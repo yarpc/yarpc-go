@@ -125,7 +125,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			checkErr(err)
 			logContext := append(
 				baseFields(),
-				zap.String("direction", _directionInbound),
+				zap.String("direction", string(_directionInbound)),
 				zap.String("rpcType", "Unary"),
 			)
 			logContext = append(logContext, tt.wantFields...)
@@ -146,7 +146,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			}
 			logContext := append(
 				baseFields(),
-				zap.String("direction", _directionOutbound),
+				zap.String("direction", string(_directionOutbound)),
 				zap.String("rpcType", "Unary"),
 			)
 			logContext = append(logContext, tt.wantFields...)
@@ -164,7 +164,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			checkErr(err)
 			logContext := append(
 				baseFields(),
-				zap.String("direction", _directionInbound),
+				zap.String("direction", string(_directionInbound)),
 				zap.String("rpcType", "Oneway"),
 			)
 			logContext = append(logContext, tt.wantFields...)
@@ -182,7 +182,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			checkErr(err)
 			logContext := append(
 				baseFields(),
-				zap.String("direction", _directionOutbound),
+				zap.String("direction", string(_directionOutbound)),
 				zap.String("rpcType", "Oneway"),
 			)
 			logContext = append(logContext, tt.wantFields...)
@@ -203,7 +203,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			checkErr(err)
 			logContext := append(
 				baseFields(),
-				zap.String("direction", _directionInbound),
+				zap.String("direction", string(_directionInbound)),
 				zap.String("rpcType", "Streaming"),
 			)
 			logContext = append(logContext, tt.wantFields...)
@@ -221,7 +221,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			checkErr(err)
 			logContext := append(
 				baseFields(),
-				zap.String("direction", _directionOutbound),
+				zap.String("direction", string(_directionOutbound)),
 				zap.String("rpcType", "Streaming"),
 			)
 			logContext = append(logContext, tt.wantFields...)
@@ -324,12 +324,12 @@ func TestMiddlewareMetrics(t *testing.T) {
 				&transporttest.FakeResponseWriter{},
 				fakeHandler{tt.err, tt.applicationErr},
 			)
-			validate(mw, _directionInbound)
+			validate(mw, string(_directionInbound))
 		})
 		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
 			mw := NewMiddleware(zap.NewNop(), pally.NewRegistry(), NewNopContextExtractor())
 			mw.Call(context.Background(), req, fakeOutbound{err: tt.err})
-			validate(mw, _directionOutbound)
+			validate(mw, string(_directionOutbound))
 		})
 	}
 }
@@ -369,7 +369,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		zap.String("encoding", string(req.Encoding)),
 		zap.String("routingKey", req.RoutingKey),
 		zap.String("routingDelegate", req.RoutingDelegate),
-		zap.String("direction", _directionInbound),
+		zap.String("direction", string(_directionInbound)),
 		zap.String("rpcType", "Unary"),
 		zap.Duration("latency", 0),
 		zap.Bool("successful", false),
