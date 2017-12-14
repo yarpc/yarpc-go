@@ -72,11 +72,6 @@ func (ss *serverStream) ReceiveMessage(_ context.Context) (*transport.StreamMess
 	// TODO used pooled buffers for performance.
 	var msg []byte
 	if err := ss.stream.RecvMsg(&msg); err != nil {
-		s, ok := status.FromError(err)
-		if ok && s.Code() == codes.Canceled && s.Message() == context.Canceled.Error() {
-			// GRPC Race condition on end of a stream, sometimes it returns a context cancelled error
-			return nil, io.EOF
-		}
 		return nil, toYARPCStreamError(err)
 	}
 	return &transport.StreamMessage{Body: ioutil.NopCloser(bytes.NewReader(msg))}, nil
