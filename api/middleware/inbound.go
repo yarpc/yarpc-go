@@ -139,7 +139,7 @@ func (nopOnewayInbound) HandleOneway(ctx context.Context, req *transport.Request
 // StreamInbound middleware is re-used across requests and MAY be called
 // multiple times for the same request.
 type StreamInbound interface {
-	HandleStream(s transport.ServerStream, h transport.StreamHandler) error
+	HandleStream(s *transport.ServerStream, h transport.StreamHandler) error
 }
 
 // NopStreamInbound is an inbound middleware that does not do
@@ -156,10 +156,10 @@ func ApplyStreamInbound(h transport.StreamHandler, i StreamInbound) transport.St
 }
 
 // StreamInboundFunc adapts a function into a StreamInbound Middleware.
-type StreamInboundFunc func(transport.ServerStream, transport.StreamHandler) error
+type StreamInboundFunc func(*transport.ServerStream, transport.StreamHandler) error
 
 // HandleStream for StreamInboundFunc
-func (f StreamInboundFunc) HandleStream(s transport.ServerStream, h transport.StreamHandler) error {
+func (f StreamInboundFunc) HandleStream(s *transport.ServerStream, h transport.StreamHandler) error {
 	return f(s, h)
 }
 
@@ -168,12 +168,12 @@ type streamHandlerWithMiddleware struct {
 	i StreamInbound
 }
 
-func (h streamHandlerWithMiddleware) HandleStream(s transport.ServerStream) error {
+func (h streamHandlerWithMiddleware) HandleStream(s *transport.ServerStream) error {
 	return h.i.HandleStream(s, h.h)
 }
 
 type nopStreamInbound struct{}
 
-func (nopStreamInbound) HandleStream(s transport.ServerStream, handler transport.StreamHandler) error {
+func (nopStreamInbound) HandleStream(s *transport.ServerStream, handler transport.StreamHandler) error {
 	return handler.HandleStream(s)
 }

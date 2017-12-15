@@ -244,7 +244,7 @@ func (_m *MockStreamInbound) EXPECT() *MockStreamInboundMockRecorder {
 }
 
 // HandleStream mocks base method
-func (_m *MockStreamInbound) HandleStream(_param0 transport.ServerStream, _param1 transport.StreamHandler) error {
+func (_m *MockStreamInbound) HandleStream(_param0 *transport.ServerStream, _param1 transport.StreamHandler) error {
 	ret := _m.ctrl.Call(_m, "HandleStream", _param0, _param1)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -279,9 +279,9 @@ func (_m *MockStreamOutbound) EXPECT() *MockStreamOutboundMockRecorder {
 }
 
 // CallStream mocks base method
-func (_m *MockStreamOutbound) CallStream(_param0 context.Context, _param1 *transport.StreamRequest, _param2 transport.StreamOutbound) (transport.ClientStream, error) {
+func (_m *MockStreamOutbound) CallStream(_param0 context.Context, _param1 *transport.StreamRequest, _param2 transport.StreamOutbound) (*transport.ClientStream, error) {
 	ret := _m.ctrl.Call(_m, "CallStream", _param0, _param1, _param2)
-	ret0, _ := ret[0].(transport.ClientStream)
+	ret0, _ := ret[0].(*transport.ClientStream)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

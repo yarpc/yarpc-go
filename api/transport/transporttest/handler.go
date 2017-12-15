@@ -124,7 +124,7 @@ func (_m *MockStreamHandler) EXPECT() *MockStreamHandlerMockRecorder {
 }
 
 // HandleStream mocks base method
-func (_m *MockStreamHandler) HandleStream(_param0 transport.ServerStream) error {
+func (_m *MockStreamHandler) HandleStream(_param0 *transport.ServerStream) error {
 	ret := _m.ctrl.Call(_m, "HandleStream", _param0)
 	ret0, _ := ret[0].(error)
 	return ret0

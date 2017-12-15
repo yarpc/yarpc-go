@@ -198,7 +198,7 @@ func StreamChain(mw ...middleware.StreamOutbound) middleware.StreamOutbound {
 
 type streamChain []middleware.StreamOutbound
 
-func (c streamChain) CallStream(ctx context.Context, request *transport.StreamRequest, out transport.StreamOutbound) (transport.ClientStream, error) {
+func (c streamChain) CallStream(ctx context.Context, request *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
 	return streamChainExec{
 		Chain: []middleware.StreamOutbound(c),
 		Final: out,
@@ -228,7 +228,7 @@ func (x streamChainExec) IsRunning() bool {
 	return x.Final.IsRunning()
 }
 
-func (x streamChainExec) CallStream(ctx context.Context, request *transport.StreamRequest) (transport.ClientStream, error) {
+func (x streamChainExec) CallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
 	if len(x.Chain) == 0 {
 		return x.Final.CallStream(ctx, request)
 	}

@@ -29,6 +29,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
@@ -272,7 +273,8 @@ func TestStreamInboundMiddlewareChain(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	stream := transporttest.NewMockServerStream(mockCtrl)
+	stream, err := transport.NewServerStream(transporttest.NewMockStream(mockCtrl))
+	require.NoError(t, err)
 	handler := transporttest.NewMockStreamHandler(mockCtrl)
 	handler.EXPECT().HandleStream(stream)
 
@@ -295,7 +297,8 @@ func TestStreamOutboundMiddlewareChain(t *testing.T) {
 	ctx := context.Background()
 	req := &transport.StreamRequest{}
 
-	stream := transporttest.NewMockClientStream(mockCtrl)
+	stream, err := transport.NewClientStream(transporttest.NewMockStreamWithClose(mockCtrl))
+	require.NoError(t, err)
 
 	out := transporttest.NewMockStreamOutbound(mockCtrl)
 	out.EXPECT().CallStream(ctx, req).Return(stream, nil)

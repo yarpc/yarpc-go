@@ -51,7 +51,7 @@ func (c *countOutboundMiddleware) CallOneway(ctx context.Context, req *transport
 	return o.CallOneway(ctx, req)
 }
 
-func (c *countOutboundMiddleware) CallStream(ctx context.Context, req *transport.StreamRequest, o transport.StreamOutbound) (transport.ClientStream, error) {
+func (c *countOutboundMiddleware) CallStream(ctx context.Context, req *transport.StreamRequest, o transport.StreamOutbound) (*transport.ClientStream, error) {
 	c.Count++
 	return o.CallStream(ctx, req)
 }
@@ -253,7 +253,7 @@ func TestIntrospect(t *testing.T) {
 }
 
 var retryStreamOutbound middleware.StreamOutboundFunc = func(
-	ctx context.Context, req *transport.StreamRequest, o transport.StreamOutbound) (transport.ClientStream, error) {
+	ctx context.Context, req *transport.StreamRequest, o transport.StreamOutbound) (*transport.ClientStream, error) {
 	res, err := o.CallStream(ctx, req)
 	if err != nil {
 		res, err = o.CallStream(ctx, req)
@@ -281,7 +281,7 @@ func TestStreamChain(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 			defer cancel()
 
-			var res transport.ClientStream
+			var res *transport.ClientStream
 			req := &transport.StreamRequest{
 				Meta: &transport.RequestMeta{
 					Caller:    "somecaller",

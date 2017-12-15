@@ -181,7 +181,7 @@ func TestStreamNopOutboundMiddleware(t *testing.T) {
 
 	got, err := wrappedO.CallStream(ctx, req)
 	if assert.NoError(t, err) {
-		assert.Equal(t, nil, got)
+		assert.Nil(t, got)
 	}
 }
 

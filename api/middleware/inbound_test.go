@@ -116,9 +116,10 @@ func TestStreamNopInboundMiddleware(t *testing.T) {
 
 	h := transporttest.NewMockStreamHandler(mockCtrl)
 	wrappedH := middleware.ApplyStreamInbound(h, middleware.NopStreamInbound)
-	s := transporttest.NewMockServerStream(mockCtrl)
+	s, err := transport.NewServerStream(transporttest.NewMockStream(mockCtrl))
+	require.NoError(t, err)
 
-	err := errors.New("great sadness")
+	err = errors.New("great sadness")
 	h.EXPECT().HandleStream(s).Return(err)
 
 	assert.Equal(t, err, wrappedH.HandleStream(s))

@@ -114,7 +114,7 @@ type StreamHandler interface {
 	// function returns.
 	//
 	// An error may be returned in case of failures.
-	HandleStream(stream ServerStream) error
+	HandleStream(stream *ServerStream) error
 }
 
 // DispatchUnaryHandler calls the handler h, recovering panics and timeout errors,
@@ -167,7 +167,7 @@ func DispatchOnewayHandler(
 // errors.
 func DispatchStreamHandler(
 	h StreamHandler,
-	stream ServerStream,
+	stream *ServerStream,
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {

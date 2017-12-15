@@ -28,6 +28,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
@@ -47,7 +48,7 @@ func (c *countInboundMiddleware) HandleOneway(ctx context.Context, req *transpor
 	return h.HandleOneway(ctx, req)
 }
 
-func (c *countInboundMiddleware) HandleStream(s transport.ServerStream, h transport.StreamHandler) error {
+func (c *countInboundMiddleware) HandleStream(s *transport.ServerStream, h transport.StreamHandler) error {
 	c.Count++
 	return h.HandleStream(s)
 }
@@ -152,7 +153,7 @@ func TestOnewayChain(t *testing.T) {
 }
 
 var retryStreamInbound middleware.StreamInboundFunc = func(
-	s transport.ServerStream, h transport.StreamHandler) error {
+	s *transport.ServerStream, h transport.StreamHandler) error {
 	if err := h.HandleStream(s); err != nil {
 		return h.HandleStream(s)
 	}
@@ -177,14 +178,15 @@ func TestStreamChain(t *testing.T) {
 			before.Count, after.Count = 0, 0
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
-			s := transporttest.NewMockServerStream(mockCtrl)
+			s, err := transport.NewServerStream(transporttest.NewMockStream(mockCtrl))
+			require.NoError(t, err)
 
 			h := transporttest.NewMockStreamHandler(mockCtrl)
 			h.EXPECT().HandleStream(s).After(
 				h.EXPECT().HandleStream(s).Return(errors.New("great sadness")),
 			).Return(nil)
 
-			err := middleware.ApplyStreamInbound(h, tt.mw).HandleStream(s)
+			err = middleware.ApplyStreamInbound(h, tt.mw).HandleStream(s)
 
 			assert.NoError(t, err, "expected success")
 			assert.Equal(t, 1, before.Count, "expected outer inbound middleware to be called once")

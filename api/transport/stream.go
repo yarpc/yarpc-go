@@ -23,6 +23,8 @@ package transport
 import (
 	"context"
 	"io"
+
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 // StreamRequest is used to establish a streaming request.  It contains basic
@@ -32,32 +34,104 @@ type StreamRequest struct {
 	Meta *RequestMeta
 }
 
-// StreamResponse is the information returned at the end of a stream connection.
-// It contains basic Metadata information, and any Stream-specfic configuration
-// for ending a stream.
-type StreamResponse struct {
-	Meta *ResponseMeta
+type serverStreamOpts struct{}
+
+// ServerStreamOption are options to configure a ServerStream
+type ServerStreamOption interface {
+	apply(*serverStreamOpts)
+}
+
+// NewServerStream will create a new ServerStream.
+func NewServerStream(s Stream, options ...ServerStreamOption) (*ServerStream, error) {
+	if s == nil {
+		return nil, yarpcerrors.InvalidArgumentErrorf("non-nil stream is required")
+	}
+	return &ServerStream{stream: s}, nil
 }
 
 // ServerStream represents the Server API of interacting with a Stream.
-type ServerStream interface {
-	Stream
+type ServerStream struct {
+	stream Stream
+}
 
-	// SetResponse sets the stream response metadata for the stream before
-	// the stream has been stopped.  Depending on the implementation this will
-	// be propagated back to the client.
-	SetResponse(*StreamResponse)
+// Context returns the context for the stream.
+func (s *ServerStream) Context() context.Context {
+	return s.stream.Context()
+}
+
+// Request contains all the metadata about the request.
+func (s *ServerStream) Request() *StreamRequest {
+	return s.stream.Request()
+}
+
+// SendMessage sends a request over the stream. It blocks until the message
+// has been sent.  In certain implementations, the timeout on the context
+// will be used to timeout the request.
+func (s *ServerStream) SendMessage(ctx context.Context, msg *StreamMessage) error {
+	return s.stream.SendMessage(ctx, msg)
+}
+
+// ReceiveMessage blocks until a message is received from the connection. It
+// returns an io.Reader with the contents of the message.
+func (s *ServerStream) ReceiveMessage(ctx context.Context) (*StreamMessage, error) {
+	return s.stream.ReceiveMessage(ctx)
+}
+
+type clientStreamOpts struct{}
+
+// ClientStreamOption is an option for configuring a client stream.
+type ClientStreamOption interface {
+	apply(*clientStreamOpts)
+}
+
+// NewClientStream will create a new ClientStream.
+func NewClientStream(s StreamWithClose, options ...ClientStreamOption) (*ClientStream, error) {
+	if s == nil {
+		return nil, yarpcerrors.InvalidArgumentErrorf("non-nil stream with close is required")
+	}
+	return &ClientStream{stream: s}, nil
 }
 
 // ClientStream represents the Client API of interacting with a Stream.
-type ClientStream interface {
-	Stream
+type ClientStream struct {
+	stream StreamWithClose
+}
 
-	// Response returns the StreamResponse that was set by the server when the
-	// stream was closed.  It will return nil if it was called before the Close
-	// was called, or before one of the SendMessage/ReceiveMessage functions
-	// returned an error.
-	Response() *StreamResponse
+// Context returns the context for the stream.
+func (s *ClientStream) Context() context.Context {
+	return s.stream.Context()
+}
+
+// Request contains all the metadata about the request.
+func (s *ClientStream) Request() *StreamRequest {
+	return s.stream.Request()
+}
+
+// SendMessage sends a request over the stream. It blocks until the message
+// has been sent.  In certain implementations, the timeout on the context
+// will be used to timeout the request.
+func (s *ClientStream) SendMessage(ctx context.Context, msg *StreamMessage) error {
+	return s.stream.SendMessage(ctx, msg)
+}
+
+// ReceiveMessage blocks until a message is received from the connection. It
+// returns an io.Reader with the contents of the message.
+func (s *ClientStream) ReceiveMessage(ctx context.Context) (*StreamMessage, error) {
+	return s.stream.ReceiveMessage(ctx)
+}
+
+// Close will close the connection. It blocks until the server has
+// acknowledged the close. In certain implementations, the timeout on the
+// context will be used to timeout the request. If the server timed out the
+// connection will be forced closed by the client.
+func (s *ClientStream) Close(ctx context.Context) error {
+	return s.stream.Close(ctx)
+}
+
+// StreamWithClose represents an API of interacting with a Stream that is
+// closable.
+type StreamWithClose interface {
+	Stream
 
 	// Close will close the connection. It blocks until the server has
 	// acknowledged the close. In certain implementations, the timeout on the

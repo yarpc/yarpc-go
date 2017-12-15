@@ -151,7 +151,7 @@ func StreamChain(mw ...middleware.StreamInbound) middleware.StreamInbound {
 
 type streamChain []middleware.StreamInbound
 
-func (c streamChain) HandleStream(s transport.ServerStream, h transport.StreamHandler) error {
+func (c streamChain) HandleStream(s *transport.ServerStream, h transport.StreamHandler) error {
 	return streamChainExec{
 		Chain: []middleware.StreamInbound(c),
 		Final: h,
@@ -165,7 +165,7 @@ type streamChainExec struct {
 	Final transport.StreamHandler
 }
 
-func (x streamChainExec) HandleStream(s transport.ServerStream) error {
+func (x streamChainExec) HandleStream(s *transport.ServerStream) error {
 	if len(x.Chain) == 0 {
 		return x.Final.HandleStream(s)
 	}
