@@ -199,7 +199,9 @@ func TestMiddlewareLogging(t *testing.T) {
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
 		})
 		t.Run(tt.desc+", stream inbound", func(t *testing.T) {
-			err := mw.HandleStream(&fakeStream{ctx: context.Background(), request: sreq}, fakeHandler{tt.err, false})
+			stream, err := transport.NewServerStream(&fakeStream{ctx: context.Background(), request: sreq})
+			require.NoError(t, err)
+			err = mw.HandleStream(stream, fakeHandler{tt.err, false})
 			checkErr(err)
 			logContext := append(
 				baseFields(),

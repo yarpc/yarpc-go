@@ -48,7 +48,7 @@ func (h fakeHandler) HandleOneway(context.Context, *transport.Request) error {
 	return h.err
 }
 
-func (h fakeHandler) HandleStream(transport.ServerStream) error {
+func (h fakeHandler) HandleStream(*transport.ServerStream) error {
 	return h.err
 }
 
@@ -72,20 +72,19 @@ func (o fakeOutbound) CallOneway(context.Context, *transport.Request) (transport
 	return fakeAck{}, nil
 }
 
-func (o fakeOutbound) CallStream(ctx context.Context, request *transport.StreamRequest) (transport.ClientStream, error) {
+func (o fakeOutbound) CallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
 	if o.err != nil {
 		return nil, o.err
 	}
-	return &fakeStream{
+	return transport.NewClientStream(&fakeStream{
 		ctx:     ctx,
 		request: request,
-	}, nil
+	})
 }
 
 type fakeStream struct {
-	ctx      context.Context
-	request  *transport.StreamRequest
-	response *transport.StreamResponse
+	ctx     context.Context
+	request *transport.StreamRequest
 }
 
 func (s *fakeStream) Context() context.Context {
@@ -94,14 +93,6 @@ func (s *fakeStream) Context() context.Context {
 
 func (s *fakeStream) Request() *transport.StreamRequest {
 	return s.request
-}
-
-func (s *fakeStream) Response() *transport.StreamResponse {
-	return s.response
-}
-
-func (s *fakeStream) SetResponse(response *transport.StreamResponse) {
-	s.response = response
 }
 
 func (s *fakeStream) SendMessage(context.Context, *transport.StreamMessage) error {

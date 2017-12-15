@@ -107,19 +107,19 @@ func (m *Middleware) CallOneway(ctx context.Context, req *transport.Request, out
 }
 
 // HandleStream implements middleware.StreamInbound.
-func (m *Middleware) HandleStream(serverStream transport.ServerStream, h transport.StreamHandler) error {
+func (m *Middleware) HandleStream(serverStream *transport.ServerStream, h transport.StreamHandler) error {
 	call := m.graph.begin(serverStream.Context(), transport.Streaming, _directionInbound, serverStream.Request().Meta.ToRequest())
 	err := h.HandleStream(serverStream)
-	// TODO(pedge): wrap the transport.ServerStream?
+	// TODO(pedge): wrap the *transport.ServerStream?
 	call.End(err)
 	return err
 }
 
 // CallStream implements middleware.StreamOutbound.
-func (m *Middleware) CallStream(ctx context.Context, request *transport.StreamRequest, out transport.StreamOutbound) (transport.ClientStream, error) {
+func (m *Middleware) CallStream(ctx context.Context, request *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
 	call := m.graph.begin(ctx, transport.Streaming, _directionOutbound, request.Meta.ToRequest())
 	clientStream, err := out.CallStream(ctx, request)
-	// TODO(pedge): wrap the transport.ClientStream?
+	// TODO(pedge): wrap the *transport.ClientStream?
 	call.End(err)
 	return clientStream, err
 }
