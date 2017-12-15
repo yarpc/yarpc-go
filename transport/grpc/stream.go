@@ -32,7 +32,6 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -75,19 +74,6 @@ func (ss *serverStream) ReceiveMessage(_ context.Context) (*transport.StreamMess
 		return nil, toYARPCStreamError(err)
 	}
 	return &transport.StreamMessage{Body: ioutil.NopCloser(bytes.NewReader(msg))}, nil
-}
-
-func (ss *serverStream) SetResponse(resp *transport.StreamResponse) {
-	if resp == nil || resp.Meta == nil {
-		return
-	}
-	md := metadata.New(nil)
-
-	// TODO: This can fail for validation reasons, we should set an error on the
-	// metadata if that's the case.
-	_ = addApplicationHeaders(md, resp.Meta.Headers)
-
-	ss.stream.SetTrailer(md)
 }
 
 type clientStream struct {
@@ -154,20 +140,6 @@ func (cs *clientStream) closeWithErr(err error) error {
 		cs.span.Finish()
 	}
 	return err
-}
-
-func (cs *clientStream) Response() *transport.StreamResponse {
-	if !cs.closed.Load() {
-		return nil
-	}
-	if headers, err := getApplicationHeaders(cs.stream.Trailer()); err == nil {
-		return &transport.StreamResponse{
-			Meta: &transport.ResponseMeta{
-				Headers: headers,
-			},
-		}
-	}
-	return &transport.StreamResponse{Meta: &transport.ResponseMeta{}}
 }
 
 func toYARPCStreamError(err error) error {

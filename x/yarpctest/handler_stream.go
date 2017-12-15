@@ -56,7 +56,7 @@ func (h *echoStreamHandler) Stop(testing.TB) error {
 	return nil
 }
 
-func (h *echoStreamHandler) HandleStream(s transport.ServerStream) error {
+func (h *echoStreamHandler) HandleStream(s *transport.ServerStream) error {
 	if h.stopped.Load() {
 		return errors.New("closed")
 	}
@@ -118,7 +118,7 @@ func (o *orderedStreamHandler) Stop(t testing.TB) error {
 }
 
 // HandleStream handles a stream request.
-func (o *orderedStreamHandler) HandleStream(s transport.ServerStream) error {
+func (o *orderedStreamHandler) HandleStream(s *transport.ServerStream) error {
 	if o.stopped.Load() {
 		return errors.New("closed")
 	}
@@ -139,20 +139,7 @@ func (o *orderedStreamHandler) HandleStream(s transport.ServerStream) error {
 // StreamHandlerError is an action to return an error from a ServerStream
 // handler.
 func StreamHandlerError(err error) api.ServerStreamAction {
-	return api.ServerStreamActionFunc(func(c transport.ServerStream) error {
+	return api.ServerStreamActionFunc(func(c *transport.ServerStream) error {
 		return err
-	})
-}
-
-// StreamResponse is an action to return a transport.ResponseMeta from a
-// ServerStream handler.
-func StreamResponse(options ...api.StreamResponseOption) api.ServerStreamAction {
-	opts := api.NewStreamResponseOpts()
-	for _, option := range options {
-		option.ApplyStreamResponse(&opts)
-	}
-	return api.ServerStreamActionFunc(func(c transport.ServerStream) error {
-		c.SetResponse(opts.Resp)
-		return nil
 	})
 }

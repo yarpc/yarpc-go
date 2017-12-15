@@ -49,7 +49,7 @@ func GRPCStreamRequest(options ...api.ClientStreamRequestOption) api.Action {
 		require.NoError(t, out.Start())
 		defer func() { assert.NoError(t, out.Stop()) }()
 
-		res, err := callStream(t, out, opts.GiveRequest, opts.StreamActions)
+		err := callStream(t, out, opts.GiveRequest, opts.StreamActions)
 		if len(opts.WantErrMsgs) > 0 {
 			require.Error(t, err)
 			for _, wantErrMsg := range opts.WantErrMsgs {
@@ -58,12 +58,6 @@ func GRPCStreamRequest(options ...api.ClientStreamRequestOption) api.Action {
 			return
 		}
 		require.NoError(t, err)
-
-		for k, v := range opts.WantResponse.Meta.Headers.Items() {
-			h, ok := res.Meta.Headers.Get(k)
-			require.True(t, ok, "did not receive expected response header %q", k)
-			require.Equal(t, h, v, "response header did not match for %q", k)
-		}
 	})
 }
 
@@ -72,17 +66,17 @@ func callStream(
 	out transport.StreamOutbound,
 	req *transport.StreamRequest,
 	actions []api.ClientStreamAction,
-) (*transport.StreamResponse, error) {
+) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	client, err := out.CallStream(ctx, req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	for _, a := range actions {
 		a.ApplyClientStream(t, client)
 	}
-	return client.Response(), nil
+	return nil
 }
 
 // ClientStreamActions combines a series of client stream actions into actions
@@ -104,7 +98,7 @@ func WantStreamError(wantErrMsgs ...string) api.ClientStreamRequestOption {
 
 // CloseStream is an action to close a client stream.
 func CloseStream() api.ClientStreamAction {
-	return api.ClientStreamActionFunc(func(t testing.TB, c transport.ClientStream) {
+	return api.ClientStreamActionFunc(func(t testing.TB, c *transport.ClientStream) {
 		require.NoError(t, c.Close(context.Background()))
 	})
 }

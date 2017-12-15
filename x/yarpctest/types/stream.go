@@ -42,12 +42,12 @@ type SendStreamMsg struct {
 }
 
 // ApplyClientStream implements ClientStreamAction
-func (s *SendStreamMsg) ApplyClientStream(t testing.TB, c transport.ClientStream) {
+func (s *SendStreamMsg) ApplyClientStream(t testing.TB, c *transport.ClientStream) {
 	s.applyStream(t, c)
 }
 
 // ApplyServerStream implements ServerStreamAction
-func (s *SendStreamMsg) ApplyServerStream(c transport.ServerStream) error {
+func (s *SendStreamMsg) ApplyServerStream(c *transport.ServerStream) error {
 	s.applyStream(s.GetTestingTB(), c)
 	return nil
 }
@@ -82,12 +82,12 @@ type RecvStreamMsg struct {
 }
 
 // ApplyClientStream implements ClientStreamAction
-func (s *RecvStreamMsg) ApplyClientStream(t testing.TB, c transport.ClientStream) {
+func (s *RecvStreamMsg) ApplyClientStream(t testing.TB, c *transport.ClientStream) {
 	s.applyStream(t, c)
 }
 
 // ApplyServerStream implements ServerStreamAction
-func (s *RecvStreamMsg) ApplyServerStream(c transport.ServerStream) error {
+func (s *RecvStreamMsg) ApplyServerStream(c *transport.ServerStream) error {
 	s.applyStream(s.GetTestingTB(), c)
 	return nil
 }

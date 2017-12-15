@@ -228,7 +228,7 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 }
 
 // CallStream implements transport.StreamOutbound#CallStream.
-func (o *Outbound) CallStream(ctx context.Context, request *transport.StreamRequest) (transport.ClientStream, error) {
+func (o *Outbound) CallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
 	if _, ok := ctx.Deadline(); !ok {
 		return nil, yarpcerrors.InvalidArgumentErrorf("stream requests require a connection establishment timeout on the passed in context.")
 	}
@@ -242,7 +242,7 @@ func (o *Outbound) stream(
 	ctx context.Context,
 	req *transport.StreamRequest,
 	start time.Time,
-) (_ transport.ClientStream, err error) {
+) (_ *transport.ClientStream, err error) {
 	if req.Meta == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("stream request requires a request metadata")
 	}
@@ -298,5 +298,11 @@ func (o *Outbound) stream(
 		span.Finish()
 		return nil, err
 	}
-	return newClientStream(streamCtx, req, clientStream, span), nil
+	stream := newClientStream(streamCtx, req, clientStream, span)
+	tClientStream, err := transport.NewClientStream(stream)
+	if err != nil {
+		span.Finish()
+		return nil, err
+	}
+	return tClientStream, nil
 }

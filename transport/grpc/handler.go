@@ -143,9 +143,15 @@ func (h *handler) handleStream(
 	ctx, span := extractOpenTracingSpan.Do(ctx, transportRequest)
 	defer span.Finish()
 
+	stream := newServerStream(ctx, &transport.StreamRequest{Meta: transportRequest.ToRequestMeta()}, serverStream)
+	tServerStream, err := transport.NewServerStream(stream)
+	if err != nil {
+		return err
+	}
+
 	return transport.UpdateSpanWithErr(span, transport.DispatchStreamHandler(
 		streamHandler,
-		newServerStream(ctx, &transport.StreamRequest{Meta: transportRequest.ToRequestMeta()}, serverStream),
+		tServerStream,
 	))
 }
 

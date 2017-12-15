@@ -31,45 +31,17 @@ import (
 type ServerStreamAction interface {
 	Lifecycle
 
-	ApplyServerStream(transport.ServerStream) error
+	ApplyServerStream(*transport.ServerStream) error
 }
 
 // ServerStreamActionFunc converts a function into a StreamAction.
-type ServerStreamActionFunc func(transport.ServerStream) error
+type ServerStreamActionFunc func(*transport.ServerStream) error
 
 // ApplyServerStream implements ServerStreamAction.
-func (f ServerStreamActionFunc) ApplyServerStream(c transport.ServerStream) error { return f(c) }
+func (f ServerStreamActionFunc) ApplyServerStream(c *transport.ServerStream) error { return f(c) }
 
 // Start is a noop for wrapped functions
 func (f ServerStreamActionFunc) Start(testing.TB) error { return nil }
 
 // Stop is a noop for wrapped functions
 func (f ServerStreamActionFunc) Stop(testing.TB) error { return nil }
-
-// StreamResponseOpts are the configuration options for a server stream
-// response.
-type StreamResponseOpts struct {
-	Resp *transport.StreamResponse
-}
-
-// NewStreamResponseOpts creates a new StreamResponseOpts.
-func NewStreamResponseOpts() StreamResponseOpts {
-	return StreamResponseOpts{
-		Resp: &transport.StreamResponse{
-			Meta: &transport.ResponseMeta{
-				Headers: transport.NewHeaders(),
-			},
-		},
-	}
-}
-
-// StreamResponseOption is an option to apply to a StreamResponse
-type StreamResponseOption interface {
-	ApplyStreamResponse(*StreamResponseOpts)
-}
-
-// StreamResponseOptionFunc converts a function into a StreamResponseOption.
-type StreamResponseOptionFunc func(*StreamResponseOpts)
-
-// ApplyStreamResponse implements StreamResponseOption.
-func (f StreamResponseOptionFunc) ApplyStreamResponse(opts *StreamResponseOpts) { f(opts) }

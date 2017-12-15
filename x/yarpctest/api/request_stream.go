@@ -31,7 +31,6 @@ type ClientStreamRequestOpts struct {
 	Port          uint16
 	GiveRequest   *transport.StreamRequest
 	StreamActions []ClientStreamAction
-	WantResponse  *transport.StreamResponse
 	WantErrMsgs   []string
 }
 
@@ -42,11 +41,6 @@ func NewClientStreamRequestOpts() ClientStreamRequestOpts {
 			Meta: &transport.RequestMeta{
 				Caller:   "unknown",
 				Encoding: transport.Encoding("raw"),
-			},
-		},
-		WantResponse: &transport.StreamResponse{
-			Meta: &transport.ResponseMeta{
-				Headers: transport.NewHeaders(),
 			},
 		},
 	}
@@ -67,11 +61,11 @@ func (f ClientStreamRequestOptionFunc) ApplyClientStreamRequest(opts *ClientStre
 
 // ClientStreamAction is an action applied to a ClientStream.
 type ClientStreamAction interface {
-	ApplyClientStream(testing.TB, transport.ClientStream)
+	ApplyClientStream(testing.TB, *transport.ClientStream)
 }
 
 // ClientStreamActionFunc converts a function into a StreamAction.
-type ClientStreamActionFunc func(testing.TB, transport.ClientStream)
+type ClientStreamActionFunc func(testing.TB, *transport.ClientStream)
 
 // ApplyClientStream implements ClientStreamAction.
-func (f ClientStreamActionFunc) ApplyClientStream(t testing.TB, c transport.ClientStream) { f(t, c) }
+func (f ClientStreamActionFunc) ApplyClientStream(t testing.TB, c *transport.ClientStream) { f(t, c) }

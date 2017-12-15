@@ -215,10 +215,6 @@ func TestStreaming(t *testing.T) {
 							WantHeader("req_key", "req_val"),
 							WantHeader("req_key2", "req_val2"),
 							RecvStreamMsg("test"),
-							StreamResponse(
-								WithHeader("resp_key", "resp_val"),
-								WithHeader("resp_key2", "resp_val2"),
-							),
 						), // End of Stream
 					),
 				),
@@ -230,8 +226,6 @@ func TestStreaming(t *testing.T) {
 					Procedure("proc"),
 					WithHeader("req_key", "req_val"),
 					WithHeader("req_key2", "req_val2"),
-					WantHeader("resp_key", "resp_val"),
-					WantHeader("resp_key2", "resp_val2"),
 					ClientStreamActions(
 						SendStreamMsg("test"),
 						RecvStreamErr(io.EOF.Error()),
@@ -317,7 +311,7 @@ func TestStreaming(t *testing.T) {
 					Procedure("proc"),
 					WithHeader("key", "value"),
 					ClientStreamActions(
-						api.ClientStreamActionFunc(func(t testing.TB, c transport.ClientStream) {
+						api.ClientStreamActionFunc(func(t testing.TB, c *transport.ClientStream) {
 							val, _ := c.Request().Meta.Headers.Get("key")
 							require.Equal(t, "value", val)
 
@@ -338,18 +332,13 @@ func TestStreaming(t *testing.T) {
 					Proc(
 						Name("proc"),
 						OrderedStreamHandler(
-							api.ServerStreamActionFunc(func(s transport.ServerStream) error {
+							api.ServerStreamActionFunc(func(s *transport.ServerStream) error {
 								if _, ok := s.Context().Deadline(); ok {
 									return errors.New("should not have deadline on stream")
 								}
 								return nil
 							}),
 							RecvStreamMsg("test"),
-							api.ServerStreamActionFunc(func(s transport.ServerStream) error {
-								// invalid response setting
-								s.SetResponse(&transport.StreamResponse{})
-								return nil
-							}),
 						),
 					),
 				),
