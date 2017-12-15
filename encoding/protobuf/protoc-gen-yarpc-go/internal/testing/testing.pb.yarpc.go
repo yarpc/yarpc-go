@@ -274,8 +274,6 @@ type AllYARPCClient interface {
 // AllServiceHelloOneYARPCClient sends HelloRequests and receives the single HelloResponse when sending is done.
 type AllServiceHelloOneYARPCClient interface {
 	Context() context.Context
-	Request() *transport.StreamRequest
-	Response() *transport.StreamResponse
 	Send(*HelloRequest) error
 	CloseAndRecv() (*HelloResponse, error)
 }
@@ -283,16 +281,12 @@ type AllServiceHelloOneYARPCClient interface {
 // AllServiceHelloTwoYARPCClient receives HelloResponses, returning io.EOF when the stream is complete.
 type AllServiceHelloTwoYARPCClient interface {
 	Context() context.Context
-	Request() *transport.StreamRequest
-	Response() *transport.StreamResponse
 	Recv() (*HelloResponse, error)
 }
 
 // AllServiceHelloThreeYARPCClient sends HelloRequests and receives HelloResponses, returning io.EOF when the stream is complete.
 type AllServiceHelloThreeYARPCClient interface {
 	Context() context.Context
-	Request() *transport.StreamRequest
-	Response() *transport.StreamResponse
 	Send(*HelloRequest) error
 	Recv() (*HelloResponse, error)
 	CloseSend() error
@@ -322,24 +316,18 @@ type AllYARPCServer interface {
 // AllServiceHelloOneYARPCServer receives HelloRequests.
 type AllServiceHelloOneYARPCServer interface {
 	Context() context.Context
-	Request() *transport.StreamRequest
-	SetResponse(*transport.StreamResponse)
 	Recv() (*HelloRequest, error)
 }
 
 // AllServiceHelloTwoYARPCServer sends HelloResponses.
 type AllServiceHelloTwoYARPCServer interface {
 	Context() context.Context
-	Request() *transport.StreamRequest
-	SetResponse(*transport.StreamResponse)
 	Send(*HelloResponse) error
 }
 
 // AllServiceHelloThreeYARPCServer receives HelloRequests and sends HelloResponse.
 type AllServiceHelloThreeYARPCServer interface {
 	Context() context.Context
-	Request() *transport.StreamRequest
-	SetResponse(*transport.StreamResponse)
 	Recv() (*HelloRequest, error)
 	Send(*HelloResponse) error
 }
@@ -520,7 +508,7 @@ func (h *_AllYARPCHandler) Fire(ctx context.Context, requestMessage proto.Messag
 	return h.server.Fire(ctx, request)
 }
 
-func (h *_AllYARPCHandler) HelloOne(serverStream transport.ServerStream) error {
+func (h *_AllYARPCHandler) HelloOne(serverStream *transport.ServerStream) error {
 	response, err := h.server.HelloOne(&_AllServiceHelloOneYARPCServer{serverStream: serverStream})
 	if err != nil {
 		return err
@@ -528,7 +516,7 @@ func (h *_AllYARPCHandler) HelloOne(serverStream transport.ServerStream) error {
 	return protobuf.WriteToStream(context.Background(), response, serverStream)
 }
 
-func (h *_AllYARPCHandler) HelloTwo(serverStream transport.ServerStream) error {
+func (h *_AllYARPCHandler) HelloTwo(serverStream *transport.ServerStream) error {
 	requestMessage, err := protobuf.ReadFromStream(context.Background(), serverStream, newAllServiceHelloTwoYARPCRequest)
 	if requestMessage == nil {
 		return err
@@ -541,24 +529,16 @@ func (h *_AllYARPCHandler) HelloTwo(serverStream transport.ServerStream) error {
 	return h.server.HelloTwo(request, &_AllServiceHelloTwoYARPCServer{serverStream: serverStream})
 }
 
-func (h *_AllYARPCHandler) HelloThree(serverStream transport.ServerStream) error {
+func (h *_AllYARPCHandler) HelloThree(serverStream *transport.ServerStream) error {
 	return h.server.HelloThree(&_AllServiceHelloThreeYARPCServer{serverStream: serverStream})
 }
 
 type _AllServiceHelloOneYARPCClient struct {
-	stream transport.ClientStream
+	stream *transport.ClientStream
 }
 
 func (c *_AllServiceHelloOneYARPCClient) Context() context.Context {
 	return c.stream.Context()
-}
-
-func (c *_AllServiceHelloOneYARPCClient) Request() *transport.StreamRequest {
-	return c.stream.Request()
-}
-
-func (c *_AllServiceHelloOneYARPCClient) Response() *transport.StreamResponse {
-	return c.stream.Response()
 }
 
 func (c *_AllServiceHelloOneYARPCClient) Send(request *HelloRequest) error {
@@ -581,19 +561,11 @@ func (c *_AllServiceHelloOneYARPCClient) CloseAndRecv() (*HelloResponse, error) 
 }
 
 type _AllServiceHelloTwoYARPCClient struct {
-	stream transport.ClientStream
+	stream *transport.ClientStream
 }
 
 func (c *_AllServiceHelloTwoYARPCClient) Context() context.Context {
 	return c.stream.Context()
-}
-
-func (c *_AllServiceHelloTwoYARPCClient) Request() *transport.StreamRequest {
-	return c.stream.Request()
-}
-
-func (c *_AllServiceHelloTwoYARPCClient) Response() *transport.StreamResponse {
-	return c.stream.Response()
 }
 
 func (c *_AllServiceHelloTwoYARPCClient) Recv() (*HelloResponse, error) {
@@ -609,19 +581,11 @@ func (c *_AllServiceHelloTwoYARPCClient) Recv() (*HelloResponse, error) {
 }
 
 type _AllServiceHelloThreeYARPCClient struct {
-	stream transport.ClientStream
+	stream *transport.ClientStream
 }
 
 func (c *_AllServiceHelloThreeYARPCClient) Context() context.Context {
 	return c.stream.Context()
-}
-
-func (c *_AllServiceHelloThreeYARPCClient) Request() *transport.StreamRequest {
-	return c.stream.Request()
-}
-
-func (c *_AllServiceHelloThreeYARPCClient) Response() *transport.StreamResponse {
-	return c.stream.Response()
 }
 
 func (c *_AllServiceHelloThreeYARPCClient) Send(request *HelloRequest) error {
@@ -645,19 +609,11 @@ func (c *_AllServiceHelloThreeYARPCClient) CloseSend() error {
 }
 
 type _AllServiceHelloOneYARPCServer struct {
-	serverStream transport.ServerStream
+	serverStream *transport.ServerStream
 }
 
 func (s *_AllServiceHelloOneYARPCServer) Context() context.Context {
 	return s.serverStream.Context()
-}
-
-func (s *_AllServiceHelloOneYARPCServer) Request() *transport.StreamRequest {
-	return s.serverStream.Request()
-}
-
-func (s *_AllServiceHelloOneYARPCServer) SetResponse(response *transport.StreamResponse) {
-	s.serverStream.SetResponse(response)
 }
 
 func (s *_AllServiceHelloOneYARPCServer) Recv() (*HelloRequest, error) {
@@ -673,19 +629,11 @@ func (s *_AllServiceHelloOneYARPCServer) Recv() (*HelloRequest, error) {
 }
 
 type _AllServiceHelloTwoYARPCServer struct {
-	serverStream transport.ServerStream
+	serverStream *transport.ServerStream
 }
 
 func (s *_AllServiceHelloTwoYARPCServer) Context() context.Context {
 	return s.serverStream.Context()
-}
-
-func (s *_AllServiceHelloTwoYARPCServer) Request() *transport.StreamRequest {
-	return s.serverStream.Request()
-}
-
-func (s *_AllServiceHelloTwoYARPCServer) SetResponse(response *transport.StreamResponse) {
-	s.serverStream.SetResponse(response)
 }
 
 func (s *_AllServiceHelloTwoYARPCServer) Send(response *HelloResponse) error {
@@ -693,19 +641,11 @@ func (s *_AllServiceHelloTwoYARPCServer) Send(response *HelloResponse) error {
 }
 
 type _AllServiceHelloThreeYARPCServer struct {
-	serverStream transport.ServerStream
+	serverStream *transport.ServerStream
 }
 
 func (s *_AllServiceHelloThreeYARPCServer) Context() context.Context {
 	return s.serverStream.Context()
-}
-
-func (s *_AllServiceHelloThreeYARPCServer) Request() *transport.StreamRequest {
-	return s.serverStream.Request()
-}
-
-func (s *_AllServiceHelloThreeYARPCServer) SetResponse(response *transport.StreamResponse) {
-	s.serverStream.SetResponse(response)
 }
 
 func (s *_AllServiceHelloThreeYARPCServer) Recv() (*HelloRequest, error) {

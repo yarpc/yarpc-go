@@ -94,14 +94,14 @@ func (o *onewayHandler) HandleOneway(ctx context.Context, transportRequest *tran
 }
 
 type streamHandler struct {
-	handle func(transport.ServerStream) error
+	handle func(*transport.ServerStream) error
 }
 
-func newStreamHandler(handle func(transport.ServerStream) error) *streamHandler {
+func newStreamHandler(handle func(*transport.ServerStream) error) *streamHandler {
 	return &streamHandler{handle}
 }
 
-func (s *streamHandler) HandleStream(stream transport.ServerStream) error {
+func (s *streamHandler) HandleStream(stream *transport.ServerStream) error {
 	return s.handle(stream)
 }
 

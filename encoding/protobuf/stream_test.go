@@ -29,6 +29,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -41,7 +42,7 @@ func TestReadFromStreamDecodeError(t *testing.T) {
 	ctx := context.Background()
 	wantErr := errors.New("error")
 
-	stream := transporttest.NewMockClientStream(mockCtrl)
+	stream := transporttest.NewMockStreamWithClose(mockCtrl)
 	stream.EXPECT().ReceiveMessage(ctx).Return(&transport.StreamMessage{
 		Body: ioutil.NopCloser(readErr{err: wantErr}),
 	}, nil)
@@ -53,7 +54,10 @@ func TestReadFromStreamDecodeError(t *testing.T) {
 		},
 	)
 
-	_, err := ReadFromStream(ctx, stream, func() proto.Message { return nil })
+	clientStream, err := transport.NewClientStream(stream)
+	require.NoError(t, err)
+
+	_, err = ReadFromStream(ctx, clientStream, func() proto.Message { return nil })
 
 	assert.Equal(t, wantErr, err)
 }
@@ -72,7 +76,7 @@ func TestWriteToStreamInvalidEncoding(t *testing.T) {
 
 	ctx := context.Background()
 
-	stream := transporttest.NewMockClientStream(mockCtrl)
+	stream := transporttest.NewMockStreamWithClose(mockCtrl)
 	stream.EXPECT().Request().Return(
 		&transport.StreamRequest{
 			Meta: &transport.RequestMeta{
@@ -81,7 +85,10 @@ func TestWriteToStreamInvalidEncoding(t *testing.T) {
 		},
 	)
 
-	err := WriteToStream(ctx, nil, stream)
+	clientStream, err := transport.NewClientStream(stream)
+	require.NoError(t, err)
+
+	err = WriteToStream(ctx, nil, clientStream)
 
 	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInternal, "encoding.Expect should have handled encoding \"raw\" but did not"), err)
 }

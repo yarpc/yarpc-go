@@ -148,7 +148,7 @@ func (c *client) CallStream(
 	ctx context.Context,
 	requestMethodName string,
 	opts ...yarpc.CallOption,
-) (transport.ClientStream, error) {
+) (*transport.ClientStream, error) {
 	streamRequest := &transport.StreamRequest{
 		Meta: &transport.RequestMeta{
 			Caller:    c.outboundConfig.CallerName,

@@ -271,8 +271,6 @@ type FooYARPCClient interface {
 // FooServiceEchoOutYARPCClient sends EchoOutRequests and receives the single EchoOutResponse when sending is done.
 type FooServiceEchoOutYARPCClient interface {
 	Context() context.Context
-	Request() *transport.StreamRequest
-	Response() *transport.StreamResponse
 	Send(*EchoOutRequest) error
 	CloseAndRecv() (*EchoOutResponse, error)
 }
@@ -280,16 +278,12 @@ type FooServiceEchoOutYARPCClient interface {
 // FooServiceEchoInYARPCClient receives EchoInResponses, returning io.EOF when the stream is complete.
 type FooServiceEchoInYARPCClient interface {
 	Context() context.Context
-	Request() *transport.StreamRequest
-	Response() *transport.StreamResponse
 	Recv() (*EchoInResponse, error)
 }
 
 // FooServiceEchoBothYARPCClient sends EchoBothRequests and receives EchoBothResponses, returning io.EOF when the stream is complete.
 type FooServiceEchoBothYARPCClient interface {
 	Context() context.Context
-	Request() *transport.StreamRequest
-	Response() *transport.StreamResponse
 	Send(*EchoBothRequest) error
 	Recv() (*EchoBothResponse, error)
 	CloseSend() error
@@ -316,24 +310,18 @@ type FooYARPCServer interface {
 // FooServiceEchoOutYARPCServer receives EchoOutRequests.
 type FooServiceEchoOutYARPCServer interface {
 	Context() context.Context
-	Request() *transport.StreamRequest
-	SetResponse(*transport.StreamResponse)
 	Recv() (*EchoOutRequest, error)
 }
 
 // FooServiceEchoInYARPCServer sends EchoInResponses.
 type FooServiceEchoInYARPCServer interface {
 	Context() context.Context
-	Request() *transport.StreamRequest
-	SetResponse(*transport.StreamResponse)
 	Send(*EchoInResponse) error
 }
 
 // FooServiceEchoBothYARPCServer receives EchoBothRequests and sends EchoBothResponse.
 type FooServiceEchoBothYARPCServer interface {
 	Context() context.Context
-	Request() *transport.StreamRequest
-	SetResponse(*transport.StreamResponse)
 	Recv() (*EchoBothRequest, error)
 	Send(*EchoBothResponse) error
 }
@@ -413,7 +401,7 @@ type _FooYARPCHandler struct {
 	server FooYARPCServer
 }
 
-func (h *_FooYARPCHandler) EchoOut(serverStream transport.ServerStream) error {
+func (h *_FooYARPCHandler) EchoOut(serverStream *transport.ServerStream) error {
 	response, err := h.server.EchoOut(&_FooServiceEchoOutYARPCServer{serverStream: serverStream})
 	if err != nil {
 		return err
@@ -421,7 +409,7 @@ func (h *_FooYARPCHandler) EchoOut(serverStream transport.ServerStream) error {
 	return protobuf.WriteToStream(context.Background(), response, serverStream)
 }
 
-func (h *_FooYARPCHandler) EchoIn(serverStream transport.ServerStream) error {
+func (h *_FooYARPCHandler) EchoIn(serverStream *transport.ServerStream) error {
 	requestMessage, err := protobuf.ReadFromStream(context.Background(), serverStream, newFooServiceEchoInYARPCRequest)
 	if requestMessage == nil {
 		return err
@@ -434,24 +422,16 @@ func (h *_FooYARPCHandler) EchoIn(serverStream transport.ServerStream) error {
 	return h.server.EchoIn(request, &_FooServiceEchoInYARPCServer{serverStream: serverStream})
 }
 
-func (h *_FooYARPCHandler) EchoBoth(serverStream transport.ServerStream) error {
+func (h *_FooYARPCHandler) EchoBoth(serverStream *transport.ServerStream) error {
 	return h.server.EchoBoth(&_FooServiceEchoBothYARPCServer{serverStream: serverStream})
 }
 
 type _FooServiceEchoOutYARPCClient struct {
-	stream transport.ClientStream
+	stream *transport.ClientStream
 }
 
 func (c *_FooServiceEchoOutYARPCClient) Context() context.Context {
 	return c.stream.Context()
-}
-
-func (c *_FooServiceEchoOutYARPCClient) Request() *transport.StreamRequest {
-	return c.stream.Request()
-}
-
-func (c *_FooServiceEchoOutYARPCClient) Response() *transport.StreamResponse {
-	return c.stream.Response()
 }
 
 func (c *_FooServiceEchoOutYARPCClient) Send(request *EchoOutRequest) error {
@@ -474,19 +454,11 @@ func (c *_FooServiceEchoOutYARPCClient) CloseAndRecv() (*EchoOutResponse, error)
 }
 
 type _FooServiceEchoInYARPCClient struct {
-	stream transport.ClientStream
+	stream *transport.ClientStream
 }
 
 func (c *_FooServiceEchoInYARPCClient) Context() context.Context {
 	return c.stream.Context()
-}
-
-func (c *_FooServiceEchoInYARPCClient) Request() *transport.StreamRequest {
-	return c.stream.Request()
-}
-
-func (c *_FooServiceEchoInYARPCClient) Response() *transport.StreamResponse {
-	return c.stream.Response()
 }
 
 func (c *_FooServiceEchoInYARPCClient) Recv() (*EchoInResponse, error) {
@@ -502,19 +474,11 @@ func (c *_FooServiceEchoInYARPCClient) Recv() (*EchoInResponse, error) {
 }
 
 type _FooServiceEchoBothYARPCClient struct {
-	stream transport.ClientStream
+	stream *transport.ClientStream
 }
 
 func (c *_FooServiceEchoBothYARPCClient) Context() context.Context {
 	return c.stream.Context()
-}
-
-func (c *_FooServiceEchoBothYARPCClient) Request() *transport.StreamRequest {
-	return c.stream.Request()
-}
-
-func (c *_FooServiceEchoBothYARPCClient) Response() *transport.StreamResponse {
-	return c.stream.Response()
 }
 
 func (c *_FooServiceEchoBothYARPCClient) Send(request *EchoBothRequest) error {
@@ -538,19 +502,11 @@ func (c *_FooServiceEchoBothYARPCClient) CloseSend() error {
 }
 
 type _FooServiceEchoOutYARPCServer struct {
-	serverStream transport.ServerStream
+	serverStream *transport.ServerStream
 }
 
 func (s *_FooServiceEchoOutYARPCServer) Context() context.Context {
 	return s.serverStream.Context()
-}
-
-func (s *_FooServiceEchoOutYARPCServer) Request() *transport.StreamRequest {
-	return s.serverStream.Request()
-}
-
-func (s *_FooServiceEchoOutYARPCServer) SetResponse(response *transport.StreamResponse) {
-	s.serverStream.SetResponse(response)
 }
 
 func (s *_FooServiceEchoOutYARPCServer) Recv() (*EchoOutRequest, error) {
@@ -566,19 +522,11 @@ func (s *_FooServiceEchoOutYARPCServer) Recv() (*EchoOutRequest, error) {
 }
 
 type _FooServiceEchoInYARPCServer struct {
-	serverStream transport.ServerStream
+	serverStream *transport.ServerStream
 }
 
 func (s *_FooServiceEchoInYARPCServer) Context() context.Context {
 	return s.serverStream.Context()
-}
-
-func (s *_FooServiceEchoInYARPCServer) Request() *transport.StreamRequest {
-	return s.serverStream.Request()
-}
-
-func (s *_FooServiceEchoInYARPCServer) SetResponse(response *transport.StreamResponse) {
-	s.serverStream.SetResponse(response)
 }
 
 func (s *_FooServiceEchoInYARPCServer) Send(response *EchoInResponse) error {
@@ -586,19 +534,11 @@ func (s *_FooServiceEchoInYARPCServer) Send(response *EchoInResponse) error {
 }
 
 type _FooServiceEchoBothYARPCServer struct {
-	serverStream transport.ServerStream
+	serverStream *transport.ServerStream
 }
 
 func (s *_FooServiceEchoBothYARPCServer) Context() context.Context {
 	return s.serverStream.Context()
-}
-
-func (s *_FooServiceEchoBothYARPCServer) Request() *transport.StreamRequest {
-	return s.serverStream.Request()
-}
-
-func (s *_FooServiceEchoBothYARPCServer) SetResponse(response *transport.StreamResponse) {
-	s.serverStream.SetResponse(response)
 }
 
 func (s *_FooServiceEchoBothYARPCServer) Recv() (*EchoBothRequest, error) {

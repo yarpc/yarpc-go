@@ -60,8 +60,6 @@ type {{$service.GetName}}YARPCClient interface {
 // {{$service.GetName}}Service{{$method.GetName}}YARPCClient sends {{$method.RequestType.GoType $packagePath}}s and receives the single {{$method.ResponseType.GoType $packagePath}} when sending is done.
 type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
 	Context() context.Context
-	Request() *transport.StreamRequest
-	Response() *transport.StreamResponse
 	Send(*{{$method.RequestType.GoType $packagePath}}) error
 	CloseAndRecv() (*{{$method.ResponseType.GoType $packagePath}}, error)
 }
@@ -71,8 +69,6 @@ type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
 // {{$service.GetName}}Service{{$method.GetName}}YARPCClient receives {{$method.ResponseType.GoType $packagePath}}s, returning io.EOF when the stream is complete.
 type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
 	Context() context.Context
-	Request() *transport.StreamRequest
-	Response() *transport.StreamResponse
 	Recv() (*{{$method.ResponseType.GoType $packagePath}}, error)
 }
 {{end}}
@@ -81,8 +77,6 @@ type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
 // {{$service.GetName}}Service{{$method.GetName}}YARPCClient sends {{$method.RequestType.GoType $packagePath}}s and receives {{$method.ResponseType.GoType $packagePath}}s, returning io.EOF when the stream is complete.
 type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
 	Context() context.Context
-	Request() *transport.StreamRequest
-	Response() *transport.StreamResponse
 	Send(*{{$method.RequestType.GoType $packagePath}}) error
 	Recv() (*{{$method.ResponseType.GoType $packagePath}}, error)
 	CloseSend() error
@@ -114,8 +108,6 @@ type {{$service.GetName}}YARPCServer interface {
 // {{$service.GetName}}Service{{$method.GetName}}YARPCServer receives {{$method.RequestType.GoType $packagePath}}s.
 type {{$service.GetName}}Service{{$method.GetName}}YARPCServer interface {
 	Context() context.Context
-	Request() *transport.StreamRequest
-	SetResponse(*transport.StreamResponse)
 	Recv() (*{{$method.RequestType.GoType $packagePath}}, error)
 }
 {{end}}
@@ -124,8 +116,6 @@ type {{$service.GetName}}Service{{$method.GetName}}YARPCServer interface {
 // {{$service.GetName}}Service{{$method.GetName}}YARPCServer sends {{$method.ResponseType.GoType $packagePath}}s.
 type {{$service.GetName}}Service{{$method.GetName}}YARPCServer interface {
 	Context() context.Context
-	Request() *transport.StreamRequest
-	SetResponse(*transport.StreamResponse)
 	Send(*{{$method.ResponseType.GoType $packagePath}}) error
 }
 {{end}}
@@ -134,8 +124,6 @@ type {{$service.GetName}}Service{{$method.GetName}}YARPCServer interface {
 // {{$service.GetName}}Service{{$method.GetName}}YARPCServer receives {{$method.RequestType.GoType $packagePath}}s and sends {{$method.ResponseType.GoType $packagePath}}.
 type {{$service.GetName}}Service{{$method.GetName}}YARPCServer interface {
 	Context() context.Context
-	Request() *transport.StreamRequest
-	SetResponse(*transport.StreamResponse)
 	Recv() (*{{$method.RequestType.GoType $packagePath}}, error)
 	Send(*{{$method.ResponseType.GoType $packagePath}}) error
 }
@@ -292,7 +280,7 @@ func (h *_{{$service.GetName}}YARPCHandler) {{$method.GetName}}(ctx context.Cont
 }
 {{end}}
 {{range $method := clientStreamingMethods $service}}
-func (h *_{{$service.GetName}}YARPCHandler) {{$method.GetName}}(serverStream transport.ServerStream) error {
+func (h *_{{$service.GetName}}YARPCHandler) {{$method.GetName}}(serverStream *transport.ServerStream) error {
 	response, err := h.server.{{$method.GetName}}(&_{{$service.GetName}}Service{{$method.GetName}}YARPCServer{serverStream: serverStream})
 	if err != nil {
 		return err
@@ -301,7 +289,7 @@ func (h *_{{$service.GetName}}YARPCHandler) {{$method.GetName}}(serverStream tra
 }
 {{end}}
 {{range $method := serverStreamingMethods $service}}
-func (h *_{{$service.GetName}}YARPCHandler) {{$method.GetName}}(serverStream transport.ServerStream) error {
+func (h *_{{$service.GetName}}YARPCHandler) {{$method.GetName}}(serverStream *transport.ServerStream) error {
 	requestMessage, err := protobuf.ReadFromStream(context.Background(), serverStream, new{{$service.GetName}}Service{{$method.GetName}}YARPCRequest)
 	if requestMessage == nil {
         return err
@@ -315,26 +303,18 @@ func (h *_{{$service.GetName}}YARPCHandler) {{$method.GetName}}(serverStream tra
 }
 {{end}}
 {{range $method := clientServerStreamingMethods $service}}
-func (h *_{{$service.GetName}}YARPCHandler) {{$method.GetName}}(serverStream transport.ServerStream) error {
+func (h *_{{$service.GetName}}YARPCHandler) {{$method.GetName}}(serverStream *transport.ServerStream) error {
 	return h.server.{{$method.GetName}}(&_{{$service.GetName}}Service{{$method.GetName}}YARPCServer{serverStream: serverStream})
 }
 {{end}}
 
 {{range $method := clientStreamingMethods $service}}
 type _{{$service.GetName}}Service{{$method.GetName}}YARPCClient struct {
-	stream transport.ClientStream
+	stream *transport.ClientStream
 }
 
 func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Context() context.Context {
 	return c.stream.Context()
-}
-
-func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Request() *transport.StreamRequest {
-	return c.stream.Request()
-}
-
-func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Response() *transport.StreamResponse {
-	return c.stream.Response()
 }
 
 func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Send(request *{{$method.RequestType.GoType $packagePath}}) error {
@@ -359,19 +339,11 @@ func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) CloseAndRec
 
 {{range $method := serverStreamingMethods $service}}
 type _{{$service.GetName}}Service{{$method.GetName}}YARPCClient struct {
-	stream transport.ClientStream
+	stream *transport.ClientStream
 }
 
 func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Context() context.Context {
 	return c.stream.Context()
-}
-
-func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Request() *transport.StreamRequest {
-	return c.stream.Request()
-}
-
-func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Response() *transport.StreamResponse {
-	return c.stream.Response()
 }
 
 func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Recv() (*{{$method.ResponseType.GoType $packagePath}}, error) {
@@ -389,19 +361,11 @@ func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Recv() (*{{
 
 {{range $method := clientServerStreamingMethods $service}}
 type _{{$service.GetName}}Service{{$method.GetName}}YARPCClient struct {
-	stream transport.ClientStream
+	stream *transport.ClientStream
 }
 
 func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Context() context.Context {
 	return c.stream.Context()
-}
-
-func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Request() *transport.StreamRequest {
-	return c.stream.Request()
-}
-
-func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Response() *transport.StreamResponse {
-	return c.stream.Response()
 }
 
 func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Send(request *{{$method.RequestType.GoType $packagePath}}) error {
@@ -427,19 +391,11 @@ func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) CloseSend()
 
 {{range $method := clientStreamingMethods $service}}
 type _{{$service.GetName}}Service{{$method.GetName}}YARPCServer struct {
-	serverStream transport.ServerStream
+	serverStream *transport.ServerStream
 }
 
 func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Context() context.Context {
 	return s.serverStream.Context()
-}
-
-func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Request() *transport.StreamRequest {
-	return s.serverStream.Request()
-}
-
-func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) SetResponse(response *transport.StreamResponse) {
-	s.serverStream.SetResponse(response)
 }
 
 func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Recv() (*{{$method.RequestType.GoType $packagePath}}, error) {
@@ -457,19 +413,11 @@ func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Recv() (*{{
 
 {{range $method := serverStreamingMethods $service}}
 type _{{$service.GetName}}Service{{$method.GetName}}YARPCServer struct {
-	serverStream transport.ServerStream
+	serverStream *transport.ServerStream
 }
 
 func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Context() context.Context {
 	return s.serverStream.Context()
-}
-
-func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Request() *transport.StreamRequest {
-	return s.serverStream.Request()
-}
-
-func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) SetResponse(response *transport.StreamResponse) {
-	s.serverStream.SetResponse(response)
 }
 
 func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Send(response *{{$method.ResponseType.GoType $packagePath}}) error {
@@ -479,19 +427,11 @@ func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Send(respon
 
 {{range $method := clientServerStreamingMethods $service}}
 type _{{$service.GetName}}Service{{$method.GetName}}YARPCServer struct {
-	serverStream transport.ServerStream
+	serverStream *transport.ServerStream
 }
 
 func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Context() context.Context {
 	return s.serverStream.Context()
-}
-
-func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Request() *transport.StreamRequest {
-	return s.serverStream.Request()
-}
-
-func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) SetResponse(response *transport.StreamResponse) {
-	s.serverStream.SetResponse(response)
 }
 
 func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Recv() (*{{$method.RequestType.GoType $packagePath}}, error) {
