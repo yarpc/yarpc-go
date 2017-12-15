@@ -122,6 +122,6 @@ func (o *FakeOutbound) CallOneway(ctx context.Context, req *transport.Request) (
 }
 
 // CallStream pretends to send a Stream RPC, but actually just returns an error.
-func (o *FakeOutbound) CallStream(ctx context.Context, req *transport.StreamRequest) (transport.ClientStream, error) {
+func (o *FakeOutbound) CallStream(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error) {
 	return nil, fmt.Errorf(`call stream outbound is unsupported`)
 }
