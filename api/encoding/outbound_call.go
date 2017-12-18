@@ -24,6 +24,7 @@ import (
 	"context"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 // OutboundCall is an outgoing call. It holds per-call options for a request.
@@ -49,6 +50,16 @@ func NewOutboundCall(options ...CallOption) *OutboundCall {
 		opt.apply(&call)
 	}
 	return &call
+}
+
+// NewStreamOutboundCall constructs a new StreamOutboundCall with the given
+// options.
+func NewStreamOutboundCall(options ...CallOption) (*OutboundCall, error) {
+	call := NewOutboundCall(options...)
+	if call.responseHeaders != nil {
+		return nil, yarpcerrors.InvalidArgumentErrorf("response headers are not supported for streams.")
+	}
+	return call, nil
 }
 
 // WriteToRequest fills the given request with request-specific options from
