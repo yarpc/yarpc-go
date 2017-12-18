@@ -26,6 +26,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -79,4 +80,21 @@ func TestNoStreamOutbound(t *testing.T) {
 
 	assert.Contains(t, err.Error(), "code:internal")
 	assert.Contains(t, err.Error(), "no stream outbounds for OutboundConfig")
+}
+
+func TestNoResponseHeaders(t *testing.T) {
+	client := &client{
+		serviceName: "test",
+		outboundConfig: &transport.OutboundConfig{
+			Outbounds: transport.Outbounds{},
+		},
+		encoding: Encoding,
+	}
+
+	headers := make(map[string]string)
+
+	_, err := client.CallStream(context.Background(), "somemethod", yarpc.ResponseHeaders(&headers))
+
+	assert.Contains(t, err.Error(), "code:invalid-argument")
+	assert.Contains(t, err.Error(), "response headers are not supported for streams")
 }

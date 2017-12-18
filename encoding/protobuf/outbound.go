@@ -157,8 +157,11 @@ func (c *client) CallStream(
 			Encoding:  c.encoding,
 		},
 	}
-	call := apiencoding.NewOutboundCall(encoding.FromOptions(opts)...)
-	ctx, err := call.WriteToRequestMeta(ctx, streamRequest.Meta)
+	call, err := apiencoding.NewStreamOutboundCall(encoding.FromOptions(opts)...)
+	if err != nil {
+		return nil, err
+	}
+	ctx, err = call.WriteToRequestMeta(ctx, streamRequest.Meta)
 	if err != nil {
 		return nil, err
 	}

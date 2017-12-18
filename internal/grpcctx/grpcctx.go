@@ -80,7 +80,12 @@ func (c *ContextWrapper) WithEncoding(encoding string) *ContextWrapper {
 	return c.copyAndAdd("rpc-encoding", encoding)
 }
 
-func (c *ContextWrapper) copyAndAdd(key string, value string) *ContextWrapper {
+// WithHeader returns a new ContextWrapper with the given header.
+func (c *ContextWrapper) WithHeader(key, value string) *ContextWrapper {
+	return c.copyAndAdd(key, value)
+}
+
+func (c *ContextWrapper) copyAndAdd(key, value string) *ContextWrapper {
 	md := c.md
 	if md == nil {
 		md = metadata.New(nil)

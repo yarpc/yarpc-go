@@ -102,7 +102,27 @@ func newStreamHandler(handle func(*transport.ServerStream) error) *streamHandler
 }
 
 func (s *streamHandler) HandleStream(stream *transport.ServerStream) error {
-	return s.handle(stream)
+	ctx, call := apiencoding.NewInboundCallWithOptions(stream.Context(), apiencoding.DisableResponseHeaders())
+	if err := call.ReadFromRequestMeta(stream.Request().Meta); err != nil {
+		return err
+	}
+	wrappedStream, err := transport.NewServerStream(&streamWithHandlerContext{
+		Stream: stream,
+		ctx:    ctx,
+	})
+	if err != nil {
+		return err
+	}
+	return s.handle(wrappedStream)
+}
+
+type streamWithHandlerContext struct {
+	transport.Stream
+	ctx context.Context
+}
+
+func (s *streamWithHandlerContext) Context() context.Context {
+	return s.ctx
 }
 
 func getProtoRequest(ctx context.Context, transportRequest *transport.Request, newRequest func() proto.Message) (context.Context, *apiencoding.InboundCall, proto.Message, error) {

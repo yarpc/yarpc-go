@@ -30,6 +30,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
@@ -49,9 +50,10 @@ func TestIntegration(t *testing.T) {
 }
 
 func testIntegrationForTransportType(t *testing.T, transportType testutils.TransportType) {
+	expectedStreamingHeaders := transport.NewHeaders().With("firstTestKey", "firstTestValue")
 	keyValueYARPCServer := example.NewKeyValueYARPCServer()
 	sinkYARPCServer := example.NewSinkYARPCServer(true)
-	fooYARPCServer := example.NewFooYARPCServer()
+	fooYARPCServer := example.NewFooYARPCServer(expectedStreamingHeaders)
 	assert.NoError(
 		t,
 		exampleutil.WithClients(
@@ -60,7 +62,7 @@ func testIntegrationForTransportType(t *testing.T, transportType testutils.Trans
 			sinkYARPCServer,
 			fooYARPCServer,
 			func(clients *exampleutil.Clients) error {
-				testIntegration(t, clients, keyValueYARPCServer, sinkYARPCServer)
+				testIntegration(t, clients, keyValueYARPCServer, sinkYARPCServer, expectedStreamingHeaders)
 				return nil
 			},
 		),
@@ -72,6 +74,7 @@ func testIntegration(
 	clients *exampleutil.Clients,
 	keyValueYARPCServer *example.KeyValueYARPCServer,
 	sinkYARPCServer *example.SinkYARPCServer,
+	expectedStreamingHeaders transport.Headers,
 ) {
 	keyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "foo-bar", "baz"))
 	err := setValue(clients.KeyValueYARPCClient, "foo", "bar")
@@ -130,28 +133,35 @@ func testIntegration(
 	assert.NoError(t, sinkYARPCServer.WaitFireDone())
 	assert.Equal(t, []string{"foo", "bar", "baz"}, sinkYARPCServer.Values())
 
+	contextWrapper := clients.ContextWrapper
+	streamOptions := make([]yarpc.CallOption, 0, expectedStreamingHeaders.Len())
+	for k, v := range expectedStreamingHeaders.Items() {
+		streamOptions = append(streamOptions, yarpc.WithHeader(k, v))
+		contextWrapper = contextWrapper.WithHeader(k, v)
+	}
+
 	messages := []string{"foo", "bar", "baz"}
-	gotMessages, err := echoOut(clients.FooYARPCClient, messages)
+	gotMessages, err := echoOut(clients.FooYARPCClient, messages, streamOptions...)
 	assert.NoError(t, err)
 	assert.Equal(t, messages, gotMessages)
 
-	gotMessages, err = echoIn(clients.FooYARPCClient, "foo", 3)
+	gotMessages, err = echoIn(clients.FooYARPCClient, "foo", 3, streamOptions...)
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"foo", "foo", "foo"}, gotMessages)
 
-	gotMessages, err = echoBoth(clients.FooYARPCClient, "foo", 2, 2)
+	gotMessages, err = echoBoth(clients.FooYARPCClient, "foo", 2, 2, streamOptions...)
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"foo", "foo", "foo", "foo"}, gotMessages)
 
-	gotMessages, err = echoOutGRPC(clients.FooGRPCClient, clients.ContextWrapper, messages)
+	gotMessages, err = echoOutGRPC(clients.FooGRPCClient, contextWrapper, messages)
 	assert.NoError(t, err)
 	assert.Equal(t, messages, gotMessages)
 
-	gotMessages, err = echoInGRPC(clients.FooGRPCClient, clients.ContextWrapper, "foo", 3)
+	gotMessages, err = echoInGRPC(clients.FooGRPCClient, contextWrapper, "foo", 3)
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"foo", "foo", "foo"}, gotMessages)
 
-	gotMessages, err = echoBothGRPC(clients.FooGRPCClient, clients.ContextWrapper, "foo", 2, 2)
+	gotMessages, err = echoBothGRPC(clients.FooGRPCClient, contextWrapper, "foo", 2, 2)
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"foo", "foo", "foo", "foo"}, gotMessages)
 }
