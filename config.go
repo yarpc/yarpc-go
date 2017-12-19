@@ -25,11 +25,11 @@ import (
 	"time"
 
 	opentracing "github.com/opentracing/opentracing-go"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/uber-go/tally"
+	"go.uber.org/net/metrics"
+	"go.uber.org/net/metrics/tallypush"
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/internal/observability"
-	"go.uber.org/yarpc/internal/pally"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -70,32 +70,66 @@ func (c LoggingConfig) extractor() observability.ContextExtractor {
 }
 
 // MetricsConfig describes how telemetry should be configured.
+// Scope and Tally are exclusive; choose one.
+// If neither is present, metrics are not recorded, all instrumentation becomes
+// no-ops.
+// If both are present, we emit a warning and ignore Tally.
+// If a metrics scope is preseent, we use that scope to record metrics and they
+// are not pushed to Tally.
+// If Tally is present, we use its metrics scope and push them periodically.
 type MetricsConfig struct {
+	// Metrics is a *"go.uber.org/net/metrics".Scope for recording stats.
+	// YARPC does not push these metrics; pushing metrics from the root is an
+	// external concern.
+	Metrics *metrics.Scope
 	// Tally scope used for pushing to M3 or StatsD-based systems. By
 	// default, metrics are collected in memory but not pushed.
 	Tally tally.Scope
 }
 
-func (c MetricsConfig) registry(name string, logger *zap.Logger) (*pally.Registry, context.CancelFunc) {
-	r := pally.NewRegistry(
-		pally.Labeled(pally.Labels{
-			"component":  _packageName,
-			"dispatcher": pally.ScrubLabelValue(name),
-		}),
-		// Also expose all YARPC metrics via the default Prometheus registry.
-		pally.Federated(prometheus.DefaultRegisterer),
-	)
-
-	if c.Tally == nil {
-		return r, func() {}
+func (c MetricsConfig) scope(name string, logger *zap.Logger) (*metrics.Scope, context.CancelFunc) {
+	// Neither: no-op metrics, not pushed
+	if c.Metrics == nil && c.Tally == nil {
+		return nil, func() {}
 	}
 
-	stop, err := r.Push(c.Tally, _tallyPushInterval)
+	// Both: ignore Tally and warn.
+	if c.Metrics != nil && c.Tally != nil {
+		logger.Warn("yarpc.NewDispatcher expects only one of Metrics.Tally or Metrics.Scope. " +
+			"To push to Tally, either use a Metrics.Scope and use tallypush, or just pass a Tally Scope")
+		c.Tally = nil
+	}
+
+	// Hereafter: We have one of either c.Metrics or c.Tally exclusively.
+
+	var root *metrics.Root    // For pushing, if present
+	var parent *metrics.Scope // For measuring
+
+	if c.Metrics != nil {
+		// root remains nil
+		parent = c.Metrics
+	} else { // c.Tally != nil
+		root = metrics.New()
+		parent = root.Scope()
+	}
+
+	meter := parent.Tagged(metrics.Tags{
+		"component":  _packageName,
+		"dispatcher": name,
+	})
+
+	// When we have c.Metrics, we do not push
+	if root == nil {
+		return meter, func() {}
+	}
+
+	// When we have c.Tally, we measure *and* push
+	stopMeter, err := root.Push(tallypush.New(c.Tally), _tallyPushInterval)
 	if err != nil {
 		logger.Error("Failed to start pushing metrics to Tally.", zap.Error(err))
-		return r, func() {}
+		return meter, func() {}
 	}
-	return r, stop
+	return meter, stopMeter
 }
 
 // Config specifies the parameters of a new Dispatcher constructed via
