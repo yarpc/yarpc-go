@@ -46,7 +46,7 @@ func NewInboundCall(ctx context.Context) (context.Context, *InboundCall) {
 	return NewInboundCallWithOptions(ctx)
 }
 
-// InboundCallOption is an option for configuring an InboundCall
+// InboundCallOption is an option for configuring an InboundCall.
 type InboundCallOption interface {
 	apply(call *InboundCall)
 }

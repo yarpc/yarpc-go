@@ -52,12 +52,12 @@ func NewOutboundCall(options ...CallOption) *OutboundCall {
 	return &call
 }
 
-// NewStreamOutboundCall constructs a new StreamOutboundCall with the given
-// options.
+// NewStreamOutboundCall constructs a new OutboundCall with the given
+// options and enforces the OutboundCall is valid for streams.
 func NewStreamOutboundCall(options ...CallOption) (*OutboundCall, error) {
 	call := NewOutboundCall(options...)
 	if call.responseHeaders != nil {
-		return nil, yarpcerrors.InvalidArgumentErrorf("response headers are not supported for streams.")
+		return nil, yarpcerrors.InvalidArgumentErrorf("response headers are not supported for streams")
 	}
 	return call, nil
 }

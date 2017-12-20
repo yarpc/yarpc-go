@@ -183,6 +183,6 @@ func TestStreamOutboundCallCannotReadFromResponse(t *testing.T) {
 	call, err := NewStreamOutboundCall(ResponseHeaders(&headers))
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "code:invalid-argument")
-	assert.Contains(t, err.Error(), "response headers are not supported for streams.")
+	assert.Contains(t, err.Error(), "response headers are not supported for streams")
 	assert.Nil(t, call)
 }

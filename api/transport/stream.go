@@ -27,18 +27,16 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
-// StreamRequest is used to establish a streaming request.  It contains basic
-// Metadata information, and any Stream-specfic configuration for creating a
-// stream.
+// StreamRequest represents a streaming request.  It contains basic stream
+// metadata.
 type StreamRequest struct {
 	Meta *RequestMeta
 }
 
-type serverStreamOpts struct{}
-
-// ServerStreamOption are options to configure a ServerStream
+// ServerStreamOption are options to configure a ServerStream.
+// There are no current ServerStreamOptions implemented.
 type ServerStreamOption interface {
-	apply(*serverStreamOpts)
+	unimplemented()
 }
 
 // NewServerStream will create a new ServerStream.
@@ -77,15 +75,14 @@ func (s *ServerStream) ReceiveMessage(ctx context.Context) (*StreamMessage, erro
 	return s.stream.ReceiveMessage(ctx)
 }
 
-type clientStreamOpts struct{}
-
 // ClientStreamOption is an option for configuring a client stream.
+// There are no current ClientStreamOptions implemented.
 type ClientStreamOption interface {
-	apply(*clientStreamOpts)
+	unimplemented()
 }
 
 // NewClientStream will create a new ClientStream.
-func NewClientStream(s StreamWithClose, options ...ClientStreamOption) (*ClientStream, error) {
+func NewClientStream(s StreamCloser, options ...ClientStreamOption) (*ClientStream, error) {
 	if s == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("non-nil stream with close is required")
 	}
@@ -94,7 +91,7 @@ func NewClientStream(s StreamWithClose, options ...ClientStreamOption) (*ClientS
 
 // ClientStream represents the Client API of interacting with a Stream.
 type ClientStream struct {
-	stream StreamWithClose
+	stream StreamCloser
 }
 
 // Context returns the context for the stream.
@@ -128,15 +125,15 @@ func (s *ClientStream) Close(ctx context.Context) error {
 	return s.stream.Close(ctx)
 }
 
-// StreamWithClose represents an API of interacting with a Stream that is
+// StreamCloser represents an API of interacting with a Stream that is
 // closable.
-type StreamWithClose interface {
+type StreamCloser interface {
 	Stream
 
 	// Close will close the connection. It blocks until the server has
-	// acknowledged the close. In certain implementations, the timeout on the
-	// context will be used to timeout the request. If the server timed out the
-	// connection will be forced closed by the client.
+	// acknowledged the close. The provided context controls the timeout for
+	// this operation if the implementation supports it. If the server timed out
+	// the connection will be forced closed by the client.
 	Close(context.Context) error
 }
 
