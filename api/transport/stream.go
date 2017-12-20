@@ -30,26 +30,50 @@ import (
 // StreamRequest represents a streaming request.  It contains basic stream
 // metadata.
 type StreamRequest struct {
-	Meta *RequestMeta
+	Meta    *RequestMeta
+	Context context.Context
+}
+
+type StreamResponseHeaderProvider interface {
+	SetResponseHeaders(Headers) error
+}
+
+func WithStreamResponseHeaderProvider(s StreamResponseHeaderProvider) ServerStreamOption {
+	return serverStreamOptionFunc(func(opts *serverStreamOpts) {
+		opts.responseHeaderProvider = s
+	})
+}
+
+type serverStreamOpts struct {
+	responseHeaderProvider StreamResponseHeaderProvider
 }
 
 // ServerStreamOption are options to configure a ServerStream.
 // There are no current ServerStreamOptions implemented.
 type ServerStreamOption interface {
-	unimplemented()
+	apply(opts *serverStreamOpts)
 }
+
+type serverStreamOptionFunc func(*serverStreamOpts)
+
+func (s serverStreamOptionFunc) apply(opts *serverStreamOpts) { s(opts) }
 
 // NewServerStream will create a new ServerStream.
 func NewServerStream(s Stream, options ...ServerStreamOption) (*ServerStream, error) {
 	if s == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("non-nil stream is required")
 	}
-	return &ServerStream{stream: s}, nil
+	opts := serverStreamOpts{}
+	for _, option := range options {
+		option.apply(&opts)
+	}
+	return &ServerStream{stream: s, opts: opts}, nil
 }
 
 // ServerStream represents the Server API of interacting with a Stream.
 type ServerStream struct {
 	stream Stream
+	opts   serverStreamOpts
 }
 
 // Context returns the context for the stream.
@@ -75,23 +99,50 @@ func (s *ServerStream) ReceiveMessage(ctx context.Context) (*StreamMessage, erro
 	return s.stream.ReceiveMessage(ctx)
 }
 
+func (s *ServerStream) GetResponseHeaderProvider() (_ StreamResponseHeaderProvider, ok bool) {
+	return s.opts.responseHeaderProvider, s.opts.responseHeaderProvider != nil
+}
+
+type StreamResponseHeaderReader interface {
+	GetResponseHeaders() (Headers, error)
+}
+
+func WithStreamResponseHeaderReader(s StreamResponseHeaderReader) ClientStreamOption {
+	return clientStreamOptionFunc(func(opts *clientStreamOpts) {
+		opts.responseHeaderReader = s
+	})
+}
+
+type clientStreamOpts struct {
+	responseHeaderReader StreamResponseHeaderReader
+}
+
 // ClientStreamOption is an option for configuring a client stream.
 // There are no current ClientStreamOptions implemented.
 type ClientStreamOption interface {
-	unimplemented()
+	apply(*clientStreamOpts)
 }
+
+type clientStreamOptionFunc func(*clientStreamOpts)
+
+func (s clientStreamOptionFunc) apply(opts *clientStreamOpts) { s(opts) }
 
 // NewClientStream will create a new ClientStream.
 func NewClientStream(s StreamCloser, options ...ClientStreamOption) (*ClientStream, error) {
 	if s == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("non-nil stream with close is required")
 	}
-	return &ClientStream{stream: s}, nil
+	opts := clientStreamOpts{}
+	for _, option := range options {
+		option.apply(&opts)
+	}
+	return &ClientStream{stream: s, opts: opts}, nil
 }
 
 // ClientStream represents the Client API of interacting with a Stream.
 type ClientStream struct {
 	stream StreamCloser
+	opts   clientStreamOpts
 }
 
 // Context returns the context for the stream.
@@ -123,6 +174,10 @@ func (s *ClientStream) ReceiveMessage(ctx context.Context) (*StreamMessage, erro
 // connection will be forced closed by the client.
 func (s *ClientStream) Close(ctx context.Context) error {
 	return s.stream.Close(ctx)
+}
+
+func (s *ClientStream) GetResponseHeaderReader() (_ StreamResponseHeaderReader, ok bool) {
+	return s.opts.responseHeaderReader, s.opts.responseHeaderReader != nil
 }
 
 // StreamCloser represents an API of interacting with a Stream that is

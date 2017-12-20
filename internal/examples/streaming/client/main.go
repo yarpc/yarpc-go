@@ -24,11 +24,14 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"time"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/encoding"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/examples/streaming"
 	"go.uber.org/yarpc/transport/grpc"
 )
@@ -40,11 +43,14 @@ func main() {
 }
 
 func do() error {
+	var outbound transport.StreamOutbound
+	outbound = grpc.NewTransport().NewSingleOutbound("127.0.0.1:24039")
+
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "keyvalue-client",
 		Outbounds: yarpc.Outbounds{
 			"keyvalue": {
-				Stream: grpc.NewTransport().NewSingleOutbound("127.0.0.1:24039"),
+				Stream: outbound,
 			},
 		},
 	})
@@ -58,18 +64,51 @@ func do() error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	stream, err := client.HelloThere(ctx, yarpc.WithHeader("test", "testtest"))
+	streamCtx, cancel2 := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel2()
+	responseReader := &encoding.ResponseHeaderReader{}
+	stream, err := client.HelloThere(
+		ctx,
+		yarpc.WithHeader("clientheader", "testtest"),
+		yarpc.CallOption(encoding.WithStreamContext(streamCtx)),
+		yarpc.CallOption(encoding.WithResponseHeaderReader(responseReader)),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to create stream: %s", err.Error())
 	}
 
+	defer fmt.Println("")
+	defer func() {
+		_, err := stream.Recv()
+		if err != io.EOF {
+			fmt.Println("invalid end of stream")
+			return
+		}
+		headers, err := responseReader.GetResponseHeaders()
+		if err != nil {
+			fmt.Println("error getting response headers")
+			return
+		}
+		fmt.Println("Got response headers:", headers)
+	}()
+
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Printf(">>> ")
-	defer fmt.Println("")
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line == "stop" {
-			return stream.CloseSend()
+			err := stream.CloseSend()
+			if err != nil {
+				fmt.Println("error sending close: ", err)
+				return err
+			}
+			for {
+				msg, err := stream.Recv()
+				if err != nil {
+					return err
+				}
+				fmt.Printf("got response after close: %q\n", msg.Id)
+			}
 		}
 
 		fmt.Printf("sending message: %q\n", line)

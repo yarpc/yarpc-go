@@ -175,7 +175,7 @@ func (c *client) CallStream(
 	if err != nil {
 		return nil, err
 	}
-	ctx, err = call.WriteToRequestMeta(ctx, streamRequest.Meta)
+	ctx, err = call.WriteToStreamRequest(ctx, streamRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -189,6 +189,9 @@ func (c *client) CallStream(
 	stream, err := streamOutbound.CallStream(ctx, streamRequest)
 	if err != nil {
 		return nil, err
+	}
+	if reader, ok := stream.GetResponseHeaderReader(); ok {
+		call.SetStreamResponseReader(reader)
 	}
 	return &ClientStream{stream: stream}, nil
 }

@@ -117,3 +117,21 @@ func (ic *InboundCall) WriteToResponse(resw transport.ResponseWriter) error {
 
 	return nil
 }
+
+// WriteToResponse writes response information from the InboundCall onto the
+// given ResponseWriter.
+//
+// If used, this must be called before writing the response body to the
+// ResponseWriter.
+func (ic *InboundCall) WriteToStreamResponseProvider(provider transport.StreamResponseHeaderProvider) error {
+	var headers transport.Headers
+	for _, h := range ic.resHeaders {
+		headers = headers.With(h.k, h.v)
+	}
+
+	if headers.Len() > 0 {
+		return provider.SetResponseHeaders(headers)
+	}
+
+	return nil
+}

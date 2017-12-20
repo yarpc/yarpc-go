@@ -41,6 +41,14 @@ type OutboundCall struct {
 
 	// If non-nil, response headers should be written here.
 	responseHeaders *map[string]string
+
+	// error is set if a stream param is used in a unary Call
+	err error
+
+	// Only for streams
+	isStream             bool
+	streamContext        context.Context
+	streamResponseReader *ResponseHeaderReader
 }
 
 // NewOutboundCall constructs a new OutboundCall with the given options.
@@ -55,11 +63,15 @@ func NewOutboundCall(options ...CallOption) *OutboundCall {
 // NewStreamOutboundCall constructs a new OutboundCall with the given
 // options and enforces the OutboundCall is valid for streams.
 func NewStreamOutboundCall(options ...CallOption) (*OutboundCall, error) {
-	call := NewOutboundCall(options...)
+	var call OutboundCall
+	call.isStream = true
+	for _, opt := range options {
+		opt.apply(&call)
+	}
 	if call.responseHeaders != nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("response headers are not supported for streams")
 	}
-	return call, nil
+	return &call, nil
 }
 
 // WriteToRequest fills the given request with request-specific options from
@@ -67,6 +79,10 @@ func NewStreamOutboundCall(options ...CallOption) (*OutboundCall, error) {
 //
 // The context MAY be replaced by the OutboundCall.
 func (c *OutboundCall) WriteToRequest(ctx context.Context, req *transport.Request) (context.Context, error) {
+	if c.err != nil {
+		return nil, c.err
+	}
+
 	for _, h := range c.headers {
 		req.Headers = req.Headers.With(h.k, h.v)
 	}
@@ -91,6 +107,10 @@ func (c *OutboundCall) WriteToRequest(ctx context.Context, req *transport.Reques
 //
 // The context MAY be replaced by the OutboundCall.
 func (c *OutboundCall) WriteToRequestMeta(ctx context.Context, reqMeta *transport.RequestMeta) (context.Context, error) {
+	if c.err != nil {
+		return nil, c.err
+	}
+
 	for _, h := range c.headers {
 		reqMeta.Headers = reqMeta.Headers.With(h.k, h.v)
 	}
@@ -110,10 +130,47 @@ func (c *OutboundCall) WriteToRequestMeta(ctx context.Context, reqMeta *transpor
 	return ctx, nil
 }
 
+// WriteToStreamRequest fills the given request with request-specific options from
+// the call.
+//
+// The context MAY be replaced by the OutboundCall.
+func (c *OutboundCall) WriteToStreamRequest(ctx context.Context, req *transport.StreamRequest) (context.Context, error) {
+	if c.err != nil {
+		return nil, c.err
+	}
+
+	if req.Meta == nil {
+		req.Meta = &transport.RequestMeta{}
+	}
+	req.Context = c.streamContext
+
+	for _, h := range c.headers {
+		req.Meta.Headers = req.Meta.Headers.With(h.k, h.v)
+	}
+
+	if c.shardKey != nil {
+		req.Meta.ShardKey = *c.shardKey
+	}
+	if c.routingKey != nil {
+		req.Meta.RoutingKey = *c.routingKey
+	}
+	if c.routingDelegate != nil {
+		req.Meta.RoutingDelegate = *c.routingDelegate
+	}
+
+	// NB(abg): context and error are unused for now but we want to leave room
+	// for CallOptions which can fail or modify the context.
+	return ctx, nil
+}
+
 // ReadFromResponse reads information from the response for this call.
 //
 // This should be called only if the request is unary.
 func (c *OutboundCall) ReadFromResponse(ctx context.Context, res *transport.Response) (context.Context, error) {
+	if c.err != nil {
+		return nil, c.err
+	}
+
 	// We're not using ctx right now but we may in the future.
 	if c.responseHeaders != nil && res.Headers.Len() > 0 {
 		// We make a copy of the response headers because Headers.Items() must
@@ -128,4 +185,12 @@ func (c *OutboundCall) ReadFromResponse(ctx context.Context, res *transport.Resp
 	// NB(abg): context and error are unused for now but we want to leave room
 	// for CallOptions which can fail or modify the context.
 	return ctx, nil
+}
+
+func (c *OutboundCall) SetStreamResponseReader(r transport.StreamResponseHeaderReader) error {
+	if c.streamResponseReader == nil {
+		return nil // Noop
+	}
+	c.streamResponseReader.Reader = r
+	return nil
 }

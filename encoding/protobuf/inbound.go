@@ -102,7 +102,7 @@ func newStreamHandler(handle func(*ServerStream) error) *streamHandler {
 }
 
 func (s *streamHandler) HandleStream(stream *transport.ServerStream) error {
-	ctx, call := apiencoding.NewInboundCallWithOptions(stream.Context(), apiencoding.DisableResponseHeaders())
+	ctx, call := apiencoding.NewInboundCallWithOptions(stream.Context())
 	if err := call.ReadFromRequestMeta(stream.Request().Meta); err != nil {
 		return err
 	}
@@ -110,7 +110,15 @@ func (s *streamHandler) HandleStream(stream *transport.ServerStream) error {
 		ctx:    ctx,
 		stream: stream,
 	}
-	return s.handle(protoStream)
+	err := s.handle(protoStream)
+	if err != nil {
+		return err
+	}
+	responseHeaderProvider, ok := stream.GetResponseHeaderProvider()
+	if !ok {
+		return err
+	}
+	return call.WriteToStreamResponseProvider(responseHeaderProvider)
 }
 
 func getProtoRequest(ctx context.Context, transportRequest *transport.Request, newRequest func() proto.Message) (context.Context, *apiencoding.InboundCall, proto.Message, error) {

@@ -20,6 +20,12 @@
 
 package encoding
 
+import (
+	"context"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/yarpcerrors"
+)
+
 // CallOption defines options that may be passed in at call sites to other
 // services.
 //
@@ -54,4 +60,40 @@ func WithRoutingKey(rk string) CallOption {
 // WithRoutingDelegate sets the routing delegate for the request.
 func WithRoutingDelegate(rd string) CallOption {
 	return CallOption{func(o *OutboundCall) { o.routingDelegate = &rd }}
+}
+
+// WithStreamContext sets the context for a whole stream
+func WithStreamContext(ctx context.Context) CallOption {
+	return CallOption{func(o *OutboundCall) {
+		if o.isStream {
+			o.streamContext = ctx
+		} else {
+			o.err = yarpcerrors.InvalidArgumentErrorf("cannot set stream context on non-stream outbound")
+		}
+	}}
+}
+
+func WithResponseHeaderReader(reader *ResponseHeaderReader) CallOption {
+	return CallOption{func(o *OutboundCall) {
+		if o.isStream {
+			o.streamResponseReader = reader
+		} else {
+			o.err = yarpcerrors.InvalidArgumentErrorf("cannot set stream response reader on non-stream outbound")
+		}
+	}}
+}
+
+type ResponseHeaderReader struct {
+	Reader transport.StreamResponseHeaderReader
+}
+
+func (r *ResponseHeaderReader) GetResponseHeaders() (map[string]string, error) {
+	if r.Reader == nil {
+		return nil, yarpcerrors.InternalErrorf("no response header reader has been set")
+	}
+	headers, err := r.Reader.GetResponseHeaders()
+	if err != nil {
+		return nil, err
+	}
+	return headers.Items(), nil
 }
