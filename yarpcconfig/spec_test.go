@@ -46,11 +46,13 @@ func TestCompileTransportSpec(t *testing.T) {
 
 		supportsUnary  bool
 		supportsOneway bool
+		supportsStream bool
 
 		transportInput      reflect.Type
 		inboundInput        reflect.Type
 		unaryOutboundInput  reflect.Type
 		onewayOutboundInput reflect.Type
+		streamOutboundInput reflect.Type
 
 		wantErr []string
 	}{
@@ -69,6 +71,11 @@ func TestCompileTransportSpec(t *testing.T) {
 			wantErr: []string{`transport name cannot be "Oneway"`},
 		},
 		{
+			desc:    "reserved name 3",
+			spec:    TransportSpec{Name: "Stream"},
+			wantErr: []string{`transport name cannot be "Stream"`},
+		},
+		{
 			desc:    "missing BuildTransport",
 			spec:    TransportSpec{Name: "foo"},
 			wantErr: []string{"BuildTransport is required"},
@@ -81,6 +88,7 @@ func TestCompileTransportSpec(t *testing.T) {
 				BuildInbound:        func(transport.Transport) (transport.UnaryOutbound, error) { panic("kthxbye") },
 				BuildUnaryOutbound:  func(struct{}, transport.Inbound, *Kit) (transport.UnaryOutbound, error) { panic("kthxbye") },
 				BuildOnewayOutbound: func(struct{}) (transport.OnewayOutbound, error) { panic("kthxbye") },
+				BuildStreamOutbound: func(struct{}) (transport.StreamOutbound, error) { panic("kthxbye") },
 			},
 			wantErr: []string{
 				"invalid BuildTransport func(struct {}, *yarpcconfig.Kit) (transport.Inbound, error): " +
@@ -88,6 +96,7 @@ func TestCompileTransportSpec(t *testing.T) {
 				"invalid BuildInbound: must accept exactly three arguments, found 1",
 				"invalid BuildUnaryOutbound: must accept a transport.Transport as its second argument, found transport.Inbound",
 				"invalid BuildOnewayOutbound: must accept exactly three arguments, found 1",
+				"invalid BuildStreamOutbound: must accept exactly three arguments, found 1",
 			},
 		},
 		{
@@ -121,6 +130,17 @@ func TestCompileTransportSpec(t *testing.T) {
 			transportInput:      reflect.TypeOf(&cavalry{}),
 			supportsOneway:      true,
 			onewayOutboundInput: _typeOfEmptyStruct,
+		},
+		{
+			desc: "stream outbound only",
+			spec: TransportSpec{
+				Name:                "arise-riders-of-theoden",
+				BuildTransport:      func(*cavalry, *Kit) (transport.Transport, error) { panic("kthxbye") },
+				BuildStreamOutbound: func(struct{}, transport.Transport, *Kit) (transport.StreamOutbound, error) { panic("kthxbye") },
+			},
+			transportInput:      reflect.TypeOf(&cavalry{}),
+			supportsStream:      true,
+			streamOutboundInput: _typeOfEmptyStruct,
 		},
 		{
 			desc: "bad peer chooser preset",
@@ -187,6 +207,7 @@ func TestCompileTransportSpec(t *testing.T) {
 			assert.Equal(t, tt.transportInput, ts.Transport.inputType)
 			assert.Equal(t, tt.supportsUnary, ts.SupportsUnaryOutbound())
 			assert.Equal(t, tt.supportsOneway, ts.SupportsOnewayOutbound())
+			assert.Equal(t, tt.supportsStream, ts.SupportsStreamOutbound())
 
 			if ts.Inbound != nil {
 				assert.Equal(t, tt.inboundInput, ts.Inbound.inputType)
@@ -196,6 +217,9 @@ func TestCompileTransportSpec(t *testing.T) {
 			}
 			if ts.OnewayOutbound != nil {
 				assert.Equal(t, tt.onewayOutboundInput, ts.OnewayOutbound.inputType)
+			}
+			if ts.StreamOutbound != nil {
+				assert.Equal(t, tt.streamOutboundInput, ts.StreamOutbound.inputType)
 			}
 		})
 	}
@@ -683,6 +707,41 @@ func TestCompilePeerChooserSpec(t *testing.T) {
 				assert.Equal(t, tt.wantErr, err.Error(), "expected error")
 			} else {
 				assert.Equal(t, tt.wantName, s.Name, "expected name")
+			}
+		})
+	}
+}
+
+func TestCompileStreamOutboundConfig(t *testing.T) {
+	tests := []struct {
+		desc          string
+		build         interface{}
+		wantInputType reflect.Type
+		wantErr       string
+	}{
+		{
+			desc:    "incorrect return type",
+			build:   func(struct{}, transport.Transport, *Kit) (transport.Inbound, error) { panic("kthxbye") },
+			wantErr: "invalid BuildStreamOutbound: must return a transport.StreamOutbound as its first result, found transport.Inbound",
+		},
+		{
+			desc:          "valid: struct{}",
+			build:         func(struct{}, transport.Transport, *Kit) (transport.StreamOutbound, error) { panic("kthxbye") },
+			wantInputType: _typeOfEmptyStruct,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			cs, err := compileStreamOutboundConfig(tt.build)
+
+			if tt.wantErr == "" {
+				assert.Equal(t, tt.wantInputType, cs.inputType, "input type mismatch")
+				assert.NoError(t, err, "expected success")
+				return
+			}
+
+			if assert.Error(t, err, "expected failure") {
+				assert.Contains(t, err.Error(), tt.wantErr)
 			}
 		})
 	}

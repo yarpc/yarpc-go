@@ -298,7 +298,7 @@ func (c *Configurator) loadInboundInto(b *builder, i inbound) error {
 
 func (c *Configurator) loadOutboundInto(b *builder, name string, cfg outbounds) error {
 	// This matches the signature of builder.AddImplicitOutbound,
-	// AddUnaryOutbound and AddOnewayOutbound
+	// AddUnaryOutbound, AddOnewayOutbound and AddStreamOutbound
 	type adder func(*compiledTransportSpec, string, string, config.AttributeMap) error
 
 	loadUsing := func(o *outbound, adder adder) error {
@@ -326,6 +326,12 @@ func (c *Configurator) loadOutboundInto(b *builder, name string, cfg outbounds) 
 
 	if oneway := cfg.Oneway; oneway != nil {
 		if err := loadUsing(oneway, b.AddOnewayOutbound); err != nil {
+			return err
+		}
+	}
+
+	if stream := cfg.Stream; stream != nil {
+		if err := loadUsing(stream, b.AddStreamOutbound); err != nil {
 			return err
 		}
 	}
