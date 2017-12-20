@@ -39,14 +39,18 @@ type call struct {
 	extract ContextExtractor
 	fields  [5]zapcore.Field
 
-	started time.Time
-	ctx     context.Context
-	req     *transport.Request
-	rpcType transport.Type
-	inbound bool
+	started   time.Time
+	ctx       context.Context
+	req       *transport.Request
+	rpcType   transport.Type
+	direction directionName
 }
 
-func (c call) End(err error, isApplicationError bool) {
+func (c call) End(err error) {
+	c.EndWithAppError(err, false)
+}
+
+func (c call) EndWithAppError(err error, isApplicationError bool) {
 	elapsed := _timeNow().Sub(c.started)
 	c.endLogs(elapsed, err, isApplicationError)
 	c.endStats(elapsed, err, isApplicationError)
@@ -54,7 +58,7 @@ func (c call) End(err error, isApplicationError bool) {
 
 func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool) {
 	msg := "Handled inbound request."
-	if !c.inbound {
+	if c.direction != _directionInbound {
 		msg = "Made outbound call."
 	}
 	ce := c.edge.logger.Check(zap.DebugLevel, msg)

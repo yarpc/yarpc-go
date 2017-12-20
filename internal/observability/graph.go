@@ -89,9 +89,13 @@ var (
 		7500 * _ms,
 		10000 * _ms,
 	}
+)
 
-	_directionOutbound = "outbound"
-	_directionInbound  = "inbound"
+type directionName string
+
+const (
+	_directionOutbound directionName = "outbound"
+	_directionInbound  directionName = "inbound"
 )
 
 // A graph represents a collection of services: each service is a node, and we
@@ -115,12 +119,8 @@ func newGraph(reg *pally.Registry, logger *zap.Logger, extract ContextExtractor)
 }
 
 // begin starts a call along an edge.
-func (g *graph) begin(ctx context.Context, rpcType transport.Type, isInbound bool, req *transport.Request) call {
+func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction directionName, req *transport.Request) call {
 	now := _timeNow()
-	direction := _directionOutbound
-	if isInbound {
-		direction = _directionInbound
-	}
 
 	d := digester.New()
 	d.Add(req.Caller)
@@ -129,18 +129,18 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, isInbound boo
 	d.Add(req.Procedure)
 	d.Add(req.RoutingKey)
 	d.Add(req.RoutingDelegate)
-	d.Add(direction)
-	e := g.getOrCreateEdge(d.Digest(), req, direction)
+	d.Add(string(direction))
+	e := g.getOrCreateEdge(d.Digest(), req, string(direction))
 	d.Free()
 
 	return call{
-		edge:    e,
-		extract: g.extract,
-		started: now,
-		ctx:     ctx,
-		req:     req,
-		rpcType: rpcType,
-		inbound: isInbound,
+		edge:      e,
+		extract:   g.extract,
+		started:   now,
+		ctx:       ctx,
+		req:       req,
+		rpcType:   rpcType,
+		direction: direction,
 	}
 }
 

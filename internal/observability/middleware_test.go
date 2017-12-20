@@ -54,6 +54,7 @@ func TestMiddlewareLogging(t *testing.T) {
 		RoutingDelegate: "routing-delegate",
 		Body:            strings.NewReader("body"),
 	}
+	sreq := &transport.StreamRequest{Meta: req.ToRequestMeta()}
 	failed := errors.New("fail")
 
 	baseFields := func() []zapcore.Field {
@@ -124,7 +125,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			checkErr(err)
 			logContext := append(
 				baseFields(),
-				zap.String("direction", _directionInbound),
+				zap.String("direction", string(_directionInbound)),
 				zap.String("rpcType", "Unary"),
 			)
 			logContext = append(logContext, tt.wantFields...)
@@ -145,7 +146,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			}
 			logContext := append(
 				baseFields(),
-				zap.String("direction", _directionOutbound),
+				zap.String("direction", string(_directionOutbound)),
 				zap.String("rpcType", "Unary"),
 			)
 			logContext = append(logContext, tt.wantFields...)
@@ -163,7 +164,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			checkErr(err)
 			logContext := append(
 				baseFields(),
-				zap.String("direction", _directionInbound),
+				zap.String("direction", string(_directionInbound)),
 				zap.String("rpcType", "Oneway"),
 			)
 			logContext = append(logContext, tt.wantFields...)
@@ -181,12 +182,53 @@ func TestMiddlewareLogging(t *testing.T) {
 			checkErr(err)
 			logContext := append(
 				baseFields(),
-				zap.String("direction", _directionOutbound),
+				zap.String("direction", string(_directionOutbound)),
 				zap.String("rpcType", "Oneway"),
 			)
 			logContext = append(logContext, tt.wantFields...)
 			if tt.err == nil {
 				assert.NotNil(t, ack, "Expected non-nil ack if call is successful.")
+			}
+			expected := observer.LoggedEntry{
+				Entry: zapcore.Entry{
+					Level:   zapcore.DebugLevel,
+					Message: "Made outbound call.",
+				},
+				Context: logContext,
+			}
+			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
+		})
+		t.Run(tt.desc+", stream inbound", func(t *testing.T) {
+			stream, err := transport.NewServerStream(&fakeStream{ctx: context.Background(), request: sreq})
+			require.NoError(t, err)
+			err = mw.HandleStream(stream, fakeHandler{tt.err, false})
+			checkErr(err)
+			logContext := append(
+				baseFields(),
+				zap.String("direction", string(_directionInbound)),
+				zap.String("rpcType", "Streaming"),
+			)
+			logContext = append(logContext, tt.wantFields...)
+			expected := observer.LoggedEntry{
+				Entry: zapcore.Entry{
+					Level:   zapcore.DebugLevel,
+					Message: "Handled inbound request.",
+				},
+				Context: logContext,
+			}
+			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
+		})
+		t.Run(tt.desc+", stream outbound", func(t *testing.T) {
+			clientStream, err := mw.CallStream(context.Background(), sreq, fakeOutbound{err: tt.err})
+			checkErr(err)
+			logContext := append(
+				baseFields(),
+				zap.String("direction", string(_directionOutbound)),
+				zap.String("rpcType", "Streaming"),
+			)
+			logContext = append(logContext, tt.wantFields...)
+			if tt.err == nil {
+				assert.NotNil(t, clientStream, "Expected non-nil clientStream if call is successful.")
 			}
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
@@ -284,12 +326,12 @@ func TestMiddlewareMetrics(t *testing.T) {
 				&transporttest.FakeResponseWriter{},
 				fakeHandler{tt.err, tt.applicationErr},
 			)
-			validate(mw, _directionInbound)
+			validate(mw, string(_directionInbound))
 		})
 		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
 			mw := NewMiddleware(zap.NewNop(), pally.NewRegistry(), NewNopContextExtractor())
 			mw.Call(context.Background(), req, fakeOutbound{err: tt.err})
-			validate(mw, _directionOutbound)
+			validate(mw, string(_directionOutbound))
 		})
 	}
 }
@@ -329,7 +371,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		zap.String("encoding", string(req.Encoding)),
 		zap.String("routingKey", req.RoutingKey),
 		zap.String("routingDelegate", req.RoutingDelegate),
-		zap.String("direction", _directionInbound),
+		zap.String("direction", string(_directionInbound)),
 		zap.String("rpcType", "Unary"),
 		zap.Duration("latency", 0),
 		zap.Bool("successful", false),
