@@ -56,6 +56,7 @@ type HelloServiceHelloOutStreamYARPCClient interface {
 type HelloServiceHelloInStreamYARPCClient interface {
 	Context() context.Context
 	Recv(...yarpc.StreamOption) (*HelloResponse, error)
+	CloseSend(...yarpc.StreamOption) error
 }
 
 // HelloServiceHelloThereYARPCClient sends HelloRequests and receives HelloResponses, returning io.EOF when the stream is complete.
@@ -287,6 +288,10 @@ func (c *_HelloServiceHelloInStreamYARPCClient) Recv(options ...yarpc.StreamOpti
 		return nil, protobuf.CastError(emptyHelloServiceHelloInStreamYARPCResponse, responseMessage)
 	}
 	return response, err
+}
+
+func (c *_HelloServiceHelloInStreamYARPCClient) CloseSend(options ...yarpc.StreamOption) error {
+	return c.stream.Close(context.Background())
 }
 
 type _HelloServiceHelloThereYARPCClient struct {
