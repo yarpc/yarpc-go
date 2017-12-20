@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -74,6 +75,12 @@ func (ss *serverStream) ReceiveMessage(_ context.Context) (*transport.StreamMess
 		return nil, toYARPCStreamError(err)
 	}
 	return &transport.StreamMessage{Body: ioutil.NopCloser(bytes.NewReader(msg))}, nil
+}
+
+func (ss *serverStream) SetResponseHeaders(headers transport.Headers) error {
+	md := metadata.New(headers.Items())
+	ss.stream.SetTrailer(md)
+	return nil
 }
 
 type clientStream struct {
@@ -132,6 +139,15 @@ func (cs *clientStream) ReceiveMessage(context.Context) (*transport.StreamMessag
 func (cs *clientStream) Close(context.Context) error {
 	_ = cs.closeWithErr(nil)
 	return cs.stream.CloseSend()
+}
+
+func (cs *clientStream) GetResponseHeaders() (transport.Headers, error) {
+	trailers := cs.stream.Trailer()
+	headers := transport.NewHeaders()
+	for header, values := range trailers {
+		headers = headers.With(header, values[0])
+	}
+	return headers, nil
 }
 
 func (cs *clientStream) closeWithErr(err error) error {

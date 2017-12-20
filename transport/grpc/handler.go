@@ -144,7 +144,7 @@ func (h *handler) handleStream(
 	defer span.Finish()
 
 	stream := newServerStream(ctx, &transport.StreamRequest{Meta: transportRequest.ToRequestMeta()}, serverStream)
-	tServerStream, err := transport.NewServerStream(stream)
+	tServerStream, err := transport.NewServerStream(stream, transport.WithStreamResponseHeaderProvider(stream))
 	if err != nil {
 		return err
 	}

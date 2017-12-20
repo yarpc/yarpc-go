@@ -30,6 +30,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
@@ -139,6 +140,9 @@ func testIntegration(
 		streamOptions = append(streamOptions, yarpc.WithHeader(k, v))
 		contextWrapper = contextWrapper.WithHeader(k, v)
 	}
+	//ctx, cancel := context.WithCancel(context.Background())
+	//streamOptions = append(streamOptions, yarpc.CallOption(encoding.WithStreamContext(ctx)))
+	//cancel()
 
 	messages := []string{"foo", "bar", "baz"}
 	gotMessages, err := echoOut(clients.FooYARPCClient, messages, streamOptions...)

@@ -24,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 
@@ -49,15 +50,31 @@ func (h *handler) HelloInStream(*streaming.HelloRequest, streaming.HelloServiceH
 }
 
 func (h *handler) HelloThere(stream streaming.HelloServiceHelloThereYARPCServer) error {
+	fmt.Println("Stream created!")
+	call := yarpc.CallFromContext(stream.Context())
+	fmt.Println("Call: ", call.Service(), call.Procedure())
+	for _, k := range call.HeaderNames() {
+		fmt.Println("Got header: ", k, ":", call.Header(k))
+	}
 	for {
 		msg, err := stream.Recv()
 		if err != nil {
 			fmt.Printf("Error reading from stream: %q\n", err.Error())
+			if err == io.EOF {
+				if err := stream.Send(&streaming.HelloResponse{"this is my final message"}); err != nil {
+					fmt.Printf("Error sending message to stream: %q\n", err.Error())
+					call.WriteResponseHeader("endofrequest", "error on response")
+					return err
+				}
+				call.WriteResponseHeader("endofrequest", "sent response")
+				return nil
+			}
 			return err
 		}
 
 		if msg.Id == "exit" {
 			fmt.Println("Received 'exit' message, closing connection")
+			call.WriteResponseHeader("endofrequest", "exit message received")
 			return nil
 		}
 		fmt.Printf("Received a message: %q\n", msg.Id)
@@ -97,6 +114,7 @@ func do() error {
 	if err := dispatcher.Start(); err != nil {
 		return err
 	}
+	fmt.Println("started!")
 
 	select {}
 }
