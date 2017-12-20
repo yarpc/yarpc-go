@@ -155,3 +155,9 @@ func (c *Call) RoutingKey() string {
 func (c *Call) RoutingDelegate() string {
 	return (*encoding.Call)(c).RoutingDelegate()
 }
+
+// StreamOption defines options that may be passed in at streaming function
+// call sites.
+//
+// These may be used to add or alter individual stream calls.
+type StreamOption encoding.StreamOption
