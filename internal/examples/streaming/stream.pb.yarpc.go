@@ -48,22 +48,22 @@ type HelloYARPCClient interface {
 // HelloServiceHelloOutStreamYARPCClient sends HelloRequests and receives the single HelloResponse when sending is done.
 type HelloServiceHelloOutStreamYARPCClient interface {
 	Context() context.Context
-	Send(*HelloRequest) error
-	CloseAndRecv() (*HelloResponse, error)
+	Send(*HelloRequest, ...yarpc.StreamOption) error
+	CloseAndRecv(...yarpc.StreamOption) (*HelloResponse, error)
 }
 
 // HelloServiceHelloInStreamYARPCClient receives HelloResponses, returning io.EOF when the stream is complete.
 type HelloServiceHelloInStreamYARPCClient interface {
 	Context() context.Context
-	Recv() (*HelloResponse, error)
+	Recv(...yarpc.StreamOption) (*HelloResponse, error)
 }
 
 // HelloServiceHelloThereYARPCClient sends HelloRequests and receives HelloResponses, returning io.EOF when the stream is complete.
 type HelloServiceHelloThereYARPCClient interface {
 	Context() context.Context
-	Send(*HelloRequest) error
-	Recv() (*HelloResponse, error)
-	CloseSend() error
+	Send(*HelloRequest, ...yarpc.StreamOption) error
+	Recv(...yarpc.StreamOption) (*HelloResponse, error)
+	CloseSend(...yarpc.StreamOption) error
 }
 
 // NewHelloYARPCClient builds a new YARPC client for the Hello service.
@@ -88,20 +88,20 @@ type HelloYARPCServer interface {
 // HelloServiceHelloOutStreamYARPCServer receives HelloRequests.
 type HelloServiceHelloOutStreamYARPCServer interface {
 	Context() context.Context
-	Recv() (*HelloRequest, error)
+	Recv(...yarpc.StreamOption) (*HelloRequest, error)
 }
 
 // HelloServiceHelloInStreamYARPCServer sends HelloResponses.
 type HelloServiceHelloInStreamYARPCServer interface {
 	Context() context.Context
-	Send(*HelloResponse) error
+	Send(*HelloResponse, ...yarpc.StreamOption) error
 }
 
 // HelloServiceHelloThereYARPCServer receives HelloRequests and sends HelloResponse.
 type HelloServiceHelloThereYARPCServer interface {
 	Context() context.Context
-	Recv() (*HelloRequest, error)
-	Send(*HelloResponse) error
+	Recv(...yarpc.StreamOption) (*HelloRequest, error)
+	Send(*HelloResponse, ...yarpc.StreamOption) error
 }
 
 // BuildHelloYARPCProcedures prepares an implementation of the Hello service for YARPC registration.
@@ -250,11 +250,11 @@ func (c *_HelloServiceHelloOutStreamYARPCClient) Context() context.Context {
 	return c.stream.Context()
 }
 
-func (c *_HelloServiceHelloOutStreamYARPCClient) Send(request *HelloRequest) error {
+func (c *_HelloServiceHelloOutStreamYARPCClient) Send(request *HelloRequest, options ...yarpc.StreamOption) error {
 	return protobuf.WriteToStream(context.Background(), request, c.stream)
 }
 
-func (c *_HelloServiceHelloOutStreamYARPCClient) CloseAndRecv() (*HelloResponse, error) {
+func (c *_HelloServiceHelloOutStreamYARPCClient) CloseAndRecv(options ...yarpc.StreamOption) (*HelloResponse, error) {
 	if err := c.stream.Close(context.Background()); err != nil {
 		return nil, err
 	}
@@ -277,7 +277,7 @@ func (c *_HelloServiceHelloInStreamYARPCClient) Context() context.Context {
 	return c.stream.Context()
 }
 
-func (c *_HelloServiceHelloInStreamYARPCClient) Recv() (*HelloResponse, error) {
+func (c *_HelloServiceHelloInStreamYARPCClient) Recv(options ...yarpc.StreamOption) (*HelloResponse, error) {
 	responseMessage, err := protobuf.ReadFromStream(context.Background(), c.stream, newHelloServiceHelloInStreamYARPCResponse)
 	if responseMessage == nil {
 		return nil, err
@@ -297,11 +297,11 @@ func (c *_HelloServiceHelloThereYARPCClient) Context() context.Context {
 	return c.stream.Context()
 }
 
-func (c *_HelloServiceHelloThereYARPCClient) Send(request *HelloRequest) error {
+func (c *_HelloServiceHelloThereYARPCClient) Send(request *HelloRequest, options ...yarpc.StreamOption) error {
 	return protobuf.WriteToStream(context.Background(), request, c.stream)
 }
 
-func (c *_HelloServiceHelloThereYARPCClient) Recv() (*HelloResponse, error) {
+func (c *_HelloServiceHelloThereYARPCClient) Recv(options ...yarpc.StreamOption) (*HelloResponse, error) {
 	responseMessage, err := protobuf.ReadFromStream(context.Background(), c.stream, newHelloServiceHelloThereYARPCResponse)
 	if responseMessage == nil {
 		return nil, err
@@ -313,7 +313,7 @@ func (c *_HelloServiceHelloThereYARPCClient) Recv() (*HelloResponse, error) {
 	return response, err
 }
 
-func (c *_HelloServiceHelloThereYARPCClient) CloseSend() error {
+func (c *_HelloServiceHelloThereYARPCClient) CloseSend(options ...yarpc.StreamOption) error {
 	return c.stream.Close(context.Background())
 }
 
@@ -325,7 +325,7 @@ func (s *_HelloServiceHelloOutStreamYARPCServer) Context() context.Context {
 	return s.serverStream.Context()
 }
 
-func (s *_HelloServiceHelloOutStreamYARPCServer) Recv() (*HelloRequest, error) {
+func (s *_HelloServiceHelloOutStreamYARPCServer) Recv(options ...yarpc.StreamOption) (*HelloRequest, error) {
 	requestMessage, err := protobuf.ReadFromStream(context.Background(), s.serverStream, newHelloServiceHelloOutStreamYARPCRequest)
 	if requestMessage == nil {
 		return nil, err
@@ -345,7 +345,7 @@ func (s *_HelloServiceHelloInStreamYARPCServer) Context() context.Context {
 	return s.serverStream.Context()
 }
 
-func (s *_HelloServiceHelloInStreamYARPCServer) Send(response *HelloResponse) error {
+func (s *_HelloServiceHelloInStreamYARPCServer) Send(response *HelloResponse, options ...yarpc.StreamOption) error {
 	return protobuf.WriteToStream(context.Background(), response, s.serverStream)
 }
 
@@ -357,7 +357,7 @@ func (s *_HelloServiceHelloThereYARPCServer) Context() context.Context {
 	return s.serverStream.Context()
 }
 
-func (s *_HelloServiceHelloThereYARPCServer) Recv() (*HelloRequest, error) {
+func (s *_HelloServiceHelloThereYARPCServer) Recv(options ...yarpc.StreamOption) (*HelloRequest, error) {
 	requestMessage, err := protobuf.ReadFromStream(context.Background(), s.serverStream, newHelloServiceHelloThereYARPCRequest)
 	if requestMessage == nil {
 		return nil, err
@@ -369,7 +369,7 @@ func (s *_HelloServiceHelloThereYARPCServer) Recv() (*HelloRequest, error) {
 	return request, err
 }
 
-func (s *_HelloServiceHelloThereYARPCServer) Send(response *HelloResponse) error {
+func (s *_HelloServiceHelloThereYARPCServer) Send(response *HelloResponse, options ...yarpc.StreamOption) error {
 	return protobuf.WriteToStream(context.Background(), response, s.serverStream)
 }
 
