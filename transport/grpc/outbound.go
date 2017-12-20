@@ -230,7 +230,7 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 // CallStream implements transport.StreamOutbound#CallStream.
 func (o *Outbound) CallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
 	if _, ok := ctx.Deadline(); !ok {
-		return nil, yarpcerrors.InvalidArgumentErrorf("stream requests require a connection establishment timeout on the passed in context.")
+		return nil, yarpcerrors.InvalidArgumentErrorf("stream requests require a connection establishment timeout on the passed in context")
 	}
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, err
@@ -285,6 +285,10 @@ func (o *Outbound) stream(
 		return nil, err
 	}
 
+	// We use a different context for the lifetime of the stream and the time it
+	// took to establish a connection with the peer, setting the stream's
+	// context to context.Background() means the lifetime of this stream has no
+	// timeout.
 	streamCtx := metadata.NewOutgoingContext(context.Background(), md)
 	clientStream, err := grpcPeer.clientConn.NewStream(
 		streamCtx,

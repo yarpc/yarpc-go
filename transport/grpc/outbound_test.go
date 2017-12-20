@@ -54,7 +54,7 @@ func TestCallStreamWithoutDeadline(t *testing.T) {
 	_, err = out.CallStream(context.Background(), &transport.StreamRequest{})
 
 	require.Contains(t, err.Error(), "code:invalid-argument")
-	require.Contains(t, err.Error(), "stream requests require a connection establishment timeout on the passed in context.")
+	require.Contains(t, err.Error(), "stream requests require a connection establishment timeout on the passed in context")
 }
 
 func TestCallStreamWhenNotRunning(t *testing.T) {
