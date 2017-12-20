@@ -26,6 +26,7 @@ package examplepb
 
 import (
 	"context"
+	"io/ioutil"
 	"reflect"
 
 	"github.com/gogo/protobuf/proto"
@@ -35,6 +36,8 @@ import (
 	"go.uber.org/yarpc/yarpcproto"
 )
 
+var _ = ioutil.NopCloser
+
 // KeyValueYARPCClient is the YARPC client-side interface for the KeyValue service.
 type KeyValueYARPCClient interface {
 	GetValue(context.Context, *GetValueRequest, ...yarpc.CallOption) (*GetValueResponse, error)
@@ -43,7 +46,7 @@ type KeyValueYARPCClient interface {
 
 // NewKeyValueYARPCClient builds a new YARPC client for the KeyValue service.
 func NewKeyValueYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) KeyValueYARPCClient {
-	return &_KeyValueYARPCCaller{protobuf.NewClient(
+	return &_KeyValueYARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
 			ServiceName:  "uber.yarpc.internal.examples.protobuf.example.KeyValue",
 			ClientConfig: clientConfig,
@@ -70,7 +73,7 @@ func BuildKeyValueYARPCProcedures(server KeyValueYARPCServer) []transport.Proced
 					Handler: protobuf.NewUnaryHandler(
 						protobuf.UnaryHandlerParams{
 							Handle:     handler.GetValue,
-							NewRequest: newKeyValue_GetValueYARPCRequest,
+							NewRequest: newKeyValueServiceGetValueYARPCRequest,
 						},
 					),
 				},
@@ -79,40 +82,41 @@ func BuildKeyValueYARPCProcedures(server KeyValueYARPCServer) []transport.Proced
 					Handler: protobuf.NewUnaryHandler(
 						protobuf.UnaryHandlerParams{
 							Handle:     handler.SetValue,
-							NewRequest: newKeyValue_SetValueYARPCRequest,
+							NewRequest: newKeyValueServiceSetValueYARPCRequest,
 						},
 					),
 				},
 			},
 			OnewayHandlerParams: []protobuf.BuildProceduresOnewayHandlerParams{},
+			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{},
 		},
 	)
 }
 
 type _KeyValueYARPCCaller struct {
-	client protobuf.Client
+	streamClient protobuf.StreamClient
 }
 
 func (c *_KeyValueYARPCCaller) GetValue(ctx context.Context, request *GetValueRequest, options ...yarpc.CallOption) (*GetValueResponse, error) {
-	responseMessage, err := c.client.Call(ctx, "GetValue", request, newKeyValue_GetValueYARPCResponse, options...)
+	responseMessage, err := c.streamClient.Call(ctx, "GetValue", request, newKeyValueServiceGetValueYARPCResponse, options...)
 	if responseMessage == nil {
 		return nil, err
 	}
 	response, ok := responseMessage.(*GetValueResponse)
 	if !ok {
-		return nil, protobuf.CastError(emptyKeyValue_GetValueYARPCResponse, responseMessage)
+		return nil, protobuf.CastError(emptyKeyValueServiceGetValueYARPCResponse, responseMessage)
 	}
 	return response, err
 }
 
 func (c *_KeyValueYARPCCaller) SetValue(ctx context.Context, request *SetValueRequest, options ...yarpc.CallOption) (*SetValueResponse, error) {
-	responseMessage, err := c.client.Call(ctx, "SetValue", request, newKeyValue_SetValueYARPCResponse, options...)
+	responseMessage, err := c.streamClient.Call(ctx, "SetValue", request, newKeyValueServiceSetValueYARPCResponse, options...)
 	if responseMessage == nil {
 		return nil, err
 	}
 	response, ok := responseMessage.(*SetValueResponse)
 	if !ok {
-		return nil, protobuf.CastError(emptyKeyValue_SetValueYARPCResponse, responseMessage)
+		return nil, protobuf.CastError(emptyKeyValueServiceSetValueYARPCResponse, responseMessage)
 	}
 	return response, err
 }
@@ -127,7 +131,7 @@ func (h *_KeyValueYARPCHandler) GetValue(ctx context.Context, requestMessage pro
 	if requestMessage != nil {
 		request, ok = requestMessage.(*GetValueRequest)
 		if !ok {
-			return nil, protobuf.CastError(emptyKeyValue_GetValueYARPCRequest, requestMessage)
+			return nil, protobuf.CastError(emptyKeyValueServiceGetValueYARPCRequest, requestMessage)
 		}
 	}
 	response, err := h.server.GetValue(ctx, request)
@@ -143,7 +147,7 @@ func (h *_KeyValueYARPCHandler) SetValue(ctx context.Context, requestMessage pro
 	if requestMessage != nil {
 		request, ok = requestMessage.(*SetValueRequest)
 		if !ok {
-			return nil, protobuf.CastError(emptyKeyValue_SetValueYARPCRequest, requestMessage)
+			return nil, protobuf.CastError(emptyKeyValueServiceSetValueYARPCRequest, requestMessage)
 		}
 	}
 	response, err := h.server.SetValue(ctx, request)
@@ -153,27 +157,27 @@ func (h *_KeyValueYARPCHandler) SetValue(ctx context.Context, requestMessage pro
 	return response, err
 }
 
-func newKeyValue_GetValueYARPCRequest() proto.Message {
+func newKeyValueServiceGetValueYARPCRequest() proto.Message {
 	return &GetValueRequest{}
 }
 
-func newKeyValue_GetValueYARPCResponse() proto.Message {
+func newKeyValueServiceGetValueYARPCResponse() proto.Message {
 	return &GetValueResponse{}
 }
 
-func newKeyValue_SetValueYARPCRequest() proto.Message {
+func newKeyValueServiceSetValueYARPCRequest() proto.Message {
 	return &SetValueRequest{}
 }
 
-func newKeyValue_SetValueYARPCResponse() proto.Message {
+func newKeyValueServiceSetValueYARPCResponse() proto.Message {
 	return &SetValueResponse{}
 }
 
 var (
-	emptyKeyValue_GetValueYARPCRequest  = &GetValueRequest{}
-	emptyKeyValue_GetValueYARPCResponse = &GetValueResponse{}
-	emptyKeyValue_SetValueYARPCRequest  = &SetValueRequest{}
-	emptyKeyValue_SetValueYARPCResponse = &SetValueResponse{}
+	emptyKeyValueServiceGetValueYARPCRequest  = &GetValueRequest{}
+	emptyKeyValueServiceGetValueYARPCResponse = &GetValueResponse{}
+	emptyKeyValueServiceSetValueYARPCRequest  = &SetValueRequest{}
+	emptyKeyValueServiceSetValueYARPCResponse = &SetValueResponse{}
 )
 
 // SinkYARPCClient is the YARPC client-side interface for the Sink service.
@@ -183,7 +187,7 @@ type SinkYARPCClient interface {
 
 // NewSinkYARPCClient builds a new YARPC client for the Sink service.
 func NewSinkYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) SinkYARPCClient {
-	return &_SinkYARPCCaller{protobuf.NewClient(
+	return &_SinkYARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
 			ServiceName:  "uber.yarpc.internal.examples.protobuf.example.Sink",
 			ClientConfig: clientConfig,
@@ -210,21 +214,22 @@ func BuildSinkYARPCProcedures(server SinkYARPCServer) []transport.Procedure {
 					Handler: protobuf.NewOnewayHandler(
 						protobuf.OnewayHandlerParams{
 							Handle:     handler.Fire,
-							NewRequest: newSink_FireYARPCRequest,
+							NewRequest: newSinkServiceFireYARPCRequest,
 						},
 					),
 				},
 			},
+			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{},
 		},
 	)
 }
 
 type _SinkYARPCCaller struct {
-	client protobuf.Client
+	streamClient protobuf.StreamClient
 }
 
 func (c *_SinkYARPCCaller) Fire(ctx context.Context, request *FireRequest, options ...yarpc.CallOption) (yarpc.Ack, error) {
-	return c.client.CallOneway(ctx, "Fire", request, options...)
+	return c.streamClient.CallOneway(ctx, "Fire", request, options...)
 }
 
 type _SinkYARPCHandler struct {
@@ -237,23 +242,357 @@ func (h *_SinkYARPCHandler) Fire(ctx context.Context, requestMessage proto.Messa
 	if requestMessage != nil {
 		request, ok = requestMessage.(*FireRequest)
 		if !ok {
-			return protobuf.CastError(emptySink_FireYARPCRequest, requestMessage)
+			return protobuf.CastError(emptySinkServiceFireYARPCRequest, requestMessage)
 		}
 	}
 	return h.server.Fire(ctx, request)
 }
 
-func newSink_FireYARPCRequest() proto.Message {
+func newSinkServiceFireYARPCRequest() proto.Message {
 	return &FireRequest{}
 }
 
-func newSink_FireYARPCResponse() proto.Message {
+func newSinkServiceFireYARPCResponse() proto.Message {
 	return &yarpcproto.Oneway{}
 }
 
 var (
-	emptySink_FireYARPCRequest  = &FireRequest{}
-	emptySink_FireYARPCResponse = &yarpcproto.Oneway{}
+	emptySinkServiceFireYARPCRequest  = &FireRequest{}
+	emptySinkServiceFireYARPCResponse = &yarpcproto.Oneway{}
+)
+
+// FooYARPCClient is the YARPC client-side interface for the Foo service.
+type FooYARPCClient interface {
+	EchoOut(context.Context, ...yarpc.CallOption) (FooServiceEchoOutYARPCClient, error)
+	EchoIn(context.Context, *EchoInRequest, ...yarpc.CallOption) (FooServiceEchoInYARPCClient, error)
+	EchoBoth(context.Context, ...yarpc.CallOption) (FooServiceEchoBothYARPCClient, error)
+}
+
+// FooServiceEchoOutYARPCClient sends EchoOutRequests and receives the single EchoOutResponse when sending is done.
+type FooServiceEchoOutYARPCClient interface {
+	Context() context.Context
+	Send(*EchoOutRequest, ...yarpc.StreamOption) error
+	CloseAndRecv(...yarpc.StreamOption) (*EchoOutResponse, error)
+}
+
+// FooServiceEchoInYARPCClient receives EchoInResponses, returning io.EOF when the stream is complete.
+type FooServiceEchoInYARPCClient interface {
+	Context() context.Context
+	Recv(...yarpc.StreamOption) (*EchoInResponse, error)
+	CloseSend(...yarpc.StreamOption) error
+}
+
+// FooServiceEchoBothYARPCClient sends EchoBothRequests and receives EchoBothResponses, returning io.EOF when the stream is complete.
+type FooServiceEchoBothYARPCClient interface {
+	Context() context.Context
+	Send(*EchoBothRequest, ...yarpc.StreamOption) error
+	Recv(...yarpc.StreamOption) (*EchoBothResponse, error)
+	CloseSend(...yarpc.StreamOption) error
+}
+
+// NewFooYARPCClient builds a new YARPC client for the Foo service.
+func NewFooYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) FooYARPCClient {
+	return &_FooYARPCCaller{protobuf.NewStreamClient(
+		protobuf.ClientParams{
+			ServiceName:  "uber.yarpc.internal.examples.protobuf.example.Foo",
+			ClientConfig: clientConfig,
+			Options:      options,
+		},
+	)}
+}
+
+// FooYARPCServer is the YARPC server-side interface for the Foo service.
+type FooYARPCServer interface {
+	EchoOut(FooServiceEchoOutYARPCServer) (*EchoOutResponse, error)
+	EchoIn(*EchoInRequest, FooServiceEchoInYARPCServer) error
+	EchoBoth(FooServiceEchoBothYARPCServer) error
+}
+
+// FooServiceEchoOutYARPCServer receives EchoOutRequests.
+type FooServiceEchoOutYARPCServer interface {
+	Context() context.Context
+	Recv(...yarpc.StreamOption) (*EchoOutRequest, error)
+}
+
+// FooServiceEchoInYARPCServer sends EchoInResponses.
+type FooServiceEchoInYARPCServer interface {
+	Context() context.Context
+	Send(*EchoInResponse, ...yarpc.StreamOption) error
+}
+
+// FooServiceEchoBothYARPCServer receives EchoBothRequests and sends EchoBothResponse.
+type FooServiceEchoBothYARPCServer interface {
+	Context() context.Context
+	Recv(...yarpc.StreamOption) (*EchoBothRequest, error)
+	Send(*EchoBothResponse, ...yarpc.StreamOption) error
+}
+
+// BuildFooYARPCProcedures prepares an implementation of the Foo service for YARPC registration.
+func BuildFooYARPCProcedures(server FooYARPCServer) []transport.Procedure {
+	handler := &_FooYARPCHandler{server}
+	return protobuf.BuildProcedures(
+		protobuf.BuildProceduresParams{
+			ServiceName:         "uber.yarpc.internal.examples.protobuf.example.Foo",
+			UnaryHandlerParams:  []protobuf.BuildProceduresUnaryHandlerParams{},
+			OnewayHandlerParams: []protobuf.BuildProceduresOnewayHandlerParams{},
+			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{
+				{
+					MethodName: "EchoBoth",
+					Handler: protobuf.NewStreamHandler(
+						protobuf.StreamHandlerParams{
+							Handle: handler.EchoBoth,
+						},
+					),
+				},
+
+				{
+					MethodName: "EchoIn",
+					Handler: protobuf.NewStreamHandler(
+						protobuf.StreamHandlerParams{
+							Handle: handler.EchoIn,
+						},
+					),
+				},
+
+				{
+					MethodName: "EchoOut",
+					Handler: protobuf.NewStreamHandler(
+						protobuf.StreamHandlerParams{
+							Handle: handler.EchoOut,
+						},
+					),
+				},
+			},
+		},
+	)
+}
+
+type _FooYARPCCaller struct {
+	streamClient protobuf.StreamClient
+}
+
+func (c *_FooYARPCCaller) EchoOut(ctx context.Context, options ...yarpc.CallOption) (FooServiceEchoOutYARPCClient, error) {
+	stream, err := c.streamClient.CallStream(ctx, "EchoOut", options...)
+	if err != nil {
+		return nil, err
+	}
+	return &_FooServiceEchoOutYARPCClient{stream: stream}, nil
+}
+
+func (c *_FooYARPCCaller) EchoIn(ctx context.Context, request *EchoInRequest, options ...yarpc.CallOption) (FooServiceEchoInYARPCClient, error) {
+	stream, err := c.streamClient.CallStream(ctx, "EchoIn", options...)
+	if err != nil {
+		return nil, err
+	}
+	if err := stream.Send(request); err != nil {
+		return nil, err
+	}
+	return &_FooServiceEchoInYARPCClient{stream: stream}, nil
+}
+
+func (c *_FooYARPCCaller) EchoBoth(ctx context.Context, options ...yarpc.CallOption) (FooServiceEchoBothYARPCClient, error) {
+	stream, err := c.streamClient.CallStream(ctx, "EchoBoth", options...)
+	if err != nil {
+		return nil, err
+	}
+	return &_FooServiceEchoBothYARPCClient{stream: stream}, nil
+}
+
+type _FooYARPCHandler struct {
+	server FooYARPCServer
+}
+
+func (h *_FooYARPCHandler) EchoOut(serverStream *protobuf.ServerStream) error {
+	response, err := h.server.EchoOut(&_FooServiceEchoOutYARPCServer{serverStream: serverStream})
+	if err != nil {
+		return err
+	}
+	return serverStream.Send(response)
+}
+
+func (h *_FooYARPCHandler) EchoIn(serverStream *protobuf.ServerStream) error {
+	requestMessage, err := serverStream.Receive(newFooServiceEchoInYARPCRequest)
+	if requestMessage == nil {
+		return err
+	}
+
+	request, ok := requestMessage.(*EchoInRequest)
+	if !ok {
+		return protobuf.CastError(emptyFooServiceEchoInYARPCRequest, requestMessage)
+	}
+	return h.server.EchoIn(request, &_FooServiceEchoInYARPCServer{serverStream: serverStream})
+}
+
+func (h *_FooYARPCHandler) EchoBoth(serverStream *protobuf.ServerStream) error {
+	return h.server.EchoBoth(&_FooServiceEchoBothYARPCServer{serverStream: serverStream})
+}
+
+type _FooServiceEchoOutYARPCClient struct {
+	stream *protobuf.ClientStream
+}
+
+func (c *_FooServiceEchoOutYARPCClient) Context() context.Context {
+	return c.stream.Context()
+}
+
+func (c *_FooServiceEchoOutYARPCClient) Send(request *EchoOutRequest, options ...yarpc.StreamOption) error {
+	return c.stream.Send(request, options...)
+}
+
+func (c *_FooServiceEchoOutYARPCClient) CloseAndRecv(options ...yarpc.StreamOption) (*EchoOutResponse, error) {
+	if err := c.stream.Close(options...); err != nil {
+		return nil, err
+	}
+	responseMessage, err := c.stream.Receive(newFooServiceEchoOutYARPCResponse, options...)
+	if responseMessage == nil {
+		return nil, err
+	}
+	response, ok := responseMessage.(*EchoOutResponse)
+	if !ok {
+		return nil, protobuf.CastError(emptyFooServiceEchoOutYARPCResponse, responseMessage)
+	}
+	return response, err
+}
+
+type _FooServiceEchoInYARPCClient struct {
+	stream *protobuf.ClientStream
+}
+
+func (c *_FooServiceEchoInYARPCClient) Context() context.Context {
+	return c.stream.Context()
+}
+
+func (c *_FooServiceEchoInYARPCClient) Recv(options ...yarpc.StreamOption) (*EchoInResponse, error) {
+	responseMessage, err := c.stream.Receive(newFooServiceEchoInYARPCResponse, options...)
+	if responseMessage == nil {
+		return nil, err
+	}
+	response, ok := responseMessage.(*EchoInResponse)
+	if !ok {
+		return nil, protobuf.CastError(emptyFooServiceEchoInYARPCResponse, responseMessage)
+	}
+	return response, err
+}
+
+func (c *_FooServiceEchoInYARPCClient) CloseSend(options ...yarpc.StreamOption) error {
+	return c.stream.Close(options...)
+}
+
+type _FooServiceEchoBothYARPCClient struct {
+	stream *protobuf.ClientStream
+}
+
+func (c *_FooServiceEchoBothYARPCClient) Context() context.Context {
+	return c.stream.Context()
+}
+
+func (c *_FooServiceEchoBothYARPCClient) Send(request *EchoBothRequest, options ...yarpc.StreamOption) error {
+	return c.stream.Send(request, options...)
+}
+
+func (c *_FooServiceEchoBothYARPCClient) Recv(options ...yarpc.StreamOption) (*EchoBothResponse, error) {
+	responseMessage, err := c.stream.Receive(newFooServiceEchoBothYARPCResponse, options...)
+	if responseMessage == nil {
+		return nil, err
+	}
+	response, ok := responseMessage.(*EchoBothResponse)
+	if !ok {
+		return nil, protobuf.CastError(emptyFooServiceEchoBothYARPCResponse, responseMessage)
+	}
+	return response, err
+}
+
+func (c *_FooServiceEchoBothYARPCClient) CloseSend(options ...yarpc.StreamOption) error {
+	return c.stream.Close(options...)
+}
+
+type _FooServiceEchoOutYARPCServer struct {
+	serverStream *protobuf.ServerStream
+}
+
+func (s *_FooServiceEchoOutYARPCServer) Context() context.Context {
+	return s.serverStream.Context()
+}
+
+func (s *_FooServiceEchoOutYARPCServer) Recv(options ...yarpc.StreamOption) (*EchoOutRequest, error) {
+	requestMessage, err := s.serverStream.Receive(newFooServiceEchoOutYARPCRequest, options...)
+	if requestMessage == nil {
+		return nil, err
+	}
+	request, ok := requestMessage.(*EchoOutRequest)
+	if !ok {
+		return nil, protobuf.CastError(emptyFooServiceEchoOutYARPCRequest, requestMessage)
+	}
+	return request, err
+}
+
+type _FooServiceEchoInYARPCServer struct {
+	serverStream *protobuf.ServerStream
+}
+
+func (s *_FooServiceEchoInYARPCServer) Context() context.Context {
+	return s.serverStream.Context()
+}
+
+func (s *_FooServiceEchoInYARPCServer) Send(response *EchoInResponse, options ...yarpc.StreamOption) error {
+	return s.serverStream.Send(response, options...)
+}
+
+type _FooServiceEchoBothYARPCServer struct {
+	serverStream *protobuf.ServerStream
+}
+
+func (s *_FooServiceEchoBothYARPCServer) Context() context.Context {
+	return s.serverStream.Context()
+}
+
+func (s *_FooServiceEchoBothYARPCServer) Recv(options ...yarpc.StreamOption) (*EchoBothRequest, error) {
+	requestMessage, err := s.serverStream.Receive(newFooServiceEchoBothYARPCRequest, options...)
+	if requestMessage == nil {
+		return nil, err
+	}
+	request, ok := requestMessage.(*EchoBothRequest)
+	if !ok {
+		return nil, protobuf.CastError(emptyFooServiceEchoBothYARPCRequest, requestMessage)
+	}
+	return request, err
+}
+
+func (s *_FooServiceEchoBothYARPCServer) Send(response *EchoBothResponse, options ...yarpc.StreamOption) error {
+	return s.serverStream.Send(response, options...)
+}
+
+func newFooServiceEchoOutYARPCRequest() proto.Message {
+	return &EchoOutRequest{}
+}
+
+func newFooServiceEchoOutYARPCResponse() proto.Message {
+	return &EchoOutResponse{}
+}
+
+func newFooServiceEchoInYARPCRequest() proto.Message {
+	return &EchoInRequest{}
+}
+
+func newFooServiceEchoInYARPCResponse() proto.Message {
+	return &EchoInResponse{}
+}
+
+func newFooServiceEchoBothYARPCRequest() proto.Message {
+	return &EchoBothRequest{}
+}
+
+func newFooServiceEchoBothYARPCResponse() proto.Message {
+	return &EchoBothResponse{}
+}
+
+var (
+	emptyFooServiceEchoOutYARPCRequest   = &EchoOutRequest{}
+	emptyFooServiceEchoOutYARPCResponse  = &EchoOutResponse{}
+	emptyFooServiceEchoInYARPCRequest    = &EchoInRequest{}
+	emptyFooServiceEchoInYARPCResponse   = &EchoInResponse{}
+	emptyFooServiceEchoBothYARPCRequest  = &EchoBothRequest{}
+	emptyFooServiceEchoBothYARPCResponse = &EchoBothResponse{}
 )
 
 func init() {
@@ -265,6 +604,11 @@ func init() {
 	yarpc.RegisterClientBuilder(
 		func(clientConfig transport.ClientConfig, structField reflect.StructField) SinkYARPCClient {
 			return NewSinkYARPCClient(clientConfig, protobuf.ClientBuilderOptions(clientConfig, structField)...)
+		},
+	)
+	yarpc.RegisterClientBuilder(
+		func(clientConfig transport.ClientConfig, structField reflect.StructField) FooYARPCClient {
+			return NewFooYARPCClient(clientConfig, protobuf.ClientBuilderOptions(clientConfig, structField)...)
 		},
 	)
 }

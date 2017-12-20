@@ -31,6 +31,7 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
@@ -73,10 +74,12 @@ func run(
 ) error {
 	keyValueYARPCServer := example.NewKeyValueYARPCServer()
 	sinkYARPCServer := example.NewSinkYARPCServer(true)
+	fooYARPCServer := example.NewFooYARPCServer(transport.NewHeaders())
 	return exampleutil.WithClients(
 		transportType,
 		keyValueYARPCServer,
 		sinkYARPCServer,
+		fooYARPCServer,
 		func(clients *exampleutil.Clients) error {
 			return doClient(
 				keyValueYARPCServer,

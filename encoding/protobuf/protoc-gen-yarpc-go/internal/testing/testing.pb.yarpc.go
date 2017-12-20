@@ -26,6 +26,7 @@ package testing
 
 import (
 	"context"
+	"io/ioutil"
 	"reflect"
 
 	"github.com/gogo/protobuf/proto"
@@ -35,6 +36,8 @@ import (
 	"go.uber.org/yarpc/yarpcproto"
 )
 
+var _ = ioutil.NopCloser
+
 // KeyValueYARPCClient is the YARPC client-side interface for the KeyValue service.
 type KeyValueYARPCClient interface {
 	GetValue(context.Context, *GetValueRequest, ...yarpc.CallOption) (*GetValueResponse, error)
@@ -43,7 +46,7 @@ type KeyValueYARPCClient interface {
 
 // NewKeyValueYARPCClient builds a new YARPC client for the KeyValue service.
 func NewKeyValueYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) KeyValueYARPCClient {
-	return &_KeyValueYARPCCaller{protobuf.NewClient(
+	return &_KeyValueYARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
 			ServiceName:  "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.KeyValue",
 			ClientConfig: clientConfig,
@@ -70,7 +73,7 @@ func BuildKeyValueYARPCProcedures(server KeyValueYARPCServer) []transport.Proced
 					Handler: protobuf.NewUnaryHandler(
 						protobuf.UnaryHandlerParams{
 							Handle:     handler.GetValue,
-							NewRequest: newKeyValue_GetValueYARPCRequest,
+							NewRequest: newKeyValueServiceGetValueYARPCRequest,
 						},
 					),
 				},
@@ -79,40 +82,41 @@ func BuildKeyValueYARPCProcedures(server KeyValueYARPCServer) []transport.Proced
 					Handler: protobuf.NewUnaryHandler(
 						protobuf.UnaryHandlerParams{
 							Handle:     handler.SetValue,
-							NewRequest: newKeyValue_SetValueYARPCRequest,
+							NewRequest: newKeyValueServiceSetValueYARPCRequest,
 						},
 					),
 				},
 			},
 			OnewayHandlerParams: []protobuf.BuildProceduresOnewayHandlerParams{},
+			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{},
 		},
 	)
 }
 
 type _KeyValueYARPCCaller struct {
-	client protobuf.Client
+	streamClient protobuf.StreamClient
 }
 
 func (c *_KeyValueYARPCCaller) GetValue(ctx context.Context, request *GetValueRequest, options ...yarpc.CallOption) (*GetValueResponse, error) {
-	responseMessage, err := c.client.Call(ctx, "GetValue", request, newKeyValue_GetValueYARPCResponse, options...)
+	responseMessage, err := c.streamClient.Call(ctx, "GetValue", request, newKeyValueServiceGetValueYARPCResponse, options...)
 	if responseMessage == nil {
 		return nil, err
 	}
 	response, ok := responseMessage.(*GetValueResponse)
 	if !ok {
-		return nil, protobuf.CastError(emptyKeyValue_GetValueYARPCResponse, responseMessage)
+		return nil, protobuf.CastError(emptyKeyValueServiceGetValueYARPCResponse, responseMessage)
 	}
 	return response, err
 }
 
 func (c *_KeyValueYARPCCaller) SetValue(ctx context.Context, request *SetValueRequest, options ...yarpc.CallOption) (*SetValueResponse, error) {
-	responseMessage, err := c.client.Call(ctx, "SetValue", request, newKeyValue_SetValueYARPCResponse, options...)
+	responseMessage, err := c.streamClient.Call(ctx, "SetValue", request, newKeyValueServiceSetValueYARPCResponse, options...)
 	if responseMessage == nil {
 		return nil, err
 	}
 	response, ok := responseMessage.(*SetValueResponse)
 	if !ok {
-		return nil, protobuf.CastError(emptyKeyValue_SetValueYARPCResponse, responseMessage)
+		return nil, protobuf.CastError(emptyKeyValueServiceSetValueYARPCResponse, responseMessage)
 	}
 	return response, err
 }
@@ -127,7 +131,7 @@ func (h *_KeyValueYARPCHandler) GetValue(ctx context.Context, requestMessage pro
 	if requestMessage != nil {
 		request, ok = requestMessage.(*GetValueRequest)
 		if !ok {
-			return nil, protobuf.CastError(emptyKeyValue_GetValueYARPCRequest, requestMessage)
+			return nil, protobuf.CastError(emptyKeyValueServiceGetValueYARPCRequest, requestMessage)
 		}
 	}
 	response, err := h.server.GetValue(ctx, request)
@@ -143,7 +147,7 @@ func (h *_KeyValueYARPCHandler) SetValue(ctx context.Context, requestMessage pro
 	if requestMessage != nil {
 		request, ok = requestMessage.(*SetValueRequest)
 		if !ok {
-			return nil, protobuf.CastError(emptyKeyValue_SetValueYARPCRequest, requestMessage)
+			return nil, protobuf.CastError(emptyKeyValueServiceSetValueYARPCRequest, requestMessage)
 		}
 	}
 	response, err := h.server.SetValue(ctx, request)
@@ -153,27 +157,27 @@ func (h *_KeyValueYARPCHandler) SetValue(ctx context.Context, requestMessage pro
 	return response, err
 }
 
-func newKeyValue_GetValueYARPCRequest() proto.Message {
+func newKeyValueServiceGetValueYARPCRequest() proto.Message {
 	return &GetValueRequest{}
 }
 
-func newKeyValue_GetValueYARPCResponse() proto.Message {
+func newKeyValueServiceGetValueYARPCResponse() proto.Message {
 	return &GetValueResponse{}
 }
 
-func newKeyValue_SetValueYARPCRequest() proto.Message {
+func newKeyValueServiceSetValueYARPCRequest() proto.Message {
 	return &SetValueRequest{}
 }
 
-func newKeyValue_SetValueYARPCResponse() proto.Message {
+func newKeyValueServiceSetValueYARPCResponse() proto.Message {
 	return &SetValueResponse{}
 }
 
 var (
-	emptyKeyValue_GetValueYARPCRequest  = &GetValueRequest{}
-	emptyKeyValue_GetValueYARPCResponse = &GetValueResponse{}
-	emptyKeyValue_SetValueYARPCRequest  = &SetValueRequest{}
-	emptyKeyValue_SetValueYARPCResponse = &SetValueResponse{}
+	emptyKeyValueServiceGetValueYARPCRequest  = &GetValueRequest{}
+	emptyKeyValueServiceGetValueYARPCResponse = &GetValueResponse{}
+	emptyKeyValueServiceSetValueYARPCRequest  = &SetValueRequest{}
+	emptyKeyValueServiceSetValueYARPCResponse = &SetValueResponse{}
 )
 
 // SinkYARPCClient is the YARPC client-side interface for the Sink service.
@@ -183,7 +187,7 @@ type SinkYARPCClient interface {
 
 // NewSinkYARPCClient builds a new YARPC client for the Sink service.
 func NewSinkYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) SinkYARPCClient {
-	return &_SinkYARPCCaller{protobuf.NewClient(
+	return &_SinkYARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
 			ServiceName:  "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.Sink",
 			ClientConfig: clientConfig,
@@ -210,21 +214,22 @@ func BuildSinkYARPCProcedures(server SinkYARPCServer) []transport.Procedure {
 					Handler: protobuf.NewOnewayHandler(
 						protobuf.OnewayHandlerParams{
 							Handle:     handler.Fire,
-							NewRequest: newSink_FireYARPCRequest,
+							NewRequest: newSinkServiceFireYARPCRequest,
 						},
 					),
 				},
 			},
+			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{},
 		},
 	)
 }
 
 type _SinkYARPCCaller struct {
-	client protobuf.Client
+	streamClient protobuf.StreamClient
 }
 
 func (c *_SinkYARPCCaller) Fire(ctx context.Context, request *FireRequest, options ...yarpc.CallOption) (yarpc.Ack, error) {
-	return c.client.CallOneway(ctx, "Fire", request, options...)
+	return c.streamClient.CallOneway(ctx, "Fire", request, options...)
 }
 
 type _SinkYARPCHandler struct {
@@ -237,23 +242,494 @@ func (h *_SinkYARPCHandler) Fire(ctx context.Context, requestMessage proto.Messa
 	if requestMessage != nil {
 		request, ok = requestMessage.(*FireRequest)
 		if !ok {
-			return protobuf.CastError(emptySink_FireYARPCRequest, requestMessage)
+			return protobuf.CastError(emptySinkServiceFireYARPCRequest, requestMessage)
 		}
 	}
 	return h.server.Fire(ctx, request)
 }
 
-func newSink_FireYARPCRequest() proto.Message {
+func newSinkServiceFireYARPCRequest() proto.Message {
 	return &FireRequest{}
 }
 
-func newSink_FireYARPCResponse() proto.Message {
+func newSinkServiceFireYARPCResponse() proto.Message {
 	return &yarpcproto.Oneway{}
 }
 
 var (
-	emptySink_FireYARPCRequest  = &FireRequest{}
-	emptySink_FireYARPCResponse = &yarpcproto.Oneway{}
+	emptySinkServiceFireYARPCRequest  = &FireRequest{}
+	emptySinkServiceFireYARPCResponse = &yarpcproto.Oneway{}
+)
+
+// AllYARPCClient is the YARPC client-side interface for the All service.
+type AllYARPCClient interface {
+	GetValue(context.Context, *GetValueRequest, ...yarpc.CallOption) (*GetValueResponse, error)
+	SetValue(context.Context, *SetValueRequest, ...yarpc.CallOption) (*SetValueResponse, error)
+	Fire(context.Context, *FireRequest, ...yarpc.CallOption) (yarpc.Ack, error)
+	HelloOne(context.Context, ...yarpc.CallOption) (AllServiceHelloOneYARPCClient, error)
+	HelloTwo(context.Context, *HelloRequest, ...yarpc.CallOption) (AllServiceHelloTwoYARPCClient, error)
+	HelloThree(context.Context, ...yarpc.CallOption) (AllServiceHelloThreeYARPCClient, error)
+}
+
+// AllServiceHelloOneYARPCClient sends HelloRequests and receives the single HelloResponse when sending is done.
+type AllServiceHelloOneYARPCClient interface {
+	Context() context.Context
+	Send(*HelloRequest, ...yarpc.StreamOption) error
+	CloseAndRecv(...yarpc.StreamOption) (*HelloResponse, error)
+}
+
+// AllServiceHelloTwoYARPCClient receives HelloResponses, returning io.EOF when the stream is complete.
+type AllServiceHelloTwoYARPCClient interface {
+	Context() context.Context
+	Recv(...yarpc.StreamOption) (*HelloResponse, error)
+	CloseSend(...yarpc.StreamOption) error
+}
+
+// AllServiceHelloThreeYARPCClient sends HelloRequests and receives HelloResponses, returning io.EOF when the stream is complete.
+type AllServiceHelloThreeYARPCClient interface {
+	Context() context.Context
+	Send(*HelloRequest, ...yarpc.StreamOption) error
+	Recv(...yarpc.StreamOption) (*HelloResponse, error)
+	CloseSend(...yarpc.StreamOption) error
+}
+
+// NewAllYARPCClient builds a new YARPC client for the All service.
+func NewAllYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) AllYARPCClient {
+	return &_AllYARPCCaller{protobuf.NewStreamClient(
+		protobuf.ClientParams{
+			ServiceName:  "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.All",
+			ClientConfig: clientConfig,
+			Options:      options,
+		},
+	)}
+}
+
+// AllYARPCServer is the YARPC server-side interface for the All service.
+type AllYARPCServer interface {
+	GetValue(context.Context, *GetValueRequest) (*GetValueResponse, error)
+	SetValue(context.Context, *SetValueRequest) (*SetValueResponse, error)
+	Fire(context.Context, *FireRequest) error
+	HelloOne(AllServiceHelloOneYARPCServer) (*HelloResponse, error)
+	HelloTwo(*HelloRequest, AllServiceHelloTwoYARPCServer) error
+	HelloThree(AllServiceHelloThreeYARPCServer) error
+}
+
+// AllServiceHelloOneYARPCServer receives HelloRequests.
+type AllServiceHelloOneYARPCServer interface {
+	Context() context.Context
+	Recv(...yarpc.StreamOption) (*HelloRequest, error)
+}
+
+// AllServiceHelloTwoYARPCServer sends HelloResponses.
+type AllServiceHelloTwoYARPCServer interface {
+	Context() context.Context
+	Send(*HelloResponse, ...yarpc.StreamOption) error
+}
+
+// AllServiceHelloThreeYARPCServer receives HelloRequests and sends HelloResponse.
+type AllServiceHelloThreeYARPCServer interface {
+	Context() context.Context
+	Recv(...yarpc.StreamOption) (*HelloRequest, error)
+	Send(*HelloResponse, ...yarpc.StreamOption) error
+}
+
+// BuildAllYARPCProcedures prepares an implementation of the All service for YARPC registration.
+func BuildAllYARPCProcedures(server AllYARPCServer) []transport.Procedure {
+	handler := &_AllYARPCHandler{server}
+	return protobuf.BuildProcedures(
+		protobuf.BuildProceduresParams{
+			ServiceName: "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.All",
+			UnaryHandlerParams: []protobuf.BuildProceduresUnaryHandlerParams{
+				{
+					MethodName: "GetValue",
+					Handler: protobuf.NewUnaryHandler(
+						protobuf.UnaryHandlerParams{
+							Handle:     handler.GetValue,
+							NewRequest: newAllServiceGetValueYARPCRequest,
+						},
+					),
+				},
+				{
+					MethodName: "SetValue",
+					Handler: protobuf.NewUnaryHandler(
+						protobuf.UnaryHandlerParams{
+							Handle:     handler.SetValue,
+							NewRequest: newAllServiceSetValueYARPCRequest,
+						},
+					),
+				},
+			},
+			OnewayHandlerParams: []protobuf.BuildProceduresOnewayHandlerParams{
+				{
+					MethodName: "Fire",
+					Handler: protobuf.NewOnewayHandler(
+						protobuf.OnewayHandlerParams{
+							Handle:     handler.Fire,
+							NewRequest: newAllServiceFireYARPCRequest,
+						},
+					),
+				},
+			},
+			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{
+				{
+					MethodName: "HelloThree",
+					Handler: protobuf.NewStreamHandler(
+						protobuf.StreamHandlerParams{
+							Handle: handler.HelloThree,
+						},
+					),
+				},
+
+				{
+					MethodName: "HelloTwo",
+					Handler: protobuf.NewStreamHandler(
+						protobuf.StreamHandlerParams{
+							Handle: handler.HelloTwo,
+						},
+					),
+				},
+
+				{
+					MethodName: "HelloOne",
+					Handler: protobuf.NewStreamHandler(
+						protobuf.StreamHandlerParams{
+							Handle: handler.HelloOne,
+						},
+					),
+				},
+			},
+		},
+	)
+}
+
+type _AllYARPCCaller struct {
+	streamClient protobuf.StreamClient
+}
+
+func (c *_AllYARPCCaller) GetValue(ctx context.Context, request *GetValueRequest, options ...yarpc.CallOption) (*GetValueResponse, error) {
+	responseMessage, err := c.streamClient.Call(ctx, "GetValue", request, newAllServiceGetValueYARPCResponse, options...)
+	if responseMessage == nil {
+		return nil, err
+	}
+	response, ok := responseMessage.(*GetValueResponse)
+	if !ok {
+		return nil, protobuf.CastError(emptyAllServiceGetValueYARPCResponse, responseMessage)
+	}
+	return response, err
+}
+
+func (c *_AllYARPCCaller) SetValue(ctx context.Context, request *SetValueRequest, options ...yarpc.CallOption) (*SetValueResponse, error) {
+	responseMessage, err := c.streamClient.Call(ctx, "SetValue", request, newAllServiceSetValueYARPCResponse, options...)
+	if responseMessage == nil {
+		return nil, err
+	}
+	response, ok := responseMessage.(*SetValueResponse)
+	if !ok {
+		return nil, protobuf.CastError(emptyAllServiceSetValueYARPCResponse, responseMessage)
+	}
+	return response, err
+}
+
+func (c *_AllYARPCCaller) Fire(ctx context.Context, request *FireRequest, options ...yarpc.CallOption) (yarpc.Ack, error) {
+	return c.streamClient.CallOneway(ctx, "Fire", request, options...)
+}
+
+func (c *_AllYARPCCaller) HelloOne(ctx context.Context, options ...yarpc.CallOption) (AllServiceHelloOneYARPCClient, error) {
+	stream, err := c.streamClient.CallStream(ctx, "HelloOne", options...)
+	if err != nil {
+		return nil, err
+	}
+	return &_AllServiceHelloOneYARPCClient{stream: stream}, nil
+}
+
+func (c *_AllYARPCCaller) HelloTwo(ctx context.Context, request *HelloRequest, options ...yarpc.CallOption) (AllServiceHelloTwoYARPCClient, error) {
+	stream, err := c.streamClient.CallStream(ctx, "HelloTwo", options...)
+	if err != nil {
+		return nil, err
+	}
+	if err := stream.Send(request); err != nil {
+		return nil, err
+	}
+	return &_AllServiceHelloTwoYARPCClient{stream: stream}, nil
+}
+
+func (c *_AllYARPCCaller) HelloThree(ctx context.Context, options ...yarpc.CallOption) (AllServiceHelloThreeYARPCClient, error) {
+	stream, err := c.streamClient.CallStream(ctx, "HelloThree", options...)
+	if err != nil {
+		return nil, err
+	}
+	return &_AllServiceHelloThreeYARPCClient{stream: stream}, nil
+}
+
+type _AllYARPCHandler struct {
+	server AllYARPCServer
+}
+
+func (h *_AllYARPCHandler) GetValue(ctx context.Context, requestMessage proto.Message) (proto.Message, error) {
+	var request *GetValueRequest
+	var ok bool
+	if requestMessage != nil {
+		request, ok = requestMessage.(*GetValueRequest)
+		if !ok {
+			return nil, protobuf.CastError(emptyAllServiceGetValueYARPCRequest, requestMessage)
+		}
+	}
+	response, err := h.server.GetValue(ctx, request)
+	if response == nil {
+		return nil, err
+	}
+	return response, err
+}
+
+func (h *_AllYARPCHandler) SetValue(ctx context.Context, requestMessage proto.Message) (proto.Message, error) {
+	var request *SetValueRequest
+	var ok bool
+	if requestMessage != nil {
+		request, ok = requestMessage.(*SetValueRequest)
+		if !ok {
+			return nil, protobuf.CastError(emptyAllServiceSetValueYARPCRequest, requestMessage)
+		}
+	}
+	response, err := h.server.SetValue(ctx, request)
+	if response == nil {
+		return nil, err
+	}
+	return response, err
+}
+
+func (h *_AllYARPCHandler) Fire(ctx context.Context, requestMessage proto.Message) error {
+	var request *FireRequest
+	var ok bool
+	if requestMessage != nil {
+		request, ok = requestMessage.(*FireRequest)
+		if !ok {
+			return protobuf.CastError(emptyAllServiceFireYARPCRequest, requestMessage)
+		}
+	}
+	return h.server.Fire(ctx, request)
+}
+
+func (h *_AllYARPCHandler) HelloOne(serverStream *protobuf.ServerStream) error {
+	response, err := h.server.HelloOne(&_AllServiceHelloOneYARPCServer{serverStream: serverStream})
+	if err != nil {
+		return err
+	}
+	return serverStream.Send(response)
+}
+
+func (h *_AllYARPCHandler) HelloTwo(serverStream *protobuf.ServerStream) error {
+	requestMessage, err := serverStream.Receive(newAllServiceHelloTwoYARPCRequest)
+	if requestMessage == nil {
+		return err
+	}
+
+	request, ok := requestMessage.(*HelloRequest)
+	if !ok {
+		return protobuf.CastError(emptyAllServiceHelloTwoYARPCRequest, requestMessage)
+	}
+	return h.server.HelloTwo(request, &_AllServiceHelloTwoYARPCServer{serverStream: serverStream})
+}
+
+func (h *_AllYARPCHandler) HelloThree(serverStream *protobuf.ServerStream) error {
+	return h.server.HelloThree(&_AllServiceHelloThreeYARPCServer{serverStream: serverStream})
+}
+
+type _AllServiceHelloOneYARPCClient struct {
+	stream *protobuf.ClientStream
+}
+
+func (c *_AllServiceHelloOneYARPCClient) Context() context.Context {
+	return c.stream.Context()
+}
+
+func (c *_AllServiceHelloOneYARPCClient) Send(request *HelloRequest, options ...yarpc.StreamOption) error {
+	return c.stream.Send(request, options...)
+}
+
+func (c *_AllServiceHelloOneYARPCClient) CloseAndRecv(options ...yarpc.StreamOption) (*HelloResponse, error) {
+	if err := c.stream.Close(options...); err != nil {
+		return nil, err
+	}
+	responseMessage, err := c.stream.Receive(newAllServiceHelloOneYARPCResponse, options...)
+	if responseMessage == nil {
+		return nil, err
+	}
+	response, ok := responseMessage.(*HelloResponse)
+	if !ok {
+		return nil, protobuf.CastError(emptyAllServiceHelloOneYARPCResponse, responseMessage)
+	}
+	return response, err
+}
+
+type _AllServiceHelloTwoYARPCClient struct {
+	stream *protobuf.ClientStream
+}
+
+func (c *_AllServiceHelloTwoYARPCClient) Context() context.Context {
+	return c.stream.Context()
+}
+
+func (c *_AllServiceHelloTwoYARPCClient) Recv(options ...yarpc.StreamOption) (*HelloResponse, error) {
+	responseMessage, err := c.stream.Receive(newAllServiceHelloTwoYARPCResponse, options...)
+	if responseMessage == nil {
+		return nil, err
+	}
+	response, ok := responseMessage.(*HelloResponse)
+	if !ok {
+		return nil, protobuf.CastError(emptyAllServiceHelloTwoYARPCResponse, responseMessage)
+	}
+	return response, err
+}
+
+func (c *_AllServiceHelloTwoYARPCClient) CloseSend(options ...yarpc.StreamOption) error {
+	return c.stream.Close(options...)
+}
+
+type _AllServiceHelloThreeYARPCClient struct {
+	stream *protobuf.ClientStream
+}
+
+func (c *_AllServiceHelloThreeYARPCClient) Context() context.Context {
+	return c.stream.Context()
+}
+
+func (c *_AllServiceHelloThreeYARPCClient) Send(request *HelloRequest, options ...yarpc.StreamOption) error {
+	return c.stream.Send(request, options...)
+}
+
+func (c *_AllServiceHelloThreeYARPCClient) Recv(options ...yarpc.StreamOption) (*HelloResponse, error) {
+	responseMessage, err := c.stream.Receive(newAllServiceHelloThreeYARPCResponse, options...)
+	if responseMessage == nil {
+		return nil, err
+	}
+	response, ok := responseMessage.(*HelloResponse)
+	if !ok {
+		return nil, protobuf.CastError(emptyAllServiceHelloThreeYARPCResponse, responseMessage)
+	}
+	return response, err
+}
+
+func (c *_AllServiceHelloThreeYARPCClient) CloseSend(options ...yarpc.StreamOption) error {
+	return c.stream.Close(options...)
+}
+
+type _AllServiceHelloOneYARPCServer struct {
+	serverStream *protobuf.ServerStream
+}
+
+func (s *_AllServiceHelloOneYARPCServer) Context() context.Context {
+	return s.serverStream.Context()
+}
+
+func (s *_AllServiceHelloOneYARPCServer) Recv(options ...yarpc.StreamOption) (*HelloRequest, error) {
+	requestMessage, err := s.serverStream.Receive(newAllServiceHelloOneYARPCRequest, options...)
+	if requestMessage == nil {
+		return nil, err
+	}
+	request, ok := requestMessage.(*HelloRequest)
+	if !ok {
+		return nil, protobuf.CastError(emptyAllServiceHelloOneYARPCRequest, requestMessage)
+	}
+	return request, err
+}
+
+type _AllServiceHelloTwoYARPCServer struct {
+	serverStream *protobuf.ServerStream
+}
+
+func (s *_AllServiceHelloTwoYARPCServer) Context() context.Context {
+	return s.serverStream.Context()
+}
+
+func (s *_AllServiceHelloTwoYARPCServer) Send(response *HelloResponse, options ...yarpc.StreamOption) error {
+	return s.serverStream.Send(response, options...)
+}
+
+type _AllServiceHelloThreeYARPCServer struct {
+	serverStream *protobuf.ServerStream
+}
+
+func (s *_AllServiceHelloThreeYARPCServer) Context() context.Context {
+	return s.serverStream.Context()
+}
+
+func (s *_AllServiceHelloThreeYARPCServer) Recv(options ...yarpc.StreamOption) (*HelloRequest, error) {
+	requestMessage, err := s.serverStream.Receive(newAllServiceHelloThreeYARPCRequest, options...)
+	if requestMessage == nil {
+		return nil, err
+	}
+	request, ok := requestMessage.(*HelloRequest)
+	if !ok {
+		return nil, protobuf.CastError(emptyAllServiceHelloThreeYARPCRequest, requestMessage)
+	}
+	return request, err
+}
+
+func (s *_AllServiceHelloThreeYARPCServer) Send(response *HelloResponse, options ...yarpc.StreamOption) error {
+	return s.serverStream.Send(response, options...)
+}
+
+func newAllServiceGetValueYARPCRequest() proto.Message {
+	return &GetValueRequest{}
+}
+
+func newAllServiceGetValueYARPCResponse() proto.Message {
+	return &GetValueResponse{}
+}
+
+func newAllServiceSetValueYARPCRequest() proto.Message {
+	return &SetValueRequest{}
+}
+
+func newAllServiceSetValueYARPCResponse() proto.Message {
+	return &SetValueResponse{}
+}
+
+func newAllServiceFireYARPCRequest() proto.Message {
+	return &FireRequest{}
+}
+
+func newAllServiceFireYARPCResponse() proto.Message {
+	return &yarpcproto.Oneway{}
+}
+
+func newAllServiceHelloOneYARPCRequest() proto.Message {
+	return &HelloRequest{}
+}
+
+func newAllServiceHelloOneYARPCResponse() proto.Message {
+	return &HelloResponse{}
+}
+
+func newAllServiceHelloTwoYARPCRequest() proto.Message {
+	return &HelloRequest{}
+}
+
+func newAllServiceHelloTwoYARPCResponse() proto.Message {
+	return &HelloResponse{}
+}
+
+func newAllServiceHelloThreeYARPCRequest() proto.Message {
+	return &HelloRequest{}
+}
+
+func newAllServiceHelloThreeYARPCResponse() proto.Message {
+	return &HelloResponse{}
+}
+
+var (
+	emptyAllServiceGetValueYARPCRequest    = &GetValueRequest{}
+	emptyAllServiceGetValueYARPCResponse   = &GetValueResponse{}
+	emptyAllServiceSetValueYARPCRequest    = &SetValueRequest{}
+	emptyAllServiceSetValueYARPCResponse   = &SetValueResponse{}
+	emptyAllServiceFireYARPCRequest        = &FireRequest{}
+	emptyAllServiceFireYARPCResponse       = &yarpcproto.Oneway{}
+	emptyAllServiceHelloOneYARPCRequest    = &HelloRequest{}
+	emptyAllServiceHelloOneYARPCResponse   = &HelloResponse{}
+	emptyAllServiceHelloTwoYARPCRequest    = &HelloRequest{}
+	emptyAllServiceHelloTwoYARPCResponse   = &HelloResponse{}
+	emptyAllServiceHelloThreeYARPCRequest  = &HelloRequest{}
+	emptyAllServiceHelloThreeYARPCResponse = &HelloResponse{}
 )
 
 func init() {
@@ -265,6 +741,11 @@ func init() {
 	yarpc.RegisterClientBuilder(
 		func(clientConfig transport.ClientConfig, structField reflect.StructField) SinkYARPCClient {
 			return NewSinkYARPCClient(clientConfig, protobuf.ClientBuilderOptions(clientConfig, structField)...)
+		},
+	)
+	yarpc.RegisterClientBuilder(
+		func(clientConfig transport.ClientConfig, structField reflect.StructField) AllYARPCClient {
+			return NewAllYARPCClient(clientConfig, protobuf.ClientBuilderOptions(clientConfig, structField)...)
 		},
 	)
 }

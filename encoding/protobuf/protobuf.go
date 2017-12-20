@@ -52,6 +52,7 @@ type BuildProceduresParams struct {
 	ServiceName         string
 	UnaryHandlerParams  []BuildProceduresUnaryHandlerParams
 	OnewayHandlerParams []BuildProceduresOnewayHandlerParams
+	StreamHandlerParams []BuildProceduresStreamHandlerParams
 }
 
 // BuildProceduresUnaryHandlerParams contains the parameters for a UnaryHandler for BuildProcedures.
@@ -64,6 +65,12 @@ type BuildProceduresUnaryHandlerParams struct {
 type BuildProceduresOnewayHandlerParams struct {
 	MethodName string
 	Handler    transport.OnewayHandler
+}
+
+// BuildProceduresStreamHandlerParams contains the parameters for a StreamHandler for BuildProcedures.
+type BuildProceduresStreamHandlerParams struct {
+	MethodName string
+	Handler    transport.StreamHandler
 }
 
 // BuildProcedures builds the transport.Procedures.
@@ -99,6 +106,21 @@ func BuildProcedures(params BuildProceduresParams) []transport.Procedure {
 			},
 		)
 	}
+	for _, streamHandlerParams := range params.StreamHandlerParams {
+		procedures = append(
+			procedures,
+			transport.Procedure{
+				Name:        procedure.ToName(params.ServiceName, streamHandlerParams.MethodName),
+				HandlerSpec: transport.NewStreamHandlerSpec(streamHandlerParams.Handler),
+				Encoding:    Encoding,
+			},
+			transport.Procedure{
+				Name:        procedure.ToName(params.ServiceName, streamHandlerParams.MethodName),
+				HandlerSpec: transport.NewStreamHandlerSpec(streamHandlerParams.Handler),
+				Encoding:    JSONEncoding,
+			},
+		)
+	}
 	return procedures
 }
 
@@ -119,6 +141,17 @@ type Client interface {
 	) (transport.Ack, error)
 }
 
+// StreamClient is a protobuf client with streaming.
+type StreamClient interface {
+	Client
+
+	CallStream(
+		ctx context.Context,
+		requestMethodName string,
+		opts ...yarpc.CallOption,
+	) (*ClientStream, error)
+}
+
 // ClientOption is an option for a new Client.
 type ClientOption interface {
 	apply(*client)
@@ -133,6 +166,11 @@ type ClientParams struct {
 
 // NewClient creates a new client.
 func NewClient(params ClientParams) Client {
+	return newClient(params.ServiceName, params.ClientConfig, params.Options...)
+}
+
+// NewStreamClient creates a new stream client.
+func NewStreamClient(params ClientParams) StreamClient {
 	return newClient(params.ServiceName, params.ClientConfig, params.Options...)
 }
 
@@ -156,6 +194,16 @@ type OnewayHandlerParams struct {
 // NewOnewayHandler returns a new OnewayHandler.
 func NewOnewayHandler(params OnewayHandlerParams) transport.OnewayHandler {
 	return newOnewayHandler(params.Handle, params.NewRequest)
+}
+
+// StreamHandlerParams contains the parameters for creating a new StreamHandler.
+type StreamHandlerParams struct {
+	Handle func(*ServerStream) error
+}
+
+// NewStreamHandler returns a new StreamHandler.
+func NewStreamHandler(params StreamHandlerParams) transport.StreamHandler {
+	return newStreamHandler(params.Handle)
 }
 
 // ClientBuilderOptions returns ClientOptions that yarpc.InjectClients should use for a
@@ -194,4 +242,50 @@ func uniqueLowercaseStrings(s []string) []string {
 		c = append(c, key)
 	}
 	return c
+}
+
+// ClientStream is a protobuf-specific client stream.
+type ClientStream struct {
+	stream *transport.ClientStream
+}
+
+// Context returns the context of the stream.
+func (c *ClientStream) Context() context.Context {
+	return c.stream.Context()
+}
+
+// Receive will receive a protobuf message from the client stream.
+func (c *ClientStream) Receive(newMessage func() proto.Message, options ...yarpc.StreamOption) (proto.Message, error) {
+	return readFromStream(context.Background(), c.stream, newMessage)
+}
+
+// Send will send a protobuf message to the client stream.
+func (c *ClientStream) Send(message proto.Message, options ...yarpc.StreamOption) error {
+	return writeToStream(context.Background(), c.stream, message)
+}
+
+// Close will close the protobuf stream.
+func (c *ClientStream) Close(options ...yarpc.StreamOption) error {
+	return c.stream.Close(context.Background())
+}
+
+// ServerStream is a protobuf-specific server stream.
+type ServerStream struct {
+	ctx    context.Context
+	stream *transport.ServerStream
+}
+
+// Context returns the context of the stream.
+func (s *ServerStream) Context() context.Context {
+	return s.ctx
+}
+
+// Receive will receive a protobuf message from the server stream.
+func (s *ServerStream) Receive(newMessage func() proto.Message, options ...yarpc.StreamOption) (proto.Message, error) {
+	return readFromStream(context.Background(), s.stream, newMessage)
+}
+
+// Send will send a protobuf message to the server stream.
+func (s *ServerStream) Send(message proto.Message, options ...yarpc.StreamOption) error {
+	return writeToStream(context.Background(), s.stream, message)
 }

@@ -22,9 +22,12 @@ package example
 
 import (
 	"context"
+	"io"
 	"sync"
 	"time"
 
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/yarpcerrors"
 )
@@ -35,9 +38,11 @@ const (
 )
 
 var (
-	errRequestNil      = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "request nil")
-	errRequestKeyNil   = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "request key nil")
-	errRequestValueNil = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "request value nil")
+	errRequestNil             = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "request nil")
+	errRequestKeyNil          = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "request key nil")
+	errRequestValueNil        = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "request value nil")
+	errRequestMessageNil      = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "request message nil")
+	errRequestNumResponsesNil = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "request num responses nil")
 )
 
 // KeyValueYARPCServer implements examplepb.KeyValueYARPCServer.
@@ -166,6 +171,99 @@ func (s *SinkYARPCServer) WaitFireDone() error {
 	case <-s.fireDone:
 	case <-time.After(FireDoneTimeout):
 		return yarpcerrors.Newf(yarpcerrors.CodeDeadlineExceeded, "fire not done after %v", FireDoneTimeout)
+	}
+	return nil
+}
+
+// FooYARPCServer implements examplepb.FooYARPCServer.
+type FooYARPCServer struct {
+	expectedHeaders transport.Headers
+}
+
+// NewFooYARPCServer returns a new FooYARPCServer.
+func NewFooYARPCServer(expectedHeaders transport.Headers) *FooYARPCServer {
+	return &FooYARPCServer{
+		expectedHeaders: expectedHeaders,
+	}
+}
+
+// EchoOut reads from a stream and echos all requests in the response.
+func (f *FooYARPCServer) EchoOut(server examplepb.FooServiceEchoOutYARPCServer) (*examplepb.EchoOutResponse, error) {
+	var allMessages []string
+	call := yarpc.CallFromContext(server.Context())
+	for k, v := range f.expectedHeaders.Items() {
+		if call.Header(k) != v {
+			return nil, yarpcerrors.InvalidArgumentErrorf("did not receive proper headers, missing %q:%q", k, v)
+		}
+	}
+	for request, err := server.Recv(); err != io.EOF; request, err = server.Recv() {
+		if err != nil {
+			return nil, err
+		}
+		if request == nil {
+			return nil, errRequestNil
+		}
+		if request.Message == "" {
+			return nil, errRequestMessageNil
+		}
+		allMessages = append(allMessages, request.Message)
+	}
+	return &examplepb.EchoOutResponse{
+		AllMessages: allMessages,
+	}, nil
+}
+
+// EchoIn echos a series of requests back on a stream.
+func (f *FooYARPCServer) EchoIn(request *examplepb.EchoInRequest, server examplepb.FooServiceEchoInYARPCServer) error {
+	if request == nil {
+		return errRequestNil
+	}
+	if request.Message == "" {
+		return errRequestMessageNil
+	}
+	if request.NumResponses == 0 {
+		return errRequestNumResponsesNil
+	}
+	call := yarpc.CallFromContext(server.Context())
+	for k, v := range f.expectedHeaders.Items() {
+		if call.Header(k) != v {
+			return yarpcerrors.InvalidArgumentErrorf("did not receive proper headers, missing %q:%q", k, v)
+		}
+	}
+	for i := 0; i < int(request.NumResponses); i++ {
+		if err := server.Send(&examplepb.EchoInResponse{Message: request.Message}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// EchoBoth immediately echos a request back to the client.
+func (f *FooYARPCServer) EchoBoth(server examplepb.FooServiceEchoBothYARPCServer) error {
+	call := yarpc.CallFromContext(server.Context())
+	for k, v := range f.expectedHeaders.Items() {
+		if call.Header(k) != v {
+			return yarpcerrors.InvalidArgumentErrorf("did not receive proper headers, missing %q:%q", k, v)
+		}
+	}
+	for request, err := server.Recv(); err != io.EOF; request, err = server.Recv() {
+		if err != nil {
+			return err
+		}
+		if request == nil {
+			return errRequestNil
+		}
+		if request.Message == "" {
+			return errRequestMessageNil
+		}
+		if request.NumResponses == 0 {
+			return errRequestNumResponsesNil
+		}
+		for i := 0; i < int(request.NumResponses); i++ {
+			if err := server.Send(&examplepb.EchoBothResponse{Message: request.Message}); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
