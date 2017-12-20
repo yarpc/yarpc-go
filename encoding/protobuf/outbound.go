@@ -23,7 +23,6 @@ package protobuf
 import (
 	"bytes"
 	"context"
-	"fmt"
 
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc"
@@ -42,10 +41,7 @@ type client struct {
 }
 
 func newClient(serviceName string, clientConfig transport.ClientConfig, options ...ClientOption) *client {
-	outboundConfig, ok := clientConfig.(*transport.OutboundConfig)
-	if !ok {
-		panic(fmt.Sprintf("%T should be a *transport.OutboundConfig", clientConfig))
-	}
+	outboundConfig := toOutboundConfig(clientConfig)
 	client := &client{
 		serviceName:    serviceName,
 		outboundConfig: outboundConfig,
@@ -55,6 +51,24 @@ func newClient(serviceName string, clientConfig transport.ClientConfig, options 
 		option.apply(client)
 	}
 	return client
+}
+
+func toOutboundConfig(cc transport.ClientConfig) *transport.OutboundConfig {
+	if outboundConfig, ok := cc.(*transport.OutboundConfig); ok {
+		return outboundConfig
+	}
+	// If the config is not an *OutboundConfig we assume the only Outbound is
+	// unary and create our own outbound config.
+	// If there is no unary outbound, this function will panic, but, we're kinda
+	// stuck with that. (and why the hell are you passing a oneway-only client
+	// config to protobuf anyway?).
+	return &transport.OutboundConfig{
+		CallerName: cc.Caller(),
+		Outbounds: transport.Outbounds{
+			ServiceName: cc.Service(),
+			Unary:       cc.GetUnaryOutbound(),
+		},
+	}
 }
 
 func (c *client) Call(

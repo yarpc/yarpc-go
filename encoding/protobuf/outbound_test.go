@@ -41,11 +41,28 @@ func TestInvalidOutboundEncoding(t *testing.T) {
 	assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.FromError(err).Code())
 }
 
+func TestNonOutboundConfigWithUnaryClient(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	cc := transporttest.NewMockClientConfig(mockCtrl)
+	cc.EXPECT().Caller().Return("caller")
+	cc.EXPECT().Service().Return("service")
+	cc.EXPECT().GetUnaryOutbound().Return(transporttest.NewMockUnaryOutbound(mockCtrl))
+
+	assert.NotPanics(t, func() {
+		newClient("test", cc)
+	})
+}
+
 func TestNonOutboundConfigClient(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
 	cc := transporttest.NewMockClientConfig(mockCtrl)
+	cc.EXPECT().Caller().Return("caller")
+	cc.EXPECT().Service().Return("service")
+	cc.EXPECT().GetUnaryOutbound().Do(func() { panic("bad times") })
 
 	assert.Panics(t, func() {
 		newClient("test", cc)
