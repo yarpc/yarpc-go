@@ -47,10 +47,3 @@ type ResponseWriter interface {
 	// of Write().
 	SetApplicationError()
 }
-
-// ResponseMeta is the low level response metadata representation.  It does not
-// include any "body" information (or application error), and should only be
-// used for information about a connection's metadata.
-type ResponseMeta struct {
-	Headers Headers
-}
