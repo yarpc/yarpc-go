@@ -23,6 +23,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -34,6 +35,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/examples/streaming"
 	"go.uber.org/yarpc/transport/grpc"
+	"go.uber.org/yarpc/transport/x/websocket"
 )
 
 func main() {
@@ -43,8 +45,14 @@ func main() {
 }
 
 func do() error {
+	protocol := flag.String("protocol", "grpc", " Set which protocol you'd like to use (grpc, websockets)")
+	flag.Parse()
+
 	var outbound transport.StreamOutbound
 	outbound = grpc.NewTransport().NewSingleOutbound("127.0.0.1:24039")
+	if *protocol == "websocket" {
+		outbound = websocket.NewTransport().NewSingleOutbound("ws://127.0.0.1:24040")
+	}
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "keyvalue-client",

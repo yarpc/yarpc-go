@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/examples/streaming"
 	"go.uber.org/yarpc/transport/grpc"
+	"go.uber.org/yarpc/transport/x/websocket"
 )
 
 type handler struct {
@@ -102,9 +103,15 @@ func do() error {
 	}
 	inbound = grpc.NewTransport().NewInbound(listener)
 
+	webListener, err := net.Listen("tcp", "127.0.0.1:24040")
+	if err != nil {
+		return err
+	}
+	webInbound := websocket.NewTransport().NewInbound(webListener)
+
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name:     "keyvalue",
-		Inbounds: yarpc.Inbounds{inbound},
+		Inbounds: yarpc.Inbounds{inbound, webInbound},
 	})
 
 	handler := &handler{}
