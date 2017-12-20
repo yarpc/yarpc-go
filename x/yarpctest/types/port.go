@@ -89,3 +89,8 @@ func (n *Port) ApplyService(opts *api.ServiceOpts) {
 func (n *Port) ApplyRequest(opts *api.RequestOpts) {
 	opts.Port = n.Port
 }
+
+// ApplyClientStreamRequest implements ClientStreamRequestOption
+func (n *Port) ApplyClientStreamRequest(opts *api.ClientStreamRequestOpts) {
+	opts.Port = n.Port
+}

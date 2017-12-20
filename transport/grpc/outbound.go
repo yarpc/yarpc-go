@@ -146,14 +146,10 @@ func (o *Outbound) invoke(
 		callOptions = []grpc.CallOption{grpc.Trailer(responseMD)}
 	}
 	apiPeer, onFinish, err := o.peerChooser.Choose(ctx, request)
-	defer func() {
-		if onFinish != nil {
-			onFinish(retErr)
-		}
-	}()
 	if err != nil {
 		return err
 	}
+	defer func() { onFinish(retErr) }()
 	grpcPeer, ok := apiPeer.(*grpcPeer)
 	if !ok {
 		return peer.ErrInvalidPeerConversion{
@@ -163,9 +159,6 @@ func (o *Outbound) invoke(
 	}
 
 	tracer := o.t.options.tracer
-	if tracer == nil {
-		tracer = opentracing.GlobalTracer()
-	}
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        tracer,
 		TransportName: transportName,
@@ -181,12 +174,11 @@ func (o *Outbound) invoke(
 
 	return transport.UpdateSpanWithErr(
 		span,
-		grpc.Invoke(
+		grpcPeer.clientConn.Invoke(
 			metadata.NewOutgoingContext(ctx, md),
 			fullMethod,
 			requestBuffer.Bytes(),
 			responseBody,
-			grpcPeer.clientConn,
 			callOptions...,
 		),
 	)
@@ -233,4 +225,88 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 		message = ""
 	}
 	return intyarpcerrors.NewWithNamef(code, name, message)
+}
+
+// CallStream implements transport.StreamOutbound#CallStream.
+func (o *Outbound) CallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
+	if _, ok := ctx.Deadline(); !ok {
+		return nil, yarpcerrors.InvalidArgumentErrorf("stream requests require a connection establishment timeout on the passed in context")
+	}
+	if err := o.once.WaitUntilRunning(ctx); err != nil {
+		return nil, err
+	}
+	return o.stream(ctx, request, time.Now())
+}
+
+func (o *Outbound) stream(
+	ctx context.Context,
+	req *transport.StreamRequest,
+	start time.Time,
+) (_ *transport.ClientStream, err error) {
+	if req.Meta == nil {
+		return nil, yarpcerrors.InvalidArgumentErrorf("stream request requires a request metadata")
+	}
+	treq := req.Meta.ToRequest()
+	md, err := transportRequestToMetadata(treq)
+	if err != nil {
+		return nil, err
+	}
+
+	fullMethod, err := procedureNameToFullMethod(req.Meta.Procedure)
+	if err != nil {
+		return nil, err
+	}
+
+	apiPeer, onFinish, err := o.peerChooser.Choose(ctx, treq)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { onFinish(err) }()
+
+	grpcPeer, ok := apiPeer.(*grpcPeer)
+	if !ok {
+		return nil, peer.ErrInvalidPeerConversion{
+			Peer:         apiPeer,
+			ExpectedType: "*grpcPeer",
+		}
+	}
+
+	tracer := o.t.options.tracer
+	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
+		Tracer:        tracer,
+		TransportName: transportName,
+		StartTime:     start,
+		ExtraTags:     yarpc.OpentracingTags,
+	}
+	_, span := createOpenTracingSpan.Do(ctx, treq)
+
+	if err := tracer.Inject(span.Context(), opentracing.HTTPHeaders, mdReadWriter(md)); err != nil {
+		span.Finish()
+		return nil, err
+	}
+
+	// We use a different context for the lifetime of the stream and the time it
+	// took to establish a connection with the peer, setting the stream's
+	// context to context.Background() means the lifetime of this stream has no
+	// timeout.
+	streamCtx := metadata.NewOutgoingContext(context.Background(), md)
+	clientStream, err := grpcPeer.clientConn.NewStream(
+		streamCtx,
+		&grpc.StreamDesc{
+			ClientStreams: true,
+			ServerStreams: true,
+		},
+		fullMethod,
+	)
+	if err != nil {
+		span.Finish()
+		return nil, err
+	}
+	stream := newClientStream(streamCtx, req, clientStream, span)
+	tClientStream, err := transport.NewClientStream(stream)
+	if err != nil {
+		span.Finish()
+		return nil, err
+	}
+	return tClientStream, nil
 }
