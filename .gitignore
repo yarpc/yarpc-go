@@ -15,6 +15,8 @@
 /internal/examples/json-keyvalue/client/client
 /internal/examples/json-keyvalue/server/server
 /internal/examples/protobuf/protobuf
+/internal/examples/streaming/client/client
+/internal/examples/streaming/server/server
 /internal/examples/thrift-hello/hello/hello
 /internal/examples/thrift-keyvalue/keyvalue/client/client
 /internal/examples/thrift-keyvalue/keyvalue/server/server

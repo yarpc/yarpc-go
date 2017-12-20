@@ -108,6 +108,7 @@ protoc_all \
   encoding/protobuf/protoc-gen-yarpc-go/internal/testing/dep.proto \
   encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto \
   encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing_no_service.proto
+protoc_all internal/examples/streaming/stream.proto
 
 ragel -Z -G2 -o internal/interpolate/parse.go internal/interpolate/parse.rl
 gofmt -s -w internal/interpolate/parse.go

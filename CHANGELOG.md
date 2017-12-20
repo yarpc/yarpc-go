@@ -4,6 +4,7 @@ Releases
 v1.27.0-dev (unreleased)
 --------------------
 
+-   Add support for Inbound and Outbound streaming RPCs using gRPC and Protobuf.
 -   Add support for creating peer choosers through config with PeerChooserSpec.
 
 
