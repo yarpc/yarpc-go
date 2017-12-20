@@ -297,7 +297,7 @@ func TestStreamOutboundMiddlewareChain(t *testing.T) {
 	ctx := context.Background()
 	req := &transport.StreamRequest{}
 
-	stream, err := transport.NewClientStream(transporttest.NewMockStreamWithClose(mockCtrl))
+	stream, err := transport.NewClientStream(transporttest.NewMockStreamCloser(mockCtrl))
 	require.NoError(t, err)
 
 	out := transporttest.NewMockStreamOutbound(mockCtrl)

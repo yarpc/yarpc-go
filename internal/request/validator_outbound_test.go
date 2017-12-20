@@ -137,7 +137,7 @@ func TestStreamValidate(t *testing.T) {
 			Encoding:  "raw",
 		},
 	}
-	stream, err := transport.NewClientStream(transporttest.NewMockStreamWithClose(mockCtrl))
+	stream, err := transport.NewClientStream(transporttest.NewMockStreamCloser(mockCtrl))
 	require.NoError(t, err)
 
 	out := transporttest.NewMockStreamOutbound(mockCtrl)
