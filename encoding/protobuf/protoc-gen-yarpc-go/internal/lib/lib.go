@@ -60,8 +60,8 @@ type {{$service.GetName}}YARPCClient interface {
 // {{$service.GetName}}Service{{$method.GetName}}YARPCClient sends {{$method.RequestType.GoType $packagePath}}s and receives the single {{$method.ResponseType.GoType $packagePath}} when sending is done.
 type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
 	Context() context.Context
-	Send(*{{$method.RequestType.GoType $packagePath}}) error
-	CloseAndRecv() (*{{$method.ResponseType.GoType $packagePath}}, error)
+	Send(*{{$method.RequestType.GoType $packagePath}}, ...yarpc.StreamOption) error
+	CloseAndRecv(...yarpc.StreamOption) (*{{$method.ResponseType.GoType $packagePath}}, error)
 }
 {{end}}
 
@@ -69,7 +69,7 @@ type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
 // {{$service.GetName}}Service{{$method.GetName}}YARPCClient receives {{$method.ResponseType.GoType $packagePath}}s, returning io.EOF when the stream is complete.
 type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
 	Context() context.Context
-	Recv() (*{{$method.ResponseType.GoType $packagePath}}, error)
+	Recv(...yarpc.StreamOption) (*{{$method.ResponseType.GoType $packagePath}}, error)
 }
 {{end}}
 
@@ -77,9 +77,9 @@ type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
 // {{$service.GetName}}Service{{$method.GetName}}YARPCClient sends {{$method.RequestType.GoType $packagePath}}s and receives {{$method.ResponseType.GoType $packagePath}}s, returning io.EOF when the stream is complete.
 type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
 	Context() context.Context
-	Send(*{{$method.RequestType.GoType $packagePath}}) error
-	Recv() (*{{$method.ResponseType.GoType $packagePath}}, error)
-	CloseSend() error
+	Send(*{{$method.RequestType.GoType $packagePath}}, ...yarpc.StreamOption) error
+	Recv(...yarpc.StreamOption) (*{{$method.ResponseType.GoType $packagePath}}, error)
+	CloseSend(...yarpc.StreamOption) error
 }
 {{end}}
 
@@ -108,7 +108,7 @@ type {{$service.GetName}}YARPCServer interface {
 // {{$service.GetName}}Service{{$method.GetName}}YARPCServer receives {{$method.RequestType.GoType $packagePath}}s.
 type {{$service.GetName}}Service{{$method.GetName}}YARPCServer interface {
 	Context() context.Context
-	Recv() (*{{$method.RequestType.GoType $packagePath}}, error)
+	Recv(...yarpc.StreamOption) (*{{$method.RequestType.GoType $packagePath}}, error)
 }
 {{end}}
 
@@ -116,7 +116,7 @@ type {{$service.GetName}}Service{{$method.GetName}}YARPCServer interface {
 // {{$service.GetName}}Service{{$method.GetName}}YARPCServer sends {{$method.ResponseType.GoType $packagePath}}s.
 type {{$service.GetName}}Service{{$method.GetName}}YARPCServer interface {
 	Context() context.Context
-	Send(*{{$method.ResponseType.GoType $packagePath}}) error
+	Send(*{{$method.ResponseType.GoType $packagePath}}, ...yarpc.StreamOption) error
 }
 {{end}}
 
@@ -124,8 +124,8 @@ type {{$service.GetName}}Service{{$method.GetName}}YARPCServer interface {
 // {{$service.GetName}}Service{{$method.GetName}}YARPCServer receives {{$method.RequestType.GoType $packagePath}}s and sends {{$method.ResponseType.GoType $packagePath}}.
 type {{$service.GetName}}Service{{$method.GetName}}YARPCServer interface {
 	Context() context.Context
-	Recv() (*{{$method.RequestType.GoType $packagePath}}, error)
-	Send(*{{$method.ResponseType.GoType $packagePath}}) error
+	Recv(...yarpc.StreamOption) (*{{$method.RequestType.GoType $packagePath}}, error)
+	Send(*{{$method.ResponseType.GoType $packagePath}}, ...yarpc.StreamOption) error
 }
 {{end}}
 
@@ -317,11 +317,11 @@ func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Context() c
 	return c.stream.Context()
 }
 
-func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Send(request *{{$method.RequestType.GoType $packagePath}}) error {
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Send(request *{{$method.RequestType.GoType $packagePath}}, options ...yarpc.StreamOption) error {
 	return protobuf.WriteToStream(context.Background(), request, c.stream)
 }
 
-func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) CloseAndRecv() (*{{$method.ResponseType.GoType $packagePath}}, error) {
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) CloseAndRecv(options ...yarpc.StreamOption) (*{{$method.ResponseType.GoType $packagePath}}, error) {
 	if err := c.stream.Close(context.Background()); err != nil {
 		return nil, err
 	}
@@ -346,7 +346,7 @@ func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Context() c
 	return c.stream.Context()
 }
 
-func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Recv() (*{{$method.ResponseType.GoType $packagePath}}, error) {
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Recv(options ...yarpc.StreamOption) (*{{$method.ResponseType.GoType $packagePath}}, error) {
 	responseMessage, err := protobuf.ReadFromStream(context.Background(), c.stream, new{{$service.GetName}}Service{{$method.GetName}}YARPCResponse)
 	if responseMessage == nil {
         return nil, err
@@ -368,11 +368,11 @@ func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Context() c
 	return c.stream.Context()
 }
 
-func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Send(request *{{$method.RequestType.GoType $packagePath}}) error {
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Send(request *{{$method.RequestType.GoType $packagePath}}, options ...yarpc.StreamOption) error {
 	return protobuf.WriteToStream(context.Background(), request, c.stream)
 }
 
-func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Recv() (*{{$method.ResponseType.GoType $packagePath}}, error) {
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Recv(options ...yarpc.StreamOption) (*{{$method.ResponseType.GoType $packagePath}}, error) {
 	responseMessage, err := protobuf.ReadFromStream(context.Background(), c.stream, new{{$service.GetName}}Service{{$method.GetName}}YARPCResponse)
 	if responseMessage == nil {
         return nil, err
@@ -384,7 +384,7 @@ func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Recv() (*{{
 	return response, err
 }
 
-func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) CloseSend() error {
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) CloseSend(options ...yarpc.StreamOption) error {
 	return c.stream.Close(context.Background())
 }
 {{end}}
@@ -398,7 +398,7 @@ func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Context() c
 	return s.serverStream.Context()
 }
 
-func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Recv() (*{{$method.RequestType.GoType $packagePath}}, error) {
+func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Recv(options ...yarpc.StreamOption) (*{{$method.RequestType.GoType $packagePath}}, error) {
 	requestMessage, err := protobuf.ReadFromStream(context.Background(), s.serverStream, new{{$service.GetName}}Service{{$method.GetName}}YARPCRequest)
 	if requestMessage == nil {
         return nil, err
@@ -420,7 +420,7 @@ func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Context() c
 	return s.serverStream.Context()
 }
 
-func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Send(response *{{$method.ResponseType.GoType $packagePath}}) error {
+func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Send(response *{{$method.ResponseType.GoType $packagePath}}, options ...yarpc.StreamOption) error {
 	return protobuf.WriteToStream(context.Background(), response, s.serverStream)
 }
 {{end}}
@@ -434,7 +434,7 @@ func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Context() c
 	return s.serverStream.Context()
 }
 
-func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Recv() (*{{$method.RequestType.GoType $packagePath}}, error) {
+func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Recv(options ...yarpc.StreamOption) (*{{$method.RequestType.GoType $packagePath}}, error) {
 	requestMessage, err := protobuf.ReadFromStream(context.Background(), s.serverStream, new{{$service.GetName}}Service{{$method.GetName}}YARPCRequest)
 	if requestMessage == nil {
         return nil, err
@@ -446,7 +446,7 @@ func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Recv() (*{{
 	return request, err
 }
 
-func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Send(response *{{$method.ResponseType.GoType $packagePath}}) error {
+func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Send(response *{{$method.ResponseType.GoType $packagePath}}, options ...yarpc.StreamOption) error {
 	return protobuf.WriteToStream(context.Background(), response, s.serverStream)
 }
 {{end}}

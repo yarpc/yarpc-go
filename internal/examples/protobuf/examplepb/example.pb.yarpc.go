@@ -271,22 +271,22 @@ type FooYARPCClient interface {
 // FooServiceEchoOutYARPCClient sends EchoOutRequests and receives the single EchoOutResponse when sending is done.
 type FooServiceEchoOutYARPCClient interface {
 	Context() context.Context
-	Send(*EchoOutRequest) error
-	CloseAndRecv() (*EchoOutResponse, error)
+	Send(*EchoOutRequest, ...yarpc.StreamOption) error
+	CloseAndRecv(...yarpc.StreamOption) (*EchoOutResponse, error)
 }
 
 // FooServiceEchoInYARPCClient receives EchoInResponses, returning io.EOF when the stream is complete.
 type FooServiceEchoInYARPCClient interface {
 	Context() context.Context
-	Recv() (*EchoInResponse, error)
+	Recv(...yarpc.StreamOption) (*EchoInResponse, error)
 }
 
 // FooServiceEchoBothYARPCClient sends EchoBothRequests and receives EchoBothResponses, returning io.EOF when the stream is complete.
 type FooServiceEchoBothYARPCClient interface {
 	Context() context.Context
-	Send(*EchoBothRequest) error
-	Recv() (*EchoBothResponse, error)
-	CloseSend() error
+	Send(*EchoBothRequest, ...yarpc.StreamOption) error
+	Recv(...yarpc.StreamOption) (*EchoBothResponse, error)
+	CloseSend(...yarpc.StreamOption) error
 }
 
 // NewFooYARPCClient builds a new YARPC client for the Foo service.
@@ -310,20 +310,20 @@ type FooYARPCServer interface {
 // FooServiceEchoOutYARPCServer receives EchoOutRequests.
 type FooServiceEchoOutYARPCServer interface {
 	Context() context.Context
-	Recv() (*EchoOutRequest, error)
+	Recv(...yarpc.StreamOption) (*EchoOutRequest, error)
 }
 
 // FooServiceEchoInYARPCServer sends EchoInResponses.
 type FooServiceEchoInYARPCServer interface {
 	Context() context.Context
-	Send(*EchoInResponse) error
+	Send(*EchoInResponse, ...yarpc.StreamOption) error
 }
 
 // FooServiceEchoBothYARPCServer receives EchoBothRequests and sends EchoBothResponse.
 type FooServiceEchoBothYARPCServer interface {
 	Context() context.Context
-	Recv() (*EchoBothRequest, error)
-	Send(*EchoBothResponse) error
+	Recv(...yarpc.StreamOption) (*EchoBothRequest, error)
+	Send(*EchoBothResponse, ...yarpc.StreamOption) error
 }
 
 // BuildFooYARPCProcedures prepares an implementation of the Foo service for YARPC registration.
@@ -434,11 +434,11 @@ func (c *_FooServiceEchoOutYARPCClient) Context() context.Context {
 	return c.stream.Context()
 }
 
-func (c *_FooServiceEchoOutYARPCClient) Send(request *EchoOutRequest) error {
+func (c *_FooServiceEchoOutYARPCClient) Send(request *EchoOutRequest, options ...yarpc.StreamOption) error {
 	return protobuf.WriteToStream(context.Background(), request, c.stream)
 }
 
-func (c *_FooServiceEchoOutYARPCClient) CloseAndRecv() (*EchoOutResponse, error) {
+func (c *_FooServiceEchoOutYARPCClient) CloseAndRecv(options ...yarpc.StreamOption) (*EchoOutResponse, error) {
 	if err := c.stream.Close(context.Background()); err != nil {
 		return nil, err
 	}
@@ -461,7 +461,7 @@ func (c *_FooServiceEchoInYARPCClient) Context() context.Context {
 	return c.stream.Context()
 }
 
-func (c *_FooServiceEchoInYARPCClient) Recv() (*EchoInResponse, error) {
+func (c *_FooServiceEchoInYARPCClient) Recv(options ...yarpc.StreamOption) (*EchoInResponse, error) {
 	responseMessage, err := protobuf.ReadFromStream(context.Background(), c.stream, newFooServiceEchoInYARPCResponse)
 	if responseMessage == nil {
 		return nil, err
@@ -481,11 +481,11 @@ func (c *_FooServiceEchoBothYARPCClient) Context() context.Context {
 	return c.stream.Context()
 }
 
-func (c *_FooServiceEchoBothYARPCClient) Send(request *EchoBothRequest) error {
+func (c *_FooServiceEchoBothYARPCClient) Send(request *EchoBothRequest, options ...yarpc.StreamOption) error {
 	return protobuf.WriteToStream(context.Background(), request, c.stream)
 }
 
-func (c *_FooServiceEchoBothYARPCClient) Recv() (*EchoBothResponse, error) {
+func (c *_FooServiceEchoBothYARPCClient) Recv(options ...yarpc.StreamOption) (*EchoBothResponse, error) {
 	responseMessage, err := protobuf.ReadFromStream(context.Background(), c.stream, newFooServiceEchoBothYARPCResponse)
 	if responseMessage == nil {
 		return nil, err
@@ -497,7 +497,7 @@ func (c *_FooServiceEchoBothYARPCClient) Recv() (*EchoBothResponse, error) {
 	return response, err
 }
 
-func (c *_FooServiceEchoBothYARPCClient) CloseSend() error {
+func (c *_FooServiceEchoBothYARPCClient) CloseSend(options ...yarpc.StreamOption) error {
 	return c.stream.Close(context.Background())
 }
 
@@ -509,7 +509,7 @@ func (s *_FooServiceEchoOutYARPCServer) Context() context.Context {
 	return s.serverStream.Context()
 }
 
-func (s *_FooServiceEchoOutYARPCServer) Recv() (*EchoOutRequest, error) {
+func (s *_FooServiceEchoOutYARPCServer) Recv(options ...yarpc.StreamOption) (*EchoOutRequest, error) {
 	requestMessage, err := protobuf.ReadFromStream(context.Background(), s.serverStream, newFooServiceEchoOutYARPCRequest)
 	if requestMessage == nil {
 		return nil, err
@@ -529,7 +529,7 @@ func (s *_FooServiceEchoInYARPCServer) Context() context.Context {
 	return s.serverStream.Context()
 }
 
-func (s *_FooServiceEchoInYARPCServer) Send(response *EchoInResponse) error {
+func (s *_FooServiceEchoInYARPCServer) Send(response *EchoInResponse, options ...yarpc.StreamOption) error {
 	return protobuf.WriteToStream(context.Background(), response, s.serverStream)
 }
 
@@ -541,7 +541,7 @@ func (s *_FooServiceEchoBothYARPCServer) Context() context.Context {
 	return s.serverStream.Context()
 }
 
-func (s *_FooServiceEchoBothYARPCServer) Recv() (*EchoBothRequest, error) {
+func (s *_FooServiceEchoBothYARPCServer) Recv(options ...yarpc.StreamOption) (*EchoBothRequest, error) {
 	requestMessage, err := protobuf.ReadFromStream(context.Background(), s.serverStream, newFooServiceEchoBothYARPCRequest)
 	if requestMessage == nil {
 		return nil, err
@@ -553,7 +553,7 @@ func (s *_FooServiceEchoBothYARPCServer) Recv() (*EchoBothRequest, error) {
 	return request, err
 }
 
-func (s *_FooServiceEchoBothYARPCServer) Send(response *EchoBothResponse) error {
+func (s *_FooServiceEchoBothYARPCServer) Send(response *EchoBothResponse, options ...yarpc.StreamOption) error {
 	return protobuf.WriteToStream(context.Background(), response, s.serverStream)
 }
 
