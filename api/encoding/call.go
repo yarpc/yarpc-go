@@ -22,10 +22,10 @@ package encoding
 
 import (
 	"context"
-	"errors"
 	"sort"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 type keyValuePair struct{ k, v string }
@@ -48,9 +48,12 @@ func CallFromContext(ctx context.Context) *Call {
 // WriteResponseHeader writes headers to the response of this call.
 func (c *Call) WriteResponseHeader(k, v string) error {
 	if c == nil {
-		return errors.New(
+		return yarpcerrors.InvalidArgumentErrorf(
 			"failed to write response header: " +
 				"Call was nil, make sure CallFromContext was called with a request context")
+	}
+	if c.ic.disableResponseHeaders {
+		return yarpcerrors.InvalidArgumentErrorf("call does not support setting response headers")
 	}
 	c.ic.resHeaders = append(c.ic.resHeaders, keyValuePair{k: k, v: v})
 	return nil

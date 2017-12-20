@@ -32,8 +32,9 @@ import (
 // incoming request on the Context and send response headers through
 // WriteResponseHeader.
 type InboundCall struct {
-	resHeaders []keyValuePair
-	req        *transport.Request
+	resHeaders             []keyValuePair
+	req                    *transport.Request
+	disableResponseHeaders bool
 }
 
 type inboundCallKey struct{} // context key for *InboundCall
@@ -42,7 +43,34 @@ type inboundCallKey struct{} // context key for *InboundCall
 //
 // A request context is returned and must be used in place of the original.
 func NewInboundCall(ctx context.Context) (context.Context, *InboundCall) {
+	return NewInboundCallWithOptions(ctx)
+}
+
+// InboundCallOption is an option for configuring an InboundCall.
+type InboundCallOption interface {
+	apply(call *InboundCall)
+}
+
+type inboundCallOptionFunc func(*InboundCall)
+
+func (i inboundCallOptionFunc) apply(call *InboundCall) { i(call) }
+
+// DisableResponseHeaders disables response headers for inbound calls.
+func DisableResponseHeaders() InboundCallOption {
+	return inboundCallOptionFunc(func(call *InboundCall) {
+		call.disableResponseHeaders = true
+	})
+}
+
+// NewInboundCallWithOptions builds a new InboundCall with the given context and
+// options.
+//
+// A request context is returned and must be used in place of the original.
+func NewInboundCallWithOptions(ctx context.Context, opts ...InboundCallOption) (context.Context, *InboundCall) {
 	call := &InboundCall{}
+	for _, opt := range opts {
+		opt.apply(call)
+	}
 	return context.WithValue(ctx, inboundCallKey{}, call), call
 }
 
@@ -60,6 +88,15 @@ func (ic *InboundCall) ReadFromRequest(req *transport.Request) error {
 	// TODO(abg): Maybe we should copy attributes over so that changes to the
 	// Request don't change the output.
 	ic.req = req
+	return nil
+}
+
+// ReadFromRequestMeta reads information from the given request.
+//
+// This information may be queried on the context using functions like Caller,
+// Service, Procedure, etc.
+func (ic *InboundCall) ReadFromRequestMeta(reqMeta *transport.RequestMeta) error {
+	ic.req = reqMeta.ToRequest()
 	return nil
 }
 

@@ -175,3 +175,71 @@ type nopOnewayOutbound struct{}
 func (nopOnewayOutbound) CallOneway(ctx context.Context, request *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
 	return out.CallOneway(ctx, request)
 }
+
+// StreamOutbound defines transport-level middleware for
+// `StreamOutbound`s.
+//
+// StreamOutbound middleware MAY do zero or more of the following: change the
+// context, change the requestMeta, change the returned Stream, handle the
+// returned error, call the given outbound zero or more times.
+//
+// StreamOutbound middleware MUST always return a non-nil Stream or error,
+// and they MUST be thread-safe
+//
+// StreamOutbound middleware is re-used across requests and MAY be called
+// multiple times on the same request.
+type StreamOutbound interface {
+	CallStream(ctx context.Context, request *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error)
+}
+
+// NopStreamOutbound is a stream outbound middleware that does not do
+// anything special. It simply calls the underlying StreamOutbound.
+var NopStreamOutbound StreamOutbound = nopStreamOutbound{}
+
+// ApplyStreamOutbound applies the given StreamOutbound middleware to
+// the given StreamOutbound transport.
+func ApplyStreamOutbound(o transport.StreamOutbound, f StreamOutbound) transport.StreamOutbound {
+	if f == nil {
+		return o
+	}
+	return streamOutboundWithMiddleware{o: o, f: f}
+}
+
+// StreamOutboundFunc adapts a function into a StreamOutbound middleware.
+type StreamOutboundFunc func(context.Context, *transport.StreamRequest, transport.StreamOutbound) (*transport.ClientStream, error)
+
+// CallStream for StreamOutboundFunc.
+func (f StreamOutboundFunc) CallStream(ctx context.Context, request *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
+	return f(ctx, request, out)
+}
+
+type streamOutboundWithMiddleware struct {
+	o transport.StreamOutbound
+	f StreamOutbound
+}
+
+func (fo streamOutboundWithMiddleware) Transports() []transport.Transport {
+	return fo.o.Transports()
+}
+
+func (fo streamOutboundWithMiddleware) Start() error {
+	return fo.o.Start()
+}
+
+func (fo streamOutboundWithMiddleware) Stop() error {
+	return fo.o.Stop()
+}
+
+func (fo streamOutboundWithMiddleware) IsRunning() bool {
+	return fo.o.IsRunning()
+}
+
+func (fo streamOutboundWithMiddleware) CallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
+	return fo.f.CallStream(ctx, request, fo.o)
+}
+
+type nopStreamOutbound struct{}
+
+func (nopStreamOutbound) CallStream(ctx context.Context, request *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
+	return out.CallStream(ctx, request)
+}

@@ -124,3 +124,52 @@ func (x onewayChainExec) HandleOneway(ctx context.Context, req *transport.Reques
 	x.Chain = x.Chain[1:]
 	return next.HandleOneway(ctx, req, x)
 }
+
+// StreamChain combines a series of `StreamInbound`s into a single `InboundMiddleware`.
+func StreamChain(mw ...middleware.StreamInbound) middleware.StreamInbound {
+	unchained := make([]middleware.StreamInbound, 0, len(mw))
+	for _, m := range mw {
+		if m == nil {
+			continue
+		}
+		if c, ok := m.(streamChain); ok {
+			unchained = append(unchained, c...)
+			continue
+		}
+		unchained = append(unchained, m)
+	}
+
+	switch len(unchained) {
+	case 0:
+		return middleware.NopStreamInbound
+	case 1:
+		return unchained[0]
+	default:
+		return streamChain(unchained)
+	}
+}
+
+type streamChain []middleware.StreamInbound
+
+func (c streamChain) HandleStream(s *transport.ServerStream, h transport.StreamHandler) error {
+	return streamChainExec{
+		Chain: []middleware.StreamInbound(c),
+		Final: h,
+	}.HandleStream(s)
+}
+
+// streamChainExec adapts a series of `StreamInbound`s into a StreamHandler.
+// It is scoped to a single request to the `Handler` and is not thread-safe.
+type streamChainExec struct {
+	Chain []middleware.StreamInbound
+	Final transport.StreamHandler
+}
+
+func (x streamChainExec) HandleStream(s *transport.ServerStream) error {
+	if len(x.Chain) == 0 {
+		return x.Final.HandleStream(s)
+	}
+	next := x.Chain[0]
+	x.Chain = x.Chain[1:]
+	return next.HandleStream(s, x)
+}

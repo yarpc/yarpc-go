@@ -29,6 +29,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
@@ -266,4 +267,53 @@ func TestOnewayOutboundMiddleware(t *testing.T) {
 			assert.Equal(t, res, gotRes, "expected response to match")
 		})
 	}
+}
+
+func TestStreamInboundMiddlewareChain(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	stream, err := transport.NewServerStream(transporttest.NewMockStream(mockCtrl))
+	require.NoError(t, err)
+	handler := transporttest.NewMockStreamHandler(mockCtrl)
+	handler.EXPECT().HandleStream(stream)
+
+	inboundMW := StreamInboundMiddleware(
+		middleware.NopStreamInbound,
+		middleware.NopStreamInbound,
+		middleware.NopStreamInbound,
+		middleware.NopStreamInbound,
+	)
+
+	h := middleware.ApplyStreamInbound(handler, inboundMW)
+
+	assert.NoError(t, h.HandleStream(stream))
+}
+
+func TestStreamOutboundMiddlewareChain(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	ctx := context.Background()
+	req := &transport.StreamRequest{}
+
+	stream, err := transport.NewClientStream(transporttest.NewMockStreamCloser(mockCtrl))
+	require.NoError(t, err)
+
+	out := transporttest.NewMockStreamOutbound(mockCtrl)
+	out.EXPECT().CallStream(ctx, req).Return(stream, nil)
+
+	mw := StreamOutboundMiddleware(
+		middleware.NopStreamOutbound,
+		middleware.NopStreamOutbound,
+		middleware.NopStreamOutbound,
+		middleware.NopStreamOutbound,
+	)
+
+	o := middleware.ApplyStreamOutbound(out, mw)
+
+	s, err := o.CallStream(ctx, req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, stream, s)
 }

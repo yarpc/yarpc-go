@@ -29,7 +29,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 )
 
-func TestOutboundCallWriteToRequest(t *testing.T) {
+func TestOutboundCallWriteToRequestAndRequestMeta(t *testing.T) {
 	tests := []struct {
 		desc        string
 		giveOptions []CallOption
@@ -122,13 +122,40 @@ func TestOutboundCallWriteToRequest(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		call := NewOutboundCall(tt.giveOptions...)
+		t.Run(tt.desc+" regular", func(t *testing.T) {
+			call := NewOutboundCall(tt.giveOptions...)
 
-		request := tt.giveRequest
-		_, err := call.WriteToRequest(context.Background(), &request)
-		if assert.NoError(t, err, tt.desc) {
-			assert.Equal(t, tt.wantRequest, request, tt.desc)
-		}
+			request := tt.giveRequest
+			requestMeta := tt.giveRequest.ToRequestMeta()
+
+			_, err := call.WriteToRequest(context.Background(), &request)
+			if assert.NoError(t, err, tt.desc) {
+				assert.Equal(t, tt.wantRequest, request, tt.desc)
+			}
+
+			_, err = call.WriteToRequestMeta(context.Background(), requestMeta)
+			if assert.NoError(t, err, tt.desc) {
+				assert.Equal(t, tt.wantRequest.ToRequestMeta(), requestMeta, tt.desc)
+			}
+		})
+
+		t.Run(tt.desc+" streaming", func(t *testing.T) {
+			call, err := NewStreamOutboundCall(tt.giveOptions...)
+			require.NoError(t, err)
+
+			request := tt.giveRequest
+			requestMeta := tt.giveRequest.ToRequestMeta()
+
+			_, err = call.WriteToRequest(context.Background(), &request)
+			if assert.NoError(t, err, tt.desc) {
+				assert.Equal(t, tt.wantRequest, request, tt.desc)
+			}
+
+			_, err = call.WriteToRequestMeta(context.Background(), requestMeta)
+			if assert.NoError(t, err, tt.desc) {
+				assert.Equal(t, tt.wantRequest.ToRequestMeta(), requestMeta, tt.desc)
+			}
+		})
 	}
 }
 
@@ -149,4 +176,13 @@ func TestOutboundCallReadFromResponse(t *testing.T) {
 		"foo":     "bar",
 		"success": "true",
 	}, headers)
+}
+
+func TestStreamOutboundCallCannotReadFromResponse(t *testing.T) {
+	var headers map[string]string
+	call, err := NewStreamOutboundCall(ResponseHeaders(&headers))
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "code:invalid-argument")
+	assert.Contains(t, err.Error(), "response headers are not supported for streams")
+	assert.Nil(t, call)
 }

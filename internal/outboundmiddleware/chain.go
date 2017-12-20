@@ -171,3 +171,68 @@ func (x onewayChainExec) Introspect() introspection.OutboundStatus {
 	}
 	return introspection.OutboundStatusNotSupported
 }
+
+// StreamChain combines a series of `StreamOutbound`s into a single `StreamOutbound`.
+func StreamChain(mw ...middleware.StreamOutbound) middleware.StreamOutbound {
+	unchained := make([]middleware.StreamOutbound, 0, len(mw))
+	for _, m := range mw {
+		if m == nil {
+			continue
+		}
+		if c, ok := m.(streamChain); ok {
+			unchained = append(unchained, c...)
+			continue
+		}
+		unchained = append(unchained, m)
+	}
+
+	switch len(unchained) {
+	case 0:
+		return middleware.NopStreamOutbound
+	case 1:
+		return unchained[0]
+	default:
+		return streamChain(unchained)
+	}
+}
+
+type streamChain []middleware.StreamOutbound
+
+func (c streamChain) CallStream(ctx context.Context, request *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
+	return streamChainExec{
+		Chain: []middleware.StreamOutbound(c),
+		Final: out,
+	}.CallStream(ctx, request)
+}
+
+// streamChainExec adapts a series of `StreamOutbound`s into a `StreamOutbound`. It
+// is scoped to a single call of a StreamOutbound and is not thread-safe.
+type streamChainExec struct {
+	Chain []middleware.StreamOutbound
+	Final transport.StreamOutbound
+}
+
+func (x streamChainExec) Transports() []transport.Transport {
+	return x.Final.Transports()
+}
+
+func (x streamChainExec) Start() error {
+	return x.Final.Start()
+}
+
+func (x streamChainExec) Stop() error {
+	return x.Final.Stop()
+}
+
+func (x streamChainExec) IsRunning() bool {
+	return x.Final.IsRunning()
+}
+
+func (x streamChainExec) CallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
+	if len(x.Chain) == 0 {
+		return x.Final.CallStream(ctx, request)
+	}
+	next := x.Chain[0]
+	x.Chain = x.Chain[1:]
+	return next.CallStream(ctx, request, x)
+}

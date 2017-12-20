@@ -145,8 +145,9 @@ func TestStartStopFailures(t *testing.T) {
 	tests := []struct {
 		desc string
 
-		inbounds  func(*gomock.Controller) Inbounds
-		outbounds func(*gomock.Controller) Outbounds
+		inbounds   func(*gomock.Controller) Inbounds
+		outbounds  func(*gomock.Controller) Outbounds
+		procedures func(*gomock.Controller) []transport.Procedure
 
 		wantStartErr string
 		wantStopErr  string
@@ -178,6 +179,42 @@ func TestStartStopFailures(t *testing.T) {
 						}
 				}
 				return outbounds
+			},
+		},
+		{
+			desc: "all success streaming",
+			inbounds: func(mockCtrl *gomock.Controller) Inbounds {
+				inbounds := make(Inbounds, 10)
+				for i := range inbounds {
+					in := transporttest.NewMockInbound(mockCtrl)
+					in.EXPECT().Transports()
+					in.EXPECT().SetRouter(gomock.Any())
+					in.EXPECT().Start().Return(nil)
+					in.EXPECT().Stop().Return(nil)
+					inbounds[i] = in
+				}
+				return inbounds
+			},
+			outbounds: func(mockCtrl *gomock.Controller) Outbounds {
+				outbounds := make(Outbounds, 10)
+				for i := 0; i < 10; i++ {
+					out := transporttest.NewMockStreamOutbound(mockCtrl)
+					out.EXPECT().Transports()
+					out.EXPECT().Start().Return(nil)
+					out.EXPECT().Stop().Return(nil)
+					outbounds[fmt.Sprintf("service-%v", i)] =
+						transport.Outbounds{
+							Stream: out,
+						}
+				}
+				return outbounds
+			},
+			procedures: func(mockCtrl *gomock.Controller) []transport.Procedure {
+				proc := transport.Procedure{
+					Name:        "test",
+					HandlerSpec: transport.NewStreamHandlerSpec(transporttest.NewMockStreamHandler(mockCtrl)),
+				}
+				return []transport.Procedure{proc}
 			},
 		},
 		{
@@ -330,6 +367,10 @@ func TestStartStopFailures(t *testing.T) {
 				Inbounds:  tt.inbounds(mockCtrl),
 				Outbounds: tt.outbounds(mockCtrl),
 			})
+
+			if tt.procedures != nil {
+				dispatcher.Register(tt.procedures(mockCtrl))
+			}
 
 			err := dispatcher.Start()
 			if tt.wantStartErr != "" {

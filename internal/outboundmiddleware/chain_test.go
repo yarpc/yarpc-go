@@ -51,6 +51,11 @@ func (c *countOutboundMiddleware) CallOneway(ctx context.Context, req *transport
 	return o.CallOneway(ctx, req)
 }
 
+func (c *countOutboundMiddleware) CallStream(ctx context.Context, req *transport.StreamRequest, o transport.StreamOutbound) (*transport.ClientStream, error) {
+	c.Count++
+	return o.CallStream(ctx, req)
+}
+
 var retryUnaryOutbound middleware.UnaryOutboundFunc = func(
 	ctx context.Context, req *transport.Request, o transport.UnaryOutbound) (*transport.Response, error) {
 	res, err := o.Call(ctx, req)
@@ -245,4 +250,78 @@ func TestIntrospect(t *testing.T) {
 		chain := &onewayChainExec{Final: out}
 		assert.Equal(t, expectStatus, chain.Introspect(), errMsg)
 	})
+}
+
+var retryStreamOutbound middleware.StreamOutboundFunc = func(
+	ctx context.Context, req *transport.StreamRequest, o transport.StreamOutbound) (*transport.ClientStream, error) {
+	res, err := o.CallStream(ctx, req)
+	if err != nil {
+		res, err = o.CallStream(ctx, req)
+	}
+	return res, err
+}
+
+func TestStreamChain(t *testing.T) {
+	before := &countOutboundMiddleware{}
+	after := &countOutboundMiddleware{}
+
+	tests := []struct {
+		desc string
+		mw   middleware.StreamOutbound
+	}{
+		{"flat chain", StreamChain(before, retryStreamOutbound, nil, after)},
+		{"nested chain", StreamChain(before, StreamChain(retryStreamOutbound, after, nil))},
+		{"single chain", StreamChain(StreamChain(before), retryStreamOutbound, StreamChain(after), StreamChain())},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+			defer cancel()
+
+			var res *transport.ClientStream
+			req := &transport.StreamRequest{
+				Meta: &transport.RequestMeta{
+					Caller:    "somecaller",
+					Service:   "someservice",
+					Encoding:  transport.Encoding("raw"),
+					Procedure: "hello",
+				},
+			}
+			o := transporttest.NewMockStreamOutbound(mockCtrl)
+
+			before.Count, after.Count = 0, 0
+			o.EXPECT().CallStream(ctx, req).After(
+				o.EXPECT().CallStream(ctx, req).Return(nil, errors.New("great sadness")),
+			).Return(res, nil)
+
+			mw := middleware.ApplyStreamOutbound(o, tt.mw)
+			gotRes, err := mw.CallStream(ctx, req)
+
+			assert.NoError(t, err, "expected success")
+			assert.Equal(t, 1, before.Count, "expected outer middleware to be called once")
+			assert.Equal(t, 2, after.Count, "expected inner middleware to be called twice")
+			assert.Equal(t, res, gotRes, "expected response to match")
+		})
+	}
+}
+
+func TestStreamChainExecFuncs(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	o := transporttest.NewMockStreamOutbound(mockCtrl)
+	o.EXPECT().Stop()
+	o.EXPECT().Start()
+	o.EXPECT().Transports()
+	o.EXPECT().IsRunning().Return(true)
+
+	mw := streamChainExec{Final: o}
+
+	assert.Nil(t, mw.Start())
+	assert.True(t, mw.IsRunning())
+	assert.Nil(t, mw.Stop())
+	assert.Len(t, mw.Transports(), 0)
 }

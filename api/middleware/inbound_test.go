@@ -109,3 +109,27 @@ func TestNilInboundMiddleware(t *testing.T) {
 		require.NoError(t, err, "unexpected error calling handler")
 	})
 }
+
+func TestStreamNopInboundMiddleware(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	h := transporttest.NewMockStreamHandler(mockCtrl)
+	wrappedH := middleware.ApplyStreamInbound(h, middleware.NopStreamInbound)
+	s, err := transport.NewServerStream(transporttest.NewMockStream(mockCtrl))
+	require.NoError(t, err)
+
+	err = errors.New("great sadness")
+	h.EXPECT().HandleStream(s).Return(err)
+
+	assert.Equal(t, err, wrappedH.HandleStream(s))
+}
+
+func TestStreamDefaultsToHandlerWhenNil(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	h := transporttest.NewMockStreamHandler(mockCtrl)
+	wrappedH := middleware.ApplyStreamInbound(h, nil)
+	assert.Equal(t, wrappedH, h)
+}

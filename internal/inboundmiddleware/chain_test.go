@@ -28,6 +28,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
@@ -45,6 +46,11 @@ func (c *countInboundMiddleware) Handle(
 func (c *countInboundMiddleware) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
 	c.Count++
 	return h.HandleOneway(ctx, req)
+}
+
+func (c *countInboundMiddleware) HandleStream(s *transport.ServerStream, h transport.StreamHandler) error {
+	c.Count++
+	return h.HandleStream(s)
 }
 
 var retryUnaryInbound middleware.UnaryInboundFunc = func(
@@ -138,6 +144,49 @@ func TestOnewayChain(t *testing.T) {
 			).Return(nil)
 
 			err := middleware.ApplyOnewayInbound(h, tt.mw).HandleOneway(ctx, req)
+
+			assert.NoError(t, err, "expected success")
+			assert.Equal(t, 1, before.Count, "expected outer inbound middleware to be called once")
+			assert.Equal(t, 2, after.Count, "expected inner inbound middleware to be called twice")
+		})
+	}
+}
+
+var retryStreamInbound middleware.StreamInboundFunc = func(
+	s *transport.ServerStream, h transport.StreamHandler) error {
+	if err := h.HandleStream(s); err != nil {
+		return h.HandleStream(s)
+	}
+	return nil
+}
+
+func TestStreamChain(t *testing.T) {
+	before := &countInboundMiddleware{}
+	after := &countInboundMiddleware{}
+
+	tests := []struct {
+		desc string
+		mw   middleware.StreamInbound
+	}{
+		{"flat chain", StreamChain(before, retryStreamInbound, after, nil)},
+		{"nested chain", StreamChain(before, StreamChain(retryStreamInbound, nil, after))},
+		{"single chain", StreamChain(StreamChain(before), retryStreamInbound, StreamChain(after), StreamChain())},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			before.Count, after.Count = 0, 0
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+			s, err := transport.NewServerStream(transporttest.NewMockStream(mockCtrl))
+			require.NoError(t, err)
+
+			h := transporttest.NewMockStreamHandler(mockCtrl)
+			h.EXPECT().HandleStream(s).After(
+				h.EXPECT().HandleStream(s).Return(errors.New("great sadness")),
+			).Return(nil)
+
+			err = middleware.ApplyStreamInbound(h, tt.mw).HandleStream(s)
 
 			assert.NoError(t, err, "expected success")
 			assert.Equal(t, 1, before.Count, "expected outer inbound middleware to be called once")
