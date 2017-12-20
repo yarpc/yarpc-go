@@ -319,6 +319,7 @@ func TestStreaming(t *testing.T) {
 							require.False(t, hasDeadline, "context had a deadline %s, what?", deadline.String())
 						}),
 						SendStreamMsg("test"),
+						RecvStreamErr(io.EOF.Error()),
 					),
 				),
 			),
