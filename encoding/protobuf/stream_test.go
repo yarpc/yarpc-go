@@ -57,7 +57,7 @@ func TestReadFromStreamDecodeError(t *testing.T) {
 	clientStream, err := transport.NewClientStream(stream)
 	require.NoError(t, err)
 
-	_, err = ReadFromStream(ctx, clientStream, func() proto.Message { return nil })
+	_, err = readFromStream(ctx, clientStream, func() proto.Message { return nil })
 
 	assert.Equal(t, wantErr, err)
 }
@@ -88,7 +88,7 @@ func TestWriteToStreamInvalidEncoding(t *testing.T) {
 	clientStream, err := transport.NewClientStream(stream)
 	require.NoError(t, err)
 
-	err = WriteToStream(ctx, nil, clientStream)
+	err = writeToStream(ctx, clientStream, nil)
 
 	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInternal, "encoding.Expect should have handled encoding \"raw\" but did not"), err)
 }

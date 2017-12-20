@@ -162,7 +162,7 @@ func (c *client) CallStream(
 	ctx context.Context,
 	requestMethodName string,
 	opts ...yarpc.CallOption,
-) (*transport.ClientStream, error) {
+) (*ClientStream, error) {
 	streamRequest := &transport.StreamRequest{
 		Meta: &transport.RequestMeta{
 			Caller:    c.outboundConfig.CallerName,
@@ -186,5 +186,9 @@ func (c *client) CallStream(
 	if streamOutbound == nil {
 		return nil, yarpcerrors.InternalErrorf("no stream outbounds for OutboundConfig %s", c.outboundConfig.CallerName)
 	}
-	return streamOutbound.CallStream(ctx, streamRequest)
+	stream, err := streamOutbound.CallStream(ctx, streamRequest)
+	if err != nil {
+		return nil, err
+	}
+	return &ClientStream{stream: stream}, nil
 }

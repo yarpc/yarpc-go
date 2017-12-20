@@ -384,7 +384,7 @@ func (c *_FooYARPCCaller) EchoIn(ctx context.Context, request *EchoInRequest, op
 	if err != nil {
 		return nil, err
 	}
-	if err := protobuf.WriteToStream(context.Background(), request, stream); err != nil {
+	if err := stream.Send(request); err != nil {
 		return nil, err
 	}
 	return &_FooServiceEchoInYARPCClient{stream: stream}, nil
@@ -402,16 +402,16 @@ type _FooYARPCHandler struct {
 	server FooYARPCServer
 }
 
-func (h *_FooYARPCHandler) EchoOut(serverStream *transport.ServerStream) error {
+func (h *_FooYARPCHandler) EchoOut(serverStream *protobuf.ServerStream) error {
 	response, err := h.server.EchoOut(&_FooServiceEchoOutYARPCServer{serverStream: serverStream})
 	if err != nil {
 		return err
 	}
-	return protobuf.WriteToStream(context.Background(), response, serverStream)
+	return serverStream.Send(response)
 }
 
-func (h *_FooYARPCHandler) EchoIn(serverStream *transport.ServerStream) error {
-	requestMessage, err := protobuf.ReadFromStream(context.Background(), serverStream, newFooServiceEchoInYARPCRequest)
+func (h *_FooYARPCHandler) EchoIn(serverStream *protobuf.ServerStream) error {
+	requestMessage, err := serverStream.Receive(newFooServiceEchoInYARPCRequest)
 	if requestMessage == nil {
 		return err
 	}
@@ -423,12 +423,12 @@ func (h *_FooYARPCHandler) EchoIn(serverStream *transport.ServerStream) error {
 	return h.server.EchoIn(request, &_FooServiceEchoInYARPCServer{serverStream: serverStream})
 }
 
-func (h *_FooYARPCHandler) EchoBoth(serverStream *transport.ServerStream) error {
+func (h *_FooYARPCHandler) EchoBoth(serverStream *protobuf.ServerStream) error {
 	return h.server.EchoBoth(&_FooServiceEchoBothYARPCServer{serverStream: serverStream})
 }
 
 type _FooServiceEchoOutYARPCClient struct {
-	stream *transport.ClientStream
+	stream *protobuf.ClientStream
 }
 
 func (c *_FooServiceEchoOutYARPCClient) Context() context.Context {
@@ -436,14 +436,14 @@ func (c *_FooServiceEchoOutYARPCClient) Context() context.Context {
 }
 
 func (c *_FooServiceEchoOutYARPCClient) Send(request *EchoOutRequest, options ...yarpc.StreamOption) error {
-	return protobuf.WriteToStream(context.Background(), request, c.stream)
+	return c.stream.Send(request, options...)
 }
 
 func (c *_FooServiceEchoOutYARPCClient) CloseAndRecv(options ...yarpc.StreamOption) (*EchoOutResponse, error) {
-	if err := c.stream.Close(context.Background()); err != nil {
+	if err := c.stream.Close(options...); err != nil {
 		return nil, err
 	}
-	responseMessage, err := protobuf.ReadFromStream(context.Background(), c.stream, newFooServiceEchoOutYARPCResponse)
+	responseMessage, err := c.stream.Receive(newFooServiceEchoOutYARPCResponse, options...)
 	if responseMessage == nil {
 		return nil, err
 	}
@@ -455,7 +455,7 @@ func (c *_FooServiceEchoOutYARPCClient) CloseAndRecv(options ...yarpc.StreamOpti
 }
 
 type _FooServiceEchoInYARPCClient struct {
-	stream *transport.ClientStream
+	stream *protobuf.ClientStream
 }
 
 func (c *_FooServiceEchoInYARPCClient) Context() context.Context {
@@ -463,7 +463,7 @@ func (c *_FooServiceEchoInYARPCClient) Context() context.Context {
 }
 
 func (c *_FooServiceEchoInYARPCClient) Recv(options ...yarpc.StreamOption) (*EchoInResponse, error) {
-	responseMessage, err := protobuf.ReadFromStream(context.Background(), c.stream, newFooServiceEchoInYARPCResponse)
+	responseMessage, err := c.stream.Receive(newFooServiceEchoInYARPCResponse, options...)
 	if responseMessage == nil {
 		return nil, err
 	}
@@ -475,11 +475,11 @@ func (c *_FooServiceEchoInYARPCClient) Recv(options ...yarpc.StreamOption) (*Ech
 }
 
 func (c *_FooServiceEchoInYARPCClient) CloseSend(options ...yarpc.StreamOption) error {
-	return c.stream.Close(context.Background())
+	return c.stream.Close(options...)
 }
 
 type _FooServiceEchoBothYARPCClient struct {
-	stream *transport.ClientStream
+	stream *protobuf.ClientStream
 }
 
 func (c *_FooServiceEchoBothYARPCClient) Context() context.Context {
@@ -487,11 +487,11 @@ func (c *_FooServiceEchoBothYARPCClient) Context() context.Context {
 }
 
 func (c *_FooServiceEchoBothYARPCClient) Send(request *EchoBothRequest, options ...yarpc.StreamOption) error {
-	return protobuf.WriteToStream(context.Background(), request, c.stream)
+	return c.stream.Send(request, options...)
 }
 
 func (c *_FooServiceEchoBothYARPCClient) Recv(options ...yarpc.StreamOption) (*EchoBothResponse, error) {
-	responseMessage, err := protobuf.ReadFromStream(context.Background(), c.stream, newFooServiceEchoBothYARPCResponse)
+	responseMessage, err := c.stream.Receive(newFooServiceEchoBothYARPCResponse, options...)
 	if responseMessage == nil {
 		return nil, err
 	}
@@ -503,11 +503,11 @@ func (c *_FooServiceEchoBothYARPCClient) Recv(options ...yarpc.StreamOption) (*E
 }
 
 func (c *_FooServiceEchoBothYARPCClient) CloseSend(options ...yarpc.StreamOption) error {
-	return c.stream.Close(context.Background())
+	return c.stream.Close(options...)
 }
 
 type _FooServiceEchoOutYARPCServer struct {
-	serverStream *transport.ServerStream
+	serverStream *protobuf.ServerStream
 }
 
 func (s *_FooServiceEchoOutYARPCServer) Context() context.Context {
@@ -515,7 +515,7 @@ func (s *_FooServiceEchoOutYARPCServer) Context() context.Context {
 }
 
 func (s *_FooServiceEchoOutYARPCServer) Recv(options ...yarpc.StreamOption) (*EchoOutRequest, error) {
-	requestMessage, err := protobuf.ReadFromStream(context.Background(), s.serverStream, newFooServiceEchoOutYARPCRequest)
+	requestMessage, err := s.serverStream.Receive(newFooServiceEchoOutYARPCRequest, options...)
 	if requestMessage == nil {
 		return nil, err
 	}
@@ -527,7 +527,7 @@ func (s *_FooServiceEchoOutYARPCServer) Recv(options ...yarpc.StreamOption) (*Ec
 }
 
 type _FooServiceEchoInYARPCServer struct {
-	serverStream *transport.ServerStream
+	serverStream *protobuf.ServerStream
 }
 
 func (s *_FooServiceEchoInYARPCServer) Context() context.Context {
@@ -535,11 +535,11 @@ func (s *_FooServiceEchoInYARPCServer) Context() context.Context {
 }
 
 func (s *_FooServiceEchoInYARPCServer) Send(response *EchoInResponse, options ...yarpc.StreamOption) error {
-	return protobuf.WriteToStream(context.Background(), response, s.serverStream)
+	return s.serverStream.Send(response, options...)
 }
 
 type _FooServiceEchoBothYARPCServer struct {
-	serverStream *transport.ServerStream
+	serverStream *protobuf.ServerStream
 }
 
 func (s *_FooServiceEchoBothYARPCServer) Context() context.Context {
@@ -547,7 +547,7 @@ func (s *_FooServiceEchoBothYARPCServer) Context() context.Context {
 }
 
 func (s *_FooServiceEchoBothYARPCServer) Recv(options ...yarpc.StreamOption) (*EchoBothRequest, error) {
-	requestMessage, err := protobuf.ReadFromStream(context.Background(), s.serverStream, newFooServiceEchoBothYARPCRequest)
+	requestMessage, err := s.serverStream.Receive(newFooServiceEchoBothYARPCRequest, options...)
 	if requestMessage == nil {
 		return nil, err
 	}
@@ -559,7 +559,7 @@ func (s *_FooServiceEchoBothYARPCServer) Recv(options ...yarpc.StreamOption) (*E
 }
 
 func (s *_FooServiceEchoBothYARPCServer) Send(response *EchoBothResponse, options ...yarpc.StreamOption) error {
-	return protobuf.WriteToStream(context.Background(), response, s.serverStream)
+	return s.serverStream.Send(response, options...)
 }
 
 func newFooServiceEchoOutYARPCRequest() proto.Message {

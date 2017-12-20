@@ -21,9 +21,7 @@
 package protobuf
 
 import (
-	"bytes"
 	"context"
-	"io"
 	"reflect"
 	"strings"
 
@@ -151,7 +149,7 @@ type StreamClient interface {
 		ctx context.Context,
 		requestMethodName string,
 		opts ...yarpc.CallOption,
-	) (*transport.ClientStream, error)
+	) (*ClientStream, error)
 }
 
 // ClientOption is an option for a new Client.
@@ -200,7 +198,7 @@ func NewOnewayHandler(params OnewayHandlerParams) transport.OnewayHandler {
 
 // StreamHandlerParams contains the parameters for creating a new StreamHandler.
 type StreamHandlerParams struct {
-	Handle func(*transport.ServerStream) error
+	Handle func(*ServerStream) error
 }
 
 // NewStreamHandler returns a new StreamHandler.
@@ -246,47 +244,48 @@ func uniqueLowercaseStrings(s []string) []string {
 	return c
 }
 
-// ReadFromStream reads a proto.Message from a stream.
-func ReadFromStream(
-	ctx context.Context,
-	stream transport.Stream,
-	newMessage func() proto.Message,
-) (proto.Message, error) {
-	streamMsg, err := stream.ReceiveMessage(ctx)
-	if err != nil {
-		return nil, err
-	}
-	message := newMessage()
-	if err := unmarshal(stream.Request().Meta.Encoding, streamMsg.Body, message); err != nil {
-		streamMsg.Body.Close()
-		return nil, err
-	}
-	if streamMsg.Body != nil {
-		streamMsg.Body.Close()
-	}
-	return message, nil
+// ClientStream is a protobuf-specific client stream.
+type ClientStream struct {
+	stream *transport.ClientStream
 }
 
-// WriteToStream writes a proto.Message to a stream.
-func WriteToStream(ctx context.Context, message proto.Message, stream transport.Stream) error {
-	messageData, cleanup, err := marshal(stream.Request().Meta.Encoding, message)
-	if err != nil {
-		return err
-	}
-	return stream.SendMessage(
-		ctx,
-		&transport.StreamMessage{
-			Body: readCloser{Reader: bytes.NewReader(messageData), closer: cleanup},
-		},
-	)
+// Context returns the context of the stream.
+func (c *ClientStream) Context() context.Context {
+	return c.stream.Context()
 }
 
-type readCloser struct {
-	io.Reader
-	closer func()
+// Receive will receive a protobuf message from the client stream.
+func (c *ClientStream) Receive(newMessage func() proto.Message, options ...yarpc.StreamOption) (proto.Message, error) {
+	return readFromStream(context.Background(), c.stream, newMessage)
 }
 
-func (r readCloser) Close() error {
-	r.closer()
-	return nil
+// Send will send a protobuf message to the client stream.
+func (c *ClientStream) Send(message proto.Message, options ...yarpc.StreamOption) error {
+	return writeToStream(context.Background(), c.stream, message)
+}
+
+// Close will close the protobuf stream.
+func (c *ClientStream) Close(options ...yarpc.StreamOption) error {
+	return c.stream.Close(context.Background())
+}
+
+// ServerStream is a protobuf-specific server stream.
+type ServerStream struct {
+	ctx    context.Context
+	stream *transport.ServerStream
+}
+
+// Context returns the context of the stream.
+func (s *ServerStream) Context() context.Context {
+	return s.ctx
+}
+
+// Receive will receive a protobuf message from the server stream.
+func (s *ServerStream) Receive(newMessage func() proto.Message, options ...yarpc.StreamOption) (proto.Message, error) {
+	return readFromStream(context.Background(), s.stream, newMessage)
+}
+
+// Send will send a protobuf message to the server stream.
+func (s *ServerStream) Send(message proto.Message, options ...yarpc.StreamOption) error {
+	return writeToStream(context.Background(), s.stream, message)
 }

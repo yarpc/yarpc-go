@@ -94,10 +94,10 @@ func (o *onewayHandler) HandleOneway(ctx context.Context, transportRequest *tran
 }
 
 type streamHandler struct {
-	handle func(*transport.ServerStream) error
+	handle func(*ServerStream) error
 }
 
-func newStreamHandler(handle func(*transport.ServerStream) error) *streamHandler {
+func newStreamHandler(handle func(*ServerStream) error) *streamHandler {
 	return &streamHandler{handle}
 }
 
@@ -106,23 +106,11 @@ func (s *streamHandler) HandleStream(stream *transport.ServerStream) error {
 	if err := call.ReadFromRequestMeta(stream.Request().Meta); err != nil {
 		return err
 	}
-	wrappedStream, err := transport.NewServerStream(&streamWithHandlerContext{
-		Stream: stream,
+	protoStream := &ServerStream{
 		ctx:    ctx,
-	})
-	if err != nil {
-		return err
+		stream: stream,
 	}
-	return s.handle(wrappedStream)
-}
-
-type streamWithHandlerContext struct {
-	transport.Stream
-	ctx context.Context
-}
-
-func (s *streamWithHandlerContext) Context() context.Context {
-	return s.ctx
+	return s.handle(protoStream)
 }
 
 func getProtoRequest(ctx context.Context, transportRequest *transport.Request, newRequest func() proto.Message) (context.Context, *apiencoding.InboundCall, proto.Message, error) {
