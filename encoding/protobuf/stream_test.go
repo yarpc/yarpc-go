@@ -42,7 +42,7 @@ func TestReadFromStreamDecodeError(t *testing.T) {
 	ctx := context.Background()
 	wantErr := errors.New("error")
 
-	stream := transporttest.NewMockStreamWithClose(mockCtrl)
+	stream := transporttest.NewMockStreamCloser(mockCtrl)
 	stream.EXPECT().ReceiveMessage(ctx).Return(&transport.StreamMessage{
 		Body: ioutil.NopCloser(readErr{err: wantErr}),
 	}, nil)
@@ -76,7 +76,7 @@ func TestWriteToStreamInvalidEncoding(t *testing.T) {
 
 	ctx := context.Background()
 
-	stream := transporttest.NewMockStreamWithClose(mockCtrl)
+	stream := transporttest.NewMockStreamCloser(mockCtrl)
 	stream.EXPECT().Request().Return(
 		&transport.StreamRequest{
 			Meta: &transport.RequestMeta{
