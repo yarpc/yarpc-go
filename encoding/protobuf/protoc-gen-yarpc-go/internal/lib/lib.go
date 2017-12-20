@@ -70,6 +70,7 @@ type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
 type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
 	Context() context.Context
 	Recv(...yarpc.StreamOption) (*{{$method.ResponseType.GoType $packagePath}}, error)
+	CloseSend(...yarpc.StreamOption) error
 }
 {{end}}
 
@@ -356,6 +357,10 @@ func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Recv(option
 		return nil, protobuf.CastError(empty{{$service.GetName}}Service{{$method.GetName}}YARPCResponse, responseMessage)
 	}
 	return response, err
+}
+
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) CloseSend(options ...yarpc.StreamOption) error {
+	return c.stream.Close(context.Background())
 }
 {{end}}
 

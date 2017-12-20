@@ -279,6 +279,7 @@ type FooServiceEchoOutYARPCClient interface {
 type FooServiceEchoInYARPCClient interface {
 	Context() context.Context
 	Recv(...yarpc.StreamOption) (*EchoInResponse, error)
+	CloseSend(...yarpc.StreamOption) error
 }
 
 // FooServiceEchoBothYARPCClient sends EchoBothRequests and receives EchoBothResponses, returning io.EOF when the stream is complete.
@@ -471,6 +472,10 @@ func (c *_FooServiceEchoInYARPCClient) Recv(options ...yarpc.StreamOption) (*Ech
 		return nil, protobuf.CastError(emptyFooServiceEchoInYARPCResponse, responseMessage)
 	}
 	return response, err
+}
+
+func (c *_FooServiceEchoInYARPCClient) CloseSend(options ...yarpc.StreamOption) error {
+	return c.stream.Close(context.Background())
 }
 
 type _FooServiceEchoBothYARPCClient struct {
