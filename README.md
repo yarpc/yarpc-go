@@ -1,4 +1,4 @@
-# yarpc [![GoDoc][doc-img]][doc] [![GitHub release][release-img]][release] [![Mit License][mit-img]][mit] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][report-card-img]][report-card]
+# yarpc [![GoDoc][doc-img]][doc] [![GitHub release][release-img]][release] [![Mit License][mit-img]][mit] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov]
 
 A message passing platform for Go that lets you:
 
@@ -40,6 +40,3 @@ the containing `x` package and their APIs will be locked.
 
 [cov-img]: https://codecov.io/gh/yarpc/yarpc-go/branch/master/graph/badge.svg
 [cov]: https://codecov.io/gh/yarpc/yarpc-go/branch/master
-
-[report-card-img]: https://goreportcard.com/badge/go.uber.org/yarpc
-[report-card]: https://goreportcard.com/report/go.uber.org/yarpc
