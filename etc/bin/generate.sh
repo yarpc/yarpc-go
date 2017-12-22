@@ -78,6 +78,7 @@ mockgen -destination=api/transport/transporttest/outbound.go -package=transportt
 mockgen -destination=api/transport/transporttest/router.go -package=transporttest go.uber.org/yarpc/api/transport Router,RouteTable
 mockgen -destination=api/transport/transporttest/stream.go -package=transporttest go.uber.org/yarpc/api/transport Stream,StreamCloser
 mockgen -destination=api/transport/transporttest/transport.go -package=transporttest go.uber.org/yarpc/api/transport Transport
+mockgen -source=vendor/go.uber.org/thriftrw/protocol/protocol.go -destination=encoding/thrift/mock_protocol_test.go -package=thrift go.uber.org/thriftrw/protocol Protocol
 
 generate_stringer ConnectionStatus ./api/peer
 generate_stringer State ./pkg/lifecycle
