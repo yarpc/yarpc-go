@@ -51,19 +51,23 @@ func TestStreaming(t *testing.T) {
 					),
 				),
 			),
-			requests: Actions(
-				GRPCStreamRequest(
-					p.NamedPort("1"),
-					Service("myservice"),
-					Procedure("proc"),
-					ClientStreamActions(
-						SendStreamMsg("test"),
-						RecvStreamMsg("test"),
-						SendStreamMsg("test2"),
-						RecvStreamMsg("test2"),
-						CloseStream(),
+			requests: ConcurrentAction(
+				RepeatAction(
+					GRPCStreamRequest(
+						p.NamedPort("1"),
+						Service("myservice"),
+						Procedure("proc"),
+						ClientStreamActions(
+							SendStreamMsg("test"),
+							RecvStreamMsg("test"),
+							SendStreamMsg("test2"),
+							RecvStreamMsg("test2"),
+							CloseStream(),
+						),
 					),
+					10,
 				),
+				3,
 			),
 		},
 		{

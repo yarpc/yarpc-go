@@ -37,7 +37,7 @@ type SendStreamMsg struct {
 	api.SafeTestingTBOnStart
 	api.NoopStop
 
-	Body        io.ReadCloser
+	BodyFunc    func() io.ReadCloser
 	WantErrMsgs []string
 }
 
@@ -56,7 +56,7 @@ func (s *SendStreamMsg) applyStream(t testing.TB, c transport.Stream) {
 	err := c.SendMessage(
 		context.Background(),
 		&transport.StreamMessage{
-			Body: s.Body,
+			Body: s.BodyFunc(),
 		},
 	)
 	if len(s.WantErrMsgs) > 0 {

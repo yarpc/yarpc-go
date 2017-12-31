@@ -35,11 +35,12 @@ import (
 
 // GRPCStreamRequest creates a new grpc stream request.
 func GRPCStreamRequest(options ...api.ClientStreamRequestOption) api.Action {
-	opts := api.NewClientStreamRequestOpts()
-	for _, option := range options {
-		option.ApplyClientStreamRequest(&opts)
-	}
 	return api.ActionFunc(func(t testing.TB) {
+		opts := api.NewClientStreamRequestOpts()
+		for _, option := range options {
+			option.ApplyClientStreamRequest(&opts)
+		}
+
 		trans := grpc.NewTransport()
 		out := trans.NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", opts.Port))
 

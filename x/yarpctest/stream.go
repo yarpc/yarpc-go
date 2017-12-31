@@ -22,6 +22,7 @@ package yarpctest
 
 import (
 	"bytes"
+	"io"
 	"io/ioutil"
 
 	"go.uber.org/yarpc/x/yarpctest/types"
@@ -29,14 +30,20 @@ import (
 
 // SendStreamMsg sends a message to a stream.
 func SendStreamMsg(sendMsg string) *types.SendStreamMsg {
-	return &types.SendStreamMsg{Body: ioutil.NopCloser(bytes.NewBufferString(sendMsg))}
+	return &types.SendStreamMsg{
+		BodyFunc: func() io.ReadCloser {
+			return ioutil.NopCloser(bytes.NewBufferString(sendMsg))
+		},
+	}
 }
 
 // SendStreamMsgAndExpectError sends a message on a stream and asserts on the
 // error returned.
 func SendStreamMsgAndExpectError(sendMsg string, wantErrMsgs ...string) *types.SendStreamMsg {
 	return &types.SendStreamMsg{
-		Body:        ioutil.NopCloser(bytes.NewBufferString(sendMsg)),
+		BodyFunc: func() io.ReadCloser {
+			return ioutil.NopCloser(bytes.NewBufferString(sendMsg))
+		},
 		WantErrMsgs: wantErrMsgs,
 	}
 }
@@ -45,7 +52,9 @@ func SendStreamMsgAndExpectError(sendMsg string, wantErrMsgs ...string) *types.S
 // message and asserts on the result.
 func SendStreamDecodeErrorAndExpectError(decodeErr error, wantErrMsgs ...string) *types.SendStreamMsg {
 	return &types.SendStreamMsg{
-		Body:        ioutil.NopCloser(readErr{decodeErr}),
+		BodyFunc: func() io.ReadCloser {
+			return ioutil.NopCloser(readErr{decodeErr})
+		},
 		WantErrMsgs: wantErrMsgs,
 	}
 }

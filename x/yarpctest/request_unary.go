@@ -40,11 +40,12 @@ import (
 
 // HTTPRequest creates a new YARPC http request.
 func HTTPRequest(options ...api.RequestOption) api.Action {
-	opts := api.NewRequestOpts()
-	for _, option := range options {
-		option.ApplyRequest(&opts)
-	}
 	return api.ActionFunc(func(t testing.TB) {
+		opts := api.NewRequestOpts()
+		for _, option := range options {
+			option.ApplyRequest(&opts)
+		}
+
 		trans := http.NewTransport()
 		out := trans.NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d/", opts.Port))
 
@@ -65,11 +66,12 @@ func HTTPRequest(options ...api.RequestOption) api.Action {
 
 // TChannelRequest creates a new tchannel request.
 func TChannelRequest(options ...api.RequestOption) api.Action {
-	opts := api.NewRequestOpts()
-	for _, option := range options {
-		option.ApplyRequest(&opts)
-	}
 	return api.ActionFunc(func(t testing.TB) {
+		opts := api.NewRequestOpts()
+		for _, option := range options {
+			option.ApplyRequest(&opts)
+		}
+
 		trans, err := tchannel.NewTransport(tchannel.ServiceName(opts.GiveRequest.Caller))
 		require.NoError(t, err)
 		out := trans.NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", opts.Port))
@@ -91,11 +93,12 @@ func TChannelRequest(options ...api.RequestOption) api.Action {
 
 // GRPCRequest creates a new grpc unary request.
 func GRPCRequest(options ...api.RequestOption) api.Action {
-	opts := api.NewRequestOpts()
-	for _, option := range options {
-		option.ApplyRequest(&opts)
-	}
 	return api.ActionFunc(func(t testing.TB) {
+		opts := api.NewRequestOpts()
+		for _, option := range options {
+			option.ApplyRequest(&opts)
+		}
+
 		trans := grpc.NewTransport()
 		out := trans.NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", opts.Port))
 

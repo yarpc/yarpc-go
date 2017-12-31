@@ -44,14 +44,18 @@ func TestServiceRouting(t *testing.T) {
 					Proc(Name("echo"), EchoHandler()),
 				),
 			),
-			requests: Actions(
-				HTTPRequest(
-					p.NamedPort("1"),
-					Body("test body"),
-					Service("myservice"),
-					Procedure("echo"),
-					WantRespBody("test body"),
+			requests: ConcurrentAction(
+				RepeatAction(
+					HTTPRequest(
+						p.NamedPort("1"),
+						Body("test body"),
+						Service("myservice"),
+						Procedure("echo"),
+						WantRespBody("test body"),
+					),
+					10,
 				),
+				3,
 			),
 		},
 		{
@@ -63,14 +67,18 @@ func TestServiceRouting(t *testing.T) {
 					Proc(Name("echo"), EchoHandler()),
 				),
 			),
-			requests: Actions(
-				TChannelRequest(
-					p.NamedPort("2"),
-					Body("test body"),
-					Service("myservice"),
-					Procedure("echo"),
-					WantRespBody("test body"),
+			requests: ConcurrentAction(
+				RepeatAction(
+					TChannelRequest(
+						p.NamedPort("2"),
+						Body("test body"),
+						Service("myservice"),
+						Procedure("echo"),
+						WantRespBody("test body"),
+					),
+					10,
 				),
+				3,
 			),
 		},
 		{
@@ -82,14 +90,18 @@ func TestServiceRouting(t *testing.T) {
 					Proc(Name("echo"), EchoHandler()),
 				),
 			),
-			requests: Actions(
-				GRPCRequest(
-					p.NamedPort("3"),
-					Body("test body"),
-					Service("myservice"),
-					Procedure("echo"),
-					WantRespBody("test body"),
+			requests: ConcurrentAction(
+				RepeatAction(
+					GRPCRequest(
+						p.NamedPort("3"),
+						Body("test body"),
+						Service("myservice"),
+						Procedure("echo"),
+						WantRespBody("test body"),
+					),
+					10,
 				),
+				3,
 			),
 		},
 		{
