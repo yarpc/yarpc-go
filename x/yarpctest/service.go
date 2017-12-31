@@ -57,14 +57,17 @@ func TChannelService(options ...api.ServiceOption) api.Lifecycle {
 	for _, option := range options {
 		option.ApplyService(&opts)
 	}
-	if opts.Listener != nil {
-		if err := opts.Listener.Close(); err != nil {
+	listener := opts.Listener
+	var err error
+	if listener == nil {
+		if listener, err = net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", opts.Port)); err != nil {
 			panic(err)
 		}
 	}
 	trans, err := tchannel.NewTransport(
 		tchannel.ListenAddr(fmt.Sprintf("127.0.0.1:%d", opts.Port)),
 		tchannel.ServiceName(opts.Name),
+		tchannel.Listener(listener),
 	)
 	if err != nil {
 		panic(err)
