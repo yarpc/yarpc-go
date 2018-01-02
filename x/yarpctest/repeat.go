@@ -21,10 +21,11 @@
 package yarpctest
 
 import (
+	"fmt"
+	"sync"
 	"testing"
 
 	"go.uber.org/yarpc/x/yarpctest/api"
-	"sync"
 )
 
 // RepeatAction will call the provided action a set number of times (the action
@@ -43,7 +44,7 @@ func ConcurrentAction(action Action, threads int) api.Action {
 	return api.ActionFunc(func(t testing.TB) {
 		var wg sync.WaitGroup
 		for i := 0; i < threads; i++ {
-			name := string(i)
+			name := fmt.Sprint(i)
 			wg.Add(1)
 			go func() {
 				api.Run(
