@@ -31,9 +31,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/examples/thrift-hello/hello/echo"
-	"go.uber.org/yarpc/internal/examples/thrift-hello/hello/echo/helloclient"
-	"go.uber.org/yarpc/internal/examples/thrift-hello/hello/echo/helloserver"
+	"go.uber.org/yarpc/internal/examples/thrift-hello-binary/hellobinary/echobinary"
+	"go.uber.org/yarpc/internal/examples/thrift-hello-binary/hellobinary/echobinary/hellobinaryclient"
+	"go.uber.org/yarpc/internal/examples/thrift-hello-binary/hellobinary/echobinary/hellobinaryserver"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/transport/tchannel"
 	. "go.uber.org/yarpc/x/yarpctest"
@@ -81,14 +81,14 @@ func TestThrift(t *testing.T) {
 
 func ThriftEchoProcedures() api.ServiceOption {
 	return api.ServiceOptionFunc(func(opts *api.ServiceOpts) {
-		opts.Procedures = append(opts.Procedures, helloserver.New(&helloHandler{})...)
+		opts.Procedures = append(opts.Procedures, hellobinaryserver.New(&helloHandler{})...)
 	})
 }
 
 type helloHandler struct{}
 
-func (h helloHandler) Echo(ctx context.Context, e *echo.EchoRequest) (*echo.EchoResponse, error) {
-	return &echo.EchoResponse{Message: e.Message, Count: e.Count + 1}, nil
+func (h helloHandler) Echo(ctx context.Context, e *echobinary.EchoBinaryRequest) (*echobinary.EchoBinaryResponse, error) {
+	return &echobinary.EchoBinaryResponse{Message: e.Message, Count: e.Count + 1}, nil
 }
 
 // RandomizedEchoAction creates a random echo action, and calls into the
@@ -98,15 +98,15 @@ func RandomizedTChannelEchoAction(service string, p *types.Port) api.Action {
 		cc, stop := getOutboundConfig(t, service, p)
 		defer stop()
 
-		client := helloclient.New(cc)
-		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+		client := hellobinaryclient.New(cc)
+		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second*10)
 		defer cancel()
 		count := Intn(500) + 1
 		message := String(count)
-		resp, err := client.Echo(ctx, &echo.EchoRequest{Message: message, Count: int16(count)})
+		resp, err := client.Echo(ctx, &echobinary.EchoBinaryRequest{Message: []byte(message), Count: int16(count)})
 		require.NoError(t, err)
 		require.Equal(t, int16(count+1), resp.Count)
-		require.Equal(t, message, resp.Message)
+		require.Equal(t, message, string(resp.Message), "data corruption occurred")
 	})
 }
 
