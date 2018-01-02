@@ -1,0 +1,4 @@
+run:
+  - command: ./hellobinary/hellobinary
+    output: |
+      *echobinary.EchoBinaryResponse{Message: Hello world, Count: 2}
