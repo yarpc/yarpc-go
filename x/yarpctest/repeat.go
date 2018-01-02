@@ -43,9 +43,16 @@ func ConcurrentAction(action Action, threads int) api.Action {
 	return api.ActionFunc(func(t testing.TB) {
 		var wg sync.WaitGroup
 		for i := 0; i < threads; i++ {
+			name := string(i)
 			wg.Add(1)
 			go func() {
-				action.Run(t)
+				api.Run(
+					name,
+					t,
+					func(t testing.TB) {
+						action.Run(t)
+					},
+				)
 				wg.Done()
 			}()
 		}
