@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Add support for Inbound and Outbound streaming RPCs using gRPC and Protobuf.
 - Add support for creating peer choosers through config with PeerChooserSpec.
-- Adds the option of injecting a "go.uber.org/net/metrics".Scope into the
+- Add the option of injecting a `"go.uber.org/net/metrics".Scope` into the
   dispatcher metrics configuration, in lieu of a Tally Scope.  Metrics scopes
   support in memory and Prometheus collection.
 
