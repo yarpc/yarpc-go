@@ -21,7 +21,6 @@
 package tchannel
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -190,7 +189,7 @@ type responseWriter struct {
 	failedWith         error
 	format             tchannel.Format
 	headers            transport.Headers
-	buffer             *bytes.Buffer
+	buffer             *bufferpool.Buffer
 	response           inboundCallResponse
 	isApplicationError bool
 }

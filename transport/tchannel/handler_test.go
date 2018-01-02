@@ -459,7 +459,7 @@ func TestResponseWriterFailure(t *testing.T) {
 		_, err = w.Write([]byte("bar"))
 		assert.NoError(t, err)
 		err = w.Close()
-		assert.Error(t, w.Close())
+		assert.Error(t, err)
 		for _, msg := range tt.messages {
 			assert.Contains(t, err.Error(), msg)
 		}
