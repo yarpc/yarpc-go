@@ -22,7 +22,6 @@ package thrift_test
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"sync"
 	"testing"
@@ -113,7 +112,7 @@ func RandomizedTChannelEchoAction(service string, p *types.Port) api.Action {
 func getOutboundConfig(t testing.TB, service string, port *types.Port) (c *transport.OutboundConfig, stop func()) {
 	trans, err := tchannel.NewTransport(tchannel.ServiceName("caller"))
 	require.NoError(t, err)
-	out := trans.NewSingleOutbound(fmt.Sprintf(port.Listener.Addr().String()))
+	out := trans.NewSingleOutbound(port.Listener.Addr().String())
 
 	require.NoError(t, trans.Start())
 	require.NoError(t, out.Start())
