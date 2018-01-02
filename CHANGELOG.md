@@ -8,6 +8,13 @@ v1.27.0-dev (unreleased)
 -   Add support for creating peer choosers through config with PeerChooserSpec.
 
 
+v1.26.1 (2017-12-21)
+--------------------
+
+-   Reverts the integration for envelope-agnostic Thrift. This change
+    introduced data corruption to request bodies due to a buffer pooling bug.
+
+
 v1.26.0 (2017-12-13)
 --------------------
 

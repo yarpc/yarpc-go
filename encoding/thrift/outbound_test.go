@@ -32,7 +32,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/thriftrw/envelope"
-	"go.uber.org/thriftrw/thrifttest"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
@@ -138,7 +137,7 @@ func TestClient(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
 
-		proto := thrifttest.NewMockProtocol(mockCtrl)
+		proto := NewMockProtocol(mockCtrl)
 
 		if tt.wantRequestEnvelope != nil {
 			proto.EXPECT().EncodeEnveloped(*tt.wantRequestEnvelope, gomock.Any()).
@@ -256,7 +255,7 @@ func TestClientOneway(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
 
-		proto := thrifttest.NewMockProtocol(mockCtrl)
+		proto := NewMockProtocol(mockCtrl)
 		bodyBytes := []byte("irrelevant")
 
 		if tt.wantRequestEnvelope != nil {
