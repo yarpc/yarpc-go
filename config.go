@@ -84,6 +84,7 @@ type MetricsConfig struct {
 	Metrics *metrics.Scope
 	// Tally scope used for pushing to M3 or StatsD-based systems. By
 	// default, metrics are collected in memory but not pushed.
+	// TODO deprecate this option for metrics configuration.
 	Tally tally.Scope
 }
 
