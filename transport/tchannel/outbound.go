@@ -84,19 +84,24 @@ func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport
 	if _, ok := ctx.(tchannel.ContextWithHeaders); ok {
 		return nil, errDoNotUseContextWithHeaders
 	}
-	root := o.transport.ch.RootPeers()
 	p, onFinish, err := o.getPeerForRequest(ctx, req)
 	if err != nil {
 		return nil, toYARPCError(req, err)
 	}
-	tp := root.GetOrAdd(p.HostPort())
-	res, err := o.callWithPeer(ctx, req, tp)
+	res, err := p.Call(ctx, req)
 	onFinish(err)
 	return res, toYARPCError(req, err)
 }
 
+// Call sends an RPC to this specific peer.
+func (p *tchannelPeer) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+	root := p.transport.ch.RootPeers()
+	tp := root.GetOrAdd(p.HostPort())
+	return callWithPeer(ctx, req, tp)
+}
+
 // callWithPeer sends a request with the chosen peer.
-func (o *Outbound) callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Peer) (*transport.Response, error) {
+func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Peer) (*transport.Response, error) {
 	// NB(abg): Under the current API, the local service's name is required
 	// twice: once when constructing the TChannel and then again when
 	// constructing the RPC.
