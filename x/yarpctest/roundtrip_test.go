@@ -240,6 +240,52 @@ func TestServiceRouting(t *testing.T) {
 				),
 			),
 		},
+		{
+			name: "hardcoded peer",
+			services: Lifecycles(
+				TChannelService(
+					Name("myservice"),
+					Port(54321),
+					Proc(Name("echo"), EchoHandler()),
+				),
+			),
+			requests: ConcurrentAction(
+				RepeatAction(
+					TChannelRequest(
+						Port(54321),
+						Body("test body"),
+						Service("myservice"),
+						Procedure("echo"),
+						WantRespBody("test body"),
+					),
+					10,
+				),
+				3,
+			),
+		},
+		{
+			name: "hardcoded peer (same as above, testing reuse)",
+			services: Lifecycles(
+				TChannelService(
+					Name("myservice"),
+					Port(54321),
+					Proc(Name("echo"), EchoHandler()),
+				),
+			),
+			requests: ConcurrentAction(
+				RepeatAction(
+					TChannelRequest(
+						Port(54321),
+						Body("test body"),
+						Service("myservice"),
+						Procedure("echo"),
+						WantRespBody("test body"),
+					),
+					10,
+				),
+				3,
+			),
+		},
 	}
 
 	for _, tt := range tests {
