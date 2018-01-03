@@ -79,6 +79,16 @@ type Port struct {
 	Port     uint16
 }
 
+// Start is a Noop.
+func (n *Port) Start(t testing.TB) error {
+	return nil
+}
+
+// Stop closes the port's listener.
+func (n *Port) Stop(t testing.TB) error {
+	return n.Listener.Close()
+}
+
 // ApplyService implements api.ServiceOption.
 func (n *Port) ApplyService(opts *api.ServiceOpts) {
 	opts.Listener = n.Listener
