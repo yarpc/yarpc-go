@@ -256,7 +256,7 @@ func (rw *responseWriter) Close(httpStatusCode int) {
 	rw.w.WriteHeader(httpStatusCode)
 	if rw.buffer != nil {
 		// TODO: what to do with error?
-		_, _ = rw.w.Write(rw.buffer.Bytes())
+		_, _ = rw.buffer.WriteTo(rw.w)
 		bufferpool.Put(rw.buffer)
 	}
 }
