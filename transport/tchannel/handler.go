@@ -255,7 +255,7 @@ func (rw *responseWriter) Close() error {
 	defer func() { retErr = appendError(retErr, bodyWriter.Close()) }()
 	if rw.buffer != nil {
 		defer bufferpool.Put(rw.buffer)
-		if _, err := bodyWriter.Write(rw.buffer.Bytes()); err != nil {
+		if _, err := rw.buffer.WriteTo(bodyWriter); err != nil {
 			return appendError(retErr, err)
 		}
 	}
