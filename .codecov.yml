@@ -79,6 +79,12 @@ ignore:
  - /internal/examples/streaming/
  - /internal/examples/streaming/client/
  - /internal/examples/streaming/server/
+ - /internal/examples/thrift-hello-binary/hellobinary/
+ - /internal/examples/thrift-hello-binary/hellobinary/echobinary/
+ - /internal/examples/thrift-hello-binary/hellobinary/echobinary/hellobinaryclient/
+ - /internal/examples/thrift-hello-binary/hellobinary/echobinary/hellobinaryfx/
+ - /internal/examples/thrift-hello-binary/hellobinary/echobinary/hellobinaryserver/
+ - /internal/examples/thrift-hello-binary/hellobinary/echobinary/hellobinarytest/
  - /internal/examples/thrift-hello/hello/
  - /internal/examples/thrift-hello/hello/echo/
  - /internal/examples/thrift-hello/hello/echo/helloclient/

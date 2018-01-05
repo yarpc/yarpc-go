@@ -16,6 +16,7 @@ all: \
 	protobuf-grpc \
 	protobuf-google-grpc \
 	thrift-hello \
+	thrift-hello-binary \
 	thrift-keyvalue-http \
 	thrift-keyvalue-tchannel \
 	thrift-keyvalue-grpc \
@@ -67,6 +68,11 @@ protobuf-google-grpc: install build-protobuf
 thrift-hello: install
 	go build -o thrift-hello/hello/hello thrift-hello/hello/main.go
 	$(SERVICE_TEST) --dir thrift-hello
+
+.PHONY: thrift-hello-binary
+thrift-hello-binary: install
+	go build -o thrift-hello-binary/hellobinary/hellobinary thrift-hello-binary/hellobinary/main.go
+	$(SERVICE_TEST) --dir thrift-hello-binary
 
 .PHONY: build-thrift-keyvalue
 build-thrift-keyvalue:
