@@ -66,7 +66,7 @@ func newPort(t testing.TB) *Port {
 	port, err := strconv.ParseInt(pieces[len(pieces)-1], 10, 0)
 	require.NoError(t, err)
 	return &Port{
-		listener: listener,
+		Listener: listener,
 		Port:     uint16(port),
 	}
 }
@@ -75,13 +75,13 @@ func newPort(t testing.TB) *Port {
 // requests and services.
 type Port struct {
 	api.NoopLifecycle
-	listener net.Listener
+	Listener net.Listener
 	Port     uint16
 }
 
 // ApplyService implements api.ServiceOption.
 func (n *Port) ApplyService(opts *api.ServiceOpts) {
-	opts.Listener = n.listener
+	opts.Listener = n.Listener
 	opts.Port = n.Port
 }
 
