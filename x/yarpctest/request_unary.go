@@ -55,7 +55,7 @@ func HTTPRequest(options ...api.RequestOption) api.Action {
 		require.NoError(t, out.Start())
 		defer func() { assert.NoError(t, out.Stop()) }()
 
-		resp, cancel, err := sendRequest(out, opts.GiveRequest)
+		resp, cancel, err := sendRequest(out, opts.GiveRequest, opts.GiveTimeout)
 		defer cancel()
 		validateError(t, err, opts.WantError)
 		if opts.WantError == nil {
@@ -82,7 +82,7 @@ func TChannelRequest(options ...api.RequestOption) api.Action {
 		require.NoError(t, out.Start())
 		defer func() { assert.NoError(t, out.Stop()) }()
 
-		resp, cancel, err := sendRequest(out, opts.GiveRequest)
+		resp, cancel, err := sendRequest(out, opts.GiveRequest, opts.GiveTimeout)
 		defer cancel()
 		validateError(t, err, opts.WantError)
 		if opts.WantError == nil {
@@ -108,7 +108,7 @@ func GRPCRequest(options ...api.RequestOption) api.Action {
 		require.NoError(t, out.Start())
 		defer func() { assert.NoError(t, out.Stop()) }()
 
-		resp, cancel, err := sendRequest(out, opts.GiveRequest)
+		resp, cancel, err := sendRequest(out, opts.GiveRequest, opts.GiveTimeout)
 		defer cancel()
 		validateError(t, err, opts.WantError)
 		if opts.WantError == nil {
@@ -117,8 +117,8 @@ func GRPCRequest(options ...api.RequestOption) api.Action {
 	})
 }
 
-func sendRequest(out transport.UnaryOutbound, request *transport.Request) (*transport.Response, context.CancelFunc, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+func sendRequest(out transport.UnaryOutbound, request *transport.Request, timeout time.Duration) (*transport.Response, context.CancelFunc, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	resp, err := out.Call(ctx, request)
 	return resp, cancel, err
 }
@@ -158,6 +158,13 @@ func validateResponse(t testing.TB, actualResp *transport.Response, expectedResp
 func Body(msg string) api.RequestOption {
 	return api.RequestOptionFunc(func(opts *api.RequestOpts) {
 		opts.GiveRequest.Body = bytes.NewBufferString(msg)
+	})
+}
+
+// GiveTimeout will set the timeout for the request.
+func GiveTimeout(duration time.Duration) api.RequestOption {
+	return api.RequestOptionFunc(func(opts *api.RequestOpts) {
+		opts.GiveTimeout = duration
 	})
 }
 

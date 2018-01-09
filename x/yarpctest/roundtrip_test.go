@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -48,6 +49,7 @@ func TestServiceRouting(t *testing.T) {
 				RepeatAction(
 					HTTPRequest(
 						p.NamedPort("1"),
+						GiveTimeout(testtime.Second),
 						Body("test body"),
 						Service("myservice"),
 						Procedure("echo"),
@@ -71,6 +73,7 @@ func TestServiceRouting(t *testing.T) {
 				RepeatAction(
 					TChannelRequest(
 						p.NamedPort("2"),
+						GiveTimeout(testtime.Second),
 						Body("test body"),
 						Service("myservice"),
 						Procedure("echo"),
@@ -94,6 +97,7 @@ func TestServiceRouting(t *testing.T) {
 				RepeatAction(
 					GRPCRequest(
 						p.NamedPort("3"),
+						GiveTimeout(testtime.Second),
 						Body("test body"),
 						Service("myservice"),
 						Procedure("echo"),
