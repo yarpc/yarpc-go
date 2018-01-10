@@ -499,6 +499,10 @@ func TestGetSystemError(t *testing.T) {
 			giveErr:  tchannel.NewSystemError(tchannel.ErrCodeBusy, "test"),
 			wantCode: tchannel.ErrCodeBusy,
 		},
+		{
+			giveErr:  yarpcerrors.Newf(yarpcerrors.Code(1235), "test"),
+			wantCode: tchannel.ErrCodeUnexpected,
+		},
 	}
 	for i, tt := range tests {
 		t.Run(string(i), func(t *testing.T) {
