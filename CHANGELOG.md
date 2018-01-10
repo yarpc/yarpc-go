@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Add support for creating peer choosers through config with PeerChooserSpec.
 
 ### Fixed
-- Tchannel inbound response errors are now properly mapped from yarpc errors.
+- TChannel inbound response errors are now properly mapped from YARPC errors.
 
 
 ## [1.26.1] - 2017-12-21
