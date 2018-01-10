@@ -38,6 +38,7 @@ import (
 	"go.uber.org/yarpc/internal/routertest"
 	"go.uber.org/yarpc/internal/testtime"
 	pkgerrors "go.uber.org/yarpc/pkg/errors"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 func TestHandlerErrors(t *testing.T) {
@@ -475,4 +476,36 @@ func TestResponseWriterEmptyBodyHeaders(t *testing.T) {
 	assert.NotEmpty(t, res.arg2.Bytes(), "headers must not be empty")
 	assert.Empty(t, res.arg3.Bytes(), "body must be empty but was %#v", res.arg3.Bytes())
 	assert.False(t, res.applicationError, "application error must be false")
+}
+
+func TestGetSystemError(t *testing.T) {
+	tests := []struct {
+		giveErr  error
+		wantCode tchannel.SystemErrCode
+	}{
+		{
+			giveErr:  yarpcerrors.UnavailableErrorf("test"),
+			wantCode: tchannel.ErrCodeDeclined,
+		},
+		{
+			giveErr:  errors.New("test"),
+			wantCode: tchannel.ErrCodeUnexpected,
+		},
+		{
+			giveErr:  yarpcerrors.InvalidArgumentErrorf("test"),
+			wantCode: tchannel.ErrCodeBadRequest,
+		},
+		{
+			giveErr:  tchannel.NewSystemError(tchannel.ErrCodeBusy, "test"),
+			wantCode: tchannel.ErrCodeBusy,
+		},
+	}
+	for i, tt := range tests {
+		t.Run(string(i), func(t *testing.T) {
+			gotErr := getSystemError(tt.giveErr)
+			tchErr, ok := gotErr.(tchannel.SystemError)
+			require.True(t, ok, "did not return tchannel error")
+			assert.Equal(t, tt.wantCode, tchErr.Code())
+		})
+	}
 }
