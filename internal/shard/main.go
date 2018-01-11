@@ -28,6 +28,8 @@ import (
 	"strconv"
 )
 
+// Shards a list of files over a distribution defined by totalShards.
+// Useful for splitting work and running tests in parallel.
 var usage = fmt.Sprintf("Usage: %s shardNum totalShards args...", os.Args[0])
 
 func main() {
