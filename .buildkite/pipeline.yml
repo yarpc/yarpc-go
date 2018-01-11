@@ -5,14 +5,14 @@ steps:
         build: yarpc-go-1.8
         image-repository: 296822479253.dkr.ecr.us-east-2.amazonaws.com/fusionjs
     agents:
-      queue: 'uber-builders'
+      queue: builders
   - name: ":docker: :package: 1.9"
     plugins:
       docker-compose#v1.5.2:
         build: yarpc-go-1.9
         image-repository: 296822479253.dkr.ecr.us-east-2.amazonaws.com/fusionjs
     agents:
-      queue: 'uber-builders'
+      queue: builders
   - wait
   - name: ":go: 1.8 test - %n"
     command: "make test"
@@ -20,29 +20,41 @@ steps:
     plugins:
       docker-compose#v1.5.2:
         run: yarpc-go-1.8
+    agents:
+      queue: workers
   - name: ":go: 1.8 lint"
     command: "make lint"
     plugins:
       docker-compose#v1.5.2:
         run: yarpc-go-1.8
+    agents:
+      queue: workers
   - name: ":go: 1.8 examples"
     command: "make examples"
     plugins:
       docker-compose#v1.5.2:
         run: yarpc-go-1.8
+    agents:
+      queue: workers
   - name: ":go: 1.9 test - %n"
     command: "make codecov"
     parallelism: 6
     plugins:
       docker-compose#v1.5.2:
         run: yarpc-go-1.9
+    agents:
+      queue: workers
   - name: ":go: 1.9 lint"
     command: "make lint"
     plugins:
       docker-compose#v1.5.2:
         run: yarpc-go-1.9
+    agents:
+      queue: workers
   - name: ":go: 1.9 examples"
     command: "make examples"
     plugins:
       docker-compose#v1.5.2:
         run: yarpc-go-1.9
+    agents:
+      queue: workers
