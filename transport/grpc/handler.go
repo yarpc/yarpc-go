@@ -184,13 +184,9 @@ func (h *handler) handleUnary(
 	// which grpc can modify. Without this, the test TestDataRace in integration_test.go
 	// will be set off.
 	data := responseWriter.Bytes()
-	var b []byte
-	if len(data) > 0 {
-		b = make([]byte, len(data))
-		copy(b, data)
-	}
+
 	// Send the response attributes back and end the stream.
-	if sendErr := serverStream.SendMsg(b); sendErr != nil {
+	if sendErr := serverStream.SendMsg(data); sendErr != nil {
 		// We couldn't send the response.
 		return sendErr
 	}
