@@ -35,7 +35,7 @@ import:
 - package: go.uber.org/atomic
   version: ^1
 - package: go.uber.org/thriftrw
-  version: ^1
+  version: ^1.10
 - package: golang.org/x/net
   version: master
   # explicitly specifying this because glide is having issues with golang.org repos
