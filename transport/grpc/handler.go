@@ -177,16 +177,8 @@ func (h *handler) handleUnary(
 	err := h.handleUnaryBeforeErrorConversion(ctx, transportRequest, responseWriter, start, handler)
 	err = handlerErrorToGRPCError(err, responseWriter)
 
-	// We need to copy the bytes out so that we do not use the buffer-pool-backed byte slices.
-	// grpc does a send back to the client on a loop in a separate goroutine, which may occur
-	// after we return from this dunction. Because our codec is a passthrough, the "marshalled"
-	// data from the interface{} given to SendMsg is the original byte buffer from the buffer pool,
-	// which grpc can modify. Without this, the test TestDataRace in integration_test.go
-	// will be set off.
-	data := responseWriter.Bytes()
-
 	// Send the response attributes back and end the stream.
-	if sendErr := serverStream.SendMsg(data); sendErr != nil {
+	if sendErr := serverStream.SendMsg(responseWriter.Bytes()); sendErr != nil {
 		// We couldn't send the response.
 		return sendErr
 	}
