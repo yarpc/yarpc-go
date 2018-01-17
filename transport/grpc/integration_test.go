@@ -170,6 +170,17 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 	})
 }
 
+func TestDataRace(t *testing.T) {
+	t.Parallel()
+	value := strings.Repeat("a", 32768)
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", value))
+		getValue, err := e.GetValueYARPC(context.Background(), "foo")
+		assert.NoError(t, err)
+		assert.Equal(t, value, getValue)
+	})
+}
+
 func TestApplicationErrorPropagation(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
