@@ -37,7 +37,7 @@ import (
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
 	"go.uber.org/yarpc/internal/testutils"
 	"go.uber.org/yarpc/yarpcerrors"
-	"google.golang.org/grpc"
+	"google.golang.org/grpc/status"
 )
 
 var flagOutbound = flag.String("outbound", "tchannel", "The outbound to use for unary calls")
@@ -196,8 +196,8 @@ func getErrorMessage(err error) string {
 	if yarpcerrors.IsStatus(err) {
 		return yarpcerrors.FromError(err).Message()
 	}
-	if errorDesc := grpc.ErrorDesc(err); errorDesc != "" {
-		return errorDesc
+	if status, ok := status.FromError(err); ok {
+		return status.Message()
 	}
 	return err.Error()
 }
