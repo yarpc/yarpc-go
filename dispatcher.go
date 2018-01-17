@@ -26,6 +26,7 @@ import (
 	"sync"
 
 	"go.uber.org/multierr"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal"
@@ -33,7 +34,6 @@ import (
 	"go.uber.org/yarpc/internal/inboundmiddleware"
 	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/internal/outboundmiddleware"
-	"go.uber.org/yarpc/internal/pally"
 	"go.uber.org/yarpc/internal/request"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/zap"
@@ -80,8 +80,8 @@ func NewDispatcher(cfg Config) *Dispatcher {
 	logger := cfg.Logging.logger(cfg.Name)
 	extractor := cfg.Logging.extractor()
 
-	registry, stopPush := cfg.Metrics.registry(cfg.Name, logger)
-	cfg = addObservingMiddleware(cfg, registry, logger, extractor)
+	meter, stopMeter := cfg.Metrics.scope(cfg.Name, logger)
+	cfg = addObservingMiddleware(cfg, meter, logger, extractor)
 
 	return &Dispatcher{
 		name:              cfg.Name,
@@ -91,14 +91,14 @@ func NewDispatcher(cfg Config) *Dispatcher {
 		transports:        collectTransports(cfg.Inbounds, cfg.Outbounds),
 		inboundMiddleware: cfg.InboundMiddleware,
 		log:               logger,
-		registry:          registry,
-		stopRegistryPush:  stopPush,
+		meter:             meter,
+		stopMeter:         stopMeter,
 		once:              lifecycle.NewOnce(),
 	}
 }
 
-func addObservingMiddleware(cfg Config, registry *pally.Registry, logger *zap.Logger, extractor observability.ContextExtractor) Config {
-	observer := observability.NewMiddleware(logger, registry, extractor)
+func addObservingMiddleware(cfg Config, meter *metrics.Scope, logger *zap.Logger, extractor observability.ContextExtractor) Config {
+	observer := observability.NewMiddleware(logger, meter, extractor)
 
 	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(observer, cfg.InboundMiddleware.Unary)
 	cfg.InboundMiddleware.Oneway = inboundmiddleware.OnewayChain(observer, cfg.InboundMiddleware.Oneway)
@@ -205,9 +205,9 @@ type Dispatcher struct {
 
 	inboundMiddleware InboundMiddleware
 
-	log              *zap.Logger
-	registry         *pally.Registry
-	stopRegistryPush context.CancelFunc
+	log       *zap.Logger
+	meter     *metrics.Scope
+	stopMeter context.CancelFunc
 
 	once *lifecycle.Once
 }
@@ -484,7 +484,7 @@ func (d *Dispatcher) stop() error {
 
 	// Stop pushing metrics to Tally.
 	d.log.Debug("Stopping metrics push loop, if any.")
-	d.stopRegistryPush()
+	d.stopMeter()
 	d.log.Debug("Stopped metrics push loop, if any.")
 
 	d.log.Info("Completed shutdown.")

@@ -1,5 +1,5 @@
-hash: 2ae2256c1070f8aaa397564451e9bc13affcd87e33ee50b94d95fbff4c4dcb9a
-updated: 2018-01-11T15:56:43.12063543-08:00
+hash: 7c7d875c128e2f5ee2218b87f3ec2b6fb335279d1cda2657c6cc4eb92a2ecdb9
+updated: 2018-01-17T11:45:33.306560761-08:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -91,13 +91,8 @@ imports:
   - internal/mapstructure
 - name: github.com/uber-go/tally
   version: 6c4631652c6aab57c64f65c2e0aaec2e9aae3a64
-  subpackages:
-  - m3
-  - m3/customtransports
-  - m3/thrift
-  - m3/thriftudp
 - name: github.com/uber/jaeger-client-go
-  version: f54d8ece0a66e3db6a9247e946eb1e2bd79029ea
+  version: 3ac96c6e679cb60a74589b0d0aa7c70a906183f7
   subpackages:
   - internal/baggage
   - internal/spanlog
@@ -139,6 +134,12 @@ imports:
   - internal/lifecycle
 - name: go.uber.org/multierr
   version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
+- name: go.uber.org/net/metrics
+  version: 1e19de5b971489a45d178e12a0f72a78c70e300e
+  subpackages:
+  - bucket
+  - push
+  - tallypush
 - name: go.uber.org/thriftrw
   version: 6216e5bb19132c14e979cf9c62abae6f022a0c0d
   subpackages:
@@ -154,6 +155,7 @@ imports:
   - protocol/binary
   - ptr
   - thriftreflect
+  - thrifttest
   - version
   - wire
 - name: go.uber.org/zap
@@ -240,7 +242,7 @@ testImports:
 - name: github.com/kisielk/gotool
   version: d6ce6262d87e3a4e153e86023ff56ae771554a41
 - name: github.com/uber/jaeger-lib
-  version: 5519f3beabf28707fca8d3f47f9cff87dad48d96
+  version: 7f95f4f7e80028096410abddaae2556e4c61b59f
   subpackages:
   - metrics
 - name: github.com/wadey/gocovmerge
