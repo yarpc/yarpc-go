@@ -40,7 +40,7 @@ func newResponseWriter() *responseWriter {
 
 func (r *responseWriter) Write(p []byte) (int, error) {
 	if r.buffer == nil {
-		r.buffer = bytes.NewBuffer(make([]byte, 0, 1024))
+		r.buffer = bytes.NewBuffer(make([]byte, 0, len(p)))
 	}
 	return r.buffer.Write(p)
 }
