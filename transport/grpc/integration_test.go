@@ -170,7 +170,7 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 	})
 }
 
-func TestDataRace(t *testing.T) {
+func TestLargeEcho(t *testing.T) {
 	t.Parallel()
 	value := strings.Repeat("a", 32768)
 	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
