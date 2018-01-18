@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   support in memory and Prometheus collection.
 
 ### Fixed
+- Removed buffer pooling from GRPC inbound responses which had possible data
+  corruption issues.
 - TChannel inbound response errors are now properly mapped from YARPC errors.
 
 
