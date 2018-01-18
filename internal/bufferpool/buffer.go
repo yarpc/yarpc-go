@@ -36,9 +36,8 @@ type Buffer struct {
 
 func newBuffer(pool *Pool) *Buffer {
 	return &Buffer{
-		pool:    pool,
-		version: 0,
-		buf:     &bytes.Buffer{},
+		pool: pool,
+		buf:  &bytes.Buffer{},
 	}
 }
 
@@ -48,8 +47,7 @@ func (b *Buffer) preOp() uint {
 	}
 
 	b.version++
-	cur := b.version
-	return cur
+	return b.version
 }
 
 func (b *Buffer) postOp(v uint) {
