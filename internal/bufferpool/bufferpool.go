@@ -69,6 +69,8 @@ func (p *Pool) Get() *Buffer {
 	buf, ok := p.pool.Get().(*Buffer)
 	if !ok {
 		buf = newBuffer(p)
+	} else {
+		buf.reuse()
 	}
 	return buf
 }

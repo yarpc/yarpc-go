@@ -30,8 +30,14 @@ import (
 type Buffer struct {
 	pool *Pool
 
+	// version is an ever-incrementing integer on ever operation.
+	// it ensures that we don't perform multiple overlapping operations.
 	version uint
-	buf     *bytes.Buffer
+
+	// released tracks whether the buffer has been released.
+	released bool
+
+	buf *bytes.Buffer
 }
 
 func newBuffer(pool *Pool) *Buffer {
@@ -41,17 +47,21 @@ func newBuffer(pool *Pool) *Buffer {
 	}
 }
 
-func (b *Buffer) preOp() uint {
-	if b.buf == nil {
-		panic("use-after-free of pooled buffer, or pending Bytes() call")
+func (b *Buffer) checkUseAfterFree() {
+	if b.released || b.buf == nil {
+		panic("use-after-free of pooled buffer")
 	}
+}
 
+func (b *Buffer) preOp() uint {
+	b.checkUseAfterFree()
 	b.version++
 	return b.version
 }
 
 func (b *Buffer) postOp(v uint) {
-	if v != b.version {
+	b.checkUseAfterFree()
+	if v != b.version || b.released {
 		panic("concurrent use of pooled buffer")
 	}
 	b.version++
@@ -115,11 +125,14 @@ func (b *Buffer) Reset() {
 
 // Release releases the buffer back to the buffer pool.
 func (b *Buffer) Release() {
-	v := b.preOp()
-	b.postOp(v)
+	// Increment the version so overlapping operations fail.
+	b.postOp(b.preOp())
 
 	if !b.pool.testDetectUseAfterFree {
 		b.Reset()
+
+		// We must mark released after the `Reset`.
+		b.released = true
 		b.pool.release(b)
 		return
 	}
@@ -130,7 +143,12 @@ func (b *Buffer) Release() {
 	go overwriteData(b.Bytes())
 
 	// This will cause any future accesses to panic.
+	b.released = true
 	b.buf = nil
+}
+
+func (b *Buffer) reuse() {
+	b.released = false
 }
 
 func overwriteData(bs []byte) {
