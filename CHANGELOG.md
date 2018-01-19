@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   dispatcher metrics configuration, in lieu of a Tally Scope.  Metrics scopes
   support in memory and Prometheus collection.
 
+### Changed
+- Detect buffer pooling bugs by detecting concurrent accesses in production
+  and more thorough use-after-free detection in tests.
+
 ### Fixed
 - Removed buffer pooling from GRPC inbound responses which had possible data
   corruption issues.
