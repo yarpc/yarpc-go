@@ -39,9 +39,9 @@ type Pool struct {
 }
 
 func init() {
-	// FIXME: This is a huge hack just for prototyping.
-	// This detects whether we're running as part of a test, and if so
-	// enables the use-after-free detection.
+	// This is a hacky way to determine whether we are running in unit tests where
+	// we want to enable use-after-free detection.
+	// https://stackoverflow.com/a/36666114
 	if flag.Lookup("test.v") != nil {
 		_pool = NewPool(DetectUseAfterFreeForTests())
 	}
