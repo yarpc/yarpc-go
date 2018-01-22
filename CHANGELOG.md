@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - TChannel inbound response errors are now properly mapped from YARPC errors.
 
 
+## [1.26.2] - 2017-01-17
+### Removed
+- Removed buffer pooling from GRPC inbound responses which had possible data
+  corruption issues.
+
+
 ## [1.26.1] - 2017-12-21
 ### Removed
 - Reverts the integration for envelope-agnostic Thrift. This change
