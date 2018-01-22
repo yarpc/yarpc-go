@@ -219,7 +219,7 @@ func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transp
 // responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.
 type responseWriter struct {
 	w      http.ResponseWriter
-	buffer *bytes.Buffer
+	buffer *bufferpool.Buffer
 }
 
 func newResponseWriter(w http.ResponseWriter) *responseWriter {

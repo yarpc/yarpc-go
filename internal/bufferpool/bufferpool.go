@@ -23,24 +23,68 @@
 package bufferpool
 
 import (
-	"bytes"
+	"flag"
 	"sync"
 )
 
-var _bufferPool = sync.Pool{
-	New: func() interface{} {
-		return &bytes.Buffer{}
-	},
+var _pool = NewPool()
+
+// Option configures a buffer pool.
+type Option func(*Pool)
+
+// Pool represents a buffer pool with a set of options.
+type Pool struct {
+	testDetectUseAfterFree bool
+	pool                   sync.Pool
 }
 
-// Get returns a new Buffer from the Buffer pool that has been reset.
-func Get() *bytes.Buffer {
-	buf := _bufferPool.Get().(*bytes.Buffer)
-	buf.Reset()
+func init() {
+	// This is a hacky way to determine whether we are running in unit tests where
+	// we want to enable use-after-free detection.
+	// https://stackoverflow.com/a/36666114
+	if flag.Lookup("test.v") != nil {
+		_pool = NewPool(DetectUseAfterFreeForTests())
+	}
+}
+
+// NewPool returns a pool that we can allocate buffers from.
+func NewPool(opts ...Option) *Pool {
+	pool := &Pool{}
+	for _, opt := range opts {
+		opt(pool)
+	}
+	return pool
+}
+
+// DetectUseAfterFreeForTests is an option that allows unit tests to detect
+// bad use of a pooled buffer after it has been released to the pool.
+func DetectUseAfterFreeForTests() Option {
+	return func(p *Pool) {
+		p.testDetectUseAfterFree = true
+	}
+}
+
+// Get returns a buffer from the pool.
+func (p *Pool) Get() *Buffer {
+	buf, ok := p.pool.Get().(*Buffer)
+	if !ok {
+		buf = newBuffer(p)
+	} else {
+		buf.reuse()
+	}
 	return buf
 }
 
+func (p *Pool) release(buf *Buffer) {
+	p.pool.Put(buf)
+}
+
+// Get returns a new Buffer from the Buffer pool that has been reset.
+func Get() *Buffer {
+	return _pool.Get()
+}
+
 // Put returns a Buffer to the Buffer pool.
-func Put(buf *bytes.Buffer) {
-	_bufferPool.Put(buf)
+func Put(buf *Buffer) {
+	buf.Release()
 }
