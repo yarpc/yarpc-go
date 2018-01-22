@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -46,10 +46,11 @@ func TransportSpec(opts ...Option) yarpcconfig.TransportSpec {
 		panic(err.Error())
 	}
 	return yarpcconfig.TransportSpec{
-		Name:               transportName,
-		BuildTransport:     transportSpec.buildTransport,
-		BuildInbound:       transportSpec.buildInbound,
-		BuildUnaryOutbound: transportSpec.buildUnaryOutbound,
+		Name:                transportName,
+		BuildTransport:      transportSpec.buildTransport,
+		BuildInbound:        transportSpec.buildInbound,
+		BuildUnaryOutbound:  transportSpec.buildUnaryOutbound,
+		BuildStreamOutbound: transportSpec.buildStreamOutbound,
 	}
 }
 
@@ -167,6 +168,14 @@ func (t *transportSpec) buildInbound(inboundConfig *InboundConfig, tr transport.
 }
 
 func (t *transportSpec) buildUnaryOutbound(outboundConfig *OutboundConfig, tr transport.Transport, kit *yarpcconfig.Kit) (transport.UnaryOutbound, error) {
+	return t.buildOutbound(outboundConfig, tr, kit)
+}
+
+func (t *transportSpec) buildStreamOutbound(outboundConfig *OutboundConfig, tr transport.Transport, kit *yarpcconfig.Kit) (transport.StreamOutbound, error) {
+	return t.buildOutbound(outboundConfig, tr, kit)
+}
+
+func (t *transportSpec) buildOutbound(outboundConfig *OutboundConfig, tr transport.Transport, kit *yarpcconfig.Kit) (*Outbound, error) {
 	trans, ok := tr.(*Transport)
 	if !ok {
 		return nil, newTransportCastError(tr)

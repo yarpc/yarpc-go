@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -64,6 +64,17 @@ type OnewayOutbound interface {
 	CallOneway(ctx context.Context, request *Request) (Ack, error)
 }
 
+// StreamOutbound is a transport that knows how to send stream requests for
+// procedure calls.
+type StreamOutbound interface {
+	Outbound
+
+	// CallStream creates a stream connection based on the metadata in the
+	// request passed in.  If there is a timeout on the context, this timeout
+	// is for establishing a connection, and not for the lifetime of the stream.
+	CallStream(ctx context.Context, request *StreamRequest) (*ClientStream, error)
+}
+
 // Outbounds encapsulates the outbound specification for a service.
 //
 // This includes the service name that will be used for outbound requests as
@@ -79,4 +90,8 @@ type Outbounds struct {
 	// If set, this is the oneway outbound which sends the request and
 	// continues once the message has been delivered.
 	Oneway OnewayOutbound
+
+	// If set, this is the stream outbound which creates a ClientStream that can
+	// be used to continuously send/recv requests over the connection.
+	Stream StreamOutbound
 }

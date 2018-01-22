@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -38,6 +38,7 @@ import (
 	"go.uber.org/yarpc/internal/routertest"
 	"go.uber.org/yarpc/internal/testtime"
 	pkgerrors "go.uber.org/yarpc/pkg/errors"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 func TestHandlerErrors(t *testing.T) {
@@ -458,7 +459,7 @@ func TestResponseWriterFailure(t *testing.T) {
 		_, err = w.Write([]byte("bar"))
 		assert.NoError(t, err)
 		err = w.Close()
-		assert.Error(t, w.Close())
+		assert.Error(t, err)
 		for _, msg := range tt.messages {
 			assert.Contains(t, err.Error(), msg)
 		}
@@ -475,4 +476,40 @@ func TestResponseWriterEmptyBodyHeaders(t *testing.T) {
 	assert.NotEmpty(t, res.arg2.Bytes(), "headers must not be empty")
 	assert.Empty(t, res.arg3.Bytes(), "body must be empty but was %#v", res.arg3.Bytes())
 	assert.False(t, res.applicationError, "application error must be false")
+}
+
+func TestGetSystemError(t *testing.T) {
+	tests := []struct {
+		giveErr  error
+		wantCode tchannel.SystemErrCode
+	}{
+		{
+			giveErr:  yarpcerrors.UnavailableErrorf("test"),
+			wantCode: tchannel.ErrCodeDeclined,
+		},
+		{
+			giveErr:  errors.New("test"),
+			wantCode: tchannel.ErrCodeUnexpected,
+		},
+		{
+			giveErr:  yarpcerrors.InvalidArgumentErrorf("test"),
+			wantCode: tchannel.ErrCodeBadRequest,
+		},
+		{
+			giveErr:  tchannel.NewSystemError(tchannel.ErrCodeBusy, "test"),
+			wantCode: tchannel.ErrCodeBusy,
+		},
+		{
+			giveErr:  yarpcerrors.Newf(yarpcerrors.Code(1235), "test"),
+			wantCode: tchannel.ErrCodeUnexpected,
+		},
+	}
+	for i, tt := range tests {
+		t.Run(string(i), func(t *testing.T) {
+			gotErr := getSystemError(tt.giveErr)
+			tchErr, ok := gotErr.(tchannel.SystemError)
+			require.True(t, ok, "did not return tchannel error")
+			assert.Equal(t, tt.wantCode, tchErr.Code())
+		})
+	}
 }

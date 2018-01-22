@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -36,6 +36,11 @@ type GiveHeader struct {
 	Value string
 }
 
+// ApplyClientStreamRequest implements api.ClientStreamRequestOption.
+func (h *GiveHeader) ApplyClientStreamRequest(opts *api.ClientStreamRequestOpts) {
+	opts.GiveRequest.Meta.Headers = opts.GiveRequest.Meta.Headers.With(h.Key, h.Value)
+}
+
 // ApplyRequest implements RequestOption.
 func (h *GiveHeader) ApplyRequest(opts *api.RequestOpts) {
 	opts.GiveRequest.Headers = opts.GiveRequest.Headers.With(h.Key, h.Value)
@@ -55,6 +60,14 @@ type WantHeader struct {
 
 	Key   string
 	Value string
+}
+
+// ApplyServerStream implements ServerStreamAction.
+func (h *WantHeader) ApplyServerStream(c *transport.ServerStream) error {
+	actualValue, ok := c.Request().Meta.Headers.Get(h.Key)
+	require.True(h.GetTestingTB(), ok, "header %q was not set on the request", h.Key)
+	require.Equal(h.GetTestingTB(), actualValue, h.Value, "headers did not match for %q", h.Key)
+	return nil
 }
 
 // ApplyRequest implements RequestOption.

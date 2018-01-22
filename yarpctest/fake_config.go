@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -44,7 +44,19 @@ type FakeOutboundConfig struct {
 	Nop string `config:"nop,interpolate"`
 }
 
-func buildFakeOutbound(c *FakeOutboundConfig, t transport.Transport, kit *yarpcconfig.Kit) (transport.UnaryOutbound, error) {
+func buildFakeUnaryOutbound(c *FakeOutboundConfig, t transport.Transport, kit *yarpcconfig.Kit) (transport.UnaryOutbound, error) {
+	return buildFakeOutbound(c, t, kit)
+}
+
+func buildFakeOnewayOutbound(c *FakeOutboundConfig, t transport.Transport, kit *yarpcconfig.Kit) (transport.OnewayOutbound, error) {
+	return buildFakeOutbound(c, t, kit)
+}
+
+func buildFakeStreamOutbound(c *FakeOutboundConfig, t transport.Transport, kit *yarpcconfig.Kit) (transport.StreamOutbound, error) {
+	return buildFakeOutbound(c, t, kit)
+}
+
+func buildFakeOutbound(c *FakeOutboundConfig, t transport.Transport, kit *yarpcconfig.Kit) (*FakeOutbound, error) {
 	x := t.(*FakeTransport)
 	chooser, err := c.BuildPeerChooser(x, hostport.Identify, kit)
 	if err != nil {
@@ -57,12 +69,33 @@ func buildFakeOutbound(c *FakeOutboundConfig, t transport.Transport, kit *yarpcc
 // transport type, suitable for passing to Configurator.MustRegisterTransport.
 func FakeTransportSpec() yarpcconfig.TransportSpec {
 	return yarpcconfig.TransportSpec{
-		Name:               "fake-transport",
-		BuildTransport:     buildFakeTransport,
-		BuildUnaryOutbound: buildFakeOutbound,
+		Name:                "fake-transport",
+		BuildTransport:      buildFakeTransport,
+		BuildUnaryOutbound:  buildFakeUnaryOutbound,
+		BuildOnewayOutbound: buildFakeOnewayOutbound,
+		BuildStreamOutbound: buildFakeStreamOutbound,
 		PeerChooserPresets: []yarpcconfig.PeerChooserPreset{
 			FakePeerChooserPreset(),
 		},
+	}
+}
+
+// FakePeerChooserConfig configures the FakePeerChooser.
+type FakePeerChooserConfig struct {
+	Nop string `config:"nop,interpolate"`
+}
+
+func buildFakePeerChooser(c *FakePeerChooserConfig, t peer.Transport, kit *yarpcconfig.Kit) (peer.Chooser, error) {
+	return NewFakePeerChooser(ChooserNop(c.Nop)), nil
+}
+
+// FakePeerChooserSpec returns a configurator spec for the fake-chooser FakePeerChooser
+// peer selection strategy, suitable for passing to
+// Configurator.MustRegisterPeerChooser.
+func FakePeerChooserSpec() yarpcconfig.PeerChooserSpec {
+	return yarpcconfig.PeerChooserSpec{
+		Name:             "fake-chooser",
+		BuildPeerChooser: buildFakePeerChooser,
 	}
 }
 
@@ -122,6 +155,7 @@ func FakePeerListUpdaterSpec() yarpcconfig.PeerListUpdaterSpec {
 func NewFakeConfigurator(opts ...yarpcconfig.Option) *yarpcconfig.Configurator {
 	configurator := yarpcconfig.New(opts...)
 	configurator.MustRegisterTransport(FakeTransportSpec())
+	configurator.MustRegisterPeerChooser(FakePeerChooserSpec())
 	configurator.MustRegisterPeerList(FakePeerListSpec())
 	configurator.MustRegisterPeerListUpdater(FakePeerListUpdaterSpec())
 	return configurator

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -66,7 +66,7 @@ func newPort(t testing.TB) *Port {
 	port, err := strconv.ParseInt(pieces[len(pieces)-1], 10, 0)
 	require.NoError(t, err)
 	return &Port{
-		listener: listener,
+		Listener: listener,
 		Port:     uint16(port),
 	}
 }
@@ -75,17 +75,22 @@ func newPort(t testing.TB) *Port {
 // requests and services.
 type Port struct {
 	api.NoopLifecycle
-	listener net.Listener
+	Listener net.Listener
 	Port     uint16
 }
 
 // ApplyService implements api.ServiceOption.
 func (n *Port) ApplyService(opts *api.ServiceOpts) {
-	opts.Listener = n.listener
+	opts.Listener = n.Listener
 	opts.Port = n.Port
 }
 
 // ApplyRequest implements api.RequestOption
 func (n *Port) ApplyRequest(opts *api.RequestOpts) {
+	opts.Port = n.Port
+}
+
+// ApplyClientStreamRequest implements ClientStreamRequestOption
+func (n *Port) ApplyClientStreamRequest(opts *api.ClientStreamRequestOpts) {
 	opts.Port = n.Port
 }

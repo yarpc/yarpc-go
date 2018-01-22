@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -40,11 +40,12 @@ import (
 
 // HTTPRequest creates a new YARPC http request.
 func HTTPRequest(options ...api.RequestOption) api.Action {
-	opts := api.NewRequestOpts()
-	for _, option := range options {
-		option.ApplyRequest(&opts)
-	}
 	return api.ActionFunc(func(t testing.TB) {
+		opts := api.NewRequestOpts()
+		for _, option := range options {
+			option.ApplyRequest(&opts)
+		}
+
 		trans := http.NewTransport()
 		out := trans.NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d/", opts.Port))
 
@@ -54,7 +55,7 @@ func HTTPRequest(options ...api.RequestOption) api.Action {
 		require.NoError(t, out.Start())
 		defer func() { assert.NoError(t, out.Stop()) }()
 
-		resp, cancel, err := sendRequest(out, opts.GiveRequest)
+		resp, cancel, err := sendRequest(out, opts.GiveRequest, opts.GiveTimeout)
 		defer cancel()
 		validateError(t, err, opts.WantError)
 		if opts.WantError == nil {
@@ -65,11 +66,12 @@ func HTTPRequest(options ...api.RequestOption) api.Action {
 
 // TChannelRequest creates a new tchannel request.
 func TChannelRequest(options ...api.RequestOption) api.Action {
-	opts := api.NewRequestOpts()
-	for _, option := range options {
-		option.ApplyRequest(&opts)
-	}
 	return api.ActionFunc(func(t testing.TB) {
+		opts := api.NewRequestOpts()
+		for _, option := range options {
+			option.ApplyRequest(&opts)
+		}
+
 		trans, err := tchannel.NewTransport(tchannel.ServiceName(opts.GiveRequest.Caller))
 		require.NoError(t, err)
 		out := trans.NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", opts.Port))
@@ -80,7 +82,7 @@ func TChannelRequest(options ...api.RequestOption) api.Action {
 		require.NoError(t, out.Start())
 		defer func() { assert.NoError(t, out.Stop()) }()
 
-		resp, cancel, err := sendRequest(out, opts.GiveRequest)
+		resp, cancel, err := sendRequest(out, opts.GiveRequest, opts.GiveTimeout)
 		defer cancel()
 		validateError(t, err, opts.WantError)
 		if opts.WantError == nil {
@@ -91,11 +93,12 @@ func TChannelRequest(options ...api.RequestOption) api.Action {
 
 // GRPCRequest creates a new grpc unary request.
 func GRPCRequest(options ...api.RequestOption) api.Action {
-	opts := api.NewRequestOpts()
-	for _, option := range options {
-		option.ApplyRequest(&opts)
-	}
 	return api.ActionFunc(func(t testing.TB) {
+		opts := api.NewRequestOpts()
+		for _, option := range options {
+			option.ApplyRequest(&opts)
+		}
+
 		trans := grpc.NewTransport()
 		out := trans.NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", opts.Port))
 
@@ -105,7 +108,7 @@ func GRPCRequest(options ...api.RequestOption) api.Action {
 		require.NoError(t, out.Start())
 		defer func() { assert.NoError(t, out.Stop()) }()
 
-		resp, cancel, err := sendRequest(out, opts.GiveRequest)
+		resp, cancel, err := sendRequest(out, opts.GiveRequest, opts.GiveTimeout)
 		defer cancel()
 		validateError(t, err, opts.WantError)
 		if opts.WantError == nil {
@@ -114,8 +117,8 @@ func GRPCRequest(options ...api.RequestOption) api.Action {
 	})
 }
 
-func sendRequest(out transport.UnaryOutbound, request *transport.Request) (*transport.Response, context.CancelFunc, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+func sendRequest(out transport.UnaryOutbound, request *transport.Request, timeout time.Duration) (*transport.Response, context.CancelFunc, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	resp, err := out.Call(ctx, request)
 	return resp, cancel, err
 }
@@ -155,6 +158,13 @@ func validateResponse(t testing.TB, actualResp *transport.Response, expectedResp
 func Body(msg string) api.RequestOption {
 	return api.RequestOptionFunc(func(opts *api.RequestOpts) {
 		opts.GiveRequest.Body = bytes.NewBufferString(msg)
+	})
+}
+
+// GiveTimeout will set the timeout for the request.
+func GiveTimeout(duration time.Duration) api.RequestOption {
+	return api.RequestOptionFunc(func(opts *api.RequestOpts) {
+		opts.GiveTimeout = duration
 	})
 }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -48,4 +48,16 @@ func OnewayOutboundMiddleware(mw ...middleware.OnewayOutbound) middleware.Oneway
 // middleware in-order into a single OnewayInbound middleware.
 func OnewayInboundMiddleware(mw ...middleware.OnewayInbound) middleware.OnewayInbound {
 	return inboundmiddleware.OnewayChain(mw...)
+}
+
+// StreamOutboundMiddleware combines the given collection of unary outbound
+// middleware in-order into a single StreamOutbound middleware.
+func StreamOutboundMiddleware(mw ...middleware.StreamOutbound) middleware.StreamOutbound {
+	return outboundmiddleware.StreamChain(mw...)
+}
+
+// StreamInboundMiddleware combines the given collection of unary inbound
+// middleware in-order into a single StreamInbound middleware.
+func StreamInboundMiddleware(mw ...middleware.StreamInbound) middleware.StreamInbound {
+	return inboundmiddleware.StreamChain(mw...)
 }

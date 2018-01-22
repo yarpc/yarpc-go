@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,11 +21,11 @@
 package grpc
 
 import (
-	"fmt"
 	"strings"
 
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -114,7 +114,7 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 		case 1:
 			value = values[0]
 		default:
-			return nil, fmt.Errorf("header has more than one value: %s", header)
+			return nil, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s", header)
 		}
 		header = transport.CanonicalizeHeaderKey(header)
 		switch header {
@@ -148,7 +148,7 @@ func addApplicationHeaders(md metadata.MD, headers transport.Headers) error {
 	for header, value := range headers.Items() {
 		header = transport.CanonicalizeHeaderKey(header)
 		if isReserved(header) {
-			return fmt.Errorf("cannot use reserved header in application headers: %s", header)
+			return yarpcerrors.InvalidArgumentErrorf("cannot use reserved header in application headers: %s", header)
 		}
 		if err := addToMetadata(md, header, value); err != nil {
 			return err
@@ -175,7 +175,7 @@ func getApplicationHeaders(md metadata.MD) (transport.Headers, error) {
 		case 1:
 			value = values[0]
 		default:
-			return headers, fmt.Errorf("header has more than one value: %s", header)
+			return headers, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s", header)
 		}
 		headers = headers.With(header, value)
 	}
@@ -189,7 +189,7 @@ func addToMetadata(md metadata.MD, key string, value string) error {
 		return nil
 	}
 	if _, ok := md[key]; ok {
-		return fmt.Errorf("duplicate key: %s", key)
+		return yarpcerrors.InvalidArgumentErrorf("duplicate key: %s", key)
 	}
 	md[key] = []string{value}
 	return nil

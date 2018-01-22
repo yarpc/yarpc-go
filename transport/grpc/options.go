@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -152,6 +152,12 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 	}
 	if transportOptions.logger == nil {
 		transportOptions.logger = zap.NewNop()
+	}
+	if transportOptions.tracer == nil {
+		transportOptions.tracer = opentracing.GlobalTracer()
+	}
+	if transportOptions.tracer == nil {
+		transportOptions.tracer = opentracing.NoopTracer{}
 	}
 	return transportOptions
 }

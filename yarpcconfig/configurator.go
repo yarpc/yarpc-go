@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -42,6 +42,7 @@ import (
 // variants.
 type Configurator struct {
 	knownTransports       map[string]*compiledTransportSpec
+	knownPeerChoosers     map[string]*compiledPeerChooserSpec
 	knownPeerLists        map[string]*compiledPeerListSpec
 	knownPeerListUpdaters map[string]*compiledPeerListUpdaterSpec
 	resolver              interpolate.VariableResolver
@@ -52,6 +53,7 @@ type Configurator struct {
 func New(opts ...Option) *Configurator {
 	c := &Configurator{
 		knownTransports:       make(map[string]*compiledTransportSpec),
+		knownPeerChoosers:     make(map[string]*compiledPeerChooserSpec),
 		knownPeerLists:        make(map[string]*compiledPeerListSpec),
 		knownPeerListUpdaters: make(map[string]*compiledPeerListUpdaterSpec),
 		resolver:              os.LookupEnv,
@@ -97,6 +99,41 @@ func (c *Configurator) MustRegisterTransport(t TransportSpec) {
 	}
 }
 
+// RegisterPeerChooser registers a PeerChooserSpec with the given Configurator,
+// teaching it how to build peer choosers of this kind from configuration.
+//
+// An error is returned if the PeerChooserSpec is invalid. Use
+// MustRegisterPeerChooser to panic in the case of registration failure.
+//
+// If a peer chooser with the same name already exists, it will be replaced.
+//
+// If a peer list is registered with the same name, it will be ignored.
+//
+// See PeerChooserSpec for details on how to integrate your own peer chooser
+// with the system.
+func (c *Configurator) RegisterPeerChooser(s PeerChooserSpec) error {
+	if s.Name == "" {
+		return errors.New("name is required")
+	}
+
+	spec, err := compilePeerChooserSpec(&s)
+	if err != nil {
+		return fmt.Errorf("invalid PeerChooserSpec for %q: %v", s.Name, err)
+	}
+
+	c.knownPeerChoosers[s.Name] = spec
+	return nil
+}
+
+// MustRegisterPeerChooser registers the given PeerChooserSpec with the
+// Configurator.
+// This function panics if the PeerChooserSpec is invalid.
+func (c *Configurator) MustRegisterPeerChooser(s PeerChooserSpec) {
+	if err := c.RegisterPeerChooser(s); err != nil {
+		panic(err)
+	}
+}
+
 // RegisterPeerList registers a PeerListSpec with the given Configurator,
 // teaching it how to build peer lists of this kind from configuration.
 //
@@ -104,6 +141,9 @@ func (c *Configurator) MustRegisterTransport(t TransportSpec) {
 // MustRegisterPeerList to panic in the case of registration failure.
 //
 // If a peer list with the same name already exists, it will be replaced.
+//
+// If a peer chooser is registered with the same name, this list will be
+// ignored.
 //
 // See PeerListSpec for details on how to integrate your own peer list with
 // the system.
@@ -258,7 +298,7 @@ func (c *Configurator) loadInboundInto(b *builder, i inbound) error {
 
 func (c *Configurator) loadOutboundInto(b *builder, name string, cfg outbounds) error {
 	// This matches the signature of builder.AddImplicitOutbound,
-	// AddUnaryOutbound and AddOnewayOutbound
+	// AddUnaryOutbound, AddOnewayOutbound and AddStreamOutbound
 	type adder func(*compiledTransportSpec, string, string, config.AttributeMap) error
 
 	loadUsing := func(o *outbound, adder adder) error {
@@ -286,6 +326,12 @@ func (c *Configurator) loadOutboundInto(b *builder, name string, cfg outbounds) 
 
 	if oneway := cfg.Oneway; oneway != nil {
 		if err := loadUsing(oneway, b.AddOnewayOutbound); err != nil {
+			return err
+		}
+	}
+
+	if stream := cfg.Stream; stream != nil {
+		if err := loadUsing(stream, b.AddStreamOutbound); err != nil {
 			return err
 		}
 	}

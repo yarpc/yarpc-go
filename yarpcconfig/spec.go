@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -112,6 +112,7 @@ type TransportSpec struct {
 	// outbounds for this transport.
 	BuildUnaryOutbound  interface{}
 	BuildOnewayOutbound interface{}
+	BuildStreamOutbound interface{}
 
 	// Named presets.
 	//
@@ -152,6 +153,33 @@ type PeerChooserPreset struct {
 	// the freedom to add more information to the functions in the future.
 }
 
+// PeerChooserSpec specifies the configuration parameters for an outbound peer
+// chooser. Peer choosers dictate how peers are selected for an outbound. These
+// specifications are registered against a Configurator to teach it how to parse
+// the configuration for that peer chooser and build instances of it.
+//
+// For example, we could implement and register a peer chooser spec that selects
+// peers based on advanced configuration or sharding information.
+//
+// 	myoutbound:
+// 	  tchannel:
+// 	    mysharder:
+//        shard1: 1.1.1.1:1234
+//        ...
+type PeerChooserSpec struct {
+	Name string
+
+	// A function in the shape,
+	//
+	//  func(C, p peer.Transport, *config.Kit) (peer.Chooser, error)
+	//
+	// Where C is a struct or pointer to a struct defining the configuration
+	// parameters needed to build this peer chooser.
+	//
+	// BuildPeerChooser is required.
+	BuildPeerChooser interface{}
+}
+
 // PeerListSpec specifies the configuration parameters for an outbound peer
 // list. Peer lists dictate the peer selection strategy and receive updates of
 // new and removed peers from peer updaters. These specifications are
@@ -171,7 +199,7 @@ type PeerListSpec struct {
 
 	// A function in the shape,
 	//
-	//  func(C, *config.Kit) (peer.ChooserList, error)
+	//  func(C, peer.Transport, *config.Kit) (peer.ChooserList, error)
 	//
 	// Where C is a struct or pointer to a struct defining the configuration
 	// parameters needed to build this peer list. Parameters on the struct
@@ -222,6 +250,7 @@ var (
 	_typeOfInbound         = reflect.TypeOf((*transport.Inbound)(nil)).Elem()
 	_typeOfUnaryOutbound   = reflect.TypeOf((*transport.UnaryOutbound)(nil)).Elem()
 	_typeOfOnewayOutbound  = reflect.TypeOf((*transport.OnewayOutbound)(nil)).Elem()
+	_typeOfStreamOutbound  = reflect.TypeOf((*transport.StreamOutbound)(nil)).Elem()
 	_typeOfPeerTransport   = reflect.TypeOf((*peer.Transport)(nil)).Elem()
 	_typeOfPeerChooserList = reflect.TypeOf((*peer.ChooserList)(nil)).Elem()
 	_typeOfPeerChooser     = reflect.TypeOf((*peer.Chooser)(nil)).Elem()
@@ -241,6 +270,7 @@ type compiledTransportSpec struct {
 	Inbound        *configSpec
 	UnaryOutbound  *configSpec
 	OnewayOutbound *configSpec
+	StreamOutbound *configSpec
 
 	PeerChooserPresets map[string]*compiledPeerChooserPreset
 }
@@ -253,6 +283,10 @@ func (s *compiledTransportSpec) SupportsOnewayOutbound() bool {
 	return s.OnewayOutbound != nil
 }
 
+func (s *compiledTransportSpec) SupportsStreamOutbound() bool {
+	return s.StreamOutbound != nil
+}
+
 func compileTransportSpec(spec *TransportSpec) (*compiledTransportSpec, error) {
 	out := compiledTransportSpec{Name: spec.Name}
 
@@ -261,7 +295,7 @@ func compileTransportSpec(spec *TransportSpec) (*compiledTransportSpec, error) {
 	}
 
 	switch strings.ToLower(spec.Name) {
-	case "unary", "oneway":
+	case "unary", "oneway", "stream":
 		return nil, fmt.Errorf("transport name cannot be %q: %q is a reserved name", spec.Name, spec.Name)
 	}
 
@@ -286,6 +320,9 @@ func compileTransportSpec(spec *TransportSpec) (*compiledTransportSpec, error) {
 	}
 	if spec.BuildOnewayOutbound != nil {
 		out.OnewayOutbound = appendError(compileOnewayOutboundConfig(spec.BuildOnewayOutbound))
+	}
+	if spec.BuildStreamOutbound != nil {
+		out.StreamOutbound = appendError(compileStreamOutboundConfig(spec.BuildStreamOutbound))
 	}
 
 	if len(spec.PeerChooserPresets) == 0 {
@@ -388,6 +425,17 @@ func compileOnewayOutboundConfig(build interface{}) (*configSpec, error) {
 	return &configSpec{inputType: t.In(0), factory: v}, nil
 }
 
+func compileStreamOutboundConfig(build interface{}) (*configSpec, error) {
+	v := reflect.ValueOf(build)
+	t := v.Type()
+
+	if err := validateConfigFunc(t, _typeOfStreamOutbound); err != nil {
+		return nil, fmt.Errorf("invalid BuildStreamOutbound: %v", err)
+	}
+
+	return &configSpec{inputType: t.In(0), factory: v}, nil
+}
+
 // Common validation for all build functions except Tranport.
 func validateConfigFunc(t reflect.Type, outputType reflect.Type) error {
 	switch {
@@ -463,6 +511,63 @@ func compilePeerChooserPreset(preset PeerChooserPreset) (*compiledPeerChooserPre
 	}
 
 	return &compiledPeerChooserPreset{name: preset.Name, factory: v}, nil
+}
+
+// Compiled internal representation of a user-specified PeerChooserSpec.
+type compiledPeerChooserSpec struct {
+	Name        string
+	PeerChooser *configSpec
+}
+
+func compilePeerChooserSpec(spec *PeerChooserSpec) (*compiledPeerChooserSpec, error) {
+	out := compiledPeerChooserSpec{Name: spec.Name}
+
+	if spec.Name == "" {
+		return nil, errors.New("Name is required")
+	}
+
+	if spec.BuildPeerChooser == nil {
+		return nil, errors.New("BuildPeerChooser is required")
+	}
+
+	buildPeerChooser, err := compilePeerChooserConfig(spec.BuildPeerChooser)
+	if err != nil {
+		return nil, err
+	}
+	out.PeerChooser = buildPeerChooser
+
+	return &out, nil
+}
+
+func compilePeerChooserConfig(build interface{}) (*configSpec, error) {
+	v := reflect.ValueOf(build)
+	t := v.Type()
+
+	var err error
+	switch {
+	case t.Kind() != reflect.Func:
+		err = errors.New("must be a function")
+	case t.NumIn() != 3:
+		err = fmt.Errorf("must accept exactly three arguments, found %v", t.NumIn())
+	case !isDecodable(t.In(0)):
+		err = fmt.Errorf("must accept a struct or struct pointer as its first argument, found %v", t.In(0))
+	case t.In(1) != _typeOfPeerTransport:
+		err = fmt.Errorf("must accept a %v as its second argument, found %v", _typeOfPeerTransport, t.In(1))
+	case t.In(2) != _typeOfKit:
+		err = fmt.Errorf("must accept a %v as its third argument, found %v", _typeOfKit, t.In(2))
+	case t.NumOut() != 2:
+		err = fmt.Errorf("must return exactly two results, found %v", t.NumOut())
+	case t.Out(0) != _typeOfPeerChooser:
+		err = fmt.Errorf("must return a peer.Chooser as its first result, found %v", t.Out(0))
+	case t.Out(1) != _typeOfError:
+		err = fmt.Errorf("must return an error as its second result, found %v", t.Out(1))
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("invalid BuildPeerChooser %v: %v", t, err)
+	}
+
+	return &configSpec{inputType: t.In(0), factory: v}, nil
 }
 
 // Compiled internal representation of a user-specified PeerListSpec.

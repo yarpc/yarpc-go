@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@ import (
 	"log"
 	"testing"
 
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
@@ -59,7 +60,8 @@ func BenchmarkIntegrationGRPC(b *testing.B) {
 func benchmarkForTransportType(b *testing.B, transportType testutils.TransportType, f func(*exampleutil.Clients) error) {
 	keyValueYARPCServer := example.NewKeyValueYARPCServer()
 	sinkYARPCServer := example.NewSinkYARPCServer(false)
-	exampleutil.WithClients(transportType, keyValueYARPCServer, sinkYARPCServer, f)
+	fooYARPCServer := example.NewFooYARPCServer(transport.NewHeaders())
+	exampleutil.WithClients(transportType, keyValueYARPCServer, sinkYARPCServer, fooYARPCServer, f)
 }
 
 func benchmarkIntegrationYARPC(b *testing.B, keyValueYARPCClient examplepb.KeyValueYARPCClient) {

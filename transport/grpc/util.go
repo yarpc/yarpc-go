@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@ import (
 	"net/url"
 
 	"go.uber.org/yarpc/pkg/procedure"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 const defaultServiceName = "__default__"
@@ -32,7 +33,7 @@ const defaultServiceName = "__default__"
 func procedureNameToServiceNameMethodName(procedureName string) (string, string, error) {
 	serviceName, methodName := procedure.FromName(procedureName)
 	if serviceName == "" {
-		return "", "", fmt.Errorf("invalid procedure name: %s", procedureName)
+		return "", "", yarpcerrors.InvalidArgumentErrorf("invalid procedure name: %s", procedureName)
 	}
 	if methodName == "" {
 		methodName = serviceName

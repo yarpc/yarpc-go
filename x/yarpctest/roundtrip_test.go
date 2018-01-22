@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -44,14 +45,19 @@ func TestServiceRouting(t *testing.T) {
 					Proc(Name("echo"), EchoHandler()),
 				),
 			),
-			requests: Actions(
-				HTTPRequest(
-					p.NamedPort("1"),
-					Body("test body"),
-					Service("myservice"),
-					Procedure("echo"),
-					WantRespBody("test body"),
+			requests: ConcurrentAction(
+				RepeatAction(
+					HTTPRequest(
+						p.NamedPort("1"),
+						GiveTimeout(testtime.Second),
+						Body("test body"),
+						Service("myservice"),
+						Procedure("echo"),
+						WantRespBody("test body"),
+					),
+					10,
 				),
+				3,
 			),
 		},
 		{
@@ -63,14 +69,19 @@ func TestServiceRouting(t *testing.T) {
 					Proc(Name("echo"), EchoHandler()),
 				),
 			),
-			requests: Actions(
-				TChannelRequest(
-					p.NamedPort("2"),
-					Body("test body"),
-					Service("myservice"),
-					Procedure("echo"),
-					WantRespBody("test body"),
+			requests: ConcurrentAction(
+				RepeatAction(
+					TChannelRequest(
+						p.NamedPort("2"),
+						GiveTimeout(testtime.Second),
+						Body("test body"),
+						Service("myservice"),
+						Procedure("echo"),
+						WantRespBody("test body"),
+					),
+					10,
 				),
+				3,
 			),
 		},
 		{
@@ -82,14 +93,19 @@ func TestServiceRouting(t *testing.T) {
 					Proc(Name("echo"), EchoHandler()),
 				),
 			),
-			requests: Actions(
-				GRPCRequest(
-					p.NamedPort("3"),
-					Body("test body"),
-					Service("myservice"),
-					Procedure("echo"),
-					WantRespBody("test body"),
+			requests: ConcurrentAction(
+				RepeatAction(
+					GRPCRequest(
+						p.NamedPort("3"),
+						GiveTimeout(testtime.Second),
+						Body("test body"),
+						Service("myservice"),
+						Procedure("echo"),
+						WantRespBody("test body"),
+					),
+					10,
 				),
+				3,
 			),
 		},
 		{
@@ -226,6 +242,52 @@ func TestServiceRouting(t *testing.T) {
 					WantRespBody("success"),
 					WantHeader("responseKey", "responseValue"),
 				),
+			),
+		},
+		{
+			name: "hardcoded peer",
+			services: Lifecycles(
+				TChannelService(
+					Name("myservice"),
+					Port(54321),
+					Proc(Name("echo"), EchoHandler()),
+				),
+			),
+			requests: ConcurrentAction(
+				RepeatAction(
+					TChannelRequest(
+						Port(54321),
+						Body("test body"),
+						Service("myservice"),
+						Procedure("echo"),
+						WantRespBody("test body"),
+					),
+					10,
+				),
+				3,
+			),
+		},
+		{
+			name: "hardcoded peer (same as above, testing reuse)",
+			services: Lifecycles(
+				TChannelService(
+					Name("myservice"),
+					Port(54321),
+					Proc(Name("echo"), EchoHandler()),
+				),
+			),
+			requests: ConcurrentAction(
+				RepeatAction(
+					TChannelRequest(
+						Port(54321),
+						Body("test body"),
+						Service("myservice"),
+						Procedure("echo"),
+						WantRespBody("test body"),
+					),
+					10,
+				),
+				3,
 			),
 		},
 	}

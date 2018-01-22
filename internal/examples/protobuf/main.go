@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -31,12 +31,13 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
 	"go.uber.org/yarpc/internal/testutils"
 	"go.uber.org/yarpc/yarpcerrors"
-	"google.golang.org/grpc"
+	"google.golang.org/grpc/status"
 )
 
 var flagOutbound = flag.String("outbound", "tchannel", "The outbound to use for unary calls")
@@ -73,10 +74,12 @@ func run(
 ) error {
 	keyValueYARPCServer := example.NewKeyValueYARPCServer()
 	sinkYARPCServer := example.NewSinkYARPCServer(true)
+	fooYARPCServer := example.NewFooYARPCServer(transport.NewHeaders())
 	return exampleutil.WithClients(
 		transportType,
 		keyValueYARPCServer,
 		sinkYARPCServer,
+		fooYARPCServer,
 		func(clients *exampleutil.Clients) error {
 			return doClient(
 				keyValueYARPCServer,
@@ -193,8 +196,8 @@ func getErrorMessage(err error) string {
 	if yarpcerrors.IsStatus(err) {
 		return yarpcerrors.FromError(err).Message()
 	}
-	if errorDesc := grpc.ErrorDesc(err); errorDesc != "" {
-		return errorDesc
+	if status, ok := status.FromError(err); ok {
+		return status.Message()
 	}
 	return err.Error()
 }

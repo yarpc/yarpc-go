@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,8 +24,8 @@ import (
 	"context"
 	"sync"
 
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/pally"
 	"go.uber.org/zap"
 )
 
@@ -63,45 +63,63 @@ type Middleware struct {
 }
 
 // NewMiddleware constructs a Middleware.
-func NewMiddleware(logger *zap.Logger, reg *pally.Registry, extract ContextExtractor) *Middleware {
-	return &Middleware{newGraph(reg, logger, extract)}
+func NewMiddleware(logger *zap.Logger, scope *metrics.Scope, extract ContextExtractor) *Middleware {
+	return &Middleware{newGraph(scope, logger, extract)}
 }
 
 // Handle implements middleware.UnaryInbound.
 func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w transport.ResponseWriter, h transport.UnaryHandler) error {
-	call := m.graph.begin(ctx, transport.Unary, true /* isInbound */, req)
+	call := m.graph.begin(ctx, transport.Unary, _directionInbound, req)
 	wrappedWriter := newWriter(w)
 	err := h.Handle(ctx, req, wrappedWriter)
-	call.End(err, wrappedWriter.isApplicationError)
+	call.EndWithAppError(err, wrappedWriter.isApplicationError)
 	wrappedWriter.free()
 	return err
 }
 
 // Call implements middleware.UnaryOutbound.
 func (m *Middleware) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
-	call := m.graph.begin(ctx, transport.Unary, false /* isInbound */, req)
+	call := m.graph.begin(ctx, transport.Unary, _directionOutbound, req)
 	res, err := out.Call(ctx, req)
 
 	isApplicationError := false
 	if res != nil {
 		isApplicationError = res.ApplicationError
 	}
-	call.End(err, isApplicationError)
+	call.EndWithAppError(err, isApplicationError)
 	return res, err
 }
 
 // HandleOneway implements middleware.OnewayInbound.
 func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
-	call := m.graph.begin(ctx, transport.Oneway, true /* isInbound */, req)
+	call := m.graph.begin(ctx, transport.Oneway, _directionInbound, req)
 	err := h.HandleOneway(ctx, req)
-	call.End(err, false /* isApplicationError */)
+	call.End(err)
 	return err
 }
 
 // CallOneway implements middleware.OnewayOutbound.
 func (m *Middleware) CallOneway(ctx context.Context, req *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
-	call := m.graph.begin(ctx, transport.Oneway, false /* isInbound */, req)
+	call := m.graph.begin(ctx, transport.Oneway, _directionOutbound, req)
 	ack, err := out.CallOneway(ctx, req)
-	call.End(err, false /* isApplicationError */)
+	call.End(err)
 	return ack, err
+}
+
+// HandleStream implements middleware.StreamInbound.
+func (m *Middleware) HandleStream(serverStream *transport.ServerStream, h transport.StreamHandler) error {
+	call := m.graph.begin(serverStream.Context(), transport.Streaming, _directionInbound, serverStream.Request().Meta.ToRequest())
+	err := h.HandleStream(serverStream)
+	// TODO(pedge): wrap the *transport.ServerStream?
+	call.End(err)
+	return err
+}
+
+// CallStream implements middleware.StreamOutbound.
+func (m *Middleware) CallStream(ctx context.Context, request *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
+	call := m.graph.begin(ctx, transport.Streaming, _directionOutbound, request.Meta.ToRequest())
+	clientStream, err := out.CallStream(ctx, request)
+	// TODO(pedge): wrap the *transport.ClientStream?
+	call.End(err)
+	return clientStream, err
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -155,3 +155,9 @@ func (c *Call) RoutingKey() string {
 func (c *Call) RoutingDelegate() string {
 	return (*encoding.Call)(c).RoutingDelegate()
 }
+
+// StreamOption defines options that may be passed in at streaming function
+// call sites.
+//
+// These may be used to add or alter individual stream calls.
+type StreamOption encoding.StreamOption

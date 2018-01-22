@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -108,4 +108,28 @@ func TestNilInboundMiddleware(t *testing.T) {
 		err := mw.HandleOneway(ctx, req)
 		require.NoError(t, err, "unexpected error calling handler")
 	})
+}
+
+func TestStreamNopInboundMiddleware(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	h := transporttest.NewMockStreamHandler(mockCtrl)
+	wrappedH := middleware.ApplyStreamInbound(h, middleware.NopStreamInbound)
+	s, err := transport.NewServerStream(transporttest.NewMockStream(mockCtrl))
+	require.NoError(t, err)
+
+	err = errors.New("great sadness")
+	h.EXPECT().HandleStream(s).Return(err)
+
+	assert.Equal(t, err, wrappedH.HandleStream(s))
+}
+
+func TestStreamDefaultsToHandlerWhenNil(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	h := transporttest.NewMockStreamHandler(mockCtrl)
+	wrappedH := middleware.ApplyStreamInbound(h, nil)
+	assert.Equal(t, wrappedH, h)
 }

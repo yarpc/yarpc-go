@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -32,10 +32,13 @@ import (
 type Clients struct {
 	KeyValueYARPCClient     examplepb.KeyValueYARPCClient
 	SinkYARPCClient         examplepb.SinkYARPCClient
+	FooYARPCClient          examplepb.FooYARPCClient
 	KeyValueYARPCJSONClient examplepb.KeyValueYARPCClient
 	SinkYARPCJSONClient     examplepb.SinkYARPCClient
+	FooYARPCJSONClient      examplepb.FooYARPCClient
 	KeyValueGRPCClient      examplepb.KeyValueClient
 	SinkGRPCClient          examplepb.SinkClient
+	FooGRPCClient           examplepb.FooClient
 	ContextWrapper          *grpcctx.ContextWrapper
 }
 
@@ -44,6 +47,7 @@ func WithClients(
 	transportType testutils.TransportType,
 	keyValueYARPCServer examplepb.KeyValueYARPCServer,
 	sinkYARPCServer examplepb.SinkYARPCServer,
+	fooYARPCServer examplepb.FooYARPCServer,
 	f func(*Clients) error,
 ) error {
 	var procedures []transport.Procedure
@@ -52,6 +56,9 @@ func WithClients(
 	}
 	if sinkYARPCServer != nil {
 		procedures = append(procedures, examplepb.BuildSinkYARPCProcedures(sinkYARPCServer)...)
+	}
+	if fooYARPCServer != nil {
+		procedures = append(procedures, examplepb.BuildFooYARPCProcedures(fooYARPCServer)...)
 	}
 	return testutils.WithClientInfo(
 		"example",
@@ -62,10 +69,13 @@ func WithClients(
 				&Clients{
 					examplepb.NewKeyValueYARPCClient(clientInfo.ClientConfig),
 					examplepb.NewSinkYARPCClient(clientInfo.ClientConfig),
+					examplepb.NewFooYARPCClient(clientInfo.ClientConfig),
 					examplepb.NewKeyValueYARPCClient(clientInfo.ClientConfig, protobuf.UseJSON),
 					examplepb.NewSinkYARPCClient(clientInfo.ClientConfig, protobuf.UseJSON),
+					examplepb.NewFooYARPCClient(clientInfo.ClientConfig, protobuf.UseJSON),
 					examplepb.NewKeyValueClient(clientInfo.GRPCClientConn),
 					examplepb.NewSinkClient(clientInfo.GRPCClientConn),
+					examplepb.NewFooClient(clientInfo.GRPCClientConn),
 					clientInfo.ContextWrapper,
 				},
 			)

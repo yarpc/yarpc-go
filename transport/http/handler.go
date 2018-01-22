@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -219,7 +219,7 @@ func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transp
 // responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.
 type responseWriter struct {
 	w      http.ResponseWriter
-	buffer *bytes.Buffer
+	buffer *bufferpool.Buffer
 }
 
 func newResponseWriter(w http.ResponseWriter) *responseWriter {
@@ -256,7 +256,7 @@ func (rw *responseWriter) Close(httpStatusCode int) {
 	rw.w.WriteHeader(httpStatusCode)
 	if rw.buffer != nil {
 		// TODO: what to do with error?
-		_, _ = rw.w.Write(rw.buffer.Bytes())
+		_, _ = rw.buffer.WriteTo(rw.w)
 		bufferpool.Put(rw.buffer)
 	}
 }

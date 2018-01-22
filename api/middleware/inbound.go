@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -126,4 +126,54 @@ type nopOnewayInbound struct{}
 
 func (nopOnewayInbound) HandleOneway(ctx context.Context, req *transport.Request, handler transport.OnewayHandler) error {
 	return handler.HandleOneway(ctx, req)
+}
+
+// StreamInbound defines a transport-level middleware for
+// `StreamHandler`s.
+//
+// StreamInbound middleware MAY do zero or more of the following: change the
+// stream, handle the returned error, call the given handler zero or more times.
+//
+// StreamInbound middleware MUST be thread-safe.
+//
+// StreamInbound middleware is re-used across requests and MAY be called
+// multiple times for the same request.
+type StreamInbound interface {
+	HandleStream(s *transport.ServerStream, h transport.StreamHandler) error
+}
+
+// NopStreamInbound is an inbound middleware that does not do
+// anything special. It simply calls the underlying StreamHandler.
+var NopStreamInbound StreamInbound = nopStreamInbound{}
+
+// ApplyStreamInbound applies the given StreamInbound middleware to
+// the given StreamHandler.
+func ApplyStreamInbound(h transport.StreamHandler, i StreamInbound) transport.StreamHandler {
+	if i == nil {
+		return h
+	}
+	return streamHandlerWithMiddleware{h: h, i: i}
+}
+
+// StreamInboundFunc adapts a function into a StreamInbound Middleware.
+type StreamInboundFunc func(*transport.ServerStream, transport.StreamHandler) error
+
+// HandleStream for StreamInboundFunc
+func (f StreamInboundFunc) HandleStream(s *transport.ServerStream, h transport.StreamHandler) error {
+	return f(s, h)
+}
+
+type streamHandlerWithMiddleware struct {
+	h transport.StreamHandler
+	i StreamInbound
+}
+
+func (h streamHandlerWithMiddleware) HandleStream(s *transport.ServerStream) error {
+	return h.i.HandleStream(s, h.h)
+}
+
+type nopStreamInbound struct{}
+
+func (nopStreamInbound) HandleStream(s *transport.ServerStream, handler transport.StreamHandler) error {
+	return handler.HandleStream(s)
 }

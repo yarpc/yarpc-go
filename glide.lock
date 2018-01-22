@@ -1,5 +1,5 @@
-hash: 2ae2256c1070f8aaa397564451e9bc13affcd87e33ee50b94d95fbff4c4dcb9a
-updated: 2017-11-27T16:51:06.196113099-05:00
+hash: 7c7d875c128e2f5ee2218b87f3ec2b6fb335279d1cda2657c6cc4eb92a2ecdb9
+updated: 2018-01-17T11:45:33.306560761-08:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -90,14 +90,9 @@ imports:
   subpackages:
   - internal/mapstructure
 - name: github.com/uber-go/tally
-  version: 95078a8f10668bd1fa73ae46761cdc58d25436b8
-  subpackages:
-  - m3
-  - m3/customtransports
-  - m3/thrift
-  - m3/thriftudp
+  version: 6c4631652c6aab57c64f65c2e0aaec2e9aae3a64
 - name: github.com/uber/jaeger-client-go
-  version: ff3efa227b65e419701a4f48985379ca106a89e7
+  version: 3ac96c6e679cb60a74589b0d0aa7c70a906183f7
   subpackages:
   - internal/baggage
   - internal/spanlog
@@ -137,8 +132,14 @@ imports:
   - internal/lifecycle
 - name: go.uber.org/multierr
   version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
+- name: go.uber.org/net/metrics
+  version: 1e19de5b971489a45d178e12a0f72a78c70e300e
+  subpackages:
+  - bucket
+  - push
+  - tallypush
 - name: go.uber.org/thriftrw
-  version: bce7fd589d505915f56a7901d8c143e1625e085c
+  version: 6216e5bb19132c14e979cf9c62abae6f022a0c0d
   subpackages:
   - envelope
   - internal/envelope
@@ -146,7 +147,6 @@ imports:
   - internal/frame
   - internal/goast
   - internal/multiplex
-  - internal/semver
   - plugin
   - plugin/api
   - protocol
@@ -165,7 +165,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 80e70a3f7765a5661a179fd8399b4db2c72646fb
+  version: ab555f366c4508dbe0802550b1b20c46c5c18aa0
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -201,10 +201,11 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 5a9f7b402fe85096d2e1d0383435ee1876e863d0
+  version: 7cea4cc846bcf00cbb27595b07da5de875ef7de9
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
+  - balancer/base
   - balancer/roundrobin
   - codes
   - connectivity
@@ -238,7 +239,7 @@ testImports:
 - name: github.com/kisielk/gotool
   version: d6ce6262d87e3a4e153e86023ff56ae771554a41
 - name: github.com/uber/jaeger-lib
-  version: c48167d9cae5887393dd5e61efd06a4a48b7fbb3
+  version: 7f95f4f7e80028096410abddaae2556e4c61b59f
   subpackages:
   - metrics
 - name: github.com/wadey/gocovmerge

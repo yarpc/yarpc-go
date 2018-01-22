@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/transport"
 )
 
 func TestNilCall(t *testing.T) {
@@ -41,6 +42,94 @@ func TestNilCall(t *testing.T) {
 	assert.Equal(t, "", call.RoutingDelegate())
 	assert.Equal(t, "", call.Header("foo"))
 	assert.Empty(t, call.HeaderNames())
+
+	assert.Error(t, call.WriteResponseHeader("foo", "bar"))
+}
+
+func TestReadFromRequest(t *testing.T) {
+	ctx, icall := NewInboundCall(context.Background())
+	icall.ReadFromRequest(&transport.Request{
+		Service:         "service",
+		Caller:          "caller",
+		Encoding:        transport.Encoding("raw"),
+		Procedure:       "proc",
+		ShardKey:        "sk",
+		RoutingKey:      "rk",
+		RoutingDelegate: "rd",
+		Headers:         transport.NewHeaders().With("foo", "bar"),
+	})
+	call := CallFromContext(ctx)
+	require.NotNil(t, call)
+
+	assert.Equal(t, "caller", call.Caller())
+	assert.Equal(t, "service", call.Service())
+	assert.Equal(t, "raw", string(call.Encoding()))
+	assert.Equal(t, "proc", call.Procedure())
+	assert.Equal(t, "sk", call.ShardKey())
+	assert.Equal(t, "rk", call.RoutingKey())
+	assert.Equal(t, "rd", call.RoutingDelegate())
+	assert.Equal(t, "bar", call.Header("foo"))
+	assert.Len(t, call.HeaderNames(), 1)
+
+	assert.NoError(t, call.WriteResponseHeader("foo2", "bar2"))
+	assert.Equal(t, icall.resHeaders[0].k, "foo2")
+	assert.Equal(t, icall.resHeaders[0].v, "bar2")
+}
+
+func TestReadFromRequestMeta(t *testing.T) {
+	ctx, icall := NewInboundCall(context.Background())
+	icall.ReadFromRequestMeta(&transport.RequestMeta{
+		Service:         "service",
+		Caller:          "caller",
+		Encoding:        transport.Encoding("raw"),
+		Procedure:       "proc",
+		ShardKey:        "sk",
+		RoutingKey:      "rk",
+		RoutingDelegate: "rd",
+		Headers:         transport.NewHeaders().With("foo", "bar"),
+	})
+	call := CallFromContext(ctx)
+	require.NotNil(t, call)
+
+	assert.Equal(t, "caller", call.Caller())
+	assert.Equal(t, "service", call.Service())
+	assert.Equal(t, "raw", string(call.Encoding()))
+	assert.Equal(t, "proc", call.Procedure())
+	assert.Equal(t, "sk", call.ShardKey())
+	assert.Equal(t, "rk", call.RoutingKey())
+	assert.Equal(t, "rd", call.RoutingDelegate())
+	assert.Equal(t, "bar", call.Header("foo"))
+	assert.Len(t, call.HeaderNames(), 1)
+
+	assert.NoError(t, call.WriteResponseHeader("foo2", "bar2"))
+	assert.Equal(t, icall.resHeaders[0].k, "foo2")
+	assert.Equal(t, icall.resHeaders[0].v, "bar2")
+}
+
+func TestDisabledResponseHeaders(t *testing.T) {
+	ctx, icall := NewInboundCallWithOptions(context.Background(), DisableResponseHeaders())
+	icall.ReadFromRequest(&transport.Request{
+		Service:         "service",
+		Caller:          "caller",
+		Encoding:        transport.Encoding("raw"),
+		Procedure:       "proc",
+		ShardKey:        "sk",
+		RoutingKey:      "rk",
+		RoutingDelegate: "rd",
+		Headers:         transport.NewHeaders().With("foo", "bar"),
+	})
+	call := CallFromContext(ctx)
+	require.NotNil(t, call)
+
+	assert.Equal(t, "caller", call.Caller())
+	assert.Equal(t, "service", call.Service())
+	assert.Equal(t, "raw", string(call.Encoding()))
+	assert.Equal(t, "proc", call.Procedure())
+	assert.Equal(t, "sk", call.ShardKey())
+	assert.Equal(t, "rk", call.RoutingKey())
+	assert.Equal(t, "rd", call.RoutingDelegate())
+	assert.Equal(t, "bar", call.Header("foo"))
+	assert.Len(t, call.HeaderNames(), 1)
 
 	assert.Error(t, call.WriteResponseHeader("foo", "bar"))
 }

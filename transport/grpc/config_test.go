@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -63,6 +63,18 @@ func TestConfigBuildUnaryOutboundOtherTransport(t *testing.T) {
 func TestConfigBuildUnaryOutboundRequiredAddress(t *testing.T) {
 	transportSpec := &transportSpec{}
 	_, err := transportSpec.buildUnaryOutbound(&OutboundConfig{}, NewTransport(), nil)
+	require.Equal(t, newRequiredFieldMissingError("address"), err)
+}
+
+func TestConfigBuildStreamOutboundOtherTransport(t *testing.T) {
+	transportSpec := &transportSpec{}
+	_, err := transportSpec.buildStreamOutbound(&OutboundConfig{}, testTransport{}, nil)
+	require.Equal(t, newTransportCastError(testTransport{}), err)
+}
+
+func TestConfigBuildStreamOutboundRequiredAddress(t *testing.T) {
+	transportSpec := &transportSpec{}
+	_, err := transportSpec.buildStreamOutbound(&OutboundConfig{}, NewTransport(), nil)
 	require.Equal(t, newRequiredFieldMissingError("address"), err)
 }
 

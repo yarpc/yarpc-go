@@ -29,14 +29,20 @@ This document outlines how to create a release of yarpc-go
     git merge $BRANCH
     ```
 
-4.  Alter the release date in CHANGELOG.md for `$VERSION` using the format
-    `YYYY-MM-DD` and remove the trailing `-dev`, making the latest version
-    match `$VERSION`.
+4.  Alter the Unreleased entry in CHANGELOG.md to point to `$VERSION` and
+    update the link at the bottom of the file. Use the format `YYYY-MM-DD` for
+    the year.
 
     ```diff
-    -v1.21.0-dev (unreleased)
-    +v1.21.0 (2017-10-23)
+    -## [Unreleased]
+    +## [1.21.0] - 2017-10-23
     ```
+
+    ```diff
+    -[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.20.1...HEAD
+    +[1.21.0]: https://github.com/yarpc/yarpc-go/compare/v1.20.1...v1.21.0
+    ```
+
 
 5.  Update the version number in version.go and verify that it matches what is
     in the changelog.
@@ -78,18 +84,19 @@ This document outlines how to create a release of yarpc-go
     git merge master
     ```
 
-11. Add a placeholder for the next version to CHANGELOG.md.  This is typically
-    one minor version above the version just released.
+11. Add a placeholder for the next version to CHANGELOG.md and a new link at
+    the bottom.
 
     ```diff
-    +v1.22.0-dev (unreleased)
-    +------------------------
-    +
+    +## [Unreleased]
     +-   No changes yet.
     +
-    +
-     v1.21.0 (2017-10-23)
-     --------------------
+     ## [1.21.0] - 2017-10-23
+    ```
+
+    ```diff
+    +[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.21.0...HEAD
+     [1.21.0]: https://github.com/yarpc/yarpc-go/compare/v1.20.1...v1.21.0
     ```
 
 12. Update the version number in version.go to the same version.

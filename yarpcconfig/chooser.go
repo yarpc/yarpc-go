@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -165,12 +165,25 @@ func (pc PeerChooser) BuildPeerChooser(transport peer.Transport, identify func(s
 }
 
 func (pc PeerChooser) buildPeerChooser(transport peer.Transport, identify func(string) peer.Identifier, kit *Kit) (peer.Chooser, error) {
-	peerListName, peerListConfig, err := getPeerListInfo(pc.Etc, kit)
+	peerChooserName, peerChooserConfig, err := getPeerListInfo(pc.Etc, kit)
 	if err != nil {
 		return nil, err
 	}
 
-	peerListSpec, err := kit.peerListSpec(peerListName)
+	if peerChooserSpec := kit.maybePeerChooserSpec(peerChooserName); peerChooserSpec != nil {
+		chooserBuilder, err := peerChooserSpec.PeerChooser.Decode(peerChooserConfig, config.InterpolateWith(kit.resolver))
+		if err != nil {
+			return nil, err
+		}
+		result, err := chooserBuilder.Build(transport, kit)
+		if err != nil {
+			return nil, err
+		}
+		return result.(peer.Chooser), nil
+	}
+
+	// if there was no chooser registered, we assume we have a peer list registered
+	peerListSpec, err := kit.peerListSpec(peerChooserName)
 	if err != nil {
 		return nil, err
 	}
@@ -185,16 +198,16 @@ func (pc PeerChooser) buildPeerChooser(transport peer.Transport, identify func(s
 	//
 	// We will be left with only failurePenalty in the map so that we can simply
 	// decode it into the peer list configuration type.
-	peerListUpdater, err := buildPeerListUpdater(peerListConfig, identify, kit)
+	peerListUpdater, err := buildPeerListUpdater(peerChooserConfig, identify, kit)
 	if err != nil {
 		return nil, err
 	}
 
-	chooserBuilder, err := peerListSpec.PeerList.Decode(peerListConfig, config.InterpolateWith(kit.resolver))
+	listBuilder, err := peerListSpec.PeerList.Decode(peerChooserConfig, config.InterpolateWith(kit.resolver))
 	if err != nil {
 		return nil, err
 	}
-	result, err := chooserBuilder.Build(transport, kit)
+	result, err := listBuilder.Build(transport, kit)
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +238,7 @@ func getPeerListInfo(etc config.AttributeMap, kit *Kit) (name string, config con
 	names := etc.Keys()
 	switch len(names) {
 	case 0:
-		err = fmt.Errorf("no peer list provided in config, need one of: %+v", kit.peerListSpecNames())
+		err = fmt.Errorf("no peer list or chooser provided in config, need one of: %+v", kit.peerChooserAndListSpecNames())
 	default:
 		err = fmt.Errorf("unrecognized attributes in outbound config: %+v", etc)
 	case 1:

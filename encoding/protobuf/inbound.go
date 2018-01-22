@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -91,6 +91,26 @@ func (o *onewayHandler) HandleOneway(ctx context.Context, transportRequest *tran
 		return err
 	}
 	return o.handleOneway(ctx, request)
+}
+
+type streamHandler struct {
+	handle func(*ServerStream) error
+}
+
+func newStreamHandler(handle func(*ServerStream) error) *streamHandler {
+	return &streamHandler{handle}
+}
+
+func (s *streamHandler) HandleStream(stream *transport.ServerStream) error {
+	ctx, call := apiencoding.NewInboundCallWithOptions(stream.Context(), apiencoding.DisableResponseHeaders())
+	if err := call.ReadFromRequestMeta(stream.Request().Meta); err != nil {
+		return err
+	}
+	protoStream := &ServerStream{
+		ctx:    ctx,
+		stream: stream,
+	}
+	return s.handle(protoStream)
 }
 
 func getProtoRequest(ctx context.Context, transportRequest *transport.Request, newRequest func() proto.Message) (context.Context, *apiencoding.InboundCall, proto.Message, error) {

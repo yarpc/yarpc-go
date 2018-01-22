@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -39,6 +39,9 @@ const (
 	Unary Type = iota + 1
 	// Oneway types are fire and forget RPCs (no response)
 	Oneway
+	// Streaming types are Stream based RPCs (bidirectional messages over long
+	// lived connections)
+	Streaming
 )
 
 // HandlerSpec holds a handler and its Type
@@ -48,6 +51,7 @@ type HandlerSpec struct {
 
 	unaryHandler  UnaryHandler
 	onewayHandler OnewayHandler
+	streamHandler StreamHandler
 }
 
 // MarshalLogObject implements zap.ObjectMarshaler.
@@ -65,6 +69,9 @@ func (h HandlerSpec) Unary() UnaryHandler { return h.unaryHandler }
 // Oneway returns the Oneway Handler or nil
 func (h HandlerSpec) Oneway() OnewayHandler { return h.onewayHandler }
 
+// Stream returns the Stream Handler or nil
+func (h HandlerSpec) Stream() StreamHandler { return h.streamHandler }
+
 // NewUnaryHandlerSpec returns an new HandlerSpec with a UnaryHandler
 func NewUnaryHandlerSpec(handler UnaryHandler) HandlerSpec {
 	return HandlerSpec{t: Unary, unaryHandler: handler}
@@ -73,6 +80,11 @@ func NewUnaryHandlerSpec(handler UnaryHandler) HandlerSpec {
 // NewOnewayHandlerSpec returns an new HandlerSpec with a OnewayHandler
 func NewOnewayHandlerSpec(handler OnewayHandler) HandlerSpec {
 	return HandlerSpec{t: Oneway, onewayHandler: handler}
+}
+
+// NewStreamHandlerSpec returns an new HandlerSpec with a StreamHandler
+func NewStreamHandlerSpec(handler StreamHandler) HandlerSpec {
+	return HandlerSpec{t: Streaming, streamHandler: handler}
 }
 
 // UnaryHandler handles a single, transport-level, unary request.
@@ -94,6 +106,15 @@ type OnewayHandler interface {
 	//
 	// An error may be returned in case of failures.
 	HandleOneway(ctx context.Context, req *Request) error
+}
+
+// StreamHandler handles a stream connection request.
+type StreamHandler interface {
+	// Handle the given stream connection.  The stream will close when the
+	// function returns.
+	//
+	// An error may be returned in case of failures.
+	HandleStream(stream *ServerStream) error
 }
 
 // DispatchUnaryHandler calls the handler h, recovering panics and timeout errors,
@@ -140,4 +161,20 @@ func DispatchOnewayHandler(
 	}()
 
 	return h.HandleOneway(ctx, req)
+}
+
+// DispatchStreamHandler calls the stream handler, recovering from panics as
+// errors.
+func DispatchStreamHandler(
+	h StreamHandler,
+	stream *ServerStream,
+) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Stream handler panicked: %v\n%s", r, debug.Stack())
+			err = fmt.Errorf("panic: %v", r)
+		}
+	}()
+
+	return h.HandleStream(stream)
 }

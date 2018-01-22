@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/thriftrw/thrifttest"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
@@ -111,7 +112,7 @@ func TestThriftHandler(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
 
-		proto := NewMockProtocol(mockCtrl)
+		proto := thrifttest.NewMockProtocol(mockCtrl)
 		if tt.giveEnvelope != nil {
 			proto.EXPECT().DecodeEnveloped(gomock.Any()).Return(*tt.giveEnvelope, nil)
 		}

@@ -1,0 +1,12 @@
+run:
+  - command: ./server/server
+    sleep_ms: 500
+  - command: ./client/client
+    input: |
+      hello
+      stop
+    output: |
+      >>> sending message: "hello"
+      waiting for response...
+      got response: "Got your message: \"hello\", thanks!"
+      >>>

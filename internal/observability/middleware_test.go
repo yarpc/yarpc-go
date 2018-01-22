@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,18 +23,17 @@ package observability
 import (
 	"context"
 	"errors"
-	"io/ioutil"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/internal/digester"
-	"go.uber.org/yarpc/internal/pally"
-	"go.uber.org/yarpc/internal/pally/pallytest"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -54,6 +53,7 @@ func TestMiddlewareLogging(t *testing.T) {
 		RoutingDelegate: "routing-delegate",
 		Body:            strings.NewReader("body"),
 	}
+	sreq := &transport.StreamRequest{Meta: req.ToRequestMeta()}
 	failed := errors.New("fail")
 
 	baseFields := func() []zapcore.Field {
@@ -96,7 +96,7 @@ func TestMiddlewareLogging(t *testing.T) {
 
 	for _, tt := range tests {
 		core, logs := observer.New(zapcore.DebugLevel)
-		mw := NewMiddleware(zap.New(core), pally.NewRegistry(), NewNopContextExtractor())
+		mw := NewMiddleware(zap.New(core), metrics.New().Scope(), NewNopContextExtractor())
 
 		getLog := func() observer.LoggedEntry {
 			entries := logs.TakeAll()
@@ -124,7 +124,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			checkErr(err)
 			logContext := append(
 				baseFields(),
-				zap.String("direction", _directionInbound),
+				zap.String("direction", string(_directionInbound)),
 				zap.String("rpcType", "Unary"),
 			)
 			logContext = append(logContext, tt.wantFields...)
@@ -145,7 +145,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			}
 			logContext := append(
 				baseFields(),
-				zap.String("direction", _directionOutbound),
+				zap.String("direction", string(_directionOutbound)),
 				zap.String("rpcType", "Unary"),
 			)
 			logContext = append(logContext, tt.wantFields...)
@@ -163,7 +163,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			checkErr(err)
 			logContext := append(
 				baseFields(),
-				zap.String("direction", _directionInbound),
+				zap.String("direction", string(_directionInbound)),
 				zap.String("rpcType", "Oneway"),
 			)
 			logContext = append(logContext, tt.wantFields...)
@@ -181,12 +181,53 @@ func TestMiddlewareLogging(t *testing.T) {
 			checkErr(err)
 			logContext := append(
 				baseFields(),
-				zap.String("direction", _directionOutbound),
+				zap.String("direction", string(_directionOutbound)),
 				zap.String("rpcType", "Oneway"),
 			)
 			logContext = append(logContext, tt.wantFields...)
 			if tt.err == nil {
 				assert.NotNil(t, ack, "Expected non-nil ack if call is successful.")
+			}
+			expected := observer.LoggedEntry{
+				Entry: zapcore.Entry{
+					Level:   zapcore.DebugLevel,
+					Message: "Made outbound call.",
+				},
+				Context: logContext,
+			}
+			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
+		})
+		t.Run(tt.desc+", stream inbound", func(t *testing.T) {
+			stream, err := transport.NewServerStream(&fakeStream{ctx: context.Background(), request: sreq})
+			require.NoError(t, err)
+			err = mw.HandleStream(stream, fakeHandler{tt.err, false})
+			checkErr(err)
+			logContext := append(
+				baseFields(),
+				zap.String("direction", string(_directionInbound)),
+				zap.String("rpcType", "Streaming"),
+			)
+			logContext = append(logContext, tt.wantFields...)
+			expected := observer.LoggedEntry{
+				Entry: zapcore.Entry{
+					Level:   zapcore.DebugLevel,
+					Message: "Handled inbound request.",
+				},
+				Context: logContext,
+			}
+			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
+		})
+		t.Run(tt.desc+", stream outbound", func(t *testing.T) {
+			clientStream, err := mw.CallStream(context.Background(), sreq, fakeOutbound{err: tt.err})
+			checkErr(err)
+			logContext := append(
+				baseFields(),
+				zap.String("direction", string(_directionOutbound)),
+				zap.String("rpcType", "Streaming"),
+			)
+			logContext = append(logContext, tt.wantFields...)
+			if tt.err == nil {
+				assert.NotNil(t, clientStream, "Expected non-nil clientStream if call is successful.")
 			}
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
@@ -270,26 +311,26 @@ func TestMiddlewareMetrics(t *testing.T) {
 			assert.Equal(t, int64(tt.wantCalls), edge.calls.Load())
 			assert.Equal(t, int64(tt.wantSuccesses), edge.successes.Load())
 			for tagName, val := range tt.wantCallerFailures {
-				assert.Equal(t, int64(val), edge.callerFailures.MustGet(tagName).Load())
+				assert.Equal(t, int64(val), edge.callerFailures.MustGet(_error, tagName).Load())
 			}
 			for tagName, val := range tt.wantServerFailures {
-				assert.Equal(t, int64(val), edge.serverFailures.MustGet(tagName).Load())
+				assert.Equal(t, int64(val), edge.serverFailures.MustGet(_error, tagName).Load())
 			}
 		}
 		t.Run(tt.desc+", unary inbound", func(t *testing.T) {
-			mw := NewMiddleware(zap.NewNop(), pally.NewRegistry(), NewNopContextExtractor())
+			mw := NewMiddleware(zap.NewNop(), metrics.New().Scope(), NewNopContextExtractor())
 			mw.Handle(
 				context.Background(),
 				req,
 				&transporttest.FakeResponseWriter{},
 				fakeHandler{tt.err, tt.applicationErr},
 			)
-			validate(mw, _directionInbound)
+			validate(mw, string(_directionInbound))
 		})
 		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
-			mw := NewMiddleware(zap.NewNop(), pally.NewRegistry(), NewNopContextExtractor())
+			mw := NewMiddleware(zap.NewNop(), metrics.New().Scope(), NewNopContextExtractor())
 			mw.Call(context.Background(), req, fakeOutbound{err: tt.err})
-			validate(mw, _directionOutbound)
+			validate(mw, string(_directionOutbound))
 		})
 	}
 }
@@ -329,7 +370,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		zap.String("encoding", string(req.Encoding)),
 		zap.String("routingKey", req.RoutingKey),
 		zap.String("routingDelegate", req.RoutingDelegate),
-		zap.String("direction", _directionInbound),
+		zap.String("direction", string(_directionInbound)),
 		zap.String("rpcType", "Unary"),
 		zap.Duration("latency", 0),
 		zap.Bool("successful", false),
@@ -338,7 +379,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 	}
 
 	core, logs := observer.New(zap.DebugLevel)
-	mw := NewMiddleware(zap.New(core), pally.NewRegistry(), NewNopContextExtractor())
+	mw := NewMiddleware(zap.New(core), metrics.New().Scope(), NewNopContextExtractor())
 
 	assert.NoError(t, mw.Handle(
 		context.Background(),
@@ -361,10 +402,11 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 	assert.Equal(t, expected, entry, "Unexpected log entry written.")
 }
 
-func TestMiddlewareStats(t *testing.T) {
+func TestMiddlewareSuccessSnapshot(t *testing.T) {
 	defer stubTime()()
-	reg := pally.NewRegistry()
-	mw := NewMiddleware(zap.NewNop(), reg, NewNopContextExtractor())
+	root := metrics.New()
+	meter := root.Scope()
+	mw := NewMiddleware(zap.NewNop(), meter, NewNopContextExtractor())
 
 	err := mw.Handle(
 		context.Background(),
@@ -383,8 +425,110 @@ func TestMiddlewareStats(t *testing.T) {
 	)
 	assert.NoError(t, err, "Unexpected transport error.")
 
-	expected, err := ioutil.ReadFile("testdata/prom.txt")
-	assert.NoError(t, err, "Unexpected error reading testdata.")
+	snap := root.Snapshot()
+	tags := metrics.Tags{
+		"dest":             "service",
+		"direction":        "inbound",
+		"encoding":         "raw",
+		"procedure":        "procedure",
+		"routing_delegate": "rd",
+		"routing_key":      "rk",
+		"source":           "caller",
+	}
+	want := &metrics.RootSnapshot{
+		Counters: []metrics.Snapshot{
+			{Name: "calls", Tags: tags, Value: 1},
+			{Name: "successes", Tags: tags, Value: 1},
+		},
+		Histograms: []metrics.HistogramSnapshot{
+			{
+				Name: "caller_failure_latency_ms",
+				Tags: tags,
+				Unit: time.Millisecond,
+			},
+			{
+				Name: "server_failure_latency_ms",
+				Tags: tags,
+				Unit: time.Millisecond,
+			},
+			{
+				Name:   "success_latency_ms",
+				Tags:   tags,
+				Unit:   time.Millisecond,
+				Values: []int64{1},
+			},
+		},
+	}
+	assert.Equal(t, want, snap, "Unexpected snapshot of metrics.")
+}
 
-	pallytest.AssertPrometheus(t, reg, strings.TrimSpace(string(expected)))
+func TestMiddlewareFailureSnapshot(t *testing.T) {
+	defer stubTime()()
+	root := metrics.New()
+	meter := root.Scope()
+	mw := NewMiddleware(zap.NewNop(), meter, NewNopContextExtractor())
+
+	err := mw.Handle(
+		context.Background(),
+		&transport.Request{
+			Caller:          "caller",
+			Service:         "service",
+			Encoding:        "raw",
+			Procedure:       "procedure",
+			ShardKey:        "sk",
+			RoutingKey:      "rk",
+			RoutingDelegate: "rd",
+			Body:            strings.NewReader("body"),
+		},
+		&transporttest.FakeResponseWriter{},
+		fakeHandler{fmt.Errorf("yuno"), false},
+	)
+	assert.Error(t, err, "Expected transport error.")
+
+	snap := root.Snapshot()
+	tags := metrics.Tags{
+		"dest":             "service",
+		"direction":        "inbound",
+		"encoding":         "raw",
+		"procedure":        "procedure",
+		"routing_delegate": "rd",
+		"routing_key":      "rk",
+		"source":           "caller",
+	}
+	errorTags := metrics.Tags{
+		"dest":             "service",
+		"direction":        "inbound",
+		"encoding":         "raw",
+		"procedure":        "procedure",
+		"routing_delegate": "rd",
+		"routing_key":      "rk",
+		"source":           "caller",
+		"error":            "unknown_internal_yarpc",
+	}
+	want := &metrics.RootSnapshot{
+		Counters: []metrics.Snapshot{
+			{Name: "calls", Tags: tags, Value: 1},
+			{Name: "server_failures", Tags: errorTags, Value: 1},
+			{Name: "successes", Tags: tags, Value: 0},
+		},
+		Histograms: []metrics.HistogramSnapshot{
+			{
+				Name: "caller_failure_latency_ms",
+				Tags: tags,
+				Unit: time.Millisecond,
+			},
+			{
+				Name:   "server_failure_latency_ms",
+				Tags:   tags,
+				Unit:   time.Millisecond,
+				Values: []int64{1},
+			},
+			{
+				Name: "success_latency_ms",
+				Tags: tags,
+				Unit: time.Millisecond,
+			},
+		},
+	}
+	assert.Equal(t, want, snap, "Unexpected snapshot of metrics.")
 }

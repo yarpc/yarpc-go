@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -149,7 +149,8 @@ func WithClientInfo(serviceName string, procedures []transport.Procedure, transp
 
 // NewClientDispatcher returns a new client Dispatcher.
 //
-// HTTP always will be configured as an outbound for Oneway unless using TransportTypeGRPC.
+// HTTP always will be configured as an outbound for Oneway.
+// gRPC always will be configured as an outbound for Stream.
 func NewClientDispatcher(transportType TransportType, config *DispatcherConfig, logger *zap.Logger) (*yarpc.Dispatcher, error) {
 	port, err := config.GetPort(transportType)
 	if err != nil {
@@ -159,8 +160,12 @@ func NewClientDispatcher(transportType TransportType, config *DispatcherConfig, 
 	if err != nil {
 		return nil, err
 	}
-	httpTransport := http.NewTransport(http.Logger(logger))
-	var onewayOutbound transport.OnewayOutbound
+	grpcPort, err := config.GetPort(TransportTypeGRPC)
+	if err != nil {
+		return nil, err
+	}
+	onewayOutbound := http.NewTransport(http.Logger(logger)).NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d", httpPort))
+	streamOutbound := grpc.NewTransport(grpc.Logger(logger)).NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", grpcPort))
 	var unaryOutbound transport.UnaryOutbound
 	switch transportType {
 	case TransportTypeTChannel:
@@ -168,15 +173,11 @@ func NewClientDispatcher(transportType TransportType, config *DispatcherConfig, 
 		if err != nil {
 			return nil, err
 		}
-		onewayOutbound = httpTransport.NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d", httpPort))
 		unaryOutbound = tchannelTransport.NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", port))
 	case TransportTypeHTTP:
-		httpOutbound := httpTransport.NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d", port))
-		onewayOutbound = httpOutbound
-		unaryOutbound = httpOutbound
+		unaryOutbound = onewayOutbound
 	case TransportTypeGRPC:
-		onewayOutbound = httpTransport.NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d", httpPort))
-		unaryOutbound = grpc.NewTransport(grpc.Logger(logger)).NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", port))
+		unaryOutbound = streamOutbound
 	default:
 		return nil, fmt.Errorf("invalid TransportType: %v", transportType)
 	}
@@ -187,6 +188,7 @@ func NewClientDispatcher(transportType TransportType, config *DispatcherConfig, 
 				config.GetServiceName(): {
 					Oneway: onewayOutbound,
 					Unary:  unaryOutbound,
+					Stream: streamOutbound,
 				},
 			},
 		},

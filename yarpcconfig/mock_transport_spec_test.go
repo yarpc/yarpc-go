@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -47,6 +47,7 @@ type mockTransportSpecBuilder struct {
 	InboundConfig        reflect.Type
 	UnaryOutboundConfig  reflect.Type
 	OnewayOutboundConfig reflect.Type
+	StreamOutboundConfig reflect.Type
 }
 
 // build the mockTransportSpec.
@@ -68,6 +69,9 @@ func (b mockTransportSpecBuilder) Build(ctrl *gomock.Controller) *mockTransportS
 	}
 	if b.OnewayOutboundConfig != nil {
 		s.BuildOnewayOutbound = builderFunc(ctrl, &m, "BuildOnewayOutbound", []reflect.Type{b.OnewayOutboundConfig, _typeOfTransport, _typeOfKit}, _typeOfOnewayOutbound)
+	}
+	if b.StreamOutboundConfig != nil {
+		s.BuildStreamOutbound = builderFunc(ctrl, &m, "BuildStreamOutbound", []reflect.Type{b.StreamOutboundConfig, _typeOfTransport, _typeOfKit}, _typeOfStreamOutbound)
 	}
 
 	return &m
@@ -96,6 +100,10 @@ func (m *mockTransportSpec) BuildUnaryOutbound(interface{}, transport.Transport,
 }
 
 func (m *mockTransportSpec) BuildOnewayOutbound(interface{}, transport.Transport, gomock.Matcher) (transport.OnewayOutbound, error) {
+	panic("This function should never be called")
+}
+
+func (m *mockTransportSpec) BuildStreamOutbound(interface{}, transport.Transport, gomock.Matcher) (transport.StreamOutbound, error) {
 	panic("This function should never be called")
 }
 
@@ -130,6 +138,10 @@ func (r *_transportSpecRecorder) BuildUnaryOutbound(cfg interface{}, t transport
 
 func (r *_transportSpecRecorder) BuildOnewayOutbound(cfg interface{}, t transport.Transport, kit gomock.Matcher) *gomock.Call {
 	return r.ctrl.RecordCall(r.m, "BuildOnewayOutbound", cfg, t, kit)
+}
+
+func (r *_transportSpecRecorder) BuildStreamOutbound(cfg interface{}, t transport.Transport, kit gomock.Matcher) *gomock.Call {
+	return r.ctrl.RecordCall(r.m, "BuildStreamOutbound", cfg, t, kit)
 }
 
 // anyKitMatcher verifies that an instance is a *Kit.

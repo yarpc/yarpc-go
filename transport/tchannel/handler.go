@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +21,6 @@
 package tchannel
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -190,7 +189,7 @@ type responseWriter struct {
 	failedWith         error
 	format             tchannel.Format
 	headers            transport.Headers
-	buffer             *bytes.Buffer
+	buffer             *bufferpool.Buffer
 	response           inboundCallResponse
 	isApplicationError bool
 }
@@ -255,7 +254,7 @@ func (rw *responseWriter) Close() error {
 	defer func() { retErr = appendError(retErr, bodyWriter.Close()) }()
 	if rw.buffer != nil {
 		defer bufferpool.Put(rw.buffer)
-		if _, err := bodyWriter.Write(rw.buffer.Bytes()); err != nil {
+		if _, err := rw.buffer.WriteTo(bodyWriter); err != nil {
 			return appendError(retErr, err)
 		}
 	}
@@ -267,14 +266,15 @@ func getSystemError(err error) error {
 	if _, ok := err.(tchannel.SystemError); ok {
 		return err
 	}
-	status := tchannel.ErrCodeUnexpected
-	code := yarpcerrors.FromError(err).Code()
-	if code == yarpcerrors.CodeInvalidArgument || code == yarpcerrors.CodeUnimplemented {
-		status = tchannel.ErrCodeBadRequest
-	} else if code == yarpcerrors.CodeDeadlineExceeded {
-		status = tchannel.ErrCodeTimeout
+	if !yarpcerrors.IsStatus(err) {
+		return tchannel.NewSystemError(tchannel.ErrCodeUnexpected, err.Error())
 	}
-	return tchannel.NewSystemError(status, err.Error())
+	status := yarpcerrors.FromError(err)
+	tchannelCode, ok := _codeToTChannelCode[status.Code()]
+	if !ok {
+		tchannelCode = tchannel.ErrCodeUnexpected
+	}
+	return tchannel.NewSystemError(tchannelCode, status.Message())
 }
 
 func appendError(left error, right error) error {

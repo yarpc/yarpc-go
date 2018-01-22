@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,7 @@ package api
 
 import (
 	"bytes"
+	"time"
 
 	"go.uber.org/yarpc/api/transport"
 )
@@ -30,6 +31,7 @@ import (
 // to make on the response.
 type RequestOpts struct {
 	Port         uint16
+	GiveTimeout  time.Duration
 	GiveRequest  *transport.Request
 	WantResponse *transport.Response
 	WantError    error
@@ -38,6 +40,7 @@ type RequestOpts struct {
 // NewRequestOpts initializes a RequestOpts struct.
 func NewRequestOpts() RequestOpts {
 	return RequestOpts{
+		GiveTimeout: time.Second * 10,
 		GiveRequest: &transport.Request{
 			Caller:   "unknown",
 			Encoding: transport.Encoding("raw"),
