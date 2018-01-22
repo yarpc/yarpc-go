@@ -30,7 +30,7 @@ import (
 type Buffer struct {
 	pool *Pool
 
-	// version is an ever-incrementing integer on ever operation.
+	// version is an ever-incrementing integer on every operation.
 	// it ensures that we don't perform multiple overlapping operations.
 	version uint
 
@@ -128,15 +128,27 @@ func (b *Buffer) Release() {
 	// Increment the version so overlapping operations fail.
 	b.postOp(b.preOp())
 
-	if !b.pool.testDetectUseAfterFree {
-		b.Reset()
-
-		// We must mark released after the `Reset`.
-		b.released = true
-		b.pool.release(b)
+	if b.pool.testDetectUseAfterFree {
+		b.releaseDetectUseAfterFree()
 		return
 	}
 
+	// Before releasing a buffer, we should reset it to "clear" the buffer
+	// while holding on to the capacity of the buffer.
+	b.Reset()
+
+	// We must mark released after the `Reset`, so that `Reset` doesn't
+	// trigger use-after-free.
+	b.released = true
+
+	b.pool.release(b)
+}
+
+func (b *Buffer) reuse() {
+	b.released = false
+}
+
+func (b *Buffer) releaseDetectUseAfterFree() {
 	// Detect any lingering reads of the underlying data by resetting the data.
 	// We repeat it in a goroutine to trigger the race detector.
 	overwriteData(b.Bytes())
@@ -145,10 +157,6 @@ func (b *Buffer) Release() {
 	// This will cause any future accesses to panic.
 	b.released = true
 	b.buf = nil
-}
-
-func (b *Buffer) reuse() {
-	b.released = false
 }
 
 func overwriteData(bs []byte) {
