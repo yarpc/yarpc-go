@@ -111,6 +111,11 @@ func (v *ExceptionType) UnmarshalText(value []byte) error {
 	}
 }
 
+// Ptr returns a pointer to this enum value.
+func (v ExceptionType) Ptr() *ExceptionType {
+	return &v
+}
+
 // ToWire translates ExceptionType into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.

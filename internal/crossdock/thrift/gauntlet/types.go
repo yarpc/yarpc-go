@@ -4068,6 +4068,11 @@ func (v *Numberz) UnmarshalText(value []byte) error {
 	}
 }
 
+// Ptr returns a pointer to this enum value.
+func (v Numberz) Ptr() *Numberz {
+	return &v
+}
+
 // ToWire translates Numberz into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
