@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+- No changes yet.
+
 ## [1.27.2] - 2017-01-23
 ### Fixed
 - Removed buffer pooling from GRPC outbound requests which had possible data
@@ -900,6 +903,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.27.2...HEAD
 [1.27.2]: https://github.com/yarpc/yarpc-go/compare/v1.27.1...v1.27.2
 [1.27.1]: https://github.com/yarpc/yarpc-go/compare/v1.27.0...v1.27.1
 [1.27.0]: https://github.com/yarpc/yarpc-go/compare/v1.26.2...v1.27.0
