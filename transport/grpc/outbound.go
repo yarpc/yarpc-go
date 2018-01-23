@@ -32,7 +32,6 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/bufferpool"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -132,9 +131,8 @@ func (o *Outbound) invoke(
 		return err
 	}
 
-	requestBuffer := bufferpool.Get()
-	defer bufferpool.Put(requestBuffer)
-	if _, err := requestBuffer.ReadFrom(request.Body); err != nil {
+	bytes, err := ioutil.ReadAll(request.Body)
+	if err != nil {
 		return err
 	}
 	fullMethod, err := procedureNameToFullMethod(request.Procedure)
@@ -177,7 +175,7 @@ func (o *Outbound) invoke(
 		grpcPeer.clientConn.Invoke(
 			metadata.NewOutgoingContext(ctx, md),
 			fullMethod,
-			requestBuffer.Bytes(),
+			bytes,
 			responseBody,
 			callOptions...,
 		),
