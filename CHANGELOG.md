@@ -900,7 +900,10 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.26.1...HEAD
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.27.1...HEAD
+[1.27.1]: https://github.com/yarpc/yarpc-go/compare/v1.27.0...v1.27.1
+[1.27.0]: https://github.com/yarpc/yarpc-go/compare/v1.26.2...v1.27.0
+[1.26.2]: https://github.com/yarpc/yarpc-go/compare/v1.26.1...v1.26.2
 [1.26.1]: https://github.com/yarpc/yarpc-go/compare/v1.26.0...v1.26.1
 [1.26.0]: https://github.com/yarpc/yarpc-go/compare/v1.25.1...v1.26.0
 [1.25.1]: https://github.com/yarpc/yarpc-go/compare/v1.25.0...v1.25.1
