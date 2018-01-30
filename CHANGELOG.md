@@ -5,7 +5,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Changed
 - Enabled random shuffling of peerlist order by default.
+### Added
+- Reintroduce envelope-agnostic Thrift inbounds. Thrift inbounds will now
+  accept Thrift requests with or without envelopes.  This feature was
+  originally added in 1.26.0 and removed in 1.26.1 because the implementation
+  introduced an inbound request data corruption hazard.
 
 ## [1.27.2] - 2017-01-23
 ### Fixed
