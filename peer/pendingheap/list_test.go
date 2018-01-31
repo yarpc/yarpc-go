@@ -585,7 +585,8 @@ func TestPeerHeapList(t *testing.T) {
 			ExpectPeerRetainsWithError(transport, tt.errRetainedPeerIDs, tt.retainErr)
 			ExpectPeerReleases(transport, tt.errReleasedPeerIDs, tt.releaseErr)
 
-			pl := New(transport, Capacity(0))
+			opts := []ListOption{Capacity(0), noShuffle}
+			pl := New(transport, opts...)
 
 			deps := ListActionDeps{
 				Peers: peerMap,
@@ -610,4 +611,8 @@ func TestPeerHeapList(t *testing.T) {
 			assert.Equal(t, tt.expectedRunning, pl.IsRunning(), "Peer list should match expected final running state")
 		})
 	}
+}
+
+var noShuffle ListOption = func(c *listConfig) {
+	c.shuffle = false
 }
