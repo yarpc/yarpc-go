@@ -115,7 +115,7 @@ var DisableKeepAlives TransportOption = func(options *transportOptions) {
 	options.disableKeepAlives = true
 }
 
-// DisableCompression, if true, prevents the Transport from requesting
+// DisableCompression if true prevents the Transport from requesting
 // compression with an "Accept-Encoding: gzip" request header when the Request
 // contains no existing Accept-Encoding value. If the Transport requests gzip
 // on its own and gets a gzipped response, it's transparently decoded in the
@@ -125,7 +125,7 @@ var DisableCompression TransportOption = func(options *transportOptions) {
 	options.disableCompression = true
 }
 
-// ResponseHeaderTimeout, if non-zero, specifies the amount of time to wait for
+// ResponseHeaderTimeout if non-zero specifies the amount of time to wait for
 // a server's response headers after fully writing the request (including its
 // body, if any).  This time does not include the time to read the response
 // body.
