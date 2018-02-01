@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/peer"
@@ -97,11 +98,12 @@ func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport
 func (p *tchannelPeer) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	root := p.transport.ch.RootPeers()
 	tp := root.GetOrAdd(p.HostPort())
-	return callWithPeer(ctx, req, tp)
+	fmt.Println(p.transport.canonicalHeader)
+	return callWithPeer(ctx, req, tp, p.transport.canonicalHeader)
 }
 
 // callWithPeer sends a request with the chosen peer.
-func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Peer) (*transport.Response, error) {
+func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Peer, canonicalHeader bool) (*transport.Response, error) {
 	// NB(abg): Under the current API, the local service's name is required
 	// twice: once when constructing the TChannel and then again when
 	// constructing the RPC.
@@ -133,8 +135,13 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		return nil, err
 	}
 
+	headerItems := req.Headers.Items()
+	if canonicalHeader {
+		headerItems = req.Headers.RawItems()
+	}
+
 	// Inject tracing system baggage
-	reqHeaders := tchannel.InjectOutboundSpan(call.Response(), req.Headers.Items())
+	reqHeaders := tchannel.InjectOutboundSpan(call.Response(), headerItems)
 
 	if err := writeRequestHeaders(ctx, format, reqHeaders, call.Arg2Writer); err != nil {
 		// TODO(abg): This will wrap IO errors while writing headers as encode

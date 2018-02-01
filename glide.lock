@@ -1,5 +1,5 @@
 hash: 7c7d875c128e2f5ee2218b87f3ec2b6fb335279d1cda2657c6cc4eb92a2ecdb9
-updated: 2018-01-17T11:45:33.306560761-08:00
+updated: 2018-01-31T14:57:48.544493-08:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -17,7 +17,7 @@ imports:
   - assert
   - require
 - name: github.com/davecgh/go-spew
-  version: 04cdfd42973bb9c8589fd6a731800cf222fde1a9
+  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
   subpackages:
   - spew
 - name: github.com/facebookgo/clock
@@ -65,21 +65,21 @@ imports:
   - prometheus
   - prometheus/promhttp
 - name: github.com/prometheus/client_model
-  version: 6f3806018612930941127f2a7c6c453ba2c527d2
+  version: 99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 2f17f4a9d485bf34b4bfaccc273805040e4f86c8
+  version: 2e54d0b93cba2fd133edc32211dcc32c06ef72ca
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: e645f4e5aaa8506fc71d6edbc5c4ff02c04c46f2
+  version: a6e9df898b1336106c743392c48ee0b71f5c4efa
   subpackages:
   - xfs
 - name: github.com/stretchr/testify
-  version: 890a5c3458b43e6104ff5da8dfa139d013d77544
+  version: 12b6f73e6084dad08a7c6e575284b177ecafbc71
   subpackages:
   - assert
   - require
@@ -168,7 +168,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: ab555f366c4508dbe0802550b1b20c46c5c18aa0
+  version: 0ed95abb35c445290478a5348a7b38bb154135fd
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -185,26 +185,26 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: 53aa286056ef226755cd898109dbcdaba8ac0b81
+  version: a204229cd828a74741ee7b5da9bf4794497f85ed
   repo: https://github.com/golang/sys
 - name: golang.org/x/text
-  version: acd49d43e9b95df46670431bf5c7ae59586daad8
+  version: 2df9074612f50810d82416d2229398a1e7188c5c
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 64890f4e2b733655fee5077a5435a8812404c3a3
+  version: 6d70fb2e85323e81c89374331d3d2b93304faa36
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 595979c8a7bf586b2d293fb42246bf91a0b893d9
+  version: 7f0da29060c682909f650ad8ed4e515bd74fa12a
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 7cea4cc846bcf00cbb27595b07da5de875ef7de9
+  version: 6b51017f791ae1cfbec89c52efdf444b13b550ef
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
@@ -229,12 +229,12 @@ imports:
   - tap
   - transport
 - name: gopkg.in/yaml.v2
-  version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
+  version: a83829b6f1293c91addabc89d0571c246397bbf4
 testImports:
 - name: github.com/codahale/hdrhistogram
-  version: 3a0bb77429bd3a61596f5e8a3172445844342120
+  version: f8ad88b59a584afeee9d334eff879b104439117b
 - name: github.com/golang/lint
-  version: f635bddafc7154957bd70209ee858a4b97e64a9b
+  version: e14d9b0f1d332b1420c1ffa32562ad2dc84d645d
   subpackages:
   - golint
 - name: github.com/kisielk/errcheck
@@ -253,6 +253,6 @@ testImports:
   - parallel-exec
   - update-license
 - name: honnef.co/go/tools
-  version: 376b3b58b9e4def403181ee2fd3d4cc7de8375ae
+  version: 8ed405e85c65fb38745a8eafe01ee9590523f172
   subpackages:
   - cmd/staticcheck

@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"sync"
 	"testing"
@@ -119,6 +120,10 @@ func TestOutboundHeaders(t *testing.T) {
 }
 
 func TestCallSuccess(t *testing.T) {
+	const (
+		headerKey = "foo-BAR-BaZ"
+		headerVal = "FooBarBaz"
+	)
 	server := testutils.NewServer(t, nil)
 	defer server.Close()
 	serverHostPort := server.PeerInfo().HostPort
@@ -132,7 +137,7 @@ func TestCallSuccess(t *testing.T) {
 
 			headers, body, err := readArgs(call)
 			if assert.NoError(t, err, "failed to read request") {
-				assert.Equal(t, []byte{0x00, 0x00}, headers)
+				assert.Equal(t, []byte(fmt.Sprintf("%s:%s", headerKey, headerVal)), headers)
 				assert.Equal(t, []byte("world"), body)
 			}
 
@@ -149,7 +154,7 @@ func TestCallSuccess(t *testing.T) {
 			assert.NoError(t, err, "failed to write response")
 		}))
 
-	x, err := NewTransport(ServiceName("caller"))
+	x, err := NewTransport(ServiceName("caller"), CanonicalHeader())
 	require.NoError(t, err)
 	require.NoError(t, x.Start(), "failed to start transport")
 
@@ -166,6 +171,7 @@ func TestCallSuccess(t *testing.T) {
 			Service:   "service",
 			Encoding:  raw.Encoding,
 			Procedure: "hello",
+			Headers:   transport.NewHeaders().With(headerKey, headerVal),
 			Body:      bytes.NewReader([]byte("world")),
 		},
 	)
