@@ -30,6 +30,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/integrationtest"
+	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/yarpctest"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/transport/http"
@@ -38,9 +39,10 @@ import (
 func newTransport() peer.Transport {
 	return http.NewTransport(
 		http.Tracer(opentracing.NoopTracer{}),
-		http.KeepAlive(20*time.Millisecond),
-		http.ConnTimeout(time.Millisecond),
+		http.DisableKeepAlives(),
+		http.ConnTimeout(testtime.Millisecond),
 		http.ConnBackoff(backoff.None),
+		http.InnocenceWindow(1*time.Second),
 	)
 }
 
@@ -65,7 +67,7 @@ var spec = integrationtest.TransportSpec{
 
 func TestHTTPWithRoundRobin(t *testing.T) {
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 	defer cancel()
 
 	permanent, permanentAddr := spec.NewServer(t, ":0")
@@ -100,6 +102,43 @@ func TestHTTPWithRoundRobin(t *testing.T) {
 	restored, _ := spec.NewServer(t, temporaryAddr)
 	defer restored.Stop()
 	integrationtest.Blast(ctx, t, c)
+}
+
+func TestHTTPOnSuspect(t *testing.T) {
+	server, serverAddr := spec.NewServer(t, ":0")
+
+	client, c := spec.NewClient(t, []string{serverAddr})
+	defer client.Stop()
+
+	// Exercise OnSuspect
+	ctx := context.Background()
+	ctx, cancel1 := context.WithTimeout(ctx, 5*testtime.Millisecond)
+	defer cancel1()
+	integrationtest.Timeout(ctx, c)
+
+	// Exercise the innocence window
+	ctx = context.Background()
+	ctx, cancel2 := context.WithTimeout(ctx, 5*testtime.Millisecond)
+	defer cancel2()
+	integrationtest.Timeout(ctx, c)
+
+	// Validate that the peer remains available
+	ctx = context.Background()
+	ctx, cancel3 := context.WithTimeout(ctx, 5*testtime.Millisecond)
+	defer cancel3()
+	integrationtest.Blast(ctx, t, c)
+
+	// Induce the peer management loop to exit through its shutdown path.
+	go server.Stop()
+	ctx = context.Background()
+	ctx, cancel4 := context.WithTimeout(ctx, 5*testtime.Millisecond)
+	defer cancel4()
+	for {
+		err := integrationtest.Call(ctx, c)
+		if err != nil {
+			break
+		}
+	}
 }
 
 func TestIntegration(t *testing.T) {

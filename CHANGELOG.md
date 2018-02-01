@@ -62,6 +62,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [1.28.0] - 2018-03-13
 ### Changed
 - Enabled random shuffling of peerlist order by default.
+- The HTTP protocol now mitigates peers that are unavailable due to a half-open
+  TCP connection.
+  Previously, if a peer shut down unexpectedly, it might fail to send a TCP FIN
+  packet, leaving the sender unaware that the peer is unavailable.
+  The symptom is that requests sent down this connection will time out.
+  This change introduces a suspicion window for peers that time out.
+  Once per suspicion window, the HTTP transport's peer manager will attempt
+  to establish a fresh TCP connection to the peer.
+  Failing to establish a connection will transition the peer to the unavailable
+  state until a fresh TCP connection becomes available.
+  The HTTP transport now accepts an `InnocenceWindow` duration, and an
+  `innocenceWindow` config field.
 ### Added
 - Reintroduce envelope-agnostic Thrift inbounds. Thrift inbounds will now
   accept Thrift requests with or without envelopes.  This feature was

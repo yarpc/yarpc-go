@@ -45,6 +45,7 @@ type transportOptions struct {
 	responseHeaderTimeout time.Duration
 	connTimeout           time.Duration
 	connBackoffStrategy   backoffapi.Strategy
+	innocenceWindow       time.Duration
 	tracer                opentracing.Tracer
 	buildClient           func(*transportOptions) *http.Client
 	logger                *zap.Logger
@@ -56,6 +57,7 @@ var defaultTransportOptions = transportOptions{
 	connTimeout:         defaultConnTimeout,
 	connBackoffStrategy: backoff.DefaultExponential,
 	buildClient:         buildHTTPClient,
+	innocenceWindow:     defaultInnocenceWindow,
 }
 
 func newTransportOptions() transportOptions {
@@ -160,6 +162,24 @@ func ConnBackoff(s backoffapi.Strategy) TransportOption {
 	}
 }
 
+// InnocenceWindow is the duration after the peer connection management loop
+// will suspend suspicion for a peer after successfully checking whether the
+// peer is live with a fresh TCP connection.
+//
+// The default innocence window is 5 seconds.
+//
+// A timeout does not necessarily indicate that a peer is unavailable,
+// but it could indicate that the connection is half-open, that the peer died
+// without sending a TCP FIN packet.
+// In this case, the peer connection management loop attempts to open a TCP
+// connection in the background, once per innocence window, while suspicious of
+// the connection, leaving the peer available until it fails.
+func InnocenceWindow(d time.Duration) TransportOption {
+	return func(options *transportOptions) {
+		options.innocenceWindow = d
+	}
+}
+
 // Tracer configures a tracer for the transport and all its inbounds and
 // outbounds.
 func Tracer(tracer opentracing.Tracer) TransportOption {
@@ -204,6 +224,7 @@ func (o *transportOptions) newTransport() *Transport {
 		client:              o.buildClient(o),
 		connTimeout:         o.connTimeout,
 		connBackoffStrategy: o.connBackoffStrategy,
+		innocenceWindow:     o.innocenceWindow,
 		peers:               make(map[string]*httpPeer),
 		tracer:              o.tracer,
 		logger:              logger,
@@ -244,6 +265,7 @@ type Transport struct {
 	connTimeout         time.Duration
 	connBackoffStrategy backoffapi.Strategy
 	connectorsGroup     sync.WaitGroup
+	innocenceWindow     time.Duration
 
 	tracer opentracing.Tracer
 	logger *zap.Logger

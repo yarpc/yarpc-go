@@ -506,6 +506,11 @@ func (o *Outbound) doWithPeer(
 		default:
 		}
 		if err == context.DeadlineExceeded {
+			// Note that the connection experienced a time out, which may
+			// indicate that the connection is half-open, that the destination
+			// died without sending a TCP FIN packet.
+			p.OnSuspect()
+
 			end := time.Now()
 			return nil, yarpcerrors.Newf(
 				yarpcerrors.CodeDeadlineExceeded,
