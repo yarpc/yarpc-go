@@ -83,6 +83,9 @@ func TestRoundRobinList(t *testing.T) {
 
 		// Boolean indicating whether the PeerList is "running" after the actions have been applied
 		expectedRunning bool
+
+		// Boolean indicating whether peers should be shuffled
+		shuffle bool
 	}
 	tests := []testStruct{
 		{
@@ -345,6 +348,29 @@ func TestRoundRobinList(t *testing.T) {
 				ChooseAction{ExpectedPeer: "1"},
 			},
 			expectedRunning: true,
+		},
+		{
+			msg: "start add many and remove many with shuffle",
+			retainedAvailablePeerIDs: []string{"1", "2", "3-r", "4-r", "5-a-r", "6-a-r", "7-a", "8-a"},
+			releasedPeerIDs:          []string{"3-r", "4-r", "5-a-r", "6-a-r"},
+			expectedAvailablePeers:   []string{"1", "2", "7-a", "8-a"},
+			peerListActions: []PeerListAction{
+				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1", "2", "3-r", "4-r"}},
+				UpdateAction{
+					AddedPeerIDs: []string{"5-a-r", "6-a-r", "7-a", "8-a"},
+				},
+				UpdateAction{
+					RemovedPeerIDs: []string{"5-a-r", "6-a-r", "3-r", "4-r"},
+				},
+				ChooseAction{ExpectedPeer: "2"},
+				ChooseAction{ExpectedPeer: "1"},
+				ChooseAction{ExpectedPeer: "8-a"},
+				ChooseAction{ExpectedPeer: "7-a"},
+				ChooseAction{ExpectedPeer: "2"},
+			},
+			expectedRunning: true,
+			shuffle:         true,
 		},
 		{
 			msg: "add retain error",
@@ -862,7 +888,10 @@ func TestRoundRobinList(t *testing.T) {
 			ExpectPeerRetainsWithError(transport, tt.errRetainedPeerIDs, tt.retainErr)
 			ExpectPeerReleases(transport, tt.errReleasedPeerIDs, tt.releaseErr)
 
-			var opts []ListOption
+			opts := []ListOption{seed(0)}
+			if !tt.shuffle {
+				opts = append(opts, noShuffle)
+			}
 			pl := New(transport, opts...)
 
 			deps := ListActionDeps{
@@ -970,3 +999,13 @@ func (p *testPeer) Status() peer.Status {
 func (*testPeer) StartRequest() {}
 
 func (*testPeer) EndRequest() {}
+
+var noShuffle ListOption = func(c *listConfig) {
+	c.shuffle = false
+}
+
+func seed(seed int64) ListOption {
+	return func(c *listConfig) {
+		c.seed = seed
+	}
+}
