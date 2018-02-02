@@ -54,7 +54,7 @@ func TestEncodeAndDecodeHeaders(t *testing.T) {
 
 	for _, tt := range tests {
 		headers := transport.HeadersFromMap(tt.headers)
-		assert.Equal(t, tt.bytes, encodeHeaders(headers))
+		assert.Equal(t, tt.bytes, encodeHeaders(tt.headers))
 
 		result, err := decodeHeaders(bytes.NewReader(tt.bytes))
 		if assert.NoError(t, err) {
@@ -130,7 +130,7 @@ func TestReadAndWriteHeaders(t *testing.T) {
 		headers := transport.HeadersFromMap(tt.headers)
 
 		buffer := newBufferArgWriter()
-		err := writeHeaders(tt.format, headers, func() (tchannel.ArgWriter, error) {
+		err := writeHeaders(tt.format, tt.headers, func() (tchannel.ArgWriter, error) {
 			return buffer, nil
 		})
 		require.NoError(t, err)

@@ -134,10 +134,14 @@ func TestCallSuccess(t *testing.T) {
 			assert.Equal(t, "service", call.ServiceName())
 			assert.Equal(t, tchannel.Raw, call.Format())
 			assert.Equal(t, "hello", call.MethodString())
-
+			fmt.Println(call)
 			headers, body, err := readArgs(call)
 			if assert.NoError(t, err, "failed to read request") {
-				assert.Equal(t, []byte(fmt.Sprintf("%s:%s", headerKey, headerVal)), headers)
+				assert.Equal(t, []byte{
+					0x00, 0x01,
+					0x00, 0x0b, 'f', 'o', 'o', '-', 'B', 'A', 'R', '-', 'B', 'a', 'Z',
+					0x00, 0x09, 'F', 'o', 'o', 'B', 'a', 'r', 'B', 'a', 'z',
+				}, headers)
 				assert.Equal(t, []byte("world"), body)
 			}
 
@@ -154,7 +158,7 @@ func TestCallSuccess(t *testing.T) {
 			assert.NoError(t, err, "failed to write response")
 		}))
 
-	x, err := NewTransport(ServiceName("caller"), CanonicalHeader())
+	x, err := NewTransport(ServiceName("caller"), RawHeader())
 	require.NoError(t, err)
 	require.NoError(t, x.Start(), "failed to start transport")
 

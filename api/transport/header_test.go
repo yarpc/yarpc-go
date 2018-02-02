@@ -80,3 +80,14 @@ func TestNewHeaders(t *testing.T) {
 		}
 	}
 }
+
+func TestItemsAndRawItems(t *testing.T) {
+	const (
+		headerKey          = "foo-BAR-BaZ"
+		headerKeyLowercase = "foo-bar-baz"
+		headerVal          = "FooBarBaz"
+	)
+	header := NewHeaders().With(headerKey, headerVal)
+	assert.Equal(t, map[string]string{headerKey: headerVal}, header.RawItems())
+	assert.Equal(t, map[string]string{headerKeyLowercase: headerVal}, header.Items())
+}

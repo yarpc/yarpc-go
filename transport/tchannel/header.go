@@ -98,15 +98,22 @@ func writeRequestHeaders(
 	format tchannel.Format,
 	appHeaders map[string]string,
 	getWriter func() (tchannel.ArgWriter, error),
+	rawHeader bool,
 ) error {
 	headers := transport.NewHeadersWithCapacity(len(appHeaders))
 	// TODO: zero-alloc version
-
 	for k, v := range appHeaders {
 		headers = headers.With(k, v)
 	}
 
-	return writeHeaders(format, headers, getWriter)
+	var items map[string]string
+	if rawHeader {
+		items = headers.RawItems()
+	} else {
+		items = headers.Items()
+	}
+
+	return writeHeaders(format, items, getWriter)
 }
 
 // writeHeaders writes the given headers using the given function to get the
@@ -116,10 +123,10 @@ func writeRequestHeaders(
 // InboundCallResponse.
 //
 // If the format is JSON, the headers are JSON encoded.
-func writeHeaders(format tchannel.Format, headers transport.Headers, getWriter func() (tchannel.ArgWriter, error)) error {
+func writeHeaders(format tchannel.Format, headers map[string]string, getWriter func() (tchannel.ArgWriter, error)) error {
 	if format == tchannel.JSON {
 		// JSON is special
-		return tchannel.NewArgWriter(getWriter()).WriteJSON(headers.Items())
+		return tchannel.NewArgWriter(getWriter()).WriteJSON(headers)
 	}
 	return tchannel.NewArgWriter(getWriter()).Write(encodeHeaders(headers))
 }
@@ -148,13 +155,13 @@ func decodeHeaders(r io.Reader) (transport.Headers, error) {
 // encodeHeaders encodes headers using the format:
 //
 // 	nh:2 (k~2 v~2){nh}
-func encodeHeaders(hs transport.Headers) []byte {
-	if hs.Len() == 0 {
+func encodeHeaders(hs map[string]string) []byte {
+	if len(hs) == 0 {
 		return []byte{0, 0} // nh = 2
 	}
 
 	size := 2 // nh:2
-	for k, v := range hs.Items() {
+	for k, v := range hs {
 		size += len(k) + 2 // k~2
 		size += len(v) + 2 // v~2
 	}
@@ -162,8 +169,8 @@ func encodeHeaders(hs transport.Headers) []byte {
 	out := make([]byte, size)
 
 	i := 2
-	binary.BigEndian.PutUint16(out, uint16(hs.Len())) // nh:2
-	for k, v := range hs.Items() {
+	binary.BigEndian.PutUint16(out, uint16(len(hs))) // nh:2
+	for k, v := range hs {
 		i += _putStr16(k, out[i:]) // k~2
 		i += _putStr16(v, out[i:]) // v~2
 	}
