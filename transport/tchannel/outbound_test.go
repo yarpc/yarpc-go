@@ -22,7 +22,6 @@ package tchannel
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"sync"
 	"testing"
@@ -134,7 +133,6 @@ func TestCallSuccess(t *testing.T) {
 			assert.Equal(t, "service", call.ServiceName())
 			assert.Equal(t, tchannel.Raw, call.Format())
 			assert.Equal(t, "hello", call.MethodString())
-			fmt.Println(call)
 			headers, body, err := readArgs(call)
 			if assert.NoError(t, err, "failed to read request") {
 				assert.Equal(t, []byte{

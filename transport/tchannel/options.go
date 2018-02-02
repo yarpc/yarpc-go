@@ -177,7 +177,7 @@ func ConnBackoff(s backoffapi.Strategy) TransportOption {
 	}
 }
 
-// RawHeader specifies to skip canonicalizing the header
+// RawHeader specifies whether to use the raw header keys
 func RawHeader() TransportOption {
 	return func(options *transportOptions) {
 		options.rawHeader = true

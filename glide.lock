@@ -1,5 +1,5 @@
 hash: 7c7d875c128e2f5ee2218b87f3ec2b6fb335279d1cda2657c6cc4eb92a2ecdb9
-updated: 2018-01-31T14:57:48.544493-08:00
+updated: 2018-02-01T17:36:42.499728-08:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -103,7 +103,7 @@ imports:
   - thrift-gen/zipkincore
   - utils
 - name: github.com/uber/tchannel-go
-  version: 7bcb33f4bb908c21374f8bfdc9d4b1ebcbb8dab0
+  version: acd4eb54c11531814d9cd0344fdc53bebe86ab12
   subpackages:
   - internal/argreader
   - json
@@ -168,7 +168,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 0ed95abb35c445290478a5348a7b38bb154135fd
+  version: b417086c80e91bfa321ef761574721644b8b9f61
   repo: https://github.com/golang/net
   subpackages:
   - bpf
