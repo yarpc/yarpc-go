@@ -28,17 +28,22 @@ import (
 	"go.uber.org/yarpc/api/transport"
 )
 
-func TestHeaders(t *testing.T) {
+func TestHTTPHeaders(t *testing.T) {
 	tests := []struct {
-		prefix    string
-		transport transport.Headers
-		http      http.Header
+		prefix        string
+		toTransport   transport.Headers
+		fromTransport transport.Headers
+		http          http.Header
 	}{
 		{
 			ApplicationHeaderPrefix,
 			transport.HeadersFromMap(map[string]string{
 				"foo":     "bar",
 				"foo-bar": "hello",
+			}),
+			transport.HeadersFromMap(map[string]string{
+				"Foo":     "bar",
+				"Foo-Bar": "hello",
 			}),
 			http.Header{
 				"Rpc-Header-Foo":     []string{"bar"},
@@ -49,8 +54,8 @@ func TestHeaders(t *testing.T) {
 
 	for _, tt := range tests {
 		m := headerMapper{tt.prefix}
-		assert.Equal(t, tt.transport, m.FromHTTPHeaders(tt.http, transport.Headers{}))
-		assert.Equal(t, tt.http, m.ToHTTPHeaders(tt.transport, nil))
+		assert.Equal(t, tt.fromTransport, m.FromHTTPHeaders(tt.http, transport.Headers{}))
+		assert.Equal(t, tt.http, m.ToHTTPHeaders(tt.toTransport, nil))
 	}
 }
 
