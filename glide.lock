@@ -1,5 +1,5 @@
 hash: 7c7d875c128e2f5ee2218b87f3ec2b6fb335279d1cda2657c6cc4eb92a2ecdb9
-updated: 2018-02-01T17:36:42.499728-08:00
+updated: 2018-02-04T14:32:04.466459-08:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -79,7 +79,7 @@ imports:
   subpackages:
   - xfs
 - name: github.com/stretchr/testify
-  version: 12b6f73e6084dad08a7c6e575284b177ecafbc71
+  version: a726187e3128d0a0ec37f73ca7c4d3e508e6c2e5
   subpackages:
   - assert
   - require
@@ -168,7 +168,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: b417086c80e91bfa321ef761574721644b8b9f61
+  version: 2fb46b16b8dda405028c50f7c7f0f9dd1fa6bfb1
   repo: https://github.com/golang/net
   subpackages:
   - bpf
