@@ -108,7 +108,7 @@ func writeRequestHeaders(
 
 	var items map[string]string
 	if rawHeader {
-		items = headers.RawItems()
+		items = headers.ForwardingItems()
 	} else {
 		items = headers.Items()
 	}

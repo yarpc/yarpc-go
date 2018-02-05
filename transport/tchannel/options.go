@@ -56,7 +56,7 @@ type transportOptions struct {
 	name                string
 	connTimeout         time.Duration
 	connBackoffStrategy backoffapi.Strategy
-	rawHeader           bool
+	forwardingHeader    bool
 }
 
 // newTransportOptions constructs the default transport options struct
@@ -177,9 +177,9 @@ func ConnBackoff(s backoffapi.Strategy) TransportOption {
 	}
 }
 
-// RawHeader specifies whether to use the raw header keys
-func RawHeader() TransportOption {
+// ForwardingHeader specifies whether to forward headers without canonicalizing it
+func ForwardingHeader() TransportOption {
 	return func(options *transportOptions) {
-		options.rawHeader = true
+		options.forwardingHeader = true
 	}
 }

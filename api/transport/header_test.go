@@ -81,13 +81,35 @@ func TestNewHeaders(t *testing.T) {
 	}
 }
 
-func TestItemsAndRawItems(t *testing.T) {
-	const (
-		headerKey          = "foo-BAR-BaZ"
-		headerKeyLowercase = "foo-bar-baz"
-		headerVal          = "FooBarBaz"
+func TestItemsAndForwardingItems(t *testing.T) {
+	var (
+		h = map[string]string{
+			"foo-BAR-BaZ":  "foo-bar-baz",
+			"Foo-bAr-baZ":  "FOO-BAR-BAZ",
+			"other-header": "other-value",
+		}
+		items = map[string]string{
+			"foo-bar-baz":  "FOO-BAR-BAZ",
+			"other-header": "other-value",
+		}
+		forwardingItems = map[string]string{
+			"Foo-bAr-baZ":  "FOO-BAR-BAZ",
+			"other-header": "other-value",
+		}
+		afterDeletion = map[string]string{
+			"other-header": "other-value",
+		}
 	)
-	header := NewHeaders().With(headerKey, headerVal)
-	assert.Equal(t, map[string]string{headerKey: headerVal}, header.RawItems())
-	assert.Equal(t, map[string]string{headerKeyLowercase: headerVal}, header.Items())
+
+	header := NewHeaders()
+	for k, v := range h {
+		header = header.With(k, v)
+	}
+
+	assert.Equal(t, forwardingItems, header.ForwardingItems())
+	assert.Equal(t, items, header.Items())
+
+	header.Del("foo-bar-BAZ")
+	assert.Equal(t, afterDeletion, header.ForwardingItems())
+	assert.Equal(t, afterDeletion, header.Items())
 }

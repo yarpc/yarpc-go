@@ -97,7 +97,7 @@ func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport
 func (p *tchannelPeer) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	root := p.transport.ch.RootPeers()
 	tp := root.GetOrAdd(p.HostPort())
-	return callWithPeer(ctx, req, tp, p.transport.rawHeader)
+	return callWithPeer(ctx, req, tp, p.transport.forwardingHeader)
 }
 
 // callWithPeer sends a request with the chosen peer.
@@ -135,7 +135,7 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 
 	var headerItems map[string]string
 	if rawHeader {
-		headerItems = req.Headers.RawItems()
+		headerItems = req.Headers.ForwardingItems()
 	} else {
 		headerItems = req.Headers.Items()
 	}

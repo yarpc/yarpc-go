@@ -82,12 +82,12 @@ func (options transportOptions) newChannelTransport() *ChannelTransport {
 		logger = zap.NewNop()
 	}
 	return &ChannelTransport{
-		once:      lifecycle.NewOnce(),
-		ch:        options.ch,
-		addr:      options.addr,
-		tracer:    options.tracer,
-		logger:    logger,
-		rawHeader: options.rawHeader,
+		once:             lifecycle.NewOnce(),
+		ch:               options.ch,
+		addr:             options.addr,
+		tracer:           options.tracer,
+		logger:           logger,
+		forwardingHeader: options.forwardingHeader,
 	}
 }
 
@@ -96,13 +96,13 @@ func (options transportOptions) newChannelTransport() *ChannelTransport {
 // If you have a YARPC peer.Chooser, use the unqualified tchannel.Transport
 // instead.
 type ChannelTransport struct {
-	ch        Channel
-	name      string
-	addr      string
-	tracer    opentracing.Tracer
-	logger    *zap.Logger
-	router    transport.Router
-	rawHeader bool
+	ch               Channel
+	name             string
+	addr             string
+	tracer           opentracing.Tracer
+	logger           *zap.Logger
+	router           transport.Router
+	forwardingHeader bool
 
 	once *lifecycle.Once
 }

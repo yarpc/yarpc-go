@@ -38,8 +38,8 @@ func CanonicalizeHeaderKey(k string) string {
 type Headers struct {
 	// This representation allows us to make zero-value valid
 	items map[string]string
-	// non-canonicalized headers
-	rawItems map[string]string
+	// map from canonicalized key to original key
+	keyMapping map[string]string
 }
 
 // NewHeaders builds a new Headers object.
@@ -67,12 +67,13 @@ func (h Headers) With(k, v string) Headers {
 	if h.items == nil {
 		h.items = make(map[string]string)
 	}
-	if h.rawItems == nil {
-		h.rawItems = make(map[string]string)
+	if h.keyMapping == nil {
+		h.keyMapping = make(map[string]string)
 	}
 
-	h.items[CanonicalizeHeaderKey(k)] = v
-	h.rawItems[k] = v
+	canonicalizedKey := CanonicalizeHeaderKey(k)
+	h.items[canonicalizedKey] = v
+	h.keyMapping[canonicalizedKey] = k
 	return h
 }
 
@@ -80,8 +81,9 @@ func (h Headers) With(k, v string) Headers {
 //
 // This is a no-op if the key does not exist.
 func (h Headers) Del(k string) {
-	delete(h.items, CanonicalizeHeaderKey(k))
-	delete(h.rawItems, k)
+	canonicalizedKey := CanonicalizeHeaderKey(k)
+	delete(h.items, canonicalizedKey)
+	delete(h.keyMapping, canonicalizedKey)
 }
 
 // Get retrieves the value associated with the given header name.
@@ -109,14 +111,18 @@ func (h Headers) Items() map[string]string {
 	return h.items
 }
 
-// RawItems returns the non-canonicalized version of the underlying map
+// ForwardingItems returns the non-canonicalized version of the underlying map
 // for this Headers object. The returned map MUST NOT be changed.
 // Doing so will result in undefined behavior.
-func (h Headers) RawItems() map[string]string {
-	if h.rawItems == nil {
+func (h Headers) ForwardingItems() map[string]string {
+	if h.keyMapping == nil {
 		return emptyMap
 	}
-	return h.rawItems
+	m := make(map[string]string, len(h.keyMapping))
+	for k, v := range h.keyMapping {
+		m[v] = h.items[k]
+	}
+	return m
 }
 
 // HeadersFromMap builds a new Headers object from the given map of header
