@@ -83,10 +83,12 @@ func TestNewHeaders(t *testing.T) {
 
 func TestItemsAndForwardingItems(t *testing.T) {
 	var (
-		h = map[string]string{
-			"foo-BAR-BaZ":  "foo-bar-baz",
-			"Foo-bAr-baZ":  "FOO-BAR-BAZ",
-			"other-header": "other-value",
+		h = []struct {
+			key, val string
+		}{
+			{"foo-BAR-BaZ", "foo-bar-baz"},
+			{"Foo-bAr-baZ", "FOO-BAR-BAZ"},
+			{"other-header", "other-value"},
 		}
 		items = map[string]string{
 			"foo-bar-baz":  "FOO-BAR-BAZ",
@@ -102,8 +104,8 @@ func TestItemsAndForwardingItems(t *testing.T) {
 	)
 
 	header := NewHeaders()
-	for k, v := range h {
-		header = header.With(k, v)
+	for _, v := range h {
+		header = header.With(v.key, v.val)
 	}
 
 	assert.Equal(t, forwardingItems, header.ForwardingItems())
