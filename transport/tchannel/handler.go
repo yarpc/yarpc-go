@@ -94,6 +94,10 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	responseWriter := newResponseWriter(call.Response(), call.Format())
 
 	err := h.callHandler(ctx, call, responseWriter)
+	if yarpcerrors.IsIgnored(err) {
+		return // drop request
+	}
+
 	if err != nil && !responseWriter.isApplicationError {
 		// TODO: log error
 		_ = call.Response().SendSystemError(getSystemError(err))

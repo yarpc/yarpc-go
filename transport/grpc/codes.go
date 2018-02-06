@@ -45,6 +45,7 @@ var (
 		yarpcerrors.CodeUnavailable:        codes.Unavailable,
 		yarpcerrors.CodeDataLoss:           codes.DataLoss,
 		yarpcerrors.CodeUnauthenticated:    codes.Unauthenticated,
+		yarpcerrors.CodeIgnored:            codes.Unavailable,
 	}
 
 	// _grpcCodeToCode maps all gRPC Codes to their corresponding Code.

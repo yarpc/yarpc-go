@@ -42,6 +42,7 @@ var (
 		yarpcerrors.CodeUnavailable:        503,
 		yarpcerrors.CodeDataLoss:           500,
 		yarpcerrors.CodeUnauthenticated:    401,
+		yarpcerrors.CodeIgnored:            503,
 	}
 
 	// _statusCodeToCodes maps HTTP status codes to a slice of their corresponding Codes.
@@ -67,7 +68,10 @@ var (
 			yarpcerrors.CodeDataLoss,
 		},
 		501: {yarpcerrors.CodeUnimplemented},
-		503: {yarpcerrors.CodeUnavailable},
+		503: {
+			yarpcerrors.CodeUnavailable,
+			yarpcerrors.CodeIgnored,
+		},
 		504: {yarpcerrors.CodeDeadlineExceeded},
 	}
 )

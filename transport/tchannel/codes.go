@@ -40,6 +40,9 @@ var (
 		yarpcerrors.CodeUnavailable:       tchannel.ErrCodeDeclined,
 		yarpcerrors.CodeDataLoss:          tchannel.ErrCodeProtocol,
 		yarpcerrors.CodeResourceExhausted: tchannel.ErrCodeBusy,
+
+		// yarpcerrors.CodeIgnored is intentionally omitted. This error code will
+		// black hole requests and so, no error will be returned to the client.
 	}
 
 	// _tchannelCodeToCode maps TChannel SystemErrCodes to their corresponding Code.
