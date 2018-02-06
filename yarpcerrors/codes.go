@@ -136,6 +136,9 @@ const (
 	// CodeUnauthenticated means the request does not have valid authentication
 	// credentials for the operation.
 	CodeUnauthenticated Code = 16
+
+	// CodeIgnored means the request was ignored.
+	CodeIgnored Code = 17
 )
 
 var (
@@ -157,6 +160,7 @@ var (
 		CodeUnavailable:        "unavailable",
 		CodeDataLoss:           "data-loss",
 		CodeUnauthenticated:    "unauthenticated",
+		CodeIgnored:            "ignored",
 	}
 	_stringToCode = map[string]Code{
 		"ok":                  CodeOK,
@@ -176,6 +180,7 @@ var (
 		"unavailable":         CodeUnavailable,
 		"data-loss":           CodeDataLoss,
 		"unauthenticated":     CodeUnauthenticated,
+		"ignored":             CodeIgnored,
 	}
 )
 

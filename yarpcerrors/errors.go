@@ -234,6 +234,12 @@ func UnauthenticatedErrorf(format string, args ...interface{}) error {
 	return Newf(CodeUnauthenticated, format, args...)
 }
 
+// IgnoredErrorf returns a new Status with code CodeIgnored
+// by calling Newf(CodeIgnore, format, args...).
+func IgnoredErrorf(format string, args ...interface{}) error {
+	return Newf(CodeIgnored, format, args...)
+}
+
 // IsCancelled returns true if FromError(err).Code() == CodeCancelled.
 func IsCancelled(err error) bool {
 	return FromError(err).Code() == CodeCancelled
@@ -312,6 +318,11 @@ func IsDataLoss(err error) bool {
 // IsUnauthenticated returns true if FromError(err).Code() == CodeUnauthenticated.
 func IsUnauthenticated(err error) bool {
 	return FromError(err).Code() == CodeUnauthenticated
+}
+
+// IsIgnored returns true if FromError(err).Code() == CodeIgnored.
+func IsIgnored(err error) bool {
+	return FromError(err).Code() == CodeIgnored
 }
 
 // IsYARPCError returns whether the provided error is a YARPC error.
