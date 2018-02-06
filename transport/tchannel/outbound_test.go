@@ -156,7 +156,7 @@ func TestCallSuccess(t *testing.T) {
 			assert.NoError(t, err, "failed to write response")
 		}))
 
-	x, err := NewTransport(ServiceName("caller"), ForwardingHeader())
+	x, err := NewTransport(ServiceName("caller"), ExactCaseHeader())
 	require.NoError(t, err)
 	require.NoError(t, x.Start(), "failed to start transport")
 

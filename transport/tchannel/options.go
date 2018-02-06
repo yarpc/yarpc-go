@@ -56,7 +56,7 @@ type transportOptions struct {
 	name                string
 	connTimeout         time.Duration
 	connBackoffStrategy backoffapi.Strategy
-	forwardingHeader    bool
+	exactCaseHeader     bool
 }
 
 // newTransportOptions constructs the default transport options struct
@@ -177,9 +177,9 @@ func ConnBackoff(s backoffapi.Strategy) TransportOption {
 	}
 }
 
-// ForwardingHeader specifies whether to forward headers without canonicalizing it
-func ForwardingHeader() TransportOption {
+// ExactCaseHeader specifies whether to forward headers without canonicalizing it
+func ExactCaseHeader() TransportOption {
 	return func(options *transportOptions) {
-		options.forwardingHeader = true
+		options.exactCaseHeader = true
 	}
 }

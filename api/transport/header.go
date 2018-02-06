@@ -81,9 +81,8 @@ func (h Headers) With(k, v string) Headers {
 //
 // This is a no-op if the key does not exist.
 func (h Headers) Del(k string) {
-	canonicalizedKey := CanonicalizeHeaderKey(k)
-	delete(h.items, canonicalizedKey)
-	delete(h.originalItems, canonicalizedKey)
+	delete(h.items, CanonicalizeHeaderKey(k))
+	delete(h.originalItems, k)
 }
 
 // Get retrieves the value associated with the given header name.

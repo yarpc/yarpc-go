@@ -102,10 +102,14 @@ func TestItemsAndExactCaseItems(t *testing.T) {
 		postDeletionItems = map[string]string{
 			"other-header": "other-value",
 		}
-		postDeletionExactCaseItems = map[string]string{
+		postDeletionExactCaseItems1 = map[string]string{
 			"foo-BAR-BaZ":  "foo-bar-baz",
 			"Foo-bAr-baZ":  "FOO-BAR-BAZ",
 			"other-header": "other-value",
+		}
+		postDeletionExactCaseItems2 = map[string]string{
+			"foo-BAR-BaZ": "foo-bar-baz",
+			"Foo-bAr-baZ": "FOO-BAR-BAZ",
 		}
 	)
 
@@ -119,5 +123,9 @@ func TestItemsAndExactCaseItems(t *testing.T) {
 
 	header.Del("foo-bar-BAZ")
 	assert.Equal(t, postDeletionItems, header.Items())
-	assert.Equal(t, postDeletionExactCaseItems, header.ExactCaseItems())
+	assert.Equal(t, postDeletionExactCaseItems1, header.ExactCaseItems())
+
+	header.Del("other-header")
+	assert.Equal(t, map[string]string{}, header.Items())
+	assert.Equal(t, postDeletionExactCaseItems2, header.ExactCaseItems())
 }

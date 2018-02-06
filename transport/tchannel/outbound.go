@@ -97,7 +97,7 @@ func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport
 func (p *tchannelPeer) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	root := p.transport.ch.RootPeers()
 	tp := root.GetOrAdd(p.HostPort())
-	return callWithPeer(ctx, req, tp, p.transport.forwardingHeader)
+	return callWithPeer(ctx, req, tp, p.transport.exactCaseHeader)
 }
 
 // callWithPeer sends a request with the chosen peer.
@@ -133,15 +133,8 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		return nil, err
 	}
 
-	var headerItems map[string]string
-	if exactCaseHeader {
-		headerItems = req.Headers.ExactCaseItems()
-	} else {
-		headerItems = req.Headers.Items()
-	}
-
 	// Inject tracing system baggage
-	reqHeaders := tchannel.InjectOutboundSpan(call.Response(), headerItems)
+	reqHeaders := tchannel.InjectOutboundSpan(call.Response(), req.Headers.ExactCaseItems())
 
 	if err := writeRequestHeaders(ctx, format, reqHeaders, call.Arg2Writer, exactCaseHeader); err != nil {
 		// TODO(abg): This will wrap IO errors while writing headers as encode
