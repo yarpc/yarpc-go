@@ -98,22 +98,18 @@ func writeRequestHeaders(
 	format tchannel.Format,
 	appHeaders map[string]string,
 	getWriter func() (tchannel.ArgWriter, error),
-	rawHeader bool,
+	writeExactHeaderCase bool,
 ) error {
+	if writeExactHeaderCase {
+		return writeHeaders(format, appHeaders, getWriter)
+	}
 	headers := transport.NewHeadersWithCapacity(len(appHeaders))
 	// TODO: zero-alloc version
 	for k, v := range appHeaders {
 		headers = headers.With(k, v)
 	}
 
-	var items map[string]string
-	if rawHeader {
-		items = headers.ForwardingItems()
-	} else {
-		items = headers.Items()
-	}
-
-	return writeHeaders(format, items, getWriter)
+	return writeHeaders(format, headers.Items(), getWriter)
 }
 
 // writeHeaders writes the given headers using the given function to get the

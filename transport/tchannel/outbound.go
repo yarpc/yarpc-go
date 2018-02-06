@@ -101,7 +101,7 @@ func (p *tchannelPeer) Call(ctx context.Context, req *transport.Request) (*trans
 }
 
 // callWithPeer sends a request with the chosen peer.
-func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Peer, rawHeader bool) (*transport.Response, error) {
+func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Peer, exactCaseHeader bool) (*transport.Response, error) {
 	// NB(abg): Under the current API, the local service's name is required
 	// twice: once when constructing the TChannel and then again when
 	// constructing the RPC.
@@ -134,8 +134,8 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 	}
 
 	var headerItems map[string]string
-	if rawHeader {
-		headerItems = req.Headers.ForwardingItems()
+	if exactCaseHeader {
+		headerItems = req.Headers.ExactCaseItems()
 	} else {
 		headerItems = req.Headers.Items()
 	}
@@ -143,7 +143,7 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 	// Inject tracing system baggage
 	reqHeaders := tchannel.InjectOutboundSpan(call.Response(), headerItems)
 
-	if err := writeRequestHeaders(ctx, format, reqHeaders, call.Arg2Writer, rawHeader); err != nil {
+	if err := writeRequestHeaders(ctx, format, reqHeaders, call.Arg2Writer, exactCaseHeader); err != nil {
 		// TODO(abg): This will wrap IO errors while writing headers as encode
 		// errors. We should fix that.
 		return nil, errors.RequestHeadersEncodeError(req, err)

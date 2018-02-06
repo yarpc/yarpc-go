@@ -81,7 +81,7 @@ func TestNewHeaders(t *testing.T) {
 	}
 }
 
-func TestItemsAndForwardingItems(t *testing.T) {
+func TestItemsAndExactCaseItems(t *testing.T) {
 	var (
 		h = []struct {
 			key, val string
@@ -95,10 +95,16 @@ func TestItemsAndForwardingItems(t *testing.T) {
 			"other-header": "other-value",
 		}
 		forwardingItems = map[string]string{
+			"foo-BAR-BaZ":  "foo-bar-baz",
 			"Foo-bAr-baZ":  "FOO-BAR-BAZ",
 			"other-header": "other-value",
 		}
-		afterDeletion = map[string]string{
+		postDeletionItems = map[string]string{
+			"other-header": "other-value",
+		}
+		postDeletionExactCaseItems = map[string]string{
+			"foo-BAR-BaZ":  "foo-bar-baz",
+			"Foo-bAr-baZ":  "FOO-BAR-BAZ",
 			"other-header": "other-value",
 		}
 	)
@@ -108,10 +114,10 @@ func TestItemsAndForwardingItems(t *testing.T) {
 		header = header.With(v.key, v.val)
 	}
 
-	assert.Equal(t, forwardingItems, header.ForwardingItems())
+	assert.Equal(t, forwardingItems, header.ExactCaseItems())
 	assert.Equal(t, items, header.Items())
 
 	header.Del("foo-bar-BAZ")
-	assert.Equal(t, afterDeletion, header.ForwardingItems())
-	assert.Equal(t, afterDeletion, header.Items())
+	assert.Equal(t, postDeletionItems, header.Items())
+	assert.Equal(t, postDeletionExactCaseItems, header.ExactCaseItems())
 }

@@ -38,8 +38,8 @@ func CanonicalizeHeaderKey(k string) string {
 type Headers struct {
 	// This representation allows us to make zero-value valid
 	items map[string]string
-	// map from canonicalized key to original key
-	keyMapping map[string]string
+	// original non-canonical headers, foo-bar will be treated as different value than Foo-bar
+	originalItems map[string]string
 }
 
 // NewHeaders builds a new Headers object.
@@ -53,7 +53,10 @@ func NewHeadersWithCapacity(capacity int) Headers {
 	if capacity <= 0 {
 		return Headers{}
 	}
-	return Headers{items: make(map[string]string, capacity)}
+	return Headers{
+		items:         make(map[string]string, capacity),
+		originalItems: make(map[string]string, capacity),
+	}
 }
 
 // With returns a Headers object with the given key-value pair added to it.
@@ -66,14 +69,11 @@ func NewHeadersWithCapacity(capacity int) Headers {
 func (h Headers) With(k, v string) Headers {
 	if h.items == nil {
 		h.items = make(map[string]string)
-	}
-	if h.keyMapping == nil {
-		h.keyMapping = make(map[string]string)
+		h.originalItems = make(map[string]string)
 	}
 
-	canonicalizedKey := CanonicalizeHeaderKey(k)
-	h.items[canonicalizedKey] = v
-	h.keyMapping[canonicalizedKey] = k
+	h.items[CanonicalizeHeaderKey(k)] = v
+	h.originalItems[k] = v
 	return h
 }
 
@@ -83,7 +83,7 @@ func (h Headers) With(k, v string) Headers {
 func (h Headers) Del(k string) {
 	canonicalizedKey := CanonicalizeHeaderKey(k)
 	delete(h.items, canonicalizedKey)
-	delete(h.keyMapping, canonicalizedKey)
+	delete(h.originalItems, canonicalizedKey)
 }
 
 // Get retrieves the value associated with the given header name.
@@ -111,18 +111,14 @@ func (h Headers) Items() map[string]string {
 	return h.items
 }
 
-// ForwardingItems returns the non-canonicalized version of the underlying map
+// ExactCaseItems returns the non-canonicalized version of the underlying map
 // for this Headers object. The returned map MUST NOT be changed.
 // Doing so will result in undefined behavior.
-func (h Headers) ForwardingItems() map[string]string {
-	if h.keyMapping == nil {
+func (h Headers) ExactCaseItems() map[string]string {
+	if h.originalItems == nil {
 		return emptyMap
 	}
-	m := make(map[string]string, len(h.keyMapping))
-	for k, v := range h.keyMapping {
-		m[v] = h.items[k]
-	}
-	return m
+	return h.originalItems
 }
 
 // HeadersFromMap builds a new Headers object from the given map of header
