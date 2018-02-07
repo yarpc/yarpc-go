@@ -219,6 +219,8 @@ func TestApplicationErrorPropagation(t *testing.T) {
 func TestYARPCRequestValidator(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, []TransportOption{
+		// TODO: this will only test client-side, need to test server-side
+		// with no option specified on client-side
 		RequestValidator(func(transportRequest *transport.Request) error {
 			if strings.HasSuffix(transportRequest.Procedure, "GetValue") {
 				// just some random error
