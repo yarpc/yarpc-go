@@ -104,12 +104,6 @@ func TestItemsAndExactCaseItems(t *testing.T) {
 		postDeletionExactCaseItems1 = map[string]string{
 			"Foo-bAr-baZ": "FOO-BAR-BAZ",
 		}
-		/*
-			postDeletionExactCaseItems2 = map[string]string{
-				"foo-BAR-BaZ": "foo-bar-baz",
-				"Foo-bAr-baZ": "FOO-BAR-BAZ",
-			}
-		*/
 	)
 
 	header := NewHeaders()
