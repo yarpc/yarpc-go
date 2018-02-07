@@ -111,7 +111,7 @@ func addObservingMiddleware(cfg Config, meter *metrics.Scope, logger *zap.Logger
 	return cfg
 }
 
-// convertOutbounds applys outbound middleware and creates validator outbounds
+// convertOutbounds applies outbound middleware and creates validator outbounds
 func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
 	outboundSpecs := make(Outbounds, len(outbounds))
 
