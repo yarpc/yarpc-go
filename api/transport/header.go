@@ -40,6 +40,8 @@ type Headers struct {
 	items map[string]string
 	// original non-canonical headers, foo-bar will be treated as different value than Foo-bar
 	originalItems map[string]string
+	// cannoical to original mapping
+	toOriginal map[string]string
 }
 
 // NewHeaders builds a new Headers object.
@@ -56,6 +58,7 @@ func NewHeadersWithCapacity(capacity int) Headers {
 	return Headers{
 		items:         make(map[string]string, capacity),
 		originalItems: make(map[string]string, capacity),
+		toOriginal:    make(map[string]string, capacity),
 	}
 }
 
@@ -70,10 +73,16 @@ func (h Headers) With(k, v string) Headers {
 	if h.items == nil {
 		h.items = make(map[string]string)
 		h.originalItems = make(map[string]string)
+		h.toOriginal = make(map[string]string)
 	}
-
-	h.items[CanonicalizeHeaderKey(k)] = v
+	headerKey := CanonicalizeHeaderKey(k)
+	// remove from originalItem if canconical header is already present
+	if original, ok := h.toOriginal[headerKey]; ok {
+		delete(h.originalItems, original)
+	}
+	h.items[headerKey] = v
 	h.originalItems[k] = v
+	h.toOriginal[headerKey] = k
 	return h
 }
 
@@ -81,8 +90,12 @@ func (h Headers) With(k, v string) Headers {
 //
 // This is a no-op if the key does not exist.
 func (h Headers) Del(k string) {
-	delete(h.items, CanonicalizeHeaderKey(k))
-	delete(h.originalItems, k)
+	headerKey := CanonicalizeHeaderKey(k)
+	delete(h.items, headerKey)
+	if original, ok := h.toOriginal[headerKey]; ok {
+		delete(h.originalItems, original)
+	}
+	delete(h.toOriginal, headerKey)
 }
 
 // Get retrieves the value associated with the given header name.

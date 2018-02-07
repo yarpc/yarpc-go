@@ -94,23 +94,22 @@ func TestItemsAndExactCaseItems(t *testing.T) {
 			"foo-bar-baz":  "FOO-BAR-BAZ",
 			"other-header": "other-value",
 		}
-		forwardingItems = map[string]string{
-			"foo-BAR-BaZ":  "foo-bar-baz",
+		exactCaseItems = map[string]string{
 			"Foo-bAr-baZ":  "FOO-BAR-BAZ",
 			"other-header": "other-value",
 		}
 		postDeletionItems = map[string]string{
-			"other-header": "other-value",
+			"foo-bar-baz": "FOO-BAR-BAZ",
 		}
 		postDeletionExactCaseItems1 = map[string]string{
-			"foo-BAR-BaZ":  "foo-bar-baz",
-			"Foo-bAr-baZ":  "FOO-BAR-BAZ",
-			"other-header": "other-value",
-		}
-		postDeletionExactCaseItems2 = map[string]string{
-			"foo-BAR-BaZ": "foo-bar-baz",
 			"Foo-bAr-baZ": "FOO-BAR-BAZ",
 		}
+		/*
+			postDeletionExactCaseItems2 = map[string]string{
+				"foo-BAR-BaZ": "foo-bar-baz",
+				"Foo-bAr-baZ": "FOO-BAR-BAZ",
+			}
+		*/
 	)
 
 	header := NewHeaders()
@@ -118,14 +117,15 @@ func TestItemsAndExactCaseItems(t *testing.T) {
 		header = header.With(v.key, v.val)
 	}
 
-	assert.Equal(t, forwardingItems, header.ExactCaseItems())
+	assert.Equal(t, exactCaseItems, header.ExactCaseItems())
 	assert.Equal(t, items, header.Items())
 
-	header.Del("foo-bar-BAZ")
+	header.Del("other-header")
 	assert.Equal(t, postDeletionItems, header.Items())
 	assert.Equal(t, postDeletionExactCaseItems1, header.ExactCaseItems())
 
-	header.Del("other-header")
+	header.Del("foo-bar-BAZ")
 	assert.Equal(t, map[string]string{}, header.Items())
-	assert.Equal(t, postDeletionExactCaseItems2, header.ExactCaseItems())
+	assert.Equal(t, map[string]string{}, header.ExactCaseItems())
+
 }
