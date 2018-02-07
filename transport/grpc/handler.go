@@ -62,6 +62,9 @@ func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error 
 	if err != nil {
 		return err
 	}
+	if err := h.i.t.options.requestValidator(transportRequest); err != nil {
+		return handlerErrorToGRPCError(err, nil)
+	}
 
 	handlerSpec, err := h.i.router.Choose(ctx, transportRequest)
 	if err != nil {
@@ -222,6 +225,8 @@ func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Req
 	return transport.DispatchUnaryHandler(ctx, unaryHandler, time.Now(), transportRequest, responseWriter)
 }
 
+// responseWriter can be nil, but no name will be propagated
+// name is only needed for backwards compatibility
 func handlerErrorToGRPCError(err error, responseWriter *responseWriter) error {
 	if err == nil {
 		return nil
@@ -241,7 +246,9 @@ func handlerErrorToGRPCError(err error, responseWriter *responseWriter) error {
 	message := yarpcStatus.Message()
 	// if the yarpc error has a name, set the header
 	if name != "" {
-		responseWriter.AddSystemHeader(ErrorNameHeader, name)
+		if responseWriter != nil {
+			responseWriter.AddSystemHeader(ErrorNameHeader, name)
+		}
 		if message == "" {
 			// if the message is empty, set the message to the name for grpc compatibility
 			message = name
