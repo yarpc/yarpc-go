@@ -88,17 +88,11 @@ func (h Headers) Len() int {
 	return len(h.items)
 }
 
-// Global empty map used by Items() for the case where h.items is nil.
-var emptyMap = map[string]string{}
-
 // Items returns the underlying map for this Headers object. The returned map
 // MUST NOT be changed. Doing so will result in undefined behavior.
 //
 // Keys in the map are normalized using CanonicalizeHeaderKey.
 func (h Headers) Items() map[string]string {
-	if h.items == nil {
-		return emptyMap
-	}
 	return h.items
 }
 
