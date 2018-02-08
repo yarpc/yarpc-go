@@ -123,77 +123,100 @@ func TestCallSuccess(t *testing.T) {
 		headerKey = "foo-BAR-BaZ"
 		headerVal = "FooBarBaz"
 	)
-	server := testutils.NewServer(t, nil)
-	defer server.Close()
-	serverHostPort := server.PeerInfo().HostPort
-
-	server.GetSubChannel("service").SetHandler(tchannel.HandlerFunc(
-		func(ctx context.Context, call *tchannel.InboundCall) {
-			assert.Equal(t, "caller", call.CallerName())
-			assert.Equal(t, "service", call.ServiceName())
-			assert.Equal(t, tchannel.Raw, call.Format())
-			assert.Equal(t, "hello", call.MethodString())
-			headers, body, err := readArgs(call)
-			if assert.NoError(t, err, "failed to read request") {
-				assert.Equal(t, []byte{
-					0x00, 0x01,
-					0x00, 0x0b, 'f', 'o', 'o', '-', 'B', 'A', 'R', '-', 'B', 'a', 'Z',
-					0x00, 0x09, 'F', 'o', 'o', 'B', 'a', 'r', 'B', 'a', 'z',
-				}, headers)
-				assert.Equal(t, []byte("world"), body)
-			}
-
-			dl, ok := ctx.Deadline()
-			assert.True(t, ok, "deadline expected")
-			assert.WithinDuration(t, time.Now(), dl, 200*testtime.Millisecond)
-
-			err = writeArgs(call.Response(),
-				[]byte{
-					0x00, 0x01,
-					0x00, 0x03, 'f', 'o', 'o',
-					0x00, 0x03, 'b', 'a', 'r',
-				}, []byte("great success"))
-			assert.NoError(t, err, "failed to write response")
-		}))
-
-	x, err := NewTransport(ServiceName("caller"), ExactCaseHeader())
-	require.NoError(t, err)
-	require.NoError(t, x.Start(), "failed to start transport")
-
-	out := x.NewSingleOutbound(serverHostPort)
-	require.NoError(t, out.Start(), "failed to start outbound")
-	defer out.Stop()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
-	defer cancel()
-	res, err := out.Call(
-		ctx,
-		&transport.Request{
-			Caller:    "caller",
-			Service:   "service",
-			Encoding:  raw.Encoding,
-			Procedure: "hello",
-			Headers:   transport.NewHeaders().With(headerKey, headerVal),
-			Body:      bytes.NewReader([]byte("world")),
+	tests := []struct {
+		msg       string
+		options   []TransportOption
+		headerVal []byte
+	}{
+		{
+			msg:     "exactCaseHeader options on",
+			options: []TransportOption{ServiceName("caller"), ExactCaseHeader()},
+			headerVal: []byte{
+				0x00, 0x01,
+				0x00, 0x0b, 'f', 'o', 'o', '-', 'B', 'A', 'R', '-', 'B', 'a', 'Z',
+				0x00, 0x09, 'F', 'o', 'o', 'B', 'a', 'r', 'B', 'a', 'z',
+			},
 		},
-	)
-
-	if !assert.NoError(t, err, "failed to make call") {
-		return
+		{
+			msg:     "exactCaseHeader options off",
+			options: []TransportOption{ServiceName("caller")},
+			headerVal: []byte{
+				0x00, 0x01,
+				0x00, 0x0b, 'f', 'o', 'o', '-', 'b', 'a', 'r', '-', 'b', 'a', 'z',
+				0x00, 0x09, 'F', 'o', 'o', 'B', 'a', 'r', 'B', 'a', 'z',
+			},
+		},
 	}
 
-	assert.Equal(t, false, res.ApplicationError, "not application error")
+	for _, tt := range tests {
+		server := testutils.NewServer(t, nil)
+		defer server.Close()
+		serverHostPort := server.PeerInfo().HostPort
 
-	foo, ok := res.Headers.Get("foo")
-	assert.True(t, ok, "value for foo expected")
-	assert.Equal(t, "bar", foo, "foo value mismatch")
+		server.GetSubChannel("service").SetHandler(tchannel.HandlerFunc(
+			func(ctx context.Context, call *tchannel.InboundCall) {
+				assert.Equal(t, "caller", call.CallerName())
+				assert.Equal(t, "service", call.ServiceName())
+				assert.Equal(t, tchannel.Raw, call.Format())
+				assert.Equal(t, "hello", call.MethodString())
+				headers, body, err := readArgs(call)
+				if assert.NoError(t, err, "failed to read request") {
+					assert.Equal(t, tt.headerVal, headers)
+					assert.Equal(t, []byte("world"), body)
+				}
 
-	body, err := ioutil.ReadAll(res.Body)
-	if assert.NoError(t, err, "failed to read response body") {
-		assert.Equal(t, []byte("great success"), body)
+				dl, ok := ctx.Deadline()
+				assert.True(t, ok, "deadline expected")
+				assert.WithinDuration(t, time.Now(), dl, 200*testtime.Millisecond)
+
+				err = writeArgs(call.Response(),
+					[]byte{
+						0x00, 0x01,
+						0x00, 0x03, 'f', 'o', 'o',
+						0x00, 0x03, 'b', 'a', 'r',
+					}, []byte("great success"))
+				assert.NoError(t, err, "failed to write response")
+			}))
+
+		x, err := NewTransport(tt.options...)
+		require.NoError(t, err)
+		require.NoError(t, x.Start(), "failed to start transport")
+
+		out := x.NewSingleOutbound(serverHostPort)
+		require.NoError(t, out.Start(), "failed to start outbound")
+		defer out.Stop()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
+		defer cancel()
+		res, err := out.Call(
+			ctx,
+			&transport.Request{
+				Caller:    "caller",
+				Service:   "service",
+				Encoding:  raw.Encoding,
+				Procedure: "hello",
+				Headers:   transport.NewHeaders().With(headerKey, headerVal),
+				Body:      bytes.NewReader([]byte("world")),
+			},
+		)
+
+		if !assert.NoError(t, err, "failed to make call") {
+			return
+		}
+
+		assert.Equal(t, false, res.ApplicationError, "not application error")
+
+		foo, ok := res.Headers.Get("foo")
+		assert.True(t, ok, "value for foo expected")
+		assert.Equal(t, "bar", foo, "foo value mismatch")
+
+		body, err := ioutil.ReadAll(res.Body)
+		if assert.NoError(t, err, "failed to read response body") {
+			assert.Equal(t, []byte("great success"), body)
+		}
+
+		assert.NoError(t, res.Body.Close(), "failed to close response body")
 	}
-
-	assert.NoError(t, res.Body.Close(), "failed to close response body")
 }
 
 func TestCallFailures(t *testing.T) {

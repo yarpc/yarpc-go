@@ -95,77 +95,77 @@ func TestItemsAndExactCaseItems(t *testing.T) {
 		postDeletionExactCaseItems map[string]string
 	}{
 		{
-			"delete lowercase/canonical key",
-			"other-header",
-			[]headers{
+			msg:         "delete lowercase/canonical key",
+			toDeleteKey: "other-header",
+			headers: []headers{
 				{"foo-BAR-BaZ", "foo-bar-baz"},
 				{"Foo-bAr-baZ", "FOO-BAR-BAZ"},
 				{"other-header", "other-value"},
 			},
-			map[string]string{
+			preDeletionItems: map[string]string{
 				"foo-bar-baz":  "FOO-BAR-BAZ",
 				"other-header": "other-value",
 			},
-			map[string]string{
+			postDeletionItems: map[string]string{
 				"foo-bar-baz": "FOO-BAR-BAZ",
 			},
-			map[string]string{
+			preDeletionExactCaseItems: map[string]string{
 				"foo-BAR-BaZ":  "foo-bar-baz",
 				"Foo-bAr-baZ":  "FOO-BAR-BAZ",
 				"other-header": "other-value",
 			},
-			map[string]string{
+			postDeletionExactCaseItems: map[string]string{
 				"foo-BAR-BaZ": "foo-bar-baz",
 				"Foo-bAr-baZ": "FOO-BAR-BAZ",
 			},
 		},
 		{
-			"delete non-canonical key that does not exist in originalItem",
-			"fOo-BAR-Baz",
-			[]headers{
+			msg:         "delete non-canonical key that does not exist in originalItem",
+			toDeleteKey: "fOo-BAR-Baz",
+			headers: []headers{
 				{"foo-BAR-BaZ", "foo-bar-baz"},
 				{"Foo-bAr-baZ", "FOO-BAR-BAZ"},
 				{"other-header", "other-value"},
 			},
-			map[string]string{
+			preDeletionItems: map[string]string{
 				"foo-bar-baz":  "FOO-BAR-BAZ",
 				"other-header": "other-value",
 			},
-			map[string]string{
+			postDeletionItems: map[string]string{
 				"other-header": "other-value",
 			},
-			map[string]string{
+			preDeletionExactCaseItems: map[string]string{
 				"foo-BAR-BaZ":  "foo-bar-baz",
 				"Foo-bAr-baZ":  "FOO-BAR-BAZ",
 				"other-header": "other-value",
 			},
-			map[string]string{
+			postDeletionExactCaseItems: map[string]string{
 				"foo-BAR-BaZ":  "foo-bar-baz",
 				"Foo-bAr-baZ":  "FOO-BAR-BAZ",
 				"other-header": "other-value",
 			},
 		},
 		{
-			"delete non-canonical key that also exists in originalItem",
-			"foo-BAR-BaZ",
-			[]headers{
+			msg:         "delete non-canonical key that also exists in originalItem",
+			toDeleteKey: "foo-BAR-BaZ",
+			headers: []headers{
 				{"foo-BAR-BaZ", "foo-bar-baz"},
 				{"Foo-bAr-baZ", "FOO-BAR-BAZ"},
 				{"other-header", "other-value"},
 			},
-			map[string]string{
+			preDeletionItems: map[string]string{
 				"foo-bar-baz":  "FOO-BAR-BAZ",
 				"other-header": "other-value",
 			},
-			map[string]string{
+			postDeletionItems: map[string]string{
 				"other-header": "other-value",
 			},
-			map[string]string{
+			preDeletionExactCaseItems: map[string]string{
 				"foo-BAR-BaZ":  "foo-bar-baz",
 				"Foo-bAr-baZ":  "FOO-BAR-BAZ",
 				"other-header": "other-value",
 			},
-			map[string]string{
+			postDeletionExactCaseItems: map[string]string{
 				"Foo-bAr-baZ":  "FOO-BAR-BAZ",
 				"other-header": "other-value",
 			},
