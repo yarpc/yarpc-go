@@ -82,44 +82,109 @@ func TestNewHeaders(t *testing.T) {
 }
 
 func TestItemsAndExactCaseItems(t *testing.T) {
-	var (
-		h = []struct {
-			key, val string
-		}{
-			{"foo-BAR-BaZ", "foo-bar-baz"},
-			{"Foo-bAr-baZ", "FOO-BAR-BAZ"},
-			{"other-header", "other-value"},
-		}
-		items = map[string]string{
-			"foo-bar-baz":  "FOO-BAR-BAZ",
-			"other-header": "other-value",
-		}
-		exactCaseItems = map[string]string{
-			"Foo-bAr-baZ":  "FOO-BAR-BAZ",
-			"other-header": "other-value",
-		}
-		postDeletionItems = map[string]string{
-			"foo-bar-baz": "FOO-BAR-BAZ",
-		}
-		postDeletionExactCaseItems1 = map[string]string{
-			"Foo-bAr-baZ": "FOO-BAR-BAZ",
-		}
-	)
-
-	header := NewHeaders()
-	for _, v := range h {
-		header = header.With(v.key, v.val)
+	type headers struct {
+		key, val string
+	}
+	tests := []struct {
+		msg                        string
+		toDeleteKey                string
+		headers                    []headers
+		preDeletionItems           map[string]string
+		postDeletionItems          map[string]string
+		preDeletionExactCaseItems  map[string]string
+		postDeletionExactCaseItems map[string]string
+	}{
+		{
+			"delete lowercase/canonical key",
+			"other-header",
+			[]headers{
+				{"foo-BAR-BaZ", "foo-bar-baz"},
+				{"Foo-bAr-baZ", "FOO-BAR-BAZ"},
+				{"other-header", "other-value"},
+			},
+			map[string]string{
+				"foo-bar-baz":  "FOO-BAR-BAZ",
+				"other-header": "other-value",
+			},
+			map[string]string{
+				"foo-bar-baz": "FOO-BAR-BAZ",
+			},
+			map[string]string{
+				"foo-BAR-BaZ":  "foo-bar-baz",
+				"Foo-bAr-baZ":  "FOO-BAR-BAZ",
+				"other-header": "other-value",
+			},
+			map[string]string{
+				"foo-BAR-BaZ": "foo-bar-baz",
+				"Foo-bAr-baZ": "FOO-BAR-BAZ",
+			},
+		},
+		{
+			"delete non-canonical key that does not exist in originalItem",
+			"fOo-BAR-Baz",
+			[]headers{
+				{"foo-BAR-BaZ", "foo-bar-baz"},
+				{"Foo-bAr-baZ", "FOO-BAR-BAZ"},
+				{"other-header", "other-value"},
+			},
+			map[string]string{
+				"foo-bar-baz":  "FOO-BAR-BAZ",
+				"other-header": "other-value",
+			},
+			map[string]string{
+				"other-header": "other-value",
+			},
+			map[string]string{
+				"foo-BAR-BaZ":  "foo-bar-baz",
+				"Foo-bAr-baZ":  "FOO-BAR-BAZ",
+				"other-header": "other-value",
+			},
+			map[string]string{
+				"foo-BAR-BaZ":  "foo-bar-baz",
+				"Foo-bAr-baZ":  "FOO-BAR-BAZ",
+				"other-header": "other-value",
+			},
+		},
+		{
+			"delete non-canonical key that also exists in originalItem",
+			"foo-BAR-BaZ",
+			[]headers{
+				{"foo-BAR-BaZ", "foo-bar-baz"},
+				{"Foo-bAr-baZ", "FOO-BAR-BAZ"},
+				{"other-header", "other-value"},
+			},
+			map[string]string{
+				"foo-bar-baz":  "FOO-BAR-BAZ",
+				"other-header": "other-value",
+			},
+			map[string]string{
+				"other-header": "other-value",
+			},
+			map[string]string{
+				"foo-BAR-BaZ":  "foo-bar-baz",
+				"Foo-bAr-baZ":  "FOO-BAR-BAZ",
+				"other-header": "other-value",
+			},
+			map[string]string{
+				"Foo-bAr-baZ":  "FOO-BAR-BAZ",
+				"other-header": "other-value",
+			},
+		},
 	}
 
-	assert.Equal(t, exactCaseItems, header.ExactCaseItems())
-	assert.Equal(t, items, header.Items())
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			header := NewHeaders()
+			for _, v := range tt.headers {
+				header = header.With(v.key, v.val)
+			}
 
-	header.Del("other-header")
-	assert.Equal(t, postDeletionItems, header.Items())
-	assert.Equal(t, postDeletionExactCaseItems1, header.ExactCaseItems())
+			assert.Equal(t, tt.preDeletionItems, header.Items())
+			assert.Equal(t, tt.preDeletionExactCaseItems, header.ExactCaseItems())
 
-	header.Del("foo-bar-BAZ")
-	assert.Equal(t, map[string]string{}, header.Items())
-	assert.Equal(t, map[string]string{}, header.ExactCaseItems())
-
+			header.Del(tt.toDeleteKey)
+			assert.Equal(t, tt.postDeletionItems, header.Items())
+			assert.Equal(t, tt.postDeletionExactCaseItems, header.ExactCaseItems())
+		})
+	}
 }
