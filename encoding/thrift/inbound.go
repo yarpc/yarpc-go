@@ -101,7 +101,7 @@ func (t thriftOnewayHandler) HandleOneway(ctx context.Context, treq *transport.R
 // decodeRequest is a utility shared by Unary and Oneway handlers, to decode
 // the request, regardless of enveloping.
 func decodeRequest(
-	parentCtx context.Context,
+	ctx context.Context,
 	// buf is a byte buffer from the buffer pool, that will be released back to
 	// the buffer pool by the caller after it is finished with the decoded
 	// request payload. Thrift requests read sets, maps, and lists lazilly.
@@ -118,31 +118,29 @@ func decodeRequest(
 	enveloping bool,
 ) (
 	// ctx is a context including the inbound call.
-	ctx context.Context,
+	context.Context,
 	// call is an inboundCall populated from the transport request and context.
-	call *encodingapi.InboundCall,
+	*encodingapi.InboundCall,
 	// reqValue is the wire representation of the decoded request.
 	// decodeRequest does not surface the envelope.
-	reqValue wire.Value,
+	wire.Value,
 	// responder indicates how to encode the response, with the enveloping
 	// strategy corresponding to the request. It is not used for oneway handlers.
-	responder protocol.Responder,
-	err error,
+	protocol.Responder,
+	error,
 ) {
-	ctx = parentCtx
-
-	if err = errors.ExpectEncodings(treq, Encoding); err != nil {
-		return
+	if err := errors.ExpectEncodings(treq, Encoding); err != nil {
+		return ctx, nil, wire.Value{}, nil, err
 	}
 
-	ctx, call = encodingapi.NewInboundCall(ctx)
-	if err = call.ReadFromRequest(treq); err != nil {
+	ctx, call := encodingapi.NewInboundCall(ctx)
+	if err := call.ReadFromRequest(treq); err != nil {
 		// not reachable
-		return
+		return ctx, nil, wire.Value{}, nil, err
 	}
 
-	if _, err = buf.ReadFrom(treq.Body); err != nil {
-		return
+	if _, err := buf.ReadFrom(treq.Body); err != nil {
+		return ctx, nil, wire.Value{}, nil, err
 	}
 
 	reader := bytes.NewReader(buf.Bytes())
@@ -150,25 +148,32 @@ func decodeRequest(
 	// Discover or choose the appropriate envelope
 	if agnosticProto, ok := proto.(protocol.EnvelopeAgnosticProtocol); ok {
 		// Envelope-agnostic
-		reqValue, responder, err = agnosticProto.DecodeRequest(reqEnvelopeType, reader)
+		reqValue, responder, err := agnosticProto.DecodeRequest(reqEnvelopeType, reader)
+		if err != nil {
+			return ctx, nil, wire.Value{}, nil, err
+		}
+		return ctx, call, reqValue, responder, nil
 	} else if enveloping {
 		// Enveloped
 		var envelope wire.Envelope
-		envelope, err = proto.DecodeEnveloped(reader)
+		envelope, err := proto.DecodeEnveloped(reader)
 		if err != nil {
-			return
+			return ctx, nil, wire.Value{}, nil, err
 		}
 		if envelope.Type != reqEnvelopeType {
-			err = errors.RequestBodyDecodeError(treq, errUnexpectedEnvelopeType(envelope.Type))
-			return
+			err := errors.RequestBodyDecodeError(treq, errUnexpectedEnvelopeType(envelope.Type))
+			return ctx, nil, wire.Value{}, nil, err
 		}
-		reqValue = envelope.Value
-		responder = protocol.EnvelopeV1Responder{Name: envelope.Name, SeqID: envelope.SeqID}
+		reqValue := envelope.Value
+		responder := protocol.EnvelopeV1Responder{Name: envelope.Name, SeqID: envelope.SeqID}
+		return ctx, call, reqValue, responder, nil
 	} else {
 		// Not-enveloped
-		reqValue, err = proto.Decode(reader, wire.TStruct)
-		responder = protocol.NoEnvelopeResponder
+		reqValue, err := proto.Decode(reader, wire.TStruct)
+		if err != nil {
+			return ctx, nil, wire.Value{}, nil, err
+		}
+		responder := protocol.NoEnvelopeResponder
+		return ctx, call, reqValue, responder, err
 	}
-
-	return
 }
