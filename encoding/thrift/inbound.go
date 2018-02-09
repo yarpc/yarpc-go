@@ -145,35 +145,58 @@ func decodeRequest(
 
 	reader := bytes.NewReader(buf.Bytes())
 
+	reqValue, responder, err := decodeMaybeEnvelopedRequest(treq, reqEnvelopeType, proto, enveloping, reader)
+	if err != nil {
+		return ctx, nil, wire.Value{}, nil, err
+	}
+	return ctx, call, reqValue, responder, nil
+}
+
+func decodeMaybeEnvelopedRequest(
+	treq *transport.Request,
+	reqEnvelopeType wire.EnvelopeType,
+	proto protocol.Protocol,
+	enveloping bool,
+	reader *bytes.Reader,
+) (wire.Value, protocol.Responder, error) {
 	// Discover or choose the appropriate envelope
 	if agnosticProto, ok := proto.(protocol.EnvelopeAgnosticProtocol); ok {
-		// Envelope-agnostic
-		reqValue, responder, err := agnosticProto.DecodeRequest(reqEnvelopeType, reader)
-		if err != nil {
-			return ctx, nil, wire.Value{}, nil, err
-		}
-		return ctx, call, reqValue, responder, nil
+		return agnosticProto.DecodeRequest(reqEnvelopeType, reader)
 	} else if enveloping {
-		// Enveloped
-		var envelope wire.Envelope
-		envelope, err := proto.DecodeEnveloped(reader)
-		if err != nil {
-			return ctx, nil, wire.Value{}, nil, err
-		}
-		if envelope.Type != reqEnvelopeType {
-			err := errors.RequestBodyDecodeError(treq, errUnexpectedEnvelopeType(envelope.Type))
-			return ctx, nil, wire.Value{}, nil, err
-		}
-		reqValue := envelope.Value
-		responder := protocol.EnvelopeV1Responder{Name: envelope.Name, SeqID: envelope.SeqID}
-		return ctx, call, reqValue, responder, nil
+		return decodeEnvelopedRequest(treq, reqEnvelopeType, proto, reader)
 	} else {
-		// Not-enveloped
-		reqValue, err := proto.Decode(reader, wire.TStruct)
-		if err != nil {
-			return ctx, nil, wire.Value{}, nil, err
-		}
-		responder := protocol.NoEnvelopeResponder
-		return ctx, call, reqValue, responder, err
+		return decodeUnenvelopedRequest(proto, reader)
 	}
+}
+
+func decodeEnvelopedRequest(
+	treq *transport.Request,
+	reqEnvelopeType wire.EnvelopeType,
+	proto protocol.Protocol,
+	reader *bytes.Reader,
+) (wire.Value, protocol.Responder, error) {
+	var envelope wire.Envelope
+	envelope, err := proto.DecodeEnveloped(reader)
+	if err != nil {
+		return wire.Value{}, nil, err
+	}
+	if envelope.Type != reqEnvelopeType {
+		err := errors.RequestBodyDecodeError(treq, errUnexpectedEnvelopeType(envelope.Type))
+		return wire.Value{}, nil, err
+	}
+	reqValue := envelope.Value
+	responder := protocol.EnvelopeV1Responder{Name: envelope.Name, SeqID: envelope.SeqID}
+	return reqValue, responder, nil
+}
+
+func decodeUnenvelopedRequest(
+	proto protocol.Protocol,
+	reader *bytes.Reader,
+) (wire.Value, protocol.Responder, error) {
+	reqValue, err := proto.Decode(reader, wire.TStruct)
+	if err != nil {
+		return wire.Value{}, nil, err
+	}
+	responder := protocol.NoEnvelopeResponder
+	return reqValue, responder, err
 }
