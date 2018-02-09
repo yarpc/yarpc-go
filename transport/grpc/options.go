@@ -88,10 +88,13 @@ func Logger(logger *zap.Logger) TransportOption {
 // before allowing an outbound call to be made or an inbound call
 // to be processed.
 //
+// This option can be used multiple times and the request validators
+// will be applied in the order they are given.
+//
 // By default, no validation is done.
 func RequestValidator(requestValidator func(*transport.Request) error) TransportOption {
 	return func(transportOptions *transportOptions) {
-		transportOptions.requestValidator = requestValidator
+		transportOptions.requestValidators = append(transportOptions.requestValidators, requestValidator)
 	}
 }
 
@@ -145,7 +148,7 @@ type transportOptions struct {
 	backoffStrategy      backoff.Strategy
 	tracer               opentracing.Tracer
 	logger               *zap.Logger
-	requestValidator     func(*transport.Request) error
+	requestValidators    []func(*transport.Request) error
 	serverMaxRecvMsgSize int
 	serverMaxSendMsgSize int
 	clientMaxRecvMsgSize int
@@ -171,9 +174,6 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 	}
 	if transportOptions.tracer == nil {
 		transportOptions.tracer = opentracing.NoopTracer{}
-	}
-	if transportOptions.requestValidator == nil {
-		transportOptions.requestValidator = func(*transport.Request) error { return nil }
 	}
 	return transportOptions
 }

@@ -62,7 +62,7 @@ func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error 
 	if err != nil {
 		return err
 	}
-	if err := h.i.t.options.requestValidator(transportRequest); err != nil {
+	if err := h.i.t.validateRequest(transportRequest); err != nil {
 		return handlerErrorToGRPCError(err, nil)
 	}
 
