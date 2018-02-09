@@ -133,10 +133,14 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		return nil, err
 	}
 
+	reqHeaders := req.Headers.Items()
+	if exactCaseHeader {
+		reqHeaders = req.Headers.ExactCaseItems()
+	}
 	// Inject tracing system baggage
-	reqHeaders := tchannel.InjectOutboundSpan(call.Response(), req.Headers.ExactCaseItems())
+	reqHeaders = tchannel.InjectOutboundSpan(call.Response(), reqHeaders)
 
-	if err := writeRequestHeaders(ctx, format, reqHeaders, call.Arg2Writer, exactCaseHeader); err != nil {
+	if err := writeHeaders(format, reqHeaders, call.Arg2Writer); err != nil {
 		// TODO(abg): This will wrap IO errors while writing headers as encode
 		// errors. We should fix that.
 		return nil, errors.RequestHeadersEncodeError(req, err)

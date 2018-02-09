@@ -93,25 +93,6 @@ func readHeaders(format tchannel.Format, getReader func() (tchannel.ArgReader, e
 	return headers, r.Close()
 }
 
-func writeRequestHeaders(
-	ctx context.Context,
-	format tchannel.Format,
-	appHeaders map[string]string,
-	getWriter func() (tchannel.ArgWriter, error),
-	writeExactHeaderCase bool,
-) error {
-	if writeExactHeaderCase {
-		return writeHeaders(format, appHeaders, getWriter)
-	}
-	headers := transport.NewHeadersWithCapacity(len(appHeaders))
-	// TODO: zero-alloc version
-	for k, v := range appHeaders {
-		headers = headers.With(k, v)
-	}
-
-	return writeHeaders(format, headers.Items(), getWriter)
-}
-
 // writeHeaders writes the given headers using the given function to get the
 // arg writer.
 //

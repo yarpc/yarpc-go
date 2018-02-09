@@ -155,6 +155,7 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 	if err != nil {
 		return nil, toYARPCError(req, err)
 	}
+
 	reqHeaders := req.Headers.Items()
 	if o.transport.exactCaseHeader {
 		reqHeaders = req.Headers.ExactCaseItems()
@@ -162,7 +163,7 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 	// Inject tracing system baggage
 	reqHeaders = tchannel.InjectOutboundSpan(call.Response(), reqHeaders)
 
-	if err := writeRequestHeaders(ctx, format, reqHeaders, call.Arg2Writer, o.transport.exactCaseHeader); err != nil {
+	if err := writeHeaders(format, reqHeaders, call.Arg2Writer); err != nil {
 		// TODO(abg): This will wrap IO errors while writing headers as encode
 		// errors. We should fix that.
 		return nil, errors.RequestHeadersEncodeError(req, err)

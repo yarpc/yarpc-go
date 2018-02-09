@@ -22,7 +22,6 @@ package tchannel
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"io/ioutil"
 	"testing"
@@ -157,18 +156,17 @@ func TestReadHeadersFailure(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestWriteRequestHeaders(t *testing.T) {
+func TestWriteHeaders(t *testing.T) {
 	tests := []struct {
 		msg string
 		// the headers are serialized in an undefined order so the encoding
 		// must be one of the following
-		bytes                []byte
-		orBytes              []byte
-		headers              map[string]string
-		writeExactHeaderCase bool
+		bytes   []byte
+		orBytes []byte
+		headers map[string]string
 	}{
 		{
-			"writeExactHeader false",
+			"lowercase header",
 			[]byte{
 				0x00, 0x02,
 				0x00, 0x01, 'a', 0x00, 0x01, '1',
@@ -179,11 +177,10 @@ func TestWriteRequestHeaders(t *testing.T) {
 				0x00, 0x01, 'b', 0x00, 0x01, '2',
 				0x00, 0x01, 'a', 0x00, 0x01, '1',
 			},
-			map[string]string{"A": "1", "b": "2"},
-			false,
+			map[string]string{"a": "1", "b": "2"},
 		},
 		{
-			"writeExactHeader true",
+			"mixed case header",
 			[]byte{
 				0x00, 0x02,
 				0x00, 0x01, 'A', 0x00, 0x01, '1',
@@ -195,19 +192,20 @@ func TestWriteRequestHeaders(t *testing.T) {
 				0x00, 0x01, 'A', 0x00, 0x01, '1',
 			},
 			map[string]string{"A": "1", "b": "2"},
-			true,
 		},
 	}
 
 	for _, tt := range tests {
-		buffer := newBufferArgWriter()
-		err := writeRequestHeaders(context.TODO(), tchannel.Raw, tt.headers, func() (tchannel.ArgWriter, error) {
-			return buffer, nil
-		}, tt.writeExactHeaderCase)
-		require.NoError(t, err)
-		// Result must match either tt.bytes or tt.orBytes.
-		if !bytes.Equal(tt.bytes, buffer.Bytes()) {
-			assert.Equal(t, tt.orBytes, buffer.Bytes())
-		}
+		t.Run(tt.msg, func(t *testing.T) {
+			buffer := newBufferArgWriter()
+			err := writeHeaders(tchannel.Raw, tt.headers, func() (tchannel.ArgWriter, error) {
+				return buffer, nil
+			})
+			require.NoError(t, err)
+			// Result must match either tt.bytes or tt.orBytes.
+			if !bytes.Equal(tt.bytes, buffer.Bytes()) {
+				assert.Equal(t, tt.orBytes, buffer.Bytes())
+			}
+		})
 	}
 }
