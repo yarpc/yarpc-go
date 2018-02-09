@@ -1,5 +1,5 @@
 hash: 7c7d875c128e2f5ee2218b87f3ec2b6fb335279d1cda2657c6cc4eb92a2ecdb9
-updated: 2018-01-17T11:45:33.306560761-08:00
+updated: 2018-02-09T11:03:05.849248-08:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -103,7 +103,7 @@ imports:
   - thrift-gen/zipkincore
   - utils
 - name: github.com/uber/tchannel-go
-  version: 7bcb33f4bb908c21374f8bfdc9d4b1ebcbb8dab0
+  version: acd4eb54c11531814d9cd0344fdc53bebe86ab12
   subpackages:
   - internal/argreader
   - json
@@ -168,7 +168,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: ab555f366c4508dbe0802550b1b20c46c5c18aa0
+  version: 2fb46b16b8dda405028c50f7c7f0f9dd1fa6bfb1
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -204,7 +204,7 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 7cea4cc846bcf00cbb27595b07da5de875ef7de9
+  version: 6b51017f791ae1cfbec89c52efdf444b13b550ef
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
@@ -234,7 +234,7 @@ testImports:
 - name: github.com/codahale/hdrhistogram
   version: 3a0bb77429bd3a61596f5e8a3172445844342120
 - name: github.com/golang/lint
-  version: f635bddafc7154957bd70209ee858a4b97e64a9b
+  version: e14d9b0f1d332b1420c1ffa32562ad2dc84d645d
   subpackages:
   - golint
 - name: github.com/kisielk/errcheck
@@ -253,6 +253,6 @@ testImports:
   - parallel-exec
   - update-license
 - name: honnef.co/go/tools
-  version: 376b3b58b9e4def403181ee2fd3d4cc7de8375ae
+  version: 8ed405e85c65fb38745a8eafe01ee9590523f172
   subpackages:
   - cmd/staticcheck
