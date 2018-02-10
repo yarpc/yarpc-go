@@ -105,6 +105,7 @@ func (t thriftOnewayHandler) HandleOneway(ctx context.Context, treq *transport.R
 // decodeRequest is a utility shared by Unary and Oneway handlers, to decode
 // the request, regardless of enveloping.
 func decodeRequest(
+	// call is an inboundCall populated from the transport request and context.
 	call *encodingapi.InboundCall,
 	// buf is a byte buffer from the buffer pool, that will be released back to
 	// the buffer pool by the caller after it is finished with the decoded
@@ -121,11 +122,10 @@ func decodeRequest(
 	// protocol is not envelope agnostic.
 	enveloping bool,
 ) (
-	// call is an inboundCall populated from the transport request and context.
-	// reqValue is the wire representation of the decoded request.
+	// the wire representation of the decoded request.
 	// decodeRequest does not surface the envelope.
 	wire.Value,
-	// responder indicates how to encode the response, with the enveloping
+	// how to encode the response, with the enveloping
 	// strategy corresponding to the request. It is not used for oneway handlers.
 	protocol.Responder,
 	error,
