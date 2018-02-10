@@ -148,11 +148,11 @@ func decodeRequest(
 	// Discover or choose the appropriate envelope
 	if agnosticProto, ok := proto.(protocol.EnvelopeAgnosticProtocol); ok {
 		return agnosticProto.DecodeRequest(reqEnvelopeType, reader)
-	} else if enveloping {
-		return decodeEnvelopedRequest(treq, reqEnvelopeType, proto, reader)
-	} else {
-		return decodeUnenvelopedRequest(proto, reader)
 	}
+	if enveloping {
+		return decodeEnvelopedRequest(treq, reqEnvelopeType, proto, reader)
+	}
+	return decodeUnenvelopedRequest(proto, reader)
 }
 
 func decodeEnvelopedRequest(
