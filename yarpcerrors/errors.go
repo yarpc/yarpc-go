@@ -68,6 +68,8 @@ type Status struct {
 	code    Code
 	name    string
 	message string
+
+	isIgnoreErr bool
 }
 
 // WithName returns a new Status with the given name.
@@ -186,6 +188,17 @@ func ResourceExhaustedErrorf(format string, args ...interface{}) error {
 	return Newf(CodeResourceExhausted, format, args...)
 }
 
+// IgnoreErrorf returns a new Status with code CodeResourceExhausted
+// by calling Newf(CodeResourceExhausted, format, args...).
+//
+// Returned errors can be differentiated from ResourceExhaustedErrorf()
+// by calling IsIgnore(err).
+func IgnoreErrorf(format string, args ...interface{}) error {
+	s := Newf(CodeResourceExhausted, format, args...)
+	s.isIgnoreErr = true
+	return s
+}
+
 // FailedPreconditionErrorf returns a new Status with code CodeFailedPrecondition
 // by calling Newf(CodeFailedPrecondition, format, args...).
 func FailedPreconditionErrorf(format string, args ...interface{}) error {
@@ -272,6 +285,14 @@ func IsPermissionDenied(err error) bool {
 // IsResourceExhausted returns true if FromError(err).Code() == CodeResourceExhausted.
 func IsResourceExhausted(err error) bool {
 	return FromError(err).Code() == CodeResourceExhausted
+}
+
+// IsIgnore returns true if the error was created from IgnoreErrorf(...).
+func IsIgnore(err error) bool {
+	if status := FromError(err); status != nil {
+		return status.isIgnoreErr
+	}
+	return false
 }
 
 // IsFailedPrecondition returns true if FromError(err).Code() == CodeFailedPrecondition.

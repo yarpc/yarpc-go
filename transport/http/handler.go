@@ -62,6 +62,10 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		responseWriter.Close(http.StatusOK)
 		return
 	}
+	if yarpcerrors.IsIgnore(status) {
+		// abrubtly close the connection
+		return
+	}
 	if statusCodeText, marshalErr := status.Code().MarshalText(); marshalErr != nil {
 		status = yarpcerrors.Newf(yarpcerrors.CodeInternal, "error %s had code %v which is unknown", status.Error(), status.Code())
 		responseWriter.AddSystemHeader(ErrorCodeHeader, "internal")
