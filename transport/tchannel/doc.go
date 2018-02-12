@@ -51,7 +51,7 @@
 // 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 // 		Name: "myservice",
 // 		Outbounds: yarpc.Outbounds{
-// 			{Unary: myserviceOutbound},
+// 			"outboundservice": {Unary: myserviceOutbound},
 // 		},
 // 	})
 //

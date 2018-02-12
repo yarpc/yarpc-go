@@ -185,6 +185,9 @@ var (
 // the most specific error code that applies. For example, prefer
 // `OutOfRange` over `FailedPrecondition` if both codes apply.
 // Similarly prefer `NotFound` or `AlreadyExists` over `FailedPrecondition`.
+//
+// These codes are meant to match gRPC status codes.
+// https://godoc.org/google.golang.org/grpc/codes#Code
 type Code int
 
 // String returns the the string representation of the Code.

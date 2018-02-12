@@ -18,66 +18,62 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package roundrobin
+package peerlist
 
 import (
-	"time"
+	"math/rand"
+	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/peer/peerlist"
+	"go.uber.org/yarpc/peer/hostport"
 )
 
-type listConfig struct {
-	capacity int
-	shuffle  bool
-	seed     int64
+const (
+	id1 = hostport.PeerIdentifier("1.2.3.4:1234")
+	id2 = hostport.PeerIdentifier("4.3.2.1:4321")
+	id3 = hostport.PeerIdentifier("1.1.1.1:1111")
+)
+
+func TestValues(t *testing.T) {
+	vs := values(map[string]peer.Identifier{})
+	assert.Equal(t, []peer.Identifier{}, vs)
+
+	vs = values(map[string]peer.Identifier{"_": id1, "__": id2})
+	assert.Equal(t, 2, len(vs))
+	assert.Contains(t, vs, id1)
+	assert.Contains(t, vs, id2)
 }
 
-var defaultListConfig = listConfig{
-	capacity: 10,
-	shuffle:  true,
-	seed:     time.Now().UnixNano(),
-}
-
-// ListOption customizes the behavior of a roundrobin list.
-type ListOption func(*listConfig)
-
-// Capacity specifies the default capacity of the underlying
-// data structures for this list.
-//
-// Defaults to 10.
-func Capacity(capacity int) ListOption {
-	return func(c *listConfig) {
-		c.capacity = capacity
+func TestShuffle(t *testing.T) {
+	for _, test := range []struct {
+		msg  string
+		seed int64
+		in   []peer.Identifier
+		want []peer.Identifier
+	}{
+		{
+			"empty",
+			0,
+			[]peer.Identifier{},
+			[]peer.Identifier{},
+		},
+		{
+			"some",
+			0,
+			[]peer.Identifier{id1, id2, id3},
+			[]peer.Identifier{id2, id3, id1},
+		},
+		{
+			"different seed",
+			7,
+			[]peer.Identifier{id1, id2, id3},
+			[]peer.Identifier{id2, id1, id3},
+		},
+	} {
+		t.Run(test.msg, func(t *testing.T) {
+			randSrc := rand.NewSource(test.seed)
+			assert.Equal(t, test.want, shuffle(randSrc, test.in))
+		})
 	}
-}
-
-// New creates a new round robin peer list.
-func New(transport peer.Transport, opts ...ListOption) *List {
-	cfg := defaultListConfig
-	for _, o := range opts {
-		o(&cfg)
-	}
-
-	plOpts := []peerlist.ListOption{
-		peerlist.Capacity(cfg.capacity),
-		peerlist.Seed(cfg.seed),
-	}
-	if !cfg.shuffle {
-		plOpts = append(plOpts, peerlist.NoShuffle)
-	}
-
-	return &List{
-		List: peerlist.New(
-			"roundrobin",
-			transport,
-			newPeerRing(),
-			plOpts...,
-		),
-	}
-}
-
-// List is a PeerList which rotates which peers are to be selected in a circle
-type List struct {
-	*peerlist.List
 }
