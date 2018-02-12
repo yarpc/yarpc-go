@@ -42,14 +42,13 @@ var (
 )
 
 type listOptions struct {
-	capacity int
-	shuffle  bool
-	seed     int64
+	capacity  int
+	noShuffle bool
+	seed      int64
 }
 
 var defaultListOptions = listOptions{
 	capacity: 10,
-	shuffle:  true,
 	seed:     time.Now().UnixNano(),
 }
 
@@ -73,8 +72,10 @@ func Capacity(capacity int) ListOption {
 }
 
 // NoShuffle disables the default behavior of shuffling peerlist order.
-var NoShuffle listOptionFunc = func(options *listOptions) {
-	options.shuffle = false
+func NoShuffle() ListOption {
+	return listOptionFunc(func(options *listOptions) {
+		options.noShuffle = true
+	})
 }
 
 // Seed specifies the random seed to use for shuffling peers
@@ -101,7 +102,7 @@ func New(name string, transport peer.Transport, availableChooser peer.ListImplem
 		availablePeers:     make(map[string]*peerThunk, options.capacity),
 		availableChooser:   availableChooser,
 		transport:          transport,
-		shuffle:            options.shuffle,
+		noShuffle:          options.noShuffle,
 		randSrc:            rand.NewSource(options.seed),
 		peerAvailableEvent: make(chan struct{}, 1),
 	}
@@ -130,8 +131,8 @@ type List struct {
 	peerAvailableEvent chan struct{}
 	transport          peer.Transport
 
-	shuffle bool
-	randSrc rand.Source
+	noShuffle bool
+	randSrc   rand.Source
 
 	once *lifecycle.Once
 }
@@ -165,7 +166,7 @@ func (pl *List) updateInitialized(updates peer.ListUpdates) error {
 	}
 
 	add := updates.Additions
-	if pl.shuffle {
+	if !pl.noShuffle {
 		add = shuffle(pl.randSrc, add)
 	}
 
@@ -253,7 +254,7 @@ func (pl *List) start() error {
 	}
 
 	add := values(pl.uninitializedPeers)
-	if pl.shuffle {
+	if !pl.noShuffle {
 		add = shuffle(pl.randSrc, add)
 	}
 
