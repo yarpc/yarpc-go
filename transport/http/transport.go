@@ -111,8 +111,10 @@ func IdleConnTimeout(t time.Duration) TransportOption {
 
 // DisableKeepAlives prevents re-use of TCP connections between different HTTP
 // requests.
-var DisableKeepAlives TransportOption = func(options *transportOptions) {
-	options.disableKeepAlives = true
+func DisableKeepAlives() TransportOption {
+	return func(options *transportOptions) {
+		options.disableKeepAlives = true
+	}
 }
 
 // DisableCompression if true prevents the Transport from requesting
@@ -121,8 +123,10 @@ var DisableKeepAlives TransportOption = func(options *transportOptions) {
 // on its own and gets a gzipped response, it's transparently decoded in the
 // Response.Body. However, if the user explicitly requested gzip it is not
 // automatically uncompressed.
-var DisableCompression TransportOption = func(options *transportOptions) {
-	options.disableCompression = true
+func DisableCompression() TransportOption {
+	return func(options *transportOptions) {
+		options.disableCompression = true
+	}
 }
 
 // ResponseHeaderTimeout if non-zero specifies the amount of time to wait for

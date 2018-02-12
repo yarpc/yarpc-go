@@ -97,6 +97,7 @@ func TestTransportSpec(t *testing.T) {
 			wantClient: &wantHTTPClient{
 				KeepAlive:           30 * time.Second,
 				MaxIdleConnsPerHost: 2,
+				ConnTimeout:         defaultConnTimeout,
 			},
 		},
 		{
@@ -108,14 +109,30 @@ func TestTransportSpec(t *testing.T) {
 			wantClient: &wantHTTPClient{
 				KeepAlive:           5 * time.Second,
 				MaxIdleConnsPerHost: 42,
+				ConnTimeout:         defaultConnTimeout,
 			},
 		},
 		{
 			desc: "explicit transport config",
-			cfg:  attrs{"keepAlive": "5s"},
+			cfg: attrs{
+				"keepAlive":             "5s",
+				"maxIdleConns":          1,
+				"maxIdleConnsPerHost":   2,
+				"idleConnTimeout":       "5s",
+				"connTimeout":           "1s",
+				"disableKeepAlives":     true,
+				"disableCompression":    true,
+				"responseHeaderTimeout": "1s",
+			},
 			wantClient: &wantHTTPClient{
-				KeepAlive:           5 * time.Second,
-				MaxIdleConnsPerHost: 2,
+				KeepAlive:             5 * time.Second,
+				MaxIdleConns:          1,
+				MaxIdleConnsPerHost:   2,
+				IdleConnTimeout:       5 * time.Second,
+				ConnTimeout:           1 * time.Second,
+				DisableKeepAlives:     true,
+				DisableCompression:    true,
+				ResponseHeaderTimeout: 1 * time.Second,
 			},
 		},
 	}
@@ -434,8 +451,14 @@ func mapResolver(m map[string]string) func(string) (string, bool) {
 }
 
 type wantHTTPClient struct {
-	KeepAlive           time.Duration
-	MaxIdleConnsPerHost int
+	KeepAlive             time.Duration
+	MaxIdleConns          int
+	MaxIdleConnsPerHost   int
+	IdleConnTimeout       time.Duration
+	DisableKeepAlives     bool
+	DisableCompression    bool
+	ResponseHeaderTimeout time.Duration
+	ConnTimeout           time.Duration
 }
 
 // useFakeBuildClient verifies the configuration we use to build an HTTP
@@ -443,8 +466,14 @@ type wantHTTPClient struct {
 func useFakeBuildClient(t *testing.T, want *wantHTTPClient) TransportOption {
 	return buildClient(func(options *transportOptions) *http.Client {
 		assert.Equal(t, want.KeepAlive, options.keepAlive, "http.Client: KeepAlive should match")
-		assert.Equal(t, want.MaxIdleConnsPerHost, options.maxIdleConnsPerHost,
-			"http.Client: MaxIdleConnsPerHost should match")
+		assert.Equal(t, want.MaxIdleConns, options.maxIdleConns, "http.Client: MaxIdleConns should match")
+		assert.Equal(t, want.MaxIdleConnsPerHost, options.maxIdleConnsPerHost, "http.Client: MaxIdleConnsPerHost should match")
+		// TODO(kris): not sure why the default is not zero.
+		// assert.Equal(t, want.IdleConnTimeout, options.idleConnTimeout, "http.Client: IdleConnTimeout should match")
+		assert.Equal(t, want.DisableKeepAlives, options.disableKeepAlives, "http.Client: DisableKeepAlives should match")
+		assert.Equal(t, want.DisableCompression, options.disableCompression, "http.Client: DisableCompression should match")
+		assert.Equal(t, want.ResponseHeaderTimeout, options.responseHeaderTimeout, "http.Client: ResponseHeaderTimeout should match")
+		assert.Equal(t, want.ConnTimeout, options.connTimeout, "http.Client: ConnTimeout should match")
 		return buildHTTPClient(options)
 	})
 }
