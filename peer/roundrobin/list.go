@@ -64,7 +64,7 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 		peerlist.Seed(cfg.seed),
 	}
 	if !cfg.shuffle {
-		plOpts = append(plOpts, peerlist.NoShuffle)
+		plOpts = append(plOpts, peerlist.NoShuffle())
 	}
 
 	return &List{
