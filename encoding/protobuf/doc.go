@@ -62,7 +62,7 @@
 //   package foo.bar;
 //
 //   message EchoRequest {
-//	   string value = 1;
+//     string value = 1;
 //   }
 //
 //   message EchoResponse {
@@ -96,6 +96,12 @@
 // Where context-ttl-ms is the timeout, rpc-caller is anything, rpc-service is the name
 // of the configured service, rpc-encoding is json, rpc-procedure is proto_package.proto_service::proto_method,
 // and the data is the JSON representation of the request.
+//
+// If using YAB, one can also use:
+//
+//   yab -p http://0.0.0.0:8080 -e json -s hello -p foo.bar.Baz::Echo -r '{"value":"sample"}'
+//
+// See https://github.com/yarpc/yab for more details.
 //
 // Oneway methods are supported as well. To use, define your RPC
 // method to return the uber.yarpc.Oneway type defined in
