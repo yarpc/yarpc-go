@@ -26,5 +26,7 @@ import "go.uber.org/thriftrw/envelope"
 type Response struct {
 	Body envelope.Enveloper
 
+	// DEPRECATED
 	IsApplicationError bool
+	ApplicationError   error
 }
