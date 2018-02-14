@@ -134,7 +134,7 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 	}
 	reqHeaders := req.Headers.Items()
 	if exactCaseHeader {
-		reqHeaders = req.Headers.ExactCaseItems()
+		reqHeaders = req.Headers.OriginalItems()
 	}
 
 	tracingBaggage := tchannel.InjectOutboundSpan(call.Response(), nil)

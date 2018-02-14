@@ -109,10 +109,10 @@ func (h Headers) Items() map[string]string {
 	return h.items
 }
 
-// ExactCaseItems returns the non-canonicalized version of the underlying map
+// OriginalItems returns the non-canonicalized version of the underlying map
 // for this Headers object. The returned map MUST NOT be changed.
 // Doing so will result in undefined behavior.
-func (h Headers) ExactCaseItems() map[string]string {
+func (h Headers) OriginalItems() map[string]string {
 	if h.originalItems == nil {
 		return emptyMap
 	}

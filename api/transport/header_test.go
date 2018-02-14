@@ -81,18 +81,18 @@ func TestNewHeaders(t *testing.T) {
 	}
 }
 
-func TestItemsAndExactCaseItems(t *testing.T) {
+func TestItemsAndOriginalItems(t *testing.T) {
 	type headers struct {
 		key, val string
 	}
 	tests := []struct {
-		msg                        string
-		toDeleteKey                string
-		headers                    []headers
-		preDeletionItems           map[string]string
-		postDeletionItems          map[string]string
-		preDeletionExactCaseItems  map[string]string
-		postDeletionExactCaseItems map[string]string
+		msg                       string
+		toDeleteKey               string
+		headers                   []headers
+		preDeletionItems          map[string]string
+		postDeletionItems         map[string]string
+		preDeletionOriginalItems  map[string]string
+		postDeletionOriginalItems map[string]string
 	}{
 		{
 			msg:         "delete lowercase/canonical key",
@@ -109,12 +109,12 @@ func TestItemsAndExactCaseItems(t *testing.T) {
 			postDeletionItems: map[string]string{
 				"foo-bar-baz": "FOO-BAR-BAZ",
 			},
-			preDeletionExactCaseItems: map[string]string{
+			preDeletionOriginalItems: map[string]string{
 				"foo-BAR-BaZ":  "foo-bar-baz",
 				"Foo-bAr-baZ":  "FOO-BAR-BAZ",
 				"other-header": "other-value",
 			},
-			postDeletionExactCaseItems: map[string]string{
+			postDeletionOriginalItems: map[string]string{
 				"foo-BAR-BaZ": "foo-bar-baz",
 				"Foo-bAr-baZ": "FOO-BAR-BAZ",
 			},
@@ -134,12 +134,12 @@ func TestItemsAndExactCaseItems(t *testing.T) {
 			postDeletionItems: map[string]string{
 				"other-header": "other-value",
 			},
-			preDeletionExactCaseItems: map[string]string{
+			preDeletionOriginalItems: map[string]string{
 				"foo-BAR-BaZ":  "foo-bar-baz",
 				"Foo-bAr-baZ":  "FOO-BAR-BAZ",
 				"other-header": "other-value",
 			},
-			postDeletionExactCaseItems: map[string]string{
+			postDeletionOriginalItems: map[string]string{
 				"foo-BAR-BaZ":  "foo-bar-baz",
 				"Foo-bAr-baZ":  "FOO-BAR-BAZ",
 				"other-header": "other-value",
@@ -160,12 +160,12 @@ func TestItemsAndExactCaseItems(t *testing.T) {
 			postDeletionItems: map[string]string{
 				"other-header": "other-value",
 			},
-			preDeletionExactCaseItems: map[string]string{
+			preDeletionOriginalItems: map[string]string{
 				"foo-BAR-BaZ":  "foo-bar-baz",
 				"Foo-bAr-baZ":  "FOO-BAR-BAZ",
 				"other-header": "other-value",
 			},
-			postDeletionExactCaseItems: map[string]string{
+			postDeletionOriginalItems: map[string]string{
 				"Foo-bAr-baZ":  "FOO-BAR-BAZ",
 				"other-header": "other-value",
 			},
@@ -180,11 +180,11 @@ func TestItemsAndExactCaseItems(t *testing.T) {
 			}
 
 			assert.Equal(t, tt.preDeletionItems, header.Items())
-			assert.Equal(t, tt.preDeletionExactCaseItems, header.ExactCaseItems())
+			assert.Equal(t, tt.preDeletionOriginalItems, header.OriginalItems())
 
 			header.Del(tt.toDeleteKey)
 			assert.Equal(t, tt.postDeletionItems, header.Items())
-			assert.Equal(t, tt.postDeletionExactCaseItems, header.ExactCaseItems())
+			assert.Equal(t, tt.postDeletionOriginalItems, header.OriginalItems())
 		})
 	}
 }

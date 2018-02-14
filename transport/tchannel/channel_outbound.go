@@ -158,7 +158,7 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 
 	reqHeaders := req.Headers.Items()
 	if o.transport.exactCaseHeader {
-		reqHeaders = req.Headers.ExactCaseItems()
+		reqHeaders = req.Headers.OriginalItems()
 	}
 
 	tracingBaggage := tchannel.InjectOutboundSpan(call.Response(), nil)

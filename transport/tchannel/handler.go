@@ -208,7 +208,7 @@ func newResponseWriter(response inboundCallResponse, format tchannel.Format, exa
 func (rw *responseWriter) AddHeaders(h transport.Headers) {
 	headers := h.Items()
 	if rw.exactCaseHeader {
-		headers = h.ExactCaseItems()
+		headers = h.OriginalItems()
 	}
 	for k, v := range headers {
 		// TODO: is this considered a breaking change?
