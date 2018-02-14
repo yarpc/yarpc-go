@@ -94,6 +94,12 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	responseWriter := newResponseWriter(call.Response(), call.Format())
 
 	err := h.callHandler(ctx, call, responseWriter)
+
+	if yarpcerrors.IsIgnore(err) {
+		// let clients timeout -- this will slow down callers with aggresive retry policies
+		return
+	}
+
 	if err != nil && !responseWriter.isApplicationError {
 		// TODO: log error
 		_ = call.Response().SendSystemError(getSystemError(err))
