@@ -68,7 +68,7 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 		return err
 	}
 	if appErr != nil {
-		responseWriter.SetApplicationError()
+		responseWriter.SetVerboseApplicationError(appErr)
 	}
 	return appErr
 }

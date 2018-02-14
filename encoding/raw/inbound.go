@@ -62,7 +62,7 @@ func (r rawUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw
 		_, writeErr = rw.Write(resBody)
 	}
 	if appErr != nil {
-		rw.SetApplicationError()
+		rw.SetVerboseApplicationError(appErr)
 		return appErr
 	}
 	return writeErr
