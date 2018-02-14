@@ -54,7 +54,7 @@
 // are created for every RPC method: one that will handle the standard Protobuf
 // binary encoding, and one that will handle the JSON encoding.
 //
-// If coupled with an HTTP Inbound, Protobuf prodecures can be called using
+// If coupled with an HTTP Inbound, Protobuf procedures can be called using
 // curl. Given the following Protobuf definition:
 //
 //   syntax = "proto3;
