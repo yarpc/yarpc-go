@@ -109,6 +109,8 @@ func writeRequestHeaders(
 	return writeHeaders(format, headers, getWriter)
 }
 
+var emptyMap = map[string]string{}
+
 // writeHeaders writes the given headers using the given function to get the
 // arg writer.
 //
@@ -119,7 +121,12 @@ func writeRequestHeaders(
 func writeHeaders(format tchannel.Format, headers transport.Headers, getWriter func() (tchannel.ArgWriter, error)) error {
 	if format == tchannel.JSON {
 		// JSON is special
-		return tchannel.NewArgWriter(getWriter()).WriteJSON(headers.Items())
+		items := headers.Items()
+		if items == nil {
+			// We want to write "{}", not "null" for empty map.
+			items = emptyMap
+		}
+		return tchannel.NewArgWriter(getWriter()).WriteJSON(items)
 	}
 	return tchannel.NewArgWriter(getWriter()).Write(encodeHeaders(headers))
 }
