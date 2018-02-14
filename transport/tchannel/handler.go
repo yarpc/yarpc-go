@@ -251,7 +251,7 @@ func (rw *responseWriter) Close() error {
 			retErr = appendError(retErr, fmt.Errorf("SetApplicationError() failed: %v", err))
 		}
 	}
-	retErr = appendError(retErr, writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer))
+	retErr = appendError(retErr, writeHeaders(rw.format, rw.headers, nil, rw.response.Arg2Writer))
 
 	// Arg3Writer must be opened and closed regardless of if there is data
 	// However, if there is a system error, we do not want to do this
