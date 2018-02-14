@@ -132,13 +132,21 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 	if err != nil {
 		return nil, err
 	}
+	// Inject tracing system baggage
+	tracingBaggage := tchannel.InjectOutboundSpan(call.Response(), nil)
 
-	reqHeaders := req.Headers.Items()
+	var reqHeaders map[string]string
 	if exactCaseHeader {
 		reqHeaders = req.Headers.ExactCaseItems()
+		for k, v := range tracingBaggage {
+			reqHeaders[k] = v
+		}
+	} else {
+		reqHeaders = req.Headers.Items()
+		for k, v := range tracingBaggage {
+			reqHeaders[transport.CanonicalizeHeaderKey(k)] = v
+		}
 	}
-	// Inject tracing system baggage
-	reqHeaders = tchannel.InjectOutboundSpan(call.Response(), reqHeaders)
 
 	if err := writeHeaders(format, reqHeaders, call.Arg2Writer); err != nil {
 		// TODO(abg): This will wrap IO errors while writing headers as encode

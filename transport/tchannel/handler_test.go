@@ -342,6 +342,7 @@ func TestResponseWriter(t *testing.T) {
 		arg2             []byte
 		arg3             []byte
 		applicationError bool
+		exactCaseHeader  bool
 	}{
 		{
 			format: tchannel.Raw,
@@ -389,6 +390,22 @@ func TestResponseWriter(t *testing.T) {
 		{
 			format: tchannel.JSON,
 			apply: func(w *responseWriter) {
+				headers := transport.HeadersFromMap(map[string]string{"FoO": "bAr"})
+				w.AddHeaders(headers)
+
+				_, err := w.Write([]byte("{"))
+				require.NoError(t, err)
+
+				_, err = w.Write([]byte("}"))
+				require.NoError(t, err)
+			},
+			arg2:            []byte(`{"FoO":"bAr"}` + "\n"),
+			arg3:            []byte("{}"),
+			exactCaseHeader: true,
+		},
+		{
+			format: tchannel.JSON,
+			apply: func(w *responseWriter) {
 				_, err := w.Write([]byte("{"))
 				require.NoError(t, err)
 
@@ -416,7 +433,7 @@ func TestResponseWriter(t *testing.T) {
 		resp := newResponseRecorder()
 		call.resp = resp
 
-		w := newResponseWriter(call.Response(), call.Format())
+		w := newResponseWriter(call.Response(), call.Format(), tt.exactCaseHeader)
 		tt.apply(w)
 		assert.NoError(t, w.Close())
 
@@ -453,7 +470,7 @@ func TestResponseWriterFailure(t *testing.T) {
 		resp := newResponseRecorder()
 		tt.setupResp(resp)
 
-		w := newResponseWriter(resp, tchannel.Raw)
+		w := newResponseWriter(resp, tchannel.Raw, false)
 		_, err := w.Write([]byte("foo"))
 		assert.NoError(t, err)
 		_, err = w.Write([]byte("bar"))
@@ -468,7 +485,7 @@ func TestResponseWriterFailure(t *testing.T) {
 
 func TestResponseWriterEmptyBodyHeaders(t *testing.T) {
 	res := newResponseRecorder()
-	w := newResponseWriter(res, tchannel.Raw)
+	w := newResponseWriter(res, tchannel.Raw, false)
 
 	w.AddHeaders(transport.NewHeaders().With("foo", "bar"))
 	require.NoError(t, w.Close())

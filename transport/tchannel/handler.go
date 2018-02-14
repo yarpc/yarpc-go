@@ -80,9 +80,10 @@ func (c tchannelCall) Response() inboundCallResponse {
 
 // handler wraps a transport.UnaryHandler into a TChannel Handler.
 type handler struct {
-	existing map[string]tchannel.Handler
-	router   transport.Router
-	tracer   opentracing.Tracer
+	existing        map[string]tchannel.Handler
+	router          transport.Router
+	tracer          opentracing.Tracer
+	exactCaseHeader bool
 }
 
 func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
@@ -91,7 +92,7 @@ func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
 
 func (h handler) handle(ctx context.Context, call inboundCall) {
 	// you MUST close the responseWriter no matter what unless you have a tchannel.SystemError
-	responseWriter := newResponseWriter(call.Response(), call.Format())
+	responseWriter := newResponseWriter(call.Response(), call.Format(), h.exactCaseHeader)
 
 	err := h.callHandler(ctx, call, responseWriter)
 	if err != nil && !responseWriter.isApplicationError {
@@ -188,21 +189,28 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 type responseWriter struct {
 	failedWith         error
 	format             tchannel.Format
-	headers            transport.Headers
+	headers            map[string]string
 	buffer             *bufferpool.Buffer
 	response           inboundCallResponse
 	isApplicationError bool
+	exactCaseHeader    bool
 }
 
-func newResponseWriter(response inboundCallResponse, format tchannel.Format) *responseWriter {
+func newResponseWriter(response inboundCallResponse, format tchannel.Format, exactCaseHeader bool) *responseWriter {
 	return &responseWriter{
-		response: response,
-		format:   format,
+		response:        response,
+		format:          format,
+		headers:         map[string]string{},
+		exactCaseHeader: exactCaseHeader,
 	}
 }
 
 func (rw *responseWriter) AddHeaders(h transport.Headers) {
-	for k, v := range h.Items() {
+	headers := h.Items()
+	if rw.exactCaseHeader {
+		headers = h.ExactCaseItems()
+	}
+	for k, v := range headers {
 		// TODO: is this considered a breaking change?
 		if isReservedHeaderKey(k) {
 			rw.failedWith = appendError(rw.failedWith, fmt.Errorf("cannot use reserved header key: %s", k))
@@ -213,7 +221,7 @@ func (rw *responseWriter) AddHeaders(h transport.Headers) {
 }
 
 func (rw *responseWriter) addHeader(key string, value string) {
-	rw.headers = rw.headers.With(key, value)
+	rw.headers[key] = value
 }
 
 func (rw *responseWriter) SetApplicationError() {
@@ -243,7 +251,7 @@ func (rw *responseWriter) Close() error {
 			retErr = appendError(retErr, fmt.Errorf("SetApplicationError() failed: %v", err))
 		}
 	}
-	retErr = appendError(retErr, writeHeaders(rw.format, rw.headers.Items(), rw.response.Arg2Writer))
+	retErr = appendError(retErr, writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer))
 
 	// Arg3Writer must be opened and closed regardless of if there is data
 	// However, if there is a system error, we do not want to do this
