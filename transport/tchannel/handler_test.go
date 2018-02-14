@@ -364,6 +364,24 @@ func TestResponseWriter(t *testing.T) {
 		{
 			format: tchannel.Raw,
 			apply: func(w *responseWriter) {
+				headers := transport.HeadersFromMap(map[string]string{"FoO": "bAr"})
+				w.AddHeaders(headers)
+				_, err := w.Write([]byte("hello "))
+				require.NoError(t, err)
+				_, err = w.Write([]byte("world"))
+				require.NoError(t, err)
+			},
+			arg2: []byte{
+				0x00, 0x01,
+				0x00, 0x03, 'F', 'o', 'O',
+				0x00, 0x03, 'b', 'A', 'r',
+			},
+			arg3:            []byte("hello world"),
+			exactCaseHeader: true,
+		},
+		{
+			format: tchannel.Raw,
+			apply: func(w *responseWriter) {
 				_, err := w.Write([]byte("foo"))
 				require.NoError(t, err)
 				_, err = w.Write([]byte("bar"))
