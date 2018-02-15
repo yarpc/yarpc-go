@@ -54,11 +54,61 @@
 // are created for every RPC method: one that will handle the standard Protobuf
 // binary encoding, and one that will handle the JSON encoding.
 //
+// If coupled with an HTTP Inbound, Protobuf procedures can be called using
+// curl. Given the following Protobuf definition:
+//
+//   syntax = "proto3;
+//
+//   package foo.bar;
+//
+//   message EchoRequest {
+//     string value = 1;
+//   }
+//
+//   message EchoResponse {
+//     string value = 1;
+//   }
+//
+//   service Baz {
+//     rpc Echo(EchoRequest) returns (EchoResponse) {}
+//   }
+//
+// And the following configuation:
+//
+//   service:
+//     name: hello
+//   yarpc:
+//     inbounds:
+//       http:
+//          address: ":8080"
+//
+// If running locally, one could make the following call:
+//
+//   curl \
+//     http://0.0.0.0:8080 \
+//     -H 'context-ttl-ms: 2000' \
+//     -H "rpc-caller: curl-$(whoami)" \
+//     -H 'rpc-service: hello' \
+//     -H 'rpc-encoding: json' \
+//     -H 'rpc-procedure: foo.bar.Baz::Echo' \
+//     -d '{"value":"sample"}'
+//
+// Where context-ttl-ms is the timeout in milliseconds, rpc-caller is the name of the entity making the request,
+// rpc-service is the name of the configured service, rpc-encoding is json, rpc-procedure is the name of the
+// Protobuf method being called in the form proto_package.proto_service::proto_method, and the data is the JSON
+// representation of the request.
+//
+// If using Yab, one can also use:
+//
+//   yab -p http://0.0.0.0:8080 -e json -s hello -p foo.bar.Baz::Echo -r '{"value":"sample"}'
+//
+// See https://github.com/yarpc/yab for more details.
+//
 // Oneway methods are supported as well. To use, define your RPC
 // method to return the uber.yarpc.Oneway type defined in
 // go.uber.org/yarpc/yarpcproto/yarpc.proto.
 //
-//   syntax = "proto3;
+//   syntax = "proto3";
 //
 //   import "go.uber.org/yarpc/yarpcproto/yarpc.proto";
 //
