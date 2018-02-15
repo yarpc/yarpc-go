@@ -87,17 +87,18 @@
 //   curl \
 //     http://0.0.0.0:8080 \
 //     -H 'context-ttl-ms: 2000' \
-//     -H 'rpc-caller: hello-client' \
+//     -H "rpc-caller: curl-$(whoami)" \
 //     -H 'rpc-service: hello' \
 //     -H 'rpc-encoding: json' \
 //     -H 'rpc-procedure: foo.bar.Baz::Echo' \
 //     -d '{"value":"sample"}'
 //
-// Where context-ttl-ms is the timeout, rpc-caller is anything, rpc-service is the name
-// of the configured service, rpc-encoding is json, rpc-procedure is proto_package.proto_service::proto_method,
-// and the data is the JSON representation of the request.
+// Where context-ttl-ms is the timeout in milliseconds, rpc-caller is the name of the entity making the request,
+// rpc-service is the name of the configured service, rpc-encoding is json, rpc-procedure is the name of the
+// Protobuf method being called in the form proto_package.proto_service::proto_method, and the data is the JSON
+// representation of the request.
 //
-// If using YAB, one can also use:
+// If using Yab, one can also use:
 //
 //   yab -p http://0.0.0.0:8080 -e json -s hello -p foo.bar.Baz::Echo -r '{"value":"sample"}'
 //
