@@ -177,7 +177,7 @@ func ConnBackoff(s backoffapi.Strategy) TransportOption {
 	}
 }
 
-// ExactCaseHeader specifies whether to forward headers without canonicalizing it
+// OriginalHeaders specifies whether to forward headers without canonicalizing it
 func OriginalHeaders() TransportOption {
 	return func(options *transportOptions) {
 		options.originalHeaders = true
