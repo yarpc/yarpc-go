@@ -130,7 +130,7 @@ func TestCallSuccess(t *testing.T) {
 	}{
 		{
 			msg:     "exactCaseHeader options on",
-			options: []TransportOption{ServiceName("caller"), ExactCaseHeader()},
+			options: []TransportOption{ServiceName("caller"), OriginalHeaders()},
 			headerVal: []byte{
 				0x00, 0x01,
 				0x00, 0x0b, 'f', 'o', 'o', '-', 'B', 'A', 'R', '-', 'B', 'a', 'Z',

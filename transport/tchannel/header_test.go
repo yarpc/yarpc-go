@@ -160,7 +160,7 @@ func TestWriteHeaders(t *testing.T) {
 	tests := []struct {
 		msg string
 		// the headers are serialized in an undefined order so the encoding
-		// must be one of the following
+		// must be one of bytes or orBytes
 		bytes          []byte
 		orBytes        []byte
 		headers        map[string]string
@@ -179,7 +179,7 @@ func TestWriteHeaders(t *testing.T) {
 				0x00, 0x01, 'a', 0x00, 0x01, '1',
 			},
 			map[string]string{"a": "1", "b": "2"},
-			nil,
+			nil, /* tracingBaggage */
 		},
 		{
 			"mixed case header",
@@ -194,7 +194,22 @@ func TestWriteHeaders(t *testing.T) {
 				0x00, 0x01, 'A', 0x00, 0x01, '1',
 			},
 			map[string]string{"A": "1", "b": "2"},
-			nil,
+			nil, /* tracingBaggage */
+		},
+		{
+			"keys only differ by case",
+			[]byte{
+				0x00, 0x02,
+				0x00, 0x01, 'A', 0x00, 0x01, '1',
+				0x00, 0x01, 'a', 0x00, 0x01, '2',
+			},
+			[]byte{
+				0x00, 0x02,
+				0x00, 0x01, 'a', 0x00, 0x01, '2',
+				0x00, 0x01, 'A', 0x00, 0x01, '1',
+			},
+			map[string]string{"A": "1", "a": "2"},
+			nil, /* tracingBaggage */
 		},
 		{
 			"tracing bagger header",

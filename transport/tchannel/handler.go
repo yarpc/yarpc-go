@@ -80,10 +80,10 @@ func (c tchannelCall) Response() inboundCallResponse {
 
 // handler wraps a transport.UnaryHandler into a TChannel Handler.
 type handler struct {
-	existing       map[string]tchannel.Handler
-	router         transport.Router
-	tracer         opentracing.Tracer
-	originalHeader bool
+	existing        map[string]tchannel.Handler
+	router          transport.Router
+	tracer          opentracing.Tracer
+	originalHeaders bool
 }
 
 func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
@@ -92,7 +92,7 @@ func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
 
 func (h handler) handle(ctx context.Context, call inboundCall) {
 	// you MUST close the responseWriter no matter what unless you have a tchannel.SystemError
-	responseWriter := newResponseWriter(call.Response(), call.Format(), h.originalHeader)
+	responseWriter := newResponseWriter(call.Response(), call.Format(), h.originalHeaders)
 
 	err := h.callHandler(ctx, call, responseWriter)
 	if err != nil && !responseWriter.isApplicationError {
@@ -193,23 +193,19 @@ type responseWriter struct {
 	buffer             *bufferpool.Buffer
 	response           inboundCallResponse
 	isApplicationError bool
-	originalHeader     bool
+	originalHeaders    bool
 }
 
-func newResponseWriter(response inboundCallResponse, format tchannel.Format, originalHeader bool) *responseWriter {
+func newResponseWriter(response inboundCallResponse, format tchannel.Format, originalHeaders bool) *responseWriter {
 	return &responseWriter{
-		response:       response,
-		format:         format,
-		originalHeader: originalHeader,
+		response:        response,
+		format:          format,
+		originalHeaders: originalHeaders,
 	}
 }
 
 func (rw *responseWriter) AddHeaders(h transport.Headers) {
-	headers := h.Items()
-	if rw.originalHeader {
-		headers = h.OriginalItems()
-	}
-	for k, v := range headers {
+	for k, v := range h.OriginalItems() {
 		// TODO: is this considered a breaking change?
 		if isReservedHeaderKey(k) {
 			rw.failedWith = appendError(rw.failedWith, fmt.Errorf("cannot use reserved header key: %s", k))
@@ -252,7 +248,7 @@ func (rw *responseWriter) Close() error {
 	}
 
 	headers := rw.headers.Items()
-	if rw.originalHeader {
+	if rw.originalHeaders {
 		headers = rw.headers.OriginalItems()
 	}
 	retErr = appendError(retErr, writeHeaders(rw.format, headers, nil, rw.response.Arg2Writer))

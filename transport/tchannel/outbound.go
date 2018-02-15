@@ -97,7 +97,7 @@ func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport
 func (p *tchannelPeer) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	root := p.transport.ch.RootPeers()
 	tp := root.GetOrAdd(p.HostPort())
-	return callWithPeer(ctx, req, tp, p.transport.originalHeader)
+	return callWithPeer(ctx, req, tp, p.transport.originalHeaders)
 }
 
 // callWithPeer sends a request with the chosen peer.
@@ -137,6 +137,7 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		reqHeaders = req.Headers.OriginalItems()
 	}
 
+	// baggage headers are transport implementation details that are stripped out (and stored in the context). Users don't interact with it
 	tracingBaggage := tchannel.InjectOutboundSpan(call.Response(), nil)
 	if err := writeHeaders(format, reqHeaders, tracingBaggage, call.Arg2Writer); err != nil {
 		// TODO(abg): This will wrap IO errors while writing headers as encode

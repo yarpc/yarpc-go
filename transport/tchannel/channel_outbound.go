@@ -157,10 +157,10 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 	}
 
 	reqHeaders := req.Headers.Items()
-	if o.transport.originalHeader {
+	if o.transport.originalHeaders {
 		reqHeaders = req.Headers.OriginalItems()
 	}
-	// We do not want to canonicalize these headers as channel_outbound is deprecated
+	// baggage headers are transport implementation details that are stripped out (and stored in the context). Users don't interact with it
 	tracingBaggage := tchannel.InjectOutboundSpan(call.Response(), nil)
 	if err := writeHeaders(format, reqHeaders, tracingBaggage, call.Arg2Writer); err != nil {
 		// TODO(abg): This will wrap IO errors while writing headers as encode

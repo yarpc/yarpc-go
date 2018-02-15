@@ -59,7 +59,7 @@ type Transport struct {
 	connRetryBackoffFactor int
 	connectorsGroup        sync.WaitGroup
 	connBackoffStrategy    backoffapi.Strategy
-	originalHeader         bool
+	originalHeaders        bool
 
 	peers map[string]*tchannelPeer
 }
@@ -100,7 +100,7 @@ func (o transportOptions) newTransport() *Transport {
 		peers:               make(map[string]*tchannelPeer),
 		tracer:              o.tracer,
 		logger:              logger,
-		originalHeader:      o.originalHeader,
+		originalHeaders:     o.originalHeaders,
 	}
 }
 
@@ -195,9 +195,9 @@ func (t *Transport) start() error {
 	chopts := tchannel.ChannelOptions{
 		Tracer: t.tracer,
 		Handler: handler{
-			router:         t.router,
-			tracer:         t.tracer,
-			originalHeader: t.originalHeader,
+			router:          t.router,
+			tracer:          t.tracer,
+			originalHeaders: t.originalHeaders,
 		},
 		OnPeerStatusChanged: t.onPeerStatusChanged,
 	}
