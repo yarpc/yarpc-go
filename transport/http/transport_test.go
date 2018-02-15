@@ -22,6 +22,7 @@ package http
 
 import (
 	"testing"
+	"time"
 
 	"github.com/crossdock/crossdock-go/assert"
 	"github.com/golang/mock/gomock"
@@ -281,18 +282,18 @@ func TestTransportClient(t *testing.T) {
 	assert.NotNil(t, transport.client)
 }
 
-func TestTransportClientWithKeepAlive(t *testing.T) {
+func TestTransportClientOpaqueOptions(t *testing.T) {
 	// Unfortunately the KeepAlive is obfuscated in the client, so we can't really
 	// assert this worked.
-	transport := NewTransport(KeepAlive(testtime.Second))
-
-	assert.NotNil(t, transport.client)
-}
-
-func TestTransportClientWithMaxIdleConnections(t *testing.T) {
-	// Unfortunately the MaxIdleConnsPerHost is obfuscated in the client, so we can't really
-	// assert this worked.
-	transport := NewTransport(MaxIdleConnsPerHost(100))
+	transport := NewTransport(
+		KeepAlive(testtime.Second),
+		MaxIdleConns(100),
+		MaxIdleConnsPerHost(10),
+		IdleConnTimeout(1*time.Second),
+		DisableCompression(),
+		DisableKeepAlives(),
+		ResponseHeaderTimeout(1*time.Second),
+	)
 
 	assert.NotNil(t, transport.client)
 }

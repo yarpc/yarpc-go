@@ -93,6 +93,8 @@ func readHeaders(format tchannel.Format, getReader func() (tchannel.ArgReader, e
 	return headers, r.Close()
 }
 
+var emptyMap = map[string]string{}
+
 // writeHeaders writes the given headers using the given function to get the
 // arg writer.
 //
@@ -111,6 +113,10 @@ func writeHeaders(format tchannel.Format, headers map[string]string, tracingBagg
 	}
 	if format == tchannel.JSON {
 		// JSON is special
+		if merged == nil {
+			// We want to write "{}", not "null" for empty map.
+			merged = emptyMap
+		}
 		return tchannel.NewArgWriter(getWriter()).WriteJSON(merged)
 	}
 	return tchannel.NewArgWriter(getWriter()).Write(encodeHeaders(merged))
