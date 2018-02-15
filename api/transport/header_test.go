@@ -80,3 +80,111 @@ func TestNewHeaders(t *testing.T) {
 		}
 	}
 }
+
+func TestItemsAndOriginalItems(t *testing.T) {
+	type headers struct {
+		key, val string
+	}
+	tests := []struct {
+		msg                       string
+		toDeleteKey               string
+		headers                   []headers
+		preDeletionItems          map[string]string
+		postDeletionItems         map[string]string
+		preDeletionOriginalItems  map[string]string
+		postDeletionOriginalItems map[string]string
+	}{
+		{
+			msg:         "delete lowercase/canonical key",
+			toDeleteKey: "other-header",
+			headers: []headers{
+				{"foo-BAR-BaZ", "foo-bar-baz"},
+				{"Foo-bAr-baZ", "FOO-BAR-BAZ"},
+				{"other-header", "other-value"},
+			},
+			preDeletionItems: map[string]string{
+				"foo-bar-baz":  "FOO-BAR-BAZ",
+				"other-header": "other-value",
+			},
+			postDeletionItems: map[string]string{
+				"foo-bar-baz": "FOO-BAR-BAZ",
+			},
+			preDeletionOriginalItems: map[string]string{
+				"foo-BAR-BaZ":  "foo-bar-baz",
+				"Foo-bAr-baZ":  "FOO-BAR-BAZ",
+				"other-header": "other-value",
+			},
+			postDeletionOriginalItems: map[string]string{
+				"foo-BAR-BaZ": "foo-bar-baz",
+				"Foo-bAr-baZ": "FOO-BAR-BAZ",
+			},
+		},
+		{
+			msg:         "delete non-canonical key that does not exist in originalItem",
+			toDeleteKey: "fOo-BAR-Baz",
+			headers: []headers{
+				{"foo-BAR-BaZ", "foo-bar-baz"},
+				{"Foo-bAr-baZ", "FOO-BAR-BAZ"},
+				{"other-header", "other-value"},
+			},
+			preDeletionItems: map[string]string{
+				"foo-bar-baz":  "FOO-BAR-BAZ",
+				"other-header": "other-value",
+			},
+			postDeletionItems: map[string]string{
+				"other-header": "other-value",
+			},
+			preDeletionOriginalItems: map[string]string{
+				"foo-BAR-BaZ":  "foo-bar-baz",
+				"Foo-bAr-baZ":  "FOO-BAR-BAZ",
+				"other-header": "other-value",
+			},
+			postDeletionOriginalItems: map[string]string{
+				"foo-BAR-BaZ":  "foo-bar-baz",
+				"Foo-bAr-baZ":  "FOO-BAR-BAZ",
+				"other-header": "other-value",
+			},
+		},
+		{
+			msg:         "delete non-canonical key that also exists in originalItem",
+			toDeleteKey: "foo-BAR-BaZ",
+			headers: []headers{
+				{"foo-BAR-BaZ", "foo-bar-baz"},
+				{"Foo-bAr-baZ", "FOO-BAR-BAZ"},
+				{"other-header", "other-value"},
+			},
+			preDeletionItems: map[string]string{
+				"foo-bar-baz":  "FOO-BAR-BAZ",
+				"other-header": "other-value",
+			},
+			postDeletionItems: map[string]string{
+				"other-header": "other-value",
+			},
+			preDeletionOriginalItems: map[string]string{
+				"foo-BAR-BaZ":  "foo-bar-baz",
+				"Foo-bAr-baZ":  "FOO-BAR-BAZ",
+				"other-header": "other-value",
+			},
+			postDeletionOriginalItems: map[string]string{
+				"Foo-bAr-baZ":  "FOO-BAR-BAZ",
+				"other-header": "other-value",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			header := NewHeaders()
+			for _, v := range tt.headers {
+				header = header.With(v.key, v.val)
+			}
+
+			assert.Equal(t, tt.preDeletionItems, header.Items())
+			assert.Equal(t, tt.preDeletionOriginalItems, header.OriginalItems())
+
+			header.Del(tt.toDeleteKey)
+			assert.Equal(t, tt.postDeletionItems, header.Items())
+			assert.Equal(t, tt.postDeletionOriginalItems, header.OriginalItems())
+		})
+	}
+}

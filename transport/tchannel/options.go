@@ -56,6 +56,7 @@ type transportOptions struct {
 	name                string
 	connTimeout         time.Duration
 	connBackoffStrategy backoffapi.Strategy
+	originalHeaders     bool
 }
 
 // newTransportOptions constructs the default transport options struct
@@ -173,5 +174,12 @@ func ConnTimeout(d time.Duration) TransportOption {
 func ConnBackoff(s backoffapi.Strategy) TransportOption {
 	return func(options *transportOptions) {
 		options.connBackoffStrategy = s
+	}
+}
+
+// OriginalHeaders specifies whether to forward headers without canonicalizing it
+func OriginalHeaders() TransportOption {
+	return func(options *transportOptions) {
+		options.originalHeaders = true
 	}
 }

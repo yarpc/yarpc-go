@@ -156,10 +156,13 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 		return nil, toYARPCError(req, err)
 	}
 
-	// Inject tracing system baggage
-	reqHeaders := tchannel.InjectOutboundSpan(call.Response(), req.Headers.Items())
-
-	if err := writeRequestHeaders(ctx, format, reqHeaders, call.Arg2Writer); err != nil {
+	reqHeaders := req.Headers.Items()
+	if o.transport.originalHeaders {
+		reqHeaders = req.Headers.OriginalItems()
+	}
+	// baggage headers are transport implementation details that are stripped out (and stored in the context). Users don't interact with it
+	tracingBaggage := tchannel.InjectOutboundSpan(call.Response(), nil)
+	if err := writeHeaders(format, reqHeaders, tracingBaggage, call.Arg2Writer); err != nil {
 		// TODO(abg): This will wrap IO errors while writing headers as encode
 		// errors. We should fix that.
 		return nil, errors.RequestHeadersEncodeError(req, err)

@@ -80,9 +80,10 @@ func (c tchannelCall) Response() inboundCallResponse {
 
 // handler wraps a transport.UnaryHandler into a TChannel Handler.
 type handler struct {
-	existing map[string]tchannel.Handler
-	router   transport.Router
-	tracer   opentracing.Tracer
+	existing        map[string]tchannel.Handler
+	router          transport.Router
+	tracer          opentracing.Tracer
+	originalHeaders bool
 }
 
 func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
@@ -91,7 +92,7 @@ func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
 
 func (h handler) handle(ctx context.Context, call inboundCall) {
 	// you MUST close the responseWriter no matter what unless you have a tchannel.SystemError
-	responseWriter := newResponseWriter(call.Response(), call.Format())
+	responseWriter := newResponseWriter(call.Response(), call.Format(), h.originalHeaders)
 
 	err := h.callHandler(ctx, call, responseWriter)
 	if err != nil && !responseWriter.isApplicationError {
@@ -192,17 +193,19 @@ type responseWriter struct {
 	buffer             *bufferpool.Buffer
 	response           inboundCallResponse
 	isApplicationError bool
+	originalHeaders    bool
 }
 
-func newResponseWriter(response inboundCallResponse, format tchannel.Format) *responseWriter {
+func newResponseWriter(response inboundCallResponse, format tchannel.Format, originalHeaders bool) *responseWriter {
 	return &responseWriter{
-		response: response,
-		format:   format,
+		response:        response,
+		format:          format,
+		originalHeaders: originalHeaders,
 	}
 }
 
 func (rw *responseWriter) AddHeaders(h transport.Headers) {
-	for k, v := range h.Items() {
+	for k, v := range h.OriginalItems() {
 		// TODO: is this considered a breaking change?
 		if isReservedHeaderKey(k) {
 			rw.failedWith = appendError(rw.failedWith, fmt.Errorf("cannot use reserved header key: %s", k))
@@ -243,7 +246,12 @@ func (rw *responseWriter) Close() error {
 			retErr = appendError(retErr, fmt.Errorf("SetApplicationError() failed: %v", err))
 		}
 	}
-	retErr = appendError(retErr, writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer))
+
+	headers := rw.headers.Items()
+	if rw.originalHeaders {
+		headers = rw.headers.OriginalItems()
+	}
+	retErr = appendError(retErr, writeHeaders(rw.format, headers, nil, rw.response.Arg2Writer))
 
 	// Arg3Writer must be opened and closed regardless of if there is data
 	// However, if there is a system error, we do not want to do this

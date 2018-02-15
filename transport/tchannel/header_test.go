@@ -54,7 +54,7 @@ func TestEncodeAndDecodeHeaders(t *testing.T) {
 
 	for _, tt := range tests {
 		headers := transport.HeadersFromMap(tt.headers)
-		assert.Equal(t, tt.bytes, encodeHeaders(headers))
+		assert.Equal(t, tt.bytes, encodeHeaders(tt.headers))
 
 		result, err := decodeHeaders(bytes.NewReader(tt.bytes))
 		if assert.NoError(t, err) {
@@ -130,7 +130,7 @@ func TestReadAndWriteHeaders(t *testing.T) {
 		headers := transport.HeadersFromMap(tt.headers)
 
 		buffer := newBufferArgWriter()
-		err := writeHeaders(tt.format, headers, func() (tchannel.ArgWriter, error) {
+		err := writeHeaders(tt.format, tt.headers, nil, func() (tchannel.ArgWriter, error) {
 			return buffer, nil
 		})
 		require.NoError(t, err)
@@ -154,4 +154,91 @@ func TestReadHeadersFailure(t *testing.T) {
 		return nil, errors.New("great sadness")
 	})
 	require.Error(t, err)
+}
+
+func TestWriteHeaders(t *testing.T) {
+	tests := []struct {
+		msg string
+		// the headers are serialized in an undefined order so the encoding
+		// must be one of bytes or orBytes
+		bytes          []byte
+		orBytes        []byte
+		headers        map[string]string
+		tracingBaggage map[string]string
+	}{
+		{
+			"lowercase header",
+			[]byte{
+				0x00, 0x02,
+				0x00, 0x01, 'a', 0x00, 0x01, '1',
+				0x00, 0x01, 'b', 0x00, 0x01, '2',
+			},
+			[]byte{
+				0x00, 0x02,
+				0x00, 0x01, 'b', 0x00, 0x01, '2',
+				0x00, 0x01, 'a', 0x00, 0x01, '1',
+			},
+			map[string]string{"a": "1", "b": "2"},
+			nil, /* tracingBaggage */
+		},
+		{
+			"mixed case header",
+			[]byte{
+				0x00, 0x02,
+				0x00, 0x01, 'A', 0x00, 0x01, '1',
+				0x00, 0x01, 'b', 0x00, 0x01, '2',
+			},
+			[]byte{
+				0x00, 0x02,
+				0x00, 0x01, 'b', 0x00, 0x01, '2',
+				0x00, 0x01, 'A', 0x00, 0x01, '1',
+			},
+			map[string]string{"A": "1", "b": "2"},
+			nil, /* tracingBaggage */
+		},
+		{
+			"keys only differ by case",
+			[]byte{
+				0x00, 0x02,
+				0x00, 0x01, 'A', 0x00, 0x01, '1',
+				0x00, 0x01, 'a', 0x00, 0x01, '2',
+			},
+			[]byte{
+				0x00, 0x02,
+				0x00, 0x01, 'a', 0x00, 0x01, '2',
+				0x00, 0x01, 'A', 0x00, 0x01, '1',
+			},
+			map[string]string{"A": "1", "a": "2"},
+			nil, /* tracingBaggage */
+		},
+		{
+			"tracing bagger header",
+			[]byte{
+				0x00, 0x02,
+				0x00, 0x01, 'a', 0x00, 0x01, '1',
+				0x00, 0x01, 'b', 0x00, 0x01, '2',
+			},
+			[]byte{
+				0x00, 0x02,
+				0x00, 0x01, 'b', 0x00, 0x01, '2',
+				0x00, 0x01, 'a', 0x00, 0x01, '1',
+			},
+			map[string]string{"b": "2"},
+			map[string]string{"a": "1"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			buffer := newBufferArgWriter()
+			err := writeHeaders(tchannel.Raw, tt.headers, tt.tracingBaggage, func() (tchannel.ArgWriter, error) {
+				return buffer, nil
+			})
+			require.NoError(t, err)
+			// Result must match either tt.bytes or tt.orBytes.
+			if !bytes.Equal(tt.bytes, buffer.Bytes()) {
+				assert.Equal(t, tt.orBytes, buffer.Bytes())
+			}
+		})
+	}
 }

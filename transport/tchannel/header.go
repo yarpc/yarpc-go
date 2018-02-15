@@ -93,22 +93,6 @@ func readHeaders(format tchannel.Format, getReader func() (tchannel.ArgReader, e
 	return headers, r.Close()
 }
 
-func writeRequestHeaders(
-	ctx context.Context,
-	format tchannel.Format,
-	appHeaders map[string]string,
-	getWriter func() (tchannel.ArgWriter, error),
-) error {
-	headers := transport.NewHeadersWithCapacity(len(appHeaders))
-	// TODO: zero-alloc version
-
-	for k, v := range appHeaders {
-		headers = headers.With(k, v)
-	}
-
-	return writeHeaders(format, headers, getWriter)
-}
-
 var emptyMap = map[string]string{}
 
 // writeHeaders writes the given headers using the given function to get the
@@ -118,17 +102,36 @@ var emptyMap = map[string]string{}
 // InboundCallResponse.
 //
 // If the format is JSON, the headers are JSON encoded.
-func writeHeaders(format tchannel.Format, headers transport.Headers, getWriter func() (tchannel.ArgWriter, error)) error {
+func writeHeaders(format tchannel.Format, headers map[string]string, tracingBaggage map[string]string, getWriter func() (tchannel.ArgWriter, error)) error {
+	merged := mergeHeaders(headers, tracingBaggage)
 	if format == tchannel.JSON {
 		// JSON is special
-		items := headers.Items()
-		if items == nil {
+		if merged == nil {
 			// We want to write "{}", not "null" for empty map.
-			items = emptyMap
+			merged = emptyMap
 		}
-		return tchannel.NewArgWriter(getWriter()).WriteJSON(items)
+		return tchannel.NewArgWriter(getWriter()).WriteJSON(merged)
 	}
-	return tchannel.NewArgWriter(getWriter()).Write(encodeHeaders(headers))
+	return tchannel.NewArgWriter(getWriter()).Write(encodeHeaders(merged))
+}
+
+// mergeHeaders will keep the last value if the same key appears multiple times
+func mergeHeaders(m1, m2 map[string]string) map[string]string {
+	if len(m1) == 0 {
+		return m2
+	}
+	if len(m2) == 0 {
+		return m1
+	}
+	// merge and return
+	merged := make(map[string]string, len(m1)+len(m2))
+	for k, v := range m1 {
+		merged[k] = v
+	}
+	for k, v := range m2 {
+		merged[k] = v
+	}
+	return merged
 }
 
 // decodeHeaders decodes headers using the format:
@@ -155,13 +158,13 @@ func decodeHeaders(r io.Reader) (transport.Headers, error) {
 // encodeHeaders encodes headers using the format:
 //
 // 	nh:2 (k~2 v~2){nh}
-func encodeHeaders(hs transport.Headers) []byte {
-	if hs.Len() == 0 {
+func encodeHeaders(hs map[string]string) []byte {
+	if len(hs) == 0 {
 		return []byte{0, 0} // nh = 2
 	}
 
 	size := 2 // nh:2
-	for k, v := range hs.Items() {
+	for k, v := range hs {
 		size += len(k) + 2 // k~2
 		size += len(v) + 2 // v~2
 	}
@@ -169,8 +172,8 @@ func encodeHeaders(hs transport.Headers) []byte {
 	out := make([]byte, size)
 
 	i := 2
-	binary.BigEndian.PutUint16(out, uint16(hs.Len())) // nh:2
-	for k, v := range hs.Items() {
+	binary.BigEndian.PutUint16(out, uint16(len(hs))) // nh:2
+	for k, v := range hs {
 		i += _putStr16(k, out[i:]) // k~2
 		i += _putStr16(v, out[i:]) // v~2
 	}
