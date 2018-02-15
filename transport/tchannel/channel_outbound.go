@@ -157,7 +157,7 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 	}
 
 	reqHeaders := req.Headers.Items()
-	if o.transport.exactCaseHeader {
+	if o.transport.originalHeader {
 		reqHeaders = req.Headers.OriginalItems()
 	}
 	// We do not want to canonicalize these headers as channel_outbound is deprecated

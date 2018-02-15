@@ -80,10 +80,10 @@ func (c tchannelCall) Response() inboundCallResponse {
 
 // handler wraps a transport.UnaryHandler into a TChannel Handler.
 type handler struct {
-	existing        map[string]tchannel.Handler
-	router          transport.Router
-	tracer          opentracing.Tracer
-	exactCaseHeader bool
+	existing       map[string]tchannel.Handler
+	router         transport.Router
+	tracer         opentracing.Tracer
+	originalHeader bool
 }
 
 func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
@@ -92,7 +92,7 @@ func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
 
 func (h handler) handle(ctx context.Context, call inboundCall) {
 	// you MUST close the responseWriter no matter what unless you have a tchannel.SystemError
-	responseWriter := newResponseWriter(call.Response(), call.Format(), h.exactCaseHeader)
+	responseWriter := newResponseWriter(call.Response(), call.Format(), h.originalHeader)
 
 	err := h.callHandler(ctx, call, responseWriter)
 	if err != nil && !responseWriter.isApplicationError {
@@ -193,20 +193,20 @@ type responseWriter struct {
 	buffer             *bufferpool.Buffer
 	response           inboundCallResponse
 	isApplicationError bool
-	exactCaseHeader    bool
+	originalHeader     bool
 }
 
-func newResponseWriter(response inboundCallResponse, format tchannel.Format, exactCaseHeader bool) *responseWriter {
+func newResponseWriter(response inboundCallResponse, format tchannel.Format, originalHeader bool) *responseWriter {
 	return &responseWriter{
-		response:        response,
-		format:          format,
-		exactCaseHeader: exactCaseHeader,
+		response:       response,
+		format:         format,
+		originalHeader: originalHeader,
 	}
 }
 
 func (rw *responseWriter) AddHeaders(h transport.Headers) {
 	headers := h.Items()
-	if rw.exactCaseHeader {
+	if rw.originalHeader {
 		headers = h.OriginalItems()
 	}
 	for k, v := range headers {
@@ -252,7 +252,7 @@ func (rw *responseWriter) Close() error {
 	}
 
 	headers := rw.headers.Items()
-	if rw.exactCaseHeader {
+	if rw.originalHeader {
 		headers = rw.headers.OriginalItems()
 	}
 	retErr = appendError(retErr, writeHeaders(rw.format, headers, nil, rw.response.Arg2Writer))
