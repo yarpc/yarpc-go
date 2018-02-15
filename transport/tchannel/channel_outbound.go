@@ -160,7 +160,7 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 	if o.transport.exactCaseHeader {
 		reqHeaders = req.Headers.OriginalItems()
 	}
-
+	// We do not want to canonicalize these headers as channel_outbound is deprecated
 	tracingBaggage := tchannel.InjectOutboundSpan(call.Response(), nil)
 	if err := writeHeaders(format, reqHeaders, tracingBaggage, call.Arg2Writer); err != nil {
 		// TODO(abg): This will wrap IO errors while writing headers as encode

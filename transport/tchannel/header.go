@@ -102,11 +102,11 @@ func readHeaders(format tchannel.Format, getReader func() (tchannel.ArgReader, e
 // If the format is JSON, the headers are JSON encoded.
 func writeHeaders(format tchannel.Format, headers map[string]string, tracingBaggage map[string]string, getWriter func() (tchannel.ArgWriter, error)) error {
 	merged := make(map[string]string, len(headers)+len(tracingBaggage))
-	// tracingBaggage should not override application headers. So this goes first
-	for k, v := range tracingBaggage {
+	for k, v := range headers {
 		merged[k] = v
 	}
-	for k, v := range headers {
+	// tracingBaggage should  override application headers. So this goes last
+	for k, v := range tracingBaggage {
 		merged[k] = v
 	}
 	if format == tchannel.JSON {

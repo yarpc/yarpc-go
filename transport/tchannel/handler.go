@@ -189,7 +189,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 type responseWriter struct {
 	failedWith         error
 	format             tchannel.Format
-	headers            map[string]string
+	headers            transport.Headers
 	buffer             *bufferpool.Buffer
 	response           inboundCallResponse
 	isApplicationError bool
@@ -200,7 +200,6 @@ func newResponseWriter(response inboundCallResponse, format tchannel.Format, exa
 	return &responseWriter{
 		response:        response,
 		format:          format,
-		headers:         map[string]string{},
 		exactCaseHeader: exactCaseHeader,
 	}
 }
@@ -221,7 +220,7 @@ func (rw *responseWriter) AddHeaders(h transport.Headers) {
 }
 
 func (rw *responseWriter) addHeader(key string, value string) {
-	rw.headers[key] = value
+	rw.headers = rw.headers.With(key, value)
 }
 
 func (rw *responseWriter) SetApplicationError() {
@@ -251,7 +250,12 @@ func (rw *responseWriter) Close() error {
 			retErr = appendError(retErr, fmt.Errorf("SetApplicationError() failed: %v", err))
 		}
 	}
-	retErr = appendError(retErr, writeHeaders(rw.format, rw.headers, nil, rw.response.Arg2Writer))
+
+	headers := rw.headers.Items()
+	if rw.exactCaseHeader {
+		headers = rw.headers.OriginalItems()
+	}
+	retErr = appendError(retErr, writeHeaders(rw.format, headers, nil, rw.response.Arg2Writer))
 
 	// Arg3Writer must be opened and closed regardless of if there is data
 	// However, if there is a system error, we do not want to do this
