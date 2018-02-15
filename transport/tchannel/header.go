@@ -103,14 +103,7 @@ var emptyMap = map[string]string{}
 //
 // If the format is JSON, the headers are JSON encoded.
 func writeHeaders(format tchannel.Format, headers map[string]string, tracingBaggage map[string]string, getWriter func() (tchannel.ArgWriter, error)) error {
-	merged := make(map[string]string, len(headers)+len(tracingBaggage))
-	for k, v := range headers {
-		merged[k] = v
-	}
-	// tracingBaggage should  override application headers. So this goes last
-	for k, v := range tracingBaggage {
-		merged[k] = v
-	}
+	merged := mergeHeaders(headers, tracingBaggage)
 	if format == tchannel.JSON {
 		// JSON is special
 		if merged == nil {
@@ -120,6 +113,25 @@ func writeHeaders(format tchannel.Format, headers map[string]string, tracingBagg
 		return tchannel.NewArgWriter(getWriter()).WriteJSON(merged)
 	}
 	return tchannel.NewArgWriter(getWriter()).Write(encodeHeaders(merged))
+}
+
+// mergeHeaders will keep the last value if the same key appears multiple times
+func mergeHeaders(m1, m2 map[string]string) map[string]string {
+	if len(m1) == 0 {
+		return m2
+	}
+	if len(m2) == 0 {
+		return m1
+	}
+	// merge and return
+	merged := make(map[string]string, len(m1)+len(m2))
+	for k, v := range m1 {
+		merged[k] = v
+	}
+	for k, v := range m2 {
+		merged[k] = v
+	}
+	return merged
 }
 
 // decodeHeaders decodes headers using the format:
