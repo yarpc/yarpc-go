@@ -80,10 +80,10 @@ func (c tchannelCall) Response() inboundCallResponse {
 
 // handler wraps a transport.UnaryHandler into a TChannel Handler.
 type handler struct {
-	existing        map[string]tchannel.Handler
-	router          transport.Router
-	tracer          opentracing.Tracer
-	originalHeaders bool
+	existing   map[string]tchannel.Handler
+	router     transport.Router
+	tracer     opentracing.Tracer
+	headerCase headerCase
 }
 
 func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
@@ -92,7 +92,7 @@ func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
 
 func (h handler) handle(ctx context.Context, call inboundCall) {
 	// you MUST close the responseWriter no matter what unless you have a tchannel.SystemError
-	responseWriter := newResponseWriter(call.Response(), call.Format(), h.originalHeaders)
+	responseWriter := newResponseWriter(call.Response(), call.Format(), h.headerCase)
 
 	err := h.callHandler(ctx, call, responseWriter)
 	if err != nil && !responseWriter.isApplicationError {
@@ -193,14 +193,14 @@ type responseWriter struct {
 	buffer             *bufferpool.Buffer
 	response           inboundCallResponse
 	isApplicationError bool
-	originalHeaders    bool
+	headerCase         headerCase
 }
 
-func newResponseWriter(response inboundCallResponse, format tchannel.Format, originalHeaders bool) *responseWriter {
+func newResponseWriter(response inboundCallResponse, format tchannel.Format, headerCase headerCase) *responseWriter {
 	return &responseWriter{
-		response:        response,
-		format:          format,
-		originalHeaders: originalHeaders,
+		response:   response,
+		format:     format,
+		headerCase: headerCase,
 	}
 }
 
@@ -247,10 +247,7 @@ func (rw *responseWriter) Close() error {
 		}
 	}
 
-	headers := rw.headers.Items()
-	if rw.originalHeaders {
-		headers = rw.headers.OriginalItems()
-	}
+	headers := headerMap(rw.headers, rw.headerCase)
 	retErr = appendError(retErr, writeHeaders(rw.format, headers, nil, rw.response.Arg2Writer))
 
 	// Arg3Writer must be opened and closed regardless of if there is data
