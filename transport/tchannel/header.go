@@ -181,6 +181,15 @@ func encodeHeaders(hs map[string]string) []byte {
 	return out
 }
 
+func headerMap(hs transport.Headers, headerCase headerCase) map[string]string {
+	switch headerCase {
+	case originalHeaderCase:
+		return hs.OriginalItems()
+	default:
+		return hs.Items()
+	}
+}
+
 // _putStr16 writes the bytes `in` into `out` using the encoding `s~2`.
 func _putStr16(in string, out []byte) int {
 	binary.BigEndian.PutUint16(out, uint16(len(in)))

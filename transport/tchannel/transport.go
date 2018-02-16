@@ -36,6 +36,13 @@ import (
 	"go.uber.org/zap"
 )
 
+type headerCase int
+
+const (
+	canonicalizedHeaderCase headerCase = iota
+	originalHeaderCase
+)
+
 // Transport is a TChannel transport suitable for use with YARPC's peer
 // selection system.
 // The transport implements peer.Transport so multiple peer.List
@@ -59,7 +66,7 @@ type Transport struct {
 	connRetryBackoffFactor int
 	connectorsGroup        sync.WaitGroup
 	connBackoffStrategy    backoffapi.Strategy
-	originalHeaders        bool
+	headerCase             headerCase
 
 	peers map[string]*tchannelPeer
 }
@@ -90,6 +97,10 @@ func (o transportOptions) newTransport() *Transport {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
+	headerCase := canonicalizedHeaderCase
+	if o.originalHeaders {
+		headerCase = originalHeaderCase
+	}
 	return &Transport{
 		once:                lifecycle.NewOnce(),
 		name:                o.name,
@@ -100,7 +111,7 @@ func (o transportOptions) newTransport() *Transport {
 		peers:               make(map[string]*tchannelPeer),
 		tracer:              o.tracer,
 		logger:              logger,
-		originalHeaders:     o.originalHeaders,
+		headerCase:          headerCase,
 	}
 }
 
@@ -195,9 +206,9 @@ func (t *Transport) start() error {
 	chopts := tchannel.ChannelOptions{
 		Tracer: t.tracer,
 		Handler: handler{
-			router:          t.router,
-			tracer:          t.tracer,
-			originalHeaders: t.originalHeaders,
+			router:     t.router,
+			tracer:     t.tracer,
+			headerCase: t.headerCase,
 		},
 		OnPeerStatusChanged: t.onPeerStatusChanged,
 	}
