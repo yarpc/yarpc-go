@@ -26,6 +26,7 @@ import (
 
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/lifecycle"
 )
@@ -137,6 +138,15 @@ func (t *Transport) ReleasePeer(peerIdentifier peer.Identifier, peerSubscriber p
 		delete(t.addressToPeer, address)
 		p.stop()
 		return p.wait()
+	}
+	return nil
+}
+
+func (t *Transport) validateRequest(request *transport.Request) error {
+	for _, requestValidator := range t.options.requestValidators {
+		if err := requestValidator(request); err != nil {
+			return err
+		}
 	}
 	return nil
 }

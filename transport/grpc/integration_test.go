@@ -216,6 +216,25 @@ func TestApplicationErrorPropagation(t *testing.T) {
 	})
 }
 
+func TestYARPCRequestValidator(t *testing.T) {
+	t.Parallel()
+	doWithTestEnv(t, []TransportOption{
+		// TODO: this will only test client-side, need to test server-side
+		// with no option specified on client-side
+		RequestValidator(func(transportRequest *transport.Request) error {
+			if strings.HasSuffix(transportRequest.Procedure, "GetValue") {
+				// just some random error
+				return yarpcerrors.OutOfRangeErrorf("hello")
+			}
+			return nil
+		}),
+	}, nil, nil, func(t *testing.T, e *testEnv) {
+		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", "testValue"))
+		_, err := e.GetValueYARPC(context.Background(), "foo")
+		assert.Equal(t, yarpcerrors.OutOfRangeErrorf("hello"), err)
+	})
+}
+
 func doWithTestEnv(t *testing.T, transportOptions []TransportOption, inboundOptions []InboundOption, outboundOptions []OutboundOption, f func(*testing.T, *testEnv)) {
 	testEnv, err := newTestEnv(transportOptions, inboundOptions, outboundOptions)
 	require.NoError(t, err)

@@ -25,6 +25,7 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/backoff"
+	"go.uber.org/yarpc/api/transport"
 	intbackoff "go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/zap"
 )
@@ -83,6 +84,20 @@ func Logger(logger *zap.Logger) TransportOption {
 	}
 }
 
+// RequestValidator specifies an option to validate a transport.Request
+// before allowing an outbound call to be made or an inbound call
+// to be processed.
+//
+// This option can be used multiple times and the request validators
+// will be applied in the order they are given.
+//
+// By default, no validation is done.
+func RequestValidator(requestValidator func(*transport.Request) error) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.requestValidators = append(transportOptions.requestValidators, requestValidator)
+	}
+}
+
 // ServerMaxRecvMsgSize is the maximum message size the server can receive.
 //
 // The default is 4MB.
@@ -133,6 +148,7 @@ type transportOptions struct {
 	backoffStrategy      backoff.Strategy
 	tracer               opentracing.Tracer
 	logger               *zap.Logger
+	requestValidators    []func(*transport.Request) error
 	serverMaxRecvMsgSize int
 	serverMaxSendMsgSize int
 	clientMaxRecvMsgSize int

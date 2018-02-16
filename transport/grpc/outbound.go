@@ -97,6 +97,9 @@ func (o *Outbound) Chooser() peer.Chooser {
 
 // Call implements transport.UnaryOutbound#Call.
 func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+	if err := o.t.validateRequest(request); err != nil {
+		return nil, yarpcerrors.FromError(err)
+	}
 	if request == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for grpc outbound was nil")
 	}
