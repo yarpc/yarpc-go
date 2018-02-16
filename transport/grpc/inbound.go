@@ -29,6 +29,8 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 var (
@@ -100,6 +102,8 @@ func (i *Inbound) start() error {
 		grpc.MaxRecvMsgSize(i.t.options.serverMaxRecvMsgSize),
 		grpc.MaxSendMsgSize(i.t.options.serverMaxSendMsgSize),
 	)
+
+	grpc_health_v1.RegisterHealthServer(server, health.NewServer())
 
 	go func() {
 		i.t.options.logger.Info("started GRPC inbound", zap.Stringer("address", i.listener.Addr()))
