@@ -22,6 +22,7 @@ package observability
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"go.uber.org/net/metrics"
@@ -82,11 +83,15 @@ func (m *Middleware) Call(ctx context.Context, req *transport.Request, out trans
 	call := m.graph.begin(ctx, transport.Unary, _directionOutbound, req)
 	res, err := out.Call(ctx, req)
 
-	isApplicationError := false
-	if res != nil {
-		isApplicationError = res.ApplicationError
+	var appErr error
+	if res != nil && res.ApplicationError {
+		// This is a stub until outbound application error could be properly
+		// propagated
+		appErr = errors.New("application_error")
 	}
-	call.EndWithAppError(err, isApplicationError)
+
+	call.EndWithAppError(err, appErr)
+
 	return res, err
 }
 
