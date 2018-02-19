@@ -135,7 +135,6 @@ func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$thrift>.
 
 	var response <$thrift>.Response
 	if err == nil {
-		response.IsApplicationError = appErr != nil
 		response.ApplicationError = appErr
 		response.Body = result
 	}
