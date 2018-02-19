@@ -81,9 +81,9 @@ func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool)
 			fields,
 			zap.String(_error, "application_error"),
 		)
+	} else {
+		fields = append(fields, zap.Error(err))
 	}
-
-	fields = append(fields, zap.Error(err))
 
 	ce.Write(fields...)
 }
