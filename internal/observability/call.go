@@ -52,16 +52,16 @@ type call struct {
 }
 
 func (c call) End(err error) {
-	c.EndWithAppError(err, nil)
+	c.EndWithAppError(err, false)
 }
 
-func (c call) EndWithAppError(err error, appErr error) {
+func (c call) EndWithAppError(err error, isApplicationError bool) {
 	elapsed := _timeNow().Sub(c.started)
-	c.endLogs(elapsed, err, appErr)
-	c.endStats(elapsed, err, appErr)
+	c.endLogs(elapsed, err, isApplicationError)
+	c.endStats(elapsed, err, isApplicationError)
 }
 
-func (c call) endLogs(elapsed time.Duration, err error, appErr error) {
+func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool) {
 	msg := "Handled inbound request."
 	if c.direction != _directionInbound {
 		msg = "Made outbound call."
@@ -73,18 +73,17 @@ func (c call) endLogs(elapsed time.Duration, err error, appErr error) {
 	fields := c.fields[:0]
 	fields = append(fields, zap.String("rpcType", c.rpcType.String()))
 	fields = append(fields, zap.Duration("latency", elapsed))
-	fields = append(fields, zap.Bool("successful", err == nil && appErr == nil))
+	fields = append(fields, zap.Bool("successful", err == nil))
 	fields = append(fields, c.extract(c.ctx))
 
-	if appErr != nil {
+	if isApplicationError {
 		fields = append(
 			fields,
 			zap.String(_error, "application_error"),
-			zap.Error(appErr),
 		)
-	} else {
-		fields = append(fields, zap.Error(err))
 	}
+
+	fields = append(fields, zap.Error(err))
 
 	ce.Write(fields...)
 }
@@ -93,18 +92,18 @@ type withName interface {
 	Name() string
 }
 
-func (c call) endStats(elapsed time.Duration, err error, appErr error) {
+func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool) {
 	// TODO: We need a much better way to distinguish between caller and server
 	// errors. See T855583.
 	c.edge.calls.Inc()
-	if err == nil && appErr == nil {
+	if err == nil {
 		c.edge.successes.Inc()
 		c.edge.latencies.Observe(elapsed)
 		return
 	}
 
 	// For now, assume that all application errors are the caller's fault.
-	if appErr != nil {
+	if isApplicationError {
 		c.edge.callerErrLatencies.Observe(elapsed)
 
 		tags := []string{
@@ -112,7 +111,7 @@ func (c call) endStats(elapsed time.Duration, err error, appErr error) {
 		}
 
 		// If application error is a named one, augment tags with its name
-		if named, ok := appErr.(withName); ok {
+		if named, ok := err.(withName); ok {
 			tags = append(tags, _name, named.Name())
 		}
 

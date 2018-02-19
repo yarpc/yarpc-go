@@ -22,7 +22,6 @@ package observability
 
 import (
 	"context"
-	"errors"
 	"sync"
 
 	"go.uber.org/net/metrics"
@@ -40,6 +39,7 @@ type writer struct {
 	transport.ResponseWriter
 
 	isApplicationError bool
+	applicationError error
 }
 
 func newWriter(rw transport.ResponseWriter) *writer {
@@ -52,6 +52,12 @@ func newWriter(rw transport.ResponseWriter) *writer {
 func (w *writer) SetApplicationError() {
 	w.isApplicationError = true
 	w.ResponseWriter.SetApplicationError()
+}
+
+func (w *writer) SetVerboseApplicationError(err error) {
+	w.isApplicationError = true
+	w.applicationError = err
+	w.ResponseWriter.SetVerboseApplicationError(err)
 }
 
 func (w *writer) free() {
@@ -73,8 +79,19 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 	call := m.graph.begin(ctx, transport.Unary, _directionInbound, req)
 	wrappedWriter := newWriter(w)
 	err := h.Handle(ctx, req, wrappedWriter)
-	call.EndWithAppError(err, wrappedWriter.isApplicationError)
+
+	isApplicationError := false
+
+	// In case the application error happened, we want it to override
+	// whatever other error might have happened along
+	if wrappedWriter.isApplicationError {
+		err = wrappedWriter.applicationError
+		isApplicationError = true
+	}
+
+	call.EndWithAppError(err, isApplicationError)
 	wrappedWriter.free()
+
 	return err
 }
 
@@ -82,16 +99,7 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 func (m *Middleware) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	call := m.graph.begin(ctx, transport.Unary, _directionOutbound, req)
 	res, err := out.Call(ctx, req)
-
-	var appErr error
-	if res != nil && res.ApplicationError {
-		// This is a stub until outbound application error could be properly
-		// propagated
-		appErr = errors.New("application_error")
-	}
-
-	call.EndWithAppError(err, appErr)
-
+	call.EndWithAppError(err, res.ApplicationError)
 	return res, err
 }
 
