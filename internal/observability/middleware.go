@@ -90,7 +90,8 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 func (m *Middleware) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	call := m.graph.begin(ctx, transport.Unary, _directionOutbound, req)
 	res, err := out.Call(ctx, req)
-	call.EndWithAppError(err, res.ApplicationError)
+	isApplicationError := res != nil && res.ApplicationError
+	call.EndWithAppError(err, isApplicationError)
 	return res, err
 }
 
