@@ -76,12 +76,7 @@ func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool)
 	fields = append(fields, zap.Bool("successful", err == nil))
 	fields = append(fields, c.extract(c.ctx))
 
-	if isApplicationError {
-		fields = append(
-			fields,
-			zap.String(_error, "application_error"),
-		)
-	} else {
+	if !isApplicationError {
 		fields = append(fields, zap.Error(err))
 	}
 
