@@ -238,7 +238,7 @@ func (rw *responseWriter) AddHeaders(h transport.Headers) {
 	applicationHeaders.ToHTTPHeaders(h, rw.w.Header())
 }
 
-func (rw *responseWriter) SetApplicationError() {
+func (rw *responseWriter) SetApplicationError(_ error) {
 	rw.w.Header().Set(ApplicationStatusHeader, ApplicationErrorStatus)
 }
 

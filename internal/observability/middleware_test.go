@@ -385,7 +385,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		context.Background(),
 		req,
 		&transporttest.FakeResponseWriter{},
-		fakeHandler{err: nil, applicationErr: true},
+		fakeHandler{err: errors.New("some_weird_error"), applicationErr: true},
 	), "Unexpected transport error.")
 
 	expected := observer.LoggedEntry{

@@ -42,14 +42,8 @@ type ResponseWriter interface {
 	AddHeaders(Headers)
 	// TODO(abg): Ability to set individual headers instead?
 
-	// DEPRECATED
 	// SetApplicationError specifies that this response contains an
 	// application error. If called, this MUST be called before any invocation
 	// of Write().
-	SetApplicationError()
-
-	// SetVerboseApplicationError allows to verbosely specify application error
-	// If called, this MUST be called before any invocation
-	// of Write().
-	SetVerboseApplicationError(err error)
+	SetApplicationError(err error)
 }

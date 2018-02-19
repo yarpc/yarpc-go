@@ -191,9 +191,7 @@ type responseWriter struct {
 	headers            transport.Headers
 	buffer             *bufferpool.Buffer
 	response           inboundCallResponse
-
 	isApplicationError bool
-	verboseApplicationError error
 }
 
 func newResponseWriter(response inboundCallResponse, format tchannel.Format) *responseWriter {
@@ -218,13 +216,8 @@ func (rw *responseWriter) addHeader(key string, value string) {
 	rw.headers = rw.headers.With(key, value)
 }
 
-func (rw *responseWriter) SetApplicationError() {
+func (rw *responseWriter) SetApplicationError(_ error) {
 	rw.isApplicationError = true
-}
-
-func (rw *responseWriter) SetVerboseApplicationError(err error) {
-	rw.isApplicationError = true
-	rw.verboseApplicationError = err
 }
 
 func (rw *responseWriter) Write(s []byte) (int, error) {

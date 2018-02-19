@@ -401,7 +401,7 @@ func TestResponseWriter(t *testing.T) {
 		{
 			format: tchannel.Raw,
 			apply: func(w *responseWriter) {
-				w.SetApplicationError()
+				w.SetApplicationError(errors.New("application_error"))
 				_, err := w.Write([]byte("hello"))
 				require.NoError(t, err)
 			},

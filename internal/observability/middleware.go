@@ -38,26 +38,19 @@ var _writerPool = sync.Pool{New: func() interface{} {
 type writer struct {
 	transport.ResponseWriter
 
-	isApplicationError bool
 	applicationError error
 }
 
 func newWriter(rw transport.ResponseWriter) *writer {
 	w := _writerPool.Get().(*writer)
-	w.isApplicationError = false
 	w.ResponseWriter = rw
 	return w
 }
 
-func (w *writer) SetApplicationError() {
-	w.isApplicationError = true
-	w.ResponseWriter.SetApplicationError()
-}
-
-func (w *writer) SetVerboseApplicationError(err error) {
-	w.isApplicationError = true
+func (w *writer) SetApplicationError(err error) {
 	w.applicationError = err
-	w.ResponseWriter.SetVerboseApplicationError(err)
+
+	w.ResponseWriter.SetApplicationError(err)
 }
 
 func (w *writer) free() {
@@ -84,7 +77,7 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 
 	// In case the application error happened, we want it to override
 	// whatever other error might have happened along
-	if wrappedWriter.isApplicationError {
+	if wrappedWriter.applicationError != nil {
 		err = wrappedWriter.applicationError
 		isApplicationError = true
 	}

@@ -209,7 +209,7 @@ type FakeResponseWriter struct {
 }
 
 // SetApplicationError for FakeResponseWriter.
-func (fw *FakeResponseWriter) SetApplicationError() {
+func (fw *FakeResponseWriter) SetApplicationError(_ error) {
 	fw.IsApplicationError = true
 }
 

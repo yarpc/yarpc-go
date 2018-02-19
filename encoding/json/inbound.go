@@ -72,7 +72,7 @@ func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw tra
 	}
 
 	if appErr, _ := results[1].Interface().(error); appErr != nil {
-		rw.SetVerboseApplicationError(appErr)
+		rw.SetApplicationError(appErr)
 		return appErr
 	}
 

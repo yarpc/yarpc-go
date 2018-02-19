@@ -73,7 +73,7 @@ func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request,
 	}
 
 	if res.ApplicationError != nil {
-		rw.SetVerboseApplicationError(res.ApplicationError)
+		rw.SetApplicationError(res.ApplicationError)
 	}
 
 	if err := call.WriteToResponse(rw); err != nil {

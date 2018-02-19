@@ -52,7 +52,7 @@ func (r *responseWriter) AddHeaders(headers transport.Headers) {
 	r.headerErr = multierr.Combine(r.headerErr, addApplicationHeaders(r.md, headers))
 }
 
-func (r *responseWriter) SetApplicationError() {
+func (r *responseWriter) SetApplicationError(_ error) {
 	r.AddSystemHeader(ApplicationErrorHeader, ApplicationErrorHeaderValue)
 }
 
