@@ -73,16 +73,14 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 	wrappedWriter := newWriter(w)
 	err := h.Handle(ctx, req, wrappedWriter)
 
-	isApplicationError := false
-
 	// In case the application error happened, we want it to override
 	// whatever other error might have happened along
 	if wrappedWriter.applicationError != nil {
-		err = wrappedWriter.applicationError
-		isApplicationError = true
+		call.EndWithAppError(wrappedWriter.applicationError, true)
+	} else {
+		call.EndWithAppError(err, false)
 	}
 
-	call.EndWithAppError(err, isApplicationError)
 	wrappedWriter.free()
 
 	return err
