@@ -55,14 +55,13 @@ func (h handler) Healthy(ctx context.Context, body wire.Value) (thrift.Response,
 		return thrift.Response{}, err
 	}
 
-	success, err := h.impl.Healthy(ctx)
+	success, appErr := h.impl.Healthy(ctx)
 
-	hadError := err != nil
-	result, err := common.BaseService_Healthy_Helper.WrapResponse(success, err)
+	result, err := common.BaseService_Healthy_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
-		response.IsApplicationError = hadError
+		response.ApplicationError = appErr
 		response.Body = result
 	}
 	return response, err

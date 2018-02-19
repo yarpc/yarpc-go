@@ -59,14 +59,13 @@ func (h handler) Hello(ctx context.Context, body wire.Value) (thrift.Response, e
 		return thrift.Response{}, err
 	}
 
-	err := h.impl.Hello(ctx)
+	appErr := h.impl.Hello(ctx)
 
-	hadError := err != nil
-	result, err := common.ExtendEmpty_Hello_Helper.WrapResponse(err)
+	result, err := common.ExtendEmpty_Hello_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
-		response.IsApplicationError = hadError
+		response.ApplicationError = appErr
 		response.Body = result
 	}
 	return response, err

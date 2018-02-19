@@ -93,14 +93,13 @@ func (h handler) CompareAndSwap(ctx context.Context, body wire.Value) (thrift.Re
 		return thrift.Response{}, err
 	}
 
-	err := h.impl.CompareAndSwap(ctx, args.Request)
+	appErr := h.impl.CompareAndSwap(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := atomic.Store_CompareAndSwap_Helper.WrapResponse(err)
+	result, err := atomic.Store_CompareAndSwap_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
-		response.IsApplicationError = hadError
+		response.ApplicationError = appErr
 		response.Body = result
 	}
 	return response, err
@@ -121,14 +120,13 @@ func (h handler) Increment(ctx context.Context, body wire.Value) (thrift.Respons
 		return thrift.Response{}, err
 	}
 
-	err := h.impl.Increment(ctx, args.Key, args.Value)
+	appErr := h.impl.Increment(ctx, args.Key, args.Value)
 
-	hadError := err != nil
-	result, err := atomic.Store_Increment_Helper.WrapResponse(err)
+	result, err := atomic.Store_Increment_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
-		response.IsApplicationError = hadError
+		response.ApplicationError = appErr
 		response.Body = result
 	}
 	return response, err

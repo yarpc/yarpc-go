@@ -91,14 +91,13 @@ func (h handler) BlahBlah(ctx context.Context, body wire.Value) (thrift.Response
 		return thrift.Response{}, err
 	}
 
-	err := h.impl.BlahBlah(ctx)
+	appErr := h.impl.BlahBlah(ctx)
 
-	hadError := err != nil
-	result, err := gauntlet.SecondService_BlahBlah_Helper.WrapResponse(err)
+	result, err := gauntlet.SecondService_BlahBlah_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
-		response.IsApplicationError = hadError
+		response.ApplicationError = appErr
 		response.Body = result
 	}
 	return response, err
@@ -110,14 +109,13 @@ func (h handler) SecondtestString(ctx context.Context, body wire.Value) (thrift.
 		return thrift.Response{}, err
 	}
 
-	success, err := h.impl.SecondtestString(ctx, args.Thing)
+	success, appErr := h.impl.SecondtestString(ctx, args.Thing)
 
-	hadError := err != nil
-	result, err := gauntlet.SecondService_SecondtestString_Helper.WrapResponse(success, err)
+	result, err := gauntlet.SecondService_SecondtestString_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
-		response.IsApplicationError = hadError
+		response.ApplicationError = appErr
 		response.Body = result
 	}
 	return response, err
