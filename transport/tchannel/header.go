@@ -40,10 +40,10 @@ const (
 	ErrorMessageHeaderKey = "$rpc$-error-message"
 )
 
-var _reservedHeaderKeys = map[string]bool{
-	ErrorCodeHeaderKey:    true,
-	ErrorNameHeaderKey:    true,
-	ErrorMessageHeaderKey: true,
+var _reservedHeaderKeys = map[string]struct{}{
+	ErrorCodeHeaderKey:    {},
+	ErrorNameHeaderKey:    {},
+	ErrorMessageHeaderKey: {},
 }
 
 func isReservedHeaderKey(key string) bool {
