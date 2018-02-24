@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package uber.yarpc.internal.examples.protobuf.example;
 
-import "go.uber.org/yarpc/yarpcproto/yarpc.proto";
+import "yarpcproto/yarpc.proto";
 
 option go_package = "examplepb";
 

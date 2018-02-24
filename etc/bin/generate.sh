@@ -28,7 +28,6 @@ generate_stringer() {
 # $3: other options
 protoc_with_imports() {
   protoc \
-    -I "${GOPATH}/src" \
     -I vendor \
     -I vendor/github.com/gogo/protobuf/protobuf \
     -I . \
