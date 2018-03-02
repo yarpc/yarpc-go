@@ -21,10 +21,12 @@
 package yarpc_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -40,6 +42,8 @@ import (
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 func basicConfig(t testing.TB) Config {
@@ -495,6 +499,84 @@ func TestClientConfigWithOutboundServiceNameOverride(t *testing.T) {
 
 	assert.Equal(t, "test", cc.Caller())
 	assert.Equal(t, "my-real-service", cc.Service())
+}
+
+func TestEnableObservabilityMiddleware(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	req := &transport.Request{
+		Service:   "test",
+		Caller:    "test",
+		Procedure: "test",
+		Encoding:  transport.Encoding("test"),
+	}
+	out := transporttest.NewMockUnaryOutbound(mockCtrl)
+	out.EXPECT().Transports().AnyTimes()
+	out.EXPECT().Call(ctx, req).Times(1).Return(nil, nil)
+
+	core, logs := observer.New(zapcore.DebugLevel)
+	dispatcher := NewDispatcher(Config{
+		Name: "test",
+		Outbounds: Outbounds{
+			"my-test-service": {
+				ServiceName: "my-real-service",
+				Unary:       out,
+			},
+		},
+		Logging: LoggingConfig{
+			Zap: zap.New(core),
+		},
+		DisableAutoObservabilityMiddleware: false,
+	})
+
+	cc := dispatcher.MustOutboundConfig("my-test-service")
+	_, err := cc.Outbounds.Unary.Call(ctx, req)
+	require.NoError(t, err)
+
+	// There should be one log.
+	assert.Equal(t, 1, logs.Len())
+}
+
+func TestDisableObservabilityMiddleware(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	req := &transport.Request{
+		Service:   "test",
+		Caller:    "test",
+		Procedure: "test",
+		Encoding:  transport.Encoding("test"),
+	}
+	out := transporttest.NewMockUnaryOutbound(mockCtrl)
+	out.EXPECT().Transports().AnyTimes()
+	out.EXPECT().Call(ctx, req).Times(1).Return(nil, nil)
+
+	core, logs := observer.New(zapcore.DebugLevel)
+	dispatcher := NewDispatcher(Config{
+		Name: "test",
+		Outbounds: Outbounds{
+			"my-test-service": {
+				ServiceName: "my-real-service",
+				Unary:       out,
+			},
+		},
+		Logging: LoggingConfig{
+			Zap: zap.New(core),
+		},
+		DisableAutoObservabilityMiddleware: true,
+	})
+
+	cc := dispatcher.MustOutboundConfig("my-test-service")
+	_, err := cc.Outbounds.Unary.Call(ctx, req)
+	require.NoError(t, err)
+
+	// There should be no logs.
+	assert.Equal(t, 0, logs.Len())
 }
 
 func TestObservabilityConfig(t *testing.T) {

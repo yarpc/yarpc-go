@@ -172,4 +172,11 @@ type Config struct {
 
 	// Configures telemetry.
 	Metrics MetricsConfig
+
+	// DisableAutoObservabilityMiddleware is used to stop the dispatcher from
+	// automatically attaching observability middleware to all inbounds and
+	// outbounds.  It is the assumption that if if this option is disabled the
+	// observability middleware is being inserted in the Inbound/Outbound
+	// Middleware.
+	DisableAutoObservabilityMiddleware bool
 }

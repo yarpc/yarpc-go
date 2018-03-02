@@ -98,6 +98,10 @@ func NewDispatcher(cfg Config) *Dispatcher {
 }
 
 func addObservingMiddleware(cfg Config, meter *metrics.Scope, logger *zap.Logger, extractor observability.ContextExtractor) Config {
+	if cfg.DisableAutoObservabilityMiddleware {
+		return cfg
+	}
+
 	observer := observability.NewMiddleware(logger, meter, extractor)
 
 	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(observer, cfg.InboundMiddleware.Unary)
