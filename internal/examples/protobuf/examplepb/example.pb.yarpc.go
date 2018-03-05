@@ -30,6 +30,7 @@ import (
 	"reflect"
 
 	"github.com/gogo/protobuf/proto"
+	"go.uber.org/fx"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/protobuf"
@@ -91,6 +92,81 @@ func BuildKeyValueYARPCProcedures(server KeyValueYARPCServer) []transport.Proced
 			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{},
 		},
 	)
+}
+
+// ProvideKeyValueYARPCClientParams defines the input
+// for ProvideKeyValueYARPCClient. It provides the
+// paramaters to get a KeyValueYARPCClient in an
+// Fx application.
+type ProvideKeyValueYARPCClientParams struct {
+	fx.In
+
+	Provider yarpc.ClientConfig
+}
+
+// ProvideKeyValueYARPCClientResult defines the output
+// of ProvideKeyValueYARPCClient. It provides a
+// KeyValueYARPCClient to an Fx application.
+type ProvideKeyValueYARPCClientResult struct {
+	fx.Out
+
+	Client KeyValueYARPCClient
+
+	// We are using an fx.Out struct here instead of just returning a client
+	// so that we can add more values or add named versions of the client in
+	// the future without breaking any existing code.
+}
+
+// ProvideKeyValueYARPCClient provides a KeyValueYARPCClient
+// to an Fx application using the given name for routing.
+//
+//  fx.Provide(
+//    examplepb.ProvideKeyValueYARPCClient,
+//    ...
+//  )
+func ProvideKeyValueYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
+	return func(params ProvideKeyValueYARPCClientParams) ProvideKeyValueYARPCClientResult {
+		return ProvideKeyValueYARPCClientResult{
+			Client: NewKeyValueYARPCClient(params.Provider.ClientConfig(name), options...),
+		}
+	}
+}
+
+// ProvideKeyValueYARPCProceduresParams defines the input
+// for ProvideKeyValueYARPCProcedures. It provides the
+// paramaters to get KeyValueYARPCServer procedures in an
+// Fx application.
+type ProvideKeyValueYARPCProceduresParams struct {
+	fx.In
+
+	Server KeyValueYARPCServer
+}
+
+// ProvideKeyValueYARPCProceduresResult defines the output
+// of ProvideKeyValueYARPCProcedures. It provides
+// KeyValueYARPCServer procedures to an Fx application.
+//
+// The procedures are provided to the "yarpcfx" value group.
+// Dig 1.2 or newer must be used for this feature to work.
+type ProvideKeyValueYARPCProceduresResult struct {
+	fx.Out
+
+	Procedures []transport.Procedure `group:"yarpcfx"`
+}
+
+// ProvideKeyValueYARPCProcedures provides KeyValueYARPCServer procedures to an Fx application.
+// It expects a KeyValueYARPCServer to be present in the container.
+//
+//  fx.Provide(
+//    examplepb.ProvideKeyValueYARPCProcedures,
+//    ...
+//  )
+func ProvideKeyValueYARPCProcedures() interface{} {
+	return func(params ProvideKeyValueYARPCProceduresParams) ProvideKeyValueYARPCProceduresResult {
+		return ProvideKeyValueYARPCProceduresResult{
+			Procedures: BuildKeyValueYARPCProcedures(params.Server),
+		}
+	}
 }
 
 type _KeyValueYARPCCaller struct {
@@ -222,6 +298,81 @@ func BuildSinkYARPCProcedures(server SinkYARPCServer) []transport.Procedure {
 			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{},
 		},
 	)
+}
+
+// ProvideSinkYARPCClientParams defines the input
+// for ProvideSinkYARPCClient. It provides the
+// paramaters to get a SinkYARPCClient in an
+// Fx application.
+type ProvideSinkYARPCClientParams struct {
+	fx.In
+
+	Provider yarpc.ClientConfig
+}
+
+// ProvideSinkYARPCClientResult defines the output
+// of ProvideSinkYARPCClient. It provides a
+// SinkYARPCClient to an Fx application.
+type ProvideSinkYARPCClientResult struct {
+	fx.Out
+
+	Client SinkYARPCClient
+
+	// We are using an fx.Out struct here instead of just returning a client
+	// so that we can add more values or add named versions of the client in
+	// the future without breaking any existing code.
+}
+
+// ProvideSinkYARPCClient provides a SinkYARPCClient
+// to an Fx application using the given name for routing.
+//
+//  fx.Provide(
+//    examplepb.ProvideSinkYARPCClient,
+//    ...
+//  )
+func ProvideSinkYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
+	return func(params ProvideSinkYARPCClientParams) ProvideSinkYARPCClientResult {
+		return ProvideSinkYARPCClientResult{
+			Client: NewSinkYARPCClient(params.Provider.ClientConfig(name), options...),
+		}
+	}
+}
+
+// ProvideSinkYARPCProceduresParams defines the input
+// for ProvideSinkYARPCProcedures. It provides the
+// paramaters to get SinkYARPCServer procedures in an
+// Fx application.
+type ProvideSinkYARPCProceduresParams struct {
+	fx.In
+
+	Server SinkYARPCServer
+}
+
+// ProvideSinkYARPCProceduresResult defines the output
+// of ProvideSinkYARPCProcedures. It provides
+// SinkYARPCServer procedures to an Fx application.
+//
+// The procedures are provided to the "yarpcfx" value group.
+// Dig 1.2 or newer must be used for this feature to work.
+type ProvideSinkYARPCProceduresResult struct {
+	fx.Out
+
+	Procedures []transport.Procedure `group:"yarpcfx"`
+}
+
+// ProvideSinkYARPCProcedures provides SinkYARPCServer procedures to an Fx application.
+// It expects a SinkYARPCServer to be present in the container.
+//
+//  fx.Provide(
+//    examplepb.ProvideSinkYARPCProcedures,
+//    ...
+//  )
+func ProvideSinkYARPCProcedures() interface{} {
+	return func(params ProvideSinkYARPCProceduresParams) ProvideSinkYARPCProceduresResult {
+		return ProvideSinkYARPCProceduresResult{
+			Procedures: BuildSinkYARPCProcedures(params.Server),
+		}
+	}
 }
 
 type _SinkYARPCCaller struct {
@@ -365,6 +516,81 @@ func BuildFooYARPCProcedures(server FooYARPCServer) []transport.Procedure {
 			},
 		},
 	)
+}
+
+// ProvideFooYARPCClientParams defines the input
+// for ProvideFooYARPCClient. It provides the
+// paramaters to get a FooYARPCClient in an
+// Fx application.
+type ProvideFooYARPCClientParams struct {
+	fx.In
+
+	Provider yarpc.ClientConfig
+}
+
+// ProvideFooYARPCClientResult defines the output
+// of ProvideFooYARPCClient. It provides a
+// FooYARPCClient to an Fx application.
+type ProvideFooYARPCClientResult struct {
+	fx.Out
+
+	Client FooYARPCClient
+
+	// We are using an fx.Out struct here instead of just returning a client
+	// so that we can add more values or add named versions of the client in
+	// the future without breaking any existing code.
+}
+
+// ProvideFooYARPCClient provides a FooYARPCClient
+// to an Fx application using the given name for routing.
+//
+//  fx.Provide(
+//    examplepb.ProvideFooYARPCClient,
+//    ...
+//  )
+func ProvideFooYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
+	return func(params ProvideFooYARPCClientParams) ProvideFooYARPCClientResult {
+		return ProvideFooYARPCClientResult{
+			Client: NewFooYARPCClient(params.Provider.ClientConfig(name), options...),
+		}
+	}
+}
+
+// ProvideFooYARPCProceduresParams defines the input
+// for ProvideFooYARPCProcedures. It provides the
+// paramaters to get FooYARPCServer procedures in an
+// Fx application.
+type ProvideFooYARPCProceduresParams struct {
+	fx.In
+
+	Server FooYARPCServer
+}
+
+// ProvideFooYARPCProceduresResult defines the output
+// of ProvideFooYARPCProcedures. It provides
+// FooYARPCServer procedures to an Fx application.
+//
+// The procedures are provided to the "yarpcfx" value group.
+// Dig 1.2 or newer must be used for this feature to work.
+type ProvideFooYARPCProceduresResult struct {
+	fx.Out
+
+	Procedures []transport.Procedure `group:"yarpcfx"`
+}
+
+// ProvideFooYARPCProcedures provides FooYARPCServer procedures to an Fx application.
+// It expects a FooYARPCServer to be present in the container.
+//
+//  fx.Provide(
+//    examplepb.ProvideFooYARPCProcedures,
+//    ...
+//  )
+func ProvideFooYARPCProcedures() interface{} {
+	return func(params ProvideFooYARPCProceduresParams) ProvideFooYARPCProceduresResult {
+		return ProvideFooYARPCProceduresResult{
+			Procedures: BuildFooYARPCProcedures(params.Server),
+		}
+	}
 }
 
 type _FooYARPCCaller struct {

@@ -30,6 +30,7 @@ import (
 	"reflect"
 
 	"github.com/gogo/protobuf/proto"
+	"go.uber.org/fx"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/protobuf"
@@ -153,6 +154,81 @@ func BuildHelloYARPCProcedures(server HelloYARPCServer) []transport.Procedure {
 			},
 		},
 	)
+}
+
+// ProvideHelloYARPCClientParams defines the input
+// for ProvideHelloYARPCClient. It provides the
+// paramaters to get a HelloYARPCClient in an
+// Fx application.
+type ProvideHelloYARPCClientParams struct {
+	fx.In
+
+	Provider yarpc.ClientConfig
+}
+
+// ProvideHelloYARPCClientResult defines the output
+// of ProvideHelloYARPCClient. It provides a
+// HelloYARPCClient to an Fx application.
+type ProvideHelloYARPCClientResult struct {
+	fx.Out
+
+	Client HelloYARPCClient
+
+	// We are using an fx.Out struct here instead of just returning a client
+	// so that we can add more values or add named versions of the client in
+	// the future without breaking any existing code.
+}
+
+// ProvideHelloYARPCClient provides a HelloYARPCClient
+// to an Fx application using the given name for routing.
+//
+//  fx.Provide(
+//    streaming.ProvideHelloYARPCClient,
+//    ...
+//  )
+func ProvideHelloYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
+	return func(params ProvideHelloYARPCClientParams) ProvideHelloYARPCClientResult {
+		return ProvideHelloYARPCClientResult{
+			Client: NewHelloYARPCClient(params.Provider.ClientConfig(name), options...),
+		}
+	}
+}
+
+// ProvideHelloYARPCProceduresParams defines the input
+// for ProvideHelloYARPCProcedures. It provides the
+// paramaters to get HelloYARPCServer procedures in an
+// Fx application.
+type ProvideHelloYARPCProceduresParams struct {
+	fx.In
+
+	Server HelloYARPCServer
+}
+
+// ProvideHelloYARPCProceduresResult defines the output
+// of ProvideHelloYARPCProcedures. It provides
+// HelloYARPCServer procedures to an Fx application.
+//
+// The procedures are provided to the "yarpcfx" value group.
+// Dig 1.2 or newer must be used for this feature to work.
+type ProvideHelloYARPCProceduresResult struct {
+	fx.Out
+
+	Procedures []transport.Procedure `group:"yarpcfx"`
+}
+
+// ProvideHelloYARPCProcedures provides HelloYARPCServer procedures to an Fx application.
+// It expects a HelloYARPCServer to be present in the container.
+//
+//  fx.Provide(
+//    streaming.ProvideHelloYARPCProcedures,
+//    ...
+//  )
+func ProvideHelloYARPCProcedures() interface{} {
+	return func(params ProvideHelloYARPCProceduresParams) ProvideHelloYARPCProceduresResult {
+		return ProvideHelloYARPCProceduresResult{
+			Procedures: BuildHelloYARPCProcedures(params.Server),
+		}
+	}
 }
 
 type _HelloYARPCCaller struct {
