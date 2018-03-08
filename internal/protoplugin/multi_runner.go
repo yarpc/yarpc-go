@@ -43,17 +43,17 @@ func (m *multiRunner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.Co
 		response := runner.Run(request)
 		if responseErrString := response.GetError(); responseErrString != "" {
 			responseErr = multierr.Append(responseErr, errors.New(responseErrString))
-		} else {
-			for _, file := range response.GetFile() {
-				name := file.GetName()
-				if name == "" {
-					return newResponseError(errors.New("no name on CodeGeneratorResponse_File"))
-				}
-				if _, ok := nameToFile[name]; ok {
-					return newResponseError(fmt.Errorf("duplicate name for CodeGeneratorResponse_File: %s", name))
-				}
-				nameToFile[name] = file
+			continue
+		}
+		for _, file := range response.GetFile() {
+			name := file.GetName()
+			if name == "" {
+				return newResponseError(errors.New("no name on CodeGeneratorResponse_File"))
 			}
+			if _, ok := nameToFile[name]; ok {
+				return newResponseError(fmt.Errorf("duplicate name for CodeGeneratorResponse_File: %s", name))
+			}
+			nameToFile[name] = file
 		}
 	}
 	if responseErr != nil {
