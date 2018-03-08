@@ -503,7 +503,8 @@ var Runner = protoplugin.NewRunner(
 		"go.uber.org/yarpc/api/transport",
 		"go.uber.org/yarpc/encoding/protobuf",
 	},
-	func(name string) (string, error) {
+	func(file *protoplugin.File) (string, error) {
+		name := file.GetName()
 		return fmt.Sprintf("%s.pb.yarpc.go", strings.TrimSuffix(name, filepath.Ext(name))), nil
 	},
 )

@@ -37,11 +37,11 @@ var (
 )
 
 type generator struct {
-	registry                      *registry
-	tmpl                          *template.Template
-	templateInfoChecker           func(*TemplateInfo) error
-	baseImports                   []*GoPackage
-	protoFilenameToOutputFilename func(string) (string, error)
+	registry             *registry
+	tmpl                 *template.Template
+	templateInfoChecker  func(*TemplateInfo) error
+	baseImports          []*GoPackage
+	fileToOutputFilename func(*File) (string, error)
 }
 
 func newGenerator(
@@ -49,7 +49,7 @@ func newGenerator(
 	tmpl *template.Template,
 	templateInfoChecker func(*TemplateInfo) error,
 	baseImportStrings []string,
-	protoFilenameToOutputFilename func(string) (string, error),
+	fileToOutputFilename func(*File) (string, error),
 ) *generator {
 	var baseImports []*GoPackage
 	for _, pkgpath := range baseImportStrings {
@@ -74,7 +74,7 @@ func newGenerator(
 		tmpl,
 		templateInfoChecker,
 		baseImports,
-		protoFilenameToOutputFilename,
+		fileToOutputFilename,
 	}
 }
 
@@ -92,7 +92,7 @@ func (g *generator) Generate(targets []*File) ([]*plugin_go.CodeGeneratorRespons
 		if err != nil {
 			return nil, fmt.Errorf("could not format go code: %v\n%s", err, code)
 		}
-		output, err := g.protoFilenameToOutputFilename(file.GetName())
+		output, err := g.fileToOutputFilename(file)
 		if err != nil {
 			return nil, err
 		}
