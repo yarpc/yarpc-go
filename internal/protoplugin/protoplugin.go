@@ -96,9 +96,9 @@ func NewRunner(
 	tmpl *template.Template,
 	templateInfoChecker func(*TemplateInfo) error,
 	baseImports []string,
-	fileSuffix string,
+	protoFilenameToOutputFilename func(string) (string, error),
 ) Runner {
-	return newRunner(tmpl, templateInfoChecker, baseImports, fileSuffix)
+	return newRunner(tmpl, templateInfoChecker, baseImports, protoFilenameToOutputFilename)
 }
 
 // TemplateInfo is the info passed to a template.
