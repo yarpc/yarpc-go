@@ -24,6 +24,8 @@
 package lib
 
 import (
+	"fmt"
+	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -501,7 +503,9 @@ var Runner = protoplugin.NewRunner(
 		"go.uber.org/yarpc/api/transport",
 		"go.uber.org/yarpc/encoding/protobuf",
 	},
-	"pb.yarpc.go",
+	func(name string) (string, error) {
+		return fmt.Sprintf("%s.pb.yarpc.go", strings.TrimSuffix(name, filepath.Ext(name))), nil
+	},
 )
 
 func checkTemplateInfo(templateInfo *protoplugin.TemplateInfo) error {
