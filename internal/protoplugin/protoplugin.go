@@ -101,6 +101,12 @@ func NewRunner(
 	return newRunner(tmpl, templateInfoChecker, baseImports, fileSuffix)
 }
 
+// NewMultiRunner returns a new Runner that executes all the given Runners and
+// merges the resulting CodeGeneratorResponses.
+func NewMultiRunner(runners ...Runner) Runner {
+	return newMultiRunner(runners...)
+}
+
 // TemplateInfo is the info passed to a template.
 type TemplateInfo struct {
 	*File
