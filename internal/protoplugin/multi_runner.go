@@ -23,6 +23,7 @@ package protoplugin
 import (
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
 	"go.uber.org/multierr"
@@ -63,5 +64,6 @@ func (m *multiRunner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.Co
 	for _, file := range nameToFile {
 		files = append(files, file)
 	}
+	sort.Slice(files, func(i int, j int) bool { return files[i].GetName() < files[j].GetName() })
 	return newResponseFiles(files)
 }
