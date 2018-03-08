@@ -29,6 +29,8 @@ import (
 	"go.uber.org/multierr"
 )
 
+var errNoFileName = errors.New("no name on CodeGeneratorResponse_File")
+
 type multiRunner struct {
 	runners []Runner
 }
@@ -49,10 +51,10 @@ func (m *multiRunner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.Co
 		for _, file := range response.GetFile() {
 			name := file.GetName()
 			if name == "" {
-				return newResponseError(errors.New("no name on CodeGeneratorResponse_File"))
+				return newResponseError(errNoFileName)
 			}
 			if _, ok := nameToFile[name]; ok {
-				return newResponseError(fmt.Errorf("duplicate name for CodeGeneratorResponse_File: %s", name))
+				return newResponseError(newErrorDuplicateFileName(name))
 			}
 			nameToFile[name] = file
 		}
@@ -66,4 +68,8 @@ func (m *multiRunner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.Co
 	}
 	sort.Slice(files, func(i int, j int) bool { return files[i].GetName() < files[j].GetName() })
 	return newResponseFiles(files)
+}
+
+func newErrorDuplicateFileName(name string) error {
+	return fmt.Errorf("duplicate name for CodeGeneratorResponse_File: %s", name)
 }
