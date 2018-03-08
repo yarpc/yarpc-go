@@ -96,9 +96,9 @@ func NewRunner(
 	tmpl *template.Template,
 	templateInfoChecker func(*TemplateInfo) error,
 	baseImports []string,
-	protoFilenameToOutputFilename func(string) (string, error),
+	fileToOutputFilename func(*File) (string, error),
 ) Runner {
-	return newRunner(tmpl, templateInfoChecker, baseImports, protoFilenameToOutputFilename)
+	return newRunner(tmpl, templateInfoChecker, baseImports, fileToOutputFilename)
 }
 
 // NewMultiRunner returns a new Runner that executes all the given Runners and

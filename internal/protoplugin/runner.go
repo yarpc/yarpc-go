@@ -29,19 +29,19 @@ import (
 )
 
 type runner struct {
-	tmpl                          *template.Template
-	templateInfoChecker           func(*TemplateInfo) error
-	baseImports                   []string
-	protoFilenameToOutputFilename func(string) (string, error)
+	tmpl                 *template.Template
+	templateInfoChecker  func(*TemplateInfo) error
+	baseImports          []string
+	fileToOutputFilename func(*File) (string, error)
 }
 
 func newRunner(
 	tmpl *template.Template,
 	templateInfoChecker func(*TemplateInfo) error,
 	baseImports []string,
-	protoFilenameToOutputFilename func(string) (string, error),
+	fileToOutputFilename func(*File) (string, error),
 ) *runner {
-	return &runner{tmpl, templateInfoChecker, baseImports, protoFilenameToOutputFilename}
+	return &runner{tmpl, templateInfoChecker, baseImports, fileToOutputFilename}
 }
 
 func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGeneratorResponse {
@@ -67,7 +67,7 @@ func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGen
 		r.tmpl,
 		r.templateInfoChecker,
 		r.baseImports,
-		r.protoFilenameToOutputFilename,
+		r.fileToOutputFilename,
 	)
 	if err := registry.Load(request); err != nil {
 		return newResponseError(err)
