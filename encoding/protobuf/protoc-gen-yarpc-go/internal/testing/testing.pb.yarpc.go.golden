@@ -74,20 +74,20 @@ func BuildKeyValueYARPCProcedures(server KeyValueYARPCServer) []transport.Proced
 	)
 }
 
-// ProvideKeyValueYARPCClientParams defines the input
-// for ProvideKeyValueYARPCClient. It provides the
+// FxKeyValueYARPCClientParams defines the input
+// for NewFxKeyValueYARPCClient. It provides the
 // paramaters to get a KeyValueYARPCClient in an
 // Fx application.
-type ProvideKeyValueYARPCClientParams struct {
+type FxKeyValueYARPCClientParams struct {
 	fx.In
 
 	Provider yarpc.ClientConfig
 }
 
-// ProvideKeyValueYARPCClientResult defines the output
-// of ProvideKeyValueYARPCClient. It provides a
+// FxKeyValueYARPCClientResult defines the output
+// of NewFxKeyValueYARPCClient. It provides a
 // KeyValueYARPCClient to an Fx application.
-type ProvideKeyValueYARPCClientResult struct {
+type FxKeyValueYARPCClientResult struct {
 	fx.Out
 
 	Client KeyValueYARPCClient
@@ -97,53 +97,53 @@ type ProvideKeyValueYARPCClientResult struct {
 	// the future without breaking any existing code.
 }
 
-// ProvideKeyValueYARPCClient provides a KeyValueYARPCClient
+// NewFxKeyValueYARPCClient provides a KeyValueYARPCClient
 // to an Fx application using the given name for routing.
 //
 //  fx.Provide(
-//    testing.ProvideKeyValueYARPCClient,
+//    testing.NewFxKeyValueYARPCClient,
 //    ...
 //  )
-func ProvideKeyValueYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
-	return func(params ProvideKeyValueYARPCClientParams) ProvideKeyValueYARPCClientResult {
-		return ProvideKeyValueYARPCClientResult{
+func NewFxKeyValueYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
+	return func(params FxKeyValueYARPCClientParams) FxKeyValueYARPCClientResult {
+		return FxKeyValueYARPCClientResult{
 			Client: NewKeyValueYARPCClient(params.Provider.ClientConfig(name), options...),
 		}
 	}
 }
 
-// ProvideKeyValueYARPCProceduresParams defines the input
-// for ProvideKeyValueYARPCProcedures. It provides the
+// FxKeyValueYARPCProceduresParams defines the input
+// for NewFxKeyValueYARPCProcedures. It provides the
 // paramaters to get KeyValueYARPCServer procedures in an
 // Fx application.
-type ProvideKeyValueYARPCProceduresParams struct {
+type FxKeyValueYARPCProceduresParams struct {
 	fx.In
 
 	Server KeyValueYARPCServer
 }
 
-// ProvideKeyValueYARPCProceduresResult defines the output
-// of ProvideKeyValueYARPCProcedures. It provides
+// FxKeyValueYARPCProceduresResult defines the output
+// of NewFxKeyValueYARPCProcedures. It provides
 // KeyValueYARPCServer procedures to an Fx application.
 //
 // The procedures are provided to the "yarpcfx" value group.
 // Dig 1.2 or newer must be used for this feature to work.
-type ProvideKeyValueYARPCProceduresResult struct {
+type FxKeyValueYARPCProceduresResult struct {
 	fx.Out
 
 	Procedures []transport.Procedure `group:"yarpcfx"`
 }
 
-// ProvideKeyValueYARPCProcedures provides KeyValueYARPCServer procedures to an Fx application.
+// NewFxKeyValueYARPCProcedures provides KeyValueYARPCServer procedures to an Fx application.
 // It expects a KeyValueYARPCServer to be present in the container.
 //
 //  fx.Provide(
-//    testing.ProvideKeyValueYARPCProcedures,
+//    testing.NewFxKeyValueYARPCProcedures,
 //    ...
 //  )
-func ProvideKeyValueYARPCProcedures() interface{} {
-	return func(params ProvideKeyValueYARPCProceduresParams) ProvideKeyValueYARPCProceduresResult {
-		return ProvideKeyValueYARPCProceduresResult{
+func NewFxKeyValueYARPCProcedures() interface{} {
+	return func(params FxKeyValueYARPCProceduresParams) FxKeyValueYARPCProceduresResult {
+		return FxKeyValueYARPCProceduresResult{
 			Procedures: BuildKeyValueYARPCProcedures(params.Server),
 		}
 	}
@@ -280,20 +280,20 @@ func BuildSinkYARPCProcedures(server SinkYARPCServer) []transport.Procedure {
 	)
 }
 
-// ProvideSinkYARPCClientParams defines the input
-// for ProvideSinkYARPCClient. It provides the
+// FxSinkYARPCClientParams defines the input
+// for NewFxSinkYARPCClient. It provides the
 // paramaters to get a SinkYARPCClient in an
 // Fx application.
-type ProvideSinkYARPCClientParams struct {
+type FxSinkYARPCClientParams struct {
 	fx.In
 
 	Provider yarpc.ClientConfig
 }
 
-// ProvideSinkYARPCClientResult defines the output
-// of ProvideSinkYARPCClient. It provides a
+// FxSinkYARPCClientResult defines the output
+// of NewFxSinkYARPCClient. It provides a
 // SinkYARPCClient to an Fx application.
-type ProvideSinkYARPCClientResult struct {
+type FxSinkYARPCClientResult struct {
 	fx.Out
 
 	Client SinkYARPCClient
@@ -303,53 +303,53 @@ type ProvideSinkYARPCClientResult struct {
 	// the future without breaking any existing code.
 }
 
-// ProvideSinkYARPCClient provides a SinkYARPCClient
+// NewFxSinkYARPCClient provides a SinkYARPCClient
 // to an Fx application using the given name for routing.
 //
 //  fx.Provide(
-//    testing.ProvideSinkYARPCClient,
+//    testing.NewFxSinkYARPCClient,
 //    ...
 //  )
-func ProvideSinkYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
-	return func(params ProvideSinkYARPCClientParams) ProvideSinkYARPCClientResult {
-		return ProvideSinkYARPCClientResult{
+func NewFxSinkYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
+	return func(params FxSinkYARPCClientParams) FxSinkYARPCClientResult {
+		return FxSinkYARPCClientResult{
 			Client: NewSinkYARPCClient(params.Provider.ClientConfig(name), options...),
 		}
 	}
 }
 
-// ProvideSinkYARPCProceduresParams defines the input
-// for ProvideSinkYARPCProcedures. It provides the
+// FxSinkYARPCProceduresParams defines the input
+// for NewFxSinkYARPCProcedures. It provides the
 // paramaters to get SinkYARPCServer procedures in an
 // Fx application.
-type ProvideSinkYARPCProceduresParams struct {
+type FxSinkYARPCProceduresParams struct {
 	fx.In
 
 	Server SinkYARPCServer
 }
 
-// ProvideSinkYARPCProceduresResult defines the output
-// of ProvideSinkYARPCProcedures. It provides
+// FxSinkYARPCProceduresResult defines the output
+// of NewFxSinkYARPCProcedures. It provides
 // SinkYARPCServer procedures to an Fx application.
 //
 // The procedures are provided to the "yarpcfx" value group.
 // Dig 1.2 or newer must be used for this feature to work.
-type ProvideSinkYARPCProceduresResult struct {
+type FxSinkYARPCProceduresResult struct {
 	fx.Out
 
 	Procedures []transport.Procedure `group:"yarpcfx"`
 }
 
-// ProvideSinkYARPCProcedures provides SinkYARPCServer procedures to an Fx application.
+// NewFxSinkYARPCProcedures provides SinkYARPCServer procedures to an Fx application.
 // It expects a SinkYARPCServer to be present in the container.
 //
 //  fx.Provide(
-//    testing.ProvideSinkYARPCProcedures,
+//    testing.NewFxSinkYARPCProcedures,
 //    ...
 //  )
-func ProvideSinkYARPCProcedures() interface{} {
-	return func(params ProvideSinkYARPCProceduresParams) ProvideSinkYARPCProceduresResult {
-		return ProvideSinkYARPCProceduresResult{
+func NewFxSinkYARPCProcedures() interface{} {
+	return func(params FxSinkYARPCProceduresParams) FxSinkYARPCProceduresResult {
+		return FxSinkYARPCProceduresResult{
 			Procedures: BuildSinkYARPCProcedures(params.Server),
 		}
 	}
@@ -533,20 +533,20 @@ func BuildAllYARPCProcedures(server AllYARPCServer) []transport.Procedure {
 	)
 }
 
-// ProvideAllYARPCClientParams defines the input
-// for ProvideAllYARPCClient. It provides the
+// FxAllYARPCClientParams defines the input
+// for NewFxAllYARPCClient. It provides the
 // paramaters to get a AllYARPCClient in an
 // Fx application.
-type ProvideAllYARPCClientParams struct {
+type FxAllYARPCClientParams struct {
 	fx.In
 
 	Provider yarpc.ClientConfig
 }
 
-// ProvideAllYARPCClientResult defines the output
-// of ProvideAllYARPCClient. It provides a
+// FxAllYARPCClientResult defines the output
+// of NewFxAllYARPCClient. It provides a
 // AllYARPCClient to an Fx application.
-type ProvideAllYARPCClientResult struct {
+type FxAllYARPCClientResult struct {
 	fx.Out
 
 	Client AllYARPCClient
@@ -556,53 +556,53 @@ type ProvideAllYARPCClientResult struct {
 	// the future without breaking any existing code.
 }
 
-// ProvideAllYARPCClient provides a AllYARPCClient
+// NewFxAllYARPCClient provides a AllYARPCClient
 // to an Fx application using the given name for routing.
 //
 //  fx.Provide(
-//    testing.ProvideAllYARPCClient,
+//    testing.NewFxAllYARPCClient,
 //    ...
 //  )
-func ProvideAllYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
-	return func(params ProvideAllYARPCClientParams) ProvideAllYARPCClientResult {
-		return ProvideAllYARPCClientResult{
+func NewFxAllYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
+	return func(params FxAllYARPCClientParams) FxAllYARPCClientResult {
+		return FxAllYARPCClientResult{
 			Client: NewAllYARPCClient(params.Provider.ClientConfig(name), options...),
 		}
 	}
 }
 
-// ProvideAllYARPCProceduresParams defines the input
-// for ProvideAllYARPCProcedures. It provides the
+// FxAllYARPCProceduresParams defines the input
+// for NewFxAllYARPCProcedures. It provides the
 // paramaters to get AllYARPCServer procedures in an
 // Fx application.
-type ProvideAllYARPCProceduresParams struct {
+type FxAllYARPCProceduresParams struct {
 	fx.In
 
 	Server AllYARPCServer
 }
 
-// ProvideAllYARPCProceduresResult defines the output
-// of ProvideAllYARPCProcedures. It provides
+// FxAllYARPCProceduresResult defines the output
+// of NewFxAllYARPCProcedures. It provides
 // AllYARPCServer procedures to an Fx application.
 //
 // The procedures are provided to the "yarpcfx" value group.
 // Dig 1.2 or newer must be used for this feature to work.
-type ProvideAllYARPCProceduresResult struct {
+type FxAllYARPCProceduresResult struct {
 	fx.Out
 
 	Procedures []transport.Procedure `group:"yarpcfx"`
 }
 
-// ProvideAllYARPCProcedures provides AllYARPCServer procedures to an Fx application.
+// NewFxAllYARPCProcedures provides AllYARPCServer procedures to an Fx application.
 // It expects a AllYARPCServer to be present in the container.
 //
 //  fx.Provide(
-//    testing.ProvideAllYARPCProcedures,
+//    testing.NewFxAllYARPCProcedures,
 //    ...
 //  )
-func ProvideAllYARPCProcedures() interface{} {
-	return func(params ProvideAllYARPCProceduresParams) ProvideAllYARPCProceduresResult {
-		return ProvideAllYARPCProceduresResult{
+func NewFxAllYARPCProcedures() interface{} {
+	return func(params FxAllYARPCProceduresParams) FxAllYARPCProceduresResult {
+		return FxAllYARPCProceduresResult{
 			Procedures: BuildAllYARPCProcedures(params.Server),
 		}
 	}

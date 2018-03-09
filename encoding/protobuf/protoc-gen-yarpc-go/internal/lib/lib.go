@@ -195,20 +195,20 @@ func Build{{$service.GetName}}YARPCProcedures(server {{$service.GetName}}YARPCSe
 	)
 }
 
-// Provide{{$service.GetName}}YARPCClientParams defines the input
-// for Provide{{$service.GetName}}YARPCClient. It provides the
+// Fx{{$service.GetName}}YARPCClientParams defines the input
+// for NewFx{{$service.GetName}}YARPCClient. It provides the
 // paramaters to get a {{$service.GetName}}YARPCClient in an
 // Fx application.
-type Provide{{$service.GetName}}YARPCClientParams struct {
+type Fx{{$service.GetName}}YARPCClientParams struct {
 	fx.In
 
 	Provider yarpc.ClientConfig
 }
 
-// Provide{{$service.GetName}}YARPCClientResult defines the output
-// of Provide{{$service.GetName}}YARPCClient. It provides a
+// Fx{{$service.GetName}}YARPCClientResult defines the output
+// of NewFx{{$service.GetName}}YARPCClient. It provides a
 // {{$service.GetName}}YARPCClient to an Fx application.
-type Provide{{$service.GetName}}YARPCClientResult struct {
+type Fx{{$service.GetName}}YARPCClientResult struct {
 	fx.Out
 
 	Client {{$service.GetName}}YARPCClient
@@ -218,53 +218,53 @@ type Provide{{$service.GetName}}YARPCClientResult struct {
 	// the future without breaking any existing code.
 }
 
-// Provide{{$service.GetName}}YARPCClient provides a {{$service.GetName}}YARPCClient
+// NewFx{{$service.GetName}}YARPCClient provides a {{$service.GetName}}YARPCClient
 // to an Fx application using the given name for routing.
 //
 //  fx.Provide(
-//    {{$packageName}}.Provide{{$service.GetName}}YARPCClient,
+//    {{$packageName}}.NewFx{{$service.GetName}}YARPCClient,
 //    ...
 //  )
-func Provide{{$service.GetName}}YARPCClient(name string, options ...protobuf.ClientOption) interface{} {
-	return func(params Provide{{$service.GetName}}YARPCClientParams) Provide{{$service.GetName}}YARPCClientResult {
-		return Provide{{$service.GetName}}YARPCClientResult{
+func NewFx{{$service.GetName}}YARPCClient(name string, options ...protobuf.ClientOption) interface{} {
+	return func(params Fx{{$service.GetName}}YARPCClientParams) Fx{{$service.GetName}}YARPCClientResult {
+		return Fx{{$service.GetName}}YARPCClientResult{
 			Client: New{{$service.GetName}}YARPCClient(params.Provider.ClientConfig(name), options...),
 		}
 	}
 }
 
-// Provide{{$service.GetName}}YARPCProceduresParams defines the input
-// for Provide{{$service.GetName}}YARPCProcedures. It provides the
+// Fx{{$service.GetName}}YARPCProceduresParams defines the input
+// for NewFx{{$service.GetName}}YARPCProcedures. It provides the
 // paramaters to get {{$service.GetName}}YARPCServer procedures in an
 // Fx application.
-type Provide{{$service.GetName}}YARPCProceduresParams struct {
+type Fx{{$service.GetName}}YARPCProceduresParams struct {
 	fx.In
 
 	Server {{$service.GetName}}YARPCServer
 }
 
-// Provide{{$service.GetName}}YARPCProceduresResult defines the output
-// of Provide{{$service.GetName}}YARPCProcedures. It provides
+// Fx{{$service.GetName}}YARPCProceduresResult defines the output
+// of NewFx{{$service.GetName}}YARPCProcedures. It provides
 // {{$service.GetName}}YARPCServer procedures to an Fx application.
 //
 // The procedures are provided to the "yarpcfx" value group.
 // Dig 1.2 or newer must be used for this feature to work.
-type Provide{{$service.GetName}}YARPCProceduresResult struct {
+type Fx{{$service.GetName}}YARPCProceduresResult struct {
 	fx.Out
 
 	Procedures []transport.Procedure ` + "`" + `group:"yarpcfx"` + "`" + `
 }
 
-// Provide{{$service.GetName}}YARPCProcedures provides {{$service.GetName}}YARPCServer procedures to an Fx application.
+// NewFx{{$service.GetName}}YARPCProcedures provides {{$service.GetName}}YARPCServer procedures to an Fx application.
 // It expects a {{$service.GetName}}YARPCServer to be present in the container.
 //
 //  fx.Provide(
-//    {{$packageName}}.Provide{{$service.GetName}}YARPCProcedures,
+//    {{$packageName}}.NewFx{{$service.GetName}}YARPCProcedures,
 //    ...
 //  )
-func Provide{{$service.GetName}}YARPCProcedures() interface{} {
-	return func(params Provide{{$service.GetName}}YARPCProceduresParams) Provide{{$service.GetName}}YARPCProceduresResult {
-		return Provide{{$service.GetName}}YARPCProceduresResult{
+func NewFx{{$service.GetName}}YARPCProcedures() interface{} {
+	return func(params Fx{{$service.GetName}}YARPCProceduresParams) Fx{{$service.GetName}}YARPCProceduresResult {
+		return Fx{{$service.GetName}}YARPCProceduresResult{
 			Procedures: Build{{$service.GetName}}YARPCProcedures(params.Server),
 		}
 	}

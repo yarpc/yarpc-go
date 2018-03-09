@@ -83,20 +83,20 @@ func BuildEchoYARPCProcedures(server EchoYARPCServer) []transport.Procedure {
 	)
 }
 
-// ProvideEchoYARPCClientParams defines the input
-// for ProvideEchoYARPCClient. It provides the
+// FxEchoYARPCClientParams defines the input
+// for NewFxEchoYARPCClient. It provides the
 // paramaters to get a EchoYARPCClient in an
 // Fx application.
-type ProvideEchoYARPCClientParams struct {
+type FxEchoYARPCClientParams struct {
 	fx.In
 
 	Provider yarpc.ClientConfig
 }
 
-// ProvideEchoYARPCClientResult defines the output
-// of ProvideEchoYARPCClient. It provides a
+// FxEchoYARPCClientResult defines the output
+// of NewFxEchoYARPCClient. It provides a
 // EchoYARPCClient to an Fx application.
-type ProvideEchoYARPCClientResult struct {
+type FxEchoYARPCClientResult struct {
 	fx.Out
 
 	Client EchoYARPCClient
@@ -106,53 +106,53 @@ type ProvideEchoYARPCClientResult struct {
 	// the future without breaking any existing code.
 }
 
-// ProvideEchoYARPCClient provides a EchoYARPCClient
+// NewFxEchoYARPCClient provides a EchoYARPCClient
 // to an Fx application using the given name for routing.
 //
 //  fx.Provide(
-//    crossdockpb.ProvideEchoYARPCClient,
+//    crossdockpb.NewFxEchoYARPCClient,
 //    ...
 //  )
-func ProvideEchoYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
-	return func(params ProvideEchoYARPCClientParams) ProvideEchoYARPCClientResult {
-		return ProvideEchoYARPCClientResult{
+func NewFxEchoYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
+	return func(params FxEchoYARPCClientParams) FxEchoYARPCClientResult {
+		return FxEchoYARPCClientResult{
 			Client: NewEchoYARPCClient(params.Provider.ClientConfig(name), options...),
 		}
 	}
 }
 
-// ProvideEchoYARPCProceduresParams defines the input
-// for ProvideEchoYARPCProcedures. It provides the
+// FxEchoYARPCProceduresParams defines the input
+// for NewFxEchoYARPCProcedures. It provides the
 // paramaters to get EchoYARPCServer procedures in an
 // Fx application.
-type ProvideEchoYARPCProceduresParams struct {
+type FxEchoYARPCProceduresParams struct {
 	fx.In
 
 	Server EchoYARPCServer
 }
 
-// ProvideEchoYARPCProceduresResult defines the output
-// of ProvideEchoYARPCProcedures. It provides
+// FxEchoYARPCProceduresResult defines the output
+// of NewFxEchoYARPCProcedures. It provides
 // EchoYARPCServer procedures to an Fx application.
 //
 // The procedures are provided to the "yarpcfx" value group.
 // Dig 1.2 or newer must be used for this feature to work.
-type ProvideEchoYARPCProceduresResult struct {
+type FxEchoYARPCProceduresResult struct {
 	fx.Out
 
 	Procedures []transport.Procedure `group:"yarpcfx"`
 }
 
-// ProvideEchoYARPCProcedures provides EchoYARPCServer procedures to an Fx application.
+// NewFxEchoYARPCProcedures provides EchoYARPCServer procedures to an Fx application.
 // It expects a EchoYARPCServer to be present in the container.
 //
 //  fx.Provide(
-//    crossdockpb.ProvideEchoYARPCProcedures,
+//    crossdockpb.NewFxEchoYARPCProcedures,
 //    ...
 //  )
-func ProvideEchoYARPCProcedures() interface{} {
-	return func(params ProvideEchoYARPCProceduresParams) ProvideEchoYARPCProceduresResult {
-		return ProvideEchoYARPCProceduresResult{
+func NewFxEchoYARPCProcedures() interface{} {
+	return func(params FxEchoYARPCProceduresParams) FxEchoYARPCProceduresResult {
+		return FxEchoYARPCProceduresResult{
 			Procedures: BuildEchoYARPCProcedures(params.Server),
 		}
 	}
@@ -251,20 +251,20 @@ func BuildOnewayYARPCProcedures(server OnewayYARPCServer) []transport.Procedure 
 	)
 }
 
-// ProvideOnewayYARPCClientParams defines the input
-// for ProvideOnewayYARPCClient. It provides the
+// FxOnewayYARPCClientParams defines the input
+// for NewFxOnewayYARPCClient. It provides the
 // paramaters to get a OnewayYARPCClient in an
 // Fx application.
-type ProvideOnewayYARPCClientParams struct {
+type FxOnewayYARPCClientParams struct {
 	fx.In
 
 	Provider yarpc.ClientConfig
 }
 
-// ProvideOnewayYARPCClientResult defines the output
-// of ProvideOnewayYARPCClient. It provides a
+// FxOnewayYARPCClientResult defines the output
+// of NewFxOnewayYARPCClient. It provides a
 // OnewayYARPCClient to an Fx application.
-type ProvideOnewayYARPCClientResult struct {
+type FxOnewayYARPCClientResult struct {
 	fx.Out
 
 	Client OnewayYARPCClient
@@ -274,53 +274,53 @@ type ProvideOnewayYARPCClientResult struct {
 	// the future without breaking any existing code.
 }
 
-// ProvideOnewayYARPCClient provides a OnewayYARPCClient
+// NewFxOnewayYARPCClient provides a OnewayYARPCClient
 // to an Fx application using the given name for routing.
 //
 //  fx.Provide(
-//    crossdockpb.ProvideOnewayYARPCClient,
+//    crossdockpb.NewFxOnewayYARPCClient,
 //    ...
 //  )
-func ProvideOnewayYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
-	return func(params ProvideOnewayYARPCClientParams) ProvideOnewayYARPCClientResult {
-		return ProvideOnewayYARPCClientResult{
+func NewFxOnewayYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
+	return func(params FxOnewayYARPCClientParams) FxOnewayYARPCClientResult {
+		return FxOnewayYARPCClientResult{
 			Client: NewOnewayYARPCClient(params.Provider.ClientConfig(name), options...),
 		}
 	}
 }
 
-// ProvideOnewayYARPCProceduresParams defines the input
-// for ProvideOnewayYARPCProcedures. It provides the
+// FxOnewayYARPCProceduresParams defines the input
+// for NewFxOnewayYARPCProcedures. It provides the
 // paramaters to get OnewayYARPCServer procedures in an
 // Fx application.
-type ProvideOnewayYARPCProceduresParams struct {
+type FxOnewayYARPCProceduresParams struct {
 	fx.In
 
 	Server OnewayYARPCServer
 }
 
-// ProvideOnewayYARPCProceduresResult defines the output
-// of ProvideOnewayYARPCProcedures. It provides
+// FxOnewayYARPCProceduresResult defines the output
+// of NewFxOnewayYARPCProcedures. It provides
 // OnewayYARPCServer procedures to an Fx application.
 //
 // The procedures are provided to the "yarpcfx" value group.
 // Dig 1.2 or newer must be used for this feature to work.
-type ProvideOnewayYARPCProceduresResult struct {
+type FxOnewayYARPCProceduresResult struct {
 	fx.Out
 
 	Procedures []transport.Procedure `group:"yarpcfx"`
 }
 
-// ProvideOnewayYARPCProcedures provides OnewayYARPCServer procedures to an Fx application.
+// NewFxOnewayYARPCProcedures provides OnewayYARPCServer procedures to an Fx application.
 // It expects a OnewayYARPCServer to be present in the container.
 //
 //  fx.Provide(
-//    crossdockpb.ProvideOnewayYARPCProcedures,
+//    crossdockpb.NewFxOnewayYARPCProcedures,
 //    ...
 //  )
-func ProvideOnewayYARPCProcedures() interface{} {
-	return func(params ProvideOnewayYARPCProceduresParams) ProvideOnewayYARPCProceduresResult {
-		return ProvideOnewayYARPCProceduresResult{
+func NewFxOnewayYARPCProcedures() interface{} {
+	return func(params FxOnewayYARPCProceduresParams) FxOnewayYARPCProceduresResult {
+		return FxOnewayYARPCProceduresResult{
 			Procedures: BuildOnewayYARPCProcedures(params.Server),
 		}
 	}
