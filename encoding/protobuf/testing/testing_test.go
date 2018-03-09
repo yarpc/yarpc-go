@@ -61,6 +61,7 @@ func testIntegrationForTransportType(t *testing.T, transportType testutils.Trans
 			keyValueYARPCServer,
 			sinkYARPCServer,
 			fooYARPCServer,
+			nil,
 			func(clients *exampleutil.Clients) error {
 				testIntegration(t, clients, keyValueYARPCServer, sinkYARPCServer, expectedStreamingHeaders)
 				return nil
