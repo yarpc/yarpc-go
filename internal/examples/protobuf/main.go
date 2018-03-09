@@ -129,9 +129,9 @@ func doClient(
 			var response *examplepb.GetValueResponse
 			var err error
 			if googleGRPC {
-				response, err = clients.KeyValueGRPCClient.GetValue(clients.ContextWrapper.Wrap(ctx), &examplepb.GetValueRequest{key})
+				response, err = clients.KeyValueGRPCClient.GetValue(clients.ContextWrapper.Wrap(ctx), &examplepb.GetValueRequest{Key: key})
 			} else {
-				response, err = clients.KeyValueYARPCClient.GetValue(ctx, &examplepb.GetValueRequest{key})
+				response, err = clients.KeyValueYARPCClient.GetValue(ctx, &examplepb.GetValueRequest{Key: key})
 			}
 			if err != nil {
 				fmt.Fprintf(output, "get %s failed: %s\n", key, getErrorMessage(err))
@@ -153,9 +153,9 @@ func doClient(
 			defer cancel()
 			var err error
 			if googleGRPC {
-				_, err = clients.KeyValueGRPCClient.SetValue(clients.ContextWrapper.Wrap(ctx), &examplepb.SetValueRequest{key, value})
+				_, err = clients.KeyValueGRPCClient.SetValue(clients.ContextWrapper.Wrap(ctx), &examplepb.SetValueRequest{Key: key, Value: value})
 			} else {
-				_, err = clients.KeyValueYARPCClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
+				_, err = clients.KeyValueYARPCClient.SetValue(ctx, &examplepb.SetValueRequest{Key: key, Value: value})
 			}
 			if err != nil {
 				fmt.Fprintf(output, "set %s = %s failed: %v\n", key, value, getErrorMessage(err))
@@ -169,7 +169,7 @@ func doClient(
 			value := args[0]
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
-			if _, err := clients.SinkYARPCClient.Fire(ctx, &examplepb.FireRequest{value}); err != nil {
+			if _, err := clients.SinkYARPCClient.Fire(ctx, &examplepb.FireRequest{Value: value}); err != nil {
 				fmt.Fprintf(output, "fire %s failed: %s\n", value, getErrorMessage(err))
 			}
 			if err := sinkYARPCServer.WaitFireDone(); err != nil {
