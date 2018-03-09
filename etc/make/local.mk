@@ -2,9 +2,11 @@
 # lint results.
 LINT_EXCLUDES_EXTRAS =
 
-# Regex for 'go vet' rules to ignore
-GOVET_IGNORE_RULES = \
-	possible formatting directive in Error call
+# Regexes for 'go vet' rules to ignore
+FILTER_GOVET := grep -v \
+	-e '^\#' \
+	-e 'possible formatting directive in Error call' \
+	-e 'refers to unknown identifier'
 
 ERRCHECK_FLAGS := -ignoretests
 ERRCHECK_EXCLUDES := \.Close\(\) \.Stop\(\)
@@ -69,7 +71,7 @@ govet: __eval_packages __eval_go_files ## check go vet
 	$(eval VET_LOG := $(shell mktemp -t govet.XXXXX))
 	@go vet $(PACKAGES) 2>&1 \
 		| grep -v '^exit status' \
-		| grep -v "$(GOVET_IGNORE_RULES)" \
+		| $(FILTER_GOVET) \
 		| $(FILTER_LINT) > $(VET_LOG) || true
 	@[ ! -s "$(VET_LOG)" ] || (echo "govet failed:" | cat - $(VET_LOG) && false)
 
