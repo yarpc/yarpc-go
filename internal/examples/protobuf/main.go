@@ -37,6 +37,7 @@ import (
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
 	"go.uber.org/yarpc/internal/testutils"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
 	"google.golang.org/grpc/status"
 )
 
@@ -75,11 +76,16 @@ func run(
 	keyValueYARPCServer := example.NewKeyValueYARPCServer()
 	sinkYARPCServer := example.NewSinkYARPCServer(true)
 	fooYARPCServer := example.NewFooYARPCServer(transport.NewHeaders())
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		return err
+	}
 	return exampleutil.WithClients(
 		transportType,
 		keyValueYARPCServer,
 		sinkYARPCServer,
 		fooYARPCServer,
+		logger,
 		func(clients *exampleutil.Clients) error {
 			return doClient(
 				keyValueYARPCServer,
