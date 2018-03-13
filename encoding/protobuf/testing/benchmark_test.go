@@ -23,6 +23,7 @@ package testing
 import (
 	"io/ioutil"
 	"log"
+	"net"
 	"testing"
 
 	"go.uber.org/yarpc/api/transport"
@@ -31,6 +32,7 @@ import (
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
 	"go.uber.org/yarpc/internal/grpcctx"
 	"go.uber.org/yarpc/internal/testutils"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
 )
 
@@ -50,11 +52,27 @@ func BenchmarkIntegrationYARPC(b *testing.B) {
 	}
 }
 
-func BenchmarkIntegrationGRPC(b *testing.B) {
+func BenchmarkIntegrationGRPCClient(b *testing.B) {
 	benchmarkForTransportType(b, testutils.TransportTypeGRPC, func(clients *exampleutil.Clients) error {
 		benchmarkIntegrationGRPC(b, clients.KeyValueGRPCClient, clients.ContextWrapper)
 		return nil
 	})
+}
+
+func BenchmarkIntegrationGRPCAll(b *testing.B) {
+	server := grpc.NewServer()
+	examplepb.RegisterKeyValueServer(server, example.NewKeyValueYARPCServer())
+	listener, err := net.Listen("tcp", "0.0.0.0:1234")
+	if err != nil {
+		b.Fatal(err.Error())
+	}
+	go func() { _ = server.Serve(listener) }()
+	defer server.Stop()
+	grpcClientConn, err := grpc.Dial("0.0.0.0:1234", grpc.WithInsecure())
+	if err != nil {
+		b.Fatal(err.Error())
+	}
+	benchmarkIntegrationGRPC(b, examplepb.NewKeyValueClient(grpcClientConn), grpcctx.NewContextWrapper())
 }
 
 func benchmarkForTransportType(b *testing.B, transportType testutils.TransportType, f func(*exampleutil.Clients) error) {
