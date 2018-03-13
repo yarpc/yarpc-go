@@ -6,7 +6,7 @@ LINT_EXCLUDES_EXTRAS =
 FILTER_GOVET := grep -v \
 	-e '^\#' \
 	-e 'possible formatting directive in Error call' \
-	-e 'refers to unknown identifier'
+	-e 'Example.*refers to unknown identifier'
 
 ERRCHECK_FLAGS := -ignoretests
 ERRCHECK_EXCLUDES := \.Close\(\) \.Stop\(\)
