@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   form, instead of normalizing their case.
 - Adds an option to disable observability middleware, in the event you
   provide alternate observability middleware.
+- Add methods to start and stop a dispatcher's transports, inbounds, and
+  outbounds separately.
 
 ## [1.27.2] - 2017-01-23
 ### Fixed
