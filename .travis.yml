@@ -6,7 +6,7 @@ env:
 matrix:
   include:
     - env: CI_TYPES='codecov'
-    - env: CI_TYPES='lint test examples' DOCKER_GO_VERSION=1.8
     - env: CI_TYPES='lint test examples' DOCKER_GO_VERSION=1.9
+    - env: CI_TYPES='lint test examples' DOCKER_GO_VERSION=1.10
 script:
   - make ci

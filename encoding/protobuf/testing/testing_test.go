@@ -170,7 +170,7 @@ func testIntegration(
 func getValue(keyValueYARPCClient examplepb.KeyValueYARPCClient, key string, options ...yarpc.CallOption) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	response, err := keyValueYARPCClient.GetValue(ctx, &examplepb.GetValueRequest{key}, options...)
+	response, err := keyValueYARPCClient.GetValue(ctx, &examplepb.GetValueRequest{Key: key}, options...)
 	if response != nil {
 		return response.Value, err
 	}
@@ -180,14 +180,14 @@ func getValue(keyValueYARPCClient examplepb.KeyValueYARPCClient, key string, opt
 func setValue(keyValueYARPCClient examplepb.KeyValueYARPCClient, key string, value string, options ...yarpc.CallOption) error {
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err := keyValueYARPCClient.SetValue(ctx, &examplepb.SetValueRequest{key, value}, options...)
+	_, err := keyValueYARPCClient.SetValue(ctx, &examplepb.SetValueRequest{Key: key, Value: value}, options...)
 	return err
 }
 
 func getValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *grpcctx.ContextWrapper, key string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	response, err := keyValueGRPCClient.GetValue(contextWrapper.Wrap(ctx), &examplepb.GetValueRequest{key})
+	response, err := keyValueGRPCClient.GetValue(contextWrapper.Wrap(ctx), &examplepb.GetValueRequest{Key: key})
 	if response != nil {
 		return response.Value, err
 	}
@@ -197,14 +197,14 @@ func getValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *g
 func setValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *grpcctx.ContextWrapper, key string, value string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err := keyValueGRPCClient.SetValue(contextWrapper.Wrap(ctx), &examplepb.SetValueRequest{key, value})
+	_, err := keyValueGRPCClient.SetValue(contextWrapper.Wrap(ctx), &examplepb.SetValueRequest{Key: key, Value: value})
 	return err
 }
 
 func fire(sinkYARPCClient examplepb.SinkYARPCClient, value string, options ...yarpc.CallOption) error {
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err := sinkYARPCClient.Fire(ctx, &examplepb.FireRequest{value}, options...)
+	_, err := sinkYARPCClient.Fire(ctx, &examplepb.FireRequest{Value: value}, options...)
 	return err
 }
 

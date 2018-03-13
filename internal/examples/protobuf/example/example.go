@@ -77,7 +77,7 @@ func (k *KeyValueYARPCServer) GetValue(ctx context.Context, request *examplepb.G
 			k.nextError = nil
 		}
 		k.Unlock()
-		return &examplepb.GetValueResponse{value}, nextError
+		return &examplepb.GetValueResponse{Value: value}, nextError
 	}
 	k.RUnlock()
 	return nil, yarpcerrors.Newf(yarpcerrors.CodeNotFound, request.Key)

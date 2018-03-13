@@ -73,7 +73,7 @@ func do() error {
 		}
 
 		fmt.Printf("sending message: %q\n", line)
-		if err := stream.Send(&streaming.HelloRequest{line}); err != nil {
+		if err := stream.Send(&streaming.HelloRequest{Id: line}); err != nil {
 			return err
 		}
 

@@ -63,7 +63,7 @@ func (h *handler) HelloThere(stream streaming.HelloServiceHelloThereYARPCServer)
 		fmt.Printf("Received a message: %q\n", msg.Id)
 
 		resp := fmt.Sprintf("Got your message: %q, thanks!", msg.Id)
-		if err := stream.Send(&streaming.HelloResponse{resp}); err != nil {
+		if err := stream.Send(&streaming.HelloResponse{Id: resp}); err != nil {
 			fmt.Printf("Error sending message to stream: %q\n", err.Error())
 			return err
 		}
