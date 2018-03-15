@@ -359,12 +359,14 @@ func (d *Dispatcher) PhasedStart() (*PhasedStarter, error) {
 		dispatcher: d,
 		log:        d.log,
 	}
-	err := d.once.Start(func() error {
+	if err := d.once.Start(func() error {
 		starter.log.Info("beginning phased dispatcher start")
 		starter.setRouters()
 		return nil
-	})
-	return starter, err
+	}); err != nil {
+		return nil, err
+	}
+	return starter, nil
 }
 
 // Stop stops the Dispatcher, shutting down all inbounds, outbounds, and
