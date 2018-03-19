@@ -33,6 +33,7 @@ type runner struct {
 	templateInfoChecker  func(*TemplateInfo) error
 	baseImports          []string
 	fileToOutputFilename func(*File) (string, error)
+	unknownFlagHandler   func(key string, value string) error
 }
 
 func newRunner(
@@ -40,8 +41,15 @@ func newRunner(
 	templateInfoChecker func(*TemplateInfo) error,
 	baseImports []string,
 	fileToOutputFilename func(*File) (string, error),
+	unknownFlagHandler func(key string, value string) error,
 ) *runner {
-	return &runner{tmpl, templateInfoChecker, baseImports, fileToOutputFilename}
+	return &runner{
+		tmpl:                 tmpl,
+		templateInfoChecker:  templateInfoChecker,
+		baseImports:          baseImports,
+		fileToOutputFilename: fileToOutputFilename,
+		unknownFlagHandler:   unknownFlagHandler,
+	}
 }
 
 func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGeneratorResponse {
@@ -58,6 +66,12 @@ func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGen
 				registry.SetPrefix(value)
 			case strings.HasPrefix(name, "M"):
 				registry.AddPackageMap(name[1:], value)
+			default:
+				if r.unknownFlagHandler != nil {
+					if err := r.unknownFlagHandler(name, value); err != nil {
+						return newResponseError(err)
+					}
+				}
 			}
 		}
 	}
