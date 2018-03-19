@@ -507,6 +507,9 @@ var Runner = protoplugin.NewRunner(
 		name := file.GetName()
 		return fmt.Sprintf("%s.pb.yarpc.go", strings.TrimSuffix(name, filepath.Ext(name))), nil
 	},
+	func(key string, value string) error {
+		return nil
+	},
 )
 
 func checkTemplateInfo(templateInfo *protoplugin.TemplateInfo) error {
