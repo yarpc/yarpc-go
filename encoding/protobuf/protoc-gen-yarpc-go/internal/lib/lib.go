@@ -222,7 +222,7 @@ type Fx{{$service.GetName}}YARPCClientResult struct {
 // to an Fx application using the given name for routing.
 //
 //  fx.Provide(
-//    {{$packageName}}.NewFx{{$service.GetName}}YARPCClient,
+//    {{$packageName}}.NewFx{{$service.GetName}}YARPCClient("service-name"),
 //    ...
 //  )
 func NewFx{{$service.GetName}}YARPCClient(name string, options ...protobuf.ClientOption) interface{} {
@@ -259,7 +259,7 @@ type Fx{{$service.GetName}}YARPCProceduresResult struct {
 // It expects a {{$service.GetName}}YARPCServer to be present in the container.
 //
 //  fx.Provide(
-//    {{$packageName}}.NewFx{{$service.GetName}}YARPCProcedures,
+//    {{$packageName}}.NewFx{{$service.GetName}}YARPCProcedures(),
 //    ...
 //  )
 func NewFx{{$service.GetName}}YARPCProcedures() interface{} {

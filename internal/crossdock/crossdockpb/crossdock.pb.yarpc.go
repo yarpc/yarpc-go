@@ -110,7 +110,7 @@ type FxEchoYARPCClientResult struct {
 // to an Fx application using the given name for routing.
 //
 //  fx.Provide(
-//    crossdockpb.NewFxEchoYARPCClient,
+//    crossdockpb.NewFxEchoYARPCClient("service-name"),
 //    ...
 //  )
 func NewFxEchoYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
@@ -147,7 +147,7 @@ type FxEchoYARPCProceduresResult struct {
 // It expects a EchoYARPCServer to be present in the container.
 //
 //  fx.Provide(
-//    crossdockpb.NewFxEchoYARPCProcedures,
+//    crossdockpb.NewFxEchoYARPCProcedures(),
 //    ...
 //  )
 func NewFxEchoYARPCProcedures() interface{} {
@@ -278,7 +278,7 @@ type FxOnewayYARPCClientResult struct {
 // to an Fx application using the given name for routing.
 //
 //  fx.Provide(
-//    crossdockpb.NewFxOnewayYARPCClient,
+//    crossdockpb.NewFxOnewayYARPCClient("service-name"),
 //    ...
 //  )
 func NewFxOnewayYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
@@ -315,7 +315,7 @@ type FxOnewayYARPCProceduresResult struct {
 // It expects a OnewayYARPCServer to be present in the container.
 //
 //  fx.Provide(
-//    crossdockpb.NewFxOnewayYARPCProcedures,
+//    crossdockpb.NewFxOnewayYARPCProcedures(),
 //    ...
 //  )
 func NewFxOnewayYARPCProcedures() interface{} {

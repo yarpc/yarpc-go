@@ -183,7 +183,7 @@ type FxHelloYARPCClientResult struct {
 // to an Fx application using the given name for routing.
 //
 //  fx.Provide(
-//    streaming.NewFxHelloYARPCClient,
+//    streaming.NewFxHelloYARPCClient("service-name"),
 //    ...
 //  )
 func NewFxHelloYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
@@ -220,7 +220,7 @@ type FxHelloYARPCProceduresResult struct {
 // It expects a HelloYARPCServer to be present in the container.
 //
 //  fx.Provide(
-//    streaming.NewFxHelloYARPCProcedures,
+//    streaming.NewFxHelloYARPCProcedures(),
 //    ...
 //  )
 func NewFxHelloYARPCProcedures() interface{} {

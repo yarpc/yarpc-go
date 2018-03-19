@@ -121,7 +121,7 @@ type FxKeyValueYARPCClientResult struct {
 // to an Fx application using the given name for routing.
 //
 //  fx.Provide(
-//    testing.NewFxKeyValueYARPCClient,
+//    testing.NewFxKeyValueYARPCClient("service-name"),
 //    ...
 //  )
 func NewFxKeyValueYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
@@ -158,7 +158,7 @@ type FxKeyValueYARPCProceduresResult struct {
 // It expects a KeyValueYARPCServer to be present in the container.
 //
 //  fx.Provide(
-//    testing.NewFxKeyValueYARPCProcedures,
+//    testing.NewFxKeyValueYARPCProcedures(),
 //    ...
 //  )
 func NewFxKeyValueYARPCProcedures() interface{} {
@@ -327,7 +327,7 @@ type FxSinkYARPCClientResult struct {
 // to an Fx application using the given name for routing.
 //
 //  fx.Provide(
-//    testing.NewFxSinkYARPCClient,
+//    testing.NewFxSinkYARPCClient("service-name"),
 //    ...
 //  )
 func NewFxSinkYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
@@ -364,7 +364,7 @@ type FxSinkYARPCProceduresResult struct {
 // It expects a SinkYARPCServer to be present in the container.
 //
 //  fx.Provide(
-//    testing.NewFxSinkYARPCProcedures,
+//    testing.NewFxSinkYARPCProcedures(),
 //    ...
 //  )
 func NewFxSinkYARPCProcedures() interface{} {
@@ -580,7 +580,7 @@ type FxAllYARPCClientResult struct {
 // to an Fx application using the given name for routing.
 //
 //  fx.Provide(
-//    testing.NewFxAllYARPCClient,
+//    testing.NewFxAllYARPCClient("service-name"),
 //    ...
 //  )
 func NewFxAllYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
@@ -617,7 +617,7 @@ type FxAllYARPCProceduresResult struct {
 // It expects a AllYARPCServer to be present in the container.
 //
 //  fx.Provide(
-//    testing.NewFxAllYARPCProcedures,
+//    testing.NewFxAllYARPCProcedures(),
 //    ...
 //  )
 func NewFxAllYARPCProcedures() interface{} {
