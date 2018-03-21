@@ -97,8 +97,9 @@ func NewRunner(
 	templateInfoChecker func(*TemplateInfo) error,
 	baseImports []string,
 	fileToOutputFilename func(*File) (string, error),
+	unknownFlagHandler func(key string, value string) error,
 ) Runner {
-	return newRunner(tmpl, templateInfoChecker, baseImports, fileToOutputFilename)
+	return newRunner(tmpl, templateInfoChecker, baseImports, fileToOutputFilename, unknownFlagHandler)
 }
 
 // NewMultiRunner returns a new Runner that executes all the given Runners and
