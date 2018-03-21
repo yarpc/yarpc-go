@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Add methods to start and stop a dispatcher's transports, inbounds, and
   outbounds separately.
+- Add `NewFx{{Service}}YARPCClient` and `NewFx{{Service}}YARPCProcedures`
+  generated methods from protoc-gen-yarpc-go for Fx.
 
 ## [1.28.0] - 2018-04-13
 ### Changed
