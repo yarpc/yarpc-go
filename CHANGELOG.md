@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+- No changes yet.
+
 ## [1.29.0] - 2018-03-21
 ### Added
 - Add methods to start and stop a dispatcher's transports, inbounds, and
@@ -920,6 +923,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.29.0...HEAD
 [1.29.0]: https://github.com/yarpc/yarpc-go/compare/v1.28.0...v1.29.0
 [1.28.0]: https://github.com/yarpc/yarpc-go/compare/v1.27.2...v1.28.0
 [1.27.2]: https://github.com/yarpc/yarpc-go/compare/v1.27.1...v1.27.2
