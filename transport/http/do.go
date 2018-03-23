@@ -12,11 +12,11 @@ import (
 	"github.com/opentracing/opentracing-go"
 )
 
-// Do makes an old school HTTP request
+// Do makes an old school HTTP request.
 //
 //  hreq, err := http.NewRequest("GET", "http://example.com/path", nil)
 //  treq := &transport.Request{} // ShardKey anyone?
-//  hres, err := o.Do(ctx, hreq, treq)
+//  hres, err := o.Do(hreq)
 func (o *Outbound) RoundTrip(hreq *http.Request) (*http.Response, error) {
 	ctx := hreq.Context()
 	treq := &transport.Request{}

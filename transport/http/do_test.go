@@ -6,40 +6,159 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/internal/testtime"
+	"bytes"
 )
 
-func TestDoHttp(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(404)
-		w.Write([]byte("Hello, World!\r\n"))
-	}))
-	defer ts.Close()
 
-	x := NewTransport()
-	o := x.NewSingleOutbound(ts.URL)
+func TestCallHttpSuccess(t *testing.T) {
+	successServer := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, req *http.Request) {
+			defer req.Body.Close()
 
-	x.Start()
-	defer x.Stop()
-	o.Start()
-	defer o.Stop()
+			body, err := ioutil.ReadAll(req.Body)
+			if assert.NoError(t, err) {
+				assert.Equal(t, []byte("world"), body)
+			}
 
-	client := http.Client{
-		Transport: o,
+			w.Header().Set("foo", "bar")
+			_, err = w.Write([]byte("great success"))
+			assert.NoError(t, err)
+		},
+	))
+	defer successServer.Close()
+
+	httpTransport := NewTransport()
+	out := httpTransport.NewSingleOutbound(successServer.URL)
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+
+	req, err := http.NewRequest("GET", successServer.URL, bytes.NewReader([]byte("world")))
+	req = req.WithContext(ctx)
+
+	client := http.Client{Transport: out}
+
+	res, err := client.Do(req)
+
+	require.NoError(t, err)
+	defer res.Body.Close()
+
+	foo := res.Header.Get("foo")
+	assert.NotNil(t, foo, "value for foo expected")
+	assert.Equal(t, "bar", foo, "foo value mismatch")
+
+	body, err := ioutil.ReadAll(res.Body)
+	if assert.NoError(t, err) {
+		assert.Equal(t, []byte("great success"), body)
+	}
+}
+
+
+
+func TestHTTPApplicationError(t *testing.T) {
+	tests := []struct {
+		desc     string
+		status   string
+		appError bool
+	}{
+		{
+			desc:     "ok",
+			status:   "success",
+			appError: false,
+		},
+		{
+			desc:     "error",
+			status:   "error",
+			appError: true,
+		},
+		{
+			desc:     "not an error",
+			status:   "lolwut",
+			appError: false,
+		},
 	}
 
-	req, err := http.NewRequest("GET", ts.URL, nil)
-	require.NoError(t, err)
-	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, time.Second)
-	defer cancel()
-	res, err := client.Do(req)
-	require.NoError(t, err)
-	assert.Equal(t, "404 Not Found", res.Status)
-	resb, err := ioutil.ReadAll(res.Body)
-	require.NoError(t, err)
-	assert.Equal(t, []byte("Hello, World!\r\n"), resb)
+	httpTransport := NewTransport()
+
+	for _, tt := range tests {
+		server := httptest.NewServer(http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Add("Status", tt.status)
+				defer r.Body.Close()
+			},
+		))
+		defer server.Close()
+
+		out := httpTransport.NewSingleOutbound(server.URL)
+
+		require.NoError(t, out.Start(), "failed to start outbound")
+		defer out.Stop()
+
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 100*testtime.Millisecond)
+		defer cancel()
+
+		req, err := http.NewRequest("GET", server.URL, bytes.NewReader([]byte("world")))
+		req = req.WithContext(ctx)
+
+		client := http.Client{Transport: out}
+
+		res, err := client.Do(req)
+
+		assert.Equal(t, res.Header.Get("Status"), tt.status, "%v: application status", tt.desc)
+
+		if !assert.NoError(t, err, "%v: call failed", tt.desc) {
+			continue
+		}
+
+		if !assert.NoError(t, res.Body.Close(), "%v: failed to close response body") {
+			continue
+		}
+	}
+}
+
+func TestHTTPCallFailures(t *testing.T) {
+	notFoundServer := httptest.NewServer(http.NotFoundHandler())
+	defer notFoundServer.Close()
+
+	internalErrorServer := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "great sadness", http.StatusInternalServerError)
+		}))
+	defer internalErrorServer.Close()
+
+	httpTransport := NewTransport()
+
+	tests := []struct {
+		url      string
+		messages []string
+	}{
+		{"not a URL", []string{"protocol scheme"}},
+		{notFoundServer.URL, []string{"404", "page not found"}},
+		{internalErrorServer.URL, []string{"great sadness"}},
+	}
+
+	for _, tt := range tests {
+		out := httpTransport.NewSingleOutbound(tt.url)
+		require.NoError(t, out.Start(), "failed to start outbound")
+		defer out.Stop()
+
+		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+		defer cancel()
+		req, _ := http.NewRequest("GET", internalErrorServer.URL, bytes.NewReader([]byte("world")))
+		req = req.WithContext(ctx)
+
+		client := http.Client{Transport: out}
+
+		res, err := client.Do(req)
+		assert.NoError(t, err)
+
+		assert.NotEqual(t, res.Status, 200)
+	}
 }
