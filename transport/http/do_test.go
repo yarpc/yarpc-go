@@ -45,7 +45,7 @@ func TestCallHttpSuccess(t *testing.T) {
 	client := http.Client{Transport: out}
 
 	res, err := client.Do(req)
-
+	
 	require.NoError(t, err)
 	defer res.Body.Close()
 
