@@ -17,7 +17,9 @@ import (
 //  hreq, err := http.NewRequest("GET", "http://example.com/path", nil)
 //  treq := &transport.Request{} // ShardKey anyone?
 //  hres, err := o.Do(ctx, hreq, treq)
-func (o *Outbound) Do(ctx context.Context, hreq *http.Request, treq *transport.Request) (*http.Response, error) {
+func (o *Outbound) RoundTrip(hreq *http.Request) (*http.Response, error) {
+	ctx := hreq.Context()
+	treq := &transport.Request{}
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "error waiting for http unary outbound to start for service: %s", treq.Service)
 	}

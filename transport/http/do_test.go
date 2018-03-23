@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/api/transport"
 )
 
 func TestDoHttp(t *testing.T) {
@@ -28,12 +27,16 @@ func TestDoHttp(t *testing.T) {
 	o.Start()
 	defer o.Stop()
 
+	client := http.Client{
+		Transport: o,
+	}
+
 	req, err := http.NewRequest("GET", ts.URL, nil)
 	require.NoError(t, err)
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
-	res, err := o.Do(ctx, req, &transport.Request{})
+	res, err := client.Do(req)
 	require.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status)
 	resb, err := ioutil.ReadAll(res.Body)
