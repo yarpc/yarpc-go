@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -45,7 +44,7 @@ func TestCallHttpSuccess(t *testing.T) {
 	client := http.Client{Transport: out}
 
 	res, err := client.Do(req)
-	
+
 	require.NoError(t, err)
 	defer res.Body.Close()
 
