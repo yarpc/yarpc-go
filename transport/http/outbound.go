@@ -252,25 +252,15 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request, start time
 	return resp, err
 }
 
-func (o *Outbound) callWithPeer(
+func (o *Outbound) callWithTracing(
 	ctx context.Context,
 	treq *transport.Request,
 	start time.Time,
-	ttl time.Duration,
 	p *httpPeer,
-) (*transport.Response, error) {
-	req, err := o.createRequest(p, treq)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
-	ctx, req, span, err := o.withOpentracingSpan(ctx, req, treq, start)
-	if err != nil {
-		return nil, err
-	}
-	defer span.Finish()
-	req = o.withCoreHeaders(req, treq, ttl)
+	req *http.Request,
+	span opentracing.Span,
+) (*http.Response, error) {
+	var err error
 
 	response, err := p.transport.client.Do(req.WithContext(ctx))
 
@@ -301,6 +291,34 @@ func (o *Outbound) callWithPeer(
 	}
 
 	span.SetTag("http.status_code", response.StatusCode)
+
+	return response, nil
+}
+
+func (o *Outbound) callWithPeer(
+	ctx context.Context,
+	treq *transport.Request,
+	start time.Time,
+	ttl time.Duration,
+	p *httpPeer,
+) (*transport.Response, error) {
+	req, err := o.createRequest(p, treq)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
+	ctx, req, span, err := o.withOpentracingSpan(ctx, req, treq, start)
+	if err != nil {
+		return nil, err
+	}
+	defer span.Finish()
+
+	req = o.withCoreHeaders(req, treq, ttl)
+	response, err := o.callWithTracing(ctx, treq, start, p, req, span)
+	if err != nil {
+		return nil, err
+	}
 
 	tres := &transport.Response{
 		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, transport.NewHeaders()),

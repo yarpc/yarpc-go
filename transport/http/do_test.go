@@ -13,7 +13,6 @@ import (
 	"bytes"
 )
 
-
 func TestCallHttpSuccess(t *testing.T) {
 	successServer := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, req *http.Request) {
@@ -58,8 +57,6 @@ func TestCallHttpSuccess(t *testing.T) {
 		assert.Equal(t, []byte("great success"), body)
 	}
 }
-
-
 
 func TestHTTPApplicationError(t *testing.T) {
 	tests := []struct {
