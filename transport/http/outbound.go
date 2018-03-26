@@ -252,7 +252,7 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request, start time
 	return resp, err
 }
 
-func (o *Outbound) callWithTracing(
+func (o *Outbound) errorHandleHTTPRequest(
 	ctx context.Context,
 	treq *transport.Request,
 	start time.Time,
@@ -315,7 +315,7 @@ func (o *Outbound) callWithPeer(
 	defer span.Finish()
 
 	req = o.withCoreHeaders(req, treq, ttl)
-	response, err := o.callWithTracing(ctx, treq, start, p, req, span)
+	response, err := o.errorHandleHTTPRequest(ctx, treq, start, p, req, span)
 	if err != nil {
 		return nil, err
 	}

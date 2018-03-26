@@ -33,7 +33,6 @@ import (
 // The peer chooser for raw HTTP requests will receive a blank YARPC transport.Request, which is
 // sufficient for load balancers like peer/pendingheap (fewest-pending-requests) and peer/roundrobin
 // (round-robin).
-
 func (o *Outbound) RoundTrip(hreq *http.Request) (*http.Response, error) {
 	ctx := hreq.Context()
 	treq := &transport.Request{}
@@ -82,7 +81,7 @@ func (o *Outbound) doWithPeer(
 	}
 	defer span.Finish()
 
-	hres, err := o.callWithTracing(ctx, treq, start, p, hreq, span)
+	hres, err := o.errorHandleHTTPRequest(ctx, treq, start, p, hreq, span)
 	if err != nil {
 		return nil, err
 	}
