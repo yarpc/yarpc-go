@@ -10,11 +10,11 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
-//RoundTrip implements the http.RoundTripper interface, making a YARPC HTTP outbound suitable as a
+// RoundTrip implements the http.RoundTripper interface, making a YARPC HTTP outbound suitable as a
 // Transport when constructing an HTTP Client. An HTTP client is suitable only for relative paths to
 // a single outbound service.
 //
-//The HTTP outbound refuses to send HTTP requests that have a fully qualified path, since it cannot
+// The HTTP outbound refuses to send HTTP requests that have a fully qualified path, since it cannot
 // respect the host and protocol portions of the URL, instead routing through the outbound peer
 // chooser. A request that specifies a host or protocol will return an error.
 //
@@ -22,12 +22,12 @@ import (
 //
 // client := http.Client{Transport: outbound}
 // Thereafter use the Golang standard library HTTP to send requests with this client.
-// ctx := context.Background()
-// ctx, cancel = context.WithTimeout(ctx, time.Second)
-// defer cancel()
-// req := http.NewRequest("GET", "http://example.com/", nil)
-// req = req.WithContext(ctx)
-// res, err := client.Do(request)
+//  ctx := context.Background()
+//  ctx, cancel = context.WithTimeout(ctx, time.Second)
+//  defer cancel()
+//  req := http.NewRequest("GET", "http://example.com/", nil)
+//  req = req.WithContext(ctx)
+//  res, err := client.Do(request)
 //
 // All requests must have a deadline on the context.
 // The peer chooser for raw HTTP requests will receive a blank YARPC transport.Request, which is

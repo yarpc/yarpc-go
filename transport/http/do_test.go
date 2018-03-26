@@ -40,6 +40,7 @@ func TestCallHttpSuccess(t *testing.T) {
 	defer cancel()
 
 	req, err := http.NewRequest("GET", successServer.URL, bytes.NewReader([]byte("world")))
+	//require.NoError(t, err)
 	req = req.WithContext(ctx)
 
 	client := http.Client{Transport: out}
@@ -113,6 +114,7 @@ func TestHTTPSuccessWithMethods(t *testing.T) {
 		defer cancel()
 
 		req, err := http.NewRequest(tt.method, server.URL, bytes.NewReader([]byte("world")))
+		require.NoError(t, err)
 		req = req.WithContext(ctx)
 
 		client := http.Client{Transport: out}
@@ -184,6 +186,7 @@ func TestHTTPErrorWithMethods(t *testing.T) {
 		defer cancel()
 
 		req, err := http.NewRequest(tt.method, server.URL, bytes.NewReader([]byte("world")))
+		require.NoError(t, err)
 		req = req.WithContext(ctx)
 
 		client := http.Client{Transport: out}
@@ -241,6 +244,7 @@ func TestHTTPTimeout(t *testing.T) {
 		defer cancel()
 
 		req, err := http.NewRequest(tt.method, server.URL, bytes.NewReader([]byte("world")))
+		require.NoError(t, err)
 		req = req.WithContext(ctx)
 
 		client := http.Client{Transport: out}
@@ -296,6 +300,7 @@ func TestHTTPApplicationError(t *testing.T) {
 		defer cancel()
 
 		req, err := http.NewRequest("GET", server.URL, bytes.NewReader([]byte("world")))
+		require.NoError(t, err)
 		req = req.WithContext(ctx)
 
 		client := http.Client{Transport: out}
