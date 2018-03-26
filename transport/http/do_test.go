@@ -70,25 +70,25 @@ func TestHTTPSuccessWithMethods(t *testing.T) {
 			desc:   "GET success",
 			status: "success",
 			method: "GET",
-			path: "/",
+			path:   "/",
 		},
 		{
 			desc:   "POST success",
 			status: "lolwut",
 			method: "POST",
-			path: "/",
+			path:   "/",
 		},
 		{
 			desc:   "TRACE success",
 			status: "lolwut",
 			method: "TRACE",
-			path: "/",
+			path:   "/",
 		},
 		{
 			desc:   "PUT success",
 			status: "lolwut",
 			method: "PUT",
-			path: "/",
+			path:   "/",
 		},
 	}
 
@@ -131,7 +131,6 @@ func TestHTTPSuccessWithMethods(t *testing.T) {
 	}
 }
 
-
 func TestHTTPErrorWithMethods(t *testing.T) {
 	tests := []struct {
 		desc   string
@@ -143,25 +142,25 @@ func TestHTTPErrorWithMethods(t *testing.T) {
 			desc:   "GET error",
 			status: "success",
 			method: "GET",
-			path: "/",
+			path:   "/",
 		},
 		{
 			desc:   "POST error",
 			status: "error",
 			method: "POST",
-			path: "/health",
+			path:   "/health",
 		},
 		{
 			desc:   "TRACE error",
 			status: "lolwut",
 			method: "TRACE",
-			path: "/",
+			path:   "/",
 		},
 		{
 			desc:   "PUT error",
 			status: "lolwut",
 			method: "PUT",
-			path: "/",
+			path:   "/",
 		},
 	}
 
@@ -203,21 +202,21 @@ func TestHTTPErrorWithMethods(t *testing.T) {
 
 func TestHTTPTimeout(t *testing.T) {
 	tests := []struct {
-		desc   string
-		method string
-		path   string
+		desc    string
+		method  string
+		path    string
 		timeout time.Duration
 	}{
 		{
-			desc:   "GET error",
-			method: "GET",
-			path: "/",
+			desc:    "GET error",
+			method:  "GET",
+			path:    "/",
 			timeout: 0,
 		},
 		{
-			desc:   "POST error",
-			method: "POST",
-			path: "/",
+			desc:    "POST error",
+			method:  "POST",
+			path:    "/",
 			timeout: 0,
 		},
 	}
@@ -252,7 +251,6 @@ func TestHTTPTimeout(t *testing.T) {
 		assert.Nil(t, res)
 	}
 }
-
 
 func TestHTTPApplicationError(t *testing.T) {
 	tests := []struct {
