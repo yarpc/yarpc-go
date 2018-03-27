@@ -135,6 +135,7 @@ func TestHTTPSuccessWithMethods(t *testing.T) {
 			client := http.Client{Transport: out}
 
 			res, err := client.Do(req)
+			require.NoError(t, err)
 
 			assert.Equal(t, res.Header.Get("Status"), tt.status, "%v: application status", tt.desc)
 		})

@@ -104,5 +104,5 @@ func (o *Outbound) doWithPeer(
 	}
 	defer span.Finish()
 
-	return  o.errorHandleHTTPRequest(ctx, treq, start, p, hreq, span)
+	return o.errorHandleHTTPRequest(ctx, treq, start, p, hreq, span)
 }
