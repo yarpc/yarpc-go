@@ -40,7 +40,7 @@ import (
 //
 // Sample usage:
 //
-// client := http.Client{Transport: outbound}
+//  client := http.Client{Transport: outbound}
 // Thereafter use the Golang standard library HTTP to send requests with this client.
 //  ctx := context.Background()
 //  ctx, cancel := context.WithTimeout(ctx, time.Second)
@@ -98,11 +98,6 @@ func (o *Outbound) doWithPeer(
 	p *httpPeer,
 ) (*http.Response, error) {
 	hreq.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
-	ctx, hreq, span, err := o.withOpentracingSpan(ctx, hreq, treq, start)
-	if err != nil {
-		return nil, err
-	}
-	defer span.Finish()
 
-	return o.errorHandleHTTPRequest(ctx, treq, start, p, hreq, span)
+	return o.errorHandleHTTPRequest(ctx, treq, start, p, hreq, nil)
 }

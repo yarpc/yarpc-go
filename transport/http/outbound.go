@@ -272,9 +272,10 @@ func (o *Outbound) errorHandleHTTPRequest(
 			err = ctx.Err()
 		default:
 		}
-
-		span.SetTag("error", true)
-		span.LogFields(opentracinglog.String("event", err.Error()))
+		if span != nil {
+			span.SetTag("error", true)
+			span.LogFields(opentracinglog.String("event", err.Error()))
+		}
 		if err == context.DeadlineExceeded {
 			end := time.Now()
 			return nil, yarpcerrors.Newf(
@@ -289,8 +290,6 @@ func (o *Outbound) errorHandleHTTPRequest(
 
 		return nil, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "unknown error from http client: %s", err.Error())
 	}
-
-	span.SetTag("http.status_code", response.StatusCode)
 
 	return response, nil
 }
@@ -319,6 +318,7 @@ func (o *Outbound) callWithPeer(
 	if err != nil {
 		return nil, err
 	}
+	span.SetTag("http.status_code", response.StatusCode)
 
 	tres := &transport.Response{
 		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, transport.NewHeaders()),

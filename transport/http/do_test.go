@@ -206,19 +206,16 @@ func TestHTTPTimeout(t *testing.T) {
 	tests := []struct {
 		desc    string
 		method  string
-		path    string
 		timeout time.Duration
 	}{
 		{
 			desc:    "GET error",
 			method:  "GET",
-			path:    "/",
 			timeout: 0,
 		},
 		{
 			desc:    "POST error",
 			method:  "POST",
-			path:    "/",
 			timeout: 0,
 		},
 	}
@@ -229,11 +226,9 @@ func TestHTTPTimeout(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(
 				func(w http.ResponseWriter, r *http.Request) {
-					http.Error(w, "Error out", http.StatusInternalServerError)
+					defer r.Body.Close()
 				},
 			))
-			defer server.Close()
-
 			out := httpTransport.NewSingleOutbound(server.URL)
 
 			require.NoError(t, out.Start(), "failed to start outbound")
@@ -250,7 +245,7 @@ func TestHTTPTimeout(t *testing.T) {
 			client := http.Client{Transport: out}
 
 			res, err := client.Do(req)
-
+			assert.Equal(t, "context deadline exceeded", ctx.Err().Error())
 			assert.Error(t, err)
 			assert.Nil(t, res)
 		})
