@@ -283,11 +283,7 @@ func (o *Outbound) stream(
 		return nil, err
 	}
 
-	// We use a different context for the lifetime of the stream and the time it
-	// took to establish a connection with the peer, setting the stream's
-	// context to context.Background() means the lifetime of this stream has no
-	// timeout.
-	streamCtx := metadata.NewOutgoingContext(context.Background(), md)
+	streamCtx := metadata.NewOutgoingContext(ctx, md)
 	clientStream, err := grpcPeer.clientConn.NewStream(
 		streamCtx,
 		&grpc.StreamDesc{
