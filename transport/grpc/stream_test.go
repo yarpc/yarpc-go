@@ -26,9 +26,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/api/transport"
 	. "go.uber.org/yarpc/x/yarpctest"
-	"go.uber.org/yarpc/x/yarpctest/api"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -290,73 +288,6 @@ func TestStreaming(t *testing.T) {
 					Procedure("proc"),
 					ClientStreamActions(
 						SendStreamDecodeErrorAndExpectError(yarpcerrors.InternalErrorf("test"), yarpcerrors.InternalErrorf("test").Error()),
-					),
-				),
-			),
-		},
-		{
-			name: "stream client request and context functions",
-			services: Lifecycles(
-				GRPCService(
-					Name("myservice"),
-					p.NamedPort("10"),
-					Proc(
-						Name("proc"),
-						OrderedStreamHandler(
-							RecvStreamMsg("test"),
-						),
-					),
-				),
-			),
-			requests: Actions(
-				GRPCStreamRequest(
-					p.NamedPort("10"),
-					Service("myservice"),
-					Procedure("proc"),
-					WithHeader("key", "value"),
-					ClientStreamActions(
-						api.ClientStreamActionFunc(func(t testing.TB, c *transport.ClientStream) {
-							val, _ := c.Request().Meta.Headers.Get("key")
-							require.Equal(t, "value", val)
-
-							deadline, hasDeadline := c.Context().Deadline()
-							require.False(t, hasDeadline, "context had a deadline %s, what?", deadline.String())
-						}),
-						SendStreamMsg("test"),
-						RecvStreamErr(io.EOF.Error()),
-					),
-				),
-			),
-		},
-		{
-			name: "server invalid response and context check",
-			services: Lifecycles(
-				GRPCService(
-					Name("myservice"),
-					p.NamedPort("11"),
-					Proc(
-						Name("proc"),
-						OrderedStreamHandler(
-							api.ServerStreamActionFunc(func(s *transport.ServerStream) error {
-								if _, ok := s.Context().Deadline(); ok {
-									return errors.New("should not have deadline on stream")
-								}
-								return nil
-							}),
-							RecvStreamMsg("test"),
-						),
-					),
-				),
-			),
-			requests: Actions(
-				GRPCStreamRequest(
-					p.NamedPort("11"),
-					Service("myservice"),
-					Procedure("proc"),
-					WithHeader("key", "value"),
-					ClientStreamActions(
-						SendStreamMsg("test"),
-						RecvStreamErr(io.EOF.Error()),
 					),
 				),
 			),

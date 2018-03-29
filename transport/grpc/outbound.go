@@ -227,9 +227,6 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 
 // CallStream implements transport.StreamOutbound#CallStream.
 func (o *Outbound) CallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
-	//if _, ok := ctx.Deadline(); !ok {
-	//return nil, yarpcerrors.InvalidArgumentErrorf("stream requests require a connection establishment timeout on the passed in context")
-	//}
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, err
 	}

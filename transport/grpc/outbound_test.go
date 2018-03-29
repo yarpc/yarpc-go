@@ -44,19 +44,6 @@ func TestNoRequest(t *testing.T) {
 	assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for grpc outbound was nil"), err)
 }
 
-func TestCallStreamWithoutDeadline(t *testing.T) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
-	require.NoError(t, err)
-
-	tran := NewTransport()
-	out := tran.NewSingleOutbound(listener.Addr().String())
-
-	_, err = out.CallStream(context.Background(), &transport.StreamRequest{})
-
-	require.Contains(t, err.Error(), "code:invalid-argument")
-	require.Contains(t, err.Error(), "stream requests require a connection establishment timeout on the passed in context")
-}
-
 func TestCallStreamWhenNotRunning(t *testing.T) {
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
 	require.NoError(t, err)
