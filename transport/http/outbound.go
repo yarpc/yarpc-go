@@ -426,7 +426,7 @@ func getYARPCErrorFromResponse(response *http.Response, bothResponseError bool) 
 // sufficient for load balancers like peer/pendingheap (fewest-pending-requests) and peer/roundrobin
 // (round-robin).
 func (o *Outbound) RoundTrip(hreq *http.Request) (*http.Response, error) {
-	return o.roundTrip(hreq, nil, time.Now())
+	return o.roundTrip(hreq, nil /* treq */, time.Now())
 }
 
 func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start time.Time) (*http.Response, error) {
