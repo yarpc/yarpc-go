@@ -440,6 +440,12 @@ func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start 
 	}
 	ttl := deadline.Sub(start)
 
+	// When sending requests through the RoundTrip method, we construct the
+	// transport request from the HTTP headers as if it were an inbound
+	// request.
+	// The API for setting transport metadata for an outbound request when
+	// using the go stdlib HTTP client is to use headers as the YAPRC HTTP
+	// transport header conventions.
 	if treq == nil {
 		treq = &transport.Request{
 			Caller:          hreq.Header.Get(CallerHeader),
