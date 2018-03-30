@@ -5,7 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- No changes yet.
+- The YARPC HTTP outbound now implements http.RoundTripper.
+  This makes YARPC's load balancers, other peer selectors, and peer
+  availability management accessible to REST call sites.
 
 ## [1.29.0] - 2018-03-21
 ### Added
