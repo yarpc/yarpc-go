@@ -34,7 +34,7 @@ import (
 	"go.uber.org/yarpc/internal/testtime"
 )
 
-func TestCallHttpSuccess(t *testing.T) {
+func TestCallHTTPSuccess(t *testing.T) {
 	successServer := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, req *http.Request) {
 			defer req.Body.Close()
