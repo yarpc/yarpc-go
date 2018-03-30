@@ -56,27 +56,21 @@ import (
 // sufficient for load balancers like peer/pendingheap (fewest-pending-requests) and peer/roundrobin
 // (round-robin).
 func (o *Outbound) RoundTrip(hreq *http.Request) (*http.Response, error) {
-	var (
-		start time.Time
-		ttl   time.Duration
-		treq  *transport.Request
-	)
+	return o.roundTrip(hreq, nil, time.Now())
+}
+
+func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start time.Time) (*http.Response, error) {
 	ctx := hreq.Context()
-	if yctx, ok := ctx.(*yarpcRequestContext); ok {
-		start = yctx.start
-		ttl = yctx.ttl
-		treq = yctx.treq
-		ctx = yctx.Context
-	} else {
-		start = time.Now()
-		// Do we want to set a default so users don't have to do this manually?
-		deadline, ok := ctx.Deadline()
-		if !ok {
-			return nil, yarpcerrors.Newf(
-				yarpcerrors.CodeInvalidArgument,
-				"missing context deadline")
-		}
-		ttl = deadline.Sub(start)
+
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return nil, yarpcerrors.Newf(
+			yarpcerrors.CodeInvalidArgument,
+			"missing context deadline")
+	}
+	ttl := deadline.Sub(start)
+
+	if treq == nil {
 		treq = &transport.Request{
 			Caller:          hreq.Header.Get(CallerHeader),
 			Service:         hreq.Header.Get(ServiceHeader),
@@ -88,6 +82,7 @@ func (o *Outbound) RoundTrip(hreq *http.Request) (*http.Response, error) {
 			Headers:         applicationHeaders.FromHTTPHeaders(hreq.Header, transport.Headers{}),
 		}
 	}
+
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, intyarpcerrors.AnnotateWithInfo(
 			yarpcerrors.FromError(err),

@@ -228,38 +228,26 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 	return time.Now(), nil
 }
 
-type yarpcRequestContext struct {
-	context.Context
-	treq  *transport.Request
-	start time.Time
-	ttl   time.Duration
-}
-
 func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
 	start := time.Now()
 	deadline, _ := ctx.Deadline()
 	ttl := deadline.Sub(start)
 
-	req, err := o.createRequest(treq)
+	hreq, err := o.createRequest(treq)
 	if err != nil {
 		return nil, err
 	}
-	req.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
+	hreq.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
 
-	ctx, req, span, err := o.withOpentracingSpan(ctx, req, treq, start)
+	ctx, hreq, span, err := o.withOpentracingSpan(ctx, hreq, treq, start)
 	if err != nil {
 		return nil, err
 	}
 	defer span.Finish()
 
-	req = o.withCoreHeaders(req, treq, ttl)
-	req = req.WithContext(&yarpcRequestContext{
-		Context: ctx,
-		treq:    treq,
-		start:   start,
-		ttl:     ttl,
-	})
-	response, err := o.RoundTrip(req)
+	hreq = o.withCoreHeaders(hreq, treq, ttl)
+	hreq = hreq.WithContext(ctx)
+	response, err := o.roundTrip(hreq, treq, start)
 	if err != nil {
 		if span != nil {
 			span.SetTag("error", true)
