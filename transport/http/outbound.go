@@ -402,11 +402,8 @@ func getYARPCErrorFromResponse(response *http.Response, bothResponseError bool) 
 
 // RoundTrip implements the http.RoundTripper interface, making a YARPC HTTP outbound suitable as a
 // Transport when constructing an HTTP Client. An HTTP client is suitable only for relative paths to
-// a single outbound service.
-//
-// The HTTP outbound refuses to send HTTP requests that have a fully qualified path, since it cannot
-// respect the host and protocol portions of the URL, instead routing through the outbound peer
-// chooser. A request that specifies a host or protocol will return an error.
+// a single outbound service. The HTTP outbound overrides the host:port portion of the URL of the
+// provided request.
 //
 // Sample usage:
 //
