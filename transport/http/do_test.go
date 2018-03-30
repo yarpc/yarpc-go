@@ -326,11 +326,6 @@ func TestHTTPCallFailures(t *testing.T) {
 		messages []string
 	}{
 		{
-			"not a URL",
-			"not a URL",
-			[]string{"protocol scheme"},
-		},
-		{
 			"404",
 			notFoundServer.URL,
 			[]string{"404", "page not found"},
@@ -339,11 +334,6 @@ func TestHTTPCallFailures(t *testing.T) {
 			"failed due to error",
 			internalErrorServer.URL,
 			[]string{"great sadness"},
-		},
-		{
-			"fail for a fully qualified URL",
-			"http://example.com/",
-			[]string{"failed"},
 		},
 	}
 
@@ -361,9 +351,11 @@ func TestHTTPCallFailures(t *testing.T) {
 			client := http.Client{Transport: out}
 
 			res, err := client.Do(req)
-			assert.NoError(t, err)
 
-			assert.NotEqual(t, res.Status, 200)
+			if assert.NoError(t, err) {
+				assert.NotEqual(t, res.Status, 200)
+			}
+
 		})
 	}
 }

@@ -41,7 +41,9 @@ import (
 // Sample usage:
 //
 //  client := http.Client{Transport: outbound}
+//
 // Thereafter use the Golang standard library HTTP to send requests with this client.
+//
 //  ctx := context.Background()
 //  ctx, cancel := context.WithTimeout(ctx, time.Second)
 //  defer cancel()
@@ -54,29 +56,44 @@ import (
 // sufficient for load balancers like peer/pendingheap (fewest-pending-requests) and peer/roundrobin
 // (round-robin).
 func (o *Outbound) RoundTrip(hreq *http.Request) (*http.Response, error) {
+	var (
+		start time.Time
+		ttl   time.Duration
+		treq  *transport.Request
+	)
 	ctx := hreq.Context()
-	treq := &transport.Request{}
+	if yctx, ok := ctx.(*yarpcRequestContext); ok {
+		start = yctx.start
+		ttl = yctx.ttl
+		treq = yctx.treq
+		ctx = yctx.Context
+	} else {
+		start = time.Now()
+		// Do we want to set a default so users don't have to do this manually?
+		deadline, ok := ctx.Deadline()
+		if !ok {
+			return nil, yarpcerrors.Newf(
+				yarpcerrors.CodeInvalidArgument,
+				"missing context deadline")
+		}
+		ttl = deadline.Sub(start)
+		treq = &transport.Request{
+			Caller:          hreq.Header.Get(CallerHeader),
+			Service:         hreq.Header.Get(ServiceHeader),
+			Encoding:        transport.Encoding(hreq.Header.Get(EncodingHeader)),
+			Procedure:       hreq.Header.Get(ProcedureHeader),
+			ShardKey:        hreq.Header.Get(ShardKeyHeader),
+			RoutingKey:      hreq.Header.Get(RoutingKeyHeader),
+			RoutingDelegate: hreq.Header.Get(RoutingDelegateHeader),
+			// TODO: transform headers.
+		}
+	}
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, intyarpcerrors.AnnotateWithInfo(
 			yarpcerrors.FromError(err),
 			"error waiting for http unary outbound to start for service: %s",
 			treq.Service)
 	}
-
-	start := time.Now()
-	deadline, _ := ctx.Deadline()
-	ttl := deadline.Sub(start)
-
-	return o.do(ctx, hreq, treq, start, ttl)
-}
-
-func (o *Outbound) do(
-	ctx context.Context,
-	hreq *http.Request,
-	treq *transport.Request,
-	start time.Time,
-	ttl time.Duration,
-) (*http.Response, error) {
 	p, onFinish, err := o.getPeerForRequest(ctx, treq)
 	if err != nil {
 		return nil, err
@@ -97,7 +114,32 @@ func (o *Outbound) doWithPeer(
 	ttl time.Duration,
 	p *httpPeer,
 ) (*http.Response, error) {
-	hreq.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
+	hreq.URL.Host = p.HostPort()
 
-	return o.errorHandleHTTPRequest(ctx, treq, start, p, hreq, nil)
+	response, err := o.transport.client.Do(hreq.WithContext(ctx))
+
+	if err != nil {
+		// Workaround borrowed from ctxhttp until
+		// https://github.com/golang/go/issues/17711 is resolved.
+		select {
+		case <-ctx.Done():
+			err = ctx.Err()
+		default:
+		}
+		if err == context.DeadlineExceeded {
+			end := time.Now()
+			return nil, yarpcerrors.Newf(
+				yarpcerrors.CodeDeadlineExceeded,
+				"client timeout for procedure %q of service %q after %v",
+				treq.Procedure, treq.Service, end.Sub(start))
+		}
+
+		// Note that the connection may have been lost so the peer connection
+		// maintenance loop resumes probing for availability.
+		p.OnDisconnected()
+
+		return nil, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "unknown error from http client: %s", err.Error())
+	}
+
+	return response, nil
 }

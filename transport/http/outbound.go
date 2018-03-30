@@ -207,15 +207,8 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	if treq == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil")
 	}
-	if err := o.once.WaitUntilRunning(ctx); err != nil {
-		return nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "error waiting for http unary outbound to start for service: %s", treq.Service)
-	}
 
-	start := time.Now()
-	deadline, _ := ctx.Deadline()
-	ttl := deadline.Sub(start)
-
-	return o.call(ctx, treq, start, ttl)
+	return o.call(ctx, treq)
 }
 
 // CallOneway makes a oneway request
@@ -227,11 +220,7 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 		return nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "error waiting for http oneway outbound to start for service: %s", treq.Service)
 	}
 
-	start := time.Now()
-	deadline, _ := ctx.Deadline()
-	ttl := deadline.Sub(start)
-
-	_, err := o.call(ctx, treq, start, ttl)
+	_, err := o.call(ctx, treq)
 	if err != nil {
 		return nil, err
 	}
@@ -239,74 +228,24 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 	return time.Now(), nil
 }
 
-func (o *Outbound) call(ctx context.Context, treq *transport.Request, start time.Time, ttl time.Duration) (*transport.Response, error) {
-	p, onFinish, err := o.getPeerForRequest(ctx, treq)
+type yarpcRequestContext struct {
+	context.Context
+	treq  *transport.Request
+	start time.Time
+	ttl   time.Duration
+}
+
+func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
+	start := time.Now()
+	deadline, _ := ctx.Deadline()
+	ttl := deadline.Sub(start)
+
+	req, err := o.createRequest(treq)
 	if err != nil {
 		return nil, err
 	}
-
-	resp, err := o.callWithPeer(ctx, treq, start, ttl, p)
-
-	// Call the onFinish method right before returning (with the error from call with peer)
-	onFinish(err)
-	return resp, err
-}
-
-func (o *Outbound) errorHandleHTTPRequest(
-	ctx context.Context,
-	treq *transport.Request,
-	start time.Time,
-	p *httpPeer,
-	req *http.Request,
-	span opentracing.Span,
-) (*http.Response, error) {
-	var err error
-
-	response, err := p.transport.client.Do(req.WithContext(ctx))
-
-	if err != nil {
-		// Workaround borrowed from ctxhttp until
-		// https://github.com/golang/go/issues/17711 is resolved.
-		select {
-		case <-ctx.Done():
-			err = ctx.Err()
-		default:
-		}
-		if span != nil {
-			span.SetTag("error", true)
-			span.LogFields(opentracinglog.String("event", err.Error()))
-		}
-		if err == context.DeadlineExceeded {
-			end := time.Now()
-			return nil, yarpcerrors.Newf(
-				yarpcerrors.CodeDeadlineExceeded,
-				"client timeout for procedure %q of service %q after %v",
-				treq.Procedure, treq.Service, end.Sub(start))
-		}
-
-		// Note that the connection may have been lost so the peer connection
-		// maintenance loop resumes probing for availability.
-		p.OnDisconnected()
-
-		return nil, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "unknown error from http client: %s", err.Error())
-	}
-
-	return response, nil
-}
-
-func (o *Outbound) callWithPeer(
-	ctx context.Context,
-	treq *transport.Request,
-	start time.Time,
-	ttl time.Duration,
-	p *httpPeer,
-) (*transport.Response, error) {
-	req, err := o.createRequest(p, treq)
-	if err != nil {
-		return nil, err
-	}
-
 	req.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
+
 	ctx, req, span, err := o.withOpentracingSpan(ctx, req, treq, start)
 	if err != nil {
 		return nil, err
@@ -314,10 +253,21 @@ func (o *Outbound) callWithPeer(
 	defer span.Finish()
 
 	req = o.withCoreHeaders(req, treq, ttl)
-	response, err := o.errorHandleHTTPRequest(ctx, treq, start, p, req, span)
+	req = req.WithContext(&yarpcRequestContext{
+		Context: ctx,
+		treq:    treq,
+		start:   start,
+		ttl:     ttl,
+	})
+	response, err := o.RoundTrip(req)
 	if err != nil {
+		if span != nil {
+			span.SetTag("error", true)
+			span.LogFields(opentracinglog.String("event", err.Error()))
+		}
 		return nil, err
 	}
+
 	span.SetTag("http.status_code", response.StatusCode)
 
 	tres := &transport.Response{
@@ -355,9 +305,9 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Reques
 	return hpPeer, onFinish, nil
 }
 
-func (o *Outbound) createRequest(p *httpPeer, treq *transport.Request) (*http.Request, error) {
+func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error) {
 	newURL := *o.urlTemplate
-	newURL.Host = p.HostPort()
+	//newURL.Host = p.HostPort()
 	return http.NewRequest("POST", newURL.String(), treq.Body)
 }
 
