@@ -295,7 +295,6 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Reques
 
 func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error) {
 	newURL := *o.urlTemplate
-	//newURL.Host = p.HostPort()
 	return http.NewRequest("POST", newURL.String(), treq.Body)
 }
 
