@@ -336,9 +336,9 @@ func Benchmark_TChannel_TChannelToTChannel(b *testing.B) {
 }
 
 func BenchmarkHTTPRoundTripper(b *testing.B) {
-	URI := "http://localhost:8001"
+	uri := "http://localhost:8001"
 
-	outbound := yhttp.NewTransport().NewSingleOutbound(URI)
+	outbound := yhttp.NewTransport().NewSingleOutbound(uri)
 	require.NoError(b, outbound.Start())
 	defer outbound.Stop()
 
@@ -346,6 +346,6 @@ func BenchmarkHTTPRoundTripper(b *testing.B) {
 
 	withHTTPServer(b, ":8001", httpEcho(b), func() {
 		b.ResetTimer()
-		runHTTPClient(b, roundTripper, URI)
+		runHTTPClient(b, roundTripper, uri)
 	})
 }
