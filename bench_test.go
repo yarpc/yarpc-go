@@ -334,3 +334,18 @@ func Benchmark_TChannel_TChannelToTChannel(b *testing.B) {
 	b.ResetTimer()
 	runTChannelClient(b, clientCh, serverCh.PeerInfo().HostPort)
 }
+
+func BenchmarkHTTPRoundTripper(b *testing.B) {
+	URI := "http://localhost:8001"
+
+	outbound := yhttp.NewTransport().NewSingleOutbound(URI)
+	require.NoError(b, outbound.Start())
+	defer outbound.Stop()
+
+	roundTripper := &http.Client{Transport: outbound}
+
+	withHTTPServer(b, ":8001", httpEcho(b), func() {
+		b.ResetTimer()
+		runHTTPClient(b, roundTripper, URI)
+	})
+}
