@@ -85,7 +85,7 @@ func (o *Outbound) RoundTrip(hreq *http.Request) (*http.Response, error) {
 			ShardKey:        hreq.Header.Get(ShardKeyHeader),
 			RoutingKey:      hreq.Header.Get(RoutingKeyHeader),
 			RoutingDelegate: hreq.Header.Get(RoutingDelegateHeader),
-			// TODO: transform headers.
+			Headers:         applicationHeaders.FromHTTPHeaders(hreq.Header, transport.Headers{}),
 		}
 	}
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
