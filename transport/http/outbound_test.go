@@ -446,3 +446,10 @@ func TestNoRequest(t *testing.T) {
 	_, err = out.CallOneway(context.Background(), nil)
 	assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil"), err)
 }
+
+func TestNoContextDeadline(t *testing.T) {
+	out := NewTransport().NewSingleOutbound("foo-host:8080")
+
+	_, err := out.call(context.Background(), &transport.Request{})
+	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing context deadline"), err)
+}

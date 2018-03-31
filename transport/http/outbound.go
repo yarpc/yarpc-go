@@ -227,7 +227,11 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 
 func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
 	start := time.Now()
-	deadline, _ := ctx.Deadline()
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return nil, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing context deadline")
+	}
+
 	ttl := deadline.Sub(start)
 
 	hreq, err := o.createRequest(treq)
