@@ -412,8 +412,7 @@ func getYARPCErrorFromResponse(response *http.Response, bothResponseError bool) 
 //
 // Thereafter use the Golang standard library HTTP to send requests with this client.
 //
-//  ctx := context.Background()
-//  ctx, cancel := context.WithTimeout(ctx, time.Second)
+//  ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 //  defer cancel()
 //  req := http.NewRequest("GET", "http://example.com/", nil)
 //  req = req.WithContext(ctx)
