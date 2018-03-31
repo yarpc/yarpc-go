@@ -216,9 +216,6 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 	if treq == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil")
 	}
-	if err := o.once.WaitUntilRunning(ctx); err != nil {
-		return nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "error waiting for http oneway outbound to start for service: %s", treq.Service)
-	}
 
 	_, err := o.call(ctx, treq)
 	if err != nil {
