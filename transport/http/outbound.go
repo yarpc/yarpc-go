@@ -447,7 +447,7 @@ func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start 
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, intyarpcerrors.AnnotateWithInfo(
 			yarpcerrors.FromError(err),
-			"error waiting for http unary outbound to start for service: %s",
+			"error waiting for HTTP outbound to start for service: %s",
 			treq.Service)
 	}
 

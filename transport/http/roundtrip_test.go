@@ -32,330 +32,130 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
-func TestCallHTTPSuccess(t *testing.T) {
-	successServer := httptest.NewServer(http.HandlerFunc(
+func TestRoundTripSuccess(t *testing.T) {
+	headerKey, headerVal := "foo", "bar"
+	giveBody := "successful response"
+
+	echoServer := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, req *http.Request) {
 			defer req.Body.Close()
 
-			body, err := ioutil.ReadAll(req.Body)
-			if assert.NoError(t, err) {
-				assert.Equal(t, []byte("world"), body)
-			}
+			// copy header
+			header := req.Header.Get(headerKey)
+			w.Header().Set(headerKey, header)
 
-			w.Header().Set("foo", "bar")
-			_, err = w.Write([]byte("great success"))
-			assert.NoError(t, err)
+			// copy body
+			body, err := ioutil.ReadAll(req.Body)
+			if err != nil {
+				t.Error("error reading body")
+			}
+			_, err = w.Write(body)
+			if err != nil {
+				t.Error("error writing body")
+			}
 		},
 	))
-	defer successServer.Close()
+	defer echoServer.Close()
 
+	// start outbound
 	httpTransport := NewTransport()
-	out := httpTransport.NewSingleOutbound(successServer.URL)
+	out := httpTransport.NewSingleOutbound(echoServer.URL)
 	require.NoError(t, out.Start(), "failed to start outbound")
 	defer out.Stop()
 
+	// create request
+	hreq, err := http.NewRequest("GET", echoServer.URL, bytes.NewReader([]byte(giveBody)))
+	require.NoError(t, err, "could not create HTTP request")
+	hreq.Header.Add(headerKey, headerVal)
+
+	// add deadline
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
+	hreq = hreq.WithContext(ctx)
 
-	req, err := http.NewRequest("GET", successServer.URL, bytes.NewReader([]byte("world")))
+	// make call
+	client := http.Client{Transport: out}
+	res, err := client.Do(hreq)
+	require.NoError(t, err, "could not make call")
+	defer res.Body.Close()
+
+	// validate header
+	gotHeaderVal := res.Header.Get(headerKey)
+	assert.Equal(t, headerVal, gotHeaderVal, "header did not match")
+
+	// validate body
+	gotBody, err := ioutil.ReadAll(res.Body)
 	require.NoError(t, err)
+	assert.Equal(t, giveBody, string(gotBody), "body did not match")
+}
+
+func TestRoundTripTimeout(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			time.Sleep(time.Hour) // never respond
+		}))
+
+	// start outbound
+	out := NewTransport().NewSingleOutbound(server.URL)
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
+
+	// create request
+	req, err := http.NewRequest("POST", server.URL, nil /* body */)
+	require.NoError(t, err)
+
+	// set a small deadline so the the call times out quickly
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+	defer cancel()
+	req = req.WithContext(ctx)
+
+	// make call
+	client := http.Client{Transport: out}
+	res, err := client.Do(req)
+
+	// validate response
+	if assert.Error(t, err) {
+		assert.Contains(t, err.Error(), "deadline-exceeded")
+	}
+	if assert.NotNil(t, ctx.Err()) {
+		assert.Equal(t, "context deadline exceeded", ctx.Err().Error())
+	}
+	assert.Nil(t, res)
+}
+
+func TestRoundTripNoDeadline(t *testing.T) {
+	URL := "http://foo-host"
+
+	out := NewTransport().NewSingleOutbound(URL)
+	require.NoError(t, out.Start(), "could not start outbound")
+
+	hreq, err := http.NewRequest("GET", URL, nil /* body */)
+	require.NoError(t, err)
+
+	resp, err := out.RoundTrip(hreq)
+	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing context deadline"), err)
+	assert.Nil(t, resp)
+}
+
+func TestRoundTripNotRunning(t *testing.T) {
+	URL := "http://foo-host"
+	out := NewTransport().NewSingleOutbound(URL)
+
+	req, err := http.NewRequest("POST", URL, nil /* body */)
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+	defer cancel()
 	req = req.WithContext(ctx)
 
 	client := http.Client{Transport: out}
-
 	res, err := client.Do(req)
 
-	require.NoError(t, err)
-	defer res.Body.Close()
-
-	foo := res.Header.Get("foo")
-	assert.NotNil(t, foo, "value for foo expected")
-	assert.Equal(t, "bar", foo, "foo value mismatch")
-
-	body, err := ioutil.ReadAll(res.Body)
-	require.NoError(t, err)
-	assert.Equal(t, []byte("great success"), body)
-}
-
-func TestHTTPSuccessWithMethods(t *testing.T) {
-	tests := []struct {
-		desc   string
-		status string
-		method string
-	}{
-		{
-			desc:   "GET success",
-			status: "success",
-			method: "GET",
-		},
-		{
-			desc:   "POST success",
-			status: "lolwut",
-			method: "POST",
-		},
-		{
-			desc:   "TRACE success",
-			status: "lolwut",
-			method: "TRACE",
-		},
-		{
-			desc:   "PUT success",
-			status: "lolwut",
-			method: "PUT",
-		},
+	if assert.Error(t, err) {
+		assert.Contains(t, err.Error(), "waiting for HTTP outbound to start")
 	}
-
-	httpTransport := NewTransport()
-
-	for _, tt := range tests {
-		t.Run(tt.desc, func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(
-				func(w http.ResponseWriter, r *http.Request) {
-					w.Header().Add("Status", tt.status)
-					defer r.Body.Close()
-				},
-			))
-			defer server.Close()
-
-			out := httpTransport.NewSingleOutbound(server.URL)
-
-			require.NoError(t, out.Start(), "failed to start outbound")
-			defer out.Stop()
-
-			ctx := context.Background()
-			ctx, cancel := context.WithTimeout(ctx, 100*testtime.Millisecond)
-			defer cancel()
-
-			req, err := http.NewRequest(tt.method, server.URL, bytes.NewReader([]byte("world")))
-			require.NoError(t, err)
-			req = req.WithContext(ctx)
-
-			client := http.Client{Transport: out}
-
-			res, err := client.Do(req)
-			require.NoError(t, err)
-
-			assert.Equal(t, res.Header.Get("Status"), tt.status, "%v: application status", tt.desc)
-		})
-	}
-}
-
-func TestHTTPErrorWithMethods(t *testing.T) {
-	tests := []struct {
-		desc   string
-		status string
-		method string
-	}{
-		{
-			desc:   "GET error",
-			status: "success",
-			method: "GET",
-		},
-		{
-			desc:   "POST error",
-			status: "error",
-			method: "POST",
-		},
-		{
-			desc:   "TRACE error",
-			status: "lolwut",
-			method: "TRACE",
-		},
-		{
-			desc:   "PUT error",
-			status: "lolwut",
-			method: "PUT",
-		},
-	}
-
-	httpTransport := NewTransport()
-	for _, tt := range tests {
-		t.Run(tt.desc, func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(
-				func(w http.ResponseWriter, r *http.Request) {
-					http.Error(w, "Error out", http.StatusInternalServerError)
-				},
-			))
-			defer server.Close()
-			// starting outbound
-			out := httpTransport.NewSingleOutbound(server.URL)
-
-			require.NoError(t, out.Start(), "failed to start outbound")
-			defer out.Stop()
-
-			ctx := context.Background()
-			ctx, cancel := context.WithTimeout(ctx, 100*testtime.Millisecond)
-			defer cancel()
-			// creating request
-			req, err := http.NewRequest(tt.method, server.URL, bytes.NewReader([]byte("world")))
-			require.NoError(t, err)
-			req = req.WithContext(ctx)
-
-			client := http.Client{Transport: out}
-			// making request
-			res, err := client.Do(req)
-			require.NoError(t, err)
-			require.NoError(t, res.Body.Close(), "%v: failed to close response body")
-		})
-	}
-}
-
-func TestHTTPTimeout(t *testing.T) {
-	tests := []struct {
-		desc    string
-		method  string
-		timeout time.Duration
-	}{
-		{
-			desc:    "GET error",
-			method:  "GET",
-			timeout: 0,
-		},
-		{
-			desc:    "POST error",
-			method:  "POST",
-			timeout: 0,
-		},
-	}
-
-	httpTransport := NewTransport()
-
-	for _, tt := range tests {
-		t.Run(tt.desc, func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(
-				func(w http.ResponseWriter, r *http.Request) {
-					defer r.Body.Close()
-				},
-			))
-			out := httpTransport.NewSingleOutbound(server.URL)
-
-			require.NoError(t, out.Start(), "failed to start outbound")
-			defer out.Stop()
-
-			ctx := context.Background()
-			ctx, cancel := context.WithTimeout(ctx, tt.timeout)
-			defer cancel()
-
-			req, err := http.NewRequest(tt.method, server.URL, bytes.NewReader([]byte("world")))
-			require.NoError(t, err)
-			req = req.WithContext(ctx)
-
-			client := http.Client{Transport: out}
-
-			res, err := client.Do(req)
-			assert.Equal(t, "context deadline exceeded", ctx.Err().Error())
-			assert.Error(t, err)
-			assert.Nil(t, res)
-		})
-	}
-}
-
-func TestHTTPApplicationError(t *testing.T) {
-	tests := []struct {
-		desc   string
-		status string
-	}{
-		{
-			desc:   "ok",
-			status: "success",
-		},
-		{
-			desc:   "error",
-			status: "error",
-		},
-		{
-			desc:   "not an error",
-			status: "lolwut",
-		},
-	}
-
-	httpTransport := NewTransport()
-
-	for _, tt := range tests {
-		t.Run(tt.desc, func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(
-				func(w http.ResponseWriter, r *http.Request) {
-					w.Header().Add("Status", tt.status)
-					defer r.Body.Close()
-				},
-			))
-			defer server.Close()
-
-			out := httpTransport.NewSingleOutbound(server.URL)
-
-			require.NoError(t, out.Start(), "failed to start outbound")
-			defer out.Stop()
-
-			ctx := context.Background()
-			ctx, cancel := context.WithTimeout(ctx, 100*testtime.Millisecond)
-			defer cancel()
-
-			req, err := http.NewRequest("GET", server.URL, bytes.NewReader([]byte("world")))
-			require.NoError(t, err)
-			req = req.WithContext(ctx)
-
-			client := http.Client{Transport: out}
-
-			res, err := client.Do(req)
-
-			assert.Equal(t, res.Header.Get("Status"), tt.status, "%v: application status", tt.desc)
-
-			require.NoError(t, err)
-			require.NoError(t, res.Body.Close())
-		})
-	}
-}
-
-func TestHTTPCallFailures(t *testing.T) {
-	notFoundServer := httptest.NewServer(http.NotFoundHandler())
-	defer notFoundServer.Close()
-
-	internalErrorServer := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			http.Error(w, "great sadness", http.StatusInternalServerError)
-		}))
-	defer internalErrorServer.Close()
-
-	httpTransport := NewTransport()
-
-	tests := []struct {
-		desc     string
-		url      string
-		messages []string
-	}{
-		{
-			"404",
-			notFoundServer.URL,
-			[]string{"404", "page not found"},
-		},
-		{
-			"failed due to error",
-			internalErrorServer.URL,
-			[]string{"great sadness"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.desc, func(t *testing.T) {
-			out := httpTransport.NewSingleOutbound(tt.url)
-			require.NoError(t, out.Start(), "failed to start outbound")
-			defer out.Stop()
-
-			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-			defer cancel()
-			req, _ := http.NewRequest("GET", internalErrorServer.URL, bytes.NewReader([]byte("world")))
-			req = req.WithContext(ctx)
-
-			client := http.Client{Transport: out}
-
-			res, err := client.Do(req)
-
-			if assert.NoError(t, err) {
-				assert.NotEqual(t, res.Status, 200)
-			}
-
-		})
-	}
+	assert.Nil(t, res)
 }
