@@ -95,7 +95,7 @@ func TestRoundTripSuccess(t *testing.T) {
 func TestRoundTripTimeout(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			time.Sleep(time.Hour) // never respond
+			<-r.Context().Done() // never respond
 		}))
 
 	// start outbound
@@ -118,11 +118,11 @@ func TestRoundTripTimeout(t *testing.T) {
 
 	// validate response
 	if assert.Error(t, err) {
-		assert.Contains(t, err.Error(), "deadline-exceeded")
+		// we use a Contains here since the returned error is really a
+		// url.Error wrapping a yarpcerror
+		assert.Contains(t, err.Error(), yarpcerrors.CodeDeadlineExceeded.String())
 	}
-	if assert.NotNil(t, ctx.Err()) {
-		assert.Equal(t, "context deadline exceeded", ctx.Err().Error())
-	}
+	assert.Equal(t, context.DeadlineExceeded, ctx.Err())
 	assert.Nil(t, res)
 }
 
