@@ -373,7 +373,7 @@ func TestCallWithoutStarting(t *testing.T) {
 		},
 	)
 
-	assert.Equal(t, yarpcerrors.FailedPreconditionErrorf("error waiting for http unary outbound to start for service: service: context finished while waiting for instance to start: context deadline exceeded"), err)
+	assert.Equal(t, yarpcerrors.FailedPreconditionErrorf("error waiting for HTTP outbound to start for service: service: context finished while waiting for instance to start: context deadline exceeded"), err)
 }
 
 func TestGetPeerForRequestErr(t *testing.T) {
