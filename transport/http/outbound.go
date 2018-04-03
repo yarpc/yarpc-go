@@ -402,14 +402,12 @@ func getYARPCErrorFromResponse(response *http.Response, bothResponseError bool) 
 //
 //  ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 //  defer cancel()
-//  req := http.NewRequest("GET", "http://example.com/", nil)
+//  req, err := http.NewRequest("GET", "http://example.com/", nil /* body */)
 //  req = req.WithContext(ctx)
 //  res, err := client.Do(req)
 //
 // All requests must have a deadline on the context.
-// The peer chooser for raw HTTP requests will receive a blank YARPC transport.Request, which is
-// sufficient for load balancers like peer/pendingheap (fewest-pending-requests) and peer/roundrobin
-// (round-robin).
+// The peer chooser for raw HTTP requests will receive a YARPC transport.Request with no body.
 func (o *Outbound) RoundTrip(hreq *http.Request) (*http.Response, error) {
 	return o.roundTrip(hreq, nil /* treq */, time.Now())
 }
