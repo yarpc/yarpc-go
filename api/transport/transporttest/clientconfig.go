@@ -21,6 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// Package transporttest is a generated GoMock package.
 package transporttest
 
 import (
@@ -48,56 +49,56 @@ func NewMockClientConfig(ctrl *gomock.Controller) *MockClientConfig {
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (_m *MockClientConfig) EXPECT() *MockClientConfigMockRecorder {
-	return _m.recorder
+func (m *MockClientConfig) EXPECT() *MockClientConfigMockRecorder {
+	return m.recorder
 }
 
 // Caller mocks base method
-func (_m *MockClientConfig) Caller() string {
-	ret := _m.ctrl.Call(_m, "Caller")
+func (m *MockClientConfig) Caller() string {
+	ret := m.ctrl.Call(m, "Caller")
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
 // Caller indicates an expected call of Caller
-func (_mr *MockClientConfigMockRecorder) Caller() *gomock.Call {
-	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Caller", reflect.TypeOf((*MockClientConfig)(nil).Caller))
+func (mr *MockClientConfigMockRecorder) Caller() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Caller", reflect.TypeOf((*MockClientConfig)(nil).Caller))
 }
 
 // GetOnewayOutbound mocks base method
-func (_m *MockClientConfig) GetOnewayOutbound() transport.OnewayOutbound {
-	ret := _m.ctrl.Call(_m, "GetOnewayOutbound")
+func (m *MockClientConfig) GetOnewayOutbound() transport.OnewayOutbound {
+	ret := m.ctrl.Call(m, "GetOnewayOutbound")
 	ret0, _ := ret[0].(transport.OnewayOutbound)
 	return ret0
 }
 
 // GetOnewayOutbound indicates an expected call of GetOnewayOutbound
-func (_mr *MockClientConfigMockRecorder) GetOnewayOutbound() *gomock.Call {
-	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "GetOnewayOutbound", reflect.TypeOf((*MockClientConfig)(nil).GetOnewayOutbound))
+func (mr *MockClientConfigMockRecorder) GetOnewayOutbound() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOnewayOutbound", reflect.TypeOf((*MockClientConfig)(nil).GetOnewayOutbound))
 }
 
 // GetUnaryOutbound mocks base method
-func (_m *MockClientConfig) GetUnaryOutbound() transport.UnaryOutbound {
-	ret := _m.ctrl.Call(_m, "GetUnaryOutbound")
+func (m *MockClientConfig) GetUnaryOutbound() transport.UnaryOutbound {
+	ret := m.ctrl.Call(m, "GetUnaryOutbound")
 	ret0, _ := ret[0].(transport.UnaryOutbound)
 	return ret0
 }
 
 // GetUnaryOutbound indicates an expected call of GetUnaryOutbound
-func (_mr *MockClientConfigMockRecorder) GetUnaryOutbound() *gomock.Call {
-	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "GetUnaryOutbound", reflect.TypeOf((*MockClientConfig)(nil).GetUnaryOutbound))
+func (mr *MockClientConfigMockRecorder) GetUnaryOutbound() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnaryOutbound", reflect.TypeOf((*MockClientConfig)(nil).GetUnaryOutbound))
 }
 
 // Service mocks base method
-func (_m *MockClientConfig) Service() string {
-	ret := _m.ctrl.Call(_m, "Service")
+func (m *MockClientConfig) Service() string {
+	ret := m.ctrl.Call(m, "Service")
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
 // Service indicates an expected call of Service
-func (_mr *MockClientConfigMockRecorder) Service() *gomock.Call {
-	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Service", reflect.TypeOf((*MockClientConfig)(nil).Service))
+func (mr *MockClientConfigMockRecorder) Service() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockClientConfig)(nil).Service))
 }
 
 // MockClientConfigProvider is a mock of ClientConfigProvider interface
@@ -119,18 +120,18 @@ func NewMockClientConfigProvider(ctrl *gomock.Controller) *MockClientConfigProvi
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (_m *MockClientConfigProvider) EXPECT() *MockClientConfigProviderMockRecorder {
-	return _m.recorder
+func (m *MockClientConfigProvider) EXPECT() *MockClientConfigProviderMockRecorder {
+	return m.recorder
 }
 
 // ClientConfig mocks base method
-func (_m *MockClientConfigProvider) ClientConfig(_param0 string) transport.ClientConfig {
-	ret := _m.ctrl.Call(_m, "ClientConfig", _param0)
+func (m *MockClientConfigProvider) ClientConfig(arg0 string) transport.ClientConfig {
+	ret := m.ctrl.Call(m, "ClientConfig", arg0)
 	ret0, _ := ret[0].(transport.ClientConfig)
 	return ret0
 }
 
 // ClientConfig indicates an expected call of ClientConfig
-func (_mr *MockClientConfigProviderMockRecorder) ClientConfig(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "ClientConfig", reflect.TypeOf((*MockClientConfigProvider)(nil).ClientConfig), arg0)
+func (mr *MockClientConfigProviderMockRecorder) ClientConfig(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClientConfig", reflect.TypeOf((*MockClientConfigProvider)(nil).ClientConfig), arg0)
 }

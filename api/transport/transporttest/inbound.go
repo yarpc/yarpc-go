@@ -21,6 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// Package transporttest is a generated GoMock package.
 package transporttest
 
 import (
@@ -48,64 +49,64 @@ func NewMockInbound(ctrl *gomock.Controller) *MockInbound {
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (_m *MockInbound) EXPECT() *MockInboundMockRecorder {
-	return _m.recorder
+func (m *MockInbound) EXPECT() *MockInboundMockRecorder {
+	return m.recorder
 }
 
 // IsRunning mocks base method
-func (_m *MockInbound) IsRunning() bool {
-	ret := _m.ctrl.Call(_m, "IsRunning")
+func (m *MockInbound) IsRunning() bool {
+	ret := m.ctrl.Call(m, "IsRunning")
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // IsRunning indicates an expected call of IsRunning
-func (_mr *MockInboundMockRecorder) IsRunning() *gomock.Call {
-	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "IsRunning", reflect.TypeOf((*MockInbound)(nil).IsRunning))
+func (mr *MockInboundMockRecorder) IsRunning() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRunning", reflect.TypeOf((*MockInbound)(nil).IsRunning))
 }
 
 // SetRouter mocks base method
-func (_m *MockInbound) SetRouter(_param0 transport.Router) {
-	_m.ctrl.Call(_m, "SetRouter", _param0)
+func (m *MockInbound) SetRouter(arg0 transport.Router) {
+	m.ctrl.Call(m, "SetRouter", arg0)
 }
 
 // SetRouter indicates an expected call of SetRouter
-func (_mr *MockInboundMockRecorder) SetRouter(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "SetRouter", reflect.TypeOf((*MockInbound)(nil).SetRouter), arg0)
+func (mr *MockInboundMockRecorder) SetRouter(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRouter", reflect.TypeOf((*MockInbound)(nil).SetRouter), arg0)
 }
 
 // Start mocks base method
-func (_m *MockInbound) Start() error {
-	ret := _m.ctrl.Call(_m, "Start")
+func (m *MockInbound) Start() error {
+	ret := m.ctrl.Call(m, "Start")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Start indicates an expected call of Start
-func (_mr *MockInboundMockRecorder) Start() *gomock.Call {
-	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Start", reflect.TypeOf((*MockInbound)(nil).Start))
+func (mr *MockInboundMockRecorder) Start() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockInbound)(nil).Start))
 }
 
 // Stop mocks base method
-func (_m *MockInbound) Stop() error {
-	ret := _m.ctrl.Call(_m, "Stop")
+func (m *MockInbound) Stop() error {
+	ret := m.ctrl.Call(m, "Stop")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Stop indicates an expected call of Stop
-func (_mr *MockInboundMockRecorder) Stop() *gomock.Call {
-	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Stop", reflect.TypeOf((*MockInbound)(nil).Stop))
+func (mr *MockInboundMockRecorder) Stop() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockInbound)(nil).Stop))
 }
 
 // Transports mocks base method
-func (_m *MockInbound) Transports() []transport.Transport {
-	ret := _m.ctrl.Call(_m, "Transports")
+func (m *MockInbound) Transports() []transport.Transport {
+	ret := m.ctrl.Call(m, "Transports")
 	ret0, _ := ret[0].([]transport.Transport)
 	return ret0
 }
 
 // Transports indicates an expected call of Transports
-func (_mr *MockInboundMockRecorder) Transports() *gomock.Call {
-	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Transports", reflect.TypeOf((*MockInbound)(nil).Transports))
+func (mr *MockInboundMockRecorder) Transports() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Transports", reflect.TypeOf((*MockInbound)(nil).Transports))
 }
