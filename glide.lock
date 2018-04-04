@@ -30,7 +30,7 @@ imports:
   - sortkeys
   - types
 - name: github.com/golang/mock
-  version: 485faf39398c214ff46541e0d896cf4468ed392f
+  version: 13f360950a79f5864a972c786a10a50e44b69541
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
@@ -144,7 +144,7 @@ imports:
   - push
   - tallypush
 - name: go.uber.org/thriftrw
-  version: 43dfafd7bb1c99f0460d645a1959b73f6dfa536f
+  version: 6216e5bb19132c14e979cf9c62abae6f022a0c0d
   subpackages:
   - envelope
   - internal/envelope
