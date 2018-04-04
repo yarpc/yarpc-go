@@ -21,7 +21,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package peertest is a generated GoMock package.
 package peertest
 
 import (
@@ -49,33 +48,33 @@ func NewMockTransport(ctrl *gomock.Controller) *MockTransport {
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockTransport) EXPECT() *MockTransportMockRecorder {
-	return m.recorder
+func (_m *MockTransport) EXPECT() *MockTransportMockRecorder {
+	return _m.recorder
 }
 
 // ReleasePeer mocks base method
-func (m *MockTransport) ReleasePeer(arg0 peer.Identifier, arg1 peer.Subscriber) error {
-	ret := m.ctrl.Call(m, "ReleasePeer", arg0, arg1)
+func (_m *MockTransport) ReleasePeer(_param0 peer.Identifier, _param1 peer.Subscriber) error {
+	ret := _m.ctrl.Call(_m, "ReleasePeer", _param0, _param1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ReleasePeer indicates an expected call of ReleasePeer
-func (mr *MockTransportMockRecorder) ReleasePeer(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleasePeer", reflect.TypeOf((*MockTransport)(nil).ReleasePeer), arg0, arg1)
+func (_mr *MockTransportMockRecorder) ReleasePeer(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "ReleasePeer", reflect.TypeOf((*MockTransport)(nil).ReleasePeer), arg0, arg1)
 }
 
 // RetainPeer mocks base method
-func (m *MockTransport) RetainPeer(arg0 peer.Identifier, arg1 peer.Subscriber) (peer.Peer, error) {
-	ret := m.ctrl.Call(m, "RetainPeer", arg0, arg1)
+func (_m *MockTransport) RetainPeer(_param0 peer.Identifier, _param1 peer.Subscriber) (peer.Peer, error) {
+	ret := _m.ctrl.Call(_m, "RetainPeer", _param0, _param1)
 	ret0, _ := ret[0].(peer.Peer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RetainPeer indicates an expected call of RetainPeer
-func (mr *MockTransportMockRecorder) RetainPeer(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetainPeer", reflect.TypeOf((*MockTransport)(nil).RetainPeer), arg0, arg1)
+func (_mr *MockTransportMockRecorder) RetainPeer(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "RetainPeer", reflect.TypeOf((*MockTransport)(nil).RetainPeer), arg0, arg1)
 }
 
 // MockSubscriber is a mock of Subscriber interface
@@ -97,16 +96,16 @@ func NewMockSubscriber(ctrl *gomock.Controller) *MockSubscriber {
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockSubscriber) EXPECT() *MockSubscriberMockRecorder {
-	return m.recorder
+func (_m *MockSubscriber) EXPECT() *MockSubscriberMockRecorder {
+	return _m.recorder
 }
 
 // NotifyStatusChanged mocks base method
-func (m *MockSubscriber) NotifyStatusChanged(arg0 peer.Identifier) {
-	m.ctrl.Call(m, "NotifyStatusChanged", arg0)
+func (_m *MockSubscriber) NotifyStatusChanged(_param0 peer.Identifier) {
+	_m.ctrl.Call(_m, "NotifyStatusChanged", _param0)
 }
 
 // NotifyStatusChanged indicates an expected call of NotifyStatusChanged
-func (mr *MockSubscriberMockRecorder) NotifyStatusChanged(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyStatusChanged", reflect.TypeOf((*MockSubscriber)(nil).NotifyStatusChanged), arg0)
+func (_mr *MockSubscriberMockRecorder) NotifyStatusChanged(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "NotifyStatusChanged", reflect.TypeOf((*MockSubscriber)(nil).NotifyStatusChanged), arg0)
 }

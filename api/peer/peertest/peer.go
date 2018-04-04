@@ -21,7 +21,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package peertest is a generated GoMock package.
 package peertest
 
 import (
@@ -49,20 +48,20 @@ func NewMockIdentifier(ctrl *gomock.Controller) *MockIdentifier {
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockIdentifier) EXPECT() *MockIdentifierMockRecorder {
-	return m.recorder
+func (_m *MockIdentifier) EXPECT() *MockIdentifierMockRecorder {
+	return _m.recorder
 }
 
 // Identifier mocks base method
-func (m *MockIdentifier) Identifier() string {
-	ret := m.ctrl.Call(m, "Identifier")
+func (_m *MockIdentifier) Identifier() string {
+	ret := _m.ctrl.Call(_m, "Identifier")
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
 // Identifier indicates an expected call of Identifier
-func (mr *MockIdentifierMockRecorder) Identifier() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Identifier", reflect.TypeOf((*MockIdentifier)(nil).Identifier))
+func (_mr *MockIdentifierMockRecorder) Identifier() *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Identifier", reflect.TypeOf((*MockIdentifier)(nil).Identifier))
 }
 
 // MockPeer is a mock of Peer interface
@@ -84,50 +83,50 @@ func NewMockPeer(ctrl *gomock.Controller) *MockPeer {
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockPeer) EXPECT() *MockPeerMockRecorder {
-	return m.recorder
+func (_m *MockPeer) EXPECT() *MockPeerMockRecorder {
+	return _m.recorder
 }
 
 // EndRequest mocks base method
-func (m *MockPeer) EndRequest() {
-	m.ctrl.Call(m, "EndRequest")
+func (_m *MockPeer) EndRequest() {
+	_m.ctrl.Call(_m, "EndRequest")
 }
 
 // EndRequest indicates an expected call of EndRequest
-func (mr *MockPeerMockRecorder) EndRequest() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndRequest", reflect.TypeOf((*MockPeer)(nil).EndRequest))
+func (_mr *MockPeerMockRecorder) EndRequest() *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "EndRequest", reflect.TypeOf((*MockPeer)(nil).EndRequest))
 }
 
 // Identifier mocks base method
-func (m *MockPeer) Identifier() string {
-	ret := m.ctrl.Call(m, "Identifier")
+func (_m *MockPeer) Identifier() string {
+	ret := _m.ctrl.Call(_m, "Identifier")
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
 // Identifier indicates an expected call of Identifier
-func (mr *MockPeerMockRecorder) Identifier() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Identifier", reflect.TypeOf((*MockPeer)(nil).Identifier))
+func (_mr *MockPeerMockRecorder) Identifier() *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Identifier", reflect.TypeOf((*MockPeer)(nil).Identifier))
 }
 
 // StartRequest mocks base method
-func (m *MockPeer) StartRequest() {
-	m.ctrl.Call(m, "StartRequest")
+func (_m *MockPeer) StartRequest() {
+	_m.ctrl.Call(_m, "StartRequest")
 }
 
 // StartRequest indicates an expected call of StartRequest
-func (mr *MockPeerMockRecorder) StartRequest() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartRequest", reflect.TypeOf((*MockPeer)(nil).StartRequest))
+func (_mr *MockPeerMockRecorder) StartRequest() *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "StartRequest", reflect.TypeOf((*MockPeer)(nil).StartRequest))
 }
 
 // Status mocks base method
-func (m *MockPeer) Status() peer.Status {
-	ret := m.ctrl.Call(m, "Status")
+func (_m *MockPeer) Status() peer.Status {
+	ret := _m.ctrl.Call(_m, "Status")
 	ret0, _ := ret[0].(peer.Status)
 	return ret0
 }
 
 // Status indicates an expected call of Status
-func (mr *MockPeerMockRecorder) Status() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Status", reflect.TypeOf((*MockPeer)(nil).Status))
+func (_mr *MockPeerMockRecorder) Status() *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Status", reflect.TypeOf((*MockPeer)(nil).Status))
 }

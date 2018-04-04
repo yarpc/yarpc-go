@@ -21,7 +21,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package transporttest is a generated GoMock package.
 package transporttest
 
 import (
@@ -50,20 +49,20 @@ func NewMockUnaryHandler(ctrl *gomock.Controller) *MockUnaryHandler {
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockUnaryHandler) EXPECT() *MockUnaryHandlerMockRecorder {
-	return m.recorder
+func (_m *MockUnaryHandler) EXPECT() *MockUnaryHandlerMockRecorder {
+	return _m.recorder
 }
 
 // Handle mocks base method
-func (m *MockUnaryHandler) Handle(arg0 context.Context, arg1 *transport.Request, arg2 transport.ResponseWriter) error {
-	ret := m.ctrl.Call(m, "Handle", arg0, arg1, arg2)
+func (_m *MockUnaryHandler) Handle(_param0 context.Context, _param1 *transport.Request, _param2 transport.ResponseWriter) error {
+	ret := _m.ctrl.Call(_m, "Handle", _param0, _param1, _param2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Handle indicates an expected call of Handle
-func (mr *MockUnaryHandlerMockRecorder) Handle(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Handle", reflect.TypeOf((*MockUnaryHandler)(nil).Handle), arg0, arg1, arg2)
+func (_mr *MockUnaryHandlerMockRecorder) Handle(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Handle", reflect.TypeOf((*MockUnaryHandler)(nil).Handle), arg0, arg1, arg2)
 }
 
 // MockOnewayHandler is a mock of OnewayHandler interface
@@ -85,20 +84,20 @@ func NewMockOnewayHandler(ctrl *gomock.Controller) *MockOnewayHandler {
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockOnewayHandler) EXPECT() *MockOnewayHandlerMockRecorder {
-	return m.recorder
+func (_m *MockOnewayHandler) EXPECT() *MockOnewayHandlerMockRecorder {
+	return _m.recorder
 }
 
 // HandleOneway mocks base method
-func (m *MockOnewayHandler) HandleOneway(arg0 context.Context, arg1 *transport.Request) error {
-	ret := m.ctrl.Call(m, "HandleOneway", arg0, arg1)
+func (_m *MockOnewayHandler) HandleOneway(_param0 context.Context, _param1 *transport.Request) error {
+	ret := _m.ctrl.Call(_m, "HandleOneway", _param0, _param1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // HandleOneway indicates an expected call of HandleOneway
-func (mr *MockOnewayHandlerMockRecorder) HandleOneway(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleOneway", reflect.TypeOf((*MockOnewayHandler)(nil).HandleOneway), arg0, arg1)
+func (_mr *MockOnewayHandlerMockRecorder) HandleOneway(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "HandleOneway", reflect.TypeOf((*MockOnewayHandler)(nil).HandleOneway), arg0, arg1)
 }
 
 // MockStreamHandler is a mock of StreamHandler interface
@@ -120,18 +119,18 @@ func NewMockStreamHandler(ctrl *gomock.Controller) *MockStreamHandler {
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockStreamHandler) EXPECT() *MockStreamHandlerMockRecorder {
-	return m.recorder
+func (_m *MockStreamHandler) EXPECT() *MockStreamHandlerMockRecorder {
+	return _m.recorder
 }
 
 // HandleStream mocks base method
-func (m *MockStreamHandler) HandleStream(arg0 *transport.ServerStream) error {
-	ret := m.ctrl.Call(m, "HandleStream", arg0)
+func (_m *MockStreamHandler) HandleStream(_param0 *transport.ServerStream) error {
+	ret := _m.ctrl.Call(_m, "HandleStream", _param0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // HandleStream indicates an expected call of HandleStream
-func (mr *MockStreamHandlerMockRecorder) HandleStream(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleStream", reflect.TypeOf((*MockStreamHandler)(nil).HandleStream), arg0)
+func (_mr *MockStreamHandlerMockRecorder) HandleStream(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "HandleStream", reflect.TypeOf((*MockStreamHandler)(nil).HandleStream), arg0)
 }

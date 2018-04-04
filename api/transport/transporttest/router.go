@@ -21,7 +21,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package transporttest is a generated GoMock package.
 package transporttest
 
 import (
@@ -50,33 +49,33 @@ func NewMockRouter(ctrl *gomock.Controller) *MockRouter {
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockRouter) EXPECT() *MockRouterMockRecorder {
-	return m.recorder
+func (_m *MockRouter) EXPECT() *MockRouterMockRecorder {
+	return _m.recorder
 }
 
 // Choose mocks base method
-func (m *MockRouter) Choose(arg0 context.Context, arg1 *transport.Request) (transport.HandlerSpec, error) {
-	ret := m.ctrl.Call(m, "Choose", arg0, arg1)
+func (_m *MockRouter) Choose(_param0 context.Context, _param1 *transport.Request) (transport.HandlerSpec, error) {
+	ret := _m.ctrl.Call(_m, "Choose", _param0, _param1)
 	ret0, _ := ret[0].(transport.HandlerSpec)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Choose indicates an expected call of Choose
-func (mr *MockRouterMockRecorder) Choose(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Choose", reflect.TypeOf((*MockRouter)(nil).Choose), arg0, arg1)
+func (_mr *MockRouterMockRecorder) Choose(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Choose", reflect.TypeOf((*MockRouter)(nil).Choose), arg0, arg1)
 }
 
 // Procedures mocks base method
-func (m *MockRouter) Procedures() []transport.Procedure {
-	ret := m.ctrl.Call(m, "Procedures")
+func (_m *MockRouter) Procedures() []transport.Procedure {
+	ret := _m.ctrl.Call(_m, "Procedures")
 	ret0, _ := ret[0].([]transport.Procedure)
 	return ret0
 }
 
 // Procedures indicates an expected call of Procedures
-func (mr *MockRouterMockRecorder) Procedures() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Procedures", reflect.TypeOf((*MockRouter)(nil).Procedures))
+func (_mr *MockRouterMockRecorder) Procedures() *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Procedures", reflect.TypeOf((*MockRouter)(nil).Procedures))
 }
 
 // MockRouteTable is a mock of RouteTable interface
@@ -98,41 +97,41 @@ func NewMockRouteTable(ctrl *gomock.Controller) *MockRouteTable {
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockRouteTable) EXPECT() *MockRouteTableMockRecorder {
-	return m.recorder
+func (_m *MockRouteTable) EXPECT() *MockRouteTableMockRecorder {
+	return _m.recorder
 }
 
 // Choose mocks base method
-func (m *MockRouteTable) Choose(arg0 context.Context, arg1 *transport.Request) (transport.HandlerSpec, error) {
-	ret := m.ctrl.Call(m, "Choose", arg0, arg1)
+func (_m *MockRouteTable) Choose(_param0 context.Context, _param1 *transport.Request) (transport.HandlerSpec, error) {
+	ret := _m.ctrl.Call(_m, "Choose", _param0, _param1)
 	ret0, _ := ret[0].(transport.HandlerSpec)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Choose indicates an expected call of Choose
-func (mr *MockRouteTableMockRecorder) Choose(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Choose", reflect.TypeOf((*MockRouteTable)(nil).Choose), arg0, arg1)
+func (_mr *MockRouteTableMockRecorder) Choose(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Choose", reflect.TypeOf((*MockRouteTable)(nil).Choose), arg0, arg1)
 }
 
 // Procedures mocks base method
-func (m *MockRouteTable) Procedures() []transport.Procedure {
-	ret := m.ctrl.Call(m, "Procedures")
+func (_m *MockRouteTable) Procedures() []transport.Procedure {
+	ret := _m.ctrl.Call(_m, "Procedures")
 	ret0, _ := ret[0].([]transport.Procedure)
 	return ret0
 }
 
 // Procedures indicates an expected call of Procedures
-func (mr *MockRouteTableMockRecorder) Procedures() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Procedures", reflect.TypeOf((*MockRouteTable)(nil).Procedures))
+func (_mr *MockRouteTableMockRecorder) Procedures() *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Procedures", reflect.TypeOf((*MockRouteTable)(nil).Procedures))
 }
 
 // Register mocks base method
-func (m *MockRouteTable) Register(arg0 []transport.Procedure) {
-	m.ctrl.Call(m, "Register", arg0)
+func (_m *MockRouteTable) Register(_param0 []transport.Procedure) {
+	_m.ctrl.Call(_m, "Register", _param0)
 }
 
 // Register indicates an expected call of Register
-func (mr *MockRouteTableMockRecorder) Register(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Register", reflect.TypeOf((*MockRouteTable)(nil).Register), arg0)
+func (_mr *MockRouteTableMockRecorder) Register(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Register", reflect.TypeOf((*MockRouteTable)(nil).Register), arg0)
 }
