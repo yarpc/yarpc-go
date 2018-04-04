@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   This makes YARPC's load balancers, other peer selectors, and peer
   availability management accessible to REST call sites.
 
+## [1.29.1] - 2018-04-04
+### Fixed
+- Removed `repo:` from glide.yaml because Apache Thrift development has moved
+  to GitHub (https://issues.apache.org/jira/browse/INFRA-16287).
+
 ## [1.29.0] - 2018-03-21
 ### Added
 - Add methods to start and stop a dispatcher's transports, inbounds, and
@@ -926,7 +931,8 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.29.0...HEAD
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.29.1...HEAD
+[1.29.1]: https://github.com/yarpc/yarpc-go/compare/v1.29.0...v1.29.1
 [1.29.0]: https://github.com/yarpc/yarpc-go/compare/v1.28.0...v1.29.0
 [1.28.0]: https://github.com/yarpc/yarpc-go/compare/v1.27.2...v1.28.0
 [1.27.2]: https://github.com/yarpc/yarpc-go/compare/v1.27.1...v1.27.2
