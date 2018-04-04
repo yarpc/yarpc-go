@@ -62,9 +62,10 @@ import:
 - package: github.com/golang/mock
   version: ^1
 testImport:
-- package: github.com/golang/lint
+- package: golang.org/x/lint
   subpackages:
   - golint
+  repo: https://github.com/golang/lint
 - package: github.com/kisielk/errcheck
 - package: github.com/kisielk/gotool
 - package: github.com/wadey/gocovmerge

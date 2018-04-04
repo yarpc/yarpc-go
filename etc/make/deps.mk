@@ -10,7 +10,7 @@ GEN_GO_BIN_DEPS = \
 # List of vendored go executables needed for other operations
 EXTRA_GO_BIN_DEPS = \
 	github.com/kisielk/errcheck \
-	github.com/golang/lint/golint \
+	golang.org/x/lint/golint \
 	github.com/wadey/gocovmerge \
 	golang.org/x/tools/cmd/cover \
 	go.uber.org/tools/parallel-exec \

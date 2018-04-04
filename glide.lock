@@ -1,5 +1,5 @@
-hash: 0c4a9a6c617dd397ea563ac152a5747595b1aecda2c8c0b8bf76620f9ea26312
-updated: 2018-04-04T14:41:33.187711642-07:00
+hash: d5feb657f754428789806e021da6d3ebc63f38bf2517d4e5ec2ab925e9946344
+updated: 2018-04-04T15:10:37.503480469-07:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -207,7 +207,7 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 1e2570b1b19ade82d8dbb31bba4e65e9f9ef5b34
+  version: d89cded64628466c4ab532d1f0ba5c220459ebe8
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
@@ -237,10 +237,6 @@ imports:
 testImports:
 - name: github.com/codahale/hdrhistogram
   version: 3a0bb77429bd3a61596f5e8a3172445844342120
-- name: github.com/golang/lint
-  version: 85993ffd0a6cd043291f3f63d45d656d97b165bd
-  subpackages:
-  - golint
 - name: github.com/kisielk/errcheck
   version: 8050dd7cc11578becd8622667107bb21a7baf451
 - name: github.com/kisielk/gotool
@@ -256,6 +252,11 @@ testImports:
   subpackages:
   - parallel-exec
   - update-license
+- name: golang.org/x/lint
+  version: 85993ffd0a6cd043291f3f63d45d656d97b165bd
+  repo: https://github.com/golang/lint
+  subpackages:
+  - golint
 - name: honnef.co/go/tools
   version: 57ee65dc7ff868f8fe21064b05f9e744a73bc9ab
   subpackages:
