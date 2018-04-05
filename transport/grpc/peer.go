@@ -29,6 +29,7 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
+	"google.golang.org/grpc/credentials"
 )
 
 type grpcPeer struct {
@@ -44,16 +45,28 @@ type grpcPeer struct {
 }
 
 func newPeer(address string, t *Transport) (*grpcPeer, error) {
-	clientConn, err := grpc.Dial(
-		address,
-		grpc.WithInsecure(),
+	dialOptions := []grpc.DialOption{
 		grpc.WithCodec(customCodec{}),
 		grpc.WithUserAgent(UserAgent),
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(t.options.clientMaxRecvMsgSize),
 			grpc.MaxCallSendMsgSize(t.options.clientMaxSendMsgSize),
 		),
-	)
+	}
+	if t.options.clientCertPool == nil && t.options.clientCertFilePath == "" {
+		dialOptions = append(dialOptions, grpc.WithInsecure())
+	} else if t.options.clientCertPool != nil {
+		dialOptions = append(dialOptions, grpc.WithTransportCredentials(
+			credentials.NewClientTLSFromCert(t.options.clientCertPool, ""),
+		))
+	} else {
+		transportCredentials, err := credentials.NewClientTLSFromFile(t.options.clientCertFilePath, "")
+		if err != nil {
+			return nil, err
+		}
+		dialOptions = append(dialOptions, grpc.WithTransportCredentials(transportCredentials))
+	}
+	clientConn, err := grpc.Dial(address, dialOptions...)
 	if err != nil {
 		return nil, err
 	}

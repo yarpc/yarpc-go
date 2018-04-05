@@ -21,6 +21,7 @@
 package grpc
 
 import (
+	"crypto/x509"
 	"math"
 
 	"github.com/opentracing/opentracing-go"
@@ -119,6 +120,28 @@ func ClientMaxSendMsgSize(clientMaxSendMsgSize int) TransportOption {
 	}
 }
 
+// ClientCertPool is the certificate pool to use when dialing.
+//
+// This overrides ClientCertFilePath.
+//
+// The default is to not use TLS.
+func ClientCertPool(clientCertPool *x509.CertPool) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.clientCertPool = clientCertPool
+	}
+}
+
+// ClientCertFilePath is the path to the certificate file to use when dialing.
+//
+// This is overridden by ClientCertPool.
+//
+// The default is to not use TLS.
+func ClientCertFilePath(clientCertFilePath string) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.clientCertFilePath = clientCertFilePath
+	}
+}
+
 // InboundOption is an option for an inbound.
 type InboundOption func(*inboundOptions)
 
@@ -137,6 +160,8 @@ type transportOptions struct {
 	serverMaxSendMsgSize int
 	clientMaxRecvMsgSize int
 	clientMaxSendMsgSize int
+	clientCertPool       *x509.CertPool
+	clientCertFilePath   string
 }
 
 func newTransportOptions(options []TransportOption) *transportOptions {
