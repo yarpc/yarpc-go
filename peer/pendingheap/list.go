@@ -27,10 +27,12 @@ import (
 
 type listConfig struct {
 	capacity int
+	shuffle  bool
 }
 
 var defaultListConfig = listConfig{
 	capacity: 10,
+	shuffle:  true,
 }
 
 // ListOption customizes the behavior of a pending requests peer heap.
@@ -53,12 +55,19 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 		o(&cfg)
 	}
 
+	plOpts := []peerlist.ListOption{
+		peerlist.Capacity(cfg.capacity),
+	}
+	if !cfg.shuffle {
+		plOpts = append(plOpts, peerlist.NoShuffle())
+	}
+
 	return &List{
 		List: peerlist.New(
 			"fewest-pending-requests",
 			transport,
 			&pendingHeap{},
-			peerlist.Capacity(cfg.capacity),
+			plOpts...,
 		),
 	}
 }

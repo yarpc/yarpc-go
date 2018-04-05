@@ -37,7 +37,8 @@ import (
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
 	"go.uber.org/yarpc/internal/testutils"
 	"go.uber.org/yarpc/yarpcerrors"
-	"google.golang.org/grpc"
+	"go.uber.org/zap"
+	"google.golang.org/grpc/status"
 )
 
 var flagOutbound = flag.String("outbound", "tchannel", "The outbound to use for unary calls")
@@ -75,11 +76,16 @@ func run(
 	keyValueYARPCServer := example.NewKeyValueYARPCServer()
 	sinkYARPCServer := example.NewSinkYARPCServer(true)
 	fooYARPCServer := example.NewFooYARPCServer(transport.NewHeaders())
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		return err
+	}
 	return exampleutil.WithClients(
 		transportType,
 		keyValueYARPCServer,
 		sinkYARPCServer,
 		fooYARPCServer,
+		logger,
 		func(clients *exampleutil.Clients) error {
 			return doClient(
 				keyValueYARPCServer,
@@ -129,9 +135,9 @@ func doClient(
 			var response *examplepb.GetValueResponse
 			var err error
 			if googleGRPC {
-				response, err = clients.KeyValueGRPCClient.GetValue(clients.ContextWrapper.Wrap(ctx), &examplepb.GetValueRequest{key})
+				response, err = clients.KeyValueGRPCClient.GetValue(clients.ContextWrapper.Wrap(ctx), &examplepb.GetValueRequest{Key: key})
 			} else {
-				response, err = clients.KeyValueYARPCClient.GetValue(ctx, &examplepb.GetValueRequest{key})
+				response, err = clients.KeyValueYARPCClient.GetValue(ctx, &examplepb.GetValueRequest{Key: key})
 			}
 			if err != nil {
 				fmt.Fprintf(output, "get %s failed: %s\n", key, getErrorMessage(err))
@@ -153,9 +159,9 @@ func doClient(
 			defer cancel()
 			var err error
 			if googleGRPC {
-				_, err = clients.KeyValueGRPCClient.SetValue(clients.ContextWrapper.Wrap(ctx), &examplepb.SetValueRequest{key, value})
+				_, err = clients.KeyValueGRPCClient.SetValue(clients.ContextWrapper.Wrap(ctx), &examplepb.SetValueRequest{Key: key, Value: value})
 			} else {
-				_, err = clients.KeyValueYARPCClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
+				_, err = clients.KeyValueYARPCClient.SetValue(ctx, &examplepb.SetValueRequest{Key: key, Value: value})
 			}
 			if err != nil {
 				fmt.Fprintf(output, "set %s = %s failed: %v\n", key, value, getErrorMessage(err))
@@ -169,7 +175,7 @@ func doClient(
 			value := args[0]
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
-			if _, err := clients.SinkYARPCClient.Fire(ctx, &examplepb.FireRequest{value}); err != nil {
+			if _, err := clients.SinkYARPCClient.Fire(ctx, &examplepb.FireRequest{Value: value}); err != nil {
 				fmt.Fprintf(output, "fire %s failed: %s\n", value, getErrorMessage(err))
 			}
 			if err := sinkYARPCServer.WaitFireDone(); err != nil {
@@ -196,8 +202,8 @@ func getErrorMessage(err error) string {
 	if yarpcerrors.IsStatus(err) {
 		return yarpcerrors.FromError(err).Message()
 	}
-	if errorDesc := grpc.ErrorDesc(err); errorDesc != "" {
-		return errorDesc
+	if status, ok := status.FromError(err); ok {
+		return status.Message()
 	}
 	return err.Error()
 }

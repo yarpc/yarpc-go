@@ -30,6 +30,8 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+const _error = "error"
+
 // A call represents a single RPC along an edge.
 //
 // To prevent allocating on the heap on the request path, it's a value instead
@@ -71,7 +73,7 @@ func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool)
 	fields = append(fields, zap.Bool("successful", err == nil && !isApplicationError))
 	fields = append(fields, c.extract(c.ctx))
 	if isApplicationError {
-		fields = append(fields, zap.String("error", "application_error"))
+		fields = append(fields, zap.String(_error, "application_error"))
 	} else {
 		fields = append(fields, zap.Error(err))
 	}
@@ -90,7 +92,7 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 	// For now, assume that all application errors are the caller's fault.
 	if isApplicationError {
 		c.edge.callerErrLatencies.Observe(elapsed)
-		if counter, err := c.edge.callerFailures.Get("application_error"); err == nil {
+		if counter, err := c.edge.callerFailures.Get(_error, "application_error"); err == nil {
 			counter.Inc()
 		}
 		return
@@ -98,7 +100,7 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 
 	if !yarpcerrors.IsStatus(err) {
 		c.edge.serverErrLatencies.Observe(elapsed)
-		if counter, err := c.edge.serverFailures.Get("unknown_internal_yarpc"); err == nil {
+		if counter, err := c.edge.serverFailures.Get(_error, "unknown_internal_yarpc"); err == nil {
 			counter.Inc()
 		}
 		return
@@ -117,7 +119,7 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 		yarpcerrors.CodeUnimplemented,
 		yarpcerrors.CodeUnauthenticated:
 		c.edge.callerErrLatencies.Observe(elapsed)
-		if counter, err := c.edge.callerFailures.Get(errCode.String()); err == nil {
+		if counter, err := c.edge.callerFailures.Get(_error, errCode.String()); err == nil {
 			counter.Inc()
 		}
 		return
@@ -128,7 +130,7 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 		yarpcerrors.CodeUnavailable,
 		yarpcerrors.CodeDataLoss:
 		c.edge.serverErrLatencies.Observe(elapsed)
-		if counter, err := c.edge.serverFailures.Get(errCode.String()); err == nil {
+		if counter, err := c.edge.serverFailures.Get(_error, errCode.String()); err == nil {
 			counter.Inc()
 		}
 		return
@@ -136,7 +138,7 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 	// If this code is executed we've hit an error code outside the usual error
 	// code range, so we'll just log the string representation of that code.
 	c.edge.serverErrLatencies.Observe(elapsed)
-	if counter, err := c.edge.serverFailures.Get(errCode.String()); err == nil {
+	if counter, err := c.edge.serverFailures.Get(_error, errCode.String()); err == nil {
 		counter.Inc()
 	}
 }

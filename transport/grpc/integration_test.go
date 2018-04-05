@@ -170,6 +170,17 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 	})
 }
 
+func TestLargeEcho(t *testing.T) {
+	t.Parallel()
+	value := strings.Repeat("a", 32768)
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", value))
+		getValue, err := e.GetValueYARPC(context.Background(), "foo")
+		assert.NoError(t, err)
+		assert.Equal(t, value, getValue)
+	})
+}
+
 func TestApplicationErrorPropagation(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
@@ -344,7 +355,7 @@ func (e *testEnv) Call(
 func (e *testEnv) GetValueYARPC(ctx context.Context, key string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 	defer cancel()
-	response, err := e.KeyValueYARPCClient.GetValue(ctx, &examplepb.GetValueRequest{key})
+	response, err := e.KeyValueYARPCClient.GetValue(ctx, &examplepb.GetValueRequest{Key: key})
 	if response != nil {
 		return response.Value, err
 	}
@@ -354,14 +365,14 @@ func (e *testEnv) GetValueYARPC(ctx context.Context, key string) (string, error)
 func (e *testEnv) SetValueYARPC(ctx context.Context, key string, value string) error {
 	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 	defer cancel()
-	_, err := e.KeyValueYARPCClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
+	_, err := e.KeyValueYARPCClient.SetValue(ctx, &examplepb.SetValueRequest{Key: key, Value: value})
 	return err
 }
 
 func (e *testEnv) GetValueGRPC(ctx context.Context, key string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 	defer cancel()
-	response, err := e.KeyValueGRPCClient.GetValue(e.ContextWrapper.Wrap(ctx), &examplepb.GetValueRequest{key})
+	response, err := e.KeyValueGRPCClient.GetValue(e.ContextWrapper.Wrap(ctx), &examplepb.GetValueRequest{Key: key})
 	if response != nil {
 		return response.Value, err
 	}
@@ -371,7 +382,7 @@ func (e *testEnv) GetValueGRPC(ctx context.Context, key string) (string, error) 
 func (e *testEnv) SetValueGRPC(ctx context.Context, key string, value string) error {
 	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 	defer cancel()
-	_, err := e.KeyValueGRPCClient.SetValue(e.ContextWrapper.Wrap(ctx), &examplepb.SetValueRequest{key, value})
+	_, err := e.KeyValueGRPCClient.SetValue(e.ContextWrapper.Wrap(ctx), &examplepb.SetValueRequest{Key: key, Value: value})
 	return err
 }
 

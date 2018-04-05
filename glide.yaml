@@ -3,8 +3,6 @@ homepage: https://github.com/yarpc/yarpc-go
 license: MIT
 import:
 - package: github.com/apache/thrift
-  repo: git://git.apache.org/thrift.git
-  vcs: git
   version: 0.9.3 # TODO switch back to ^0.9.3 once Apache Thrift fixes https://issues.apache.org/jira/browse/THRIFT-4261
 - package: github.com/crossdock/crossdock-go
   version: master
@@ -34,8 +32,10 @@ import:
   version: ^3
 - package: go.uber.org/atomic
   version: ^1
-- package: go.uber.org/thriftrw
+- package: go.uber.org/net/metrics
   version: ^1
+- package: go.uber.org/thriftrw
+  version: ^1.10
 - package: golang.org/x/net
   version: master
   # explicitly specifying this because glide is having issues with golang.org repos
@@ -62,9 +62,10 @@ import:
 - package: github.com/golang/mock
   version: ^1
 testImport:
-- package: github.com/golang/lint
+- package: golang.org/x/lint
   subpackages:
   - golint
+  repo: https://github.com/golang/lint
 - package: github.com/kisielk/errcheck
 - package: github.com/kisielk/gotool
 - package: github.com/wadey/gocovmerge

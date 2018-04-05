@@ -21,17 +21,14 @@
 package yarpc_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"runtime"
+	"sync"
 	"testing"
+	"time"
 
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/uber-go/tally"
-	tchannelgo "github.com/uber/tchannel-go"
-	thriftrwversion "go.uber.org/thriftrw/version"
 	. "go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
@@ -39,7 +36,18 @@ import (
 	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
+
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uber-go/tally"
+	tchannelgo "github.com/uber/tchannel-go"
+	"go.uber.org/atomic"
+	"go.uber.org/multierr"
+	thriftrwversion "go.uber.org/thriftrw/version"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 func basicConfig(t testing.TB) Config {
@@ -54,6 +62,14 @@ func basicConfig(t testing.TB) Config {
 			httpTransport.NewInbound(":0"),
 		},
 	}
+}
+
+func outboundConfig(t testing.TB) Config {
+	cfg := basicConfig(t)
+	cfg.Outbounds = Outbounds{"my-test-service": {
+		Unary: http.NewTransport().NewSingleOutbound("http://127.0.0.1:1234"),
+	}}
+	return cfg
 }
 
 func basicDispatcher(t testing.TB) *Dispatcher {
@@ -395,6 +411,138 @@ func TestStartStopFailures(t *testing.T) {
 	}
 }
 
+func TestPhasedStartStop(t *testing.T) {
+	t.Run("in order", func(t *testing.T) {
+		d := NewDispatcher(outboundConfig(t))
+		starter, err := d.PhasedStart()
+		require.NoError(t, err, "constructing phased starter failed")
+		startErr := multierr.Combine(
+			starter.StartTransports(),
+			starter.StartOutbounds(),
+			starter.StartInbounds(),
+		)
+		require.NoError(t, startErr, "phased startup failed")
+		stopper, err := d.PhasedStop()
+		require.NoError(t, err, "constructing phased stopped failed")
+		stopErr := multierr.Combine(
+			stopper.StopInbounds(),
+			stopper.StopOutbounds(),
+			stopper.StopTransports(),
+		)
+		require.NoError(t, stopErr, "phased shutdown failed")
+	})
+
+	t.Run("start out of order", func(t *testing.T) {
+		d := NewDispatcher(outboundConfig(t))
+		starter, err := d.PhasedStart()
+		require.NoError(t, err, "constructing phased starter failed")
+
+		// Must start transports first.
+		assert.Error(t, starter.StartInbounds(), "succeeded inbounds before transports")
+		assert.Error(t, starter.StartOutbounds(), "succeeded started outbounds before transports")
+		require.NoError(t, starter.StartTransports(), "starting transports failed")
+
+		// Must start outbounds second.
+		assert.Error(t, starter.StartTransports(), "succeeded starting transports again")
+		assert.Error(t, starter.StartInbounds(), "succeeded started inbounds before outbounds")
+		require.NoError(t, starter.StartOutbounds(), "starting outbounds failed")
+
+		// Must start inbounds last.
+		assert.Error(t, starter.StartTransports(), "succeeded starting transports again")
+		assert.Error(t, starter.StartOutbounds(), "succeeded starting outbounds again")
+		require.NoError(t, starter.StartInbounds(), "starting inbounds failed")
+
+		assert.NoError(t, d.Stop(), "shutting down dispatcher failed")
+	})
+
+	t.Run("stop out of order", func(t *testing.T) {
+		d := NewDispatcher(outboundConfig(t))
+		require.NoError(t, d.Start(), "starting dispatcher failed")
+
+		stopper, err := d.PhasedStop()
+		require.NoError(t, err, "constructing phased stopper failed")
+
+		// Must stop inbounds first.
+		assert.Error(t, stopper.StopTransports(), "succeeded stopping transports before inbounds")
+		assert.Error(t, stopper.StopOutbounds(), "succeeded stopping outbounds before inbounds")
+		require.NoError(t, stopper.StopInbounds(), "stopping inbunds failed")
+
+		// Must stop outbounds second.
+		assert.Error(t, stopper.StopInbounds(), "succeeded stopping inbounds again")
+		assert.Error(t, stopper.StopTransports(), "succeeded stopping transports before outbounds")
+		require.NoError(t, stopper.StopOutbounds(), "stopping outbounds failed")
+
+		// Must stop transports last.
+		assert.Error(t, stopper.StopInbounds(), "succeeded stopping inbounds again")
+		assert.Error(t, stopper.StopOutbounds(), "succeeded stopping outbounds again")
+		require.NoError(t, stopper.StopTransports(), "stopping transports failed")
+	})
+}
+
+func TestPhasedStartRaces(t *testing.T) {
+	d := NewDispatcher(outboundConfig(t))
+	starter, err := d.PhasedStart()
+	require.NoError(t, err, "constructing phased starter failed")
+
+	const concurrency = 100
+	run := make(chan struct{})
+	errs := atomic.NewInt64(0)
+	var wg sync.WaitGroup
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-run
+			if err := starter.StartTransports(); err != nil {
+				errs.Inc()
+			}
+			if err := starter.StartOutbounds(); err != nil {
+				errs.Inc()
+			}
+			if err := starter.StartInbounds(); err != nil {
+				errs.Inc()
+			}
+		}()
+	}
+	close(run)
+	wg.Wait()
+	// Expect repeat calls to Start* to fail.
+	assert.Equal(t, 3*concurrency-3, int(errs.Load()), "wrong number of errors")
+	require.NoError(t, d.Stop(), "failed to cleanly shut down dispatcher")
+}
+
+func TestPhasedStopRaces(t *testing.T) {
+	d := NewDispatcher(outboundConfig(t))
+	require.NoError(t, d.Start(), "starting dispatcher failed")
+	stopper, err := d.PhasedStop()
+	require.NoError(t, err, "constructing phased stopper failed")
+
+	const concurrency = 100
+	run := make(chan struct{})
+	errs := atomic.NewInt64(0)
+	var wg sync.WaitGroup
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-run
+			if err := stopper.StopInbounds(); err != nil {
+				errs.Inc()
+			}
+			if err := stopper.StopOutbounds(); err != nil {
+				errs.Inc()
+			}
+			if err := stopper.StopTransports(); err != nil {
+				errs.Inc()
+			}
+		}()
+	}
+	close(run)
+	wg.Wait()
+	// Expect repeat calls to Stop* to fail.
+	assert.Equal(t, 3*concurrency-3, int(errs.Load()), "wrong number of errors")
+}
+
 func TestNoOutboundsForService(t *testing.T) {
 	defer func() {
 		r := recover()
@@ -495,6 +643,84 @@ func TestClientConfigWithOutboundServiceNameOverride(t *testing.T) {
 
 	assert.Equal(t, "test", cc.Caller())
 	assert.Equal(t, "my-real-service", cc.Service())
+}
+
+func TestEnableObservabilityMiddleware(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	req := &transport.Request{
+		Service:   "test",
+		Caller:    "test",
+		Procedure: "test",
+		Encoding:  transport.Encoding("test"),
+	}
+	out := transporttest.NewMockUnaryOutbound(mockCtrl)
+	out.EXPECT().Transports().AnyTimes()
+	out.EXPECT().Call(ctx, req).Times(1).Return(nil, nil)
+
+	core, logs := observer.New(zapcore.DebugLevel)
+	dispatcher := NewDispatcher(Config{
+		Name: "test",
+		Outbounds: Outbounds{
+			"my-test-service": {
+				ServiceName: "my-real-service",
+				Unary:       out,
+			},
+		},
+		Logging: LoggingConfig{
+			Zap: zap.New(core),
+		},
+		DisableAutoObservabilityMiddleware: false,
+	})
+
+	cc := dispatcher.MustOutboundConfig("my-test-service")
+	_, err := cc.Outbounds.Unary.Call(ctx, req)
+	require.NoError(t, err)
+
+	// There should be one log.
+	assert.Equal(t, 1, logs.Len())
+}
+
+func TestDisableObservabilityMiddleware(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	req := &transport.Request{
+		Service:   "test",
+		Caller:    "test",
+		Procedure: "test",
+		Encoding:  transport.Encoding("test"),
+	}
+	out := transporttest.NewMockUnaryOutbound(mockCtrl)
+	out.EXPECT().Transports().AnyTimes()
+	out.EXPECT().Call(ctx, req).Times(1).Return(nil, nil)
+
+	core, logs := observer.New(zapcore.DebugLevel)
+	dispatcher := NewDispatcher(Config{
+		Name: "test",
+		Outbounds: Outbounds{
+			"my-test-service": {
+				ServiceName: "my-real-service",
+				Unary:       out,
+			},
+		},
+		Logging: LoggingConfig{
+			Zap: zap.New(core),
+		},
+		DisableAutoObservabilityMiddleware: true,
+	})
+
+	cc := dispatcher.MustOutboundConfig("my-test-service")
+	_, err := cc.Outbounds.Unary.Call(ctx, req)
+	require.NoError(t, err)
+
+	// There should be no logs.
+	assert.Equal(t, 0, logs.Len())
 }
 
 func TestObservabilityConfig(t *testing.T) {

@@ -34,7 +34,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	gtransport "google.golang.org/grpc/transport"
 )
 
 var (
@@ -53,14 +52,12 @@ func newHandler(i *Inbound) *handler {
 
 func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error {
 	start := time.Now()
-	// Grab context information from the stream's context.
 	ctx := serverStream.Context()
-	stream, ok := gtransport.StreamFromContext(ctx)
+	streamMethod, ok := grpc.MethodFromServerStream(serverStream)
 	if !ok {
 		return errInvalidGRPCStream
 	}
 
-	streamMethod := stream.Method()
 	transportRequest, err := h.getBasicTransportRequest(ctx, streamMethod)
 	if err != nil {
 		return err

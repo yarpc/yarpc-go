@@ -68,7 +68,6 @@ func (ss *serverStream) SendMessage(_ context.Context, m *transport.StreamMessag
 }
 
 func (ss *serverStream) ReceiveMessage(_ context.Context) (*transport.StreamMessage, error) {
-	// TODO used pooled buffers for performance.
 	var msg []byte
 	if err := ss.stream.RecvMsg(&msg); err != nil {
 		return nil, toYARPCStreamError(err)
@@ -107,8 +106,6 @@ func (cs *clientStream) SendMessage(_ context.Context, m *transport.StreamMessag
 	}
 	// TODO can we make a "Bytes" interface to get direct access to the bytes
 	// (instead of resorting to ReadAll (which is not necessarily performant))
-	// Alternatively we can pool Buffers to read the message and clear the
-	// buffers after we've sent the Messages.
 	msg, err := ioutil.ReadAll(m.Body)
 	_ = m.Body.Close()
 	if err != nil {

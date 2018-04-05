@@ -169,7 +169,7 @@ func TestStreamNopOutboundMiddleware(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	req := &transport.StreamRequest{
-		&transport.RequestMeta{
+		Meta: &transport.RequestMeta{
 			Caller:    "somecaller",
 			Service:   "someservice",
 			Encoding:  raw.Encoding,

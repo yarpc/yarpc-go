@@ -50,8 +50,8 @@
 // 	myserviceOutbound := tchannelTransport.NewOutbound()
 // 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 // 		Name: "myservice",
-// 		Outbounds: yarpc.OUtbounds{
-// 			{Unary: myserviceOutbound},
+// 		Outbounds: yarpc.Outbounds{
+// 			"outboundservice": {Unary: myserviceOutbound},
 // 		},
 // 	})
 //

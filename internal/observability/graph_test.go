@@ -24,8 +24,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/pally"
 	"go.uber.org/zap"
 )
 
@@ -33,7 +33,8 @@ func TestEdgeNopFallbacks(t *testing.T) {
 	// If we fail to create any of the metrics required for the edge, we should
 	// fall back to no-op implementations. The easiest way to trigger failures
 	// is to re-use the same Registry.
-	reg := pally.NewRegistry()
+	root := metrics.New()
+	meter := root.Scope()
 	req := &transport.Request{
 		Caller:          "caller",
 		Service:         "service",
@@ -45,15 +46,29 @@ func TestEdgeNopFallbacks(t *testing.T) {
 	}
 
 	// Should succeed, covered by middleware tests.
-	_ = newEdge(zap.NewNop(), reg, req, string(_directionOutbound))
+	_ = newEdge(zap.NewNop(), meter, req, string(_directionOutbound))
 
 	// Should fall back to no-op metrics.
-	e := newEdge(zap.NewNop(), reg, req, string(_directionOutbound))
-	assert.NotNil(t, e.calls, "Expected to fall back to no-op metrics.")
-	assert.NotNil(t, e.successes, "Expected to fall back to no-op metrics.")
-	assert.NotNil(t, e.callerFailures, "Expected to fall back to no-op metrics.")
-	assert.NotNil(t, e.serverFailures, "Expected to fall back to no-op metrics.")
-	assert.NotNil(t, e.latencies, "Expected to fall back to no-op metrics.")
-	assert.NotNil(t, e.callerErrLatencies, "Expected to fall back to no-op metrics.")
-	assert.NotNil(t, e.serverErrLatencies, "Expected to fall back to no-op metrics.")
+	// Usage of nil metrics should not panic, should not observe changes.
+	e := newEdge(zap.NewNop(), meter, req, string(_directionOutbound))
+
+	e.calls.Inc()
+	assert.Equal(t, int64(0), e.calls.Load(), "Expected to fall back to no-op metrics.")
+
+	e.successes.Load()
+	assert.Equal(t, int64(0), e.successes.Load(), "Expected to fall back to no-op metrics.")
+
+	cf, err := e.callerFailures.Get()
+	assert.NoError(t, err, "Unexpected error getting caller failure counter")
+	cf.Inc()
+	assert.Equal(t, int64(0), cf.Load(), "Expected to fall back to no-op metrics.")
+
+	sf, err := e.serverFailures.Get()
+	assert.NoError(t, err, "Unexpected error getting server failure counter")
+	sf.Inc()
+	assert.Equal(t, int64(0), sf.Load(), "Expected to fall back to no-op metrics.")
+
+	e.latencies.Observe(0)
+	e.callerErrLatencies.Observe(0)
+	e.serverErrLatencies.Observe(0)
 }

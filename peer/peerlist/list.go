@@ -23,7 +23,9 @@ package peerlist
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"sync"
+	"time"
 
 	"go.uber.org/atomic"
 	"go.uber.org/multierr"
@@ -40,11 +42,14 @@ var (
 )
 
 type listOptions struct {
-	capacity int
+	capacity  int
+	noShuffle bool
+	seed      int64
 }
 
 var defaultListOptions = listOptions{
 	capacity: 10,
+	seed:     time.Now().UnixNano(),
 }
 
 // ListOption customizes the behavior of a list.
@@ -66,6 +71,22 @@ func Capacity(capacity int) ListOption {
 	})
 }
 
+// NoShuffle disables the default behavior of shuffling peerlist order.
+func NoShuffle() ListOption {
+	return listOptionFunc(func(options *listOptions) {
+		options.noShuffle = true
+	})
+}
+
+// Seed specifies the random seed to use for shuffling peers
+//
+// Defaults to approximately the process start time in nanoseconds.
+func Seed(seed int64) ListOption {
+	return listOptionFunc(func(options *listOptions) {
+		options.seed = seed
+	})
+}
+
 // New creates a new peer list with an identifier chooser for available peers.
 func New(name string, transport peer.Transport, availableChooser peer.ListImplementation, opts ...ListOption) *List {
 	options := defaultListOptions
@@ -81,6 +102,8 @@ func New(name string, transport peer.Transport, availableChooser peer.ListImplem
 		availablePeers:     make(map[string]*peerThunk, options.capacity),
 		availableChooser:   availableChooser,
 		transport:          transport,
+		noShuffle:          options.noShuffle,
+		randSrc:            rand.NewSource(options.seed),
 		peerAvailableEvent: make(chan struct{}, 1),
 	}
 }
@@ -107,6 +130,9 @@ type List struct {
 	availableChooser   peer.ListImplementation
 	peerAvailableEvent chan struct{}
 	transport          peer.Transport
+
+	noShuffle bool
+	randSrc   rand.Source
 
 	once *lifecycle.Once
 }
@@ -139,7 +165,12 @@ func (pl *List) updateInitialized(updates peer.ListUpdates) error {
 		errs = multierr.Append(errs, pl.removePeerIdentifier(peerID))
 	}
 
-	for _, peerID := range updates.Additions {
+	add := updates.Additions
+	if !pl.noShuffle {
+		add = shuffle(pl.randSrc, add)
+	}
+
+	for _, peerID := range add {
 		errs = multierr.Append(errs, pl.addPeerIdentifier(peerID))
 	}
 	return errs
@@ -222,10 +253,15 @@ func (pl *List) start() error {
 		return err
 	}
 
+	add := values(pl.uninitializedPeers)
+	if !pl.noShuffle {
+		add = shuffle(pl.randSrc, add)
+	}
+
 	var errs error
-	for k, pid := range pl.uninitializedPeers {
+	for _, pid := range add {
 		errs = multierr.Append(errs, pl.addPeerIdentifier(pid))
-		delete(pl.uninitializedPeers, k)
+		delete(pl.uninitializedPeers, pid.Identifier())
 	}
 
 	pl.shouldRetainPeers.Store(true)
@@ -567,4 +603,26 @@ func (pl *List) Introspect() introspection.ChooserStatus {
 			len(availables)+len(unavailables)),
 		Peers: peersStatus,
 	}
+}
+
+// shuffle randomizes the order of a slice of peers.
+// see: https://en.wikipedia.org/wiki/Fisher-Yates_shuffle
+func shuffle(src rand.Source, in []peer.Identifier) []peer.Identifier {
+	shuffled := make([]peer.Identifier, len(in))
+	r := rand.New(src)
+	copy(shuffled, in)
+	for i := len(in) - 1; i > 0; i-- {
+		j := r.Intn(i + 1)
+		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
+	}
+	return shuffled
+}
+
+// values returns a slice of the values contained in a map of peers.
+func values(m map[string]peer.Identifier) []peer.Identifier {
+	vs := make([]peer.Identifier, 0, len(m))
+	for _, v := range m {
+		vs = append(vs, v)
+	}
+	return vs
 }

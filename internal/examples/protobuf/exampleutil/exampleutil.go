@@ -26,6 +26,7 @@ import (
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/grpcctx"
 	"go.uber.org/yarpc/internal/testutils"
+	"go.uber.org/zap"
 )
 
 // Clients holds all clients.
@@ -48,6 +49,7 @@ func WithClients(
 	keyValueYARPCServer examplepb.KeyValueYARPCServer,
 	sinkYARPCServer examplepb.SinkYARPCServer,
 	fooYARPCServer examplepb.FooYARPCServer,
+	logger *zap.Logger,
 	f func(*Clients) error,
 ) error {
 	var procedures []transport.Procedure
@@ -64,6 +66,7 @@ func WithClients(
 		"example",
 		procedures,
 		transportType,
+		logger,
 		func(clientInfo *testutils.ClientInfo) error {
 			return f(
 				&Clients{

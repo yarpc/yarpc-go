@@ -38,6 +38,7 @@ import (
 	"go.uber.org/yarpc/internal/routertest"
 	"go.uber.org/yarpc/internal/testtime"
 	pkgerrors "go.uber.org/yarpc/pkg/errors"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 func TestHandlerErrors(t *testing.T) {
@@ -341,6 +342,7 @@ func TestResponseWriter(t *testing.T) {
 		arg2             []byte
 		arg3             []byte
 		applicationError bool
+		headerCase       headerCase
 	}{
 		{
 			format: tchannel.Raw,
@@ -362,6 +364,24 @@ func TestResponseWriter(t *testing.T) {
 		{
 			format: tchannel.Raw,
 			apply: func(w *responseWriter) {
+				headers := transport.HeadersFromMap(map[string]string{"FoO": "bAr"})
+				w.AddHeaders(headers)
+				_, err := w.Write([]byte("hello "))
+				require.NoError(t, err)
+				_, err = w.Write([]byte("world"))
+				require.NoError(t, err)
+			},
+			arg2: []byte{
+				0x00, 0x01,
+				0x00, 0x03, 'F', 'o', 'O',
+				0x00, 0x03, 'b', 'A', 'r',
+			},
+			arg3:       []byte("hello world"),
+			headerCase: originalHeaderCase,
+		},
+		{
+			format: tchannel.Raw,
+			apply: func(w *responseWriter) {
 				_, err := w.Write([]byte("foo"))
 				require.NoError(t, err)
 				_, err = w.Write([]byte("bar"))
@@ -376,10 +396,7 @@ func TestResponseWriter(t *testing.T) {
 				headers := transport.HeadersFromMap(map[string]string{"foo": "bar"})
 				w.AddHeaders(headers)
 
-				_, err := w.Write([]byte("{"))
-				require.NoError(t, err)
-
-				_, err = w.Write([]byte("}"))
+				_, err := w.Write([]byte("{}"))
 				require.NoError(t, err)
 			},
 			arg2: []byte(`{"foo":"bar"}` + "\n"),
@@ -388,10 +405,20 @@ func TestResponseWriter(t *testing.T) {
 		{
 			format: tchannel.JSON,
 			apply: func(w *responseWriter) {
-				_, err := w.Write([]byte("{"))
-				require.NoError(t, err)
+				headers := transport.HeadersFromMap(map[string]string{"FoO": "bAr"})
+				w.AddHeaders(headers)
 
-				_, err = w.Write([]byte("}"))
+				_, err := w.Write([]byte("{}"))
+				require.NoError(t, err)
+			},
+			arg2:       []byte(`{"FoO":"bAr"}` + "\n"),
+			arg3:       []byte("{}"),
+			headerCase: originalHeaderCase,
+		},
+		{
+			format: tchannel.JSON,
+			apply: func(w *responseWriter) {
+				_, err := w.Write([]byte("{}"))
 				require.NoError(t, err)
 			},
 			arg2: []byte("{}\n"),
@@ -415,7 +442,7 @@ func TestResponseWriter(t *testing.T) {
 		resp := newResponseRecorder()
 		call.resp = resp
 
-		w := newResponseWriter(call.Response(), call.Format())
+		w := newResponseWriter(call.Response(), call.Format(), tt.headerCase)
 		tt.apply(w)
 		assert.NoError(t, w.Close())
 
@@ -452,13 +479,13 @@ func TestResponseWriterFailure(t *testing.T) {
 		resp := newResponseRecorder()
 		tt.setupResp(resp)
 
-		w := newResponseWriter(resp, tchannel.Raw)
+		w := newResponseWriter(resp, tchannel.Raw, canonicalizedHeaderCase)
 		_, err := w.Write([]byte("foo"))
 		assert.NoError(t, err)
 		_, err = w.Write([]byte("bar"))
 		assert.NoError(t, err)
 		err = w.Close()
-		assert.Error(t, w.Close())
+		assert.Error(t, err)
 		for _, msg := range tt.messages {
 			assert.Contains(t, err.Error(), msg)
 		}
@@ -467,7 +494,7 @@ func TestResponseWriterFailure(t *testing.T) {
 
 func TestResponseWriterEmptyBodyHeaders(t *testing.T) {
 	res := newResponseRecorder()
-	w := newResponseWriter(res, tchannel.Raw)
+	w := newResponseWriter(res, tchannel.Raw, canonicalizedHeaderCase)
 
 	w.AddHeaders(transport.NewHeaders().With("foo", "bar"))
 	require.NoError(t, w.Close())
@@ -475,4 +502,40 @@ func TestResponseWriterEmptyBodyHeaders(t *testing.T) {
 	assert.NotEmpty(t, res.arg2.Bytes(), "headers must not be empty")
 	assert.Empty(t, res.arg3.Bytes(), "body must be empty but was %#v", res.arg3.Bytes())
 	assert.False(t, res.applicationError, "application error must be false")
+}
+
+func TestGetSystemError(t *testing.T) {
+	tests := []struct {
+		giveErr  error
+		wantCode tchannel.SystemErrCode
+	}{
+		{
+			giveErr:  yarpcerrors.UnavailableErrorf("test"),
+			wantCode: tchannel.ErrCodeDeclined,
+		},
+		{
+			giveErr:  errors.New("test"),
+			wantCode: tchannel.ErrCodeUnexpected,
+		},
+		{
+			giveErr:  yarpcerrors.InvalidArgumentErrorf("test"),
+			wantCode: tchannel.ErrCodeBadRequest,
+		},
+		{
+			giveErr:  tchannel.NewSystemError(tchannel.ErrCodeBusy, "test"),
+			wantCode: tchannel.ErrCodeBusy,
+		},
+		{
+			giveErr:  yarpcerrors.Newf(yarpcerrors.Code(1235), "test"),
+			wantCode: tchannel.ErrCodeUnexpected,
+		},
+	}
+	for i, tt := range tests {
+		t.Run(string(i), func(t *testing.T) {
+			gotErr := getSystemError(tt.giveErr)
+			tchErr, ok := gotErr.(tchannel.SystemError)
+			require.True(t, ok, "did not return tchannel error")
+			assert.Equal(t, tt.wantCode, tchErr.Code())
+		})
+	}
 }

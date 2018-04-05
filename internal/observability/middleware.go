@@ -24,8 +24,8 @@ import (
 	"context"
 	"sync"
 
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/pally"
 	"go.uber.org/zap"
 )
 
@@ -63,8 +63,8 @@ type Middleware struct {
 }
 
 // NewMiddleware constructs a Middleware.
-func NewMiddleware(logger *zap.Logger, reg *pally.Registry, extract ContextExtractor) *Middleware {
-	return &Middleware{newGraph(reg, logger, extract)}
+func NewMiddleware(logger *zap.Logger, scope *metrics.Scope, extract ContextExtractor) *Middleware {
+	return &Middleware{newGraph(scope, logger, extract)}
 }
 
 // Handle implements middleware.UnaryInbound.

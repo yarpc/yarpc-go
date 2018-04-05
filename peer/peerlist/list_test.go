@@ -18,41 +18,62 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package pallytest
+package peerlist
 
 import (
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"strings"
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/peer/hostport"
 )
 
-// Scrape collects and returns the plain-text content of the registry's scrape
-// endpoint, along with the response code.
-func Scrape(t testing.TB, registry http.Handler) (int, string) {
-	server := httptest.NewServer(registry)
-	defer server.Close()
+const (
+	id1 = hostport.PeerIdentifier("1.2.3.4:1234")
+	id2 = hostport.PeerIdentifier("4.3.2.1:4321")
+	id3 = hostport.PeerIdentifier("1.1.1.1:1111")
+)
 
-	resp, err := http.Get(server.URL)
-	require.NoError(t, err, "Unexpected error scraping Prometheus endpoint.")
-	body, err := ioutil.ReadAll(resp.Body)
-	require.NoError(t, err, "Unexpected error reading response body.")
-	return resp.StatusCode, strings.TrimSpace(string(body))
+func TestValues(t *testing.T) {
+	vs := values(map[string]peer.Identifier{})
+	assert.Equal(t, []peer.Identifier{}, vs)
+
+	vs = values(map[string]peer.Identifier{"_": id1, "__": id2})
+	assert.Equal(t, 2, len(vs))
+	assert.Contains(t, vs, id1)
+	assert.Contains(t, vs, id2)
 }
 
-// AssertPrometheus asserts that the registry's scrape endpoint successfully
-// serves the supplied plain-text Prometheus metrics.
-func AssertPrometheus(t testing.TB, registry http.Handler, expected string) {
-	code, actual := Scrape(t, registry)
-	assert.Equal(t, http.StatusOK, code, "Unexpected HTTP response code from Prometheus scrape.")
-	assert.Equal(
-		t,
-		strings.Split(expected, "\n"),
-		strings.Split(actual, "\n"),
-		"Unexpected Prometheus text.",
-	)
+func TestShuffle(t *testing.T) {
+	for _, test := range []struct {
+		msg  string
+		seed int64
+		in   []peer.Identifier
+		want []peer.Identifier
+	}{
+		{
+			"empty",
+			0,
+			[]peer.Identifier{},
+			[]peer.Identifier{},
+		},
+		{
+			"some",
+			0,
+			[]peer.Identifier{id1, id2, id3},
+			[]peer.Identifier{id2, id3, id1},
+		},
+		{
+			"different seed",
+			7,
+			[]peer.Identifier{id1, id2, id3},
+			[]peer.Identifier{id2, id1, id3},
+		},
+	} {
+		t.Run(test.msg, func(t *testing.T) {
+			randSrc := rand.NewSource(test.seed)
+			assert.Equal(t, test.want, shuffle(randSrc, test.in))
+		})
+	}
 }

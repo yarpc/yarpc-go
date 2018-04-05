@@ -97,11 +97,11 @@ func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport
 func (p *tchannelPeer) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	root := p.transport.ch.RootPeers()
 	tp := root.GetOrAdd(p.HostPort())
-	return callWithPeer(ctx, req, tp)
+	return callWithPeer(ctx, req, tp, p.transport.headerCase)
 }
 
 // callWithPeer sends a request with the chosen peer.
-func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Peer) (*transport.Response, error) {
+func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Peer, headerCase headerCase) (*transport.Response, error) {
 	// NB(abg): Under the current API, the local service's name is required
 	// twice: once when constructing the TChannel and then again when
 	// constructing the RPC.
@@ -132,11 +132,11 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 	if err != nil {
 		return nil, err
 	}
+	reqHeaders := headerMap(req.Headers, headerCase)
 
-	// Inject tracing system baggage
-	reqHeaders := tchannel.InjectOutboundSpan(call.Response(), req.Headers.Items())
-
-	if err := writeRequestHeaders(ctx, format, reqHeaders, call.Arg2Writer); err != nil {
+	// baggage headers are transport implementation details that are stripped out (and stored in the context). Users don't interact with it
+	tracingBaggage := tchannel.InjectOutboundSpan(call.Response(), nil)
+	if err := writeHeaders(format, reqHeaders, tracingBaggage, call.Arg2Writer); err != nil {
 		// TODO(abg): This will wrap IO errors while writing headers as encode
 		// errors. We should fix that.
 		return nil, errors.RequestHeadersEncodeError(req, err)

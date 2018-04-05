@@ -29,19 +29,27 @@ import (
 )
 
 type runner struct {
-	tmpl                *template.Template
-	templateInfoChecker func(*TemplateInfo) error
-	baseImports         []string
-	fileSuffix          string
+	tmpl                 *template.Template
+	templateInfoChecker  func(*TemplateInfo) error
+	baseImports          []string
+	fileToOutputFilename func(*File) (string, error)
+	unknownFlagHandler   func(key string, value string) error
 }
 
 func newRunner(
 	tmpl *template.Template,
 	templateInfoChecker func(*TemplateInfo) error,
 	baseImports []string,
-	fileSuffix string,
+	fileToOutputFilename func(*File) (string, error),
+	unknownFlagHandler func(key string, value string) error,
 ) *runner {
-	return &runner{tmpl, templateInfoChecker, baseImports, fileSuffix}
+	return &runner{
+		tmpl:                 tmpl,
+		templateInfoChecker:  templateInfoChecker,
+		baseImports:          baseImports,
+		fileToOutputFilename: fileToOutputFilename,
+		unknownFlagHandler:   unknownFlagHandler,
+	}
 }
 
 func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGeneratorResponse {
@@ -58,6 +66,12 @@ func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGen
 				registry.SetPrefix(value)
 			case strings.HasPrefix(name, "M"):
 				registry.AddPackageMap(name[1:], value)
+			default:
+				if r.unknownFlagHandler != nil {
+					if err := r.unknownFlagHandler(name, value); err != nil {
+						return newResponseError(err)
+					}
+				}
 			}
 		}
 	}
@@ -67,7 +81,7 @@ func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGen
 		r.tmpl,
 		r.templateInfoChecker,
 		r.baseImports,
-		r.fileSuffix,
+		r.fileToOutputFilename,
 	)
 	if err := registry.Load(request); err != nil {
 		return newResponseError(err)

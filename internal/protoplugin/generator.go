@@ -26,8 +26,6 @@ import (
 	"fmt"
 	"go/format"
 	"path"
-	"path/filepath"
-	"strings"
 	"text/template"
 
 	"github.com/gogo/protobuf/proto"
@@ -39,11 +37,11 @@ var (
 )
 
 type generator struct {
-	registry            *registry
-	tmpl                *template.Template
-	templateInfoChecker func(*TemplateInfo) error
-	baseImports         []*GoPackage
-	fileSuffix          string
+	registry             *registry
+	tmpl                 *template.Template
+	templateInfoChecker  func(*TemplateInfo) error
+	baseImports          []*GoPackage
+	fileToOutputFilename func(*File) (string, error)
 }
 
 func newGenerator(
@@ -51,7 +49,7 @@ func newGenerator(
 	tmpl *template.Template,
 	templateInfoChecker func(*TemplateInfo) error,
 	baseImportStrings []string,
-	fileSuffix string,
+	fileToOutputFilename func(*File) (string, error),
 ) *generator {
 	var baseImports []*GoPackage
 	for _, pkgpath := range baseImportStrings {
@@ -76,7 +74,7 @@ func newGenerator(
 		tmpl,
 		templateInfoChecker,
 		baseImports,
-		fileSuffix,
+		fileToOutputFilename,
 	}
 }
 
@@ -94,10 +92,10 @@ func (g *generator) Generate(targets []*File) ([]*plugin_go.CodeGeneratorRespons
 		if err != nil {
 			return nil, fmt.Errorf("could not format go code: %v\n%s", err, code)
 		}
-		name := file.GetName()
-		ext := filepath.Ext(name)
-		base := strings.TrimSuffix(name, ext)
-		output := fmt.Sprintf("%s.%s", base, g.fileSuffix)
+		output, err := g.fileToOutputFilename(file)
+		if err != nil {
+			return nil, err
+		}
 		files = append(files, &plugin_go.CodeGeneratorResponse_File{
 			Name:    proto.String(output),
 			Content: proto.String(string(formatted)),

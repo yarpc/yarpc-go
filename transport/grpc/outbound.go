@@ -32,7 +32,6 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/bufferpool"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -132,9 +131,8 @@ func (o *Outbound) invoke(
 		return err
 	}
 
-	requestBuffer := bufferpool.Get()
-	defer bufferpool.Put(requestBuffer)
-	if _, err := requestBuffer.ReadFrom(request.Body); err != nil {
+	bytes, err := ioutil.ReadAll(request.Body)
+	if err != nil {
 		return err
 	}
 	fullMethod, err := procedureNameToFullMethod(request.Procedure)
@@ -177,7 +175,7 @@ func (o *Outbound) invoke(
 		grpcPeer.clientConn.Invoke(
 			metadata.NewOutgoingContext(ctx, md),
 			fullMethod,
-			requestBuffer.Bytes(),
+			bytes,
 			responseBody,
 			callOptions...,
 		),
@@ -229,9 +227,6 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 
 // CallStream implements transport.StreamOutbound#CallStream.
 func (o *Outbound) CallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
-	if _, ok := ctx.Deadline(); !ok {
-		return nil, yarpcerrors.InvalidArgumentErrorf("stream requests require a connection establishment timeout on the passed in context")
-	}
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, err
 	}
@@ -285,11 +280,7 @@ func (o *Outbound) stream(
 		return nil, err
 	}
 
-	// We use a different context for the lifetime of the stream and the time it
-	// took to establish a connection with the peer, setting the stream's
-	// context to context.Background() means the lifetime of this stream has no
-	// timeout.
-	streamCtx := metadata.NewOutgoingContext(context.Background(), md)
+	streamCtx := metadata.NewOutgoingContext(ctx, md)
 	clientStream, err := grpcPeer.clientConn.NewStream(
 		streamCtx,
 		&grpc.StreamDesc{

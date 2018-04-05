@@ -21,7 +21,6 @@
 package tchannel
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -81,9 +80,10 @@ func (c tchannelCall) Response() inboundCallResponse {
 
 // handler wraps a transport.UnaryHandler into a TChannel Handler.
 type handler struct {
-	existing map[string]tchannel.Handler
-	router   transport.Router
-	tracer   opentracing.Tracer
+	existing   map[string]tchannel.Handler
+	router     transport.Router
+	tracer     opentracing.Tracer
+	headerCase headerCase
 }
 
 func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
@@ -92,7 +92,7 @@ func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
 
 func (h handler) handle(ctx context.Context, call inboundCall) {
 	// you MUST close the responseWriter no matter what unless you have a tchannel.SystemError
-	responseWriter := newResponseWriter(call.Response(), call.Format())
+	responseWriter := newResponseWriter(call.Response(), call.Format(), h.headerCase)
 
 	err := h.callHandler(ctx, call, responseWriter)
 	if err != nil && !responseWriter.isApplicationError {
@@ -190,20 +190,22 @@ type responseWriter struct {
 	failedWith         error
 	format             tchannel.Format
 	headers            transport.Headers
-	buffer             *bytes.Buffer
+	buffer             *bufferpool.Buffer
 	response           inboundCallResponse
 	isApplicationError bool
+	headerCase         headerCase
 }
 
-func newResponseWriter(response inboundCallResponse, format tchannel.Format) *responseWriter {
+func newResponseWriter(response inboundCallResponse, format tchannel.Format, headerCase headerCase) *responseWriter {
 	return &responseWriter{
-		response: response,
-		format:   format,
+		response:   response,
+		format:     format,
+		headerCase: headerCase,
 	}
 }
 
 func (rw *responseWriter) AddHeaders(h transport.Headers) {
-	for k, v := range h.Items() {
+	for k, v := range h.OriginalItems() {
 		// TODO: is this considered a breaking change?
 		if isReservedHeaderKey(k) {
 			rw.failedWith = appendError(rw.failedWith, fmt.Errorf("cannot use reserved header key: %s", k))
@@ -244,7 +246,9 @@ func (rw *responseWriter) Close() error {
 			retErr = appendError(retErr, fmt.Errorf("SetApplicationError() failed: %v", err))
 		}
 	}
-	retErr = appendError(retErr, writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer))
+
+	headers := headerMap(rw.headers, rw.headerCase)
+	retErr = appendError(retErr, writeHeaders(rw.format, headers, nil, rw.response.Arg2Writer))
 
 	// Arg3Writer must be opened and closed regardless of if there is data
 	// However, if there is a system error, we do not want to do this
@@ -267,14 +271,15 @@ func getSystemError(err error) error {
 	if _, ok := err.(tchannel.SystemError); ok {
 		return err
 	}
-	status := tchannel.ErrCodeUnexpected
-	code := yarpcerrors.FromError(err).Code()
-	if code == yarpcerrors.CodeInvalidArgument || code == yarpcerrors.CodeUnimplemented {
-		status = tchannel.ErrCodeBadRequest
-	} else if code == yarpcerrors.CodeDeadlineExceeded {
-		status = tchannel.ErrCodeTimeout
+	if !yarpcerrors.IsStatus(err) {
+		return tchannel.NewSystemError(tchannel.ErrCodeUnexpected, err.Error())
 	}
-	return tchannel.NewSystemError(status, err.Error())
+	status := yarpcerrors.FromError(err)
+	tchannelCode, ok := _codeToTChannelCode[status.Code()]
+	if !ok {
+		tchannelCode = tchannel.ErrCodeUnexpected
+	}
+	return tchannel.NewSystemError(tchannelCode, status.Message())
 }
 
 func appendError(left error, right error) error {

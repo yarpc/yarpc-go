@@ -1,14 +1,12 @@
-hash: 2ae2256c1070f8aaa397564451e9bc13affcd87e33ee50b94d95fbff4c4dcb9a
-updated: 2017-11-27T16:51:06.196113099-05:00
+hash: d5feb657f754428789806e021da6d3ebc63f38bf2517d4e5ec2ab925e9946344
+updated: 2018-04-04T15:10:37.503480469-07:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
-  repo: git://git.apache.org/thrift.git
-  vcs: git
   subpackages:
   - lib/go/thrift
 - name: github.com/beorn7/perks
-  version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
+  version: 3a771d992973f24aa725d07868b467d1ddfceafb
   subpackages:
   - quantile
 - name: github.com/crossdock/crossdock-go
@@ -17,7 +15,7 @@ imports:
   - assert
   - require
 - name: github.com/davecgh/go-spew
-  version: ecdeabc65495df2dec95d7c4a4c3e021903035e5
+  version: 8991bc29aa16c548c550c7ff78260e27b9ab7c73
   subpackages:
   - spew
 - name: github.com/facebookgo/clock
@@ -36,7 +34,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 1e59b77b52bf8e4b449a57e6f79f21226d571845
+  version: e09c5db296004fbe3f74490e84dcd62c3c5ddb1b
   subpackages:
   - proto
   - ptypes
@@ -56,7 +54,7 @@ imports:
   - log
   - mocktracer
 - name: github.com/pmezard/go-difflib
-  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
   - difflib
 - name: github.com/prometheus/client_golang
@@ -69,38 +67,38 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 2e54d0b93cba2fd133edc32211dcc32c06ef72ca
+  version: 38c53a9f4bfcd932d1b00bfc65e256a7fba6b37a
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: a6e9df898b1336106c743392c48ee0b71f5c4efa
+  version: 780932d4fbbe0e69b84c34c20f5c8d0981e109ea
   subpackages:
+  - internal/util
+  - nfs
   - xfs
 - name: github.com/stretchr/testify
-  version: 2aa2c176b9dab406a6970f6a55f513e8a8c8b18f
+  version: c679ae2cc0cb27ec3293fea7e254e47386f05d69
   subpackages:
   - assert
   - require
 - name: github.com/uber-go/atomic
-  version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
+  version: 8474b86a5a6f79c443ce4b2992817ff32cf208b8
+  subpackages:
+  - utils
 - name: github.com/uber-go/mapdecode
   version: 718b4994083e432669f44a00174c5f1bcdb1434d
   subpackages:
   - internal/mapstructure
 - name: github.com/uber-go/tally
-  version: 95078a8f10668bd1fa73ae46761cdc58d25436b8
-  subpackages:
-  - m3
-  - m3/customtransports
-  - m3/thrift
-  - m3/thriftudp
+  version: 522328b48efad0c6034dba92bf39228694e9d31f
 - name: github.com/uber/jaeger-client-go
-  version: ff3efa227b65e419701a4f48985379ca106a89e7
+  version: c107110d057826281414cb964f167bce5be17588
   subpackages:
   - internal/baggage
   - internal/spanlog
+  - internal/throttler
   - log
   - thrift-gen/agent
   - thrift-gen/jaeger
@@ -108,7 +106,7 @@ imports:
   - thrift-gen/zipkincore
   - utils
 - name: github.com/uber/tchannel-go
-  version: 7bcb33f4bb908c21374f8bfdc9d4b1ebcbb8dab0
+  version: cc0c40929b0dbdb755b727a8c253de2b5d4af46b
   subpackages:
   - internal/argreader
   - json
@@ -127,9 +125,11 @@ imports:
 - name: go.uber.org/atomic
   version: 8474b86a5a6f79c443ce4b2992817ff32cf208b8
 - name: go.uber.org/dig
-  version: a752dd97d0e0718ba977eaaca94a23a4d28b7a08
+  version: d100de9c8cc8358591507951141bc107713ba671
+  subpackages:
+  - internal/digreflect
 - name: go.uber.org/fx
-  version: a47f1657ce04f3d82db1ef230ffbb292b15af0ee
+  version: 35bf66c87beb2c8ec1a68cf00b54542e2d169c0b
   subpackages:
   - fxtest
   - internal/fxlog
@@ -137,8 +137,14 @@ imports:
   - internal/lifecycle
 - name: go.uber.org/multierr
   version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
+- name: go.uber.org/net/metrics
+  version: 1e19de5b971489a45d178e12a0f72a78c70e300e
+  subpackages:
+  - bucket
+  - push
+  - tallypush
 - name: go.uber.org/thriftrw
-  version: bce7fd589d505915f56a7901d8c143e1625e085c
+  version: 6216e5bb19132c14e979cf9c62abae6f022a0c0d
   subpackages:
   - envelope
   - internal/envelope
@@ -146,13 +152,13 @@ imports:
   - internal/frame
   - internal/goast
   - internal/multiplex
-  - internal/semver
   - plugin
   - plugin/api
   - protocol
   - protocol/binary
   - ptr
   - thriftreflect
+  - thrifttest
   - version
   - wire
 - name: go.uber.org/zap
@@ -165,7 +171,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 80e70a3f7765a5661a179fd8399b4db2c72646fb
+  version: b3c676e531a6dc479fa1b35ac961c13f5e2b4d2e
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -182,34 +188,36 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: a204229cd828a74741ee7b5da9bf4794497f85ed
+  version: 1d206c9fa8975fb4cf00df1dc8bf3283dc24ba0e
   repo: https://github.com/golang/sys
 - name: golang.org/x/text
-  version: 88f656faf3f37f690df1a32515b479415e1a6769
+  version: 2cb43934f0eece38629746959acc633cba083fe4
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 6d70fb2e85323e81c89374331d3d2b93304faa36
+  version: ac136b6c2db7c4d43955e4bc7174db36dc0539c0
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 7f0da29060c682909f650ad8ed4e515bd74fa12a
+  version: 35de2414665fc36f56b72d982c5af480d86de5ab
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 5a9f7b402fe85096d2e1d0383435ee1876e863d0
+  version: 6b51017f791ae1cfbec89c52efdf444b13b550ef
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
+  - balancer/base
   - balancer/roundrobin
   - codes
   - connectivity
   - credentials
   - encoding
+  - encoding/proto
   - grpclb/grpc_lb_v1/messages
   - grpclog
   - internal
@@ -225,20 +233,16 @@ imports:
   - tap
   - transport
 - name: gopkg.in/yaml.v2
-  version: 287cf08546ab5e7e37d55a84f7ed3fd1db036de5
+  version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
 testImports:
 - name: github.com/codahale/hdrhistogram
   version: 3a0bb77429bd3a61596f5e8a3172445844342120
-- name: github.com/golang/lint
-  version: 6aaf7c34af0f4c36a57e0c429bace4d706d8e931
-  subpackages:
-  - golint
 - name: github.com/kisielk/errcheck
-  version: b1445a9dd8285a50c6d1661d16f0a9ceb08125f7
+  version: 8050dd7cc11578becd8622667107bb21a7baf451
 - name: github.com/kisielk/gotool
-  version: d6ce6262d87e3a4e153e86023ff56ae771554a41
+  version: 80517062f582ea3340cd4baf70e86d539ae7d84d
 - name: github.com/uber/jaeger-lib
-  version: c48167d9cae5887393dd5e61efd06a4a48b7fbb3
+  version: 4267858c0679cd4e47cefed8d7f70fd386cfb567
   subpackages:
   - metrics
 - name: github.com/wadey/gocovmerge
@@ -248,7 +252,12 @@ testImports:
   subpackages:
   - parallel-exec
   - update-license
+- name: golang.org/x/lint
+  version: 85993ffd0a6cd043291f3f63d45d656d97b165bd
+  repo: https://github.com/golang/lint
+  subpackages:
+  - golint
 - name: honnef.co/go/tools
-  version: 376b3b58b9e4def403181ee2fd3d4cc7de8375ae
+  version: 57ee65dc7ff868f8fe21064b05f9e744a73bc9ab
   subpackages:
   - cmd/staticcheck

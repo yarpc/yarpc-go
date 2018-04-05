@@ -207,15 +207,8 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	if treq == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil")
 	}
-	if err := o.once.WaitUntilRunning(ctx); err != nil {
-		return nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "error waiting for http unary outbound to start for service: %s", treq.Service)
-	}
 
-	start := time.Now()
-	deadline, _ := ctx.Deadline()
-	ttl := deadline.Sub(start)
-
-	return o.call(ctx, treq, start, ttl)
+	return o.call(ctx, treq)
 }
 
 // CallOneway makes a oneway request
@@ -223,15 +216,8 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 	if treq == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil")
 	}
-	if err := o.once.WaitUntilRunning(ctx); err != nil {
-		return nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "error waiting for http oneway outbound to start for service: %s", treq.Service)
-	}
 
-	start := time.Now()
-	deadline, _ := ctx.Deadline()
-	ttl := deadline.Sub(start)
-
-	_, err := o.call(ctx, treq, start, ttl)
+	_, err := o.call(ctx, treq)
 	if err != nil {
 		return nil, err
 	}
@@ -239,74 +225,33 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 	return time.Now(), nil
 }
 
-func (o *Outbound) call(ctx context.Context, treq *transport.Request, start time.Time, ttl time.Duration) (*transport.Response, error) {
-	p, onFinish, err := o.getPeerForRequest(ctx, treq)
+func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
+	start := time.Now()
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return nil, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing context deadline")
+	}
+	ttl := deadline.Sub(start)
+
+	hreq, err := o.createRequest(treq)
 	if err != nil {
 		return nil, err
 	}
+	hreq.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
 
-	resp, err := o.callWithPeer(ctx, treq, start, ttl, p)
-
-	// Call the onFinish method right before returning (with the error from call with peer)
-	onFinish(err)
-	return resp, err
-}
-
-func (o *Outbound) callWithPeer(
-	ctx context.Context,
-	treq *transport.Request,
-	start time.Time,
-	ttl time.Duration,
-	p *httpPeer,
-) (*transport.Response, error) {
-	req, err := o.createRequest(p, treq)
+	hreq = o.withCoreHeaders(hreq, treq, ttl)
+	hreq = hreq.WithContext(ctx)
+	response, err := o.roundTrip(hreq, treq, start)
 	if err != nil {
 		return nil, err
 	}
-
-	req.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
-	ctx, req, span, err := o.withOpentracingSpan(ctx, req, treq, start)
-	if err != nil {
-		return nil, err
-	}
-	defer span.Finish()
-	req = o.withCoreHeaders(req, treq, ttl)
-
-	response, err := p.transport.client.Do(req.WithContext(ctx))
-
-	if err != nil {
-		// Workaround borrowed from ctxhttp until
-		// https://github.com/golang/go/issues/17711 is resolved.
-		select {
-		case <-ctx.Done():
-			err = ctx.Err()
-		default:
-		}
-
-		span.SetTag("error", true)
-		span.LogFields(opentracinglog.String("event", err.Error()))
-		if err == context.DeadlineExceeded {
-			end := time.Now()
-			return nil, yarpcerrors.Newf(
-				yarpcerrors.CodeDeadlineExceeded,
-				"client timeout for procedure %q of service %q after %v",
-				treq.Procedure, treq.Service, end.Sub(start))
-		}
-
-		// Note that the connection may have been lost so the peer connection
-		// maintenance loop resumes probing for availability.
-		p.OnDisconnected()
-
-		return nil, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "unknown error from http client: %s", err.Error())
-	}
-
-	span.SetTag("http.status_code", response.StatusCode)
 
 	tres := &transport.Response{
 		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, transport.NewHeaders()),
 		Body:             response.Body,
 		ApplicationError: response.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus,
 	}
+
 	bothResponseError := response.Header.Get(BothResponseErrorHeader) == AcceptTrue
 	if bothResponseError && o.bothResponseError {
 		if response.StatusCode >= 300 {
@@ -337,9 +282,8 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Reques
 	return hpPeer, onFinish, nil
 }
 
-func (o *Outbound) createRequest(p *httpPeer, treq *transport.Request) (*http.Request, error) {
+func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error) {
 	newURL := *o.urlTemplate
-	newURL.Host = p.HostPort()
 	return http.NewRequest("POST", newURL.String(), treq.Body)
 }
 
@@ -443,6 +387,128 @@ func getYARPCErrorFromResponse(response *http.Response, bothResponseError bool) 
 		response.Header.Get(ErrorNameHeader),
 		strings.TrimSuffix(contents, "\n"),
 	)
+}
+
+// RoundTrip implements the http.RoundTripper interface, making a YARPC HTTP outbound suitable as a
+// Transport when constructing an HTTP Client. An HTTP client is suitable only for relative paths to
+// a single outbound service. The HTTP outbound overrides the host:port portion of the URL of the
+// provided request.
+//
+// Sample usage:
+//
+//  client := http.Client{Transport: outbound}
+//
+// Thereafter use the Golang standard library HTTP to send requests with this client.
+//
+//  ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+//  defer cancel()
+//  req, err := http.NewRequest("GET", "http://example.com/", nil /* body */)
+//  req = req.WithContext(ctx)
+//  res, err := client.Do(req)
+//
+// All requests must have a deadline on the context.
+// The peer chooser for raw HTTP requests will receive a YARPC transport.Request with no body.
+func (o *Outbound) RoundTrip(hreq *http.Request) (*http.Response, error) {
+	return o.roundTrip(hreq, nil /* treq */, time.Now())
+}
+
+func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start time.Time) (*http.Response, error) {
+	ctx := hreq.Context()
+
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return nil, yarpcerrors.Newf(
+			yarpcerrors.CodeInvalidArgument,
+			"missing context deadline")
+	}
+	ttl := deadline.Sub(start)
+
+	// When sending requests through the RoundTrip method, we construct the
+	// transport request from the HTTP headers as if it were an inbound
+	// request.
+	// The API for setting transport metadata for an outbound request when
+	// using the go stdlib HTTP client is to use headers as the YAPRC HTTP
+	// transport header conventions.
+	if treq == nil {
+		treq = &transport.Request{
+			Caller:          hreq.Header.Get(CallerHeader),
+			Service:         hreq.Header.Get(ServiceHeader),
+			Encoding:        transport.Encoding(hreq.Header.Get(EncodingHeader)),
+			Procedure:       hreq.Header.Get(ProcedureHeader),
+			ShardKey:        hreq.Header.Get(ShardKeyHeader),
+			RoutingKey:      hreq.Header.Get(RoutingKeyHeader),
+			RoutingDelegate: hreq.Header.Get(RoutingDelegateHeader),
+			Headers:         applicationHeaders.FromHTTPHeaders(hreq.Header, transport.Headers{}),
+		}
+	}
+
+	if err := o.once.WaitUntilRunning(ctx); err != nil {
+		return nil, intyarpcerrors.AnnotateWithInfo(
+			yarpcerrors.FromError(err),
+			"error waiting for HTTP outbound to start for service: %s",
+			treq.Service)
+	}
+
+	ctx, hreq, span, err := o.withOpentracingSpan(ctx, hreq, treq, start)
+	if err != nil {
+		return nil, err
+	}
+	defer span.Finish()
+
+	p, onFinish, err := o.getPeerForRequest(ctx, treq)
+	if err != nil {
+		return nil, err
+	}
+
+	hres, err := o.doWithPeer(ctx, hreq, treq, start, ttl, p)
+	// Call the onFinish method before returning (with the error from call with peer)
+	onFinish(err)
+	if err != nil {
+		span.SetTag("error", true)
+		span.LogFields(opentracinglog.String("event", err.Error()))
+		return nil, err
+	}
+
+	span.SetTag("http.status_code", hres.StatusCode)
+	return hres, err
+}
+
+func (o *Outbound) doWithPeer(
+	ctx context.Context,
+	hreq *http.Request,
+	treq *transport.Request,
+	start time.Time,
+	ttl time.Duration,
+	p *httpPeer,
+) (*http.Response, error) {
+	hreq.URL.Host = p.HostPort()
+
+	response, err := o.transport.client.Do(hreq.WithContext(ctx))
+
+	if err != nil {
+		// Workaround borrowed from ctxhttp until
+		// https://github.com/golang/go/issues/17711 is resolved.
+		select {
+		case <-ctx.Done():
+			err = ctx.Err()
+		default:
+		}
+		if err == context.DeadlineExceeded {
+			end := time.Now()
+			return nil, yarpcerrors.Newf(
+				yarpcerrors.CodeDeadlineExceeded,
+				"client timeout for procedure %q of service %q after %v",
+				treq.Procedure, treq.Service, end.Sub(start))
+		}
+
+		// Note that the connection may have been lost so the peer connection
+		// maintenance loop resumes probing for availability.
+		p.OnDisconnected()
+
+		return nil, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "unknown error from http client: %s", err.Error())
+	}
+
+	return response, nil
 }
 
 // Introspect returns basic status about this outbound.

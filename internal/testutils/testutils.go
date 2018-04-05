@@ -99,12 +99,11 @@ type ClientInfo struct {
 // The server dispatcher will be brought up using all TransportTypes and with the serviceName.
 // The client dispatcher will be brought up using the given TransportType for Unary, HTTP for
 // Oneway, and the serviceName with a "-client" suffix.
-func WithClientInfo(serviceName string, procedures []transport.Procedure, transportType TransportType, f func(*ClientInfo) error) (err error) {
-	dispatcherConfig, err := NewDispatcherConfig(serviceName)
-	if err != nil {
-		return err
+func WithClientInfo(serviceName string, procedures []transport.Procedure, transportType TransportType, logger *zap.Logger, f func(*ClientInfo) error) (err error) {
+	if logger == nil {
+		logger = zap.NewNop()
 	}
-	logger, err := zap.NewDevelopment()
+	dispatcherConfig, err := NewDispatcherConfig(serviceName)
 	if err != nil {
 		return err
 	}

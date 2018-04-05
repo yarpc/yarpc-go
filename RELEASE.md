@@ -73,7 +73,7 @@ This document outlines how to create a release of yarpc-go
     This will get tested by the build for master anyways.
 
 9.  Go to <https://github.com/yarpc/yarpc-go/tags> and edit the release notes
-    of the new tag.  Copy the changelog entries for this release int the
+    of the new tag.  Copy the changelog entries for this release in the
     release notes and set the name of the release to the version number
     (`v$VERSION`).
 
@@ -89,7 +89,7 @@ This document outlines how to create a release of yarpc-go
 
     ```diff
     +## [Unreleased]
-    +-   No changes yet.
+    +- No changes yet.
     +
      ## [1.21.0] - 2017-10-23
     ```

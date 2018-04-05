@@ -37,13 +37,18 @@ import (
 )
 
 type transportOptions struct {
-	keepAlive           time.Duration
-	maxIdleConnsPerHost int
-	connTimeout         time.Duration
-	connBackoffStrategy backoffapi.Strategy
-	tracer              opentracing.Tracer
-	buildClient         func(*transportOptions) *http.Client
-	logger              *zap.Logger
+	keepAlive             time.Duration
+	maxIdleConns          int
+	maxIdleConnsPerHost   int
+	idleConnTimeout       time.Duration
+	disableKeepAlives     bool
+	disableCompression    bool
+	responseHeaderTimeout time.Duration
+	connTimeout           time.Duration
+	connBackoffStrategy   backoffapi.Strategy
+	tracer                opentracing.Tracer
+	buildClient           func(*transportOptions) *http.Client
+	logger                *zap.Logger
 }
 
 var defaultTransportOptions = transportOptions{
@@ -75,6 +80,14 @@ func KeepAlive(t time.Duration) TransportOption {
 	}
 }
 
+// MaxIdleConns controls the maximum number of idle (keep-alive) connections
+// across all hosts. Zero means no limit.
+func MaxIdleConns(i int) TransportOption {
+	return func(options *transportOptions) {
+		options.maxIdleConns = i
+	}
+}
+
 // MaxIdleConnsPerHost specifies the number of idle (keep-alive) HTTP
 // connections that will be maintained per host.
 // Existing idle connections will be used instead of creating new HTTP
@@ -84,6 +97,45 @@ func KeepAlive(t time.Duration) TransportOption {
 func MaxIdleConnsPerHost(i int) TransportOption {
 	return func(options *transportOptions) {
 		options.maxIdleConnsPerHost = i
+	}
+}
+
+// IdleConnTimeout is the maximum amount of time an idle (keep-alive)
+// connection will remain idle before closing itself.
+// Zero means no limit.
+func IdleConnTimeout(t time.Duration) TransportOption {
+	return func(options *transportOptions) {
+		options.idleConnTimeout = t
+	}
+}
+
+// DisableKeepAlives prevents re-use of TCP connections between different HTTP
+// requests.
+func DisableKeepAlives() TransportOption {
+	return func(options *transportOptions) {
+		options.disableKeepAlives = true
+	}
+}
+
+// DisableCompression if true prevents the Transport from requesting
+// compression with an "Accept-Encoding: gzip" request header when the Request
+// contains no existing Accept-Encoding value. If the Transport requests gzip
+// on its own and gets a gzipped response, it's transparently decoded in the
+// Response.Body. However, if the user explicitly requested gzip it is not
+// automatically uncompressed.
+func DisableCompression() TransportOption {
+	return func(options *transportOptions) {
+		options.disableCompression = true
+	}
+}
+
+// ResponseHeaderTimeout if non-zero specifies the amount of time to wait for
+// a server's response headers after fully writing the request (including its
+// body, if any).  This time does not include the time to read the response
+// body.
+func ResponseHeaderTimeout(t time.Duration) TransportOption {
+	return func(options *transportOptions) {
+		options.responseHeaderTimeout = t
 	}
 }
 
@@ -170,7 +222,12 @@ func buildHTTPClient(options *transportOptions) *http.Client {
 			}).Dial,
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
+			MaxIdleConns:          options.maxIdleConns,
 			MaxIdleConnsPerHost:   options.maxIdleConnsPerHost,
+			IdleConnTimeout:       options.idleConnTimeout,
+			DisableKeepAlives:     options.disableKeepAlives,
+			DisableCompression:    options.disableCompression,
+			ResponseHeaderTimeout: options.responseHeaderTimeout,
 		},
 	}
 }

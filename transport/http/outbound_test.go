@@ -373,7 +373,7 @@ func TestCallWithoutStarting(t *testing.T) {
 		},
 	)
 
-	assert.Equal(t, yarpcerrors.FailedPreconditionErrorf("error waiting for http unary outbound to start for service: service: context finished while waiting for instance to start: context deadline exceeded"), err)
+	assert.Equal(t, yarpcerrors.FailedPreconditionErrorf("error waiting for HTTP outbound to start for service: service: context finished while waiting for instance to start: context deadline exceeded"), err)
 }
 
 func TestGetPeerForRequestErr(t *testing.T) {
@@ -445,4 +445,11 @@ func TestNoRequest(t *testing.T) {
 
 	_, err = out.CallOneway(context.Background(), nil)
 	assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil"), err)
+}
+
+func TestOutboundNoDeadline(t *testing.T) {
+	out := NewTransport().NewSingleOutbound("http://foo-host:8080")
+
+	_, err := out.call(context.Background(), &transport.Request{})
+	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing context deadline"), err)
 }

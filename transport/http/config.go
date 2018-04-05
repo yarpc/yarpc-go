@@ -81,7 +81,11 @@ func (ts *transportSpec) Spec() yarpcconfig.TransportSpec {
 //  transports:
 //    http:
 //      keepAlive: 30s
+//      maxIdleConns: 2
 //      maxIdleConnsPerHost: 2
+//      disableKeepAlives: false
+//      disableCompression: false
+//      responseHeaderTimeout: 0s
 //      connTimeout: 500ms
 //      connBackoff:
 //        exponential:
@@ -93,10 +97,15 @@ func (ts *transportSpec) Spec() yarpcconfig.TransportSpec {
 type TransportConfig struct {
 	// Specifies the keep-alive period for all HTTP clients. This field is
 	// optional.
-	KeepAlive           time.Duration       `config:"keepAlive"`
-	MaxIdleConnsPerHost int                 `config:"maxIdleConnsPerHost"`
-	ConnTimeout         time.Duration       `config:"connTimeout"`
-	ConnBackoff         yarpcconfig.Backoff `config:"connBackoff"`
+	KeepAlive             time.Duration       `config:"keepAlive"`
+	MaxIdleConns          int                 `config:"maxIdleConns"`
+	MaxIdleConnsPerHost   int                 `config:"maxIdleConnsPerHost"`
+	IdleConnTimeout       time.Duration       `config:"idleConnTimeout"`
+	DisableKeepAlives     bool                `config:"disableKeepAlives"`
+	DisableCompression    bool                `config:"disableCompression"`
+	ResponseHeaderTimeout time.Duration       `config:"responseHeaderTimeout"`
+	ConnTimeout           time.Duration       `config:"connTimeout"`
+	ConnBackoff           yarpcconfig.Backoff `config:"connBackoff"`
 }
 
 func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit) (transport.Transport, error) {
@@ -109,8 +118,20 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 	if tc.KeepAlive > 0 {
 		options.keepAlive = tc.KeepAlive
 	}
+	if tc.MaxIdleConns > 0 {
+		options.maxIdleConns = tc.MaxIdleConns
+	}
 	if tc.MaxIdleConnsPerHost > 0 {
 		options.maxIdleConnsPerHost = tc.MaxIdleConnsPerHost
+	}
+	if tc.DisableKeepAlives {
+		options.disableKeepAlives = true
+	}
+	if tc.DisableCompression {
+		options.disableCompression = true
+	}
+	if tc.ResponseHeaderTimeout > 0 {
+		options.responseHeaderTimeout = tc.ResponseHeaderTimeout
 	}
 	if tc.ConnTimeout > 0 {
 		options.connTimeout = tc.ConnTimeout
