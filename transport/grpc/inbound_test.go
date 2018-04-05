@@ -38,7 +38,10 @@ func TestInboundMechanics(t *testing.T) {
 
 	inbound = NewTransport().NewInbound(listener)
 	inbound.SetRouter(newTestRouter(nil))
+	assert.Nil(t, inbound.Addr())
 	assert.NoError(t, inbound.Start())
 	assert.True(t, inbound.IsRunning())
+	assert.NotNil(t, inbound.Addr())
 	assert.NoError(t, inbound.Stop())
+	assert.Nil(t, inbound.Addr())
 }

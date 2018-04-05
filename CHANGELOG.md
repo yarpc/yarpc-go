@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - The YARPC HTTP outbound now implements http.RoundTripper.
   This makes YARPC's load balancers, other peer selectors, and peer
   availability management accessible to REST call sites.
+- Adds `Addr()` on `grpc.Inbound` to expose the address the server is listening
+  on when the server is running.
 
 ## [1.29.1] - 2018-04-04
 ### Fixed
