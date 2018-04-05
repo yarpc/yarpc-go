@@ -1,0 +1,38 @@
+version: '3'
+services:
+  yarpc-go-1.9:
+    build:
+      context: .
+      dockerfile: Dockerfile.1.9
+    network_mode: "host"
+    environment:
+      - TEST_TIME_SCALE=5
+      - THIS_CHUNK=${BUILDKITE_PARALLEL_JOB}
+      - TOTAL_CHUNKS=${BUILDKITE_PARALLEL_JOB_COUNT}
+      - CODECOV_TOKEN
+      - CI=true
+      - BUILDKITE
+      - BUILDKITE_BRANCH
+      - BUILDKITE_BUILD_NUMBER
+      - BUILDKITE_JOB_ID
+      - BUILDKITE_BUILD_URL
+      - BUILDKITE_PROJECT_SLUG
+      - BUILDKITE_COMMIT
+  yarpc-go-1.10:
+    build:
+      context: .
+      dockerfile: Dockerfile.1.10
+    network_mode: "host"
+    environment:
+      - TEST_TIME_SCALE=5
+      - THIS_CHUNK=${BUILDKITE_PARALLEL_JOB}
+      - TOTAL_CHUNKS=${BUILDKITE_PARALLEL_JOB_COUNT}
+      - CODECOV_TOKEN
+      - CI=true
+      - BUILDKITE
+      - BUILDKITE_BRANCH
+      - BUILDKITE_BUILD_NUMBER
+      - BUILDKITE_JOB_ID
+      - BUILDKITE_BUILD_URL
+      - BUILDKITE_PROJECT_SLUG
+      - BUILDKITE_COMMIT
