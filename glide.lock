@@ -1,5 +1,5 @@
 hash: d5feb657f754428789806e021da6d3ebc63f38bf2517d4e5ec2ab925e9946344
-updated: 2018-04-04T15:10:37.503480469-07:00
+updated: 2018-04-06T10:59:05.548371928-07:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -30,7 +30,7 @@ imports:
   - sortkeys
   - types
 - name: github.com/golang/mock
-  version: 13f360950a79f5864a972c786a10a50e44b69541
+  version: c34cdb4725f4c3844d095133c6e40e448b86589b
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
@@ -136,7 +136,7 @@ imports:
   - internal/fxreflect
   - internal/lifecycle
 - name: go.uber.org/multierr
-  version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
+  version: a3d1fc1f1316d4132fc61f4ea1159ae0613fb474
 - name: go.uber.org/net/metrics
   version: 1e19de5b971489a45d178e12a0f72a78c70e300e
   subpackages:
@@ -144,7 +144,7 @@ imports:
   - push
   - tallypush
 - name: go.uber.org/thriftrw
-  version: 6216e5bb19132c14e979cf9c62abae6f022a0c0d
+  version: 43dfafd7bb1c99f0460d645a1959b73f6dfa536f
   subpackages:
   - envelope
   - internal/envelope
@@ -188,7 +188,7 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: 1d206c9fa8975fb4cf00df1dc8bf3283dc24ba0e
+  version: 3b87a42e500a6dc65dae1a55d0b641295971163e
   repo: https://github.com/golang/sys
 - name: golang.org/x/text
   version: 2cb43934f0eece38629746959acc633cba083fe4
@@ -203,11 +203,11 @@ imports:
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 35de2414665fc36f56b72d982c5af480d86de5ab
+  version: aae13d27a44d62f039eeeb93e74e893886673932
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 6b51017f791ae1cfbec89c52efdf444b13b550ef
+  version: d89cded64628466c4ab532d1f0ba5c220459ebe8
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
