@@ -47,9 +47,9 @@ func newPeer(address string, t *Transport) (*grpcPeer, error) {
 	clientConn, err := grpc.Dial(
 		address,
 		grpc.WithInsecure(),
-		grpc.WithCodec(customCodec{}),
 		grpc.WithUserAgent(UserAgent),
 		grpc.WithDefaultCallOptions(
+			grpc.CallCustomCodec(customCodec{}),
 			grpc.MaxCallRecvMsgSize(t.options.clientMaxRecvMsgSize),
 			grpc.MaxCallSendMsgSize(t.options.clientMaxSendMsgSize),
 		),
