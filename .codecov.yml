@@ -47,6 +47,7 @@ ignore:
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/weatherfx/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/weatherserver/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/weathertest/
+ - /internal/cover/
  - /internal/crossdock/crossdockpb/
  - /internal/crossdock/thrift/echo/
  - /internal/crossdock/thrift/echo/echoclient/

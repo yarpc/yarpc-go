@@ -1,5 +1,6 @@
 IGNORE_DIRS="\
   internal/examples \
+  internal/cover \
   internal/service-test \
   internal/testutils"
 
