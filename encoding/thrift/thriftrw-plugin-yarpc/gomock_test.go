@@ -62,7 +62,7 @@ func TestMockClients(t *testing.T) {
 				c.Hello(ctx)
 			},
 			wantStatus:     Fatal,
-			wantErrorsLike: []string{"no matching expected call"},
+			wantErrorsLike: []string{"Unexpected call"},
 		},
 		{
 			desc: "extends empty: expected:",
@@ -80,7 +80,7 @@ func TestMockClients(t *testing.T) {
 			},
 			wantStatus: Fatal,
 			wantErrorsLike: []string{
-				"missing call(s) to [*extendemptytest.MockClient.Hello(is anything)]",
+				"missing call(s) to [*extendemptytest.MockClient.Hello(is anything)",
 				"aborting test due to missing call(s)",
 			},
 		},
@@ -91,7 +91,7 @@ func TestMockClients(t *testing.T) {
 				c.Healthy(ctx)
 			},
 			wantStatus:     Fatal,
-			wantErrorsLike: []string{"no matching expected call"},
+			wantErrorsLike: []string{"Unexpected call"},
 		},
 		{
 			desc: "extends only: expected:",
@@ -111,7 +111,7 @@ func TestMockClients(t *testing.T) {
 			},
 			wantStatus: Fatal,
 			wantErrorsLike: []string{
-				"missing call(s) to [*extendonlytest.MockClient.Healthy(is anything)]",
+				"missing call(s) to [*extendonlytest.MockClient.Healthy(is anything)",
 				"aborting test due to missing call(s)",
 			},
 		},
@@ -137,7 +137,7 @@ func TestMockClients(t *testing.T) {
 				c.Healthy(ctx)
 			},
 			wantStatus:     Fatal,
-			wantErrorsLike: []string{"no matching expected call"},
+			wantErrorsLike: []string{"Unexpected call"},
 		},
 		{
 			desc: "store: healthy: expected call",
@@ -189,7 +189,7 @@ func TestMockClients(t *testing.T) {
 				c.Forget(ctx, ptr.String("hello"))
 			},
 			wantStatus:     Fatal,
-			wantErrorsLike: []string{"no matching expected call"},
+			wantErrorsLike: []string{"Unexpected call"},
 		},
 		{
 			desc: "store: forget: expected",
