@@ -21,6 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// Package transporttest is a generated GoMock package.
 package transporttest
 
 import (
@@ -47,42 +48,42 @@ func NewMockTransport(ctrl *gomock.Controller) *MockTransport {
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (_m *MockTransport) EXPECT() *MockTransportMockRecorder {
-	return _m.recorder
+func (m *MockTransport) EXPECT() *MockTransportMockRecorder {
+	return m.recorder
 }
 
 // IsRunning mocks base method
-func (_m *MockTransport) IsRunning() bool {
-	ret := _m.ctrl.Call(_m, "IsRunning")
+func (m *MockTransport) IsRunning() bool {
+	ret := m.ctrl.Call(m, "IsRunning")
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // IsRunning indicates an expected call of IsRunning
-func (_mr *MockTransportMockRecorder) IsRunning() *gomock.Call {
-	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "IsRunning", reflect.TypeOf((*MockTransport)(nil).IsRunning))
+func (mr *MockTransportMockRecorder) IsRunning() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRunning", reflect.TypeOf((*MockTransport)(nil).IsRunning))
 }
 
 // Start mocks base method
-func (_m *MockTransport) Start() error {
-	ret := _m.ctrl.Call(_m, "Start")
+func (m *MockTransport) Start() error {
+	ret := m.ctrl.Call(m, "Start")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Start indicates an expected call of Start
-func (_mr *MockTransportMockRecorder) Start() *gomock.Call {
-	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Start", reflect.TypeOf((*MockTransport)(nil).Start))
+func (mr *MockTransportMockRecorder) Start() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockTransport)(nil).Start))
 }
 
 // Stop mocks base method
-func (_m *MockTransport) Stop() error {
-	ret := _m.ctrl.Call(_m, "Stop")
+func (m *MockTransport) Stop() error {
+	ret := m.ctrl.Call(m, "Stop")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Stop indicates an expected call of Stop
-func (_mr *MockTransportMockRecorder) Stop() *gomock.Call {
-	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Stop", reflect.TypeOf((*MockTransport)(nil).Stop))
+func (mr *MockTransportMockRecorder) Stop() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockTransport)(nil).Stop))
 }
