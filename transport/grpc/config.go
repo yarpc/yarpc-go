@@ -71,6 +71,7 @@ type TransportConfig struct {
 	ServerMaxSendMsgSize int                 `config:"serverMaxSendMsgSize"`
 	ClientMaxRecvMsgSize int                 `config:"clientMaxRecvMsgSize"`
 	ClientMaxSendMsgSize int                 `config:"clientMaxSendMsgSize"`
+	ClientCertFilePath   string              `config:"clientCertFilePath"`
 	Backoff              yarpcconfig.Backoff `config:"backoff"`
 }
 
@@ -143,6 +144,9 @@ func (t *transportSpec) buildTransport(transportConfig *TransportConfig, _ *yarp
 	}
 	if transportConfig.ClientMaxSendMsgSize > 0 {
 		options = append(options, ClientMaxSendMsgSize(transportConfig.ClientMaxSendMsgSize))
+	}
+	if transportConfig.ClientCertFilePath != "" {
+		options = append(options, ClientCertFilePath(transportConfig.ClientCertFilePath))
 	}
 	backoffStrategy, err := transportConfig.Backoff.Strategy()
 	if err != nil {

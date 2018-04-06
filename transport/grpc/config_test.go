@@ -85,12 +85,14 @@ func TestTransportSpecUnknownOption(t *testing.T) {
 func TestTransportSpec(t *testing.T) {
 	type attrs map[string]interface{}
 
+	// we use wantInbound to test TransportOptions as well
 	type wantInbound struct {
 		Address              string
 		ServerMaxRecvMsgSize int
 		ServerMaxSendMsgSize int
 		ClientMaxRecvMsgSize int
 		ClientMaxSendMsgSize int
+		ClientCertFilePath   string
 	}
 
 	type wantOutbound struct {
@@ -209,6 +211,17 @@ func TestTransportSpec(t *testing.T) {
 				ClientMaxSendMsgSize: 8192,
 			},
 		},
+		{
+			desc: "inbound and transport with client cert file path",
+			transportCfg: attrs{
+				"clientCertFilePath": "/path/to/cert",
+			},
+			inboundCfg: attrs{"address": ":54572"},
+			wantInbound: &wantInbound{
+				Address:            ":54572",
+				ClientCertFilePath: "/path/to/cert",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -267,6 +280,11 @@ func TestTransportSpec(t *testing.T) {
 					assert.Equal(t, tt.wantInbound.ClientMaxSendMsgSize, inbound.t.options.clientMaxSendMsgSize)
 				} else {
 					assert.Equal(t, defaultClientMaxSendMsgSize, inbound.t.options.clientMaxSendMsgSize)
+				}
+				if tt.wantInbound.ClientCertFilePath != "" {
+					assert.Equal(t, tt.wantInbound.ClientCertFilePath, inbound.t.options.clientCertFilePath)
+				} else {
+					assert.Empty(t, inbound.t.options.clientCertFilePath)
 				}
 			} else {
 				assert.Len(t, cfg.Inbounds, 0)
