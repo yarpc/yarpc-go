@@ -45,13 +45,16 @@ func main() {
 }
 
 func do() error {
+	flagSet := flag.NewFlagSet("client", flag.ExitOnError)
 	outboundName := ""
-	flag.StringVar(
+	flagSet.StringVar(
 		&outboundName,
 		"outbound", "", "name of the outbound to use (http/tchannel/grpc)",
 	)
 
-	flag.Parse()
+	if err := flagSet.Parse(os.Args[1:]); err != nil {
+		return err
+	}
 
 	httpTransport := http.NewTransport()
 	tchannelTransport, err := tchannel.NewChannelTransport(tchannel.ServiceName("keyvalue-client"))

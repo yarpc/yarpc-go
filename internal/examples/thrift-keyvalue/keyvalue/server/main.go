@@ -27,6 +27,7 @@ import (
 	"log"
 	"net"
 	gohttp "net/http"
+	"os"
 	"strings"
 	"sync"
 
@@ -40,7 +41,10 @@ import (
 	"go.uber.org/yarpc/x/yarpcmeta"
 )
 
-var flagInbound = flag.String("inbound", "", "name of the inbound to use (http/tchannel/grpc)")
+var (
+	flagSet     = flag.NewFlagSet("server", flag.ExitOnError)
+	flagInbound = flagSet.String("inbound", "", "name of the inbound to use (http/tchannel/grpc)")
+)
 
 type handler struct {
 	sync.RWMutex
@@ -73,7 +77,9 @@ func main() {
 }
 
 func do() error {
-	flag.Parse()
+	if err := flagSet.Parse(os.Args[1:]); err != nil {
+		return err
+	}
 	var inbound transport.Inbound
 	switch strings.ToLower(*flagInbound) {
 	case "http":

@@ -32,17 +32,20 @@ import (
 )
 
 var (
-	flagDir            = flag.String("dir", "", "The relative directory to operate from, defaults to current directory")
-	flagConfigFilePath = flag.String("file", "service-test.yaml", "The configuration file to use relative to the context directory")
-	flagTimeout        = flag.Duration("timeout", 5*time.Second, "The time to wait until timing out")
-	flagNoVerifyOutput = flag.Bool("no-validate-output", false, "Do not validate output and just run the commands")
-	flagDebug          = flag.Bool("debug", false, "Log debug information")
+	flagSet            = flag.NewFlagSet("service-test", flag.ExitOnError)
+	flagDir            = flagSet.String("dir", "", "The relative directory to operate from, defaults to current directory")
+	flagConfigFilePath = flagSet.String("file", "service-test.yaml", "The configuration file to use relative to the context directory")
+	flagTimeout        = flagSet.Duration("timeout", 5*time.Second, "The time to wait until timing out")
+	flagNoVerifyOutput = flagSet.Bool("no-validate-output", false, "Do not validate output and just run the commands")
+	flagDebug          = flagSet.Bool("debug", false, "Log debug information")
 
 	errSignal = errors.New("signal")
 )
 
 func main() {
-	flag.Parse()
+	if err := flagSet.Parse(os.Args[1:]); err != nil {
+		log.Fatal(err)
+	}
 	if err := do(
 		*flagDir,
 		*flagConfigFilePath,

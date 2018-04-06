@@ -37,7 +37,10 @@ import (
 	"go.uber.org/yarpc/transport/http"
 )
 
-var flagWait = flag.Bool("wait", false, "Wait for a signal to exit")
+var (
+	flagSet  = flag.NewFlagSet("thrift-hello", flag.ExitOnError)
+	flagWait = flagSet.Bool("wait", false, "Wait for a signal to exit")
+)
 
 func main() {
 	if err := do(); err != nil {
@@ -46,7 +49,9 @@ func main() {
 }
 
 func do() error {
-	flag.Parse()
+	if err := flagSet.Parse(os.Args[1:]); err != nil {
+		return err
+	}
 	// configure a YARPC dispatcher for the service "hello",
 	// expose the service over an HTTP inbound on port 8086,
 	// and configure outbound calls to service "hello" over HTTP port 8086 as well

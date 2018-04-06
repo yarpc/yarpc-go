@@ -41,12 +41,17 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var flagOutbound = flag.String("outbound", "tchannel", "The outbound to use for unary calls")
-var flagGoogleGRPC = flag.Bool("google-grpc", false, "Use google grpc for outbound KeyValue calls")
-var flagBlock = flag.Bool("block", false, "Block and run the server forever instead of running the client")
+var (
+	flagSet        = flag.NewFlagSet("protobuf", flag.ExitOnError)
+	flagOutbound   = flagSet.String("outbound", "tchannel", "The outbound to use for unary calls")
+	flagGoogleGRPC = flagSet.Bool("google-grpc", false, "Use google grpc for outbound KeyValue calls")
+	flagBlock      = flagSet.Bool("block", false, "Block and run the server forever instead of running the client")
+)
 
 func main() {
-	flag.Parse()
+	if err := flagSet.Parse(os.Args[1:]); err != nil {
+		log.Fatal(err)
+	}
 	if err := do(); err != nil {
 		log.Fatal(err)
 	}
