@@ -68,11 +68,9 @@ testImport:
   repo: https://github.com/golang/lint
 - package: github.com/kisielk/errcheck
 - package: github.com/kisielk/gotool
-- package: github.com/wadey/gocovmerge
 - package: go.uber.org/tools
   version: master
   subpackages:
-  - parallel-exec
   - update-license
 - package: honnef.co/go/tools
   subpackages:
