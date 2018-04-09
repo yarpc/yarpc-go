@@ -70,7 +70,7 @@ func run(packages []string) error {
 		return fmt.Errorf("could not determine current directory: %v", err)
 	}
 
-	rootPkg, err := build.ImportDir(cwd, 0 /* import mode */)
+	rootPkg, err := build.ImportDir(cwd, build.ImportMode(0))
 	if err != nil {
 		return errNoGoPackage
 	}
