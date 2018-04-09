@@ -49,7 +49,7 @@ import (
 
 func main() {
 	log.SetFlags(0)
-	if err := run(); err != nil {
+	if err := run(os.Args[1:]); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -60,8 +60,7 @@ var (
 	errNoImportPath = fmt.Errorf("could not determine import path for the Go package in the current directory")
 )
 
-func run() error {
-	packages := os.Args[1:]
+func run(packages []string) error {
 	if len(packages) == 0 {
 		return errUsage
 	}
