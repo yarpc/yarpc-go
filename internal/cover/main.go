@@ -112,7 +112,7 @@ func run(packages []string) error {
 	testArgs = append(testArgs, packages...)
 	cmd := exec.Command("go", testArgs...)
 	cmd.Stdout = os.Stdout
-	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("go test failed: %v", err)
 	}
