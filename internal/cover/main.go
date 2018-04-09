@@ -173,7 +173,7 @@ func filterIgnoredPackages(rootDir, rootImportPath, src, dst string) (err error)
 			_, err = os.Stat(filepath.Join(rootDir, relPath, ".nocover"))
 
 			// cover a package if .nocover doesn't exist
-			cover = err != nil
+			cover = os.IsNotExist(err)
 			shouldCover[importPath] = cover
 		}
 
