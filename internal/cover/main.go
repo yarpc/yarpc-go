@@ -97,11 +97,7 @@ func run(packages []string) error {
 		return fmt.Errorf("failed to create temporary file: %v", err)
 	}
 	covFileName := covFile.Name()
-	defer func() {
-		if err := os.Remove(covFileName); err != nil {
-			log.Printf("WARN: failed to remove %q: %v", covFileName, err)
-		}
-	}()
+	defer deleteFile(covFileName)
 
 	if err := covFile.Close(); err != nil {
 		return fmt.Errorf("failed to close %q: %v", covFileName, err)
@@ -196,5 +192,11 @@ func filterIgnoredPackages(rootDir, rootImportPath, src, dst string) (err error)
 func closeFile(n string, c io.Closer) {
 	if err := c.Close(); err != nil {
 		log.Printf("WARN: Failed to close %q: %v", n, err)
+	}
+}
+
+func deleteFile(f string) {
+	if err := os.Remove(f); err != nil {
+		log.Printf("WARN: failed to remove %q: %v", f, err)
 	}
 }
