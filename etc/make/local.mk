@@ -133,7 +133,7 @@ test: $(THRIFTRW) __eval_chunked_packages ## run chunked tests
 
 .PHONY: cover
 cover: $(THRIFTRW) __eval_chunked_packages ## run chunked tests and output code coverage
-	PATH=$(BIN):$$PATH ./etc/bin/cover.sh $(CHUNKED_PACKAGES)
+	PATH=$(BIN):$$PATH go run ./internal/cover/main.go $(CHUNKED_PACKAGES)
 	go tool cover -html=coverage.txt -o cover.html
 
 .PHONY: codecov
