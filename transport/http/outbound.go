@@ -238,13 +238,23 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 		return nil, err
 	}
 	hreq.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
-
-	hreq = o.withCoreHeaders(hreq, treq, ttl)
-	hreq = hreq.WithContext(ctx)
-	response, err := o.roundTrip(hreq, treq, start)
+	ctx, hreq, span, err := o.withOpentracingSpan(ctx, hreq, treq, start)
 	if err != nil {
 		return nil, err
 	}
+	defer span.Finish()
+
+	hreq = o.withCoreHeaders(hreq, treq, ttl)
+	hreq = hreq.WithContext(ctx)
+
+	response, err := o.roundTrip(hreq, treq, start)
+	if err != nil {
+		span.SetTag("error", true)
+		span.LogFields(opentracinglog.String("event", err.Error()))
+		return nil, err
+	}
+
+	span.SetTag("http.status_code", response.StatusCode)
 
 	tres := &transport.Response{
 		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, transport.NewHeaders()),
@@ -408,6 +418,8 @@ func getYARPCErrorFromResponse(response *http.Response, bothResponseError bool) 
 //
 // All requests must have a deadline on the context.
 // The peer chooser for raw HTTP requests will receive a YARPC transport.Request with no body.
+//
+// OpenTracing information must be added manually, before this call, to support context propagation.
 func (o *Outbound) RoundTrip(hreq *http.Request) (*http.Response, error) {
 	return o.roundTrip(hreq, nil /* treq */, time.Now())
 }
@@ -449,12 +461,6 @@ func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start 
 			treq.Service)
 	}
 
-	ctx, hreq, span, err := o.withOpentracingSpan(ctx, hreq, treq, start)
-	if err != nil {
-		return nil, err
-	}
-	defer span.Finish()
-
 	p, onFinish, err := o.getPeerForRequest(ctx, treq)
 	if err != nil {
 		return nil, err
@@ -463,13 +469,6 @@ func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start 
 	hres, err := o.doWithPeer(ctx, hreq, treq, start, ttl, p)
 	// Call the onFinish method before returning (with the error from call with peer)
 	onFinish(err)
-	if err != nil {
-		span.SetTag("error", true)
-		span.LogFields(opentracinglog.String("event", err.Error()))
-		return nil, err
-	}
-
-	span.SetTag("http.status_code", hres.StatusCode)
 	return hres, err
 }
 
