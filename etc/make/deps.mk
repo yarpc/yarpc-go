@@ -133,3 +133,7 @@ deps: predeps glide $(GEN_BINS) $(EXTRA_BINS) ## install all dependencies
 .PHONY: glide
 glide: $(GLIDE) ## install glide dependencies
 	PATH=$$PATH:$(BIN) glide install
+
+.PHONY: glide-up
+glide-up: $(GLIDE) ## update glide dependencies
+	PATH=$$PATH:$(BIN) glide up

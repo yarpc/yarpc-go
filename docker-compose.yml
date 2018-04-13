@@ -1,5 +1,6 @@
 version: '3'
 services:
+
   yarpc-go-1.9:
     build:
       context: .
@@ -13,11 +14,15 @@ services:
       - CI=true
       - BUILDKITE
       - BUILDKITE_BRANCH
+      - BUILDKITE_BUILD_CREATOR
+      - BUILDKITE_BUILD_CREATOR_EMAIL
       - BUILDKITE_BUILD_NUMBER
-      - BUILDKITE_JOB_ID
       - BUILDKITE_BUILD_URL
-      - BUILDKITE_PROJECT_SLUG
       - BUILDKITE_COMMIT
+      - BUILDKITE_JOB_ID
+      - BUILDKITE_PROJECT_SLUG
+      - BUILDKITE_REPO
+
   yarpc-go-1.10:
     build:
       context: .
@@ -31,8 +36,17 @@ services:
       - CI=true
       - BUILDKITE
       - BUILDKITE_BRANCH
+      - BUILDKITE_BUILD_CREATOR
+      - BUILDKITE_BUILD_CREATOR_EMAIL
       - BUILDKITE_BUILD_NUMBER
-      - BUILDKITE_JOB_ID
       - BUILDKITE_BUILD_URL
-      - BUILDKITE_PROJECT_SLUG
       - BUILDKITE_COMMIT
+      - BUILDKITE_JOB_ID
+      - BUILDKITE_PROJECT_SLUG
+      - BUILDKITE_REPO
+      - SSH_AUTH_SOCK=/ssh-agent
+    volumes:
+      - $SSH_AUTH_SOCK:/ssh-agent
+    # We mount the host's SSH Agent unix socket at /ssh-agent in the container
+    # and tell the container where to find it so that the container can
+    # actually push commits.
