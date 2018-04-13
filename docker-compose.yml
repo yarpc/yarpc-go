@@ -1,5 +1,6 @@
 version: '3'
 services:
+
   yarpc-go-1.9:
     build:
       context: .
@@ -18,6 +19,7 @@ services:
       - BUILDKITE_BUILD_URL
       - BUILDKITE_PROJECT_SLUG
       - BUILDKITE_COMMIT
+
   yarpc-go-1.10:
     build:
       context: .
@@ -36,3 +38,6 @@ services:
       - BUILDKITE_BUILD_URL
       - BUILDKITE_PROJECT_SLUG
       - BUILDKITE_COMMIT
+      - SSH_AUTH_SOCK=/ssh-agent
+    volumes:
+      - $SSH_AUTH_SOCK:/ssh-agent
