@@ -1,5 +1,5 @@
 hash: f42c5f4769c7a1714be5ee8c287f0cd3526afa2f8c1554a7e43a5a619ba53990
-updated: 2018-04-06T11:55:43.72291436-07:00
+updated: 2018-04-13T22:49:26.836311183Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -129,7 +129,7 @@ imports:
   subpackages:
   - internal/digreflect
 - name: go.uber.org/fx
-  version: 35bf66c87beb2c8ec1a68cf00b54542e2d169c0b
+  version: ed7e99834c0a7099c6cb6434fe5a7b007ac00db9
   subpackages:
   - fxtest
   - internal/fxlog
@@ -171,7 +171,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: b3c676e531a6dc479fa1b35ac961c13f5e2b4d2e
+  version: 61147c48b25b599e5b561d2e9c4f3e1ef489ca41
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -207,7 +207,7 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: d89cded64628466c4ab532d1f0ba5c220459ebe8
+  version: d11072e7ca9811b1100b80ca0269ac831f06d024
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
