@@ -157,19 +157,29 @@ fi
 echo "--- Creating a pull request using branch $PR_BRANCH"
 git push "$REMOTE" HEAD:"refs/heads/$PR_BRANCH"
 
-MESSAGE=$(echo 'I tried to update the dependencies but either the generated
+# This needs to be a function so that we can pipe into it from the python
+# command with the heredoc without making an overly long line. That is, we
+# want to avoid,
+#
+#   python - foo bar <<EOF | curl --user ... -X POST [very long line]
+create_pull_request()
+{
+  curl --user "$GITHUB_USER:$GITHUB_TOKEN" -X POST \
+    --data @- "https://api.github.com/repos/$GITHUB_REPO/pulls"
+}
+
+python - "$PR_BRANCH" "$BRANCH" <<EOF | create_pull_request
+import sys, json
+
+print(json.dumps({
+  "title": "Update dependencies on $(now)",
+  "head": sys.argv[1],
+  "base": sys.argv[2],
+  "maintainer_can_modify": True,
+  "body": """I tried to update the dependencies but either the generated
 code changed or some tests failed, so I need someone to validate or fix this
 change.
 
-Thanks!' | perl -p -e 's/\n/\\n/g')
-
-curl --user "$GITHUB_USER:$GITHUB_TOKEN" -X POST \
-  --data @- "https://api.github.com/repos/$GITHUB_REPO/pulls" <<EOF
-{
-  "title": "Update dependencies on $(now)",
-  "head": "$PR_BRANCH",
-  "base": "$BRANCH",
-  "body": "$MESSAGE",
-  "maintainer_can_modify": true
-}
+Thanks!""",
+}))
 EOF
