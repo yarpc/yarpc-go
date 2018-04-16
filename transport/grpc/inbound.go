@@ -40,7 +40,7 @@ var (
 // Inbound is a grpc transport.Inbound.
 type Inbound struct {
 	once     *lifecycle.Once
-	lock     sync.Mutex
+	lock     sync.RWMutex
 	t        *Transport
 	listener net.Listener
 	options  *inboundOptions
@@ -78,6 +78,21 @@ func (i *Inbound) SetRouter(router transport.Router) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 	i.router = router
+}
+
+// Addr returns the address on which the server is listening.
+//
+// Returns nil if Start has not been called yet
+func (i *Inbound) Addr() net.Addr {
+	i.lock.RLock()
+	defer i.lock.RUnlock()
+	// i.server is set in start, so checking against nil checks
+	// if Start has been called
+	// we check if i.listener is nil just for safety
+	if i.server == nil || i.listener == nil {
+		return nil
+	}
+	return i.listener.Addr()
 }
 
 // Transports implements transport.Inbound#Transports.
@@ -128,6 +143,7 @@ func (i *Inbound) stop() error {
 	if i.server != nil {
 		i.server.GracefulStop()
 	}
+	i.server = nil
 	return nil
 }
 
