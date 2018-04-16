@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
 
 # This script will update the dependencies for the branch that it was executed
 # with. If the update didn't cause any generated code to change and the tests
@@ -30,8 +32,6 @@
 #   BUILDKITE_REPO (optional)
 #
 # See https://buildkite.com/docs/builds/environment-variables for what they mean.
-
-set -euo pipefail
 
 if [ -z "${GITHUB_USER:-}" ] || [ -z "${GITHUB_TOKEN:-}" ]; then
   echo "GITHUB_USER or GITHUB_TOKEN is unset."
