@@ -12,6 +12,8 @@
 #   GitHub username used to authenticate requests.
 # GITHUB_TOKEN (required)
 #   GitHub token to authenticate $GITHUB_USER.
+# GITHUB_EMAIL (optional)
+#   Email address of the GitHub user.
 # GITHUB_REPO (optional)
 #   GitHub repository in the form $user/$repo. This will usually be inferred
 #   automatically from BUILDKITE_REPO.
@@ -73,9 +75,12 @@ if ! git config user.name >/dev/nul; then
 fi
 
 if ! git config user.email >/dev/null; then
-  FALLBACK_EMAIL="$GITHUB_USER@users.noreply.github.com"
-  export GIT_AUTHOR_EMAIL="${BUILDKITE_BUILD_CREATOR_EMAIL:-$FALLBACK_EMAIL}"
-  export GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
+  EMAIL="${BUILDKITE_BUILD_CREATOR_EMAIL:-${GITHUB_EMAIL:-}}"
+  if [ -z "$EMAIL" ]; then
+    EMAIL="$GITHUB_USER@users.noreply.github.com"
+  fi
+  export GIT_AUTHOR_EMAIL="$EMAIL"
+  export GIT_COMMITTER_EMAIL="$EMAIL"
 fi
 
 # When pushing over ssh, automatically add the host to known_hosts instead of
