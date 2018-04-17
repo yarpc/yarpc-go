@@ -1,5 +1,5 @@
 hash: f42c5f4769c7a1714be5ee8c287f0cd3526afa2f8c1554a7e43a5a619ba53990
-updated: 2018-04-06T11:55:43.72291436-07:00
+updated: 2018-04-17T17:27:02.146569607Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -94,7 +94,7 @@ imports:
 - name: github.com/uber-go/tally
   version: 522328b48efad0c6034dba92bf39228694e9d31f
 - name: github.com/uber/jaeger-client-go
-  version: c107110d057826281414cb964f167bce5be17588
+  version: 3205d4aabc55c1a13b1e48d3db793bc8cd37bd16
   subpackages:
   - internal/baggage
   - internal/spanlog
@@ -129,7 +129,7 @@ imports:
   subpackages:
   - internal/digreflect
 - name: go.uber.org/fx
-  version: 35bf66c87beb2c8ec1a68cf00b54542e2d169c0b
+  version: ed7e99834c0a7099c6cb6434fe5a7b007ac00db9
   subpackages:
   - fxtest
   - internal/fxlog
@@ -162,7 +162,7 @@ imports:
   - version
   - wire
 - name: go.uber.org/zap
-  version: 35aad584952c3e7020db7b839f6b102de6271f89
+  version: eeedf312bc6c57391d84767a4cd413f02a917974
   subpackages:
   - buffer
   - internal/bufferpool
@@ -171,12 +171,13 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: b3c676e531a6dc479fa1b35ac961c13f5e2b4d2e
+  version: 8d16fa6dc9a85c1cd3ed24ad08ff21cf94f10888
   repo: https://github.com/golang/net
   subpackages:
   - bpf
   - context
   - context/ctxhttp
+  - http/httpguts
   - http2
   - http2/hpack
   - idna
@@ -207,7 +208,7 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: d89cded64628466c4ab532d1f0ba5c220459ebe8
+  version: d11072e7ca9811b1100b80ca0269ac831f06d024
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
