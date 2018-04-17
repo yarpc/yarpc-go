@@ -50,22 +50,23 @@ fi
 
 AUTHOR="$GITHUB_USER"
 EMAIL=""
-if [ -z "${BUILDKITE_BUILD_CREATOR_EMAIL:-}" ]; then
-  if [ -z "${GITHUB_EMAIL:-}" ]; then
+if [ -z "${GITHUB_EMAIL:-}" ]; then
+  if [ -z "${BUILDKITE_BUILD_CREATOR_EMAIL:-}" ]; then
     echo "Either GITHUB_EMAIL or BUILDKITE_BUILD_CREATOR_EMAIL is required."
     exit 1
+  elif [ -z "${BUILDKITE_BUILD_CREATOR:-}" ]; then
+    echo "BUILDKITE_BUILD_CREATOR is required if BUILDKITE_BUILD_CREATOR_EMAIL was provided."
+    exit 1
   else
-    EMAIL="$GITHUB_EMAIL"
+    # If we're using the build creator's email address, we should use their name
+    # too.
+    AUTHOR="$BUILDKITE_BUILD_CREATOR"
+    EMAIL="$BUILDKITE_BUILD_CREATOR_EMAIL"
   fi
-elif [ -z "${BUILDKITE_BUILD_CREATOR:-}" ]; then
-  echo "BUILDKITE_BUILD_CREATOR is required if BUILDKITE_BUILD_CREATOR_EMAIL was provided."
-  exit 1
 else
-  # If we're using the build creator's email address, we should use their name
-  # too.
-  AUTHOR="$BUILDKITE_BUILD_CREATOR"
-  EMAIL="$BUILDKITE_BUILD_CREATOR_EMAIL"
+  EMAIL="$GITHUB_EMAIL"
 fi
+
 
 export GIT_AUTHOR_NAME="$AUTHOR"
 export GIT_COMMITTER_NAME="$AUTHOR"
