@@ -32,6 +32,10 @@ IFS=$'\n\t'
 #   BUILDKITE_REPO (optional)
 #
 # See https://buildkite.com/docs/builds/environment-variables for what they mean.
+#
+# Either BUILDKITE_BUILD_CREATOR_EMAIL or GITHUB_EMAIL must be present. If
+# BUILDKITE_BUILD_CREATOR_EMAIL was specified, BUILDKITE_BUILD_CREATOR must
+# also be present.
 
 if [ -z "${GITHUB_USER:-}" ] || [ -z "${GITHUB_TOKEN:-}" ]; then
   echo "GITHUB_USER or GITHUB_TOKEN is unset."
@@ -43,6 +47,30 @@ if [ -z "${BUILDKITE_BRANCH:-}" ]; then
   echo "BUILDKITE_BRANCH is unset. Is this running on BuildKite?"
   exit 1
 fi
+
+AUTHOR="$GITHUB_USER"
+EMAIL=""
+if [ -z "${BUILDKITE_BUILD_CREATOR_EMAIL:-}" ]; then
+  if [ -z "${GITHUB_EMAIL:-}" ]; then
+    echo "Either GITHUB_EMAIL or BUILDKITE_BUILD_CREATOR_EMAIL is required."
+    exit 1
+  else
+    EMAIL="$GITHUB_EMAIL"
+  fi
+elif [ -z "${BUILDKITE_BUILD_CREATOR:-}" ]; then
+  echo "BUILDKITE_BUILD_CREATOR is required if BUILDKITE_BUILD_CREATOR_EMAIL was provided."
+  exit 1
+else
+  # If we're using the build creator's email address, we should use their name
+  # too.
+  AUTHOR="$BUILDKITE_BUILD_CREATOR"
+  EMAIL="$BUILDKITE_BUILD_CREATOR_EMAIL"
+fi
+
+export GIT_AUTHOR_NAME="$AUTHOR"
+export GIT_COMMITTER_NAME="$AUTHOR"
+export GIT_AUTHOR_EMAIL="$EMAIL"
+export GIT_COMMITTER_EMAIL="$EMAIL"
 
 REMOTE="${GIT_REMOTE:-origin}"
 BRANCH="$BUILDKITE_BRANCH"
@@ -63,24 +91,6 @@ if [ -z "$GITHUB_REPO" ]; then
       echo "You can set it explicitly if you're not running this from CI."
       exit 1
   esac
-fi
-
-# git needs a user.email and user.name to make new commits. If these are
-# unset, we set the corresponding environment variables. We use information
-# from BuildKite when available and fall back to GitHub user information if
-# it's unavailable.
-if ! git config user.name >/dev/nul; then
-  export GIT_AUTHOR_NAME="${BUILDKITE_BUILD_CREATOR:-$GITHUB_USER}"
-  export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"
-fi
-
-if ! git config user.email >/dev/null; then
-  EMAIL="${BUILDKITE_BUILD_CREATOR_EMAIL:-${GITHUB_EMAIL:-}}"
-  if [ -z "$EMAIL" ]; then
-    EMAIL="$GITHUB_USER@users.noreply.github.com"
-  fi
-  export GIT_AUTHOR_EMAIL="$EMAIL"
-  export GIT_COMMITTER_EMAIL="$EMAIL"
 fi
 
 # When pushing over ssh, automatically add the host to known_hosts instead of
