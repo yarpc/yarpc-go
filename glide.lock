@@ -1,5 +1,5 @@
 hash: f42c5f4769c7a1714be5ee8c287f0cd3526afa2f8c1554a7e43a5a619ba53990
-updated: 2018-04-17T17:27:02.146569607Z
+updated: 2018-04-18T15:07:22.07283611Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -171,7 +171,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 8d16fa6dc9a85c1cd3ed24ad08ff21cf94f10888
+  version: d41e8174641f662c5a2d1c7a5f9e828788eb8706
   repo: https://github.com/golang/net
   subpackages:
   - bpf
