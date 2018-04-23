@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   availability management accessible to REST call sites.
 - Adds `Addr()` on `grpc.Inbound` to expose the address the server is listening
   on when the server is running.
+- Adds Transport property to transport.Request and transport.RequestMeta
+  Metrics will now be tagged with the transport of calls to handlers
 
 ## [1.29.1] - 2018-04-04
 ### Fixed

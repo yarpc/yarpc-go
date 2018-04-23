@@ -45,6 +45,7 @@ func TestMiddlewareLogging(t *testing.T) {
 	req := &transport.Request{
 		Caller:          "caller",
 		Service:         "service",
+		Transport:       "",
 		Encoding:        "raw",
 		Procedure:       "procedure",
 		Headers:         transport.NewHeaders().With("password", "super-secret"),
@@ -60,6 +61,7 @@ func TestMiddlewareLogging(t *testing.T) {
 		return []zapcore.Field{
 			zap.String("source", req.Caller),
 			zap.String("dest", req.Service),
+			zap.String("transport", unknownIfEmpty(req.Transport)),
 			zap.String("procedure", req.Procedure),
 			zap.String("encoding", string(req.Encoding)),
 			zap.String("routingKey", req.RoutingKey),
@@ -246,6 +248,7 @@ func TestMiddlewareMetrics(t *testing.T) {
 	req := &transport.Request{
 		Caller:    "caller",
 		Service:   "service",
+		Transport: "",
 		Encoding:  "raw",
 		Procedure: "procedure",
 		Body:      strings.NewReader("body"),
@@ -342,6 +345,7 @@ func getKey(req *transport.Request, direction string) (key []byte, free func()) 
 	d := digester.New()
 	d.Add(req.Caller)
 	d.Add(req.Service)
+	d.Add(req.Transport)
 	d.Add(string(req.Encoding))
 	d.Add(req.Procedure)
 	d.Add(req.RoutingKey)
@@ -355,6 +359,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 	req := &transport.Request{
 		Caller:          "caller",
 		Service:         "service",
+		Transport:       "",
 		Encoding:        "raw",
 		Procedure:       "procedure",
 		ShardKey:        "shard01",
@@ -366,6 +371,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 	expectedFields := []zapcore.Field{
 		zap.String("source", req.Caller),
 		zap.String("dest", req.Service),
+		zap.String("transport", "unknown"),
 		zap.String("procedure", req.Procedure),
 		zap.String("encoding", string(req.Encoding)),
 		zap.String("routingKey", req.RoutingKey),
@@ -413,6 +419,7 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 		&transport.Request{
 			Caller:          "caller",
 			Service:         "service",
+			Transport:       "",
 			Encoding:        "raw",
 			Procedure:       "procedure",
 			ShardKey:        "sk",
@@ -429,6 +436,7 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 	tags := metrics.Tags{
 		"dest":             "service",
 		"direction":        "inbound",
+		"transport":        "unknown",
 		"encoding":         "raw",
 		"procedure":        "procedure",
 		"routing_delegate": "rd",
@@ -473,6 +481,7 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 		&transport.Request{
 			Caller:          "caller",
 			Service:         "service",
+			Transport:       "",
 			Encoding:        "raw",
 			Procedure:       "procedure",
 			ShardKey:        "sk",
@@ -489,6 +498,7 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 	tags := metrics.Tags{
 		"dest":             "service",
 		"direction":        "inbound",
+		"transport":        "unknown",
 		"encoding":         "raw",
 		"procedure":        "procedure",
 		"routing_delegate": "rd",
@@ -498,6 +508,7 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 	errorTags := metrics.Tags{
 		"dest":             "service",
 		"direction":        "inbound",
+		"transport":        "unknown",
 		"encoding":         "raw",
 		"procedure":        "procedure",
 		"routing_delegate": "rd",

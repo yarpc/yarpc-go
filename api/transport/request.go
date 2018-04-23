@@ -38,6 +38,9 @@ type Request struct {
 	// The service refers to the canonical traffic group for the service.
 	Service string
 
+	// Name of the transport used for the call
+	Transport string
+
 	// Name of the encoding used for the request body.
 	Encoding Encoding
 
@@ -70,6 +73,7 @@ func (r *Request) ToRequestMeta() *RequestMeta {
 	return &RequestMeta{
 		Caller:          r.Caller,
 		Service:         r.Service,
+		Transport:       r.Transport,
 		Encoding:        r.Encoding,
 		Procedure:       r.Procedure,
 		Headers:         r.Headers,
@@ -154,6 +158,9 @@ type RequestMeta struct {
 	// The service refers to the canonical traffic group for the service.
 	Service string
 
+	// Name of the transport used for the call
+	Transport string
+
 	// Name of the encoding used for the request body.
 	Encoding Encoding
 
@@ -186,6 +193,7 @@ func (r *RequestMeta) ToRequest() *Request {
 	return &Request{
 		Caller:          r.Caller,
 		Service:         r.Service,
+		Transport:       r.Transport,
 		Encoding:        r.Encoding,
 		Procedure:       r.Procedure,
 		Headers:         r.Headers,

@@ -38,6 +38,7 @@ func TestEdgeNopFallbacks(t *testing.T) {
 	req := &transport.Request{
 		Caller:          "caller",
 		Service:         "service",
+		Transport:       "",
 		Encoding:        "raw",
 		Procedure:       "procedure",
 		ShardKey:        "sk",
@@ -71,4 +72,34 @@ func TestEdgeNopFallbacks(t *testing.T) {
 	e.latencies.Observe(0)
 	e.callerErrLatencies.Observe(0)
 	e.serverErrLatencies.Observe(0)
+}
+
+func TestUnknownIfEmpty(t *testing.T) {
+	tests := []struct {
+		transport string
+		expected  string
+	}{
+		{
+			expected: "unknown",
+		},
+		{
+			transport: "tchannel",
+			expected:  "tchannel",
+		},
+		{
+			transport: "http",
+			expected:  "http",
+		},
+		{
+			transport: "grpc",
+			expected:  "grpc",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.expected, func(t *testing.T) {
+			actual := unknownIfEmpty(tt.transport)
+			assert.Equal(t, tt.expected, actual, "expected: %s, got: %s", tt.transport, actual)
+
+		})
+	}
 }
