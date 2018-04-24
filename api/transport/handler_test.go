@@ -112,7 +112,9 @@ func TestDispatchOnewayHandlerWithPanic(t *testing.T) {
 	err := DispatchOnewayHandler(
 		context.Background(),
 		onewayHandlerFunc(handler),
-		nil)
+		nil,
+		zap.NewNop(),
+	)
 	expectMsg := fmt.Sprintf("panic: %s", msg)
 	assert.Equal(t, err.Error(), expectMsg)
 }
@@ -123,7 +125,7 @@ func TestDispatchStreamHandlerWithPanic(t *testing.T) {
 		panic(msg)
 	}
 
-	err := DispatchStreamHandler(streamHandlerFunc(handler), nil)
+	err := DispatchStreamHandler(streamHandlerFunc(handler), nil, zap.NewNop())
 	expectMsg := fmt.Sprintf("panic: %s", msg)
 	assert.Equal(t, err.Error(), expectMsg)
 }

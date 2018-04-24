@@ -130,18 +130,7 @@ func DispatchUnaryHandler(
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			if logger != nil {
-				logger.Error("Unary handler panicked",
-					zap.String("service", req.Service),
-					zap.String("procedue", req.Procedure),
-					zap.String("encoding", string(req.Encoding)),
-					zap.String("caller", req.Caller),
-					zap.Stack("stack"),
-				)
-			} else {
-				log.Printf("Unary handler panicked: %v\n%s", r, debug.Stack())
-			}
-			err = fmt.Errorf("panic: %v", r)
+			err = logPanic("Unary", logger, r, req.ToRequestMeta())
 		}
 	}()
 
@@ -164,11 +153,11 @@ func DispatchOnewayHandler(
 	ctx context.Context,
 	h OnewayHandler,
 	req *Request,
+	logger *zap.Logger,
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("Oneway handler panicked: %v\n%s", r, debug.Stack())
-			err = fmt.Errorf("panic: %v", r)
+			err = logPanic("Oneway", logger, r, req.ToRequestMeta())
 		}
 	}()
 
@@ -180,13 +169,30 @@ func DispatchOnewayHandler(
 func DispatchStreamHandler(
 	h StreamHandler,
 	stream *ServerStream,
+	logger *zap.Logger,
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("Stream handler panicked: %v\n%s", r, debug.Stack())
-			err = fmt.Errorf("panic: %v", r)
+			err = logPanic("Stream", logger, r, stream.Request().Meta)
 		}
 	}()
 
 	return h.HandleStream(stream)
+}
+
+func logPanic(rpcType string, logger *zap.Logger, recovered interface{}, req *RequestMeta) error {
+	err := fmt.Errorf("panic: %v", recovered)
+	if logger != nil {
+		logger.Error("Unary handler panicked",
+			zap.String("service", req.Service),
+			zap.String("procedue", req.Procedure),
+			zap.String("encoding", string(req.Encoding)),
+			zap.String("caller", req.Caller),
+			zap.Error(err),
+			zap.Stack("stack"),
+		)
+	} else {
+		log.Printf("%s handler panicked: %v\n%s", rpcType, recovered, debug.Stack())
+	}
+	return err
 }
