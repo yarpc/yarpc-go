@@ -35,7 +35,7 @@ the containing `x` package and their APIs will be locked.
 [mit-img]: http://img.shields.io/badge/License-MIT-blue.svg
 [mit]: https://github.com/yarpc/yarpc-go/blob/master/LICENSE
 
-[ci-img]: https://badge.buildkite.com/f7d8e675c4d5ee4f5c4e4c2e33ca03c5be9bde22b186750538.svg
+[ci-img]: https://badge.buildkite.com/f7d8e675c4d5ee4f5c4e4c2e33ca03c5be9bde22b186750538.svg?branch=master      
 [ci]: https://buildkite.com/uberopensource/yarpc-go
 
 [cov-img]: https://codecov.io/gh/yarpc/yarpc-go/branch/master/graph/badge.svg
