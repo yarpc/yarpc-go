@@ -183,7 +183,7 @@ func DispatchStreamHandler(
 func logPanic(rpcType string, logger *zap.Logger, recovered interface{}, req *RequestMeta) error {
 	err := fmt.Errorf("panic: %v", recovered)
 	if logger != nil {
-		logger.Error("Unary handler panicked",
+		logger.Error(fmt.Sprintf("%s handler panicked", rpcType),
 			zap.String("service", req.Service),
 			zap.String("procedue", req.Procedure),
 			zap.String("encoding", string(req.Encoding)),
