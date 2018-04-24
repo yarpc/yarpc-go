@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -95,7 +96,9 @@ func TestDispatchUnaryHandlerWithPanic(t *testing.T) {
 		unaryHandlerFunc(handler),
 		time.Now(),
 		&Request{},
-		nil)
+		nil,
+		zap.NewNop(),
+	)
 	expectMsg := fmt.Sprintf("panic: %s", msg)
 	assert.Equal(t, err.Error(), expectMsg)
 }

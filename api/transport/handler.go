@@ -131,7 +131,13 @@ func DispatchUnaryHandler(
 	defer func() {
 		if r := recover(); r != nil {
 			if logger != nil {
-				logger.Error("Unary handler panicked", zap.Any("transport.Request", r), zap.Any("stack", debug.Stack()))
+				logger.Error("Unary handler panicked",
+					zap.String("service", req.Service),
+					zap.String("procedue", req.Procedure),
+					zap.String("encoding", string(req.Encoding)),
+					zap.String("caller", req.Caller),
+					zap.Stack("stack"),
+				)
 			} else {
 				log.Printf("Unary handler panicked: %v\n%s", r, debug.Stack())
 			}
