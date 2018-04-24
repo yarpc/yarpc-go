@@ -29,6 +29,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -43,11 +44,8 @@ var (
 )
 
 type handler struct {
-	i *Inbound
-}
-
-func newHandler(i *Inbound) *handler {
-	return &handler{i: i}
+	i      *Inbound
+	logger *zap.Logger
 }
 
 func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error {
@@ -223,7 +221,7 @@ func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Req
 	if err := transport.ValidateRequestContext(ctx); err != nil {
 		return err
 	}
-	return transport.DispatchUnaryHandler(ctx, unaryHandler, time.Now(), transportRequest, responseWriter)
+	return transport.DispatchUnaryHandler(ctx, unaryHandler, time.Now(), transportRequest, responseWriter, h.logger)
 }
 
 func handlerErrorToGRPCError(err error, responseWriter *responseWriter) error {

@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -125,10 +126,15 @@ func DispatchUnaryHandler(
 	start time.Time,
 	req *Request,
 	resq ResponseWriter,
+	logger *zap.Logger,
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("Unary handler panicked: %v\n%s", r, debug.Stack())
+			if logger != nil {
+				logger.Error("Unary handler panicked", zap.Any("transport.Request", r), zap.Any("stack", debug.Stack()))
+			} else {
+				log.Printf("Unary handler panicked: %v\n%s", r, debug.Stack())
+			}
 			err = fmt.Errorf("panic: %v", r)
 		}
 	}()

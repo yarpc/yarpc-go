@@ -36,6 +36,7 @@ import (
 	"go.uber.org/yarpc/internal/iopool"
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
 )
 
 func popHeader(h http.Header, n string) string {
@@ -50,6 +51,7 @@ type handler struct {
 	tracer            opentracing.Tracer
 	grabHeaders       map[string]struct{}
 	bothResponseError bool
+	logger            *zap.Logger
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -144,7 +146,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	case transport.Unary:
 		defer span.Finish()
 
-		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)
+		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter, h.logger)
 
 	case transport.Oneway:
 		err = handleOnewayRequest(span, treq, spec.Oneway())
