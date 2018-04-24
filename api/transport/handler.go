@@ -191,8 +191,8 @@ func logPanic(rpcType string, logger *zap.Logger, recovered interface{}, req *Re
 			zap.Error(err),
 			zap.Stack("stack"),
 		)
-	} else {
-		log.Printf("%s handler panicked: %v\n%s", rpcType, recovered, debug.Stack())
+		return err
 	}
+	log.Printf("%s handler panicked: %v\n%s", rpcType, recovered, debug.Stack())
 	return err
 }
