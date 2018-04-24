@@ -66,11 +66,11 @@ This document outlines how to create a release of yarpc-go
     git push origin master "v$VERSION"
     ```
 
-8.  Go to <https://travis-ci.org/yarpc/yarpc-go/builds> and cancel the build
-    for `v$VERSION`.  If that Codecov build completes before the Codecov build
-    for master, the code coverage for master will not get updated because only
-    one branch gets updated per commit; this was verified with Codecov support.
-    This will get tested by the build for master anyways.
+8.  Go to <https://buildkite.com/uberopensource/yarpc-go/builds> and cancel the
+    build for `v$VERSION`.  If that Codecov build completes before the Codecov
+    build for master, the code coverage for master will not get updated because
+    only one branch gets updated per commit; this was verified with Codecov
+    support. This will get tested by the build for master anyways.
 
 9.  Go to <https://github.com/yarpc/yarpc-go/tags> and edit the release notes
     of the new tag.  Copy the changelog entries for this release in the
