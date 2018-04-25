@@ -4,18 +4,14 @@
 package fooserver
 
 import (
-	"context"
-	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/nameserver"
 )
 
 // Interface is the server-side interface for the Foo service.
 type Interface interface {
-	Foo(
-		ctx context.Context,
-	) error
+	nameserver.Interface
 }
 
 // New prepares an implementation of the Foo service for
@@ -24,46 +20,16 @@ type Interface interface {
 // 	handler := FooHandler{}
 // 	dispatcher.Register(fooserver.New(handler))
 func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
-	h := handler{impl}
+
 	service := thrift.Service{
-		Name: "Foo",
-		Methods: []thrift.Method{
-
-			thrift.Method{
-				Name: "foo",
-				HandlerSpec: thrift.HandlerSpec{
-
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.Foo),
-				},
-				Signature:    "Foo()",
-				ThriftModule: extends.ThriftModule,
-			},
-		},
+		Name:    "Foo",
+		Methods: []thrift.Method{},
 	}
 
-	procedures := make([]transport.Procedure, 0, 1)
+	procedures := make([]transport.Procedure, 0, 0)
+	procedures = append(procedures, nameserver.New(impl, opts...)...)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
 
 type handler struct{ impl Interface }
-
-func (h handler) Foo(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args extends.Foo_Foo_Args
-	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
-	}
-
-	err := h.impl.Foo(ctx)
-
-	hadError := err != nil
-	result, err := extends.Foo_Foo_Helper.WrapResponse(err)
-
-	var response thrift.Response
-	if err == nil {
-		response.IsApplicationError = hadError
-		response.Body = result
-	}
-	return response, err
-}

@@ -4,21 +4,16 @@
 package fooclient
 
 import (
-	"context"
-	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/nameclient"
 	"reflect"
 )
 
 // Interface is a client for the Foo service.
 type Interface interface {
-	Foo(
-		ctx context.Context,
-		opts ...yarpc.CallOption,
-	) error
+	nameclient.Interface
 }
 
 // New builds a new client for the Foo service.
@@ -30,6 +25,7 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 			Service:      "Foo",
 			ClientConfig: c,
 		}, opts...),
+		Interface: nameclient.New(c, opts...),
 	}
 }
 
@@ -42,27 +38,7 @@ func init() {
 }
 
 type client struct {
+	nameclient.Interface
+
 	c thrift.Client
-}
-
-func (c client) Foo(
-	ctx context.Context,
-	opts ...yarpc.CallOption,
-) (err error) {
-
-	args := extends.Foo_Foo_Helper.Args()
-
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
-
-	var result extends.Foo_Foo_Result
-	if err = result.FromWire(body); err != nil {
-		return
-	}
-
-	err = extends.Foo_Foo_Helper.UnwrapResponse(&result)
-	return
 }

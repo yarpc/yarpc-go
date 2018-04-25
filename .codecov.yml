@@ -47,14 +47,14 @@ ignore:
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/barfx/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/barserver/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/bartest/
- - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/bazclient/
- - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/bazfx/
- - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/bazserver/
- - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/baztest/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/fooclient/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/foofx/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/fooserver/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/footest/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/nameclient/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/namefx/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/nameserver/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/nametest/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/weatherclient/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/weatherfx/

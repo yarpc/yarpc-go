@@ -10,8 +10,8 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "extends",
 	Package:  "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends",
 	FilePath: "extends.thrift",
-	SHA1:     "7ed68b65ca286dce96de6f7b037130946ad04f0d",
+	SHA1:     "5dc89427890e0f8f94285fc648815882150591b9",
 	Raw:      rawIDL,
 }
 
-const rawIDL = "service Foo {\n\tvoid foo()\n}\nservice Bar extends Foo {\n\tvoid bar()\n}\nservice Baz extends Bar {\n\tvoid baz()\n}\n"
+const rawIDL = "service Name {\n\tstring name()\n}\nservice Foo extends Name {}\nservice Bar extends Foo {}\n"

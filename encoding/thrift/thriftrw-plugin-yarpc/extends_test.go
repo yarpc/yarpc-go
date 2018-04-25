@@ -20,34 +20,32 @@
 
 package main
 
-import "context"
+import (
+	"context"
+	"testing"
+
+	"go.uber.org/yarpc"
+)
+
+func TestExtendsService(t *testing.T) {
+	// Retrieve the call from context and assert
+	// that the service is the child service.
+}
+
+type nameHandler struct{}
+
+func (*nameHandler) Name(ctx context.Context) (string, error) {
+	return yarpc.CallFromContext(ctx).Service(), nil
+}
 
 type fooHandler struct{}
 
-func (*fooHandler) Foo(ctx context.Context) error {
-	return nil
+func (*fooHandler) Name(ctx context.Context) (string, error) {
+	return yarpc.CallFromContext(ctx).Service(), nil
 }
 
 type barHandler struct{}
 
-func (*barHandler) Foo(ctx context.Context) error {
-	return nil
-}
-
-func (*barHandler) Bar(ctx context.Context) error {
-	return nil
-}
-
-type bazHandler struct{}
-
-func (*bazHandler) Foo(ctx context.Context) error {
-	return nil
-}
-
-func (*bazHandler) Bar(ctx context.Context) error {
-	return nil
-}
-
-func (*bazHandler) Baz(ctx context.Context) error {
-	return nil
+func (*barHandler) Name(ctx context.Context) (string, error) {
+	return yarpc.CallFromContext(ctx).Service(), nil
 }

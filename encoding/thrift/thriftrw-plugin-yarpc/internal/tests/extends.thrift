@@ -1,9 +1,5 @@
-service Foo {
-	void foo()
+service Name {
+	string name()
 }
-service Bar extends Foo {
-	void bar()
-}
-service Baz extends Bar {
-	void baz()
-}
+service Foo extends Name {}
+service Bar extends Foo {}

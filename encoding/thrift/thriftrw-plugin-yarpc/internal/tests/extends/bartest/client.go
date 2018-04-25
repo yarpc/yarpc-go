@@ -41,60 +41,33 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 	return m.recorder
 }
 
-// Bar responds to a Bar call based on the mock expectations. This
+// Name responds to a Name call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().Bar(gomock.Any(), ...).Return(...)
-// 	... := client.Bar(...)
-func (m *MockClient) Bar(
+// 	client.EXPECT().Name(gomock.Any(), ...).Return(...)
+// 	... := client.Name(...)
+func (m *MockClient) Name(
 	ctx context.Context,
 	opts ...yarpc.CallOption,
-) (err error) {
+) (success string, err error) {
 
 	args := []interface{}{ctx}
 	for _, o := range opts {
 		args = append(args, o)
 	}
 	i := 0
-	ret := m.ctrl.Call(m, "Bar", args...)
+	ret := m.ctrl.Call(m, "Name", args...)
+	success, _ = ret[i].(string)
+	i++
 	err, _ = ret[i].(error)
 	return
 }
 
-func (mr *_MockClientRecorder) Bar(
+func (mr *_MockClientRecorder) Name(
 	ctx interface{},
 	opts ...interface{},
 ) *gomock.Call {
 	args := append([]interface{}{ctx}, opts...)
-	return mr.mock.ctrl.RecordCall(mr.mock, "Bar", args...)
-}
-
-// Foo responds to a Foo call based on the mock expectations. This
-// call will fail if the mock does not expect this call. Use EXPECT to expect
-// a call to this function.
-//
-// 	client.EXPECT().Foo(gomock.Any(), ...).Return(...)
-// 	... := client.Foo(...)
-func (m *MockClient) Foo(
-	ctx context.Context,
-	opts ...yarpc.CallOption,
-) (err error) {
-
-	args := []interface{}{ctx}
-	for _, o := range opts {
-		args = append(args, o)
-	}
-	i := 0
-	ret := m.ctrl.Call(m, "Foo", args...)
-	err, _ = ret[i].(error)
-	return
-}
-
-func (mr *_MockClientRecorder) Foo(
-	ctx interface{},
-	opts ...interface{},
-) *gomock.Call {
-	args := append([]interface{}{ctx}, opts...)
-	return mr.mock.ctrl.RecordCall(mr.mock, "Foo", args...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "Name", args...)
 }

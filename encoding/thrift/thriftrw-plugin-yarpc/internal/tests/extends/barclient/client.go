@@ -4,12 +4,9 @@
 package barclient
 
 import (
-	"context"
-	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/fooclient"
 	"reflect"
 )
@@ -17,11 +14,6 @@ import (
 // Interface is a client for the Bar service.
 type Interface interface {
 	fooclient.Interface
-
-	Bar(
-		ctx context.Context,
-		opts ...yarpc.CallOption,
-	) error
 }
 
 // New builds a new client for the Bar service.
@@ -49,26 +41,4 @@ type client struct {
 	fooclient.Interface
 
 	c thrift.Client
-}
-
-func (c client) Bar(
-	ctx context.Context,
-	opts ...yarpc.CallOption,
-) (err error) {
-
-	args := extends.Bar_Bar_Helper.Args()
-
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
-
-	var result extends.Bar_Bar_Result
-	if err = result.FromWire(body); err != nil {
-		return
-	}
-
-	err = extends.Bar_Bar_Helper.UnwrapResponse(&result)
-	return
 }
