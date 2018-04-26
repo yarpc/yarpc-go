@@ -112,7 +112,7 @@ func TestDispatchOnewayHandlerWithPanic(t *testing.T) {
 	err := DispatchOnewayHandler(
 		context.Background(),
 		onewayHandlerFunc(handler),
-		nil,
+		&Request{},
 		zap.NewNop(),
 	)
 	expectMsg := fmt.Sprintf("panic: %s", msg)
