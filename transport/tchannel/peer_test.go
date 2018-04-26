@@ -32,12 +32,11 @@ import (
 	"go.uber.org/yarpc/internal/integrationtest"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/yarpctest"
-	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/transport/tchannel"
 )
 
 var spec = integrationtest.TransportSpec{
-	Identify: hostport.Identify,
+	Identify: identify,
 	NewServerTransport: func(t *testing.T, addr string) peer.Transport {
 		x, err := tchannel.NewTransport(
 			tchannel.ServiceName("service"),
@@ -133,6 +132,18 @@ func TestCancelMaintainConn(t *testing.T) {
 	require.NoError(t, err)
 	transport.Start()
 	transport.Stop()
-	_, err = transport.RetainPeer(hostport.PeerIdentifier("127.0.0.1:66408"), noSub{})
+	_, err = transport.RetainPeer(identify("127.0.0.1:66408"), noSub{})
 	require.NoError(t, err)
+}
+
+func identify(id string) peer.Identifier {
+	return &testIdentifier{id}
+}
+
+type testIdentifier struct {
+	id string
+}
+
+func (i testIdentifier) Identifier() string {
+	return i.id
 }

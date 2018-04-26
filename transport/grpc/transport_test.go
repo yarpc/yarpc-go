@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/peer/hostport"
 	"google.golang.org/grpc"
 )
 
@@ -54,10 +53,10 @@ func TestRetainReleasePeerSuccess(t *testing.T) {
 	address := listener.Addr().String()
 	peerSubscriber := testPeerSubscriber{}
 
-	peer, err := transport.RetainPeer(hostport.Identify(address), peerSubscriber)
+	peer, err := transport.RetainPeer(testIdentifier{address}, peerSubscriber)
 	assert.NoError(t, err)
 	assert.Equal(t, peer, transport.addressToPeer[address])
-	assert.NoError(t, transport.ReleasePeer(hostport.Identify(address), peerSubscriber))
+	assert.NoError(t, transport.ReleasePeer(testIdentifier{address}, peerSubscriber))
 }
 
 func TestRetainReleasePeerErrorPeerIdentifier(t *testing.T) {
@@ -77,9 +76,17 @@ func TestReleasePeerErrorNoPeer(t *testing.T) {
 	assert.Equal(t, peer.ErrTransportHasNoReferenceToPeer{
 		TransportName:  "grpc.Transport",
 		PeerIdentifier: address,
-	}, transport.ReleasePeer(hostport.Identify(address), peerSubscriber))
+	}, transport.ReleasePeer(testIdentifier{address}, peerSubscriber))
 }
 
 type testPeerSubscriber struct{}
 
 func (testPeerSubscriber) NotifyStatusChanged(peer.Identifier) {}
+
+type testIdentifier struct {
+	id string
+}
+
+func (i testIdentifier) Identifier() string {
+	return i.id
+}
