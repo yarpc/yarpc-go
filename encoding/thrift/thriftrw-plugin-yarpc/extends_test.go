@@ -22,30 +22,108 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/barclient"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/barserver"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/fooclient"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/fooserver"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/nameclient"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/nameserver"
+	"go.uber.org/yarpc/internal/yarpctest"
+	"go.uber.org/yarpc/transport/http"
 )
 
-func TestExtendsService(t *testing.T) {
-	// Retrieve the call from context and assert
-	// that the service is the child service.
+func setupTest(t *testing.T, p []transport.Procedure) (client *yarpc.Dispatcher, clientStop, serverStop func() error) {
+	httpInbound := http.NewTransport().NewInbound(":0")
+
+	server := yarpc.NewDispatcher(yarpc.Config{
+		Name:     "server",
+		Inbounds: yarpc.Inbounds{httpInbound},
+	})
+	server.Register(p)
+	require.NoError(t, server.Start())
+
+	outbound := http.NewTransport().NewSingleOutbound(
+		fmt.Sprintf("http://%v", yarpctest.ZeroAddrToHostPort(httpInbound.Addr())))
+
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name: "client",
+		Outbounds: yarpc.Outbounds{
+			"server": {
+				Unary:  outbound,
+				Oneway: outbound,
+			},
+		},
+	})
+	require.NoError(t, dispatcher.Start())
+
+	return dispatcher, dispatcher.Stop, server.Stop
+}
+
+func TestExtendsProcedure(t *testing.T) {
+	t.Run("base service: Name::name", func(t *testing.T) {
+		d, cStop, sStop := setupTest(t, nameserver.New(&nameHandler{}))
+		defer cStop()
+		defer sStop()
+
+		cli := nameclient.New(d.ClientConfig("server"))
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		res, err := cli.Name(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, "Name::name", res)
+	})
+	t.Run("foo service: Foo::name", func(t *testing.T) {
+		d, cStop, sStop := setupTest(t, fooserver.New(&fooHandler{}))
+		defer cStop()
+		defer sStop()
+
+		cli := fooclient.New(d.ClientConfig("server"))
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		res, err := cli.Name(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, "Foo::name", res)
+	})
+	t.Run("bar service: Bar::name", func(t *testing.T) {
+		d, cStop, sStop := setupTest(t, barserver.New(&barHandler{}))
+		defer cStop()
+		defer sStop()
+
+		cli := barclient.New(d.ClientConfig("server"))
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		res, err := cli.Name(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, "Bar::name", res)
+	})
 }
 
 type nameHandler struct{}
 
 func (*nameHandler) Name(ctx context.Context) (string, error) {
-	return yarpc.CallFromContext(ctx).Service(), nil
+	return yarpc.CallFromContext(ctx).Procedure(), nil
 }
 
 type fooHandler struct{}
 
 func (*fooHandler) Name(ctx context.Context) (string, error) {
-	return yarpc.CallFromContext(ctx).Service(), nil
+	return yarpc.CallFromContext(ctx).Procedure(), nil
 }
 
 type barHandler struct{}
 
 func (*barHandler) Name(ctx context.Context) (string, error) {
-	return yarpc.CallFromContext(ctx).Service(), nil
+	return yarpc.CallFromContext(ctx).Procedure(), nil
 }
