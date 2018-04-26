@@ -1,5 +1,5 @@
 // isolating panic tests in separate package to avoid cyclic imports
-package transport_panic_test
+package transport_test
 
 import (
 	"context"
