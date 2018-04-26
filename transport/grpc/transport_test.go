@@ -64,20 +64,6 @@ func TestRetainReleasePeerErrorPeerIdentifier(t *testing.T) {
 	transport := NewTransport()
 	assert.NoError(t, transport.Start())
 	defer func() { assert.NoError(t, transport.Stop()) }()
-
-	address := "foo:1234"
-	peerSubscriber := testPeerSubscriber{}
-
-	_, err := transport.RetainPeer(testPeerIdentifier(address), peerSubscriber)
-	assert.Equal(t, peer.ErrInvalidPeerType{
-		ExpectedType:   "hostport.PeerIdentifier",
-		PeerIdentifier: testPeerIdentifier(address),
-	}, err)
-	err = transport.ReleasePeer(testPeerIdentifier(address), peerSubscriber)
-	assert.Equal(t, peer.ErrInvalidPeerType{
-		ExpectedType:   "hostport.PeerIdentifier",
-		PeerIdentifier: testPeerIdentifier(address),
-	}, err)
 }
 
 func TestReleasePeerErrorNoPeer(t *testing.T) {
@@ -94,23 +80,6 @@ func TestReleasePeerErrorNoPeer(t *testing.T) {
 	}, transport.ReleasePeer(hostport.Identify(address), peerSubscriber))
 }
 
-func TestGetPeerAddress(t *testing.T) {
-	s, err := getPeerAddress(hostport.Identify("foo:1234"))
-	assert.NoError(t, err)
-	assert.Equal(t, "foo:1234", s)
-	_, err = getPeerAddress(testPeerIdentifier("foo:1234"))
-	assert.Equal(t, peer.ErrInvalidPeerType{
-		ExpectedType:   "hostport.PeerIdentifier",
-		PeerIdentifier: testPeerIdentifier("foo:1234"),
-	}, err)
-}
-
 type testPeerSubscriber struct{}
 
 func (testPeerSubscriber) NotifyStatusChanged(peer.Identifier) {}
-
-type testPeerIdentifier string
-
-func (p testPeerIdentifier) Identifier() string {
-	return string(p)
-}

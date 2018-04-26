@@ -26,7 +26,6 @@ import (
 
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
@@ -99,12 +98,10 @@ func (t *Transport) NewOutbound(peerChooser peer.Chooser, options ...OutboundOpt
 func (t *Transport) RetainPeer(peerIdentifier peer.Identifier, peerSubscriber peer.Subscriber) (peer.Peer, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	address, err := getPeerAddress(peerIdentifier)
-	if err != nil {
-		return nil, err
-	}
+	address := peerIdentifier.Identifier()
 	p, ok := t.addressToPeer[address]
 	if !ok {
+		var err error
 		p, err = newPeer(address, t)
 		if err != nil {
 			return nil, err
@@ -119,10 +116,7 @@ func (t *Transport) RetainPeer(peerIdentifier peer.Identifier, peerSubscriber pe
 func (t *Transport) ReleasePeer(peerIdentifier peer.Identifier, peerSubscriber peer.Subscriber) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	address, err := getPeerAddress(peerIdentifier)
-	if err != nil {
-		return err
-	}
+	address := peerIdentifier.Identifier()
 	p, ok := t.addressToPeer[address]
 	if !ok {
 		return peer.ErrTransportHasNoReferenceToPeer{
@@ -139,14 +133,4 @@ func (t *Transport) ReleasePeer(peerIdentifier peer.Identifier, peerSubscriber p
 		return p.wait()
 	}
 	return nil
-}
-
-func getPeerAddress(peerIdentifier peer.Identifier) (string, error) {
-	if _, ok := peerIdentifier.(hostport.PeerIdentifier); !ok {
-		return "", peer.ErrInvalidPeerType{
-			ExpectedType:   "hostport.PeerIdentifier",
-			PeerIdentifier: peerIdentifier,
-		}
-	}
-	return peerIdentifier.Identifier(), nil
 }

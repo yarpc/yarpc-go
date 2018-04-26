@@ -38,7 +38,7 @@ type httpPeer struct {
 	timer     *time.Timer
 }
 
-func newPeer(pid hostport.PeerIdentifier, t *Transport) *httpPeer {
+func newPeer(addr string, t *Transport) *httpPeer {
 	// Create a defused timer for later use.
 	timer := time.NewTimer(0)
 	if !timer.Stop() {
@@ -46,9 +46,9 @@ func newPeer(pid hostport.PeerIdentifier, t *Transport) *httpPeer {
 	}
 
 	return &httpPeer{
-		Peer:      hostport.NewPeer(pid, t),
+		Peer:      hostport.NewPeer(hostport.PeerIdentifier(addr), t),
 		transport: t,
-		addr:      pid.Identifier(),
+		addr:      addr,
 		changed:   make(chan struct{}, 1),
 		released:  make(chan struct{}, 0),
 		timer:     timer,

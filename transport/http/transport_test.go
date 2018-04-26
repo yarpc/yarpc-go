@@ -259,23 +259,6 @@ func TestTransport(t *testing.T) {
 	}
 }
 
-func TestTransportRetainWithInvalidPeerIdentifierType(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	transport := NewTransport()
-	pid := NewMockIdentifier(mockCtrl)
-
-	expectedErr := peer.ErrInvalidPeerType{
-		ExpectedType:   "hostport.PeerIdentifier",
-		PeerIdentifier: pid,
-	}
-
-	_, err := transport.RetainPeer(pid, NewMockSubscriber(mockCtrl))
-
-	assert.Equal(t, expectedErr, err, "did not return error on invalid peer identifier")
-}
-
 func TestTransportClient(t *testing.T) {
 	transport := NewTransport()
 
