@@ -29,8 +29,6 @@ import (
 	"go.uber.org/yarpc/yarpcconfig"
 )
 
-const transportName = "grpc"
-
 // TransportSpec returns a TransportSpec for the gRPC transport.
 //
 // See TransportConfig, InboundConfig, and OutboundConfig for details on the

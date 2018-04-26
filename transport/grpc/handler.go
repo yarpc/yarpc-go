@@ -87,6 +87,7 @@ func (h *handler) getBasicTransportRequest(ctx context.Context, streamMethod str
 	if err != nil {
 		return nil, err
 	}
+	transportRequest.Transport = transportName
 
 	procedure, err := procedureFromStreamMethod(streamMethod)
 	if err != nil {

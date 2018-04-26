@@ -48,7 +48,7 @@ const (
 )
 
 // A graph represents a collection of services: each service is a node, and we
-// collect stats for each caller-callee-encoding-procedure-rk-sk-rd edge.
+// collect stats for each caller-callee-transport-encoding-procedure-rk-sk-rd edge.
 type graph struct {
 	meter   *metrics.Scope
 	logger  *zap.Logger
@@ -74,6 +74,7 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction dir
 	d := digester.New()
 	d.Add(req.Caller)
 	d.Add(req.Service)
+	d.Add(req.Transport)
 	d.Add(string(req.Encoding))
 	d.Add(req.Procedure)
 	d.Add(req.RoutingKey)
@@ -143,6 +144,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 	tags := metrics.Tags{
 		"source":           req.Caller,
 		"dest":             req.Service,
+		"transport":        unknownIfEmpty(req.Transport),
 		"procedure":        req.Procedure,
 		"encoding":         string(req.Encoding),
 		"routing_key":      req.RoutingKey,
@@ -222,6 +224,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 	logger = logger.With(
 		zap.String("source", req.Caller),
 		zap.String("dest", req.Service),
+		zap.String("transport", unknownIfEmpty(req.Transport)),
 		zap.String("procedure", req.Procedure),
 		zap.String("encoding", string(req.Encoding)),
 		zap.String("routingKey", req.RoutingKey),
@@ -238,4 +241,12 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		callerErrLatencies: callerErrLatencies,
 		serverErrLatencies: serverErrLatencies,
 	}
+}
+
+// unknownIfEmpty works around hard-coded default value of "default" in go.uber.org/net/metrics
+func unknownIfEmpty(t string) string {
+	if t == "" {
+		t = "unknown"
+	}
+	return t
 }
