@@ -29,7 +29,6 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
 	"go.uber.org/yarpc/internal/testtime"
-	"go.uber.org/yarpc/peer/hostport"
 )
 
 type peerExpectation struct {
@@ -40,7 +39,7 @@ type peerExpectation struct {
 func createPeerIdentifierMap(ids []string) map[string]peer.Identifier {
 	pids := make(map[string]peer.Identifier, len(ids))
 	for _, id := range ids {
-		pids[id] = hostport.PeerIdentifier(id)
+		pids[id] = &testIdentifier{id}
 	}
 	return pids
 }
@@ -259,23 +258,6 @@ func TestTransport(t *testing.T) {
 	}
 }
 
-func TestTransportRetainWithInvalidPeerIdentifierType(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	transport := NewTransport()
-	pid := NewMockIdentifier(mockCtrl)
-
-	expectedErr := peer.ErrInvalidPeerType{
-		ExpectedType:   "hostport.PeerIdentifier",
-		PeerIdentifier: pid,
-	}
-
-	_, err := transport.RetainPeer(pid, NewMockSubscriber(mockCtrl))
-
-	assert.Equal(t, expectedErr, err, "did not return error on invalid peer identifier")
-}
-
 func TestTransportClient(t *testing.T) {
 	transport := NewTransport()
 
@@ -296,4 +278,12 @@ func TestTransportClientOpaqueOptions(t *testing.T) {
 	)
 
 	assert.NotNil(t, transport.client)
+}
+
+type testIdentifier struct {
+	id string
+}
+
+func (i testIdentifier) Identifier() string {
+	return i.id
 }

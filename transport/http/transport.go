@@ -31,7 +31,6 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/backoff"
-	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/zap"
 )
@@ -277,27 +276,19 @@ func (a *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.P
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
-	hppid, ok := pid.(hostport.PeerIdentifier)
-	if !ok {
-		return nil, peer.ErrInvalidPeerType{
-			ExpectedType:   "hostport.PeerIdentifier",
-			PeerIdentifier: pid,
-		}
-	}
-
-	p := a.getOrCreatePeer(hppid)
+	p := a.getOrCreatePeer(pid)
 	p.Subscribe(sub)
 	return p, nil
 }
 
 // **NOTE** should only be called while the lock write mutex is acquired
-func (a *Transport) getOrCreatePeer(pid hostport.PeerIdentifier) *httpPeer {
-	if p, ok := a.peers[pid.Identifier()]; ok {
+func (a *Transport) getOrCreatePeer(pid peer.Identifier) *httpPeer {
+	addr := pid.Identifier()
+	if p, ok := a.peers[addr]; ok {
 		return p
 	}
-
-	p := newPeer(pid, a)
-	a.peers[p.Identifier()] = p
+	p := newPeer(addr, a)
+	a.peers[addr] = p
 	a.connectorsGroup.Add(1)
 	go p.MaintainConn()
 
