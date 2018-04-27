@@ -185,6 +185,7 @@ func logPanic(rpcType Type, logger *zap.Logger, recovered interface{}, req *Requ
 	if logger != nil {
 		logger.Error(fmt.Sprintf("%s handler panicked", rpcType),
 			zap.String("service", req.Service),
+			zap.String("transport", req.Transport),
 			zap.String("procedure", req.Procedure),
 			zap.String("encoding", string(req.Encoding)),
 			zap.String("caller", req.Caller),
