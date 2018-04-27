@@ -130,7 +130,7 @@ func DispatchUnaryHandler(
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = logPanic("Unary", logger, r, req.ToRequestMeta())
+			err = logPanic(Unary, logger, r, req.ToRequestMeta())
 		}
 	}()
 
@@ -157,7 +157,7 @@ func DispatchOnewayHandler(
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = logPanic("Oneway", logger, r, req.ToRequestMeta())
+			err = logPanic(Oneway, logger, r, req.ToRequestMeta())
 		}
 	}()
 
@@ -173,14 +173,14 @@ func DispatchStreamHandler(
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = logPanic("Stream", logger, r, stream.Request().Meta)
+			err = logPanic(Streaming, logger, r, stream.Request().Meta)
 		}
 	}()
 
 	return h.HandleStream(stream)
 }
 
-func logPanic(rpcType string, logger *zap.Logger, recovered interface{}, req *RequestMeta) error {
+func logPanic(rpcType Type, logger *zap.Logger, recovered interface{}, req *RequestMeta) error {
 	err := fmt.Errorf("panic: %v", recovered)
 	if logger != nil {
 		logger.Error(fmt.Sprintf("%s handler panicked", rpcType),
