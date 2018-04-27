@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   They previously required a hostport.PeerIdentifier for RetainPeer and
   ReleasePeer calls.
 
+### Changed
+- Dispatchers now log recovered handler panics via a zap logger if present
+
 ## [1.29.1] - 2018-04-04
 ### Fixed
 - Removed `repo:` from glide.yaml because Apache Thrift development has moved
