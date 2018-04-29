@@ -35,6 +35,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreclient"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystorefx"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreserver"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/storeclient"
@@ -139,8 +140,7 @@ func TestFxServer(t *testing.T) {
 		assert.NoError(t, clientD.Stop(), "failed to stop client")
 	}()
 
-	// Can use read-write client to call read-only server
-	client := storeclient.New(clientD.ClientConfig("myserver"))
+	client := readonlystoreclient.New(clientD.ClientConfig("myserver"))
 
 	ctx := context.Background()
 

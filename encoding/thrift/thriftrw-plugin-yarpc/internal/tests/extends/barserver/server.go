@@ -27,7 +27,18 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	}
 
 	procedures := make([]transport.Procedure, 0, 0)
-	procedures = append(procedures, fooserver.New(impl, opts...)...)
+
+	procedures = append(
+		procedures,
+		fooserver.New(
+			impl,
+			append(
+				opts,
+				thrift.Named("Bar"),
+			)...,
+		)...,
+	)
+
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }

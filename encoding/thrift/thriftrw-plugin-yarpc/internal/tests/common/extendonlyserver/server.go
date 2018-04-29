@@ -27,7 +27,18 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	}
 
 	procedures := make([]transport.Procedure, 0, 0)
-	procedures = append(procedures, baseserviceserver.New(impl, opts...)...)
+
+	procedures = append(
+		procedures,
+		baseserviceserver.New(
+			impl,
+			append(
+				opts,
+				thrift.Named("ExtendOnly"),
+			)...,
+		)...,
+	)
+
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }

@@ -94,8 +94,19 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Proced
 	}
 
 	procedures := make([]<$transport>.Procedure, 0, <len .Functions>)
-	<if .Parent> procedures = append(procedures, <import .ParentServerPackagePath>.New(impl, opts...)...)
-	<end>         procedures = append(procedures, <$thrift>.BuildProcedures(service, opts...)...)
+	<if .Parent>
+	procedures = append(
+		procedures,
+		<import .ParentServerPackagePath>.New(
+			impl,
+			append(
+				opts,
+				<$thrift>.Named("<.Name>"),
+			)...,
+		)...,
+	)
+	<end>
+	procedures = append(procedures, <$thrift>.BuildProcedures(service, opts...)...)
 	return procedures
 }
 

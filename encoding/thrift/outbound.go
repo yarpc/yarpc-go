@@ -84,17 +84,22 @@ func New(c Config, opts ...ClientOption) Client {
 		p = cc.Protocol
 	}
 
+	svc := c.Service
+	if cc.ServiceName != "" {
+		svc = cc.ServiceName
+	}
+
 	if cc.Multiplexed {
 		p = multiplexedOutboundProtocol{
 			Protocol: p,
-			Service:  c.Service,
+			Service:  svc,
 		}
 	}
 
 	return thriftClient{
 		p:             p,
 		cc:            c.ClientConfig,
-		thriftService: c.Service,
+		thriftService: svc,
 		Enveloping:    cc.Enveloping,
 	}
 }

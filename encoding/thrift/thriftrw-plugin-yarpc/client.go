@@ -70,9 +70,18 @@ func New(c <$transport>.ClientConfig, opts ...<$thrift>.ClientOption) Interface 
 			Service: "<.Name>",
 			ClientConfig: c,
 		}, opts...),
-		<if .Parent> Interface: <import .ParentClientPackagePath>.New(c, opts...),
-		<end>}
+		<if .Parent>
+		Interface: <import .ParentClientPackagePath>.New(
+			c,
+			append(
+				opts,
+				<$thrift>.Named("<.Name>"),
+			)...,
+		),
+		<end>
+	}
 }
+
 
 func init() {
 	<$yarpc>.RegisterClientBuilder(

@@ -92,6 +92,11 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 		proto = rc.Protocol
 	}
 
+	svc := s.Name
+	if rc.ServiceName != "" {
+		svc = rc.ServiceName
+	}
+
 	rs := make([]transport.Procedure, 0, len(s.Methods))
 
 	for _, method := range s.Methods {
@@ -114,7 +119,7 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 		}
 
 		rs = append(rs, transport.Procedure{
-			Name:        procedure.ToName(s.Name, method.Name),
+			Name:        procedure.ToName(svc, method.Name),
 			HandlerSpec: spec,
 			Encoding:    Encoding,
 			Signature:   method.Signature,

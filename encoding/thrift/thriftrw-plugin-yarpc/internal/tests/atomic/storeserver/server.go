@@ -80,7 +80,18 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	}
 
 	procedures := make([]transport.Procedure, 0, 3)
-	procedures = append(procedures, readonlystoreserver.New(impl, opts...)...)
+
+	procedures = append(
+		procedures,
+		readonlystoreserver.New(
+			impl,
+			append(
+				opts,
+				thrift.Named("Store"),
+			)...,
+		)...,
+	)
+
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }

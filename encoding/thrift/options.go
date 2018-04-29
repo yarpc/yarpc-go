@@ -23,7 +23,7 @@ package thrift
 import "go.uber.org/thriftrw/protocol"
 
 type clientConfig struct {
-	Name        string
+	ServiceName string
 	Protocol    protocol.Protocol
 	Enveloping  bool
 	Multiplexed bool
@@ -35,8 +35,9 @@ type ClientOption interface {
 }
 
 type registerConfig struct {
-	Protocol   protocol.Protocol
-	Enveloping bool
+	ServiceName string
+	Protocol    protocol.Protocol
+	Enveloping  bool
 }
 
 // RegisterOption customizes the behavior of a Thrift handler during
@@ -94,17 +95,26 @@ func (multiplexedOption) applyClientOption(c *clientConfig) {
 	c.Multiplexed = true
 }
 
-type namedOption struct{ Name string }
+type namedOption struct{ ServiceName string }
 
 func (n namedOption) applyClientOption(c *clientConfig) {
-	c.Name = n.Name
+	if c.ServiceName == "" {
+		c.ServiceName = n.ServiceName
+	}
+}
+
+func (n namedOption) applyRegisterOption(c *registerConfig) {
+	if c.ServiceName == "" {
+		c.ServiceName = n.ServiceName
+	}
 }
 
 // Named is an option that specifies the name of a thrift.Client.
 // This option should be used if a thrift service extends another
-// thrift service. This ensures that the inherited procedures
-// are appropriately labelled with the the inheriting service's
-// name.
+// thrift service. Note that the first Named ClientOption will
+// trump all other Named options. This ensures that the
+// inherited procedures are appropriately labelled with the
+// furthest-inheriting service's name.
 //
 // Specify this option when constructing the Thrift client.
 //
@@ -112,8 +122,8 @@ func (n namedOption) applyClientOption(c *clientConfig) {
 //
 // If not specified, the client's inherited procedures will be
 // labelled with the service name from which they are inherited.
-func Named(n string) ClientOption {
-	return namedOption{Name: n}
+func Named(n string) Option {
+	return namedOption{ServiceName: n}
 }
 
 type protocolOption struct{ Protocol protocol.Protocol }

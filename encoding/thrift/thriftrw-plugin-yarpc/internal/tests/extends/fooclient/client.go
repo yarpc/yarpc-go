@@ -25,7 +25,14 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 			Service:      "Foo",
 			ClientConfig: c,
 		}, opts...),
-		Interface: nameclient.New(c, opts...),
+
+		Interface: nameclient.New(
+			c,
+			append(
+				opts,
+				thrift.Named("Foo"),
+			)...,
+		),
 	}
 }
 
