@@ -105,7 +105,7 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Proced
 			)...,
 		)...,
 	)
-	<end>
+	<end ->
 	procedures = append(procedures, <$thrift>.BuildProcedures(service, opts...)...)
 	return procedures
 }
