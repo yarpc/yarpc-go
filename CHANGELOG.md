@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   on when the server is running.
 - Adds Transport property to transport.Request and transport.RequestMeta
   Metrics will now be tagged with the transport of calls to handlers
+### Fixed
+- YARPC HTTP, gRPC, and TChannel transports are now compatible with any
+  peer.Identifier implementation.
+  They previously required a hostport.PeerIdentifier for RetainPeer and
+  ReleasePeer calls.
 
 ## [1.29.1] - 2018-04-04
 ### Fixed
