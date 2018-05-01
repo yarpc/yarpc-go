@@ -1,5 +1,5 @@
 hash: f42c5f4769c7a1714be5ee8c287f0cd3526afa2f8c1554a7e43a5a619ba53990
-updated: 2018-04-23T15:05:53.663242689Z
+updated: 2018-05-01T15:06:21.908498701Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -94,12 +94,13 @@ imports:
 - name: github.com/uber-go/tally
   version: 522328b48efad0c6034dba92bf39228694e9d31f
 - name: github.com/uber/jaeger-client-go
-  version: 3205d4aabc55c1a13b1e48d3db793bc8cd37bd16
+  version: b043381d944715b469fd6b37addfd30145ca1758
   subpackages:
   - internal/baggage
   - internal/spanlog
   - internal/throttler
   - log
+  - thrift
   - thrift-gen/agent
   - thrift-gen/jaeger
   - thrift-gen/sampling
