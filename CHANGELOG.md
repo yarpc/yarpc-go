@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.30.0] - 2018-05-03
 ### Added
 - The YARPC HTTP outbound now implements http.RoundTripper.
   This makes YARPC's load balancers, other peer selectors, and peer
@@ -940,7 +940,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.29.1...HEAD
+[1.30.0]: https://github.com/yarpc/yarpc-go/compare/v1.29.1...v1.30.0
 [1.29.1]: https://github.com/yarpc/yarpc-go/compare/v1.29.0...v1.29.1
 [1.29.0]: https://github.com/yarpc/yarpc-go/compare/v1.28.0...v1.29.0
 [1.28.0]: https://github.com/yarpc/yarpc-go/compare/v1.27.2...v1.28.0
