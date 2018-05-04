@@ -44,4 +44,5 @@ type ClientConfig interface {
 	// have already been started.
 	GetUnaryOutbound() UnaryOutbound
 	GetOnewayOutbound() OnewayOutbound
+	GetStreamOutbound() StreamOutbound
 }
