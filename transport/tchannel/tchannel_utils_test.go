@@ -107,6 +107,7 @@ type responseRecorder struct {
 	arg2, arg3       *bufferArgWriter
 	systemErr        error
 	applicationError bool
+	blackholed       bool
 }
 
 func newResponseRecorder() *responseRecorder {
@@ -138,4 +139,8 @@ func (rr *responseRecorder) SendSystemError(err error) error {
 func (rr *responseRecorder) SetApplicationError() error {
 	rr.applicationError = true
 	return nil
+}
+
+func (rr *responseRecorder) Blackhole() {
+	rr.blackholed = true
 }

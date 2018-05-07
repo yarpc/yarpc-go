@@ -64,6 +64,7 @@ type inboundCall interface {
 type inboundCallResponse interface {
 	Arg2Writer() (tchannel.ArgWriter, error)
 	Arg3Writer() (tchannel.ArgWriter, error)
+	Blackhole()
 	SendSystemError(err error) error
 	SetApplicationError() error
 }
