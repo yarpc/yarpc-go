@@ -29,6 +29,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/x/yarpctest"
 	"go.uber.org/yarpc/x/yarpctest/api"
+	"go.uber.org/yarpc/x/yarpctest/types"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -37,11 +38,11 @@ func TestHandleResourceExhausted(t *testing.T) {
 	procedureName := "test-procedure"
 	port := uint16(8000)
 
-	resourceExhaustedHandler := yarpctest.EchoHandler(api.UnaryInboundMiddlewareFunc(
-		func(context.Context, *transport.Request, transport.ResponseWriter, transport.UnaryHandler) error {
+	resourceExhaustedHandler := &types.UnaryHandler{
+		Handler: api.UnaryHandlerFunc(func(context.Context, *transport.Request, transport.ResponseWriter) error {
 			// eg: simulating a rate limiter that's reached its limit
 			return yarpcerrors.Newf(yarpcerrors.CodeResourceExhausted, "resource exhausted: rate limit exceeded")
-		}))
+		})}
 
 	service := yarpctest.TChannelService(
 		yarpctest.Name(serviceName),
