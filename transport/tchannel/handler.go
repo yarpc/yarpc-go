@@ -96,6 +96,13 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	responseWriter := newResponseWriter(call.Response(), call.Format(), h.headerCase)
 
 	err := h.callHandler(ctx, call, responseWriter)
+
+	// black-hole requests on resource exhausted errors
+	if yarpcerrors.FromError(err).Code() == yarpcerrors.CodeResourceExhausted {
+		// all TChannel clients will time out instead of receiving an error
+		call.Response().Blackhole()
+		return
+	}
 	if err != nil && !responseWriter.isApplicationError {
 		// TODO: log error
 		_ = call.Response().SendSystemError(getSystemError(err))
