@@ -137,3 +137,7 @@ glide: $(GLIDE) ## install glide dependencies
 .PHONY: glide-up
 glide-up: $(GLIDE) ## update glide dependencies
 	PATH=$$PATH:$(BIN) glide up
+
+.PHONY: glide-cc
+glide-cc: $(GLIDE) ## clear the glide cache
+	PATH=$$PATH:$(BIN) glide cc

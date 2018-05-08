@@ -123,7 +123,7 @@ if [ -n "$(git_status --porcelain)" ]; then
 fi
 
 echo "--- Updating dependencies"
-make glide-up
+make glide-cc glide-up
 
 case "$(git_status --porcelain)" in
   "")
