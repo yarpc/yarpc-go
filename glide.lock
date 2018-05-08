@@ -1,5 +1,5 @@
 hash: f42c5f4769c7a1714be5ee8c287f0cd3526afa2f8c1554a7e43a5a619ba53990
-updated: 2018-05-03T15:07:54.114341784Z
+updated: 2018-05-08T20:03:24.226837868Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -34,7 +34,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: e09c5db296004fbe3f74490e84dcd62c3c5ddb1b
+  version: b4deda0973fb4c70b50d226b1af49f3da59f5265
   subpackages:
   - proto
   - ptypes
@@ -67,13 +67,13 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 38c53a9f4bfcd932d1b00bfc65e256a7fba6b37a
+  version: d811d2e9bf898806ecfb6ef6296774b13ffc314c
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 780932d4fbbe0e69b84c34c20f5c8d0981e109ea
+  version: 8b1c2da0d56deffdbb9e48d4414b4e674bd8083e
   subpackages:
   - internal/util
   - nfs
@@ -172,7 +172,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 640f4622ab692b87c2f3a94265e6f579fe38263d
+  version: d11bb6cd8e3c4e60239c9cb20ef68586d74500d0
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -187,25 +187,24 @@ imports:
   - internal/timeseries
   - ipv4
   - ipv6
-  - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: 3b87a42e500a6dc65dae1a55d0b641295971163e
+  version: 7db1c3b1a98089d0071c84f646ff5c96aad43682
   repo: https://github.com/golang/sys
 - name: golang.org/x/text
-  version: 2cb43934f0eece38629746959acc633cba083fe4
+  version: 7922cc490dd5a7dbaa7fd5d6196b49db59ac042f
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: ac136b6c2db7c4d43955e4bc7174db36dc0539c0
+  version: 48418e5732e1b1e2a10207c8007a5f959e422f20
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: aae13d27a44d62f039eeeb93e74e893886673932
+  version: 86e600f69ee4704c6efbf6a2a40a5c10700e76c2
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
@@ -252,7 +251,7 @@ testImports:
   subpackages:
   - update-license
 - name: golang.org/x/lint
-  version: 85993ffd0a6cd043291f3f63d45d656d97b165bd
+  version: 470b6b0bb3005eda157f0275e2e4895055396a81
   repo: https://github.com/golang/lint
   subpackages:
   - golint
