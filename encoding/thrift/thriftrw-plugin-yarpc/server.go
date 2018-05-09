@@ -126,17 +126,16 @@ func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$thrift>.
 	}
 
 	<if .ReturnType>
-		success, err := h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
+		success, appErr := h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
 	<else>
-		err := h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
+		appErr := h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
 	<end>
 
-	hadError := err != nil
-	result, err := <$prefix>Helper.WrapResponse(<if .ReturnType>success,<end> err)
+	result, err := <$prefix>Helper.WrapResponse(<if .ReturnType>success,<end> appErr)
 
 	var response <$thrift>.Response
 	if err == nil {
-		response.IsApplicationError = hadError
+		response.ApplicationError = appErr
 		response.Body = result
 	}
 	return response, err

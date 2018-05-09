@@ -381,7 +381,6 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		zap.Duration("latency", 0),
 		zap.Bool("successful", false),
 		zap.Skip(),
-		zap.String("error", "application_error"),
 	}
 
 	core, logs := observer.New(zap.DebugLevel)
@@ -391,7 +390,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		context.Background(),
 		req,
 		&transporttest.FakeResponseWriter{},
-		fakeHandler{err: nil, applicationErr: true},
+		fakeHandler{err: errors.New("some_weird_error"), applicationErr: true},
 	), "Unexpected transport error.")
 
 	expected := observer.LoggedEntry{

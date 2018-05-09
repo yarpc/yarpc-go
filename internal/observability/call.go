@@ -30,7 +30,10 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-const _error = "error"
+const (
+	_error = "error"
+	_name  = "name"
+)
 
 // A call represents a single RPC along an edge.
 //
@@ -70,31 +73,48 @@ func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool)
 	fields := c.fields[:0]
 	fields = append(fields, zap.String("rpcType", c.rpcType.String()))
 	fields = append(fields, zap.Duration("latency", elapsed))
-	fields = append(fields, zap.Bool("successful", err == nil && !isApplicationError))
+	fields = append(fields, zap.Bool("successful", err == nil))
 	fields = append(fields, c.extract(c.ctx))
-	if isApplicationError {
-		fields = append(fields, zap.String(_error, "application_error"))
-	} else {
+
+	if !isApplicationError {
 		fields = append(fields, zap.Error(err))
 	}
+
 	ce.Write(fields...)
+}
+
+type withName interface {
+	Name() string
 }
 
 func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool) {
 	// TODO: We need a much better way to distinguish between caller and server
 	// errors. See T855583.
 	c.edge.calls.Inc()
-	if err == nil && !isApplicationError {
+	if err == nil {
 		c.edge.successes.Inc()
 		c.edge.latencies.Observe(elapsed)
 		return
 	}
+
 	// For now, assume that all application errors are the caller's fault.
 	if isApplicationError {
 		c.edge.callerErrLatencies.Observe(elapsed)
-		if counter, err := c.edge.callerFailures.Get(_error, "application_error"); err == nil {
+
+		tags := []string{
+			_error, "application_error",
+		}
+
+		// If application error is a named one, augment tags with its name
+		if named, ok := err.(withName); ok {
+			tags = append(tags, _name, named.Name())
+		}
+
+		counter, err := c.edge.callerFailures.Get(tags...)
+		if err == nil {
 			counter.Inc()
 		}
+
 		return
 	}
 

@@ -60,14 +60,13 @@ func (h handler) Integer(ctx context.Context, body wire.Value) (thrift.Response,
 		return thrift.Response{}, err
 	}
 
-	success, err := h.impl.Integer(ctx, args.Key)
+	success, appErr := h.impl.Integer(ctx, args.Key)
 
-	hadError := err != nil
-	result, err := atomic.ReadOnlyStore_Integer_Helper.WrapResponse(success, err)
+	result, err := atomic.ReadOnlyStore_Integer_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
-		response.IsApplicationError = hadError
+		response.ApplicationError = appErr
 		response.Body = result
 	}
 	return response, err

@@ -76,14 +76,13 @@ func (h handler) Echo(ctx context.Context, body wire.Value) (thrift.Response, er
 		return thrift.Response{}, err
 	}
 
-	success, err := h.impl.Echo(ctx, args.Ping)
+	success, appErr := h.impl.Echo(ctx, args.Ping)
 
-	hadError := err != nil
-	result, err := echo.Echo_Echo_Helper.WrapResponse(success, err)
+	result, err := echo.Echo_Echo_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
-		response.IsApplicationError = hadError
+		response.ApplicationError = appErr
 		response.Body = result
 	}
 	return response, err

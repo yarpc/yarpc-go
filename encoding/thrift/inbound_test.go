@@ -23,6 +23,7 @@ package thrift
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -100,7 +101,10 @@ func TestDecodeRequestApplicationError(t *testing.T) {
 
 	handler := func(ctx context.Context, w wire.Value) (Response, error) {
 		// XXX setting application error bit
-		return Response{Body: fakeEnveloper(wire.Reply), IsApplicationError: true}, nil
+		return Response{
+			Body:             fakeEnveloper(wire.Reply),
+			ApplicationError: errors.New("application_error"),
+		}, nil
 	}
 	h := thriftUnaryHandler{Protocol: proto, UnaryHandler: handler}
 

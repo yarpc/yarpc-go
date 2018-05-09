@@ -38,19 +38,20 @@ var _writerPool = sync.Pool{New: func() interface{} {
 type writer struct {
 	transport.ResponseWriter
 
-	isApplicationError bool
+	applicationError error
 }
 
 func newWriter(rw transport.ResponseWriter) *writer {
 	w := _writerPool.Get().(*writer)
-	w.isApplicationError = false
+	w.applicationError = nil
 	w.ResponseWriter = rw
 	return w
 }
 
-func (w *writer) SetApplicationError() {
-	w.isApplicationError = true
-	w.ResponseWriter.SetApplicationError()
+func (w *writer) SetApplicationError(err error) {
+	w.applicationError = err
+
+	w.ResponseWriter.SetApplicationError(err)
 }
 
 func (w *writer) free() {
@@ -72,8 +73,17 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 	call := m.graph.begin(ctx, transport.Unary, _directionInbound, req)
 	wrappedWriter := newWriter(w)
 	err := h.Handle(ctx, req, wrappedWriter)
-	call.EndWithAppError(err, wrappedWriter.isApplicationError)
+
+	// In case the application error happened, we want it to override
+	// whatever other error might have happened along
+	if wrappedWriter.applicationError != nil {
+		call.EndWithAppError(wrappedWriter.applicationError, true)
+	} else {
+		call.EndWithAppError(err, false)
+	}
+
 	wrappedWriter.free()
+
 	return err
 }
 
@@ -81,11 +91,7 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 func (m *Middleware) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	call := m.graph.begin(ctx, transport.Unary, _directionOutbound, req)
 	res, err := out.Call(ctx, req)
-
-	isApplicationError := false
-	if res != nil {
-		isApplicationError = res.ApplicationError
-	}
+	isApplicationError := res != nil && res.ApplicationError
 	call.EndWithAppError(err, isApplicationError)
 	return res, err
 }

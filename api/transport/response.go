@@ -45,5 +45,5 @@ type ResponseWriter interface {
 	// SetApplicationError specifies that this response contains an
 	// application error. If called, this MUST be called before any invocation
 	// of Write().
-	SetApplicationError()
+	SetApplicationError(err error)
 }

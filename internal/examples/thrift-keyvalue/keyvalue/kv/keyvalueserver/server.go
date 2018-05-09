@@ -93,14 +93,13 @@ func (h handler) GetValue(ctx context.Context, body wire.Value) (thrift.Response
 		return thrift.Response{}, err
 	}
 
-	success, err := h.impl.GetValue(ctx, args.Key)
+	success, appErr := h.impl.GetValue(ctx, args.Key)
 
-	hadError := err != nil
-	result, err := kv.KeyValue_GetValue_Helper.WrapResponse(success, err)
+	result, err := kv.KeyValue_GetValue_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
-		response.IsApplicationError = hadError
+		response.ApplicationError = appErr
 		response.Body = result
 	}
 	return response, err
@@ -112,14 +111,13 @@ func (h handler) SetValue(ctx context.Context, body wire.Value) (thrift.Response
 		return thrift.Response{}, err
 	}
 
-	err := h.impl.SetValue(ctx, args.Key, args.Value)
+	appErr := h.impl.SetValue(ctx, args.Key, args.Value)
 
-	hadError := err != nil
-	result, err := kv.KeyValue_SetValue_Helper.WrapResponse(err)
+	result, err := kv.KeyValue_SetValue_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
-		response.IsApplicationError = hadError
+		response.ApplicationError = appErr
 		response.Body = result
 	}
 	return response, err

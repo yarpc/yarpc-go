@@ -228,7 +228,7 @@ func (rw *responseWriter) addHeader(key string, value string) {
 	rw.headers = rw.headers.With(key, value)
 }
 
-func (rw *responseWriter) SetApplicationError() {
+func (rw *responseWriter) SetApplicationError(_ error) {
 	rw.isApplicationError = true
 }
 
