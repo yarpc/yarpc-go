@@ -82,10 +82,12 @@ func init() {
 	)
 }
 
-type client struct {
+// Client is a wrapper around a thrift.Client
+type Client struct {
 	<if .Parent><import .ParentClientPackagePath>.Interface
 	<end>
-	c <$thrift>.Client
+	// Client is the underlining thirft client
+	Client <$thrift>.Client
 }
 
 <$service := .>
@@ -95,13 +97,13 @@ type client struct {
 <$context := import "context">
 <$prefix := printf "%s.%s_%s_" (import $module.ImportPath) $service.Name .Name>
 
-func (c client) <.Name>(
+func (c Client) <.Name>(
 	ctx <$context>.Context, <range .Arguments>
 	_<.Name> <formatType .Type>,<end>
 	opts ...<$yarpc>.CallOption,
 <if .OneWay>) (<$yarpc>.Ack, error) {
 	args := <$prefix>Helper.Args(<range .Arguments>_<.Name>, <end>)
-	return c.c.CallOneway(ctx, args, opts...)
+	return c.Client.CallOneway(ctx, args, opts...)
 }
 <else>) (<if .ReturnType>success <formatType .ReturnType>,<end> err error) {
 	<$wire := import "go.uber.org/thriftrw/wire">
@@ -109,7 +111,7 @@ func (c client) <.Name>(
 
 	<if $sanitize>ctx = <import "github.com/uber/tchannel-go">.WithoutHeaders(ctx)<end>
 	var body <$wire>.Value
-	body, err = c.c.Call(ctx, args, opts...)
+	body, err = c.Client.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
