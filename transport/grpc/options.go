@@ -119,6 +119,15 @@ func ClientMaxSendMsgSize(clientMaxSendMsgSize int) TransportOption {
 	}
 }
 
+// ClientTLS says to use TLS with the system certificate pool on the client side.
+//
+// The default is to not use TLS.
+func ClientTLS() TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.clientTLS = true
+	}
+}
+
 // InboundOption is an option for an inbound.
 type InboundOption func(*inboundOptions)
 
@@ -137,6 +146,7 @@ type transportOptions struct {
 	serverMaxSendMsgSize int
 	clientMaxRecvMsgSize int
 	clientMaxSendMsgSize int
+	clientTLS            bool
 }
 
 func newTransportOptions(options []TransportOption) *transportOptions {

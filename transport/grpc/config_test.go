@@ -91,6 +91,7 @@ func TestTransportSpec(t *testing.T) {
 		ServerMaxSendMsgSize int
 		ClientMaxRecvMsgSize int
 		ClientMaxSendMsgSize int
+		ClientTLS            bool
 	}
 
 	type wantOutbound struct {
@@ -209,6 +210,17 @@ func TestTransportSpec(t *testing.T) {
 				ClientMaxSendMsgSize: 8192,
 			},
 		},
+		{
+			desc: "inbound and transport with client TLS",
+			transportCfg: attrs{
+				"clientTLS": true,
+			},
+			inboundCfg: attrs{"address": ":54572"},
+			wantInbound: &wantInbound{
+				Address:   ":54572",
+				ClientTLS: true,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -268,6 +280,7 @@ func TestTransportSpec(t *testing.T) {
 				} else {
 					assert.Equal(t, defaultClientMaxSendMsgSize, inbound.t.options.clientMaxSendMsgSize)
 				}
+				assert.Equal(t, tt.wantInbound.ClientTLS, inbound.t.options.clientTLS)
 			} else {
 				assert.Len(t, cfg.Inbounds, 0)
 			}
