@@ -1,5 +1,5 @@
 hash: a42f2c917dbbdb0ebc3052a09ba38d91eb37088d5ba2be498c8e8399d7663dd5
-updated: 2018-05-11T15:07:34.416178065Z
+updated: 2018-05-15T15:05:26.192169874Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -32,7 +32,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: b4deda0973fb4c70b50d226b1af49f3da59f5265
+  version: 927b65914520a8b7d44f5c9057611cfec6b2e2d0
   subpackages:
   - proto
   - ptypes
@@ -170,7 +170,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: f73e4c9ed3b7ebdd5f699a16a880c2b1994e50dd
+  version: 2491c5de3490fced2f6cff376127c667efeed857
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -187,10 +187,10 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 9950ad118b73f9207b991f01920a3509c68f7f2b
+  version: 7c87d13f8e835d2fb3a70a2912c811ed0c1d241b
   repo: https://github.com/golang/sys
 - name: golang.org/x/text
-  version: 7dd2c8130f5e924233f5543598300651c386d431
+  version: 5c1cf69b5978e5a34c5f9ba09a83e56acc4b7877
   subpackages:
   - secure/bidirule
   - transform
@@ -202,7 +202,7 @@ imports:
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 86e600f69ee4704c6efbf6a2a40a5c10700e76c2
+  version: 7bb2a897381c9c5ab2aeb8614f758d7766af68ff
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
@@ -242,7 +242,7 @@ testImports:
 - name: github.com/kisielk/gotool
   version: 80517062f582ea3340cd4baf70e86d539ae7d84d
 - name: github.com/uber/jaeger-lib
-  version: 4267858c0679cd4e47cefed8d7f70fd386cfb567
+  version: ed3a127ec5fef7ae9ea95b01b542c47fbd999ce5
   subpackages:
   - metrics
 - name: go.uber.org/tools
