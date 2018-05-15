@@ -70,13 +70,19 @@ func TestMiddlewareLogging(t *testing.T) {
 	}
 
 	tests := []struct {
-		desc           string
-		err            error // downstream error
-		applicationErr bool  // downstream application error
-		wantFields     []zapcore.Field
+		desc            string
+		err             error // downstream error
+		applicationErr  bool  // downstream application error
+		wantErrLevel    zapcore.Level
+		wantInboundMsg  string
+		wantOutboundMsg string
+		wantFields      []zapcore.Field
 	}{
 		{
-			desc: "no downstream errors",
+			desc:            "no downstream errors",
+			wantErrLevel:    zapcore.DebugLevel,
+			wantInboundMsg:  "Handled inbound request.",
+			wantOutboundMsg: "Made outbound call.",
 			wantFields: []zapcore.Field{
 				zap.Duration("latency", 0),
 				zap.Bool("successful", true),
@@ -85,8 +91,11 @@ func TestMiddlewareLogging(t *testing.T) {
 			},
 		},
 		{
-			desc: "downstream transport error",
-			err:  failed,
+			desc:            "downstream transport error",
+			err:             failed,
+			wantErrLevel:    zapcore.ErrorLevel,
+			wantInboundMsg:  "Error handling inbound request.",
+			wantOutboundMsg: "Error making outbound call.",
 			wantFields: []zapcore.Field{
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
@@ -132,8 +141,8 @@ func TestMiddlewareLogging(t *testing.T) {
 			logContext = append(logContext, tt.wantFields...)
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
-					Level:   zapcore.DebugLevel,
-					Message: "Handled inbound request.",
+					Level:   tt.wantErrLevel,
+					Message: tt.wantInboundMsg,
 				},
 				Context: logContext,
 			}
@@ -153,8 +162,8 @@ func TestMiddlewareLogging(t *testing.T) {
 			logContext = append(logContext, tt.wantFields...)
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
-					Level:   zapcore.DebugLevel,
-					Message: "Made outbound call.",
+					Level:   tt.wantErrLevel,
+					Message: tt.wantOutboundMsg,
 				},
 				Context: logContext,
 			}
@@ -171,8 +180,8 @@ func TestMiddlewareLogging(t *testing.T) {
 			logContext = append(logContext, tt.wantFields...)
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
-					Level:   zapcore.DebugLevel,
-					Message: "Handled inbound request.",
+					Level:   tt.wantErrLevel,
+					Message: tt.wantInboundMsg,
 				},
 				Context: logContext,
 			}
@@ -192,8 +201,8 @@ func TestMiddlewareLogging(t *testing.T) {
 			}
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
-					Level:   zapcore.DebugLevel,
-					Message: "Made outbound call.",
+					Level:   tt.wantErrLevel,
+					Message: tt.wantOutboundMsg,
 				},
 				Context: logContext,
 			}
@@ -212,8 +221,8 @@ func TestMiddlewareLogging(t *testing.T) {
 			logContext = append(logContext, tt.wantFields...)
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
-					Level:   zapcore.DebugLevel,
-					Message: "Handled inbound request.",
+					Level:   tt.wantErrLevel,
+					Message: tt.wantInboundMsg,
 				},
 				Context: logContext,
 			}
@@ -233,8 +242,8 @@ func TestMiddlewareLogging(t *testing.T) {
 			}
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
-					Level:   zapcore.DebugLevel,
-					Message: "Made outbound call.",
+					Level:   tt.wantErrLevel,
+					Message: tt.wantOutboundMsg,
 				},
 				Context: logContext,
 			}

@@ -59,14 +59,25 @@ func (c call) EndWithAppError(err error, isApplicationError bool) {
 }
 
 func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool) {
-	msg := "Handled inbound request."
-	if c.direction != _directionInbound {
-		msg = "Made outbound call."
+	var ce *zapcore.CheckedEntry
+	if err == nil {
+		msg := "Handled inbound request."
+		if c.direction != _directionInbound {
+			msg = "Made outbound call."
+		}
+		ce = c.edge.logger.Check(zap.DebugLevel, msg)
+	} else {
+		msg := "Error handling inbound request."
+		if c.direction != _directionInbound {
+			msg = "Error making outbound call."
+		}
+		ce = c.edge.logger.Check(zap.ErrorLevel, msg)
 	}
-	ce := c.edge.logger.Check(zap.DebugLevel, msg)
+
 	if ce == nil {
 		return
 	}
+
 	fields := c.fields[:0]
 	fields = append(fields, zap.String("rpcType", c.rpcType.String()))
 	fields = append(fields, zap.Duration("latency", elapsed))
