@@ -8,8 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 - TChannel inbounds will blackhole requests when handlers return resource
   exhausted errors.
-- Change log level to reflect error status. Previously all logs are logged at debug
-  level, errors are now logged at error level.
+- Change log level to reflect error statuses. Previously all logs are logged at debug
+  level. Errors are now logged at error level.
 
 ## [1.30.0] - 2018-05-03
 ### Added
