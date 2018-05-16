@@ -66,7 +66,7 @@ func (c call) EndWithAppError(err error, isApplicationError bool) {
 
 func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool) {
 	var ce *zapcore.CheckedEntry
-	if err == nil {
+	if err == nil && !isApplicationError {
 		msg := _successfulInbound
 		if c.direction != _directionInbound {
 			msg = _successfulOutbound
