@@ -1,5 +1,5 @@
 hash: a42f2c917dbbdb0ebc3052a09ba38d91eb37088d5ba2be498c8e8399d7663dd5
-updated: 2018-05-15T15:05:26.192169874Z
+updated: 2018-05-17T15:06:41.566370767Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -90,7 +90,7 @@ imports:
   subpackages:
   - internal/mapstructure
 - name: github.com/uber-go/tally
-  version: 6f121596292a5ec8618b71ee3687fe42da73d289
+  version: 51e5c45d670c9ff0dfefd5bdd72903631f013d0c
 - name: github.com/uber/jaeger-client-go
   version: b043381d944715b469fd6b37addfd30145ca1758
   subpackages:
@@ -197,7 +197,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 48418e5732e1b1e2a10207c8007a5f959e422f20
+  version: 28aef64757f4d432485ab970b094e1af8b301e84
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
