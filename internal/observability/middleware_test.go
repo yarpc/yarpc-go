@@ -69,7 +69,7 @@ func TestMiddlewareLogging(t *testing.T) {
 		}
 	}
 
-	tests := []struct {
+	type test struct {
 		desc            string
 		err             error // downstream error
 		applicationErr  bool  // downstream application error
@@ -77,7 +77,9 @@ func TestMiddlewareLogging(t *testing.T) {
 		wantInboundMsg  string
 		wantOutboundMsg string
 		wantFields      []zapcore.Field
-	}{
+	}
+
+	tests := []test{
 		{
 			desc:            "no downstream errors",
 			wantErrLevel:    zapcore.DebugLevel,
@@ -118,6 +120,14 @@ func TestMiddlewareLogging(t *testing.T) {
 		},
 	}
 
+	newHandler := func(t test) fakeHandler {
+		return fakeHandler{err: t.err, applicationErr: t.applicationErr}
+	}
+
+	newOutbound := func(t test) fakeOutbound {
+		return fakeOutbound{err: t.err, applicationErr: t.applicationErr}
+	}
+
 	for _, tt := range tests {
 		core, logs := observer.New(zapcore.DebugLevel)
 		mw := NewMiddleware(zap.New(core), metrics.New().Scope(), NewNopContextExtractor())
@@ -143,7 +153,7 @@ func TestMiddlewareLogging(t *testing.T) {
 				context.Background(),
 				req,
 				&transporttest.FakeResponseWriter{},
-				fakeHandler{tt.err, tt.applicationErr},
+				newHandler(tt),
 			)
 			checkErr(err)
 			logContext := append(
@@ -162,7 +172,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
 		})
 		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
-			res, err := mw.Call(context.Background(), req, fakeOutbound{err: tt.err, applicationErr: tt.applicationErr})
+			res, err := mw.Call(context.Background(), req, newOutbound(tt))
 			checkErr(err)
 			if tt.err == nil {
 				assert.NotNil(t, res, "Expected non-nil response if call is successful.")
@@ -182,11 +192,14 @@ func TestMiddlewareLogging(t *testing.T) {
 			}
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
 		})
+
+		// Application errors aren't applicable to oneway and streaming
+		if tt.applicationErr {
+			continue
+		}
+
 		t.Run(tt.desc+", oneway inbound", func(t *testing.T) {
-			if tt.applicationErr {
-				t.Skip()
-			}
-			err := mw.HandleOneway(context.Background(), req, fakeHandler{err: tt.err, applicationErr: false})
+			err := mw.HandleOneway(context.Background(), req, newHandler(tt))
 			checkErr(err)
 			logContext := append(
 				baseFields(),
@@ -204,10 +217,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
 		})
 		t.Run(tt.desc+", oneway outbound", func(t *testing.T) {
-			if tt.applicationErr {
-				t.Skip()
-			}
-			ack, err := mw.CallOneway(context.Background(), req, fakeOutbound{err: tt.err, applicationErr: false})
+			ack, err := mw.CallOneway(context.Background(), req, newOutbound(tt))
 			checkErr(err)
 			logContext := append(
 				baseFields(),
@@ -228,12 +238,9 @@ func TestMiddlewareLogging(t *testing.T) {
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
 		})
 		t.Run(tt.desc+", stream inbound", func(t *testing.T) {
-			if tt.applicationErr {
-				t.Skip()
-			}
 			stream, err := transport.NewServerStream(&fakeStream{ctx: context.Background(), request: sreq})
 			require.NoError(t, err)
-			err = mw.HandleStream(stream, fakeHandler{err: tt.err, applicationErr: false})
+			err = mw.HandleStream(stream, newHandler(tt))
 			checkErr(err)
 			logContext := append(
 				baseFields(),
@@ -251,10 +258,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
 		})
 		t.Run(tt.desc+", stream outbound", func(t *testing.T) {
-			if tt.applicationErr {
-				t.Skip()
-			}
-			clientStream, err := mw.CallStream(context.Background(), sreq, fakeOutbound{err: tt.err, applicationErr: false})
+			clientStream, err := mw.CallStream(context.Background(), sreq, newOutbound(tt))
 			checkErr(err)
 			logContext := append(
 				baseFields(),
@@ -288,7 +292,7 @@ func TestMiddlewareMetrics(t *testing.T) {
 		Body:      strings.NewReader("body"),
 	}
 
-	tests := []struct {
+	type test struct {
 		desc               string
 		err                error // downstream error
 		applicationErr     bool  // downstream application error
@@ -296,7 +300,9 @@ func TestMiddlewareMetrics(t *testing.T) {
 		wantSuccesses      int
 		wantCallerFailures map[string]int
 		wantServerFailures map[string]int
-	}{
+	}
+
+	tests := []test{
 		{
 			desc:          "no downstream errors",
 			wantCalls:     1,
@@ -340,6 +346,14 @@ func TestMiddlewareMetrics(t *testing.T) {
 		},
 	}
 
+	newHandler := func(t test) fakeHandler {
+		return fakeHandler{err: t.err, applicationErr: t.applicationErr}
+	}
+
+	newOutbound := func(t test) fakeOutbound {
+		return fakeOutbound{err: t.err, applicationErr: t.applicationErr}
+	}
+
 	for _, tt := range tests {
 		validate := func(mw *Middleware, direction string) {
 			key, free := getKey(req, direction)
@@ -360,13 +374,13 @@ func TestMiddlewareMetrics(t *testing.T) {
 				context.Background(),
 				req,
 				&transporttest.FakeResponseWriter{},
-				fakeHandler{tt.err, tt.applicationErr},
+				newHandler(tt),
 			)
 			validate(mw, string(_directionInbound))
 		})
 		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
 			mw := NewMiddleware(zap.NewNop(), metrics.New().Scope(), NewNopContextExtractor())
-			mw.Call(context.Background(), req, fakeOutbound{err: tt.err, applicationErr: tt.applicationErr})
+			mw.Call(context.Background(), req, newOutbound(tt))
 			validate(mw, string(_directionOutbound))
 		})
 	}
@@ -418,7 +432,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		zap.String("error", "application_error"),
 	}
 
-	core, logs := observer.New(zap.ErrorLevel)
+	core, logs := observer.New(zap.DebugLevel)
 	mw := NewMiddleware(zap.New(core), metrics.New().Scope(), NewNopContextExtractor())
 
 	assert.NoError(t, mw.Handle(
