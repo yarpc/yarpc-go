@@ -215,7 +215,7 @@ func (fw *FakeResponseWriter) SetApplicationError() {
 
 // AddHeaders for FakeResponseWriter.
 func (fw *FakeResponseWriter) AddHeaders(h transport.Headers) {
-	for k, v := range h.Items() {
+	for k, v := range h.OriginalItems() {
 		fw.Headers = fw.Headers.With(k, v)
 	}
 }
