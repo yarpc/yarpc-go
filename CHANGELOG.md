@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - TChannel inbounds will blackhole requests when handlers return resource
   exhausted errors.
 
+### Fixed
+- Pin `github.com/golang/protobuf` for backwards compatability guarantees.
+
 ## [1.30.0] - 2018-05-03
 ### Added
 - The YARPC HTTP outbound now implements http.RoundTripper.
