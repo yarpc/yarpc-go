@@ -30,7 +30,13 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-const _error = "error"
+const (
+	_error              = "error"
+	_successfulInbound  = "Handled inbound request."
+	_successfulOutbound = "Made outbound call."
+	_errorInbound       = "Error handling inbound request."
+	_errorOutbound      = "Error making outbound call."
+)
 
 // A call represents a single RPC along an edge.
 //
@@ -59,14 +65,25 @@ func (c call) EndWithAppError(err error, isApplicationError bool) {
 }
 
 func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool) {
-	msg := "Handled inbound request."
-	if c.direction != _directionInbound {
-		msg = "Made outbound call."
+	var ce *zapcore.CheckedEntry
+	if err == nil && !isApplicationError {
+		msg := _successfulInbound
+		if c.direction != _directionInbound {
+			msg = _successfulOutbound
+		}
+		ce = c.edge.logger.Check(zap.DebugLevel, msg)
+	} else {
+		msg := _errorInbound
+		if c.direction != _directionInbound {
+			msg = _errorOutbound
+		}
+		ce = c.edge.logger.Check(zap.ErrorLevel, msg)
 	}
-	ce := c.edge.logger.Check(zap.DebugLevel, msg)
+
 	if ce == nil {
 		return
 	}
+
 	fields := c.fields[:0]
 	fields = append(fields, zap.String("rpcType", c.rpcType.String()))
 	fields = append(fields, zap.Duration("latency", elapsed))

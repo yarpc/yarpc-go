@@ -55,14 +55,15 @@ func (h fakeHandler) HandleStream(*transport.ServerStream) error {
 type fakeOutbound struct {
 	transport.Outbound
 
-	err error
+	err            error
+	applicationErr bool
 }
 
 func (o fakeOutbound) Call(context.Context, *transport.Request) (*transport.Response, error) {
 	if o.err != nil {
 		return nil, o.err
 	}
-	return &transport.Response{}, nil
+	return &transport.Response{ApplicationError: o.applicationErr}, nil
 }
 
 func (o fakeOutbound) CallOneway(context.Context, *transport.Request) (transport.Ack, error) {

@@ -69,14 +69,22 @@ func TestMiddlewareLogging(t *testing.T) {
 		}
 	}
 
-	tests := []struct {
-		desc           string
-		err            error // downstream error
-		applicationErr bool  // downstream application error
-		wantFields     []zapcore.Field
-	}{
+	type test struct {
+		desc            string
+		err             error // downstream error
+		applicationErr  bool  // downstream application error
+		wantErrLevel    zapcore.Level
+		wantInboundMsg  string
+		wantOutboundMsg string
+		wantFields      []zapcore.Field
+	}
+
+	tests := []test{
 		{
-			desc: "no downstream errors",
+			desc:            "no downstream errors",
+			wantErrLevel:    zapcore.DebugLevel,
+			wantInboundMsg:  "Handled inbound request.",
+			wantOutboundMsg: "Made outbound call.",
 			wantFields: []zapcore.Field{
 				zap.Duration("latency", 0),
 				zap.Bool("successful", true),
@@ -85,8 +93,11 @@ func TestMiddlewareLogging(t *testing.T) {
 			},
 		},
 		{
-			desc: "downstream transport error",
-			err:  failed,
+			desc:            "downstream transport error",
+			err:             failed,
+			wantErrLevel:    zapcore.ErrorLevel,
+			wantInboundMsg:  "Error handling inbound request.",
+			wantOutboundMsg: "Error making outbound call.",
 			wantFields: []zapcore.Field{
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
@@ -94,6 +105,27 @@ func TestMiddlewareLogging(t *testing.T) {
 				zap.Error(failed),
 			},
 		},
+		{
+			desc:            "no downstream error but with application error",
+			applicationErr:  true,
+			wantErrLevel:    zapcore.ErrorLevel,
+			wantInboundMsg:  "Error handling inbound request.",
+			wantOutboundMsg: "Error making outbound call.",
+			wantFields: []zapcore.Field{
+				zap.Duration("latency", 0),
+				zap.Bool("successful", false),
+				zap.Skip(),
+				zap.String("error", "application_error"),
+			},
+		},
+	}
+
+	newHandler := func(t test) fakeHandler {
+		return fakeHandler{err: t.err, applicationErr: t.applicationErr}
+	}
+
+	newOutbound := func(t test) fakeOutbound {
+		return fakeOutbound{err: t.err, applicationErr: t.applicationErr}
 	}
 
 	for _, tt := range tests {
@@ -121,7 +153,7 @@ func TestMiddlewareLogging(t *testing.T) {
 				context.Background(),
 				req,
 				&transporttest.FakeResponseWriter{},
-				fakeHandler{tt.err, tt.applicationErr},
+				newHandler(tt),
 			)
 			checkErr(err)
 			logContext := append(
@@ -132,15 +164,15 @@ func TestMiddlewareLogging(t *testing.T) {
 			logContext = append(logContext, tt.wantFields...)
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
-					Level:   zapcore.DebugLevel,
-					Message: "Handled inbound request.",
+					Level:   tt.wantErrLevel,
+					Message: tt.wantInboundMsg,
 				},
 				Context: logContext,
 			}
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
 		})
 		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
-			res, err := mw.Call(context.Background(), req, fakeOutbound{err: tt.err})
+			res, err := mw.Call(context.Background(), req, newOutbound(tt))
 			checkErr(err)
 			if tt.err == nil {
 				assert.NotNil(t, res, "Expected non-nil response if call is successful.")
@@ -153,15 +185,21 @@ func TestMiddlewareLogging(t *testing.T) {
 			logContext = append(logContext, tt.wantFields...)
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
-					Level:   zapcore.DebugLevel,
-					Message: "Made outbound call.",
+					Level:   tt.wantErrLevel,
+					Message: tt.wantOutboundMsg,
 				},
 				Context: logContext,
 			}
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
 		})
+
+		// Application errors aren't applicable to oneway and streaming
+		if tt.applicationErr {
+			continue
+		}
+
 		t.Run(tt.desc+", oneway inbound", func(t *testing.T) {
-			err := mw.HandleOneway(context.Background(), req, fakeHandler{tt.err, false})
+			err := mw.HandleOneway(context.Background(), req, newHandler(tt))
 			checkErr(err)
 			logContext := append(
 				baseFields(),
@@ -171,15 +209,15 @@ func TestMiddlewareLogging(t *testing.T) {
 			logContext = append(logContext, tt.wantFields...)
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
-					Level:   zapcore.DebugLevel,
-					Message: "Handled inbound request.",
+					Level:   tt.wantErrLevel,
+					Message: tt.wantInboundMsg,
 				},
 				Context: logContext,
 			}
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
 		})
 		t.Run(tt.desc+", oneway outbound", func(t *testing.T) {
-			ack, err := mw.CallOneway(context.Background(), req, fakeOutbound{err: tt.err})
+			ack, err := mw.CallOneway(context.Background(), req, newOutbound(tt))
 			checkErr(err)
 			logContext := append(
 				baseFields(),
@@ -192,8 +230,8 @@ func TestMiddlewareLogging(t *testing.T) {
 			}
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
-					Level:   zapcore.DebugLevel,
-					Message: "Made outbound call.",
+					Level:   tt.wantErrLevel,
+					Message: tt.wantOutboundMsg,
 				},
 				Context: logContext,
 			}
@@ -202,7 +240,7 @@ func TestMiddlewareLogging(t *testing.T) {
 		t.Run(tt.desc+", stream inbound", func(t *testing.T) {
 			stream, err := transport.NewServerStream(&fakeStream{ctx: context.Background(), request: sreq})
 			require.NoError(t, err)
-			err = mw.HandleStream(stream, fakeHandler{tt.err, false})
+			err = mw.HandleStream(stream, newHandler(tt))
 			checkErr(err)
 			logContext := append(
 				baseFields(),
@@ -212,15 +250,15 @@ func TestMiddlewareLogging(t *testing.T) {
 			logContext = append(logContext, tt.wantFields...)
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
-					Level:   zapcore.DebugLevel,
-					Message: "Handled inbound request.",
+					Level:   tt.wantErrLevel,
+					Message: tt.wantInboundMsg,
 				},
 				Context: logContext,
 			}
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
 		})
 		t.Run(tt.desc+", stream outbound", func(t *testing.T) {
-			clientStream, err := mw.CallStream(context.Background(), sreq, fakeOutbound{err: tt.err})
+			clientStream, err := mw.CallStream(context.Background(), sreq, newOutbound(tt))
 			checkErr(err)
 			logContext := append(
 				baseFields(),
@@ -233,8 +271,8 @@ func TestMiddlewareLogging(t *testing.T) {
 			}
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
-					Level:   zapcore.DebugLevel,
-					Message: "Made outbound call.",
+					Level:   tt.wantErrLevel,
+					Message: tt.wantOutboundMsg,
 				},
 				Context: logContext,
 			}
@@ -254,7 +292,7 @@ func TestMiddlewareMetrics(t *testing.T) {
 		Body:      strings.NewReader("body"),
 	}
 
-	tests := []struct {
+	type test struct {
 		desc               string
 		err                error // downstream error
 		applicationErr     bool  // downstream application error
@@ -262,7 +300,9 @@ func TestMiddlewareMetrics(t *testing.T) {
 		wantSuccesses      int
 		wantCallerFailures map[string]int
 		wantServerFailures map[string]int
-	}{
+	}
+
+	tests := []test{
 		{
 			desc:          "no downstream errors",
 			wantCalls:     1,
@@ -306,6 +346,14 @@ func TestMiddlewareMetrics(t *testing.T) {
 		},
 	}
 
+	newHandler := func(t test) fakeHandler {
+		return fakeHandler{err: t.err, applicationErr: t.applicationErr}
+	}
+
+	newOutbound := func(t test) fakeOutbound {
+		return fakeOutbound{err: t.err, applicationErr: t.applicationErr}
+	}
+
 	for _, tt := range tests {
 		validate := func(mw *Middleware, direction string) {
 			key, free := getKey(req, direction)
@@ -326,13 +374,13 @@ func TestMiddlewareMetrics(t *testing.T) {
 				context.Background(),
 				req,
 				&transporttest.FakeResponseWriter{},
-				fakeHandler{tt.err, tt.applicationErr},
+				newHandler(tt),
 			)
 			validate(mw, string(_directionInbound))
 		})
 		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
 			mw := NewMiddleware(zap.NewNop(), metrics.New().Scope(), NewNopContextExtractor())
-			mw.Call(context.Background(), req, fakeOutbound{err: tt.err})
+			mw.Call(context.Background(), req, newOutbound(tt))
 			validate(mw, string(_directionOutbound))
 		})
 	}
@@ -396,8 +444,8 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 
 	expected := observer.LoggedEntry{
 		Entry: zapcore.Entry{
-			Level:   zapcore.DebugLevel,
-			Message: "Handled inbound request.",
+			Level:   zapcore.ErrorLevel,
+			Message: "Error handling inbound request.",
 		},
 		Context: expectedFields,
 	}
