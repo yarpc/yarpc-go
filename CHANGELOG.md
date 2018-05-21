@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Change log level to reflect error statuses. Previously all logs are logged at debug
   level. Errors are now logged at error level.
 
+### Fixed
+- Pin `github.com/golang/protobuf` for backwards compatability guarantees.
+
 ## [1.30.0] - 2018-05-03
 ### Added
 - The YARPC HTTP outbound now implements http.RoundTripper.

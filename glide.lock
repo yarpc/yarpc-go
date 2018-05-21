@@ -1,5 +1,5 @@
-hash: a42f2c917dbbdb0ebc3052a09ba38d91eb37088d5ba2be498c8e8399d7663dd5
-updated: 2018-05-17T15:06:41.566370767Z
+hash: 645f18f7fcd15820d1f2be89a2b3f771ac2b07a6996a4288d0f84dc56563149b
+updated: 2018-05-17T17:23:40.261119849-07:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -32,7 +32,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 927b65914520a8b7d44f5c9057611cfec6b2e2d0
+  version: b4deda0973fb4c70b50d226b1af49f3da59f5265
   subpackages:
   - proto
   - ptypes
@@ -65,19 +65,19 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: d811d2e9bf898806ecfb6ef6296774b13ffc314c
+  version: 38c53a9f4bfcd932d1b00bfc65e256a7fba6b37a
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 8b1c2da0d56deffdbb9e48d4414b4e674bd8083e
+  version: 780932d4fbbe0e69b84c34c20f5c8d0981e109ea
   subpackages:
   - internal/util
   - nfs
   - xfs
 - name: github.com/stretchr/testify
-  version: c679ae2cc0cb27ec3293fea7e254e47386f05d69
+  version: 12b6f73e6084dad08a7c6e575284b177ecafbc71
   subpackages:
   - assert
   - require
@@ -90,7 +90,7 @@ imports:
   subpackages:
   - internal/mapstructure
 - name: github.com/uber-go/tally
-  version: 51e5c45d670c9ff0dfefd5bdd72903631f013d0c
+  version: 79f2a33b0e55b1255ffbbaf824dcafb09ff34dda
 - name: github.com/uber/jaeger-client-go
   version: b043381d944715b469fd6b37addfd30145ca1758
   subpackages:
@@ -170,7 +170,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 2491c5de3490fced2f6cff376127c667efeed857
+  version: 5f9ae10d9af5b1c89ae6904293b14b064d4ada23
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -185,24 +185,25 @@ imports:
   - internal/timeseries
   - ipv4
   - ipv6
+  - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: 7c87d13f8e835d2fb3a70a2912c811ed0c1d241b
+  version: 3b87a42e500a6dc65dae1a55d0b641295971163e
   repo: https://github.com/golang/sys
 - name: golang.org/x/text
-  version: 5c1cf69b5978e5a34c5f9ba09a83e56acc4b7877
+  version: 2cb43934f0eece38629746959acc633cba083fe4
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 28aef64757f4d432485ab970b094e1af8b301e84
+  version: ac136b6c2db7c4d43955e4bc7174db36dc0539c0
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 7bb2a897381c9c5ab2aeb8614f758d7766af68ff
+  version: 35de2414665fc36f56b72d982c5af480d86de5ab
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
