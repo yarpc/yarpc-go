@@ -21,6 +21,7 @@
 package grpc
 
 import (
+	"crypto/tls"
 	"math"
 
 	"github.com/opentracing/opentracing-go"
@@ -128,6 +129,20 @@ func ClientTLS() TransportOption {
 	}
 }
 
+// ClientTLSConfig provides a tls.Config for the GRPC client
+func ClientTLSConfig(c *tls.Config) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.clientTLSConfig = c
+	}
+}
+
+// ServerTLSConfig provides a tls.Config for the GRPC client
+func ServerTLSConfig(c *tls.Config) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.serverTLSConfig = c
+	}
+}
+
 // InboundOption is an option for an inbound.
 type InboundOption func(*inboundOptions)
 
@@ -147,6 +162,8 @@ type transportOptions struct {
 	clientMaxRecvMsgSize int
 	clientMaxSendMsgSize int
 	clientTLS            bool
+	clientTLSConfig      *tls.Config
+	serverTLSConfig      *tls.Config
 }
 
 func newTransportOptions(options []TransportOption) *transportOptions {

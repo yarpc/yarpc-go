@@ -29,6 +29,7 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 var (
@@ -109,12 +110,18 @@ func (i *Inbound) start() error {
 
 	handler := newHandler(i, i.t.options.logger)
 
-	server := grpc.NewServer(
+	serverOptions := []grpc.ServerOption{
 		grpc.CustomCodec(customCodec{}),
 		grpc.UnknownServiceHandler(handler.handle),
 		grpc.MaxRecvMsgSize(i.t.options.serverMaxRecvMsgSize),
 		grpc.MaxSendMsgSize(i.t.options.serverMaxSendMsgSize),
-	)
+	}
+
+	if i.t.options.serverTLSConfig != nil {
+		serverOptions = append(serverOptions, grpc.Creds(credentials.NewTLS(i.t.options.serverTLSConfig)))
+	}
+
+	server := grpc.NewServer(serverOptions...)
 
 	go func() {
 		i.t.options.logger.Info("started GRPC inbound", zap.Stringer("address", i.listener.Addr()))
