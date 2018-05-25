@@ -129,14 +129,20 @@ func ClientTLS() TransportOption {
 	}
 }
 
-// ClientTLSConfig provides a tls.Config for the GRPC client
+// ClientTLSConfig provides a tls.Config for the GRPC client. This option overrides ClientTLS().
+//
+// The default is not to use TLS.
 func ClientTLSConfig(c *tls.Config) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.clientTLSConfig = c
 	}
 }
 
-// ServerTLSConfig provides a tls.Config for the GRPC client
+// ServerTLSConfig provides a tls.Config for the GRPC server. When provided, GRPC will accept only
+// TLS connections. The TLS config must contain a certificate chain and private key or the server
+// may not start.
+//
+// The default is to accept plaintext connections.
 func ServerTLSConfig(c *tls.Config) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.serverTLSConfig = c

@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Change log level to reflect error statuses. Previously all logs were logged at
   debug level. Errors are now logged at error level.
 - Update pin for gogo/protobuf to ^1
+- Add `grpc.ClientTLSConfig` and `grpc.ServerTLSConfig` to permit the use of arbitrary
+  tls.Config structs with gRPC.
 
 ## [1.30.0] - 2018-05-03
 ### Added
