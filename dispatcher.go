@@ -224,6 +224,17 @@ func (d *Dispatcher) Inbounds() Inbounds {
 	return inbounds
 }
 
+// Outbounds returns a copy of the list of outbounds for this RPC object.
+func (d *Dispatcher) Outbounds() Outbounds {
+	outbounds := make(Outbounds, len(d.outbounds))
+
+	for k, v := range d.outbounds {
+		outbounds[k] = v
+	}
+
+	return outbounds
+}
+
 // ClientConfig provides the configuration needed to talk to the given
 // service through an outboundKey. This configuration may be directly
 // passed into encoding-specific RPC clients.
