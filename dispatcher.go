@@ -227,11 +227,9 @@ func (d *Dispatcher) Inbounds() Inbounds {
 // Outbounds returns a copy of the list of outbounds for this RPC object.
 func (d *Dispatcher) Outbounds() Outbounds {
 	outbounds := make(Outbounds, len(d.outbounds))
-
 	for k, v := range d.outbounds {
 		outbounds[k] = v
 	}
-
 	return outbounds
 }
 
