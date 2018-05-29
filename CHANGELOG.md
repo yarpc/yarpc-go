@@ -5,9 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- Added method to the Dispatcher to allow reading the set of configured
+  outbounds.
 ### Changed
-- Added an Outbounds method to the Dispatcher to allow reading the set of configured
-  outbounds
 - TChannel inbounds will blackhole requests when handlers return resource
   exhausted errors.
 - Change log level to reflect error statuses. Previously all logs are logged at debug
