@@ -158,7 +158,6 @@ func TestInboundsOrderAfterStart(t *testing.T) {
 }
 
 func TestOutboundsReturnsACopy(t *testing.T) {
-
 	testService := "my-test-service"
 	d := NewDispatcher(Config{
 		Name: "test",
