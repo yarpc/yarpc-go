@@ -9,7 +9,7 @@ FILTER_GOVET := grep -v \
 	-e 'Example.*refers to unknown identifier'
 
 ERRCHECK_FLAGS := -ignoretests
-ERRCHECK_EXCLUDES := \.Close\(\) \.Stop\(\)
+ERRCHECK_EXCLUDES := \.Close\(\) \.Stop\(\) fmt\.Fprint
 FILTER_ERRCHECK := grep -v $(patsubst %,-e %, $(ERRCHECK_EXCLUDES))
 
 STATICCHECK_FLAGS := \
