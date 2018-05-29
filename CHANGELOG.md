@@ -6,8 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
-- Added method to the Dispatcher to allow reading the set of configured
-  outbounds.
+- Added `Outbounds()` on `Dispatcher` to provide access to the configured outbounds.
+
 ### Changed
 - TChannel inbounds will blackhole requests when handlers return resource
   exhausted errors.
