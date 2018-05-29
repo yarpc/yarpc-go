@@ -157,6 +157,30 @@ func TestInboundsOrderAfterStart(t *testing.T) {
 	assert.NotNil(t, httpInbound.Addr(), "expected an HTTP addr")
 }
 
+func TestOutboundsReturnsACopy(t *testing.T) {
+	testService := "my-test-service"
+	d := NewDispatcher(Config{
+		Name: "test",
+		Outbounds: Outbounds{
+			testService: {
+				Unary: http.NewTransport().NewSingleOutbound("http://127.0.0.1:1234"),
+			},
+		},
+	})
+
+	outbounds := d.Outbounds()
+	require.Len(t, outbounds, 1, "expected one outbound")
+	assert.Contains(t, outbounds, testService, "must contain my-test-service")
+
+	// Mutate the map and verify that the next call still returns non-nil
+	// results.
+	delete(outbounds, "my-test-service")
+
+	outbounds = d.Outbounds()
+	require.Len(t, outbounds, 1, "expected one outbound")
+	assert.Contains(t, outbounds, testService, "must contain my-test-service")
+}
+
 func TestStartStopFailures(t *testing.T) {
 	tests := []struct {
 		desc string
