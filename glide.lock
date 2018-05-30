@@ -1,5 +1,5 @@
 hash: a42f2c917dbbdb0ebc3052a09ba38d91eb37088d5ba2be498c8e8399d7663dd5
-updated: 2018-05-25T15:03:25.91707656Z
+updated: 2018-05-30T15:01:54.157739272Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -71,7 +71,7 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 8b1c2da0d56deffdbb9e48d4414b4e674bd8083e
+  version: fe93d378a6b03758a2c1b65e86cf630bf78681c0
   subpackages:
   - internal/util
   - nfs
@@ -170,7 +170,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: dfa909b99c79129e1100513e5cd36307665e5723
+  version: 8d282c4e200f6234d5df69ac4ad1ecb709c3df2c
   repo: https://github.com/golang/net
   subpackages:
   - bpf
