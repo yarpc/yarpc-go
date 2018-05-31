@@ -95,10 +95,10 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	// you MUST close the responseWriter no matter what unless you have a tchannel.SystemError
 	responseWriter := newResponseWriter(call.Response(), call.Format(), h.headerCase)
 
-	err := h.callHandler(ctx, call, responseWriter)
+	// echo accepted rpc-service in response header
+	responseWriter.addHeader(ServiceHeaderKey, call.ServiceName())
 
-	// echo accepted rpc-service in response header in any status
-	responseWriter.addHeader(RespondServiceHeaderKey, call.ServiceName())
+	err := h.callHandler(ctx, call, responseWriter)
 
 	// black-hole requests on resource exhausted errors
 	if yarpcerrors.FromError(err).Code() == yarpcerrors.CodeResourceExhausted {

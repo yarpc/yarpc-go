@@ -58,7 +58,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	procedure := popHeader(req.Header, ProcedureHeader)
 	bothResponseError := popHeader(req.Header, AcceptsBothResponseErrorHeader) == AcceptTrue
 	// first add response header to echo accepted rpc-service
-	responseWriter.AddSystemHeader(RespondServiceHeader, service)
+	responseWriter.AddSystemHeader(ServiceHeader, service)
 	status := yarpcerrors.FromError(errors.WrapHandlerError(h.callHandler(responseWriter, req, service, procedure), service, procedure))
 	if status == nil {
 		responseWriter.Close(http.StatusOK)

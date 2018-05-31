@@ -45,7 +45,8 @@ const (
 	ProcedureHeader = "Rpc-Procedure"
 
 	// Name of the service to which the request is being sent. This
-	// corresponds to the Request.Service attribute.
+	// corresponds to the Request.Service attribute. This header is also used
+	// in responses to check requests get processed by correct service.
 	ServiceHeader = "Rpc-Service"
 
 	// Shard key used by the destined service to shard the request. This
@@ -82,10 +83,6 @@ const (
 	// feature is supported on the server. If any non-empty value is set,
 	// this indicates true.
 	BothResponseErrorHeader = "Rpc-Both-Response-Error"
-
-	// Echo ServiceHeader in Request header which can be used by clients/HC to
-	// validate request went to the correct service
-	RespondServiceHeader = "Rpc-Respond-Service-Header"
 )
 
 // Valid values for the Rpc-Status header.
