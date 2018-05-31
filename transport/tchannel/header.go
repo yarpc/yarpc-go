@@ -38,6 +38,8 @@ const (
 	ErrorNameHeaderKey = "$rpc$-error-name"
 	// ErrorMessageHeaderKey is the response header key for the error message.
 	ErrorMessageHeaderKey = "$rpc$-error-message"
+	// RespondServiceHeaderKey is the response header key for the respond service.
+	RespondServiceHeaderKey = "$rpc$-respond-service"
 )
 
 var _reservedHeaderKeys = map[string]struct{}{

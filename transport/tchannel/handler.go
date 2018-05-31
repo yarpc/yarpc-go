@@ -97,6 +97,9 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 
 	err := h.callHandler(ctx, call, responseWriter)
 
+	// echo accepted rpc-service in response header in any status
+	responseWriter.addHeader(RespondServiceHeaderKey, call.ServiceName())
+
 	// black-hole requests on resource exhausted errors
 	if yarpcerrors.FromError(err).Code() == yarpcerrors.CodeResourceExhausted {
 		// all TChannel clients will time out instead of receiving an error

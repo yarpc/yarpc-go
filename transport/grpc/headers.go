@@ -63,6 +63,8 @@ const (
 	// ApplicationErrorHeader is the header key that will contain a non-empty value
 	// if there was an application error.
 	ApplicationErrorHeader = "rpc-application-error"
+	// RespondServiceHeader is the header key for respond service
+	RespondServiceHeader = "rpc-respond-service"
 
 	// ApplicationErrorHeaderValue is the value that will be set for
 	// ApplicationErrorHeader is there was an application error.

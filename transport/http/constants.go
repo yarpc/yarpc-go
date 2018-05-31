@@ -82,6 +82,10 @@ const (
 	// feature is supported on the server. If any non-empty value is set,
 	// this indicates true.
 	BothResponseErrorHeader = "Rpc-Both-Response-Error"
+
+	// Echo ServiceHeader in Request header which can be used by clients/HC to
+	// validate request went to the correct service
+	RespondServiceHeader = "Rpc-Respond-Service-Header"
 )
 
 // Valid values for the Rpc-Status header.

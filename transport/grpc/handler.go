@@ -175,6 +175,9 @@ func (h *handler) handleUnary(
 	responseWriter := newResponseWriter()
 	defer responseWriter.Close()
 
+	// echo accepted rpc-service in response header in any status
+	responseWriter.AddSystemHeader(RespondServiceHeader, transportRequest.Service)
+
 	err := h.handleUnaryBeforeErrorConversion(ctx, transportRequest, responseWriter, start, handler)
 	err = handlerErrorToGRPCError(err, responseWriter)
 
