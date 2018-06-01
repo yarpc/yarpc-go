@@ -45,7 +45,8 @@ const (
 	ProcedureHeader = "Rpc-Procedure"
 
 	// Name of the service to which the request is being sent. This
-	// corresponds to the Request.Service attribute.
+	// corresponds to the Request.Service attribute. This header is also used
+	// in responses to ensure requests are processed by the correct service.
 	ServiceHeader = "Rpc-Service"
 
 	// Shard key used by the destined service to shard the request. This
