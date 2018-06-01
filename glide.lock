@@ -1,5 +1,5 @@
 hash: a42f2c917dbbdb0ebc3052a09ba38d91eb37088d5ba2be498c8e8399d7663dd5
-updated: 2018-05-31T15:04:48.923082141Z
+updated: 2018-06-01T15:07:22.369182454Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -71,7 +71,7 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 61aaa706c6d4fda9365b6273c96839eb7e27f6e4
+  version: 94663424ae5ae9856b40a9f170762b4197024661
   subpackages:
   - internal/util
   - nfs
@@ -202,7 +202,7 @@ imports:
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 694d95ba50e67b2e363f3483057db5d4910c18f9
+  version: 4065a77fc542a455295382a23a996a08ed18813a
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
