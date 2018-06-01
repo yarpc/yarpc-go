@@ -109,6 +109,11 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 	var responseMD metadata.MD
 	invokeErr := o.invoke(ctx, request, &responseBody, &responseMD, start)
 	responseHeaders, err := getApplicationHeaders(responseMD)
+	// Service name match validation, return yarpcerrors.CodeInternal error if not match
+	if match, resSvcName := checkServiceMatch(request.Service, responseMD); !match {
+		return nil, yarpcerrors.InternalErrorf("Service name not match, request service name: %s, response service name: %s", request.Service, resSvcName)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -300,4 +305,11 @@ func (o *Outbound) stream(
 		return nil, err
 	}
 	return tClientStream, nil
+}
+
+func checkServiceMatch(reqSvcName string, responseMD metadata.MD) (bool, string) {
+	if resSvcName, ok := responseMD[ServiceHeader]; ok {
+		return reqSvcName == resSvcName[0], resSvcName[0]
+	}
+	return true, ""
 }
