@@ -23,7 +23,7 @@ package pendingheap
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/yarpcconfig"
@@ -31,9 +31,50 @@ import (
 )
 
 func TestPendingHeapConfig(t *testing.T) {
+	minus1, zero, twenty := -1, 0, 20
+	tests := []struct {
+		name    string
+		cfg     Configuration
+		wantErr bool
+	}{
+		{
+			name: "no configuration",
+		},
+		{
+			name: "negative capacity",
+			cfg: Configuration{
+				Capacity: &minus1,
+			},
+			wantErr: true,
+		},
+		{
+			name: "zero capacity",
+			cfg: Configuration{
+				Capacity: &zero,
+			},
+			wantErr: true,
+		},
+		{
+			name: "valid capacity",
+			cfg: Configuration{
+				Capacity: &twenty,
+			},
+		},
+	}
+
 	s := Spec()
-	build := s.BuildPeerList.(func(struct{}, peer.Transport, *yarpcconfig.Kit) (peer.ChooserList, error))
-	pl, err := build(struct{}{}, yarpctest.NewFakeTransport(), nil)
-	assert.NoError(t, err, "must construct a peer list")
-	pl.Update(peer.ListUpdates{Additions: []peer.Identifier{hostport.PeerIdentifier("127.0.0.1:8080")}})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			build := s.BuildPeerList.(func(Configuration, peer.Transport, *yarpcconfig.Kit) (peer.ChooserList, error))
+			pl, err := build(tt.cfg, yarpctest.NewFakeTransport(), nil)
+
+			if tt.wantErr {
+				require.Error(t, err, "must not construct a peer list")
+
+			} else {
+				require.NoError(t, err)
+				pl.Update(peer.ListUpdates{Additions: []peer.Identifier{hostport.PeerIdentifier("127.0.0.1:8080")}})
+			}
+		})
+	}
 }
