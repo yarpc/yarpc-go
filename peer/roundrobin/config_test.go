@@ -21,47 +21,60 @@
 package roundrobin
 
 import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/yarpcconfig"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/yarpctest"
 )
 
-// Configuration descripes how to build a round-robin peer list.
-type Configuration struct {
-	Capacity *int `config:"capacity"`
-}
-
-// Spec returns a configuration specification for the round-robin peer list
-// implementation, making it possible to select the least recently chosen peer
-// with transports that use outbound peer list configuration (like HTTP).
-//
-//  cfg := yarpcconfig.New()
-//  cfg.MustRegisterPeerList(roundrobin.Spec())
-//
-// This enables the round-robin peer list:
-//
-//  outbounds:
-//    otherservice:
-//      unary:
-//        http:
-//          url: https://host:port/rpc
-//          round-robin:
-//            peers:
-//              - 127.0.0.1:8080
-//              - 127.0.0.1:8081
-func Spec() yarpcconfig.PeerListSpec {
-	return yarpcconfig.PeerListSpec{
-		Name: "round-robin",
-		BuildPeerList: func(cfg Configuration, t peer.Transport, k *yarpcconfig.Kit) (peer.ChooserList, error) {
-			if cfg.Capacity == nil {
-				return New(t), nil
-			}
-
-			if *cfg.Capacity <= 0 {
-				return nil, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "Capacity must be greater than 0")
-			}
-
-			return New(t, Capacity(*cfg.Capacity)), nil
+func TestPendingHeapConfig(t *testing.T) {
+	minus1, zero, twenty := -1, 0, 20
+	tests := []struct {
+		name    string
+		cfg     Configuration
+		wantErr bool
+	}{
+		{
+			name: "no configuration",
 		},
+		{
+			name: "negative capacity",
+			cfg: Configuration{
+				Capacity: &minus1,
+			},
+			wantErr: true,
+		},
+		{
+			name: "zero capacity",
+			cfg: Configuration{
+				Capacity: &zero,
+			},
+			wantErr: true,
+		},
+		{
+			name: "valid capacity",
+			cfg: Configuration{
+				Capacity: &twenty,
+			},
+		},
+	}
+
+	s := Spec()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			build := s.BuildPeerList.(func(Configuration, peer.Transport, *yarpcconfig.Kit) (peer.ChooserList, error))
+			pl, err := build(tt.cfg, yarpctest.NewFakeTransport(), nil)
+
+			if tt.wantErr {
+				require.Error(t, err, "must not construct a peer list")
+
+			} else {
+				require.NoError(t, err)
+				pl.Update(peer.ListUpdates{Additions: []peer.Identifier{hostport.PeerIdentifier("127.0.0.1:8080")}})
+			}
+		})
 	}
 }

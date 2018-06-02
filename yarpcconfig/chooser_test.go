@@ -345,6 +345,26 @@ func TestChooserConfigurator(t *testing.T) {
 			},
 		},
 		{
+			desc: "use round-robin chooser with capacity",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								round-robin:
+									capacity: 50
+									fake-updater: {}
+			`),
+			test: func(t *testing.T, c yarpc.Config) {
+				outbound := c.Outbounds["their-service"]
+				unary := outbound.Unary.(*yarpctest.FakeOutbound)
+				chooser := unary.Chooser().(*peer.BoundChooser)
+				list, ok := chooser.ChooserList().(*roundrobin.List)
+				require.True(t, ok, "use round robin")
+				_ = list
+			},
+		},
+		{
 			desc: "use least-pending chooser",
 			given: whitespace.Expand(`
 				outbounds:
