@@ -158,6 +158,9 @@ type Config struct {
 	InboundMiddleware  InboundMiddleware
 	OutboundMiddleware OutboundMiddleware
 
+	// OutboundMiddlewareExemptions maps outbounds to be exempted from middleware
+	OutboundMiddlewareExemptions map[string]struct{}
+
 	// Tracer is meant to add/record tracing information to a request.
 	//
 	// Deprecated: The dispatcher does nothing with this property.  Set the
