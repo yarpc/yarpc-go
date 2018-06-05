@@ -165,6 +165,12 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		return nil, err
 	}
 
+	// service name match validation, return yarpcerrors.CodeInternal error if not match
+	if match, resSvcName := checkServiceMatchAndDeleteHeaderKey(req.Service, headers); !match {
+		return nil, yarpcerrors.InternalErrorf("service name sent from the request "+
+			"does not match the service name received in the response: sent %q, got: %q", req.Service, resSvcName)
+	}
+
 	return &transport.Response{
 		Headers:          headers,
 		Body:             resBody,
