@@ -59,6 +59,9 @@ type InboundMiddleware struct {
 	Stream middleware.StreamInbound
 }
 
+// OutboundMiddlewareExemptions maps outbounds to be exempted from middleware
+type OutboundMiddlewareExemptions map[string]struct{}
+
 // RouterMiddleware wraps the Router middleware
 type RouterMiddleware middleware.Router
 
@@ -115,7 +118,7 @@ func addObservingMiddleware(cfg Config, meter *metrics.Scope, logger *zap.Logger
 
 // convertOutbounds applies outbound middleware and creates validator outbounds
 // except if outbound is in UnFilteredOutbounds map
-func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware, ufos map[string]struct{}) Outbounds {
+func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware, omes OutboundMiddlewareExemptions) Outbounds {
 	// TODO: map the map from yarpcconfig parsing to yarpc config to here...
 	outboundSpecs := make(Outbounds, len(outbounds))
 
@@ -125,43 +128,44 @@ func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware, ufos map[strin
 		}
 
 		var (
-			unaryOutbound    transport.UnaryOutbound
-			onewayOutbound   transport.OnewayOutbound
-			streamOutbound   transport.StreamOutbound
-			bypassMiddleware bool
+			unaryOutbound        transport.UnaryOutbound
+			onewayOutbound       transport.OnewayOutbound
+			streamOutbound       transport.StreamOutbound
+			exemptFromMiddleware bool
 		)
 		serviceName := outboundKey
-		for ufo := range ufos {
-			if ufo == outboundKey {
-				bypassMiddleware = true
+		for ome := range omes {
+			if ome == outboundKey {
+				exemptFromMiddleware = true
 			}
 		}
 
-		// apply outbound middleware and create ValidatorOutbounds
+		// apply outbound middleware and create ValidatorOutbounds unless exemptFromMiddleware
+		// TODO: refactor Validation to separate that concern from middleware exemption
 		if outs.Unary != nil {
-			if !bypassMiddleware {
+			if exemptFromMiddleware {
+				unaryOutbound = middleware.ApplyUnaryOutbound(outs.Unary, nil)
+			} else {
 				unaryOutbound = middleware.ApplyUnaryOutbound(outs.Unary, mw.Unary)
 				unaryOutbound = request.UnaryValidatorOutbound{UnaryOutbound: unaryOutbound}
-			} else {
-				unaryOutbound = middleware.ApplyUnaryOutbound(outs.Unary, nil)
 			}
 		}
 
 		if outs.Oneway != nil {
-			if !bypassMiddleware {
+			if exemptFromMiddleware {
+				onewayOutbound = middleware.ApplyOnewayOutbound(outs.Oneway, nil)
+			} else {
 				onewayOutbound = middleware.ApplyOnewayOutbound(outs.Oneway, mw.Oneway)
 				onewayOutbound = request.OnewayValidatorOutbound{OnewayOutbound: onewayOutbound}
-			} else {
-				onewayOutbound = middleware.ApplyOnewayOutbound(outs.Oneway, nil)
 			}
 		}
 
 		if outs.Stream != nil {
-			if !bypassMiddleware {
+			if exemptFromMiddleware {
+				streamOutbound = middleware.ApplyStreamOutbound(outs.Stream, nil)
+			} else {
 				streamOutbound = middleware.ApplyStreamOutbound(outs.Stream, mw.Stream)
 				streamOutbound = request.StreamValidatorOutbound{StreamOutbound: streamOutbound}
-			} else {
-				streamOutbound = middleware.ApplyStreamOutbound(outs.Stream, nil)
 			}
 		}
 
