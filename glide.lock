@@ -1,5 +1,5 @@
 hash: a42f2c917dbbdb0ebc3052a09ba38d91eb37088d5ba2be498c8e8399d7663dd5
-updated: 2018-06-04T15:04:33.697178372Z
+updated: 2018-06-06T15:03:58.147519589Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -32,7 +32,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 3a3da3a4e26776cc22a79ef46d5d58477532dede
+  version: 64db29d85ff91ba669cfaf009d5f400a4da8a55f
   subpackages:
   - proto
   - ptypes
@@ -187,7 +187,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: c11f84a56e43e20a78cee75a7c034031ecf57d1f
+  version: 538ab54ba952cc4c7c705fa213fbf7993c97c175
   repo: https://github.com/golang/sys
 - name: golang.org/x/text
   version: 5c1cf69b5978e5a34c5f9ba09a83e56acc4b7877
