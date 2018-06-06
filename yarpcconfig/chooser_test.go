@@ -359,9 +359,8 @@ func TestChooserConfigurator(t *testing.T) {
 				outbound := c.Outbounds["their-service"]
 				unary := outbound.Unary.(*yarpctest.FakeOutbound)
 				chooser := unary.Chooser().(*peer.BoundChooser)
-				list, ok := chooser.ChooserList().(*roundrobin.List)
+				_, ok := chooser.ChooserList().(*roundrobin.List)
 				require.True(t, ok, "use round robin")
-				_ = list
 			},
 		},
 		{
