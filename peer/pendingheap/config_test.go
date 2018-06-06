@@ -73,7 +73,7 @@ func TestPendingHeapConfig(t *testing.T) {
 
 			} else {
 				require.NoError(t, err)
-				pl.Update(peer.ListUpdates{Additions: []peer.Identifier{hostport.PeerIdentifier("127.0.0.1:8080")}})
+				pl.Update(peer.ListUpdates{Additions: []peer.Identifier{hostport.PeerIdentifier("foo-host:port")}})
 			}
 		})
 	}
