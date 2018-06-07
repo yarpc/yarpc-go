@@ -150,8 +150,7 @@ func Run(t crossdock.T) {
 			},
 			body:       `{"token":"10"}`,
 			wantStatus: 501,
-			wantBody: `unrecognized procedure ` +
-				`"echo" for service "not-yarpc-test"` + "\n",
+			wantBody:   `unrecognized service name "not-yarpc-test", available services: "yarpc-test"` + "\n",
 		},
 		{
 			name: "no procedure",

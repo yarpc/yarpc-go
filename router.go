@@ -24,6 +24,8 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strconv"
+	"strings"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/humanize"
@@ -52,6 +54,7 @@ type MapRouter struct {
 	serviceProcedures         map[serviceProcedure]transport.Procedure
 	serviceProcedureEncodings map[serviceProcedureEncoding]transport.Procedure
 	supportedEncodings        map[serviceProcedure][]string
+	serviceNames              map[string]struct{}
 }
 
 // NewMapRouter builds a new MapRouter that uses the given name as the
@@ -62,6 +65,7 @@ func NewMapRouter(defaultService string) MapRouter {
 		serviceProcedures:         make(map[serviceProcedure]transport.Procedure),
 		serviceProcedureEncodings: make(map[serviceProcedureEncoding]transport.Procedure),
 		supportedEncodings:        make(map[serviceProcedure][]string),
+		serviceNames:              map[string]struct{}{defaultService: {}},
 	}
 }
 
@@ -81,6 +85,8 @@ func (m MapRouter) Register(rs []transport.Procedure) {
 		if r.Name == "" {
 			panic("Expected procedure name not to be empty string in registration")
 		}
+
+		m.serviceNames[r.Service] = struct{}{}
 
 		sp := serviceProcedure{
 			service:   r.Service,
@@ -158,6 +164,12 @@ func (m MapRouter) Choose(ctx context.Context, req *transport.Request) (transpor
 		service = m.defaultService
 	}
 
+	if _, ok := m.serviceNames[service]; !ok {
+		return transport.HandlerSpec{},
+			yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "unrecognized service name %q, "+
+				"available services: %s", req.Service, getAvailableServiceNames(m.serviceNames))
+	}
+
 	// Fully specified combinations of service, procedure, and encoding.
 	spe := serviceProcedureEncoding{
 		service:   service,
@@ -191,4 +203,15 @@ func (m MapRouter) Choose(ctx context.Context, req *transport.Request) (transpor
 	}
 
 	return transport.HandlerSpec{}, yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "unrecognized procedure %q for service %q", req.Procedure, req.Service)
+}
+
+// Extract keys from service names map and return a formatted string
+func getAvailableServiceNames(svcMap map[string]struct{}) string {
+	var serviceNames []string
+	for key := range svcMap {
+		serviceNames = append(serviceNames, strconv.Quote(key))
+	}
+	// Sort the string array to generate consistent result
+	sort.Strings(serviceNames)
+	return strings.Join(serviceNames, ", ")
 }
