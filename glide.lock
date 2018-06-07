@@ -1,5 +1,5 @@
 hash: a42f2c917dbbdb0ebc3052a09ba38d91eb37088d5ba2be498c8e8399d7663dd5
-updated: 2018-06-06T15:03:58.147519589Z
+updated: 2018-06-07T15:03:31.48518493Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -32,7 +32,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 64db29d85ff91ba669cfaf009d5f400a4da8a55f
+  version: 05f48f4eaf0e05663b562bab533cdd472238ce29
   subpackages:
   - proto
   - ptypes
@@ -187,7 +187,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 538ab54ba952cc4c7c705fa213fbf7993c97c175
+  version: 9527bec2660bd847c050fda93a0f0c6dee0800bb
   repo: https://github.com/golang/sys
 - name: golang.org/x/text
   version: 5c1cf69b5978e5a34c5f9ba09a83e56acc4b7877
@@ -206,7 +206,7 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 41344da2231b913fa3d983840a57a6b1b7b631a1
+  version: 22a49e732a507a11ac524e4ea5fd1a3e384b6fb8
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
