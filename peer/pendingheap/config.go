@@ -25,14 +25,14 @@ import (
 	"go.uber.org/yarpc/yarpcconfig"
 )
 
-// Spec returns a configuration specification for the round-robin peer list
+// Spec returns a configuration specification for the pending heap peer list
 // implementation, making it possible to select the least recently chosen peer
 // with transports that use outbound peer list configuration (like HTTP).
 //
 //  cfg := yarpcconfig.New()
 //  cfg.MustRegisterPeerList(pendingheap.Spec())
 //
-// This enables the round-robin peer list:
+// This enables the pending heap peer list:
 //
 //  outbounds:
 //    otherservice:
