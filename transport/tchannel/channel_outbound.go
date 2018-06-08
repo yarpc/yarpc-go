@@ -174,6 +174,11 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 
 	res := call.Response()
 	headers, err := readHeaders(format, res.Arg2Reader)
+	// Service name match validation, return yarpcerrors.CodeInternal error if not match
+	if match, resSvcName := checkServiceMatchAndDeleteHeaderKeys(req.Service, headers); !match {
+		return nil, yarpcerrors.InternalErrorf("Service name not match, request service name: %s, response service name: %s", req.Service, resSvcName)
+	}
+
 	if err != nil {
 		if err, ok := err.(tchannel.SystemError); ok {
 			return nil, fromSystemError(err)
@@ -252,4 +257,14 @@ func getResponseErrorAndDeleteHeaderKeys(headers transport.Headers) error {
 	errorName, _ := headers.Get(ErrorNameHeaderKey)
 	errorMessage, _ := headers.Get(ErrorMessageHeaderKey)
 	return intyarpcerrors.NewWithNamef(errorCode, errorName, errorMessage)
+}
+
+func checkServiceMatchAndDeleteHeaderKeys(reqSvcName string, resHeaders transport.Headers) (bool, string) {
+	defer func() {
+		resHeaders.Del(ServiceHeaderKey)
+	}()
+	if resSvcName, ok := resHeaders.Get(ServiceHeaderKey); ok {
+		return reqSvcName == resSvcName, resSvcName
+	}
+	return true, ""
 }

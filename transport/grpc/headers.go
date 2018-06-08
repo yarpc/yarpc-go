@@ -36,6 +36,7 @@ const (
 	CallerHeader = "rpc-caller"
 	// ServiceHeader is the header key for the name of the service to which
 	// the request is being sent. This corresponds to the Request.Service attribute.
+	// This header is used for both requests and responses
 	// This header is required.
 	ServiceHeader = "rpc-service"
 	// ShardKeyHeader is the header key for the shard key used by the destined service

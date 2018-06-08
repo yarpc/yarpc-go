@@ -148,6 +148,11 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 
 	res := call.Response()
 	headers, err := readHeaders(format, res.Arg2Reader)
+	// Service name match validation, return yarpcerrors.CodeInternal error if not match
+	if match, resSvcName := checkServiceMatchAndDeleteHeaderKeys(req.Service, headers); !match {
+		return nil, yarpcerrors.InternalErrorf("Service name not match, request service name: %s, response service name: %s", req.Service, resSvcName)
+	}
+
 	if err != nil {
 		if err, ok := err.(tchannel.SystemError); ok {
 			return nil, fromSystemError(err)

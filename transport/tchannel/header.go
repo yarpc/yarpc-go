@@ -38,12 +38,15 @@ const (
 	ErrorNameHeaderKey = "$rpc$-error-name"
 	// ErrorMessageHeaderKey is the response header key for the error message.
 	ErrorMessageHeaderKey = "$rpc$-error-message"
+	// ServiceHeaderKey is the response header key for the respond service.
+	ServiceHeaderKey = "$rpc$-service"
 )
 
 var _reservedHeaderKeys = map[string]struct{}{
-	ErrorCodeHeaderKey:    {},
-	ErrorNameHeaderKey:    {},
-	ErrorMessageHeaderKey: {},
+	ErrorCodeHeaderKey:      {},
+	ErrorNameHeaderKey:      {},
+	ErrorMessageHeaderKey: 	 {},
+	ServiceHeaderKey: {},
 }
 
 func isReservedHeaderKey(key string) bool {
