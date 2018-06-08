@@ -40,6 +40,7 @@ import (
 	"go.uber.org/yarpc/internal/whitespace"
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/peer/pendingheap"
 	"go.uber.org/yarpc/peer/roundrobin"
 	"go.uber.org/yarpc/peer/x/peerheap"
 	"go.uber.org/yarpc/transport/http"
@@ -361,6 +362,24 @@ func TestChooserConfigurator(t *testing.T) {
 				list, ok := chooser.ChooserList().(*peerheap.List)
 				require.True(t, ok, "use peer heap")
 				_ = list
+			},
+		},
+		{
+			desc: "use fewest-pending-requests chooser",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								fewest-pending-requests:
+									fake-updater: {}
+			`),
+			test: func(t *testing.T, c yarpc.Config) {
+				outbound := c.Outbounds["their-service"]
+				unary := outbound.Unary.(*yarpctest.FakeOutbound)
+				chooser := unary.Chooser().(*peer.BoundChooser)
+				_, ok := chooser.ChooserList().(*pendingheap.List)
+				require.True(t, ok, "use pending heap")
 			},
 		},
 		{
@@ -980,6 +999,7 @@ func TestChooserConfigurator(t *testing.T) {
 			configer.MustRegisterTransport(http.TransportSpec())
 			configer.MustRegisterTransport(tchannel.TransportSpec(tchannel.Tracer(opentracing.NoopTracer{})))
 			configer.MustRegisterPeerList(peerheap.Spec())
+			configer.MustRegisterPeerList(pendingheap.Spec())
 			configer.MustRegisterPeerList(roundrobin.Spec())
 			configer.MustRegisterPeerChooser(invalidPeerChooserSpec())
 			configer.MustRegisterPeerList(invalidPeerListSpec())
