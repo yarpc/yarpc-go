@@ -341,7 +341,7 @@ func TestChooserConfigurator(t *testing.T) {
 				chooser := unary.Chooser().(*peer.BoundChooser)
 				list, ok := chooser.ChooserList().(*roundrobin.List)
 				require.True(t, ok, "use round robin")
-				_ = list
+				require.Equal(t, 10, list.Capacity(), "expected default of 10")
 			},
 		},
 		{
@@ -359,8 +359,9 @@ func TestChooserConfigurator(t *testing.T) {
 				outbound := c.Outbounds["their-service"]
 				unary := outbound.Unary.(*yarpctest.FakeOutbound)
 				chooser := unary.Chooser().(*peer.BoundChooser)
-				_, ok := chooser.ChooserList().(*roundrobin.List)
+				list, ok := chooser.ChooserList().(*roundrobin.List)
 				require.True(t, ok, "use round robin")
+				require.Equal(t, 50, list.Capacity())
 			},
 		},
 		{

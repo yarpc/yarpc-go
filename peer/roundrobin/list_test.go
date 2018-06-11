@@ -28,6 +28,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
@@ -920,6 +921,14 @@ func TestRoundRobinList(t *testing.T) {
 			assert.Equal(t, tt.expectedRunning, pl.IsRunning(), "List was not in the expected state")
 		})
 	}
+}
+
+func TestCapacity(t *testing.T) {
+	const capacity = 37
+	pl := New(nil /*transport*/, Capacity(capacity))
+
+	require.NotNil(t, pl)
+	assert.Equal(t, capacity, pl.Capacity())
 }
 
 func TestIntrospect(t *testing.T) {
