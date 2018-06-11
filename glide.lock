@@ -1,5 +1,5 @@
 hash: a42f2c917dbbdb0ebc3052a09ba38d91eb37088d5ba2be498c8e8399d7663dd5
-updated: 2018-06-08T15:05:29.010550528Z
+updated: 2018-06-11T15:03:23.957610805Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -77,7 +77,7 @@ imports:
   - nfs
   - xfs
 - name: github.com/stretchr/testify
-  version: c679ae2cc0cb27ec3293fea7e254e47386f05d69
+  version: f35b8ab0b5a2cef36673838d662e249dd9c94686
   subpackages:
   - assert
   - require
@@ -187,7 +187,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 9527bec2660bd847c050fda93a0f0c6dee0800bb
+  version: bff228c7b664c5fce602223a05fb708fd8654986
   repo: https://github.com/golang/sys
 - name: golang.org/x/text
   version: 5c1cf69b5978e5a34c5f9ba09a83e56acc4b7877
@@ -197,12 +197,12 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 4e38c85762ef97af128e1043dea2059b9f0ae206
+  version: c65208ee29128450a4a024e3b7710f3a8d14028d
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 81158efcc9f219c511e4d3c0d61a0e6e49c01a24
+  version: 32ee49c4dd805befd833990acba36cb75042378c
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
