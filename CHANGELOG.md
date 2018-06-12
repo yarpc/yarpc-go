@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - Added `Outbounds()` on `Dispatcher` to provide access to the configured outbounds.
+- Expose capacity option to configurator for the round-robin peer chooser.
 
 ### Changed
 - TChannel inbounds will blackhole requests when handlers return resource

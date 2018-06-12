@@ -21,9 +21,17 @@
 package roundrobin
 
 import (
+	"fmt"
+
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/yarpcconfig"
+	"go.uber.org/yarpc/yarpcerrors"
 )
+
+// Configuration descripes how to build a round-robin peer list.
+type Configuration struct {
+	Capacity *int `config:"capacity"`
+}
 
 // Spec returns a configuration specification for the round-robin peer list
 // implementation, making it possible to select the least recently chosen peer
@@ -46,8 +54,17 @@ import (
 func Spec() yarpcconfig.PeerListSpec {
 	return yarpcconfig.PeerListSpec{
 		Name: "round-robin",
-		BuildPeerList: func(c struct{}, t peer.Transport, k *yarpcconfig.Kit) (peer.ChooserList, error) {
-			return New(t), nil
+		BuildPeerList: func(cfg Configuration, t peer.Transport, k *yarpcconfig.Kit) (peer.ChooserList, error) {
+			if cfg.Capacity == nil {
+				return New(t), nil
+			}
+
+			if *cfg.Capacity <= 0 {
+				return nil, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument,
+					fmt.Sprintf("Capacity must be greater than 0. Got: %d.", *cfg.Capacity))
+			}
+
+			return New(t, Capacity(*cfg.Capacity)), nil
 		},
 	}
 }
