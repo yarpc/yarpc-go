@@ -398,8 +398,29 @@ func TestChooserConfigurator(t *testing.T) {
 				outbound := c.Outbounds["their-service"]
 				unary := outbound.Unary.(*yarpctest.FakeOutbound)
 				chooser := unary.Chooser().(*peer.BoundChooser)
-				_, ok := chooser.ChooserList().(*pendingheap.List)
+				list, ok := chooser.ChooserList().(*pendingheap.List)
 				require.True(t, ok, "use pending heap")
+				require.Equal(t, 10, list.Capacity(), "expected default of 10")
+			},
+		},
+		{
+			desc: "use fewest-pending-requests chooser with capacity",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								fewest-pending-requests:
+									capacity: 50
+									fake-updater: {}
+			`),
+			test: func(t *testing.T, c yarpc.Config) {
+				outbound := c.Outbounds["their-service"]
+				unary := outbound.Unary.(*yarpctest.FakeOutbound)
+				chooser := unary.Chooser().(*peer.BoundChooser)
+				list, ok := chooser.ChooserList().(*pendingheap.List)
+				require.True(t, ok, "use pending heap")
+				require.Equal(t, 50, list.Capacity())
 			},
 		},
 		{

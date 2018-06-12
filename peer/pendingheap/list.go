@@ -69,10 +69,17 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 			&pendingHeap{},
 			plOpts...,
 		),
+		capacity: cfg.capacity,
 	}
 }
 
 // List is a PeerList which rotates which peers are to be selected in a circle
 type List struct {
 	*peerlist.List
+	capacity int
+}
+
+// Capacity is the maximum number of peers the peer list will hold.
+func (l *List) Capacity() int {
+	return l.capacity
 }
