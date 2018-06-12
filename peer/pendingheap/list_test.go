@@ -28,6 +28,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
@@ -611,6 +612,14 @@ func TestPeerHeapList(t *testing.T) {
 			assert.Equal(t, tt.expectedRunning, pl.IsRunning(), "Peer list should match expected final running state")
 		})
 	}
+}
+
+func TestCapacity(t *testing.T) {
+	const capacity = 37
+	pl := New(nil /*transport*/, Capacity(capacity))
+
+	require.NotNil(t, pl)
+	assert.Equal(t, capacity, pl.Capacity())
 }
 
 var noShuffle ListOption = func(c *listConfig) {

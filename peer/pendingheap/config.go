@@ -21,9 +21,17 @@
 package pendingheap
 
 import (
+	"fmt"
+
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/yarpcconfig"
+	"go.uber.org/yarpc/yarpcerrors"
 )
+
+// Configuration descripes how to build a fewest pending heap peer list.
+type Configuration struct {
+	Capacity *int `config:"capacity"`
+}
 
 // Spec returns a configuration specification for the pending heap peer list
 // implementation, making it possible to select the least recently chosen peer
@@ -40,14 +48,24 @@ import (
 //        http:
 //          url: https://host:port/rpc
 //          fewest-pending-requests:
+//            capacity: 25
 //            peers:
 //              - 127.0.0.1:8080
 //              - 127.0.0.1:8081
 func Spec() yarpcconfig.PeerListSpec {
 	return yarpcconfig.PeerListSpec{
 		Name: "fewest-pending-requests",
-		BuildPeerList: func(c struct{}, t peer.Transport, k *yarpcconfig.Kit) (peer.ChooserList, error) {
-			return New(t), nil
+		BuildPeerList: func(cfg Configuration, t peer.Transport, k *yarpcconfig.Kit) (peer.ChooserList, error) {
+			if cfg.Capacity == nil {
+				return New(t), nil
+			}
+
+			if *cfg.Capacity <= 0 {
+				return nil, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument,
+					fmt.Sprintf("Capacity must be greater than 0. Got: %d.", *cfg.Capacity))
+			}
+
+			return New(t, Capacity(*cfg.Capacity)), nil
 		},
 	}
 }
