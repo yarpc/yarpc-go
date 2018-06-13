@@ -48,7 +48,6 @@ type Configuration struct {
 //        http:
 //          url: https://host:port/rpc
 //          fewest-pending-requests:
-//            capacity: 25
 //            peers:
 //              - 127.0.0.1:8080
 //              - 127.0.0.1:8081
