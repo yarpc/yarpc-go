@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added `Outbounds()` on `Dispatcher` to provide access to the configured outbounds.
 - Expose capacity option to configurator for the round-robin peer chooser.
 - Expose capacity option to configurator for the fewest pending heap peer chooser.
+- Dispatchers now log recovered handler panics via a zap logger if present
 
 ### Changed
 - TChannel inbounds will blackhole requests when handlers return resource
@@ -31,9 +32,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   peer.Identifier implementation.
   They previously required a hostport.PeerIdentifier for RetainPeer and
   ReleasePeer calls.
-
-### Changed
-- Dispatchers now log recovered handler panics via a zap logger if present
 
 ## [1.29.1] - 2018-04-04
 ### Fixed
