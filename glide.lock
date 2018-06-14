@@ -1,5 +1,5 @@
 hash: a42f2c917dbbdb0ebc3052a09ba38d91eb37088d5ba2be498c8e8399d7663dd5
-updated: 2018-06-12T15:01:46.240913551Z
+updated: 2018-06-13T18:04:27.010970604Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -32,7 +32,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 05f48f4eaf0e05663b562bab533cdd472238ce29
+  version: 5831880292e721c76b58a16ecc60adc27d8e6355
   subpackages:
   - proto
   - ptypes
@@ -71,7 +71,7 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 94663424ae5ae9856b40a9f170762b4197024661
+  version: 7d6f385de8bea29190f15ba9931442a0eaef9af7
   subpackages:
   - internal/util
   - nfs
@@ -128,7 +128,7 @@ imports:
   subpackages:
   - internal/digreflect
 - name: go.uber.org/fx
-  version: ed7e99834c0a7099c6cb6434fe5a7b007ac00db9
+  version: 4556160e761570faf2b4e89547c04cdcd96e0c7a
   subpackages:
   - fxtest
   - internal/fxlog
@@ -187,7 +187,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: a9e25c09b96b8870693763211309e213c6ef299d
+  version: 56ede360ec1c541828fb88741b3f1049406d28f5
   repo: https://github.com/golang/sys
 - name: golang.org/x/text
   version: 5c1cf69b5978e5a34c5f9ba09a83e56acc4b7877
@@ -197,7 +197,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 8c39fb57ad842377bfea6ab5eff7608e4e8f6765
+  version: 58c6d92c350b07117a185248780ff4a905bafc29
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
