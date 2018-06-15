@@ -148,7 +148,6 @@ func (h *handler) handleStream(
 	return transport.UpdateSpanWithErr(span, transport.DispatchStreamHandler(
 		streamHandler,
 		tServerStream,
-		h.logger,
 	))
 }
 
@@ -222,7 +221,7 @@ func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Req
 	if err := transport.ValidateRequestContext(ctx); err != nil {
 		return err
 	}
-	return transport.DispatchUnaryHandler(ctx, unaryHandler, time.Now(), transportRequest, responseWriter, h.logger)
+	return transport.DispatchUnaryHandler(ctx, unaryHandler, time.Now(), transportRequest, responseWriter)
 }
 
 func handlerErrorToGRPCError(err error, responseWriter *responseWriter) error {

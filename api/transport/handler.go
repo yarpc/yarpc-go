@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/yarpcerrors"
-	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -126,11 +125,11 @@ func DispatchUnaryHandler(
 	start time.Time,
 	req *Request,
 	resq ResponseWriter,
-	logger *zap.Logger,
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = logPanic(Unary, logger, r, req.ToRequestMeta())
+			log.Printf("Unary handler panicked: %v\n%s", r, debug.Stack())
+			err = fmt.Errorf("panic: %v", r)
 		}
 	}()
 
@@ -153,11 +152,11 @@ func DispatchOnewayHandler(
 	ctx context.Context,
 	h OnewayHandler,
 	req *Request,
-	logger *zap.Logger,
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = logPanic(Oneway, logger, r, req.ToRequestMeta())
+			log.Printf("Oneway handler panicked: %v\n%s", r, debug.Stack())
+			err = fmt.Errorf("panic: %v", r)
 		}
 	}()
 
@@ -169,31 +168,13 @@ func DispatchOnewayHandler(
 func DispatchStreamHandler(
 	h StreamHandler,
 	stream *ServerStream,
-	logger *zap.Logger,
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = logPanic(Streaming, logger, r, stream.Request().Meta)
+			log.Printf("Stream handler panicked: %v\n%s", r, debug.Stack())
+			err = fmt.Errorf("panic: %v", r)
 		}
 	}()
 
 	return h.HandleStream(stream)
-}
-
-func logPanic(rpcType Type, logger *zap.Logger, recovered interface{}, req *RequestMeta) error {
-	err := fmt.Errorf("panic: %v", recovered)
-	if logger != nil {
-		logger.Error(fmt.Sprintf("%s handler panicked", rpcType),
-			zap.String("service", req.Service),
-			zap.String("transport", req.Transport),
-			zap.String("procedure", req.Procedure),
-			zap.String("encoding", string(req.Encoding)),
-			zap.String("caller", req.Caller),
-			zap.Error(err),
-			zap.Stack("stack"),
-		)
-		return err
-	}
-	log.Printf("%s handler panicked: %v\n%s", rpcType, recovered, debug.Stack())
-	return err
 }
