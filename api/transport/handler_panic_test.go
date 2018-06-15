@@ -49,9 +49,8 @@ func TestDispatchUnaryHandlerWithPanic(t *testing.T) {
 		&transport.Request{},
 		nil,
 	)
-	fmt.Sprintf("err: %#v\n", err)
-	//expectMsg := fmt.Sprintf("panic: %s", msg)
-	//assert.Equal(t, err.Error(), expectMsg)
+	expectMsg := fmt.Sprintf("panic: %s", msg)
+	assert.Equal(t, err.Error(), expectMsg)
 }
 
 func TestDispatchOnewayHandlerWithPanic(t *testing.T) {
@@ -65,9 +64,8 @@ func TestDispatchOnewayHandlerWithPanic(t *testing.T) {
 		transport.OnewayHandlerFunc(handler),
 		&transport.Request{},
 	)
-	fmt.Sprintf("err: %#v\n", err)
-	//expectMsg := fmt.Sprintf("panic: %s", msg)
-	//assert.Equal(t, err.Error(), expectMsg)
+	expectMsg := fmt.Sprintf("panic: %s", msg)
+	assert.Equal(t, err.Error(), expectMsg)
 }
 
 func TestDispatchStreamHandlerWithPanic(t *testing.T) {
@@ -80,20 +78,17 @@ func TestDispatchStreamHandlerWithPanic(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockStream := transporttest.NewMockStream(mockCtrl)
-	/*
-		mockStream.EXPECT().Request().Return(
-			&transport.StreamRequest{
-				Meta: &transport.RequestMeta{},
-			}).Times(1)
-	*/
+	mockStream.EXPECT().Request().Return(
+		&transport.StreamRequest{
+			Meta: &transport.RequestMeta{},
+		}).Times(1)
 	mockServerStream, _ := transport.NewServerStream(mockStream)
 	err := transport.DispatchStreamHandler(
 		transport.StreamHandlerFunc(handler),
 		mockServerStream,
 	)
-	fmt.Sprintf("err: %#v\n", err)
-	//expectMsg := fmt.Sprintf("panic: %s", msg)
-	//assert.Equal(t, err.Error(), expectMsg)
+	expectMsg := fmt.Sprintf("panic: %s", msg)
+	assert.Equal(t, err.Error(), expectMsg)
 }
 
 func TestInvokeUnaryHandlerWithPanic(t *testing.T) {

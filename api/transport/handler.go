@@ -22,12 +22,8 @@ package transport
 
 import (
 	"context"
-	"fmt"
-	"log"
-	"runtime/debug"
 	"time"
 
-	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -117,8 +113,7 @@ type StreamHandler interface {
 	HandleStream(stream *ServerStream) error
 }
 
-// DispatchUnaryHandler calls the handler h, recovering panics and timeout errors,
-// converting them to yarpc errors. All other errors are passed trough.
+// DispatchUnaryHandler is the deprecated - use InvokeUnaryHandler instead
 func DispatchUnaryHandler(
 	ctx context.Context,
 	h UnaryHandler,
@@ -126,55 +121,22 @@ func DispatchUnaryHandler(
 	req *Request,
 	resq ResponseWriter,
 ) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("Unary handler panicked: %v\n%s", r, debug.Stack())
-			err = fmt.Errorf("panic: %v", r)
-		}
-	}()
-
-	err = h.Handle(ctx, req, resq)
-
-	// The handler stopped work on context deadline.
-	if err == context.DeadlineExceeded && err == ctx.Err() {
-		deadline, _ := ctx.Deadline()
-		err = yarpcerrors.Newf(
-			yarpcerrors.CodeDeadlineExceeded,
-			"call to procedure %q of service %q from caller %q timed out after %v",
-			req.Procedure, req.Service, req.Caller, deadline.Sub(start))
-	}
-	return err
+	return InvokeUnaryHandler(ctx, h, start, req, resq, nil)
 }
 
-// DispatchOnewayHandler calls the oneway handler, recovering from panics as
-// errors
+// DispatchOnewayHandler is the deprecated - use InvokeOnewayHandler instead
 func DispatchOnewayHandler(
 	ctx context.Context,
 	h OnewayHandler,
 	req *Request,
 ) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("Oneway handler panicked: %v\n%s", r, debug.Stack())
-			err = fmt.Errorf("panic: %v", r)
-		}
-	}()
-
-	return h.HandleOneway(ctx, req)
+	return InvokeOnewayHandler(ctx, h, req, nil)
 }
 
-// DispatchStreamHandler calls the stream handler, recovering from panics as
-// errors.
+// DispatchStreamHandler is the deprecated - use InvokeStreamHandler instead
 func DispatchStreamHandler(
 	h StreamHandler,
 	stream *ServerStream,
 ) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("Stream handler panicked: %v\n%s", r, debug.Stack())
-			err = fmt.Errorf("panic: %v", r)
-		}
-	}()
-
-	return h.HandleStream(stream)
+	return InvokeStreamHandler(h, stream, nil)
 }

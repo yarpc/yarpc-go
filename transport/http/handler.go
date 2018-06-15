@@ -146,10 +146,10 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	case transport.Unary:
 		defer span.Finish()
 
-		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)
+		err = transport.InvokeUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter, h.logger)
 
 	case transport.Oneway:
-		err = handleOnewayRequest(span, treq, spec.Oneway())
+		err = handleOnewayRequest(span, treq, spec.Oneway(), h.logger)
 
 	default:
 		err = yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport http does not handle %s handlers", spec.Type().String())
@@ -163,6 +163,7 @@ func handleOnewayRequest(
 	span opentracing.Span,
 	treq *transport.Request,
 	onewayHandler transport.OnewayHandler,
+	logger *zap.Logger,
 ) error {
 	// we will lose access to the body unless we read all the bytes before
 	// returning from the request
@@ -176,13 +177,13 @@ func handleOnewayRequest(
 	// http.Request's context when ServeHTTP returns
 	ctx := opentracing.ContextWithSpan(context.Background(), span)
 
-	go func() {
+	go func(logger *zap.Logger) {
 		// ensure the span lasts for length of the handler in case of errors
 		defer span.Finish()
 
-		err := transport.DispatchOnewayHandler(ctx, onewayHandler, treq)
+		err := transport.InvokeOnewayHandler(ctx, onewayHandler, treq, logger)
 		updateSpanWithErr(span, err)
-	}()
+	}(logger)
 	return nil
 }
 

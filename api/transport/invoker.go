@@ -31,7 +31,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// InvokeUnaryHandler invokes the UnaryHandler
+// InvokeUnaryHandler calls the handler h, recovering panics and timeout errors,
+// converting them to yarpc errors. All other errors are passed through.
 func InvokeUnaryHandler(
 	ctx context.Context,
 	h UnaryHandler,
