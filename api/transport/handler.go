@@ -121,7 +121,15 @@ func DispatchUnaryHandler(
 	req *Request,
 	resq ResponseWriter,
 ) (err error) {
-	return InvokeUnaryHandler(ctx, h, start, req, resq, nil)
+	return InvokeUnaryHandler(UnaryInvokeRequest{
+		Context:        ctx,
+		StartTime:      start,
+		Request:        req,
+		ResponseWriter: resq,
+		Handler:        h,
+	},
+		nil,
+	)
 }
 
 // DispatchOnewayHandler is the deprecated - use InvokeOnewayHandler instead
@@ -130,7 +138,13 @@ func DispatchOnewayHandler(
 	h OnewayHandler,
 	req *Request,
 ) (err error) {
-	return InvokeOnewayHandler(ctx, h, req, nil)
+	return InvokeOnewayHandler(OnewayInvokeRequest{
+		Context: ctx,
+		Request: req,
+		Handler: h,
+	},
+		nil,
+	)
 }
 
 // DispatchStreamHandler is the deprecated - use InvokeStreamHandler instead
@@ -138,5 +152,10 @@ func DispatchStreamHandler(
 	h StreamHandler,
 	stream *ServerStream,
 ) (err error) {
-	return InvokeStreamHandler(h, stream, nil)
+	return InvokeStreamHandler(StreamInvokeRequest{
+		Stream:  stream,
+		Handler: h,
+	},
+		nil,
+	)
 }

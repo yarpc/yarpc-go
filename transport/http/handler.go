@@ -146,7 +146,15 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	case transport.Unary:
 		defer span.Finish()
 
-		err = transport.InvokeUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter, h.logger)
+		err = transport.InvokeUnaryHandler(transport.UnaryInvokeRequest{
+			Context:        ctx,
+			StartTime:      start,
+			Request:        treq,
+			Handler:        spec.Unary(),
+			ResponseWriter: responseWriter,
+		},
+			h.logger,
+		)
 
 	case transport.Oneway:
 		err = handleOnewayRequest(span, treq, spec.Oneway(), h.logger)
@@ -181,7 +189,12 @@ func handleOnewayRequest(
 		// ensure the span lasts for length of the handler in case of errors
 		defer span.Finish()
 
-		err := transport.InvokeOnewayHandler(ctx, onewayHandler, treq, logger)
+		err := transport.InvokeOnewayHandler(transport.OnewayInvokeRequest{
+			Context: ctx,
+			Request: treq,
+			Handler: onewayHandler,
+		},
+			logger)
 		updateSpanWithErr(span, err)
 	}(logger)
 	return nil

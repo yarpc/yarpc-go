@@ -145,9 +145,10 @@ func (h *handler) handleStream(
 		return err
 	}
 
-	return transport.UpdateSpanWithErr(span, transport.InvokeStreamHandler(
-		streamHandler,
-		tServerStream,
+	return transport.UpdateSpanWithErr(span, transport.InvokeStreamHandler(transport.StreamInvokeRequest{
+		Stream:  tServerStream,
+		Handler: streamHandler,
+	},
 		h.logger,
 	))
 }

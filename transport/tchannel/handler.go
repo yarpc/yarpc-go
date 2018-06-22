@@ -193,7 +193,15 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 	}
 	switch spec.Type() {
 	case transport.Unary:
-		return transport.InvokeUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter, h.logger)
+		return transport.InvokeUnaryHandler(transport.UnaryInvokeRequest{
+			Context:        ctx,
+			StartTime:      start,
+			Request:        treq,
+			ResponseWriter: responseWriter,
+			Handler:        spec.Unary(),
+		},
+			h.logger,
+		)
 
 	default:
 		return yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport tchannel does not handle %s handlers", spec.Type().String())

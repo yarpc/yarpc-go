@@ -31,31 +31,49 @@ import (
 	"go.uber.org/zap"
 )
 
+// UnaryInvokeRequest encapsulates minimum arguments to invoke a unary handler
+type UnaryInvokeRequest struct {
+	Context        context.Context
+	StartTime      time.Time
+	Request        *Request
+	ResponseWriter ResponseWriter
+	Handler        UnaryHandler
+}
+
+// OnewayInvokeRequest encapsulates minimum arguments to invoke a unary handler
+type OnewayInvokeRequest struct {
+	Context context.Context
+	Request *Request
+	Handler OnewayHandler
+}
+
+// StreamInvokeRequest encapsulates minimum arguments to invoke a unary handler
+type StreamInvokeRequest struct {
+	Stream  *ServerStream
+	Handler StreamHandler
+}
+
 // InvokeUnaryHandler calls the handler h, recovering panics and timeout errors,
 // converting them to yarpc errors. All other errors are passed through.
 func InvokeUnaryHandler(
-	ctx context.Context,
-	h UnaryHandler,
-	start time.Time,
-	req *Request,
-	resq ResponseWriter,
+	i UnaryInvokeRequest,
 	logger *zap.Logger,
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = logPanic(Unary, logger, r, req.ToRequestMeta())
+			err = logPanic(Unary, logger, r, i.Request.ToRequestMeta())
 		}
 	}()
 
-	err = h.Handle(ctx, req, resq)
+	err = i.Handler.Handle(i.Context, i.Request, i.ResponseWriter)
 
 	// The handler stopped work on context deadline.
-	if err == context.DeadlineExceeded && err == ctx.Err() {
-		deadline, _ := ctx.Deadline()
+	if err == context.DeadlineExceeded && err == i.Context.Err() {
+		deadline, _ := i.Context.Deadline()
 		err = yarpcerrors.Newf(
 			yarpcerrors.CodeDeadlineExceeded,
 			"call to procedure %q of service %q from caller %q timed out after %v",
-			req.Procedure, req.Service, req.Caller, deadline.Sub(start))
+			i.Request.Procedure, i.Request.Service, i.Request.Caller, deadline.Sub(i.StartTime))
 	}
 	return err
 }
@@ -63,34 +81,31 @@ func InvokeUnaryHandler(
 // InvokeOnewayHandler calls the oneway handler, recovering from panics as
 // errors
 func InvokeOnewayHandler(
-	ctx context.Context,
-	h OnewayHandler,
-	req *Request,
+	i OnewayInvokeRequest,
 	logger *zap.Logger,
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = logPanic(Oneway, logger, r, req.ToRequestMeta())
+			err = logPanic(Oneway, logger, r, i.Request.ToRequestMeta())
 		}
 	}()
 
-	return h.HandleOneway(ctx, req)
+	return i.Handler.HandleOneway(i.Context, i.Request)
 }
 
 // InvokeStreamHandler calls the stream handler, recovering from panics as
 // errors.
 func InvokeStreamHandler(
-	h StreamHandler,
-	stream *ServerStream,
+	i StreamInvokeRequest,
 	logger *zap.Logger,
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = logPanic(Streaming, logger, r, stream.Request().Meta)
+			err = logPanic(Streaming, logger, r, i.Stream.Request().Meta)
 		}
 	}()
 
-	return h.HandleStream(stream)
+	return i.Handler.HandleStream(i.Stream)
 }
 
 func logPanic(rpcType Type, logger *zap.Logger, recovered interface{}, req *RequestMeta) error {
