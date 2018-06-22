@@ -124,9 +124,10 @@ func TestCallSuccess(t *testing.T) {
 		headerVal = "FooBarBaz"
 	)
 	tests := []struct {
-		msg       string
-		options   []TransportOption
-		headerVal []byte
+		msg                   string
+		options               []TransportOption
+		headerVal             []byte
+		withServiceRespHeader bool
 	}{
 		{
 			msg:     "exactCaseHeader options on",
@@ -145,6 +146,16 @@ func TestCallSuccess(t *testing.T) {
 				0x00, 0x0b, 'f', 'o', 'o', '-', 'b', 'a', 'r', '-', 'b', 'a', 'z',
 				0x00, 0x09, 'F', 'o', 'o', 'B', 'a', 'r', 'B', 'a', 'z',
 			},
+		},
+		{
+			msg:     "exactCaseHeader options off",
+			options: []TransportOption{ServiceName("caller")},
+			headerVal: []byte{
+				0x00, 0x01,
+				0x00, 0x0b, 'f', 'o', 'o', '-', 'b', 'a', 'r', '-', 'b', 'a', 'z',
+				0x00, 0x09, 'F', 'o', 'o', 'B', 'a', 'r', 'B', 'a', 'z',
+			},
+			withServiceRespHeader: true,
 		},
 	}
 
@@ -170,13 +181,26 @@ func TestCallSuccess(t *testing.T) {
 					assert.True(t, ok, "deadline expected")
 					assert.WithinDuration(t, time.Now(), dl, 200*testtime.Millisecond)
 
-					err = writeArgs(call.Response(),
-						[]byte{
-							0x00, 0x01,
-							0x00, 0x03, 'f', 'o', 'o',
-							0x00, 0x03, 'b', 'a', 'r',
-						}, []byte("great success"))
-					assert.NoError(t, err, "failed to write response")
+					if tt.withServiceRespHeader {
+						// test with response service name header
+						err = writeArgs(call.Response(),
+							[]byte{
+								0x00, 0x02,
+								0x00, 0x03, 'f', 'o', 'o',
+								0x00, 0x03, 'b', 'a', 'r',
+								0x00, 0x0d, '$', 'r', 'p', 'c', '$', '-', 's', 'e', 'r', 'v', 'i', 'c', 'e',
+								0x00, 0x07, 's', 'e', 'r', 'v', 'i', 'c', 'e',
+							}, []byte("great success"))
+					} else {
+						// test without response service name header
+						err = writeArgs(call.Response(),
+							[]byte{
+								0x00, 0x01,
+								0x00, 0x03, 'f', 'o', 'o',
+								0x00, 0x03, 'b', 'a', 'r',
+							}, []byte("great success"))
+					}
+					assert.NoError(t, err, "o write response")
 				}))
 
 			x, err := NewTransport(tt.options...)
@@ -222,6 +246,10 @@ func TestCallSuccess(t *testing.T) {
 }
 
 func TestCallFailures(t *testing.T) {
+	const (
+		unexpectedMethod = "unexpected"
+		unknownMethod    = "unknown"
+	)
 	server := testutils.NewServer(t, nil)
 	defer server.Close()
 	serverHostPort := server.PeerInfo().HostPort
@@ -229,15 +257,23 @@ func TestCallFailures(t *testing.T) {
 	server.GetSubChannel("service").SetHandler(tchannel.HandlerFunc(
 		func(ctx context.Context, call *tchannel.InboundCall) {
 			var err error
-			if call.MethodString() == "unexpected" {
+			if call.MethodString() == unexpectedMethod {
 				err = tchannel.NewSystemError(
 					tchannel.ErrCodeUnexpected, "great sadness")
-			} else {
+				call.Response().SendSystemError(err)
+			} else if call.MethodString() == unknownMethod {
 				err = tchannel.NewSystemError(
 					tchannel.ErrCodeBadRequest, "unknown method")
+				call.Response().SendSystemError(err)
+			} else {
+				err = writeArgs(call.Response(),
+					[]byte{
+						0x00, 0x01,
+						0x00, 0x0d, '$', 'r', 'p', 'c', '$', '-', 's', 'e', 'r', 'v', 'i', 'c', 'e',
+						0x00, 0x05, 'w', 'r', 'o', 'n', 'g',
+					}, []byte("bad sadness"))
+				assert.NoError(t, err, "o write response")
 			}
-
-			call.Response().SendSystemError(err)
 		}))
 
 	type testCase struct {
@@ -247,12 +283,16 @@ func TestCallFailures(t *testing.T) {
 
 	tests := []testCase{
 		{
-			procedure: "unexpected",
+			procedure: unexpectedMethod,
 			message:   "great sadness",
 		},
 		{
-			procedure: "not a procedure",
+			procedure: unknownMethod,
 			message:   "unknown method",
+		},
+		{
+			procedure: "wrong service name",
+			message:   "does not match",
 		},
 	}
 
