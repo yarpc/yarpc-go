@@ -191,6 +191,12 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 		return nil, toYARPCError(req, err)
 	}
 
+	// service name match validation, return yarpcerrors.CodeInternal error if not match
+	if match, resSvcName := checkServiceMatchAndDeleteHeaderKey(req.Service, headers); !match {
+		return nil, yarpcerrors.InternalErrorf("service name sent from the request "+
+			"does not match the service name received in the response: sent %q, got: %q", req.Service, resSvcName)
+	}
+
 	return &transport.Response{
 		Headers:          headers,
 		Body:             resBody,
@@ -252,4 +258,14 @@ func getResponseErrorAndDeleteHeaderKeys(headers transport.Headers) error {
 	errorName, _ := headers.Get(ErrorNameHeaderKey)
 	errorMessage, _ := headers.Get(ErrorMessageHeaderKey)
 	return intyarpcerrors.NewWithNamef(errorCode, errorName, errorMessage)
+}
+
+// ServiceHeaderKey is internal key used by YARPC, we need to remove it before give response to client
+// only does verification when there is a response service header.
+func checkServiceMatchAndDeleteHeaderKey(reqSvcName string, resHeaders transport.Headers) (bool, string) {
+	if resSvcName, ok := resHeaders.Get(ServiceHeaderKey); ok {
+		resHeaders.Del(ServiceHeaderKey)
+		return reqSvcName == resSvcName, resSvcName
+	}
+	return true, ""
 }
