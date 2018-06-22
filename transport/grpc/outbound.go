@@ -108,6 +108,7 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 	var responseBody []byte
 	var responseMD metadata.MD
 	invokeErr := o.invoke(ctx, request, &responseBody, &responseMD, start)
+
 	responseHeaders, err := getApplicationHeaders(responseMD)
 	if err != nil {
 		return nil, err
@@ -116,7 +117,7 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 		Body:             ioutil.NopCloser(bytes.NewBuffer(responseBody)),
 		Headers:          responseHeaders,
 		ApplicationError: metadataToIsApplicationError(responseMD),
-	}, invokeErrorToYARPCError(invokeErr, responseMD)
+	}, invokeErr
 }
 
 func (o *Outbound) invoke(
@@ -170,7 +171,7 @@ func (o *Outbound) invoke(
 		return err
 	}
 
-	return transport.UpdateSpanWithErr(
+	err = transport.UpdateSpanWithErr(
 		span,
 		grpcPeer.clientConn.Invoke(
 			metadata.NewOutgoingContext(ctx, md),
@@ -180,6 +181,16 @@ func (o *Outbound) invoke(
 			callOptions...,
 		),
 	)
+	if err != nil {
+		return invokeErrorToYARPCError(err, *responseMD)
+	}
+	// Service name match validation, return yarpcerrors.CodeInternal error if not match
+	if match, resSvcName := checkServiceMatch(request.Service, *responseMD); !match {
+		// If service doesn't match => we got response => span must not be nil
+		return transport.UpdateSpanWithErr(span, yarpcerrors.InternalErrorf("service name sent from the request "+
+			"does not match the service name received in the response: sent %q, got: %q", request.Service, resSvcName))
+	}
+	return nil
 }
 
 func metadataToIsApplicationError(responseMD metadata.MD) bool {
@@ -300,4 +311,12 @@ func (o *Outbound) stream(
 		return nil, err
 	}
 	return tClientStream, nil
+}
+
+// Only does verification when there is a response service header key
+func checkServiceMatch(reqSvcName string, responseMD metadata.MD) (bool, string) {
+	if resSvcName, ok := responseMD[ServiceHeader]; ok {
+		return reqSvcName == resSvcName[0], resSvcName[0]
+	}
+	return true, ""
 }

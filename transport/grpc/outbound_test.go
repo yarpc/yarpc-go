@@ -21,6 +21,7 @@
 package grpc
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net"
@@ -28,12 +29,14 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/peer/peertest"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/yarpcerrors"
+	"google.golang.org/grpc"
 )
 
 func TestNoRequest(t *testing.T) {
@@ -199,4 +202,81 @@ func TestCallStreamWithInvalidPeer(t *testing.T) {
 			ExpectedType: "*grpcPeer",
 		}.Error(),
 	)
+}
+
+func TestCallServiceMatch(t *testing.T) {
+	tests := []struct {
+		msg         string
+		headerKey   string
+		headerValue string
+		wantErr     bool
+	}{
+		{
+			msg:         "call service match success",
+			headerKey:   ServiceHeader,
+			headerValue: "Service",
+		},
+		{
+			msg:         "call service match failed",
+			headerKey:   ServiceHeader,
+			headerValue: "ThisIsWrongSvcName",
+			wantErr:     true,
+		},
+		{
+			msg: "no service name response header",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			server := grpc.NewServer(
+				grpc.UnknownServiceHandler(func(srv interface{}, stream grpc.ServerStream) error {
+					responseWriter := newResponseWriter()
+					defer responseWriter.Close()
+
+					if tt.headerKey != "" {
+						responseWriter.AddSystemHeader(tt.headerKey, tt.headerValue)
+					}
+
+					// Send the response attributes back and end the stream.
+					if sendErr := stream.SendMsg(&empty.Empty{}); sendErr != nil {
+						// We couldn't send the response.
+						return sendErr
+					}
+					if responseWriter.md != nil {
+						stream.SetTrailer(responseWriter.md)
+					}
+					return nil
+				}),
+			)
+			listener, err := net.Listen("tcp", ":0")
+			require.NoError(t, err)
+			go func() {
+				err := server.Serve(listener)
+				require.NoError(t, err)
+			}()
+			defer server.Stop()
+
+			grpcTransport := NewTransport()
+			out := grpcTransport.NewSingleOutbound(listener.Addr().String())
+			require.NoError(t, grpcTransport.Start())
+			require.NoError(t, out.Start())
+			defer grpcTransport.Stop()
+			defer out.Stop()
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			req := &transport.Request{
+				Service:   "Service",
+				Procedure: "Hello",
+				Body:      bytes.NewReader([]byte("world")),
+			}
+			_, err = out.Call(ctx, req)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "does not match")
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }
