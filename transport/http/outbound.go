@@ -256,6 +256,13 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 
 	span.SetTag("http.status_code", response.StatusCode)
 
+	// Service name match validation, return yarpcerrors.CodeInternal error if not match
+	if match, resSvcName := checkServiceMatch(treq.Service, response.Header); !match {
+		return nil, transport.UpdateSpanWithErr(span,
+			yarpcerrors.InternalErrorf("service name sent from the request "+
+				"does not match the service name received in the response, sent %q, got: %q", treq.Service, resSvcName))
+	}
+
 	tres := &transport.Response{
 		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, transport.NewHeaders()),
 		Body:             response.Body,
@@ -397,6 +404,12 @@ func getYARPCErrorFromResponse(response *http.Response, bothResponseError bool) 
 		response.Header.Get(ErrorNameHeader),
 		strings.TrimSuffix(contents, "\n"),
 	)
+}
+
+// Only does verification if there is a response header
+func checkServiceMatch(reqSvcName string, resHeaders http.Header) (bool, string) {
+	serviceName := resHeaders.Get(ServiceHeader)
+	return serviceName == "" || serviceName == reqSvcName, serviceName
 }
 
 // RoundTrip implements the http.RoundTripper interface, making a YARPC HTTP outbound suitable as a
