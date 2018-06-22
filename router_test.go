@@ -82,6 +82,7 @@ func TestMapRouter(t *testing.T) {
 		{"", "baz", "json", bazJSON},
 		{"myservice", "baz", "proto", nil},
 		{"", "baz", "proto", nil},
+		{"unknownservice", "", "", nil},
 	}
 
 	for _, tt := range tests {
@@ -305,4 +306,28 @@ func TestProcedureSort(t *testing.T) {
 			Name:    "poke",
 		},
 	}, ps, "should order procedures lexicographically on (service, procedure, encoding)")
+}
+
+func TestUnknownServiceName(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	m := NewMapRouter("service1")
+	foo := transporttest.NewMockUnaryHandler(mockCtrl)
+
+	m.Register([]transport.Procedure{
+		{
+			Name:        "foo",
+			HandlerSpec: transport.NewUnaryHandlerSpec(foo),
+			Service:     "service2",
+			Encoding:    "json",
+		},
+	})
+
+	_, err := m.Choose(context.Background(), &transport.Request{
+		Service:   "wrongService",
+		Procedure: "foo",
+		Encoding:  "json",
+	})
+	assert.Contains(t, err.Error(), `unrecognized service name "wrongService", available services: "service1", "service2"`)
 }
