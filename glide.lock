@@ -1,5 +1,5 @@
 hash: a42f2c917dbbdb0ebc3052a09ba38d91eb37088d5ba2be498c8e8399d7663dd5
-updated: 2018-06-21T15:01:17.552932648Z
+updated: 2018-06-22T15:01:28.72071095Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -187,7 +187,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: ad87a3a340fa7f3bed189293fbfa7a9b7e021ae1
+  version: 63fc586f45fe72d95d5240a5d5eb95e6503907d3
   repo: https://github.com/golang/sys
 - name: golang.org/x/text
   version: 5cec4b58c438bd98288aeb248bab2c1840713d21
@@ -202,7 +202,7 @@ imports:
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 32ee49c4dd805befd833990acba36cb75042378c
+  version: 80063a038e333bbe006c878e4c5ce4c74d055498
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
