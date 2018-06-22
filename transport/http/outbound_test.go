@@ -453,3 +453,75 @@ func TestOutboundNoDeadline(t *testing.T) {
 	_, err := out.call(context.Background(), &transport.Request{})
 	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing context deadline"), err)
 }
+
+func TestServiceMatchSuccess(t *testing.T) {
+	matchServer := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, req *http.Request) {
+			defer req.Body.Close()
+			w.Header().Set(ServiceHeader, req.Header.Get(ServiceHeader))
+			_, err := w.Write([]byte("Service name header return"))
+			assert.NoError(t, err)
+		},
+	))
+	defer matchServer.Close()
+
+	httpTransport := NewTransport()
+	out := httpTransport.NewSingleOutbound(matchServer.URL)
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+	_, err := out.Call(ctx, &transport.Request{
+		Service: "Service",
+	})
+	require.NoError(t, err)
+}
+
+func TestServiceMatchFailed(t *testing.T) {
+	mismatchServer := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, req *http.Request) {
+			defer req.Body.Close()
+			w.Header().Set(ServiceHeader, "ThisIsAWrongSvcName")
+			_, err := w.Write([]byte("Wrong service name header return"))
+			assert.NoError(t, err)
+		},
+	))
+	defer mismatchServer.Close()
+
+	httpTransport := NewTransport()
+	out := httpTransport.NewSingleOutbound(mismatchServer.URL)
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+	_, err := out.Call(ctx, &transport.Request{
+		Service: "Service",
+	})
+	assert.Error(t, err, "expected failure for service name dismatch")
+}
+
+func TestServiceMatchNoHeader(t *testing.T) {
+	noHeaderServer := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, req *http.Request) {
+			defer req.Body.Close()
+			// intentionally do not set a response header
+			_, err := w.Write([]byte("No service name header return"))
+			assert.NoError(t, err)
+		},
+	))
+	defer noHeaderServer.Close()
+
+	httpTransport := NewTransport()
+	out := httpTransport.NewSingleOutbound(noHeaderServer.URL)
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+	_, err := out.Call(ctx, &transport.Request{
+		Service: "Service",
+	})
+	require.NoError(t, err)
+}
