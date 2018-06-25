@@ -23,11 +23,20 @@ package grpc
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"fmt"
 	"math"
+	"math/big"
 	"net"
 	"strings"
 	"testing"
+	"time"
+
+	"crypto/tls"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
@@ -70,6 +79,66 @@ func TestGRPCBasic(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "bar", value)
 	})
+}
+
+func TestTLSWithYARPC(t *testing.T) {
+	for _, test := range []struct {
+		clientValidity      time.Duration
+		serverValidity      time.Duration
+		expectedErrContains string
+		name                string
+	}{
+		{1 * time.Minute,
+			1 * time.Minute,
+			"",
+			"valid certs both sides",
+		},
+		{1 * time.Minute,
+			-1 * time.Minute,
+			"transport: authentication handshake failed: x509: certificate has expired or is not yet valid",
+			"invalid server cert",
+		},
+		{
+			-1 * time.Minute,
+			1 * time.Minute,
+			"remote error: tls: bad certificate",
+			"invalid client cert",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			scenario := createTLSScenario(t, test.clientValidity, test.serverValidity)
+			serverTLSOpt := ServerTLSConfig(&tls.Config{
+				Certificates: []tls.Certificate{{
+					Certificate: [][]byte{scenario.ServerCert.Raw},
+					Leaf:        scenario.ServerCert,
+					PrivateKey:  scenario.ServerKey,
+				}},
+				ClientAuth: tls.RequireAndVerifyClientCert,
+				ClientCAs:  scenario.CAs,
+			})
+
+			clientTLSOpt := ClientTLSConfig(&tls.Config{
+				Certificates: []tls.Certificate{{
+					Certificate: [][]byte{scenario.ClientCert.Raw},
+					Leaf:        scenario.ClientCert,
+					PrivateKey:  scenario.ClientKey,
+				}},
+				RootCAs: scenario.CAs,
+			})
+
+			doWithTestEnv(t, []TransportOption{serverTLSOpt, clientTLSOpt}, nil, nil, func(t *testing.T, e *testEnv) {
+				err := e.SetValueYARPC(context.Background(), "foo", "bar")
+				if test.expectedErrContains == "" {
+					assert.NoError(t, err)
+				} else {
+					assert.Contains(t, err.Error(), test.expectedErrContains)
+				}
+			},
+				withNewPeer,
+			)
+		})
+
+	}
 }
 
 func TestYARPCWellKnownError(t *testing.T) {
@@ -216,8 +285,8 @@ func TestApplicationErrorPropagation(t *testing.T) {
 	})
 }
 
-func doWithTestEnv(t *testing.T, transportOptions []TransportOption, inboundOptions []InboundOption, outboundOptions []OutboundOption, f func(*testing.T, *testEnv)) {
-	testEnv, err := newTestEnv(transportOptions, inboundOptions, outboundOptions)
+func doWithTestEnv(t *testing.T, transportOptions []TransportOption, inboundOptions []InboundOption, outboundOptions []OutboundOption, f func(*testing.T, *testEnv), opts ...testEnvOption) {
+	testEnv, err := newTestEnv(transportOptions, inboundOptions, outboundOptions, opts...)
 	require.NoError(t, err)
 	defer func() {
 		assert.NoError(t, testEnv.Close())
@@ -239,7 +308,27 @@ type testEnv struct {
 	KeyValueYARPCServer *example.KeyValueYARPCServer
 }
 
-func newTestEnv(transportOptions []TransportOption, inboundOptions []InboundOption, outboundOptions []OutboundOption) (_ *testEnv, err error) {
+type testEnvParams struct {
+	UseNewPeer bool // use outbound.go newPeer instead of grpc.Dial
+}
+
+type testEnvOption func(t *testEnvParams)
+
+func withNewPeer(t *testEnvParams) {
+	t.UseNewPeer = true
+}
+
+func newTestEnv(
+	transportOptions []TransportOption,
+	inboundOptions []InboundOption,
+	outboundOptions []OutboundOption,
+	opts ...testEnvOption,
+) (_ *testEnv, err error) {
+	params := &testEnvParams{}
+	for _, opt := range opts {
+		opt(params)
+	}
+
 	keyValueYARPCServer := example.NewKeyValueYARPCServer()
 	procedures := examplepb.BuildKeyValueYARPCProcedures(keyValueYARPCServer)
 	testRouter := newTestRouter(procedures)
@@ -270,7 +359,20 @@ func newTestEnv(transportOptions []TransportOption, inboundOptions []InboundOpti
 		}
 	}()
 
-	clientConn, err := grpc.Dial(listener.Addr().String(), grpc.WithInsecure())
+	var clientConn *grpc.ClientConn
+
+	if params.UseNewPeer {
+		peer, err := newPeer(listener.Addr().String(), t)
+		if err != nil {
+			return nil, err
+		}
+		clientConn = peer.clientConn
+	} else {
+		clientConn, err = grpc.Dial(listener.Addr().String(), grpc.WithInsecure())
+		if err != nil {
+			return nil, err
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -413,4 +515,87 @@ func (r *testRouter) Choose(_ context.Context, request *transport.Request) (tran
 		}
 	}
 	return transport.HandlerSpec{}, fmt.Errorf("no procedure for name %s", request.Procedure)
+}
+
+type tlsScenario struct {
+	CAs        *x509.CertPool
+	ServerCert *x509.Certificate
+	ServerKey  *ecdsa.PrivateKey
+	ClientCert *x509.Certificate
+	ClientKey  *ecdsa.PrivateKey
+}
+
+func createTLSScenario(t *testing.T, clientValidity time.Duration, serverValidity time.Duration) tlsScenario {
+	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	caBytes, err := x509.CreateCertificate(
+		rand.Reader,
+		&x509.Certificate{
+			Subject: pkix.Name{
+				CommonName: "test ca",
+			},
+			SerialNumber:          big.NewInt(1),
+			BasicConstraintsValid: true,
+			IsCA:      true,
+			KeyUsage:  x509.KeyUsageCertSign,
+			NotBefore: time.Now(),
+			NotAfter:  time.Now().Add(10 * time.Minute),
+		},
+		&x509.Certificate{},
+		caKey.Public(),
+		caKey,
+	)
+	require.NoError(t, err)
+	ca, err := x509.ParseCertificate(caBytes)
+	require.NoError(t, err)
+
+	serverKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	serverCertBytes, err := x509.CreateCertificate(
+		rand.Reader,
+		&x509.Certificate{
+			Subject: pkix.Name{
+				CommonName: "server",
+			},
+			NotAfter:     time.Now().Add(serverValidity),
+			SerialNumber: big.NewInt(2),
+			IPAddresses:  []net.IP{net.ParseIP("127.0.0.1")},
+			KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyAgreement,
+		},
+		ca,
+		serverKey.Public(),
+		caKey,
+	)
+	require.NoError(t, err)
+	serverCert, err := x509.ParseCertificate(serverCertBytes)
+	require.NoError(t, err)
+
+	clientKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	clientCertBytes, err := x509.CreateCertificate(
+		rand.Reader,
+		&x509.Certificate{
+			Subject: pkix.Name{
+				CommonName: "client",
+			},
+			NotAfter:     time.Now().Add(clientValidity),
+			SerialNumber: big.NewInt(3),
+			KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyAgreement,
+		},
+		ca,
+		clientKey.Public(),
+		caKey,
+	)
+	require.NoError(t, err)
+	clientCert, err := x509.ParseCertificate(clientCertBytes)
+	require.NoError(t, err)
+
+	pool := x509.NewCertPool()
+	pool.AddCert(ca)
+
+	return tlsScenario{
+		CAs:        pool,
+		ServerCert: serverCert,
+		ServerKey:  serverKey,
+		ClientCert: clientCert,
+		ClientKey:  clientKey,
+	}
 }
