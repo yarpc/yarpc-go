@@ -88,21 +88,23 @@ func TestTLSWithYARPC(t *testing.T) {
 		expectedErrContains string
 		name                string
 	}{
-		{1 * time.Minute,
-			1 * time.Minute,
-			"",
-			"valid certs both sides",
-		},
-		{1 * time.Minute,
-			-1 * time.Minute,
-			"transport: authentication handshake failed: x509: certificate has expired or is not yet valid",
-			"invalid server cert",
+		{
+			clientValidity: 1 * time.Minute,
+			serverValidity: 1 * time.Minute,
+			name:           "valid certs both sides",
 		},
 		{
-			-1 * time.Minute,
-			1 * time.Minute,
-			"remote error: tls: bad certificate",
-			"invalid client cert",
+
+			clientValidity:      1 * time.Minute,
+			serverValidity:      -1 * time.Minute,
+			expectedErrContains: "transport: authentication handshake failed: x509: certificate has expired or is not yet valid",
+			name:                "invalid server cert",
+		},
+		{
+			clientValidity:      -1 * time.Minute,
+			serverValidity:      1 * time.Minute,
+			expectedErrContains: "remote error: tls: bad certificate",
+			name:                "invalid client cert",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
