@@ -552,6 +552,7 @@ func createTLSScenario(t *testing.T, clientValidity time.Duration, serverValidit
 	require.NoError(t, err)
 
 	serverKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
 	serverCertBytes, err := x509.CreateCertificate(
 		rand.Reader,
 		&x509.Certificate{
@@ -572,6 +573,7 @@ func createTLSScenario(t *testing.T, clientValidity time.Duration, serverValidit
 	require.NoError(t, err)
 
 	clientKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
 	clientCertBytes, err := x509.CreateCertificate(
 		rand.Reader,
 		&x509.Certificate{
