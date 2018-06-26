@@ -128,7 +128,7 @@ func TestTLSWithYARPC(t *testing.T) {
 				RootCAs: scenario.CAs,
 			})
 
-			doWithTestEnv(t, []TransportOption{serverTLSOpt, clientTLSOpt}, nil, nil, func(t *testing.T, e *testEnv) {
+			doWithTestEnv(t, []TransportOption{clientTLSOpt}, []InboundOption{serverTLSOpt}, nil, func(t *testing.T, e *testEnv) {
 				err := e.SetValueYARPC(context.Background(), "foo", "bar")
 				if test.expectedErrContains == "" {
 					assert.NoError(t, err)

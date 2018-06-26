@@ -117,8 +117,8 @@ func (i *Inbound) start() error {
 		grpc.MaxSendMsgSize(i.t.options.serverMaxSendMsgSize),
 	}
 
-	if i.t.options.serverTLSConfig != nil {
-		serverOptions = append(serverOptions, grpc.Creds(credentials.NewTLS(i.t.options.serverTLSConfig)))
+	if i.options.tlsConfig != nil {
+		serverOptions = append(serverOptions, grpc.Creds(credentials.NewTLS(i.options.tlsConfig)))
 	}
 
 	server := grpc.NewServer(serverOptions...)

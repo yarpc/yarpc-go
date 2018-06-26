@@ -138,21 +138,21 @@ func ClientTLSConfig(c *tls.Config) TransportOption {
 	}
 }
 
+// InboundOption is an option for an inbound.
+type InboundOption func(*inboundOptions)
+
+func (InboundOption) grpcOption() {}
+
 // ServerTLSConfig provides a tls.Config for the GRPC server. When provided, GRPC will accept only
 // TLS connections. The TLS config must contain a certificate chain and private key or the server
 // may not start.
 //
 // The default is to accept plaintext connections.
-func ServerTLSConfig(c *tls.Config) TransportOption {
-	return func(transportOptions *transportOptions) {
-		transportOptions.serverTLSConfig = c
+func ServerTLSConfig(c *tls.Config) InboundOption {
+	return func(o *inboundOptions) {
+		o.tlsConfig = c
 	}
 }
-
-// InboundOption is an option for an inbound.
-type InboundOption func(*inboundOptions)
-
-func (InboundOption) grpcOption() {}
 
 // OutboundOption is an option for an outbound.
 type OutboundOption func(*outboundOptions)
@@ -169,7 +169,6 @@ type transportOptions struct {
 	clientMaxSendMsgSize int
 	clientTLS            bool
 	clientTLSConfig      *tls.Config
-	serverTLSConfig      *tls.Config
 }
 
 func newTransportOptions(options []TransportOption) *transportOptions {
@@ -195,7 +194,9 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 	return transportOptions
 }
 
-type inboundOptions struct{}
+type inboundOptions struct {
+	tlsConfig *tls.Config
+}
 
 func newInboundOptions(options []InboundOption) *inboundOptions {
 	inboundOptions := &inboundOptions{}
