@@ -54,6 +54,7 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 )
 
@@ -109,7 +110,7 @@ func TestTLSWithYARPC(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			scenario := createTLSScenario(t, test.clientValidity, test.serverValidity)
-			serverTLSOpt := ServerTLSConfig(&tls.Config{
+			serverTLSOpt := ServerCredentials(credentials.NewTLS(&tls.Config{
 				Certificates: []tls.Certificate{{
 					Certificate: [][]byte{scenario.ServerCert.Raw},
 					Leaf:        scenario.ServerCert,
@@ -117,7 +118,7 @@ func TestTLSWithYARPC(t *testing.T) {
 				}},
 				ClientAuth: tls.RequireAndVerifyClientCert,
 				ClientCAs:  scenario.CAs,
-			})
+			}))
 
 			clientTLSOpt := ClientTLSConfig(&tls.Config{
 				Certificates: []tls.Certificate{{

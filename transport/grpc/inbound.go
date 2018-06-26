@@ -29,7 +29,6 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 )
 
 var (
@@ -117,8 +116,8 @@ func (i *Inbound) start() error {
 		grpc.MaxSendMsgSize(i.t.options.serverMaxSendMsgSize),
 	}
 
-	if i.options.tlsConfig != nil {
-		serverOptions = append(serverOptions, grpc.Creds(credentials.NewTLS(i.options.tlsConfig)))
+	if i.options.credentials != nil {
+		serverOptions = append(serverOptions, grpc.Creds(i.options.credentials))
 	}
 
 	server := grpc.NewServer(serverOptions...)

@@ -28,6 +28,7 @@ import (
 	"go.uber.org/yarpc/api/backoff"
 	intbackoff "go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/credentials"
 )
 
 const (
@@ -143,14 +144,13 @@ type InboundOption func(*inboundOptions)
 
 func (InboundOption) grpcOption() {}
 
-// ServerTLSConfig provides a tls.Config for the GRPC server. When provided, GRPC will accept only
-// TLS connections. The TLS config must contain a certificate chain and private key or the server
-// may not start.
+// ServerCredentials provides server-side GRPC transport credentials, such as a
+// TLS certificate and private key.
 //
-// The default is to accept plaintext connections.
-func ServerTLSConfig(c *tls.Config) InboundOption {
+// The default is to run a cleartext, unauthenticated server.
+func ServerCredentials(c credentials.TransportCredentials) InboundOption {
 	return func(o *inboundOptions) {
-		o.tlsConfig = c
+		o.credentials = c
 	}
 }
 
@@ -195,7 +195,7 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 }
 
 type inboundOptions struct {
-	tlsConfig *tls.Config
+	credentials credentials.TransportCredentials
 }
 
 func newInboundOptions(options []InboundOption) *inboundOptions {
