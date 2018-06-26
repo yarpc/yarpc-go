@@ -67,6 +67,7 @@ func toOutboundConfig(cc transport.ClientConfig) *transport.OutboundConfig {
 		Outbounds: transport.Outbounds{
 			ServiceName: cc.Service(),
 			Unary:       cc.GetUnaryOutbound(),
+			Stream:      cc.GetStreamOutbound(),
 		},
 	}
 }

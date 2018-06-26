@@ -49,6 +49,7 @@ func TestNonOutboundConfigWithUnaryClient(t *testing.T) {
 	cc.EXPECT().Caller().Return("caller")
 	cc.EXPECT().Service().Return("service")
 	cc.EXPECT().GetUnaryOutbound().Return(transporttest.NewMockUnaryOutbound(mockCtrl))
+	cc.EXPECT().GetStreamOutbound().Return(transporttest.NewMockStreamOutbound(mockCtrl))
 
 	assert.NotPanics(t, func() {
 		newClient("test", cc)

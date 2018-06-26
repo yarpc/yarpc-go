@@ -75,3 +75,16 @@ func (o *OutboundConfig) GetOnewayOutbound() OnewayOutbound {
 	}
 	return o.Outbounds.Oneway
 }
+
+// GetStreamOutbound returns an outbound to send the stream through or panics
+// if there is no stream outbound for this service.
+//
+// Implements ClientConfig#GetStreamOutbound.
+func (o *OutboundConfig) GetStreamOutbound() StreamOutbound {
+	// TODO: This function should be deprecated, it's for legacy support.
+	// Use Outbounds.Stream instead (and panic if you want).
+	if o.Outbounds.Stream == nil {
+		panic(fmt.Sprintf("service %q does not have a stream outbound", o.Outbounds.ServiceName))
+	}
+	return o.Outbounds.Stream
+}

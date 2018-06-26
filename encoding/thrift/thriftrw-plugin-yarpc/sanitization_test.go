@@ -98,3 +98,7 @@ func (cc testClientConfig) GetUnaryOutbound() transport.UnaryOutbound {
 func (cc testClientConfig) GetOnewayOutbound() transport.OnewayOutbound {
 	panic("Not implemented")
 }
+
+func (cc testClientConfig) GetStreamOutbound() transport.StreamOutbound {
+	panic("Not implemented")
+}

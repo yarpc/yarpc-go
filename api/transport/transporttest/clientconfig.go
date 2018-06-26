@@ -77,6 +77,18 @@ func (mr *MockClientConfigMockRecorder) GetOnewayOutbound() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOnewayOutbound", reflect.TypeOf((*MockClientConfig)(nil).GetOnewayOutbound))
 }
 
+// GetStreamOutbound mocks base method
+func (m *MockClientConfig) GetStreamOutbound() transport.StreamOutbound {
+	ret := m.ctrl.Call(m, "GetStreamOutbound")
+	ret0, _ := ret[0].(transport.StreamOutbound)
+	return ret0
+}
+
+// GetStreamOutbound indicates an expected call of GetStreamOutbound
+func (mr *MockClientConfigMockRecorder) GetStreamOutbound() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStreamOutbound", reflect.TypeOf((*MockClientConfig)(nil).GetStreamOutbound))
+}
+
 // GetUnaryOutbound mocks base method
 func (m *MockClientConfig) GetUnaryOutbound() transport.UnaryOutbound {
 	ret := m.ctrl.Call(m, "GetUnaryOutbound")
