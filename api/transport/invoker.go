@@ -38,6 +38,7 @@ type UnaryInvokeRequest struct {
 	Request        *Request
 	ResponseWriter ResponseWriter
 	Handler        UnaryHandler
+	Options        *InvokerOptions
 }
 
 // OnewayInvokeRequest encapsulates minimum arguments to invoke a unary handler
@@ -45,23 +46,24 @@ type OnewayInvokeRequest struct {
 	Context context.Context
 	Request *Request
 	Handler OnewayHandler
+	Options *InvokerOptions
 }
 
 // StreamInvokeRequest encapsulates minimum arguments to invoke a unary handler
 type StreamInvokeRequest struct {
 	Stream  *ServerStream
 	Handler StreamHandler
+	Options *InvokerOptions
 }
 
 // InvokeUnaryHandler calls the handler h, recovering panics and timeout errors,
 // converting them to yarpc errors. All other errors are passed through.
 func InvokeUnaryHandler(
 	i UnaryInvokeRequest,
-	logger *zap.Logger,
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = logPanic(Unary, logger, r, i.Request.ToRequestMeta())
+			err = handlePanic(Unary, i.Options, r, i.Request.ToRequestMeta())
 		}
 	}()
 
@@ -82,11 +84,10 @@ func InvokeUnaryHandler(
 // errors
 func InvokeOnewayHandler(
 	i OnewayInvokeRequest,
-	logger *zap.Logger,
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = logPanic(Oneway, logger, r, i.Request.ToRequestMeta())
+			err = handlePanic(Oneway, i.Options, r, i.Request.ToRequestMeta())
 		}
 	}()
 
@@ -97,31 +98,37 @@ func InvokeOnewayHandler(
 // errors.
 func InvokeStreamHandler(
 	i StreamInvokeRequest,
-	logger *zap.Logger,
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = logPanic(Streaming, logger, r, i.Stream.Request().Meta)
+			err = handlePanic(Streaming, i.Options, r, i.Stream.Request().Meta)
 		}
 	}()
 
 	return i.Handler.HandleStream(i.Stream)
 }
 
-func logPanic(rpcType Type, logger *zap.Logger, recovered interface{}, req *RequestMeta) error {
+func handlePanic(rpcType Type, options *InvokerOptions, recovered interface{}, req *RequestMeta) error {
 	err := fmt.Errorf("panic: %v", recovered)
-	if logger != nil {
-		logger.Error(fmt.Sprintf("%s handler panicked", rpcType),
-			zap.String("service", req.Service),
-			zap.String("transport", req.Transport),
-			zap.String("procedure", req.Procedure),
-			zap.String("encoding", string(req.Encoding)),
-			zap.String("caller", req.Caller),
-			zap.Error(err),
-			zap.Stack("stack"),
-		)
-		return err
+	if options != nil {
+		if options.logger != nil {
+			logPanic(rpcType, options.logger, err, req)
+			return err
+		}
 	}
 	log.Printf("%s handler panicked: %v\n%s", rpcType, recovered, debug.Stack())
+	return err
+}
+
+func logPanic(rpcType Type, logger *zap.Logger, err error, req *RequestMeta) error {
+	logger.Error(fmt.Sprintf("%s handler panicked", rpcType),
+		zap.String("service", req.Service),
+		zap.String("transport", req.Transport),
+		zap.String("procedure", req.Procedure),
+		zap.String("encoding", string(req.Encoding)),
+		zap.String("caller", req.Caller),
+		zap.Error(err),
+		zap.Stack("stack"),
+	)
 	return err
 }

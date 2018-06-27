@@ -34,8 +34,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// TODO: need to adjust the Dispatch* panic tests
-
 func TestDispatchUnaryHandlerWithPanic(t *testing.T) {
 	msg := "I'm panicking in a unary handler!"
 	handler := func(context.Context, *transport.Request, transport.ResponseWriter) error {
@@ -103,8 +101,8 @@ func TestInvokeUnaryHandlerWithPanic(t *testing.T) {
 			StartTime: time.Now(),
 			Request:   &transport.Request{},
 			Handler:   transport.UnaryHandlerFunc(handler),
+			Options:   transport.NewInvokerOptions(transport.Logger(zap.NewNop())),
 		},
-		zap.NewNop(),
 	)
 	expectMsg := fmt.Sprintf("panic: %s", msg)
 	assert.Equal(t, err.Error(), expectMsg)
@@ -120,8 +118,8 @@ func TestInvokeOnewayHandlerWithPanic(t *testing.T) {
 		Context: context.Background(),
 		Request: &transport.Request{},
 		Handler: transport.OnewayHandlerFunc(handler),
+		Options: transport.NewInvokerOptions(transport.Logger(zap.NewNop())),
 	},
-		zap.NewNop(),
 	)
 	expectMsg := fmt.Sprintf("panic: %s", msg)
 	assert.Equal(t, err.Error(), expectMsg)
@@ -145,8 +143,8 @@ func TestInvokeStreamHandlerWithPanic(t *testing.T) {
 	err := transport.InvokeStreamHandler(transport.StreamInvokeRequest{
 		Stream:  mockServerStream,
 		Handler: transport.StreamHandlerFunc(handler),
+		Options: transport.NewInvokerOptions(transport.Logger(zap.NewNop())),
 	},
-		zap.NewNop(),
 	)
 	expectMsg := fmt.Sprintf("panic: %s", msg)
 	assert.Equal(t, err.Error(), expectMsg)

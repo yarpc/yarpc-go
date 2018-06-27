@@ -130,7 +130,6 @@ func DispatchUnaryHandler(
 		ResponseWriter: resq,
 		Handler:        h,
 	},
-		nil,
 	)
 }
 
@@ -147,7 +146,6 @@ func DispatchOnewayHandler(
 		Request: req,
 		Handler: h,
 	},
-		nil,
 	)
 }
 
@@ -162,6 +160,5 @@ func DispatchStreamHandler(
 		Stream:  stream,
 		Handler: h,
 	},
-		nil,
 	)
 }
