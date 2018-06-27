@@ -107,7 +107,8 @@ func (i *Inbound) start() error {
 		return errRouterNotSet
 	}
 
-	handler := &handler{i: i, logger: i.t.options.logger}
+	handler := newHandler(i, i.t.options.logger)
+	// handler := &handler{i: i, logger: i.t.options.logger}
 
 	server := grpc.NewServer(
 		grpc.CustomCodec(customCodec{}),

@@ -156,7 +156,7 @@ func (i *Inbound) start() error {
 		tracer:            i.tracer,
 		grabHeaders:       i.grabHeaders,
 		bothResponseError: i.bothResponseError,
-		logger:            i.logger,
+		invokerOptions:    transport.NewInvokerOptions(transport.Logger(i.logger)),
 	}
 	if i.interceptor != nil {
 		httpHandler = i.interceptor(httpHandler)

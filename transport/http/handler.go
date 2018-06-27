@@ -36,7 +36,6 @@ import (
 	"go.uber.org/yarpc/internal/iopool"
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/yarpcerrors"
-	"go.uber.org/zap"
 )
 
 func popHeader(h http.Header, n string) string {
@@ -51,7 +50,7 @@ type handler struct {
 	tracer            opentracing.Tracer
 	grabHeaders       map[string]struct{}
 	bothResponseError bool
-	logger            *zap.Logger
+	invokerOptions    *transport.InvokerOptions
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -152,12 +151,12 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 			Request:        treq,
 			Handler:        spec.Unary(),
 			ResponseWriter: responseWriter,
+			Options:        h.invokerOptions,
 		},
-			h.logger,
 		)
 
 	case transport.Oneway:
-		err = handleOnewayRequest(span, treq, spec.Oneway(), h.logger)
+		err = handleOnewayRequest(span, treq, spec.Oneway(), h.invokerOptions)
 
 	default:
 		err = yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport http does not handle %s handlers", spec.Type().String())
@@ -171,7 +170,7 @@ func handleOnewayRequest(
 	span opentracing.Span,
 	treq *transport.Request,
 	onewayHandler transport.OnewayHandler,
-	logger *zap.Logger,
+	invokerOptions *transport.InvokerOptions,
 ) error {
 	// we will lose access to the body unless we read all the bytes before
 	// returning from the request
@@ -185,7 +184,7 @@ func handleOnewayRequest(
 	// http.Request's context when ServeHTTP returns
 	ctx := opentracing.ContextWithSpan(context.Background(), span)
 
-	go func(logger *zap.Logger) {
+	go func() {
 		// ensure the span lasts for length of the handler in case of errors
 		defer span.Finish()
 
@@ -193,10 +192,11 @@ func handleOnewayRequest(
 			Context: ctx,
 			Request: treq,
 			Handler: onewayHandler,
+			Options: invokerOptions,
 		},
-			logger)
+		)
 		updateSpanWithErr(span, err)
-	}(logger)
+	}()
 	return nil
 }
 
