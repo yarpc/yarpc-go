@@ -120,7 +120,7 @@ func handlePanic(rpcType Type, options *InvokerOptions, recovered interface{}, r
 	return err
 }
 
-func logPanic(rpcType Type, logger *zap.Logger, err error, req *RequestMeta) error {
+func logPanic(rpcType Type, logger *zap.Logger, err error, req *RequestMeta) {
 	logger.Error(fmt.Sprintf("%s handler panicked", rpcType),
 		zap.String("service", req.Service),
 		zap.String("transport", req.Transport),
@@ -130,5 +130,4 @@ func logPanic(rpcType Type, logger *zap.Logger, err error, req *RequestMeta) err
 		zap.Error(err),
 		zap.Stack("stack"),
 	)
-	return err
 }
