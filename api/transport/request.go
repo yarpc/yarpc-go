@@ -31,6 +31,23 @@ import (
 
 // Request is the low level request representation.
 type Request struct {
+	// ID is a unique identifier for a request/response pair. This MAY be a
+	// trace ID or UUID.
+	//
+	// This MAY be set by transports or middleware.
+	ID string
+
+	// Host is the name of the server issuing this request.
+	//
+	// It MAY be set by a an environment-aware middleware.
+	Host string
+
+	// Environment is the name of the host environment that the request was
+	// issued from. eg "staging", "production"
+	//
+	// It MAY be set by a an environment-aware middleware.
+	Environment string
+
 	// Name of the service making the request.
 	Caller string
 
