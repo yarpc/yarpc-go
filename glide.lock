@@ -1,5 +1,5 @@
 hash: a42f2c917dbbdb0ebc3052a09ba38d91eb37088d5ba2be498c8e8399d7663dd5
-updated: 2018-06-28T15:05:16.364537572Z
+updated: 2018-06-29T15:03:05.836724888Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -171,7 +171,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: e514e69ffb8bc3c76a71ae40de0118d794855992
+  version: 4cb1c02c05b0e749b0365f61ae859a8e0cfceed9
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -191,14 +191,14 @@ imports:
   version: 7138fd3d9dc8335c567ca206f4333fb75eb05d56
   repo: https://github.com/golang/sys
 - name: golang.org/x/text
-  version: 5cec4b58c438bd98288aeb248bab2c1840713d21
+  version: c0fe8dde8a10c9b32154bd9bdf080b8b3d635127
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 16699b2d33e2654d743c50b4525ab7e73e346238
+  version: 1c99e1239a0c8b0e59c34000995c4e319b7702ca
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
