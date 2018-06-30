@@ -27,4 +27,5 @@ import "go.uber.org/yarpc/transport/tchannel"
 func RemoveVariableMapKeys(headers map[string]string) {
 	delete(headers, "$tracing$uber-trace-id")
 	delete(headers, tchannel.ServiceHeaderKey)
+	delete(headers, tchannel.RequestUUIDHeaderKey)
 }

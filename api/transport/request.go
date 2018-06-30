@@ -25,12 +25,16 @@ import (
 	"io"
 	"strings"
 
+	"github.com/satori/go.uuid"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap/zapcore"
 )
 
 // Request is the low level request representation.
 type Request struct {
+	// UUID of the request, this field will be random generated
+	UUID uuid.UUID
+
 	// Name of the service making the request.
 	Caller string
 

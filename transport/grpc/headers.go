@@ -23,6 +23,7 @@ package grpc
 import (
 	"strings"
 
+	"github.com/satori/go.uuid"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -40,6 +41,9 @@ const (
 	// correct service.
 	// This header is required.
 	ServiceHeader = "rpc-service"
+	// UUID associated with each request. Echo this header on the response ensures
+	// it sent to correct client
+	RequestUUIDHeader = "rpc-request-uuid"
 	// ShardKeyHeader is the header key for the shard key used by the destined service
 	// to shard the request. This corresponds to the Request.ShardKey attribute.
 	// This header is optional.
@@ -99,6 +103,11 @@ func transportRequestToMetadata(request *transport.Request) (metadata.MD, error)
 	); err != nil {
 		return md, err
 	}
+	if !uuid.Equal(request.UUID, uuid.Nil) {
+		if err := addToMetadata(md, RequestUUIDHeader, request.UUID.String()); err != nil {
+			return md, err
+		}
+	}
 	return md, addApplicationHeaders(md, request.Headers)
 }
 
@@ -138,6 +147,8 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 			if request.Encoding == "" {
 				request.Encoding = transport.Encoding(getContentSubtype(value))
 			}
+		case RequestUUIDHeader:
+			request.UUID = uuid.FromStringOrNil(value)
 		default:
 			request.Headers = request.Headers.With(header, value)
 		}

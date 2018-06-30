@@ -49,6 +49,10 @@ const (
 	// in responses to ensure requests are processed by the correct service.
 	ServiceHeader = "Rpc-Service"
 
+	// UUID associated with each request. Echo this header on the response
+	// ensures it sent to correct client
+	RequestUUIDHeader = "Rpc-Request-UUID"
+
 	// Shard key used by the destined service to shard the request. This
 	// corresponds to the Request.ShardKey attribute.
 	ShardKeyHeader = "Rpc-Shard-Key"

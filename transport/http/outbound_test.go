@@ -454,74 +454,112 @@ func TestOutboundNoDeadline(t *testing.T) {
 	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing context deadline"), err)
 }
 
-func TestServiceMatchSuccess(t *testing.T) {
-	matchServer := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, req *http.Request) {
-			defer req.Body.Close()
-			w.Header().Set(ServiceHeader, req.Header.Get(ServiceHeader))
-			_, err := w.Write([]byte("Service name header return"))
-			assert.NoError(t, err)
+func TestServiceMatchAndUUIDMatch(t *testing.T) {
+	const (
+		rightServiceName = "yarpc-service"
+		wrongServiceName = "wrong-service"
+		wrongUuid        = "dead-cafe-beef-1234"
+	)
+	tests := []struct {
+		msg          string
+		headers      map[string]string
+		sendSameUUID bool
+		wantErr      string
+	}{
+		{
+			msg: "service match success and uuid match success",
+			headers: map[string]string{
+				ServiceHeader: rightServiceName,
+			},
+			sendSameUUID: true,
 		},
-	))
-	defer matchServer.Close()
-
-	httpTransport := NewTransport()
-	out := httpTransport.NewSingleOutbound(matchServer.URL)
-	require.NoError(t, out.Start(), "failed to start outbound")
-	defer out.Stop()
-
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-	defer cancel()
-	_, err := out.Call(ctx, &transport.Request{
-		Service: "Service",
-	})
-	require.NoError(t, err)
-}
-
-func TestServiceMatchFailed(t *testing.T) {
-	mismatchServer := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, req *http.Request) {
-			defer req.Body.Close()
-			w.Header().Set(ServiceHeader, "ThisIsAWrongSvcName")
-			_, err := w.Write([]byte("Wrong service name header return"))
-			assert.NoError(t, err)
+		{
+			msg: "service match success and uuid match failure",
+			headers: map[string]string{
+				ServiceHeader:     rightServiceName,
+				RequestUUIDHeader: wrongUuid,
+			},
+			wantErr: "does not match the uuid",
 		},
-	))
-	defer mismatchServer.Close()
-
-	httpTransport := NewTransport()
-	out := httpTransport.NewSingleOutbound(mismatchServer.URL)
-	require.NoError(t, out.Start(), "failed to start outbound")
-	defer out.Stop()
-
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-	defer cancel()
-	_, err := out.Call(ctx, &transport.Request{
-		Service: "Service",
-	})
-	assert.Error(t, err, "expected failure for service name dismatch")
-}
-
-func TestServiceMatchNoHeader(t *testing.T) {
-	noHeaderServer := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, req *http.Request) {
-			defer req.Body.Close()
-			// intentionally do not set a response header
-			_, err := w.Write([]byte("No service name header return"))
-			assert.NoError(t, err)
+		{
+			msg: "service match failure and uuid match success",
+			headers: map[string]string{
+				ServiceHeader: wrongServiceName,
+			},
+			sendSameUUID: true,
+			wantErr:      "does not match the service name",
 		},
-	))
-	defer noHeaderServer.Close()
+		{
+			msg: "service match failure and uuid match failure",
+			headers: map[string]string{
+				ServiceHeader:     wrongServiceName,
+				RequestUUIDHeader: wrongUuid,
+			},
+			wantErr: "does not match the service name",
+		},
+		{
+			msg: "service name missing and uuid missing",
+		},
+		{
+			msg: "service name missing and uuid match failure",
+			headers: map[string]string{
+				RequestUUIDHeader: wrongUuid,
+			},
+			wantErr: "does not match the uuid",
+		},
+		{
+			msg:          "service name missing and uuid match success",
+			sendSameUUID: true,
+		},
+		{
+			msg: "service name success and uuid missing",
+			headers: map[string]string{
+				ServiceHeader: rightServiceName,
+			},
+		},
+		{
+			msg: "service name match failure and uuid missing",
+			headers: map[string]string{
+				ServiceHeader: wrongServiceName,
+			},
+			wantErr: "does not match the service name",
+		},
+	}
 
-	httpTransport := NewTransport()
-	out := httpTransport.NewSingleOutbound(noHeaderServer.URL)
-	require.NoError(t, out.Start(), "failed to start outbound")
-	defer out.Stop()
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(
+				func(w http.ResponseWriter, req *http.Request) {
+					defer req.Body.Close()
+					if tt.sendSameUUID {
+						w.Header().Set(RequestUUIDHeader, req.Header.Get(RequestUUIDHeader))
+					}
+					for headerKey, headerVal := range tt.headers {
+						w.Header().Set(headerKey, headerVal)
+					}
+				},
+			))
+			defer server.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-	defer cancel()
-	_, err := out.Call(ctx, &transport.Request{
-		Service: "Service",
-	})
-	require.NoError(t, err)
+			httpTransport := NewTransport()
+			out := httpTransport.NewSingleOutbound(server.URL)
+			require.NoError(t, out.Start(), "failed to start outbound")
+			defer out.Stop()
+
+			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+			defer cancel()
+			res, err := out.Call(ctx, &transport.Request{
+				Service: rightServiceName,
+			})
+			if tt.wantErr != "" {
+				if assert.Error(t, err, "expected error for match failure") {
+					assert.Contains(t, err.Error(), tt.wantErr)
+				}
+			} else {
+				if assert.NoError(t, err, "unexpected failure during call") {
+					defer res.Body.Close()
+				}
+			}
+		})
+	}
 }

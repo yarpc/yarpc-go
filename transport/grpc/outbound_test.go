@@ -37,6 +37,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 func TestNoRequest(t *testing.T) {
@@ -204,26 +205,75 @@ func TestCallStreamWithInvalidPeer(t *testing.T) {
 	)
 }
 
-func TestCallServiceMatch(t *testing.T) {
+func TestCallServiceMatchAndUUIDMatch(t *testing.T) {
+	const (
+		rightServiceName = "yarpc-service"
+		wrongServiceName = "wrong-service"
+		wrongUuid        = "dead-cafe-beef-1234"
+	)
 	tests := []struct {
-		msg         string
-		headerKey   string
-		headerValue string
-		wantErr     bool
+		msg          string
+		headers      map[string]string
+		sendSameUUID bool
+		wantErr      string
 	}{
 		{
-			msg:         "call service match success",
-			headerKey:   ServiceHeader,
-			headerValue: "Service",
+			msg: "service match success and uuid match success",
+			headers: map[string]string{
+				ServiceHeader: rightServiceName,
+			},
+			sendSameUUID: true,
 		},
 		{
-			msg:         "call service match failed",
-			headerKey:   ServiceHeader,
-			headerValue: "ThisIsWrongSvcName",
-			wantErr:     true,
+			msg: "service match success and uuid match failure",
+			headers: map[string]string{
+				ServiceHeader:     rightServiceName,
+				RequestUUIDHeader: wrongUuid,
+			},
+			wantErr: "does not match the uuid",
 		},
 		{
-			msg: "no service name response header",
+			msg: "service match failure and uuid match success",
+			headers: map[string]string{
+				ServiceHeader: wrongServiceName,
+			},
+			sendSameUUID: true,
+			wantErr:      "does not match the service name",
+		},
+		{
+			msg: "service match failure and uuid match failure",
+			headers: map[string]string{
+				ServiceHeader:     wrongServiceName,
+				RequestUUIDHeader: wrongUuid,
+			},
+			wantErr: "does not match the service name",
+		},
+		{
+			msg: "service name missing and uuid missing",
+		},
+		{
+			msg: "service name missing and uuid match failure",
+			headers: map[string]string{
+				RequestUUIDHeader: wrongUuid,
+			},
+			wantErr: "does not match the uuid",
+		},
+		{
+			msg:          "service name missing and uuid match success",
+			sendSameUUID: true,
+		},
+		{
+			msg: "service name success and uuid missing",
+			headers: map[string]string{
+				ServiceHeader: rightServiceName,
+			},
+		},
+		{
+			msg: "service name match failure and uuid missing",
+			headers: map[string]string{
+				ServiceHeader: wrongServiceName,
+			},
+			wantErr: "does not match the service name",
 		},
 	}
 	for _, tt := range tests {
@@ -232,9 +282,22 @@ func TestCallServiceMatch(t *testing.T) {
 				grpc.UnknownServiceHandler(func(srv interface{}, stream grpc.ServerStream) error {
 					responseWriter := newResponseWriter()
 					defer responseWriter.Close()
+					ctx := stream.Context()
+					md, ok := metadata.FromIncomingContext(ctx)
+					if md == nil || !ok {
+						return yarpcerrors.Newf(yarpcerrors.CodeInternal, "cannot get metadata from ctx: %v", ctx)
+					}
 
-					if tt.headerKey != "" {
-						responseWriter.AddSystemHeader(tt.headerKey, tt.headerValue)
+					if tt.sendSameUUID {
+						if values, ok := md[RequestUUIDHeader]; ok {
+							responseWriter.AddSystemHeader(RequestUUIDHeader, values[0])
+						} else {
+							return yarpcerrors.Newf(yarpcerrors.CodeInternal, "cannot get uuid header value")
+						}
+					}
+
+					for headerKey, headerVal := range tt.headers {
+						responseWriter.AddSystemHeader(headerKey, headerVal)
 					}
 
 					// Send the response attributes back and end the stream.
@@ -266,14 +329,14 @@ func TestCallServiceMatch(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 			defer cancel()
 			req := &transport.Request{
-				Service:   "Service",
+				Service:   rightServiceName,
 				Procedure: "Hello",
 				Body:      bytes.NewReader([]byte("world")),
 			}
 			_, err = out.Call(ctx, req)
-			if tt.wantErr {
+			if tt.wantErr != "" {
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "does not match")
+				assert.Contains(t, err.Error(), tt.wantErr)
 			} else {
 				require.NoError(t, err)
 			}

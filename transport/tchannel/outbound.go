@@ -23,6 +23,7 @@ package tchannel
 import (
 	"context"
 
+	"github.com/satori/go.uuid"
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -132,6 +133,9 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 	if err != nil {
 		return nil, err
 	}
+	// append a random per-request uuid
+	req.UUID = uuid.NewV4()
+	req.Headers.With(RequestUUIDHeaderKey, req.UUID.String())
 	reqHeaders := headerMap(req.Headers, headerCase)
 
 	// baggage headers are transport implementation details that are stripped out (and stored in the context). Users don't interact with it
@@ -165,10 +169,8 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		return nil, err
 	}
 
-	// service name match validation, return yarpcerrors.CodeInternal error if not match
-	if match, resSvcName := checkServiceMatchAndDeleteHeaderKey(req.Service, headers); !match {
-		return nil, yarpcerrors.InternalErrorf("service name sent from the request "+
-			"does not match the service name received in the response: sent %q, got: %q", req.Service, resSvcName)
+	if err := checkResponseHeadersAndDeleteHeaderKey(req, headers); err != nil {
+		return nil, err
 	}
 
 	return &transport.Response{

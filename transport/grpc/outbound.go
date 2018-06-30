@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
+	"github.com/satori/go.uuid"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -127,6 +128,8 @@ func (o *Outbound) invoke(
 	responseMD *metadata.MD,
 	start time.Time,
 ) (retErr error) {
+	// Append random uuid to request
+	request.UUID = uuid.NewV4()
 	md, err := transportRequestToMetadata(request)
 	if err != nil {
 		return err
@@ -184,13 +187,7 @@ func (o *Outbound) invoke(
 	if err != nil {
 		return invokeErrorToYARPCError(err, *responseMD)
 	}
-	// Service name match validation, return yarpcerrors.CodeInternal error if not match
-	if match, resSvcName := checkServiceMatch(request.Service, *responseMD); !match {
-		// If service doesn't match => we got response => span must not be nil
-		return transport.UpdateSpanWithErr(span, yarpcerrors.InternalErrorf("service name sent from the request "+
-			"does not match the service name received in the response: sent %q, got: %q", request.Service, resSvcName))
-	}
-	return nil
+	return transport.UpdateSpanWithErr(span, checkResponseHeaders(request, *responseMD))
 }
 
 func metadataToIsApplicationError(responseMD metadata.MD) bool {
@@ -313,10 +310,22 @@ func (o *Outbound) stream(
 	return tClientStream, nil
 }
 
-// Only does verification when there is a response service header key
-func checkServiceMatch(reqSvcName string, responseMD metadata.MD) (bool, string) {
+// Only does verification when there is a corresponding header key
+func checkResponseHeaders(request *transport.Request, responseMD metadata.MD) error {
 	if resSvcName, ok := responseMD[ServiceHeader]; ok {
-		return reqSvcName == resSvcName[0], resSvcName[0]
+		// Validate service name
+		if request.Service != resSvcName[0] {
+			// If service doesn't match => we got response => span must not be nil
+			return yarpcerrors.InternalErrorf("service name sent from the request does not match the "+
+				"service name received in the response: sent %q, got: %q", request.Service, resSvcName)
+		}
 	}
-	return true, ""
+	if resUUID, ok := responseMD[RequestUUIDHeader]; ok {
+		// Validate request uuid
+		if request.UUID.String() != resUUID[0] {
+			return yarpcerrors.InternalErrorf("uuid sent from the request " +
+				"does not match the uuid received in the response")
+		}
+	}
+	return nil
 }

@@ -156,6 +156,11 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 	}
 	treq.Headers = headers
 
+	// echo request uuid if it exists
+	if uuid, ok := treq.Headers.Get(RequestUUIDHeaderKey); ok {
+		responseWriter.addHeader(RequestUUIDHeaderKey, uuid)
+	}
+
 	if tcall, ok := call.(tchannelCall); ok {
 		tracer := h.tracer
 		ctx = tchannel.ExtractInboundSpan(ctx, tcall.InboundCall, headers.Items(), tracer)

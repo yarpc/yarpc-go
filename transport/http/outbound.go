@@ -33,6 +33,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	opentracinglog "github.com/opentracing/opentracing-go/log"
+	"github.com/satori/go.uuid"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -244,6 +245,8 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	}
 	defer span.Finish()
 
+	// Append random per-request UUID
+	treq.UUID = uuid.NewV4()
 	hreq = o.withCoreHeaders(hreq, treq, ttl)
 	hreq = hreq.WithContext(ctx)
 
@@ -256,11 +259,8 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 
 	span.SetTag("http.status_code", response.StatusCode)
 
-	// Service name match validation, return yarpcerrors.CodeInternal error if not match
-	if match, resSvcName := checkServiceMatch(treq.Service, response.Header); !match {
-		return nil, transport.UpdateSpanWithErr(span,
-			yarpcerrors.InternalErrorf("service name sent from the request "+
-				"does not match the service name received in the response, sent %q, got: %q", treq.Service, resSvcName))
+	if err := checkResponseHeaders(treq, response.Header); err != nil {
+		return nil, transport.UpdateSpanWithErr(span, err)
 	}
 
 	tres := &transport.Response{
@@ -348,6 +348,7 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 		}
 	}
 
+	req.Header.Set(RequestUUIDHeader, treq.UUID.String())
 	req.Header.Set(CallerHeader, treq.Caller)
 	req.Header.Set(ServiceHeader, treq.Service)
 	req.Header.Set(ProcedureHeader, treq.Procedure)
@@ -406,10 +407,20 @@ func getYARPCErrorFromResponse(response *http.Response, bothResponseError bool) 
 	)
 }
 
-// Only does verification if there is a response header
-func checkServiceMatch(reqSvcName string, resHeaders http.Header) (bool, string) {
-	serviceName := resHeaders.Get(ServiceHeader)
-	return serviceName == "" || serviceName == reqSvcName, serviceName
+func checkResponseHeaders(treq *transport.Request, resHeader http.Header) error {
+	// Only does verification if there is a corresponding header
+	serviceName := resHeader.Get(ServiceHeader)
+	// Validate service name
+	if serviceName != "" && treq.Service != serviceName {
+		return yarpcerrors.InternalErrorf("service name sent from the request "+
+			"does not match the service name received in the response, sent %q, got: %q", treq.Service, serviceName)
+	}
+	// Validate request uuid
+	resUUID := resHeader.Get(RequestUUIDHeader)
+	if resUUID != "" && treq.UUID.String() != resUUID {
+		return yarpcerrors.InternalErrorf("uuid sent from the request does not match the uuid received in the response")
+	}
+	return nil
 }
 
 // RoundTrip implements the http.RoundTripper interface, making a YARPC HTTP outbound suitable as a

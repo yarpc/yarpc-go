@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
+	"github.com/satori/go.uuid"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
@@ -177,6 +178,10 @@ func (h *handler) handleUnary(
 
 	// Echo accepted rpc-service in response header
 	responseWriter.AddSystemHeader(ServiceHeader, transportRequest.Service)
+	if !uuid.Equal(transportRequest.UUID, uuid.Nil) {
+		// Echo accepted request's uuid
+		responseWriter.AddSystemHeader(RequestUUIDHeader, transportRequest.UUID.String())
+	}
 
 	err := h.handleUnaryBeforeErrorConversion(ctx, transportRequest, responseWriter, start, handler)
 	err = handlerErrorToGRPCError(err, responseWriter)

@@ -24,6 +24,7 @@ import (
 	"context"
 	"io"
 
+	"github.com/satori/go.uuid"
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
@@ -156,6 +157,10 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 		return nil, toYARPCError(req, err)
 	}
 
+	// append a random per-request uuid header
+	req.UUID = uuid.NewV4()
+	req.Headers.With(RequestUUIDHeaderKey, req.UUID.String())
+
 	reqHeaders := req.Headers.Items()
 	if o.transport.originalHeaders {
 		reqHeaders = req.Headers.OriginalItems()
@@ -191,10 +196,8 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 		return nil, toYARPCError(req, err)
 	}
 
-	// service name match validation, return yarpcerrors.CodeInternal error if not match
-	if match, resSvcName := checkServiceMatchAndDeleteHeaderKey(req.Service, headers); !match {
-		return nil, yarpcerrors.InternalErrorf("service name sent from the request "+
-			"does not match the service name received in the response: sent %q, got: %q", req.Service, resSvcName)
+	if err = checkResponseHeadersAndDeleteHeaderKey(req, headers); err != nil {
+		return nil, err
 	}
 
 	return &transport.Response{
@@ -260,12 +263,23 @@ func getResponseErrorAndDeleteHeaderKeys(headers transport.Headers) error {
 	return intyarpcerrors.NewWithNamef(errorCode, errorName, errorMessage)
 }
 
-// ServiceHeaderKey is internal key used by YARPC, we need to remove it before give response to client
 // only does verification when there is a response service header.
-func checkServiceMatchAndDeleteHeaderKey(reqSvcName string, resHeaders transport.Headers) (bool, string) {
+// ServiceHeaderKey and RequestUUIDHeaderKey is internal key used by YARPC, remove them before sending response
+func checkResponseHeadersAndDeleteHeaderKey(req *transport.Request, resHeaders transport.Headers) error {
 	if resSvcName, ok := resHeaders.Get(ServiceHeaderKey); ok {
 		resHeaders.Del(ServiceHeaderKey)
-		return reqSvcName == resSvcName, resSvcName
+		if req.Service != resSvcName {
+			return yarpcerrors.InternalErrorf("service name sent from the request does not match "+
+				"the service name received in the response: sent %q, got: %q", req.Service, resSvcName)
+
+		}
 	}
-	return true, ""
+	if resUUID, ok := resHeaders.Get(RequestUUIDHeaderKey); ok {
+		resHeaders.Del(RequestUUIDHeaderKey)
+		if req.UUID.String() != resUUID {
+			return yarpcerrors.InternalErrorf("uuid sent from the request does not match " +
+				"the uuid received in the response")
+		}
+	}
+	return nil
 }

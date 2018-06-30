@@ -156,15 +156,31 @@ func TestChannelOutboundHeaders(t *testing.T) {
 
 func TestChannelCallSuccess(t *testing.T) {
 	tests := []struct {
-		msg                   string
-		withServiceRespHeader bool
+		msg     string
+		content []byte
+		uuid    []byte
 	}{
 		{
-			msg: "channel call success with response service name header",
-			withServiceRespHeader: true,
+			msg: "channel call success without service name response headers",
+			content: []byte{
+				0x00, 0x01,
+				0x00, 0x03, 'f', 'o', 'o',
+				0x00, 0x03, 'b', 'a', 'r',
+			},
+			uuid: []byte{
+				0x00, 0x12, '$', 'r', 'p', 'c', '$', '-', 'r', 'e', 'q', 'u', 'e', 's', 't', '-', 'u', 'u', 'i', 'd',
+				0x00, 0x24,
+			},
 		},
 		{
-			msg: "channel call success without response service name header",
+			msg: "channel call success with service name response header",
+			content: []byte{
+				0x00, 0x02,
+				0x00, 0x03, 'f', 'o', 'o',
+				0x00, 0x03, 'b', 'a', 'r',
+				0x00, 0x0d, '$', 'r', 'p', 'c', '$', '-', 's', 'e', 'r', 'v', 'i', 'c', 'e',
+				0x00, 0x07, 's', 'e', 'r', 'v', 'i', 'c', 'e',
+			},
 		},
 	}
 
@@ -183,7 +199,7 @@ func TestChannelCallSuccess(t *testing.T) {
 
 					headers, body, err := readArgs(call)
 					if assert.NoError(t, err, "failed to read request") {
-						assert.Equal(t, []byte{0x00, 0x00}, headers)
+						assert.Equal(t, []byte{0x00, 0x01}, headers[:2])
 						assert.Equal(t, []byte("world"), body)
 					}
 
@@ -191,25 +207,10 @@ func TestChannelCallSuccess(t *testing.T) {
 					assert.True(t, ok, "deadline expected")
 					assert.WithinDuration(t, time.Now(), dl, 200*testtime.Millisecond)
 
-					if !tt.withServiceRespHeader {
-						// test without response service name header
-						err = writeArgs(call.Response(),
-							[]byte{
-								0x00, 0x01,
-								0x00, 0x03, 'f', 'o', 'o',
-								0x00, 0x03, 'b', 'a', 'r',
-							}, []byte("great success"))
-					} else {
-						// test with response service name header
-						err = writeArgs(call.Response(),
-							[]byte{
-								0x00, 0x02,
-								0x00, 0x03, 'f', 'o', 'o',
-								0x00, 0x03, 'b', 'a', 'r',
-								0x00, 0x0d, '$', 'r', 'p', 'c', '$', '-', 's', 'e', 'r', 'v', 'i', 'c', 'e',
-								0x00, 0x07, 's', 'e', 'r', 'v', 'i', 'c', 'e',
-							}, []byte("great success"))
+					if tt.uuid != nil {
+						tt.content = append(tt.content, headers[2:]...)
 					}
+					err = writeArgs(call.Response(), tt.content, []byte("great success"))
 					assert.NoError(t, err, "failed to write response")
 				}))
 

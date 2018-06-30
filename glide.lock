@@ -1,5 +1,5 @@
-hash: a42f2c917dbbdb0ebc3052a09ba38d91eb37088d5ba2be498c8e8399d7663dd5
-updated: 2018-06-27T15:05:20.495389762Z
+hash: 30d26e4ffb4dd8a5dd9fde7b5aa4e7c22aa81884ad788889dda422a99e788e95
+updated: 2018-06-27T18:46:05.376580457-07:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -171,7 +171,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: afe8f62b1d6bbd81f31868121a50b06d8188e1f9
+  version: 9ef9f5bb98a1fdc41f8cf6c250a4404b4085e389
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -243,6 +243,8 @@ testImports:
   version: 55d8f507faff4d6eddd0c41a3e713e2567fca4e5
 - name: github.com/kisielk/gotool
   version: 80517062f582ea3340cd4baf70e86d539ae7d84d
+- name: github.com/satori/go.uuid
+  version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/uber/jaeger-lib
   version: ed3a127ec5fef7ae9ea95b01b542c47fbd999ce5
   subpackages:
