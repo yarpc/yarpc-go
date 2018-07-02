@@ -50,10 +50,8 @@ import uber_yarpc "go.uber.org/yarpc/yarpcproto"
 import strings "strings"
 import reflect "reflect"
 
-import (
-	context "golang.org/x/net/context"
-	grpc "google.golang.org/grpc"
-)
+import context "golang.org/x/net/context"
+import grpc "google.golang.org/grpc"
 
 import io "io"
 
@@ -264,10 +262,7 @@ func init() {
 }
 func (this *GetValueRequest) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*GetValueRequest)
@@ -280,10 +275,7 @@ func (this *GetValueRequest) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -294,10 +286,7 @@ func (this *GetValueRequest) Equal(that interface{}) bool {
 }
 func (this *GetValueResponse) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*GetValueResponse)
@@ -310,10 +299,7 @@ func (this *GetValueResponse) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -324,10 +310,7 @@ func (this *GetValueResponse) Equal(that interface{}) bool {
 }
 func (this *SetValueRequest) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*SetValueRequest)
@@ -340,10 +323,7 @@ func (this *SetValueRequest) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -357,10 +337,7 @@ func (this *SetValueRequest) Equal(that interface{}) bool {
 }
 func (this *SetValueResponse) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*SetValueResponse)
@@ -373,10 +350,7 @@ func (this *SetValueResponse) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -384,10 +358,7 @@ func (this *SetValueResponse) Equal(that interface{}) bool {
 }
 func (this *FireRequest) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*FireRequest)
@@ -400,10 +371,7 @@ func (this *FireRequest) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -414,10 +382,7 @@ func (this *FireRequest) Equal(that interface{}) bool {
 }
 func (this *EchoOutRequest) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*EchoOutRequest)
@@ -430,10 +395,7 @@ func (this *EchoOutRequest) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -444,10 +406,7 @@ func (this *EchoOutRequest) Equal(that interface{}) bool {
 }
 func (this *EchoOutResponse) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*EchoOutResponse)
@@ -460,10 +419,7 @@ func (this *EchoOutResponse) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -479,10 +435,7 @@ func (this *EchoOutResponse) Equal(that interface{}) bool {
 }
 func (this *EchoInRequest) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*EchoInRequest)
@@ -495,10 +448,7 @@ func (this *EchoInRequest) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -512,10 +462,7 @@ func (this *EchoInRequest) Equal(that interface{}) bool {
 }
 func (this *EchoInResponse) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*EchoInResponse)
@@ -528,10 +475,7 @@ func (this *EchoInResponse) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -542,10 +486,7 @@ func (this *EchoInResponse) Equal(that interface{}) bool {
 }
 func (this *EchoBothRequest) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*EchoBothRequest)
@@ -558,10 +499,7 @@ func (this *EchoBothRequest) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -575,10 +513,7 @@ func (this *EchoBothRequest) Equal(that interface{}) bool {
 }
 func (this *EchoBothResponse) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*EchoBothResponse)
@@ -591,10 +526,7 @@ func (this *EchoBothResponse) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
