@@ -1,5 +1,5 @@
 hash: a42f2c917dbbdb0ebc3052a09ba38d91eb37088d5ba2be498c8e8399d7663dd5
-updated: 2018-06-29T15:03:05.836724888Z
+updated: 2018-07-02T15:03:20.911631811Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -72,7 +72,7 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 7d6f385de8bea29190f15ba9931442a0eaef9af7
+  version: 40f013a808ec4fa79def444a1a56de4d1727efcb
   subpackages:
   - internal/util
   - nfs
@@ -240,7 +240,7 @@ testImports:
 - name: github.com/codahale/hdrhistogram
   version: 3a0bb77429bd3a61596f5e8a3172445844342120
 - name: github.com/kisielk/errcheck
-  version: 55d8f507faff4d6eddd0c41a3e713e2567fca4e5
+  version: e96dacdb078a5166c20b48dd667fb26d2ce0379f
 - name: github.com/kisielk/gotool
   version: 80517062f582ea3340cd4baf70e86d539ae7d84d
 - name: github.com/uber/jaeger-lib
