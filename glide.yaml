@@ -7,7 +7,7 @@ import:
 - package: github.com/crossdock/crossdock-go
   version: master
 - package: github.com/gogo/protobuf
-  version: ~0.5
+  version: ~1.0.0
 - package: github.com/mattn/go-shellwords
   version: ^1
 - package: github.com/uber-go/mapdecode
@@ -43,7 +43,7 @@ import:
   subpackages:
   - context
 - package: google.golang.org/grpc
-  version: ^1.12.0
+  version: ^1.13.0
   repo: https://github.com/grpc/grpc-go
 - package: golang.org/x/sys
   # explicitly specifying this because glide is having issues with golang.org repos
