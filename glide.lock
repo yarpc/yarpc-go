@@ -1,5 +1,5 @@
-hash: a42f2c917dbbdb0ebc3052a09ba38d91eb37088d5ba2be498c8e8399d7663dd5
-updated: 2018-07-02T15:03:20.911631811Z
+hash: 927f5685c4672a3742a0837bced8645f6924baa75bda13dc844360c4c71e91d3
+updated: 2018-07-02T11:54:59.073645-07:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -19,7 +19,7 @@ imports:
   subpackages:
   - spew
 - name: github.com/gogo/protobuf
-  version: 342cbe0a04158f6dcb03ca0079991a51a4248c02
+  version: 1adfc126b41513cc696b209667c8656ea7aac67c
   subpackages:
   - jsonpb
   - proto
@@ -252,7 +252,7 @@ testImports:
   subpackages:
   - update-license
 - name: golang.org/x/lint
-  version: 470b6b0bb3005eda157f0275e2e4895055396a81
+  version: 06c8688daad7faa9da5a0c2f163a3d14aac986ca
   repo: https://github.com/golang/lint
   subpackages:
   - golint
