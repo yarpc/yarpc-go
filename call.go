@@ -119,6 +119,11 @@ func (c *Call) Service() string {
 	return (*encoding.Call)(c).Service()
 }
 
+// Transport returns the name of the transport being called.
+func (c *Call) Transport() string {
+	return (*encoding.Call)(c).Transport()
+}
+
 // Procedure returns the name of the procedure being called.
 func (c *Call) Procedure() string {
 	return (*encoding.Call)(c).Procedure()

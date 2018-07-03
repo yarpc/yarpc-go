@@ -83,6 +83,11 @@ func (m RequestMatcher) Matches(got interface{}) bool {
 		return false
 	}
 
+	if l.Transport != r.Transport {
+		m.t.Logf("Transport mismatch: %s != %s", l.Transport, r.Transport)
+		return false
+	}
+
 	if l.Encoding != r.Encoding {
 		m.t.Logf("Encoding mismatch: %s != %s", l.Service, r.Service)
 		return false

@@ -73,6 +73,7 @@ func TestHandlerSuccess(t *testing.T) {
 			t, &transport.Request{
 				Caller:          "moe",
 				Service:         "curly",
+				Transport:       "http",
 				Encoding:        raw.Encoding,
 				Procedure:       "nyuck",
 				ShardKey:        "shard",
@@ -170,6 +171,7 @@ func TestHandlerHeaders(t *testing.T) {
 				&transport.Request{
 					Caller:    "caller",
 					Service:   "service",
+					Transport: "http",
 					Encoding:  transport.Encoding(tt.giveEncoding),
 					Procedure: "hello",
 					Headers:   transport.HeadersFromMap(tt.wantHeaders),
@@ -328,6 +330,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 			t, &transport.Request{
 				Caller:    "somecaller",
 				Service:   "fake",
+				Transport: "http",
 				Encoding:  raw.Encoding,
 				Procedure: "hello",
 				Body:      bytes.NewReader([]byte{}),

@@ -55,6 +55,8 @@ const (
 // roundTripTransport provides a function that sets up and tears down an
 // Inbound, and provides an Outbound which knows how to call that Inbound.
 type roundTripTransport interface {
+	// Name is the string representation of the transport. eg http, grpc, tchannel
+	Name() string
 	// Set up an Inbound serving Router r, and call f with an Outbound that
 	// knows how to talk to that Inbound.
 	WithRouter(r transport.Router, f func(transport.UnaryOutbound))
@@ -98,6 +100,10 @@ func (f onewayHandlerFunc) HandleOneway(ctx context.Context, r *transport.Reques
 // httpTransport implements a roundTripTransport for HTTP.
 type httpTransport struct{ t *testing.T }
 
+func (ht httpTransport) Name() string {
+	return "http"
+}
+
 func (ht httpTransport) WithRouter(r transport.Router, f func(transport.UnaryOutbound)) {
 	httpTransport := http.NewTransport()
 
@@ -128,6 +134,10 @@ func (ht httpTransport) WithRouterOneway(r transport.Router, f func(transport.On
 
 // tchannelTransport implements a roundTripTransport for TChannel.
 type tchannelTransport struct{ t *testing.T }
+
+func (tt tchannelTransport) Name() string {
+	return "tchannel"
+}
 
 func (tt tchannelTransport) WithRouter(r transport.Router, f func(transport.UnaryOutbound)) {
 	serverOpts := testutils.NewOpts().SetServiceName(testService)
@@ -164,6 +174,10 @@ func (tt tchannelTransport) WithRouterOneway(r transport.Router, f func(transpor
 
 // grpcTransport implements a roundTripTransport for gRPC.
 type grpcTransport struct{ t *testing.T }
+
+func (gt grpcTransport) Name() string {
+	return "grpc"
+}
 
 func (gt grpcTransport) WithRouter(r transport.Router, f func(transport.UnaryOutbound)) {
 	grpcTransport := grpc.NewTransport()
@@ -249,6 +263,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 			requestMatcher := transporttest.NewRequestMatcher(t, &transport.Request{
 				Caller:    testCaller,
 				Service:   testService,
+				Transport: trans.Name(),
 				Procedure: testProcedure,
 				Encoding:  raw.Encoding,
 				Headers:   tt.requestHeaders,
@@ -334,6 +349,7 @@ func TestSimpleRoundTripOneway(t *testing.T) {
 			requestMatcher := transporttest.NewRequestMatcher(t, &transport.Request{
 				Caller:    testCaller,
 				Service:   testService,
+				Transport: trans.Name(),
 				Procedure: testProcedureOneway,
 				Encoding:  raw.Encoding,
 				Headers:   tt.requestHeaders,
