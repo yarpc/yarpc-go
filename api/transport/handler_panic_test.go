@@ -101,7 +101,7 @@ func TestInvokeUnaryHandlerWithPanic(t *testing.T) {
 			StartTime: time.Now(),
 			Request:   &transport.Request{},
 			Handler:   transport.UnaryHandlerFunc(handler),
-			Options:   transport.NewInvokerOptions(transport.Logger(zap.NewNop())),
+			Logger:    zap.NewNop(),
 		},
 	)
 	expectMsg := fmt.Sprintf("panic: %s", msg)
@@ -118,7 +118,7 @@ func TestInvokeOnewayHandlerWithPanic(t *testing.T) {
 		Context: context.Background(),
 		Request: &transport.Request{},
 		Handler: transport.OnewayHandlerFunc(handler),
-		Options: transport.NewInvokerOptions(transport.Logger(zap.NewNop())),
+		Logger:  zap.NewNop(),
 	},
 	)
 	expectMsg := fmt.Sprintf("panic: %s", msg)
@@ -143,7 +143,7 @@ func TestInvokeStreamHandlerWithPanic(t *testing.T) {
 	err := transport.InvokeStreamHandler(transport.StreamInvokeRequest{
 		Stream:  mockServerStream,
 		Handler: transport.StreamHandlerFunc(handler),
-		Options: transport.NewInvokerOptions(transport.Logger(zap.NewNop())),
+		Logger:  zap.NewNop(),
 	},
 	)
 	expectMsg := fmt.Sprintf("panic: %s", msg)

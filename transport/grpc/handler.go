@@ -44,13 +44,12 @@ var (
 )
 
 type handler struct {
-	i              *Inbound
-	invokerOptions *transport.InvokerOptions
+	i      *Inbound
+	logger *zap.Logger
 }
 
 func newHandler(i *Inbound, l *zap.Logger) *handler {
-	o := transport.NewInvokerOptions(transport.Logger(l))
-	return &handler{i: i, invokerOptions: o}
+	return &handler{i: i, logger: l}
 }
 
 func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error {
@@ -153,9 +152,8 @@ func (h *handler) handleStream(
 	return transport.UpdateSpanWithErr(span, transport.InvokeStreamHandler(transport.StreamInvokeRequest{
 		Stream:  tServerStream,
 		Handler: streamHandler,
-		Options: h.invokerOptions,
-	},
-	))
+		Logger:  h.logger,
+	}))
 }
 
 func (h *handler) handleUnary(

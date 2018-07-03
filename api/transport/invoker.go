@@ -38,7 +38,7 @@ type UnaryInvokeRequest struct {
 	Request        *Request
 	ResponseWriter ResponseWriter
 	Handler        UnaryHandler
-	Options        *InvokerOptions
+	Logger         *zap.Logger // optional
 }
 
 // OnewayInvokeRequest encapsulates minimum arguments to invoke a unary handler
@@ -46,14 +46,14 @@ type OnewayInvokeRequest struct {
 	Context context.Context
 	Request *Request
 	Handler OnewayHandler
-	Options *InvokerOptions
+	Logger  *zap.Logger // optional
 }
 
 // StreamInvokeRequest encapsulates minimum arguments to invoke a unary handler
 type StreamInvokeRequest struct {
 	Stream  *ServerStream
 	Handler StreamHandler
-	Options *InvokerOptions
+	Logger  *zap.Logger // optional
 }
 
 // InvokeUnaryHandler calls the handler h, recovering panics and timeout errors,
@@ -63,7 +63,7 @@ func InvokeUnaryHandler(
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = handlePanic(Unary, i.Options, r, i.Request.ToRequestMeta())
+			err = handlePanic(Unary, i.Logger, r, i.Request.ToRequestMeta())
 		}
 	}()
 
@@ -87,7 +87,7 @@ func InvokeOnewayHandler(
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = handlePanic(Oneway, i.Options, r, i.Request.ToRequestMeta())
+			err = handlePanic(Oneway, i.Logger, r, i.Request.ToRequestMeta())
 		}
 	}()
 
@@ -101,20 +101,18 @@ func InvokeStreamHandler(
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = handlePanic(Streaming, i.Options, r, i.Stream.Request().Meta)
+			err = handlePanic(Streaming, i.Logger, r, i.Stream.Request().Meta)
 		}
 	}()
 
 	return i.Handler.HandleStream(i.Stream)
 }
 
-func handlePanic(rpcType Type, options *InvokerOptions, recovered interface{}, req *RequestMeta) error {
+func handlePanic(rpcType Type, logger *zap.Logger, recovered interface{}, req *RequestMeta) error {
 	err := fmt.Errorf("panic: %v", recovered)
-	if options != nil {
-		if options.logger != nil {
-			logPanic(rpcType, options.logger, err, req)
-			return err
-		}
+	if logger != nil {
+		logPanic(rpcType, logger, err, req)
+		return err
 	}
 	log.Printf("%s handler panicked: %v\n%s", rpcType, recovered, debug.Stack())
 	return err

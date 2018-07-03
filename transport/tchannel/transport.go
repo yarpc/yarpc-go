@@ -198,10 +198,10 @@ func (t *Transport) start() error {
 	chopts := tchannel.ChannelOptions{
 		Tracer: t.tracer,
 		Handler: handler{
-			router:         t.router,
-			tracer:         t.tracer,
-			headerCase:     t.headerCase,
-			invokerOptions: transport.NewInvokerOptions(transport.Logger(t.logger)),
+			router:     t.router,
+			tracer:     t.tracer,
+			headerCase: t.headerCase,
+			logger:     t.logger,
 		},
 		OnPeerStatusChanged: t.onPeerStatusChanged,
 	}

@@ -36,6 +36,7 @@ import (
 	"go.uber.org/yarpc/internal/iopool"
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
 )
 
 func popHeader(h http.Header, n string) string {
@@ -50,7 +51,7 @@ type handler struct {
 	tracer            opentracing.Tracer
 	grabHeaders       map[string]struct{}
 	bothResponseError bool
-	invokerOptions    *transport.InvokerOptions
+	logger            *zap.Logger
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -151,12 +152,11 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 			Request:        treq,
 			Handler:        spec.Unary(),
 			ResponseWriter: responseWriter,
-			Options:        h.invokerOptions,
-		},
-		)
+			Logger:         h.logger,
+		})
 
 	case transport.Oneway:
-		err = handleOnewayRequest(span, treq, spec.Oneway(), h.invokerOptions)
+		err = handleOnewayRequest(span, treq, spec.Oneway(), h.logger)
 
 	default:
 		err = yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport http does not handle %s handlers", spec.Type().String())
@@ -170,7 +170,7 @@ func handleOnewayRequest(
 	span opentracing.Span,
 	treq *transport.Request,
 	onewayHandler transport.OnewayHandler,
-	invokerOptions *transport.InvokerOptions,
+	logger *zap.Logger,
 ) error {
 	// we will lose access to the body unless we read all the bytes before
 	// returning from the request
@@ -192,9 +192,8 @@ func handleOnewayRequest(
 			Context: ctx,
 			Request: treq,
 			Handler: onewayHandler,
-			Options: invokerOptions,
-		},
-		)
+			Logger:  logger,
+		})
 		updateSpanWithErr(span, err)
 	}()
 	return nil
