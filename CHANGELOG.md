@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Additional transport headers were added to `transport.Request`: `ID`, `Host`
   and `Environment`.
+- Additional transport headers were added to `transport.Response`: `ID`,
+  `Host`, `Environment` and `Service`.
 
 ## [1.31.0] - 2018-07-09
 ### Added
