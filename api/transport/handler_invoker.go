@@ -31,8 +31,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// UnaryInvokeRequest encapsulates minimum arguments to invoke a unary
-// handler.
+// UnaryInvokeRequest encapsulates arguments to invoke a unary handler.
 type UnaryInvokeRequest struct {
 	Context        context.Context
 	StartTime      time.Time
@@ -42,8 +41,7 @@ type UnaryInvokeRequest struct {
 	Logger         *zap.Logger // optional
 }
 
-// OnewayInvokeRequest encapsulates minimum arguments to invoke a unary
-// handler.
+// OnewayInvokeRequest encapsulates arguments to invoke a unary handler.
 type OnewayInvokeRequest struct {
 	Context context.Context
 	Request *Request
@@ -51,8 +49,7 @@ type OnewayInvokeRequest struct {
 	Logger  *zap.Logger // optional
 }
 
-// StreamInvokeRequest encapsulates minimum arguments to invoke a unary
-// handler.
+// StreamInvokeRequest encapsulates arguments to invoke a unary handler.
 type StreamInvokeRequest struct {
 	Stream  *ServerStream
 	Handler StreamHandler

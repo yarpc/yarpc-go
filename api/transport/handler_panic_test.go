@@ -72,7 +72,7 @@ func TestDispatchOnewayHandlerWithPanic(t *testing.T) {
 
 func TestDispatchStreamHandlerWithPanic(t *testing.T) {
 	msg := "I'm panicking in a stream handler!"
-	handler := func(_ *transport.ServerStream) error {
+	handler := func(*transport.ServerStream) error {
 		panic(msg)
 	}
 	var err error
@@ -137,7 +137,7 @@ func TestInvokeOnewayHandlerWithPanic(t *testing.T) {
 
 func TestInvokeStreamHandlerWithPanic(t *testing.T) {
 	msg := "I'm panicking in a stream handler!"
-	handler := func(_ *transport.ServerStream) error {
+	handler := func(*transport.ServerStream) error {
 		panic(msg)
 	}
 	var err error
