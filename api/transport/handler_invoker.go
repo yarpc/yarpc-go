@@ -31,7 +31,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// UnaryInvokeRequest encapsulates minimum arguments to invoke a unary handler
+// UnaryInvokeRequest encapsulates minimum arguments to invoke a unary
+// handler.
 type UnaryInvokeRequest struct {
 	Context        context.Context
 	StartTime      time.Time
@@ -41,7 +42,8 @@ type UnaryInvokeRequest struct {
 	Logger         *zap.Logger // optional
 }
 
-// OnewayInvokeRequest encapsulates minimum arguments to invoke a unary handler
+// OnewayInvokeRequest encapsulates minimum arguments to invoke a unary
+// handler.
 type OnewayInvokeRequest struct {
 	Context context.Context
 	Request *Request
@@ -49,7 +51,8 @@ type OnewayInvokeRequest struct {
 	Logger  *zap.Logger // optional
 }
 
-// StreamInvokeRequest encapsulates minimum arguments to invoke a unary handler
+// StreamInvokeRequest encapsulates minimum arguments to invoke a unary
+// handler.
 type StreamInvokeRequest struct {
 	Stream  *ServerStream
 	Handler StreamHandler
@@ -81,7 +84,7 @@ func InvokeUnaryHandler(
 }
 
 // InvokeOnewayHandler calls the oneway handler, recovering from panics as
-// errors
+// errors.
 func InvokeOnewayHandler(
 	i OnewayInvokeRequest,
 ) (err error) {
@@ -108,23 +111,23 @@ func InvokeStreamHandler(
 	return i.Handler.HandleStream(i.Stream)
 }
 
-func handlePanic(rpcType Type, logger *zap.Logger, recovered interface{}, req *RequestMeta) error {
+func handlePanic(rpcType Type, logger *zap.Logger, recovered interface{}, reqMeta *RequestMeta) error {
 	err := fmt.Errorf("panic: %v", recovered)
 	if logger != nil {
-		logPanic(rpcType, logger, err, req)
+		logPanic(rpcType, logger, err, reqMeta)
 		return err
 	}
 	log.Printf("%s handler panicked: %v\n%s", rpcType, recovered, debug.Stack())
 	return err
 }
 
-func logPanic(rpcType Type, logger *zap.Logger, err error, req *RequestMeta) {
+func logPanic(rpcType Type, logger *zap.Logger, err error, reqMeta *RequestMeta) {
 	logger.Error(fmt.Sprintf("%s handler panicked", rpcType),
-		zap.String("service", req.Service),
-		zap.String("transport", req.Transport),
-		zap.String("procedure", req.Procedure),
-		zap.String("encoding", string(req.Encoding)),
-		zap.String("caller", req.Caller),
+		zap.String("service", reqMeta.Service),
+		zap.String("transport", reqMeta.Transport),
+		zap.String("procedure", reqMeta.Procedure),
+		zap.String("encoding", string(reqMeta.Encoding)),
+		zap.String("caller", reqMeta.Caller),
 		zap.Error(err),
 		zap.Stack("stack"),
 	)

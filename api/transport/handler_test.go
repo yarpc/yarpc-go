@@ -53,21 +53,21 @@ func TestHandlerSpecLogMarshaling(t *testing.T) {
 	}{
 		{
 			desc: "unary",
-			spec: NewUnaryHandlerSpec(UnaryHandlerFunc(func(_ context.Context, _ *Request, _ ResponseWriter) error {
+			spec: NewUnaryHandlerSpec(UnaryHandlerFunc(func(context.Context, *Request, ResponseWriter) error {
 				return nil
 			})),
 			want: map[string]interface{}{"rpcType": "Unary"},
 		},
 		{
 			desc: "oneway",
-			spec: NewOnewayHandlerSpec(OnewayHandlerFunc(func(_ context.Context, _ *Request) error {
+			spec: NewOnewayHandlerSpec(OnewayHandlerFunc(func(context.Context, *Request) error {
 				return nil
 			})),
 			want: map[string]interface{}{"rpcType": "Oneway"},
 		},
 		{
 			desc: "stream",
-			spec: NewStreamHandlerSpec(StreamHandlerFunc(func(_ *ServerStream) error {
+			spec: NewStreamHandlerSpec(StreamHandlerFunc(func(*ServerStream) error {
 				return nil
 			})),
 			want: map[string]interface{}{"rpcType": "Streaming"},

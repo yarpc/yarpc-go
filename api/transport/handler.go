@@ -115,6 +115,7 @@ type StreamHandler interface {
 
 // DispatchUnaryHandler calls the handler h, recovering panics and timeout errors,
 // converting them to yarpc errors. All other errors are passed trough.
+//
 // Deprecated: Use InvokeUnaryHandler instead.
 func DispatchUnaryHandler(
 	ctx context.Context,
@@ -129,12 +130,12 @@ func DispatchUnaryHandler(
 		Request:        req,
 		ResponseWriter: resq,
 		Handler:        h,
-	},
-	)
+	})
 }
 
 // DispatchOnewayHandler calls the oneway handler, recovering from panics as
 // errors
+//
 // Deprecated: Use InvokeOnewayHandler instead.
 func DispatchOnewayHandler(
 	ctx context.Context,
@@ -145,12 +146,12 @@ func DispatchOnewayHandler(
 		Context: ctx,
 		Request: req,
 		Handler: h,
-	},
-	)
+	})
 }
 
 // DispatchStreamHandler calls the stream handler, recovering from panics as
 // errors.
+//
 // Deprecated: Use InvokeStreamHandler instead.
 func DispatchStreamHandler(
 	h StreamHandler,
@@ -159,6 +160,5 @@ func DispatchStreamHandler(
 	return InvokeStreamHandler(StreamInvokeRequest{
 		Stream:  stream,
 		Handler: h,
-	},
-	)
+	})
 }
