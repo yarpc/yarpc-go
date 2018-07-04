@@ -226,7 +226,14 @@ func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Req
 	if err := transport.ValidateRequestContext(ctx); err != nil {
 		return err
 	}
-	return transport.DispatchUnaryHandler(ctx, unaryHandler, time.Now(), transportRequest, responseWriter)
+	return transport.InvokeUnaryHandler(transport.UnaryInvokeRequest{
+		Context:        ctx,
+		StartTime:      time.Now(),
+		Request:        transportRequest,
+		ResponseWriter: responseWriter,
+		Handler:        unaryHandler,
+		Logger:         h.logger,
+	})
 }
 
 func handlerErrorToGRPCError(err error, responseWriter *responseWriter) error {
