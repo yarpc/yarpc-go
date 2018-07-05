@@ -57,7 +57,7 @@ type StreamInvokeRequest struct {
 }
 
 // InvokeUnaryHandler calls the handler h, recovering panics and timeout errors,
-// converting them to yarpc errors. All other errors are passed through.
+// converting them to YARPC errors. All other errors are passed through.
 func InvokeUnaryHandler(
 	i UnaryInvokeRequest,
 ) (err error) {

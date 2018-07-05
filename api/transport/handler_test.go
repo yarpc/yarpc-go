@@ -28,7 +28,6 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// export to avoid cyclic imports for tests in handler_panic_test.go
 type UnaryHandlerFunc func(context.Context, *Request, ResponseWriter) error
 type OnewayHandlerFunc func(context.Context, *Request) error
 type StreamHandlerFunc func(*ServerStream) error
