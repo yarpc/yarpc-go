@@ -22,27 +22,25 @@ package transport
 
 import (
 	"context"
-	"fmt"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap/zapcore"
 )
 
-type unaryHandlerFunc func(context.Context, *Request, ResponseWriter) error
-type onewayHandlerFunc func(context.Context, *Request) error
-type streamHandlerFunc func(*ServerStream) error
+type UnaryHandlerFunc func(context.Context, *Request, ResponseWriter) error
+type OnewayHandlerFunc func(context.Context, *Request) error
+type StreamHandlerFunc func(*ServerStream) error
 
-func (f unaryHandlerFunc) Handle(ctx context.Context, r *Request, w ResponseWriter) error {
+func (f UnaryHandlerFunc) Handle(ctx context.Context, r *Request, w ResponseWriter) error {
 	return f(ctx, r, w)
 }
 
-func (f onewayHandlerFunc) HandleOneway(ctx context.Context, r *Request) error {
+func (f OnewayHandlerFunc) HandleOneway(ctx context.Context, r *Request) error {
 	return f(ctx, r)
 }
 
-func (f streamHandlerFunc) HandleStream(stream *ServerStream) error {
+func (f StreamHandlerFunc) HandleStream(stream *ServerStream) error {
 	return f(stream)
 }
 
@@ -54,21 +52,21 @@ func TestHandlerSpecLogMarshaling(t *testing.T) {
 	}{
 		{
 			desc: "unary",
-			spec: NewUnaryHandlerSpec(unaryHandlerFunc(func(_ context.Context, _ *Request, _ ResponseWriter) error {
+			spec: NewUnaryHandlerSpec(UnaryHandlerFunc(func(context.Context, *Request, ResponseWriter) error {
 				return nil
 			})),
 			want: map[string]interface{}{"rpcType": "Unary"},
 		},
 		{
 			desc: "oneway",
-			spec: NewOnewayHandlerSpec(onewayHandlerFunc(func(_ context.Context, _ *Request) error {
+			spec: NewOnewayHandlerSpec(OnewayHandlerFunc(func(context.Context, *Request) error {
 				return nil
 			})),
 			want: map[string]interface{}{"rpcType": "Oneway"},
 		},
 		{
 			desc: "stream",
-			spec: NewStreamHandlerSpec(streamHandlerFunc(func(_ *ServerStream) error {
+			spec: NewStreamHandlerSpec(StreamHandlerFunc(func(*ServerStream) error {
 				return nil
 			})),
 			want: map[string]interface{}{"rpcType": "Streaming"},
@@ -82,45 +80,4 @@ func TestHandlerSpecLogMarshaling(t *testing.T) {
 			assert.Equal(t, tt.want, enc.Fields, "Unexpected output from marshaling spec.")
 		})
 	}
-}
-
-func TestDispatchUnaryHandlerWithPanic(t *testing.T) {
-	msg := "I'm panicking in a unary handler!"
-	handler := func(context.Context, *Request, ResponseWriter) error {
-		panic(msg)
-	}
-
-	err := DispatchUnaryHandler(
-		context.Background(),
-		unaryHandlerFunc(handler),
-		time.Now(),
-		&Request{},
-		nil)
-	expectMsg := fmt.Sprintf("panic: %s", msg)
-	assert.Equal(t, err.Error(), expectMsg)
-}
-
-func TestDispatchOnewayHandlerWithPanic(t *testing.T) {
-	msg := "I'm panicking in a oneway handler!"
-	handler := func(context.Context, *Request) error {
-		panic(msg)
-	}
-
-	err := DispatchOnewayHandler(
-		context.Background(),
-		onewayHandlerFunc(handler),
-		nil)
-	expectMsg := fmt.Sprintf("panic: %s", msg)
-	assert.Equal(t, err.Error(), expectMsg)
-}
-
-func TestDispatchStreamHandlerWithPanic(t *testing.T) {
-	msg := "I'm panicking in a stream handler!"
-	handler := func(_ *ServerStream) error {
-		panic(msg)
-	}
-
-	err := DispatchStreamHandler(streamHandlerFunc(handler), nil)
-	expectMsg := fmt.Sprintf("panic: %s", msg)
-	assert.Equal(t, err.Error(), expectMsg)
 }
