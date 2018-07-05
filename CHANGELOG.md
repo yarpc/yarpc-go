@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.31.0] - 2018-07-09
 ### Added
 - Added `Outbounds()` on `Dispatcher` to provide access to the configured outbounds.
 - Expose capacity option to configurator for the round-robin peer chooser.
@@ -954,7 +954,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.30.0...HEAD
+[1.31.0]: https://github.com/yarpc/yarpc-go/compare/v1.30.1...v1.31.0
 [1.30.0]: https://github.com/yarpc/yarpc-go/compare/v1.29.1...v1.30.0
 [1.29.1]: https://github.com/yarpc/yarpc-go/compare/v1.29.0...v1.29.1
 [1.29.0]: https://github.com/yarpc/yarpc-go/compare/v1.28.0...v1.29.0
