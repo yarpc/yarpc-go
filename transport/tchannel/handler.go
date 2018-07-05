@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
 	ncontext "golang.org/x/net/context"
 )
 
@@ -85,6 +86,7 @@ type handler struct {
 	router     transport.Router
 	tracer     opentracing.Tracer
 	headerCase headerCase
+	logger     *zap.Logger
 }
 
 func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
@@ -191,7 +193,14 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 	}
 	switch spec.Type() {
 	case transport.Unary:
-		return transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)
+		return transport.InvokeUnaryHandler(transport.UnaryInvokeRequest{
+			Context:        ctx,
+			StartTime:      start,
+			Request:        treq,
+			ResponseWriter: responseWriter,
+			Handler:        spec.Unary(),
+			Logger:         h.logger,
+		})
 
 	default:
 		return yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport tchannel does not handle %s handlers", spec.Type().String())

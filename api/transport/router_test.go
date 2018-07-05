@@ -32,7 +32,7 @@ func TestProcedureLogMarshaling(t *testing.T) {
 	p := Procedure{
 		Name:    "name",
 		Service: "service",
-		HandlerSpec: NewUnaryHandlerSpec(unaryHandlerFunc(func(_ context.Context, _ *Request, _ ResponseWriter) error {
+		HandlerSpec: NewUnaryHandlerSpec(UnaryHandlerFunc(func(context.Context, *Request, ResponseWriter) error {
 			return nil
 		})),
 		Encoding:  "raw",

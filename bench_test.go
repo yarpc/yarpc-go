@@ -306,7 +306,6 @@ func Benchmark_TChannel_TChannelToYARPC(b *testing.B) {
 
 	withDispatcher(
 		b, serverCfg, func(dispatcher *yarpc.Dispatcher) {
-			dispatcher.Register(raw.Procedure("echo", yarpcEcho))
 
 			clientCh, err := tchannel.NewChannel("client", nil)
 			require.NoError(b, err, "failed to build client TChannel")
