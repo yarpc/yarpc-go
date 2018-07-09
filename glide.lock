@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-07-02T11:22:35.275595-07:00
+updated: 2018-07-09T15:03:10.034617416Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -32,7 +32,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: e09c5db296004fbe3f74490e84dcd62c3c5ddb1b
+  version: 1325a051a2753cd67556b182843b1b693d0854cd
   subpackages:
   - proto
   - ptypes
@@ -66,19 +66,19 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 38c53a9f4bfcd932d1b00bfc65e256a7fba6b37a
+  version: 7600349dcfe1abd18d72d3a1770870d9800a7801
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 780932d4fbbe0e69b84c34c20f5c8d0981e109ea
+  version: ae68e2d4c00fed4943b5f6698d504a5fe083da8a
   subpackages:
   - internal/util
   - nfs
   - xfs
 - name: github.com/stretchr/testify
-  version: c679ae2cc0cb27ec3293fea7e254e47386f05d69
+  version: f35b8ab0b5a2cef36673838d662e249dd9c94686
   subpackages:
   - assert
   - require
@@ -171,7 +171,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 4cb1c02c05b0e749b0365f61ae859a8e0cfceed9
+  version: 6f138e0f60713a248abf7046f1014a3ba90f5341
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -188,22 +188,22 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 3b87a42e500a6dc65dae1a55d0b641295971163e
+  version: 1b2967e3c290b7c545b3db0deeda16e9be4f98a2
   repo: https://github.com/golang/sys
 - name: golang.org/x/text
-  version: 2cb43934f0eece38629746959acc633cba083fe4
+  version: 0605a8320aceb4207a5fb3521281e17ec2075476
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: ac136b6c2db7c4d43955e4bc7174db36dc0539c0
+  version: e2be0f7276f6ea2d8290dea1ffd89c98f6ac0b9e
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: aae13d27a44d62f039eeeb93e74e893886673932
+  version: 8b2cc369ab52e0003a878865c9372afdd6ca5c5a
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
@@ -252,7 +252,7 @@ testImports:
   subpackages:
   - update-license
 - name: golang.org/x/lint
-  version: 470b6b0bb3005eda157f0275e2e4895055396a81
+  version: 06c8688daad7faa9da5a0c2f163a3d14aac986ca
   repo: https://github.com/golang/lint
   subpackages:
   - golint
