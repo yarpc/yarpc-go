@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- No changes yet
+
+## [1.31.0] - 2018-07-09
 ### Added
 - Added `Outbounds()` on `Dispatcher` to provide access to the configured outbounds.
 - Expose capacity option to configurator for the round-robin peer chooser.
@@ -14,8 +17,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 - TChannel inbounds will blackhole requests when handlers return resource
   exhausted errors.
-- Change log level to reflect error statuses. Previously all logs are logged at debug
-  level. Errors are now logged at error level.
+- Change log level to reflect error statuses. Previously all logs were logged at
+  debug level. Errors are now logged at error level.
 - Update pin for gogo/protobuf to ^1
 
 ## [1.30.0] - 2018-05-03
@@ -954,7 +957,8 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.30.0...HEAD
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.31.0...HEAD
+[1.31.0]: https://github.com/yarpc/yarpc-go/compare/v1.30.1...v1.31.0
 [1.30.0]: https://github.com/yarpc/yarpc-go/compare/v1.29.1...v1.30.0
 [1.29.1]: https://github.com/yarpc/yarpc-go/compare/v1.29.0...v1.29.1
 [1.29.0]: https://github.com/yarpc/yarpc-go/compare/v1.28.0...v1.29.0
