@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-07-10T15:05:36.143732145Z
+updated: 2018-07-10T10:49:18.309231-07:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -257,6 +257,6 @@ testImports:
   subpackages:
   - golint
 - name: honnef.co/go/tools
-  version: 777bcba768589da7e5210bf232388ec6a1054d61
+  version: 3ac6a802416d2efd6654491fe47f693e56d8eb4e
   subpackages:
   - cmd/staticcheck
