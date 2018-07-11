@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-07-10T10:49:18.309231-07:00
+updated: 2018-07-11T15:05:23.242162201Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -32,7 +32,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 1325a051a2753cd67556b182843b1b693d0854cd
+  version: 0cb4f732569330e7b40d8fcee91c41aafaaddc4f
   subpackages:
   - proto
   - ptypes
@@ -171,7 +171,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 292b43bbf7cb8d35ddf40f8d5100ef3837cced3f
+  version: 039a4258aec0ad3c79b905677cceeab13b296a77
   repo: https://github.com/golang/net
   subpackages:
   - bpf
