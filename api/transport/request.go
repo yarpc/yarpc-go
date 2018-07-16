@@ -38,7 +38,7 @@ type Request struct {
 	// The service refers to the canonical traffic group for the service.
 	Service string
 
-	// Name of the transport used for the call
+	// Name of the transport used for the call.
 	Transport string
 
 	// Name of the encoding used for the request body.
@@ -88,6 +88,7 @@ func (r *Request) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	// TODO (#788): Include headers once we can omit PII.
 	enc.AddString("caller", r.Caller)
 	enc.AddString("service", r.Service)
+	enc.AddString("transport", r.Transport)
 	enc.AddString("encoding", string(r.Encoding))
 	enc.AddString("procedure", r.Procedure)
 	enc.AddString("shardKey", r.ShardKey)
@@ -158,7 +159,7 @@ type RequestMeta struct {
 	// The service refers to the canonical traffic group for the service.
 	Service string
 
-	// Name of the transport used for the call
+	// Name of the transport used for the call.
 	Transport string
 
 	// Name of the encoding used for the request body.

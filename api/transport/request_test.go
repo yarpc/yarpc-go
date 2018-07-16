@@ -129,6 +129,7 @@ func TestRequestLogMarshaling(t *testing.T) {
 	r := &transport.Request{
 		Caller:          "caller",
 		Service:         "service",
+		Transport:       "transport",
 		Encoding:        "raw",
 		Procedure:       "procedure",
 		Headers:         transport.NewHeaders().With("password", "super-secret"),
@@ -142,6 +143,7 @@ func TestRequestLogMarshaling(t *testing.T) {
 	assert.Equal(t, map[string]interface{}{
 		"caller":          "caller",
 		"service":         "service",
+		"transport":       "transport",
 		"encoding":        "raw",
 		"procedure":       "procedure",
 		"shardKey":        "shard01",
@@ -154,6 +156,7 @@ func TestRequestMetaToRequestConversionAndBack(t *testing.T) {
 	reqMeta := &transport.RequestMeta{
 		Caller:          "caller",
 		Service:         "service",
+		Transport:       "transport",
 		Encoding:        "raw",
 		Procedure:       "hello",
 		Headers:         transport.NewHeaders().With("key", "val"),

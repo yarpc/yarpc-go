@@ -55,6 +55,7 @@ func TestCallFromContext(t *testing.T) {
 		&transport.Request{
 			Caller:          "foo",
 			Service:         "bar",
+			Transport:       "trans",
 			Encoding:        transport.Encoding("baz"),
 			Procedure:       "hello",
 			Headers:         transport.NewHeaders().With("foo", "bar"),
@@ -67,6 +68,7 @@ func TestCallFromContext(t *testing.T) {
 	call := yarpc.CallFromContext(ctx)
 	assert.Equal(t, "foo", call.Caller())
 	assert.Equal(t, "bar", call.Service())
+	assert.Equal(t, "trans", call.Transport())
 	assert.Equal(t, transport.Encoding("baz"), call.Encoding())
 	assert.Equal(t, "hello", call.Procedure())
 	assert.Equal(t, "bar", call.Header("foo"))
