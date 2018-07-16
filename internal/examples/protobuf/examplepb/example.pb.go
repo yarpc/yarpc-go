@@ -21,37 +21,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-/*
-	Package examplepb is a generated protocol buffer package.
-
-	It is generated from these files:
-		internal/examples/protobuf/examplepb/example.proto
-
-	It has these top-level messages:
-		GetValueRequest
-		GetValueResponse
-		SetValueRequest
-		SetValueResponse
-		FireRequest
-		EchoOutRequest
-		EchoOutResponse
-		EchoInRequest
-		EchoInResponse
-		EchoBothRequest
-		EchoBothResponse
-*/
 package examplepb
 
 import proto "github.com/gogo/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import uber_yarpc "go.uber.org/yarpc/yarpcproto"
+import yarpcproto "go.uber.org/yarpc/yarpcproto"
 
 import strings "strings"
 import reflect "reflect"
 
-import context "golang.org/x/net/context"
-import grpc "google.golang.org/grpc"
+import golang_org_x_net_context "golang.org/x/net/context"
+import google_golang_org_grpc "google.golang.org/grpc"
 
 import io "io"
 
@@ -67,12 +48,42 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
 type GetValueRequest struct {
-	Key string `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Key                  string   `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *GetValueRequest) Reset()                    { *m = GetValueRequest{} }
-func (*GetValueRequest) ProtoMessage()               {}
-func (*GetValueRequest) Descriptor() ([]byte, []int) { return fileDescriptorExample, []int{0} }
+func (m *GetValueRequest) Reset()      { *m = GetValueRequest{} }
+func (*GetValueRequest) ProtoMessage() {}
+func (*GetValueRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_example_5239a0ac251f0542, []int{0}
+}
+func (m *GetValueRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GetValueRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GetValueRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *GetValueRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetValueRequest.Merge(dst, src)
+}
+func (m *GetValueRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *GetValueRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetValueRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetValueRequest proto.InternalMessageInfo
 
 func (m *GetValueRequest) GetKey() string {
 	if m != nil {
@@ -82,12 +93,42 @@ func (m *GetValueRequest) GetKey() string {
 }
 
 type GetValueResponse struct {
-	Value string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	Value                string   `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *GetValueResponse) Reset()                    { *m = GetValueResponse{} }
-func (*GetValueResponse) ProtoMessage()               {}
-func (*GetValueResponse) Descriptor() ([]byte, []int) { return fileDescriptorExample, []int{1} }
+func (m *GetValueResponse) Reset()      { *m = GetValueResponse{} }
+func (*GetValueResponse) ProtoMessage() {}
+func (*GetValueResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_example_5239a0ac251f0542, []int{1}
+}
+func (m *GetValueResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GetValueResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GetValueResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *GetValueResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetValueResponse.Merge(dst, src)
+}
+func (m *GetValueResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *GetValueResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetValueResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetValueResponse proto.InternalMessageInfo
 
 func (m *GetValueResponse) GetValue() string {
 	if m != nil {
@@ -97,13 +138,43 @@ func (m *GetValueResponse) GetValue() string {
 }
 
 type SetValueRequest struct {
-	Key   string `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
-	Value string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	Key                  string   `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Value                string   `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *SetValueRequest) Reset()                    { *m = SetValueRequest{} }
-func (*SetValueRequest) ProtoMessage()               {}
-func (*SetValueRequest) Descriptor() ([]byte, []int) { return fileDescriptorExample, []int{2} }
+func (m *SetValueRequest) Reset()      { *m = SetValueRequest{} }
+func (*SetValueRequest) ProtoMessage() {}
+func (*SetValueRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_example_5239a0ac251f0542, []int{2}
+}
+func (m *SetValueRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SetValueRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SetValueRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *SetValueRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SetValueRequest.Merge(dst, src)
+}
+func (m *SetValueRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *SetValueRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_SetValueRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SetValueRequest proto.InternalMessageInfo
 
 func (m *SetValueRequest) GetKey() string {
 	if m != nil {
@@ -120,19 +191,79 @@ func (m *SetValueRequest) GetValue() string {
 }
 
 type SetValueResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *SetValueResponse) Reset()                    { *m = SetValueResponse{} }
-func (*SetValueResponse) ProtoMessage()               {}
-func (*SetValueResponse) Descriptor() ([]byte, []int) { return fileDescriptorExample, []int{3} }
+func (m *SetValueResponse) Reset()      { *m = SetValueResponse{} }
+func (*SetValueResponse) ProtoMessage() {}
+func (*SetValueResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_example_5239a0ac251f0542, []int{3}
+}
+func (m *SetValueResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SetValueResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SetValueResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *SetValueResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SetValueResponse.Merge(dst, src)
+}
+func (m *SetValueResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *SetValueResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_SetValueResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SetValueResponse proto.InternalMessageInfo
 
 type FireRequest struct {
-	Value string `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
+	Value                string   `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *FireRequest) Reset()                    { *m = FireRequest{} }
-func (*FireRequest) ProtoMessage()               {}
-func (*FireRequest) Descriptor() ([]byte, []int) { return fileDescriptorExample, []int{4} }
+func (m *FireRequest) Reset()      { *m = FireRequest{} }
+func (*FireRequest) ProtoMessage() {}
+func (*FireRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_example_5239a0ac251f0542, []int{4}
+}
+func (m *FireRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *FireRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_FireRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *FireRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_FireRequest.Merge(dst, src)
+}
+func (m *FireRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *FireRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_FireRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_FireRequest proto.InternalMessageInfo
 
 func (m *FireRequest) GetValue() string {
 	if m != nil {
@@ -142,12 +273,42 @@ func (m *FireRequest) GetValue() string {
 }
 
 type EchoOutRequest struct {
-	Message string `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	Message              string   `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *EchoOutRequest) Reset()                    { *m = EchoOutRequest{} }
-func (*EchoOutRequest) ProtoMessage()               {}
-func (*EchoOutRequest) Descriptor() ([]byte, []int) { return fileDescriptorExample, []int{5} }
+func (m *EchoOutRequest) Reset()      { *m = EchoOutRequest{} }
+func (*EchoOutRequest) ProtoMessage() {}
+func (*EchoOutRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_example_5239a0ac251f0542, []int{5}
+}
+func (m *EchoOutRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *EchoOutRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_EchoOutRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *EchoOutRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EchoOutRequest.Merge(dst, src)
+}
+func (m *EchoOutRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *EchoOutRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_EchoOutRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EchoOutRequest proto.InternalMessageInfo
 
 func (m *EchoOutRequest) GetMessage() string {
 	if m != nil {
@@ -157,12 +318,42 @@ func (m *EchoOutRequest) GetMessage() string {
 }
 
 type EchoOutResponse struct {
-	AllMessages []string `protobuf:"bytes,2,rep,name=all_messages,json=allMessages" json:"all_messages,omitempty"`
+	AllMessages          []string `protobuf:"bytes,2,rep,name=all_messages,json=allMessages" json:"all_messages,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *EchoOutResponse) Reset()                    { *m = EchoOutResponse{} }
-func (*EchoOutResponse) ProtoMessage()               {}
-func (*EchoOutResponse) Descriptor() ([]byte, []int) { return fileDescriptorExample, []int{6} }
+func (m *EchoOutResponse) Reset()      { *m = EchoOutResponse{} }
+func (*EchoOutResponse) ProtoMessage() {}
+func (*EchoOutResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_example_5239a0ac251f0542, []int{6}
+}
+func (m *EchoOutResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *EchoOutResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_EchoOutResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *EchoOutResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EchoOutResponse.Merge(dst, src)
+}
+func (m *EchoOutResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *EchoOutResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_EchoOutResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EchoOutResponse proto.InternalMessageInfo
 
 func (m *EchoOutResponse) GetAllMessages() []string {
 	if m != nil {
@@ -172,13 +363,43 @@ func (m *EchoOutResponse) GetAllMessages() []string {
 }
 
 type EchoInRequest struct {
-	Message      string `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
-	NumResponses int64  `protobuf:"varint,2,opt,name=num_responses,json=numResponses,proto3" json:"num_responses,omitempty"`
+	Message              string   `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	NumResponses         int64    `protobuf:"varint,2,opt,name=num_responses,json=numResponses,proto3" json:"num_responses,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *EchoInRequest) Reset()                    { *m = EchoInRequest{} }
-func (*EchoInRequest) ProtoMessage()               {}
-func (*EchoInRequest) Descriptor() ([]byte, []int) { return fileDescriptorExample, []int{7} }
+func (m *EchoInRequest) Reset()      { *m = EchoInRequest{} }
+func (*EchoInRequest) ProtoMessage() {}
+func (*EchoInRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_example_5239a0ac251f0542, []int{7}
+}
+func (m *EchoInRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *EchoInRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_EchoInRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *EchoInRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EchoInRequest.Merge(dst, src)
+}
+func (m *EchoInRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *EchoInRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_EchoInRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EchoInRequest proto.InternalMessageInfo
 
 func (m *EchoInRequest) GetMessage() string {
 	if m != nil {
@@ -195,12 +416,42 @@ func (m *EchoInRequest) GetNumResponses() int64 {
 }
 
 type EchoInResponse struct {
-	Message string `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	Message              string   `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *EchoInResponse) Reset()                    { *m = EchoInResponse{} }
-func (*EchoInResponse) ProtoMessage()               {}
-func (*EchoInResponse) Descriptor() ([]byte, []int) { return fileDescriptorExample, []int{8} }
+func (m *EchoInResponse) Reset()      { *m = EchoInResponse{} }
+func (*EchoInResponse) ProtoMessage() {}
+func (*EchoInResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_example_5239a0ac251f0542, []int{8}
+}
+func (m *EchoInResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *EchoInResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_EchoInResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *EchoInResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EchoInResponse.Merge(dst, src)
+}
+func (m *EchoInResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *EchoInResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_EchoInResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EchoInResponse proto.InternalMessageInfo
 
 func (m *EchoInResponse) GetMessage() string {
 	if m != nil {
@@ -210,13 +461,43 @@ func (m *EchoInResponse) GetMessage() string {
 }
 
 type EchoBothRequest struct {
-	Message      string `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
-	NumResponses int64  `protobuf:"varint,2,opt,name=num_responses,json=numResponses,proto3" json:"num_responses,omitempty"`
+	Message              string   `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	NumResponses         int64    `protobuf:"varint,2,opt,name=num_responses,json=numResponses,proto3" json:"num_responses,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *EchoBothRequest) Reset()                    { *m = EchoBothRequest{} }
-func (*EchoBothRequest) ProtoMessage()               {}
-func (*EchoBothRequest) Descriptor() ([]byte, []int) { return fileDescriptorExample, []int{9} }
+func (m *EchoBothRequest) Reset()      { *m = EchoBothRequest{} }
+func (*EchoBothRequest) ProtoMessage() {}
+func (*EchoBothRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_example_5239a0ac251f0542, []int{9}
+}
+func (m *EchoBothRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *EchoBothRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_EchoBothRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *EchoBothRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EchoBothRequest.Merge(dst, src)
+}
+func (m *EchoBothRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *EchoBothRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_EchoBothRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EchoBothRequest proto.InternalMessageInfo
 
 func (m *EchoBothRequest) GetMessage() string {
 	if m != nil {
@@ -233,12 +514,42 @@ func (m *EchoBothRequest) GetNumResponses() int64 {
 }
 
 type EchoBothResponse struct {
-	Message string `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	Message              string   `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *EchoBothResponse) Reset()                    { *m = EchoBothResponse{} }
-func (*EchoBothResponse) ProtoMessage()               {}
-func (*EchoBothResponse) Descriptor() ([]byte, []int) { return fileDescriptorExample, []int{10} }
+func (m *EchoBothResponse) Reset()      { *m = EchoBothResponse{} }
+func (*EchoBothResponse) ProtoMessage() {}
+func (*EchoBothResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_example_5239a0ac251f0542, []int{10}
+}
+func (m *EchoBothResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *EchoBothResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_EchoBothResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *EchoBothResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EchoBothResponse.Merge(dst, src)
+}
+func (m *EchoBothResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *EchoBothResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_EchoBothResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EchoBothResponse proto.InternalMessageInfo
 
 func (m *EchoBothResponse) GetMessage() string {
 	if m != nil {
@@ -681,7 +992,7 @@ func NewKeyValueClient(cc *grpc.ClientConn) KeyValueClient {
 
 func (c *keyValueClient) GetValue(ctx context.Context, in *GetValueRequest, opts ...grpc.CallOption) (*GetValueResponse, error) {
 	out := new(GetValueResponse)
-	err := grpc.Invoke(ctx, "/uber.yarpc.internal.examples.protobuf.example.KeyValue/GetValue", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/uber.yarpc.internal.examples.protobuf.example.KeyValue/GetValue", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -690,7 +1001,7 @@ func (c *keyValueClient) GetValue(ctx context.Context, in *GetValueRequest, opts
 
 func (c *keyValueClient) SetValue(ctx context.Context, in *SetValueRequest, opts ...grpc.CallOption) (*SetValueResponse, error) {
 	out := new(SetValueResponse)
-	err := grpc.Invoke(ctx, "/uber.yarpc.internal.examples.protobuf.example.KeyValue/SetValue", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/uber.yarpc.internal.examples.protobuf.example.KeyValue/SetValue", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -764,7 +1075,7 @@ var _KeyValue_serviceDesc = grpc.ServiceDesc{
 // Client API for Sink service
 
 type SinkClient interface {
-	Fire(ctx context.Context, in *FireRequest, opts ...grpc.CallOption) (*uber_yarpc.Oneway, error)
+	Fire(ctx context.Context, in *FireRequest, opts ...grpc.CallOption) (*yarpcproto.Oneway, error)
 }
 
 type sinkClient struct {
@@ -775,9 +1086,9 @@ func NewSinkClient(cc *grpc.ClientConn) SinkClient {
 	return &sinkClient{cc}
 }
 
-func (c *sinkClient) Fire(ctx context.Context, in *FireRequest, opts ...grpc.CallOption) (*uber_yarpc.Oneway, error) {
-	out := new(uber_yarpc.Oneway)
-	err := grpc.Invoke(ctx, "/uber.yarpc.internal.examples.protobuf.example.Sink/Fire", in, out, c.cc, opts...)
+func (c *sinkClient) Fire(ctx context.Context, in *FireRequest, opts ...grpc.CallOption) (*yarpcproto.Oneway, error) {
+	out := new(yarpcproto.Oneway)
+	err := c.cc.Invoke(ctx, "/uber.yarpc.internal.examples.protobuf.example.Sink/Fire", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -787,7 +1098,7 @@ func (c *sinkClient) Fire(ctx context.Context, in *FireRequest, opts ...grpc.Cal
 // Server API for Sink service
 
 type SinkServer interface {
-	Fire(context.Context, *FireRequest) (*uber_yarpc.Oneway, error)
+	Fire(context.Context, *FireRequest) (*yarpcproto.Oneway, error)
 }
 
 func RegisterSinkServer(s *grpc.Server, srv SinkServer) {
@@ -842,7 +1153,7 @@ func NewFooClient(cc *grpc.ClientConn) FooClient {
 }
 
 func (c *fooClient) EchoOut(ctx context.Context, opts ...grpc.CallOption) (Foo_EchoOutClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_Foo_serviceDesc.Streams[0], c.cc, "/uber.yarpc.internal.examples.protobuf.example.Foo/EchoOut", opts...)
+	stream, err := c.cc.NewStream(ctx, &_Foo_serviceDesc.Streams[0], "/uber.yarpc.internal.examples.protobuf.example.Foo/EchoOut", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -876,7 +1187,7 @@ func (x *fooEchoOutClient) CloseAndRecv() (*EchoOutResponse, error) {
 }
 
 func (c *fooClient) EchoIn(ctx context.Context, in *EchoInRequest, opts ...grpc.CallOption) (Foo_EchoInClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_Foo_serviceDesc.Streams[1], c.cc, "/uber.yarpc.internal.examples.protobuf.example.Foo/EchoIn", opts...)
+	stream, err := c.cc.NewStream(ctx, &_Foo_serviceDesc.Streams[1], "/uber.yarpc.internal.examples.protobuf.example.Foo/EchoIn", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -908,7 +1219,7 @@ func (x *fooEchoInClient) Recv() (*EchoInResponse, error) {
 }
 
 func (c *fooClient) EchoBoth(ctx context.Context, opts ...grpc.CallOption) (Foo_EchoBothClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_Foo_serviceDesc.Streams[2], c.cc, "/uber.yarpc.internal.examples.protobuf.example.Foo/EchoBoth", opts...)
+	stream, err := c.cc.NewStream(ctx, &_Foo_serviceDesc.Streams[2], "/uber.yarpc.internal.examples.protobuf.example.Foo/EchoBoth", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2604,10 +2915,10 @@ var (
 )
 
 func init() {
-	proto.RegisterFile("internal/examples/protobuf/examplepb/example.proto", fileDescriptorExample)
+	proto.RegisterFile("internal/examples/protobuf/examplepb/example.proto", fileDescriptor_example_5239a0ac251f0542)
 }
 
-var fileDescriptorExample = []byte{
+var fileDescriptor_example_5239a0ac251f0542 = []byte{
 	// 511 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x54, 0x5f, 0x6b, 0xd3, 0x50,
 	0x14, 0xcf, 0x69, 0xe6, 0xd6, 0x9e, 0x6d, 0xb6, 0x1c, 0x44, 0x4a, 0x1e, 0x2e, 0x33, 0x7d, 0x29,
