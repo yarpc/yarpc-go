@@ -53,6 +53,9 @@ func TestCallFromContext(t *testing.T) {
 	ctx, inboundCall := encoding.NewInboundCall(context.Background())
 	err := inboundCall.ReadFromRequest(
 		&transport.Request{
+			ID:              "id",
+			Host:            "host",
+			Environment:     "env",
 			Caller:          "foo",
 			Service:         "bar",
 			Transport:       "trans",
@@ -66,6 +69,9 @@ func TestCallFromContext(t *testing.T) {
 	)
 	assert.NoError(t, err)
 	call := yarpc.CallFromContext(ctx)
+	assert.Equal(t, "id", call.ID())
+	assert.Equal(t, "host", call.Host())
+	assert.Equal(t, "env", call.Environment())
 	assert.Equal(t, "foo", call.Caller())
 	assert.Equal(t, "bar", call.Service())
 	assert.Equal(t, "trans", call.Transport())
