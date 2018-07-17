@@ -21,24 +21,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-/*
-Package testing is a generated protocol buffer package.
-
-It is generated from these files:
-	encoding/protobuf/protoc-gen-yarpc-go/internal/testing/dep.proto
-	encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto
-	encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing_no_service.proto
-
-It has these top-level messages:
-	SetValueResponse
-	GetValueRequest
-	GetValueResponse
-	SetValueRequest
-	FireRequest
-	HelloRequest
-	HelloResponse
-	Foo
-*/
 package testing
 
 import proto "github.com/gogo/protobuf/proto"
@@ -62,11 +44,41 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
 type SetValueResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *SetValueResponse) Reset()                    { *m = SetValueResponse{} }
-func (*SetValueResponse) ProtoMessage()               {}
-func (*SetValueResponse) Descriptor() ([]byte, []int) { return fileDescriptorDep, []int{0} }
+func (m *SetValueResponse) Reset()      { *m = SetValueResponse{} }
+func (*SetValueResponse) ProtoMessage() {}
+func (*SetValueResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_dep_972183b3590a2f63, []int{0}
+}
+func (m *SetValueResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SetValueResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SetValueResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *SetValueResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SetValueResponse.Merge(dst, src)
+}
+func (m *SetValueResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *SetValueResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_SetValueResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SetValueResponse proto.InternalMessageInfo
 
 func init() {
 	proto.RegisterType((*SetValueResponse)(nil), "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.SetValueResponse")
@@ -328,10 +340,10 @@ var (
 )
 
 func init() {
-	proto.RegisterFile("encoding/protobuf/protoc-gen-yarpc-go/internal/testing/dep.proto", fileDescriptorDep)
+	proto.RegisterFile("encoding/protobuf/protoc-gen-yarpc-go/internal/testing/dep.proto", fileDescriptor_dep_972183b3590a2f63)
 }
 
-var fileDescriptorDep = []byte{
+var fileDescriptor_dep_972183b3590a2f63 = []byte{
 	// 190 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x72, 0x48, 0xcd, 0x4b, 0xce,
 	0x4f, 0xc9, 0xcc, 0x4b, 0xd7, 0x2f, 0x28, 0xca, 0x2f, 0xc9, 0x4f, 0x2a, 0x4d, 0x83, 0x30, 0x92,

@@ -21,16 +21,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-/*
-Package streaming is a generated protocol buffer package.
-
-It is generated from these files:
-	internal/examples/streaming/stream.proto
-
-It has these top-level messages:
-	HelloRequest
-	HelloResponse
-*/
 package streaming
 
 import proto "github.com/gogo/protobuf/proto"
@@ -40,8 +30,8 @@ import math "math"
 import strings "strings"
 import reflect "reflect"
 
-import context "golang.org/x/net/context"
-import grpc "google.golang.org/grpc"
+import golang_org_x_net_context "golang.org/x/net/context"
+import google_golang_org_grpc "google.golang.org/grpc"
 
 import io "io"
 
@@ -57,12 +47,42 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
 type HelloRequest struct {
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id                   string   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *HelloRequest) Reset()                    { *m = HelloRequest{} }
-func (*HelloRequest) ProtoMessage()               {}
-func (*HelloRequest) Descriptor() ([]byte, []int) { return fileDescriptorStream, []int{0} }
+func (m *HelloRequest) Reset()      { *m = HelloRequest{} }
+func (*HelloRequest) ProtoMessage() {}
+func (*HelloRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_stream_55ca018fa61cd022, []int{0}
+}
+func (m *HelloRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *HelloRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_HelloRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *HelloRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_HelloRequest.Merge(dst, src)
+}
+func (m *HelloRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *HelloRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_HelloRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_HelloRequest proto.InternalMessageInfo
 
 func (m *HelloRequest) GetId() string {
 	if m != nil {
@@ -72,12 +92,42 @@ func (m *HelloRequest) GetId() string {
 }
 
 type HelloResponse struct {
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id                   string   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *HelloResponse) Reset()                    { *m = HelloResponse{} }
-func (*HelloResponse) ProtoMessage()               {}
-func (*HelloResponse) Descriptor() ([]byte, []int) { return fileDescriptorStream, []int{1} }
+func (m *HelloResponse) Reset()      { *m = HelloResponse{} }
+func (*HelloResponse) ProtoMessage() {}
+func (*HelloResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_stream_55ca018fa61cd022, []int{1}
+}
+func (m *HelloResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *HelloResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_HelloResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *HelloResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_HelloResponse.Merge(dst, src)
+}
+func (m *HelloResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *HelloResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_HelloResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_HelloResponse proto.InternalMessageInfo
 
 func (m *HelloResponse) GetId() string {
 	if m != nil {
@@ -194,7 +244,7 @@ func NewHelloClient(cc *grpc.ClientConn) HelloClient {
 
 func (c *helloClient) HelloUnary(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (*HelloResponse, error) {
 	out := new(HelloResponse)
-	err := grpc.Invoke(ctx, "/uber.yarpc.internal.examples.streaming.Hello/HelloUnary", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/uber.yarpc.internal.examples.streaming.Hello/HelloUnary", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +252,7 @@ func (c *helloClient) HelloUnary(ctx context.Context, in *HelloRequest, opts ...
 }
 
 func (c *helloClient) HelloThere(ctx context.Context, opts ...grpc.CallOption) (Hello_HelloThereClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_Hello_serviceDesc.Streams[0], c.cc, "/uber.yarpc.internal.examples.streaming.Hello/HelloThere", opts...)
+	stream, err := c.cc.NewStream(ctx, &_Hello_serviceDesc.Streams[0], "/uber.yarpc.internal.examples.streaming.Hello/HelloThere", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +283,7 @@ func (x *helloHelloThereClient) Recv() (*HelloResponse, error) {
 }
 
 func (c *helloClient) HelloOutStream(ctx context.Context, opts ...grpc.CallOption) (Hello_HelloOutStreamClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_Hello_serviceDesc.Streams[1], c.cc, "/uber.yarpc.internal.examples.streaming.Hello/HelloOutStream", opts...)
+	stream, err := c.cc.NewStream(ctx, &_Hello_serviceDesc.Streams[1], "/uber.yarpc.internal.examples.streaming.Hello/HelloOutStream", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +317,7 @@ func (x *helloHelloOutStreamClient) CloseAndRecv() (*HelloResponse, error) {
 }
 
 func (c *helloClient) HelloInStream(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (Hello_HelloInStreamClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_Hello_serviceDesc.Streams[2], c.cc, "/uber.yarpc.internal.examples.streaming.Hello/HelloInStream", opts...)
+	stream, err := c.cc.NewStream(ctx, &_Hello_serviceDesc.Streams[2], "/uber.yarpc.internal.examples.streaming.Hello/HelloInStream", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -813,9 +863,11 @@ var (
 	ErrIntOverflowStream   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("internal/examples/streaming/stream.proto", fileDescriptorStream) }
+func init() {
+	proto.RegisterFile("internal/examples/streaming/stream.proto", fileDescriptor_stream_55ca018fa61cd022)
+}
 
-var fileDescriptorStream = []byte{
+var fileDescriptor_stream_55ca018fa61cd022 = []byte{
 	// 265 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xd2, 0xc8, 0xcc, 0x2b, 0x49,
 	0x2d, 0xca, 0x4b, 0xcc, 0xd1, 0x4f, 0xad, 0x48, 0xcc, 0x2d, 0xc8, 0x49, 0x2d, 0xd6, 0x2f, 0x2e,
