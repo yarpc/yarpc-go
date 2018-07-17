@@ -26,13 +26,13 @@ package testing
 import proto "github.com/gogo/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import uber_yarpc "go.uber.org/yarpc/yarpcproto"
+import yarpcproto "go.uber.org/yarpc/yarpcproto"
 
 import strings "strings"
 import reflect "reflect"
 
-import context "golang.org/x/net/context"
-import grpc "google.golang.org/grpc"
+import golang_org_x_net_context "golang.org/x/net/context"
+import google_golang_org_grpc "google.golang.org/grpc"
 
 import io "io"
 
@@ -41,13 +41,49 @@ var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the proto package it is being compiled against.
+// A compilation error at this line likely means your copy of the
+// proto package needs to be updated.
+const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
+
 type GetValueRequest struct {
-	Key string `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Key                  string   `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *GetValueRequest) Reset()                    { *m = GetValueRequest{} }
-func (*GetValueRequest) ProtoMessage()               {}
-func (*GetValueRequest) Descriptor() ([]byte, []int) { return fileDescriptorTesting, []int{0} }
+func (m *GetValueRequest) Reset()      { *m = GetValueRequest{} }
+func (*GetValueRequest) ProtoMessage() {}
+func (*GetValueRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_testing_8b73fd5d40a66023, []int{0}
+}
+func (m *GetValueRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GetValueRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GetValueRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *GetValueRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetValueRequest.Merge(dst, src)
+}
+func (m *GetValueRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *GetValueRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetValueRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetValueRequest proto.InternalMessageInfo
 
 func (m *GetValueRequest) GetKey() string {
 	if m != nil {
@@ -57,12 +93,42 @@ func (m *GetValueRequest) GetKey() string {
 }
 
 type GetValueResponse struct {
-	Value string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	Value                string   `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *GetValueResponse) Reset()                    { *m = GetValueResponse{} }
-func (*GetValueResponse) ProtoMessage()               {}
-func (*GetValueResponse) Descriptor() ([]byte, []int) { return fileDescriptorTesting, []int{1} }
+func (m *GetValueResponse) Reset()      { *m = GetValueResponse{} }
+func (*GetValueResponse) ProtoMessage() {}
+func (*GetValueResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_testing_8b73fd5d40a66023, []int{1}
+}
+func (m *GetValueResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GetValueResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GetValueResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *GetValueResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetValueResponse.Merge(dst, src)
+}
+func (m *GetValueResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *GetValueResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetValueResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetValueResponse proto.InternalMessageInfo
 
 func (m *GetValueResponse) GetValue() string {
 	if m != nil {
@@ -72,13 +138,43 @@ func (m *GetValueResponse) GetValue() string {
 }
 
 type SetValueRequest struct {
-	Key   string `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
-	Value string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	Key                  string   `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Value                string   `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *SetValueRequest) Reset()                    { *m = SetValueRequest{} }
-func (*SetValueRequest) ProtoMessage()               {}
-func (*SetValueRequest) Descriptor() ([]byte, []int) { return fileDescriptorTesting, []int{2} }
+func (m *SetValueRequest) Reset()      { *m = SetValueRequest{} }
+func (*SetValueRequest) ProtoMessage() {}
+func (*SetValueRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_testing_8b73fd5d40a66023, []int{2}
+}
+func (m *SetValueRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SetValueRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SetValueRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *SetValueRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SetValueRequest.Merge(dst, src)
+}
+func (m *SetValueRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *SetValueRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_SetValueRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SetValueRequest proto.InternalMessageInfo
 
 func (m *SetValueRequest) GetKey() string {
 	if m != nil {
@@ -95,12 +191,42 @@ func (m *SetValueRequest) GetValue() string {
 }
 
 type FireRequest struct {
-	Value string `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
+	Value                string   `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *FireRequest) Reset()                    { *m = FireRequest{} }
-func (*FireRequest) ProtoMessage()               {}
-func (*FireRequest) Descriptor() ([]byte, []int) { return fileDescriptorTesting, []int{3} }
+func (m *FireRequest) Reset()      { *m = FireRequest{} }
+func (*FireRequest) ProtoMessage() {}
+func (*FireRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_testing_8b73fd5d40a66023, []int{3}
+}
+func (m *FireRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *FireRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_FireRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *FireRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_FireRequest.Merge(dst, src)
+}
+func (m *FireRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *FireRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_FireRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_FireRequest proto.InternalMessageInfo
 
 func (m *FireRequest) GetValue() string {
 	if m != nil {
@@ -110,12 +236,42 @@ func (m *FireRequest) GetValue() string {
 }
 
 type HelloRequest struct {
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id                   string   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *HelloRequest) Reset()                    { *m = HelloRequest{} }
-func (*HelloRequest) ProtoMessage()               {}
-func (*HelloRequest) Descriptor() ([]byte, []int) { return fileDescriptorTesting, []int{4} }
+func (m *HelloRequest) Reset()      { *m = HelloRequest{} }
+func (*HelloRequest) ProtoMessage() {}
+func (*HelloRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_testing_8b73fd5d40a66023, []int{4}
+}
+func (m *HelloRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *HelloRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_HelloRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *HelloRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_HelloRequest.Merge(dst, src)
+}
+func (m *HelloRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *HelloRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_HelloRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_HelloRequest proto.InternalMessageInfo
 
 func (m *HelloRequest) GetId() string {
 	if m != nil {
@@ -125,12 +281,42 @@ func (m *HelloRequest) GetId() string {
 }
 
 type HelloResponse struct {
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id                   string   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *HelloResponse) Reset()                    { *m = HelloResponse{} }
-func (*HelloResponse) ProtoMessage()               {}
-func (*HelloResponse) Descriptor() ([]byte, []int) { return fileDescriptorTesting, []int{5} }
+func (m *HelloResponse) Reset()      { *m = HelloResponse{} }
+func (*HelloResponse) ProtoMessage() {}
+func (*HelloResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_testing_8b73fd5d40a66023, []int{5}
+}
+func (m *HelloResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *HelloResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_HelloResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *HelloResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_HelloResponse.Merge(dst, src)
+}
+func (m *HelloResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *HelloResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_HelloResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_HelloResponse proto.InternalMessageInfo
 
 func (m *HelloResponse) GetId() string {
 	if m != nil {
@@ -389,7 +575,7 @@ func NewKeyValueClient(cc *grpc.ClientConn) KeyValueClient {
 
 func (c *keyValueClient) GetValue(ctx context.Context, in *GetValueRequest, opts ...grpc.CallOption) (*GetValueResponse, error) {
 	out := new(GetValueResponse)
-	err := grpc.Invoke(ctx, "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.KeyValue/GetValue", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.KeyValue/GetValue", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -398,7 +584,7 @@ func (c *keyValueClient) GetValue(ctx context.Context, in *GetValueRequest, opts
 
 func (c *keyValueClient) SetValue(ctx context.Context, in *SetValueRequest, opts ...grpc.CallOption) (*SetValueResponse, error) {
 	out := new(SetValueResponse)
-	err := grpc.Invoke(ctx, "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.KeyValue/SetValue", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.KeyValue/SetValue", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -472,7 +658,7 @@ var _KeyValue_serviceDesc = grpc.ServiceDesc{
 // Client API for Sink service
 
 type SinkClient interface {
-	Fire(ctx context.Context, in *FireRequest, opts ...grpc.CallOption) (*uber_yarpc.Oneway, error)
+	Fire(ctx context.Context, in *FireRequest, opts ...grpc.CallOption) (*yarpcproto.Oneway, error)
 }
 
 type sinkClient struct {
@@ -483,9 +669,9 @@ func NewSinkClient(cc *grpc.ClientConn) SinkClient {
 	return &sinkClient{cc}
 }
 
-func (c *sinkClient) Fire(ctx context.Context, in *FireRequest, opts ...grpc.CallOption) (*uber_yarpc.Oneway, error) {
-	out := new(uber_yarpc.Oneway)
-	err := grpc.Invoke(ctx, "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.Sink/Fire", in, out, c.cc, opts...)
+func (c *sinkClient) Fire(ctx context.Context, in *FireRequest, opts ...grpc.CallOption) (*yarpcproto.Oneway, error) {
+	out := new(yarpcproto.Oneway)
+	err := c.cc.Invoke(ctx, "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.Sink/Fire", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -495,7 +681,7 @@ func (c *sinkClient) Fire(ctx context.Context, in *FireRequest, opts ...grpc.Cal
 // Server API for Sink service
 
 type SinkServer interface {
-	Fire(context.Context, *FireRequest) (*uber_yarpc.Oneway, error)
+	Fire(context.Context, *FireRequest) (*yarpcproto.Oneway, error)
 }
 
 func RegisterSinkServer(s *grpc.Server, srv SinkServer) {
@@ -538,7 +724,7 @@ var _Sink_serviceDesc = grpc.ServiceDesc{
 type AllClient interface {
 	GetValue(ctx context.Context, in *GetValueRequest, opts ...grpc.CallOption) (*GetValueResponse, error)
 	SetValue(ctx context.Context, in *SetValueRequest, opts ...grpc.CallOption) (*SetValueResponse, error)
-	Fire(ctx context.Context, in *FireRequest, opts ...grpc.CallOption) (*uber_yarpc.Oneway, error)
+	Fire(ctx context.Context, in *FireRequest, opts ...grpc.CallOption) (*yarpcproto.Oneway, error)
 	HelloOne(ctx context.Context, opts ...grpc.CallOption) (All_HelloOneClient, error)
 	HelloTwo(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (All_HelloTwoClient, error)
 	HelloThree(ctx context.Context, opts ...grpc.CallOption) (All_HelloThreeClient, error)
@@ -554,7 +740,7 @@ func NewAllClient(cc *grpc.ClientConn) AllClient {
 
 func (c *allClient) GetValue(ctx context.Context, in *GetValueRequest, opts ...grpc.CallOption) (*GetValueResponse, error) {
 	out := new(GetValueResponse)
-	err := grpc.Invoke(ctx, "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.All/GetValue", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.All/GetValue", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -563,16 +749,16 @@ func (c *allClient) GetValue(ctx context.Context, in *GetValueRequest, opts ...g
 
 func (c *allClient) SetValue(ctx context.Context, in *SetValueRequest, opts ...grpc.CallOption) (*SetValueResponse, error) {
 	out := new(SetValueResponse)
-	err := grpc.Invoke(ctx, "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.All/SetValue", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.All/SetValue", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *allClient) Fire(ctx context.Context, in *FireRequest, opts ...grpc.CallOption) (*uber_yarpc.Oneway, error) {
-	out := new(uber_yarpc.Oneway)
-	err := grpc.Invoke(ctx, "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.All/Fire", in, out, c.cc, opts...)
+func (c *allClient) Fire(ctx context.Context, in *FireRequest, opts ...grpc.CallOption) (*yarpcproto.Oneway, error) {
+	out := new(yarpcproto.Oneway)
+	err := c.cc.Invoke(ctx, "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.All/Fire", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -580,7 +766,7 @@ func (c *allClient) Fire(ctx context.Context, in *FireRequest, opts ...grpc.Call
 }
 
 func (c *allClient) HelloOne(ctx context.Context, opts ...grpc.CallOption) (All_HelloOneClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_All_serviceDesc.Streams[0], c.cc, "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.All/HelloOne", opts...)
+	stream, err := c.cc.NewStream(ctx, &_All_serviceDesc.Streams[0], "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.All/HelloOne", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -614,7 +800,7 @@ func (x *allHelloOneClient) CloseAndRecv() (*HelloResponse, error) {
 }
 
 func (c *allClient) HelloTwo(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (All_HelloTwoClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_All_serviceDesc.Streams[1], c.cc, "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.All/HelloTwo", opts...)
+	stream, err := c.cc.NewStream(ctx, &_All_serviceDesc.Streams[1], "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.All/HelloTwo", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -646,7 +832,7 @@ func (x *allHelloTwoClient) Recv() (*HelloResponse, error) {
 }
 
 func (c *allClient) HelloThree(ctx context.Context, opts ...grpc.CallOption) (All_HelloThreeClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_All_serviceDesc.Streams[2], c.cc, "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.All/HelloThree", opts...)
+	stream, err := c.cc.NewStream(ctx, &_All_serviceDesc.Streams[2], "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.All/HelloThree", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -681,7 +867,7 @@ func (x *allHelloThreeClient) Recv() (*HelloResponse, error) {
 type AllServer interface {
 	GetValue(context.Context, *GetValueRequest) (*GetValueResponse, error)
 	SetValue(context.Context, *SetValueRequest) (*SetValueResponse, error)
-	Fire(context.Context, *FireRequest) (*uber_yarpc.Oneway, error)
+	Fire(context.Context, *FireRequest) (*yarpcproto.Oneway, error)
 	HelloOne(All_HelloOneServer) error
 	HelloTwo(*HelloRequest, All_HelloTwoServer) error
 	HelloThree(All_HelloThreeServer) error
@@ -1770,10 +1956,10 @@ var (
 )
 
 func init() {
-	proto.RegisterFile("encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto", fileDescriptorTesting)
+	proto.RegisterFile("encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto", fileDescriptor_testing_8b73fd5d40a66023)
 }
 
-var fileDescriptorTesting = []byte{
+var fileDescriptor_testing_8b73fd5d40a66023 = []byte{
 	// 451 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x94, 0x3d, 0x8b, 0xd4, 0x40,
 	0x18, 0xc7, 0x33, 0xb9, 0xd3, 0x5b, 0x1f, 0x5f, 0xee, 0x18, 0x44, 0x8e, 0x14, 0xa3, 0xe4, 0x9a,
