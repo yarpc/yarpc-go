@@ -21,15 +21,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-/*
-Package yarpcproto is a generated protocol buffer package.
-
-It is generated from these files:
-	yarpcproto/yarpc.proto
-
-It has these top-level messages:
-	Oneway
-*/
 package yarpcproto
 
 import proto "github.com/gogo/protobuf/proto"
@@ -55,12 +46,42 @@ const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 // Oneway is the return type to use for an rpc method if
 // the method should be generated as oneway.
 type Oneway struct {
-	Ack bool `protobuf:"varint,1,opt,name=ack,proto3" json:"ack,omitempty"`
+	Ack                  bool     `protobuf:"varint,1,opt,name=ack,proto3" json:"ack,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *Oneway) Reset()                    { *m = Oneway{} }
-func (*Oneway) ProtoMessage()               {}
-func (*Oneway) Descriptor() ([]byte, []int) { return fileDescriptorYarpc, []int{0} }
+func (m *Oneway) Reset()      { *m = Oneway{} }
+func (*Oneway) ProtoMessage() {}
+func (*Oneway) Descriptor() ([]byte, []int) {
+	return fileDescriptor_yarpc_f711c1ca03d10446, []int{0}
+}
+func (m *Oneway) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *Oneway) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_Oneway.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *Oneway) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Oneway.Merge(dst, src)
+}
+func (m *Oneway) XXX_Size() int {
+	return m.Size()
+}
+func (m *Oneway) XXX_DiscardUnknown() {
+	xxx_messageInfo_Oneway.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Oneway proto.InternalMessageInfo
 
 func (m *Oneway) GetAck() bool {
 	if m != nil {
@@ -366,9 +387,9 @@ var (
 	ErrIntOverflowYarpc   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("yarpcproto/yarpc.proto", fileDescriptorYarpc) }
+func init() { proto.RegisterFile("yarpcproto/yarpc.proto", fileDescriptor_yarpc_f711c1ca03d10446) }
 
-var fileDescriptorYarpc = []byte{
+var fileDescriptor_yarpc_f711c1ca03d10446 = []byte{
 	// 134 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0xab, 0x4c, 0x2c, 0x2a,
 	0x48, 0x2e, 0x28, 0xca, 0x2f, 0xc9, 0xd7, 0x07, 0x33, 0xf5, 0xc0, 0x6c, 0x21, 0xae, 0xd2, 0xa4,
