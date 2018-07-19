@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-07-18T15:03:06.16587057Z
+updated: 2018-07-19T16:55:25.026518148Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -91,7 +91,7 @@ imports:
   subpackages:
   - internal/mapstructure
 - name: github.com/uber-go/tally
-  version: 79f2a33b0e55b1255ffbbaf824dcafb09ff34dda
+  version: ff17f3c43c065c3c2991f571e740eee43ea3a14a
 - name: github.com/uber/jaeger-client-go
   version: b043381d944715b469fd6b37addfd30145ca1758
   subpackages:
@@ -171,7 +171,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: d0887baf81f4598189d4e12a37c6da86f0bba4d0
+  version: 81d44fd177a98d09fe3bc40a5a78d495d3f042ea
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -203,7 +203,7 @@ imports:
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 2731d4fa720b67f9fe38e9051a2a9b38e4609260
+  version: fedd2861243fd1a8152376292b921b394c7bef7e
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
