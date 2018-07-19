@@ -37,13 +37,49 @@ var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the proto package it is being compiled against.
+// A compilation error at this line likely means your copy of the
+// proto package needs to be updated.
+const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
+
 type Foo struct {
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id                   string   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *Foo) Reset()                    { *m = Foo{} }
-func (*Foo) ProtoMessage()               {}
-func (*Foo) Descriptor() ([]byte, []int) { return fileDescriptorTestingNoService, []int{0} }
+func (m *Foo) Reset()      { *m = Foo{} }
+func (*Foo) ProtoMessage() {}
+func (*Foo) Descriptor() ([]byte, []int) {
+	return fileDescriptor_testing_no_service_cbcc38bc53ab705d, []int{0}
+}
+func (m *Foo) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *Foo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_Foo.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *Foo) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Foo.Merge(dst, src)
+}
+func (m *Foo) XXX_Size() int {
+	return m.Size()
+}
+func (m *Foo) XXX_DiscardUnknown() {
+	xxx_messageInfo_Foo.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Foo proto.InternalMessageInfo
 
 func (m *Foo) GetId() string {
 	if m != nil {
@@ -356,10 +392,10 @@ var (
 )
 
 func init() {
-	proto.RegisterFile("encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing_no_service.proto", fileDescriptorTestingNoService)
+	proto.RegisterFile("encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing_no_service.proto", fileDescriptor_testing_no_service_cbcc38bc53ab705d)
 }
 
-var fileDescriptorTestingNoService = []byte{
+var fileDescriptor_testing_no_service_cbcc38bc53ab705d = []byte{
 	// 203 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xf2, 0x4f, 0xcd, 0x4b, 0xce,
 	0x4f, 0xc9, 0xcc, 0x4b, 0xd7, 0x2f, 0x28, 0xca, 0x2f, 0xc9, 0x4f, 0x2a, 0x4d, 0x83, 0x30, 0x92,
