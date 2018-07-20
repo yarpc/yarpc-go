@@ -27,6 +27,7 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/peer/peerlist/v2"
 )
 
 type pendingHeap struct {
@@ -39,6 +40,8 @@ type pendingHeap struct {
 	// equal.
 	next int
 }
+
+var _ peerlist.Implementation = (*pendingHeap)(nil)
 
 func (ph *pendingHeap) Choose(ctx context.Context, req *transport.Request) peer.StatusPeer {
 	ph.Lock()
@@ -56,7 +59,7 @@ func (ph *pendingHeap) Choose(ctx context.Context, req *transport.Request) peer.
 	return ps.peer
 }
 
-func (ph *pendingHeap) Add(p peer.StatusPeer) peer.Subscriber {
+func (ph *pendingHeap) Add(p peer.StatusPeer, _ peer.Identifier) peer.Subscriber {
 	if p == nil {
 		return nil
 	}
@@ -70,7 +73,7 @@ func (ph *pendingHeap) Add(p peer.StatusPeer) peer.Subscriber {
 	return ps
 }
 
-func (ph *pendingHeap) Remove(p peer.StatusPeer, sub peer.Subscriber) {
+func (ph *pendingHeap) Remove(p peer.StatusPeer, _ peer.Identifier, sub peer.Subscriber) {
 	ps, ok := sub.(*peerScore)
 	if !ok {
 		return

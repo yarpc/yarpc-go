@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   and `Environment`.
 - Additional transport headers were added to `transport.Response`: `ID`,
   `Host`, `Environment` and `Service`.
+- Added `peer/peerlist/v2` which differs from the original `peer/peerlist` by
+  replacing the use of `api/peer.ListImplementation` with
+  `peer/peerlist/v2.Implementation`, which threads the peer separately from the
+  peer identifier.
+  This allows us to thread shard information from the peer list updater to a
+  sharding peer list.
+- Added connection/disconnection simulation to the `yarpctest` fake transport
+  and peers.
 - x/yarpctest: Added support for specifying outbound middleware.
 
 ## [1.31.0] - 2018-07-09

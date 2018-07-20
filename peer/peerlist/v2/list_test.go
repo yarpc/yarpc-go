@@ -88,14 +88,14 @@ type mraList struct {
 	mrr peer.StatusPeer
 }
 
-var _ peer.ListImplementation = (*mraList)(nil)
+var _ Implementation = (*mraList)(nil)
 
-func (l *mraList) Add(peer peer.StatusPeer) peer.Subscriber {
+func (l *mraList) Add(peer peer.StatusPeer, pid peer.Identifier) peer.Subscriber {
 	l.mra = peer
 	return &mraSub{}
 }
 
-func (l *mraList) Remove(peer peer.StatusPeer, ps peer.Subscriber) {
+func (l *mraList) Remove(peer peer.StatusPeer, pid peer.Identifier, ps peer.Subscriber) {
 	l.mrr = peer
 }
 

@@ -18,20 +18,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package peerlist is deprecated in favor of
-// `go.uber.org/yarpc/peer/peerlist/v2` which can additionally convey peer list
-// identifiers to the peerlist.Implementation without a wrapper type, allowing
-// a peer list updater to communicate shard information for example.
-//
 // Package peerlist provides a utility for managing peer availability with a
 // separate implementation of peer selection from just among available peers.
 // The peer list implements the peer.ChooserList interface and accepts a
-// peer.ListImplementation to provide the implementation-specific concern of,
+// peerlist.Implementation to provide the implementation-specific concern of,
 // for example, a *roundrobin.List.
 //
 // The example is an implementation of peer.ChooserList using a random peer selection
 // strategy, returned by newRandomListImplementation(), implementing
-// peer.ListImplementation.
+// peerlist.Implementation.
 //
 //   type List struct {
 //   	*peerlist.List
