@@ -70,6 +70,8 @@ type ChooserList interface {
 //
 // peerlist.List and ListImplementation compose well with sharding schemes the
 // degenerate to returning the only available peer.
+//
+// Deprecated in favor of "go.uber.org/yarpc/peer/peerlistv2".Implementation.
 type ListImplementation interface {
 	transport.Lifecycle
 
