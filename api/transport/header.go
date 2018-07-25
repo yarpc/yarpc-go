@@ -30,16 +30,27 @@ func CanonicalizeHeaderKey(k string) string {
 	return strings.ToLower(k)
 }
 
-// Headers is the transport-level representation of application headers.
+// Headers is the transport-level representation of headers.
 //
 // 	var headers transport.Headers
 // 	headers = headers.With("foo", "bar")
 // 	headers = headers.With("baz", "qux")
+//
+// Use 'Response' methods to set or get transport response headers
+// written by ResponseWriters.
 type Headers struct {
+	// "items" and "originalItems" are application headers
 	// This representation allows us to make zero-value valid
 	items map[string]string
 	// original non-canonical headers, foo-bar will be treated as different value than Foo-bar
 	originalItems map[string]string
+
+	// the following transport Headers correspond to fields on
+	// transport.Response
+	id          string
+	host        string
+	environment string
+	service     string
 }
 
 // NewHeaders builds a new Headers object.
@@ -76,6 +87,79 @@ func (h Headers) With(k, v string) Headers {
 	return h
 }
 
+// WithResponseID indicates the value Transports should use for "ID" on
+// transport.Response.
+//
+// The returned object MAY not point to the same Headers underlying data store
+// as the original Headers so the returned Headers MUST always be used instead
+// of the original object.
+func (h Headers) WithResponseID(id string) Headers {
+	h.id = id
+	return h
+}
+
+// ResponseID returns the transport response header for "ID".
+//
+// This field MUST map to the "ID" field on transport.Response structs.
+func (h Headers) ResponseID() string {
+	return h.id
+}
+
+// WithResponseHost indicates the value Transports should use for "Host" on
+// transport.Response.
+//
+// The returned object MAY not point to the same Headers underlying data store
+// as the original Headers so the returned Headers MUST always be used instead
+// of the original object.
+func (h Headers) WithResponseHost(host string) Headers {
+	h.host = host
+	return h
+}
+
+// ResponseHost returns the transport response header for "Host".
+//
+// This field MUST map to the "Host" field on transport.Response structs.
+func (h Headers) ResponseHost() string {
+	return h.host
+}
+
+// WithResponseEnvironment indicates the value Transports should use for
+// "Environment" on transport.Response.
+//
+// The returned object MAY not point to the same Headers underlying data store
+// as the original Headers so the returned Headers MUST always be used instead
+// of the original object.
+func (h Headers) WithResponseEnvironment(env string) Headers {
+	h.environment = env
+	return h
+}
+
+// ResponseEnvironment returns the transport response header for "Environment".
+//
+// This field MUST map to the "Environment" field on transport.Response
+// structs.
+func (h Headers) ResponseEnvironment() string {
+	return h.environment
+}
+
+// WithResponseService indicates the value Transports should use for "Service"
+// on transport.Response.
+//
+// The returned object MAY not point to the same Headers underlying data store
+// as the original Headers so the returned Headers MUST always be used instead
+// of the original object.
+func (h Headers) WithResponseService(service string) Headers {
+	h.service = service
+	return h
+}
+
+// ResponseService returns the transport response header for "Service".
+//
+// This field MUST map to the "Service" field on transport.Response structs.
+func (h Headers) ResponseService() string {
+	return h.service
+}
+
 // Del deletes the header with the given name from the Headers map.
 //
 // This is a no-op if the key does not exist.
@@ -84,7 +168,7 @@ func (h Headers) Del(k string) {
 	delete(h.originalItems, k)
 }
 
-// Get retrieves the value associated with the given header name.
+// Get retrieves the value associated with the given application header name.
 func (h Headers) Get(k string) (string, bool) {
 	v, ok := h.items[CanonicalizeHeaderKey(k)]
 	return v, ok
@@ -95,7 +179,7 @@ func (h Headers) Len() int {
 	return len(h.items)
 }
 
-// Items returns the underlying map for this Headers object. The returned map
+// Items returns the underlying map for application headers. The returned map
 // MUST NOT be changed. Doing so will result in undefined behavior.
 //
 // Keys in the map are normalized using CanonicalizeHeaderKey.
@@ -104,7 +188,7 @@ func (h Headers) Items() map[string]string {
 }
 
 // OriginalItems returns the non-canonicalized version of the underlying map
-// for this Headers object. The returned map MUST NOT be changed.
+// for application headers. The returned map MUST NOT be changed.
 // Doing so will result in undefined behavior.
 func (h Headers) OriginalItems() map[string]string {
 	return h.originalItems

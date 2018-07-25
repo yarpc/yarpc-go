@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   and `Environment`.
 - Additional transport headers were added to `transport.Response`: `ID`,
   `Host`, `Environment` and `Service`.
+- `transport.RequestWriter`s can write transport-level response headers.
 
 ## [1.31.0] - 2018-07-09
 ### Added

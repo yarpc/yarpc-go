@@ -188,3 +188,23 @@ func TestItemsAndOriginalItems(t *testing.T) {
 		})
 	}
 }
+
+func TestTransportHeaders(t *testing.T) {
+	const (
+		id      = "test-id"
+		host    = "test-host"
+		env     = "test-env"
+		service = "test-service"
+	)
+
+	headers := NewHeaders().
+		WithResponseID(id).
+		WithResponseHost(host).
+		WithResponseEnvironment(env).
+		WithResponseService(service)
+
+	assert.Equal(t, id, headers.ResponseID())
+	assert.Equal(t, host, headers.ResponseHost())
+	assert.Equal(t, env, headers.ResponseEnvironment())
+	assert.Equal(t, service, headers.ResponseService())
+}
