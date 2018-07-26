@@ -22,8 +22,6 @@ package api
 
 import (
 	"bytes"
-	"context"
-	"testing"
 	"time"
 
 	"go.uber.org/yarpc/api/middleware"
@@ -67,26 +65,3 @@ type RequestOptionFunc func(*RequestOpts)
 
 // ApplyRequest implements RequestOption.
 func (f RequestOptionFunc) ApplyRequest(opts *RequestOpts) { f(opts) }
-
-// UnaryOutboundMiddleware is a wrapper around the middleware.UnaryOutbound and
-// Lifecycle interfaces.
-type UnaryOutboundMiddleware interface {
-	Lifecycle
-	middleware.UnaryOutbound
-}
-
-var _ UnaryOutboundMiddleware = (UnaryOutboundMiddlewareFunc)(nil)
-
-// UnaryOutboundMiddlewareFunc converts a function into a transport.UnaryOutboundMiddleware.
-type UnaryOutboundMiddlewareFunc func(context.Context, *transport.Request, transport.UnaryOutbound) (*transport.Response, error)
-
-// Call implements yarpc/api/transport#UnaryOutboundMiddleware.
-func (f UnaryOutboundMiddlewareFunc) Call(ctx context.Context, req *transport.Request, next transport.UnaryOutbound) (*transport.Response, error) {
-	return f(ctx, req, next)
-}
-
-// Start is a noop for wrapped functions.
-func (f UnaryOutboundMiddlewareFunc) Start(testing.TB) error { return nil }
-
-// Stop is a noop for wrapped functions.
-func (f UnaryOutboundMiddlewareFunc) Stop(testing.TB) error { return nil }
