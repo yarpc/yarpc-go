@@ -174,9 +174,11 @@ func GiveTimeout(duration time.Duration) api.RequestOption {
 }
 
 // UnaryOutboundMiddleware sets unary outbound middleware for a request.
-func UnaryOutboundMiddleware(out ...middleware.UnaryOutbound) api.RequestOption {
+//
+// Multiple invocations will append to existing middleware.
+func UnaryOutboundMiddleware(mw ...middleware.UnaryOutbound) api.RequestOption {
 	return api.RequestOptionFunc(func(opts *api.RequestOpts) {
-		opts.UnaryMiddleware = out
+		opts.UnaryMiddleware = append(opts.UnaryMiddleware, mw...)
 	})
 }
 

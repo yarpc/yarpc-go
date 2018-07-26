@@ -25,6 +25,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
@@ -372,7 +373,7 @@ func TestUnaryOutboundMiddleware(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			require.NoError(t, tt.service.Start(t))
-			defer func() { require.NoError(t, tt.service.Stop(t)) }()
+			defer func() { assert.NoError(t, tt.service.Stop(t)) }()
 			tt.request.Run(t)
 		})
 	}
