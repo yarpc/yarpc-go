@@ -31,6 +31,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/http"
@@ -47,7 +49,8 @@ func HTTPRequest(options ...api.RequestOption) api.Action {
 		}
 
 		trans := http.NewTransport()
-		out := trans.NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d/", opts.Port))
+		httpOut := trans.NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d/", opts.Port))
+		out := middleware.ApplyUnaryOutbound(httpOut, yarpc.UnaryOutboundMiddleware(opts.UnaryMiddleware...))
 
 		require.NoError(t, trans.Start())
 		defer func() { assert.NoError(t, trans.Stop()) }()
@@ -74,7 +77,8 @@ func TChannelRequest(options ...api.RequestOption) api.Action {
 
 		trans, err := tchannel.NewTransport(tchannel.ServiceName(opts.GiveRequest.Caller))
 		require.NoError(t, err)
-		out := trans.NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", opts.Port))
+		tchannelOut := trans.NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", opts.Port))
+		out := middleware.ApplyUnaryOutbound(tchannelOut, yarpc.UnaryOutboundMiddleware(opts.UnaryMiddleware...))
 
 		require.NoError(t, trans.Start())
 		defer func() { assert.NoError(t, trans.Stop()) }()
@@ -100,7 +104,8 @@ func GRPCRequest(options ...api.RequestOption) api.Action {
 		}
 
 		trans := grpc.NewTransport()
-		out := trans.NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", opts.Port))
+		grpcOut := trans.NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", opts.Port))
+		out := middleware.ApplyUnaryOutbound(grpcOut, yarpc.UnaryOutboundMiddleware(opts.UnaryMiddleware...))
 
 		require.NoError(t, trans.Start())
 		defer func() { assert.NoError(t, trans.Stop()) }()
@@ -165,6 +170,13 @@ func Body(msg string) api.RequestOption {
 func GiveTimeout(duration time.Duration) api.RequestOption {
 	return api.RequestOptionFunc(func(opts *api.RequestOpts) {
 		opts.GiveTimeout = duration
+	})
+}
+
+// UnaryOutboundMiddleware sets unary outbound middleware for a request.
+func UnaryOutboundMiddleware(out ...middleware.UnaryOutbound) api.RequestOption {
+	return api.RequestOptionFunc(func(opts *api.RequestOpts) {
+		opts.UnaryMiddleware = out
 	})
 }
 
