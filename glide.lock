@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-07-25T15:05:16.903449031Z
+updated: 2018-07-26T15:05:29.493577807Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -198,7 +198,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 526516e9c4bf5a3f76fe506dec01ca51d04cbe50
+  version: 475b7a1e12f029fbb4d210958352057952ea9f7a
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
