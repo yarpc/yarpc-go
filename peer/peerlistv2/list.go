@@ -420,7 +420,7 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 		if p != nil {
 			t := p.(*peerThunk)
 			pl.notifyPeerAvailable()
-			t.onStart()
+			t.StartRequest()
 			return t.peer, t.boundOnFinish, nil
 		}
 		if err := pl.waitForPeerAddedEvent(ctx); err != nil {

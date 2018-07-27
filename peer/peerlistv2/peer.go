@@ -37,10 +37,6 @@ type peerThunk struct {
 	boundOnFinish func(error)
 }
 
-func (t *peerThunk) onStart() {
-	t.peer.StartRequest()
-}
-
 func (t *peerThunk) onFinish(error) {
 	t.peer.EndRequest()
 }
