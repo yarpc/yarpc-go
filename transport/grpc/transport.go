@@ -21,6 +21,7 @@
 package grpc
 
 import (
+	"crypto/tls"
 	"net"
 	"sync"
 
@@ -102,7 +103,11 @@ func (t *Transport) RetainPeer(peerIdentifier peer.Identifier, peerSubscriber pe
 	p, ok := t.addressToPeer[address]
 	if !ok {
 		var err error
-		p, err = newPeer(address, t)
+		var tlsConfig *tls.Config
+		if tlsIdentifier, ok := peerIdentifier.(*tlsIdentifier); ok {
+			tlsConfig = tlsIdentifier.tlsConfig
+		}
+		p, err = newPeer(address, tlsConfig, t)
 		if err != nil {
 			return nil, err
 		}

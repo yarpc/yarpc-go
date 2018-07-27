@@ -21,9 +21,11 @@
 package grpc
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net"
 
+	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/yarpcconfig"
@@ -103,7 +105,8 @@ type OutboundConfig struct {
 	yarpcconfig.PeerChooser
 
 	// Address to connect to if no peer options set.
-	Address string `config:"address,interpolate"`
+	Address   string      `config:"address,interpolate"`
+	TLSConfig *tls.Config `config:"tls"`
 }
 
 type transportSpec struct {
@@ -188,7 +191,12 @@ func (t *transportSpec) buildOutbound(outboundConfig *OutboundConfig, tr transpo
 		}
 		return trans.NewSingleOutbound(outboundConfig.Address, t.OutboundOptions...), nil
 	}
-	chooser, err := outboundConfig.BuildPeerChooser(trans, hostport.Identify, kit)
+
+	var outTrans peer.Transport = trans
+	if outboundConfig.TLSConfig != nil {
+		outTrans = &tlsTransport{trans: trans, tlsConfig: outboundConfig.TLSConfig}
+	}
+	chooser, err := outboundConfig.BuildPeerChooser(outTrans, hostport.Identify, kit)
 	if err != nil {
 		return nil, err
 	}
