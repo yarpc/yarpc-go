@@ -26,7 +26,7 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	peerlist "go.uber.org/yarpc/peer/peerlistv2"
+	"go.uber.org/yarpc/peer/peerlist/v2"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 

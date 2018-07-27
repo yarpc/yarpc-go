@@ -19,7 +19,7 @@
 // THE SOFTWARE.
 
 // Package peerlist is depracted in favor of
-// `go.uber.org/yarpc/peer/peerlistv2` which can additionally convey peer list
+// `go.uber.org/yarpc/peer/peerlist/v2` which can additionally convey peer list
 // identifiers to the peerlist.Implementation without a wrapper type, allowing
 // a peer list updater to communicate shard information for example.
 //

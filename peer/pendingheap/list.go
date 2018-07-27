@@ -22,7 +22,7 @@ package pendingheap
 
 import (
 	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/peer/peerlistv2"
+	"go.uber.org/yarpc/peer/peerlist/v2"
 )
 
 type listConfig struct {
