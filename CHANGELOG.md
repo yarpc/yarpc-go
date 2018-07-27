@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   peer identifier.
   This allows us to thread shard information from the peer list updater to a
   sharding peer list.
+- Added connection/disconnection simulation to the `yarpctest` fake transport
+  and peers.
 - x/yarpctest: Added support for specifying outbound middleware.
 
 ## [1.31.0] - 2018-07-09
