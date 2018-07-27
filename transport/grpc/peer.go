@@ -22,6 +22,7 @@ package grpc
 
 import (
 	"context"
+	"crypto/tls"
 	"sync"
 
 	"go.uber.org/yarpc/api/peer"
@@ -44,7 +45,7 @@ type grpcPeer struct {
 	stoppedErr error
 }
 
-func newPeer(address string, t *Transport) (*grpcPeer, error) {
+func newPeer(address string, tlsConfig *tls.Config, t *Transport) (*grpcPeer, error) {
 	dialOptions := []grpc.DialOption{
 		grpc.WithUserAgent(UserAgent),
 		grpc.WithDefaultCallOptions(
@@ -57,9 +58,12 @@ func newPeer(address string, t *Transport) (*grpcPeer, error) {
 		dialOptions = append(dialOptions, grpc.WithTransportCredentials(credentials.NewTLS(t.options.clientTLSConfig)))
 	} else if t.options.clientTLS {
 		dialOptions = append(dialOptions, grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")))
+	} else if tlsConfig != nil {
+		dialOptions = append(dialOptions, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
 	} else {
 		dialOptions = append(dialOptions, grpc.WithInsecure())
 	}
+
 	clientConn, err := grpc.Dial(address, dialOptions...)
 	if err != nil {
 		return nil, err
