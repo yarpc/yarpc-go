@@ -26,6 +26,7 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	peerlist "go.uber.org/yarpc/peer/peerlist/v2"
 )
 
 type randomList struct {
@@ -40,9 +41,9 @@ func newRandomList(cap int, source rand.Source) *randomList {
 	}
 }
 
-var _ peer.ListImplementation = (*randomList)(nil)
+var _ peerlist.Implementation = (*randomList)(nil)
 
-func (r *randomList) Add(peer peer.StatusPeer) peer.Subscriber {
+func (r *randomList) Add(peer peer.StatusPeer, _ peer.Identifier) peer.Subscriber {
 	index := len(r.subscribers)
 	r.subscribers = append(r.subscribers, &subscriber{
 		index: index,
@@ -51,7 +52,7 @@ func (r *randomList) Add(peer peer.StatusPeer) peer.Subscriber {
 	return r.subscribers[index]
 }
 
-func (r *randomList) Remove(peer peer.StatusPeer, sub peer.Subscriber) {
+func (r *randomList) Remove(peer peer.StatusPeer, _ peer.Identifier, sub peer.Subscriber) {
 	if sub, ok := sub.(*subscriber); ok && len(r.subscribers) > 0 {
 		index := sub.index
 		last := len(r.subscribers) - 1
