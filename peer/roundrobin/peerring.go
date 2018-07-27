@@ -26,6 +26,7 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	peerlist "go.uber.org/yarpc/peer/peerlistv2"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -50,6 +51,8 @@ func (s *subscriber) NotifyStatusChanged(pid peer.Identifier) {
 type peerRing struct {
 	nextNode *ring.Ring
 }
+
+var _ peerlist.Implementation = (*peerRing)(nil)
 
 // Add a peer.StatusPeer to the end of the peerRing, if the ring is empty it
 // initializes the nextNode marker
