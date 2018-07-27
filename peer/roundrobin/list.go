@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/peer/peerlist"
+	"go.uber.org/yarpc/peer/peerlistv2"
 )
 
 type listConfig struct {

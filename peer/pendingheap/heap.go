@@ -56,7 +56,7 @@ func (ph *pendingHeap) Choose(ctx context.Context, req *transport.Request) peer.
 	return ps.peer
 }
 
-func (ph *pendingHeap) Add(p peer.StatusPeer) peer.Subscriber {
+func (ph *pendingHeap) Add(p peer.StatusPeer, _ peer.Identifier) peer.Subscriber {
 	if p == nil {
 		return nil
 	}
@@ -70,7 +70,7 @@ func (ph *pendingHeap) Add(p peer.StatusPeer) peer.Subscriber {
 	return ps
 }
 
-func (ph *pendingHeap) Remove(p peer.StatusPeer, sub peer.Subscriber) {
+func (ph *pendingHeap) Remove(p peer.StatusPeer, _ peer.Identifier, sub peer.Subscriber) {
 	ps, ok := sub.(*peerScore)
 	if !ok {
 		return

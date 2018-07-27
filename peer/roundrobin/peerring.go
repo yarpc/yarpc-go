@@ -53,7 +53,7 @@ type peerRing struct {
 
 // Add a peer.StatusPeer to the end of the peerRing, if the ring is empty it
 // initializes the nextNode marker
-func (pr *peerRing) Add(p peer.StatusPeer) peer.Subscriber {
+func (pr *peerRing) Add(p peer.StatusPeer, _ peer.Identifier) peer.Subscriber {
 	sub := &subscriber{peer: p}
 	newNode := ring.New(1)
 	newNode.Value = sub
@@ -71,7 +71,7 @@ func (pr *peerRing) Add(p peer.StatusPeer) peer.Subscriber {
 
 // Remove the peer from the ring. Use the subscriber to address the node of the
 // ring directly.
-func (pr *peerRing) Remove(p peer.StatusPeer, s peer.Subscriber) {
+func (pr *peerRing) Remove(p peer.StatusPeer, _ peer.Identifier, s peer.Subscriber) {
 	sub, ok := s.(*subscriber)
 	if !ok {
 		// Don't panic.
