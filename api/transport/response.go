@@ -68,3 +68,46 @@ type ResponseWriter interface {
 	// of Write().
 	SetApplicationError()
 }
+
+// ResponseMetaWriter returns a ResponseMeta struct that handlers and inbound
+// middleware may use to modify transport.Response fields.
+//
+// ResponseWriter implementations should implement this interface with the
+// intention of users attempting an upcast.
+type ResponseMetaWriter interface {
+	ResponseMeta() *ResponseMeta
+}
+
+// ResponseMeta is the low level response metadata representation. This struct
+// MUST be inspected by transports to map corresponding transport.Response
+// fields, after a handler is called.
+//
+// ResponseWriters should expose this struct using the ResponseMetaWriter
+// interface.
+//
+// There should be one per request.
+type ResponseMeta struct {
+	// ID of the response as chosen by the client. This MAY be a trace ID or
+	// UUID.
+	//
+	// If the corresponding transport.Request struct has this field set, this
+	// field MUST have the same value.
+	ID string
+
+	// Host is the name of the server responding with this reponse.
+	//
+	// It MAY be set by a an environment-aware middleware.
+	Host string
+
+	// Environment is the name of the host environment that the request was
+	// issued from. eg "staging", "production"
+	//
+	// It MAY be set by a an environment-aware middleware.
+	Environment string
+
+	// Service is the name of the responding service.
+	Service string
+
+	Headers          Headers
+	ApplicationError bool
+}
