@@ -486,9 +486,9 @@ func (pl *List) notifyStatusChanged(pid peer.Identifier) {
 	// No action required
 }
 
-// handleAvailablePeerStatusChange checks the connection status of a connected peer to potentially
-// move that Peer from the PeerRing to the unavailable peer map
-// Must be run in a mutex.Lock()
+// handleAvailablePeerStatusChange checks the connection status of a connected
+// peer to potentially move that Peer from the implementation data structure to
+// the unavailable peer map Must be run in a mutex.Lock()
 func (pl *List) handleAvailablePeerStatusChange(t *peerThunk) error {
 	if t.peer.Status().ConnectionStatus == peer.Available {
 		// Peer is in the proper pool, ignore

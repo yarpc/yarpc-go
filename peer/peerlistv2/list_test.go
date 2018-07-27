@@ -21,12 +21,16 @@
 package peerlist
 
 import (
+	"context"
 	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/yarpctest"
 )
 
 const (
@@ -76,4 +80,145 @@ func TestShuffle(t *testing.T) {
 			assert.Equal(t, test.want, shuffle(randSrc, test.in))
 		})
 	}
+}
+
+// most recently added peer list implementation for the test.
+type mraList struct {
+	mra peer.StatusPeer
+	mrr peer.StatusPeer
+}
+
+var _ Implementation = (*mraList)(nil)
+
+func (l *mraList) Add(peer peer.StatusPeer, pid peer.Identifier) peer.Subscriber {
+	l.mra = peer
+	return &mraSub{}
+}
+
+func (l *mraList) Remove(peer peer.StatusPeer, pid peer.Identifier, ps peer.Subscriber) {
+	l.mrr = peer
+}
+
+func (l *mraList) Choose(ctx context.Context, req *transport.Request) peer.StatusPeer {
+	return l.mra
+}
+
+func (l *mraList) Start() error {
+	return nil
+}
+
+func (l *mraList) Stop() error {
+	return nil
+}
+
+func (l *mraList) IsRunning() bool {
+	return true
+}
+
+type mraSub struct {
+}
+
+func (s *mraSub) NotifyStatusChanged(pid peer.Identifier) {
+}
+
+func TestPeerList(t *testing.T) {
+	fake := yarpctest.NewFakeTransport()
+	impl := &mraList{}
+	list := New("mra", fake, impl, Capacity(1), NoShuffle(), Seed(0))
+
+	peers := list.Peers()
+	assert.Len(t, peers, 0)
+
+	assert.NoError(t, list.Update(peer.ListUpdates{
+		Additions: []peer.Identifier{
+			hostport.Identify("1.1.1.1:4040"),
+			hostport.Identify("2.2.2.2:4040"),
+		},
+		Removals: []peer.Identifier{},
+	}))
+
+	// Invalid updates before start
+	assert.Error(t, list.Update(peer.ListUpdates{
+		Additions: []peer.Identifier{
+			hostport.Identify("1.1.1.1:4040"),
+		},
+		Removals: []peer.Identifier{
+			hostport.Identify("3.3.3.3:4040"),
+		},
+	}))
+
+	assert.Equal(t, 0, list.NumAvailable())
+	assert.Equal(t, 0, list.NumUnavailable())
+	assert.Equal(t, 2, list.NumUninitialized())
+	assert.False(t, list.Available(hostport.Identify("2.2.2.2:4040")))
+	assert.True(t, list.Uninitialized(hostport.Identify("2.2.2.2:4040")))
+
+	require.NoError(t, list.Start())
+
+	// Connect to the peer and simulate a request.
+	fake.SimulateConnect(hostport.Identify("2.2.2.2:4040"))
+	assert.Equal(t, 1, list.NumAvailable())
+	assert.Equal(t, 1, list.NumUnavailable())
+	assert.Equal(t, 0, list.NumUninitialized())
+	assert.True(t, list.Available(hostport.Identify("2.2.2.2:4040")))
+	assert.False(t, list.Uninitialized(hostport.Identify("2.2.2.2:4040")))
+	peers = list.Peers()
+	assert.Len(t, peers, 2)
+	p, onFinish, err := list.Choose(context.Background(), &transport.Request{})
+	assert.Equal(t, "2.2.2.2:4040", p.Identifier())
+	require.NoError(t, err)
+	onFinish(nil)
+
+	// Simulate a second connection and request.
+	fake.SimulateConnect(hostport.Identify("1.1.1.1:4040"))
+	assert.Equal(t, 2, list.NumAvailable())
+	assert.Equal(t, 0, list.NumUnavailable())
+	assert.Equal(t, 0, list.NumUninitialized())
+	peers = list.Peers()
+	assert.Len(t, peers, 2)
+	p, onFinish, err = list.Choose(context.Background(), &transport.Request{})
+	assert.Equal(t, "1.1.1.1:4040", p.Identifier())
+	require.NoError(t, err)
+	onFinish(nil)
+
+	fake.SimulateDisconnect(hostport.Identify("2.2.2.2:4040"))
+	assert.Equal(t, "2.2.2.2:4040", impl.mrr.Identifier())
+
+	assert.NoError(t, list.Update(peer.ListUpdates{
+		Additions: []peer.Identifier{
+			hostport.Identify("3.3.3.3:4040"),
+		},
+		Removals: []peer.Identifier{
+			hostport.Identify("2.2.2.2:4040"),
+		},
+	}))
+
+	// Invalid updates
+	assert.Error(t, list.Update(peer.ListUpdates{
+		Additions: []peer.Identifier{
+			hostport.Identify("3.3.3.3:4040"),
+		},
+		Removals: []peer.Identifier{
+			hostport.Identify("4.4.4.4:4040"),
+		},
+	}))
+
+	require.NoError(t, list.Stop())
+
+	// Invalid updates, after stop
+	assert.Error(t, list.Update(peer.ListUpdates{
+		Additions: []peer.Identifier{
+			hostport.Identify("3.3.3.3:4040"),
+		},
+		Removals: []peer.Identifier{
+			hostport.Identify("4.4.4.4:4040"),
+		},
+	}))
+
+	assert.NoError(t, list.Update(peer.ListUpdates{
+		Additions: []peer.Identifier{},
+		Removals: []peer.Identifier{
+			hostport.Identify("3.3.3.3:4040"),
+		},
+	}))
 }
