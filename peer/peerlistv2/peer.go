@@ -62,8 +62,7 @@ func (t *peerThunk) EndRequest() {
 func (t *peerThunk) NotifyStatusChanged(pid peer.Identifier) {
 	t.list.notifyStatusChanged(pid)
 
-	s := t.Subscriber()
-	if s != nil {
+	if s := t.Subscriber(); s != nil {
 		s.NotifyStatusChanged(pid)
 	}
 }
