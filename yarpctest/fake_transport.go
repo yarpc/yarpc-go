@@ -70,8 +70,8 @@ func (t *FakeTransport) SimulateConnect(id peer.Identifier) {
 	t.Peer(id).simulateConnect()
 }
 
-// SimulateConnect simulates a disconnection to the peer, marking the peer as
-// unavailable and notifying subscribers.
+// SimulateDisconnect simulates a disconnection to the peer, marking the peer
+// as unavailable and notifying subscribers.
 func (t *FakeTransport) SimulateDisconnect(id peer.Identifier) {
 	t.Peer(id).simulateDisconnect()
 }
