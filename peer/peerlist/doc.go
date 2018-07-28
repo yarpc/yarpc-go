@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package peerlist is depracted in favor of
+// Package peerlist is deprecated in favor of
 // `go.uber.org/yarpc/peer/peerlist/v2` which can additionally convey peer list
 // identifiers to the peerlist.Implementation without a wrapper type, allowing
 // a peer list updater to communicate shard information for example.
