@@ -40,11 +40,22 @@ func NopTransportOption(nopOption string) FakeTransportOption {
 	}
 }
 
+// InitialConnectionStatus specifies the initial connection status for new
+// peers of this transport.  This is Available by default.  With the status set
+// to Unavailable, the test may manual simmulate connection and disconnection
+// with the SimulateConnect and SimulateDisconnect methods.
+func InitialConnectionStatus(s peer.ConnectionStatus) FakeTransportOption {
+	return func(t *FakeTransport) {
+		t.initialConnectionStatus = s
+	}
+}
+
 // NewFakeTransport returns a fake transport.
 func NewFakeTransport(opts ...FakeTransportOption) *FakeTransport {
 	t := &FakeTransport{
-		Lifecycle: lifecycletest.NewNop(),
-		peers:     make(map[string]*FakePeer),
+		Lifecycle:               lifecycletest.NewNop(),
+		initialConnectionStatus: peer.Available,
+		peers: make(map[string]*FakePeer),
 	}
 	for _, opt := range opts {
 		opt(t)
@@ -55,8 +66,9 @@ func NewFakeTransport(opts ...FakeTransportOption) *FakeTransport {
 // FakeTransport is a fake transport.
 type FakeTransport struct {
 	transport.Lifecycle
-	nopOption string
-	peers     map[string]*FakePeer
+	nopOption               string
+	initialConnectionStatus peer.ConnectionStatus
+	peers                   map[string]*FakePeer
 }
 
 // NopOption returns the configured nopOption. It's fake.
@@ -85,7 +97,7 @@ func (t *FakeTransport) Peer(id peer.Identifier) *FakePeer {
 	p := &FakePeer{
 		id: id.(hostport.PeerIdentifier),
 		status: peer.Status{
-			ConnectionStatus: peer.Available,
+			ConnectionStatus: t.initialConnectionStatus,
 		},
 	}
 	t.peers[id.Identifier()] = p
