@@ -24,17 +24,19 @@ import (
 	"bytes"
 	"time"
 
+	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 )
 
 // RequestOpts are configuration options for a yarpc Request and assertions
 // to make on the response.
 type RequestOpts struct {
-	Port         uint16
-	GiveTimeout  time.Duration
-	GiveRequest  *transport.Request
-	WantResponse *transport.Response
-	WantError    error
+	Port            uint16
+	UnaryMiddleware []middleware.UnaryOutbound
+	GiveTimeout     time.Duration
+	GiveRequest     *transport.Request
+	WantResponse    *transport.Response
+	WantError       error
 }
 
 // NewRequestOpts initializes a RequestOpts struct.
