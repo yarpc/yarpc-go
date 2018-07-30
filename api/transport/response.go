@@ -72,15 +72,24 @@ type ResponseWriter interface {
 // ResponseMetaWriter returns a ResponseMeta struct that handlers and inbound
 // middleware may use to modify transport.Response fields.
 //
-// ResponseWriter implementations should implement this interface with the
-// intention of users attempting an upcast.
+// Middleware and handlers may attempt to upcast ResponseWriters to
+// ResponseMetaWriters to access and write response metadata. Failure to cast
+// MUST be handled.
+//
+//   if metaW, ok := resW.(transport.ResponseMetaWriter); !ok {
+//     meta := metaW.ResponseMeta()
+//     meta.ID = "foo"
+//   }
+//
+// Transport implementations that support writing response metadata should have
+// their ResponseWriters implement ResponseMetaWriter to facilitate this.
 type ResponseMetaWriter interface {
 	ResponseMeta() *ResponseMeta
 }
 
-// ResponseMeta is the low level response metadata representation. This struct
-// MUST be inspected by transports to map corresponding transport.Response
-// fields, after a handler is called.
+// ResponseMeta is the low level response metadata representation. Transports
+// that support writing response metadata with ResponseMetaWriter MUST inspect
+// the final ResponseMeta before writing the response body.
 //
 // ResponseWriters should expose this struct using the ResponseMetaWriter
 // interface.
