@@ -79,13 +79,17 @@ func (t *FakeTransport) SimulateDisconnect(id peer.Identifier) {
 // Peer returns the persistent peer object for that peer identifier for the
 // lifetime of the fake transport.
 func (t *FakeTransport) Peer(id peer.Identifier) *FakePeer {
-	if peer, ok := t.peers[id.Identifier()]; ok {
-		return peer
-	} else {
-		peer := &FakePeer{id: id.(hostport.PeerIdentifier)}
-		t.peers[id.Identifier()] = peer
-		return peer
+	if p, ok := t.peers[id.Identifier()]; ok {
+		return p
 	}
+	p := &FakePeer{
+		id: id.(hostport.PeerIdentifier),
+		status: peer.Status{
+			ConnectionStatus: peer.Available,
+		},
+	}
+	t.peers[id.Identifier()] = p
+	return p
 }
 
 // RetainPeer returns a fake peer.

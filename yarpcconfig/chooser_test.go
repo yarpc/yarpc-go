@@ -308,8 +308,6 @@ func TestChooserConfigurator(t *testing.T) {
 					require.NoError(t, dispatcher.Stop(), "error stopping dispatcher")
 				}()
 
-				// TODO https://github.com/yarpc/yarpc-go/issues/968
-				//require.True(t, dispatcher.IsRunning(), "dispatcher is running")
 				require.True(t, transport.IsRunning(), "transport is running")
 				require.True(t, unary.IsRunning(), "outbound is running")
 				require.True(t, list.IsRunning(), "chooser is running")
