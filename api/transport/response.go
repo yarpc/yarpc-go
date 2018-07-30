@@ -120,3 +120,10 @@ type ResponseMeta struct {
 	Headers          Headers
 	ApplicationError bool
 }
+
+// AddHeaders is a convenience function for appending to existing Headers.
+func (meta *ResponseMeta) AddHeaders(headers Headers) {
+	for k, v := range headers.OriginalItems() {
+		meta.Headers = meta.Headers.With(k, v)
+	}
+}
