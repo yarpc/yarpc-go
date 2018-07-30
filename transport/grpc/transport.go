@@ -96,32 +96,34 @@ func (t *Transport) NewOutbound(peerChooser peer.Chooser, options ...OutboundOpt
 }
 
 // RetainPeer retains the peer.
-func (t *Transport) RetainPeer(peerIdentifier peer.Identifier, peerSubscriber peer.Subscriber) (peer.Peer, error) {
+func (t *Transport) RetainPeer(pid peer.Identifier, ps peer.Subscriber) (peer.Peer, error) {
+	return t.retainPeer(pid, nil, ps)
+}
+
+// retainPeer provides the general implementation of retainPeer for both TLS
+// and non-TLS clients.
+func (t *Transport) retainPeer(pid peer.Identifier, tlsConfig *tls.Config, ps peer.Subscriber) (peer.Peer, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	address := peerIdentifier.Identifier()
+	address := pid.Identifier()
 	p, ok := t.addressToPeer[address]
 	if !ok {
 		var err error
-		var tlsConfig *tls.Config
-		if tlsIdentifier, ok := peerIdentifier.(*tlsIdentifier); ok {
-			tlsConfig = tlsIdentifier.tlsConfig
-		}
 		p, err = newPeer(address, tlsConfig, t)
 		if err != nil {
 			return nil, err
 		}
 		t.addressToPeer[address] = p
 	}
-	p.Subscribe(peerSubscriber)
+	p.Subscribe(ps)
 	return p, nil
 }
 
 // ReleasePeer releases the peer.
-func (t *Transport) ReleasePeer(peerIdentifier peer.Identifier, peerSubscriber peer.Subscriber) error {
+func (t *Transport) ReleasePeer(pid peer.Identifier, ps peer.Subscriber) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	address := peerIdentifier.Identifier()
+	address := pid.Identifier()
 	p, ok := t.addressToPeer[address]
 	if !ok {
 		return peer.ErrTransportHasNoReferenceToPeer{
@@ -129,7 +131,7 @@ func (t *Transport) ReleasePeer(peerIdentifier peer.Identifier, peerSubscriber p
 			PeerIdentifier: address,
 		}
 	}
-	if err := p.Unsubscribe(peerSubscriber); err != nil {
+	if err := p.Unsubscribe(ps); err != nil {
 		return err
 	}
 	if p.NumSubscribers() == 0 {

@@ -6,30 +6,40 @@ import (
 	"go.uber.org/yarpc/api/peer"
 )
 
-type tlsIdentifier struct {
-	id        peer.Identifier
-	tlsConfig *tls.Config
+// WithTLS creates a TLS gRPC transport wrapper.
+// Any outbound and peer list constructed with this TLS decorator will feed the
+// TLS configuration to each peer used by that peer list and client.
+// Use a separate TLS transport for each separate TLS configuration.
+//
+//   trans := grpc.NewTransport()
+//   tlsTrans := trans.WithTLS(&tls.Config{...})
+//   pl := peerheap.New(tlsTrans)
+//   trans.NewOutbound(trans)
+func (t *Transport) WithTLS(tlsConfig *tls.Config) peer.Transport {
+	if tlsConfig == nil {
+		return t
+	}
+	return &tlsTransport{
+		trans:     t,
+		tlsConfig: tlsConfig,
+	}
 }
 
-func (id *tlsIdentifier) Identifier() string {
-	return id.id.Identifier()
-}
-
+// tlsTransport is a decorator for a gRPC transport that threads TLS
+// configuration to the transport for every retained and released peer.
 type tlsTransport struct {
 	trans     *Transport
 	tlsConfig *tls.Config
 }
 
-func (t tlsTransport) RetainPeer(id peer.Identifier, sub peer.Subscriber) (peer.Peer, error) {
-	return t.trans.RetainPeer(&tlsIdentifier{
-		id:        id,
-		tlsConfig: t.tlsConfig,
-	}, sub)
+var _ peer.Transport = (*tlsTransport)(nil)
+
+// RetainPeer retains the identified peer with TLS.
+func (t tlsTransport) RetainPeer(id peer.Identifier, ps peer.Subscriber) (peer.Peer, error) {
+	return t.trans.retainPeer(id, t.tlsConfig, ps)
 }
 
-func (t tlsTransport) ReleasePeer(id peer.Identifier, sub peer.Subscriber) error {
-	return t.trans.ReleasePeer(&tlsIdentifier{
-		id:        id,
-		tlsConfig: t.tlsConfig,
-	}, sub)
+// ReleasePeer releases a TLS peer.
+func (t tlsTransport) ReleasePeer(id peer.Identifier, ps peer.Subscriber) error {
+	return t.trans.ReleasePeer(id, ps)
 }

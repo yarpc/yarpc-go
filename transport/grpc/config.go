@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"net"
 
-	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/yarpcconfig"
@@ -192,10 +191,11 @@ func (t *transportSpec) buildOutbound(outboundConfig *OutboundConfig, tr transpo
 		return trans.NewSingleOutbound(outboundConfig.Address, t.OutboundOptions...), nil
 	}
 
-	var outTrans peer.Transport = trans
-	if outboundConfig.TLSConfig != nil {
-		outTrans = &tlsTransport{trans: trans, tlsConfig: outboundConfig.TLSConfig}
-	}
+	// Optionally decorate the transport with a TLS configuration.  The peer
+	// chooser receives this decorated transport so it can annotate peer
+	// identifiers with the desired TLS configuration for individual peers.
+	outTrans := trans.WithTLS(outboundConfig.TLSConfig)
+
 	chooser, err := outboundConfig.BuildPeerChooser(outTrans, hostport.Identify, kit)
 	if err != nil {
 		return nil, err
