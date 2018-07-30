@@ -54,9 +54,7 @@ func newPeer(address string, tlsConfig *tls.Config, t *Transport) (*grpcPeer, er
 			grpc.MaxCallSendMsgSize(t.options.clientMaxSendMsgSize),
 		),
 	}
-	if t.options.clientTLSConfig != nil {
-		dialOptions = append(dialOptions, grpc.WithTransportCredentials(credentials.NewTLS(t.options.clientTLSConfig)))
-	} else if t.options.clientTLS {
+	if t.options.clientTLS {
 		dialOptions = append(dialOptions, grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")))
 	} else if tlsConfig != nil {
 		dialOptions = append(dialOptions, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))

@@ -130,15 +130,6 @@ func ClientTLS() TransportOption {
 	}
 }
 
-// ClientTLSConfig provides a tls.Config for the GRPC client. This option overrides ClientTLS().
-//
-// The default is not to use TLS.
-func ClientTLSConfig(c *tls.Config) TransportOption {
-	return func(transportOptions *transportOptions) {
-		transportOptions.clientTLSConfig = c
-	}
-}
-
 // InboundOption is an option for an inbound.
 type InboundOption func(*inboundOptions)
 
@@ -168,7 +159,6 @@ type transportOptions struct {
 	clientMaxRecvMsgSize int
 	clientMaxSendMsgSize int
 	clientTLS            bool
-	clientTLSConfig      *tls.Config
 }
 
 func newTransportOptions(options []TransportOption) *transportOptions {
@@ -206,7 +196,18 @@ func newInboundOptions(options []InboundOption) *inboundOptions {
 	return inboundOptions
 }
 
-type outboundOptions struct{}
+type outboundOptions struct {
+	clientTLSConfig *tls.Config
+}
+
+// ClientTLSConfig provides a tls.Config for the GRPC client. This option overrides ClientTLS().
+//
+// The default is not to use TLS.
+func ClientTLSConfig(c *tls.Config) OutboundOption {
+	return func(outboundOptions *outboundOptions) {
+		outboundOptions.clientTLSConfig = c
+	}
+}
 
 func newOutboundOptions(options []OutboundOption) *outboundOptions {
 	outboundOptions := &outboundOptions{}
