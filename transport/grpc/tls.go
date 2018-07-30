@@ -13,8 +13,16 @@ import (
 //
 //   trans := grpc.NewTransport()
 //   tlsTrans := trans.WithTLS(&tls.Config{...})
-//   pl := peerheap.New(tlsTrans)
-//   trans.NewOutbound(trans)
+//   list := roundrobin.New(tlsTrans)
+//   list.Update(peer.ListUpdates{
+//       Additions: []peer.Identifier{
+//           hostport.Identify("127.0.0.1:8080"),
+//       },
+//   })
+//   outbound := trans.NewOutbound(list)
+//   client := theirserviceencoding.Client(outbound)
+//
+// For a nil tlsConfig, returns the transport unmodified.
 func (t *Transport) WithTLS(tlsConfig *tls.Config) peer.Transport {
 	if tlsConfig == nil {
 		return t

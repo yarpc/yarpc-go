@@ -191,9 +191,10 @@ func (t *transportSpec) buildOutbound(outboundConfig *OutboundConfig, tr transpo
 		return trans.NewSingleOutbound(outboundConfig.Address, t.OutboundOptions...), nil
 	}
 
-	// Optionally decorate the transport with a TLS configuration.  The peer
-	// chooser receives this decorated transport so it can annotate peer
-	// identifiers with the desired TLS configuration for individual peers.
+	// Optionally decorate the transport with a TLS configuration.
+	// The peer chooser receives this decorated transport so it can annotate
+	// peer identifiers with the desired TLS configuration for individual
+	// peers.
 	outTrans := trans.WithTLS(outboundConfig.TLSConfig)
 
 	chooser, err := outboundConfig.BuildPeerChooser(outTrans, hostport.Identify, kit)
