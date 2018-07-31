@@ -22,19 +22,18 @@ package yarpctest
 
 import (
 	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/peer/hostport"
 )
 
 // FakePeer is a fake peer with an identifier.
 type FakePeer struct {
-	id          hostport.PeerIdentifier
+	id          peer.Identifier
 	subscribers []peer.Subscriber
 	status      peer.Status
 }
 
 // Identifier returns the fake peer identifier.
 func (p *FakePeer) Identifier() string {
-	return string(p.id)
+	return p.id.Identifier()
 }
 
 // Status returns the fake peer status.
