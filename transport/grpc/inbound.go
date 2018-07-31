@@ -116,8 +116,8 @@ func (i *Inbound) start() error {
 		grpc.MaxSendMsgSize(i.t.options.serverMaxSendMsgSize),
 	}
 
-	if i.options.credentials != nil {
-		serverOptions = append(serverOptions, grpc.Creds(i.options.credentials))
+	if i.options.creds != nil {
+		serverOptions = append(serverOptions, grpc.Creds(i.options.creds))
 	}
 
 	server := grpc.NewServer(serverOptions...)
@@ -152,5 +152,3 @@ func (i *Inbound) stop() error {
 	i.server = nil
 	return nil
 }
-
-type noopGrpcStruct struct{}

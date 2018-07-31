@@ -26,6 +26,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
@@ -35,8 +36,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"crypto/tls"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
@@ -60,7 +59,7 @@ import (
 
 func TestYARPCBasic(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		_, err := e.GetValueYARPC(context.Background(), "foo")
 		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeNotFound, "foo"), err)
 		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", "bar"))
@@ -72,7 +71,7 @@ func TestYARPCBasic(t *testing.T) {
 
 func TestGRPCBasic(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		_, err := e.GetValueGRPC(context.Background(), "foo")
 		assert.Equal(t, status.Error(codes.NotFound, "foo"), err)
 		assert.NoError(t, e.SetValueGRPC(context.Background(), "foo", "bar"))
@@ -83,7 +82,6 @@ func TestGRPCBasic(t *testing.T) {
 }
 
 func TestTLSWithYARPC(t *testing.T) {
-	t.Skip("WIP")
 	for _, test := range []struct {
 		clientValidity      time.Duration
 		serverValidity      time.Duration
@@ -96,7 +94,6 @@ func TestTLSWithYARPC(t *testing.T) {
 			name:           "valid certs both sides",
 		},
 		{
-
 			clientValidity:      1 * time.Minute,
 			serverValidity:      -1 * time.Minute,
 			expectedErrContains: "transport: authentication handshake failed: x509: certificate has expired or is not yet valid",
@@ -111,7 +108,8 @@ func TestTLSWithYARPC(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			scenario := createTLSScenario(t, test.clientValidity, test.serverValidity)
-			serverTLSOpt := ServerCredentials(credentials.NewTLS(&tls.Config{
+
+			serverCreds := credentials.NewTLS(&tls.Config{
 				Certificates: []tls.Certificate{{
 					Certificate: [][]byte{scenario.ServerCert.Raw},
 					Leaf:        scenario.ServerCert,
@@ -119,9 +117,10 @@ func TestTLSWithYARPC(t *testing.T) {
 				}},
 				ClientAuth: tls.RequireAndVerifyClientCert,
 				ClientCAs:  scenario.CAs,
-			}))
+			})
+			inboundTLSOpt := Creds(serverCreds)
 
-			clientTLSOpt := ClientTLSConfig(&tls.Config{
+			clientCreds := credentials.NewTLS(&tls.Config{
 				Certificates: []tls.Certificate{{
 					Certificate: [][]byte{scenario.ClientCert.Raw},
 					Leaf:        scenario.ClientCert,
@@ -129,17 +128,16 @@ func TestTLSWithYARPC(t *testing.T) {
 				}},
 				RootCAs: scenario.CAs,
 			})
+			dialTLSOpt := WithTransportCredentials(clientCreds)
 
-			doWithTestEnv(t, []TransportOption{}, []InboundOption{serverTLSOpt}, []OutboundOption{clientTLSOpt}, func(t *testing.T, e *testEnv) {
+			doWithTestEnv(t, nil, []InboundOption{inboundTLSOpt}, nil, []DialOption{dialTLSOpt}, func(t *testing.T, e *testEnv) {
 				err := e.SetValueYARPC(context.Background(), "foo", "bar")
 				if test.expectedErrContains == "" {
 					assert.NoError(t, err)
 				} else {
 					assert.Contains(t, err.Error(), test.expectedErrContains)
 				}
-			},
-				withNewPeer,
-			)
+			}, withTLSScenario(&scenario))
 		})
 
 	}
@@ -147,7 +145,7 @@ func TestTLSWithYARPC(t *testing.T) {
 
 func TestYARPCWellKnownError(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
 		err := e.SetValueYARPC(context.Background(), "foo", "bar")
 		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "bar 1"), err)
@@ -156,7 +154,7 @@ func TestYARPCWellKnownError(t *testing.T) {
 
 func TestYARPCNamedError(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", "baz 1"))
 		err := e.SetValueYARPC(context.Background(), "foo", "bar")
 		assert.Equal(t, intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", "baz 1"), err)
@@ -165,7 +163,7 @@ func TestYARPCNamedError(t *testing.T) {
 
 func TestYARPCNamedErrorNoMessage(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", ""))
 		err := e.SetValueYARPC(context.Background(), "foo", "bar")
 		assert.Equal(t, intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", ""), err)
@@ -174,7 +172,7 @@ func TestYARPCNamedErrorNoMessage(t *testing.T) {
 
 func TestGRPCWellKnownError(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
 		err := e.SetValueGRPC(context.Background(), "foo", "bar")
 		assert.Equal(t, status.Error(codes.FailedPrecondition, "bar 1"), err)
@@ -183,7 +181,7 @@ func TestGRPCWellKnownError(t *testing.T) {
 
 func TestGRPCNamedError(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", "baz 1"))
 		err := e.SetValueGRPC(context.Background(), "foo", "bar")
 		assert.Equal(t, status.Error(codes.Unknown, "bar: baz 1"), err)
@@ -192,7 +190,7 @@ func TestGRPCNamedError(t *testing.T) {
 
 func TestGRPCNamedErrorNoMessage(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", ""))
 		err := e.SetValueGRPC(context.Background(), "foo", "bar")
 		assert.Equal(t, status.Error(codes.Unknown, "bar"), err)
@@ -201,7 +199,7 @@ func TestGRPCNamedErrorNoMessage(t *testing.T) {
 
 func TestYARPCResponseAndError(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		err := e.SetValueYARPC(context.Background(), "foo", "bar")
 		assert.NoError(t, err)
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
@@ -214,7 +212,7 @@ func TestYARPCResponseAndError(t *testing.T) {
 func TestGRPCResponseAndError(t *testing.T) {
 	t.Skip("grpc-go clients do not support returning both a response and error as of now")
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		err := e.SetValueGRPC(context.Background(), "foo", "bar")
 		assert.NoError(t, err)
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
@@ -227,7 +225,7 @@ func TestGRPCResponseAndError(t *testing.T) {
 func TestYARPCMaxMsgSize(t *testing.T) {
 	t.Parallel()
 	value := strings.Repeat("a", defaultServerMaxRecvMsgSize*2)
-	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		assert.Equal(t, yarpcerrors.CodeResourceExhausted, yarpcerrors.FromError(e.SetValueYARPC(context.Background(), "foo", value)).Code())
 	})
 	doWithTestEnv(t, []TransportOption{
@@ -235,7 +233,7 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 		ClientMaxSendMsgSize(math.MaxInt32),
 		ServerMaxRecvMsgSize(math.MaxInt32),
 		ServerMaxSendMsgSize(math.MaxInt32),
-	}, nil, nil, func(t *testing.T, e *testEnv) {
+	}, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", value))
 		getValue, err := e.GetValueYARPC(context.Background(), "foo")
 		assert.NoError(t, err)
@@ -246,7 +244,7 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 func TestLargeEcho(t *testing.T) {
 	t.Parallel()
 	value := strings.Repeat("a", 32768)
-	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", value))
 		getValue, err := e.GetValueYARPC(context.Background(), "foo")
 		assert.NoError(t, err)
@@ -256,7 +254,7 @@ func TestLargeEcho(t *testing.T) {
 
 func TestApplicationErrorPropagation(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		response, err := e.Call(
 			context.Background(),
 			"GetValue",
@@ -289,13 +287,25 @@ func TestApplicationErrorPropagation(t *testing.T) {
 	})
 }
 
-func doWithTestEnv(t *testing.T, transportOptions []TransportOption, inboundOptions []InboundOption, outboundOptions []OutboundOption, f func(*testing.T, *testEnv), opts ...testEnvOption) {
-	testEnv, err := newTestEnv(transportOptions, inboundOptions, outboundOptions, opts...)
+func doWithTestEnv(t *testing.T, transportOptions []TransportOption, inboundOptions []InboundOption, outboundOptions []OutboundOption, dialOptions []DialOption, f func(*testing.T, *testEnv), opts ...testEnvOption) {
+	testEnv, err := newTestEnv(transportOptions, inboundOptions, outboundOptions, dialOptions, opts...)
 	require.NoError(t, err)
 	defer func() {
 		assert.NoError(t, testEnv.Close())
 	}()
 	f(t, testEnv)
+}
+
+type testEnvOptions struct {
+	tlsScenario *tlsScenario
+}
+
+type testEnvOption func(*testEnvOptions)
+
+func withTLSScenario(tlsScenario *tlsScenario) testEnvOption {
+	return func(o *testEnvOptions) {
+		o.tlsScenario = tlsScenario
+	}
 }
 
 type testEnv struct {
@@ -312,25 +322,16 @@ type testEnv struct {
 	KeyValueYARPCServer *example.KeyValueYARPCServer
 }
 
-type testEnvParams struct {
-	UseNewPeer bool // use outbound.go newPeer instead of grpc.Dial
-}
-
-type testEnvOption func(t *testEnvParams)
-
-func withNewPeer(t *testEnvParams) {
-	t.UseNewPeer = true
-}
-
 func newTestEnv(
 	transportOptions []TransportOption,
 	inboundOptions []InboundOption,
 	outboundOptions []OutboundOption,
+	dialOptions []DialOption,
 	opts ...testEnvOption,
 ) (_ *testEnv, err error) {
-	params := &testEnvParams{}
+	options := &testEnvOptions{}
 	for _, opt := range opts {
-		opt(params)
+		opt(options)
 	}
 
 	keyValueYARPCServer := example.NewKeyValueYARPCServer()
@@ -341,11 +342,6 @@ func newTestEnv(
 	if err := t.Start(); err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err != nil {
-			err = multierr.Append(err, t.Stop())
-		}
-	}()
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -357,47 +353,34 @@ func newTestEnv(
 	if err := inbound.Start(); err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err != nil {
-			err = multierr.Append(err, inbound.Stop())
-		}
-	}()
 
 	var clientConn *grpc.ClientConn
 
-	if params.UseNewPeer {
-		// TODO: get clientTLSConfig here or change how we call newPeer in
-		// integration tests
-		peer, err := newPeer(listener.Addr().String(), nil, t)
-		if err != nil {
-			return nil, err
-		}
-		clientConn = peer.clientConn
+	var credsOption grpc.DialOption
+	if options.tlsScenario != nil {
+		scenario := options.tlsScenario
+		creds := credentials.NewTLS(&tls.Config{
+			Certificates: []tls.Certificate{{
+				Certificate: [][]byte{scenario.ClientCert.Raw},
+				Leaf:        scenario.ClientCert,
+				PrivateKey:  scenario.ClientKey,
+			}},
+			RootCAs: scenario.CAs,
+		})
+		credsOption = grpc.WithTransportCredentials(creds)
 	} else {
-		clientConn, err = grpc.Dial(listener.Addr().String(), grpc.WithInsecure())
-		if err != nil {
-			return nil, err
-		}
+		credsOption = grpc.WithInsecure()
 	}
+	clientConn, err = grpc.Dial(listener.Addr().String(), credsOption)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err != nil {
-			err = multierr.Append(err, clientConn.Close())
-		}
-	}()
 	keyValueClient := examplepb.NewKeyValueClient(clientConn)
 
 	outbound := t.NewSingleOutbound(listener.Addr().String(), outboundOptions...)
 	if err := outbound.Start(); err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err != nil {
-			err = multierr.Append(err, outbound.Stop())
-		}
-	}()
 
 	caller := "example-client"
 	service := "example"
