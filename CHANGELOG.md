@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added connection/disconnection simulation to the `yarpctest` fake transport
   and peers.
 - x/yarpctest: Added support for specifying outbound middleware.
+- yarpctest: Changed `FakePeer` id to use "go.uber.org/yarpc/api/peer".Identifier 
+  interface instead of the concrete "go.uber.org/peer/hostport".Identifier type.
 
 ## [1.31.0] - 2018-07-09
 ### Added

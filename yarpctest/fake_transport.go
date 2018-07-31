@@ -25,7 +25,6 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/lifecycletest"
 )
 
@@ -95,7 +94,7 @@ func (t *FakeTransport) Peer(id peer.Identifier) *FakePeer {
 		return p
 	}
 	p := &FakePeer{
-		id: id.(hostport.PeerIdentifier),
+		id: id,
 		status: peer.Status{
 			ConnectionStatus: t.initialConnectionStatus,
 		},
