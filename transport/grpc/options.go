@@ -51,6 +51,7 @@ type Option interface {
 var _ Option = (TransportOption)(nil)
 var _ Option = (InboundOption)(nil)
 var _ Option = (OutboundOption)(nil)
+var _ Option = (DialOption)(nil)
 
 // TransportOption is an option for a transport.
 type TransportOption func(*transportOptions)
@@ -143,6 +144,8 @@ func (OutboundOption) grpcOption() {}
 // DialOption is an option that influences grpc.Dial.
 type DialOption func(*dialOptions)
 
+func (DialOption) grpcOption() {}
+
 // DialerCredentials returns a DialOption which configures a
 // connection level security credentials (e.g., TLS/SSL).
 func DialerCredentials(creds credentials.TransportCredentials) DialOption {
@@ -221,9 +224,9 @@ func (d *dialOptions) grpcOptions() []grpc.DialOption {
 }
 
 func newDialOptions(options []DialOption) *dialOptions {
-	dialOptions := &dialOptions{}
+	var dopts dialOptions
 	for _, option := range options {
-		option(dialOptions)
+		option(&dopts)
 	}
-	return dialOptions
+	return &dopts
 }

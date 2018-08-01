@@ -99,8 +99,6 @@ func (t *Transport) NewOutbound(peerChooser peer.Chooser, options ...OutboundOpt
 //
 // Deprecated: use grpcTransport.NewDialer(...grpc.DialOption) to create a
 // peer.Transport instead of using the grpc.Transport as a peer.Transport.
-// You will need to explicitly choose either grpc.WithInsecure() or
-// grpc.WithCredentials(...) options.
 func (t *Transport) RetainPeer(pid peer.Identifier, ps peer.Subscriber) (peer.Peer, error) {
 	return t.retainPeer(pid, nil, ps)
 }
@@ -128,8 +126,6 @@ func (t *Transport) retainPeer(pid peer.Identifier, options *dialOptions, ps pee
 //
 // Deprecated: use grpcTransport.NewDialer(...grpc.DialOption) to create a
 // peer.Transport instead of using the grpc.Transport as a peer.Transport.
-// You will need to explicitly choose either grpc.WithInsecure() or
-// grpc.WithCredentials(...) options.
 func (t *Transport) ReleasePeer(pid peer.Identifier, ps peer.Subscriber) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
