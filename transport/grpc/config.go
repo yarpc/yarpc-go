@@ -108,14 +108,14 @@ type InboundTLSConfig struct {
 }
 
 func (c InboundTLSConfig) inboundOptions() ([]InboundOption, error) {
-	if c.Enabled {
-		creds, err := c.newInboundCredentials()
-		if err != nil {
-			return nil, err
-		}
-		return []InboundOption{InboundCredentials(creds)}, nil
+	if !c.Enabled {
+		return nil, nil
 	}
-	return nil, nil
+	creds, err := c.newInboundCredentials()
+	if err != nil {
+		return nil, err
+	}
+	return []InboundOption{InboundCredentials(creds)}, nil
 }
 
 func (c InboundTLSConfig) newInboundCredentials() (credentials.TransportCredentials, error) {
@@ -137,8 +137,6 @@ func (c InboundTLSConfig) newInboundCredentials() (credentials.TransportCredenti
 //  outbounds:
 //    myservice:
 //      grpc:
-//        tls:
-//          enabled: true
 //        round-robin:
 //          peers:
 //            - 127.0.0.1:8080
