@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-07-31T15:05:45.323212442Z
+updated: 2018-08-01T15:04:28.575763969Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -32,7 +32,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 11bd559057bb9c65e24d1bd7f436d375323a8565
+  version: f5983d50c82d70eaa88c17080245cc871558081f
   subpackages:
   - proto
   - ptypes
@@ -66,7 +66,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 7600349dcfe1abd18d72d3a1770870d9800a7801
+  version: c7de2306084e37d54b8be01f3541a8464345e9a5
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -171,7 +171,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: a0f8a16cb08c06df97cbdf9c47f4731ba548c33c
+  version: 49c15d80dfbc983ea25246ee959d970efe09ec09
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -190,6 +190,8 @@ imports:
 - name: golang.org/x/sys
   version: bd9dbc187b6e1dacfdd2722a87e83093c2d7bd6e
   repo: https://github.com/golang/sys
+  subpackages:
+  - unix
 - name: golang.org/x/text
   version: 0605a8320aceb4207a5fb3521281e17ec2075476
   subpackages:
@@ -198,16 +200,16 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 0700b576e4d8bfc20051cc93cfb041e6e52ce8ed
+  version: 33176b2029f9538e722efa4a005f7aa00cf60010
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 2a72893556e4d1f6c795a4c039314c9fa751eedb
+  version: daca94659cb50e9f37c1b834680f2e46358f10b0
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 168a6198bcb0ef175f7dacec0b8691fc141dc9b8
+  version: 32fb0ac620c32ba40a4626ddf94d90d12cce3455
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
@@ -222,7 +224,9 @@ imports:
   - internal
   - internal/backoff
   - internal/channelz
+  - internal/envconfig
   - internal/grpcrand
+  - internal/transport
   - keepalive
   - metadata
   - naming
@@ -233,7 +237,6 @@ imports:
   - stats
   - status
   - tap
-  - transport
 - name: gopkg.in/yaml.v2
   version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
 testImports:
