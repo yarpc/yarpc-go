@@ -23,9 +23,10 @@ package grpc
 import (
 	"math"
 
-	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/backoff"
 	intbackoff "go.uber.org/yarpc/internal/backoff"
+
+	"github.com/opentracing/opentracing-go"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -126,9 +127,9 @@ type InboundOption func(*inboundOptions)
 
 func (InboundOption) grpcOption() {}
 
-// Creds returns an InboundOption that sets credentials for incoming
+// InboundCredentials returns an InboundOption that sets credentials for incoming
 // connections.
-func Creds(creds credentials.TransportCredentials) InboundOption {
+func InboundCredentials(creds credentials.TransportCredentials) InboundOption {
 	return func(inboundOptions *inboundOptions) {
 		inboundOptions.creds = creds
 	}
@@ -142,9 +143,9 @@ func (OutboundOption) grpcOption() {}
 // DialOption is an option that influences grpc.Dial.
 type DialOption func(*dialOptions)
 
-// WithTransportCredentials returns a DialOption which configures a
+// DialerCredentials returns a DialOption which configures a
 // connection level security credentials (e.g., TLS/SSL).
-func WithTransportCredentials(creds credentials.TransportCredentials) DialOption {
+func DialerCredentials(creds credentials.TransportCredentials) DialOption {
 	return func(dialOptions *dialOptions) {
 		dialOptions.creds = creds
 	}

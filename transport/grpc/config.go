@@ -80,6 +80,12 @@ type TransportConfig struct {
 // inbounds:
 //   grpc:
 //     address: ":80"
+//
+// A gRPC inbound can also enable TLS from key and cert files.
+//
+// inbounds:
+//   grpc:
+//     address: ":443"
 //     tls:
 //       enabled: true
 //       keyFile: "/path/to/key"
@@ -103,16 +109,16 @@ type InboundTLSConfig struct {
 
 func (c InboundTLSConfig) inboundOptions() ([]InboundOption, error) {
 	if c.Enabled {
-		creds, err := c.newServerCreds()
+		creds, err := c.newInboundCredentials()
 		if err != nil {
 			return nil, err
 		}
-		return []InboundOption{Creds(creds)}, nil
+		return []InboundOption{InboundCredentials(creds)}, nil
 	}
 	return nil, nil
 }
 
-func (c InboundTLSConfig) newServerCreds() (credentials.TransportCredentials, error) {
+func (c InboundTLSConfig) newInboundCredentials() (credentials.TransportCredentials, error) {
 	if c.CertFile != "" && c.KeyFile != "" {
 		return credentials.NewServerTLSFromFile(c.CertFile, c.KeyFile)
 	}
@@ -137,6 +143,16 @@ func (c InboundTLSConfig) newServerCreds() (credentials.TransportCredentials, er
 //          peers:
 //            - 127.0.0.1:8080
 //            - 127.0.0.1:8081
+//
+// A gRPC outbound can enable TLS using system cert.Pool.
+//
+//  outbounds:
+//    mysecureservice:
+//      grpc:
+//        address: ":443"
+//        tls:
+//          enabled: true
+//
 type OutboundConfig struct {
 	yarpcconfig.PeerChooser
 
@@ -155,12 +171,12 @@ type OutboundTLSConfig struct {
 }
 
 func (c OutboundTLSConfig) dialOptions() []DialOption {
-	if c.Enabled {
-		creds := credentials.NewClientTLSFromCert(nil, "")
-		option := WithTransportCredentials(creds)
-		return []DialOption{option}
+	if !c.Enabled {
+		return nil
 	}
-	return nil
+	creds := credentials.NewClientTLSFromCert(nil, "")
+	option := DialerCredentials(creds)
+	return []DialOption{option}
 }
 
 type transportSpec struct {

@@ -85,6 +85,7 @@ func (t *Transport) NewInbound(listener net.Listener, options ...InboundOption) 
 }
 
 // NewSingleOutbound returns a new Outbound for the given adrress.
+// Note: This does not support TLS. See TLS example in doc.go.
 func (t *Transport) NewSingleOutbound(address string, options ...OutboundOption) *Outbound {
 	return newSingleOutbound(t, address, options...)
 }

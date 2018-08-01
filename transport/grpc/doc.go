@@ -40,10 +40,56 @@
 //     Inbounds: yarpc.Inbounds{myInbound},
 //   })
 //
+// To configure TLS on your service listener, pass
+// credentials.TransportCredentials as an InboundCredentials InboundOption.
+// There are various ways to create credentials.TransportCredentials. See
+// https://godoc.org/google.golang.org/grpc/credentials#TransportCredentials.
+//
+//   listener, err := net.Listen("tcp", ":4443")
+//   if err != nil {
+//     return err
+//   }
+//
+//   myTLSConfig := &tls.Config{
+//     // any arbitrary valid tls.Config
+//   }
+//   myTransportCredentials := credentials.NewTLS(myTLSConfig)
+//   myInboundCredentials := InboundCredentials(myTransportCredentials)
+//   myInbound := grpcTransport.NewInbound(
+//     listener,
+//     []InboundOption{myInboundCredentials},
+//   )
+//   dispatcher := yarpc.NewDispatcher(yarpc.Config{
+//     Name: "myservice",
+//     Inbounds: yarpc.Inbounds{myInbound},
+//   })
+//
 // To make requests to a YARPC application that supports gRPC, pass a gRPC
 // outbound in your yarpc.Config.
 //
 //   myserviceOutbound := grpcTransport.NewSingleOutbound("127.0.0.1:8080")
+//   dispatcher := yarpc.NewDispatcher(yarpc.Config{
+//     Name: "myclient",
+//     Outbounds: yarpc.Outbounds{
+//       "myservice": {Unary: myserviceOutbound},
+//     },
+//   })
+//
+// To make requests using TLS to an application supporting gRPC over TLS, pass
+// credentials.TransportCredentials as a DialerCredentials DialOption. There
+// are various ways to create credentials.TransportCredentials. See
+// https://godoc.org/google.golang.org/grpc/credentials#TransportCredentials.
+//
+//   myTLSConfig := &tls.Config{
+//     // any arbitrary valid tls.Config
+//   }
+//   myTransportCredentials := credentials.NewTLS(myTLSConfig)
+//   myDialOptions := []DialOption{DialerCredentials(myTransportCredentials)}
+//   myChooser := peer.NewSingle(
+//     hostport.Identify("127.0.0.1:4443"),
+//     t.NewDialer(myDialOptions...),
+//   )
+//   myserviceOutbound := grpcTransport.NewOutbound(myChooser)
 //   dispatcher := yarpc.NewDispatcher(yarpc.Config{
 //     Name: "myclient",
 //     Outbounds: yarpc.Outbounds{

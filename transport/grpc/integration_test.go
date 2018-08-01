@@ -120,7 +120,7 @@ func TestTLSWithYARPC(t *testing.T) {
 				ClientAuth: tls.RequireAndVerifyClientCert,
 				ClientCAs:  scenario.CAs,
 			})
-			inboundTLSOpt := Creds(serverCreds)
+			inboundTLSOpt := InboundCredentials(serverCreds)
 
 			clientCreds := credentials.NewTLS(&tls.Config{
 				Certificates: []tls.Certificate{{
@@ -130,7 +130,7 @@ func TestTLSWithYARPC(t *testing.T) {
 				}},
 				RootCAs: scenario.CAs,
 			})
-			dialTLSOpt := WithTransportCredentials(clientCreds)
+			dialTLSOpt := DialerCredentials(clientCreds)
 
 			doWithTestEnv(t, nil, []InboundOption{inboundTLSOpt}, nil, []DialOption{dialTLSOpt}, func(t *testing.T, e *testEnv) {
 				err := e.SetValueYARPC(context.Background(), "foo", "bar")
