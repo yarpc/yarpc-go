@@ -49,14 +49,14 @@ import (
 	"go.uber.org/yarpc/internal/grpcctx"
 	"go.uber.org/yarpc/internal/testtime"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
+	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/procedure"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
-	"go.uber.org/yarpc/peer"
-	"go.uber.org/yarpc/peer/hostport"
 )
 
 func TestYARPCBasic(t *testing.T) {
