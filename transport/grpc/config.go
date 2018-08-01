@@ -93,18 +93,18 @@ type TransportConfig struct {
 type InboundConfig struct {
 	// Address to listen on. This field is required.
 	Address string           `config:"address,interpolate"`
-	TLS     InboundTLSConfig `config:"tls,optional"`
+	TLS     InboundTLSConfig `config:"tls"`
 }
 
 func (c InboundConfig) inboundOptions() ([]InboundOption, error) {
 	return c.TLS.inboundOptions()
 }
 
-// InboundTLSConfig configures a gRPC inbound TLS credentials.
+// InboundTLSConfig specifies the TLS configuration for the gRPC inbound.
 type InboundTLSConfig struct {
-	Enabled  bool   `config:"enabled,optional"`
-	CertFile string `config:"certFile,optional"`
-	KeyFile  string `config:"keyFile,optional"`
+	Enabled  bool   `config:"enabled"` // disabled by default
+	CertFile string `config:"certFile,interpolate"`
+	KeyFile  string `config:"keyFile,interpolate"`
 }
 
 func (c InboundTLSConfig) inboundOptions() ([]InboundOption, error) {
@@ -142,10 +142,10 @@ func (c InboundTLSConfig) newInboundCredentials() (credentials.TransportCredenti
 //            - 127.0.0.1:8080
 //            - 127.0.0.1:8081
 //
-// A gRPC outbound can enable TLS using system cert.Pool.
+// A gRPC outbound can enable TLS using the system cert.Pool.
 //
 //  outbounds:
-//    mysecureservice:
+//    theirsecureservice:
 //      grpc:
 //        address: ":443"
 //        tls:
@@ -156,7 +156,7 @@ type OutboundConfig struct {
 
 	// Address to connect to if no peer options set.
 	Address string            `config:"address,interpolate"`
-	TLS     OutboundTLSConfig `config:"tls,optional"`
+	TLS     OutboundTLSConfig `config:"tls"`
 }
 
 func (c OutboundConfig) dialOptions() []DialOption {
@@ -165,7 +165,7 @@ func (c OutboundConfig) dialOptions() []DialOption {
 
 // OutboundTLSConfig configures TLS for a gRPC outbound.
 type OutboundTLSConfig struct {
-	Enabled bool `config:"enabled,optional"`
+	Enabled bool `config:"enabled"`
 }
 
 func (c OutboundTLSConfig) dialOptions() []DialOption {
@@ -236,7 +236,7 @@ func (t *transportSpec) buildInbound(inboundConfig *InboundConfig, tr transport.
 	}
 	inboundOptions, err := inboundConfig.inboundOptions()
 	if err != nil {
-		return nil, fmt.Errorf("cannot build gRPC inbound from given configuration: %s", err)
+		return nil, fmt.Errorf("cannot build gRPC inbound from given configuration: %v", err)
 	}
 	return trans.NewInbound(listener, append(t.InboundOptions, inboundOptions...)...), nil
 }
@@ -279,5 +279,5 @@ func newTransportCastError(tr transport.Transport) error {
 }
 
 func newRequiredFieldMissingError(field string) error {
-	return fmt.Errorf("required field missing: %s", field)
+	return fmt.Errorf("required field missing: %v", field)
 }

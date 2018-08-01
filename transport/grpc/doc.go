@@ -54,10 +54,9 @@
 //     // any arbitrary valid tls.Config
 //   }
 //   myTransportCredentials := credentials.NewTLS(myTLSConfig)
-//   myInboundCredentials := InboundCredentials(myTransportCredentials)
 //   myInbound := grpcTransport.NewInbound(
 //     listener,
-//     []InboundOption{myInboundCredentials},
+//     InboundCredentials(myInboundCredentials),
 //   )
 //   dispatcher := yarpc.NewDispatcher(yarpc.Config{
 //     Name: "myservice",
@@ -84,10 +83,9 @@
 //     // any arbitrary valid tls.Config
 //   }
 //   myTransportCredentials := credentials.NewTLS(myTLSConfig)
-//   myDialOptions := []DialOption{DialerCredentials(myTransportCredentials)}
 //   myChooser := peer.NewSingle(
 //     hostport.Identify("127.0.0.1:4443"),
-//     t.NewDialer(myDialOptions...),
+//     t.NewDialer(DialerCredentials(myTransportCredentials)),
 //   )
 //   myserviceOutbound := grpcTransport.NewOutbound(myChooser)
 //   dispatcher := yarpc.NewDispatcher(yarpc.Config{
