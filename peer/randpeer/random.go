@@ -89,4 +89,4 @@ type subscriber struct {
 
 var _ peer.Subscriber = (*subscriber)(nil)
 
-func (s *subscriber) NotifyStatusChanged(peer.Identifier) {}
+func (*subscriber) NotifyStatusChanged(peer.Identifier) {}

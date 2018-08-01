@@ -21,7 +21,6 @@
 package randpeer
 
 import (
-	"fmt"
 	"math/rand"
 	"time"
 
@@ -38,7 +37,7 @@ var defaultListOptions = listOptions{
 	capacity: 10,
 }
 
-// ListOption customizes the behavior of a roundrobin list.
+// ListOption customizes the behavior of a random list.
 type ListOption interface {
 	apply(*listOptions)
 }
@@ -60,7 +59,6 @@ func Capacity(capacity int) ListOption {
 // Seed specifies the seed for generating random choices.
 func Seed(seed int64) ListOption {
 	return listOptionFunc(func(options *listOptions) {
-		fmt.Printf("HERE %d\n", seed)
 		options.source = rand.NewSource(seed)
 	})
 }
@@ -72,7 +70,7 @@ func Source(source rand.Source) ListOption {
 	})
 }
 
-// New creates a new round robin peer list.
+// New creates a new random peer list.
 func New(transport peer.Transport, opts ...ListOption) *List {
 	options := defaultListOptions
 	for _, opt := range opts {
