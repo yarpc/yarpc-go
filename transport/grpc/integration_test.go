@@ -296,20 +296,14 @@ func TestApplicationErrorPropagation(t *testing.T) {
 	})
 }
 
-func doWithTestEnv(t *testing.T, transportOptions []TransportOption, inboundOptions []InboundOption, outboundOptions []OutboundOption, dialOptions []DialOption, f func(*testing.T, *testEnv), opts ...testEnvOption) {
-	testEnv, err := newTestEnv(transportOptions, inboundOptions, outboundOptions, dialOptions, opts...)
+func doWithTestEnv(t *testing.T, transportOptions []TransportOption, inboundOptions []InboundOption, outboundOptions []OutboundOption, dialOptions []DialOption, f func(*testing.T, *testEnv)) {
+	testEnv, err := newTestEnv(transportOptions, inboundOptions, outboundOptions, dialOptions)
 	require.NoError(t, err)
 	defer func() {
 		assert.NoError(t, testEnv.Close())
 	}()
 	f(t, testEnv)
 }
-
-type testEnvOptions struct {
-	tlsScenario *tlsScenario
-}
-
-type testEnvOption func(*testEnvOptions)
 
 type testEnv struct {
 	Caller              string
@@ -330,13 +324,7 @@ func newTestEnv(
 	inboundOptions []InboundOption,
 	outboundOptions []OutboundOption,
 	dialOptions []DialOption,
-	opts ...testEnvOption,
 ) (_ *testEnv, err error) {
-	options := &testEnvOptions{}
-	for _, opt := range opts {
-		opt(options)
-	}
-
 	keyValueYARPCServer := example.NewKeyValueYARPCServer()
 	procedures := examplepb.BuildKeyValueYARPCProcedures(keyValueYARPCServer)
 	testRouter := newTestRouter(procedures)

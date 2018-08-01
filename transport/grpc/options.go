@@ -139,7 +139,7 @@ type OutboundOption func(*outboundOptions)
 
 func (OutboundOption) grpcOption() {}
 
-// DialOption is an option that influences grpc.Dial
+// DialOption is an option that influences grpc.Dial.
 type DialOption func(*dialOptions)
 
 // WithTransportCredentials returns a DialOption which configures a
