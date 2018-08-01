@@ -84,30 +84,33 @@ func TestGRPCBasic(t *testing.T) {
 }
 
 func TestTLSWithYARPC(t *testing.T) {
-	for _, test := range []struct {
+
+	tests := []struct {
 		clientValidity      time.Duration
 		serverValidity      time.Duration
 		expectedErrContains string
 		name                string
 	}{
 		{
-			clientValidity: 1 * time.Minute,
-			serverValidity: 1 * time.Minute,
+			clientValidity: time.Minute,
+			serverValidity: time.Minute,
 			name:           "valid certs both sides",
 		},
 		{
-			clientValidity:      1 * time.Minute,
-			serverValidity:      -1 * time.Minute,
+			clientValidity:      time.Minute,
+			serverValidity:      -1,
 			expectedErrContains: "transport: authentication handshake failed: x509: certificate has expired or is not yet valid",
 			name:                "invalid server cert",
 		},
 		{
-			clientValidity:      -1 * time.Minute,
-			serverValidity:      1 * time.Minute,
+			clientValidity:      -1,
+			serverValidity:      time.Minute,
 			expectedErrContains: "remote error: tls: bad certificate",
 			name:                "invalid client cert",
 		},
-	} {
+	}
+
+	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			scenario := createTLSScenario(t, test.clientValidity, test.serverValidity)
 
@@ -134,21 +137,21 @@ func TestTLSWithYARPC(t *testing.T) {
 
 			doWithTestEnv(t, nil, []InboundOption{inboundTLSOpt}, nil, []DialOption{dialTLSOpt}, func(t *testing.T, e *testEnv) {
 				err := e.SetValueYARPC(context.Background(), "foo", "bar")
-				if test.expectedErrContains == "" {
-					assert.NoError(t, err)
-				} else {
-					assert.Contains(t, err.Error(), test.expectedErrContains)
-				}
+				expectErrorContains(t, err, test.expectedErrContains)
 
 				err = e.SetValueGRPC(context.Background(), "foo", "bar")
-				if test.expectedErrContains == "" {
-					assert.NoError(t, err)
-				} else {
-					assert.Contains(t, err.Error(), test.expectedErrContains)
-				}
+				expectErrorContains(t, err, test.expectedErrContains)
 			})
 		})
+	}
+}
 
+func expectErrorContains(t *testing.T, err error, contains string) {
+	if contains == "" {
+		assert.NoError(t, err)
+	} else {
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), contains)
 	}
 }
 
