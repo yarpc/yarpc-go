@@ -55,6 +55,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
+	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/peer/hostport"
 )
 
 func TestYARPCBasic(t *testing.T) {
@@ -131,7 +133,14 @@ func TestTLSWithYARPC(t *testing.T) {
 			dialTLSOpt := WithTransportCredentials(clientCreds)
 
 			doWithTestEnv(t, nil, []InboundOption{inboundTLSOpt}, nil, []DialOption{dialTLSOpt}, func(t *testing.T, e *testEnv) {
-				err := e.SetValueGRPC(context.Background(), "foo", "bar")
+				err := e.SetValueYARPC(context.Background(), "foo", "bar")
+				if test.expectedErrContains == "" {
+					assert.NoError(t, err)
+				} else {
+					assert.Contains(t, err.Error(), test.expectedErrContains)
+				}
+
+				err = e.SetValueGRPC(context.Background(), "foo", "bar")
 				if test.expectedErrContains == "" {
 					assert.NoError(t, err)
 				} else {
@@ -356,7 +365,9 @@ func newTestEnv(
 	}
 	keyValueClient := examplepb.NewKeyValueClient(clientConn)
 
-	outbound := t.NewSingleOutbound(listener.Addr().String(), outboundOptions...)
+	chooser := peer.NewSingle(hostport.Identify(listener.Addr().String()), t.NewDialer(dialOptions...))
+	outbound := t.NewOutbound(chooser, outboundOptions...)
+
 	if err := outbound.Start(); err != nil {
 		return nil, err
 	}
