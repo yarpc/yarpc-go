@@ -52,14 +52,16 @@ func (r *randomList) Add(peer peer.StatusPeer, _ peer.Identifier) peer.Subscribe
 	return r.subscribers[index]
 }
 
-func (r *randomList) Remove(peer peer.StatusPeer, _ peer.Identifier, sub peer.Subscriber) {
-	if sub, ok := sub.(*subscriber); ok && len(r.subscribers) > 0 {
-		index := sub.index
-		last := len(r.subscribers) - 1
-		r.subscribers[index] = r.subscribers[last]
-		r.subscribers[index].index = index
-		r.subscribers = r.subscribers[0:last]
+func (r *randomList) Remove(peer peer.StatusPeer, _ peer.Identifier, ps peer.Subscriber) {
+	sub, ok := ps.(*subscriber)
+	if !ok || len(r.subscribers) == 0 {
+		return
 	}
+	index := sub.index
+	last := len(r.subscribers) - 1
+	r.subscribers[index] = r.subscribers[last]
+	r.subscribers[index].index = index
+	r.subscribers = r.subscribers[0:last]
 }
 
 func (r *randomList) Choose(_ context.Context, _ *transport.Request) peer.StatusPeer {
