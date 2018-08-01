@@ -131,13 +131,13 @@ func TestTLSWithYARPC(t *testing.T) {
 			dialTLSOpt := WithTransportCredentials(clientCreds)
 
 			doWithTestEnv(t, nil, []InboundOption{inboundTLSOpt}, nil, []DialOption{dialTLSOpt}, func(t *testing.T, e *testEnv) {
-				err := e.SetValueYARPC(context.Background(), "foo", "bar")
+				err := e.SetValueGRPC(context.Background(), "foo", "bar")
 				if test.expectedErrContains == "" {
 					assert.NoError(t, err)
 				} else {
 					assert.Contains(t, err.Error(), test.expectedErrContains)
 				}
-			}, withTLSScenario(&scenario))
+			})
 		})
 
 	}
@@ -302,12 +302,6 @@ type testEnvOptions struct {
 
 type testEnvOption func(*testEnvOptions)
 
-func withTLSScenario(tlsScenario *tlsScenario) testEnvOption {
-	return func(o *testEnvOptions) {
-		o.tlsScenario = tlsScenario
-	}
-}
-
 type testEnv struct {
 	Caller              string
 	Service             string
@@ -356,22 +350,7 @@ func newTestEnv(
 
 	var clientConn *grpc.ClientConn
 
-	var credsOption grpc.DialOption
-	if options.tlsScenario != nil {
-		scenario := options.tlsScenario
-		creds := credentials.NewTLS(&tls.Config{
-			Certificates: []tls.Certificate{{
-				Certificate: [][]byte{scenario.ClientCert.Raw},
-				Leaf:        scenario.ClientCert,
-				PrivateKey:  scenario.ClientKey,
-			}},
-			RootCAs: scenario.CAs,
-		})
-		credsOption = grpc.WithTransportCredentials(creds)
-	} else {
-		credsOption = grpc.WithInsecure()
-	}
-	clientConn, err = grpc.Dial(listener.Addr().String(), credsOption)
+	clientConn, err = grpc.Dial(listener.Addr().String(), newDialOptions(dialOptions).grpcOptions()...)
 	if err != nil {
 		return nil, err
 	}
