@@ -201,27 +201,6 @@ func (m ResponseMatcher) Matches(got interface{}) bool {
 		panic(fmt.Sprintf("expected *transport.Response, got %v", got))
 	}
 
-	if l.ID != r.ID {
-		m.t.Logf("ID fields do not match: %q != %q", l.ID, r.ID)
-		return false
-	}
-	if l.Host != r.Host {
-		m.t.Logf("Host fields do not match: %q != %q", l.Host, r.Host)
-		return false
-	}
-	if l.Environment != r.Environment {
-		m.t.Logf("Environment fields do not match: %q != %q", l.Environment, r.Environment)
-		return false
-	}
-	if l.Service != r.Service {
-		m.t.Logf("Service fields do not match: %q != %q", l.Service, r.Service)
-		return false
-	}
-	if l.ApplicationError != r.ApplicationError {
-		m.t.Logf("Application errors do not match: %v != %v", l.ApplicationError, r.ApplicationError)
-		return false
-	}
-
 	if err := checkSuperSet(l.Headers, r.Headers); err != nil {
 		m.t.Logf("Headers mismatch: %v != %v\n\t%v", l.Headers, r.Headers, err)
 		return false
