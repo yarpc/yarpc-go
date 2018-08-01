@@ -31,23 +31,6 @@ import (
 
 // Request is the low level request representation.
 type Request struct {
-	// ID for a request/response pair as chosen by the client. This MAY be a
-	// trace ID or UUID.
-	//
-	// This MAY be set by transports or middleware.
-	ID string
-
-	// Host is the name of the server issuing this request.
-	//
-	// It MAY be set by a an environment-aware middleware.
-	Host string
-
-	// Environment is the name of the host environment that the request was
-	// issued from. eg "staging", "production"
-	//
-	// It MAY be set by a an environment-aware middleware.
-	Environment string
-
 	// Name of the service making the request.
 	Caller string
 
@@ -88,9 +71,6 @@ type Request struct {
 // ToRequestMeta converts a Request into a RequestMeta.
 func (r *Request) ToRequestMeta() *RequestMeta {
 	return &RequestMeta{
-		ID:              r.ID,
-		Host:            r.Host,
-		Environment:     r.Environment,
 		Caller:          r.Caller,
 		Service:         r.Service,
 		Transport:       r.Transport,
@@ -106,9 +86,6 @@ func (r *Request) ToRequestMeta() *RequestMeta {
 // MarshalLogObject implements zap.ObjectMarshaler.
 func (r *Request) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	// TODO (#788): Include headers once we can omit PII.
-	enc.AddString("id", r.ID)
-	enc.AddString("host", r.Host)
-	enc.AddString("environment", r.Environment)
 	enc.AddString("caller", r.Caller)
 	enc.AddString("service", r.Service)
 	enc.AddString("transport", r.Transport)
@@ -175,23 +152,6 @@ func ValidateRequestContext(ctx context.Context) error {
 // include any "body" information, and should only be used for information about
 // a connection's metadata.
 type RequestMeta struct {
-	// ID is a unique identifier for a request/response pair. This MAY be a
-	// trace ID or UUID.
-	//
-	// This MAY be set by transports or middleware.
-	ID string
-
-	// Host is the name of the server issuing this request.
-	//
-	// It MAY be set by a an environment-aware middleware.
-	Host string
-
-	// Environment is the name of the host environment that the request was
-	// issued from. eg "staging", "production"
-	//
-	// It MAY be set by a an environment-aware middleware.
-	Environment string
-
 	// Name of the service making the request.
 	Caller string
 
@@ -232,9 +192,6 @@ func (r *RequestMeta) ToRequest() *Request {
 		return &Request{}
 	}
 	return &Request{
-		ID:              r.ID,
-		Host:            r.Host,
-		Environment:     r.Environment,
 		Caller:          r.Caller,
 		Service:         r.Service,
 		Transport:       r.Transport,

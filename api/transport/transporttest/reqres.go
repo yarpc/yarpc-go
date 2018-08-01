@@ -73,21 +73,6 @@ func (m RequestMatcher) Matches(got interface{}) bool {
 		panic(fmt.Sprintf("expected *transport.Request, got %v", got))
 	}
 
-	if l.ID != r.ID {
-		m.t.Logf("ID mismatch: %s != %s", l.ID, r.ID)
-		return false
-	}
-
-	if l.Host != r.Host {
-		m.t.Logf("Host mismatch: %s != %s", l.Host, r.Host)
-		return false
-	}
-
-	if l.Environment != r.Environment {
-		m.t.Logf("Environment mismatch: %s != %s", l.Environment, r.Environment)
-		return false
-	}
-
 	if l.Caller != r.Caller {
 		m.t.Logf("Caller mismatch: %s != %s", l.Caller, r.Caller)
 		return false
