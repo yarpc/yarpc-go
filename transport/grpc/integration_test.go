@@ -61,7 +61,8 @@ import (
 
 func TestYARPCBasic(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	te := testEnvOptions{}
+	te.do(t, func(t *testing.T, e *testEnv) {
 		_, err := e.GetValueYARPC(context.Background(), "foo")
 		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeNotFound, "foo"), err)
 		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", "bar"))
@@ -73,7 +74,8 @@ func TestYARPCBasic(t *testing.T) {
 
 func TestGRPCBasic(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	te := testEnvOptions{}
+	te.do(t, func(t *testing.T, e *testEnv) {
 		_, err := e.GetValueGRPC(context.Background(), "foo")
 		assert.Equal(t, status.Error(codes.NotFound, "foo"), err)
 		assert.NoError(t, e.SetValueGRPC(context.Background(), "foo", "bar"))
@@ -83,8 +85,7 @@ func TestGRPCBasic(t *testing.T) {
 	})
 }
 
-func TestTLSWithYARPC(t *testing.T) {
-
+func TestTLSWithYARPCAndGRPC(t *testing.T) {
 	tests := []struct {
 		clientValidity      time.Duration
 		serverValidity      time.Duration
@@ -125,7 +126,6 @@ func TestTLSWithYARPC(t *testing.T) {
 				ClientAuth: tls.RequireAndVerifyClientCert,
 				ClientCAs:  scenario.CAs,
 			})
-			inboundTLSOpt := InboundCredentials(serverCreds)
 
 			clientCreds := credentials.NewTLS(&tls.Config{
 				GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
@@ -137,9 +137,12 @@ func TestTLSWithYARPC(t *testing.T) {
 				},
 				RootCAs: scenario.CAs,
 			})
-			dialTLSOpt := DialerCredentials(clientCreds)
 
-			doWithTestEnv(t, nil, []InboundOption{inboundTLSOpt}, nil, []DialOption{dialTLSOpt}, func(t *testing.T, e *testEnv) {
+			te := testEnvOptions{
+				InboundOptions: []InboundOption{InboundCredentials(serverCreds)},
+				DialOptions:    []DialOption{DialerCredentials(clientCreds)},
+			}
+			te.do(t, func(t *testing.T, e *testEnv) {
 				err := e.SetValueYARPC(context.Background(), "foo", "bar")
 				expectErrorContains(t, err, test.expectedErrContains)
 
@@ -161,7 +164,8 @@ func expectErrorContains(t *testing.T, err error, contains string) {
 
 func TestYARPCWellKnownError(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	te := testEnvOptions{}
+	te.do(t, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
 		err := e.SetValueYARPC(context.Background(), "foo", "bar")
 		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "bar 1"), err)
@@ -170,7 +174,8 @@ func TestYARPCWellKnownError(t *testing.T) {
 
 func TestYARPCNamedError(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	te := testEnvOptions{}
+	te.do(t, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", "baz 1"))
 		err := e.SetValueYARPC(context.Background(), "foo", "bar")
 		assert.Equal(t, intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", "baz 1"), err)
@@ -179,7 +184,8 @@ func TestYARPCNamedError(t *testing.T) {
 
 func TestYARPCNamedErrorNoMessage(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	te := testEnvOptions{}
+	te.do(t, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", ""))
 		err := e.SetValueYARPC(context.Background(), "foo", "bar")
 		assert.Equal(t, intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", ""), err)
@@ -188,7 +194,8 @@ func TestYARPCNamedErrorNoMessage(t *testing.T) {
 
 func TestGRPCWellKnownError(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	te := testEnvOptions{}
+	te.do(t, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
 		err := e.SetValueGRPC(context.Background(), "foo", "bar")
 		assert.Equal(t, status.Error(codes.FailedPrecondition, "bar 1"), err)
@@ -197,7 +204,8 @@ func TestGRPCWellKnownError(t *testing.T) {
 
 func TestGRPCNamedError(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	te := testEnvOptions{}
+	te.do(t, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", "baz 1"))
 		err := e.SetValueGRPC(context.Background(), "foo", "bar")
 		assert.Equal(t, status.Error(codes.Unknown, "bar: baz 1"), err)
@@ -206,7 +214,8 @@ func TestGRPCNamedError(t *testing.T) {
 
 func TestGRPCNamedErrorNoMessage(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	te := testEnvOptions{}
+	te.do(t, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", ""))
 		err := e.SetValueGRPC(context.Background(), "foo", "bar")
 		assert.Equal(t, status.Error(codes.Unknown, "bar"), err)
@@ -215,7 +224,8 @@ func TestGRPCNamedErrorNoMessage(t *testing.T) {
 
 func TestYARPCResponseAndError(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	te := testEnvOptions{}
+	te.do(t, func(t *testing.T, e *testEnv) {
 		err := e.SetValueYARPC(context.Background(), "foo", "bar")
 		assert.NoError(t, err)
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
@@ -228,7 +238,8 @@ func TestYARPCResponseAndError(t *testing.T) {
 func TestGRPCResponseAndError(t *testing.T) {
 	t.Skip("grpc-go clients do not support returning both a response and error as of now")
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	te := testEnvOptions{}
+	te.do(t, func(t *testing.T, e *testEnv) {
 		err := e.SetValueGRPC(context.Background(), "foo", "bar")
 		assert.NoError(t, err)
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
@@ -241,15 +252,19 @@ func TestGRPCResponseAndError(t *testing.T) {
 func TestYARPCMaxMsgSize(t *testing.T) {
 	t.Parallel()
 	value := strings.Repeat("a", defaultServerMaxRecvMsgSize*2)
-	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	te := testEnvOptions{}
+	te.do(t, func(t *testing.T, e *testEnv) {
 		assert.Equal(t, yarpcerrors.CodeResourceExhausted, yarpcerrors.FromError(e.SetValueYARPC(context.Background(), "foo", value)).Code())
 	})
-	doWithTestEnv(t, []TransportOption{
-		ClientMaxRecvMsgSize(math.MaxInt32),
-		ClientMaxSendMsgSize(math.MaxInt32),
-		ServerMaxRecvMsgSize(math.MaxInt32),
-		ServerMaxSendMsgSize(math.MaxInt32),
-	}, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	te = testEnvOptions{
+		TransportOptions: []TransportOption{
+			ClientMaxRecvMsgSize(math.MaxInt32),
+			ClientMaxSendMsgSize(math.MaxInt32),
+			ServerMaxRecvMsgSize(math.MaxInt32),
+			ServerMaxSendMsgSize(math.MaxInt32),
+		},
+	}
+	te.do(t, func(t *testing.T, e *testEnv) {
 		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", value))
 		getValue, err := e.GetValueYARPC(context.Background(), "foo")
 		assert.NoError(t, err)
@@ -260,7 +275,8 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 func TestLargeEcho(t *testing.T) {
 	t.Parallel()
 	value := strings.Repeat("a", 32768)
-	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	te := testEnvOptions{}
+	te.do(t, func(t *testing.T, e *testEnv) {
 		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", value))
 		getValue, err := e.GetValueYARPC(context.Background(), "foo")
 		assert.NoError(t, err)
@@ -270,7 +286,8 @@ func TestLargeEcho(t *testing.T) {
 
 func TestApplicationErrorPropagation(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, nil, nil, func(t *testing.T, e *testEnv) {
+	te := testEnvOptions{}
+	te.do(t, func(t *testing.T, e *testEnv) {
 		response, err := e.Call(
 			context.Background(),
 			"GetValue",
@@ -303,15 +320,6 @@ func TestApplicationErrorPropagation(t *testing.T) {
 	})
 }
 
-func doWithTestEnv(t *testing.T, transportOptions []TransportOption, inboundOptions []InboundOption, outboundOptions []OutboundOption, dialOptions []DialOption, f func(*testing.T, *testEnv)) {
-	testEnv, err := newTestEnv(transportOptions, inboundOptions, outboundOptions, dialOptions)
-	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, testEnv.Close())
-	}()
-	f(t, testEnv)
-}
-
 type testEnv struct {
 	Caller              string
 	Service             string
@@ -324,6 +332,27 @@ type testEnv struct {
 	KeyValueGRPCClient  examplepb.KeyValueClient
 	KeyValueYARPCClient examplepb.KeyValueYARPCClient
 	KeyValueYARPCServer *example.KeyValueYARPCServer
+}
+
+type testEnvOptions struct {
+	TransportOptions []TransportOption
+	InboundOptions   []InboundOption
+	OutboundOptions  []OutboundOption
+	DialOptions      []DialOption
+}
+
+func (te *testEnvOptions) do(t *testing.T, f func(*testing.T, *testEnv)) {
+	testEnv, err := newTestEnv(
+		te.TransportOptions,
+		te.InboundOptions,
+		te.OutboundOptions,
+		te.DialOptions,
+	)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, testEnv.Close())
+	}()
+	f(t, testEnv)
 }
 
 func newTestEnv(
