@@ -219,10 +219,19 @@ func Call(ctx context.Context, rawClient raw.Client) error {
 	return nil
 }
 
+// Timeout sends a request to the client, which will timeout on the server.
+func Timeout(ctx context.Context, rawClient raw.Client) error {
+	_, err := rawClient.Call(ctx, "timeout", []byte{})
+	return err
+}
+
 // Register registers an echo procedure handler on a dispatcher.
 func Register(dispatcher *yarpc.Dispatcher) {
-	handle := func(ctx context.Context, req []byte) ([]byte, error) {
+	dispatcher.Register(raw.Procedure("echo", func(ctx context.Context, req []byte) ([]byte, error) {
 		return req, nil
-	}
-	dispatcher.Register(raw.Procedure("echo", handle))
+	}))
+	dispatcher.Register(raw.Procedure("timeout", func(ctx context.Context, req []byte) ([]byte, error) {
+		<-ctx.Done()
+		return nil, context.DeadlineExceeded
+	}))
 }

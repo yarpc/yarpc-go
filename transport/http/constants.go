@@ -24,7 +24,10 @@ import "time"
 
 const transportName = "http"
 
-var defaultConnTimeout = 500 * time.Millisecond
+var (
+	defaultConnTimeout     = 500 * time.Millisecond
+	defaultInnocenceWindow = 5 * time.Second
+)
 
 // HTTP headers used in requests and responses to send YARPC metadata.
 const (
