@@ -49,8 +49,11 @@ var (
 // Use "go.uber.org/yarpc/peer/peerlist".List in conjunction with a
 // ListImplementation to produce a "go.uber.org/yarpc/api/peer".List.
 //
-// peerlist.List and ListImplementation compose well with sharding schemes the
-// degenerate to returning the only available peer.
+// peerlist.List and peerlist.Implementation compose well with sharding schemes
+// the degenerate to returning the only available peer.
+//
+// The peerlist.List calls Add, Remove, and Choose under a write lock so the
+// implementation is free to perform mutations on its own data without locks.
 type Implementation interface {
 	transport.Lifecycle
 
