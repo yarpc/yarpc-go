@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
+- Additional transport headers were added to `transport.Request`: `ID`, `Host`
+  and `Environment`.
+- Additional transport headers were added to `transport.Response`: `ID`,
+  `Host`, `Environment` and `Service`.
 - Added `peer/peerlist/v2` which differs from the original `peer/peerlist` by
   replacing the use of `api/peer.ListImplementation` with
   `peer/peerlist/v2.Implementation`, which threads the peer separately from the

@@ -33,6 +33,9 @@ func TestNilCall(t *testing.T) {
 	call := CallFromContext(context.Background())
 	require.Nil(t, call)
 
+	assert.Equal(t, "", call.ID())
+	assert.Equal(t, "", call.Host())
+	assert.Equal(t, "", call.Environment())
 	assert.Equal(t, "", call.Caller())
 	assert.Equal(t, "", call.Service())
 	assert.Equal(t, "", call.Transport())
@@ -50,6 +53,9 @@ func TestNilCall(t *testing.T) {
 func TestReadFromRequest(t *testing.T) {
 	ctx, icall := NewInboundCall(context.Background())
 	icall.ReadFromRequest(&transport.Request{
+		ID:              "id",
+		Host:            "host-name",
+		Environment:     "env",
 		Service:         "service",
 		Transport:       "transport",
 		Caller:          "caller",
@@ -63,6 +69,9 @@ func TestReadFromRequest(t *testing.T) {
 	call := CallFromContext(ctx)
 	require.NotNil(t, call)
 
+	assert.Equal(t, "id", call.ID())
+	assert.Equal(t, "host-name", call.Host())
+	assert.Equal(t, "env", call.Environment())
 	assert.Equal(t, "caller", call.Caller())
 	assert.Equal(t, "service", call.Service())
 	assert.Equal(t, "transport", call.Transport())
@@ -82,8 +91,11 @@ func TestReadFromRequest(t *testing.T) {
 func TestReadFromRequestMeta(t *testing.T) {
 	ctx, icall := NewInboundCall(context.Background())
 	icall.ReadFromRequestMeta(&transport.RequestMeta{
-		Service:         "service",
+		ID:              "id",
+		Host:            "host-name",
+		Environment:     "env",
 		Caller:          "caller",
+		Service:         "service",
 		Transport:       "transport",
 		Encoding:        transport.Encoding("raw"),
 		Procedure:       "proc",
@@ -95,6 +107,9 @@ func TestReadFromRequestMeta(t *testing.T) {
 	call := CallFromContext(ctx)
 	require.NotNil(t, call)
 
+	assert.Equal(t, "id", call.ID())
+	assert.Equal(t, "host-name", call.Host())
+	assert.Equal(t, "env", call.Environment())
 	assert.Equal(t, "caller", call.Caller())
 	assert.Equal(t, "service", call.Service())
 	assert.Equal(t, "transport", call.Transport())
@@ -114,6 +129,9 @@ func TestReadFromRequestMeta(t *testing.T) {
 func TestDisabledResponseHeaders(t *testing.T) {
 	ctx, icall := NewInboundCallWithOptions(context.Background(), DisableResponseHeaders())
 	icall.ReadFromRequest(&transport.Request{
+		ID:              "id",
+		Host:            "host-name",
+		Environment:     "env",
 		Service:         "service",
 		Transport:       "transport",
 		Caller:          "caller",
@@ -127,6 +145,9 @@ func TestDisabledResponseHeaders(t *testing.T) {
 	call := CallFromContext(ctx)
 	require.NotNil(t, call)
 
+	assert.Equal(t, "id", call.ID())
+	assert.Equal(t, "host-name", call.Host())
+	assert.Equal(t, "env", call.Environment())
 	assert.Equal(t, "caller", call.Caller())
 	assert.Equal(t, "service", call.Service())
 	assert.Equal(t, "transport", call.Transport())
