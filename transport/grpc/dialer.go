@@ -39,12 +39,12 @@ type Dialer struct {
 
 var _ peer.Transport = (*Dialer)(nil)
 
-// RetainPeer retains the identified peer with dial options.
+// RetainPeer retains the identified peer, passing dial options.
 func (d *Dialer) RetainPeer(id peer.Identifier, ps peer.Subscriber) (peer.Peer, error) {
 	return d.trans.retainPeer(id, d.options, ps)
 }
 
-// ReleasePeer releases a TLS peer.
+// ReleasePeer releases the identified peer.
 func (d *Dialer) ReleasePeer(id peer.Identifier, ps peer.Subscriber) error {
 	return d.trans.ReleasePeer(id, ps)
 }

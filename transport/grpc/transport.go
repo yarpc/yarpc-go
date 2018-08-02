@@ -98,13 +98,12 @@ func (t *Transport) NewOutbound(peerChooser peer.Chooser, options ...OutboundOpt
 // RetainPeer retains the peer.
 //
 // Deprecated: use grpcTransport.NewDialer(...grpc.DialOption) to create a
-// peer.Transport instead of using the grpc.Transport as a peer.Transport.
+// peer.Transport that supports custom DialOptions instead of using the
+// grpc.Transport as a peer.Transport.
 func (t *Transport) RetainPeer(pid peer.Identifier, ps peer.Subscriber) (peer.Peer, error) {
 	return t.retainPeer(pid, nil, ps)
 }
 
-// retainPeer provides the general implementation of retainPeer for both TLS
-// and non-TLS clients.
 func (t *Transport) retainPeer(pid peer.Identifier, options *dialOptions, ps peer.Subscriber) (peer.Peer, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
@@ -125,7 +124,8 @@ func (t *Transport) retainPeer(pid peer.Identifier, options *dialOptions, ps pee
 // ReleasePeer releases the peer.
 //
 // Deprecated: use grpcTransport.NewDialer(...grpc.DialOption) to create a
-// peer.Transport instead of using the grpc.Transport as a peer.Transport.
+// peer.Transport that supports custom DialOptions instead of using the
+// grpc.Transport as a peer.Transport.
 func (t *Transport) ReleasePeer(pid peer.Identifier, ps peer.Subscriber) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
