@@ -500,6 +500,8 @@ type tlsScenario struct {
 }
 
 func createTLSScenario(t *testing.T, clientValidity time.Duration, serverValidity time.Duration) tlsScenario {
+	now := time.Now()
+
 	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
 	caBytes, err := x509.CreateCertificate(
@@ -512,8 +514,8 @@ func createTLSScenario(t *testing.T, clientValidity time.Duration, serverValidit
 			BasicConstraintsValid: true,
 			IsCA:      true,
 			KeyUsage:  x509.KeyUsageCertSign,
-			NotBefore: time.Now(),
-			NotAfter:  time.Now().Add(10 * time.Minute),
+			NotBefore: now,
+			NotAfter:  now.Add(10 * time.Minute),
 		},
 		&x509.Certificate{},
 		caKey.Public(),
@@ -531,7 +533,7 @@ func createTLSScenario(t *testing.T, clientValidity time.Duration, serverValidit
 			Subject: pkix.Name{
 				CommonName: "server",
 			},
-			NotAfter:     time.Now().Add(serverValidity),
+			NotAfter:     now.Add(serverValidity),
 			SerialNumber: big.NewInt(2),
 			IPAddresses:  []net.IP{net.ParseIP("127.0.0.1")},
 			KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyAgreement,
@@ -552,7 +554,7 @@ func createTLSScenario(t *testing.T, clientValidity time.Duration, serverValidit
 			Subject: pkix.Name{
 				CommonName: "client",
 			},
-			NotAfter:     time.Now().Add(clientValidity),
+			NotAfter:     now.Add(clientValidity),
 			SerialNumber: big.NewInt(3),
 			KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyAgreement,
 		},
