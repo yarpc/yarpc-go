@@ -115,22 +115,26 @@ func TestTLSWithYARPC(t *testing.T) {
 			scenario := createTLSScenario(t, test.clientValidity, test.serverValidity)
 
 			serverCreds := credentials.NewTLS(&tls.Config{
-				Certificates: []tls.Certificate{{
-					Certificate: [][]byte{scenario.ServerCert.Raw},
-					Leaf:        scenario.ServerCert,
-					PrivateKey:  scenario.ServerKey,
-				}},
+				GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
+					return &tls.Certificate{
+						Certificate: [][]byte{scenario.ServerCert.Raw},
+						Leaf:        scenario.ServerCert,
+						PrivateKey:  scenario.ServerKey,
+					}, nil
+				},
 				ClientAuth: tls.RequireAndVerifyClientCert,
 				ClientCAs:  scenario.CAs,
 			})
 			inboundTLSOpt := InboundCredentials(serverCreds)
 
 			clientCreds := credentials.NewTLS(&tls.Config{
-				Certificates: []tls.Certificate{{
-					Certificate: [][]byte{scenario.ClientCert.Raw},
-					Leaf:        scenario.ClientCert,
-					PrivateKey:  scenario.ClientKey,
-				}},
+				GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+					return &tls.Certificate{
+						Certificate: [][]byte{scenario.ClientCert.Raw},
+						Leaf:        scenario.ClientCert,
+						PrivateKey:  scenario.ClientKey,
+					}, nil
+				},
 				RootCAs: scenario.CAs,
 			})
 			dialTLSOpt := DialerCredentials(clientCreds)
