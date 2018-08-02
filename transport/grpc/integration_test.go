@@ -323,6 +323,7 @@ func TestApplicationErrorPropagation(t *testing.T) {
 type testEnv struct {
 	Caller              string
 	Service             string
+	Transport           *Transport
 	Inbound             *Inbound
 	Outbound            *Outbound
 	ClientConn          *grpc.ClientConn
@@ -365,21 +366,31 @@ func newTestEnv(
 	procedures := examplepb.BuildKeyValueYARPCProcedures(keyValueYARPCServer)
 	testRouter := newTestRouter(procedures)
 
-	t := NewTransport(transportOptions...)
-	if err := t.Start(); err != nil {
+	trans := NewTransport(transportOptions...)
+	if err := trans.Start(); err != nil {
 		return nil, err
 	}
+	defer func() {
+		if err != nil {
+			err = multierr.Append(err, trans.Stop())
+		}
+	}()
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return nil, err
 	}
 
-	inbound := t.NewInbound(listener, inboundOptions...)
+	inbound := trans.NewInbound(listener, inboundOptions...)
 	inbound.SetRouter(testRouter)
 	if err := inbound.Start(); err != nil {
 		return nil, err
 	}
+	defer func() {
+		if err != nil {
+			err = multierr.Append(err, inbound.Stop())
+		}
+	}()
 
 	var clientConn *grpc.ClientConn
 
@@ -389,12 +400,17 @@ func newTestEnv(
 	}
 	keyValueClient := examplepb.NewKeyValueClient(clientConn)
 
-	chooser := peer.NewSingle(hostport.Identify(listener.Addr().String()), t.NewDialer(dialOptions...))
-	outbound := t.NewOutbound(chooser, outboundOptions...)
+	chooser := peer.NewSingle(hostport.Identify(listener.Addr().String()), trans.NewDialer(dialOptions...))
+	outbound := trans.NewOutbound(chooser, outboundOptions...)
 
 	if err := outbound.Start(); err != nil {
 		return nil, err
 	}
+	defer func() {
+		if err != nil {
+			err = multierr.Append(err, outbound.Stop())
+		}
+	}()
 
 	caller := "example-client"
 	service := "example"
@@ -414,17 +430,18 @@ func newTestEnv(
 		WithEncoding(string(protobuf.Encoding))
 
 	return &testEnv{
-		caller,
-		service,
-		inbound,
-		outbound,
-		clientConn,
-		contextWrapper,
-		clientConfig,
-		procedures,
-		keyValueClient,
-		keyValueYARPCClient,
-		keyValueYARPCServer,
+		Caller:              caller,
+		Service:             service,
+		Transport:           trans,
+		Inbound:             inbound,
+		Outbound:            outbound,
+		ClientConn:          clientConn,
+		ContextWrapper:      contextWrapper,
+		ClientConfig:        clientConfig,
+		Procedures:          procedures,
+		KeyValueGRPCClient:  keyValueClient,
+		KeyValueYARPCClient: keyValueYARPCClient,
+		KeyValueYARPCServer: keyValueYARPCServer,
 	}, nil
 }
 
@@ -494,6 +511,7 @@ func (e *testEnv) SetValueGRPC(ctx context.Context, key string, value string) er
 func (e *testEnv) Close() error {
 	return multierr.Combine(
 		e.ClientConn.Close(),
+		e.Transport.Stop(),
 		e.Outbound.Stop(),
 		e.Inbound.Stop(),
 	)
