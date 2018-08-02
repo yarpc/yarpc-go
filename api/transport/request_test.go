@@ -127,9 +127,6 @@ func TestValidator(t *testing.T) {
 
 func TestRequestLogMarshaling(t *testing.T) {
 	r := &transport.Request{
-		ID:              "id",
-		Host:            "host",
-		Environment:     "environment",
 		Caller:          "caller",
 		Service:         "service",
 		Transport:       "transport",
@@ -144,9 +141,6 @@ func TestRequestLogMarshaling(t *testing.T) {
 	enc := zapcore.NewMapObjectEncoder()
 	assert.NoError(t, r.MarshalLogObject(enc), "Unexpected error marshaling request.")
 	assert.Equal(t, map[string]interface{}{
-		"id":              "id",
-		"host":            "host",
-		"environment":     "environment",
 		"caller":          "caller",
 		"service":         "service",
 		"transport":       "transport",
@@ -160,9 +154,6 @@ func TestRequestLogMarshaling(t *testing.T) {
 
 func TestRequestMetaToRequestConversionAndBack(t *testing.T) {
 	reqMeta := &transport.RequestMeta{
-		ID:              "id",
-		Host:            "host",
-		Environment:     "environment",
 		Caller:          "caller",
 		Service:         "service",
 		Transport:       "transport",

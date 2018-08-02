@@ -59,30 +59,6 @@ func (c *Call) WriteResponseHeader(k, v string) error {
 	return nil
 }
 
-// ID returns the ID for the request.
-func (c *Call) ID() string {
-	if c == nil {
-		return ""
-	}
-	return c.ic.req.ID
-}
-
-// Host returns the name of the sever making this request.
-func (c *Call) Host() string {
-	if c == nil {
-		return ""
-	}
-	return c.ic.req.Host
-}
-
-// Environment returns the environment this request was made in.
-func (c *Call) Environment() string {
-	if c == nil {
-		return ""
-	}
-	return c.ic.req.Environment
-}
-
 // Caller returns the name of the service making this request.
 func (c *Call) Caller() string {
 	if c == nil {
