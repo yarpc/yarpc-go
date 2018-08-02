@@ -31,6 +31,16 @@ import (
 	"go.uber.org/yarpc/internal/testtime"
 )
 
+// NoJitter is a transport option only available in tests, to disable jitter
+// between connection attempts.
+func NoJitter() TransportOption {
+	return func(options *transportOptions) {
+		options.jitter = func(n int64) int64 {
+			return n
+		}
+	}
+}
+
 type peerExpectation struct {
 	id          string
 	subscribers []string

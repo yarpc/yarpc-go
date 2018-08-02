@@ -21,7 +21,6 @@
 package http
 
 import (
-	"math/rand"
 	"net"
 	"time"
 
@@ -93,8 +92,8 @@ func (p *httpPeer) OnSuspect() {
 	// Extend the window of innocence from the current time.
 	// Use Store instead of CAS since races at worst extend the innocence
 	// window to relatively similar distant times.
-	jitter := rand.Int63n(p.transport.innocenceWindow.Nanoseconds())
-	p.innocentUntilUnixNano.Store(now + jitter)
+	innocentDurationUnixNano := p.transport.jitter(p.transport.innocenceWindow.Nanoseconds())
+	p.innocentUntilUnixNano.Store(now + innocentDurationUnixNano)
 
 	// Kick the state change channel (if it hasn't been kicked already).
 	// But leave status as available.

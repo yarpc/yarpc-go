@@ -232,6 +232,6 @@ func Register(dispatcher *yarpc.Dispatcher) {
 	}))
 	dispatcher.Register(raw.Procedure("timeout", func(ctx context.Context, req []byte) ([]byte, error) {
 		<-ctx.Done()
-		return nil, nil
+		return nil, context.DeadlineExceeded
 	}))
 }

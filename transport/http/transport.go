@@ -21,6 +21,7 @@
 package http
 
 import (
+	"math/rand"
 	"net"
 	"net/http"
 	"sync"
@@ -46,6 +47,7 @@ type transportOptions struct {
 	connTimeout           time.Duration
 	connBackoffStrategy   backoffapi.Strategy
 	innocenceWindow       time.Duration
+	jitter                func(int64) int64
 	tracer                opentracing.Tracer
 	buildClient           func(*transportOptions) *http.Client
 	logger                *zap.Logger
@@ -58,6 +60,7 @@ var defaultTransportOptions = transportOptions{
 	connBackoffStrategy: backoff.DefaultExponential,
 	buildClient:         buildHTTPClient,
 	innocenceWindow:     defaultInnocenceWindow,
+	jitter:              rand.Int63n,
 }
 
 func newTransportOptions() transportOptions {
@@ -225,6 +228,7 @@ func (o *transportOptions) newTransport() *Transport {
 		connTimeout:         o.connTimeout,
 		connBackoffStrategy: o.connBackoffStrategy,
 		innocenceWindow:     o.innocenceWindow,
+		jitter:              o.jitter,
 		peers:               make(map[string]*httpPeer),
 		tracer:              o.tracer,
 		logger:              logger,
@@ -266,6 +270,7 @@ type Transport struct {
 	connBackoffStrategy backoffapi.Strategy
 	connectorsGroup     sync.WaitGroup
 	innocenceWindow     time.Duration
+	jitter              func(int64) int64
 
 	tracer opentracing.Tracer
 	logger *zap.Logger

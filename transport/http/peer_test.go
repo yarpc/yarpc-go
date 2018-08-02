@@ -22,6 +22,7 @@ package http_test
 
 import (
 	"context"
+	"runtime"
 	"testing"
 	"time"
 
@@ -42,7 +43,8 @@ func newTransport() peer.Transport {
 		http.DisableKeepAlives(),
 		http.ConnTimeout(testtime.Millisecond),
 		http.ConnBackoff(backoff.None),
-		http.InnocenceWindow(1*time.Second),
+		http.InnocenceWindow(10*time.Second),
+		http.NoJitter(),
 	)
 }
 
@@ -112,30 +114,34 @@ func TestHTTPOnSuspect(t *testing.T) {
 
 	// Exercise OnSuspect
 	ctx := context.Background()
-	ctx, cancel1 := context.WithTimeout(ctx, 5*testtime.Millisecond)
-	defer cancel1()
-	integrationtest.Timeout(ctx, c)
+	ctx, cancel := context.WithTimeout(ctx, 50*testtime.Millisecond)
+	defer cancel()
+	_ = integrationtest.Timeout(ctx, c)
 
 	// Exercise the innocence window
 	ctx = context.Background()
-	ctx, cancel2 := context.WithTimeout(ctx, 5*testtime.Millisecond)
-	defer cancel2()
-	integrationtest.Timeout(ctx, c)
+	ctx, cancel = context.WithTimeout(ctx, 50*testtime.Millisecond)
+	defer cancel()
+	_ = integrationtest.Timeout(ctx, c)
 
 	// Validate that the peer remains available
 	ctx = context.Background()
-	ctx, cancel3 := context.WithTimeout(ctx, 5*testtime.Millisecond)
-	defer cancel3()
+	ctx, cancel = context.WithTimeout(ctx, 50*testtime.Millisecond)
+	defer cancel()
 	integrationtest.Blast(ctx, t, c)
 
 	// Induce the peer management loop to exit through its shutdown path.
 	go server.Stop()
 	ctx = context.Background()
-	ctx, cancel4 := context.WithTimeout(ctx, 5*testtime.Millisecond)
-	defer cancel4()
+	ctx, cancel = context.WithTimeout(ctx, 50*testtime.Millisecond)
+	defer cancel()
 	for {
 		err := integrationtest.Call(ctx, c)
 		if err != nil {
+			// Yielding, it transpires, is necessary to get coverage on leaving
+			// OnSuspect early due to the innocense window.  Even with this, it
+			// gets coverage about as often as it wins a coin toss.
+			runtime.Gosched()
 			break
 		}
 	}
