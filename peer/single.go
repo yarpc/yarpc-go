@@ -51,7 +51,7 @@ func NewSingle(pid peer.Identifier, transport peer.Transport) *Single {
 	return s
 }
 
-// Transport exposes the transport for tests.
+// Transport returns the transport to which this peer is attached.
 func (s *Single) Transport() peer.Transport {
 	return s.t
 }
