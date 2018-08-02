@@ -51,6 +51,11 @@ func NewSingle(pid peer.Identifier, transport peer.Transport) *Single {
 	return s
 }
 
+// Transport returns the transport to which this peer is attached.
+func (s *Single) Transport() peer.Transport {
+	return s.t
+}
+
 // Choose returns the single peer
 func (s *Single) Choose(ctx context.Context, _ *transport.Request) (peer.Peer, func(error), error) {
 	if err := s.once.WaitUntilRunning(ctx); err != nil {

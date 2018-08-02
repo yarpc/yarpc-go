@@ -85,6 +85,7 @@ func (t *Transport) NewInbound(listener net.Listener, options ...InboundOption) 
 }
 
 // NewSingleOutbound returns a new Outbound for the given adrress.
+// Note: This does not support TLS. See TLS example in doc.go.
 func (t *Transport) NewSingleOutbound(address string, options ...OutboundOption) *Outbound {
 	return newSingleOutbound(t, address, options...)
 }
@@ -95,28 +96,40 @@ func (t *Transport) NewOutbound(peerChooser peer.Chooser, options ...OutboundOpt
 }
 
 // RetainPeer retains the peer.
-func (t *Transport) RetainPeer(peerIdentifier peer.Identifier, peerSubscriber peer.Subscriber) (peer.Peer, error) {
+//
+// Deprecated: use grpcTransport.NewDialer(...grpc.DialOption) to create a
+// peer.Transport that supports custom DialOptions instead of using the
+// grpc.Transport as a peer.Transport.
+func (t *Transport) RetainPeer(pid peer.Identifier, ps peer.Subscriber) (peer.Peer, error) {
+	return t.retainPeer(pid, nil, ps)
+}
+
+func (t *Transport) retainPeer(pid peer.Identifier, options *dialOptions, ps peer.Subscriber) (peer.Peer, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	address := peerIdentifier.Identifier()
+	address := pid.Identifier()
 	p, ok := t.addressToPeer[address]
 	if !ok {
 		var err error
-		p, err = newPeer(address, t)
+		p, err = t.newPeer(address, options)
 		if err != nil {
 			return nil, err
 		}
 		t.addressToPeer[address] = p
 	}
-	p.Subscribe(peerSubscriber)
+	p.Subscribe(ps)
 	return p, nil
 }
 
 // ReleasePeer releases the peer.
-func (t *Transport) ReleasePeer(peerIdentifier peer.Identifier, peerSubscriber peer.Subscriber) error {
+//
+// Deprecated: use grpcTransport.NewDialer(...grpc.DialOption) to create a
+// peer.Transport that supports custom DialOptions instead of using the
+// grpc.Transport as a peer.Transport.
+func (t *Transport) ReleasePeer(pid peer.Identifier, ps peer.Subscriber) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	address := peerIdentifier.Identifier()
+	address := pid.Identifier()
 	p, ok := t.addressToPeer[address]
 	if !ok {
 		return peer.ErrTransportHasNoReferenceToPeer{
@@ -124,7 +137,7 @@ func (t *Transport) ReleasePeer(peerIdentifier peer.Identifier, peerSubscriber p
 			PeerIdentifier: address,
 		}
 	}
-	if err := p.Unsubscribe(peerSubscriber); err != nil {
+	if err := p.Unsubscribe(ps); err != nil {
 		return err
 	}
 	if p.NumSubscribers() == 0 {

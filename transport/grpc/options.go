@@ -23,10 +23,13 @@ package grpc
 import (
 	"math"
 
-	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/backoff"
 	intbackoff "go.uber.org/yarpc/internal/backoff"
+
+	"github.com/opentracing/opentracing-go"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 const (
@@ -48,6 +51,7 @@ type Option interface {
 var _ Option = (TransportOption)(nil)
 var _ Option = (InboundOption)(nil)
 var _ Option = (OutboundOption)(nil)
+var _ Option = (DialOption)(nil)
 
 // TransportOption is an option for a transport.
 type TransportOption func(*transportOptions)
@@ -119,24 +123,36 @@ func ClientMaxSendMsgSize(clientMaxSendMsgSize int) TransportOption {
 	}
 }
 
-// ClientTLS says to use TLS with the system certificate pool on the client side.
-//
-// The default is to not use TLS.
-func ClientTLS() TransportOption {
-	return func(transportOptions *transportOptions) {
-		transportOptions.clientTLS = true
-	}
-}
-
 // InboundOption is an option for an inbound.
 type InboundOption func(*inboundOptions)
 
 func (InboundOption) grpcOption() {}
 
+// InboundCredentials returns an InboundOption that sets credentials for incoming
+// connections.
+func InboundCredentials(creds credentials.TransportCredentials) InboundOption {
+	return func(inboundOptions *inboundOptions) {
+		inboundOptions.creds = creds
+	}
+}
+
 // OutboundOption is an option for an outbound.
 type OutboundOption func(*outboundOptions)
 
 func (OutboundOption) grpcOption() {}
+
+// DialOption is an option that influences grpc.Dial.
+type DialOption func(*dialOptions)
+
+func (DialOption) grpcOption() {}
+
+// DialerCredentials returns a DialOption which configures a
+// connection level security credentials (e.g., TLS/SSL).
+func DialerCredentials(creds credentials.TransportCredentials) DialOption {
+	return func(dialOptions *dialOptions) {
+		dialOptions.creds = creds
+	}
+}
 
 type transportOptions struct {
 	backoffStrategy      backoff.Strategy
@@ -146,7 +162,6 @@ type transportOptions struct {
 	serverMaxSendMsgSize int
 	clientMaxRecvMsgSize int
 	clientMaxSendMsgSize int
-	clientTLS            bool
 }
 
 func newTransportOptions(options []TransportOption) *transportOptions {
@@ -172,7 +187,9 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 	return transportOptions
 }
 
-type inboundOptions struct{}
+type inboundOptions struct {
+	creds credentials.TransportCredentials
+}
 
 func newInboundOptions(options []InboundOption) *inboundOptions {
 	inboundOptions := &inboundOptions{}
@@ -190,4 +207,26 @@ func newOutboundOptions(options []OutboundOption) *outboundOptions {
 		option(outboundOptions)
 	}
 	return outboundOptions
+}
+
+type dialOptions struct {
+	creds credentials.TransportCredentials
+}
+
+func (d *dialOptions) grpcOptions() []grpc.DialOption {
+	var credsOption grpc.DialOption
+	if d == nil || d.creds == nil {
+		credsOption = grpc.WithInsecure()
+	} else {
+		credsOption = grpc.WithTransportCredentials(d.creds)
+	}
+	return []grpc.DialOption{credsOption}
+}
+
+func newDialOptions(options []DialOption) *dialOptions {
+	var dopts dialOptions
+	for _, option := range options {
+		option(&dopts)
+	}
+	return &dopts
 }

@@ -91,11 +91,12 @@ func TestTransportSpec(t *testing.T) {
 		ServerMaxSendMsgSize int
 		ClientMaxRecvMsgSize int
 		ClientMaxSendMsgSize int
-		ClientTLS            bool
+		TLS                  bool
 	}
 
 	type wantOutbound struct {
 		Address string
+		TLS     bool
 	}
 
 	type test struct {
@@ -211,14 +212,47 @@ func TestTransportSpec(t *testing.T) {
 			},
 		},
 		{
-			desc: "inbound and transport with client TLS",
-			transportCfg: attrs{
-				"clientTLS": true,
+			desc: "TLS enabled on an inbound",
+			inboundCfg: attrs{
+				"address": "localhost:54569",
+				"tls": attrs{
+					"enabled":  true,
+					"certFile": "testdata/cert",
+					"keyFile":  "testdata/key",
+				},
 			},
-			inboundCfg: attrs{"address": ":54572"},
 			wantInbound: &wantInbound{
-				Address:   ":54572",
-				ClientTLS: true,
+				Address: "127.0.0.1:54569",
+				TLS:     true,
+			},
+		},
+		{
+			desc: "TLS enabled on an inbound with invalid config",
+			inboundCfg: attrs{
+				"address": "localhost:54713",
+				"tls": attrs{
+					"enabled": true,
+				},
+			},
+			wantErrors: []string{`both certFile and keyFile`},
+		},
+		{
+			desc: "TLS enabled on an outbound",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					transportName: attrs{
+						"address": "localhost:54816",
+						"tls": attrs{
+							"enabled": true,
+						},
+					},
+				},
+			},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {
+					Address: "localhost:54816",
+					TLS:     true,
+				},
 			},
 		},
 	}
@@ -280,7 +314,7 @@ func TestTransportSpec(t *testing.T) {
 				} else {
 					assert.Equal(t, defaultClientMaxSendMsgSize, inbound.t.options.clientMaxSendMsgSize)
 				}
-				assert.Equal(t, tt.wantInbound.ClientTLS, inbound.t.options.clientTLS)
+				assert.Equal(t, tt.wantInbound.TLS, inbound.options.creds != nil)
 			} else {
 				assert.Len(t, cfg.Inbounds, 0)
 			}
@@ -291,15 +325,16 @@ func TestTransportSpec(t *testing.T) {
 				require.True(t, ok, "expected *Outbound, got %T", ob)
 				if wantOutbound.Address != "" {
 					single, ok := outbound.peerChooser.(*peer.Single)
-					if !ok {
-						require.True(t, ok, "expected *peer.Single, got %T", outbound.peerChooser)
-					}
+					require.True(t, ok, "expected *peer.Single, got %T", outbound.peerChooser)
 					require.NoError(t, single.Start())
 					ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 					defer cancel()
 					peer, _, err := single.Choose(ctx, &transport.Request{})
 					require.NoError(t, err)
 					require.Equal(t, wantOutbound.Address, peer.Identifier())
+					dialer, ok := single.Transport().(*Dialer)
+					require.True(t, ok, "expected *Dialer, got %T", single.Transport())
+					assert.Equal(t, wantOutbound.TLS, dialer.options.creds != nil)
 				}
 			}
 		})
