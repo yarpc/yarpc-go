@@ -290,6 +290,162 @@ func TestServiceRouting(t *testing.T) {
 				3,
 			),
 		},
+		{
+			name: "HTTP request retry error",
+			services: Lifecycles(
+				HTTPService(
+					Name("myservice"),
+					p.NamedPort("7"),
+					Proc(
+						Name("proc"),
+						OrderedRequestHandler(
+							ErrorHandler(yarpcerrors.InternalErrorf("internal error")),
+							ErrorHandler(yarpcerrors.InternalErrorf("internal error")),
+							StaticHandler("success"),
+						),
+					),
+				),
+			),
+			requests: Actions(
+				HTTPRequest(
+					p.NamedPort("7"),
+					Service("myservice"),
+					Procedure("proc"),
+					WantError(yarpcerrors.InternalErrorf("internal error").Error()),
+					WithRetry(1),
+				),
+			),
+		},
+		{
+			name: "HTTP request retry success",
+			services: Lifecycles(
+				HTTPService(
+					Name("myservice"),
+					p.NamedPort("8"),
+					Proc(
+						Name("proc"),
+						OrderedRequestHandler(
+							ErrorHandler(yarpcerrors.InternalErrorf("internal error")),
+							ErrorHandler(yarpcerrors.InternalErrorf("internal error")),
+							StaticHandler("success"),
+						),
+					),
+				),
+			),
+			requests: Actions(
+				HTTPRequest(
+					p.NamedPort("8"),
+					Service("myservice"),
+					Procedure("proc"),
+					WantRespBody("success"),
+					WithRetry(2),
+				),
+			),
+		},
+		{
+			name: "TChannel request retry error",
+			services: Lifecycles(
+				TChannelService(
+					Name("myservice"),
+					p.NamedPort("9"),
+					Proc(
+						Name("proc"),
+						OrderedRequestHandler(
+							ErrorHandler(yarpcerrors.InternalErrorf("internal error")),
+							ErrorHandler(yarpcerrors.InternalErrorf("internal error")),
+							StaticHandler("success"),
+						),
+					),
+				),
+			),
+			requests: Actions(
+				TChannelRequest(
+					p.NamedPort("9"),
+					Service("myservice"),
+					Procedure("proc"),
+					WantError(yarpcerrors.InternalErrorf("internal error").Error()),
+					WithRetry(1),
+				),
+			),
+		},
+		{
+			name: "TChannel request retry success",
+			services: Lifecycles(
+				TChannelService(
+					Name("myservice"),
+					p.NamedPort("10"),
+					Proc(
+						Name("proc"),
+						OrderedRequestHandler(
+							ErrorHandler(yarpcerrors.InternalErrorf("internal error")),
+							ErrorHandler(yarpcerrors.InternalErrorf("internal error")),
+							StaticHandler("success"),
+						),
+					),
+				),
+			),
+			requests: Actions(
+				TChannelRequest(
+					p.NamedPort("10"),
+					Service("myservice"),
+					Procedure("proc"),
+					WantRespBody("success"),
+					WithRetry(2),
+				),
+			),
+		},
+		{
+			name: "GRPC request retry error",
+			services: Lifecycles(
+				GRPCService(
+					Name("myservice"),
+					p.NamedPort("11"),
+					Proc(
+						Name("proc"),
+						OrderedRequestHandler(
+							ErrorHandler(yarpcerrors.InternalErrorf("internal error")),
+							ErrorHandler(yarpcerrors.InternalErrorf("internal error")),
+							StaticHandler("success"),
+						),
+					),
+				),
+			),
+			requests: Actions(
+				GRPCRequest(
+					p.NamedPort("11"),
+					Service("myservice"),
+					Procedure("proc"),
+					WantError(yarpcerrors.InternalErrorf("internal error").Error()),
+					WithRetry(1),
+				),
+			),
+		},
+		{
+			name: "GRPC request retry success",
+			services: Lifecycles(
+				GRPCService(
+					Name("myservice"),
+					p.NamedPort("12"),
+					Proc(
+						Name("proc"),
+						OrderedRequestHandler(
+							ErrorHandler(yarpcerrors.InternalErrorf("internal error")),
+							ErrorHandler(yarpcerrors.InternalErrorf("internal error")),
+							StaticHandler("success"),
+						),
+					),
+				),
+			),
+			requests: Actions(
+				GRPCRequest(
+					p.NamedPort("12"),
+					Service("myservice"),
+					Procedure("proc"),
+					WantRespBody("success"),
+					WithRetry(2),
+				),
+			),
+		},
 	}
 
 	for _, tt := range tests {

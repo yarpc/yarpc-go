@@ -55,11 +55,24 @@ func HTTPRequest(options ...api.RequestOption) api.Action {
 		require.NoError(t, out.Start())
 		defer func() { assert.NoError(t, out.Stop()) }()
 
-		resp, cancel, err := sendRequest(out, opts.GiveRequest, opts.GiveTimeout)
-		defer cancel()
-		validateError(t, err, opts.WantError)
-		if opts.WantError == nil {
-			validateResponse(t, resp, opts.WantResponse)
+		for i := 0; i < opts.RetryCount+1; i++ {
+			resp, cancel, err := sendRequest(out, opts.GiveRequest, opts.GiveTimeout)
+			defer cancel()
+			if i == opts.RetryCount {
+				validateError(t, err, opts.WantError)
+				if opts.WantError == nil {
+					validateResponse(t, resp, opts.WantResponse)
+				}
+				return
+			}
+
+			if err != nil {
+				continue
+			}
+
+			if err := matchResponse(resp, opts.WantResponse); err == nil {
+				return
+			}
 		}
 	})
 }
@@ -82,11 +95,24 @@ func TChannelRequest(options ...api.RequestOption) api.Action {
 		require.NoError(t, out.Start())
 		defer func() { assert.NoError(t, out.Stop()) }()
 
-		resp, cancel, err := sendRequest(out, opts.GiveRequest, opts.GiveTimeout)
-		defer cancel()
-		validateError(t, err, opts.WantError)
-		if opts.WantError == nil {
-			validateResponse(t, resp, opts.WantResponse)
+		for i := 0; i < opts.RetryCount+1; i++ {
+			resp, cancel, err := sendRequest(out, opts.GiveRequest, opts.GiveTimeout)
+			defer cancel()
+			if i == opts.RetryCount {
+				validateError(t, err, opts.WantError)
+				if opts.WantError == nil {
+					validateResponse(t, resp, opts.WantResponse)
+				}
+				return
+			}
+
+			if err != nil {
+				continue
+			}
+
+			if err := matchResponse(resp, opts.WantResponse); err == nil {
+				return
+			}
 		}
 	})
 }
@@ -108,11 +134,24 @@ func GRPCRequest(options ...api.RequestOption) api.Action {
 		require.NoError(t, out.Start())
 		defer func() { assert.NoError(t, out.Stop()) }()
 
-		resp, cancel, err := sendRequest(out, opts.GiveRequest, opts.GiveTimeout)
-		defer cancel()
-		validateError(t, err, opts.WantError)
-		if opts.WantError == nil {
-			validateResponse(t, resp, opts.WantResponse)
+		for i := 0; i < opts.RetryCount+1; i++ {
+			resp, cancel, err := sendRequest(out, opts.GiveRequest, opts.GiveTimeout)
+			defer cancel()
+			if i == opts.RetryCount {
+				validateError(t, err, opts.WantError)
+				if opts.WantError == nil {
+					validateResponse(t, resp, opts.WantResponse)
+				}
+				return
+			}
+
+			if err != nil {
+				continue
+			}
+
+			if err := matchResponse(resp, opts.WantResponse); err == nil {
+				return
+			}
 		}
 	})
 }
@@ -133,23 +172,40 @@ func validateError(t testing.TB, actualErr error, wantError error) {
 }
 
 func validateResponse(t testing.TB, actualResp *transport.Response, expectedResp *transport.Response) {
+	require.NoError(t, matchResponse(actualResp, expectedResp), "response mismatch")
+}
+
+func matchResponse(actualResp *transport.Response, expectedResp *transport.Response) error {
 	var actualBody []byte
 	var expectedBody []byte
 	var err error
 	if actualResp.Body != nil {
 		actualBody, err = ioutil.ReadAll(actualResp.Body)
-		require.NoError(t, err)
+		if err != nil {
+			return fmt.Errorf("failed to read response body")
+		}
 	}
 	if expectedResp.Body != nil {
 		expectedBody, err = ioutil.ReadAll(expectedResp.Body)
-		require.NoError(t, err)
+		if err != nil {
+			return fmt.Errorf("failed to read response body")
+		}
 	}
-	assert.Equal(t, string(actualBody), string(expectedBody))
+	if string(actualBody) != string(expectedBody) {
+		return fmt.Errorf("response body mismatch, expect %s, got %s",
+			expectedBody, actualBody)
+	}
 	for k, v := range expectedResp.Headers.Items() {
 		actualValue, ok := actualResp.Headers.Get(k)
-		require.True(t, ok, "header %q was not set on the response", k)
-		require.Equal(t, actualValue, v, "headers did not match for %q", k)
+		if !ok {
+			return fmt.Errorf("headler %q was not set on the response", k)
+		}
+		if actualValue != v {
+			return fmt.Errorf("headers mismatch for %q, expected %v, got %v",
+				k, v, actualValue)
+		}
 	}
+	return nil
 }
 
 // UNARY-SPECIFIC REQUEST OPTIONS
@@ -191,5 +247,13 @@ func GiveAndWantLargeBodyIsEchoed(numOfBytes int) api.RequestOption {
 		body := bytes.Repeat([]byte("t"), numOfBytes)
 		opts.GiveRequest.Body = bytes.NewReader(body)
 		opts.WantResponse.Body = ioutil.NopCloser(bytes.NewReader(body))
+	})
+}
+
+// WithRetry retries the request for a given times, until the request succeeds
+// and the response matches.
+func WithRetry(count int) api.RequestOption {
+	return api.RequestOptionFunc(func(opts *api.RequestOpts) {
+		opts.RetryCount = count
 	})
 }

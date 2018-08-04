@@ -35,6 +35,7 @@ type RequestOpts struct {
 	GiveRequest  *transport.Request
 	WantResponse *transport.Response
 	WantError    error
+	RetryCount   int
 }
 
 // NewRequestOpts initializes a RequestOpts struct.
