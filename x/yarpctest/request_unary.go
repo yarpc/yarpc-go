@@ -67,6 +67,7 @@ func HTTPRequest(options ...api.RequestOption) api.Action {
 			}
 
 			if err != nil {
+				time.Sleep(opts.RetryInterval)
 				continue
 			}
 
@@ -107,6 +108,7 @@ func TChannelRequest(options ...api.RequestOption) api.Action {
 			}
 
 			if err != nil {
+				time.Sleep(opts.RetryInterval)
 				continue
 			}
 
@@ -146,6 +148,7 @@ func GRPCRequest(options ...api.RequestOption) api.Action {
 			}
 
 			if err != nil {
+				time.Sleep(opts.RetryInterval)
 				continue
 			}
 
@@ -252,8 +255,9 @@ func GiveAndWantLargeBodyIsEchoed(numOfBytes int) api.RequestOption {
 
 // WithRetry retries the request for a given times, until the request succeeds
 // and the response matches.
-func WithRetry(count int) api.RequestOption {
+func WithRetry(count int, interval time.Duration) api.RequestOption {
 	return api.RequestOptionFunc(func(opts *api.RequestOpts) {
 		opts.RetryCount = count
+		opts.RetryInterval = interval
 	})
 }

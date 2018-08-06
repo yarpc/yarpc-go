@@ -30,12 +30,13 @@ import (
 // RequestOpts are configuration options for a yarpc Request and assertions
 // to make on the response.
 type RequestOpts struct {
-	Port         uint16
-	GiveTimeout  time.Duration
-	GiveRequest  *transport.Request
-	WantResponse *transport.Response
-	WantError    error
-	RetryCount   int
+	Port          uint16
+	GiveTimeout   time.Duration
+	GiveRequest   *transport.Request
+	WantResponse  *transport.Response
+	WantError     error
+	RetryCount    int
+	RetryInterval time.Duration
 }
 
 // NewRequestOpts initializes a RequestOpts struct.
