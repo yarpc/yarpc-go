@@ -108,25 +108,30 @@ func GRPCRequest(options ...api.RequestOption) api.Action {
 }
 
 func sendRequestAndValidateResp(t testing.TB, out transport.UnaryOutbound, opts api.RequestOpts) {
-	for i := 0; i < opts.RetryCount+1; i++ {
+	f := func(i int) bool {
 		resp, cancel, err := sendRequest(out, opts.GiveRequest, opts.GiveTimeout)
 		defer cancel()
+
 		if i == opts.RetryCount {
 			validateError(t, err, opts.WantError)
 			if opts.WantError == nil {
 				validateResponse(t, resp, opts.WantResponse)
 			}
-			return
+			return true
 		}
 
-		if err != nil {
-			time.Sleep(opts.RetryInterval)
-			continue
+		if err != nil || matchResponse(resp, opts.WantResponse) != nil {
+			return false
 		}
 
-		if err := matchResponse(resp, opts.WantResponse); err == nil {
+		return true
+	}
+
+	for i := 0; i < opts.RetryCount+1; i++ {
+		if ok := f(i); ok {
 			return
 		}
+		time.Sleep(opts.RetryInterval)
 	}
 }
 
@@ -233,9 +238,9 @@ func GiveAndWantLargeBodyIsEchoed(numOfBytes int) api.RequestOption {
 	})
 }
 
-// WithRetry retries the request for a given times, until the request succeeds
+// Retry retries the request for a given times, until the request succeeds
 // and the response matches.
-func WithRetry(count int, interval time.Duration) api.RequestOption {
+func Retry(count int, interval time.Duration) api.RequestOption {
 	return api.RequestOptionFunc(func(opts *api.RequestOpts) {
 		opts.RetryCount = count
 		opts.RetryInterval = interval
