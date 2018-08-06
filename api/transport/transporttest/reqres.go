@@ -73,6 +73,21 @@ func (m RequestMatcher) Matches(got interface{}) bool {
 		panic(fmt.Sprintf("expected *transport.Request, got %v", got))
 	}
 
+	if l.ID != r.ID {
+		m.t.Logf("ID mismatch: %s != %s", l.ID, r.ID)
+		return false
+	}
+
+	if l.Host != r.Host {
+		m.t.Logf("Host mismatch: %s != %s", l.Host, r.Host)
+		return false
+	}
+
+	if l.Environment != r.Environment {
+		m.t.Logf("Environment mismatch: %s != %s", l.Environment, r.Environment)
+		return false
+	}
+
 	if l.Caller != r.Caller {
 		m.t.Logf("Caller mismatch: %s != %s", l.Caller, r.Caller)
 		return false
@@ -186,6 +201,27 @@ func (m ResponseMatcher) Matches(got interface{}) bool {
 	r, ok := got.(*transport.Response)
 	if !ok {
 		panic(fmt.Sprintf("expected *transport.Response, got %v", got))
+	}
+
+	if l.ID != r.ID {
+		m.t.Logf("ID fields do not match: %q != %q", l.ID, r.ID)
+		return false
+	}
+	if l.Host != r.Host {
+		m.t.Logf("Host fields do not match: %q != %q", l.Host, r.Host)
+		return false
+	}
+	if l.Environment != r.Environment {
+		m.t.Logf("Environment fields do not match: %q != %q", l.Environment, r.Environment)
+		return false
+	}
+	if l.Service != r.Service {
+		m.t.Logf("Service fields do not match: %q != %q", l.Service, r.Service)
+		return false
+	}
+	if l.ApplicationError != r.ApplicationError {
+		m.t.Logf("Application errors do not match: %v != %v", l.ApplicationError, r.ApplicationError)
+		return false
 	}
 
 	if err := checkSuperSet(l.Headers, r.Headers); err != nil {

@@ -24,6 +24,27 @@ import "io"
 
 // Response is the low level response representation.
 type Response struct {
+	// ID of the response as chosen by the client. This MAY be a trace ID or
+	// UUID.
+	//
+	// If the corresponding transport.Request struct has this field set, this
+	// field MUST have the same value.
+	ID string
+
+	// Host is the name of the server responding with this reponse.
+	//
+	// It MAY be set by a an environment-aware middleware.
+	Host string
+
+	// Environment is the name of the host environment that the request was
+	// issued from. eg "staging", "production"
+	//
+	// It MAY be set by a an environment-aware middleware.
+	Environment string
+
+	// Service is the name of the responding service.
+	Service string
+
 	Headers          Headers
 	Body             io.ReadCloser
 	ApplicationError bool

@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added `peer/tworandomchoices`, an implementation of the Two Random Choices
   load balancer algorithm.
 - Reintroduce Transport field matching for `transporttest.RequestMatcher`.
+- Additional transport headers were added to `transport.Request`: `ID`, `Host`
+  and `Environment`.
+- Additional transport headers were added to `transport.Response`: `ID`,
+  `Host`, `Environment` and `Service`.
 ### Changed
 - HTTP inbounds gracefully shutdown with an optional timeout, defaulting to 5
   seconds.

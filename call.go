@@ -109,6 +109,21 @@ func (c *Call) WriteResponseHeader(k, v string) error {
 	return (*encoding.Call)(c).WriteResponseHeader(k, v)
 }
 
+// ID returns the ID for the request.
+func (c *Call) ID() string {
+	return (*encoding.Call)(c).ID()
+}
+
+// Host returns the name of the sever making this request.
+func (c *Call) Host() string {
+	return (*encoding.Call)(c).Host()
+}
+
+// Environment returns the environment this request was made in.
+func (c *Call) Environment() string {
+	return (*encoding.Call)(c).Environment()
+}
+
 // Caller returns the name of the service making this request.
 func (c *Call) Caller() string {
 	return (*encoding.Call)(c).Caller()
