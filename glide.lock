@@ -1,5 +1,5 @@
-hash: b2ba31000bc2dc987f5ee25897fe23be0231543aad8ab69c93202639c0f76459
-updated: 2018-07-06T11:28:53.417211-07:00
+hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
+updated: 2018-08-06T15:05:48.949824766Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -19,7 +19,7 @@ imports:
   subpackages:
   - spew
 - name: github.com/gogo/protobuf
-  version: 1adfc126b41513cc696b209667c8656ea7aac67c
+  version: 636bf0302bc95575d69441b25a2603156ffdddf1
   subpackages:
   - jsonpb
   - proto
@@ -32,7 +32,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: e09c5db296004fbe3f74490e84dcd62c3c5ddb1b
+  version: 89a0c16f4dc2a70c0ed864d8ef64878f24fdaa51
   subpackages:
   - proto
   - ptypes
@@ -62,23 +62,23 @@ imports:
   - prometheus
   - prometheus/promhttp
 - name: github.com/prometheus/client_model
-  version: 99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c
+  version: 5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 38c53a9f4bfcd932d1b00bfc65e256a7fba6b37a
+  version: c7de2306084e37d54b8be01f3541a8464345e9a5
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 780932d4fbbe0e69b84c34c20f5c8d0981e109ea
+  version: 05ee40e3a273f7245e8777337fc7b46e533a9a92
   subpackages:
   - internal/util
   - nfs
   - xfs
 - name: github.com/stretchr/testify
-  version: c679ae2cc0cb27ec3293fea7e254e47386f05d69
+  version: f35b8ab0b5a2cef36673838d662e249dd9c94686
   subpackages:
   - assert
   - require
@@ -91,7 +91,7 @@ imports:
   subpackages:
   - internal/mapstructure
 - name: github.com/uber-go/tally
-  version: 79f2a33b0e55b1255ffbbaf824dcafb09ff34dda
+  version: ff17f3c43c065c3c2991f571e740eee43ea3a14a
 - name: github.com/uber/jaeger-client-go
   version: b043381d944715b469fd6b37addfd30145ca1758
   subpackages:
@@ -162,7 +162,7 @@ imports:
   - version
   - wire
 - name: go.uber.org/zap
-  version: eeedf312bc6c57391d84767a4cd413f02a917974
+  version: 4d45f9617f7d90f7a663ff21c7a4321dbe78098b
   subpackages:
   - buffer
   - internal/bufferpool
@@ -171,7 +171,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: ed29d75add3d7c4bf7ca65aac0c6df3d1420216f
+  version: f4c29de78a2a91c00474a2e689954305c350adf9
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -188,26 +188,28 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 3b87a42e500a6dc65dae1a55d0b641295971163e
+  version: 34b17bdb430002e9db9ae7ddc8480b9fa05edc22
   repo: https://github.com/golang/sys
+  subpackages:
+  - unix
 - name: golang.org/x/text
-  version: 2cb43934f0eece38629746959acc633cba083fe4
+  version: cb6730876b985e110843c1842a7a63a63677cf08
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: ac136b6c2db7c4d43955e4bc7174db36dc0539c0
+  version: 3c07937fe18c27668fd78bbaed3d6b8b39e202ea
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: aae13d27a44d62f039eeeb93e74e893886673932
+  version: daca94659cb50e9f37c1b834680f2e46358f10b0
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 168a6198bcb0ef175f7dacec0b8691fc141dc9b8
+  version: 32fb0ac620c32ba40a4626ddf94d90d12cce3455
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
@@ -222,7 +224,9 @@ imports:
   - internal
   - internal/backoff
   - internal/channelz
+  - internal/envconfig
   - internal/grpcrand
+  - internal/transport
   - keepalive
   - metadata
   - naming
@@ -233,7 +237,6 @@ imports:
   - stats
   - status
   - tap
-  - transport
 - name: gopkg.in/yaml.v2
   version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
 testImports:
@@ -257,6 +260,6 @@ testImports:
   subpackages:
   - golint
 - name: honnef.co/go/tools
-  version: 85dde8b51d3a07710001c1571ac759ebdd9b0106
+  version: 88497007e8588ea5b6baee991f74a1607e809487
   subpackages:
   - cmd/staticcheck

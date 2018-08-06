@@ -16,6 +16,7 @@ steps:
           # The script needs the following environment variables in addition
           # to those provided by the docker-compose.
           - GITHUB_USER
+          - GITHUB_EMAIL
           - GITHUB_TOKEN
           - GITHUB_REPO
     agents:

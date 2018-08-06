@@ -18,33 +18,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package peerlist is deprecated in favor of
-// `go.uber.org/yarpc/peer/peerlist/v2` which can additionally convey peer list
-// identifiers to the peerlist.Implementation without a wrapper type, allowing
-// a peer list updater to communicate shard information for example.
-//
-// Package peerlist provides a utility for managing peer availability with a
-// separate implementation of peer selection from just among available peers.
-// The peer list implements the peer.ChooserList interface and accepts a
-// peer.ListImplementation to provide the implementation-specific concern of,
-// for example, a *roundrobin.List.
-//
-// The example is an implementation of peer.ChooserList using a random peer selection
-// strategy, returned by newRandomListImplementation(), implementing
-// peer.ListImplementation.
-//
-//   type List struct {
-//   	*peerlist.List
-//   }
-//
-//   func New(transport peer.Transport) *List {
-//   	return &List{
-//   		List: peerlist.New(
-//   			"random",
-//   			transport,
-//   			newRandomListImplementation(),
-//   		),
-//   	}
-//   }
-//
-package peerlist
+package randpeer
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/yarpcconfig"
+	"go.uber.org/yarpc/yarpctest"
+)
+
+type attrs map[string]interface{}
+
+func TestConfig(t *testing.T) {
+	cfg := yarpcconfig.New()
+	cfg.RegisterPeerList(Spec())
+	cfg.RegisterTransport(yarpctest.FakeTransportSpec())
+	config, err := cfg.LoadConfig("our-service", attrs{
+		"outbounds": attrs{
+			"their-service": attrs{
+				"fake-transport": attrs{
+					"random": attrs{
+						"peers": []string{
+							"1.1.1.1:1111",
+							"2.2.2.2:2222",
+						},
+					},
+				},
+			},
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, config.Outbounds)
+	require.NotNil(t, config.Outbounds["their-service"])
+	require.NotNil(t, config.Outbounds["their-service"].Unary)
+}

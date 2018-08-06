@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Added
+- Adds inbound and outbound TLS support for gRPC. See `gprc.InboundCredentials`,
+  `grpc.DialerCredentials`, and `grpc.Transport.NewDialer` for usage.
+- Added `peer/peerlist/v2` which differs from the original `peer/peerlist` by
+  replacing the use of `api/peer.ListImplementation` with
+  `peer/peerlist/v2.Implementation`, which threads the peer separately from the
+  peer identifier.
+  This allows us to thread shard information from the peer list updater to a
+  sharding peer list.
+- Added connection/disconnection simulation to the `yarpctest` fake transport
+  and peers.
+- x/yarpctest: Added support for specifying outbound middleware.
+- yarpctest: Changed `FakePeer` id to use "go.uber.org/yarpc/api/peer".Identifier 
+  interface instead of the concrete "go.uber.org/peer/hostport".Identifier type.
+### Changed
+- The HTTP protocol now mitigates peers that are unavailable due to a half-open
+  TCP connection.
+  Previously, if a peer shut down unexpectedly, it might fail to send a TCP FIN
+  packet, leaving the sender unaware that the peer is unavailable.
+  The symptom is that requests sent down this connection will time out.
+  This change introduces a suspicion window for peers that time out.
+  Once per suspicion window, the HTTP transport's peer manager will attempt
+  to establish a fresh TCP connection to the peer.
+  Failing to establish a connection will transition the peer to the unavailable
+  state until a fresh TCP connection becomes available.
+  The HTTP transport now accepts an `InnocenceWindow` duration, and an
+  `innocenceWindow` config field.
+
 ## [1.31.0] - 2018-07-09
 ### Added
 - Added `Outbounds()` on `Dispatcher` to provide access to the configured outbounds.
@@ -954,6 +983,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.31.0...HEAD
 [1.31.0]: https://github.com/yarpc/yarpc-go/compare/v1.30.1...v1.31.0
 [1.30.0]: https://github.com/yarpc/yarpc-go/compare/v1.29.1...v1.30.0
 [1.29.1]: https://github.com/yarpc/yarpc-go/compare/v1.29.0...v1.29.1

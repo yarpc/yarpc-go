@@ -109,12 +109,18 @@ func (i *Inbound) start() error {
 
 	handler := newHandler(i, i.t.options.logger)
 
-	server := grpc.NewServer(
+	serverOptions := []grpc.ServerOption{
 		grpc.CustomCodec(customCodec{}),
 		grpc.UnknownServiceHandler(handler.handle),
 		grpc.MaxRecvMsgSize(i.t.options.serverMaxRecvMsgSize),
 		grpc.MaxSendMsgSize(i.t.options.serverMaxSendMsgSize),
-	)
+	}
+
+	if i.options.creds != nil {
+		serverOptions = append(serverOptions, grpc.Creds(i.options.creds))
+	}
+
+	server := grpc.NewServer(serverOptions...)
 
 	go func() {
 		i.t.options.logger.Info("started GRPC inbound", zap.Stringer("address", i.listener.Addr()))
@@ -146,5 +152,3 @@ func (i *Inbound) stop() error {
 	i.server = nil
 	return nil
 }
-
-type noopGrpcStruct struct{}

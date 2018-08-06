@@ -35,6 +35,7 @@ func TestNilCall(t *testing.T) {
 
 	assert.Equal(t, "", call.Caller())
 	assert.Equal(t, "", call.Service())
+	assert.Equal(t, "", call.Transport())
 	assert.Equal(t, "", string(call.Encoding()))
 	assert.Equal(t, "", call.Procedure())
 	assert.Equal(t, "", call.ShardKey())
@@ -50,6 +51,7 @@ func TestReadFromRequest(t *testing.T) {
 	ctx, icall := NewInboundCall(context.Background())
 	icall.ReadFromRequest(&transport.Request{
 		Service:         "service",
+		Transport:       "transport",
 		Caller:          "caller",
 		Encoding:        transport.Encoding("raw"),
 		Procedure:       "proc",
@@ -63,6 +65,7 @@ func TestReadFromRequest(t *testing.T) {
 
 	assert.Equal(t, "caller", call.Caller())
 	assert.Equal(t, "service", call.Service())
+	assert.Equal(t, "transport", call.Transport())
 	assert.Equal(t, "raw", string(call.Encoding()))
 	assert.Equal(t, "proc", call.Procedure())
 	assert.Equal(t, "sk", call.ShardKey())
@@ -81,6 +84,7 @@ func TestReadFromRequestMeta(t *testing.T) {
 	icall.ReadFromRequestMeta(&transport.RequestMeta{
 		Service:         "service",
 		Caller:          "caller",
+		Transport:       "transport",
 		Encoding:        transport.Encoding("raw"),
 		Procedure:       "proc",
 		ShardKey:        "sk",
@@ -93,6 +97,7 @@ func TestReadFromRequestMeta(t *testing.T) {
 
 	assert.Equal(t, "caller", call.Caller())
 	assert.Equal(t, "service", call.Service())
+	assert.Equal(t, "transport", call.Transport())
 	assert.Equal(t, "raw", string(call.Encoding()))
 	assert.Equal(t, "proc", call.Procedure())
 	assert.Equal(t, "sk", call.ShardKey())
@@ -110,6 +115,7 @@ func TestDisabledResponseHeaders(t *testing.T) {
 	ctx, icall := NewInboundCallWithOptions(context.Background(), DisableResponseHeaders())
 	icall.ReadFromRequest(&transport.Request{
 		Service:         "service",
+		Transport:       "transport",
 		Caller:          "caller",
 		Encoding:        transport.Encoding("raw"),
 		Procedure:       "proc",
@@ -123,6 +129,7 @@ func TestDisabledResponseHeaders(t *testing.T) {
 
 	assert.Equal(t, "caller", call.Caller())
 	assert.Equal(t, "service", call.Service())
+	assert.Equal(t, "transport", call.Transport())
 	assert.Equal(t, "raw", string(call.Encoding()))
 	assert.Equal(t, "proc", call.Procedure())
 	assert.Equal(t, "sk", call.ShardKey())

@@ -24,6 +24,7 @@ import (
 	"net"
 	"time"
 
+	"go.uber.org/atomic"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/hostport"
 )
@@ -31,17 +32,21 @@ import (
 type httpPeer struct {
 	*hostport.Peer
 
-	transport *Transport
-	addr      string
-	changed   chan struct{}
-	released  chan struct{}
-	timer     *time.Timer
+	transport             *Transport
+	addr                  string
+	changed               chan struct{}
+	released              chan struct{}
+	timer                 *time.Timer
+	innocentUntilUnixNano *atomic.Int64
 }
 
 func newPeer(addr string, t *Transport) *httpPeer {
 	// Create a defused timer for later use.
 	timer := time.NewTimer(0)
 	if !timer.Stop() {
+		// not reachable, but if the timer wins the race, it would mean
+		// deadlock later, so best to conditionally drain the channel just in
+		// that case.
 		<-timer.C
 	}
 
@@ -52,6 +57,7 @@ func newPeer(addr string, t *Transport) *httpPeer {
 		changed:   make(chan struct{}, 1),
 		released:  make(chan struct{}, 0),
 		timer:     timer,
+		innocentUntilUnixNano: atomic.NewInt64(0),
 	}
 }
 
@@ -73,8 +79,32 @@ func (p *httpPeer) isAvailable() bool {
 	return false
 }
 
+func (p *httpPeer) OnSuspect() {
+	now := time.Now().UnixNano()
+	innocentUntil := p.innocentUntilUnixNano.Load()
+
+	// Do not check for connectivity after every request timeout.
+	// Spread them out so they only occur once in every innocence window.
+	if now < innocentUntil {
+		return
+	}
+
+	// Extend the window of innocence from the current time.
+	// Use Store instead of CAS since races at worst extend the innocence
+	// window to relatively similar distant times.
+	innocentDurationUnixNano := p.transport.jitter(p.transport.innocenceWindow.Nanoseconds())
+	p.innocentUntilUnixNano.Store(now + innocentDurationUnixNano)
+
+	// Kick the state change channel (if it hasn't been kicked already).
+	// But leave status as available.
+	select {
+	case p.changed <- struct{}{}:
+	default:
+	}
+}
+
 func (p *httpPeer) OnDisconnected() {
-	p.Peer.SetStatus(peer.Unavailable)
+	p.Peer.SetStatus(peer.Connecting)
 
 	// Kick the state change channel (if it hasn't been kicked already).
 	select {
@@ -97,8 +127,11 @@ func (p *httpPeer) MaintainConn() {
 
 	// Attempt to retain an open connection to each peer so long as it is
 	// retained.
+	p.Peer.SetStatus(peer.Connecting)
 	for {
-		p.Peer.SetStatus(peer.Connecting)
+		// Invariant: Status is Connecting initially, or after exponential
+		// back-off, or after OnDisconnected, but still Available after
+		// OnSuspect.
 		if p.isAvailable() {
 			p.Peer.SetStatus(peer.Available)
 			// Reset on success
@@ -106,6 +139,8 @@ func (p *httpPeer) MaintainConn() {
 			if !p.waitForChange() {
 				break
 			}
+			// Invariant: the status is Connecting if change is triggered by
+			// OnDisconnected, but remains Available if triggered by OnSuspect.
 		} else {
 			p.Peer.SetStatus(peer.Unavailable)
 			// Back-off on fail
@@ -113,6 +148,7 @@ func (p *httpPeer) MaintainConn() {
 				break
 			}
 			attempts++
+			p.Peer.SetStatus(peer.Connecting)
 		}
 	}
 	p.Peer.SetStatus(peer.Unavailable)
@@ -131,8 +167,6 @@ func (p *httpPeer) waitForChange() (changed bool) {
 		return true
 	case <-p.released:
 		return false
-	case <-p.transport.once.Stopping():
-		return false
 	}
 }
 
@@ -150,6 +184,8 @@ func (p *httpPeer) sleep(delay time.Duration) (completed bool) {
 	}
 
 	if !p.timer.Stop() {
+		// This branch is very difficult to reach, as stopping a timer almost
+		// always succeeds.
 		<-p.timer.C
 	}
 	return false

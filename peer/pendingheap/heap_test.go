@@ -160,10 +160,10 @@ func verifyIndexes(t *testing.T, h *pendingHeap) {
 
 func TestPeerHeapInvalidAdd(t *testing.T) {
 	var ph pendingHeap
-	assert.Nil(t, (&ph).Add(nil), "heap does not panic when adding nil")
+	assert.Nil(t, (&ph).Add(nil, nil), "heap does not panic when adding nil")
 }
 
 func TestPeerHeapInvalidRemoval(t *testing.T) {
 	var ph pendingHeap
-	(&ph).Remove(nil, nil)
+	(&ph).Remove(nil, nil, nil)
 }

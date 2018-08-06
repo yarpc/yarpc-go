@@ -18,61 +18,85 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package pendingheap
+package randpeer
 
 import (
+	"math/rand"
+	"time"
+
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/peerlist/v2"
 )
 
-type listConfig struct {
+type listOptions struct {
 	capacity int
-	shuffle  bool
+	source   rand.Source
 }
 
-var defaultListConfig = listConfig{
+var defaultListOptions = listOptions{
 	capacity: 10,
-	shuffle:  true,
 }
 
-// ListOption customizes the behavior of a pending requests peer heap.
-type ListOption func(*listConfig)
+// ListOption customizes the behavior of a random list.
+type ListOption interface {
+	apply(*listOptions)
+}
+
+type listOptionFunc func(*listOptions)
+
+func (f listOptionFunc) apply(options *listOptions) { f(options) }
 
 // Capacity specifies the default capacity of the underlying
 // data structures for this list.
 //
 // Defaults to 10.
 func Capacity(capacity int) ListOption {
-	return func(c *listConfig) {
-		c.capacity = capacity
-	}
+	return listOptionFunc(func(options *listOptions) {
+		options.capacity = capacity
+	})
 }
 
-// New creates a new pending heap.
+// Seed specifies the seed for generating random choices.
+func Seed(seed int64) ListOption {
+	return listOptionFunc(func(options *listOptions) {
+		options.source = rand.NewSource(seed)
+	})
+}
+
+// Source is a source of randomness for the peer list.
+func Source(source rand.Source) ListOption {
+	return listOptionFunc(func(options *listOptions) {
+		options.source = source
+	})
+}
+
+// New creates a new random peer list.
 func New(transport peer.Transport, opts ...ListOption) *List {
-	cfg := defaultListConfig
-	for _, o := range opts {
-		o(&cfg)
+	options := defaultListOptions
+	for _, opt := range opts {
+		opt.apply(&options)
+	}
+
+	if options.source == nil {
+		options.source = rand.NewSource(time.Now().UnixNano())
 	}
 
 	plOpts := []peerlist.ListOption{
-		peerlist.Capacity(cfg.capacity),
-	}
-	if !cfg.shuffle {
-		plOpts = append(plOpts, peerlist.NoShuffle())
+		peerlist.Capacity(options.capacity),
+		peerlist.NoShuffle(),
 	}
 
 	return &List{
 		List: peerlist.New(
-			"fewest-pending-requests",
+			"random",
 			transport,
-			&pendingHeap{},
+			newRandomList(options.capacity, options.source),
 			plOpts...,
 		),
 	}
 }
 
-// List is a PeerList which rotates which peers are to be selected in a circle
+// List is a PeerList that rotates which peers are to be selected randomly
 type List struct {
 	*peerlist.List
 }

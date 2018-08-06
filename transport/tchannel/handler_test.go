@@ -85,6 +85,7 @@ func TestHandlerErrors(t *testing.T) {
 				&transport.Request{
 					Caller:          "caller",
 					Service:         "service",
+					Transport:       "tchannel",
 					Headers:         transport.HeadersFromMap(tt.wantHeaders),
 					Encoding:        transport.Encoding(tt.format),
 					Procedure:       "hello",
@@ -196,6 +197,7 @@ func TestHandlerFailures(t *testing.T) {
 						t, &transport.Request{
 							Caller:    "bar",
 							Service:   "foo",
+							Transport: "tchannel",
 							Encoding:  raw.Encoding,
 							Procedure: "hello",
 							Body:      bytes.NewReader([]byte{0x00}),
@@ -219,6 +221,7 @@ func TestHandlerFailures(t *testing.T) {
 				req := &transport.Request{
 					Caller:    "bar",
 					Service:   "foo",
+					Transport: "tchannel",
 					Encoding:  json.Encoding,
 					Procedure: "hello",
 					Body:      bytes.NewReader([]byte("{}")),
@@ -249,10 +252,11 @@ func TestHandlerFailures(t *testing.T) {
 			},
 			expectCall: func(h *transporttest.MockUnaryHandler) {
 				req := &transport.Request{
-					Service:   "foo",
 					Caller:    "bar",
-					Procedure: "waituntiltimeout",
+					Service:   "foo",
+					Transport: "tchannel",
 					Encoding:  raw.Encoding,
+					Procedure: "waituntiltimeout",
 					Body:      bytes.NewReader([]byte{0x00}),
 				}
 				h.EXPECT().Handle(
@@ -278,10 +282,11 @@ func TestHandlerFailures(t *testing.T) {
 			},
 			expectCall: func(h *transporttest.MockUnaryHandler) {
 				req := &transport.Request{
-					Service:   "foo",
 					Caller:    "bar",
-					Procedure: "panic",
+					Service:   "foo",
+					Transport: "tchannel",
 					Encoding:  raw.Encoding,
+					Procedure: "panic",
 					Body:      bytes.NewReader([]byte{0x00}),
 				}
 				h.EXPECT().Handle(

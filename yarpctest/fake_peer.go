@@ -22,31 +22,47 @@ package yarpctest
 
 import (
 	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/peer/hostport"
 )
 
 // FakePeer is a fake peer with an identifier.
 type FakePeer struct {
-	id hostport.PeerIdentifier
+	id          peer.Identifier
+	subscribers []peer.Subscriber
+	status      peer.Status
 }
 
 // Identifier returns the fake peer identifier.
 func (p *FakePeer) Identifier() string {
-	return string(p.id)
+	return p.id.Identifier()
 }
 
 // Status returns the fake peer status.
 func (p *FakePeer) Status() peer.Status {
-	return peer.Status{
-		ConnectionStatus:    peer.Available,
-		PendingRequestCount: 0,
-	}
+	return p.status
 }
 
-// StartRequest does nothing.
+// StartRequest increments pending request count.
 func (p *FakePeer) StartRequest() {
+	p.status.PendingRequestCount++
 }
 
-// EndRequest does nothing.
+// EndRequest decrements pending request count.
 func (p *FakePeer) EndRequest() {
+	p.status.PendingRequestCount--
+}
+
+func (p *FakePeer) simulateConnect() {
+	p.status.ConnectionStatus = peer.Available
+	p.broadcast()
+}
+
+func (p *FakePeer) simulateDisconnect() {
+	p.status.ConnectionStatus = peer.Unavailable
+	p.broadcast()
+}
+
+func (p *FakePeer) broadcast() {
+	for _, sub := range p.subscribers {
+		sub.NotifyStatusChanged(p.id)
+	}
 }

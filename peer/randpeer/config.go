@@ -18,33 +18,36 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package peerlist is deprecated in favor of
-// `go.uber.org/yarpc/peer/peerlist/v2` which can additionally convey peer list
-// identifiers to the peerlist.Implementation without a wrapper type, allowing
-// a peer list updater to communicate shard information for example.
+package randpeer
+
+import (
+	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/yarpcconfig"
+)
+
+// Spec returns a configuration specification for the random peer list
+// implementation, making it possible to select a random peer with transports
+// that use outbound peer list configuration (like HTTP).
 //
-// Package peerlist provides a utility for managing peer availability with a
-// separate implementation of peer selection from just among available peers.
-// The peer list implements the peer.ChooserList interface and accepts a
-// peer.ListImplementation to provide the implementation-specific concern of,
-// for example, a *roundrobin.List.
+//  cfg := yarpcconfig.New()
+//  cfg.MustRegisterPeerList(random.Spec())
 //
-// The example is an implementation of peer.ChooserList using a random peer selection
-// strategy, returned by newRandomListImplementation(), implementing
-// peer.ListImplementation.
+// This enables the random peer list:
 //
-//   type List struct {
-//   	*peerlist.List
-//   }
-//
-//   func New(transport peer.Transport) *List {
-//   	return &List{
-//   		List: peerlist.New(
-//   			"random",
-//   			transport,
-//   			newRandomListImplementation(),
-//   		),
-//   	}
-//   }
-//
-package peerlist
+//  outbounds:
+//    otherservice:
+//      unary:
+//        http:
+//          url: https://host:port/rpc
+//          random:
+//            peers:
+//              - 127.0.0.1:8080
+//              - 127.0.0.1:8081
+func Spec() yarpcconfig.PeerListSpec {
+	return yarpcconfig.PeerListSpec{
+		Name: "random",
+		BuildPeerList: func(c struct{}, t peer.Transport, k *yarpcconfig.Kit) (peer.ChooserList, error) {
+			return New(t), nil
+		},
+	}
+}

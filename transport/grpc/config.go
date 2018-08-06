@@ -24,9 +24,12 @@ import (
 	"fmt"
 	"net"
 
+	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/yarpcconfig"
+	"google.golang.org/grpc/credentials"
 )
 
 // TransportSpec returns a TransportSpec for the gRPC transport.
@@ -77,9 +80,49 @@ type TransportConfig struct {
 // inbounds:
 //   grpc:
 //     address: ":80"
+//
+// A gRPC inbound can also enable TLS from key and cert files.
+//
+// inbounds:
+//   grpc:
+//     address: ":443"
+//     tls:
+//       enabled: true
+//       keyFile: "/path/to/key"
+//       certFile: "/path/to/cert"
 type InboundConfig struct {
 	// Address to listen on. This field is required.
-	Address string `config:"address,interpolate"`
+	Address string           `config:"address,interpolate"`
+	TLS     InboundTLSConfig `config:"tls"`
+}
+
+func (c InboundConfig) inboundOptions() ([]InboundOption, error) {
+	return c.TLS.inboundOptions()
+}
+
+// InboundTLSConfig specifies the TLS configuration for the gRPC inbound.
+type InboundTLSConfig struct {
+	Enabled  bool   `config:"enabled"` // disabled by default
+	CertFile string `config:"certFile,interpolate"`
+	KeyFile  string `config:"keyFile,interpolate"`
+}
+
+func (c InboundTLSConfig) inboundOptions() ([]InboundOption, error) {
+	if !c.Enabled {
+		return nil, nil
+	}
+	creds, err := c.newInboundCredentials()
+	if err != nil {
+		return nil, err
+	}
+	return []InboundOption{InboundCredentials(creds)}, nil
+}
+
+func (c InboundTLSConfig) newInboundCredentials() (credentials.TransportCredentials, error) {
+	if c.CertFile != "" && c.KeyFile != "" {
+		return credentials.NewServerTLSFromFile(c.CertFile, c.KeyFile)
+	}
+	return nil, fmt.Errorf("both certFile and keyFile are necessary to construct gRPC transport credentials, got certFile=%q and keyFile=%q", c.CertFile, c.KeyFile)
 }
 
 // OutboundConfig configures a gRPC Outbound.
@@ -98,11 +141,40 @@ type InboundConfig struct {
 //          peers:
 //            - 127.0.0.1:8080
 //            - 127.0.0.1:8081
+//
+// A gRPC outbound can enable TLS using the system cert.Pool.
+//
+//  outbounds:
+//    theirsecureservice:
+//      grpc:
+//        address: ":443"
+//        tls:
+//          enabled: true
+//
 type OutboundConfig struct {
 	yarpcconfig.PeerChooser
 
 	// Address to connect to if no peer options set.
-	Address string `config:"address,interpolate"`
+	Address string            `config:"address,interpolate"`
+	TLS     OutboundTLSConfig `config:"tls"`
+}
+
+func (c OutboundConfig) dialOptions() []DialOption {
+	return c.TLS.dialOptions()
+}
+
+// OutboundTLSConfig configures TLS for a gRPC outbound.
+type OutboundTLSConfig struct {
+	Enabled bool `config:"enabled"`
+}
+
+func (c OutboundTLSConfig) dialOptions() []DialOption {
+	if !c.Enabled {
+		return nil
+	}
+	creds := credentials.NewClientTLSFromCert(nil, "")
+	option := DialerCredentials(creds)
+	return []DialOption{option}
 }
 
 type transportSpec struct {
@@ -162,7 +234,11 @@ func (t *transportSpec) buildInbound(inboundConfig *InboundConfig, tr transport.
 	if err != nil {
 		return nil, err
 	}
-	return trans.NewInbound(listener, t.InboundOptions...), nil
+	inboundOptions, err := inboundConfig.inboundOptions()
+	if err != nil {
+		return nil, fmt.Errorf("cannot build gRPC inbound from given configuration: %v", err)
+	}
+	return trans.NewInbound(listener, append(t.InboundOptions, inboundOptions...)...), nil
 }
 
 func (t *transportSpec) buildUnaryOutbound(outboundConfig *OutboundConfig, tr transport.Transport, kit *yarpcconfig.Kit) (transport.UnaryOutbound, error) {
@@ -178,16 +254,23 @@ func (t *transportSpec) buildOutbound(outboundConfig *OutboundConfig, tr transpo
 	if !ok {
 		return nil, newTransportCastError(tr)
 	}
+
+	dialer := trans.NewDialer(outboundConfig.dialOptions()...)
+
+	var chooser peer.Chooser
 	if outboundConfig.Empty() {
 		if outboundConfig.Address == "" {
 			return nil, newRequiredFieldMissingError("address")
 		}
-		return trans.NewSingleOutbound(outboundConfig.Address, t.OutboundOptions...), nil
+		chooser = peerchooser.NewSingle(hostport.PeerIdentifier(outboundConfig.Address), dialer)
+	} else {
+		var err error
+		chooser, err = outboundConfig.BuildPeerChooser(dialer, hostport.Identify, kit)
+		if err != nil {
+			return nil, err
+		}
 	}
-	chooser, err := outboundConfig.BuildPeerChooser(trans, hostport.Identify, kit)
-	if err != nil {
-		return nil, err
-	}
+
 	return trans.NewOutbound(chooser, t.OutboundOptions...), nil
 }
 
@@ -196,5 +279,5 @@ func newTransportCastError(tr transport.Transport) error {
 }
 
 func newRequiredFieldMissingError(field string) error {
-	return fmt.Errorf("required field missing: %s", field)
+	return fmt.Errorf("required field missing: %v", field)
 }

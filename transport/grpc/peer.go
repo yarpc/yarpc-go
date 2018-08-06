@@ -33,6 +33,7 @@ import (
 
 type grpcPeer struct {
 	*hostport.Peer
+
 	t          *Transport
 	clientConn *grpc.ClientConn
 	stoppingC  chan struct{}
@@ -43,17 +44,17 @@ type grpcPeer struct {
 	stoppedErr error
 }
 
-func newPeer(address string, t *Transport) (*grpcPeer, error) {
-	clientConn, err := grpc.Dial(
-		address,
-		grpc.WithInsecure(),
+func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, error) {
+	dialOptions := append([]grpc.DialOption{
 		grpc.WithUserAgent(UserAgent),
 		grpc.WithDefaultCallOptions(
 			grpc.CallCustomCodec(customCodec{}),
 			grpc.MaxCallRecvMsgSize(t.options.clientMaxRecvMsgSize),
 			grpc.MaxCallSendMsgSize(t.options.clientMaxSendMsgSize),
 		),
-	)
+	}, options.grpcOptions()...)
+
+	clientConn, err := grpc.Dial(address, dialOptions...)
 	if err != nil {
 		return nil, err
 	}

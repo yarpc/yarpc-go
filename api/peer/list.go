@@ -70,6 +70,11 @@ type ChooserList interface {
 //
 // peerlist.List and ListImplementation compose well with sharding schemes the
 // degenerate to returning the only available peer.
+//
+// The peerlist.List calls Add, Remove, and Choose under a write lock so the
+// implementation is free to perform mutations on its own data without locks.
+//
+// Deprecated in favor of "go.uber.org/yarpc/peer/peerlist/v2".Implementation.
 type ListImplementation interface {
 	transport.Lifecycle
 

@@ -75,6 +75,14 @@ func (c *Call) Service() string {
 	return c.ic.req.Service
 }
 
+// Transport returns the name of the transport being called.
+func (c *Call) Transport() string {
+	if c == nil {
+		return ""
+	}
+	return c.ic.req.Transport
+}
+
 // Procedure returns the name of the procedure being called.
 func (c *Call) Procedure() string {
 	if c == nil {

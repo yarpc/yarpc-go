@@ -18,33 +18,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package peerlist is deprecated in favor of
-// `go.uber.org/yarpc/peer/peerlist/v2` which can additionally convey peer list
-// identifiers to the peerlist.Implementation without a wrapper type, allowing
-// a peer list updater to communicate shard information for example.
-//
-// Package peerlist provides a utility for managing peer availability with a
-// separate implementation of peer selection from just among available peers.
-// The peer list implements the peer.ChooserList interface and accepts a
-// peer.ListImplementation to provide the implementation-specific concern of,
-// for example, a *roundrobin.List.
-//
-// The example is an implementation of peer.ChooserList using a random peer selection
-// strategy, returned by newRandomListImplementation(), implementing
-// peer.ListImplementation.
-//
-//   type List struct {
-//   	*peerlist.List
-//   }
-//
-//   func New(transport peer.Transport) *List {
-//   	return &List{
-//   		List: peerlist.New(
-//   			"random",
-//   			transport,
-//   			newRandomListImplementation(),
-//   		),
-//   	}
-//   }
-//
-package peerlist
+package grpc
+
+import (
+	"go.uber.org/yarpc/api/peer"
+)
+
+// NewDialer creates a transport that is decorated to retain peers with
+// additional gRPC dial options.
+func (t *Transport) NewDialer(options ...DialOption) *Dialer {
+	return &Dialer{trans: t, options: newDialOptions(options)}
+}
+
+// Dialer is a decorator for a gRPC transport that threads dial options for
+// every retained peer.
+type Dialer struct {
+	trans   *Transport
+	options *dialOptions
+}
+
+var _ peer.Transport = (*Dialer)(nil)
+
+// RetainPeer retains the identified peer, passing dial options.
+func (d *Dialer) RetainPeer(id peer.Identifier, ps peer.Subscriber) (peer.Peer, error) {
+	return d.trans.retainPeer(id, d.options, ps)
+}
+
+// ReleasePeer releases the identified peer.
+func (d *Dialer) ReleasePeer(id peer.Identifier, ps peer.Subscriber) error {
+	return d.trans.ReleasePeer(id, ps)
+}

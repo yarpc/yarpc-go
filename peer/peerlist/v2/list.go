@@ -41,6 +41,29 @@ var (
 	_noContextDeadlineError = "can't wait for peer without a context deadline for a %s peer list"
 )
 
+// Implementation is a collection of available peers, with its own
+// subscribers for peer status change notifications.
+// The available peer list encapsulates the logic for selecting from among
+// available peers, whereas a ChooserList is responsible for retaining,
+// releasing, and monitoring peer availability.
+// Use "go.uber.org/yarpc/peer/peerlist".List in conjunction with a
+// ListImplementation to produce a "go.uber.org/yarpc/api/peer".List.
+//
+// peerlist.List and peerlist.Implementation compose well with sharding schemes
+// the degenerate to returning the only available peer.
+//
+// The peerlist.List calls Add, Remove, and Choose under a write lock so the
+// implementation is free to perform mutations on its own data without locks.
+type Implementation interface {
+	transport.Lifecycle
+
+	Add(peer.StatusPeer, peer.Identifier) peer.Subscriber
+	Remove(peer.StatusPeer, peer.Identifier, peer.Subscriber)
+	// Choose must return an available peer under a list read lock, so must
+	// not block.
+	Choose(context.Context, *transport.Request) peer.StatusPeer
+}
+
 type listOptions struct {
 	capacity  int
 	noShuffle bool
@@ -88,7 +111,7 @@ func Seed(seed int64) ListOption {
 }
 
 // New creates a new peer list with an identifier chooser for available peers.
-func New(name string, transport peer.Transport, availableChooser peer.ListImplementation, opts ...ListOption) *List {
+func New(name string, transport peer.Transport, availableChooser Implementation, opts ...ListOption) *List {
 	options := defaultListOptions
 	for _, o := range opts {
 		o.apply(&options)
@@ -108,7 +131,7 @@ func New(name string, transport peer.Transport, availableChooser peer.ListImplem
 	}
 }
 
-// List is an abstract peer list, backed by a peer.ListImplementation to
+// List is an abstract peer list, backed by an Implementation to
 // determine which peer to choose among available peers.
 // The abstract list manages available versus unavailable peers, intercepting
 // these notifications from the transport's concrete implementation of
@@ -127,7 +150,7 @@ type List struct {
 
 	unavailablePeers   map[string]*peerThunk
 	availablePeers     map[string]*peerThunk
-	availableChooser   peer.ListImplementation
+	availableChooser   Implementation
 	peerAvailableEvent chan struct{}
 	transport          peer.Transport
 
@@ -233,7 +256,7 @@ func (pl *List) addToAvailablePeers(t *peerThunk) error {
 	if pl.availablePeers[t.peer.Identifier()] != nil {
 		return peer.ErrPeerAddAlreadyInList(t.peer.Identifier())
 	}
-	sub := pl.availableChooser.Add(t)
+	sub := pl.availableChooser.Add(t, t.id)
 	t.SetSubscriber(sub)
 	pl.availablePeers[t.Identifier()] = t
 	pl.notifyPeerAvailable()
@@ -312,7 +335,7 @@ func (pl *List) removeAllAvailablePeers(toRemove map[string]*peerThunk) []*peerT
 	for id, t := range toRemove {
 		thunks = append(thunks, t)
 		delete(pl.availablePeers, id)
-		pl.availableChooser.Remove(t, t.Subscriber())
+		pl.availableChooser.Remove(t, t.id, t.Subscriber())
 	}
 	return thunks
 }
@@ -374,7 +397,7 @@ func (pl *List) removePeerIdentifierReferences(pid peer.Identifier) (*peerThunk,
 // Must be run in a mutex.Lock()
 func (pl *List) removeFromAvailablePeers(t *peerThunk) error {
 	delete(pl.availablePeers, t.peer.Identifier())
-	pl.availableChooser.Remove(t, t.Subscriber())
+	pl.availableChooser.Remove(t, t.id, t.Subscriber())
 	t.SetSubscriber(nil)
 	return nil
 }
@@ -400,7 +423,7 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 		if p != nil {
 			t := p.(*peerThunk)
 			pl.notifyPeerAvailable()
-			t.onStart()
+			t.StartRequest()
 			return t.peer, t.boundOnFinish, nil
 		}
 		if err := pl.waitForPeerAddedEvent(ctx); err != nil {
@@ -488,14 +511,15 @@ func (pl *List) notifyStatusChanged(pid peer.Identifier) {
 
 // handleAvailablePeerStatusChange checks the connection status of a connected
 // peer to potentially move that Peer from the implementation data structure to
-// the unavailable peer map Must be run in a mutex.Lock()
+// the unavailable peer map
+// Must be run in a mutex.Lock()
 func (pl *List) handleAvailablePeerStatusChange(t *peerThunk) error {
 	if t.peer.Status().ConnectionStatus == peer.Available {
 		// Peer is in the proper pool, ignore
 		return nil
 	}
 
-	pl.availableChooser.Remove(t, t.Subscriber())
+	pl.availableChooser.Remove(t, t.id, t.Subscriber())
 	t.SetSubscriber(nil)
 	delete(pl.availablePeers, t.peer.Identifier())
 

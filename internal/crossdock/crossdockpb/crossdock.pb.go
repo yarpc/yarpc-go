@@ -21,23 +21,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-/*
-Package crossdockpb is a generated protocol buffer package.
-
-It is generated from these files:
-	internal/crossdock/crossdockpb/crossdock.proto
-
-It has these top-level messages:
-	Ping
-	Pong
-	Token
-*/
 package crossdockpb
 
 import proto "github.com/gogo/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import uber_yarpc "go.uber.org/yarpc/yarpcproto"
+import yarpcproto "go.uber.org/yarpc/yarpcproto"
 
 import strings "strings"
 import reflect "reflect"
@@ -59,12 +48,42 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
 type Ping struct {
-	Beep string `protobuf:"bytes,1,opt,name=beep,proto3" json:"beep,omitempty"`
+	Beep                 string   `protobuf:"bytes,1,opt,name=beep,proto3" json:"beep,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *Ping) Reset()                    { *m = Ping{} }
-func (*Ping) ProtoMessage()               {}
-func (*Ping) Descriptor() ([]byte, []int) { return fileDescriptorCrossdock, []int{0} }
+func (m *Ping) Reset()      { *m = Ping{} }
+func (*Ping) ProtoMessage() {}
+func (*Ping) Descriptor() ([]byte, []int) {
+	return fileDescriptor_crossdock_b9725983d3c99657, []int{0}
+}
+func (m *Ping) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *Ping) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_Ping.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *Ping) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Ping.Merge(dst, src)
+}
+func (m *Ping) XXX_Size() int {
+	return m.Size()
+}
+func (m *Ping) XXX_DiscardUnknown() {
+	xxx_messageInfo_Ping.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Ping proto.InternalMessageInfo
 
 func (m *Ping) GetBeep() string {
 	if m != nil {
@@ -74,12 +93,42 @@ func (m *Ping) GetBeep() string {
 }
 
 type Pong struct {
-	Boop string `protobuf:"bytes,1,opt,name=boop,proto3" json:"boop,omitempty"`
+	Boop                 string   `protobuf:"bytes,1,opt,name=boop,proto3" json:"boop,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *Pong) Reset()                    { *m = Pong{} }
-func (*Pong) ProtoMessage()               {}
-func (*Pong) Descriptor() ([]byte, []int) { return fileDescriptorCrossdock, []int{1} }
+func (m *Pong) Reset()      { *m = Pong{} }
+func (*Pong) ProtoMessage() {}
+func (*Pong) Descriptor() ([]byte, []int) {
+	return fileDescriptor_crossdock_b9725983d3c99657, []int{1}
+}
+func (m *Pong) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *Pong) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_Pong.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *Pong) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Pong.Merge(dst, src)
+}
+func (m *Pong) XXX_Size() int {
+	return m.Size()
+}
+func (m *Pong) XXX_DiscardUnknown() {
+	xxx_messageInfo_Pong.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Pong proto.InternalMessageInfo
 
 func (m *Pong) GetBoop() string {
 	if m != nil {
@@ -89,12 +138,42 @@ func (m *Pong) GetBoop() string {
 }
 
 type Token struct {
-	Value string `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
+	Value                string   `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *Token) Reset()                    { *m = Token{} }
-func (*Token) ProtoMessage()               {}
-func (*Token) Descriptor() ([]byte, []int) { return fileDescriptorCrossdock, []int{2} }
+func (m *Token) Reset()      { *m = Token{} }
+func (*Token) ProtoMessage() {}
+func (*Token) Descriptor() ([]byte, []int) {
+	return fileDescriptor_crossdock_b9725983d3c99657, []int{2}
+}
+func (m *Token) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *Token) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_Token.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *Token) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Token.Merge(dst, src)
+}
+func (m *Token) XXX_Size() int {
+	return m.Size()
+}
+func (m *Token) XXX_DiscardUnknown() {
+	xxx_messageInfo_Token.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Token proto.InternalMessageInfo
 
 func (m *Token) GetValue() string {
 	if m != nil {
@@ -243,7 +322,7 @@ func NewEchoClient(cc *grpc.ClientConn) EchoClient {
 
 func (c *echoClient) Echo(ctx context.Context, in *Ping, opts ...grpc.CallOption) (*Pong, error) {
 	out := new(Pong)
-	err := grpc.Invoke(ctx, "/uber.yarpc.internal.crossdock.Echo/Echo", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/uber.yarpc.internal.crossdock.Echo/Echo", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -294,7 +373,7 @@ var _Echo_serviceDesc = grpc.ServiceDesc{
 // Client API for Oneway service
 
 type OnewayClient interface {
-	Echo(ctx context.Context, in *Token, opts ...grpc.CallOption) (*uber_yarpc.Oneway, error)
+	Echo(ctx context.Context, in *Token, opts ...grpc.CallOption) (*yarpcproto.Oneway, error)
 }
 
 type onewayClient struct {
@@ -305,9 +384,9 @@ func NewOnewayClient(cc *grpc.ClientConn) OnewayClient {
 	return &onewayClient{cc}
 }
 
-func (c *onewayClient) Echo(ctx context.Context, in *Token, opts ...grpc.CallOption) (*uber_yarpc.Oneway, error) {
-	out := new(uber_yarpc.Oneway)
-	err := grpc.Invoke(ctx, "/uber.yarpc.internal.crossdock.Oneway/Echo", in, out, c.cc, opts...)
+func (c *onewayClient) Echo(ctx context.Context, in *Token, opts ...grpc.CallOption) (*yarpcproto.Oneway, error) {
+	out := new(yarpcproto.Oneway)
+	err := c.cc.Invoke(ctx, "/uber.yarpc.internal.crossdock.Oneway/Echo", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -317,7 +396,7 @@ func (c *onewayClient) Echo(ctx context.Context, in *Token, opts ...grpc.CallOpt
 // Server API for Oneway service
 
 type OnewayServer interface {
-	Echo(context.Context, *Token) (*uber_yarpc.Oneway, error)
+	Echo(context.Context, *Token) (*yarpcproto.Oneway, error)
 }
 
 func RegisterOnewayServer(s *grpc.Server, srv OnewayServer) {
@@ -860,10 +939,10 @@ var (
 )
 
 func init() {
-	proto.RegisterFile("internal/crossdock/crossdockpb/crossdock.proto", fileDescriptorCrossdock)
+	proto.RegisterFile("internal/crossdock/crossdockpb/crossdock.proto", fileDescriptor_crossdock_b9725983d3c99657)
 }
 
-var fileDescriptorCrossdock = []byte{
+var fileDescriptor_crossdock_b9725983d3c99657 = []byte{
 	// 251 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xd2, 0xcb, 0xcc, 0x2b, 0x49,
 	0x2d, 0xca, 0x4b, 0xcc, 0xd1, 0x4f, 0x2e, 0xca, 0x2f, 0x2e, 0x4e, 0xc9, 0x4f, 0xce, 0x46, 0xb0,

@@ -21,10 +21,14 @@
 package yarpctest
 
 import (
+	"context"
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/middleware"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/yarpcerrors"
 )
@@ -453,6 +457,80 @@ func TestServiceRouting(t *testing.T) {
 			require.NoError(t, tt.services.Start(t))
 			defer func() { require.NoError(t, tt.services.Stop(t)) }()
 			tt.requests.Run(t)
+		})
+	}
+}
+
+func TestUnaryOutboundMiddleware(t *testing.T) {
+	p := NewPortProvider(t)
+
+	const (
+		service            = "service"
+		correctProcedure   = "correct-procedure"
+		incorrectProcedure = "inccorect"
+	)
+
+	mw := middleware.UnaryOutboundFunc(
+		func(ctx context.Context, req *transport.Request, next transport.UnaryOutbound) (*transport.Response, error) {
+			// fix procedure name
+			req.Procedure = correctProcedure
+			return next.Call(ctx, req)
+		})
+
+	tests := []struct {
+		name    string
+		service Lifecycle
+		request Action
+	}{
+		{
+			name: "HTTP",
+			service: HTTPService(
+				Name(service),
+				Proc(Name(correctProcedure), EchoHandler()),
+				p.NamedPort("http"),
+			),
+			request: HTTPRequest(
+				Service(service),
+				Procedure(incorrectProcedure),
+				UnaryOutboundMiddleware(mw),
+				p.NamedPort("http"),
+			),
+		},
+		{
+			name: "TChannel",
+			service: TChannelService(
+				Name(service),
+				Proc(Name(correctProcedure), EchoHandler()),
+				p.NamedPort("TChannel"),
+			),
+			request: TChannelRequest(
+				Service(service),
+				Procedure(incorrectProcedure),
+				UnaryOutboundMiddleware(mw),
+				p.NamedPort("TChannel"),
+			),
+		},
+		{
+			name: "gRPC",
+			service: GRPCService(
+				Name(service),
+				Proc(Name(correctProcedure), EchoHandler()),
+				p.NamedPort("grpc"),
+			),
+			request: GRPCRequest(
+				Service(service),
+				Procedure(incorrectProcedure),
+				UnaryOutboundMiddleware(mw),
+				p.NamedPort("grpc"),
+			),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.NoError(t, tt.service.Start(t))
+			defer func() { assert.NoError(t, tt.service.Stop(t)) }()
+			tt.request.Run(t)
 		})
 	}
 }
