@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
+- x/yarpctest: Add a retry option to HTTP/TChannel/GRPCRequest.
 - Adds inbound and outbound TLS support for gRPC. See `gprc.InboundCredentials`,
   `grpc.DialerCredentials`, and `grpc.Transport.NewDialer` for usage.
 - Added `peer/peerlist/v2` which differs from the original `peer/peerlist` by
