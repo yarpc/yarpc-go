@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+- x/yarpctest: Add a retry option to HTTP/TChannel/GRPCRequest.
+
 ## [1.32.2] - 2018-08-07
 ### Fixed
 - CHANGELOG.md and version.go changes were still incorrect for v1.32.1
@@ -14,7 +17,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [1.32.0] - 2018-08-06
 ### Added
-- x/yarpctest: Add a retry option to HTTP/TChannel/GRPCRequest.
 - Adds inbound and outbound TLS support for gRPC. See `gprc.InboundCredentials`,
   `grpc.DialerCredentials`, and `grpc.Transport.NewDialer` for usage.
 - Added `peer/peerlist/v2` which differs from the original `peer/peerlist` by
@@ -992,6 +994,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.32.2...HEAD
 [1.32.2]: https://github.com/yarpc/yarpc-go/compare/v1.32.1...v1.32.2
 [1.32.1]: https://github.com/yarpc/yarpc-go/compare/v1.32.0...v1.32.1
 [1.32.0]: https://github.com/yarpc/yarpc-go/compare/v1.31.0...v1.32.0
