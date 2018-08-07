@@ -37,7 +37,7 @@ type RequestOpts struct {
 	GiveRequest     *transport.Request
 	WantResponse    *transport.Response
 	WantError       error
-	AttemptCount    int
+	RetryCount      int
 	RetryInterval   time.Duration
 }
 

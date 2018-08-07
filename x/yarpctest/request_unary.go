@@ -112,7 +112,7 @@ func sendRequestAndValidateResp(t testing.TB, out transport.UnaryOutbound, opts 
 		resp, cancel, err := sendRequest(out, opts.GiveRequest, opts.GiveTimeout)
 		defer cancel()
 
-		if i == opts.AttemptCount-1 {
+		if i == opts.RetryCount {
 			validateError(t, err, opts.WantError)
 			if opts.WantError == nil {
 				validateResponse(t, resp, opts.WantResponse)
@@ -127,7 +127,7 @@ func sendRequestAndValidateResp(t testing.TB, out transport.UnaryOutbound, opts 
 		return true
 	}
 
-	for i := 0; i < opts.AttemptCount; i++ {
+	for i := 0; i < opts.RetryCount+1; i++ {
 		if ok := f(i); ok {
 			return
 		}
@@ -242,7 +242,7 @@ func GiveAndWantLargeBodyIsEchoed(numOfBytes int) api.RequestOption {
 // and the response matches.
 func Retry(count int, interval time.Duration) api.RequestOption {
 	return api.RequestOptionFunc(func(opts *api.RequestOpts) {
-		opts.AttemptCount = count + 1
+		opts.RetryCount = count
 		opts.RetryInterval = interval
 	})
 }
