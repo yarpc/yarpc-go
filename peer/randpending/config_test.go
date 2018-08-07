@@ -38,7 +38,7 @@ func TestConfig(t *testing.T) {
 		"outbounds": attrs{
 			"their-service": attrs{
 				"fake-transport": attrs{
-					"fewest-pending-requests-of-two-random-peers": attrs{
+					"choose-two-random": attrs{
 						"peers": []string{
 							"1.1.1.1:1111",
 							"2.2.2.2:2222",

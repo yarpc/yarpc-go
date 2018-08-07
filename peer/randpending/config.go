@@ -26,7 +26,7 @@ import (
 )
 
 // Spec returns a configuration specification for the "fewest pending requests
-// of-two random peers" implementation, making it possible to select the better
+// of two random peers" implementation, making it possible to select the better
 // of two random peer with transports that use outbound peer list configuration
 // (like HTTP).
 //
@@ -40,13 +40,13 @@ import (
 //      unary:
 //        http:
 //          url: https://host:port/rpc
-//          fewest-pending-of-random:
+//          choose-two-random:
 //            peers:
 //              - 127.0.0.1:8080
 //              - 127.0.0.1:8081
 func Spec() yarpcconfig.PeerListSpec {
 	return yarpcconfig.PeerListSpec{
-		Name: "fewest-pending-requests-of-two-random-peers",
+		Name: "choose-two-random",
 		BuildPeerList: func(c struct{}, t peer.Transport, k *yarpcconfig.Kit) (peer.ChooserList, error) {
 			return New(t), nil
 		},

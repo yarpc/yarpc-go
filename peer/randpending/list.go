@@ -89,7 +89,7 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 
 	return &List{
 		List: peerlist.New(
-			"fewest-pending-requests-of-two-random-peers",
+			"choose-two-random",
 			transport,
 			newRandPendingList(options.capacity, options.source),
 			plOpts...,
