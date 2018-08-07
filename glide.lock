@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-08-06T15:05:48.949824766Z
+updated: 2018-08-07T15:07:13.328129134Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -162,7 +162,7 @@ imports:
   - version
   - wire
 - name: go.uber.org/zap
-  version: 4d45f9617f7d90f7a663ff21c7a4321dbe78098b
+  version: ff33455a0e382e8a81d14dd7c922020b6b5e7982
   subpackages:
   - buffer
   - internal/bufferpool
@@ -171,7 +171,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: f4c29de78a2a91c00474a2e689954305c350adf9
+  version: 19491d39cadbd9cd33f26ca22cc89ba4ba38251c
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -188,12 +188,12 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 34b17bdb430002e9db9ae7ddc8480b9fa05edc22
+  version: 0718ef2ef256118d53a01598f179001ec2af7626
   repo: https://github.com/golang/sys
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: cb6730876b985e110843c1842a7a63a63677cf08
+  version: 17ff2d5776d28fa6ba2280c1053f7adf8d32eea6
   subpackages:
   - secure/bidirule
   - transform
