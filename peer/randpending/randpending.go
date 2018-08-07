@@ -65,12 +65,19 @@ func (r *randPendingList) Remove(peer peer.StatusPeer, _ peer.Identifier, ps pee
 }
 
 func (r *randPendingList) Choose(_ context.Context, _ *transport.Request) peer.StatusPeer {
-	if len(r.subscribers) == 0 {
+	numSubs := len(r.subscribers)
+	if numSubs == 0 {
 		return nil
 	}
-	i := r.random.Intn(len(r.subscribers))
-	j := r.random.Intn(len(r.subscribers))
-	if i != j && r.pending(i) > r.pending(j) {
+	if numSubs == 1 {
+		return r.subscribers[0].peer
+	}
+	i := r.random.Intn(numSubs)
+	j := i + 1 + r.random.Intn(numSubs-1)
+	if j >= numSubs {
+		j -= numSubs
+	}
+	if r.pending(i) > r.pending(j) {
 		i = j
 	}
 	return r.subscribers[i].peer
