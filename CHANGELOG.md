@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.32.3] - 2018-08-07
+### Fixed
+- Revert Transport field match from RequestMatcher
+
 ## [1.32.2] - 2018-08-07
 ### Fixed
 - CHANGELOG.md and version.go changes were still incorrect for v1.32.1
@@ -991,6 +995,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[1.32.3]: https://github.com/yarpc/yarpc-go/compare/v1.32.2...v1.32.3
 [1.32.2]: https://github.com/yarpc/yarpc-go/compare/v1.32.1...v1.32.2
 [1.32.1]: https://github.com/yarpc/yarpc-go/compare/v1.32.0...v1.32.1
 [1.32.0]: https://github.com/yarpc/yarpc-go/compare/v1.31.0...v1.32.0
