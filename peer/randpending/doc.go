@@ -1,4 +1,4 @@
-// package randpending provides a load balancer implementation that
+// Package randpending provides a load balancer implementation that
 // picks two peers at random and chooses the one with fewer pending requests.
 //
 // The Power of Two Choices in Randomized Load Balancing:
