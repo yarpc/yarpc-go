@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-08-07T15:07:13.328129134Z
+updated: 2018-08-08T15:01:46.709966223Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -171,7 +171,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 19491d39cadbd9cd33f26ca22cc89ba4ba38251c
+  version: f9ce57c11b242f0f1599cf25c89d8cb02c45295a
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -188,7 +188,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 0718ef2ef256118d53a01598f179001ec2af7626
+  version: 3249cb6984157e6ed574d535fb27fc72a94a67e2
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -200,7 +200,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 3c07937fe18c27668fd78bbaed3d6b8b39e202ea
+  version: ca6481ae56504398949d597084558e50ad07117a
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
@@ -243,7 +243,7 @@ testImports:
 - name: github.com/codahale/hdrhistogram
   version: 3a0bb77429bd3a61596f5e8a3172445844342120
 - name: github.com/kisielk/errcheck
-  version: e96dacdb078a5166c20b48dd667fb26d2ce0379f
+  version: 1787c4bee836470bf45018cfbc783650db3c6501
 - name: github.com/kisielk/gotool
   version: 80517062f582ea3340cd4baf70e86d539ae7d84d
 - name: github.com/uber/jaeger-lib
