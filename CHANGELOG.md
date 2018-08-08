@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added `peer/tworandomchoices`, an implementation of the Two Random Choices
   load balancer algorithm.
 
+## [1.32.4] - 2018-08-07
+### Fixed
+- Address data races in yarpctest.FakeTransport
+
+## [1.32.3] - 2018-08-07
+### Fixed
+- Revert Transport field match from RequestMatcher
+
 ## [1.32.2] - 2018-08-07
 ### Fixed
 - CHANGELOG.md and version.go changes were still incorrect for v1.32.1
@@ -996,7 +1004,12 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+<<<<<<< HEAD
 [Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.32.2...HEAD
+=======
+[1.32.4]: https://github.com/yarpc/yarpc-go/compare/v1.32.3...v1.32.4
+[1.32.3]: https://github.com/yarpc/yarpc-go/compare/v1.32.2...v1.32.3
+>>>>>>> master
 [1.32.2]: https://github.com/yarpc/yarpc-go/compare/v1.32.1...v1.32.2
 [1.32.1]: https://github.com/yarpc/yarpc-go/compare/v1.32.0...v1.32.1
 [1.32.0]: https://github.com/yarpc/yarpc-go/compare/v1.31.0...v1.32.0

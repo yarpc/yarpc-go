@@ -26,7 +26,8 @@ import (
 
 // FakePeer is a fake peer with an identifier.
 type FakePeer struct {
-	id          peer.Identifier
+	id peer.Identifier
+	// subscribers needs to be modified under lock in FakeTransport
 	subscribers []peer.Subscriber
 	status      peer.Status
 }

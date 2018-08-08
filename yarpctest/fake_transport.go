@@ -22,6 +22,7 @@ package yarpctest
 
 import (
 	"fmt"
+	"sync"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -55,6 +56,7 @@ func NewFakeTransport(opts ...FakeTransportOption) *FakeTransport {
 		Lifecycle:               lifecycletest.NewNop(),
 		initialConnectionStatus: peer.Available,
 		peers: make(map[string]*FakePeer),
+		mu:    &sync.Mutex{},
 	}
 	for _, opt := range opts {
 		opt(t)
@@ -68,6 +70,7 @@ type FakeTransport struct {
 	nopOption               string
 	initialConnectionStatus peer.ConnectionStatus
 	peers                   map[string]*FakePeer
+	mu                      *sync.Mutex
 }
 
 // NopOption returns the configured nopOption. It's fake.
@@ -90,6 +93,9 @@ func (t *FakeTransport) SimulateDisconnect(id peer.Identifier) {
 // Peer returns the persistent peer object for that peer identifier for the
 // lifetime of the fake transport.
 func (t *FakeTransport) Peer(id peer.Identifier) *FakePeer {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
 	if p, ok := t.peers[id.Identifier()]; ok {
 		return p
 	}
@@ -106,6 +112,8 @@ func (t *FakeTransport) Peer(id peer.Identifier) *FakePeer {
 // RetainPeer returns a fake peer.
 func (t *FakeTransport) RetainPeer(id peer.Identifier, ps peer.Subscriber) (peer.Peer, error) {
 	peer := t.Peer(id)
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	peer.subscribers = append(peer.subscribers, ps)
 	return peer, nil
 }
@@ -113,6 +121,8 @@ func (t *FakeTransport) RetainPeer(id peer.Identifier, ps peer.Subscriber) (peer
 // ReleasePeer does nothing.
 func (t *FakeTransport) ReleasePeer(id peer.Identifier, ps peer.Subscriber) error {
 	peer := t.Peer(id)
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	if subscribers, count := filterSubscriber(peer.subscribers, ps); count == 0 {
 		return fmt.Errorf("no such subscriber")
 	} else if count > 1 {
