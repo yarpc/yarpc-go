@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package randpending
+package tworandomchoices
 
 import (
 	"context"
@@ -29,73 +29,73 @@ import (
 	peerlist "go.uber.org/yarpc/peer/peerlist/v2"
 )
 
-type randPendingList struct {
+type twoRandomChoicesList struct {
 	subscribers []*subscriber
 	random      *rand.Rand
 }
 
-func newRandPendingList(cap int, source rand.Source) *randPendingList {
-	return &randPendingList{
+func newTwoRandomChoicesList(cap int, source rand.Source) *twoRandomChoicesList {
+	return &twoRandomChoicesList{
 		subscribers: make([]*subscriber, 0, cap),
 		random:      rand.New(source),
 	}
 }
 
-var _ peerlist.Implementation = (*randPendingList)(nil)
+var _ peerlist.Implementation = (*twoRandomChoicesList)(nil)
 
-func (r *randPendingList) Add(peer peer.StatusPeer, _ peer.Identifier) peer.Subscriber {
-	index := len(r.subscribers)
-	r.subscribers = append(r.subscribers, &subscriber{
+func (l *twoRandomChoicesList) Add(peer peer.StatusPeer, _ peer.Identifier) peer.Subscriber {
+	index := len(l.subscribers)
+	l.subscribers = append(l.subscribers, &subscriber{
 		index: index,
 		peer:  peer,
 	})
-	return r.subscribers[index]
+	return l.subscribers[index]
 }
 
-func (r *randPendingList) Remove(peer peer.StatusPeer, _ peer.Identifier, ps peer.Subscriber) {
+func (l *twoRandomChoicesList) Remove(peer peer.StatusPeer, _ peer.Identifier, ps peer.Subscriber) {
 	sub, ok := ps.(*subscriber)
-	if !ok || len(r.subscribers) == 0 {
+	if !ok || len(l.subscribers) == 0 {
 		return
 	}
 	index := sub.index
-	last := len(r.subscribers) - 1
-	r.subscribers[index] = r.subscribers[last]
-	r.subscribers[index].index = index
-	r.subscribers = r.subscribers[0:last]
+	last := len(l.subscribers) - 1
+	l.subscribers[index] = l.subscribers[last]
+	l.subscribers[index].index = index
+	l.subscribers = l.subscribers[0:last]
 }
 
-func (r *randPendingList) Choose(_ context.Context, _ *transport.Request) peer.StatusPeer {
-	numSubs := len(r.subscribers)
+func (l *twoRandomChoicesList) Choose(_ context.Context, _ *transport.Request) peer.StatusPeer {
+	numSubs := len(l.subscribers)
 	if numSubs == 0 {
 		return nil
 	}
 	if numSubs == 1 {
-		return r.subscribers[0].peer
+		return l.subscribers[0].peer
 	}
-	i := r.random.Intn(numSubs)
-	j := i + 1 + r.random.Intn(numSubs-1)
+	i := l.random.Intn(numSubs)
+	j := i + 1 + l.random.Intn(numSubs-1)
 	if j >= numSubs {
 		j -= numSubs
 	}
-	if r.pending(i) > r.pending(j) {
+	if l.pending(i) > l.pending(j) {
 		i = j
 	}
-	return r.subscribers[i].peer
+	return l.subscribers[i].peer
 }
 
-func (r *randPendingList) pending(index int) int {
-	return r.subscribers[index].peer.Status().PendingRequestCount
+func (l *twoRandomChoicesList) pending(index int) int {
+	return l.subscribers[index].peer.Status().PendingRequestCount
 }
 
-func (r *randPendingList) Start() error {
+func (l *twoRandomChoicesList) Start() error {
 	return nil
 }
 
-func (r *randPendingList) Stop() error {
+func (l *twoRandomChoicesList) Stop() error {
 	return nil
 }
 
-func (r *randPendingList) IsRunning() bool {
+func (l *twoRandomChoicesList) IsRunning() bool {
 	return true
 }
 

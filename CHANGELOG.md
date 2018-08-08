@@ -6,8 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 - x/yarpctest: Add a retry option to HTTP/TChannel/GRPCRequest.
-- Added `peer/randpending`, an implementation of the Two Random Choices load
-  balancer algorithm.
+- Added `peer/tworandomchoices`, an implementation of the Two Random Choices
+  load balancer algorithm.
 
 ## [1.32.2] - 2018-08-07
 ### Fixed

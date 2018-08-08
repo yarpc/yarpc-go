@@ -18,38 +18,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package randpending
+package tworandomchoices
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/yarpcconfig"
-	"go.uber.org/yarpc/yarpctest"
 )
 
-type attrs map[string]interface{}
-
-func TestConfig(t *testing.T) {
-	cfg := yarpcconfig.New()
-	cfg.RegisterPeerList(Spec())
-	cfg.RegisterTransport(yarpctest.FakeTransportSpec())
-	config, err := cfg.LoadConfig("our-service", attrs{
-		"outbounds": attrs{
-			"their-service": attrs{
-				"fake-transport": attrs{
-					"choose-two-random": attrs{
-						"peers": []string{
-							"1.1.1.1:1111",
-							"2.2.2.2:2222",
-						},
-					},
-				},
-			},
+// Spec returns a configuration specification for the "fewest pending requests
+// of two random peers" implementation, making it possible to select the better
+// of two random peer with transports that use outbound peer list configuration
+// (like HTTP).
+//
+//  cfg := yarpcconfig.New()
+//  cfg.MustRegisterPeerList(tworandomchoices.Spec())
+//
+// This enables the random peer list:
+//
+//  outbounds:
+//    otherservice:
+//      unary:
+//        http:
+//          url: https://host:port/rpc
+//          two-random-choices:
+//            peers:
+//              - 127.0.0.1:8080
+//              - 127.0.0.1:8081
+func Spec() yarpcconfig.PeerListSpec {
+	return yarpcconfig.PeerListSpec{
+		Name: "two-random-choices",
+		BuildPeerList: func(c struct{}, t peer.Transport, k *yarpcconfig.Kit) (peer.ChooserList, error) {
+			return New(t), nil
 		},
-	})
-	require.NoError(t, err)
-	require.NotNil(t, config.Outbounds)
-	require.NotNil(t, config.Outbounds["their-service"])
-	require.NotNil(t, config.Outbounds["their-service"].Unary)
+	}
 }

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package randpending_test
+package tworandomchoices_test
 
 import (
 	"context"
@@ -31,23 +31,23 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
-	"go.uber.org/yarpc/peer/randpending"
+	"go.uber.org/yarpc/peer/tworandomchoices"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
 var (
-	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "can't wait for peer without a context deadline for a choose-two-random peer list")
+	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "can't wait for peer without a context deadline for a two-random-choices peer list")
 )
 
 func newNotRunningError(err string) error {
-	return yarpcerrors.FailedPreconditionErrorf("choose-two-random peer list is not running: %s", err)
+	return yarpcerrors.FailedPreconditionErrorf("two-random-choices peer list is not running: %s", err)
 }
 
 func newUnavailableError(err error) error {
-	return yarpcerrors.UnavailableErrorf("choose-two-random peer list timed out waiting for peer: %s", err.Error())
+	return yarpcerrors.UnavailableErrorf("two-random-choices peer list timed out waiting for peer: %s", err.Error())
 }
 
-func TestRandPendingPeer(t *testing.T) {
+func TestTwoRandomChoicesPeer(t *testing.T) {
 	type testStruct struct {
 		msg string
 
@@ -561,7 +561,7 @@ func TestRandPendingPeer(t *testing.T) {
 			ExpectPeerRetainsWithError(transport, tt.errRetainedPeerIDs, tt.retainErr)
 			ExpectPeerReleases(transport, tt.errReleasedPeerIDs, tt.releaseErr)
 
-			pl := randpending.New(transport, randpending.Seed(0))
+			pl := tworandomchoices.New(transport, tworandomchoices.Seed(0))
 
 			deps := ListActionDeps{
 				Peers: peerMap,

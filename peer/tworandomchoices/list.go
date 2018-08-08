@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package randpending
+package tworandomchoices
 
 import (
 	"math/rand"
@@ -89,9 +89,9 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 
 	return &List{
 		List: peerlist.New(
-			"choose-two-random",
+			"two-random-choices",
 			transport,
-			newRandPendingList(options.capacity, options.source),
+			newTwoRandomChoicesList(options.capacity, options.source),
 			plOpts...,
 		),
 	}
