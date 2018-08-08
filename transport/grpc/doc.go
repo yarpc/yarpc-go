@@ -85,7 +85,7 @@
 //   myTransportCredentials := credentials.NewTLS(myTLSConfig)
 //   myChooser := peer.NewSingle(
 //     hostport.Identify("127.0.0.1:4443"),
-//     t.NewDialer(DialerCredentials(myTransportCredentials)),
+//     grpcTransport.NewDialer(DialerCredentials(myTransportCredentials)),
 //   )
 //   myserviceOutbound := grpcTransport.NewOutbound(myChooser)
 //   dispatcher := yarpc.NewDispatcher(yarpc.Config{
