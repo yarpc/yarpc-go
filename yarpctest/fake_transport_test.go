@@ -25,12 +25,17 @@ import (
 	"sync"
 	"testing"
 
+	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/yarpctest"
 )
 
 type testPeer struct {
 	id string
 }
+
+type testSubscriber struct{}
+
+func (s testSubscriber) NotifyStatusChanged(peer.Identifier) {}
 
 func (p testPeer) Identifier() string {
 	return p.id
@@ -48,9 +53,33 @@ func TestFakeTransport(t *testing.T) {
 
 		go func(i int) {
 			p := &testPeer{id: fmt.Sprintf("foo %d", i%10)}
-
 			<-wait
 			trans.Peer(p)
+
+			wg.Done()
+		}(i)
+	}
+	close(wait)
+	wg.Wait()
+}
+
+func TestRetainReleasePeer(t *testing.T) {
+	trans := yarpctest.NewFakeTransport()
+	trans.Start()
+
+	wait := make(chan struct{}, 0)
+	var wg sync.WaitGroup
+
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+
+		go func(i int) {
+			p := &testPeer{id: fmt.Sprintf("foo %d", i%10)}
+			s := &testSubscriber{}
+			<-wait
+			myPeer := trans.Peer(p)
+			trans.RetainPeer(myPeer, s)
+			trans.ReleasePeer(myPeer, s)
 
 			wg.Done()
 		}(i)

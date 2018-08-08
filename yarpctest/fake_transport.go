@@ -112,6 +112,8 @@ func (t *FakeTransport) Peer(id peer.Identifier) *FakePeer {
 // RetainPeer returns a fake peer.
 func (t *FakeTransport) RetainPeer(id peer.Identifier, ps peer.Subscriber) (peer.Peer, error) {
 	peer := t.Peer(id)
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	peer.subscribers = append(peer.subscribers, ps)
 	return peer, nil
 }
@@ -119,6 +121,8 @@ func (t *FakeTransport) RetainPeer(id peer.Identifier, ps peer.Subscriber) (peer
 // ReleasePeer does nothing.
 func (t *FakeTransport) ReleasePeer(id peer.Identifier, ps peer.Subscriber) error {
 	peer := t.Peer(id)
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	if subscribers, count := filterSubscriber(peer.subscribers, ps); count == 0 {
 		return fmt.Errorf("no such subscriber")
 	} else if count > 1 {
