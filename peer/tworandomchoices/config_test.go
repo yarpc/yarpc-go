@@ -18,7 +18,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
+package tworandomchoices
 
-// Version is the current version of YARPC.
-const Version = "1.33.0-dev"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/yarpcconfig"
+	"go.uber.org/yarpc/yarpctest"
+)
+
+type attrs map[string]interface{}
+
+func TestConfig(t *testing.T) {
+	cfg := yarpcconfig.New()
+	cfg.RegisterPeerList(Spec())
+	cfg.RegisterTransport(yarpctest.FakeTransportSpec())
+	config, err := cfg.LoadConfig("our-service", attrs{
+		"outbounds": attrs{
+			"their-service": attrs{
+				"fake-transport": attrs{
+					"two-random-choices": attrs{
+						"peers": []string{
+							"1.1.1.1:1111",
+							"2.2.2.2:2222",
+						},
+					},
+				},
+			},
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, config.Outbounds)
+	require.NotNil(t, config.Outbounds["their-service"])
+	require.NotNil(t, config.Outbounds["their-service"].Unary)
+}

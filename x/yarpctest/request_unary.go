@@ -58,12 +58,7 @@ func HTTPRequest(options ...api.RequestOption) api.Action {
 		require.NoError(t, out.Start())
 		defer func() { assert.NoError(t, out.Stop()) }()
 
-		resp, cancel, err := sendRequest(out, opts.GiveRequest, opts.GiveTimeout)
-		defer cancel()
-		validateError(t, err, opts.WantError)
-		if opts.WantError == nil {
-			validateResponse(t, resp, opts.WantResponse)
-		}
+		sendRequestAndValidateResp(t, out, opts)
 	})
 }
 
@@ -86,12 +81,7 @@ func TChannelRequest(options ...api.RequestOption) api.Action {
 		require.NoError(t, out.Start())
 		defer func() { assert.NoError(t, out.Stop()) }()
 
-		resp, cancel, err := sendRequest(out, opts.GiveRequest, opts.GiveTimeout)
-		defer cancel()
-		validateError(t, err, opts.WantError)
-		if opts.WantError == nil {
-			validateResponse(t, resp, opts.WantResponse)
-		}
+		sendRequestAndValidateResp(t, out, opts)
 	})
 }
 
@@ -113,13 +103,36 @@ func GRPCRequest(options ...api.RequestOption) api.Action {
 		require.NoError(t, out.Start())
 		defer func() { assert.NoError(t, out.Stop()) }()
 
+		sendRequestAndValidateResp(t, out, opts)
+	})
+}
+
+func sendRequestAndValidateResp(t testing.TB, out transport.UnaryOutbound, opts api.RequestOpts) {
+	f := func(i int) bool {
 		resp, cancel, err := sendRequest(out, opts.GiveRequest, opts.GiveTimeout)
 		defer cancel()
-		validateError(t, err, opts.WantError)
-		if opts.WantError == nil {
-			validateResponse(t, resp, opts.WantResponse)
+
+		if i == opts.RetryCount {
+			validateError(t, err, opts.WantError)
+			if opts.WantError == nil {
+				validateResponse(t, resp, opts.WantResponse)
+			}
+			return true
 		}
-	})
+
+		if err != nil || matchResponse(resp, opts.WantResponse) != nil {
+			return false
+		}
+
+		return true
+	}
+
+	for i := 0; i < opts.RetryCount+1; i++ {
+		if ok := f(i); ok {
+			return
+		}
+		time.Sleep(opts.RetryInterval)
+	}
 }
 
 func sendRequest(out transport.UnaryOutbound, request *transport.Request, timeout time.Duration) (*transport.Response, context.CancelFunc, error) {
@@ -138,23 +151,40 @@ func validateError(t testing.TB, actualErr error, wantError error) {
 }
 
 func validateResponse(t testing.TB, actualResp *transport.Response, expectedResp *transport.Response) {
+	require.NoError(t, matchResponse(actualResp, expectedResp), "response mismatch")
+}
+
+func matchResponse(actualResp *transport.Response, expectedResp *transport.Response) error {
 	var actualBody []byte
 	var expectedBody []byte
 	var err error
 	if actualResp.Body != nil {
 		actualBody, err = ioutil.ReadAll(actualResp.Body)
-		require.NoError(t, err)
+		if err != nil {
+			return fmt.Errorf("failed to read response body")
+		}
 	}
 	if expectedResp.Body != nil {
 		expectedBody, err = ioutil.ReadAll(expectedResp.Body)
-		require.NoError(t, err)
+		if err != nil {
+			return fmt.Errorf("failed to read response body")
+		}
 	}
-	assert.Equal(t, string(actualBody), string(expectedBody))
+	if string(actualBody) != string(expectedBody) {
+		return fmt.Errorf("response body mismatch, expect %s, got %s",
+			expectedBody, actualBody)
+	}
 	for k, v := range expectedResp.Headers.Items() {
 		actualValue, ok := actualResp.Headers.Get(k)
-		require.True(t, ok, "header %q was not set on the response", k)
-		require.Equal(t, actualValue, v, "headers did not match for %q", k)
+		if !ok {
+			return fmt.Errorf("headler %q was not set on the response", k)
+		}
+		if actualValue != v {
+			return fmt.Errorf("headers mismatch for %q, expected %v, got %v",
+				k, v, actualValue)
+		}
 	}
+	return nil
 }
 
 // UNARY-SPECIFIC REQUEST OPTIONS
@@ -205,5 +235,14 @@ func GiveAndWantLargeBodyIsEchoed(numOfBytes int) api.RequestOption {
 		body := bytes.Repeat([]byte("t"), numOfBytes)
 		opts.GiveRequest.Body = bytes.NewReader(body)
 		opts.WantResponse.Body = ioutil.NopCloser(bytes.NewReader(body))
+	})
+}
+
+// Retry retries the request for a given times, until the request succeeds
+// and the response matches.
+func Retry(count int, interval time.Duration) api.RequestOption {
+	return api.RequestOptionFunc(func(opts *api.RequestOpts) {
+		opts.RetryCount = count
+		opts.RetryInterval = interval
 	})
 }

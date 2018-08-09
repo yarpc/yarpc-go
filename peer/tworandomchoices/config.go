@@ -18,7 +18,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
+package tworandomchoices
 
-// Version is the current version of YARPC.
-const Version = "1.33.0-dev"
+import (
+	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/yarpcconfig"
+)
+
+// Spec returns a configuration specification for the "fewest pending requests
+// of two random peers" implementation, making it possible to select the better
+// of two random peer with transports that use outbound peer list configuration
+// (like HTTP).
+//
+//  cfg := yarpcconfig.New()
+//  cfg.MustRegisterPeerList(tworandomchoices.Spec())
+//
+// This enables the random peer list:
+//
+//  outbounds:
+//    otherservice:
+//      unary:
+//        http:
+//          url: https://host:port/rpc
+//          two-random-choices:
+//            peers:
+//              - 127.0.0.1:8080
+//              - 127.0.0.1:8081
+func Spec() yarpcconfig.PeerListSpec {
+	return yarpcconfig.PeerListSpec{
+		Name: "two-random-choices",
+		BuildPeerList: func(c struct{}, t peer.Transport, k *yarpcconfig.Kit) (peer.ChooserList, error) {
+			return New(t), nil
+		},
+	}
+}

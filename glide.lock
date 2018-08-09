@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-08-06T15:05:48.949824766Z
+updated: 2018-08-09T15:04:13.766070031Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -162,7 +162,7 @@ imports:
   - version
   - wire
 - name: go.uber.org/zap
-  version: 4d45f9617f7d90f7a663ff21c7a4321dbe78098b
+  version: ff33455a0e382e8a81d14dd7c922020b6b5e7982
   subpackages:
   - buffer
   - internal/bufferpool
@@ -171,7 +171,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: f4c29de78a2a91c00474a2e689954305c350adf9
+  version: f9ce57c11b242f0f1599cf25c89d8cb02c45295a
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -188,24 +188,24 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 34b17bdb430002e9db9ae7ddc8480b9fa05edc22
+  version: 904bdc257025c7b3f43c19360ad3ab85783fad78
   repo: https://github.com/golang/sys
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: cb6730876b985e110843c1842a7a63a63677cf08
+  version: 17ff2d5776d28fa6ba2280c1053f7adf8d32eea6
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 3c07937fe18c27668fd78bbaed3d6b8b39e202ea
+  version: 2fad9c56520a6ca94c6960472b921c21a8fa9343
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: daca94659cb50e9f37c1b834680f2e46358f10b0
+  version: 383e8b2c3b9e36c4076b235b32537292176bae20
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
@@ -243,7 +243,7 @@ testImports:
 - name: github.com/codahale/hdrhistogram
   version: 3a0bb77429bd3a61596f5e8a3172445844342120
 - name: github.com/kisielk/errcheck
-  version: e96dacdb078a5166c20b48dd667fb26d2ce0379f
+  version: 1787c4bee836470bf45018cfbc783650db3c6501
 - name: github.com/kisielk/gotool
   version: 80517062f582ea3340cd4baf70e86d539ae7d84d
 - name: github.com/uber/jaeger-lib
