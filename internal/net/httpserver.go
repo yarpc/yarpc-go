@@ -26,7 +26,6 @@ import (
 	"net"
 	"net/http"
 	"sync"
-	"time"
 
 	"go.uber.org/atomic"
 )
@@ -108,16 +107,16 @@ func (h *HTTPServer) serve(listener net.Listener) {
 	}
 }
 
-// Stop stops the server. An error is returned if the server stopped
+// Shutdown stops the server. An error is returned if the server stopped
 // unexpectedly.
 //
 // Once a server is stopped, it cannot be started again with ListenAndServe.
-func (h *HTTPServer) Stop() error {
+func (h *HTTPServer) Shutdown(ctx context.Context) error {
 	if h.stopped.Swap(true) {
 		return nil
 	}
 
-	wasRunning, closeErr := h.shutdownServer()
+	wasRunning, closeErr := h.shutdownServer(ctx)
 	if !wasRunning {
 		return nil
 	}
@@ -129,16 +128,13 @@ func (h *HTTPServer) Stop() error {
 	return serveErr
 }
 
-func (h *HTTPServer) shutdownServer() (wasRunning bool, _ error) {
+func (h *HTTPServer) shutdownServer(ctx context.Context) (wasRunning bool, _ error) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
 	if h.listener == nil {
 		return false, nil
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 
 	err := h.Server.Shutdown(ctx)
 
