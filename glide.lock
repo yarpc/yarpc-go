@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-08-09T15:04:13.766070031Z
+updated: 2018-08-10T15:05:26.328815142Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -188,19 +188,19 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 904bdc257025c7b3f43c19360ad3ab85783fad78
+  version: f0d5e33068cb57c22a181f5df0ffda885309eb5a
   repo: https://github.com/golang/sys
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 17ff2d5776d28fa6ba2280c1053f7adf8d32eea6
+  version: 5bceb69540612522dda873bd734395b4a43b1d41
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 2fad9c56520a6ca94c6960472b921c21a8fa9343
+  version: af5e78811ae33d6683fe32926e3c744d88d75bba
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
