@@ -21,6 +21,7 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -56,7 +57,7 @@ func Start() {
 
 // Stop stops the HTTP server.
 func Stop() {
-	if err := server.Stop(); err != nil {
+	if err := server.Shutdown(context.Background()); err != nil {
 		log.Printf("failed to stop HTTP server: %v", err)
 	}
 }

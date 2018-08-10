@@ -21,6 +21,7 @@
 package apachethrift
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"time"
@@ -73,7 +74,7 @@ func Start() {
 
 // Stop stops the Apache Thrift server.
 func Stop() {
-	if err := server.Stop(); err != nil {
+	if err := server.Shutdown(context.Background()); err != nil {
 		log.Printf("failed to stop Apache Thrift server: %v", err)
 	}
 }
