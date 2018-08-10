@@ -21,10 +21,12 @@
 package net
 
 import (
+	"context"
 	"errors"
 	"net"
 	"net/http"
 	"sync"
+	"time"
 
 	"go.uber.org/atomic"
 )
@@ -115,7 +117,7 @@ func (h *HTTPServer) Stop() error {
 		return nil
 	}
 
-	wasRunning, closeErr := h.closeListener()
+	wasRunning, closeErr := h.shutdownServer()
 	if !wasRunning {
 		return nil
 	}
@@ -127,16 +129,24 @@ func (h *HTTPServer) Stop() error {
 	return serveErr
 }
 
-func (h *HTTPServer) closeListener() (wasRunning bool, err error) {
+func (h *HTTPServer) shutdownServer() (wasRunning bool, _ error) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
 	if h.listener == nil {
-		return
+		return false, nil
 	}
 
-	wasRunning = true
-	err = h.listener.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err := h.Server.Shutdown(ctx)
+
+	// It's possible that the serve goroutine hasn't yet started, so the server
+	// might not know about the listener. We ignore errors are we may be closing
+	// the same listener twice.
+	h.listener.Close()
+
 	h.listener = nil
-	return
+	return true, err
 }
