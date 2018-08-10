@@ -139,8 +139,8 @@ func (h *HTTPServer) shutdownServer(ctx context.Context) (wasRunning bool, _ err
 	err := h.Server.Shutdown(ctx)
 
 	// It's possible that the serve goroutine hasn't yet started, so the server
-	// might not know about the listener. We ignore errors are we may be closing
-	// the same listener twice.
+	// might not know about the listener. We ignore errors since we may b
+	// closing the same listener twice.
 	h.listener.Close()
 
 	h.listener = nil
