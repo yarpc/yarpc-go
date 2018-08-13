@@ -189,12 +189,12 @@ func (i *Inbound) Stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	return i.Shutdown(ctx)
+	return i.shutdown(ctx)
 }
 
-// Shutdown the inbound, closing the listening socket, closing idle
+// shutdown the inbound, closing the listening socket, closing idle
 // connections, and waiting for all pending calls to complete.
-func (i *Inbound) Shutdown(ctx context.Context) error {
+func (i *Inbound) shutdown(ctx context.Context) error {
 	return i.once.Stop(func() error {
 		if i.server == nil {
 			return nil
