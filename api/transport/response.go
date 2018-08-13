@@ -76,10 +76,12 @@ type ResponseWriter interface {
 // ResponseMetaWriters to access and write response metadata. Failure to cast
 // MUST be handled.
 //
-//   if metaW, ok := resW.(transport.ResponseMetaWriter); !ok {
-//     meta := metaW.ResponseMeta()
-//     meta.ID = "foo"
+//  if metaW, ok := resW.(transport.ResponseMetaWriter); ok {
+//   if meta := metaW.ResponseMeta(); meta != nil{
+//     meta.Host = "foo"
+//     ...
 //   }
+//  }
 //
 // Transport implementations that support writing response metadata should have
 // their ResponseWriters implement ResponseMetaWriter to facilitate this.
