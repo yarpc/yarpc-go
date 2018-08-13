@@ -209,6 +209,8 @@ func TestSimpleRoundTrip(t *testing.T) {
 	}
 
 	tests := []struct {
+		name string
+
 		requestHeaders  transport.Headers
 		requestBody     string
 		responseHeaders transport.Headers
@@ -218,12 +220,14 @@ func TestSimpleRoundTrip(t *testing.T) {
 		wantError func(error)
 	}{
 		{
+			name:            "headers",
 			requestHeaders:  transport.NewHeaders().With("token", "1234"),
 			requestBody:     "world",
 			responseHeaders: transport.NewHeaders().With("status", "ok"),
 			responseBody:    "hello, world",
 		},
 		{
+			name:          "internal err",
 			requestBody:   "foo",
 			responseError: yarpcerrors.Newf(yarpcerrors.CodeInternal, "great sadness"),
 			wantError: func(err error) {
@@ -231,26 +235,9 @@ func TestSimpleRoundTrip(t *testing.T) {
 			},
 		},
 		{
+			name:          "invalid arg",
 			requestBody:   "bar",
 			responseError: yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing service name"),
-			wantError: func(err error) {
-				assert.True(t, yarpcerrors.FromError(err).Code() == yarpcerrors.CodeInvalidArgument, err.Error())
-			},
-		},
-		{
-			requestBody: "baz",
-			responseError: yarpcerrors.Newf(yarpcerrors.CodeInternal,
-				`error for procedure "foo" of service "bar": great sadness`,
-			),
-			wantError: func(err error) {
-				assert.True(t, yarpcerrors.FromError(err).Code() == yarpcerrors.CodeInternal, err.Error())
-			},
-		},
-		{
-			requestBody: "qux",
-			responseError: yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument,
-				`BadRequest: unrecognized procedure "echo" for service "derp"`,
-			),
 			wantError: func(err error) {
 				assert.True(t, yarpcerrors.FromError(err).Code() == yarpcerrors.CodeInvalidArgument, err.Error())
 			},
@@ -260,62 +247,65 @@ func TestSimpleRoundTrip(t *testing.T) {
 	rootCtx := context.Background()
 	for _, tt := range tests {
 		for _, trans := range transports {
-			requestMatcher := transporttest.NewRequestMatcher(t, &transport.Request{
-				Caller:    testCaller,
-				Service:   testService,
-				Transport: trans.Name(),
-				Procedure: testProcedure,
-				Encoding:  raw.Encoding,
-				Headers:   tt.requestHeaders,
-				Body:      bytes.NewReader([]byte(tt.requestBody)),
-			})
-
-			handler := unaryHandlerFunc(func(_ context.Context, r *transport.Request, w transport.ResponseWriter) error {
-				r.Headers.Del("user-agent") // for gRPC
-				r.Headers.Del(":authority") // for gRPC
-				assert.True(t, requestMatcher.Matches(r), "request mismatch: received %v", r)
-
-				if tt.responseError != nil {
-					return tt.responseError
-				}
-
-				if tt.responseHeaders.Len() > 0 {
-					w.AddHeaders(tt.responseHeaders)
-				}
-
-				_, err := w.Write([]byte(tt.responseBody))
-				assert.NoError(t, err, "failed to write response for %v", r)
-				return err
-			})
-
-			ctx, cancel := context.WithTimeout(rootCtx, 200*testtime.Millisecond)
-			defer cancel()
-
-			router := staticRouter{Handler: handler}
-			trans.WithRouter(router, func(o transport.UnaryOutbound) {
-				res, err := o.Call(ctx, &transport.Request{
+			t.Run(tt.name+"-"+trans.Name(), func(t *testing.T) {
+				requestMatcher := transporttest.NewRequestMatcher(t, &transport.Request{
 					Caller:    testCaller,
 					Service:   testService,
+					Transport: trans.Name(),
 					Procedure: testProcedure,
 					Encoding:  raw.Encoding,
 					Headers:   tt.requestHeaders,
-					Body:      bytes.NewReader([]byte(tt.requestBody)),
+					Body:      bytes.NewBufferString(tt.requestBody),
 				})
 
-				if tt.wantError != nil {
-					if assert.Error(t, err, "%T: expected error, got %v", trans, res) {
-						tt.wantError(err)
+				handler := unaryHandlerFunc(func(_ context.Context, r *transport.Request, w transport.ResponseWriter) error {
+					r.Headers.Del("user-agent") // for gRPC
+					r.Headers.Del(":authority") // for gRPC
+					assert.True(t, requestMatcher.Matches(r), "request mismatch: received %v", r)
+
+					if tt.responseError != nil {
+						return tt.responseError
 					}
-				} else {
-					responseMatcher := transporttest.NewResponseMatcher(t, &transport.Response{
-						Headers: tt.responseHeaders,
-						Body:    ioutil.NopCloser(bytes.NewReader([]byte(tt.responseBody))),
+
+					if tt.responseHeaders.Len() > 0 {
+						w.AddHeaders(tt.responseHeaders)
+					}
+
+					_, err := w.Write([]byte(tt.responseBody))
+					assert.NoError(t, err, "failed to write response for %v", r)
+					return err
+				})
+
+				ctx, cancel := context.WithTimeout(rootCtx, 200*testtime.Millisecond)
+				defer cancel()
+
+				router := staticRouter{Handler: handler}
+				trans.WithRouter(router, func(o transport.UnaryOutbound) {
+					res, err := o.Call(ctx, &transport.Request{
+						Caller:    testCaller,
+						Service:   testService,
+						Procedure: testProcedure,
+						Encoding:  raw.Encoding,
+						Headers:   tt.requestHeaders,
+						Body:      bytes.NewBufferString(tt.requestBody),
 					})
 
-					if assert.NoError(t, err, "%T: call failed", trans) {
-						assert.True(t, responseMatcher.Matches(res), "%T: response mismatch", trans)
+					if tt.wantError != nil {
+						if assert.Error(t, err, "%T: expected error, got %v", trans, res) {
+							tt.wantError(err)
+						}
+
+					} else {
+						responseMatcher := transporttest.NewResponseMatcher(t, &transport.Response{
+							Headers: tt.responseHeaders,
+							Body:    ioutil.NopCloser(bytes.NewReader([]byte(tt.responseBody))),
+						})
+
+						if assert.NoError(t, err, "%T: call failed", trans) {
+							assert.True(t, responseMatcher.Matches(res), "%T: response mismatch", trans)
+						}
 					}
-				}
+				})
 			})
 		}
 	}
