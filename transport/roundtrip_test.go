@@ -244,7 +244,6 @@ func TestSimpleRoundTrip(t *testing.T) {
 		},
 	}
 
-	rootCtx := context.Background()
 	for _, tt := range tests {
 		for _, trans := range transports {
 			t.Run(tt.name+"-"+trans.Name(), func(t *testing.T) {
@@ -276,7 +275,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 					return err
 				})
 
-				ctx, cancel := context.WithTimeout(rootCtx, 200*testtime.Millisecond)
+				ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
 				defer cancel()
 
 				router := staticRouter{Handler: handler}
