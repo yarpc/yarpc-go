@@ -21,6 +21,7 @@
 package net
 
 import (
+	"context"
 	"errors"
 	"net"
 	"net/http"
@@ -106,16 +107,16 @@ func (h *HTTPServer) serve(listener net.Listener) {
 	}
 }
 
-// Stop stops the server. An error is returned if the server stopped
+// Shutdown stops the server. An error is returned if the server stopped
 // unexpectedly.
 //
 // Once a server is stopped, it cannot be started again with ListenAndServe.
-func (h *HTTPServer) Stop() error {
+func (h *HTTPServer) Shutdown(ctx context.Context) error {
 	if h.stopped.Swap(true) {
 		return nil
 	}
 
-	wasRunning, closeErr := h.closeListener()
+	wasRunning, closeErr := h.shutdownServer(ctx)
 	if !wasRunning {
 		return nil
 	}
@@ -127,16 +128,21 @@ func (h *HTTPServer) Stop() error {
 	return serveErr
 }
 
-func (h *HTTPServer) closeListener() (wasRunning bool, err error) {
+func (h *HTTPServer) shutdownServer(ctx context.Context) (wasRunning bool, _ error) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
 	if h.listener == nil {
-		return
+		return false, nil
 	}
 
-	wasRunning = true
-	err = h.listener.Close()
+	err := h.Server.Shutdown(ctx)
+
+	// It's possible that the serve goroutine hasn't yet started, so the server
+	// might not know about the listener. We ignore errors since we may b
+	// closing the same listener twice.
+	h.listener.Close()
+
 	h.listener = nil
-	return
+	return true, err
 }

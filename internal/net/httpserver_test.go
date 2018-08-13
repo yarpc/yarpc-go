@@ -21,6 +21,7 @@
 package net
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"os"
@@ -34,7 +35,7 @@ import (
 	"go.uber.org/yarpc/internal/yarpctest"
 )
 
-func TestStartAndStop(t *testing.T) {
+func TestStartAndShutdown(t *testing.T) {
 	server := NewHTTPServer(&http.Server{Addr: "127.0.0.1:0"})
 	require.NoError(t, server.ListenAndServe())
 
@@ -45,7 +46,7 @@ func TestStartAndStop(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, conn.Close())
 
-	require.NoError(t, server.Stop())
+	require.NoError(t, server.Shutdown(context.Background()))
 	_, err = net.Dial("tcp", addr)
 	require.Error(t, err)
 }
@@ -53,7 +54,7 @@ func TestStartAndStop(t *testing.T) {
 func TestStartAddrInUse(t *testing.T) {
 	s1 := NewHTTPServer(&http.Server{Addr: "127.0.0.1:0"})
 	require.NoError(t, s1.ListenAndServe())
-	defer s1.Stop()
+	defer s1.Shutdown(context.Background())
 
 	addr := yarpctest.ZeroAddrToHostPort(s1.Listener().Addr())
 	s2 := NewHTTPServer(&http.Server{Addr: addr})
@@ -67,30 +68,30 @@ func TestStartAddrInUse(t *testing.T) {
 		assert.True(t, ok && se.Syscall == "bind" && se.Err == syscall.EADDRINUSE, "expected a EADDRINUSE bind error")
 	}
 }
-func TestStopAndListen(t *testing.T) {
+func TestShutdownAndListen(t *testing.T) {
 	server := NewHTTPServer(&http.Server{Addr: ":0"})
 	require.NoError(t, server.ListenAndServe())
-	require.NoError(t, server.Stop())
+	require.NoError(t, server.Shutdown(context.Background()))
 	require.Error(t, server.ListenAndServe())
 }
 
-func TestStopWithoutStart(t *testing.T) {
+func TestShutdownWithoutStart(t *testing.T) {
 	server := NewHTTPServer(&http.Server{Addr: ":0"})
-	require.NoError(t, server.Stop())
+	require.NoError(t, server.Shutdown(context.Background()))
 }
 
 func TestStartTwice(t *testing.T) {
 	server := NewHTTPServer(&http.Server{Addr: ":0"})
 	require.NoError(t, server.ListenAndServe())
 	require.Error(t, server.ListenAndServe())
-	require.NoError(t, server.Stop())
+	require.NoError(t, server.Shutdown(context.Background()))
 }
 
-func TestStopTwice(t *testing.T) {
+func TestShutdownTwice(t *testing.T) {
 	server := NewHTTPServer(&http.Server{Addr: ":0"})
 	require.NoError(t, server.ListenAndServe())
-	require.NoError(t, server.Stop())
-	require.NoError(t, server.Stop())
+	require.NoError(t, server.Shutdown(context.Background()))
+	require.NoError(t, server.Shutdown(context.Background()))
 }
 
 func TestListenFail(t *testing.T) {
@@ -98,10 +99,10 @@ func TestListenFail(t *testing.T) {
 	require.Error(t, server.ListenAndServe())
 }
 
-func TestStopError(t *testing.T) {
+func TestShutdownError(t *testing.T) {
 	server := NewHTTPServer(&http.Server{Addr: ":0"})
 	require.NoError(t, server.ListenAndServe())
 	require.NoError(t, server.Listener().Close())
 	time.Sleep(5 * testtime.Millisecond)
-	require.Error(t, server.Stop())
+	require.Error(t, server.Shutdown(context.Background()))
 }

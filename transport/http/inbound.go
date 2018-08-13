@@ -21,9 +21,11 @@
 package http
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/transport"
@@ -182,16 +184,24 @@ func (i *Inbound) start() error {
 	return nil
 }
 
-// Stop the inbound, closing the listening socket.
+// Stop the inbound using Shutdown, but with a fixed timeout.
 func (i *Inbound) Stop() error {
-	return i.once.Stop(i.stop)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	return i.shutdown(ctx)
 }
 
-func (i *Inbound) stop() error {
-	if i.server == nil {
-		return nil
-	}
-	return i.server.Stop()
+// shutdown the inbound, closing the listening socket, closing idle
+// connections, and waiting for all pending calls to complete.
+func (i *Inbound) shutdown(ctx context.Context) error {
+	return i.once.Stop(func() error {
+		if i.server == nil {
+			return nil
+		}
+
+		return i.server.Shutdown(ctx)
+	})
 }
 
 // IsRunning returns whether the inbound is currently running

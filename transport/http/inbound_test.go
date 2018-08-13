@@ -234,15 +234,47 @@ func TestMuxWithInterceptor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.path, func(t *testing.T) {
-
 			url := fmt.Sprintf("http://%v%v", inbound.Addr(), tt.path)
-			resp, err := http.Get(url)
-			require.NoError(t, err, "GET failed")
-			defer resp.Body.Close()
-
-			body, err := ioutil.ReadAll(resp.Body)
-			require.NoError(t, err, "Failed to read body")
+			_, body, err := httpGet(t, url)
+			require.NoError(t, err, "request failed")
 			assert.Equal(t, tt.want, string(body))
 		})
 	}
+}
+
+func TestRequestAfterStop(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, "OK")
+	})
+
+	transport := NewTransport()
+	inbound := transport.NewInbound("127.0.0.1:0", Mux("/", mux))
+	inbound.SetRouter(newTestRouter(nil))
+	require.NoError(t, inbound.Start(), "Failed to start inbound")
+
+	url := fmt.Sprintf("http://%v/health", inbound.Addr())
+	_, body, err := httpGet(t, url)
+	require.NoError(t, err, "expect successful response")
+	assert.Equal(t, "OK", body, "response mismatch")
+
+	require.NoError(t, inbound.Stop(), "Failed to stop inbound")
+
+	_, _, err = httpGet(t, url)
+	assert.Error(t, err, "requests should fail once inbound is stopped")
+}
+
+func httpGet(t *testing.T, url string) (*http.Response, string, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, "", fmt.Errorf("GET %v failed: %v", url, err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, "", fmt.Errorf("Failed to read reponse from %v: %v", url, err)
+	}
+
+	return resp, string(body), nil
 }
