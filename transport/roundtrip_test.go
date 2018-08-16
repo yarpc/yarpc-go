@@ -246,7 +246,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 
 	for _, tt := range tests {
 		for _, trans := range transports {
-			t.Run(tt.name+"-"+trans.Name(), func(t *testing.T) {
+			t.Run(tt.name+"/"+trans.Name(), func(t *testing.T) {
 				requestMatcher := transporttest.NewRequestMatcher(t, &transport.Request{
 					Caller:    testCaller,
 					Service:   testService,
