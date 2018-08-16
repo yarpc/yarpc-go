@@ -36,6 +36,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const defaultShutdownTimeout = 5 * time.Second
+
 // InboundOption customizes the behavior of an HTTP Inbound constructed with
 // NewInbound.
 type InboundOption func(*Inbound)
@@ -81,12 +83,25 @@ func GrabHeaders(headers ...string) InboundOption {
 	}
 }
 
+// ShutdownTimeout specifies the maximum duration the inbound should wait for
+// closing idle connections, and pending calls to complete.
+//
+// Set to 0 to wait for a complete drain.
+//
+// Defaults to 5 seconds.
+func ShutdownTimeout(timeout time.Duration) InboundOption {
+	return func(i *Inbound) {
+		i.shutdownTimeout = timeout
+	}
+}
+
 // NewInbound builds a new HTTP inbound that listens on the given address and
 // sharing this transport.
 func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 	i := &Inbound{
 		once:              lifecycle.NewOnce(),
 		addr:              addr,
+		shutdownTimeout:   defaultShutdownTimeout,
 		tracer:            t.tracer,
 		logger:            t.logger,
 		transport:         t,
@@ -102,16 +117,17 @@ func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 // Inbound receives YARPC requests using an HTTP server. It may be constructed
 // using the NewInbound method on the Transport.
 type Inbound struct {
-	addr        string
-	mux         *http.ServeMux
-	muxPattern  string
-	server      *intnet.HTTPServer
-	router      transport.Router
-	tracer      opentracing.Tracer
-	logger      *zap.Logger
-	transport   *Transport
-	grabHeaders map[string]struct{}
-	interceptor func(http.Handler) http.Handler
+	addr            string
+	mux             *http.ServeMux
+	muxPattern      string
+	server          *intnet.HTTPServer
+	shutdownTimeout time.Duration
+	router          transport.Router
+	tracer          opentracing.Tracer
+	logger          *zap.Logger
+	transport       *Transport
+	grabHeaders     map[string]struct{}
+	interceptor     func(http.Handler) http.Handler
 
 	once *lifecycle.Once
 
@@ -184,9 +200,9 @@ func (i *Inbound) start() error {
 	return nil
 }
 
-// Stop the inbound using Shutdown, but with a fixed timeout.
+// Stop the inbound using Shutdown.
 func (i *Inbound) Stop() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), i.shutdownTimeout)
 	defer cancel()
 
 	return i.shutdown(ctx)
