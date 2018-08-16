@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-08-15T15:06:33.657614718Z
+updated: 2018-08-16T15:06:14.911481067Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -171,7 +171,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: c39426892332e1bb5ec0a434a079bf82f5d30c54
+  version: aaf60122140d3fcf75376d319f0554393160eb50
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -188,7 +188,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 14742f9018cd6651ec7364dc6ee08af0baaa1031
+  version: 1c9583448a9c3aa0f9a6a5241bf73c0bd8aafded
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -200,12 +200,12 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 8f8fd1f23985f19c387c894e5597b22d8256a495
+  version: 9de19001913fbbc31d62e61c3c2d0a49ee352534
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 383e8b2c3b9e36c4076b235b32537292176bae20
+  version: d0a8f471bba2dbb160885b0000d814ee5d559bad
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
