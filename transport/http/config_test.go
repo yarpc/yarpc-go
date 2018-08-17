@@ -193,7 +193,7 @@ func TestTransportSpec(t *testing.T) {
 		{
 			desc:       "shutdown timeout err",
 			cfg:        attrs{"address": ":8080", "shutdownTimeout": "-1s"},
-			wantErrors: []string{`shutdownTimeout must be at least 0, got: "-1s"`},
+			wantErrors: []string{`shutdownTimeout must not be negative, got: "-1s"`},
 		},
 	}
 

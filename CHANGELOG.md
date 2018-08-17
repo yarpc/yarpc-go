@@ -9,8 +9,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - x/yarpctest: Add a retry option to HTTP/TChannel/GRPCRequest.
 - Added `peer/tworandomchoices`, an implementation of the Two Random Choices
   load balancer algorithm.
-- HTTP inbounds can be configured with a shutdown timeout to wait for requests
-  to drain.
+### Changed
+- HTTP inbounds gracefully shutdown with an optional timeout, defaulting to 5
+  seconds.
 
 ## [1.32.4] - 2018-08-07
 ### Fixed

@@ -176,7 +176,7 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 
 	if ic.ShutdownTimeout != nil {
 		if *ic.ShutdownTimeout < 0 {
-			return nil, fmt.Errorf("shutdownTimeout must be at least 0, got: %q", ic.ShutdownTimeout)
+			return nil, fmt.Errorf("shutdownTimeout must not be negative, got: %q", ic.ShutdownTimeout)
 		}
 		inboundOptions = append(inboundOptions, ShutdownTimeout(*ic.ShutdownTimeout))
 	}
