@@ -154,12 +154,15 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 //      grabHeaders:
 //        - x-foo
 //        - x-bar
+//      shutdownTimeout: 5s
 type InboundConfig struct {
 	// Address to listen on. This field is required.
 	Address string `config:"address,interpolate"`
 	// The additional headers, starting with x, that should be
 	// propagated to handlers. This field is optional.
 	GrabHeaders []string `config:"grabHeaders"`
+	// The maximum amount of time to wait for the inbound to shutdown.
+	ShutdownTimeout *time.Duration `config:"shutdownTimeout"`
 }
 
 func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, k *yarpcconfig.Kit) (transport.Inbound, error) {
@@ -170,6 +173,14 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 	if len(ic.GrabHeaders) > 0 {
 		inboundOptions = append(inboundOptions, GrabHeaders(ic.GrabHeaders...))
 	}
+
+	if ic.ShutdownTimeout != nil {
+		if *ic.ShutdownTimeout < 0 {
+			return nil, fmt.Errorf("shutdownTimeout must not be negative, got: %q", ic.ShutdownTimeout)
+		}
+		inboundOptions = append(inboundOptions, ShutdownTimeout(*ic.ShutdownTimeout))
+	}
+
 	return t.(*Transport).NewInbound(ic.Address, inboundOptions...), nil
 }
 

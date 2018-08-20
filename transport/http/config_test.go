@@ -56,10 +56,11 @@ func TestTransportSpec(t *testing.T) {
 	}
 
 	type wantInbound struct {
-		Address     string
-		Mux         *http.ServeMux
-		MuxPattern  string
-		GrabHeaders map[string]struct{}
+		Address         string
+		Mux             *http.ServeMux
+		MuxPattern      string
+		GrabHeaders     map[string]struct{}
+		ShutdownTimeout time.Duration
 	}
 
 	type inboundTest struct {
@@ -149,18 +150,22 @@ func TestTransportSpec(t *testing.T) {
 		{
 			desc:        "simple inbound",
 			cfg:         attrs{"address": ":8080"},
-			wantInbound: &wantInbound{Address: ":8080"},
+			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout},
 		},
 		{
-			desc:        "simple inbound with grab headers",
-			cfg:         attrs{"address": ":8080", "grabHeaders": []string{"x-foo", "x-bar"}},
-			wantInbound: &wantInbound{Address: ":8080", GrabHeaders: map[string]struct{}{"x-foo": {}, "x-bar": {}}},
+			desc: "simple inbound with grab headers",
+			cfg:  attrs{"address": ":8080", "grabHeaders": []string{"x-foo", "x-bar"}},
+			wantInbound: &wantInbound{
+				Address:         ":8080",
+				GrabHeaders:     map[string]struct{}{"x-foo": {}, "x-bar": {}},
+				ShutdownTimeout: defaultShutdownTimeout,
+			},
 		},
 		{
 			desc:        "inbound interpolation",
 			cfg:         attrs{"address": "${HOST:}:${PORT}"},
 			env:         map[string]string{"HOST": "127.0.0.1", "PORT": "80"},
-			wantInbound: &wantInbound{Address: "127.0.0.1:80"},
+			wantInbound: &wantInbound{Address: "127.0.0.1:80", ShutdownTimeout: defaultShutdownTimeout},
 		},
 		{
 			desc: "serve mux",
@@ -169,10 +174,26 @@ func TestTransportSpec(t *testing.T) {
 				Mux("/yarpc", serveMux),
 			},
 			wantInbound: &wantInbound{
-				Address:    ":8080",
-				Mux:        serveMux,
-				MuxPattern: "/yarpc",
+				Address:         ":8080",
+				Mux:             serveMux,
+				MuxPattern:      "/yarpc",
+				ShutdownTimeout: defaultShutdownTimeout,
 			},
+		},
+		{
+			desc:        "shutdown timeout",
+			cfg:         attrs{"address": ":8080", "shutdownTimeout": "1s"},
+			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: time.Second},
+		},
+		{
+			desc:        "shutdown timeout 0",
+			cfg:         attrs{"address": ":8080", "shutdownTimeout": "0s"},
+			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: 0},
+		},
+		{
+			desc:       "shutdown timeout err",
+			cfg:        attrs{"address": ":8080", "shutdownTimeout": "-1s"},
+			wantErrors: []string{`shutdownTimeout must not be negative, got: "-1s"`},
 		},
 	}
 
@@ -406,6 +427,7 @@ func TestTransportSpec(t *testing.T) {
 				} else {
 					assert.Empty(t, ib.grabHeaders)
 				}
+				assert.Equal(t, want.ShutdownTimeout, ib.shutdownTimeout, "shutdownTimeout should match")
 			}
 		}
 
