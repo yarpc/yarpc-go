@@ -24,18 +24,17 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestAddHeaders(t *testing.T) {
 	meta := ResponseMeta{}
-
 	meta.AddHeaders(NewHeaders().With("foo", "bar"))
 	meta.AddHeaders(NewHeaders().With("FizZ", "BuzZ"))
 
-	headers := meta.Headers.OriginalItems()
-	require.Len(t, headers, 2)
+	wantHeaders := map[string]string{
+		"foo":  "bar",
+		"FizZ": "BuzZ",
+	}
 
-	assert.Equal(t, "bar", headers["foo"])
-	assert.Equal(t, "BuzZ", headers["FizZ"])
+	assert.Equal(t, wantHeaders, meta.Headers.OriginalItems(), "headers did not match")
 }

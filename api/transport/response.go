@@ -73,8 +73,9 @@ type ResponseWriter interface {
 // middleware may use to modify transport.Response fields.
 //
 // Middleware and handlers may attempt to upcast ResponseWriters to
-// ResponseMetaWriters to access and write response metadata. Failure to cast
-// MUST be handled.
+// ResponseMetaWriters to access and write response metadata. On successful
+// cast, the ResponseWriter should only be used for writes. Failure to cast MUST
+// be handled.
 //
 //  if metaW, ok := resW.(transport.ResponseMetaWriter); ok {
 //   if meta := metaW.ResponseMeta(); meta != nil{
@@ -83,8 +84,14 @@ type ResponseWriter interface {
 //   }
 //  }
 //
+// ResponseWriter calls to `AddHeaders()` and `SetApplicationError()` may be
+// modified afterwards, by changing the ResponseMeta.
+//
 // Transport implementations that support writing response metadata should have
 // their ResponseWriters implement ResponseMetaWriter to facilitate this.
+//
+// Nil returns indicate unsupported behavior. This could be due to a wrapper
+// that has no guarantee of the underlying writer implementing this interface.
 type ResponseMetaWriter interface {
 	ResponseMeta() *ResponseMeta
 }
@@ -119,7 +126,10 @@ type ResponseMeta struct {
 	// Service is the name of the responding service.
 	Service string
 
-	Headers          Headers
+	Headers Headers
+	// TODO(abg/apeatsbond): ApplicationError should just be an error. To get
+	// thrift support with YARPC errors, we need to send the application error to
+	// the transport level.
 	ApplicationError bool
 }
 
