@@ -42,7 +42,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added connection/disconnection simulation to the `yarpctest` fake transport
   and peers.
 - x/yarpctest: Added support for specifying outbound middleware.
-- yarpctest: Changed `FakePeer` id to use "go.uber.org/yarpc/api/peer".Identifier 
+- yarpctest: Changed `FakePeer` id to use "go.uber.org/yarpc/api/peer".Identifier
   interface instead of the concrete "go.uber.org/peer/hostport".Identifier type.
 ### Changed
 - The HTTP protocol now mitigates peers that are unavailable due to a half-open
@@ -64,6 +64,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Expose capacity option to configurator for the round-robin peer chooser.
 - Expose capacity option to configurator for the fewest pending heap peer chooser.
 - Dispatchers now log recovered handler panics via a Zap logger, if present.
+- Responses for all transports now include a header containing the name of the
+  service that handled the request.
 
 ### Changed
 - TChannel inbounds will blackhole requests when handlers return resource
