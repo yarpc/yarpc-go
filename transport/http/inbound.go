@@ -29,7 +29,6 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/introspection"
 	intnet "go.uber.org/yarpc/internal/net"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -238,21 +237,4 @@ func (i *Inbound) Addr() net.Addr {
 	}
 
 	return listener.Addr()
-}
-
-// Introspect returns the state of the inbound for introspection purposes.
-func (i *Inbound) Introspect() introspection.InboundStatus {
-	state := "Stopped"
-	if i.IsRunning() {
-		state = "Started"
-	}
-	var addrString string
-	if addr := i.Addr(); addr != nil {
-		addrString = addr.String()
-	}
-	return introspection.InboundStatus{
-		Transport: "http",
-		Endpoint:  addrString,
-		State:     state,
-	}
 }

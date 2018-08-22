@@ -31,7 +31,6 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
-	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/yarpcerrors"
 )
@@ -920,41 +919,6 @@ func TestRoundRobinList(t *testing.T) {
 			assert.Equal(t, tt.expectedRunning, pl.IsRunning(), "List was not in the expected state")
 		})
 	}
-}
-
-func TestIntrospect(t *testing.T) {
-	pl := New(testTransport{})
-	assert.NoError(t, pl.Start())
-	assert.NoError(t, pl.Update(peer.ListUpdates{
-		Additions: []peer.Identifier{
-			newTestPeer("foo", 0, peer.Unavailable),
-			newTestPeer("bar", 1, peer.Available),
-			newTestPeer("baz", 2, peer.Available),
-		},
-	}))
-
-	chooserStatus := pl.Introspect()
-	assert.Equal(t, "Single", chooserStatus.Name)
-	assert.Equal(t, "Running (2/3 available)", chooserStatus.State)
-
-	peerIdentifierToPeerStatus := make(map[string]introspection.PeerStatus, len(chooserStatus.Peers))
-	for _, peerStatus := range chooserStatus.Peers {
-		peerIdentifierToPeerStatus[peerStatus.Identifier] = peerStatus
-	}
-	checkPeerStatus(t, peerIdentifierToPeerStatus, "foo", "Unavailable, 0 pending request(s)")
-	checkPeerStatus(t, peerIdentifierToPeerStatus, "bar", "Available, 1 pending request(s)")
-	checkPeerStatus(t, peerIdentifierToPeerStatus, "baz", "Available, 2 pending request(s)")
-}
-
-func checkPeerStatus(
-	t *testing.T,
-	peerIdentifierToPeerStatus map[string]introspection.PeerStatus,
-	identifier string,
-	expectedState string,
-) {
-	peerStatus, ok := peerIdentifierToPeerStatus[identifier]
-	assert.True(t, ok)
-	assert.Equal(t, expectedState, peerStatus.State)
 }
 
 type testTransport struct{}

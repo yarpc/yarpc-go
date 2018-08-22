@@ -22,11 +22,9 @@ package peer
 
 import (
 	"context"
-	"fmt"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
@@ -98,32 +96,4 @@ func (s *Single) stop() error {
 // IsRunning is a noop
 func (s *Single) IsRunning() bool {
 	return true
-}
-
-// Introspect returns a ChooserStatus with a single PeerStatus.
-func (s *Single) Introspect() introspection.ChooserStatus {
-	if !s.once.IsRunning() {
-		return introspection.ChooserStatus{
-			Name: "Single",
-			Peers: []introspection.PeerStatus{
-				{
-					Identifier: s.pid.Identifier(),
-					State:      "uninitialized",
-				},
-			},
-		}
-	}
-
-	peerStatus := s.p.Status()
-	peer := introspection.PeerStatus{
-		Identifier: s.p.Identifier(),
-		State: fmt.Sprintf("%s, %d pending request(s)",
-			peerStatus.ConnectionStatus.String(),
-			peerStatus.PendingRequestCount),
-	}
-
-	return introspection.ChooserStatus{
-		Name:  "Single",
-		Peers: []introspection.PeerStatus{peer},
-	}
 }

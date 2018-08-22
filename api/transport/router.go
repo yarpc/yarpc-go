@@ -40,12 +40,11 @@ type Procedure struct {
 	// HandlerSpec specifying which handler and rpc type.
 	HandlerSpec HandlerSpec
 
-	// Encoding of the handler (optional) used for introspection and routing
+	// Encoding of the handler.
 	// (if present).
 	Encoding Encoding
 
-	// Signature of the handler, for introspection. This should be a snippet of
-	// Go code representing the function definition.
+	// Human-readable signature of the handler.
 	Signature string
 }
 

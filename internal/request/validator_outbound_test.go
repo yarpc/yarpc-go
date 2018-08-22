@@ -30,7 +30,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/internal/introspection"
 )
 
 func TestCall(t *testing.T) {
@@ -99,20 +98,6 @@ func TestCallErrors(t *testing.T) {
 			assert.Error(t, err, "expected error from invalid request")
 		})
 	}
-}
-
-func TestIntrospect(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	t.Run("unary", func(t *testing.T) {
-		validatorOut := UnaryValidatorOutbound{transporttest.NewMockUnaryOutbound(ctrl)}
-		assert.Equal(t, introspection.OutboundStatusNotSupported, validatorOut.Introspect())
-	})
-
-	t.Run("unary", func(t *testing.T) {
-		validatorOut := OnewayValidatorOutbound{transporttest.NewMockOnewayOutbound(ctrl)}
-		assert.Equal(t, introspection.OutboundStatusNotSupported, validatorOut.Introspect())
-	})
 }
 
 func newValidTestRequest() *transport.Request {

@@ -26,7 +26,6 @@ import (
 
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/iopool"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	"go.uber.org/yarpc/pkg/errors"
@@ -35,8 +34,7 @@ import (
 )
 
 var (
-	_ transport.UnaryOutbound              = (*ChannelOutbound)(nil)
-	_ introspection.IntrospectableOutbound = (*ChannelOutbound)(nil)
+	_ transport.UnaryOutbound = (*ChannelOutbound)(nil)
 )
 
 // NewOutbound builds a new TChannel outbound using the transport's shared
@@ -202,19 +200,6 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 		Body:             resBody,
 		ApplicationError: res.ApplicationError(),
 	}, getResponseErrorAndDeleteHeaderKeys(headers)
-}
-
-// Introspect returns basic status about this outbound.
-func (o *ChannelOutbound) Introspect() introspection.OutboundStatus {
-	state := "Stopped"
-	if o.IsRunning() {
-		state = "Running"
-	}
-	return introspection.OutboundStatus{
-		Transport: "tchannel",
-		Endpoint:  o.addr,
-		State:     state,
-	}
 }
 
 func writeBody(body io.Reader, call *tchannel.OutboundCall) error {

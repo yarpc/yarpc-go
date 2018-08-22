@@ -22,7 +22,6 @@ package peerlist
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"sync"
 	"time"
@@ -31,7 +30,6 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/introspection"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -556,53 +554,6 @@ func (pl *List) NumUnavailable() int {
 // NumUninitialized returns how many peers are unavailable.
 func (pl *List) NumUninitialized() int {
 	return len(pl.uninitializedPeers)
-}
-
-// Introspect returns a ChooserStatus with a summary of the Peers.
-func (pl *List) Introspect() introspection.ChooserStatus {
-	state := "Stopped"
-	if pl.IsRunning() {
-		state = "Running"
-	}
-
-	pl.lock.Lock()
-	availables := make([]peer.Peer, 0, len(pl.availablePeers))
-	for _, t := range pl.availablePeers {
-		availables = append(availables, t.peer)
-	}
-	unavailables := make([]peer.Peer, 0, len(pl.unavailablePeers))
-	for _, t := range pl.unavailablePeers {
-		unavailables = append(unavailables, t.peer)
-	}
-	pl.lock.Unlock()
-
-	peersStatus := make([]introspection.PeerStatus, 0,
-		len(availables)+len(unavailables))
-
-	buildPeerStatus := func(peer peer.Peer) introspection.PeerStatus {
-		ps := peer.Status()
-		return introspection.PeerStatus{
-			Identifier: peer.Identifier(),
-			State: fmt.Sprintf("%s, %d pending request(s)",
-				ps.ConnectionStatus.String(),
-				ps.PendingRequestCount),
-		}
-	}
-
-	for _, peer := range availables {
-		peersStatus = append(peersStatus, buildPeerStatus(peer))
-	}
-
-	for _, peer := range unavailables {
-		peersStatus = append(peersStatus, buildPeerStatus(peer))
-	}
-
-	return introspection.ChooserStatus{
-		Name: "Single",
-		State: fmt.Sprintf("%s (%d/%d available)", state, len(availables),
-			len(availables)+len(unavailables)),
-		Peers: peersStatus,
-	}
 }
 
 // shuffle randomizes the order of a slice of peers.

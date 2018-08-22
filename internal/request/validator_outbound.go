@@ -24,7 +24,6 @@ import (
 	"context"
 
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/introspection"
 )
 
 // UnaryValidatorOutbound wraps an Outbound to validate all outgoing unary requests.
@@ -43,14 +42,6 @@ func (o UnaryValidatorOutbound) Call(ctx context.Context, request *transport.Req
 	return o.UnaryOutbound.Call(ctx, request)
 }
 
-// Introspect returns the introspection status of the underlying outbound.
-func (o UnaryValidatorOutbound) Introspect() introspection.OutboundStatus {
-	if o, ok := o.UnaryOutbound.(introspection.IntrospectableOutbound); ok {
-		return o.Introspect()
-	}
-	return introspection.OutboundStatusNotSupported
-}
-
 // OnewayValidatorOutbound wraps an Outbound to validate all outgoing oneway requests.
 type OnewayValidatorOutbound struct{ transport.OnewayOutbound }
 
@@ -65,14 +56,6 @@ func (o OnewayValidatorOutbound) CallOneway(ctx context.Context, request *transp
 	}
 
 	return o.OnewayOutbound.CallOneway(ctx, request)
-}
-
-// Introspect returns the introspection status of the underlying outbound.
-func (o OnewayValidatorOutbound) Introspect() introspection.OutboundStatus {
-	if o, ok := o.OnewayOutbound.(introspection.IntrospectableOutbound); ok {
-		return o.Introspect()
-	}
-	return introspection.OutboundStatusNotSupported
 }
 
 // StreamValidatorOutbound wraps an Outbound to validate all outgoing oneway requests.

@@ -922,7 +922,6 @@ func TestChooserConfigurator(t *testing.T) {
 				require.NotNil(t, unary.Chooser(), "must have chooser")
 				chooser, ok := unary.Chooser().(*peer.Single)
 				require.True(t, ok, "unary chooser must be a single peer chooser")
-				assert.Equal(t, "127.0.0.1:8080", chooser.Introspect().Peers[0].Identifier, "incorrect peer")
 
 				dispatcher := yarpc.NewDispatcher(c)
 				assert.NoError(t, dispatcher.Start(), "error starting")
@@ -968,7 +967,6 @@ func TestChooserConfigurator(t *testing.T) {
 				require.NotNil(t, unary.Chooser(), "must have chooser")
 				chooser, ok := unary.Chooser().(*peer.Single)
 				require.True(t, ok, "unary chooser must be a single peer chooser")
-				assert.Equal(t, "127.0.0.1:9000", chooser.Introspect().Peers[0].Identifier, "incorrect peer")
 
 				dispatcher := yarpc.NewDispatcher(c)
 				assert.NoError(t, dispatcher.Start(), "error starting")

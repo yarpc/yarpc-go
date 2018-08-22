@@ -34,7 +34,6 @@ import (
 	"go.uber.org/yarpc/api/middleware/middlewaretest"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/testtime"
 )
 
@@ -232,24 +231,6 @@ func TestOnewayChainExec(t *testing.T) {
 	// stop
 	out.EXPECT().Stop().Return(nil)
 	assert.NoError(t, chain.Stop(), "unexpected error stopping outbound")
-}
-
-func TestIntrospect(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	expectStatus := introspection.OutboundStatusNotSupported
-	errMsg := "expected not supported status"
-
-	t.Run("unary", func(t *testing.T) {
-		out := transporttest.NewMockUnaryOutbound(ctrl)
-		chain := &unaryChainExec{Final: out}
-		assert.Equal(t, expectStatus, chain.Introspect(), errMsg)
-	})
-
-	t.Run("oneway", func(t *testing.T) {
-		out := transporttest.NewMockOnewayOutbound(ctrl)
-		chain := &onewayChainExec{Final: out}
-		assert.Equal(t, expectStatus, chain.Introspect(), errMsg)
-	})
 }
 
 var retryStreamOutbound middleware.StreamOutboundFunc = func(

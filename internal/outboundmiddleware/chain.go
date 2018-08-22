@@ -25,7 +25,6 @@ import (
 
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/introspection"
 )
 
 // UnaryChain combines a series of `UnaryOutbound`s into a single `UnaryOutbound`.
@@ -93,13 +92,6 @@ func (x unaryChainExec) Call(ctx context.Context, request *transport.Request) (*
 	return next.Call(ctx, request, x)
 }
 
-func (x unaryChainExec) Introspect() introspection.OutboundStatus {
-	if o, ok := x.Final.(introspection.IntrospectableOutbound); ok {
-		return o.Introspect()
-	}
-	return introspection.OutboundStatusNotSupported
-}
-
 // OnewayChain combines a series of `OnewayOutbound`s into a single `OnewayOutbound`.
 func OnewayChain(mw ...middleware.OnewayOutbound) middleware.OnewayOutbound {
 	unchained := make([]middleware.OnewayOutbound, 0, len(mw))
@@ -163,13 +155,6 @@ func (x onewayChainExec) CallOneway(ctx context.Context, request *transport.Requ
 	next := x.Chain[0]
 	x.Chain = x.Chain[1:]
 	return next.CallOneway(ctx, request, x)
-}
-
-func (x onewayChainExec) Introspect() introspection.OutboundStatus {
-	if o, ok := x.Final.(introspection.IntrospectableOutbound); ok {
-		return o.Introspect()
-	}
-	return introspection.OutboundStatusNotSupported
 }
 
 // StreamChain combines a series of `StreamOutbound`s into a single `StreamOutbound`.

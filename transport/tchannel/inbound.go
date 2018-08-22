@@ -22,7 +22,6 @@ package tchannel
 
 import (
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/zap"
 )
@@ -80,17 +79,4 @@ func (i *Inbound) Stop() error {
 // IsRunning returns whether the Inbound is running.
 func (i *Inbound) IsRunning() bool {
 	return i.once.IsRunning()
-}
-
-// Introspect returns the state of the inbound for introspection purposes.
-func (i *Inbound) Introspect() introspection.InboundStatus {
-	stateString := ""
-	if i.transport.ch != nil {
-		stateString = i.transport.ch.State().String()
-	}
-	return introspection.InboundStatus{
-		Transport: "tchannel",
-		Endpoint:  i.transport.addr,
-		State:     stateString,
-	}
 }

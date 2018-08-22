@@ -26,7 +26,6 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
@@ -114,14 +113,6 @@ func (c *BoundChooser) stop() error {
 // chooser's lifecycle.
 func (c *BoundChooser) IsRunning() bool {
 	return c.chooserList.IsRunning() && c.updater.IsRunning()
-}
-
-// Introspect introspects the bound chooser.
-func (c *BoundChooser) Introspect() introspection.ChooserStatus {
-	if ic, ok := c.chooserList.(introspection.IntrospectableChooser); ok {
-		return ic.Introspect()
-	}
-	return introspection.ChooserStatus{}
 }
 
 // BindPeers returns a binder (suitable as an argument to peer.Bind) that

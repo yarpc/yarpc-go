@@ -62,8 +62,7 @@ type Method struct {
 	// The handler to call.
 	HandlerSpec HandlerSpec
 
-	// Snippet of Go code representing the function definition of the handler.
-	// This is useful for introspection.
+	// Human-readable signature of the method.
 	Signature string
 
 	// ThriftModule, if non-nil, refers to the Thrift module from where this

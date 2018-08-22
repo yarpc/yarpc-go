@@ -24,7 +24,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -32,7 +31,6 @@ import (
 	. "go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
@@ -41,10 +39,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber-go/tally"
-	tchannelgo "github.com/uber/tchannel-go"
 	"go.uber.org/atomic"
 	"go.uber.org/multierr"
-	thriftrwversion "go.uber.org/thriftrw/version"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
@@ -773,98 +769,6 @@ func TestObservabilityConfig(t *testing.T) {
 			)
 		}
 	}
-}
-
-func TestIntrospect(t *testing.T) {
-	httpTransport := http.NewTransport()
-	tchannelChannelTransport, err := tchannel.NewChannelTransport(tchannel.ServiceName("test"), tchannel.ListenAddr(":4040"))
-	require.NoError(t, err)
-	tchannelTransport, err := tchannel.NewTransport(tchannel.ServiceName("test"), tchannel.ListenAddr(":5050"))
-	require.NoError(t, err)
-	httpOutbound := httpTransport.NewSingleOutbound("http://127.0.0.1:1234")
-
-	config := Config{
-		Name: "test",
-		Inbounds: Inbounds{
-			httpTransport.NewInbound(":0"),
-			tchannelChannelTransport.NewInbound(),
-			tchannelTransport.NewInbound(),
-		},
-		Outbounds: Outbounds{
-			"test-client-http": {
-				Unary:  httpOutbound,
-				Oneway: httpOutbound,
-			},
-			"test-client-tchannel-channel": {
-				Unary: tchannelChannelTransport.NewSingleOutbound("127.0.0.1:2345"),
-			},
-			"test-client-tchannel": {
-				Unary: tchannelTransport.NewSingleOutbound("127.0.0.1:3456"),
-			},
-		},
-	}
-	dispatcher := NewDispatcher(config)
-
-	dispatcherStatus := dispatcher.Introspect()
-
-	assert.Equal(t, config.Name, dispatcherStatus.Name)
-	assert.NotEmpty(t, dispatcherStatus.ID)
-	assert.Empty(t, dispatcherStatus.Procedures)
-	assert.Len(t, dispatcherStatus.Inbounds, 3)
-	assert.Len(t, dispatcherStatus.Outbounds, 4)
-
-	inboundStatus := getInboundStatus(t, dispatcherStatus.Inbounds, "http", "")
-	assert.Equal(t, "Stopped", inboundStatus.State)
-	inboundStatus = getInboundStatus(t, dispatcherStatus.Inbounds, "tchannel", ":4040")
-	assert.Equal(t, "ChannelClient", inboundStatus.State)
-	inboundStatus = getInboundStatus(t, dispatcherStatus.Inbounds, "tchannel", ":5050")
-	assert.Equal(t, "", inboundStatus.State)
-
-	outboundStatus := getOutboundStatus(t, dispatcherStatus.Outbounds, "test-client-http", "unary")
-	assert.Equal(t, "http://127.0.0.1:1234", outboundStatus.Endpoint)
-	assert.Equal(t, "Stopped", outboundStatus.State)
-	assert.Equal(t, "test-client-http", outboundStatus.OutboundKey)
-	outboundStatus = getOutboundStatus(t, dispatcherStatus.Outbounds, "test-client-http", "oneway")
-	assert.Equal(t, "http://127.0.0.1:1234", outboundStatus.Endpoint)
-	assert.Equal(t, "Stopped", outboundStatus.State)
-	assert.Equal(t, "test-client-http", outboundStatus.OutboundKey)
-	outboundStatus = getOutboundStatus(t, dispatcherStatus.Outbounds, "test-client-tchannel-channel", "unary")
-	assert.Equal(t, "127.0.0.1:2345", outboundStatus.Endpoint)
-	assert.Equal(t, "Stopped", outboundStatus.State)
-	assert.Equal(t, "test-client-tchannel-channel", outboundStatus.OutboundKey)
-	outboundStatus = getOutboundStatus(t, dispatcherStatus.Outbounds, "test-client-tchannel", "unary")
-	assert.Equal(t, "Stopped", outboundStatus.State)
-	assert.Equal(t, "test-client-tchannel", outboundStatus.OutboundKey)
-
-	packageNameToVersion := make(map[string]string, len(dispatcherStatus.PackageVersions))
-	for _, packageVersion := range dispatcherStatus.PackageVersions {
-		assert.Empty(t, packageNameToVersion[packageVersion.Name])
-		packageNameToVersion[packageVersion.Name] = packageVersion.Version
-	}
-	checkPackageVersion(t, packageNameToVersion, "yarpc", Version)
-	checkPackageVersion(t, packageNameToVersion, "tchannel", tchannelgo.VersionInfo)
-	checkPackageVersion(t, packageNameToVersion, "thriftrw", thriftrwversion.Version)
-	checkPackageVersion(t, packageNameToVersion, "go", runtime.Version())
-}
-
-func getInboundStatus(t *testing.T, inbounds []introspection.InboundStatus, transport string, endpoint string) introspection.InboundStatus {
-	for _, inboundStatus := range inbounds {
-		if inboundStatus.Transport == transport && inboundStatus.Endpoint == endpoint {
-			return inboundStatus
-		}
-	}
-	t.Fatalf("could not find inbound with transport %s and endpoint %s", transport, endpoint)
-	return introspection.InboundStatus{}
-}
-
-func getOutboundStatus(t *testing.T, outbounds []introspection.OutboundStatus, service string, rpcType string) introspection.OutboundStatus {
-	for _, outboundStatus := range outbounds {
-		if outboundStatus.Service == service && outboundStatus.RPCType == rpcType {
-			return outboundStatus
-		}
-	}
-	t.Fatalf("could not find outbound with service %s and rpcType %s", service, rpcType)
-	return introspection.OutboundStatus{}
 }
 
 func checkPackageVersion(t *testing.T, packageNameToVersion map[string]string, key string, expectedVersion string) {

@@ -36,7 +36,6 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/introspection"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -46,9 +45,8 @@ import (
 
 // this ensures the HTTP outbound implements both transport.Outbound interfaces
 var (
-	_ transport.UnaryOutbound              = (*Outbound)(nil)
-	_ transport.OnewayOutbound             = (*Outbound)(nil)
-	_ introspection.IntrospectableOutbound = (*Outbound)(nil)
+	_ transport.UnaryOutbound  = (*Outbound)(nil)
+	_ transport.OnewayOutbound = (*Outbound)(nil)
 )
 
 var defaultURLTemplate, _ = url.Parse("http://localhost")
@@ -526,26 +524,4 @@ func (o *Outbound) doWithPeer(
 	}
 
 	return response, nil
-}
-
-// Introspect returns basic status about this outbound.
-func (o *Outbound) Introspect() introspection.OutboundStatus {
-	state := "Stopped"
-	if o.IsRunning() {
-		state = "Running"
-	}
-	var chooser introspection.ChooserStatus
-	if i, ok := o.chooser.(introspection.IntrospectableChooser); ok {
-		chooser = i.Introspect()
-	} else {
-		chooser = introspection.ChooserStatus{
-			Name: "Introspection not available",
-		}
-	}
-	return introspection.OutboundStatus{
-		Transport: "http",
-		Endpoint:  o.urlTemplate.String(),
-		State:     state,
-		Chooser:   chooser,
-	}
 }

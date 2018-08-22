@@ -26,7 +26,6 @@ import (
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/introspection"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -38,8 +37,7 @@ import (
 var (
 	errDoNotUseContextWithHeaders = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "tchannel.ContextWithHeaders is not compatible with YARPC, use yarpc.CallOption instead")
 
-	_ transport.UnaryOutbound              = (*Outbound)(nil)
-	_ introspection.IntrospectableOutbound = (*Outbound)(nil)
+	_ transport.UnaryOutbound = (*Outbound)(nil)
 )
 
 // Outbound sends YARPC requests over TChannel.
@@ -213,25 +211,4 @@ func (o *Outbound) Stop() error {
 // IsRunning returns whether the ChannelOutbound is running.
 func (o *Outbound) IsRunning() bool {
 	return o.once.IsRunning()
-}
-
-// Introspect returns basic status about this outbound.
-func (o *Outbound) Introspect() introspection.OutboundStatus {
-	state := "Stopped"
-	if o.IsRunning() {
-		state = "Running"
-	}
-	var chooser introspection.ChooserStatus
-	if i, ok := o.chooser.(introspection.IntrospectableChooser); ok {
-		chooser = i.Introspect()
-	} else {
-		chooser = introspection.ChooserStatus{
-			Name: "Introspection not available",
-		}
-	}
-	return introspection.OutboundStatus{
-		Transport: "tchannel",
-		State:     state,
-		Chooser:   chooser,
-	}
 }
