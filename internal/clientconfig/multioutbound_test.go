@@ -45,7 +45,4 @@ func TestClientConfigPanic(t *testing.T) {
 
 	assert.Panics(t, func() { c.GetUnaryOutbound() },
 		"expected ClientConfig to panic for nil UnaryOutbound")
-
-	assert.Panics(t, func() { c.GetOnewayOutbound() },
-		"expected ClientConfig to panic for nil OnewayOutbound")
 }

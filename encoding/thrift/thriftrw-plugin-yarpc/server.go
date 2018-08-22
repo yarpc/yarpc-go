@@ -37,8 +37,6 @@ package <$pkgname>
 <$transport := import "go.uber.org/yarpc/api/transport">
 
 <$contextImportPath   := .ContextImportPath>
-<$onewayWrapperImport := .OnewayWrapperImport>
-<$onewayWrapperFunc   := .OnewayWrapperFunc>
 <$unaryWrapperImport  := .UnaryWrapperImport>
 <$unaryWrapperFunc    := .UnaryWrapperFunc>
 
@@ -56,8 +54,7 @@ type Interface interface {
 		<.Name>(
 			ctx <$context>.Context, <range .Arguments>
 			<.Name> <formatType .Type>,<end>
-		)<if .OneWay> error
-		<else if .ReturnType> (<formatType .ReturnType>, error)
+		) <if .ReturnType> (<formatType .ReturnType>, error)
 		<else> error
 		<end>
 	<end>
@@ -79,15 +76,10 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Proced
 			<$thrift>.Method{
 				Name: "<.ThriftName>",
 				HandlerSpec: <$thrift>.HandlerSpec{
-				<if .OneWay>
-					Type: <$transport>.Oneway,
-					Oneway: <import $onewayWrapperImport>.<$onewayWrapperFunc>(h.<.Name>),
-				<else>
 					Type: <$transport>.Unary,
 					Unary: <import $unaryWrapperImport>.<$unaryWrapperFunc>(h.<.Name>),
-				<end>
 				},
-				Signature: "<.Name>(<range $i, $v := .Arguments><if ne $i 0>, <end><.Name> <formatType .Type><end>)<if not .OneWay | and .ReturnType> (<formatType .ReturnType>)<end>",
+				Signature: "<.Name>(<range $i, $v := .Arguments><if ne $i 0>, <end><.Name> <formatType .Type><end>)<if .ReturnType> (<formatType .ReturnType>)<end>",
 				ThriftModule: <import $module.ImportPath>.ThriftModule,
 				},
 		<end>},
@@ -109,16 +101,6 @@ type handler struct{ impl Interface }
 
 <$wire := import "go.uber.org/thriftrw/wire">
 
-<if .OneWay>
-func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) error {
-	var args <$prefix>Args
-	if err := args.FromWire(body); err != nil {
-		return err
-	}
-
-	return h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
-}
-<else>
 func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$thrift>.Response, error) {
 	var args <$prefix>Args
 	if err := args.FromWire(body); err != nil {
@@ -141,7 +123,6 @@ func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$thrift>.
 	}
 	return response, err
 }
-<end>
 <end>
 `
 

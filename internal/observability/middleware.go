@@ -90,22 +90,6 @@ func (m *Middleware) Call(ctx context.Context, req *transport.Request, out trans
 	return res, err
 }
 
-// HandleOneway implements middleware.OnewayInbound.
-func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
-	call := m.graph.begin(ctx, transport.Oneway, _directionInbound, req)
-	err := h.HandleOneway(ctx, req)
-	call.End(err)
-	return err
-}
-
-// CallOneway implements middleware.OnewayOutbound.
-func (m *Middleware) CallOneway(ctx context.Context, req *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
-	call := m.graph.begin(ctx, transport.Oneway, _directionOutbound, req)
-	ack, err := out.CallOneway(ctx, req)
-	call.End(err)
-	return ack, err
-}
-
 // HandleStream implements middleware.StreamInbound.
 func (m *Middleware) HandleStream(serverStream *transport.ServerStream, h transport.StreamHandler) error {
 	call := m.graph.begin(serverStream.Context(), transport.Streaming, _directionInbound, serverStream.Request().Meta.ToRequest())

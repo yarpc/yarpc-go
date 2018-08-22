@@ -72,7 +72,6 @@ func (m *MockClient) GetValue(
 	_Key *string,
 	opts ...yarpc.CallOption,
 ) (success string, err error) {
-
 	args := []interface{}{ctx, _Key}
 	for _, o := range opts {
 		args = append(args, o)
@@ -106,7 +105,6 @@ func (m *MockClient) SetValue(
 	_Value *string,
 	opts ...yarpc.CallOption,
 ) (err error) {
-
 	args := []interface{}{ctx, _Key, _Value}
 	for _, o := range opts {
 		args = append(args, o)

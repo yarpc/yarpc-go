@@ -3,7 +3,6 @@ syntax = "proto3";
 package uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing;
 
 import "encoding/protobuf/protoc-gen-yarpc-go/internal/testing/dep.proto";
-import "yarpcproto/yarpc.proto";
 
 option go_package = "testing";
 
@@ -39,14 +38,9 @@ service KeyValue {
   rpc SetValue(SetValueRequest) returns (SetValueResponse) {}
 }
 
-service Sink {
-  rpc Fire(FireRequest) returns (uber.yarpc.Oneway) {}
-}
-
 service All {
   rpc GetValue(GetValueRequest) returns (GetValueResponse) {}
   rpc SetValue(SetValueRequest) returns (SetValueResponse) {}
-  rpc Fire(FireRequest) returns (uber.yarpc.Oneway) {}
   rpc HelloOne(stream HelloRequest) returns (HelloResponse) {}
   rpc HelloTwo(HelloRequest) returns (stream HelloResponse) {}
   rpc HelloThree(stream HelloRequest) returns (stream HelloResponse) {}

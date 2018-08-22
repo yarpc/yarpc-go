@@ -52,7 +52,6 @@ func (m *MockClient) Integer(
 	_Key *string,
 	opts ...yarpc.CallOption,
 ) (success int64, err error) {
-
 	args := []interface{}{ctx, _Key}
 	for _, o := range opts {
 		args = append(args, o)
@@ -84,7 +83,6 @@ func (m *MockClient) Healthy(
 	ctx context.Context,
 	opts ...yarpc.CallOption,
 ) (success bool, err error) {
-
 	args := []interface{}{ctx}
 	for _, o := range opts {
 		args = append(args, o)

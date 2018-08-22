@@ -22,7 +22,6 @@ package main_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -97,7 +96,6 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 		method     string
 		methodArgs []interface{}
 
-		wantAck    bool
 		wantResult interface{}
 		wantError  error
 	}{
@@ -243,22 +241,6 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 			methodArgs:    []interface{}{ptr.String("foo")},
 			wantError:     &atomic.KeyDoesNotExist{Key: ptr.String("foo")},
 		},
-		{
-			desc:          "store: forget",
-			procedures:    storeserver.New(&storeHandler{}, serverOpts...),
-			newClientFunc: storeclient.New,
-			method:        "Forget",
-			methodArgs:    []interface{}{ptr.String("foo")},
-			wantAck:       true,
-		},
-		{
-			desc:          "store: forget error",
-			procedures:    storeserver.New(&storeHandler{failWith: errors.New("great sadness")}, serverOpts...),
-			newClientFunc: storeclient.New,
-			method:        "Forget",
-			methodArgs:    []interface{}{ptr.String("foo")},
-			wantAck:       true,
-		},
 	}
 
 	ctx := context.Background()
@@ -281,8 +263,7 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 				Name: "roundtrip-client",
 				Outbounds: yarpc.Outbounds{
 					"roundtrip-server": {
-						Unary:  outbound,
-						Oneway: outbound,
+						Unary: outbound,
 					},
 				},
 			})
@@ -342,7 +323,7 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 			case 1: // error
 				err, _ := returns[0].Interface().(error)
 				assert.Equal(t, tt.wantError, err)
-			case 2: // (ack/result, err)
+			case 2: // (result, err)
 				result := returns[0].Interface()
 				err, _ := returns[1].Interface().(error)
 				if tt.wantError != nil {
@@ -351,13 +332,7 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 					if !assert.NoError(t, err, "expected success") {
 						return
 					}
-
-					if tt.wantAck {
-						assert.Implements(t, (*transport.Ack)(nil), result, "expected a non-nil ack")
-						assert.NotNil(t, result, "expected a non-nil ack")
-					} else {
-						assert.Equal(t, tt.wantResult, result)
-					}
+					assert.Equal(t, tt.wantResult, result)
 				}
 			default:
 				t.Fatalf(

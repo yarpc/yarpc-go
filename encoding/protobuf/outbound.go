@@ -60,8 +60,7 @@ func toOutboundConfig(cc transport.ClientConfig) *transport.OutboundConfig {
 	// If the config is not an *OutboundConfig we assume the only Outbound is
 	// unary and create our own outbound config.
 	// If there is no unary outbound, this function will panic, but, we're kinda
-	// stuck with that. (and why the hell are you passing a oneway-only client
-	// config to protobuf anyway?).
+	// stuck with that.
 	return &transport.OutboundConfig{
 		CallerName: cc.Caller(),
 		Outbounds: transport.Outbounds{
@@ -108,26 +107,6 @@ func (c *client) Call(
 		}
 	}
 	return response, appErr
-}
-
-func (c *client) CallOneway(
-	ctx context.Context,
-	requestMethodName string,
-	request proto.Message,
-	options ...yarpc.CallOption,
-) (transport.Ack, error) {
-	ctx, _, transportRequest, cleanup, err := c.buildTransportRequest(ctx, requestMethodName, request, options)
-	if cleanup != nil {
-		defer cleanup()
-	}
-	if err != nil {
-		return nil, err
-	}
-	onewayOutbound := c.outboundConfig.Outbounds.Oneway
-	if onewayOutbound == nil {
-		return nil, yarpcerrors.InternalErrorf("no oneway outbounds for OutboundConfig %s", c.outboundConfig.CallerName)
-	}
-	return onewayOutbound.CallOneway(ctx, transportRequest)
 }
 
 func (c *client) buildTransportRequest(ctx context.Context, requestMethodName string, request proto.Message, options []yarpc.CallOption) (context.Context, *apiencoding.OutboundCall, *transport.Request, func(), error) {

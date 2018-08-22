@@ -53,7 +53,6 @@ func (m *MockClient) CompareAndSwap(
 	_Request *atomic.CompareAndSwap,
 	opts ...yarpc.CallOption,
 ) (err error) {
-
 	args := []interface{}{ctx, _Request}
 	for _, o := range opts {
 		args = append(args, o)
@@ -73,39 +72,6 @@ func (mr *_MockClientRecorder) CompareAndSwap(
 	return mr.mock.ctrl.RecordCall(mr.mock, "CompareAndSwap", args...)
 }
 
-// Forget responds to a Forget call based on the mock expectations. This
-// call will fail if the mock does not expect this call. Use EXPECT to expect
-// a call to this function.
-//
-// 	client.EXPECT().Forget(gomock.Any(), ...).Return(...)
-// 	... := client.Forget(...)
-func (m *MockClient) Forget(
-	ctx context.Context,
-	_Key *string,
-	opts ...yarpc.CallOption,
-) (ack yarpc.Ack, err error) {
-
-	args := []interface{}{ctx, _Key}
-	for _, o := range opts {
-		args = append(args, o)
-	}
-	i := 0
-	ret := m.ctrl.Call(m, "Forget", args...)
-	ack, _ = ret[i].(yarpc.Ack)
-	i++
-	err, _ = ret[i].(error)
-	return
-}
-
-func (mr *_MockClientRecorder) Forget(
-	ctx interface{},
-	_Key interface{},
-	opts ...interface{},
-) *gomock.Call {
-	args := append([]interface{}{ctx, _Key}, opts...)
-	return mr.mock.ctrl.RecordCall(mr.mock, "Forget", args...)
-}
-
 // Increment responds to a Increment call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -118,7 +84,6 @@ func (m *MockClient) Increment(
 	_Value *int64,
 	opts ...yarpc.CallOption,
 ) (err error) {
-
 	args := []interface{}{ctx, _Key, _Value}
 	for _, o := range opts {
 		args = append(args, o)
@@ -150,7 +115,6 @@ func (m *MockClient) Integer(
 	_Key *string,
 	opts ...yarpc.CallOption,
 ) (success int64, err error) {
-
 	args := []interface{}{ctx, _Key}
 	for _, o := range opts {
 		args = append(args, o)
@@ -182,7 +146,6 @@ func (m *MockClient) Healthy(
 	ctx context.Context,
 	opts ...yarpc.CallOption,
 ) (success bool, err error) {
-
 	args := []interface{}{ctx}
 	for _, o := range opts {
 		args = append(args, o)

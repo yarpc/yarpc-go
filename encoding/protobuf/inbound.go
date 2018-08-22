@@ -73,26 +73,6 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 	return appErr
 }
 
-type onewayHandler struct {
-	handleOneway func(context.Context, proto.Message) error
-	newRequest   func() proto.Message
-}
-
-func newOnewayHandler(
-	handleOneway func(context.Context, proto.Message) error,
-	newRequest func() proto.Message,
-) *onewayHandler {
-	return &onewayHandler{handleOneway, newRequest}
-}
-
-func (o *onewayHandler) HandleOneway(ctx context.Context, transportRequest *transport.Request) error {
-	ctx, _, request, err := getProtoRequest(ctx, transportRequest, o.newRequest)
-	if err != nil {
-		return err
-	}
-	return o.handleOneway(ctx, request)
-}
-
 type streamHandler struct {
 	handle func(*ServerStream) error
 }

@@ -99,12 +99,10 @@ func (s *Svc) FxPackagePath() string {
 type templateData struct {
 	*Svc
 
-	ContextImportPath   string
-	UnaryWrapperImport  string
-	UnaryWrapperFunc    string
-	OnewayWrapperImport string
-	OnewayWrapperFunc   string
-	SanitizeTChannel    bool
+	ContextImportPath  string
+	UnaryWrapperImport string
+	UnaryWrapperFunc   string
+	SanitizeTChannel   bool
 }
 
 // ParentServerPackagePath returns the import path for the immediate parent

@@ -77,57 +77,6 @@ func (nopUnaryInbound) Handle(ctx context.Context, req *transport.Request, resw 
 	return handler.Handle(ctx, req, resw)
 }
 
-// OnewayInbound defines a transport-level middleware for
-// `OnewayHandler`s.
-//
-// OnewayInbound middleware MAY do zero or more of the following: change the
-// context, change the request, handle the returned error, call the given
-// handler zero or more times.
-//
-// OnewayInbound middleware MUST be thread-safe.
-//
-// OnewayInbound middleware is re-used across requests and MAY be called
-// multiple times for the same request.
-type OnewayInbound interface {
-	HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error
-}
-
-// NopOnewayInbound is an inbound middleware that does not do
-// anything special. It simply calls the underlying OnewayHandler.
-var NopOnewayInbound OnewayInbound = nopOnewayInbound{}
-
-// ApplyOnewayInbound applies the given OnewayInbound middleware to
-// the given OnewayHandler.
-func ApplyOnewayInbound(h transport.OnewayHandler, i OnewayInbound) transport.OnewayHandler {
-	if i == nil {
-		return h
-	}
-	return onewayHandlerWithMiddleware{h: h, i: i}
-}
-
-// OnewayInboundFunc adapts a function into a OnewayInbound Middleware.
-type OnewayInboundFunc func(context.Context, *transport.Request, transport.OnewayHandler) error
-
-// HandleOneway for OnewayInboundFunc
-func (f OnewayInboundFunc) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
-	return f(ctx, req, h)
-}
-
-type onewayHandlerWithMiddleware struct {
-	h transport.OnewayHandler
-	i OnewayInbound
-}
-
-func (h onewayHandlerWithMiddleware) HandleOneway(ctx context.Context, req *transport.Request) error {
-	return h.i.HandleOneway(ctx, req, h.h)
-}
-
-type nopOnewayInbound struct{}
-
-func (nopOnewayInbound) HandleOneway(ctx context.Context, req *transport.Request, handler transport.OnewayHandler) error {
-	return handler.HandleOneway(ctx, req)
-}
-
 // StreamInbound defines a transport-level middleware for
 // `StreamHandler`s.
 //

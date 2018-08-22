@@ -44,10 +44,6 @@ func (h fakeHandler) Handle(_ context.Context, _ *transport.Request, rw transpor
 	return h.err
 }
 
-func (h fakeHandler) HandleOneway(context.Context, *transport.Request) error {
-	return h.err
-}
-
 func (h fakeHandler) HandleStream(*transport.ServerStream) error {
 	return h.err
 }
@@ -64,13 +60,6 @@ func (o fakeOutbound) Call(context.Context, *transport.Request) (*transport.Resp
 		return nil, o.err
 	}
 	return &transport.Response{ApplicationError: o.applicationErr}, nil
-}
-
-func (o fakeOutbound) CallOneway(context.Context, *transport.Request) (transport.Ack, error) {
-	if o.err != nil {
-		return nil, o.err
-	}
-	return fakeAck{}, nil
 }
 
 func (o fakeOutbound) CallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {

@@ -226,8 +226,8 @@ func TestDecodeEnvelopedEnvelopeTypeError(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	proto := thrifttest.NewMockProtocol(mockCtrl)
-	// XXX DecodeEnveloped returns OneWay instead of expected Call
-	proto.EXPECT().DecodeEnveloped(gomock.Any()).Return(wire.Envelope{Type: wire.OneWay}, nil)
+	// XXX DecodeEnveloped returns Reply instead of expected Call
+	proto.EXPECT().DecodeEnveloped(gomock.Any()).Return(wire.Envelope{Type: wire.Reply}, nil)
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
@@ -236,7 +236,7 @@ func TestDecodeEnvelopedEnvelopeTypeError(t *testing.T) {
 	err := unaryCall(ctx, h)
 
 	if assert.Error(t, err, "expected an error") {
-		assert.Contains(t, err.Error(), "unexpected envelope type: OneWay")
+		assert.Contains(t, err.Error(), "unexpected envelope type: Reply")
 	}
 }
 
@@ -292,14 +292,14 @@ func TestUnaryHandlerResponseEnvelopeTypeError(t *testing.T) {
 	defer cancel()
 
 	handler := func(ctx context.Context, w wire.Value) (Response, error) {
-		// XXX OneWay instead of Reply
-		return Response{Body: fakeEnveloper(wire.OneWay)}, nil
+		// XXX Call instead of Reply
+		return Response{Body: fakeEnveloper(wire.Call)}, nil
 	}
 	h := thriftUnaryHandler{Protocol: proto, UnaryHandler: handler}
 	err := unaryCall(ctx, h)
 
 	if assert.Error(t, err, "expected an error") {
-		assert.Contains(t, err.Error(), "unexpected envelope type: OneWay")
+		assert.Contains(t, err.Error(), "unexpected envelope type: Call")
 	}
 }
 
@@ -322,51 +322,6 @@ func TestUnaryHandlerBodyToWireError(t *testing.T) {
 
 	if assert.Error(t, err, "expected an error") {
 		assert.Contains(t, err.Error(), "to wire error")
-	}
-}
-
-func TestOnewayHandler(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	proto := thrifttest.NewMockEnvelopeAgnosticProtocol(mockCtrl)
-	// XXX expecting OneWay request instead of Call
-	proto.EXPECT().DecodeRequest(wire.OneWay, gomock.Any()).Return(
-		wire.NewValueStruct(wire.Struct{}), protocol.NoEnvelopeResponder, nil)
-
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-	defer cancel()
-
-	handler := func(ctx context.Context, v wire.Value) error {
-		return nil
-	}
-	h := thriftOnewayHandler{Protocol: proto, OnewayHandler: handler}
-	err := h.HandleOneway(ctx, request())
-
-	// XXX expecting success in this case
-	assert.NoError(t, err, "unexpected error")
-}
-
-func TestOnewayHandlerError(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	proto := thrifttest.NewMockEnvelopeAgnosticProtocol(mockCtrl)
-	// XXX mock returns decode request error, to induce error path out of handleRequest in HandleOneway
-	proto.EXPECT().DecodeRequest(wire.OneWay, gomock.Any()).Return(
-		wire.Value{}, protocol.NoEnvelopeResponder, fmt.Errorf("decode request error"))
-
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-	defer cancel()
-
-	handler := func(ctx context.Context, v wire.Value) error {
-		return nil
-	}
-	h := thriftOnewayHandler{Protocol: proto, OnewayHandler: handler}
-	err := h.HandleOneway(ctx, request())
-
-	if assert.Error(t, err, "expected an error") {
-		assert.Contains(t, err.Error(), "decode request error")
 	}
 }
 

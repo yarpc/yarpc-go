@@ -182,37 +182,6 @@ func TestMockClients(t *testing.T) {
 				assert.Equal(t, int64(42), result)
 			},
 		},
-		{
-			desc: "store: forget: unexpected",
-			withController: func(ctrl *gomock.Controller) {
-				c := storetest.NewMockClient(ctrl)
-				c.Forget(ctx, ptr.String("hello"))
-			},
-			wantStatus:     Fatal,
-			wantErrorsLike: []string{"Unexpected call"},
-		},
-		{
-			desc: "store: forget: expected",
-			withController: func(ctrl *gomock.Controller) {
-				c := storetest.NewMockClient(ctrl)
-				c.EXPECT().Forget(gomock.Any(), ptr.String("hello")).Return(nil, errors.New("great sadness"))
-
-				_, err := c.Forget(ctx, ptr.String("hello"))
-				assert.Equal(t, errors.New("great sadness"), err)
-			},
-		},
-		{
-			desc: "store: forget: missing",
-			withController: func(ctrl *gomock.Controller) {
-				c := storetest.NewMockClient(ctrl)
-				c.EXPECT().Forget(gomock.Any(), ptr.String("hello")).Return(nil, errors.New("great sadness"))
-			},
-			wantStatus: Fatal,
-			wantErrorsLike: []string{
-				"missing call(s) to [*storetest.MockClient.Forget(is anything",
-				"aborting test due to missing call(s)",
-			},
-		},
 	}
 
 	for _, tt := range tests {

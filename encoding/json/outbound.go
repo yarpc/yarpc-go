@@ -41,7 +41,6 @@ type Client interface {
 	//
 	// Returns the response or an error if the request failed.
 	Call(ctx context.Context, procedure string, reqBody interface{}, resBodyOut interface{}, opts ...yarpc.CallOption) error
-	CallOneway(ctx context.Context, procedure string, reqBody interface{}, opts ...yarpc.CallOption) (transport.Ack, error)
 }
 
 // New builds a new JSON client.
@@ -101,27 +100,4 @@ func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interfac
 		return appErr
 	}
 	return decodeErr
-}
-
-func (c jsonClient) CallOneway(ctx context.Context, procedure string, reqBody interface{}, opts ...yarpc.CallOption) (transport.Ack, error) {
-	call := encodingapi.NewOutboundCall(encoding.FromOptions(opts)...)
-	treq := transport.Request{
-		Caller:    c.cc.Caller(),
-		Service:   c.cc.Service(),
-		Procedure: procedure,
-		Encoding:  Encoding,
-	}
-
-	ctx, err := call.WriteToRequest(ctx, &treq)
-	if err != nil {
-		return nil, err
-	}
-
-	var buff bytes.Buffer
-	if err := json.NewEncoder(&buff).Encode(reqBody); err != nil {
-		return nil, errors.RequestBodyEncodeError(&treq, err)
-	}
-	treq.Body = &buff
-
-	return c.cc.GetOnewayOutbound().CallOneway(ctx, &treq)
 }

@@ -42,23 +42,7 @@ func (o UnaryValidatorOutbound) Call(ctx context.Context, request *transport.Req
 	return o.UnaryOutbound.Call(ctx, request)
 }
 
-// OnewayValidatorOutbound wraps an Outbound to validate all outgoing oneway requests.
-type OnewayValidatorOutbound struct{ transport.OnewayOutbound }
-
-// CallOneway performs the given request, failing early if the request is invalid.
-func (o OnewayValidatorOutbound) CallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
-	if err := transport.ValidateRequest(request); err != nil {
-		return nil, err
-	}
-
-	if err := transport.ValidateRequestContext(ctx); err != nil {
-		return nil, err
-	}
-
-	return o.OnewayOutbound.CallOneway(ctx, request)
-}
-
-// StreamValidatorOutbound wraps an Outbound to validate all outgoing oneway requests.
+// StreamValidatorOutbound wraps an Outbound to validate all outgoing stream requests.
 type StreamValidatorOutbound struct{ transport.StreamOutbound }
 
 // CallStream performs the given request, failing early if the request is invalid.

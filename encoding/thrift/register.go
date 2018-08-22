@@ -44,14 +44,10 @@ func Register(r transport.RouteTable, rs []transport.Procedure) {
 // UnaryHandler is a convenience type alias for functions that act as Handlers.
 type UnaryHandler func(context.Context, wire.Value) (Response, error)
 
-// OnewayHandler is a convenience type alias for functions that act as OnewayHandlers.
-type OnewayHandler func(context.Context, wire.Value) error
-
 // HandlerSpec represents the handler behind a Thrift service method.
 type HandlerSpec struct {
-	Type   transport.Type
-	Unary  UnaryHandler
-	Oneway OnewayHandler
+	Type  transport.Type
+	Unary UnaryHandler
 }
 
 // Method represents a Thrift service method.
@@ -101,12 +97,6 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 				UnaryHandler: method.HandlerSpec.Unary,
 				Protocol:     proto,
 				Enveloping:   rc.Enveloping,
-			})
-		case transport.Oneway:
-			spec = transport.NewOnewayHandlerSpec(thriftOnewayHandler{
-				OnewayHandler: method.HandlerSpec.Oneway,
-				Protocol:      proto,
-				Enveloping:    rc.Enveloping,
 			})
 		default:
 			panic(fmt.Sprintf("Invalid handler type for %T", method))

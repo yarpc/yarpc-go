@@ -35,7 +35,6 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			thrift.Method{
 				Name: "hello",
 				HandlerSpec: thrift.HandlerSpec{
-
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.Hello),
 				},

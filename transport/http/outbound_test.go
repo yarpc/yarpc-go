@@ -442,9 +442,6 @@ func TestNoRequest(t *testing.T) {
 
 	_, err := out.Call(context.Background(), nil)
 	assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil"), err)
-
-	_, err = out.CallOneway(context.Background(), nil)
-	assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil"), err)
 }
 
 func TestOutboundNoDeadline(t *testing.T) {

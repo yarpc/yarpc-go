@@ -48,16 +48,3 @@ func Procedure(name string, handler UnaryHandler) []transport.Procedure {
 		},
 	}
 }
-
-// OnewayHandler implements a single, onweway procedure
-type OnewayHandler func(context.Context, []byte) error
-
-// OnewayProcedure builds a Procedure from the given raw handler
-func OnewayProcedure(name string, handler OnewayHandler) []transport.Procedure {
-	return []transport.Procedure{
-		{
-			Name:        name,
-			HandlerSpec: transport.NewOnewayHandlerSpec(rawOnewayHandler{handler}),
-		},
-	}
-}

@@ -51,7 +51,6 @@ var UseJSON ClientOption = useJSON{}
 type BuildProceduresParams struct {
 	ServiceName         string
 	UnaryHandlerParams  []BuildProceduresUnaryHandlerParams
-	OnewayHandlerParams []BuildProceduresOnewayHandlerParams
 	StreamHandlerParams []BuildProceduresStreamHandlerParams
 }
 
@@ -59,12 +58,6 @@ type BuildProceduresParams struct {
 type BuildProceduresUnaryHandlerParams struct {
 	MethodName string
 	Handler    transport.UnaryHandler
-}
-
-// BuildProceduresOnewayHandlerParams contains the parameters for a OnewayHandler for BuildProcedures.
-type BuildProceduresOnewayHandlerParams struct {
-	MethodName string
-	Handler    transport.OnewayHandler
 }
 
 // BuildProceduresStreamHandlerParams contains the parameters for a StreamHandler for BuildProcedures.
@@ -75,7 +68,7 @@ type BuildProceduresStreamHandlerParams struct {
 
 // BuildProcedures builds the transport.Procedures.
 func BuildProcedures(params BuildProceduresParams) []transport.Procedure {
-	procedures := make([]transport.Procedure, 0, 2*(len(params.UnaryHandlerParams)+len(params.OnewayHandlerParams)))
+	procedures := make([]transport.Procedure, 0, 2*len(params.UnaryHandlerParams))
 	for _, unaryHandlerParams := range params.UnaryHandlerParams {
 		procedures = append(
 			procedures,
@@ -87,21 +80,6 @@ func BuildProcedures(params BuildProceduresParams) []transport.Procedure {
 			transport.Procedure{
 				Name:        procedure.ToName(params.ServiceName, unaryHandlerParams.MethodName),
 				HandlerSpec: transport.NewUnaryHandlerSpec(unaryHandlerParams.Handler),
-				Encoding:    JSONEncoding,
-			},
-		)
-	}
-	for _, onewayHandlerParams := range params.OnewayHandlerParams {
-		procedures = append(
-			procedures,
-			transport.Procedure{
-				Name:        procedure.ToName(params.ServiceName, onewayHandlerParams.MethodName),
-				HandlerSpec: transport.NewOnewayHandlerSpec(onewayHandlerParams.Handler),
-				Encoding:    Encoding,
-			},
-			transport.Procedure{
-				Name:        procedure.ToName(params.ServiceName, onewayHandlerParams.MethodName),
-				HandlerSpec: transport.NewOnewayHandlerSpec(onewayHandlerParams.Handler),
 				Encoding:    JSONEncoding,
 			},
 		)
@@ -133,12 +111,6 @@ type Client interface {
 		newResponse func() proto.Message,
 		options ...yarpc.CallOption,
 	) (proto.Message, error)
-	CallOneway(
-		ctx context.Context,
-		requestMethodName string,
-		request proto.Message,
-		options ...yarpc.CallOption,
-	) (transport.Ack, error)
 }
 
 // StreamClient is a protobuf client with streaming.
@@ -183,17 +155,6 @@ type UnaryHandlerParams struct {
 // NewUnaryHandler returns a new UnaryHandler.
 func NewUnaryHandler(params UnaryHandlerParams) transport.UnaryHandler {
 	return newUnaryHandler(params.Handle, params.NewRequest)
-}
-
-// OnewayHandlerParams contains the parameters for creating a new OnewayHandler.
-type OnewayHandlerParams struct {
-	Handle     func(context.Context, proto.Message) error
-	NewRequest func() proto.Message
-}
-
-// NewOnewayHandler returns a new OnewayHandler.
-func NewOnewayHandler(params OnewayHandlerParams) transport.OnewayHandler {
-	return newOnewayHandler(params.Handle, params.NewRequest)
 }
 
 // StreamHandlerParams contains the parameters for creating a new StreamHandler.

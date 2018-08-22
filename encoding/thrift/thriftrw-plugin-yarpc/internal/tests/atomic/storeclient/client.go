@@ -24,12 +24,6 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
-	Forget(
-		ctx context.Context,
-		Key *string,
-		opts ...yarpc.CallOption,
-	) (yarpc.Ack, error)
-
 	Increment(
 		ctx context.Context,
 		Key *string,
@@ -86,15 +80,6 @@ func (c client) CompareAndSwap(
 
 	err = atomic.Store_CompareAndSwap_Helper.UnwrapResponse(&result)
 	return
-}
-
-func (c client) Forget(
-	ctx context.Context,
-	_Key *string,
-	opts ...yarpc.CallOption,
-) (yarpc.Ack, error) {
-	args := atomic.Store_Forget_Helper.Args(_Key)
-	return c.c.CallOneway(ctx, args, opts...)
 }
 
 func (c client) Increment(

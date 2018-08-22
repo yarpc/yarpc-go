@@ -40,9 +40,6 @@ var (
 	_unaryHandlerWrapper = flag.String("unary-handler-wrapper",
 		"go.uber.org/yarpc/encoding/thrift.UnaryHandler",
 		"Function used to wrap generic Thrift unary function handlers into YARPC handlers")
-	_onewayHandlerWrapper = flag.String("oneway-handler-wrapper",
-		"go.uber.org/yarpc/encoding/thrift.OnewayHandler",
-		"Function used to wrap generic Thrift oneway function handlers into YARPC handlers")
 	_noGomock = flag.Bool("no-gomock", false,
 		"Don't generate gomock mocks for service clients")
 	_noFx             = flag.Bool("no-fx", false, "Don't generate Fx module")
@@ -63,19 +60,16 @@ func (g g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceRespon
 	}
 
 	unaryWrapperImport, unaryWrapperFunc := splitFunctionPath(*_unaryHandlerWrapper)
-	onewayWrapperImport, onewayWrapperFunc := splitFunctionPath(*_onewayHandlerWrapper)
 
 	files := make(map[string][]byte)
 	for _, serviceID := range req.RootServices {
 		svc := buildSvc(serviceID, req)
 		data := templateData{
-			Svc:                 svc,
-			ContextImportPath:   *_context,
-			UnaryWrapperImport:  unaryWrapperImport,
-			UnaryWrapperFunc:    unaryWrapperFunc,
-			OnewayWrapperImport: onewayWrapperImport,
-			OnewayWrapperFunc:   onewayWrapperFunc,
-			SanitizeTChannel:    g.SanitizeTChannel,
+			Svc:                svc,
+			ContextImportPath:  *_context,
+			UnaryWrapperImport: unaryWrapperImport,
+			UnaryWrapperFunc:   unaryWrapperFunc,
+			SanitizeTChannel:   g.SanitizeTChannel,
 		}
 
 		for _, gen := range generators {

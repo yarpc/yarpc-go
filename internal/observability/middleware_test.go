@@ -193,50 +193,11 @@ func TestMiddlewareLogging(t *testing.T) {
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
 		})
 
-		// Application errors aren't applicable to oneway and streaming
+		// Application errors aren't applicable to streaming
 		if tt.applicationErr {
 			continue
 		}
 
-		t.Run(tt.desc+", oneway inbound", func(t *testing.T) {
-			err := mw.HandleOneway(context.Background(), req, newHandler(tt))
-			checkErr(err)
-			logContext := append(
-				baseFields(),
-				zap.String("direction", string(_directionInbound)),
-				zap.String("rpcType", "Oneway"),
-			)
-			logContext = append(logContext, tt.wantFields...)
-			expected := observer.LoggedEntry{
-				Entry: zapcore.Entry{
-					Level:   tt.wantErrLevel,
-					Message: tt.wantInboundMsg,
-				},
-				Context: logContext,
-			}
-			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
-		})
-		t.Run(tt.desc+", oneway outbound", func(t *testing.T) {
-			ack, err := mw.CallOneway(context.Background(), req, newOutbound(tt))
-			checkErr(err)
-			logContext := append(
-				baseFields(),
-				zap.String("direction", string(_directionOutbound)),
-				zap.String("rpcType", "Oneway"),
-			)
-			logContext = append(logContext, tt.wantFields...)
-			if tt.err == nil {
-				assert.NotNil(t, ack, "Expected non-nil ack if call is successful.")
-			}
-			expected := observer.LoggedEntry{
-				Entry: zapcore.Entry{
-					Level:   tt.wantErrLevel,
-					Message: tt.wantOutboundMsg,
-				},
-				Context: logContext,
-			}
-			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
-		})
 		t.Run(tt.desc+", stream inbound", func(t *testing.T) {
 			stream, err := transport.NewServerStream(&fakeStream{ctx: context.Background(), request: sreq})
 			require.NoError(t, err)

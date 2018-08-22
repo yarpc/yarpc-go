@@ -19,8 +19,7 @@
 // THE SOFTWARE.
 
 // Package http implements a YARPC transport based on the HTTP/1.1 protocol.
-// The HTTP transport provides first class support for Unary RPCs and
-// experimental support for Oneway RPCs.
+// The HTTP transport provides support for Unary RPCs.
 //
 // Usage
 //

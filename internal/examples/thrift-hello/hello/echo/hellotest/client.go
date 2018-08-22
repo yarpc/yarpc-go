@@ -73,7 +73,6 @@ func (m *MockClient) Echo(
 	_Echo *echo.EchoRequest,
 	opts ...yarpc.CallOption,
 ) (success *echo.EchoResponse, err error) {
-
 	args := []interface{}{ctx, _Echo}
 	for _, o := range opts {
 		args = append(args, o)

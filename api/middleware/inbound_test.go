@@ -60,28 +60,6 @@ func TestUnaryNopInboundMiddleware(t *testing.T) {
 	assert.Equal(t, err, wrappedH.Handle(ctx, req, resw))
 }
 
-func TestOnewayNopInboundMiddleware(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	h := transporttest.NewMockOnewayHandler(mockCtrl)
-	wrappedH := middleware.ApplyOnewayInbound(h, middleware.NopOnewayInbound)
-
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-	defer cancel()
-	req := &transport.Request{
-		Caller:    "somecaller",
-		Service:   "someservice",
-		Encoding:  raw.Encoding,
-		Procedure: "hello",
-		Body:      bytes.NewReader([]byte{1, 2, 3}),
-	}
-	err := errors.New("great sadness")
-	h.EXPECT().HandleOneway(ctx, req).Return(err)
-
-	assert.Equal(t, err, wrappedH.HandleOneway(ctx, req))
-}
-
 func TestNilInboundMiddleware(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -97,15 +75,6 @@ func TestNilInboundMiddleware(t *testing.T) {
 
 		handler.EXPECT().Handle(ctx, req, resWriter)
 		err := mw.Handle(ctx, req, resWriter)
-		require.NoError(t, err, "unexpected error calling handler")
-	})
-
-	t.Run("oneway", func(t *testing.T) {
-		handler := transporttest.NewMockOnewayHandler(ctrl)
-		mw := middleware.ApplyOnewayInbound(handler, nil)
-
-		handler.EXPECT().HandleOneway(ctx, req)
-		err := mw.HandleOneway(ctx, req)
 		require.NoError(t, err, "unexpected error calling handler")
 	})
 }

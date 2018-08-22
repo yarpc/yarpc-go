@@ -21,11 +21,6 @@ type Interface interface {
 		Request *atomic.CompareAndSwap,
 	) error
 
-	Forget(
-		ctx context.Context,
-		Key *string,
-	) error
-
 	Increment(
 		ctx context.Context,
 		Key *string,
@@ -47,7 +42,6 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			thrift.Method{
 				Name: "compareAndSwap",
 				HandlerSpec: thrift.HandlerSpec{
-
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.CompareAndSwap),
 				},
@@ -56,20 +50,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
-				Name: "forget",
-				HandlerSpec: thrift.HandlerSpec{
-
-					Type:   transport.Oneway,
-					Oneway: thrift.OnewayHandler(h.Forget),
-				},
-				Signature:    "Forget(Key *string)",
-				ThriftModule: atomic.ThriftModule,
-			},
-
-			thrift.Method{
 				Name: "increment",
 				HandlerSpec: thrift.HandlerSpec{
-
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.Increment),
 				},
@@ -79,7 +61,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 3)
+	procedures := make([]transport.Procedure, 0, 2)
 	procedures = append(procedures, readonlystoreserver.New(impl, opts...)...)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
@@ -104,15 +86,6 @@ func (h handler) CompareAndSwap(ctx context.Context, body wire.Value) (thrift.Re
 		response.Body = result
 	}
 	return response, err
-}
-
-func (h handler) Forget(ctx context.Context, body wire.Value) error {
-	var args atomic.Store_Forget_Args
-	if err := args.FromWire(body); err != nil {
-		return err
-	}
-
-	return h.impl.Forget(ctx, args.Key)
 }
 
 func (h handler) Increment(ctx context.Context, body wire.Value) (thrift.Response, error) {

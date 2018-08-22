@@ -104,32 +104,6 @@
 //
 // See https://github.com/yarpc/yab for more details.
 //
-// Oneway methods are supported as well. To use, define your RPC
-// method to return the uber.yarpc.Oneway type defined in
-// go.uber.org/yarpc/yarpcproto/yarpc.proto.
-//
-//   syntax = "proto3";
-//
-//   import "go.uber.org/yarpc/yarpcproto/yarpc.proto";
-//
-//   package foo;
-//
-//   message FireRequest {}
-//
-//   service Baz {
-//     rpc Fire(FireRequest) returns (uber.yarpc.Oneway) {}
-//   }
-//
-// Corresponding BazYARPCClient and BazYARPCServer interfaces will be generated.
-//
-//   type BazYARPCClient interface {
-//     Fire(context.Context, *FireRequest, ...yarpc.CallOption) (yarpc.Ack, error)
-//   }
-//
-//   type BazYARPCServer interface {
-//     Fire(context.Context, *FireRequest) error
-//   }
-//
 // Except for any ClientOptions (such as UseJSON), the types and functions
 // defined in this package should not be directly used in applications,
 // instead use the code generated from protoc-gen-yarpc-go.

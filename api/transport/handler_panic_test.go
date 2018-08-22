@@ -53,23 +53,6 @@ func TestDispatchUnaryHandlerWithPanic(t *testing.T) {
 	assert.Equal(t, expectMsg, err.Error())
 }
 
-func TestDispatchOnewayHandlerWithPanic(t *testing.T) {
-	msg := "I'm panicking in a oneway handler!"
-	handler := func(context.Context, *transport.Request) error {
-		panic(msg)
-	}
-	var err error
-	require.NotPanics(t, func() {
-		err = transport.DispatchOnewayHandler(
-			context.Background(),
-			transport.OnewayHandlerFunc(handler),
-			&transport.Request{},
-		)
-	}, "Panic not recovered")
-	expectMsg := fmt.Sprintf("panic: %s", msg)
-	assert.Equal(t, expectMsg, err.Error())
-}
-
 func TestDispatchStreamHandlerWithPanic(t *testing.T) {
 	msg := "I'm panicking in a stream handler!"
 	handler := func(*transport.ServerStream) error {
@@ -112,24 +95,6 @@ func TestInvokeUnaryHandlerWithPanic(t *testing.T) {
 				Logger:    zap.NewNop(),
 			},
 		)
-	}, "Panic not recovered")
-	expectMsg := fmt.Sprintf("panic: %s", msg)
-	assert.Equal(t, expectMsg, err.Error())
-}
-
-func TestInvokeOnewayHandlerWithPanic(t *testing.T) {
-	msg := "I'm panicking in a oneway handler!"
-	handler := func(context.Context, *transport.Request) error {
-		panic(msg)
-	}
-	var err error
-	require.NotPanics(t, func() {
-		err = transport.InvokeOnewayHandler(transport.OnewayInvokeRequest{
-			Context: context.Background(),
-			Request: &transport.Request{},
-			Handler: transport.OnewayHandlerFunc(handler),
-			Logger:  zap.NewNop(),
-		})
 	}, "Panic not recovered")
 	expectMsg := fmt.Sprintf("panic: %s", msg)
 	assert.Equal(t, expectMsg, err.Error())

@@ -24,7 +24,5 @@ service Store extends ReadOnlyStore {
 
     void compareAndSwap(1: CompareAndSwap request)
         throws (1: IntegerMismatchError mismatch)
-
-    oneway void forget(1: string key)
 }
 

@@ -39,17 +39,4 @@
 //  dispatcher.Register(json.Procedure("getValue", GetValue))
 //  dispatcher.Register(json.Procedure("setValue", SetValue))
 //
-// Similarly, to register a oneway JSON procedure, define functions in the
-// format,
-//
-// 	f(ctx context.Context, body $reqBody) error
-//
-// Where $reqBody is a map[string]interface{} or pointer to a struct.
-//
-// Use the OnewayProcedure function to build procedures to register against a
-// Router.
-//
-//  dispatcher.Register(json.OnewayProcedure("setValue", SetValue))
-//  dispatcher.Register(json.OnewayProcedure("runTask", RunTask))
-//
 package json

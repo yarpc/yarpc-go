@@ -32,9 +32,6 @@ import (
 // rawUnaryHandler adapts a Handler into a transport.UnaryHandler
 type rawUnaryHandler struct{ UnaryHandler }
 
-// rawOnewayHandler adapts a Handler into a transport.OnewayHandler
-type rawOnewayHandler struct{ OnewayHandler }
-
 func (r rawUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
 	if err := errors.ExpectEncodings(treq, Encoding); err != nil {
 		return err
@@ -66,22 +63,4 @@ func (r rawUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw
 		return appErr
 	}
 	return writeErr
-}
-
-func (r rawOnewayHandler) HandleOneway(ctx context.Context, treq *transport.Request) error {
-	if err := errors.ExpectEncodings(treq, Encoding); err != nil {
-		return err
-	}
-
-	ctx, call := encodingapi.NewInboundCall(ctx)
-	if err := call.ReadFromRequest(treq); err != nil {
-		return err
-	}
-
-	reqBody, err := ioutil.ReadAll(treq.Body)
-	if err != nil {
-		return err
-	}
-
-	return r.OnewayHandler(ctx, reqBody)
 }

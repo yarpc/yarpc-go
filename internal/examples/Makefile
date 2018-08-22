@@ -19,7 +19,6 @@ all: \
 	thrift-keyvalue-http \
 	thrift-keyvalue-tchannel \
 	thrift-keyvalue-grpc \
-	thrift-oneway \
 	streaming
 
 .PHONY: install
@@ -84,10 +83,6 @@ thrift-keyvalue-tchannel: install build-thrift-keyvalue
 .PHONY: thrift-keyvalue-grpc
 thrift-keyvalue-grpc: install build-thrift-keyvalue
 	TRANSPORT=grpc $(SERVICE_TEST) --dir thrift-keyvalue
-
-.PHONY: thrift-oneway
-thrift-oneway:
-	GOBIN=/tmp go install thrift-oneway/main.go
 
 .PHONY: build-streaming
 build-streaming:

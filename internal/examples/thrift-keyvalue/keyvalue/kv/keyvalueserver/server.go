@@ -59,7 +59,6 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			thrift.Method{
 				Name: "getValue",
 				HandlerSpec: thrift.HandlerSpec{
-
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.GetValue),
 				},
@@ -70,7 +69,6 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			thrift.Method{
 				Name: "setValue",
 				HandlerSpec: thrift.HandlerSpec{
-
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.SetValue),
 				},

@@ -44,7 +44,6 @@ import (
 type Client interface {
 	// Call the given Thrift method.
 	Call(ctx context.Context, reqBody envelope.Enveloper, opts ...yarpc.CallOption) (wire.Value, error)
-	CallOneway(ctx context.Context, reqBody envelope.Enveloper, opts ...yarpc.CallOption) (transport.Ack, error)
 }
 
 // Config contains the configuration for the Client.
@@ -175,23 +174,6 @@ func (c thriftClient) Call(ctx context.Context, reqBody envelope.Enveloper, opts
 	}
 }
 
-func (c thriftClient) CallOneway(ctx context.Context, reqBody envelope.Enveloper, opts ...yarpc.CallOption) (transport.Ack, error) {
-	out := c.cc.GetOnewayOutbound()
-
-	treq, _, err := c.buildTransportRequest(reqBody)
-	if err != nil {
-		return nil, err
-	}
-
-	call := encodingapi.NewOutboundCall(encoding.FromOptions(opts)...)
-	ctx, err = call.WriteToRequest(ctx, treq)
-	if err != nil {
-		return nil, err
-	}
-
-	return out.CallOneway(ctx, treq)
-}
-
 func (c thriftClient) buildTransportRequest(reqBody envelope.Enveloper) (*transport.Request, protocol.Protocol, error) {
 	proto := c.p
 	if !c.Enveloping {
@@ -216,7 +198,7 @@ func (c thriftClient) buildTransportRequest(reqBody envelope.Enveloper) (*transp
 	}
 
 	reqEnvelopeType := reqBody.EnvelopeType()
-	if reqEnvelopeType != wire.Call && reqEnvelopeType != wire.OneWay {
+	if reqEnvelopeType != wire.Call {
 		return nil, nil, errors.RequestBodyEncodeError(
 			&treq, errUnexpectedEnvelopeType(reqEnvelopeType),
 		)

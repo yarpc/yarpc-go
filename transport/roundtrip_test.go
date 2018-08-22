@@ -27,7 +27,6 @@ import (
 	"io/ioutil"
 	"net"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -48,8 +47,7 @@ const (
 	testCaller  = "testService-client"
 	testService = "testService"
 
-	testProcedure       = "hello"
-	testProcedureOneway = "hello-oneway"
+	testProcedure = "hello"
 )
 
 // roundTripTransport provides a function that sets up and tears down an
@@ -60,12 +58,10 @@ type roundTripTransport interface {
 	// Set up an Inbound serving Router r, and call f with an Outbound that
 	// knows how to talk to that Inbound.
 	WithRouter(r transport.Router, f func(transport.UnaryOutbound))
-	WithRouterOneway(r transport.Router, f func(transport.OnewayOutbound))
 }
 
 type staticRouter struct {
-	Handler       transport.UnaryHandler
-	OnewayHandler transport.OnewayHandler
+	Handler transport.UnaryHandler
 }
 
 func (r staticRouter) Register([]transport.Procedure) {
@@ -77,10 +73,7 @@ func (r staticRouter) Procedures() []transport.Procedure {
 }
 
 func (r staticRouter) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
-	if req.Procedure == testProcedure {
-		return transport.NewUnaryHandlerSpec(r.Handler), nil
-	}
-	return transport.NewOnewayHandlerSpec(r.OnewayHandler), nil
+	return transport.NewUnaryHandlerSpec(r.Handler), nil
 }
 
 // handlerFunc wraps a function into a transport.Router
@@ -88,13 +81,6 @@ type unaryHandlerFunc func(context.Context, *transport.Request, transport.Respon
 
 func (f unaryHandlerFunc) Handle(ctx context.Context, r *transport.Request, w transport.ResponseWriter) error {
 	return f(ctx, r, w)
-}
-
-// onewayHandlerFunc wraps a function into a transport.Router
-type onewayHandlerFunc func(context.Context, *transport.Request) error
-
-func (f onewayHandlerFunc) HandleOneway(ctx context.Context, r *transport.Request) error {
-	return f(ctx, r)
 }
 
 // httpTransport implements a roundTripTransport for HTTP.
@@ -105,20 +91,6 @@ func (ht httpTransport) Name() string {
 }
 
 func (ht httpTransport) WithRouter(r transport.Router, f func(transport.UnaryOutbound)) {
-	httpTransport := http.NewTransport()
-
-	i := httpTransport.NewInbound("127.0.0.1:0")
-	i.SetRouter(r)
-	require.NoError(ht.t, i.Start(), "failed to start")
-	defer i.Stop()
-
-	o := httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s", i.Addr().String()))
-	require.NoError(ht.t, o.Start(), "failed to start outbound")
-	defer o.Stop()
-	f(o)
-}
-
-func (ht httpTransport) WithRouterOneway(r transport.Router, f func(transport.OnewayOutbound)) {
 	httpTransport := http.NewTransport()
 
 	i := httpTransport.NewInbound("127.0.0.1:0")
@@ -168,10 +140,6 @@ func (tt tchannelTransport) WithRouter(r transport.Router, f func(transport.Unar
 	})
 }
 
-func (tt tchannelTransport) WithRouterOneway(r transport.Router, f func(transport.OnewayOutbound)) {
-	panic("tchannel does not support oneway calls")
-}
-
 // grpcTransport implements a roundTripTransport for gRPC.
 type grpcTransport struct{ t *testing.T }
 
@@ -195,10 +163,6 @@ func (gt grpcTransport) WithRouter(r transport.Router, f func(transport.UnaryOut
 	require.NoError(gt.t, o.Start(), "failed to start outbound")
 	defer o.Stop()
 	f(o)
-}
-
-func (gt grpcTransport) WithRouterOneway(r transport.Router, f func(transport.OnewayOutbound)) {
-	panic("grpc does not support oneway calls")
 }
 
 func TestSimpleRoundTrip(t *testing.T) {
@@ -307,86 +271,5 @@ func TestSimpleRoundTrip(t *testing.T) {
 				})
 			})
 		}
-	}
-}
-
-func TestSimpleRoundTripOneway(t *testing.T) {
-	trans := httpTransport{t}
-
-	tests := []struct {
-		name           string
-		requestHeaders transport.Headers
-		requestBody    string
-	}{
-		{
-			name:           "hello world",
-			requestHeaders: transport.NewHeaders().With("foo", "bar"),
-			requestBody:    "hello world",
-		},
-		{
-			name:           "empty",
-			requestHeaders: transport.NewHeaders(),
-			requestBody:    "",
-		},
-	}
-
-	rootCtx := context.Background()
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-
-			requestMatcher := transporttest.NewRequestMatcher(t, &transport.Request{
-				Caller:    testCaller,
-				Service:   testService,
-				Transport: trans.Name(),
-				Procedure: testProcedureOneway,
-				Encoding:  raw.Encoding,
-				Headers:   tt.requestHeaders,
-				Body:      bytes.NewReader([]byte(tt.requestBody)),
-			})
-
-			handlerDone := make(chan struct{})
-
-			onewayHandler := onewayHandlerFunc(func(_ context.Context, r *transport.Request) error {
-				assert.True(t, requestMatcher.Matches(r), "request mismatch: received %v", r)
-
-				// Pretend to work: this delay should not slow down tests since it is a
-				// server-side operation
-				testtime.Sleep(5 * time.Second)
-
-				// close the channel, telling the client (which should not be waiting for
-				// a response) that the handler finished executing
-				close(handlerDone)
-
-				return nil
-			})
-
-			router := staticRouter{OnewayHandler: onewayHandler}
-
-			trans.WithRouterOneway(router, func(o transport.OnewayOutbound) {
-				ctx, cancel := context.WithTimeout(rootCtx, time.Second)
-				defer cancel()
-				ack, err := o.CallOneway(ctx, &transport.Request{
-					Caller:    testCaller,
-					Service:   testService,
-					Procedure: testProcedureOneway,
-					Encoding:  raw.Encoding,
-					Headers:   tt.requestHeaders,
-					Body:      bytes.NewReader([]byte(tt.requestBody)),
-				})
-
-				select {
-				case <-handlerDone:
-					// if the server filled the channel, it means we waited for the server
-					// to complete the request
-					assert.Fail(t, "client waited for server handler to finish executing")
-				default:
-				}
-
-				if assert.NoError(t, err, "%T: oneway call failed for test '%v'", trans, tt.name) {
-					assert.NotNil(t, ack)
-				}
-			})
-		})
 	}
 }

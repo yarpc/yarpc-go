@@ -123,7 +123,6 @@ func BuildHelloYARPCProcedures(server HelloYARPCServer) []transport.Procedure {
 					),
 				},
 			},
-			OnewayHandlerParams: []protobuf.BuildProceduresOnewayHandlerParams{},
 			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{
 				{
 					MethodName: "HelloThere",

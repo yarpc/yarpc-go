@@ -50,20 +50,6 @@ type UnaryOutbound interface {
 	Call(ctx context.Context, request *Request) (*Response, error)
 }
 
-// OnewayOutbound is a transport that knows how to send oneway requests for
-// procedure calls.
-type OnewayOutbound interface {
-	Outbound
-
-	// CallOneway sends the given request through this transport and returns an
-	// ack.
-	//
-	// This MUST NOT be called before Start() has been called successfully. This
-	// MAY panic if called without calling Start(). This MUST be safe to call
-	// concurrently.
-	CallOneway(ctx context.Context, request *Request) (Ack, error)
-}
-
 // StreamOutbound is a transport that knows how to send stream requests for
 // procedure calls.
 type StreamOutbound interface {
@@ -79,17 +65,13 @@ type StreamOutbound interface {
 //
 // This includes the service name that will be used for outbound requests as
 // well as the Outbound that will be used to transport the request.  The
-// outbound will be one of Unary and Oneway.
+// outbound will be one of Unary and Stream.
 type Outbounds struct {
 	ServiceName string
 
 	// If set, this is the unary outbound which sends a request and waits for
 	// the response.
 	Unary UnaryOutbound
-
-	// If set, this is the oneway outbound which sends the request and
-	// continues once the message has been delivered.
-	Oneway OnewayOutbound
 
 	// If set, this is the stream outbound which creates a ClientStream that can
 	// be used to continuously send/recv requests over the connection.

@@ -38,18 +38,6 @@ func UnaryInboundMiddleware(mw ...middleware.UnaryInbound) middleware.UnaryInbou
 	return inboundmiddleware.UnaryChain(mw...)
 }
 
-// OnewayOutboundMiddleware combines the given collection of unary outbound
-// middleware in-order into a single OnewayOutbound middleware.
-func OnewayOutboundMiddleware(mw ...middleware.OnewayOutbound) middleware.OnewayOutbound {
-	return outboundmiddleware.OnewayChain(mw...)
-}
-
-// OnewayInboundMiddleware combines the given collection of unary inbound
-// middleware in-order into a single OnewayInbound middleware.
-func OnewayInboundMiddleware(mw ...middleware.OnewayInbound) middleware.OnewayInbound {
-	return inboundmiddleware.OnewayChain(mw...)
-}
-
 // StreamOutboundMiddleware combines the given collection of unary outbound
 // middleware in-order into a single StreamOutbound middleware.
 func StreamOutboundMiddleware(mw ...middleware.StreamOutbound) middleware.StreamOutbound {

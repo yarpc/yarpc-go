@@ -116,11 +116,6 @@ func (o *FakeOutbound) Call(ctx context.Context, req *transport.Request) (*trans
 	return nil, fmt.Errorf(`no outbound callable specified on the fake outbound`)
 }
 
-// CallOneway pretends to send a oneway RPC, but actually just returns an error.
-func (o *FakeOutbound) CallOneway(ctx context.Context, req *transport.Request) (transport.Ack, error) {
-	return nil, fmt.Errorf(`fake outbound does not support call oneway`)
-}
-
 // CallStream pretends to send a Stream RPC, but actually just returns an error.
 func (o *FakeOutbound) CallStream(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error) {
 	return nil, fmt.Errorf(`fake outbound does not support call stream`)

@@ -52,8 +52,7 @@ type Interface interface {
 			ctx <$context>.Context, <range .Arguments>
 			<.Name> <formatType .Type>,<end>
 			opts ...<$yarpc>.CallOption,
-		)<if .OneWay> (<$yarpc>.Ack, error)
-		<else if .ReturnType> (<formatType .ReturnType>, error)
+		) <if .ReturnType> (<formatType .ReturnType>, error)
 		<else> error
 		<end>
 	<end>
@@ -99,11 +98,7 @@ func (c client) <.Name>(
 	ctx <$context>.Context, <range .Arguments>
 	_<.Name> <formatType .Type>,<end>
 	opts ...<$yarpc>.CallOption,
-<if .OneWay>) (<$yarpc>.Ack, error) {
-	args := <$prefix>Helper.Args(<range .Arguments>_<.Name>, <end>)
-	return c.c.CallOneway(ctx, args, opts...)
-}
-<else>) (<if .ReturnType>success <formatType .ReturnType>,<end> err error) {
+) (<if .ReturnType>success <formatType .ReturnType>,<end> err error) {
 	<$wire := import "go.uber.org/thriftrw/wire">
 	args := <$prefix>Helper.Args(<range .Arguments>_<.Name>, <end>)
 
@@ -122,7 +117,6 @@ func (c client) <.Name>(
 	<if .ReturnType>success, <end>err = <$prefix>Helper.UnwrapResponse(&result)
 	return
 }
-<end>
 <end>
 `
 

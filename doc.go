@@ -48,7 +48,6 @@
 // can apply to requests over any transport.
 //
 // Each YARPC transport protocol can implement inbound handlers and outbound
-// callers. Each of these can support different RPC types, like unary (request and
-// response) or oneway (request and receipt) RPC. A future release of YARPC will
-// add support for other RPC types including variations on streaming and pubsub.
+// callers. Each of these can support different RPC types, like unary (request
+// and response) and streaming RPC.
 package yarpc

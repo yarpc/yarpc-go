@@ -94,7 +94,3 @@ func (cc testClientConfig) Service() string {
 func (cc testClientConfig) GetUnaryOutbound() transport.UnaryOutbound {
 	return cc.outbound
 }
-
-func (cc testClientConfig) GetOnewayOutbound() transport.OnewayOutbound {
-	panic("Not implemented")
-}

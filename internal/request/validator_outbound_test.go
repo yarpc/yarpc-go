@@ -50,24 +50,11 @@ func TestCall(t *testing.T) {
 		_, err := validatorOut.Call(ctx, req)
 		require.NoError(t, err)
 	})
-
-	t.Run("oneway", func(t *testing.T) {
-		out := transporttest.NewMockOnewayOutbound(ctrl)
-		validatorOut := OnewayValidatorOutbound{out}
-
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
-		defer cancel()
-		out.EXPECT().CallOneway(ctx, req).Return(nil, nil)
-
-		_, err := validatorOut.CallOneway(ctx, req)
-		require.NoError(t, err)
-	})
 }
 
 func TestCallErrors(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	validatorOut := UnaryValidatorOutbound{transporttest.NewMockUnaryOutbound(ctrl)}
-	validatorOutOneway := OnewayValidatorOutbound{transporttest.NewMockOnewayOutbound(ctrl)}
 
 	tests := []struct {
 		name string
@@ -89,12 +76,6 @@ func TestCallErrors(t *testing.T) {
 		t.Run("unary: "+tt.name, func(t *testing.T) {
 			res, err := validatorOut.Call(tt.ctx, tt.req)
 			assert.Nil(t, res)
-			assert.Error(t, err, "expected error from invalid request")
-		})
-
-		t.Run("oneway: "+tt.name, func(t *testing.T) {
-			ack, err := validatorOutOneway.CallOneway(tt.ctx, tt.req)
-			assert.Nil(t, ack)
 			assert.Error(t, err, "expected error from invalid request")
 		})
 	}

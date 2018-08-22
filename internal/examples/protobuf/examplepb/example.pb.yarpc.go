@@ -34,7 +34,6 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/protobuf"
-	"go.uber.org/yarpc/yarpcproto"
 )
 
 var _ = ioutil.NopCloser
@@ -88,7 +87,6 @@ func BuildKeyValueYARPCProcedures(server KeyValueYARPCServer) []transport.Proced
 					),
 				},
 			},
-			OnewayHandlerParams: []protobuf.BuildProceduresOnewayHandlerParams{},
 			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{},
 		},
 	)
@@ -256,162 +254,6 @@ var (
 	emptyKeyValueServiceSetValueYARPCResponse = &SetValueResponse{}
 )
 
-// SinkYARPCClient is the YARPC client-side interface for the Sink service.
-type SinkYARPCClient interface {
-	Fire(context.Context, *FireRequest, ...yarpc.CallOption) (yarpc.Ack, error)
-}
-
-// NewSinkYARPCClient builds a new YARPC client for the Sink service.
-func NewSinkYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) SinkYARPCClient {
-	return &_SinkYARPCCaller{protobuf.NewStreamClient(
-		protobuf.ClientParams{
-			ServiceName:  "uber.yarpc.internal.examples.protobuf.example.Sink",
-			ClientConfig: clientConfig,
-			Options:      options,
-		},
-	)}
-}
-
-// SinkYARPCServer is the YARPC server-side interface for the Sink service.
-type SinkYARPCServer interface {
-	Fire(context.Context, *FireRequest) error
-}
-
-// BuildSinkYARPCProcedures prepares an implementation of the Sink service for YARPC registration.
-func BuildSinkYARPCProcedures(server SinkYARPCServer) []transport.Procedure {
-	handler := &_SinkYARPCHandler{server}
-	return protobuf.BuildProcedures(
-		protobuf.BuildProceduresParams{
-			ServiceName:        "uber.yarpc.internal.examples.protobuf.example.Sink",
-			UnaryHandlerParams: []protobuf.BuildProceduresUnaryHandlerParams{},
-			OnewayHandlerParams: []protobuf.BuildProceduresOnewayHandlerParams{
-				{
-					MethodName: "Fire",
-					Handler: protobuf.NewOnewayHandler(
-						protobuf.OnewayHandlerParams{
-							Handle:     handler.Fire,
-							NewRequest: newSinkServiceFireYARPCRequest,
-						},
-					),
-				},
-			},
-			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{},
-		},
-	)
-}
-
-// FxSinkYARPCClientParams defines the input
-// for NewFxSinkYARPCClient. It provides the
-// paramaters to get a SinkYARPCClient in an
-// Fx application.
-type FxSinkYARPCClientParams struct {
-	fx.In
-
-	Provider yarpc.ClientConfig
-}
-
-// FxSinkYARPCClientResult defines the output
-// of NewFxSinkYARPCClient. It provides a
-// SinkYARPCClient to an Fx application.
-type FxSinkYARPCClientResult struct {
-	fx.Out
-
-	Client SinkYARPCClient
-
-	// We are using an fx.Out struct here instead of just returning a client
-	// so that we can add more values or add named versions of the client in
-	// the future without breaking any existing code.
-}
-
-// NewFxSinkYARPCClient provides a SinkYARPCClient
-// to an Fx application using the given name for routing.
-//
-//  fx.Provide(
-//    examplepb.NewFxSinkYARPCClient("service-name"),
-//    ...
-//  )
-func NewFxSinkYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
-	return func(params FxSinkYARPCClientParams) FxSinkYARPCClientResult {
-		return FxSinkYARPCClientResult{
-			Client: NewSinkYARPCClient(params.Provider.ClientConfig(name), options...),
-		}
-	}
-}
-
-// FxSinkYARPCProceduresParams defines the input
-// for NewFxSinkYARPCProcedures. It provides the
-// paramaters to get SinkYARPCServer procedures in an
-// Fx application.
-type FxSinkYARPCProceduresParams struct {
-	fx.In
-
-	Server SinkYARPCServer
-}
-
-// FxSinkYARPCProceduresResult defines the output
-// of NewFxSinkYARPCProcedures. It provides
-// SinkYARPCServer procedures to an Fx application.
-//
-// The procedures are provided to the "yarpcfx" value group.
-// Dig 1.2 or newer must be used for this feature to work.
-type FxSinkYARPCProceduresResult struct {
-	fx.Out
-
-	Procedures []transport.Procedure `group:"yarpcfx"`
-}
-
-// NewFxSinkYARPCProcedures provides SinkYARPCServer procedures to an Fx application.
-// It expects a SinkYARPCServer to be present in the container.
-//
-//  fx.Provide(
-//    examplepb.NewFxSinkYARPCProcedures(),
-//    ...
-//  )
-func NewFxSinkYARPCProcedures() interface{} {
-	return func(params FxSinkYARPCProceduresParams) FxSinkYARPCProceduresResult {
-		return FxSinkYARPCProceduresResult{
-			Procedures: BuildSinkYARPCProcedures(params.Server),
-		}
-	}
-}
-
-type _SinkYARPCCaller struct {
-	streamClient protobuf.StreamClient
-}
-
-func (c *_SinkYARPCCaller) Fire(ctx context.Context, request *FireRequest, options ...yarpc.CallOption) (yarpc.Ack, error) {
-	return c.streamClient.CallOneway(ctx, "Fire", request, options...)
-}
-
-type _SinkYARPCHandler struct {
-	server SinkYARPCServer
-}
-
-func (h *_SinkYARPCHandler) Fire(ctx context.Context, requestMessage proto.Message) error {
-	var request *FireRequest
-	var ok bool
-	if requestMessage != nil {
-		request, ok = requestMessage.(*FireRequest)
-		if !ok {
-			return protobuf.CastError(emptySinkServiceFireYARPCRequest, requestMessage)
-		}
-	}
-	return h.server.Fire(ctx, request)
-}
-
-func newSinkServiceFireYARPCRequest() proto.Message {
-	return &FireRequest{}
-}
-
-func newSinkServiceFireYARPCResponse() proto.Message {
-	return &yarpcproto.Oneway{}
-}
-
-var (
-	emptySinkServiceFireYARPCRequest  = &FireRequest{}
-	emptySinkServiceFireYARPCResponse = &yarpcproto.Oneway{}
-)
-
 // FooYARPCClient is the YARPC client-side interface for the Foo service.
 type FooYARPCClient interface {
 	EchoOut(context.Context, ...yarpc.CallOption) (FooServiceEchoOutYARPCClient, error)
@@ -483,9 +325,8 @@ func BuildFooYARPCProcedures(server FooYARPCServer) []transport.Procedure {
 	handler := &_FooYARPCHandler{server}
 	return protobuf.BuildProcedures(
 		protobuf.BuildProceduresParams{
-			ServiceName:         "uber.yarpc.internal.examples.protobuf.example.Foo",
-			UnaryHandlerParams:  []protobuf.BuildProceduresUnaryHandlerParams{},
-			OnewayHandlerParams: []protobuf.BuildProceduresOnewayHandlerParams{},
+			ServiceName:        "uber.yarpc.internal.examples.protobuf.example.Foo",
+			UnaryHandlerParams: []protobuf.BuildProceduresUnaryHandlerParams{},
 			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{
 				{
 					MethodName: "EchoBoth",
@@ -825,11 +666,6 @@ func init() {
 	yarpc.RegisterClientBuilder(
 		func(clientConfig transport.ClientConfig, structField reflect.StructField) KeyValueYARPCClient {
 			return NewKeyValueYARPCClient(clientConfig, protobuf.ClientBuilderOptions(clientConfig, structField)...)
-		},
-	)
-	yarpc.RegisterClientBuilder(
-		func(clientConfig transport.ClientConfig, structField reflect.StructField) SinkYARPCClient {
-			return NewSinkYARPCClient(clientConfig, protobuf.ClientBuilderOptions(clientConfig, structField)...)
 		},
 	)
 	yarpc.RegisterClientBuilder(

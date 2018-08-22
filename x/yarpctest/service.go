@@ -163,11 +163,6 @@ func (w *wrappedDispatcher) Start(t testing.TB) error {
 				err = multierr.Append(err, lc.Start(t))
 			}
 		}
-		if oneway := procedure.HandlerSpec.Oneway(); oneway != nil {
-			if lc, ok := oneway.(api.Lifecycle); ok {
-				err = multierr.Append(err, lc.Start(t))
-			}
-		}
 		if stream := procedure.HandlerSpec.Stream(); stream != nil {
 			if lc, ok := stream.(api.Lifecycle); ok {
 				err = multierr.Append(err, lc.Start(t))
@@ -187,11 +182,6 @@ func (w *wrappedDispatcher) Stop(t testing.TB) error {
 	for _, procedure := range w.procedures {
 		if unary := procedure.HandlerSpec.Unary(); unary != nil {
 			if lc, ok := unary.(api.Lifecycle); ok {
-				err = multierr.Append(err, lc.Stop(t))
-			}
-		}
-		if oneway := procedure.HandlerSpec.Oneway(); oneway != nil {
-			if lc, ok := oneway.(api.Lifecycle); ok {
 				err = multierr.Append(err, lc.Stop(t))
 			}
 		}

@@ -97,8 +97,8 @@ type ClientInfo struct {
 // the function the client configuration to use in tests for the given TransportType.
 //
 // The server dispatcher will be brought up using all TransportTypes and with the serviceName.
-// The client dispatcher will be brought up using the given TransportType for Unary, HTTP for
-// Oneway, and the serviceName with a "-client" suffix.
+// The client dispatcher will be brought up using the given TransportType for
+// Unary, and the serviceName with a "-client" suffix.
 func WithClientInfo(serviceName string, procedures []transport.Procedure, transportType TransportType, logger *zap.Logger, f func(*ClientInfo) error) (err error) {
 	if logger == nil {
 		logger = zap.NewNop()
@@ -148,7 +148,6 @@ func WithClientInfo(serviceName string, procedures []transport.Procedure, transp
 
 // NewClientDispatcher returns a new client Dispatcher.
 //
-// HTTP always will be configured as an outbound for Oneway.
 // gRPC always will be configured as an outbound for Stream.
 func NewClientDispatcher(transportType TransportType, config *DispatcherConfig, logger *zap.Logger) (*yarpc.Dispatcher, error) {
 	port, err := config.GetPort(transportType)
@@ -163,7 +162,6 @@ func NewClientDispatcher(transportType TransportType, config *DispatcherConfig, 
 	if err != nil {
 		return nil, err
 	}
-	onewayOutbound := http.NewTransport(http.Logger(logger)).NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d", httpPort))
 	streamOutbound := grpc.NewTransport(grpc.Logger(logger)).NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", grpcPort))
 	var unaryOutbound transport.UnaryOutbound
 	switch transportType {
@@ -174,7 +172,7 @@ func NewClientDispatcher(transportType TransportType, config *DispatcherConfig, 
 		}
 		unaryOutbound = tchannelTransport.NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", port))
 	case TransportTypeHTTP:
-		unaryOutbound = onewayOutbound
+		unaryOutbound = http.NewTransport(http.Logger(logger)).NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d", httpPort))
 	case TransportTypeGRPC:
 		unaryOutbound = streamOutbound
 	default:
@@ -185,7 +183,6 @@ func NewClientDispatcher(transportType TransportType, config *DispatcherConfig, 
 			Name: fmt.Sprintf("%s-client", config.GetServiceName()),
 			Outbounds: yarpc.Outbounds{
 				config.GetServiceName(): {
-					Oneway: onewayOutbound,
 					Unary:  unaryOutbound,
 					Stream: streamOutbound,
 				},

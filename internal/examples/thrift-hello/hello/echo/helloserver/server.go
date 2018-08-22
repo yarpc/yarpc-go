@@ -53,7 +53,6 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			thrift.Method{
 				Name: "echo",
 				HandlerSpec: thrift.HandlerSpec{
-
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.Echo),
 				},

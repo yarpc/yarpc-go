@@ -92,7 +92,6 @@ func (s *PhasedStarter) StartOutbounds() error {
 	wait := errorsync.ErrorWaiter{}
 	for _, o := range s.dispatcher.outbounds {
 		wait.Submit(s.start(o.Unary))
-		wait.Submit(s.start(o.Oneway))
 		wait.Submit(s.start(o.Stream))
 	}
 	if errs := wait.Wait(); len(errs) != 0 {
@@ -226,9 +225,6 @@ func (s *PhasedStopper) StopOutbounds() error {
 	for _, o := range s.dispatcher.outbounds {
 		if o.Unary != nil {
 			wait.Submit(o.Unary.Stop)
-		}
-		if o.Oneway != nil {
-			wait.Submit(o.Oneway.Stop)
 		}
 		if o.Stream != nil {
 			wait.Submit(o.Stream.Stop)

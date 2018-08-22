@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package uber.yarpc.internal.examples.protobuf.example;
 
-import "yarpcproto/yarpc.proto";
-
 option go_package = "examplepb";
 
 message GetValueRequest {
@@ -54,10 +52,6 @@ message EchoBothResponse {
 service KeyValue {
   rpc GetValue(GetValueRequest) returns (GetValueResponse) {}
   rpc SetValue(SetValueRequest) returns (SetValueResponse) {}
-}
-
-service Sink {
-  rpc Fire(FireRequest) returns (uber.yarpc.Oneway) {}
 }
 
 service Foo {

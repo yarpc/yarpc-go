@@ -33,13 +33,4 @@
 // 	}
 //
 // 	dispatcher.Register(raw.Procedure("submit", Submit))
-//
-// Similarly, use the OnewayProcedure function to build procedures to register
-// against a Router.
-//
-// 	func RunTask(ctx context.Context, reqBody []byte) error {
-// 		// ...
-// 	}
-//
-// 	dispatcher.Register(raw.OnewayProcedure("RunTask", RunTask))
 package raw

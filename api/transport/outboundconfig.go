@@ -62,16 +62,3 @@ func (o *OutboundConfig) GetUnaryOutbound() UnaryOutbound {
 	}
 	return o.Outbounds.Unary
 }
-
-// GetOnewayOutbound returns an outbound to send the request through or panics
-// if there is no oneway outbound for this service.
-//
-// Implements ClientConfig#GetOnewayOutbound.
-func (o *OutboundConfig) GetOnewayOutbound() OnewayOutbound {
-	// TODO: This function should be deprecated, it's for legacy support.
-	// Use o.Outbounds.Oneway instead (and panic if you want).
-	if o.Outbounds.Oneway == nil {
-		panic(fmt.Sprintf("service %q does not have a oneway outbound", o.Outbounds.ServiceName))
-	}
-	return o.Outbounds.Oneway
-}

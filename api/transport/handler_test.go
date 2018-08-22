@@ -29,15 +29,10 @@ import (
 )
 
 type UnaryHandlerFunc func(context.Context, *Request, ResponseWriter) error
-type OnewayHandlerFunc func(context.Context, *Request) error
 type StreamHandlerFunc func(*ServerStream) error
 
 func (f UnaryHandlerFunc) Handle(ctx context.Context, r *Request, w ResponseWriter) error {
 	return f(ctx, r, w)
-}
-
-func (f OnewayHandlerFunc) HandleOneway(ctx context.Context, r *Request) error {
-	return f(ctx, r)
 }
 
 func (f StreamHandlerFunc) HandleStream(stream *ServerStream) error {
@@ -56,13 +51,6 @@ func TestHandlerSpecLogMarshaling(t *testing.T) {
 				return nil
 			})),
 			want: map[string]interface{}{"rpcType": "Unary"},
-		},
-		{
-			desc: "oneway",
-			spec: NewOnewayHandlerSpec(OnewayHandlerFunc(func(context.Context, *Request) error {
-				return nil
-			})),
-			want: map[string]interface{}{"rpcType": "Oneway"},
 		},
 		{
 			desc: "stream",

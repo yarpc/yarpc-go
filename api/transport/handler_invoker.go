@@ -41,14 +41,6 @@ type UnaryInvokeRequest struct {
 	Logger         *zap.Logger // optional
 }
 
-// OnewayInvokeRequest encapsulates arguments to invoke a unary handler.
-type OnewayInvokeRequest struct {
-	Context context.Context
-	Request *Request
-	Handler OnewayHandler
-	Logger  *zap.Logger // optional
-}
-
 // StreamInvokeRequest encapsulates arguments to invoke a unary handler.
 type StreamInvokeRequest struct {
 	Stream  *ServerStream
@@ -78,20 +70,6 @@ func InvokeUnaryHandler(
 			i.Request.Procedure, i.Request.Service, i.Request.Caller, deadline.Sub(i.StartTime))
 	}
 	return err
-}
-
-// InvokeOnewayHandler calls the oneway handler, recovering from panics as
-// errors.
-func InvokeOnewayHandler(
-	i OnewayInvokeRequest,
-) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = handlePanic(Oneway, i.Logger, r, i.Request.ToRequestMeta())
-		}
-	}()
-
-	return i.Handler.HandleOneway(i.Context, i.Request)
 }
 
 // InvokeStreamHandler calls the stream handler, recovering from panics as

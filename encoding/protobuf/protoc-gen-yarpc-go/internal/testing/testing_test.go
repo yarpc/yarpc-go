@@ -32,7 +32,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go/internal/lib"
 	"go.uber.org/yarpc/internal/protoplugin"
-	_ "go.uber.org/yarpc/yarpcproto" // needed for proto.RegisterFile for Oneway type
 )
 
 func TestGolden(t *testing.T) {
@@ -60,13 +59,11 @@ func testGolden(
 	outputGoldenFilePath string,
 ) {
 	codeGeneratorRequest := &plugin_go.CodeGeneratorRequest{
-		Parameter: proto.String("Myarpcproto/yarpc.proto=go.uber.org/yarpc/yarpcproto"),
 		FileToGenerate: []string{
 			inputFilePath,
 		},
 		ProtoFile: []*descriptor.FileDescriptorProto{
 			getFileDescriptorProto(t, "encoding/protobuf/protoc-gen-yarpc-go/internal/testing/dep.proto"),
-			getFileDescriptorProto(t, "yarpcproto/yarpc.proto"),
 			getFileDescriptorProto(t, inputFilePath),
 		},
 	}

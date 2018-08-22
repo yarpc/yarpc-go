@@ -31,7 +31,6 @@ func MultiOutbound(caller, service string, outbounds transport.Outbounds) transp
 		Outbounds: transport.Outbounds{
 			ServiceName: service,
 			Unary:       outbounds.Unary,
-			Oneway:      outbounds.Oneway,
 		},
 	}
 }

@@ -43,5 +43,4 @@ type ClientConfig interface {
 	// MAY be called multiple times for a request. The returned outbound MUST
 	// have already been started.
 	GetUnaryOutbound() UnaryOutbound
-	GetOnewayOutbound() OnewayOutbound
 }

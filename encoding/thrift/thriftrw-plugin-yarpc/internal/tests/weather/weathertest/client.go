@@ -51,7 +51,6 @@ func (m *MockClient) Check(
 	ctx context.Context,
 	opts ...yarpc.CallOption,
 ) (success string, err error) {
-
 	args := []interface{}{ctx}
 	for _, o := range opts {
 		args = append(args, o)

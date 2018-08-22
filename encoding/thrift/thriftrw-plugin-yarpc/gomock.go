@@ -80,18 +80,15 @@ func (m *MockClient) <.Name>(
 	ctx <$context>.Context, <range .Arguments>
 	_<.Name> <formatType .Type>,<end>
 	opts ...<$yarpc>.CallOption,
-) <if .OneWay> (ack <$yarpc>.Ack, err error) {
-  <else>       (<if .ReturnType>success <formatType .ReturnType>,<end> err error) {
-  <end>
+) (<if .ReturnType>success <formatType .ReturnType>,<end> err error) {
 	args := []interface{}{ctx,<range .Arguments> _<.Name>,<end>}
 	for _, o := range opts {
 		args = append(args, o)
 	}
 	i := 0
 	ret := m.ctrl.Call(m, "<.Name>", args...)
-	<if .OneWay>          ack,     _ = ret[i].(<$yarpc>.Ack); i++
-	<else if .ReturnType> success, _ = ret[i].(<formatType .ReturnType>); i++
-	<end>                 err,     _ = ret[i].(error)
+	<if .ReturnType> success, _ = ret[i].(<formatType .ReturnType>); i++
+	<end>            err,     _ = ret[i].(error)
 	return
 }
 

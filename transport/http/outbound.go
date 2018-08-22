@@ -44,10 +44,7 @@ import (
 )
 
 // this ensures the HTTP outbound implements both transport.Outbound interfaces
-var (
-	_ transport.UnaryOutbound  = (*Outbound)(nil)
-	_ transport.OnewayOutbound = (*Outbound)(nil)
-)
+var _ transport.UnaryOutbound = (*Outbound)(nil)
 
 var defaultURLTemplate, _ = url.Parse("http://localhost")
 
@@ -207,20 +204,6 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	}
 
 	return o.call(ctx, treq)
-}
-
-// CallOneway makes a oneway request
-func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
-	if treq == nil {
-		return nil, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil")
-	}
-
-	_, err := o.call(ctx, treq)
-	if err != nil {
-		return nil, err
-	}
-
-	return time.Now(), nil
 }
 
 func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {

@@ -48,14 +48,12 @@ type Outbounds map[string]transport.Outbounds
 // OutboundMiddleware contains the different types of outbound middlewares.
 type OutboundMiddleware struct {
 	Unary  middleware.UnaryOutbound
-	Oneway middleware.OnewayOutbound
 	Stream middleware.StreamOutbound
 }
 
 // InboundMiddleware contains the different types of inbound middlewares.
 type InboundMiddleware struct {
 	Unary  middleware.UnaryInbound
-	Oneway middleware.OnewayInbound
 	Stream middleware.StreamInbound
 }
 
@@ -103,11 +101,9 @@ func addObservingMiddleware(cfg Config, meter *metrics.Scope, logger *zap.Logger
 	observer := observability.NewMiddleware(logger, meter, extractor)
 
 	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(observer, cfg.InboundMiddleware.Unary)
-	cfg.InboundMiddleware.Oneway = inboundmiddleware.OnewayChain(observer, cfg.InboundMiddleware.Oneway)
 	cfg.InboundMiddleware.Stream = inboundmiddleware.StreamChain(observer, cfg.InboundMiddleware.Stream)
 
 	cfg.OutboundMiddleware.Unary = outboundmiddleware.UnaryChain(cfg.OutboundMiddleware.Unary, observer)
-	cfg.OutboundMiddleware.Oneway = outboundmiddleware.OnewayChain(cfg.OutboundMiddleware.Oneway, observer)
 	cfg.OutboundMiddleware.Stream = outboundmiddleware.StreamChain(cfg.OutboundMiddleware.Stream, observer)
 
 	return cfg
@@ -118,13 +114,12 @@ func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
 	outboundSpecs := make(Outbounds, len(outbounds))
 
 	for outboundKey, outs := range outbounds {
-		if outs.Unary == nil && outs.Oneway == nil && outs.Stream == nil {
+		if outs.Unary == nil && outs.Stream == nil {
 			panic(fmt.Sprintf("no outbound set for outbound key %q in dispatcher", outboundKey))
 		}
 
 		var (
 			unaryOutbound  transport.UnaryOutbound
-			onewayOutbound transport.OnewayOutbound
 			streamOutbound transport.StreamOutbound
 		)
 		serviceName := outboundKey
@@ -133,11 +128,6 @@ func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
 		if outs.Unary != nil {
 			unaryOutbound = middleware.ApplyUnaryOutbound(outs.Unary, mw.Unary)
 			unaryOutbound = request.UnaryValidatorOutbound{UnaryOutbound: unaryOutbound}
-		}
-
-		if outs.Oneway != nil {
-			onewayOutbound = middleware.ApplyOnewayOutbound(outs.Oneway, mw.Oneway)
-			onewayOutbound = request.OnewayValidatorOutbound{OnewayOutbound: onewayOutbound}
 		}
 
 		if outs.Stream != nil {
@@ -152,7 +142,6 @@ func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
 		outboundSpecs[outboundKey] = transport.Outbounds{
 			ServiceName: serviceName,
 			Unary:       unaryOutbound,
-			Oneway:      onewayOutbound,
 			Stream:      streamOutbound,
 		}
 	}
@@ -175,11 +164,6 @@ func collectTransports(inbounds Inbounds, outbounds Outbounds) []transport.Trans
 	for _, outbound := range outbounds {
 		if unary := outbound.Unary; unary != nil {
 			for _, transport := range unary.Transports() {
-				transports[transport] = struct{}{}
-			}
-		}
-		if oneway := outbound.Oneway; oneway != nil {
-			for _, transport := range oneway.Transports() {
 				transports[transport] = struct{}{}
 			}
 		}
@@ -296,10 +280,6 @@ func (d *Dispatcher) Register(rs []transport.Procedure) {
 			h := middleware.ApplyUnaryInbound(r.HandlerSpec.Unary(),
 				d.inboundMiddleware.Unary)
 			r.HandlerSpec = transport.NewUnaryHandlerSpec(h)
-		case transport.Oneway:
-			h := middleware.ApplyOnewayInbound(r.HandlerSpec.Oneway(),
-				d.inboundMiddleware.Oneway)
-			r.HandlerSpec = transport.NewOnewayHandlerSpec(h)
 		case transport.Streaming:
 			h := middleware.ApplyStreamInbound(r.HandlerSpec.Stream(),
 				d.inboundMiddleware.Stream)

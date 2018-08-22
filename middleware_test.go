@@ -45,28 +45,11 @@ var (
 		return nil
 	}
 
-	retryOnewayInbound middleware.OnewayInboundFunc = func(
-		ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
-		if err := h.HandleOneway(ctx, req); err != nil {
-			return h.HandleOneway(ctx, req)
-		}
-		return nil
-	}
-
 	retryUnaryOutbound middleware.UnaryOutboundFunc = func(
 		ctx context.Context, req *transport.Request, o transport.UnaryOutbound) (*transport.Response, error) {
 		res, err := o.Call(ctx, req)
 		if err != nil {
 			res, err = o.Call(ctx, req)
-		}
-		return res, err
-	}
-
-	retryOnewayOutbound middleware.OnewayOutboundFunc = func(
-		ctx context.Context, req *transport.Request, o transport.OnewayOutbound) (transport.Ack, error) {
-		res, err := o.CallOneway(ctx, req)
-		if err != nil {
-			res, err = o.CallOneway(ctx, req)
 		}
 		return res, err
 	}
@@ -80,22 +63,12 @@ func (c *countInboundMiddleware) Handle(
 	return h.Handle(ctx, req, resw)
 }
 
-func (c *countInboundMiddleware) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
-	c.Count++
-	return h.HandleOneway(ctx, req)
-}
-
 type countOutboundMiddleware struct{ Count int }
 
 func (c *countOutboundMiddleware) Call(
 	ctx context.Context, req *transport.Request, o transport.UnaryOutbound) (*transport.Response, error) {
 	c.Count++
 	return o.Call(ctx, req)
-}
-
-func (c *countOutboundMiddleware) CallOneway(ctx context.Context, req *transport.Request, o transport.OnewayOutbound) (transport.Ack, error) {
-	c.Count++
-	return o.CallOneway(ctx, req)
 }
 
 func TestUnaryInboundMiddleware(t *testing.T) {
@@ -140,47 +113,6 @@ func TestUnaryInboundMiddleware(t *testing.T) {
 	}
 }
 
-func TestOnewayInboundMiddleware(t *testing.T) {
-	before := &countInboundMiddleware{}
-	after := &countInboundMiddleware{}
-
-	tests := []struct {
-		desc string
-		mw   middleware.OnewayInbound
-	}{
-		{"flat chain", OnewayInboundMiddleware(before, retryOnewayInbound, after, nil)},
-		{"nested chain", OnewayInboundMiddleware(before, OnewayInboundMiddleware(retryOnewayInbound, nil, after))},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.desc, func(t *testing.T) {
-			before.Count, after.Count = 0, 0
-			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
-			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-			defer cancel()
-
-			req := &transport.Request{
-				Caller:    "somecaller",
-				Service:   "someservice",
-				Encoding:  transport.Encoding("raw"),
-				Procedure: "hello",
-				Body:      bytes.NewReader([]byte{1, 2, 3}),
-			}
-			h := transporttest.NewMockOnewayHandler(mockCtrl)
-			h.EXPECT().HandleOneway(ctx, req).After(
-				h.EXPECT().HandleOneway(ctx, req).Return(errors.New("great sadness")),
-			).Return(nil)
-
-			err := middleware.ApplyOnewayInbound(h, tt.mw).HandleOneway(ctx, req)
-
-			assert.NoError(t, err, "expected success")
-			assert.Equal(t, 1, before.Count, "expected outer inbound middleware to be called once")
-			assert.Equal(t, 2, after.Count, "expected inner inbound middleware to be called twice")
-		})
-	}
-}
-
 func TestUnaryOutboundMiddleware(t *testing.T) {
 	before := &countOutboundMiddleware{}
 	after := &countOutboundMiddleware{}
@@ -217,49 +149,6 @@ func TestUnaryOutboundMiddleware(t *testing.T) {
 			).Return(res, nil)
 
 			gotRes, err := middleware.ApplyUnaryOutbound(o, tt.mw).Call(ctx, req)
-
-			assert.NoError(t, err, "expected success")
-			assert.Equal(t, 1, before.Count, "expected outer middleware to be called once")
-			assert.Equal(t, 2, after.Count, "expected inner middleware to be called twice")
-			assert.Equal(t, res, gotRes, "expected response to match")
-		})
-	}
-}
-
-func TestOnewayOutboundMiddleware(t *testing.T) {
-	before := &countOutboundMiddleware{}
-	after := &countOutboundMiddleware{}
-
-	tests := []struct {
-		desc string
-		mw   middleware.OnewayOutbound
-	}{
-		{"flat chain", OnewayOutboundMiddleware(before, retryOnewayOutbound, nil, after)},
-		{"flat chain", OnewayOutboundMiddleware(before, OnewayOutboundMiddleware(retryOnewayOutbound, after, nil))},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.desc, func(t *testing.T) {
-			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
-			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-			defer cancel()
-
-			var res transport.Ack
-			req := &transport.Request{
-				Caller:    "somecaller",
-				Service:   "someservice",
-				Encoding:  transport.Encoding("raw"),
-				Procedure: "hello",
-				Body:      bytes.NewReader([]byte{1, 2, 3}),
-			}
-			o := transporttest.NewMockOnewayOutbound(mockCtrl)
-			before.Count, after.Count = 0, 0
-			o.EXPECT().CallOneway(ctx, req).After(
-				o.EXPECT().CallOneway(ctx, req).Return(nil, errors.New("great sadness")),
-			).Return(res, nil)
-
-			gotRes, err := middleware.ApplyOnewayOutbound(o, tt.mw).CallOneway(ctx, req)
 
 			assert.NoError(t, err, "expected success")
 			assert.Equal(t, 1, before.Count, "expected outer middleware to be called once")

@@ -79,7 +79,6 @@ func run(
 	output io.Writer,
 ) error {
 	keyValueYARPCServer := example.NewKeyValueYARPCServer()
-	sinkYARPCServer := example.NewSinkYARPCServer(true)
 	fooYARPCServer := example.NewFooYARPCServer(transport.NewHeaders())
 	logger, err := zap.NewDevelopment()
 	if err != nil {
@@ -88,13 +87,11 @@ func run(
 	return exampleutil.WithClients(
 		transportType,
 		keyValueYARPCServer,
-		sinkYARPCServer,
 		fooYARPCServer,
 		logger,
 		func(clients *exampleutil.Clients) error {
 			return doClient(
 				keyValueYARPCServer,
-				sinkYARPCServer,
 				clients,
 				googleGRPC,
 				block,
@@ -107,7 +104,6 @@ func run(
 
 func doClient(
 	keyValueYARPCServer *example.KeyValueYARPCServer,
-	sinkYARPCServer *example.SinkYARPCServer,
 	clients *exampleutil.Clients,
 	googleGRPC bool,
 	block bool,
@@ -172,32 +168,10 @@ func doClient(
 				fmt.Fprintf(output, "set %s = %s failed: %v\n", key, value, getErrorMessage(err))
 			}
 			continue
-		case "fire":
-			if len(args) != 1 {
-				fmt.Fprintln(output, "usage: fire value")
-				continue
-			}
-			value := args[0]
-			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-			defer cancel()
-			if _, err := clients.SinkYARPCClient.Fire(ctx, &examplepb.FireRequest{Value: value}); err != nil {
-				fmt.Fprintf(output, "fire %s failed: %s\n", value, getErrorMessage(err))
-			}
-			if err := sinkYARPCServer.WaitFireDone(); err != nil {
-				fmt.Fprintln(output, err)
-			}
-			continue
-		case "fired-values":
-			if len(args) != 0 {
-				fmt.Fprintln(output, "usage: fired-values")
-				continue
-			}
-			fmt.Fprintln(output, strings.Join(sinkYARPCServer.Values(), " "))
-			continue
 		case "exit":
 			return nil
 		default:
-			return fmt.Errorf("invalid command, valid commands are: get, set, fire, fired-values, exit: %s", cmd)
+			return fmt.Errorf("invalid command, valid commands are: get, set, exit: %s", cmd)
 		}
 	}
 	return scanner.Err()

@@ -64,31 +64,6 @@ func TestUnaryNopOutboundMiddleware(t *testing.T) {
 	}
 }
 
-func TestOnewayNopOutboundMiddleware(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	o := transporttest.NewMockOnewayOutbound(mockCtrl)
-	wrappedO := middleware.ApplyOnewayOutbound(o, middleware.NopOnewayOutbound)
-
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-	defer cancel()
-	req := &transport.Request{
-		Caller:    "somecaller",
-		Service:   "someservice",
-		Encoding:  raw.Encoding,
-		Procedure: "hello",
-		Body:      bytes.NewReader([]byte{1, 2, 3}),
-	}
-
-	o.EXPECT().CallOneway(ctx, req).Return(nil, nil)
-
-	got, err := wrappedO.CallOneway(ctx, req)
-	if assert.NoError(t, err) {
-		assert.Equal(t, nil, got)
-	}
-}
-
 func TestNilOutboundMiddleware(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -98,14 +73,6 @@ func TestNilOutboundMiddleware(t *testing.T) {
 		out.EXPECT().Start()
 
 		mw := middleware.ApplyUnaryOutbound(out, nil)
-		require.NoError(t, mw.Start())
-	})
-
-	t.Run("oneway", func(t *testing.T) {
-		out := transporttest.NewMockOnewayOutbound(ctrl)
-		out.EXPECT().Start()
-
-		mw := middleware.ApplyOnewayOutbound(out, nil)
 		require.NoError(t, mw.Start())
 	})
 }
@@ -118,28 +85,6 @@ func TestOutboundMiddleware(t *testing.T) {
 		out := transporttest.NewMockUnaryOutbound(ctrl)
 		mw := middlewaretest.NewMockUnaryOutbound(ctrl)
 		outWithMW := middleware.ApplyUnaryOutbound(out, mw)
-
-		// start
-		out.EXPECT().Start().Return(nil)
-		assert.NoError(t, outWithMW.Start(), "could not start outbound")
-
-		// transports
-		out.EXPECT().Transports()
-		outWithMW.Transports()
-
-		// is running
-		out.EXPECT().IsRunning().Return(true)
-		assert.True(t, outWithMW.IsRunning(), "expected outbound to be running")
-
-		// stop
-		out.EXPECT().Stop().Return(nil)
-		assert.NoError(t, outWithMW.Stop(), "unexpected error stopping outbound")
-	})
-
-	t.Run("oneway", func(t *testing.T) {
-		out := transporttest.NewMockOnewayOutbound(ctrl)
-		mw := middlewaretest.NewMockOnewayOutbound(ctrl)
-		outWithMW := middleware.ApplyOnewayOutbound(out, mw)
 
 		// start
 		out.EXPECT().Start().Return(nil)
