@@ -82,9 +82,6 @@ generate_stringer ConnectionStatus ./api/peer
 generate_stringer State ./pkg/lifecycle
 generate_stringer Type ./api/transport
 
-thriftrw --plugin=yarpc --out=internal/crossdock/thrift internal/crossdock/thrift/echo.thrift
-thriftrw --plugin=yarpc --out=internal/crossdock/thrift internal/crossdock/thrift/oneway.thrift
-thriftrw --plugin=yarpc --out=internal/crossdock/thrift internal/crossdock/thrift/gauntlet.thrift
 thriftrw --plugin=yarpc --out=internal/examples/thrift-oneway internal/examples/thrift-oneway/sink.thrift
 thriftrw --plugin=yarpc --out=internal/examples/thrift-hello/hello internal/examples/thrift-hello/hello/echo.thrift
 thriftrw --plugin=yarpc --out=internal/examples/thrift-keyvalue/keyvalue internal/examples/thrift-keyvalue/keyvalue/kv.thrift
@@ -95,14 +92,8 @@ thriftrw --no-recurse --plugin=yarpc --out=encoding/thrift/thriftrw-plugin-yarpc
 thriftrw --no-recurse --plugin=yarpc --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic.thrift
 thriftrw --no-recurse --plugin="yarpc --sanitize-tchannel" --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather.thrift
 
-thrift-gen --generateThrift --outputDir internal/crossdock/thrift/gen-go --inputFile internal/crossdock/thrift/echo.thrift
-thrift-gen --generateThrift --outputDir internal/crossdock/thrift/gen-go --inputFile internal/crossdock/thrift/gauntlet_tchannel.thrift | strip_thrift_warnings
-
-thrift --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift --out internal/crossdock/thrift/gen-go internal/crossdock/thrift/gauntlet_apache.thrift | strip_thrift_warnings
-
 protoc_go yarpcproto/yarpc.proto
 protoc_all internal/examples/protobuf/examplepb/example.proto
-protoc_all internal/crossdock/crossdockpb/crossdock.proto
 protoc_all \
   encoding/protobuf/protoc-gen-yarpc-go/internal/testing/dep.proto \
   encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto \
@@ -113,13 +104,7 @@ ragel -Z -G2 -o internal/interpolate/parse.go internal/interpolate/parse.rl
 gofmt -s -w internal/interpolate/parse.go
 generated_by_ragel internal/interpolate/parse.go
 
-touch internal/crossdock/thrift/gen-go/echo/.nocover
-touch internal/crossdock/thrift/gen-go/gauntlet_apache/.nocover
-touch internal/crossdock/thrift/gen-go/gauntlet_tchannel/.nocover
 touch yarpcproto/.nocover
-
-rm -rf internal/crossdock/thrift/gen-go/gauntlet_apache/second_service-remote # generated and not needed
-rm -rf internal/crossdock/thrift/gen-go/gauntlet_apache/thrift_test-remote # generated and not needed
 
 etc/bin/update-licenses.sh
 etc/bin/generate-cover-ignore.sh
