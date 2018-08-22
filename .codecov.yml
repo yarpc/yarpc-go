@@ -72,4 +72,3 @@ ignore:
  - /internal/examples/thrift-keyvalue/keyvalue/server/
  - /internal/service-test/
  - /internal/testutils/
- - /serialize/internal/
