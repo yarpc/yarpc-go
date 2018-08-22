@@ -236,7 +236,7 @@ func Benchmark_HTTP_NetHTTPToNetHTTP(b *testing.B) {
 }
 
 func Benchmark_TChannel_YARPCToYARPC(b *testing.B) {
-	serverTChannel, err := ytchannel.NewChannelTransport(ytchannel.ServiceName("server"))
+	serverTChannel, err := ytchannel.NewTransport(ytchannel.ServiceName("server"))
 	require.NoError(b, err)
 
 	serverCfg := yarpc.Config{
@@ -244,7 +244,7 @@ func Benchmark_TChannel_YARPCToYARPC(b *testing.B) {
 		Inbounds: yarpc.Inbounds{serverTChannel.NewInbound()},
 	}
 
-	clientTChannel, err := ytchannel.NewChannelTransport(ytchannel.ServiceName("client"))
+	clientTChannel, err := ytchannel.NewTransport(ytchannel.ServiceName("client"))
 	require.NoError(b, err)
 
 	// no defer close on channels because YARPC will take care of that
@@ -277,7 +277,7 @@ func Benchmark_TChannel_YARPCToTChannel(b *testing.B) {
 	serverCh.Register(traw.Wrap(tchannelEcho{t: b}), "echo")
 	require.NoError(b, serverCh.ListenAndServe(":0"), "failed to start up TChannel")
 
-	clientTChannel, err := ytchannel.NewChannelTransport(ytchannel.ServiceName("client"))
+	clientTChannel, err := ytchannel.NewTransport(ytchannel.ServiceName("client"))
 	require.NoError(b, err)
 
 	clientCfg := yarpc.Config{
@@ -296,7 +296,7 @@ func Benchmark_TChannel_YARPCToTChannel(b *testing.B) {
 }
 
 func Benchmark_TChannel_TChannelToYARPC(b *testing.B) {
-	tchannelTransport, err := ytchannel.NewChannelTransport(ytchannel.ServiceName("server"))
+	tchannelTransport, err := ytchannel.NewTransport(ytchannel.ServiceName("server"))
 	require.NoError(b, err)
 
 	serverCfg := yarpc.Config{

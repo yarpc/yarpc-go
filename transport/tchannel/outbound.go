@@ -22,10 +22,12 @@ package tchannel
 
 import (
 	"context"
+	"io"
 
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/iopool"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -208,7 +210,52 @@ func (o *Outbound) Stop() error {
 	return o.once.Stop(o.chooser.Stop)
 }
 
-// IsRunning returns whether the ChannelOutbound is running.
+// IsRunning returns whether the Outbound is running.
 func (o *Outbound) IsRunning() bool {
 	return o.once.IsRunning()
+}
+
+func writeBody(body io.Reader, call *tchannel.OutboundCall) error {
+	w, err := call.Arg3Writer()
+	if err != nil {
+		return err
+	}
+
+	if _, err := iopool.Copy(w, body); err != nil {
+		return err
+	}
+
+	return w.Close()
+}
+
+// ServiceHeaderKey is internal key used by YARPC, we need to remove it before give response to client
+// only does verification when there is a response service header.
+func checkServiceMatchAndDeleteHeaderKey(reqSvcName string, resHeaders transport.Headers) (bool, string) {
+	if resSvcName, ok := resHeaders.Get(ServiceHeaderKey); ok {
+		resHeaders.Del(ServiceHeaderKey)
+		return reqSvcName == resSvcName, resSvcName
+	}
+	return true, ""
+}
+
+func getResponseErrorAndDeleteHeaderKeys(headers transport.Headers) error {
+	defer func() {
+		headers.Del(ErrorCodeHeaderKey)
+		headers.Del(ErrorNameHeaderKey)
+		headers.Del(ErrorMessageHeaderKey)
+	}()
+	errorCodeString, ok := headers.Get(ErrorCodeHeaderKey)
+	if !ok {
+		return nil
+	}
+	var errorCode yarpcerrors.Code
+	if err := errorCode.UnmarshalText([]byte(errorCodeString)); err != nil {
+		return err
+	}
+	if errorCode == yarpcerrors.CodeOK {
+		return yarpcerrors.Newf(yarpcerrors.CodeInternal, "got CodeOK from error header")
+	}
+	errorName, _ := headers.Get(ErrorNameHeaderKey)
+	errorMessage, _ := headers.Get(ErrorMessageHeaderKey)
+	return intyarpcerrors.NewWithNamef(errorCode, errorName, errorMessage)
 }

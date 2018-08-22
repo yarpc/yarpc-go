@@ -21,7 +21,6 @@
 package tchannel
 
 import (
-	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -82,10 +81,6 @@ func NewTransport(opts ...TransportOption) (*Transport, error) {
 
 	for _, opt := range opts {
 		opt(&options)
-	}
-
-	if options.ch != nil {
-		return nil, fmt.Errorf("NewTransport does not accept WithChannel, use NewChannelTransport")
 	}
 
 	return options.newTransport(), nil

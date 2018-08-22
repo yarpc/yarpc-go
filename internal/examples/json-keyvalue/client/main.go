@@ -98,7 +98,7 @@ func do() error {
 	}
 
 	httpTransport := http.NewTransport()
-	tchannelTransport, err := tchannel.NewChannelTransport(tchannel.ServiceName("keyvalue-client"))
+	tchannelTransport, err := tchannel.NewTransport(tchannel.ServiceName("keyvalue-client"))
 	if err != nil {
 		return err
 	}

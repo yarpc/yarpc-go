@@ -59,7 +59,7 @@ func (i *Inbound) Transports() []transport.Transport {
 }
 
 // Start starts this Inbound. Note that this does not start listening for
-// connections; that occurs when you start the underlying ChannelTransport is
+// connections; that occurs when you start the underlying Transport is
 // started.
 func (i *Inbound) Start() error {
 	return i.once.Start(func() error {

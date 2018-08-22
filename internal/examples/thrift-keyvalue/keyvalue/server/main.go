@@ -89,7 +89,7 @@ func do() error {
 			}
 		}()
 	case "tchannel":
-		tchannelTransport, err := tchannel.NewChannelTransport(
+		tchannelTransport, err := tchannel.NewTransport(
 			tchannel.ServiceName("keyvalue"),
 			tchannel.ListenAddr("127.0.0.1:28945"),
 		)

@@ -30,8 +30,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/uber/tchannel-go"
-	"github.com/uber/tchannel-go/testutils"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/raw"
@@ -112,32 +110,25 @@ func (tt tchannelTransport) Name() string {
 }
 
 func (tt tchannelTransport) WithRouter(r transport.Router, f func(transport.UnaryOutbound)) {
-	serverOpts := testutils.NewOpts().SetServiceName(testService)
-	clientOpts := testutils.NewOpts().SetServiceName(testCaller)
-	testutils.WithServer(tt.t, serverOpts, func(ch *tchannel.Channel, hostPort string) {
-		ix, err := tch.NewChannelTransport(tch.WithChannel(ch))
-		require.NoError(tt.t, err)
+	ix, err := tch.NewTransport(tch.ServiceName(testService))
+	require.NoError(tt.t, err)
 
-		i := ix.NewInbound()
-		i.SetRouter(r)
-		require.NoError(tt.t, ix.Start(), "failed to start inbound transport")
-		require.NoError(tt.t, i.Start(), "failed to start inbound")
+	i := ix.NewInbound()
+	i.SetRouter(r)
+	require.NoError(tt.t, ix.Start(), "failed to start inbound transport")
+	require.NoError(tt.t, i.Start(), "failed to start inbound")
 
-		defer i.Stop()
-		// ^ the server is already listening so this will just set up the
-		// handler.
+	defer i.Stop()
 
-		client := testutils.NewClient(tt.t, clientOpts)
-		ox, err := tch.NewChannelTransport(tch.WithChannel(client))
-		require.NoError(tt.t, err)
+	ox, err := tch.NewTransport(tch.ServiceName(testCaller))
+	require.NoError(tt.t, err)
 
-		o := ox.NewSingleOutbound(hostPort)
-		require.NoError(tt.t, ox.Start(), "failed to start outbound transport")
-		require.NoError(tt.t, o.Start(), "failed to start outbound")
-		defer o.Stop()
+	o := ox.NewSingleOutbound(ix.ListenAddr())
+	require.NoError(tt.t, ox.Start(), "failed to start outbound transport")
+	require.NoError(tt.t, o.Start(), "failed to start outbound")
+	defer o.Stop()
 
-		f(o)
-	})
+	f(o)
 }
 
 // grpcTransport implements a roundTripTransport for gRPC.

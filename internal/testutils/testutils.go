@@ -166,7 +166,7 @@ func NewClientDispatcher(transportType TransportType, config *DispatcherConfig, 
 	var unaryOutbound transport.UnaryOutbound
 	switch transportType {
 	case TransportTypeTChannel:
-		tchannelTransport, err := tchannel.NewChannelTransport(tchannel.ServiceName(config.GetServiceName()), tchannel.Logger(logger))
+		tchannelTransport, err := tchannel.NewTransport(tchannel.ServiceName(config.GetServiceName()), tchannel.Logger(logger))
 		if err != nil {
 			return nil, err
 		}
@@ -205,7 +205,7 @@ func NewServerDispatcher(procedures []transport.Procedure, config *DispatcherCon
 	if err != nil {
 		return nil, err
 	}
-	tchannelTransport, err := tchannel.NewChannelTransport(
+	tchannelTransport, err := tchannel.NewTransport(
 		tchannel.ServiceName(config.GetServiceName()),
 		tchannel.ListenAddr(fmt.Sprintf("127.0.0.1:%d", tchannelPort)),
 		tchannel.Logger(logger),

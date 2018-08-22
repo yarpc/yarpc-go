@@ -43,3 +43,11 @@ func toYARPCError(req *transport.Request, err error) error {
 	}
 	return yarpcerrors.UnknownErrorf("received unknown error calling service: %q, procedure: %q, err: %s", req.Service, req.Procedure, err.Error())
 }
+
+func fromSystemError(err tchannel.SystemError) error {
+	code, ok := _tchannelCodeToCode[err.Code()]
+	if !ok {
+		return yarpcerrors.Newf(yarpcerrors.CodeInternal, "got tchannel.SystemError %v which did not have a matching YARPC code", err)
+	}
+	return yarpcerrors.Newf(code, err.Message())
+}

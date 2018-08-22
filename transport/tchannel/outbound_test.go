@@ -81,8 +81,10 @@ func TestOutboundHeaders(t *testing.T) {
 				assert.NoError(t, err, "failed to write response")
 			}))
 
-		x, err := NewChannelTransport(ServiceName("foo"))
+		x, err := NewTransport(ServiceName("foo"))
 		require.NoError(t, err)
+		require.NoError(t, x.Start(), "failed to start transport")
+
 		out := x.NewSingleOutbound(hostport)
 		require.NoError(t, err)
 		require.NoError(t, out.Start(), "failed to start outbound")

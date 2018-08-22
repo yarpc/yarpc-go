@@ -23,17 +23,16 @@
 //
 // Usage
 //
-// A ChannelTransport must be constructed to use this transport. You can
-// provide an existing TChannel Channel to construct the Channel transport.
+// A Transport must be constructed to use this transport.
 //
 // 	ch := getTChannelChannel()
-// 	tchannelTransport, err := tchannel.NewChannelTransport(tchannel.WithChannel(ch))
+// 	tchannelTransport, err := tchannel.NewTransport(tchannel.WithChannel(ch))
 //
 // Alternatively, you can let YARPC own and manage the TChannel Channel for
 // you by providing the service name. Note that this is the name of the local
 // service, not the name of the service you will be sending requests to.
 //
-// 	tchannelTransport, err := tchannel.NewChannelTransport(tchannel.ServiceName("myservice"))
+// 	tchannelTransport, err := tchannel.NewTransport(tchannel.ServiceName("myservice"))
 //
 // To serve a YARPC application over TChannel, pass a TChannel inbound in your
 // yarpc.Config.

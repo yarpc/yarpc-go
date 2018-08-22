@@ -48,7 +48,7 @@ import (
 
 func basicConfig(t testing.TB) Config {
 	httpTransport := http.NewTransport()
-	tchannelTransport, err := tchannel.NewChannelTransport(tchannel.ServiceName("test"))
+	tchannelTransport, err := tchannel.NewTransport(tchannel.ServiceName("test"))
 	require.NoError(t, err)
 
 	return Config{
@@ -131,7 +131,7 @@ func TestInboundsOrderIsMaintained(t *testing.T) {
 	dispatcher := basicDispatcher(t)
 
 	// Order must be maintained
-	_, ok := dispatcher.Inbounds()[0].(*tchannel.ChannelInbound)
+	_, ok := dispatcher.Inbounds()[0].(*tchannel.Inbound)
 	assert.True(t, ok, "first inbound must be TChannel")
 
 	_, ok = dispatcher.Inbounds()[1].(*http.Inbound)
@@ -146,8 +146,9 @@ func TestInboundsOrderAfterStart(t *testing.T) {
 
 	inbounds := dispatcher.Inbounds()
 
-	tchInbound := inbounds[0].(*tchannel.ChannelInbound)
-	assert.NotEqual(t, "0.0.0.0:0", tchInbound.Channel().PeerInfo().HostPort)
+	tchInbound := inbounds[0].(*tchannel.Inbound)
+	assert.NotEqual(t, "0.0.0.0:0",
+		tchInbound.Transports()[0].(*tchannel.Transport).ListenAddr())
 
 	httpInbound := inbounds[1].(*http.Inbound)
 	assert.NotNil(t, httpInbound.Addr(), "expected an HTTP addr")
