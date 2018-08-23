@@ -1,19 +1,10 @@
-hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-08-23T15:01:54.225151113Z
+hash: b077a22fc1b97d6aa93b7308ee01249d775419561493d0831381c05af5dbe865
+updated: 2018-08-23T09:18:35.553945831-07:00
 imports:
-- name: github.com/apache/thrift
-  version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
-  subpackages:
-  - lib/go/thrift
 - name: github.com/beorn7/perks
   version: 3a771d992973f24aa725d07868b467d1ddfceafb
   subpackages:
   - quantile
-- name: github.com/crossdock/crossdock-go
-  version: 049aabb0122b03bc9bd30cab8f3f91fb60166361
-  subpackages:
-  - assert
-  - require
 - name: github.com/davecgh/go-spew
   version: 8991bc29aa16c548c550c7ff78260e27b9ab7c73
   subpackages:
@@ -86,38 +77,18 @@ imports:
   version: 1ea20fb1cbb1cc08cbd0d913a96dead89aa18289
   subpackages:
   - utils
-- name: github.com/uber-go/mapdecode
-  version: 718b4994083e432669f44a00174c5f1bcdb1434d
-  subpackages:
-  - internal/mapstructure
 - name: github.com/uber-go/tally
   version: ff17f3c43c065c3c2991f571e740eee43ea3a14a
-- name: github.com/uber/jaeger-client-go
-  version: b043381d944715b469fd6b37addfd30145ca1758
-  subpackages:
-  - internal/baggage
-  - internal/spanlog
-  - internal/throttler
-  - log
-  - thrift
-  - thrift-gen/agent
-  - thrift-gen/jaeger
-  - thrift-gen/sampling
-  - thrift-gen/zipkincore
-  - utils
 - name: github.com/uber/tchannel-go
   version: 7f5c12c66261f3ac3c5dde959d65eed59e3b63af
   subpackages:
   - internal/argreader
-  - json
   - raw
   - relay
   - relay/relaytest
   - testutils
   - testutils/goroutines
   - testutils/testreader
-  - thrift
-  - thrift/gen-go/meta
   - tnet
   - tos
   - trand
@@ -177,7 +148,6 @@ imports:
   subpackages:
   - bpf
   - context
-  - context/ctxhttp
   - http/httpguts
   - http2
   - http2/hpack
@@ -201,7 +171,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 447b503c8ba6e20bc730585499fc01c81a78c621
+  version: 0bd7993ac0faaa363ea801cf51c8a3c140ea586b
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
@@ -241,16 +211,10 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
 testImports:
-- name: github.com/codahale/hdrhistogram
-  version: 3a0bb77429bd3a61596f5e8a3172445844342120
 - name: github.com/kisielk/errcheck
   version: 1787c4bee836470bf45018cfbc783650db3c6501
 - name: github.com/kisielk/gotool
   version: 80517062f582ea3340cd4baf70e86d539ae7d84d
-- name: github.com/uber/jaeger-lib
-  version: ed3a127ec5fef7ae9ea95b01b542c47fbd999ce5
-  subpackages:
-  - metrics
 - name: go.uber.org/tools
   version: ce2550dad7144b81ae2f67dc5e55597643f6902b
   subpackages:
