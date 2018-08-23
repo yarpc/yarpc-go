@@ -53,6 +53,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/protobuf"
+	"go.uber.org/yarpc/pkg/procedure"
 	rpb "go.uber.org/yarpc/transport/grpc/reflection/grpc_reflection_v1alpha"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -87,6 +88,9 @@ func (s *serverReflectionServer) getSymbols() (svcNames []string, symbolIndex ma
 		s.serviceNames = make([]string, 0)
 		processed := map[string]struct{}{}
 		for _, p := range s.s.Router().Procedures() {
+			if p.Encoding != protobuf.Encoding {
+				continue
+			}
 			var h protobuf.ProtoHandler
 			var ok bool
 			switch p.HandlerSpec.Type() {
@@ -101,7 +105,8 @@ func (s *serverReflectionServer) getSymbols() (svcNames []string, symbolIndex ma
 					p.HandlerSpec.Type(), p.Service, p.Name))
 			}
 			if ok && h != nil {
-				s.serviceNames = append(s.serviceNames, p.Service)
+				protoService, _ := procedure.FromName(p.Name)
+				s.serviceNames = append(s.serviceNames, protoService)
 				fdec := h.FileDescriptorBytes()
 				fd, err := decodeFileDesc(fdec)
 				if err != nil {

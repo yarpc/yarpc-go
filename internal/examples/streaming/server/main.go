@@ -31,6 +31,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/examples/streaming"
 	"go.uber.org/yarpc/transport/grpc"
+	"go.uber.org/yarpc/transport/grpc/reflection"
 )
 
 type handler struct {
@@ -93,6 +94,7 @@ func do() error {
 	handler := &handler{}
 
 	dispatcher.Register(streaming.BuildHelloYARPCProcedures(handler))
+	reflection.Register(dispatcher)
 
 	if err := dispatcher.Start(); err != nil {
 		return err

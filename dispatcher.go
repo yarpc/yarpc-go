@@ -288,32 +288,33 @@ func (d *Dispatcher) InboundMiddleware() InboundMiddleware {
 // requests to these procedures will be routed to the handlers specified in
 // the given Procedures.
 func (d *Dispatcher) Register(rs []transport.Procedure) {
-	procedures := make([]transport.Procedure, 0, len(rs))
+	d.table.Register(rs)
+	// procedures := make([]transport.Procedure, 0, len(rs))
 
-	for _, r := range rs {
-		switch r.HandlerSpec.Type() {
-		case transport.Unary:
-			h := middleware.ApplyUnaryInbound(r.HandlerSpec.Unary(),
-				d.inboundMiddleware.Unary)
-			r.HandlerSpec = transport.NewUnaryHandlerSpec(h)
-		case transport.Oneway:
-			h := middleware.ApplyOnewayInbound(r.HandlerSpec.Oneway(),
-				d.inboundMiddleware.Oneway)
-			r.HandlerSpec = transport.NewOnewayHandlerSpec(h)
-		case transport.Streaming:
-			h := middleware.ApplyStreamInbound(r.HandlerSpec.Stream(),
-				d.inboundMiddleware.Stream)
-			r.HandlerSpec = transport.NewStreamHandlerSpec(h)
-		default:
-			panic(fmt.Sprintf("unknown handler type %q for service %q, procedure %q",
-				r.HandlerSpec.Type(), r.Service, r.Name))
-		}
+	// for _, r := range rs {
+	// 	switch r.HandlerSpec.Type() {
+	// 	case transport.Unary:
+	// 		h := middleware.ApplyUnaryInbound(r.HandlerSpec.Unary(),
+	// 			d.inboundMiddleware.Unary)
+	// 		r.HandlerSpec = transport.NewUnaryHandlerSpec(h)
+	// 	case transport.Oneway:
+	// 		h := middleware.ApplyOnewayInbound(r.HandlerSpec.Oneway(),
+	// 			d.inboundMiddleware.Oneway)
+	// 		r.HandlerSpec = transport.NewOnewayHandlerSpec(h)
+	// 	case transport.Streaming:
+	// 		h := middleware.ApplyStreamInbound(r.HandlerSpec.Stream(),
+	// 			d.inboundMiddleware.Stream)
+	// 		r.HandlerSpec = transport.NewStreamHandlerSpec(h)
+	// 	default:
+	// 		panic(fmt.Sprintf("unknown handler type %q for service %q, procedure %q",
+	// 			r.HandlerSpec.Type(), r.Service, r.Name))
+	// 	}
 
-		procedures = append(procedures, r)
-		d.log.Info("Registration succeeded.", zap.Object("registeredProcedure", r))
-	}
+	// 	procedures = append(procedures, r)
+	// 	d.log.Info("Registration succeeded.", zap.Object("registeredProcedure", r))
+	// }
 
-	d.table.Register(procedures)
+	// d.table.Register(procedures)
 }
 
 // Start starts the Dispatcher, allowing it to accept and process new incoming

@@ -144,3 +144,11 @@ type ReflectionInfo struct {
 func (u unaryHandler) FileDescriptorBytes() []byte {
 	return u.ReflectionFileDescriptorBytes
 }
+
+func (o onewayHandler) FileDescriptorBytes() []byte {
+	return o.ReflectionFileDescriptorBytes
+}
+
+func (s streamHandler) FileDescriptorBytes() []byte {
+	return s.ReflectionFileDescriptorBytes
+}

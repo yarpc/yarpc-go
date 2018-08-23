@@ -117,6 +117,9 @@ func BuildHelloYARPCProcedures(server HelloYARPCServer) []transport.Procedure {
 					MethodName: "HelloUnary",
 					Handler: protobuf.NewUnaryHandler(
 						protobuf.UnaryHandlerParams{
+							ReflectionInfo: protobuf.ReflectionInfo{
+								ReflectionFileDescriptorBytes: fileDescriptor_stream_55ca018fa61cd022,
+							},
 							Handle:     handler.HelloUnary,
 							NewRequest: newHelloServiceHelloUnaryYARPCRequest,
 						},
@@ -129,6 +132,9 @@ func BuildHelloYARPCProcedures(server HelloYARPCServer) []transport.Procedure {
 					MethodName: "HelloThere",
 					Handler: protobuf.NewStreamHandler(
 						protobuf.StreamHandlerParams{
+							ReflectionInfo: protobuf.ReflectionInfo{
+								ReflectionFileDescriptorBytes: fileDescriptor_stream_55ca018fa61cd022,
+							},
 							Handle: handler.HelloThere,
 						},
 					),
@@ -138,6 +144,9 @@ func BuildHelloYARPCProcedures(server HelloYARPCServer) []transport.Procedure {
 					MethodName: "HelloInStream",
 					Handler: protobuf.NewStreamHandler(
 						protobuf.StreamHandlerParams{
+							ReflectionInfo: protobuf.ReflectionInfo{
+								ReflectionFileDescriptorBytes: fileDescriptor_stream_55ca018fa61cd022,
+							},
 							Handle: handler.HelloInStream,
 						},
 					),
@@ -147,6 +156,9 @@ func BuildHelloYARPCProcedures(server HelloYARPCServer) []transport.Procedure {
 					MethodName: "HelloOutStream",
 					Handler: protobuf.NewStreamHandler(
 						protobuf.StreamHandlerParams{
+							ReflectionInfo: protobuf.ReflectionInfo{
+								ReflectionFileDescriptorBytes: fileDescriptor_stream_55ca018fa61cd022,
+							},
 							Handle: handler.HelloOutStream,
 						},
 					),
