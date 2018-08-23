@@ -32,13 +32,15 @@ import (
 type unaryHandler struct {
 	handle     func(context.Context, proto.Message) (proto.Message, error)
 	newRequest func() proto.Message
+	ReflectionInfo
 }
 
 func newUnaryHandler(
 	handle func(context.Context, proto.Message) (proto.Message, error),
 	newRequest func() proto.Message,
+	ReflectionInfo ReflectionInfo,
 ) *unaryHandler {
-	return &unaryHandler{handle, newRequest}
+	return &unaryHandler{handle, newRequest, ReflectionInfo}
 }
 
 func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.Request, responseWriter transport.ResponseWriter) error {
@@ -76,13 +78,15 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 type onewayHandler struct {
 	handleOneway func(context.Context, proto.Message) error
 	newRequest   func() proto.Message
+	ReflectionInfo
 }
 
 func newOnewayHandler(
 	handleOneway func(context.Context, proto.Message) error,
 	newRequest func() proto.Message,
+	ReflectionInfo ReflectionInfo,
 ) *onewayHandler {
-	return &onewayHandler{handleOneway, newRequest}
+	return &onewayHandler{handleOneway, newRequest, ReflectionInfo}
 }
 
 func (o *onewayHandler) HandleOneway(ctx context.Context, transportRequest *transport.Request) error {
@@ -95,10 +99,14 @@ func (o *onewayHandler) HandleOneway(ctx context.Context, transportRequest *tran
 
 type streamHandler struct {
 	handle func(*ServerStream) error
+	ReflectionInfo
 }
 
-func newStreamHandler(handle func(*ServerStream) error) *streamHandler {
-	return &streamHandler{handle}
+func newStreamHandler(
+	handle func(*ServerStream) error,
+	ReflectionInfo ReflectionInfo,
+) *streamHandler {
+	return &streamHandler{handle, ReflectionInfo}
 }
 
 func (s *streamHandler) HandleStream(stream *transport.ServerStream) error {
@@ -126,4 +134,13 @@ func getProtoRequest(ctx context.Context, transportRequest *transport.Request, n
 		return nil, nil, nil, errors.RequestBodyDecodeError(transportRequest, err)
 	}
 	return ctx, call, request, nil
+}
+
+// ReflectionInfo contains info required for reflection
+type ReflectionInfo struct {
+	ReflectionFileDescriptorBytes []byte
+}
+
+func (u unaryHandler) FileDescriptorBytes() []byte {
+	return u.ReflectionFileDescriptorBytes
 }

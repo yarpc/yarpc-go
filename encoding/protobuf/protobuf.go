@@ -174,36 +174,44 @@ func NewStreamClient(params ClientParams) StreamClient {
 	return newClient(params.ServiceName, params.ClientConfig, params.Options...)
 }
 
+// ProtoHandler facilitates reflection on this endpoint
+type ProtoHandler interface {
+	FileDescriptorBytes() []byte
+}
+
 // UnaryHandlerParams contains the parameters for creating a new UnaryHandler.
 type UnaryHandlerParams struct {
+	ReflectionInfo
 	Handle     func(context.Context, proto.Message) (proto.Message, error)
 	NewRequest func() proto.Message
 }
 
 // NewUnaryHandler returns a new UnaryHandler.
 func NewUnaryHandler(params UnaryHandlerParams) transport.UnaryHandler {
-	return newUnaryHandler(params.Handle, params.NewRequest)
+	return newUnaryHandler(params.Handle, params.NewRequest, params.ReflectionInfo)
 }
 
 // OnewayHandlerParams contains the parameters for creating a new OnewayHandler.
 type OnewayHandlerParams struct {
+	ReflectionInfo
 	Handle     func(context.Context, proto.Message) error
 	NewRequest func() proto.Message
 }
 
 // NewOnewayHandler returns a new OnewayHandler.
 func NewOnewayHandler(params OnewayHandlerParams) transport.OnewayHandler {
-	return newOnewayHandler(params.Handle, params.NewRequest)
+	return newOnewayHandler(params.Handle, params.NewRequest, params.ReflectionInfo)
 }
 
 // StreamHandlerParams contains the parameters for creating a new StreamHandler.
 type StreamHandlerParams struct {
+	ReflectionInfo
 	Handle func(*ServerStream) error
 }
 
 // NewStreamHandler returns a new StreamHandler.
 func NewStreamHandler(params StreamHandlerParams) transport.StreamHandler {
-	return newStreamHandler(params.Handle)
+	return newStreamHandler(params.Handle, params.ReflectionInfo)
 }
 
 // ClientBuilderOptions returns ClientOptions that yarpc.InjectClients should use for a
