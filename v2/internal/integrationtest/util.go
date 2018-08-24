@@ -20,217 +20,200 @@
 
 package integrationtest
 
-import (
-	"bytes"
-	"context"
-	"fmt"
-	"sync"
-	"testing"
-	"time"
+// const (
+// 	maxAttempts        = 1000
+// 	concurrentAttempts = 100
+// )
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/internal/testtime"
-	"go.uber.org/yarpc/v2/yarpcpeer"
-	"go.uber.org/yarpc/v2/yarpcraw"
-	"go.uber.org/yarpc/v2/yarpcroundrobin"
-)
+// // TransportSpec specifies how to create test clients and servers for a transport.
+// type TransportSpec struct {
+// 	NewServerTransport func(t *testing.T, addr string) yarpcpeer.Transport
+// 	NewClientTransport func(t *testing.T) yarpcpeer.Transport
+// 	NewInbound         func(trans yarpcpeer.Transport, addr string, router yarpctransport.Router) func()
+// 	NewUnaryOutbound   func(trans yarpcpeer.Transport, pc yarpcpeer.Chooser) yarpctransport.UnaryOutbound
+// 	Identify           func(addr string) yarpcpeer.Identifier
+// 	Addr               func(trans yarpcpeer.Transport, inbound yarpctransport.Inbound) string
+// }
 
-const (
-	maxAttempts        = 1000
-	concurrentAttempts = 100
-)
+// // Test runs reusable tests with the transport spec.
+// func (s TransportSpec) Test(t *testing.T) {
+// 	t.Run("reuseConnRoundRobin", s.TestConcurrentClientsRoundRobin)
+// 	t.Run("backoffConnRoundRobin", s.TestBackoffConnRoundRobin)
+// 	t.Run("connectAndStopRoundRobin", s.TestConnectAndStopRoundRobin)
+// }
 
-// TransportSpec specifies how to create test clients and servers for a transport.
-type TransportSpec struct {
-	NewServerTransport func(t *testing.T, addr string) yarpcpeer.Transport
-	NewClientTransport func(t *testing.T) yarpcpeer.Transport
-	NewInbound         func(trans yarpcpeer.Transport, addr string, router yarpctransport.Router) yarpctransport.Inbound
-	NewUnaryOutbound   func(trans yarpcpeer.Transport, pc yarpcpeer.Chooser) yarpctransport.UnaryOutbound
-	Identify           func(addr string) yarpcpeer.Identifier
-	Addr               func(trans yarpcpeer.Transport, inbound yarpctransport.Inbound) string
-}
+// // NewClient returns a running dispatcher and a raw client for the echo
+// // procedure.
+// func (s TransportSpec) NewClient(t *testing.T, addrs []string) (yarpcraw.Client, func()) {
+// 	ids := make([]yarpcpeer.Identifier, len(addrs))
+// 	for i, addr := range addrs {
+// 		ids[i] = s.Identify(addr)
+// 	}
 
-// Test runs reusable tests with the transport spec.
-func (s TransportSpec) Test(t *testing.T) {
-	t.Run("reuseConnRoundRobin", s.TestConcurrentClientsRoundRobin)
-	t.Run("backoffConnRoundRobin", s.TestBackoffConnRoundRobin)
-	t.Run("connectAndStopRoundRobin", s.TestConnectAndStopRoundRobin)
-}
+// 	trans := s.NewClientTransport(t)
 
-// NewClient returns a running dispatcher and a raw client for the echo
-// procedure.
-func (s TransportSpec) NewClient(t *testing.T, addrs []string) (yarpcraw.Client, func()) {
-	ids := make([]yarpcpeer.Identifier, len(addrs))
-	for i, addr := range addrs {
-		ids[i] = s.Identify(addr)
-	}
+// 	pl := yarpcroundrobin.New(trans)
+// 	pl.Update(yarpcpeer.ListUpdates{
+// 		Additions: yarpcpeer.Addresses(addrs),
+// 	})
+// 	pl.Start()
 
-	trans := s.NewClientTransport(t)
+// 	ob := s.NewUnaryOutbound(trans, pl)
+// 	rawClient := yarpcraw.New(&yarpctransport.OutboundConfig{
+// 		CallerName: "service",
+// 		Outbounds: &yarpctransport.Outbounds{
+// 			ServiceName: "service",
+// 			Unary:       ob,
+// 		},
+// 	})
 
-	pl := yarpcroundrobin.New(trans)
-	pl.Update(yarpcpeer.ListUpdates{
-		Additions: yarpcpeer.Addresses(addrs),
-	})
-	pl.Start()
+// 	return rawClient, func() {
+// 		trans.Stop()
+// 		pl.Stop()
+// 	}
+// }
 
-	ob := s.NewUnaryOutbound(trans, pl)
-	rawClient := yarpcraw.New(&yarpctransport.OutboundConfig{
-		CallerName: "service",
-		Outbounds: &yarpctransport.Outbounds{
-			ServiceName: "service",
-			Unary:       ob,
-		},
-	})
+// // NewServer creates an echo server using the given inbound from any transport.
+// func (s TransportSpec) NewServer(t *testing.T, addr string) (string, func()) {
+// 	router := NewRouter()
+// 	Register(router)
+// 	trans := s.NewServerTransport(t, addr)
+// 	inbound := s.NewInbound(trans, addr)
+// 	require.NoError(t, inbound.Start(), "start inbound")
 
-	return rawClient, func() {
-		trans.Stop()
-		pl.Stop()
-	}
-}
+// 	return s.Addr(trans, inbound), func() {
+// 		require.NoError(t, inbound.Stop())
+// 	}
+// }
 
-// NewServer creates an echo server using the given inbound from any transport.
-func (s TransportSpec) NewServer(t *testing.T, addr string) (string, func()) {
-	router := NewRouter()
-	Register(router)
-	trans := s.NewServerTransport(t, addr)
-	inbound := s.NewInbound(trans, addr)
-	require.NoError(t, inbound.Start(), "start inbound")
+// // TestConnectAndStopRoundRobin is a test that any transport can apply to
+// // exercise a transport dropping connections if the transport is stopped before
+// // a pending request can complete.
+// func (s TransportSpec) TestConnectAndStopRoundRobin(t *testing.T) {
+// 	addr := "127.0.0.1:31172"
 
-	require.NoError(t, dispatcher.Start(), "start server dispatcher")
+// 	client, rawClient := s.NewClient(t, []string{addr})
 
-	return s.Addr(trans, inbound), func() {
-	}
-}
+// 	done := make(chan struct{})
+// 	go func() {
+// 		defer close(done)
+// 		ctx := context.Background()
+// 		ctx, cancel := context.WithTimeout(ctx, 50*testtime.Millisecond)
+// 		defer cancel()
+// 		assert.Error(t, Call(ctx, rawClient))
+// 	}()
 
-// TestConnectAndStopRoundRobin is a test that any transport can apply to
-// exercise a transport dropping connections if the transport is stopped before
-// a pending request can complete.
-func (s TransportSpec) TestConnectAndStopRoundRobin(t *testing.T) {
-	addr := "127.0.0.1:31172"
+// 	time.Sleep(10 * testtime.Millisecond)
+// 	assert.NoError(t, client.Stop())
 
-	client, rawClient := s.NewClient(t, []string{addr})
+// 	<-done
+// }
 
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		ctx := context.Background()
-		ctx, cancel := context.WithTimeout(ctx, 50*testtime.Millisecond)
-		defer cancel()
-		assert.Error(t, Call(ctx, rawClient))
-	}()
+// // TestConcurrentClientsRoundRobin is a reusable test that any transport can
+// // apply to cover connection reuse.
+// func (s TransportSpec) TestConcurrentClientsRoundRobin(t *testing.T) {
+// 	var wg sync.WaitGroup
+// 	count := concurrentAttempts
 
-	time.Sleep(10 * testtime.Millisecond)
-	assert.NoError(t, client.Stop())
+// 	server, addr := s.NewServer(t, ":0")
+// 	defer server.Stop()
 
-	<-done
-}
+// 	client, rawClient := s.NewClient(t, []string{addr})
+// 	defer client.Stop()
 
-// TestConcurrentClientsRoundRobin is a reusable test that any transport can
-// apply to cover connection reuse.
-func (s TransportSpec) TestConcurrentClientsRoundRobin(t *testing.T) {
-	var wg sync.WaitGroup
-	count := concurrentAttempts
+// 	wg.Add(count)
+// 	call := func() {
+// 		defer wg.Done()
+// 		ctx := context.Background()
+// 		ctx, cancel := context.WithTimeout(ctx, 150*testtime.Millisecond)
+// 		defer cancel()
+// 		assert.NoError(t, Call(ctx, rawClient))
+// 	}
+// 	for i := 0; i < count; i++ {
+// 		go call()
+// 		time.Sleep(10 * testtime.Millisecond)
+// 	}
 
-	server, addr := s.NewServer(t, ":0")
-	defer server.Stop()
+// 	wg.Wait()
+// }
 
-	client, rawClient := s.NewClient(t, []string{addr})
-	defer client.Stop()
+// // TestBackoffConnRoundRobin is a reusable test that any transport can apply to
+// // cover connection management backoff.
+// func (s TransportSpec) TestBackoffConnRoundRobin(t *testing.T) {
+// 	addr := "127.0.0.1:31782"
 
-	wg.Add(count)
-	call := func() {
-		defer wg.Done()
-		ctx := context.Background()
-		ctx, cancel := context.WithTimeout(ctx, 150*testtime.Millisecond)
-		defer cancel()
-		assert.NoError(t, Call(ctx, rawClient))
-	}
-	for i := 0; i < count; i++ {
-		go call()
-		time.Sleep(10 * testtime.Millisecond)
-	}
+// 	done := make(chan struct{})
+// 	go func() {
+// 		defer close(done)
 
-	wg.Wait()
-}
+// 		client, rawClient := s.NewClient(t, []string{addr})
+// 		defer client.Stop()
 
-// TestBackoffConnRoundRobin is a reusable test that any transport can apply to
-// cover connection management backoff.
-func (s TransportSpec) TestBackoffConnRoundRobin(t *testing.T) {
-	addr := "127.0.0.1:31782"
+// 		ctx := context.Background()
+// 		ctx, cancel := context.WithTimeout(ctx, testtime.Second)
+// 		defer cancel()
 
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
+// 		// Eventually succeeds, when the server comes online.
+// 		assert.NoError(t, Call(ctx, rawClient))
+// 	}()
 
-		client, rawClient := s.NewClient(t, []string{addr})
-		defer client.Stop()
+// 	// Give the client time to make multiple connection attempts.
+// 	time.Sleep(10 * testtime.Millisecond)
+// 	server, _ := s.NewServer(t, addr)
+// 	defer server.Stop()
 
-		ctx := context.Background()
-		ctx, cancel := context.WithTimeout(ctx, testtime.Second)
-		defer cancel()
+// 	<-done
+// }
 
-		// Eventually succeeds, when the server comes online.
-		assert.NoError(t, Call(ctx, rawClient))
-	}()
+// // Blast sends a blast of calls to the client and verifies that they do not
+// // err.
+// func Blast(ctx context.Context, t *testing.T, rawClient yarpcraw.Client) {
+// 	for i := 0; i < 10; i++ {
+// 		assert.NoError(t, Call(ctx, rawClient))
+// 	}
+// }
 
-	// Give the client time to make multiple connection attempts.
-	time.Sleep(10 * testtime.Millisecond)
-	server, _ := s.NewServer(t, addr)
-	defer server.Stop()
+// // CallUntilSuccess sends a request until it succeeds.
+// func CallUntilSuccess(t *testing.T, rawClient yarpcraw.Client, interval time.Duration) {
+// 	for i := 0; i < maxAttempts; i++ {
+// 		ctx := context.Background()
+// 		ctx, cancel := context.WithTimeout(ctx, interval)
+// 		err := Call(ctx, rawClient)
+// 		cancel()
+// 		if err == nil {
+// 			return
+// 		}
+// 	}
+// 	assert.Fail(t, "call until success failed multiple times")
+// }
 
-	<-done
-}
+// // Call sends an echo request to the client.
+// func Call(ctx context.Context, rawClient yarpcraw.Client) error {
+// 	ctx, cancel := context.WithTimeout(ctx, 100*testtime.Millisecond)
+// 	defer cancel()
+// 	res, err := rawClient.Call(ctx, "echo", []byte("hello"))
+// 	if err != nil {
+// 		return err
+// 	}
+// 	if !bytes.Equal(res, []byte("hello")) {
+// 		return fmt.Errorf("unexpected response %+v", res)
+// 	}
+// 	return nil
+// }
 
-// Blast sends a blast of calls to the client and verifies that they do not
-// err.
-func Blast(ctx context.Context, t *testing.T, rawClient yarpcraw.Client) {
-	for i := 0; i < 10; i++ {
-		assert.NoError(t, Call(ctx, rawClient))
-	}
-}
+// // Timeout sends a request to the client, which will timeout on the server.
+// func Timeout(ctx context.Context, rawClient yarpcraw.Client) error {
+// 	_, err := rawClient.Call(ctx, "timeout", []byte{})
+// 	return err
+// }
 
-// CallUntilSuccess sends a request until it succeeds.
-func CallUntilSuccess(t *testing.T, rawClient yarpcraw.Client, interval time.Duration) {
-	for i := 0; i < maxAttempts; i++ {
-		ctx := context.Background()
-		ctx, cancel := context.WithTimeout(ctx, interval)
-		err := Call(ctx, rawClient)
-		cancel()
-		if err == nil {
-			return
-		}
-	}
-	assert.Fail(t, "call until success failed multiple times")
-}
-
-// Call sends an echo request to the client.
-func Call(ctx context.Context, rawClient yarpcraw.Client) error {
-	ctx, cancel := context.WithTimeout(ctx, 100*testtime.Millisecond)
-	defer cancel()
-	res, err := rawClient.Call(ctx, "echo", []byte("hello"))
-	if err != nil {
-		return err
-	}
-	if !bytes.Equal(res, []byte("hello")) {
-		return fmt.Errorf("unexpected response %+v", res)
-	}
-	return nil
-}
-
-// Timeout sends a request to the client, which will timeout on the server.
-func Timeout(ctx context.Context, rawClient yarpcraw.Client) error {
-	_, err := rawClient.Call(ctx, "timeout", []byte{})
-	return err
-}
-
-// Register registers an echo procedure handler on a router.
-func Register(router yarpctransport.Router) {
-	router.Register(yarpcraw.Procedure("echo", func(ctx context.Context, req []byte) ([]byte, error) {
-		return req, nil
-	}))
-	router.Register(yarpcraw.Procedure("timeout", func(ctx context.Context, req []byte) ([]byte, error) {
-		<-ctx.Done()
-		return nil, context.DeadlineExceeded
-	}))
-}
+// // Register registers an echo procedure handler on a router.
+// func Register(router yarpctransport.Router) {
+// 	router.Register(yarpcraw.Procedure("echo", func(ctx context.Context, req []byte) ([]byte, error) {
+// 		return req, nil
+// 	}))
+// 	router.Register(yarpcraw.Procedure("timeout", func(ctx context.Context, req []byte) ([]byte, error) {
+// 		<-ctx.Done()
+// 		return nil, context.DeadlineExceeded
+// 	}))
+// }
