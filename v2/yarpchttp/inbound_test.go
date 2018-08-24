@@ -37,9 +37,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/internal/routertest"
 	"go.uber.org/yarpc/internal/testtime"
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/internal/internalyarpctest"
 	"go.uber.org/yarpc/v2/yarpcerrors"
-	"go.uber.org/yarpc/v2/yarpctransport"
 	"go.uber.org/yarpc/v2/yarpctransporttest"
 )
 
@@ -129,11 +129,11 @@ func TestInboundMux(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err = o.Call(ctx, &yarpctransport.Request{
+	_, err = o.Call(ctx, &yarpc.Request{
 		Caller:    "foo",
 		Service:   "bar",
 		Procedure: "hello",
-		Encoding:  yarpctransport.Encoding("raw"),
+		Encoding:  yarpc.Encoding("raw"),
 		Body:      bytes.NewReader([]byte("derp")),
 	})
 
@@ -143,7 +143,7 @@ func TestInboundMux(t *testing.T) {
 
 	o.setURLTemplate("http://host:port/rpc/v1")
 
-	spec := yarpctransport.NewUnaryHandlerSpec(h)
+	spec := yarpc.NewUnaryHandlerSpec(h)
 	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
 		WithCaller("foo").
 		WithService("bar").
@@ -152,11 +152,11 @@ func TestInboundMux(t *testing.T) {
 
 	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
-	res, err := o.Call(ctx, &yarpctransport.Request{
+	res, err := o.Call(ctx, &yarpc.Request{
 		Caller:    "foo",
 		Service:   "bar",
 		Procedure: "hello",
-		Encoding:  yarpctransport.Encoding("raw"),
+		Encoding:  yarpc.Encoding("raw"),
 		Body:      bytes.NewReader([]byte("derp")),
 	})
 

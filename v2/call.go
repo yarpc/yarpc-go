@@ -25,7 +25,6 @@ import (
 	"sort"
 
 	"go.uber.org/yarpc/v2/yarpcerrors"
-	"go.uber.org/yarpc/v2/yarpctransport"
 )
 
 type keyValuePair struct{ k, v string }
@@ -92,7 +91,7 @@ func (c *Call) Procedure() string {
 }
 
 // Encoding returns the encoding for this request.
-func (c *Call) Encoding() yarpctransport.Encoding {
+func (c *Call) Encoding() Encoding {
 	if c == nil {
 		return ""
 	}

@@ -26,7 +26,6 @@ import (
 	"encoding/json"
 
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpctransport"
 )
 
 // Client makes JSON requests to a single service.
@@ -41,17 +40,17 @@ type Client interface {
 }
 
 // New builds a new JSON client.
-func New(c yarpctransport.ClientConfig) Client {
+func New(c yarpc.ClientConfig) Client {
 	return jsonClient{cc: c}
 }
 
 type jsonClient struct {
-	cc yarpctransport.ClientConfig
+	cc yarpc.ClientConfig
 }
 
 func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interface{}, resBodyOut interface{}, opts ...yarpc.CallOption) error {
 	call := yarpc.NewOutboundCall(opts...)
-	treq := yarpctransport.Request{
+	treq := yarpc.Request{
 		Caller:    c.cc.Caller(),
 		Service:   c.cc.Service(),
 		Procedure: procedure,
@@ -65,7 +64,7 @@ func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interfac
 
 	encoded, err := json.Marshal(reqBody)
 	if err != nil {
-		return yarpctransport.RequestBodyEncodeError(&treq, err)
+		return yarpc.RequestBodyEncodeError(&treq, err)
 	}
 
 	treq.Body = bytes.NewReader(encoded)
@@ -82,7 +81,7 @@ func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interfac
 	}
 	if tres.Body != nil {
 		if err := json.NewDecoder(tres.Body).Decode(resBodyOut); err != nil && decodeErr == nil {
-			decodeErr = yarpctransport.ResponseBodyDecodeError(&treq, err)
+			decodeErr = yarpc.ResponseBodyDecodeError(&treq, err)
 		}
 		if err := tres.Body.Close(); err != nil && decodeErr == nil {
 			decodeErr = err

@@ -35,9 +35,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/internal/testtime"
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerrors"
 	"go.uber.org/yarpc/v2/yarpcpeertest"
-	"go.uber.org/yarpc/v2/yarpctransport"
 )
 
 func TestNewOutbound(t *testing.T) {
@@ -89,10 +89,10 @@ func TestCallSuccess(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	res, err := out.Call(ctx, &yarpctransport.Request{
+	res, err := out.Call(ctx, &yarpc.Request{
 		Caller:    "caller",
 		Service:   "service",
-		Encoding:  yarpctransport.Encoding("raw"),
+		Encoding:  yarpc.Encoding("raw"),
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte("world")),
 	})
@@ -125,14 +125,14 @@ func TestOutboundHeaders(t *testing.T) {
 	tests := []struct {
 		desc    string
 		context context.Context
-		headers yarpctransport.Headers
+		headers yarpc.Headers
 		opts    []OutboundOption
 
 		wantHeaders map[string]string
 	}{
 		{
 			desc:    "application headers",
-			headers: yarpctransport.NewHeaders().With("foo", "bar").With("baz", "Qux"),
+			headers: yarpc.NewHeaders().With("foo", "bar").With("baz", "Qux"),
 			wantHeaders: map[string]string{
 				"Rpc-Header-Foo": "bar",
 				"Rpc-Header-Baz": "Qux",
@@ -140,7 +140,7 @@ func TestOutboundHeaders(t *testing.T) {
 		},
 		{
 			desc:    "extra headers",
-			headers: yarpctransport.NewHeaders().With("x", "y"),
+			headers: yarpc.NewHeaders().With("x", "y"),
 			opts: []OutboundOption{
 				AddHeader("X-Foo", "bar"),
 				AddHeader("X-BAR", "BAZ"),
@@ -176,10 +176,10 @@ func TestOutboundHeaders(t *testing.T) {
 
 		out := trans.NewSingleOutbound(server.URL, tt.opts...)
 
-		res, err := out.Call(ctx, &yarpctransport.Request{
+		res, err := out.Call(ctx, &yarpc.Request{
 			Caller:    "caller",
 			Service:   "service",
-			Encoding:  yarpctransport.Encoding("raw"),
+			Encoding:  yarpc.Encoding("raw"),
 			Headers:   tt.headers,
 			Procedure: "hello",
 			Body:      bytes.NewReader([]byte("world")),
@@ -235,10 +235,10 @@ func TestOutboundApplicationError(t *testing.T) {
 		ctx, cancel := context.WithTimeout(ctx, 100*testtime.Millisecond)
 		defer cancel()
 
-		res, err := out.Call(ctx, &yarpctransport.Request{
+		res, err := out.Call(ctx, &yarpc.Request{
 			Caller:    "caller",
 			Service:   "service",
-			Encoding:  yarpctransport.Encoding("raw"),
+			Encoding:  yarpc.Encoding("raw"),
 			Procedure: "hello",
 			Body:      bytes.NewReader([]byte("world")),
 		})
@@ -281,10 +281,10 @@ func TestCallFailures(t *testing.T) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 		defer cancel()
-		_, err := out.Call(ctx, &yarpctransport.Request{
+		_, err := out.Call(ctx, &yarpc.Request{
 			Caller:    "caller",
 			Service:   "service",
-			Encoding:  yarpctransport.Encoding("raw"),
+			Encoding:  yarpc.Encoding("raw"),
 			Procedure: "wat",
 			Body:      bytes.NewReader([]byte("huh")),
 		})
@@ -322,7 +322,7 @@ func TestGetPeerForRequestErr(t *testing.T) {
 			out.chooser = chooser
 
 			ctx := context.Background()
-			treq := &yarpctransport.Request{}
+			treq := &yarpc.Request{}
 
 			chooser.EXPECT().Choose(ctx, treq).Return(tt.peer, nil, tt.err)
 
@@ -342,7 +342,7 @@ func TestWithCoreHeaders(t *testing.T) {
 	routingKey := "routing"
 	routingDelegate := "delegate"
 
-	treq := &yarpctransport.Request{
+	treq := &yarpc.Request{
 		ShardKey:        shardKey,
 		RoutingKey:      routingKey,
 		RoutingDelegate: routingDelegate,
@@ -365,7 +365,7 @@ func TestNoRequest(t *testing.T) {
 func TestOutboundNoDeadline(t *testing.T) {
 	out := NewTransport().NewSingleOutbound("http://foo-host:8080")
 
-	_, err := out.call(context.Background(), &yarpctransport.Request{})
+	_, err := out.call(context.Background(), &yarpc.Request{})
 	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing context deadline"), err)
 }
 
@@ -385,7 +385,7 @@ func TestServiceMatchSuccess(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err := out.Call(ctx, &yarpctransport.Request{
+	_, err := out.Call(ctx, &yarpc.Request{
 		Service: "Service",
 	})
 	require.NoError(t, err)
@@ -407,7 +407,7 @@ func TestServiceMatchFailed(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err := out.Call(ctx, &yarpctransport.Request{
+	_, err := out.Call(ctx, &yarpc.Request{
 		Service: "Service",
 	})
 	assert.Error(t, err, "expected failure for service name dismatch")
@@ -429,7 +429,7 @@ func TestServiceMatchNoHeader(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err := out.Call(ctx, &yarpctransport.Request{
+	_, err := out.Call(ctx, &yarpc.Request{
 		Service: "Service",
 	})
 	require.NoError(t, err)

@@ -27,9 +27,9 @@ import (
 	"time"
 
 	"go.uber.org/multierr"
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerrors"
 	"go.uber.org/yarpc/v2/yarpcpeer"
-	"go.uber.org/yarpc/v2/yarpctransport"
 )
 
 var (
@@ -55,7 +55,7 @@ type Implementation interface {
 	Remove(yarpcpeer.StatusPeer, yarpcpeer.Identifier, yarpcpeer.Subscriber)
 	// Choose must return an available peer under a list read lock, so must
 	// not block.
-	Choose(context.Context, *yarpctransport.Request) yarpcpeer.StatusPeer
+	Choose(context.Context, *yarpc.Request) yarpcpeer.StatusPeer
 }
 
 type listOptions struct {
@@ -300,7 +300,7 @@ func (pl *List) removeFromUnavailablePeers(t *peerThunk) {
 }
 
 // Choose selects the next available peer in the peer list
-func (pl *List) Choose(ctx context.Context, req *yarpctransport.Request) (yarpcpeer.Peer, func(error), error) {
+func (pl *List) Choose(ctx context.Context, req *yarpc.Request) (yarpcpeer.Peer, func(error), error) {
 	for {
 		pl.lock.RLock()
 		p := pl.implementation.Choose(ctx, req)

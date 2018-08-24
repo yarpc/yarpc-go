@@ -6,9 +6,10 @@ package yarpctransporttest
 
 import (
 	context "context"
-	gomock "github.com/golang/mock/gomock"
-	yarpctransport "go.uber.org/yarpc/v2/yarpctransport"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 // MockStream is a mock of Stream interface
@@ -47,9 +48,9 @@ func (mr *MockStreamMockRecorder) Context() *gomock.Call {
 }
 
 // ReceiveMessage mocks base method
-func (m *MockStream) ReceiveMessage(arg0 context.Context) (*yarpctransport.StreamMessage, error) {
+func (m *MockStream) ReceiveMessage(arg0 context.Context) (*yarpc.StreamMessage, error) {
 	ret := m.ctrl.Call(m, "ReceiveMessage", arg0)
-	ret0, _ := ret[0].(*yarpctransport.StreamMessage)
+	ret0, _ := ret[0].(*yarpc.StreamMessage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -60,9 +61,9 @@ func (mr *MockStreamMockRecorder) ReceiveMessage(arg0 interface{}) *gomock.Call 
 }
 
 // Request mocks base method
-func (m *MockStream) Request() *yarpctransport.StreamRequest {
+func (m *MockStream) Request() *yarpc.StreamRequest {
 	ret := m.ctrl.Call(m, "Request")
-	ret0, _ := ret[0].(*yarpctransport.StreamRequest)
+	ret0, _ := ret[0].(*yarpc.StreamRequest)
 	return ret0
 }
 
@@ -72,7 +73,7 @@ func (mr *MockStreamMockRecorder) Request() *gomock.Call {
 }
 
 // SendMessage mocks base method
-func (m *MockStream) SendMessage(arg0 context.Context, arg1 *yarpctransport.StreamMessage) error {
+func (m *MockStream) SendMessage(arg0 context.Context, arg1 *yarpc.StreamMessage) error {
 	ret := m.ctrl.Call(m, "SendMessage", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -131,9 +132,9 @@ func (mr *MockStreamCloserMockRecorder) Context() *gomock.Call {
 }
 
 // ReceiveMessage mocks base method
-func (m *MockStreamCloser) ReceiveMessage(arg0 context.Context) (*yarpctransport.StreamMessage, error) {
+func (m *MockStreamCloser) ReceiveMessage(arg0 context.Context) (*yarpc.StreamMessage, error) {
 	ret := m.ctrl.Call(m, "ReceiveMessage", arg0)
-	ret0, _ := ret[0].(*yarpctransport.StreamMessage)
+	ret0, _ := ret[0].(*yarpc.StreamMessage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -144,9 +145,9 @@ func (mr *MockStreamCloserMockRecorder) ReceiveMessage(arg0 interface{}) *gomock
 }
 
 // Request mocks base method
-func (m *MockStreamCloser) Request() *yarpctransport.StreamRequest {
+func (m *MockStreamCloser) Request() *yarpc.StreamRequest {
 	ret := m.ctrl.Call(m, "Request")
-	ret0, _ := ret[0].(*yarpctransport.StreamRequest)
+	ret0, _ := ret[0].(*yarpc.StreamRequest)
 	return ret0
 }
 
@@ -156,7 +157,7 @@ func (mr *MockStreamCloserMockRecorder) Request() *gomock.Call {
 }
 
 // SendMessage mocks base method
-func (m *MockStreamCloser) SendMessage(arg0 context.Context, arg1 *yarpctransport.StreamMessage) error {
+func (m *MockStreamCloser) SendMessage(arg0 context.Context, arg1 *yarpc.StreamMessage) error {
 	ret := m.ctrl.Call(m, "SendMessage", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0

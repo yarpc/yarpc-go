@@ -39,13 +39,13 @@ package yarpchttp_test
 // 	NewClientTransport: func(t *testing.T) yarpcpeer.Transport {
 // 		return newTransport()
 // 	},
-// 	NewUnaryOutbound: func(x yarpcpeer.Transport, pc yarpcpeer.Chooser) yarpctransport.UnaryOutbound {
+// 	NewUnaryOutbound: func(x yarpcpeer.Transport, pc yarpcpeer.Chooser) yarpc.UnaryOutbound {
 // 		return x.(*yarpchttp.Transport).NewOutbound(pc)
 // 	},
-// 	NewInbound: func(x yarpcpeer.Transport, addr string, router yarpctransport.Router) yarpctransport.Inbound {
+// 	NewInbound: func(x yarpcpeer.Transport, addr string, router yarpc.Router) yarpc.Inbound {
 // 		return x.(*yarpchttp.Transport).NewInbound(addr, router)
 // 	},
-// 	Addr: func(x yarpcpeer.Transport, ib yarpctransport.Inbound) string {
+// 	Addr: func(x yarpcpeer.Transport, ib yarpc.Inbound) string {
 // 		return yarpctest.ZeroAddrToHostPort(ib.(*yarpchttp.Inbound).Addr())
 // 	},
 // }

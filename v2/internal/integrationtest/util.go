@@ -29,10 +29,10 @@ package integrationtest
 // type TransportSpec struct {
 // 	NewServerTransport func(t *testing.T, addr string) yarpcpeer.Transport
 // 	NewClientTransport func(t *testing.T) yarpcpeer.Transport
-// 	NewInbound         func(trans yarpcpeer.Transport, addr string, router yarpctransport.Router) func()
-// 	NewUnaryOutbound   func(trans yarpcpeer.Transport, pc yarpcpeer.Chooser) yarpctransport.UnaryOutbound
+// 	NewInbound         func(trans yarpcpeer.Transport, addr string, router yarpc.Router) func()
+// 	NewUnaryOutbound   func(trans yarpcpeer.Transport, pc yarpcpeer.Chooser) yarpc.UnaryOutbound
 // 	Identify           func(addr string) yarpcpeer.Identifier
-// 	Addr               func(trans yarpcpeer.Transport, inbound yarpctransport.Inbound) string
+// 	Addr               func(trans yarpcpeer.Transport, inbound yarpc.Inbound) string
 // }
 
 // // Test runs reusable tests with the transport spec.
@@ -59,9 +59,9 @@ package integrationtest
 // 	pl.Start()
 
 // 	ob := s.NewUnaryOutbound(trans, pl)
-// 	rawClient := yarpcraw.New(&yarpctransport.OutboundConfig{
+// 	rawClient := yarpcraw.New(&yarpc.OutboundConfig{
 // 		CallerName: "service",
-// 		Outbounds: &yarpctransport.Outbounds{
+// 		Outbounds: &yarpc.Outbounds{
 // 			ServiceName: "service",
 // 			Unary:       ob,
 // 		},
@@ -208,7 +208,7 @@ package integrationtest
 // }
 
 // // Register registers an echo procedure handler on a router.
-// func Register(router yarpctransport.Router) {
+// func Register(router yarpc.Router) {
 // 	router.Register(yarpcraw.Procedure("echo", func(ctx context.Context, req []byte) ([]byte, error) {
 // 		return req, nil
 // 	}))

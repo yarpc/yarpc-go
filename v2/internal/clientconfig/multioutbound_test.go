@@ -24,7 +24,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/yarpc/v2/yarpctransport"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 const (
@@ -33,7 +33,7 @@ const (
 )
 
 func TestClientConfigNames(t *testing.T) {
-	outbounds := yarpctransport.Outbounds{}
+	outbounds := yarpc.Outbounds{}
 	c := MultiOutbound(caller, service, outbounds)
 
 	assert.Equal(t, c.Caller(), caller)
@@ -41,7 +41,7 @@ func TestClientConfigNames(t *testing.T) {
 }
 
 func TestClientConfigPanic(t *testing.T) {
-	c := MultiOutbound(caller, service, yarpctransport.Outbounds{})
+	c := MultiOutbound(caller, service, yarpc.Outbounds{})
 
 	assert.Panics(t, func() { c.GetUnaryOutbound() },
 		"expected ClientConfig to panic for nil UnaryOutbound")

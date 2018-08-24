@@ -26,7 +26,6 @@ import (
 	"io/ioutil"
 
 	"go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpctransport"
 )
 
 // Client makes Raw requests to a single service.
@@ -36,17 +35,17 @@ type Client interface {
 }
 
 // New builds a new Raw client.
-func New(c yarpctransport.ClientConfig) Client {
+func New(c yarpc.ClientConfig) Client {
 	return rawClient{cc: c}
 }
 
 type rawClient struct {
-	cc yarpctransport.ClientConfig
+	cc yarpc.ClientConfig
 }
 
 func (c rawClient) Call(ctx context.Context, procedure string, body []byte, opts ...yarpc.CallOption) ([]byte, error) {
 	call := yarpc.NewOutboundCall(opts...)
-	treq := yarpctransport.Request{
+	treq := yarpc.Request{
 		Caller:    c.cc.Caller(),
 		Service:   c.cc.Service(),
 		Procedure: procedure,

@@ -20,7 +20,7 @@
 
 package yarpcjson
 
-import "go.uber.org/yarpc/v2/yarpctransport"
+import yarpc "go.uber.org/yarpc/v2"
 
 // Encoding is the name of this encoding.
-const Encoding yarpctransport.Encoding = "json"
+const Encoding yarpc.Encoding = "json"

@@ -23,7 +23,7 @@ package yarpcraw
 import (
 	"context"
 
-	"go.uber.org/yarpc/v2/yarpctransport"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 // Register calls the RouteTable's Register method.
@@ -32,7 +32,7 @@ import (
 // in a future version.
 //
 // Deprecated: Use the RouteTable's Register method directly.
-func Register(r yarpctransport.RouteTable, rs []yarpctransport.Procedure) {
+func Register(r yarpc.RouteTable, rs []yarpc.Procedure) {
 	r.Register(rs)
 }
 
@@ -40,11 +40,11 @@ func Register(r yarpctransport.RouteTable, rs []yarpctransport.Procedure) {
 type UnaryHandler func(context.Context, []byte) ([]byte, error)
 
 // Procedure builds a Procedure from the given raw handler.
-func Procedure(name string, handler UnaryHandler) []yarpctransport.Procedure {
-	return []yarpctransport.Procedure{
+func Procedure(name string, handler UnaryHandler) []yarpc.Procedure {
+	return []yarpc.Procedure{
 		{
 			Name:        name,
-			HandlerSpec: yarpctransport.NewUnaryHandlerSpec(rawUnaryHandler{handler}),
+			HandlerSpec: yarpc.NewUnaryHandlerSpec(rawUnaryHandler{handler}),
 		},
 	}
 }

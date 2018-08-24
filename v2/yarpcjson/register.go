@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"go.uber.org/yarpc/v2/yarpctransport"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 var (
@@ -40,7 +40,7 @@ var (
 // in a future version.
 //
 // Deprecated: Use the RouteTable's Register method directly.
-func Register(r yarpctransport.RouteTable, rs []yarpctransport.Procedure) {
+func Register(r yarpc.RouteTable, rs []yarpc.Procedure) {
 	r.Register(rs)
 }
 
@@ -51,11 +51,11 @@ func Register(r yarpctransport.RouteTable, rs []yarpctransport.Procedure) {
 //
 // Where $reqBody and $resBody are a map[string]interface{} or pointers to
 // structs.
-func Procedure(name string, handler interface{}) []yarpctransport.Procedure {
-	return []yarpctransport.Procedure{
+func Procedure(name string, handler interface{}) []yarpc.Procedure {
+	return []yarpc.Procedure{
 		{
 			Name: name,
-			HandlerSpec: yarpctransport.NewUnaryHandlerSpec(
+			HandlerSpec: yarpc.NewUnaryHandlerSpec(
 				wrapUnaryHandler(name, handler),
 			),
 			Encoding: Encoding,
@@ -64,8 +64,8 @@ func Procedure(name string, handler interface{}) []yarpctransport.Procedure {
 }
 
 // wrapUnaryHandler takes a valid JSON handler function and converts it into a
-// yarpctransport.UnaryHandler.
-func wrapUnaryHandler(name string, handler interface{}) yarpctransport.UnaryHandler {
+// yarpc.UnaryHandler.
+func wrapUnaryHandler(name string, handler interface{}) yarpc.UnaryHandler {
 	reqBodyType := verifyUnarySignature(name, reflect.TypeOf(handler))
 	return newJSONHandler(reqBodyType, handler)
 }

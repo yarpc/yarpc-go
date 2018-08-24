@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpctransport
+package yarpc
 
 import (
 	"context"
@@ -26,6 +26,12 @@ import (
 
 	"go.uber.org/yarpc/yarpcerrors"
 )
+
+// StreamOption is an option that may be passed in at streaming function call
+// sites.
+type StreamOption interface {
+	unimplemented()
+}
 
 // StreamRequest represents a streaming request.  It contains basic stream
 // metadata.

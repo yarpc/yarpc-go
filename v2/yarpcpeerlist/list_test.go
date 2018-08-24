@@ -27,9 +27,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcpeer"
 	"go.uber.org/yarpc/v2/yarpctest"
-	"go.uber.org/yarpc/v2/yarpctransport"
 )
 
 const (
@@ -98,7 +98,7 @@ func (l *mraList) Remove(peer yarpcpeer.StatusPeer, pid yarpcpeer.Identifier, ps
 	l.mrr = peer
 }
 
-func (l *mraList) Choose(ctx context.Context, req *yarpctransport.Request) yarpcpeer.StatusPeer {
+func (l *mraList) Choose(ctx context.Context, req *yarpc.Request) yarpcpeer.StatusPeer {
 	return l.mra
 }
 
@@ -141,7 +141,7 @@ func TestPeerList(t *testing.T) {
 	assert.True(t, list.Available(yarpcpeer.Address("2.2.2.2:4040")))
 	peers = list.Peers()
 	assert.Len(t, peers, 2)
-	p, onFinish, err := list.Choose(context.Background(), &yarpctransport.Request{})
+	p, onFinish, err := list.Choose(context.Background(), &yarpc.Request{})
 	assert.Equal(t, "2.2.2.2:4040", p.Identifier())
 	require.NoError(t, err)
 	onFinish(nil)
@@ -152,7 +152,7 @@ func TestPeerList(t *testing.T) {
 	assert.Equal(t, 0, list.NumUnavailable())
 	peers = list.Peers()
 	assert.Len(t, peers, 2)
-	p, onFinish, err = list.Choose(context.Background(), &yarpctransport.Request{})
+	p, onFinish, err = list.Choose(context.Background(), &yarpc.Request{})
 	assert.Equal(t, "1.1.1.1:4040", p.Identifier())
 	require.NoError(t, err)
 	onFinish(nil)

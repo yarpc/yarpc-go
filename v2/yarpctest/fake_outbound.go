@@ -24,8 +24,8 @@ import (
 	"context"
 	"fmt"
 
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcpeer"
-	"go.uber.org/yarpc/v2/yarpctransport"
 )
 
 // FakeOutboundOption is an option for FakeTransport.NewOutbound.
@@ -43,7 +43,7 @@ func NopOutboundOption(nopOption string) FakeOutboundOption {
 
 // OutboundCallable is a function that will be called for for an outbound's
 // `Call` method.
-type OutboundCallable func(ctx context.Context, req *yarpctransport.Request) (*yarpctransport.Response, error)
+type OutboundCallable func(ctx context.Context, req *yarpc.Request) (*yarpc.Response, error)
 
 // OutboundCallOverride returns an option to set the "callOverride" for a
 // FakeTransport.NewOutbound.
@@ -86,7 +86,7 @@ func (o *FakeOutbound) NopOption() string {
 }
 
 // Call pretends to send a unary RPC, but actually just returns an error.
-func (o *FakeOutbound) Call(ctx context.Context, req *yarpctransport.Request) (*yarpctransport.Response, error) {
+func (o *FakeOutbound) Call(ctx context.Context, req *yarpc.Request) (*yarpc.Response, error) {
 	if o.callOverride != nil {
 		return o.callOverride(ctx, req)
 	}
@@ -94,6 +94,6 @@ func (o *FakeOutbound) Call(ctx context.Context, req *yarpctransport.Request) (*
 }
 
 // CallStream pretends to send a Stream RPC, but actually just returns an error.
-func (o *FakeOutbound) CallStream(ctx context.Context, req *yarpctransport.StreamRequest) (*yarpctransport.ClientStream, error) {
+func (o *FakeOutbound) CallStream(ctx context.Context, req *yarpc.StreamRequest) (*yarpc.ClientStream, error) {
 	return nil, fmt.Errorf(`fake outbound does not support call stream`)
 }

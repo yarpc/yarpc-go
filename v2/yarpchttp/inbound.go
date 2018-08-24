@@ -30,8 +30,8 @@ import (
 	"github.com/opentracing/opentracing-go"
 	intnet "go.uber.org/yarpc/internal/net"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerrors"
-	"go.uber.org/yarpc/v2/yarpctransport"
 	"go.uber.org/zap"
 )
 
@@ -96,7 +96,7 @@ func ShutdownTimeout(timeout time.Duration) InboundOption {
 
 // NewInbound builds a new HTTP inbound that listens on the given address and
 // sharing this transport.
-func (t *Transport) NewInbound(addr string, router yarpctransport.Router, opts ...InboundOption) *Inbound {
+func (t *Transport) NewInbound(addr string, router yarpc.Router, opts ...InboundOption) *Inbound {
 	i := &Inbound{
 		once:              lifecycle.NewOnce(),
 		addr:              addr,
@@ -122,7 +122,7 @@ type Inbound struct {
 	muxPattern      string
 	server          *intnet.HTTPServer
 	shutdownTimeout time.Duration
-	router          yarpctransport.Router
+	router          yarpc.Router
 	tracer          opentracing.Tracer
 	logger          *zap.Logger
 	transport       *Transport

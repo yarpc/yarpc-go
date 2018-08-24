@@ -25,11 +25,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/yarpc/v2/yarpctransport"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 func TestParseTTL(t *testing.T) {
-	req := &yarpctransport.Request{
+	req := &yarpc.Request{
 		Caller:    "caller",
 		Service:   "service",
 		Procedure: "hello",

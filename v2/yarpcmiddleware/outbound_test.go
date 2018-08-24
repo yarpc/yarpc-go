@@ -29,9 +29,9 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/internal/testtime"
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcmiddleware"
 	"go.uber.org/yarpc/v2/yarpcmiddlewaretest"
-	"go.uber.org/yarpc/v2/yarpctransport"
 	"go.uber.org/yarpc/v2/yarpctransporttest"
 )
 
@@ -44,15 +44,15 @@ func TestUnaryNopOutboundMiddleware(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	req := &yarpctransport.Request{
+	req := &yarpc.Request{
 		Caller:    "somecaller",
 		Service:   "someservice",
-		Encoding:  yarpctransport.Encoding("raw"),
+		Encoding:  yarpc.Encoding("raw"),
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}
 
-	res := &yarpctransport.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6}))}
+	res := &yarpc.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6}))}
 	o.EXPECT().Call(ctx, req).Return(res, nil)
 
 	got, err := wrappedO.Call(ctx, req)
@@ -91,11 +91,11 @@ func TestStreamNopOutboundMiddleware(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	req := &yarpctransport.StreamRequest{
-		Meta: &yarpctransport.RequestMeta{
+	req := &yarpc.StreamRequest{
+		Meta: &yarpc.RequestMeta{
 			Caller:    "somecaller",
 			Service:   "someservice",
-			Encoding:  yarpctransport.Encoding("raw"),
+			Encoding:  yarpc.Encoding("raw"),
 			Procedure: "hello",
 		},
 	}

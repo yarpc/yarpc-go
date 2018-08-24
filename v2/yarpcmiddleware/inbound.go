@@ -23,7 +23,7 @@ package yarpcmiddleware
 import (
 	"context"
 
-	"go.uber.org/yarpc/v2/yarpctransport"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 // UnaryInbound defines a transport-level middleware for
@@ -39,7 +39,7 @@ import (
 // UnaryInbound middleware is re-used across requests and MAY be called multiple times
 // for the same request.
 type UnaryInbound interface {
-	Handle(ctx context.Context, req *yarpctransport.Request, resw yarpctransport.ResponseWriter, h yarpctransport.UnaryHandler) error
+	Handle(ctx context.Context, req *yarpc.Request, resw yarpc.ResponseWriter, h yarpc.UnaryHandler) error
 }
 
 // NopUnaryInbound is a inbound middleware that does not do anything special. It
@@ -47,7 +47,7 @@ type UnaryInbound interface {
 var NopUnaryInbound UnaryInbound = nopUnaryInbound{}
 
 // ApplyUnaryInbound applies the given InboundMiddleware to the given Handler.
-func ApplyUnaryInbound(h yarpctransport.UnaryHandler, i UnaryInbound) yarpctransport.UnaryHandler {
+func ApplyUnaryInbound(h yarpc.UnaryHandler, i UnaryInbound) yarpc.UnaryHandler {
 	if i == nil {
 		return h
 	}
@@ -55,25 +55,25 @@ func ApplyUnaryInbound(h yarpctransport.UnaryHandler, i UnaryInbound) yarpctrans
 }
 
 // UnaryInboundFunc adapts a function into an InboundMiddleware.
-type UnaryInboundFunc func(context.Context, *yarpctransport.Request, yarpctransport.ResponseWriter, yarpctransport.UnaryHandler) error
+type UnaryInboundFunc func(context.Context, *yarpc.Request, yarpc.ResponseWriter, yarpc.UnaryHandler) error
 
 // Handle for UnaryInboundFunc
-func (f UnaryInboundFunc) Handle(ctx context.Context, req *yarpctransport.Request, resw yarpctransport.ResponseWriter, h yarpctransport.UnaryHandler) error {
+func (f UnaryInboundFunc) Handle(ctx context.Context, req *yarpc.Request, resw yarpc.ResponseWriter, h yarpc.UnaryHandler) error {
 	return f(ctx, req, resw, h)
 }
 
 type unaryHandlerWithMiddleware struct {
-	h yarpctransport.UnaryHandler
+	h yarpc.UnaryHandler
 	i UnaryInbound
 }
 
-func (h unaryHandlerWithMiddleware) Handle(ctx context.Context, req *yarpctransport.Request, resw yarpctransport.ResponseWriter) error {
+func (h unaryHandlerWithMiddleware) Handle(ctx context.Context, req *yarpc.Request, resw yarpc.ResponseWriter) error {
 	return h.i.Handle(ctx, req, resw, h.h)
 }
 
 type nopUnaryInbound struct{}
 
-func (nopUnaryInbound) Handle(ctx context.Context, req *yarpctransport.Request, resw yarpctransport.ResponseWriter, handler yarpctransport.UnaryHandler) error {
+func (nopUnaryInbound) Handle(ctx context.Context, req *yarpc.Request, resw yarpc.ResponseWriter, handler yarpc.UnaryHandler) error {
 	return handler.Handle(ctx, req, resw)
 }
 
@@ -88,7 +88,7 @@ func (nopUnaryInbound) Handle(ctx context.Context, req *yarpctransport.Request, 
 // StreamInbound middleware is re-used across requests and MAY be called
 // multiple times for the same request.
 type StreamInbound interface {
-	HandleStream(s *yarpctransport.ServerStream, h yarpctransport.StreamHandler) error
+	HandleStream(s *yarpc.ServerStream, h yarpc.StreamHandler) error
 }
 
 // NopStreamInbound is an inbound middleware that does not do
@@ -97,7 +97,7 @@ var NopStreamInbound StreamInbound = nopStreamInbound{}
 
 // ApplyStreamInbound applies the given StreamInbound middleware to
 // the given StreamHandler.
-func ApplyStreamInbound(h yarpctransport.StreamHandler, i StreamInbound) yarpctransport.StreamHandler {
+func ApplyStreamInbound(h yarpc.StreamHandler, i StreamInbound) yarpc.StreamHandler {
 	if i == nil {
 		return h
 	}
@@ -105,24 +105,24 @@ func ApplyStreamInbound(h yarpctransport.StreamHandler, i StreamInbound) yarpctr
 }
 
 // StreamInboundFunc adapts a function into a StreamInbound Middleware.
-type StreamInboundFunc func(*yarpctransport.ServerStream, yarpctransport.StreamHandler) error
+type StreamInboundFunc func(*yarpc.ServerStream, yarpc.StreamHandler) error
 
 // HandleStream for StreamInboundFunc
-func (f StreamInboundFunc) HandleStream(s *yarpctransport.ServerStream, h yarpctransport.StreamHandler) error {
+func (f StreamInboundFunc) HandleStream(s *yarpc.ServerStream, h yarpc.StreamHandler) error {
 	return f(s, h)
 }
 
 type streamHandlerWithMiddleware struct {
-	h yarpctransport.StreamHandler
+	h yarpc.StreamHandler
 	i StreamInbound
 }
 
-func (h streamHandlerWithMiddleware) HandleStream(s *yarpctransport.ServerStream) error {
+func (h streamHandlerWithMiddleware) HandleStream(s *yarpc.ServerStream) error {
 	return h.i.HandleStream(s, h.h)
 }
 
 type nopStreamInbound struct{}
 
-func (nopStreamInbound) HandleStream(s *yarpctransport.ServerStream, handler yarpctransport.StreamHandler) error {
+func (nopStreamInbound) HandleStream(s *yarpc.ServerStream, handler yarpc.StreamHandler) error {
 	return handler.HandleStream(s)
 }

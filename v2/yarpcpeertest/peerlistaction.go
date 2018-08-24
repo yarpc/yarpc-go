@@ -29,8 +29,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/internal/testtime"
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcpeer"
-	"go.uber.org/yarpc/v2/yarpctransport"
 )
 
 // ListActionDeps are passed through PeerListActions' Apply methods in order
@@ -100,7 +100,7 @@ func (a ChooseMultiAction) Apply(t *testing.T, pl yarpcpeer.Chooser, deps ListAc
 type ChooseAction struct {
 	InputContext        context.Context
 	InputContextTimeout time.Duration
-	InputRequest        *yarpctransport.Request
+	InputRequest        *yarpc.Request
 	ExpectedPeer        string
 	ExpectedErr         error
 }

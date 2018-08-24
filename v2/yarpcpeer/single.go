@@ -24,7 +24,7 @@ import (
 	"context"
 
 	"go.uber.org/yarpc/pkg/lifecycle"
-	"go.uber.org/yarpc/v2/yarpctransport"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 // Single implements the Chooser interface for a single peer
@@ -54,7 +54,7 @@ func (s *Single) Transport() Transport {
 }
 
 // Choose returns the single peer
-func (s *Single) Choose(ctx context.Context, _ *yarpctransport.Request) (Peer, func(error), error) {
+func (s *Single) Choose(ctx context.Context, _ *yarpc.Request) (Peer, func(error), error) {
 	if err := s.once.WaitUntilRunning(ctx); err != nil {
 		return nil, nil, err
 	}

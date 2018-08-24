@@ -26,7 +26,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/v2/yarpctransport"
 )
 
 func TestNilCall(t *testing.T) {
@@ -49,16 +48,16 @@ func TestNilCall(t *testing.T) {
 
 func TestReadFromRequest(t *testing.T) {
 	ctx, icall := NewInboundCall(context.Background())
-	icall.ReadFromRequest(&yarpctransport.Request{
+	icall.ReadFromRequest(&Request{
 		Service:         "service",
 		Transport:       "transport",
 		Caller:          "caller",
-		Encoding:        yarpctransport.Encoding("raw"),
+		Encoding:        Encoding("raw"),
 		Procedure:       "proc",
 		ShardKey:        "sk",
 		RoutingKey:      "rk",
 		RoutingDelegate: "rd",
-		Headers:         yarpctransport.NewHeaders().With("foo", "bar"),
+		Headers:         NewHeaders().With("foo", "bar"),
 	})
 	call := CallFromContext(ctx)
 	require.NotNil(t, call)
@@ -81,16 +80,16 @@ func TestReadFromRequest(t *testing.T) {
 
 func TestReadFromRequestMeta(t *testing.T) {
 	ctx, icall := NewInboundCall(context.Background())
-	icall.ReadFromRequestMeta(&yarpctransport.RequestMeta{
+	icall.ReadFromRequestMeta(&RequestMeta{
 		Service:         "service",
 		Caller:          "caller",
 		Transport:       "transport",
-		Encoding:        yarpctransport.Encoding("raw"),
+		Encoding:        Encoding("raw"),
 		Procedure:       "proc",
 		ShardKey:        "sk",
 		RoutingKey:      "rk",
 		RoutingDelegate: "rd",
-		Headers:         yarpctransport.NewHeaders().With("foo", "bar"),
+		Headers:         NewHeaders().With("foo", "bar"),
 	})
 	call := CallFromContext(ctx)
 	require.NotNil(t, call)
@@ -113,16 +112,16 @@ func TestReadFromRequestMeta(t *testing.T) {
 
 func TestDisabledResponseHeaders(t *testing.T) {
 	ctx, icall := NewInboundCallWithOptions(context.Background(), DisableResponseHeaders())
-	icall.ReadFromRequest(&yarpctransport.Request{
+	icall.ReadFromRequest(&Request{
 		Service:         "service",
 		Transport:       "transport",
 		Caller:          "caller",
-		Encoding:        yarpctransport.Encoding("raw"),
+		Encoding:        Encoding("raw"),
 		Procedure:       "proc",
 		ShardKey:        "sk",
 		RoutingKey:      "rk",
 		RoutingDelegate: "rd",
-		Headers:         yarpctransport.NewHeaders().With("foo", "bar"),
+		Headers:         NewHeaders().With("foo", "bar"),
 	})
 	call := CallFromContext(ctx)
 	require.NotNil(t, call)

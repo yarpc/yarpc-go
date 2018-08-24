@@ -6,9 +6,10 @@ package yarpctransporttest
 
 import (
 	context "context"
-	gomock "github.com/golang/mock/gomock"
-	yarpctransport "go.uber.org/yarpc/v2/yarpctransport"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 // MockUnaryOutbound is a mock of UnaryOutbound interface
@@ -35,9 +36,9 @@ func (m *MockUnaryOutbound) EXPECT() *MockUnaryOutboundMockRecorder {
 }
 
 // Call mocks base method
-func (m *MockUnaryOutbound) Call(arg0 context.Context, arg1 *yarpctransport.Request) (*yarpctransport.Response, error) {
+func (m *MockUnaryOutbound) Call(arg0 context.Context, arg1 *yarpc.Request) (*yarpc.Response, error) {
 	ret := m.ctrl.Call(m, "Call", arg0, arg1)
-	ret0, _ := ret[0].(*yarpctransport.Response)
+	ret0, _ := ret[0].(*yarpc.Response)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -71,9 +72,9 @@ func (m *MockStreamOutbound) EXPECT() *MockStreamOutboundMockRecorder {
 }
 
 // CallStream mocks base method
-func (m *MockStreamOutbound) CallStream(arg0 context.Context, arg1 *yarpctransport.StreamRequest) (*yarpctransport.ClientStream, error) {
+func (m *MockStreamOutbound) CallStream(arg0 context.Context, arg1 *yarpc.StreamRequest) (*yarpc.ClientStream, error) {
 	ret := m.ctrl.Call(m, "CallStream", arg0, arg1)
-	ret0, _ := ret[0].(*yarpctransport.ClientStream)
+	ret0, _ := ret[0].(*yarpc.ClientStream)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

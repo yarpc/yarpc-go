@@ -25,23 +25,23 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/yarpc/v2/yarpctransport"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 func TestHTTPHeaders(t *testing.T) {
 	tests := []struct {
 		prefix        string
-		toTransport   yarpctransport.Headers
-		fromTransport yarpctransport.Headers
+		toTransport   yarpc.Headers
+		fromTransport yarpc.Headers
 		http          http.Header
 	}{
 		{
 			ApplicationHeaderPrefix,
-			yarpctransport.HeadersFromMap(map[string]string{
+			yarpc.HeadersFromMap(map[string]string{
 				"foo":     "bar",
 				"foo-bar": "hello",
 			}),
-			yarpctransport.HeadersFromMap(map[string]string{
+			yarpc.HeadersFromMap(map[string]string{
 				"Foo":     "bar",
 				"Foo-Bar": "hello",
 			}),
@@ -54,7 +54,7 @@ func TestHTTPHeaders(t *testing.T) {
 
 	for _, tt := range tests {
 		m := headerMapper{tt.prefix}
-		assert.Equal(t, tt.fromTransport, m.FromHTTPHeaders(tt.http, yarpctransport.Headers{}))
+		assert.Equal(t, tt.fromTransport, m.FromHTTPHeaders(tt.http, yarpc.Headers{}))
 		assert.Equal(t, tt.http, m.ToHTTPHeaders(tt.toTransport, nil))
 	}
 }

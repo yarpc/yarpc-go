@@ -28,7 +28,7 @@ import (
 	"strings"
 	"testing"
 
-	yarpctransport "go.uber.org/yarpc/v2/yarpctransport"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 // RequestMatcher may be used in gomock argument lists to assert that two
@@ -39,7 +39,7 @@ import (
 // source request, and the contents of the request bodies are the same.
 type RequestMatcher struct {
 	t    *testing.T
-	req  *yarpctransport.Request
+	req  *yarpc.Request
 	body []byte
 }
 
@@ -48,7 +48,7 @@ type RequestMatcher struct {
 //
 // The request's contents are read in their entirety and replaced with a
 // bytes.Reader.
-func NewRequestMatcher(t *testing.T, r *yarpctransport.Request) RequestMatcher {
+func NewRequestMatcher(t *testing.T, r *yarpc.Request) RequestMatcher {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		t.Fatalf("failed to read request body: %v", err)
@@ -68,9 +68,9 @@ func NewRequestMatcher(t *testing.T, r *yarpctransport.Request) RequestMatcher {
 // NewRequestMatcher.
 func (m RequestMatcher) Matches(got interface{}) bool {
 	l := m.req
-	r, ok := got.(*yarpctransport.Request)
+	r, ok := got.(*yarpc.Request)
 	if !ok {
-		panic(fmt.Sprintf("expected *yarpctransport.Request, got %v", got))
+		panic(fmt.Sprintf("expected *yarpc.Request, got %v", got))
 	}
 
 	if l.Caller != r.Caller {
@@ -135,7 +135,7 @@ func (m RequestMatcher) String() string {
 }
 
 // checkSuperSet checks if the items in l are all also present in r.
-func checkSuperSet(l, r yarpctransport.Headers) error {
+func checkSuperSet(l, r yarpc.Headers) error {
 	missing := make([]string, 0, l.Len())
 	for k, vl := range l.Items() {
 		vr, ok := r.Get(k)
@@ -153,13 +153,13 @@ func checkSuperSet(l, r yarpctransport.Headers) error {
 // ResponseMatcher is similar to RequestMatcher but for responses.
 type ResponseMatcher struct {
 	t    *testing.T
-	res  *yarpctransport.Response
+	res  *yarpc.Response
 	body []byte
 }
 
 // NewResponseMatcher builds a new ResponseMatcher that verifies that
 // responses match the given Response.
-func NewResponseMatcher(t *testing.T, r *yarpctransport.Response) ResponseMatcher {
+func NewResponseMatcher(t *testing.T, r *yarpc.Response) ResponseMatcher {
 	body, err := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
@@ -176,9 +176,9 @@ func NewResponseMatcher(t *testing.T, r *yarpctransport.Response) ResponseMatche
 // NewResponseMatcher.
 func (m ResponseMatcher) Matches(got interface{}) bool {
 	l := m.res
-	r, ok := got.(*yarpctransport.Response)
+	r, ok := got.(*yarpc.Response)
 	if !ok {
-		panic(fmt.Sprintf("expected *yarpctransport.Response, got %v", got))
+		panic(fmt.Sprintf("expected *yarpc.Response, got %v", got))
 	}
 
 	if err := checkSuperSet(l.Headers, r.Headers); err != nil {
@@ -204,7 +204,7 @@ func (m ResponseMatcher) Matches(got interface{}) bool {
 // written to it.
 type FakeResponseWriter struct {
 	IsApplicationError bool
-	Headers            yarpctransport.Headers
+	Headers            yarpc.Headers
 	Body               bytes.Buffer
 }
 
@@ -214,7 +214,7 @@ func (fw *FakeResponseWriter) SetApplicationError() {
 }
 
 // AddHeaders for FakeResponseWriter.
-func (fw *FakeResponseWriter) AddHeaders(h yarpctransport.Headers) {
+func (fw *FakeResponseWriter) AddHeaders(h yarpc.Headers) {
 	for k, v := range h.OriginalItems() {
 		fw.Headers = fw.Headers.With(k, v)
 	}

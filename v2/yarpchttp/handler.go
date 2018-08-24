@@ -31,9 +31,9 @@ import (
 	opentracinglog "github.com/opentracing/opentracing-go/log"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/pkg/errors"
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerrors"
 	"go.uber.org/yarpc/v2/yarpctracing"
-	"go.uber.org/yarpc/v2/yarpctransport"
 	"go.uber.org/zap"
 )
 
@@ -43,9 +43,9 @@ func popHeader(h http.Header, n string) string {
 	return v
 }
 
-// handler adapts a yarpctransport.Handler into a handler for net/http.
+// handler adapts a yarpc.Handler into a handler for net/http.
 type handler struct {
-	router            yarpctransport.Router
+	router            yarpc.Router
 	tracer            opentracing.Tracer
 	grabHeaders       map[string]struct{}
 	bothResponseError bool
@@ -94,16 +94,16 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	if req.Method != http.MethodPost {
 		return yarpcerrors.Newf(yarpcerrors.CodeNotFound, "request method was %s but only %s is allowed", req.Method, http.MethodPost)
 	}
-	treq := &yarpctransport.Request{
+	treq := &yarpc.Request{
 		Caller:          popHeader(req.Header, CallerHeader),
 		Service:         service,
 		Procedure:       procedure,
-		Encoding:        yarpctransport.Encoding(popHeader(req.Header, EncodingHeader)),
+		Encoding:        yarpc.Encoding(popHeader(req.Header, EncodingHeader)),
 		Transport:       transportName,
 		ShardKey:        popHeader(req.Header, ShardKeyHeader),
 		RoutingKey:      popHeader(req.Header, RoutingKeyHeader),
 		RoutingDelegate: popHeader(req.Header, RoutingDelegateHeader),
-		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, yarpctransport.Headers{}),
+		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, yarpc.Headers{}),
 		Body:            req.Body,
 	}
 	for header := range h.grabHeaders {
@@ -111,7 +111,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 			treq.Headers = treq.Headers.With(header, value)
 		}
 	}
-	if err := yarpctransport.ValidateRequest(treq); err != nil {
+	if err := yarpc.ValidateRequest(treq); err != nil {
 		return err
 	}
 	defer func() {
@@ -137,14 +137,14 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	if parseTTLErr != nil {
 		return parseTTLErr
 	}
-	if err := yarpctransport.ValidateRequestContext(ctx); err != nil {
+	if err := yarpc.ValidateRequestContext(ctx); err != nil {
 		return err
 	}
 	switch spec.Type() {
-	case yarpctransport.Unary:
+	case yarpc.Unary:
 		defer span.Finish()
 
-		err = yarpctransport.InvokeUnaryHandler(yarpctransport.UnaryInvokeRequest{
+		err = yarpc.InvokeUnaryHandler(yarpc.UnaryInvokeRequest{
 			Context:        ctx,
 			StartTime:      start,
 			Request:        treq,
@@ -168,7 +168,7 @@ func updateSpanWithErr(span opentracing.Span, err error) {
 	}
 }
 
-func (h handler) createSpan(ctx context.Context, req *http.Request, treq *yarpctransport.Request, start time.Time) (context.Context, opentracing.Span) {
+func (h handler) createSpan(ctx context.Context, req *http.Request, treq *yarpc.Request, start time.Time) (context.Context, opentracing.Span) {
 	// Extract opentracing etc baggage from headers
 	// Annotate the inbound context with a trace span
 	tracer := h.tracer
@@ -196,7 +196,7 @@ func (h handler) createSpan(ctx context.Context, req *http.Request, treq *yarpct
 	return ctx, span
 }
 
-// responseWriter adapts a http.ResponseWriter into a yarpctransport.ResponseWriter.
+// responseWriter adapts a http.ResponseWriter into a yarpc.ResponseWriter.
 type responseWriter struct {
 	w      http.ResponseWriter
 	buffer *bufferpool.Buffer
@@ -214,7 +214,7 @@ func (rw *responseWriter) Write(s []byte) (int, error) {
 	return rw.buffer.Write(s)
 }
 
-func (rw *responseWriter) AddHeaders(h yarpctransport.Headers) {
+func (rw *responseWriter) AddHeaders(h yarpc.Headers) {
 	applicationHeaders.ToHTTPHeaders(h, rw.w.Header())
 }
 
@@ -241,7 +241,7 @@ func (rw *responseWriter) Close(httpStatusCode int) {
 	}
 }
 
-func getContentType(encoding yarpctransport.Encoding) string {
+func getContentType(encoding yarpc.Encoding) string {
 	switch encoding {
 	case "json":
 		return "application/json"

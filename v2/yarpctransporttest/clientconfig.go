@@ -5,9 +5,10 @@
 package yarpctransporttest
 
 import (
-	gomock "github.com/golang/mock/gomock"
-	yarpctransport "go.uber.org/yarpc/v2/yarpctransport"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 // MockClientConfig is a mock of ClientConfig interface
@@ -46,9 +47,9 @@ func (mr *MockClientConfigMockRecorder) Caller() *gomock.Call {
 }
 
 // GetUnaryOutbound mocks base method
-func (m *MockClientConfig) GetUnaryOutbound() yarpctransport.UnaryOutbound {
+func (m *MockClientConfig) GetUnaryOutbound() yarpc.UnaryOutbound {
 	ret := m.ctrl.Call(m, "GetUnaryOutbound")
-	ret0, _ := ret[0].(yarpctransport.UnaryOutbound)
+	ret0, _ := ret[0].(yarpc.UnaryOutbound)
 	return ret0
 }
 
@@ -93,9 +94,9 @@ func (m *MockClientConfigProvider) EXPECT() *MockClientConfigProviderMockRecorde
 }
 
 // ClientConfig mocks base method
-func (m *MockClientConfigProvider) ClientConfig(arg0 string) yarpctransport.ClientConfig {
+func (m *MockClientConfigProvider) ClientConfig(arg0 string) yarpc.ClientConfig {
 	ret := m.ctrl.Call(m, "ClientConfig", arg0)
-	ret0, _ := ret[0].(yarpctransport.ClientConfig)
+	ret0, _ := ret[0].(yarpc.ClientConfig)
 	return ret0
 }
 

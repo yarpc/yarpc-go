@@ -27,18 +27,17 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/v2/yarpctransport"
 	"go.uber.org/yarpc/v2/yarpctransporttest"
 )
 
 func TestInboundCallReadFromRequest(t *testing.T) {
 	ctx, inboundCall := NewInboundCall(context.Background())
-	err := inboundCall.ReadFromRequest(&yarpctransport.Request{
+	err := inboundCall.ReadFromRequest(&Request{
 		Caller:    "caller",
 		Service:   "service",
-		Encoding:  yarpctransport.Encoding("raw"),
+		Encoding:  Encoding("raw"),
 		Procedure: "hello",
-		Headers: yarpctransport.HeadersFromMap(map[string]string{
+		Headers: HeadersFromMap(map[string]string{
 			"hello":   "World",
 			"Foo":     "bar",
 			"success": "true",
@@ -72,7 +71,7 @@ func TestInboundCallWriteToResponse(t *testing.T) {
 	tests := []struct {
 		desc        string
 		sendHeaders map[string]string
-		wantHeaders yarpctransport.Headers
+		wantHeaders Headers
 	}{
 		{
 			desc: "no headers",

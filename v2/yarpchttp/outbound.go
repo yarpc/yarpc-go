@@ -34,15 +34,15 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 	opentracinglog "github.com/opentracing/opentracing-go/log"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/internal/internalyarpcerrors"
 	"go.uber.org/yarpc/v2/yarpcerrors"
 	"go.uber.org/yarpc/v2/yarpcpeer"
 	"go.uber.org/yarpc/v2/yarpctracing"
-	"go.uber.org/yarpc/v2/yarpctransport"
 )
 
-// this ensures the HTTP outbound implements both yarpctransport.Outbound interfaces
-var _ yarpctransport.UnaryOutbound = (*Outbound)(nil)
+// this ensures the HTTP outbound implements both yarpc.Outbound interfaces
+var _ yarpc.UnaryOutbound = (*Outbound)(nil)
 
 var defaultURLTemplate, _ = url.Parse("http://localhost")
 
@@ -176,7 +176,7 @@ func (o *Outbound) Chooser() yarpcpeer.Chooser {
 }
 
 // Call makes a HTTP request
-func (o *Outbound) Call(ctx context.Context, treq *yarpctransport.Request) (*yarpctransport.Response, error) {
+func (o *Outbound) Call(ctx context.Context, treq *yarpc.Request) (*yarpc.Response, error) {
 	if treq == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil")
 	}
@@ -184,7 +184,7 @@ func (o *Outbound) Call(ctx context.Context, treq *yarpctransport.Request) (*yar
 	return o.call(ctx, treq)
 }
 
-func (o *Outbound) call(ctx context.Context, treq *yarpctransport.Request) (*yarpctransport.Response, error) {
+func (o *Outbound) call(ctx context.Context, treq *yarpc.Request) (*yarpc.Response, error) {
 	start := time.Now()
 	deadline, ok := ctx.Deadline()
 	if !ok {
@@ -217,13 +217,13 @@ func (o *Outbound) call(ctx context.Context, treq *yarpctransport.Request) (*yar
 
 	// Service name match validation, return yarpcerrors.CodeInternal error if not match
 	if match, resSvcName := checkServiceMatch(treq.Service, response.Header); !match {
-		return nil, yarpctransport.UpdateSpanWithErr(span,
+		return nil, yarpc.UpdateSpanWithErr(span,
 			yarpcerrors.InternalErrorf("service name sent from the request "+
 				"does not match the service name received in the response, sent %q, got: %q", treq.Service, resSvcName))
 	}
 
-	tres := &yarpctransport.Response{
-		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, yarpctransport.NewHeaders()),
+	tres := &yarpc.Response{
+		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, yarpc.NewHeaders()),
 		Body:             response.Body,
 		ApplicationError: response.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus,
 	}
@@ -241,7 +241,7 @@ func (o *Outbound) call(ctx context.Context, treq *yarpctransport.Request) (*yar
 	return nil, getYARPCErrorFromResponse(response, false)
 }
 
-func (o *Outbound) getPeerForRequest(ctx context.Context, treq *yarpctransport.Request) (*httpPeer, func(error), error) {
+func (o *Outbound) getPeerForRequest(ctx context.Context, treq *yarpc.Request) (*httpPeer, func(error), error) {
 	p, onFinish, err := o.chooser.Choose(ctx, treq)
 	if err != nil {
 		return nil, nil, err
@@ -258,12 +258,12 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, treq *yarpctransport.R
 	return hpPeer, onFinish, nil
 }
 
-func (o *Outbound) createRequest(treq *yarpctransport.Request) (*http.Request, error) {
+func (o *Outbound) createRequest(treq *yarpc.Request) (*http.Request, error) {
 	newURL := *o.urlTemplate
 	return http.NewRequest("POST", newURL.String(), treq.Body)
 }
 
-func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *yarpctransport.Request, start time.Time) (context.Context, *http.Request, opentracing.Span, error) {
+func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *yarpc.Request, start time.Time) (context.Context, *http.Request, opentracing.Span, error) {
 	// Apply HTTP Context headers for tracing and baggage carried by tracing.
 	tracer := o.tracer
 	var parent opentracing.SpanContext // ok to be nil
@@ -299,7 +299,7 @@ func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, t
 	return ctx, req, span, err
 }
 
-func (o *Outbound) withCoreHeaders(req *http.Request, treq *yarpctransport.Request, ttl time.Duration) *http.Request {
+func (o *Outbound) withCoreHeaders(req *http.Request, treq *yarpc.Request, ttl time.Duration) *http.Request {
 	// Add default headers to all requests.
 	for k, vs := range o.headers {
 		for _, v := range vs {
@@ -389,14 +389,14 @@ func checkServiceMatch(reqSvcName string, resHeaders http.Header) (bool, string)
 //  res, err := client.Do(req)
 //
 // All requests must have a deadline on the context.
-// The peer chooser for raw HTTP requests will receive a yarpctransport.Request with no body.
+// The peer chooser for raw HTTP requests will receive a yarpc.Request with no body.
 //
 // OpenTracing information must be added manually, before this call, to support context propagation.
 func (o *Outbound) RoundTrip(hreq *http.Request) (*http.Response, error) {
 	return o.roundTrip(hreq, nil /* treq */, time.Now())
 }
 
-func (o *Outbound) roundTrip(hreq *http.Request, treq *yarpctransport.Request, start time.Time) (*http.Response, error) {
+func (o *Outbound) roundTrip(hreq *http.Request, treq *yarpc.Request, start time.Time) (*http.Response, error) {
 	ctx := hreq.Context()
 
 	deadline, ok := ctx.Deadline()
@@ -414,15 +414,15 @@ func (o *Outbound) roundTrip(hreq *http.Request, treq *yarpctransport.Request, s
 	// using the go stdlib HTTP client is to use headers as the YAPRC HTTP
 	// transport header conventions.
 	if treq == nil {
-		treq = &yarpctransport.Request{
+		treq = &yarpc.Request{
 			Caller:          hreq.Header.Get(CallerHeader),
 			Service:         hreq.Header.Get(ServiceHeader),
-			Encoding:        yarpctransport.Encoding(hreq.Header.Get(EncodingHeader)),
+			Encoding:        yarpc.Encoding(hreq.Header.Get(EncodingHeader)),
 			Procedure:       hreq.Header.Get(ProcedureHeader),
 			ShardKey:        hreq.Header.Get(ShardKeyHeader),
 			RoutingKey:      hreq.Header.Get(RoutingKeyHeader),
 			RoutingDelegate: hreq.Header.Get(RoutingDelegateHeader),
-			Headers:         applicationHeaders.FromHTTPHeaders(hreq.Header, yarpctransport.Headers{}),
+			Headers:         applicationHeaders.FromHTTPHeaders(hreq.Header, yarpc.Headers{}),
 		}
 	}
 
@@ -447,7 +447,7 @@ func (o *Outbound) roundTrip(hreq *http.Request, treq *yarpctransport.Request, s
 func (o *Outbound) doWithPeer(
 	ctx context.Context,
 	hreq *http.Request,
-	treq *yarpctransport.Request,
+	treq *yarpc.Request,
 	start time.Time,
 	ttl time.Duration,
 	p *httpPeer,

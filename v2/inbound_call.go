@@ -22,8 +22,6 @@ package yarpc
 
 import (
 	"context"
-
-	"go.uber.org/yarpc/v2/yarpctransport"
 )
 
 // InboundCall holds information about the inbound call and its response.
@@ -33,7 +31,7 @@ import (
 // WriteResponseHeader.
 type InboundCall struct {
 	resHeaders             []keyValuePair
-	req                    *yarpctransport.Request
+	req                    *Request
 	disableResponseHeaders bool
 }
 
@@ -84,7 +82,7 @@ func getInboundCall(ctx context.Context) (*InboundCall, bool) {
 //
 // This information may be queried on the context using functions like Caller,
 // Service, Procedure, etc.
-func (ic *InboundCall) ReadFromRequest(req *yarpctransport.Request) error {
+func (ic *InboundCall) ReadFromRequest(req *Request) error {
 	// TODO(abg): Maybe we should copy attributes over so that changes to the
 	// Request don't change the output.
 	ic.req = req
@@ -95,7 +93,7 @@ func (ic *InboundCall) ReadFromRequest(req *yarpctransport.Request) error {
 //
 // This information may be queried on the context using functions like Caller,
 // Service, Procedure, etc.
-func (ic *InboundCall) ReadFromRequestMeta(reqMeta *yarpctransport.RequestMeta) error {
+func (ic *InboundCall) ReadFromRequestMeta(reqMeta *RequestMeta) error {
 	ic.req = reqMeta.ToRequest()
 	return nil
 }
@@ -105,8 +103,8 @@ func (ic *InboundCall) ReadFromRequestMeta(reqMeta *yarpctransport.RequestMeta) 
 //
 // If used, this must be called before writing the response body to the
 // ResponseWriter.
-func (ic *InboundCall) WriteToResponse(resw yarpctransport.ResponseWriter) error {
-	var headers yarpctransport.Headers
+func (ic *InboundCall) WriteToResponse(resw ResponseWriter) error {
+	var headers Headers
 	for _, h := range ic.resHeaders {
 		headers = headers.With(h.k, h.v)
 	}

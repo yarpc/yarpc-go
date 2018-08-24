@@ -6,9 +6,10 @@ package yarpctransporttest
 
 import (
 	context "context"
-	gomock "github.com/golang/mock/gomock"
-	yarpctransport "go.uber.org/yarpc/v2/yarpctransport"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 // MockUnaryHandler is a mock of UnaryHandler interface
@@ -35,7 +36,7 @@ func (m *MockUnaryHandler) EXPECT() *MockUnaryHandlerMockRecorder {
 }
 
 // Handle mocks base method
-func (m *MockUnaryHandler) Handle(arg0 context.Context, arg1 *yarpctransport.Request, arg2 yarpctransport.ResponseWriter) error {
+func (m *MockUnaryHandler) Handle(arg0 context.Context, arg1 *yarpc.Request, arg2 yarpc.ResponseWriter) error {
 	ret := m.ctrl.Call(m, "Handle", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -70,7 +71,7 @@ func (m *MockStreamHandler) EXPECT() *MockStreamHandlerMockRecorder {
 }
 
 // HandleStream mocks base method
-func (m *MockStreamHandler) HandleStream(arg0 *yarpctransport.ServerStream) error {
+func (m *MockStreamHandler) HandleStream(arg0 *yarpc.ServerStream) error {
 	ret := m.ctrl.Call(m, "HandleStream", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0

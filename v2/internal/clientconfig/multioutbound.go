@@ -20,13 +20,13 @@
 
 package clientconfig
 
-import "go.uber.org/yarpc/v2/yarpctransport"
+import yarpc "go.uber.org/yarpc/v2"
 
 // MultiOutbound constructs a ClientConfig backed by multiple outbound types
-func MultiOutbound(caller, service string, outbounds yarpctransport.Outbounds) yarpctransport.ClientConfig {
-	return &yarpctransport.OutboundConfig{
+func MultiOutbound(caller, service string, outbounds yarpc.Outbounds) yarpc.ClientConfig {
+	return &yarpc.OutboundConfig{
 		CallerName: caller,
-		Outbounds: yarpctransport.Outbounds{
+		Outbounds: yarpc.Outbounds{
 			ServiceName: service,
 			Unary:       outbounds.Unary,
 		},

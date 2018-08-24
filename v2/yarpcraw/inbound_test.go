@@ -31,7 +31,6 @@ import (
 	"github.com/uber/tchannel-go/testutils/testreader"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpctransport"
 	"go.uber.org/yarpc/v2/yarpctransporttest"
 )
 
@@ -45,12 +44,12 @@ func TestRawHandler(t *testing.T) {
 
 	tests := []struct {
 		procedure  string
-		headers    yarpctransport.Headers
+		headers    yarpc.Headers
 		bodyChunks [][]byte
 		handler    UnaryHandler
 
 		wantErr     string
-		wantHeaders yarpctransport.Headers
+		wantHeaders yarpc.Headers
 		wantBody    []byte
 	}{
 		{
@@ -107,7 +106,7 @@ func TestRawHandler(t *testing.T) {
 				require.NoError(t, yarpc.CallFromContext(ctx).WriteResponseHeader("hello", "world"))
 				return []byte{}, nil
 			},
-			wantHeaders: yarpctransport.NewHeaders().With("hello", "world"),
+			wantHeaders: yarpc.NewHeaders().With("hello", "world"),
 		},
 	}
 
@@ -124,7 +123,7 @@ func TestRawHandler(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 		defer cancel()
 
-		err := handler.Handle(ctx, &yarpctransport.Request{
+		err := handler.Handle(ctx, &yarpc.Request{
 			Procedure: tt.procedure,
 			Headers:   tt.headers,
 			Encoding:  "raw",

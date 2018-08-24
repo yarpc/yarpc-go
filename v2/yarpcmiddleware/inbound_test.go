@@ -30,8 +30,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/internal/testtime"
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcmiddleware"
-	"go.uber.org/yarpc/v2/yarpctransport"
 	"go.uber.org/yarpc/v2/yarpctransporttest"
 )
 
@@ -44,10 +44,10 @@ func TestUnaryNopInboundMiddleware(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	req := &yarpctransport.Request{
+	req := &yarpc.Request{
 		Caller:    "somecaller",
 		Service:   "someservice",
-		Encoding:  yarpctransport.Encoding("raw"),
+		Encoding:  yarpc.Encoding("raw"),
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}
@@ -63,7 +63,7 @@ func TestNilInboundMiddleware(t *testing.T) {
 	defer ctrl.Finish()
 
 	ctx := context.Background()
-	req := &yarpctransport.Request{}
+	req := &yarpc.Request{}
 
 	t.Run("unary", func(t *testing.T) {
 		handler := yarpctransporttest.NewMockUnaryHandler(ctrl)
@@ -83,7 +83,7 @@ func TestStreamNopInboundMiddleware(t *testing.T) {
 
 	h := yarpctransporttest.NewMockStreamHandler(mockCtrl)
 	wrappedH := yarpcmiddleware.ApplyStreamInbound(h, yarpcmiddleware.NopStreamInbound)
-	s, err := yarpctransport.NewServerStream(yarpctransporttest.NewMockStream(mockCtrl))
+	s, err := yarpc.NewServerStream(yarpctransporttest.NewMockStream(mockCtrl))
 	require.NoError(t, err)
 
 	err = errors.New("great sadness")

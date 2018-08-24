@@ -33,8 +33,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/internal/clientconfig"
-	"go.uber.org/yarpc/v2/yarpctransport"
-	"go.uber.org/yarpc/v2/yarpctransporttest"
 )
 
 var _typeOfMapInterface = reflect.TypeOf(map[string]interface{}{})
@@ -108,28 +106,28 @@ func TestCall(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		outbound := yarpctransporttest.NewMockUnaryOutbound(mockCtrl)
+		outbound := yarpc.NewMockUnaryOutbound(mockCtrl)
 		client := New(clientconfig.MultiOutbound(caller, service,
-			yarpctransport.Outbounds{
+			yarpc.Outbounds{
 				Unary: outbound,
 			}))
 
 		if !tt.noCall {
 			outbound.EXPECT().Call(gomock.Any(),
-				yarpctransporttest.NewRequestMatcher(t,
-					&yarpctransport.Request{
+				yarpc.NewRequestMatcher(t,
+					&yarpc.Request{
 						Caller:    caller,
 						Service:   service,
 						Procedure: tt.procedure,
 						Encoding:  Encoding,
-						Headers:   yarpctransport.HeadersFromMap(tt.headers),
+						Headers:   yarpc.HeadersFromMap(tt.headers),
 						Body:      bytes.NewReader([]byte(tt.encodedRequest)),
 					}),
 			).Return(
-				&yarpctransport.Response{
+				&yarpc.Response{
 					Body: ioutil.NopCloser(
 						bytes.NewReader([]byte(tt.encodedResponse))),
-					Headers: yarpctransport.HeadersFromMap(tt.wantHeaders),
+					Headers: yarpc.HeadersFromMap(tt.wantHeaders),
 				}, tt.responseErr)
 		}
 

@@ -26,8 +26,8 @@ import (
 	"strconv"
 	"time"
 
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerrors"
-	"go.uber.org/yarpc/v2/yarpctransport"
 )
 
 // parseTTL takes a context parses the given TTL, clamping the context to that
@@ -35,7 +35,7 @@ import (
 // to parse and validate that TTL.
 //
 // Leaves the context unchanged if the TTL is empty.
-func parseTTL(ctx context.Context, req *yarpctransport.Request, ttl string) (_ context.Context, cancel func(), _ error) {
+func parseTTL(ctx context.Context, req *yarpc.Request, ttl string) (_ context.Context, cancel func(), _ error) {
 	if ttl == "" {
 		return ctx, func() {}, nil
 	}

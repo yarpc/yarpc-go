@@ -34,11 +34,11 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/internal/routertest"
 	"go.uber.org/yarpc/v2/yarpcerrors"
 	"go.uber.org/yarpc/v2/yarpcraw"
 	"go.uber.org/yarpc/v2/yarpcrouter"
-	"go.uber.org/yarpc/v2/yarpctransport"
 	"go.uber.org/yarpc/v2/yarpctransporttest"
 )
 
@@ -58,7 +58,7 @@ func TestHandlerSuccess(t *testing.T) {
 
 	router := yarpctransporttest.NewMockRouter(mockCtrl)
 	rpcHandler := yarpctransporttest.NewMockUnaryHandler(mockCtrl)
-	spec := yarpctransport.NewUnaryHandlerSpec(rpcHandler)
+	spec := yarpc.NewUnaryHandlerSpec(rpcHandler)
 
 	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
 		WithService("curly").
@@ -70,11 +70,11 @@ func TestHandlerSuccess(t *testing.T) {
 			yarpctransporttest.ContextTTL(time.Second),
 		),
 		yarpctransporttest.NewRequestMatcher(
-			t, &yarpctransport.Request{
+			t, &yarpc.Request{
 				Caller:          "moe",
 				Service:         "curly",
 				Transport:       "http",
-				Encoding:        yarpctransport.Encoding("raw"),
+				Encoding:        yarpc.Encoding("raw"),
 				Procedure:       "nyuck",
 				ShardKey:        "shard",
 				RoutingKey:      "routekey",
@@ -154,7 +154,7 @@ func TestHandlerHeaders(t *testing.T) {
 	for _, tt := range tests {
 		router := yarpctransporttest.NewMockRouter(mockCtrl)
 		rpcHandler := yarpctransporttest.NewMockUnaryHandler(mockCtrl)
-		spec := yarpctransport.NewUnaryHandlerSpec(rpcHandler)
+		spec := yarpc.NewUnaryHandlerSpec(rpcHandler)
 
 		router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
 			WithService("service").
@@ -168,13 +168,13 @@ func TestHandlerHeaders(t *testing.T) {
 				yarpctransporttest.ContextTTL(tt.wantTTL),
 			),
 			yarpctransporttest.NewRequestMatcher(t,
-				&yarpctransport.Request{
+				&yarpc.Request{
 					Caller:    "caller",
 					Service:   "service",
 					Transport: "http",
-					Encoding:  yarpctransport.Encoding(tt.giveEncoding),
+					Encoding:  yarpc.Encoding(tt.giveEncoding),
 					Procedure: "hello",
-					Headers:   yarpctransport.HeadersFromMap(tt.wantHeaders),
+					Headers:   yarpc.HeadersFromMap(tt.wantHeaders),
 					Body:      bytes.NewReader([]byte("world")),
 				}),
 			gomock.Any(),
@@ -199,7 +199,7 @@ func TestHandlerHeaders(t *testing.T) {
 		rw := httptest.NewRecorder()
 		httpHandler.ServeHTTP(rw, req)
 		assert.Equal(t, 200, rw.Code, "expected 200 status code")
-		assert.Equal(t, getContentType(yarpctransport.Encoding(tt.giveEncoding)), rw.HeaderMap.Get("Content-Type"))
+		assert.Equal(t, getContentType(yarpc.Encoding(tt.giveEncoding)), rw.HeaderMap.Get("Content-Type"))
 	}
 }
 
@@ -286,7 +286,7 @@ func TestHandlerFailures(t *testing.T) {
 		if tt.errTTL {
 			// since TTL is checked after we've determined the transport type, if we have an
 			// error with TTL it will be discovered after we read from the router
-			spec := yarpctransport.NewUnaryHandlerSpec(panickedHandler{})
+			spec := yarpc.NewUnaryHandlerSpec(panickedHandler{})
 			router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
 				WithService(service).
 				WithProcedure(procedure),
@@ -327,11 +327,11 @@ func TestHandlerInternalFailure(t *testing.T) {
 	rpcHandler.EXPECT().Handle(
 		yarpctransporttest.NewContextMatcher(t, yarpctransporttest.ContextTTL(time.Second)),
 		yarpctransporttest.NewRequestMatcher(
-			t, &yarpctransport.Request{
+			t, &yarpc.Request{
 				Caller:    "somecaller",
 				Service:   "fake",
 				Transport: "http",
-				Encoding:  yarpctransport.Encoding("raw"),
+				Encoding:  yarpc.Encoding("raw"),
 				Procedure: "hello",
 				Body:      bytes.NewReader([]byte{}),
 			},
@@ -340,7 +340,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 	).Return(fmt.Errorf("great sadness"))
 
 	router := yarpctransporttest.NewMockRouter(mockCtrl)
-	spec := yarpctransport.NewUnaryHandlerSpec(rpcHandler)
+	spec := yarpc.NewUnaryHandlerSpec(rpcHandler)
 
 	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
 		WithService("fake").
@@ -360,16 +360,16 @@ func TestHandlerInternalFailure(t *testing.T) {
 
 type panickedHandler struct{}
 
-func (th panickedHandler) Handle(context.Context, *yarpctransport.Request, yarpctransport.ResponseWriter) error {
+func (th panickedHandler) Handle(context.Context, *yarpc.Request, yarpc.ResponseWriter) error {
 	panic("oops I panicked!")
 }
 
 func TestHandlerPanic(t *testing.T) {
 	router := yarpcrouter.NewMapRouter("yarpc-test-client")
-	router.Register([]yarpctransport.Procedure{
+	router.Register([]yarpc.Procedure{
 		{
 			Name:        "panic",
-			HandlerSpec: yarpctransport.NewUnaryHandlerSpec(panickedHandler{}),
+			HandlerSpec: yarpc.NewUnaryHandlerSpec(panickedHandler{}),
 		},
 	})
 	trans := NewTransport()
@@ -382,9 +382,9 @@ func TestHandlerPanic(t *testing.T) {
 
 	outbound := trans.NewSingleOutbound(fmt.Sprintf("http://" + inbound.Addr().String()))
 
-	client := yarpcraw.New(&yarpctransport.OutboundConfig{
+	client := yarpcraw.New(&yarpc.OutboundConfig{
 		CallerName: "yarpc-test-client",
-		Outbounds: yarpctransport.Outbounds{
+		Outbounds: yarpc.Outbounds{
 			ServiceName: "yarpc-test-client",
 			Unary:       outbound,
 		},
@@ -416,7 +416,7 @@ func TestResponseWriter(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	writer := newResponseWriter(recorder)
 
-	headers := yarpctransport.HeadersFromMap(map[string]string{
+	headers := yarpc.HeadersFromMap(map[string]string{
 		"foo":       "bar",
 		"shard-key": "123",
 	})

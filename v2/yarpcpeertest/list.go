@@ -6,10 +6,11 @@ package yarpcpeertest
 
 import (
 	context "context"
-	gomock "github.com/golang/mock/gomock"
-	yarpcpeer "go.uber.org/yarpc/v2/yarpcpeer"
-	yarpctransport "go.uber.org/yarpc/v2/yarpctransport"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
+	yarpc "go.uber.org/yarpc/v2"
+	yarpcpeer "go.uber.org/yarpc/v2/yarpcpeer"
 )
 
 // MockChooser is a mock of Chooser interface
@@ -36,7 +37,7 @@ func (m *MockChooser) EXPECT() *MockChooserMockRecorder {
 }
 
 // Choose mocks base method
-func (m *MockChooser) Choose(arg0 context.Context, arg1 *yarpctransport.Request) (yarpcpeer.Peer, func(error), error) {
+func (m *MockChooser) Choose(arg0 context.Context, arg1 *yarpc.Request) (yarpcpeer.Peer, func(error), error) {
 	ret := m.ctrl.Call(m, "Choose", arg0, arg1)
 	ret0, _ := ret[0].(yarpcpeer.Peer)
 	ret1, _ := ret[1].(func(error))
@@ -108,7 +109,7 @@ func (m *MockChooserList) EXPECT() *MockChooserListMockRecorder {
 }
 
 // Choose mocks base method
-func (m *MockChooserList) Choose(arg0 context.Context, arg1 *yarpctransport.Request) (yarpcpeer.Peer, func(error), error) {
+func (m *MockChooserList) Choose(arg0 context.Context, arg1 *yarpc.Request) (yarpcpeer.Peer, func(error), error) {
 	ret := m.ctrl.Call(m, "Choose", arg0, arg1)
 	ret0, _ := ret[0].(yarpcpeer.Peer)
 	ret1, _ := ret[1].(func(error))

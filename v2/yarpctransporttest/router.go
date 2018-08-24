@@ -6,9 +6,10 @@ package yarpctransporttest
 
 import (
 	context "context"
-	gomock "github.com/golang/mock/gomock"
-	yarpctransport "go.uber.org/yarpc/v2/yarpctransport"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 // MockRouter is a mock of Router interface
@@ -35,9 +36,9 @@ func (m *MockRouter) EXPECT() *MockRouterMockRecorder {
 }
 
 // Choose mocks base method
-func (m *MockRouter) Choose(arg0 context.Context, arg1 *yarpctransport.Request) (yarpctransport.HandlerSpec, error) {
+func (m *MockRouter) Choose(arg0 context.Context, arg1 *yarpc.Request) (yarpc.HandlerSpec, error) {
 	ret := m.ctrl.Call(m, "Choose", arg0, arg1)
-	ret0, _ := ret[0].(yarpctransport.HandlerSpec)
+	ret0, _ := ret[0].(yarpc.HandlerSpec)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -48,9 +49,9 @@ func (mr *MockRouterMockRecorder) Choose(arg0, arg1 interface{}) *gomock.Call {
 }
 
 // Procedures mocks base method
-func (m *MockRouter) Procedures() []yarpctransport.Procedure {
+func (m *MockRouter) Procedures() []yarpc.Procedure {
 	ret := m.ctrl.Call(m, "Procedures")
-	ret0, _ := ret[0].([]yarpctransport.Procedure)
+	ret0, _ := ret[0].([]yarpc.Procedure)
 	return ret0
 }
 
@@ -83,9 +84,9 @@ func (m *MockRouteTable) EXPECT() *MockRouteTableMockRecorder {
 }
 
 // Choose mocks base method
-func (m *MockRouteTable) Choose(arg0 context.Context, arg1 *yarpctransport.Request) (yarpctransport.HandlerSpec, error) {
+func (m *MockRouteTable) Choose(arg0 context.Context, arg1 *yarpc.Request) (yarpc.HandlerSpec, error) {
 	ret := m.ctrl.Call(m, "Choose", arg0, arg1)
-	ret0, _ := ret[0].(yarpctransport.HandlerSpec)
+	ret0, _ := ret[0].(yarpc.HandlerSpec)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -96,9 +97,9 @@ func (mr *MockRouteTableMockRecorder) Choose(arg0, arg1 interface{}) *gomock.Cal
 }
 
 // Procedures mocks base method
-func (m *MockRouteTable) Procedures() []yarpctransport.Procedure {
+func (m *MockRouteTable) Procedures() []yarpc.Procedure {
 	ret := m.ctrl.Call(m, "Procedures")
-	ret0, _ := ret[0].([]yarpctransport.Procedure)
+	ret0, _ := ret[0].([]yarpc.Procedure)
 	return ret0
 }
 
@@ -108,7 +109,7 @@ func (mr *MockRouteTableMockRecorder) Procedures() *gomock.Call {
 }
 
 // Register mocks base method
-func (m *MockRouteTable) Register(arg0 []yarpctransport.Procedure) {
+func (m *MockRouteTable) Register(arg0 []yarpc.Procedure) {
 	m.ctrl.Call(m, "Register", arg0)
 }
 

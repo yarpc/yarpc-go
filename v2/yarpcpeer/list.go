@@ -23,7 +23,7 @@ package yarpcpeer
 import (
 	"context"
 
-	"go.uber.org/yarpc/v2/yarpctransport"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 // Chooser is a collection of Peers. Outbounds request peers from the
@@ -31,7 +31,7 @@ import (
 // The chooser is responsible for managing the lifecycle of any retained peers.
 type Chooser interface {
 	// Choose a Peer for the next call, block until a peer is available (or timeout)
-	Choose(context.Context, *yarpctransport.Request) (peer Peer, onFinish func(error), err error)
+	Choose(context.Context, *yarpc.Request) (peer Peer, onFinish func(error), err error)
 }
 
 // List listens to adds and removes of Peers from a peer list updater.

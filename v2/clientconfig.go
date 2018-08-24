@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpctransport
+package yarpc
 
 // ClientConfigProvider builds ClientConfigs from the current service to other services.
 type ClientConfigProvider interface {

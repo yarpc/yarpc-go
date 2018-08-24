@@ -25,14 +25,13 @@ import (
 	"io/ioutil"
 
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpctransport"
 )
 
-// rawUnaryHandler adapts a Handler into a yarpctransport.UnaryHandler
+// rawUnaryHandler adapts a Handler into a yarpc.UnaryHandler
 type rawUnaryHandler struct{ UnaryHandler }
 
-func (r rawUnaryHandler) Handle(ctx context.Context, treq *yarpctransport.Request, rw yarpctransport.ResponseWriter) error {
-	if err := yarpctransport.ExpectEncodings(treq, Encoding); err != nil {
+func (r rawUnaryHandler) Handle(ctx context.Context, treq *yarpc.Request, rw yarpc.ResponseWriter) error {
+	if err := yarpc.ExpectEncodings(treq, Encoding); err != nil {
 		return err
 	}
 
