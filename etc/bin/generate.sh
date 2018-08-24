@@ -78,6 +78,18 @@ mockgen -destination=api/transport/transporttest/router.go -package=transporttes
 mockgen -destination=api/transport/transporttest/stream.go -package=transporttest go.uber.org/yarpc/api/transport Stream,StreamCloser
 mockgen -destination=api/transport/transporttest/transport.go -package=transporttest go.uber.org/yarpc/api/transport Transport
 
+mockgen -destination=v2/yarpcmiddlewaretest/router.go -package=yarpcmiddlewaretest go.uber.org/yarpc/v2/yarpcmiddleware Router,UnaryInbound,UnaryOutbound,StreamInbound,StreamOutbound
+mockgen -destination=v2/yarpcpeertest/list.go -package=yarpcpeertest go.uber.org/yarpc/v2/yarpcpeer Chooser,List,ChooserList
+mockgen -destination=v2/yarpcpeertest/peer.go -package=yarpcpeertest go.uber.org/yarpc/v2/yarpcpeer Identifier,Peer
+mockgen -destination=v2/yarpcpeertest/transport.go -package=yarpcpeertest go.uber.org/yarpc/v2/yarpcpeer Transport,Subscriber
+# mockgen -destination=v2/yarpctransporttest/clientconfig.go -package=yarpctransporttest go.uber.org/yarpc/v2/yarpctransport ClientConfig,ClientConfigProvider
+mockgen -destination=v2/yarpctransporttest/handler.go -package=yarpctransporttest go.uber.org/yarpc/v2/yarpctransport UnaryHandler,StreamHandler
+# mockgen -destination=v2/yarpctransporttest/inbound.go -package=yarpctransporttest go.uber.org/yarpc/v2/yarpctransport Inbound
+# mockgen -destination=v2/yarpctransporttest/outbound.go -package=yarpctransporttest go.uber.org/yarpc/v2/yarpctransport UnaryOutbound,StreamOutbound
+mockgen -destination=v2/yarpctransporttest/router.go -package=yarpctransporttest go.uber.org/yarpc/v2/yarpctransport Router,RouteTable
+mockgen -destination=v2/yarpctransporttest/stream.go -package=yarpctransporttest go.uber.org/yarpc/v2/yarpctransport Stream,StreamCloser
+# mockgen -destination=v2/yarpctransporttest/transport.go -package=yarpctransporttest go.uber.org/yarpc/v2/yarpctransport Transport
+
 generate_stringer ConnectionStatus ./api/peer
 generate_stringer State ./pkg/lifecycle
 generate_stringer Type ./api/transport
