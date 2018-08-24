@@ -25,7 +25,6 @@ import (
 	"fmt"
 
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcpeer"
 )
 
 // FakeOutboundOption is an option for FakeTransport.NewOutbound.
@@ -56,7 +55,7 @@ func OutboundCallOverride(callable OutboundCallable) FakeOutboundOption {
 }
 
 // NewOutbound returns a FakeOutbound with a given peer chooser and options.
-func (t *FakeTransport) NewOutbound(c yarpcpeer.Chooser, opts ...FakeOutboundOption) *FakeOutbound {
+func (t *FakeTransport) NewOutbound(c yarpc.Chooser, opts ...FakeOutboundOption) *FakeOutbound {
 	o := &FakeOutbound{
 		transport: t,
 		chooser:   c,
@@ -70,13 +69,13 @@ func (t *FakeTransport) NewOutbound(c yarpcpeer.Chooser, opts ...FakeOutboundOpt
 // FakeOutbound is a unary outbound for the FakeTransport. It is fake.
 type FakeOutbound struct {
 	transport    *FakeTransport
-	chooser      yarpcpeer.Chooser
+	chooser      yarpc.Chooser
 	nopOption    string
 	callOverride OutboundCallable
 }
 
 // Chooser returns theis FakeOutbound's peer chooser.
-func (o *FakeOutbound) Chooser() yarpcpeer.Chooser {
+func (o *FakeOutbound) Chooser() yarpc.Chooser {
 	return o.chooser
 }
 

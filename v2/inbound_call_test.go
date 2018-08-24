@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc
+package yarpc_test
 
 import (
 	"context"
@@ -27,6 +27,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	. "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpctransporttest"
 )
 

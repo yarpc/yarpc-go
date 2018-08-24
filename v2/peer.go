@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcpeer
+package yarpc
 
 // ConnectionStatus maintains information about the Peer's connection state
 type ConnectionStatus int

@@ -27,12 +27,12 @@ package integrationtest
 
 // // TransportSpec specifies how to create test clients and servers for a transport.
 // type TransportSpec struct {
-// 	NewServerTransport func(t *testing.T, addr string) yarpcpeer.Transport
-// 	NewClientTransport func(t *testing.T) yarpcpeer.Transport
-// 	NewInbound         func(trans yarpcpeer.Transport, addr string, router yarpc.Router) func()
-// 	NewUnaryOutbound   func(trans yarpcpeer.Transport, pc yarpcpeer.Chooser) yarpc.UnaryOutbound
-// 	Identify           func(addr string) yarpcpeer.Identifier
-// 	Addr               func(trans yarpcpeer.Transport, inbound yarpc.Inbound) string
+// 	NewServerTransport func(t *testing.T, addr string) yarpc.Dialer
+// 	NewClientTransport func(t *testing.T) yarpc.Dialer
+// 	NewInbound         func(trans yarpc.Dialer, addr string, router yarpc.Router) func()
+// 	NewUnaryOutbound   func(trans yarpc.Dialer, pc yarpc.Chooser) yarpc.UnaryOutbound
+// 	Identify           func(addr string) yarpc.Identifier
+// 	Addr               func(trans yarpc.Dialer, inbound yarpc.Inbound) string
 // }
 
 // // Test runs reusable tests with the transport spec.
@@ -45,7 +45,7 @@ package integrationtest
 // // NewClient returns a running dispatcher and a raw client for the echo
 // // procedure.
 // func (s TransportSpec) NewClient(t *testing.T, addrs []string) (yarpcraw.Client, func()) {
-// 	ids := make([]yarpcpeer.Identifier, len(addrs))
+// 	ids := make([]yarpc.Identifier, len(addrs))
 // 	for i, addr := range addrs {
 // 		ids[i] = s.Identify(addr)
 // 	}
@@ -53,8 +53,8 @@ package integrationtest
 // 	trans := s.NewClientTransport(t)
 
 // 	pl := yarpcroundrobin.New(trans)
-// 	pl.Update(yarpcpeer.ListUpdates{
-// 		Additions: yarpcpeer.Addresses(addrs),
+// 	pl.Update(yarpc.ListUpdates{
+// 		Additions: yarpc.Addresses(addrs),
 // 	})
 // 	pl.Start()
 

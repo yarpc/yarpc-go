@@ -6,10 +6,9 @@ package yarpcmiddlewaretest
 
 import (
 	context "context"
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
-	yarpc "go.uber.org/yarpc/v2"
+	v2 "go.uber.org/yarpc/v2"
+	reflect "reflect"
 )
 
 // MockRouter is a mock of Router interface
@@ -36,9 +35,9 @@ func (m *MockRouter) EXPECT() *MockRouterMockRecorder {
 }
 
 // Choose mocks base method
-func (m *MockRouter) Choose(arg0 context.Context, arg1 *yarpc.Request, arg2 yarpc.Router) (yarpc.HandlerSpec, error) {
+func (m *MockRouter) Choose(arg0 context.Context, arg1 *v2.Request, arg2 v2.Router) (v2.HandlerSpec, error) {
 	ret := m.ctrl.Call(m, "Choose", arg0, arg1, arg2)
-	ret0, _ := ret[0].(yarpc.HandlerSpec)
+	ret0, _ := ret[0].(v2.HandlerSpec)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -49,9 +48,9 @@ func (mr *MockRouterMockRecorder) Choose(arg0, arg1, arg2 interface{}) *gomock.C
 }
 
 // Procedures mocks base method
-func (m *MockRouter) Procedures(arg0 yarpc.Router) []yarpc.Procedure {
+func (m *MockRouter) Procedures(arg0 v2.Router) []v2.Procedure {
 	ret := m.ctrl.Call(m, "Procedures", arg0)
-	ret0, _ := ret[0].([]yarpc.Procedure)
+	ret0, _ := ret[0].([]v2.Procedure)
 	return ret0
 }
 
@@ -84,7 +83,7 @@ func (m *MockUnaryInbound) EXPECT() *MockUnaryInboundMockRecorder {
 }
 
 // Handle mocks base method
-func (m *MockUnaryInbound) Handle(arg0 context.Context, arg1 *yarpc.Request, arg2 yarpc.ResponseWriter, arg3 yarpc.UnaryHandler) error {
+func (m *MockUnaryInbound) Handle(arg0 context.Context, arg1 *v2.Request, arg2 v2.ResponseWriter, arg3 v2.UnaryHandler) error {
 	ret := m.ctrl.Call(m, "Handle", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -119,9 +118,9 @@ func (m *MockUnaryOutbound) EXPECT() *MockUnaryOutboundMockRecorder {
 }
 
 // Call mocks base method
-func (m *MockUnaryOutbound) Call(arg0 context.Context, arg1 *yarpc.Request, arg2 yarpc.UnaryOutbound) (*yarpc.Response, error) {
+func (m *MockUnaryOutbound) Call(arg0 context.Context, arg1 *v2.Request, arg2 v2.UnaryOutbound) (*v2.Response, error) {
 	ret := m.ctrl.Call(m, "Call", arg0, arg1, arg2)
-	ret0, _ := ret[0].(*yarpc.Response)
+	ret0, _ := ret[0].(*v2.Response)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -155,7 +154,7 @@ func (m *MockStreamInbound) EXPECT() *MockStreamInboundMockRecorder {
 }
 
 // HandleStream mocks base method
-func (m *MockStreamInbound) HandleStream(arg0 *yarpc.ServerStream, arg1 yarpc.StreamHandler) error {
+func (m *MockStreamInbound) HandleStream(arg0 *v2.ServerStream, arg1 v2.StreamHandler) error {
 	ret := m.ctrl.Call(m, "HandleStream", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -190,9 +189,9 @@ func (m *MockStreamOutbound) EXPECT() *MockStreamOutboundMockRecorder {
 }
 
 // CallStream mocks base method
-func (m *MockStreamOutbound) CallStream(arg0 context.Context, arg1 *yarpc.StreamRequest, arg2 yarpc.StreamOutbound) (*yarpc.ClientStream, error) {
+func (m *MockStreamOutbound) CallStream(arg0 context.Context, arg1 *v2.StreamRequest, arg2 v2.StreamOutbound) (*v2.ClientStream, error) {
 	ret := m.ctrl.Call(m, "CallStream", arg0, arg1, arg2)
-	ret0, _ := ret[0].(*yarpc.ClientStream)
+	ret0, _ := ret[0].(*v2.ClientStream)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

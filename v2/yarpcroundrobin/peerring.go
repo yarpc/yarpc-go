@@ -26,7 +26,6 @@ import (
 
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerrors"
-	"go.uber.org/yarpc/v2/yarpcpeer"
 	"go.uber.org/yarpc/v2/yarpcpeerlist"
 )
 
@@ -38,11 +37,11 @@ func newPeerRing() *peerRing {
 }
 
 type subscriber struct {
-	peer yarpcpeer.StatusPeer
+	peer yarpc.StatusPeer
 	node *ring.Ring
 }
 
-func (s *subscriber) NotifyStatusChanged(pid yarpcpeer.Identifier) {
+func (s *subscriber) NotifyStatusChanged(pid yarpc.Identifier) {
 }
 
 // peerRing provides a safe way to interact (Add/Remove/Get) with a potentially
@@ -54,9 +53,9 @@ type peerRing struct {
 
 var _ yarpcpeerlist.Implementation = (*peerRing)(nil)
 
-// Add a yarpcpeer.StatusPeer to the end of the peerRing, if the ring is empty it
+// Add a yarpc.StatusPeer to the end of the peerRing, if the ring is empty it
 // initializes the nextNode marker
-func (pr *peerRing) Add(p yarpcpeer.StatusPeer, _ yarpcpeer.Identifier) yarpcpeer.Subscriber {
+func (pr *peerRing) Add(p yarpc.StatusPeer, _ yarpc.Identifier) yarpc.Subscriber {
 	sub := &subscriber{peer: p}
 	newNode := ring.New(1)
 	newNode.Value = sub
@@ -74,7 +73,7 @@ func (pr *peerRing) Add(p yarpcpeer.StatusPeer, _ yarpcpeer.Identifier) yarpcpee
 
 // Remove the peer from the ring. Use the subscriber to address the node of the
 // ring directly.
-func (pr *peerRing) Remove(p yarpcpeer.StatusPeer, _ yarpcpeer.Identifier, s yarpcpeer.Subscriber) {
+func (pr *peerRing) Remove(p yarpc.StatusPeer, _ yarpc.Identifier, s yarpc.Subscriber) {
 	sub, ok := s.(*subscriber)
 	if !ok {
 		// Don't panic.
@@ -98,7 +97,7 @@ func (pr *peerRing) isNextNode(node *ring.Ring) bool {
 
 // Choose returns the next peer in the ring, or nil if there is no peer in the ring
 // after it has the next peer, it increments the nextPeer marker in the ring
-func (pr *peerRing) Choose(_ context.Context, _ *yarpc.Request) yarpcpeer.StatusPeer {
+func (pr *peerRing) Choose(_ context.Context, _ *yarpc.Request) yarpc.StatusPeer {
 	if pr.nextNode == nil {
 		return nil
 	}
@@ -109,7 +108,7 @@ func (pr *peerRing) Choose(_ context.Context, _ *yarpc.Request) yarpcpeer.Status
 	return p
 }
 
-func getPeerForRingNode(rNode *ring.Ring) yarpcpeer.StatusPeer {
+func getPeerForRingNode(rNode *ring.Ring) yarpc.StatusPeer {
 	return rNode.Value.(*subscriber).peer
 }
 

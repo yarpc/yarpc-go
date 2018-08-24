@@ -18,31 +18,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcpeertest
+package yarpc
 
-import (
-	"github.com/golang/mock/gomock"
-	yarpcpeer "go.uber.org/yarpc/v2/yarpcpeer"
-)
-
-// SubscriberDefinition is an abstraction for defining a PeerSubscriber with
-// an ID so it can be referenced later.
-type SubscriberDefinition struct {
-	ID                  string
-	ExpectedNotifyCount int
+// Subscriber listens to changes of a Peer over time.
+type Subscriber interface {
+	// The Peer Notifies the Subscriber when its status changes (e.g. connections status, pending requests)
+	NotifyStatusChanged(Identifier)
 }
 
-// CreateSubscriberMap will take a slice of SubscriberDefinitions and return
-// a map of IDs to MockPeerSubscribers
-func CreateSubscriberMap(
-	mockCtrl *gomock.Controller,
-	subDefinitions []SubscriberDefinition,
-) map[string]yarpcpeer.Subscriber {
-	subscribers := make(map[string]yarpcpeer.Subscriber, len(subDefinitions))
-	for _, subDef := range subDefinitions {
-		sub := NewMockSubscriber(mockCtrl)
-		sub.EXPECT().NotifyStatusChanged(gomock.Any()).Times(subDef.ExpectedNotifyCount)
-		subscribers[subDef.ID] = sub
-	}
-	return subscribers
+// Dialer manages Peers across different Subscribers.  A Subscriber will
+// request a Peer for a specific Identifier and the Dialer has the ability to
+// create a new Peer or return an existing one.
+type Dialer interface {
+	// Get or create a Peer for the Subscriber
+	RetainPeer(Identifier, Subscriber) (Peer, error)
+
+	// Unallocate a peer from the Subscriber
+	ReleasePeer(Identifier, Subscriber) error
 }

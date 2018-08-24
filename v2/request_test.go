@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	. "go.uber.org/yarpc/v2"
 	"go.uber.org/zap/zapcore"
 )
 

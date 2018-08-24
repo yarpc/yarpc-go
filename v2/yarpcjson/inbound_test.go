@@ -58,7 +58,7 @@ func TestHandleStructSuccess(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	resw := new(yarpc.FakeResponseWriter)
+	resw := new(yarpctransporttest.FakeResponseWriter)
 	err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",
@@ -85,7 +85,7 @@ func TestHandleMapSuccess(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	resw := new(yarpc.FakeResponseWriter)
+	resw := new(yarpctransporttest.FakeResponseWriter)
 	err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "foo",
 		Encoding:  "json",
@@ -105,7 +105,7 @@ func TestHandleInterfaceEmptySuccess(t *testing.T) {
 
 	handler := jsonHandler{reader: ifaceEmptyReader{}, handler: reflect.ValueOf(h)}
 
-	resw := new(yarpc.FakeResponseWriter)
+	resw := new(yarpctransporttest.FakeResponseWriter)
 	err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "foo",
 		Encoding:  "json",
@@ -127,7 +127,7 @@ func TestHandleSuccessWithResponseHeaders(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	resw := new(yarpc.FakeResponseWriter)
+	resw := new(yarpctransporttest.FakeResponseWriter)
 	err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",

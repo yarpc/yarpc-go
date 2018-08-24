@@ -18,14 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcpeertest
+package yarpctest
 
 import (
 	"fmt"
 	"sync"
 
 	"github.com/golang/mock/gomock"
-	yarpcpeer "go.uber.org/yarpc/v2/yarpcpeer"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 // MockPeerIdentifier is a small wrapper around the PeerIdentifier interfaces for a string
@@ -38,10 +38,10 @@ func (pid MockPeerIdentifier) Identifier() string {
 }
 
 // NewLightMockPeer returns a new MockPeer
-func NewLightMockPeer(pid MockPeerIdentifier, conStatus yarpcpeer.ConnectionStatus) *LightMockPeer {
+func NewLightMockPeer(pid MockPeerIdentifier, conStatus yarpc.ConnectionStatus) *LightMockPeer {
 	return &LightMockPeer{
 		MockPeerIdentifier: pid,
-		PeerStatus: yarpcpeer.Status{
+		PeerStatus: yarpc.Status{
 			ConnectionStatus:    conStatus,
 			PendingRequestCount: 0,
 		},
@@ -56,11 +56,11 @@ type LightMockPeer struct {
 
 	MockPeerIdentifier
 
-	PeerStatus yarpcpeer.Status
+	PeerStatus yarpc.Status
 }
 
 // Status returns the Status Object of the MockPeer
-func (p *LightMockPeer) Status() yarpcpeer.Status {
+func (p *LightMockPeer) Status() yarpc.Status {
 	return p.PeerStatus
 }
 
@@ -84,7 +84,7 @@ type PeerIdentifierMatcher string
 
 // Matches returns true of got is equivalent to the PeerIdentifier Matching string
 func (pim PeerIdentifierMatcher) Matches(got interface{}) bool {
-	gotPID, ok := got.(yarpcpeer.Identifier)
+	gotPID, ok := got.(yarpc.Identifier)
 	if !ok {
 		return false
 	}
@@ -97,52 +97,52 @@ func (pim PeerIdentifierMatcher) String() string {
 }
 
 // CreatePeerIDs takes a slice of peerID strings and returns a slice of PeerIdentifiers
-func CreatePeerIDs(peerIDStrs []string) []yarpcpeer.Identifier {
-	pids := make([]yarpcpeer.Identifier, 0, len(peerIDStrs))
+func CreatePeerIDs(peerIDStrs []string) []yarpc.Identifier {
+	pids := make([]yarpc.Identifier, 0, len(peerIDStrs))
 	for _, id := range peerIDStrs {
 		pids = append(pids, MockPeerIdentifier(id))
 	}
 	return pids
 }
 
-// ExpectPeerRetains registers expectations on a MockTransport to generate peers on the RetainPeer function
+// ExpectPeerRetains registers expectations on a MockDialer to generate peers on the RetainPeer function
 func ExpectPeerRetains(
-	transport *MockTransport,
+	dialer *MockDialer,
 	availablePeerStrs []string,
 	unavailablePeerStrs []string,
 ) map[string]*LightMockPeer {
 	peers := make(map[string]*LightMockPeer, len(availablePeerStrs)+len(unavailablePeerStrs))
 	for _, peerStr := range availablePeerStrs {
-		p := NewLightMockPeer(MockPeerIdentifier(peerStr), yarpcpeer.Available)
-		transport.EXPECT().RetainPeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(p, nil)
+		p := NewLightMockPeer(MockPeerIdentifier(peerStr), yarpc.Available)
+		dialer.EXPECT().RetainPeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(p, nil)
 		peers[p.Identifier()] = p
 	}
 	for _, peerStr := range unavailablePeerStrs {
-		p := NewLightMockPeer(MockPeerIdentifier(peerStr), yarpcpeer.Unavailable)
-		transport.EXPECT().RetainPeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(p, nil)
+		p := NewLightMockPeer(MockPeerIdentifier(peerStr), yarpc.Unavailable)
+		dialer.EXPECT().RetainPeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(p, nil)
 		peers[p.Identifier()] = p
 	}
 	return peers
 }
 
-// ExpectPeerRetainsWithError registers expectations on a MockTransport return errors
+// ExpectPeerRetainsWithError registers expectations on a MockDialer return errors
 func ExpectPeerRetainsWithError(
-	transport *MockTransport,
+	dialer *MockDialer,
 	peerStrs []string,
-	err error, // Will be returned from the MockTransport on the Retains of these Peers
+	err error, // Will be returned from the MockDialer on the Retains of these Peers
 ) {
 	for _, peerStr := range peerStrs {
-		transport.EXPECT().RetainPeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(nil, err)
+		dialer.EXPECT().RetainPeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(nil, err)
 	}
 }
 
-// ExpectPeerReleases registers expectations on a MockTransport to release peers through the ReleasePeer function
+// ExpectPeerReleases registers expectations on a MockDialer to release peers through the ReleasePeer function
 func ExpectPeerReleases(
-	transport *MockTransport,
+	dialer *MockDialer,
 	peerStrs []string,
 	err error,
 ) {
 	for _, peerStr := range peerStrs {
-		transport.EXPECT().ReleasePeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(err)
+		dialer.EXPECT().ReleasePeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(err)
 	}
 }

@@ -31,7 +31,7 @@ import (
 	backoffapi "go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/yarpc/pkg/lifecycle"
-	"go.uber.org/yarpc/v2/yarpcpeer"
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/zap"
 )
 
@@ -275,7 +275,7 @@ type Transport struct {
 	logger *zap.Logger
 }
 
-var _ yarpcpeer.Transport = (*Transport)(nil)
+var _ yarpc.Dialer = (*Transport)(nil)
 
 // Start starts the HTTP transport.
 func (a *Transport) Start() error {
@@ -297,8 +297,8 @@ func (a *Transport) IsRunning() bool {
 	return a.once.IsRunning()
 }
 
-// RetainPeer gets or creates a Peer for the specified yarpcpeer.Subscriber (usually a yarpcpeer.Chooser)
-func (a *Transport) RetainPeer(pid yarpcpeer.Identifier, sub yarpcpeer.Subscriber) (yarpcpeer.Peer, error) {
+// RetainPeer gets or creates a Peer for the specified yarpc.Subscriber (usually a yarpc.Chooser)
+func (a *Transport) RetainPeer(pid yarpc.Identifier, sub yarpc.Subscriber) (yarpc.Peer, error) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -308,7 +308,7 @@ func (a *Transport) RetainPeer(pid yarpcpeer.Identifier, sub yarpcpeer.Subscribe
 }
 
 // **NOTE** should only be called while the lock write mutex is acquired
-func (a *Transport) getOrCreatePeer(pid yarpcpeer.Identifier) *httpPeer {
+func (a *Transport) getOrCreatePeer(pid yarpc.Identifier) *httpPeer {
 	addr := pid.Identifier()
 	if p, ok := a.peers[addr]; ok {
 		return p
@@ -321,14 +321,14 @@ func (a *Transport) getOrCreatePeer(pid yarpcpeer.Identifier) *httpPeer {
 	return p
 }
 
-// ReleasePeer releases a peer from the yarpcpeer.Subscriber and removes that peer from the Transport if nothing is listening to it
-func (a *Transport) ReleasePeer(pid yarpcpeer.Identifier, sub yarpcpeer.Subscriber) error {
+// ReleasePeer releases a peer from the yarpc.Subscriber and removes that peer from the Transport if nothing is listening to it
+func (a *Transport) ReleasePeer(pid yarpc.Identifier, sub yarpc.Subscriber) error {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
 	p, ok := a.peers[pid.Identifier()]
 	if !ok {
-		return yarpcpeer.ErrTransportHasNoReferenceToPeer{
+		return yarpc.ErrTransportHasNoReferenceToPeer{
 			TransportName:  "http.Transport",
 			PeerIdentifier: pid.Identifier(),
 		}

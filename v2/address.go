@@ -1,4 +1,4 @@
-package yarpcpeer
+package yarpc
 
 // Address is a peer identified by its host:port string.
 //

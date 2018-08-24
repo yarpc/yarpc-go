@@ -25,7 +25,7 @@ import (
 	"sync"
 	"testing"
 
-	"go.uber.org/yarpc/v2/yarpcpeer"
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
 
@@ -35,7 +35,7 @@ type testPeer struct {
 
 type testSubscriber struct{}
 
-func (s testSubscriber) NotifyStatusChanged(yarpcpeer.Identifier) {}
+func (s testSubscriber) NotifyStatusChanged(yarpc.Identifier) {}
 
 func (p testPeer) Identifier() string {
 	return p.id

@@ -37,12 +37,12 @@ import (
 	"go.uber.org/yarpc/internal/testtime"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerrors"
-	"go.uber.org/yarpc/v2/yarpcpeertest"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 func TestNewOutbound(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	chooser := yarpcpeertest.NewMockChooser(ctrl)
+	chooser := yarpctest.NewMockChooser(ctrl)
 
 	out := NewOutbound(chooser)
 	require.NotNil(t, out)
@@ -301,7 +301,7 @@ func TestGetPeerForRequestErr(t *testing.T) {
 
 	tests := []struct {
 		name string
-		peer *yarpcpeertest.MockPeer
+		peer *yarpctest.MockPeer
 		err  error
 	}{
 		{
@@ -309,14 +309,14 @@ func TestGetPeerForRequestErr(t *testing.T) {
 		},
 		{
 			name: "error casting peer",
-			peer: yarpcpeertest.NewMockPeer(ctrl),
+			peer: yarpctest.NewMockPeer(ctrl),
 			err:  errors.New("err"),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			chooser := yarpcpeertest.NewMockChooser(ctrl)
+			chooser := yarpctest.NewMockChooser(ctrl)
 
 			out := NewTransport().NewSingleOutbound("http://127.0.0.1:9999")
 			out.chooser = chooser

@@ -18,30 +18,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcpeertest
+package yarpctest
 
 import (
 	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	yarpcpeer "go.uber.org/yarpc/v2/yarpcpeer"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
-// TransportDeps are passed through all the TransportActions in order to pass certain
+// DialerDeps are passed through all the DialerActions in order to pass certain
 // state in between Actions
-type TransportDeps struct {
-	PeerIdentifiers map[string]yarpcpeer.Identifier
-	Subscribers     map[string]yarpcpeer.Subscriber
+type DialerDeps struct {
+	PeerIdentifiers map[string]yarpc.Identifier
+	Subscribers     map[string]yarpc.Subscriber
 }
 
-// TransportAction defines actions that can be applied to an Transport
-type TransportAction interface {
-	// Apply runs a function on the Transport and asserts the result
-	Apply(*testing.T, yarpcpeer.Transport, TransportDeps)
+// DialerAction defines actions that can be applied to an Dialer
+type DialerAction interface {
+	// Apply runs a function on the Dialer and asserts the result
+	Apply(*testing.T, yarpc.Dialer, DialerDeps)
 }
 
-// RetainAction will execute the RetainPeer method on the Transport
+// RetainAction will execute the RetainPeer method on the Dialer
 type RetainAction struct {
 	InputIdentifierID string
 	InputSubscriberID string
@@ -49,12 +49,12 @@ type RetainAction struct {
 	ExpectedPeerID    string
 }
 
-// Apply will execute the RetainPeer method on the Transport
-func (a RetainAction) Apply(t *testing.T, transport yarpcpeer.Transport, deps TransportDeps) {
+// Apply will execute the RetainPeer method on the Dialer
+func (a RetainAction) Apply(t *testing.T, dialer yarpc.Dialer, deps DialerDeps) {
 	peerID := deps.PeerIdentifiers[a.InputIdentifierID]
 	sub := deps.Subscribers[a.InputSubscriberID]
 
-	p, err := transport.RetainPeer(peerID, sub)
+	p, err := dialer.RetainPeer(peerID, sub)
 
 	if a.ExpectedErr != nil {
 		assert.Equal(t, a.ExpectedErr, err)
@@ -67,19 +67,19 @@ func (a RetainAction) Apply(t *testing.T, transport yarpcpeer.Transport, deps Tr
 	}
 }
 
-// ReleaseAction will execute the ReleasePeer method on the Transport
+// ReleaseAction will execute the ReleasePeer method on the Dialer
 type ReleaseAction struct {
 	InputIdentifierID string
 	InputSubscriberID string
 	ExpectedErrType   error
 }
 
-// Apply will execute the ReleasePeer method on the Transport
-func (a ReleaseAction) Apply(t *testing.T, transport yarpcpeer.Transport, deps TransportDeps) {
+// Apply will execute the ReleasePeer method on the Dialer
+func (a ReleaseAction) Apply(t *testing.T, dialer yarpc.Dialer, deps DialerDeps) {
 	peerID := deps.PeerIdentifiers[a.InputIdentifierID]
 	sub := deps.Subscribers[a.InputSubscriberID]
 
-	err := transport.ReleasePeer(peerID, sub)
+	err := dialer.ReleasePeer(peerID, sub)
 
 	if a.ExpectedErrType != nil && assert.Error(t, err) {
 		assert.IsType(t, a.ExpectedErrType, err)
@@ -88,11 +88,11 @@ func (a ReleaseAction) Apply(t *testing.T, transport yarpcpeer.Transport, deps T
 	}
 }
 
-// ApplyTransportActions runs all the TransportActions on the peer Transport
-func ApplyTransportActions(t *testing.T, transport yarpcpeer.Transport, actions []TransportAction, d TransportDeps) {
+// ApplyDialerActions runs all the DialerActions on the peer Dialer
+func ApplyDialerActions(t *testing.T, dialer yarpc.Dialer, actions []DialerAction, d DialerDeps) {
 	for i, action := range actions {
 		t.Run(fmt.Sprintf("action #%d: %T", i, action), func(t *testing.T) {
-			action.Apply(t, transport, d)
+			action.Apply(t, dialer, d)
 		})
 	}
 }

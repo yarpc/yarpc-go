@@ -28,21 +28,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcpeer"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 const (
-	id1 = yarpcpeer.Address("1.2.3.4:1234")
-	id2 = yarpcpeer.Address("4.3.2.1:4321")
-	id3 = yarpcpeer.Address("1.1.1.1:1111")
+	id1 = yarpc.Address("1.2.3.4:1234")
+	id2 = yarpc.Address("4.3.2.1:4321")
+	id3 = yarpc.Address("1.1.1.1:1111")
 )
 
 func TestValues(t *testing.T) {
-	vs := values(map[string]yarpcpeer.Identifier{})
-	assert.Equal(t, []yarpcpeer.Identifier{}, vs)
+	vs := values(map[string]yarpc.Identifier{})
+	assert.Equal(t, []yarpc.Identifier{}, vs)
 
-	vs = values(map[string]yarpcpeer.Identifier{"_": id1, "__": id2})
+	vs = values(map[string]yarpc.Identifier{"_": id1, "__": id2})
 	assert.Equal(t, 2, len(vs))
 	assert.Contains(t, vs, id1)
 	assert.Contains(t, vs, id2)
@@ -52,26 +51,26 @@ func TestShuffle(t *testing.T) {
 	for _, test := range []struct {
 		msg  string
 		seed int64
-		in   []yarpcpeer.Identifier
-		want []yarpcpeer.Identifier
+		in   []yarpc.Identifier
+		want []yarpc.Identifier
 	}{
 		{
 			"empty",
 			0,
-			[]yarpcpeer.Identifier{},
-			[]yarpcpeer.Identifier{},
+			[]yarpc.Identifier{},
+			[]yarpc.Identifier{},
 		},
 		{
 			"some",
 			0,
-			[]yarpcpeer.Identifier{id1, id2, id3},
-			[]yarpcpeer.Identifier{id2, id3, id1},
+			[]yarpc.Identifier{id1, id2, id3},
+			[]yarpc.Identifier{id2, id3, id1},
 		},
 		{
 			"different seed",
 			7,
-			[]yarpcpeer.Identifier{id1, id2, id3},
-			[]yarpcpeer.Identifier{id2, id1, id3},
+			[]yarpc.Identifier{id1, id2, id3},
+			[]yarpc.Identifier{id2, id1, id3},
 		},
 	} {
 		t.Run(test.msg, func(t *testing.T) {
@@ -83,62 +82,62 @@ func TestShuffle(t *testing.T) {
 
 // most recently added peer list implementation for the test.
 type mraList struct {
-	mra yarpcpeer.StatusPeer
-	mrr yarpcpeer.StatusPeer
+	mra yarpc.StatusPeer
+	mrr yarpc.StatusPeer
 }
 
 var _ Implementation = (*mraList)(nil)
 
-func (l *mraList) Add(peer yarpcpeer.StatusPeer, pid yarpcpeer.Identifier) yarpcpeer.Subscriber {
+func (l *mraList) Add(peer yarpc.StatusPeer, pid yarpc.Identifier) yarpc.Subscriber {
 	l.mra = peer
 	return &mraSub{}
 }
 
-func (l *mraList) Remove(peer yarpcpeer.StatusPeer, pid yarpcpeer.Identifier, ps yarpcpeer.Subscriber) {
+func (l *mraList) Remove(peer yarpc.StatusPeer, pid yarpc.Identifier, ps yarpc.Subscriber) {
 	l.mrr = peer
 }
 
-func (l *mraList) Choose(ctx context.Context, req *yarpc.Request) yarpcpeer.StatusPeer {
+func (l *mraList) Choose(ctx context.Context, req *yarpc.Request) yarpc.StatusPeer {
 	return l.mra
 }
 
 type mraSub struct {
 }
 
-func (s *mraSub) NotifyStatusChanged(pid yarpcpeer.Identifier) {
+func (s *mraSub) NotifyStatusChanged(pid yarpc.Identifier) {
 }
 
 func TestPeerList(t *testing.T) {
-	fake := yarpctest.NewFakeTransport(yarpctest.InitialConnectionStatus(yarpcpeer.Unavailable))
+	fake := yarpctest.NewFakeTransport(yarpctest.InitialConnectionStatus(yarpc.Unavailable))
 	impl := &mraList{}
 	list := New("mra", fake, impl, Capacity(1), NoShuffle(), Seed(0))
 
 	peers := list.Peers()
 	assert.Len(t, peers, 0)
 
-	assert.NoError(t, list.Update(yarpcpeer.ListUpdates{
-		Additions: []yarpcpeer.Identifier{
-			yarpcpeer.Address("1.1.1.1:4040"),
-			yarpcpeer.Address("2.2.2.2:4040"),
+	assert.NoError(t, list.Update(yarpc.ListUpdates{
+		Additions: []yarpc.Identifier{
+			yarpc.Address("1.1.1.1:4040"),
+			yarpc.Address("2.2.2.2:4040"),
 		},
-		Removals: []yarpcpeer.Identifier{},
+		Removals: []yarpc.Identifier{},
 	}))
 
 	// Invalid updates before start
-	assert.Error(t, list.Update(yarpcpeer.ListUpdates{
-		Additions: []yarpcpeer.Identifier{
-			yarpcpeer.Address("1.1.1.1:4040"),
+	assert.Error(t, list.Update(yarpc.ListUpdates{
+		Additions: []yarpc.Identifier{
+			yarpc.Address("1.1.1.1:4040"),
 		},
-		Removals: []yarpcpeer.Identifier{
-			yarpcpeer.Address("3.3.3.3:4040"),
+		Removals: []yarpc.Identifier{
+			yarpc.Address("3.3.3.3:4040"),
 		},
 	}))
 
 	// Connect to the peer and simulate a request.
-	fake.SimulateConnect(yarpcpeer.Address("2.2.2.2:4040"))
+	fake.SimulateConnect(yarpc.Address("2.2.2.2:4040"))
 	assert.Equal(t, 1, list.NumAvailable())
 	assert.Equal(t, 1, list.NumUnavailable())
-	assert.True(t, list.Available(yarpcpeer.Address("2.2.2.2:4040")))
+	assert.True(t, list.Available(yarpc.Address("2.2.2.2:4040")))
 	peers = list.Peers()
 	assert.Len(t, peers, 2)
 	p, onFinish, err := list.Choose(context.Background(), &yarpc.Request{})
@@ -147,7 +146,7 @@ func TestPeerList(t *testing.T) {
 	onFinish(nil)
 
 	// Simulate a second connection and request.
-	fake.SimulateConnect(yarpcpeer.Address("1.1.1.1:4040"))
+	fake.SimulateConnect(yarpc.Address("1.1.1.1:4040"))
 	assert.Equal(t, 2, list.NumAvailable())
 	assert.Equal(t, 0, list.NumUnavailable())
 	peers = list.Peers()
@@ -157,32 +156,32 @@ func TestPeerList(t *testing.T) {
 	require.NoError(t, err)
 	onFinish(nil)
 
-	fake.SimulateDisconnect(yarpcpeer.Address("2.2.2.2:4040"))
+	fake.SimulateDisconnect(yarpc.Address("2.2.2.2:4040"))
 	assert.Equal(t, "2.2.2.2:4040", impl.mrr.Identifier())
 
-	assert.NoError(t, list.Update(yarpcpeer.ListUpdates{
-		Additions: []yarpcpeer.Identifier{
-			yarpcpeer.Address("3.3.3.3:4040"),
+	assert.NoError(t, list.Update(yarpc.ListUpdates{
+		Additions: []yarpc.Identifier{
+			yarpc.Address("3.3.3.3:4040"),
 		},
-		Removals: []yarpcpeer.Identifier{
-			yarpcpeer.Address("2.2.2.2:4040"),
+		Removals: []yarpc.Identifier{
+			yarpc.Address("2.2.2.2:4040"),
 		},
 	}))
 
 	// Invalid updates
-	assert.Error(t, list.Update(yarpcpeer.ListUpdates{
-		Additions: []yarpcpeer.Identifier{
-			yarpcpeer.Address("3.3.3.3:4040"),
+	assert.Error(t, list.Update(yarpc.ListUpdates{
+		Additions: []yarpc.Identifier{
+			yarpc.Address("3.3.3.3:4040"),
 		},
-		Removals: []yarpcpeer.Identifier{
-			yarpcpeer.Address("4.4.4.4:4040"),
+		Removals: []yarpc.Identifier{
+			yarpc.Address("4.4.4.4:4040"),
 		},
 	}))
 
-	assert.NoError(t, list.Update(yarpcpeer.ListUpdates{
-		Additions: []yarpcpeer.Identifier{},
-		Removals: []yarpcpeer.Identifier{
-			yarpcpeer.Address("3.3.3.3:4040"),
+	assert.NoError(t, list.Update(yarpc.ListUpdates{
+		Additions: []yarpc.Identifier{},
+		Removals: []yarpc.Identifier{
+			yarpc.Address("3.3.3.3:4040"),
 		},
 	}))
 }

@@ -25,7 +25,6 @@ import (
 	"fmt"
 
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcpeer"
 )
 
 // FakePeerListOption is an option for NewFakePeerList.
@@ -53,12 +52,12 @@ func NewFakePeerList(opts ...FakePeerListOption) *FakePeerList {
 }
 
 // Choose pretends to choose a peer, but actually always returns an error. It's fake.
-func (c *FakePeerList) Choose(ctx context.Context, req *yarpc.Request) (yarpcpeer.Peer, func(error), error) {
+func (c *FakePeerList) Choose(ctx context.Context, req *yarpc.Request) (yarpc.Peer, func(error), error) {
 	return nil, nil, fmt.Errorf(`fake peer list can't actually choose peers`)
 }
 
 // Update pretends to add or remove peers.
-func (c *FakePeerList) Update(up yarpcpeer.ListUpdates) error {
+func (c *FakePeerList) Update(up yarpc.ListUpdates) error {
 	return nil
 }
 

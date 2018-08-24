@@ -37,7 +37,6 @@ import (
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/internal/internalyarpcerrors"
 	"go.uber.org/yarpc/v2/yarpcerrors"
-	"go.uber.org/yarpc/v2/yarpcpeer"
 	"go.uber.org/yarpc/v2/yarpctracing"
 )
 
@@ -52,7 +51,7 @@ type OutboundOption func(*Outbound)
 func (OutboundOption) httpOption() {}
 
 // URLTemplate specifies the URL this outbound makes requests to. For
-// yarpcpeer.Chooser-based outbounds, the peer (host:port) spection of the URL
+// yarpc.Chooser-based outbounds, the peer (host:port) spection of the URL
 // may vary from call to call but the rest will remain unchanged. For
 // single-peer outbounds, the URL will be used as-is.
 func URLTemplate(template string) OutboundOption {
@@ -84,7 +83,7 @@ func AddHeader(key, value string) OutboundOption {
 }
 
 // NewOutbound builds an HTTP outbound that sends requests to peers supplied
-// by the given yarpcpeer.Chooser. The URL template for used for the different
+// by the given yarpc.Chooser. The URL template for used for the different
 // peers may be customized using the URLTemplate option.
 //
 // The peer chooser and outbound must share the same transport, in this case
@@ -92,7 +91,7 @@ func AddHeader(key, value string) OutboundOption {
 // The peer chooser must use the transport's RetainPeer to obtain peer
 // instances and return those peers to the outbound when it calls Choose.
 // The concrete peer type is private and intrinsic to the HTTP transport.
-func (t *Transport) NewOutbound(chooser yarpcpeer.Chooser, opts ...OutboundOption) *Outbound {
+func (t *Transport) NewOutbound(chooser yarpc.Chooser, opts ...OutboundOption) *Outbound {
 	o := &Outbound{
 		once:              lifecycle.NewOnce(),
 		chooser:           chooser,
@@ -108,7 +107,7 @@ func (t *Transport) NewOutbound(chooser yarpcpeer.Chooser, opts ...OutboundOptio
 }
 
 // NewOutbound builds an HTTP outbound that sends requests to peers supplied
-// by the given yarpcpeer.Chooser. The URL template for used for the different
+// by the given yarpc.Chooser. The URL template for used for the different
 // peers may be customized using the URLTemplate option.
 //
 // The peer chooser and outbound must share the same transport, in this case
@@ -116,27 +115,8 @@ func (t *Transport) NewOutbound(chooser yarpcpeer.Chooser, opts ...OutboundOptio
 // The peer chooser must use the transport's RetainPeer to obtain peer
 // instances and return those peers to the outbound when it calls Choose.
 // The concrete peer type is private and intrinsic to the HTTP transport.
-func NewOutbound(chooser yarpcpeer.Chooser, opts ...OutboundOption) *Outbound {
+func NewOutbound(chooser yarpc.Chooser, opts ...OutboundOption) *Outbound {
 	return NewTransport().NewOutbound(chooser, opts...)
-}
-
-// NewSingleOutbound builds an outbound that sends YARPC requests over HTTP
-// to the specified URL.
-//
-// The URLTemplate option has no effect in this form.
-func (t *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbound {
-	parsedURL, err := url.Parse(uri)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	chooser := yarpcpeer.NewSingle(yarpcpeer.Address(parsedURL.Host), t)
-	o := t.NewOutbound(chooser)
-	for _, opt := range opts {
-		opt(o)
-	}
-	o.setURLTemplate(uri)
-	return o
 }
 
 // Outbound sends YARPC requests over HTTP. It may be constructed using the
@@ -145,7 +125,7 @@ func (t *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbo
 // to construct all HTTP outbounds, ensuring efficient sharing of resources
 // across the different outbounds.
 type Outbound struct {
-	chooser     yarpcpeer.Chooser
+	chooser     yarpc.Chooser
 	urlTemplate *url.URL
 	tracer      opentracing.Tracer
 	transport   *Transport
@@ -171,7 +151,7 @@ func (o *Outbound) setURLTemplate(URL string) {
 }
 
 // Chooser returns the outbound's peer chooser.
-func (o *Outbound) Chooser() yarpcpeer.Chooser {
+func (o *Outbound) Chooser() yarpc.Chooser {
 	return o.chooser
 }
 
@@ -249,7 +229,7 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, treq *yarpc.Request) (
 
 	hpPeer, ok := p.(*httpPeer)
 	if !ok {
-		return nil, nil, yarpcpeer.ErrInvalidPeerConversion{
+		return nil, nil, yarpc.ErrInvalidPeerConversion{
 			Peer:         p,
 			ExpectedType: "*httpPeer",
 		}

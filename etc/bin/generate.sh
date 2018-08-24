@@ -66,6 +66,26 @@ strip_thrift_warnings() {
   grep -v '^\[WARNING:.*emphasize the signedness' | sed '/^\s*$/d'
 }
 
+# V2
+
+mockgen -destination=v2/yarpcmiddlewaretest/router.go -package=yarpcmiddlewaretest go.uber.org/yarpc/v2/yarpcmiddleware Router,UnaryInbound,UnaryOutbound,StreamInbound,StreamOutbound
+mockgen -destination=v2/yarpctest/mock_dialer.go -package=yarpctest go.uber.org/yarpc/v2 Dialer
+mockgen -destination=v2/yarpctest/mock_list.go -package=yarpctest go.uber.org/yarpc/v2 Chooser,List,ChooserList
+mockgen -destination=v2/yarpctest/mock_peer.go -package=yarpctest go.uber.org/yarpc/v2 Identifier,Peer
+mockgen -destination=v2/yarpctest/mock_subscriber.go -package=yarpctest go.uber.org/yarpc/v2 Subscriber
+# mockgen -destination=v2/yarpctransporttest/clientconfig.go -package=yarpctransporttest go.uber.org/yarpc/v2 ClientConfig,ClientConfigProvider
+mockgen -destination=v2/yarpctransporttest/handler.go -package=yarpctransporttest go.uber.org/yarpc/v2 UnaryHandler,StreamHandler
+# mockgen -destination=v2/yarpctransporttest/inbound.go -package=yarpctransporttest go.uber.org/yarpc/v2 Inbound
+# mockgen -destination=v2/yarpctransporttest/outbound.go -package=yarpctransporttest go.uber.org/yarpc/v2 UnaryOutbound,StreamOutbound
+mockgen -destination=v2/yarpctransporttest/router.go -package=yarpctransporttest go.uber.org/yarpc/v2 Router,RouteTable
+mockgen -destination=v2/yarpctransporttest/stream.go -package=yarpctransporttest go.uber.org/yarpc/v2 Stream,StreamCloser
+# mockgen -destination=v2/yarpctransporttest/transport.go -package=yarpctransporttest go.uber.org/yarpc/v2 Transport
+
+generate_stringer ConnectionStatus ./v2
+generate_stringer Type ./v2
+
+# V1
+
 mockgen -destination=api/middleware/middlewaretest/router.go -package=middlewaretest go.uber.org/yarpc/api/middleware Router,UnaryInbound,UnaryOutbound,StreamInbound,StreamOutbound
 mockgen -destination=api/peer/peertest/list.go -package=peertest go.uber.org/yarpc/api/peer Chooser,List,ChooserList
 mockgen -destination=api/peer/peertest/peer.go -package=peertest go.uber.org/yarpc/api/peer Identifier,Peer
@@ -77,18 +97,6 @@ mockgen -destination=api/transport/transporttest/outbound.go -package=transportt
 mockgen -destination=api/transport/transporttest/router.go -package=transporttest go.uber.org/yarpc/api/transport Router,RouteTable
 mockgen -destination=api/transport/transporttest/stream.go -package=transporttest go.uber.org/yarpc/api/transport Stream,StreamCloser
 mockgen -destination=api/transport/transporttest/transport.go -package=transporttest go.uber.org/yarpc/api/transport Transport
-
-mockgen -destination=v2/yarpcmiddlewaretest/router.go -package=yarpcmiddlewaretest go.uber.org/yarpc/v2/yarpcmiddleware Router,UnaryInbound,UnaryOutbound,StreamInbound,StreamOutbound
-mockgen -destination=v2/yarpcpeertest/list.go -package=yarpcpeertest go.uber.org/yarpc/v2/yarpcpeer Chooser,List,ChooserList
-mockgen -destination=v2/yarpcpeertest/peer.go -package=yarpcpeertest go.uber.org/yarpc/v2/yarpcpeer Identifier,Peer
-mockgen -destination=v2/yarpcpeertest/transport.go -package=yarpcpeertest go.uber.org/yarpc/v2/yarpcpeer Transport,Subscriber
-# mockgen -destination=v2/yarpctransporttest/clientconfig.go -package=yarpctransporttest go.uber.org/yarpc/v2 ClientConfig,ClientConfigProvider
-mockgen -destination=v2/yarpctransporttest/handler.go -package=yarpctransporttest go.uber.org/yarpc/v2 UnaryHandler,StreamHandler
-# mockgen -destination=v2/yarpctransporttest/inbound.go -package=yarpctransporttest go.uber.org/yarpc/v2 Inbound
-# mockgen -destination=v2/yarpctransporttest/outbound.go -package=yarpctransporttest go.uber.org/yarpc/v2 UnaryOutbound,StreamOutbound
-mockgen -destination=v2/yarpctransporttest/router.go -package=yarpctransporttest go.uber.org/yarpc/v2 Router,RouteTable
-mockgen -destination=v2/yarpctransporttest/stream.go -package=yarpctransporttest go.uber.org/yarpc/v2 Stream,StreamCloser
-# mockgen -destination=v2/yarpctransporttest/transport.go -package=yarpctransporttest go.uber.org/yarpc/v2 Transport
 
 generate_stringer ConnectionStatus ./api/peer
 generate_stringer State ./pkg/lifecycle

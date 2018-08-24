@@ -23,7 +23,7 @@ package yarpcroundrobin
 import (
 	"time"
 
-	"go.uber.org/yarpc/v2/yarpcpeer"
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcpeerlist"
 )
 
@@ -53,7 +53,7 @@ func Capacity(capacity int) ListOption {
 }
 
 // New creates a new round robin peer list.
-func New(transport yarpcpeer.Transport, opts ...ListOption) *List {
+func New(dialer yarpc.Dialer, opts ...ListOption) *List {
 	cfg := defaultListConfig
 	for _, o := range opts {
 		o(&cfg)
@@ -70,7 +70,7 @@ func New(transport yarpcpeer.Transport, opts ...ListOption) *List {
 	return &List{
 		List: yarpcpeerlist.New(
 			"roundrobin",
-			transport,
+			dialer,
 			newPeerRing(),
 			plOpts...,
 		),

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcpeertest
+package yarpctest
 
 import (
 	"context"
@@ -30,7 +30,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/internal/testtime"
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcpeer"
 )
 
 // ListActionDeps are passed through PeerListActions' Apply methods in order
@@ -42,7 +41,7 @@ type ListActionDeps struct {
 // PeerListAction defines actions that can be applied to a PeerList
 type PeerListAction interface {
 	// Apply runs a function on the PeerList and asserts the result
-	Apply(*testing.T, yarpcpeer.Chooser, ListActionDeps)
+	Apply(*testing.T, yarpc.Chooser, ListActionDeps)
 }
 
 // StartAction is an action for testing PeerList.Start
@@ -55,7 +54,7 @@ type starter interface {
 }
 
 // Apply runs "Start" on the peerList and validates the error
-func (a StartAction) Apply(t *testing.T, pl yarpcpeer.Chooser, deps ListActionDeps) {
+func (a StartAction) Apply(t *testing.T, pl yarpc.Chooser, deps ListActionDeps) {
 	if starter, ok := pl.(starter); ok {
 		err := starter.Start()
 		assert.Equal(t, a.ExpectedErr, err)
@@ -72,7 +71,7 @@ type stopper interface {
 }
 
 // Apply runs "Stop" on the peerList and validates the error
-func (a StopAction) Apply(t *testing.T, pl yarpcpeer.Chooser, deps ListActionDeps) {
+func (a StopAction) Apply(t *testing.T, pl yarpc.Chooser, deps ListActionDeps) {
 	if stopper, ok := pl.(stopper); ok {
 		err := stopper.Stop()
 		assert.Equal(t, a.ExpectedErr, err, "Stop action expected error %v, got %v", a.ExpectedErr, err)
@@ -86,7 +85,7 @@ type ChooseMultiAction struct {
 }
 
 // Apply runs "Choose" on the peerList for every ExpectedPeer
-func (a ChooseMultiAction) Apply(t *testing.T, pl yarpcpeer.Chooser, deps ListActionDeps) {
+func (a ChooseMultiAction) Apply(t *testing.T, pl yarpc.Chooser, deps ListActionDeps) {
 	for _, expectedPeer := range a.ExpectedPeers {
 		action := ChooseAction{
 			ExpectedPeer:        expectedPeer,
@@ -106,7 +105,7 @@ type ChooseAction struct {
 }
 
 // Apply runs "Choose" on the peerList and validates the peer && error
-func (a ChooseAction) Apply(t *testing.T, pl yarpcpeer.Chooser, deps ListActionDeps) {
+func (a ChooseAction) Apply(t *testing.T, pl yarpc.Chooser, deps ListActionDeps) {
 	ctx := a.InputContext
 	if ctx == nil {
 		ctx = context.Background()
@@ -144,23 +143,23 @@ type UpdateAction struct {
 	ExpectedErr    error
 }
 
-// Apply runs "Update" on the yarpcpeer.Chooser after casting it to a yarpcpeer.List
+// Apply runs "Update" on the yarpc.Chooser after casting it to a yarpc.List
 // and validates the error
-func (a UpdateAction) Apply(t *testing.T, pl yarpcpeer.Chooser, deps ListActionDeps) {
-	list := pl.(yarpcpeer.List)
+func (a UpdateAction) Apply(t *testing.T, pl yarpc.Chooser, deps ListActionDeps) {
+	list := pl.(yarpc.List)
 
-	added := make([]yarpcpeer.Identifier, 0, len(a.AddedPeerIDs))
+	added := make([]yarpc.Identifier, 0, len(a.AddedPeerIDs))
 	for _, peerID := range a.AddedPeerIDs {
 		added = append(added, MockPeerIdentifier(peerID))
 	}
 
-	removed := make([]yarpcpeer.Identifier, 0, len(a.RemovedPeerIDs))
+	removed := make([]yarpc.Identifier, 0, len(a.RemovedPeerIDs))
 	for _, peerID := range a.RemovedPeerIDs {
 		removed = append(removed, MockPeerIdentifier(peerID))
 	}
 
 	err := list.Update(
-		yarpcpeer.ListUpdates{
+		yarpc.ListUpdates{
 			Additions: added,
 			Removals:  removed,
 		},
@@ -176,7 +175,7 @@ type ConcurrentAction struct {
 
 // Apply runs all the ConcurrentAction's actions in goroutines with a delay of `Wait`
 // between each action. Returns when all actions have finished executing
-func (a ConcurrentAction) Apply(t *testing.T, pl yarpcpeer.Chooser, deps ListActionDeps) {
+func (a ConcurrentAction) Apply(t *testing.T, pl yarpc.Chooser, deps ListActionDeps) {
 	var wg sync.WaitGroup
 
 	wg.Add(len(a.Actions))
@@ -201,7 +200,7 @@ type NotifyStatusChangeAction struct {
 	PeerID string
 
 	// NewConnectionStatus is the new ConnectionStatus of the Peer
-	NewConnectionStatus yarpcpeer.ConnectionStatus
+	NewConnectionStatus yarpc.ConnectionStatus
 
 	// Unretained indicates that this notify occurs to a peer that has never been
 	// retained on the transport (to test edge cases).
@@ -209,8 +208,8 @@ type NotifyStatusChangeAction struct {
 }
 
 // Apply will run the NotifyStatusChanged function on the PeerList with the provided Peer
-func (a NotifyStatusChangeAction) Apply(t *testing.T, pl yarpcpeer.Chooser, deps ListActionDeps) {
-	plSub := pl.(yarpcpeer.Subscriber)
+func (a NotifyStatusChangeAction) Apply(t *testing.T, pl yarpc.Chooser, deps ListActionDeps) {
+	plSub := pl.(yarpc.Subscriber)
 
 	if a.Unretained {
 		plSub.NotifyStatusChanged(MockPeerIdentifier(a.PeerID))
@@ -223,7 +222,7 @@ func (a NotifyStatusChangeAction) Apply(t *testing.T, pl yarpcpeer.Chooser, deps
 }
 
 // ApplyPeerListActions runs all the PeerListActions on the PeerList
-func ApplyPeerListActions(t *testing.T, pl yarpcpeer.Chooser, actions []PeerListAction, deps ListActionDeps) {
+func ApplyPeerListActions(t *testing.T, pl yarpc.Chooser, actions []PeerListAction, deps ListActionDeps) {
 	for i, action := range actions {
 		t.Run(fmt.Sprintf("action #%d: %T", i, action), func(t *testing.T) {
 			action.Apply(t, pl, deps)

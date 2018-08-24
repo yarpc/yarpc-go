@@ -20,7 +20,7 @@
 
 package yarpchttp_test
 
-// func newTransport() yarpcpeer.Transport {
+// func newTransport() yarpc.Dialer {
 // 	return yarpchttp.NewTransport(
 // 		yarpchttp.Tracer(opentracing.NoopTracer{}),
 // 		yarpchttp.DisableKeepAlives(),
@@ -33,19 +33,19 @@ package yarpchttp_test
 
 // var spec = integrationtest.TransportSpec{
 // 	Identify: hostport.Identify,
-// 	NewServerTransport: func(t *testing.T, addr string) yarpcpeer.Transport {
+// 	NewServerTransport: func(t *testing.T, addr string) yarpc.Dialer {
 // 		return newTransport()
 // 	},
-// 	NewClientTransport: func(t *testing.T) yarpcpeer.Transport {
+// 	NewClientTransport: func(t *testing.T) yarpc.Dialer {
 // 		return newTransport()
 // 	},
-// 	NewUnaryOutbound: func(x yarpcpeer.Transport, pc yarpcpeer.Chooser) yarpc.UnaryOutbound {
+// 	NewUnaryOutbound: func(x yarpc.Dialer, pc yarpc.Chooser) yarpc.UnaryOutbound {
 // 		return x.(*yarpchttp.Transport).NewOutbound(pc)
 // 	},
-// 	NewInbound: func(x yarpcpeer.Transport, addr string, router yarpc.Router) yarpc.Inbound {
+// 	NewInbound: func(x yarpc.Dialer, addr string, router yarpc.Router) yarpc.Inbound {
 // 		return x.(*yarpchttp.Transport).NewInbound(addr, router)
 // 	},
-// 	Addr: func(x yarpcpeer.Transport, ib yarpc.Inbound) string {
+// 	Addr: func(x yarpc.Dialer, ib yarpc.Inbound) string {
 // 		return yarpctest.ZeroAddrToHostPort(ib.(*yarpchttp.Inbound).Addr())
 // 	},
 // }

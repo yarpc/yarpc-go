@@ -29,23 +29,23 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/v2/yarpctransport"
+	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpctransporttest"
 	"go.uber.org/zap"
 )
 
 func TestDispatchUnaryHandlerWithPanic(t *testing.T) {
 	msg := "I'm panicking in a unary handler!"
-	handler := func(context.Context, *yarpctransport.Request, yarpctransport.ResponseWriter) error {
+	handler := func(context.Context, *yarpc.Request, yarpc.ResponseWriter) error {
 		panic(msg)
 	}
 	var err error
 	require.NotPanics(t, func() {
-		err = yarpctransport.DispatchUnaryHandler(
+		err = yarpc.DispatchUnaryHandler(
 			context.Background(),
-			yarpctransport.UnaryHandlerFunc(handler),
+			yarpc.UnaryHandlerFunc(handler),
 			time.Now(),
-			&yarpctransport.Request{},
+			&yarpc.Request{},
 			nil,
 		)
 	}, "Panic not recovered")
@@ -55,7 +55,7 @@ func TestDispatchUnaryHandlerWithPanic(t *testing.T) {
 
 func TestDispatchStreamHandlerWithPanic(t *testing.T) {
 	msg := "I'm panicking in a stream handler!"
-	handler := func(*yarpctransport.ServerStream) error {
+	handler := func(*yarpc.ServerStream) error {
 		panic(msg)
 	}
 	var err error
@@ -64,14 +64,14 @@ func TestDispatchStreamHandlerWithPanic(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockStream := yarpctransporttest.NewMockStream(mockCtrl)
 	mockStream.EXPECT().Request().Return(
-		&yarpctransport.StreamRequest{
-			Meta: &yarpctransport.RequestMeta{},
+		&yarpc.StreamRequest{
+			Meta: &yarpc.RequestMeta{},
 		}).Times(1)
-	mockServerStream, err := yarpctransport.NewServerStream(mockStream)
+	mockServerStream, err := yarpc.NewServerStream(mockStream)
 	require.NoError(t, err, "Should create mockServerStream")
 	require.NotPanics(t, func() {
-		err = yarpctransport.DispatchStreamHandler(
-			yarpctransport.StreamHandlerFunc(handler),
+		err = yarpc.DispatchStreamHandler(
+			yarpc.StreamHandlerFunc(handler),
 			mockServerStream,
 		)
 	}, "Panic not recovered")
@@ -81,17 +81,17 @@ func TestDispatchStreamHandlerWithPanic(t *testing.T) {
 
 func TestInvokeUnaryHandlerWithPanic(t *testing.T) {
 	msg := "I'm panicking in a unary handler!"
-	handler := func(context.Context, *yarpctransport.Request, yarpctransport.ResponseWriter) error {
+	handler := func(context.Context, *yarpc.Request, yarpc.ResponseWriter) error {
 		panic(msg)
 	}
 	var err error
 	require.NotPanics(t, func() {
-		err = yarpctransport.InvokeUnaryHandler(
-			yarpctransport.UnaryInvokeRequest{
+		err = yarpc.InvokeUnaryHandler(
+			yarpc.UnaryInvokeRequest{
 				Context:   context.Background(),
 				StartTime: time.Now(),
-				Request:   &yarpctransport.Request{},
-				Handler:   yarpctransport.UnaryHandlerFunc(handler),
+				Request:   &yarpc.Request{},
+				Handler:   yarpc.UnaryHandlerFunc(handler),
 				Logger:    zap.NewNop(),
 			},
 		)
@@ -102,7 +102,7 @@ func TestInvokeUnaryHandlerWithPanic(t *testing.T) {
 
 func TestInvokeStreamHandlerWithPanic(t *testing.T) {
 	msg := "I'm panicking in a stream handler!"
-	handler := func(*yarpctransport.ServerStream) error {
+	handler := func(*yarpc.ServerStream) error {
 		panic(msg)
 	}
 	var err error
@@ -111,15 +111,15 @@ func TestInvokeStreamHandlerWithPanic(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockStream := yarpctransporttest.NewMockStream(mockCtrl)
 	mockStream.EXPECT().Request().Return(
-		&yarpctransport.StreamRequest{
-			Meta: &yarpctransport.RequestMeta{},
+		&yarpc.StreamRequest{
+			Meta: &yarpc.RequestMeta{},
 		}).Times(1)
-	mockServerStream, err := yarpctransport.NewServerStream(mockStream)
+	mockServerStream, err := yarpc.NewServerStream(mockStream)
 	require.NoError(t, err, "should create mockServerStream")
 	require.NotPanics(t, func() {
-		err = yarpctransport.InvokeStreamHandler(yarpctransport.StreamInvokeRequest{
+		err = yarpc.InvokeStreamHandler(yarpc.StreamInvokeRequest{
 			Stream:  mockServerStream,
-			Handler: yarpctransport.StreamHandlerFunc(handler),
+			Handler: yarpc.StreamHandlerFunc(handler),
 			Logger:  zap.NewNop(),
 		})
 	}, "Panic not recovered")
