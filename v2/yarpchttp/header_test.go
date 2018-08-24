@@ -18,30 +18,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package yarpchttp
 
 import (
 	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/v2/yarpctransport"
 )
 
 func TestHTTPHeaders(t *testing.T) {
 	tests := []struct {
 		prefix        string
-		toTransport   transport.Headers
-		fromTransport transport.Headers
+		toTransport   yarpctransport.Headers
+		fromTransport yarpctransport.Headers
 		http          http.Header
 	}{
 		{
 			ApplicationHeaderPrefix,
-			transport.HeadersFromMap(map[string]string{
+			yarpctransport.HeadersFromMap(map[string]string{
 				"foo":     "bar",
 				"foo-bar": "hello",
 			}),
-			transport.HeadersFromMap(map[string]string{
+			yarpctransport.HeadersFromMap(map[string]string{
 				"Foo":     "bar",
 				"Foo-Bar": "hello",
 			}),
@@ -54,7 +54,7 @@ func TestHTTPHeaders(t *testing.T) {
 
 	for _, tt := range tests {
 		m := headerMapper{tt.prefix}
-		assert.Equal(t, tt.fromTransport, m.FromHTTPHeaders(tt.http, transport.Headers{}))
+		assert.Equal(t, tt.fromTransport, m.FromHTTPHeaders(tt.http, yarpctransport.Headers{}))
 		assert.Equal(t, tt.http, m.ToHTTPHeaders(tt.toTransport, nil))
 	}
 }

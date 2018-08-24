@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package yarpchttp
 
 import (
 	"testing"
@@ -26,9 +26,9 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/yarpc/api/peer"
-	. "go.uber.org/yarpc/api/peer/peertest"
 	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/yarpc/v2/yarpcpeer"
+	"go.uber.org/yarpc/v2/yarpcpeertest"
 )
 
 // NoJitter is a transport option only available in tests, to disable jitter
@@ -46,8 +46,8 @@ type peerExpectation struct {
 	subscribers []string
 }
 
-func createPeerIdentifierMap(ids []string) map[string]peer.Identifier {
-	pids := make(map[string]peer.Identifier, len(ids))
+func createPeerIdentifierMap(ids []string) map[string]yarpcpeer.Identifier {
+	pids := make(map[string]yarpcpeer.Identifier, len(ids))
 	for _, id := range ids {
 		pids[id] = &testIdentifier{id}
 	}
@@ -64,10 +64,10 @@ func TestTransport(t *testing.T) {
 
 		// subscriberDefs defines all the Subscribers that will be used in
 		// the actions up from so they can be generated and passed as deps
-		subscriberDefs []SubscriberDefinition
+		subscriberDefs []yarpcpeertest.SubscriberDefinition
 
 		// actions are the actions that will be applied against the transport
-		actions []TransportAction
+		actions []yarpcpeertest.TransportAction
 
 		// expectedPeers are a list of peers (and those peer's subscribers)
 		// that are expected on the transport after the actions
@@ -77,11 +77,11 @@ func TestTransport(t *testing.T) {
 		{
 			msg:         "one retain",
 			identifiers: []string{"i1"},
-			subscriberDefs: []SubscriberDefinition{
+			subscriberDefs: []yarpcpeertest.SubscriberDefinition{
 				{ID: "s1"},
 			},
-			actions: []TransportAction{
-				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
+			actions: []yarpcpeertest.TransportAction{
+				yarpcpeertest.RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
 			},
 			expectedPeers: []peerExpectation{
 				{id: "i1", subscribers: []string{"s1"}},
@@ -90,26 +90,26 @@ func TestTransport(t *testing.T) {
 		{
 			msg:         "one retain one release",
 			identifiers: []string{"i1"},
-			subscriberDefs: []SubscriberDefinition{
+			subscriberDefs: []yarpcpeertest.SubscriberDefinition{
 				{ID: "s1"},
 			},
-			actions: []TransportAction{
-				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
-				ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s1"},
+			actions: []yarpcpeertest.TransportAction{
+				yarpcpeertest.RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
+				yarpcpeertest.ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s1"},
 			},
 		},
 		{
 			msg:         "three retains",
 			identifiers: []string{"i1"},
-			subscriberDefs: []SubscriberDefinition{
+			subscriberDefs: []yarpcpeertest.SubscriberDefinition{
 				{ID: "s1"},
 				{ID: "s2"},
 				{ID: "s3"},
 			},
-			actions: []TransportAction{
-				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
-				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s2", ExpectedPeerID: "i1"},
-				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s3", ExpectedPeerID: "i1"},
+			actions: []yarpcpeertest.TransportAction{
+				yarpcpeertest.RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
+				yarpcpeertest.RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s2", ExpectedPeerID: "i1"},
+				yarpcpeertest.RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s3", ExpectedPeerID: "i1"},
 			},
 			expectedPeers: []peerExpectation{
 				{id: "i1", subscribers: []string{"s1", "s2", "s3"}},
@@ -118,16 +118,16 @@ func TestTransport(t *testing.T) {
 		{
 			msg:         "three retains one release",
 			identifiers: []string{"i1"},
-			subscriberDefs: []SubscriberDefinition{
+			subscriberDefs: []yarpcpeertest.SubscriberDefinition{
 				{ID: "s1"},
 				{ID: "s2r"},
 				{ID: "s3"},
 			},
-			actions: []TransportAction{
-				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
-				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s2r", ExpectedPeerID: "i1"},
-				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s3", ExpectedPeerID: "i1"},
-				ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s2r"},
+			actions: []yarpcpeertest.TransportAction{
+				yarpcpeertest.RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
+				yarpcpeertest.RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s2r", ExpectedPeerID: "i1"},
+				yarpcpeertest.RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s3", ExpectedPeerID: "i1"},
+				yarpcpeertest.ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s2r"},
 			},
 			expectedPeers: []peerExpectation{
 				{id: "i1", subscribers: []string{"s1", "s3"}},
@@ -136,47 +136,47 @@ func TestTransport(t *testing.T) {
 		{
 			msg:         "three retains, three release",
 			identifiers: []string{"i1"},
-			subscriberDefs: []SubscriberDefinition{
+			subscriberDefs: []yarpcpeertest.SubscriberDefinition{
 				{ID: "s1"},
 				{ID: "s2"},
 				{ID: "s3"},
 			},
-			actions: []TransportAction{
-				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
-				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s2", ExpectedPeerID: "i1"},
-				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s3", ExpectedPeerID: "i1"},
-				ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s1"},
-				ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s2"},
-				ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s3"},
+			actions: []yarpcpeertest.TransportAction{
+				yarpcpeertest.RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
+				yarpcpeertest.RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s2", ExpectedPeerID: "i1"},
+				yarpcpeertest.RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s3", ExpectedPeerID: "i1"},
+				yarpcpeertest.ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s1"},
+				yarpcpeertest.ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s2"},
+				yarpcpeertest.ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s3"},
 			},
 		},
 		{
 			msg:         "no retains one release",
 			identifiers: []string{"i1"},
-			subscriberDefs: []SubscriberDefinition{
+			subscriberDefs: []yarpcpeertest.SubscriberDefinition{
 				{ID: "s1"},
 			},
-			actions: []TransportAction{
-				ReleaseAction{
+			actions: []yarpcpeertest.TransportAction{
+				yarpcpeertest.ReleaseAction{
 					InputIdentifierID: "i1",
 					InputSubscriberID: "s1",
-					ExpectedErrType:   peer.ErrTransportHasNoReferenceToPeer{},
+					ExpectedErrType:   yarpcpeer.ErrTransportHasNoReferenceToPeer{},
 				},
 			},
 		},
 		{
 			msg:         "one retains, one release (from different subscriber)",
 			identifiers: []string{"i1"},
-			subscriberDefs: []SubscriberDefinition{
+			subscriberDefs: []yarpcpeertest.SubscriberDefinition{
 				{ID: "s1"},
 				{ID: "s2"},
 			},
-			actions: []TransportAction{
-				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
-				ReleaseAction{
+			actions: []yarpcpeertest.TransportAction{
+				yarpcpeertest.RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
+				yarpcpeertest.ReleaseAction{
 					InputIdentifierID: "i1",
 					InputSubscriberID: "s2",
-					ExpectedErrType:   peer.ErrPeerHasNoReferenceToSubscriber{},
+					ExpectedErrType:   yarpcpeer.ErrPeerHasNoReferenceToSubscriber{},
 				},
 			},
 			expectedPeers: []peerExpectation{
@@ -186,7 +186,7 @@ func TestTransport(t *testing.T) {
 		{
 			msg:         "multi peer retain/release",
 			identifiers: []string{"i1", "i2", "i3", "i4r", "i5r"},
-			subscriberDefs: []SubscriberDefinition{
+			subscriberDefs: []yarpcpeertest.SubscriberDefinition{
 				{ID: "s1"},
 				{ID: "s2"},
 				{ID: "s3"},
@@ -195,36 +195,36 @@ func TestTransport(t *testing.T) {
 				{ID: "s6rnd"},
 				{ID: "s7rnd"},
 			},
-			actions: []TransportAction{
+			actions: []yarpcpeertest.TransportAction{
 				// Retains/Releases of i1 (Retain/Release the random peers at the end)
-				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s5rnd", ExpectedPeerID: "i1"},
-				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s6rnd", ExpectedPeerID: "i1"},
-				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
-				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s2", ExpectedPeerID: "i1"},
-				ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s5rnd"},
-				ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s6rnd"},
+				yarpcpeertest.RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s5rnd", ExpectedPeerID: "i1"},
+				yarpcpeertest.RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s6rnd", ExpectedPeerID: "i1"},
+				yarpcpeertest.RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
+				yarpcpeertest.RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s2", ExpectedPeerID: "i1"},
+				yarpcpeertest.ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s5rnd"},
+				yarpcpeertest.ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s6rnd"},
 
 				// Retains/Releases of i2 (Retain then Release then Retain again)
-				RetainAction{InputIdentifierID: "i2", InputSubscriberID: "s2", ExpectedPeerID: "i2"},
-				RetainAction{InputIdentifierID: "i2", InputSubscriberID: "s3", ExpectedPeerID: "i2"},
-				ReleaseAction{InputIdentifierID: "i2", InputSubscriberID: "s2"},
-				ReleaseAction{InputIdentifierID: "i2", InputSubscriberID: "s3"},
-				RetainAction{InputIdentifierID: "i2", InputSubscriberID: "s2", ExpectedPeerID: "i2"},
-				RetainAction{InputIdentifierID: "i2", InputSubscriberID: "s3", ExpectedPeerID: "i2"},
+				yarpcpeertest.RetainAction{InputIdentifierID: "i2", InputSubscriberID: "s2", ExpectedPeerID: "i2"},
+				yarpcpeertest.RetainAction{InputIdentifierID: "i2", InputSubscriberID: "s3", ExpectedPeerID: "i2"},
+				yarpcpeertest.ReleaseAction{InputIdentifierID: "i2", InputSubscriberID: "s2"},
+				yarpcpeertest.ReleaseAction{InputIdentifierID: "i2", InputSubscriberID: "s3"},
+				yarpcpeertest.RetainAction{InputIdentifierID: "i2", InputSubscriberID: "s2", ExpectedPeerID: "i2"},
+				yarpcpeertest.RetainAction{InputIdentifierID: "i2", InputSubscriberID: "s3", ExpectedPeerID: "i2"},
 
 				// Retains/Releases of i3 (Retain/Release unrelated sub, then retain two)
-				RetainAction{InputIdentifierID: "i3", InputSubscriberID: "s7rnd", ExpectedPeerID: "i3"},
-				ReleaseAction{InputIdentifierID: "i3", InputSubscriberID: "s7rnd"},
-				RetainAction{InputIdentifierID: "i3", InputSubscriberID: "s3", ExpectedPeerID: "i3"},
-				RetainAction{InputIdentifierID: "i3", InputSubscriberID: "s4", ExpectedPeerID: "i3"},
+				yarpcpeertest.RetainAction{InputIdentifierID: "i3", InputSubscriberID: "s7rnd", ExpectedPeerID: "i3"},
+				yarpcpeertest.ReleaseAction{InputIdentifierID: "i3", InputSubscriberID: "s7rnd"},
+				yarpcpeertest.RetainAction{InputIdentifierID: "i3", InputSubscriberID: "s3", ExpectedPeerID: "i3"},
+				yarpcpeertest.RetainAction{InputIdentifierID: "i3", InputSubscriberID: "s4", ExpectedPeerID: "i3"},
 
 				// Retain/Release i4r on random subscriber
-				RetainAction{InputIdentifierID: "i4r", InputSubscriberID: "s5rnd", ExpectedPeerID: "i4r"},
-				ReleaseAction{InputIdentifierID: "i4r", InputSubscriberID: "s5rnd"},
+				yarpcpeertest.RetainAction{InputIdentifierID: "i4r", InputSubscriberID: "s5rnd", ExpectedPeerID: "i4r"},
+				yarpcpeertest.ReleaseAction{InputIdentifierID: "i4r", InputSubscriberID: "s5rnd"},
 
 				// Retain/Release i5r on already used subscriber
-				RetainAction{InputIdentifierID: "i5r", InputSubscriberID: "s3", ExpectedPeerID: "i5r"},
-				ReleaseAction{InputIdentifierID: "i5r", InputSubscriberID: "s3"},
+				yarpcpeertest.RetainAction{InputIdentifierID: "i5r", InputSubscriberID: "s3", ExpectedPeerID: "i5r"},
+				yarpcpeertest.ReleaseAction{InputIdentifierID: "i5r", InputSubscriberID: "s3"},
 			},
 			expectedPeers: []peerExpectation{
 				{id: "i1", subscribers: []string{"s1", "s2"}},
@@ -241,11 +241,11 @@ func TestTransport(t *testing.T) {
 
 			transport := NewTransport()
 
-			deps := TransportDeps{
+			deps := yarpcpeertest.TransportDeps{
 				PeerIdentifiers: createPeerIdentifierMap(tt.identifiers),
-				Subscribers:     CreateSubscriberMap(mockCtrl, tt.subscriberDefs),
+				Subscribers:     yarpcpeertest.CreateSubscriberMap(mockCtrl, tt.subscriberDefs),
 			}
-			ApplyTransportActions(t, transport, tt.actions, deps)
+			yarpcpeertest.ApplyTransportActions(t, transport, tt.actions, deps)
 
 			assert.Len(t, transport.peers, len(tt.expectedPeers))
 			for _, expectedPeerNode := range tt.expectedPeers {

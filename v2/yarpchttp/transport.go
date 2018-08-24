@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package yarpchttp
 
 import (
 	"math/rand"
@@ -29,10 +29,9 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	backoffapi "go.uber.org/yarpc/api/backoff"
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/yarpc/v2/yarpcpeer"
 	"go.uber.org/zap"
 )
 
@@ -276,7 +275,7 @@ type Transport struct {
 	logger *zap.Logger
 }
 
-var _ transport.Transport = (*Transport)(nil)
+var _ yarpcpeer.Transport = (*Transport)(nil)
 
 // Start starts the HTTP transport.
 func (a *Transport) Start() error {
@@ -298,8 +297,8 @@ func (a *Transport) IsRunning() bool {
 	return a.once.IsRunning()
 }
 
-// RetainPeer gets or creates a Peer for the specified peer.Subscriber (usually a peer.Chooser)
-func (a *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.Peer, error) {
+// RetainPeer gets or creates a Peer for the specified yarpcpeer.Subscriber (usually a yarpcpeer.Chooser)
+func (a *Transport) RetainPeer(pid yarpcpeer.Identifier, sub yarpcpeer.Subscriber) (yarpcpeer.Peer, error) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -309,7 +308,7 @@ func (a *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.P
 }
 
 // **NOTE** should only be called while the lock write mutex is acquired
-func (a *Transport) getOrCreatePeer(pid peer.Identifier) *httpPeer {
+func (a *Transport) getOrCreatePeer(pid yarpcpeer.Identifier) *httpPeer {
 	addr := pid.Identifier()
 	if p, ok := a.peers[addr]; ok {
 		return p
@@ -322,14 +321,14 @@ func (a *Transport) getOrCreatePeer(pid peer.Identifier) *httpPeer {
 	return p
 }
 
-// ReleasePeer releases a peer from the peer.Subscriber and removes that peer from the Transport if nothing is listening to it
-func (a *Transport) ReleasePeer(pid peer.Identifier, sub peer.Subscriber) error {
+// ReleasePeer releases a peer from the yarpcpeer.Subscriber and removes that peer from the Transport if nothing is listening to it
+func (a *Transport) ReleasePeer(pid yarpcpeer.Identifier, sub yarpcpeer.Subscriber) error {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
 	p, ok := a.peers[pid.Identifier()]
 	if !ok {
-		return peer.ErrTransportHasNoReferenceToPeer{
+		return yarpcpeer.ErrTransportHasNoReferenceToPeer{
 			TransportName:  "http.Transport",
 			PeerIdentifier: pid.Identifier(),
 		}

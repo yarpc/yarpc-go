@@ -18,18 +18,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package yarpchttp
 
 import (
 	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/v2/yarpctransport"
 )
 
 func TestParseTTL(t *testing.T) {
-	req := &transport.Request{
+	req := &yarpctransport.Request{
 		Caller:    "caller",
 		Service:   "service",
 		Procedure: "hello",

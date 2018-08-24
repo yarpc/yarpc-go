@@ -18,14 +18,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package http implements a YARPC transport based on the HTTP/1.1 protocol.
+// Package yarpchttp implements a YARPC transport based on the HTTP/1.1
+// protocol.
 // The HTTP transport provides support for Unary RPCs.
 //
 // Usage
 //
 // An HTTP Transport must be constructed to use this transport.
 //
-// 	httpTransport := http.NewTransport()
+// 	httpTransport := yarpchttp.NewTransport()
 //
 // To serve your YARPC application over HTTP, pass an HTTP inbound in your
 // yarpc.Config.
@@ -68,4 +69,4 @@
 // See Also
 //
 // YARPC Properties: https://github.com/yarpc/yarpc/blob/master/properties.md
-package http
+package yarpchttp

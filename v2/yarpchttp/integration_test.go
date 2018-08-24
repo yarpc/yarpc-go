@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package yarpchttp
 
 import (
 	"context"
@@ -30,10 +30,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/multierr"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/json"
-	"go.uber.org/yarpc/internal/clientconfig"
-	pkgerrors "go.uber.org/yarpc/pkg/errors"
+	"go.uber.org/yarpc/v2/internal/clientconfig"
+	"go.uber.org/yarpc/v2/yarpcjson"
+	"go.uber.org/yarpc/v2/yarpctransport"
 )
 
 func TestBothResponseError(t *testing.T) {
@@ -62,7 +61,7 @@ func TestBothResponseError(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("inbound(%v)-outbound(%v)", tt.inboundBothResponseError, tt.outboundBothResponseError), func(t *testing.T) {
 			doWithTestEnv(t, testEnvOptions{
-				Procedures: json.Procedure("testFoo", testFooHandler),
+				Procedures: yarpcjson.Procedure("testFoo", testFooHandler),
 				InboundOptions: []InboundOption{
 					func(i *Inbound) {
 						i.bothResponseError = tt.inboundBothResponseError
@@ -74,13 +73,13 @@ func TestBothResponseError(t *testing.T) {
 					},
 				},
 			}, func(t *testing.T, testEnv *testEnv) {
-				client := json.New(testEnv.ClientConfig)
+				client := yarpcjson.New(testEnv.ClientConfig)
 				var response testFooResponse
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				defer cancel()
 				err := client.Call(ctx, "testFoo", &testFooRequest{One: "one", Error: "bar"}, &response)
 
-				assert.Equal(t, pkgerrors.WrapHandlerError(errors.New("bar"), "example", "testFoo"), err)
+				assert.Equal(t, yarpctransport.WrapHandlerError(errors.New("bar"), "example", "testFoo"), err)
 				if tt.inboundBothResponseError && tt.outboundBothResponseError {
 					assert.Equal(t, "one", response.One)
 				} else {
@@ -122,29 +121,28 @@ func doWithTestEnv(t *testing.T, options testEnvOptions, f func(*testing.T, *tes
 type testEnv struct {
 	Inbound      *Inbound
 	Outbound     *Outbound
-	ClientConfig transport.ClientConfig
+	ClientConfig yarpctransport.ClientConfig
 }
 
 type testEnvOptions struct {
-	Procedures       []transport.Procedure
+	Procedures       []yarpctransport.Procedure
 	TransportOptions []TransportOption
 	InboundOptions   []InboundOption
 	OutboundOptions  []OutboundOption
 }
 
 func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
-	t := NewTransport(options.TransportOptions...)
-	if err := t.Start(); err != nil {
+	trans := NewTransport(options.TransportOptions...)
+	if err := trans.Start(); err != nil {
 		return nil, err
 	}
 	defer func() {
 		if err != nil {
-			err = multierr.Append(err, t.Stop())
+			err = multierr.Append(err, trans.Stop())
 		}
 	}()
 
-	inbound := t.NewInbound("127.0.0.1:0", options.InboundOptions...)
-	inbound.SetRouter(newTestRouter(options.Procedures))
+	inbound := trans.NewInbound("127.0.0.1:0", newTestRouter(options.Procedures), options.InboundOptions...)
 	if err := inbound.Start(); err != nil {
 		return nil, err
 	}
@@ -154,22 +152,14 @@ func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
 		}
 	}()
 
-	outbound := t.NewSingleOutbound(fmt.Sprintf("http://%s", inbound.Addr().String()), options.OutboundOptions...)
-	if err := outbound.Start(); err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err != nil {
-			err = multierr.Append(err, outbound.Stop())
-		}
-	}()
+	outbound := trans.NewSingleOutbound(fmt.Sprintf("http://%s", inbound.Addr().String()), options.OutboundOptions...)
 
 	caller := "example-client"
 	service := "example"
 	clientConfig := clientconfig.MultiOutbound(
 		caller,
 		service,
-		transport.Outbounds{
+		yarpctransport.Outbounds{
 			ServiceName: caller,
 			Unary:       outbound,
 		},
@@ -183,29 +173,26 @@ func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
 }
 
 func (e *testEnv) Close() error {
-	return multierr.Combine(
-		e.Outbound.Stop(),
-		e.Inbound.Stop(),
-	)
+	return e.Inbound.Stop()
 }
 
 type testRouter struct {
-	procedures []transport.Procedure
+	procedures []yarpctransport.Procedure
 }
 
-func newTestRouter(procedures []transport.Procedure) *testRouter {
+func newTestRouter(procedures []yarpctransport.Procedure) *testRouter {
 	return &testRouter{procedures}
 }
 
-func (r *testRouter) Procedures() []transport.Procedure {
+func (r *testRouter) Procedures() []yarpctransport.Procedure {
 	return r.procedures
 }
 
-func (r *testRouter) Choose(_ context.Context, request *transport.Request) (transport.HandlerSpec, error) {
+func (r *testRouter) Choose(_ context.Context, request *yarpctransport.Request) (yarpctransport.HandlerSpec, error) {
 	for _, procedure := range r.procedures {
 		if procedure.Name == request.Procedure {
 			return procedure.HandlerSpec, nil
 		}
 	}
-	return transport.HandlerSpec{}, fmt.Errorf("no procedure for name %s", request.Procedure)
+	return yarpctransport.HandlerSpec{}, fmt.Errorf("no procedure for name %s", request.Procedure)
 }

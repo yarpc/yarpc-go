@@ -18,25 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http_test
+package yarpchttp_test
 
 import (
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/transport/http"
+	"go.uber.org/yarpc/v2/yarpchttp"
 )
 
 func ExampleOutbound() {
-	transport := http.NewTransport()
-
-	yarpc.NewDispatcher(yarpc.Config{
-		Name: "myservice",
-		Outbounds: yarpc.Outbounds{
-			"myservice": {
-				Unary: transport.NewSingleOutbound("http://127.0.0.1:8888"),
-			},
-			"anotherservice": {
-				Unary: transport.NewSingleOutbound("http://127.0.0.1:9999"),
-			},
-		},
-	})
+	trans := yarpchttp.NewTransport()
+	outbound := trans.NewSingleOutbound("http://127.0.0.1:8888")
+	_ = outbound
 }

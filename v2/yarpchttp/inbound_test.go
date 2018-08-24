@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package yarpchttp
 
 import (
 	"bytes"
@@ -35,30 +35,21 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/routertest"
 	"go.uber.org/yarpc/internal/testtime"
-	"go.uber.org/yarpc/internal/yarpctest"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2/internal/internalyarpctest"
+	"go.uber.org/yarpc/v2/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpctransport"
+	"go.uber.org/yarpc/v2/yarpctransporttest"
 )
 
 func TestStartAddrInUse(t *testing.T) {
 	t1 := NewTransport()
-	i1 := t1.NewInbound(":0")
+	i1 := t1.NewInbound(":0", newTestRouter(nil))
 
-	assert.Len(t, i1.Transports(), 1, "transports must contain the transport")
-	// we use == instead of assert.Equal because we want to do a pointer
-	// comparison
-	assert.True(t, t1 == i1.Transports()[0], "transports must match")
-
-	i1.SetRouter(newTestRouter(nil))
 	require.NoError(t, i1.Start(), "inbound 1 must start without an error")
 	t2 := NewTransport()
-	i2 := t2.NewInbound(i1.Addr().String())
-	i2.SetRouter(newTestRouter(nil))
+	i2 := t2.NewInbound(i1.Addr().String(), newTestRouter(nil))
 	err := i2.Start()
 
 	require.Error(t, err)
@@ -73,9 +64,8 @@ func TestStartAddrInUse(t *testing.T) {
 }
 
 func TestNilAddrAfterStop(t *testing.T) {
-	x := NewTransport()
-	i := x.NewInbound(":0")
-	i.SetRouter(newTestRouter(nil))
+	trans := NewTransport()
+	i := trans.NewInbound(":0", newTestRouter(nil))
 	require.NoError(t, i.Start())
 	assert.NotEqual(t, ":0", i.Addr().String())
 	assert.NotNil(t, i.Addr())
@@ -84,41 +74,31 @@ func TestNilAddrAfterStop(t *testing.T) {
 }
 
 func TestInboundStartAndStop(t *testing.T) {
-	x := NewTransport()
-	i := x.NewInbound(":0")
-	i.SetRouter(newTestRouter(nil))
+	trans := NewTransport()
+	i := trans.NewInbound(":0", newTestRouter(nil))
 	require.NoError(t, i.Start())
 	assert.NotEqual(t, ":0", i.Addr().String())
 	assert.NoError(t, i.Stop())
 }
 
 func TestInboundStartError(t *testing.T) {
-	x := NewTransport()
-	i := x.NewInbound("invalid")
-	i.SetRouter(new(transporttest.MockRouter))
+	trans := NewTransport()
+	i := trans.NewInbound("invalid", new(yarpctransporttest.MockRouter))
 	err := i.Start()
 	assert.Error(t, err, "expected failure")
 }
 
 func TestInboundStartErrorBadGrabHeader(t *testing.T) {
-	x := NewTransport()
-	i := x.NewInbound(":0", GrabHeaders("x-valid", "y-invalid"))
-	i.SetRouter(new(transporttest.MockRouter))
+	trans := NewTransport()
+	i := trans.NewInbound(":0", new(yarpctransporttest.MockRouter), GrabHeaders("x-valid", "y-invalid"))
 	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.FromError(i.Start()).Code())
-}
-
-func TestInboundStopWithoutStarting(t *testing.T) {
-	x := NewTransport()
-	i := x.NewInbound(":8000")
-	assert.Nil(t, i.Addr())
-	assert.NoError(t, i.Stop())
 }
 
 func TestInboundMux(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	httpTransport := NewTransport()
+	trans := NewTransport()
 	// TODO transport lifecycle
 
 	mux := http.NewServeMux()
@@ -126,16 +106,15 @@ func TestInboundMux(t *testing.T) {
 		w.Write([]byte("healthy"))
 	})
 
-	i := httpTransport.NewInbound(":0", Mux("/rpc/v1", mux))
-	h := transporttest.NewMockUnaryHandler(mockCtrl)
-	reg := transporttest.NewMockRouter(mockCtrl)
-	reg.EXPECT().Procedures()
-	i.SetRouter(reg)
+	router := yarpctransporttest.NewMockRouter(mockCtrl)
+	i := trans.NewInbound(":0", router, Mux("/rpc/v1", mux))
+	h := yarpctransporttest.NewMockUnaryHandler(mockCtrl)
+	router.EXPECT().Procedures()
 	require.NoError(t, i.Start())
 
 	defer i.Stop()
 
-	addr := fmt.Sprintf("http://%v/", yarpctest.ZeroAddrToHostPort(i.Addr()))
+	addr := fmt.Sprintf("http://%v/", internalyarpctest.ZeroAddrToHostPort(i.Addr()))
 	resp, err := http.Get(addr + "health")
 	if assert.NoError(t, err, "/health failed") {
 		defer resp.Body.Close()
@@ -146,17 +125,15 @@ func TestInboundMux(t *testing.T) {
 	}
 
 	// this should fail
-	o := httpTransport.NewSingleOutbound(addr)
-	require.NoError(t, o.Start(), "failed to start outbound")
-	defer o.Stop()
+	o := trans.NewSingleOutbound(addr)
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err = o.Call(ctx, &transport.Request{
+	_, err = o.Call(ctx, &yarpctransport.Request{
 		Caller:    "foo",
 		Service:   "bar",
 		Procedure: "hello",
-		Encoding:  raw.Encoding,
+		Encoding:  yarpctransport.Encoding("raw"),
 		Body:      bytes.NewReader([]byte("derp")),
 	})
 
@@ -165,11 +142,9 @@ func TestInboundMux(t *testing.T) {
 	}
 
 	o.setURLTemplate("http://host:port/rpc/v1")
-	require.NoError(t, o.Start(), "failed to start outbound")
-	defer o.Stop()
 
-	spec := transport.NewUnaryHandlerSpec(h)
-	reg.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
+	spec := yarpctransport.NewUnaryHandlerSpec(h)
+	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
 		WithCaller("foo").
 		WithService("bar").
 		WithProcedure("hello"),
@@ -177,11 +152,11 @@ func TestInboundMux(t *testing.T) {
 
 	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
-	res, err := o.Call(ctx, &transport.Request{
+	res, err := o.Call(ctx, &yarpctransport.Request{
 		Caller:    "foo",
 		Service:   "bar",
 		Procedure: "hello",
-		Encoding:  raw.Encoding,
+		Encoding:  yarpctransport.Encoding("raw"),
 		Body:      bytes.NewReader([]byte("derp")),
 	})
 
@@ -219,18 +194,10 @@ func TestMuxWithInterceptor(t *testing.T) {
 		})
 	}
 
-	transport := NewTransport()
-	inbound := transport.NewInbound("127.0.0.1:0", Mux("/", mux), Interceptor(intercept))
-	inbound.SetRouter(newTestRouter(nil))
+	trans := NewTransport()
+	inbound := trans.NewInbound("127.0.0.1:0", newTestRouter(nil), Mux("/", mux), Interceptor(intercept))
 	require.NoError(t, inbound.Start(), "Failed to start inbound")
 	defer inbound.Stop()
-
-	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name:     "server",
-		Inbounds: yarpc.Inbounds{inbound},
-	})
-	require.NoError(t, dispatcher.Start(), "Failed to start dispatcher")
-	defer dispatcher.Stop()
 
 	for _, tt := range tests {
 		t.Run(tt.path, func(t *testing.T) {
@@ -248,9 +215,8 @@ func TestRequestAfterStop(t *testing.T) {
 		io.WriteString(w, "OK")
 	})
 
-	transport := NewTransport()
-	inbound := transport.NewInbound("127.0.0.1:0", Mux("/", mux))
-	inbound.SetRouter(newTestRouter(nil))
+	trans := NewTransport()
+	inbound := trans.NewInbound("127.0.0.1:0", newTestRouter(nil), Mux("/", mux))
 	require.NoError(t, inbound.Start(), "Failed to start inbound")
 
 	url := fmt.Sprintf("http://%v/health", inbound.Addr())
