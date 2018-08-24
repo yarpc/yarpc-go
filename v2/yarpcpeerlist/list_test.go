@@ -134,21 +134,11 @@ func TestPeerList(t *testing.T) {
 		},
 	}))
 
-	assert.Equal(t, 0, list.NumAvailable())
-	assert.Equal(t, 0, list.NumUnavailable())
-	assert.Equal(t, 2, list.NumUninitialized())
-	assert.False(t, list.Available(yarpcpeer.Address("2.2.2.2:4040")))
-	assert.True(t, list.Uninitialized(yarpcpeer.Address("2.2.2.2:4040")))
-
-	require.NoError(t, list.Start())
-
 	// Connect to the peer and simulate a request.
 	fake.SimulateConnect(yarpcpeer.Address("2.2.2.2:4040"))
 	assert.Equal(t, 1, list.NumAvailable())
 	assert.Equal(t, 1, list.NumUnavailable())
-	assert.Equal(t, 0, list.NumUninitialized())
 	assert.True(t, list.Available(yarpcpeer.Address("2.2.2.2:4040")))
-	assert.False(t, list.Uninitialized(yarpcpeer.Address("2.2.2.2:4040")))
 	peers = list.Peers()
 	assert.Len(t, peers, 2)
 	p, onFinish, err := list.Choose(context.Background(), &yarpctransport.Request{})
@@ -160,7 +150,6 @@ func TestPeerList(t *testing.T) {
 	fake.SimulateConnect(yarpcpeer.Address("1.1.1.1:4040"))
 	assert.Equal(t, 2, list.NumAvailable())
 	assert.Equal(t, 0, list.NumUnavailable())
-	assert.Equal(t, 0, list.NumUninitialized())
 	peers = list.Peers()
 	assert.Len(t, peers, 2)
 	p, onFinish, err = list.Choose(context.Background(), &yarpctransport.Request{})
@@ -181,18 +170,6 @@ func TestPeerList(t *testing.T) {
 	}))
 
 	// Invalid updates
-	assert.Error(t, list.Update(yarpcpeer.ListUpdates{
-		Additions: []yarpcpeer.Identifier{
-			yarpcpeer.Address("3.3.3.3:4040"),
-		},
-		Removals: []yarpcpeer.Identifier{
-			yarpcpeer.Address("4.4.4.4:4040"),
-		},
-	}))
-
-	require.NoError(t, list.Stop())
-
-	// Invalid updates, after stop
 	assert.Error(t, list.Update(yarpcpeer.ListUpdates{
 		Additions: []yarpcpeer.Identifier{
 			yarpcpeer.Address("3.3.3.3:4040"),

@@ -26,7 +26,6 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/atomic"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/v2/yarpcerrors"
 	"go.uber.org/yarpc/v2/yarpcpeer"
@@ -114,7 +113,6 @@ func New(name string, transport yarpcpeer.Transport, implementation Implementati
 
 	return &List{
 		name:               name,
-		uninitializedPeers: make(map[string]yarpcpeer.Identifier, options.capacity),
 		unavailablePeers:   make(map[string]*peerThunk, options.capacity),
 		availablePeers:     make(map[string]*peerThunk, options.capacity),
 		implementation:     implementation,
@@ -122,7 +120,6 @@ func New(name string, transport yarpcpeer.Transport, implementation Implementati
 		noShuffle:          options.noShuffle,
 		randSrc:            rand.NewSource(options.seed),
 		peerAvailableEvent: make(chan struct{}, 1),
-		started:            make(chan struct{}, 0),
 	}
 }
 
@@ -136,13 +133,9 @@ func New(name string, transport yarpcpeer.Transport, implementation Implementati
 //
 // The list is a suitable basis for concrete implementations like round-robin.
 type List struct {
-	lock    sync.RWMutex
-	started chan struct{}
+	lock sync.RWMutex
 
 	name string
-
-	shouldRetainPeers  atomic.Bool
-	uninitializedPeers map[string]yarpcpeer.Identifier
 
 	unavailablePeers   map[string]*peerThunk
 	availablePeers     map[string]*peerThunk
@@ -165,18 +158,6 @@ func (pl *List) Update(updates yarpcpeer.ListUpdates) error {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
-	if pl.shouldRetainPeers.Load() {
-		return pl.updateInitialized(updates)
-	}
-	return pl.updateUninitialized(updates)
-}
-
-// updateInitialized applies peer list updates when the peer list
-// is able to retain peers, putting the updates into the available
-// or unavailable containers.
-//
-// Must be run inside a mutex.Lock()
-func (pl *List) updateInitialized(updates yarpcpeer.ListUpdates) error {
 	var errs error
 	for _, pid := range updates.Removals {
 		errs = multierr.Append(errs, pl.removePeerIdentifier(pid))
@@ -190,27 +171,6 @@ func (pl *List) updateInitialized(updates yarpcpeer.ListUpdates) error {
 	for _, pid := range add {
 		errs = multierr.Append(errs, pl.addPeerIdentifier(pid))
 	}
-	return errs
-}
-
-// updateUninitialized applies peer list updates when the peer list
-// is **not** able to retain peers, putting the updates into a single
-// uninitialized peer list.
-//
-// Must be run inside a mutex.Lock()
-func (pl *List) updateUninitialized(updates yarpcpeer.ListUpdates) error {
-	var errs error
-	for _, pid := range updates.Removals {
-		if _, ok := pl.uninitializedPeers[pid.Identifier()]; ok {
-			delete(pl.uninitializedPeers, pid.Identifier())
-		} else {
-			errs = multierr.Append(errs, yarpcpeer.ErrPeerRemoveNotInList(pid.Identifier()))
-		}
-	}
-	for _, pid := range updates.Additions {
-		pl.uninitializedPeers[pid.Identifier()] = pid
-	}
-
 	return errs
 }
 
@@ -255,53 +215,6 @@ func (pl *List) addToAvailablePeers(t *peerThunk) error {
 	pl.availablePeers[t.Identifier()] = t
 	pl.notifyPeerAvailable()
 	return nil
-}
-
-// Start notifies the List that requests will start coming
-func (pl *List) Start() error {
-	pl.lock.Lock()
-	defer pl.lock.Unlock()
-
-	add := values(pl.uninitializedPeers)
-	if !pl.noShuffle {
-		add = shuffle(pl.randSrc, add)
-	}
-
-	var errs error
-	for _, pid := range add {
-		errs = multierr.Append(errs, pl.addPeerIdentifier(pid))
-		delete(pl.uninitializedPeers, pid.Identifier())
-	}
-
-	pl.shouldRetainPeers.Store(true)
-
-	close(pl.started)
-	return errs
-}
-
-// Stop notifies the List that requests will stop coming
-func (pl *List) Stop() error {
-	pl.lock.Lock()
-	defer pl.lock.Unlock()
-
-	var errs error
-
-	availablePeers := pl.removeAllAvailablePeers(pl.availablePeers)
-	errs = pl.releaseAll(errs, availablePeers)
-	pl.addToUninitialized(availablePeers)
-
-	unavailablePeers := pl.removeAllUnavailablePeers(pl.unavailablePeers)
-	errs = pl.releaseAll(errs, unavailablePeers)
-	pl.addToUninitialized(unavailablePeers)
-
-	pl.shouldRetainPeers.Store(false)
-	return errs
-}
-
-func (pl *List) addToUninitialized(thunks []*peerThunk) {
-	for _, t := range thunks {
-		pl.uninitializedPeers[t.id.Identifier()] = t.id
-	}
 }
 
 // removeAllAvailablePeers will clear the availablePeers list and return all
@@ -388,16 +301,6 @@ func (pl *List) removeFromUnavailablePeers(t *peerThunk) {
 
 // Choose selects the next available peer in the peer list
 func (pl *List) Choose(ctx context.Context, req *yarpctransport.Request) (yarpcpeer.Peer, func(error), error) {
-	pl.lock.RLock()
-	started := pl.started
-	pl.lock.RUnlock()
-
-	select {
-	case <-ctx.Done():
-		return nil, nil, pl.newNotRunningError(ctx.Err())
-	case <-started:
-	}
-
 	for {
 		pl.lock.RLock()
 		p := pl.implementation.Choose(ctx, req)
@@ -446,10 +349,6 @@ func (pl *List) newNoContextDeadlineError() error {
 
 func (pl *List) newUnavailableError(err error) error {
 	return yarpcerrors.Newf(yarpcerrors.CodeUnavailable, "%s peer list timed out waiting for peer: %s", pl.name, err.Error())
-}
-
-func (pl *List) newNotRunningError(err error) error {
-	return yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "%s peer list is not running: context finished while waiting for instance to start: %s", pl.name, err.Error())
 }
 
 // NotifyStatusChanged receives status change notifications for peers in the
@@ -528,12 +427,6 @@ func (pl *List) Available(p yarpcpeer.Identifier) bool {
 	return ok
 }
 
-// Uninitialized returns whether a peer is waiting for the peer list to start.
-func (pl *List) Uninitialized(p yarpcpeer.Identifier) bool {
-	_, ok := pl.uninitializedPeers[p.Identifier()]
-	return ok
-}
-
 // Peers returns a snapshot of all retained (available and
 // unavailable) peers.
 func (pl *List) Peers() []yarpcpeer.Peer {
@@ -557,11 +450,6 @@ func (pl *List) NumAvailable() int {
 // NumUnavailable returns how many peers are unavailable.
 func (pl *List) NumUnavailable() int {
 	return len(pl.unavailablePeers)
-}
-
-// NumUninitialized returns how many peers are unavailable.
-func (pl *List) NumUninitialized() int {
-	return len(pl.uninitializedPeers)
 }
 
 // shuffle randomizes the order of a slice of peers.
