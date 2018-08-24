@@ -32,14 +32,14 @@ import (
 	"go.uber.org/yarpc/internal/testtime"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcmiddleware"
-	"go.uber.org/yarpc/v2/yarpctransporttest"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 func TestUnaryNopInboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	h := yarpctransporttest.NewMockUnaryHandler(mockCtrl)
+	h := yarpctest.NewMockUnaryHandler(mockCtrl)
 	wrappedH := yarpcmiddleware.ApplyUnaryInbound(h, yarpcmiddleware.NopUnaryInbound)
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
@@ -51,7 +51,7 @@ func TestUnaryNopInboundMiddleware(t *testing.T) {
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}
-	resw := new(yarpctransporttest.FakeResponseWriter)
+	resw := new(yarpctest.FakeResponseWriter)
 	err := errors.New("great sadness")
 	h.EXPECT().Handle(ctx, req, resw).Return(err)
 
@@ -66,10 +66,10 @@ func TestNilInboundMiddleware(t *testing.T) {
 	req := &yarpc.Request{}
 
 	t.Run("unary", func(t *testing.T) {
-		handler := yarpctransporttest.NewMockUnaryHandler(ctrl)
+		handler := yarpctest.NewMockUnaryHandler(ctrl)
 		mw := yarpcmiddleware.ApplyUnaryInbound(handler, nil)
 
-		resWriter := &yarpctransporttest.FakeResponseWriter{}
+		resWriter := &yarpctest.FakeResponseWriter{}
 
 		handler.EXPECT().Handle(ctx, req, resWriter)
 		err := mw.Handle(ctx, req, resWriter)
@@ -81,9 +81,9 @@ func TestStreamNopInboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	h := yarpctransporttest.NewMockStreamHandler(mockCtrl)
+	h := yarpctest.NewMockStreamHandler(mockCtrl)
 	wrappedH := yarpcmiddleware.ApplyStreamInbound(h, yarpcmiddleware.NopStreamInbound)
-	s, err := yarpc.NewServerStream(yarpctransporttest.NewMockStream(mockCtrl))
+	s, err := yarpc.NewServerStream(yarpctest.NewMockStream(mockCtrl))
 	require.NoError(t, err)
 
 	err = errors.New("great sadness")
@@ -96,7 +96,7 @@ func TestStreamDefaultsToHandlerWhenNil(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	h := yarpctransporttest.NewMockStreamHandler(mockCtrl)
+	h := yarpctest.NewMockStreamHandler(mockCtrl)
 	wrappedH := yarpcmiddleware.ApplyStreamInbound(h, nil)
 	assert.Equal(t, wrappedH, h)
 }

@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpctransporttest"
+	"go.uber.org/yarpc/v2/yarpctest"
 	"go.uber.org/zap"
 )
 
@@ -62,7 +62,7 @@ func TestDispatchStreamHandlerWithPanic(t *testing.T) {
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	mockStream := yarpctransporttest.NewMockStream(mockCtrl)
+	mockStream := yarpctest.NewMockStream(mockCtrl)
 	mockStream.EXPECT().Request().Return(
 		&yarpc.StreamRequest{
 			Meta: &yarpc.RequestMeta{},
@@ -109,7 +109,7 @@ func TestInvokeStreamHandlerWithPanic(t *testing.T) {
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	mockStream := yarpctransporttest.NewMockStream(mockCtrl)
+	mockStream := yarpctest.NewMockStream(mockCtrl)
 	mockStream.EXPECT().Request().Return(
 		&yarpc.StreamRequest{
 			Meta: &yarpc.RequestMeta{},

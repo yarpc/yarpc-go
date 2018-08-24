@@ -39,7 +39,7 @@ import (
 	"go.uber.org/yarpc/v2/yarpcerrors"
 	"go.uber.org/yarpc/v2/yarpcraw"
 	"go.uber.org/yarpc/v2/yarpcrouter"
-	"go.uber.org/yarpc/v2/yarpctransporttest"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 func TestHandlerSuccess(t *testing.T) {
@@ -56,8 +56,8 @@ func TestHandlerSuccess(t *testing.T) {
 	headers.Set(RoutingKeyHeader, "routekey")
 	headers.Set(RoutingDelegateHeader, "routedelegate")
 
-	router := yarpctransporttest.NewMockRouter(mockCtrl)
-	rpcHandler := yarpctransporttest.NewMockUnaryHandler(mockCtrl)
+	router := yarpctest.NewMockRouter(mockCtrl)
+	rpcHandler := yarpctest.NewMockUnaryHandler(mockCtrl)
 	spec := yarpc.NewUnaryHandlerSpec(rpcHandler)
 
 	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
@@ -66,10 +66,10 @@ func TestHandlerSuccess(t *testing.T) {
 	).Return(spec, nil)
 
 	rpcHandler.EXPECT().Handle(
-		yarpctransporttest.NewContextMatcher(t,
-			yarpctransporttest.ContextTTL(time.Second),
+		yarpctest.NewContextMatcher(t,
+			yarpctest.ContextTTL(time.Second),
 		),
-		yarpctransporttest.NewRequestMatcher(
+		yarpctest.NewRequestMatcher(
 			t, &yarpc.Request{
 				Caller:          "moe",
 				Service:         "curly",
@@ -152,8 +152,8 @@ func TestHandlerHeaders(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		router := yarpctransporttest.NewMockRouter(mockCtrl)
-		rpcHandler := yarpctransporttest.NewMockUnaryHandler(mockCtrl)
+		router := yarpctest.NewMockRouter(mockCtrl)
+		rpcHandler := yarpctest.NewMockUnaryHandler(mockCtrl)
 		spec := yarpc.NewUnaryHandlerSpec(rpcHandler)
 
 		router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
@@ -164,10 +164,10 @@ func TestHandlerHeaders(t *testing.T) {
 		httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}, grabHeaders: tt.grabHeaders, bothResponseError: true}
 
 		rpcHandler.EXPECT().Handle(
-			yarpctransporttest.NewContextMatcher(t,
-				yarpctransporttest.ContextTTL(tt.wantTTL),
+			yarpctest.NewContextMatcher(t,
+				yarpctest.ContextTTL(tt.wantTTL),
 			),
-			yarpctransporttest.NewRequestMatcher(t,
+			yarpctest.NewRequestMatcher(t,
 				&yarpc.Request{
 					Caller:    "caller",
 					Service:   "service",
@@ -281,7 +281,7 @@ func TestHandlerFailures(t *testing.T) {
 			req.Body = ioutil.NopCloser(bytes.NewReader([]byte{}))
 		}
 
-		router := yarpctransporttest.NewMockRouter(mockCtrl)
+		router := yarpctest.NewMockRouter(mockCtrl)
 
 		if tt.errTTL {
 			// since TTL is checked after we've determined the transport type, if we have an
@@ -323,10 +323,10 @@ func TestHandlerInternalFailure(t *testing.T) {
 		Body:   ioutil.NopCloser(bytes.NewReader([]byte{})),
 	}
 
-	rpcHandler := yarpctransporttest.NewMockUnaryHandler(mockCtrl)
+	rpcHandler := yarpctest.NewMockUnaryHandler(mockCtrl)
 	rpcHandler.EXPECT().Handle(
-		yarpctransporttest.NewContextMatcher(t, yarpctransporttest.ContextTTL(time.Second)),
-		yarpctransporttest.NewRequestMatcher(
+		yarpctest.NewContextMatcher(t, yarpctest.ContextTTL(time.Second)),
+		yarpctest.NewRequestMatcher(
 			t, &yarpc.Request{
 				Caller:    "somecaller",
 				Service:   "fake",
@@ -339,7 +339,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 		gomock.Any(),
 	).Return(fmt.Errorf("great sadness"))
 
-	router := yarpctransporttest.NewMockRouter(mockCtrl)
+	router := yarpctest.NewMockRouter(mockCtrl)
 	spec := yarpc.NewUnaryHandlerSpec(rpcHandler)
 
 	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().

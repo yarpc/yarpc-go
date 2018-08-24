@@ -31,7 +31,7 @@ import (
 	"github.com/uber/tchannel-go/testutils/testreader"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpctransporttest"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 func TestRawHandler(t *testing.T) {
@@ -112,7 +112,7 @@ func TestRawHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		handler := rawUnaryHandler{tt.handler}
-		resw := new(yarpctransporttest.FakeResponseWriter)
+		resw := new(yarpctest.FakeResponseWriter)
 
 		writer, chunkReader := testreader.ChunkReader()
 		for _, chunk := range tt.bodyChunks {

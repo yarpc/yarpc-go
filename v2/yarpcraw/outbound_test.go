@@ -32,7 +32,7 @@ import (
 	"github.com/uber/tchannel-go/testutils/testreader"
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/internal/clientconfig"
-	"go.uber.org/yarpc/v2/yarpctransporttest"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 func TestCall(t *testing.T) {
@@ -86,7 +86,7 @@ func TestCall(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		outbound := yarpctransporttest.NewMockUnaryOutbound(mockCtrl)
+		outbound := yarpctest.NewMockUnaryOutbound(mockCtrl)
 		client := New(clientconfig.MultiOutbound(caller, service,
 			yarpc.Outbounds{
 				Unary: outbound,
@@ -99,7 +99,7 @@ func TestCall(t *testing.T) {
 		close(writer)
 
 		outbound.EXPECT().Call(gomock.Any(),
-			yarpctransporttest.NewRequestMatcher(t,
+			yarpctest.NewRequestMatcher(t,
 				&yarpc.Request{
 					Caller:    caller,
 					Service:   service,

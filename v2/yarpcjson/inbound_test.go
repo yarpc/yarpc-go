@@ -32,7 +32,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpctransporttest"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 type simpleRequest struct {
@@ -58,7 +58,7 @@ func TestHandleStructSuccess(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	resw := new(yarpctransporttest.FakeResponseWriter)
+	resw := new(yarpctest.FakeResponseWriter)
 	err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",
@@ -85,7 +85,7 @@ func TestHandleMapSuccess(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	resw := new(yarpctransporttest.FakeResponseWriter)
+	resw := new(yarpctest.FakeResponseWriter)
 	err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "foo",
 		Encoding:  "json",
@@ -105,7 +105,7 @@ func TestHandleInterfaceEmptySuccess(t *testing.T) {
 
 	handler := jsonHandler{reader: ifaceEmptyReader{}, handler: reflect.ValueOf(h)}
 
-	resw := new(yarpctransporttest.FakeResponseWriter)
+	resw := new(yarpctest.FakeResponseWriter)
 	err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "foo",
 		Encoding:  "json",
@@ -127,7 +127,7 @@ func TestHandleSuccessWithResponseHeaders(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	resw := new(yarpctransporttest.FakeResponseWriter)
+	resw := new(yarpctest.FakeResponseWriter)
 	err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",
@@ -152,7 +152,7 @@ func TestHandleBothResponseError(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	resw := new(yarpctransporttest.FakeResponseWriter)
+	resw := new(yarpctest.FakeResponseWriter)
 	err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",

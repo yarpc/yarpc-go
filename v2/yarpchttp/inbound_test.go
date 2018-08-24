@@ -40,7 +40,7 @@ import (
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/internal/internalyarpctest"
 	"go.uber.org/yarpc/v2/yarpcerrors"
-	"go.uber.org/yarpc/v2/yarpctransporttest"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 func TestStartAddrInUse(t *testing.T) {
@@ -83,14 +83,14 @@ func TestInboundStartAndStop(t *testing.T) {
 
 func TestInboundStartError(t *testing.T) {
 	trans := NewTransport()
-	i := trans.NewInbound("invalid", new(yarpctransporttest.MockRouter))
+	i := trans.NewInbound("invalid", new(yarpctest.MockRouter))
 	err := i.Start()
 	assert.Error(t, err, "expected failure")
 }
 
 func TestInboundStartErrorBadGrabHeader(t *testing.T) {
 	trans := NewTransport()
-	i := trans.NewInbound(":0", new(yarpctransporttest.MockRouter), GrabHeaders("x-valid", "y-invalid"))
+	i := trans.NewInbound(":0", new(yarpctest.MockRouter), GrabHeaders("x-valid", "y-invalid"))
 	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.FromError(i.Start()).Code())
 }
 
@@ -106,9 +106,9 @@ func TestInboundMux(t *testing.T) {
 		w.Write([]byte("healthy"))
 	})
 
-	router := yarpctransporttest.NewMockRouter(mockCtrl)
+	router := yarpctest.NewMockRouter(mockCtrl)
 	i := trans.NewInbound(":0", router, Mux("/rpc/v1", mux))
-	h := yarpctransporttest.NewMockUnaryHandler(mockCtrl)
+	h := yarpctest.NewMockUnaryHandler(mockCtrl)
 	router.EXPECT().Procedures()
 	require.NoError(t, i.Start())
 

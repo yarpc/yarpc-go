@@ -68,18 +68,15 @@ strip_thrift_warnings() {
 
 # V2
 
-mockgen -destination=v2/yarpcmiddlewaretest/router.go -package=yarpcmiddlewaretest go.uber.org/yarpc/v2/yarpcmiddleware Router,UnaryInbound,UnaryOutbound,StreamInbound,StreamOutbound
+mockgen -destination=v2/yarpcmiddlewaretest/mock_router.go -package=yarpcmiddlewaretest go.uber.org/yarpc/v2/yarpcmiddleware Router,UnaryInbound,UnaryOutbound,StreamInbound,StreamOutbound
 mockgen -destination=v2/yarpctest/mock_dialer.go -package=yarpctest go.uber.org/yarpc/v2 Dialer
 mockgen -destination=v2/yarpctest/mock_list.go -package=yarpctest go.uber.org/yarpc/v2 Chooser,List,ChooserList
 mockgen -destination=v2/yarpctest/mock_peer.go -package=yarpctest go.uber.org/yarpc/v2 Identifier,Peer
 mockgen -destination=v2/yarpctest/mock_subscriber.go -package=yarpctest go.uber.org/yarpc/v2 Subscriber
-# mockgen -destination=v2/yarpctransporttest/clientconfig.go -package=yarpctransporttest go.uber.org/yarpc/v2 ClientConfig,ClientConfigProvider
-mockgen -destination=v2/yarpctransporttest/handler.go -package=yarpctransporttest go.uber.org/yarpc/v2 UnaryHandler,StreamHandler
-# mockgen -destination=v2/yarpctransporttest/inbound.go -package=yarpctransporttest go.uber.org/yarpc/v2 Inbound
-# mockgen -destination=v2/yarpctransporttest/outbound.go -package=yarpctransporttest go.uber.org/yarpc/v2 UnaryOutbound,StreamOutbound
-mockgen -destination=v2/yarpctransporttest/router.go -package=yarpctransporttest go.uber.org/yarpc/v2 Router,RouteTable
-mockgen -destination=v2/yarpctransporttest/stream.go -package=yarpctransporttest go.uber.org/yarpc/v2 Stream,StreamCloser
-# mockgen -destination=v2/yarpctransporttest/transport.go -package=yarpctransporttest go.uber.org/yarpc/v2 Transport
+mockgen -destination=v2/yarpctest/mock_handler.go -package=yarpctest go.uber.org/yarpc/v2 UnaryHandler,StreamHandler
+mockgen -destination=v2/yarpctest/mock_outbound.go -package=yarpctest go.uber.org/yarpc/v2 UnaryOutbound,StreamOutbound
+mockgen -destination=v2/yarpctest/mock_router.go -package=yarpctest go.uber.org/yarpc/v2 Router,RouteTable
+mockgen -destination=v2/yarpctest/mock_stream.go -package=yarpctest go.uber.org/yarpc/v2 Stream,StreamCloser
 
 generate_stringer ConnectionStatus ./v2
 generate_stringer Type ./v2

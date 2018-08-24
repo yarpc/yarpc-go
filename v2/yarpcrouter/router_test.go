@@ -31,7 +31,7 @@ import (
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcmiddleware"
 	"go.uber.org/yarpc/v2/yarpcmiddlewaretest"
-	"go.uber.org/yarpc/v2/yarpctransporttest"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 func TestMapRouter(t *testing.T) {
@@ -40,10 +40,10 @@ func TestMapRouter(t *testing.T) {
 
 	m := NewMapRouter("myservice")
 
-	foo := yarpctransporttest.NewMockUnaryHandler(mockCtrl)
-	bar := yarpctransporttest.NewMockUnaryHandler(mockCtrl)
-	bazJSON := yarpctransporttest.NewMockUnaryHandler(mockCtrl)
-	bazThrift := yarpctransporttest.NewMockUnaryHandler(mockCtrl)
+	foo := yarpctest.NewMockUnaryHandler(mockCtrl)
+	bar := yarpctest.NewMockUnaryHandler(mockCtrl)
+	bazJSON := yarpctest.NewMockUnaryHandler(mockCtrl)
+	bazThrift := yarpctest.NewMockUnaryHandler(mockCtrl)
 	m.Register([]yarpc.Procedure{
 		{
 			Name:        "foo",
@@ -108,9 +108,9 @@ func TestMapRouter_Procedures(t *testing.T) {
 
 	m := NewMapRouter("myservice")
 
-	bar := yarpc.NewUnaryHandlerSpec(yarpctransporttest.NewMockUnaryHandler(mockCtrl))
-	foo := yarpc.NewUnaryHandlerSpec(yarpctransporttest.NewMockUnaryHandler(mockCtrl))
-	aww := yarpc.NewUnaryHandlerSpec(yarpctransporttest.NewMockUnaryHandler(mockCtrl))
+	bar := yarpc.NewUnaryHandlerSpec(yarpctest.NewMockUnaryHandler(mockCtrl))
+	foo := yarpc.NewUnaryHandlerSpec(yarpctest.NewMockUnaryHandler(mockCtrl))
+	aww := yarpc.NewUnaryHandlerSpec(yarpctest.NewMockUnaryHandler(mockCtrl))
 	m.Register([]yarpc.Procedure{
 		{
 			Name:        "bar",
@@ -313,7 +313,7 @@ func TestUnknownServiceName(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	m := NewMapRouter("service1")
-	foo := yarpctransporttest.NewMockUnaryHandler(mockCtrl)
+	foo := yarpctest.NewMockUnaryHandler(mockCtrl)
 
 	m.Register([]yarpc.Procedure{
 		{

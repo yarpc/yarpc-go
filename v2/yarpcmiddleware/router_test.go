@@ -29,14 +29,14 @@ import (
 	"github.com/stretchr/testify/require"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcmiddlewaretest"
-	"go.uber.org/yarpc/v2/yarpctransporttest"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 func TestApplyRouteTable(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	routerMiddleware := yarpcmiddlewaretest.NewMockRouter(ctrl)
-	routeTable := yarpctransporttest.NewMockRouteTable(ctrl)
+	routeTable := yarpctest.NewMockRouteTable(ctrl)
 
 	rtWithMW := ApplyRouteTable(routeTable, routerMiddleware)
 
@@ -52,11 +52,11 @@ func TestRouteTableMiddleware(t *testing.T) {
 	defer ctrl.Finish()
 
 	routerMiddleware := yarpcmiddlewaretest.NewMockRouter(ctrl)
-	routeTable := yarpctransporttest.NewMockRouteTable(ctrl)
+	routeTable := yarpctest.NewMockRouteTable(ctrl)
 
 	ctx := context.Background()
 	req := &yarpc.Request{}
-	spec := yarpc.NewUnaryHandlerSpec(yarpctransporttest.NewMockUnaryHandler(ctrl))
+	spec := yarpc.NewUnaryHandlerSpec(yarpctest.NewMockUnaryHandler(ctrl))
 
 	routeTableWithMW := ApplyRouteTable(routeTable, routerMiddleware)
 
