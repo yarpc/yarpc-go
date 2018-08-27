@@ -39,3 +39,13 @@
 - [ ] yarpc.Dialer more like Dialer (Dial(ctx, id) Closer instead of RetainPeer and ReleasePeer)
 - [ ] replace TransportAction with DialerAction throughout
 - [ ] rewrite v2/yarpcroundrobin tests
+- [ ] type Error error to collate errors in godoc
+- [x] http new inbound takes a listener and a router
+- [x] http shutdown is now public
+- [ ] revisit all Start/Stop to thread a context
+- [ ] add dialer options for http dialer
+- [ ] revisit ErrTransportHasNoReferenceToPeer error, maybe get rid of it, definitely rename TransportName, maybe privatize it.
+- [ ] http inbound accepts listener
+  - [ ] revisit i.server.Serve to run in a goroutine and preserve internal/net semantics
+- [ ] move ValidateRequest into yarpctransport package
+- [ ] replace client config provider with a register/get API in YARPC Fx that connects the configuration of individual transports.
