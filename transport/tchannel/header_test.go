@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 func TestEncodeAndDecodeHeaders(t *testing.T) {
@@ -238,6 +239,47 @@ func TestWriteHeaders(t *testing.T) {
 			// Result must match either tt.bytes or tt.orBytes.
 			if !bytes.Equal(tt.bytes, buffer.Bytes()) {
 				assert.Equal(t, tt.orBytes, buffer.Bytes())
+			}
+		})
+	}
+}
+
+func TestValidateServiceHeaders(t *testing.T) {
+	tests := []struct {
+		name            string
+		requestService  string
+		responseService string
+		err             bool
+	}{
+		{
+			name:            "match",
+			requestService:  "service",
+			responseService: "service",
+		},
+		{
+			name: "match empty",
+		},
+		{
+			name:           "match - no response",
+			requestService: "service",
+		},
+		{
+			name:            "no match",
+			requestService:  "foo",
+			responseService: "bar",
+			err:             true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if !tt.err {
+				assert.NoError(t, validateServiceName(tt.requestService, tt.responseService))
+
+			} else {
+				err := validateServiceName(tt.requestService, tt.responseService)
+				require.Error(t, err)
+				assert.True(t, yarpcerrors.IsInternal(err), "expected yarpc.InternalError")
 			}
 		})
 	}

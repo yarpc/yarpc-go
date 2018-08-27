@@ -29,6 +29,7 @@ import (
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/tchannel/internal"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 const (
@@ -191,6 +192,19 @@ func headerMap(hs transport.Headers, headerCase headerCase) map[string]string {
 	default:
 		return hs.Items()
 	}
+}
+
+// this check ensures that the service we're issuing a request to is the one
+// responding
+func validateServiceName(requestService, responseService string) error {
+	// an empty service string means that we're talking to an older YARPC
+	// TChannel client
+	if responseService == "" || requestService == responseService {
+		return nil
+	}
+	return yarpcerrors.InternalErrorf(
+		"service name sent from the request does not match the service name "+
+			"received in the response: sent %q, got: %q", requestService, responseService)
 }
 
 // _putStr16 writes the bytes `in` into `out` using the encoding `s~2`.
