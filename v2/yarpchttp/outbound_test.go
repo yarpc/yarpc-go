@@ -52,7 +52,7 @@ func TestNewOutbound(t *testing.T) {
 func TestNewSingleOutboundPanic(t *testing.T) {
 	require.Panics(t, func() {
 		// invalid url should cause panic
-		NewTransport().NewSingleOutbound(":")
+		NewDialer().NewSingleOutbound(":")
 	},
 		"expected to panic")
 }
@@ -84,8 +84,8 @@ func TestCallSuccess(t *testing.T) {
 	))
 	defer successServer.Close()
 
-	trans := NewTransport()
-	out := trans.NewSingleOutbound(successServer.URL)
+	dialer := NewDialer()
+	out := dialer.NewSingleOutbound(successServer.URL)
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
@@ -153,7 +153,7 @@ func TestOutboundHeaders(t *testing.T) {
 		},
 	}
 
-	trans := NewTransport()
+	dialer := NewDialer()
 
 	for _, tt := range tests {
 		server := httptest.NewServer(http.HandlerFunc(
@@ -174,7 +174,7 @@ func TestOutboundHeaders(t *testing.T) {
 			defer cancel()
 		}
 
-		out := trans.NewSingleOutbound(server.URL, tt.opts...)
+		out := dialer.NewSingleOutbound(server.URL, tt.opts...)
 
 		res, err := out.Call(ctx, &yarpc.Request{
 			Caller:    "caller",
@@ -218,7 +218,7 @@ func TestOutboundApplicationError(t *testing.T) {
 		},
 	}
 
-	trans := NewTransport()
+	dialer := NewDialer()
 
 	for _, tt := range tests {
 		server := httptest.NewServer(http.HandlerFunc(
@@ -229,7 +229,7 @@ func TestOutboundApplicationError(t *testing.T) {
 		))
 		defer server.Close()
 
-		out := trans.NewSingleOutbound(server.URL)
+		out := dialer.NewSingleOutbound(server.URL)
 
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, 100*testtime.Millisecond)
@@ -265,7 +265,7 @@ func TestCallFailures(t *testing.T) {
 		}))
 	defer internalErrorServer.Close()
 
-	trans := NewTransport()
+	dialer := NewDialer()
 
 	tests := []struct {
 		url      string
@@ -277,7 +277,7 @@ func TestCallFailures(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		out := trans.NewSingleOutbound(tt.url)
+		out := dialer.NewSingleOutbound(tt.url)
 
 		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 		defer cancel()
@@ -318,7 +318,7 @@ func TestGetPeerForRequestErr(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			chooser := yarpctest.NewMockChooser(ctrl)
 
-			out := NewTransport().NewSingleOutbound("http://127.0.0.1:9999")
+			out := NewDialer().NewSingleOutbound("http://127.0.0.1:9999")
 			out.chooser = chooser
 
 			ctx := context.Background()
@@ -334,7 +334,7 @@ func TestGetPeerForRequestErr(t *testing.T) {
 
 func TestWithCoreHeaders(t *testing.T) {
 	endpoint := "http://127.0.0.1:9999"
-	out := NewTransport().NewSingleOutbound(endpoint)
+	out := NewDialer().NewSingleOutbound(endpoint)
 
 	httpReq := httptest.NewRequest("", endpoint, nil)
 
@@ -355,7 +355,7 @@ func TestWithCoreHeaders(t *testing.T) {
 }
 
 func TestNoRequest(t *testing.T) {
-	tran := NewTransport()
+	tran := NewDialer()
 	out := tran.NewSingleOutbound("localhost:0")
 
 	_, err := out.Call(context.Background(), nil)
@@ -363,7 +363,7 @@ func TestNoRequest(t *testing.T) {
 }
 
 func TestOutboundNoDeadline(t *testing.T) {
-	out := NewTransport().NewSingleOutbound("http://foo-host:8080")
+	out := NewDialer().NewSingleOutbound("http://foo-host:8080")
 
 	_, err := out.call(context.Background(), &yarpc.Request{})
 	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing context deadline"), err)
@@ -380,8 +380,8 @@ func TestServiceMatchSuccess(t *testing.T) {
 	))
 	defer matchServer.Close()
 
-	trans := NewTransport()
-	out := trans.NewSingleOutbound(matchServer.URL)
+	dialer := NewDialer()
+	out := dialer.NewSingleOutbound(matchServer.URL)
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
@@ -402,8 +402,8 @@ func TestServiceMatchFailed(t *testing.T) {
 	))
 	defer mismatchServer.Close()
 
-	trans := NewTransport()
-	out := trans.NewSingleOutbound(mismatchServer.URL)
+	dialer := NewDialer()
+	out := dialer.NewSingleOutbound(mismatchServer.URL)
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
@@ -424,8 +424,8 @@ func TestServiceMatchNoHeader(t *testing.T) {
 	))
 	defer noHeaderServer.Close()
 
-	trans := NewTransport()
-	out := trans.NewSingleOutbound(noHeaderServer.URL)
+	dialer := NewDialer()
+	out := dialer.NewSingleOutbound(noHeaderServer.URL)
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()

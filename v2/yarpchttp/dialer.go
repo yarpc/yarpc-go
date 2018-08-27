@@ -37,7 +37,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type transportOptions struct {
+type dialerOptions struct {
 	keepAlive             time.Duration
 	maxIdleConns          int
 	maxIdleConnsPerHost   int
@@ -50,11 +50,11 @@ type transportOptions struct {
 	innocenceWindow       time.Duration
 	jitter                func(int64) int64
 	tracer                opentracing.Tracer
-	buildClient           func(*transportOptions) *http.Client
+	buildClient           func(*dialerOptions) *http.Client
 	logger                *zap.Logger
 }
 
-var defaultTransportOptions = transportOptions{
+var defaultDialerOptions = dialerOptions{
 	keepAlive:           30 * time.Second,
 	maxIdleConnsPerHost: 2,
 	connTimeout:         defaultConnTimeout,
@@ -64,31 +64,31 @@ var defaultTransportOptions = transportOptions{
 	jitter:              rand.Int63n,
 }
 
-func newTransportOptions() transportOptions {
-	options := defaultTransportOptions
+func newDialerOptions() dialerOptions {
+	options := defaultDialerOptions
 	options.tracer = opentracing.GlobalTracer()
 	return options
 }
 
-// TransportOption customizes the behavior of an HTTP transport.
-type TransportOption func(*transportOptions)
+// DialerOption customizes the behavior of an HTTP dialer.
+type DialerOption func(*dialerOptions)
 
-func (TransportOption) httpOption() {}
+func (DialerOption) httpOption() {}
 
 // KeepAlive specifies the keep-alive period for the network connection. If
 // zero, keep-alives are disabled.
 //
 // Defaults to 30 seconds.
-func KeepAlive(t time.Duration) TransportOption {
-	return func(options *transportOptions) {
+func KeepAlive(t time.Duration) DialerOption {
+	return func(options *dialerOptions) {
 		options.keepAlive = t
 	}
 }
 
 // MaxIdleConns controls the maximum number of idle (keep-alive) connections
 // across all hosts. Zero means no limit.
-func MaxIdleConns(i int) TransportOption {
-	return func(options *transportOptions) {
+func MaxIdleConns(i int) DialerOption {
+	return func(options *dialerOptions) {
 		options.maxIdleConns = i
 	}
 }
@@ -99,8 +99,8 @@ func MaxIdleConns(i int) TransportOption {
 // connections.
 //
 // Defaults to 2 connections.
-func MaxIdleConnsPerHost(i int) TransportOption {
-	return func(options *transportOptions) {
+func MaxIdleConnsPerHost(i int) DialerOption {
+	return func(options *dialerOptions) {
 		options.maxIdleConnsPerHost = i
 	}
 }
@@ -108,28 +108,28 @@ func MaxIdleConnsPerHost(i int) TransportOption {
 // IdleConnTimeout is the maximum amount of time an idle (keep-alive)
 // connection will remain idle before closing itself.
 // Zero means no limit.
-func IdleConnTimeout(t time.Duration) TransportOption {
-	return func(options *transportOptions) {
+func IdleConnTimeout(t time.Duration) DialerOption {
+	return func(options *dialerOptions) {
 		options.idleConnTimeout = t
 	}
 }
 
 // DisableKeepAlives prevents re-use of TCP connections between different HTTP
 // requests.
-func DisableKeepAlives() TransportOption {
-	return func(options *transportOptions) {
+func DisableKeepAlives() DialerOption {
+	return func(options *dialerOptions) {
 		options.disableKeepAlives = true
 	}
 }
 
-// DisableCompression if true prevents the Transport from requesting
+// DisableCompression if true prevents the Dialer from requesting
 // compression with an "Accept-Encoding: gzip" request header when the Request
-// contains no existing Accept-Encoding value. If the Transport requests gzip
+// contains no existing Accept-Encoding value. If the Dialer requests gzip
 // on its own and gets a gzipped response, it's transparently decoded in the
 // Response.Body. However, if the user explicitly requested gzip it is not
 // automatically uncompressed.
-func DisableCompression() TransportOption {
-	return func(options *transportOptions) {
+func DisableCompression() DialerOption {
+	return func(options *dialerOptions) {
 		options.disableCompression = true
 	}
 }
@@ -138,19 +138,19 @@ func DisableCompression() TransportOption {
 // a server's response headers after fully writing the request (including its
 // body, if any).  This time does not include the time to read the response
 // body.
-func ResponseHeaderTimeout(t time.Duration) TransportOption {
-	return func(options *transportOptions) {
+func ResponseHeaderTimeout(t time.Duration) DialerOption {
+	return func(options *dialerOptions) {
 		options.responseHeaderTimeout = t
 	}
 }
 
-// ConnTimeout is the time that the transport will wait for a connection attempt.
+// ConnTimeout is the time that the dialer will wait for a connection attempt.
 // If a peer has been retained by a peer list, connection attempts are
 // performed in a goroutine off the request path.
 //
 // The default is half a second.
-func ConnTimeout(d time.Duration) TransportOption {
-	return func(options *transportOptions) {
+func ConnTimeout(d time.Duration) DialerOption {
+	return func(options *dialerOptions) {
 		options.connTimeout = d
 	}
 }
@@ -160,8 +160,8 @@ func ConnTimeout(d time.Duration) TransportOption {
 //
 // The default is exponential backoff starting with 10ms fully jittered,
 // doubling each attempt, with a maximum interval of 30s.
-func ConnBackoff(s backoffapi.Strategy) TransportOption {
-	return func(options *transportOptions) {
+func ConnBackoff(s backoffapi.Strategy) DialerOption {
+	return func(options *dialerOptions) {
 		options.connBackoffStrategy = s
 	}
 }
@@ -178,8 +178,8 @@ func ConnBackoff(s backoffapi.Strategy) TransportOption {
 // In this case, the peer connection management loop attempts to open a TCP
 // connection in the background, once per innocence window, while suspicious of
 // the connection, leaving the peer available until it fails.
-func InnocenceWindow(d time.Duration) TransportOption {
-	return func(options *transportOptions) {
+func InnocenceWindow(d time.Duration) DialerOption {
+	return func(options *dialerOptions) {
 		options.innocenceWindow = d
 	}
 }
@@ -187,35 +187,35 @@ func InnocenceWindow(d time.Duration) TransportOption {
 // Logger sets a logger to use for internal logging.
 //
 // The default is to not write any logs.
-func Logger(logger *zap.Logger) TransportOption {
-	return func(options *transportOptions) {
+func Logger(logger *zap.Logger) DialerOption {
+	return func(options *dialerOptions) {
 		options.logger = logger
 	}
 }
 
 // Hidden option to override the buildHTTPClient function. This is used only
 // for testing.
-func buildClient(f func(*transportOptions) *http.Client) TransportOption {
-	return func(options *transportOptions) {
+func buildClient(f func(*dialerOptions) *http.Client) DialerOption {
+	return func(options *dialerOptions) {
 		options.buildClient = f
 	}
 }
 
-// NewTransport creates a new HTTP transport for managing peers and sending requests
-func NewTransport(opts ...TransportOption) *Transport {
-	options := newTransportOptions()
+// NewDialer creates a new HTTP dialer for managing peers and sending requests
+func NewDialer(opts ...DialerOption) *Dialer {
+	options := newDialerOptions()
 	for _, opt := range opts {
 		opt(&options)
 	}
-	return options.newTransport()
+	return options.newDialer()
 }
 
-func (o *transportOptions) newTransport() *Transport {
+func (o *dialerOptions) newDialer() *Dialer {
 	logger := o.logger
 	if logger == nil {
 		logger = zap.NewNop()
 	}
-	return &Transport{
+	return &Dialer{
 		once:                lifecycle.NewOnce(),
 		client:              o.buildClient(o),
 		connTimeout:         o.connTimeout,
@@ -228,7 +228,7 @@ func (o *transportOptions) newTransport() *Transport {
 	}
 }
 
-func buildHTTPClient(options *transportOptions) *http.Client {
+func buildHTTPClient(options *dialerOptions) *http.Client {
 	return &http.Client{
 		Transport: &http.Transport{
 			// options lifted from https://golang.org/src/net/http/transport.go
@@ -249,10 +249,10 @@ func buildHTTPClient(options *transportOptions) *http.Client {
 	}
 }
 
-// Transport keeps track of HTTP peers and the associated HTTP client. It
+// Dialer keeps track of HTTP peers and the associated HTTP client. It
 // allows using a single HTTP client to make requests to multiple YARPC
 // services and pooling the resources needed therein.
-type Transport struct {
+type Dialer struct {
 	lock sync.Mutex
 	once *lifecycle.Once
 
@@ -269,17 +269,17 @@ type Transport struct {
 	logger *zap.Logger
 }
 
-var _ yarpc.Dialer = (*Transport)(nil)
+var _ yarpc.Dialer = (*Dialer)(nil)
 
-// Start starts the HTTP transport.
-func (a *Transport) Start() error {
+// Start starts the HTTP dialer.
+func (a *Dialer) Start() error {
 	return a.once.Start(func() error {
 		return nil // Nothing to do
 	})
 }
 
-// Stop stops the HTTP transport.
-func (a *Transport) Stop() error {
+// Stop stops the HTTP dialer.
+func (a *Dialer) Stop() error {
 	return a.once.Stop(func() error {
 		a.connectorsGroup.Wait()
 		return nil
@@ -290,7 +290,7 @@ func (a *Transport) Stop() error {
 // to the specified URL.
 //
 // The URLTemplate option has no effect in this form.
-func (a *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbound {
+func (a *Dialer) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbound {
 	parsedURL, err := url.Parse(uri)
 	if err != nil {
 		panic(err.Error())
@@ -305,13 +305,13 @@ func (a *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbo
 	return o
 }
 
-// IsRunning returns whether the HTTP transport is running.
-func (a *Transport) IsRunning() bool {
+// IsRunning returns whether the HTTP dialer is running.
+func (a *Dialer) IsRunning() bool {
 	return a.once.IsRunning()
 }
 
 // RetainPeer gets or creates a Peer for the specified yarpc.Subscriber (usually a yarpc.Chooser)
-func (a *Transport) RetainPeer(pid yarpc.Identifier, sub yarpc.Subscriber) (yarpc.Peer, error) {
+func (a *Dialer) RetainPeer(pid yarpc.Identifier, sub yarpc.Subscriber) (yarpc.Peer, error) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -321,7 +321,7 @@ func (a *Transport) RetainPeer(pid yarpc.Identifier, sub yarpc.Subscriber) (yarp
 }
 
 // **NOTE** should only be called while the lock write mutex is acquired
-func (a *Transport) getOrCreatePeer(pid yarpc.Identifier) *httpPeer {
+func (a *Dialer) getOrCreatePeer(pid yarpc.Identifier) *httpPeer {
 	addr := pid.Identifier()
 	if p, ok := a.peers[addr]; ok {
 		return p
@@ -334,8 +334,8 @@ func (a *Transport) getOrCreatePeer(pid yarpc.Identifier) *httpPeer {
 	return p
 }
 
-// ReleasePeer releases a peer from the yarpc.Subscriber and removes that peer from the Transport if nothing is listening to it
-func (a *Transport) ReleasePeer(pid yarpc.Identifier, sub yarpc.Subscriber) error {
+// ReleasePeer releases a peer from the yarpc.Subscriber and removes that peer from the Dialer if nothing is listening to it
+func (a *Dialer) ReleasePeer(pid yarpc.Identifier, sub yarpc.Subscriber) error {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 

@@ -69,7 +69,7 @@ func OutboundTracer(tracer opentracing.Tracer) OutboundOption {
 // AddHeader specifies that an HTTP outbound should always include the given
 // header in outgoung requests.
 //
-// 	httpTransport.NewOutbound(chooser, http.AddHeader("X-Token", "TOKEN"))
+// 	yarpchttp.NewOutbound(chooser, http.AddHeader("X-Token", "TOKEN"))
 //
 // Note that headers starting with "Rpc-" are reserved by YARPC. This function
 // will panic if the header starts with "Rpc-".
@@ -107,11 +107,12 @@ func NewOutbound(chooser yarpc.Chooser, opts ...OutboundOption) *Outbound {
 	return o
 }
 
-// Outbound sends YARPC requests over HTTP. It may be constructed using the
-// NewOutbound function or the NewOutbound or NewSingleOutbound methods on the
-// HTTP Transport. It is recommended that services use a single HTTP transport
-// to construct all HTTP outbounds, ensuring efficient sharing of resources
-// across the different outbounds.
+// Outbound sends YARPC requests over HTTP.
+// It may be constructed using the NewOutbound function or NewSingleOutbound
+// methods on the HTTP dialer.
+// It is recommended that services use a single HTTP dialer to construct all
+// HTTP outbounds, ensuring efficient sharing of resources across the different
+// outbounds.
 type Outbound struct {
 	chooser     yarpc.Chooser
 	urlTemplate *url.URL
@@ -412,7 +413,7 @@ func (o *Outbound) doWithPeer(
 ) (*http.Response, error) {
 	hreq.URL.Host = p.addr
 
-	response, err := p.transport.client.Do(hreq.WithContext(ctx))
+	response, err := p.dialer.client.Do(hreq.WithContext(ctx))
 
 	if err != nil {
 		// Workaround borrowed from ctxhttp until

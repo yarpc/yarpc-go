@@ -32,7 +32,7 @@ import (
 type httpPeer struct {
 	*yarpcpeer.AbstractPeer
 
-	transport             *Transport
+	dialer                *Dialer
 	addr                  string
 	changed               chan struct{}
 	released              chan struct{}
@@ -40,7 +40,7 @@ type httpPeer struct {
 	innocentUntilUnixNano *atomic.Int64
 }
 
-func newPeer(addr string, t *Transport) *httpPeer {
+func newPeer(addr string, dialer *Dialer) *httpPeer {
 	// Create a defused timer for later use.
 	timer := time.NewTimer(0)
 	if !timer.Stop() {
@@ -52,7 +52,7 @@ func newPeer(addr string, t *Transport) *httpPeer {
 
 	return &httpPeer{
 		AbstractPeer: yarpcpeer.NewAbstractPeer(yarpc.Address(addr)),
-		transport:    t,
+		dialer:       dialer,
 		addr:         addr,
 		changed:      make(chan struct{}, 1),
 		released:     make(chan struct{}, 0),
@@ -61,14 +61,14 @@ func newPeer(addr string, t *Transport) *httpPeer {
 	}
 }
 
-// The HTTP transport polls for whether a peer is available by attempting to
-// connect. The transport does not preserve the connection because HTTP servers
+// The HTTP dialer polls for whether a peer is available by attempting to
+// connect. The dialer does not preserve the connection because HTTP servers
 // may behave oddly if they don't receive a request immediately.
 // Instead, we treat the peer as available until proven otherwise with a fresh
 // connection attempt.
 func (p *httpPeer) isAvailable() bool {
 	// If there's no open connection, we probe by connecting.
-	dialer := &net.Dialer{Timeout: p.transport.connTimeout}
+	dialer := &net.Dialer{Timeout: p.dialer.connTimeout}
 	conn, err := dialer.Dial("tcp", p.addr)
 	if conn != nil {
 		conn.Close()
@@ -92,7 +92,7 @@ func (p *httpPeer) OnSuspect() {
 	// Extend the window of innocence from the current time.
 	// Use Store instead of CAS since races at worst extend the innocence
 	// window to relatively similar distant times.
-	innocentDurationUnixNano := p.transport.jitter(p.transport.innocenceWindow.Nanoseconds())
+	innocentDurationUnixNano := p.dialer.jitter(p.dialer.innocenceWindow.Nanoseconds())
 	p.innocentUntilUnixNano.Store(now + innocentDurationUnixNano)
 
 	// Kick the state change channel (if it hasn't been kicked already).
@@ -120,10 +120,10 @@ func (p *httpPeer) Release() {
 func (p *httpPeer) MaintainConn() {
 	var attempts uint
 
-	backoff := p.transport.connBackoffStrategy.Backoff()
+	backoff := p.dialer.connBackoffStrategy.Backoff()
 
 	// Wait for start (so we can be certain that we have a channel).
-	<-p.transport.once.Started()
+	<-p.dialer.once.Started()
 
 	// Attempt to retain an open connection to each peer so long as it is
 	// retained.
@@ -153,11 +153,11 @@ func (p *httpPeer) MaintainConn() {
 	}
 	p.AbstractPeer.SetStatus(yarpc.Unavailable)
 
-	p.transport.connectorsGroup.Done()
+	p.dialer.connectorsGroup.Done()
 }
 
-// waitForChange waits for the transport to send a peer connection status
-// change notification, but exits early if the transport releases the peer or
+// waitForChange waits for the dialer to send a peer connection status
+// change notification, but exits early if the dialer releases the peer or
 // stops.  waitForChange returns whether it is resuming due to a connection
 // status change event.
 func (p *httpPeer) waitForChange() (changed bool) {
@@ -170,7 +170,7 @@ func (p *httpPeer) waitForChange() (changed bool) {
 	}
 }
 
-// sleep waits for a duration, but exits early if the transport releases the
+// sleep waits for a duration, but exits early if the dialer releases the
 // peer or stops.  sleep returns whether it successfully waited the entire
 // duration.
 func (p *httpPeer) sleep(delay time.Duration) (completed bool) {
@@ -180,7 +180,7 @@ func (p *httpPeer) sleep(delay time.Duration) (completed bool) {
 	case <-p.timer.C:
 		return true
 	case <-p.released:
-	case <-p.transport.once.Stopping():
+	case <-p.dialer.once.Stopping():
 	}
 
 	if !p.timer.Stop() {

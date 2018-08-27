@@ -31,10 +31,10 @@ import (
 	"go.uber.org/yarpc/v2/yarpctest"
 )
 
-// NoJitter is a transport option only available in tests, to disable jitter
+// NoJitter is a dialer option only available in tests, to disable jitter
 // between connection attempts.
-func NoJitter() TransportOption {
-	return func(options *transportOptions) {
+func NoJitter() DialerOption {
+	return func(options *dialerOptions) {
 		options.jitter = func(n int64) int64 {
 			return n
 		}
@@ -54,7 +54,7 @@ func createPeerIdentifierMap(ids []string) map[string]yarpc.Identifier {
 	return pids
 }
 
-func TestTransport(t *testing.T) {
+func TestDialer(t *testing.T) {
 	type testStruct struct {
 		msg string
 
@@ -66,11 +66,11 @@ func TestTransport(t *testing.T) {
 		// the actions up from so they can be generated and passed as deps
 		subscriberDefs []yarpctest.SubscriberDefinition
 
-		// actions are the actions that will be applied against the transport
+		// actions are the actions that will be applied against the dialer
 		actions []yarpctest.DialerAction
 
 		// expectedPeers are a list of peers (and those peer's subscribers)
-		// that are expected on the transport after the actions
+		// that are expected on the dialer after the actions
 		expectedPeers []peerExpectation
 	}
 	tests := []testStruct{
@@ -239,17 +239,17 @@ func TestTransport(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			trans := NewTransport()
+			dialer := NewDialer()
 
 			deps := yarpctest.DialerDeps{
 				PeerIdentifiers: createPeerIdentifierMap(tt.identifiers),
 				Subscribers:     yarpctest.CreateSubscriberMap(mockCtrl, tt.subscriberDefs),
 			}
-			yarpctest.ApplyDialerActions(t, trans, tt.actions, deps)
+			yarpctest.ApplyDialerActions(t, dialer, tt.actions, deps)
 
-			assert.Len(t, trans.peers, len(tt.expectedPeers))
+			assert.Len(t, dialer.peers, len(tt.expectedPeers))
 			for _, expectedPeerNode := range tt.expectedPeers {
-				p, ok := trans.peers[expectedPeerNode.id]
+				p, ok := dialer.peers[expectedPeerNode.id]
 				assert.True(t, ok)
 
 				if assert.NotNil(t, p) {
@@ -269,16 +269,15 @@ func TestTransport(t *testing.T) {
 	}
 }
 
-func TestTransportClient(t *testing.T) {
-	trans := NewTransport()
-
-	assert.NotNil(t, trans.client)
+func TestDialerClient(t *testing.T) {
+	dialer := NewDialer()
+	assert.NotNil(t, dialer.client)
 }
 
-func TestTransportClientOpaqueOptions(t *testing.T) {
+func TestDialerClientOpaqueOptions(t *testing.T) {
 	// Unfortunately the KeepAlive is obfuscated in the client, so we can't really
 	// assert this worked.
-	trans := NewTransport(
+	dialer := NewDialer(
 		KeepAlive(testtime.Second),
 		MaxIdleConns(100),
 		MaxIdleConnsPerHost(10),
@@ -288,7 +287,7 @@ func TestTransportClientOpaqueOptions(t *testing.T) {
 		ResponseHeaderTimeout(1*time.Second),
 	)
 
-	assert.NotNil(t, trans.client)
+	assert.NotNil(t, dialer.client)
 }
 
 type testIdentifier struct {

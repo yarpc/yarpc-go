@@ -40,15 +40,17 @@
 - [x] moved internal internal/errors.ZeroAddrToHostPort to v2/internal/internalyarpcerrors
 - [x] decouple NewInbound from NewTransport
 - [x] decouple NewOutbound from NewTransport (except NewSingleOutbound)
-- [ ] transport -> dialer everywhere
-- [ ] Connecting peer status -> ELIMINATED
-- [ ] revisit newPeer taking an addr string instead of peer identifier
-- [ ] rewrite doc.go examples
-- [ ] restore validator middleware
-- [ ] decorate a router with middleware
+- [x] transport -> dialer everywhere
 - [ ] fix options pattern
 - [ ] separate InboundTracer and OutboundTracer options
 - [ ] exorcise lifecycle
 - [ ] thread middleware chains as options to encoding constructors
 - [ ] exorcise ClientConfig interface in favor of OutboundConfig struct
 - [ ] thread context through Start/Stop
+- [ ] revisit yarpc.ErrTansportHsNoReferenceToPeer -> yarpcerrors.ErrDialerHasNoReferenceToPeer
+- [ ] dialer should have no Start, Close instead of Stop
+- [ ] Connecting peer status -> ELIMINATED
+- [ ] rewrite doc.go examples
+- [ ] consider threading a custom dialer through the Dialer constructor
+- [ ] restore validator middleware
+- [ ] decorate a router with middleware

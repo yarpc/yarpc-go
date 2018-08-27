@@ -380,7 +380,7 @@ func (th panickedHandler) Handle(context.Context, *yarpc.Request, yarpc.Response
 }
 
 func TestHandlerPanic(t *testing.T) {
-	trans := NewTransport()
+	dialer := NewDialer()
 	router := yarpcrouter.NewMapRouter("yarpc-test")
 	router.Register([]yarpc.Procedure{
 		{
@@ -393,7 +393,7 @@ func TestHandlerPanic(t *testing.T) {
 	require.NoError(t, inbound.Start())
 	defer inbound.Stop()
 
-	outbound := trans.NewSingleOutbound("https://" + inbound.Addr().String())
+	outbound := dialer.NewSingleOutbound("https://" + inbound.Addr().String())
 	client := yarpcraw.New(&yarpc.OutboundConfig{
 		CallerName: "yarpc-test-client",
 		Outbounds: yarpc.Outbounds{

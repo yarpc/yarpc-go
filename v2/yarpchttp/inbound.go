@@ -130,8 +130,7 @@ func NewInbound(addr string, router yarpc.Router, opts ...InboundOption) *Inboun
 	return i
 }
 
-// Inbound receives YARPC requests using an HTTP server. It may be constructed
-// using the NewInbound method on the Transport.
+// Inbound receives YARPC requests using an HTTP server.
 type Inbound struct {
 	addr            string
 	mux             *http.ServeMux
@@ -141,7 +140,6 @@ type Inbound struct {
 	router          yarpc.Router
 	tracer          opentracing.Tracer
 	logger          *zap.Logger
-	transport       *Transport
 	grabHeaders     map[string]struct{}
 	interceptor     func(http.Handler) http.Handler
 
@@ -164,7 +162,7 @@ func (i *Inbound) Start() error {
 
 func (i *Inbound) start() error {
 	if i.router == nil {
-		return yarpcerrors.Newf(yarpcerrors.CodeInternal, "no router configured for transport inbound")
+		return yarpcerrors.Newf(yarpcerrors.CodeInternal, "no router configured for HTTP inbound")
 	}
 	for header := range i.grabHeaders {
 		if !strings.HasPrefix(header, "x-") {

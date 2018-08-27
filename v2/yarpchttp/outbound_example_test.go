@@ -27,11 +27,11 @@ import (
 )
 
 func ExampleOutbound() {
-	trans := yarpchttp.NewTransport()
+	dialer := yarpchttp.NewDialer()
 	yarpcraw.New(&yarpc.OutboundConfig{
 		CallerName: "myservice",
 		Outbounds: yarpc.Outbounds{
-			Unary: trans.NewSingleOutbound("http://127.0.0.1:8888"),
+			Unary: dialer.NewSingleOutbound("http://127.0.0.1:8888"),
 		},
 	})
 }

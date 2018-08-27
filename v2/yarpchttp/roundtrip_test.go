@@ -61,7 +61,7 @@ func TestRoundTripSuccess(t *testing.T) {
 	defer echoServer.Close()
 
 	// start outbound
-	trans := NewTransport()
+	trans := NewDialer()
 	out := trans.NewSingleOutbound(echoServer.URL)
 
 	// create request
@@ -97,7 +97,7 @@ func TestRoundTripTimeout(t *testing.T) {
 		}))
 
 	// start outbound
-	out := NewTransport().NewSingleOutbound(server.URL)
+	out := NewDialer().NewSingleOutbound(server.URL)
 
 	// create request
 	req, err := http.NewRequest("POST", server.URL, nil /* body */)
@@ -125,7 +125,7 @@ func TestRoundTripTimeout(t *testing.T) {
 func TestRoundTripNoDeadline(t *testing.T) {
 	URL := "http://foo-host"
 
-	out := NewTransport().NewSingleOutbound(URL)
+	out := NewDialer().NewSingleOutbound(URL)
 
 	hreq, err := http.NewRequest("GET", URL, nil /* body */)
 	require.NoError(t, err)

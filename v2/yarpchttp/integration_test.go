@@ -126,20 +126,20 @@ type testEnv struct {
 }
 
 type testEnvOptions struct {
-	Procedures       []yarpc.Procedure
-	TransportOptions []TransportOption
-	InboundOptions   []InboundOption
-	OutboundOptions  []OutboundOption
+	Procedures      []yarpc.Procedure
+	DialerOptions   []DialerOption
+	InboundOptions  []InboundOption
+	OutboundOptions []OutboundOption
 }
 
 func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
-	trans := NewTransport(options.TransportOptions...)
-	if err := trans.Start(); err != nil {
+	dialer := NewDialer(options.DialerOptions...)
+	if err := dialer.Start(); err != nil {
 		return nil, err
 	}
 	defer func() {
 		if err != nil {
-			err = multierr.Append(err, trans.Stop())
+			err = multierr.Append(err, dialer.Stop())
 		}
 	}()
 
@@ -153,7 +153,7 @@ func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
 		}
 	}()
 
-	outbound := trans.NewSingleOutbound(fmt.Sprintf("http://%s", inbound.Addr().String()), options.OutboundOptions...)
+	outbound := dialer.NewSingleOutbound(fmt.Sprintf("http://%s", inbound.Addr().String()), options.OutboundOptions...)
 
 	caller := "example-client"
 	service := "example"

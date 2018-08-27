@@ -122,8 +122,8 @@ func TestInboundMux(t *testing.T) {
 	}
 
 	// this should fail
-	trans := NewTransport()
-	o := trans.NewSingleOutbound(addr)
+	dialer := NewDialer()
+	o := dialer.NewSingleOutbound(addr)
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
@@ -187,7 +187,7 @@ func TestMuxWithInterceptor(t *testing.T) {
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "OK")
 	})
-	intercept := func(transportHandler http.Handler) http.Handler {
+	intercept := func(_ http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			io.WriteString(w, "intercepted")
 		})
