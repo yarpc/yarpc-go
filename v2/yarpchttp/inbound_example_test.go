@@ -21,6 +21,7 @@
 package yarpchttp_test
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -33,11 +34,14 @@ import (
 
 func ExampleInbound() {
 	router := yarpcrouter.NewMapRouter("my-service")
-	inbound := yarpchttp.NewInbound(":8888", router)
-	if err := inbound.Start(); err != nil {
+	inbound := &yarpchttp.Inbound{
+		Address: ":8888",
+		Router:  router,
+	}
+	if err := inbound.Start(context.Background()); err != nil {
 		log.Fatal(err)
 	}
-	defer inbound.Stop()
+	defer inbound.Stop(context.Background())
 }
 
 func ExampleMux() {
@@ -50,11 +54,16 @@ func ExampleMux() {
 	})
 
 	router := yarpcrouter.NewMapRouter("my-service")
-	inbound := yarpchttp.NewInbound(":8888", router, yarpchttp.Mux("/yarpc", mux))
-	if err := inbound.Start(); err != nil {
+	inbound := &yarpchttp.Inbound{
+		Address:    ":8888",
+		Router:     router,
+		Mux:        mux,
+		MuxPattern: "/yarpc",
+	}
+	if err := inbound.Start(context.Background()); err != nil {
 		log.Fatal(err)
 	}
-	defer inbound.Stop()
+	defer inbound.Stop(context.Background())
 
 	// Make a request to the /health endpoint.
 	res, err := http.Get("http://127.0.0.1:8888/health")
@@ -90,11 +99,15 @@ func ExampleInterceptor() {
 
 	// Create a new inbound, attaching the interceptor
 	router := yarpcrouter.NewMapRouter("server")
-	inbound := yarpchttp.NewInbound(":8889", router, yarpchttp.Interceptor(intercept))
-	if err := inbound.Start(); err != nil {
+	inbound := &yarpchttp.Inbound{
+		Address:     ":8889",
+		Router:      router,
+		Interceptor: intercept,
+	}
+	if err := inbound.Start(context.Background()); err != nil {
 		log.Fatal(err)
 	}
-	defer inbound.Stop()
+	defer inbound.Stop(context.Background())
 
 	// Make a non-YARPC request to the / endpoint.
 	res, err := http.Get("http://127.0.0.1:8889/")

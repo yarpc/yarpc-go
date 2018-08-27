@@ -44,11 +44,11 @@ func popHeader(h http.Header, n string) string {
 
 // handler adapts a yarpc.Handler into a handler for net/http.
 type handler struct {
-	router            yarpc.Router
-	tracer            opentracing.Tracer
-	grabHeaders       map[string]struct{}
-	bothResponseError bool
-	logger            *zap.Logger
+	router              yarpc.Router
+	tracer              opentracing.Tracer
+	grabHeaders         map[string]struct{}
+	legacyResponseError bool
+	logger              *zap.Logger
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -73,7 +73,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if status.Name() != "" {
 		responseWriter.AddSystemHeader(ErrorNameHeader, status.Name())
 	}
-	if bothResponseError && h.bothResponseError {
+	if bothResponseError && !h.legacyResponseError {
 		responseWriter.AddSystemHeader(BothResponseErrorHeader, AcceptTrue)
 		responseWriter.AddSystemHeader(ErrorMessageHeader, status.Message())
 	} else {

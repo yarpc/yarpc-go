@@ -87,7 +87,7 @@ func TestHandlerSuccess(t *testing.T) {
 		gomock.Any(),
 	).Return(nil)
 
-	httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}, bothResponseError: true}
+	httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}}
 	req := &http.Request{
 		Method: "POST",
 		Header: headers,
@@ -163,7 +163,7 @@ func TestHandlerHeaders(t *testing.T) {
 			WithProcedure("hello"),
 		).Return(spec, nil)
 
-		httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}, grabHeaders: tt.grabHeaders, bothResponseError: true}
+		httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}, grabHeaders: tt.grabHeaders}
 
 		rpcHandler.EXPECT().Handle(
 			yarpctest.NewContextMatcher(t,
@@ -306,7 +306,7 @@ func TestHandlerFailures(t *testing.T) {
 				).Return(spec, nil)
 			}
 
-			h := handler{router: router, tracer: &opentracing.NoopTracer{}, bothResponseError: true}
+			h := handler{router: router, tracer: &opentracing.NoopTracer{}}
 
 			rw := httptest.NewRecorder()
 			h.ServeHTTP(rw, tt.req)
@@ -362,7 +362,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 		WithProcedure("hello"),
 	).Return(spec, nil)
 
-	httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}, bothResponseError: true}
+	httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}}
 	httpResponse := httptest.NewRecorder()
 	httpHandler.ServeHTTP(httpResponse, &request)
 
@@ -391,10 +391,12 @@ func TestHandlerPanic(t *testing.T) {
 			HandlerSpec: yarpc.NewUnaryHandlerSpec(panickedHandler{}),
 		},
 	})
-	inbound := NewInbound("localhost:0", router)
-
-	require.NoError(t, inbound.Start())
-	defer inbound.Stop()
+	inbound := &Inbound{
+		Address: "localhost:0",
+		Router:  router,
+	}
+	require.NoError(t, inbound.Start(context.Background()))
+	defer inbound.Stop(context.Background())
 
 	outbound := dialer.NewSingleOutbound("https://" + inbound.Addr().String())
 	client := yarpcraw.New(&yarpc.OutboundConfig{

@@ -40,16 +40,21 @@ import (
 	"go.uber.org/yarpc/v2/internal/internalyarpctest"
 	"go.uber.org/yarpc/v2/internal/routertest"
 	"go.uber.org/yarpc/v2/yarpcerrors"
-	"go.uber.org/yarpc/v2/yarpcrouter"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 func TestStartAddrInUse(t *testing.T) {
-	i1 := NewInbound(":0", newTestRouter(nil))
+	i1 := &Inbound{
+		Address: ":0",
+		Router:  newTestRouter(nil),
+	}
 
-	require.NoError(t, i1.Start(), "inbound 1 must start without an error")
-	i2 := NewInbound(i1.Addr().String(), newTestRouter(nil))
-	err := i2.Start()
+	require.NoError(t, i1.Start(context.Background()), "inbound 1 must start without an error")
+	i2 := &Inbound{
+		Address: i1.Addr().String(),
+		Router:  newTestRouter(nil),
+	}
+	err := i2.Start(context.Background())
 	require.Error(t, err)
 
 	oe, ok := err.(*net.OpError)
@@ -59,41 +64,47 @@ func TestStartAddrInUse(t *testing.T) {
 		assert.True(t, ok && se.Syscall == "bind" && se.Err == syscall.EADDRINUSE, "expected a EADDRINUSE bind error")
 	}
 
-	assert.NoError(t, i1.Stop())
+	assert.NoError(t, i1.Stop(context.Background()))
 }
 
 func TestNilAddrAfterStop(t *testing.T) {
-	i := NewInbound(":0", newTestRouter(nil))
-	require.NoError(t, i.Start())
+	i := &Inbound{
+		Address: ":0",
+		Router:  newTestRouter(nil),
+	}
+	require.NoError(t, i.Start(context.Background()))
 	assert.NotEqual(t, ":0", i.Addr().String())
 	assert.NotNil(t, i.Addr())
-	assert.NoError(t, i.Stop())
+	assert.NoError(t, i.Stop(context.Background()))
 	assert.Nil(t, i.Addr())
 }
 
 func TestInboundStartAndStop(t *testing.T) {
-	i := NewInbound(":0", newTestRouter(nil))
-	require.NoError(t, i.Start())
+	i := &Inbound{
+		Address: ":0",
+		Router:  newTestRouter(nil),
+	}
+	require.NoError(t, i.Start(context.Background()))
 	assert.NotEqual(t, ":0", i.Addr().String())
-	assert.NoError(t, i.Stop())
+	assert.NoError(t, i.Stop(context.Background()))
 }
 
 func TestInboundStartError(t *testing.T) {
-	i := NewInbound("invalid", new(yarpctest.MockRouter))
-	err := i.Start()
+	i := &Inbound{
+		Address: "invalid",
+		Router:  new(yarpctest.MockRouter),
+	}
+	err := i.Start(context.Background())
 	assert.Error(t, err, "expected failure")
 }
 
 func TestInboundStartErrorBadGrabHeader(t *testing.T) {
-	i := NewInbound(":0", new(yarpctest.MockRouter), GrabHeaders("x-valid", "y-invalid"))
-	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.FromError(i.Start()).Code())
-}
-
-func TestInboundStopWithoutStarting(t *testing.T) {
-	router := yarpcrouter.NewMapRouter("server")
-	i := NewInbound(":8000", router)
-	assert.Nil(t, i.Addr())
-	assert.NoError(t, i.Stop())
+	i := &Inbound{
+		Address:     ":0",
+		Router:      new(yarpctest.MockRouter),
+		GrabHeaders: []string{"x-valid", "y-invalid"},
+	}
+	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.FromError(i.Start(context.Background())).Code())
 }
 
 func TestInboundMux(t *testing.T) {
@@ -107,9 +118,14 @@ func TestInboundMux(t *testing.T) {
 
 	router := yarpctest.NewMockRouter(mockCtrl)
 	router.EXPECT().Procedures()
-	i := NewInbound(":0", router, Mux("/rpc/v1", mux))
-	require.NoError(t, i.Start())
-	defer i.Stop()
+	i := &Inbound{
+		Address:    ":0",
+		Router:     router,
+		Mux:        mux,
+		MuxPattern: "/rpc/v1",
+	}
+	require.NoError(t, i.Start(context.Background()))
+	defer i.Stop(context.Background())
 
 	addr := fmt.Sprintf("http://%v/", internalyarpctest.ZeroAddrToHostPort(i.Addr()))
 	resp, err := http.Get(addr + "health")
@@ -195,9 +211,14 @@ func TestMuxWithInterceptor(t *testing.T) {
 		})
 	}
 
-	inbound := NewInbound("127.0.0.1:0", newTestRouter(nil), Mux("/", mux), Interceptor(intercept))
-	require.NoError(t, inbound.Start(), "Failed to start inbound")
-	defer inbound.Stop()
+	inbound := &Inbound{
+		Address:     "127.0.0.1:0",
+		Router:      newTestRouter(nil),
+		Mux:         mux,
+		Interceptor: intercept,
+	}
+	require.NoError(t, inbound.Start(context.Background()), "Failed to start inbound")
+	defer inbound.Stop(context.Background())
 
 	for _, tt := range tests {
 		t.Run(tt.path, func(t *testing.T) {
@@ -215,15 +236,19 @@ func TestRequestAfterStop(t *testing.T) {
 		io.WriteString(w, "OK")
 	})
 
-	inbound := NewInbound("127.0.0.1:0", newTestRouter(nil), Mux("/", mux))
-	require.NoError(t, inbound.Start(), "Failed to start inbound")
+	inbound := Inbound{
+		Address: "127.0.0.1:0",
+		Router:  newTestRouter(nil),
+		Mux:     mux,
+	}
+	require.NoError(t, inbound.Start(context.Background()), "Failed to start inbound")
 
 	url := fmt.Sprintf("http://%v/health", inbound.Addr())
 	_, body, err := httpGet(t, url)
 	require.NoError(t, err, "expect successful response")
 	assert.Equal(t, "OK", body, "response mismatch")
 
-	require.NoError(t, inbound.Stop(), "Failed to stop inbound")
+	require.NoError(t, inbound.Stop(context.Background()), "Failed to stop inbound")
 
 	_, _, err = httpGet(t, url)
 	assert.Error(t, err, "requests should fail once inbound is stopped")

@@ -44,9 +44,12 @@
 - [x] move the connectorsGroup.Done() method into a defer block to ensure the dialer.Stop() returns, even if NotifyStatusChanged (particularly on a mock) panics.
 - [x] remove Lifecycle from Dialer
 - [x] remove Lifecycle from Outbound
-- [ ] remove Lifecycle from Inbound
-- [x] change NewTransport constructor with options pattern to Dialer{} struct
+- [x] remove Lifecycle from Inbound
 - [ ] fix options pattern
+  - [x] change NewTransport constructor with options pattern to &Dialer{} struct
+  - [x] change NewInbound constructor with options pattern to &Inbound{} struct
+  - [ ] change NewOutbound constructor with options pattern to &Outbound{} struct
+- [ ] change Inbound.Addr back from Inbound.Address after threading a listener instead of Addr on Inbound{} (and delete this message)
 - [ ] thread middleware chains as options to encoding constructors
 - [ ] exorcise ClientConfig interface in favor of OutboundConfig struct
 - [ ] thread context through Start/Stop

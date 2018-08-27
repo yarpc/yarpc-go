@@ -63,10 +63,8 @@ func TestBothResponseError(t *testing.T) {
 		t.Run(fmt.Sprintf("inbound(%v)-outbound(%v)", tt.inboundBothResponseError, tt.outboundBothResponseError), func(t *testing.T) {
 			doWithTestEnv(t, testEnvOptions{
 				Procedures: yarpcjson.Procedure("testFoo", testFooHandler),
-				InboundOptions: []InboundOption{
-					func(i *Inbound) {
-						i.bothResponseError = tt.inboundBothResponseError
-					},
+				Inbound: &Inbound{
+					legacyResponseError: !tt.inboundBothResponseError,
 				},
 				OutboundOptions: []OutboundOption{
 					func(o *Outbound) {
@@ -127,7 +125,7 @@ type testEnv struct {
 
 type testEnvOptions struct {
 	Procedures      []yarpc.Procedure
-	InboundOptions  []InboundOption
+	Inbound         *Inbound
 	OutboundOptions []OutboundOption
 }
 
@@ -142,13 +140,15 @@ func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
 		}
 	}()
 
-	inbound := NewInbound("127.0.0.1:0", newTestRouter(options.Procedures), options.InboundOptions...)
-	if err := inbound.Start(); err != nil {
+	inbound := options.Inbound
+	inbound.Address = "127.0.0.1:0"
+	inbound.Router = newTestRouter(options.Procedures)
+	if err := inbound.Start(context.Background()); err != nil {
 		return nil, err
 	}
 	defer func() {
 		if err != nil {
-			err = multierr.Append(err, inbound.Stop())
+			err = multierr.Append(err, inbound.Stop(context.Background()))
 		}
 	}()
 
@@ -173,7 +173,7 @@ func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
 }
 
 func (e *testEnv) Close() error {
-	return e.Inbound.Stop()
+	return e.Inbound.Stop(context.Background())
 }
 
 type testRouter struct {
