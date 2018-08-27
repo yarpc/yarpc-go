@@ -8,7 +8,7 @@
 - [ ] remove peer.Binder (lifecycle related)
 - [o] make peer.ListUpdates an anonymous struct
 - [x] remove deprecated peer list chooser implementation interafce
-- [ ] remove "connecting" state from peer status
+- [x] remove "connecting" state from peer status
 - [ ] debatably reduce scope of peer status to just connection status, forcing the peer list to track pending request counts directly
 - [ ] remove Identifier interface from Peer interface
 - [ ] strip pkg/lifecycle implementation from all component implementations

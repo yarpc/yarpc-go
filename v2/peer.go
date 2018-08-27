@@ -27,9 +27,6 @@ const (
 	// Unavailable indicates the Peer is unavailable for requests
 	Unavailable ConnectionStatus = iota
 
-	// Connecting indicates the Peer is in the process of connecting
-	Connecting
-
 	// Available indicates the Peer is available for requests
 	Available
 )
