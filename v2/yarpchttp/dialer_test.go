@@ -21,25 +21,15 @@
 package yarpchttp
 
 import (
+	"context"
 	"testing"
-	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/yarpc/internal/testtime"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
-
-// NoJitter is a dialer option only available in tests, to disable jitter
-// between connection attempts.
-func NoJitter() DialerOption {
-	return func(options *dialerOptions) {
-		options.jitter = func(n int64) int64 {
-			return n
-		}
-	}
-}
 
 type peerExpectation struct {
 	id          string
@@ -49,7 +39,7 @@ type peerExpectation struct {
 func createPeerIdentifierMap(ids []string) map[string]yarpc.Identifier {
 	pids := make(map[string]yarpc.Identifier, len(ids))
 	for _, id := range ids {
-		pids[id] = &testIdentifier{id}
+		pids[id] = yarpc.Address(id)
 	}
 	return pids
 }
@@ -154,7 +144,7 @@ func TestDialer(t *testing.T) {
 			msg:         "no retains one release",
 			identifiers: []string{"i1"},
 			subscriberDefs: []yarpctest.SubscriberDefinition{
-				{ID: "s1"},
+				{ID: "s1", ExpectedNotifyCount: 1},
 			},
 			actions: []yarpctest.DialerAction{
 				yarpctest.ReleaseAction{
@@ -168,8 +158,8 @@ func TestDialer(t *testing.T) {
 			msg:         "one retains, one release (from different subscriber)",
 			identifiers: []string{"i1"},
 			subscriberDefs: []yarpctest.SubscriberDefinition{
-				{ID: "s1"},
-				{ID: "s2"},
+				{ID: "s1", ExpectedNotifyCount: 1},
+				{ID: "s2", ExpectedNotifyCount: 1},
 			},
 			actions: []yarpctest.DialerAction{
 				yarpctest.RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
@@ -239,7 +229,11 @@ func TestDialer(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			dialer := NewDialer()
+			dialer := &Dialer{}
+			require.NoError(t, dialer.Start(context.Background()))
+			defer func() {
+				require.NoError(t, dialer.Stop(context.Background()))
+			}()
 
 			deps := yarpctest.DialerDeps{
 				PeerIdentifiers: createPeerIdentifierMap(tt.identifiers),
@@ -247,9 +241,9 @@ func TestDialer(t *testing.T) {
 			}
 			yarpctest.ApplyDialerActions(t, dialer, tt.actions, deps)
 
-			assert.Len(t, dialer.peers, len(tt.expectedPeers))
+			assert.Len(t, dialer.internal.peers, len(tt.expectedPeers))
 			for _, expectedPeerNode := range tt.expectedPeers {
-				p, ok := dialer.peers[expectedPeerNode.id]
+				p, ok := dialer.internal.peers[expectedPeerNode.id]
 				assert.True(t, ok)
 
 				if assert.NotNil(t, p) {
@@ -258,7 +252,7 @@ func TestDialer(t *testing.T) {
 					// We can't look at the subscribers directly so we'll
 					// attempt to remove subscribers and be sure that it
 					// doesn't error
-					assert.Len(t, expectedPeerNode.subscribers, p.NumSubscribers())
+					assert.Equal(t, len(expectedPeerNode.subscribers), p.NumSubscribers(), "number of subscribers")
 					for _, sub := range expectedPeerNode.subscribers {
 						err := p.Unsubscribe(deps.Subscribers[sub])
 						assert.NoError(t, err, "peer %s did not have reference to subscriber %s", p.Identifier(), sub)
@@ -270,30 +264,8 @@ func TestDialer(t *testing.T) {
 }
 
 func TestDialerClient(t *testing.T) {
-	dialer := NewDialer()
-	assert.NotNil(t, dialer.client)
-}
-
-func TestDialerClientOpaqueOptions(t *testing.T) {
-	// Unfortunately the KeepAlive is obfuscated in the client, so we can't really
-	// assert this worked.
-	dialer := NewDialer(
-		KeepAlive(testtime.Second),
-		MaxIdleConns(100),
-		MaxIdleConnsPerHost(10),
-		IdleConnTimeout(1*time.Second),
-		DisableCompression(),
-		DisableKeepAlives(),
-		ResponseHeaderTimeout(1*time.Second),
-	)
-
-	assert.NotNil(t, dialer.client)
-}
-
-type testIdentifier struct {
-	id string
-}
-
-func (i testIdentifier) Identifier() string {
-	return i.id
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer dialer.Stop(context.Background())
+	assert.NotNil(t, dialer.internal.client)
 }

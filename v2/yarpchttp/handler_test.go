@@ -380,7 +380,10 @@ func (th panickedHandler) Handle(context.Context, *yarpc.Request, yarpc.Response
 }
 
 func TestHandlerPanic(t *testing.T) {
-	dialer := NewDialer()
+	dialer := &Dialer{}
+	dialer.Start(context.Background())
+	defer dialer.Stop(context.Background())
+
 	router := yarpcrouter.NewMapRouter("yarpc-test")
 	router.Register([]yarpc.Procedure{
 		{

@@ -21,13 +21,19 @@
 package yarpchttp_test
 
 import (
+	"context"
+	"log"
+
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpchttp"
 	"go.uber.org/yarpc/v2/yarpcraw"
 )
 
 func ExampleOutbound() {
-	dialer := yarpchttp.NewDialer()
+	dialer := &yarpchttp.Dialer{}
+	if err := dialer.Start(context.Background()); err != nil {
+		log.Fatal(err)
+	}
 	yarpcraw.New(&yarpc.OutboundConfig{
 		CallerName: "myservice",
 		Outbounds: yarpc.Outbounds{

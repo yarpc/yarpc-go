@@ -52,7 +52,7 @@ func TestNewOutbound(t *testing.T) {
 func TestNewSingleOutboundPanic(t *testing.T) {
 	require.Panics(t, func() {
 		// invalid url should cause panic
-		NewDialer().NewSingleOutbound(":")
+		(&Dialer{}).NewSingleOutbound(":")
 	},
 		"expected to panic")
 }
@@ -84,7 +84,11 @@ func TestCallSuccess(t *testing.T) {
 	))
 	defer successServer.Close()
 
-	dialer := NewDialer()
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer func() {
+		require.NoError(t, dialer.Stop(context.Background()))
+	}()
 	out := dialer.NewSingleOutbound(successServer.URL)
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
@@ -153,7 +157,11 @@ func TestOutboundHeaders(t *testing.T) {
 		},
 	}
 
-	dialer := NewDialer()
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer func() {
+		require.NoError(t, dialer.Stop(context.Background()))
+	}()
 
 	for _, tt := range tests {
 		server := httptest.NewServer(http.HandlerFunc(
@@ -218,7 +226,11 @@ func TestOutboundApplicationError(t *testing.T) {
 		},
 	}
 
-	dialer := NewDialer()
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer func() {
+		require.NoError(t, dialer.Stop(context.Background()))
+	}()
 
 	for _, tt := range tests {
 		server := httptest.NewServer(http.HandlerFunc(
@@ -265,7 +277,11 @@ func TestCallFailures(t *testing.T) {
 		}))
 	defer internalErrorServer.Close()
 
-	dialer := NewDialer()
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer func() {
+		require.NoError(t, dialer.Stop(context.Background()))
+	}()
 
 	tests := []struct {
 		url      string
@@ -318,7 +334,12 @@ func TestGetPeerForRequestErr(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			chooser := yarpctest.NewMockChooser(ctrl)
 
-			out := NewDialer().NewSingleOutbound("http://127.0.0.1:9999")
+			dialer := &Dialer{}
+			require.NoError(t, dialer.Start(context.Background()))
+			defer func() {
+				require.NoError(t, dialer.Stop(context.Background()))
+			}()
+			out := dialer.NewSingleOutbound("http://127.0.0.1:9999")
 			out.chooser = chooser
 
 			ctx := context.Background()
@@ -333,10 +354,15 @@ func TestGetPeerForRequestErr(t *testing.T) {
 }
 
 func TestWithCoreHeaders(t *testing.T) {
-	endpoint := "http://127.0.0.1:9999"
-	out := NewDialer().NewSingleOutbound(endpoint)
+	addr := "http://127.0.0.1:9999"
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer func() {
+		require.NoError(t, dialer.Stop(context.Background()))
+	}()
+	out := dialer.NewSingleOutbound(addr)
 
-	httpReq := httptest.NewRequest("", endpoint, nil)
+	httpReq := httptest.NewRequest("", addr, nil)
 
 	shardKey := "sharding"
 	routingKey := "routing"
@@ -355,15 +381,24 @@ func TestWithCoreHeaders(t *testing.T) {
 }
 
 func TestNoRequest(t *testing.T) {
-	tran := NewDialer()
-	out := tran.NewSingleOutbound("localhost:0")
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer func() {
+		require.NoError(t, dialer.Stop(context.Background()))
+	}()
+	out := dialer.NewSingleOutbound("localhost:0")
 
 	_, err := out.Call(context.Background(), nil)
 	assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil"), err)
 }
 
 func TestOutboundNoDeadline(t *testing.T) {
-	out := NewDialer().NewSingleOutbound("http://foo-host:8080")
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer func() {
+		require.NoError(t, dialer.Stop(context.Background()))
+	}()
+	out := dialer.NewSingleOutbound("http://foo-host:8080")
 
 	_, err := out.call(context.Background(), &yarpc.Request{})
 	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing context deadline"), err)
@@ -380,7 +415,11 @@ func TestServiceMatchSuccess(t *testing.T) {
 	))
 	defer matchServer.Close()
 
-	dialer := NewDialer()
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer func() {
+		require.NoError(t, dialer.Stop(context.Background()))
+	}()
 	out := dialer.NewSingleOutbound(matchServer.URL)
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
@@ -402,7 +441,11 @@ func TestServiceMatchFailed(t *testing.T) {
 	))
 	defer mismatchServer.Close()
 
-	dialer := NewDialer()
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer func() {
+		require.NoError(t, dialer.Stop(context.Background()))
+	}()
 	out := dialer.NewSingleOutbound(mismatchServer.URL)
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
@@ -424,7 +467,11 @@ func TestServiceMatchNoHeader(t *testing.T) {
 	))
 	defer noHeaderServer.Close()
 
-	dialer := NewDialer()
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer func() {
+		require.NoError(t, dialer.Stop(context.Background()))
+	}()
 	out := dialer.NewSingleOutbound(noHeaderServer.URL)
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)

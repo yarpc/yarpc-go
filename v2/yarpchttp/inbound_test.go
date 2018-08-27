@@ -122,7 +122,9 @@ func TestInboundMux(t *testing.T) {
 	}
 
 	// this should fail
-	dialer := NewDialer()
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer dialer.Stop(context.Background())
 	o := dialer.NewSingleOutbound(addr)
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)

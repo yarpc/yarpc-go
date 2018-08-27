@@ -127,19 +127,18 @@ type testEnv struct {
 
 type testEnvOptions struct {
 	Procedures      []yarpc.Procedure
-	DialerOptions   []DialerOption
 	InboundOptions  []InboundOption
 	OutboundOptions []OutboundOption
 }
 
 func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
-	dialer := NewDialer(options.DialerOptions...)
-	if err := dialer.Start(); err != nil {
+	dialer := &Dialer{}
+	if err := dialer.Start(context.Background()); err != nil {
 		return nil, err
 	}
 	defer func() {
 		if err != nil {
-			err = multierr.Append(err, dialer.Stop())
+			err = multierr.Append(err, dialer.Stop(context.Background()))
 		}
 	}()
 

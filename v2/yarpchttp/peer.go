@@ -32,7 +32,7 @@ import (
 type httpPeer struct {
 	*yarpcpeer.AbstractPeer
 
-	dialer                *Dialer
+	dialer                *dialerInternals
 	addr                  string
 	changed               chan struct{}
 	released              chan struct{}
@@ -40,7 +40,7 @@ type httpPeer struct {
 	innocentUntilUnixNano *atomic.Int64
 }
 
-func newPeer(addr string, dialer *Dialer) *httpPeer {
+func newPeer(addr string, dialer *dialerInternals) *httpPeer {
 	// Create a defused timer for later use.
 	timer := time.NewTimer(0)
 	if !timer.Stop() {
@@ -104,7 +104,7 @@ func (p *httpPeer) OnSuspect() {
 }
 
 func (p *httpPeer) OnDisconnected() {
-	p.AbstractPeer.SetStatus(yarpc.Connecting)
+	p.AbstractPeer.SetStatus(yarpc.Unavailable)
 
 	// Kick the state change channel (if it hasn't been kicked already).
 	select {
@@ -118,18 +118,19 @@ func (p *httpPeer) Release() {
 }
 
 func (p *httpPeer) MaintainConn() {
+	defer func() {
+		p.dialer.connectorsGroup.Done()
+	}()
+
 	var attempts uint
 
 	backoff := p.dialer.connBackoffStrategy.Backoff()
 
-	// Wait for start (so we can be certain that we have a channel).
-	<-p.dialer.once.Started()
-
 	// Attempt to retain an open connection to each peer so long as it is
 	// retained.
-	p.AbstractPeer.SetStatus(yarpc.Connecting)
+	p.AbstractPeer.SetStatus(yarpc.Unavailable)
 	for {
-		// Invariant: Status is Connecting initially, or after exponential
+		// Invariant: Status is Unavailable initially, or after exponential
 		// back-off, or after OnDisconnected, but still Available after
 		// OnSuspect.
 		if p.isAvailable() {
@@ -139,7 +140,7 @@ func (p *httpPeer) MaintainConn() {
 			if !p.waitForChange() {
 				break
 			}
-			// Invariant: the status is Connecting if change is triggered by
+			// Invariant: the status is Unavailable if change is triggered by
 			// OnDisconnected, but remains Available if triggered by OnSuspect.
 		} else {
 			p.AbstractPeer.SetStatus(yarpc.Unavailable)
@@ -148,12 +149,10 @@ func (p *httpPeer) MaintainConn() {
 				break
 			}
 			attempts++
-			p.AbstractPeer.SetStatus(yarpc.Connecting)
+			p.AbstractPeer.SetStatus(yarpc.Unavailable)
 		}
 	}
 	p.AbstractPeer.SetStatus(yarpc.Unavailable)
-
-	p.dialer.connectorsGroup.Done()
 }
 
 // waitForChange waits for the dialer to send a peer connection status
@@ -180,7 +179,6 @@ func (p *httpPeer) sleep(delay time.Duration) (completed bool) {
 	case <-p.timer.C:
 		return true
 	case <-p.released:
-	case <-p.dialer.once.Stopping():
 	}
 
 	if !p.timer.Stop() {
