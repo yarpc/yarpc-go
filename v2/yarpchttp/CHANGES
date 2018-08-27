@@ -36,6 +36,7 @@
 - [x] Outbound Start/Stop lifecycle no longer drives chooser Start/Stop lifecycle.
       [x] consequently, outbound no longer needs to implement Start/Stop lifecycle.
       [x] tests fixed to not use lifecycle
+- [ ] reg as a free variable -> router
 - [ ] ZeroAddrToHostPort
 - [ ] decouple NewInbound from NewTransport
 - [ ] exorcise lifecycle
@@ -45,3 +46,5 @@
 - [ ] revisit newPeer taking an addr string instead of peer identifier
 - [ ] transport -> dialer everywhere
 - [ ] rewrite doc.go examples
+- [ ] restore validator middleware
+- [ ] decorate a router with middleware

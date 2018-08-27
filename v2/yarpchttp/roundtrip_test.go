@@ -134,23 +134,3 @@ func TestRoundTripNoDeadline(t *testing.T) {
 	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing context deadline"), err)
 	assert.Nil(t, resp)
 }
-
-func TestRoundTripNotRunning(t *testing.T) {
-	URL := "http://foo-host"
-	out := NewTransport().NewSingleOutbound(URL)
-
-	req, err := http.NewRequest("POST", URL, nil /* body */)
-	require.NoError(t, err)
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
-	defer cancel()
-	req = req.WithContext(ctx)
-
-	client := http.Client{Transport: out}
-	res, err := client.Do(req)
-
-	if assert.Error(t, err) {
-		assert.Contains(t, err.Error(), "waiting for HTTP outbound to start")
-	}
-	assert.Nil(t, res)
-}

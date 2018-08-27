@@ -443,7 +443,7 @@ func (o *Outbound) doWithPeer(
 ) (*http.Response, error) {
 	hreq.URL.Host = p.addr
 
-	response, err := o.transport.client.Do(hreq.WithContext(ctx))
+	response, err := p.transport.client.Do(hreq.WithContext(ctx))
 
 	if err != nil {
 		// Workaround borrowed from ctxhttp until
