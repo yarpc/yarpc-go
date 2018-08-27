@@ -170,11 +170,15 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		return nil, err
 	}
 
-	return &transport.Response{
+	err = getResponseError(headers)
+	deleteReservedHeaders(headers)
+
+	resp := &transport.Response{
 		Headers:          headers,
 		Body:             resBody,
 		ApplicationError: res.ApplicationError(),
-	}, getResponseErrorAndDeleteHeaderKeys(headers)
+	}
+	return resp, err
 }
 
 func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*tchannelPeer, func(error), error) {

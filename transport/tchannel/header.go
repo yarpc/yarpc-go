@@ -194,6 +194,12 @@ func headerMap(hs transport.Headers, headerCase headerCase) map[string]string {
 	}
 }
 
+func deleteReservedHeaders(headers transport.Headers) {
+	for headerKey := range _reservedHeaderKeys {
+		headers.Del(headerKey)
+	}
+}
+
 // this check ensures that the service we're issuing a request to is the one
 // responding
 func validateServiceName(requestService, responseService string) error {
