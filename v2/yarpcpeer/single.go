@@ -43,11 +43,11 @@ func NewSingle(pid yarpc.Identifier, dialer yarpc.Dialer) *Single {
 
 // Choose returns the single peer
 func (single *Single) Choose(ctx context.Context, _ *yarpc.Request) (yarpc.Peer, func(error), error) {
-	peer, err := single.dialer.RetainPeer(single.pid, _nopSubscriber)
+	peer, err := single.dialer.RetainPeer(single.pid, yarpc.NopSubscriber)
 	if err != nil {
 		return nil, nil, err
 	}
-	err = single.dialer.ReleasePeer(single.pid, _nopSubscriber)
+	err = single.dialer.ReleasePeer(single.pid, yarpc.NopSubscriber)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -56,9 +56,3 @@ func (single *Single) Choose(ctx context.Context, _ *yarpc.Request) (yarpc.Peer,
 		peer.EndRequest()
 	}, nil
 }
-
-type nopSubscriber struct{}
-
-func (nopSubscriber) NotifyStatusChanged(_ yarpc.Identifier) {}
-
-var _nopSubscriber nopSubscriber

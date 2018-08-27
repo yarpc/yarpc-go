@@ -36,3 +36,11 @@ type Dialer interface {
 	// Unallocate a peer from the Subscriber
 	ReleasePeer(Identifier, Subscriber) error
 }
+
+type nopSubscriber struct{}
+
+func (nopSubscriber) NotifyStatusChanged(Identifier) {}
+
+// NopSubscriber is a peer status notification subscriber that ignores such
+// notifications, for tests and for the single peer chooser.
+var NopSubscriber nopSubscriber
