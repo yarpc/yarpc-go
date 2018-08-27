@@ -36,7 +36,6 @@ import (
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/internal/internalyarpcerrors"
 	"go.uber.org/yarpc/v2/yarpcerrors"
-	"go.uber.org/yarpc/v2/yarpcpeer"
 	"go.uber.org/yarpc/v2/yarpctracing"
 )
 
@@ -57,6 +56,13 @@ func (OutboundOption) httpOption() {}
 func URLTemplate(template string) OutboundOption {
 	return func(o *Outbound) {
 		o.setURLTemplate(template)
+	}
+}
+
+// OutboundTracer configures a tracer for the outbound.
+func OutboundTracer(tracer opentracing.Tracer) OutboundOption {
+	return func(o *Outbound) {
+		o.tracer = tracer
 	}
 }
 
@@ -85,55 +91,19 @@ func AddHeader(key, value string) OutboundOption {
 // NewOutbound builds an HTTP outbound that sends requests to peers supplied
 // by the given yarpc.Chooser. The URL template for used for the different
 // peers may be customized using the URLTemplate option.
-//
-// The peer chooser and outbound must share the same transport, in this case
-// the HTTP transport.
-// The peer chooser must use the transport's RetainPeer to obtain peer
-// instances and return those peers to the outbound when it calls Choose.
-// The concrete peer type is private and intrinsic to the HTTP transport.
-func (t *Transport) NewOutbound(chooser yarpc.Chooser, opts ...OutboundOption) *Outbound {
+func NewOutbound(chooser yarpc.Chooser, opts ...OutboundOption) *Outbound {
 	o := &Outbound{
 		chooser:           chooser,
 		urlTemplate:       defaultURLTemplate,
-		tracer:            t.tracer,
-		transport:         t,
 		bothResponseError: true,
 	}
 	for _, opt := range opts {
 		opt(o)
 	}
-	return o
-}
-
-// NewOutbound builds an HTTP outbound that sends requests to peers supplied
-// by the given yarpc.Chooser. The URL template for used for the different
-// peers may be customized using the URLTemplate option.
-//
-// The peer chooser and outbound must share the same transport, in this case
-// the HTTP transport.
-// The peer chooser must use the transport's RetainPeer to obtain peer
-// instances and return those peers to the outbound when it calls Choose.
-// The concrete peer type is private and intrinsic to the HTTP transport.
-func NewOutbound(chooser yarpc.Chooser, opts ...OutboundOption) *Outbound {
-	return NewTransport().NewOutbound(chooser, opts...)
-}
-
-// NewSingleOutbound builds an outbound that sends YARPC requests over HTTP
-// to the specified URL.
-//
-// The URLTemplate option has no effect in this form.
-func (t *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbound {
-	parsedURL, err := url.Parse(uri)
-	if err != nil {
-		panic(err.Error())
+	// TODO move to defaultOutboundOptions and proper options pattern
+	if o.tracer == nil {
+		o.tracer = opentracing.GlobalTracer()
 	}
-
-	chooser := yarpcpeer.NewSingle(yarpc.Address(parsedURL.Host), t)
-	o := t.NewOutbound(chooser)
-	for _, opt := range opts {
-		opt(o)
-	}
-	o.setURLTemplate(uri)
 	return o
 }
 
@@ -146,7 +116,6 @@ type Outbound struct {
 	chooser     yarpc.Chooser
 	urlTemplate *url.URL
 	tracer      opentracing.Tracer
-	transport   *Transport
 
 	// Headers to add to all outgoing requests.
 	headers http.Header

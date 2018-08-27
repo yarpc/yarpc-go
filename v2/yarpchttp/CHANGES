@@ -36,15 +36,19 @@
 - [x] Outbound Start/Stop lifecycle no longer drives chooser Start/Stop lifecycle.
       [x] consequently, outbound no longer needs to implement Start/Stop lifecycle.
       [x] tests fixed to not use lifecycle
-- [ ] reg as a free variable -> router
-- [ ] ZeroAddrToHostPort
-- [ ] decouple NewInbound from NewTransport
-- [ ] exorcise lifecycle
-- [ ] thread middleware chains as options to encoding constructors
-- [ ] thread context through Start/Stop
+- [x] reg as a free variable -> router
+- [x] moved internal internal/errors.ZeroAddrToHostPort to v2/internal/internalyarpcerrors
+- [x] decouple NewInbound from NewTransport
+- [x] decouple NewOutbound from NewTransport (except NewSingleOutbound)
+- [ ] transport -> dialer everywhere
 - [ ] Connecting peer status -> ELIMINATED
 - [ ] revisit newPeer taking an addr string instead of peer identifier
-- [ ] transport -> dialer everywhere
 - [ ] rewrite doc.go examples
 - [ ] restore validator middleware
 - [ ] decorate a router with middleware
+- [ ] fix options pattern
+- [ ] separate InboundTracer and OutboundTracer options
+- [ ] exorcise lifecycle
+- [ ] thread middleware chains as options to encoding constructors
+- [ ] exorcise ClientConfig interface in favor of OutboundConfig struct
+- [ ] thread context through Start/Stop

@@ -143,7 +143,7 @@ func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
 		}
 	}()
 
-	inbound := trans.NewInbound("127.0.0.1:0", newTestRouter(options.Procedures), options.InboundOptions...)
+	inbound := NewInbound("127.0.0.1:0", newTestRouter(options.Procedures), options.InboundOptions...)
 	if err := inbound.Start(); err != nil {
 		return nil, err
 	}

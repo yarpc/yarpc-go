@@ -82,6 +82,20 @@ func GrabHeaders(headers ...string) InboundOption {
 	}
 }
 
+// InboundTracer configures a tracer for the inbound.
+func InboundTracer(tracer opentracing.Tracer) InboundOption {
+	return func(i *Inbound) {
+		i.tracer = tracer
+	}
+}
+
+// InboundLogger configures a tracer for the inbound.
+func InboundLogger(logger *zap.Logger) InboundOption {
+	return func(i *Inbound) {
+		i.logger = logger
+	}
+}
+
 // ShutdownTimeout specifies the maximum duration the inbound should wait for
 // closing idle connections, and pending calls to complete.
 //
@@ -94,22 +108,24 @@ func ShutdownTimeout(timeout time.Duration) InboundOption {
 	}
 }
 
-// NewInbound builds a new HTTP inbound that listens on the given address and
-// sharing this transport.
-func (t *Transport) NewInbound(addr string, router yarpc.Router, opts ...InboundOption) *Inbound {
+// NewInbound builds a new HTTP inbound that listens on the given address.
+func NewInbound(addr string, router yarpc.Router, opts ...InboundOption) *Inbound {
 	i := &Inbound{
 		once:              lifecycle.NewOnce(),
 		addr:              addr,
 		router:            router,
 		shutdownTimeout:   defaultShutdownTimeout,
-		tracer:            t.tracer,
-		logger:            t.logger,
-		transport:         t,
 		grabHeaders:       make(map[string]struct{}),
 		bothResponseError: true,
 	}
 	for _, opt := range opts {
 		opt(i)
+	}
+	if i.tracer == nil {
+		i.tracer = opentracing.GlobalTracer()
+	}
+	if i.logger == nil {
+		i.logger = zap.NewNop()
 	}
 	return i
 }
@@ -133,12 +149,11 @@ type Inbound struct {
 
 	// should only be false in testing
 	bothResponseError bool
+
+	state inboundState
 }
 
-// Tracer configures a tracer on this inbound.
-func (i *Inbound) Tracer(tracer opentracing.Tracer) *Inbound {
-	i.tracer = tracer
-	return i
+type inboundState struct {
 }
 
 // Start starts the inbound with a given service detail, opening a listening

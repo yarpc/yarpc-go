@@ -32,9 +32,8 @@ import (
 )
 
 func ExampleInbound() {
-	trans := yarpchttp.NewTransport()
 	router := yarpcrouter.NewMapRouter("my-service")
-	inbound := trans.NewInbound(":8888", router)
+	inbound := yarpchttp.NewInbound(":8888", router)
 	if err := inbound.Start(); err != nil {
 		log.Fatal(err)
 	}
@@ -50,16 +49,8 @@ func ExampleMux() {
 		}
 	})
 
-	// This inbound will serve the YARPC service on the path /yarpc.  The
-	// /health endpoint on the Mux will be left alone.
-	trans := yarpchttp.NewTransport()
-	if err := trans.Start(); err != nil {
-		log.Fatal(err)
-	}
-	defer trans.Stop()
-
 	router := yarpcrouter.NewMapRouter("my-service")
-	inbound := trans.NewInbound(":8888", router, yarpchttp.Mux("/yarpc", mux))
+	inbound := yarpchttp.NewInbound(":8888", router, yarpchttp.Mux("/yarpc", mux))
 	if err := inbound.Start(); err != nil {
 		log.Fatal(err)
 	}
@@ -98,14 +89,8 @@ func ExampleInterceptor() {
 	}
 
 	// Create a new inbound, attaching the interceptor
-	trans := yarpchttp.NewTransport()
-	if err := trans.Start(); err != nil {
-		log.Fatal(err)
-	}
-	defer trans.Stop()
-
 	router := yarpcrouter.NewMapRouter("server")
-	inbound := trans.NewInbound(":8889", router, yarpchttp.Interceptor(intercept))
+	inbound := yarpchttp.NewInbound(":8889", router, yarpchttp.Interceptor(intercept))
 	if err := inbound.Start(); err != nil {
 		log.Fatal(err)
 	}

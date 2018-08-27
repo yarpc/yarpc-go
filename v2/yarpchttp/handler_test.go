@@ -388,7 +388,7 @@ func TestHandlerPanic(t *testing.T) {
 			HandlerSpec: yarpc.NewUnaryHandlerSpec(panickedHandler{}),
 		},
 	})
-	inbound := trans.NewInbound("localhost:0", router)
+	inbound := NewInbound("localhost:0", router)
 
 	require.NoError(t, inbound.Start())
 	defer inbound.Stop()

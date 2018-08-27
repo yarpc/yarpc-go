@@ -24,6 +24,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -32,6 +33,7 @@ import (
 	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcpeer"
 	"go.uber.org/zap"
 )
 
@@ -182,14 +184,6 @@ func InnocenceWindow(d time.Duration) TransportOption {
 	}
 }
 
-// Tracer configures a tracer for the transport and all its inbounds and
-// outbounds.
-func Tracer(tracer opentracing.Tracer) TransportOption {
-	return func(options *transportOptions) {
-		options.tracer = tracer
-	}
-}
-
 // Logger sets a logger to use for internal logging.
 //
 // The default is to not write any logs.
@@ -290,6 +284,25 @@ func (a *Transport) Stop() error {
 		a.connectorsGroup.Wait()
 		return nil
 	})
+}
+
+// NewSingleOutbound builds an outbound that sends YARPC requests over HTTP
+// to the specified URL.
+//
+// The URLTemplate option has no effect in this form.
+func (a *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbound {
+	parsedURL, err := url.Parse(uri)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	chooser := yarpcpeer.NewSingle(yarpc.Address(parsedURL.Host), a)
+	o := NewOutbound(chooser)
+	for _, opt := range opts {
+		opt(o)
+	}
+	o.setURLTemplate(uri)
+	return o
 }
 
 // IsRunning returns whether the HTTP transport is running.

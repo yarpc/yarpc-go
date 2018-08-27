@@ -49,3 +49,6 @@
   - [ ] revisit i.server.Serve to run in a goroutine and preserve internal/net semantics
 - [ ] move ValidateRequest into yarpctransport package
 - [ ] replace client config provider with a register/get API in YARPC Fx that connects the configuration of individual transports.
+- [ ] rename handler specs returned by routers to routes
+- [ ] moved internal/yarpcerrors.WrapHandlerErrort to v2/yarpcerrors
+- [ ] rename yarpcerrors to yarpcerror in keeping with the aesthetic
