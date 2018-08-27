@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package yarpchttp
 
 import (
 	"context"
@@ -28,10 +28,10 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
-	"go.uber.org/yarpc/api/transport"
 	intnet "go.uber.org/yarpc/internal/net"
 	"go.uber.org/yarpc/pkg/lifecycle"
-	"go.uber.org/yarpc/yarpcerrors"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerrors"
 	"go.uber.org/zap"
 )
 
@@ -96,10 +96,11 @@ func ShutdownTimeout(timeout time.Duration) InboundOption {
 
 // NewInbound builds a new HTTP inbound that listens on the given address and
 // sharing this transport.
-func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
+func (t *Transport) NewInbound(addr string, router yarpc.Router, opts ...InboundOption) *Inbound {
 	i := &Inbound{
 		once:              lifecycle.NewOnce(),
 		addr:              addr,
+		router:            router,
 		shutdownTimeout:   defaultShutdownTimeout,
 		tracer:            t.tracer,
 		logger:            t.logger,
@@ -121,7 +122,7 @@ type Inbound struct {
 	muxPattern      string
 	server          *intnet.HTTPServer
 	shutdownTimeout time.Duration
-	router          transport.Router
+	router          yarpc.Router
 	tracer          opentracing.Tracer
 	logger          *zap.Logger
 	transport       *Transport
@@ -138,18 +139,6 @@ type Inbound struct {
 func (i *Inbound) Tracer(tracer opentracing.Tracer) *Inbound {
 	i.tracer = tracer
 	return i
-}
-
-// SetRouter configures a router to handle incoming requests.
-// This satisfies the transport.Inbound interface, and would be called
-// by a dispatcher when it starts.
-func (i *Inbound) SetRouter(router transport.Router) {
-	i.router = router
-}
-
-// Transports returns the inbound's HTTP transport.
-func (i *Inbound) Transports() []transport.Transport {
-	return []transport.Transport{i.transport}
 }
 
 // Start starts the inbound with a given service detail, opening a listening

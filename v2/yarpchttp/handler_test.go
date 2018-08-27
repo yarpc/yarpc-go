@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package yarpchttp
 
 import (
 	"bytes"
@@ -34,12 +34,12 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	yarpc "go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/internal/routertest"
-	"go.uber.org/yarpc/yarpcerrors"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/internal/internalyarpctest"
+	"go.uber.org/yarpc/v2/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcraw"
+	"go.uber.org/yarpc/v2/yarpcrouter"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 func TestHandlerSuccess(t *testing.T) {
@@ -56,25 +56,25 @@ func TestHandlerSuccess(t *testing.T) {
 	headers.Set(RoutingKeyHeader, "routekey")
 	headers.Set(RoutingDelegateHeader, "routedelegate")
 
-	router := transporttest.NewMockRouter(mockCtrl)
-	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
-	spec := transport.NewUnaryHandlerSpec(rpcHandler)
+	router := yarpctest.NewMockRouter(mockCtrl)
+	rpcHandler := yarpctest.NewMockUnaryHandler(mockCtrl)
+	spec := yarpc.NewUnaryHandlerSpec(rpcHandler)
 
-	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
+	router.EXPECT().Choose(gomock.Any(), internalyarpctest.NewMatcher().
 		WithService("curly").
 		WithProcedure("nyuck"),
 	).Return(spec, nil)
 
 	rpcHandler.EXPECT().Handle(
-		transporttest.NewContextMatcher(t,
-			transporttest.ContextTTL(time.Second),
+		yarpctest.NewContextMatcher(t,
+			yarpctest.ContextTTL(time.Second),
 		),
-		transporttest.NewRequestMatcher(
-			t, &transport.Request{
+		yarpctest.NewRequestMatcher(
+			t, &yarpc.Request{
 				Caller:          "moe",
 				Service:         "curly",
 				Transport:       "http",
-				Encoding:        raw.Encoding,
+				Encoding:        yarpcraw.Encoding,
 				Procedure:       "nyuck",
 				ShardKey:        "shard",
 				RoutingKey:      "routekey",
@@ -152,11 +152,11 @@ func TestHandlerHeaders(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		router := transporttest.NewMockRouter(mockCtrl)
-		rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
-		spec := transport.NewUnaryHandlerSpec(rpcHandler)
+		router := yarpctest.NewMockRouter(mockCtrl)
+		rpcHandler := yarpctest.NewMockUnaryHandler(mockCtrl)
+		spec := yarpc.NewUnaryHandlerSpec(rpcHandler)
 
-		router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
+		router.EXPECT().Choose(gomock.Any(), internalyarpctest.NewMatcher().
 			WithService("service").
 			WithProcedure("hello"),
 		).Return(spec, nil)
@@ -164,17 +164,17 @@ func TestHandlerHeaders(t *testing.T) {
 		httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}, grabHeaders: tt.grabHeaders, bothResponseError: true}
 
 		rpcHandler.EXPECT().Handle(
-			transporttest.NewContextMatcher(t,
-				transporttest.ContextTTL(tt.wantTTL),
+			yarpctest.NewContextMatcher(t,
+				yarpctest.ContextTTL(tt.wantTTL),
 			),
-			transporttest.NewRequestMatcher(t,
-				&transport.Request{
+			yarpctest.NewRequestMatcher(t,
+				&yarpc.Request{
 					Caller:    "caller",
 					Service:   "service",
 					Transport: "http",
-					Encoding:  transport.Encoding(tt.giveEncoding),
+					Encoding:  yarpc.Encoding(tt.giveEncoding),
 					Procedure: "hello",
-					Headers:   transport.HeadersFromMap(tt.wantHeaders),
+					Headers:   yarpc.HeadersFromMap(tt.wantHeaders),
 					Body:      bytes.NewReader([]byte("world")),
 				}),
 			gomock.Any(),
@@ -199,7 +199,7 @@ func TestHandlerHeaders(t *testing.T) {
 		rw := httptest.NewRecorder()
 		httpHandler.ServeHTTP(rw, req)
 		assert.Equal(t, 200, rw.Code, "expected 200 status code")
-		assert.Equal(t, getContentType(transport.Encoding(tt.giveEncoding)), rw.HeaderMap.Get("Content-Type"))
+		assert.Equal(t, getContentType(yarpc.Encoding(tt.giveEncoding)), rw.HeaderMap.Get("Content-Type"))
 	}
 }
 
@@ -281,13 +281,13 @@ func TestHandlerFailures(t *testing.T) {
 			req.Body = ioutil.NopCloser(bytes.NewReader([]byte{}))
 		}
 
-		reg := transporttest.NewMockRouter(mockCtrl)
+		reg := yarpctest.NewMockRouter(mockCtrl)
 
 		if tt.errTTL {
 			// since TTL is checked after we've determined the transport type, if we have an
 			// error with TTL it will be discovered after we read from the router
-			spec := transport.NewUnaryHandlerSpec(panickedHandler{})
-			reg.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
+			spec := yarpc.NewUnaryHandlerSpec(panickedHandler{})
+			reg.EXPECT().Choose(gomock.Any(), internalyarpctest.NewMatcher().
 				WithService(service).
 				WithProcedure(procedure),
 			).Return(spec, nil)
@@ -323,15 +323,15 @@ func TestHandlerInternalFailure(t *testing.T) {
 		Body:   ioutil.NopCloser(bytes.NewReader([]byte{})),
 	}
 
-	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+	rpcHandler := yarpctest.NewMockUnaryHandler(mockCtrl)
 	rpcHandler.EXPECT().Handle(
-		transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
-		transporttest.NewRequestMatcher(
-			t, &transport.Request{
+		yarpctest.NewContextMatcher(t, yarpctest.ContextTTL(time.Second)),
+		yarpctest.NewRequestMatcher(
+			t, &yarpc.Request{
 				Caller:    "somecaller",
 				Service:   "fake",
 				Transport: "http",
-				Encoding:  raw.Encoding,
+				Encoding:  yarpcraw.Encoding,
 				Procedure: "hello",
 				Body:      bytes.NewReader([]byte{}),
 			},
@@ -339,10 +339,10 @@ func TestHandlerInternalFailure(t *testing.T) {
 		gomock.Any(),
 	).Return(fmt.Errorf("great sadness"))
 
-	router := transporttest.NewMockRouter(mockCtrl)
-	spec := transport.NewUnaryHandlerSpec(rpcHandler)
+	router := yarpctest.NewMockRouter(mockCtrl)
+	spec := yarpc.NewUnaryHandlerSpec(rpcHandler)
 
-	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
+	router.EXPECT().Choose(gomock.Any(), internalyarpctest.NewMatcher().
 		WithService("fake").
 		WithProcedure("hello"),
 	).Return(spec, nil)
@@ -360,39 +360,32 @@ func TestHandlerInternalFailure(t *testing.T) {
 
 type panickedHandler struct{}
 
-func (th panickedHandler) Handle(context.Context, *transport.Request, transport.ResponseWriter) error {
+func (th panickedHandler) Handle(context.Context, *yarpc.Request, yarpc.ResponseWriter) error {
 	panic("oops I panicked!")
 }
 
 func TestHandlerPanic(t *testing.T) {
-	httpTransport := NewTransport()
-	inbound := httpTransport.NewInbound("localhost:0")
-	serverDispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name:     "yarpc-test",
-		Inbounds: yarpc.Inbounds{inbound},
-	})
-	serverDispatcher.Register([]transport.Procedure{
+	trans := NewTransport()
+	router := yarpcrouter.NewMapRouter("yarpc-test")
+	router.Register([]yarpc.Procedure{
 		{
 			Name:        "panic",
-			HandlerSpec: transport.NewUnaryHandlerSpec(panickedHandler{}),
+			HandlerSpec: yarpc.NewUnaryHandlerSpec(panickedHandler{}),
 		},
 	})
+	inbound := trans.NewInbound("localhost:0", router)
 
-	require.NoError(t, serverDispatcher.Start())
-	defer serverDispatcher.Stop()
+	require.NoError(t, inbound.Start())
+	defer inbound.Stop()
 
-	clientDispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name: "yarpc-test-client",
+	outbound := trans.NewSingleOutbound("https://" + inbound.Addr().String())
+	client := yarpcraw.New(&yarpc.OutboundConfig{
+		CallerName: "yarpc-test-client",
 		Outbounds: yarpc.Outbounds{
-			"yarpc-test": {
-				Unary: httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s", inbound.Addr().String())),
-			},
+			ServiceName: "yarpc-test",
+			Unary:       outbound,
 		},
 	})
-	require.NoError(t, clientDispatcher.Start())
-	defer clientDispatcher.Stop()
-
-	client := raw.New(clientDispatcher.ClientConfig("yarpc-test"))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	_, err := client.Call(ctx, "panic", []byte{})
@@ -419,7 +412,7 @@ func TestResponseWriter(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	writer := newResponseWriter(recorder)
 
-	headers := transport.HeadersFromMap(map[string]string{
+	headers := yarpc.HeadersFromMap(map[string]string{
 		"foo":       "bar",
 		"shard-key": "123",
 	})

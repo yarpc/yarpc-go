@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package yarpchttp
 
 import (
 	"context"
@@ -29,11 +29,10 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	opentracinglog "github.com/opentracing/opentracing-go/log"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
-	"go.uber.org/yarpc/pkg/errors"
-	"go.uber.org/yarpc/yarpcerrors"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpctracing"
 	"go.uber.org/zap"
 )
 
@@ -43,9 +42,9 @@ func popHeader(h http.Header, n string) string {
 	return v
 }
 
-// handler adapts a transport.Handler into a handler for net/http.
+// handler adapts a yarpc.Handler into a handler for net/http.
 type handler struct {
-	router            transport.Router
+	router            yarpc.Router
 	tracer            opentracing.Tracer
 	grabHeaders       map[string]struct{}
 	bothResponseError bool
@@ -59,7 +58,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	bothResponseError := popHeader(req.Header, AcceptsBothResponseErrorHeader) == AcceptTrue
 	// add response header to echo accepted rpc-service
 	responseWriter.AddSystemHeader(ServiceHeader, service)
-	status := yarpcerrors.FromError(errors.WrapHandlerError(h.callHandler(responseWriter, req, service, procedure), service, procedure))
+	status := yarpcerrors.FromError(yarpc.WrapHandlerError(h.callHandler(responseWriter, req, service, procedure), service, procedure))
 	if status == nil {
 		responseWriter.Close(http.StatusOK)
 		return
@@ -94,16 +93,16 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	if req.Method != http.MethodPost {
 		return yarpcerrors.Newf(yarpcerrors.CodeNotFound, "request method was %s but only %s is allowed", req.Method, http.MethodPost)
 	}
-	treq := &transport.Request{
+	treq := &yarpc.Request{
 		Caller:          popHeader(req.Header, CallerHeader),
 		Service:         service,
 		Procedure:       procedure,
-		Encoding:        transport.Encoding(popHeader(req.Header, EncodingHeader)),
+		Encoding:        yarpc.Encoding(popHeader(req.Header, EncodingHeader)),
 		Transport:       transportName,
 		ShardKey:        popHeader(req.Header, ShardKeyHeader),
 		RoutingKey:      popHeader(req.Header, RoutingKeyHeader),
 		RoutingDelegate: popHeader(req.Header, RoutingDelegateHeader),
-		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}),
+		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, yarpc.Headers{}),
 		Body:            req.Body,
 	}
 	for header := range h.grabHeaders {
@@ -111,7 +110,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 			treq.Headers = treq.Headers.With(header, value)
 		}
 	}
-	if err := transport.ValidateRequest(treq); err != nil {
+	if err := yarpc.ValidateRequest(treq); err != nil {
 		return err
 	}
 	defer func() {
@@ -137,14 +136,14 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	if parseTTLErr != nil {
 		return parseTTLErr
 	}
-	if err := transport.ValidateRequestContext(ctx); err != nil {
+	if err := yarpc.ValidateRequestContext(ctx); err != nil {
 		return err
 	}
 	switch spec.Type() {
-	case transport.Unary:
+	case yarpc.Unary:
 		defer span.Finish()
 
-		err = transport.InvokeUnaryHandler(transport.UnaryInvokeRequest{
+		err = yarpc.InvokeUnaryHandler(yarpc.UnaryInvokeRequest{
 			Context:        ctx,
 			StartTime:      start,
 			Request:        treq,
@@ -168,7 +167,7 @@ func updateSpanWithErr(span opentracing.Span, err error) {
 	}
 }
 
-func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, opentracing.Span) {
+func (h handler) createSpan(ctx context.Context, req *http.Request, treq *yarpc.Request, start time.Time) (context.Context, opentracing.Span) {
 	// Extract opentracing etc baggage from headers
 	// Annotate the inbound context with a trace span
 	tracer := h.tracer
@@ -182,7 +181,7 @@ func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transp
 		"rpc.encoding":  treq.Encoding,
 		"rpc.transport": "http",
 	}
-	for k, v := range yarpc.OpentracingTags {
+	for k, v := range yarpctracing.Tags {
 		tags[k] = v
 	}
 	span := tracer.StartSpan(
@@ -196,7 +195,7 @@ func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transp
 	return ctx, span
 }
 
-// responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.
+// responseWriter adapts a http.ResponseWriter into a yarpc.ResponseWriter.
 type responseWriter struct {
 	w      http.ResponseWriter
 	buffer *bufferpool.Buffer
@@ -214,7 +213,7 @@ func (rw *responseWriter) Write(s []byte) (int, error) {
 	return rw.buffer.Write(s)
 }
 
-func (rw *responseWriter) AddHeaders(h transport.Headers) {
+func (rw *responseWriter) AddHeaders(h yarpc.Headers) {
 	applicationHeaders.ToHTTPHeaders(h, rw.w.Header())
 }
 
@@ -241,7 +240,7 @@ func (rw *responseWriter) Close(httpStatusCode int) {
 	}
 }
 
-func getContentType(encoding transport.Encoding) string {
+func getContentType(encoding yarpc.Encoding) string {
 	switch encoding {
 	case "json":
 		return "application/json"

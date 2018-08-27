@@ -1,0 +1,47 @@
+- [x] package http -> yarpchttp
+- [x] yarpcerrors -> v2/yarpcerrors
+- [x] errors.WrapHandlerError -> yarpc.WrapHandlerError
+- [x] api/transport -> yarpc/v2
+- [x] Transports() -> DELETED
+- [x] delete option.go that unified inbound, outbound, and transport option for the configurator
+- [x] yarpc -> yarpc/v2
+- [x] api/peer -> yarpc/v2
+- [x] api/transport.Transport -> yarpc/v2.Dialer
+- [x] api/transport/transporttest.* -> yarpc/v2/yarpctest, and eliminate "." imports
+      [x] TransportAction -> DialerAction
+      [x] ApplyTransportActions -> ApplyDialerActions
+      [x] TransportDeps -> DialerDeps
+      [x] RetainAction
+      [x] ReleaseAction
+      [x] SubscriberDefinition
+      [x] CreateSubscriberMap
+- [x] yarpc/api/peer/peertest -> yarpc/v2/yarpctest and eliminate "." dot imports
+- [x] transport as a free variable -> trans
+- [x] t as a free variable -> trans, when not used as *testing.T
+- [ ] x as free variable -> trans
+- [x] httpTransport as a free variable -> trans
+- [x] http -> yarpchttp, nethttp -> http as free package names
+- [x] api/transport/transporttest -> yarpctest
+- [x] intyarpcerrors yarpc/internal/yarpcerrors -> yarpc/v2/internal/internalyarpcerrors
+- [x] remove YARPC yarpc.* documentation stutter, since the package name has changed.
+- [x] thread router through NewInbound, remove SetRouter
+- [x] port dispatcher-based examples and tests
+- [x] encoding/raw -> v2/yarpcraw
+- [x] yarpcraw.Encoding -> yarpc.Encoding("raw") in tests to decouple raw package
+- [x] encoding/json -> v2/yarpcjson
+- [x] internal/clientconfig -> v2/internal/clientconfig
+- [x] peer (as peerchooser) -> v2/yarpcpeer.NewSingle
+- [x] peer/hostport -> v2.Address or v2/yarpcpeer.AbstractPeer (rename embedded Peer to AbstractPeer on *httpPeer)
+- [x] yarpc.OpentracingTags -> v2/yarpctracing.Tags
+- [x] Outbound Start/Stop lifecycle no longer drives chooser Start/Stop lifecycle.
+      [x] consequently, outbound no longer needs to implement Start/Stop lifecycle.
+      [x] tests fixed to not use lifecycle
+- [ ] ZeroAddrToHostPort
+- [ ] decouple NewInbound from NewTransport
+- [ ] exorcise lifecycle
+- [ ] thread middleware chains as options to encoding constructors
+- [ ] thread context through Start/Stop
+- [ ] Connecting peer status -> ELIMINATED
+- [ ] revisit newPeer taking an addr string instead of peer identifier
+- [ ] transport -> dialer everywhere
+- [ ] rewrite doc.go examples

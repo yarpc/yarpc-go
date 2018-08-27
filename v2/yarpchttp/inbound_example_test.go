@@ -18,39 +18,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http_test
+package yarpchttp_test
 
 import (
 	"fmt"
 	"io"
 	"log"
-	nethttp "net/http"
+	"net/http"
 	"os"
 
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/transport/http"
+	"go.uber.org/yarpc/v2/yarpchttp"
+	"go.uber.org/yarpc/v2/yarpcrouter"
 )
 
 func ExampleInbound() {
-	transport := http.NewTransport()
-	inbound := transport.NewInbound(":8888")
-
-	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name:     "myservice",
-		Inbounds: yarpc.Inbounds{inbound},
-	})
-	if err := dispatcher.Start(); err != nil {
+	trans := yarpchttp.NewTransport()
+	router := yarpcrouter.NewMapRouter("my-service")
+	inbound := trans.NewInbound(":8888", router)
+	if err := inbound.Start(); err != nil {
 		log.Fatal(err)
 	}
-	defer dispatcher.Stop()
+	defer inbound.Stop()
 }
 
 func ExampleMux() {
-	// import nethttp "net/http"
-
 	// We set up a ServeMux which provides a /health endpoint.
-	mux := nethttp.NewServeMux()
-	mux.HandleFunc("/health", func(w nethttp.ResponseWriter, _ *nethttp.Request) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		if _, err := fmt.Fprintln(w, "hello from /health"); err != nil {
 			panic(err)
 		}
@@ -58,21 +52,21 @@ func ExampleMux() {
 
 	// This inbound will serve the YARPC service on the path /yarpc.  The
 	// /health endpoint on the Mux will be left alone.
-	transport := http.NewTransport()
-	inbound := transport.NewInbound(":8888", http.Mux("/yarpc", mux))
-
-	// Fire up a dispatcher with the new inbound.
-	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name:     "server",
-		Inbounds: yarpc.Inbounds{inbound},
-	})
-	if err := dispatcher.Start(); err != nil {
+	trans := yarpchttp.NewTransport()
+	if err := trans.Start(); err != nil {
 		log.Fatal(err)
 	}
-	defer dispatcher.Stop()
+	defer trans.Stop()
+
+	router := yarpcrouter.NewMapRouter("my-service")
+	inbound := trans.NewInbound(":8888", router, yarpchttp.Mux("/yarpc", mux))
+	if err := inbound.Start(); err != nil {
+		log.Fatal(err)
+	}
+	defer inbound.Stop()
 
 	// Make a request to the /health endpoint.
-	res, err := nethttp.Get("http://127.0.0.1:8888/health")
+	res, err := http.Get("http://127.0.0.1:8888/health")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -85,18 +79,16 @@ func ExampleMux() {
 }
 
 func ExampleInterceptor() {
-	// import nethttp "net/http"
-
-	// Given a fallback http.Handler
-	fallback := nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
+	// Given a fallback yarpchttp.Handler
+	fallback := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "hello, world!")
 	})
 
 	// Create an interceptor that falls back to a handler when the HTTP request is
 	// missing the RPC-Encoding header.
-	intercept := func(transportHandler nethttp.Handler) nethttp.Handler {
-		return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
-			if r.Header.Get(http.EncodingHeader) == "" {
+	intercept := func(transportHandler http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get(yarpchttp.EncodingHeader) == "" {
 				// Not a YARPC request, use fallback handler.
 				fallback.ServeHTTP(w, r)
 			} else {
@@ -106,21 +98,21 @@ func ExampleInterceptor() {
 	}
 
 	// Create a new inbound, attaching the interceptor
-	transport := http.NewTransport()
-	inbound := transport.NewInbound(":8889", http.Interceptor(intercept))
-
-	// Fire up a dispatcher with the new inbound.
-	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name:     "server",
-		Inbounds: yarpc.Inbounds{inbound},
-	})
-	if err := dispatcher.Start(); err != nil {
+	trans := yarpchttp.NewTransport()
+	if err := trans.Start(); err != nil {
 		log.Fatal(err)
 	}
-	defer dispatcher.Stop()
+	defer trans.Stop()
+
+	router := yarpcrouter.NewMapRouter("server")
+	inbound := trans.NewInbound(":8889", router, yarpchttp.Interceptor(intercept))
+	if err := inbound.Start(); err != nil {
+		log.Fatal(err)
+	}
+	defer inbound.Stop()
 
 	// Make a non-YARPC request to the / endpoint.
-	res, err := nethttp.Get("http://127.0.0.1:8889/")
+	res, err := http.Get("http://127.0.0.1:8889/")
 	if err != nil {
 		log.Fatal(err)
 	}

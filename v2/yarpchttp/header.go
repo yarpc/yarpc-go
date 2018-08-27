@@ -18,13 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package yarpchttp
 
 import (
 	"net/http"
 	"strings"
 
-	"go.uber.org/yarpc/api/transport"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 // headerConverter converts HTTP headers to and from transport headers.
@@ -40,7 +40,7 @@ var (
 // is returned.
 //
 // If 'to' is nil, a new map will be assigned.
-func (hm headerMapper) ToHTTPHeaders(from transport.Headers, to http.Header) http.Header {
+func (hm headerMapper) ToHTTPHeaders(from yarpc.Headers, to http.Header) http.Header {
 	if to == nil {
 		to = make(http.Header, from.Len())
 	}
@@ -56,7 +56,7 @@ func (hm headerMapper) ToHTTPHeaders(from transport.Headers, to http.Header) htt
 // is returned.
 //
 // If 'to' is nil, a new map will be assigned.
-func (hm headerMapper) FromHTTPHeaders(from http.Header, to transport.Headers) transport.Headers {
+func (hm headerMapper) FromHTTPHeaders(from http.Header, to yarpc.Headers) yarpc.Headers {
 	prefixLen := len(hm.Prefix)
 	for k := range from {
 		if strings.HasPrefix(k, hm.Prefix) {

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package yarpchttp
 
 import (
 	"bytes"
@@ -32,7 +32,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/internal/testtime"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerrors"
 )
 
 func TestRoundTripSuccess(t *testing.T) {
@@ -61,10 +61,8 @@ func TestRoundTripSuccess(t *testing.T) {
 	defer echoServer.Close()
 
 	// start outbound
-	httpTransport := NewTransport()
-	out := httpTransport.NewSingleOutbound(echoServer.URL)
-	require.NoError(t, out.Start(), "failed to start outbound")
-	defer out.Stop()
+	trans := NewTransport()
+	out := trans.NewSingleOutbound(echoServer.URL)
 
 	// create request
 	hreq, err := http.NewRequest("GET", echoServer.URL, bytes.NewReader([]byte(giveBody)))
@@ -100,8 +98,6 @@ func TestRoundTripTimeout(t *testing.T) {
 
 	// start outbound
 	out := NewTransport().NewSingleOutbound(server.URL)
-	require.NoError(t, out.Start(), "failed to start outbound")
-	defer out.Stop()
 
 	// create request
 	req, err := http.NewRequest("POST", server.URL, nil /* body */)
@@ -130,7 +126,6 @@ func TestRoundTripNoDeadline(t *testing.T) {
 	URL := "http://foo-host"
 
 	out := NewTransport().NewSingleOutbound(URL)
-	require.NoError(t, out.Start(), "could not start outbound")
 
 	hreq, err := http.NewRequest("GET", URL, nil /* body */)
 	require.NoError(t, err)

@@ -18,19 +18,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package yarpchttp
 
 import (
 	"net"
 	"time"
 
 	"go.uber.org/atomic"
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/peer/hostport"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcpeer"
 )
 
 type httpPeer struct {
-	*hostport.Peer
+	*yarpcpeer.AbstractPeer
 
 	transport             *Transport
 	addr                  string
@@ -51,12 +51,12 @@ func newPeer(addr string, t *Transport) *httpPeer {
 	}
 
 	return &httpPeer{
-		Peer:      hostport.NewPeer(hostport.PeerIdentifier(addr), t),
-		transport: t,
-		addr:      addr,
-		changed:   make(chan struct{}, 1),
-		released:  make(chan struct{}, 0),
-		timer:     timer,
+		AbstractPeer: yarpcpeer.NewAbstractPeer(yarpc.Address(addr)),
+		transport:    t,
+		addr:         addr,
+		changed:      make(chan struct{}, 1),
+		released:     make(chan struct{}, 0),
+		timer:        timer,
 		innocentUntilUnixNano: atomic.NewInt64(0),
 	}
 }
@@ -104,7 +104,7 @@ func (p *httpPeer) OnSuspect() {
 }
 
 func (p *httpPeer) OnDisconnected() {
-	p.Peer.SetStatus(peer.Connecting)
+	p.AbstractPeer.SetStatus(yarpc.Connecting)
 
 	// Kick the state change channel (if it hasn't been kicked already).
 	select {
@@ -127,13 +127,13 @@ func (p *httpPeer) MaintainConn() {
 
 	// Attempt to retain an open connection to each peer so long as it is
 	// retained.
-	p.Peer.SetStatus(peer.Connecting)
+	p.AbstractPeer.SetStatus(yarpc.Connecting)
 	for {
 		// Invariant: Status is Connecting initially, or after exponential
 		// back-off, or after OnDisconnected, but still Available after
 		// OnSuspect.
 		if p.isAvailable() {
-			p.Peer.SetStatus(peer.Available)
+			p.AbstractPeer.SetStatus(yarpc.Available)
 			// Reset on success
 			attempts = 0
 			if !p.waitForChange() {
@@ -142,16 +142,16 @@ func (p *httpPeer) MaintainConn() {
 			// Invariant: the status is Connecting if change is triggered by
 			// OnDisconnected, but remains Available if triggered by OnSuspect.
 		} else {
-			p.Peer.SetStatus(peer.Unavailable)
+			p.AbstractPeer.SetStatus(yarpc.Unavailable)
 			// Back-off on fail
 			if !p.sleep(backoff.Duration(attempts)) {
 				break
 			}
 			attempts++
-			p.Peer.SetStatus(peer.Connecting)
+			p.AbstractPeer.SetStatus(yarpc.Connecting)
 		}
 	}
-	p.Peer.SetStatus(peer.Unavailable)
+	p.AbstractPeer.SetStatus(yarpc.Unavailable)
 
 	p.transport.connectorsGroup.Done()
 }

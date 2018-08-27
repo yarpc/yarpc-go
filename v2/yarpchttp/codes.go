@@ -18,9 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package yarpchttp
 
-import "go.uber.org/yarpc/yarpcerrors"
+import "go.uber.org/yarpc/v2/yarpcerrors"
 
 var (
 	// _codeToStatusCode maps all Codes to their corresponding HTTP status code.
