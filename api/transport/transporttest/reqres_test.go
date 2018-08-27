@@ -54,12 +54,12 @@ func TestRequestMatcherTransport(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			reqMatcher := NewRequestMatcher(t, &transport.Request{
 				Transport: tt.transport,
-				Body:      bytes.NewBufferString(""), // cannot be nil
+				Body:      &bytes.Buffer{},
 			})
 
 			req := &transport.Request{
 				Transport: "foo-transport",
-				Body:      bytes.NewBufferString(""),
+				Body:      &bytes.Buffer{},
 			}
 
 			if tt.wantMatch {
