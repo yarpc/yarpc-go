@@ -40,9 +40,11 @@ func CreateSubscriberMap(
 ) map[string]yarpc.Subscriber {
 	subscribers := make(map[string]yarpc.Subscriber, len(subDefinitions))
 	for _, subDef := range subDefinitions {
-		sub := NewMockSubscriber(mockCtrl)
-		sub.EXPECT().NotifyStatusChanged(gomock.Any()).Times(subDef.ExpectedNotifyCount)
-		subscribers[subDef.ID] = sub
+		subscribers[subDef.ID] = subscriber(subDef.ID)
 	}
 	return subscribers
 }
+
+type subscriber string
+
+func (subscriber) NotifyStatusChanged(yarpc.Identifier) {}
