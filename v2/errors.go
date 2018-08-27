@@ -76,24 +76,6 @@ func IsUnrecognizedProcedureError(err error) bool {
 	return yarpcerrors.FromError(err).Code() == yarpcerrors.CodeUnimplemented
 }
 
-// WrapHandlerError is a convenience function to help wrap errors returned
-// from a handler.
-//
-// If err is nil, WrapHandlerError returns nil.
-// If err is a YARPC error, WrapHandlerError returns err with no changes.
-// If err is not a YARPC error, WrapHandlerError returns a new YARPC error
-// with code yarpcerrors.CodeUnknown and message err.Error(), along with
-// service and procedure information.
-func WrapHandlerError(err error, service string, procedure string) error {
-	if err == nil {
-		return nil
-	}
-	if yarpcerrors.IsStatus(err) {
-		return err
-	}
-	return yarpcerrors.Newf(yarpcerrors.CodeUnknown, "error for service %q and procedure %q: %s", service, procedure, err.Error())
-}
-
 // ErrPeerHasNoReferenceToSubscriber is called when a Peer is expected
 // to operate on a PeerSubscriber it has no reference to
 type ErrPeerHasNoReferenceToSubscriber struct {

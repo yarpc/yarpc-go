@@ -52,12 +52,6 @@ func TestUnrecognizedProcedureError(t *testing.T) {
 	assert.False(t, IsUnrecognizedProcedureError(errors.New("derp")))
 }
 
-func TestWrapHandlerError(t *testing.T) {
-	assert.Nil(t, WrapHandlerError(nil, "foo", "bar"))
-	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.FromError(WrapHandlerError(yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, ""), "foo", "bar")).Code())
-	assert.Equal(t, yarpcerrors.CodeUnknown, yarpcerrors.FromError(WrapHandlerError(errors.New(""), "foo", "bar")).Code())
-}
-
 func TestExpectEncodings(t *testing.T) {
 	assert.Error(t, ExpectEncodings(&Request{}, "foo"))
 	assert.NoError(t, ExpectEncodings(&Request{Encoding: "foo"}, "foo"))
