@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - x/yarpctest: Add a retry option to HTTP/TChannel/GRPCRequest.
 - Added `peer/tworandomchoices`, an implementation of the Two Random Choices
   load balancer algorithm.
+- Reintroduce Transport field matching for `transporttest.RequestMatcher`.
 ### Changed
 - HTTP inbounds gracefully shutdown with an optional timeout, defaulting to 5
   seconds.
