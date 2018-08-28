@@ -123,7 +123,7 @@ func (o *Outbound) call(ctx context.Context, treq *yarpc.Request) (*yarpc.Respon
 
 	// Service name match validation, return yarpcerrors.CodeInternal error if not match
 	if match, resSvcName := checkServiceMatch(treq.Service, response.Header); !match {
-		return nil, yarpc.UpdateSpanWithErr(span,
+		return nil, yarpctracing.UpdateSpanWithErr(span,
 			yarpcerrors.InternalErrorf("service name sent from the request "+
 				"does not match the service name received in the response, sent %q, got: %q", treq.Service, resSvcName))
 	}

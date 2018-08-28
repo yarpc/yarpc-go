@@ -26,7 +26,6 @@ import (
 
 // Chooser is a collection of Peers. Outbounds request peers from the
 // peer.Chooser to determine where to send requests.
-// The chooser is responsible for managing the lifecycle of any retained peers.
 type Chooser interface {
 	// Choose a Peer for the next call, block until a peer is available (or timeout)
 	Choose(context.Context, *Request) (peer Peer, onFinish func(error), err error)

@@ -1,16 +1,16 @@
+- [ ] rename handler specs returned by routers to routes
+- [ ] rename UnaryOutbound to Caller
+- [ ] rename StreamOutbound to Streamer
 - [x] remove Lifecycle from Transport
 - [x] remove transport Outbound interface
 - [x] remove transport Inbound interface
-- [ ] rename UnaryOutbound to Caller
-- [ ] rename StreamOutbound to Streamer
-- [ ] ClientStream, why not an interface?
-- [ ] rename peer.Transport to yarpctransport.Dialer
-- [ ] remove peer.Binder (lifecycle related)
+- [x] rename peer.Transport to yarpc/v2.Dialer
+- [x] remove peer.Binder (lifecycle related)
 - [o] make peer.ListUpdates an anonymous struct
 - [x] remove deprecated peer list chooser implementation interafce
 - [x] remove "connecting" state from peer status
-- [ ] debatably reduce scope of peer status to just connection status, forcing the peer list to track pending request counts directly
-- [ ] remove Identifier interface from Peer interface
+- [o] debatably reduce scope of peer status to just connection status, forcing the peer list to track pending request counts directly
+- [o] remove Identifier interface from Peer interface
 - [ ] strip pkg/lifecycle implementation from all component implementations
 - [ ] remove Spec and Config
 - [ ] rename CallStream / Stream/Streamer
@@ -50,7 +50,6 @@
   - [ ] revisit i.server.Serve to run in a goroutine and preserve internal/net semantics
 - [ ] move ValidateRequest into yarpctransport package
 - [ ] replace client config provider with a register/get API in YARPC Fx that connects the configuration of individual transports.
-- [ ] rename handler specs returned by routers to routes
-- [ ] moved internal/yarpcerrors.WrapHandlerErrort to v2/yarpcerrors
+- [x] moved internal/yarpcerrors.WrapHandlerError to v2/yarpcerrors
 - [ ] rename yarpcerrors to yarpcerror in keeping with the aesthetic
 - [x] Replace ClientConfig, OutboundConfig, and Outbounds -> yarpc.Client{Caller,Service,Unary,Stream}

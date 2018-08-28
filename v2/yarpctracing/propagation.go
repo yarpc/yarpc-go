@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc
+package yarpctracing
 
 import (
 	"context"
@@ -27,6 +27,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	opentracinglog "github.com/opentracing/opentracing-go/log"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 // CreateOpenTracingSpan creates a new context with a started span
@@ -41,7 +42,7 @@ type CreateOpenTracingSpan struct {
 // This should be called before a Outbound makes a call
 func (c *CreateOpenTracingSpan) Do(
 	ctx context.Context,
-	req *Request,
+	req *yarpc.Request,
 ) (context.Context, opentracing.Span) {
 	var parent opentracing.SpanContext
 	if parentSpan := opentracing.SpanFromContext(ctx); parentSpan != nil {
@@ -84,7 +85,7 @@ type ExtractOpenTracingSpan struct {
 // This should be called before a Inbound handles a request
 func (e *ExtractOpenTracingSpan) Do(
 	ctx context.Context,
-	req *Request,
+	req *yarpc.Request,
 ) (context.Context, opentracing.Span) {
 	tags := opentracing.Tags{
 		"rpc.caller":    req.Caller,
