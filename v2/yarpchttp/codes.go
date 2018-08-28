@@ -20,55 +20,55 @@
 
 package yarpchttp
 
-import "go.uber.org/yarpc/v2/yarpcerrors"
+import "go.uber.org/yarpc/v2/yarpcerror"
 
 var (
 	// _codeToStatusCode maps all Codes to their corresponding HTTP status code.
-	_codeToStatusCode = map[yarpcerrors.Code]int{
-		yarpcerrors.CodeOK:                 200,
-		yarpcerrors.CodeCancelled:          499,
-		yarpcerrors.CodeUnknown:            500,
-		yarpcerrors.CodeInvalidArgument:    400,
-		yarpcerrors.CodeDeadlineExceeded:   504,
-		yarpcerrors.CodeNotFound:           404,
-		yarpcerrors.CodeAlreadyExists:      409,
-		yarpcerrors.CodePermissionDenied:   403,
-		yarpcerrors.CodeResourceExhausted:  429,
-		yarpcerrors.CodeFailedPrecondition: 400,
-		yarpcerrors.CodeAborted:            409,
-		yarpcerrors.CodeOutOfRange:         400,
-		yarpcerrors.CodeUnimplemented:      501,
-		yarpcerrors.CodeInternal:           500,
-		yarpcerrors.CodeUnavailable:        503,
-		yarpcerrors.CodeDataLoss:           500,
-		yarpcerrors.CodeUnauthenticated:    401,
+	_codeToStatusCode = map[yarpcerror.Code]int{
+		yarpcerror.CodeOK:                 200,
+		yarpcerror.CodeCancelled:          499,
+		yarpcerror.CodeUnknown:            500,
+		yarpcerror.CodeInvalidArgument:    400,
+		yarpcerror.CodeDeadlineExceeded:   504,
+		yarpcerror.CodeNotFound:           404,
+		yarpcerror.CodeAlreadyExists:      409,
+		yarpcerror.CodePermissionDenied:   403,
+		yarpcerror.CodeResourceExhausted:  429,
+		yarpcerror.CodeFailedPrecondition: 400,
+		yarpcerror.CodeAborted:            409,
+		yarpcerror.CodeOutOfRange:         400,
+		yarpcerror.CodeUnimplemented:      501,
+		yarpcerror.CodeInternal:           500,
+		yarpcerror.CodeUnavailable:        503,
+		yarpcerror.CodeDataLoss:           500,
+		yarpcerror.CodeUnauthenticated:    401,
 	}
 
 	// _statusCodeToCodes maps HTTP status codes to a slice of their corresponding Codes.
-	_statusCodeToCodes = map[int][]yarpcerrors.Code{
-		200: {yarpcerrors.CodeOK},
+	_statusCodeToCodes = map[int][]yarpcerror.Code{
+		200: {yarpcerror.CodeOK},
 		400: {
-			yarpcerrors.CodeInvalidArgument,
-			yarpcerrors.CodeFailedPrecondition,
-			yarpcerrors.CodeOutOfRange,
+			yarpcerror.CodeInvalidArgument,
+			yarpcerror.CodeFailedPrecondition,
+			yarpcerror.CodeOutOfRange,
 		},
-		401: {yarpcerrors.CodeUnauthenticated},
-		403: {yarpcerrors.CodePermissionDenied},
-		404: {yarpcerrors.CodeNotFound},
+		401: {yarpcerror.CodeUnauthenticated},
+		403: {yarpcerror.CodePermissionDenied},
+		404: {yarpcerror.CodeNotFound},
 		409: {
-			yarpcerrors.CodeAborted,
-			yarpcerrors.CodeAlreadyExists,
+			yarpcerror.CodeAborted,
+			yarpcerror.CodeAlreadyExists,
 		},
-		429: {yarpcerrors.CodeResourceExhausted},
-		499: {yarpcerrors.CodeCancelled},
+		429: {yarpcerror.CodeResourceExhausted},
+		499: {yarpcerror.CodeCancelled},
 		500: {
-			yarpcerrors.CodeUnknown,
-			yarpcerrors.CodeInternal,
-			yarpcerrors.CodeDataLoss,
+			yarpcerror.CodeUnknown,
+			yarpcerror.CodeInternal,
+			yarpcerror.CodeDataLoss,
 		},
-		501: {yarpcerrors.CodeUnimplemented},
-		503: {yarpcerrors.CodeUnavailable},
-		504: {yarpcerrors.CodeDeadlineExceeded},
+		501: {yarpcerror.CodeUnimplemented},
+		503: {yarpcerror.CodeUnavailable},
+		504: {yarpcerror.CodeDeadlineExceeded},
 	}
 )
 
@@ -77,15 +77,15 @@ var (
 //
 // If one Code maps to the given HTTP status code, that Code is returned.
 // If more than one Code maps to the given HTTP status Code, one Code is returned.
-// If the Code is >=400 and < 500, yarpcerrors.CodeInvalidArgument is returned.
-// Else, yarpcerrors.CodeUnknown is returned.
-func statusCodeToBestCode(statusCode int) yarpcerrors.Code {
+// If the Code is >=400 and < 500, yarpcerror.CodeInvalidArgument is returned.
+// Else, yarpcerror.CodeUnknown is returned.
+func statusCodeToBestCode(statusCode int) yarpcerror.Code {
 	codes, ok := _statusCodeToCodes[statusCode]
 	if !ok || len(codes) == 0 {
 		if statusCode >= 400 && statusCode < 500 {
-			return yarpcerrors.CodeInvalidArgument
+			return yarpcerror.CodeInvalidArgument
 		}
-		return yarpcerrors.CodeUnknown
+		return yarpcerror.CodeUnknown
 	}
 	return codes[0]
 }

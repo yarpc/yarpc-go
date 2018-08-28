@@ -33,8 +33,8 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 	opentracinglog "github.com/opentracing/opentracing-go/log"
 	"go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/internal/internalyarpcerrors"
-	"go.uber.org/yarpc/v2/yarpcerrors"
+	"go.uber.org/yarpc/v2/internal/internalyarpcerror"
+	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcpeer"
 	"go.uber.org/yarpc/v2/yarpctracing"
 )
@@ -85,7 +85,7 @@ type Outbound struct {
 // Call makes a HTTP request
 func (o *Outbound) Call(ctx context.Context, treq *yarpc.Request) (*yarpc.Response, error) {
 	if treq == nil {
-		return nil, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil")
+		return nil, yarpcerror.InvalidArgumentErrorf("request for http unary outbound was nil")
 	}
 
 	return o.call(ctx, treq)
@@ -95,7 +95,7 @@ func (o *Outbound) call(ctx context.Context, treq *yarpc.Request) (*yarpc.Respon
 	start := time.Now()
 	deadline, ok := ctx.Deadline()
 	if !ok {
-		return nil, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing context deadline")
+		return nil, yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "missing context deadline")
 	}
 	ttl := deadline.Sub(start)
 
@@ -122,10 +122,10 @@ func (o *Outbound) call(ctx context.Context, treq *yarpc.Request) (*yarpc.Respon
 
 	span.SetTag("http.status_code", response.StatusCode)
 
-	// Service name match validation, return yarpcerrors.CodeInternal error if not match
+	// Service name match validation, return yarpcerror.CodeInternal error if not match
 	if match, resSvcName := checkServiceMatch(treq.Service, response.Header); !match {
 		return nil, yarpctracing.UpdateSpanWithErr(span,
-			yarpcerrors.InternalErrorf("service name sent from the request "+
+			yarpcerror.InternalErrorf("service name sent from the request "+
 				"does not match the service name received in the response, sent %q, got: %q", treq.Service, resSvcName))
 	}
 
@@ -282,23 +282,23 @@ func getYARPCErrorFromResponse(response *http.Response, bothResponseError bool) 
 	} else {
 		contentsBytes, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			return yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
+			return yarpcerror.Newf(yarpcerror.CodeInternal, err.Error())
 		}
 		contents = string(contentsBytes)
 		if err := response.Body.Close(); err != nil {
-			return yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
+			return yarpcerror.Newf(yarpcerror.CodeInternal, err.Error())
 		}
 	}
 	// use the status code if we can't get a code from the headers
 	code := statusCodeToBestCode(response.StatusCode)
 	if errorCodeText := response.Header.Get(ErrorCodeHeader); errorCodeText != "" {
-		var errorCode yarpcerrors.Code
+		var errorCode yarpcerror.Code
 		// TODO: what to do with error?
 		if err := errorCode.UnmarshalText([]byte(errorCodeText)); err == nil {
 			code = errorCode
 		}
 	}
-	return internalyarpcerrors.NewWithNamef(
+	return internalyarpcerror.NewWithNamef(
 		code,
 		response.Header.Get(ErrorNameHeader),
 		strings.TrimSuffix(contents, "\n"),
@@ -341,8 +341,8 @@ func (o *Outbound) roundTrip(hreq *http.Request, treq *yarpc.Request, start time
 
 	deadline, ok := ctx.Deadline()
 	if !ok {
-		return nil, yarpcerrors.Newf(
-			yarpcerrors.CodeInvalidArgument,
+		return nil, yarpcerror.Newf(
+			yarpcerror.CodeInvalidArgument,
 			"missing context deadline")
 	}
 	ttl := deadline.Sub(start)
@@ -404,8 +404,8 @@ func (o *Outbound) doWithPeer(
 			p.OnSuspect()
 
 			end := time.Now()
-			return nil, yarpcerrors.Newf(
-				yarpcerrors.CodeDeadlineExceeded,
+			return nil, yarpcerror.Newf(
+				yarpcerror.CodeDeadlineExceeded,
 				"client timeout for procedure %q of service %q after %v",
 				treq.Procedure, treq.Service, end.Sub(start))
 		}
@@ -414,7 +414,7 @@ func (o *Outbound) doWithPeer(
 		// maintenance loop resumes probing for availability.
 		p.OnDisconnected()
 
-		return nil, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "unknown error from http client: %s", err.Error())
+		return nil, yarpcerror.Newf(yarpcerror.CodeUnknown, "unknown error from http client: %s", err.Error())
 	}
 
 	return response, nil

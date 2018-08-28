@@ -39,7 +39,7 @@ import (
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/internal/internalyarpctest"
 	"go.uber.org/yarpc/v2/internal/routertest"
-	"go.uber.org/yarpc/v2/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
 
@@ -92,7 +92,7 @@ func TestInboundStartErrorBadGrabHeader(t *testing.T) {
 		Router:      new(yarpctest.MockRouter),
 		GrabHeaders: []string{"x-valid", "y-invalid"},
 	}
-	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.FromError(i.Start(context.Background())).Code())
+	assert.Equal(t, yarpcerror.CodeInvalidArgument, yarpcerror.FromError(i.Start(context.Background())).Code())
 }
 
 func TestInboundMux(t *testing.T) {
@@ -145,7 +145,7 @@ func TestInboundMux(t *testing.T) {
 	})
 
 	if assert.Error(t, err, "RPC call to / should have failed") {
-		assert.Equal(t, yarpcerrors.CodeNotFound, yarpcerrors.FromError(err).Code())
+		assert.Equal(t, yarpcerror.CodeNotFound, yarpcerror.FromError(err).Code())
 	}
 
 	host := outbound.URL.Host

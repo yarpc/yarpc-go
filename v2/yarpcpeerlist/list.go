@@ -28,7 +28,7 @@ import (
 
 	"go.uber.org/multierr"
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcpeer"
 )
 
@@ -344,11 +344,11 @@ func (pl *List) waitForPeerAddedEvent(ctx context.Context) error {
 }
 
 func (pl *List) newNoContextDeadlineError() error {
-	return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, _noContextDeadlineError, pl.name)
+	return yarpcerror.Newf(yarpcerror.CodeInvalidArgument, _noContextDeadlineError, pl.name)
 }
 
 func (pl *List) newUnavailableError(err error) error {
-	return yarpcerrors.Newf(yarpcerrors.CodeUnavailable, "%s peer list timed out waiting for peer: %s", pl.name, err.Error())
+	return yarpcerror.Newf(yarpcerror.CodeUnavailable, "%s peer list timed out waiting for peer: %s", pl.name, err.Error())
 }
 
 // NotifyStatusChanged receives status change notifications for peers in the

@@ -32,7 +32,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/internal/testtime"
-	"go.uber.org/yarpc/v2/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 func TestRoundTripSuccess(t *testing.T) {
@@ -131,7 +131,7 @@ func TestRoundTripTimeout(t *testing.T) {
 	if assert.Error(t, err) {
 		// we use a Contains here since the returned error is really a
 		// url.Error wrapping a yarpcerror
-		assert.Contains(t, err.Error(), yarpcerrors.CodeDeadlineExceeded.String())
+		assert.Contains(t, err.Error(), yarpcerror.CodeDeadlineExceeded.String())
 	}
 	assert.Equal(t, context.DeadlineExceeded, ctx.Err())
 	assert.Nil(t, res)
@@ -154,6 +154,6 @@ func TestRoundTripNoDeadline(t *testing.T) {
 	require.NoError(t, err)
 
 	resp, err := outbound.RoundTrip(hreq)
-	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing context deadline"), err)
+	assert.Equal(t, yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "missing context deadline"), err)
 	assert.Nil(t, resp)
 }

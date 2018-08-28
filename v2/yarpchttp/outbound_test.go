@@ -37,7 +37,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
 
@@ -401,7 +401,7 @@ func TestNoRequest(t *testing.T) {
 	}
 
 	_, err := outbound.Call(context.Background(), nil)
-	assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil"), err)
+	assert.Equal(t, yarpcerror.InvalidArgumentErrorf("request for http unary outbound was nil"), err)
 }
 
 func TestOutboundNoDeadline(t *testing.T) {
@@ -416,7 +416,7 @@ func TestOutboundNoDeadline(t *testing.T) {
 	}
 
 	_, err := outbound.call(context.Background(), &yarpc.Request{})
-	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing context deadline"), err)
+	assert.Equal(t, yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "missing context deadline"), err)
 }
 
 func TestServiceMatchSuccess(t *testing.T) {

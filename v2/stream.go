@@ -24,7 +24,7 @@ import (
 	"context"
 	"io"
 
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 // StreamOption is an option that may be passed in at streaming function call
@@ -48,7 +48,7 @@ type ServerStreamOption interface {
 // NewServerStream will create a new ServerStream.
 func NewServerStream(s Stream, options ...ServerStreamOption) (*ServerStream, error) {
 	if s == nil {
-		return nil, yarpcerrors.InvalidArgumentErrorf("non-nil stream is required")
+		return nil, yarpcerror.InvalidArgumentErrorf("non-nil stream is required")
 	}
 	return &ServerStream{stream: s}, nil
 }
@@ -90,7 +90,7 @@ type ClientStreamOption interface {
 // NewClientStream will create a new ClientStream.
 func NewClientStream(s StreamCloser, options ...ClientStreamOption) (*ClientStream, error) {
 	if s == nil {
-		return nil, yarpcerrors.InvalidArgumentErrorf("non-nil stream with close is required")
+		return nil, yarpcerror.InvalidArgumentErrorf("non-nil stream with close is required")
 	}
 	return &ClientStream{stream: s}, nil
 }

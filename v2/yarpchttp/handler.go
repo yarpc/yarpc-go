@@ -31,7 +31,7 @@ import (
 	opentracinglog "github.com/opentracing/opentracing-go/log"
 	"go.uber.org/yarpc/internal/bufferpool"
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpctracing"
 	"go.uber.org/yarpc/v2/yarpctransport"
 	"go.uber.org/zap"
@@ -60,13 +60,13 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// add response header to echo accepted rpc-service
 	responseWriter.AddSystemHeader(ServiceHeader, service)
 	err := h.callHandler(responseWriter, req, service, procedure)
-	status := yarpcerrors.FromError(yarpcerrors.WrapHandlerError(err, service, procedure))
+	status := yarpcerror.FromError(yarpcerror.WrapHandlerError(err, service, procedure))
 	if status == nil {
 		responseWriter.Close(http.StatusOK)
 		return
 	}
 	if statusCodeText, marshalErr := status.Code().MarshalText(); marshalErr != nil {
-		status = yarpcerrors.Newf(yarpcerrors.CodeInternal, "error %s had code %v which is unknown", status.Error(), status.Code())
+		status = yarpcerror.Newf(yarpcerror.CodeInternal, "error %s had code %v which is unknown", status.Error(), status.Code())
 		responseWriter.AddSystemHeader(ErrorCodeHeader, "internal")
 	} else {
 		responseWriter.AddSystemHeader(ErrorCodeHeader, string(statusCodeText))
@@ -93,7 +93,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	start := time.Now()
 	defer req.Body.Close()
 	if req.Method != http.MethodPost {
-		return yarpcerrors.Newf(yarpcerrors.CodeNotFound, "request method was %s but only %s is allowed", req.Method, http.MethodPost)
+		return yarpcerror.Newf(yarpcerror.CodeNotFound, "request method was %s but only %s is allowed", req.Method, http.MethodPost)
 	}
 	treq := &yarpc.Request{
 		Caller:          popHeader(req.Header, CallerHeader),
@@ -155,7 +155,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		})
 
 	default:
-		err = yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport http does not handle %s handlers", spec.Type().String())
+		err = yarpcerror.Newf(yarpcerror.CodeUnimplemented, "transport http does not handle %s handlers", spec.Type().String())
 	}
 
 	updateSpanWithErr(span, err)

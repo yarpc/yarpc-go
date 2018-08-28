@@ -31,7 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcjson"
 )
 
@@ -75,7 +75,7 @@ func TestBothResponseError(t *testing.T) {
 				defer cancel()
 				err := client.Call(ctx, "testFoo", &testFooRequest{One: "one", Error: "bar"}, &response)
 
-				assert.Equal(t, yarpcerrors.WrapHandlerError(errors.New("bar"), "example", "testFoo"), err)
+				assert.Equal(t, yarpcerror.WrapHandlerError(errors.New("bar"), "example", "testFoo"), err)
 				if tt.inboundBothResponseError && tt.outboundBothResponseError {
 					assert.Equal(t, "one", response.One)
 				} else {

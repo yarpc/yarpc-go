@@ -25,32 +25,32 @@ import (
 	"strings"
 
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 // RequestBodyDecodeError builds a YARPC error with code
-// yarpcerrors.CodeInvalidArgument that represents a failure to decode
+// yarpcerror.CodeInvalidArgument that represents a failure to decode
 // the request body.
 func RequestBodyDecodeError(req *yarpc.Request, err error) error {
 	return newServerEncodingError(req, nil, false /*isResponse*/, false /*isHeader*/, err)
 }
 
 // ResponseBodyEncodeError builds a YARPC error with code
-// yarpcerrors.CodeInvalidArgument that represents a failure to encode
+// yarpcerror.CodeInvalidArgument that represents a failure to encode
 // the response body.
 func ResponseBodyEncodeError(req *yarpc.Request, err error) error {
 	return newServerEncodingError(req, nil, true /*isResponse*/, false /*isHeader*/, err)
 }
 
 // RequestHeadersDecodeError builds a YARPC error with code
-// yarpcerrors.CodeInvalidArgument that represents a failure to
+// yarpcerror.CodeInvalidArgument that represents a failure to
 // decode the request headers.
 func RequestHeadersDecodeError(req *yarpc.Request, err error) error {
 	return newServerEncodingError(req, nil, false /*isResponse*/, true /*isHeader*/, err)
 }
 
 // ResponseHeadersEncodeError builds a YARPC error with code
-// yarpcerrors.CodeInvalidArgument that represents a failure to
+// yarpcerror.CodeInvalidArgument that represents a failure to
 // encode the response headers.
 func ResponseHeadersEncodeError(req *yarpc.Request, err error) error {
 	return newServerEncodingError(req, nil, true /*isResponse*/, true /*isHeader*/, err)
@@ -58,7 +58,7 @@ func ResponseHeadersEncodeError(req *yarpc.Request, err error) error {
 
 // ExpectEncodings verifies that the given request has one of the given
 // encodings, otherwise it returns a YARPC error with code
-// yarpcerrors.CodeInvalidArgument.
+// yarpcerror.CodeInvalidArgument.
 func ExpectEncodings(req *yarpc.Request, want ...yarpc.Encoding) error {
 	got := req.Encoding
 	for _, w := range want {
@@ -98,7 +98,7 @@ func newServerEncodingError(req *yarpc.Request, encodings []yarpc.Encoding, isRe
 	parts = append(parts,
 		fmt.Sprintf("for procedure %q of service %q from caller %q: %v",
 			req.Procedure, req.Service, req.Caller, err))
-	return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, strings.Join(parts, " "))
+	return yarpcerror.Newf(yarpcerror.CodeInvalidArgument, strings.Join(parts, " "))
 }
 
 func newEncodingMismatchError(want []yarpc.Encoding, got yarpc.Encoding) error {

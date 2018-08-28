@@ -39,7 +39,7 @@ import (
 	"github.com/stretchr/testify/require"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/internal/internalyarpctest"
-	"go.uber.org/yarpc/v2/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcraw"
 	"go.uber.org/yarpc/v2/yarpcrouter"
 	"go.uber.org/yarpc/v2/yarpctest"
@@ -230,12 +230,12 @@ func TestHandlerFailures(t *testing.T) {
 
 		// if we expect an error as a result of the TTL
 		errTTL   bool
-		wantCode yarpcerrors.Code
+		wantCode yarpcerror.Code
 	}{
 		{
 			msg:      "get root not found",
 			req:      &http.Request{Method: "GET"},
-			wantCode: yarpcerrors.CodeNotFound,
+			wantCode: yarpcerror.CodeNotFound,
 		},
 		{
 			msg: "post without call header",
@@ -243,7 +243,7 @@ func TestHandlerFailures(t *testing.T) {
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, CallerHeader),
 			},
-			wantCode: yarpcerrors.CodeInvalidArgument,
+			wantCode: yarpcerror.CodeInvalidArgument,
 		},
 		{
 			msg: "post without service header",
@@ -251,7 +251,7 @@ func TestHandlerFailures(t *testing.T) {
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, ServiceHeader),
 			},
-			wantCode: yarpcerrors.CodeInvalidArgument,
+			wantCode: yarpcerror.CodeInvalidArgument,
 		},
 		{
 			msg: "post without procedure header",
@@ -259,7 +259,7 @@ func TestHandlerFailures(t *testing.T) {
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, ProcedureHeader),
 			},
-			wantCode: yarpcerrors.CodeInvalidArgument,
+			wantCode: yarpcerror.CodeInvalidArgument,
 		},
 		{
 			msg: "post without timeout header",
@@ -267,7 +267,7 @@ func TestHandlerFailures(t *testing.T) {
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, TTLMSHeader),
 			},
-			wantCode: yarpcerrors.CodeInvalidArgument,
+			wantCode: yarpcerror.CodeInvalidArgument,
 			errTTL:   true,
 		},
 		{
@@ -275,7 +275,7 @@ func TestHandlerFailures(t *testing.T) {
 			req: &http.Request{
 				Method: "POST",
 			},
-			wantCode: yarpcerrors.CodeInvalidArgument,
+			wantCode: yarpcerror.CodeInvalidArgument,
 		},
 		{
 			msg: "post with bad timeout",
@@ -283,7 +283,7 @@ func TestHandlerFailures(t *testing.T) {
 				Method: "POST",
 				Header: headersWithBadTTL,
 			},
-			wantCode: yarpcerrors.CodeInvalidArgument,
+			wantCode: yarpcerror.CodeInvalidArgument,
 			errTTL:   true,
 		},
 	}
@@ -414,7 +414,7 @@ func TestHandlerPanic(t *testing.T) {
 	defer cancel()
 	_, err := client.Call(ctx, "panic", []byte{})
 
-	assert.Equal(t, yarpcerrors.CodeUnknown, yarpcerrors.FromError(err).Code())
+	assert.Equal(t, yarpcerror.CodeUnknown, yarpcerror.FromError(err).Code())
 }
 
 func headerCopyWithout(headers http.Header, names ...string) http.Header {

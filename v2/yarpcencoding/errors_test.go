@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcencoding"
-	"go.uber.org/yarpc/v2/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 func TestExpectEncodings(t *testing.T) {
@@ -21,47 +21,47 @@ func TestExpectEncodings(t *testing.T) {
 func TestEncodeErrors(t *testing.T) {
 	tests := []struct {
 		errorFunc     func(*yarpc.Request, error) error
-		expectedCode  yarpcerrors.Code
+		expectedCode  yarpcerror.Code
 		expectedWords []string
 	}{
 		{
 			errorFunc:     yarpcencoding.RequestBodyEncodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerror.CodeInvalidArgument,
 			expectedWords: []string{"request", "body", "encode"},
 		},
 		{
 			errorFunc:     yarpcencoding.RequestHeadersEncodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerror.CodeInvalidArgument,
 			expectedWords: []string{"request", "headers", "encode"},
 		},
 		{
 			errorFunc:     yarpcencoding.RequestBodyDecodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerror.CodeInvalidArgument,
 			expectedWords: []string{"request", "body", "decode"},
 		},
 		{
 			errorFunc:     yarpcencoding.RequestHeadersDecodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerror.CodeInvalidArgument,
 			expectedWords: []string{"request", "headers", "decode"},
 		},
 		{
 			errorFunc:     yarpcencoding.ResponseBodyEncodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerror.CodeInvalidArgument,
 			expectedWords: []string{"response", "body", "encode"},
 		},
 		{
 			errorFunc:     yarpcencoding.ResponseHeadersEncodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerror.CodeInvalidArgument,
 			expectedWords: []string{"response", "headers", "encode"},
 		},
 		{
 			errorFunc:     yarpcencoding.ResponseBodyDecodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerror.CodeInvalidArgument,
 			expectedWords: []string{"response", "body", "decode"},
 		},
 		{
 			errorFunc:     yarpcencoding.ResponseHeadersDecodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerror.CodeInvalidArgument,
 			expectedWords: []string{"response", "headers", "decode"},
 		},
 	}
@@ -71,9 +71,9 @@ func TestEncodeErrors(t *testing.T) {
 	}
 }
 
-func assertError(t *testing.T, err error, expectedCode yarpcerrors.Code, expectedWords ...string) {
+func assertError(t *testing.T, err error, expectedCode yarpcerror.Code, expectedWords ...string) {
 	assert.Error(t, err)
-	assert.Equal(t, expectedCode, yarpcerrors.FromError(err).Code())
+	assert.Equal(t, expectedCode, yarpcerror.FromError(err).Code())
 	for _, expectedWord := range expectedWords {
 		assert.Contains(t, err.Error(), expectedWord)
 	}

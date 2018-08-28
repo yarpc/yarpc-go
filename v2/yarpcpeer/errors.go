@@ -102,7 +102,7 @@ func (e ErrPeerRemoveNotInList) Error() string {
 }
 
 // ErrChooseContextHasNoDeadline is returned when a context is sent to a peerlist with no deadline
-// DEPRECATED use yarpcerrors api instead.
+// DEPRECATED use yarpcerror api instead.
 type ErrChooseContextHasNoDeadline string
 
 func (e ErrChooseContextHasNoDeadline) Error() string {

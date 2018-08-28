@@ -28,7 +28,7 @@ import (
 	"time"
 
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/zap"
 )
 
@@ -65,8 +65,8 @@ func InvokeUnaryHandler(
 	// The handler stopped work on context deadline.
 	if err == context.DeadlineExceeded && err == i.Context.Err() {
 		deadline, _ := i.Context.Deadline()
-		err = yarpcerrors.Newf(
-			yarpcerrors.CodeDeadlineExceeded,
+		err = yarpcerror.Newf(
+			yarpcerror.CodeDeadlineExceeded,
 			"call to procedure %q of service %q from caller %q timed out after %v",
 			i.Request.Procedure, i.Request.Service, i.Request.Caller, deadline.Sub(i.StartTime))
 	}

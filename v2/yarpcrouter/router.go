@@ -29,7 +29,7 @@ import (
 
 	"go.uber.org/yarpc/internal/humanize"
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 var (
@@ -166,7 +166,7 @@ func (m MapRouter) Choose(ctx context.Context, req *yarpc.Request) (yarpc.Handle
 
 	if _, ok := m.serviceNames[service]; !ok {
 		return yarpc.HandlerSpec{},
-			yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "unrecognized service name %q, "+
+			yarpcerror.Newf(yarpcerror.CodeUnimplemented, "unrecognized service name %q, "+
 				"available services: %s", req.Service, getAvailableServiceNames(m.serviceNames))
 	}
 
@@ -202,7 +202,7 @@ func (m MapRouter) Choose(ctx context.Context, req *yarpc.Request) (yarpc.Handle
 		return m.serviceProcedureEncodings[spe].HandlerSpec, nil
 	}
 
-	return yarpc.HandlerSpec{}, yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "unrecognized procedure %q for service %q", req.Procedure, req.Service)
+	return yarpc.HandlerSpec{}, yarpcerror.Newf(yarpcerror.CodeUnimplemented, "unrecognized procedure %q for service %q", req.Procedure, req.Service)
 }
 
 // Extract keys from service names map and return a formatted string

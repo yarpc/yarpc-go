@@ -25,32 +25,32 @@ import (
 	"strings"
 
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 // RequestBodyEncodeError builds a YARPC error with code
-// yarpcerrors.CodeInvalidArgument that represents a failure to encode
+// yarpcerror.CodeInvalidArgument that represents a failure to encode
 // the request body.
 func RequestBodyEncodeError(req *yarpc.Request, err error) error {
 	return newClientEncodingError(req, false /*isResponse*/, false /*isHeader*/, err)
 }
 
 // ResponseBodyDecodeError builds a YARPC error with code
-// yarpcerrors.CodeInvalidArgument that represents a failure to decode
+// yarpcerror.CodeInvalidArgument that represents a failure to decode
 // the response body.
 func ResponseBodyDecodeError(req *yarpc.Request, err error) error {
 	return newClientEncodingError(req, true /*isResponse*/, false /*isHeader*/, err)
 }
 
 // RequestHeadersEncodeError builds a YARPC error with code
-// yarpcerrors.CodeInvalidArgument that represents a failure to
+// yarpcerror.CodeInvalidArgument that represents a failure to
 // encode the request headers.
 func RequestHeadersEncodeError(req *yarpc.Request, err error) error {
 	return newClientEncodingError(req, false /*isResponse*/, true /*isHeader*/, err)
 }
 
 // ResponseHeadersDecodeError builds a YARPC error with code
-// yarpcerrors.CodeInvalidArgument that represents a failure to
+// yarpcerror.CodeInvalidArgument that represents a failure to
 // decode the response headers.
 func ResponseHeadersDecodeError(req *yarpc.Request, err error) error {
 	return newClientEncodingError(req, true /*isResponse*/, true /*isHeader*/, err)
@@ -71,5 +71,5 @@ func newClientEncodingError(req *yarpc.Request, isResponse bool, isHeader bool, 
 	parts = append(parts,
 		fmt.Sprintf("for procedure %q of service %q: %v",
 			req.Procedure, req.Service, err))
-	return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, strings.Join(parts, " "))
+	return yarpcerror.Newf(yarpcerror.CodeInvalidArgument, strings.Join(parts, " "))
 }

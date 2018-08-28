@@ -25,15 +25,15 @@ package yarpcroundrobin
 // )
 
 // var (
-// 	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "can't wait for peer without a context deadline for a roundrobin peer list")
+// 	_noContextDeadlineError = yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "can't wait for peer without a context deadline for a roundrobin peer list")
 // )
 
 // func newNotRunningError(err string) error {
-// 	return yarpcerrors.FailedPreconditionErrorf("roundrobin peer list is not running: %s", err)
+// 	return yarpcerror.FailedPreconditionErrorf("roundrobin peer list is not running: %s", err)
 // }
 
 // func newUnavailableError(err error) error {
-// 	return yarpcerrors.UnavailableErrorf("roundrobin peer list timed out waiting for peer: %s", err.Error())
+// 	return yarpcerror.UnavailableErrorf("roundrobin peer list timed out waiting for peer: %s", err.Error())
 // }
 
 // func TestRoundRobinList(t *testing.T) {
