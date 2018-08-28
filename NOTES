@@ -29,12 +29,13 @@
 - [x] yarpc/peer.Transport -> yarpc/v2.Dialer
 - [ ] yarpc/peer.Identifier -> yarpc/v2.PeerIdentifier
 - [ ] yarpc/peer.Status -> yarpc/v2.PeerStatus
-- [ ] yarpc/peer.Single -> self-choosing-peers
-      have all transport peer implementations implement peer.Chooser so they can be retained and passed manually to a client constructor
+-     replace NewSingleOutbound with &Outbound{Dialer, Addr/URL} pattern for all transports.
+      - [x] HTTP
+      - [ ] TChannel
+      - [ ] gRPC
 - [ ] audit errors.go for peer list errors regarding start/stop events
 - [ ] add doc back to v2/yarpcpeer which now is reduced to just the AbstractPeer implementation
 - [ ] remove transport argument from yarpc/v2/yarpcpeer.NewAbstractPeer previously yarpc/hostport.NewPeer
-- [ ] bring back NewSingleOutbound
 - [ ] consolidate mocks in*test into v2/yarpctest
 - [ ] yarpc.Dialer more like Dialer (Dial(ctx, id) Closer instead of RetainPeer and ReleasePeer)
 - [ ] replace TransportAction with DialerAction throughout
