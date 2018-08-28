@@ -151,7 +151,7 @@ func TestDialer(t *testing.T) {
 				yarpctest.ReleaseAction{
 					InputIdentifierID: "i1",
 					InputSubscriberID: "s1",
-					ExpectedErrType:   yarpcpeer.ErrTransportHasNoReferenceToPeer{},
+					ExpectedErrType:   yarpcpeer.ErrDialerHasNoReferenceToPeer{},
 				},
 			},
 		},

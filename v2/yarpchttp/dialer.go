@@ -278,7 +278,7 @@ func (d *dialerInternals) releasePeer(pid yarpc.Identifier, sub yarpc.Subscriber
 
 	p, ok := d.peers[pid.Identifier()]
 	if !ok {
-		return yarpcpeer.ErrTransportHasNoReferenceToPeer{
+		return yarpcpeer.ErrDialerHasNoReferenceToPeer{
 			TransportName:  "http.Transport",
 			PeerIdentifier: pid.Identifier(),
 		}

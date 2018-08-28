@@ -21,13 +21,13 @@ func TestErrPeerHasNoReferenceToSubscriber(t *testing.T) {
 	assert.Equal(t, wantErr, err.Error())
 }
 
-func TestErrTransportHasNoReferenceToPeer2(t *testing.T) {
+func TestErrDialerHasNoReferenceToPeer2(t *testing.T) {
 	transportName := "test-transport"
 	peerIdentifier := "test-peer-id"
 
-	wantErr := fmt.Sprintf("transport %q has no reference to peer %q", transportName, peerIdentifier)
+	wantErr := fmt.Sprintf("dialer %q has no reference to peer %q", transportName, peerIdentifier)
 
-	err := &yarpcpeer.ErrTransportHasNoReferenceToPeer{TransportName: transportName, PeerIdentifier: peerIdentifier}
+	err := &yarpcpeer.ErrDialerHasNoReferenceToPeer{TransportName: transportName, PeerIdentifier: peerIdentifier}
 	assert.Equal(t, wantErr, err.Error())
 }
 

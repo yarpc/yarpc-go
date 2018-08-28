@@ -37,15 +37,15 @@ func (e ErrPeerHasNoReferenceToSubscriber) Error() string {
 	return fmt.Sprintf("peer (%v) has no reference to peer subscriber (%v)", e.PeerIdentifier, e.PeerSubscriber)
 }
 
-// ErrTransportHasNoReferenceToPeer is called when a transport is expected to
+// ErrDialerHasNoReferenceToPeer is called when a transport is expected to
 // operate on a Peer it has no reference to
-type ErrTransportHasNoReferenceToPeer struct {
+type ErrDialerHasNoReferenceToPeer struct {
 	TransportName  string
 	PeerIdentifier string
 }
 
-func (e ErrTransportHasNoReferenceToPeer) Error() string {
-	return fmt.Sprintf("transport %q has no reference to peer %q", e.TransportName, e.PeerIdentifier)
+func (e ErrDialerHasNoReferenceToPeer) Error() string {
+	return fmt.Sprintf("dialer %q has no reference to peer %q", e.TransportName, e.PeerIdentifier)
 }
 
 // ErrInvalidPeerType is when a specfic peer type is required, but

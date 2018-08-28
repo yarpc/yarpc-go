@@ -174,12 +174,12 @@ package yarpcroundrobin
 // 			msg: "start stop release error",
 // 			retainedAvailablePeerIDs: []string{"1"},
 // 			errReleasedPeerIDs:       []string{"1"},
-// 			releaseErr:               yarpc.ErrTransportHasNoReferenceToPeer{},
+// 			releaseErr:               yarpc.ErrDialerHasNoReferenceToPeer{},
 // 			peerListActions: []PeerListAction{
 // 				StartAction{},
 // 				UpdateAction{AddedPeerIDs: []string{"1"}},
 // 				StopAction{
-// 					ExpectedErr: yarpc.ErrTransportHasNoReferenceToPeer{},
+// 					ExpectedErr: yarpc.ErrDialerHasNoReferenceToPeer{},
 // 				},
 // 			},
 // 			expectedUninitializedPeers: []string{"1"},
@@ -190,14 +190,14 @@ package yarpcroundrobin
 // 			retainedAvailablePeerIDs: []string{"1", "2", "3"},
 // 			releasedPeerIDs:          []string{"2"},
 // 			errReleasedPeerIDs:       []string{"1", "3"},
-// 			releaseErr:               yarpc.ErrTransportHasNoReferenceToPeer{},
+// 			releaseErr:               yarpc.ErrDialerHasNoReferenceToPeer{},
 // 			peerListActions: []PeerListAction{
 // 				StartAction{},
 // 				UpdateAction{AddedPeerIDs: []string{"1", "2", "3"}},
 // 				StopAction{
 // 					ExpectedErr: multierr.Combine(
-// 						yarpc.ErrTransportHasNoReferenceToPeer{},
-// 						yarpc.ErrTransportHasNoReferenceToPeer{},
+// 						yarpc.ErrDialerHasNoReferenceToPeer{},
+// 						yarpc.ErrDialerHasNoReferenceToPeer{},
 // 					),
 // 				},
 // 			},
@@ -368,14 +368,14 @@ package yarpcroundrobin
 // 			msg: "remove release error",
 // 			retainedAvailablePeerIDs: []string{"1", "2"},
 // 			errReleasedPeerIDs:       []string{"2"},
-// 			releaseErr:               yarpc.ErrTransportHasNoReferenceToPeer{},
+// 			releaseErr:               yarpc.ErrDialerHasNoReferenceToPeer{},
 // 			expectedAvailablePeers:   []string{"1"},
 // 			peerListActions: []PeerListAction{
 // 				StartAction{},
 // 				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
 // 				UpdateAction{
 // 					RemovedPeerIDs: []string{"2"},
-// 					ExpectedErr:    yarpc.ErrTransportHasNoReferenceToPeer{},
+// 					ExpectedErr:    yarpc.ErrDialerHasNoReferenceToPeer{},
 // 				},
 // 				ChooseAction{ExpectedPeer: "1"},
 // 				ChooseAction{ExpectedPeer: "1"},
