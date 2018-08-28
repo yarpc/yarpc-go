@@ -1,0 +1,104 @@
+- [ ] Strike ResponseWriter out, use *yarpc.Response directly.
+      - [ ] Fix inbound middleware
+      - [ ] Fix inbound transports
+      - [ ] Consider creating a unified Unary or Caller interface that can be
+            used for both inbound and outbound unary.
+      - [ ] Consider removing Body from Request and Response entirely, making
+            them positional, to avoid separating and embedding Meta* for the
+            streaming case.
+- [ ] Change Request and Response body to yarpc.Buffer type
+      - [ ] Accumulate request bodies at the inbound
+- [ ] yarpcrouter.Router needs to accept middleware to decorate registered
+      procedures.
+- [ ] Replace functional options in yarpcpeerlist with struct options
+- [ ] Create an API in yarpcfx to register and obtain peer lists by name.
+      Use this API to configure the chooser for an outbound in their transport fx package.
+      Use this API to send updates from a peer list updater to a peer list in the updater fx package.
+- [ ] yarpchttp needs to subsume responsibility for validating requests instead
+      of leaving that to middleware registered in the dispatcher.
+- [ ] Consider renaming HandlerSpecs to Routes
+- [ ] Fix round robin tests, relaxing its requirements regarding lifecycle
+      ordering, perhaps taking availability changes into account.
+- [ ] Audit yarpcerrors, remove the ones that are no longer needed.
+- [ ] Construct PRs with retroactive continuity.
+- [ ] Nit: scrape name pid and change to just id throughout.
+- [ ] Audit docs
+
+Encodings:
+- [x] Drop raw encoding
+- [x] Port JSON encoding
+- [ ] Port Thrift encoding
+- [ ] Port Protobuf encoding
+
+Transports:
+- [ ] Port TChannel transport
+- [ ] Port or recreate gRPC transport
+
+To port peer lists forward:
+- [ ] Replace functional options with options struct pattern, like net in the
+      go standard library and the v2/yarpchttp example.
+- [ ] Remove lifecycle.
+- [ ] Drop Config and Spec, recreate in yarpcfx.
+
+To port transports forward:
+- [ ] Rename Transport to Dialer, implementing yarpc.Dialer.
+- [ ] Decouple Inbound and Outbound from Transport. The Dialer gives outbounds
+      access to the underlying transport if that's needed to convey disconnect
+      messages back.  Inbounds have no need for the dialer.
+- [ ] Remove lifecycle.
+- [ ] Inbounds should have Addr and Listener properties, favoring the open Listener if given.
+- [ ] Outbounds should have URL/Addr, Dialer, and Chooser properties, favoring the Chooser if given.
+- [ ] NewSingleOutbound should be removed in favor of Outbound{Dialer, Addr or URL} as an alternative
+      to providing a chooser.
+- [ ] Start/Stop must accept context, return error.
+- [ ] Replace functional options with options struct pattern, like net in the
+      go standard library and the v2/yarpchttp example.
+- [ ] Transports() method is no longer required.
+- [ ] Reduce the Connecting peer connection status to simply Unavailable.
+- [ ] Clean up free variables that refer to dialers. What was trans, x, or transport can now be just dialer.
+- [ ] Remove all references to the raw encoding in tests, which no longer exists.
+- [ ] Stop with context should block until context expires or all connection management goroutines conclude.
+- [ ] Nit: reg as a free variable should be renamed router.
+- [ ] Audit docs
+- [ ] Nit: eliminate use of "." imports for yarpctests.
+- [ ] Replace the Dispatcher throughout tests with a yarpc.Router or yarpc.Config as needed.
+- [ ] Subsume validation instead of depending on the dispatcher to add validator middleware.
+
+To port encodings forward:
+- [ ] Accept yarpc/v2.Client instead of yarpc.ClientConfig + yarpc.Outbounds.
+- [ ] Create new codegen target for yarpc/v2
+- [ ] New encodings must accept middleware stack in client constructor
+- [ ] Replace the Dispatcher throughout tests with a yarpc.Router or yarpc.Config as needed.
+- [ ] Audit docs
+- [ ] Nit: eliminate use of "." imports for yarpctests.
+
+Package changes:
+- [ ] api/transport -> v2
+- [ ] api/peer -> v2
+- [ ] api/middleware -> v2/yarpcmiddlware
+- [ ] yarpcerrors -> v2/yarpcerror
+- [ ] yarpctest -> v2/yarpctest
+- [ ] api/transport/transporttest -> v2/yarpctest
+- [ ] api/peer/peertest -> v2/yarpctest
+- [ ] peer/peerlist/v2 -> v2/yarpcpeerlist
+- [ ] intyarpcerrors yarpc/internal/yarpcerrors -> yarpc/v2/internal/internalyarpcerrors
+
+Name changes
+- [ ] api/transport.* -> v2.*
+- [ ] api/transport/transporttest.* -> v2/yarpctest.*
+- [ ] api/peer.* -> v2.*
+- [ ] api/peer/peertest.* -> v2/yarpctest.*
+- [ ] api/middleware.* -> v2/yarpcmiddlware.*
+- [ ] api/middleware/middlewaretest.* -> v2/yarpcmiddlewaretest.*
+- [ ] transport/* -> v2/yarpc*
+- [ ] encoding/* -> v2/yarpc*
+- [ ] yarpc.ErrTansportHasNoReferenceToPeer -> yarpcpeer.ErrDialerHasNoReferenceToPeer
+- [ ] pkg/errors.WrapHandlerError -> v2/yarpcerrors.WrapHandlerError
+- [ ] peer/hostport.PeerIdentifier -> v2.Address
+- [ ] peer/hostport.Peer -> v2/yarpcpeer.AbstractPeer
+- [ ] yarpc.OpentracingTags -> v2/yarpctracing.Tags
+- [ ] internal/errors.ZeroAddrToHostPort -> v2/internal/internalyarpcerrors.ZeroAddrToHostPort
+- [ ] TransportAction -> DialerAction
+- [ ] ApplyTransportActions -> ApplyDialerActions
+- [ ] peer.Single -> no longer needed
+- [ ] peer.Binder -> no longer needed
