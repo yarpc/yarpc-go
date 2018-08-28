@@ -22,12 +22,10 @@ package yarpcrouter
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"strconv"
 	"strings"
 
-	"go.uber.org/yarpc/internal/humanize"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerror"
 )
@@ -51,9 +49,7 @@ type serviceProcedureEncoding struct {
 // procedures.
 type MapRouter struct {
 	defaultService            string
-	serviceProcedures         map[serviceProcedure]yarpc.Procedure
 	serviceProcedureEncodings map[serviceProcedureEncoding]yarpc.Procedure
-	supportedEncodings        map[serviceProcedure][]string
 	serviceNames              map[string]struct{}
 }
 
@@ -62,9 +58,7 @@ type MapRouter struct {
 func NewMapRouter(defaultService string) MapRouter {
 	return MapRouter{
 		defaultService:            defaultService,
-		serviceProcedures:         make(map[serviceProcedure]yarpc.Procedure),
 		serviceProcedureEncodings: make(map[serviceProcedureEncoding]yarpc.Procedure),
-		supportedEncodings:        make(map[serviceProcedure][]string),
 		serviceNames:              map[string]struct{}{defaultService: {}},
 	}
 }
@@ -88,52 +82,23 @@ func (m MapRouter) Register(rs []yarpc.Procedure) {
 
 		m.serviceNames[r.Service] = struct{}{}
 
-		sp := serviceProcedure{
-			service:   r.Service,
-			procedure: r.Name,
-		}
-
-		if r.Encoding == "" {
-			// Protect against masking encoding-specific routes.
-			if _, ok := m.serviceProcedures[sp]; ok {
-				panic(fmt.Sprintf("Cannot register multiple handlers for every encoding for service %q and procedure  %q", sp.service, sp.procedure))
-			}
-			if se, ok := m.supportedEncodings[sp]; ok {
-				panic(fmt.Sprintf("Cannot register a handler for every encoding for service %q and procedure %q when there are already handlers for %s", sp.service, sp.procedure, humanize.QuotedJoin(se, "and", "no encodings")))
-			}
-			// This supports wild card encodings (for backward compatibility,
-			// since type models like Thrift were not previously required to
-			// specify the encoding of every procedure).
-			m.serviceProcedures[sp] = r
-			continue
-		}
-
 		spe := serviceProcedureEncoding{
 			service:   r.Service,
 			procedure: r.Name,
 			encoding:  r.Encoding,
 		}
 
-		// Protect against overriding wildcards
-		if _, ok := m.serviceProcedures[sp]; ok {
-			panic(fmt.Sprintf("Cannot register a handler for both (service, procedure) on any * encoding and (service, procedure, encoding), specifically (%q, %q, %q)", r.Service, r.Name, r.Encoding))
-		}
 		// Route to individual handlers for unique combinations of service,
 		// procedure, and encoding. This shall henceforth be the
 		// recommended way for models to register procedures.
 		m.serviceProcedureEncodings[spe] = r
-		// Record supported encodings.
-		m.supportedEncodings[sp] = append(m.supportedEncodings[sp], string(r.Encoding))
 	}
 }
 
 // Procedures returns a list procedures that
 // have been registered so far.
 func (m MapRouter) Procedures() []yarpc.Procedure {
-	procs := make([]yarpc.Procedure, 0, len(m.serviceProcedures)+len(m.serviceProcedureEncodings))
-	for _, v := range m.serviceProcedures {
-		procs = append(procs, v)
-	}
+	procs := make([]yarpc.Procedure, 0, len(m.serviceProcedureEncodings))
 	for _, v := range m.serviceProcedureEncodings {
 		procs = append(procs, v)
 	}
@@ -178,28 +143,6 @@ func (m MapRouter) Choose(ctx context.Context, req *yarpc.Request) (yarpc.Handle
 	}
 	if procedure, ok := m.serviceProcedureEncodings[spe]; ok {
 		return procedure.HandlerSpec, nil
-	}
-
-	// Alternately use the original behavior: route all encodings to the same
-	// handler.
-	sp := serviceProcedure{
-		service:   service,
-		procedure: procedure,
-	}
-	if procedure, ok := m.serviceProcedures[sp]; ok {
-		return procedure.HandlerSpec, nil
-	}
-
-	// Supported procedure, unrecognized encoding.
-	if wantEncodings := m.supportedEncodings[sp]; len(wantEncodings) == 1 {
-		// To maintain backward compatibility with the error messages provided
-		// on the wire (as verified by Crossdock across all language
-		// implementations), this routes an invalid encoding to the sole
-		// implementation of a procedure.
-		// The handler is then responsible for detecting the invalid encoding
-		// and providing an error including "failed to decode".
-		spe.encoding = yarpc.Encoding(wantEncodings[0])
-		return m.serviceProcedureEncodings[spe].HandlerSpec, nil
 	}
 
 	return yarpc.HandlerSpec{}, yarpcerror.Newf(yarpcerror.CodeUnimplemented, "unrecognized procedure %q for service %q", req.Procedure, req.Service)

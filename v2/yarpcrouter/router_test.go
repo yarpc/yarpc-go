@@ -168,65 +168,6 @@ func TestEmptyProcedureRegistration(t *testing.T) {
 		"expected router panic")
 }
 
-func TestAmbiguousProcedureRegistration(t *testing.T) {
-	m := NewMapRouter("test-service-name")
-
-	procedures := []yarpc.Procedure{
-		{
-			Name:    "foo",
-			Service: "test",
-		},
-		{
-			Name:    "foo",
-			Service: "test",
-		},
-	}
-
-	assert.Panics(t,
-		func() { m.Register(procedures) },
-		"expected router panic")
-}
-
-func TestEncodingBeforeWildcardProcedureRegistration(t *testing.T) {
-	m := NewMapRouter("test-service-name")
-
-	procedures := []yarpc.Procedure{
-		{
-			Name:     "foo",
-			Service:  "test",
-			Encoding: "json",
-		},
-		{
-			Name:    "foo",
-			Service: "test",
-		},
-	}
-
-	assert.Panics(t,
-		func() { m.Register(procedures) },
-		"expected router panic")
-}
-
-func TestWildcardBeforeEncodingProcedureRegistration(t *testing.T) {
-	m := NewMapRouter("test-service-name")
-
-	procedures := []yarpc.Procedure{
-		{
-			Name:    "foo",
-			Service: "test",
-		},
-		{
-			Name:     "foo",
-			Service:  "test",
-			Encoding: "json",
-		},
-	}
-
-	assert.Panics(t,
-		func() { m.Register(procedures) },
-		"expected router panic")
-}
-
 func IgnoreTestRouterWithMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
