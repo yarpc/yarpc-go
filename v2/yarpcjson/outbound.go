@@ -29,27 +29,23 @@ import (
 	"go.uber.org/yarpc/v2/yarpcencoding"
 )
 
-// Client makes JSON requests to a single service.
-type Client interface {
-	// Call performs an outbound JSON request.
-	//
-	// resBodyOut is a pointer to a value that can be filled with
-	// json.Unmarshal.
-	//
-	// Returns the response or an error if the request failed.
-	Call(ctx context.Context, procedure string, reqBody interface{}, resBodyOut interface{}, opts ...yarpc.CallOption) error
-}
-
 // New builds a new JSON client.
 func New(c yarpc.Client) Client {
-	return jsonClient{c: c}
+	return Client{c: c}
 }
 
-type jsonClient struct {
+// Client is a JSON encoding porcelain for a YARPC client.
+type Client struct {
 	c yarpc.Client
 }
 
-func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interface{}, resBodyOut interface{}, opts ...yarpc.CallOption) error {
+// Call performs an outbound JSON request.
+//
+// resBodyOut is a pointer to a value that can be filled with
+// json.Unmarshal.
+//
+// Returns the response or an error if the request failed.
+func (c Client) Call(ctx context.Context, procedure string, reqBody interface{}, resBodyOut interface{}, opts ...yarpc.CallOption) error {
 	call := yarpc.NewOutboundCall(opts...)
 	treq := yarpc.Request{
 		Caller:    c.c.Caller,

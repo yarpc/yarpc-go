@@ -1,6 +1,11 @@
 - [ ] rename handler specs returned by routers to routes
 - [ ] rename UnaryOutbound to Caller
 - [ ] rename StreamOutbound to Streamer
+- [ ] strip pkg/lifecycle implementation from all component implementations
+- [ ] remove Spec and Config
+- [ ] rename CallStream / Stream/Streamer
+- [ ] scrape pid/id
+
 - [x] remove Lifecycle from Transport
 - [x] remove transport Outbound interface
 - [x] remove transport Inbound interface
@@ -11,17 +16,20 @@
 - [x] remove "connecting" state from peer status
 - [o] debatably reduce scope of peer status to just connection status, forcing the peer list to track pending request counts directly
 - [o] remove Identifier interface from Peer interface
-- [ ] strip pkg/lifecycle implementation from all component implementations
-- [ ] remove Spec and Config
-- [ ] rename CallStream / Stream/Streamer
-- [ ] scrape pid/id
-- [ ] move router to v2/yarpcrouter
-- [ ] cull support for (service, procedure) mappings in map router
-- [ ] NewInbound should take Listener and Router for HTTP and gRPC, TChannel too if we can pull it off
-- [ ] Inbound Stop should take context instead of configured timeout
-- [ ] revisit v2/yarpcraw/doc to match dispatcherless API
-- [ ] remove all yarpc.RegisterClientBuilder
-- [ ] revisit yarpcraw.New, return concrete *Client type instead of interface
+- [x] move router to v2/yarpcrouter
+- [x] cull support for (service, procedure) mappings in map router
+-     NewInbound should take Listener and Router for
+      [x] HTTP
+      [ ] gRPC
+      [-] TChannel too if we can pull it off
+-     Inbound Stop should take context instead of configured timeout
+      [x] HTTP
+      [ ] gRPC
+      [ ] TChannel
+- [o] revisit v2/yarpcraw/doc to match dispatcherless API (deleted raw)
+- [x] remove all yarpc.RegisterClientBuilder
+- [o] revisit yarpcraw.New, return concrete *Client type instead of interface (deleted instead)
+- [x] revisit yarpcjson.New, return concrete *Client type instead of interface
 - [ ] revisit v2/doc.go for package description that encompasses subpackages
 - [x] remove lifecycle from v2/yarpcpeerlist
 - [ ] fix tests in roundrobin and peerlist action tests

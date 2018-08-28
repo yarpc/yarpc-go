@@ -34,16 +34,6 @@ var (
 	_interfaceEmptyType = reflect.TypeOf((*interface{})(nil)).Elem()
 )
 
-// Register calls the RouteTable's Register method.
-//
-// This function exists for backwards compatibility only. It will be removed
-// in a future version.
-//
-// Deprecated: Use the RouteTable's Register method directly.
-func Register(r yarpc.RouteTable, rs []yarpc.Procedure) {
-	r.Register(rs)
-}
-
 // Procedure builds a Procedure from the given JSON handler. handler must be
 // a function with a signature similar to,
 //
