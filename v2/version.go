@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
+package yarpc
 
 // Version is the current version of YARPC.
-const Version = "1.33.0-dev"
+const Version = "2.0.0-dev"

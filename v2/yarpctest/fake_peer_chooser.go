@@ -24,9 +24,7 @@ import (
 	"context"
 	"fmt"
 
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/pkg/lifecycletest"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 // FakePeerChooserOption is an option for NewFakePeerChooser.
@@ -41,16 +39,12 @@ func ChooserNop(nop string) func(*FakePeerChooser) {
 
 // FakePeerChooser is a fake peer chooser.
 type FakePeerChooser struct {
-	transport.Lifecycle
-
 	nop string
 }
 
 // NewFakePeerChooser returns a fake peer list.
 func NewFakePeerChooser(opts ...FakePeerChooserOption) *FakePeerChooser {
-	pl := &FakePeerChooser{
-		Lifecycle: lifecycletest.NewNop(),
-	}
+	pl := &FakePeerChooser{}
 	for _, opt := range opts {
 		opt(pl)
 	}
@@ -58,7 +52,7 @@ func NewFakePeerChooser(opts ...FakePeerChooserOption) *FakePeerChooser {
 }
 
 // Choose pretends to choose a peer, but actually always returns an error. It's fake.
-func (c *FakePeerChooser) Choose(ctx context.Context, req *transport.Request) (peer.Peer, func(error), error) {
+func (c *FakePeerChooser) Choose(ctx context.Context, req *yarpc.Request) (yarpc.Peer, func(error), error) {
 	return nil, nil, fmt.Errorf(`fake peer chooser can't actually choose peers`)
 }
 

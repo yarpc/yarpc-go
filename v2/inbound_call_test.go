@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package encoding
+package yarpc_test
 
 import (
 	"context"
@@ -27,18 +27,18 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/transport/transporttest"
+	. "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 func TestInboundCallReadFromRequest(t *testing.T) {
 	ctx, inboundCall := NewInboundCall(context.Background())
-	err := inboundCall.ReadFromRequest(&transport.Request{
+	err := inboundCall.ReadFromRequest(&Request{
 		Caller:    "caller",
 		Service:   "service",
-		Encoding:  transport.Encoding("raw"),
+		Encoding:  Encoding("raw"),
 		Procedure: "hello",
-		Headers: transport.HeadersFromMap(map[string]string{
+		Headers: HeadersFromMap(map[string]string{
 			"hello":   "World",
 			"Foo":     "bar",
 			"success": "true",
@@ -72,7 +72,7 @@ func TestInboundCallWriteToResponse(t *testing.T) {
 	tests := []struct {
 		desc        string
 		sendHeaders map[string]string
-		wantHeaders transport.Headers
+		wantHeaders Headers
 	}{
 		{
 			desc: "no headers",
@@ -87,7 +87,7 @@ func TestInboundCallWriteToResponse(t *testing.T) {
 				call.WriteResponseHeader(k, v)
 			}
 
-			var resw transporttest.FakeResponseWriter
+			var resw yarpctest.FakeResponseWriter
 			assert.NoError(t, inboundCall.WriteToResponse(&resw))
 			assert.Equal(t, tt.wantHeaders, resw.Headers)
 		})

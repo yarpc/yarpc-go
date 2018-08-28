@@ -18,9 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package json
+package yarpcjson
 
-import "go.uber.org/yarpc/api/transport"
+import yarpc "go.uber.org/yarpc/v2"
 
 // Encoding is the name of this encoding.
-const Encoding transport.Encoding = "json"
+const Encoding yarpc.Encoding = "json"

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc
+package yarpcrouter
 
 import (
 	"context"
@@ -28,10 +28,10 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/yarpc/api/middleware"
-	"go.uber.org/yarpc/api/middleware/middlewaretest"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/transport/transporttest"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcmiddleware"
+	"go.uber.org/yarpc/v2/yarpcmiddlewaretest"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 func TestMapRouter(t *testing.T) {
@@ -40,35 +40,35 @@ func TestMapRouter(t *testing.T) {
 
 	m := NewMapRouter("myservice")
 
-	foo := transporttest.NewMockUnaryHandler(mockCtrl)
-	bar := transporttest.NewMockUnaryHandler(mockCtrl)
-	bazJSON := transporttest.NewMockUnaryHandler(mockCtrl)
-	bazThrift := transporttest.NewMockUnaryHandler(mockCtrl)
-	m.Register([]transport.Procedure{
+	foo := yarpctest.NewMockUnaryHandler(mockCtrl)
+	bar := yarpctest.NewMockUnaryHandler(mockCtrl)
+	bazJSON := yarpctest.NewMockUnaryHandler(mockCtrl)
+	bazThrift := yarpctest.NewMockUnaryHandler(mockCtrl)
+	m.Register([]yarpc.Procedure{
 		{
 			Name:        "foo",
-			HandlerSpec: transport.NewUnaryHandlerSpec(foo),
+			HandlerSpec: yarpc.NewUnaryHandlerSpec(foo),
 		},
 		{
 			Name:        "bar",
 			Service:     "anotherservice",
-			HandlerSpec: transport.NewUnaryHandlerSpec(bar),
+			HandlerSpec: yarpc.NewUnaryHandlerSpec(bar),
 		},
 		{
 			Name:        "baz",
 			Encoding:    "json",
-			HandlerSpec: transport.NewUnaryHandlerSpec(bazJSON),
+			HandlerSpec: yarpc.NewUnaryHandlerSpec(bazJSON),
 		},
 		{
 			Name:        "baz",
 			Encoding:    "thrift",
-			HandlerSpec: transport.NewUnaryHandlerSpec(bazThrift),
+			HandlerSpec: yarpc.NewUnaryHandlerSpec(bazThrift),
 		},
 	})
 
 	tests := []struct {
 		service, procedure, encoding string
-		want                         transport.UnaryHandler
+		want                         yarpc.UnaryHandler
 	}{
 		{"myservice", "foo", "", foo},
 		{"", "foo", "", foo},
@@ -86,10 +86,10 @@ func TestMapRouter(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got, err := m.Choose(context.Background(), &transport.Request{
+		got, err := m.Choose(context.Background(), &yarpc.Request{
 			Service:   tt.service,
 			Procedure: tt.procedure,
-			Encoding:  transport.Encoding(tt.encoding),
+			Encoding:  yarpc.Encoding(tt.encoding),
 		})
 		if tt.want != nil {
 			assert.NoError(t, err,
@@ -108,10 +108,10 @@ func TestMapRouter_Procedures(t *testing.T) {
 
 	m := NewMapRouter("myservice")
 
-	bar := transport.NewUnaryHandlerSpec(transporttest.NewMockUnaryHandler(mockCtrl))
-	foo := transport.NewUnaryHandlerSpec(transporttest.NewMockUnaryHandler(mockCtrl))
-	aww := transport.NewUnaryHandlerSpec(transporttest.NewMockUnaryHandler(mockCtrl))
-	m.Register([]transport.Procedure{
+	bar := yarpc.NewUnaryHandlerSpec(yarpctest.NewMockUnaryHandler(mockCtrl))
+	foo := yarpc.NewUnaryHandlerSpec(yarpctest.NewMockUnaryHandler(mockCtrl))
+	aww := yarpc.NewUnaryHandlerSpec(yarpctest.NewMockUnaryHandler(mockCtrl))
+	m.Register([]yarpc.Procedure{
 		{
 			Name:        "bar",
 			Service:     "anotherservice",
@@ -129,7 +129,7 @@ func TestMapRouter_Procedures(t *testing.T) {
 		},
 	})
 
-	expectedOrderedProcedures := []transport.Procedure{
+	expectedOrderedProcedures := []yarpc.Procedure{
 		{
 			Name:        "aww",
 			Service:     "anotherservice",
@@ -156,69 +156,10 @@ func TestMapRouter_Procedures(t *testing.T) {
 func TestEmptyProcedureRegistration(t *testing.T) {
 	m := NewMapRouter("test-service-name")
 
-	procedures := []transport.Procedure{
+	procedures := []yarpc.Procedure{
 		{
 			Name:    "",
 			Service: "test",
-		},
-	}
-
-	assert.Panics(t,
-		func() { m.Register(procedures) },
-		"expected router panic")
-}
-
-func TestAmbiguousProcedureRegistration(t *testing.T) {
-	m := NewMapRouter("test-service-name")
-
-	procedures := []transport.Procedure{
-		{
-			Name:    "foo",
-			Service: "test",
-		},
-		{
-			Name:    "foo",
-			Service: "test",
-		},
-	}
-
-	assert.Panics(t,
-		func() { m.Register(procedures) },
-		"expected router panic")
-}
-
-func TestEncodingBeforeWildcardProcedureRegistration(t *testing.T) {
-	m := NewMapRouter("test-service-name")
-
-	procedures := []transport.Procedure{
-		{
-			Name:     "foo",
-			Service:  "test",
-			Encoding: "json",
-		},
-		{
-			Name:    "foo",
-			Service: "test",
-		},
-	}
-
-	assert.Panics(t,
-		func() { m.Register(procedures) },
-		"expected router panic")
-}
-
-func TestWildcardBeforeEncodingProcedureRegistration(t *testing.T) {
-	m := NewMapRouter("test-service-name")
-
-	procedures := []transport.Procedure{
-		{
-			Name:    "foo",
-			Service: "test",
-		},
-		{
-			Name:     "foo",
-			Service:  "test",
-			Encoding: "json",
 		},
 	}
 
@@ -232,13 +173,13 @@ func IgnoreTestRouterWithMiddleware(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	ctx := context.Background()
-	req := &transport.Request{}
-	expectedSpec := transport.HandlerSpec{}
+	req := &yarpc.Request{}
+	expectedSpec := yarpc.HandlerSpec{}
 
-	routerMiddleware := middlewaretest.NewMockRouter(mockCtrl)
+	routerMiddleware := yarpcmiddlewaretest.NewMockRouter(mockCtrl)
 	routerMiddleware.EXPECT().Choose(ctx, req, gomock.Any()).Times(1).Return(expectedSpec, nil)
 
-	router := middleware.ApplyRouteTable(NewMapRouter("service"), routerMiddleware)
+	router := yarpcmiddleware.ApplyRouteTable(NewMapRouter("service"), routerMiddleware)
 
 	actualSpec, err := router.Choose(ctx, req)
 
@@ -313,18 +254,18 @@ func TestUnknownServiceName(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	m := NewMapRouter("service1")
-	foo := transporttest.NewMockUnaryHandler(mockCtrl)
+	foo := yarpctest.NewMockUnaryHandler(mockCtrl)
 
-	m.Register([]transport.Procedure{
+	m.Register([]yarpc.Procedure{
 		{
 			Name:        "foo",
-			HandlerSpec: transport.NewUnaryHandlerSpec(foo),
+			HandlerSpec: yarpc.NewUnaryHandlerSpec(foo),
 			Service:     "service2",
 			Encoding:    "json",
 		},
 	})
 
-	_, err := m.Choose(context.Background(), &transport.Request{
+	_, err := m.Choose(context.Background(), &yarpc.Request{
 		Service:   "wrongService",
 		Procedure: "foo",
 		Encoding:  "json",

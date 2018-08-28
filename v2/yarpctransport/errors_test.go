@@ -18,14 +18,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package yarpctransport
 
 import (
 	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/yarpc/yarpcerrors"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 func TestBadRequestError(t *testing.T) {
@@ -35,15 +36,15 @@ func TestBadRequestError(t *testing.T) {
 }
 
 func TestIsUnexpectedError(t *testing.T) {
-	assert.True(t, IsUnexpectedError(yarpcerrors.Newf(yarpcerrors.CodeInternal, "")))
+	assert.True(t, IsUnexpectedError(yarpcerror.Newf(yarpcerror.CodeInternal, "")))
 }
 
 func TestIsTimeoutError(t *testing.T) {
-	assert.True(t, IsTimeoutError(yarpcerrors.Newf(yarpcerrors.CodeDeadlineExceeded, "")))
+	assert.True(t, IsTimeoutError(yarpcerror.Newf(yarpcerror.CodeDeadlineExceeded, "")))
 }
 
 func TestUnrecognizedProcedureError(t *testing.T) {
-	err := UnrecognizedProcedureError(&Request{Service: "curly", Procedure: "nyuck"})
+	err := UnrecognizedProcedureError(&yarpc.Request{Service: "curly", Procedure: "nyuck"})
 	assert.True(t, IsUnrecognizedProcedureError(err))
 	assert.False(t, IsUnrecognizedProcedureError(errors.New("derp")))
 }

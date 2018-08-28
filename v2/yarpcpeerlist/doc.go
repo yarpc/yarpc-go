@@ -18,15 +18,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package peerlist provides a utility for managing peer availability with a
-// separate implementation of peer selection from just among available peers.
-// The peer list implements the peer.ChooserList interface and accepts a
-// peerlist.Implementation to provide the implementation-specific concern of,
-// for example, a *roundrobin.List.
+// Package yarpcpeerlist provides an abstract implementation of a peer list.
 //
-// The example is an implementation of peer.ChooserList using a random peer selection
-// strategy, returned by newRandomListImplementation(), implementing
-// peerlist.Implementation.
+// The peer list watches the availability of individual peers, responds to
+// membership updates, and delegates to a logical implementation, e.g.,
+// yarpcroundrobin, to choose from among available peers.
+//
+// This example is an implementation of peer.ChooserList using a random peer
+// selection strategy, returned by newRandomListImplementation(), implementing
+// yarpcpeerlist.Implementation.
 //
 //   type List struct {
 //   	*peerlist.List
@@ -42,4 +42,4 @@
 //   	}
 //   }
 //
-package peerlist
+package yarpcpeerlist

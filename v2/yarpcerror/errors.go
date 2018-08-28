@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcerrors
+package yarpcerror
 
 import (
 	"bytes"
@@ -312,69 +312,6 @@ func IsDataLoss(err error) bool {
 // IsUnauthenticated returns true if FromError(err).Code() == CodeUnauthenticated.
 func IsUnauthenticated(err error) bool {
 	return FromError(err).Code() == CodeUnauthenticated
-}
-
-// IsYARPCError returns whether the provided error is a YARPC error.
-//
-// This is always false if the error is nil.
-//
-// Deprecated: use IsStatus instead.
-func IsYARPCError(err error) bool {
-	return IsStatus(err)
-}
-
-// ErrorCode returns the Code for the given error, CodeOK if the error is nil,
-// or CodeUnknown if the given error is not a YARPC error.
-//
-// Deprecated: Use FromError and Code instead.
-func ErrorCode(err error) Code {
-	return FromError(err).Code()
-}
-
-// ErrorName returns the name for the given error, or "" if the given
-// error is not a YARPC error created with NamedErrorf that has a non-empty name.
-//
-// Deprecated: Use FromError and Name instead.
-func ErrorName(err error) string {
-	return FromError(err).Name()
-}
-
-// ErrorMessage returns the message for the given error, or "" if the given
-// error is nil, or err.Error() if the given error is not a YARPC error or
-// the YARPC error had no message.
-//
-// Deprecated: Use FromError and Message instead.
-func ErrorMessage(err error) string {
-	return FromError(err).Message()
-}
-
-// NamedErrorf returns a new Status with code CodeUnknown and the given name.
-//
-// This should be used for user-defined errors.
-//
-// The name must only contain lowercase letters from a-z and dashes (-), and
-// cannot start or end in a dash. If the name is something else, an error with
-// code CodeInternal will be returned.
-//
-// Deprecated: Use Newf and WithName instead.
-func NamedErrorf(name string, format string, args ...interface{}) error {
-	return Newf(CodeUnknown, format, args...).WithName(name)
-}
-
-// FromHeaders returns a new Status from headers transmitted from the server side.
-//
-// If the specified code is CodeOK, this will return nil.
-//
-// The name must only contain lowercase letters from a-z and dashes (-), and
-// cannot start or end in a dash. If the name is something else, an error with
-// code CodeInternal will be returned.
-//
-// This function should not be used by server implementations, use the individual
-// error constructors instead. This should only be used by transport implementations.
-//
-// Deprecated: Use Newf and WithName instead.
-func FromHeaders(code Code, name string, message string) error {
-	return Newf(code, message).WithName(name)
 }
 
 func sprintf(format string, args ...interface{}) string {

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package json
+package yarpcjson
 
 import (
 	"bytes"
@@ -31,9 +31,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 type simpleRequest struct {
@@ -59,8 +58,8 @@ func TestHandleStructSuccess(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	resw := new(transporttest.FakeResponseWriter)
-	err := handler.Handle(context.Background(), &transport.Request{
+	resw := new(yarpctest.FakeResponseWriter)
+	err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",
 		Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),
@@ -86,8 +85,8 @@ func TestHandleMapSuccess(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	resw := new(transporttest.FakeResponseWriter)
-	err := handler.Handle(context.Background(), &transport.Request{
+	resw := new(yarpctest.FakeResponseWriter)
+	err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "foo",
 		Encoding:  "json",
 		Body:      jsonBody(`{"foo": 42, "bar": ["a", "b", "c"]}`),
@@ -106,8 +105,8 @@ func TestHandleInterfaceEmptySuccess(t *testing.T) {
 
 	handler := jsonHandler{reader: ifaceEmptyReader{}, handler: reflect.ValueOf(h)}
 
-	resw := new(transporttest.FakeResponseWriter)
-	err := handler.Handle(context.Background(), &transport.Request{
+	resw := new(yarpctest.FakeResponseWriter)
+	err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "foo",
 		Encoding:  "json",
 		Body:      jsonBody(`["a", "b", "c"]`),
@@ -128,15 +127,15 @@ func TestHandleSuccessWithResponseHeaders(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	resw := new(transporttest.FakeResponseWriter)
-	err := handler.Handle(context.Background(), &transport.Request{
+	resw := new(yarpctest.FakeResponseWriter)
+	err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",
 		Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),
 	}, resw)
 	require.NoError(t, err)
 
-	assert.Equal(t, transport.NewHeaders().With("foo", "bar"), resw.Headers)
+	assert.Equal(t, yarpc.NewHeaders().With("foo", "bar"), resw.Headers)
 }
 
 func TestHandleBothResponseError(t *testing.T) {
@@ -153,8 +152,8 @@ func TestHandleBothResponseError(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	resw := new(transporttest.FakeResponseWriter)
-	err := handler.Handle(context.Background(), &transport.Request{
+	resw := new(yarpctest.FakeResponseWriter)
+	err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",
 		Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),

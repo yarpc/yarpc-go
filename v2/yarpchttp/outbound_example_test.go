@@ -18,25 +18,29 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http_test
+package yarpchttp_test
 
 import (
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/transport/http"
+	"context"
+	"log"
+	"net/url"
+
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpchttp"
+	"go.uber.org/yarpc/v2/yarpcjson"
 )
 
 func ExampleOutbound() {
-	transport := http.NewTransport()
-
-	yarpc.NewDispatcher(yarpc.Config{
-		Name: "myservice",
-		Outbounds: yarpc.Outbounds{
-			"myservice": {
-				Unary: transport.NewSingleOutbound("http://127.0.0.1:8888"),
-			},
-			"anotherservice": {
-				Unary: transport.NewSingleOutbound("http://127.0.0.1:9999"),
-			},
+	dialer := &yarpchttp.Dialer{}
+	if err := dialer.Start(context.Background()); err != nil {
+		log.Fatal(err)
+	}
+	yarpcjson.New(yarpc.Client{
+		Caller:  "myservice",
+		Service: "theirservice",
+		Unary: &yarpchttp.Outbound{
+			URL:    &url.URL{Host: "127.0.0.1:8888"},
+			Dialer: dialer,
 		},
 	})
 }

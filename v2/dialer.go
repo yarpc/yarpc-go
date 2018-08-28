@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package peer
+package yarpc
 
 // Subscriber listens to changes of a Peer over time.
 type Subscriber interface {
@@ -26,12 +26,21 @@ type Subscriber interface {
 	NotifyStatusChanged(Identifier)
 }
 
-// Transport manages Peers across different Subscribers.  A Subscriber will request a Peer for a specific
-// PeerIdentifier and the Transport has the ability to create a new Peer or return an existing one.
-type Transport interface {
+// Dialer manages Peers across different Subscribers.  A Subscriber will
+// request a Peer for a specific Identifier and the Dialer has the ability to
+// create a new Peer or return an existing one.
+type Dialer interface {
 	// Get or create a Peer for the Subscriber
 	RetainPeer(Identifier, Subscriber) (Peer, error)
 
 	// Unallocate a peer from the Subscriber
 	ReleasePeer(Identifier, Subscriber) error
 }
+
+type nopSubscriber struct{}
+
+func (nopSubscriber) NotifyStatusChanged(Identifier) {}
+
+// NopSubscriber is a peer status notification subscriber that ignores such
+// notifications, for tests and for the single peer chooser.
+var NopSubscriber nopSubscriber

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport_test
+package yarpc_test
 
 import (
 	"context"
@@ -27,21 +27,21 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/yarpc/api/transport"
+	. "go.uber.org/yarpc/v2"
 	"go.uber.org/zap/zapcore"
 )
 
 func TestValidator(t *testing.T) {
 	tests := []struct {
-		req           *transport.Request
-		transportType transport.Type
+		req           *Request
+		transportType Type
 		ttl           time.Duration
 
 		wantMissingParams []string
 	}{
 		{
 			// No error
-			req: &transport.Request{
+			req: &Request{
 				Caller:    "caller",
 				Service:   "service",
 				Encoding:  "raw",
@@ -51,7 +51,7 @@ func TestValidator(t *testing.T) {
 		},
 		{
 			// encoding is not required
-			req: &transport.Request{
+			req: &Request{
 				Caller:    "caller",
 				Service:   "service",
 				Procedure: "hello",
@@ -59,7 +59,7 @@ func TestValidator(t *testing.T) {
 			wantMissingParams: []string{"encoding"},
 		},
 		{
-			req: &transport.Request{
+			req: &Request{
 				Service:   "service",
 				Procedure: "hello",
 				Encoding:  "raw",
@@ -67,7 +67,7 @@ func TestValidator(t *testing.T) {
 			wantMissingParams: []string{"caller"},
 		},
 		{
-			req: &transport.Request{
+			req: &Request{
 				Caller:    "caller",
 				Procedure: "hello",
 				Encoding:  "raw",
@@ -75,7 +75,7 @@ func TestValidator(t *testing.T) {
 			wantMissingParams: []string{"service"},
 		},
 		{
-			req: &transport.Request{
+			req: &Request{
 				Caller:   "caller",
 				Service:  "service",
 				Encoding: "raw",
@@ -83,26 +83,26 @@ func TestValidator(t *testing.T) {
 			wantMissingParams: []string{"procedure"},
 		},
 		{
-			req: &transport.Request{
+			req: &Request{
 				Caller:    "caller",
 				Service:   "service",
 				Procedure: "hello",
 				Encoding:  "raw",
 			},
-			transportType:     transport.Unary,
+			transportType:     Unary,
 			wantMissingParams: []string{"TTL"},
 		},
 		{
-			req:               &transport.Request{},
+			req:               &Request{},
 			wantMissingParams: []string{"encoding", "caller", "service", "procedure"},
 		},
 	}
 
 	for _, tt := range tests {
 		ctx := context.Background()
-		err := transport.ValidateRequest(tt.req)
+		err := ValidateRequest(tt.req)
 
-		if err == nil && tt.transportType == transport.Unary {
+		if err == nil && tt.transportType == Unary {
 			var cancel func()
 
 			if tt.ttl != 0 {
@@ -110,7 +110,7 @@ func TestValidator(t *testing.T) {
 				defer cancel()
 			}
 
-			err = transport.ValidateRequestContext(ctx)
+			err = ValidateRequestContext(ctx)
 		}
 
 		if len(tt.wantMissingParams) > 0 {
@@ -126,13 +126,13 @@ func TestValidator(t *testing.T) {
 }
 
 func TestRequestLogMarshaling(t *testing.T) {
-	r := &transport.Request{
+	r := &Request{
 		Caller:          "caller",
 		Service:         "service",
 		Transport:       "transport",
 		Encoding:        "raw",
 		Procedure:       "procedure",
-		Headers:         transport.NewHeaders().With("password", "super-secret"),
+		Headers:         NewHeaders().With("password", "super-secret"),
 		ShardKey:        "shard01",
 		RoutingKey:      "routing-key",
 		RoutingDelegate: "routing-delegate",
@@ -153,13 +153,13 @@ func TestRequestLogMarshaling(t *testing.T) {
 }
 
 func TestRequestMetaToRequestConversionAndBack(t *testing.T) {
-	reqMeta := &transport.RequestMeta{
+	reqMeta := &RequestMeta{
 		Caller:          "caller",
 		Service:         "service",
 		Transport:       "transport",
 		Encoding:        "raw",
 		Procedure:       "hello",
-		Headers:         transport.NewHeaders().With("key", "val"),
+		Headers:         NewHeaders().With("key", "val"),
 		ShardKey:        "shard",
 		RoutingKey:      "rk",
 		RoutingDelegate: "rd",
@@ -171,7 +171,7 @@ func TestRequestMetaToRequestConversionAndBack(t *testing.T) {
 }
 
 func TestNilRequestMetaToRequestConversion(t *testing.T) {
-	var reqMeta *transport.RequestMeta
+	var reqMeta *RequestMeta
 
-	assert.Equal(t, &transport.Request{}, reqMeta.ToRequest())
+	assert.Equal(t, &Request{}, reqMeta.ToRequest())
 }

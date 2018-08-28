@@ -20,7 +20,7 @@
 
 package routertest
 
-import "go.uber.org/yarpc/api/transport"
+import yarpc "go.uber.org/yarpc/v2"
 
 // Criterion is an argument that adds criteria to a transport request and
 // context matcher.
@@ -40,7 +40,7 @@ func NewMatcher(criteria ...Criterion) *Matcher {
 	return &m
 }
 
-type choiceConstraint func(*transport.Request) bool
+type choiceConstraint func(*yarpc.Request) bool
 
 // Matcher is a gomock Matcher that validates transport requests with
 // given criteria.
@@ -50,7 +50,7 @@ type Matcher struct {
 
 // WithCaller adds a constraint that the request caller must match.
 func (m *Matcher) WithCaller(caller string) *Matcher {
-	m.constraints = append(m.constraints, func(r *transport.Request) bool {
+	m.constraints = append(m.constraints, func(r *yarpc.Request) bool {
 		return caller == r.Caller
 	})
 	return m
@@ -58,7 +58,7 @@ func (m *Matcher) WithCaller(caller string) *Matcher {
 
 // WithService adds a constraint that the request callee must match.
 func (m *Matcher) WithService(service string) *Matcher {
-	m.constraints = append(m.constraints, func(r *transport.Request) bool {
+	m.constraints = append(m.constraints, func(r *yarpc.Request) bool {
 		return service == r.Service
 	})
 	return m
@@ -66,7 +66,7 @@ func (m *Matcher) WithService(service string) *Matcher {
 
 // WithProcedure adds a constraint that the request procedure must match.
 func (m *Matcher) WithProcedure(procedure string) *Matcher {
-	m.constraints = append(m.constraints, func(r *transport.Request) bool {
+	m.constraints = append(m.constraints, func(r *yarpc.Request) bool {
 		return procedure == r.Procedure
 	})
 	return m
@@ -75,7 +75,7 @@ func (m *Matcher) WithProcedure(procedure string) *Matcher {
 // Matches returns whether a transport request matches the configured criteria
 // for the matcher.
 func (m *Matcher) Matches(got interface{}) bool {
-	req := got.(*transport.Request)
+	req := got.(*yarpc.Request)
 	for _, check := range m.constraints {
 		if !check(req) {
 			return false

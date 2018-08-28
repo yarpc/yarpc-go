@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package encoding
+package yarpc
 
 import (
 	"context"
@@ -26,29 +26,28 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/api/transport"
 )
 
 func TestOutboundCallWriteToRequestAndRequestMeta(t *testing.T) {
 	tests := []struct {
 		desc        string
 		giveOptions []CallOption
-		giveRequest transport.Request
-		wantRequest transport.Request
+		giveRequest Request
+		wantRequest Request
 	}{
 		{
 			desc:        "no options",
 			giveOptions: []CallOption{},
-			giveRequest: transport.Request{
+			giveRequest: Request{
 				Caller:    "caller",
 				Service:   "service",
-				Encoding:  transport.Encoding("raw"),
+				Encoding:  Encoding("raw"),
 				Procedure: "hello",
 			},
-			wantRequest: transport.Request{
+			wantRequest: Request{
 				Caller:    "caller",
 				Service:   "service",
-				Encoding:  transport.Encoding("raw"),
+				Encoding:  Encoding("raw"),
 				Procedure: "hello",
 			},
 		},
@@ -58,18 +57,18 @@ func TestOutboundCallWriteToRequestAndRequestMeta(t *testing.T) {
 				WithHeader("foo", "bar"),
 				WithHeader("baz", "qux"),
 			},
-			giveRequest: transport.Request{
+			giveRequest: Request{
 				Caller:    "caller",
 				Service:   "service",
-				Encoding:  transport.Encoding("raw"),
+				Encoding:  Encoding("raw"),
 				Procedure: "hello",
 			},
-			wantRequest: transport.Request{
+			wantRequest: Request{
 				Caller:    "caller",
 				Service:   "service",
-				Encoding:  transport.Encoding("raw"),
+				Encoding:  Encoding("raw"),
 				Procedure: "hello",
-				Headers:   transport.HeadersFromMap(map[string]string{"foo": "bar", "baz": "qux"}),
+				Headers:   HeadersFromMap(map[string]string{"foo": "bar", "baz": "qux"}),
 			},
 		},
 		{
@@ -79,8 +78,8 @@ func TestOutboundCallWriteToRequestAndRequestMeta(t *testing.T) {
 				WithHeader("baz", "qux"),
 				WithHeader("foo", "qux"),
 			},
-			wantRequest: transport.Request{
-				Headers: transport.HeadersFromMap(map[string]string{
+			wantRequest: Request{
+				Headers: HeadersFromMap(map[string]string{
 					"foo": "qux",
 					"baz": "qux",
 				}),
@@ -92,8 +91,8 @@ func TestOutboundCallWriteToRequestAndRequestMeta(t *testing.T) {
 				WithHeader("foo", "bar"),
 				WithShardKey("derp"),
 			},
-			wantRequest: transport.Request{
-				Headers:  transport.NewHeaders().With("foo", "bar"),
+			wantRequest: Request{
+				Headers:  NewHeaders().With("foo", "bar"),
 				ShardKey: "derp",
 			},
 		},
@@ -103,7 +102,7 @@ func TestOutboundCallWriteToRequestAndRequestMeta(t *testing.T) {
 				WithShardKey("derp"),
 				WithRoutingKey("hello"),
 			},
-			wantRequest: transport.Request{
+			wantRequest: Request{
 				ShardKey:   "derp",
 				RoutingKey: "hello",
 			},
@@ -114,7 +113,7 @@ func TestOutboundCallWriteToRequestAndRequestMeta(t *testing.T) {
 				WithRoutingKey("hello"),
 				WithRoutingDelegate("zzz"),
 			},
-			wantRequest: transport.Request{
+			wantRequest: Request{
 				RoutingKey:      "hello",
 				RoutingDelegate: "zzz",
 			},
@@ -162,8 +161,8 @@ func TestOutboundCallWriteToRequestAndRequestMeta(t *testing.T) {
 func TestOutboundCallReadFromResponse(t *testing.T) {
 	var headers map[string]string
 	call := NewOutboundCall(ResponseHeaders(&headers))
-	_, err := call.ReadFromResponse(context.Background(), &transport.Response{
-		Headers: transport.HeadersFromMap(map[string]string{
+	_, err := call.ReadFromResponse(context.Background(), &Response{
+		Headers: HeadersFromMap(map[string]string{
 			"hello":   "World",
 			"Foo":     "bar",
 			"success": "true",

@@ -18,13 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package roundrobin
+package yarpcroundrobin
 
 import (
 	"time"
 
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/peer/peerlist/v2"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcpeerlist"
 )
 
 type listConfig struct {
@@ -53,31 +53,31 @@ func Capacity(capacity int) ListOption {
 }
 
 // New creates a new round robin peer list.
-func New(transport peer.Transport, opts ...ListOption) *List {
+func New(dialer yarpc.Dialer, opts ...ListOption) *List {
 	cfg := defaultListConfig
 	for _, o := range opts {
 		o(&cfg)
 	}
 
-	plOpts := []peerlist.ListOption{
-		peerlist.Capacity(cfg.capacity),
-		peerlist.Seed(cfg.seed),
+	plOpts := []yarpcpeerlist.ListOption{
+		yarpcpeerlist.Capacity(cfg.capacity),
+		yarpcpeerlist.Seed(cfg.seed),
 	}
 	if !cfg.shuffle {
-		plOpts = append(plOpts, peerlist.NoShuffle())
+		plOpts = append(plOpts, yarpcpeerlist.NoShuffle())
 	}
 
 	return &List{
-		List: peerlist.New(
+		List: yarpcpeerlist.New(
 			"roundrobin",
-			transport,
+			dialer,
 			newPeerRing(),
 			plOpts...,
 		),
 	}
 }
 
-// List is a PeerList which rotates which peers are to be selected in a circle
+// List is a PeerList that rotates which peers are to be selected in a cycle.
 type List struct {
-	*peerlist.List
+	*yarpcpeerlist.List
 }

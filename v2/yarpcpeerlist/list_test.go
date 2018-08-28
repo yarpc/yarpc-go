@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package peerlist
+package yarpcpeerlist
 
 import (
 	"context"
@@ -27,23 +27,21 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/yarpctest"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 const (
-	id1 = hostport.PeerIdentifier("1.2.3.4:1234")
-	id2 = hostport.PeerIdentifier("4.3.2.1:4321")
-	id3 = hostport.PeerIdentifier("1.1.1.1:1111")
+	id1 = yarpc.Address("1.2.3.4:1234")
+	id2 = yarpc.Address("4.3.2.1:4321")
+	id3 = yarpc.Address("1.1.1.1:1111")
 )
 
 func TestValues(t *testing.T) {
-	vs := values(map[string]peer.Identifier{})
-	assert.Equal(t, []peer.Identifier{}, vs)
+	vs := values(map[string]yarpc.Identifier{})
+	assert.Equal(t, []yarpc.Identifier{}, vs)
 
-	vs = values(map[string]peer.Identifier{"_": id1, "__": id2})
+	vs = values(map[string]yarpc.Identifier{"_": id1, "__": id2})
 	assert.Equal(t, 2, len(vs))
 	assert.Contains(t, vs, id1)
 	assert.Contains(t, vs, id2)
@@ -53,26 +51,26 @@ func TestShuffle(t *testing.T) {
 	for _, test := range []struct {
 		msg  string
 		seed int64
-		in   []peer.Identifier
-		want []peer.Identifier
+		in   []yarpc.Identifier
+		want []yarpc.Identifier
 	}{
 		{
 			"empty",
 			0,
-			[]peer.Identifier{},
-			[]peer.Identifier{},
+			[]yarpc.Identifier{},
+			[]yarpc.Identifier{},
 		},
 		{
 			"some",
 			0,
-			[]peer.Identifier{id1, id2, id3},
-			[]peer.Identifier{id2, id3, id1},
+			[]yarpc.Identifier{id1, id2, id3},
+			[]yarpc.Identifier{id2, id3, id1},
 		},
 		{
 			"different seed",
 			7,
-			[]peer.Identifier{id1, id2, id3},
-			[]peer.Identifier{id2, id1, id3},
+			[]yarpc.Identifier{id1, id2, id3},
+			[]yarpc.Identifier{id2, id1, id3},
 		},
 	} {
 		t.Run(test.msg, func(t *testing.T) {
@@ -84,141 +82,106 @@ func TestShuffle(t *testing.T) {
 
 // most recently added peer list implementation for the test.
 type mraList struct {
-	mra peer.StatusPeer
-	mrr peer.StatusPeer
+	mra yarpc.StatusPeer
+	mrr yarpc.StatusPeer
 }
 
 var _ Implementation = (*mraList)(nil)
 
-func (l *mraList) Add(peer peer.StatusPeer, pid peer.Identifier) peer.Subscriber {
+func (l *mraList) Add(peer yarpc.StatusPeer, pid yarpc.Identifier) yarpc.Subscriber {
 	l.mra = peer
 	return &mraSub{}
 }
 
-func (l *mraList) Remove(peer peer.StatusPeer, pid peer.Identifier, ps peer.Subscriber) {
+func (l *mraList) Remove(peer yarpc.StatusPeer, pid yarpc.Identifier, ps yarpc.Subscriber) {
 	l.mrr = peer
 }
 
-func (l *mraList) Choose(ctx context.Context, req *transport.Request) peer.StatusPeer {
+func (l *mraList) Choose(ctx context.Context, req *yarpc.Request) yarpc.StatusPeer {
 	return l.mra
-}
-
-func (l *mraList) Start() error {
-	return nil
-}
-
-func (l *mraList) Stop() error {
-	return nil
-}
-
-func (l *mraList) IsRunning() bool {
-	return true
 }
 
 type mraSub struct {
 }
 
-func (s *mraSub) NotifyStatusChanged(pid peer.Identifier) {
+func (s *mraSub) NotifyStatusChanged(pid yarpc.Identifier) {
 }
 
 func TestPeerList(t *testing.T) {
-	fake := yarpctest.NewFakeTransport(yarpctest.InitialConnectionStatus(peer.Unavailable))
+	fake := yarpctest.NewFakeTransport(yarpctest.InitialConnectionStatus(yarpc.Unavailable))
 	impl := &mraList{}
 	list := New("mra", fake, impl, Capacity(1), NoShuffle(), Seed(0))
 
 	peers := list.Peers()
 	assert.Len(t, peers, 0)
 
-	assert.NoError(t, list.Update(peer.ListUpdates{
-		Additions: []peer.Identifier{
-			hostport.Identify("1.1.1.1:4040"),
-			hostport.Identify("2.2.2.2:4040"),
+	assert.NoError(t, list.Update(yarpc.ListUpdates{
+		Additions: []yarpc.Identifier{
+			yarpc.Address("1.1.1.1:4040"),
+			yarpc.Address("2.2.2.2:4040"),
 		},
-		Removals: []peer.Identifier{},
+		Removals: []yarpc.Identifier{},
 	}))
 
 	// Invalid updates before start
-	assert.Error(t, list.Update(peer.ListUpdates{
-		Additions: []peer.Identifier{
-			hostport.Identify("1.1.1.1:4040"),
+	assert.Error(t, list.Update(yarpc.ListUpdates{
+		Additions: []yarpc.Identifier{
+			yarpc.Address("1.1.1.1:4040"),
 		},
-		Removals: []peer.Identifier{
-			hostport.Identify("3.3.3.3:4040"),
+		Removals: []yarpc.Identifier{
+			yarpc.Address("3.3.3.3:4040"),
 		},
 	}))
 
-	assert.Equal(t, 0, list.NumAvailable())
-	assert.Equal(t, 0, list.NumUnavailable())
-	assert.Equal(t, 2, list.NumUninitialized())
-	assert.False(t, list.Available(hostport.Identify("2.2.2.2:4040")))
-	assert.True(t, list.Uninitialized(hostport.Identify("2.2.2.2:4040")))
-
-	require.NoError(t, list.Start())
-
 	// Connect to the peer and simulate a request.
-	fake.SimulateConnect(hostport.Identify("2.2.2.2:4040"))
+	fake.SimulateConnect(yarpc.Address("2.2.2.2:4040"))
 	assert.Equal(t, 1, list.NumAvailable())
 	assert.Equal(t, 1, list.NumUnavailable())
-	assert.Equal(t, 0, list.NumUninitialized())
-	assert.True(t, list.Available(hostport.Identify("2.2.2.2:4040")))
-	assert.False(t, list.Uninitialized(hostport.Identify("2.2.2.2:4040")))
+	assert.True(t, list.Available(yarpc.Address("2.2.2.2:4040")))
 	peers = list.Peers()
 	assert.Len(t, peers, 2)
-	p, onFinish, err := list.Choose(context.Background(), &transport.Request{})
+	p, onFinish, err := list.Choose(context.Background(), &yarpc.Request{})
 	assert.Equal(t, "2.2.2.2:4040", p.Identifier())
 	require.NoError(t, err)
 	onFinish(nil)
 
 	// Simulate a second connection and request.
-	fake.SimulateConnect(hostport.Identify("1.1.1.1:4040"))
+	fake.SimulateConnect(yarpc.Address("1.1.1.1:4040"))
 	assert.Equal(t, 2, list.NumAvailable())
 	assert.Equal(t, 0, list.NumUnavailable())
-	assert.Equal(t, 0, list.NumUninitialized())
 	peers = list.Peers()
 	assert.Len(t, peers, 2)
-	p, onFinish, err = list.Choose(context.Background(), &transport.Request{})
+	p, onFinish, err = list.Choose(context.Background(), &yarpc.Request{})
 	assert.Equal(t, "1.1.1.1:4040", p.Identifier())
 	require.NoError(t, err)
 	onFinish(nil)
 
-	fake.SimulateDisconnect(hostport.Identify("2.2.2.2:4040"))
+	fake.SimulateDisconnect(yarpc.Address("2.2.2.2:4040"))
 	assert.Equal(t, "2.2.2.2:4040", impl.mrr.Identifier())
 
-	assert.NoError(t, list.Update(peer.ListUpdates{
-		Additions: []peer.Identifier{
-			hostport.Identify("3.3.3.3:4040"),
+	assert.NoError(t, list.Update(yarpc.ListUpdates{
+		Additions: []yarpc.Identifier{
+			yarpc.Address("3.3.3.3:4040"),
 		},
-		Removals: []peer.Identifier{
-			hostport.Identify("2.2.2.2:4040"),
+		Removals: []yarpc.Identifier{
+			yarpc.Address("2.2.2.2:4040"),
 		},
 	}))
 
 	// Invalid updates
-	assert.Error(t, list.Update(peer.ListUpdates{
-		Additions: []peer.Identifier{
-			hostport.Identify("3.3.3.3:4040"),
+	assert.Error(t, list.Update(yarpc.ListUpdates{
+		Additions: []yarpc.Identifier{
+			yarpc.Address("3.3.3.3:4040"),
 		},
-		Removals: []peer.Identifier{
-			hostport.Identify("4.4.4.4:4040"),
-		},
-	}))
-
-	require.NoError(t, list.Stop())
-
-	// Invalid updates, after stop
-	assert.Error(t, list.Update(peer.ListUpdates{
-		Additions: []peer.Identifier{
-			hostport.Identify("3.3.3.3:4040"),
-		},
-		Removals: []peer.Identifier{
-			hostport.Identify("4.4.4.4:4040"),
+		Removals: []yarpc.Identifier{
+			yarpc.Address("4.4.4.4:4040"),
 		},
 	}))
 
-	assert.NoError(t, list.Update(peer.ListUpdates{
-		Additions: []peer.Identifier{},
-		Removals: []peer.Identifier{
-			hostport.Identify("3.3.3.3:4040"),
+	assert.NoError(t, list.Update(yarpc.ListUpdates{
+		Additions: []yarpc.Identifier{},
+		Removals: []yarpc.Identifier{
+			yarpc.Address("3.3.3.3:4040"),
 		},
 	}))
 }

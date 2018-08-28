@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport_test
+package yarpctransport_test
 
 import (
 	"context"
@@ -29,86 +29,25 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpctest"
+	"go.uber.org/yarpc/v2/yarpctransport"
 	"go.uber.org/zap"
 )
 
-func TestDispatchUnaryHandlerWithPanic(t *testing.T) {
-	msg := "I'm panicking in a unary handler!"
-	handler := func(context.Context, *transport.Request, transport.ResponseWriter) error {
-		panic(msg)
-	}
-	var err error
-	require.NotPanics(t, func() {
-		err = transport.DispatchUnaryHandler(
-			context.Background(),
-			transport.UnaryHandlerFunc(handler),
-			time.Now(),
-			&transport.Request{},
-			nil,
-		)
-	}, "Panic not recovered")
-	expectMsg := fmt.Sprintf("panic: %s", msg)
-	assert.Equal(t, expectMsg, err.Error())
-}
-
-func TestDispatchOnewayHandlerWithPanic(t *testing.T) {
-	msg := "I'm panicking in a oneway handler!"
-	handler := func(context.Context, *transport.Request) error {
-		panic(msg)
-	}
-	var err error
-	require.NotPanics(t, func() {
-		err = transport.DispatchOnewayHandler(
-			context.Background(),
-			transport.OnewayHandlerFunc(handler),
-			&transport.Request{},
-		)
-	}, "Panic not recovered")
-	expectMsg := fmt.Sprintf("panic: %s", msg)
-	assert.Equal(t, expectMsg, err.Error())
-}
-
-func TestDispatchStreamHandlerWithPanic(t *testing.T) {
-	msg := "I'm panicking in a stream handler!"
-	handler := func(*transport.ServerStream) error {
-		panic(msg)
-	}
-	var err error
-
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-	mockStream := transporttest.NewMockStream(mockCtrl)
-	mockStream.EXPECT().Request().Return(
-		&transport.StreamRequest{
-			Meta: &transport.RequestMeta{},
-		}).Times(1)
-	mockServerStream, err := transport.NewServerStream(mockStream)
-	require.NoError(t, err, "Should create mockServerStream")
-	require.NotPanics(t, func() {
-		err = transport.DispatchStreamHandler(
-			transport.StreamHandlerFunc(handler),
-			mockServerStream,
-		)
-	}, "Panic not recovered")
-	expectMsg := fmt.Sprintf("panic: %s", msg)
-	assert.Equal(t, expectMsg, err.Error())
-}
-
 func TestInvokeUnaryHandlerWithPanic(t *testing.T) {
 	msg := "I'm panicking in a unary handler!"
-	handler := func(context.Context, *transport.Request, transport.ResponseWriter) error {
+	handler := func(context.Context, *yarpc.Request, yarpc.ResponseWriter) error {
 		panic(msg)
 	}
 	var err error
 	require.NotPanics(t, func() {
-		err = transport.InvokeUnaryHandler(
-			transport.UnaryInvokeRequest{
+		err = yarpctransport.InvokeUnaryHandler(
+			yarpctransport.UnaryInvokeRequest{
 				Context:   context.Background(),
 				StartTime: time.Now(),
-				Request:   &transport.Request{},
-				Handler:   transport.UnaryHandlerFunc(handler),
+				Request:   &yarpc.Request{},
+				Handler:   yarpc.UnaryHandlerFunc(handler),
 				Logger:    zap.NewNop(),
 			},
 		)
@@ -117,44 +56,26 @@ func TestInvokeUnaryHandlerWithPanic(t *testing.T) {
 	assert.Equal(t, expectMsg, err.Error())
 }
 
-func TestInvokeOnewayHandlerWithPanic(t *testing.T) {
-	msg := "I'm panicking in a oneway handler!"
-	handler := func(context.Context, *transport.Request) error {
-		panic(msg)
-	}
-	var err error
-	require.NotPanics(t, func() {
-		err = transport.InvokeOnewayHandler(transport.OnewayInvokeRequest{
-			Context: context.Background(),
-			Request: &transport.Request{},
-			Handler: transport.OnewayHandlerFunc(handler),
-			Logger:  zap.NewNop(),
-		})
-	}, "Panic not recovered")
-	expectMsg := fmt.Sprintf("panic: %s", msg)
-	assert.Equal(t, expectMsg, err.Error())
-}
-
 func TestInvokeStreamHandlerWithPanic(t *testing.T) {
 	msg := "I'm panicking in a stream handler!"
-	handler := func(*transport.ServerStream) error {
+	handler := func(*yarpc.ServerStream) error {
 		panic(msg)
 	}
 	var err error
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	mockStream := transporttest.NewMockStream(mockCtrl)
+	mockStream := yarpctest.NewMockStream(mockCtrl)
 	mockStream.EXPECT().Request().Return(
-		&transport.StreamRequest{
-			Meta: &transport.RequestMeta{},
+		&yarpc.StreamRequest{
+			Meta: &yarpc.RequestMeta{},
 		}).Times(1)
-	mockServerStream, err := transport.NewServerStream(mockStream)
+	mockServerStream, err := yarpc.NewServerStream(mockStream)
 	require.NoError(t, err, "should create mockServerStream")
 	require.NotPanics(t, func() {
-		err = transport.InvokeStreamHandler(transport.StreamInvokeRequest{
+		err = yarpctransport.InvokeStreamHandler(yarpctransport.StreamInvokeRequest{
 			Stream:  mockServerStream,
-			Handler: transport.StreamHandlerFunc(handler),
+			Handler: yarpc.StreamHandlerFunc(handler),
 			Logger:  zap.NewNop(),
 		})
 	}, "Panic not recovered")

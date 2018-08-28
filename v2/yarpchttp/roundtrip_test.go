@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package yarpchttp
 
 import (
 	"bytes"
@@ -32,7 +32,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/internal/testtime"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 func TestRoundTripSuccess(t *testing.T) {
@@ -61,10 +61,15 @@ func TestRoundTripSuccess(t *testing.T) {
 	defer echoServer.Close()
 
 	// start outbound
-	httpTransport := NewTransport()
-	out := httpTransport.NewSingleOutbound(echoServer.URL)
-	require.NoError(t, out.Start(), "failed to start outbound")
-	defer out.Stop()
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer func() {
+		require.NoError(t, dialer.Stop(context.Background()))
+	}()
+	outbound := &Outbound{
+		Dialer: dialer,
+		URL:    parseURL(echoServer.URL),
+	}
 
 	// create request
 	hreq, err := http.NewRequest("GET", echoServer.URL, bytes.NewReader([]byte(giveBody)))
@@ -77,7 +82,7 @@ func TestRoundTripSuccess(t *testing.T) {
 	hreq = hreq.WithContext(ctx)
 
 	// make call
-	client := http.Client{Transport: out}
+	client := http.Client{Transport: outbound}
 	res, err := client.Do(hreq)
 	require.NoError(t, err, "could not make call")
 	defer res.Body.Close()
@@ -99,9 +104,15 @@ func TestRoundTripTimeout(t *testing.T) {
 		}))
 
 	// start outbound
-	out := NewTransport().NewSingleOutbound(server.URL)
-	require.NoError(t, out.Start(), "failed to start outbound")
-	defer out.Stop()
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer func() {
+		require.NoError(t, dialer.Stop(context.Background()))
+	}()
+	outbound := &Outbound{
+		Dialer: dialer,
+		URL:    parseURL(server.URL),
+	}
 
 	// create request
 	req, err := http.NewRequest("POST", server.URL, nil /* body */)
@@ -113,14 +124,14 @@ func TestRoundTripTimeout(t *testing.T) {
 	req = req.WithContext(ctx)
 
 	// make call
-	client := http.Client{Transport: out}
+	client := http.Client{Transport: outbound}
 	res, err := client.Do(req)
 
 	// validate response
 	if assert.Error(t, err) {
 		// we use a Contains here since the returned error is really a
 		// url.Error wrapping a yarpcerror
-		assert.Contains(t, err.Error(), yarpcerrors.CodeDeadlineExceeded.String())
+		assert.Contains(t, err.Error(), yarpcerror.CodeDeadlineExceeded.String())
 	}
 	assert.Equal(t, context.DeadlineExceeded, ctx.Err())
 	assert.Nil(t, res)
@@ -129,33 +140,20 @@ func TestRoundTripTimeout(t *testing.T) {
 func TestRoundTripNoDeadline(t *testing.T) {
 	URL := "http://foo-host"
 
-	out := NewTransport().NewSingleOutbound(URL)
-	require.NoError(t, out.Start(), "could not start outbound")
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer func() {
+		require.NoError(t, dialer.Stop(context.Background()))
+	}()
+	outbound := &Outbound{
+		Dialer: dialer,
+		URL:    parseURL(URL),
+	}
 
 	hreq, err := http.NewRequest("GET", URL, nil /* body */)
 	require.NoError(t, err)
 
-	resp, err := out.RoundTrip(hreq)
-	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing context deadline"), err)
+	resp, err := outbound.RoundTrip(hreq)
+	assert.Equal(t, yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "missing context deadline"), err)
 	assert.Nil(t, resp)
-}
-
-func TestRoundTripNotRunning(t *testing.T) {
-	URL := "http://foo-host"
-	out := NewTransport().NewSingleOutbound(URL)
-
-	req, err := http.NewRequest("POST", URL, nil /* body */)
-	require.NoError(t, err)
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
-	defer cancel()
-	req = req.WithContext(ctx)
-
-	client := http.Client{Transport: out}
-	res, err := client.Do(req)
-
-	if assert.Error(t, err) {
-		assert.Contains(t, err.Error(), "waiting for HTTP outbound to start")
-	}
-	assert.Nil(t, res)
 }

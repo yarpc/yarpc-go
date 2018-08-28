@@ -18,13 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package yarpchttp
 
 import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -33,203 +32,70 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	opentracinglog "github.com/opentracing/opentracing-go/log"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/introspection"
-	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
-	peerchooser "go.uber.org/yarpc/peer"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/pkg/lifecycle"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/internal/internalyarpcerror"
+	"go.uber.org/yarpc/v2/yarpcerror"
+	"go.uber.org/yarpc/v2/yarpcpeer"
+	"go.uber.org/yarpc/v2/yarpctracing"
 )
 
-// this ensures the HTTP outbound implements both transport.Outbound interfaces
-var (
-	_ transport.UnaryOutbound              = (*Outbound)(nil)
-	_ transport.OnewayOutbound             = (*Outbound)(nil)
-	_ introspection.IntrospectableOutbound = (*Outbound)(nil)
-)
+// This type assertion ensures that the HTTP outbound implements both yarpc.Outbound interfaces.
+var _ yarpc.UnaryOutbound = (*Outbound)(nil)
 
-var defaultURLTemplate, _ = url.Parse("http://localhost")
+// This type assertion ensures that the HTTP outbound implements the HTTP
+// RoundTripper transport interface.
+var _ http.RoundTripper = (*Outbound)(nil)
 
-// OutboundOption customizes an HTTP Outbound.
-type OutboundOption func(*Outbound)
+var defaultURL = &url.URL{Scheme: "http", Host: "localhost"}
 
-func (OutboundOption) httpOption() {}
-
-// URLTemplate specifies the URL this outbound makes requests to. For
-// peer.Chooser-based outbounds, the peer (host:port) spection of the URL may
-// vary from call to call but the rest will remain unchanged. For single-peer
-// outbounds, the URL will be used as-is.
-func URLTemplate(template string) OutboundOption {
-	return func(o *Outbound) {
-		o.setURLTemplate(template)
-	}
-}
-
-// AddHeader specifies that an HTTP outbound should always include the given
-// header in outgoung requests.
-//
-// 	httpTransport.NewOutbound(chooser, http.AddHeader("X-Token", "TOKEN"))
-//
-// Note that headers starting with "Rpc-" are reserved by YARPC. This function
-// will panic if the header starts with "Rpc-".
-func AddHeader(key, value string) OutboundOption {
-	if strings.HasPrefix(strings.ToLower(key), "rpc-") {
-		panic(fmt.Errorf(
-			"invalid header name %q: "+
-				`headers starting with "Rpc-" are reserved by YARPC`, key))
-	}
-
-	return func(o *Outbound) {
-		if o.headers == nil {
-			o.headers = make(http.Header)
-		}
-		o.headers.Add(key, value)
-	}
-}
-
-// NewOutbound builds an HTTP outbound that sends requests to peers supplied
-// by the given peer.Chooser. The URL template for used for the different
-// peers may be customized using the URLTemplate option.
-//
-// The peer chooser and outbound must share the same transport, in this case
-// the HTTP transport.
-// The peer chooser must use the transport's RetainPeer to obtain peer
-// instances and return those peers to the outbound when it calls Choose.
-// The concrete peer type is private and intrinsic to the HTTP transport.
-func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *Outbound {
-	o := &Outbound{
-		once:              lifecycle.NewOnce(),
-		chooser:           chooser,
-		urlTemplate:       defaultURLTemplate,
-		tracer:            t.tracer,
-		transport:         t,
-		bothResponseError: true,
-	}
-	for _, opt := range opts {
-		opt(o)
-	}
-	return o
-}
-
-// NewOutbound builds an HTTP outbound that sends requests to peers supplied
-// by the given peer.Chooser. The URL template for used for the different
-// peers may be customized using the URLTemplate option.
-//
-// The peer chooser and outbound must share the same transport, in this case
-// the HTTP transport.
-// The peer chooser must use the transport's RetainPeer to obtain peer
-// instances and return those peers to the outbound when it calls Choose.
-// The concrete peer type is private and intrinsic to the HTTP transport.
-func NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *Outbound {
-	return NewTransport().NewOutbound(chooser, opts...)
-}
-
-// NewSingleOutbound builds an outbound that sends YARPC requests over HTTP
-// to the specified URL.
-//
-// The URLTemplate option has no effect in this form.
-func (t *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbound {
-	parsedURL, err := url.Parse(uri)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	chooser := peerchooser.NewSingle(hostport.PeerIdentifier(parsedURL.Host), t)
-	o := t.NewOutbound(chooser)
-	for _, opt := range opts {
-		opt(o)
-	}
-	o.setURLTemplate(uri)
-	return o
-}
-
-// Outbound sends YARPC requests over HTTP. It may be constructed using the
-// NewOutbound function or the NewOutbound or NewSingleOutbound methods on the
-// HTTP Transport. It is recommended that services use a single HTTP transport
-// to construct all HTTP outbounds, ensuring efficient sharing of resources
-// across the different outbounds.
+// Outbound sends YARPC requests over HTTP.
+// It may be constructed using the NewOutbound function or NewSingleOutbound
+// methods on the HTTP dialer.
+// It is recommended that services use a single HTTP dialer to construct all
+// HTTP outbounds, ensuring efficient sharing of resources across the different
+// outbounds.
 type Outbound struct {
-	chooser     peer.Chooser
-	urlTemplate *url.URL
-	tracer      opentracing.Tracer
-	transport   *Transport
+	// Chooser is a peer chooser for outbound requests.
+	Chooser yarpc.Chooser
+
+	// Dialer is an alternative to specifying a Chooser.
+	// The outbound will dial the address specified in the URL.
+	Dialer yarpc.Dialer
+
+	// URL specifies the template for the URL this outbound makes requests to.
+	// For yarpc.Chooser-based outbounds, the peer (host:port) spection of the
+	// URL may vary from call to call but the REST will remain unchanged.
+	// For single-peer outbounds, the URL will be used as-is.
+	URL *url.URL
+
+	// Tracer attaches a tracer for the outbound.
+	Tracer opentracing.Tracer
 
 	// Headers to add to all outgoing requests.
-	headers http.Header
+	Headers http.Header
 
-	once *lifecycle.Once
-
-	// should only be false in testing
-	bothResponseError bool
-}
-
-// setURLTemplate configures an alternate URL template.
-// The host:port portion of the URL template gets replaced by the chosen peer's
-// identifier for each outbound request.
-func (o *Outbound) setURLTemplate(URL string) {
-	parsedURL, err := url.Parse(URL)
-	if err != nil {
-		log.Fatalf("failed to configure HTTP outbound: invalid URL template %q: %s", URL, err)
-	}
-	o.urlTemplate = parsedURL
-}
-
-// Transports returns the outbound's HTTP transport.
-func (o *Outbound) Transports() []transport.Transport {
-	return []transport.Transport{o.transport}
-}
-
-// Chooser returns the outbound's peer chooser.
-func (o *Outbound) Chooser() peer.Chooser {
-	return o.chooser
-}
-
-// Start the HTTP outbound
-func (o *Outbound) Start() error {
-	return o.once.Start(o.chooser.Start)
-}
-
-// Stop the HTTP outbound
-func (o *Outbound) Stop() error {
-	return o.once.Stop(o.chooser.Stop)
-}
-
-// IsRunning returns whether the Outbound is running.
-func (o *Outbound) IsRunning() bool {
-	return o.once.IsRunning()
+	// legacyResponseError forces the legacy behavior for HTTP response errors.
+	// Outbound calls will not have the Rpc-Both-Response-Error header, so servers
+	// will respond with error messages in the response body instead of the
+	// Rpc-Error-Message header.
+	// This is for tests only.
+	legacyResponseError bool
 }
 
 // Call makes a HTTP request
-func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
+func (o *Outbound) Call(ctx context.Context, treq *yarpc.Request) (*yarpc.Response, error) {
 	if treq == nil {
-		return nil, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil")
+		return nil, yarpcerror.InvalidArgumentErrorf("request for http unary outbound was nil")
 	}
 
 	return o.call(ctx, treq)
 }
 
-// CallOneway makes a oneway request
-func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
-	if treq == nil {
-		return nil, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil")
-	}
-
-	_, err := o.call(ctx, treq)
-	if err != nil {
-		return nil, err
-	}
-
-	return time.Now(), nil
-}
-
-func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
+func (o *Outbound) call(ctx context.Context, treq *yarpc.Request) (*yarpc.Response, error) {
 	start := time.Now()
 	deadline, ok := ctx.Deadline()
 	if !ok {
-		return nil, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing context deadline")
+		return nil, yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "missing context deadline")
 	}
 	ttl := deadline.Sub(start)
 
@@ -256,21 +122,21 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 
 	span.SetTag("http.status_code", response.StatusCode)
 
-	// Service name match validation, return yarpcerrors.CodeInternal error if not match
+	// Service name match validation, return yarpcerror.CodeInternal error if not match
 	if match, resSvcName := checkServiceMatch(treq.Service, response.Header); !match {
-		return nil, transport.UpdateSpanWithErr(span,
-			yarpcerrors.InternalErrorf("service name sent from the request "+
+		return nil, yarpctracing.UpdateSpanWithErr(span,
+			yarpcerror.InternalErrorf("service name sent from the request "+
 				"does not match the service name received in the response, sent %q, got: %q", treq.Service, resSvcName))
 	}
 
-	tres := &transport.Response{
-		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, transport.NewHeaders()),
+	tres := &yarpc.Response{
+		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, yarpc.NewHeaders()),
 		Body:             response.Body,
 		ApplicationError: response.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus,
 	}
 
 	bothResponseError := response.Header.Get(BothResponseErrorHeader) == AcceptTrue
-	if bothResponseError && o.bothResponseError {
+	if bothResponseError && !o.legacyResponseError {
 		if response.StatusCode >= 300 {
 			return tres, getYARPCErrorFromResponse(response, true)
 		}
@@ -282,31 +148,59 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	return nil, getYARPCErrorFromResponse(response, false)
 }
 
-func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*httpPeer, func(error), error) {
-	p, onFinish, err := o.chooser.Choose(ctx, treq)
-	if err != nil {
-		return nil, nil, err
+func (o *Outbound) getPeerForRequest(ctx context.Context, treq *yarpc.Request) (*httpPeer, func(error), error) {
+	var peer yarpc.Peer
+	var onFinish func(error)
+	var err error
+
+	if o.Chooser != nil {
+		peer, onFinish, err = o.Chooser.Choose(ctx, treq)
+		if err != nil {
+			return nil, nil, err
+		}
+	} else if o.Dialer != nil && o.URL != nil {
+		id := yarpc.Address(o.URL.Host)
+		peer, err = o.Dialer.RetainPeer(id, yarpc.NopSubscriber)
+		if err != nil {
+			return nil, nil, err
+		}
+		err = o.Dialer.ReleasePeer(id, yarpc.NopSubscriber)
+		if err != nil {
+			return nil, nil, err
+		}
+		onFinish = nopFinish
+	} else {
+		// TODO capture error type
+		return nil, nil, fmt.Errorf("HTTP Outbound must have either Chooser or Dialer and URL to make a Call")
 	}
 
-	hpPeer, ok := p.(*httpPeer)
+	hp, ok := peer.(*httpPeer)
 	if !ok {
-		return nil, nil, peer.ErrInvalidPeerConversion{
-			Peer:         p,
+		return nil, nil, yarpcpeer.ErrInvalidPeerConversion{
+			Peer:         peer,
 			ExpectedType: "*httpPeer",
 		}
 	}
 
-	return hpPeer, onFinish, nil
+	return hp, onFinish, nil
 }
 
-func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error) {
-	newURL := *o.urlTemplate
-	return http.NewRequest("POST", newURL.String(), treq.Body)
+func nopFinish(error) {}
+
+func (o *Outbound) createRequest(treq *yarpc.Request) (*http.Request, error) {
+	url := defaultURL
+	if o.URL != nil {
+		url = o.URL
+	}
+	return http.NewRequest("POST", url.String(), treq.Body)
 }
 
-func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, *http.Request, opentracing.Span, error) {
+func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *yarpc.Request, start time.Time) (context.Context, *http.Request, opentracing.Span, error) {
 	// Apply HTTP Context headers for tracing and baggage carried by tracing.
-	tracer := o.tracer
+	tracer := o.Tracer
+	if tracer == nil {
+		tracer = opentracing.GlobalTracer()
+	}
 	var parent opentracing.SpanContext // ok to be nil
 	if parentSpan := opentracing.SpanFromContext(ctx); parentSpan != nil {
 		parent = parentSpan.Context()
@@ -317,7 +211,7 @@ func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, t
 		"rpc.encoding":  treq.Encoding,
 		"rpc.transport": "http",
 	}
-	for k, v := range yarpc.OpentracingTags {
+	for k, v := range yarpctracing.Tags {
 		tags[k] = v
 	}
 	span := tracer.StartSpan(
@@ -340,9 +234,14 @@ func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, t
 	return ctx, req, span, err
 }
 
-func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, ttl time.Duration) *http.Request {
+func (o *Outbound) withCoreHeaders(req *http.Request, treq *yarpc.Request, ttl time.Duration) *http.Request {
 	// Add default headers to all requests.
-	for k, vs := range o.headers {
+	for k, vs := range o.Headers {
+		if strings.HasPrefix(strings.ToLower(k), "rpc-") {
+			panic(fmt.Errorf(
+				"invalid header name %q: "+
+					`headers starting with "Rpc-" are reserved by YARPC`, k))
+		}
 		for _, v := range vs {
 			req.Header.Add(k, v)
 		}
@@ -369,7 +268,7 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 		req.Header.Set(EncodingHeader, encoding)
 	}
 
-	if o.bothResponseError {
+	if !o.legacyResponseError {
 		req.Header.Set(AcceptsBothResponseErrorHeader, AcceptTrue)
 	}
 
@@ -383,23 +282,23 @@ func getYARPCErrorFromResponse(response *http.Response, bothResponseError bool) 
 	} else {
 		contentsBytes, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			return yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
+			return yarpcerror.Newf(yarpcerror.CodeInternal, err.Error())
 		}
 		contents = string(contentsBytes)
 		if err := response.Body.Close(); err != nil {
-			return yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
+			return yarpcerror.Newf(yarpcerror.CodeInternal, err.Error())
 		}
 	}
 	// use the status code if we can't get a code from the headers
 	code := statusCodeToBestCode(response.StatusCode)
 	if errorCodeText := response.Header.Get(ErrorCodeHeader); errorCodeText != "" {
-		var errorCode yarpcerrors.Code
+		var errorCode yarpcerror.Code
 		// TODO: what to do with error?
 		if err := errorCode.UnmarshalText([]byte(errorCodeText)); err == nil {
 			code = errorCode
 		}
 	}
-	return intyarpcerrors.NewWithNamef(
+	return internalyarpcerror.NewWithNamef(
 		code,
 		response.Header.Get(ErrorNameHeader),
 		strings.TrimSuffix(contents, "\n"),
@@ -430,20 +329,20 @@ func checkServiceMatch(reqSvcName string, resHeaders http.Header) (bool, string)
 //  res, err := client.Do(req)
 //
 // All requests must have a deadline on the context.
-// The peer chooser for raw HTTP requests will receive a YARPC transport.Request with no body.
+// The peer chooser for raw HTTP requests will receive a yarpc.Request with no body.
 //
 // OpenTracing information must be added manually, before this call, to support context propagation.
 func (o *Outbound) RoundTrip(hreq *http.Request) (*http.Response, error) {
 	return o.roundTrip(hreq, nil /* treq */, time.Now())
 }
 
-func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start time.Time) (*http.Response, error) {
+func (o *Outbound) roundTrip(hreq *http.Request, treq *yarpc.Request, start time.Time) (*http.Response, error) {
 	ctx := hreq.Context()
 
 	deadline, ok := ctx.Deadline()
 	if !ok {
-		return nil, yarpcerrors.Newf(
-			yarpcerrors.CodeInvalidArgument,
+		return nil, yarpcerror.Newf(
+			yarpcerror.CodeInvalidArgument,
 			"missing context deadline")
 	}
 	ttl := deadline.Sub(start)
@@ -455,23 +354,16 @@ func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start 
 	// using the go stdlib HTTP client is to use headers as the YAPRC HTTP
 	// transport header conventions.
 	if treq == nil {
-		treq = &transport.Request{
+		treq = &yarpc.Request{
 			Caller:          hreq.Header.Get(CallerHeader),
 			Service:         hreq.Header.Get(ServiceHeader),
-			Encoding:        transport.Encoding(hreq.Header.Get(EncodingHeader)),
+			Encoding:        yarpc.Encoding(hreq.Header.Get(EncodingHeader)),
 			Procedure:       hreq.Header.Get(ProcedureHeader),
 			ShardKey:        hreq.Header.Get(ShardKeyHeader),
 			RoutingKey:      hreq.Header.Get(RoutingKeyHeader),
 			RoutingDelegate: hreq.Header.Get(RoutingDelegateHeader),
-			Headers:         applicationHeaders.FromHTTPHeaders(hreq.Header, transport.Headers{}),
+			Headers:         applicationHeaders.FromHTTPHeaders(hreq.Header, yarpc.Headers{}),
 		}
-	}
-
-	if err := o.once.WaitUntilRunning(ctx); err != nil {
-		return nil, intyarpcerrors.AnnotateWithInfo(
-			yarpcerrors.FromError(err),
-			"error waiting for HTTP outbound to start for service: %s",
-			treq.Service)
 	}
 
 	p, onFinish, err := o.getPeerForRequest(ctx, treq)
@@ -488,14 +380,14 @@ func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start 
 func (o *Outbound) doWithPeer(
 	ctx context.Context,
 	hreq *http.Request,
-	treq *transport.Request,
+	treq *yarpc.Request,
 	start time.Time,
 	ttl time.Duration,
 	p *httpPeer,
 ) (*http.Response, error) {
-	hreq.URL.Host = p.HostPort()
+	hreq.URL.Host = p.addr
 
-	response, err := o.transport.client.Do(hreq.WithContext(ctx))
+	response, err := p.dialer.client.Do(hreq.WithContext(ctx))
 
 	if err != nil {
 		// Workaround borrowed from ctxhttp until
@@ -512,8 +404,8 @@ func (o *Outbound) doWithPeer(
 			p.OnSuspect()
 
 			end := time.Now()
-			return nil, yarpcerrors.Newf(
-				yarpcerrors.CodeDeadlineExceeded,
+			return nil, yarpcerror.Newf(
+				yarpcerror.CodeDeadlineExceeded,
 				"client timeout for procedure %q of service %q after %v",
 				treq.Procedure, treq.Service, end.Sub(start))
 		}
@@ -522,30 +414,8 @@ func (o *Outbound) doWithPeer(
 		// maintenance loop resumes probing for availability.
 		p.OnDisconnected()
 
-		return nil, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "unknown error from http client: %s", err.Error())
+		return nil, yarpcerror.Newf(yarpcerror.CodeUnknown, "unknown error from http client: %s", err.Error())
 	}
 
 	return response, nil
-}
-
-// Introspect returns basic status about this outbound.
-func (o *Outbound) Introspect() introspection.OutboundStatus {
-	state := "Stopped"
-	if o.IsRunning() {
-		state = "Running"
-	}
-	var chooser introspection.ChooserStatus
-	if i, ok := o.chooser.(introspection.IntrospectableChooser); ok {
-		chooser = i.Introspect()
-	} else {
-		chooser = introspection.ChooserStatus{
-			Name: "Introspection not available",
-		}
-	}
-	return introspection.OutboundStatus{
-		Transport: "http",
-		Endpoint:  o.urlTemplate.String(),
-		State:     state,
-		Chooser:   chooser,
-	}
 }

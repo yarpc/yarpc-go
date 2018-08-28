@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package middleware_test
+package yarpcmiddleware_test
 
 import (
 	"bytes"
@@ -26,36 +26,33 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"go.uber.org/yarpc/api/middleware"
-	"go.uber.org/yarpc/api/middleware/middlewaretest"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/internal/testtime"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/internal/testtime"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcmiddleware"
+	"go.uber.org/yarpc/v2/yarpcmiddlewaretest"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 func TestUnaryNopOutboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	o := transporttest.NewMockUnaryOutbound(mockCtrl)
-	wrappedO := middleware.ApplyUnaryOutbound(o, middleware.NopUnaryOutbound)
+	o := yarpctest.NewMockUnaryOutbound(mockCtrl)
+	wrappedO := yarpcmiddleware.ApplyUnaryOutbound(o, yarpcmiddleware.NopUnaryOutbound)
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	req := &transport.Request{
+	req := &yarpc.Request{
 		Caller:    "somecaller",
 		Service:   "someservice",
-		Encoding:  raw.Encoding,
+		Encoding:  yarpc.Encoding("raw"),
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}
 
-	res := &transport.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6}))}
+	res := &yarpc.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6}))}
 	o.EXPECT().Call(ctx, req).Return(res, nil)
 
 	got, err := wrappedO.Call(ctx, req)
@@ -64,49 +61,13 @@ func TestUnaryNopOutboundMiddleware(t *testing.T) {
 	}
 }
 
-func TestOnewayNopOutboundMiddleware(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	o := transporttest.NewMockOnewayOutbound(mockCtrl)
-	wrappedO := middleware.ApplyOnewayOutbound(o, middleware.NopOnewayOutbound)
-
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-	defer cancel()
-	req := &transport.Request{
-		Caller:    "somecaller",
-		Service:   "someservice",
-		Encoding:  raw.Encoding,
-		Procedure: "hello",
-		Body:      bytes.NewReader([]byte{1, 2, 3}),
-	}
-
-	o.EXPECT().CallOneway(ctx, req).Return(nil, nil)
-
-	got, err := wrappedO.CallOneway(ctx, req)
-	if assert.NoError(t, err) {
-		assert.Equal(t, nil, got)
-	}
-}
-
 func TestNilOutboundMiddleware(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	t.Run("unary", func(t *testing.T) {
-		out := transporttest.NewMockUnaryOutbound(ctrl)
-		out.EXPECT().Start()
-
-		mw := middleware.ApplyUnaryOutbound(out, nil)
-		require.NoError(t, mw.Start())
-	})
-
-	t.Run("oneway", func(t *testing.T) {
-		out := transporttest.NewMockOnewayOutbound(ctrl)
-		out.EXPECT().Start()
-
-		mw := middleware.ApplyOnewayOutbound(out, nil)
-		require.NoError(t, mw.Start())
+		out := yarpctest.NewMockUnaryOutbound(ctrl)
+		_ = yarpcmiddleware.ApplyUnaryOutbound(out, nil)
 	})
 }
 
@@ -115,47 +76,9 @@ func TestOutboundMiddleware(t *testing.T) {
 	defer ctrl.Finish()
 
 	t.Run("unary", func(t *testing.T) {
-		out := transporttest.NewMockUnaryOutbound(ctrl)
-		mw := middlewaretest.NewMockUnaryOutbound(ctrl)
-		outWithMW := middleware.ApplyUnaryOutbound(out, mw)
-
-		// start
-		out.EXPECT().Start().Return(nil)
-		assert.NoError(t, outWithMW.Start(), "could not start outbound")
-
-		// transports
-		out.EXPECT().Transports()
-		outWithMW.Transports()
-
-		// is running
-		out.EXPECT().IsRunning().Return(true)
-		assert.True(t, outWithMW.IsRunning(), "expected outbound to be running")
-
-		// stop
-		out.EXPECT().Stop().Return(nil)
-		assert.NoError(t, outWithMW.Stop(), "unexpected error stopping outbound")
-	})
-
-	t.Run("oneway", func(t *testing.T) {
-		out := transporttest.NewMockOnewayOutbound(ctrl)
-		mw := middlewaretest.NewMockOnewayOutbound(ctrl)
-		outWithMW := middleware.ApplyOnewayOutbound(out, mw)
-
-		// start
-		out.EXPECT().Start().Return(nil)
-		assert.NoError(t, outWithMW.Start(), "could not start outbound")
-
-		// transports
-		out.EXPECT().Transports()
-		outWithMW.Transports()
-
-		// is running
-		out.EXPECT().IsRunning().Return(true)
-		assert.True(t, outWithMW.IsRunning(), "expected outbound to be running")
-
-		// stop
-		out.EXPECT().Stop().Return(nil)
-		assert.NoError(t, outWithMW.Stop(), "unexpected error stopping outbound")
+		out := yarpctest.NewMockUnaryOutbound(ctrl)
+		mw := yarpcmiddlewaretest.NewMockUnaryOutbound(ctrl)
+		_ = yarpcmiddleware.ApplyUnaryOutbound(out, mw)
 	})
 }
 
@@ -163,16 +86,16 @@ func TestStreamNopOutboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	o := transporttest.NewMockStreamOutbound(mockCtrl)
-	wrappedO := middleware.ApplyStreamOutbound(o, middleware.NopStreamOutbound)
+	o := yarpctest.NewMockStreamOutbound(mockCtrl)
+	wrappedO := yarpcmiddleware.ApplyStreamOutbound(o, yarpcmiddleware.NopStreamOutbound)
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	req := &transport.StreamRequest{
-		Meta: &transport.RequestMeta{
+	req := &yarpc.StreamRequest{
+		Meta: &yarpc.RequestMeta{
 			Caller:    "somecaller",
 			Service:   "someservice",
-			Encoding:  raw.Encoding,
+			Encoding:  yarpc.Encoding("raw"),
 			Procedure: "hello",
 		},
 	}
@@ -189,8 +112,8 @@ func TestStreamDefaultsToOutboundWhenNil(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	o := transporttest.NewMockStreamOutbound(mockCtrl)
-	wrappedO := middleware.ApplyStreamOutbound(o, nil)
+	o := yarpctest.NewMockStreamOutbound(mockCtrl)
+	wrappedO := yarpcmiddleware.ApplyStreamOutbound(o, nil)
 	assert.Equal(t, wrappedO, o)
 }
 
@@ -198,15 +121,6 @@ func TestStreamMiddlewareCallsUnderlyingFunctions(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	o := transporttest.NewMockStreamOutbound(mockCtrl)
-	o.EXPECT().Start().Times(1)
-	o.EXPECT().Stop().Times(1)
-	o.EXPECT().Transports().Times(1)
-	o.EXPECT().IsRunning().Times(1)
-	wrappedO := middleware.ApplyStreamOutbound(o, middleware.NopStreamOutbound)
-
-	wrappedO.IsRunning()
-	wrappedO.Transports()
-	wrappedO.Start()
-	wrappedO.Stop()
+	o := yarpctest.NewMockStreamOutbound(mockCtrl)
+	_ = yarpcmiddleware.ApplyStreamOutbound(o, yarpcmiddleware.NopStreamOutbound)
 }

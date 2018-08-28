@@ -18,16 +18,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package json
+package yarpcjson
 
 import (
 	"context"
 	"encoding/json"
 	"reflect"
 
-	encodingapi "go.uber.org/yarpc/api/encoding"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/pkg/errors"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcencoding"
 )
 
 // jsonHandler adapts a user-provided high-level handler into a transport-level
@@ -41,19 +40,19 @@ type jsonHandler struct {
 	handler reflect.Value
 }
 
-func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
-	if err := errors.ExpectEncodings(treq, Encoding); err != nil {
+func (h jsonHandler) Handle(ctx context.Context, treq *yarpc.Request, rw yarpc.ResponseWriter) error {
+	if err := yarpcencoding.ExpectEncodings(treq, Encoding); err != nil {
 		return err
 	}
 
-	ctx, call := encodingapi.NewInboundCall(ctx)
+	ctx, call := yarpc.NewInboundCall(ctx)
 	if err := call.ReadFromRequest(treq); err != nil {
 		return err
 	}
 
 	reqBody, err := h.reader.Read(json.NewDecoder(treq.Body))
 	if err != nil {
-		return errors.RequestBodyDecodeError(treq, err)
+		return yarpcencoding.RequestBodyDecodeError(treq, err)
 	}
 
 	results := h.handler.Call([]reflect.Value{reflect.ValueOf(ctx), reqBody})
@@ -67,7 +66,7 @@ func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw tra
 	var encodeErr error
 	if result := results[0].Interface(); result != nil {
 		if err := json.NewEncoder(rw).Encode(result); err != nil {
-			encodeErr = errors.ResponseBodyEncodeError(treq, err)
+			encodeErr = yarpcencoding.ResponseBodyEncodeError(treq, err)
 		}
 	}
 
@@ -77,30 +76,6 @@ func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw tra
 	}
 
 	return encodeErr
-}
-
-func (h jsonHandler) HandleOneway(ctx context.Context, treq *transport.Request) error {
-	if err := errors.ExpectEncodings(treq, Encoding); err != nil {
-		return err
-	}
-
-	ctx, call := encodingapi.NewInboundCall(ctx)
-	if err := call.ReadFromRequest(treq); err != nil {
-		return err
-	}
-
-	reqBody, err := h.reader.Read(json.NewDecoder(treq.Body))
-	if err != nil {
-		return errors.RequestBodyDecodeError(treq, err)
-	}
-
-	results := h.handler.Call([]reflect.Value{reflect.ValueOf(ctx), reqBody})
-
-	if err := results[0].Interface(); err != nil {
-		return err.(error)
-	}
-
-	return nil
 }
 
 // requestReader is used to parse a JSON request argument from a JSON decoder.

@@ -18,14 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package yarpchttp
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 func TestCodes(t *testing.T) {
@@ -46,17 +46,17 @@ func TestUnspecifiedCodes(t *testing.T) {
 	tests := []struct {
 		name string
 		give int
-		want yarpcerrors.Code
+		want yarpcerror.Code
 	}{
 		{
 			name: "code invalid argument",
 			give: 450, // test for an x in range: [400, 500)
-			want: yarpcerrors.CodeInvalidArgument,
+			want: yarpcerror.CodeInvalidArgument,
 		},
 		{
 			name: "code unkown",
 			give: 1000,
-			want: yarpcerrors.CodeUnknown,
+			want: yarpcerror.CodeUnknown,
 		},
 	}
 

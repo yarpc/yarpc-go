@@ -18,12 +18,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package yarpc
 
 import "strings"
 
-// CanonicalizeHeaderKey canonicalizes the given header key for storage into
-// Headers.
+// CanonicalizeHeaderKey canonicalizes the given header key to the same form
+// used by the headers map returned by ResponseHeaders.
+//
+// 	var headers map[string]string
+// 	res, err := client.Call(ctx, "hello", requestBody, ResponseHeaders(&headers))
+// 	email, ok := headers[CanonicalizeHeaderKey("User-Email-Address")]
 func CanonicalizeHeaderKey(k string) string {
 	// TODO: Deal with unsupported header keys (anything that's not a valid HTTP
 	// header key).

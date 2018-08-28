@@ -18,22 +18,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc
+package yarpcrouter
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"strconv"
 	"strings"
 
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/humanize"
-	"go.uber.org/yarpc/yarpcerrors"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 var (
-	_ transport.Router = (*MapRouter)(nil)
+	_ yarpc.Router = (*MapRouter)(nil)
 )
 
 type serviceProcedure struct {
@@ -44,16 +42,14 @@ type serviceProcedure struct {
 type serviceProcedureEncoding struct {
 	service   string
 	procedure string
-	encoding  transport.Encoding
+	encoding  yarpc.Encoding
 }
 
 // MapRouter is a Router that maintains a map of the registered
 // procedures.
 type MapRouter struct {
 	defaultService            string
-	serviceProcedures         map[serviceProcedure]transport.Procedure
-	serviceProcedureEncodings map[serviceProcedureEncoding]transport.Procedure
-	supportedEncodings        map[serviceProcedure][]string
+	serviceProcedureEncodings map[serviceProcedureEncoding]yarpc.Procedure
 	serviceNames              map[string]struct{}
 }
 
@@ -62,9 +58,7 @@ type MapRouter struct {
 func NewMapRouter(defaultService string) MapRouter {
 	return MapRouter{
 		defaultService:            defaultService,
-		serviceProcedures:         make(map[serviceProcedure]transport.Procedure),
-		serviceProcedureEncodings: make(map[serviceProcedureEncoding]transport.Procedure),
-		supportedEncodings:        make(map[serviceProcedure][]string),
+		serviceProcedureEncodings: make(map[serviceProcedureEncoding]yarpc.Procedure),
 		serviceNames:              map[string]struct{}{defaultService: {}},
 	}
 }
@@ -76,7 +70,7 @@ func NewMapRouter(defaultService string) MapRouter {
 // same name and service name can exist if they handle different encodings.
 // If a procedure does not specify an encoding, it can only support one handler.
 // The router will select that handler regardless of the encoding.
-func (m MapRouter) Register(rs []transport.Procedure) {
+func (m MapRouter) Register(rs []yarpc.Procedure) {
 	for _, r := range rs {
 		if r.Service == "" {
 			r.Service = m.defaultService
@@ -88,52 +82,23 @@ func (m MapRouter) Register(rs []transport.Procedure) {
 
 		m.serviceNames[r.Service] = struct{}{}
 
-		sp := serviceProcedure{
-			service:   r.Service,
-			procedure: r.Name,
-		}
-
-		if r.Encoding == "" {
-			// Protect against masking encoding-specific routes.
-			if _, ok := m.serviceProcedures[sp]; ok {
-				panic(fmt.Sprintf("Cannot register multiple handlers for every encoding for service %q and procedure  %q", sp.service, sp.procedure))
-			}
-			if se, ok := m.supportedEncodings[sp]; ok {
-				panic(fmt.Sprintf("Cannot register a handler for every encoding for service %q and procedure %q when there are already handlers for %s", sp.service, sp.procedure, humanize.QuotedJoin(se, "and", "no encodings")))
-			}
-			// This supports wild card encodings (for backward compatibility,
-			// since type models like Thrift were not previously required to
-			// specify the encoding of every procedure).
-			m.serviceProcedures[sp] = r
-			continue
-		}
-
 		spe := serviceProcedureEncoding{
 			service:   r.Service,
 			procedure: r.Name,
 			encoding:  r.Encoding,
 		}
 
-		// Protect against overriding wildcards
-		if _, ok := m.serviceProcedures[sp]; ok {
-			panic(fmt.Sprintf("Cannot register a handler for both (service, procedure) on any * encoding and (service, procedure, encoding), specifically (%q, %q, %q)", r.Service, r.Name, r.Encoding))
-		}
 		// Route to individual handlers for unique combinations of service,
 		// procedure, and encoding. This shall henceforth be the
 		// recommended way for models to register procedures.
 		m.serviceProcedureEncodings[spe] = r
-		// Record supported encodings.
-		m.supportedEncodings[sp] = append(m.supportedEncodings[sp], string(r.Encoding))
 	}
 }
 
 // Procedures returns a list procedures that
 // have been registered so far.
-func (m MapRouter) Procedures() []transport.Procedure {
-	procs := make([]transport.Procedure, 0, len(m.serviceProcedures)+len(m.serviceProcedureEncodings))
-	for _, v := range m.serviceProcedures {
-		procs = append(procs, v)
-	}
+func (m MapRouter) Procedures() []yarpc.Procedure {
+	procs := make([]yarpc.Procedure, 0, len(m.serviceProcedureEncodings))
 	for _, v := range m.serviceProcedureEncodings {
 		procs = append(procs, v)
 	}
@@ -141,7 +106,7 @@ func (m MapRouter) Procedures() []transport.Procedure {
 	return procs
 }
 
-type sortableProcedures []transport.Procedure
+type sortableProcedures []yarpc.Procedure
 
 func (ps sortableProcedures) Len() int {
 	return len(ps)
@@ -157,16 +122,16 @@ func (ps sortableProcedures) Swap(i int, j int) {
 
 // Choose retrives the HandlerSpec for the service, procedure, and encoding
 // noted on the transport request, or returns an unrecognized procedure error
-// (testable with transport.IsUnrecognizedProcedureError(err)).
-func (m MapRouter) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
+// (testable with yarpc.IsUnrecognizedProcedureError(err)).
+func (m MapRouter) Choose(ctx context.Context, req *yarpc.Request) (yarpc.HandlerSpec, error) {
 	service, procedure, encoding := req.Service, req.Procedure, req.Encoding
 	if service == "" {
 		service = m.defaultService
 	}
 
 	if _, ok := m.serviceNames[service]; !ok {
-		return transport.HandlerSpec{},
-			yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "unrecognized service name %q, "+
+		return yarpc.HandlerSpec{},
+			yarpcerror.Newf(yarpcerror.CodeUnimplemented, "unrecognized service name %q, "+
 				"available services: %s", req.Service, getAvailableServiceNames(m.serviceNames))
 	}
 
@@ -180,29 +145,7 @@ func (m MapRouter) Choose(ctx context.Context, req *transport.Request) (transpor
 		return procedure.HandlerSpec, nil
 	}
 
-	// Alternately use the original behavior: route all encodings to the same
-	// handler.
-	sp := serviceProcedure{
-		service:   service,
-		procedure: procedure,
-	}
-	if procedure, ok := m.serviceProcedures[sp]; ok {
-		return procedure.HandlerSpec, nil
-	}
-
-	// Supported procedure, unrecognized encoding.
-	if wantEncodings := m.supportedEncodings[sp]; len(wantEncodings) == 1 {
-		// To maintain backward compatibility with the error messages provided
-		// on the wire (as verified by Crossdock across all language
-		// implementations), this routes an invalid encoding to the sole
-		// implementation of a procedure.
-		// The handler is then responsible for detecting the invalid encoding
-		// and providing an error including "failed to decode".
-		spe.encoding = transport.Encoding(wantEncodings[0])
-		return m.serviceProcedureEncodings[spe].HandlerSpec, nil
-	}
-
-	return transport.HandlerSpec{}, yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "unrecognized procedure %q for service %q", req.Procedure, req.Service)
+	return yarpc.HandlerSpec{}, yarpcerror.Newf(yarpcerror.CodeUnimplemented, "unrecognized procedure %q for service %q", req.Procedure, req.Service)
 }
 
 // Extract keys from service names map and return a formatted string

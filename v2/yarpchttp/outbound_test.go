@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package yarpchttp
 
 import (
 	"bytes"
@@ -27,37 +27,19 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/api/peer/peertest"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/testtime"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
-
-func TestNewOutbound(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	chooser := peertest.NewMockChooser(ctrl)
-
-	out := NewOutbound(chooser)
-	require.NotNil(t, out)
-	assert.Equal(t, chooser, out.Chooser())
-}
-
-func TestNewSingleOutboundPanic(t *testing.T) {
-	require.Panics(t, func() {
-		// invalid url should cause panic
-		NewTransport().NewSingleOutbound(":")
-	},
-		"expected to panic")
-}
 
 func TestCallSuccess(t *testing.T) {
 	successServer := httptest.NewServer(http.HandlerFunc(
@@ -86,17 +68,22 @@ func TestCallSuccess(t *testing.T) {
 	))
 	defer successServer.Close()
 
-	httpTransport := NewTransport()
-	out := httpTransport.NewSingleOutbound(successServer.URL)
-	require.NoError(t, out.Start(), "failed to start outbound")
-	defer out.Stop()
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer func() {
+		require.NoError(t, dialer.Stop(context.Background()))
+	}()
+	outbound := &Outbound{
+		Dialer: dialer,
+		URL:    parseURL(successServer.URL),
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	res, err := out.Call(ctx, &transport.Request{
+	res, err := outbound.Call(ctx, &yarpc.Request{
 		Caller:    "caller",
 		Service:   "service",
-		Encoding:  raw.Encoding,
+		Encoding:  yarpc.Encoding("raw"),
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte("world")),
 	})
@@ -114,40 +101,56 @@ func TestCallSuccess(t *testing.T) {
 }
 
 func TestAddReservedHeader(t *testing.T) {
-	tests := []string{
-		"Rpc-Foo",
-		"rpc-header-foo",
-		"RPC-Bar",
-	}
+	assert.Panics(t, func() {
+		// TODO pare this down
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
 
-	for _, tt := range tests {
-		assert.Panics(t, func() { AddHeader(tt, "bar") })
-	}
+		dialer := &Dialer{}
+		dialer.Start(ctx)
+		defer dialer.Stop(ctx)
+
+		res, err := (&Outbound{
+			Dialer: dialer,
+			URL:    &url.URL{Host: "localhost:8080"},
+			Headers: http.Header{
+				"RPC-WAT":             []string{},
+				"Rpc-Not-On-My-Watch": []string{},
+				"rpc-i-dont-think-so": []string{},
+			},
+		}).Call(ctx, &yarpc.Request{})
+		require.Nil(t, res)
+		require.NoError(t, err)
+	})
 }
 
 func TestOutboundHeaders(t *testing.T) {
 	tests := []struct {
-		desc    string
-		context context.Context
-		headers transport.Headers
-		opts    []OutboundOption
+		desc     string
+		context  context.Context
+		headers  yarpc.Headers
+		outbound *Outbound
 
 		wantHeaders map[string]string
 	}{
 		{
 			desc:    "application headers",
-			headers: transport.NewHeaders().With("foo", "bar").With("baz", "Qux"),
+			headers: yarpc.NewHeaders().With("foo", "bar").With("baz", "Qux"),
 			wantHeaders: map[string]string{
 				"Rpc-Header-Foo": "bar",
 				"Rpc-Header-Baz": "Qux",
 			},
+			outbound: &Outbound{},
 		},
 		{
 			desc:    "extra headers",
-			headers: transport.NewHeaders().With("x", "y"),
-			opts: []OutboundOption{
-				AddHeader("X-Foo", "bar"),
-				AddHeader("X-BAR", "BAZ"),
+			headers: yarpc.NewHeaders().With("x", "y"),
+			outbound: &Outbound{
+				Headers: http.Header{
+					"X-Foo": []string{"bar"},
+					"X-Bar": []string{"BAZ"},
+				},
 			},
 			wantHeaders: map[string]string{
 				"Rpc-Header-X": "y",
@@ -157,52 +160,48 @@ func TestOutboundHeaders(t *testing.T) {
 		},
 	}
 
-	httpTransport := NewTransport()
-
 	for _, tt := range tests {
-		server := httptest.NewServer(http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
-				defer r.Body.Close()
-				for k, v := range tt.wantHeaders {
-					assert.Equal(
-						t, v, r.Header.Get(k), "%v: header %v did not match", tt.desc, k)
-				}
-			},
-		))
-		defer server.Close()
+		t.Run(tt.desc, func(t *testing.T) {
+			dialer := &Dialer{}
+			require.NoError(t, dialer.Start(context.Background()))
+			defer func() {
+				require.NoError(t, dialer.Stop(context.Background()))
+			}()
 
-		ctx := tt.context
-		if ctx == nil {
-			var cancel context.CancelFunc
-			ctx, cancel = context.WithTimeout(context.Background(), testtime.Second)
-			defer cancel()
-		}
+			server := httptest.NewServer(http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+					defer r.Body.Close()
+					for k, v := range tt.wantHeaders {
+						assert.Equal(
+							t, v, r.Header.Get(k), "%v: header %v did not match", tt.desc, k)
+					}
+				},
+			))
+			defer server.Close()
 
-		out := httpTransport.NewSingleOutbound(server.URL, tt.opts...)
-		assert.Len(t, out.Transports(), 1, "transports must contain the transport")
-		// we use == instead of assert.Equal because we want to do a pointer
-		// comparison
-		assert.True(t, httpTransport == out.Transports()[0], "transports must match")
+			ctx := tt.context
+			if ctx == nil {
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithTimeout(context.Background(), testtime.Second)
+				defer cancel()
+			}
 
-		require.NoError(t, out.Start(), "failed to start outbound")
-		defer out.Stop()
+			outbound := &*tt.outbound
+			outbound.Dialer = dialer
+			outbound.URL = parseURL(server.URL)
 
-		res, err := out.Call(ctx, &transport.Request{
-			Caller:    "caller",
-			Service:   "service",
-			Encoding:  raw.Encoding,
-			Headers:   tt.headers,
-			Procedure: "hello",
-			Body:      bytes.NewReader([]byte("world")),
+			res, err := outbound.Call(ctx, &yarpc.Request{
+				Caller:    "caller",
+				Service:   "service",
+				Encoding:  yarpc.Encoding("raw"),
+				Headers:   tt.headers,
+				Procedure: "hello",
+				Body:      bytes.NewReader([]byte("world")),
+			})
+
+			require.NoError(t, err, "%v: call failed", tt.desc)
+			require.NoError(t, res.Body.Close(), "%v: failed to close response body")
 		})
-
-		if !assert.NoError(t, err, "%v: call failed", tt.desc) {
-			continue
-		}
-
-		if !assert.NoError(t, res.Body.Close(), "%v: failed to close response body") {
-			continue
-		}
 	}
 }
 
@@ -229,7 +228,11 @@ func TestOutboundApplicationError(t *testing.T) {
 		},
 	}
 
-	httpTransport := NewTransport()
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer func() {
+		require.NoError(t, dialer.Stop(context.Background()))
+	}()
 
 	for _, tt := range tests {
 		server := httptest.NewServer(http.HandlerFunc(
@@ -240,19 +243,16 @@ func TestOutboundApplicationError(t *testing.T) {
 		))
 		defer server.Close()
 
-		out := httpTransport.NewSingleOutbound(server.URL)
-
-		require.NoError(t, out.Start(), "failed to start outbound")
-		defer out.Stop()
+		outbound := &Outbound{Dialer: dialer, URL: parseURL(server.URL)}
 
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, 100*testtime.Millisecond)
 		defer cancel()
 
-		res, err := out.Call(ctx, &transport.Request{
+		res, err := outbound.Call(ctx, &yarpc.Request{
 			Caller:    "caller",
 			Service:   "service",
-			Encoding:  raw.Encoding,
+			Encoding:  yarpc.Encoding("raw"),
 			Procedure: "hello",
 			Body:      bytes.NewReader([]byte("world")),
 		})
@@ -279,8 +279,6 @@ func TestCallFailures(t *testing.T) {
 		}))
 	defer internalErrorServer.Close()
 
-	httpTransport := NewTransport()
-
 	tests := []struct {
 		url      string
 		messages []string
@@ -291,89 +289,30 @@ func TestCallFailures(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		out := httpTransport.NewSingleOutbound(tt.url)
-		require.NoError(t, out.Start(), "failed to start outbound")
-		defer out.Stop()
+		t.Run(tt.url, func(t *testing.T) {
+			dialer := &Dialer{}
+			require.NoError(t, dialer.Start(context.Background()))
+			defer func() {
+				require.NoError(t, dialer.Stop(context.Background()))
+			}()
 
-		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-		defer cancel()
-		_, err := out.Call(ctx, &transport.Request{
-			Caller:    "caller",
-			Service:   "service",
-			Encoding:  raw.Encoding,
-			Procedure: "wat",
-			Body:      bytes.NewReader([]byte("huh")),
+			outbound := &Outbound{Dialer: dialer, URL: parseURL(tt.url)}
+
+			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+			defer cancel()
+			_, err := outbound.Call(ctx, &yarpc.Request{
+				Caller:    "caller",
+				Service:   "service",
+				Encoding:  yarpc.Encoding("raw"),
+				Procedure: "wat",
+				Body:      bytes.NewReader([]byte("huh")),
+			})
+			assert.Error(t, err, "expected failure")
+			for _, msg := range tt.messages {
+				assert.Contains(t, err.Error(), msg)
+			}
 		})
-		assert.Error(t, err, "expected failure")
-		for _, msg := range tt.messages {
-			assert.Contains(t, err.Error(), msg)
-		}
 	}
-}
-
-func TestStartMultiple(t *testing.T) {
-	httpTransport := NewTransport()
-	out := httpTransport.NewSingleOutbound("http://localhost:9999")
-
-	var wg sync.WaitGroup
-	signal := make(chan struct{})
-
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			<-signal
-
-			err := out.Start()
-			assert.NoError(t, err)
-		}()
-	}
-	close(signal)
-	wg.Wait()
-}
-
-func TestStopMultiple(t *testing.T) {
-	httpTransport := NewTransport()
-	out := httpTransport.NewSingleOutbound("http://127.0.0.1:9999")
-
-	err := out.Start()
-	require.NoError(t, err)
-
-	var wg sync.WaitGroup
-	signal := make(chan struct{})
-
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			<-signal
-
-			err := out.Stop()
-			assert.NoError(t, err)
-		}()
-	}
-	close(signal)
-	wg.Wait()
-}
-
-func TestCallWithoutStarting(t *testing.T) {
-	httpTransport := NewTransport()
-	out := httpTransport.NewSingleOutbound("http://127.0.0.1:9999")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
-	defer cancel()
-	_, err := out.Call(
-		ctx,
-		&transport.Request{
-			Caller:    "caller",
-			Service:   "service",
-			Encoding:  raw.Encoding,
-			Procedure: "foo",
-			Body:      bytes.NewReader([]byte("sup")),
-		},
-	)
-
-	assert.Equal(t, yarpcerrors.FailedPreconditionErrorf("error waiting for HTTP outbound to start for service: service: context finished while waiting for instance to start: context deadline exceeded"), err)
 }
 
 func TestGetPeerForRequestErr(t *testing.T) {
@@ -382,7 +321,7 @@ func TestGetPeerForRequestErr(t *testing.T) {
 
 	tests := []struct {
 		name string
-		peer *peertest.MockPeer
+		peer *yarpctest.MockPeer
 		err  error
 	}{
 		{
@@ -390,46 +329,60 @@ func TestGetPeerForRequestErr(t *testing.T) {
 		},
 		{
 			name: "error casting peer",
-			peer: peertest.NewMockPeer(ctrl),
+			peer: yarpctest.NewMockPeer(ctrl),
 			err:  errors.New("err"),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			chooser := peertest.NewMockChooser(ctrl)
+			chooser := yarpctest.NewMockChooser(ctrl)
 
-			out := NewTransport().NewSingleOutbound("http://127.0.0.1:9999")
-			out.chooser = chooser
+			dialer := &Dialer{}
+			require.NoError(t, dialer.Start(context.Background()))
+			defer func() {
+				require.NoError(t, dialer.Stop(context.Background()))
+			}()
+			outbound := &Outbound{
+				Chooser: chooser,
+				URL:     &url.URL{Host: "127.0.0.1:9999"},
+			}
 
 			ctx := context.Background()
-			treq := &transport.Request{}
+			treq := &yarpc.Request{}
 
 			chooser.EXPECT().Choose(ctx, treq).Return(tt.peer, nil, tt.err)
 
-			_, _, err := out.getPeerForRequest(ctx, treq)
+			_, _, err := outbound.getPeerForRequest(ctx, treq)
 			require.Error(t, err)
 		})
 	}
 }
 
 func TestWithCoreHeaders(t *testing.T) {
-	endpoint := "http://127.0.0.1:9999"
-	out := NewTransport().NewSingleOutbound(endpoint)
-	require.NoError(t, out.Start())
+	addr := "http://127.0.0.1:9999"
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer func() {
+		require.NoError(t, dialer.Stop(context.Background()))
+	}()
+	outbound := &Outbound{
+		Dialer: dialer,
+		URL:    parseURL(addr),
+	}
 
-	httpReq := httptest.NewRequest("", endpoint, nil)
+	httpReq := httptest.NewRequest("", addr, nil)
 
 	shardKey := "sharding"
 	routingKey := "routing"
 	routingDelegate := "delegate"
 
-	treq := &transport.Request{
+	treq := &yarpc.Request{
 		ShardKey:        shardKey,
 		RoutingKey:      routingKey,
 		RoutingDelegate: routingDelegate,
 	}
-	result := out.withCoreHeaders(httpReq, treq, time.Second)
+	result := outbound.withCoreHeaders(httpReq, treq, time.Second)
 
 	assert.Equal(t, shardKey, result.Header.Get(ShardKeyHeader))
 	assert.Equal(t, routingKey, result.Header.Get(RoutingKeyHeader))
@@ -437,21 +390,33 @@ func TestWithCoreHeaders(t *testing.T) {
 }
 
 func TestNoRequest(t *testing.T) {
-	tran := NewTransport()
-	out := tran.NewSingleOutbound("localhost:0")
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer func() {
+		require.NoError(t, dialer.Stop(context.Background()))
+	}()
+	outbound := &Outbound{
+		Dialer: dialer,
+		URL:    &url.URL{Host: "localhost:0"},
+	}
 
-	_, err := out.Call(context.Background(), nil)
-	assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil"), err)
-
-	_, err = out.CallOneway(context.Background(), nil)
-	assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil"), err)
+	_, err := outbound.Call(context.Background(), nil)
+	assert.Equal(t, yarpcerror.InvalidArgumentErrorf("request for http unary outbound was nil"), err)
 }
 
 func TestOutboundNoDeadline(t *testing.T) {
-	out := NewTransport().NewSingleOutbound("http://foo-host:8080")
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer func() {
+		require.NoError(t, dialer.Stop(context.Background()))
+	}()
+	outbound := &Outbound{
+		Dialer: dialer,
+		URL:    &url.URL{Host: "foo-host:8080"},
+	}
 
-	_, err := out.call(context.Background(), &transport.Request{})
-	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing context deadline"), err)
+	_, err := outbound.call(context.Background(), &yarpc.Request{})
+	assert.Equal(t, yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "missing context deadline"), err)
 }
 
 func TestServiceMatchSuccess(t *testing.T) {
@@ -465,14 +430,19 @@ func TestServiceMatchSuccess(t *testing.T) {
 	))
 	defer matchServer.Close()
 
-	httpTransport := NewTransport()
-	out := httpTransport.NewSingleOutbound(matchServer.URL)
-	require.NoError(t, out.Start(), "failed to start outbound")
-	defer out.Stop()
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer func() {
+		require.NoError(t, dialer.Stop(context.Background()))
+	}()
+	outbound := &Outbound{
+		Dialer: dialer,
+		URL:    parseURL(matchServer.URL),
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err := out.Call(ctx, &transport.Request{
+	_, err := outbound.Call(ctx, &yarpc.Request{
 		Service: "Service",
 	})
 	require.NoError(t, err)
@@ -489,14 +459,19 @@ func TestServiceMatchFailed(t *testing.T) {
 	))
 	defer mismatchServer.Close()
 
-	httpTransport := NewTransport()
-	out := httpTransport.NewSingleOutbound(mismatchServer.URL)
-	require.NoError(t, out.Start(), "failed to start outbound")
-	defer out.Stop()
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer func() {
+		require.NoError(t, dialer.Stop(context.Background()))
+	}()
+	outbound := &Outbound{
+		Dialer: dialer,
+		URL:    parseURL(mismatchServer.URL),
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err := out.Call(ctx, &transport.Request{
+	_, err := outbound.Call(ctx, &yarpc.Request{
 		Service: "Service",
 	})
 	assert.Error(t, err, "expected failure for service name dismatch")
@@ -513,15 +488,25 @@ func TestServiceMatchNoHeader(t *testing.T) {
 	))
 	defer noHeaderServer.Close()
 
-	httpTransport := NewTransport()
-	out := httpTransport.NewSingleOutbound(noHeaderServer.URL)
-	require.NoError(t, out.Start(), "failed to start outbound")
-	defer out.Stop()
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer func() {
+		require.NoError(t, dialer.Stop(context.Background()))
+	}()
+	outbound := &Outbound{
+		Dialer: dialer,
+		URL:    parseURL(noHeaderServer.URL),
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err := out.Call(ctx, &transport.Request{
+	_, err := outbound.Call(ctx, &yarpc.Request{
 		Service: "Service",
 	})
 	require.NoError(t, err)
+}
+
+func parseURL(in string) *url.URL {
+	out, _ := url.Parse(in)
+	return out
 }

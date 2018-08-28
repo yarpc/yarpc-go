@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package net
+package internalhttp
 
 import (
 	"context"
@@ -92,11 +92,16 @@ func (h *HTTPServer) ListenAndServe() error {
 		return err
 	}
 
-	go h.serve(h.listener)
+	go h.Run(h.listener)
 	return nil
 }
 
-func (h *HTTPServer) serve(listener net.Listener) {
+// Run runs the server with an open listener.
+func (h *HTTPServer) Run(listener net.Listener) {
+	h.lock.Lock()
+	h.listener = listener
+	h.lock.Unlock()
+
 	// Serve always returns a non-nil error. For us, it's an error only if
 	// we didn't call Stop().
 	err := h.Server.Serve(listener)

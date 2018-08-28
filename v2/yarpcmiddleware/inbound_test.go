@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package middleware_test
+package yarpcmiddleware_test
 
 import (
 	"bytes"
@@ -26,60 +26,36 @@ import (
 	"errors"
 	"testing"
 
-	"go.uber.org/yarpc/api/middleware"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/internal/testtime"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/internal/testtime"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcmiddleware"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 func TestUnaryNopInboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	h := transporttest.NewMockUnaryHandler(mockCtrl)
-	wrappedH := middleware.ApplyUnaryInbound(h, middleware.NopUnaryInbound)
+	h := yarpctest.NewMockUnaryHandler(mockCtrl)
+	wrappedH := yarpcmiddleware.ApplyUnaryInbound(h, yarpcmiddleware.NopUnaryInbound)
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	req := &transport.Request{
+	req := &yarpc.Request{
 		Caller:    "somecaller",
 		Service:   "someservice",
-		Encoding:  raw.Encoding,
+		Encoding:  yarpc.Encoding("raw"),
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}
-	resw := new(transporttest.FakeResponseWriter)
+	resw := new(yarpctest.FakeResponseWriter)
 	err := errors.New("great sadness")
 	h.EXPECT().Handle(ctx, req, resw).Return(err)
 
 	assert.Equal(t, err, wrappedH.Handle(ctx, req, resw))
-}
-
-func TestOnewayNopInboundMiddleware(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	h := transporttest.NewMockOnewayHandler(mockCtrl)
-	wrappedH := middleware.ApplyOnewayInbound(h, middleware.NopOnewayInbound)
-
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-	defer cancel()
-	req := &transport.Request{
-		Caller:    "somecaller",
-		Service:   "someservice",
-		Encoding:  raw.Encoding,
-		Procedure: "hello",
-		Body:      bytes.NewReader([]byte{1, 2, 3}),
-	}
-	err := errors.New("great sadness")
-	h.EXPECT().HandleOneway(ctx, req).Return(err)
-
-	assert.Equal(t, err, wrappedH.HandleOneway(ctx, req))
 }
 
 func TestNilInboundMiddleware(t *testing.T) {
@@ -87,25 +63,16 @@ func TestNilInboundMiddleware(t *testing.T) {
 	defer ctrl.Finish()
 
 	ctx := context.Background()
-	req := &transport.Request{}
+	req := &yarpc.Request{}
 
 	t.Run("unary", func(t *testing.T) {
-		handler := transporttest.NewMockUnaryHandler(ctrl)
-		mw := middleware.ApplyUnaryInbound(handler, nil)
+		handler := yarpctest.NewMockUnaryHandler(ctrl)
+		mw := yarpcmiddleware.ApplyUnaryInbound(handler, nil)
 
-		resWriter := &transporttest.FakeResponseWriter{}
+		resWriter := &yarpctest.FakeResponseWriter{}
 
 		handler.EXPECT().Handle(ctx, req, resWriter)
 		err := mw.Handle(ctx, req, resWriter)
-		require.NoError(t, err, "unexpected error calling handler")
-	})
-
-	t.Run("oneway", func(t *testing.T) {
-		handler := transporttest.NewMockOnewayHandler(ctrl)
-		mw := middleware.ApplyOnewayInbound(handler, nil)
-
-		handler.EXPECT().HandleOneway(ctx, req)
-		err := mw.HandleOneway(ctx, req)
 		require.NoError(t, err, "unexpected error calling handler")
 	})
 }
@@ -114,9 +81,9 @@ func TestStreamNopInboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	h := transporttest.NewMockStreamHandler(mockCtrl)
-	wrappedH := middleware.ApplyStreamInbound(h, middleware.NopStreamInbound)
-	s, err := transport.NewServerStream(transporttest.NewMockStream(mockCtrl))
+	h := yarpctest.NewMockStreamHandler(mockCtrl)
+	wrappedH := yarpcmiddleware.ApplyStreamInbound(h, yarpcmiddleware.NopStreamInbound)
+	s, err := yarpc.NewServerStream(yarpctest.NewMockStream(mockCtrl))
 	require.NoError(t, err)
 
 	err = errors.New("great sadness")
@@ -129,7 +96,7 @@ func TestStreamDefaultsToHandlerWhenNil(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	h := transporttest.NewMockStreamHandler(mockCtrl)
-	wrappedH := middleware.ApplyStreamInbound(h, nil)
+	h := yarpctest.NewMockStreamHandler(mockCtrl)
+	wrappedH := yarpcmiddleware.ApplyStreamInbound(h, nil)
 	assert.Equal(t, wrappedH, h)
 }

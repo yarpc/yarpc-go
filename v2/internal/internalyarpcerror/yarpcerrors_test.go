@@ -18,14 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcerrors
+package internalyarpcerror
 
 import (
 	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 func TestAnnotateWithError(t *testing.T) {
@@ -38,29 +38,29 @@ func TestAnnotateWithError(t *testing.T) {
 	}{
 		{
 			name:       "basic",
-			giveErr:    yarpcerrors.FailedPreconditionErrorf("test"),
+			giveErr:    yarpcerror.FailedPreconditionErrorf("test"),
 			giveFormat: "mytest",
-			wantErr:    yarpcerrors.FailedPreconditionErrorf("mytest: test"),
+			wantErr:    yarpcerror.FailedPreconditionErrorf("mytest: test"),
 		},
 		{
 			name:       "basic with args",
-			giveErr:    yarpcerrors.FailedPreconditionErrorf("test"),
+			giveErr:    yarpcerror.FailedPreconditionErrorf("test"),
 			giveFormat: "mytest %s",
 			giveArgs: []interface{}{
 				"arg1",
 			},
-			wantErr: yarpcerrors.FailedPreconditionErrorf("mytest arg1: test"),
+			wantErr: yarpcerror.FailedPreconditionErrorf("mytest arg1: test"),
 		},
 		{
 			name:       "unannotated",
 			giveErr:    errors.New("test"),
 			giveFormat: "mytest",
-			wantErr:    yarpcerrors.UnknownErrorf("mytest: test"),
+			wantErr:    yarpcerror.UnknownErrorf("mytest: test"),
 		},
 	}
 	for _, n := range tests {
 		t.Run(n.name, func(t *testing.T) {
-			gotErr := AnnotateWithInfo(yarpcerrors.FromError(n.giveErr), n.giveFormat, n.giveArgs...)
+			gotErr := AnnotateWithInfo(yarpcerror.FromError(n.giveErr), n.giveFormat, n.giveArgs...)
 			assert.Equal(t, n.wantErr, gotErr)
 		})
 	}

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package encoding
+package yarpc
 
 import (
 	"context"
@@ -26,7 +26,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/api/transport"
 )
 
 func TestNilCall(t *testing.T) {
@@ -49,16 +48,16 @@ func TestNilCall(t *testing.T) {
 
 func TestReadFromRequest(t *testing.T) {
 	ctx, icall := NewInboundCall(context.Background())
-	icall.ReadFromRequest(&transport.Request{
+	icall.ReadFromRequest(&Request{
 		Service:         "service",
 		Transport:       "transport",
 		Caller:          "caller",
-		Encoding:        transport.Encoding("raw"),
+		Encoding:        Encoding("raw"),
 		Procedure:       "proc",
 		ShardKey:        "sk",
 		RoutingKey:      "rk",
 		RoutingDelegate: "rd",
-		Headers:         transport.NewHeaders().With("foo", "bar"),
+		Headers:         NewHeaders().With("foo", "bar"),
 	})
 	call := CallFromContext(ctx)
 	require.NotNil(t, call)
@@ -81,16 +80,16 @@ func TestReadFromRequest(t *testing.T) {
 
 func TestReadFromRequestMeta(t *testing.T) {
 	ctx, icall := NewInboundCall(context.Background())
-	icall.ReadFromRequestMeta(&transport.RequestMeta{
+	icall.ReadFromRequestMeta(&RequestMeta{
 		Service:         "service",
 		Caller:          "caller",
 		Transport:       "transport",
-		Encoding:        transport.Encoding("raw"),
+		Encoding:        Encoding("raw"),
 		Procedure:       "proc",
 		ShardKey:        "sk",
 		RoutingKey:      "rk",
 		RoutingDelegate: "rd",
-		Headers:         transport.NewHeaders().With("foo", "bar"),
+		Headers:         NewHeaders().With("foo", "bar"),
 	})
 	call := CallFromContext(ctx)
 	require.NotNil(t, call)
@@ -113,16 +112,16 @@ func TestReadFromRequestMeta(t *testing.T) {
 
 func TestDisabledResponseHeaders(t *testing.T) {
 	ctx, icall := NewInboundCallWithOptions(context.Background(), DisableResponseHeaders())
-	icall.ReadFromRequest(&transport.Request{
+	icall.ReadFromRequest(&Request{
 		Service:         "service",
 		Transport:       "transport",
 		Caller:          "caller",
-		Encoding:        transport.Encoding("raw"),
+		Encoding:        Encoding("raw"),
 		Procedure:       "proc",
 		ShardKey:        "sk",
 		RoutingKey:      "rk",
 		RoutingDelegate: "rd",
-		Headers:         transport.NewHeaders().With("foo", "bar"),
+		Headers:         NewHeaders().With("foo", "bar"),
 	})
 	call := CallFromContext(ctx)
 	require.NotNil(t, call)

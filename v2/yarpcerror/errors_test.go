@@ -18,14 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcerrors
+package yarpcerror
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -76,59 +74,6 @@ func TestErrorsString(t *testing.T) {
 			require.True(t, ok)
 			require.Equal(t, fmt.Sprintf("code:%s message:hello 1", code.String()), status.Error())
 		},
-		func(t *testing.T) {
-			status, ok := NamedErrorf("foo", "hello %d", 1).(*Status)
-			require.True(t, ok)
-			require.Equal(t, "code:unknown name:foo message:hello 1", status.Error())
-		},
-	)
-}
-
-func TestIsYARPCError(t *testing.T) {
-	testAllErrorConstructors(
-		t,
-		func(t *testing.T, code Code, errorConstructor func(string, ...interface{}) error) {
-			require.True(t, IsYARPCError(errorConstructor("")))
-		},
-		func(t *testing.T) {
-			require.True(t, IsYARPCError(NamedErrorf("", "")))
-		},
-	)
-}
-
-func TestErrorCode(t *testing.T) {
-	testAllErrorConstructors(
-		t,
-		func(t *testing.T, code Code, errorConstructor func(string, ...interface{}) error) {
-			require.Equal(t, code, ErrorCode(errorConstructor("")))
-		},
-		func(t *testing.T) {
-			require.Equal(t, CodeUnknown, ErrorCode(NamedErrorf("", "")))
-		},
-	)
-}
-
-func TestErrorName(t *testing.T) {
-	testAllErrorConstructors(
-		t,
-		func(t *testing.T, code Code, errorConstructor func(string, ...interface{}) error) {
-			require.Empty(t, ErrorName(errorConstructor("")))
-		},
-		func(t *testing.T) {
-			require.Equal(t, "foo", ErrorName(NamedErrorf("foo", "")))
-		},
-	)
-}
-
-func TestErrorMessage(t *testing.T) {
-	testAllErrorConstructors(
-		t,
-		func(t *testing.T, code Code, errorConstructor func(string, ...interface{}) error) {
-			require.Equal(t, "hello 1", ErrorMessage(errorConstructor("hello %d", 1)))
-		},
-		func(t *testing.T) {
-			require.Equal(t, "hello 1", ErrorMessage(NamedErrorf("foo", "hello %d", 1)))
-		},
 	)
 }
 
@@ -142,29 +87,13 @@ func TestIsErrorWithCode(t *testing.T) {
 	}
 }
 
-func TestNonYARPCErrors(t *testing.T) {
-	assert.Equal(t, CodeOK, ErrorCode(nil))
-	assert.Equal(t, CodeUnknown, ErrorCode(errors.New("")))
-	assert.Equal(t, "", ErrorName(nil))
-	assert.Equal(t, "", ErrorName(errors.New("")))
-	assert.Equal(t, "", ErrorMessage(nil))
-	assert.Equal(t, "", ErrorMessage(errors.New("")))
-	assert.Nil(t, FromHeaders(CodeOK, "", ""))
-}
-
-func TestFromHeadersBadName(t *testing.T) {
-	assert.Equal(t, validateName("123"), FromHeaders(CodeUnknown, "123", ""))
-}
-
 func testAllErrorConstructors(
 	t *testing.T,
 	errorConstructorFunc func(*testing.T, Code, func(string, ...interface{}) error),
-	namedFunc func(*testing.T),
 ) {
 	for code, errorConstructor := range _codeToErrorConstructor {
 		t.Run(code.String(), func(t *testing.T) {
 			errorConstructorFunc(t, code, errorConstructor)
 		})
 	}
-	t.Run("Named", namedFunc)
 }

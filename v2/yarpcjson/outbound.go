@@ -18,50 +18,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package json
+package yarpcjson
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
 
-	"go.uber.org/yarpc"
-	encodingapi "go.uber.org/yarpc/api/encoding"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/pkg/encoding"
-	"go.uber.org/yarpc/pkg/errors"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcencoding"
 )
 
-// Client makes JSON requests to a single service.
-type Client interface {
-	// Call performs an outbound JSON request.
-	//
-	// resBodyOut is a pointer to a value that can be filled with
-	// json.Unmarshal.
-	//
-	// Returns the response or an error if the request failed.
-	Call(ctx context.Context, procedure string, reqBody interface{}, resBodyOut interface{}, opts ...yarpc.CallOption) error
-	CallOneway(ctx context.Context, procedure string, reqBody interface{}, opts ...yarpc.CallOption) (transport.Ack, error)
-}
-
 // New builds a new JSON client.
-func New(c transport.ClientConfig) Client {
-	return jsonClient{cc: c}
+func New(c yarpc.Client) Client {
+	return Client{c: c}
 }
 
-func init() {
-	yarpc.RegisterClientBuilder(New)
+// Client is a JSON encoding porcelain for a YARPC client.
+type Client struct {
+	c yarpc.Client
 }
 
-type jsonClient struct {
-	cc transport.ClientConfig
-}
-
-func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interface{}, resBodyOut interface{}, opts ...yarpc.CallOption) error {
-	call := encodingapi.NewOutboundCall(encoding.FromOptions(opts)...)
-	treq := transport.Request{
-		Caller:    c.cc.Caller(),
-		Service:   c.cc.Service(),
+// Call performs an outbound JSON request.
+//
+// resBodyOut is a pointer to a value that can be filled with
+// json.Unmarshal.
+//
+// Returns the response or an error if the request failed.
+func (c Client) Call(ctx context.Context, procedure string, reqBody interface{}, resBodyOut interface{}, opts ...yarpc.CallOption) error {
+	call := yarpc.NewOutboundCall(opts...)
+	treq := yarpc.Request{
+		Caller:    c.c.Caller,
+		Service:   c.c.Service,
 		Procedure: procedure,
 		Encoding:  Encoding,
 	}
@@ -73,11 +61,11 @@ func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interfac
 
 	encoded, err := json.Marshal(reqBody)
 	if err != nil {
-		return errors.RequestBodyEncodeError(&treq, err)
+		return yarpcencoding.RequestBodyEncodeError(&treq, err)
 	}
 
 	treq.Body = bytes.NewReader(encoded)
-	tres, appErr := c.cc.GetUnaryOutbound().Call(ctx, &treq)
+	tres, appErr := c.c.Unary.Call(ctx, &treq)
 	if tres == nil {
 		return appErr
 	}
@@ -90,7 +78,7 @@ func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interfac
 	}
 	if tres.Body != nil {
 		if err := json.NewDecoder(tres.Body).Decode(resBodyOut); err != nil && decodeErr == nil {
-			decodeErr = errors.ResponseBodyDecodeError(&treq, err)
+			decodeErr = yarpcencoding.ResponseBodyDecodeError(&treq, err)
 		}
 		if err := tres.Body.Close(); err != nil && decodeErr == nil {
 			decodeErr = err
@@ -101,27 +89,4 @@ func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interfac
 		return appErr
 	}
 	return decodeErr
-}
-
-func (c jsonClient) CallOneway(ctx context.Context, procedure string, reqBody interface{}, opts ...yarpc.CallOption) (transport.Ack, error) {
-	call := encodingapi.NewOutboundCall(encoding.FromOptions(opts)...)
-	treq := transport.Request{
-		Caller:    c.cc.Caller(),
-		Service:   c.cc.Service(),
-		Procedure: procedure,
-		Encoding:  Encoding,
-	}
-
-	ctx, err := call.WriteToRequest(ctx, &treq)
-	if err != nil {
-		return nil, err
-	}
-
-	var buff bytes.Buffer
-	if err := json.NewEncoder(&buff).Encode(reqBody); err != nil {
-		return nil, errors.RequestBodyEncodeError(&treq, err)
-	}
-	treq.Body = &buff
-
-	return c.cc.GetOnewayOutbound().CallOneway(ctx, &treq)
 }

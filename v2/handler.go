@@ -18,11 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package yarpc
 
 import (
 	"context"
-	"time"
 
 	"go.uber.org/zap/zapcore"
 )
@@ -33,20 +32,16 @@ type Type int
 const (
 	// Unary types are traditional request/response RPCs
 	Unary Type = iota + 1
-	// Oneway types are fire and forget RPCs (no response)
-	Oneway
 	// Streaming types are Stream based RPCs (bidirectional messages over long
 	// lived connections)
 	Streaming
 )
 
-// HandlerSpec holds a handler and its Type
-// one handler will be set, the other nil
+// HandlerSpec holds either a UnaryHandler or StreamHandler.
 type HandlerSpec struct {
 	t Type
 
 	unaryHandler  UnaryHandler
-	onewayHandler OnewayHandler
 	streamHandler StreamHandler
 }
 
@@ -62,20 +57,12 @@ func (h HandlerSpec) Type() Type { return h.t }
 // Unary returns the Unary Handler or nil
 func (h HandlerSpec) Unary() UnaryHandler { return h.unaryHandler }
 
-// Oneway returns the Oneway Handler or nil
-func (h HandlerSpec) Oneway() OnewayHandler { return h.onewayHandler }
-
 // Stream returns the Stream Handler or nil
 func (h HandlerSpec) Stream() StreamHandler { return h.streamHandler }
 
 // NewUnaryHandlerSpec returns an new HandlerSpec with a UnaryHandler
 func NewUnaryHandlerSpec(handler UnaryHandler) HandlerSpec {
 	return HandlerSpec{t: Unary, unaryHandler: handler}
-}
-
-// NewOnewayHandlerSpec returns an new HandlerSpec with a OnewayHandler
-func NewOnewayHandlerSpec(handler OnewayHandler) HandlerSpec {
-	return HandlerSpec{t: Oneway, onewayHandler: handler}
 }
 
 // NewStreamHandlerSpec returns an new HandlerSpec with a StreamHandler
@@ -96,14 +83,6 @@ type UnaryHandler interface {
 	Handle(ctx context.Context, req *Request, resw ResponseWriter) error
 }
 
-// OnewayHandler handles a single, transport-level, oneway request.
-type OnewayHandler interface {
-	// Handle the given oneway request
-	//
-	// An error may be returned in case of failures.
-	HandleOneway(ctx context.Context, req *Request) error
-}
-
 // StreamHandler handles a stream connection request.
 type StreamHandler interface {
 	// Handle the given stream connection.  The stream will close when the
@@ -113,52 +92,20 @@ type StreamHandler interface {
 	HandleStream(stream *ServerStream) error
 }
 
-// DispatchUnaryHandler calls the handler h, recovering panics and timeout errors,
-// converting them to yarpc errors. All other errors are passed trough.
-//
-// Deprecated: Use InvokeUnaryHandler instead.
-func DispatchUnaryHandler(
-	ctx context.Context,
-	h UnaryHandler,
-	start time.Time,
-	req *Request,
-	resq ResponseWriter,
-) (err error) {
-	return InvokeUnaryHandler(UnaryInvokeRequest{
-		Context:        ctx,
-		StartTime:      start,
-		Request:        req,
-		ResponseWriter: resq,
-		Handler:        h,
-	})
+// UnaryHandlerFunc is a utility for defining a UnaryHandler with just a
+// function.
+type UnaryHandlerFunc func(context.Context, *Request, ResponseWriter) error
+
+// StreamHandlerFunc is a utility for defining a StreamHandler with just a
+// function.
+type StreamHandlerFunc func(*ServerStream) error
+
+// Handle handles an inbound unary request.
+func (f UnaryHandlerFunc) Handle(ctx context.Context, r *Request, w ResponseWriter) error {
+	return f(ctx, r, w)
 }
 
-// DispatchOnewayHandler calls the oneway handler, recovering from panics as
-// errors
-//
-// Deprecated: Use InvokeOnewayHandler instead.
-func DispatchOnewayHandler(
-	ctx context.Context,
-	h OnewayHandler,
-	req *Request,
-) (err error) {
-	return InvokeOnewayHandler(OnewayInvokeRequest{
-		Context: ctx,
-		Request: req,
-		Handler: h,
-	})
-}
-
-// DispatchStreamHandler calls the stream handler, recovering from panics as
-// errors.
-//
-// Deprecated: Use InvokeStreamHandler instead.
-func DispatchStreamHandler(
-	h StreamHandler,
-	stream *ServerStream,
-) (err error) {
-	return InvokeStreamHandler(StreamInvokeRequest{
-		Stream:  stream,
-		Handler: h,
-	})
+// HandleStream handles an inbound streaming request.
+func (f StreamHandlerFunc) HandleStream(stream *ServerStream) error {
+	return f(stream)
 }

@@ -18,37 +18,41 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package peer
+package yarpcpeer
 
-import "fmt"
+import (
+	"fmt"
+
+	yarpc "go.uber.org/yarpc/v2"
+)
 
 // ErrPeerHasNoReferenceToSubscriber is called when a Peer is expected
 // to operate on a PeerSubscriber it has no reference to
 type ErrPeerHasNoReferenceToSubscriber struct {
-	PeerIdentifier Identifier
-	PeerSubscriber Subscriber
+	PeerIdentifier yarpc.Identifier
+	PeerSubscriber yarpc.Subscriber
 }
 
 func (e ErrPeerHasNoReferenceToSubscriber) Error() string {
 	return fmt.Sprintf("peer (%v) has no reference to peer subscriber (%v)", e.PeerIdentifier, e.PeerSubscriber)
 }
 
-// ErrTransportHasNoReferenceToPeer is called when a transport is expected to
+// ErrDialerHasNoReferenceToPeer is called when a transport is expected to
 // operate on a Peer it has no reference to
-type ErrTransportHasNoReferenceToPeer struct {
+type ErrDialerHasNoReferenceToPeer struct {
 	TransportName  string
 	PeerIdentifier string
 }
 
-func (e ErrTransportHasNoReferenceToPeer) Error() string {
-	return fmt.Sprintf("transport %q has no reference to peer %q", e.TransportName, e.PeerIdentifier)
+func (e ErrDialerHasNoReferenceToPeer) Error() string {
+	return fmt.Sprintf("dialer %q has no reference to peer %q", e.TransportName, e.PeerIdentifier)
 }
 
 // ErrInvalidPeerType is when a specfic peer type is required, but
 // was not passed in
 type ErrInvalidPeerType struct {
 	ExpectedType   string
-	PeerIdentifier Identifier
+	PeerIdentifier yarpc.Identifier
 }
 
 func (e ErrInvalidPeerType) Error() string {
@@ -73,22 +77,12 @@ func (e ErrPeerListNotStarted) Error() string {
 
 // ErrInvalidPeerConversion is called when a peer can't be properly converted
 type ErrInvalidPeerConversion struct {
-	Peer         Peer
+	Peer         yarpc.Peer
 	ExpectedType string
 }
 
 func (e ErrInvalidPeerConversion) Error() string {
 	return fmt.Sprintf("cannot convert peer (%v) to type %s", e.Peer, e.ExpectedType)
-}
-
-// ErrInvalidTransportConversion is called when a transport can't be properly converted
-type ErrInvalidTransportConversion struct {
-	Transport    Transport
-	ExpectedType string
-}
-
-func (e ErrInvalidTransportConversion) Error() string {
-	return fmt.Sprintf("cannot convert transport (%v) to type %s", e.Transport, e.ExpectedType)
 }
 
 // ErrPeerAddAlreadyInList is returned to peer list updater if the
@@ -108,7 +102,7 @@ func (e ErrPeerRemoveNotInList) Error() string {
 }
 
 // ErrChooseContextHasNoDeadline is returned when a context is sent to a peerlist with no deadline
-// DEPRECATED use yarpcerrors api instead.
+// DEPRECATED use yarpcerror api instead.
 type ErrChooseContextHasNoDeadline string
 
 func (e ErrChooseContextHasNoDeadline) Error() string {

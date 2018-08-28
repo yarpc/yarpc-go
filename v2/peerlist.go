@@ -18,22 +18,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package peer
+package yarpc
 
 import (
 	"context"
-
-	"go.uber.org/yarpc/api/transport"
 )
 
 // Chooser is a collection of Peers. Outbounds request peers from the
 // peer.Chooser to determine where to send requests.
-// The chooser is responsible for managing the lifecycle of any retained peers.
 type Chooser interface {
-	transport.Lifecycle
-
 	// Choose a Peer for the next call, block until a peer is available (or timeout)
-	Choose(context.Context, *transport.Request) (peer Peer, onFinish func(error), err error)
+	Choose(context.Context, *Request) (peer Peer, onFinish func(error), err error)
 }
 
 // List listens to adds and removes of Peers from a peer list updater.
@@ -59,38 +54,3 @@ type ChooserList interface {
 	Chooser
 	List
 }
-
-// ListImplementation is a collection of available peers, with its own
-// subscribers for peer status change notifications.
-// The available peer list encapsulates the logic for selecting from among
-// available peers, whereas a ChooserList is responsible for retaining,
-// releasing, and monitoring peer availability.
-// Use "go.uber.org/yarpc/peer/peerlist".List in conjunction with a
-// ListImplementation to produce a "go.uber.org/yarpc/api/peer".List.
-//
-// peerlist.List and ListImplementation compose well with sharding schemes the
-// degenerate to returning the only available peer.
-//
-// The peerlist.List calls Add, Remove, and Choose under a write lock so the
-// implementation is free to perform mutations on its own data without locks.
-//
-// Deprecated in favor of "go.uber.org/yarpc/peer/peerlist/v2".Implementation.
-type ListImplementation interface {
-	transport.Lifecycle
-
-	Add(StatusPeer) Subscriber
-	Remove(StatusPeer, Subscriber)
-	// Choose must return an available peer under a list read lock, so must
-	// not block.
-	Choose(context.Context, *transport.Request) StatusPeer
-}
-
-// Binder is a callback for peer.Bind that accepts a peer list and binds it to
-// a peer list updater for the duration of the returned peer list updater.
-// The peer list updater must implement the lifecycle interface, and start and
-// stop updates over that lifecycle.
-// The binder must not block on updating the list, because update may block
-// until the peer list has started.
-// The binder must return a peer list updater that will begin updating when it
-// starts, and stop updating when it stops.
-type Binder func(List) transport.Lifecycle

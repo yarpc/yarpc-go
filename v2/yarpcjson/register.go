@@ -18,14 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package json
+package yarpcjson
 
 import (
 	"context"
 	"fmt"
 	"reflect"
 
-	"go.uber.org/yarpc/api/transport"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 var (
@@ -34,16 +34,6 @@ var (
 	_interfaceEmptyType = reflect.TypeOf((*interface{})(nil)).Elem()
 )
 
-// Register calls the RouteTable's Register method.
-//
-// This function exists for backwards compatibility only. It will be removed
-// in a future version.
-//
-// Deprecated: Use the RouteTable's Register method directly.
-func Register(r transport.RouteTable, rs []transport.Procedure) {
-	r.Register(rs)
-}
-
 // Procedure builds a Procedure from the given JSON handler. handler must be
 // a function with a signature similar to,
 //
@@ -51,11 +41,11 @@ func Register(r transport.RouteTable, rs []transport.Procedure) {
 //
 // Where $reqBody and $resBody are a map[string]interface{} or pointers to
 // structs.
-func Procedure(name string, handler interface{}) []transport.Procedure {
-	return []transport.Procedure{
+func Procedure(name string, handler interface{}) []yarpc.Procedure {
+	return []yarpc.Procedure{
 		{
 			Name: name,
-			HandlerSpec: transport.NewUnaryHandlerSpec(
+			HandlerSpec: yarpc.NewUnaryHandlerSpec(
 				wrapUnaryHandler(name, handler),
 			),
 			Encoding: Encoding,
@@ -63,34 +53,10 @@ func Procedure(name string, handler interface{}) []transport.Procedure {
 	}
 }
 
-// OnewayProcedure builds a Procedure from the given JSON handler. handler must be
-// a function with a signature similar to,
-//
-// 	f(ctx context.Context, body $reqBody) error
-//
-// Where $reqBody is a map[string]interface{} or pointer to a struct.
-func OnewayProcedure(name string, handler interface{}) []transport.Procedure {
-	return []transport.Procedure{
-		{
-			Name: name,
-			HandlerSpec: transport.NewOnewayHandlerSpec(
-				wrapOnewayHandler(name, handler)),
-			Encoding: Encoding,
-		},
-	}
-}
-
 // wrapUnaryHandler takes a valid JSON handler function and converts it into a
-// transport.UnaryHandler.
-func wrapUnaryHandler(name string, handler interface{}) transport.UnaryHandler {
+// yarpc.UnaryHandler.
+func wrapUnaryHandler(name string, handler interface{}) yarpc.UnaryHandler {
 	reqBodyType := verifyUnarySignature(name, reflect.TypeOf(handler))
-	return newJSONHandler(reqBodyType, handler)
-}
-
-// wrapOnewayHandler takes a valid JSON handler function and converts it into a
-// transport.OnewayHandler.
-func wrapOnewayHandler(name string, handler interface{}) transport.OnewayHandler {
-	reqBodyType := verifyOnewaySignature(name, reflect.TypeOf(handler))
 	return newJSONHandler(reqBodyType, handler)
 }
 
@@ -137,30 +103,6 @@ func verifyUnarySignature(n string, t reflect.Type) reflect.Type {
 			"the first result of the handler for %q must be "+
 				"a struct pointer, a map[string]interface{}, or interface{], and not: %v",
 			n, resBodyType,
-		))
-	}
-
-	return reqBodyType
-}
-
-// verifyOnewaySignature verifies that the given type matches what we expect
-// from oneway JSON handlers.
-//
-// Returns the request type.
-func verifyOnewaySignature(n string, t reflect.Type) reflect.Type {
-	reqBodyType := verifyInputSignature(n, t)
-
-	if t.NumOut() != 1 {
-		panic(fmt.Sprintf(
-			"expected handler for %q to have 1 result but it had %v",
-			n, t.NumOut(),
-		))
-	}
-
-	if t.Out(0) != _errorType {
-		panic(fmt.Sprintf(
-			"the result of the handler for %q must be of type error, and not: %v",
-			n, t.Out(0),
 		))
 	}
 

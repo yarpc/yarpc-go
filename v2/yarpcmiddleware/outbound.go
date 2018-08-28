@@ -18,13 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package middleware
+package yarpcmiddleware
 
 import (
 	"context"
 
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/introspection"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 // UnaryOutbound defines transport-level middleware for
@@ -40,7 +39,7 @@ import (
 // UnaryOutbound middleware is re-used across requests and MAY be called
 // multiple times on the same request.
 type UnaryOutbound interface {
-	Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error)
+	Call(ctx context.Context, request *yarpc.Request, out yarpc.UnaryOutbound) (*yarpc.Response, error)
 }
 
 // NopUnaryOutbound is a unary outbound middleware that does not do
@@ -49,7 +48,7 @@ var NopUnaryOutbound UnaryOutbound = nopUnaryOutbound{}
 
 // ApplyUnaryOutbound applies the given UnaryOutbound middleware to
 // the given UnaryOutbound transport.
-func ApplyUnaryOutbound(o transport.UnaryOutbound, f UnaryOutbound) transport.UnaryOutbound {
+func ApplyUnaryOutbound(o yarpc.UnaryOutbound, f UnaryOutbound) yarpc.UnaryOutbound {
 	if f == nil {
 		return o
 	}
@@ -57,123 +56,26 @@ func ApplyUnaryOutbound(o transport.UnaryOutbound, f UnaryOutbound) transport.Un
 }
 
 // UnaryOutboundFunc adapts a function into a UnaryOutbound middleware.
-type UnaryOutboundFunc func(context.Context, *transport.Request, transport.UnaryOutbound) (*transport.Response, error)
+type UnaryOutboundFunc func(context.Context, *yarpc.Request, yarpc.UnaryOutbound) (*yarpc.Response, error)
 
 // Call for UnaryOutboundFunc.
-func (f UnaryOutboundFunc) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+func (f UnaryOutboundFunc) Call(ctx context.Context, request *yarpc.Request, out yarpc.UnaryOutbound) (*yarpc.Response, error) {
 	return f(ctx, request, out)
 }
 
 type unaryOutboundWithMiddleware struct {
-	o transport.UnaryOutbound
+	o yarpc.UnaryOutbound
 	f UnaryOutbound
 }
 
-func (fo unaryOutboundWithMiddleware) Transports() []transport.Transport {
-	return fo.o.Transports()
-}
-
-func (fo unaryOutboundWithMiddleware) Start() error {
-	return fo.o.Start()
-}
-
-func (fo unaryOutboundWithMiddleware) Stop() error {
-	return fo.o.Stop()
-}
-
-func (fo unaryOutboundWithMiddleware) IsRunning() bool {
-	return fo.o.IsRunning()
-}
-
-func (fo unaryOutboundWithMiddleware) Introspect() introspection.OutboundStatus {
-	if o, ok := fo.o.(introspection.IntrospectableOutbound); ok {
-		return o.Introspect()
-	}
-	return introspection.OutboundStatusNotSupported
-}
-
-func (fo unaryOutboundWithMiddleware) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+func (fo unaryOutboundWithMiddleware) Call(ctx context.Context, request *yarpc.Request) (*yarpc.Response, error) {
 	return fo.f.Call(ctx, request, fo.o)
 }
 
 type nopUnaryOutbound struct{}
 
-func (nopUnaryOutbound) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+func (nopUnaryOutbound) Call(ctx context.Context, request *yarpc.Request, out yarpc.UnaryOutbound) (*yarpc.Response, error) {
 	return out.Call(ctx, request)
-}
-
-// OnewayOutbound defines transport-level middleware for `OnewayOutbound`s.
-//
-// OnewayOutbound middleware MAY do zero or more of the following: change the
-// context, change the request, change the returned ack, handle the returned
-// error, call the given outbound zero or more times.
-//
-// OnewayOutbound middleware MUST always return an Ack (nil or not) or an
-// error, and they MUST be thread-safe.
-//
-// OnewayOutbound middleware is re-used across requests and MAY be called
-// multiple times on the same request.
-type OnewayOutbound interface {
-	CallOneway(ctx context.Context, request *transport.Request, out transport.OnewayOutbound) (transport.Ack, error)
-}
-
-// NopOnewayOutbound is a oneway outbound middleware that does not do
-// anything special. It simply calls the underlying OnewayOutbound transport.
-var NopOnewayOutbound OnewayOutbound = nopOnewayOutbound{}
-
-// ApplyOnewayOutbound applies the given OnewayOutbound middleware to
-// the given OnewayOutbound transport.
-func ApplyOnewayOutbound(o transport.OnewayOutbound, f OnewayOutbound) transport.OnewayOutbound {
-	if f == nil {
-		return o
-	}
-	return onewayOutboundWithMiddleware{o: o, f: f}
-}
-
-// OnewayOutboundFunc adapts a function into a OnewayOutbound middleware.
-type OnewayOutboundFunc func(context.Context, *transport.Request, transport.OnewayOutbound) (transport.Ack, error)
-
-// CallOneway for OnewayOutboundFunc.
-func (f OnewayOutboundFunc) CallOneway(ctx context.Context, request *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
-	return f(ctx, request, out)
-}
-
-type onewayOutboundWithMiddleware struct {
-	o transport.OnewayOutbound
-	f OnewayOutbound
-}
-
-func (fo onewayOutboundWithMiddleware) Transports() []transport.Transport {
-	return fo.o.Transports()
-}
-
-func (fo onewayOutboundWithMiddleware) Start() error {
-	return fo.o.Start()
-}
-
-func (fo onewayOutboundWithMiddleware) Stop() error {
-	return fo.o.Stop()
-}
-
-func (fo onewayOutboundWithMiddleware) IsRunning() bool {
-	return fo.o.IsRunning()
-}
-
-func (fo onewayOutboundWithMiddleware) CallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
-	return fo.f.CallOneway(ctx, request, fo.o)
-}
-
-func (fo onewayOutboundWithMiddleware) Introspect() introspection.OutboundStatus {
-	if o, ok := fo.o.(introspection.IntrospectableOutbound); ok {
-		return o.Introspect()
-	}
-	return introspection.OutboundStatusNotSupported
-}
-
-type nopOnewayOutbound struct{}
-
-func (nopOnewayOutbound) CallOneway(ctx context.Context, request *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
-	return out.CallOneway(ctx, request)
 }
 
 // StreamOutbound defines transport-level middleware for
@@ -189,7 +91,7 @@ func (nopOnewayOutbound) CallOneway(ctx context.Context, request *transport.Requ
 // StreamOutbound middleware is re-used across requests and MAY be called
 // multiple times on the same request.
 type StreamOutbound interface {
-	CallStream(ctx context.Context, request *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error)
+	CallStream(ctx context.Context, request *yarpc.StreamRequest, out yarpc.StreamOutbound) (*yarpc.ClientStream, error)
 }
 
 // NopStreamOutbound is a stream outbound middleware that does not do
@@ -198,7 +100,7 @@ var NopStreamOutbound StreamOutbound = nopStreamOutbound{}
 
 // ApplyStreamOutbound applies the given StreamOutbound middleware to
 // the given StreamOutbound transport.
-func ApplyStreamOutbound(o transport.StreamOutbound, f StreamOutbound) transport.StreamOutbound {
+func ApplyStreamOutbound(o yarpc.StreamOutbound, f StreamOutbound) yarpc.StreamOutbound {
 	if f == nil {
 		return o
 	}
@@ -206,40 +108,24 @@ func ApplyStreamOutbound(o transport.StreamOutbound, f StreamOutbound) transport
 }
 
 // StreamOutboundFunc adapts a function into a StreamOutbound middleware.
-type StreamOutboundFunc func(context.Context, *transport.StreamRequest, transport.StreamOutbound) (*transport.ClientStream, error)
+type StreamOutboundFunc func(context.Context, *yarpc.StreamRequest, yarpc.StreamOutbound) (*yarpc.ClientStream, error)
 
 // CallStream for StreamOutboundFunc.
-func (f StreamOutboundFunc) CallStream(ctx context.Context, request *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
+func (f StreamOutboundFunc) CallStream(ctx context.Context, request *yarpc.StreamRequest, out yarpc.StreamOutbound) (*yarpc.ClientStream, error) {
 	return f(ctx, request, out)
 }
 
 type streamOutboundWithMiddleware struct {
-	o transport.StreamOutbound
+	o yarpc.StreamOutbound
 	f StreamOutbound
 }
 
-func (fo streamOutboundWithMiddleware) Transports() []transport.Transport {
-	return fo.o.Transports()
-}
-
-func (fo streamOutboundWithMiddleware) Start() error {
-	return fo.o.Start()
-}
-
-func (fo streamOutboundWithMiddleware) Stop() error {
-	return fo.o.Stop()
-}
-
-func (fo streamOutboundWithMiddleware) IsRunning() bool {
-	return fo.o.IsRunning()
-}
-
-func (fo streamOutboundWithMiddleware) CallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
+func (fo streamOutboundWithMiddleware) CallStream(ctx context.Context, request *yarpc.StreamRequest) (*yarpc.ClientStream, error) {
 	return fo.f.CallStream(ctx, request, fo.o)
 }
 
 type nopStreamOutbound struct{}
 
-func (nopStreamOutbound) CallStream(ctx context.Context, request *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
+func (nopStreamOutbound) CallStream(ctx context.Context, request *yarpc.StreamRequest, out yarpc.StreamOutbound) (*yarpc.ClientStream, error) {
 	return out.CallStream(ctx, request)
 }

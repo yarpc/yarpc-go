@@ -18,13 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package encoding
+package yarpc
 
 import (
 	"context"
 
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 // OutboundCall is an outgoing call. It holds per-call options for a request.
@@ -57,7 +56,7 @@ func NewOutboundCall(options ...CallOption) *OutboundCall {
 func NewStreamOutboundCall(options ...CallOption) (*OutboundCall, error) {
 	call := NewOutboundCall(options...)
 	if call.responseHeaders != nil {
-		return nil, yarpcerrors.InvalidArgumentErrorf("response headers are not supported for streams")
+		return nil, yarpcerror.InvalidArgumentErrorf("response headers are not supported for streams")
 	}
 	return call, nil
 }
@@ -66,7 +65,7 @@ func NewStreamOutboundCall(options ...CallOption) (*OutboundCall, error) {
 // the call.
 //
 // The context MAY be replaced by the OutboundCall.
-func (c *OutboundCall) WriteToRequest(ctx context.Context, req *transport.Request) (context.Context, error) {
+func (c *OutboundCall) WriteToRequest(ctx context.Context, req *Request) (context.Context, error) {
 	for _, h := range c.headers {
 		req.Headers = req.Headers.With(h.k, h.v)
 	}
@@ -90,7 +89,7 @@ func (c *OutboundCall) WriteToRequest(ctx context.Context, req *transport.Reques
 // the call.
 //
 // The context MAY be replaced by the OutboundCall.
-func (c *OutboundCall) WriteToRequestMeta(ctx context.Context, reqMeta *transport.RequestMeta) (context.Context, error) {
+func (c *OutboundCall) WriteToRequestMeta(ctx context.Context, reqMeta *RequestMeta) (context.Context, error) {
 	for _, h := range c.headers {
 		reqMeta.Headers = reqMeta.Headers.With(h.k, h.v)
 	}
@@ -113,7 +112,7 @@ func (c *OutboundCall) WriteToRequestMeta(ctx context.Context, reqMeta *transpor
 // ReadFromResponse reads information from the response for this call.
 //
 // This should be called only if the request is unary.
-func (c *OutboundCall) ReadFromResponse(ctx context.Context, res *transport.Response) (context.Context, error) {
+func (c *OutboundCall) ReadFromResponse(ctx context.Context, res *Response) (context.Context, error) {
 	// We're not using ctx right now but we may in the future.
 	if c.responseHeaders != nil && res.Headers.Len() > 0 {
 		// We make a copy of the response headers because Headers.Items() must

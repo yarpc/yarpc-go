@@ -18,28 +18,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package middleware
+package yarpcmiddleware
 
 import (
 	"context"
 
-	"go.uber.org/yarpc/api/transport"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 // Router is a middleware for defining a customized routing experience for procedures
 type Router interface {
 	// Procedures returns the list of procedures that can be called on this router.
 	// Procedures SHOULD call into router that is passed in.
-	Procedures(transport.Router) []transport.Procedure
+	Procedures(yarpc.Router) []yarpc.Procedure
 
 	// Choose returns a HandlerSpec for the given request and transport.
 	// If the Router cannot determine what to call it should call into the router that was
 	// passed in.
-	Choose(context.Context, *transport.Request, transport.Router) (transport.HandlerSpec, error)
+	Choose(context.Context, *yarpc.Request, yarpc.Router) (yarpc.HandlerSpec, error)
 }
 
 // ApplyRouteTable applies the given Router middleware to the given Router.
-func ApplyRouteTable(r transport.RouteTable, m Router) transport.RouteTable {
+func ApplyRouteTable(r yarpc.RouteTable, m Router) yarpc.RouteTable {
 	if m == nil {
 		return r
 	}
@@ -47,18 +47,18 @@ func ApplyRouteTable(r transport.RouteTable, m Router) transport.RouteTable {
 }
 
 type routeTableWithMiddleware struct {
-	r transport.RouteTable
+	r yarpc.RouteTable
 	m Router
 }
 
-func (r routeTableWithMiddleware) Procedures() []transport.Procedure {
+func (r routeTableWithMiddleware) Procedures() []yarpc.Procedure {
 	return r.m.Procedures(r.r)
 }
 
-func (r routeTableWithMiddleware) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
+func (r routeTableWithMiddleware) Choose(ctx context.Context, req *yarpc.Request) (yarpc.HandlerSpec, error) {
 	return r.m.Choose(ctx, req, r.r)
 }
 
-func (r routeTableWithMiddleware) Register(procedures []transport.Procedure) {
+func (r routeTableWithMiddleware) Register(procedures []yarpc.Procedure) {
 	r.r.Register(procedures)
 }

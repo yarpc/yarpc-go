@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcerrors
+package yarpcerror
 
 import (
 	"testing"
@@ -38,7 +38,7 @@ func TestValidateName(t *testing.T) {
 
 func testValidateName(t *testing.T, name string, expectError bool) {
 	if expectError {
-		assert.Equal(t, CodeInternal, ErrorCode(validateName(name)), "expected error for %s", name)
+		assert.Equal(t, CodeInternal, validateName(name).(*Status).code, "expected error for %s", name)
 	} else {
 		assert.NoError(t, validateName(name), "expected no error for %s", name)
 	}

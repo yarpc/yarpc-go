@@ -20,11 +20,6 @@
 
 package yarpctest
 
-import (
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/pkg/lifecycletest"
-)
-
 // FakePeerListUpdaterOption is an option for NewFakePeerListUpdater.
 type FakePeerListUpdaterOption func(*FakePeerListUpdater)
 
@@ -43,7 +38,6 @@ func UpdaterNop(nop string) func(*FakePeerListUpdater) {
 // FakePeerListUpdater is a fake peer list updater.  It doesn't actually update
 // a peer list.
 type FakePeerListUpdater struct {
-	transport.Lifecycle
 	watch bool
 	nop   string
 }
@@ -51,9 +45,7 @@ type FakePeerListUpdater struct {
 // NewFakePeerListUpdater returns a new FakePeerListUpdater, applying any
 // passed options.
 func NewFakePeerListUpdater(opts ...FakePeerListUpdaterOption) *FakePeerListUpdater {
-	u := &FakePeerListUpdater{
-		Lifecycle: lifecycletest.NewNop(),
-	}
+	u := &FakePeerListUpdater{}
 	for _, opt := range opts {
 		opt(u)
 	}

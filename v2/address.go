@@ -18,19 +18,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package hostport
+package yarpc
 
-import (
-	"sync"
+// Address is a peer identified by its host:port string.
+//
+// Address is the least elaborate peer identifier implementation.
+type Address string
 
-	"go.uber.org/atomic"
-	"go.uber.org/yarpc/api/peer"
-)
+// Identifier returns the peer identifier as a string.
+func (a Address) Identifier() string {
+	return string(a)
+}
 
-// PeerIdentifier uniquely references a host:port combination using a common interface
-type PeerIdentifier string
-
-// Identifier generates a (should be) unique identifier for this PeerIdentifier (to use in maps, etc)
-func (p PeerIdentifier) Identifier() string {
-	return string(p)
+// Addresses lifts a list of string addresses to Address peer identifiers.
+func Addresses(addrs []string) []Identifier {
+	ids := make([]Identifier, 0, len(addrs))
+	for _, addr := range addrs {
+		ids = append(ids, Address(addr))
+	}
+	return ids
 }

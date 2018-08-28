@@ -18,14 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package yarpc
 
 import (
 	"context"
 	"io"
 	"strings"
 
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -121,29 +121,29 @@ func ValidateRequest(req *Request) error {
 		missingParams = append(missingParams, "encoding")
 	}
 	if len(missingParams) > 0 {
-		return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing %s", strings.Join(missingParams, ", "))
+		return yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "missing %s", strings.Join(missingParams, ", "))
 	}
 	return nil
 }
 
 // ValidateUnaryContext validates that a context for a unary request is valid
 // and contains all required information, and returns a YARPC error with code
-// yarpcerrors.CodeInvalidArgument otherwise.
+// yarpcerror.CodeInvalidArgument otherwise.
 //
 // Deprecated: Use ValidateRequestContext instead.
 func ValidateUnaryContext(ctx context.Context) error {
 	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
-		return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing TTL")
+		return yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "missing TTL")
 	}
 	return nil
 }
 
 // ValidateRequestContext validates that a context for a request is valid
 // and contains all required information, and returns a YARPC error with code
-// yarpcerrors.CodeInvalidArgument otherwise.
+// yarpcerror.CodeInvalidArgument otherwise.
 func ValidateRequestContext(ctx context.Context) error {
 	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
-		return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing TTL")
+		return yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "missing TTL")
 	}
 	return nil
 }

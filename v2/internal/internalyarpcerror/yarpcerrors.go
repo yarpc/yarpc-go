@@ -18,26 +18,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcerrors
+package internalyarpcerror
 
 import (
 	"fmt"
 
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
-// NewWithNamef calls yarpcerrors.Newf and WithName on the resulting Status.
+// NewWithNamef calls yarpcerror.Newf and WithName on the resulting Status.
 //
 // This is put in a separate package so that we can ignore this specific file
 // with staticcheck and existing transports can still use this logic, as
 // WithName is deprecated but we still want to handle name behavior for
 // backwards compatibility.
-func NewWithNamef(code yarpcerrors.Code, name string, format string, args ...interface{}) *yarpcerrors.Status {
-	return yarpcerrors.Newf(code, format, args...).WithName(name)
+func NewWithNamef(code yarpcerror.Code, name string, format string, args ...interface{}) *yarpcerror.Status {
+	return yarpcerror.Newf(code, format, args...).WithName(name)
 }
 
 // AnnotateWithInfo will take an error and add info to it's error message while
 // keeping the same status code.
-func AnnotateWithInfo(status *yarpcerrors.Status, format string, args ...interface{}) *yarpcerrors.Status {
-	return yarpcerrors.Newf(status.Code(), "%s: %s", fmt.Sprintf(format, args...), status.Message())
+func AnnotateWithInfo(status *yarpcerror.Status, format string, args ...interface{}) *yarpcerror.Status {
+	return yarpcerror.Newf(status.Code(), "%s: %s", fmt.Sprintf(format, args...), status.Message())
 }

@@ -24,9 +24,7 @@ import (
 	"fmt"
 	"sync"
 
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/pkg/lifecycletest"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 // FakeTransportOption is an option for NewFakeTransport.
@@ -44,7 +42,7 @@ func NopTransportOption(nopOption string) FakeTransportOption {
 // peers of this transport.  This is Available by default.  With the status set
 // to Unavailable, the test may manual simmulate connection and disconnection
 // with the SimulateConnect and SimulateDisconnect methods.
-func InitialConnectionStatus(s peer.ConnectionStatus) FakeTransportOption {
+func InitialConnectionStatus(s yarpc.ConnectionStatus) FakeTransportOption {
 	return func(t *FakeTransport) {
 		t.initialConnectionStatus = s
 	}
@@ -53,8 +51,7 @@ func InitialConnectionStatus(s peer.ConnectionStatus) FakeTransportOption {
 // NewFakeTransport returns a fake transport.
 func NewFakeTransport(opts ...FakeTransportOption) *FakeTransport {
 	t := &FakeTransport{
-		Lifecycle:               lifecycletest.NewNop(),
-		initialConnectionStatus: peer.Available,
+		initialConnectionStatus: yarpc.Available,
 		peers: make(map[string]*FakePeer),
 		mu:    &sync.Mutex{},
 	}
@@ -66,9 +63,8 @@ func NewFakeTransport(opts ...FakeTransportOption) *FakeTransport {
 
 // FakeTransport is a fake transport.
 type FakeTransport struct {
-	transport.Lifecycle
 	nopOption               string
-	initialConnectionStatus peer.ConnectionStatus
+	initialConnectionStatus yarpc.ConnectionStatus
 	peers                   map[string]*FakePeer
 	mu                      *sync.Mutex
 }
@@ -80,19 +76,19 @@ func (t *FakeTransport) NopOption() string {
 
 // SimulateConnect simulates a connection to the peer, marking the peer as
 // available and notifying subscribers.
-func (t *FakeTransport) SimulateConnect(id peer.Identifier) {
+func (t *FakeTransport) SimulateConnect(id yarpc.Identifier) {
 	t.Peer(id).simulateConnect()
 }
 
 // SimulateDisconnect simulates a disconnection to the peer, marking the peer
 // as unavailable and notifying subscribers.
-func (t *FakeTransport) SimulateDisconnect(id peer.Identifier) {
+func (t *FakeTransport) SimulateDisconnect(id yarpc.Identifier) {
 	t.Peer(id).simulateDisconnect()
 }
 
 // Peer returns the persistent peer object for that peer identifier for the
 // lifetime of the fake transport.
-func (t *FakeTransport) Peer(id peer.Identifier) *FakePeer {
+func (t *FakeTransport) Peer(id yarpc.Identifier) *FakePeer {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -101,7 +97,7 @@ func (t *FakeTransport) Peer(id peer.Identifier) *FakePeer {
 	}
 	p := &FakePeer{
 		id: id,
-		status: peer.Status{
+		status: yarpc.Status{
 			ConnectionStatus: t.initialConnectionStatus,
 		},
 	}
@@ -110,7 +106,7 @@ func (t *FakeTransport) Peer(id peer.Identifier) *FakePeer {
 }
 
 // RetainPeer returns a fake peer.
-func (t *FakeTransport) RetainPeer(id peer.Identifier, ps peer.Subscriber) (peer.Peer, error) {
+func (t *FakeTransport) RetainPeer(id yarpc.Identifier, ps yarpc.Subscriber) (yarpc.Peer, error) {
 	peer := t.Peer(id)
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -119,7 +115,7 @@ func (t *FakeTransport) RetainPeer(id peer.Identifier, ps peer.Subscriber) (peer
 }
 
 // ReleasePeer does nothing.
-func (t *FakeTransport) ReleasePeer(id peer.Identifier, ps peer.Subscriber) error {
+func (t *FakeTransport) ReleasePeer(id yarpc.Identifier, ps yarpc.Subscriber) error {
 	peer := t.Peer(id)
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -133,8 +129,8 @@ func (t *FakeTransport) ReleasePeer(id peer.Identifier, ps peer.Subscriber) erro
 	return nil
 }
 
-func filterSubscriber(subs []peer.Subscriber, ps peer.Subscriber) ([]peer.Subscriber, int) {
-	res := make([]peer.Subscriber, 0, len(subs))
+func filterSubscriber(subs []yarpc.Subscriber, ps yarpc.Subscriber) ([]yarpc.Subscriber, int) {
+	res := make([]yarpc.Subscriber, 0, len(subs))
 	count := 0
 	for _, sub := range subs {
 		if sub != ps {

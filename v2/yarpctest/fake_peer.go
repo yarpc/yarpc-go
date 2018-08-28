@@ -20,16 +20,14 @@
 
 package yarpctest
 
-import (
-	"go.uber.org/yarpc/api/peer"
-)
+import yarpc "go.uber.org/yarpc/v2"
 
 // FakePeer is a fake peer with an identifier.
 type FakePeer struct {
-	id peer.Identifier
+	id yarpc.Identifier
 	// subscribers needs to be modified under lock in FakeTransport
-	subscribers []peer.Subscriber
-	status      peer.Status
+	subscribers []yarpc.Subscriber
+	status      yarpc.Status
 }
 
 // Identifier returns the fake peer identifier.
@@ -38,7 +36,7 @@ func (p *FakePeer) Identifier() string {
 }
 
 // Status returns the fake peer status.
-func (p *FakePeer) Status() peer.Status {
+func (p *FakePeer) Status() yarpc.Status {
 	return p.status
 }
 
@@ -53,12 +51,12 @@ func (p *FakePeer) EndRequest() {
 }
 
 func (p *FakePeer) simulateConnect() {
-	p.status.ConnectionStatus = peer.Available
+	p.status.ConnectionStatus = yarpc.Available
 	p.broadcast()
 }
 
 func (p *FakePeer) simulateDisconnect() {
-	p.status.ConnectionStatus = peer.Unavailable
+	p.status.ConnectionStatus = yarpc.Unavailable
 	p.broadcast()
 }
 

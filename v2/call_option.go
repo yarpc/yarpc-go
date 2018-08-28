@@ -18,12 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package encoding
+package yarpc
 
 // CallOption defines options that may be passed in at call sites to other
 // services.
 //
-// Encoding authors should accept yarpc.CallOptions and convert them to
+// Encoding authors should accept CallOptions and convert them to
 // encoding.CallOptions to use with NewOutboundCall. This will keep the
 // API for service authors simple.
 type CallOption struct{ apply func(*OutboundCall) }

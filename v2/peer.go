@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package peer
+package yarpc
 
 // ConnectionStatus maintains information about the Peer's connection state
 type ConnectionStatus int
@@ -26,9 +26,6 @@ type ConnectionStatus int
 const (
 	// Unavailable indicates the Peer is unavailable for requests
 	Unavailable ConnectionStatus = iota
-
-	// Connecting indicates the Peer is in the process of connecting
-	Connecting
 
 	// Available indicates the Peer is available for requests
 	Available

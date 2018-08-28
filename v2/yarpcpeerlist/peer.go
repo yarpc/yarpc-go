@@ -18,12 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package peerlist
+package yarpcpeerlist
 
 import (
 	"sync"
 
-	"go.uber.org/yarpc/api/peer"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 // peerThunk captures a peer and its corresponding subscriber,
@@ -31,9 +31,9 @@ import (
 type peerThunk struct {
 	lock          sync.RWMutex
 	list          *List
-	id            peer.Identifier
-	peer          peer.Peer
-	subscriber    peer.Subscriber
+	id            yarpc.Identifier
+	peer          yarpc.Peer
+	subscriber    yarpc.Subscriber
 	boundOnFinish func(error)
 }
 
@@ -45,7 +45,7 @@ func (t *peerThunk) Identifier() string {
 	return t.peer.Identifier()
 }
 
-func (t *peerThunk) Status() peer.Status {
+func (t *peerThunk) Status() yarpc.Status {
 	return t.peer.Status()
 }
 
@@ -59,7 +59,7 @@ func (t *peerThunk) EndRequest() {
 
 // NotifyStatusChanged forwards a status notification to the peer list and to
 // the underlying identifier chooser list.
-func (t *peerThunk) NotifyStatusChanged(pid peer.Identifier) {
+func (t *peerThunk) NotifyStatusChanged(pid yarpc.Identifier) {
 	t.list.notifyStatusChanged(pid)
 
 	if s := t.Subscriber(); s != nil {
@@ -68,14 +68,14 @@ func (t *peerThunk) NotifyStatusChanged(pid peer.Identifier) {
 }
 
 // SetSubscriber assigns a subscriber to the subscriber thunk.
-func (t *peerThunk) SetSubscriber(s peer.Subscriber) {
+func (t *peerThunk) SetSubscriber(s yarpc.Subscriber) {
 	t.lock.Lock()
 	t.subscriber = s
 	t.lock.Unlock()
 }
 
 // Subscriber returns the subscriber.
-func (t *peerThunk) Subscriber() peer.Subscriber {
+func (t *peerThunk) Subscriber() yarpc.Subscriber {
 	t.lock.RLock()
 	s := t.subscriber
 	t.lock.RUnlock()

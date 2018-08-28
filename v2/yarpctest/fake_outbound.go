@@ -24,9 +24,7 @@ import (
 	"context"
 	"fmt"
 
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/pkg/lifecycle"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 // FakeOutboundOption is an option for FakeTransport.NewOutbound.
@@ -44,7 +42,7 @@ func NopOutboundOption(nopOption string) FakeOutboundOption {
 
 // OutboundCallable is a function that will be called for for an outbound's
 // `Call` method.
-type OutboundCallable func(ctx context.Context, req *transport.Request) (*transport.Response, error)
+type OutboundCallable func(ctx context.Context, req *yarpc.Request) (*yarpc.Response, error)
 
 // OutboundCallOverride returns an option to set the "callOverride" for a
 // FakeTransport.NewOutbound.
@@ -57,9 +55,8 @@ func OutboundCallOverride(callable OutboundCallable) FakeOutboundOption {
 }
 
 // NewOutbound returns a FakeOutbound with a given peer chooser and options.
-func (t *FakeTransport) NewOutbound(c peer.Chooser, opts ...FakeOutboundOption) *FakeOutbound {
+func (t *FakeTransport) NewOutbound(c yarpc.Chooser, opts ...FakeOutboundOption) *FakeOutbound {
 	o := &FakeOutbound{
-		once:      lifecycle.NewOnce(),
 		transport: t,
 		chooser:   c,
 	}
@@ -71,15 +68,14 @@ func (t *FakeTransport) NewOutbound(c peer.Chooser, opts ...FakeOutboundOption) 
 
 // FakeOutbound is a unary outbound for the FakeTransport. It is fake.
 type FakeOutbound struct {
-	once         *lifecycle.Once
 	transport    *FakeTransport
-	chooser      peer.Chooser
+	chooser      yarpc.Chooser
 	nopOption    string
 	callOverride OutboundCallable
 }
 
 // Chooser returns theis FakeOutbound's peer chooser.
-func (o *FakeOutbound) Chooser() peer.Chooser {
+func (o *FakeOutbound) Chooser() yarpc.Chooser {
 	return o.chooser
 }
 
@@ -88,40 +84,15 @@ func (o *FakeOutbound) NopOption() string {
 	return o.nopOption
 }
 
-// Start starts the fake outbound and its chooser.
-func (o *FakeOutbound) Start() error {
-	return o.once.Start(o.chooser.Start)
-}
-
-// Stop stops the fake outbound and its chooser.
-func (o *FakeOutbound) Stop() error {
-	return o.once.Stop(o.chooser.Stop)
-}
-
-// IsRunning returns whether the fake outbound is running.
-func (o *FakeOutbound) IsRunning() bool {
-	return o.once.IsRunning()
-}
-
-// Transports returns the FakeTransport that owns this outbound.
-func (o *FakeOutbound) Transports() []transport.Transport {
-	return []transport.Transport{o.transport}
-}
-
 // Call pretends to send a unary RPC, but actually just returns an error.
-func (o *FakeOutbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+func (o *FakeOutbound) Call(ctx context.Context, req *yarpc.Request) (*yarpc.Response, error) {
 	if o.callOverride != nil {
 		return o.callOverride(ctx, req)
 	}
 	return nil, fmt.Errorf(`no outbound callable specified on the fake outbound`)
 }
 
-// CallOneway pretends to send a oneway RPC, but actually just returns an error.
-func (o *FakeOutbound) CallOneway(ctx context.Context, req *transport.Request) (transport.Ack, error) {
-	return nil, fmt.Errorf(`fake outbound does not support call oneway`)
-}
-
 // CallStream pretends to send a Stream RPC, but actually just returns an error.
-func (o *FakeOutbound) CallStream(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error) {
+func (o *FakeOutbound) CallStream(ctx context.Context, req *yarpc.StreamRequest) (*yarpc.ClientStream, error) {
 	return nil, fmt.Errorf(`fake outbound does not support call stream`)
 }

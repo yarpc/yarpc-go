@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package yarpchttp
 
 import (
 	"context"
@@ -26,8 +26,8 @@ import (
 	"strconv"
 	"time"
 
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 // parseTTL takes a context parses the given TTL, clamping the context to that
@@ -35,7 +35,7 @@ import (
 // to parse and validate that TTL.
 //
 // Leaves the context unchanged if the TTL is empty.
-func parseTTL(ctx context.Context, req *transport.Request, ttl string) (_ context.Context, cancel func(), _ error) {
+func parseTTL(ctx context.Context, req *yarpc.Request, ttl string) (_ context.Context, cancel func(), _ error) {
 	if ttl == "" {
 		return ctx, func() {}, nil
 	}
@@ -63,5 +63,5 @@ func parseTTL(ctx context.Context, req *transport.Request, ttl string) (_ contex
 }
 
 func newInvalidTTLError(service string, procedure string, ttl string) error {
-	return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "invalid TTL %q for service %q and procedure %q", ttl, service, procedure)
+	return yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "invalid TTL %q for service %q and procedure %q", ttl, service, procedure)
 }

@@ -18,16 +18,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc
+package yarpctracing
 
 import (
 	"runtime"
 
 	opentracing "github.com/opentracing/opentracing-go"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
-// OpentracingTags are tags with YARPC metadata.
-var OpentracingTags = opentracing.Tags{
-	"yarpc.version": Version,
+// Tags are opentracing tags with YARPC metadata.
+var Tags = opentracing.Tags{
+	"yarpc.version": yarpc.Version,
 	"go.version":    runtime.Version(),
 }

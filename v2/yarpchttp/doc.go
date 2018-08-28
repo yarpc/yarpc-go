@@ -18,44 +18,57 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package http implements a YARPC transport based on the HTTP/1.1 protocol.
-// The HTTP transport provides first class support for Unary RPCs and
-// experimental support for Oneway RPCs.
+// Package yarpchttp implements a YARPC transport based on the HTTP/1.1 protocol.
+// The HTTP transport provides support for Unary RPCs.
 //
 // Usage
 //
-// An HTTP Transport must be constructed to use this transport.
+// To serve your YARPC application over HTTP, create an inbound with a
+// listening address or listener.
 //
-// 	httpTransport := http.NewTransport()
+//  router := yarpcrouter.NewMapRouter("my-service")
+//  inbound := yarpchttp.Inbound{
+//      Addr: ":8080",
+//      Router: router,
+//  }
+//  inbound.Start(ctx) // and error handling
+//  defer inbound.Stop(ctx) // and error handling
 //
-// To serve your YARPC application over HTTP, pass an HTTP inbound in your
-// yarpc.Config.
+// To make requests to a YARPC application that supports HTTP, you will need a
+// dialer, an outbound, and a client.
 //
-// 	myInbound := httpTransport.NewInbound(":8080")
-// 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-// 		Name: "myservice",
-// 		Inbounds: yarpc.Inbounds{myInbound},
-// 	})
+//  dialer := yarpchttp.Dialer{}
+//  dialer.Start(ctx) // and error handling
+//  defer dialer.Stop(ctx) // and error handling
 //
-// To make requests to a YARPC application that supports HTTP, pass an HTTP
-// outbound in your yarpc.Config.
+//  url, err := url.Parse("http://127.0.0.1:8080")
+//  // and error handling
 //
-// 	myserviceOutbound := httpTransport.NewSingleOutbound("http://127.0.0.1:8080")
-// 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-// 		Name: "myclient",
-// 		Outbounds: yarpc.Outbounds{
-// 			"myservice": {Unary: myserviceOutbound},
-// 		},
-// 	})
+//  outbound := yarpchttp.Outbound{
+//      Dialer: dialer,
+//      URL: url,
+//  }
 //
-// Note that stopping an HTTP transport does NOT immediately terminate ongoing
-// requests. Connections will remain open until all clients have disconnected.
+//  client := yarpcraw.New(yarpc.Client{
+//      Caller: "myservice",
+//      Service: "theirservice",
+//      Unary: outbound,
+//  })
 //
-// Configuration
+// To use a load balancer or peer chooser in general, introduce a peer list
+// between the outbound and dialer.  The peer chooser will obtain addresses and
+// punch them into the Host component of the URL.
 //
-// An HTTP Transport may be configured using YARPC's configuration system. See
-// TransportConfig, InboundConfig, and OutboundConfig for details on the
-// different configuration parameters supported by this transport.
+//  dialer := yarpchttp.Dialer{}
+//  dialer.Start(ctx) // and error handling
+//  defer dialer.Stop(ctx) // and error handling
+//
+//  list := yarpcroundrobin.New(dialer)
+//
+//  outbound := yarpchttp.Outbound{
+//      Chooser: list,
+//      URL: url,
+//  }
 //
 // Wire Representation
 //
@@ -69,4 +82,4 @@
 // See Also
 //
 // YARPC Properties: https://github.com/yarpc/yarpc/blob/master/properties.md
-package http
+package yarpchttp
