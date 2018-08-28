@@ -51,5 +51,6 @@
 - [ ] move ValidateRequest into yarpctransport package
 - [ ] replace client config provider with a register/get API in YARPC Fx that connects the configuration of individual transports.
 - [x] moved internal/yarpcerrors.WrapHandlerError to v2/yarpcerrors
-- [ ] rename yarpcerrors to yarpcerror in keeping with the aesthetic
+- [x] rename yarpcerrors to yarpcerror in keeping with the aesthetic (this also reveals accidental linkage to the prior version)
 - [x] Replace ClientConfig, OutboundConfig, and Outbounds -> yarpc.Client{Caller,Service,Unary,Stream}
+- [ ] audit v2/yarpctransport error types for actual usage and naming

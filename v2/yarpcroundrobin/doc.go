@@ -18,23 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package yarpcraw provides the raw encoding for YARPC.
-//
-// To make outbound requests,
-//
-// 	client := yarpcraw.New(yarpc.Client{
-//      Caller:  "myservice",
-//      Service: "theirservice",
-//      Unary:   outbound,
-//  })
-// 	resBody, err := client.Call(ctx, "submit", []byte{1, 2, 3})
-//
-// Use the Procedure function to build procedures to register against a
-// Router.
-//
-// 	func Submit(ctx context.Context, reqBody []byte) ([]byte, error) {
-// 		// ...
-// 	}
-//
-// 	router.Register(yarpcraw.Procedure("submit", Submit))
-package yarpcraw
+// Package yarpcroundrobin provides a peer.List implementation that chooses
+// from available peers in a cycle.
+package yarpcroundrobin

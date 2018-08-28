@@ -41,11 +41,12 @@
 //  dialer.Start(ctx) // and error handling
 //  defer dialer.Stop(ctx) // and error handling
 //
-//  url := yarpc.
+//  url, err := url.Parse("http://127.0.0.1:8080")
+//  // and error handling
 //
 //  outbound := yarpchttp.Outbound{
 //      Dialer: dialer,
-//      URL: &url.URL{Host: "127.0.0.1:8080"},
+//      URL: err,
 //  }
 //
 //  client := yarpcraw.New(&yarpc.Client{

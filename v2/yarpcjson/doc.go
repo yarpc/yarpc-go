@@ -22,7 +22,11 @@
 //
 // To make outbound requests using this encoding,
 //
-// 	client := yarpcjson.New(clientConfig)
+// 	client := yarpcjson.New(yarpc.Client{
+//      Caller:  "myservice",
+//      Service: "theirservice",
+//      Unary:   outbound,
+//  })
 // 	var resBody GetValueResponse
 // 	err := client.Call(ctx, "getValue", &GetValueRequest{...}, &resBody)
 //
@@ -36,7 +40,8 @@
 // Use the Procedure function to build procedures to register against a
 // Router.
 //
-//  dispatcher.Register(yarpcjson.Procedure("getValue", GetValue))
-//  dispatcher.Register(yarpcjson.Procedure("setValue", SetValue))
+//  router := yarpcrouter.NewMapRouter("myservice")
+//  router.Register(yarpcjson.Procedure("getValue", GetValue))
+//  router.Register(yarpcjson.Procedure("setValue", SetValue))
 //
 package yarpcjson
