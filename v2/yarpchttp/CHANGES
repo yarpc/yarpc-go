@@ -50,13 +50,12 @@
   - [x] change NewInbound constructor with options pattern to &Inbound{} struct
   - [x] change NewOutbound constructor with options pattern to &Outbound{} struct
 - [x] Inbound struct now configured with Addr or Listener, exposed Listener property is API for getting Addr()
-- [ ] exorcise ClientConfig interface in favor of OutboundConfig struct
-- [ ] thread middleware chains as options to encoding constructors
-- [ ] thread context through Start/Stop
-- [ ] revisit yarpc.ErrTansportHsNoReferenceToPeer -> yarpcerrors.ErrDialerHasNoReferenceToPeer
-- [ ] dialer should have no Start, Close instead of Stop
-- [ ] Connecting peer status -> ELIMINATED
-- [ ] rewrite doc.go examples
+- [x] exorcise ClientConfig interface in favor of OutboundConfig struct
+- [x] thread context through Start/Stop
+- [x] revisit yarpc.ErrTansportHsNoReferenceToPeer -> yarpcerrors.ErrDialerHasNoReferenceToPeer
+- [x] Connecting peer status -> ELIMINATED
+- [x] rewrite doc.go examples
 - [ ] consider threading a custom dialer through the Dialer constructor
+- [ ] thread middleware chains as options to encoding constructors
 - [ ] restore validator middleware
 - [ ] decorate a router with middleware
