@@ -53,3 +53,4 @@
 - [ ] rename handler specs returned by routers to routes
 - [ ] moved internal/yarpcerrors.WrapHandlerErrort to v2/yarpcerrors
 - [ ] rename yarpcerrors to yarpcerror in keeping with the aesthetic
+- [x] Replace ClientConfig, OutboundConfig, and Outbounds -> yarpc.Client{Caller,Service,Unary,Stream}

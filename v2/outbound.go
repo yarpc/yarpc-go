@@ -43,13 +43,15 @@ type StreamOutbound interface {
 	CallStream(ctx context.Context, request *StreamRequest) (*ClientStream, error)
 }
 
-// Outbounds encapsulates the outbound specification for a service.
-//
-// This includes the service name that will be used for outbound requests as
-// well as the Outbound that will be used to transport the request.  The
-// outbound will be one of Unary and Stream.
-type Outbounds struct {
-	ServiceName string
+// Client is a configuration for how to call into another service.
+// It is used in conjunction with an encoding to send a request through
+// outbounds by RPC type.
+type Client struct {
+	// Caller is the name of the local service.
+	Caller string
+
+	// Service is the name of the remote service.
+	Service string
 
 	// If set, this is the unary outbound which sends a request and waits for
 	// the response.

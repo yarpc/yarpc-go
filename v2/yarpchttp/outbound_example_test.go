@@ -35,16 +35,12 @@ func ExampleOutbound() {
 	if err := dialer.Start(context.Background()); err != nil {
 		log.Fatal(err)
 	}
-	yarpcraw.New(&yarpc.OutboundConfig{
-		CallerName: "myservice",
-		Outbounds: yarpc.Outbounds{
-			Unary: &yarpchttp.Outbound{
-				URL: &url.URL{
-					Scheme: "http",
-					Host:   "127.0.0.1:8888",
-				},
-				Dialer: dialer,
-			},
+	yarpcraw.New(yarpc.Client{
+		Caller:  "myservice",
+		Service: "theirservice",
+		Unary: &yarpchttp.Outbound{
+			URL:    &url.URL{Host: "127.0.0.1:8888"},
+			Dialer: dialer,
 		},
 	})
 }

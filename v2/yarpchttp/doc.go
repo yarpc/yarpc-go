@@ -24,30 +24,50 @@
 // Usage
 //
 // To serve your YARPC application over HTTP, create an inbound with a
-// listening port and a router for inbound requests.
+// listening address or listener.
 //
 //  router := yarpcrouter.NewMapRouter("my-service")
-// 	myInbound := httpTransport.NewInbound(":8080", router)
+// 	inbound := yarpchttp.Inbound{
+//      Addr: ":8080",
+//      Router: router,
+//  }
+//  inbound.Start(ctx) // and error handling
+//  defer inbound.Stop(ctx) // and error handling
 //
-// To make requests to a YARPC application that supports HTTP, pass an HTTP
-// outbound in your yarpc.Config.
+// To make requests to a YARPC application that supports HTTP, you will need a
+// dialer, an outbound, and a client.
 //
-// 	myserviceOutbound := httpTransport.NewSingleOutbound("http://127.0.0.1:8080")
-// 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-// 		Name: "myclient",
-// 		Outbounds: yarpc.Outbounds{
-// 			"myservice": {Unary: myserviceOutbound},
-// 		},
-// 	})
+//  dialer := yarpchttp.Dialer{}
+//  dialer.Start(ctx) // and error handling
+//  defer dialer.Stop(ctx) // and error handling
 //
-// Note that stopping an HTTP transport does NOT immediately terminate ongoing
-// requests. Connections will remain open until all clients have disconnected.
+//  url := yarpc.
 //
-// Configuration
+//  outbound := yarpchttp.Outbound{
+//      Dialer: dialer,
+//      URL: &url.URL{Host: "127.0.0.1:8080"},
+//  }
 //
-// An HTTP Transport may be configured using YARPC's configuration system. See
-// TransportConfig, InboundConfig, and OutboundConfig for details on the
-// different configuration parameters supported by this transport.
+//  client := yarpcraw.New(&yarpc.Client{
+//      Caller: "myservice",
+//      Service: "theirservice",
+//      Unary: outbound,
+//  })
+//
+// To use a load balancer or peer chooser in general, introduce a peer list
+// between the outbound and dialer.  The peer chooser will obtain addresses and
+// punch them into the Host of the URL.
+//
+//  dialer := yarpchttp.Dialer{}
+//  dialer.Start(ctx) // and error handling
+//  defer dialer.Stop(ctx) // and error handling
+//
+//  list := roundrobin.New(dialer)
+//
+//  outbound := yarpchttp.Outbound{
+//      Chooser: list,
+//      URL: &url.URL{Host: "127.0.0.1:8080"},
+//  }
 //
 // Wire Representation
 //

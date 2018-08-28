@@ -31,7 +31,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/internal/clientconfig"
 	"go.uber.org/yarpc/v2/yarpcerrors"
 	"go.uber.org/yarpc/v2/yarpcjson"
 )
@@ -70,7 +69,7 @@ func TestBothResponseError(t *testing.T) {
 					legacyResponseError: !tt.outboundBothResponseError,
 				},
 			}, func(t *testing.T, testEnv *testEnv) {
-				client := yarpcjson.New(testEnv.ClientConfig)
+				client := yarpcjson.New(testEnv.Client)
 				var response testFooResponse
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				defer cancel()
@@ -116,10 +115,10 @@ func doWithTestEnv(t *testing.T, options testEnvOptions, f func(*testing.T, *tes
 }
 
 type testEnv struct {
-	Dialer       *Dialer
-	Inbound      *Inbound
-	Outbound     *Outbound
-	ClientConfig yarpc.ClientConfig
+	Dialer   *Dialer
+	Inbound  *Inbound
+	Outbound *Outbound
+	Client   yarpc.Client
 }
 
 type testEnvOptions struct {
@@ -145,22 +144,17 @@ func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
 	outbound.Dialer = dialer
 	outbound.URL = parseURL("http://" + inbound.Listener.Addr().String())
 
-	caller := "example-client"
-	service := "example"
-	clientConfig := clientconfig.MultiOutbound(
-		caller,
-		service,
-		yarpc.Outbounds{
-			ServiceName: caller,
-			Unary:       outbound,
-		},
-	)
+	client := yarpc.Client{
+		Service: "example",
+		Caller:  "example-client",
+		Unary:   outbound,
+	}
 
 	return &testEnv{
 		dialer,
 		inbound,
 		outbound,
-		clientConfig,
+		client,
 	}, nil
 }
 

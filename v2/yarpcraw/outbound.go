@@ -35,19 +35,19 @@ type Client interface {
 }
 
 // New builds a new Raw client.
-func New(c yarpc.ClientConfig) Client {
-	return rawClient{cc: c}
+func New(c yarpc.Client) Client {
+	return rawClient{c: c}
 }
 
 type rawClient struct {
-	cc yarpc.ClientConfig
+	c yarpc.Client
 }
 
 func (c rawClient) Call(ctx context.Context, procedure string, body []byte, opts ...yarpc.CallOption) ([]byte, error) {
 	call := yarpc.NewOutboundCall(opts...)
 	treq := yarpc.Request{
-		Caller:    c.cc.Caller(),
-		Service:   c.cc.Service(),
+		Caller:    c.c.Caller,
+		Service:   c.c.Service,
 		Procedure: procedure,
 		Encoding:  Encoding,
 		Body:      bytes.NewReader(body),
@@ -58,7 +58,7 @@ func (c rawClient) Call(ctx context.Context, procedure string, body []byte, opts
 		return nil, err
 	}
 
-	tres, appErr := c.cc.GetUnaryOutbound().Call(ctx, &treq)
+	tres, appErr := c.c.Unary.Call(ctx, &treq)
 	if tres == nil {
 		return nil, appErr
 	}

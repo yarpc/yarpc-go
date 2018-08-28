@@ -399,16 +399,14 @@ func TestHandlerPanic(t *testing.T) {
 	require.NoError(t, inbound.Start(context.Background()))
 	defer inbound.Stop(context.Background())
 
-	client := yarpcraw.New(&yarpc.OutboundConfig{
-		CallerName: "yarpc-test-client",
-		Outbounds: yarpc.Outbounds{
-			ServiceName: "yarpc-test",
-			Unary: &Outbound{
-				Dialer: dialer,
-				URL: &url.URL{
-					Scheme: "https",
-					Host:   inbound.Listener.Addr().String(),
-				},
+	client := yarpcraw.New(yarpc.Client{
+		Caller:  "yarpc-test-client",
+		Service: "yarpc-test",
+		Unary: &Outbound{
+			Dialer: dialer,
+			URL: &url.URL{
+				Scheme: "https",
+				Host:   inbound.Listener.Addr().String(),
 			},
 		},
 	})

@@ -40,19 +40,19 @@ type Client interface {
 }
 
 // New builds a new JSON client.
-func New(c yarpc.ClientConfig) Client {
-	return jsonClient{cc: c}
+func New(c yarpc.Client) Client {
+	return jsonClient{c: c}
 }
 
 type jsonClient struct {
-	cc yarpc.ClientConfig
+	c yarpc.Client
 }
 
 func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interface{}, resBodyOut interface{}, opts ...yarpc.CallOption) error {
 	call := yarpc.NewOutboundCall(opts...)
 	treq := yarpc.Request{
-		Caller:    c.cc.Caller(),
-		Service:   c.cc.Service(),
+		Caller:    c.c.Caller,
+		Service:   c.c.Service,
 		Procedure: procedure,
 		Encoding:  Encoding,
 	}
@@ -68,7 +68,7 @@ func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interfac
 	}
 
 	treq.Body = bytes.NewReader(encoded)
-	tres, appErr := c.cc.GetUnaryOutbound().Call(ctx, &treq)
+	tres, appErr := c.c.Unary.Call(ctx, &treq)
 	if tres == nil {
 		return appErr
 	}
