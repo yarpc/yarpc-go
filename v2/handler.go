@@ -37,8 +37,7 @@ const (
 	Streaming
 )
 
-// HandlerSpec holds a handler and its Type
-// one handler will be set, the other nil
+// HandlerSpec holds either a UnaryHandler or StreamHandler.
 type HandlerSpec struct {
 	t Type
 
