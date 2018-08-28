@@ -27,7 +27,7 @@ import (
 
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpchttp"
-	"go.uber.org/yarpc/v2/yarpcraw"
+	"go.uber.org/yarpc/v2/yarpcjson"
 )
 
 func ExampleOutbound() {
@@ -35,7 +35,7 @@ func ExampleOutbound() {
 	if err := dialer.Start(context.Background()); err != nil {
 		log.Fatal(err)
 	}
-	yarpcraw.New(yarpc.Client{
+	yarpcjson.New(yarpc.Client{
 		Caller:  "myservice",
 		Service: "theirservice",
 		Unary: &yarpchttp.Outbound{

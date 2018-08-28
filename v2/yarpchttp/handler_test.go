@@ -40,7 +40,6 @@ import (
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/internal/internalyarpctest"
 	"go.uber.org/yarpc/v2/yarpcerror"
-	"go.uber.org/yarpc/v2/yarpcraw"
 	"go.uber.org/yarpc/v2/yarpcrouter"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
@@ -77,7 +76,7 @@ func TestHandlerSuccess(t *testing.T) {
 				Caller:          "moe",
 				Service:         "curly",
 				Transport:       "http",
-				Encoding:        yarpcraw.Encoding,
+				Encoding:        yarpc.Encoding("raw"),
 				Procedure:       "nyuck",
 				ShardKey:        "shard",
 				RoutingKey:      "routekey",
@@ -347,7 +346,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 				Caller:    "somecaller",
 				Service:   "fake",
 				Transport: "http",
-				Encoding:  yarpcraw.Encoding,
+				Encoding:  yarpc.Encoding("raw"),
 				Procedure: "hello",
 				Body:      bytes.NewReader([]byte{}),
 			},
@@ -399,20 +398,21 @@ func TestHandlerPanic(t *testing.T) {
 	require.NoError(t, inbound.Start(context.Background()))
 	defer inbound.Stop(context.Background())
 
-	client := yarpcraw.New(yarpc.Client{
-		Caller:  "yarpc-test-client",
-		Service: "yarpc-test",
-		Unary: &Outbound{
-			Dialer: dialer,
-			URL: &url.URL{
-				Scheme: "https",
-				Host:   inbound.Listener.Addr().String(),
-			},
+	outbound := &Outbound{
+		Dialer: dialer,
+		URL: &url.URL{
+			Scheme: "https",
+			Host:   inbound.Listener.Addr().String(),
 		},
-	})
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	_, err := outbound.Call(ctx, &yarpc.Request{
+		Caller:    "yarpc-test",
+		Service:   "yarpc-test",
+		Procedure: "panic",
+		Body:      &bytes.Buffer{},
+	})
 	defer cancel()
-	_, err := client.Call(ctx, "panic", []byte{})
 
 	assert.Equal(t, yarpcerror.CodeUnknown, yarpcerror.FromError(err).Code())
 }
