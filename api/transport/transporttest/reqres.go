@@ -66,6 +66,8 @@ func NewRequestMatcher(t *testing.T, r *transport.Request) RequestMatcher {
 
 // Matches checks if the given object matches the Request provided in
 // NewRequestMatcher.
+//
+// ID will only be checked if the given field is non-empty.
 func (m RequestMatcher) Matches(got interface{}) bool {
 	l := m.req
 	r, ok := got.(*transport.Request)
@@ -73,7 +75,9 @@ func (m RequestMatcher) Matches(got interface{}) bool {
 		panic(fmt.Sprintf("expected *transport.Request, got %v", got))
 	}
 
-	if l.ID != r.ID {
+	// We check if 'ID' is set before comparing, since transports modify the field
+	// after users define the struct.
+	if l.ID != "" && l.ID != r.ID {
 		m.t.Logf("ID mismatch: %s != %s", l.ID, r.ID)
 		return false
 	}
@@ -98,8 +102,8 @@ func (m RequestMatcher) Matches(got interface{}) bool {
 		return false
 	}
 
-	// We check if 'Transport' is set before comparing, since transports may
-	// modify the field after users define the struct.
+	// We check if 'Transport' is set before comparing, since transports modify
+	// the field after users define the struct.
 	if l.Transport != "" && l.Transport != r.Transport {
 		m.t.Logf("Transport mismatch: %s != %s", l.Transport, r.Transport)
 		return false
@@ -196,6 +200,8 @@ func NewResponseMatcher(t *testing.T, r *transport.Response) ResponseMatcher {
 
 // Matches checks if the given object matches the Response provided in
 // NewResponseMatcher.
+//
+// ID and Service will only be checked if the given fields are non-empty.
 func (m ResponseMatcher) Matches(got interface{}) bool {
 	l := m.res
 	r, ok := got.(*transport.Response)
@@ -203,7 +209,10 @@ func (m ResponseMatcher) Matches(got interface{}) bool {
 		panic(fmt.Sprintf("expected *transport.Response, got %v", got))
 	}
 
-	if l.ID != r.ID {
+	// We check if 'ID' and 'Service' are set before comparing, since transports
+	// set the fields after users define the struct.
+
+	if l.ID != "" && l.ID != r.ID {
 		m.t.Logf("ID fields do not match: %q != %q", l.ID, r.ID)
 		return false
 	}
@@ -215,7 +224,7 @@ func (m ResponseMatcher) Matches(got interface{}) bool {
 		m.t.Logf("Environment fields do not match: %q != %q", l.Environment, r.Environment)
 		return false
 	}
-	if l.Service != r.Service {
+	if l.Service != "" && l.Service != r.Service {
 		m.t.Logf("Service fields do not match: %q != %q", l.Service, r.Service)
 		return false
 	}
