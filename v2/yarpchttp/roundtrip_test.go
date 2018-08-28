@@ -66,7 +66,10 @@ func TestRoundTripSuccess(t *testing.T) {
 	defer func() {
 		require.NoError(t, dialer.Stop(context.Background()))
 	}()
-	out := dialer.NewSingleOutbound(echoServer.URL)
+	outbound := &Outbound{
+		Dialer: dialer,
+		URL:    parseURL(echoServer.URL),
+	}
 
 	// create request
 	hreq, err := http.NewRequest("GET", echoServer.URL, bytes.NewReader([]byte(giveBody)))
@@ -79,7 +82,7 @@ func TestRoundTripSuccess(t *testing.T) {
 	hreq = hreq.WithContext(ctx)
 
 	// make call
-	client := http.Client{Transport: out}
+	client := http.Client{Transport: outbound}
 	res, err := client.Do(hreq)
 	require.NoError(t, err, "could not make call")
 	defer res.Body.Close()
@@ -106,7 +109,10 @@ func TestRoundTripTimeout(t *testing.T) {
 	defer func() {
 		require.NoError(t, dialer.Stop(context.Background()))
 	}()
-	out := dialer.NewSingleOutbound(server.URL)
+	outbound := &Outbound{
+		Dialer: dialer,
+		URL:    parseURL(server.URL),
+	}
 
 	// create request
 	req, err := http.NewRequest("POST", server.URL, nil /* body */)
@@ -118,7 +124,7 @@ func TestRoundTripTimeout(t *testing.T) {
 	req = req.WithContext(ctx)
 
 	// make call
-	client := http.Client{Transport: out}
+	client := http.Client{Transport: outbound}
 	res, err := client.Do(req)
 
 	// validate response
@@ -139,12 +145,15 @@ func TestRoundTripNoDeadline(t *testing.T) {
 	defer func() {
 		require.NoError(t, dialer.Stop(context.Background()))
 	}()
-	out := dialer.NewSingleOutbound(URL)
+	outbound := &Outbound{
+		Dialer: dialer,
+		URL:    parseURL(URL),
+	}
 
 	hreq, err := http.NewRequest("GET", URL, nil /* body */)
 	require.NoError(t, err)
 
-	resp, err := out.RoundTrip(hreq)
+	resp, err := outbound.RoundTrip(hreq)
 	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing context deadline"), err)
 	assert.Nil(t, resp)
 }

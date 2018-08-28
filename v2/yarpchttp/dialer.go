@@ -26,7 +26,6 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
-	"net/url"
 	"sync"
 	"time"
 
@@ -34,7 +33,6 @@ import (
 	backoffapi "go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcpeer"
 	"go.uber.org/zap"
 )
 
@@ -232,25 +230,6 @@ func (d *dialerInternals) stop(ctx context.Context) error {
 	case <-done:
 		return nil
 	}
-}
-
-// NewSingleOutbound builds an outbound that sends YARPC requests over HTTP
-// to the specified URL.
-//
-// The URLTemplate option has no effect in this form.
-func (d *Dialer) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbound {
-	parsedURL, err := url.Parse(uri)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	chooser := yarpcpeer.NewSingle(yarpc.Address(parsedURL.Host), d)
-	o := NewOutbound(chooser)
-	for _, opt := range opts {
-		opt(o)
-	}
-	o.setURLTemplate(uri)
-	return o
 }
 
 // RetainPeer gets or creates a Peer for the specified yarpc.Subscriber (usually a yarpc.Chooser)

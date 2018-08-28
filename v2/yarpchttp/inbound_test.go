@@ -127,8 +127,8 @@ func TestInboundMux(t *testing.T) {
 	require.NoError(t, i.Start(context.Background()))
 	defer i.Stop(context.Background())
 
-	addr := fmt.Sprintf("http://%v/", internalyarpctest.ZeroAddrToHostPort(i.Addr()))
-	resp, err := http.Get(addr + "health")
+	url := fmt.Sprintf("http://%v/", internalyarpctest.ZeroAddrToHostPort(i.Addr()))
+	resp, err := http.Get(url + "health")
 	if assert.NoError(t, err, "/health failed") {
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
@@ -141,11 +141,14 @@ func TestInboundMux(t *testing.T) {
 	dialer := &Dialer{}
 	require.NoError(t, dialer.Start(context.Background()))
 	defer dialer.Stop(context.Background())
-	o := dialer.NewSingleOutbound(addr)
+	outbound := &Outbound{
+		Dialer: dialer,
+		URL:    parseURL(url),
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err = o.Call(ctx, &yarpc.Request{
+	_, err = outbound.Call(ctx, &yarpc.Request{
 		Caller:    "foo",
 		Service:   "bar",
 		Procedure: "hello",
@@ -157,7 +160,9 @@ func TestInboundMux(t *testing.T) {
 		assert.Equal(t, yarpcerrors.CodeNotFound, yarpcerrors.FromError(err).Code())
 	}
 
-	o.setURLTemplate("http://host:port/rpc/v1")
+	host := outbound.URL.Host
+	outbound.URL = parseURL("http://host:port/rpc/v1")
+	outbound.URL.Host = host
 
 	h := yarpctest.NewMockUnaryHandler(mockCtrl)
 	spec := yarpc.NewUnaryHandlerSpec(h)
@@ -169,7 +174,7 @@ func TestInboundMux(t *testing.T) {
 
 	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
-	res, err := o.Call(ctx, &yarpc.Request{
+	res, err := outbound.Call(ctx, &yarpc.Request{
 		Caller:    "foo",
 		Service:   "bar",
 		Procedure: "hello",

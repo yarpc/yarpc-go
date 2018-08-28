@@ -23,6 +23,7 @@ package yarpchttp_test
 import (
 	"context"
 	"log"
+	"net/url"
 
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpchttp"
@@ -37,7 +38,13 @@ func ExampleOutbound() {
 	yarpcraw.New(&yarpc.OutboundConfig{
 		CallerName: "myservice",
 		Outbounds: yarpc.Outbounds{
-			Unary: dialer.NewSingleOutbound("http://127.0.0.1:8888"),
+			Unary: &yarpchttp.Outbound{
+				URL: &url.URL{
+					Scheme: "http",
+					Host:   "127.0.0.1:8888",
+				},
+				Dialer: dialer,
+			},
 		},
 	})
 }

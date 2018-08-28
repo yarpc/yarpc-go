@@ -28,6 +28,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -398,12 +399,17 @@ func TestHandlerPanic(t *testing.T) {
 	require.NoError(t, inbound.Start(context.Background()))
 	defer inbound.Stop(context.Background())
 
-	outbound := dialer.NewSingleOutbound("https://" + inbound.Addr().String())
 	client := yarpcraw.New(&yarpc.OutboundConfig{
 		CallerName: "yarpc-test-client",
 		Outbounds: yarpc.Outbounds{
 			ServiceName: "yarpc-test",
-			Unary:       outbound,
+			Unary: &Outbound{
+				Dialer: dialer,
+				URL: &url.URL{
+					Scheme: "https",
+					Host:   inbound.Addr().String(),
+				},
+			},
 		},
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)

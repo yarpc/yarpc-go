@@ -66,10 +66,8 @@ func TestBothResponseError(t *testing.T) {
 				Inbound: &Inbound{
 					legacyResponseError: !tt.inboundBothResponseError,
 				},
-				OutboundOptions: []OutboundOption{
-					func(o *Outbound) {
-						o.bothResponseError = tt.outboundBothResponseError
-					},
+				Outbound: &Outbound{
+					legacyResponseError: !tt.outboundBothResponseError,
 				},
 			}, func(t *testing.T, testEnv *testEnv) {
 				client := yarpcjson.New(testEnv.ClientConfig)
@@ -118,15 +116,16 @@ func doWithTestEnv(t *testing.T, options testEnvOptions, f func(*testing.T, *tes
 }
 
 type testEnv struct {
+	Dialer       *Dialer
 	Inbound      *Inbound
 	Outbound     *Outbound
 	ClientConfig yarpc.ClientConfig
 }
 
 type testEnvOptions struct {
-	Procedures      []yarpc.Procedure
-	Inbound         *Inbound
-	OutboundOptions []OutboundOption
+	Procedures []yarpc.Procedure
+	Inbound    *Inbound
+	Outbound   *Outbound
 }
 
 func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
@@ -134,11 +133,6 @@ func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
 	if err := dialer.Start(context.Background()); err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err != nil {
-			err = multierr.Append(err, dialer.Stop(context.Background()))
-		}
-	}()
 
 	inbound := options.Inbound
 	inbound.Address = "127.0.0.1:0"
@@ -146,13 +140,10 @@ func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
 	if err := inbound.Start(context.Background()); err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err != nil {
-			err = multierr.Append(err, inbound.Stop(context.Background()))
-		}
-	}()
 
-	outbound := dialer.NewSingleOutbound(fmt.Sprintf("http://%s", inbound.Addr().String()), options.OutboundOptions...)
+	outbound := options.Outbound
+	outbound.Dialer = dialer
+	outbound.URL = parseURL("http://" + inbound.Addr().String())
 
 	caller := "example-client"
 	service := "example"
@@ -166,6 +157,7 @@ func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
 	)
 
 	return &testEnv{
+		dialer,
 		inbound,
 		outbound,
 		clientConfig,
@@ -173,7 +165,10 @@ func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
 }
 
 func (e *testEnv) Close() error {
-	return e.Inbound.Stop(context.Background())
+	return multierr.Combine(
+		e.Dialer.Stop(context.Background()),
+		e.Inbound.Stop(context.Background()),
+	)
 }
 
 type testRouter struct {
