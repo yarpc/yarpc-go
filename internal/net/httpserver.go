@@ -98,6 +98,10 @@ func (h *HTTPServer) ListenAndServe() error {
 
 // Run runs the server with an open listener.
 func (h *HTTPServer) Run(listener net.Listener) {
+	h.lock.Lock()
+	h.listener = listener
+	h.lock.Unlock()
+
 	// Serve always returns a non-nil error. For us, it's an error only if
 	// we didn't call Stop().
 	err := h.Server.Serve(listener)

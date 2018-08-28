@@ -18,7 +18,7 @@
 - [x] yarpc/api/peer/peertest -> yarpc/v2/yarpctest and eliminate "." dot imports
 - [x] transport as a free variable -> trans
 - [x] t as a free variable -> trans, when not used as *testing.T
-- [ ] x as free variable -> trans
+- [x] x as free variable -> trans
 - [x] httpTransport as a free variable -> trans
 - [x] http -> yarpchttp, nethttp -> http as free package names
 - [x] api/transport/transporttest -> yarpctest
@@ -49,8 +49,8 @@
   - [x] change NewTransport constructor with options pattern to &Dialer{} struct
   - [x] change NewInbound constructor with options pattern to &Inbound{} struct
   - [x] change NewOutbound constructor with options pattern to &Outbound{} struct
+- [x] Inbound struct now configured with Addr or Listener, exposed Listener property is API for getting Addr()
 - [ ] exorcise ClientConfig interface in favor of OutboundConfig struct
-- [ ] change Inbound.Addr back from Inbound.Address after threading a listener instead of Addr on Inbound{} (and delete this message)
 - [ ] thread middleware chains as options to encoding constructors
 - [ ] thread context through Start/Stop
 - [ ] revisit yarpc.ErrTansportHsNoReferenceToPeer -> yarpcerrors.ErrDialerHasNoReferenceToPeer

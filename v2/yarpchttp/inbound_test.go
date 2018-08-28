@@ -45,14 +45,14 @@ import (
 
 func TestStartAddrInUse(t *testing.T) {
 	i1 := &Inbound{
-		Address: ":0",
-		Router:  newTestRouter(nil),
+		Addr:   ":0",
+		Router: newTestRouter(nil),
 	}
 
 	require.NoError(t, i1.Start(context.Background()), "inbound 1 must start without an error")
 	i2 := &Inbound{
-		Address: i1.Addr().String(),
-		Router:  newTestRouter(nil),
+		Addr:   i1.Listener.Addr().String(),
+		Router: newTestRouter(nil),
 	}
 	err := i2.Start(context.Background())
 	require.Error(t, err)
@@ -67,32 +67,20 @@ func TestStartAddrInUse(t *testing.T) {
 	assert.NoError(t, i1.Stop(context.Background()))
 }
 
-func TestNilAddrAfterStop(t *testing.T) {
-	i := &Inbound{
-		Address: ":0",
-		Router:  newTestRouter(nil),
-	}
-	require.NoError(t, i.Start(context.Background()))
-	assert.NotEqual(t, ":0", i.Addr().String())
-	assert.NotNil(t, i.Addr())
-	assert.NoError(t, i.Stop(context.Background()))
-	assert.Nil(t, i.Addr())
-}
-
 func TestInboundStartAndStop(t *testing.T) {
 	i := &Inbound{
-		Address: ":0",
-		Router:  newTestRouter(nil),
+		Addr:   ":0",
+		Router: newTestRouter(nil),
 	}
 	require.NoError(t, i.Start(context.Background()))
-	assert.NotEqual(t, ":0", i.Addr().String())
+	assert.NotEqual(t, ":0", i.Listener.Addr().String())
 	assert.NoError(t, i.Stop(context.Background()))
 }
 
 func TestInboundStartError(t *testing.T) {
 	i := &Inbound{
-		Address: "invalid",
-		Router:  new(yarpctest.MockRouter),
+		Addr:   "invalid",
+		Router: new(yarpctest.MockRouter),
 	}
 	err := i.Start(context.Background())
 	assert.Error(t, err, "expected failure")
@@ -100,7 +88,7 @@ func TestInboundStartError(t *testing.T) {
 
 func TestInboundStartErrorBadGrabHeader(t *testing.T) {
 	i := &Inbound{
-		Address:     ":0",
+		Addr:        ":0",
 		Router:      new(yarpctest.MockRouter),
 		GrabHeaders: []string{"x-valid", "y-invalid"},
 	}
@@ -119,7 +107,7 @@ func TestInboundMux(t *testing.T) {
 	router := yarpctest.NewMockRouter(mockCtrl)
 	router.EXPECT().Procedures()
 	i := &Inbound{
-		Address:    ":0",
+		Addr:       ":0",
 		Router:     router,
 		Mux:        mux,
 		MuxPattern: "/rpc/v1",
@@ -127,7 +115,7 @@ func TestInboundMux(t *testing.T) {
 	require.NoError(t, i.Start(context.Background()))
 	defer i.Stop(context.Background())
 
-	url := fmt.Sprintf("http://%v/", internalyarpctest.ZeroAddrToHostPort(i.Addr()))
+	url := fmt.Sprintf("http://%v/", internalyarpctest.ZeroAddrToHostPort(i.Listener.Addr()))
 	resp, err := http.Get(url + "health")
 	if assert.NoError(t, err, "/health failed") {
 		defer resp.Body.Close()
@@ -217,7 +205,7 @@ func TestMuxWithInterceptor(t *testing.T) {
 	}
 
 	inbound := &Inbound{
-		Address:     "127.0.0.1:0",
+		Addr:        "127.0.0.1:0",
 		Router:      newTestRouter(nil),
 		Mux:         mux,
 		Interceptor: intercept,
@@ -227,7 +215,7 @@ func TestMuxWithInterceptor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.path, func(t *testing.T) {
-			url := fmt.Sprintf("http://%v%v", inbound.Addr(), tt.path)
+			url := fmt.Sprintf("http://%v%v", inbound.Listener.Addr(), tt.path)
 			_, body, err := httpGet(t, url)
 			require.NoError(t, err, "request failed")
 			assert.Equal(t, tt.want, string(body))
@@ -242,13 +230,13 @@ func TestRequestAfterStop(t *testing.T) {
 	})
 
 	inbound := Inbound{
-		Address: "127.0.0.1:0",
-		Router:  newTestRouter(nil),
-		Mux:     mux,
+		Addr:   "127.0.0.1:0",
+		Router: newTestRouter(nil),
+		Mux:    mux,
 	}
 	require.NoError(t, inbound.Start(context.Background()), "Failed to start inbound")
 
-	url := fmt.Sprintf("http://%v/health", inbound.Addr())
+	url := fmt.Sprintf("http://%v/health", inbound.Listener.Addr())
 	_, body, err := httpGet(t, url)
 	require.NoError(t, err, "expect successful response")
 	assert.Equal(t, "OK", body, "response mismatch")

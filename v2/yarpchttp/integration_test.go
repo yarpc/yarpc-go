@@ -135,7 +135,7 @@ func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
 	}
 
 	inbound := options.Inbound
-	inbound.Address = "127.0.0.1:0"
+	inbound.Addr = "127.0.0.1:0"
 	inbound.Router = newTestRouter(options.Procedures)
 	if err := inbound.Start(context.Background()); err != nil {
 		return nil, err
@@ -143,7 +143,7 @@ func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
 
 	outbound := options.Outbound
 	outbound.Dialer = dialer
-	outbound.URL = parseURL("http://" + inbound.Addr().String())
+	outbound.URL = parseURL("http://" + inbound.Listener.Addr().String())
 
 	caller := "example-client"
 	service := "example"

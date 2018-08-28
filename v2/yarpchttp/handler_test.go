@@ -393,8 +393,8 @@ func TestHandlerPanic(t *testing.T) {
 		},
 	})
 	inbound := &Inbound{
-		Address: "localhost:0",
-		Router:  router,
+		Addr:   "localhost:0",
+		Router: router,
 	}
 	require.NoError(t, inbound.Start(context.Background()))
 	defer inbound.Stop(context.Background())
@@ -407,7 +407,7 @@ func TestHandlerPanic(t *testing.T) {
 				Dialer: dialer,
 				URL: &url.URL{
 					Scheme: "https",
-					Host:   inbound.Addr().String(),
+					Host:   inbound.Listener.Addr().String(),
 				},
 			},
 		},

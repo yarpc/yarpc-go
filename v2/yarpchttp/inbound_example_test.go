@@ -35,8 +35,8 @@ import (
 func ExampleInbound() {
 	router := yarpcrouter.NewMapRouter("my-service")
 	inbound := &yarpchttp.Inbound{
-		Address: ":8888",
-		Router:  router,
+		Addr:   ":8888",
+		Router: router,
 	}
 	if err := inbound.Start(context.Background()); err != nil {
 		log.Fatal(err)
@@ -55,7 +55,7 @@ func ExampleMux() {
 
 	router := yarpcrouter.NewMapRouter("my-service")
 	inbound := &yarpchttp.Inbound{
-		Address:    ":8888",
+		Addr:       ":8888",
 		Router:     router,
 		Mux:        mux,
 		MuxPattern: "/yarpc",
@@ -100,7 +100,7 @@ func ExampleInterceptor() {
 	// Create a new inbound, attaching the interceptor
 	router := yarpcrouter.NewMapRouter("server")
 	inbound := &yarpchttp.Inbound{
-		Address:     ":8889",
+		Addr:        ":8889",
 		Router:      router,
 		Interceptor: intercept,
 	}

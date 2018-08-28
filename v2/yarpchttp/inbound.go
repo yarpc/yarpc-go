@@ -36,7 +36,11 @@ import (
 
 // Inbound receives YARPC requests using an HTTP server.
 type Inbound struct {
-	Address string
+	// Listener is an open listener for inbound HTTP requests.
+	Listener net.Listener
+
+	// Addr is a host:port on which to listen if no Listener is expressly provided.
+	Addr string
 
 	// Router is the router to handle requests.
 	Router yarpc.Router
@@ -136,15 +140,21 @@ func (i *Inbound) Start(_ context.Context) error {
 	}
 
 	server := &http.Server{
-		Addr:    i.Address,
 		Handler: httpHandler,
 	}
-	i.server = intnet.NewHTTPServer(server)
-	if err := i.server.ListenAndServe(); err != nil {
-		return err
+
+	if i.Listener == nil {
+		var err error
+		i.Listener, err = net.Listen("tcp", i.Addr)
+		if err != nil {
+			return err
+		}
 	}
 
-	addr := i.server.Listener().Addr().String()
+	i.server = intnet.NewHTTPServer(server)
+	go i.server.Run(i.Listener)
+
+	addr := i.Listener.Addr().String()
 	logger.Info("started HTTP inbound", zap.String("address", addr))
 	if len(i.Router.Procedures()) == 0 {
 		logger.Warn("no procedures specified for HTTP inbound")
@@ -158,19 +168,4 @@ func (i *Inbound) Stop(ctx context.Context) error {
 		return fmt.Errorf("HTTP inbounds must be started before they are stopped")
 	}
 	return i.server.Shutdown(ctx)
-}
-
-// Addr returns the address on which the server is listening. Returns nil if
-// Start has not been called yet.
-func (i *Inbound) Addr() net.Addr {
-	if i.server == nil {
-		return nil
-	}
-
-	listener := i.server.Listener()
-	if listener == nil {
-		return nil
-	}
-
-	return listener.Addr()
 }
