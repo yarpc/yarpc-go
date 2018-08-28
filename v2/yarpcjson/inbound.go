@@ -26,6 +26,7 @@ import (
 	"reflect"
 
 	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcencoding"
 )
 
 // jsonHandler adapts a user-provided high-level handler into a transport-level
@@ -40,7 +41,7 @@ type jsonHandler struct {
 }
 
 func (h jsonHandler) Handle(ctx context.Context, treq *yarpc.Request, rw yarpc.ResponseWriter) error {
-	if err := yarpc.ExpectEncodings(treq, Encoding); err != nil {
+	if err := yarpcencoding.ExpectEncodings(treq, Encoding); err != nil {
 		return err
 	}
 
@@ -51,7 +52,7 @@ func (h jsonHandler) Handle(ctx context.Context, treq *yarpc.Request, rw yarpc.R
 
 	reqBody, err := h.reader.Read(json.NewDecoder(treq.Body))
 	if err != nil {
-		return yarpc.RequestBodyDecodeError(treq, err)
+		return yarpcencoding.RequestBodyDecodeError(treq, err)
 	}
 
 	results := h.handler.Call([]reflect.Value{reflect.ValueOf(ctx), reqBody})
@@ -65,7 +66,7 @@ func (h jsonHandler) Handle(ctx context.Context, treq *yarpc.Request, rw yarpc.R
 	var encodeErr error
 	if result := results[0].Interface(); result != nil {
 		if err := json.NewEncoder(rw).Encode(result); err != nil {
-			encodeErr = yarpc.ResponseBodyEncodeError(treq, err)
+			encodeErr = yarpcencoding.ResponseBodyEncodeError(treq, err)
 		}
 	}
 

@@ -28,17 +28,6 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type UnaryHandlerFunc func(context.Context, *Request, ResponseWriter) error
-type StreamHandlerFunc func(*ServerStream) error
-
-func (f UnaryHandlerFunc) Handle(ctx context.Context, r *Request, w ResponseWriter) error {
-	return f(ctx, r, w)
-}
-
-func (f StreamHandlerFunc) HandleStream(stream *ServerStream) error {
-	return f(stream)
-}
-
 func TestHandlerSpecLogMarshaling(t *testing.T) {
 	tests := []struct {
 		desc string

@@ -46,7 +46,7 @@ func (p *AbstractPeer) Unsubscribe(sub yarpc.Subscriber) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	if _, ok := p.subscribers[sub]; !ok {
-		return yarpc.ErrPeerHasNoReferenceToSubscriber{
+		return ErrPeerHasNoReferenceToSubscriber{
 			PeerIdentifier: p.pid,
 			PeerSubscriber: sub,
 		}

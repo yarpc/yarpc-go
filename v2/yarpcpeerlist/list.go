@@ -29,6 +29,7 @@ import (
 	"go.uber.org/multierr"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcpeer"
 )
 
 var (
@@ -176,7 +177,7 @@ func (pl *List) Update(updates yarpc.ListUpdates) error {
 // Must be run inside a mutex.Lock()
 func (pl *List) addPeerIdentifier(pid yarpc.Identifier) error {
 	if t := pl.getThunk(pid); t != nil {
-		return yarpc.ErrPeerAddAlreadyInList(pid.Identifier())
+		return yarpcpeer.ErrPeerAddAlreadyInList(pid.Identifier())
 	}
 
 	t := &peerThunk{list: pl, id: pid}
@@ -207,7 +208,7 @@ func (pl *List) addToUnavailablePeers(t *peerThunk) error {
 // Must be run in a mutex.Lock()
 func (pl *List) addToAvailablePeers(t *peerThunk) error {
 	if pl.availablePeers[t.peer.Identifier()] != nil {
-		return yarpc.ErrPeerAddAlreadyInList(t.peer.Identifier())
+		return yarpcpeer.ErrPeerAddAlreadyInList(t.peer.Identifier())
 	}
 	sub := pl.implementation.Add(t, t.id)
 	t.SetSubscriber(sub)
@@ -278,7 +279,7 @@ func (pl *List) removePeerIdentifierReferences(pid yarpc.Identifier) (*peerThunk
 		return t, nil
 	}
 
-	return nil, yarpc.ErrPeerRemoveNotInList(pid.Identifier())
+	return nil, yarpcpeer.ErrPeerRemoveNotInList(pid.Identifier())
 }
 
 // removeFromAvailablePeers remove a peer from the Available Peers list the

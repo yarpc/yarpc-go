@@ -22,7 +22,6 @@ package yarpc
 
 import (
 	"context"
-	"time"
 
 	"go.uber.org/zap/zapcore"
 )
@@ -94,36 +93,20 @@ type StreamHandler interface {
 	HandleStream(stream *ServerStream) error
 }
 
-// DispatchUnaryHandler calls the handler h, recovering panics and timeout errors,
-// converting them to yarpc errors. All other errors are passed trough.
-//
-// Deprecated: Use InvokeUnaryHandler instead.
-func DispatchUnaryHandler(
-	ctx context.Context,
-	h UnaryHandler,
-	start time.Time,
-	req *Request,
-	resq ResponseWriter,
-) (err error) {
-	return InvokeUnaryHandler(UnaryInvokeRequest{
-		Context:        ctx,
-		StartTime:      start,
-		Request:        req,
-		ResponseWriter: resq,
-		Handler:        h,
-	})
+// UnaryHandlerFunc is a utility for defining a UnaryHandler with just a
+// function.
+type UnaryHandlerFunc func(context.Context, *Request, ResponseWriter) error
+
+// StreamHandlerFunc is a utility for defining a StreamHandler with just a
+// function.
+type StreamHandlerFunc func(*ServerStream) error
+
+// Handle handles an inbound unary request.
+func (f UnaryHandlerFunc) Handle(ctx context.Context, r *Request, w ResponseWriter) error {
+	return f(ctx, r, w)
 }
 
-// DispatchStreamHandler calls the stream handler, recovering from panics as
-// errors.
-//
-// Deprecated: Use InvokeStreamHandler instead.
-func DispatchStreamHandler(
-	h StreamHandler,
-	stream *ServerStream,
-) (err error) {
-	return InvokeStreamHandler(StreamInvokeRequest{
-		Stream:  stream,
-		Handler: h,
-	})
+// HandleStream handles an inbound streaming request.
+func (f StreamHandlerFunc) HandleStream(stream *ServerStream) error {
+	return f(stream)
 }

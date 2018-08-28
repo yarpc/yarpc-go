@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcpeer"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
 
@@ -150,7 +151,7 @@ func TestDialer(t *testing.T) {
 				yarpctest.ReleaseAction{
 					InputIdentifierID: "i1",
 					InputSubscriberID: "s1",
-					ExpectedErrType:   yarpc.ErrTransportHasNoReferenceToPeer{},
+					ExpectedErrType:   yarpcpeer.ErrTransportHasNoReferenceToPeer{},
 				},
 			},
 		},
@@ -166,7 +167,7 @@ func TestDialer(t *testing.T) {
 				yarpctest.ReleaseAction{
 					InputIdentifierID: "i1",
 					InputSubscriberID: "s2",
-					ExpectedErrType:   yarpc.ErrPeerHasNoReferenceToSubscriber{},
+					ExpectedErrType:   yarpcpeer.ErrPeerHasNoReferenceToSubscriber{},
 				},
 			},
 			expectedPeers: []peerExpectation{

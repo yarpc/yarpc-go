@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc_test
+package yarpctransport_test
 
 import (
 	"context"
@@ -31,53 +31,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpctest"
+	"go.uber.org/yarpc/v2/yarpctransport"
 	"go.uber.org/zap"
 )
-
-func TestDispatchUnaryHandlerWithPanic(t *testing.T) {
-	msg := "I'm panicking in a unary handler!"
-	handler := func(context.Context, *yarpc.Request, yarpc.ResponseWriter) error {
-		panic(msg)
-	}
-	var err error
-	require.NotPanics(t, func() {
-		err = yarpc.DispatchUnaryHandler(
-			context.Background(),
-			yarpc.UnaryHandlerFunc(handler),
-			time.Now(),
-			&yarpc.Request{},
-			nil,
-		)
-	}, "Panic not recovered")
-	expectMsg := fmt.Sprintf("panic: %s", msg)
-	assert.Equal(t, expectMsg, err.Error())
-}
-
-func TestDispatchStreamHandlerWithPanic(t *testing.T) {
-	msg := "I'm panicking in a stream handler!"
-	handler := func(*yarpc.ServerStream) error {
-		panic(msg)
-	}
-	var err error
-
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-	mockStream := yarpctest.NewMockStream(mockCtrl)
-	mockStream.EXPECT().Request().Return(
-		&yarpc.StreamRequest{
-			Meta: &yarpc.RequestMeta{},
-		}).Times(1)
-	mockServerStream, err := yarpc.NewServerStream(mockStream)
-	require.NoError(t, err, "Should create mockServerStream")
-	require.NotPanics(t, func() {
-		err = yarpc.DispatchStreamHandler(
-			yarpc.StreamHandlerFunc(handler),
-			mockServerStream,
-		)
-	}, "Panic not recovered")
-	expectMsg := fmt.Sprintf("panic: %s", msg)
-	assert.Equal(t, expectMsg, err.Error())
-}
 
 func TestInvokeUnaryHandlerWithPanic(t *testing.T) {
 	msg := "I'm panicking in a unary handler!"
@@ -86,8 +42,8 @@ func TestInvokeUnaryHandlerWithPanic(t *testing.T) {
 	}
 	var err error
 	require.NotPanics(t, func() {
-		err = yarpc.InvokeUnaryHandler(
-			yarpc.UnaryInvokeRequest{
+		err = yarpctransport.InvokeUnaryHandler(
+			yarpctransport.UnaryInvokeRequest{
 				Context:   context.Background(),
 				StartTime: time.Now(),
 				Request:   &yarpc.Request{},
@@ -117,7 +73,7 @@ func TestInvokeStreamHandlerWithPanic(t *testing.T) {
 	mockServerStream, err := yarpc.NewServerStream(mockStream)
 	require.NoError(t, err, "should create mockServerStream")
 	require.NotPanics(t, func() {
-		err = yarpc.InvokeStreamHandler(yarpc.StreamInvokeRequest{
+		err = yarpctransport.InvokeStreamHandler(yarpctransport.StreamInvokeRequest{
 			Stream:  mockServerStream,
 			Handler: yarpc.StreamHandlerFunc(handler),
 			Logger:  zap.NewNop(),

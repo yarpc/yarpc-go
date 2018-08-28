@@ -18,44 +18,45 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc
+package yarpcencoding
 
 import (
 	"fmt"
 	"strings"
 
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerrors"
 )
 
 // RequestBodyEncodeError builds a YARPC error with code
 // yarpcerrors.CodeInvalidArgument that represents a failure to encode
 // the request body.
-func RequestBodyEncodeError(req *Request, err error) error {
+func RequestBodyEncodeError(req *yarpc.Request, err error) error {
 	return newClientEncodingError(req, false /*isResponse*/, false /*isHeader*/, err)
 }
 
 // ResponseBodyDecodeError builds a YARPC error with code
 // yarpcerrors.CodeInvalidArgument that represents a failure to decode
 // the response body.
-func ResponseBodyDecodeError(req *Request, err error) error {
+func ResponseBodyDecodeError(req *yarpc.Request, err error) error {
 	return newClientEncodingError(req, true /*isResponse*/, false /*isHeader*/, err)
 }
 
 // RequestHeadersEncodeError builds a YARPC error with code
 // yarpcerrors.CodeInvalidArgument that represents a failure to
 // encode the request headers.
-func RequestHeadersEncodeError(req *Request, err error) error {
+func RequestHeadersEncodeError(req *yarpc.Request, err error) error {
 	return newClientEncodingError(req, false /*isResponse*/, true /*isHeader*/, err)
 }
 
 // ResponseHeadersDecodeError builds a YARPC error with code
 // yarpcerrors.CodeInvalidArgument that represents a failure to
 // decode the response headers.
-func ResponseHeadersDecodeError(req *Request, err error) error {
+func ResponseHeadersDecodeError(req *yarpc.Request, err error) error {
 	return newClientEncodingError(req, true /*isResponse*/, true /*isHeader*/, err)
 }
 
-func newClientEncodingError(req *Request, isResponse bool, isHeader bool, err error) error {
+func newClientEncodingError(req *yarpc.Request, isResponse bool, isHeader bool, err error) error {
 	parts := []string{"failed to"}
 	if isResponse {
 		parts = append(parts, fmt.Sprintf("decode %q response", string(req.Encoding)))

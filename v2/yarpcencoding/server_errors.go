@@ -18,47 +18,48 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc
+package yarpcencoding
 
 import (
 	"fmt"
 	"strings"
 
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerrors"
 )
 
 // RequestBodyDecodeError builds a YARPC error with code
 // yarpcerrors.CodeInvalidArgument that represents a failure to decode
 // the request body.
-func RequestBodyDecodeError(req *Request, err error) error {
+func RequestBodyDecodeError(req *yarpc.Request, err error) error {
 	return newServerEncodingError(req, nil, false /*isResponse*/, false /*isHeader*/, err)
 }
 
 // ResponseBodyEncodeError builds a YARPC error with code
 // yarpcerrors.CodeInvalidArgument that represents a failure to encode
 // the response body.
-func ResponseBodyEncodeError(req *Request, err error) error {
+func ResponseBodyEncodeError(req *yarpc.Request, err error) error {
 	return newServerEncodingError(req, nil, true /*isResponse*/, false /*isHeader*/, err)
 }
 
 // RequestHeadersDecodeError builds a YARPC error with code
 // yarpcerrors.CodeInvalidArgument that represents a failure to
 // decode the request headers.
-func RequestHeadersDecodeError(req *Request, err error) error {
+func RequestHeadersDecodeError(req *yarpc.Request, err error) error {
 	return newServerEncodingError(req, nil, false /*isResponse*/, true /*isHeader*/, err)
 }
 
 // ResponseHeadersEncodeError builds a YARPC error with code
 // yarpcerrors.CodeInvalidArgument that represents a failure to
 // encode the response headers.
-func ResponseHeadersEncodeError(req *Request, err error) error {
+func ResponseHeadersEncodeError(req *yarpc.Request, err error) error {
 	return newServerEncodingError(req, nil, true /*isResponse*/, true /*isHeader*/, err)
 }
 
 // ExpectEncodings verifies that the given request has one of the given
 // encodings, otherwise it returns a YARPC error with code
 // yarpcerrors.CodeInvalidArgument.
-func ExpectEncodings(req *Request, want ...Encoding) error {
+func ExpectEncodings(req *yarpc.Request, want ...yarpc.Encoding) error {
 	got := req.Encoding
 	for _, w := range want {
 		if w == got {
@@ -69,9 +70,9 @@ func ExpectEncodings(req *Request, want ...Encoding) error {
 	return newServerEncodingError(req, want, false /*isResponse*/, false /*isHeader*/, newEncodingMismatchError(want, got))
 }
 
-func newServerEncodingError(req *Request, encodings []Encoding, isResponse bool, isHeader bool, err error) error {
+func newServerEncodingError(req *yarpc.Request, encodings []yarpc.Encoding, isResponse bool, isHeader bool, err error) error {
 	if len(encodings) == 0 {
-		encodings = []Encoding{req.Encoding}
+		encodings = []yarpc.Encoding{req.Encoding}
 	}
 	parts := []string{"failed to"}
 	if isResponse {
@@ -100,7 +101,7 @@ func newServerEncodingError(req *Request, encodings []Encoding, isResponse bool,
 	return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, strings.Join(parts, " "))
 }
 
-func newEncodingMismatchError(want []Encoding, got Encoding) error {
+func newEncodingMismatchError(want []yarpc.Encoding, got yarpc.Encoding) error {
 	switch len(want) {
 	case 1:
 		return fmt.Errorf("expected encoding %q but got %q", want[0], got)

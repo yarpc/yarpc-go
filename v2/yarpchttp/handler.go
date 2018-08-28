@@ -33,6 +33,7 @@ import (
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerrors"
 	"go.uber.org/yarpc/v2/yarpctracing"
+	"go.uber.org/yarpc/v2/yarpctransport"
 	"go.uber.org/zap"
 )
 
@@ -144,7 +145,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	case yarpc.Unary:
 		defer span.Finish()
 
-		err = yarpc.InvokeUnaryHandler(yarpc.UnaryInvokeRequest{
+		err = yarpctransport.InvokeUnaryHandler(yarpctransport.UnaryInvokeRequest{
 			Context:        ctx,
 			StartTime:      start,
 			Request:        treq,

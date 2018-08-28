@@ -33,6 +33,7 @@ import (
 	backoffapi "go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcpeer"
 	"go.uber.org/zap"
 )
 
@@ -277,7 +278,7 @@ func (d *dialerInternals) releasePeer(pid yarpc.Identifier, sub yarpc.Subscriber
 
 	p, ok := d.peers[pid.Identifier()]
 	if !ok {
-		return yarpc.ErrTransportHasNoReferenceToPeer{
+		return yarpcpeer.ErrTransportHasNoReferenceToPeer{
 			TransportName:  "http.Transport",
 			PeerIdentifier: pid.Identifier(),
 		}

@@ -35,6 +35,7 @@ import (
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/internal/internalyarpcerrors"
 	"go.uber.org/yarpc/v2/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcpeer"
 	"go.uber.org/yarpc/v2/yarpctracing"
 )
 
@@ -175,7 +176,7 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, treq *yarpc.Request) (
 
 	hp, ok := peer.(*httpPeer)
 	if !ok {
-		return nil, nil, yarpc.ErrInvalidPeerConversion{
+		return nil, nil, yarpcpeer.ErrInvalidPeerConversion{
 			Peer:         peer,
 			ExpectedType: "*httpPeer",
 		}

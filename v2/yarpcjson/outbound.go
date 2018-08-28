@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 
 	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcencoding"
 )
 
 // Client makes JSON requests to a single service.
@@ -64,7 +65,7 @@ func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interfac
 
 	encoded, err := json.Marshal(reqBody)
 	if err != nil {
-		return yarpc.RequestBodyEncodeError(&treq, err)
+		return yarpcencoding.RequestBodyEncodeError(&treq, err)
 	}
 
 	treq.Body = bytes.NewReader(encoded)
@@ -81,7 +82,7 @@ func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interfac
 	}
 	if tres.Body != nil {
 		if err := json.NewDecoder(tres.Body).Decode(resBodyOut); err != nil && decodeErr == nil {
-			decodeErr = yarpc.ResponseBodyDecodeError(&treq, err)
+			decodeErr = yarpcencoding.ResponseBodyDecodeError(&treq, err)
 		}
 		if err := tres.Body.Close(); err != nil && decodeErr == nil {
 			decodeErr = err

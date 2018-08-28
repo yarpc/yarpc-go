@@ -18,48 +18,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcraw
+package yarpctransport
 
 import (
-	"context"
-	"io/ioutil"
+	"errors"
+	"testing"
 
+	"github.com/stretchr/testify/assert"
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcencoding"
+	"go.uber.org/yarpc/v2/yarpcerrors"
 )
 
-// rawUnaryHandler adapts a Handler into a yarpc.UnaryHandler
-type rawUnaryHandler struct{ UnaryHandler }
+func TestBadRequestError(t *testing.T) {
+	err := errors.New("derp")
+	err = InboundBadRequestError(err)
+	assert.True(t, IsBadRequestError(err))
+}
 
-func (r rawUnaryHandler) Handle(ctx context.Context, treq *yarpc.Request, rw yarpc.ResponseWriter) error {
-	if err := yarpcencoding.ExpectEncodings(treq, Encoding); err != nil {
-		return err
-	}
+func TestIsUnexpectedError(t *testing.T) {
+	assert.True(t, IsUnexpectedError(yarpcerrors.Newf(yarpcerrors.CodeInternal, "")))
+}
 
-	ctx, call := yarpc.NewInboundCall(ctx)
-	if err := call.ReadFromRequest(treq); err != nil {
-		return err
-	}
+func TestIsTimeoutError(t *testing.T) {
+	assert.True(t, IsTimeoutError(yarpcerrors.Newf(yarpcerrors.CodeDeadlineExceeded, "")))
+}
 
-	reqBody, err := ioutil.ReadAll(treq.Body)
-	if err != nil {
-		return err
-	}
-
-	resBody, appErr := r.UnaryHandler(ctx, reqBody)
-	if err := call.WriteToResponse(rw); err != nil {
-		return err
-	}
-
-	// we want to return the appErr if it exists as this is what
-	// the previous behavior was so we deprioritize this error
-	var writeErr error
-	if len(resBody) > 0 {
-		_, writeErr = rw.Write(resBody)
-	}
-	if appErr != nil {
-		rw.SetApplicationError()
-		return appErr
-	}
-	return writeErr
+func TestUnrecognizedProcedureError(t *testing.T) {
+	err := UnrecognizedProcedureError(&yarpc.Request{Service: "curly", Procedure: "nyuck"})
+	assert.True(t, IsUnrecognizedProcedureError(err))
+	assert.False(t, IsUnrecognizedProcedureError(errors.New("derp")))
 }

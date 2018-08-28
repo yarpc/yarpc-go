@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc
+package yarpctransport
 
 import (
 	"context"
@@ -27,6 +27,7 @@ import (
 	"runtime/debug"
 	"time"
 
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 )
@@ -35,16 +36,16 @@ import (
 type UnaryInvokeRequest struct {
 	Context        context.Context
 	StartTime      time.Time
-	Request        *Request
-	ResponseWriter ResponseWriter
-	Handler        UnaryHandler
+	Request        *yarpc.Request
+	ResponseWriter yarpc.ResponseWriter
+	Handler        yarpc.UnaryHandler
 	Logger         *zap.Logger // optional
 }
 
 // StreamInvokeRequest encapsulates arguments to invoke a unary handler.
 type StreamInvokeRequest struct {
-	Stream  *ServerStream
-	Handler StreamHandler
+	Stream  *yarpc.ServerStream
+	Handler yarpc.StreamHandler
 	Logger  *zap.Logger // optional
 }
 
@@ -55,7 +56,7 @@ func InvokeUnaryHandler(
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = handlePanic(Unary, i.Logger, r, i.Request.ToRequestMeta())
+			err = handlePanic(yarpc.Unary, i.Logger, r, i.Request.ToRequestMeta())
 		}
 	}()
 
@@ -79,14 +80,14 @@ func InvokeStreamHandler(
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = handlePanic(Streaming, i.Logger, r, i.Stream.Request().Meta)
+			err = handlePanic(yarpc.Streaming, i.Logger, r, i.Stream.Request().Meta)
 		}
 	}()
 
 	return i.Handler.HandleStream(i.Stream)
 }
 
-func handlePanic(rpcType Type, logger *zap.Logger, recovered interface{}, reqMeta *RequestMeta) error {
+func handlePanic(rpcType yarpc.Type, logger *zap.Logger, recovered interface{}, reqMeta *yarpc.RequestMeta) error {
 	err := fmt.Errorf("panic: %v", recovered)
 	if logger != nil {
 		logPanic(rpcType, logger, err, reqMeta)
@@ -96,7 +97,7 @@ func handlePanic(rpcType Type, logger *zap.Logger, recovered interface{}, reqMet
 	return err
 }
 
-func logPanic(rpcType Type, logger *zap.Logger, err error, reqMeta *RequestMeta) {
+func logPanic(rpcType yarpc.Type, logger *zap.Logger, err error, reqMeta *yarpc.RequestMeta) {
 	logger.Error(fmt.Sprintf("%s handler panicked", rpcType),
 		zap.String("service", reqMeta.Service),
 		zap.String("transport", reqMeta.Transport),
