@@ -33,6 +33,9 @@ var _writerPool = sync.Pool{New: func() interface{} {
 	return &writer{}
 }}
 
+var _ transport.ResponseMetaWriter = (*writer)(nil)
+var _ transport.ResponseWriter = (*writer)(nil)
+
 // writer wraps a transport.ResponseWriter so the observing middleware can
 // detect application errors.
 type writer struct {
@@ -51,6 +54,13 @@ func newWriter(rw transport.ResponseWriter) *writer {
 func (w *writer) SetApplicationError() {
 	w.isApplicationError = true
 	w.ResponseWriter.SetApplicationError()
+}
+
+func (w *writer) ResponseMeta() *transport.ResponseMeta {
+	if respMetaWriter, ok := w.ResponseWriter.(transport.ResponseMetaWriter); ok {
+		return respMetaWriter.ResponseMeta()
+	}
+	return nil
 }
 
 func (w *writer) free() {

@@ -68,3 +68,74 @@ type ResponseWriter interface {
 	// of Write().
 	SetApplicationError()
 }
+
+// ResponseMetaWriter returns a ResponseMeta struct that handlers and inbound
+// middleware may use to modify transport.Response fields.
+//
+// Middleware and handlers may attempt to upcast ResponseWriters to
+// ResponseMetaWriters to access and write response metadata. On successful
+// cast, the ResponseWriter should only be used for writes. Failure to cast MUST
+// be handled.
+//
+//  if metaW, ok := resW.(transport.ResponseMetaWriter); ok {
+//   if meta := metaW.ResponseMeta(); meta != nil{
+//     meta.Host = "foo"
+//     ...
+//   }
+//  }
+//
+// ResponseWriter calls to `AddHeaders()` and `SetApplicationError()` may be
+// modified afterwards, by changing the ResponseMeta.
+//
+// Transport implementations that support writing response metadata should have
+// their ResponseWriters implement ResponseMetaWriter to facilitate this.
+//
+// Nil returns indicate unsupported behavior. This could be due to a wrapper
+// that has no guarantee of the underlying writer implementing this interface.
+type ResponseMetaWriter interface {
+	ResponseMeta() *ResponseMeta
+}
+
+// ResponseMeta is the low level response metadata representation. Transports
+// that support writing response metadata with ResponseMetaWriter MUST inspect
+// the final ResponseMeta before writing the response body.
+//
+// ResponseWriters should expose this struct using the ResponseMetaWriter
+// interface.
+//
+// There should be one per request.
+type ResponseMeta struct {
+	// ID of the response as chosen by the client. This MAY be a trace ID or
+	// UUID.
+	//
+	// If the corresponding transport.Request struct has this field set, this
+	// field MUST have the same value.
+	ID string
+
+	// Host is the name of the server responding with this reponse.
+	//
+	// It MAY be set by a an environment-aware middleware.
+	Host string
+
+	// Environment is the name of the host environment that the request was
+	// issued from. eg "staging", "production"
+	//
+	// It MAY be set by a an environment-aware middleware.
+	Environment string
+
+	// Service is the name of the responding service.
+	Service string
+
+	Headers Headers
+	// TODO(abg/apeatsbond): ApplicationError should just be an error. To get
+	// thrift support with YARPC errors, we need to send the application error to
+	// the transport level.
+	ApplicationError bool
+}
+
+// AddHeaders is a convenience function for appending to existing Headers.
+func (meta *ResponseMeta) AddHeaders(headers Headers) {
+	for k, v := range headers.OriginalItems() {
+		meta.Headers = meta.Headers.With(k, v)
+	}
+}

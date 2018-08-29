@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   and `Environment`.
 - Additional transport headers were added to `transport.Response`: `ID`,
   `Host`, `Environment` and `Service`.
+- Added `transport.ResponseMetaWriter` and `transport.ResponseMeta` to support
+  writing `transport.Response` fields in handlers.
 ### Changed
 - HTTP inbounds gracefully shutdown with an optional timeout, defaulting to 5
   seconds.

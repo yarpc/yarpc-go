@@ -591,3 +591,38 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 	}
 	assert.Equal(t, want, snap, "Unexpected snapshot of metrics.")
 }
+
+var _ transport.ResponseWriter = (*testResponseWriter)(nil)
+
+type testResponseWriter struct{}
+
+func (*testResponseWriter) AddHeaders(transport.Headers) {}
+func (*testResponseWriter) SetApplicationError()         {}
+func (*testResponseWriter) Write([]byte) (int, error) {
+	return 0, nil
+}
+
+var _ transport.ResponseWriter = (*testResponseMetaWriter)(nil)
+
+type testResponseMetaWriter struct{}
+
+func (*testResponseMetaWriter) AddHeaders(transport.Headers) {}
+func (*testResponseMetaWriter) SetApplicationError()         {}
+func (*testResponseMetaWriter) Write([]byte) (int, error) {
+	return 0, nil
+}
+func (*testResponseMetaWriter) ResponseMeta() *transport.ResponseMeta {
+	return &transport.ResponseMeta{}
+}
+
+func TestResponseMetaWriter(t *testing.T) {
+	t.Run("not a ResponseMetaWriter", func(t *testing.T) {
+		w := newWriter(&testResponseWriter{})
+		require.Nil(t, w.ResponseMeta())
+	})
+
+	t.Run("implements ResponseMetaWriter", func(t *testing.T) {
+		w := newWriter(&testResponseMetaWriter{})
+		require.NotNil(t, w.ResponseMeta())
+	})
+}
