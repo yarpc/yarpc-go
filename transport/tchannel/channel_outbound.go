@@ -196,11 +196,15 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 		return nil, err
 	}
 
-	return &transport.Response{
+	err = getResponseError(headers)
+	deleteReservedHeaders(headers)
+
+	resp := &transport.Response{
 		Headers:          headers,
 		Body:             resBody,
 		ApplicationError: res.ApplicationError(),
-	}, getResponseErrorAndDeleteHeaderKeys(headers)
+	}
+	return resp, err
 }
 
 // Introspect returns basic status about this outbound.
@@ -237,13 +241,7 @@ func fromSystemError(err tchannel.SystemError) error {
 	return yarpcerrors.Newf(code, err.Message())
 }
 
-func getResponseErrorAndDeleteHeaderKeys(headers transport.Headers) error {
-	defer func() {
-		headers.Del(ServiceHeaderKey)
-		headers.Del(ErrorCodeHeaderKey)
-		headers.Del(ErrorNameHeaderKey)
-		headers.Del(ErrorMessageHeaderKey)
-	}()
+func getResponseError(headers transport.Headers) error {
 	errorCodeString, ok := headers.Get(ErrorCodeHeaderKey)
 	if !ok {
 		return nil
