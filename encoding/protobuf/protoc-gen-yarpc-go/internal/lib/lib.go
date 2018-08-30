@@ -253,6 +253,7 @@ type Fx{{$service.GetName}}YARPCProceduresResult struct {
 	fx.Out
 
 	Procedures []transport.Procedure ` + "`" + `group:"yarpcfx"` + "`" + `
+	ReflectionInfo reflection.ServerReflectionInfo ` + "`" + `group:"yarpcprotoreflectionfx"` + "`" + `
 }
 
 // NewFx{{$service.GetName}}YARPCProcedures provides {{$service.GetName}}YARPCServer procedures to an Fx application.
@@ -266,6 +267,10 @@ func NewFx{{$service.GetName}}YARPCProcedures() interface{} {
 	return func(params Fx{{$service.GetName}}YARPCProceduresParams) Fx{{$service.GetName}}YARPCProceduresResult {
 		return Fx{{$service.GetName}}YARPCProceduresResult{
 			Procedures: Build{{$service.GetName}}YARPCProcedures(params.Server),
+			ReflectionInfo: reflection.ServerReflectionInfo{
+				ServiceName: "{{trimPrefixPeriod $service.FQSN}}",
+				FileDescriptor: {{$service.File.VarName}},
+			},
 		}
 	}
 }
@@ -578,6 +583,7 @@ var Runner = protoplugin.NewRunner(
 		"go.uber.org/yarpc",
 		"go.uber.org/yarpc/api/transport",
 		"go.uber.org/yarpc/encoding/protobuf",
+		"go.uber.org/yarpc/encoding/protobuf/reflection",
 	},
 	func(file *protoplugin.File) (string, error) {
 		name := file.GetName()
