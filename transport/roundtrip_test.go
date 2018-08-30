@@ -511,8 +511,12 @@ func TestRoundTripMeta(t *testing.T) {
 			service: yarpctest.HTTPService(append(serviceOpts, ports.NamedPort("http"))...),
 			request: yarpctest.HTTPRequest(append(requestOpts, ports.NamedPort("http"))...),
 		},
+		{
+			name:    "TChannel",
+			service: yarpctest.TChannelService(append(serviceOpts, ports.NamedPort("TChannel"))...),
+			request: yarpctest.TChannelRequest(append(requestOpts, ports.NamedPort("TChannel"))...),
+		},
 		// TODO(apeatsbond): add gRPC test
-		// TODO(apeatsbond): add TChannel test
 	}
 
 	for _, tt := range tests {

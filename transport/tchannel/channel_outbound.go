@@ -191,19 +191,23 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 		return nil, toYARPCError(req, err)
 	}
 
-	respService, _ := headers.Get(ServiceHeaderKey) // validateServiceName handles empty strings
-	if err := validateServiceName(req.Service, respService); err != nil {
+	headerItems := headers.Items()
+	if err := validateServiceName(req.Service, headerItems[ServiceHeaderKey]); err != nil {
 		return nil, err
 	}
 
-	err = getResponseError(headers)
-	deleteReservedHeaders(headers)
-
 	resp := &transport.Response{
+		ID:               headerItems[IDHeaderKey],
+		Host:             headerItems[HostHeaderKey],
+		Environment:      headerItems[EnvironmentHeaderKey],
+		Service:          headerItems[ServiceHeaderKey],
 		Headers:          headers,
 		Body:             resBody,
 		ApplicationError: res.ApplicationError(),
 	}
+
+	err = getResponseError(headers)
+	deleteReservedHeaders(headers)
 	return resp, err
 }
 

@@ -33,21 +33,36 @@ import (
 )
 
 const (
+	// IDHeaderKey for a request/response pair as chosen by the client. This
+	// corresponds to the Request.ID and Response.ID attribute.
+	IDHeaderKey = "$rpc$-id"
+	// HostHeaderKey for the host name of the server issuing or responding to a
+	// request. This corresponds to the Request.Host and Response.Host attribute.
+	HostHeaderKey = "$rpc$-host"
+	// EnvironmentHeaderKey for the host environment that the request was issued
+	// from. eg "staging", "production"
+	EnvironmentHeaderKey = "$rpc$-environment"
+	// ServiceHeaderKey for the service the request is being sent. This
+	// corresponds to the Request.Service and Response.Service attribute.
+	ServiceHeaderKey = "$rpc$-service"
+
 	// ErrorCodeHeaderKey is the response header key for the error code.
 	ErrorCodeHeaderKey = "$rpc$-error-code"
 	// ErrorNameHeaderKey is the response header key for the error name.
 	ErrorNameHeaderKey = "$rpc$-error-name"
 	// ErrorMessageHeaderKey is the response header key for the error message.
 	ErrorMessageHeaderKey = "$rpc$-error-message"
-	// ServiceHeaderKey is the response header key for the respond service
-	ServiceHeaderKey = "$rpc$-service"
 )
 
 var _reservedHeaderKeys = map[string]struct{}{
+	IDHeaderKey:          {},
+	HostHeaderKey:        {},
+	EnvironmentHeaderKey: {},
+	ServiceHeaderKey:     {},
+
 	ErrorCodeHeaderKey:    {},
 	ErrorNameHeaderKey:    {},
 	ErrorMessageHeaderKey: {},
-	ServiceHeaderKey:      {},
 }
 
 func isReservedHeaderKey(key string) bool {
@@ -211,6 +226,27 @@ func validateServiceName(requestService, responseService string) error {
 	return yarpcerrors.InternalErrorf(
 		"service name sent from the request does not match the service name "+
 			"received in the response: sent %q, got: %q", requestService, responseService)
+}
+
+func requestMetaWithHeaders(req *transport.Request, headers map[string]string) map[string]string {
+	headersAndMeta := make(map[string]string, len(headers)+4)
+	for k, v := range headers {
+		headersAndMeta[k] = v
+	}
+
+	if req.ID != "" {
+		headersAndMeta[IDHeaderKey] = req.ID
+	}
+	if req.Host != "" {
+		headersAndMeta[HostHeaderKey] = req.Host
+	}
+	if req.Environment != "" {
+		headersAndMeta[EnvironmentHeaderKey] = req.Environment
+	}
+	if req.Service != "" {
+		headersAndMeta[ServiceHeaderKey] = req.Service
+	}
+	return headersAndMeta
 }
 
 // _putStr16 writes the bytes `in` into `out` using the encoding `s~2`.
