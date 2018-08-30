@@ -23,6 +23,7 @@ package transport_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -33,6 +34,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/testutils"
+	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/raw"
@@ -40,6 +42,9 @@ import (
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/yarpc/x/yarpctest"
+	"go.uber.org/yarpc/x/yarpctest/api"
+	"go.uber.org/yarpc/x/yarpctest/types"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -387,6 +392,134 @@ func TestSimpleRoundTripOneway(t *testing.T) {
 					assert.NotNil(t, ack)
 				}
 			})
+		})
+	}
+}
+
+func TestRoundTripMeta(t *testing.T) {
+	const (
+		id           = "test-id"
+		host1, host2 = "test-host-1", "test-host-2"
+		env1, env2   = "test-env-1", "test-env-2"
+		service      = "test-service"
+		caller       = "unknown" /* from x/yarpctest */
+	)
+
+	reqMatcher := transporttest.NewRequestMatcher(t, &transport.Request{
+		ID:          id,
+		Host:        host1,
+		Environment: env1,
+		Caller:      caller,
+		Service:     service,
+		Procedure:   testProcedure,
+		Encoding:    raw.Encoding,
+		Headers:     transport.NewHeaders().With("foo", "bar"),
+		Body:        bytes.NewBufferString(""),
+	})
+
+	respMatcher := transporttest.NewResponseMatcher(t, &transport.Response{
+		ID:          id,
+		Host:        host2,
+		Environment: env2,
+		Service:     service,
+		Headers:     transport.NewHeaders().With("fizz", "buzz"),
+		Body:        ioutil.NopCloser(bytes.NewBufferString("")),
+	})
+
+	// add meta information to transport.Request for all outbound calls
+	outboundMW := middleware.UnaryOutboundFunc(func(ctx context.Context, req *transport.Request, next transport.UnaryOutbound) (*transport.Response, error) {
+		// add meta
+		req.ID = id
+		req.Host = host1
+		req.Environment = env1
+
+		// issue call
+		resp, err := next.Call(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+
+		// validate response
+		if !assert.True(t, respMatcher.Matches(resp)) {
+			return nil, errors.New("unexpected response")
+		}
+		return resp, nil
+	})
+
+	handler := &types.UnaryHandler{
+		Handler: api.UnaryHandlerFunc(func(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
+			// validate request
+			if !assert.True(t, reqMatcher.Matches(req)) {
+				return errors.New("unexpected request")
+			}
+
+			// get responseMeta
+			responseMetaWriter, ok := resw.(transport.ResponseMetaWriter)
+			if !assert.True(t, ok) {
+				return errors.New("could not upcast response writer to transport.ResponseMetaWriter")
+			}
+
+			// validate responseMeta
+			resMeta := responseMetaWriter.ResponseMeta()
+			if !assert.NotNil(t, resMeta) {
+				return errors.New("responseMeta is nil")
+			}
+			if !assert.NotEmpty(t, resMeta.ID) {
+				return errors.New("ResponseMeta.ID is empty")
+			}
+			if !assert.Empty(t, resMeta.Host) {
+				return errors.New("ResponseMeta.Host is unexpectedly set")
+			}
+			if !assert.Empty(t, resMeta.Environment) {
+				return errors.New("ResponseMeta.Environment is unexpectedly set")
+			}
+			if !assert.NotEmpty(t, resMeta.Service) {
+				return errors.New("ResponseMeta.Service is empty")
+			}
+
+			// write additional response meta
+			resMeta.Host = host2
+			resMeta.Environment = env2
+			resMeta.AddHeaders(transport.NewHeaders().With("fizz", "buzz"))
+
+			return nil
+		}),
+	}
+
+	ports := yarpctest.NewPortProvider(t)
+
+	serviceOpts := []api.ServiceOption{
+		yarpctest.Name(service),
+		yarpctest.Proc(yarpctest.Name(testProcedure), handler),
+	}
+
+	requestOpts := []api.RequestOption{
+		yarpctest.Service(service),
+		yarpctest.Procedure(testProcedure),
+		yarpctest.GiveTimeout(time.Second),
+		yarpctest.UnaryOutboundMiddleware(outboundMW),
+		yarpctest.WithHeader("foo", "bar"),
+	}
+
+	tests := []struct {
+		name    string
+		service api.Lifecycle
+		request api.Action
+	}{
+		{
+			name:    "http",
+			service: yarpctest.HTTPService(append(serviceOpts, ports.NamedPort("http"))...),
+			request: yarpctest.HTTPRequest(append(requestOpts, ports.NamedPort("http"))...),
+		},
+		// TODO(apeatsbond): add gRPC test
+		// TODO(apeatsbond): add TChannel test
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.NoError(t, tt.service.Start(t))
+			tt.request.Run(t)
+			require.NoError(t, tt.service.Stop(t))
 		})
 	}
 }
