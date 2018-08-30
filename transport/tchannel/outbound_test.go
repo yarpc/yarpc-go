@@ -76,12 +76,14 @@ func TestOutboundHeaders(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var handlerInvoked bool
 			server := testutils.NewServer(t, nil)
 			defer server.Close()
 			serverHostPort := server.PeerInfo().HostPort
 
 			server.GetSubChannel("service").SetHandler(tchannel.HandlerFunc(
 				func(ctx context.Context, call *tchannel.InboundCall) {
+					handlerInvoked = true
 					headers, err := readHeaders(tchannel.Raw, call.Arg2Reader)
 					if !assert.NoError(t, err, "failed to read request") {
 						return
@@ -123,17 +125,21 @@ func TestOutboundHeaders(t *testing.T) {
 			)
 
 			require.NoError(t, err, "failed to make call")
+			assert.True(t, handlerInvoked, "handler was never called by client")
 		})
 	}
 }
 
 func TestCallSuccess(t *testing.T) {
+	var handlerInvoked bool
 	server := testutils.NewServer(t, nil)
 	defer server.Close()
 	serverHostPort := server.PeerInfo().HostPort
 
 	server.GetSubChannel("service").SetHandler(tchannel.HandlerFunc(
 		func(ctx context.Context, call *tchannel.InboundCall) {
+			handlerInvoked = true
+
 			assert.Equal(t, "caller", call.CallerName())
 			assert.Equal(t, "service", call.ServiceName())
 			assert.Equal(t, tchannel.Raw, call.Format())
@@ -186,6 +192,7 @@ func TestCallSuccess(t *testing.T) {
 	}
 
 	assert.NoError(t, res.Body.Close(), "failed to close response body")
+	assert.True(t, handlerInvoked, "handler was never called by client")
 }
 
 func TestCallFailures(t *testing.T) {
