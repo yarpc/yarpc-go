@@ -22,6 +22,6 @@ package reflection
 
 // ServerReflectionInfo encapsulates the information needed to generate reflection for a service
 type ServerReflectionInfo struct {
-	ServiceName    string
-	FileDescriptor []byte
+	ServiceName        string
+	RegisteredFileName string
 }

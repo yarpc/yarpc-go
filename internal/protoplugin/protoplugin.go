@@ -38,6 +38,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -142,6 +143,11 @@ type File struct {
 	Messages  []*Message
 	Enums     []*Enum
 	Services  []*Service
+}
+
+// RegisteredFileName is the string with which the FileDescriptor was registered on proto during init.
+func (f *File) RegisteredFileName() string {
+	return strconv.Quote(*f.Name)
 }
 
 // Message describes a protocol buffer message types.
