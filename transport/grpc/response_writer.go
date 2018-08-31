@@ -25,17 +25,25 @@ import (
 
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
 type responseWriter struct {
 	buffer    *bytes.Buffer
 	md        metadata.MD
+	resMeta   *transport.ResponseMeta
 	headerErr error
 }
 
-func newResponseWriter() *responseWriter {
-	return &responseWriter{}
+func newResponseWriter(treq *transport.Request) *responseWriter {
+	return &responseWriter{
+		md: metadata.New(nil),
+		resMeta: &transport.ResponseMeta{
+			ID:      treq.ID,
+			Service: treq.Service,
+		},
+	}
 }
 
 func (r *responseWriter) Write(p []byte) (int, error) {
@@ -46,20 +54,14 @@ func (r *responseWriter) Write(p []byte) (int, error) {
 }
 
 func (r *responseWriter) AddHeaders(headers transport.Headers) {
-	if r.md == nil {
-		r.md = metadata.New(nil)
-	}
-	r.headerErr = multierr.Combine(r.headerErr, addApplicationHeaders(r.md, headers))
+	r.resMeta.AddHeaders(headers)
 }
 
 func (r *responseWriter) SetApplicationError() {
-	r.AddSystemHeader(ApplicationErrorHeader, ApplicationErrorHeaderValue)
+	r.resMeta.ApplicationError = true
 }
 
 func (r *responseWriter) AddSystemHeader(key string, value string) {
-	if r.md == nil {
-		r.md = metadata.New(nil)
-	}
 	r.headerErr = multierr.Combine(r.headerErr, addToMetadata(r.md, key, value))
 }
 
@@ -70,6 +72,33 @@ func (r *responseWriter) Bytes() []byte {
 	return r.buffer.Bytes()
 }
 
-func (r *responseWriter) Close() {
+func (r *responseWriter) ResponseMeta() *transport.ResponseMeta {
+	return r.resMeta
+}
+
+func (r *responseWriter) setResponseMeta() {
+	if r.resMeta.ID != "" {
+		r.AddSystemHeader(IDHeader, r.resMeta.ID)
+	}
+	if r.resMeta.Host != "" {
+		r.AddSystemHeader(HostHeader, r.resMeta.Host)
+	}
+	if r.resMeta.Environment != "" {
+		r.AddSystemHeader(EnvironmentHeader, r.resMeta.Environment)
+	}
+	if r.resMeta.Service != "" {
+		r.AddSystemHeader(ServiceHeader, r.resMeta.Service)
+	}
+
+	r.headerErr = multierr.Combine(r.headerErr, addApplicationHeaders(r.md, r.resMeta.Headers))
+	if r.resMeta.ApplicationError {
+		r.AddSystemHeader(ApplicationErrorHeader, ApplicationErrorHeaderValue)
+	}
+}
+
+// Close should only be called after a successful send on the server stream
+func (r *responseWriter) Close(serverStream grpc.ServerStream) {
+	r.setResponseMeta()
+	serverStream.SetTrailer(r.md)
 	r.buffer = nil
 }

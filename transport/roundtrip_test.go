@@ -448,6 +448,9 @@ func TestRoundTripMeta(t *testing.T) {
 
 	handler := &types.UnaryHandler{
 		Handler: api.UnaryHandlerFunc(func(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
+			req.Headers.Del("user-agent") // for gRPC
+			req.Headers.Del(":authority") // for gRPC
+
 			// validate request
 			if !assert.True(t, reqMatcher.Matches(req)) {
 				return errors.New("unexpected request")
@@ -516,7 +519,11 @@ func TestRoundTripMeta(t *testing.T) {
 			service: yarpctest.TChannelService(append(serviceOpts, ports.NamedPort("TChannel"))...),
 			request: yarpctest.TChannelRequest(append(requestOpts, ports.NamedPort("TChannel"))...),
 		},
-		// TODO(apeatsbond): add gRPC test
+		{
+			name:    "gRPC",
+			service: yarpctest.GRPCService(append(serviceOpts, ports.NamedPort("gRPC"))...),
+			request: yarpctest.GRPCRequest(append(requestOpts, ports.NamedPort("gRPC"))...),
+		},
 	}
 
 	for _, tt := range tests {
