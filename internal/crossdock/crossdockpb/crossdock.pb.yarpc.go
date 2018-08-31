@@ -34,6 +34,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/protobuf"
+	"go.uber.org/yarpc/encoding/protobuf/reflection"
 	"go.uber.org/yarpc/yarpcproto"
 )
 
@@ -140,7 +141,8 @@ type FxEchoYARPCProceduresParams struct {
 type FxEchoYARPCProceduresResult struct {
 	fx.Out
 
-	Procedures []transport.Procedure `group:"yarpcfx"`
+	Procedures     []transport.Procedure           `group:"yarpcfx"`
+	ReflectionInfo reflection.ServerReflectionInfo `group:"yarpcprotoreflectionfx"`
 }
 
 // NewFxEchoYARPCProcedures provides EchoYARPCServer procedures to an Fx application.
@@ -154,6 +156,10 @@ func NewFxEchoYARPCProcedures() interface{} {
 	return func(params FxEchoYARPCProceduresParams) FxEchoYARPCProceduresResult {
 		return FxEchoYARPCProceduresResult{
 			Procedures: BuildEchoYARPCProcedures(params.Server),
+			ReflectionInfo: reflection.ServerReflectionInfo{
+				ServiceName:        "uber.yarpc.internal.crossdock.Echo",
+				RegisteredFileName: "internal/crossdock/crossdockpb/crossdock.proto",
+			},
 		}
 	}
 }
@@ -308,7 +314,8 @@ type FxOnewayYARPCProceduresParams struct {
 type FxOnewayYARPCProceduresResult struct {
 	fx.Out
 
-	Procedures []transport.Procedure `group:"yarpcfx"`
+	Procedures     []transport.Procedure           `group:"yarpcfx"`
+	ReflectionInfo reflection.ServerReflectionInfo `group:"yarpcprotoreflectionfx"`
 }
 
 // NewFxOnewayYARPCProcedures provides OnewayYARPCServer procedures to an Fx application.
@@ -322,6 +329,10 @@ func NewFxOnewayYARPCProcedures() interface{} {
 	return func(params FxOnewayYARPCProceduresParams) FxOnewayYARPCProceduresResult {
 		return FxOnewayYARPCProceduresResult{
 			Procedures: BuildOnewayYARPCProcedures(params.Server),
+			ReflectionInfo: reflection.ServerReflectionInfo{
+				ServiceName:        "uber.yarpc.internal.crossdock.Oneway",
+				RegisteredFileName: "internal/crossdock/crossdockpb/crossdock.proto",
+			},
 		}
 	}
 }
