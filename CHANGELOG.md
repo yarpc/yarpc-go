@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added `peer/tworandomchoices`, an implementation of the Two Random Choices
   load balancer algorithm.
 - Reintroduce Transport field matching for `transporttest.RequestMatcher`.
+- Added `encoding/protobuf/reflection/` for exposing server reflection related
+  information through codegeneration.
+- `protoc-gen-yarpc-go` now generates `yarpcprotoreflectionfx` fx groups containing
+  information required for building server reflection API's.
+
 ### Changed
 - HTTP inbounds gracefully shutdown with an optional timeout, defaulting to 5
   seconds.
