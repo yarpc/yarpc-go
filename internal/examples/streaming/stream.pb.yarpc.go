@@ -34,6 +34,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/protobuf"
+	"go.uber.org/yarpc/encoding/protobuf/reflection"
 )
 
 var _ = ioutil.NopCloser
@@ -213,7 +214,8 @@ type FxHelloYARPCProceduresParams struct {
 type FxHelloYARPCProceduresResult struct {
 	fx.Out
 
-	Procedures []transport.Procedure `group:"yarpcfx"`
+	Procedures     []transport.Procedure           `group:"yarpcfx"`
+	ReflectionInfo reflection.ServerReflectionInfo `group:"yarpcprotoreflectionfx"`
 }
 
 // NewFxHelloYARPCProcedures provides HelloYARPCServer procedures to an Fx application.
@@ -227,6 +229,10 @@ func NewFxHelloYARPCProcedures() interface{} {
 	return func(params FxHelloYARPCProceduresParams) FxHelloYARPCProceduresResult {
 		return FxHelloYARPCProceduresResult{
 			Procedures: BuildHelloYARPCProcedures(params.Server),
+			ReflectionInfo: reflection.ServerReflectionInfo{
+				ServiceName:        "uber.yarpc.internal.examples.streaming.Hello",
+				RegisteredFileName: "internal/examples/streaming/stream.proto",
+			},
 		}
 	}
 }

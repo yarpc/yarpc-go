@@ -34,6 +34,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/protobuf"
+	"go.uber.org/yarpc/encoding/protobuf/reflection"
 	"go.uber.org/yarpc/yarpcproto"
 )
 
@@ -151,7 +152,8 @@ type FxKeyValueYARPCProceduresParams struct {
 type FxKeyValueYARPCProceduresResult struct {
 	fx.Out
 
-	Procedures []transport.Procedure `group:"yarpcfx"`
+	Procedures     []transport.Procedure           `group:"yarpcfx"`
+	ReflectionInfo reflection.ServerReflectionInfo `group:"yarpcprotoreflectionfx"`
 }
 
 // NewFxKeyValueYARPCProcedures provides KeyValueYARPCServer procedures to an Fx application.
@@ -165,6 +167,10 @@ func NewFxKeyValueYARPCProcedures() interface{} {
 	return func(params FxKeyValueYARPCProceduresParams) FxKeyValueYARPCProceduresResult {
 		return FxKeyValueYARPCProceduresResult{
 			Procedures: BuildKeyValueYARPCProcedures(params.Server),
+			ReflectionInfo: reflection.ServerReflectionInfo{
+				ServiceName:        "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.KeyValue",
+				RegisteredFileName: "encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto",
+			},
 		}
 	}
 }
@@ -357,7 +363,8 @@ type FxSinkYARPCProceduresParams struct {
 type FxSinkYARPCProceduresResult struct {
 	fx.Out
 
-	Procedures []transport.Procedure `group:"yarpcfx"`
+	Procedures     []transport.Procedure           `group:"yarpcfx"`
+	ReflectionInfo reflection.ServerReflectionInfo `group:"yarpcprotoreflectionfx"`
 }
 
 // NewFxSinkYARPCProcedures provides SinkYARPCServer procedures to an Fx application.
@@ -371,6 +378,10 @@ func NewFxSinkYARPCProcedures() interface{} {
 	return func(params FxSinkYARPCProceduresParams) FxSinkYARPCProceduresResult {
 		return FxSinkYARPCProceduresResult{
 			Procedures: BuildSinkYARPCProcedures(params.Server),
+			ReflectionInfo: reflection.ServerReflectionInfo{
+				ServiceName:        "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.Sink",
+				RegisteredFileName: "encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto",
+			},
 		}
 	}
 }
@@ -610,7 +621,8 @@ type FxAllYARPCProceduresParams struct {
 type FxAllYARPCProceduresResult struct {
 	fx.Out
 
-	Procedures []transport.Procedure `group:"yarpcfx"`
+	Procedures     []transport.Procedure           `group:"yarpcfx"`
+	ReflectionInfo reflection.ServerReflectionInfo `group:"yarpcprotoreflectionfx"`
 }
 
 // NewFxAllYARPCProcedures provides AllYARPCServer procedures to an Fx application.
@@ -624,6 +636,10 @@ func NewFxAllYARPCProcedures() interface{} {
 	return func(params FxAllYARPCProceduresParams) FxAllYARPCProceduresResult {
 		return FxAllYARPCProceduresResult{
 			Procedures: BuildAllYARPCProcedures(params.Server),
+			ReflectionInfo: reflection.ServerReflectionInfo{
+				ServiceName:        "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.All",
+				RegisteredFileName: "encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto",
+			},
 		}
 	}
 }
