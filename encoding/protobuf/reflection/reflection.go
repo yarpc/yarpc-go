@@ -20,8 +20,17 @@
 
 package reflection
 
-// ServerReflectionInfo encapsulates the information needed to generate reflection for a service
+// ServerReflectionInfo encapsulates the information about a service required
+// for exposing this service on the gRPC reflection protocol.
+// See https://github.com/grpc/grpc/blob/master/doc/server-reflection.md
 type ServerReflectionInfo struct {
-	ServiceName        string
+
+	// The fully qualified service name
+	ServiceName string
+
+	// RegisteredFileName is the identifer with hich the filedescriptor
+	// associated with this service is registered using `proto.RegisterFile()`
+	// during init. It can be used to get a compressed filedescriptor using
+	// `proto.FileDescriptor()`.
 	RegisteredFileName string
 }
