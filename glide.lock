@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-08-31T15:06:45.383549981Z
+updated: 2018-09-03T15:07:15.642951043Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -201,12 +201,12 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 4bc20fc7916bc21abba37451a6923cffa9a2cd3f
+  version: 7ca132754999accbaa5c1735eda29e7ce0f3bf03
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: c66870c02cf823ceb633bcd05be3c7cda29976f4
+  version: 11092d34479b07829b72e10713b159248caf5dad
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
