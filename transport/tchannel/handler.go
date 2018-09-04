@@ -97,9 +97,6 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	// you MUST close the responseWriter no matter what unless you have a tchannel.SystemError
 	responseWriter := newResponseWriter(call.Response(), call.Format(), h.headerCase)
 
-	// echo accepted rpc-service in response header
-	responseWriter.addHeader(ServiceHeaderKey, call.ServiceName())
-
 	err := h.callHandler(ctx, call, responseWriter)
 
 	// black-hole requests on resource exhausted errors
@@ -108,12 +105,12 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 		call.Response().Blackhole()
 		return
 	}
-	if err != nil && !responseWriter.isApplicationError {
+	if err != nil && !responseWriter.meta.ApplicationError {
 		// TODO: log error
 		_ = call.Response().SendSystemError(getSystemError(err))
 		return
 	}
-	if err != nil && responseWriter.isApplicationError {
+	if err != nil && responseWriter.meta.ApplicationError {
 		// we have an error, so we're going to propagate it as a yarpc error,
 		// regardless of whether or not it is a system error.
 		status := yarpcerrors.FromError(errors.WrapHandlerError(err, call.ServiceName(), call.MethodString()))
@@ -142,6 +139,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 	}
 
 	treq := &transport.Request{
+		// ID, Host, Environment extracted from headers below
 		Caller:          call.CallerName(),
 		Service:         call.ServiceName(),
 		Encoding:        transport.Encoding(call.Format()),
@@ -156,11 +154,24 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 	if err != nil {
 		return errors.RequestHeadersDecodeError(treq, err)
 	}
+
+	// extract request meta
+	headerItems := headers.Items()
+	treq.ID = headerItems[IDHeaderKey]
+	treq.Host = headerItems[HostHeaderKey]
+	treq.Environment = headerItems[EnvironmentHeaderKey]
+
+	// set response meta
+	resMeta := responseWriter.ResponseMeta()
+	resMeta.ID = headerItems[IDHeaderKey]
+	resMeta.Service = headerItems[ServiceHeaderKey]
+
+	deleteReservedHeaders(headers)
 	treq.Headers = headers
 
 	if tcall, ok := call.(tchannelCall); ok {
 		tracer := h.tracer
-		ctx = tchannel.ExtractInboundSpan(ctx, tcall.InboundCall, headers.Items(), tracer)
+		ctx = tchannel.ExtractInboundSpan(ctx, tcall.InboundCall, headerItems, tracer)
 	}
 
 	body, err := call.Arg3Reader()
@@ -207,14 +218,18 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 	}
 }
 
+var (
+	_ transport.ResponseWriter     = (*responseWriter)(nil)
+	_ transport.ResponseMetaWriter = (*responseWriter)(nil)
+)
+
 type responseWriter struct {
-	failedWith         error
-	format             tchannel.Format
-	headers            transport.Headers
-	buffer             *bufferpool.Buffer
-	response           inboundCallResponse
-	isApplicationError bool
-	headerCase         headerCase
+	failedWith error
+	format     tchannel.Format
+	buffer     *bufferpool.Buffer
+	response   inboundCallResponse
+	headerCase headerCase
+	meta       *transport.ResponseMeta
 }
 
 func newResponseWriter(response inboundCallResponse, format tchannel.Format, headerCase headerCase) *responseWriter {
@@ -222,6 +237,7 @@ func newResponseWriter(response inboundCallResponse, format tchannel.Format, hea
 		response:   response,
 		format:     format,
 		headerCase: headerCase,
+		meta:       &transport.ResponseMeta{},
 	}
 }
 
@@ -237,11 +253,11 @@ func (rw *responseWriter) AddHeaders(h transport.Headers) {
 }
 
 func (rw *responseWriter) addHeader(key string, value string) {
-	rw.headers = rw.headers.With(key, value)
+	rw.meta.Headers = rw.meta.Headers.With(key, value)
 }
 
 func (rw *responseWriter) SetApplicationError() {
-	rw.isApplicationError = true
+	rw.meta.ApplicationError = true
 }
 
 func (rw *responseWriter) Write(s []byte) (int, error) {
@@ -260,15 +276,41 @@ func (rw *responseWriter) Write(s []byte) (int, error) {
 	return n, err
 }
 
+func (rw *responseWriter) ResponseMeta() *transport.ResponseMeta {
+	return rw.meta
+}
+
+func (rw *responseWriter) setMeta(headers map[string]string) map[string]string {
+	if headers == nil {
+		headers = make(map[string]string, 4)
+	}
+
+	if rw.meta.ID != "" {
+		headers[IDHeaderKey] = rw.meta.ID
+	}
+	if rw.meta.Host != "" {
+		headers[HostHeaderKey] = rw.meta.Host
+	}
+	if rw.meta.Environment != "" {
+		headers[EnvironmentHeaderKey] = rw.meta.Environment
+	}
+	if rw.meta.Service != "" {
+		headers[ServiceHeaderKey] = rw.meta.Service
+	}
+	return headers
+}
+
 func (rw *responseWriter) Close() error {
 	retErr := rw.failedWith
-	if rw.isApplicationError {
+	if rw.meta.ApplicationError {
 		if err := rw.response.SetApplicationError(); err != nil {
 			retErr = appendError(retErr, fmt.Errorf("SetApplicationError() failed: %v", err))
 		}
 	}
 
-	headers := headerMap(rw.headers, rw.headerCase)
+	headers := headerMap(rw.meta.Headers, rw.headerCase)
+	headers = rw.setMeta(headers)
+
 	retErr = appendError(retErr, writeHeaders(rw.format, headers, nil, rw.response.Arg2Writer))
 
 	// Arg3Writer must be opened and closed regardless of if there is data

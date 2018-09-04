@@ -133,6 +133,7 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		return nil, err
 	}
 	reqHeaders := headerMap(req.Headers, headerCase)
+	reqHeaders = requestMetaWithHeaders(req, reqHeaders)
 
 	// baggage headers are transport implementation details that are stripped out (and stored in the context). Users don't interact with it
 	tracingBaggage := tchannel.InjectOutboundSpan(call.Response(), nil)
@@ -165,19 +166,25 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		return nil, err
 	}
 
-	respService, _ := headers.Get(ServiceHeaderKey) // validateServiceName handles empty strings
+	headerItems := headers.Items()
+
+	respService := headerItems[ServiceHeaderKey]
 	if err := validateServiceName(req.Service, respService); err != nil {
 		return nil, err
 	}
 
-	err = getResponseError(headers)
-	deleteReservedHeaders(headers)
-
 	resp := &transport.Response{
+		ID:               headerItems[IDHeaderKey],
+		Host:             headerItems[HostHeaderKey],
+		Environment:      headerItems[EnvironmentHeaderKey],
+		Service:          respService,
 		Headers:          headers,
 		Body:             resBody,
 		ApplicationError: res.ApplicationError(),
 	}
+
+	err = getResponseError(headers)
+	deleteReservedHeaders(headers)
 	return resp, err
 }
 
