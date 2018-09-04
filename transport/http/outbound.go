@@ -264,6 +264,10 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	}
 
 	tres := &transport.Response{
+		ID:               response.Header.Get(IDHeader),
+		Host:             response.Header.Get(HostHeader),
+		Environment:      response.Header.Get(EnvironmentHeader),
+		Service:          response.Header.Get(ServiceHeader),
 		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, transport.NewHeaders()),
 		Body:             response.Body,
 		ApplicationError: response.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus,
@@ -348,6 +352,15 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 		}
 	}
 
+	if treq.ID != "" {
+		req.Header.Set(IDHeader, treq.ID)
+	}
+	if treq.Host != "" {
+		req.Header.Set(HostHeader, treq.Host)
+	}
+	if treq.Environment != "" {
+		req.Header.Set(EnvironmentHeader, treq.Environment)
+	}
 	req.Header.Set(CallerHeader, treq.Caller)
 	req.Header.Set(ServiceHeader, treq.Service)
 	req.Header.Set(ProcedureHeader, treq.Procedure)
@@ -456,6 +469,9 @@ func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start 
 	// transport header conventions.
 	if treq == nil {
 		treq = &transport.Request{
+			ID:              hreq.Header.Get(IDHeader),
+			Host:            hreq.Header.Get(HostHeader),
+			Environment:     hreq.Header.Get(EnvironmentHeader),
 			Caller:          hreq.Header.Get(CallerHeader),
 			Service:         hreq.Header.Get(ServiceHeader),
 			Encoding:        transport.Encoding(hreq.Header.Get(EncodingHeader)),

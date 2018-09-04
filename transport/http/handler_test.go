@@ -417,13 +417,16 @@ func headerCopyWithout(headers http.Header, names ...string) http.Header {
 
 func TestResponseWriter(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	writer := newResponseWriter(recorder)
+	writer := newResponseWriter(recorder, nil /*http.Header*/)
 
 	headers := transport.HeadersFromMap(map[string]string{
 		"foo":       "bar",
 		"shard-key": "123",
 	})
 	writer.AddHeaders(headers)
+
+	meta := writer.ResponseMeta()
+	require.NotNil(t, meta)
 
 	_, err := writer.Write([]byte("hello"))
 	require.NoError(t, err)

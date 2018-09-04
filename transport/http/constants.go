@@ -31,6 +31,19 @@ var (
 
 // HTTP headers used in requests and responses to send YARPC metadata.
 const (
+	// ID for a request/response pair as chosen by the client. This corresponds to
+	// the ID field for transport.Request and transport.Response.
+	IDHeader = "Rpc-Id"
+
+	// Host name of the server issuing/responding to the request. This corresponds
+	// to the Host field for transport.Request and transport.Response.
+	HostHeader = "Rpc-Host"
+
+	// Environment of the host issuing/responding the request. eg "staging",
+	// "production". This corresponds to the ID field for transport.Request and
+	// transport.Response.
+	EnvironmentHeader = "Rpc-Environment"
+
 	// Name of the service sending the request. This corresponds to the
 	// Request.Caller attribute.
 	CallerHeader = "Rpc-Caller"
@@ -47,9 +60,8 @@ const (
 	// Request.Procedure attribute.
 	ProcedureHeader = "Rpc-Procedure"
 
-	// Name of the service to which the request is being sent. This
-	// corresponds to the Request.Service attribute. This header is also used
-	// in responses to ensure requests are processed by the correct service.
+	// Name of the service to which the request is being sent. This corresponds to
+	// the Service field for transport.Request and transport.Response.
 	ServiceHeader = "Rpc-Service"
 
 	// Shard key used by the destined service to shard the request. This
