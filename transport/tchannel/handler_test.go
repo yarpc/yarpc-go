@@ -89,7 +89,7 @@ func TestHandlerErrors(t *testing.T) {
 			wantError:        true,
 			wantNumLogs:      1,
 			wantLogLevel:     zapcore.ErrorLevel,
-			wantLogMessage:   "responseWriter failed to close",
+			wantLogMessage:   "tchannel responseWriter failed to close",
 			wantErrorMessage: "faultyResponseWriter failed to close",
 		},
 	}
@@ -195,7 +195,7 @@ func TestHandlerFailures(t *testing.T) {
 			},
 			wantStatus:     tchannel.ErrCodeBadRequest,
 			wantLogLevel:   zapcore.ErrorLevel,
-			wantLogMessage: "callHandler error",
+			wantLogMessage: "tchannel callHandler error",
 			wantNumLogs:    1,
 		},
 		{
@@ -210,7 +210,7 @@ func TestHandlerFailures(t *testing.T) {
 			},
 			wantStatus:     tchannel.ErrCodeBadRequest,
 			wantLogLevel:   zapcore.ErrorLevel,
-			wantLogMessage: "callHandler error",
+			wantLogMessage: "tchannel callHandler error",
 			wantNumLogs:    1,
 		},
 		{
@@ -225,7 +225,7 @@ func TestHandlerFailures(t *testing.T) {
 			},
 			wantStatus:     tchannel.ErrCodeBadRequest,
 			wantLogLevel:   zapcore.ErrorLevel,
-			wantLogMessage: "callHandler error",
+			wantLogMessage: "tchannel callHandler error",
 			wantNumLogs:    1,
 		},
 		{
@@ -240,7 +240,7 @@ func TestHandlerFailures(t *testing.T) {
 			},
 			wantStatus:     tchannel.ErrCodeUnexpected,
 			wantLogLevel:   zapcore.ErrorLevel,
-			wantLogMessage: "callHandler error",
+			wantLogMessage: "tchannel callHandler error",
 			wantNumLogs:    1,
 		},
 		{
@@ -270,7 +270,7 @@ func TestHandlerFailures(t *testing.T) {
 			},
 			wantStatus:     tchannel.ErrCodeUnexpected,
 			wantLogLevel:   zapcore.ErrorLevel,
-			wantLogMessage: "callHandler error",
+			wantLogMessage: "tchannel callHandler error",
 			wantNumLogs:    1,
 		},
 		{
@@ -303,7 +303,7 @@ func TestHandlerFailures(t *testing.T) {
 			},
 			wantStatus:     tchannel.ErrCodeBadRequest,
 			wantLogLevel:   zapcore.ErrorLevel,
-			wantLogMessage: "callHandler error",
+			wantLogMessage: "tchannel callHandler error",
 			wantNumLogs:    1,
 		},
 		{
@@ -339,7 +339,7 @@ func TestHandlerFailures(t *testing.T) {
 			},
 			wantStatus:     tchannel.ErrCodeTimeout,
 			wantLogLevel:   zapcore.ErrorLevel,
-			wantLogMessage: "callHandler error",
+			wantLogMessage: "tchannel callHandler error",
 			wantNumLogs:    1,
 		},
 		{

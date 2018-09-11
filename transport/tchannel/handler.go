@@ -72,7 +72,7 @@ type inboundCallResponse interface {
 
 // responseWriter provides an interface similar to newTchannelResponseWriter.
 //
-// responseWriter allows us to control the tchannelResponseWriter during testing.
+// It allows us to control tchannelResponseWriter during testing.
 type responseWriter interface {
 	AddHeaders(h transport.Headers)
 	AddHeader(key string, value string)
@@ -124,7 +124,7 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	if err != nil && !responseWriter.IsApplicationError() {
 
 		_ = call.Response().SendSystemError(getSystemError(err))
-		h.logger.Error("callHandler error", zap.Error(err))
+		h.logger.Error("tchannel callHandler error", zap.Error(err))
 		return
 	}
 	if err != nil && responseWriter.IsApplicationError() {
@@ -144,7 +144,7 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	}
 	if err := responseWriter.Close(); err != nil {
 		_ = call.Response().SendSystemError(getSystemError(err))
-		h.logger.Error("responseWriter failed to close", zap.Error(err))
+		h.logger.Error("tchannel responseWriter failed to close", zap.Error(err))
 	}
 }
 

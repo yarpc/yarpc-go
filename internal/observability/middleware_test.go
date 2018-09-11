@@ -589,4 +589,5 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 			},
 		},
 	}
-	assert.Equal(t, want, snap, "Unexpected snapshot of metrics."}
+	assert.Equal(t, want, snap, "Unexpected snapshot of metrics.")
+}

@@ -145,7 +145,7 @@ func (rr *responseRecorder) Blackhole() {
 	rr.blackholed = true
 }
 
-// faultyResponseWriter mocks a responseWriter.Close() error inorder to test logging behaviour
+// faultyResponseWriter mocks a responseWriter.Close() error to test logging behaviour
 // inside tchannel.Handle.
 type faultyResponseWriter struct{ tchannelResponseWriter }
 
