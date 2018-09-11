@@ -39,6 +39,9 @@ import (
 	"go.uber.org/yarpc/internal/testtime"
 	pkgerrors "go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 func TestHandlerErrors(t *testing.T) {
@@ -46,33 +49,68 @@ func TestHandlerErrors(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	tests := []struct {
-		format  tchannel.Format
-		headers []byte
-
-		wantHeaders map[string]string
+		desc              string
+		format            tchannel.Format
+		headers           []byte
+		wantHeaders       map[string]string
+		newResponseWriter func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
+		recorder          recorder
+		wantLogLevel      zapcore.Level
+		wantLogMessage    string
+		wantErrMessage    string
 	}{
 		{
-			format:      tchannel.JSON,
-			headers:     []byte(`{"Rpc-Header-Foo": "bar"}`),
-			wantHeaders: map[string]string{"rpc-header-foo": "bar"},
+			desc:              "test tchannel json handler",
+			format:            tchannel.JSON,
+			headers:           []byte(`{"Rpc-Header-Foo": "bar"}`),
+			wantHeaders:       map[string]string{"rpc-header-foo": "bar"},
+			newResponseWriter: newHandlerWriter,
+			recorder:          newResponseRecorder(),
 		},
 		{
+			desc:   "test tchannel thrift handler",
 			format: tchannel.Thrift,
 			headers: []byte{
 				0x00, 0x01, // 1 header
 				0x00, 0x03, 'F', 'o', 'o', // Foo
 				0x00, 0x03, 'B', 'a', 'r', // Bar
 			},
-			wantHeaders: map[string]string{"foo": "Bar"},
+			wantHeaders:       map[string]string{"foo": "Bar"},
+			newResponseWriter: newHandlerWriter,
+			recorder:          newResponseRecorder(),
+		},
+		{
+			desc:              "test responseWriter.Close() failure logging",
+			format:            tchannel.JSON,
+			headers:           []byte(`{"Rpc-Header-Foo": "bar"}`),
+			wantHeaders:       map[string]string{"rpc-header-foo": "bar"},
+			newResponseWriter: newFaultyHandlerWriter,
+			recorder:          newResponseRecorder(),
+			wantLogLevel:      zapcore.ErrorLevel,
+			wantLogMessage:    "responseWriter failed to close",
+			wantErrMessage:    "faultyHandlerWriter failed to close",
+		},
+		{
+			desc:              "test SendSystemError() failure logging",
+			format:            tchannel.JSON,
+			headers:           []byte(`{"Rpc-Header-Foo": "bar"}`),
+			wantHeaders:       map[string]string{"rpc-header-foo": "bar"},
+			newResponseWriter: newFaultyHandlerWriter,
+			recorder:          newFaultyResponseRecorder(),
+			wantLogLevel:      zapcore.ErrorLevel,
+			wantLogMessage:    "SendSystemError failed",
+			wantErrMessage:    "SendSystemError failure",
 		},
 	}
 
 	for _, tt := range tests {
+		core, logs := observer.New(zapcore.ErrorLevel)
 		rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
 		router := transporttest.NewMockRouter(mockCtrl)
 
 		spec := transport.NewUnaryHandlerSpec(rpcHandler)
-		tchHandler := handler{router: router}
+
+		tchHandler := handler{router: router, logger: zap.New(core).Named("tchannel"), newResponseWriter: tt.newResponseWriter}
 
 		router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
 			WithService("service").
@@ -97,7 +135,7 @@ func TestHandlerErrors(t *testing.T) {
 			gomock.Any(),
 		).Return(nil)
 
-		respRecorder := newResponseRecorder()
+		respRecorder := tt.recorder
 
 		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 		defer cancel()
@@ -114,22 +152,37 @@ func TestHandlerErrors(t *testing.T) {
 			resp:            respRecorder,
 		})
 
-		assert.NoError(t, respRecorder.systemErr, "did not expect an error")
+		getLog := func() observer.LoggedEntry {
+			entries := logs.TakeAll()
+			return entries[0]
+		}
+
+		if tt.wantLogMessage != "" {
+			log := getLog()
+			logContext := log.ContextMap()
+			assert.Equal(t, tt.wantLogLevel, log.Entry.Level, "Unexpected log level")
+			assert.Equal(t, tt.wantLogMessage, log.Entry.Message, "Unexpected log message written")
+			assert.Equal(t, tt.wantErrMessage, logContext["error"], "Unexpected error message")
+			assert.Equal(t, "tchannel", log.LoggerName, "Unexpected logger name")
+			assert.Error(t, respRecorder.SystemError(), "Error expected with logging")
+		}
+
 	}
 }
 
 func TestHandlerFailures(t *testing.T) {
 	tests := []struct {
-		desc string
-
-		// context to use in the callm a default one is used otherwise.
-		ctx     context.Context
-		ctxFunc func() (context.Context, context.CancelFunc)
-
-		sendCall   *fakeInboundCall
-		expectCall func(*transporttest.MockUnaryHandler)
-
-		wantStatus tchannel.SystemErrCode // expected status
+		desc              string
+		ctx               context.Context // context to use in the callm a default one is used otherwise.
+		ctxFunc           func() (context.Context, context.CancelFunc)
+		sendCall          *fakeInboundCall
+		expectCall        func(*transporttest.MockUnaryHandler)
+		wantStatus        tchannel.SystemErrCode // expected status
+		newResponseWriter func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
+		recorder          recorder
+		wantLogLevel      zapcore.Level
+		wantLogMessage    string
+		wantErrMessage    string
 	}{
 		{
 			desc: "no timeout on context",
@@ -142,7 +195,11 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    []byte{0x00, 0x00},
 				arg3:    []byte{0x00},
 			},
-			wantStatus: tchannel.ErrCodeBadRequest,
+			wantStatus:        tchannel.ErrCodeBadRequest,
+			newResponseWriter: newHandlerWriter,
+			recorder:          newResponseRecorder(),
+			wantLogLevel:      zapcore.ErrorLevel,
+			wantLogMessage:    "handler failed",
 		},
 		{
 			desc: "arg2 reader error",
@@ -154,7 +211,11 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    nil,
 				arg3:    []byte{0x00},
 			},
-			wantStatus: tchannel.ErrCodeBadRequest,
+			wantStatus:        tchannel.ErrCodeBadRequest,
+			newResponseWriter: newHandlerWriter,
+			recorder:          newResponseRecorder(),
+			wantLogLevel:      zapcore.ErrorLevel,
+			wantLogMessage:    "handler failed",
 		},
 		{
 			desc: "arg2 parse error",
@@ -166,7 +227,11 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    []byte("{not valid JSON}"),
 				arg3:    []byte{0x00},
 			},
-			wantStatus: tchannel.ErrCodeBadRequest,
+			wantStatus:        tchannel.ErrCodeBadRequest,
+			newResponseWriter: newHandlerWriter,
+			recorder:          newResponseRecorder(),
+			wantLogLevel:      zapcore.ErrorLevel,
+			wantLogMessage:    "handler failed",
 		},
 		{
 			desc: "arg3 reader error",
@@ -178,7 +243,11 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    []byte{0x00, 0x00},
 				arg3:    nil,
 			},
-			wantStatus: tchannel.ErrCodeUnexpected,
+			wantStatus:        tchannel.ErrCodeUnexpected,
+			newResponseWriter: newHandlerWriter,
+			recorder:          newResponseRecorder(),
+			wantLogLevel:      zapcore.ErrorLevel,
+			wantLogMessage:    "handler failed",
 		},
 		{
 			desc: "internal error",
@@ -205,7 +274,11 @@ func TestHandlerFailures(t *testing.T) {
 					), gomock.Any(),
 				).Return(fmt.Errorf("great sadness"))
 			},
-			wantStatus: tchannel.ErrCodeUnexpected,
+			wantStatus:        tchannel.ErrCodeUnexpected,
+			newResponseWriter: newHandlerWriter,
+			recorder:          newResponseRecorder(),
+			wantLogLevel:      zapcore.ErrorLevel,
+			wantLogMessage:    "handler failed",
 		},
 		{
 			desc: "arg3 encode error",
@@ -235,7 +308,11 @@ func TestHandlerFailures(t *testing.T) {
 						"serialization derp",
 					)))
 			},
-			wantStatus: tchannel.ErrCodeBadRequest,
+			wantStatus:        tchannel.ErrCodeBadRequest,
+			newResponseWriter: newHandlerWriter,
+			recorder:          newResponseRecorder(),
+			wantLogLevel:      zapcore.ErrorLevel,
+			wantLogMessage:    "handler failed",
 		},
 		{
 			desc: "handler timeout",
@@ -268,7 +345,11 @@ func TestHandlerFailures(t *testing.T) {
 					<-ctx.Done()
 				}).Return(context.DeadlineExceeded)
 			},
-			wantStatus: tchannel.ErrCodeTimeout,
+			wantStatus:        tchannel.ErrCodeTimeout,
+			newResponseWriter: newHandlerWriter,
+			recorder:          newResponseRecorder(),
+			wantLogLevel:      zapcore.ErrorLevel,
+			wantLogMessage:    "handler failed",
 		},
 		{
 			desc: "handler panic",
@@ -298,7 +379,28 @@ func TestHandlerFailures(t *testing.T) {
 					panic("oops I panicked!")
 				})
 			},
-			wantStatus: tchannel.ErrCodeUnexpected,
+			wantStatus:        tchannel.ErrCodeUnexpected,
+			newResponseWriter: newHandlerWriter,
+			recorder:          newResponseRecorder(),
+			wantLogLevel:      zapcore.ErrorLevel,
+			wantLogMessage:    "Unary handler panicked",
+		},
+		{
+			desc: "test SendSystemError() error logging",
+			sendCall: &fakeInboundCall{
+				service: "foo",
+				caller:  "bar",
+				method:  "hello",
+				format:  tchannel.Raw,
+				arg2:    nil,
+				arg3:    []byte{0x00},
+			},
+			wantStatus:        tchannel.ErrCodeBadRequest,
+			newResponseWriter: newHandlerWriter,
+			recorder:          newFaultyResponseRecorder(),
+			wantLogLevel:      zapcore.ErrorLevel,
+			wantLogMessage:    "SendSystemError failed",
+			wantErrMessage:    "SendSystemError failure",
 		},
 	}
 
@@ -311,6 +413,7 @@ func TestHandlerFailures(t *testing.T) {
 		}
 		defer cancel()
 
+		core, logs := observer.New(zapcore.ErrorLevel)
 		mockCtrl := gomock.NewController(t)
 		thandler := transporttest.NewMockUnaryHandler(mockCtrl)
 		spec := transport.NewUnaryHandlerSpec(thandler)
@@ -319,7 +422,7 @@ func TestHandlerFailures(t *testing.T) {
 			tt.expectCall(thandler)
 		}
 
-		resp := newResponseRecorder()
+		resp := tt.recorder
 		tt.sendCall.resp = resp
 
 		router := transporttest.NewMockRouter(mockCtrl)
@@ -328,13 +431,29 @@ func TestHandlerFailures(t *testing.T) {
 			WithProcedure(tt.sendCall.method),
 		).Return(spec, nil).AnyTimes()
 
-		handler{router: router}.handle(ctx, tt.sendCall)
-		err := resp.systemErr
+		handler{router: router, logger: zap.New(core).Named("tchannel"), newResponseWriter: tt.newResponseWriter}.handle(ctx, tt.sendCall)
+		err := resp.SystemError()
 		require.Error(t, err, "expected error for %q", tt.desc)
 
 		systemErr, isSystemErr := err.(tchannel.SystemError)
 		require.True(t, isSystemErr, "expected %v for %q to be a system error", err, tt.desc)
 		assert.Equal(t, tt.wantStatus, systemErr.Code(), tt.desc)
+
+		getLog := func() observer.LoggedEntry {
+			entries := logs.TakeAll()
+			return entries[0]
+		}
+
+		if tt.wantLogMessage != "" {
+			log := getLog()
+			logContext := log.ContextMap()
+			assert.Equal(t, tt.wantLogLevel, log.Entry.Level, "Unexpected log level")
+			assert.Equal(t, tt.wantLogMessage, log.Entry.Message, "Unexpected log message written")
+			assert.Equal(t, "tchannel", log.LoggerName, "Unexpected logger name")
+			if tt.wantErrMessage != "" {
+				assert.Equal(t, tt.wantErrMessage, logContext["error"], "Unexpected error message")
+			}
+		}
 
 		mockCtrl.Finish()
 	}
@@ -343,7 +462,7 @@ func TestHandlerFailures(t *testing.T) {
 func TestResponseWriter(t *testing.T) {
 	tests := []struct {
 		format           tchannel.Format
-		apply            func(*responseWriter)
+		apply            func(responseWriter)
 		arg2             []byte
 		arg3             []byte
 		applicationError bool
@@ -351,7 +470,7 @@ func TestResponseWriter(t *testing.T) {
 	}{
 		{
 			format: tchannel.Raw,
-			apply: func(w *responseWriter) {
+			apply: func(w responseWriter) {
 				headers := transport.HeadersFromMap(map[string]string{"foo": "bar"})
 				w.AddHeaders(headers)
 				_, err := w.Write([]byte("hello "))
@@ -368,7 +487,7 @@ func TestResponseWriter(t *testing.T) {
 		},
 		{
 			format: tchannel.Raw,
-			apply: func(w *responseWriter) {
+			apply: func(w responseWriter) {
 				headers := transport.HeadersFromMap(map[string]string{"FoO": "bAr"})
 				w.AddHeaders(headers)
 				_, err := w.Write([]byte("hello "))
@@ -386,7 +505,7 @@ func TestResponseWriter(t *testing.T) {
 		},
 		{
 			format: tchannel.Raw,
-			apply: func(w *responseWriter) {
+			apply: func(w responseWriter) {
 				_, err := w.Write([]byte("foo"))
 				require.NoError(t, err)
 				_, err = w.Write([]byte("bar"))
@@ -397,7 +516,7 @@ func TestResponseWriter(t *testing.T) {
 		},
 		{
 			format: tchannel.JSON,
-			apply: func(w *responseWriter) {
+			apply: func(w responseWriter) {
 				headers := transport.HeadersFromMap(map[string]string{"foo": "bar"})
 				w.AddHeaders(headers)
 
@@ -409,7 +528,7 @@ func TestResponseWriter(t *testing.T) {
 		},
 		{
 			format: tchannel.JSON,
-			apply: func(w *responseWriter) {
+			apply: func(w responseWriter) {
 				headers := transport.HeadersFromMap(map[string]string{"FoO": "bAr"})
 				w.AddHeaders(headers)
 
@@ -422,7 +541,7 @@ func TestResponseWriter(t *testing.T) {
 		},
 		{
 			format: tchannel.JSON,
-			apply: func(w *responseWriter) {
+			apply: func(w responseWriter) {
 				_, err := w.Write([]byte("{}"))
 				require.NoError(t, err)
 			},
@@ -431,7 +550,7 @@ func TestResponseWriter(t *testing.T) {
 		},
 		{
 			format: tchannel.Raw,
-			apply: func(w *responseWriter) {
+			apply: func(w responseWriter) {
 				w.SetApplicationError()
 				_, err := w.Write([]byte("hello"))
 				require.NoError(t, err)
@@ -447,7 +566,7 @@ func TestResponseWriter(t *testing.T) {
 		resp := newResponseRecorder()
 		call.resp = resp
 
-		w := newResponseWriter(call.Response(), call.Format(), tt.headerCase)
+		w := newHandlerWriter(call.Response(), call.Format(), tt.headerCase)
 		tt.apply(w)
 		assert.NoError(t, w.Close())
 
@@ -484,7 +603,7 @@ func TestResponseWriterFailure(t *testing.T) {
 		resp := newResponseRecorder()
 		tt.setupResp(resp)
 
-		w := newResponseWriter(resp, tchannel.Raw, canonicalizedHeaderCase)
+		w := newHandlerWriter(resp, tchannel.Raw, canonicalizedHeaderCase)
 		_, err := w.Write([]byte("foo"))
 		assert.NoError(t, err)
 		_, err = w.Write([]byte("bar"))
@@ -499,7 +618,7 @@ func TestResponseWriterFailure(t *testing.T) {
 
 func TestResponseWriterEmptyBodyHeaders(t *testing.T) {
 	res := newResponseRecorder()
-	w := newResponseWriter(res, tchannel.Raw, canonicalizedHeaderCase)
+	w := newHandlerWriter(res, tchannel.Raw, canonicalizedHeaderCase)
 
 	w.AddHeaders(transport.NewHeaders().With("foo", "bar"))
 	require.NoError(t, w.Close())
