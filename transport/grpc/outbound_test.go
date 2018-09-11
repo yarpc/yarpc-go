@@ -230,8 +230,7 @@ func TestCallServiceMatch(t *testing.T) {
 		t.Run(tt.msg, func(t *testing.T) {
 			server := grpc.NewServer(
 				grpc.UnknownServiceHandler(func(srv interface{}, stream grpc.ServerStream) error {
-					responseWriter := newResponseWriter()
-					defer responseWriter.Close()
+					responseWriter := newResponseWriter(&transport.Request{})
 
 					if tt.headerKey != "" {
 						responseWriter.AddSystemHeader(tt.headerKey, tt.headerValue)
@@ -242,9 +241,7 @@ func TestCallServiceMatch(t *testing.T) {
 						// We couldn't send the response.
 						return sendErr
 					}
-					if responseWriter.md != nil {
-						stream.SetTrailer(responseWriter.md)
-					}
+					responseWriter.Close(stream)
 					return nil
 				}),
 			)

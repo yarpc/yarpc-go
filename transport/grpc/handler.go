@@ -175,11 +175,7 @@ func (h *handler) handleUnary(
 	_, _ = requestBuffer.Write(requestData)
 	transportRequest.Body = requestBuffer
 
-	responseWriter := newResponseWriter()
-	defer responseWriter.Close()
-
-	// Echo accepted rpc-service in response header
-	responseWriter.AddSystemHeader(ServiceHeader, transportRequest.Service)
+	responseWriter := newResponseWriter(transportRequest)
 
 	err := h.handleUnaryBeforeErrorConversion(ctx, transportRequest, responseWriter, start, handler)
 	err = handlerErrorToGRPCError(err, responseWriter)
@@ -189,9 +185,7 @@ func (h *handler) handleUnary(
 		// We couldn't send the response.
 		return sendErr
 	}
-	if responseWriter.md != nil {
-		serverStream.SetTrailer(responseWriter.md)
-	}
+	responseWriter.Close(serverStream)
 	return err
 }
 

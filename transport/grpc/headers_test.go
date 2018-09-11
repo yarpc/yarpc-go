@@ -41,6 +41,9 @@ func TestMetadataToTransportRequest(t *testing.T) {
 		{
 			Name: "Basic",
 			MD: metadata.Pairs(
+				IDHeader, "example-id",
+				HostHeader, "example-host",
+				EnvironmentHeader, "example-env",
 				CallerHeader, "example-caller",
 				ServiceHeader, "example-service",
 				ShardKeyHeader, "example-shard-key",
@@ -51,6 +54,9 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				"baz", "bat",
 			),
 			TransportRequest: &transport.Request{
+				ID:              "example-id",
+				Host:            "example-host",
+				Environment:     "example-env",
 				Caller:          "example-caller",
 				Service:         "example-service",
 				ShardKey:        "example-shard-key",
@@ -135,6 +141,9 @@ func TestTransportRequestToMetadata(t *testing.T) {
 		{
 			Name: "Basic",
 			MD: metadata.Pairs(
+				IDHeader, "example-id",
+				HostHeader, "example-host",
+				EnvironmentHeader, "example-env",
 				CallerHeader, "example-caller",
 				ServiceHeader, "example-service",
 				ShardKeyHeader, "example-shard-key",
@@ -145,6 +154,9 @@ func TestTransportRequestToMetadata(t *testing.T) {
 				"baz", "bat",
 			),
 			TransportRequest: &transport.Request{
+				ID:              "example-id",
+				Host:            "example-host",
+				Environment:     "example-env",
 				Caller:          "example-caller",
 				Service:         "example-service",
 				ShardKey:        "example-shard-key",
@@ -192,6 +204,9 @@ func TestGetContentSubtype(t *testing.T) {
 }
 
 func TestIsReserved(t *testing.T) {
+	assert.True(t, isReserved(IDHeader))
+	assert.True(t, isReserved(HostHeader))
+	assert.True(t, isReserved(EnvironmentHeader))
 	assert.True(t, isReserved(CallerHeader))
 	assert.True(t, isReserved(ServiceHeader))
 	assert.True(t, isReserved(ShardKeyHeader))
@@ -199,4 +214,52 @@ func TestIsReserved(t *testing.T) {
 	assert.True(t, isReserved(RoutingDelegateHeader))
 	assert.True(t, isReserved(EncodingHeader))
 	assert.True(t, isReserved("rpc-foo"))
+}
+
+func TestGetFirstFromMetadata(t *testing.T) {
+	const testKey = "key"
+
+	tests := []struct {
+		name   string
+		give   func() metadata.MD
+		expect string
+	}{
+		{
+			name: "nil",
+		},
+		{
+			name: "empty list",
+			give: func() metadata.MD {
+				return metadata.New(nil)
+			},
+		},
+		{
+			name: "single val",
+			give: func() metadata.MD {
+				m := metadata.New(nil)
+				m.Set(testKey, "foo")
+				return m
+			},
+			expect: "foo",
+		},
+		{
+			name: "list vals",
+			give: func() metadata.MD {
+				m := metadata.New(nil)
+				m.Set(testKey, "foo", "bar", "baz")
+				return m
+			},
+			expect: "foo",
+		},
+	}
+
+	for _, tt := range tests {
+		var md metadata.MD
+		if tt.give != nil {
+			md = tt.give()
+		}
+
+		got := getFirstFromMetadata(md, testKey)
+		require.Equal(t, tt.expect, got)
+	}
 }

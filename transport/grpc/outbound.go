@@ -109,13 +109,18 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 	var responseMD metadata.MD
 	invokeErr := o.invoke(ctx, request, &responseBody, &responseMD, start)
 
-	responseHeaders, err := getApplicationHeaders(responseMD)
+	applicationHeaders, err := getApplicationHeaders(responseMD)
 	if err != nil {
 		return nil, err
 	}
+
 	return &transport.Response{
+		ID:               getFirstFromMetadata(responseMD, IDHeader),
+		Host:             getFirstFromMetadata(responseMD, HostHeader),
+		Environment:      getFirstFromMetadata(responseMD, EnvironmentHeader),
+		Service:          getFirstFromMetadata(responseMD, ServiceHeader),
 		Body:             ioutil.NopCloser(bytes.NewBuffer(responseBody)),
-		Headers:          responseHeaders,
+		Headers:          applicationHeaders,
 		ApplicationError: metadataToIsApplicationError(responseMD),
 	}, invokeErr
 }

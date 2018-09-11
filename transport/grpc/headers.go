@@ -30,26 +30,39 @@ import (
 )
 
 const (
+	// IDHeader for a request/response pair as chosen by the client. This
+	// corresponds to the Request.ID and Response.ID attribute.
+	IDHeader = "rpc-id"
+	// HostHeader for the host name of the server issuing or responding to a
+	// request. This corresponds to the Request.Host and Response.Host attribute.
+	HostHeader = "rpc-host"
+	// EnvironmentHeader for the host environment that the request was issued
+	// from. eg "staging", "production"
+	EnvironmentHeader = "rpc-environment"
 	// CallerHeader is the header key for the name of the service sending the
 	// request. This corresponds to the Request.Caller attribute.
+	//
 	// This header is required.
 	CallerHeader = "rpc-caller"
-	// ServiceHeader is the header key for the name of the service to which
-	// the request is being sent. This corresponds to the Request.Service attribute.
-	// This header is also used in responses to ensure requests are processed by the
-	// correct service.
+	// ServiceHeader is the header key for the name of the service receiving and
+	// responding to the request. This corresponds to the Request.Service and
+	// Response.Service attribute.
+	//
 	// This header is required.
 	ServiceHeader = "rpc-service"
 	// ShardKeyHeader is the header key for the shard key used by the destined service
 	// to shard the request. This corresponds to the Request.ShardKey attribute.
+	//
 	// This header is optional.
 	ShardKeyHeader = "rpc-shard-key"
 	// RoutingKeyHeader is the header key for the traffic group responsible for
 	// handling the request. This corresponds to the Request.RoutingKey attribute.
+	//
 	// This header is optional.
 	RoutingKeyHeader = "rpc-routing-key"
 	// RoutingDelegateHeader is the header key for a service that can proxy the
 	// destined service. This corresponds to the Request.RoutingDelegate attribute.
+	//
 	// This header is optional.
 	RoutingDelegateHeader = "rpc-routing-delegate"
 	// EncodingHeader is the header key for the encoding used for the request body.
@@ -58,6 +71,7 @@ const (
 	// the gRPC wire format http://www.grpc.io/docs/guides/wire.html
 	// For example, a content-type of "application/grpc+proto" will be intepreted
 	// as the proto encoding.
+	//
 	// This header is required unless content-type is set properly.
 	EncodingHeader = "rpc-encoding"
 	// ErrorNameHeader is the header key for the error name.
@@ -90,6 +104,9 @@ func isReserved(header string) bool {
 func transportRequestToMetadata(request *transport.Request) (metadata.MD, error) {
 	md := metadata.New(nil)
 	if err := multierr.Combine(
+		addToMetadata(md, IDHeader, request.ID),
+		addToMetadata(md, HostHeader, request.Host),
+		addToMetadata(md, EnvironmentHeader, request.Environment),
 		addToMetadata(md, CallerHeader, request.Caller),
 		addToMetadata(md, ServiceHeader, request.Service),
 		addToMetadata(md, ShardKeyHeader, request.ShardKey),
@@ -120,6 +137,12 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 		}
 		header = transport.CanonicalizeHeaderKey(header)
 		switch header {
+		case IDHeader:
+			request.ID = value
+		case EnvironmentHeader:
+			request.Environment = value
+		case HostHeader:
+			request.Host = value
 		case CallerHeader:
 			request.Caller = value
 		case ServiceHeader:
@@ -182,6 +205,14 @@ func getApplicationHeaders(md metadata.MD) (transport.Headers, error) {
 		headers = headers.With(header, value)
 	}
 	return headers, nil
+}
+
+// return the first value for a key or empty
+func getFirstFromMetadata(md metadata.MD, key string) (value string) {
+	if vals := md.Get(key); len(vals) > 0 {
+		return vals[0]
+	}
+	return
 }
 
 // add to md
