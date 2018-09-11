@@ -99,6 +99,13 @@ func (i *fakeInboundCall) Arg3Reader() (tchannel.ArgReader, error) {
 	return ioutil.NopCloser(bytes.NewReader(i.arg3)), nil
 }
 
+// recorder wraps the inboundCallResponse interface to mock errors from responseRecorder's
+// methods during testing
+type recorder interface {
+	inboundCallResponse
+	SystemError() error
+}
+
 // responseRecorder is a inboundCallResponse that records whatever is written
 // to it.
 //
@@ -136,6 +143,10 @@ func (rr *responseRecorder) SendSystemError(err error) error {
 	return nil
 }
 
+func (rr *responseRecorder) SystemError() error {
+	return rr.systemErr
+}
+
 func (rr *responseRecorder) SetApplicationError() error {
 	rr.applicationError = true
 	return nil
@@ -143,4 +154,29 @@ func (rr *responseRecorder) SetApplicationError() error {
 
 func (rr *responseRecorder) Blackhole() {
 	rr.blackholed = true
+}
+
+// faultyResponseRecorder mocks a SendSystemError to test logging behaviour
+// inside tchannel.Handle
+type faultyResponseRecorder struct{ responseRecorder }
+
+func newFaultyResponseRecorder() recorder {
+	return &faultyResponseRecorder{}
+}
+
+func (fr *faultyResponseRecorder) SendSystemError(err error) error {
+	fr.systemErr = err
+	return errors.New("SendSystemError failure")
+}
+
+// faultyHandlerWriter mocks a responseWriter.Close() error to test logging behaviour
+// inside tchannel.Handle.
+type faultyHandlerWriter struct{ handlerWriter }
+
+func newFaultyHandlerWriter(response inboundCallResponse, format tchannel.Format, headerCase headerCase) responseWriter {
+	return &faultyHandlerWriter{}
+}
+
+func (frw *faultyHandlerWriter) Close() error {
+	return errors.New("faultyHandlerWriter failed to close")
 }
