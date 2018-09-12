@@ -70,6 +70,18 @@ type inboundCallResponse interface {
 	SetApplicationError() error
 }
 
+// responseWriter provides an interface similar to newTchannelResponseWriter.
+//
+// It allows us to control tchannelResponseWriter during testing.
+type responseWriter interface {
+	AddHeaders(h transport.Headers)
+	AddHeader(key string, value string)
+	SetApplicationError()
+	IsApplicationError() bool
+	Write(s []byte) (int, error)
+	Close() error
+}
+
 // tchannelCall wraps a TChannel InboundCall into an inboundCall.
 //
 // We need to do this so that we can change the return type of call.Response()
@@ -82,11 +94,12 @@ func (c tchannelCall) Response() inboundCallResponse {
 
 // handler wraps a transport.UnaryHandler into a TChannel Handler.
 type handler struct {
-	existing   map[string]tchannel.Handler
-	router     transport.Router
-	tracer     opentracing.Tracer
-	headerCase headerCase
-	logger     *zap.Logger
+	existing          map[string]tchannel.Handler
+	router            transport.Router
+	tracer            opentracing.Tracer
+	headerCase        headerCase
+	logger            *zap.Logger
+	newResponseWriter func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
 }
 
 func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
@@ -95,10 +108,10 @@ func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
 
 func (h handler) handle(ctx context.Context, call inboundCall) {
 	// you MUST close the responseWriter no matter what unless you have a tchannel.SystemError
-	responseWriter := newResponseWriter(call.Response(), call.Format(), h.headerCase)
+	responseWriter := h.newResponseWriter(call.Response(), call.Format(), h.headerCase)
 
 	// echo accepted rpc-service in response header
-	responseWriter.addHeader(ServiceHeaderKey, call.ServiceName())
+	responseWriter.AddHeader(ServiceHeaderKey, call.ServiceName())
 
 	err := h.callHandler(ctx, call, responseWriter)
 
@@ -108,33 +121,34 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 		call.Response().Blackhole()
 		return
 	}
-	if err != nil && !responseWriter.isApplicationError {
-		// TODO: log error
+	if err != nil && !responseWriter.IsApplicationError() {
+
 		_ = call.Response().SendSystemError(getSystemError(err))
+		h.logger.Error("tchannel transport handler request failed", zap.Error(err))
 		return
 	}
-	if err != nil && responseWriter.isApplicationError {
+	if err != nil && responseWriter.IsApplicationError() {
 		// we have an error, so we're going to propagate it as a yarpc error,
 		// regardless of whether or not it is a system error.
 		status := yarpcerrors.FromError(errors.WrapHandlerError(err, call.ServiceName(), call.MethodString()))
 		// TODO: what to do with error? we could have a whole complicated scheme to
 		// return a SystemError here, might want to do that
 		text, _ := status.Code().MarshalText()
-		responseWriter.addHeader(ErrorCodeHeaderKey, string(text))
+		responseWriter.AddHeader(ErrorCodeHeaderKey, string(text))
 		if status.Name() != "" {
-			responseWriter.addHeader(ErrorNameHeaderKey, status.Name())
+			responseWriter.AddHeader(ErrorNameHeaderKey, status.Name())
 		}
 		if status.Message() != "" {
-			responseWriter.addHeader(ErrorMessageHeaderKey, status.Message())
+			responseWriter.AddHeader(ErrorMessageHeaderKey, status.Message())
 		}
 	}
 	if err := responseWriter.Close(); err != nil {
-		// TODO: log error
 		_ = call.Response().SendSystemError(getSystemError(err))
+		h.logger.Error("tchannel responseWriter failed to close", zap.Error(err))
 	}
 }
 
-func (h handler) callHandler(ctx context.Context, call inboundCall, responseWriter *responseWriter) error {
+func (h handler) callHandler(ctx context.Context, call inboundCall, responseWriter responseWriter) error {
 	start := time.Now()
 	_, ok := ctx.Deadline()
 	if !ok {
@@ -207,80 +221,84 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 	}
 }
 
-type responseWriter struct {
-	failedWith         error
-	format             tchannel.Format
-	headers            transport.Headers
-	buffer             *bufferpool.Buffer
-	response           inboundCallResponse
-	isApplicationError bool
-	headerCase         headerCase
+type tchannelResponseWriter struct {
+	FailedWith       error
+	Format           tchannel.Format
+	Headers          transport.Headers
+	Buffer           *bufferpool.Buffer
+	Response         inboundCallResponse
+	ApplicationError bool
+	HeaderCase       headerCase
 }
 
-func newResponseWriter(response inboundCallResponse, format tchannel.Format, headerCase headerCase) *responseWriter {
-	return &responseWriter{
-		response:   response,
-		format:     format,
-		headerCase: headerCase,
+func newTchannelResponseWriter(response inboundCallResponse, format tchannel.Format, headerCase headerCase) responseWriter {
+	return &tchannelResponseWriter{
+		Response:   response,
+		Format:     format,
+		HeaderCase: headerCase,
 	}
 }
 
-func (rw *responseWriter) AddHeaders(h transport.Headers) {
+func (rw *tchannelResponseWriter) AddHeaders(h transport.Headers) {
 	for k, v := range h.OriginalItems() {
 		// TODO: is this considered a breaking change?
 		if isReservedHeaderKey(k) {
-			rw.failedWith = appendError(rw.failedWith, fmt.Errorf("cannot use reserved header key: %s", k))
+			rw.FailedWith = appendError(rw.FailedWith, fmt.Errorf("cannot use reserved header key: %s", k))
 			return
 		}
-		rw.addHeader(k, v)
+		rw.AddHeader(k, v)
 	}
 }
 
-func (rw *responseWriter) addHeader(key string, value string) {
-	rw.headers = rw.headers.With(key, value)
+func (rw *tchannelResponseWriter) AddHeader(key string, value string) {
+	rw.Headers = rw.Headers.With(key, value)
 }
 
-func (rw *responseWriter) SetApplicationError() {
-	rw.isApplicationError = true
+func (rw *tchannelResponseWriter) SetApplicationError() {
+	rw.ApplicationError = true
 }
 
-func (rw *responseWriter) Write(s []byte) (int, error) {
-	if rw.failedWith != nil {
-		return 0, rw.failedWith
+func (rw *tchannelResponseWriter) IsApplicationError() bool {
+	return rw.ApplicationError
+}
+
+func (rw *tchannelResponseWriter) Write(s []byte) (int, error) {
+	if rw.FailedWith != nil {
+		return 0, rw.FailedWith
 	}
 
-	if rw.buffer == nil {
-		rw.buffer = bufferpool.Get()
+	if rw.Buffer == nil {
+		rw.Buffer = bufferpool.Get()
 	}
 
-	n, err := rw.buffer.Write(s)
+	n, err := rw.Buffer.Write(s)
 	if err != nil {
-		rw.failedWith = appendError(rw.failedWith, err)
+		rw.FailedWith = appendError(rw.FailedWith, err)
 	}
 	return n, err
 }
 
-func (rw *responseWriter) Close() error {
-	retErr := rw.failedWith
-	if rw.isApplicationError {
-		if err := rw.response.SetApplicationError(); err != nil {
+func (rw *tchannelResponseWriter) Close() error {
+	retErr := rw.FailedWith
+	if rw.IsApplicationError() {
+		if err := rw.Response.SetApplicationError(); err != nil {
 			retErr = appendError(retErr, fmt.Errorf("SetApplicationError() failed: %v", err))
 		}
 	}
 
-	headers := headerMap(rw.headers, rw.headerCase)
-	retErr = appendError(retErr, writeHeaders(rw.format, headers, nil, rw.response.Arg2Writer))
+	headers := headerMap(rw.Headers, rw.HeaderCase)
+	retErr = appendError(retErr, writeHeaders(rw.Format, headers, nil, rw.Response.Arg2Writer))
 
 	// Arg3Writer must be opened and closed regardless of if there is data
 	// However, if there is a system error, we do not want to do this
-	bodyWriter, err := rw.response.Arg3Writer()
+	bodyWriter, err := rw.Response.Arg3Writer()
 	if err != nil {
 		return appendError(retErr, err)
 	}
 	defer func() { retErr = appendError(retErr, bodyWriter.Close()) }()
-	if rw.buffer != nil {
-		defer bufferpool.Put(rw.buffer)
-		if _, err := rw.buffer.WriteTo(bodyWriter); err != nil {
+	if rw.Buffer != nil {
+		defer bufferpool.Put(rw.Buffer)
+		if _, err := rw.Buffer.WriteTo(bodyWriter); err != nil {
 			return appendError(retErr, err)
 		}
 	}

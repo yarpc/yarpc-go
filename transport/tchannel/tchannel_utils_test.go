@@ -144,3 +144,21 @@ func (rr *responseRecorder) SetApplicationError() error {
 func (rr *responseRecorder) Blackhole() {
 	rr.blackholed = true
 }
+
+// faultyResponseWriter mocks a responseWriter.Close() error to test logging behaviour
+// inside tchannel.Handle.
+type faultyResponseWriter struct{ tchannelResponseWriter }
+
+func (frw *faultyResponseWriter) Close() error {
+	return errors.New("faultyResponseWriter failed to close")
+}
+
+func newFaultyResponseWriter(response inboundCallResponse, format tchannel.Format, headerCase headerCase) responseWriter {
+	return &faultyResponseWriter{
+		tchannelResponseWriter{
+			Response:   response,
+			Format:     format,
+			HeaderCase: headerCase,
+		},
+	}
+}
