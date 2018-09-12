@@ -124,7 +124,7 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	if err != nil && !responseWriter.IsApplicationError() {
 
 		_ = call.Response().SendSystemError(getSystemError(err))
-		h.logger.Error("tchannel callHandler error", zap.Error(err))
+		h.logger.Error("tchannel transport handler request failed", zap.Error(err))
 		return
 	}
 	if err != nil && responseWriter.IsApplicationError() {

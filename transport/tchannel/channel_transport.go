@@ -139,11 +139,6 @@ func (t *ChannelTransport) start() error {
 		for s := range services {
 			sc := t.ch.GetSubChannel(s)
 			existing := sc.GetHandlers()
-
-			if t.logger == nil {
-				t.logger = zap.NewNop()
-			}
-
 			sc.SetHandler(handler{existing: existing, router: t.router, tracer: t.tracer, logger: t.logger, newResponseWriter: newTchannelResponseWriter})
 		}
 	}
