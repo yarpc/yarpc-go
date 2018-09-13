@@ -58,6 +58,10 @@ type OutboundOption func(*Outbound)
 
 func (OutboundOption) httpOption() {}
 
+// RequestFactory allows clients to configure their outgoing http requests. If not set,
+// a default implemenation will use the HostPort to make a POST request with the request body.
+type RequestFactory func(*transport.Request) (*http.Request, error)
+
 // URLTemplate specifies the URL this outbound makes requests to. For
 // peer.Chooser-based outbounds, the peer (host:port) spection of the URL may
 // vary from call to call but the rest will remain unchanged. For single-peer
@@ -87,6 +91,24 @@ func AddHeader(key, value string) OutboundOption {
 			o.headers = make(http.Header)
 		}
 		o.headers.Add(key, value)
+	}
+}
+
+// WithRequestFactory allows end clients to override the default behavior for creating HTTP requests
+// from the underlying transport request. This is useful if the remote service doesn't support
+// YARPC transport headers:
+//
+//  httpTransport.NewOutbound(chooser, http.WithRequestFactory(
+//    func(treq *transport.Request) *http.Request {
+//      newURL, _ := url.Parse(fmt.Sprintf("http://host:port/%s", treq.Procedure))
+//      return http.NewRequest("POST", newURL.String(), treq.Body)
+//  })
+//
+// An example would be an API gateway or mapping RPC methods to a legacy service. When overriding
+// the URL, do not modify the base URI host or port.
+func WithRequestFactory(hrf RequestFactory) OutboundOption {
+	return func(o *Outbound) {
+		o.requestFactory = hrf
 	}
 }
 
@@ -152,10 +174,11 @@ func (t *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbo
 // to construct all HTTP outbounds, ensuring efficient sharing of resources
 // across the different outbounds.
 type Outbound struct {
-	chooser     peer.Chooser
-	urlTemplate *url.URL
-	tracer      opentracing.Tracer
-	transport   *Transport
+	chooser        peer.Chooser
+	urlTemplate    *url.URL
+	requestFactory RequestFactory
+	tracer         opentracing.Tracer
+	transport      *Transport
 
 	// Headers to add to all outgoing requests.
 	headers http.Header
@@ -300,6 +323,9 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Reques
 }
 
 func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error) {
+	if o.requestFactory != nil {
+		return o.requestFactory(treq)
+	}
 	newURL := *o.urlTemplate
 	return http.NewRequest("POST", newURL.String(), treq.Body)
 }

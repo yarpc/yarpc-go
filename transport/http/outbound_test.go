@@ -24,9 +24,11 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"sync"
 	"testing"
@@ -110,6 +112,64 @@ func TestCallSuccess(t *testing.T) {
 	body, err := ioutil.ReadAll(res.Body)
 	if assert.NoError(t, err) {
 		assert.Equal(t, []byte("great success"), body)
+	}
+}
+
+func TestCallSuccessWithRequestFactory(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, req *http.Request) {
+			defer req.Body.Close()
+
+			// assert that the procedure matches the path since we have a req factory
+			assert.Equal(t,
+				fmt.Sprintf("/%s", req.Header.Get(ProcedureHeader)),
+				req.URL.Path)
+
+			body, err := ioutil.ReadAll(req.Body)
+			if assert.NoError(t, err) {
+				assert.Equal(t, []byte("world"), body)
+			}
+
+			w.Header().Set("rpc-header-foo", "bar")
+			_, err = w.Write([]byte("great success"))
+			assert.NoError(t, err)
+		},
+	))
+	defer server.Close()
+
+	httpTransport := NewTransport()
+	factory := func(treq *transport.Request) (*http.Request, error) {
+		newURL, _ := url.Parse(fmt.Sprintf("%s/%s", server.URL, treq.Procedure))
+		return http.NewRequest("POST", newURL.String(), treq.Body)
+	}
+	out := httpTransport.NewSingleOutbound(server.URL, WithRequestFactory(factory))
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
+
+	tests := []struct {
+		procedure string
+		input     []byte
+		wantBody  []byte
+	}{
+		{"hello", []byte("world"), []byte("great success")},
+		{"howdy", []byte("world"), []byte("great success")},
+		{"yo", []byte("world"), []byte("great success")},
+	}
+
+	for _, tt := range tests {
+		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+		defer cancel()
+		res, err := out.Call(ctx, &transport.Request{
+			Caller:    "caller",
+			Service:   "service",
+			Encoding:  raw.Encoding,
+			Procedure: tt.procedure,
+			Body:      bytes.NewReader(tt.input),
+		})
+		body, err := ioutil.ReadAll(res.Body)
+		if assert.NoError(t, err) {
+			assert.Equal(t, tt.wantBody, body)
+		}
 	}
 }
 
