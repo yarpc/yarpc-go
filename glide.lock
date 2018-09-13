@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-09-12T15:05:35.756739777Z
+updated: 2018-09-13T15:06:37.15600545Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -32,7 +32,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: ebb3f5824e60ab924d5a647fdc09b85d87c2829f
+  version: 0f2620f554cf5c8e281a2eb655a035f5a0f6dc90
   subpackages:
   - proto
   - ptypes
@@ -206,7 +206,7 @@ imports:
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 36d5787dc5356b711fe8f3040271aaf51c35955b
+  version: 5a2fd4cab2d6d4a18e70c34937662526cd0c4bd1
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
