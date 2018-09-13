@@ -6,9 +6,10 @@ package yarpcmiddlewaretest
 
 import (
 	context "context"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	v2 "go.uber.org/yarpc/v2"
-	reflect "reflect"
 )
 
 // MockRouter is a mock of Router interface

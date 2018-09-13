@@ -22,13 +22,14 @@
 // THE SOFTWARE.
 
 // Package middlewaretest is a generated GoMock package.
-package middlewaretest
+package yarpcmiddlewaretest
 
 import (
 	context "context"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	transport "go.uber.org/yarpc/api/transport"
-	reflect "reflect"
 )
 
 // MockRouter is a mock of Router interface

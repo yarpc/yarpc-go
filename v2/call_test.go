@@ -111,7 +111,7 @@ func TestReadFromRequestMeta(t *testing.T) {
 }
 
 func TestDisabledResponseHeaders(t *testing.T) {
-	ctx, icall := NewInboundCallWithOptions(context.Background(), DisableResponseHeaders())
+	ctx, icall := NewInboundCall(context.Background(), DisableResponseHeaders())
 	icall.ReadFromRequest(&Request{
 		Service:         "service",
 		Transport:       "transport",

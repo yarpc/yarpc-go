@@ -126,18 +126,6 @@ func ValidateRequest(req *Request) error {
 	return nil
 }
 
-// ValidateUnaryContext validates that a context for a unary request is valid
-// and contains all required information, and returns a YARPC error with code
-// yarpcerror.CodeInvalidArgument otherwise.
-//
-// Deprecated: Use ValidateRequestContext instead.
-func ValidateUnaryContext(ctx context.Context) error {
-	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
-		return yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "missing TTL")
-	}
-	return nil
-}
-
 // ValidateRequestContext validates that a context for a request is valid
 // and contains all required information, and returns a YARPC error with code
 // yarpcerror.CodeInvalidArgument otherwise.

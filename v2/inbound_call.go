@@ -37,11 +37,15 @@ type InboundCall struct {
 
 type inboundCallKey struct{} // context key for *InboundCall
 
-// NewInboundCall builds a new InboundCall with the given context.
+// NewInboundCall builds a new InboundCall with the given context and options.
 //
 // A request context is returned and must be used in place of the original.
-func NewInboundCall(ctx context.Context) (context.Context, *InboundCall) {
-	return NewInboundCallWithOptions(ctx)
+func NewInboundCall(ctx context.Context, opts ...InboundCallOption) (context.Context, *InboundCall) {
+	call := &InboundCall{}
+	for _, opt := range opts {
+		opt.apply(call)
+	}
+	return context.WithValue(ctx, inboundCallKey{}, call), call
 }
 
 // InboundCallOption is an option for configuring an InboundCall.
@@ -58,18 +62,6 @@ func DisableResponseHeaders() InboundCallOption {
 	return inboundCallOptionFunc(func(call *InboundCall) {
 		call.disableResponseHeaders = true
 	})
-}
-
-// NewInboundCallWithOptions builds a new InboundCall with the given context and
-// options.
-//
-// A request context is returned and must be used in place of the original.
-func NewInboundCallWithOptions(ctx context.Context, opts ...InboundCallOption) (context.Context, *InboundCall) {
-	call := &InboundCall{}
-	for _, opt := range opts {
-		opt.apply(call)
-	}
-	return context.WithValue(ctx, inboundCallKey{}, call), call
 }
 
 // getInboundCall returns the inbound call on this context or nil.
