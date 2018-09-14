@@ -35,6 +35,8 @@ Note that "FQMN", "FQSN", etc stand for "Fully Qualified Message Name",
 package protoplugin
 
 import (
+	"bytes"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -139,15 +141,58 @@ func (g *GoPackage) String() string {
 // File wraps descriptor.FileDescriptorProto for richer features.
 type File struct {
 	*descriptor.FileDescriptorProto
-	GoPackage *GoPackage
-	Messages  []*Message
-	Enums     []*Enum
-	Services  []*Service
+	GoPackage              *GoPackage
+	Messages               []*Message
+	Enums                  []*Enum
+	Services               []*Service
+	TransitiveDependencies []*File
 }
 
 // RegisteredFileName is the string with which the FileDescriptor was registered on proto during init.
 func (f *File) RegisteredFileName() string {
 	return strconv.Quote(*f.Name)
+}
+
+func (f *File) serializedFileDescriptor() []byte {
+	pb := proto.Clone(f.FileDescriptorProto).(*descriptor.FileDescriptorProto)
+	pb.SourceCodeInfo = nil
+
+	b, err := proto.Marshal(pb)
+	if err != nil {
+		panic(err)
+	}
+
+	var buf bytes.Buffer
+	w, _ := gzip.NewWriterLevel(&buf, gzip.BestCompression)
+	w.Write(b)
+	w.Close()
+	return buf.Bytes()
+}
+
+// Serialize serializes
+func (f *File) Serialize() string {
+	b := f.serializedFileDescriptor()
+
+	buf := make([]byte, 0, 0)
+	w := bytes.NewBuffer(buf)
+	w.WriteString("[]byte{\n")
+	for len(b) > 0 {
+		n := 16
+		if n > len(b) {
+			n = len(b)
+		}
+
+		s := ""
+		for _, c := range b[:n] {
+			s += fmt.Sprintf("0x%02x,", c)
+		}
+		w.WriteString(s)
+		w.WriteString("\n")
+
+		b = b[n:]
+	}
+	w.WriteString("}")
+	return w.String()
 }
 
 // Message describes a protocol buffer message types.
