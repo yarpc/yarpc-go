@@ -553,6 +553,15 @@ var (
 	empty{{$service.GetName}}Service{{$method.GetName}}YARPCResponse = &{{$method.ResponseType.GoType $packagePath}}{}{{end}}
 )
 {{end}}
+
+var transitiveFileDescriptorClosure = [...][]byte{
+	// {{ .Name }}
+	{{ .Serialize }},
+	{{range $dependency := .TransitiveDependencies }} 
+	// {{ $dependency.Name }} 
+	{{ $dependency.Serialize }},{{end}}
+}
+
 {{if .Services}}func init() { {{range $service := .Services}}
 	yarpc.RegisterClientBuilder(
 		func(clientConfig transport.ClientConfig, structField reflect.StructField) {{$service.GetName}}YARPCClient {
