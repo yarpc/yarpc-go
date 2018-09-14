@@ -36,8 +36,8 @@ func TestHandlerSpecLogMarshaling(t *testing.T) {
 	}{
 		{
 			desc: "unary",
-			spec: NewUnaryHandlerSpec(UnaryHandlerFunc(func(context.Context, *Request, ResponseWriter) error {
-				return nil
+			spec: NewUnaryHandlerSpec(UnaryHandlerFunc(func(context.Context, *Request) (*Response, error) {
+				return nil, nil
 			})),
 			want: map[string]interface{}{"rpcType": "Unary"},
 		},

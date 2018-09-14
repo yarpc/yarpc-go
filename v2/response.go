@@ -28,22 +28,3 @@ type Response struct {
 	Body             io.ReadCloser
 	ApplicationError bool
 }
-
-// ResponseWriter allows Handlers to write responses in a streaming fashion.
-//
-// Functions on ResponseWriter are not thread-safe.
-type ResponseWriter interface {
-	io.Writer
-
-	// AddHeaders adds the given headers to the response. If called, this MUST
-	// be called before any invocation of Write().
-	//
-	// This MUST NOT panic if Headers is nil.
-	AddHeaders(Headers)
-	// TODO(abg): Ability to set individual headers instead?
-
-	// SetApplicationError specifies that this response contains an
-	// application error. If called, this MUST be called before any invocation
-	// of Write().
-	SetApplicationError()
-}

@@ -34,12 +34,11 @@ import (
 
 // UnaryInvokeRequest encapsulates arguments to invoke a unary handler.
 type UnaryInvokeRequest struct {
-	Context        context.Context
-	StartTime      time.Time
-	Request        *yarpc.Request
-	ResponseWriter yarpc.ResponseWriter
-	Handler        yarpc.UnaryHandler
-	Logger         *zap.Logger // optional
+	Context   context.Context
+	StartTime time.Time
+	Request   *yarpc.Request
+	Handler   yarpc.UnaryHandler
+	Logger    *zap.Logger // optional
 }
 
 // StreamInvokeRequest encapsulates arguments to invoke a unary handler.
@@ -53,14 +52,14 @@ type StreamInvokeRequest struct {
 // converting them to YARPC errors. All other errors are passed through.
 func InvokeUnaryHandler(
 	i UnaryInvokeRequest,
-) (err error) {
+) (res *yarpc.Response, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = handlePanic(yarpc.Unary, i.Logger, r, i.Request.ToRequestMeta())
 		}
 	}()
 
-	err = i.Handler.Handle(i.Context, i.Request, i.ResponseWriter)
+	res, err = i.Handler.Handle(i.Context, i.Request)
 
 	// The handler stopped work on context deadline.
 	if err == context.DeadlineExceeded && err == i.Context.Err() {
@@ -70,7 +69,7 @@ func InvokeUnaryHandler(
 			"call to procedure %q of service %q from caller %q timed out after %v",
 			i.Request.Procedure, i.Request.Service, i.Request.Caller, deadline.Sub(i.StartTime))
 	}
-	return err
+	return res, err
 }
 
 // InvokeStreamHandler calls the stream handler, recovering from panics as

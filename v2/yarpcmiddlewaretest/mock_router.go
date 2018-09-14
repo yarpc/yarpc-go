@@ -6,10 +6,9 @@ package yarpcmiddlewaretest
 
 import (
 	context "context"
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
 	v2 "go.uber.org/yarpc/v2"
+	reflect "reflect"
 )
 
 // MockRouter is a mock of Router interface
@@ -84,15 +83,16 @@ func (m *MockUnaryInbound) EXPECT() *MockUnaryInboundMockRecorder {
 }
 
 // Handle mocks base method
-func (m *MockUnaryInbound) Handle(arg0 context.Context, arg1 *v2.Request, arg2 v2.ResponseWriter, arg3 v2.UnaryHandler) error {
-	ret := m.ctrl.Call(m, "Handle", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(error)
-	return ret0
+func (m *MockUnaryInbound) Handle(arg0 context.Context, arg1 *v2.Request, arg2 v2.UnaryHandler) (*v2.Response, error) {
+	ret := m.ctrl.Call(m, "Handle", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*v2.Response)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Handle indicates an expected call of Handle
-func (mr *MockUnaryInboundMockRecorder) Handle(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Handle", reflect.TypeOf((*MockUnaryInbound)(nil).Handle), arg0, arg1, arg2, arg3)
+func (mr *MockUnaryInboundMockRecorder) Handle(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Handle", reflect.TypeOf((*MockUnaryInbound)(nil).Handle), arg0, arg1, arg2)
 }
 
 // MockUnaryOutbound is a mock of UnaryOutbound interface

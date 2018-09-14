@@ -32,8 +32,8 @@ func TestProcedureLogMarshaling(t *testing.T) {
 	p := Procedure{
 		Name:    "name",
 		Service: "service",
-		HandlerSpec: NewUnaryHandlerSpec(UnaryHandlerFunc(func(context.Context, *Request, ResponseWriter) error {
-			return nil
+		HandlerSpec: NewUnaryHandlerSpec(UnaryHandlerFunc(func(context.Context, *Request) (*Response, error) {
+			return nil, nil
 		})),
 		Encoding:  "raw",
 		Signature: "signature",

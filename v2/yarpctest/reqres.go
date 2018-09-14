@@ -199,28 +199,3 @@ func (m ResponseMatcher) Matches(got interface{}) bool {
 
 	return true
 }
-
-// FakeResponseWriter is a ResponseWriter that records the headers and the body
-// written to it.
-type FakeResponseWriter struct {
-	IsApplicationError bool
-	Headers            yarpc.Headers
-	Body               bytes.Buffer
-}
-
-// SetApplicationError for FakeResponseWriter.
-func (fw *FakeResponseWriter) SetApplicationError() {
-	fw.IsApplicationError = true
-}
-
-// AddHeaders for FakeResponseWriter.
-func (fw *FakeResponseWriter) AddHeaders(h yarpc.Headers) {
-	for k, v := range h.OriginalItems() {
-		fw.Headers = fw.Headers.With(k, v)
-	}
-}
-
-// Write for FakeResponseWriter.
-func (fw *FakeResponseWriter) Write(s []byte) (int, error) {
-	return fw.Body.Write(s)
-}

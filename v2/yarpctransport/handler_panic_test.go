@@ -37,12 +37,12 @@ import (
 
 func TestInvokeUnaryHandlerWithPanic(t *testing.T) {
 	msg := "I'm panicking in a unary handler!"
-	handler := func(context.Context, *yarpc.Request, yarpc.ResponseWriter) error {
+	handler := func(context.Context, *yarpc.Request) (*yarpc.Response, error) {
 		panic(msg)
 	}
 	var err error
 	require.NotPanics(t, func() {
-		err = yarpctransport.InvokeUnaryHandler(
+		_, err = yarpctransport.InvokeUnaryHandler(
 			yarpctransport.UnaryInvokeRequest{
 				Context:   context.Background(),
 				StartTime: time.Now(),

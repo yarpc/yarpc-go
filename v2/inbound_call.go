@@ -91,19 +91,12 @@ func (ic *InboundCall) ReadFromRequestMeta(reqMeta *RequestMeta) error {
 }
 
 // WriteToResponse writes response information from the InboundCall onto the
-// given ResponseWriter.
+// given Response.
 //
 // If used, this must be called before writing the response body to the
-// ResponseWriter.
-func (ic *InboundCall) WriteToResponse(resw ResponseWriter) error {
-	var headers Headers
+// Response.
+func (ic *InboundCall) WriteToResponse(res *Response) {
 	for _, h := range ic.resHeaders {
-		headers = headers.With(h.k, h.v)
+		res.Headers = res.Headers.With(h.k, h.v)
 	}
-
-	if headers.Len() > 0 {
-		resw.AddHeaders(headers)
-	}
-
-	return nil
 }
