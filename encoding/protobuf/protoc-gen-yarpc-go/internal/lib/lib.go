@@ -270,6 +270,7 @@ func NewFx{{$service.GetName}}YARPCProcedures() interface{} {
 			ReflectionInfo: reflection.ServerReflectionInfo{
 				ServiceName: "{{trimPrefixPeriod $service.FQSN}}",
 				RegisteredFileName: {{$service.File.RegisteredFileName}},
+				FileDescriptors: transitiveFileDescriptorClosure,
 			},
 		}
 	}
