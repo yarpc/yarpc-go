@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added `peer/tworandomchoices`, an implementation of the Two Random Choices
   load balancer algorithm.
 - Reintroduce Transport field matching for `transporttest.RequestMatcher`.
+- New http outpound option 'RequestFactory' which allows clients to override the createRequest method in the transport/http/outbound.go.
 ### Changed
 - HTTP inbounds gracefully shutdown with an optional timeout, defaulting to 5
   seconds.
