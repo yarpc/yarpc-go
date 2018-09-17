@@ -157,9 +157,8 @@ func NewFxEchoYARPCProcedures() interface{} {
 		return FxEchoYARPCProceduresResult{
 			Procedures: BuildEchoYARPCProcedures(params.Server),
 			ReflectionInfo: reflection.ServerReflectionInfo{
-				ServiceName:        "uber.yarpc.internal.crossdock.Echo",
-				RegisteredFileName: "internal/crossdock/crossdockpb/crossdock.proto",
-				FileDescriptors:    transitiveFileDescriptorClosure,
+				ServiceName:     "uber.yarpc.internal.crossdock.Echo",
+				FileDescriptors: transitiveFileDescriptorClosure,
 			},
 		}
 	}
@@ -331,9 +330,8 @@ func NewFxOnewayYARPCProcedures() interface{} {
 		return FxOnewayYARPCProceduresResult{
 			Procedures: BuildOnewayYARPCProcedures(params.Server),
 			ReflectionInfo: reflection.ServerReflectionInfo{
-				ServiceName:        "uber.yarpc.internal.crossdock.Oneway",
-				RegisteredFileName: "internal/crossdock/crossdockpb/crossdock.proto",
-				FileDescriptors:    transitiveFileDescriptorClosure,
+				ServiceName:     "uber.yarpc.internal.crossdock.Oneway",
+				FileDescriptors: transitiveFileDescriptorClosure,
 			},
 		}
 	}

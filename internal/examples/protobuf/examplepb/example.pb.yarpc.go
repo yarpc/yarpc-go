@@ -168,9 +168,8 @@ func NewFxKeyValueYARPCProcedures() interface{} {
 		return FxKeyValueYARPCProceduresResult{
 			Procedures: BuildKeyValueYARPCProcedures(params.Server),
 			ReflectionInfo: reflection.ServerReflectionInfo{
-				ServiceName:        "uber.yarpc.internal.examples.protobuf.example.KeyValue",
-				RegisteredFileName: "internal/examples/protobuf/examplepb/example.proto",
-				FileDescriptors:    transitiveFileDescriptorClosure,
+				ServiceName:     "uber.yarpc.internal.examples.protobuf.example.KeyValue",
+				FileDescriptors: transitiveFileDescriptorClosure,
 			},
 		}
 	}
@@ -380,9 +379,8 @@ func NewFxSinkYARPCProcedures() interface{} {
 		return FxSinkYARPCProceduresResult{
 			Procedures: BuildSinkYARPCProcedures(params.Server),
 			ReflectionInfo: reflection.ServerReflectionInfo{
-				ServiceName:        "uber.yarpc.internal.examples.protobuf.example.Sink",
-				RegisteredFileName: "internal/examples/protobuf/examplepb/example.proto",
-				FileDescriptors:    transitiveFileDescriptorClosure,
+				ServiceName:     "uber.yarpc.internal.examples.protobuf.example.Sink",
+				FileDescriptors: transitiveFileDescriptorClosure,
 			},
 		}
 	}
@@ -604,9 +602,8 @@ func NewFxFooYARPCProcedures() interface{} {
 		return FxFooYARPCProceduresResult{
 			Procedures: BuildFooYARPCProcedures(params.Server),
 			ReflectionInfo: reflection.ServerReflectionInfo{
-				ServiceName:        "uber.yarpc.internal.examples.protobuf.example.Foo",
-				RegisteredFileName: "internal/examples/protobuf/examplepb/example.proto",
-				FileDescriptors:    transitiveFileDescriptorClosure,
+				ServiceName:     "uber.yarpc.internal.examples.protobuf.example.Foo",
+				FileDescriptors: transitiveFileDescriptorClosure,
 			},
 		}
 	}

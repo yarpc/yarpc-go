@@ -28,12 +28,6 @@ type ServerReflectionInfo struct {
 	// The fully qualified service name
 	ServiceName string
 
-	// RegisteredFileName is the identifer with hich the filedescriptor
-	// associated with this service is registered using `proto.RegisterFile()`
-	// during init. It can be used to get a compressed filedescriptor using
-	// `proto.FileDescriptor()`.
-	RegisteredFileName string
-
 	// FileDescriptors returns an array of all compressed filedescriptors for the
 	// file in which the service is defined and all its transitive dependencies.
 	FileDescriptors [][]byte

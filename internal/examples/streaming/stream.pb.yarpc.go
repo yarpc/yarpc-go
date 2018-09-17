@@ -230,9 +230,8 @@ func NewFxHelloYARPCProcedures() interface{} {
 		return FxHelloYARPCProceduresResult{
 			Procedures: BuildHelloYARPCProcedures(params.Server),
 			ReflectionInfo: reflection.ServerReflectionInfo{
-				ServiceName:        "uber.yarpc.internal.examples.streaming.Hello",
-				RegisteredFileName: "internal/examples/streaming/stream.proto",
-				FileDescriptors:    transitiveFileDescriptorClosure,
+				ServiceName:     "uber.yarpc.internal.examples.streaming.Hello",
+				FileDescriptors: transitiveFileDescriptorClosure,
 			},
 		}
 	}

@@ -168,9 +168,8 @@ func NewFxKeyValueYARPCProcedures() interface{} {
 		return FxKeyValueYARPCProceduresResult{
 			Procedures: BuildKeyValueYARPCProcedures(params.Server),
 			ReflectionInfo: reflection.ServerReflectionInfo{
-				ServiceName:        "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.KeyValue",
-				RegisteredFileName: "encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto",
-				FileDescriptors:    transitiveFileDescriptorClosure,
+				ServiceName:     "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.KeyValue",
+				FileDescriptors: transitiveFileDescriptorClosure,
 			},
 		}
 	}
@@ -380,9 +379,8 @@ func NewFxSinkYARPCProcedures() interface{} {
 		return FxSinkYARPCProceduresResult{
 			Procedures: BuildSinkYARPCProcedures(params.Server),
 			ReflectionInfo: reflection.ServerReflectionInfo{
-				ServiceName:        "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.Sink",
-				RegisteredFileName: "encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto",
-				FileDescriptors:    transitiveFileDescriptorClosure,
+				ServiceName:     "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.Sink",
+				FileDescriptors: transitiveFileDescriptorClosure,
 			},
 		}
 	}
@@ -639,9 +637,8 @@ func NewFxAllYARPCProcedures() interface{} {
 		return FxAllYARPCProceduresResult{
 			Procedures: BuildAllYARPCProcedures(params.Server),
 			ReflectionInfo: reflection.ServerReflectionInfo{
-				ServiceName:        "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.All",
-				RegisteredFileName: "encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto",
-				FileDescriptors:    transitiveFileDescriptorClosure,
+				ServiceName:     "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.All",
+				FileDescriptors: transitiveFileDescriptorClosure,
 			},
 		}
 	}
