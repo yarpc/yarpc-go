@@ -214,8 +214,8 @@ type FxHelloYARPCProceduresParams struct {
 type FxHelloYARPCProceduresResult struct {
 	fx.Out
 
-	Procedures     []transport.Procedure           `group:"yarpcfx"`
-	ReflectionInfo reflection.ServerReflectionInfo `group:"yarpcprotoreflectionfx"`
+	Procedures     []transport.Procedure `group:"yarpcfx"`
+	ReflectionMeta reflection.ServerMeta `group:"yarpcfx"`
 }
 
 // NewFxHelloYARPCProcedures provides HelloYARPCServer procedures to an Fx application.
@@ -229,9 +229,9 @@ func NewFxHelloYARPCProcedures() interface{} {
 	return func(params FxHelloYARPCProceduresParams) FxHelloYARPCProceduresResult {
 		return FxHelloYARPCProceduresResult{
 			Procedures: BuildHelloYARPCProcedures(params.Server),
-			ReflectionInfo: reflection.ServerReflectionInfo{
+			ReflectionMeta: reflection.ServerMeta{
 				ServiceName:     "uber.yarpc.internal.examples.streaming.Hello",
-				FileDescriptors: transitiveFileDescriptorClosure,
+				FileDescriptors: yarpcFileDescriptorClosure45d12c3ddf34baf8,
 			},
 		}
 	}
@@ -503,7 +503,7 @@ var (
 	emptyHelloServiceHelloInStreamYARPCResponse  = &HelloResponse{}
 )
 
-var transitiveFileDescriptorClosure = [][]byte{
+var yarpcFileDescriptorClosure45d12c3ddf34baf8 = [][]byte{
 	// internal/examples/streaming/stream.proto
 	[]byte{
 		0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xd2, 0xc8, 0xcc, 0x2b, 0x49,

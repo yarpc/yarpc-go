@@ -152,8 +152,8 @@ type FxKeyValueYARPCProceduresParams struct {
 type FxKeyValueYARPCProceduresResult struct {
 	fx.Out
 
-	Procedures     []transport.Procedure           `group:"yarpcfx"`
-	ReflectionInfo reflection.ServerReflectionInfo `group:"yarpcprotoreflectionfx"`
+	Procedures     []transport.Procedure `group:"yarpcfx"`
+	ReflectionMeta reflection.ServerMeta `group:"yarpcfx"`
 }
 
 // NewFxKeyValueYARPCProcedures provides KeyValueYARPCServer procedures to an Fx application.
@@ -167,9 +167,9 @@ func NewFxKeyValueYARPCProcedures() interface{} {
 	return func(params FxKeyValueYARPCProceduresParams) FxKeyValueYARPCProceduresResult {
 		return FxKeyValueYARPCProceduresResult{
 			Procedures: BuildKeyValueYARPCProcedures(params.Server),
-			ReflectionInfo: reflection.ServerReflectionInfo{
+			ReflectionMeta: reflection.ServerMeta{
 				ServiceName:     "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.KeyValue",
-				FileDescriptors: transitiveFileDescriptorClosure,
+				FileDescriptors: yarpcFileDescriptorClosure301ba429865f230b,
 			},
 		}
 	}
@@ -363,8 +363,8 @@ type FxSinkYARPCProceduresParams struct {
 type FxSinkYARPCProceduresResult struct {
 	fx.Out
 
-	Procedures     []transport.Procedure           `group:"yarpcfx"`
-	ReflectionInfo reflection.ServerReflectionInfo `group:"yarpcprotoreflectionfx"`
+	Procedures     []transport.Procedure `group:"yarpcfx"`
+	ReflectionMeta reflection.ServerMeta `group:"yarpcfx"`
 }
 
 // NewFxSinkYARPCProcedures provides SinkYARPCServer procedures to an Fx application.
@@ -378,9 +378,9 @@ func NewFxSinkYARPCProcedures() interface{} {
 	return func(params FxSinkYARPCProceduresParams) FxSinkYARPCProceduresResult {
 		return FxSinkYARPCProceduresResult{
 			Procedures: BuildSinkYARPCProcedures(params.Server),
-			ReflectionInfo: reflection.ServerReflectionInfo{
+			ReflectionMeta: reflection.ServerMeta{
 				ServiceName:     "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.Sink",
-				FileDescriptors: transitiveFileDescriptorClosure,
+				FileDescriptors: yarpcFileDescriptorClosure301ba429865f230b,
 			},
 		}
 	}
@@ -621,8 +621,8 @@ type FxAllYARPCProceduresParams struct {
 type FxAllYARPCProceduresResult struct {
 	fx.Out
 
-	Procedures     []transport.Procedure           `group:"yarpcfx"`
-	ReflectionInfo reflection.ServerReflectionInfo `group:"yarpcprotoreflectionfx"`
+	Procedures     []transport.Procedure `group:"yarpcfx"`
+	ReflectionMeta reflection.ServerMeta `group:"yarpcfx"`
 }
 
 // NewFxAllYARPCProcedures provides AllYARPCServer procedures to an Fx application.
@@ -636,9 +636,9 @@ func NewFxAllYARPCProcedures() interface{} {
 	return func(params FxAllYARPCProceduresParams) FxAllYARPCProceduresResult {
 		return FxAllYARPCProceduresResult{
 			Procedures: BuildAllYARPCProcedures(params.Server),
-			ReflectionInfo: reflection.ServerReflectionInfo{
+			ReflectionMeta: reflection.ServerMeta{
 				ServiceName:     "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.All",
-				FileDescriptors: transitiveFileDescriptorClosure,
+				FileDescriptors: yarpcFileDescriptorClosure301ba429865f230b,
 			},
 		}
 	}
@@ -974,7 +974,7 @@ var (
 	emptyAllServiceHelloThreeYARPCResponse = &HelloResponse{}
 )
 
-var transitiveFileDescriptorClosure = [][]byte{
+var yarpcFileDescriptorClosure301ba429865f230b = [][]byte{
 	// encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto
 	[]byte{
 		0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x94, 0x41, 0x6f, 0x94, 0x40,
@@ -1006,7 +1006,6 @@ var transitiveFileDescriptorClosure = [][]byte{
 		0xdb, 0x4f, 0x39, 0x5e, 0xfd, 0xee, 0x1e, 0x93, 0x67, 0xf3, 0xf7, 0xd3, 0x76, 0x7b, 0x7d, 0x5d,
 		0x13, 0x1e, 0xfc, 0x08, 0x00, 0x00, 0xff, 0xff, 0xd2, 0xae, 0xef, 0xde, 0x02, 0x08, 0x00, 0x00,
 	},
-
 	// encoding/protobuf/protoc-gen-yarpc-go/internal/testing/dep.proto
 	[]byte{
 		0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x34, 0xcc, 0xb1, 0x0a, 0xc2, 0x30,

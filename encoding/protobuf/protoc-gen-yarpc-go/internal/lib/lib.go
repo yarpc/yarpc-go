@@ -24,6 +24,7 @@
 package lib
 
 import (
+	"bytes"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -253,7 +254,7 @@ type Fx{{$service.GetName}}YARPCProceduresResult struct {
 	fx.Out
 
 	Procedures []transport.Procedure ` + "`" + `group:"yarpcfx"` + "`" + `
-	ReflectionInfo reflection.ServerReflectionInfo ` + "`" + `group:"yarpcprotoreflectionfx"` + "`" + `
+	ReflectionMeta reflection.ServerMeta ` + "`" + `group:"yarpcfx"` + "`" + `
 }
 
 // NewFx{{$service.GetName}}YARPCProcedures provides {{$service.GetName}}YARPCServer procedures to an Fx application.
@@ -267,9 +268,9 @@ func NewFx{{$service.GetName}}YARPCProcedures() interface{} {
 	return func(params Fx{{$service.GetName}}YARPCProceduresParams) Fx{{$service.GetName}}YARPCProceduresResult {
 		return Fx{{$service.GetName}}YARPCProceduresResult{
 			Procedures: Build{{$service.GetName}}YARPCProcedures(params.Server),
-			ReflectionInfo: reflection.ServerReflectionInfo{
+			ReflectionMeta: reflection.ServerMeta{
 				ServiceName: "{{trimPrefixPeriod $service.FQSN}}",
-				FileDescriptors: transitiveFileDescriptorClosure,
+				FileDescriptors: {{ .File.FileDescriptorClosureVarName }},
 			},
 		}
 	}
@@ -554,12 +555,11 @@ var (
 )
 {{end}}
 
-var transitiveFileDescriptorClosure = [][]byte{
+var {{ .File.FileDescriptorClosureVarName }} = [][]byte{
 	// {{ .Name }}
-	{{ .Serialize }},
-	{{range $dependency := .TransitiveDependencies }} 
-	// {{ $dependency.Name }} 
-	{{ $dependency.Serialize }},{{end}}
+	{{ encodedFileDescriptor .File }},{{range $dependency := .TransitiveDependencies }}
+	// {{ $dependency.Name }}
+	{{ encodedFileDescriptor $dependency }},{{end}}
 }
 
 {{if .Services}}func init() { {{range $service := .Services}}
@@ -580,6 +580,7 @@ var Runner = protoplugin.NewRunner(
 			"clientStreamingMethods":       clientStreamingMethods,
 			"serverStreamingMethods":       serverStreamingMethods,
 			"clientServerStreamingMethods": clientServerStreamingMethods,
+			"encodedFileDescriptor":        encodedFileDescriptor,
 			"trimPrefixPeriod":             trimPrefixPeriod,
 		}).Parse(tmpl)),
 	checkTemplateInfo,
@@ -655,6 +656,34 @@ func clientServerStreamingMethods(service *protoplugin.Service) ([]*protoplugin.
 		}
 	}
 	return methods, nil
+}
+
+func encodedFileDescriptor(f *protoplugin.File) (string, error) {
+	b, err := f.SerializedFileDescriptor()
+	if err != nil {
+		return "", err
+	}
+
+	buf := make([]byte, 0, 0)
+	w := bytes.NewBuffer(buf)
+	w.WriteString("[]byte{\n")
+	for len(b) > 0 {
+		n := 16
+		if n > len(b) {
+			n = len(b)
+		}
+
+		s := ""
+		for _, c := range b[:n] {
+			s += fmt.Sprintf("0x%02x,", c)
+		}
+		w.WriteString(s)
+		w.WriteString("\n")
+
+		b = b[n:]
+	}
+	w.WriteString("}")
+	return w.String(), nil
 }
 
 func trimPrefixPeriod(s string) string {

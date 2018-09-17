@@ -37,10 +37,11 @@ package protoplugin
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"strconv"
 	"strings"
 	"text/template"
 
@@ -148,51 +149,31 @@ type File struct {
 	TransitiveDependencies []*File
 }
 
-// RegisteredFileName is the string with which the FileDescriptor was registered on proto during init.
-func (f *File) RegisteredFileName() string {
-	return strconv.Quote(*f.Name)
+// FileDescriptorClosureVarName is the variable name we'll use in the generated code to refer
+// to the compressed bytes of this descriptor and its dependencies.
+func (f *File) FileDescriptorClosureVarName() string {
+	h := sha256.Sum256([]byte(f.GetName()))
+	return fmt.Sprintf("yarpcFileDescriptorClosure%s", hex.EncodeToString(h[:8]))
 }
 
-func (f *File) serializedFileDescriptor() []byte {
+// SerializedFileDescriptor returns a gzipped marshalled representation of the FileDescriptor
+func (f *File) SerializedFileDescriptor() ([]byte, error) {
 	pb := proto.Clone(f.FileDescriptorProto).(*descriptor.FileDescriptorProto)
 	pb.SourceCodeInfo = nil
 
 	b, err := proto.Marshal(pb)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	var buf bytes.Buffer
 	w, _ := gzip.NewWriterLevel(&buf, gzip.BestCompression)
-	w.Write(b)
-	w.Close()
-	return buf.Bytes()
-}
-
-// Serialize serializes
-func (f *File) Serialize() string {
-	b := f.serializedFileDescriptor()
-
-	buf := make([]byte, 0, 0)
-	w := bytes.NewBuffer(buf)
-	w.WriteString("[]byte{\n")
-	for len(b) > 0 {
-		n := 16
-		if n > len(b) {
-			n = len(b)
-		}
-
-		s := ""
-		for _, c := range b[:n] {
-			s += fmt.Sprintf("0x%02x,", c)
-		}
-		w.WriteString(s)
-		w.WriteString("\n")
-
-		b = b[n:]
+	_, err = w.Write(b)
+	if err != nil {
+		return nil, err
 	}
-	w.WriteString("}")
-	return w.String()
+	w.Close()
+	return buf.Bytes(), nil
 }
 
 // Message describes a protocol buffer message types.

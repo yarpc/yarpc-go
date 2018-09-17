@@ -24,7 +24,7 @@
 
 package testing
 
-var transitiveFileDescriptorClosure = [][]byte{
+var yarpcFileDescriptorClosureb0b3dca1b562601d = [][]byte{
 	// encoding/protobuf/protoc-gen-yarpc-go/internal/testing/dep.proto
 	[]byte{
 		0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x34, 0xcc, 0xb1, 0x0a, 0xc2, 0x30,

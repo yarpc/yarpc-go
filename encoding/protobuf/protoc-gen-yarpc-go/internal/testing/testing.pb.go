@@ -26,8 +26,8 @@ package testing
 import proto "github.com/gogo/protobuf/proto"
 import fmt "fmt"
 import math "math"
+import types "github.com/gogo/protobuf/types"
 import yarpcproto "go.uber.org/yarpc/yarpcproto"
-import protobuf "google/protobuf"
 
 import strings "strings"
 import reflect "reflect"
@@ -49,10 +49,10 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
 type GetValueRequest struct {
-	Key                  string             `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
-	WktTest              *protobuf.Duration `protobuf:"bytes,2,opt,name=wkt_test,json=wktTest" json:"wkt_test,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
-	XXX_sizecache        int32              `json:"-"`
+	Key                  string          `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	WktTest              *types.Duration `protobuf:"bytes,2,opt,name=wkt_test,json=wktTest" json:"wkt_test,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
+	XXX_sizecache        int32           `json:"-"`
 }
 
 func (m *GetValueRequest) Reset()      { *m = GetValueRequest{} }
@@ -94,7 +94,7 @@ func (m *GetValueRequest) GetKey() string {
 	return ""
 }
 
-func (m *GetValueRequest) GetWktTest() *protobuf.Duration {
+func (m *GetValueRequest) GetWktTest() *types.Duration {
 	if m != nil {
 		return m.WktTest
 	}
@@ -1313,7 +1313,7 @@ func (this *GetValueRequest) String() string {
 	}
 	s := strings.Join([]string{`&GetValueRequest{`,
 		`Key:` + fmt.Sprintf("%v", this.Key) + `,`,
-		`WktTest:` + strings.Replace(fmt.Sprintf("%v", this.WktTest), "Duration", "protobuf.Duration", 1) + `,`,
+		`WktTest:` + strings.Replace(fmt.Sprintf("%v", this.WktTest), "Duration", "types.Duration", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -1462,7 +1462,7 @@ func (m *GetValueRequest) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.WktTest == nil {
-				m.WktTest = &protobuf.Duration{}
+				m.WktTest = &types.Duration{}
 			}
 			if err := m.WktTest.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err

@@ -20,10 +20,10 @@
 
 package reflection
 
-// ServerReflectionInfo encapsulates the information about a service required
-// for exposing this service on the gRPC reflection protocol.
+// ServerMeta encapsulates service information that's required for
+// using the gRPC reflection protocol.
 // See https://github.com/grpc/grpc/blob/master/doc/server-reflection.md
-type ServerReflectionInfo struct {
+type ServerMeta struct {
 
 	// The fully qualified service name
 	ServiceName string

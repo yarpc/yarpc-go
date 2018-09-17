@@ -141,8 +141,8 @@ type FxEchoYARPCProceduresParams struct {
 type FxEchoYARPCProceduresResult struct {
 	fx.Out
 
-	Procedures     []transport.Procedure           `group:"yarpcfx"`
-	ReflectionInfo reflection.ServerReflectionInfo `group:"yarpcprotoreflectionfx"`
+	Procedures     []transport.Procedure `group:"yarpcfx"`
+	ReflectionMeta reflection.ServerMeta `group:"yarpcfx"`
 }
 
 // NewFxEchoYARPCProcedures provides EchoYARPCServer procedures to an Fx application.
@@ -156,9 +156,9 @@ func NewFxEchoYARPCProcedures() interface{} {
 	return func(params FxEchoYARPCProceduresParams) FxEchoYARPCProceduresResult {
 		return FxEchoYARPCProceduresResult{
 			Procedures: BuildEchoYARPCProcedures(params.Server),
-			ReflectionInfo: reflection.ServerReflectionInfo{
+			ReflectionMeta: reflection.ServerMeta{
 				ServiceName:     "uber.yarpc.internal.crossdock.Echo",
-				FileDescriptors: transitiveFileDescriptorClosure,
+				FileDescriptors: yarpcFileDescriptorClosure6acfd671bab786d8,
 			},
 		}
 	}
@@ -314,8 +314,8 @@ type FxOnewayYARPCProceduresParams struct {
 type FxOnewayYARPCProceduresResult struct {
 	fx.Out
 
-	Procedures     []transport.Procedure           `group:"yarpcfx"`
-	ReflectionInfo reflection.ServerReflectionInfo `group:"yarpcprotoreflectionfx"`
+	Procedures     []transport.Procedure `group:"yarpcfx"`
+	ReflectionMeta reflection.ServerMeta `group:"yarpcfx"`
 }
 
 // NewFxOnewayYARPCProcedures provides OnewayYARPCServer procedures to an Fx application.
@@ -329,9 +329,9 @@ func NewFxOnewayYARPCProcedures() interface{} {
 	return func(params FxOnewayYARPCProceduresParams) FxOnewayYARPCProceduresResult {
 		return FxOnewayYARPCProceduresResult{
 			Procedures: BuildOnewayYARPCProcedures(params.Server),
-			ReflectionInfo: reflection.ServerReflectionInfo{
+			ReflectionMeta: reflection.ServerMeta{
 				ServiceName:     "uber.yarpc.internal.crossdock.Oneway",
-				FileDescriptors: transitiveFileDescriptorClosure,
+				FileDescriptors: yarpcFileDescriptorClosure6acfd671bab786d8,
 			},
 		}
 	}
@@ -374,7 +374,7 @@ var (
 	emptyOnewayServiceEchoYARPCResponse = &yarpcproto.Oneway{}
 )
 
-var transitiveFileDescriptorClosure = [][]byte{
+var yarpcFileDescriptorClosure6acfd671bab786d8 = [][]byte{
 	// internal/crossdock/crossdockpb/crossdock.proto
 	[]byte{
 		0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xd2, 0xcb, 0xcc, 0x2b, 0x49,
@@ -391,7 +391,6 @@ var transitiveFileDescriptorClosure = [][]byte{
 		0x2a, 0x88, 0x09, 0x4e, 0xbc, 0x51, 0xdc, 0x48, 0x41, 0x9a, 0xc4, 0x06, 0x0e, 0x12, 0x63, 0x40,
 		0x00, 0x00, 0x00, 0xff, 0xff, 0xec, 0x56, 0xe1, 0xbf, 0x7b, 0x01, 0x00, 0x00,
 	},
-
 	// yarpcproto/yarpc.proto
 	[]byte{
 		0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0xab, 0x4c, 0x2c, 0x2a,
