@@ -52,13 +52,14 @@ type Transport struct {
 	lock sync.Mutex
 	once *lifecycle.Once
 
-	ch       *tchannel.Channel
-	router   transport.Router
-	tracer   opentracing.Tracer
-	logger   *zap.Logger
-	name     string
-	addr     string
-	listener net.Listener
+	ch                *tchannel.Channel
+	router            transport.Router
+	tracer            opentracing.Tracer
+	logger            *zap.Logger
+	name              string
+	addr              string
+	listener          net.Listener
+	newResponseWriter func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
 
 	connTimeout            time.Duration
 	initialConnRetryDelay  time.Duration
@@ -111,6 +112,7 @@ func (o transportOptions) newTransport() *Transport {
 		tracer:              o.tracer,
 		logger:              logger,
 		headerCase:          headerCase,
+		newResponseWriter:   newHandlerWriter,
 	}
 }
 
@@ -202,7 +204,7 @@ func (t *Transport) start() error {
 			tracer:            t.tracer,
 			headerCase:        t.headerCase,
 			logger:            t.logger,
-			newResponseWriter: newHandlerWriter,
+			newResponseWriter: t.newResponseWriter,
 		},
 		OnPeerStatusChanged: t.onPeerStatusChanged,
 	}

@@ -82,12 +82,13 @@ func (options transportOptions) newChannelTransport() *ChannelTransport {
 		logger = zap.NewNop()
 	}
 	return &ChannelTransport{
-		once:            lifecycle.NewOnce(),
-		ch:              options.ch,
-		addr:            options.addr,
-		tracer:          options.tracer,
-		logger:          logger.Named("tchannel"),
-		originalHeaders: options.originalHeaders,
+		once:              lifecycle.NewOnce(),
+		ch:                options.ch,
+		addr:              options.addr,
+		tracer:            options.tracer,
+		logger:            logger.Named("tchannel"),
+		originalHeaders:   options.originalHeaders,
+		newResponseWriter: newHandlerWriter,
 	}
 }
 
@@ -96,15 +97,15 @@ func (options transportOptions) newChannelTransport() *ChannelTransport {
 // If you have a YARPC peer.Chooser, use the unqualified tchannel.Transport
 // instead.
 type ChannelTransport struct {
-	ch              Channel
-	name            string
-	addr            string
-	tracer          opentracing.Tracer
-	logger          *zap.Logger
-	router          transport.Router
-	originalHeaders bool
-
-	once *lifecycle.Once
+	once              *lifecycle.Once
+	ch                Channel
+	name              string
+	addr              string
+	tracer            opentracing.Tracer
+	logger            *zap.Logger
+	router            transport.Router
+	originalHeaders   bool
+	newResponseWriter func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
 }
 
 // Channel returns the underlying TChannel "Channel" instance.
@@ -139,7 +140,7 @@ func (t *ChannelTransport) start() error {
 		for s := range services {
 			sc := t.ch.GetSubChannel(s)
 			existing := sc.GetHandlers()
-			sc.SetHandler(handler{existing: existing, router: t.router, tracer: t.tracer, logger: t.logger, newResponseWriter: newHandlerWriter})
+			sc.SetHandler(handler{existing: existing, router: t.router, tracer: t.tracer, logger: t.logger, newResponseWriter: t.newResponseWriter})
 		}
 	}
 
