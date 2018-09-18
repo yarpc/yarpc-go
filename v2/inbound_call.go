@@ -81,15 +81,6 @@ func (ic *InboundCall) ReadFromRequest(req *Request) error {
 	return nil
 }
 
-// ReadFromRequestMeta reads information from the given request.
-//
-// This information may be queried on the context using functions like Caller,
-// Service, Procedure, etc.
-func (ic *InboundCall) ReadFromRequestMeta(reqMeta *RequestMeta) error {
-	ic.req = reqMeta.ToRequest()
-	return nil
-}
-
 // WriteToResponse writes response information from the InboundCall onto the
 // given Response.
 //

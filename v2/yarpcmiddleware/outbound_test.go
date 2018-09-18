@@ -91,13 +91,11 @@ func TestStreamNopOutboundMiddleware(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	req := &yarpc.StreamRequest{
-		Meta: &yarpc.RequestMeta{
-			Caller:    "somecaller",
-			Service:   "someservice",
-			Encoding:  yarpc.Encoding("raw"),
-			Procedure: "hello",
-		},
+	req := &yarpc.Request{
+		Caller:    "somecaller",
+		Service:   "someservice",
+		Encoding:  yarpc.Encoding("raw"),
+		Procedure: "hello",
 	}
 
 	o.EXPECT().CallStream(ctx, req).Return(nil, nil)

@@ -151,27 +151,3 @@ func TestRequestLogMarshaling(t *testing.T) {
 		"routingDelegate": "routing-delegate",
 	}, enc.Fields, "Unexpected output after marshaling request.")
 }
-
-func TestRequestMetaToRequestConversionAndBack(t *testing.T) {
-	reqMeta := &RequestMeta{
-		Caller:          "caller",
-		Service:         "service",
-		Transport:       "transport",
-		Encoding:        "raw",
-		Procedure:       "hello",
-		Headers:         NewHeaders().With("key", "val"),
-		ShardKey:        "shard",
-		RoutingKey:      "rk",
-		RoutingDelegate: "rd",
-	}
-
-	req := reqMeta.ToRequest()
-
-	assert.Equal(t, reqMeta, req.ToRequestMeta())
-}
-
-func TestNilRequestMetaToRequestConversion(t *testing.T) {
-	var reqMeta *RequestMeta
-
-	assert.Equal(t, &Request{}, reqMeta.ToRequest())
-}

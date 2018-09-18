@@ -33,12 +33,6 @@ type StreamOption interface {
 	unimplemented()
 }
 
-// StreamRequest represents a streaming request.  It contains basic stream
-// metadata.
-type StreamRequest struct {
-	Meta *RequestMeta
-}
-
 // ServerStreamOption are options to configure a ServerStream.
 // There are no current ServerStreamOptions implemented.
 type ServerStreamOption interface {
@@ -64,7 +58,7 @@ func (s *ServerStream) Context() context.Context {
 }
 
 // Request contains all the metadata about the request.
-func (s *ServerStream) Request() *StreamRequest {
+func (s *ServerStream) Request() *Request {
 	return s.stream.Request()
 }
 
@@ -106,7 +100,7 @@ func (s *ClientStream) Context() context.Context {
 }
 
 // Request contains all the metadata about the request.
-func (s *ClientStream) Request() *StreamRequest {
+func (s *ClientStream) Request() *Request {
 	return s.stream.Request()
 }
 
@@ -149,7 +143,7 @@ type Stream interface {
 	Context() context.Context
 
 	// Request contains all the metadata about the request.
-	Request() *StreamRequest
+	Request() *Request
 
 	// SendMessage sends a request over the stream. It blocks until the message
 	// has been sent.  In certain implementations, the timeout on the context

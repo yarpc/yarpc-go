@@ -67,9 +67,7 @@ func TestInvokeStreamHandlerWithPanic(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockStream := yarpctest.NewMockStream(mockCtrl)
 	mockStream.EXPECT().Request().Return(
-		&yarpc.StreamRequest{
-			Meta: &yarpc.RequestMeta{},
-		}).Times(1)
+		&yarpc.Request{}).Times(1)
 	mockServerStream, err := yarpc.NewServerStream(mockStream)
 	require.NoError(t, err, "should create mockServerStream")
 	require.NotPanics(t, func() {
