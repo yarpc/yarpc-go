@@ -25,6 +25,8 @@ package lib
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -270,7 +272,7 @@ func NewFx{{$service.GetName}}YARPCProcedures() interface{} {
 			Procedures: Build{{$service.GetName}}YARPCProcedures(params.Server),
 			ReflectionMeta: reflection.ServerMeta{
 				ServiceName: "{{trimPrefixPeriod $service.FQSN}}",
-				FileDescriptors: {{ .File.FileDescriptorClosureVarName }},
+				FileDescriptors: {{ fileDescriptorClosureVarName .File }},
 			},
 		}
 	}
@@ -555,7 +557,7 @@ var (
 )
 {{end}}
 
-var {{ .File.FileDescriptorClosureVarName }} = [][]byte{
+var {{ fileDescriptorClosureVarName .File }} = [][]byte{
 	// {{ .Name }}
 	{{ encodedFileDescriptor .File }},{{range $dependency := .TransitiveDependencies }}
 	// {{ $dependency.Name }}
@@ -581,6 +583,7 @@ var Runner = protoplugin.NewRunner(
 			"serverStreamingMethods":       serverStreamingMethods,
 			"clientServerStreamingMethods": clientServerStreamingMethods,
 			"encodedFileDescriptor":        encodedFileDescriptor,
+			"fileDescriptorClosureVarName": fileDescriptorClosureVarName,
 			"trimPrefixPeriod":             trimPrefixPeriod,
 		}).Parse(tmpl)),
 	checkTemplateInfo,
@@ -656,6 +659,15 @@ func clientServerStreamingMethods(service *protoplugin.Service) ([]*protoplugin.
 		}
 	}
 	return methods, nil
+}
+
+func fileDescriptorClosureVarName(f *protoplugin.File) (string, error) {
+	name := f.GetName()
+	if name == "" {
+		return "", fmt.Errorf("Could not create fileDescriptorClosureVarName: %s has no name", f)
+	}
+	h := sha256.Sum256([]byte(name))
+	return fmt.Sprintf("yarpcFileDescriptorClosure%s", hex.EncodeToString(h[:8])), nil
 }
 
 func encodedFileDescriptor(f *protoplugin.File) (string, error) {

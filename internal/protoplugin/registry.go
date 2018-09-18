@@ -267,7 +267,7 @@ func (r *registry) loadTransitiveFileDependencies(file *File) error {
 
 func (r *registry) loadTransitiveFileDependenciesRecurse(file *File, seen map[string]struct{}) []*File {
 	seen[file.GetName()] = struct{}{}
-	deps := make([]*File, 0, 0)
+	var deps []*File
 	for _, fname := range file.GetDependency() {
 		if _, ok := seen[fname]; ok {
 			continue
