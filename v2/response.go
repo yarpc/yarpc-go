@@ -20,11 +20,8 @@
 
 package yarpc
 
-import "io"
-
 // Response is the low level response representation.
 type Response struct {
 	Headers          Headers
-	Body             io.ReadCloser
 	ApplicationError bool
 }

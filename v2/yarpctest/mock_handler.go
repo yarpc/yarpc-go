@@ -35,16 +35,17 @@ func (m *MockUnaryHandler) EXPECT() *MockUnaryHandlerMockRecorder {
 }
 
 // Handle mocks base method
-func (m *MockUnaryHandler) Handle(arg0 context.Context, arg1 *v2.Request) (*v2.Response, error) {
-	ret := m.ctrl.Call(m, "Handle", arg0, arg1)
+func (m *MockUnaryHandler) Handle(arg0 context.Context, arg1 *v2.Request, arg2 *v2.Buffer) (*v2.Response, *v2.Buffer, error) {
+	ret := m.ctrl.Call(m, "Handle", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*v2.Response)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(*v2.Buffer)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // Handle indicates an expected call of Handle
-func (mr *MockUnaryHandlerMockRecorder) Handle(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Handle", reflect.TypeOf((*MockUnaryHandler)(nil).Handle), arg0, arg1)
+func (mr *MockUnaryHandlerMockRecorder) Handle(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Handle", reflect.TypeOf((*MockUnaryHandler)(nil).Handle), arg0, arg1, arg2)
 }
 
 // MockStreamHandler is a mock of StreamHandler interface

@@ -20,41 +20,9 @@
 
 package yarpc
 
-import (
-	"context"
-	"testing"
+import "bytes"
 
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap/zapcore"
-)
-
-func TestHandlerSpecLogMarshaling(t *testing.T) {
-	tests := []struct {
-		desc string
-		spec HandlerSpec
-		want map[string]interface{}
-	}{
-		{
-			desc: "unary",
-			spec: NewUnaryHandlerSpec(UnaryHandlerFunc(func(context.Context, *Request, *Buffer) (*Response, *Buffer, error) {
-				return nil, nil, nil
-			})),
-			want: map[string]interface{}{"rpcType": "Unary"},
-		},
-		{
-			desc: "stream",
-			spec: NewStreamHandlerSpec(StreamHandlerFunc(func(*ServerStream) error {
-				return nil
-			})),
-			want: map[string]interface{}{"rpcType": "Streaming"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.desc, func(t *testing.T) {
-			enc := zapcore.NewMapObjectEncoder()
-			assert.NoError(t, tt.spec.MarshalLogObject(enc), "Unexpected error marshaling spec.")
-			assert.Equal(t, tt.want, enc.Fields, "Unexpected output from marshaling spec.")
-		})
-	}
+// Buffer is used for requests and responses.
+type Buffer struct {
+	bytes bytes.Buffer
 }

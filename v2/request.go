@@ -22,7 +22,6 @@ package yarpc
 
 import (
 	"context"
-	"io"
 	"strings"
 
 	"go.uber.org/yarpc/v2/yarpcerror"
@@ -63,9 +62,6 @@ type Request struct {
 	// for the destined service for routing purposes. The routing delegate may
 	// override the routing key and service.
 	RoutingDelegate string
-
-	// Request payload.
-	Body io.Reader
 }
 
 // MarshalLogObject implements zap.ObjectMarshaler.

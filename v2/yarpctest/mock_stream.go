@@ -60,9 +60,9 @@ func (mr *MockStreamMockRecorder) ReceiveMessage(arg0 interface{}) *gomock.Call 
 }
 
 // Request mocks base method
-func (m *MockStream) Request() *v2.StreamRequest {
+func (m *MockStream) Request() *v2.Request {
 	ret := m.ctrl.Call(m, "Request")
-	ret0, _ := ret[0].(*v2.StreamRequest)
+	ret0, _ := ret[0].(*v2.Request)
 	return ret0
 }
 
@@ -144,9 +144,9 @@ func (mr *MockStreamCloserMockRecorder) ReceiveMessage(arg0 interface{}) *gomock
 }
 
 // Request mocks base method
-func (m *MockStreamCloser) Request() *v2.StreamRequest {
+func (m *MockStreamCloser) Request() *v2.Request {
 	ret := m.ctrl.Call(m, "Request")
-	ret0, _ := ret[0].(*v2.StreamRequest)
+	ret0, _ := ret[0].(*v2.Request)
 	return ret0
 }
 

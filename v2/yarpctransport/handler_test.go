@@ -25,36 +25,37 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/zap/zapcore"
 )
 
-type UnaryHandlerFunc func(context.Context, *Request) (*Response, error)
-type StreamHandlerFunc func(*ServerStream) error
+type UnaryHandlerFunc func(context.Context, *yarpc.Request, *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error)
+type StreamHandlerFunc func(*yarpc.ServerStream) error
 
-func (f UnaryHandlerFunc) Handle(ctx context.Context, r *Request) (*Response, error) {
-	return f(ctx, r, w)
+func (f UnaryHandlerFunc) Handle(ctx context.Context, r *yarpc.Request, b *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
+	return f(ctx, r, b)
 }
 
-func (f StreamHandlerFunc) HandleStream(stream *ServerStream) error {
+func (f StreamHandlerFunc) HandleStream(stream *yarpc.ServerStream) error {
 	return f(stream)
 }
 
 func TestHandlerSpecLogMarshaling(t *testing.T) {
 	tests := []struct {
 		desc string
-		spec HandlerSpec
+		spec yarpc.HandlerSpec
 		want map[string]interface{}
 	}{
 		{
 			desc: "unary",
-			spec: NewUnaryHandlerSpec(UnaryHandlerFunc(func(context.Context, *Request) (*Response, error) {
-				return nil, nil
+			spec: yarpc.NewUnaryHandlerSpec(UnaryHandlerFunc(func(context.Context, *yarpc.Request, *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
+				return nil, nil, nil
 			})),
 			want: map[string]interface{}{"rpcType": "Unary"},
 		},
 		{
 			desc: "stream",
-			spec: NewStreamHandlerSpec(StreamHandlerFunc(func(*ServerStream) error {
+			spec: yarpc.NewStreamHandlerSpec(StreamHandlerFunc(func(*yarpc.ServerStream) error {
 				return nil
 			})),
 			want: map[string]interface{}{"rpcType": "Streaming"},

@@ -22,7 +22,6 @@ package yarpc_test
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"time"
 
@@ -136,7 +135,6 @@ func TestRequestLogMarshaling(t *testing.T) {
 		ShardKey:        "shard01",
 		RoutingKey:      "routing-key",
 		RoutingDelegate: "routing-delegate",
-		Body:            strings.NewReader("body"),
 	}
 	enc := zapcore.NewMapObjectEncoder()
 	assert.NoError(t, r.MarshalLogObject(enc), "Unexpected error marshaling request.")

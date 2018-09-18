@@ -3,10 +3,10 @@
       - [ ] Fix inbound transports
       - [ ] Consider creating a unified Unary or Caller interface that can be
             used for both inbound and outbound unary.
-      - [ ] Consider removing Body from Request and Response entirely, making
+      - [x] Consider removing Body from Request and Response entirely, making
             them positional, to avoid separating and embedding Meta* for the
             streaming case.
-- [ ] Change Request and Response body to yarpc.Buffer type
+- [x] Change Request and Response body to yarpc.Buffer type
       - [ ] Accumulate request bodies at the inbound
 - [ ] yarpcrouter.Router needs to accept middleware to decorate registered
       procedures.
