@@ -21,18 +21,15 @@
 package yarpcjson
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 type simpleRequest struct {
@@ -58,17 +55,18 @@ func TestHandleStructSuccess(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	resw := new(yarpctest.FakeResponseWriter)
-	err := handler.Handle(context.Background(), &yarpc.Request{
+	reqBuf := &yarpc.Buffer{}
+	_, err := reqBuf.WriteString(`{"name": "foo", "attributes": {"bar": 42}}`)
+	require.NoError(err)
+
+	_, resBuf, err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",
-		Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),
-	}, resw)
+	}, reqBuf)
 	require.NoError(t, err)
 
 	var response simpleResponse
-	require.NoError(t, json.Unmarshal(resw.Body.Bytes(), &response))
-
+	require.NoError(t, json.Unmarshal(resBuf.Bytes(), &response))
 	assert.Equal(t, simpleResponse{Success: true}, response)
 }
 
@@ -85,16 +83,19 @@ func TestHandleMapSuccess(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	resw := new(yarpctest.FakeResponseWriter)
-	err := handler.Handle(context.Background(), &yarpc.Request{
+	reqBuf := &yarpc.Buffer{}
+	_, err := reqBuf.WriteString(`{"foo": 42, "bar": ["a", "b", "c"]}`)
+	require.NoError(err)
+
+	_, resBuf, err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "foo",
 		Encoding:  "json",
-		Body:      jsonBody(`{"foo": 42, "bar": ["a", "b", "c"]}`),
-	}, resw)
+	}, reqBuf)
+
 	require.NoError(t, err)
 
 	var response struct{ Success string }
-	require.NoError(t, json.Unmarshal(resw.Body.Bytes(), &response))
+	require.NoError(t, json.Unmarshal(resBuf.Bytes(), &response))
 	assert.Equal(t, "true", response.Success)
 }
 
@@ -105,15 +106,17 @@ func TestHandleInterfaceEmptySuccess(t *testing.T) {
 
 	handler := jsonHandler{reader: ifaceEmptyReader{}, handler: reflect.ValueOf(h)}
 
-	resw := new(yarpctest.FakeResponseWriter)
-	err := handler.Handle(context.Background(), &yarpc.Request{
+	reqBuf := &yarpc.Buffer{}
+	_, err := reqBuf.WriteString(`["a", "b", "c"]`)
+	require.NoError(err)
+
+	_, resBuf, err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "foo",
 		Encoding:  "json",
-		Body:      jsonBody(`["a", "b", "c"]`),
-	}, resw)
-	require.NoError(t, err)
+	}, reqBuf)
 
-	assert.JSONEq(t, `["a", "b", "c"]`, resw.Body.String())
+	require.NoError(t, err)
+	assert.JSONEq(t, `["a", "b", "c"]`, reqBuf.String())
 }
 
 func TestHandleSuccessWithResponseHeaders(t *testing.T) {
@@ -127,15 +130,17 @@ func TestHandleSuccessWithResponseHeaders(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	resw := new(yarpctest.FakeResponseWriter)
-	err := handler.Handle(context.Background(), &yarpc.Request{
+	reqBuf := &yarpc.Buffer{}
+	_, err := reqBuf.WriteString(`{"name": "foo", "attributes": {"bar": 42}}`)
+	require.NoError(err)
+
+	res, resBuf, err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",
-		Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),
-	}, resw)
-	require.NoError(t, err)
+	}, reqBuf)
 
-	assert.Equal(t, yarpc.NewHeaders().With("foo", "bar"), resw.Headers)
+	require.NoError(t, err)
+	assert.Equal(t, yarpc.NewHeaders().With("foo", "bar"), res.Headers)
 }
 
 func TestHandleBothResponseError(t *testing.T) {
@@ -152,20 +157,18 @@ func TestHandleBothResponseError(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	resw := new(yarpctest.FakeResponseWriter)
-	err := handler.Handle(context.Background(), &yarpc.Request{
+	reqBuf := &yarpc.Buffer{}
+	_, err := reqBuf.WriteString(`{"name": "foo", "attributes": {"bar": 42}}`)
+	require.NoError(err)
+
+	_, resBuf, err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",
-		Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),
-	}, resw)
+	}, reqBuf)
+
 	require.Equal(t, errors.New("bar"), err)
 
 	var response simpleResponse
-	require.NoError(t, json.Unmarshal(resw.Body.Bytes(), &response))
-
+	require.NoError(t, json.Unmarshal(resBuf.Bytes(), &response))
 	assert.Equal(t, simpleResponse{Success: true}, response)
-}
-
-func jsonBody(s string) io.Reader {
-	return bytes.NewReader([]byte(s))
 }

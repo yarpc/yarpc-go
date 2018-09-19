@@ -29,6 +29,8 @@ import (
 	"go.uber.org/yarpc/v2/yarpcencoding"
 )
 
+var _ yarpc.UnaryHandler = (*jsonHandler)(nil)
+
 // jsonHandler adapts a user-provided high-level handler into a transport-level
 // Handler.
 //
@@ -40,42 +42,45 @@ type jsonHandler struct {
 	handler reflect.Value
 }
 
-func (h jsonHandler) Handle(ctx context.Context, treq *yarpc.Request, rw yarpc.ResponseWriter) error {
-	if err := yarpcencoding.ExpectEncodings(treq, Encoding); err != nil {
-		return err
+func (h jsonHandler) Handle(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
+	if err := yarpcencoding.ExpectEncodings(req, Encoding); err != nil {
+		return nil, nil, err
 	}
 
 	ctx, call := yarpc.NewInboundCall(ctx)
-	if err := call.ReadFromRequest(treq); err != nil {
-		return err
+	if err := call.ReadFromRequest(req); err != nil {
+		return nil, nil, err
 	}
 
-	reqBody, err := h.reader.Read(json.NewDecoder(treq.Body))
+	reqBody, err := h.reader.Read(json.NewDecoder(reqBuf))
 	if err != nil {
-		return yarpcencoding.RequestBodyDecodeError(treq, err)
+		return nil, nil, yarpcencoding.RequestBodyDecodeError(req, err)
 	}
 
 	results := h.handler.Call([]reflect.Value{reflect.ValueOf(ctx), reqBody})
 
-	if err := call.WriteToResponse(rw); err != nil {
-		return err
-	}
+	response := &yarpc.Response{}
+	responseBuf := &yarpc.Buffer{}
+	call.WriteToResponse(response)
 
 	// we want to return the appErr if it exists as this is what
 	// the previous behavior was so we deprioritize this error
 	var encodeErr error
 	if result := results[0].Interface(); result != nil {
-		if err := json.NewEncoder(rw).Encode(result); err != nil {
-			encodeErr = yarpcencoding.ResponseBodyEncodeError(treq, err)
+		if err := json.NewEncoder(responseBuf).Encode(result); err != nil {
+			encodeErr = yarpcencoding.ResponseBodyEncodeError(req, err)
 		}
 	}
 
 	if appErr, _ := results[1].Interface().(error); appErr != nil {
-		rw.SetApplicationError()
-		return appErr
+		response.ApplicationError = true
+		// TODO(apeatsbond): now that we propogate a Response struct back, the
+		// Response should hold the actual application error. Errors returned by the
+		// handler (not through the Response) could be considered fatal.
+		return response, responseBuf, appErr
 	}
 
-	return encodeErr
+	return response, responseBuf, encodeErr
 }
 
 // requestReader is used to parse a JSON request argument from a JSON decoder.
