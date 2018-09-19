@@ -24,5 +24,18 @@ import "bytes"
 
 // Buffer is used for requests and responses.
 type Buffer struct {
-	bytes bytes.Buffer
+	bytes.Buffer
+}
+
+// NewBufferBytes creates a new Buffer, using the bytes as its initial contents.
+// The new Buffer takes ownership of bytes, and the caller should not use buf
+// after this call.
+func NewBufferBytes(b []byte) *Buffer {
+	return &Buffer{*bytes.NewBuffer(b)}
+}
+
+// NewBufferString creates a new Buffer, using the string as its initial
+// contents.
+func NewBufferString(s string) *Buffer {
+	return &Buffer{*bytes.NewBufferString(s)}
 }

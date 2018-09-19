@@ -42,7 +42,7 @@ func NopOutboundOption(nopOption string) FakeOutboundOption {
 
 // OutboundCallable is a function that will be called for for an outbound's
 // `Call` method.
-type OutboundCallable func(ctx context.Context, req *yarpc.Request) (*yarpc.Response, error)
+type OutboundCallable func(context.Context, *yarpc.Request, *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error)
 
 // OutboundCallOverride returns an option to set the "callOverride" for a
 // FakeTransport.NewOutbound.
@@ -90,7 +90,7 @@ func (o *FakeOutbound) NopOption() string {
 // Call pretends to send a unary RPC, but actually just returns an error.
 func (o *FakeOutbound) Call(ctx context.Context, req *yarpc.Request, buf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
 	if o.callOverride != nil {
-		return o.callOverride(ctx, req)
+		return o.callOverride(ctx, req, buf)
 	}
 	return nil, nil, fmt.Errorf(`no outbound callable specified on the fake outbound`)
 }
