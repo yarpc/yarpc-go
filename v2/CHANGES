@@ -6,6 +6,11 @@
       - [x] Consider removing Body from Request and Response entirely, making
             them positional, to avoid separating and embedding Meta* for the
             streaming case.
+      - [ ] Now that we propogate a Response struct back, the Response should hold the actual
+            application error. Errors returned by the handler (not through the Response)
+            could be considered fatal (T1995085). This affects transports and encodings.
+            - [ ] JSON encoding
+            - [ ] HTTP transport
 - [x] Change Request and Response body to yarpc.Buffer type
       - [ ] Accumulate request bodies at the inbound
 - [ ] yarpcrouter.Router needs to accept middleware to decorate registered
@@ -23,6 +28,7 @@
 - [ ] Construct PRs with retroactive continuity.
 - [ ] Nit: scrape name pid and change to just id throughout.
 - [ ] Audit docs
+- [ ] choose to use either `req` and `resp` or `request` and `response` as variable names for consistency.
 
 Encodings:
 - [x] Drop raw encoding

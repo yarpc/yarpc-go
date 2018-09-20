@@ -63,12 +63,7 @@ func (c Client) Call(ctx context.Context, procedure string, reqBody interface{},
 		return yarpcencoding.RequestBodyEncodeError(&request, err)
 	}
 
-	requestBuf := &yarpc.Buffer{}
-	if _, err := requestBuf.Write(encoded); err != nil {
-		return err
-	}
-
-	response, responseBuf, appErr := c.c.Unary.Call(ctx, &request, requestBuf)
+	response, responseBuf, appErr := c.c.Unary.Call(ctx, &request, yarpc.NewBufferBytes(encoded))
 	if response == nil {
 		return appErr
 	}

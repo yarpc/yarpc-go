@@ -55,10 +55,7 @@ func TestHandleStructSuccess(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	reqBuf := &yarpc.Buffer{}
-	_, err := reqBuf.WriteString(`{"name": "foo", "attributes": {"bar": 42}}`)
-	require.NoError(err)
-
+	reqBuf := yarpc.NewBufferString(`{"name": "foo", "attributes": {"bar": 42}}`)
 	_, resBuf, err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",
@@ -83,10 +80,7 @@ func TestHandleMapSuccess(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	reqBuf := &yarpc.Buffer{}
-	_, err := reqBuf.WriteString(`{"foo": 42, "bar": ["a", "b", "c"]}`)
-	require.NoError(err)
-
+	reqBuf := yarpc.NewBufferString(`{"foo": 42, "bar": ["a", "b", "c"]}`)
 	_, resBuf, err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "foo",
 		Encoding:  "json",
@@ -106,11 +100,8 @@ func TestHandleInterfaceEmptySuccess(t *testing.T) {
 
 	handler := jsonHandler{reader: ifaceEmptyReader{}, handler: reflect.ValueOf(h)}
 
-	reqBuf := &yarpc.Buffer{}
-	_, err := reqBuf.WriteString(`["a", "b", "c"]`)
-	require.NoError(err)
-
-	_, resBuf, err := handler.Handle(context.Background(), &yarpc.Request{
+	reqBuf := yarpc.NewBufferString(`["a", "b", "c"]`)
+	_, _, err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "foo",
 		Encoding:  "json",
 	}, reqBuf)
@@ -130,11 +121,8 @@ func TestHandleSuccessWithResponseHeaders(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	reqBuf := &yarpc.Buffer{}
-	_, err := reqBuf.WriteString(`{"name": "foo", "attributes": {"bar": 42}}`)
-	require.NoError(err)
-
-	res, resBuf, err := handler.Handle(context.Background(), &yarpc.Request{
+	reqBuf := yarpc.NewBufferString(`{"name": "foo", "attributes": {"bar": 42}}`)
+	res, _, err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",
 	}, reqBuf)
@@ -157,10 +145,7 @@ func TestHandleBothResponseError(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	reqBuf := &yarpc.Buffer{}
-	_, err := reqBuf.WriteString(`{"name": "foo", "attributes": {"bar": 42}}`)
-	require.NoError(err)
-
+	reqBuf := yarpc.NewBufferString(`{"name": "foo", "attributes": {"bar": 42}}`)
 	_, resBuf, err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",

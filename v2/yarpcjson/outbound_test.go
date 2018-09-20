@@ -21,10 +21,8 @@
 package yarpcjson
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"io/ioutil"
 	"reflect"
 	"testing"
 
@@ -115,21 +113,20 @@ func TestCall(t *testing.T) {
 
 		if !tt.noCall {
 			outbound.EXPECT().Call(gomock.Any(),
-				yarpctest.NewRequestMatcher(t,
-					&yarpc.Request{
-						Caller:    caller,
-						Service:   service,
-						Procedure: tt.procedure,
-						Encoding:  Encoding,
-						Headers:   yarpc.HeadersFromMap(tt.headers),
-						Body:      bytes.NewReader([]byte(tt.encodedRequest)),
-					}),
+				&yarpc.Request{
+					Caller:    caller,
+					Service:   service,
+					Procedure: tt.procedure,
+					Encoding:  Encoding,
+					Headers:   yarpc.HeadersFromMap(tt.headers),
+				},
+				yarpc.NewBufferString(tt.encodedRequest),
 			).Return(
 				&yarpc.Response{
-					Body: ioutil.NopCloser(
-						bytes.NewReader([]byte(tt.encodedResponse))),
 					Headers: yarpc.HeadersFromMap(tt.wantHeaders),
-				}, tt.responseErr)
+				},
+				yarpc.NewBufferString(tt.encodedResponse),
+				tt.responseErr)
 		}
 
 		var wantType reflect.Type
