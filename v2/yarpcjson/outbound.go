@@ -21,7 +21,6 @@
 package yarpcjson
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 
@@ -47,41 +46,37 @@ type Client struct {
 // Returns the response or an error if the request failed.
 func (c Client) Call(ctx context.Context, procedure string, reqBody interface{}, resBodyOut interface{}, opts ...yarpc.CallOption) error {
 	call := yarpc.NewOutboundCall(opts...)
-	treq := yarpc.Request{
+	request := yarpc.Request{
 		Caller:    c.c.Caller,
 		Service:   c.c.Service,
 		Procedure: procedure,
 		Encoding:  Encoding,
 	}
 
-	ctx, err := call.WriteToRequest(ctx, &treq)
+	ctx, err := call.WriteToRequest(ctx, &request)
 	if err != nil {
 		return err
 	}
 
 	encoded, err := json.Marshal(reqBody)
 	if err != nil {
-		return yarpcencoding.RequestBodyEncodeError(&treq, err)
+		return yarpcencoding.RequestBodyEncodeError(&request, err)
 	}
 
-	treq.Body = bytes.NewReader(encoded)
-	tres, appErr := c.c.Unary.Call(ctx, &treq)
-	if tres == nil {
+	response, responseBuf, appErr := c.c.Unary.Call(ctx, &request, yarpc.NewBufferBytes(encoded))
+	if response == nil {
 		return appErr
 	}
 
 	// we want to return the appErr if it exists as this is what
 	// the previous behavior was so we deprioritize this error
 	var decodeErr error
-	if _, err = call.ReadFromResponse(ctx, tres); err != nil {
+	if _, err = call.ReadFromResponse(ctx, response); err != nil {
 		decodeErr = err
 	}
-	if tres.Body != nil {
-		if err := json.NewDecoder(tres.Body).Decode(resBodyOut); err != nil && decodeErr == nil {
-			decodeErr = yarpcencoding.ResponseBodyDecodeError(&treq, err)
-		}
-		if err := tres.Body.Close(); err != nil && decodeErr == nil {
-			decodeErr = err
+	if responseBuf != nil {
+		if err := json.NewDecoder(responseBuf).Decode(resBodyOut); err != nil && decodeErr == nil {
+			decodeErr = yarpcencoding.ResponseBodyDecodeError(&request, err)
 		}
 	}
 
