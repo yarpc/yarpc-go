@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-09-19T15:04:35.86800991Z
+updated: 2018-09-20T15:06:36.296075156Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -32,7 +32,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 6e3d092c77c3bae25acf4925942b568e742c1c20
+  version: 7716a980bceefe9a0213654823d9ea62d23b87a2
   subpackages:
   - proto
   - ptypes
@@ -72,7 +72,7 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 05ee40e3a273f7245e8777337fc7b46e533a9a92
+  version: 418d78d0b9a7b7de3a6bbc8a23def624cc977bb2
   subpackages:
   - internal/util
   - nfs
@@ -125,7 +125,7 @@ imports:
 - name: go.uber.org/atomic
   version: 1ea20fb1cbb1cc08cbd0d913a96dead89aa18289
 - name: go.uber.org/dig
-  version: d6ba99365e475c24e8ac02392eb3f78ccab2a6f3
+  version: 27eb30e15ef3e7f67cd86f2b65c618e3e308c104
   subpackages:
   - internal/digreflect
   - internal/dot
@@ -189,7 +189,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: ee1b12c67af419cf5a9be3bdbeea7fc1c5f32f11
+  version: d641721ec2dead6fe5ca284096fe4b1fcd49e427
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -261,6 +261,6 @@ testImports:
   subpackages:
   - golint
 - name: honnef.co/go/tools
-  version: 88497007e8588ea5b6baee991f74a1607e809487
+  version: e3ad64cb4ed3e25a30bf42def711f9cb5b004f72
   subpackages:
   - cmd/staticcheck
