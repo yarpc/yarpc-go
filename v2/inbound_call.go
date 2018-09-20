@@ -37,11 +37,15 @@ type InboundCall struct {
 
 type inboundCallKey struct{} // context key for *InboundCall
 
-// NewInboundCall builds a new InboundCall with the given context.
+// NewInboundCall builds a new InboundCall with the given context and options.
 //
 // A request context is returned and must be used in place of the original.
-func NewInboundCall(ctx context.Context) (context.Context, *InboundCall) {
-	return NewInboundCallWithOptions(ctx)
+func NewInboundCall(ctx context.Context, opts ...InboundCallOption) (context.Context, *InboundCall) {
+	call := &InboundCall{}
+	for _, opt := range opts {
+		opt.apply(call)
+	}
+	return context.WithValue(ctx, inboundCallKey{}, call), call
 }
 
 // InboundCallOption is an option for configuring an InboundCall.
@@ -58,18 +62,6 @@ func DisableResponseHeaders() InboundCallOption {
 	return inboundCallOptionFunc(func(call *InboundCall) {
 		call.disableResponseHeaders = true
 	})
-}
-
-// NewInboundCallWithOptions builds a new InboundCall with the given context and
-// options.
-//
-// A request context is returned and must be used in place of the original.
-func NewInboundCallWithOptions(ctx context.Context, opts ...InboundCallOption) (context.Context, *InboundCall) {
-	call := &InboundCall{}
-	for _, opt := range opts {
-		opt.apply(call)
-	}
-	return context.WithValue(ctx, inboundCallKey{}, call), call
 }
 
 // getInboundCall returns the inbound call on this context or nil.
@@ -89,29 +81,13 @@ func (ic *InboundCall) ReadFromRequest(req *Request) error {
 	return nil
 }
 
-// ReadFromRequestMeta reads information from the given request.
-//
-// This information may be queried on the context using functions like Caller,
-// Service, Procedure, etc.
-func (ic *InboundCall) ReadFromRequestMeta(reqMeta *RequestMeta) error {
-	ic.req = reqMeta.ToRequest()
-	return nil
-}
-
 // WriteToResponse writes response information from the InboundCall onto the
-// given ResponseWriter.
+// given Response.
 //
 // If used, this must be called before writing the response body to the
-// ResponseWriter.
-func (ic *InboundCall) WriteToResponse(resw ResponseWriter) error {
-	var headers Headers
+// Response.
+func (ic *InboundCall) WriteToResponse(res *Response) {
 	for _, h := range ic.resHeaders {
-		headers = headers.With(h.k, h.v)
+		res.Headers = res.Headers.With(h.k, h.v)
 	}
-
-	if headers.Len() > 0 {
-		resw.AddHeaders(headers)
-	}
-
-	return nil
 }

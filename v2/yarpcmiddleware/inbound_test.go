@@ -21,7 +21,6 @@
 package yarpcmiddleware_test
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"testing"
@@ -49,13 +48,14 @@ func TestUnaryNopInboundMiddleware(t *testing.T) {
 		Service:   "someservice",
 		Encoding:  yarpc.Encoding("raw"),
 		Procedure: "hello",
-		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}
-	resw := new(yarpctest.FakeResponseWriter)
-	err := errors.New("great sadness")
-	h.EXPECT().Handle(ctx, req, resw).Return(err)
+	reqBuf := yarpc.NewBufferBytes([]byte{1, 2, 3})
 
-	assert.Equal(t, err, wrappedH.Handle(ctx, req, resw))
+	err := errors.New("great sadness")
+	h.EXPECT().Handle(ctx, req, reqBuf).Return(nil, nil, err)
+
+	_, _, handleErr := wrappedH.Handle(ctx, req, reqBuf)
+	assert.Equal(t, err, handleErr)
 }
 
 func TestNilInboundMiddleware(t *testing.T) {
@@ -69,10 +69,8 @@ func TestNilInboundMiddleware(t *testing.T) {
 		handler := yarpctest.NewMockUnaryHandler(ctrl)
 		mw := yarpcmiddleware.ApplyUnaryInbound(handler, nil)
 
-		resWriter := &yarpctest.FakeResponseWriter{}
-
-		handler.EXPECT().Handle(ctx, req, resWriter)
-		err := mw.Handle(ctx, req, resWriter)
+		handler.EXPECT().Handle(ctx, req, &yarpc.Buffer{})
+		_, _, err := mw.Handle(ctx, req, &yarpc.Buffer{})
 		require.NoError(t, err, "unexpected error calling handler")
 	})
 }

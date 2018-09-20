@@ -26,20 +26,18 @@ import (
 	yarpc "go.uber.org/yarpc/v2"
 )
 
-// UnaryInbound defines a transport-level middleware for
-// `UnaryHandler`s.
+// UnaryInbound defines a transport-level middleware for `UnaryHandler`s.
 //
 // UnaryInbound middleware MAY do zero or more of the following: change the
-// context, change the request, call the ResponseWriter, modify the response
-// body by wrapping the ResponseWriter, handle the returned error, call the
-// given handler zero or more times.
+// context, change the request, modify the response body, handle the returned
+// error, call the given handler zero or more times.
 //
 // UnaryInbound middleware MUST be thread-safe.
 //
-// UnaryInbound middleware is re-used across requests and MAY be called multiple times
-// for the same request.
+// UnaryInbound middleware is re-used across requests and MAY be called multiple
+// times for the same request.
 type UnaryInbound interface {
-	Handle(ctx context.Context, req *yarpc.Request, resw yarpc.ResponseWriter, h yarpc.UnaryHandler) error
+	Handle(ctx context.Context, req *yarpc.Request, buf *yarpc.Buffer, h yarpc.UnaryHandler) (*yarpc.Response, *yarpc.Buffer, error)
 }
 
 // NopUnaryInbound is a inbound middleware that does not do anything special. It
@@ -55,11 +53,11 @@ func ApplyUnaryInbound(h yarpc.UnaryHandler, i UnaryInbound) yarpc.UnaryHandler 
 }
 
 // UnaryInboundFunc adapts a function into an InboundMiddleware.
-type UnaryInboundFunc func(context.Context, *yarpc.Request, yarpc.ResponseWriter, yarpc.UnaryHandler) error
+type UnaryInboundFunc func(context.Context, *yarpc.Request, *yarpc.Buffer, yarpc.UnaryHandler) (*yarpc.Response, *yarpc.Buffer, error)
 
 // Handle for UnaryInboundFunc
-func (f UnaryInboundFunc) Handle(ctx context.Context, req *yarpc.Request, resw yarpc.ResponseWriter, h yarpc.UnaryHandler) error {
-	return f(ctx, req, resw, h)
+func (f UnaryInboundFunc) Handle(ctx context.Context, req *yarpc.Request, buf *yarpc.Buffer, h yarpc.UnaryHandler) (*yarpc.Response, *yarpc.Buffer, error) {
+	return f(ctx, req, buf, h)
 }
 
 type unaryHandlerWithMiddleware struct {
@@ -67,14 +65,14 @@ type unaryHandlerWithMiddleware struct {
 	i UnaryInbound
 }
 
-func (h unaryHandlerWithMiddleware) Handle(ctx context.Context, req *yarpc.Request, resw yarpc.ResponseWriter) error {
-	return h.i.Handle(ctx, req, resw, h.h)
+func (h unaryHandlerWithMiddleware) Handle(ctx context.Context, req *yarpc.Request, buf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
+	return h.i.Handle(ctx, req, buf, h.h)
 }
 
 type nopUnaryInbound struct{}
 
-func (nopUnaryInbound) Handle(ctx context.Context, req *yarpc.Request, resw yarpc.ResponseWriter, handler yarpc.UnaryHandler) error {
-	return handler.Handle(ctx, req, resw)
+func (nopUnaryInbound) Handle(ctx context.Context, req *yarpc.Request, buf *yarpc.Buffer, handler yarpc.UnaryHandler) (*yarpc.Response, *yarpc.Buffer, error) {
+	return handler.Handle(ctx, req, buf)
 }
 
 // StreamInbound defines a transport-level middleware for

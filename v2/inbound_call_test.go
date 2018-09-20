@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc_test
+package yarpc
 
 import (
 	"context"
@@ -27,8 +27,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	. "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 func TestInboundCallReadFromRequest(t *testing.T) {
@@ -87,9 +85,9 @@ func TestInboundCallWriteToResponse(t *testing.T) {
 				call.WriteResponseHeader(k, v)
 			}
 
-			var resw yarpctest.FakeResponseWriter
-			assert.NoError(t, inboundCall.WriteToResponse(&resw))
-			assert.Equal(t, tt.wantHeaders, resw.Headers)
+			var res Response
+			inboundCall.WriteToResponse(&res)
+			assert.Equal(t, tt.wantHeaders, res.Headers)
 		})
 	}
 }

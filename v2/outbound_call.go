@@ -85,30 +85,6 @@ func (c *OutboundCall) WriteToRequest(ctx context.Context, req *Request) (contex
 	return ctx, nil
 }
 
-// WriteToRequestMeta fills the given request with request-specific options from
-// the call.
-//
-// The context MAY be replaced by the OutboundCall.
-func (c *OutboundCall) WriteToRequestMeta(ctx context.Context, reqMeta *RequestMeta) (context.Context, error) {
-	for _, h := range c.headers {
-		reqMeta.Headers = reqMeta.Headers.With(h.k, h.v)
-	}
-
-	if c.shardKey != nil {
-		reqMeta.ShardKey = *c.shardKey
-	}
-	if c.routingKey != nil {
-		reqMeta.RoutingKey = *c.routingKey
-	}
-	if c.routingDelegate != nil {
-		reqMeta.RoutingDelegate = *c.routingDelegate
-	}
-
-	// NB(abg): context and error are unused for now but we want to leave room
-	// for CallOptions which can fail or modify the context.
-	return ctx, nil
-}
-
 // ReadFromResponse reads information from the response for this call.
 //
 // This should be called only if the request is unary.

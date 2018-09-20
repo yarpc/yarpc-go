@@ -39,7 +39,12 @@ import (
 // UnaryOutbound middleware is re-used across requests and MAY be called
 // multiple times on the same request.
 type UnaryOutbound interface {
-	Call(ctx context.Context, request *yarpc.Request, out yarpc.UnaryOutbound) (*yarpc.Response, error)
+	Call(
+		ctx context.Context,
+		request *yarpc.Request,
+		buf *yarpc.Buffer,
+		out yarpc.UnaryOutbound,
+	) (*yarpc.Response, *yarpc.Buffer, error)
 }
 
 // NopUnaryOutbound is a unary outbound middleware that does not do
@@ -56,11 +61,16 @@ func ApplyUnaryOutbound(o yarpc.UnaryOutbound, f UnaryOutbound) yarpc.UnaryOutbo
 }
 
 // UnaryOutboundFunc adapts a function into a UnaryOutbound middleware.
-type UnaryOutboundFunc func(context.Context, *yarpc.Request, yarpc.UnaryOutbound) (*yarpc.Response, error)
+type UnaryOutboundFunc func(context.Context, *yarpc.Request, *yarpc.Buffer, yarpc.UnaryOutbound) (*yarpc.Response, *yarpc.Buffer, error)
 
 // Call for UnaryOutboundFunc.
-func (f UnaryOutboundFunc) Call(ctx context.Context, request *yarpc.Request, out yarpc.UnaryOutbound) (*yarpc.Response, error) {
-	return f(ctx, request, out)
+func (f UnaryOutboundFunc) Call(
+	ctx context.Context,
+	request *yarpc.Request,
+	buf *yarpc.Buffer,
+	out yarpc.UnaryOutbound,
+) (*yarpc.Response, *yarpc.Buffer, error) {
+	return f(ctx, request, buf, out)
 }
 
 type unaryOutboundWithMiddleware struct {
@@ -68,30 +78,38 @@ type unaryOutboundWithMiddleware struct {
 	f UnaryOutbound
 }
 
-func (fo unaryOutboundWithMiddleware) Call(ctx context.Context, request *yarpc.Request) (*yarpc.Response, error) {
-	return fo.f.Call(ctx, request, fo.o)
+func (fo unaryOutboundWithMiddleware) Call(
+	ctx context.Context,
+	request *yarpc.Request,
+	buf *yarpc.Buffer,
+) (*yarpc.Response, *yarpc.Buffer, error) {
+	return fo.f.Call(ctx, request, buf, fo.o)
 }
 
 type nopUnaryOutbound struct{}
 
-func (nopUnaryOutbound) Call(ctx context.Context, request *yarpc.Request, out yarpc.UnaryOutbound) (*yarpc.Response, error) {
-	return out.Call(ctx, request)
+func (nopUnaryOutbound) Call(
+	ctx context.Context,
+	request *yarpc.Request,
+	buf *yarpc.Buffer,
+	out yarpc.UnaryOutbound,
+) (*yarpc.Response, *yarpc.Buffer, error) {
+	return out.Call(ctx, request, buf)
 }
 
-// StreamOutbound defines transport-level middleware for
-// `StreamOutbound`s.
+// StreamOutbound defines transport-level middleware for `StreamOutbound`s.
 //
 // StreamOutbound middleware MAY do zero or more of the following: change the
-// context, change the requestMeta, change the returned Stream, handle the
-// returned error, call the given outbound zero or more times.
+// context, change the request, change the returned Stream, handle the returned
+// error, call the given outbound zero or more times.
 //
-// StreamOutbound middleware MUST always return a non-nil Stream or error,
-// and they MUST be thread-safe
+// StreamOutbound middleware MUST always return a non-nil Stream or error, and
+// they MUST be thread-safe
 //
 // StreamOutbound middleware is re-used across requests and MAY be called
 // multiple times on the same request.
 type StreamOutbound interface {
-	CallStream(ctx context.Context, request *yarpc.StreamRequest, out yarpc.StreamOutbound) (*yarpc.ClientStream, error)
+	CallStream(ctx context.Context, request *yarpc.Request, out yarpc.StreamOutbound) (*yarpc.ClientStream, error)
 }
 
 // NopStreamOutbound is a stream outbound middleware that does not do
@@ -108,10 +126,10 @@ func ApplyStreamOutbound(o yarpc.StreamOutbound, f StreamOutbound) yarpc.StreamO
 }
 
 // StreamOutboundFunc adapts a function into a StreamOutbound middleware.
-type StreamOutboundFunc func(context.Context, *yarpc.StreamRequest, yarpc.StreamOutbound) (*yarpc.ClientStream, error)
+type StreamOutboundFunc func(context.Context, *yarpc.Request, yarpc.StreamOutbound) (*yarpc.ClientStream, error)
 
 // CallStream for StreamOutboundFunc.
-func (f StreamOutboundFunc) CallStream(ctx context.Context, request *yarpc.StreamRequest, out yarpc.StreamOutbound) (*yarpc.ClientStream, error) {
+func (f StreamOutboundFunc) CallStream(ctx context.Context, request *yarpc.Request, out yarpc.StreamOutbound) (*yarpc.ClientStream, error) {
 	return f(ctx, request, out)
 }
 
@@ -120,12 +138,12 @@ type streamOutboundWithMiddleware struct {
 	f StreamOutbound
 }
 
-func (fo streamOutboundWithMiddleware) CallStream(ctx context.Context, request *yarpc.StreamRequest) (*yarpc.ClientStream, error) {
+func (fo streamOutboundWithMiddleware) CallStream(ctx context.Context, request *yarpc.Request) (*yarpc.ClientStream, error) {
 	return fo.f.CallStream(ctx, request, fo.o)
 }
 
 type nopStreamOutbound struct{}
 
-func (nopStreamOutbound) CallStream(ctx context.Context, request *yarpc.StreamRequest, out yarpc.StreamOutbound) (*yarpc.ClientStream, error) {
+func (nopStreamOutbound) CallStream(ctx context.Context, request *yarpc.Request, out yarpc.StreamOutbound) (*yarpc.ClientStream, error) {
 	return out.CallStream(ctx, request)
 }

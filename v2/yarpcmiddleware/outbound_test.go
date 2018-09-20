@@ -21,13 +21,12 @@
 package yarpcmiddleware_test
 
 import (
-	"bytes"
 	"context"
-	"io/ioutil"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/internal/testtime"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcmiddleware"
@@ -49,16 +48,17 @@ func TestUnaryNopOutboundMiddleware(t *testing.T) {
 		Service:   "someservice",
 		Encoding:  yarpc.Encoding("raw"),
 		Procedure: "hello",
-		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}
+	reqBuf := yarpc.NewBufferBytes([]byte{1, 2, 3})
+	resp := &yarpc.Response{}
+	respBuf := yarpc.NewBufferBytes([]byte{4, 5, 6})
+	o.EXPECT().Call(ctx, req, reqBuf).Return(resp, respBuf, nil)
 
-	res := &yarpc.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6}))}
-	o.EXPECT().Call(ctx, req).Return(res, nil)
+	gotResp, gotRespBuf, err := wrappedO.Call(ctx, req, reqBuf)
+	require.NoError(t, err)
 
-	got, err := wrappedO.Call(ctx, req)
-	if assert.NoError(t, err) {
-		assert.Equal(t, res, got)
-	}
+	assert.Equal(t, resp, gotResp)
+	assert.Equal(t, respBuf, gotRespBuf)
 }
 
 func TestNilOutboundMiddleware(t *testing.T) {
@@ -91,13 +91,11 @@ func TestStreamNopOutboundMiddleware(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	req := &yarpc.StreamRequest{
-		Meta: &yarpc.RequestMeta{
-			Caller:    "somecaller",
-			Service:   "someservice",
-			Encoding:  yarpc.Encoding("raw"),
-			Procedure: "hello",
-		},
+	req := &yarpc.Request{
+		Caller:    "somecaller",
+		Service:   "someservice",
+		Encoding:  yarpc.Encoding("raw"),
+		Procedure: "hello",
 	}
 
 	o.EXPECT().CallStream(ctx, req).Return(nil, nil)

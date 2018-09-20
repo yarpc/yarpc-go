@@ -83,10 +83,12 @@ func (m *MockUnaryInbound) EXPECT() *MockUnaryInboundMockRecorder {
 }
 
 // Handle mocks base method
-func (m *MockUnaryInbound) Handle(arg0 context.Context, arg1 *v2.Request, arg2 v2.ResponseWriter, arg3 v2.UnaryHandler) error {
+func (m *MockUnaryInbound) Handle(arg0 context.Context, arg1 *v2.Request, arg2 *v2.Buffer, arg3 v2.UnaryHandler) (*v2.Response, *v2.Buffer, error) {
 	ret := m.ctrl.Call(m, "Handle", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*v2.Response)
+	ret1, _ := ret[1].(*v2.Buffer)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // Handle indicates an expected call of Handle
@@ -118,16 +120,17 @@ func (m *MockUnaryOutbound) EXPECT() *MockUnaryOutboundMockRecorder {
 }
 
 // Call mocks base method
-func (m *MockUnaryOutbound) Call(arg0 context.Context, arg1 *v2.Request, arg2 v2.UnaryOutbound) (*v2.Response, error) {
-	ret := m.ctrl.Call(m, "Call", arg0, arg1, arg2)
+func (m *MockUnaryOutbound) Call(arg0 context.Context, arg1 *v2.Request, arg2 *v2.Buffer, arg3 v2.UnaryOutbound) (*v2.Response, *v2.Buffer, error) {
+	ret := m.ctrl.Call(m, "Call", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*v2.Response)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(*v2.Buffer)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // Call indicates an expected call of Call
-func (mr *MockUnaryOutboundMockRecorder) Call(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Call", reflect.TypeOf((*MockUnaryOutbound)(nil).Call), arg0, arg1, arg2)
+func (mr *MockUnaryOutboundMockRecorder) Call(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Call", reflect.TypeOf((*MockUnaryOutbound)(nil).Call), arg0, arg1, arg2, arg3)
 }
 
 // MockStreamInbound is a mock of StreamInbound interface
@@ -189,7 +192,7 @@ func (m *MockStreamOutbound) EXPECT() *MockStreamOutboundMockRecorder {
 }
 
 // CallStream mocks base method
-func (m *MockStreamOutbound) CallStream(arg0 context.Context, arg1 *v2.StreamRequest, arg2 v2.StreamOutbound) (*v2.ClientStream, error) {
+func (m *MockStreamOutbound) CallStream(arg0 context.Context, arg1 *v2.Request, arg2 v2.StreamOutbound) (*v2.ClientStream, error) {
 	ret := m.ctrl.Call(m, "CallStream", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*v2.ClientStream)
 	ret1, _ := ret[1].(error)

@@ -37,12 +37,12 @@ import (
 
 func TestInvokeUnaryHandlerWithPanic(t *testing.T) {
 	msg := "I'm panicking in a unary handler!"
-	handler := func(context.Context, *yarpc.Request, yarpc.ResponseWriter) error {
+	handler := func(context.Context, *yarpc.Request, *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
 		panic(msg)
 	}
 	var err error
 	require.NotPanics(t, func() {
-		err = yarpctransport.InvokeUnaryHandler(
+		_, _, err = yarpctransport.InvokeUnaryHandler(
 			yarpctransport.UnaryInvokeRequest{
 				Context:   context.Background(),
 				StartTime: time.Now(),
@@ -67,9 +67,7 @@ func TestInvokeStreamHandlerWithPanic(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockStream := yarpctest.NewMockStream(mockCtrl)
 	mockStream.EXPECT().Request().Return(
-		&yarpc.StreamRequest{
-			Meta: &yarpc.RequestMeta{},
-		}).Times(1)
+		&yarpc.Request{}).Times(1)
 	mockServerStream, err := yarpc.NewServerStream(mockStream)
 	require.NoError(t, err, "should create mockServerStream")
 	require.NotPanics(t, func() {

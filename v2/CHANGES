@@ -1,12 +1,12 @@
 - [ ] Strike ResponseWriter out, use *yarpc.Response directly.
-      - [ ] Fix inbound middleware
+      - [x] Fix inbound middleware
       - [ ] Fix inbound transports
       - [ ] Consider creating a unified Unary or Caller interface that can be
             used for both inbound and outbound unary.
-      - [ ] Consider removing Body from Request and Response entirely, making
+      - [x] Consider removing Body from Request and Response entirely, making
             them positional, to avoid separating and embedding Meta* for the
             streaming case.
-- [ ] Change Request and Response body to yarpc.Buffer type
+- [x] Change Request and Response body to yarpc.Buffer type
       - [ ] Accumulate request bodies at the inbound
 - [ ] yarpcrouter.Router needs to accept middleware to decorate registered
       procedures.
@@ -75,7 +75,7 @@ To port encodings forward:
 Package changes:
 - [ ] api/transport -> v2
 - [ ] api/peer -> v2
-- [ ] api/middleware -> v2/yarpcmiddlware
+- [x] api/middleware -> v2/yarpcmiddlware
 - [ ] yarpcerrors -> v2/yarpcerror
 - [ ] yarpctest -> v2/yarpctest
 - [ ] api/transport/transporttest -> v2/yarpctest
@@ -88,7 +88,7 @@ Name changes
 - [ ] api/transport/transporttest.* -> v2/yarpctest.*
 - [ ] api/peer.* -> v2.*
 - [ ] api/peer/peertest.* -> v2/yarpctest.*
-- [ ] api/middleware.* -> v2/yarpcmiddlware.*
+- [x] api/middleware.* -> v2/yarpcmiddlware.*
 - [ ] api/middleware/middlewaretest.* -> v2/yarpcmiddlewaretest.*
 - [ ] transport/* -> v2/yarpc*
 - [ ] encoding/* -> v2/yarpc*

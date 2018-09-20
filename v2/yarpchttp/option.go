@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package yarpchttp
 
 // Option allows customizing the YARPC HTTP transport. Any InboundOption,
 // OutboundOption, or TransportOption is a valid Option.

@@ -42,7 +42,7 @@ func NopOutboundOption(nopOption string) FakeOutboundOption {
 
 // OutboundCallable is a function that will be called for for an outbound's
 // `Call` method.
-type OutboundCallable func(ctx context.Context, req *yarpc.Request) (*yarpc.Response, error)
+type OutboundCallable func(context.Context, *yarpc.Request, *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error)
 
 // OutboundCallOverride returns an option to set the "callOverride" for a
 // FakeTransport.NewOutbound.
@@ -66,6 +66,9 @@ func (t *FakeTransport) NewOutbound(c yarpc.Chooser, opts ...FakeOutboundOption)
 	return o
 }
 
+var _ yarpc.UnaryOutbound = (*FakeOutbound)(nil)
+var _ yarpc.StreamOutbound = (*FakeOutbound)(nil)
+
 // FakeOutbound is a unary outbound for the FakeTransport. It is fake.
 type FakeOutbound struct {
 	transport    *FakeTransport
@@ -85,14 +88,14 @@ func (o *FakeOutbound) NopOption() string {
 }
 
 // Call pretends to send a unary RPC, but actually just returns an error.
-func (o *FakeOutbound) Call(ctx context.Context, req *yarpc.Request) (*yarpc.Response, error) {
+func (o *FakeOutbound) Call(ctx context.Context, req *yarpc.Request, buf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
 	if o.callOverride != nil {
-		return o.callOverride(ctx, req)
+		return o.callOverride(ctx, req, buf)
 	}
-	return nil, fmt.Errorf(`no outbound callable specified on the fake outbound`)
+	return nil, nil, fmt.Errorf(`no outbound callable specified on the fake outbound`)
 }
 
 // CallStream pretends to send a Stream RPC, but actually just returns an error.
-func (o *FakeOutbound) CallStream(ctx context.Context, req *yarpc.StreamRequest) (*yarpc.ClientStream, error) {
+func (o *FakeOutbound) CallStream(ctx context.Context, req *yarpc.Request) (*yarpc.ClientStream, error) {
 	return nil, fmt.Errorf(`fake outbound does not support call stream`)
 }

@@ -31,7 +31,7 @@ type UnaryOutbound interface {
 	// This MUST NOT be called before Start() has been called successfully. This
 	// MAY panic if called without calling Start(). This MUST be safe to call
 	// concurrently.
-	Call(ctx context.Context, request *Request) (*Response, error)
+	Call(context.Context, *Request, *Buffer) (*Response, *Buffer, error)
 }
 
 // StreamOutbound is a transport that knows how to send stream requests for
@@ -40,7 +40,7 @@ type StreamOutbound interface {
 	// CallStream creates a stream connection based on the metadata in the
 	// request passed in.  If there is a timeout on the context, this timeout
 	// is for establishing a connection, and not for the lifetime of the stream.
-	CallStream(ctx context.Context, request *StreamRequest) (*ClientStream, error)
+	CallStream(context.Context, *Request) (*ClientStream, error)
 }
 
 // Client is a configuration for how to call into another service.

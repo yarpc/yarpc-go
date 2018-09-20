@@ -48,15 +48,15 @@ type RequestMatcher struct {
 //
 // The request's contents are read in their entirety and replaced with a
 // bytes.Reader.
-func NewRequestMatcher(t *testing.T, r *yarpc.Request) RequestMatcher {
-	body, err := ioutil.ReadAll(r.Body)
+func NewRequestMatcher(t *testing.T, r *yarpc.Request, b *yarpc.Buffer) RequestMatcher {
+	body, err := ioutil.ReadAll(b)
 	if err != nil {
 		t.Fatalf("failed to read request body: %v", err)
 	}
 
 	// restore a copy of the body so that the caller can still use the request
 	// object
-	r.Body = bytes.NewReader(body)
+	b = yarpc.NewBufferBytes(body)
 	return RequestMatcher{t: t, req: r, body: body}
 }
 
@@ -66,12 +66,8 @@ func NewRequestMatcher(t *testing.T, r *yarpc.Request) RequestMatcher {
 
 // Matches checks if the given object matches the Request provided in
 // NewRequestMatcher.
-func (m RequestMatcher) Matches(got interface{}) bool {
+func (m RequestMatcher) Matches(r *yarpc.Request, buf *yarpc.Buffer) bool {
 	l := m.req
-	r, ok := got.(*yarpc.Request)
-	if !ok {
-		panic(fmt.Sprintf("expected *yarpc.Request, got %v", got))
-	}
 
 	if l.Caller != r.Caller {
 		m.t.Logf("Caller mismatch: %s != %s", l.Caller, r.Caller)
@@ -116,11 +112,11 @@ func (m RequestMatcher) Matches(got interface{}) bool {
 		}
 	}
 
-	rbody, err := ioutil.ReadAll(r.Body)
+	rbody, err := ioutil.ReadAll(buf)
 	if err != nil {
 		m.t.Fatalf("failed to read body: %v", err)
 	}
-	r.Body = bytes.NewReader(rbody) // in case it is reused
+	buf = yarpc.NewBufferBytes(rbody) // in case it is reused
 
 	if !bytes.Equal(m.body, rbody) {
 		m.t.Logf("Body mismatch: %v != %v", m.body, rbody)
@@ -159,38 +155,34 @@ type ResponseMatcher struct {
 
 // NewResponseMatcher builds a new ResponseMatcher that verifies that
 // responses match the given Response.
-func NewResponseMatcher(t *testing.T, r *yarpc.Response) ResponseMatcher {
-	body, err := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
+func NewResponseMatcher(t *testing.T, r *yarpc.Response, b *yarpc.Buffer) ResponseMatcher {
+	body, err := ioutil.ReadAll(b)
 	if err != nil {
 		t.Fatalf("failed to read response body: %v", err)
 	}
 
 	// restore a copy of the body so that the caller can still use the
 	// response object
-	r.Body = ioutil.NopCloser(bytes.NewReader(body))
+	b = yarpc.NewBufferBytes(body)
+
 	return ResponseMatcher{t: t, res: r, body: body}
 }
 
 // Matches checks if the given object matches the Response provided in
 // NewResponseMatcher.
-func (m ResponseMatcher) Matches(got interface{}) bool {
+func (m ResponseMatcher) Matches(r *yarpc.Response, b *yarpc.Buffer) bool {
 	l := m.res
-	r, ok := got.(*yarpc.Response)
-	if !ok {
-		panic(fmt.Sprintf("expected *yarpc.Response, got %v", got))
-	}
 
 	if err := checkSuperSet(l.Headers, r.Headers); err != nil {
 		m.t.Logf("Headers mismatch: %v != %v\n\t%v", l.Headers, r.Headers, err)
 		return false
 	}
 
-	rbody, err := ioutil.ReadAll(r.Body)
+	rbody, err := ioutil.ReadAll(b)
 	if err != nil {
 		m.t.Fatalf("failed to read body: %v", err)
 	}
-	r.Body = ioutil.NopCloser(bytes.NewReader(rbody)) // in case it is reused
+	b = yarpc.NewBufferBytes(rbody) // in case it is reused
 
 	if !bytes.Equal(m.body, rbody) {
 		m.t.Logf("Body mismatch: %v != %v", m.body, rbody)
@@ -198,29 +190,4 @@ func (m ResponseMatcher) Matches(got interface{}) bool {
 	}
 
 	return true
-}
-
-// FakeResponseWriter is a ResponseWriter that records the headers and the body
-// written to it.
-type FakeResponseWriter struct {
-	IsApplicationError bool
-	Headers            yarpc.Headers
-	Body               bytes.Buffer
-}
-
-// SetApplicationError for FakeResponseWriter.
-func (fw *FakeResponseWriter) SetApplicationError() {
-	fw.IsApplicationError = true
-}
-
-// AddHeaders for FakeResponseWriter.
-func (fw *FakeResponseWriter) AddHeaders(h yarpc.Headers) {
-	for k, v := range h.OriginalItems() {
-		fw.Headers = fw.Headers.With(k, v)
-	}
-}
-
-// Write for FakeResponseWriter.
-func (fw *FakeResponseWriter) Write(s []byte) (int, error) {
-	return fw.Body.Write(s)
 }

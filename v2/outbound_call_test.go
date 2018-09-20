@@ -28,7 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestOutboundCallWriteToRequestAndRequestMeta(t *testing.T) {
+func TestOutboundCallWriteToRequest(t *testing.T) {
 	tests := []struct {
 		desc        string
 		giveOptions []CallOption
@@ -124,17 +124,9 @@ func TestOutboundCallWriteToRequestAndRequestMeta(t *testing.T) {
 		t.Run(tt.desc+" regular", func(t *testing.T) {
 			call := NewOutboundCall(tt.giveOptions...)
 
-			request := tt.giveRequest
-			requestMeta := tt.giveRequest.ToRequestMeta()
-
-			_, err := call.WriteToRequest(context.Background(), &request)
+			_, err := call.WriteToRequest(context.Background(), &tt.giveRequest)
 			if assert.NoError(t, err, tt.desc) {
-				assert.Equal(t, tt.wantRequest, request, tt.desc)
-			}
-
-			_, err = call.WriteToRequestMeta(context.Background(), requestMeta)
-			if assert.NoError(t, err, tt.desc) {
-				assert.Equal(t, tt.wantRequest.ToRequestMeta(), requestMeta, tt.desc)
+				assert.Equal(t, tt.wantRequest, tt.giveRequest, tt.desc)
 			}
 		})
 
@@ -142,17 +134,9 @@ func TestOutboundCallWriteToRequestAndRequestMeta(t *testing.T) {
 			call, err := NewStreamOutboundCall(tt.giveOptions...)
 			require.NoError(t, err)
 
-			request := tt.giveRequest
-			requestMeta := tt.giveRequest.ToRequestMeta()
-
-			_, err = call.WriteToRequest(context.Background(), &request)
+			_, err = call.WriteToRequest(context.Background(), &tt.giveRequest)
 			if assert.NoError(t, err, tt.desc) {
-				assert.Equal(t, tt.wantRequest, request, tt.desc)
-			}
-
-			_, err = call.WriteToRequestMeta(context.Background(), requestMeta)
-			if assert.NoError(t, err, tt.desc) {
-				assert.Equal(t, tt.wantRequest.ToRequestMeta(), requestMeta, tt.desc)
+				assert.Equal(t, tt.wantRequest, tt.giveRequest, tt.desc)
 			}
 		})
 	}

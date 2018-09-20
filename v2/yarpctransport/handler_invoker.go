@@ -34,12 +34,12 @@ import (
 
 // UnaryInvokeRequest encapsulates arguments to invoke a unary handler.
 type UnaryInvokeRequest struct {
-	Context        context.Context
-	StartTime      time.Time
-	Request        *yarpc.Request
-	ResponseWriter yarpc.ResponseWriter
-	Handler        yarpc.UnaryHandler
-	Logger         *zap.Logger // optional
+	Context   context.Context
+	StartTime time.Time
+	Request   *yarpc.Request
+	Buffer    *yarpc.Buffer
+	Handler   yarpc.UnaryHandler
+	Logger    *zap.Logger // optional
 }
 
 // StreamInvokeRequest encapsulates arguments to invoke a unary handler.
@@ -53,14 +53,14 @@ type StreamInvokeRequest struct {
 // converting them to YARPC errors. All other errors are passed through.
 func InvokeUnaryHandler(
 	i UnaryInvokeRequest,
-) (err error) {
+) (res *yarpc.Response, buf *yarpc.Buffer, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = handlePanic(yarpc.Unary, i.Logger, r, i.Request.ToRequestMeta())
+			err = handlePanic(yarpc.Unary, i.Logger, r, i.Request)
 		}
 	}()
 
-	err = i.Handler.Handle(i.Context, i.Request, i.ResponseWriter)
+	res, buf, err = i.Handler.Handle(i.Context, i.Request, i.Buffer)
 
 	// The handler stopped work on context deadline.
 	if err == context.DeadlineExceeded && err == i.Context.Err() {
@@ -70,7 +70,7 @@ func InvokeUnaryHandler(
 			"call to procedure %q of service %q from caller %q timed out after %v",
 			i.Request.Procedure, i.Request.Service, i.Request.Caller, deadline.Sub(i.StartTime))
 	}
-	return err
+	return res, buf, err
 }
 
 // InvokeStreamHandler calls the stream handler, recovering from panics as
@@ -80,30 +80,30 @@ func InvokeStreamHandler(
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = handlePanic(yarpc.Streaming, i.Logger, r, i.Stream.Request().Meta)
+			err = handlePanic(yarpc.Streaming, i.Logger, r, i.Stream.Request())
 		}
 	}()
 
 	return i.Handler.HandleStream(i.Stream)
 }
 
-func handlePanic(rpcType yarpc.Type, logger *zap.Logger, recovered interface{}, reqMeta *yarpc.RequestMeta) error {
+func handlePanic(rpcType yarpc.Type, logger *zap.Logger, recovered interface{}, req *yarpc.Request) error {
 	err := fmt.Errorf("panic: %v", recovered)
 	if logger != nil {
-		logPanic(rpcType, logger, err, reqMeta)
+		logPanic(rpcType, logger, err, req)
 		return err
 	}
 	log.Printf("%s handler panicked: %v\n%s", rpcType, recovered, debug.Stack())
 	return err
 }
 
-func logPanic(rpcType yarpc.Type, logger *zap.Logger, err error, reqMeta *yarpc.RequestMeta) {
+func logPanic(rpcType yarpc.Type, logger *zap.Logger, err error, req *yarpc.Request) {
 	logger.Error(fmt.Sprintf("%s handler panicked", rpcType),
-		zap.String("service", reqMeta.Service),
-		zap.String("transport", reqMeta.Transport),
-		zap.String("procedure", reqMeta.Procedure),
-		zap.String("encoding", string(reqMeta.Encoding)),
-		zap.String("caller", reqMeta.Caller),
+		zap.String("service", req.Service),
+		zap.String("transport", req.Transport),
+		zap.String("procedure", req.Procedure),
+		zap.String("encoding", string(req.Encoding)),
+		zap.String("caller", req.Caller),
 		zap.Error(err),
 		zap.Stack("stack"),
 	)

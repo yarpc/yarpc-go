@@ -66,6 +66,7 @@ strip_thrift_warnings() {
   grep -v '^\[WARNING:.*emphasize the signedness' | sed '/^\s*$/d'
 }
 
+# v1 mocks
 mockgen -destination=api/middleware/middlewaretest/router.go -package=middlewaretest go.uber.org/yarpc/api/middleware Router,UnaryInbound,UnaryOutbound,OnewayInbound,OnewayOutbound,StreamInbound,StreamOutbound
 mockgen -destination=api/peer/peertest/list.go -package=peertest go.uber.org/yarpc/api/peer Chooser,List,ChooserList
 mockgen -destination=api/peer/peertest/peer.go -package=peertest go.uber.org/yarpc/api/peer Identifier,Peer
@@ -77,6 +78,12 @@ mockgen -destination=api/transport/transporttest/outbound.go -package=transportt
 mockgen -destination=api/transport/transporttest/router.go -package=transporttest go.uber.org/yarpc/api/transport Router,RouteTable
 mockgen -destination=api/transport/transporttest/stream.go -package=transporttest go.uber.org/yarpc/api/transport Stream,StreamCloser
 mockgen -destination=api/transport/transporttest/transport.go -package=transporttest go.uber.org/yarpc/api/transport Transport
+
+# v2 mocks
+mockgen -destination=v2/yarpcmiddlewaretest/mock_router.go -package=yarpcmiddlewaretest go.uber.org/yarpc/v2/yarpcmiddleware Router,UnaryInbound,UnaryOutbound,StreamInbound,StreamOutbound
+mockgen -destination=v2/yarpctest/mock_handler.go -package=yarpctest go.uber.org/yarpc/v2 UnaryHandler,StreamHandler
+mockgen -destination=v2/yarpctest/mock_outbound.go -package=yarpctest go.uber.org/yarpc/v2 UnaryOutbound,StreamOutbound
+mockgen -destination=v2/yarpctest/mock_stream.go -package=yarpctest go.uber.org/yarpc/v2 Stream,StreamCloser
 
 generate_stringer ConnectionStatus ./api/peer
 generate_stringer State ./pkg/lifecycle

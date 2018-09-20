@@ -18,13 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transporttest
+package yarpctest
 
 import (
 	"context"
-	"io"
 
-	"go.uber.org/yarpc/api/transport"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 // EchoRouter is a router that echoes all unary inbound requests, with no
@@ -32,12 +31,12 @@ import (
 type EchoRouter struct{}
 
 // Procedures returns no explicitly supported procedures.
-func (EchoRouter) Procedures() []transport.Procedure {
+func (EchoRouter) Procedures() []yarpc.Procedure {
 	return nil
 }
 
 // Choose always returns a unary echo handler.
-func (EchoRouter) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
+func (EchoRouter) Choose(ctx context.Context, req *yarpc.Request) (yarpc.HandlerSpec, error) {
 	return echoHandlerSpec, nil
 }
 
@@ -47,9 +46,8 @@ type EchoHandler struct{}
 
 // Handle handles an inbound request by copying the request body to the
 // response body.
-func (EchoHandler) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
-	_, err := io.Copy(resw, req.Body)
-	return err
+func (EchoHandler) Handle(ctx context.Context, req *yarpc.Request, buf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
+	return &yarpc.Response{}, buf, nil
 }
 
-var echoHandlerSpec = transport.NewUnaryHandlerSpec(EchoHandler{})
+var echoHandlerSpec = yarpc.NewUnaryHandlerSpec(EchoHandler{})

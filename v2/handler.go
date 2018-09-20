@@ -72,21 +72,18 @@ func NewStreamHandlerSpec(handler StreamHandler) HandlerSpec {
 
 // UnaryHandler handles a single, transport-level, unary request.
 type UnaryHandler interface {
-	// Handle the given request, writing the response to the given
-	// ResponseWriter.
+	// Handle the given request.
 	//
 	// An error may be returned in case of failures. BadRequestError must be
 	// returned for invalid requests. All other failures are treated as
 	// UnexpectedErrors.
-	//
-	// Handlers MUST NOT retain references to the ResponseWriter.
-	Handle(ctx context.Context, req *Request, resw ResponseWriter) error
+	Handle(context.Context, *Request, *Buffer) (*Response, *Buffer, error)
 }
 
 // StreamHandler handles a stream connection request.
 type StreamHandler interface {
-	// Handle the given stream connection.  The stream will close when the
-	// function returns.
+	// Handle the given stream connection. The stream will close when the function
+	// returns.
 	//
 	// An error may be returned in case of failures.
 	HandleStream(stream *ServerStream) error
@@ -94,15 +91,15 @@ type StreamHandler interface {
 
 // UnaryHandlerFunc is a utility for defining a UnaryHandler with just a
 // function.
-type UnaryHandlerFunc func(context.Context, *Request, ResponseWriter) error
+type UnaryHandlerFunc func(context.Context, *Request, *Buffer) (*Response, *Buffer, error)
 
 // StreamHandlerFunc is a utility for defining a StreamHandler with just a
 // function.
 type StreamHandlerFunc func(*ServerStream) error
 
 // Handle handles an inbound unary request.
-func (f UnaryHandlerFunc) Handle(ctx context.Context, r *Request, w ResponseWriter) error {
-	return f(ctx, r, w)
+func (f UnaryHandlerFunc) Handle(ctx context.Context, r *Request, b *Buffer) (*Response, *Buffer, error) {
+	return f(ctx, r, b)
 }
 
 // HandleStream handles an inbound streaming request.
