@@ -57,7 +57,7 @@ func TestMiddlewareLogging(t *testing.T) {
 	sreq := &transport.StreamRequest{Meta: req.ToRequestMeta()}
 	failed := errors.New("fail")
 	clientError := yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "Invalid input")
-	serverError := yarpcerrors.Newf(yarpcerrors.CodeInternal, "Internal ")
+	serverError := yarpcerrors.Newf(yarpcerrors.CodeInternal, "Internal server error")
 
 	baseFields := func() []zapcore.Field {
 		return []zapcore.Field{
