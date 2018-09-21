@@ -53,6 +53,7 @@ side closes the connection.
 ### Changed
 - HTTP inbounds gracefully shutdown with an optional timeout, defaulting to 5
   seconds.
+- Observability middleware: Log client side YARPC errors at debug level
 
 ## [1.32.4] - 2018-08-07
 ### Fixed
