@@ -39,7 +39,6 @@ type fakeHandler struct {
 func (h fakeHandler) Handle(_ context.Context, _ *transport.Request, rw transport.ResponseWriter) error {
 	if h.applicationErr {
 		rw.SetApplicationError()
-		return nil
 	}
 	return h.err
 }

@@ -56,6 +56,8 @@ func TestMiddlewareLogging(t *testing.T) {
 	}
 	sreq := &transport.StreamRequest{Meta: req.ToRequestMeta()}
 	failed := errors.New("fail")
+	clientError := yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "Invalid input")
+	serverError := yarpcerrors.Newf(yarpcerrors.CodeInternal, "Internal ")
 
 	baseFields := func() []zapcore.Field {
 		return []zapcore.Field{
@@ -89,7 +91,6 @@ func TestMiddlewareLogging(t *testing.T) {
 				zap.Duration("latency", 0),
 				zap.Bool("successful", true),
 				zap.Skip(),
-				zap.Skip(),
 			},
 		},
 		{
@@ -116,6 +117,34 @@ func TestMiddlewareLogging(t *testing.T) {
 				zap.Bool("successful", false),
 				zap.Skip(),
 				zap.String("error", "application_error"),
+			},
+		},
+		{
+			desc:            "no downstream error but with client side application error",
+			err:             clientError,
+			applicationErr:  true,
+			wantErrLevel:    zapcore.DebugLevel,
+			wantInboundMsg:  "Error handling inbound request.",
+			wantOutboundMsg: "Error making outbound call.",
+			wantFields: []zapcore.Field{
+				zap.Duration("latency", 0),
+				zap.Bool("successful", false),
+				zap.Skip(),
+				zap.Error(clientError),
+			},
+		},
+		{
+			desc:            "no downstream error but with server side application error",
+			err:             serverError,
+			applicationErr:  true,
+			wantErrLevel:    zapcore.ErrorLevel,
+			wantInboundMsg:  "Error handling inbound request.",
+			wantOutboundMsg: "Error making outbound call.",
+			wantFields: []zapcore.Field{
+				zap.Duration("latency", 0),
+				zap.Bool("successful", false),
+				zap.Skip(),
+				zap.Error(serverError),
 			},
 		},
 	}
