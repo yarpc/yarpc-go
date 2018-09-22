@@ -23,6 +23,7 @@ package yarpchttp
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -52,14 +53,15 @@ type handler struct {
 	logger              *zap.Logger
 }
 
-func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (h handler) ServeHTTP(w http.ResponseWriter, hRequest *http.Request) {
 	responseWriter := newResponseWriter(w)
-	service := popHeader(req.Header, ServiceHeader)
-	procedure := popHeader(req.Header, ProcedureHeader)
-	bothResponseError := popHeader(req.Header, AcceptsBothResponseErrorHeader) == AcceptTrue
+	service := popHeader(hRequest.Header, ServiceHeader)
+	procedure := popHeader(hRequest.Header, ProcedureHeader)
+	bothResponseError := popHeader(hRequest.Header, AcceptsBothResponseErrorHeader) == AcceptTrue
 	// add response header to echo accepted rpc-service
 	responseWriter.AddSystemHeader(ServiceHeader, service)
-	err := h.callHandler(responseWriter, req, service, procedure)
+
+	err := h.callHandler(responseWriter, hRequest, service, procedure)
 	status := yarpcerror.FromError(yarpcerror.WrapHandlerError(err, service, procedure))
 	if status == nil {
 		responseWriter.Close(http.StatusOK)
@@ -89,50 +91,55 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	responseWriter.Close(httpStatusCode)
 }
 
-func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, service string, procedure string) (retErr error) {
+func (h handler) callHandler(responseWriter *responseWriter, hRequest *http.Request, service string, procedure string) (retErr error) {
 	start := time.Now()
-	defer req.Body.Close()
-	if req.Method != http.MethodPost {
-		return yarpcerror.Newf(yarpcerror.CodeNotFound, "request method was %s but only %s is allowed", req.Method, http.MethodPost)
+	defer hRequest.Body.Close()
+	if hRequest.Method != http.MethodPost {
+		return yarpcerror.Newf(yarpcerror.CodeNotFound, "request method was %s but only %s is allowed", hRequest.Method, http.MethodPost)
 	}
-	treq := &yarpc.Request{
-		Caller:          popHeader(req.Header, CallerHeader),
+	yRequest := &yarpc.Request{
+		Caller:          popHeader(hRequest.Header, CallerHeader),
 		Service:         service,
 		Procedure:       procedure,
-		Encoding:        yarpc.Encoding(popHeader(req.Header, EncodingHeader)),
+		Encoding:        yarpc.Encoding(popHeader(hRequest.Header, EncodingHeader)),
 		Transport:       transportName,
-		ShardKey:        popHeader(req.Header, ShardKeyHeader),
-		RoutingKey:      popHeader(req.Header, RoutingKeyHeader),
-		RoutingDelegate: popHeader(req.Header, RoutingDelegateHeader),
-		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, yarpc.Headers{}),
-		Body:            req.Body,
+		ShardKey:        popHeader(hRequest.Header, ShardKeyHeader),
+		RoutingKey:      popHeader(hRequest.Header, RoutingKeyHeader),
+		RoutingDelegate: popHeader(hRequest.Header, RoutingDelegateHeader),
+		Headers:         applicationHeaders.FromHTTPHeaders(hRequest.Header, yarpc.Headers{}),
 	}
+
+	body, err := ioutil.ReadAll(hRequest.Body)
+	if err != nil {
+		return err
+	}
+	requestBuf := yarpc.NewBufferBytes(body)
+
 	for header := range h.grabHeaders {
-		if value := req.Header.Get(header); value != "" {
-			treq.Headers = treq.Headers.With(header, value)
+		if value := hRequest.Header.Get(header); value != "" {
+			yRequest.Headers = yRequest.Headers.With(header, value)
 		}
 	}
-	if err := yarpc.ValidateRequest(treq); err != nil {
+	if err := yarpc.ValidateRequest(yRequest); err != nil {
 		return err
 	}
 	defer func() {
 		if retErr == nil {
-			if contentType := getContentType(treq.Encoding); contentType != "" {
+			if contentType := getContentType(yRequest.Encoding); contentType != "" {
 				responseWriter.AddSystemHeader("Content-Type", contentType)
 			}
 		}
 	}()
 
-	ctx := req.Context()
-	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
+	ctx := hRequest.Context()
+	ctx, cancel, parseTTLErr := parseTTL(ctx, yRequest, popHeader(hRequest.Header, TTLMSHeader))
 	// parseTTLErr != nil is a problem only if the request is unary.
 	defer cancel()
-	ctx, span := h.createSpan(ctx, req, treq, start)
+	ctx, span := h.createSpan(ctx, hRequest, yRequest, start)
 
-	spec, err := h.router.Choose(ctx, treq)
+	spec, err := h.router.Choose(ctx, yRequest)
 	if err != nil {
-		updateSpanWithErr(span, err)
-		return err
+		return updateSpanWithErr(span, err)
 	}
 
 	if parseTTLErr != nil {
@@ -144,55 +151,54 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	switch spec.Type() {
 	case yarpc.Unary:
 		defer span.Finish()
-
-		err = yarpctransport.InvokeUnaryHandler(yarpctransport.UnaryInvokeRequest{
-			Context:        ctx,
-			StartTime:      start,
-			Request:        treq,
-			Handler:        spec.Unary(),
-			ResponseWriter: responseWriter,
-			Logger:         h.logger,
+		_, _, err = yarpctransport.InvokeUnaryHandler(yarpctransport.UnaryInvokeRequest{
+			Context:   ctx,
+			StartTime: start,
+			Request:   yRequest,
+			Buffer:    requestBuf,
+			Handler:   spec.Unary(),
+			Logger:    h.logger,
 		})
 
 	default:
 		err = yarpcerror.Newf(yarpcerror.CodeUnimplemented, "transport http does not handle %s handlers", spec.Type().String())
 	}
 
-	updateSpanWithErr(span, err)
-	return err
+	return updateSpanWithErr(span, err)
 }
 
-func updateSpanWithErr(span opentracing.Span, err error) {
+func updateSpanWithErr(span opentracing.Span, err error) error {
 	if err != nil {
 		span.SetTag("error", true)
 		span.LogFields(opentracinglog.String("event", err.Error()))
 	}
+	return err
 }
 
-func (h handler) createSpan(ctx context.Context, req *http.Request, treq *yarpc.Request, start time.Time) (context.Context, opentracing.Span) {
+func (h handler) createSpan(ctx context.Context, hRequest *http.Request, yRequest *yarpc.Request, start time.Time) (context.Context, opentracing.Span) {
 	// Extract opentracing etc baggage from headers
 	// Annotate the inbound context with a trace span
 	tracer := h.tracer
-	carrier := opentracing.HTTPHeadersCarrier(req.Header)
+	carrier := opentracing.HTTPHeadersCarrier(hRequest.Header)
 	parentSpanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, carrier)
 	// parentSpanCtx may be nil, ext.RPCServerOption handles a nil parent
 	// gracefully.
 	tags := opentracing.Tags{
-		"rpc.caller":    treq.Caller,
-		"rpc.service":   treq.Service,
-		"rpc.encoding":  treq.Encoding,
+		"rpc.caller":    yRequest.Caller,
+		"rpc.service":   yRequest.Service,
+		"rpc.encoding":  yRequest.Encoding,
 		"rpc.transport": "http",
 	}
 	for k, v := range yarpctracing.Tags {
 		tags[k] = v
 	}
 	span := tracer.StartSpan(
-		treq.Procedure,
+		yRequest.Procedure,
 		opentracing.StartTime(start),
 		ext.RPCServerOption(parentSpanCtx), // implies ChildOf
 		tags,
 	)
-	ext.PeerService.Set(span, treq.Caller)
+	ext.PeerService.Set(span, yRequest.Caller)
 	ctx = opentracing.ContextWithSpan(ctx, span)
 	return ctx, span
 }
