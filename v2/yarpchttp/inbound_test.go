@@ -21,7 +21,6 @@
 package yarpchttp
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -136,13 +135,12 @@ func TestInboundMux(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err = outbound.Call(ctx, &yarpc.Request{
+	_, _, err = outbound.Call(ctx, &yarpc.Request{
 		Caller:    "foo",
 		Service:   "bar",
 		Procedure: "hello",
 		Encoding:  yarpc.Encoding("raw"),
-		Body:      bytes.NewReader([]byte("derp")),
-	})
+	}, yarpc.NewBufferString("derp"))
 
 	if assert.Error(t, err, "RPC call to / should have failed") {
 		assert.Equal(t, yarpcerror.CodeNotFound, yarpcerror.FromError(err).Code())
@@ -160,23 +158,21 @@ func TestInboundMux(t *testing.T) {
 		WithProcedure("hello"),
 	).Return(spec, nil)
 
-	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(&yarpc.Response{}, &yarpc.Buffer{}, nil)
 
-	res, err := outbound.Call(ctx, &yarpc.Request{
+	response, responseBuf, err := outbound.Call(ctx, &yarpc.Request{
 		Caller:    "foo",
 		Service:   "bar",
 		Procedure: "hello",
 		Encoding:  yarpc.Encoding("raw"),
-		Body:      bytes.NewReader([]byte("derp")),
-	})
+	}, yarpc.NewBufferString("derp"))
 
-	if assert.NoError(t, err, "expected rpc request to succeed") {
-		defer res.Body.Close()
-		s, err := ioutil.ReadAll(res.Body)
-		if assert.NoError(t, err) {
-			assert.Empty(t, s)
-		}
-	}
+	require.NoError(t, err, "expected rpc request to succeed")
+	assert.NotNil(t, response)
+
+	s, err := ioutil.ReadAll(responseBuf)
+	require.NoError(t, err)
+	assert.Empty(t, s)
 }
 
 func TestMuxWithInterceptor(t *testing.T) {

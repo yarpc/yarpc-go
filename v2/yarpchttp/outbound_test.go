@@ -21,7 +21,6 @@
 package yarpchttp
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"io/ioutil"
@@ -80,21 +79,19 @@ func TestCallSuccess(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	res, err := outbound.Call(ctx, &yarpc.Request{
+	response, responseBuf, err := outbound.Call(ctx, &yarpc.Request{
 		Caller:    "caller",
 		Service:   "service",
 		Encoding:  yarpc.Encoding("raw"),
 		Procedure: "hello",
-		Body:      bytes.NewReader([]byte("world")),
-	})
+	}, yarpc.NewBufferString("world"))
 	require.NoError(t, err)
-	defer res.Body.Close()
 
-	foo, ok := res.Headers.Get("foo")
+	foo, ok := response.Headers.Get("foo")
 	assert.True(t, ok, "value for foo expected")
 	assert.Equal(t, "bar", foo, "foo value mismatch")
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := ioutil.ReadAll(responseBuf)
 	if assert.NoError(t, err) {
 		assert.Equal(t, []byte("great success"), body)
 	}
@@ -111,7 +108,7 @@ func TestAddReservedHeader(t *testing.T) {
 		dialer.Start(ctx)
 		defer dialer.Stop(ctx)
 
-		res, err := (&Outbound{
+		response, responseBuf, err := (&Outbound{
 			Dialer: dialer,
 			URL:    &url.URL{Host: "localhost:8080"},
 			Headers: http.Header{
@@ -119,8 +116,9 @@ func TestAddReservedHeader(t *testing.T) {
 				"Rpc-Not-On-My-Watch": []string{},
 				"rpc-i-dont-think-so": []string{},
 			},
-		}).Call(ctx, &yarpc.Request{})
-		require.Nil(t, res)
+		}).Call(ctx, &yarpc.Request{}, &yarpc.Buffer{})
+		require.Nil(t, response)
+		require.Nil(t, responseBuf)
 		require.NoError(t, err)
 	})
 }
@@ -190,17 +188,17 @@ func TestOutboundHeaders(t *testing.T) {
 			outbound.Dialer = dialer
 			outbound.URL = parseURL(server.URL)
 
-			res, err := outbound.Call(ctx, &yarpc.Request{
+			response, responseBuf, err := outbound.Call(ctx, &yarpc.Request{
 				Caller:    "caller",
 				Service:   "service",
 				Encoding:  yarpc.Encoding("raw"),
 				Headers:   tt.headers,
 				Procedure: "hello",
-				Body:      bytes.NewReader([]byte("world")),
-			})
+			}, yarpc.NewBufferString("world"))
 
-			require.NoError(t, err, "%v: call failed", tt.desc)
-			require.NoError(t, res.Body.Close(), "%v: failed to close response body")
+			assert.NoError(t, err, "%v: call failed", tt.desc)
+			assert.NotNil(t, response)
+			assert.NotNil(t, responseBuf)
 		})
 	}
 }
@@ -235,37 +233,31 @@ func TestOutboundApplicationError(t *testing.T) {
 	}()
 
 	for _, tt := range tests {
-		server := httptest.NewServer(http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Add("Rpc-Status", tt.status)
-				defer r.Body.Close()
-			},
-		))
-		defer server.Close()
+		t.Run(tt.desc, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Add("Rpc-Status", tt.status)
+					defer r.Body.Close()
+				},
+			))
+			defer server.Close()
 
-		outbound := &Outbound{Dialer: dialer, URL: parseURL(server.URL)}
+			outbound := &Outbound{Dialer: dialer, URL: parseURL(server.URL)}
 
-		ctx := context.Background()
-		ctx, cancel := context.WithTimeout(ctx, 100*testtime.Millisecond)
-		defer cancel()
+			ctx := context.Background()
+			ctx, cancel := context.WithTimeout(ctx, 100*testtime.Millisecond)
+			defer cancel()
 
-		res, err := outbound.Call(ctx, &yarpc.Request{
-			Caller:    "caller",
-			Service:   "service",
-			Encoding:  yarpc.Encoding("raw"),
-			Procedure: "hello",
-			Body:      bytes.NewReader([]byte("world")),
+			response, _, err := outbound.Call(ctx, &yarpc.Request{
+				Caller:    "caller",
+				Service:   "service",
+				Encoding:  yarpc.Encoding("raw"),
+				Procedure: "hello",
+			}, yarpc.NewBufferString("world"))
+
+			assert.Equal(t, response.ApplicationError, tt.appError, "%v: application status", tt.desc)
+			assert.NoError(t, err, "%v: call failed", tt.desc)
 		})
-
-		assert.Equal(t, res.ApplicationError, tt.appError, "%v: application status", tt.desc)
-
-		if !assert.NoError(t, err, "%v: call failed", tt.desc) {
-			continue
-		}
-
-		if !assert.NoError(t, res.Body.Close(), "%v: failed to close response body") {
-			continue
-		}
 	}
 }
 
@@ -300,13 +292,12 @@ func TestCallFailures(t *testing.T) {
 
 			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 			defer cancel()
-			_, err := outbound.Call(ctx, &yarpc.Request{
+			_, _, err := outbound.Call(ctx, &yarpc.Request{
 				Caller:    "caller",
 				Service:   "service",
 				Encoding:  yarpc.Encoding("raw"),
 				Procedure: "wat",
-				Body:      bytes.NewReader([]byte("huh")),
-			})
+			}, yarpc.NewBufferString("huh"))
 			assert.Error(t, err, "expected failure")
 			for _, msg := range tt.messages {
 				assert.Contains(t, err.Error(), msg)
@@ -400,7 +391,7 @@ func TestNoRequest(t *testing.T) {
 		URL:    &url.URL{Host: "localhost:0"},
 	}
 
-	_, err := outbound.Call(context.Background(), nil)
+	_, _, err := outbound.Call(context.Background(), nil, &yarpc.Buffer{})
 	assert.Equal(t, yarpcerror.InvalidArgumentErrorf("request for http unary outbound was nil"), err)
 }
 
@@ -415,7 +406,7 @@ func TestOutboundNoDeadline(t *testing.T) {
 		URL:    &url.URL{Host: "foo-host:8080"},
 	}
 
-	_, err := outbound.call(context.Background(), &yarpc.Request{})
+	_, _, err := outbound.call(context.Background(), &yarpc.Request{}, &yarpc.Buffer{})
 	assert.Equal(t, yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "missing context deadline"), err)
 }
 
@@ -442,9 +433,7 @@ func TestServiceMatchSuccess(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err := outbound.Call(ctx, &yarpc.Request{
-		Service: "Service",
-	})
+	_, _, err := outbound.Call(ctx, &yarpc.Request{Service: "Service"}, &yarpc.Buffer{})
 	require.NoError(t, err)
 }
 
@@ -471,9 +460,7 @@ func TestServiceMatchFailed(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err := outbound.Call(ctx, &yarpc.Request{
-		Service: "Service",
-	})
+	_, _, err := outbound.Call(ctx, &yarpc.Request{Service: "Service"}, &yarpc.Buffer{})
 	assert.Error(t, err, "expected failure for service name dismatch")
 }
 
@@ -500,9 +487,7 @@ func TestServiceMatchNoHeader(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err := outbound.Call(ctx, &yarpc.Request{
-		Service: "Service",
-	})
+	_, _, err := outbound.Call(ctx, &yarpc.Request{Service: "Service"}, &yarpc.Buffer{})
 	require.NoError(t, err)
 }
 

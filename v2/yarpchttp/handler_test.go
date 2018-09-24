@@ -68,36 +68,31 @@ func TestHandlerSuccess(t *testing.T) {
 	).Return(spec, nil)
 
 	rpcHandler.EXPECT().Handle(
-		yarpctest.NewContextMatcher(t,
-			yarpctest.ContextTTL(time.Second),
-		),
-		yarpctest.NewRequestMatcher(
-			t, &yarpc.Request{
-				Caller:          "moe",
-				Service:         "curly",
-				Transport:       "http",
-				Encoding:        yarpc.Encoding("raw"),
-				Procedure:       "nyuck",
-				ShardKey:        "shard",
-				RoutingKey:      "routekey",
-				RoutingDelegate: "routedelegate",
-				Body:            bytes.NewReader([]byte("Nyuck Nyuck")),
-			},
-		),
-		gomock.Any(),
-	).Return(nil)
+		yarpctest.NewContextMatcher(t, yarpctest.ContextTTL(time.Second)),
+		&yarpc.Request{
+			Caller:          "moe",
+			Service:         "curly",
+			Transport:       "http",
+			Encoding:        yarpc.Encoding("raw"),
+			Procedure:       "nyuck",
+			ShardKey:        "shard",
+			RoutingKey:      "routekey",
+			RoutingDelegate: "routedelegate",
+		},
+		yarpc.NewBufferString("Nyuck Nyuck"),
+	).Return(&yarpc.Response{}, &yarpc.Buffer{}, nil)
 
 	httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}}
-	req := &http.Request{
+	hRequest := &http.Request{
 		Method: "POST",
 		Header: headers,
 		Body:   ioutil.NopCloser(bytes.NewReader([]byte("Nyuck Nyuck"))),
 	}
 	rw := httptest.NewRecorder()
-	httpHandler.ServeHTTP(rw, req)
-	code := rw.Code
-	assert.Equal(t, code, 200, "expected 200 code")
-	assert.Equal(t, rw.Body.String(), "")
+	httpHandler.ServeHTTP(rw, hRequest)
+
+	assert.Equal(t, rw.Code, 200, "expected 200 code")
+	assert.Empty(t, rw.Body.String())
 }
 
 func TestHandlerHeaders(t *testing.T) {
@@ -122,7 +117,7 @@ func TestHandlerHeaders(t *testing.T) {
 			grabHeaders: map[string]struct{}{"x-baz": {}},
 			wantTTL:     time.Second,
 			wantHeaders: map[string]string{
-				"foo":   "bar",
+				"Foo":   "bar",
 				"x-baz": "bat",
 			},
 		},
@@ -154,22 +149,22 @@ func TestHandlerHeaders(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		router := yarpctest.NewMockRouter(mockCtrl)
-		rpcHandler := yarpctest.NewMockUnaryHandler(mockCtrl)
-		spec := yarpc.NewUnaryHandlerSpec(rpcHandler)
+		t.Run(tt.giveEncoding, func(*testing.T) {
+			router := yarpctest.NewMockRouter(mockCtrl)
+			rpcHandler := yarpctest.NewMockUnaryHandler(mockCtrl)
+			spec := yarpc.NewUnaryHandlerSpec(rpcHandler)
 
-		router.EXPECT().Choose(gomock.Any(), internalyarpctest.NewMatcher().
-			WithService("service").
-			WithProcedure("hello"),
-		).Return(spec, nil)
+			router.EXPECT().Choose(gomock.Any(), internalyarpctest.NewMatcher().
+				WithService("service").
+				WithProcedure("hello"),
+			).Return(spec, nil)
 
-		httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}, grabHeaders: tt.grabHeaders}
+			httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}, grabHeaders: tt.grabHeaders}
 
-		rpcHandler.EXPECT().Handle(
-			yarpctest.NewContextMatcher(t,
-				yarpctest.ContextTTL(tt.wantTTL),
-			),
-			yarpctest.NewRequestMatcher(t,
+			rpcHandler.EXPECT().Handle(
+				yarpctest.NewContextMatcher(t,
+					yarpctest.ContextTTL(tt.wantTTL),
+				),
 				&yarpc.Request{
 					Caller:    "caller",
 					Service:   "service",
@@ -177,31 +172,31 @@ func TestHandlerHeaders(t *testing.T) {
 					Encoding:  yarpc.Encoding(tt.giveEncoding),
 					Procedure: "hello",
 					Headers:   yarpc.HeadersFromMap(tt.wantHeaders),
-					Body:      bytes.NewReader([]byte("world")),
-				}),
-			gomock.Any(),
-		).Return(nil)
+				},
+				yarpc.NewBufferString("world"),
+			).Return(&yarpc.Response{}, &yarpc.Buffer{}, nil)
 
-		headers := http.Header{}
-		for k, vs := range tt.giveHeaders {
-			for _, v := range vs {
-				headers.Add(k, v)
+			headers := http.Header{}
+			for k, vs := range tt.giveHeaders {
+				for _, v := range vs {
+					headers.Add(k, v)
+				}
 			}
-		}
-		headers.Set(CallerHeader, "caller")
-		headers.Set(ServiceHeader, "service")
-		headers.Set(EncodingHeader, tt.giveEncoding)
-		headers.Set(ProcedureHeader, "hello")
+			headers.Set(CallerHeader, "caller")
+			headers.Set(ServiceHeader, "service")
+			headers.Set(EncodingHeader, tt.giveEncoding)
+			headers.Set(ProcedureHeader, "hello")
 
-		req := &http.Request{
-			Method: "POST",
-			Header: headers,
-			Body:   ioutil.NopCloser(bytes.NewReader([]byte("world"))),
-		}
-		rw := httptest.NewRecorder()
-		httpHandler.ServeHTTP(rw, req)
-		assert.Equal(t, 200, rw.Code, "expected 200 status code")
-		assert.Equal(t, getContentType(yarpc.Encoding(tt.giveEncoding)), rw.HeaderMap.Get("Content-Type"))
+			req := &http.Request{
+				Method: "POST",
+				Header: headers,
+				Body:   ioutil.NopCloser(bytes.NewReader([]byte("world"))),
+			}
+			rw := httptest.NewRecorder()
+			httpHandler.ServeHTTP(rw, req)
+			assert.Equal(t, 200, rw.Code, "expected 200 status code")
+			assert.Equal(t, getContentType(yarpc.Encoding(tt.giveEncoding)), rw.HeaderMap.Get("Content-Type"))
+		})
 	}
 }
 
@@ -341,18 +336,15 @@ func TestHandlerInternalFailure(t *testing.T) {
 	rpcHandler := yarpctest.NewMockUnaryHandler(mockCtrl)
 	rpcHandler.EXPECT().Handle(
 		yarpctest.NewContextMatcher(t, yarpctest.ContextTTL(time.Second)),
-		yarpctest.NewRequestMatcher(
-			t, &yarpc.Request{
-				Caller:    "somecaller",
-				Service:   "fake",
-				Transport: "http",
-				Encoding:  yarpc.Encoding("raw"),
-				Procedure: "hello",
-				Body:      bytes.NewReader([]byte{}),
-			},
-		),
+		&yarpc.Request{
+			Caller:    "somecaller",
+			Service:   "fake",
+			Transport: "http",
+			Encoding:  yarpc.Encoding("raw"),
+			Procedure: "hello",
+		},
 		gomock.Any(),
-	).Return(fmt.Errorf("great sadness"))
+	).Return(nil, nil, fmt.Errorf("great sadness"))
 
 	router := yarpctest.NewMockRouter(mockCtrl)
 	spec := yarpc.NewUnaryHandlerSpec(rpcHandler)
@@ -363,19 +355,18 @@ func TestHandlerInternalFailure(t *testing.T) {
 	).Return(spec, nil)
 
 	httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}}
-	httpResponse := httptest.NewRecorder()
-	httpHandler.ServeHTTP(httpResponse, &request)
+	responseRecorder := httptest.NewRecorder()
+	httpHandler.ServeHTTP(responseRecorder, &request)
 
-	code := httpResponse.Code
-	assert.True(t, code >= 500 && code < 600, "expected 500 level response")
+	code := responseRecorder.Code
+	assert.True(t, code >= 500 && code < 600, "expected 500 level response, got '%d'", code)
 	assert.Equal(t,
-		`error for service "fake" and procedure "hello": great sadness`+"\n",
-		httpResponse.Body.String())
+		`error for service "fake" and procedure "hello": great sadness`, responseRecorder.Body.String())
 }
 
 type panickedHandler struct{}
 
-func (th panickedHandler) Handle(context.Context, *yarpc.Request, yarpc.ResponseWriter) error {
+func (th panickedHandler) Handle(context.Context, *yarpc.Request, *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
 	panic("oops I panicked!")
 }
 
@@ -406,12 +397,11 @@ func TestHandlerPanic(t *testing.T) {
 		},
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	_, err := outbound.Call(ctx, &yarpc.Request{
+	_, _, err := outbound.Call(ctx, &yarpc.Request{
 		Caller:    "yarpc-test",
 		Service:   "yarpc-test",
 		Procedure: "panic",
-		Body:      &bytes.Buffer{},
-	})
+	}, &yarpc.Buffer{})
 	defer cancel()
 
 	assert.Equal(t, yarpcerror.CodeUnknown, yarpcerror.FromError(err).Code())
@@ -434,17 +424,17 @@ func headerCopyWithout(headers http.Header, names ...string) http.Header {
 
 func TestResponseWriter(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	writer := newResponseWriter(recorder)
+	rw := newResponseWriter(recorder)
 
-	headers := yarpc.HeadersFromMap(map[string]string{
-		"foo":       "bar",
-		"shard-key": "123",
-	})
-	writer.AddHeaders(headers)
+	response := &yarpc.Response{
+		Headers: yarpc.HeadersFromMap(map[string]string{
+			"foo":       "bar",
+			"shard-key": "123",
+		}),
+	}
 
-	_, err := writer.Write([]byte("hello"))
-	require.NoError(t, err)
-	writer.Close(http.StatusOK)
+	rw.SetResponse(response, yarpc.NewBufferString("hello"))
+	rw.Close(http.StatusOK)
 
 	assert.Equal(t, "bar", recorder.Header().Get("rpc-header-foo"))
 	assert.Equal(t, "123", recorder.Header().Get("rpc-header-shard-key"))
