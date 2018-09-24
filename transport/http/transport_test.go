@@ -271,7 +271,7 @@ func TestTransport(t *testing.T) {
 func TestTransportClient(t *testing.T) {
 	transport := NewTransport()
 
-	assert.NotNil(t, transport.client)
+	assert.NotNil(t, transport.transport)
 }
 
 func TestTransportClientOpaqueOptions(t *testing.T) {
@@ -287,7 +287,7 @@ func TestTransportClientOpaqueOptions(t *testing.T) {
 		ResponseHeaderTimeout(1*time.Second),
 	)
 
-	assert.NotNil(t, transport.client)
+	assert.NotNil(t, transport.transport)
 }
 
 type testIdentifier struct {

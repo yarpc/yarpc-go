@@ -49,7 +49,7 @@ type transportOptions struct {
 	innocenceWindow       time.Duration
 	jitter                func(int64) int64
 	tracer                opentracing.Tracer
-	buildClient           func(*transportOptions) *http.Client
+	buildTransport        func(*transportOptions) *http.Transport
 	logger                *zap.Logger
 }
 
@@ -58,7 +58,7 @@ var defaultTransportOptions = transportOptions{
 	maxIdleConnsPerHost: 2,
 	connTimeout:         defaultConnTimeout,
 	connBackoffStrategy: backoff.DefaultExponential,
-	buildClient:         buildHTTPClient,
+	buildTransport:      buildHTTPTransport,
 	innocenceWindow:     defaultInnocenceWindow,
 	jitter:              rand.Int63n,
 }
@@ -200,11 +200,11 @@ func Logger(logger *zap.Logger) TransportOption {
 	}
 }
 
-// Hidden option to override the buildHTTPClient function. This is used only
+// Hidden option to override the buildTransport function. This is used only
 // for testing.
-func buildClient(f func(*transportOptions) *http.Client) TransportOption {
+func buildTransport(f func(*transportOptions) *http.Transport) TransportOption {
 	return func(options *transportOptions) {
-		options.buildClient = f
+		options.buildTransport = f
 	}
 }
 
@@ -224,7 +224,7 @@ func (o *transportOptions) newTransport() *Transport {
 	}
 	return &Transport{
 		once:                lifecycle.NewOnce(),
-		client:              o.buildClient(o),
+		transport:           o.buildTransport(o),
 		connTimeout:         o.connTimeout,
 		connBackoffStrategy: o.connBackoffStrategy,
 		innocenceWindow:     o.innocenceWindow,
@@ -235,36 +235,34 @@ func (o *transportOptions) newTransport() *Transport {
 	}
 }
 
-func buildHTTPClient(options *transportOptions) *http.Client {
-	return &http.Client{
-		Transport: &http.Transport{
-			// options lifted from https://golang.org/src/net/http/transport.go
-			Proxy: http.ProxyFromEnvironment,
-			Dial: (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: options.keepAlive,
-			}).Dial,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-			MaxIdleConns:          options.maxIdleConns,
-			MaxIdleConnsPerHost:   options.maxIdleConnsPerHost,
-			IdleConnTimeout:       options.idleConnTimeout,
-			DisableKeepAlives:     options.disableKeepAlives,
-			DisableCompression:    options.disableCompression,
-			ResponseHeaderTimeout: options.responseHeaderTimeout,
-		},
+func buildHTTPTransport(options *transportOptions) *http.Transport {
+	return &http.Transport{
+		// options lifted from https://golang.org/src/net/http/transport.go
+		Proxy: http.ProxyFromEnvironment,
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: options.keepAlive,
+		}).Dial,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		MaxIdleConns:          options.maxIdleConns,
+		MaxIdleConnsPerHost:   options.maxIdleConnsPerHost,
+		IdleConnTimeout:       options.idleConnTimeout,
+		DisableKeepAlives:     options.disableKeepAlives,
+		DisableCompression:    options.disableCompression,
+		ResponseHeaderTimeout: options.responseHeaderTimeout,
 	}
 }
 
-// Transport keeps track of HTTP peers and the associated HTTP client. It
-// allows using a single HTTP client to make requests to multiple YARPC
+// Transport keeps track of HTTP peers and the associated HTTP transport. It
+// allows using transport's RoundTripper to roundTrip requests to multiple YARPC
 // services and pooling the resources needed therein.
 type Transport struct {
 	lock sync.Mutex
 	once *lifecycle.Once
 
-	client *http.Client
-	peers  map[string]*httpPeer
+	transport *http.Transport
+	peers     map[string]*httpPeer
 
 	connTimeout         time.Duration
 	connBackoffStrategy backoffapi.Strategy
