@@ -23,6 +23,7 @@ package yarpchttp
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -31,7 +32,6 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	opentracinglog "github.com/opentracing/opentracing-go/log"
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/internal/internalyarpcerror"
 	"go.uber.org/yarpc/v2/yarpcerror"
@@ -110,14 +110,10 @@ func (o *Outbound) call(ctx context.Context, yRequest *yarpc.Request, buf *yarpc
 	}
 	defer span.Finish()
 
-	hRequest = o.withCoreHeaders(hRequest, yRequest, ttl)
-	hRequest = hRequest.WithContext(ctx)
-
+	hRequest = o.withCoreHeaders(hRequest, yRequest, ttl).WithContext(ctx)
 	hResponse, err := o.roundTrip(hRequest, yRequest, start)
 	if err != nil {
-		span.SetTag("error", true)
-		span.LogFields(opentracinglog.String("event", err.Error()))
-		return nil, nil, err
+		return nil, nil, yarpctracing.UpdateSpanWithErr(span, err)
 	}
 
 	span.SetTag("http.status_code", hResponse.StatusCode)
@@ -133,23 +129,23 @@ func (o *Outbound) call(ctx context.Context, yRequest *yarpc.Request, buf *yarpc
 		Headers:          applicationHeaders.FromHTTPHeaders(hResponse.Header, yarpc.NewHeaders()),
 		ApplicationError: hResponse.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus,
 	}
-	body, err := ioutil.ReadAll(hResponse.Body)
+
+	responseBuf, err := readCloserToBuffer(hResponse.Body)
 	if err != nil {
 		return nil, nil, err
 	}
-	responseBuf := yarpc.NewBufferBytes(body)
 
 	bothResponseError := hResponse.Header.Get(BothResponseErrorHeader) == AcceptTrue
 	if bothResponseError && !o.legacyResponseError {
 		if hResponse.StatusCode >= 300 {
-			return yResponse, responseBuf, getYARPCErrorFromResponse(hResponse, true)
+			return yResponse, responseBuf, getYARPCErrorFromResponse(hResponse, responseBuf, true)
 		}
 		return yResponse, responseBuf, nil
 	}
 	if hResponse.StatusCode >= 200 && hResponse.StatusCode < 300 {
 		return yResponse, responseBuf, nil
 	}
-	return nil, nil, getYARPCErrorFromResponse(hResponse, false)
+	return nil, nil, getYARPCErrorFromResponse(hResponse, responseBuf, false)
 }
 
 func (o *Outbound) getPeerForRequest(ctx context.Context, yRequest *yarpc.Request) (*httpPeer, func(error), error) {
@@ -279,19 +275,29 @@ func (o *Outbound) withCoreHeaders(req *http.Request, yRequest *yarpc.Request, t
 	return req
 }
 
-func getYARPCErrorFromResponse(response *http.Response, bothResponseError bool) error {
+// readCloserToBuffer converts a readCloser to a yarpc.Buffer. This attempts to
+// close the given readCloser. This is useful for both inbound and outbound
+// requests.
+//
+// All returned erros are yarpcerror.CodeInternal.
+func readCloserToBuffer(readCloser io.ReadCloser) (*yarpc.Buffer, error) {
+	body, err := ioutil.ReadAll(readCloser)
+	if err != nil {
+		return nil, yarpcerror.Newf(yarpcerror.CodeInternal, err.Error())
+	}
+
+	if err := readCloser.Close(); err != nil {
+		return nil, yarpcerror.Newf(yarpcerror.CodeInternal, err.Error())
+	}
+	return yarpc.NewBufferBytes(body), nil
+}
+
+func getYARPCErrorFromResponse(response *http.Response, responseBuf *yarpc.Buffer, bothResponseError bool) error {
 	var contents string
 	if bothResponseError {
 		contents = response.Header.Get(ErrorMessageHeader)
 	} else {
-		contentsBytes, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			return yarpcerror.Newf(yarpcerror.CodeInternal, err.Error())
-		}
-		contents = string(contentsBytes)
-		if err := response.Body.Close(); err != nil {
-			return yarpcerror.Newf(yarpcerror.CodeInternal, err.Error())
-		}
+		contents = responseBuf.String()
 	}
 	// use the status code if we can't get a code from the headers
 	code := statusCodeToBestCode(response.StatusCode)

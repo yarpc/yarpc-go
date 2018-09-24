@@ -22,15 +22,11 @@ package yarpchttp
 
 import (
 	"context"
-	"fmt"
-	"io/ioutil"
 	"net/http"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	opentracinglog "github.com/opentracing/opentracing-go/log"
-	"go.uber.org/yarpc/internal/bufferpool"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpctracing"
@@ -59,31 +55,41 @@ func (h handler) ServeHTTP(w http.ResponseWriter, hRequest *http.Request) {
 	procedure := popHeader(hRequest.Header, ProcedureHeader)
 	bothResponseError := popHeader(hRequest.Header, AcceptsBothResponseErrorHeader) == AcceptTrue
 	// add response header to echo accepted rpc-service
-	responseWriter.AddSystemHeader(ServiceHeader, service)
+	responseWriter.WriteSystemHeader(ServiceHeader, service)
 
-	err := h.callHandler(responseWriter, hRequest, service, procedure)
-	status := yarpcerror.FromError(yarpcerror.WrapHandlerError(err, service, procedure))
-	if status == nil {
+	yResponse, yResponseBuf, err := h.callHandler(responseWriter, hRequest, service, procedure)
+	if err == nil {
+		responseWriter.SetResponse(yResponse, yResponseBuf)
 		responseWriter.Close(http.StatusOK)
 		return
 	}
+
+	status := yarpcerror.FromError(yarpcerror.WrapHandlerError(err, service, procedure))
+	responseWriter.SetApplicationError()
+
 	if statusCodeText, marshalErr := status.Code().MarshalText(); marshalErr != nil {
 		status = yarpcerror.Newf(yarpcerror.CodeInternal, "error %s had code %v which is unknown", status.Error(), status.Code())
-		responseWriter.AddSystemHeader(ErrorCodeHeader, "internal")
+		responseWriter.WriteSystemHeader(ErrorCodeHeader, "internal")
 	} else {
-		responseWriter.AddSystemHeader(ErrorCodeHeader, string(statusCodeText))
+		responseWriter.WriteSystemHeader(ErrorCodeHeader, string(statusCodeText))
 	}
 	if status.Name() != "" {
-		responseWriter.AddSystemHeader(ErrorNameHeader, status.Name())
+		responseWriter.WriteSystemHeader(ErrorNameHeader, status.Name())
 	}
+
 	if bothResponseError && !h.legacyResponseError {
-		responseWriter.AddSystemHeader(BothResponseErrorHeader, AcceptTrue)
-		responseWriter.AddSystemHeader(ErrorMessageHeader, status.Message())
+		// Write the error message as a header AND set the response body. This is
+		// intended for returning structured errors (eg via proto.Any) and still
+		// getting the server error string.
+		responseWriter.WriteSystemHeader(BothResponseErrorHeader, AcceptTrue)
+		responseWriter.WriteSystemHeader(ErrorMessageHeader, status.Message())
+		responseWriter.SetResponse(yResponse, yResponseBuf)
 	} else {
-		responseWriter.ResetBuffer()
-		_, _ = fmt.Fprintln(responseWriter, status.Message())
-		responseWriter.AddSystemHeader("Content-Type", "text/plain; charset=utf8")
+		// Set the error message as the response body (not in a header)
+		responseWriter.WriteSystemHeader("Content-Type", "text/plain; charset=utf8")
+		responseWriter.SetResponse(yResponse, yarpc.NewBufferString(status.Message()))
 	}
+
 	httpStatusCode, ok := _codeToStatusCode[status.Code()]
 	if !ok {
 		httpStatusCode = http.StatusInternalServerError
@@ -91,11 +97,15 @@ func (h handler) ServeHTTP(w http.ResponseWriter, hRequest *http.Request) {
 	responseWriter.Close(httpStatusCode)
 }
 
-func (h handler) callHandler(responseWriter *responseWriter, hRequest *http.Request, service string, procedure string) (retErr error) {
+func (h handler) callHandler(
+	responseWriter *responseWriter,
+	hRequest *http.Request,
+	service string,
+	procedure string,
+) (yResponse *yarpc.Response, yResponseBuf *yarpc.Buffer, err error) {
 	start := time.Now()
-	defer hRequest.Body.Close()
 	if hRequest.Method != http.MethodPost {
-		return yarpcerror.Newf(yarpcerror.CodeNotFound, "request method was %s but only %s is allowed", hRequest.Method, http.MethodPost)
+		return nil, nil, yarpcerror.Newf(yarpcerror.CodeNotFound, "request method was %s but only %s is allowed", hRequest.Method, http.MethodPost)
 	}
 	yRequest := &yarpc.Request{
 		Caller:          popHeader(hRequest.Header, CallerHeader),
@@ -109,27 +119,19 @@ func (h handler) callHandler(responseWriter *responseWriter, hRequest *http.Requ
 		Headers:         applicationHeaders.FromHTTPHeaders(hRequest.Header, yarpc.Headers{}),
 	}
 
-	body, err := ioutil.ReadAll(hRequest.Body)
+	yRequestBuf, err := readCloserToBuffer(hRequest.Body)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	requestBuf := yarpc.NewBufferBytes(body)
 
 	for header := range h.grabHeaders {
 		if value := hRequest.Header.Get(header); value != "" {
 			yRequest.Headers = yRequest.Headers.With(header, value)
 		}
 	}
-	if err := yarpc.ValidateRequest(yRequest); err != nil {
-		return err
+	if err = yarpc.ValidateRequest(yRequest); err != nil {
+		return nil, nil, err
 	}
-	defer func() {
-		if retErr == nil {
-			if contentType := getContentType(yRequest.Encoding); contentType != "" {
-				responseWriter.AddSystemHeader("Content-Type", contentType)
-			}
-		}
-	}()
 
 	ctx := hRequest.Context()
 	ctx, cancel, parseTTLErr := parseTTL(ctx, yRequest, popHeader(hRequest.Header, TTLMSHeader))
@@ -139,23 +141,23 @@ func (h handler) callHandler(responseWriter *responseWriter, hRequest *http.Requ
 
 	spec, err := h.router.Choose(ctx, yRequest)
 	if err != nil {
-		return updateSpanWithErr(span, err)
+		return nil, nil, yarpctracing.UpdateSpanWithErr(span, err)
 	}
 
 	if parseTTLErr != nil {
-		return parseTTLErr
+		return nil, nil, parseTTLErr
 	}
-	if err := yarpc.ValidateRequestContext(ctx); err != nil {
-		return err
+	if err = yarpc.ValidateRequestContext(ctx); err != nil {
+		return nil, nil, err
 	}
 	switch spec.Type() {
 	case yarpc.Unary:
 		defer span.Finish()
-		_, _, err = yarpctransport.InvokeUnaryHandler(yarpctransport.UnaryInvokeRequest{
+		yResponse, yResponseBuf, err = yarpctransport.InvokeUnaryHandler(yarpctransport.UnaryInvokeRequest{
 			Context:   ctx,
 			StartTime: start,
 			Request:   yRequest,
-			Buffer:    requestBuf,
+			Buffer:    yRequestBuf,
 			Handler:   spec.Unary(),
 			Logger:    h.logger,
 		})
@@ -164,15 +166,14 @@ func (h handler) callHandler(responseWriter *responseWriter, hRequest *http.Requ
 		err = yarpcerror.Newf(yarpcerror.CodeUnimplemented, "transport http does not handle %s handlers", spec.Type().String())
 	}
 
-	return updateSpanWithErr(span, err)
-}
-
-func updateSpanWithErr(span opentracing.Span, err error) error {
 	if err != nil {
-		span.SetTag("error", true)
-		span.LogFields(opentracinglog.String("event", err.Error()))
+		return yResponse, yResponseBuf, yarpctracing.UpdateSpanWithErr(span, err)
 	}
-	return err
+
+	if contentType := getContentType(yRequest.Encoding); contentType != "" {
+		responseWriter.WriteSystemHeader("Content-Type", contentType)
+	}
+	return yResponse, yResponseBuf, nil
 }
 
 func (h handler) createSpan(ctx context.Context, hRequest *http.Request, yRequest *yarpc.Request, start time.Time) (context.Context, opentracing.Span) {
@@ -205,8 +206,8 @@ func (h handler) createSpan(ctx context.Context, hRequest *http.Request, yReques
 
 // responseWriter adapts a http.ResponseWriter into a yarpc.ResponseWriter.
 type responseWriter struct {
-	w      http.ResponseWriter
-	buffer *bufferpool.Buffer
+	w   http.ResponseWriter
+	buf *yarpc.Buffer
 }
 
 func newResponseWriter(w http.ResponseWriter) *responseWriter {
@@ -214,37 +215,31 @@ func newResponseWriter(w http.ResponseWriter) *responseWriter {
 	return &responseWriter{w: w}
 }
 
-func (rw *responseWriter) Write(s []byte) (int, error) {
-	if rw.buffer == nil {
-		rw.buffer = bufferpool.Get()
-	}
-	return rw.buffer.Write(s)
+func (rw *responseWriter) WriteSystemHeader(key string, value string) {
+	rw.w.Header().Set(key, value)
 }
 
-func (rw *responseWriter) AddHeaders(h yarpc.Headers) {
-	applicationHeaders.ToHTTPHeaders(h, rw.w.Header())
+// SetResponse stores the response that will be written when calling `Close(..)`.
+func (rw *responseWriter) SetResponse(yResponse *yarpc.Response, yResponseBuf *yarpc.Buffer) {
+	if yResponse != nil {
+		applicationHeaders.ToHTTPHeaders(yResponse.Headers, rw.w.Header())
+	}
+	if yResponseBuf != nil {
+		rw.buf = yResponseBuf
+	}
 }
 
 func (rw *responseWriter) SetApplicationError() {
 	rw.w.Header().Set(ApplicationStatusHeader, ApplicationErrorStatus)
 }
 
-func (rw *responseWriter) AddSystemHeader(key string, value string) {
-	rw.w.Header().Set(key, value)
-}
-
-func (rw *responseWriter) ResetBuffer() {
-	if rw.buffer != nil {
-		rw.buffer.Reset()
-	}
-}
-
 func (rw *responseWriter) Close(httpStatusCode int) {
+	// We MUST write the HTTP status code prior to writing the response body,
+	// since writing to the response body is an implicit 200.
 	rw.w.WriteHeader(httpStatusCode)
-	if rw.buffer != nil {
-		// TODO: what to do with error?
-		_, _ = rw.buffer.WriteTo(rw.w)
-		bufferpool.Put(rw.buffer)
+	if rw.buf != nil {
+		// TODO: log this error?
+		_, _ = rw.buf.WriteTo(rw.w)
 	}
 }
 

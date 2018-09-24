@@ -24,6 +24,8 @@ import "bytes"
 
 // Buffer is used for requests and responses.
 type Buffer struct {
+	// TODO: incorporate buffer pooling (internal/bufferpool.Buffer)
+
 	bytes.Buffer
 }
 
