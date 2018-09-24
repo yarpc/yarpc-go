@@ -26,6 +26,8 @@ import (
 )
 
 // ProceduresParams contains the parameters for constructing Procedures.
+// This is used to construct a slice of yarpc.Procedures from the context
+// of a protoc plugin, i.e. protoc-gen-yarpc-go.
 type ProceduresParams struct {
 	Service string
 	Unary   []UnaryProceduresParams
@@ -45,6 +47,8 @@ type StreamProceduresParams struct {
 }
 
 // Procedures builds a slice of yarpc.Procedures.
+// This is used to construct a slice of yarpc.Procedures from the context
+// of a protoc plugin, i.e. protoc-gen-yarpc-go.
 func Procedures(params ProceduresParams) []yarpc.Procedure {
 	procedures := make([]yarpc.Procedure, 0, 2*(len(params.Unary)+len(params.Stream)))
 	for _, u := range params.Unary {

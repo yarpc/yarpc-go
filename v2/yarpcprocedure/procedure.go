@@ -19,6 +19,11 @@
 // THE SOFTWARE.
 
 // Package yarpcprocedure contains utilities for handling procedure name mappings.
+//
+// gRPC and Thrift, in particular, decompose all procedure names into a "service
+// interface" component and a "method name" component. YARPC conventionally delimits
+// these components with "::", such that an example procedure is represented as
+// "FooService::FooMethod".
 package yarpcprocedure
 
 import (
