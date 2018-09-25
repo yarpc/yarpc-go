@@ -59,7 +59,7 @@ func unmarshal(encoding yarpc.Encoding, reader io.Reader, message proto.Message)
 	case yarpcjson.Encoding:
 		return _jsonUnmarshaler.Unmarshal(bytes.NewReader(body), message)
 	default:
-		return yarpcerror.Newf(yarpcerror.CodeInternal, "encoding.Expect should have handled encoding %q but did not", encoding)
+		return yarpcerror.Newf(yarpcerror.CodeInternal, "failed to unmarshal unexpected encoding %q", encoding)
 	}
 }
 
@@ -70,7 +70,7 @@ func marshal(encoding yarpc.Encoding, message proto.Message) ([]byte, func(), er
 	case yarpcjson.Encoding:
 		return marshalJSON(message)
 	default:
-		return nil, nil, yarpcerror.Newf(yarpcerror.CodeInternal, "encoding.Expect should have handled encoding %q but did not", encoding)
+		return nil, nil, yarpcerror.Newf(yarpcerror.CodeInternal, "failed to marshal unexpected encoding %q", encoding)
 	}
 }
 
