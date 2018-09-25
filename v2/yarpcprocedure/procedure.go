@@ -33,12 +33,15 @@ import (
 
 // ToName gets the procedure name we should use for a method
 // with the given service name and method name.
-func ToName(serviceName string, methodName string) string {
-	return fmt.Sprintf("%s::%s", serviceName, methodName)
+func ToName(service, method string) string {
+	return fmt.Sprintf("%s::%s", service, method)
 }
 
 // FromName gets the service name and method name from a procdure name.
-func FromName(name string) (serviceName string, methodName string) {
+// Not all encodings separate their procedure names into service and method
+// components. In these cases, such as JSON, the entire procedure name is
+// returned in the first result.
+func FromName(name string) (service, method string) {
 	parts := strings.SplitN(name, "::", 2)
 	if len(parts) == 1 {
 		return parts[0], ""
