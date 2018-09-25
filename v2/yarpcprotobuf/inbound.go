@@ -33,17 +33,13 @@ type StreamHandlerParams struct {
 	Handle func(*ServerStream) error
 }
 
-// NewStreamHandler returns a new StreamHandler.
-func NewStreamHandler(params StreamHandlerParams) yarpc.StreamHandler {
-	return newStreamHandler(params.Handle)
-}
-
 type streamHandler struct {
 	handle func(*ServerStream) error
 }
 
-func newStreamHandler(handle func(*ServerStream) error) *streamHandler {
-	return &streamHandler{handle}
+// NewStreamHandler returns a new StreamHandler.
+func NewStreamHandler(p StreamHandlerParams) yarpc.StreamHandler {
+	return &streamHandler{p.Handle}
 }
 
 func (s *streamHandler) HandleStream(stream *yarpc.ServerStream) error {
@@ -64,21 +60,14 @@ type UnaryHandlerParams struct {
 	Create func() proto.Message
 }
 
-// NewUnaryHandler returns a new UnaryHandler.
-func NewUnaryHandler(params UnaryHandlerParams) yarpc.UnaryHandler {
-	return newUnaryHandler(params.Handle, params.Create)
-}
-
 type unaryHandler struct {
 	handle func(context.Context, proto.Message) (proto.Message, error)
 	create func() proto.Message
 }
 
-func newUnaryHandler(
-	handle func(context.Context, proto.Message) (proto.Message, error),
-	create func() proto.Message,
-) *unaryHandler {
-	return &unaryHandler{handle, create}
+// NewUnaryHandler returns a new UnaryHandler.
+func NewUnaryHandler(p UnaryHandlerParams) yarpc.UnaryHandler {
+	return &unaryHandler{p.Handle, p.Create}
 }
 
 func (u *unaryHandler) Handle(ctx context.Context, req *yarpc.Request, buf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
