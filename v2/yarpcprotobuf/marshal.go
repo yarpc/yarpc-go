@@ -30,6 +30,7 @@ import (
 	"go.uber.org/yarpc/internal/bufferpool"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerror"
+	"go.uber.org/yarpc/v2/yarpcjson"
 )
 
 var (
@@ -40,9 +41,6 @@ var (
 			return proto.NewBuffer(make([]byte, 1024))
 		},
 	}
-
-	_protoEncoding yarpc.Encoding = "proto"
-	_jsonEncoding  yarpc.Encoding = "json"
 )
 
 func unmarshal(encoding yarpc.Encoding, reader io.Reader, message proto.Message) error {
@@ -56,9 +54,9 @@ func unmarshal(encoding yarpc.Encoding, reader io.Reader, message proto.Message)
 		return nil
 	}
 	switch encoding {
-	case _protoEncoding:
+	case Encoding:
 		return proto.Unmarshal(body, message)
-	case _jsonEncoding:
+	case yarpcjson.Encoding:
 		return _jsonUnmarshaler.Unmarshal(bytes.NewReader(body), message)
 	default:
 		return yarpcerror.Newf(yarpcerror.CodeInternal, "encoding.Expect should have handled encoding %q but did not", encoding)
@@ -67,9 +65,9 @@ func unmarshal(encoding yarpc.Encoding, reader io.Reader, message proto.Message)
 
 func marshal(encoding yarpc.Encoding, message proto.Message) ([]byte, func(), error) {
 	switch encoding {
-	case _protoEncoding:
+	case Encoding:
 		return marshalProto(message)
-	case _jsonEncoding:
+	case yarpcjson.Encoding:
 		return marshalJSON(message)
 	default:
 		return nil, nil, yarpcerror.Newf(yarpcerror.CodeInternal, "encoding.Expect should have handled encoding %q but did not", encoding)
