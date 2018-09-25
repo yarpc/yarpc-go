@@ -22,6 +22,7 @@ package yarpcprotobuf
 
 import (
 	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcjson"
 	"go.uber.org/yarpc/v2/yarpcprocedure"
 )
 
@@ -57,12 +58,12 @@ func Procedures(params ProceduresParams) []yarpc.Procedure {
 			yarpc.Procedure{
 				Name:        yarpcprocedure.ToName(params.Service, u.Method),
 				HandlerSpec: yarpc.NewUnaryHandlerSpec(u.Handler),
-				Encoding:    _protoEncoding,
+				Encoding:    Encoding,
 			},
 			yarpc.Procedure{
 				Name:        yarpcprocedure.ToName(params.Service, u.Method),
 				HandlerSpec: yarpc.NewUnaryHandlerSpec(u.Handler),
-				Encoding:    _jsonEncoding,
+				Encoding:    yarpcjson.Encoding,
 			},
 		)
 	}
@@ -72,12 +73,12 @@ func Procedures(params ProceduresParams) []yarpc.Procedure {
 			yarpc.Procedure{
 				Name:        yarpcprocedure.ToName(params.Service, s.Method),
 				HandlerSpec: yarpc.NewStreamHandlerSpec(s.Handler),
-				Encoding:    _protoEncoding,
+				Encoding:    Encoding,
 			},
 			yarpc.Procedure{
 				Name:        yarpcprocedure.ToName(params.Service, s.Method),
 				HandlerSpec: yarpc.NewStreamHandlerSpec(s.Handler),
-				Encoding:    _jsonEncoding,
+				Encoding:    yarpcjson.Encoding,
 			},
 		)
 	}

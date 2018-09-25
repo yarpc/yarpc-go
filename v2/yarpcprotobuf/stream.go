@@ -65,7 +65,6 @@ func readFromStream(
 	if err := unmarshal(stream.Request().Encoding, streamMsg.Body, message); err != nil {
 		return nil, multierr.Append(err, streamMsg.Body.Close())
 	}
-	var err error
 	if streamMsg.Body != nil {
 		err = streamMsg.Body.Close()
 	}

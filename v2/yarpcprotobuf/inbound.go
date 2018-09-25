@@ -26,6 +26,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcencoding"
+	"go.uber.org/yarpc/v2/yarpcjson"
 )
 
 // StreamHandlerParams contains the parameters for creating a new StreamHandler.
@@ -117,7 +118,7 @@ func toProtoRequest(
 	body *yarpc.Buffer,
 	create func() proto.Message,
 ) (context.Context, *yarpc.InboundCall, proto.Message, error) {
-	if err := yarpcencoding.ExpectEncodings(req, _protoEncoding, _jsonEncoding); err != nil {
+	if err := yarpcencoding.ExpectEncodings(req, Encoding, yarpcjson.Encoding); err != nil {
 		return nil, nil, nil, err
 	}
 	ctx, call := yarpc.NewInboundCall(ctx)
