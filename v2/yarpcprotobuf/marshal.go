@@ -36,7 +36,7 @@ import (
 var (
 	_jsonMarshaler   = &jsonpb.Marshaler{}
 	_jsonUnmarshaler = &jsonpb.Unmarshaler{AllowUnknownFields: true}
-	_bufferPool      = sync.Pool{
+	_protoBufferPool = sync.Pool{
 		New: func() interface{} {
 			return proto.NewBuffer(make([]byte, 1024))
 		},
@@ -75,13 +75,14 @@ func marshal(encoding yarpc.Encoding, message proto.Message) ([]byte, func(), er
 }
 
 func marshalProto(message proto.Message) ([]byte, func(), error) {
-	protoBuffer := getBuffer()
-	cleanup := func() { putBuffer(protoBuffer) }
-	if err := protoBuffer.Marshal(message); err != nil {
+	buf := _protoBufferPool.Get().(*proto.Buffer)
+	buf.Reset()
+	cleanup := func() { _protoBufferPool.Put(buf) }
+	if err := buf.Marshal(message); err != nil {
 		cleanup()
 		return nil, nil, err
 	}
-	return protoBuffer.Bytes(), cleanup, nil
+	return buf.Bytes(), cleanup, nil
 }
 
 func marshalJSON(message proto.Message) ([]byte, func(), error) {
@@ -92,14 +93,4 @@ func marshalJSON(message proto.Message) ([]byte, func(), error) {
 		return nil, nil, err
 	}
 	return buf.Bytes(), cleanup, nil
-}
-
-func getBuffer() *proto.Buffer {
-	buf := _bufferPool.Get().(*proto.Buffer)
-	buf.Reset()
-	return buf
-}
-
-func putBuffer(buf *proto.Buffer) {
-	_bufferPool.Put(buf)
 }
