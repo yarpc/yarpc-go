@@ -26,6 +26,7 @@ import (
 	"io"
 
 	"github.com/gogo/protobuf/proto"
+	"go.uber.org/multierr"
 	yarpc "go.uber.org/yarpc/v2"
 )
 
@@ -62,13 +63,13 @@ func readFromStream(
 	}
 	message := create()
 	if err := unmarshal(stream.Request().Encoding, streamMsg.Body, message); err != nil {
-		streamMsg.Body.Close()
-		return nil, err
+		return nil, multierr.Append(err, streamMsg.Body.Close())
 	}
+	var err error
 	if streamMsg.Body != nil {
-		streamMsg.Body.Close()
+		err = streamMsg.Body.Close()
 	}
-	return message, nil
+	return message, err
 }
 
 // writeToStream writes a proto.Message to a stream.
