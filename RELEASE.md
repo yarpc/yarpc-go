@@ -1,6 +1,9 @@
 Release process
 ===============
 
+> **NOTE**: Don't do any of this before validating with a test service. Check
+> the internal release doc (ask someone about it) for more information.
+
 This document outlines how to create a release of yarpc-go
 
 1.  Set up some environment variables for use later.
