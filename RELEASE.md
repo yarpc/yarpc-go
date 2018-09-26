@@ -96,33 +96,29 @@ Releasing
     git pull
     ```
 
-10. Copy the changelog entries for this release to your clipboard and prepare
-    to cut a release with `hub`.
+10. Tag a release.
 
     ```
-    hub release create -e -m v$VERSION -t master v$VERSION
+    hub release create -o -m v$VERSION -t master v$VERSION
     ```
 
-11. The command above will open a file in your editor that contains just the
-    version number. Add an empty line after the version number and paste the
-    changelog entries for this release.
+11. Copy the changelog entries for this release into the release description in
+    the newly opened browser window.
 
-12. Save and quit the file.
-
-13. Go to <https://buildkite.com/uberopensource/yarpc-go/builds> and cancel the
+12. Go to <https://buildkite.com/uberopensource/yarpc-go/builds> and cancel the
     build for `v$VERSION`. If that Codecov build completes before the Codecov
     build for master, the code coverage for master will not get updated because
     only one branch gets updated per commit; this was verified with Codecov
     support. This will get tested by the build for master anyways.
 
-14. Switch back to development.
+13. Switch back to development.
 
     ```
     git checkout $BRANCH
     git merge master
     ```
 
-15. Add a placeholder for the next version to CHANGELOG.md and a new link at
+14. Add a placeholder for the next version to CHANGELOG.md and a new link at
     the bottom.
 
     ```diff
@@ -137,20 +133,20 @@ Releasing
      [1.21.0]: https://github.com/yarpc/yarpc-go/compare/v1.20.1...v1.21.0
     ```
 
-16. Update the version number in version.go to the same version.
+15. Update the version number in version.go to the same version.
 
     ```diff
     -const Version = "1.21.0"
     +const Version = "1.22.0-dev"
     ```
 
-17. Verify the version number matches.
+16. Verify the version number matches.
 
     ```
     make verifyversion
     ```
 
-18. Commit and push your changes.
+17. Commit and push your changes.
 
     ```
     git add CHANGELOG.md version.go
