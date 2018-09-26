@@ -23,6 +23,7 @@ package yarpchttp
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -31,7 +32,6 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	opentracinglog "github.com/opentracing/opentracing-go/log"
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/internal/internalyarpcerror"
 	"go.uber.org/yarpc/v2/yarpcerror"
@@ -83,78 +83,78 @@ type Outbound struct {
 }
 
 // Call makes a HTTP request
-func (o *Outbound) Call(ctx context.Context, treq *yarpc.Request) (*yarpc.Response, error) {
-	if treq == nil {
-		return nil, yarpcerror.InvalidArgumentErrorf("request for http unary outbound was nil")
+func (o *Outbound) Call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
+	if req == nil {
+		return nil, nil, yarpcerror.InvalidArgumentErrorf("request for http unary outbound was nil")
 	}
 
-	return o.call(ctx, treq)
+	return o.call(ctx, req, reqBuf)
 }
 
-func (o *Outbound) call(ctx context.Context, treq *yarpc.Request) (*yarpc.Response, error) {
+func (o *Outbound) call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
 	start := time.Now()
 	deadline, ok := ctx.Deadline()
 	if !ok {
-		return nil, yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "missing context deadline")
+		return nil, nil, yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "missing context deadline")
 	}
 	ttl := deadline.Sub(start)
 
-	hreq, err := o.createRequest(treq)
+	httpReq, err := o.createRequest(req, reqBuf)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	hreq.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
-	ctx, hreq, span, err := o.withOpentracingSpan(ctx, hreq, treq, start)
+	httpReq.Header = applicationHeaders.ToHTTPHeaders(req.Headers, nil)
+	ctx, httpReq, span, err := o.withOpentracingSpan(ctx, httpReq, req, start)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer span.Finish()
 
-	hreq = o.withCoreHeaders(hreq, treq, ttl)
-	hreq = hreq.WithContext(ctx)
-
-	response, err := o.roundTrip(hreq, treq, start)
+	httpReq = o.withCoreHeaders(httpReq, req, ttl).WithContext(ctx)
+	httpRes, err := o.roundTrip(httpReq, req, start)
 	if err != nil {
-		span.SetTag("error", true)
-		span.LogFields(opentracinglog.String("event", err.Error()))
-		return nil, err
+		return nil, nil, yarpctracing.UpdateSpanWithErr(span, err)
 	}
 
-	span.SetTag("http.status_code", response.StatusCode)
+	span.SetTag("http.status_code", httpRes.StatusCode)
 
 	// Service name match validation, return yarpcerror.CodeInternal error if not match
-	if match, resSvcName := checkServiceMatch(treq.Service, response.Header); !match {
-		return nil, yarpctracing.UpdateSpanWithErr(span,
+	if match, responseService := checkServiceMatch(req.Service, httpRes.Header); !match {
+		return nil, nil, yarpctracing.UpdateSpanWithErr(span,
 			yarpcerror.InternalErrorf("service name sent from the request "+
-				"does not match the service name received in the response, sent %q, got: %q", treq.Service, resSvcName))
+				"does not match the service name received in the response, sent %q, got: %q", req.Service, responseService))
 	}
 
-	tres := &yarpc.Response{
-		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, yarpc.NewHeaders()),
-		Body:             response.Body,
-		ApplicationError: response.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus,
+	res := &yarpc.Response{
+		Headers:          applicationHeaders.FromHTTPHeaders(httpRes.Header, yarpc.NewHeaders()),
+		ApplicationError: httpRes.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus,
 	}
 
-	bothResponseError := response.Header.Get(BothResponseErrorHeader) == AcceptTrue
-	if bothResponseError && !o.legacyResponseError {
-		if response.StatusCode >= 300 {
-			return tres, getYARPCErrorFromResponse(response, true)
+	resBuf, err := readCloserToBuffer(httpRes.Body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	botResponseError := httpRes.Header.Get(BothResponseErrorHeader) == AcceptTrue
+	if botResponseError && !o.legacyResponseError {
+		if httpRes.StatusCode >= 300 {
+			return res, resBuf, getYARPCErrorFromResponse(httpRes, resBuf, true)
 		}
-		return tres, nil
+		return res, resBuf, nil
 	}
-	if response.StatusCode >= 200 && response.StatusCode < 300 {
-		return tres, nil
+	if httpRes.StatusCode >= 200 && httpRes.StatusCode < 300 {
+		return res, resBuf, nil
 	}
-	return nil, getYARPCErrorFromResponse(response, false)
+	return nil, nil, getYARPCErrorFromResponse(httpRes, resBuf, false)
 }
 
-func (o *Outbound) getPeerForRequest(ctx context.Context, treq *yarpc.Request) (*httpPeer, func(error), error) {
+func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*httpPeer, func(error), error) {
 	var peer yarpc.Peer
 	var onFinish func(error)
 	var err error
 
 	if o.Chooser != nil {
-		peer, onFinish, err = o.Chooser.Choose(ctx, treq)
+		peer, onFinish, err = o.Chooser.Choose(ctx, req)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -187,15 +187,15 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, treq *yarpc.Request) (
 
 func nopFinish(error) {}
 
-func (o *Outbound) createRequest(treq *yarpc.Request) (*http.Request, error) {
+func (o *Outbound) createRequest(req *yarpc.Request, reqBuf *yarpc.Buffer) (*http.Request, error) {
 	url := defaultURL
 	if o.URL != nil {
 		url = o.URL
 	}
-	return http.NewRequest("POST", url.String(), treq.Body)
+	return http.NewRequest("POST", url.String(), reqBuf)
 }
 
-func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *yarpc.Request, start time.Time) (context.Context, *http.Request, opentracing.Span, error) {
+func (o *Outbound) withOpentracingSpan(ctx context.Context, httpReq *http.Request, req *yarpc.Request, start time.Time) (context.Context, *http.Request, opentracing.Span, error) {
 	// Apply HTTP Context headers for tracing and baggage carried by tracing.
 	tracer := o.Tracer
 	if tracer == nil {
@@ -206,35 +206,35 @@ func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, t
 		parent = parentSpan.Context()
 	}
 	tags := opentracing.Tags{
-		"rpc.caller":    treq.Caller,
-		"rpc.service":   treq.Service,
-		"rpc.encoding":  treq.Encoding,
+		"rpc.caller":    req.Caller,
+		"rpc.service":   req.Service,
+		"rpc.encoding":  req.Encoding,
 		"rpc.transport": "http",
 	}
 	for k, v := range yarpctracing.Tags {
 		tags[k] = v
 	}
 	span := tracer.StartSpan(
-		treq.Procedure,
+		req.Procedure,
 		opentracing.StartTime(start),
 		opentracing.ChildOf(parent),
 		tags,
 	)
-	ext.PeerService.Set(span, treq.Service)
+	ext.PeerService.Set(span, req.Service)
 	ext.SpanKindRPCClient.Set(span)
-	ext.HTTPUrl.Set(span, req.URL.String())
+	ext.HTTPUrl.Set(span, httpReq.URL.String())
 	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	err := tracer.Inject(
 		span.Context(),
 		opentracing.HTTPHeaders,
-		opentracing.HTTPHeadersCarrier(req.Header),
+		opentracing.HTTPHeadersCarrier(httpReq.Header),
 	)
 
-	return ctx, req, span, err
+	return ctx, httpReq, span, err
 }
 
-func (o *Outbound) withCoreHeaders(req *http.Request, treq *yarpc.Request, ttl time.Duration) *http.Request {
+func (o *Outbound) withCoreHeaders(httpReq *http.Request, req *yarpc.Request, ttl time.Duration) *http.Request {
 	// Add default headers to all requests.
 	for k, vs := range o.Headers {
 		if strings.HasPrefix(strings.ToLower(k), "rpc-") {
@@ -243,55 +243,65 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *yarpc.Request, ttl t
 					`headers starting with "Rpc-" are reserved by YARPC`, k))
 		}
 		for _, v := range vs {
-			req.Header.Add(k, v)
+			httpReq.Header.Add(k, v)
 		}
 	}
 
-	req.Header.Set(CallerHeader, treq.Caller)
-	req.Header.Set(ServiceHeader, treq.Service)
-	req.Header.Set(ProcedureHeader, treq.Procedure)
+	httpReq.Header.Set(CallerHeader, req.Caller)
+	httpReq.Header.Set(ServiceHeader, req.Service)
+	httpReq.Header.Set(ProcedureHeader, req.Procedure)
 	if ttl != 0 {
-		req.Header.Set(TTLMSHeader, fmt.Sprintf("%d", ttl/time.Millisecond))
+		httpReq.Header.Set(TTLMSHeader, fmt.Sprintf("%d", ttl/time.Millisecond))
 	}
-	if treq.ShardKey != "" {
-		req.Header.Set(ShardKeyHeader, treq.ShardKey)
+	if req.ShardKey != "" {
+		httpReq.Header.Set(ShardKeyHeader, req.ShardKey)
 	}
-	if treq.RoutingKey != "" {
-		req.Header.Set(RoutingKeyHeader, treq.RoutingKey)
+	if req.RoutingKey != "" {
+		httpReq.Header.Set(RoutingKeyHeader, req.RoutingKey)
 	}
-	if treq.RoutingDelegate != "" {
-		req.Header.Set(RoutingDelegateHeader, treq.RoutingDelegate)
+	if req.RoutingDelegate != "" {
+		httpReq.Header.Set(RoutingDelegateHeader, req.RoutingDelegate)
 	}
 
-	encoding := string(treq.Encoding)
+	encoding := string(req.Encoding)
 	if encoding != "" {
-		req.Header.Set(EncodingHeader, encoding)
+		httpReq.Header.Set(EncodingHeader, encoding)
 	}
 
 	if !o.legacyResponseError {
-		req.Header.Set(AcceptsBothResponseErrorHeader, AcceptTrue)
+		httpReq.Header.Set(AcceptsBothResponseErrorHeader, AcceptTrue)
 	}
 
-	return req
+	return httpReq
 }
 
-func getYARPCErrorFromResponse(response *http.Response, bothResponseError bool) error {
+// readCloserToBuffer converts a readCloser to a yarpc.Buffer. This attempts to
+// close the given readCloser. This is useful for both inbound and outbound
+// requests.
+//
+// All returned erros are yarpcerror.CodeInternal.
+func readCloserToBuffer(readCloser io.ReadCloser) (*yarpc.Buffer, error) {
+	body, err := ioutil.ReadAll(readCloser)
+	if err != nil {
+		return nil, yarpcerror.Newf(yarpcerror.CodeInternal, err.Error())
+	}
+
+	if err := readCloser.Close(); err != nil {
+		return nil, yarpcerror.Newf(yarpcerror.CodeInternal, err.Error())
+	}
+	return yarpc.NewBufferBytes(body), nil
+}
+
+func getYARPCErrorFromResponse(httpRes *http.Response, resBuf *yarpc.Buffer, bothResponseError bool) error {
 	var contents string
 	if bothResponseError {
-		contents = response.Header.Get(ErrorMessageHeader)
+		contents = httpRes.Header.Get(ErrorMessageHeader)
 	} else {
-		contentsBytes, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			return yarpcerror.Newf(yarpcerror.CodeInternal, err.Error())
-		}
-		contents = string(contentsBytes)
-		if err := response.Body.Close(); err != nil {
-			return yarpcerror.Newf(yarpcerror.CodeInternal, err.Error())
-		}
+		contents = resBuf.String()
 	}
 	// use the status code if we can't get a code from the headers
-	code := statusCodeToBestCode(response.StatusCode)
-	if errorCodeText := response.Header.Get(ErrorCodeHeader); errorCodeText != "" {
+	code := statusCodeToBestCode(httpRes.StatusCode)
+	if errorCodeText := httpRes.Header.Get(ErrorCodeHeader); errorCodeText != "" {
 		var errorCode yarpcerror.Code
 		// TODO: what to do with error?
 		if err := errorCode.UnmarshalText([]byte(errorCodeText)); err == nil {
@@ -300,15 +310,15 @@ func getYARPCErrorFromResponse(response *http.Response, bothResponseError bool) 
 	}
 	return internalyarpcerror.NewWithNamef(
 		code,
-		response.Header.Get(ErrorNameHeader),
+		httpRes.Header.Get(ErrorNameHeader),
 		strings.TrimSuffix(contents, "\n"),
 	)
 }
 
 // Only does verification if there is a response header
-func checkServiceMatch(reqSvcName string, resHeaders http.Header) (bool, string) {
+func checkServiceMatch(requestService string, resHeaders http.Header) (bool, string) {
 	serviceName := resHeaders.Get(ServiceHeader)
-	return serviceName == "" || serviceName == reqSvcName, serviceName
+	return serviceName == "" || serviceName == requestService, serviceName
 }
 
 // RoundTrip implements the http.RoundTripper interface, making a YARPC HTTP outbound suitable as a
@@ -332,12 +342,12 @@ func checkServiceMatch(reqSvcName string, resHeaders http.Header) (bool, string)
 // The peer chooser for raw HTTP requests will receive a yarpc.Request with no body.
 //
 // OpenTracing information must be added manually, before this call, to support context propagation.
-func (o *Outbound) RoundTrip(hreq *http.Request) (*http.Response, error) {
-	return o.roundTrip(hreq, nil /* treq */, time.Now())
+func (o *Outbound) RoundTrip(httpReq *http.Request) (*http.Response, error) {
+	return o.roundTrip(httpReq, nil /* req */, time.Now())
 }
 
-func (o *Outbound) roundTrip(hreq *http.Request, treq *yarpc.Request, start time.Time) (*http.Response, error) {
-	ctx := hreq.Context()
+func (o *Outbound) roundTrip(httpReq *http.Request, req *yarpc.Request, start time.Time) (*http.Response, error) {
+	ctx := httpReq.Context()
 
 	deadline, ok := ctx.Deadline()
 	if !ok {
@@ -353,25 +363,25 @@ func (o *Outbound) roundTrip(hreq *http.Request, treq *yarpc.Request, start time
 	// The API for setting transport metadata for an outbound request when
 	// using the go stdlib HTTP client is to use headers as the YAPRC HTTP
 	// transport header conventions.
-	if treq == nil {
-		treq = &yarpc.Request{
-			Caller:          hreq.Header.Get(CallerHeader),
-			Service:         hreq.Header.Get(ServiceHeader),
-			Encoding:        yarpc.Encoding(hreq.Header.Get(EncodingHeader)),
-			Procedure:       hreq.Header.Get(ProcedureHeader),
-			ShardKey:        hreq.Header.Get(ShardKeyHeader),
-			RoutingKey:      hreq.Header.Get(RoutingKeyHeader),
-			RoutingDelegate: hreq.Header.Get(RoutingDelegateHeader),
-			Headers:         applicationHeaders.FromHTTPHeaders(hreq.Header, yarpc.Headers{}),
+	if req == nil {
+		req = &yarpc.Request{
+			Caller:          httpReq.Header.Get(CallerHeader),
+			Service:         httpReq.Header.Get(ServiceHeader),
+			Encoding:        yarpc.Encoding(httpReq.Header.Get(EncodingHeader)),
+			Procedure:       httpReq.Header.Get(ProcedureHeader),
+			ShardKey:        httpReq.Header.Get(ShardKeyHeader),
+			RoutingKey:      httpReq.Header.Get(RoutingKeyHeader),
+			RoutingDelegate: httpReq.Header.Get(RoutingDelegateHeader),
+			Headers:         applicationHeaders.FromHTTPHeaders(httpReq.Header, yarpc.Headers{}),
 		}
 	}
 
-	p, onFinish, err := o.getPeerForRequest(ctx, treq)
+	p, onFinish, err := o.getPeerForRequest(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
-	hres, err := o.doWithPeer(ctx, hreq, treq, start, ttl, p)
+	hres, err := o.doWithPeer(ctx, httpReq, req, start, ttl, p)
 	// Call the onFinish method before returning (with the error from call with peer)
 	onFinish(err)
 	return hres, err
@@ -379,15 +389,15 @@ func (o *Outbound) roundTrip(hreq *http.Request, treq *yarpc.Request, start time
 
 func (o *Outbound) doWithPeer(
 	ctx context.Context,
-	hreq *http.Request,
-	treq *yarpc.Request,
+	httpReq *http.Request,
+	req *yarpc.Request,
 	start time.Time,
 	ttl time.Duration,
 	p *httpPeer,
 ) (*http.Response, error) {
-	hreq.URL.Host = p.addr
+	httpReq.URL.Host = p.addr
 
-	response, err := p.dialer.client.Do(hreq.WithContext(ctx))
+	response, err := p.dialer.client.Do(httpReq.WithContext(ctx))
 
 	if err != nil {
 		// Workaround borrowed from ctxhttp until
@@ -407,7 +417,7 @@ func (o *Outbound) doWithPeer(
 			return nil, yarpcerror.Newf(
 				yarpcerror.CodeDeadlineExceeded,
 				"client timeout for procedure %q of service %q after %v",
-				treq.Procedure, treq.Service, end.Sub(start))
+				req.Procedure, req.Service, end.Sub(start))
 		}
 
 		// Note that the connection may have been lost so the peer connection

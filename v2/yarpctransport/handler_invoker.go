@@ -51,9 +51,7 @@ type StreamInvokeRequest struct {
 
 // InvokeUnaryHandler calls the handler h, recovering panics and timeout errors,
 // converting them to YARPC errors. All other errors are passed through.
-func InvokeUnaryHandler(
-	i UnaryInvokeRequest,
-) (res *yarpc.Response, buf *yarpc.Buffer, err error) {
+func InvokeUnaryHandler(i UnaryInvokeRequest) (res *yarpc.Response, buf *yarpc.Buffer, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = handlePanic(yarpc.Unary, i.Logger, r, i.Request)
@@ -75,9 +73,7 @@ func InvokeUnaryHandler(
 
 // InvokeStreamHandler calls the stream handler, recovering from panics as
 // errors.
-func InvokeStreamHandler(
-	i StreamInvokeRequest,
-) (err error) {
+func InvokeStreamHandler(i StreamInvokeRequest) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = handlePanic(yarpc.Streaming, i.Logger, r, i.Stream.Request())

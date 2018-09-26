@@ -6,6 +6,7 @@
       - [x] Consider removing Body from Request and Response entirely, making
             them positional, to avoid separating and embedding Meta* for the
             streaming case.
+      - [ ] Incorporate implicit buffer pooling in yarpc.Buffer (using internal/bufferpool.Buffer)
       - [ ] Now that we propogate a Response struct back, the Response should hold the actual
             application error. Errors returned by the handler (not through the Response)
             could be considered fatal (T1995085). This affects transports and encodings.
@@ -28,7 +29,7 @@
 - [ ] Construct PRs with retroactive continuity.
 - [ ] Nit: scrape name pid and change to just id throughout.
 - [ ] Audit docs
-- [ ] choose to use either `req` and `resp` or `request` and `response` as variable names for consistency.
+- [ ] InvokeUnaryHandler: reduce package name noise at the call site by changing to a Do(ctx) method on UnaryInvokeRequest
 
 Encodings:
 - [x] Drop raw encoding
@@ -39,6 +40,10 @@ Encodings:
 Transports:
 - [ ] Port TChannel transport
 - [ ] Port or recreate gRPC transport
+- [ ] use `req` and `res` as variable names for consistency.
+      - [x] HTTP
+      - [ ] TChannel
+      - [ ] gRPC
 
 To port peer lists forward:
 - [ ] Replace functional options with options struct pattern, like net in the
