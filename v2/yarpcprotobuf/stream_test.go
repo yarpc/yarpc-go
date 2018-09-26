@@ -23,6 +23,7 @@ package yarpcprotobuf
 import (
 	"context"
 	"errors"
+	"io"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -32,6 +33,7 @@ import (
 	"go.uber.org/multierr"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerror"
+	"go.uber.org/yarpc/v2/yarpcjson"
 )
 
 type mockReader struct {
@@ -39,11 +41,19 @@ type mockReader struct {
 	readErr  error
 }
 
-func (r mockReader) Read(p []byte) (n int, err error) {
-	return 0, r.readErr
+func (r *mockReader) Read(p []byte) (n int, err error) {
+	if r.readErr != nil {
+		return 0, r.readErr
+	}
+	bytes, err := proto.Marshal(&mockMessage{})
+	if err != nil {
+		return 0, err
+	}
+	p = append(p, bytes...)
+	return len(bytes), io.EOF
 }
 
-func (r mockReader) Close() error {
+func (r *mockReader) Close() error {
 	return r.closeErr
 }
 
@@ -62,27 +72,39 @@ func TestReadFromStream(t *testing.T) {
 	)
 
 	tests := []struct {
-		desc   string
-		reader mockReader
-		err    error
+		desc     string
+		reader   *mockReader
+		encoding yarpc.Encoding
+		err      error
 	}{
 		{
-			desc:   "Decode error",
-			reader: mockReader{readErr: _readErr},
-			err:    _readErr,
+			desc:     "Decode error",
+			reader:   &mockReader{readErr: _readErr},
+			encoding: Encoding,
+			err:      _readErr,
 		},
 		{
-			desc:   "Decode and close multierror",
-			reader: mockReader{readErr: _readErr, closeErr: _closeErr},
-			err:    multierr.Append(_readErr, _closeErr),
+			desc:     "Close error",
+			reader:   &mockReader{closeErr: _closeErr},
+			encoding: Encoding,
+			err:      _closeErr,
 		},
-		// TODO(mensch): There appears to be an issue with buffer pooling here.
-		// The following test will hang indefinitely.
-		// {
-		//    desc:   "Close error",
-		//    reader: mockReader{closeErr: _closeErr},
-		//    err:    _closeErr,
-		// },
+		{
+			desc:     "Decode and close multierror",
+			reader:   &mockReader{readErr: _readErr, closeErr: _closeErr},
+			encoding: Encoding,
+			err:      multierr.Append(_readErr, _closeErr),
+		},
+		{
+			desc:     "Successful read with proto encoding",
+			reader:   &mockReader{},
+			encoding: Encoding,
+		},
+		{
+			desc:     "Successful read with json encoding",
+			reader:   &mockReader{},
+			encoding: yarpcjson.Encoding,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
@@ -104,14 +126,14 @@ func TestReadFromStream(t *testing.T) {
 			)
 			stream.EXPECT().Request().Return(
 				&yarpc.Request{
-					Encoding: Encoding,
+					Encoding: tt.encoding,
 				},
 			)
 
 			clientStream, err := yarpc.NewClientStream(stream)
 			require.NoError(t, err)
 
-			_, err = readFromStream(ctx, clientStream, func() proto.Message { return nil })
+			_, err = readFromStream(ctx, clientStream, func() proto.Message { return &mockMessage{} })
 			assert.Equal(t, tt.err, err)
 		})
 	}
