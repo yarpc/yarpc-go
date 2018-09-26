@@ -4,7 +4,19 @@ Release process
 > **NOTE**: Don't do any of this before validating with a test service. Check
 > the internal release doc (ask someone about it) for more information.
 
-This document outlines how to create a release of yarpc-go
+This document outlines how to create a release of yarpc-go.
+
+Prerequisites
+-------------
+
+Make sure you have `hub` installed.
+
+```
+brew install hub
+```
+
+Releasing
+---------
 
 1.  Set up some environment variables for use later.
 
@@ -17,16 +29,20 @@ This document outlines how to create a release of yarpc-go
     BRANCH=dev
     ```
 
-    ** If you are copying/pasting commands, make sure you actually set the right value for VERSION above. **
+    **If you are copying/pasting commands, make sure you actually set the right
+    value for VERSION above.**
 
-2.  Make sure you have the latest master.
+2.  Make sure you have the latest master and create a new release branch off of
+    it.
 
     ```
     git checkout master
     git pull
+    git checkout -b $(whoami)/release
     ```
 
-3.  Merge the branch being released into master.
+3.  Merge the branch with the changes being released into the newly created
+    release branch.
 
     ```
     git merge $BRANCH
@@ -62,32 +78,50 @@ This document outlines how to create a release of yarpc-go
     git commit -m "Preparing release v$VERSION"
     ```
 
-7.  Tag and push the release.
+7.  Make a pull request with these changes against `master`.
 
     ```
-    git tag -a "v$VERSION" -m "v$VERSION"
-    git push origin master "v$VERSION"
+    hub pull-request -b master --push
     ```
 
-8.  Go to <https://buildkite.com/uberopensource/yarpc-go/builds> and cancel the
-    build for `v$VERSION`.  If that Codecov build completes before the Codecov
+8.  Land the pull request after approval as a **merge commit**. To do this,
+    select **Create a merge commit** from the pull-down next to the merge
+    button and click **Merge pull request**.
+
+9.  Once the change has been landed, pull it locally.
+
+    ```
+    git checkout master
+    git pull
+    ```
+
+10. Copy the changelog entries for this release to your clipboard and prepare
+    to cut a release with `hub`.
+
+    ```
+    hub release create -e -m v$VERSION -t master v$VERSION
+    ```
+
+11. The command above will open a file in your editor that contains just the
+    version number. Add an empty line after the version number and paste the
+    changelog entries for this release.
+
+12. Save and quit the file.
+
+13. Go to <https://buildkite.com/uberopensource/yarpc-go/builds> and cancel the
+    build for `v$VERSION`. If that Codecov build completes before the Codecov
     build for master, the code coverage for master will not get updated because
     only one branch gets updated per commit; this was verified with Codecov
     support. This will get tested by the build for master anyways.
 
-9.  Go to <https://github.com/yarpc/yarpc-go/tags> and edit the release notes
-    of the new tag.  Copy the changelog entries for this release in the
-    release notes and set the name of the release to the version number
-    (`v$VERSION`).
-
-10. Switch back to development.
+14. Switch back to development.
 
     ```
     git checkout $BRANCH
     git merge master
     ```
 
-11. Add a placeholder for the next version to CHANGELOG.md and a new link at
+15. Add a placeholder for the next version to CHANGELOG.md and a new link at
     the bottom.
 
     ```diff
@@ -102,20 +136,20 @@ This document outlines how to create a release of yarpc-go
      [1.21.0]: https://github.com/yarpc/yarpc-go/compare/v1.20.1...v1.21.0
     ```
 
-12. Update the version number in version.go to the same version.
+16. Update the version number in version.go to the same version.
 
     ```diff
     -const Version = "1.21.0"
     +const Version = "1.22.0-dev"
     ```
 
-13. Verify the version number matches.
+17. Verify the version number matches.
 
     ```
     make verifyversion
     ```
 
-14. Commit and push your changes.
+18. Commit and push your changes.
 
     ```
     git add CHANGELOG.md version.go
