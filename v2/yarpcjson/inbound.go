@@ -59,28 +59,28 @@ func (h jsonHandler) Handle(ctx context.Context, req *yarpc.Request, reqBuf *yar
 
 	results := h.handler.Call([]reflect.Value{reflect.ValueOf(ctx), reqBody})
 
-	response := &yarpc.Response{}
-	responseBuf := &yarpc.Buffer{}
-	call.WriteToResponse(response)
+	res := &yarpc.Response{}
+	resBuf := &yarpc.Buffer{}
+	call.WriteToResponse(res)
 
 	// we want to return the appErr if it exists as this is what
 	// the previous behavior was so we deprioritize this error
 	var encodeErr error
 	if result := results[0].Interface(); result != nil {
-		if err := json.NewEncoder(responseBuf).Encode(result); err != nil {
+		if err := json.NewEncoder(resBuf).Encode(result); err != nil {
 			encodeErr = yarpcencoding.ResponseBodyEncodeError(req, err)
 		}
 	}
 
 	if appErr, _ := results[1].Interface().(error); appErr != nil {
-		response.ApplicationError = true
+		res.ApplicationError = true
 		// TODO(apeatsbond): now that we propogate a Response struct back, the
 		// Response should hold the actual application error. Errors returned by the
 		// handler (not through the Response) could be considered fatal.
-		return response, responseBuf, appErr
+		return res, resBuf, appErr
 	}
 
-	return response, responseBuf, encodeErr
+	return res, resBuf, encodeErr
 }
 
 // requestReader is used to parse a JSON request argument from a JSON decoder.
