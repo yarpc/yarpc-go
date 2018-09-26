@@ -99,7 +99,7 @@ func TestInboundMux(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/health", func(w http.ResponseWriter, httpReq *http.Request) {
 		w.Write([]byte("healthy"))
 	})
 
@@ -191,11 +191,11 @@ func TestMuxWithInterceptor(t *testing.T) {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		io.WriteString(w, "OK")
 	})
 	intercept := func(_ http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			io.WriteString(w, "intercepted")
 		})
 	}
@@ -221,7 +221,7 @@ func TestMuxWithInterceptor(t *testing.T) {
 
 func TestRequestAfterStop(t *testing.T) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		io.WriteString(w, "OK")
 	})
 

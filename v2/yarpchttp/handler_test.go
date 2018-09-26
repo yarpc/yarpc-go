@@ -83,13 +83,13 @@ func TestHandlerSuccess(t *testing.T) {
 	).Return(&yarpc.Response{}, &yarpc.Buffer{}, nil)
 
 	httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}}
-	hRequest := &http.Request{
+	httpReq := &http.Request{
 		Method: "POST",
 		Header: headers,
 		Body:   ioutil.NopCloser(bytes.NewReader([]byte("Nyuck Nyuck"))),
 	}
 	rw := httptest.NewRecorder()
-	httpHandler.ServeHTTP(rw, hRequest)
+	httpHandler.ServeHTTP(rw, httpReq)
 
 	assert.Equal(t, rw.Code, 200, "expected 200 code")
 	assert.Empty(t, rw.Body.String())
@@ -187,13 +187,13 @@ func TestHandlerHeaders(t *testing.T) {
 			headers.Set(EncodingHeader, tt.giveEncoding)
 			headers.Set(ProcedureHeader, "hello")
 
-			req := &http.Request{
+			httpReq := &http.Request{
 				Method: "POST",
 				Header: headers,
 				Body:   ioutil.NopCloser(bytes.NewReader([]byte("world"))),
 			}
 			rw := httptest.NewRecorder()
-			httpHandler.ServeHTTP(rw, req)
+			httpHandler.ServeHTTP(rw, httpReq)
 			assert.Equal(t, 200, rw.Code, "expected 200 status code")
 			assert.Equal(t, getContentType(yarpc.Encoding(tt.giveEncoding)), rw.HeaderMap.Get("Content-Type"))
 		})
@@ -219,8 +219,8 @@ func TestHandlerFailures(t *testing.T) {
 	headersWithBadTTL.Set(TTLMSHeader, "not a number")
 
 	tests := []struct {
-		msg string
-		req *http.Request
+		msg     string
+		httpReq *http.Request
 
 		// if we expect an error as a result of the TTL
 		errTTL   bool
@@ -228,12 +228,12 @@ func TestHandlerFailures(t *testing.T) {
 	}{
 		{
 			msg:      "get root not found",
-			req:      &http.Request{Method: "GET"},
+			httpReq:  &http.Request{Method: "GET"},
 			wantCode: yarpcerror.CodeNotFound,
 		},
 		{
 			msg: "post without call header",
-			req: &http.Request{
+			httpReq: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, CallerHeader),
 			},
@@ -241,7 +241,7 @@ func TestHandlerFailures(t *testing.T) {
 		},
 		{
 			msg: "post without service header",
-			req: &http.Request{
+			httpReq: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, ServiceHeader),
 			},
@@ -249,7 +249,7 @@ func TestHandlerFailures(t *testing.T) {
 		},
 		{
 			msg: "post without procedure header",
-			req: &http.Request{
+			httpReq: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, ProcedureHeader),
 			},
@@ -257,7 +257,7 @@ func TestHandlerFailures(t *testing.T) {
 		},
 		{
 			msg: "post without timeout header",
-			req: &http.Request{
+			httpReq: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, TTLMSHeader),
 			},
@@ -266,14 +266,14 @@ func TestHandlerFailures(t *testing.T) {
 		},
 		{
 			msg: "post without headers",
-			req: &http.Request{
+			httpReq: &http.Request{
 				Method: "POST",
 			},
 			wantCode: yarpcerror.CodeInvalidArgument,
 		},
 		{
 			msg: "post with bad timeout",
-			req: &http.Request{
+			httpReq: &http.Request{
 				Method: "POST",
 				Header: headersWithBadTTL,
 			},
@@ -284,9 +284,9 @@ func TestHandlerFailures(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			req := tt.req
-			if req.Body == nil {
-				req.Body = ioutil.NopCloser(bytes.NewReader([]byte{}))
+			httpReq := tt.httpReq
+			if httpReq.Body == nil {
+				httpReq.Body = ioutil.NopCloser(bytes.NewReader([]byte{}))
 			}
 
 			router := yarpctest.NewMockRouter(mockCtrl)
@@ -304,7 +304,7 @@ func TestHandlerFailures(t *testing.T) {
 			h := handler{router: router, tracer: &opentracing.NoopTracer{}}
 
 			rw := httptest.NewRecorder()
-			h.ServeHTTP(rw, tt.req)
+			h.ServeHTTP(rw, tt.httpReq)
 
 			httpStatusCode := rw.Code
 			assert.True(t, httpStatusCode >= 400 && httpStatusCode < 500, "expected 400 level code, got %d", httpStatusCode)
@@ -327,7 +327,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 	headers.Set(ProcedureHeader, "hello")
 	headers.Set(ServiceHeader, "fake")
 
-	request := http.Request{
+	httpReq := http.Request{
 		Method: "POST",
 		Header: headers,
 		Body:   ioutil.NopCloser(bytes.NewReader([]byte{})),
@@ -356,7 +356,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 
 	httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}}
 	responseRecorder := httptest.NewRecorder()
-	httpHandler.ServeHTTP(responseRecorder, &request)
+	httpHandler.ServeHTTP(responseRecorder, &httpReq)
 
 	code := responseRecorder.Code
 	assert.True(t, code >= 500 && code < 600, "expected 500 level response, got '%d'", code)

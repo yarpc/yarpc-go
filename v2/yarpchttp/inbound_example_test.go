@@ -80,19 +80,19 @@ func ExampleMux() {
 
 func ExampleInterceptor() {
 	// Given a fallback yarpchttp.Handler
-	fallback := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	fallback := http.HandlerFunc(func(w http.ResponseWriter, httpReq *http.Request) {
 		io.WriteString(w, "hello, world!")
 	})
 
 	// Create an interceptor that falls back to a handler when the HTTP request is
 	// missing the RPC-Encoding header.
 	intercept := func(transportHandler http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Header.Get(yarpchttp.EncodingHeader) == "" {
+		return http.HandlerFunc(func(w http.ResponseWriter, httpReq *http.Request) {
+			if httpReq.Header.Get(yarpchttp.EncodingHeader) == "" {
 				// Not a YARPC request, use fallback handler.
-				fallback.ServeHTTP(w, r)
+				fallback.ServeHTTP(w, httpReq)
 			} else {
-				transportHandler.ServeHTTP(w, r)
+				transportHandler.ServeHTTP(w, httpReq)
 			}
 		})
 	}

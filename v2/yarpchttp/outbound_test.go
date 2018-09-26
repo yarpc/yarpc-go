@@ -42,20 +42,20 @@ import (
 
 func TestCallSuccess(t *testing.T) {
 	successServer := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, req *http.Request) {
-			defer req.Body.Close()
+		func(w http.ResponseWriter, httpReq *http.Request) {
+			defer httpReq.Body.Close()
 
-			ttl := req.Header.Get(TTLMSHeader)
+			ttl := httpReq.Header.Get(TTLMSHeader)
 			ttlms, err := strconv.Atoi(ttl)
 			assert.NoError(t, err, "can parse TTL header")
 			assert.InDelta(t, ttlms, testtime.X*1000.0, testtime.X*5.0, "ttl header within tolerance")
 
-			assert.Equal(t, "caller", req.Header.Get(CallerHeader))
-			assert.Equal(t, "service", req.Header.Get(ServiceHeader))
-			assert.Equal(t, "raw", req.Header.Get(EncodingHeader))
-			assert.Equal(t, "hello", req.Header.Get(ProcedureHeader))
+			assert.Equal(t, "caller", httpReq.Header.Get(CallerHeader))
+			assert.Equal(t, "service", httpReq.Header.Get(ServiceHeader))
+			assert.Equal(t, "raw", httpReq.Header.Get(EncodingHeader))
+			assert.Equal(t, "hello", httpReq.Header.Get(ProcedureHeader))
 
-			body, err := ioutil.ReadAll(req.Body)
+			body, err := ioutil.ReadAll(httpReq.Body)
 			if assert.NoError(t, err) {
 				assert.Equal(t, []byte("world"), body)
 			}
@@ -167,11 +167,11 @@ func TestOutboundHeaders(t *testing.T) {
 			}()
 
 			server := httptest.NewServer(http.HandlerFunc(
-				func(w http.ResponseWriter, r *http.Request) {
-					defer r.Body.Close()
+				func(w http.ResponseWriter, httpReq *http.Request) {
+					defer httpReq.Body.Close()
 					for k, v := range tt.wantHeaders {
 						assert.Equal(
-							t, v, r.Header.Get(k), "%v: header %v did not match", tt.desc, k)
+							t, v, httpReq.Header.Get(k), "%v: header %v did not match", tt.desc, k)
 					}
 				},
 			))
@@ -235,9 +235,9 @@ func TestOutboundApplicationError(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(
-				func(w http.ResponseWriter, r *http.Request) {
+				func(w http.ResponseWriter, httpReq *http.Request) {
 					w.Header().Add("Rpc-Status", tt.status)
-					defer r.Body.Close()
+					defer httpReq.Body.Close()
 				},
 			))
 			defer server.Close()
@@ -266,7 +266,7 @@ func TestCallFailures(t *testing.T) {
 	defer notFoundServer.Close()
 
 	internalErrorServer := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
+		func(w http.ResponseWriter, httpReq *http.Request) {
 			http.Error(w, "great sadness", http.StatusInternalServerError)
 		}))
 	defer internalErrorServer.Close()
@@ -340,11 +340,11 @@ func TestGetPeerForRequestErr(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			treq := &yarpc.Request{}
+			req := &yarpc.Request{}
 
-			chooser.EXPECT().Choose(ctx, treq).Return(tt.peer, nil, tt.err)
+			chooser.EXPECT().Choose(ctx, req).Return(tt.peer, nil, tt.err)
 
-			_, _, err := outbound.getPeerForRequest(ctx, treq)
+			_, _, err := outbound.getPeerForRequest(ctx, req)
 			require.Error(t, err)
 		})
 	}
@@ -368,12 +368,12 @@ func TestWithCoreHeaders(t *testing.T) {
 	routingKey := "routing"
 	routingDelegate := "delegate"
 
-	treq := &yarpc.Request{
+	req := &yarpc.Request{
 		ShardKey:        shardKey,
 		RoutingKey:      routingKey,
 		RoutingDelegate: routingDelegate,
 	}
-	result := outbound.withCoreHeaders(httpReq, treq, time.Second)
+	result := outbound.withCoreHeaders(httpReq, req, time.Second)
 
 	assert.Equal(t, shardKey, result.Header.Get(ShardKeyHeader))
 	assert.Equal(t, routingKey, result.Header.Get(RoutingKeyHeader))
@@ -412,9 +412,9 @@ func TestOutboundNoDeadline(t *testing.T) {
 
 func TestServiceMatchSuccess(t *testing.T) {
 	matchServer := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, req *http.Request) {
-			defer req.Body.Close()
-			w.Header().Set(ServiceHeader, req.Header.Get(ServiceHeader))
+		func(w http.ResponseWriter, httpReq *http.Request) {
+			defer httpReq.Body.Close()
+			w.Header().Set(ServiceHeader, httpReq.Header.Get(ServiceHeader))
 			_, err := w.Write([]byte("Service name header return"))
 			assert.NoError(t, err)
 		},
@@ -439,8 +439,8 @@ func TestServiceMatchSuccess(t *testing.T) {
 
 func TestServiceMatchFailed(t *testing.T) {
 	mismatchServer := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, req *http.Request) {
-			defer req.Body.Close()
+		func(w http.ResponseWriter, httpReq *http.Request) {
+			defer httpReq.Body.Close()
 			w.Header().Set(ServiceHeader, "ThisIsAWrongSvcName")
 			_, err := w.Write([]byte("Wrong service name header return"))
 			assert.NoError(t, err)
@@ -466,8 +466,8 @@ func TestServiceMatchFailed(t *testing.T) {
 
 func TestServiceMatchNoHeader(t *testing.T) {
 	noHeaderServer := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, req *http.Request) {
-			defer req.Body.Close()
+		func(w http.ResponseWriter, httpReq *http.Request) {
+			defer httpReq.Body.Close()
 			// intentionally do not set a response header
 			_, err := w.Write([]byte("No service name header return"))
 			assert.NoError(t, err)

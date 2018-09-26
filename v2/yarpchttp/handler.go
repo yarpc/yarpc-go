@@ -49,17 +49,17 @@ type handler struct {
 	logger              *zap.Logger
 }
 
-func (h handler) ServeHTTP(w http.ResponseWriter, hRequest *http.Request) {
+func (h handler) ServeHTTP(w http.ResponseWriter, httpReq *http.Request) {
 	responseWriter := newResponseWriter(w)
-	service := popHeader(hRequest.Header, ServiceHeader)
-	procedure := popHeader(hRequest.Header, ProcedureHeader)
-	bothResponseError := popHeader(hRequest.Header, AcceptsBothResponseErrorHeader) == AcceptTrue
+	service := popHeader(httpReq.Header, ServiceHeader)
+	procedure := popHeader(httpReq.Header, ProcedureHeader)
+	bothResponseError := popHeader(httpReq.Header, AcceptsBothResponseErrorHeader) == AcceptTrue
 	// add response header to echo accepted rpc-service
 	responseWriter.WriteSystemHeader(ServiceHeader, service)
 
-	yResponse, yResponseBuf, err := h.callHandler(responseWriter, hRequest, service, procedure)
+	res, resBuf, err := h.callHandler(responseWriter, httpReq, service, procedure)
 	if err == nil {
-		responseWriter.SetResponse(yResponse, yResponseBuf)
+		responseWriter.SetResponse(res, resBuf)
 		responseWriter.Close(http.StatusOK)
 		return
 	}
@@ -83,11 +83,11 @@ func (h handler) ServeHTTP(w http.ResponseWriter, hRequest *http.Request) {
 		// getting the server error string.
 		responseWriter.WriteSystemHeader(BothResponseErrorHeader, AcceptTrue)
 		responseWriter.WriteSystemHeader(ErrorMessageHeader, status.Message())
-		responseWriter.SetResponse(yResponse, yResponseBuf)
+		responseWriter.SetResponse(res, resBuf)
 	} else {
 		// Set the error message as the response body (not in a header)
 		responseWriter.WriteSystemHeader("Content-Type", "text/plain; charset=utf8")
-		responseWriter.SetResponse(yResponse, yarpc.NewBufferString(status.Message()))
+		responseWriter.SetResponse(res, yarpc.NewBufferString(status.Message()))
 	}
 
 	httpStatusCode, ok := _codeToStatusCode[status.Code()]
@@ -99,47 +99,47 @@ func (h handler) ServeHTTP(w http.ResponseWriter, hRequest *http.Request) {
 
 func (h handler) callHandler(
 	responseWriter *responseWriter,
-	hRequest *http.Request,
+	httpReq *http.Request,
 	service string,
 	procedure string,
-) (yResponse *yarpc.Response, yResponseBuf *yarpc.Buffer, err error) {
+) (res *yarpc.Response, resBuf *yarpc.Buffer, err error) {
 	start := time.Now()
-	if hRequest.Method != http.MethodPost {
-		return nil, nil, yarpcerror.Newf(yarpcerror.CodeNotFound, "request method was %s but only %s is allowed", hRequest.Method, http.MethodPost)
+	if httpReq.Method != http.MethodPost {
+		return nil, nil, yarpcerror.Newf(yarpcerror.CodeNotFound, "request method was %s but only %s is allowed", httpReq.Method, http.MethodPost)
 	}
-	yRequest := &yarpc.Request{
-		Caller:          popHeader(hRequest.Header, CallerHeader),
+	req := &yarpc.Request{
+		Caller:          popHeader(httpReq.Header, CallerHeader),
 		Service:         service,
 		Procedure:       procedure,
-		Encoding:        yarpc.Encoding(popHeader(hRequest.Header, EncodingHeader)),
+		Encoding:        yarpc.Encoding(popHeader(httpReq.Header, EncodingHeader)),
 		Transport:       transportName,
-		ShardKey:        popHeader(hRequest.Header, ShardKeyHeader),
-		RoutingKey:      popHeader(hRequest.Header, RoutingKeyHeader),
-		RoutingDelegate: popHeader(hRequest.Header, RoutingDelegateHeader),
-		Headers:         applicationHeaders.FromHTTPHeaders(hRequest.Header, yarpc.Headers{}),
+		ShardKey:        popHeader(httpReq.Header, ShardKeyHeader),
+		RoutingKey:      popHeader(httpReq.Header, RoutingKeyHeader),
+		RoutingDelegate: popHeader(httpReq.Header, RoutingDelegateHeader),
+		Headers:         applicationHeaders.FromHTTPHeaders(httpReq.Header, yarpc.Headers{}),
 	}
 
-	yRequestBuf, err := readCloserToBuffer(hRequest.Body)
+	reqBuf, err := readCloserToBuffer(httpReq.Body)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	for header := range h.grabHeaders {
-		if value := hRequest.Header.Get(header); value != "" {
-			yRequest.Headers = yRequest.Headers.With(header, value)
+		if value := httpReq.Header.Get(header); value != "" {
+			req.Headers = req.Headers.With(header, value)
 		}
 	}
-	if err = yarpc.ValidateRequest(yRequest); err != nil {
+	if err = yarpc.ValidateRequest(req); err != nil {
 		return nil, nil, err
 	}
 
-	ctx := hRequest.Context()
-	ctx, cancel, parseTTLErr := parseTTL(ctx, yRequest, popHeader(hRequest.Header, TTLMSHeader))
+	ctx := httpReq.Context()
+	ctx, cancel, parseTTLErr := parseTTL(ctx, req, popHeader(httpReq.Header, TTLMSHeader))
 	// parseTTLErr != nil is a problem only if the request is unary.
 	defer cancel()
-	ctx, span := h.createSpan(ctx, hRequest, yRequest, start)
+	ctx, span := h.createSpan(ctx, httpReq, req, start)
 
-	spec, err := h.router.Choose(ctx, yRequest)
+	spec, err := h.router.Choose(ctx, req)
 	if err != nil {
 		return nil, nil, yarpctracing.UpdateSpanWithErr(span, err)
 	}
@@ -153,11 +153,11 @@ func (h handler) callHandler(
 	switch spec.Type() {
 	case yarpc.Unary:
 		defer span.Finish()
-		yResponse, yResponseBuf, err = yarpctransport.InvokeUnaryHandler(yarpctransport.UnaryInvokeRequest{
+		res, resBuf, err = yarpctransport.InvokeUnaryHandler(yarpctransport.UnaryInvokeRequest{
 			Context:   ctx,
 			StartTime: start,
-			Request:   yRequest,
-			Buffer:    yRequestBuf,
+			Request:   req,
+			Buffer:    reqBuf,
 			Handler:   spec.Unary(),
 			Logger:    h.logger,
 		})
@@ -167,39 +167,39 @@ func (h handler) callHandler(
 	}
 
 	if err != nil {
-		return yResponse, yResponseBuf, yarpctracing.UpdateSpanWithErr(span, err)
+		return res, resBuf, yarpctracing.UpdateSpanWithErr(span, err)
 	}
 
-	if contentType := getContentType(yRequest.Encoding); contentType != "" {
+	if contentType := getContentType(req.Encoding); contentType != "" {
 		responseWriter.WriteSystemHeader("Content-Type", contentType)
 	}
-	return yResponse, yResponseBuf, nil
+	return res, resBuf, nil
 }
 
-func (h handler) createSpan(ctx context.Context, hRequest *http.Request, yRequest *yarpc.Request, start time.Time) (context.Context, opentracing.Span) {
+func (h handler) createSpan(ctx context.Context, httpReq *http.Request, req *yarpc.Request, start time.Time) (context.Context, opentracing.Span) {
 	// Extract opentracing etc baggage from headers
 	// Annotate the inbound context with a trace span
 	tracer := h.tracer
-	carrier := opentracing.HTTPHeadersCarrier(hRequest.Header)
+	carrier := opentracing.HTTPHeadersCarrier(httpReq.Header)
 	parentSpanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, carrier)
 	// parentSpanCtx may be nil, ext.RPCServerOption handles a nil parent
 	// gracefully.
 	tags := opentracing.Tags{
-		"rpc.caller":    yRequest.Caller,
-		"rpc.service":   yRequest.Service,
-		"rpc.encoding":  yRequest.Encoding,
+		"rpc.caller":    req.Caller,
+		"rpc.service":   req.Service,
+		"rpc.encoding":  req.Encoding,
 		"rpc.transport": "http",
 	}
 	for k, v := range yarpctracing.Tags {
 		tags[k] = v
 	}
 	span := tracer.StartSpan(
-		yRequest.Procedure,
+		req.Procedure,
 		opentracing.StartTime(start),
 		ext.RPCServerOption(parentSpanCtx), // implies ChildOf
 		tags,
 	)
-	ext.PeerService.Set(span, yRequest.Caller)
+	ext.PeerService.Set(span, req.Caller)
 	ctx = opentracing.ContextWithSpan(ctx, span)
 	return ctx, span
 }
@@ -220,12 +220,12 @@ func (rw *responseWriter) WriteSystemHeader(key string, value string) {
 }
 
 // SetResponse stores the response that will be written when calling `Close(..)`.
-func (rw *responseWriter) SetResponse(yResponse *yarpc.Response, yResponseBuf *yarpc.Buffer) {
-	if yResponse != nil {
-		applicationHeaders.ToHTTPHeaders(yResponse.Headers, rw.w.Header())
+func (rw *responseWriter) SetResponse(res *yarpc.Response, resBuf *yarpc.Buffer) {
+	if res != nil {
+		applicationHeaders.ToHTTPHeaders(res.Headers, rw.w.Header())
 	}
-	if yResponseBuf != nil {
-		rw.buf = yResponseBuf
+	if resBuf != nil {
+		rw.buf = resBuf
 	}
 }
 
