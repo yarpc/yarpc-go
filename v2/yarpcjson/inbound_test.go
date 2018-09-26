@@ -101,13 +101,13 @@ func TestHandleInterfaceEmptySuccess(t *testing.T) {
 	handler := jsonHandler{reader: ifaceEmptyReader{}, handler: reflect.ValueOf(h)}
 
 	reqBuf := yarpc.NewBufferString(`["a", "b", "c"]`)
-	_, _, err := handler.Handle(context.Background(), &yarpc.Request{
+	_, resBuf, err := handler.Handle(context.Background(), &yarpc.Request{
 		Procedure: "foo",
 		Encoding:  "json",
 	}, reqBuf)
 
 	require.NoError(t, err)
-	assert.JSONEq(t, `["a", "b", "c"]`, reqBuf.String())
+	assert.JSONEq(t, `["a", "b", "c"]`, resBuf.String())
 }
 
 func TestHandleSuccessWithResponseHeaders(t *testing.T) {
