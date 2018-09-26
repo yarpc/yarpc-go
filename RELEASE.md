@@ -86,7 +86,8 @@ Releasing
 
 8.  Land the pull request after approval as a **merge commit**. To do this,
     select **Create a merge commit** from the pull-down next to the merge
-    button and click **Merge pull request**.
+    button and click **Merge pull request**. Make sure you delete that branch
+    after it has been merged with **Delete Branch**.
 
 9.  Once the change has been landed, pull it locally.
 
