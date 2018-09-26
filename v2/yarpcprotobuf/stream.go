@@ -30,6 +30,31 @@ import (
 	yarpc "go.uber.org/yarpc/v2"
 )
 
+// ClientStream is a protobuf-specific client stream.
+type ClientStream struct {
+	stream *yarpc.ClientStream
+}
+
+// Context returns the context of the stream.
+func (c *ClientStream) Context() context.Context {
+	return c.stream.Context()
+}
+
+// Receive will receive a protobuf message from the client stream.
+func (c *ClientStream) Receive(create func() proto.Message) (proto.Message, error) {
+	return readFromStream(context.Background(), c.stream, create)
+}
+
+// Send will send a protobuf message to the client stream.
+func (c *ClientStream) Send(message proto.Message) error {
+	return writeToStream(context.Background(), c.stream, message)
+}
+
+// Close will close the protobuf stream.
+func (c *ClientStream) Close() error {
+	return c.stream.Close(context.Background())
+}
+
 // ServerStream is a protobuf-specific server stream.
 type ServerStream struct {
 	ctx    context.Context
@@ -42,12 +67,12 @@ func (s *ServerStream) Context() context.Context {
 }
 
 // Receive will receive a protobuf message from the server stream.
-func (s *ServerStream) Receive(create func() proto.Message, options ...yarpc.StreamOption) (proto.Message, error) {
+func (s *ServerStream) Receive(create func() proto.Message) (proto.Message, error) {
 	return readFromStream(context.Background(), s.stream, create)
 }
 
 // Send will send a protobuf message to the server stream.
-func (s *ServerStream) Send(message proto.Message, options ...yarpc.StreamOption) error {
+func (s *ServerStream) Send(message proto.Message) error {
 	return writeToStream(context.Background(), s.stream, message)
 }
 
