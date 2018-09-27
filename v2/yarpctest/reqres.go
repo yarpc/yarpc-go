@@ -23,7 +23,6 @@ package yarpctest
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"reflect"
 	"strings"
 	"testing"
@@ -48,16 +47,12 @@ type RequestMatcher struct {
 //
 // The request's contents are read in their entirety and replaced with a
 // bytes.Reader.
-func NewRequestMatcher(t *testing.T, r *yarpc.Request, b *yarpc.Buffer) RequestMatcher {
-	body, err := ioutil.ReadAll(b)
-	if err != nil {
-		t.Fatalf("failed to read request body: %v", err)
-	}
-
-	// restore a copy of the body so that the caller can still use the request
-	// object
-	b = yarpc.NewBufferBytes(body)
-	return RequestMatcher{t: t, req: r, body: body}
+func NewRequestMatcher(t *testing.T, req *yarpc.Request, reqBuf *yarpc.Buffer) RequestMatcher {
+	// make a copy of the body so that the caller can still use the buffer
+	body := reqBuf.Bytes()
+	bodyCopy := make([]byte, len(body))
+	copy(bodyCopy, body)
+	return RequestMatcher{t: t, req: req, body: bodyCopy}
 }
 
 // TODO: Headers like User-Agent, Content-Length, etc. make their way to the
@@ -112,12 +107,7 @@ func (m RequestMatcher) Matches(r *yarpc.Request, buf *yarpc.Buffer) bool {
 		}
 	}
 
-	rbody, err := ioutil.ReadAll(buf)
-	if err != nil {
-		m.t.Fatalf("failed to read body: %v", err)
-	}
-	buf = yarpc.NewBufferBytes(rbody) // in case it is reused
-
+	rbody := buf.Bytes()
 	if !bytes.Equal(m.body, rbody) {
 		m.t.Logf("Body mismatch: %v != %v", m.body, rbody)
 		return false
@@ -155,22 +145,17 @@ type ResponseMatcher struct {
 
 // NewResponseMatcher builds a new ResponseMatcher that verifies that
 // responses match the given Response.
-func NewResponseMatcher(t *testing.T, r *yarpc.Response, b *yarpc.Buffer) ResponseMatcher {
-	body, err := ioutil.ReadAll(b)
-	if err != nil {
-		t.Fatalf("failed to read response body: %v", err)
-	}
-
-	// restore a copy of the body so that the caller can still use the
-	// response object
-	b = yarpc.NewBufferBytes(body)
-
-	return ResponseMatcher{t: t, res: r, body: body}
+func NewResponseMatcher(t *testing.T, res *yarpc.Response, resBuf *yarpc.Buffer) ResponseMatcher {
+	// make a copy of the body so that the caller can still use the buffer
+	body := resBuf.Bytes()
+	bodyCopy := make([]byte, len(body))
+	copy(bodyCopy, body)
+	return ResponseMatcher{t: t, res: res, body: bodyCopy}
 }
 
 // Matches checks if the given object matches the Response provided in
 // NewResponseMatcher.
-func (m ResponseMatcher) Matches(r *yarpc.Response, b *yarpc.Buffer) bool {
+func (m ResponseMatcher) Matches(r *yarpc.Response, resBuf *yarpc.Buffer) bool {
 	l := m.res
 
 	if err := checkSuperSet(l.Headers, r.Headers); err != nil {
@@ -178,12 +163,7 @@ func (m ResponseMatcher) Matches(r *yarpc.Response, b *yarpc.Buffer) bool {
 		return false
 	}
 
-	rbody, err := ioutil.ReadAll(b)
-	if err != nil {
-		m.t.Fatalf("failed to read body: %v", err)
-	}
-	b = yarpc.NewBufferBytes(rbody) // in case it is reused
-
+	rbody := resBuf.Bytes()
 	if !bytes.Equal(m.body, rbody) {
 		m.t.Logf("Body mismatch: %v != %v", m.body, rbody)
 		return false
