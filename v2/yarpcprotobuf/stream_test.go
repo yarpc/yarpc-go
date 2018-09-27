@@ -107,6 +107,7 @@ func TestReadFromStream(t *testing.T) {
 			encoding: yarpcjson.Encoding,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
@@ -161,6 +162,7 @@ func TestWriteToStream(t *testing.T) {
 		err = writeToStream(ctx, clientStream, nil)
 		assert.Equal(t, yarpcerror.Newf(yarpcerror.CodeInternal, "failed to marshal unexpected encoding %q", enc), err)
 	})
+
 	t.Run("successful write", func(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
