@@ -20,8 +20,6 @@
 
 package yarpcprotobuf
 
-import "go.uber.org/yarpc/v2/yarpcjson"
-
 // ClientOption is an option for a new Client.
 type ClientOption interface {
 	apply(*client)
@@ -33,5 +31,5 @@ var EncodeJSON ClientOption = encodeJSON{}
 type encodeJSON struct{}
 
 func (e encodeJSON) apply(client *client) {
-	client.encoding = yarpcjson.Encoding
+	client.encoding = JSONEncoding
 }

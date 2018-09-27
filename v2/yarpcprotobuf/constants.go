@@ -22,5 +22,10 @@ package yarpcprotobuf
 
 import yarpc "go.uber.org/yarpc/v2"
 
-// Encoding is the name of this encoding.
-const Encoding yarpc.Encoding = "proto"
+const (
+	// Encoding is the name of this encoding.
+	Encoding yarpc.Encoding = "proto"
+
+	// JSONEncoding is the name of this encoding.
+	JSONEncoding yarpc.Encoding = "json"
+)
