@@ -75,7 +75,7 @@ func (c *client) CallStream(ctx context.Context, method string, opts ...yarpc.Ca
 	if err != nil {
 		return nil, err
 	}
-	ctx, req, err := c.toYARPCRequest(ctx, method, call)
+	ctx, req, err := c.toRequest(ctx, method, call)
 	if err != nil {
 		return nil, err
 	}
@@ -94,18 +94,17 @@ func (c *client) Call(
 	opts ...yarpc.CallOption,
 ) (proto.Message, error) {
 	call := yarpc.NewOutboundCall(opts...)
-	ctx, req, err := c.toYARPCRequest(ctx, method, call)
+	ctx, req, err := c.toRequest(ctx, method, call)
 	if err != nil {
 		return nil, err
 	}
 
 	body, cleanup, err := marshal(req.Encoding, proto)
-	if cleanup != nil {
-		defer cleanup()
-	}
 	if err != nil {
 		return nil, yarpcencoding.RequestBodyEncodeError(req, err)
 	}
+	defer cleanup()
+
 	reqBuf := &yarpc.Buffer{}
 	if _, err := reqBuf.Write(body); err != nil {
 		return nil, err
@@ -115,6 +114,7 @@ func (c *client) Call(
 	if res == nil {
 		return nil, appErr
 	}
+
 	if _, err := call.ReadFromResponse(ctx, res); err != nil {
 		return nil, err
 	}
@@ -128,7 +128,7 @@ func (c *client) Call(
 	return protoRes, appErr
 }
 
-func (c *client) toYARPCRequest(ctx context.Context, method string, call *yarpc.OutboundCall) (context.Context, *yarpc.Request, error) {
+func (c *client) toRequest(ctx context.Context, method string, call *yarpc.OutboundCall) (context.Context, *yarpc.Request, error) {
 	req := &yarpc.Request{
 		Caller:    c.c.Caller,
 		Service:   c.c.Service,
