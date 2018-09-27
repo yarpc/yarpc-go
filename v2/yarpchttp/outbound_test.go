@@ -184,7 +184,7 @@ func TestOutboundHeaders(t *testing.T) {
 				defer cancel()
 			}
 
-			outbound := &*tt.outbound
+			outbound := tt.outbound
 			outbound.Dialer = dialer
 			outbound.URL = parseURL(server.URL)
 
