@@ -27,37 +27,22 @@ import (
 	"go.uber.org/yarpc/v2/yarpcpeerlist"
 )
 
-type listConfig struct {
+// Config describes how to build a round-robin peer list.
+type Config struct {
 	capacity int
 	shuffle  bool
 	seed     int64
 }
 
-var defaultListConfig = listConfig{
+var defaultListConfig = Config{
 	capacity: 10,
 	shuffle:  true,
 	seed:     time.Now().UnixNano(),
 }
 
-// ListOption customizes the behavior of a roundrobin list.
-type ListOption func(*listConfig)
-
-// Capacity specifies the default capacity of the underlying
-// data structures for this list.
-//
-// Defaults to 10.
-func Capacity(capacity int) ListOption {
-	return func(c *listConfig) {
-		c.capacity = capacity
-	}
-}
-
 // New creates a new round robin peer list.
-func New(dialer yarpc.Dialer, opts ...ListOption) *List {
-	cfg := defaultListConfig
-	for _, o := range opts {
-		o(&cfg)
-	}
+func New(dialer yarpc.Dialer, cfg Config) *List {
+	// TODO: validate cfg
 
 	plOpts := []yarpcpeerlist.ListOption{
 		yarpcpeerlist.Capacity(cfg.capacity),
