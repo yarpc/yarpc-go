@@ -42,7 +42,7 @@ type mockReader struct {
 	readErr  error
 }
 
-func (r *mockReader) Read(p []byte) (n int, err error) {
+func (r *mockReader) Read(_ []byte) (n int, err error) {
 	if r.readErr != nil {
 		return 0, r.readErr
 	}
@@ -50,7 +50,6 @@ func (r *mockReader) Read(p []byte) (n int, err error) {
 	if err != nil {
 		return 0, err
 	}
-	p = append(p, bytes...)
 	return len(bytes), io.EOF
 }
 
