@@ -13,7 +13,9 @@ WHITELIST="\
   encoding/thrift \
   encoding/thrift/thriftrw-plugin-yarpc \
   internal/interpolate \
-  pkg/lifecycle"
+  pkg/lifecycle \
+  v2 \
+  v2/yarpctest"
 
 is_ignore_dir() {
   for i in ${IGNORE_DIRS}; do
