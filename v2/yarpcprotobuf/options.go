@@ -20,12 +20,16 @@
 
 package yarpcprotobuf
 
-import yarpc "go.uber.org/yarpc/v2"
+// ClientOption is an option for a new Client.
+type ClientOption interface {
+	apply(*client)
+}
 
-const (
-	// Encoding is the name of this encoding.
-	Encoding yarpc.Encoding = "proto"
+// EncodeJSON is used to encode all client requests as JSON instead of Protobuf.
+var EncodeJSON ClientOption = encodeJSON{}
 
-	// JSONEncoding is the name of this encoding.
-	JSONEncoding yarpc.Encoding = "json"
-)
+type encodeJSON struct{}
+
+func (e encodeJSON) apply(client *client) {
+	client.encoding = JSONEncoding
+}

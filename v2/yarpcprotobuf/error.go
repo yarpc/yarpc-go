@@ -20,12 +20,12 @@
 
 package yarpcprotobuf
 
-import yarpc "go.uber.org/yarpc/v2"
-
-const (
-	// Encoding is the name of this encoding.
-	Encoding yarpc.Encoding = "proto"
-
-	// JSONEncoding is the name of this encoding.
-	JSONEncoding yarpc.Encoding = "json"
+import (
+	"github.com/gogo/protobuf/proto"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
+
+// CastError returns an error saying that generated code could not properly cast a proto.Message to it's expected type.
+func CastError(expected, actual proto.Message) error {
+	return yarpcerror.Newf(yarpcerror.CodeInternal, "expected proto.Message to have type %T but had type %T", expected, actual)
+}

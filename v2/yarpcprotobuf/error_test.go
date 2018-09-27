@@ -20,12 +20,13 @@
 
 package yarpcprotobuf
 
-import yarpc "go.uber.org/yarpc/v2"
+import (
+	"testing"
 
-const (
-	// Encoding is the name of this encoding.
-	Encoding yarpc.Encoding = "proto"
-
-	// JSONEncoding is the name of this encoding.
-	JSONEncoding yarpc.Encoding = "json"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
+
+func TestCastError(t *testing.T) {
+	assert.Equal(t, yarpcerror.CodeInternal, yarpcerror.FromError(CastError(nil, nil)).Code())
+}

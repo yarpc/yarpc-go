@@ -20,12 +20,18 @@
 
 package yarpcprotobuf
 
-import yarpc "go.uber.org/yarpc/v2"
+import (
+	"context"
+	"testing"
 
-const (
-	// Encoding is the name of this encoding.
-	Encoding yarpc.Encoding = "proto"
-
-	// JSONEncoding is the name of this encoding.
-	JSONEncoding yarpc.Encoding = "json"
+	"github.com/stretchr/testify/assert"
+	yarpc "go.uber.org/yarpc/v2"
 )
+
+func TestNoResponseHeaders(t *testing.T) {
+	client := &client{}
+	headers := make(map[string]string)
+
+	_, err := client.CallStream(context.Background(), "foo", yarpc.ResponseHeaders(&headers))
+	assert.EqualError(t, err, "code:invalid-argument message:response headers are not supported for streams")
+}
