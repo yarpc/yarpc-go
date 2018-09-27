@@ -34,6 +34,7 @@ import (
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcjson"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 type mockReader struct {
@@ -112,10 +113,8 @@ func TestReadFromStream(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			var (
-				ctx = context.Background()
-
-				// TODO(mensch): Use yarpctest.NewMockStreamCloser when available.
-				stream = NewMockStreamCloser(mockCtrl)
+				ctx    = context.Background()
+				stream = yarpctest.NewMockStreamCloser(mockCtrl)
 			)
 
 			stream.EXPECT().ReceiveMessage(ctx).Return(
@@ -149,7 +148,7 @@ func TestWriteToStream(t *testing.T) {
 			enc = "raw"
 		)
 
-		stream := NewMockStreamCloser(mockCtrl)
+		stream := yarpctest.NewMockStreamCloser(mockCtrl)
 		stream.EXPECT().Request().Return(
 			&yarpc.Request{
 				Encoding: yarpc.Encoding(enc),
@@ -168,7 +167,7 @@ func TestWriteToStream(t *testing.T) {
 
 		ctx := context.Background()
 
-		stream := NewMockStreamCloser(mockCtrl)
+		stream := yarpctest.NewMockStreamCloser(mockCtrl)
 		stream.EXPECT().Request().Return(
 			&yarpc.Request{
 				Encoding: Encoding,
