@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-09-26T15:03:29.431439387Z
+updated: 2018-09-27T15:05:38.146238035Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -130,7 +130,7 @@ imports:
   - internal/digreflect
   - internal/dot
 - name: go.uber.org/fx
-  version: b156a883a62423b7d9ab651d1689c42c4d788787
+  version: 6244a3ed900ddd4deac96447f2c988d4722ad890
   subpackages:
   - fxtest
   - internal/fxlog
@@ -172,7 +172,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: f04abc6bdfa7a0171a8a0c9fd2ada9391044d056
+  version: 4dfa2610cdf3b287375bbba5b8f2a14d3b01d8de
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -189,7 +189,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 2f1df4e56cdeb503a08d8577e6f1a7eb12efab82
+  version: 8ccfc680374f2d48b5d05f16bd7f6a3cef1bdb99
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -201,7 +201,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: c756801b0141e5d8f5f43e38d9962117e034e565
+  version: 9e2f8b2a0ac2cc9c3237908fdd5c0471b6ab311f
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
