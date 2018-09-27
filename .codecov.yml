@@ -102,5 +102,4 @@ ignore:
  - /internal/service-test/
  - /internal/testutils/
  - /serialize/internal/
- - /v2/yarpcmiddlewaretest/
  - /yarpcproto/
