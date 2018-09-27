@@ -28,9 +28,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcmiddleware"
-	"go.uber.org/yarpc/v2/yarpcmiddlewaretest"
+	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
 
@@ -176,10 +174,10 @@ func IgnoreTestRouterWithMiddleware(t *testing.T) {
 	req := &yarpc.Request{}
 	expectedSpec := yarpc.HandlerSpec{}
 
-	routerMiddleware := yarpcmiddlewaretest.NewMockRouter(mockCtrl)
+	routerMiddleware := yarpctest.NewMockRouterMiddleware(mockCtrl)
 	routerMiddleware.EXPECT().Choose(ctx, req, gomock.Any()).Times(1).Return(expectedSpec, nil)
 
-	router := yarpcmiddleware.ApplyRouteTable(NewMapRouter("service"), routerMiddleware)
+	router := yarpc.ApplyRouteTable(NewMapRouter("service"), routerMiddleware)
 
 	actualSpec, err := router.Choose(ctx, req)
 

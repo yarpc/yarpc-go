@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcmiddleware
+package yarpc_test
 
 import (
 	"context"
@@ -27,42 +27,41 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcmiddlewaretest"
+	. "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 func TestApplyRouteTable(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	routerMiddleware := yarpcmiddlewaretest.NewMockRouter(ctrl)
+	routerMiddleware := yarpctest.NewMockRouterMiddleware(ctrl)
 	routeTable := yarpctest.NewMockRouteTable(ctrl)
 
 	rtWithMW := ApplyRouteTable(routeTable, routerMiddleware)
 
-	routeTableWithMW, ok := rtWithMW.(routeTableWithMiddleware)
+	routeTableWithMW, ok := rtWithMW.(RouteTableWithMiddleware)
 	require.True(t, ok, "unexpected RouteTable type")
 
-	assert.Equal(t, routeTableWithMW.m, routerMiddleware)
-	assert.Equal(t, routeTableWithMW.r, routeTable)
+	assert.Equal(t, routeTableWithMW.GetRouterMiddleware(), routerMiddleware)
+	assert.Equal(t, routeTableWithMW.GetRouteTable(), routeTable)
 }
 
 func TestRouteTableMiddleware(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	routerMiddleware := yarpcmiddlewaretest.NewMockRouter(ctrl)
+	routerMiddleware := yarpctest.NewMockRouterMiddleware(ctrl)
 	routeTable := yarpctest.NewMockRouteTable(ctrl)
 
 	ctx := context.Background()
-	req := &yarpc.Request{}
-	spec := yarpc.NewUnaryHandlerSpec(yarpctest.NewMockUnaryHandler(ctrl))
+	req := &Request{}
+	spec := NewUnaryHandlerSpec(yarpctest.NewMockUnaryHandler(ctrl))
 
 	routeTableWithMW := ApplyRouteTable(routeTable, routerMiddleware)
 
 	// register procedures
 	routeTable.EXPECT().Register(gomock.Any())
-	routeTableWithMW.Register([]yarpc.Procedure{})
+	routeTableWithMW.Register([]Procedure{})
 
 	// choose handlerSpec
 	routerMiddleware.EXPECT().Choose(ctx, req, routeTable).Return(spec, nil)
@@ -71,6 +70,6 @@ func TestRouteTableMiddleware(t *testing.T) {
 	assert.Equal(t, spec, spec)
 
 	// get procedures
-	routerMiddleware.EXPECT().Procedures(routeTable).Return([]yarpc.Procedure{})
+	routerMiddleware.EXPECT().Procedures(routeTable).Return([]Procedure{})
 	routeTableWithMW.Procedures()
 }
