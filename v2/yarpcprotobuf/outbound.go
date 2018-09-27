@@ -34,7 +34,7 @@ type Client interface {
 	Call(
 		ctx context.Context,
 		method string,
-		request proto.Message,
+		req proto.Message,
 		create func() proto.Message,
 		opts ...yarpc.CallOption,
 	) (proto.Message, error)
@@ -75,11 +75,11 @@ func (c *client) CallStream(ctx context.Context, method string, opts ...yarpc.Ca
 	if err != nil {
 		return nil, err
 	}
-	ctx, request, err := c.toYARPCRequest(ctx, method, call)
+	ctx, req, err := c.toYARPCRequest(ctx, method, call)
 	if err != nil {
 		return nil, err
 	}
-	stream, err := c.c.Stream.CallStream(ctx, request)
+	stream, err := c.c.Stream.CallStream(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -94,52 +94,52 @@ func (c *client) Call(
 	opts ...yarpc.CallOption,
 ) (proto.Message, error) {
 	call := yarpc.NewOutboundCall(opts...)
-	ctx, request, err := c.toYARPCRequest(ctx, method, call)
+	ctx, req, err := c.toYARPCRequest(ctx, method, call)
 	if err != nil {
 		return nil, err
 	}
 
-	body, cleanup, err := marshal(request.Encoding, proto)
+	body, cleanup, err := marshal(req.Encoding, proto)
 	if cleanup != nil {
 		defer cleanup()
 	}
 	if err != nil {
-		return nil, yarpcencoding.RequestBodyEncodeError(request, err)
+		return nil, yarpcencoding.RequestBodyEncodeError(req, err)
 	}
-	requestBuf := &yarpc.Buffer{}
-	if _, err := requestBuf.Write(body); err != nil {
+	reqBuf := &yarpc.Buffer{}
+	if _, err := reqBuf.Write(body); err != nil {
 		return nil, err
 	}
 
-	response, responseBuf, appErr := c.c.Unary.Call(ctx, request, requestBuf)
-	if response == nil {
+	res, resBuf, appErr := c.c.Unary.Call(ctx, req, reqBuf)
+	if res == nil {
 		return nil, appErr
 	}
-	if _, err := call.ReadFromResponse(ctx, response); err != nil {
+	if _, err := call.ReadFromResponse(ctx, res); err != nil {
 		return nil, err
 	}
 
-	protoResponse := create()
-	if responseBuf != nil {
-		if err := unmarshal(request.Encoding, responseBuf, protoResponse); err != nil {
-			return nil, yarpcencoding.ResponseBodyDecodeError(request, err)
+	protoRes := create()
+	if resBuf != nil {
+		if err := unmarshal(req.Encoding, resBuf, protoRes); err != nil {
+			return nil, yarpcencoding.ResponseBodyDecodeError(req, err)
 		}
 	}
-	return protoResponse, appErr
+	return protoRes, appErr
 }
 
 func (c *client) toYARPCRequest(ctx context.Context, method string, call *yarpc.OutboundCall) (context.Context, *yarpc.Request, error) {
-	request := &yarpc.Request{
+	req := &yarpc.Request{
 		Caller:    c.c.Caller,
 		Service:   c.c.Service,
 		Procedure: yarpcprocedure.ToName(c.c.Service, method),
 		Encoding:  c.encoding,
 	}
 
-	ctx, err := call.WriteToRequest(ctx, request)
+	ctx, err := call.WriteToRequest(ctx, req)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return ctx, request, nil
+	return ctx, req, nil
 }

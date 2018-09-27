@@ -72,44 +72,44 @@ func NewUnaryHandler(p UnaryHandlerParams) yarpc.UnaryHandler {
 }
 
 func (u *unaryHandler) Handle(ctx context.Context, req *yarpc.Request, buf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
-	ctx, call, request, err := toProtoRequest(ctx, req, buf, u.create)
+	ctx, call, protoReq, err := toProtoRequest(ctx, req, buf, u.create)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	response := &yarpc.Response{}
-	responseBuf := &yarpc.Buffer{}
-	call.WriteToResponse(response)
+	res := &yarpc.Response{}
+	resBuf := &yarpc.Buffer{}
+	call.WriteToResponse(res)
 
-	protoResponse, appErr := u.handle(ctx, request)
+	protoRes, appErr := u.handle(ctx, protoReq)
 
-	// If the proto response is nil, return early
+	// If the proto res is nil, return early
 	// so that we don't attempt to marshal a nil
 	// object.
-	if protoResponse == nil {
+	if protoRes == nil {
 		if appErr != nil {
-			response.ApplicationError = true
+			res.ApplicationError = true
 		}
-		return response, responseBuf, appErr
+		return res, resBuf, appErr
 	}
 
-	body, cleanup, err := marshal(req.Encoding, protoResponse)
+	body, cleanup, err := marshal(req.Encoding, protoRes)
 	if cleanup != nil {
 		defer cleanup()
 	}
 	if err != nil {
-		return response, responseBuf, yarpcencoding.ResponseBodyEncodeError(req, err)
+		return res, resBuf, yarpcencoding.ResponseBodyEncodeError(req, err)
 	}
-	if _, err := responseBuf.Write(body); err != nil {
-		return response, responseBuf, err
+	if _, err := resBuf.Write(body); err != nil {
+		return res, resBuf, err
 	}
 	if appErr != nil {
 		// TODO(apeatsbond): now that we propogate a Response struct back, the
 		// Response should hold the actual application error. Errors returned by the
 		// handler (not through the Response) could be considered fatal.
-		response.ApplicationError = true
+		res.ApplicationError = true
 	}
-	return response, responseBuf, appErr
+	return res, resBuf, appErr
 }
 
 func toProtoRequest(
@@ -125,9 +125,9 @@ func toProtoRequest(
 	if err := call.ReadFromRequest(req); err != nil {
 		return nil, nil, nil, err
 	}
-	request := create()
-	if err := unmarshal(req.Encoding, body, request); err != nil {
+	protoReq := create()
+	if err := unmarshal(req.Encoding, body, protoReq); err != nil {
 		return nil, nil, nil, yarpcencoding.RequestBodyDecodeError(req, err)
 	}
-	return ctx, call, request, nil
+	return ctx, call, protoReq, nil
 }
