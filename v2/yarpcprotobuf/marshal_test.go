@@ -30,12 +30,12 @@ import (
 )
 
 func TestUnhandledEncoding(t *testing.T) {
-	t.Run("Unmarshal: internal error", func(t *testing.T) {
+	t.Run("unmarshal: internal error", func(t *testing.T) {
 		err := unmarshal(yarpc.Encoding("foo"), bytes.NewReader([]byte("foo")), nil)
 		assert.Equal(t, yarpcerror.CodeInternal, yarpcerror.FromError(err).Code())
 	})
 
-	t.Run("Marshal: internal error", func(t *testing.T) {
+	t.Run("marshal: internal error", func(t *testing.T) {
 		_, _, err := marshal(yarpc.Encoding("foo"), nil)
 		assert.Equal(t, yarpcerror.CodeInternal, yarpcerror.FromError(err).Code())
 	})

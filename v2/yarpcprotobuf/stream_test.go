@@ -79,30 +79,30 @@ func TestReadFromStream(t *testing.T) {
 		err      error
 	}{
 		{
-			desc:     "Decode error",
+			desc:     "decode error",
 			reader:   &mockReader{readErr: _readErr},
 			encoding: Encoding,
 			err:      _readErr,
 		},
 		{
-			desc:     "Close error",
+			desc:     "close error",
 			reader:   &mockReader{closeErr: _closeErr},
 			encoding: Encoding,
 			err:      _closeErr,
 		},
 		{
-			desc:     "Decode and close multierror",
+			desc:     "decode and close multierror",
 			reader:   &mockReader{readErr: _readErr, closeErr: _closeErr},
 			encoding: Encoding,
 			err:      multierr.Append(_readErr, _closeErr),
 		},
 		{
-			desc:     "Successful read with proto encoding",
+			desc:     "successful read with proto encoding",
 			reader:   &mockReader{},
 			encoding: Encoding,
 		},
 		{
-			desc:     "Successful read with json encoding",
+			desc:     "successful read with json encoding",
 			reader:   &mockReader{},
 			encoding: yarpcjson.Encoding,
 		},
@@ -139,7 +139,7 @@ func TestReadFromStream(t *testing.T) {
 }
 
 func TestWriteToStream(t *testing.T) {
-	t.Run("Invalid encoding", func(t *testing.T) {
+	t.Run("invalid encoding", func(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
 
@@ -161,7 +161,7 @@ func TestWriteToStream(t *testing.T) {
 		err = writeToStream(ctx, clientStream, nil)
 		assert.Equal(t, yarpcerror.Newf(yarpcerror.CodeInternal, "failed to marshal unexpected encoding %q", enc), err)
 	})
-	t.Run("Successful write", func(t *testing.T) {
+	t.Run("successful write", func(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
 
