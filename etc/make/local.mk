@@ -13,7 +13,7 @@ ERRCHECK_EXCLUDES := \.Close\(\) \.Stop\(\) fmt\.Fprint
 FILTER_ERRCHECK := grep -v $(patsubst %,-e %, $(ERRCHECK_EXCLUDES))
 
 STATICCHECK_FLAGS := \
-	-ignore go.uber.org/yarpc/internal/yarpcerrors/yarpcerrors.go:SA1019
+	-ignore "go.uber.org/yarpc/internal/yarpcerrors/yarpcerrors.go:SA1019 go.uber.org/yarpc/v2/internal/internalyarpcerror/yarpcerrors.go:SA1019"
 
 # The number of jobs allocated to run examples tests in parallel
 # The goal is to have all examples tests run in parallel, and
