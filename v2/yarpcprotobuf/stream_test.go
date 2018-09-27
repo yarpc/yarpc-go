@@ -67,10 +67,8 @@ func (m *mockMessage) ProtoMessage()  {}
 func (m *mockMessage) String() string { return "mock" }
 
 func TestReadFromStream(t *testing.T) {
-	var (
-		_closeErr = errors.New("faild to close")
-		_readErr  = errors.New("faild to read")
-	)
+	_closeErr := errors.New("faild to close")
+	_readErr := errors.New("faild to read")
 
 	tests := []struct {
 		desc     string
@@ -113,10 +111,8 @@ func TestReadFromStream(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			var (
-				ctx    = context.Background()
-				stream = yarpctest.NewMockStreamCloser(mockCtrl)
-			)
+			ctx := context.Background()
+			stream := yarpctest.NewMockStreamCloser(mockCtrl)
 
 			stream.EXPECT().ReceiveMessage(ctx).Return(
 				&yarpc.StreamMessage{
@@ -144,10 +140,8 @@ func TestWriteToStream(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
 
-		var (
-			ctx = context.Background()
-			enc = "raw"
-		)
+		ctx := context.Background()
+		enc := "raw"
 
 		stream := yarpctest.NewMockStreamCloser(mockCtrl)
 		stream.EXPECT().Request().Return(
