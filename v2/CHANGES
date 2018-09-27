@@ -37,6 +37,7 @@ Encodings:
 - [x] Port JSON encoding
 - [ ] Port Thrift encoding
 - [ ] Port Protobuf encoding
+      - [ ] Explore threading the context in Protobuf code generation, i.e. in `Stream.Receive`.
 
 Transports:
 - [ ] Port TChannel transport
