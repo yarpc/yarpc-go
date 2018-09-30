@@ -51,8 +51,8 @@ func TestTransportSpec(t *testing.T) {
 		env  map[string]string // environment variables
 		opts []Option          // transport spec options
 
-		wantErrors    []string
-		wantTransport *wantHTTPTransport
+		wantErrors []string
+		wantClient *wantHTTPClient
 	}
 
 	type wantInbound struct {
@@ -95,7 +95,7 @@ func TestTransportSpec(t *testing.T) {
 	transportTests := []transportTest{
 		{
 			desc: "no transport config",
-			wantTransport: &wantHTTPTransport{
+			wantClient: &wantHTTPClient{
 				KeepAlive:           30 * time.Second,
 				MaxIdleConnsPerHost: 2,
 				ConnTimeout:         defaultConnTimeout,
@@ -107,7 +107,7 @@ func TestTransportSpec(t *testing.T) {
 				KeepAlive(5 * time.Second),
 				MaxIdleConnsPerHost(42),
 			},
-			wantTransport: &wantHTTPTransport{
+			wantClient: &wantHTTPClient{
 				KeepAlive:           5 * time.Second,
 				MaxIdleConnsPerHost: 42,
 				ConnTimeout:         defaultConnTimeout,
@@ -125,7 +125,7 @@ func TestTransportSpec(t *testing.T) {
 				"disableCompression":    true,
 				"responseHeaderTimeout": "1s",
 			},
-			wantTransport: &wantHTTPTransport{
+			wantClient: &wantHTTPClient{
 				KeepAlive:             5 * time.Second,
 				MaxIdleConns:          1,
 				MaxIdleConnsPerHost:   2,
@@ -382,8 +382,8 @@ func TestTransportSpec(t *testing.T) {
 		configurator := yarpcconfig.New(yarpcconfig.InterpolationResolver(mapResolver(env)))
 
 		opts := append(append(trans.opts, inbound.opts...), outbound.opts...)
-		if trans.wantTransport != nil {
-			opts = append(opts, useFakeBuildTransport(t, trans.wantTransport))
+		if trans.wantClient != nil {
+			opts = append(opts, useFakeBuildClient(t, trans.wantClient))
 		}
 		err := configurator.RegisterTransport(TransportSpec(opts...))
 		require.NoError(t, err, "failed to register transport spec")
@@ -472,7 +472,7 @@ func mapResolver(m map[string]string) func(string) (string, bool) {
 	}
 }
 
-type wantHTTPTransport struct {
+type wantHTTPClient struct {
 	KeepAlive             time.Duration
 	MaxIdleConns          int
 	MaxIdleConnsPerHost   int
@@ -483,10 +483,10 @@ type wantHTTPTransport struct {
 	ConnTimeout           time.Duration
 }
 
-// useFakeBuildTransport verifies the configuration we use to build an HTTP
-// transport.
-func useFakeBuildTransport(t *testing.T, want *wantHTTPTransport) TransportOption {
-	return buildTransport(func(options *transportOptions) *http.Transport {
+// useFakeBuildClient verifies the configuration we use to build an HTTP
+// client.
+func useFakeBuildClient(t *testing.T, want *wantHTTPClient) TransportOption {
+	return buildClient(func(options *transportOptions) *http.Client {
 		assert.Equal(t, want.KeepAlive, options.keepAlive, "http.Client: KeepAlive should match")
 		assert.Equal(t, want.MaxIdleConns, options.maxIdleConns, "http.Client: MaxIdleConns should match")
 		assert.Equal(t, want.MaxIdleConnsPerHost, options.maxIdleConnsPerHost, "http.Client: MaxIdleConnsPerHost should match")
@@ -496,6 +496,6 @@ func useFakeBuildTransport(t *testing.T, want *wantHTTPTransport) TransportOptio
 		assert.Equal(t, want.DisableCompression, options.disableCompression, "http.Client: DisableCompression should match")
 		assert.Equal(t, want.ResponseHeaderTimeout, options.responseHeaderTimeout, "http.Client: ResponseHeaderTimeout should match")
 		assert.Equal(t, want.ConnTimeout, options.connTimeout, "http.Client: ConnTimeout should match")
-		return buildHTTPTransport(options)
+		return buildHTTPClient(options)
 	})
 }

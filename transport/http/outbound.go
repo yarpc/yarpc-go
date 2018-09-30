@@ -495,7 +495,7 @@ func (o *Outbound) doWithPeer(
 ) (*http.Response, error) {
 	hreq.URL.Host = p.HostPort()
 
-	response, err := o.transport.transport.RoundTrip(hreq.WithContext(ctx))
+	response, err := o.transport.client.Transport.RoundTrip(hreq.WithContext(ctx))
 
 	if err != nil {
 		// Workaround borrowed from ctxhttp until
