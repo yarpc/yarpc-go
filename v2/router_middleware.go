@@ -18,28 +18,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcmiddleware
+package yarpc
 
 import (
 	"context"
-
-	yarpc "go.uber.org/yarpc/v2"
 )
 
-// Router is a middleware for defining a customized routing experience for procedures
-type Router interface {
+// RouterMiddleware is a middleware for defining a customized routing experience for procedures
+type RouterMiddleware interface {
 	// Procedures returns the list of procedures that can be called on this router.
 	// Procedures SHOULD call into router that is passed in.
-	Procedures(yarpc.Router) []yarpc.Procedure
+	Procedures(Router) []Procedure
 
 	// Choose returns a HandlerSpec for the given request and transport.
-	// If the Router cannot determine what to call it should call into the router that was
+	// If the RouterMiddleware cannot determine what to call it should call into the router that was
 	// passed in.
-	Choose(context.Context, *yarpc.Request, yarpc.Router) (yarpc.HandlerSpec, error)
+	Choose(context.Context, *Request, Router) (HandlerSpec, error)
 }
 
-// ApplyRouteTable applies the given Router middleware to the given Router.
-func ApplyRouteTable(r yarpc.RouteTable, m Router) yarpc.RouteTable {
+// ApplyRouteTable applies the given RouterMiddleware middleware to the given RouterMiddleware.
+func ApplyRouteTable(r RouteTable, m RouterMiddleware) RouteTable {
 	if m == nil {
 		return r
 	}
@@ -47,18 +45,18 @@ func ApplyRouteTable(r yarpc.RouteTable, m Router) yarpc.RouteTable {
 }
 
 type routeTableWithMiddleware struct {
-	r yarpc.RouteTable
-	m Router
+	r RouteTable
+	m RouterMiddleware
 }
 
-func (r routeTableWithMiddleware) Procedures() []yarpc.Procedure {
+func (r routeTableWithMiddleware) Procedures() []Procedure {
 	return r.m.Procedures(r.r)
 }
 
-func (r routeTableWithMiddleware) Choose(ctx context.Context, req *yarpc.Request) (yarpc.HandlerSpec, error) {
+func (r routeTableWithMiddleware) Choose(ctx context.Context, req *Request) (HandlerSpec, error) {
 	return r.m.Choose(ctx, req, r.r)
 }
 
-func (r routeTableWithMiddleware) Register(procedures []yarpc.Procedure) {
+func (r routeTableWithMiddleware) Register(procedures []Procedure) {
 	r.r.Register(procedures)
 }

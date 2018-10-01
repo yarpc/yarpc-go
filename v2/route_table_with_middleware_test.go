@@ -18,5 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package yarpcmiddlewaretest provides test utilities for YARPC middleware.
-package yarpcmiddlewaretest
+package yarpc
+
+type RouteTableWithMiddleware = routeTableWithMiddleware
+
+func (r RouteTableWithMiddleware) GetRouteTable() RouteTable {
+	return r.r
+}
+
+func (r RouteTableWithMiddleware) GetRouterMiddleware() RouterMiddleware {
+	return r.m
+}

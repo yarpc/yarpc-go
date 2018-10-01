@@ -88,7 +88,7 @@ To port encodings forward:
 Package changes:
 - [ ] api/transport -> v2
 - [ ] api/peer -> v2
-- [x] api/middleware -> v2/yarpcmiddlware
+- [ ] api/middleware -> v2
 - [ ] yarpcerrors -> v2/yarpcerror
 - [ ] yarpctest -> v2/yarpctest
 - [ ] api/transport/transporttest -> v2/yarpctest
