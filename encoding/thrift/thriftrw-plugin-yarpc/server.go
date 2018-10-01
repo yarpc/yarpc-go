@@ -101,7 +101,7 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Proced
 			impl,
 			append(
 				opts,
-				<$thrift>.Named("<.Name>"),
+				<$thrift>.Named(<printf "%q" .Name>),
 			)...,
 		)...,
 	)
