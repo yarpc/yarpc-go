@@ -21,6 +21,7 @@
 package grpc
 
 import (
+	"context"
 	"net"
 	"testing"
 
@@ -30,14 +31,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-func TestTransportLifecycle(t *testing.T) {
-	transport := NewTransport()
-	assert.NoError(t, transport.Start())
-	assert.True(t, transport.IsRunning())
-	assert.NoError(t, transport.Stop())
-	assert.False(t, transport.IsRunning())
-}
-
 func TestRetainReleasePeerSuccess(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
@@ -46,37 +39,37 @@ func TestRetainReleasePeerSuccess(t *testing.T) {
 	go grpcServer.Serve(listener)
 	defer grpcServer.Stop()
 
-	transport := NewTransport()
-	assert.NoError(t, transport.Start())
-	defer func() { assert.NoError(t, transport.Stop()) }()
+	dialer := Dialer{}
+	assert.NoError(t, dialer.Start(context.Background()))
+	defer func() { assert.NoError(t, dialer.Stop(context.Background())) }()
 
 	address := listener.Addr().String()
 	peerSubscriber := testPeerSubscriber{}
 
-	peer, err := transport.RetainPeer(testIdentifier{address}, peerSubscriber)
+	peer, err := dialer.RetainPeer(testIdentifier{address}, peerSubscriber)
 	assert.NoError(t, err)
-	assert.Equal(t, peer, transport.addressToPeer[address])
-	assert.NoError(t, transport.ReleasePeer(testIdentifier{address}, peerSubscriber))
+	assert.Equal(t, peer, dialer.addressToPeer[address])
+	assert.NoError(t, dialer.ReleasePeer(testIdentifier{address}, peerSubscriber))
 }
 
 func TestRetainReleasePeerErrorPeerIdentifier(t *testing.T) {
-	transport := NewTransport()
-	assert.NoError(t, transport.Start())
-	defer func() { assert.NoError(t, transport.Stop()) }()
+	dialer := Dialer{}
+	assert.NoError(t, dialer.Start(context.Background()))
+	defer func() { assert.NoError(t, dialer.Stop(context.Background())) }()
 }
 
 func TestReleasePeerErrorNoPeer(t *testing.T) {
-	transport := NewTransport()
-	assert.NoError(t, transport.Start())
-	defer func() { assert.NoError(t, transport.Stop()) }()
+	dialer := Dialer{}
+	assert.NoError(t, dialer.Start(context.Background()))
+	defer func() { assert.NoError(t, dialer.Stop(context.Background())) }()
 
 	address := "not_retained"
 	peerSubscriber := testPeerSubscriber{}
 
-	assert.Equal(t, peer.ErrTransportHasNoReferenceToPeer{
-		TransportName:  "grpc.Transport",
+	assert.Equal(t, peer.ErrDialerHasNoReferenceToPeer{
+		DialerName:     "grpc.Dialer",
 		PeerIdentifier: address,
-	}, transport.ReleasePeer(testIdentifier{address}, peerSubscriber))
+	}, dialer.ReleasePeer(testIdentifier{address}, peerSubscriber))
 }
 
 type testPeerSubscriber struct{}
