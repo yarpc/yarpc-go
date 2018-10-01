@@ -32,6 +32,7 @@ type sender interface {
 }
 
 type transportSender struct {
+	// This avoids calling http.Client.Do on the same HTTP request twice.
 	*http.Client
 }
 

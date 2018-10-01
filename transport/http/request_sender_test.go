@@ -31,6 +31,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// *http.Client do more than what a RoundTrip is supposed to do:
+// - It tries to handle higher-level protocol details such as redirects, authentications, or cookies.
+// - It requires a client request(requestURI can't be set) so it is not possible to proxy a server request transparently.
+// We want to make sure transportSender can proxy server requests transparently.
 func TestSender(t *testing.T) {
 	const data = "dummy server response body"
 
