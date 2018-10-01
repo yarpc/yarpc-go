@@ -41,7 +41,7 @@ import (
 	"go.uber.org/yarpc/transport/http"
 )
 
-func setupTest(t *testing.T, p []transport.Procedure) (client *yarpc.Dispatcher, clientStop, serverStop func() error) {
+func setupTest(t *testing.T, p []transport.Procedure) (*yarpc.Dispatcher, func()) {
 	httpInbound := http.NewTransport().NewInbound(":0")
 
 	server := yarpc.NewDispatcher(yarpc.Config{
@@ -54,7 +54,7 @@ func setupTest(t *testing.T, p []transport.Procedure) (client *yarpc.Dispatcher,
 	outbound := http.NewTransport().NewSingleOutbound(
 		fmt.Sprintf("http://%v", yarpctest.ZeroAddrToHostPort(httpInbound.Addr())))
 
-	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+	client := yarpc.NewDispatcher(yarpc.Config{
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
@@ -63,16 +63,18 @@ func setupTest(t *testing.T, p []transport.Procedure) (client *yarpc.Dispatcher,
 			},
 		},
 	})
-	require.NoError(t, dispatcher.Start())
+	require.NoError(t, client.Start())
 
-	return dispatcher, dispatcher.Stop, server.Stop
+	return client, func() {
+		assert.NoError(t, client.Stop())
+		assert.NoError(t, server.Stop())
+	}
 }
 
 func TestExtendsProcedure(t *testing.T) {
 	t.Run("base service: Name::name", func(t *testing.T) {
-		d, cStop, sStop := setupTest(t, nameserver.New(&nameHandler{}))
-		defer cStop()
-		defer sStop()
+		d, cleanup := setupTest(t, nameserver.New(&nameHandler{}))
+		defer cleanup()
 
 		cli := nameclient.New(d.ClientConfig("server"))
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -83,9 +85,8 @@ func TestExtendsProcedure(t *testing.T) {
 		assert.Equal(t, "Name::name", res)
 	})
 	t.Run("foo service: Foo::name", func(t *testing.T) {
-		d, cStop, sStop := setupTest(t, fooserver.New(&fooHandler{}))
-		defer cStop()
-		defer sStop()
+		d, cleanup := setupTest(t, fooserver.New(&fooHandler{}))
+		defer cleanup()
 
 		cli := fooclient.New(d.ClientConfig("server"))
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -96,9 +97,8 @@ func TestExtendsProcedure(t *testing.T) {
 		assert.Equal(t, "Foo::name", res)
 	})
 	t.Run("bar service: Bar::name", func(t *testing.T) {
-		d, cStop, sStop := setupTest(t, barserver.New(&barHandler{}))
-		defer cStop()
-		defer sStop()
+		d, cleanup := setupTest(t, barserver.New(&barHandler{}))
+		defer cleanup()
 
 		cli := barclient.New(d.ClientConfig("server"))
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
