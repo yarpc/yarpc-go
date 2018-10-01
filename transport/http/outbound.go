@@ -111,6 +111,7 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 	for _, opt := range opts {
 		opt(o)
 	}
+	o.sender = &transportSender{Client: o.transport.client}
 	return o
 }
 
@@ -156,6 +157,7 @@ type Outbound struct {
 	urlTemplate *url.URL
 	tracer      opentracing.Tracer
 	transport   *Transport
+	sender      sender
 
 	// Headers to add to all outgoing requests.
 	headers http.Header
@@ -434,7 +436,7 @@ func checkServiceMatch(reqSvcName string, resHeaders http.Header) (bool, string)
 //
 // OpenTracing information must be added manually, before this call, to support context propagation.
 func (o *Outbound) RoundTrip(hreq *http.Request) (*http.Response, error) {
-	return o.roundTrip(hreq, nil /* treq */, time.Now(), &transportSender{Client: o.transport.client})
+	return o.roundTrip(hreq, nil /* treq */, time.Now(), o.sender)
 }
 
 func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start time.Time, sender sender) (*http.Response, error) {
