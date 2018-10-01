@@ -111,7 +111,7 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 	for _, opt := range opts {
 		opt(o)
 	}
-	o.sender = &transportSender{Client: o.transport.client}
+	o.sender = &transportSender{Client: t.client}
 	return o
 }
 
