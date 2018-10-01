@@ -247,7 +247,7 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	hreq = o.withCoreHeaders(hreq, treq, ttl)
 	hreq = hreq.WithContext(ctx)
 
-	response, err := o.roundTrip(hreq, treq, start, false /*transparent proxying*/)
+	response, err := o.roundTrip(hreq, treq, start, o.transport.client)
 	if err != nil {
 		span.SetTag("error", true)
 		span.LogFields(opentracinglog.String("event", err.Error()))
@@ -434,10 +434,10 @@ func checkServiceMatch(reqSvcName string, resHeaders http.Header) (bool, string)
 //
 // OpenTracing information must be added manually, before this call, to support context propagation.
 func (o *Outbound) RoundTrip(hreq *http.Request) (*http.Response, error) {
-	return o.roundTrip(hreq, nil /* treq */, time.Now(), true /* transparent proxying*/)
+	return o.roundTrip(hreq, nil /* treq */, time.Now(), &transportSender{Client: o.transport.client})
 }
 
-func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start time.Time, transparentProxy bool) (*http.Response, error) {
+func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start time.Time, sender sender) (*http.Response, error) {
 	ctx := hreq.Context()
 
 	deadline, ok := ctx.Deadline()
@@ -479,7 +479,7 @@ func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start 
 		return nil, err
 	}
 
-	hres, err := o.doWithPeer(ctx, hreq, treq, start, ttl, p, transparentProxy)
+	hres, err := o.doWithPeer(ctx, hreq, treq, start, ttl, p, sender)
 	// Call the onFinish method before returning (with the error from call with peer)
 	onFinish(err)
 	return hres, err
@@ -492,16 +492,11 @@ func (o *Outbound) doWithPeer(
 	start time.Time,
 	ttl time.Duration,
 	p *httpPeer,
-	transparentProxy bool,
+	sender sender,
 ) (*http.Response, error) {
 	hreq.URL.Host = p.HostPort()
 
-	var sender sender = o.transport.client
-	if transparentProxy {
-		sender = &transportSender{Client: o.transport.client}
-	}
 	response, err := sender.Do(hreq.WithContext(ctx))
-
 	if err != nil {
 		// Workaround borrowed from ctxhttp until
 		// https://github.com/golang/go/issues/17711 is resolved.
