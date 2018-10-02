@@ -237,12 +237,12 @@ func TestCallServiceMatch(t *testing.T) {
 
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 			defer cancel()
-			req := &yarpc.Request{
+
+			_, _, err = out.Call(ctx, &yarpc.Request{
 				Service:   "Service",
 				Procedure: "Hello",
-				// Body:      bytes.NewReader([]byte("world")),
-			}
-			_, _, err = out.Call(ctx, req, nil)
+			}, yarpc.NewBufferString("world"))
+
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "does not match")

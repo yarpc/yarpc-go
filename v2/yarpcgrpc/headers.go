@@ -85,26 +85,26 @@ func isReserved(header string) bool {
 	return strings.HasPrefix(strings.ToLower(header), "rpc-")
 }
 
-// transportRequestToMetadata will populate all reserved and application headers
+// requestToMetadata will populate all reserved and application headers
 // from the Request into a new MD.
-func transportRequestToMetadata(request *yarpc.Request) (metadata.MD, error) {
+func requestToMetadata(req *yarpc.Request) (metadata.MD, error) {
 	md := metadata.New(nil)
 	if err := multierr.Combine(
-		addToMetadata(md, CallerHeader, request.Caller),
-		addToMetadata(md, ServiceHeader, request.Service),
-		addToMetadata(md, ShardKeyHeader, request.ShardKey),
-		addToMetadata(md, RoutingKeyHeader, request.RoutingKey),
-		addToMetadata(md, RoutingDelegateHeader, request.RoutingDelegate),
-		addToMetadata(md, EncodingHeader, string(request.Encoding)),
+		addToMetadata(md, CallerHeader, req.Caller),
+		addToMetadata(md, ServiceHeader, req.Service),
+		addToMetadata(md, ShardKeyHeader, req.ShardKey),
+		addToMetadata(md, RoutingKeyHeader, req.RoutingKey),
+		addToMetadata(md, RoutingDelegateHeader, req.RoutingDelegate),
+		addToMetadata(md, EncodingHeader, string(req.Encoding)),
 	); err != nil {
 		return md, err
 	}
-	return md, addApplicationHeaders(md, request.Headers)
+	return md, addApplicationHeaders(md, req.Headers)
 }
 
-// metadataToTransportRequest will populate the Request with all reserved and application
+// metadataToRequest will populate the Request with all reserved and application
 // headers into a new Request, only not setting the Body field.
-func metadataToTransportRequest(md metadata.MD) (*yarpc.Request, error) {
+func metadataToRequest(md metadata.MD) (*yarpc.Request, error) {
 	request := &yarpc.Request{
 		Headers: yarpc.NewHeadersWithCapacity(md.Len()),
 	}

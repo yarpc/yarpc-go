@@ -30,7 +30,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-func TestMetadataToTransportRequest(t *testing.T) {
+func TestMetadataToRequest(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		Name             string
@@ -117,14 +117,14 @@ func TestMetadataToTransportRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
-			transportRequest, err := metadataToTransportRequest(tt.MD)
+			transportRequest, err := metadataToRequest(tt.MD)
 			require.Equal(t, tt.Error, err)
 			require.Equal(t, tt.TransportRequest, transportRequest)
 		})
 	}
 }
 
-func TestTransportRequestToMetadata(t *testing.T) {
+func TestRequestToMetadata(t *testing.T) {
 	t.Parallel()
 	for _, tt := range []struct {
 		Name             string
@@ -169,7 +169,7 @@ func TestTransportRequestToMetadata(t *testing.T) {
 		},
 	} {
 		t.Run(tt.Name, func(t *testing.T) {
-			md, err := transportRequestToMetadata(tt.TransportRequest)
+			md, err := requestToMetadata(tt.TransportRequest)
 			require.Equal(t, tt.Error, err)
 			require.Equal(t, tt.MD, md)
 		})

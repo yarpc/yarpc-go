@@ -22,7 +22,6 @@ package grpc
 
 import (
 	"context"
-	"io/ioutil"
 	"net/url"
 	"strings"
 	"time"
@@ -75,36 +74,34 @@ func (o *Outbound) Call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.B
 
 	var responseBody []byte
 	var responseMD metadata.MD
-	invokeErr := o.invoke(ctx, req, &responseBody, &responseMD, start)
+	invokeErr := o.invoke(ctx, req, reqBuf, &responseBody, &responseMD, start)
 
 	responseHeaders, err := getApplicationHeaders(responseMD)
 	if err != nil {
 		return nil, nil, err
 	}
 	return &yarpc.Response{
-		// Body:             ioutil.NopCloser(bytes.NewBuffer(responseBody)),
-		Headers:          responseHeaders,
-		ApplicationError: metadataToIsApplicationError(responseMD),
-	}, nil, invokeErr
+			Headers:          responseHeaders,
+			ApplicationError: metadataToIsApplicationError(responseMD),
+		},
+		yarpc.NewBufferBytes(responseBody),
+		invokeErr
 }
 
 func (o *Outbound) invoke(
 	ctx context.Context,
-	request *yarpc.Request,
+	req *yarpc.Request,
+	reqBuf *yarpc.Buffer,
 	responseBody *[]byte,
 	responseMD *metadata.MD,
 	start time.Time,
 ) (retErr error) {
-	md, err := transportRequestToMetadata(request)
+	md, err := requestToMetadata(req)
 	if err != nil {
 		return err
 	}
 
-	bytes, err := ioutil.ReadAll( /*request.Body*/ nil)
-	if err != nil {
-		return err
-	}
-	fullMethod, err := procedureNameToFullMethod(request.Procedure)
+	fullMethod, err := procedureNameToFullMethod(req.Procedure)
 	if err != nil {
 		return err
 	}
@@ -112,7 +109,7 @@ func (o *Outbound) invoke(
 	if responseMD != nil {
 		callOptions = []grpc.CallOption{grpc.Trailer(responseMD)}
 	}
-	apiPeer, onFinish, err := o.Chooser.Choose(ctx, request)
+	apiPeer, onFinish, err := o.Chooser.Choose(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -131,7 +128,7 @@ func (o *Outbound) invoke(
 		StartTime:     start,
 		ExtraTags:     yarpctracing.Tags,
 	}
-	ctx, span := createOpenTracingSpan.Do(ctx, request)
+	ctx, span := createOpenTracingSpan.Do(ctx, req)
 	defer span.Finish()
 
 	if err := o.Tracer.Inject(span.Context(), opentracing.HTTPHeaders, mdReadWriter(md)); err != nil {
@@ -143,7 +140,7 @@ func (o *Outbound) invoke(
 		grpcPeer.clientConn.Invoke(
 			metadata.NewOutgoingContext(ctx, md),
 			fullMethod,
-			bytes,
+			reqBuf.Bytes(),
 			responseBody,
 			callOptions...,
 		),
@@ -152,10 +149,10 @@ func (o *Outbound) invoke(
 		return invokeErrorToYARPCError(err, *responseMD)
 	}
 	// Service name match validation, return yarpcerror.CodeInternal error if not match
-	if match, resService := checkServiceMatch(request.Service, *responseMD); !match {
+	if match, resService := checkServiceMatch(req.Service, *responseMD); !match {
 		// If service doesn't match => we got response => span must not be nil
 		return yarpctracing.UpdateSpanWithErr(span, yarpcerror.InternalErrorf("service name sent from the request "+
-			"does not match the service name received in the response: sent %q, got: %q", request.Service, resService))
+			"does not match the service name received in the response: sent %q, got: %q", req.Service, resService))
 	}
 	return nil
 }
@@ -216,7 +213,7 @@ func (o *Outbound) stream(
 	if req == nil {
 		return nil, yarpcerror.InvalidArgumentErrorf("stream request requires a request metadata")
 	}
-	md, err := transportRequestToMetadata(req)
+	md, err := requestToMetadata(req)
 	if err != nil {
 		return nil, err
 	}

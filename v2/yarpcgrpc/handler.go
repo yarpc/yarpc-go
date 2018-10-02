@@ -84,22 +84,22 @@ func (h *handler) getBasicTransportRequest(ctx context.Context, streamMethod str
 	if md == nil || !ok {
 		return nil, yarpcerror.Newf(yarpcerror.CodeInternal, "cannot get metadata from ctx: %v", ctx)
 	}
-	transportRequest, err := metadataToTransportRequest(md)
+	req, err := metadataToRequest(md)
 	if err != nil {
 		return nil, err
 	}
-	transportRequest.Transport = transportName
+	req.Transport = transportName
 
 	procedure, err := procedureFromStreamMethod(streamMethod)
 	if err != nil {
 		return nil, err
 	}
 
-	transportRequest.Procedure = procedure
-	if err := yarpc.ValidateRequest(transportRequest); err != nil {
+	req.Procedure = procedure
+	if err := yarpc.ValidateRequest(req); err != nil {
 		return nil, err
 	}
-	return transportRequest, nil
+	return req, nil
 }
 
 // procedureFromStreamMethod converts a GRPC stream method into a yarpc

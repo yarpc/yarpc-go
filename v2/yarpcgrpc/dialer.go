@@ -192,7 +192,7 @@ func (d *dialerInternals) releasePeer(id yarpc.Identifier, sub yarpc.Subscriber)
 	p, ok := d.addressToPeer[address]
 	if !ok {
 		return yarpcpeer.ErrDialerHasNoReferenceToPeer{
-			DialerName:     "grpc.Transport",
+			DialerName:     "grpc.Dialer",
 			PeerIdentifier: address,
 		}
 	}
