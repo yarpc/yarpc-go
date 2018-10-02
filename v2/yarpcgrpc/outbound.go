@@ -21,22 +21,18 @@
 package grpc
 
 import (
-	"bytes"
 	"context"
 	"io/ioutil"
+	"net/url"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/api/transport"
-	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
-	peerchooser "go.uber.org/yarpc/peer"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/pkg/lifecycle"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2"
+	intyarpcerror "go.uber.org/yarpc/v2/internal/internalyarpcerror"
+	"go.uber.org/yarpc/v2/yarpcerror"
+	"go.uber.org/yarpc/v2/yarpcpeer"
+	"go.uber.org/yarpc/v2/yarpctracing"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -46,83 +42,55 @@ import (
 // http://www.grpc.io/docs/guides/wire.html#user-agents
 const UserAgent = "yarpc-go/" + yarpc.Version
 
-var _ transport.UnaryOutbound = (*Outbound)(nil)
+var _ yarpc.UnaryOutbound = (*Outbound)(nil)
 
-// Outbound is a transport.UnaryOutbound.
+// Outbound sends YARPC requests over gRPC. It is recommended that services use
+// a single HTTP dialer to construct all HTTP outbounds, ensuring efficient
+// sharing of resources across the different outbounds.
 type Outbound struct {
-	once        *lifecycle.Once
-	lock        sync.Mutex
-	t           *Transport
-	peerChooser peer.Chooser
-	options     *outboundOptions
+	// Chooser is a peer chooser for outbound requests.
+	Chooser yarpc.Chooser
+
+	// Dialer is an alternative to specifying a Chooser.
+	// The outbound will dial the address specified in the URL.
+	Dialer yarpc.Dialer
+
+	// URL specifies the template for the URL this outbound makes requests to.
+	// For yarpc.Chooser-based outbounds, the peer (host:port) spection of the
+	// URL may vary from call to call but the REST will remain unchanged.
+	// For single-peer outbounds, the URL will be used as-is.
+	URL *url.URL
+
+	// Tracer attaches a tracer for the outbound.
+	Tracer opentracing.Tracer
 }
 
-func newSingleOutbound(t *Transport, address string, options ...OutboundOption) *Outbound {
-	return newOutbound(t, peerchooser.NewSingle(hostport.PeerIdentifier(address), t), options...)
-}
-
-func newOutbound(t *Transport, peerChooser peer.Chooser, options ...OutboundOption) *Outbound {
-	return &Outbound{
-		once:        lifecycle.NewOnce(),
-		t:           t,
-		peerChooser: peerChooser,
-		options:     newOutboundOptions(options),
+// Call implements yarpc.UnaryOutbound#Call.
+func (o *Outbound) Call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
+	if req == nil {
+		return nil, nil, yarpcerror.InvalidArgumentErrorf("request for grpc outbound was nil")
 	}
-}
 
-// Start implements transport.Lifecycle#Start.
-func (o *Outbound) Start() error {
-	return o.once.Start(o.peerChooser.Start)
-}
-
-// Stop implements transport.Lifecycle#Stop.
-func (o *Outbound) Stop() error {
-	return o.once.Stop(o.peerChooser.Stop)
-}
-
-// IsRunning implements transport.Lifecycle#IsRunning.
-func (o *Outbound) IsRunning() bool {
-	return o.once.IsRunning()
-}
-
-// Transports implements transport.Inbound#Transports.
-func (o *Outbound) Transports() []transport.Transport {
-	return []transport.Transport{o.t}
-}
-
-// Chooser returns the peer.Chooser associated with this Outbound.
-func (o *Outbound) Chooser() peer.Chooser {
-	return o.peerChooser
-}
-
-// Call implements transport.UnaryOutbound#Call.
-func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
-	if request == nil {
-		return nil, yarpcerrors.InvalidArgumentErrorf("request for grpc outbound was nil")
-	}
-	if err := o.once.WaitUntilRunning(ctx); err != nil {
-		return nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "error waiting for grpc outbound to start for service: %s", request.Service)
-	}
 	start := time.Now()
 
 	var responseBody []byte
 	var responseMD metadata.MD
-	invokeErr := o.invoke(ctx, request, &responseBody, &responseMD, start)
+	invokeErr := o.invoke(ctx, req, &responseBody, &responseMD, start)
 
 	responseHeaders, err := getApplicationHeaders(responseMD)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return &transport.Response{
-		Body:             ioutil.NopCloser(bytes.NewBuffer(responseBody)),
+	return &yarpc.Response{
+		// Body:             ioutil.NopCloser(bytes.NewBuffer(responseBody)),
 		Headers:          responseHeaders,
 		ApplicationError: metadataToIsApplicationError(responseMD),
-	}, invokeErr
+	}, nil, invokeErr
 }
 
 func (o *Outbound) invoke(
 	ctx context.Context,
-	request *transport.Request,
+	request *yarpc.Request,
 	responseBody *[]byte,
 	responseMD *metadata.MD,
 	start time.Time,
@@ -132,7 +100,7 @@ func (o *Outbound) invoke(
 		return err
 	}
 
-	bytes, err := ioutil.ReadAll(request.Body)
+	bytes, err := ioutil.ReadAll( /*request.Body*/ nil)
 	if err != nil {
 		return err
 	}
@@ -144,34 +112,33 @@ func (o *Outbound) invoke(
 	if responseMD != nil {
 		callOptions = []grpc.CallOption{grpc.Trailer(responseMD)}
 	}
-	apiPeer, onFinish, err := o.peerChooser.Choose(ctx, request)
+	apiPeer, onFinish, err := o.Chooser.Choose(ctx, request)
 	if err != nil {
 		return err
 	}
 	defer func() { onFinish(retErr) }()
 	grpcPeer, ok := apiPeer.(*grpcPeer)
 	if !ok {
-		return peer.ErrInvalidPeerConversion{
+		return yarpcpeer.ErrInvalidPeerConversion{
 			Peer:         apiPeer,
 			ExpectedType: "*grpcPeer",
 		}
 	}
 
-	tracer := o.t.options.tracer
-	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
-		Tracer:        tracer,
+	createOpenTracingSpan := &yarpctracing.CreateOpenTracingSpan{
+		Tracer:        o.Tracer,
 		TransportName: transportName,
 		StartTime:     start,
-		ExtraTags:     yarpc.OpentracingTags,
+		ExtraTags:     yarpctracing.Tags,
 	}
 	ctx, span := createOpenTracingSpan.Do(ctx, request)
 	defer span.Finish()
 
-	if err := tracer.Inject(span.Context(), opentracing.HTTPHeaders, mdReadWriter(md)); err != nil {
+	if err := o.Tracer.Inject(span.Context(), opentracing.HTTPHeaders, mdReadWriter(md)); err != nil {
 		return err
 	}
 
-	err = transport.UpdateSpanWithErr(
+	err = yarpctracing.UpdateSpanWithErr(
 		span,
 		grpcPeer.clientConn.Invoke(
 			metadata.NewOutgoingContext(ctx, md),
@@ -184,11 +151,11 @@ func (o *Outbound) invoke(
 	if err != nil {
 		return invokeErrorToYARPCError(err, *responseMD)
 	}
-	// Service name match validation, return yarpcerrors.CodeInternal error if not match
-	if match, resSvcName := checkServiceMatch(request.Service, *responseMD); !match {
+	// Service name match validation, return yarpcerror.CodeInternal error if not match
+	if match, resService := checkServiceMatch(request.Service, *responseMD); !match {
 		// If service doesn't match => we got response => span must not be nil
-		return transport.UpdateSpanWithErr(span, yarpcerrors.InternalErrorf("service name sent from the request "+
-			"does not match the service name received in the response: sent %q, got: %q", request.Service, resSvcName))
+		return yarpctracing.UpdateSpanWithErr(span, yarpcerror.InternalErrorf("service name sent from the request "+
+			"does not match the service name received in the response: sent %q, got: %q", request.Service, resService))
 	}
 	return nil
 }
@@ -205,17 +172,17 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	if err == nil {
 		return nil
 	}
-	if yarpcerrors.IsStatus(err) {
+	if yarpcerror.IsStatus(err) {
 		return err
 	}
 	status, ok := status.FromError(err)
 	// if not a yarpc error or grpc error, just return a wrapped error
 	if !ok {
-		return yarpcerrors.FromError(err)
+		return yarpcerror.FromError(err)
 	}
 	code, ok := _grpcCodeToCode[status.Code()]
 	if !ok {
-		code = yarpcerrors.CodeUnknown
+		code = yarpcerror.CodeUnknown
 	}
 	var name string
 	if responseMD != nil {
@@ -233,37 +200,33 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	} else if name != "" && message == name {
 		message = ""
 	}
-	return intyarpcerrors.NewWithNamef(code, name, message)
+	return intyarpcerror.NewWithNamef(code, name, message)
 }
 
-// CallStream implements transport.StreamOutbound#CallStream.
-func (o *Outbound) CallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
-	if err := o.once.WaitUntilRunning(ctx); err != nil {
-		return nil, err
-	}
+// CallStream implements yarpc.StreamOutbound#CallStream.
+func (o *Outbound) CallStream(ctx context.Context, request *yarpc.Request) (*yarpc.ClientStream, error) {
 	return o.stream(ctx, request, time.Now())
 }
 
 func (o *Outbound) stream(
 	ctx context.Context,
-	req *transport.StreamRequest,
+	req *yarpc.Request,
 	start time.Time,
-) (_ *transport.ClientStream, err error) {
-	if req.Meta == nil {
-		return nil, yarpcerrors.InvalidArgumentErrorf("stream request requires a request metadata")
+) (_ *yarpc.ClientStream, err error) {
+	if req == nil {
+		return nil, yarpcerror.InvalidArgumentErrorf("stream request requires a request metadata")
 	}
-	treq := req.Meta.ToRequest()
-	md, err := transportRequestToMetadata(treq)
+	md, err := transportRequestToMetadata(req)
 	if err != nil {
 		return nil, err
 	}
 
-	fullMethod, err := procedureNameToFullMethod(req.Meta.Procedure)
+	fullMethod, err := procedureNameToFullMethod(req.Procedure)
 	if err != nil {
 		return nil, err
 	}
 
-	apiPeer, onFinish, err := o.peerChooser.Choose(ctx, treq)
+	apiPeer, onFinish, err := o.Chooser.Choose(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -271,22 +234,21 @@ func (o *Outbound) stream(
 
 	grpcPeer, ok := apiPeer.(*grpcPeer)
 	if !ok {
-		return nil, peer.ErrInvalidPeerConversion{
+		return nil, yarpcpeer.ErrInvalidPeerConversion{
 			Peer:         apiPeer,
 			ExpectedType: "*grpcPeer",
 		}
 	}
 
-	tracer := o.t.options.tracer
-	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
-		Tracer:        tracer,
+	createOpenTracingSpan := &yarpctracing.CreateOpenTracingSpan{
+		Tracer:        o.Tracer,
 		TransportName: transportName,
 		StartTime:     start,
-		ExtraTags:     yarpc.OpentracingTags,
+		ExtraTags:     yarpctracing.Tags,
 	}
-	_, span := createOpenTracingSpan.Do(ctx, treq)
+	_, span := createOpenTracingSpan.Do(ctx, req)
 
-	if err := tracer.Inject(span.Context(), opentracing.HTTPHeaders, mdReadWriter(md)); err != nil {
+	if err := o.Tracer.Inject(span.Context(), opentracing.HTTPHeaders, mdReadWriter(md)); err != nil {
 		span.Finish()
 		return nil, err
 	}
@@ -305,7 +267,7 @@ func (o *Outbound) stream(
 		return nil, err
 	}
 	stream := newClientStream(streamCtx, req, clientStream, span)
-	tClientStream, err := transport.NewClientStream(stream)
+	tClientStream, err := yarpc.NewClientStream(stream)
 	if err != nil {
 		span.Finish()
 		return nil, err
@@ -314,9 +276,9 @@ func (o *Outbound) stream(
 }
 
 // Only does verification when there is a response service header key
-func checkServiceMatch(reqSvcName string, responseMD metadata.MD) (bool, string) {
-	if resSvcName, ok := responseMD[ServiceHeader]; ok {
-		return reqSvcName == resSvcName[0], resSvcName[0]
+func checkServiceMatch(reqServiceName string, responseMD metadata.MD) (bool, string) {
+	if resService, ok := responseMD[ServiceHeader]; ok {
+		return reqServiceName == resService[0], resService[0]
 	}
 	return true, ""
 }

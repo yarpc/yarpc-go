@@ -21,10 +21,10 @@
 package grpc
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"net"
+	"net/url"
 	"testing"
 	"time"
 
@@ -32,31 +32,43 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/api/peer/peertest"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
+	"go.uber.org/yarpc/v2/yarpcpeer"
+	"go.uber.org/yarpc/v2/yarpctest"
 	"google.golang.org/grpc"
 )
 
-func TestNoRequest(t *testing.T) {
-	tran := NewTransport()
-	out := tran.NewSingleOutbound("localhost:0")
+func newOutbound(t *testing.T, addr string) (_ *Outbound, stop func()) {
+	u, err := url.Parse(addr)
+	require.NoError(t, err)
 
-	_, err := out.Call(context.Background(), nil)
-	assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for grpc outbound was nil"), err)
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+
+	return &Outbound{
+		URL:    u,
+		Dialer: dialer,
+	}, func() { assert.NoError(t, dialer.Stop(context.Background())) }
+}
+
+func TestNoRequest(t *testing.T) {
+	out, _ := newOutbound(t, "localhost:0")
+
+	_, _, err := out.Call(context.Background(), &yarpc.Request{}, &yarpc.Buffer{})
+	assert.Equal(t, yarpcerror.InvalidArgumentErrorf("request for grpc outbound was nil"), err)
 }
 
 func TestCallStreamWhenNotRunning(t *testing.T) {
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
 	require.NoError(t, err)
 
-	tran := NewTransport()
-	out := tran.NewSingleOutbound(listener.Addr().String())
+	out, stop := newOutbound(t, listener.Addr().String())
+	defer stop()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*10)
 	defer cancel()
-	_, err = out.CallStream(ctx, &transport.StreamRequest{})
+	_, err = out.CallStream(ctx, &yarpc.Request{})
 
 	require.Contains(t, err.Error(), context.DeadlineExceeded.Error())
 }
@@ -65,139 +77,103 @@ func TestCallStreamWithNoRequestMeta(t *testing.T) {
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
 	require.NoError(t, err)
 
-	tran := NewTransport()
-	out := tran.NewSingleOutbound(listener.Addr().String())
-	require.NoError(t, tran.Start())
-	require.NoError(t, out.Start())
-	defer tran.Stop()
-	defer out.Stop()
+	out, stop := newOutbound(t, listener.Addr().String())
+	defer stop()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
 	defer cancel()
-	_, err = out.CallStream(ctx, &transport.StreamRequest{})
+	_, err = out.CallStream(ctx, &yarpc.Request{})
 
-	require.Contains(t, err.Error(), yarpcerrors.InvalidArgumentErrorf("stream request requires a request metadata").Error())
+	require.Contains(t, err.Error(), yarpcerror.InvalidArgumentErrorf("stream request requires a request metadata").Error())
 }
 
 func TestCallStreamWithInvalidHeader(t *testing.T) {
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
 	require.NoError(t, err)
 
-	tran := NewTransport()
-	out := tran.NewSingleOutbound(listener.Addr().String())
-	require.NoError(t, tran.Start())
-	require.NoError(t, out.Start())
-	defer tran.Stop()
-	defer out.Stop()
+	out, done := newOutbound(t, listener.Addr().String())
+	defer done()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
 	defer cancel()
-	req := &transport.StreamRequest{
-		Meta: &transport.RequestMeta{
-			Caller:    "caller",
-			Service:   "service",
-			Encoding:  transport.Encoding("raw"),
-			Procedure: "proc",
-			Headers:   transport.NewHeaders().With("rpc-caller", "reserved header"),
-		},
+	req := &yarpc.Request{
+		Caller:    "caller",
+		Service:   "service",
+		Encoding:  yarpc.Encoding("raw"),
+		Procedure: "proc",
+		Headers:   yarpc.NewHeaders().With("rpc-caller", "reserved header"),
 	}
 	_, err = out.CallStream(ctx, req)
 
-	require.Contains(t, err.Error(), yarpcerrors.InvalidArgumentErrorf("cannot use reserved header in application headers: rpc-caller").Error())
+	require.Contains(t, err.Error(), yarpcerror.InvalidArgumentErrorf("cannot use reserved header in application headers: rpc-caller").Error())
 }
 
 func TestCallStreamWithInvalidProcedure(t *testing.T) {
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
 	require.NoError(t, err)
 
-	tran := NewTransport()
-	out := tran.NewSingleOutbound(listener.Addr().String())
-	require.NoError(t, tran.Start())
-	require.NoError(t, out.Start())
-	defer tran.Stop()
-	defer out.Stop()
+	out, done := newOutbound(t, listener.Addr().String())
+	defer done()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
 	defer cancel()
-	req := &transport.StreamRequest{
-		Meta: &transport.RequestMeta{
-			Caller:    "caller",
-			Service:   "service",
-			Encoding:  transport.Encoding("raw"),
-			Procedure: "",
-		},
+	req := &yarpc.Request{
+		Caller:    "caller",
+		Service:   "service",
+		Encoding:  yarpc.Encoding("raw"),
+		Procedure: "",
 	}
 	_, err = out.CallStream(ctx, req)
 
-	require.Contains(t, err.Error(), yarpcerrors.InvalidArgumentErrorf("invalid procedure name: ").Error())
+	require.Contains(t, err.Error(), yarpcerror.InvalidArgumentErrorf("invalid procedure name: ").Error())
 }
 
 func TestCallStreamWithChooserError(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	chooser := peertest.NewMockChooser(mockCtrl)
-	chooser.EXPECT().Start()
-	chooser.EXPECT().Stop()
-	chooser.EXPECT().Choose(gomock.Any(), gomock.Any()).Return(nil, nil, yarpcerrors.InternalErrorf("error"))
+	chooser := yarpctest.NewMockChooser(mockCtrl)
+	chooser.EXPECT().Choose(gomock.Any(), gomock.Any()).Return(nil, nil, yarpcerror.InternalErrorf("error"))
 
-	tran := NewTransport()
-	out := tran.NewOutbound(chooser)
-
-	require.NoError(t, tran.Start())
-	require.NoError(t, out.Start())
-	defer tran.Stop()
-	defer out.Stop()
+	out := &Outbound{Chooser: chooser}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
 	defer cancel()
-	req := &transport.StreamRequest{
-		Meta: &transport.RequestMeta{
-			Caller:    "caller",
-			Service:   "service",
-			Encoding:  transport.Encoding("raw"),
-			Procedure: "proc",
-		},
+	req := &yarpc.Request{
+		Caller:    "caller",
+		Service:   "service",
+		Encoding:  yarpc.Encoding("raw"),
+		Procedure: "proc",
 	}
 	_, err := out.CallStream(ctx, req)
 
-	require.Contains(t, err.Error(), yarpcerrors.InternalErrorf("error").Error())
+	require.Contains(t, err.Error(), yarpcerror.InternalErrorf("error").Error())
 }
 
 func TestCallStreamWithInvalidPeer(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	fakePeer := peertest.NewMockPeer(mockCtrl)
-	chooser := peertest.NewMockChooser(mockCtrl)
-	chooser.EXPECT().Start()
-	chooser.EXPECT().Stop()
+	fakePeer := yarpctest.NewMockPeer(mockCtrl)
+	chooser := yarpctest.NewMockChooser(mockCtrl)
 	chooser.EXPECT().Choose(gomock.Any(), gomock.Any()).Return(fakePeer, func(error) {}, nil)
 
-	tran := NewTransport()
-	out := tran.NewOutbound(chooser)
-
-	require.NoError(t, tran.Start())
-	require.NoError(t, out.Start())
-	defer tran.Stop()
-	defer out.Stop()
+	out := &Outbound{Chooser: chooser}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
 	defer cancel()
-	req := &transport.StreamRequest{
-		Meta: &transport.RequestMeta{
-			Caller:    "caller",
-			Service:   "service",
-			Encoding:  transport.Encoding("raw"),
-			Procedure: "proc",
-		},
+	req := &yarpc.Request{
+		Caller:    "caller",
+		Service:   "service",
+		Encoding:  yarpc.Encoding("raw"),
+		Procedure: "proc",
 	}
 	_, err := out.CallStream(ctx, req)
 
 	require.Contains(
 		t,
 		err.Error(),
-		peer.ErrInvalidPeerConversion{
+		yarpcpeer.ErrInvalidPeerConversion{
 			Peer:         fakePeer,
 			ExpectedType: "*grpcPeer",
 		}.Error(),
@@ -256,21 +232,17 @@ func TestCallServiceMatch(t *testing.T) {
 			}()
 			defer server.Stop()
 
-			grpcTransport := NewTransport()
-			out := grpcTransport.NewSingleOutbound(listener.Addr().String())
-			require.NoError(t, grpcTransport.Start())
-			require.NoError(t, out.Start())
-			defer grpcTransport.Stop()
-			defer out.Stop()
+			out, stop := newOutbound(t, listener.Addr().String())
+			defer stop()
 
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 			defer cancel()
-			req := &transport.Request{
+			req := &yarpc.Request{
 				Service:   "Service",
 				Procedure: "Hello",
-				Body:      bytes.NewReader([]byte("world")),
+				// Body:      bytes.NewReader([]byte("world")),
 			}
-			_, err = out.Call(ctx, req)
+			_, _, err = out.Call(ctx, req, nil)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "does not match")
