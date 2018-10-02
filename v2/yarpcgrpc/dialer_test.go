@@ -27,7 +27,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcpeer"
 	"google.golang.org/grpc"
 )
 
@@ -52,6 +53,17 @@ func TestRetainReleasePeerSuccess(t *testing.T) {
 	assert.NoError(t, dialer.ReleasePeer(testIdentifier{address}, peerSubscriber))
 }
 
+func TestRetainReleasePeerErr(t *testing.T) {
+	dialer := &Dialer{} // not started
+
+	peer, err := dialer.RetainPeer(testIdentifier{}, testPeerSubscriber{})
+	require.EqualError(t, err, "yarpcgrpc.Dialer.RetainPeer must be called after Start")
+	assert.Nil(t, peer)
+
+	err = dialer.ReleasePeer(testIdentifier{}, testPeerSubscriber{})
+	require.EqualError(t, err, "yarpcgrpc.Dialer.ReleasePeer must be called after Start")
+}
+
 func TestRetainReleasePeerErrorPeerIdentifier(t *testing.T) {
 	dialer := Dialer{}
 	assert.NoError(t, dialer.Start(context.Background()))
@@ -66,7 +78,7 @@ func TestReleasePeerErrorNoPeer(t *testing.T) {
 	address := "not_retained"
 	peerSubscriber := testPeerSubscriber{}
 
-	assert.Equal(t, peer.ErrDialerHasNoReferenceToPeer{
+	assert.Equal(t, yarpcpeer.ErrDialerHasNoReferenceToPeer{
 		DialerName:     "grpc.Dialer",
 		PeerIdentifier: address,
 	}, dialer.ReleasePeer(testIdentifier{address}, peerSubscriber))
@@ -74,7 +86,7 @@ func TestReleasePeerErrorNoPeer(t *testing.T) {
 
 type testPeerSubscriber struct{}
 
-func (testPeerSubscriber) NotifyStatusChanged(peer.Identifier) {}
+func (testPeerSubscriber) NotifyStatusChanged(yarpc.Identifier) {}
 
 type testIdentifier struct {
 	id string

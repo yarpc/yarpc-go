@@ -22,32 +22,124 @@ package grpc
 
 import (
 	"context"
+	"fmt"
+	"math"
 	"sync"
 
+	"github.com/opentracing/opentracing-go"
 	"go.uber.org/multierr"
+	backoffapi "go.uber.org/yarpc/api/backoff"
+	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcpeer"
+	"go.uber.org/yarpc/yarpcconfig"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+)
+
+const (
+	// defensive programming: these are copied from grpc-go but we set them
+	// explicitly here in case these change in grpc-go so that YARPC stays
+	// consistent.
+	defaultClientMaxRecvMsgSize = 1024 * 1024 * 4
+	defaultClientMaxSendMsgSize = math.MaxInt32
 )
 
 var _ yarpc.Dialer = (*Dialer)(nil)
 
-// Dialer is a decorator for a gRPC transport that threads dial options for
-// every retained peer.
+// Dialer keeps track of all gRPC peers
 type Dialer struct {
+	// ClientMaxRecvMsgSize is the maximum message size the client can receive.
+	//
+	// The default is 4MB.
+	ClientMaxRecvMsgSize int
+	// ClientMaxSendMsgSize is the maximum message size the client can send.
+	//
+	// The default is unlimited.
+	ClientMaxSendMsgSize int
+
+	// BackoffStrategy specifies the backoff strategy for delays between
+	// connection attempts for each peer.
+	//
+	// The default is exponential backoff starting with 10ms fully jittered,
+	// doubling each attempt, with a maximum interval of 30s. //TODO(apeatsbond)
+	Backoff yarpcconfig.Backoff
+
+	// Credentials specifies connection level security credentials (e.g.,
+	// TLS/SSL) for outbound connections.
+	Credentials credentials.TransportCredentials
+
+	// Tracer configures a logger for the dialer.
+	Logger *zap.Logger
+
+	// Tracer configures a tracer for the dialer.
+	Tracer opentracing.Tracer
+
+	internal *dialerInternals
+}
+
+type dialerInternals struct {
 	lock          sync.Mutex
-	options       *dialOptions
 	addressToPeer map[string]*grpcPeer
+
+	dialOptions []grpc.DialOption
+	backoff     backoffapi.Strategy
+
+	logger *zap.Logger
+	tracer opentracing.Tracer
 }
 
 // Start starts the gRPC dialer.
 func (d *Dialer) Start(_ context.Context) error {
-	d.addressToPeer = make(map[string]*grpcPeer)
-	// init options?
+	d.internal = &dialerInternals{
+		addressToPeer: make(map[string]*grpcPeer),
+		backoff:       backoff.DefaultExponential,
+		tracer:        opentracing.GlobalTracer(),
+		logger:        zap.NewNop(),
+	}
+
+	if d.Logger != nil {
+		d.internal.logger = d.Logger
+	}
+	if d.Tracer != nil {
+		d.internal.tracer = d.Tracer
+	}
+
+	var credentialDialOption grpc.DialOption
+	if d.Credentials == nil {
+		credentialDialOption = grpc.WithInsecure()
+	} else {
+		credentialDialOption = grpc.WithTransportCredentials(d.Credentials)
+	}
+
+	defaultCallOptions := []grpc.CallOption{grpc.CallCustomCodec(customCodec{})}
+	if d.ClientMaxRecvMsgSize != 0 {
+		defaultCallOptions = append(defaultCallOptions, grpc.MaxCallRecvMsgSize(d.ClientMaxRecvMsgSize))
+	} else {
+		defaultCallOptions = append(defaultCallOptions, grpc.MaxCallRecvMsgSize(defaultClientMaxRecvMsgSize))
+	}
+	if d.ClientMaxSendMsgSize != 0 {
+		defaultCallOptions = append(defaultCallOptions, grpc.MaxCallSendMsgSize(d.ClientMaxSendMsgSize))
+	} else {
+		defaultCallOptions = append(defaultCallOptions, grpc.MaxCallSendMsgSize(defaultClientMaxSendMsgSize))
+	}
+
+	d.internal.dialOptions = []grpc.DialOption{
+		grpc.WithUserAgent(UserAgent),
+		grpc.WithDefaultCallOptions(defaultCallOptions...),
+		credentialDialOption,
+	}
+
 	return nil
 }
 
 // Stop stops the gRPC dialer.
-func (d *Dialer) Stop() error {
+func (d *Dialer) Stop(ctx context.Context) error {
+	return d.internal.stop(ctx)
+}
+
+func (d *dialerInternals) stop(context.Context) error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 	for _, grpcPeer := range d.addressToPeer {
@@ -61,25 +153,39 @@ func (d *Dialer) Stop() error {
 }
 
 // RetainPeer retains the identified peer, passing dial options.
-func (d *Dialer) RetainPeer(id yarpc.Identifier, ps yarpc.Subscriber) (yarpc.Peer, error) {
+func (d *Dialer) RetainPeer(id yarpc.Identifier, sub yarpc.Subscriber) (yarpc.Peer, error) {
+	if d.internal == nil {
+		return nil, fmt.Errorf("yarpcgrpc.Dialer.RetainPeer must be called after Start")
+	}
+	return d.internal.retainPeer(id, sub)
+}
+
+func (d *dialerInternals) retainPeer(id yarpc.Identifier, sub yarpc.Subscriber) (yarpc.Peer, error) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 	address := id.Identifier()
 	p, ok := d.addressToPeer[address]
 	if !ok {
 		var err error
-		p, err = d.newPeer(address, d.options)
+		p, err = d.newPeer(address)
 		if err != nil {
 			return nil, err
 		}
 		d.addressToPeer[address] = p
 	}
-	p.Subscribe(ps)
+	p.Subscribe(sub)
 	return p, nil
 }
 
 // ReleasePeer releases the identified peer.
-func (d *Dialer) ReleasePeer(id yarpc.Identifier, ps yarpc.Subscriber) error {
+func (d *Dialer) ReleasePeer(id yarpc.Identifier, sub yarpc.Subscriber) error {
+	if d.internal == nil {
+		return fmt.Errorf("yarpcgrpc.Dialer.ReleasePeer must be called after Start")
+	}
+	return d.internal.releasePeer(id, sub)
+}
+
+func (d *dialerInternals) releasePeer(id yarpc.Identifier, sub yarpc.Subscriber) error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 	address := id.Identifier()
@@ -90,7 +196,7 @@ func (d *Dialer) ReleasePeer(id yarpc.Identifier, ps yarpc.Subscriber) error {
 			PeerIdentifier: address,
 		}
 	}
-	if err := p.Unsubscribe(ps); err != nil {
+	if err := p.Unsubscribe(sub); err != nil {
 		return err
 	}
 	if p.NumSubscribers() == 0 {
