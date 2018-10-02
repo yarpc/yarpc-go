@@ -21,111 +21,113 @@
 package grpc
 
 import (
+	"context"
+	"math"
 	"net"
 	"sync"
 
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/pkg/lifecycle"
+	"github.com/opentracing/opentracing-go"
+	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
-var (
-	errRouterNotSet = yarpcerrors.Newf(yarpcerrors.CodeInternal, "router not set")
-
-	_ transport.Inbound = (*Inbound)(nil)
+const (
+	// defensive programming: these are copied from grpc-go but we set them
+	// explicitly here in case these change in grpc-go so that YARPC stays
+	// consistent.
+	defaultServerMaxRecvMsgSize = 1024 * 1024 * 4
+	defaultServerMaxSendMsgSize = math.MaxInt32
 )
 
-// Inbound is a grpc transport.Inbound.
+var errRouterNotSet = yarpcerrors.Newf(yarpcerrors.CodeInternal, "gRPC router not set")
+
+// Inbound receives YARPC requests using a gRPC server.
 type Inbound struct {
-	once     *lifecycle.Once
-	lock     sync.RWMutex
-	t        *Transport
-	listener net.Listener
-	options  *inboundOptions
-	router   transport.Router
-	server   *grpc.Server
+	// Listener is an open listener for inbound gRPC requests.
+	Listener net.Listener
+
+	// Addr is a host:port on which to listen if no Listener is provided.
+	Addr string
+
+	// Router is the router to handle requests.
+	Router yarpc.Router
+
+	// ServerMaxRecvMsgSize is the maximum message size the server can receive.
+	//
+	// The default is 4MB.
+	ServerMaxRecvMsgSize int
+
+	// ServerMaxSendMsgSize is the maximum message size the server can send.
+	//
+	// The default is unlimited.
+	ServerMaxSendMsgSize int
+
+	// Credentials specifies connection level security credentials (e.g.,
+	// TLS/SSL) for incoming connections.
+	Credentials credentials.TransportCredentials
+
+	// Tracer specifies the tracer to use.
+	//
+	// By default, opentracing.GlobalTracer() is used.
+	Tracer opentracing.Tracer
+
+	// Logger configures a logger for the inbound.
+	Logger *zap.Logger
+
+	lock   sync.RWMutex
+	server *grpc.Server
 }
 
-// newInbound returns a new Inbound for the given listener.
-func newInbound(t *Transport, listener net.Listener, options ...InboundOption) *Inbound {
-	return &Inbound{
-		once:     lifecycle.NewOnce(),
-		t:        t,
-		listener: listener,
-		options:  newInboundOptions(options),
-	}
-}
-
-// Start implements transport.Lifecycle#Start.
-func (i *Inbound) Start() error {
-	return i.once.Start(i.start)
-}
-
-// Stop implements transport.Lifecycle#Stop.
-func (i *Inbound) Stop() error {
-	return i.once.Stop(i.stop)
-}
-
-// IsRunning implements transport.Lifecycle#IsRunning.
-func (i *Inbound) IsRunning() bool {
-	return i.once.IsRunning()
-}
-
-// SetRouter implements transport.Inbound#SetRouter.
-func (i *Inbound) SetRouter(router transport.Router) {
-	i.lock.Lock()
-	defer i.lock.Unlock()
-	i.router = router
-}
-
-// Addr returns the address on which the server is listening.
-//
-// Returns nil if Start has not been called yet
-func (i *Inbound) Addr() net.Addr {
-	i.lock.RLock()
-	defer i.lock.RUnlock()
-	// i.server is set in start, so checking against nil checks
-	// if Start has been called
-	// we check if i.listener is nil just for safety
-	if i.server == nil || i.listener == nil {
-		return nil
-	}
-	return i.listener.Addr()
-}
-
-// Transports implements transport.Inbound#Transports.
-func (i *Inbound) Transports() []transport.Transport {
-	return []transport.Transport{i.t}
-}
-
-func (i *Inbound) start() error {
-	i.lock.Lock()
-	defer i.lock.Unlock()
-	if i.router == nil {
+// Start starts the gRPC inbound.
+func (i *Inbound) Start(_ context.Context) error {
+	if i.Router == nil {
 		return errRouterNotSet
 	}
 
-	handler := newHandler(i, i.t.options.logger)
+	if i.Logger == nil {
+		i.Logger = zap.NewNop()
+	}
+	if i.Tracer == nil {
+		i.Tracer = opentracing.GlobalTracer()
+	}
 
+	// initialize gRPC options
 	serverOptions := []grpc.ServerOption{
 		grpc.CustomCodec(customCodec{}),
-		grpc.UnknownServiceHandler(handler.handle),
-		grpc.MaxRecvMsgSize(i.t.options.serverMaxRecvMsgSize),
-		grpc.MaxSendMsgSize(i.t.options.serverMaxSendMsgSize),
+		grpc.UnknownServiceHandler(newHandler(i).handle),
 	}
-
-	if i.options.creds != nil {
-		serverOptions = append(serverOptions, grpc.Creds(i.options.creds))
+	if i.ServerMaxRecvMsgSize != 0 {
+		serverOptions = append(serverOptions, grpc.MaxRecvMsgSize(i.ServerMaxRecvMsgSize))
+	} else {
+		serverOptions = append(serverOptions, grpc.MaxRecvMsgSize(defaultServerMaxRecvMsgSize))
 	}
-
+	if i.ServerMaxSendMsgSize != 0 {
+		serverOptions = append(serverOptions, grpc.MaxSendMsgSize(i.ServerMaxSendMsgSize))
+	} else {
+		serverOptions = append(serverOptions, grpc.MaxSendMsgSize(defaultServerMaxSendMsgSize))
+	}
+	if i.Credentials != nil {
+		serverOptions = append(serverOptions, grpc.Creds(i.Credentials))
+	}
 	server := grpc.NewServer(serverOptions...)
 
+	// create a listener at addr if no listener was given
+	if i.Listener == nil {
+		var err error
+		i.Listener, err = net.Listen("tcp", i.Addr)
+		if err != nil {
+			return err
+		}
+	}
+
+	// start gRPC server
 	go func() {
-		i.t.options.logger.Info("started GRPC inbound", zap.Stringer("address", i.listener.Addr()))
-		if len(i.router.Procedures()) == 0 {
-			i.t.options.logger.Warn("no procedures specified for GRPC inbound")
+		i.Logger.Info("started GRPC inbound", zap.Stringer("address", i.Listener.Addr()))
+		if len(i.Router.Procedures()) == 0 {
+			i.Logger.Warn("no procedures specified for GRPC inbound")
 		}
 		// TODO there should be some mechanism to block here
 		// there is a race because the listener gets set in the grpc
@@ -137,15 +139,15 @@ func (i *Inbound) start() error {
 		//
 		// TODO Server always returns a non-nil error but should
 		// we do something with some or all errors?
-		_ = server.Serve(i.listener)
+		_ = server.Serve(i.Listener)
 	}()
+
 	i.server = server
 	return nil
 }
 
-func (i *Inbound) stop() error {
-	i.lock.Lock()
-	defer i.lock.Unlock()
+// Stop stops the gRPC inbound.
+func (i *Inbound) Stop(_ context.Context) error {
 	if i.server != nil {
 		i.server.GracefulStop()
 	}
