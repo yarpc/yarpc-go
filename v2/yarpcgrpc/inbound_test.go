@@ -21,6 +21,7 @@
 package grpc
 
 import (
+	"context"
 	"net"
 	"testing"
 
@@ -31,17 +32,11 @@ import (
 func TestInboundMechanics(t *testing.T) {
 	listener, err := net.Listen("tcp", ":0")
 	require.NoError(t, err)
-	inbound := NewTransport().NewInbound(listener)
 
-	assert.False(t, inbound.IsRunning())
-	assert.Equal(t, errRouterNotSet, inbound.Start())
+	inbound := &Inbound{Listener: listener}
+	assert.Equal(t, errRouterNotSet, inbound.Start(context.Background()))
 
-	inbound = NewTransport().NewInbound(listener)
-	inbound.SetRouter(newTestRouter(nil))
-	assert.Nil(t, inbound.Addr())
-	assert.NoError(t, inbound.Start())
-	assert.True(t, inbound.IsRunning())
-	assert.NotNil(t, inbound.Addr())
-	assert.NoError(t, inbound.Stop())
-	assert.Nil(t, inbound.Addr())
+	inbound.Router = newTestRouter(nil)
+	assert.NoError(t, inbound.Start(context.Background()))
+	assert.NoError(t, inbound.Stop(context.Background()))
 }

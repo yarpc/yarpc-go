@@ -24,7 +24,7 @@ import (
 	"bytes"
 
 	"go.uber.org/multierr"
-	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/v2"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -45,7 +45,7 @@ func (r *responseWriter) Write(p []byte) (int, error) {
 	return r.buffer.Write(p)
 }
 
-func (r *responseWriter) AddHeaders(headers transport.Headers) {
+func (r *responseWriter) AddHeaders(headers yarpc.Headers) {
 	if r.md == nil {
 		r.md = metadata.New(nil)
 	}

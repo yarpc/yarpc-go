@@ -24,17 +24,17 @@ import (
 	"context"
 	"sync"
 
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
+	"go.uber.org/yarpc/v2/yarpcpeer"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 )
 
 type grpcPeer struct {
-	*hostport.Peer
+	*yarpcpeer.AbstractPeer
 
-	t          *Transport
+	dialer     *dialerInternals
 	clientConn *grpc.ClientConn
 	stoppingC  chan struct{}
 	stoppedC   chan error
@@ -44,44 +44,30 @@ type grpcPeer struct {
 	stoppedErr error
 }
 
-func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, error) {
-	dialOptions := append([]grpc.DialOption{
-		grpc.WithUserAgent(UserAgent),
-		grpc.WithDefaultCallOptions(
-			grpc.CallCustomCodec(customCodec{}),
-			grpc.MaxCallRecvMsgSize(t.options.clientMaxRecvMsgSize),
-			grpc.MaxCallSendMsgSize(t.options.clientMaxSendMsgSize),
-		),
-	}, options.grpcOptions()...)
-
-	clientConn, err := grpc.Dial(address, dialOptions...)
+func (d *dialerInternals) newPeer(id yarpc.Identifier) (*grpcPeer, error) {
+	clientConn, err := grpc.Dial(id.Identifier(), d.dialOptions...)
 	if err != nil {
 		return nil, err
 	}
 	grpcPeer := &grpcPeer{
-		Peer:       hostport.NewPeer(hostport.PeerIdentifier(address), t),
-		t:          t,
-		clientConn: clientConn,
-		stoppingC:  make(chan struct{}, 1),
-		stoppedC:   make(chan error, 1),
+		AbstractPeer: yarpcpeer.NewAbstractPeer(id),
+		dialer:       d,
+		clientConn:   clientConn,
+		stoppingC:    make(chan struct{}, 1),
+		stoppedC:     make(chan error, 1),
 	}
 	go grpcPeer.monitor()
 	return grpcPeer, nil
 }
 
 func (p *grpcPeer) monitor() {
-	if !p.monitorStart() {
-		p.monitorStop(nil)
-		return
-	}
-
 	var attempts uint
-	backoff := p.t.options.backoffStrategy.Backoff()
+	backoff := p.dialer.backoff.Backoff()
 
 	connectivityState := p.clientConn.GetState()
 	changed := true
 	for {
-		var peerConnectionStatus peer.ConnectionStatus
+		var peerConnectionStatus yarpc.ConnectionStatus
 		var err error
 		// will be called the first time since changed is initialized to true
 		if changed {
@@ -90,12 +76,12 @@ func (p *grpcPeer) monitor() {
 				p.monitorStop(err)
 				return
 			}
-			p.Peer.SetStatus(peerConnectionStatus)
+			p.AbstractPeer.SetStatus(peerConnectionStatus)
 		}
 
 		var ctx context.Context
 		var cancel context.CancelFunc
-		if peerConnectionStatus == peer.Available {
+		if peerConnectionStatus == yarpc.Available {
 			attempts = 0
 			ctx = context.Background()
 		} else {
@@ -113,22 +99,9 @@ func (p *grpcPeer) monitor() {
 	}
 }
 
-// return true if the transport is started
-// return false is monitor was stopped in the meantime
-// this should only be called by monitor()
-func (p *grpcPeer) monitorStart() bool {
-	select {
-	// wait for start so we can be certain that we have a channel
-	case <-p.t.once.Started():
-		return true
-	case <-p.stoppingC:
-		return false
-	}
-}
-
 // this should only be called by monitor()
 func (p *grpcPeer) monitorStop(err error) {
-	p.Peer.SetStatus(peer.Unavailable)
+	p.AbstractPeer.SetStatus(yarpc.Unavailable)
 	// Close always returns an error
 	_ = p.clientConn.Close()
 	p.stoppedC <- err
@@ -154,10 +127,6 @@ func (p *grpcPeer) monitorLoopWait(ctx context.Context, cancel context.CancelFun
 		}
 		loop = true
 	case <-p.stoppingC:
-	case <-p.t.once.Stopping():
-		if cancel != nil {
-			cancel()
-		}
 	}
 	return connectivityState, loop
 }
@@ -184,15 +153,13 @@ func (p *grpcPeer) wait() error {
 	return p.stoppedErr
 }
 
-func connectivityStateToPeerConnectionStatus(connectivityState connectivity.State) (peer.ConnectionStatus, error) {
+func connectivityStateToPeerConnectionStatus(connectivityState connectivity.State) (yarpc.ConnectionStatus, error) {
 	switch connectivityState {
-	case connectivity.Idle, connectivity.TransientFailure, connectivity.Shutdown:
-		return peer.Unavailable, nil
-	case connectivity.Connecting:
-		return peer.Connecting, nil
+	case connectivity.Idle, connectivity.TransientFailure, connectivity.Shutdown, connectivity.Connecting:
+		return yarpc.Unavailable, nil
 	case connectivity.Ready:
-		return peer.Available, nil
+		return yarpc.Available, nil
 	default:
-		return 0, yarpcerrors.Newf(yarpcerrors.CodeInternal, "unknown connectivity.State: %v", connectivityState)
+		return 0, yarpcerror.Newf(yarpcerror.CodeInternal, "unknown connectivity.State: %v", connectivityState)
 	}
 }

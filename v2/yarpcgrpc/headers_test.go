@@ -25,8 +25,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -35,7 +35,7 @@ func TestMetadataToTransportRequest(t *testing.T) {
 	tests := []struct {
 		Name             string
 		MD               metadata.MD
-		TransportRequest *transport.Request
+		TransportRequest *yarpc.Request
 		Error            error
 	}{
 		{
@@ -50,14 +50,14 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				"foo", "bar",
 				"baz", "bat",
 			),
-			TransportRequest: &transport.Request{
+			TransportRequest: &yarpc.Request{
 				Caller:          "example-caller",
 				Service:         "example-service",
 				ShardKey:        "example-shard-key",
 				RoutingKey:      "example-routing-key",
 				RoutingDelegate: "example-routing-delegate",
 				Encoding:        "example-encoding",
-				Headers: transport.HeadersFromMap(map[string]string{
+				Headers: yarpc.HeadersFromMap(map[string]string{
 					"foo": "bar",
 					"baz": "bat",
 				}),
@@ -75,14 +75,14 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				"foo", "bar",
 				"baz", "bat",
 			),
-			TransportRequest: &transport.Request{
+			TransportRequest: &yarpc.Request{
 				Caller:          "example-caller",
 				Service:         "example-service",
 				ShardKey:        "example-shard-key",
 				RoutingKey:      "example-routing-key",
 				RoutingDelegate: "example-routing-delegate",
 				Encoding:        "example-encoding",
-				Headers: transport.HeadersFromMap(map[string]string{
+				Headers: yarpc.HeadersFromMap(map[string]string{
 					"foo": "bar",
 					"baz": "bat",
 				}),
@@ -101,14 +101,14 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				"foo", "bar",
 				"baz", "bat",
 			),
-			TransportRequest: &transport.Request{
+			TransportRequest: &yarpc.Request{
 				Caller:          "example-caller",
 				Service:         "example-service",
 				ShardKey:        "example-shard-key",
 				RoutingKey:      "example-routing-key",
 				RoutingDelegate: "example-routing-delegate",
 				Encoding:        "example-encoding-override",
-				Headers: transport.HeadersFromMap(map[string]string{
+				Headers: yarpc.HeadersFromMap(map[string]string{
 					"foo": "bar",
 					"baz": "bat",
 				}),
@@ -129,7 +129,7 @@ func TestTransportRequestToMetadata(t *testing.T) {
 	for _, tt := range []struct {
 		Name             string
 		MD               metadata.MD
-		TransportRequest *transport.Request
+		TransportRequest *yarpc.Request
 		Error            error
 	}{
 		{
@@ -144,14 +144,14 @@ func TestTransportRequestToMetadata(t *testing.T) {
 				"foo", "bar",
 				"baz", "bat",
 			),
-			TransportRequest: &transport.Request{
+			TransportRequest: &yarpc.Request{
 				Caller:          "example-caller",
 				Service:         "example-service",
 				ShardKey:        "example-shard-key",
 				RoutingKey:      "example-routing-key",
 				RoutingDelegate: "example-routing-delegate",
 				Encoding:        "example-encoding",
-				Headers: transport.HeadersFromMap(map[string]string{
+				Headers: yarpc.HeadersFromMap(map[string]string{
 					"foo": "bar",
 					"baz": "bat",
 				}),
@@ -160,12 +160,12 @@ func TestTransportRequestToMetadata(t *testing.T) {
 		{
 			Name: "Reserved header key in application headers",
 			MD:   metadata.Pairs(),
-			TransportRequest: &transport.Request{
-				Headers: transport.HeadersFromMap(map[string]string{
+			TransportRequest: &yarpc.Request{
+				Headers: yarpc.HeadersFromMap(map[string]string{
 					CallerHeader: "example-caller",
 				}),
 			},
-			Error: yarpcerrors.InvalidArgumentErrorf("cannot use reserved header in application headers: %s", CallerHeader),
+			Error: yarpcerror.InvalidArgumentErrorf("cannot use reserved header in application headers: %s", CallerHeader),
 		},
 	} {
 		t.Run(tt.Name, func(t *testing.T) {

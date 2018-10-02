@@ -28,8 +28,9 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/atomic"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
+	"go.uber.org/yarpc/v2/yarpctracing"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -37,11 +38,11 @@ import (
 
 type serverStream struct {
 	ctx    context.Context
-	req    *transport.StreamRequest
+	req    *yarpc.Request
 	stream grpc.ServerStream
 }
 
-func newServerStream(ctx context.Context, req *transport.StreamRequest, stream grpc.ServerStream) *serverStream {
+func newServerStream(ctx context.Context, req *yarpc.Request, stream grpc.ServerStream) *serverStream {
 	return &serverStream{
 		ctx:    ctx,
 		req:    req,
@@ -53,11 +54,11 @@ func (ss *serverStream) Context() context.Context {
 	return ss.ctx
 }
 
-func (ss *serverStream) Request() *transport.StreamRequest {
+func (ss *serverStream) Request() *yarpc.Request {
 	return ss.req
 }
 
-func (ss *serverStream) SendMessage(_ context.Context, m *transport.StreamMessage) error {
+func (ss *serverStream) SendMessage(_ context.Context, m *yarpc.StreamMessage) error {
 	// TODO pool buffers for performance.
 	msg, err := ioutil.ReadAll(m.Body)
 	_ = m.Body.Close()
@@ -67,23 +68,23 @@ func (ss *serverStream) SendMessage(_ context.Context, m *transport.StreamMessag
 	return toYARPCStreamError(ss.stream.SendMsg(msg))
 }
 
-func (ss *serverStream) ReceiveMessage(_ context.Context) (*transport.StreamMessage, error) {
+func (ss *serverStream) ReceiveMessage(_ context.Context) (*yarpc.StreamMessage, error) {
 	var msg []byte
 	if err := ss.stream.RecvMsg(&msg); err != nil {
 		return nil, toYARPCStreamError(err)
 	}
-	return &transport.StreamMessage{Body: ioutil.NopCloser(bytes.NewReader(msg))}, nil
+	return &yarpc.StreamMessage{Body: ioutil.NopCloser(bytes.NewReader(msg))}, nil
 }
 
 type clientStream struct {
 	ctx    context.Context
-	req    *transport.StreamRequest
+	req    *yarpc.Request
 	stream grpc.ClientStream
 	span   opentracing.Span
 	closed atomic.Bool
 }
 
-func newClientStream(ctx context.Context, req *transport.StreamRequest, stream grpc.ClientStream, span opentracing.Span) *clientStream {
+func newClientStream(ctx context.Context, req *yarpc.Request, stream grpc.ClientStream, span opentracing.Span) *clientStream {
 	return &clientStream{
 		ctx:    ctx,
 		req:    req,
@@ -96,11 +97,11 @@ func (cs *clientStream) Context() context.Context {
 	return cs.ctx
 }
 
-func (cs *clientStream) Request() *transport.StreamRequest {
+func (cs *clientStream) Request() *yarpc.Request {
 	return cs.req
 }
 
-func (cs *clientStream) SendMessage(_ context.Context, m *transport.StreamMessage) error {
+func (cs *clientStream) SendMessage(_ context.Context, m *yarpc.StreamMessage) error {
 	if cs.closed.Load() { // If the stream is closed, we should not be sending messages on it.
 		return io.EOF
 	}
@@ -117,13 +118,13 @@ func (cs *clientStream) SendMessage(_ context.Context, m *transport.StreamMessag
 	return nil
 }
 
-func (cs *clientStream) ReceiveMessage(context.Context) (*transport.StreamMessage, error) {
+func (cs *clientStream) ReceiveMessage(context.Context) (*yarpc.StreamMessage, error) {
 	// TODO use buffers for performance reasons.
 	var msg []byte
 	if err := cs.stream.RecvMsg(&msg); err != nil {
 		return nil, toYARPCStreamError(cs.closeWithErr(err))
 	}
-	return &transport.StreamMessage{Body: ioutil.NopCloser(bytes.NewReader(msg))}, nil
+	return &yarpc.StreamMessage{Body: ioutil.NopCloser(bytes.NewReader(msg))}, nil
 }
 
 func (cs *clientStream) Close(context.Context) error {
@@ -133,7 +134,7 @@ func (cs *clientStream) Close(context.Context) error {
 
 func (cs *clientStream) closeWithErr(err error) error {
 	if !cs.closed.Swap(true) {
-		err = transport.UpdateSpanWithErr(cs.span, err)
+		err = yarpctracing.UpdateSpanWithErr(cs.span, err)
 		cs.span.Finish()
 	}
 	return err
@@ -146,19 +147,19 @@ func toYARPCStreamError(err error) error {
 	if err == io.EOF {
 		return err
 	}
-	if yarpcerrors.IsStatus(err) {
+	if yarpcerror.IsStatus(err) {
 		return err
 	}
 	status, ok := status.FromError(err)
 	// if not a yarpc error or grpc error, just return a wrapped error
 	if !ok {
-		return yarpcerrors.FromError(err)
+		return yarpcerror.FromError(err)
 	}
 	code, ok := _grpcCodeToCode[status.Code()]
 	if !ok {
-		code = yarpcerrors.CodeUnknown
+		code = yarpcerror.CodeUnknown
 	}
-	return yarpcerrors.Newf(code, status.Message())
+	return yarpcerror.Newf(code, status.Message())
 }
 
 func toGRPCStreamError(err error) error {
@@ -168,11 +169,11 @@ func toGRPCStreamError(err error) error {
 
 	// if this is not a yarpc error, return the error
 	// this will result in the error being a grpc-go error with codes.Unknown
-	if !yarpcerrors.IsStatus(err) {
+	if !yarpcerror.IsStatus(err) {
 		return err
 	}
 	// we now know we have a yarpc error
-	yarpcStatus := yarpcerrors.FromError(err)
+	yarpcStatus := yarpcerror.FromError(err)
 	message := yarpcStatus.Message()
 	grpcCode, ok := _codeToGRPCCode[yarpcStatus.Code()]
 	// should only happen if _codeToGRPCCode does not cover all codes

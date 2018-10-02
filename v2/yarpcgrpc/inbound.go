@@ -28,7 +28,7 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -42,7 +42,7 @@ const (
 	defaultServerMaxSendMsgSize = math.MaxInt32
 )
 
-var errRouterNotSet = yarpcerrors.Newf(yarpcerrors.CodeInternal, "gRPC router not set")
+var errRouterNotSet = yarpcerror.Newf(yarpcerror.CodeInternal, "gRPC router not set")
 
 // Inbound receives YARPC requests using a gRPC server.
 type Inbound struct {

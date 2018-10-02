@@ -27,9 +27,9 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpctracing"
 	"go.uber.org/yarpc/v2/yarpctransport"
-	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -40,7 +40,7 @@ import (
 var (
 	// errInvalidGRPCStream is applied before yarpc so it's a raw GRPC error
 	errInvalidGRPCStream = status.Error(codes.InvalidArgument, "received grpc request with invalid stream")
-	errInvalidGRPCMethod = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "invalid stream method name for request")
+	errInvalidGRPCMethod = yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "invalid stream method name for request")
 )
 
 type handler struct {
@@ -74,7 +74,7 @@ func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error 
 	case yarpc.Streaming:
 		return toGRPCStreamError(h.handleStream(ctx, transportRequest, serverStream, start, handlerSpec.Stream()))
 	}
-	return yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport grpc does not handle %s handlers", handlerSpec.Type().String())
+	return yarpcerror.Newf(yarpcerror.CodeUnimplemented, "transport grpc does not handle %s handlers", handlerSpec.Type().String())
 }
 
 // getBasicTransportRequest converts the grpc request metadata into a
@@ -82,7 +82,7 @@ func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error 
 func (h *handler) getBasicTransportRequest(ctx context.Context, streamMethod string) (*yarpc.Request, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if md == nil || !ok {
-		return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "cannot get metadata from ctx: %v", ctx)
+		return nil, yarpcerror.Newf(yarpcerror.CodeInternal, "cannot get metadata from ctx: %v", ctx)
 	}
 	transportRequest, err := metadataToTransportRequest(md)
 	if err != nil {
@@ -124,7 +124,7 @@ func (h *handler) handleStream(
 	transportRequest *yarpc.Request,
 	serverStream grpc.ServerStream,
 	start time.Time,
-	streamHandler yarpc.StreamHandler,
+	streamHandler yarpc.StreamTransportHandler,
 ) error {
 	tracer := h.i.Tracer
 	var parentSpanCtx opentracing.SpanContext
@@ -162,7 +162,7 @@ func (h *handler) handleUnary(
 	serverStream grpc.ServerStream,
 	streamMethod string,
 	start time.Time,
-	handler yarpc.UnaryHandler,
+	handler yarpc.UnaryTransportHandler,
 ) error {
 	var requestData []byte
 	if err := serverStream.RecvMsg(&requestData); err != nil {
@@ -173,7 +173,7 @@ func (h *handler) handleUnary(
 
 	// Buffers are documented to always return a nil error.
 	_, _ = requestBuffer.Write(requestData)
-	transportRequest.Body = requestBuffer
+	// transportRequest.Body = requestBuffer TODO(apeatsbond)
 
 	responseWriter := newResponseWriter()
 	defer responseWriter.Close()
@@ -226,7 +226,7 @@ func (h *handler) callUnary(ctx context.Context, transportRequest *yarpc.Request
 	if err := yarpc.ValidateRequestContext(ctx); err != nil {
 		return err
 	}
-	return yarpctransport.InvokeUnaryHandler(yarpctransport.UnaryInvokeRequest{
+	_, _, _ = yarpctransport.InvokeUnaryHandler(yarpctransport.UnaryInvokeRequest{
 		Context:   ctx,
 		StartTime: time.Now(),
 		Request:   transportRequest,
@@ -234,6 +234,7 @@ func (h *handler) callUnary(ctx context.Context, transportRequest *yarpc.Request
 		Handler: unaryHandler,
 		Logger:  h.i.Logger,
 	})
+	return nil
 }
 
 func handlerErrorToGRPCError(err error, responseWriter *responseWriter) error {
@@ -246,11 +247,11 @@ func handlerErrorToGRPCError(err error, responseWriter *responseWriter) error {
 	}
 	// if this is not a yarpc error, return the error
 	// this will result in the error being a grpc-go error with codes.Unknown
-	if !yarpcerrors.IsStatus(err) {
+	if !yarpcerror.IsStatus(err) {
 		return err
 	}
 	// we now know we have a yarpc error
-	yarpcStatus := yarpcerrors.FromError(err)
+	yarpcStatus := yarpcerror.FromError(err)
 	name := yarpcStatus.Name()
 	message := yarpcStatus.Message()
 	// if the yarpc error has a name, set the header

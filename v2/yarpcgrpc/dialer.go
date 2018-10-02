@@ -91,7 +91,7 @@ type dialerInternals struct {
 }
 
 // Start starts the gRPC dialer.
-func (d *Dialer) Start(_ context.Context) error {
+func (d *Dialer) Start(context.Context) error {
 	d.internal = &dialerInternals{
 		addressToPeer: make(map[string]*grpcPeer),
 		backoff:       backoff.DefaultExponential,
@@ -167,7 +167,7 @@ func (d *dialerInternals) retainPeer(id yarpc.Identifier, sub yarpc.Subscriber) 
 	p, ok := d.addressToPeer[address]
 	if !ok {
 		var err error
-		p, err = d.newPeer(address)
+		p, err = d.newPeer(id)
 		if err != nil {
 			return nil, err
 		}
@@ -192,7 +192,7 @@ func (d *dialerInternals) releasePeer(id yarpc.Identifier, sub yarpc.Subscriber)
 	p, ok := d.addressToPeer[address]
 	if !ok {
 		return yarpcpeer.ErrDialerHasNoReferenceToPeer{
-			TransportName:  "grpc.Transport",
+			DialerName:     "grpc.Transport",
 			PeerIdentifier: address,
 		}
 	}

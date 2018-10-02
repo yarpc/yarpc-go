@@ -34,9 +34,7 @@ func TestInvalidStreamContext(t *testing.T) {
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
 	require.NoError(t, err)
 
-	tran := NewTransport()
-	i := tran.NewInbound(listener)
-
+	i := &Inbound{Listener: listener}
 	h := handler{i: i}
 
 	_, err = h.getBasicTransportRequest(context.Background(), "serv/proc")
@@ -49,9 +47,7 @@ func TestInvalidStreamMethod(t *testing.T) {
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
 	require.NoError(t, err)
 
-	tran := NewTransport()
-	i := tran.NewInbound(listener)
-
+	i := &Inbound{Listener: listener}
 	h := handler{i: i}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{})
 
@@ -64,9 +60,7 @@ func TestInvalidStreamRequest(t *testing.T) {
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
 	require.NoError(t, err)
 
-	tran := NewTransport()
-	i := tran.NewInbound(listener)
-
+	i := &Inbound{Listener: listener}
 	h := handler{i: i}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{})
 
@@ -80,9 +74,7 @@ func TestInvalidStreamEmptyHeader(t *testing.T) {
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
 	require.NoError(t, err)
 
-	tran := NewTransport()
-	i := tran.NewInbound(listener)
-
+	i := &Inbound{Listener: listener}
 	h := handler{i: i}
 	md := metadata.MD{
 		CallerHeader:   []string{},
@@ -101,9 +93,7 @@ func TestInvalidStreamMultipleHeaders(t *testing.T) {
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
 	require.NoError(t, err)
 
-	tran := NewTransport()
-	i := tran.NewInbound(listener)
-
+	i := &Inbound{Listener: listener}
 	h := handler{i: i}
 	md := metadata.MD{
 		CallerHeader: []string{"caller1", "caller2"},

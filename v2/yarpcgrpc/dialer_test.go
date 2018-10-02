@@ -49,7 +49,7 @@ func TestRetainReleasePeerSuccess(t *testing.T) {
 
 	peer, err := dialer.RetainPeer(testIdentifier{address}, peerSubscriber)
 	assert.NoError(t, err)
-	assert.Equal(t, peer, dialer.addressToPeer[address])
+	assert.Equal(t, peer, dialer.internal.addressToPeer[address])
 	assert.NoError(t, dialer.ReleasePeer(testIdentifier{address}, peerSubscriber))
 }
 

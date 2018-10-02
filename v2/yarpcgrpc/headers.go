@@ -24,8 +24,8 @@ import (
 	"strings"
 
 	"go.uber.org/multierr"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -79,7 +79,7 @@ const (
 
 // TODO: there are way too many repeat calls to strings.ToLower
 // Note that these calls are done indirectly, primarily through
-// transport.CanonicalizeHeaderKey
+// yarpc.CanonicalizeHeaderKey
 
 func isReserved(header string) bool {
 	return strings.HasPrefix(strings.ToLower(header), "rpc-")
@@ -87,7 +87,7 @@ func isReserved(header string) bool {
 
 // transportRequestToMetadata will populate all reserved and application headers
 // from the Request into a new MD.
-func transportRequestToMetadata(request *transport.Request) (metadata.MD, error) {
+func transportRequestToMetadata(request *yarpc.Request) (metadata.MD, error) {
 	md := metadata.New(nil)
 	if err := multierr.Combine(
 		addToMetadata(md, CallerHeader, request.Caller),
@@ -104,9 +104,9 @@ func transportRequestToMetadata(request *transport.Request) (metadata.MD, error)
 
 // metadataToTransportRequest will populate the Request with all reserved and application
 // headers into a new Request, only not setting the Body field.
-func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
-	request := &transport.Request{
-		Headers: transport.NewHeadersWithCapacity(md.Len()),
+func metadataToTransportRequest(md metadata.MD) (*yarpc.Request, error) {
+	request := &yarpc.Request{
+		Headers: yarpc.NewHeadersWithCapacity(md.Len()),
 	}
 	for header, values := range md {
 		var value string
@@ -116,9 +116,9 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 		case 1:
 			value = values[0]
 		default:
-			return nil, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s", header)
+			return nil, yarpcerror.InvalidArgumentErrorf("header has more than one value: %s", header)
 		}
-		header = transport.CanonicalizeHeaderKey(header)
+		header = yarpc.CanonicalizeHeaderKey(header)
 		switch header {
 		case CallerHeader:
 			request.Caller = value
@@ -131,12 +131,12 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 		case RoutingDelegateHeader:
 			request.RoutingDelegate = value
 		case EncodingHeader:
-			request.Encoding = transport.Encoding(value)
+			request.Encoding = yarpc.Encoding(value)
 		case contentTypeHeader:
 			// if request.Encoding was set, do not parse content-type
 			// this results in EncodingHeader overriding content-type
 			if request.Encoding == "" {
-				request.Encoding = transport.Encoding(getContentSubtype(value))
+				request.Encoding = yarpc.Encoding(getContentSubtype(value))
 			}
 		default:
 			request.Headers = request.Headers.With(header, value)
@@ -146,11 +146,11 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 }
 
 // addApplicationHeaders adds the headers to md.
-func addApplicationHeaders(md metadata.MD, headers transport.Headers) error {
+func addApplicationHeaders(md metadata.MD, headers yarpc.Headers) error {
 	for header, value := range headers.Items() {
-		header = transport.CanonicalizeHeaderKey(header)
+		header = yarpc.CanonicalizeHeaderKey(header)
 		if isReserved(header) {
-			return yarpcerrors.InvalidArgumentErrorf("cannot use reserved header in application headers: %s", header)
+			return yarpcerror.InvalidArgumentErrorf("cannot use reserved header in application headers: %s", header)
 		}
 		if err := addToMetadata(md, header, value); err != nil {
 			return err
@@ -160,13 +160,13 @@ func addApplicationHeaders(md metadata.MD, headers transport.Headers) error {
 }
 
 // getApplicationHeaders returns the headers from md without any reserved headers.
-func getApplicationHeaders(md metadata.MD) (transport.Headers, error) {
+func getApplicationHeaders(md metadata.MD) (yarpc.Headers, error) {
 	if len(md) == 0 {
-		return transport.Headers{}, nil
+		return yarpc.Headers{}, nil
 	}
-	headers := transport.NewHeadersWithCapacity(md.Len())
+	headers := yarpc.NewHeadersWithCapacity(md.Len())
 	for header, values := range md {
-		header = transport.CanonicalizeHeaderKey(header)
+		header = yarpc.CanonicalizeHeaderKey(header)
 		if isReserved(header) {
 			continue
 		}
@@ -177,7 +177,7 @@ func getApplicationHeaders(md metadata.MD) (transport.Headers, error) {
 		case 1:
 			value = values[0]
 		default:
-			return headers, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s", header)
+			return headers, yarpcerror.InvalidArgumentErrorf("header has more than one value: %s", header)
 		}
 		headers = headers.With(header, value)
 	}
@@ -191,7 +191,7 @@ func addToMetadata(md metadata.MD, key string, value string) error {
 		return nil
 	}
 	if _, ok := md[key]; ok {
-		return yarpcerrors.InvalidArgumentErrorf("duplicate key: %s", key)
+		return yarpcerror.InvalidArgumentErrorf("duplicate key: %s", key)
 	}
 	md[key] = []string{value}
 	return nil
