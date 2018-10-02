@@ -25,11 +25,11 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpctracing"
+	"go.uber.org/yarpc/v2/yarpctransport"
 	"go.uber.org/yarpc/yarpcerrors"
-	"go.uber.org/zap"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -44,12 +44,11 @@ var (
 )
 
 type handler struct {
-	i      *Inbound
-	logger *zap.Logger
+	i *Inbound
 }
 
-func newHandler(i *Inbound, l *zap.Logger) *handler {
-	return &handler{i: i, logger: l}
+func newHandler(i *Inbound) *handler {
+	return &handler{i: i}
 }
 
 func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error {
@@ -65,22 +64,22 @@ func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error 
 		return err
 	}
 
-	handlerSpec, err := h.i.router.Choose(ctx, transportRequest)
+	handlerSpec, err := h.i.Router.Choose(ctx, transportRequest)
 	if err != nil {
 		return err
 	}
 	switch handlerSpec.Type() {
-	case transport.Unary:
+	case yarpc.Unary:
 		return h.handleUnary(ctx, transportRequest, serverStream, streamMethod, start, handlerSpec.Unary())
-	case transport.Streaming:
+	case yarpc.Streaming:
 		return toGRPCStreamError(h.handleStream(ctx, transportRequest, serverStream, start, handlerSpec.Stream()))
 	}
 	return yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport grpc does not handle %s handlers", handlerSpec.Type().String())
 }
 
 // getBasicTransportRequest converts the grpc request metadata into a
-// transport.Request without a body field.
-func (h *handler) getBasicTransportRequest(ctx context.Context, streamMethod string) (*transport.Request, error) {
+// yarpc.Request without a body field.
+func (h *handler) getBasicTransportRequest(ctx context.Context, streamMethod string) (*yarpc.Request, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if md == nil || !ok {
 		return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "cannot get metadata from ctx: %v", ctx)
@@ -97,7 +96,7 @@ func (h *handler) getBasicTransportRequest(ctx context.Context, streamMethod str
 	}
 
 	transportRequest.Procedure = procedure
-	if err := transport.ValidateRequest(transportRequest); err != nil {
+	if err := yarpc.ValidateRequest(transportRequest); err != nil {
 		return nil, err
 	}
 	return transportRequest, nil
@@ -122,47 +121,48 @@ func procedureFromStreamMethod(streamMethod string) (string, error) {
 
 func (h *handler) handleStream(
 	ctx context.Context,
-	transportRequest *transport.Request,
+	transportRequest *yarpc.Request,
 	serverStream grpc.ServerStream,
 	start time.Time,
-	streamHandler transport.StreamHandler,
+	streamHandler yarpc.StreamHandler,
 ) error {
-	tracer := h.i.t.options.tracer
+	tracer := h.i.Tracer
 	var parentSpanCtx opentracing.SpanContext
 	md, ok := metadata.FromIncomingContext(ctx)
 	if ok {
 		parentSpanCtx, _ = tracer.Extract(opentracing.HTTPHeaders, mdReadWriter(md))
 	}
-	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
+	extractOpenTracingSpan := &yarpctracing.ExtractOpenTracingSpan{
 		ParentSpanContext: parentSpanCtx,
 		Tracer:            tracer,
 		TransportName:     transportName,
 		StartTime:         start,
-		ExtraTags:         yarpc.OpentracingTags,
+		ExtraTags:         yarpctracing.Tags,
 	}
 	ctx, span := extractOpenTracingSpan.Do(ctx, transportRequest)
 	defer span.Finish()
 
-	stream := newServerStream(ctx, &transport.StreamRequest{Meta: transportRequest.ToRequestMeta()}, serverStream)
-	tServerStream, err := transport.NewServerStream(stream)
+	stream := newServerStream(ctx, transportRequest, serverStream)
+	tServerStream, err := yarpc.NewServerStream(stream)
 	if err != nil {
 		return err
 	}
 
-	return transport.UpdateSpanWithErr(span, transport.InvokeStreamHandler(transport.StreamInvokeRequest{
-		Stream:  tServerStream,
-		Handler: streamHandler,
-		Logger:  h.logger,
-	}))
+	return yarpctracing.UpdateSpanWithErr(span,
+		yarpctransport.InvokeStreamHandler(yarpctransport.StreamInvokeRequest{
+			Stream:  tServerStream,
+			Handler: streamHandler,
+			Logger:  h.i.Logger,
+		}))
 }
 
 func (h *handler) handleUnary(
 	ctx context.Context,
-	transportRequest *transport.Request,
+	transportRequest *yarpc.Request,
 	serverStream grpc.ServerStream,
 	streamMethod string,
 	start time.Time,
-	handler transport.UnaryHandler,
+	handler yarpc.UnaryHandler,
 ) error {
 	var requestData []byte
 	if err := serverStream.RecvMsg(&requestData); err != nil {
@@ -197,42 +197,42 @@ func (h *handler) handleUnary(
 
 func (h *handler) handleUnaryBeforeErrorConversion(
 	ctx context.Context,
-	transportRequest *transport.Request,
+	transportRequest *yarpc.Request,
 	responseWriter *responseWriter,
 	start time.Time,
-	handler transport.UnaryHandler,
+	handler yarpc.UnaryHandler,
 ) error {
-	tracer := h.i.t.options.tracer
+	tracer := h.i.Tracer
 	var parentSpanCtx opentracing.SpanContext
 	md, ok := metadata.FromIncomingContext(ctx)
 	if ok {
 		parentSpanCtx, _ = tracer.Extract(opentracing.HTTPHeaders, mdReadWriter(md))
 	}
-	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
+	extractOpenTracingSpan := &yarpctracing.ExtractOpenTracingSpan{
 		ParentSpanContext: parentSpanCtx,
 		Tracer:            tracer,
 		TransportName:     transportName,
 		StartTime:         start,
-		ExtraTags:         yarpc.OpentracingTags,
+		ExtraTags:         yarpctracing.Tags,
 	}
 	ctx, span := extractOpenTracingSpan.Do(ctx, transportRequest)
 	defer span.Finish()
 
 	err := h.callUnary(ctx, transportRequest, handler, responseWriter)
-	return transport.UpdateSpanWithErr(span, err)
+	return yarpctracing.UpdateSpanWithErr(span, err)
 }
 
-func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Request, unaryHandler transport.UnaryHandler, responseWriter *responseWriter) error {
-	if err := transport.ValidateRequestContext(ctx); err != nil {
+func (h *handler) callUnary(ctx context.Context, transportRequest *yarpc.Request, unaryHandler yarpc.UnaryHandler, responseWriter *responseWriter) error {
+	if err := yarpc.ValidateRequestContext(ctx); err != nil {
 		return err
 	}
-	return transport.InvokeUnaryHandler(transport.UnaryInvokeRequest{
-		Context:        ctx,
-		StartTime:      time.Now(),
-		Request:        transportRequest,
-		ResponseWriter: responseWriter,
-		Handler:        unaryHandler,
-		Logger:         h.logger,
+	return yarpctransport.InvokeUnaryHandler(yarpctransport.UnaryInvokeRequest{
+		Context:   ctx,
+		StartTime: time.Now(),
+		Request:   transportRequest,
+		// ResponseWriter: responseWriter,
+		Handler: unaryHandler,
+		Logger:  h.i.Logger,
 	})
 }
 
