@@ -17,7 +17,6 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-
 package main_test
 
 import (
@@ -134,13 +133,6 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 			wantResult:    true,
 		},
 		{
-			desc:          "store: healthy with base client",
-			procedures:    storeserver.New(&storeHandler{healthy: true}, serverOpts...),
-			newClientFunc: baseserviceclient.New,
-			method:        "Healthy",
-			wantResult:    true,
-		},
-		{
 			desc:          "store: unhealthy",
 			procedures:    storeserver.New(&storeHandler{}, serverOpts...),
 			newClientFunc: storeclient.New,
@@ -190,48 +182,12 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 			},
 		},
 		{
-			desc:          "store: integer with readonly client",
-			procedures:    storeserver.New(&storeHandler{integer: 42}, serverOpts...),
-			newClientFunc: readonlystoreclient.New,
-			method:        "Integer",
-			methodArgs:    []interface{}{ptr.String("foo")},
-			wantResult:    int64(42),
-		},
-		{
-			desc: "readonly store: integer error with rw client",
-			procedures: readonlystoreserver.New(&storeHandler{
-				failWith: &atomic.KeyDoesNotExist{Key: ptr.String("foo")},
-			}, serverOpts...),
-			newClientFunc: storeclient.New,
-			method:        "Integer",
-			methodArgs:    []interface{}{ptr.String("foo")},
-			wantError:     &atomic.KeyDoesNotExist{Key: ptr.String("foo")},
-		},
-		{
 			desc:          "readonly store: integer with readonly client",
 			procedures:    readonlystoreserver.New(&storeHandler{integer: 42}, serverOpts...),
 			newClientFunc: readonlystoreclient.New,
 			method:        "Integer",
 			methodArgs:    []interface{}{ptr.String("foo")},
 			wantResult:    int64(42),
-		},
-		{
-			desc:          "readonly store: integer with rw client",
-			procedures:    readonlystoreserver.New(&storeHandler{integer: 42}, serverOpts...),
-			newClientFunc: storeclient.New,
-			method:        "Integer",
-			methodArgs:    []interface{}{ptr.String("foo")},
-			wantResult:    int64(42),
-		},
-		{
-			desc: "readonly store: integer failure with rw client",
-			procedures: readonlystoreserver.New(&storeHandler{
-				failWith: &atomic.KeyDoesNotExist{Key: ptr.String("foo")},
-			}, serverOpts...),
-			newClientFunc: storeclient.New,
-			method:        "Integer",
-			methodArgs:    []interface{}{ptr.String("foo")},
-			wantError:     &atomic.KeyDoesNotExist{Key: ptr.String("foo")},
 		},
 		{
 			desc: "store: integer failure",

@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
+- Adds `thrift.Named` option for appropriately labelling procedures inherited
+  from other thrift services.
+### Fixed
+- Calling extended Thrift service procedures previously called the base service's
+  procedures.
+
+## [1.33.0] - 2018-09-26
+### Added
 - x/yarpctest: Add a retry option to HTTP/TChannel/GRPCRequest.
 - Added `peer/tworandomchoices`, an implementation of the Two Random Choices
   load balancer algorithm.
@@ -1011,7 +1019,8 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.32.4...HEAD
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.33.0...HEAD
+[1.33.0]: https://github.com/yarpc/yarpc-go/compare/v1.32.4...v1.33.0
 [1.32.4]: https://github.com/yarpc/yarpc-go/compare/v1.32.3...v1.32.4
 [1.32.3]: https://github.com/yarpc/yarpc-go/compare/v1.32.2...v1.32.3
 [1.32.2]: https://github.com/yarpc/yarpc-go/compare/v1.32.1...v1.32.2
