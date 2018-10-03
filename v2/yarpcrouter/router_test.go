@@ -66,7 +66,7 @@ func TestMapRouter(t *testing.T) {
 
 	tests := []struct {
 		service, procedure, encoding string
-		want                         yarpc.UnaryHandler
+		want                         yarpc.UnaryTransportHandler
 	}{
 		{"myservice", "foo", "", foo},
 		{"", "foo", "", foo},

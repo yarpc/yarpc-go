@@ -40,7 +40,7 @@ func popHeader(h http.Header, n string) string {
 	return v
 }
 
-// handler adapts a yarpc.Handler into a handler for net/http.
+// handler adapts a yarpc.UnaryEncodingHandler into a handler for net/http.
 type handler struct {
 	router              yarpc.Router
 	tracer              opentracing.Tracer

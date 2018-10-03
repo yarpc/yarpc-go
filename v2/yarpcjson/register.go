@@ -54,8 +54,8 @@ func Procedure(name string, handler interface{}) []yarpc.Procedure {
 }
 
 // wrapUnaryHandler takes a valid JSON handler function and converts it into a
-// yarpc.UnaryHandler.
-func wrapUnaryHandler(name string, handler interface{}) yarpc.UnaryHandler {
+// yarpc.UnaryTransportHandler.
+func wrapUnaryHandler(name string, handler interface{}) yarpc.UnaryTransportHandler {
 	reqBodyType := verifyUnarySignature(name, reflect.TypeOf(handler))
 	return newJSONHandler(reqBodyType, handler)
 }

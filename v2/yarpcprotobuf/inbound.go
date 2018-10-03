@@ -29,7 +29,7 @@ import (
 	"go.uber.org/yarpc/v2/yarpcjson"
 )
 
-// StreamHandlerParams contains the parameters for creating a new StreamHandler.
+// StreamHandlerParams contains the parameters for creating a new StreamTransportHandler.
 type StreamHandlerParams struct {
 	Handle func(*ServerStream) error
 }
@@ -38,8 +38,8 @@ type streamHandler struct {
 	handle func(*ServerStream) error
 }
 
-// NewStreamHandler returns a new StreamHandler.
-func NewStreamHandler(p StreamHandlerParams) yarpc.StreamHandler {
+// NewStreamHandler returns a new StreamTransportHandler.
+func NewStreamHandler(p StreamHandlerParams) yarpc.StreamTransportHandler {
 	return &streamHandler{p.Handle}
 }
 
@@ -55,7 +55,7 @@ func (s *streamHandler) HandleStream(stream *yarpc.ServerStream) error {
 	return s.handle(protoStream)
 }
 
-// UnaryHandlerParams contains the parameters for creating a new UnaryHandler.
+// UnaryHandlerParams contains the parameters for creating a new UnaryTransportHandler.
 type UnaryHandlerParams struct {
 	Handle func(context.Context, proto.Message) (proto.Message, error)
 	Create func() proto.Message
@@ -66,8 +66,8 @@ type unaryHandler struct {
 	create func() proto.Message
 }
 
-// NewUnaryHandler returns a new UnaryHandler.
-func NewUnaryHandler(p UnaryHandlerParams) yarpc.UnaryHandler {
+// NewUnaryHandler returns a new UnaryTransportHandler.
+func NewUnaryHandler(p UnaryHandlerParams) yarpc.UnaryTransportHandler {
 	return &unaryHandler{p.Handle, p.Create}
 }
 

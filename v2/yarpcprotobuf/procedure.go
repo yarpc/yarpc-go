@@ -38,13 +38,13 @@ type ProceduresParams struct {
 // UnaryProceduresParams contains the parameters for constructing Unary procedures.
 type UnaryProceduresParams struct {
 	Method  string
-	Handler yarpc.UnaryHandler
+	Handler yarpc.UnaryTransportHandler
 }
 
 // StreamProceduresParams contains the parameters for constructing Stream procedures.
 type StreamProceduresParams struct {
 	Method  string
-	Handler yarpc.StreamHandler
+	Handler yarpc.StreamTransportHandler
 }
 
 // Procedures builds a slice of yarpc.Procedures.

@@ -36,14 +36,14 @@ func TestHandlerSpecLogMarshaling(t *testing.T) {
 	}{
 		{
 			desc: "unary",
-			spec: NewUnaryHandlerSpec(UnaryHandlerFunc(func(context.Context, *Request, *Buffer) (*Response, *Buffer, error) {
+			spec: NewUnaryHandlerSpec(UnaryTransportHandlerFunc(func(context.Context, *Request, *Buffer) (*Response, *Buffer, error) {
 				return nil, nil, nil
 			})),
 			want: map[string]interface{}{"rpcType": "Unary"},
 		},
 		{
 			desc: "stream",
-			spec: NewStreamHandlerSpec(StreamHandlerFunc(func(*ServerStream) error {
+			spec: NewStreamHandlerSpec(StreamTransportHandlerFunc(func(*ServerStream) error {
 				return nil
 			})),
 			want: map[string]interface{}{"rpcType": "Streaming"},

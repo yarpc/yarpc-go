@@ -29,10 +29,10 @@ import (
 	"go.uber.org/yarpc/v2/yarpcencoding"
 )
 
-var _ yarpc.UnaryHandler = (*jsonHandler)(nil)
+var _ yarpc.UnaryTransportHandler = (*jsonHandler)(nil)
 
 // jsonHandler adapts a user-provided high-level handler into a transport-level
-// Handler.
+// UnaryEncodingHandler.
 //
 // The wrapped function must already be in the correct format:
 //
