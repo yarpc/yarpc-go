@@ -14,6 +14,8 @@ side closes the connection.
 ### Fixed
 - Calling extended Thrift service procedures previously called the base service's
   procedures.
+- Using a `http.Outbound` previously leaked implementation details that it was using a 
+  `*http.Client` underneath, when attempting to cast a `http.Outbound` into a `http.RoundTripper`
 
 ## [1.33.0] - 2018-09-26
 ### Added
