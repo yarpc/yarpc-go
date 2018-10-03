@@ -37,8 +37,6 @@ package protoplugin
 import (
 	"bytes"
 	"compress/gzip"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -147,13 +145,6 @@ type File struct {
 	Enums                  []*Enum
 	Services               []*Service
 	TransitiveDependencies []*File
-}
-
-// FileDescriptorClosureVarName is the variable name we'll use in the generated code to refer
-// to the compressed bytes of this descriptor and its dependencies.
-func (f *File) FileDescriptorClosureVarName() string {
-	h := sha256.Sum256([]byte(f.GetName()))
-	return fmt.Sprintf("yarpcFileDescriptorClosure%s", hex.EncodeToString(h[:8]))
 }
 
 // SerializedFileDescriptor returns a gzipped marshalled representation of the FileDescriptor
