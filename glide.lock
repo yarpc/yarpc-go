@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-09-26T15:03:29.431439387Z
+updated: 2018-10-03T15:05:32.615871181Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -32,7 +32,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 7716a980bceefe9a0213654823d9ea62d23b87a2
+  version: 7011d38ac0d201eeddff4a4085a657c3da322d75
   subpackages:
   - proto
   - ptypes
@@ -78,7 +78,7 @@ imports:
   - nfs
   - xfs
 - name: github.com/stretchr/testify
-  version: f35b8ab0b5a2cef36673838d662e249dd9c94686
+  version: 2db35c88b92a1631e987089b5485a95e68bc5d3a
   subpackages:
   - assert
   - require
@@ -130,7 +130,7 @@ imports:
   - internal/digreflect
   - internal/dot
 - name: go.uber.org/fx
-  version: b156a883a62423b7d9ab651d1689c42c4d788787
+  version: 6244a3ed900ddd4deac96447f2c988d4722ad890
   subpackages:
   - fxtest
   - internal/fxlog
@@ -172,7 +172,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: f04abc6bdfa7a0171a8a0c9fd2ada9391044d056
+  version: f5e5bdd778241bfefa8627f7124c39cd6ad8d74f
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -189,7 +189,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 2f1df4e56cdeb503a08d8577e6f1a7eb12efab82
+  version: af653ce8b74f808d092db8ca9741fbb63d2a469d
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -201,12 +201,12 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: c756801b0141e5d8f5f43e38d9962117e034e565
+  version: 2f84ea8ef8720b418a1414ed610df828e1db1b3b
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 0e822944c569bf5c9afd034adaa56208bd2906ac
+  version: c7e5094acea1ca1b899e2259d80a6b0f882f81f8
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc

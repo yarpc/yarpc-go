@@ -41,6 +41,22 @@ func NoJitter() TransportOption {
 	}
 }
 
+// DialerCalled is used for tests to see whether we reached a certain point in tests. Currently we check
+// if we caught an error from Dialer.
+func DialerCalled(dialerCalled func()) TransportOption {
+	return func(options *transportOptions) {
+		options.dialerCalled = dialerCalled
+	}
+}
+
+// CloserCalled is used for tests to see whether we reached a certain point in tests. Currently we check
+// if we caught an error from Dialer.
+func CloserCalled(closerCalled func()) TransportOption {
+	return func(options *transportOptions) {
+		options.closerCalled = closerCalled
+	}
+}
+
 type peerExpectation struct {
 	id          string
 	subscribers []string

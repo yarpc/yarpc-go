@@ -51,6 +51,8 @@ type transportOptions struct {
 	tracer                opentracing.Tracer
 	buildClient           func(*transportOptions) *http.Client
 	logger                *zap.Logger
+	dialerCalled          func()
+	closerCalled          func()
 }
 
 var defaultTransportOptions = transportOptions{
@@ -58,7 +60,6 @@ var defaultTransportOptions = transportOptions{
 	maxIdleConnsPerHost: 2,
 	connTimeout:         defaultConnTimeout,
 	connBackoffStrategy: backoff.DefaultExponential,
-	buildClient:         buildHTTPClient,
 	innocenceWindow:     defaultInnocenceWindow,
 	jitter:              rand.Int63n,
 }
@@ -222,9 +223,8 @@ func (o *transportOptions) newTransport() *Transport {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
-	return &Transport{
+	t := &Transport{
 		once:                lifecycle.NewOnce(),
-		client:              o.buildClient(o),
 		connTimeout:         o.connTimeout,
 		connBackoffStrategy: o.connBackoffStrategy,
 		innocenceWindow:     o.innocenceWindow,
@@ -233,25 +233,90 @@ func (o *transportOptions) newTransport() *Transport {
 		tracer:              o.tracer,
 		logger:              logger,
 	}
+	// buildClient is only passed in for tests.
+	if o.buildClient == nil {
+		t.client = o.buildHTTPClient(t)
+	} else {
+		t.client = o.buildClient(o)
+	}
+
+	return t
 }
 
-func buildHTTPClient(options *transportOptions) *http.Client {
+type httpConn struct {
+	net.Conn
+
+	transport   *Transport
+	address     string
+	closeCalled func() // Used for testing.
+}
+
+func (c *httpConn) Close() error {
+	if c.closeCalled != nil {
+		c.closeCalled()
+	}
+	// Do nothing as we still want to close the connection. It's ok if a peer has been
+	// disconnected.
+	_ = c.transport.onDisconnected(c.address)
+
+	return c.Conn.Close()
+}
+
+// func(network, address string) (net.Conn, error)
+type dialerWrapper struct {
+	dial         func(network, address string) (net.Conn, error)
+	transport    *Transport
+	dialerCalled func() // Used for testing.
+	closerCalled func() // Used for testing.
+}
+
+func (d *dialerWrapper) Dial(network, address string) (net.Conn, error) {
+	conn, err := d.dial(network, address)
+	// Any error will cause us to disconnect a peer. Not checking if conn is nil and relying on
+	// error being returned.
+	hConn := &httpConn{
+		Conn:        conn,
+		transport:   d.transport,
+		address:     address,
+		closeCalled: d.closerCalled,
+	}
+	if err != nil {
+		if d.dialerCalled != nil {
+			d.dialerCalled()
+		}
+		if err := d.transport.onDisconnected(address); err != nil {
+			return nil, err
+		}
+	}
+
+	return hConn, err
+}
+
+// Dialer wrapper needs to call a method of transport to send a notification to a peer
+// to resume peer management loop
+func (o *transportOptions) buildHTTPClient(transport *Transport) *http.Client {
 	return &http.Client{
 		Transport: &http.Transport{
 			// options lifted from https://golang.org/src/net/http/transport.go
 			Proxy: http.ProxyFromEnvironment,
-			Dial: (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: options.keepAlive,
+			Dial: (&dialerWrapper{
+				dial: (&net.Dialer{
+					Timeout:   30 * time.Second,
+					KeepAlive: o.keepAlive,
+				}).Dial,
+				transport: transport,
+				// add optional function that's comes via tests.
+				dialerCalled: o.dialerCalled,
+				closerCalled: o.closerCalled,
 			}).Dial,
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
-			MaxIdleConns:          options.maxIdleConns,
-			MaxIdleConnsPerHost:   options.maxIdleConnsPerHost,
-			IdleConnTimeout:       options.idleConnTimeout,
-			DisableKeepAlives:     options.disableKeepAlives,
-			DisableCompression:    options.disableCompression,
-			ResponseHeaderTimeout: options.responseHeaderTimeout,
+			MaxIdleConns:          o.maxIdleConns,
+			MaxIdleConnsPerHost:   o.maxIdleConnsPerHost,
+			IdleConnTimeout:       o.idleConnTimeout,
+			DisableKeepAlives:     o.disableKeepAlives,
+			DisableCompression:    o.disableCompression,
+			ResponseHeaderTimeout: o.responseHeaderTimeout,
 		},
 	}
 }
@@ -306,6 +371,22 @@ func (a *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.P
 	p := a.getOrCreatePeer(pid)
 	p.Subscribe(sub)
 	return p, nil
+}
+
+// onDisconnected marks a peer as being potentially down.
+func (a *Transport) onDisconnected(addr string) error {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+
+	p, ok := a.peers[addr]
+
+	if !ok {
+		// Peer has already been ejected.
+		return nil
+	}
+	p.onDisconnected()
+
+	return nil
 }
 
 // **NOTE** should only be called while the lock write mutex is acquired

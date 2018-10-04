@@ -91,6 +91,7 @@ thriftrw --plugin=yarpc --out=internal/examples/thrift-keyvalue/keyvalue interna
 thriftrw --out=encoding/thrift encoding/thrift/internal.thrift
 thriftrw --out=serialize serialize/internal.thrift
 
+thriftrw --no-recurse --plugin=yarpc --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends.thrift
 thriftrw --no-recurse --plugin=yarpc --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common.thrift
 thriftrw --no-recurse --plugin=yarpc --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic.thrift
 thriftrw --no-recurse --plugin="yarpc --sanitize-tchannel" --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather.thrift
