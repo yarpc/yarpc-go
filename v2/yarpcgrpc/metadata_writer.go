@@ -21,55 +21,34 @@
 package grpc
 
 import (
-	"bytes"
-
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/v2"
 	"google.golang.org/grpc/metadata"
 )
 
-type responseWriter struct {
-	buffer    *bytes.Buffer
+type metadataWriter struct {
 	md        metadata.MD
 	headerErr error
 }
 
-func newResponseWriter() *responseWriter {
-	return &responseWriter{}
-}
-
-func (r *responseWriter) Write(p []byte) (int, error) {
-	if r.buffer == nil {
-		r.buffer = bytes.NewBuffer(make([]byte, 0, len(p)))
+func newMetadataWriter() *metadataWriter {
+	return &metadataWriter{
+		md: metadata.New(nil),
 	}
-	return r.buffer.Write(p)
 }
 
-func (r *responseWriter) AddHeaders(headers yarpc.Headers) {
-	if r.md == nil {
-		r.md = metadata.New(nil)
+func (r *metadataWriter) SetResponse(res *yarpc.Response) {
+	r.headerErr = multierr.Combine(r.headerErr, addApplicationHeaders(r.md, res.Headers))
+
+	if res.ApplicationError {
+		r.AddSystemHeader(ApplicationErrorHeader, ApplicationErrorHeaderValue)
 	}
-	r.headerErr = multierr.Combine(r.headerErr, addApplicationHeaders(r.md, headers))
 }
 
-func (r *responseWriter) SetApplicationError() {
-	r.AddSystemHeader(ApplicationErrorHeader, ApplicationErrorHeaderValue)
-}
-
-func (r *responseWriter) AddSystemHeader(key string, value string) {
-	if r.md == nil {
-		r.md = metadata.New(nil)
-	}
+func (r *metadataWriter) AddSystemHeader(key string, value string) {
 	r.headerErr = multierr.Combine(r.headerErr, addToMetadata(r.md, key, value))
 }
 
-func (r *responseWriter) Bytes() []byte {
-	if r.buffer == nil {
-		return nil
-	}
-	return r.buffer.Bytes()
-}
-
-func (r *responseWriter) Close() {
-	r.buffer = nil
+func (r *metadataWriter) MD() metadata.MD {
+	return r.md
 }

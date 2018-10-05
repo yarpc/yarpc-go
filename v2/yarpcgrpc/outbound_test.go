@@ -22,7 +22,6 @@ package grpc
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/url"
 	"testing"
@@ -39,60 +38,24 @@ import (
 	"google.golang.org/grpc"
 )
 
-func newOutbound(t *testing.T, addr string) (_ *Outbound, stop func()) {
-	u, err := url.Parse(addr)
-	require.NoError(t, err)
-
-	dialer := &Dialer{}
-	require.NoError(t, dialer.Start(context.Background()))
-
-	return &Outbound{
-		URL:    u,
-		Dialer: dialer,
-	}, func() { assert.NoError(t, dialer.Stop(context.Background())) }
-}
-
 func TestNoRequest(t *testing.T) {
-	out, _ := newOutbound(t, "localhost:0")
-
-	_, _, err := out.Call(context.Background(), &yarpc.Request{}, &yarpc.Buffer{})
+	out := &Outbound{}
+	_, _, err := out.Call(context.Background(), nil, &yarpc.Buffer{})
 	assert.Equal(t, yarpcerror.InvalidArgumentErrorf("request for grpc outbound was nil"), err)
 }
 
-func TestCallStreamWhenNotRunning(t *testing.T) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
-	require.NoError(t, err)
-
-	out, stop := newOutbound(t, listener.Addr().String())
-	defer stop()
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*10)
-	defer cancel()
-	_, err = out.CallStream(ctx, &yarpc.Request{})
-
-	require.Contains(t, err.Error(), context.DeadlineExceeded.Error())
-}
-
-func TestCallStreamWithNoRequestMeta(t *testing.T) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
-	require.NoError(t, err)
-
-	out, stop := newOutbound(t, listener.Addr().String())
-	defer stop()
+func TestCallStreamWithNoRequest(t *testing.T) {
+	out := &Outbound{}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
 	defer cancel()
-	_, err = out.CallStream(ctx, &yarpc.Request{})
+	_, err := out.CallStream(ctx, nil)
 
-	require.Contains(t, err.Error(), yarpcerror.InvalidArgumentErrorf("stream request requires a request metadata").Error())
+	require.Contains(t, err.Error(), yarpcerror.InvalidArgumentErrorf("stream request requires a yarpc.Request").Error())
 }
 
 func TestCallStreamWithInvalidHeader(t *testing.T) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
-	require.NoError(t, err)
-
-	out, done := newOutbound(t, listener.Addr().String())
-	defer done()
+	out := &Outbound{}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
 	defer cancel()
@@ -103,17 +66,13 @@ func TestCallStreamWithInvalidHeader(t *testing.T) {
 		Procedure: "proc",
 		Headers:   yarpc.NewHeaders().With("rpc-caller", "reserved header"),
 	}
-	_, err = out.CallStream(ctx, req)
+	_, err := out.CallStream(ctx, req)
 
 	require.Contains(t, err.Error(), yarpcerror.InvalidArgumentErrorf("cannot use reserved header in application headers: rpc-caller").Error())
 }
 
 func TestCallStreamWithInvalidProcedure(t *testing.T) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
-	require.NoError(t, err)
-
-	out, done := newOutbound(t, listener.Addr().String())
-	defer done()
+	out := &Outbound{}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
 	defer cancel()
@@ -123,7 +82,7 @@ func TestCallStreamWithInvalidProcedure(t *testing.T) {
 		Encoding:  yarpc.Encoding("raw"),
 		Procedure: "",
 	}
-	_, err = out.CallStream(ctx, req)
+	_, err := out.CallStream(ctx, req)
 
 	require.Contains(t, err.Error(), yarpcerror.InvalidArgumentErrorf("invalid procedure name: ").Error())
 }
@@ -206,21 +165,18 @@ func TestCallServiceMatch(t *testing.T) {
 		t.Run(tt.msg, func(t *testing.T) {
 			server := grpc.NewServer(
 				grpc.UnknownServiceHandler(func(srv interface{}, stream grpc.ServerStream) error {
-					responseWriter := newResponseWriter()
-					defer responseWriter.Close()
+					mdWriter := newMetadataWriter()
 
 					if tt.headerKey != "" {
-						responseWriter.AddSystemHeader(tt.headerKey, tt.headerValue)
+						mdWriter.AddSystemHeader(tt.headerKey, tt.headerValue)
 					}
-
 					// Send the response attributes back and end the stream.
 					if sendErr := stream.SendMsg(&empty.Empty{}); sendErr != nil {
 						// We couldn't send the response.
 						return sendErr
 					}
-					if responseWriter.md != nil {
-						stream.SetTrailer(responseWriter.md)
-					}
+
+					stream.SetTrailer(mdWriter.MD())
 					return nil
 				}),
 			)
@@ -232,8 +188,16 @@ func TestCallServiceMatch(t *testing.T) {
 			}()
 			defer server.Stop()
 
-			out, stop := newOutbound(t, listener.Addr().String())
-			defer stop()
+			u, err := url.Parse("http://" + listener.Addr().String())
+			require.NoError(t, err)
+
+			dialer := &Dialer{}
+			out := &Outbound{
+				Dialer: dialer,
+				URL:    u,
+			}
+			dialer.Start(context.Background())
+			defer dialer.Stop(context.Background())
 
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 			defer cancel()

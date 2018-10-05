@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
-	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpctracing"
@@ -54,32 +53,56 @@ func newHandler(i *Inbound) *handler {
 func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error {
 	start := time.Now()
 	ctx := serverStream.Context()
+
 	streamMethod, ok := grpc.MethodFromServerStream(serverStream)
 	if !ok {
 		return errInvalidGRPCStream
 	}
 
-	transportRequest, err := h.getBasicTransportRequest(ctx, streamMethod)
+	req, err := requestFromServerStream(serverStream, streamMethod)
 	if err != nil {
 		return err
 	}
 
-	handlerSpec, err := h.i.Router.Choose(ctx, transportRequest)
+	handlerSpec, err := h.i.Router.Choose(ctx, req)
 	if err != nil {
 		return err
 	}
+
+	// extract open tracing span
+	tracer := h.i.Tracer
+	var parentSpanCtx opentracing.SpanContext
+	md, ok := metadata.FromIncomingContext(ctx)
+	if ok {
+		parentSpanCtx, _ = tracer.Extract(opentracing.HTTPHeaders, mdReadWriter(md))
+	}
+	extractOpenTracingSpan := &yarpctracing.ExtractOpenTracingSpan{
+		ParentSpanContext: parentSpanCtx,
+		Tracer:            tracer,
+		TransportName:     transportName,
+		StartTime:         start,
+		ExtraTags:         yarpctracing.Tags,
+	}
+	ctx, span := extractOpenTracingSpan.Do(ctx, req)
+	defer span.Finish()
+
+	// invoke handler
 	switch handlerSpec.Type() {
 	case yarpc.Unary:
-		return h.handleUnary(ctx, transportRequest, serverStream, streamMethod, start, handlerSpec.Unary())
+		err = h.handleUnary(ctx, req, serverStream, start, handlerSpec.Unary())
 	case yarpc.Streaming:
-		return toGRPCStreamError(h.handleStream(ctx, transportRequest, serverStream, start, handlerSpec.Stream()))
+		err = h.handleStream(ctx, req, serverStream, start, handlerSpec.Stream())
+	default:
+		return yarpcerror.Newf(yarpcerror.CodeUnimplemented, "gRPC inbound does not handle %s handlers", handlerSpec.Type().String())
 	}
-	return yarpcerror.Newf(yarpcerror.CodeUnimplemented, "transport grpc does not handle %s handlers", handlerSpec.Type().String())
+
+	return yarpctracing.UpdateSpanWithErr(span, err)
 }
 
-// getBasicTransportRequest converts the grpc request metadata into a
-// yarpc.Request without a body field.
-func (h *handler) getBasicTransportRequest(ctx context.Context, streamMethod string) (*yarpc.Request, error) {
+// requestFromServerStream converts the grpc request metadata into a yarpc.Request
+func requestFromServerStream(stream grpc.ServerStream, streamMethod string) (*yarpc.Request, error) {
+	ctx := stream.Context()
+
 	md, ok := metadata.FromIncomingContext(ctx)
 	if md == nil || !ok {
 		return nil, yarpcerror.Newf(yarpcerror.CodeInternal, "cannot get metadata from ctx: %v", ctx)
@@ -121,46 +144,30 @@ func procedureFromStreamMethod(streamMethod string) (string, error) {
 
 func (h *handler) handleStream(
 	ctx context.Context,
-	transportRequest *yarpc.Request,
-	serverStream grpc.ServerStream,
+	req *yarpc.Request,
+	gServerStream grpc.ServerStream,
 	start time.Time,
 	streamHandler yarpc.StreamTransportHandler,
 ) error {
-	tracer := h.i.Tracer
-	var parentSpanCtx opentracing.SpanContext
-	md, ok := metadata.FromIncomingContext(ctx)
-	if ok {
-		parentSpanCtx, _ = tracer.Extract(opentracing.HTTPHeaders, mdReadWriter(md))
-	}
-	extractOpenTracingSpan := &yarpctracing.ExtractOpenTracingSpan{
-		ParentSpanContext: parentSpanCtx,
-		Tracer:            tracer,
-		TransportName:     transportName,
-		StartTime:         start,
-		ExtraTags:         yarpctracing.Tags,
-	}
-	ctx, span := extractOpenTracingSpan.Do(ctx, transportRequest)
-	defer span.Finish()
-
-	stream := newServerStream(ctx, transportRequest, serverStream)
-	tServerStream, err := yarpc.NewServerStream(stream)
+	stream := newServerStream(ctx, req, gServerStream)
+	serverStream, err := yarpc.NewServerStream(stream)
 	if err != nil {
-		return err
+		return toGRPCStreamError(err)
 	}
 
-	return yarpctracing.UpdateSpanWithErr(span,
-		yarpctransport.InvokeStreamHandler(yarpctransport.StreamInvokeRequest{
-			Stream:  tServerStream,
-			Handler: streamHandler,
-			Logger:  h.i.Logger,
-		}))
+	err = yarpctransport.InvokeStreamHandler(yarpctransport.StreamInvokeRequest{
+		Stream:  serverStream,
+		Handler: streamHandler,
+		Logger:  h.i.Logger,
+	})
+
+	return toGRPCStreamError(err)
 }
 
 func (h *handler) handleUnary(
 	ctx context.Context,
-	transportRequest *yarpc.Request,
+	req *yarpc.Request,
 	serverStream grpc.ServerStream,
-	streamMethod string,
 	start time.Time,
 	handler yarpc.UnaryTransportHandler,
 ) error {
@@ -168,76 +175,38 @@ func (h *handler) handleUnary(
 	if err := serverStream.RecvMsg(&requestData); err != nil {
 		return err
 	}
-	requestBuffer := bufferpool.Get()
-	defer bufferpool.Put(requestBuffer)
 
-	// Buffers are documented to always return a nil error.
-	_, _ = requestBuffer.Write(requestData)
-	// transportRequest.Body = requestBuffer TODO(apeatsbond)
-
-	responseWriter := newResponseWriter()
-	defer responseWriter.Close()
+	mdWriter := newMetadataWriter()
 
 	// Echo accepted rpc-service in response header
-	responseWriter.AddSystemHeader(ServiceHeader, transportRequest.Service)
+	mdWriter.AddSystemHeader(ServiceHeader, req.Service)
 
-	err := h.handleUnaryBeforeErrorConversion(ctx, transportRequest, responseWriter, start, handler)
-	err = handlerErrorToGRPCError(err, responseWriter)
-
-	// Send the response attributes back and end the stream.
-	if sendErr := serverStream.SendMsg(responseWriter.Bytes()); sendErr != nil {
-		// We couldn't send the response.
-		return sendErr
-	}
-	if responseWriter.md != nil {
-		serverStream.SetTrailer(responseWriter.md)
-	}
-	return err
-}
-
-func (h *handler) handleUnaryBeforeErrorConversion(
-	ctx context.Context,
-	transportRequest *yarpc.Request,
-	responseWriter *responseWriter,
-	start time.Time,
-	handler yarpc.UnaryHandler,
-) error {
-	tracer := h.i.Tracer
-	var parentSpanCtx opentracing.SpanContext
-	md, ok := metadata.FromIncomingContext(ctx)
-	if ok {
-		parentSpanCtx, _ = tracer.Extract(opentracing.HTTPHeaders, mdReadWriter(md))
-	}
-	extractOpenTracingSpan := &yarpctracing.ExtractOpenTracingSpan{
-		ParentSpanContext: parentSpanCtx,
-		Tracer:            tracer,
-		TransportName:     transportName,
-		StartTime:         start,
-		ExtraTags:         yarpctracing.Tags,
-	}
-	ctx, span := extractOpenTracingSpan.Do(ctx, transportRequest)
-	defer span.Finish()
-
-	err := h.callUnary(ctx, transportRequest, handler, responseWriter)
-	return yarpctracing.UpdateSpanWithErr(span, err)
-}
-
-func (h *handler) callUnary(ctx context.Context, transportRequest *yarpc.Request, unaryHandler yarpc.UnaryHandler, responseWriter *responseWriter) error {
 	if err := yarpc.ValidateRequestContext(ctx); err != nil {
 		return err
 	}
-	_, _, _ = yarpctransport.InvokeUnaryHandler(yarpctransport.UnaryInvokeRequest{
+	res, resBuf, err := yarpctransport.InvokeUnaryHandler(yarpctransport.UnaryInvokeRequest{
 		Context:   ctx,
 		StartTime: time.Now(),
-		Request:   transportRequest,
-		// ResponseWriter: responseWriter,
-		Handler: unaryHandler,
-		Logger:  h.i.Logger,
+		Request:   req,
+		Buffer:    yarpc.NewBufferBytes(requestData),
+		Handler:   handler,
+		Logger:    h.i.Logger,
 	})
-	return nil
+
+	err = handlerErrorToGRPCError(err, mdWriter)
+
+	// Send the response attributes back and end the stream.
+	if sendErr := serverStream.SendMsg(resBuf.Bytes()); sendErr != nil {
+		// We couldn't send the response.
+		return sendErr
+	}
+
+	mdWriter.SetResponse(res)
+	serverStream.SetTrailer(mdWriter.MD())
+	return err
 }
 
-func handlerErrorToGRPCError(err error, responseWriter *responseWriter) error {
+func handlerErrorToGRPCError(err error, mdWriter *metadataWriter) error {
 	if err == nil {
 		return nil
 	}
@@ -256,7 +225,7 @@ func handlerErrorToGRPCError(err error, responseWriter *responseWriter) error {
 	message := yarpcStatus.Message()
 	// if the yarpc error has a name, set the header
 	if name != "" {
-		responseWriter.AddSystemHeader(ErrorNameHeader, name)
+		mdWriter.AddSystemHeader(ErrorNameHeader, name)
 		if message == "" {
 			// if the message is empty, set the message to the name for grpc compatibility
 			message = name

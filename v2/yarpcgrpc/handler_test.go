@@ -22,86 +22,74 @@ package grpc
 
 import (
 	"context"
-	"fmt"
-	"net"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
+var _ grpc.ServerStream = (*fakeServerStream)(nil)
+
+type fakeServerStream struct {
+	context context.Context
+}
+
+func (f *fakeServerStream) SetHeader(metadata.MD) error  { return nil }
+func (f *fakeServerStream) SendHeader(metadata.MD) error { return nil }
+func (f *fakeServerStream) SetTrailer(metadata.MD)       {}
+func (f *fakeServerStream) Context() context.Context     { return f.context }
+func (f *fakeServerStream) SendMsg(m interface{}) error  { return nil }
+func (f *fakeServerStream) RecvMsg(m interface{}) error  { return nil }
+
 func TestInvalidStreamContext(t *testing.T) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
-	require.NoError(t, err)
+	ss := &fakeServerStream{context: context.Background()}
 
-	i := &Inbound{Listener: listener}
-	h := handler{i: i}
-
-	_, err = h.getBasicTransportRequest(context.Background(), "serv/proc")
-
+	_, err := requestFromServerStream(ss, "serv/proc")
 	require.Contains(t, err.Error(), "cannot get metadata from ctx:")
 	require.Contains(t, err.Error(), "code:internal")
 }
 
 func TestInvalidStreamMethod(t *testing.T) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
-	require.NoError(t, err)
-
-	i := &Inbound{Listener: listener}
-	h := handler{i: i}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{})
+	ss := &fakeServerStream{context: ctx}
 
-	_, err = h.getBasicTransportRequest(ctx, "invalidMethod!")
-
+	_, err := requestFromServerStream(ss, "invalidMethod!")
 	require.Contains(t, err.Error(), errInvalidGRPCMethod.Error())
 }
 
 func TestInvalidStreamRequest(t *testing.T) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
-	require.NoError(t, err)
-
-	i := &Inbound{Listener: listener}
-	h := handler{i: i}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{})
+	ss := &fakeServerStream{context: ctx}
 
-	_, err = h.getBasicTransportRequest(ctx, "service/proc")
-
+	_, err := requestFromServerStream(ss, "service/proc")
 	require.Contains(t, err.Error(), "code:invalid-argument")
 	require.Contains(t, err.Error(), "missing service name, caller name, encoding")
 }
 
 func TestInvalidStreamEmptyHeader(t *testing.T) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
-	require.NoError(t, err)
-
-	i := &Inbound{Listener: listener}
-	h := handler{i: i}
 	md := metadata.MD{
 		CallerHeader:   []string{},
 		ServiceHeader:  []string{"test"},
 		EncodingHeader: []string{"raw"},
 	}
+
 	ctx := metadata.NewIncomingContext(context.Background(), md)
+	ss := &fakeServerStream{context: ctx}
 
-	_, err = h.getBasicTransportRequest(ctx, "service/proc")
-
+	_, err := requestFromServerStream(ss, "service/proc")
 	require.Contains(t, err.Error(), "code:invalid-argument")
 	require.Contains(t, err.Error(), "missing caller name")
 }
 
 func TestInvalidStreamMultipleHeaders(t *testing.T) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
-	require.NoError(t, err)
-
-	i := &Inbound{Listener: listener}
-	h := handler{i: i}
 	md := metadata.MD{
 		CallerHeader: []string{"caller1", "caller2"},
 	}
 	ctx := metadata.NewIncomingContext(context.Background(), md)
+	ss := &fakeServerStream{context: ctx}
 
-	_, err = h.getBasicTransportRequest(ctx, "service/proc")
-
+	_, err := requestFromServerStream(ss, "service/proc")
 	require.Contains(t, err.Error(), "code:invalid-argument")
 	require.Contains(t, err.Error(), "header has more than one value: rpc-caller")
 }

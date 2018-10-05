@@ -50,14 +50,14 @@ type Outbound struct {
 	// Chooser is a peer chooser for outbound requests.
 	Chooser yarpc.Chooser
 
-	// Dialer is an alternative to specifying a Chooser.
-	// The outbound will dial the address specified in the URL.
+	// Dialer is an alternative to specifying a Chooser. The outbound will dial
+	// the address specified in the URL.
 	Dialer yarpc.Dialer
 
 	// URL specifies the template for the URL this outbound makes requests to.
-	// For yarpc.Chooser-based outbounds, the peer (host:port) spection of the
-	// URL may vary from call to call but the REST will remain unchanged.
-	// For single-peer outbounds, the URL will be used as-is.
+	//
+	// For yarpc.Chooser-based outbounds, the peer (host:port) section of the URL
+	// may vary from call to call.
 	URL *url.URL
 
 	// Tracer attaches a tracer for the outbound.
@@ -109,51 +109,37 @@ func (o *Outbound) invoke(
 	if responseMD != nil {
 		callOptions = []grpc.CallOption{grpc.Trailer(responseMD)}
 	}
-	apiPeer, onFinish, err := o.Chooser.Choose(ctx, req)
+	peer, onFinish, err := o.getPeerForRequest(ctx, req)
 	if err != nil {
 		return err
 	}
 	defer func() { onFinish(retErr) }()
-	grpcPeer, ok := apiPeer.(*grpcPeer)
-	if !ok {
-		return yarpcpeer.ErrInvalidPeerConversion{
-			Peer:         apiPeer,
-			ExpectedType: "*grpcPeer",
-		}
-	}
 
-	createOpenTracingSpan := &yarpctracing.CreateOpenTracingSpan{
-		Tracer:        o.Tracer,
-		TransportName: transportName,
-		StartTime:     start,
-		ExtraTags:     yarpctracing.Tags,
-	}
-	ctx, span := createOpenTracingSpan.Do(ctx, req)
-	defer span.Finish()
-
-	if err := o.Tracer.Inject(span.Context(), opentracing.HTTPHeaders, mdReadWriter(md)); err != nil {
+	ctx, span, err := o.getSpanForRequest(ctx, start, req, md)
+	if err != nil {
 		return err
 	}
+	defer span.Finish()
 
-	err = yarpctracing.UpdateSpanWithErr(
-		span,
-		grpcPeer.clientConn.Invoke(
-			metadata.NewOutgoingContext(ctx, md),
-			fullMethod,
-			reqBuf.Bytes(),
-			responseBody,
-			callOptions...,
-		),
+	err = peer.clientConn.Invoke(
+		metadata.NewOutgoingContext(ctx, md),
+		fullMethod,
+		reqBuf.Bytes(),
+		responseBody,
+		callOptions...,
 	)
+
 	if err != nil {
-		return invokeErrorToYARPCError(err, *responseMD)
+		return invokeErrorToYARPCError(yarpctracing.UpdateSpanWithErr(span, err), *responseMD)
 	}
+
 	// Service name match validation, return yarpcerror.CodeInternal error if not match
 	if match, resService := checkServiceMatch(req.Service, *responseMD); !match {
 		// If service doesn't match => we got response => span must not be nil
 		return yarpctracing.UpdateSpanWithErr(span, yarpcerror.InternalErrorf("service name sent from the request "+
 			"does not match the service name received in the response: sent %q, got: %q", req.Service, resService))
 	}
+
 	return nil
 }
 
@@ -201,17 +187,11 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 }
 
 // CallStream implements yarpc.StreamOutbound#CallStream.
-func (o *Outbound) CallStream(ctx context.Context, request *yarpc.Request) (*yarpc.ClientStream, error) {
-	return o.stream(ctx, request, time.Now())
-}
+func (o *Outbound) CallStream(ctx context.Context, req *yarpc.Request) (*yarpc.ClientStream, error) {
+	start := time.Now()
 
-func (o *Outbound) stream(
-	ctx context.Context,
-	req *yarpc.Request,
-	start time.Time,
-) (_ *yarpc.ClientStream, err error) {
 	if req == nil {
-		return nil, yarpcerror.InvalidArgumentErrorf("stream request requires a request metadata")
+		return nil, yarpcerror.InvalidArgumentErrorf("stream request requires a yarpc.Request")
 	}
 	md, err := requestToMetadata(req)
 	if err != nil {
@@ -223,35 +203,19 @@ func (o *Outbound) stream(
 		return nil, err
 	}
 
-	apiPeer, onFinish, err := o.Chooser.Choose(ctx, req)
+	peer, onFinish, err := o.getPeerForRequest(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { onFinish(err) }()
 
-	grpcPeer, ok := apiPeer.(*grpcPeer)
-	if !ok {
-		return nil, yarpcpeer.ErrInvalidPeerConversion{
-			Peer:         apiPeer,
-			ExpectedType: "*grpcPeer",
-		}
-	}
-
-	createOpenTracingSpan := &yarpctracing.CreateOpenTracingSpan{
-		Tracer:        o.Tracer,
-		TransportName: transportName,
-		StartTime:     start,
-		ExtraTags:     yarpctracing.Tags,
-	}
-	_, span := createOpenTracingSpan.Do(ctx, req)
-
-	if err := o.Tracer.Inject(span.Context(), opentracing.HTTPHeaders, mdReadWriter(md)); err != nil {
-		span.Finish()
+	_, span, err := o.getSpanForRequest(ctx, start, req, md)
+	if err != nil {
 		return nil, err
 	}
 
 	streamCtx := metadata.NewOutgoingContext(ctx, md)
-	clientStream, err := grpcPeer.clientConn.NewStream(
+	clientStream, err := peer.clientConn.NewStream(
 		streamCtx,
 		&grpc.StreamDesc{
 			ClientStreams: true,
@@ -270,6 +234,79 @@ func (o *Outbound) stream(
 		return nil, err
 	}
 	return tClientStream, nil
+}
+
+// getPeerForRequest returns a peer and onFinish function for a request.
+//
+// This favors using the the peer chooser over the dialer and URL.
+func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*grpcPeer, func(error), error) {
+	var peer yarpc.Peer
+	var onFinish func(error)
+	var err error
+
+	if o.Chooser != nil {
+		peer, onFinish, err = o.Chooser.Choose(ctx, req)
+		if err != nil {
+			return nil, nil, err
+		}
+
+	} else if o.Dialer != nil && o.URL != nil {
+		id := yarpc.Address(o.URL.Host)
+		peer, err = o.Dialer.RetainPeer(id, yarpc.NopSubscriber)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		onFinish = func(error) {
+			// Do nothing.
+			//
+			// We cannot call ReleasePeer since we only dial a single peer. If a
+			// finished request calls ReleasePeer, this will close the connection loop
+			// for all concurrent callers since they have the same subscriber.
+			// Concurrent calls would otherwise fail.
+			//
+			// This could be avoided by introducing a per request subscriber.
+		}
+
+	} else {
+		return nil, nil, yarpcerror.FailedPreconditionErrorf("gRPC Outbound must have either Chooser or Dialer and URL to make a Call")
+	}
+
+	grpcPeer, ok := peer.(*grpcPeer)
+	if !ok {
+		return nil, nil, yarpcpeer.ErrInvalidPeerConversion{
+			Peer:         peer,
+			ExpectedType: "*grpcPeer",
+		}
+	}
+
+	return grpcPeer, onFinish, nil
+}
+
+// getSpanForRequest returns an opentracing.Span with the given metadata
+// injected into the span.Context()
+//
+// The caller must call span.Finish() if no error is returned.
+func (o *Outbound) getSpanForRequest(ctx context.Context, start time.Time, req *yarpc.Request, md metadata.MD) (context.Context, opentracing.Span, error) {
+	tracer := o.Tracer
+	if tracer == nil {
+		tracer = opentracing.GlobalTracer()
+	}
+
+	createOpenTracingSpan := &yarpctracing.CreateOpenTracingSpan{
+		Tracer:        tracer,
+		TransportName: transportName,
+		StartTime:     start,
+		ExtraTags:     yarpctracing.Tags,
+	}
+	newCtx, span := createOpenTracingSpan.Do(ctx, req)
+
+	if err := tracer.Inject(span.Context(), opentracing.HTTPHeaders, mdReadWriter(md)); err != nil {
+		span.Finish()
+		return nil, nil, err
+	}
+
+	return newCtx, span, nil
 }
 
 // Only does verification when there is a response service header key
