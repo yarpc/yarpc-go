@@ -18,26 +18,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package grpc
+package yarpctest
 
 import (
 	"context"
-	"net"
-	"testing"
+	"fmt"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/v2/yarpctest"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
-func TestInboundMechanics(t *testing.T) {
-	listener, err := net.Listen("tcp", ":0")
-	require.NoError(t, err)
+var _ yarpc.Router = (*FakeRouter)(nil)
 
-	inbound := &Inbound{Listener: listener}
-	assert.Equal(t, errRouterNotSet, inbound.Start(context.Background()))
+// FakeRouter is a fake router with procedures.
+type FakeRouter struct {
+	procedures []yarpc.Procedure
+}
 
-	inbound.Router = yarpctest.NewFakeRouter(nil)
-	assert.NoError(t, inbound.Start(context.Background()))
-	assert.NoError(t, inbound.Stop(context.Background()))
+// NewFakeRouter creates a fake yarpc.Router.
+func NewFakeRouter(procedures []yarpc.Procedure) *FakeRouter {
+	return &FakeRouter{procedures}
+}
+
+// Procedures returns the procedures given in the constructor.
+func (r *FakeRouter) Procedures() []yarpc.Procedure {
+	return r.procedures
+}
+
+// Choose chooses a yarpc.HandlerSpec based on request.Procedure.
+func (r *FakeRouter) Choose(_ context.Context, req *yarpc.Request) (yarpc.TransportHandlerSpec, error) {
+	for _, procedure := range r.procedures {
+		if procedure.Name == req.Procedure {
+			return procedure.HandlerSpec, nil
+		}
+	}
+	return yarpc.TransportHandlerSpec{}, fmt.Errorf("no procedure for name %s", req.Procedure)
 }
