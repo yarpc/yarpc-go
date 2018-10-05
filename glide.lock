@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-10-04T15:05:23.095175308Z
+updated: 2018-10-05T15:06:32.175311585Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -72,7 +72,7 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 6bfc2c70c4ee6da6946888bb96dec33f825df32b
+  version: 185b4288413d2a0dd0806f78c90dde719829e5ae
   subpackages:
   - internal/util
   - nfs
@@ -145,7 +145,7 @@ imports:
   - push
   - tallypush
 - name: go.uber.org/thriftrw
-  version: c8eb6919acebb42254375c897469d986c91405ae
+  version: 7c449ccc4449ee826f5063a81e7f48b178396ef1
   subpackages:
   - envelope
   - internal/envelope
@@ -172,7 +172,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: f5e5bdd778241bfefa8627f7124c39cd6ad8d74f
+  version: 146acd28ed5894421fb5aac80ca93bc1b1f46f87
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -189,7 +189,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 8469e314837c2e2471561de5c47bbf8bfd0d9099
+  version: 4497e2df6f9e69048a54498c7affbbec3294ad47
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -201,7 +201,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 1f2a8f46bd66722a69f1649231de9bf0635eb085
+  version: 59602fdee893255faef9b2cd3aa8f880ea85265c
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
