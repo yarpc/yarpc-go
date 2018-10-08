@@ -59,7 +59,7 @@ func TestHandlerSuccess(t *testing.T) {
 	headers.Set(RoutingDelegateHeader, "routedelegate")
 
 	router := yarpctest.NewMockRouter(mockCtrl)
-	rpcHandler := yarpctest.NewMockUnaryHandler(mockCtrl)
+	rpcHandler := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
 	spec := yarpc.NewUnaryHandlerSpec(rpcHandler)
 
 	router.EXPECT().Choose(gomock.Any(), internalyarpctest.NewMatcher().
@@ -151,7 +151,7 @@ func TestHandlerHeaders(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.giveEncoding, func(*testing.T) {
 			router := yarpctest.NewMockRouter(mockCtrl)
-			rpcHandler := yarpctest.NewMockUnaryHandler(mockCtrl)
+			rpcHandler := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
 			spec := yarpc.NewUnaryHandlerSpec(rpcHandler)
 
 			router.EXPECT().Choose(gomock.Any(), internalyarpctest.NewMatcher().
@@ -333,7 +333,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 		Body:   ioutil.NopCloser(bytes.NewReader([]byte{})),
 	}
 
-	rpcHandler := yarpctest.NewMockUnaryHandler(mockCtrl)
+	rpcHandler := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
 	rpcHandler.EXPECT().Handle(
 		yarpctest.NewContextMatcher(t, yarpctest.ContextTTL(time.Second)),
 		&yarpc.Request{

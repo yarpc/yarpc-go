@@ -75,7 +75,7 @@ func TestOutboundMiddleware(t *testing.T) {
 
 	t.Run("unary", func(t *testing.T) {
 		out := yarpctest.NewMockUnaryOutbound(ctrl)
-		mw := yarpctest.NewMockUnaryOutboundMiddleware(ctrl)
+		mw := yarpctest.NewMockUnaryOutboundTransportMiddleware(ctrl)
 		_ = ApplyUnaryOutboundTransportMiddleware(out, mw)
 	})
 }
