@@ -68,8 +68,8 @@ type Inbound struct {
 	GrabHeaders []string
 
 	// Interceptor specifies a function which can wrap the YARPC handler. If
-	// provided, this function will be called with an http.UnaryEncodingHandler which will
-	// route requests through YARPC. The http.UnaryEncodingHandler returned by this function
+	// provided, this function will be called with an http.Handler which will
+	// route requests through YARPC. The http.Handler returned by this function
 	// may delegate requests to the provided YARPC handler to route them through
 	// YARPC.
 	Interceptor func(http.Handler) http.Handler

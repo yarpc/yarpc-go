@@ -39,10 +39,10 @@ type UnaryInboundTransportMiddleware interface {
 }
 
 // NopUnaryInboundTransportMiddleware is an inbound middleware that does not do anything special. It
-// simply calls the underlying UnaryEncodingHandler.
+// simply calls the underlying UnaryTransportHandler.
 var NopUnaryInboundTransportMiddleware UnaryInboundTransportMiddleware = nopUnaryInboundTransportMiddleware{}
 
-// ApplyUnaryInboundTransportMiddleware applies the given InboundMiddleware to the given UnaryEncodingHandler.
+// ApplyUnaryInboundTransportMiddleware applies the given InboundMiddleware to the given UnaryTransportHandler.
 func ApplyUnaryInboundTransportMiddleware(h UnaryTransportHandler, i UnaryInboundTransportMiddleware) UnaryTransportHandler {
 	if i == nil {
 		return h

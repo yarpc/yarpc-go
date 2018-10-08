@@ -32,7 +32,7 @@ import (
 var _ yarpc.UnaryTransportHandler = (*jsonHandler)(nil)
 
 // jsonHandler adapts a user-provided high-level handler into a transport-level
-// UnaryEncodingHandler.
+// UnaryTransportHandler.
 //
 // The wrapped function must already be in the correct format:
 //

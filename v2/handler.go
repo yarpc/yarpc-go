@@ -54,10 +54,10 @@ func (h HandlerSpec) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 // Type returns the associated handler's type
 func (h HandlerSpec) Type() Type { return h.t }
 
-// Unary returns the Unary UnaryEncodingHandler or nil
+// Unary returns the Unary UnaryTransportHandler or nil
 func (h HandlerSpec) Unary() UnaryTransportHandler { return h.unaryHandler }
 
-// Stream returns the Stream UnaryEncodingHandler or nil
+// Stream returns the Stream StreamTransportHandler or nil
 func (h HandlerSpec) Stream() StreamTransportHandler { return h.streamHandler }
 
 // NewUnaryHandlerSpec returns an new HandlerSpec with a UnaryTransportHandler

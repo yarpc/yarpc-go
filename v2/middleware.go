@@ -24,7 +24,7 @@ import (
 	"context"
 )
 
-// UnaryInboundEncodingMiddleware defines an encoding-level middleware for `UnaryTransportHandler`s.
+// UnaryInboundEncodingMiddleware defines an encoding-level middleware for `UnaryEncodingHandler`s.
 //
 // UnaryInboundEncodingMiddleware MAY do zero or more of the following: change the
 // context, change the request, modify the response body, handle the returned
@@ -38,6 +38,7 @@ type UnaryInboundEncodingMiddleware interface {
 	Handle(ctx context.Context, req *Request, reqBody interface{}, h UnaryEncodingHandler) (*Response, interface{}, error)
 }
 
+// UnaryEncodingHandler handles a single, encoding-level, unary request.
 type UnaryEncodingHandler interface {
 	Handle(ctx context.Context, req *Request, reqBody interface{}) (*Response, interface{}, error)
 }
