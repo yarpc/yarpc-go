@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-10-05T15:06:32.175311585Z
+updated: 2018-10-08T15:06:36.084256091Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -32,7 +32,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 31e0d063dd98c052257e5b69eeb006818133f45c
+  version: ddf22928ea3c56eb4292a0adbbf5001b1e8e7d0d
   subpackages:
   - proto
   - ptypes
@@ -201,7 +201,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 59602fdee893255faef9b2cd3aa8f880ea85265c
+  version: f60d9635b16a5a57b06eaa119614ba4df421966a
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
