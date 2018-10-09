@@ -34,8 +34,8 @@ type Client interface {
 	Call(
 		ctx context.Context,
 		method string,
-		req proto.Message,
-		create func() proto.Message,
+		protoReq proto.Message,
+		protoRes proto.Message,
 		opts ...yarpc.CallOption,
 	) (proto.Message, error)
 }
@@ -48,22 +48,23 @@ type StreamClient interface {
 }
 
 type client struct {
-	c        yarpc.Client
-	encoding yarpc.Encoding
+	c            yarpc.Client
+	encoding     yarpc.Encoding
+	protoService string
 }
 
 // NewClient creates a new client.
-func NewClient(c yarpc.Client, opts ...ClientOption) Client {
-	return newClient(c, opts...)
+func NewClient(c yarpc.Client, protoService string, opts ...ClientOption) Client {
+	return newClient(c, protoService, opts...)
 }
 
 // NewStreamClient creates a new stream client.
-func NewStreamClient(c yarpc.Client, opts ...ClientOption) StreamClient {
-	return newClient(c, opts...)
+func NewStreamClient(c yarpc.Client, protoService string, opts ...ClientOption) StreamClient {
+	return newClient(c, protoService, opts...)
 }
 
-func newClient(c yarpc.Client, opts ...ClientOption) *client {
-	cli := &client{c: c, encoding: Encoding}
+func newClient(c yarpc.Client, service string, opts ...ClientOption) *client {
+	cli := &client{c: c, encoding: Encoding, protoService: service}
 	for _, o := range opts {
 		o.apply(cli)
 	}
@@ -89,8 +90,8 @@ func (c *client) CallStream(ctx context.Context, method string, opts ...yarpc.Ca
 func (c *client) Call(
 	ctx context.Context,
 	method string,
-	proto proto.Message,
-	create func() proto.Message,
+	protoReq proto.Message,
+	protoRes proto.Message,
 	opts ...yarpc.CallOption,
 ) (proto.Message, error) {
 	call := yarpc.NewOutboundCall(opts...)
@@ -99,7 +100,7 @@ func (c *client) Call(
 		return nil, err
 	}
 
-	body, cleanup, err := marshal(req.Encoding, proto)
+	body, cleanup, err := marshal(req.Encoding, protoReq)
 	if err != nil {
 		return nil, yarpcencoding.RequestBodyEncodeError(req, err)
 	}
@@ -119,7 +120,6 @@ func (c *client) Call(
 		return nil, err
 	}
 
-	protoRes := create()
 	if resBuf != nil {
 		if err := unmarshal(req.Encoding, resBuf, protoRes); err != nil {
 			return nil, yarpcencoding.ResponseBodyDecodeError(req, err)
@@ -128,11 +128,14 @@ func (c *client) Call(
 	return protoRes, appErr
 }
 
+// Note that the provided service corresponds to the Proto service name.
+// This includes the service's package name, such as foo.Bar, where
+// Bar is a service declared in the foo package.
 func (c *client) toRequest(ctx context.Context, method string, call *yarpc.OutboundCall) (context.Context, *yarpc.Request, error) {
 	req := &yarpc.Request{
 		Caller:    c.c.Caller,
 		Service:   c.c.Service,
-		Procedure: yarpcprocedure.ToName(c.c.Service, method),
+		Procedure: yarpcprocedure.ToName(c.protoService, method),
 		Encoding:  c.encoding,
 	}
 
