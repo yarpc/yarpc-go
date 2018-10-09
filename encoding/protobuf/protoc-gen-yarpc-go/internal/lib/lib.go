@@ -24,6 +24,7 @@
 package lib
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -678,7 +679,7 @@ func encodedFileDescriptor(f *protoplugin.File) (string, error) {
 		return "", err
 	}
 
-	var buf strings.Builder
+	var buf bytes.Buffer
 	buf.WriteString("[]byte{\n")
 	for len(fdBytes) > 0 {
 		n := 16
