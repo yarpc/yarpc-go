@@ -37,7 +37,9 @@ Encodings:
 - [x] Drop raw encoding
 - [x] Port JSON encoding
 - [ ] Port Thrift encoding
-- [ ] Port Protobuf encoding
+- [ ] Port / re-create Protobuf encoding
+      - [x] Rewrite the protoc-gen-yarpc-go plugin.
+      - [ ] Add end-to-end test that uses gRPC transport with protobuf encoding.
       - [ ] Explore threading the context in Protobuf code generation, i.e. in `Stream.Receive`.
 
 Transports:
