@@ -24,7 +24,6 @@
 package lib
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -661,6 +660,9 @@ func clientServerStreamingMethods(service *protoplugin.Service) ([]*protoplugin.
 	return methods, nil
 }
 
+// fileDescriptorClosureVarName is used to refer to a variable that contains a closure of all encoded
+// filedescriptors required to interpret a specific proto file. It is used in the yarpc codebase to
+// attach reflection information to services.
 func fileDescriptorClosureVarName(f *protoplugin.File) (string, error) {
 	name := f.GetName()
 	if name == "" {
@@ -671,31 +673,26 @@ func fileDescriptorClosureVarName(f *protoplugin.File) (string, error) {
 }
 
 func encodedFileDescriptor(f *protoplugin.File) (string, error) {
-	b, err := f.SerializedFileDescriptor()
+	fdBytes, err := f.SerializedFileDescriptor()
 	if err != nil {
 		return "", err
 	}
 
-	buf := make([]byte, 0, 0)
-	w := bytes.NewBuffer(buf)
-	w.WriteString("[]byte{\n")
-	for len(b) > 0 {
+	var buf strings.Builder
+	buf.WriteString("[]byte{\n")
+	for len(fdBytes) > 0 {
 		n := 16
-		if n > len(b) {
-			n = len(b)
+		if n > len(fdBytes) {
+			n = len(fdBytes)
 		}
-
-		s := ""
-		for _, c := range b[:n] {
-			s += fmt.Sprintf("0x%02x,", c)
+		for _, c := range fdBytes[:n] {
+			fmt.Fprintf(&buf, "0x%02x,", c)
 		}
-		w.WriteString(s)
-		w.WriteString("\n")
-
-		b = b[n:]
+		buf.WriteString("\n")
+		fdBytes = fdBytes[n:]
 	}
-	w.WriteString("}")
-	return w.String(), nil
+	buf.WriteString("}")
+	return buf.String(), nil
 }
 
 func trimPrefixPeriod(s string) string {

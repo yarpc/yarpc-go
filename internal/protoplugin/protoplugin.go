@@ -158,7 +158,11 @@ func (f *File) SerializedFileDescriptor() ([]byte, error) {
 	}
 
 	var buf bytes.Buffer
-	w, _ := gzip.NewWriterLevel(&buf, gzip.BestCompression)
+	w, err := gzip.NewWriterLevel(&buf, gzip.BestCompression)
+	if err != nil {
+		return nil, err
+	}
+
 	_, err = w.Write(b)
 	if err != nil {
 		return nil, err

@@ -261,11 +261,15 @@ func (r *registry) newMethod(svc *Service, md *descriptor.MethodDescriptorProto)
 // can resolve filedecscriptors op depdendencies
 func (r *registry) loadTransitiveFileDependencies(file *File) error {
 	seen := make(map[string]struct{})
-	file.TransitiveDependencies = r.loadTransitiveFileDependenciesRecurse(file, seen)
+	files, err := r.loadTransitiveFileDependenciesRecurse(file, seen)
+	if err != nil {
+		return err
+	}
+	file.TransitiveDependencies = files
 	return nil
 }
 
-func (r *registry) loadTransitiveFileDependenciesRecurse(file *File, seen map[string]struct{}) []*File {
+func (r *registry) loadTransitiveFileDependenciesRecurse(file *File, seen map[string]struct{}) ([]*File, error) {
 	seen[file.GetName()] = struct{}{}
 	var deps []*File
 	for _, fname := range file.GetDependency() {
@@ -274,12 +278,17 @@ func (r *registry) loadTransitiveFileDependenciesRecurse(file *File, seen map[st
 		}
 		f, err := r.LookupFile(fname)
 		if err != nil {
-			continue
+			return nil, err
 		}
 		deps = append(deps, f)
-		deps = append(deps, r.loadTransitiveFileDependenciesRecurse(f, seen)...)
+
+		files, err := r.loadTransitiveFileDependenciesRecurse(f, seen)
+		if err != nil {
+			return nil, err
+		}
+		deps = append(deps, files...)
 	}
-	return deps
+	return deps, nil
 }
 
 // defaultGoPackageName returns the default go package name to be used for go files generated from "f".
