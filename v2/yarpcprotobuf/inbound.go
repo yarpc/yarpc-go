@@ -57,22 +57,22 @@ func (s *streamHandler) HandleStream(stream *yarpc.ServerStream) error {
 
 // UnaryHandlerParams contains the parameters for creating a new UnaryTransportHandler.
 type UnaryHandlerParams struct {
-	Handle func(context.Context, proto.Message) (proto.Message, error)
-	Create func() proto.Message
+	Handle      func(context.Context, proto.Message) (proto.Message, error)
+	RequestType proto.Message
 }
 
 type unaryHandler struct {
-	handle func(context.Context, proto.Message) (proto.Message, error)
-	create func() proto.Message
+	handle      func(context.Context, proto.Message) (proto.Message, error)
+	requestType proto.Message
 }
 
-// NewUnaryHandler returns a new UnaryTransportHandler.
+// NewUnaryHandler returns a new UnaryHandler.
 func NewUnaryHandler(p UnaryHandlerParams) yarpc.UnaryTransportHandler {
-	return &unaryHandler{p.Handle, p.Create}
+	return &unaryHandler{p.Handle, p.RequestType}
 }
 
 func (u *unaryHandler) Handle(ctx context.Context, req *yarpc.Request, buf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
-	ctx, call, protoReq, err := toProtoRequest(ctx, req, buf, u.create)
+	ctx, call, protoReq, err := toProtoRequest(ctx, req, buf, u.requestType)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -83,13 +83,11 @@ func (u *unaryHandler) Handle(ctx context.Context, req *yarpc.Request, buf *yarp
 
 	protoRes, appErr := u.handle(ctx, protoReq)
 
-	// If the proto res is nil, return early
-	// so that we don't attempt to marshal a nil
+	// If the application error is not nil,, return
+	// early so that we don't attempt to marshal a nil
 	// object.
-	if protoRes == nil {
-		if appErr != nil {
-			res.ApplicationError = true
-		}
+	if appErr != nil {
+		res.ApplicationError = true
 		return res, resBuf, appErr
 	}
 
@@ -116,7 +114,7 @@ func toProtoRequest(
 	ctx context.Context,
 	req *yarpc.Request,
 	body *yarpc.Buffer,
-	create func() proto.Message,
+	protoReq proto.Message,
 ) (context.Context, *yarpc.InboundCall, proto.Message, error) {
 	if err := yarpcencoding.ExpectEncodings(req, Encoding, yarpcjson.Encoding); err != nil {
 		return nil, nil, nil, err
@@ -125,7 +123,6 @@ func toProtoRequest(
 	if err := call.ReadFromRequest(req); err != nil {
 		return nil, nil, nil, err
 	}
-	protoReq := create()
 	if err := unmarshal(req.Encoding, body, protoReq); err != nil {
 		return nil, nil, nil, yarpcencoding.RequestBodyDecodeError(req, err)
 	}
