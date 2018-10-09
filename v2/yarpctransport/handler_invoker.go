@@ -38,14 +38,14 @@ type UnaryInvokeRequest struct {
 	StartTime time.Time
 	Request   *yarpc.Request
 	Buffer    *yarpc.Buffer
-	Handler   yarpc.UnaryHandler
+	Handler   yarpc.UnaryTransportHandler
 	Logger    *zap.Logger // optional
 }
 
 // StreamInvokeRequest encapsulates arguments to invoke a unary handler.
 type StreamInvokeRequest struct {
 	Stream  *yarpc.ServerStream
-	Handler yarpc.StreamHandler
+	Handler yarpc.StreamTransportHandler
 	Logger  *zap.Logger // optional
 }
 

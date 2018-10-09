@@ -80,8 +80,8 @@ mockgen -destination=api/transport/transporttest/stream.go -package=transporttes
 mockgen -destination=api/transport/transporttest/transport.go -package=transporttest go.uber.org/yarpc/api/transport Transport
 
 # v2 mocks
-mockgen -destination=v2/yarpctest/mock_middleware.go -package=yarpctest go.uber.org/yarpc/v2 RouterMiddleware,UnaryInboundMiddleware,UnaryOutboundMiddleware,StreamInboundMiddleware,StreamOutboundMiddleware
-mockgen -destination=v2/yarpctest/mock_handler.go -package=yarpctest go.uber.org/yarpc/v2 UnaryHandler,StreamHandler
+mockgen -destination=v2/yarpctest/mock_middleware.go -package=yarpctest go.uber.org/yarpc/v2 RouterMiddleware,UnaryInboundTransportMiddleware,UnaryOutboundTransportMiddleware,StreamInboundTransportMiddleware,StreamOutboundTransportMiddleware
+mockgen -destination=v2/yarpctest/mock_handler.go -package=yarpctest go.uber.org/yarpc/v2 UnaryTransportHandler,StreamTransportHandler
 mockgen -destination=v2/yarpctest/mock_outbound.go -package=yarpctest go.uber.org/yarpc/v2 UnaryOutbound,StreamOutbound
 mockgen -destination=v2/yarpctest/mock_stream.go -package=yarpctest go.uber.org/yarpc/v2 Stream,StreamCloser
 

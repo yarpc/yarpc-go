@@ -47,7 +47,7 @@ func TestInvokeUnaryHandlerWithPanic(t *testing.T) {
 				Context:   context.Background(),
 				StartTime: time.Now(),
 				Request:   &yarpc.Request{},
-				Handler:   yarpc.UnaryHandlerFunc(handler),
+				Handler:   yarpc.UnaryTransportHandlerFunc(handler),
 				Logger:    zap.NewNop(),
 			},
 		)
@@ -73,7 +73,7 @@ func TestInvokeStreamHandlerWithPanic(t *testing.T) {
 	require.NotPanics(t, func() {
 		err = yarpctransport.InvokeStreamHandler(yarpctransport.StreamInvokeRequest{
 			Stream:  mockServerStream,
-			Handler: yarpc.StreamHandlerFunc(handler),
+			Handler: yarpc.StreamTransportHandlerFunc(handler),
 			Logger:  zap.NewNop(),
 		})
 	}, "Panic not recovered")

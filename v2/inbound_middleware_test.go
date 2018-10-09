@@ -37,8 +37,8 @@ func TestUnaryNopInboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	h := yarpctest.NewMockUnaryHandler(mockCtrl)
-	wrappedH := ApplyUnaryInboundMiddleware(h, NopUnaryInboundMiddleware)
+	h := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
+	wrappedH := ApplyUnaryInboundTransportMiddleware(h, NopUnaryInboundTransportMiddleware)
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
@@ -65,8 +65,8 @@ func TestNilInboundMiddleware(t *testing.T) {
 	req := &Request{}
 
 	t.Run("unary", func(t *testing.T) {
-		handler := yarpctest.NewMockUnaryHandler(ctrl)
-		mw := ApplyUnaryInboundMiddleware(handler, nil)
+		handler := yarpctest.NewMockUnaryTransportHandler(ctrl)
+		mw := ApplyUnaryInboundTransportMiddleware(handler, nil)
 
 		handler.EXPECT().Handle(ctx, req, &Buffer{})
 		_, _, err := mw.Handle(ctx, req, &Buffer{})
@@ -78,8 +78,8 @@ func TestStreamNopInboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	h := yarpctest.NewMockStreamHandler(mockCtrl)
-	wrappedH := ApplyStreamInboundMiddleware(h, NopStreamInboundMiddleware)
+	h := yarpctest.NewMockStreamTransportHandler(mockCtrl)
+	wrappedH := ApplyStreamInboundTransportMiddleware(h, NopStreamInboundTransportMiddleware)
 	s, err := NewServerStream(yarpctest.NewMockStream(mockCtrl))
 	require.NoError(t, err)
 
@@ -93,7 +93,7 @@ func TestStreamDefaultsToHandlerWhenNil(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	h := yarpctest.NewMockStreamHandler(mockCtrl)
-	wrappedH := ApplyStreamInboundMiddleware(h, nil)
+	h := yarpctest.NewMockStreamTransportHandler(mockCtrl)
+	wrappedH := ApplyStreamInboundTransportMiddleware(h, nil)
 	assert.Equal(t, wrappedH, h)
 }

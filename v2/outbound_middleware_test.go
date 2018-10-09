@@ -37,7 +37,7 @@ func TestUnaryNopOutboundMiddleware(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	o := yarpctest.NewMockUnaryOutbound(mockCtrl)
-	wrappedO := ApplyUnaryOutboundMiddleware(o, NopUnaryOutboundMiddleware)
+	wrappedO := ApplyUnaryOutboundTransportMiddleware(o, NopUnaryOutboundTransportMiddleware)
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
@@ -65,7 +65,7 @@ func TestNilOutboundMiddleware(t *testing.T) {
 
 	t.Run("unary", func(t *testing.T) {
 		out := yarpctest.NewMockUnaryOutbound(ctrl)
-		_ = ApplyUnaryOutboundMiddleware(out, nil)
+		_ = ApplyUnaryOutboundTransportMiddleware(out, nil)
 	})
 }
 
@@ -75,8 +75,8 @@ func TestOutboundMiddleware(t *testing.T) {
 
 	t.Run("unary", func(t *testing.T) {
 		out := yarpctest.NewMockUnaryOutbound(ctrl)
-		mw := yarpctest.NewMockUnaryOutboundMiddleware(ctrl)
-		_ = ApplyUnaryOutboundMiddleware(out, mw)
+		mw := yarpctest.NewMockUnaryOutboundTransportMiddleware(ctrl)
+		_ = ApplyUnaryOutboundTransportMiddleware(out, mw)
 	})
 }
 
@@ -85,7 +85,7 @@ func TestStreamNopOutboundMiddleware(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	o := yarpctest.NewMockStreamOutbound(mockCtrl)
-	wrappedO := ApplyStreamOutboundMiddleware(o, NopStreamOutboundMiddleware)
+	wrappedO := ApplyStreamOutboundTransportMiddleware(o, NopStreamOutboundTransportMiddleware)
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
@@ -109,7 +109,7 @@ func TestStreamDefaultsToOutboundWhenNil(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	o := yarpctest.NewMockStreamOutbound(mockCtrl)
-	wrappedO := ApplyStreamOutboundMiddleware(o, nil)
+	wrappedO := ApplyStreamOutboundTransportMiddleware(o, nil)
 	assert.Equal(t, wrappedO, o)
 }
 
@@ -118,5 +118,5 @@ func TestStreamMiddlewareCallsUnderlyingFunctions(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	o := yarpctest.NewMockStreamOutbound(mockCtrl)
-	_ = ApplyStreamOutboundMiddleware(o, NopStreamOutboundMiddleware)
+	_ = ApplyStreamOutboundTransportMiddleware(o, NopStreamOutboundTransportMiddleware)
 }

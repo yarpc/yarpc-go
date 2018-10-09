@@ -24,101 +24,101 @@ import (
 	"context"
 )
 
-// UnaryInboundMiddleware defines a transport-level middleware for `UnaryHandler`s.
+// UnaryInboundTransportMiddleware defines a transport-level middleware for `UnaryTransportHandler`s.
 //
-// UnaryInboundMiddleware MAY do zero or more of the following: change the
+// UnaryInboundTransportMiddleware MAY do zero or more of the following: change the
 // context, change the request, modify the response body, handle the returned
 // error, call the given handler zero or more times.
 //
-// UnaryInboundMiddleware MUST be thread-safe.
+// UnaryInboundTransportMiddleware MUST be thread-safe.
 //
-// UnaryInboundMiddleware is re-used across requests and MAY be called multiple
+// UnaryInboundTransportMiddleware is re-used across requests and MAY be called multiple
 // times for the same request.
-type UnaryInboundMiddleware interface {
-	Handle(ctx context.Context, req *Request, buf *Buffer, h UnaryHandler) (*Response, *Buffer, error)
+type UnaryInboundTransportMiddleware interface {
+	Handle(ctx context.Context, req *Request, buf *Buffer, h UnaryTransportHandler) (*Response, *Buffer, error)
 }
 
-// NopUnaryInboundMiddleware is an inbound middleware that does not do anything special. It
-// simply calls the underlying Handler.
-var NopUnaryInboundMiddleware UnaryInboundMiddleware = nopUnaryInboundMiddleware{}
+// NopUnaryInboundTransportMiddleware is an inbound middleware that does not do anything special. It
+// simply calls the underlying UnaryTransportHandler.
+var NopUnaryInboundTransportMiddleware UnaryInboundTransportMiddleware = nopUnaryInboundTransportMiddleware{}
 
-// ApplyUnaryInboundMiddleware applies the given InboundMiddleware to the given Handler.
-func ApplyUnaryInboundMiddleware(h UnaryHandler, i UnaryInboundMiddleware) UnaryHandler {
+// ApplyUnaryInboundTransportMiddleware applies the given InboundMiddleware to the given UnaryTransportHandler.
+func ApplyUnaryInboundTransportMiddleware(h UnaryTransportHandler, i UnaryInboundTransportMiddleware) UnaryTransportHandler {
 	if i == nil {
 		return h
 	}
-	return unaryHandlerWithMiddleware{h: h, i: i}
+	return unaryTransportHandlerWithMiddleware{h: h, i: i}
 }
 
-// UnaryInboundMiddlewareFunc adapts a function into an InboundMiddleware.
-type UnaryInboundMiddlewareFunc func(context.Context, *Request, *Buffer, UnaryHandler) (*Response, *Buffer, error)
+// UnaryInboundTransportMiddlewareFunc adapts a function into an InboundMiddleware.
+type UnaryInboundTransportMiddlewareFunc func(context.Context, *Request, *Buffer, UnaryTransportHandler) (*Response, *Buffer, error)
 
-// Handle for UnaryInboundMiddlewareFunc
-func (f UnaryInboundMiddlewareFunc) Handle(ctx context.Context, req *Request, buf *Buffer, h UnaryHandler) (*Response, *Buffer, error) {
+// Handle for UnaryInboundTransportMiddlewareFunc
+func (f UnaryInboundTransportMiddlewareFunc) Handle(ctx context.Context, req *Request, buf *Buffer, h UnaryTransportHandler) (*Response, *Buffer, error) {
 	return f(ctx, req, buf, h)
 }
 
-type unaryHandlerWithMiddleware struct {
-	h UnaryHandler
-	i UnaryInboundMiddleware
+type unaryTransportHandlerWithMiddleware struct {
+	h UnaryTransportHandler
+	i UnaryInboundTransportMiddleware
 }
 
-func (h unaryHandlerWithMiddleware) Handle(ctx context.Context, req *Request, buf *Buffer) (*Response, *Buffer, error) {
+func (h unaryTransportHandlerWithMiddleware) Handle(ctx context.Context, req *Request, buf *Buffer) (*Response, *Buffer, error) {
 	return h.i.Handle(ctx, req, buf, h.h)
 }
 
-type nopUnaryInboundMiddleware struct{}
+type nopUnaryInboundTransportMiddleware struct{}
 
-func (nopUnaryInboundMiddleware) Handle(ctx context.Context, req *Request, buf *Buffer, handler UnaryHandler) (*Response, *Buffer, error) {
+func (nopUnaryInboundTransportMiddleware) Handle(ctx context.Context, req *Request, buf *Buffer, handler UnaryTransportHandler) (*Response, *Buffer, error) {
 	return handler.Handle(ctx, req, buf)
 }
 
-// StreamInboundMiddleware defines a transport-level middleware for
-// `StreamHandler`s.
+// StreamInboundTransportMiddleware defines a transport-level middleware for
+// `StreamTransportHandler`s.
 //
-// StreamInboundMiddleware MAY do zero or more of the following: change the
+// StreamInboundTransportMiddleware MAY do zero or more of the following: change the
 // stream, handle the returned error, call the given handler zero or more times.
 //
-// StreamInboundMiddleware MUST be thread-safe.
+// StreamInboundTransportMiddleware MUST be thread-safe.
 //
-// StreamInboundMiddleware is re-used across requests and MAY be called
+// StreamInboundTransportMiddleware is re-used across requests and MAY be called
 // multiple times for the same request.
-type StreamInboundMiddleware interface {
-	HandleStream(s *ServerStream, h StreamHandler) error
+type StreamInboundTransportMiddleware interface {
+	HandleStream(s *ServerStream, h StreamTransportHandler) error
 }
 
-// NopStreamInboundMiddleware is an inbound middleware that does not do
-// anything special. It simply calls the underlying StreamHandler.
-var NopStreamInboundMiddleware StreamInboundMiddleware = nopStreamInboundMiddleware{}
+// NopStreamInboundTransportMiddleware is an inbound middleware that does not do
+// anything special. It simply calls the underlying StreamTransportHandler.
+var NopStreamInboundTransportMiddleware StreamInboundTransportMiddleware = nopStreamInboundTransportMiddleware{}
 
-// ApplyStreamInboundMiddleware applies the given StreamInboundMiddleware middleware to
-// the given StreamHandler.
-func ApplyStreamInboundMiddleware(h StreamHandler, i StreamInboundMiddleware) StreamHandler {
+// ApplyStreamInboundTransportMiddleware applies the given StreamInboundTransportMiddleware middleware to
+// the given StreamTransportHandler.
+func ApplyStreamInboundTransportMiddleware(h StreamTransportHandler, i StreamInboundTransportMiddleware) StreamTransportHandler {
 	if i == nil {
 		return h
 	}
-	return streamHandlerWithMiddleware{h: h, i: i}
+	return streamTransportHandlerWithMiddleware{h: h, i: i}
 }
 
-// StreamInboundMiddlewareFunc adapts a function into a StreamInboundMiddleware Middleware.
-type StreamInboundMiddlewareFunc func(*ServerStream, StreamHandler) error
+// StreamInboundTransportMiddlewareFunc adapts a function into a StreamInboundTransportMiddleware UnaryInboundEncodingMiddleware.
+type StreamInboundTransportMiddlewareFunc func(*ServerStream, StreamTransportHandler) error
 
-// HandleStream for StreamInboundMiddlewareFunc
-func (f StreamInboundMiddlewareFunc) HandleStream(s *ServerStream, h StreamHandler) error {
+// HandleStream for StreamInboundTransportMiddlewareFunc
+func (f StreamInboundTransportMiddlewareFunc) HandleStream(s *ServerStream, h StreamTransportHandler) error {
 	return f(s, h)
 }
 
-type streamHandlerWithMiddleware struct {
-	h StreamHandler
-	i StreamInboundMiddleware
+type streamTransportHandlerWithMiddleware struct {
+	h StreamTransportHandler
+	i StreamInboundTransportMiddleware
 }
 
-func (h streamHandlerWithMiddleware) HandleStream(s *ServerStream) error {
+func (h streamTransportHandlerWithMiddleware) HandleStream(s *ServerStream) error {
 	return h.i.HandleStream(s, h.h)
 }
 
-type nopStreamInboundMiddleware struct{}
+type nopStreamInboundTransportMiddleware struct{}
 
-func (nopStreamInboundMiddleware) HandleStream(s *ServerStream, handler StreamHandler) error {
+func (nopStreamInboundTransportMiddleware) HandleStream(s *ServerStream, handler StreamTransportHandler) error {
 	return handler.HandleStream(s)
 }

@@ -38,10 +38,10 @@ func TestMapRouter(t *testing.T) {
 
 	m := NewMapRouter("myservice")
 
-	foo := yarpctest.NewMockUnaryHandler(mockCtrl)
-	bar := yarpctest.NewMockUnaryHandler(mockCtrl)
-	bazJSON := yarpctest.NewMockUnaryHandler(mockCtrl)
-	bazThrift := yarpctest.NewMockUnaryHandler(mockCtrl)
+	foo := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
+	bar := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
+	bazJSON := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
+	bazThrift := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
 	m.Register([]yarpc.Procedure{
 		{
 			Name:        "foo",
@@ -66,7 +66,7 @@ func TestMapRouter(t *testing.T) {
 
 	tests := []struct {
 		service, procedure, encoding string
-		want                         yarpc.UnaryHandler
+		want                         yarpc.UnaryTransportHandler
 	}{
 		{"myservice", "foo", "", foo},
 		{"", "foo", "", foo},
@@ -106,9 +106,9 @@ func TestMapRouter_Procedures(t *testing.T) {
 
 	m := NewMapRouter("myservice")
 
-	bar := yarpc.NewUnaryHandlerSpec(yarpctest.NewMockUnaryHandler(mockCtrl))
-	foo := yarpc.NewUnaryHandlerSpec(yarpctest.NewMockUnaryHandler(mockCtrl))
-	aww := yarpc.NewUnaryHandlerSpec(yarpctest.NewMockUnaryHandler(mockCtrl))
+	bar := yarpc.NewUnaryHandlerSpec(yarpctest.NewMockUnaryTransportHandler(mockCtrl))
+	foo := yarpc.NewUnaryHandlerSpec(yarpctest.NewMockUnaryTransportHandler(mockCtrl))
+	aww := yarpc.NewUnaryHandlerSpec(yarpctest.NewMockUnaryTransportHandler(mockCtrl))
 	m.Register([]yarpc.Procedure{
 		{
 			Name:        "bar",
@@ -252,7 +252,7 @@ func TestUnknownServiceName(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	m := NewMapRouter("service1")
-	foo := yarpctest.NewMockUnaryHandler(mockCtrl)
+	foo := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
 
 	m.Register([]yarpc.Procedure{
 		{
