@@ -128,7 +128,7 @@ func TestReadFromStream(t *testing.T) {
 			clientStream, err := yarpc.NewClientStream(stream)
 			require.NoError(t, err)
 
-			_, err = readFromStream(ctx, clientStream, func() proto.Message { return &mockMessage{} })
+			_, err = readFromStream(ctx, clientStream, new(mockMessage))
 			assert.Equal(t, tt.err, err)
 		})
 	}

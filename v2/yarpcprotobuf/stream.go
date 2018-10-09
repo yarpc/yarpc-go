@@ -41,17 +41,17 @@ func (c *ClientStream) Context() context.Context {
 }
 
 // Receive will receive a protobuf message from the client stream.
-func (c *ClientStream) Receive(create func() proto.Message) (proto.Message, error) {
-	return readFromStream(context.Background(), c.stream, create)
+func (c *ClientStream) Receive(message proto.Message, _ ...yarpc.StreamOption) (proto.Message, error) {
+	return readFromStream(context.Background(), c.stream, message)
 }
 
 // Send will send a protobuf message to the client stream.
-func (c *ClientStream) Send(message proto.Message) error {
+func (c *ClientStream) Send(message proto.Message, _ ...yarpc.StreamOption) error {
 	return writeToStream(context.Background(), c.stream, message)
 }
 
 // Close will close the protobuf stream.
-func (c *ClientStream) Close() error {
+func (c *ClientStream) Close(_ ...yarpc.StreamOption) error {
 	return c.stream.Close(context.Background())
 }
 
@@ -67,26 +67,21 @@ func (s *ServerStream) Context() context.Context {
 }
 
 // Receive will receive a protobuf message from the server stream.
-func (s *ServerStream) Receive(create func() proto.Message) (proto.Message, error) {
-	return readFromStream(context.Background(), s.stream, create)
+func (s *ServerStream) Receive(message proto.Message, _ ...yarpc.StreamOption) (proto.Message, error) {
+	return readFromStream(context.Background(), s.stream, message)
 }
 
 // Send will send a protobuf message to the server stream.
-func (s *ServerStream) Send(message proto.Message) error {
+func (s *ServerStream) Send(message proto.Message, _ ...yarpc.StreamOption) error {
 	return writeToStream(context.Background(), s.stream, message)
 }
 
 // readFromStream reads a proto.Message from a stream.
-func readFromStream(
-	ctx context.Context,
-	stream yarpc.Stream,
-	create func() proto.Message,
-) (proto.Message, error) {
+func readFromStream(ctx context.Context, stream yarpc.Stream, message proto.Message) (proto.Message, error) {
 	streamMsg, err := stream.ReceiveMessage(ctx)
 	if err != nil {
 		return nil, err
 	}
-	message := create()
 	if err := unmarshal(stream.Request().Encoding, streamMsg.Body, message); err != nil {
 		return nil, multierr.Append(err, streamMsg.Body.Close())
 	}
