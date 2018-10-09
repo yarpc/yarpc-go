@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package stream;
+
+option go_package = "streampb";
+
+message HelloRequest {
+  string greeting = 1;
+}
+
+message HelloResponse {
+  string response = 1;
+}
+
+service Hello {
+  rpc In(HelloRequest) returns (stream HelloResponse) {}
+  rpc Out(stream HelloRequest) returns (HelloResponse) {}
+  rpc Bidirectional(stream HelloRequest) returns (stream HelloResponse) {}
+}
