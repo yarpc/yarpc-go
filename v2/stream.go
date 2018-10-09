@@ -27,20 +27,13 @@ import (
 	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
-// StreamOption is an option that may be passed in at streaming function call
-// sites.
-type StreamOption interface {
-	unimplemented()
-}
-
 // ServerStreamOption are options to configure a ServerStream.
-// There are no current ServerStreamOptions implemented.
 type ServerStreamOption interface {
 	unimplemented()
 }
 
 // NewServerStream will create a new ServerStream.
-func NewServerStream(s Stream, options ...ServerStreamOption) (*ServerStream, error) {
+func NewServerStream(s Stream, _ ...ServerStreamOption) (*ServerStream, error) {
 	if s == nil {
 		return nil, yarpcerror.InvalidArgumentErrorf("non-nil stream is required")
 	}
@@ -75,16 +68,15 @@ func (s *ServerStream) ReceiveMessage(ctx context.Context) (*StreamMessage, erro
 	return s.stream.ReceiveMessage(ctx)
 }
 
-// ClientStreamOption is an option for configuring a client stream.
-// There are no current ClientStreamOptions implemented.
+// ClientStreamOption are options for configuring a ClientStream.
 type ClientStreamOption interface {
 	unimplemented()
 }
 
 // NewClientStream will create a new ClientStream.
-func NewClientStream(s StreamCloser, options ...ClientStreamOption) (*ClientStream, error) {
+func NewClientStream(s StreamCloser, _ ...ClientStreamOption) (*ClientStream, error) {
 	if s == nil {
-		return nil, yarpcerror.InvalidArgumentErrorf("non-nil stream with close is required")
+		return nil, yarpcerror.InvalidArgumentErrorf("non-nil stream is required")
 	}
 	return &ClientStream{stream: s}, nil
 }
@@ -125,16 +117,10 @@ func (s *ClientStream) Close(ctx context.Context) error {
 	return s.stream.Close(ctx)
 }
 
-// StreamCloser represents an API of interacting with a Stream that is
-// closable.
-type StreamCloser interface {
-	Stream
-
-	// Close will close the connection. It blocks until the server has
-	// acknowledged the close. The provided context controls the timeout for
-	// this operation if the implementation supports it. If the server timed out
-	// the connection will be forced closed by the client.
-	Close(context.Context) error
+// StreamOption is an option that may be passed in at
+// streaming function call sites.
+type StreamOption interface {
+	unimplemented()
 }
 
 // Stream is an interface for interacting with a stream.
@@ -159,4 +145,16 @@ type Stream interface {
 // message in the stream.
 type StreamMessage struct {
 	Body io.ReadCloser
+}
+
+// StreamCloser represents an API of interacting with a Stream that is
+// closable.
+type StreamCloser interface {
+	Stream
+
+	// Close will close the connection. It blocks until the server has
+	// acknowledged the close. The provided context controls the timeout for
+	// this operation if the implementation supports it. If the server timed out
+	// the connection will be forced closed by the client.
+	Close(context.Context) error
 }
