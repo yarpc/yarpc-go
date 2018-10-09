@@ -1,0 +1,60 @@
+{{define "client_impl" -}}
+{{with .File}}
+{{$gopkg := .Package.GoPackage}}
+
+{{range .Services -}}
+  {{$clientImpl := .ClientImpl}}
+
+  {{/* Client implementation */}}
+
+  type {{$clientImpl}} struct {
+    stream yarpcprotobuf.StreamClient
+  }
+
+  var _ {{.Client}} = (*{{$clientImpl}})(nil)
+
+  {{range .Methods}}
+    {{if and .ClientStreaming .ServerStreaming -}}
+      func (c *{{$clientImpl}}) {{.Name}}(ctx context.Context, opts ...yarpc.CallOption) ({{.StreamClient}}, error) {
+        s, err := c.stream.CallStream(ctx, {{printf "%q" .Name}}, opts...)
+        if err != nil {
+          return nil, err
+        }
+        return &{{.StreamClientImpl}}{stream: s}, nil
+      }
+    {{else if .ClientStreaming -}}
+      func (c *{{$clientImpl}}) {{.Name}}(ctx context.Context, opts ...yarpc.CallOption) ({{.StreamClient}}, error) {
+        s, err := c.stream.CallStream(ctx, {{printf "%q" .Name}}, opts...)
+        if err != nil {
+          return nil, err
+        }
+        return &{{.StreamClientImpl}}{stream: s}, nil
+      }
+    {{else if .ServerStreaming -}}
+      func (c *{{$clientImpl}}) {{.Name}}(ctx context.Context, req *{{goType .Request $gopkg}}, opts ...yarpc.CallOption) ({{.StreamClient}}, error) {
+        s, err := c.stream.CallStream(ctx, {{printf "%q" .Name}}, opts...)
+        if err != nil {
+          return nil, err
+        }
+        if err := s.Send(req); err != nil {
+          return nil, err
+        }
+        return &{{.StreamClientImpl}}{stream: s}, nil
+          }
+    {{else -}}
+      func (c *{{$clientImpl}}) {{.Name}}(ctx context.Context, req *{{goType .Request $gopkg}}, opts ...yarpc.CallOption) (*{{goType .Response $gopkg}}, error) {
+        msg, err := c.stream.Call(ctx, {{printf "%q" .Name}}, req, new({{goType .Response $gopkg}}), opts...)
+        if err != nil {
+          return nil, err
+        }
+        res, ok := msg.(*{{goType .Response $gopkg}})
+        if !ok {
+          return nil, yarpcprotobuf.CastError(new({{goType .Response $gopkg}}), res)
+        }
+        return res, nil
+      }
+    {{end -}}
+  {{end -}}
+{{end -}}
+
+{{end -}}{{end -}}

@@ -1,0 +1,79 @@
+{{define "fx" -}}
+{{with .File}}
+{{$gopkg := .Package.GoPackage}}
+
+{{range .Services -}}
+
+  {{/* Fx clients */}}
+
+  // {{.FxClient}}Params defines the parameters
+  // required to provide a {{.Client}} into an
+  // Fx application.
+  type {{.FxClient}}Params struct {
+    fx.In
+
+    Client yarpc.Client
+  }
+
+  // {{.FxClient}}Result provides a {{.Client}}
+  // into an Fx application.
+  type {{.FxClient}}Result struct {
+    fx.Out
+
+    Client {{.Client}}
+  }
+
+  // New{{.FxClient}} provides a {{.Client}}
+  // into an Fx application, using the given
+  // name for routing.
+  //
+  //  fx.Provide(
+  //    {{$gopkg}}.New{{.FxClient}}("service-name"),
+  //    ...
+  //  )
+  // TODO(mensch): How will this work in v2?
+  func New{{.FxClient}}(_ string, opts ...yarpcprotobuf.ClientOption) interface{} {
+    return func(p {{.FxClient}}Params) {{.FxClient}}Result {
+      return {{.FxClient}}Result{
+        Client: New{{.Client}}(p.Client, opts...),
+      }
+    }
+  }
+
+  {{/* Fx servers */}}
+
+  // {{.FxServer}}Params defines the paramaters
+  // required to provide the {{.Server}} procedures
+  // into an Fx application.
+  type {{.FxServer}}Params struct {
+    fx.In
+
+    Server {{.Server}}
+  }
+
+  // {{.FxServer}}Result provides the {{.Server}}
+  // procedures into an Fx application.
+  type {{.FxServer}}Result struct {
+    fx.Out
+
+    Procedures []yarpc.Procedure `group:"yarpcfx"`
+  }
+
+  // New{{.FxServer}} provides the {{.Server}}
+  // procedures to an Fx application. It expects
+  // a {{.Server}} to be present in the container.
+  //
+  //  fx.Provide(
+  //    {{$gopkg}}.New{{.FxServer}}(),
+  //    ...
+  //  )
+  func New{{.FxServer}}() interface{} {
+    return func(p {{.FxServer}}Params) {{.FxServer}}Result {
+      return {{.FxServer}}Result{
+        Procedures: Build{{.Procedures}}(p.Server),
+      }
+    }
+  }
+{{end -}}
+
+{{end -}}{{end -}}

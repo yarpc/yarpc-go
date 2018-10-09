@@ -1,0 +1,39 @@
+{{define "client" -}}
+{{with .File}}
+{{$gopkg := .Package.GoPackage}}
+
+{{range .Services -}}
+
+  {{/* Client interface */}}
+
+  // {{.Client}} is the {{.Name}} service's client interface.
+  type {{.Client}} interface {
+    {{range .Methods -}}
+      {{if or .ClientStreaming .ServerStreaming -}}
+        {{.Name}}(
+          context.Context,
+          {{if not .ClientStreaming -}}
+            *{{goType .Request $gopkg}},
+          {{end -}}
+          ...yarpc.CallOption,
+        ) ({{.StreamClient}}, error)
+      {{else -}}
+        {{.Name}}(
+          context.Context,
+          *{{goType .Request $gopkg}},
+          ...yarpc.CallOption,
+        ) (*{{goType .Response $gopkg}}, error)
+      {{end -}}
+    {{end -}}
+  }
+
+  {{/* Client construction */}}
+
+  // New{{.Client}} builds a new YARPC client for the {{.Name}} service.
+  func New{{.Client}}(c yarpc.Client, opts ...yarpcprotobuf.ClientOption) {{.Client}} {
+    return &{{.ClientImpl}}{stream: yarpcprotobuf.NewStreamClient(c, {{printf "%q" .FQN}}, opts...)}
+  }
+
+{{end -}}
+
+{{end -}}{{end -}}
