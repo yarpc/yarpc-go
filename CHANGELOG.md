@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added `encoding/protobuf/reflection` for exposing server reflection related
   information through codegeneration. For docs related to server reflection read
   https://github.com/grpc/grpc/blob/master/doc/server-reflection.md.
-- `protoc-gen-yarpc-go` now generates `yarpc` fx groups containing
+- `protoc-gen-yarpc-go` now generates `yarpcfx` fx groups containing
   information required for building server reflection API's.
 
 ### Fixed
@@ -33,7 +33,6 @@ side closes the connection.
 - Added `peer/tworandomchoices`, an implementation of the Two Random Choices
   load balancer algorithm.
 - Reintroduce Transport field matching for `transporttest.RequestMatcher`.
-
 ### Changed
 - HTTP inbounds gracefully shutdown with an optional timeout, defaulting to 5
   seconds.
