@@ -36,7 +36,7 @@ func (EchoRouter) Procedures() []yarpc.Procedure {
 }
 
 // Choose always returns a unary echo handler.
-func (EchoRouter) Choose(ctx context.Context, req *yarpc.Request) (yarpc.HandlerSpec, error) {
+func (EchoRouter) Choose(ctx context.Context, req *yarpc.Request) (yarpc.TransportHandlerSpec, error) {
 	return echoHandlerSpec, nil
 }
 
@@ -50,4 +50,4 @@ func (EchoHandler) Handle(ctx context.Context, req *yarpc.Request, buf *yarpc.Bu
 	return &yarpc.Response{}, buf, nil
 }
 
-var echoHandlerSpec = yarpc.NewUnaryHandlerSpec(EchoHandler{})
+var echoHandlerSpec = yarpc.NewUnaryTransportHandlerSpec(EchoHandler{})

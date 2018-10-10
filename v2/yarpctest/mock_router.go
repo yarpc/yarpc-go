@@ -55,9 +55,9 @@ func (m *MockRouter) EXPECT() *MockRouterMockRecorder {
 }
 
 // Choose mocks base method
-func (m *MockRouter) Choose(arg0 context.Context, arg1 *v2.Request) (v2.HandlerSpec, error) {
+func (m *MockRouter) Choose(arg0 context.Context, arg1 *v2.Request) (v2.TransportHandlerSpec, error) {
 	ret := m.ctrl.Call(m, "Choose", arg0, arg1)
-	ret0, _ := ret[0].(v2.HandlerSpec)
+	ret0, _ := ret[0].(v2.TransportHandlerSpec)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -103,9 +103,9 @@ func (m *MockRouteTable) EXPECT() *MockRouteTableMockRecorder {
 }
 
 // Choose mocks base method
-func (m *MockRouteTable) Choose(arg0 context.Context, arg1 *v2.Request) (v2.HandlerSpec, error) {
+func (m *MockRouteTable) Choose(arg0 context.Context, arg1 *v2.Request) (v2.TransportHandlerSpec, error) {
 	ret := m.ctrl.Call(m, "Choose", arg0, arg1)
-	ret0, _ := ret[0].(v2.HandlerSpec)
+	ret0, _ := ret[0].(v2.TransportHandlerSpec)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

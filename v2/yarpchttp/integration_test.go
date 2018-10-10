@@ -177,11 +177,11 @@ func (r *testRouter) Procedures() []yarpc.Procedure {
 	return r.procedures
 }
 
-func (r *testRouter) Choose(_ context.Context, req *yarpc.Request) (yarpc.HandlerSpec, error) {
+func (r *testRouter) Choose(_ context.Context, req *yarpc.Request) (yarpc.TransportHandlerSpec, error) {
 	for _, procedure := range r.procedures {
 		if procedure.Name == req.Procedure {
 			return procedure.HandlerSpec, nil
 		}
 	}
-	return yarpc.HandlerSpec{}, fmt.Errorf("no procedure for name %s", req.Procedure)
+	return yarpc.TransportHandlerSpec{}, fmt.Errorf("no procedure for name %s", req.Procedure)
 }
