@@ -18,41 +18,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package thrift
+package yarpcthrift
 
 import (
 	"context"
-	"fmt"
 
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/thriftreflect"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/pkg/procedure"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
-// Register calls the RouteTable's Register method.
-//
-// This function exists for backwards compatibility only. It will be removed
-// in a future version.
-//
-// Deprecated: Use the RouteTable's Register method directly.
-func Register(r transport.RouteTable, rs []transport.Procedure) {
-	r.Register(rs)
-}
-
-// UnaryHandler is a convenience type alias for functions that act as Handlers.
-type UnaryHandler func(context.Context, wire.Value) (Response, error)
-
-// OnewayHandler is a convenience type alias for functions that act as OnewayHandlers.
-type OnewayHandler func(context.Context, wire.Value) error
-
-// HandlerSpec represents the handler behind a Thrift service method.
-type HandlerSpec struct {
-	Type   transport.Type
-	Unary  UnaryHandler
-	Oneway OnewayHandler
-}
+// Handler is a convenience type alias for functions that act as Handlers.
+type Handler func(context.Context, wire.Value) (Response, error)
 
 // Method represents a Thrift service method.
 type Method struct {
@@ -60,7 +39,7 @@ type Method struct {
 	Name string
 
 	// The handler to call.
-	HandlerSpec HandlerSpec
+	Handler Handler
 
 	// Snippet of Go code representing the function definition of the handler.
 	// This is useful for introspection.
@@ -81,7 +60,7 @@ type Service struct {
 
 // BuildProcedures builds a list of Procedures from a Thrift service
 // specification.
-func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
+func BuildProcedures(s Service, opts ...RegisterOption) []yarpc.Procedure {
 	var rc registerConfig
 	for _, opt := range opts {
 		opt.applyRegisterOption(&rc)
@@ -92,28 +71,17 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 		proto = rc.Protocol
 	}
 
-	rs := make([]transport.Procedure, 0, len(s.Methods))
+	rs := make([]yarpc.Procedure, 0, len(s.Methods))
 
 	for _, method := range s.Methods {
-		var spec transport.HandlerSpec
-		switch method.HandlerSpec.Type {
-		case transport.Unary:
-			spec = transport.NewUnaryHandlerSpec(thriftUnaryHandler{
-				UnaryHandler: method.HandlerSpec.Unary,
-				Protocol:     proto,
-				Enveloping:   rc.Enveloping,
-			})
-		case transport.Oneway:
-			spec = transport.NewOnewayHandlerSpec(thriftOnewayHandler{
-				OnewayHandler: method.HandlerSpec.Oneway,
-				Protocol:      proto,
-				Enveloping:    rc.Enveloping,
-			})
-		default:
-			panic(fmt.Sprintf("Invalid handler type for %T", method))
-		}
+		var spec yarpc.HandlerSpec
+		spec = yarpc.NewUnaryHandlerSpec(UnaryHandler{
+			ThriftHandler: method.Handler,
+			Protocol:      proto,
+			Enveloping:    rc.Enveloping,
+		})
 
-		rs = append(rs, transport.Procedure{
+		rs = append(rs, yarpc.Procedure{
 			Name:        procedure.ToName(s.Name, method.Name),
 			HandlerSpec: spec,
 			Encoding:    Encoding,

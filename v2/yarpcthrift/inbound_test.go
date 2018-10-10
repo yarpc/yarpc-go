@@ -18,10 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package thrift
+package yarpcthrift
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"testing"
@@ -31,9 +30,13 @@ import (
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/thrifttest"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/transport/transporttest"
+
+	// "go.uber.org/yarpc/api/transport"
+	// "go.uber.org/yarpc/api/transport/transporttest"
+	// "go.uber.org/yarpc/internal/testtime"
+
 	"go.uber.org/yarpc/internal/testtime"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 func TestDecodeRequest(t *testing.T) {
@@ -50,13 +53,12 @@ func TestDecodeRequest(t *testing.T) {
 	handler := func(ctx context.Context, w wire.Value) (Response, error) {
 		return Response{Body: fakeEnveloper(wire.Reply)}, nil
 	}
-	h := thriftUnaryHandler{Protocol: proto, UnaryHandler: handler}
+	h := UnaryHandler{Protocol: proto, ThriftHandler: handler}
 
-	rw := new(transporttest.FakeResponseWriter)
-	err := h.Handle(ctx, request(), rw)
+	res, _, err := h.Handle(ctx, request(), requestBody())
 
 	assert.NoError(t, err, "unexpected error")
-	assert.False(t, rw.IsApplicationError, "application error bit set")
+	assert.False(t, res.ApplicationError, "application error bit set")
 }
 
 func TestDecodeEnveloped(t *testing.T) {
@@ -81,9 +83,11 @@ func TestDecodeEnveloped(t *testing.T) {
 	}
 	// XXX Enveloping true for this case, to induce DecodeEnveloped instead of
 	// DecodeRequest or Decode.
-	h := thriftUnaryHandler{Protocol: proto, UnaryHandler: handler, Enveloping: true}
-	err := unaryCall(ctx, h)
+	h := UnaryHandler{Protocol: proto, ThriftHandler: handler, Enveloping: true}
+	res, resBody, err := unaryCall(ctx, h)
 
+	assert.NotNil(t, res)
+	assert.NotNil(t, resBody)
 	assert.NoError(t, err, "unexpected error")
 }
 
@@ -102,13 +106,13 @@ func TestDecodeRequestApplicationError(t *testing.T) {
 		// XXX setting application error bit
 		return Response{Body: fakeEnveloper(wire.Reply), IsApplicationError: true}, nil
 	}
-	h := thriftUnaryHandler{Protocol: proto, UnaryHandler: handler}
+	h := UnaryHandler{Protocol: proto, ThriftHandler: handler}
 
 	// XXX checking error bit
-	rw := new(transporttest.FakeResponseWriter)
-	err := h.Handle(ctx, request(), rw)
-	assert.True(t, rw.IsApplicationError, "application error bit unset")
-
+	res, resBody, err := h.Handle(ctx, request(), requestBody())
+	assert.NotNil(t, res)
+	assert.NotNil(t, resBody)
+	assert.True(t, res.ApplicationError, "application error bit unset")
 	assert.NoError(t, err, "unexpected error")
 }
 
@@ -120,43 +124,43 @@ func TestDecodeRequestEncodingError(t *testing.T) {
 	defer cancel()
 
 	// XXX handler and protocol superfluous for this case
-	h := thriftUnaryHandler{}
-	rw := new(transporttest.FakeResponseWriter)
+	h := UnaryHandler{}
 	req := request()
 	// XXX bogus encoding override
-	req.Encoding = transport.Encoding("bogus")
-	err := h.Handle(ctx, req, rw)
+	req.Encoding = yarpc.Encoding("bogus")
+	res, resBody, err := h.Handle(ctx, req, requestBody())
 
+	assert.Nil(t, res)
+	assert.Nil(t, resBody)
 	if assert.Error(t, err, "expected an error") {
 		assert.Contains(t, err.Error(), `expected encoding "thrift" but got "bogus"`)
 	}
 }
 
-func TestDecodeRequestReadError(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
+// func TestDecodeRequestReadError(t *testing.T) {
+// 	mockCtrl := gomock.NewController(t)
+// 	defer mockCtrl.Finish()
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-	defer cancel()
+// 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+// 	defer cancel()
 
-	// XXX handler and protocol superfluous for this case
-	h := thriftUnaryHandler{}
-	rw := new(transporttest.FakeResponseWriter)
-	req := request()
-	// XXX override body with a bad reader, returns error on read
-	req.Body = &badReader{}
-	err := h.Handle(ctx, req, rw)
+// 	// XXX handler and protocol superfluous for this case
+// 	h := UnaryHandler{}
+// 	req := request()
+// 	// XXX override body with a bad reader, returns error on read
+// 	req.Body = &badReader{}
+// 	err := h.Handle(ctx, req, rw)
 
-	if assert.Error(t, err, "expected an error") {
-		assert.Contains(t, err.Error(), "bad reader error")
-	}
-}
+// 	if assert.Error(t, err, "expected an error") {
+// 		assert.Contains(t, err.Error(), "bad reader error")
+// 	}
+// }
 
-type badReader struct{}
+// type badReader struct{}
 
-func (badReader) Read(buf []byte) (int, error) {
-	return 0, fmt.Errorf("bad reader error")
-}
+// func (badReader) Read(buf []byte) (int, error) {
+// 	return 0, fmt.Errorf("bad reader error")
+// }
 
 func TestDecodeRequestError(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
@@ -170,9 +174,11 @@ func TestDecodeRequestError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 
-	h := thriftUnaryHandler{Protocol: proto}
-	err := unaryCall(ctx, h)
+	h := UnaryHandler{Protocol: proto}
+	res, resBody, err := unaryCall(ctx, h)
 
+	assert.Nil(t, res)
+	assert.Nil(t, resBody)
 	if assert.Error(t, err, "expected an error") {
 		assert.Contains(t, err.Error(), "decode request error")
 	}
@@ -194,9 +200,11 @@ func TestDecodeRequestResponseError(t *testing.T) {
 	handler := func(ctx context.Context, w wire.Value) (Response, error) {
 		return Response{Body: fakeEnveloper(wire.Reply)}, nil
 	}
-	h := thriftUnaryHandler{Protocol: proto, UnaryHandler: handler}
-	err := unaryCall(ctx, h)
+	h := UnaryHandler{Protocol: proto, ThriftHandler: handler}
+	res, resBody, err := unaryCall(ctx, h)
 
+	assert.Nil(t, res)
+	assert.Nil(t, resBody)
 	if assert.Error(t, err, "expected an error") {
 		assert.Contains(t, err.Error(), "encode response error")
 	}
@@ -213,9 +221,11 @@ func TestDecodeEnvelopedError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 
-	h := thriftUnaryHandler{Protocol: proto, Enveloping: true}
-	err := unaryCall(ctx, h)
+	h := UnaryHandler{Protocol: proto, Enveloping: true}
+	res, resBody, err := unaryCall(ctx, h)
 
+	assert.Nil(t, res)
+	assert.Nil(t, resBody)
 	if assert.Error(t, err, "expected an error") {
 		assert.Contains(t, err.Error(), "decode enveloped error")
 	}
@@ -232,9 +242,11 @@ func TestDecodeEnvelopedEnvelopeTypeError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 
-	h := thriftUnaryHandler{Protocol: proto, Enveloping: true}
-	err := unaryCall(ctx, h)
+	h := UnaryHandler{Protocol: proto, Enveloping: true}
+	res, resBody, err := unaryCall(ctx, h)
 
+	assert.Nil(t, res)
+	assert.Nil(t, resBody)
 	if assert.Error(t, err, "expected an error") {
 		assert.Contains(t, err.Error(), "unexpected envelope type: OneWay")
 	}
@@ -251,9 +263,11 @@ func TestDecodeNotEnvelopedError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 
-	h := thriftUnaryHandler{Protocol: proto}
-	err := unaryCall(ctx, h)
+	h := UnaryHandler{Protocol: proto}
+	res, resBody, err := unaryCall(ctx, h)
 
+	assert.Nil(t, res)
+	assert.Nil(t, resBody)
 	if assert.Error(t, err, "expected an error") {
 		assert.Contains(t, err.Error(), "decode error")
 	}
@@ -273,9 +287,11 @@ func TestUnaryHandlerError(t *testing.T) {
 		// XXX returns error
 		return Response{}, fmt.Errorf("unary handler error")
 	}
-	h := thriftUnaryHandler{Protocol: proto, UnaryHandler: handler}
-	err := unaryCall(ctx, h)
+	h := UnaryHandler{Protocol: proto, ThriftHandler: handler}
+	res, resBody, err := unaryCall(ctx, h)
 
+	assert.Nil(t, res)
+	assert.Nil(t, resBody)
 	if assert.Error(t, err, "expected an error") {
 		assert.Contains(t, err.Error(), "unary handler error")
 	}
@@ -295,9 +311,11 @@ func TestUnaryHandlerResponseEnvelopeTypeError(t *testing.T) {
 		// XXX OneWay instead of Reply
 		return Response{Body: fakeEnveloper(wire.OneWay)}, nil
 	}
-	h := thriftUnaryHandler{Protocol: proto, UnaryHandler: handler}
-	err := unaryCall(ctx, h)
+	h := UnaryHandler{Protocol: proto, ThriftHandler: handler}
+	res, resBody, err := unaryCall(ctx, h)
 
+	assert.Nil(t, res)
+	assert.Nil(t, resBody)
 	if assert.Error(t, err, "expected an error") {
 		assert.Contains(t, err.Error(), "unexpected envelope type: OneWay")
 	}
@@ -317,70 +335,29 @@ func TestUnaryHandlerBodyToWireError(t *testing.T) {
 		// XXX Body.ToWire returns error
 		return Response{Body: errorEnveloper{wire.Reply, fmt.Errorf("to wire error")}}, nil
 	}
-	h := thriftUnaryHandler{Protocol: proto, UnaryHandler: handler}
-	err := unaryCall(ctx, h)
+	h := UnaryHandler{Protocol: proto, ThriftHandler: handler}
+	res, resBody, err := unaryCall(ctx, h)
 
+	assert.Nil(t, res)
+	assert.Nil(t, resBody)
 	if assert.Error(t, err, "expected an error") {
 		assert.Contains(t, err.Error(), "to wire error")
 	}
 }
 
-func TestOnewayHandler(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	proto := thrifttest.NewMockEnvelopeAgnosticProtocol(mockCtrl)
-	// XXX expecting OneWay request instead of Call
-	proto.EXPECT().DecodeRequest(wire.OneWay, gomock.Any()).Return(
-		wire.NewValueStruct(wire.Struct{}), protocol.NoEnvelopeResponder, nil)
-
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-	defer cancel()
-
-	handler := func(ctx context.Context, v wire.Value) error {
-		return nil
-	}
-	h := thriftOnewayHandler{Protocol: proto, OnewayHandler: handler}
-	err := h.HandleOneway(ctx, request())
-
-	// XXX expecting success in this case
-	assert.NoError(t, err, "unexpected error")
-}
-
-func TestOnewayHandlerError(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	proto := thrifttest.NewMockEnvelopeAgnosticProtocol(mockCtrl)
-	// XXX mock returns decode request error, to induce error path out of handleRequest in HandleOneway
-	proto.EXPECT().DecodeRequest(wire.OneWay, gomock.Any()).Return(
-		wire.Value{}, protocol.NoEnvelopeResponder, fmt.Errorf("decode request error"))
-
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-	defer cancel()
-
-	handler := func(ctx context.Context, v wire.Value) error {
-		return nil
-	}
-	h := thriftOnewayHandler{Protocol: proto, OnewayHandler: handler}
-	err := h.HandleOneway(ctx, request())
-
-	if assert.Error(t, err, "expected an error") {
-		assert.Contains(t, err.Error(), "decode request error")
-	}
-}
-
-func request() *transport.Request {
-	return &transport.Request{
+func request() *yarpc.Request {
+	return &yarpc.Request{
 		Caller:    "caller",
 		Service:   "service",
 		Encoding:  "thrift",
 		Procedure: "MyService::someMethod",
-		Body:      bytes.NewReader([]byte("irrelevant")),
 	}
 }
 
-func unaryCall(ctx context.Context, h thriftUnaryHandler) error {
-	rw := new(transporttest.FakeResponseWriter)
-	return h.Handle(ctx, request(), rw)
+func requestBody() *yarpc.Buffer {
+	return yarpc.NewBufferBytes([]byte("irrelevant"))
+}
+
+func unaryCall(ctx context.Context, h UnaryHandler) (*yarpc.Response, *yarpc.Buffer, error) {
+	return h.Handle(ctx, request(), requestBody())
 }

@@ -18,7 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package thrift implements Thrift encoding support for YARPC.
+// Package yarpcthrift implements Thrift encoding support for YARPC.
+//
+//  **************************************************************************
+//
+// TODO(mhp): This doc needs to be updated after thriftrw plugin is ported.
+//            Most of it is currently outdated.
+//
+//  **************************************************************************
 //
 // To use this package, you must install ThriftRW 1.0 or newer.
 //
@@ -128,4 +135,4 @@
 // The option can be used like so:
 //
 // 	thriftrw --plugin "yarpc --sanitize-tchannel" myservice.thrift
-package thrift
+package yarpcthrift
