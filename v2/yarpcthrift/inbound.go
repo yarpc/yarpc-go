@@ -31,15 +31,15 @@ import (
 	yarpc "go.uber.org/yarpc/v2"
 )
 
-// UnaryHandler wraps a Thrift Handler into a yarpc.UnaryHandler.
-type UnaryHandler struct {
+// UnaryTransportHandler wraps a Thrift Handler into a yarpc.UnaryTransportHandler.
+type UnaryTransportHandler struct {
 	ThriftHandler Handler
 	Protocol      protocol.Protocol
 	Enveloping    bool
 }
 
-// Handle implements yarpc.UnaryHandler.
-func (t UnaryHandler) Handle(ctx context.Context, req *yarpc.Request, reqBody *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
+// Handle implements yarpc.UnaryTransportHandler.
+func (t UnaryTransportHandler) Handle(ctx context.Context, req *yarpc.Request, reqBody *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
 	ctx, call := yarpc.NewInboundCall(ctx)
 
 	reqValue, responder, err := decodeRequest(call, req, reqBody, t.Protocol, t.Enveloping)

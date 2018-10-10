@@ -75,7 +75,7 @@ func BuildProcedures(s Service, opts ...RegisterOption) []yarpc.Procedure {
 
 	for _, method := range s.Methods {
 		var spec yarpc.HandlerSpec
-		spec = yarpc.NewUnaryHandlerSpec(UnaryHandler{
+		spec = yarpc.NewUnaryHandlerSpec(UnaryTransportHandler{
 			ThriftHandler: method.Handler,
 			Protocol:      proto,
 			Enveloping:    rc.Enveloping,
