@@ -60,7 +60,7 @@ func TestHandlerSuccess(t *testing.T) {
 
 	router := yarpctest.NewMockRouter(mockCtrl)
 	rpcHandler := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
-	spec := yarpc.NewUnaryHandlerSpec(rpcHandler)
+	spec := yarpc.NewUnaryTransportHandlerSpec(rpcHandler)
 
 	router.EXPECT().Choose(gomock.Any(), internalyarpctest.NewMatcher().
 		WithService("curly").
@@ -152,7 +152,7 @@ func TestHandlerHeaders(t *testing.T) {
 		t.Run(tt.giveEncoding, func(*testing.T) {
 			router := yarpctest.NewMockRouter(mockCtrl)
 			rpcHandler := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
-			spec := yarpc.NewUnaryHandlerSpec(rpcHandler)
+			spec := yarpc.NewUnaryTransportHandlerSpec(rpcHandler)
 
 			router.EXPECT().Choose(gomock.Any(), internalyarpctest.NewMatcher().
 				WithService("service").
@@ -294,7 +294,7 @@ func TestHandlerFailures(t *testing.T) {
 			if tt.errTTL {
 				// since TTL is checked after we've determined the transport type, if we have an
 				// error with TTL it will be discovered after we read from the router
-				spec := yarpc.NewUnaryHandlerSpec(panickedHandler{})
+				spec := yarpc.NewUnaryTransportHandlerSpec(panickedHandler{})
 				router.EXPECT().Choose(gomock.Any(), internalyarpctest.NewMatcher().
 					WithService(service).
 					WithProcedure(procedure),
@@ -347,7 +347,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 	).Return(nil, nil, fmt.Errorf("great sadness"))
 
 	router := yarpctest.NewMockRouter(mockCtrl)
-	spec := yarpc.NewUnaryHandlerSpec(rpcHandler)
+	spec := yarpc.NewUnaryTransportHandlerSpec(rpcHandler)
 
 	router.EXPECT().Choose(gomock.Any(), internalyarpctest.NewMatcher().
 		WithService("fake").
@@ -379,7 +379,7 @@ func TestHandlerPanic(t *testing.T) {
 	router.Register([]yarpc.Procedure{
 		{
 			Name:        "panic",
-			HandlerSpec: yarpc.NewUnaryHandlerSpec(panickedHandler{}),
+			HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(panickedHandler{}),
 		},
 	})
 	inbound := &Inbound{

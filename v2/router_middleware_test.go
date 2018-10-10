@@ -55,7 +55,7 @@ func TestRouteTableMiddleware(t *testing.T) {
 
 	ctx := context.Background()
 	req := &Request{}
-	spec := NewUnaryHandlerSpec(yarpctest.NewMockUnaryTransportHandler(ctrl))
+	spec := NewUnaryTransportHandlerSpec(yarpctest.NewMockUnaryTransportHandler(ctrl))
 
 	routeTableWithMW := ApplyRouteTable(routeTable, routerMiddleware)
 

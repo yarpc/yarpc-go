@@ -31,7 +31,7 @@
 - [ ] Nit: scrape name pid and change to just id throughout.
 - [ ] Audit docs
 - [ ] InvokeUnaryHandler: reduce package name noise at the call site by changing to a Do(ctx) method on UnaryInvokeRequest
-- [ ] support StreamHandlers in HandlerSpec
+- [ ] support StreamHandlers in EncodingHandlerSpec
 
 Encodings:
 - [x] Drop raw encoding

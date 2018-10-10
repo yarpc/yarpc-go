@@ -45,22 +45,22 @@ func TestMapRouter(t *testing.T) {
 	m.Register([]yarpc.Procedure{
 		{
 			Name:        "foo",
-			HandlerSpec: yarpc.NewUnaryHandlerSpec(foo),
+			HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(foo),
 		},
 		{
 			Name:        "bar",
 			Service:     "anotherservice",
-			HandlerSpec: yarpc.NewUnaryHandlerSpec(bar),
+			HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(bar),
 		},
 		{
 			Name:        "baz",
 			Encoding:    "json",
-			HandlerSpec: yarpc.NewUnaryHandlerSpec(bazJSON),
+			HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(bazJSON),
 		},
 		{
 			Name:        "baz",
 			Encoding:    "thrift",
-			HandlerSpec: yarpc.NewUnaryHandlerSpec(bazThrift),
+			HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(bazThrift),
 		},
 	})
 
@@ -106,9 +106,9 @@ func TestMapRouter_Procedures(t *testing.T) {
 
 	m := NewMapRouter("myservice")
 
-	bar := yarpc.NewUnaryHandlerSpec(yarpctest.NewMockUnaryTransportHandler(mockCtrl))
-	foo := yarpc.NewUnaryHandlerSpec(yarpctest.NewMockUnaryTransportHandler(mockCtrl))
-	aww := yarpc.NewUnaryHandlerSpec(yarpctest.NewMockUnaryTransportHandler(mockCtrl))
+	bar := yarpc.NewUnaryTransportHandlerSpec(yarpctest.NewMockUnaryTransportHandler(mockCtrl))
+	foo := yarpc.NewUnaryTransportHandlerSpec(yarpctest.NewMockUnaryTransportHandler(mockCtrl))
+	aww := yarpc.NewUnaryTransportHandlerSpec(yarpctest.NewMockUnaryTransportHandler(mockCtrl))
 	m.Register([]yarpc.Procedure{
 		{
 			Name:        "bar",
@@ -172,7 +172,7 @@ func IgnoreTestRouterWithMiddleware(t *testing.T) {
 
 	ctx := context.Background()
 	req := &yarpc.Request{}
-	expectedSpec := yarpc.HandlerSpec{}
+	expectedSpec := yarpc.TransportHandlerSpec{}
 
 	routerMiddleware := yarpctest.NewMockRouterMiddleware(mockCtrl)
 	routerMiddleware.EXPECT().Choose(ctx, req, gomock.Any()).Times(1).Return(expectedSpec, nil)
@@ -257,7 +257,7 @@ func TestUnknownServiceName(t *testing.T) {
 	m.Register([]yarpc.Procedure{
 		{
 			Name:        "foo",
-			HandlerSpec: yarpc.NewUnaryHandlerSpec(foo),
+			HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(foo),
 			Service:     "service2",
 			Encoding:    "json",
 		},

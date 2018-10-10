@@ -120,17 +120,17 @@ func (ps sortableProcedures) Swap(i int, j int) {
 	ps[i], ps[j] = ps[j], ps[i]
 }
 
-// Choose retrives the HandlerSpec for the service, procedure, and encoding
+// Choose retrives the TransportHandlerSpec for the service, procedure, and encoding
 // noted on the transport request, or returns an unrecognized procedure error
 // (testable with yarpc.IsUnrecognizedProcedureError(err)).
-func (m MapRouter) Choose(ctx context.Context, req *yarpc.Request) (yarpc.HandlerSpec, error) {
+func (m MapRouter) Choose(ctx context.Context, req *yarpc.Request) (yarpc.TransportHandlerSpec, error) {
 	service, procedure, encoding := req.Service, req.Procedure, req.Encoding
 	if service == "" {
 		service = m.defaultService
 	}
 
 	if _, ok := m.serviceNames[service]; !ok {
-		return yarpc.HandlerSpec{},
+		return yarpc.TransportHandlerSpec{},
 			yarpcerror.Newf(yarpcerror.CodeUnimplemented, "unrecognized service name %q, "+
 				"available services: %s", req.Service, getAvailableServiceNames(m.serviceNames))
 	}
@@ -145,7 +145,7 @@ func (m MapRouter) Choose(ctx context.Context, req *yarpc.Request) (yarpc.Handle
 		return procedure.HandlerSpec, nil
 	}
 
-	return yarpc.HandlerSpec{}, yarpcerror.Newf(yarpcerror.CodeUnimplemented, "unrecognized procedure %q for service %q", req.Procedure, req.Service)
+	return yarpc.TransportHandlerSpec{}, yarpcerror.Newf(yarpcerror.CodeUnimplemented, "unrecognized procedure %q for service %q", req.Procedure, req.Service)
 }
 
 // Extract keys from service names map and return a formatted string

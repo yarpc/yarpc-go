@@ -30,10 +30,10 @@ type RouterMiddleware interface {
 	// Procedures SHOULD call into router that is passed in.
 	Procedures(Router) []Procedure
 
-	// Choose returns a HandlerSpec for the given request and transport.
+	// Choose returns a TransportHandlerSpec for the given request and transport.
 	// If the RouterMiddleware cannot determine what to call it should call into the router that was
 	// passed in.
-	Choose(context.Context, *Request, Router) (HandlerSpec, error)
+	Choose(context.Context, *Request, Router) (TransportHandlerSpec, error)
 }
 
 // ApplyRouteTable applies the given RouterMiddleware middleware to the given RouterMiddleware.
@@ -53,7 +53,7 @@ func (r routeTableWithMiddleware) Procedures() []Procedure {
 	return r.m.Procedures(r.r)
 }
 
-func (r routeTableWithMiddleware) Choose(ctx context.Context, req *Request) (HandlerSpec, error) {
+func (r routeTableWithMiddleware) Choose(ctx context.Context, req *Request) (TransportHandlerSpec, error) {
 	return r.m.Choose(ctx, req, r.r)
 }
 

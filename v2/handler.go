@@ -37,8 +37,8 @@ const (
 	Streaming
 )
 
-// HandlerSpec holds either a UnaryTransportHandler or StreamTransportHandler.
-type HandlerSpec struct {
+// TransportHandlerSpec holds either a UnaryTransportHandler or StreamTransportHandler.
+type TransportHandlerSpec struct {
 	t Type
 
 	unaryHandler  UnaryTransportHandler
@@ -46,28 +46,52 @@ type HandlerSpec struct {
 }
 
 // MarshalLogObject implements zap.ObjectMarshaler.
-func (h HandlerSpec) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+func (h TransportHandlerSpec) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddString("rpcType", h.t.String())
 	return nil
 }
 
 // Type returns the associated handler's type
-func (h HandlerSpec) Type() Type { return h.t }
+func (h TransportHandlerSpec) Type() Type { return h.t }
 
 // Unary returns the Unary UnaryTransportHandler or nil
-func (h HandlerSpec) Unary() UnaryTransportHandler { return h.unaryHandler }
+func (h TransportHandlerSpec) Unary() UnaryTransportHandler { return h.unaryHandler }
 
 // Stream returns the Stream StreamTransportHandler or nil
-func (h HandlerSpec) Stream() StreamTransportHandler { return h.streamHandler }
+func (h TransportHandlerSpec) Stream() StreamTransportHandler { return h.streamHandler }
 
-// NewUnaryHandlerSpec returns an new HandlerSpec with a UnaryTransportHandler
-func NewUnaryHandlerSpec(handler UnaryTransportHandler) HandlerSpec {
-	return HandlerSpec{t: Unary, unaryHandler: handler}
+// NewUnaryTransportHandlerSpec returns a new TransportHandlerSpec with a UnaryTransportHandler
+func NewUnaryTransportHandlerSpec(handler UnaryTransportHandler) TransportHandlerSpec {
+	return TransportHandlerSpec{t: Unary, unaryHandler: handler}
 }
 
-// NewStreamHandlerSpec returns an new HandlerSpec with a StreamTransportHandler
-func NewStreamHandlerSpec(handler StreamTransportHandler) HandlerSpec {
-	return HandlerSpec{t: Streaming, streamHandler: handler}
+// NewStreamTransportHandlerSpec returns a new TransportHandlerSpec with a StreamTransportHandler
+func NewStreamTransportHandlerSpec(handler StreamTransportHandler) TransportHandlerSpec {
+	return TransportHandlerSpec{t: Streaming, streamHandler: handler}
+}
+
+// EncodingHandlerSpec holds either UnaryEncodingHandler or StreamEncodingHandler
+type EncodingHandlerSpec struct {
+	t Type
+
+	unaryHandler UnaryEncodingHandler
+}
+
+// MarshalLogObject implements zap.ObjectMarshaler.
+func (h EncodingHandlerSpec) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("rpcType", h.t.String())
+	return nil
+}
+
+// Type returns the associated handler's type
+func (h EncodingHandlerSpec) Type() Type { return h.t }
+
+// Unary returns the Unary UnaryEncodingHandler or nil
+func (h EncodingHandlerSpec) Unary() UnaryEncodingHandler { return h.unaryHandler }
+
+// NewUnaryEncodingHandlerSpec returns a new EncodingHandlerSpec with a UnaryEncodingHandler
+func NewUnaryEncodingHandlerSpec(handler UnaryEncodingHandler) EncodingHandlerSpec {
+	return EncodingHandlerSpec{t: Unary, unaryHandler: handler}
 }
 
 // UnaryTransportHandler handles a single, transport-level, unary request.
@@ -89,6 +113,18 @@ type StreamTransportHandler interface {
 	HandleStream(stream *ServerStream) error
 }
 
+// UnaryEncodingHandler handles a single, encoding-level, unary request.
+// An encoding handler handles a request after the request has been decoded into a concrete
+// instance specific to the procedure.
+type UnaryEncodingHandler interface {
+	// Handle the given request.
+	//
+	// An error may be returned in case of failures. BadRequestError must be
+	// returned for invalid requests. All other failures are treated as
+	// UnexpectedErrors.
+	Handle(ctx context.Context, req *Request, reqBody interface{}) (*Response, interface{}, error)
+}
+
 // UnaryTransportHandlerFunc is a utility for defining a UnaryTransportHandler with just a
 // function.
 type UnaryTransportHandlerFunc func(context.Context, *Request, *Buffer) (*Response, *Buffer, error)
@@ -96,6 +132,10 @@ type UnaryTransportHandlerFunc func(context.Context, *Request, *Buffer) (*Respon
 // StreamTransportHandlerFunc is a utility for defining a StreamTransportHandler with just a
 // function.
 type StreamTransportHandlerFunc func(*ServerStream) error
+
+// UnaryEncodingHandlerFunc is a utility for defining a UnaryEncodingHandler with just a
+// function.
+type UnaryEncodingHandlerFunc func(context.Context, *Request, interface{}) (*Response, interface{}, error)
 
 // Handle handles an inbound unary request.
 func (f UnaryTransportHandlerFunc) Handle(ctx context.Context, r *Request, b *Buffer) (*Response, *Buffer, error) {
@@ -105,4 +145,9 @@ func (f UnaryTransportHandlerFunc) Handle(ctx context.Context, r *Request, b *Bu
 // HandleStream handles an inbound streaming request.
 func (f StreamTransportHandlerFunc) HandleStream(stream *ServerStream) error {
 	return f(stream)
+}
+
+// Handle handles an inbound unary request.
+func (f UnaryEncodingHandlerFunc) Handle(ctx context.Context, r *Request, rb interface{}) (*Response, interface{}, error) {
+	return f(ctx, r, rb)
 }

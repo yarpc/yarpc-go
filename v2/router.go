@@ -37,8 +37,8 @@ type Procedure struct {
 	// Service or empty to use the default service name.
 	Service string
 
-	// HandlerSpec specifying which handler and rpc type.
-	HandlerSpec HandlerSpec
+	// TransportHandlerSpec specifying which handler and rpc type.
+	HandlerSpec TransportHandlerSpec
 
 	// Encoding of the handler.
 	// (if present).
@@ -80,7 +80,7 @@ type Router interface {
 	// metadata, or returns an UnrecognizedProcedureError if no handler exists
 	// for the request.  This is the interface for use in inbound transports to
 	// select a handler for a request.
-	Choose(ctx context.Context, req *Request) (HandlerSpec, error)
+	Choose(ctx context.Context, req *Request) (TransportHandlerSpec, error)
 }
 
 // RouteTable is an mutable interface for a Router that allows Registering new

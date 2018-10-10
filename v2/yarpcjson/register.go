@@ -45,7 +45,7 @@ func Procedure(name string, handler interface{}) []yarpc.Procedure {
 	return []yarpc.Procedure{
 		{
 			Name: name,
-			HandlerSpec: yarpc.NewUnaryHandlerSpec(
+			HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(
 				wrapUnaryHandler(name, handler),
 			),
 			Encoding: Encoding,

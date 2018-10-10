@@ -151,7 +151,7 @@ func TestInboundMux(t *testing.T) {
 	outbound.URL.Host = host
 
 	h := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
-	spec := yarpc.NewUnaryHandlerSpec(h)
+	spec := yarpc.NewUnaryTransportHandlerSpec(h)
 	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
 		WithCaller("foo").
 		WithService("bar").

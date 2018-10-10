@@ -55,9 +55,9 @@ func (m *MockRouterMiddleware) EXPECT() *MockRouterMiddlewareMockRecorder {
 }
 
 // Choose mocks base method
-func (m *MockRouterMiddleware) Choose(arg0 context.Context, arg1 *v2.Request, arg2 v2.Router) (v2.HandlerSpec, error) {
+func (m *MockRouterMiddleware) Choose(arg0 context.Context, arg1 *v2.Request, arg2 v2.Router) (v2.TransportHandlerSpec, error) {
 	ret := m.ctrl.Call(m, "Choose", arg0, arg1, arg2)
-	ret0, _ := ret[0].(v2.HandlerSpec)
+	ret0, _ := ret[0].(v2.TransportHandlerSpec)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

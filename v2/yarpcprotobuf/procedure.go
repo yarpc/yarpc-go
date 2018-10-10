@@ -57,12 +57,12 @@ func Procedures(params ProceduresParams) []yarpc.Procedure {
 			procedures,
 			yarpc.Procedure{
 				Name:        yarpcprocedure.ToName(params.Service, u.Method),
-				HandlerSpec: yarpc.NewUnaryHandlerSpec(u.Handler),
+				HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(u.Handler),
 				Encoding:    Encoding,
 			},
 			yarpc.Procedure{
 				Name:        yarpcprocedure.ToName(params.Service, u.Method),
-				HandlerSpec: yarpc.NewUnaryHandlerSpec(u.Handler),
+				HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(u.Handler),
 				Encoding:    yarpcjson.Encoding,
 			},
 		)
@@ -72,12 +72,12 @@ func Procedures(params ProceduresParams) []yarpc.Procedure {
 			procedures,
 			yarpc.Procedure{
 				Name:        yarpcprocedure.ToName(params.Service, s.Method),
-				HandlerSpec: yarpc.NewStreamHandlerSpec(s.Handler),
+				HandlerSpec: yarpc.NewStreamTransportHandlerSpec(s.Handler),
 				Encoding:    Encoding,
 			},
 			yarpc.Procedure{
 				Name:        yarpcprocedure.ToName(params.Service, s.Method),
-				HandlerSpec: yarpc.NewStreamHandlerSpec(s.Handler),
+				HandlerSpec: yarpc.NewStreamTransportHandlerSpec(s.Handler),
 				Encoding:    yarpcjson.Encoding,
 			},
 		)

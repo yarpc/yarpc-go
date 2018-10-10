@@ -43,19 +43,19 @@ func (f StreamHandlerFunc) HandleStream(stream *yarpc.ServerStream) error {
 func TestHandlerSpecLogMarshaling(t *testing.T) {
 	tests := []struct {
 		desc string
-		spec yarpc.HandlerSpec
+		spec yarpc.TransportHandlerSpec
 		want map[string]interface{}
 	}{
 		{
 			desc: "unary",
-			spec: yarpc.NewUnaryHandlerSpec(UnaryHandlerFunc(func(context.Context, *yarpc.Request, *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
+			spec: yarpc.NewUnaryTransportHandlerSpec(UnaryHandlerFunc(func(context.Context, *yarpc.Request, *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
 				return nil, nil, nil
 			})),
 			want: map[string]interface{}{"rpcType": "Unary"},
 		},
 		{
 			desc: "stream",
-			spec: yarpc.NewStreamHandlerSpec(StreamHandlerFunc(func(*yarpc.ServerStream) error {
+			spec: yarpc.NewStreamTransportHandlerSpec(StreamHandlerFunc(func(*yarpc.ServerStream) error {
 				return nil
 			})),
 			want: map[string]interface{}{"rpcType": "Streaming"},
