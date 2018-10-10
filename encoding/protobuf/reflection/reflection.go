@@ -28,7 +28,7 @@ type ServerMeta struct {
 	// The fully qualified service name
 	ServiceName string
 
-	// FileDescriptors returns an array of all compressed filedescriptors for the
+	// FileDescriptors returns an array of all compressed file descriptors for the
 	// file in which the service is defined and all its transitive dependencies.
 	FileDescriptors [][]byte
 }

@@ -147,7 +147,7 @@ type File struct {
 	TransitiveDependencies []*File
 }
 
-// SerializedFileDescriptor returns a gzipped marshalled representation of the FileDescriptor
+// SerializedFileDescriptor returns a gzipped marshalled representation of the FileDescriptor.
 func (f *File) SerializedFileDescriptor() ([]byte, error) {
 	pb := proto.Clone(f.FileDescriptorProto).(*descriptor.FileDescriptorProto)
 	pb.SourceCodeInfo = nil

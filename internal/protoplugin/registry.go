@@ -258,7 +258,7 @@ func (r *registry) newMethod(svc *Service, md *descriptor.MethodDescriptorProto)
 
 // loadTransitiveFileDependencies registers services and their methods from "targetFile" to "r".
 // It must be called after loadFile is called for all files so that loadTransitiveFileDependencies
-// can resolve filedecscriptors op depdendencies
+// can resolve file descriptors as depdendencies.
 func (r *registry) loadTransitiveFileDependencies(file *File) error {
 	seen := make(map[string]struct{})
 	files, err := r.loadTransitiveFileDependenciesRecurse(file, seen)

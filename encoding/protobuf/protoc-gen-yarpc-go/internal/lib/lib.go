@@ -662,13 +662,16 @@ func clientServerStreamingMethods(service *protoplugin.Service) ([]*protoplugin.
 }
 
 // fileDescriptorClosureVarName is used to refer to a variable that contains a closure of all encoded
-// filedescriptors required to interpret a specific proto file. It is used in the yarpc codebase to
+// file descriptors required to interpret a specific proto file. It is used in the yarpc codebase to
 // attach reflection information to services.
 func fileDescriptorClosureVarName(f *protoplugin.File) (string, error) {
 	name := f.GetName()
 	if name == "" {
 		return "", fmt.Errorf("Could not create fileDescriptorClosureVarName: %s has no name", f)
 	}
+
+	// Use a sha256 of the filename instead of the filename to prevent any characters that are illegal
+	// as golang identifiers and to discourage external usage of this constant.
 	h := sha256.Sum256([]byte(name))
 	return fmt.Sprintf("yarpcFileDescriptorClosure%s", hex.EncodeToString(h[:8])), nil
 }
@@ -679,6 +682,13 @@ func encodedFileDescriptor(f *protoplugin.File) (string, error) {
 		return "", err
 	}
 
+	// Create string that contains a golang byte slice literal containing the
+	// serialized file descriptor:
+	//
+	// []byte{
+	//     0x00, 0x01, 0x02, ..., 0xFF,	// Up to 16 bytes per line
+	// }
+	//
 	var buf bytes.Buffer
 	buf.WriteString("[]byte{\n")
 	for len(fdBytes) > 0 {
