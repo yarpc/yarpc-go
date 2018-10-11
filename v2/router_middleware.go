@@ -28,7 +28,7 @@ import (
 type RouterMiddleware interface {
 	// Procedures returns the list of procedures that can be called on this router.
 	// Procedures SHOULD call into router that is passed in.
-	Procedures(Router) []Procedure
+	Procedures(Router) []TransportProcedure
 
 	// Choose returns a TransportHandlerSpec for the given request and transport.
 	// If the RouterMiddleware cannot determine what to call it should call into the router that was
@@ -49,7 +49,7 @@ type routeTableWithMiddleware struct {
 	m RouterMiddleware
 }
 
-func (r routeTableWithMiddleware) Procedures() []Procedure {
+func (r routeTableWithMiddleware) Procedures() []TransportProcedure {
 	return r.m.Procedures(r.r)
 }
 
@@ -57,6 +57,6 @@ func (r routeTableWithMiddleware) Choose(ctx context.Context, req *Request) (Tra
 	return r.m.Choose(ctx, req, r.r)
 }
 
-func (r routeTableWithMiddleware) Register(procedures []Procedure) {
+func (r routeTableWithMiddleware) Register(procedures []TransportProcedure) {
 	r.r.Register(procedures)
 }

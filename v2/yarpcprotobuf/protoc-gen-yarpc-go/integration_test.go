@@ -78,7 +78,7 @@ func newHelloClient(t *testing.T, address string) streampb.HelloYARPCClient {
 	})
 }
 
-func startInbounds(t *testing.T, transport, service string, procedures []yarpc.Procedure) (address string, stop func()) {
+func startInbounds(t *testing.T, transport, service string, procedures []yarpc.TransportProcedure) (address string, stop func()) {
 	router := yarpcrouter.NewMapRouter(service)
 	router.Register(procedures)
 

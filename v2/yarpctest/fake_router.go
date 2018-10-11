@@ -31,16 +31,16 @@ var _ yarpc.Router = (*FakeRouter)(nil)
 
 // FakeRouter is a fake router with procedures.
 type FakeRouter struct {
-	procedures []yarpc.Procedure
+	procedures []yarpc.TransportProcedure
 }
 
 // NewFakeRouter creates a fake yarpc.Router.
-func NewFakeRouter(procedures []yarpc.Procedure) *FakeRouter {
+func NewFakeRouter(procedures []yarpc.TransportProcedure) *FakeRouter {
 	return &FakeRouter{procedures}
 }
 
 // Procedures returns the procedures given in the constructor.
-func (r *FakeRouter) Procedures() []yarpc.Procedure {
+func (r *FakeRouter) Procedures() []yarpc.TransportProcedure {
 	return r.procedures
 }
 

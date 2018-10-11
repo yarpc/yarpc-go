@@ -34,7 +34,7 @@ import (
 )
 
 // return a streaming handler that echos what it receives
-func newTestEchoStreamHandler(name string, numTimes int) []yarpc.Procedure {
+func newTestEchoStreamHandler(name string, numTimes int) []yarpc.TransportProcedure {
 	var handler = yarpc.StreamTransportHandlerFunc(func(ss *yarpc.ServerStream) error {
 		for i := 0; i < numTimes; i++ {
 			msg, err := ss.ReceiveMessage(context.Background())
@@ -52,7 +52,7 @@ func newTestEchoStreamHandler(name string, numTimes int) []yarpc.Procedure {
 		return nil
 	})
 
-	return []yarpc.Procedure{
+	return []yarpc.TransportProcedure{
 		{
 			Name:        name,
 			Service:     "test-service",

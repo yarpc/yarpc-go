@@ -44,15 +44,13 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
 type GetRequest struct {
-	Key                  string   `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Key string `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
 }
 
 func (m *GetRequest) Reset()      { *m = GetRequest{} }
 func (*GetRequest) ProtoMessage() {}
 func (*GetRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_common_946728157cc97a18, []int{0}
+	return fileDescriptor_common_d732306db597462d, []int{0}
 }
 func (m *GetRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -89,15 +87,13 @@ func (m *GetRequest) GetKey() string {
 }
 
 type GetResponse struct {
-	Value                string   `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Value string `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
 }
 
 func (m *GetResponse) Reset()      { *m = GetResponse{} }
 func (*GetResponse) ProtoMessage() {}
 func (*GetResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_common_946728157cc97a18, []int{1}
+	return fileDescriptor_common_d732306db597462d, []int{1}
 }
 func (m *GetResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -134,16 +130,14 @@ func (m *GetResponse) GetValue() string {
 }
 
 type SetRequest struct {
-	Key                  string   `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
-	Value                string   `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Key   string `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Value string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
 }
 
 func (m *SetRequest) Reset()      { *m = SetRequest{} }
 func (*SetRequest) ProtoMessage() {}
 func (*SetRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_common_946728157cc97a18, []int{2}
+	return fileDescriptor_common_d732306db597462d, []int{2}
 }
 func (m *SetRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -187,14 +181,12 @@ func (m *SetRequest) GetValue() string {
 }
 
 type SetResponse struct {
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *SetResponse) Reset()      { *m = SetResponse{} }
 func (*SetResponse) ProtoMessage() {}
 func (*SetResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_common_946728157cc97a18, []int{3}
+	return fileDescriptor_common_d732306db597462d, []int{3}
 }
 func (m *SetResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -479,6 +471,9 @@ func encodeVarintCommon(dAtA []byte, offset int, v uint64) int {
 	return offset + 1
 }
 func (m *GetRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	l = len(m.Key)
@@ -489,6 +484,9 @@ func (m *GetRequest) Size() (n int) {
 }
 
 func (m *GetResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	l = len(m.Value)
@@ -499,6 +497,9 @@ func (m *GetResponse) Size() (n int) {
 }
 
 func (m *SetRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	l = len(m.Key)
@@ -513,6 +514,9 @@ func (m *SetRequest) Size() (n int) {
 }
 
 func (m *SetResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	return n
@@ -1000,20 +1004,20 @@ var (
 	ErrIntOverflowCommon   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("src/common/common.proto", fileDescriptor_common_946728157cc97a18) }
+func init() { proto.RegisterFile("src/common/common.proto", fileDescriptor_common_d732306db597462d) }
 
-var fileDescriptor_common_946728157cc97a18 = []byte{
-	// 181 bytes of a gzipped FileDescriptorProto
+var fileDescriptor_common_d732306db597462d = []byte{
+	// 189 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0x2f, 0x2e, 0x4a, 0xd6,
 	0x4f, 0xce, 0xcf, 0xcd, 0xcd, 0xcf, 0x83, 0x52, 0x7a, 0x05, 0x45, 0xf9, 0x25, 0xf9, 0x42, 0x6c,
 	0x10, 0x9e, 0x92, 0x1c, 0x17, 0x97, 0x7b, 0x6a, 0x49, 0x50, 0x6a, 0x61, 0x69, 0x6a, 0x71, 0x89,
 	0x90, 0x00, 0x17, 0x73, 0x76, 0x6a, 0xa5, 0x04, 0xa3, 0x02, 0xa3, 0x06, 0x67, 0x10, 0x88, 0xa9,
 	0xa4, 0xcc, 0xc5, 0x0d, 0x96, 0x2f, 0x2e, 0xc8, 0xcf, 0x2b, 0x4e, 0x15, 0x12, 0xe1, 0x62, 0x2d,
 	0x4b, 0xcc, 0x29, 0x4d, 0x85, 0x2a, 0x81, 0x70, 0x94, 0x4c, 0xb8, 0xb8, 0x82, 0xf1, 0x18, 0x82,
-	0xd0, 0xc5, 0x84, 0xac, 0x8b, 0x97, 0x8b, 0x3b, 0x18, 0x61, 0xb4, 0x93, 0xd9, 0x85, 0x87, 0x72,
+	0xd0, 0xc5, 0x84, 0xac, 0x8b, 0x97, 0x8b, 0x3b, 0x18, 0x61, 0xb4, 0x93, 0xdd, 0x85, 0x87, 0x72,
 	0x0c, 0x37, 0x1e, 0xca, 0x31, 0x7c, 0x78, 0x28, 0xc7, 0xd8, 0xf0, 0x48, 0x8e, 0x71, 0xc5, 0x23,
 	0x39, 0xc6, 0x13, 0x8f, 0xe4, 0x18, 0x2f, 0x3c, 0x92, 0x63, 0x7c, 0xf0, 0x48, 0x8e, 0xf1, 0xc5,
-	0x23, 0x39, 0x86, 0x0f, 0x8f, 0xe4, 0x18, 0x27, 0x3c, 0x96, 0x63, 0x88, 0xe2, 0x80, 0xb8, 0xbf,
-	0x20, 0x29, 0x89, 0x0d, 0xec, 0x21, 0x63, 0x40, 0x00, 0x00, 0x00, 0xff, 0xff, 0x97, 0xd4, 0x25,
-	0x42, 0xeb, 0x00, 0x00, 0x00,
+	0x23, 0x39, 0x86, 0x0f, 0x8f, 0xe4, 0x18, 0x27, 0x3c, 0x96, 0x63, 0xb8, 0xf0, 0x58, 0x8e, 0xe1,
+	0xc6, 0x63, 0x39, 0x86, 0x28, 0x0e, 0x88, 0x3f, 0x0a, 0x92, 0x92, 0xd8, 0xc0, 0x1e, 0x33, 0x06,
+	0x04, 0x00, 0x00, 0xff, 0xff, 0x81, 0x3b, 0x0d, 0xe0, 0xf3, 0x00, 0x00, 0x00,
 }

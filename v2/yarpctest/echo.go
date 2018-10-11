@@ -31,7 +31,7 @@ import (
 type EchoRouter struct{}
 
 // Procedures returns no explicitly supported procedures.
-func (EchoRouter) Procedures() []yarpc.Procedure {
+func (EchoRouter) Procedures() []yarpc.TransportProcedure {
 	return nil
 }
 

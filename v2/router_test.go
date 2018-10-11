@@ -29,7 +29,7 @@ import (
 )
 
 func TestProcedureLogMarshaling(t *testing.T) {
-	p := Procedure{
+	p := TransportProcedure{
 		Name:    "name",
 		Service: "service",
 		HandlerSpec: NewUnaryTransportHandlerSpec(UnaryTransportHandlerFunc(func(context.Context, *Request, *Buffer) (*Response, *Buffer, error) {
