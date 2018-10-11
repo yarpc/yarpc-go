@@ -44,14 +44,6 @@ func TestImports(t *testing.T) {
 		}
 
 		assert.Equal(t, len(expected), len(imports))
-		assert.Equal(t, expected, toMap(imports))
+		assert.Equal(t, expected, map[string]string(imports))
 	})
-}
-
-func toMap(i Imports) map[string]string {
-	m := make(map[string]string, len(i))
-	for p, a := range i {
-		m[p] = a
-	}
-	return m
 }
