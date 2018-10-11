@@ -21,6 +21,6 @@ endif
 .PHONY: templates
 templates: $(TEMPLATES)
 ifeq ($(shell which go-bindata),)
-	@go get -u github.com/jteeuwen/go-bindata/go-bindata
+	@go get -u github.com/kevinburke/go-bindata/go-bindata
 endif
 	@go-bindata -pkg templatedata -o ./$(TEMPLATE_DATA_DIR)/bindata.go ./$(TEMPLATE_DATA_DIR)
