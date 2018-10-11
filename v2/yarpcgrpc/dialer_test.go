@@ -40,7 +40,7 @@ func TestRetainReleasePeerSuccess(t *testing.T) {
 	go grpcServer.Serve(listener)
 	defer grpcServer.Stop()
 
-	dialer := Dialer{}
+	dialer := &Dialer{}
 	assert.NoError(t, dialer.Start(context.Background()))
 	defer func() { assert.NoError(t, dialer.Stop(context.Background())) }()
 
@@ -65,13 +65,13 @@ func TestRetainReleasePeerErr(t *testing.T) {
 }
 
 func TestRetainReleasePeerErrorPeerIdentifier(t *testing.T) {
-	dialer := Dialer{}
+	dialer := &Dialer{}
 	assert.NoError(t, dialer.Start(context.Background()))
 	defer func() { assert.NoError(t, dialer.Stop(context.Background())) }()
 }
 
 func TestReleasePeerErrorNoPeer(t *testing.T) {
-	dialer := Dialer{}
+	dialer := &Dialer{}
 	assert.NoError(t, dialer.Start(context.Background()))
 	defer func() { assert.NoError(t, dialer.Stop(context.Background())) }()
 

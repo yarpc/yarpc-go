@@ -149,8 +149,7 @@ func (h *handler) handleStream(
 	start time.Time,
 	streamHandler yarpc.StreamTransportHandler,
 ) error {
-	stream := newServerStream(ctx, req, gServerStream)
-	serverStream, err := yarpc.NewServerStream(stream)
+	serverStream, err := yarpc.NewServerStream(newServerStream(ctx, req, gServerStream))
 	if err != nil {
 		return toGRPCStreamError(err)
 	}

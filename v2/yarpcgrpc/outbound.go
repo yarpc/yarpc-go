@@ -50,8 +50,9 @@ type Outbound struct {
 	// Chooser is a peer chooser for outbound requests.
 	Chooser yarpc.Chooser
 
-	// Dialer is an alternative to specifying a Chooser. The outbound will dial
-	// the address specified in the URL.
+	// Dialer is an alternative to specifying a Chooser. It will be used if no
+	// Chooser is specified. The outbound will dial the address specified in the
+	// URL.
 	Dialer yarpc.Dialer
 
 	// URL specifies the template for the URL this outbound makes requests to.
@@ -70,16 +71,13 @@ func (o *Outbound) Call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.B
 		return nil, nil, yarpcerror.InvalidArgumentErrorf("request for grpc outbound was nil")
 	}
 
-	start := time.Now()
-
-	var responseBody []byte
-	var responseMD metadata.MD
-	invokeErr := o.invoke(ctx, req, reqBuf, &responseBody, &responseMD, start)
+	responseBody, responseMD, invokeErr := o.invoke(ctx, req, reqBuf)
 
 	responseHeaders, err := getApplicationHeaders(responseMD)
 	if err != nil {
 		return nil, nil, err
 	}
+
 	return &yarpc.Response{
 			Headers:          responseHeaders,
 			ApplicationError: metadataToIsApplicationError(responseMD),
@@ -92,32 +90,33 @@ func (o *Outbound) invoke(
 	ctx context.Context,
 	req *yarpc.Request,
 	reqBuf *yarpc.Buffer,
-	responseBody *[]byte,
-	responseMD *metadata.MD,
-	start time.Time,
-) (retErr error) {
+) (responseBody []byte, responseMD metadata.MD, retErr error) {
+	start := time.Now()
+
+	responseMD = metadata.New(nil)
+
 	md, err := requestToMetadata(req)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	fullMethod, err := procedureNameToFullMethod(req.Procedure)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	var callOptions []grpc.CallOption
 	if responseMD != nil {
-		callOptions = []grpc.CallOption{grpc.Trailer(responseMD)}
+		callOptions = []grpc.CallOption{grpc.Trailer(&responseMD)}
 	}
 	peer, onFinish, err := o.getPeerForRequest(ctx, req)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	defer func() { onFinish(retErr) }()
 
 	ctx, span, err := o.getSpanForRequest(ctx, start, req, md)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	defer span.Finish()
 
@@ -125,22 +124,24 @@ func (o *Outbound) invoke(
 		metadata.NewOutgoingContext(ctx, md),
 		fullMethod,
 		reqBuf.Bytes(),
-		responseBody,
+		&responseBody,
 		callOptions...,
 	)
 
 	if err != nil {
-		return invokeErrorToYARPCError(yarpctracing.UpdateSpanWithErr(span, err), *responseMD)
+		return nil, nil, invokeErrorToYARPCError(yarpctracing.UpdateSpanWithErr(span, err), responseMD)
 	}
 
 	// Service name match validation, return yarpcerror.CodeInternal error if not match
-	if match, resService := checkServiceMatch(req.Service, *responseMD); !match {
+	if match, resService := checkServiceMatch(req.Service, responseMD); !match {
 		// If service doesn't match => we got response => span must not be nil
-		return yarpctracing.UpdateSpanWithErr(span, yarpcerror.InternalErrorf("service name sent from the request "+
-			"does not match the service name received in the response: sent %q, got: %q", req.Service, resService))
+		return nil, nil,
+			yarpctracing.UpdateSpanWithErr(span,
+				yarpcerror.InternalErrorf("service name sent from the request "+
+					"does not match the service name received in the response: sent %q, got: %q", req.Service, resService))
 	}
 
-	return nil
+	return responseBody, responseMD, nil
 }
 
 func metadataToIsApplicationError(responseMD metadata.MD) bool {
@@ -240,9 +241,11 @@ func (o *Outbound) CallStream(ctx context.Context, req *yarpc.Request) (*yarpc.C
 //
 // This favors using the the peer chooser over the dialer and URL.
 func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*grpcPeer, func(error), error) {
-	var peer yarpc.Peer
-	var onFinish func(error)
-	var err error
+	var (
+		peer     yarpc.Peer
+		onFinish func(error)
+		err      error
+	)
 
 	if o.Chooser != nil {
 		peer, onFinish, err = o.Chooser.Choose(ctx, req)

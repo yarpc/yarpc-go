@@ -24,7 +24,6 @@ import (
 	"context"
 	"math"
 	"net"
-	"sync"
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/v2"
@@ -77,7 +76,6 @@ type Inbound struct {
 	// Logger configures a logger for the inbound.
 	Logger *zap.Logger
 
-	lock   sync.RWMutex
 	server *grpc.Server
 }
 
@@ -99,16 +97,19 @@ func (i *Inbound) Start(_ context.Context) error {
 		grpc.CustomCodec(customCodec{}),
 		grpc.UnknownServiceHandler(newHandler(i).handle),
 	}
+
+	serverMaxRecvMsgSize := defaultServerMaxRecvMsgSize
 	if i.ServerMaxRecvMsgSize != 0 {
-		serverOptions = append(serverOptions, grpc.MaxRecvMsgSize(i.ServerMaxRecvMsgSize))
-	} else {
-		serverOptions = append(serverOptions, grpc.MaxRecvMsgSize(defaultServerMaxRecvMsgSize))
+		serverMaxRecvMsgSize = i.ServerMaxRecvMsgSize
 	}
+	serverOptions = append(serverOptions, grpc.MaxRecvMsgSize(serverMaxRecvMsgSize))
+
+	serverMaxSendMsgSize := defaultServerMaxSendMsgSize
 	if i.ServerMaxSendMsgSize != 0 {
-		serverOptions = append(serverOptions, grpc.MaxSendMsgSize(i.ServerMaxSendMsgSize))
-	} else {
-		serverOptions = append(serverOptions, grpc.MaxSendMsgSize(defaultServerMaxSendMsgSize))
+		serverMaxSendMsgSize = i.ServerMaxSendMsgSize
 	}
+	serverOptions = append(serverOptions, grpc.MaxSendMsgSize(serverMaxSendMsgSize))
+
 	if i.Credentials != nil {
 		serverOptions = append(serverOptions, grpc.Creds(i.Credentials))
 	}

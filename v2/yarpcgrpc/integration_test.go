@@ -55,10 +55,10 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 		name string
 
 		value                string
-		ServerMaxRecvMsgSize int
-		ServerMaxSendMsgSize int
-		ClientMaxRecvMsgSize int
-		ClientMaxSendMsgSize int
+		serverMaxRecvMsgSize int
+		serverMaxSendMsgSize int
+		clientMaxRecvMsgSize int
+		clientMaxSendMsgSize int
 
 		errCode yarpcerror.Code
 	}{
@@ -69,25 +69,25 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 		{
 			name:                 "larger than server recieve",
 			value:                strings.Repeat("a", 10),
-			ServerMaxRecvMsgSize: 1,
+			serverMaxRecvMsgSize: 1,
 			errCode:              yarpcerror.CodeResourceExhausted,
 		},
 		{
 			name:                 "larger than client send",
 			value:                strings.Repeat("a", 10),
-			ClientMaxSendMsgSize: 1,
+			clientMaxSendMsgSize: 1,
 			errCode:              yarpcerror.CodeResourceExhausted,
 		},
 		{
 			name:                 "larger than server send",
 			value:                strings.Repeat("a", 10),
-			ServerMaxSendMsgSize: 1,
+			serverMaxSendMsgSize: 1,
 			errCode:              yarpcerror.CodeResourceExhausted,
 		},
 		{
 			name:                 "larger than client recieve",
 			value:                strings.Repeat("a", 10),
-			ClientMaxRecvMsgSize: 1,
+			clientMaxRecvMsgSize: 1,
 			errCode:              yarpcerror.CodeResourceExhausted,
 		},
 	}
@@ -97,12 +97,12 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 			te := testEnvOptions{
 				Procedures: yarpcjson.Procedure("test-procedure", testEchoHandler),
 				Inbound: &Inbound{
-					ServerMaxRecvMsgSize: tt.ServerMaxRecvMsgSize,
-					ServerMaxSendMsgSize: tt.ServerMaxSendMsgSize,
+					ServerMaxRecvMsgSize: tt.serverMaxRecvMsgSize,
+					ServerMaxSendMsgSize: tt.serverMaxSendMsgSize,
 				},
 				Dialer: &Dialer{
-					ClientMaxRecvMsgSize: tt.ClientMaxRecvMsgSize,
-					ClientMaxSendMsgSize: tt.ClientMaxSendMsgSize,
+					ClientMaxRecvMsgSize: tt.clientMaxRecvMsgSize,
+					ClientMaxSendMsgSize: tt.clientMaxSendMsgSize,
 				},
 			}
 
@@ -122,8 +122,6 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 func TestJSONRoundTrip(t *testing.T) {
 	t.Parallel()
 
-	const procedure = "test-procedure"
-
 	tests := []struct {
 		name string
 
@@ -138,14 +136,14 @@ func TestJSONRoundTrip(t *testing.T) {
 	}{
 		{
 			name:      "basic",
-			procedure: procedure,
+			procedure: "test-procedure",
 			request: &testEchoRequest{
 				Message: "hello",
 			},
 		},
 		{
 			name:      "echo err",
-			procedure: procedure,
+			procedure: "test-procedure",
 			request: &testEchoRequest{
 				Error: "handler error",
 			},
@@ -161,7 +159,7 @@ func TestJSONRoundTrip(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			doWithTestEnv(t, testEnvOptions{
-				Procedures: yarpcjson.Procedure(procedure, testEchoHandler),
+				Procedures: yarpcjson.Procedure("test-procedure", testEchoHandler),
 				Inbound:    tt.inbound,
 				Outbound:   tt.outbound,
 				Dialer:     tt.dialer,
@@ -195,11 +193,13 @@ func TestConcurrentCalls(t *testing.T) {
 	doWithTestEnv(t, options, func(t *testing.T, testEnv *testEnv) {
 		client := yarpcjson.New(testEnv.Client)
 
-		var wg sync.WaitGroup
-		var lock sync.Mutex
+		var (
+			wg   sync.WaitGroup
+			lock sync.Mutex
+			errs error
+		)
 		start := make(chan struct{}, 0)
 
-		var errs error
 		for i := 0; i < 20; i++ {
 			wg.Add(1)
 			go func(i int) {
@@ -235,13 +235,12 @@ type testEchoResponse struct {
 }
 
 func testEchoHandler(_ context.Context, request *testEchoRequest) (*testEchoResponse, error) {
-	var err error
 	if request.Error != "" {
-		err = errors.New(request.Error)
+		return nil, errors.New(request.Error)
 	}
 	return &testEchoResponse{
 		Message: request.Message,
-	}, err
+	}, nil
 }
 
 type testEnv struct {
@@ -323,8 +322,6 @@ func (e *testEnv) Close() error {
 func TestTLS(t *testing.T) {
 	t.Parallel()
 
-	const procedure = "test-procedure"
-
 	tests := []struct {
 		name                string
 		clientValidity      time.Duration
@@ -377,7 +374,7 @@ func TestTLS(t *testing.T) {
 			})
 
 			te := testEnvOptions{
-				Procedures: yarpcjson.Procedure(procedure, testEchoHandler),
+				Procedures: yarpcjson.Procedure("test-procedure", testEchoHandler),
 				Inbound: &Inbound{
 					Credentials: serverCreds,
 				},
@@ -395,7 +392,7 @@ func TestTLS(t *testing.T) {
 				request := &testEchoRequest{
 					Message: "hello security!",
 				}
-				err := client.Call(ctx, procedure, request, &res)
+				err := client.Call(ctx, "test-procedure", request, &res)
 
 				if test.expectedErrContains == "" {
 					require.NoError(t, err)

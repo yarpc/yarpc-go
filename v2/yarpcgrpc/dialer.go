@@ -12,7 +12,7 @@
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENd. IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -48,7 +48,7 @@ const (
 
 var _ yarpc.Dialer = (*Dialer)(nil)
 
-// Dialer keeps track of all gRPC peers
+// Dialer keeps track of all gRPC peers.
 type Dialer struct {
 	// ClientMaxRecvMsgSize is the maximum message size the client can receive.
 	//
@@ -56,14 +56,15 @@ type Dialer struct {
 	ClientMaxRecvMsgSize int
 	// ClientMaxSendMsgSize is the maximum message size the client can send.
 	//
-	// The default is unlimited.
+	// The default is math.MaxInt32.
 	ClientMaxSendMsgSize int
 
 	// BackoffStrategy specifies the backoff strategy for delays between
 	// connection attempts for each peer.
 	//
 	// The default is exponential backoff starting with 10ms fully jittered,
-	// doubling each attempt, with a maximum interval of 30s. //TODO(apeatsbond)
+	// doubling each attempt, with a maximum interval of 30s.
+	// TODO(apeatsbond): this is still a v1 package
 	Backoff yarpcconfig.Backoff
 
 	// Credentials specifies connection level security credentials (e.g.,
@@ -106,32 +107,35 @@ func (d *Dialer) Start(context.Context) error {
 		d.internal.tracer = d.Tracer
 	}
 
-	var credentialDialOption grpc.DialOption
-	if d.Credentials == nil {
-		credentialDialOption = grpc.WithInsecure()
-	} else {
+	d.setDialOptions()
+	return nil
+}
+
+func (d *Dialer) setDialOptions() {
+	credentialDialOption := grpc.WithInsecure()
+	if d.Credentials != nil {
 		credentialDialOption = grpc.WithTransportCredentials(d.Credentials)
 	}
 
 	defaultCallOptions := []grpc.CallOption{grpc.CallCustomCodec(customCodec{})}
+
+	clientMaxRecvMsgSize := defaultClientMaxRecvMsgSize
 	if d.ClientMaxRecvMsgSize != 0 {
-		defaultCallOptions = append(defaultCallOptions, grpc.MaxCallRecvMsgSize(d.ClientMaxRecvMsgSize))
-	} else {
-		defaultCallOptions = append(defaultCallOptions, grpc.MaxCallRecvMsgSize(defaultClientMaxRecvMsgSize))
+		clientMaxRecvMsgSize = d.ClientMaxRecvMsgSize
 	}
+	defaultCallOptions = append(defaultCallOptions, grpc.MaxCallRecvMsgSize(clientMaxRecvMsgSize))
+
+	clientMaxSendMsgSize := defaultClientMaxSendMsgSize
 	if d.ClientMaxSendMsgSize != 0 {
-		defaultCallOptions = append(defaultCallOptions, grpc.MaxCallSendMsgSize(d.ClientMaxSendMsgSize))
-	} else {
-		defaultCallOptions = append(defaultCallOptions, grpc.MaxCallSendMsgSize(defaultClientMaxSendMsgSize))
+		clientMaxSendMsgSize = d.ClientMaxSendMsgSize
 	}
+	defaultCallOptions = append(defaultCallOptions, grpc.MaxCallSendMsgSize(clientMaxSendMsgSize))
 
 	d.internal.dialOptions = []grpc.DialOption{
+		credentialDialOption,
 		grpc.WithUserAgent(UserAgent),
 		grpc.WithDefaultCallOptions(defaultCallOptions...),
-		credentialDialOption,
 	}
-
-	return nil
 }
 
 // Stop stops the gRPC dialer.
