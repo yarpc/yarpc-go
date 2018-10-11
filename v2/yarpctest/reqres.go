@@ -80,7 +80,7 @@ func (m RequestMatcher) Matches(r *yarpc.Request, buf *yarpc.Buffer) bool {
 	}
 
 	if l.Procedure != r.Procedure {
-		m.t.Logf("Procedure mismatch: %s != %s", l.Procedure, r.Procedure)
+		m.t.Logf("TransportProcedure mismatch: %s != %s", l.Procedure, r.Procedure)
 		return false
 	}
 

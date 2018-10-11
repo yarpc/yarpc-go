@@ -48,6 +48,34 @@ type TransportProcedure struct {
 	Signature string
 }
 
+// EncodingProcedure specifies a single encoding-level handler and is mapped to a TransportProcedure by the router
+type EncodingProcedure struct {
+	// Name of the procedure.
+	Name string
+
+	// Service or empty to use the default service name.
+	Service string
+
+	// HandlerSpec specifying which handler and rpc type.
+	HandlerSpec EncodingHandlerSpec
+
+	// Encoding of the handler.
+	// (if present).
+	Encoding Encoding
+
+	// Human-readable signature of the handler.
+	Signature string
+
+	// Codec to assist mapping the encoding-level handler to transport-level handler
+	Codec InboundCodec
+}
+
+type InboundCodec interface {
+	Decode(req *Buffer) (interface{}, error)
+
+	Encode(res interface{}) (*Buffer, error)
+}
+
 // MarshalLogObject implements zap.ObjectMarshaler.
 func (p TransportProcedure) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	// Passing a TransportProcedure as a zap.ObjectMarshaler allocates, so we shouldn't
