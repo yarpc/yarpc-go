@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-10-10T15:04:56.223646764Z
+updated: 2018-10-11T15:05:38.430445607Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -93,7 +93,7 @@ imports:
 - name: github.com/uber-go/tally
   version: ff17f3c43c065c3c2991f571e740eee43ea3a14a
 - name: github.com/uber/jaeger-client-go
-  version: b043381d944715b469fd6b37addfd30145ca1758
+  version: 1a782e2da844727691fef1757c72eb190c2909f0
   subpackages:
   - internal/baggage
   - internal/spanlog
@@ -172,7 +172,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 146acd28ed5894421fb5aac80ca93bc1b1f46f87
+  version: 49bb7cea24b1df9410e1712aa6433dae904ff66a
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -201,7 +201,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 29f11e2b93f4d66f7c335bd7b2892836d4944f5c
+  version: 1f849cf54d09e106002f24257b1cf8b31780c97a
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
@@ -256,7 +256,7 @@ testImports:
   subpackages:
   - update-license
 - name: golang.org/x/lint
-  version: 06c8688daad7faa9da5a0c2f163a3d14aac986ca
+  version: 9a272034dedb2a3ed05231d5604ce17fb40f0e58
   repo: https://github.com/golang/lint
   subpackages:
   - golint
