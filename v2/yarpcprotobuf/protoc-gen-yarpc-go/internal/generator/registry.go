@@ -142,7 +142,7 @@ func (r *registry) getMessage(name string) (*Message, error) {
 
 // loadFile registers the given file's message types.
 // Note that we load the messages for all files up-front so that
-// all of the message types potentially referneced in the proto
+// all of the message types potentially referenced in the proto
 // services can reference these types.
 func (r *registry) loadFile(f *descriptor.FileDescriptorProto) {
 	pkg := r.newPackage(f)
