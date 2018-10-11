@@ -83,7 +83,7 @@ func (u *unaryHandler) Handle(ctx context.Context, req *yarpc.Request, buf *yarp
 
 	protoRes, appErr := u.handle(ctx, protoReq)
 
-	// If the application error is not nil,, return
+	// If the application error is not nil, return
 	// early so that we don't attempt to marshal a nil
 	// object.
 	if appErr != nil {

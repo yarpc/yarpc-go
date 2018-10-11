@@ -35,7 +35,7 @@ type ServerStreamOption interface {
 // NewServerStream will create a new ServerStream.
 func NewServerStream(s Stream, _ ...ServerStreamOption) (*ServerStream, error) {
 	if s == nil {
-		return nil, yarpcerror.InvalidArgumentErrorf("non-nil stream is required")
+		return nil, yarpcerror.InvalidArgumentErrorf("non-nil Stream is required")
 	}
 	return &ServerStream{stream: s}, nil
 }
@@ -76,7 +76,7 @@ type ClientStreamOption interface {
 // NewClientStream will create a new ClientStream.
 func NewClientStream(s StreamCloser, _ ...ClientStreamOption) (*ClientStream, error) {
 	if s == nil {
-		return nil, yarpcerror.InvalidArgumentErrorf("non-nil stream is required")
+		return nil, yarpcerror.InvalidArgumentErrorf("non-nil StreamCloser is required")
 	}
 	return &ClientStream{stream: s}, nil
 }
