@@ -33,6 +33,7 @@ import (
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcjson"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 func TestBothResponseError(t *testing.T) {
@@ -135,7 +136,7 @@ func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
 
 	inbound := options.Inbound
 	inbound.Addr = "127.0.0.1:0"
-	inbound.Router = newTestRouter(options.Procedures)
+	inbound.Router = yarpctest.NewFakeRouter(options.Procedures)
 	if err := inbound.Start(context.Background()); err != nil {
 		return nil, err
 	}
@@ -163,25 +164,4 @@ func (e *testEnv) Close() error {
 		e.Dialer.Stop(context.Background()),
 		e.Inbound.Stop(context.Background()),
 	)
-}
-
-type testRouter struct {
-	procedures []yarpc.Procedure
-}
-
-func newTestRouter(procedures []yarpc.Procedure) *testRouter {
-	return &testRouter{procedures}
-}
-
-func (r *testRouter) Procedures() []yarpc.Procedure {
-	return r.procedures
-}
-
-func (r *testRouter) Choose(_ context.Context, req *yarpc.Request) (yarpc.TransportHandlerSpec, error) {
-	for _, procedure := range r.procedures {
-		if procedure.Name == req.Procedure {
-			return procedure.HandlerSpec, nil
-		}
-	}
-	return yarpc.TransportHandlerSpec{}, fmt.Errorf("no procedure for name %s", req.Procedure)
 }

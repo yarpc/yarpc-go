@@ -170,8 +170,7 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*
 		}
 		onFinish = nopFinish
 	} else {
-		// TODO capture error type
-		return nil, nil, fmt.Errorf("HTTP Outbound must have either Chooser or Dialer and URL to make a Call")
+		return nil, nil, yarpcerror.FailedPreconditionErrorf("HTTP Outbound must have either Chooser or Dialer and URL to make a Call")
 	}
 
 	hp, ok := peer.(*httpPeer)

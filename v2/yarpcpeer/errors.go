@@ -40,12 +40,12 @@ func (e ErrPeerHasNoReferenceToSubscriber) Error() string {
 // ErrDialerHasNoReferenceToPeer is called when a transport is expected to
 // operate on a Peer it has no reference to
 type ErrDialerHasNoReferenceToPeer struct {
-	TransportName  string
+	DialerName     string
 	PeerIdentifier string
 }
 
 func (e ErrDialerHasNoReferenceToPeer) Error() string {
-	return fmt.Sprintf("dialer %q has no reference to peer %q", e.TransportName, e.PeerIdentifier)
+	return fmt.Sprintf("dialer %q has no reference to peer %q", e.DialerName, e.PeerIdentifier)
 }
 
 // ErrInvalidPeerType is when a specfic peer type is required, but

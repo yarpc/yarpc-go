@@ -45,13 +45,13 @@ import (
 func TestStartAddrInUse(t *testing.T) {
 	i1 := &Inbound{
 		Addr:   ":0",
-		Router: newTestRouter(nil),
+		Router: yarpctest.NewFakeRouter(nil),
 	}
 
 	require.NoError(t, i1.Start(context.Background()), "inbound 1 must start without an error")
 	i2 := &Inbound{
 		Addr:   i1.Listener.Addr().String(),
-		Router: newTestRouter(nil),
+		Router: yarpctest.NewFakeRouter(nil),
 	}
 	err := i2.Start(context.Background())
 	require.Error(t, err)
@@ -69,7 +69,7 @@ func TestStartAddrInUse(t *testing.T) {
 func TestInboundStartAndStop(t *testing.T) {
 	i := &Inbound{
 		Addr:   ":0",
-		Router: newTestRouter(nil),
+		Router: yarpctest.NewFakeRouter(nil),
 	}
 	require.NoError(t, i.Start(context.Background()))
 	assert.NotEqual(t, ":0", i.Listener.Addr().String())
@@ -202,7 +202,7 @@ func TestMuxWithInterceptor(t *testing.T) {
 
 	inbound := &Inbound{
 		Addr:        "127.0.0.1:0",
-		Router:      newTestRouter(nil),
+		Router:      yarpctest.NewFakeRouter(nil),
 		Mux:         mux,
 		Interceptor: intercept,
 	}
@@ -227,7 +227,7 @@ func TestRequestAfterStop(t *testing.T) {
 
 	inbound := Inbound{
 		Addr:   "127.0.0.1:0",
-		Router: newTestRouter(nil),
+		Router: yarpctest.NewFakeRouter(nil),
 		Mux:    mux,
 	}
 	require.NoError(t, inbound.Start(context.Background()), "Failed to start inbound")
