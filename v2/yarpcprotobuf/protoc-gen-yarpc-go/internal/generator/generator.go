@@ -97,7 +97,6 @@ func removeUnusedImports(filename string, buf []byte) ([]byte, error) {
 	// faster if this ever becomes a problem.
 
 	// Map from import path to import alias.
-	unusedImports := make(map[string]string)
 	for _, spec := range f.Imports {
 		// spec.Path.Value is a quoted version of the import path. So we get
 		// "sync", not sync. We need to unquote it.
@@ -105,7 +104,7 @@ func removeUnusedImports(filename string, buf []byte) ([]byte, error) {
 		if err != nil {
 			// Unreachable. If the file parsed successfully, the unquote will
 			// never fail.
-			continue
+			return nil, err
 		}
 
 		if !astutil.UsesImport(f, importPath) {
@@ -113,12 +112,8 @@ func removeUnusedImports(filename string, buf []byte) ([]byte, error) {
 			if spec.Name != nil {
 				name = spec.Name.Name
 			}
-			unusedImports[importPath] = name
+			astutil.DeleteNamedImport(fset, f, name, importPath)
 		}
-	}
-
-	for importPath, name := range unusedImports {
-		astutil.DeleteNamedImport(fset, f, name, importPath)
 	}
 
 	var buffer bytes.Buffer
