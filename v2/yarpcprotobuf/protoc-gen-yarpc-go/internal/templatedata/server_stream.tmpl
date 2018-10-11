@@ -1,0 +1,64 @@
+{{define "server_stream" -}}
+{{with .File}}
+{{$gopkg := .Package.GoPackage}}
+
+{{range .Services -}}
+  {{$server := .Server}}
+
+  {{/* Server stream interfaces */}}
+
+  {{range .Methods -}}
+    {{if or .ClientStreaming .ServerStreaming}}
+    // {{.StreamServer}} is a streaming interface used in the {{$server}} interface.
+    type {{.StreamServer}} interface {
+      Context() context.Context
+    {{if .ClientStreaming -}}
+      Recv(...yarpc.StreamOption) (*{{goType .Request $gopkg}}, error)
+    {{end -}}
+    {{if .ServerStreaming -}}
+      Send(*{{goType .Response $gopkg}}, ...yarpc.StreamOption) error
+    {{end -}}
+    }
+    {{end -}}
+  {{end -}}
+
+  {{/* Server stream implementations */}}
+
+  {{range .Methods -}}
+    {{if or .ClientStreaming .ServerStreaming}}
+    type {{.StreamServerImpl}} struct {
+      stream *yarpcprotobuf.ServerStream
+    }
+
+    var _ {{.StreamServer}} = (*{{.StreamServerImpl}})(nil)
+
+    func (s *{{.StreamServerImpl}}) Context() context.Context {
+      return s.stream.Context()
+    }
+
+    {{if .ClientStreaming}}
+    func (s *{{.StreamServerImpl}}) Recv(opts ...yarpc.StreamOption) (*{{goType .Request $gopkg}}, error) {
+      msg, err := s.stream.Receive(new({{goType .Request $gopkg}}), opts...)
+      if err != nil {
+        return nil, err
+      }
+      req, ok := msg.(*{{goType .Request $gopkg}})
+      if !ok {
+        return nil, yarpcprotobuf.CastError(new({{goType .Request $gopkg}}), msg)
+      }
+      return req, nil
+    }
+    {{end -}}
+
+    {{if .ServerStreaming}}
+    func (s *{{.StreamServerImpl}}) Send(res *{{goType .Response $gopkg}}, opts ...yarpc.StreamOption) error {
+      return s.stream.Send(res, opts...)
+    }
+    {{end -}}
+
+    {{end -}}
+  {{end -}}
+
+{{end -}}
+
+{{end -}}{{end -}}

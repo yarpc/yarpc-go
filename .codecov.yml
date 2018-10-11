@@ -102,4 +102,8 @@ ignore:
  - /internal/service-test/
  - /internal/testutils/
  - /serialize/internal/
+ - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/templatedata/
+ - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/common/
+ - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/keyvalue/
+ - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/stream/
  - /yarpcproto/

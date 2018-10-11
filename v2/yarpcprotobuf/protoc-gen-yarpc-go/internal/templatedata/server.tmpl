@@ -1,0 +1,67 @@
+{{define "server" -}}
+{{with .File}}
+{{$gopkg := .Package.GoPackage}}
+
+{{range .Services -}}
+  {{$svc := .Name}}
+
+  {{/* Service interface */}}
+
+  // {{.Server}} is the {{$svc}} service's server interface.
+  type {{.Server}} interface {
+    {{range .Methods -}}
+      {{if or .ClientStreaming .ServerStreaming -}}
+        {{.Name}}(
+          {{if not .ClientStreaming -}}
+            *{{goType .Request $gopkg}},
+          {{end -}}
+          {{.StreamServer}},
+        ) {{if not .ServerStreaming}} (*{{goType .Response $gopkg}}, error) {{else}} error {{end}}
+      {{else -}}
+        {{.Name}}(
+          context.Context,
+          *{{goType .Request $gopkg}},
+        ) (*{{goType .Response $gopkg}}, error)
+      {{end -}}
+    {{end -}}
+  }
+
+  {{/* Procedure construction */}}
+
+  // Build{{.Procedures}} constructs the YARPC procedures for the {{$svc}} service.
+  func Build{{.Procedures}}(s {{.Server}}) []yarpc.Procedure {
+    h := &{{.ServerImpl}}{server: s}
+    return yarpcprotobuf.Procedures(
+      yarpcprotobuf.ProceduresParams{
+        Service: {{printf "%q" .FQN}},
+        Unary: []yarpcprotobuf.UnaryProceduresParams{
+          {{range unaryMethods . -}}
+          {
+            Method: {{printf "%q" .Name}},
+            Handler: yarpcprotobuf.NewUnaryHandler(
+              yarpcprotobuf.UnaryHandlerParams{
+                Handle: h.{{.Name}},
+                RequestType: new({{goType .Request $gopkg}}),
+              },
+            ),
+          },
+          {{end -}}
+        },
+        Stream: []yarpcprotobuf.StreamProceduresParams{
+          {{range streamMethods . -}}
+          {
+            Method: {{printf "%q" .Name}},
+            Handler: yarpcprotobuf.NewStreamHandler(
+              yarpcprotobuf.StreamHandlerParams{
+                Handle: h.{{.Name}},
+              },
+            ),
+          },
+          {{end -}}
+        },
+      },
+    )
+  }
+{{end -}}
+
+{{end -}}{{end -}}

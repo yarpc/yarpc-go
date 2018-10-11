@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package keyvalue;
+
+option go_package = "keyvaluepb";
+
+import "src/common/common.proto";
+
+service Store {
+  rpc Get(common.GetRequest) returns (common.GetResponse);
+  rpc Set(common.SetRequest) returns (common.SetResponse);
+}
