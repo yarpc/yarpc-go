@@ -128,9 +128,13 @@ func (c *client) Call(
 	return protoRes, appErr
 }
 
-// Note that the provided service corresponds to the Proto service name.
-// This includes the service's package name, such as foo.Bar, where
-// Bar is a service declared in the foo package.
+// toRequest maps the outbound call to its corresponding request.
+// Note that the procedure name is derived from the proto service's
+// fully-qualified name, combined with the specific method we are
+// calling.
+//
+// Given a "Store" service declared in the "keyvalue" package, the derived
+// procedure for the "Get" method would be "keyvalue.Store::Get".
 func (c *client) toRequest(ctx context.Context, method string, call *yarpc.OutboundCall) (context.Context, *yarpc.Request, error) {
 	req := &yarpc.Request{
 		Caller:    c.c.Caller,
