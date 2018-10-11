@@ -172,7 +172,7 @@ func (r *registry) loadMessage(f *File, m *descriptor.DescriptorProto) {
 
 func (r *registry) loadService(f *File, s *descriptor.ServiceDescriptorProto) error {
 	name := s.GetName()
-	svc := &Service{
+	service := &Service{
 		Name:       name,
 		FQN:        f.Package.fqn(name),
 		Client:     join(name, _yarpc, _client),
@@ -188,13 +188,13 @@ func (r *registry) loadService(f *File, s *descriptor.ServiceDescriptorProto) er
 		if err != nil {
 			return err
 		}
-		svc.Methods = append(svc.Methods, method)
+		service.Methods = append(service.Methods, method)
 	}
-	f.Services = append(f.Services, svc)
+	f.Services = append(f.Services, service)
 	return nil
 }
 
-func (r *registry) newMethod(m *descriptor.MethodDescriptorProto, svc string) (*Method, error) {
+func (r *registry) newMethod(m *descriptor.MethodDescriptorProto, service string) (*Method, error) {
 	request, err := r.getMessage(m.GetInputType())
 	if err != nil {
 		return nil, err
@@ -210,10 +210,10 @@ func (r *registry) newMethod(m *descriptor.MethodDescriptorProto, svc string) (*
 		Response:         response,
 		ClientStreaming:  m.GetClientStreaming(),
 		ServerStreaming:  m.GetServerStreaming(),
-		StreamClient:     join(svc, name, _yarpc, _stream, _client),
-		StreamClientImpl: join(_implPrefix, svc, name, _yarpc, _stream, _client),
-		StreamServer:     join(svc, name, _yarpc, _stream, _server),
-		StreamServerImpl: join(_implPrefix, svc, name, _yarpc, _stream, _server),
+		StreamClient:     join(service, name, _yarpc, _stream, _client),
+		StreamClientImpl: join(_implPrefix, service, name, _yarpc, _stream, _client),
+		StreamServer:     join(service, name, _yarpc, _stream, _server),
+		StreamServerImpl: join(_implPrefix, service, name, _yarpc, _stream, _server),
 	}, nil
 }
 
