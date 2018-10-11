@@ -72,6 +72,60 @@ func NewMapRouter(defaultService string, rs []yarpc.TransportProcedure) MapRoute
 	return router
 }
 
+// NewMapRouterWithEncodingProcedures constructs a new MapRouter with the given default service name and registers
+// the given encoding level procedures as transport level procedures
+func NewMapRouterWithEncodingProcedures(defaultService string, encodingProcedures []yarpc.EncodingProcedure) MapRouter {
+	router := MapRouter{
+		defaultService:            defaultService,
+		serviceProcedureEncodings: make(map[serviceProcedureEncoding]yarpc.TransportProcedure),
+		serviceNames:              map[string]struct{}{defaultService: {}},
+	}
+
+	transportProcedures := []yarpc.TransportProcedure{}
+	for _, p := range encodingProcedures {
+		handler := func(c context.Context, r *yarpc.Request, b *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
+			decodedBody, codecErr := p.Codec.Decode(b)
+			if codecErr != nil {
+				return nil, nil, codecErr
+			}
+
+			response, body, err := p.HandlerSpec.Unary().Handle(c, r, decodedBody)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			encodedBody, codecErr := p.Codec.Encode(body)
+			if codecErr != nil {
+				return nil, nil, codecErr
+			}
+
+			return response, encodedBody, nil
+		}
+
+		transportProcedures = append(
+			transportProcedures,
+			yarpc.TransportProcedure{
+				Name:        p.Name,
+				Service:     p.Service,
+				HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(yarpc.UnaryTransportHandlerFunc(handler)),
+				Encoding:    p.Encoding,
+				Signature:   p.Signature,
+			},
+		)
+
+		router.register(transportProcedures)
+	}
+
+	return router
+}
+
+// Register registers the procedure with the MapRouter.
+// If the procedure does not specify its service name, the procedure will
+// inherit the default service name of the router.
+// Procedures should specify their encoding, and multiple procedures with the
+// same name and service name can exist if they handle different encodings.
+// If a procedure does not specify an encoding, it can only support one handler.
+// The router will select that handler regardless of the encoding.
 func (m MapRouter) register(rs []yarpc.TransportProcedure) {
 	for _, r := range rs {
 		if r.Service == "" {
