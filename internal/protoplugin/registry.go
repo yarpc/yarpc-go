@@ -76,6 +76,9 @@ func (r *registry) Load(req *plugin_go.CodeGeneratorRequest) error {
 		if err := r.loadServices(target); err != nil {
 			return err
 		}
+		if err := r.loadTransitiveFileDependencies(target); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -251,6 +254,41 @@ func (r *registry) newMethod(svc *Service, md *descriptor.MethodDescriptorProto)
 		RequestType:           requestType,
 		ResponseType:          responseType,
 	}, nil
+}
+
+// loadTransitiveFileDependencies registers services and their methods from "targetFile" to "r".
+// It must be called after loadFile is called for all files so that loadTransitiveFileDependencies
+// can resolve file descriptors as depdendencies.
+func (r *registry) loadTransitiveFileDependencies(file *File) error {
+	seen := make(map[string]struct{})
+	files, err := r.loadTransitiveFileDependenciesRecurse(file, seen)
+	if err != nil {
+		return err
+	}
+	file.TransitiveDependencies = files
+	return nil
+}
+
+func (r *registry) loadTransitiveFileDependenciesRecurse(file *File, seen map[string]struct{}) ([]*File, error) {
+	seen[file.GetName()] = struct{}{}
+	var deps []*File
+	for _, fname := range file.GetDependency() {
+		if _, ok := seen[fname]; ok {
+			continue
+		}
+		f, err := r.LookupFile(fname)
+		if err != nil {
+			return nil, err
+		}
+		deps = append(deps, f)
+
+		files, err := r.loadTransitiveFileDependenciesRecurse(f, seen)
+		if err != nil {
+			return nil, err
+		}
+		deps = append(deps, files...)
+	}
+	return deps, nil
 }
 
 // defaultGoPackageName returns the default go package name to be used for go files generated from "f".

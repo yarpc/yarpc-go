@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- Added `encoding/protobuf/reflection` for exposing server reflection related
+  information through codegeneration. For docs related to server reflection read
+  https://github.com/grpc/grpc/blob/master/doc/server-reflection.md.
+- `protoc-gen-yarpc-go` now generates `yarpcfx` fx groups containing
+  information required for building server reflection API's.
+
 ### Fixed
 - Using a `http.Outbound` previously leaked implementation details that it was using a
     `*http.Client` underneath, when attempting to cast a `http.Outbound` into a `http.RoundTripper`

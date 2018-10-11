@@ -4,11 +4,13 @@ package uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing;
 
 import "encoding/protobuf/protoc-gen-yarpc-go/internal/testing/dep.proto";
 import "yarpcproto/yarpc.proto";
+import "google/protobuf/duration.proto";
 
 option go_package = "testing";
 
 message GetValueRequest {
   string key = 1;
+  google.protobuf.Duration wkt_test = 2;
 }
 
 message GetValueResponse {

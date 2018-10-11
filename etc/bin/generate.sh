@@ -31,7 +31,7 @@ protoc_with_imports() {
     -I vendor \
     -I vendor/github.com/gogo/protobuf/protobuf \
     -I . \
-    "--${1}_out=${2}Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/protoc-gen-gogo/descriptor,Mgogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto,Myarpcproto/yarpc.proto=go.uber.org/yarpc/yarpcproto:." \
+    "--${1}_out=${2}Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/protoc-gen-gogo/descriptor,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto,Myarpcproto/yarpc.proto=go.uber.org/yarpc/yarpcproto:." \
   "${@:3}"
 }
 
