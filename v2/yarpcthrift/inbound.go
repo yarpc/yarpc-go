@@ -24,25 +24,26 @@ import (
 	"bytes"
 	"context"
 
-	"go.uber.org/yarpc/v2/yarpcencoding"
-
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
 	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcencoding"
 )
 
-// UnaryTransportHandler wraps a Thrift Handler into a yarpc.UnaryTransportHandler.
-type UnaryTransportHandler struct {
+var _ yarpc.UnaryTransportHandler = (*unaryTransportHandler)(nil)
+
+// unaryTransportHandler wraps a Thrift Handler into a yarpc.UnaryTransportHandler.
+type unaryTransportHandler struct {
 	ThriftHandler Handler
 	Protocol      protocol.Protocol
 	Enveloping    bool
 }
 
 // Handle implements yarpc.UnaryTransportHandler.
-func (t UnaryTransportHandler) Handle(ctx context.Context, req *yarpc.Request, reqBody *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
+func (t unaryTransportHandler) Handle(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
 	ctx, call := yarpc.NewInboundCall(ctx)
 
-	reqValue, responder, err := decodeRequest(call, req, reqBody, t.Protocol, t.Enveloping)
+	reqValue, responder, err := decodeRequest(call, req, reqBuf, t.Protocol, t.Enveloping)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -62,7 +63,7 @@ func (t UnaryTransportHandler) Handle(ctx context.Context, req *yarpc.Request, r
 		return nil, nil, err
 	}
 
-	res, resBody := &yarpc.Response{}, &yarpc.Buffer{}
+	res, resBuf := &yarpc.Response{}, &yarpc.Buffer{}
 
 	if thriftRes.IsApplicationError {
 		res.ApplicationError = true
@@ -70,20 +71,20 @@ func (t UnaryTransportHandler) Handle(ctx context.Context, req *yarpc.Request, r
 
 	call.WriteToResponse(res)
 
-	if err = responder.EncodeResponse(value, wire.Reply, resBody); err != nil {
+	if err = responder.EncodeResponse(value, wire.Reply, resBuf); err != nil {
 		return nil, nil, yarpcencoding.ResponseBodyEncodeError(req, err)
 	}
 
-	return res, resBody, nil
+	return res, resBuf, nil
 }
 
-// decodeRequest is a utility shared by Unary and Oneway handlers, to decode
+// decodeRequest is a utility shared by Unary handlers, to decode
 // the request, regardless of enveloping.
 func decodeRequest(
 	// call is an inboundCall populated from the transport request and context.
 	call *yarpc.InboundCall,
 	req *yarpc.Request,
-	reqBody *yarpc.Buffer,
+	reqBuf *yarpc.Buffer,
 	// proto is the encoding protocol (e.g., Binary) or an
 	// EnvelopeAgnosticProtocol (e.g., EnvelopeAgnosticBinary)
 	proto protocol.Protocol,
@@ -95,7 +96,7 @@ func decodeRequest(
 	// decodeRequest does not surface the envelope.
 	wire.Value,
 	// how to encode the response, with the enveloping
-	// strategy corresponding to the request. It is not used for oneway handlers.
+	// strategy corresponding to the request.
 	protocol.Responder,
 	error,
 ) {
@@ -108,7 +109,8 @@ func decodeRequest(
 		return wire.Value{}, nil, err
 	}
 
-	reader := bytes.NewReader(reqBody.Bytes())
+	// TODO(mhp): This will be unnecessary when `yarpc.Buffer` implements `io.ReaderAt`
+	reader := bytes.NewReader(reqBuf.Bytes())
 
 	// Discover or choose the appropriate envelope
 	if agnosticProto, ok := proto.(protocol.EnvelopeAgnosticProtocol); ok {

@@ -26,8 +26,8 @@ import (
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/thriftreflect"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/pkg/procedure"
 	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcprocedure"
 )
 
 // Handler is a convenience type alias for functions that act as Handlers.
@@ -74,15 +74,15 @@ func BuildProcedures(s Service, opts ...RegisterOption) []yarpc.Procedure {
 	rs := make([]yarpc.Procedure, 0, len(s.Methods))
 
 	for _, method := range s.Methods {
-		var spec yarpc.HandlerSpec
-		spec = yarpc.NewUnaryHandlerSpec(UnaryTransportHandler{
+		var spec yarpc.TransportHandlerSpec
+		spec = yarpc.NewUnaryTransportHandlerSpec(unaryTransportHandler{
 			ThriftHandler: method.Handler,
 			Protocol:      proto,
 			Enveloping:    rc.Enveloping,
 		})
 
 		rs = append(rs, yarpc.Procedure{
-			Name:        procedure.ToName(s.Name, method.Name),
+			Name:        yarpcprocedure.ToName(s.Name, method.Name),
 			HandlerSpec: spec,
 			Encoding:    Encoding,
 			Signature:   method.Signature,
