@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package grpc implements a YARPC transport based on the gRPC protocol.
+// Package yarpcgrpc implements a YARPC transport based on the gRPC protocol.
 // The gRPC transport provides support for Unary RPCs only.
 //
 // Usage
@@ -106,4 +106,4 @@
 // gRPC Project Page: https://grpc.io
 // gRPC Wire Protocol Definition: https://grpc.io/docs/guides/wire.html
 // gRPC Golang Library: https://github.com/grpc/grpc-go
-package grpc
+package yarpcgrpc

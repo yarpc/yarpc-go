@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package grpc
+package yarpcgrpc
 
 import (
 	"context"
@@ -61,7 +61,7 @@ type Inbound struct {
 
 	// ServerMaxSendMsgSize is the maximum message size the server can send.
 	//
-	// The default is unlimited.
+	// The default is math.MaxInt32.
 	ServerMaxSendMsgSize int
 
 	// Credentials specifies connection level security credentials (e.g.,

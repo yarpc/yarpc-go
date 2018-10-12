@@ -30,6 +30,9 @@
 - [ ] Construct PRs with retroactive continuity.
 - [ ] Nit: scrape name pid and change to just id throughout.
 - [ ] Audit docs
+      - [ ] gRPC
+      - [ ] TChannel
+      - [ ] HTTP
 - [ ] InvokeUnaryHandler: reduce package name noise at the call site by changing to a Do(ctx) method on UnaryInvokeRequest
 - [ ] support StreamHandlers in EncodingHandlerSpec
 
@@ -44,11 +47,11 @@ Encodings:
 
 Transports:
 - [ ] Port TChannel transport
-- [ ] Port or recreate gRPC transport
+- [x] Port or recreate gRPC transport
 - [ ] use `req` and `res` as variable names for consistency.
       - [x] HTTP
       - [ ] TChannel
-      - [ ] gRPC
+      - [x] gRPC
 
 To port peer lists forward:
 - [ ] Replace functional options with options struct pattern, like net in the

@@ -18,22 +18,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package grpc
+package yarpcgrpc
 
 import (
 	"fmt"
 	"net/url"
 
-	"go.uber.org/yarpc/pkg/procedure"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2/yarpcerror"
+	"go.uber.org/yarpc/v2/yarpcprocedure"
 )
 
 const defaultServiceName = "__default__"
 
 func procedureNameToServiceNameMethodName(procedureName string) (string, string, error) {
-	serviceName, methodName := procedure.FromName(procedureName)
+	serviceName, methodName := yarpcprocedure.FromName(procedureName)
 	if serviceName == "" {
-		return "", "", yarpcerrors.InvalidArgumentErrorf("invalid procedure name: %s", procedureName)
+		return "", "", yarpcerror.InvalidArgumentErrorf("invalid procedure name: %s", procedureName)
 	}
 	if methodName == "" {
 		methodName = serviceName
@@ -69,5 +69,5 @@ func procedureToName(serviceName string, methodName string) (string, error) {
 	if serviceName == defaultServiceName {
 		return methodName, nil
 	}
-	return procedure.ToName(serviceName, methodName), nil
+	return yarpcprocedure.ToName(serviceName, methodName), nil
 }
