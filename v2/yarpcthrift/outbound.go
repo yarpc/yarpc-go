@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package thrift
+package yarpcthrift
 
 import (
 	"bytes"
@@ -28,13 +28,10 @@ import (
 	"go.uber.org/thriftrw/envelope"
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc"
-	encodingapi "go.uber.org/yarpc/api/encoding"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift/internal"
-	"go.uber.org/yarpc/pkg/encoding"
-	"go.uber.org/yarpc/pkg/errors"
-	"go.uber.org/yarpc/pkg/procedure"
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcencoding"
+	"go.uber.org/yarpc/v2/yarpcprocedure"
+	"go.uber.org/yarpc/v2/yarpcthrift/internal"
 )
 
 // Client is a generic Thrift client. It speaks in raw Thrift payloads.
@@ -44,7 +41,6 @@ import (
 type Client interface {
 	// Call the given Thrift method.
 	Call(ctx context.Context, reqBody envelope.Enveloper, opts ...yarpc.CallOption) (wire.Value, error)
-	CallOneway(ctx context.Context, reqBody envelope.Enveloper, opts ...yarpc.CallOption) (transport.Ack, error)
 }
 
 // Config contains the configuration for the Client.
@@ -54,7 +50,7 @@ type Config struct {
 	Service string
 
 	// ClientConfig through which requests will be sent. Required.
-	ClientConfig transport.ClientConfig
+	Client *yarpc.Client
 }
 
 // New creates a new Thrift client.
@@ -62,11 +58,10 @@ func New(c Config, opts ...ClientOption) Client {
 	// Code generated for Thrift client instantiation will probably be something
 	// like this:
 	//
-	// 	func New(cc transport.ClientConfig, opts ...ClientOption) *MyServiceClient {
+	// 	func New(tc thrift.Client, opts ...ClientOption) *MyServiceClient {
 	// 		c := thrift.New(thrift.Config{
 	// 			Service: "MyService",
-	// 			ClientConfig: cc,
-	// 			Protocol: protocol.Binary,
+	// 			Client: tc,
 	// 		}, opts...)
 	// 		return &MyServiceClient{client: c}
 	// 	}
@@ -93,15 +88,15 @@ func New(c Config, opts ...ClientOption) Client {
 
 	return thriftClient{
 		p:             p,
-		cc:            c.ClientConfig,
+		c:             c.Client,
 		thriftService: c.Service,
 		Enveloping:    cc.Enveloping,
 	}
 }
 
 type thriftClient struct {
-	cc transport.ClientConfig
-	p  protocol.Protocol
+	c *yarpc.Client
+	p protocol.Protocol
 
 	// name of the Thrift service
 	thriftService string
@@ -122,38 +117,32 @@ func (c thriftClient) Call(ctx context.Context, reqBody envelope.Enveloper, opts
 	// 		success, err := myservice.SomeMethodHelper.UnwrapResponse(&result)
 	// 		return success, err
 	// 	}
-
-	out := c.cc.GetUnaryOutbound()
-
-	treq, proto, err := c.buildTransportRequest(reqBody)
+	treq, reqBuf, proto, err := c.buildTransportRequest(reqBody)
 	if err != nil {
 		return wire.Value{}, err
 	}
 
-	call := encodingapi.NewOutboundCall(encoding.FromOptions(opts)...)
+	call := yarpc.NewOutboundCall(opts...)
 	ctx, err = call.WriteToRequest(ctx, treq)
 	if err != nil {
 		return wire.Value{}, err
 	}
 
-	tres, err := out.Call(ctx, treq)
+	tres, tresBuf, err := c.c.Unary.Call(ctx, treq, reqBuf)
 	if err != nil {
 		return wire.Value{}, err
 	}
-	defer tres.Body.Close()
 
 	if _, err = call.ReadFromResponse(ctx, tres); err != nil {
 		return wire.Value{}, err
 	}
 
-	buf := bytes.NewBuffer(make([]byte, 0, _defaultBufferSize))
-	if _, err = buf.ReadFrom(tres.Body); err != nil {
-		return wire.Value{}, err
-	}
+	// TODO(mhp): This will be unnecessary when `yarpc.Buffer` implements `io.ReaderAt`
+	reader := bytes.NewReader(tresBuf.Bytes())
 
-	envelope, err := proto.DecodeEnveloped(bytes.NewReader(buf.Bytes()))
+	envelope, err := proto.DecodeEnveloped(reader)
 	if err != nil {
-		return wire.Value{}, errors.ResponseBodyDecodeError(treq, err)
+		return wire.Value{}, yarpcencoding.ResponseBodyDecodeError(treq, err)
 	}
 
 	switch envelope.Type {
@@ -162,7 +151,7 @@ func (c thriftClient) Call(ctx context.Context, reqBody envelope.Enveloper, opts
 	case wire.Exception:
 		var exc internal.TApplicationException
 		if err := exc.FromWire(envelope.Value); err != nil {
-			return wire.Value{}, errors.ResponseBodyDecodeError(treq, err)
+			return wire.Value{}, yarpcencoding.ResponseBodyDecodeError(treq, err)
 		}
 		return wire.Value{}, thriftException{
 			Service:   treq.Service,
@@ -170,29 +159,12 @@ func (c thriftClient) Call(ctx context.Context, reqBody envelope.Enveloper, opts
 			Reason:    &exc,
 		}
 	default:
-		return wire.Value{}, errors.ResponseBodyDecodeError(
+		return wire.Value{}, yarpcencoding.ResponseBodyDecodeError(
 			treq, errUnexpectedEnvelopeType(envelope.Type))
 	}
 }
 
-func (c thriftClient) CallOneway(ctx context.Context, reqBody envelope.Enveloper, opts ...yarpc.CallOption) (transport.Ack, error) {
-	out := c.cc.GetOnewayOutbound()
-
-	treq, _, err := c.buildTransportRequest(reqBody)
-	if err != nil {
-		return nil, err
-	}
-
-	call := encodingapi.NewOutboundCall(encoding.FromOptions(opts)...)
-	ctx, err = call.WriteToRequest(ctx, treq)
-	if err != nil {
-		return nil, err
-	}
-
-	return out.CallOneway(ctx, treq)
-}
-
-func (c thriftClient) buildTransportRequest(reqBody envelope.Enveloper) (*transport.Request, protocol.Protocol, error) {
+func (c thriftClient) buildTransportRequest(reqBody envelope.Enveloper) (*yarpc.Request, *yarpc.Buffer, protocol.Protocol, error) {
 	proto := c.p
 	if !c.Enveloping {
 		proto = disableEnvelopingProtocol{
@@ -201,40 +173,39 @@ func (c thriftClient) buildTransportRequest(reqBody envelope.Enveloper) (*transp
 		}
 	}
 
-	treq := transport.Request{
-		Caller:    c.cc.Caller(),
-		Service:   c.cc.Service(),
+	treq := &yarpc.Request{
+		Caller:    c.c.Caller,
+		Service:   c.c.Service,
 		Encoding:  Encoding,
-		Procedure: procedure.ToName(c.thriftService, reqBody.MethodName()),
+		Procedure: yarpcprocedure.ToName(c.thriftService, reqBody.MethodName()),
 	}
 
 	value, err := reqBody.ToWire()
 	if err != nil {
 		// ToWire validates the request. If it failed, we should return the error
 		// as-is because it's not an encoding error.
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	reqEnvelopeType := reqBody.EnvelopeType()
-	if reqEnvelopeType != wire.Call && reqEnvelopeType != wire.OneWay {
-		return nil, nil, errors.RequestBodyEncodeError(
-			&treq, errUnexpectedEnvelopeType(reqEnvelopeType),
+	if reqEnvelopeType != wire.Call {
+		return nil, nil, nil, yarpcencoding.RequestBodyEncodeError(
+			treq, errUnexpectedEnvelopeType(reqEnvelopeType),
 		)
 	}
 
-	var buffer bytes.Buffer
+	reqBuf := yarpc.Buffer{}
 	err = proto.EncodeEnveloped(wire.Envelope{
 		Name:  reqBody.MethodName(),
 		Type:  reqEnvelopeType,
 		SeqID: 1, // don't care
 		Value: value,
-	}, &buffer)
+	}, &reqBuf)
 	if err != nil {
-		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
+		return nil, nil, nil, yarpcencoding.RequestBodyEncodeError(treq, err)
 	}
 
-	treq.Body = &buffer
-	return &treq, proto, nil
+	return treq, &reqBuf, proto, nil
 }
 
 type thriftException struct {
