@@ -18,9 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package bufferpool maintains a pool of bytes.Buffers for use in
+// Package internalbufferpool maintains a pool of bytes.Buffers for use in
 // encoding and transport implementations.
-package bufferpool
+package internalbufferpool
 
 import (
 	"flag"
