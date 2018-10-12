@@ -18,11 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package backoff
+package yarpc
 
 import "time"
 
-// Strategy is a factory for backoff algorithms.
+// BackoffStrategy is a factory for backoff algorithms.
 // Each backoff instance may capture some state, typically a random number
 // generator.
 // The strategy guarantees that these backoff instances are either
@@ -30,7 +30,7 @@ import "time"
 //
 // Backoff strategies are useful for configuring retry loops, balancing the
 // need to recover quickly against denial of service as a failure mode.
-type Strategy interface {
+type BackoffStrategy interface {
 	Backoff() Backoff
 }
 

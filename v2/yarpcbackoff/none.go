@@ -18,19 +18,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package backoff
+package yarpcbackoff
 
-import "time"
+import (
+	"time"
+
+	"go.uber.org/yarpc/v2"
+)
 
 // None is a shorted backoff strategy that will always produce a 0ms duration.
 // This strategy is intended to minimize arbitrary delays during tests or
 // maximize load on a benchmark.
-var None Strategy = &none{}
+var None yarpc.BackoffStrategy = &none{}
 
 type none struct{}
 
 // Backoff implements Strategy.
-func (n *none) Backoff() Backoff {
+func (n *none) Backoff() yarpc.Backoff {
 	return n
 }
 

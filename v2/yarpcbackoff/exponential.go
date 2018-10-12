@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package backoff
+package yarpcbackoff
 
 import (
 	"errors"
@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"go.uber.org/multierr"
-	"go.uber.org/yarpc/api/backoff"
+	"go.uber.org/yarpc/v2"
 )
 
 var (
@@ -64,13 +64,12 @@ var defaultExponentialOpts = exponentialOptions{
 	newRand: newRand,
 }
 
-// DefaultExponential is an exponential backoff.Strategy with full jitter.
+// DefaultExponential is an exponential yarpc.BackoffStrategy with full jitter.
 // The first attempt has a range of 0 to 10ms and each successive attempt
 // doubles the range of the possible delay.
 //
-// Exponential strategies are not thread safe.
-// The Backoff() method returns a referentially independent backoff generator
-// and random number generator.
+// Exponential strategies are not thread safe. The Backoff() method returns a
+// referentially independent backoff generator and random number generator.
 var DefaultExponential = &ExponentialStrategy{
 	opts: defaultExponentialOpts,
 }
@@ -106,7 +105,7 @@ type ExponentialStrategy struct {
 	opts exponentialOptions
 }
 
-var _ backoff.Strategy = (*ExponentialStrategy)(nil)
+var _ yarpc.BackoffStrategy = (*ExponentialStrategy)(nil)
 
 // NewExponential returns a new exponential backoff strategy, which in turn
 // returns backoff functions.
@@ -136,7 +135,7 @@ func NewExponential(opts ...ExponentialOption) (*ExponentialStrategy, error) {
 
 // Backoff returns an instance of the exponential backoff strategy with its own
 // random number generator.
-func (e *ExponentialStrategy) Backoff() backoff.Backoff {
+func (e *ExponentialStrategy) Backoff() yarpc.Backoff {
 	return &exponentialBackoff{
 		first: e.opts.first,
 		max:   e.opts.max.Nanoseconds(),
