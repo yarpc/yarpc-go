@@ -24,15 +24,15 @@ import (
 	"reflect"
 	"strings"
 
-	"go.uber.org/yarpc/api/transport"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 // ClientBuilderOptions returns ClientOptions that InjectClients should use
 // for a specific Thrift client given information about the field into which
 // the client is being injected. This API will usually not be used directly by
 // users but by the generated code.
-func ClientBuilderOptions(_ transport.ClientConfig, f reflect.StructField) []ClientOption {
-	// Note that we don't use ClientConfig right now but since this code is
+func ClientBuilderOptions(_ *yarpc.Client, f reflect.StructField) []ClientOption {
+	// Note that we don't use Client right now but since this code is
 	// called by generated code, we still accept it so that we can add logic
 	// based on it in the future without breaking the API (and thus, all
 	// generated code).

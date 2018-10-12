@@ -180,14 +180,14 @@ func TestClient(t *testing.T) {
 
 		opts := tt.clientOptions
 		opts = append(opts, Protocol(proto))
-		c := New(Config{
-			Service: "MyService",
-			Client: &yarpc.Client{
+		c := New(
+			&yarpc.Client{
 				Caller:  "caller",
 				Service: "service",
 				Unary:   trans,
 			},
-		}, opts...)
+			"MyService",
+			opts...)
 
 		_, err := c.Call(ctx, tt.giveRequestBody)
 		if tt.wantError != "" {

@@ -43,26 +43,18 @@ type Client interface {
 	Call(ctx context.Context, reqBody envelope.Enveloper, opts ...yarpc.CallOption) (wire.Value, error)
 }
 
-// Config contains the configuration for the Client.
-type Config struct {
-	// Name of the Thrift service. This is the name used in the Thrift file
-	// with the 'service' keyword.
-	Service string
-
-	// ClientConfig through which requests will be sent. Required.
-	Client *yarpc.Client
-}
-
 // New creates a new Thrift client.
-func New(c Config, opts ...ClientOption) Client {
+func New(c *yarpc.Client, service string, opts ...ClientOption) Client {
+	// TODO(mhp): Update comments here once we finalize v2.
+	//
 	// Code generated for Thrift client instantiation will probably be something
 	// like this:
 	//
 	// 	func New(tc thrift.Client, opts ...ClientOption) *MyServiceClient {
-	// 		c := thrift.New(thrift.Config{
-	// 			Service: "MyService",
+	// 		c := thrift.New(
 	// 			Client: tc,
-	// 		}, opts...)
+	// 			Service: "MyService",
+	// 			opts...)
 	// 		return &MyServiceClient{client: c}
 	// 	}
 	//
@@ -88,8 +80,8 @@ func New(c Config, opts ...ClientOption) Client {
 
 	return thriftClient{
 		p:             p,
-		c:             c.Client,
-		thriftService: c.Service,
+		c:             c,
+		thriftService: service,
 		Enveloping:    cc.Enveloping,
 	}
 }

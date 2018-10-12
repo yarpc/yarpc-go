@@ -26,7 +26,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/yarpc/api/transport/transporttest"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 type someInterface interface{}
@@ -92,7 +92,7 @@ func TestClientBuilderOptions(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			var cfg clientConfig
-			opts := ClientBuilderOptions(transporttest.NewMockClientConfig(mockCtrl), tt.give)
+			opts := ClientBuilderOptions(&yarpc.Client{}, tt.give)
 			for _, o := range opts {
 				o.applyClientOption(&cfg)
 			}
