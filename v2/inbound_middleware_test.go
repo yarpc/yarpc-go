@@ -28,8 +28,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/internal/testtime"
 	. "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/internal/internaltesttime"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
 
@@ -40,7 +40,7 @@ func TestUnaryNopInboundMiddleware(t *testing.T) {
 	h := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
 	wrappedH := ApplyUnaryInboundTransportMiddleware(h, NopUnaryInboundTransportMiddleware)
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 	req := &Request{
 		Caller:    "somecaller",

@@ -34,8 +34,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/internal/internaltesttime"
 	"go.uber.org/yarpc/v2/internal/internalyarpctest"
 	"go.uber.org/yarpc/v2/internal/routertest"
 	"go.uber.org/yarpc/v2/yarpcerror"
@@ -133,7 +133,7 @@ func TestInboundMux(t *testing.T) {
 		URL:    parseURL(url),
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 	_, _, err = outbound.Call(ctx, &yarpc.Request{
 		Caller:    "foo",

@@ -18,9 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package testtime provides ways to scale time for tests running on CPU
+// Package internaltesttime provides ways to scale time for tests running on CPU
 // starved systems.
-package testtime
+package internaltesttime
 
 import (
 	"fmt"

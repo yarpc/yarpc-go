@@ -27,8 +27,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/internal/testtime"
 	. "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/internal/internaltesttime"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
 
@@ -39,7 +39,7 @@ func TestUnaryNopOutboundMiddleware(t *testing.T) {
 	o := yarpctest.NewMockUnaryOutbound(mockCtrl)
 	wrappedO := ApplyUnaryOutboundTransportMiddleware(o, NopUnaryOutboundTransportMiddleware)
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 	req := &Request{
 		Caller:    "somecaller",
@@ -87,7 +87,7 @@ func TestStreamNopOutboundMiddleware(t *testing.T) {
 	o := yarpctest.NewMockStreamOutbound(mockCtrl)
 	wrappedO := ApplyStreamOutboundTransportMiddleware(o, NopStreamOutboundTransportMiddleware)
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 	req := &Request{
 		Caller:    "somecaller",
