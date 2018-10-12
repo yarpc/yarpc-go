@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-10-11T15:05:38.430445607Z
+updated: 2018-10-12T15:06:20.124016562Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -189,7 +189,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 4497e2df6f9e69048a54498c7affbbec3294ad47
+  version: fa43e7bc11baaae89f3f902b2b4d832b68234844
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -201,7 +201,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 1f849cf54d09e106002f24257b1cf8b31780c97a
+  version: 87312bc3edd028a31d662e145d02b38790f4c716
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
@@ -256,7 +256,7 @@ testImports:
   subpackages:
   - update-license
 - name: golang.org/x/lint
-  version: 9a272034dedb2a3ed05231d5604ce17fb40f0e58
+  version: 5906bd5c48cd840279ace88b165057fbbd7fb35a
   repo: https://github.com/golang/lint
   subpackages:
   - golint
