@@ -106,4 +106,5 @@ ignore:
  - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/common/
  - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/keyvalue/
  - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/stream/
+ - /v2/yarpcthrift/internal/
  - /yarpcproto/
