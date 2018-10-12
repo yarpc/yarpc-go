@@ -22,6 +22,8 @@ package stream
 
 import (
 	"fmt"
+	"io"
+	"strings"
 
 	streampb "go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/stream"
 )
@@ -34,17 +36,28 @@ func NewServer() streampb.HelloYARPCServer {
 }
 
 func (h *helloServer) In(req *streampb.HelloRequest, s streampb.HelloInYARPCStreamServer) error {
-	resp := fmt.Sprintf("Received %q", req.GetGreeting())
-	return s.Send(&streampb.HelloResponse{Response: resp})
+	for i := 0; i < len(req.GetGreeting()); i++ {
+		resp := fmt.Sprintf("Received %d", i)
+		if err := s.Send(&streampb.HelloResponse{Response: resp}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (h *helloServer) Out(s streampb.HelloOutYARPCStreamServer) (*streampb.HelloResponse, error) {
-	req, err := s.Recv()
-	if err != nil {
-		return nil, err
+	var msgs []string
+	for {
+		req, err := s.Recv()
+		if err == io.EOF {
+			resp := fmt.Sprintf("Received %v", strings.Join(msgs, ","))
+			return &streampb.HelloResponse{Response: resp}, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		msgs = append(msgs, req.GetGreeting())
 	}
-	resp := fmt.Sprintf("Received %q", req.GetGreeting())
-	return &streampb.HelloResponse{Response: resp}, nil
 }
 
 func (h *helloServer) Bidirectional(s streampb.HelloBidirectionalYARPCStreamServer) error {
@@ -59,7 +72,8 @@ func (h *helloServer) Bidirectional(s streampb.HelloBidirectionalYARPCStreamServ
 		}
 
 		resp := fmt.Sprintf("Received %q", req.GetGreeting())
-		if err := s.Send(&streampb.HelloResponse{Response: resp}); err != nil {
+		err = s.Send(&streampb.HelloResponse{Response: resp})
+		if err != nil {
 			return err
 		}
 	}
