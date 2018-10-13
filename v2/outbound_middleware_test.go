@@ -27,7 +27,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	. "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/internal/internaltesttime"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
@@ -37,19 +37,19 @@ func TestUnaryNopOutboundMiddleware(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	o := yarpctest.NewMockUnaryOutbound(mockCtrl)
-	wrappedO := ApplyUnaryOutboundTransportMiddleware(o, NopUnaryOutboundTransportMiddleware)
+	wrappedO := yarpc.ApplyUnaryOutboundTransportMiddleware(o, yarpc.NopUnaryOutboundTransportMiddleware)
 
 	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
-	req := &Request{
+	req := &yarpc.Request{
 		Caller:    "somecaller",
 		Service:   "someservice",
-		Encoding:  Encoding("raw"),
+		Encoding:  yarpc.Encoding("raw"),
 		Procedure: "hello",
 	}
-	reqBuf := NewBufferBytes([]byte{1, 2, 3})
-	resp := &Response{}
-	respBuf := NewBufferBytes([]byte{4, 5, 6})
+	reqBuf := yarpc.NewBufferBytes([]byte{1, 2, 3})
+	resp := &yarpc.Response{}
+	respBuf := yarpc.NewBufferBytes([]byte{4, 5, 6})
 	o.EXPECT().Call(ctx, req, reqBuf).Return(resp, respBuf, nil)
 
 	gotResp, gotRespBuf, err := wrappedO.Call(ctx, req, reqBuf)
@@ -65,7 +65,7 @@ func TestNilOutboundMiddleware(t *testing.T) {
 
 	t.Run("unary", func(t *testing.T) {
 		out := yarpctest.NewMockUnaryOutbound(ctrl)
-		_ = ApplyUnaryOutboundTransportMiddleware(out, nil)
+		_ = yarpc.ApplyUnaryOutboundTransportMiddleware(out, nil)
 	})
 }
 
@@ -76,7 +76,7 @@ func TestOutboundMiddleware(t *testing.T) {
 	t.Run("unary", func(t *testing.T) {
 		out := yarpctest.NewMockUnaryOutbound(ctrl)
 		mw := yarpctest.NewMockUnaryOutboundTransportMiddleware(ctrl)
-		_ = ApplyUnaryOutboundTransportMiddleware(out, mw)
+		_ = yarpc.ApplyUnaryOutboundTransportMiddleware(out, mw)
 	})
 }
 
@@ -85,14 +85,14 @@ func TestStreamNopOutboundMiddleware(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	o := yarpctest.NewMockStreamOutbound(mockCtrl)
-	wrappedO := ApplyStreamOutboundTransportMiddleware(o, NopStreamOutboundTransportMiddleware)
+	wrappedO := yarpc.ApplyStreamOutboundTransportMiddleware(o, yarpc.NopStreamOutboundTransportMiddleware)
 
 	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
-	req := &Request{
+	req := &yarpc.Request{
 		Caller:    "somecaller",
 		Service:   "someservice",
-		Encoding:  Encoding("raw"),
+		Encoding:  yarpc.Encoding("raw"),
 		Procedure: "hello",
 	}
 
@@ -109,7 +109,7 @@ func TestStreamDefaultsToOutboundWhenNil(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	o := yarpctest.NewMockStreamOutbound(mockCtrl)
-	wrappedO := ApplyStreamOutboundTransportMiddleware(o, nil)
+	wrappedO := yarpc.ApplyStreamOutboundTransportMiddleware(o, nil)
 	assert.Equal(t, wrappedO, o)
 }
 
@@ -118,5 +118,5 @@ func TestStreamMiddlewareCallsUnderlyingFunctions(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	o := yarpctest.NewMockStreamOutbound(mockCtrl)
-	_ = ApplyStreamOutboundTransportMiddleware(o, NopStreamOutboundTransportMiddleware)
+	_ = yarpc.ApplyStreamOutboundTransportMiddleware(o, yarpc.NopStreamOutboundTransportMiddleware)
 }

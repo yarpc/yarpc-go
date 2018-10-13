@@ -27,7 +27,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	. "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
 
@@ -37,9 +37,9 @@ func TestApplyRouteTable(t *testing.T) {
 	routerMiddleware := yarpctest.NewMockRouterMiddleware(ctrl)
 	routeTable := yarpctest.NewMockRouteTable(ctrl)
 
-	rtWithMW := ApplyRouteTable(routeTable, routerMiddleware)
+	rtWithMW := yarpc.ApplyRouteTable(routeTable, routerMiddleware)
 
-	routeTableWithMW, ok := rtWithMW.(RouteTableWithMiddleware)
+	routeTableWithMW, ok := rtWithMW.(yarpc.RouteTableWithMiddleware)
 	require.True(t, ok, "unexpected RouteTable type")
 
 	assert.Equal(t, routeTableWithMW.GetRouterMiddleware(), routerMiddleware)
@@ -54,14 +54,14 @@ func TestRouteTableMiddleware(t *testing.T) {
 	routeTable := yarpctest.NewMockRouteTable(ctrl)
 
 	ctx := context.Background()
-	req := &Request{}
-	spec := NewUnaryTransportHandlerSpec(yarpctest.NewMockUnaryTransportHandler(ctrl))
+	req := &yarpc.Request{}
+	spec := yarpc.NewUnaryTransportHandlerSpec(yarpctest.NewMockUnaryTransportHandler(ctrl))
 
-	routeTableWithMW := ApplyRouteTable(routeTable, routerMiddleware)
+	routeTableWithMW := yarpc.ApplyRouteTable(routeTable, routerMiddleware)
 
 	// register procedures
 	routeTable.EXPECT().Register(gomock.Any())
-	routeTableWithMW.Register([]Procedure{})
+	routeTableWithMW.Register([]yarpc.Procedure{})
 
 	// choose handlerSpec
 	routerMiddleware.EXPECT().Choose(ctx, req, routeTable).Return(spec, nil)
@@ -70,6 +70,6 @@ func TestRouteTableMiddleware(t *testing.T) {
 	assert.Equal(t, spec, spec)
 
 	// get procedures
-	routerMiddleware.EXPECT().Procedures(routeTable).Return([]Procedure{})
+	routerMiddleware.EXPECT().Procedures(routeTable).Return([]yarpc.Procedure{})
 	routeTableWithMW.Procedures()
 }
