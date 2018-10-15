@@ -185,11 +185,11 @@ func TestIntegration(t *testing.T) {
 
 		res, err := stream.Recv()
 		require.NoError(t, err)
-		assert.Equal(t, `Received "Greetings!"`, res.Response)
+		assert.Equal(t, `Received "Greetings!"`, res.GetResponse())
 
 		assert.NoError(t, stream.Send(&streampb.HelloRequest{Greeting: "exit"}))
 
-		res, err = stream.Recv()
+		_, err = stream.Recv()
 		assert.Equal(t, err, io.EOF)
 	})
 }
