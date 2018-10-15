@@ -67,8 +67,8 @@ func TestEncodingHandlerSpecLogMarshaling(t *testing.T) {
 	}{
 		{
 			desc: "unary_encoding",
-			spec: NewUnaryEncodingHandlerSpec(UnaryEncodingHandlerFunc(func(context.Context, *Request, interface{}) (*Response, interface{}, error) {
-				return nil, nil, nil
+			spec: NewUnaryEncodingHandlerSpec(UnaryEncodingHandlerFunc(func(context.Context, interface{}) (interface{}, error) {
+				return nil, nil
 			})),
 			want: map[string]interface{}{"rpcType": "Unary"},
 		},

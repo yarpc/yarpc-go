@@ -122,7 +122,7 @@ type UnaryEncodingHandler interface {
 	// An error may be returned in case of failures. BadRequestError must be
 	// returned for invalid requests. All other failures are treated as
 	// UnexpectedErrors.
-	Handle(ctx context.Context, req *Request, reqBody interface{}) (*Response, interface{}, error)
+	Handle(ctx context.Context, reqBody interface{}) (interface{}, error)
 }
 
 // UnaryTransportHandlerFunc is a utility for defining a UnaryTransportHandler with just a
@@ -135,7 +135,7 @@ type StreamTransportHandlerFunc func(*ServerStream) error
 
 // UnaryEncodingHandlerFunc is a utility for defining a UnaryEncodingHandler with just a
 // function.
-type UnaryEncodingHandlerFunc func(context.Context, *Request, interface{}) (*Response, interface{}, error)
+type UnaryEncodingHandlerFunc func(context.Context, interface{}) (interface{}, error)
 
 // Handle handles an inbound unary request.
 func (f UnaryTransportHandlerFunc) Handle(ctx context.Context, r *Request, b *Buffer) (*Response, *Buffer, error) {
@@ -148,6 +148,6 @@ func (f StreamTransportHandlerFunc) HandleStream(stream *ServerStream) error {
 }
 
 // Handle handles an inbound unary request.
-func (f UnaryEncodingHandlerFunc) Handle(ctx context.Context, r *Request, rb interface{}) (*Response, interface{}, error) {
-	return f(ctx, r, rb)
+func (f UnaryEncodingHandlerFunc) Handle(ctx context.Context, b interface{}) (interface{}, error) {
+	return f(ctx, b)
 }
