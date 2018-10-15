@@ -35,6 +35,10 @@ func NewServer() streampb.HelloYARPCServer {
 	return &helloServer{}
 }
 
+// In represents a simple server-side streaming procedure. The number of messages
+// the server responds with is equal to the length of the request's greeting.
+// If the client sends a greeting "hello", for example, the server will respond
+// with five individual messages.
 func (h *helloServer) In(req *streampb.HelloRequest, s streampb.HelloInYARPCStreamServer) error {
 	for i := 0; i < len(req.GetGreeting()); i++ {
 		resp := fmt.Sprintf("Received %d", i)
@@ -45,6 +49,9 @@ func (h *helloServer) In(req *streampb.HelloRequest, s streampb.HelloInYARPCStre
 	return nil
 }
 
+// Out represents a simple client-side streaming procedure. The server will
+// collect greetings received from the stream and join them together in its
+// response.
 func (h *helloServer) Out(s streampb.HelloOutYARPCStreamServer) (*streampb.HelloResponse, error) {
 	var msgs []string
 	for {
@@ -60,6 +67,8 @@ func (h *helloServer) Out(s streampb.HelloOutYARPCStreamServer) (*streampb.Hello
 	}
 }
 
+// Bidirectional represents a simple bidirectional streaming procedure. The server
+// will continue to respond to greetings until it receives "exit".
 func (h *helloServer) Bidirectional(s streampb.HelloBidirectionalYARPCStreamServer) error {
 	for {
 		req, err := s.Recv()

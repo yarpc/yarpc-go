@@ -78,7 +78,7 @@ func newHelloClient(t *testing.T, address string) streampb.HelloYARPCClient {
 	})
 }
 
-func startProcedures(t *testing.T, transport, service string, procedures []yarpc.Procedure) (address string, stop func()) {
+func startInbounds(t *testing.T, transport, service string, procedures []yarpc.Procedure) (address string, stop func()) {
 	router := yarpcrouter.NewMapRouter(service)
 	router.Register(procedures)
 
@@ -108,7 +108,7 @@ func setupStreamingEnv(t *testing.T) (client streampb.HelloYARPCClient, stop fun
 	procedures := streampb.BuildHelloYARPCProcedures(stream.NewServer())
 	assert.Equal(t, 6, len(procedures))
 
-	addr, stop := startProcedures(t, "grpc", "hello", procedures)
+	addr, stop := startInbounds(t, "grpc", "hello", procedures)
 	return newHelloClient(t, addr), stop
 }
 
@@ -117,7 +117,7 @@ func TestIntegration(t *testing.T) {
 		procedures := keyvaluepb.BuildStoreYARPCProcedures(keyvalue.NewServer())
 		assert.Equal(t, 4, len(procedures))
 
-		addr, stop := startProcedures(t, "http", "keyvalue", procedures)
+		addr, stop := startInbounds(t, "http", "keyvalue", procedures)
 		defer stop()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
