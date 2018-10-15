@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-10-12T15:06:20.124016562Z
+updated: 2018-10-15T15:05:46.386485826Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -66,7 +66,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: c7de2306084e37d54b8be01f3541a8464345e9a5
+  version: bcb74de08d37a417cb6789eec1d6c810040f0470
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -78,7 +78,7 @@ imports:
   - nfs
   - xfs
 - name: github.com/stretchr/testify
-  version: 2db35c88b92a1631e987089b5485a95e68bc5d3a
+  version: 04af85275a5c7ac09d16bb3b9b2e751ed45154e5
   subpackages:
   - assert
   - require
@@ -201,7 +201,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 87312bc3edd028a31d662e145d02b38790f4c716
+  version: 5e66757b835f155f7e50931f54c9f6af8af86f75
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
