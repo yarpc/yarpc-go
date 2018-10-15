@@ -28,7 +28,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	. "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/internal/internaltesttime"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
@@ -38,17 +38,17 @@ func TestUnaryNopInboundMiddleware(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	h := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
-	wrappedH := ApplyUnaryInboundTransportMiddleware(h, NopUnaryInboundTransportMiddleware)
+	wrappedH := yarpc.ApplyUnaryInboundTransportMiddleware(h, yarpc.NopUnaryInboundTransportMiddleware)
 
 	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
-	req := &Request{
+	req := &yarpc.Request{
 		Caller:    "somecaller",
 		Service:   "someservice",
-		Encoding:  Encoding("raw"),
+		Encoding:  yarpc.Encoding("raw"),
 		Procedure: "hello",
 	}
-	reqBuf := NewBufferBytes([]byte{1, 2, 3})
+	reqBuf := yarpc.NewBufferBytes([]byte{1, 2, 3})
 
 	err := errors.New("great sadness")
 	h.EXPECT().Handle(ctx, req, reqBuf).Return(nil, nil, err)
@@ -62,14 +62,14 @@ func TestNilInboundMiddleware(t *testing.T) {
 	defer ctrl.Finish()
 
 	ctx := context.Background()
-	req := &Request{}
+	req := &yarpc.Request{}
 
 	t.Run("unary", func(t *testing.T) {
 		handler := yarpctest.NewMockUnaryTransportHandler(ctrl)
-		mw := ApplyUnaryInboundTransportMiddleware(handler, nil)
+		mw := yarpc.ApplyUnaryInboundTransportMiddleware(handler, nil)
 
-		handler.EXPECT().Handle(ctx, req, &Buffer{})
-		_, _, err := mw.Handle(ctx, req, &Buffer{})
+		handler.EXPECT().Handle(ctx, req, &yarpc.Buffer{})
+		_, _, err := mw.Handle(ctx, req, &yarpc.Buffer{})
 		require.NoError(t, err, "unexpected error calling handler")
 	})
 }
@@ -79,8 +79,8 @@ func TestStreamNopInboundMiddleware(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	h := yarpctest.NewMockStreamTransportHandler(mockCtrl)
-	wrappedH := ApplyStreamInboundTransportMiddleware(h, NopStreamInboundTransportMiddleware)
-	s, err := NewServerStream(yarpctest.NewMockStream(mockCtrl))
+	wrappedH := yarpc.ApplyStreamInboundTransportMiddleware(h, yarpc.NopStreamInboundTransportMiddleware)
+	s, err := yarpc.NewServerStream(yarpctest.NewMockStream(mockCtrl))
 	require.NoError(t, err)
 
 	err = errors.New("great sadness")
@@ -94,6 +94,6 @@ func TestStreamDefaultsToHandlerWhenNil(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	h := yarpctest.NewMockStreamTransportHandler(mockCtrl)
-	wrappedH := ApplyStreamInboundTransportMiddleware(h, nil)
+	wrappedH := yarpc.ApplyStreamInboundTransportMiddleware(h, nil)
 	assert.Equal(t, wrappedH, h)
 }

@@ -26,21 +26,21 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	. "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2"
 	"go.uber.org/zap/zapcore"
 )
 
 func TestValidator(t *testing.T) {
 	tests := []struct {
-		req           *Request
-		transportType Type
+		req           *yarpc.Request
+		transportType yarpc.Type
 		ttl           time.Duration
 
 		wantMissingParams []string
 	}{
 		{
 			// No error
-			req: &Request{
+			req: &yarpc.Request{
 				Caller:    "caller",
 				Service:   "service",
 				Encoding:  "raw",
@@ -50,7 +50,7 @@ func TestValidator(t *testing.T) {
 		},
 		{
 			// encoding is not required
-			req: &Request{
+			req: &yarpc.Request{
 				Caller:    "caller",
 				Service:   "service",
 				Procedure: "hello",
@@ -58,7 +58,7 @@ func TestValidator(t *testing.T) {
 			wantMissingParams: []string{"encoding"},
 		},
 		{
-			req: &Request{
+			req: &yarpc.Request{
 				Service:   "service",
 				Procedure: "hello",
 				Encoding:  "raw",
@@ -66,7 +66,7 @@ func TestValidator(t *testing.T) {
 			wantMissingParams: []string{"caller"},
 		},
 		{
-			req: &Request{
+			req: &yarpc.Request{
 				Caller:    "caller",
 				Procedure: "hello",
 				Encoding:  "raw",
@@ -74,7 +74,7 @@ func TestValidator(t *testing.T) {
 			wantMissingParams: []string{"service"},
 		},
 		{
-			req: &Request{
+			req: &yarpc.Request{
 				Caller:   "caller",
 				Service:  "service",
 				Encoding: "raw",
@@ -82,26 +82,26 @@ func TestValidator(t *testing.T) {
 			wantMissingParams: []string{"procedure"},
 		},
 		{
-			req: &Request{
+			req: &yarpc.Request{
 				Caller:    "caller",
 				Service:   "service",
 				Procedure: "hello",
 				Encoding:  "raw",
 			},
-			transportType:     Unary,
+			transportType:     yarpc.Unary,
 			wantMissingParams: []string{"TTL"},
 		},
 		{
-			req:               &Request{},
+			req:               &yarpc.Request{},
 			wantMissingParams: []string{"encoding", "caller", "service", "procedure"},
 		},
 	}
 
 	for _, tt := range tests {
 		ctx := context.Background()
-		err := ValidateRequest(tt.req)
+		err := yarpc.ValidateRequest(tt.req)
 
-		if err == nil && tt.transportType == Unary {
+		if err == nil && tt.transportType == yarpc.Unary {
 			var cancel func()
 
 			if tt.ttl != 0 {
@@ -109,7 +109,7 @@ func TestValidator(t *testing.T) {
 				defer cancel()
 			}
 
-			err = ValidateRequestContext(ctx)
+			err = yarpc.ValidateRequestContext(ctx)
 		}
 
 		if len(tt.wantMissingParams) > 0 {
@@ -125,13 +125,13 @@ func TestValidator(t *testing.T) {
 }
 
 func TestRequestLogMarshaling(t *testing.T) {
-	r := &Request{
+	r := &yarpc.Request{
 		Caller:          "caller",
 		Service:         "service",
 		Transport:       "transport",
 		Encoding:        "raw",
 		Procedure:       "procedure",
-		Headers:         NewHeaders().With("password", "super-secret"),
+		Headers:         yarpc.NewHeaders().With("password", "super-secret"),
 		ShardKey:        "shard01",
 		RoutingKey:      "routing-key",
 		RoutingDelegate: "routing-delegate",
