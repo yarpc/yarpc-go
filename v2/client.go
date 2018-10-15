@@ -38,3 +38,8 @@ type Client struct {
 	// be used to continuously send/recv requests over the connection.
 	Stream StreamOutbound
 }
+
+// ClientProvider is a registry of pre-configured `yarpc.Client`s.
+type ClientProvider interface {
+	Client(name string) (_ Client, ok bool)
+}
