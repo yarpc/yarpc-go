@@ -18,23 +18,46 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcgrpc
+// Package internaltesttime provides ways to scale time for tests running on CPU
+// starved systems.
+package internaltesttime
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/require"
+	"fmt"
+	"os"
+	"strconv"
+	"time"
 )
 
-func TestCodes(t *testing.T) {
-	for code, grpcCode := range _codeToGRPCCode {
-		t.Run(code.String(), func(t *testing.T) {
-			getGRPCCode, ok := _codeToGRPCCode[code]
-			require.True(t, ok)
-			require.Equal(t, grpcCode, getGRPCCode)
-			getCode, ok := _grpcCodeToCode[grpcCode]
-			require.True(t, ok)
-			require.Equal(t, code, getCode)
-		})
+var (
+	// X is the multiplier from the TEST_TIME_SCALE environment variable.
+	X = 1.0
+	// Millisecond is a millisecond dilated into test time by TEST_TIME_SCALE.
+	Millisecond = time.Millisecond
+	// Second is a second dilated into test time by TEST_TIME_SCALE.
+	Second = time.Second
+)
+
+func init() {
+	if v := os.Getenv("TEST_TIME_SCALE"); v != "" {
+		fv, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			panic(err)
+		}
+		X = fv
+		fmt.Fprintln(os.Stderr, "Scaling test time by factor", X)
 	}
+
+	Millisecond = Scale(time.Millisecond)
+	Second = Scale(time.Second)
+}
+
+// Scale returns the timeout multiplied by any set multiplier.
+func Scale(timeout time.Duration) time.Duration {
+	return time.Duration(X * float64(timeout))
+}
+
+// Sleep sleeps the given duration in test time scale.
+func Sleep(duration time.Duration) {
+	time.Sleep(Scale(duration))
 }

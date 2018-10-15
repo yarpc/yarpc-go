@@ -31,7 +31,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/yarpc/v2/internal/internaltesttime"
 	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
@@ -77,7 +77,7 @@ func TestRoundTripSuccess(t *testing.T) {
 	hreq.Header.Add(headerKey, headerVal)
 
 	// add deadline
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 	hreq = hreq.WithContext(ctx)
 

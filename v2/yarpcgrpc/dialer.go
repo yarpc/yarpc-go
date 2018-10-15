@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package grpc
+package yarpcgrpc
 
 import (
 	"context"
@@ -28,11 +28,9 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/multierr"
-	backoffapi "go.uber.org/yarpc/api/backoff"
-	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcbackoff"
 	"go.uber.org/yarpc/v2/yarpcpeer"
-	"go.uber.org/yarpc/yarpcconfig"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -59,17 +57,16 @@ type Dialer struct {
 	// The default is math.MaxInt32.
 	ClientMaxSendMsgSize int
 
+	// Credentials specifies connection level security credentials (e.g.,
+	// TLS/SSL) for outbound connections.
+	Credentials credentials.TransportCredentials
+
 	// BackoffStrategy specifies the backoff strategy for delays between
 	// connection attempts for each peer.
 	//
 	// The default is exponential backoff starting with 10ms fully jittered,
 	// doubling each attempt, with a maximum interval of 30s.
-	// TODO(apeatsbond): this is still a v1 package
-	Backoff yarpcconfig.Backoff
-
-	// Credentials specifies connection level security credentials (e.g.,
-	// TLS/SSL) for outbound connections.
-	Credentials credentials.TransportCredentials
+	Backoff yarpc.BackoffStrategy
 
 	// Tracer configures a logger for the dialer.
 	Logger *zap.Logger
@@ -85,7 +82,7 @@ type dialerInternals struct {
 	addressToPeer map[string]*grpcPeer
 
 	dialOptions []grpc.DialOption
-	backoff     backoffapi.Strategy
+	backoff     yarpc.BackoffStrategy
 
 	logger *zap.Logger
 	tracer opentracing.Tracer
@@ -95,11 +92,14 @@ type dialerInternals struct {
 func (d *Dialer) Start(context.Context) error {
 	d.internal = &dialerInternals{
 		addressToPeer: make(map[string]*grpcPeer),
-		backoff:       backoff.DefaultExponential,
+		backoff:       yarpcbackoff.DefaultExponential,
 		tracer:        opentracing.GlobalTracer(),
 		logger:        zap.NewNop(),
 	}
 
+	if d.Backoff != nil {
+		d.internal.backoff = d.Backoff
+	}
 	if d.Logger != nil {
 		d.internal.logger = d.Logger
 	}

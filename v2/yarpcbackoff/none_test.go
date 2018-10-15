@@ -18,23 +18,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcgrpc
+package yarpcbackoff
 
 import (
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestCodes(t *testing.T) {
-	for code, grpcCode := range _codeToGRPCCode {
-		t.Run(code.String(), func(t *testing.T) {
-			getGRPCCode, ok := _codeToGRPCCode[code]
-			require.True(t, ok)
-			require.Equal(t, grpcCode, getGRPCCode)
-			getCode, ok := _grpcCodeToCode[grpcCode]
-			require.True(t, ok)
-			require.Equal(t, code, getCode)
-		})
-	}
+func TestNone(t *testing.T) {
+	boff := None.Backoff()
+	assert.Equal(t, time.Duration(0), boff.Duration(0))
+	assert.Equal(t, time.Duration(0), boff.Duration(1))
+	assert.Equal(t, time.Duration(0), boff.Duration(2))
 }

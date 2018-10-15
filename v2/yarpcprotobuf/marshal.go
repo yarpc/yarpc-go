@@ -27,8 +27,8 @@ import (
 
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/gogo/protobuf/proto"
-	"go.uber.org/yarpc/internal/bufferpool"
 	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/internal/internalbufferpool"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcjson"
 )
@@ -44,8 +44,8 @@ var (
 )
 
 func unmarshal(encoding yarpc.Encoding, reader io.Reader, message proto.Message) error {
-	buf := bufferpool.Get()
-	defer bufferpool.Put(buf)
+	buf := internalbufferpool.Get()
+	defer internalbufferpool.Put(buf)
 	if _, err := buf.ReadFrom(reader); err != nil {
 		return err
 	}
@@ -86,8 +86,8 @@ func marshalProto(message proto.Message) ([]byte, func(), error) {
 }
 
 func marshalJSON(message proto.Message) ([]byte, func(), error) {
-	buf := bufferpool.Get()
-	cleanup := func() { bufferpool.Put(buf) }
+	buf := internalbufferpool.Get()
+	cleanup := func() { internalbufferpool.Put(buf) }
 	if err := _jsonMarshaler.Marshal(buf, message); err != nil {
 		cleanup()
 		return nil, nil, err

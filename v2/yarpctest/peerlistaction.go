@@ -28,8 +28,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/yarpc/internal/testtime"
 	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/internal/internaltesttime"
 )
 
 // ListActionDeps are passed through PeerListActions' Apply methods in order
@@ -89,7 +89,7 @@ func (a ChooseMultiAction) Apply(t *testing.T, pl yarpc.Chooser, deps ListAction
 	for _, expectedPeer := range a.ExpectedPeers {
 		action := ChooseAction{
 			ExpectedPeer:        expectedPeer,
-			InputContextTimeout: 50 * testtime.Millisecond,
+			InputContextTimeout: 50 * internaltesttime.Millisecond,
 		}
 		action.Apply(t, pl, deps)
 	}
@@ -186,7 +186,7 @@ func (a ConcurrentAction) Apply(t *testing.T, pl yarpc.Chooser, deps ListActionD
 		}(action)
 
 		if a.Wait > 0 {
-			testtime.Sleep(a.Wait)
+			internaltesttime.Sleep(a.Wait)
 		}
 	}
 

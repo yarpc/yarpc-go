@@ -34,8 +34,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/internal/internaltesttime"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
@@ -48,7 +48,7 @@ func TestCallSuccess(t *testing.T) {
 			ttl := httpReq.Header.Get(TTLMSHeader)
 			ttlms, err := strconv.Atoi(ttl)
 			assert.NoError(t, err, "can parse TTL header")
-			assert.InDelta(t, ttlms, testtime.X*1000.0, testtime.X*5.0, "ttl header within tolerance")
+			assert.InDelta(t, ttlms, internaltesttime.X*1000.0, internaltesttime.X*5.0, "ttl header within tolerance")
 
 			assert.Equal(t, "caller", httpReq.Header.Get(CallerHeader))
 			assert.Equal(t, "service", httpReq.Header.Get(ServiceHeader))
@@ -77,7 +77,7 @@ func TestCallSuccess(t *testing.T) {
 		URL:    parseURL(successServer.URL),
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 	response, responseBuf, err := outbound.Call(ctx, &yarpc.Request{
 		Caller:    "caller",
@@ -180,7 +180,7 @@ func TestOutboundHeaders(t *testing.T) {
 			ctx := tt.context
 			if ctx == nil {
 				var cancel context.CancelFunc
-				ctx, cancel = context.WithTimeout(context.Background(), testtime.Second)
+				ctx, cancel = context.WithTimeout(context.Background(), internaltesttime.Second)
 				defer cancel()
 			}
 
@@ -245,7 +245,7 @@ func TestOutboundApplicationError(t *testing.T) {
 			outbound := &Outbound{Dialer: dialer, URL: parseURL(server.URL)}
 
 			ctx := context.Background()
-			ctx, cancel := context.WithTimeout(ctx, 100*testtime.Millisecond)
+			ctx, cancel := context.WithTimeout(ctx, 100*internaltesttime.Millisecond)
 			defer cancel()
 
 			response, _, err := outbound.Call(ctx, &yarpc.Request{
@@ -290,7 +290,7 @@ func TestCallFailures(t *testing.T) {
 
 			outbound := &Outbound{Dialer: dialer, URL: parseURL(tt.url)}
 
-			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 			defer cancel()
 			_, _, err := outbound.Call(ctx, &yarpc.Request{
 				Caller:    "caller",
@@ -431,7 +431,7 @@ func TestServiceMatchSuccess(t *testing.T) {
 		URL:    parseURL(matchServer.URL),
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 	_, _, err := outbound.Call(ctx, &yarpc.Request{Service: "Service"}, &yarpc.Buffer{})
 	require.NoError(t, err)
@@ -458,7 +458,7 @@ func TestServiceMatchFailed(t *testing.T) {
 		URL:    parseURL(mismatchServer.URL),
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 	_, _, err := outbound.Call(ctx, &yarpc.Request{Service: "Service"}, &yarpc.Buffer{})
 	assert.Error(t, err, "expected failure for service name dismatch")
@@ -485,7 +485,7 @@ func TestServiceMatchNoHeader(t *testing.T) {
 		URL:    parseURL(noHeaderServer.URL),
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 	_, _, err := outbound.Call(ctx, &yarpc.Request{Service: "Service"}, &yarpc.Buffer{})
 	require.NoError(t, err)

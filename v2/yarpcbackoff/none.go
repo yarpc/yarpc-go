@@ -18,23 +18,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcgrpc
+package yarpcbackoff
 
 import (
-	"testing"
+	"time"
 
-	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/v2"
 )
 
-func TestCodes(t *testing.T) {
-	for code, grpcCode := range _codeToGRPCCode {
-		t.Run(code.String(), func(t *testing.T) {
-			getGRPCCode, ok := _codeToGRPCCode[code]
-			require.True(t, ok)
-			require.Equal(t, grpcCode, getGRPCCode)
-			getCode, ok := _grpcCodeToCode[grpcCode]
-			require.True(t, ok)
-			require.Equal(t, code, getCode)
-		})
-	}
+// None is a shorted backoff strategy that will always produce a 0ms duration.
+// This strategy is intended to minimize arbitrary delays during tests or
+// maximize load on a benchmark.
+var None yarpc.BackoffStrategy = &none{}
+
+type none struct{}
+
+// Backoff implements Strategy.
+func (n *none) Backoff() yarpc.Backoff {
+	return n
+}
+
+// Duration implements Backoff.
+func (*none) Duration(attempts uint) time.Duration {
+	return time.Duration(0)
 }

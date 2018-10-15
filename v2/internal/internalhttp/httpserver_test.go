@@ -31,8 +31,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/internal/testtime"
-	"go.uber.org/yarpc/internal/yarpctest"
+	"go.uber.org/yarpc/v2/internal/internaltesttime"
+	"go.uber.org/yarpc/v2/internal/internalyarpctest"
 )
 
 func TestStartAndShutdown(t *testing.T) {
@@ -40,7 +40,7 @@ func TestStartAndShutdown(t *testing.T) {
 	require.NoError(t, server.ListenAndServe())
 
 	require.NotNil(t, server.Listener())
-	addr := yarpctest.ZeroAddrToHostPort(server.Listener().Addr())
+	addr := internalyarpctest.ZeroAddrToHostPort(server.Listener().Addr())
 
 	conn, err := net.Dial("tcp", addr)
 	require.NoError(t, err)
@@ -56,7 +56,7 @@ func TestStartAddrInUse(t *testing.T) {
 	require.NoError(t, s1.ListenAndServe())
 	defer s1.Shutdown(context.Background())
 
-	addr := yarpctest.ZeroAddrToHostPort(s1.Listener().Addr())
+	addr := internalyarpctest.ZeroAddrToHostPort(s1.Listener().Addr())
 	s2 := NewHTTPServer(&http.Server{Addr: addr})
 	err := s2.ListenAndServe()
 
@@ -103,6 +103,6 @@ func TestShutdownError(t *testing.T) {
 	server := NewHTTPServer(&http.Server{Addr: ":0"})
 	require.NoError(t, server.ListenAndServe())
 	require.NoError(t, server.Listener().Close())
-	time.Sleep(5 * testtime.Millisecond)
+	time.Sleep(5 * internaltesttime.Millisecond)
 	require.Error(t, server.Shutdown(context.Background()))
 }

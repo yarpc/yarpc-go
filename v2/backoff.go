@@ -18,23 +18,29 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcgrpc
+package yarpc
 
-import (
-	"testing"
+import "time"
 
-	"github.com/stretchr/testify/require"
-)
+// BackoffStrategy is a factory for backoff algorithms.
+// Each backoff instance may capture some state, typically a random number
+// generator.
+// The strategy guarantees that these backoff instances are either
+// referentially independent and lockless or thread safe.
+//
+// Backoff strategies are useful for configuring retry loops, balancing the
+// need to recover quickly against denial of service as a failure mode.
+type BackoffStrategy interface {
+	Backoff() Backoff
+}
 
-func TestCodes(t *testing.T) {
-	for code, grpcCode := range _codeToGRPCCode {
-		t.Run(code.String(), func(t *testing.T) {
-			getGRPCCode, ok := _codeToGRPCCode[code]
-			require.True(t, ok)
-			require.Equal(t, grpcCode, getGRPCCode)
-			getCode, ok := _grpcCodeToCode[grpcCode]
-			require.True(t, ok)
-			require.Equal(t, code, getCode)
-		})
-	}
+// Backoff is an algorithm for determining how long to wait after a number of
+// attempts to perform some action.
+// Backoff strategies typically use a random number generator that uses some
+// state for feedback.
+// Instances of backoff are intended to be used in the stack of a single
+// goroutine and must therefore either be referentially independent or lock
+// safe.
+type Backoff interface {
+	Duration(attempts uint) time.Duration
 }

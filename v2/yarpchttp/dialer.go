@@ -30,9 +30,8 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
-	backoffapi "go.uber.org/yarpc/api/backoff"
-	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcbackoff"
 	"go.uber.org/yarpc/v2/yarpcpeer"
 	"go.uber.org/zap"
 )
@@ -115,7 +114,7 @@ type Dialer struct {
 	//
 	// The default is exponential backoff starting with 10ms fully jittered,
 	// doubling each attempt, with a maximum interval of 30s.
-	ConnBackoff backoffapi.Strategy
+	ConnBackoff yarpc.BackoffStrategy
 
 	// InnocenceWindow is the duration after the peer connection management loop
 	// will suspend suspicion for a peer after successfully checking whether the
@@ -161,7 +160,7 @@ type dialerInternals struct {
 	keepAlive           time.Duration
 	maxIdleConnsPerHost int
 	connTimeout         time.Duration
-	connBackoffStrategy backoffapi.Strategy
+	connBackoffStrategy yarpc.BackoffStrategy
 	buildClient         func(*Dialer) *http.Client
 	innocenceWindow     time.Duration
 	jitter              func(int64) int64
@@ -176,7 +175,7 @@ func (d *Dialer) Start(_ context.Context) error {
 		keepAlive:           30 * time.Second,
 		maxIdleConnsPerHost: 2,
 		connTimeout:         defaultConnTimeout,
-		connBackoffStrategy: backoff.DefaultExponential,
+		connBackoffStrategy: yarpcbackoff.DefaultExponential,
 		innocenceWindow:     defaultInnocenceWindow,
 		jitter:              rand.Int63n,
 		peers:               make(map[string]*httpPeer),
