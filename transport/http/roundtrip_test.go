@@ -31,6 +31,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/yarpcerrors"
 )
@@ -62,13 +63,13 @@ func TestRoundTripSuccess(t *testing.T) {
 
 	// start outbound
 	httpTransport := NewTransport()
-	out := httpTransport.NewSingleOutbound(echoServer.URL)
+	var out transport.UnaryOutbound
+	out = httpTransport.NewSingleOutbound(echoServer.URL)
 	require.NoError(t, out.Start(), "failed to start outbound")
 	defer out.Stop()
 
 	// create request
-	hreq, err := http.NewRequest("GET", echoServer.URL, bytes.NewReader([]byte(giveBody)))
-	require.NoError(t, err, "could not create HTTP request")
+	hreq := httptest.NewRequest("GET", echoServer.URL, bytes.NewReader([]byte(giveBody)))
 	hreq.Header.Add(headerKey, headerVal)
 
 	// add deadline
@@ -77,8 +78,10 @@ func TestRoundTripSuccess(t *testing.T) {
 	hreq = hreq.WithContext(ctx)
 
 	// make call
-	client := http.Client{Transport: out}
-	res, err := client.Do(hreq)
+	rt, ok := out.(http.RoundTripper)
+	assert.True(t, ok, "unable to convert an outbound to a http.RoundTripper")
+
+	res, err := rt.RoundTrip(hreq)
 	require.NoError(t, err, "could not make call")
 	defer res.Body.Close()
 

@@ -35,6 +35,8 @@ Note that "FQMN", "FQSN", etc stand for "Fully Qualified Message Name",
 package protoplugin
 
 import (
+	"bytes"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -138,10 +140,35 @@ func (g *GoPackage) String() string {
 // File wraps descriptor.FileDescriptorProto for richer features.
 type File struct {
 	*descriptor.FileDescriptorProto
-	GoPackage *GoPackage
-	Messages  []*Message
-	Enums     []*Enum
-	Services  []*Service
+	GoPackage              *GoPackage
+	Messages               []*Message
+	Enums                  []*Enum
+	Services               []*Service
+	TransitiveDependencies []*File
+}
+
+// SerializedFileDescriptor returns a gzipped marshalled representation of the FileDescriptor.
+func (f *File) SerializedFileDescriptor() ([]byte, error) {
+	pb := proto.Clone(f.FileDescriptorProto).(*descriptor.FileDescriptorProto)
+	pb.SourceCodeInfo = nil
+
+	b, err := proto.Marshal(pb)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	w, err := gzip.NewWriterLevel(&buf, gzip.BestCompression)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = w.Write(b)
+	if err != nil {
+		return nil, err
+	}
+	w.Close()
+	return buf.Bytes(), nil
 }
 
 // Message describes a protocol buffer message types.

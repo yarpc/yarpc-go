@@ -24,6 +24,9 @@
 package lib
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -253,6 +256,7 @@ type Fx{{$service.GetName}}YARPCProceduresResult struct {
 	fx.Out
 
 	Procedures []transport.Procedure ` + "`" + `group:"yarpcfx"` + "`" + `
+	ReflectionMeta reflection.ServerMeta ` + "`" + `group:"yarpcfx"` + "`" + `
 }
 
 // NewFx{{$service.GetName}}YARPCProcedures provides {{$service.GetName}}YARPCServer procedures to an Fx application.
@@ -266,6 +270,10 @@ func NewFx{{$service.GetName}}YARPCProcedures() interface{} {
 	return func(params Fx{{$service.GetName}}YARPCProceduresParams) Fx{{$service.GetName}}YARPCProceduresResult {
 		return Fx{{$service.GetName}}YARPCProceduresResult{
 			Procedures: Build{{$service.GetName}}YARPCProcedures(params.Server),
+			ReflectionMeta: reflection.ServerMeta{
+				ServiceName: "{{trimPrefixPeriod $service.FQSN}}",
+				FileDescriptors: {{ fileDescriptorClosureVarName .File }},
+			},
 		}
 	}
 }
@@ -548,6 +556,14 @@ var (
 	empty{{$service.GetName}}Service{{$method.GetName}}YARPCResponse = &{{$method.ResponseType.GoType $packagePath}}{}{{end}}
 )
 {{end}}
+
+var {{ fileDescriptorClosureVarName .File }} = [][]byte{
+	// {{ .Name }}
+	{{ encodedFileDescriptor .File }},{{range $dependency := .TransitiveDependencies }}
+	// {{ $dependency.Name }}
+	{{ encodedFileDescriptor $dependency }},{{end}}
+}
+
 {{if .Services}}func init() { {{range $service := .Services}}
 	yarpc.RegisterClientBuilder(
 		func(clientConfig transport.ClientConfig, structField reflect.StructField) {{$service.GetName}}YARPCClient {
@@ -566,6 +582,8 @@ var Runner = protoplugin.NewRunner(
 			"clientStreamingMethods":       clientStreamingMethods,
 			"serverStreamingMethods":       serverStreamingMethods,
 			"clientServerStreamingMethods": clientServerStreamingMethods,
+			"encodedFileDescriptor":        encodedFileDescriptor,
+			"fileDescriptorClosureVarName": fileDescriptorClosureVarName,
 			"trimPrefixPeriod":             trimPrefixPeriod,
 		}).Parse(tmpl)),
 	checkTemplateInfo,
@@ -578,6 +596,7 @@ var Runner = protoplugin.NewRunner(
 		"go.uber.org/yarpc",
 		"go.uber.org/yarpc/api/transport",
 		"go.uber.org/yarpc/encoding/protobuf",
+		"go.uber.org/yarpc/encoding/protobuf/reflection",
 	},
 	func(file *protoplugin.File) (string, error) {
 		name := file.GetName()
@@ -640,6 +659,51 @@ func clientServerStreamingMethods(service *protoplugin.Service) ([]*protoplugin.
 		}
 	}
 	return methods, nil
+}
+
+// fileDescriptorClosureVarName is used to refer to a variable that contains a closure of all encoded
+// file descriptors required to interpret a specific proto file. It is used in the yarpc codebase to
+// attach reflection information to services.
+func fileDescriptorClosureVarName(f *protoplugin.File) (string, error) {
+	name := f.GetName()
+	if name == "" {
+		return "", fmt.Errorf("Could not create fileDescriptorClosureVarName: %s has no name", f)
+	}
+
+	// Use a sha256 of the filename instead of the filename to prevent any characters that are illegal
+	// as golang identifiers and to discourage external usage of this constant.
+	h := sha256.Sum256([]byte(name))
+	return fmt.Sprintf("yarpcFileDescriptorClosure%s", hex.EncodeToString(h[:8])), nil
+}
+
+func encodedFileDescriptor(f *protoplugin.File) (string, error) {
+	fdBytes, err := f.SerializedFileDescriptor()
+	if err != nil {
+		return "", err
+	}
+
+	// Create string that contains a golang byte slice literal containing the
+	// serialized file descriptor:
+	//
+	// []byte{
+	//     0x00, 0x01, 0x02, ..., 0xFF,	// Up to 16 bytes per line
+	// }
+	//
+	var buf bytes.Buffer
+	buf.WriteString("[]byte{\n")
+	for len(fdBytes) > 0 {
+		n := 16
+		if n > len(fdBytes) {
+			n = len(fdBytes)
+		}
+		for _, c := range fdBytes[:n] {
+			fmt.Fprintf(&buf, "0x%02x,", c)
+		}
+		buf.WriteString("\n")
+		fdBytes = fdBytes[n:]
+	}
+	buf.WriteString("}")
+	return buf.String(), nil
 }
 
 func trimPrefixPeriod(s string) string {

@@ -67,6 +67,7 @@ func testGolden(
 		ProtoFile: []*descriptor.FileDescriptorProto{
 			getFileDescriptorProto(t, "encoding/protobuf/protoc-gen-yarpc-go/internal/testing/dep.proto"),
 			getFileDescriptorProto(t, "yarpcproto/yarpc.proto"),
+			getFileDescriptorProto(t, "google/protobuf/duration.proto"),
 			getFileDescriptorProto(t, inputFilePath),
 		},
 	}
