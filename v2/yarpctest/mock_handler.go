@@ -127,15 +127,14 @@ func (m *MockUnaryEncodingHandler) EXPECT() *MockUnaryEncodingHandlerMockRecorde
 }
 
 // Handle mocks base method
-func (m *MockUnaryEncodingHandler) Handle(arg0 context.Context, arg1 *v2.Request, arg2 interface{}) (*v2.Response, interface{}, error) {
-	ret := m.ctrl.Call(m, "Handle", arg0, arg1, arg2)
-	ret0, _ := ret[0].(*v2.Response)
-	ret1, _ := ret[1].(interface{})
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+func (m *MockUnaryEncodingHandler) Handle(arg0 context.Context, arg1 interface{}) (interface{}, error) {
+	ret := m.ctrl.Call(m, "Handle", arg0, arg1)
+	ret0, _ := ret[0].(interface{})
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Handle indicates an expected call of Handle
-func (mr *MockUnaryEncodingHandlerMockRecorder) Handle(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Handle", reflect.TypeOf((*MockUnaryEncodingHandler)(nil).Handle), arg0, arg1, arg2)
+func (mr *MockUnaryEncodingHandlerMockRecorder) Handle(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Handle", reflect.TypeOf((*MockUnaryEncodingHandler)(nil).Handle), arg0, arg1)
 }
