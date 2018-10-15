@@ -26,6 +26,7 @@ package keyvaluepb
 
 import (
 	context "context"
+	fmt "fmt"
 	proto "github.com/gogo/protobuf/proto"
 	fx "go.uber.org/fx"
 	yarpc "go.uber.org/yarpc/v2"
@@ -151,7 +152,7 @@ func (h *_StoreYARPCServer) Set(ctx context.Context, m proto.Message) (proto.Mes
 type FxStoreYARPCClientParams struct {
 	fx.In
 
-	Client yarpc.Client
+	ClientProvider yarpc.ClientProvider
 }
 
 // FxStoreYARPCClientResult provides a StoreYARPCClient
@@ -170,12 +171,16 @@ type FxStoreYARPCClientResult struct {
 //    keyvaluepb.NewFxStoreYARPCClient("service-name"),
 //    ...
 //  )
-// TODO(mensch): How will this work in v2?
-func NewFxStoreYARPCClient(_ string, opts ...yarpcprotobuf.ClientOption) interface{} {
-	return func(p FxStoreYARPCClientParams) FxStoreYARPCClientResult {
-		return FxStoreYARPCClientResult{
-			Client: NewStoreYARPCClient(p.Client, opts...),
+func NewFxStoreYARPCClient(name string, opts ...yarpcprotobuf.ClientOption) interface{} {
+	return func(p FxStoreYARPCClientParams) (FxStoreYARPCClientResult, error) {
+		client, ok := p.ClientProvider.Client(name)
+		if !ok {
+			return FxStoreYARPCClientResult{},
+				fmt.Errorf("generated code could not retrieve client for %q", name)
 		}
+		return FxStoreYARPCClientResult{
+			Client: NewStoreYARPCClient(client, opts...),
+		}, nil
 	}
 }
 

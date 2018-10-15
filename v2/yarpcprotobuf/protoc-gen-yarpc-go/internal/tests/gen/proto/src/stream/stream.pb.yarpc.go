@@ -26,6 +26,7 @@ package streampb
 
 import (
 	context "context"
+	fmt "fmt"
 	fx "go.uber.org/fx"
 	yarpc "go.uber.org/yarpc/v2"
 	yarpcprotobuf "go.uber.org/yarpc/v2/yarpcprotobuf"
@@ -359,7 +360,7 @@ func (s *_HelloBidirectionalYARPCStreamServer) Send(res *HelloResponse, opts ...
 type FxHelloYARPCClientParams struct {
 	fx.In
 
-	Client yarpc.Client
+	ClientProvider yarpc.ClientProvider
 }
 
 // FxHelloYARPCClientResult provides a HelloYARPCClient
@@ -378,12 +379,16 @@ type FxHelloYARPCClientResult struct {
 //    streampb.NewFxHelloYARPCClient("service-name"),
 //    ...
 //  )
-// TODO(mensch): How will this work in v2?
-func NewFxHelloYARPCClient(_ string, opts ...yarpcprotobuf.ClientOption) interface{} {
-	return func(p FxHelloYARPCClientParams) FxHelloYARPCClientResult {
-		return FxHelloYARPCClientResult{
-			Client: NewHelloYARPCClient(p.Client, opts...),
+func NewFxHelloYARPCClient(name string, opts ...yarpcprotobuf.ClientOption) interface{} {
+	return func(p FxHelloYARPCClientParams) (FxHelloYARPCClientResult, error) {
+		client, ok := p.ClientProvider.Client(name)
+		if !ok {
+			return FxHelloYARPCClientResult{},
+				fmt.Errorf("generated code could not retrieve client for %q", name)
 		}
+		return FxHelloYARPCClientResult{
+			Client: NewHelloYARPCClient(client, opts...),
+		}, nil
 	}
 }
 
