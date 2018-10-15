@@ -20,25 +20,21 @@
 
 package yarpc
 
-import "context"
+// Client is a configuration for how to call into another service.
+// It is used in conjunction with an encoding to send a request through
+// outbounds by RPC type.
+type Client struct {
+	// Caller is the name of the local service.
+	Caller string
 
-// UnaryOutbound is a transport that knows how to send unary requests for procedure
-// calls.
-type UnaryOutbound interface {
-	// Call sends the given request through this transport and returns its
-	// response.
-	//
-	// This MUST NOT be called before Start() has been called successfully. This
-	// MAY panic if called without calling Start(). This MUST be safe to call
-	// concurrently.
-	Call(context.Context, *Request, *Buffer) (*Response, *Buffer, error)
-}
+	// Service is the name of the remote service.
+	Service string
 
-// StreamOutbound is a transport that knows how to send stream requests for
-// procedure calls.
-type StreamOutbound interface {
-	// CallStream creates a stream connection based on the metadata in the
-	// request passed in.  If there is a timeout on the context, this timeout
-	// is for establishing a connection, and not for the lifetime of the stream.
-	CallStream(context.Context, *Request) (*ClientStream, error)
+	// If set, this is the unary outbound which sends a request and waits for
+	// the response.
+	Unary UnaryOutbound
+
+	// If set, this is the stream outbound which creates a ClientStream that can
+	// be used to continuously send/recv requests over the connection.
+	Stream StreamOutbound
 }
