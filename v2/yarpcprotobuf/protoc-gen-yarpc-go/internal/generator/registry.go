@@ -57,6 +57,7 @@ func newRegistry(req *plugin.CodeGeneratorRequest) (*registry, error) {
 		packages: make(map[string]string),
 		imports: Imports{
 			"context":                            "context",
+			"fmt":                                "fmt",
 			"go.uber.org/fx":                     "fx",
 			"github.com/gogo/protobuf/proto":     "proto",
 			"go.uber.org/yarpc/v2":               "yarpc",
