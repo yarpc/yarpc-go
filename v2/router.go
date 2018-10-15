@@ -70,6 +70,7 @@ type EncodingProcedure struct {
 	Codec InboundCodec
 }
 
+// InboundCodec helps convert the request/response bodies to & from interface{}
 type InboundCodec interface {
 	Decode(req *Buffer) (interface{}, error)
 
