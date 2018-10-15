@@ -22,6 +22,9 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"io"
+	"net"
 	"net/url"
 	"testing"
 	"time"
@@ -29,6 +32,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	yarpc "go.uber.org/yarpc/v2"
+	yarpcgrpc "go.uber.org/yarpc/v2/yarpcgrpc"
 	"go.uber.org/yarpc/v2/yarpchttp"
 	commonpb "go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/common"
 	keyvaluepb "go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/keyvalue"
@@ -38,12 +42,17 @@ import (
 	"go.uber.org/yarpc/v2/yarpcrouter"
 )
 
-func newKeyValueClient(t *testing.T) keyvaluepb.StoreYARPCClient {
+type testInbound interface {
+	Start(context.Context) error
+	Stop(context.Context) error
+}
+
+func newKeyValueClient(t *testing.T, address string) keyvaluepb.StoreYARPCClient {
 	dialer := &yarpchttp.Dialer{}
 	require.NoError(t, dialer.Start(context.Background()))
 
 	outbound := &yarpchttp.Outbound{
-		URL:    &url.URL{Scheme: "http", Host: "127.0.0.1:8888"},
+		URL:    &url.URL{Scheme: "http", Host: address},
 		Dialer: dialer,
 	}
 
@@ -54,24 +63,53 @@ func newKeyValueClient(t *testing.T) keyvaluepb.StoreYARPCClient {
 	})
 }
 
-func newHelloClient(t *testing.T) streampb.HelloYARPCClient {
+func newHelloClient(t *testing.T, address string) streampb.HelloYARPCClient {
+	dialer := &yarpcgrpc.Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+
+	outbound := &yarpcgrpc.Outbound{
+		URL:    &url.URL{Scheme: "http", Host: address},
+		Dialer: dialer,
+	}
 	return streampb.NewHelloYARPCClient(yarpc.Client{
 		Caller:  "test",
 		Service: "hello",
+		Stream:  outbound,
 	})
 }
 
-func startProcedures(t *testing.T, service string, procedures []yarpc.Procedure) (stop func() error) {
+func startInbounds(t *testing.T, transport, service string, procedures []yarpc.Procedure) (address string, stop func()) {
 	router := yarpcrouter.NewMapRouter(service)
 	router.Register(procedures)
 
-	inbound := &yarpchttp.Inbound{
-		Addr:   ":8888",
-		Router: router,
+	listener, err := net.Listen("tcp", ":0")
+	require.NoError(t, err)
+
+	var inbound testInbound
+	switch transport {
+	case "http":
+		inbound = &yarpchttp.Inbound{
+			Listener: listener,
+			Router:   router,
+		}
+	case "grpc":
+		inbound = &yarpcgrpc.Inbound{
+			Listener: listener,
+			Router:   router,
+		}
+	default:
+		t.Fatalf("unsupported transport: %v", transport)
 	}
 	require.NoError(t, inbound.Start(context.Background()))
 
-	return func() error { return inbound.Stop(context.Background()) }
+	return listener.Addr().String(), func() { require.NoError(t, inbound.Stop(context.Background())) }
+}
+func setupStreamingEnv(t *testing.T) (client streampb.HelloYARPCClient, stop func()) {
+	procedures := streampb.BuildHelloYARPCProcedures(stream.NewServer())
+	assert.Equal(t, 6, len(procedures))
+
+	addr, stop := startInbounds(t, "grpc", "hello", procedures)
+	return newHelloClient(t, addr), stop
 }
 
 func TestIntegration(t *testing.T) {
@@ -79,13 +117,13 @@ func TestIntegration(t *testing.T) {
 		procedures := keyvaluepb.BuildStoreYARPCProcedures(keyvalue.NewServer())
 		assert.Equal(t, 4, len(procedures))
 
-		stop := startProcedures(t, "keyvalue", procedures)
+		addr, stop := startInbounds(t, "http", "keyvalue", procedures)
 		defer stop()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		kv := newKeyValueClient(t)
+		kv := newKeyValueClient(t, addr)
 		_, err := kv.Get(ctx, &commonpb.GetRequest{Key: "notfound"})
 		assert.Contains(t, err.Error(), `failed to find value for key: "notfound"`)
 
@@ -96,18 +134,50 @@ func TestIntegration(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "bar", res.GetValue())
 	})
-	t.Run("bidirectional streaming", func(t *testing.T) {
-		t.Skip("TODO(mensch): Use the gRPC transport when available")
-		procedures := streampb.BuildHelloYARPCProcedures(stream.NewServer())
-		assert.Equal(t, 8, len(procedures))
-
-		stop := startProcedures(t, "hello", procedures)
+	t.Run("client streaming", func(t *testing.T) {
+		hello, stop := setupStreamingEnv(t)
 		defer stop()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		hello := newHelloClient(t)
+		stream, err := hello.Out(ctx)
+		require.NoError(t, err)
+
+		for i := 0; i < 4; i++ {
+			require.NoError(t, stream.Send(&streampb.HelloRequest{Greeting: fmt.Sprintf("%d", i)}))
+		}
+
+		res, err := stream.CloseAndRecv()
+		assert.NoError(t, err)
+		assert.Equal(t, "Received 0,1,2,3", res.GetResponse())
+	})
+	t.Run("server streaming", func(t *testing.T) {
+		hello, stop := setupStreamingEnv(t)
+		defer stop()
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		stream, err := hello.In(ctx, &streampb.HelloRequest{Greeting: "four"})
+		require.NoError(t, err)
+
+		for i := 0; i < 4; i++ {
+			res, err := stream.Recv()
+			require.NoError(t, err)
+			assert.Equal(t, fmt.Sprintf(`Received %d`, i), res.GetResponse())
+		}
+
+		_, err = stream.Recv()
+		assert.Equal(t, io.EOF, err)
+	})
+	t.Run("bidirectional streaming", func(t *testing.T) {
+		hello, stop := setupStreamingEnv(t)
+		defer stop()
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
 		stream, err := hello.Bidirectional(ctx)
 		require.NoError(t, err)
 
@@ -115,12 +185,11 @@ func TestIntegration(t *testing.T) {
 
 		res, err := stream.Recv()
 		require.NoError(t, err)
-		assert.Equal(t, `Received "Greetings!"`, res.Response)
+		assert.Equal(t, `Received "Greetings!"`, res.GetResponse())
 
 		assert.NoError(t, stream.Send(&streampb.HelloRequest{Greeting: "exit"}))
 
-		res, err = stream.Recv()
-		require.NoError(t, err)
-		assert.Nil(t, res)
+		_, err = stream.Recv()
+		assert.Equal(t, err, io.EOF)
 	})
 }

@@ -22,6 +22,8 @@ package stream
 
 import (
 	"fmt"
+	"io"
+	"strings"
 
 	streampb "go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/stream"
 )
@@ -33,20 +35,40 @@ func NewServer() streampb.HelloYARPCServer {
 	return &helloServer{}
 }
 
+// In represents a simple server-side streaming procedure. The number of messages
+// the server responds with is equal to the length of the request's greeting.
+// If the client sends a greeting "hello", for example, the server will respond
+// with five individual messages.
 func (h *helloServer) In(req *streampb.HelloRequest, s streampb.HelloInYARPCStreamServer) error {
-	resp := fmt.Sprintf("Received %q", req.GetGreeting())
-	return s.Send(&streampb.HelloResponse{Response: resp})
-}
-
-func (h *helloServer) Out(s streampb.HelloOutYARPCStreamServer) (*streampb.HelloResponse, error) {
-	req, err := s.Recv()
-	if err != nil {
-		return nil, err
+	for i := 0; i < len(req.GetGreeting()); i++ {
+		resp := fmt.Sprintf("Received %d", i)
+		if err := s.Send(&streampb.HelloResponse{Response: resp}); err != nil {
+			return err
+		}
 	}
-	resp := fmt.Sprintf("Received %q", req.GetGreeting())
-	return &streampb.HelloResponse{Response: resp}, nil
+	return nil
 }
 
+// Out represents a simple client-side streaming procedure. The server will
+// collect greetings received from the stream and join them together in its
+// response.
+func (h *helloServer) Out(s streampb.HelloOutYARPCStreamServer) (*streampb.HelloResponse, error) {
+	var msgs []string
+	for {
+		req, err := s.Recv()
+		if err == io.EOF {
+			resp := fmt.Sprintf("Received %v", strings.Join(msgs, ","))
+			return &streampb.HelloResponse{Response: resp}, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		msgs = append(msgs, req.GetGreeting())
+	}
+}
+
+// Bidirectional represents a simple bidirectional streaming procedure. The server
+// will continue to respond to greetings until it receives "exit".
 func (h *helloServer) Bidirectional(s streampb.HelloBidirectionalYARPCStreamServer) error {
 	for {
 		req, err := s.Recv()
@@ -59,7 +81,8 @@ func (h *helloServer) Bidirectional(s streampb.HelloBidirectionalYARPCStreamServ
 		}
 
 		resp := fmt.Sprintf("Received %q", req.GetGreeting())
-		if err := s.Send(&streampb.HelloResponse{Response: resp}); err != nil {
+		err = s.Send(&streampb.HelloResponse{Response: resp})
+		if err != nil {
 			return err
 		}
 	}
