@@ -73,13 +73,9 @@ func NewMapRouter(defaultService string, rs []yarpc.TransportProcedure) MapRoute
 }
 
 // NewMapRouterWithEncodingProcedures constructs a new MapRouter with the given default service name and registers
-// the given encoding level procedures as transport level procedures
+// the given encoding-level procedures as transport-level procedures
 func NewMapRouterWithEncodingProcedures(defaultService string, encodingProcedures []yarpc.EncodingProcedure) MapRouter {
-	router := MapRouter{
-		defaultService:            defaultService,
-		serviceProcedureEncodings: make(map[serviceProcedureEncoding]yarpc.TransportProcedure),
-		serviceNames:              map[string]struct{}{defaultService: {}},
-	}
+	router := NewMapRouter(defaultService)
 
 	transportProcedures := []yarpc.TransportProcedure{}
 	for _, p := range encodingProcedures {
