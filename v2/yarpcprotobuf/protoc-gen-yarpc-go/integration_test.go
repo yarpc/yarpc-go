@@ -24,6 +24,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/url"
 	"testing"
 	"time"
@@ -46,12 +47,12 @@ type testInbound interface {
 	Stop(context.Context) error
 }
 
-func newKeyValueClient(t *testing.T) keyvaluepb.StoreYARPCClient {
+func newKeyValueClient(t *testing.T, address string) keyvaluepb.StoreYARPCClient {
 	dialer := &yarpchttp.Dialer{}
 	require.NoError(t, dialer.Start(context.Background()))
 
 	outbound := &yarpchttp.Outbound{
-		URL:    &url.URL{Scheme: "http", Host: "127.0.0.1:8888"},
+		URL:    &url.URL{Scheme: "http", Host: address},
 		Dialer: dialer,
 	}
 
@@ -62,12 +63,12 @@ func newKeyValueClient(t *testing.T) keyvaluepb.StoreYARPCClient {
 	})
 }
 
-func newHelloClient(t *testing.T) streampb.HelloYARPCClient {
+func newHelloClient(t *testing.T, address string) streampb.HelloYARPCClient {
 	dialer := &yarpcgrpc.Dialer{}
 	require.NoError(t, dialer.Start(context.Background()))
 
 	outbound := &yarpcgrpc.Outbound{
-		URL:    &url.URL{Scheme: "http", Host: "127.0.0.1:8888"},
+		URL:    &url.URL{Scheme: "http", Host: address},
 		Dialer: dialer,
 	}
 	return streampb.NewHelloYARPCClient(yarpc.Client{
@@ -77,35 +78,38 @@ func newHelloClient(t *testing.T) streampb.HelloYARPCClient {
 	})
 }
 
-func startProcedures(t *testing.T, transport, service string, procedures []yarpc.Procedure) (stop func()) {
+func startProcedures(t *testing.T, transport, service string, procedures []yarpc.Procedure) (address string, stop func()) {
 	router := yarpcrouter.NewMapRouter(service)
 	router.Register(procedures)
+
+	listener, err := net.Listen("tcp", ":0")
+	require.NoError(t, err)
 
 	var inbound testInbound
 	switch transport {
 	case "http":
 		inbound = &yarpchttp.Inbound{
-			Addr:   ":8888",
-			Router: router,
+			Listener: listener,
+			Router:   router,
 		}
 	case "grpc":
 		inbound = &yarpcgrpc.Inbound{
-			Addr:   ":8888",
-			Router: router,
+			Listener: listener,
+			Router:   router,
 		}
 	default:
 		t.Fatalf("unsupported transport: %v", transport)
 	}
 	require.NoError(t, inbound.Start(context.Background()))
 
-	return func() { require.NoError(t, inbound.Stop(context.Background())) }
+	return listener.Addr().String(), func() { require.NoError(t, inbound.Stop(context.Background())) }
 }
-
 func setupStreamingEnv(t *testing.T) (client streampb.HelloYARPCClient, stop func()) {
 	procedures := streampb.BuildHelloYARPCProcedures(stream.NewServer())
 	assert.Equal(t, 6, len(procedures))
 
-	return newHelloClient(t), startProcedures(t, "grpc", "hello", procedures)
+	addr, stop := startProcedures(t, "grpc", "hello", procedures)
+	return newHelloClient(t, addr), stop
 }
 
 func TestIntegration(t *testing.T) {
@@ -113,12 +117,13 @@ func TestIntegration(t *testing.T) {
 		procedures := keyvaluepb.BuildStoreYARPCProcedures(keyvalue.NewServer())
 		assert.Equal(t, 4, len(procedures))
 
-		defer startProcedures(t, "http", "keyvalue", procedures)()
+		addr, stop := startProcedures(t, "http", "keyvalue", procedures)
+		defer stop()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		kv := newKeyValueClient(t)
+		kv := newKeyValueClient(t, addr)
 		_, err := kv.Get(ctx, &commonpb.GetRequest{Key: "notfound"})
 		assert.Contains(t, err.Error(), `failed to find value for key: "notfound"`)
 
