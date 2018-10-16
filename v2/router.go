@@ -70,6 +70,25 @@ type EncodingProcedure struct {
 	Codec InboundCodec
 }
 
+func (p EncodingProcedure) TransportProcedureFunc(c context.Context, r *Request, b *Buffer) (*Response, *Buffer, error) {
+	decodedBody, codecErr := p.Codec.Decode(b)
+	if codecErr != nil {
+		return nil, nil, codecErr
+	}
+
+	body, err := p.HandlerSpec.Unary().Handle(c, decodedBody)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	encodedBody, codecErr := p.Codec.Encode(body)
+	if codecErr != nil {
+		return nil, nil, codecErr
+	}
+
+	return nil, encodedBody, nil
+}
+
 // InboundCodec helps convert the request/response bodies to & from interface{}
 type InboundCodec interface {
 	Decode(req *Buffer) (interface{}, error)
