@@ -12,7 +12,7 @@
   type {{.FxClient}}Params struct {
     fx.In
 
-    Client yarpc.Client
+    ClientProvider yarpc.ClientProvider
   }
 
   // {{.FxClient}}Result provides a {{.Client}}
@@ -31,12 +31,16 @@
   //    {{$gopkg}}.New{{.FxClient}}("service-name"),
   //    ...
   //  )
-  // TODO(mensch): How will this work in v2?
-  func New{{.FxClient}}(_ string, opts ...yarpcprotobuf.ClientOption) interface{} {
-    return func(p {{.FxClient}}Params) {{.FxClient}}Result {
-      return {{.FxClient}}Result{
-        Client: New{{.Client}}(p.Client, opts...),
+  func New{{.FxClient}}(name string, opts ...yarpcprotobuf.ClientOption) interface{} {
+    return func(p {{.FxClient}}Params) ({{.FxClient}}Result, error) {
+      client, ok := p.ClientProvider.Client(name)
+      if !ok {
+        return {{.FxClient}}Result{},
+          fmt.Errorf("generated code could not retrieve client for %q", name)
       }
+      return {{.FxClient}}Result{
+        Client: New{{.Client}}(client, opts...),
+      }, nil
     }
   }
 

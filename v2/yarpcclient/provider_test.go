@@ -18,27 +18,32 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc
+package yarpcclient
 
-import "context"
+import (
+	"testing"
 
-// UnaryOutbound is a transport that knows how to send unary requests for procedure
-// calls.
-type UnaryOutbound interface {
-	// Call sends the given request through this transport and returns its
-	// response.
-	//
-	// This MUST NOT be called before Start() has been called successfully. This
-	// MAY panic if called without calling Start(). This MUST be safe to call
-	// concurrently.
-	Call(context.Context, *Request, *Buffer) (*Response, *Buffer, error)
-}
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/v2"
+)
 
-// StreamOutbound is a transport that knows how to send stream requests for
-// procedure calls.
-type StreamOutbound interface {
-	// CallStream creates a stream connection based on the metadata in the
-	// request passed in.  If there is a timeout on the context, this timeout
-	// is for establishing a connection, and not for the lifetime of the stream.
-	CallStream(context.Context, *Request) (*ClientStream, error)
+func TestProvider(t *testing.T) {
+	p := NewProvider()
+	require.NotNil(t, p)
+
+	client, ok := p.Client("foo")
+	require.False(t, ok)
+	require.Equal(t, yarpc.Client{}, client)
+
+	p.Register("foo", yarpc.Client{
+		Caller: "foo-caller",
+	})
+
+	client, ok = p.Client("foo")
+	require.True(t, ok)
+
+	assert.Equal(t, client, yarpc.Client{
+		Caller: "foo-caller",
+	})
 }

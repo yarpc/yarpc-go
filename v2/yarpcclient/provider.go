@@ -18,27 +18,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc
+package yarpcclient
 
-import "context"
+import (
+	"go.uber.org/yarpc/v2"
+)
 
-// UnaryOutbound is a transport that knows how to send unary requests for procedure
-// calls.
-type UnaryOutbound interface {
-	// Call sends the given request through this transport and returns its
-	// response.
-	//
-	// This MUST NOT be called before Start() has been called successfully. This
-	// MAY panic if called without calling Start(). This MUST be safe to call
-	// concurrently.
-	Call(context.Context, *Request, *Buffer) (*Response, *Buffer, error)
+var _ yarpc.ClientProvider = (*Provider)(nil)
+
+// Provider implements yarpc.ClientProvider.
+type Provider struct {
+	clients map[string]yarpc.Client
 }
 
-// StreamOutbound is a transport that knows how to send stream requests for
-// procedure calls.
-type StreamOutbound interface {
-	// CallStream creates a stream connection based on the metadata in the
-	// request passed in.  If there is a timeout on the context, this timeout
-	// is for establishing a connection, and not for the lifetime of the stream.
-	CallStream(context.Context, *Request) (*ClientStream, error)
+// NewProvider returns a new ClientProvider.
+func NewProvider() *Provider {
+	return &Provider{
+		clients: make(map[string]yarpc.Client),
+	}
+}
+
+// Client returns a named yarpc.Client.
+func (p *Provider) Client(name string) (yarpc.Client, bool) {
+	c, ok := p.clients[name]
+	return c, ok
+}
+
+// Register registers a yarpc.Client to the given name.
+func (p *Provider) Register(name string, client yarpc.Client) {
+	p.clients[name] = client
 }
