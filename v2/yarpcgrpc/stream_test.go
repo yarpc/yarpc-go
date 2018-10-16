@@ -17,313 +17,105 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-
-package yarpcgrpc_test
+package yarpcgrpc
 
 import (
-	"errors"
-	"io"
+	"context"
+	"fmt"
+	"io/ioutil"
+	"net"
+	"net/url"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	. "go.uber.org/yarpc/x/yarpctest"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
-func TestStreaming(t *testing.T) {
-	p := NewPortProvider(t)
-	tests := []struct {
-		name     string
-		services Lifecycle
-		requests Action
-	}{
+// return a streaming handler that echos what it receives
+func newTestEchoStreamHandler(name string, numTimes int) []yarpc.Procedure {
+	var handler = yarpc.StreamTransportHandlerFunc(func(ss *yarpc.ServerStream) error {
+		for i := 0; i < numTimes; i++ {
+			msg, err := ss.ReceiveMessage(context.Background())
+			if err != nil {
+				return err
+			}
+
+			err = ss.SendMessage(context.Background(), &yarpc.StreamMessage{
+				Body: msg.Body,
+			})
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	return []yarpc.Procedure{
 		{
-			name: "stream requests",
-			services: Lifecycles(
-				GRPCService(
-					Name("myservice"),
-					p.NamedPort("1"),
-					Proc(
-						Name("proc"),
-						EchoStreamHandler(),
-					),
-				),
-			),
-			requests: ConcurrentAction(
-				RepeatAction(
-					GRPCStreamRequest(
-						p.NamedPort("1"),
-						Service("myservice"),
-						Procedure("proc"),
-						ClientStreamActions(
-							SendStreamMsg("test"),
-							RecvStreamMsg("test"),
-							SendStreamMsg("test2"),
-							RecvStreamMsg("test2"),
-							CloseStream(),
-						),
-					),
-					10,
-				),
-				3,
-			),
+			Name:        name,
+			Service:     "test-service",
+			HandlerSpec: yarpc.NewStreamTransportHandlerSpec(handler),
 		},
-		{
-			name: "stream close from client",
-			services: Lifecycles(
-				GRPCService(
-					Name("myservice"),
-					p.NamedPort("2"),
-					Proc(
-						Name("proc"),
-						OrderedStreamHandler(
-							RecvStreamMsg("test"),
-							SendStreamMsg("test1"),
-							RecvStreamMsg("test2"),
-							SendStreamMsg("test3"),
-							RecvStreamErr(io.EOF.Error()),
-							SendStreamMsg("test4"),
-							StreamHandlerError(io.EOF),
-						),
-					),
-				),
-			),
-			requests: Actions(
-				GRPCStreamRequest(
-					p.NamedPort("2"),
-					Service("myservice"),
-					Procedure("proc"),
-					ClientStreamActions(
-						SendStreamMsg("test"),
-						RecvStreamMsg("test1"),
-						SendStreamMsg("test2"),
-						RecvStreamMsg("test3"),
-						CloseStream(),
-						RecvStreamMsg("test4"),
-					),
-				),
-			),
-		},
-		{
-			name: "stream close from server",
-			services: Lifecycles(
-				GRPCService(
-					Name("myservice"),
-					p.NamedPort("3"),
-					Proc(
-						Name("proc"),
-						OrderedStreamHandler(
-							RecvStreamMsg("test"),
-							SendStreamMsg("test1"),
-							RecvStreamMsg("test2"),
-							SendStreamMsg("test3"),
-						), // End of Stream
-					),
-				),
-			),
-			requests: Actions(
-				GRPCStreamRequest(
-					p.NamedPort("3"),
-					Service("myservice"),
-					Procedure("proc"),
-					ClientStreamActions(
-						SendStreamMsg("test"),
-						RecvStreamMsg("test1"),
-						SendStreamMsg("test2"),
-						RecvStreamMsg("test3"),
-						RecvStreamErr(io.EOF.Error()),
-					),
-				),
-			),
-		},
-		{
-			name: "stream close from server with error",
-			services: Lifecycles(
-				GRPCService(
-					Name("myservice"),
-					p.NamedPort("4"),
-					Proc(
-						Name("proc"),
-						OrderedStreamHandler(
-							RecvStreamMsg("test"),
-							SendStreamMsg("test1"),
-							RecvStreamMsg("test2"),
-							SendStreamMsg("test3"),
-							StreamHandlerError(yarpcerrors.InternalErrorf("myerroooooor")),
-						),
-					),
-				),
-			),
-			requests: Actions(
-				GRPCStreamRequest(
-					p.NamedPort("4"),
-					Service("myservice"),
-					Procedure("proc"),
-					ClientStreamActions(
-						SendStreamMsg("test"),
-						RecvStreamMsg("test1"),
-						SendStreamMsg("test2"),
-						RecvStreamMsg("test3"),
-						RecvStreamErr(yarpcerrors.InternalErrorf("myerroooooor").Error()),
-					),
-				),
-			),
-		},
-		{
-			name: "stream recv after close",
-			services: Lifecycles(
-				GRPCService(
-					Name("myservice"),
-					p.NamedPort("5"),
-					Proc(
-						Name("proc"),
-						OrderedStreamHandler(
-							RecvStreamMsg("test"),
-							RecvStreamErr(io.EOF.Error()),
-							SendStreamMsg("test1"),
-							SendStreamMsg("test2"),
-							SendStreamMsg("test3"),
-							StreamHandlerError(yarpcerrors.InternalErrorf("test")),
-						),
-					),
-				),
-			),
-			requests: Actions(
-				GRPCStreamRequest(
-					p.NamedPort("5"),
-					Service("myservice"),
-					Procedure("proc"),
-					ClientStreamActions(
-						SendStreamMsg("test"),
-						CloseStream(),
-						SendStreamMsgAndExpectError("lala", io.EOF.Error()),
-						RecvStreamMsg("test1"),
-						RecvStreamMsg("test2"),
-						RecvStreamMsg("test3"),
-						RecvStreamErr(yarpcerrors.InternalErrorf("test").Error()),
-					),
-				),
-			),
-		},
-		{
-			name: "stream header test",
-			services: Lifecycles(
-				GRPCService(
-					Name("myservice"),
-					p.NamedPort("6"),
-					Proc(
-						Name("proc"),
-						OrderedStreamHandler(
-							WantHeader("req_key", "req_val"),
-							WantHeader("req_key2", "req_val2"),
-							RecvStreamMsg("test"),
-						), // End of Stream
-					),
-				),
-			),
-			requests: Actions(
-				GRPCStreamRequest(
-					p.NamedPort("6"),
-					Service("myservice"),
-					Procedure("proc"),
-					WithHeader("req_key", "req_val"),
-					WithHeader("req_key2", "req_val2"),
-					ClientStreamActions(
-						SendStreamMsg("test"),
-						RecvStreamErr(io.EOF.Error()),
-					),
-				),
-			),
-		},
-		{
-			name: "stream invalid request",
-			services: Lifecycles(
-				GRPCService(
-					Name("myservice"),
-					p.NamedPort("7"),
-				),
-			),
-			requests: Actions(
-				GRPCStreamRequest(
-					p.NamedPort("7"),
-					Service("myservice"),
-					Procedure("proc"),
-					ClientStreamActions(
-						RecvStreamErr(yarpcerrors.UnimplementedErrorf("unrecognized procedure \"proc\" for service \"myservice\"").Error()),
-					),
-				),
-			),
-		},
-		{
-			name: "stream invalid client decode",
-			services: Lifecycles(
-				GRPCService(
-					Name("myservice"),
-					p.NamedPort("8"),
-				),
-			),
-			requests: Actions(
-				GRPCStreamRequest(
-					p.NamedPort("8"),
-					Service("myservice"),
-					Procedure("proc"),
-					ClientStreamActions(
-						SendStreamDecodeErrorAndExpectError(errors.New("nooooo"), "nooooo", "unknown"),
-					),
-				),
-			),
-		},
-		{
-			name: "stream invalid client decode yarpcerr",
-			services: Lifecycles(
-				GRPCService(
-					Name("myservice"),
-					p.NamedPort("9"),
-				),
-			),
-			requests: Actions(
-				GRPCStreamRequest(
-					p.NamedPort("9"),
-					Service("myservice"),
-					Procedure("proc"),
-					ClientStreamActions(
-						SendStreamDecodeErrorAndExpectError(yarpcerrors.InternalErrorf("test"), yarpcerrors.InternalErrorf("test").Error()),
-					),
-				),
-			),
-		},
-		{
-			name: "server invalid send read",
-			services: Lifecycles(
-				GRPCService(
-					Name("myservice"),
-					p.NamedPort("12"),
-					Proc(
-						Name("proc"),
-						OrderedStreamHandler(
-							SendStreamDecodeErrorAndExpectError(yarpcerrors.InternalErrorf("test"), yarpcerrors.InternalErrorf("test").Error()),
-						),
-					),
-				),
-			),
-			requests: Actions(
-				GRPCStreamRequest(
-					p.NamedPort("12"),
-					Service("myservice"),
-					Procedure("proc"),
-					ClientStreamActions(
-						RecvStreamErr(io.EOF.Error()),
-					),
-				),
-			),
-		},
+	}
+}
+
+func TestStream(t *testing.T) {
+	const numSends = 10
+
+	// start inbound
+	listener, err := net.Listen("tcp", ":0")
+	require.NoError(t, err)
+	defer listener.Close()
+
+	procedures := newTestEchoStreamHandler("test-procedure", numSends)
+	inbound := &Inbound{
+		Listener: listener,
+		Router:   yarpctest.NewFakeRouter(procedures),
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			require.NoError(t, tt.services.Start(t))
-			tt.requests.Run(t)
-			require.NoError(t, tt.services.Stop(t))
-		})
+	require.NoError(t, inbound.Start(context.Background()))
+	defer inbound.Stop(context.Background())
+
+	// start outbound
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
+	defer dialer.Stop(context.Background())
+
+	outbound := &Outbound{
+		Dialer: dialer,
+		URL:    &url.URL{Host: listener.Addr().String()},
 	}
+
+	// init stream
+	req := &yarpc.Request{
+		Caller:    "test-caller",
+		Service:   "test-service",
+		Encoding:  "test-encoding",
+		Procedure: "test-procedure",
+	}
+
+	clientStream, err := outbound.CallStream(context.Background(), req)
+	require.NoError(t, err, "could not get client stream")
+
+	// send and receive data
+	for i := 0; i < numSends; i++ {
+		sendMsg := fmt.Sprintf("hello world! %d", i)
+		sendStreamMsg := &yarpc.StreamMessage{
+			Body: ioutil.NopCloser(yarpc.NewBufferString(sendMsg)),
+		}
+
+		err := clientStream.SendMessage(context.Background(), sendStreamMsg)
+		require.NoError(t, err, "could not send message")
+
+		recvMsg, err := clientStream.ReceiveMessage(context.Background())
+		require.NoError(t, err)
+
+		recvBytes, err := ioutil.ReadAll(recvMsg.Body)
+		require.NoError(t, err)
+		assert.Equal(t, sendMsg, string(recvBytes))
+	}
+
+	assert.NoError(t, clientStream.Close(context.Background()))
 }
