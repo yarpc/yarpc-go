@@ -122,7 +122,7 @@ func TestNewMapRouterWithEncodingProcedures_HappyCase(t *testing.T) {
 	m := NewMapRouterWithEncodingProcedures("myservice", encodingProcedures)
 	transportProcedures := m.Procedures()
 
-	_, _, err := transportProcedures[0].HandlerSpec.Unary().Handle(nil, nil, nil)
+	_, _, err := transportProcedures[0].HandlerSpec.Unary().Handle(context.TODO(), nil, nil)
 	assert.NoError(t, err)
 }
 
@@ -145,7 +145,7 @@ func TestNewMapRouterWithEncodingProcedures_DecodeError(t *testing.T) {
 	m := NewMapRouterWithEncodingProcedures("myservice", encodingProcedures)
 	transportProcedures := m.Procedures()
 
-	_, _, err := transportProcedures[0].HandlerSpec.Unary().Handle(nil, nil, nil)
+	_, _, err := transportProcedures[0].HandlerSpec.Unary().Handle(context.TODO(), nil, nil)
 	assert.Error(t, err)
 }
 
@@ -169,7 +169,7 @@ func TestNewMapRouterWithEncodingProcedures_HandlerError(t *testing.T) {
 	m := NewMapRouterWithEncodingProcedures("myservice", encodingProcedures)
 	transportProcedures := m.Procedures()
 
-	_, _, err := transportProcedures[0].HandlerSpec.Unary().Handle(nil, nil, nil)
+	_, _, err := transportProcedures[0].HandlerSpec.Unary().Handle(context.TODO(), nil, nil)
 	assert.Error(t, err)
 }
 
@@ -194,7 +194,7 @@ func TestNewMapRouterWithEncodingProcedures_EncodeError(t *testing.T) {
 	m := NewMapRouterWithEncodingProcedures("myservice", encodingProcedures)
 	transportProcedures := m.Procedures()
 
-	_, _, err := transportProcedures[0].HandlerSpec.Unary().Handle(nil, nil, nil)
+	_, _, err := transportProcedures[0].HandlerSpec.Unary().Handle(context.TODO(), nil, nil)
 	assert.Error(t, err)
 }
 

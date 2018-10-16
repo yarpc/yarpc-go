@@ -70,6 +70,7 @@ type EncodingProcedure struct {
 	Codec InboundCodec
 }
 
+// TransportProcedureFunc helps map encoding-level procedures to transport-level procedures
 func (p EncodingProcedure) TransportProcedureFunc(c context.Context, r *Request, b *Buffer) (*Response, *Buffer, error) {
 	decodedBody, codecErr := p.Codec.Decode(b)
 	if codecErr != nil {
