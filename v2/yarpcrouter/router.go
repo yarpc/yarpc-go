@@ -79,31 +79,12 @@ func NewMapRouterWithEncodingProcedures(defaultService string, encodingProcedure
 
 	transportProcedures := []yarpc.TransportProcedure{}
 	for _, p := range encodingProcedures {
-		handler := func(c context.Context, r *yarpc.Request, b *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
-			decodedBody, codecErr := p.Codec.Decode(b)
-			if codecErr != nil {
-				return nil, nil, codecErr
-			}
-
-			body, err := p.HandlerSpec.Unary().Handle(c, decodedBody)
-			if err != nil {
-				return nil, nil, err
-			}
-
-			encodedBody, codecErr := p.Codec.Encode(body)
-			if codecErr != nil {
-				return nil, nil, codecErr
-			}
-
-			return nil, encodedBody, nil
-		}
-
 		transportProcedures = append(
 			transportProcedures,
 			yarpc.TransportProcedure{
 				Name:        p.Name,
 				Service:     p.Service,
-				HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(yarpc.UnaryTransportHandlerFunc(handler)),
+				HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(yarpc.UnaryTransportHandlerFunc(p.TransportProcedureFunc)),
 				Encoding:    p.Encoding,
 				Signature:   p.Signature,
 			},
