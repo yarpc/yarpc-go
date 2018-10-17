@@ -21,10 +21,15 @@
 package generator
 
 import (
+	"bytes"
+	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"path/filepath"
 	"strings"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
 	plugin "github.com/gogo/protobuf/protoc-gen-gogo/plugin"
 )
@@ -62,6 +67,7 @@ func newRegistry(req *plugin.CodeGeneratorRequest) (*registry, error) {
 			"github.com/gogo/protobuf/proto":     "proto",
 			"go.uber.org/yarpc/v2":               "yarpc",
 			"go.uber.org/yarpc/v2/yarpcprotobuf": "yarpcprotobuf",
+			"go.uber.org/yarpc/v2/yarpcprotobuf/reflection": "reflection",
 		},
 	}
 	// Process command-line plugin parameters.
@@ -87,7 +93,9 @@ func newRegistry(req *plugin.CodeGeneratorRequest) (*registry, error) {
 // CodeGeneratorRequest with the registry.
 func (r *registry) Load(req *plugin.CodeGeneratorRequest) error {
 	for _, f := range req.GetProtoFile() {
-		r.loadFile(f)
+		if err := r.loadFile(f); err != nil {
+			return err
+		}
 	}
 	for _, name := range req.FileToGenerate {
 		target, ok := r.files[name]
@@ -98,6 +106,9 @@ func (r *registry) Load(req *plugin.CodeGeneratorRequest) error {
 			if err := r.loadService(target, s); err != nil {
 				return err
 			}
+		}
+		if err := r.loadDependencies(target); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -145,17 +156,22 @@ func (r *registry) getMessage(name string) (*Message, error) {
 // Note that we load the messages for all files up-front so that
 // all of the message types potentially referenced in the proto
 // services can reference these types.
-func (r *registry) loadFile(f *descriptor.FileDescriptorProto) {
-	pkg := r.newPackage(f)
+func (r *registry) loadFile(f *descriptor.FileDescriptorProto) error {
+	reflection, err := getReflection(f)
+	if err != nil {
+		return err
+	}
 	file := &File{
 		descriptor: f,
 		Name:       f.GetName(),
-		Package:    pkg,
+		Package:    r.newPackage(f),
+		Reflection: reflection,
 	}
 	r.files[file.Name] = file
 	for _, m := range f.GetMessageType() {
 		r.loadMessage(file, m)
 	}
+	return nil
 }
 
 func (r *registry) loadMessage(f *File, m *descriptor.DescriptorProto) {
@@ -195,6 +211,40 @@ func (r *registry) loadService(f *File, s *descriptor.ServiceDescriptorProto) er
 	return nil
 }
 
+// loadDependencies collects all of the File's dependencies, both
+// direct and transitive, and assigns them to file.Dependencies.
+func (r *registry) loadDependencies(file *File) error {
+	seen := make(map[string]struct{})
+	files, err := r.loadDependenciesRecurse(file, seen)
+	if err != nil {
+		return err
+	}
+	file.Dependencies = files
+	return nil
+}
+
+func (r *registry) loadDependenciesRecurse(file *File, seen map[string]struct{}) ([]*File, error) {
+	seen[file.descriptor.GetName()] = struct{}{}
+	var deps []*File
+	for _, filename := range file.descriptor.GetDependency() {
+		if _, ok := seen[filename]; ok {
+			continue
+		}
+		f, err := r.getFile(filename)
+		if err != nil {
+			return nil, err
+		}
+		deps = append(deps, f)
+
+		files, err := r.loadDependenciesRecurse(f, seen)
+		if err != nil {
+			return nil, err
+		}
+		deps = append(deps, files...)
+	}
+	return deps, nil
+}
+
 func (r *registry) newMethod(m *descriptor.MethodDescriptorProto, service string) (*Method, error) {
 	request, err := r.getMessage(m.GetInputType())
 	if err != nil {
@@ -224,6 +274,81 @@ func (r *registry) newPackage(f *descriptor.FileDescriptorProto) *Package {
 		name:      f.GetPackage(),
 		GoPackage: goPackage(f),
 	}
+}
+
+// getReflection returns the reflection details for the given FileDescriptorProto,
+// which includes the reflection variable name and the individual file's serialized
+// source representation.
+func getReflection(fd *descriptor.FileDescriptorProto) (*Reflection, error) {
+	encoding, err := getEncodedFileDescriptor(fd)
+	if err != nil {
+		return nil, err
+	}
+	return &Reflection{
+		Var:      getReflectionVar(fd),
+		Encoding: encoding,
+	}, nil
+}
+
+// getReflectionVar returns the generated reflection closure's variable name.
+func getReflectionVar(fd *descriptor.FileDescriptorProto) string {
+	// Use a sha256 of the filename instead of the filename to prevent any characters that are illegal
+	// as golang identifiers and to discourage external usage of this constant.
+	h := sha256.Sum256([]byte(fd.GetName()))
+	return fmt.Sprintf("yarpcFileDescriptorClosure%s", hex.EncodeToString(h[:8]))
+}
+
+// getEncodedFileDescriptor returns a string representation of the FileDescriptorProto's
+// serialized bytes.
+func getEncodedFileDescriptor(fd *descriptor.FileDescriptorProto) (string, error) {
+	fdBytes, err := getSerializedFileDescriptor(fd)
+	if err != nil {
+		return "", err
+	}
+
+	// Create string that contains a golang byte slice literal containing the
+	// serialized file descriptor:
+	//
+	// []byte{
+	//     0x00, 0x01, 0x02, ..., 0xFF,	// Up to 16 bytes per line
+	// }
+	//
+	var buf bytes.Buffer
+	buf.WriteString("[]byte{\n")
+	for len(fdBytes) > 0 {
+		n := 16
+		if n > len(fdBytes) {
+			n = len(fdBytes)
+		}
+		for _, c := range fdBytes[:n] {
+			fmt.Fprintf(&buf, "0x%02x,", c)
+		}
+		buf.WriteString("\n")
+		fdBytes = fdBytes[n:]
+	}
+	buf.WriteString("}")
+	return buf.String(), nil
+}
+
+// getSerializedFileDescriptor returns a gzipped marshalled representation of the FileDescriptorProto.
+func getSerializedFileDescriptor(fd *descriptor.FileDescriptorProto) ([]byte, error) {
+	pb := proto.Clone(fd).(*descriptor.FileDescriptorProto)
+	pb.SourceCodeInfo = nil
+	b, err := proto.Marshal(pb)
+	if err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	w, err := gzip.NewWriterLevel(&buf, gzip.BestCompression)
+	if err != nil {
+		return nil, err
+	}
+	_, err = w.Write(b)
+	if err != nil {
+		return nil, err
+	}
+	w.Close()
+	return buf.Bytes(), nil
 }
 
 // goPackage determines the go package for the
