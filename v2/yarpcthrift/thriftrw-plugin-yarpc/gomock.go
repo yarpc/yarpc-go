@@ -66,9 +66,9 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 	return m.recorder
 }
 
-<range .AllFunctions>
+<range .AllFunctions><if not .OneWay>
 <$context := import "context">
-<$yarpc   := import "go.uber.org/yarpc">
+<$yarpc   := import "go.uber.org/yarpc/v2">
 
 // <.Name> responds to a <.Name> call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
@@ -80,17 +80,14 @@ func (m *MockClient) <.Name>(
 	ctx <$context>.Context, <range .Arguments>
 	_<.Name> <formatType .Type>,<end>
 	opts ...<$yarpc>.CallOption,
-) <if .OneWay> (ack <$yarpc>.Ack, err error) {
-  <else>       (<if .ReturnType>success <formatType .ReturnType>,<end> err error) {
-  <end>
+) (<if .ReturnType>success <formatType .ReturnType>,<end> err error) {
 	args := []interface{}{ctx,<range .Arguments> _<.Name>,<end>}
 	for _, o := range opts {
 		args = append(args, o)
 	}
 	i := 0
 	ret := m.ctrl.Call(m, "<.Name>", args...)
-	<if .OneWay>          ack,     _ = ret[i].(<$yarpc>.Ack); i++
-	<else if .ReturnType> success, _ = ret[i].(<formatType .ReturnType>); i++
+	<if .ReturnType> success, _ = ret[i].(<formatType .ReturnType>); i++
 	<end>                 err,     _ = ret[i].(error)
 	return
 }
@@ -103,7 +100,7 @@ func (mr *_MockClientRecorder) <.Name>(
 	args := append([]interface{}{ctx,<range .Arguments> _<.Name>,<end>}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "<.Name>", args...)
 }
-<end>
+<end><end>
 `
 
 func gomockGenerator(data *templateData, files map[string][]byte) (err error) {
