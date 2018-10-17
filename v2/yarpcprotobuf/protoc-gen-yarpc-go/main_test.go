@@ -24,11 +24,13 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
 	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	// Used to register the FileDescriptorSets with the protobuf registry.
@@ -41,13 +43,22 @@ func TestGenerate(t *testing.T) {
 	tests := []struct {
 		desc           string
 		filename       string
+		dependencies   []string
 		output         string
 		outputFilename string
 		fixture        string
 	}{
 		{
+			desc:           "empty service",
+			filename:       "src/common/common.proto",
+			output:         "internal/tests/gen/proto/src/common/common.pb.yarpc.go",
+			outputFilename: "src/common/common.pb.yarpc.go",
+			fixture:        "internal/tests/gen/proto/src/common/common.pb.yarpc.go.fixture",
+		},
+		{
 			desc:           "unary service",
 			filename:       "src/keyvalue/key_value.proto",
+			dependencies:   []string{"src/common/common.proto"},
 			output:         "internal/tests/gen/proto/src/keyvalue/key_value.pb.yarpc.go",
 			outputFilename: "src/keyvalue/key_value.pb.yarpc.go",
 			fixture:        "internal/tests/gen/proto/src/keyvalue/key_value.pb.yarpc.go.fixture",
@@ -55,6 +66,7 @@ func TestGenerate(t *testing.T) {
 		{
 			desc:           "stream service",
 			filename:       "src/stream/stream.proto",
+			dependencies:   []string{"src/common/common.proto"},
 			output:         "internal/tests/gen/proto/src/stream/stream.pb.yarpc.go",
 			outputFilename: "src/stream/stream.pb.yarpc.go",
 			fixture:        "internal/tests/gen/proto/src/stream/stream.pb.yarpc.go.fixture",
@@ -62,13 +74,14 @@ func TestGenerate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			data := getCodeGeneratorRequestBytes(t, tt.filename)
+			data := getCodeGeneratorRequestBytes(t, tt.filename, tt.dependencies...)
 			input := bytes.NewReader(data)
 			output := bytes.NewBuffer(nil)
 			require.NoError(t, run(input, output))
 
 			act := &plugin_go.CodeGeneratorResponse{}
 			require.NoError(t, proto.Unmarshal(output.Bytes(), act))
+			require.Len(t, act.File, 1)
 
 			content, err := ioutil.ReadFile(tt.fixture)
 			require.NoError(t, err)
@@ -81,13 +94,19 @@ func TestGenerate(t *testing.T) {
 					},
 				},
 			}
-			require.Equal(t, exp, act)
-
+			// Controlled by a call to `make fixtures`.
+			if os.Getenv("FIXTURES") != "" {
+				newFixture := act.File[0]
+				require.NotNil(t, newFixture.Content)
+				require.NoError(t, ioutil.WriteFile(tt.fixture, []byte(*newFixture.Content), 0755))
+				return
+			}
+			assert.Equal(t, exp, act)
 		})
 	}
 }
 
-func getCodeGeneratorRequestBytes(t *testing.T, filename string) []byte {
+func getCodeGeneratorRequestBytes(t *testing.T, filename string, dependencies ...string) []byte {
 	req := &plugin_go.CodeGeneratorRequest{
 		Parameter: proto.String(
 			"Msrc/common/common.proto=go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/common",
@@ -96,9 +115,11 @@ func getCodeGeneratorRequestBytes(t *testing.T, filename string) []byte {
 			filename,
 		},
 		ProtoFile: []*descriptor.FileDescriptorProto{
-			getFileDescriptorProto(t, "src/common/common.proto"),
 			getFileDescriptorProto(t, filename),
 		},
+	}
+	for _, d := range dependencies {
+		req.ProtoFile = append(req.ProtoFile, getFileDescriptorProto(t, d))
 	}
 
 	bytes, err := proto.Marshal(req)
@@ -107,6 +128,11 @@ func getCodeGeneratorRequestBytes(t *testing.T, filename string) []byte {
 	return bytes
 }
 
+// getFileDescriptorProto unmarshals the given filename into a *FileDescriptorProto.
+// Note that this process is NOT necessarily equivalent to running the plugins via
+// protoc.
+// In our case, the fixture reflection bytes will differ slightly than what is
+// produced by protoc.
 func getFileDescriptorProto(t *testing.T, filename string) *descriptor.FileDescriptorProto {
 	fd := proto.FileDescriptor(filename)
 	require.NotEmpty(t, fd)
