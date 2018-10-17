@@ -74,7 +74,8 @@ func NewStreamTransportHandlerSpec(handler StreamTransportHandler) TransportHand
 type EncodingHandlerSpec struct {
 	t Type
 
-	unaryHandler UnaryEncodingHandler
+	unaryHandler  UnaryEncodingHandler
+	streamHandler StreamEncodingHandler
 }
 
 // MarshalLogObject implements zap.ObjectMarshaler.
@@ -94,6 +95,11 @@ func NewUnaryEncodingHandlerSpec(handler UnaryEncodingHandler) EncodingHandlerSp
 	return EncodingHandlerSpec{t: Unary, unaryHandler: handler}
 }
 
+// NewStreamEncodingHandlerSpec returns a new EncodingHandlerSpec with a StreamEncodingHandler
+func NewStreamEncodingHandlerSpec(handler StreamEncodingHandler) EncodingHandlerSpec {
+	return EncodingHandlerSpec{t: Streaming, streamHandler: handler}
+}
+
 // UnaryTransportHandler handles a single, transport-level, unary request.
 type UnaryTransportHandler interface {
 	// Handle the given request.
@@ -104,7 +110,7 @@ type UnaryTransportHandler interface {
 	Handle(context.Context, *Request, *Buffer) (*Response, *Buffer, error)
 }
 
-// StreamTransportHandler handles a stream connection request.
+// StreamTransportHandler handles a stream connection request in the transport layer.
 type StreamTransportHandler interface {
 	// Handle the given stream connection. The stream will close when the function
 	// returns.
@@ -123,6 +129,11 @@ type UnaryEncodingHandler interface {
 	// returned for invalid requests. All other failures are treated as
 	// UnexpectedErrors.
 	Handle(ctx context.Context, reqBody interface{}) (interface{}, error)
+}
+
+// StreamEncodingHandler handles a stream connection request in the encoding layer.
+type StreamEncodingHandler interface {
+	HandleStream(stream *ServerStream) error
 }
 
 // UnaryTransportHandlerFunc is a utility for defining a UnaryTransportHandler with just a
