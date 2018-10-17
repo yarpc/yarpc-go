@@ -376,9 +376,8 @@ func (a *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.P
 // onDisconnected marks a peer as being potentially down.
 func (a *Transport) onDisconnected(addr string) error {
 	a.lock.Lock()
-	defer a.lock.Unlock()
-
 	p, ok := a.peers[addr]
+	a.lock.Unlock()
 
 	if !ok {
 		// Peer has already been ejected.
