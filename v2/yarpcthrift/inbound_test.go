@@ -31,8 +31,8 @@ import (
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/thrifttest"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/internal/testtime"
 	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/internal/internaltesttime"
 )
 
 func TestDecodeRequest(t *testing.T) {
@@ -43,7 +43,7 @@ func TestDecodeRequest(t *testing.T) {
 	proto.EXPECT().DecodeRequest(wire.Call, gomock.Any()).Return(
 		wire.NewValueStruct(wire.Struct{}), protocol.NoEnvelopeResponder, nil)
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 
 	handler := func(ctx context.Context, w wire.Value) (Response, error) {
@@ -70,7 +70,7 @@ func TestDecodeEnveloped(t *testing.T) {
 		Value: wire.NewValueStruct(wire.Struct{}),
 	}, nil)
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 
 	handler := func(ctx context.Context, w wire.Value) (Response, error) {
@@ -95,7 +95,7 @@ func TestDecodeRequestApplicationError(t *testing.T) {
 	proto.EXPECT().DecodeRequest(wire.Call, gomock.Any()).Return(
 		wire.NewValueStruct(wire.Struct{}), protocol.NoEnvelopeResponder, nil)
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 
 	handler := func(ctx context.Context, w wire.Value) (Response, error) {
@@ -116,7 +116,7 @@ func TestDecodeRequestEncodingError(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 
 	// XXX handler and protocol superfluous for this case
@@ -141,7 +141,7 @@ func TestDecodeRequestError(t *testing.T) {
 	proto.EXPECT().DecodeRequest(wire.Call, gomock.Any()).Return(
 		wire.Value{}, protocol.NoEnvelopeResponder, fmt.Errorf("decode request error"))
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 
 	h := unaryTransportHandler{Protocol: proto}
@@ -164,7 +164,7 @@ func TestDecodeRequestResponseError(t *testing.T) {
 	proto.EXPECT().DecodeRequest(wire.Call, gomock.Any()).Return(
 		wire.Value{}, errorResponder{fmt.Errorf("encode response error")}, nil)
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 
 	handler := func(ctx context.Context, w wire.Value) (Response, error) {
@@ -188,7 +188,7 @@ func TestDecodeEnvelopedError(t *testing.T) {
 	// XXX DecodeEnveloped returns error
 	proto.EXPECT().DecodeEnveloped(gomock.Any()).Return(wire.Envelope{}, fmt.Errorf("decode enveloped error"))
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 
 	h := unaryTransportHandler{Protocol: proto, Enveloping: true}
@@ -209,7 +209,7 @@ func TestDecodeEnvelopedEnvelopeTypeError(t *testing.T) {
 	// XXX DecodeEnveloped returns OneWay instead of expected Call
 	proto.EXPECT().DecodeEnveloped(gomock.Any()).Return(wire.Envelope{Type: wire.OneWay}, nil)
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 
 	h := unaryTransportHandler{Protocol: proto, Enveloping: true}
@@ -230,7 +230,7 @@ func TestDecodeNotEnvelopedError(t *testing.T) {
 	// XXX Mocked decode returns decode error
 	proto.EXPECT().Decode(gomock.Any(), wire.TStruct).Return(wire.Value{}, fmt.Errorf("decode error"))
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 
 	h := unaryTransportHandler{Protocol: proto}
@@ -250,7 +250,7 @@ func TestUnaryHandlerError(t *testing.T) {
 	proto := thrifttest.NewMockProtocol(mockCtrl)
 	proto.EXPECT().Decode(gomock.Any(), wire.TStruct).Return(wire.Value{}, nil)
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 
 	handler := func(ctx context.Context, w wire.Value) (Response, error) {
@@ -274,7 +274,7 @@ func TestUnaryHandlerResponseEnvelopeTypeError(t *testing.T) {
 	proto := thrifttest.NewMockProtocol(mockCtrl)
 	proto.EXPECT().Decode(gomock.Any(), wire.TStruct).Return(wire.Value{}, nil)
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 
 	handler := func(ctx context.Context, w wire.Value) (Response, error) {
@@ -298,7 +298,7 @@ func TestUnaryHandlerBodyToWireError(t *testing.T) {
 	proto := thrifttest.NewMockProtocol(mockCtrl)
 	proto.EXPECT().Decode(gomock.Any(), wire.TStruct).Return(wire.Value{}, nil)
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 
 	handler := func(ctx context.Context, w wire.Value) (Response, error) {
