@@ -44,7 +44,7 @@ type Client interface {
 }
 
 // New creates a new Thrift client.
-func New(c *yarpc.Client, service string, opts ...ClientOption) Client {
+func New(c yarpc.Client, service string, opts ...ClientOption) Client {
 	var cc clientConfig
 	for _, opt := range opts {
 		opt.applyClientOption(&cc)
@@ -63,15 +63,15 @@ func New(c *yarpc.Client, service string, opts ...ClientOption) Client {
 	}
 
 	return thriftClient{
-		p:             p,
 		c:             c,
+		p:             p,
 		thriftService: service,
 		Enveloping:    cc.Enveloping,
 	}
 }
 
 type thriftClient struct {
-	c *yarpc.Client
+	c yarpc.Client
 	p protocol.Protocol
 
 	// name of the Thrift service

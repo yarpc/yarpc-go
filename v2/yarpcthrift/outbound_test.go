@@ -181,7 +181,7 @@ func TestClient(t *testing.T) {
 		opts := tt.clientOptions
 		opts = append(opts, Protocol(proto))
 		c := New(
-			&yarpc.Client{
+			yarpc.Client{
 				Caller:  "caller",
 				Service: "service",
 				Unary:   out,
