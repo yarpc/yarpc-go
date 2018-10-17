@@ -61,12 +61,12 @@ func newRegistry(req *plugin.CodeGeneratorRequest) (*registry, error) {
 		messages: make(map[string]*Message),
 		packages: make(map[string]string),
 		imports: Imports{
-			"context":                            "context",
-			"fmt":                                "fmt",
-			"go.uber.org/fx":                     "fx",
-			"github.com/gogo/protobuf/proto":     "proto",
-			"go.uber.org/yarpc/v2":               "yarpc",
-			"go.uber.org/yarpc/v2/yarpcprotobuf": "yarpcprotobuf",
+			"context":                                       "context",
+			"fmt":                                           "fmt",
+			"go.uber.org/fx":                                "fx",
+			"github.com/gogo/protobuf/proto":                "proto",
+			"go.uber.org/yarpc/v2":                          "yarpc",
+			"go.uber.org/yarpc/v2/yarpcprotobuf":            "yarpcprotobuf",
 			"go.uber.org/yarpc/v2/yarpcprotobuf/reflection": "reflection",
 		},
 	}
