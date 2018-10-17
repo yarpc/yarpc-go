@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed a deadlock issue when the HTTP transport detects a connection failure
   and attempts to lock once to obtain the peer, then again to send
   notifications.
+- Relaxes the scope of a lock in the abstract peer list implementation to
+  reduce contention.
 
 ## [1.35.0] - 2018-10-15
 ### Added
