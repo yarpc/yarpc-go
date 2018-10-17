@@ -31,8 +31,8 @@ import (
 	"go.uber.org/thriftrw/envelope"
 	"go.uber.org/thriftrw/thrifttest"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/internal/testtime"
 	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/internal/internaltesttime"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
 
@@ -152,12 +152,12 @@ func TestClient(t *testing.T) {
 				}).Return(nil)
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 		defer cancel()
 
-		trans := yarpctest.NewMockUnaryOutbound(mockCtrl)
+		out := yarpctest.NewMockUnaryOutbound(mockCtrl)
 		if tt.expectCall {
-			trans.EXPECT().Call(ctx,
+			out.EXPECT().Call(ctx,
 				&yarpc.Request{
 					Caller:    "caller",
 					Service:   "service",
@@ -184,7 +184,7 @@ func TestClient(t *testing.T) {
 			&yarpc.Client{
 				Caller:  "caller",
 				Service: "service",
-				Unary:   trans,
+				Unary:   out,
 			},
 			"MyService",
 			opts...)

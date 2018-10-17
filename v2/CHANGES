@@ -40,6 +40,7 @@ Encodings:
 - [x] Drop raw encoding
 - [x] Port JSON encoding
 - [ ] Port Thrift encoding
+      - [ ] Revise/Add comment about final implementation in outbound#Call
 - [ ] Port / re-create Protobuf encoding
       - [x] Rewrite the protoc-gen-yarpc-go plugin.
       - [ ] Add end-to-end test that uses gRPC transport with protobuf encoding.
