@@ -68,16 +68,17 @@ const fxClientTemplate = `
 <$pkgname := printf "%sfx" (lower .Name)>
 package <$pkgname>
 
-<$yarpc := import "go.uber.org/yarpc">
-<$thrift := import "go.uber.org/yarpc/encoding/thrift">
+<$yarpc := import "go.uber.org/yarpc/v2">
+<$yarpcthrift := import "go.uber.org/yarpc/v2/yarpcthrift">
 <$client := import .ClientPackagePath>
 <$fx := import "go.uber.org/fx">
+<$fmt := import "fmt">
 
 // Params defines the dependencies for the <.Name> client.
 type Params struct {
 	<$fx>.In
 
-	Provider <$yarpc>.ClientConfig
+	Provider <$yarpc>.ClientProvider
 }
 
 // Result defines the output of the <.Name> client module. It provides a
@@ -99,10 +100,14 @@ type Result struct {
 // 		<$pkgname>.Client("..."),
 // 		newHandler,
 // 	)
-func Client(name string, opts ...<$thrift>.ClientOption) interface{} {
-	return func(p Params) Result {
-		client := <$client>.New(p.Provider.ClientConfig(name), opts...)
-		return Result{Client: client}
+func Client(name string, opts ...<$yarpcthrift>.ClientOption) interface{} {
+	return func(p Params) (Result, error) {
+		yarpcClient, ok := p.Provider.Client(name)
+		if !ok {
+			return Result{}, <$fmt>.Errorf("generated code could not retrieve client for %q", name)
+		}
+		client := <$client>.New(yarpcClient, opts...)
+		return Result{Client: client}, nil
 	}
 }`
 
@@ -113,8 +118,8 @@ const fxServerTemplate = `
 <$pkgname := printf "%sfx" (lower .Name)>
 package <$pkgname>
 
-<$transport := import "go.uber.org/yarpc/api/transport">
-<$thrift := import "go.uber.org/yarpc/encoding/thrift">
+<$yarpc := import "go.uber.org/yarpc/v2">
+<$yarpcthrift := import "go.uber.org/yarpc/v2/yarpcthrift">
 <$server := import .ServerPackagePath>
 <$fx := import "go.uber.org/fx">
 
@@ -133,7 +138,7 @@ type ServerParams struct {
 type ServerResult struct {
 	<$fx>.Out
 
-	Procedures []<$transport>.Procedure ` + "`group:\"yarpcfx\"`" + `
+	Procedures []<$yarpc>.Procedure ` + "`group:\"yarpcfx\"`" + `
 }
 
 // Server provides procedures for <.Name> to an Fx application. It expects a
@@ -145,7 +150,7 @@ type ServerResult struct {
 // 		},
 // 		<$pkgname>.Server(),
 // 	)
-func Server(opts ...<$thrift>.RegisterOption) interface{} {
+func Server(opts ...<$yarpcthrift>.RegisterOption) interface{} {
 	return func(p ServerParams) ServerResult {
 		procedures := <$server>.New(p.Handler, opts...)
 		return ServerResult{Procedures: procedures}
