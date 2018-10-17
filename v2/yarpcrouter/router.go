@@ -79,12 +79,20 @@ func NewMapRouterWithEncodingProcedures(defaultService string, encodingProcedure
 
 	transportProcedures := []yarpc.TransportProcedure{}
 	for _, p := range encodingProcedures {
+		var transportHandlerSpec yarpc.TransportHandlerSpec
+		switch p.HandlerSpec.Type() {
+		case yarpc.Unary:
+			transportHandlerSpec = yarpc.NewUnaryTransportHandlerSpec(unaryTransportHandler{p})
+		default:
+			panic(p.HandlerSpec.Type())
+		}
+
 		transportProcedures = append(
 			transportProcedures,
 			yarpc.TransportProcedure{
 				Name:        p.Name,
 				Service:     p.Service,
-				HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(yarpc.UnaryTransportHandlerFunc(p.TransportProcedureFunc)),
+				HandlerSpec: transportHandlerSpec,
 				Encoding:    p.Encoding,
 				Signature:   p.Signature,
 			},
@@ -94,6 +102,32 @@ func NewMapRouterWithEncodingProcedures(defaultService string, encodingProcedure
 	}
 
 	return router
+}
+
+// Allows encoding-level procedures to act as transport-level procedures
+type unaryTransportHandler struct {
+	h yarpc.EncodingProcedure
+}
+
+var _ yarpc.UnaryTransportHandler = unaryTransportHandler{}
+
+func (u unaryTransportHandler) Handle(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
+	decodedBody, codecErr := u.h.Codec.Decode(reqBuf)
+	if codecErr != nil {
+		return nil, nil, codecErr
+	}
+
+	body, err := u.h.HandlerSpec.Unary().Handle(ctx, decodedBody)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	encodedBody, codecErr := u.h.Codec.Encode(body)
+	if codecErr != nil {
+		return nil, nil, codecErr
+	}
+
+	return nil, encodedBody, nil
 }
 
 // Register registers the procedure with the MapRouter.
