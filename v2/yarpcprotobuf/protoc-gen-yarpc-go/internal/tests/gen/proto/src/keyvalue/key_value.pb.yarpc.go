@@ -27,7 +27,6 @@ package keyvaluepb
 import (
 	context "context"
 	fmt "fmt"
-
 	proto "github.com/gogo/protobuf/proto"
 	fx "go.uber.org/fx"
 	yarpc "go.uber.org/yarpc/v2"
