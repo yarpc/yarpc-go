@@ -33,12 +33,10 @@ const serverTemplate = `
 <$pkgname := printf "%sserver" (lower .Name)>
 package <$pkgname>
 
-<$thrift    := import "go.uber.org/yarpc/encoding/thrift">
-<$transport := import "go.uber.org/yarpc/api/transport">
+<$yarpc     := import "go.uber.org/yarpc/v2">
+<$yarpcthrift    := import "go.uber.org/yarpc/v2/yarpcthrift">
 
 <$contextImportPath   := .ContextImportPath>
-<$onewayWrapperImport := .OnewayWrapperImport>
-<$onewayWrapperFunc   := .OnewayWrapperFunc>
 <$unaryWrapperImport  := .UnaryWrapperImport>
 <$unaryWrapperFunc    := .UnaryWrapperFunc>
 
@@ -51,16 +49,15 @@ package <$pkgname>
 type Interface interface {
 	<if .Parent><import .ParentServerPackagePath>.Interface
 	<end>
-	<range .Functions>
+	<range .Functions><if not .OneWay>
 		<$context := import $contextImportPath>
 		<.Name>(
 			ctx <$context>.Context, <range .Arguments>
 			<.Name> <formatType .Type>,<end>
-		)<if .OneWay> error
-		<else if .ReturnType> (<formatType .ReturnType>, error)
+		)<if .ReturnType> (<formatType .ReturnType>, error)
 		<else> error
 		<end>
-	<end>
+	<end><end>
 }
 
 <$module := .Module>
@@ -70,32 +67,24 @@ type Interface interface {
 //
 // 	handler := <.Name>Handler{}
 // 	dispatcher.Register(<$pkgname>.New(handler))
-func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Procedure {
+func New(impl Interface, opts ...<$yarpcthrift>.RegisterOption) []<$yarpc>.Procedure {
 	<if .Functions>h := handler{impl}<end>
-	service := <$thrift>.Service{
+	service := <$yarpcthrift>.Service{
 		Name: "<.Name>",
-		Methods: []<$thrift>.Method{
-		<range .Functions>
-			<$thrift>.Method{
+		Methods: []<$yarpcthrift>.Method{
+		<range .Functions><if not .OneWay>
+			<$yarpcthrift>.Method{
 				Name: "<.ThriftName>",
-				HandlerSpec: <$thrift>.HandlerSpec{
-				<if .OneWay>
-					Type: <$transport>.Oneway,
-					Oneway: <import $onewayWrapperImport>.<$onewayWrapperFunc>(h.<.Name>),
-				<else>
-					Type: <$transport>.Unary,
-					Unary: <import $unaryWrapperImport>.<$unaryWrapperFunc>(h.<.Name>),
-				<end>
-				},
-				Signature: "<.Name>(<range $i, $v := .Arguments><if ne $i 0>, <end><.Name> <formatType .Type><end>)<if not .OneWay | and .ReturnType> (<formatType .ReturnType>)<end>",
+				Handler: <import $unaryWrapperImport>.<$unaryWrapperFunc>(h.<.Name>),
+				Signature: "<.Name>(<range $i, $v := .Arguments><if ne $i 0>, <end><.Name> <formatType .Type><end>)<if .ReturnType> (<formatType .ReturnType>)<end>",
 				ThriftModule: <import $module.ImportPath>.ThriftModule,
 				},
-		<end>},
+		<end><end>},
 	}
 
-	procedures := make([]<$transport>.Procedure, 0, <len .Functions>)
+	procedures := make([]<$yarpc>.Procedure, 0, <len .Functions>)
 	<if .Parent> procedures = append(procedures, <import .ParentServerPackagePath>.New(impl, opts...)...)
-	<end>         procedures = append(procedures, <$thrift>.BuildProcedures(service, opts...)...)
+	<end>         procedures = append(procedures, <$yarpcthrift>.BuildProcedures(service, opts...)...)
 	return procedures
 }
 
@@ -103,26 +92,16 @@ type handler struct{ impl Interface }
 
 <$service := .>
 <$module := .Module>
-<range .Functions>
+<range .Functions><if not .OneWay>
 <$context := import $contextImportPath>
 <$prefix := printf "%s.%s_%s_" (import $module.ImportPath) $service.Name .Name>
 
 <$wire := import "go.uber.org/thriftrw/wire">
 
-<if .OneWay>
-func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) error {
+func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$yarpcthrift>.Response, error) {
 	var args <$prefix>Args
 	if err := args.FromWire(body); err != nil {
-		return err
-	}
-
-	return h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
-}
-<else>
-func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$thrift>.Response, error) {
-	var args <$prefix>Args
-	if err := args.FromWire(body); err != nil {
-		return <$thrift>.Response{}, err
+		return <$yarpcthrift>.Response{}, err
 	}
 
 	<if .ReturnType>
@@ -134,15 +113,14 @@ func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$thrift>.
 	hadError := err != nil
 	result, err := <$prefix>Helper.WrapResponse(<if .ReturnType>success,<end> err)
 
-	var response <$thrift>.Response
+	var response <$yarpcthrift>.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
 	}
 	return response, err
 }
-<end>
-<end>
+<end><end>
 `
 
 func serverGenerator(data *templateData, files map[string][]byte) (err error) {
