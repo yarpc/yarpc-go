@@ -48,7 +48,7 @@ type TransportProcedure struct {
 	Signature string
 }
 
-// EncodingProcedure specifies a single encoding-level handler and is mapped to a TransportProcedure by the router
+// EncodingProcedure specifies a single encoding-level handler and is mapped to a TransportProcedure by the router.
 type EncodingProcedure struct {
 	// Name of the procedure.
 	Name string
@@ -68,26 +68,6 @@ type EncodingProcedure struct {
 
 	// Codec to assist mapping the encoding-level handler to transport-level handler
 	Codec InboundCodec
-}
-
-// TransportProcedureFunc helps map encoding-level procedures to transport-level procedures
-func (p EncodingProcedure) TransportProcedureFunc(c context.Context, r *Request, b *Buffer) (*Response, *Buffer, error) {
-	decodedBody, codecErr := p.Codec.Decode(b)
-	if codecErr != nil {
-		return nil, nil, codecErr
-	}
-
-	body, err := p.HandlerSpec.Unary().Handle(c, decodedBody)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	encodedBody, codecErr := p.Codec.Encode(body)
-	if codecErr != nil {
-		return nil, nil, codecErr
-	}
-
-	return nil, encodedBody, nil
 }
 
 // InboundCodec helps convert the request/response bodies to & from interface{}

@@ -198,6 +198,21 @@ func TestNewMapRouterWithEncodingProcedures_EncodeError(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestNewMapRouterWithEncodingProcedures_OnlyAllowUnaryType(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	nonUnaryHandler := yarpctest.NewMockStreamEncodingHandler(mockCtrl)
+	spec := yarpc.NewStreamEncodingHandlerSpec(nonUnaryHandler)
+	encodingProcedures := []yarpc.EncodingProcedure{
+		{
+			Name:        "happy_case",
+			HandlerSpec: spec,
+		},
+	}
+	assert.Panics(t, func() { NewMapRouterWithEncodingProcedures("myservice", encodingProcedures) })
+}
+
 func TestMapRouter_Procedures(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
