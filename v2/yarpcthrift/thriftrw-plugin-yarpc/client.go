@@ -33,9 +33,8 @@ const clientTemplate = `
 <$pkgname := printf "%sclient" (lower .Name)>
 package <$pkgname>
 
-<$yarpc     := import "go.uber.org/yarpc">
-<$transport := import "go.uber.org/yarpc/api/transport">
-<$thrift    := import "go.uber.org/yarpc/encoding/thrift">
+<$yarpc     := import "go.uber.org/yarpc/v2">
+<$yarpcthrift    := import "go.uber.org/yarpc/v2/yarpcthrift">
 
 </* Note that we import things like "context" inside loops rather than at the
     top-level because they will end up unused if the service does not have any
@@ -46,52 +45,44 @@ package <$pkgname>
 type Interface interface {
 	<if .Parent><import .ParentClientPackagePath>.Interface
 	<end>
-	<range .Functions>
+	<range .Functions><if not .OneWay>
 		<$context := import "context">
 		<.Name>(
 			ctx <$context>.Context, <range .Arguments>
 			<.Name> <formatType .Type>,<end>
 			opts ...<$yarpc>.CallOption,
-		)<if .OneWay> (<$yarpc>.Ack, error)
-		<else if .ReturnType> (<formatType .ReturnType>, error)
+		)<if .ReturnType> (<formatType .ReturnType>, error)
 		<else> error
 		<end>
-	<end>
+	<end><end>
 }
 
 </* TODO(abg): Pull the default routing name from a Thrift annotation? */>
 
 // New builds a new client for the <.Name> service.
 //
-// 	client := <$pkgname>.New(dispatcher.ClientConfig("<lower .Name>"))
-func New(c <$transport>.ClientConfig, opts ...<$thrift>.ClientOption) Interface {
+//  yarpcClient, _ := yarpc.ClientProvider("<lower .Name>")
+// 	client := <$pkgname>.New(yarpcClient)
+func New(c <$yarpc>.Client, opts ...<$yarpcthrift>.ClientOption) Interface {
 	return client{
-		c: <$thrift>.New(<$thrift>.Config{
-			Service: "<.Name>",
-			ClientConfig: c,
-		}, opts...),
+		c: <$yarpcthrift>.New(
+			c,
+			"<.Name>",
+			opts...),
 		<if .Parent> Interface: <import .ParentClientPackagePath>.New(c, opts...),
 		<end>}
-}
-
-func init() {
-	<$yarpc>.RegisterClientBuilder(
-		func(c <$transport>.ClientConfig, f <import "reflect">.StructField) Interface {
-			return New(c, <$thrift>.ClientBuilderOptions(c, f)...)
-		},
-	)
 }
 
 type client struct {
 	<if .Parent><import .ParentClientPackagePath>.Interface
 	<end>
-	c <$thrift>.Client
+	c <$yarpcthrift>.Client
 }
 
 <$service := .>
 <$module := .Module>
 <$sanitize := .SanitizeTChannel>
-<range .Functions>
+<range .Functions><if not .OneWay>
 <$context := import "context">
 <$prefix := printf "%s.%s_%s_" (import $module.ImportPath) $service.Name .Name>
 
@@ -99,11 +90,7 @@ func (c client) <.Name>(
 	ctx <$context>.Context, <range .Arguments>
 	_<.Name> <formatType .Type>,<end>
 	opts ...<$yarpc>.CallOption,
-<if .OneWay>) (<$yarpc>.Ack, error) {
-	args := <$prefix>Helper.Args(<range .Arguments>_<.Name>, <end>)
-	return c.c.CallOneway(ctx, args, opts...)
-}
-<else>) (<if .ReturnType>success <formatType .ReturnType>,<end> err error) {
+) (<if .ReturnType>success <formatType .ReturnType>,<end> err error) {
 	<$wire := import "go.uber.org/thriftrw/wire">
 	args := <$prefix>Helper.Args(<range .Arguments>_<.Name>, <end>)
 
@@ -122,8 +109,7 @@ func (c client) <.Name>(
 	<if .ReturnType>success, <end>err = <$prefix>Helper.UnwrapResponse(&result)
 	return
 }
-<end>
-<end>
+<end><end>
 `
 
 func clientGenerator(data *templateData, files map[string][]byte) (err error) {
