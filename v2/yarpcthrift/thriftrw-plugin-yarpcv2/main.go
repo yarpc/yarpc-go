@@ -106,7 +106,7 @@ func buildSvc(serviceID api.ServiceID, req *api.GenerateServiceRequest) *Svc {
 
 func main() {
 	flag.Parse()
-	plugin.Main(&plugin.Plugin{Name: "yarpc", ServiceGenerator: g{
+	plugin.Main(&plugin.Plugin{Name: "yarpcv2", ServiceGenerator: g{
 		SanitizeTChannel: *_sanitizeTChannel,
 	}})
 }
