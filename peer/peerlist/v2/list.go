@@ -491,22 +491,30 @@ func (pl *List) getThunk(pid peer.Identifier) *peerThunk {
 	return pl.unavailablePeers[pid.Identifier()]
 }
 
-// notifyStatusChanged gets called by peer thunks
+// notifyStatusChanged gets called by peer thunks.
+// Change notifications must be sent outside the list lock since handlers may
+// call locking list methods.
 func (pl *List) notifyStatusChanged(pid peer.Identifier) {
 	pl.lock.Lock()
-	defer pl.lock.Unlock()
 
 	if t := pl.availablePeers[pid.Identifier()]; t != nil {
+		pl.lock.Unlock()
+
 		// TODO: log error
 		_ = pl.handleAvailablePeerStatusChange(t)
 		return
 	}
 
 	if t := pl.unavailablePeers[pid.Identifier()]; t != nil {
+		pl.lock.Unlock()
+
 		// TODO: log error
 		_ = pl.handleUnavailablePeerStatusChange(t)
+		return
 	}
+
 	// No action required
+	pl.lock.Unlock()
 }
 
 // handleAvailablePeerStatusChange checks the connection status of a connected
