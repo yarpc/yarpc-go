@@ -30,14 +30,14 @@ import (
 
 var _tmpl = template.Must(
 	parseTemplates(
-		templatedata.MustAsset("internal/templatedata/base.tmpl"),
-		templatedata.MustAsset("internal/templatedata/client.tmpl"),
-		templatedata.MustAsset("internal/templatedata/client_impl.tmpl"),
-		templatedata.MustAsset("internal/templatedata/client_stream.tmpl"),
-		templatedata.MustAsset("internal/templatedata/fx.tmpl"),
-		templatedata.MustAsset("internal/templatedata/server.tmpl"),
-		templatedata.MustAsset("internal/templatedata/server_impl.tmpl"),
-		templatedata.MustAsset("internal/templatedata/server_stream.tmpl"),
+		templatedata.MustAsset("internal/template/base.tmpl"),
+		templatedata.MustAsset("internal/template/client.tmpl"),
+		templatedata.MustAsset("internal/template/client_impl.tmpl"),
+		templatedata.MustAsset("internal/template/client_stream.tmpl"),
+		templatedata.MustAsset("internal/template/fx.tmpl"),
+		templatedata.MustAsset("internal/template/server.tmpl"),
+		templatedata.MustAsset("internal/template/server_impl.tmpl"),
+		templatedata.MustAsset("internal/template/server_stream.tmpl"),
 	),
 )
 
