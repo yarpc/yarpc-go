@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.35.1] - 2018-10-17
+### Fixed
+- Fixed a deadlock issue when the HTTP transport detects a connection failure
+  and attempts to lock once to obtain the peer, then again to send
+  notifications.
+
 ## [1.35.0] - 2018-10-15
 ### Added
 - Added `encoding/protobuf/reflection` for exposing server reflection related
@@ -1034,6 +1040,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[1.35.1]: https://github.com/yarpc/yarpc-go/compare/v1.35.0...v1.35.1
 [1.35.0]: https://github.com/yarpc/yarpc-go/compare/v1.34.0...v1.35.0
 [1.34.0]: https://github.com/yarpc/yarpc-go/compare/v1.33.0...v1.34.0
 [1.33.0]: https://github.com/yarpc/yarpc-go/compare/v1.32.4...v1.33.0
