@@ -48,7 +48,8 @@ type TransportProcedure struct {
 	Signature string
 }
 
-// EncodingProcedure specifies a single encoding-level handler and is mapped to a TransportProcedure by the router.
+// EncodingProcedure specifies a single encoding-level handler. The RouteTable can register an
+// EncodingProcedure after mapping it to a corresponding TransportProcedure.
 type EncodingProcedure struct {
 	// Name of the procedure.
 	Name string
@@ -70,7 +71,7 @@ type EncodingProcedure struct {
 	Codec InboundCodec
 }
 
-// InboundCodec helps convert the request/response bodies to & from interface{}
+// InboundCodec defines the interface YARPC uses to encode and decode request and response bodies.
 type InboundCodec interface {
 	Decode(req *Buffer) (interface{}, error)
 
