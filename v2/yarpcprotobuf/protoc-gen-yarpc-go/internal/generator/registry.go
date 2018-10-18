@@ -117,7 +117,7 @@ func (r *registry) Load(req *plugin.CodeGeneratorRequest) error {
 // GetData returns the template data the corresponds
 // to the given filename.
 func (r *registry) GetData(filename string) (*Data, error) {
-	f, err := r.getFile(filename)
+	f, err := r.lookupFile(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -127,9 +127,9 @@ func (r *registry) GetData(filename string) (*Data, error) {
 	}, nil
 }
 
-// getFile returns the File that corresponds to the
+// lookupFile returns the File that corresponds to the
 // given filename.
-func (r *registry) getFile(filename string) (*File, error) {
+func (r *registry) lookupFile(filename string) (*File, error) {
 	f, ok := r.files[filename]
 	if !ok {
 		return nil, fmt.Errorf("file %q was not found", filename)
@@ -137,10 +137,10 @@ func (r *registry) getFile(filename string) (*File, error) {
 	return f, nil
 }
 
-// getMessage returns the Message that corresponds to the
+// lookupMessage returns the Message that corresponds to the
 // given name. This method expects the input to be formed
 // as an input or output type, such as .foo.Bar.
-func (r *registry) getMessage(name string) (*Message, error) {
+func (r *registry) lookupMessage(name string) (*Message, error) {
 	// All input and output types are represented as
 	// .$(Package).$(Message), so we explicitly trim
 	// the leading '.' prefix.
@@ -230,7 +230,7 @@ func (r *registry) loadDependenciesRecurse(file *File, seen map[string]struct{})
 		if _, ok := seen[filename]; ok {
 			continue
 		}
-		f, err := r.getFile(filename)
+		f, err := r.lookupFile(filename)
 		if err != nil {
 			return nil, err
 		}
@@ -246,11 +246,11 @@ func (r *registry) loadDependenciesRecurse(file *File, seen map[string]struct{})
 }
 
 func (r *registry) newMethod(m *descriptor.MethodDescriptorProto, service string) (*Method, error) {
-	request, err := r.getMessage(m.GetInputType())
+	request, err := r.lookupMessage(m.GetInputType())
 	if err != nil {
 		return nil, err
 	}
-	response, err := r.getMessage(m.GetOutputType())
+	response, err := r.lookupMessage(m.GetOutputType())
 	if err != nil {
 		return nil, err
 	}
