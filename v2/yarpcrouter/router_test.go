@@ -119,7 +119,9 @@ func TestNewMapRouterWithEncodingProcedures_HappyCase(t *testing.T) {
 			Codec:       fooCodec,
 		},
 	}
-	m := NewMapRouterWithEncodingProcedures("myservice", encodingProcedures)
+
+	procedures := MapToTransportProcedures(encodingProcedures)
+	m := NewMapRouterWithProcedures("myservice", procedures)
 	transportProcedures := m.Procedures()
 
 	_, _, err := transportProcedures[0].HandlerSpec.Unary().Handle(context.TODO(), nil, nil)
@@ -142,7 +144,8 @@ func TestNewMapRouterWithEncodingProcedures_DecodeError(t *testing.T) {
 			Codec:       barCodec,
 		},
 	}
-	m := NewMapRouterWithEncodingProcedures("myservice", encodingProcedures)
+	procedures := MapToTransportProcedures(encodingProcedures)
+	m := NewMapRouterWithProcedures("myservice", procedures)
 	transportProcedures := m.Procedures()
 
 	_, _, err := transportProcedures[0].HandlerSpec.Unary().Handle(context.TODO(), nil, nil)
@@ -166,7 +169,8 @@ func TestNewMapRouterWithEncodingProcedures_HandlerError(t *testing.T) {
 			Codec:       bazCodec,
 		},
 	}
-	m := NewMapRouterWithEncodingProcedures("myservice", encodingProcedures)
+	procedures := MapToTransportProcedures(encodingProcedures)
+	m := NewMapRouterWithProcedures("myservice", procedures)
 	transportProcedures := m.Procedures()
 
 	_, _, err := transportProcedures[0].HandlerSpec.Unary().Handle(context.TODO(), nil, nil)
@@ -191,7 +195,8 @@ func TestNewMapRouterWithEncodingProcedures_EncodeError(t *testing.T) {
 			Codec:       quxCodec,
 		},
 	}
-	m := NewMapRouterWithEncodingProcedures("myservice", encodingProcedures)
+	procedures := MapToTransportProcedures(encodingProcedures)
+	m := NewMapRouterWithProcedures("myservice", procedures)
 	transportProcedures := m.Procedures()
 
 	_, _, err := transportProcedures[0].HandlerSpec.Unary().Handle(context.TODO(), nil, nil)
@@ -210,7 +215,7 @@ func TestNewMapRouterWithEncodingProcedures_OnlyAllowUnaryType(t *testing.T) {
 			HandlerSpec: spec,
 		},
 	}
-	assert.Panics(t, func() { NewMapRouterWithEncodingProcedures("myservice", encodingProcedures) })
+	assert.Panics(t, func() { MapToTransportProcedures(encodingProcedures) })
 }
 
 func TestMapRouter_Procedures(t *testing.T) {

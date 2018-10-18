@@ -149,8 +149,8 @@ type StreamTransportHandlerFunc func(*ServerStream) error
 type UnaryEncodingHandlerFunc func(context.Context, interface{}) (interface{}, error)
 
 // Handle handles an inbound unary request.
-func (f UnaryTransportHandlerFunc) Handle(ctx context.Context, r *Request, b *Buffer) (*Response, *Buffer, error) {
-	return f(ctx, r, b)
+func (f UnaryTransportHandlerFunc) Handle(ctx context.Context, req *Request, reqBody *Buffer) (*Response, *Buffer, error) {
+	return f(ctx, req, reqBody)
 }
 
 // HandleStream handles an inbound streaming request.
@@ -159,6 +159,6 @@ func (f StreamTransportHandlerFunc) HandleStream(stream *ServerStream) error {
 }
 
 // Handle handles an inbound unary request.
-func (f UnaryEncodingHandlerFunc) Handle(ctx context.Context, b interface{}) (interface{}, error) {
-	return f(ctx, b)
+func (f UnaryEncodingHandlerFunc) Handle(ctx context.Context, reqBody interface{}) (interface{}, error) {
+	return f(ctx, reqBody)
 }

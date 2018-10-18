@@ -31,7 +31,8 @@ import (
 )
 
 var (
-	_ yarpc.Router = (*MapRouter)(nil)
+	_ yarpc.Router                = (*MapRouter)(nil)
+	_ yarpc.UnaryTransportHandler = &unaryTransportHandler{}
 )
 
 type serviceProcedure struct {
@@ -72,46 +73,44 @@ func NewMapRouter(defaultService string, rs []yarpc.TransportProcedure) MapRoute
 	return router
 }
 
-// NewMapRouterWithEncodingProcedures constructs a new MapRouter with the given default service name and registers
-// the given encoding-level procedures as transport-level procedures
-func NewMapRouterWithEncodingProcedures(defaultService string, encodingProcedures []yarpc.EncodingProcedure) MapRouter {
-	router := NewMapRouter(defaultService)
-
-	transportProcedures := []yarpc.TransportProcedure{}
-	for _, p := range encodingProcedures {
+// MapToTransportProcedures converts encoding-level procedures to transport-level procedures.
+func MapToTransportProcedures(encodingProcedures []yarpc.EncodingProcedure) []yarpc.TransportProcedure {
+	transportProcedures := make([]yarpc.TransportProcedure, len(encodingProcedures))
+	for i, p := range encodingProcedures {
 		var transportHandlerSpec yarpc.TransportHandlerSpec
 		switch p.HandlerSpec.Type() {
 		case yarpc.Unary:
-			transportHandlerSpec = yarpc.NewUnaryTransportHandlerSpec(unaryTransportHandler{p})
+			transportHandlerSpec = yarpc.NewUnaryTransportHandlerSpec(&unaryTransportHandler{p})
 		default:
 			panic(p.HandlerSpec.Type())
 		}
 
-		transportProcedures = append(
-			transportProcedures,
-			yarpc.TransportProcedure{
-				Name:        p.Name,
-				Service:     p.Service,
-				HandlerSpec: transportHandlerSpec,
-				Encoding:    p.Encoding,
-				Signature:   p.Signature,
-			},
-		)
-
-		router.register(transportProcedures)
+		transportProcedures[i] = yarpc.TransportProcedure{
+			Name:        p.Name,
+			Service:     p.Service,
+			HandlerSpec: transportHandlerSpec,
+			Encoding:    p.Encoding,
+			Signature:   p.Signature,
+		}
 	}
 
+	return transportProcedures
+}
+
+// NewMapRouterWithProcedures constructs a new MapRouter with the given default service name and registers
+// the given transport-level procedures.
+func NewMapRouterWithProcedures(defaultService string, transportProcedures []yarpc.TransportProcedure) MapRouter {
+	router := NewMapRouter(defaultService)
+	router.Register(transportProcedures)
 	return router
 }
 
-// Allows encoding-level procedures to act as transport-level procedures
+// Allows encoding-level procedures to act as transport-level procedures.
 type unaryTransportHandler struct {
 	h yarpc.EncodingProcedure
 }
 
-var _ yarpc.UnaryTransportHandler = unaryTransportHandler{}
-
-func (u unaryTransportHandler) Handle(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
+func (u *unaryTransportHandler) Handle(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
 	decodedBody, codecErr := u.h.Codec.Decode(reqBuf)
 	if codecErr != nil {
 		return nil, nil, codecErr
