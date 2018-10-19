@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-10-18T15:03:53.327620876Z
+updated: 2018-10-19T15:06:18.403457082Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -66,7 +66,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: bcb74de08d37a417cb6789eec1d6c810040f0470
+  version: 16b4535ad14a9ef20a9d9fd8055143c5faa15224
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -145,7 +145,7 @@ imports:
   - push
   - tallypush
 - name: go.uber.org/thriftrw
-  version: 7c449ccc4449ee826f5063a81e7f48b178396ef1
+  version: f21741d67580a27b01451386c3998090905dc243
   subpackages:
   - envelope
   - internal/envelope
@@ -189,7 +189,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: fa43e7bc11baaae89f3f902b2b4d832b68234844
+  version: 8f1d3d21f81be6e86ebcd6febee89c89bc50719f
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -201,7 +201,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 06f26fdaaa28cdb20cf496a5eec17e1270830a63
+  version: 6adeb8aab2ded9eb693b831d5fd090c10a6ebdfa
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
