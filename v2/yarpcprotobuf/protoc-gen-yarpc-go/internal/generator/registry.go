@@ -86,12 +86,12 @@ func newRegistry(req *plugin.CodeGeneratorRequest) (*registry, error) {
 			}
 		}
 	}
-	return r, r.Load(req)
+	return r, r.load(req)
 }
 
-// Load registers all of the Proto types provided in the
+// load registers all of the Proto types provided in the
 // CodeGeneratorRequest with the registry.
-func (r *registry) Load(req *plugin.CodeGeneratorRequest) error {
+func (r *registry) load(req *plugin.CodeGeneratorRequest) error {
 	for _, f := range req.GetProtoFile() {
 		if err := r.loadFile(f); err != nil {
 			return err
