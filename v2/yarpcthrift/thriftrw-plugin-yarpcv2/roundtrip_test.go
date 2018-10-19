@@ -22,43 +22,39 @@ package main_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"net"
+	"net/url"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/thriftrw/ptr"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/internal/testtime"
-	"go.uber.org/yarpc/v2/yarpctest"
-	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc/internal/tests/atomic"
-	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreclient"
-	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreserver"
-	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc/internal/tests/atomic/storeclient"
-	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc/internal/tests/atomic/storeserver"
-	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc/internal/tests/common/baseserviceclient"
-	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc/internal/tests/common/baseserviceserver"
-	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc/internal/tests/common/emptyserviceclient"
-	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc/internal/tests/common/emptyserviceserver"
-	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc/internal/tests/common/extendemptyclient"
-	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc/internal/tests/common/extendemptyserver"
-	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc/internal/tests/common/extendonlyclient"
-	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc/internal/tests/common/extendonlyserver"
+	"go.uber.org/yarpc/v2/internal/internaltesttime"
+	"go.uber.org/yarpc/v2/yarpchttp"
+	"go.uber.org/yarpc/v2/yarpcrouter"
+	"go.uber.org/yarpc/v2/yarpcthrift"
+	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpcv2/internal/tests/atomic"
+	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpcv2/internal/tests/atomic/readonlystoreclient"
+	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpcv2/internal/tests/atomic/readonlystoreserver"
+	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpcv2/internal/tests/atomic/storeclient"
+	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpcv2/internal/tests/atomic/storeserver"
+	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpcv2/internal/tests/common/baseserviceclient"
+	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpcv2/internal/tests/common/baseserviceserver"
+	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpcv2/internal/tests/common/emptyserviceclient"
+	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpcv2/internal/tests/common/emptyserviceserver"
+	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpcv2/internal/tests/common/extendemptyclient"
+	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpcv2/internal/tests/common/extendemptyserver"
+	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpcv2/internal/tests/common/extendonlyclient"
+	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpcv2/internal/tests/common/extendonlyserver"
 )
 
 func TestRoundTrip(t *testing.T) {
 	tests := []struct{ enveloped, multiplexed bool }{
 		{true, true},
-		// Skipping for now until flaky test fixed.
-		// Uncomment this when fixed.
-		// https://github.com/yarpc/yarpc-go/issues/1171
-		//{true, false},
+		{true, false},
 		{false, true},
 		{false, false},
 	}
@@ -70,34 +66,28 @@ func TestRoundTrip(t *testing.T) {
 }
 
 func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
-	var serverOpts []thrift.RegisterOption
+	var serverOpts []yarpcthrift.RegisterOption
 	if enveloped {
-		serverOpts = append(serverOpts, thrift.Enveloped)
+		serverOpts = append(serverOpts, yarpcthrift.Enveloped)
 	}
 
-	var clientOpts []string
+	var clientOpts []yarpcthrift.ClientOption
 	if enveloped {
-		clientOpts = append(clientOpts, "enveloped")
+		clientOpts = append(clientOpts, yarpcthrift.Enveloped)
 	}
 	if multiplexed {
-		clientOpts = append(clientOpts, "multiplexed")
-	}
-
-	var thriftTag string
-	if len(clientOpts) > 0 {
-		thriftTag = fmt.Sprintf(` thrift:"%v"`, strings.Join(clientOpts, ","))
+		clientOpts = append(clientOpts, yarpcthrift.Multiplexed)
 	}
 
 	tests := []struct {
 		desc          string
-		procedures    []transport.Procedure
+		procedures    []yarpc.Procedure
 		newClientFunc interface{}
 
 		// if method is non-empty, client.method(ctx, methodArgs...) will be called
 		method     string
 		methodArgs []interface{}
 
-		wantAck    bool
 		wantResult interface{}
 		wantError  error
 	}{
@@ -243,50 +233,35 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 			methodArgs:    []interface{}{ptr.String("foo")},
 			wantError:     &atomic.KeyDoesNotExist{Key: ptr.String("foo")},
 		},
-		{
-			desc:          "store: forget",
-			procedures:    storeserver.New(&storeHandler{}, serverOpts...),
-			newClientFunc: storeclient.New,
-			method:        "Forget",
-			methodArgs:    []interface{}{ptr.String("foo")},
-			wantAck:       true,
-		},
-		{
-			desc:          "store: forget error",
-			procedures:    storeserver.New(&storeHandler{failWith: errors.New("great sadness")}, serverOpts...),
-			newClientFunc: storeclient.New,
-			method:        "Forget",
-			methodArgs:    []interface{}{ptr.String("foo")},
-			wantAck:       true,
-		},
 	}
 
 	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			httpInbound := http.NewTransport().NewInbound(":0")
+			router := yarpcrouter.NewMapRouter("roundtrip-server")
+			router.Register(tt.procedures)
+			listener, err := net.Listen("tcp", ":0")
+			require.NoError(t, err)
+			httpInbound := &yarpchttp.Inbound{
+				Listener: listener,
+				Router:   router,
+			}
+			require.NoError(t, httpInbound.Start(context.Background()), "failed to start server")
+			defer func() {
+				assert.NoError(t, httpInbound.Stop(context.Background()), "failed to stop server")
+			}()
 
-			server := yarpc.NewDispatcher(yarpc.Config{
-				Name:     "roundtrip-server",
-				Inbounds: yarpc.Inbounds{httpInbound},
-			})
-			server.Register(tt.procedures)
-			require.NoError(t, server.Start())
-			defer server.Stop()
-
-			outbound := http.NewTransport().NewSingleOutbound(
-				fmt.Sprintf("http://%v", yarpctest.ZeroAddrToHostPort(httpInbound.Addr())))
-
-			dispatcher := yarpc.NewDispatcher(yarpc.Config{
-				Name: "roundtrip-client",
-				Outbounds: yarpc.Outbounds{
-					"roundtrip-server": {
-						Unary: outbound,
-					},
-				},
-			})
-			require.NoError(t, dispatcher.Start())
-			defer dispatcher.Stop()
+			dialer := &yarpchttp.Dialer{}
+			require.NoError(t, dialer.Start(context.Background()))
+			outbound := &yarpchttp.Outbound{
+				URL:    &url.URL{Scheme: "http", Host: listener.Addr().String()},
+				Dialer: dialer,
+			}
+			clientD := yarpc.Client{
+				Caller:  "roundtrip-client",
+				Service: "roundtrip-server",
+				Unary:   outbound,
+			}
 
 			// Verify that newClientFunc was valid
 			newClientFuncType := reflect.TypeOf(tt.newClientFunc)
@@ -299,27 +274,13 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 			require.Equal(t, reflect.Interface, clientType.Kind(),
 				"invalid test: newClientFunc must return an Interface")
 
-			// The following blob is equivalent to,
-			//
-			// 	var clientHolder struct {
-			// 		Client ${service}client.Interface `service:"roundtrip-server"`
-			// 	}
-			// 	yarpc.InjectClients(dispatcher, &clientHolder)
-			// 	client := clientHolder.Client
-			//
-			// Optionally with the `thrift:"..."` tag if thriftTag was
-			// non-empty.
-			structType := reflect.StructOf([]reflect.StructField{
-				{
-					Name: "Client",
-					Type: clientType,
-					Tag:  reflect.StructTag(`service:"roundtrip-server"` + thriftTag),
-				},
-			})
-			clientHolder := reflect.New(structType).Elem()
-			yarpc.InjectClients(dispatcher, clientHolder.Addr().Interface())
-			client := clientHolder.Field(0)
-			assert.NotNil(t, client.Interface(), "InjectClients did not provide a client")
+			clientArgs := []reflect.Value{reflect.ValueOf(clientD)}
+			for _, opt := range clientOpts {
+				clientArgs = append(clientArgs, reflect.ValueOf(opt))
+			}
+
+			client := reflect.ValueOf(tt.newClientFunc).
+				Call(clientArgs)[0]
 
 			if tt.method == "" {
 				return
@@ -331,7 +292,7 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 			method := client.MethodByName(tt.method)
 			assert.True(t, method.IsValid(), "Method %q not found", tt.method)
 
-			ctx, cancel := context.WithTimeout(ctx, 200*testtime.Millisecond)
+			ctx, cancel := context.WithTimeout(ctx, 200*internaltesttime.Millisecond)
 			defer cancel()
 
 			args := append([]interface{}{ctx}, tt.methodArgs...)
@@ -341,22 +302,14 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 			case 1: // error
 				err, _ := returns[0].Interface().(error)
 				assert.Equal(t, tt.wantError, err)
-			case 2: // (ack/result, err)
+			case 2: // (result, err)
 				result := returns[0].Interface()
 				err, _ := returns[1].Interface().(error)
 				if tt.wantError != nil {
 					assert.Equal(t, tt.wantError, err)
 				} else {
-					if !assert.NoError(t, err, "expected success") {
-						return
-					}
-
-					if tt.wantAck {
-						assert.Implements(t, (*transport.Ack)(nil), result, "expected a non-nil ack")
-						assert.NotNil(t, result, "expected a non-nil ack")
-					} else {
-						assert.Equal(t, tt.wantResult, result)
-					}
+					require.NoError(t, err, "expected success")
+					assert.Equal(t, tt.wantResult, result)
 				}
 			default:
 				t.Fatalf(
