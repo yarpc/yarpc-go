@@ -20,173 +20,176 @@
 
 package main
 
-// import (
-// 	"context"
-// 	"fmt"
-// 	"testing"
-// 	"time"
+import (
+	"context"
+	"net"
+	"net/url"
+	"testing"
+	"time"
 
-// 	"github.com/stretchr/testify/assert"
-// 	"github.com/stretchr/testify/require"
-// 	"go.uber.org/fx"
-// 	"go.uber.org/fx/fxtest"
-// 	"go.uber.org/thriftrw/ptr"
-// 	"go.uber.org/yarpc/api/transport"
-// 	"go.uber.org/yarpc/encoding/raw"
-// 	"go.uber.org/yarpc/transport/http"
-// 	"go.uber.org/yarpc/v2"
-// 	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc/internal/tests/atomic"
-// 	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystorefx"
-// 	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreserver"
-// 	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc/internal/tests/atomic/storeclient"
-// 	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc/internal/tests/atomic/storefx"
-// )
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/fx"
+	"go.uber.org/fx/fxtest"
+	"go.uber.org/thriftrw/ptr"
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcclient"
+	"go.uber.org/yarpc/v2/yarpchttp"
+	"go.uber.org/yarpc/v2/yarpcjson"
+	"go.uber.org/yarpc/v2/yarpcrouter"
+	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpcv2/internal/tests/atomic"
+	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpcv2/internal/tests/atomic/readonlystorefx"
+	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpcv2/internal/tests/atomic/readonlystoreserver"
+	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpcv2/internal/tests/atomic/storeclient"
+	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpcv2/internal/tests/atomic/storefx"
+)
 
-// func TestFxClient(t *testing.T) {
-// 	d := yarpc.NewDispatcher(yarpc.Config{
-// 		Name: "myservice",
-// 		Outbounds: yarpc.Outbounds{
-// 			"store": {Unary: http.NewTransport().NewSingleOutbound("http://127.0.0.1/yarpc")},
-// 		},
-// 	})
+func TestFxClient(t *testing.T) {
+	d := yarpcclient.NewProvider()
+	d.Register("store", yarpc.Client{})
 
-// 	assert.NotPanics(t, func() {
-// 		p := storefx.Params{
-// 			Provider: d,
-// 		}
-// 		f := storefx.Client("store").(func(storefx.Params) storefx.Result)
-// 		f(p)
-// 	}, "failed to build client")
+	assert.NotPanics(t, func() {
+		p := storefx.Params{
+			Provider: d,
+		}
+		f := storefx.Client("store").(func(storefx.Params) (storefx.Result, error))
+		f(p)
+	}, "failed to build client")
 
-// 	assert.Panics(t, func() {
-// 		f := storefx.Client("not-store").(func(*yarpc.Dispatcher) storeclient.Interface)
-// 		f(d)
-// 	}, "expected panic")
-// }
+	assert.Panics(t, func() {
+		f := storefx.Client("not-store").(func(yarpc.ClientProvider) storeclient.Interface)
+		f(d)
+	}, "expected panic")
+}
 
-// func extractProcedures(procs *[]transport.Procedure) fx.Option {
-// 	type params struct {
-// 		fx.In
+func extractProcedures(procs *[]yarpc.Procedure) fx.Option {
+	type params struct {
+		fx.In
 
-// 		// We need to handle both cases: A single transport.Procedure provided
-// 		// to the "yarpcfx" group and a []transport.Procedure provided to the
-// 		// "yarpcfx" group.
-// 		SingleProcedures []transport.Procedure   `group:"yarpcfx"`
-// 		ProcedureLists   [][]transport.Procedure `group:"yarpcfx"`
-// 	}
+		// We need to handle both cases: A single transport.Procedure provided
+		// to the "yarpcfx" group and a []transport.Procedure provided to the
+		// "yarpcfx" group.
+		SingleProcedures []yarpc.Procedure   `group:"yarpcfx"`
+		ProcedureLists   [][]yarpc.Procedure `group:"yarpcfx"`
+	}
 
-// 	return fx.Invoke(func(p params) {
-// 		for _, proc := range p.SingleProcedures {
-// 			*procs = append(*procs, proc)
-// 		}
-// 		for _, procList := range p.ProcedureLists {
-// 			*procs = append(*procs, procList...)
-// 		}
-// 	})
-// }
+	return fx.Invoke(func(p params) {
+		for _, proc := range p.SingleProcedures {
+			*procs = append(*procs, proc)
+		}
+		for _, procList := range p.ProcedureLists {
+			*procs = append(*procs, procList...)
+		}
+	})
+}
 
-// func echoRaw(ctx context.Context, req []byte) ([]byte, error) { return req, nil }
+func echoJSON(ctx context.Context, req map[string]interface{}) (map[string]interface{}, error) {
+	return req, nil
+}
 
-// func TestFxServer(t *testing.T) {
-// 	type rawProcedures struct {
-// 		fx.Out
+func TestFxServer(t *testing.T) {
+	type jsonProcedures struct {
+		fx.Out
 
-// 		Procedures []transport.Procedure `group:"yarpcfx"`
-// 	}
+		Procedures []yarpc.Procedure `group:"yarpcfx"`
+	}
 
-// 	handler := readOnlyStoreHandler{
-// 		"foo":    1,
-// 		"bar":    2,
-// 		"answer": 42,
-// 	}
+	handler := readOnlyStoreHandler{
+		"foo":    1,
+		"bar":    2,
+		"answer": 42,
+	}
 
-// 	var procedures []transport.Procedure
-// 	serverApp := fxtest.New(t,
-// 		fx.Provide(
-// 			func() readonlystoreserver.Interface { return handler },
-// 			readonlystorefx.Server(),
-// 			func() rawProcedures {
-// 				return rawProcedures{Procedures: raw.Procedure("echoRaw", echoRaw)}
-// 			},
-// 		),
-// 		extractProcedures(&procedures),
-// 	)
-// 	defer serverApp.RequireStart().RequireStop()
+	var procedures []yarpc.Procedure
+	serverApp := fxtest.New(t,
+		fx.Provide(
+			func() readonlystoreserver.Interface { return handler },
+			readonlystorefx.Server(),
+			func() jsonProcedures {
+				return jsonProcedures{Procedures: yarpcjson.Procedure("echoJSON", echoJSON)}
+			},
+		),
+		extractProcedures(&procedures),
+	)
+	defer serverApp.RequireStart().RequireStop()
 
-// 	inbound := http.NewTransport().NewInbound("127.0.0.1:0")
-// 	serverD := yarpc.NewDispatcher(yarpc.Config{
-// 		Name:     "myserver",
-// 		Inbounds: yarpc.Inbounds{inbound},
-// 	})
-// 	serverD.Register(procedures)
-// 	require.NoError(t, serverD.Start(), "failed to start server")
-// 	defer func() {
-// 		assert.NoError(t, serverD.Stop(), "failed to stop server")
-// 	}()
+	router := yarpcrouter.NewMapRouter("myserver")
+	router.Register(procedures)
+	listener, err := net.Listen("tcp", ":0")
+	require.NoError(t, err)
+	serverD := &yarpchttp.Inbound{
+		Listener: listener,
+		Router:   router,
+	}
+	require.NoError(t, serverD.Start(context.Background()), "failed to start server")
+	defer func() {
+		assert.NoError(t, serverD.Stop(context.Background()), "failed to stop server")
+	}()
 
-// 	clientD := yarpc.NewDispatcher(yarpc.Config{
-// 		Name: "myclient",
-// 		Outbounds: yarpc.Outbounds{
-// 			"myserver": {
-// 				Unary: http.NewTransport().NewSingleOutbound(
-// 					fmt.Sprintf("http://%s/", inbound.Addr()),
-// 				),
-// 			},
-// 		},
-// 	})
-// 	require.NoError(t, clientD.Start(), "failed to start client")
-// 	defer func() {
-// 		assert.NoError(t, clientD.Stop(), "failed to stop client")
-// 	}()
+	dialer := &yarpchttp.Dialer{}
+	require.NoError(t, dialer.Start(context.Background()))
 
-// 	// Can use read-write client to call read-only server
-// 	client := storeclient.New(clientD.ClientConfig("myserver"))
+	outbound := &yarpchttp.Outbound{
+		URL:    &url.URL{Scheme: "http", Host: listener.Addr().String()},
+		Dialer: dialer,
+	}
 
-// 	ctx := context.Background()
+	clientD := yarpc.Client{
+		Caller:  "myclient",
+		Service: "myserver",
+		Unary:   outbound,
+	}
 
-// 	t.Run("Integer", func(t *testing.T) {
-// 		ctx, cancel := context.WithTimeout(ctx, time.Second)
-// 		defer cancel()
+	// Can use read-write client to call read-only server
+	client := storeclient.New(clientD)
 
-// 		res, err := client.Integer(ctx, ptr.String("answer"))
-// 		assert.NoError(t, err, "request failed")
-// 		assert.Equal(t, int64(42), res, "result did not match")
-// 	})
+	ctx := context.Background()
 
-// 	t.Run("Integer error", func(t *testing.T) {
-// 		ctx, cancel := context.WithTimeout(ctx, time.Second)
-// 		defer cancel()
+	t.Run("Integer", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
 
-// 		_, err := client.Integer(ctx, ptr.String("baz")) // baz does not exist
-// 		assert.Error(t, err, "request failed")
+		res, err := client.Integer(ctx, ptr.String("answer"))
+		assert.NoError(t, err, "request failed")
+		assert.Equal(t, int64(42), res, "result did not match")
+	})
 
-// 		exc, ok := err.(*atomic.KeyDoesNotExist)
-// 		require.True(t, ok, "error '%+v' must be a *KeyDoesNotExist, not %T", err, err)
-// 		assert.Equal(t, "baz", *exc.Key, "exception key did not match")
-// 	})
+	t.Run("Integer error", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
 
-// 	rawClient := raw.New(clientD.ClientConfig("myserver"))
+		_, err := client.Integer(ctx, ptr.String("baz")) // baz does not exist
+		assert.Error(t, err, "request failed")
 
-// 	t.Run("raw", func(t *testing.T) {
-// 		ctx, cancel := context.WithTimeout(ctx, time.Second)
-// 		defer cancel()
+		exc, ok := err.(*atomic.KeyDoesNotExist)
+		require.True(t, ok, "error '%+v' must be a *KeyDoesNotExist, not %T", err, err)
+		assert.Equal(t, "baz", *exc.Key, "exception key did not match")
+	})
 
-// 		res, err := rawClient.Call(ctx, "echoRaw", []byte("hello"))
-// 		require.NoError(t, err, "request failed")
-// 		assert.Equal(t, "hello", string(res), "response body did not match")
-// 	})
-// }
+	// rawClient := raw.New(clientD.ClientConfig("myserver"))
+	jsonClient := yarpcjson.New(clientD)
+	t.Run("json", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
 
-// type readOnlyStoreHandler map[string]int64
+		req := map[string]string{"hello": "world"}
+		var res map[string]string
+		err := jsonClient.Call(ctx, "echoJSON", req, &res)
+		require.NoError(t, err, "request failed")
+		assert.Equal(t, map[string]string{"hello": "world"}, res, "response body did not match")
+	})
+}
 
-// func (readOnlyStoreHandler) Healthy(context.Context) (bool, error) {
-// 	return true, nil
-// }
+type readOnlyStoreHandler map[string]int64
 
-// func (h readOnlyStoreHandler) Integer(ctx context.Context, k *string) (int64, error) {
-// 	v, ok := h[*k]
-// 	if !ok {
-// 		return 0, &atomic.KeyDoesNotExist{Key: k}
-// 	}
-// 	return v, nil
-// }
+func (readOnlyStoreHandler) Healthy(context.Context) (bool, error) {
+	return true, nil
+}
+
+func (h readOnlyStoreHandler) Integer(ctx context.Context, k *string) (int64, error) {
+	v, ok := h[*k]
+	if !ok {
+		return 0, &atomic.KeyDoesNotExist{Key: k}
+	}
+	return v, nil
+}
