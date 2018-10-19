@@ -107,7 +107,6 @@ ignore:
  - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/keyvalue/
  - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/stream/
  - /v2/yarpcthrift/internal/
- - /v2/yarpcthrift/thriftrw-plugin-yarpcv2/
  - /v2/yarpcthrift/thriftrw-plugin-yarpcv2/internal/tests/atomic/
  - /v2/yarpcthrift/thriftrw-plugin-yarpcv2/internal/tests/atomic/readonlystoreclient/
  - /v2/yarpcthrift/thriftrw-plugin-yarpcv2/internal/tests/atomic/readonlystorefx/
