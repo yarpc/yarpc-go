@@ -39,11 +39,10 @@ type Result struct {
 // 	)
 func Client(name string, opts ...yarpcthrift.ClientOption) interface{} {
 	return func(p Params) (Result, error) {
-		yarpcClient, ok := p.Provider.Client(name)
+		client, ok := p.Provider.Client(name)
 		if !ok {
 			return Result{}, fmt.Errorf("generated code could not retrieve client for %q", name)
 		}
-		client := readonlystoreclient.New(yarpcClient, opts...)
-		return Result{Client: client}, nil
+		return Result{Client: readonlystoreclient.New(client, opts...)}, nil
 	}
 }

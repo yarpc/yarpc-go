@@ -242,13 +242,13 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 			router.Register(tt.procedures)
 			listener, err := net.Listen("tcp", ":0")
 			require.NoError(t, err)
-			httpInbound := &yarpchttp.Inbound{
+			inbound := &yarpchttp.Inbound{
 				Listener: listener,
 				Router:   router,
 			}
-			require.NoError(t, httpInbound.Start(context.Background()), "failed to start server")
+			require.NoError(t, inbound.Start(context.Background()), "failed to start server")
 			defer func() {
-				assert.NoError(t, httpInbound.Stop(context.Background()), "failed to stop server")
+				assert.NoError(t, inbound.Stop(context.Background()), "failed to stop server")
 			}()
 
 			dialer := &yarpchttp.Dialer{}
@@ -257,7 +257,7 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 				URL:    &url.URL{Scheme: "http", Host: listener.Addr().String()},
 				Dialer: dialer,
 			}
-			clientD := yarpc.Client{
+			yarpcClient := yarpc.Client{
 				Caller:  "roundtrip-client",
 				Service: "roundtrip-server",
 				Unary:   outbound,
@@ -274,7 +274,7 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 			require.Equal(t, reflect.Interface, clientType.Kind(),
 				"invalid test: newClientFunc must return an Interface")
 
-			clientArgs := []reflect.Value{reflect.ValueOf(clientD)}
+			clientArgs := []reflect.Value{reflect.ValueOf(yarpcClient)}
 			for _, opt := range clientOpts {
 				clientArgs = append(clientArgs, reflect.ValueOf(opt))
 			}

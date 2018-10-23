@@ -22,7 +22,10 @@ type Interface interface {
 
 // New builds a new client for the Weather service.
 //
-//  yarpcClient, _ := yarpc.ClientProvider("weather")
+//  yarpcClient, err := yarpc.Provider.Client("weather")
+//  if err != nil {
+//	  return err
+//  }
 // 	client := weatherclient.New(yarpcClient)
 func New(c yarpc.Client, opts ...yarpcthrift.ClientOption) Interface {
 	return client{

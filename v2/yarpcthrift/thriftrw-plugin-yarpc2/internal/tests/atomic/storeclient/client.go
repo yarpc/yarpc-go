@@ -32,7 +32,10 @@ type Interface interface {
 
 // New builds a new client for the Store service.
 //
-//  yarpcClient, _ := yarpc.ClientProvider("store")
+//  yarpcClient, err := yarpc.Provider.Client("store")
+//  if err != nil {
+//	  return err
+//  }
 // 	client := storeclient.New(yarpcClient)
 func New(c yarpc.Client, opts ...yarpcthrift.ClientOption) Interface {
 	return client{

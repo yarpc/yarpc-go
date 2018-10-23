@@ -24,7 +24,10 @@ type Interface interface {
 
 // New builds a new client for the ExtendEmpty service.
 //
-//  yarpcClient, _ := yarpc.ClientProvider("extendempty")
+//  yarpcClient, err := yarpc.Provider.Client("extendempty")
+//  if err != nil {
+//	  return err
+//  }
 // 	client := extendemptyclient.New(yarpcClient)
 func New(c yarpc.Client, opts ...yarpcthrift.ClientOption) Interface {
 	return client{

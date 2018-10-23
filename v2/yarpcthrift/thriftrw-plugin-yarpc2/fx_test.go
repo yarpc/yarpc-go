@@ -33,7 +33,6 @@ import (
 	"go.uber.org/fx/fxtest"
 	"go.uber.org/thriftrw/ptr"
 	"go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcclient"
 	"go.uber.org/yarpc/v2/yarpchttp"
 	"go.uber.org/yarpc/v2/yarpcjson"
 	"go.uber.org/yarpc/v2/yarpcrouter"
@@ -41,26 +40,7 @@ import (
 	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/atomic/readonlystorefx"
 	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/atomic/readonlystoreserver"
 	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/atomic/storeclient"
-	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/atomic/storefx"
 )
-
-func TestFxClient(t *testing.T) {
-	d := yarpcclient.NewProvider()
-	d.Register("store", yarpc.Client{})
-
-	assert.NotPanics(t, func() {
-		p := storefx.Params{
-			Provider: d,
-		}
-		f := storefx.Client("store").(func(storefx.Params) (storefx.Result, error))
-		f(p)
-	}, "failed to build client")
-
-	assert.Panics(t, func() {
-		f := storefx.Client("not-store").(func(yarpc.ClientProvider) storeclient.Interface)
-		f(d)
-	}, "expected panic")
-}
 
 func extractProcedures(procs *[]yarpc.Procedure) fx.Option {
 	type params struct {
@@ -117,13 +97,13 @@ func TestFxServer(t *testing.T) {
 	router.Register(procedures)
 	listener, err := net.Listen("tcp", ":0")
 	require.NoError(t, err)
-	serverD := &yarpchttp.Inbound{
+	inbound := &yarpchttp.Inbound{
 		Listener: listener,
 		Router:   router,
 	}
-	require.NoError(t, serverD.Start(context.Background()), "failed to start server")
+	require.NoError(t, inbound.Start(context.Background()), "failed to start server")
 	defer func() {
-		assert.NoError(t, serverD.Stop(context.Background()), "failed to stop server")
+		assert.NoError(t, inbound.Stop(context.Background()), "failed to stop server")
 	}()
 
 	dialer := &yarpchttp.Dialer{}
@@ -134,14 +114,14 @@ func TestFxServer(t *testing.T) {
 		Dialer: dialer,
 	}
 
-	clientD := yarpc.Client{
+	yarpcClient := yarpc.Client{
 		Caller:  "myclient",
 		Service: "myserver",
 		Unary:   outbound,
 	}
 
 	// Can use read-write client to call read-only server
-	client := storeclient.New(clientD)
+	client := storeclient.New(yarpcClient)
 
 	ctx := context.Background()
 
@@ -166,8 +146,7 @@ func TestFxServer(t *testing.T) {
 		assert.Equal(t, "baz", *exc.Key, "exception key did not match")
 	})
 
-	// rawClient := raw.New(clientD.ClientConfig("myserver"))
-	jsonClient := yarpcjson.New(clientD)
+	jsonClient := yarpcjson.New(yarpcClient)
 	t.Run("json", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()

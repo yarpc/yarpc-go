@@ -33,11 +33,10 @@ import (
 	"strings"
 	"testing"
 
-	"go.uber.org/atomic"
-	"go.uber.org/thriftrw/plugin"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/atomic"
+	"go.uber.org/thriftrw/plugin"
 )
 
 // This implements a test that verifies that the code in internal/tests/ is up to

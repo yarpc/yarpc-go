@@ -17,7 +17,7 @@ WHITELIST="\
   v2 \
   v2/yarpctest \
   v2/yarpcthrift \
-  v2/yarpcthrift/thriftrw-plugin-yarpcv2"
+  v2/yarpcthrift/thriftrw-plugin-yarpc2"
 
 is_ignore_dir() {
   for i in ${IGNORE_DIRS}; do

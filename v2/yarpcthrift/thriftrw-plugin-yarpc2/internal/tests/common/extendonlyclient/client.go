@@ -16,7 +16,10 @@ type Interface interface {
 
 // New builds a new client for the ExtendOnly service.
 //
-//  yarpcClient, _ := yarpc.ClientProvider("extendonly")
+//  yarpcClient, err := yarpc.Provider.Client("extendonly")
+//  if err != nil {
+//	  return err
+//  }
 // 	client := extendonlyclient.New(yarpcClient)
 func New(c yarpc.Client, opts ...yarpcthrift.ClientOption) Interface {
 	return client{

@@ -33,8 +33,8 @@ const clientTemplate = `
 <$pkgname := printf "%sclient" (lower .Name)>
 package <$pkgname>
 
-<$yarpc     := import "go.uber.org/yarpc/v2">
-<$yarpcthrift    := import "go.uber.org/yarpc/v2/yarpcthrift">
+<$yarpc       := import "go.uber.org/yarpc/v2">
+<$yarpcthrift := import "go.uber.org/yarpc/v2/yarpcthrift">
 
 </* Note that we import things like "context" inside loops rather than at the
     top-level because they will end up unused if the service does not have any
@@ -57,11 +57,12 @@ type Interface interface {
 	<end><end>
 }
 
-</* TODO(abg): Pull the default routing name from a Thrift annotation? */>
-
 // New builds a new client for the <.Name> service.
 //
-//  yarpcClient, _ := yarpc.ClientProvider("<lower .Name>")
+//  yarpcClient, err := yarpc.Provider.Client("<lower .Name>")
+//  if err != nil {
+//	  return err
+//  }
 // 	client := <$pkgname>.New(yarpcClient)
 func New(c <$yarpc>.Client, opts ...<$yarpcthrift>.ClientOption) Interface {
 	return client{
