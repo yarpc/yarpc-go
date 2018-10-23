@@ -1,15 +1,16 @@
 TEMPLATE_DATA_DIR = internal/templatedata
+TEMPLATE_DIR = internal/template
 TESTS_DIR = internal/tests
 
 TEMPLATES = \
-	$(TEMPLATE_DATA_DIR)/base.tmpl \
-	$(TEMPLATE_DATA_DIR)/client.tmpl \
-	$(TEMPLATE_DATA_DIR)/client_impl.tmpl \
-	$(TEMPLATE_DATA_DIR)/client_stream.tmpl \
-	$(TEMPLATE_DATA_DIR)/fx.tmpl \
-	$(TEMPLATE_DATA_DIR)/server.tmpl \
-	$(TEMPLATE_DATA_DIR)/server_impl.tmpl \
-	$(TEMPLATE_DATA_DIR)/server_stream.tmpl
+	$(TEMPLATE_DIR)/base.tmpl \
+	$(TEMPLATE_DIR)/client.tmpl \
+	$(TEMPLATE_DIR)/client_impl.tmpl \
+	$(TEMPLATE_DIR)/client_stream.tmpl \
+	$(TEMPLATE_DIR)/fx.tmpl \
+	$(TEMPLATE_DIR)/server.tmpl \
+	$(TEMPLATE_DIR)/server_impl.tmpl \
+	$(TEMPLATE_DIR)/server_stream.tmpl
 
 .PHONY: generate
 generate:
@@ -18,9 +19,15 @@ ifeq ($(shell which prototool),)
 endif
 	@prototool generate $(TESTS_DIR)
 
+# A simple utility used to update our test fixtures when
+# we have made a change to the generated templates.
+.PHONY: fixtures
+fixtures:
+	@FIXTURES=true go test . --run TestGenerate
+
 .PHONY: templates
 templates: $(TEMPLATES)
 ifeq ($(shell which go-bindata),)
 	@go get -u github.com/kevinburke/go-bindata/go-bindata
 endif
-	@go-bindata -pkg templatedata -o ./$(TEMPLATE_DATA_DIR)/bindata.go ./$(TEMPLATE_DATA_DIR)
+	@go-bindata -pkg templatedata -o ./$(TEMPLATE_DATA_DIR)/bindata.go ./$(TEMPLATE_DIR)

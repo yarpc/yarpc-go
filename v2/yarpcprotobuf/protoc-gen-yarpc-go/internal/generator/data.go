@@ -37,9 +37,11 @@ type Data struct {
 type File struct {
 	descriptor *descriptor.FileDescriptorProto
 
-	Name     string
-	Package  *Package
-	Services []*Service
+	Name         string
+	Package      *Package
+	Reflection   *Reflection
+	Services     []*Service
+	Dependencies []*File
 }
 
 // Package holds information with respect
@@ -111,4 +113,12 @@ type Method struct {
 type Message struct {
 	Name    string
 	Package *Package
+}
+
+// Reflection represents the server reflection data.
+type Reflection struct {
+	// Var is the variable name used to contain
+	// the generated file descriptor closure.
+	Var      string
+	Encoding string
 }

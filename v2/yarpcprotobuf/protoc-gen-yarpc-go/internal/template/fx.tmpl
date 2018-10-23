@@ -1,6 +1,7 @@
 {{define "fx" -}}
 {{with .File}}
 {{$gopkg := .Package.GoPackage}}
+{{$reflectionVar := .Reflection.Var}}
 
 {{range .Services -}}
 
@@ -60,7 +61,8 @@
   type {{.FxServer}}Result struct {
     fx.Out
 
-    Procedures []yarpc.Procedure `group:"yarpcfx"`
+    Procedures     []yarpc.Procedure     `group:"yarpcfx"`
+    ReflectionMeta reflection.ServerMeta `group:"yarpcfx"`
   }
 
   // New{{.FxServer}} provides the {{.Server}}
@@ -75,9 +77,24 @@
     return func(p {{.FxServer}}Params) {{.FxServer}}Result {
       return {{.FxServer}}Result{
         Procedures: Build{{.Procedures}}(p.Server),
+        ReflectionMeta: reflection.ServerMeta{
+          ServiceName: {{printf "%q" .FQN}},
+          FileDescriptors: {{$reflectionVar}},
+        },
       }
     }
   }
+
 {{end -}}
+
+{{/* Reflection server */}}
+var {{$reflectionVar}} = [][]byte{
+  // {{.Name}}
+  {{.Reflection.Encoding}},
+  {{range .Dependencies -}}
+    // {{.Name}}
+    {{.Reflection.Encoding}},
+  {{end -}}
+}
 
 {{end -}}{{end -}}
