@@ -34,15 +34,15 @@ var (
 	_interfaceEmptyType = reflect.TypeOf((*interface{})(nil)).Elem()
 )
 
-// Procedure builds a Procedure from the given JSON handler. handler must be
+// Procedure builds a TransportProcedure from the given JSON handler. handler must be
 // a function with a signature similar to,
 //
 // 	f(ctx context.Context, body $reqBody) ($resBody, error)
 //
 // Where $reqBody and $resBody are a map[string]interface{} or pointers to
 // structs.
-func Procedure(name string, handler interface{}) []yarpc.Procedure {
-	return []yarpc.Procedure{
+func Procedure(name string, handler interface{}) []yarpc.TransportProcedure {
+	return []yarpc.TransportProcedure{
 		{
 			Name: name,
 			HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(

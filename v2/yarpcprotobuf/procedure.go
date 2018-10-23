@@ -50,17 +50,17 @@ type StreamProceduresParams struct {
 // Procedures builds a slice of yarpc.Procedures.
 // This is used to construct a slice of yarpc.Procedures from the context
 // of a protoc plugin, i.e. protoc-gen-yarpc-go.
-func Procedures(params ProceduresParams) []yarpc.Procedure {
-	procedures := make([]yarpc.Procedure, 0, 2*(len(params.Unary)+len(params.Stream)))
+func Procedures(params ProceduresParams) []yarpc.TransportProcedure {
+	procedures := make([]yarpc.TransportProcedure, 0, 2*(len(params.Unary)+len(params.Stream)))
 	for _, u := range params.Unary {
 		procedures = append(
 			procedures,
-			yarpc.Procedure{
+			yarpc.TransportProcedure{
 				Name:        yarpcprocedure.ToName(params.Service, u.Method),
 				HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(u.Handler),
 				Encoding:    Encoding,
 			},
-			yarpc.Procedure{
+			yarpc.TransportProcedure{
 				Name:        yarpcprocedure.ToName(params.Service, u.Method),
 				HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(u.Handler),
 				Encoding:    yarpcjson.Encoding,
@@ -70,12 +70,12 @@ func Procedures(params ProceduresParams) []yarpc.Procedure {
 	for _, s := range params.Stream {
 		procedures = append(
 			procedures,
-			yarpc.Procedure{
+			yarpc.TransportProcedure{
 				Name:        yarpcprocedure.ToName(params.Service, s.Method),
 				HandlerSpec: yarpc.NewStreamTransportHandlerSpec(s.Handler),
 				Encoding:    Encoding,
 			},
-			yarpc.Procedure{
+			yarpc.TransportProcedure{
 				Name:        yarpcprocedure.ToName(params.Service, s.Method),
 				HandlerSpec: yarpc.NewStreamTransportHandlerSpec(s.Handler),
 				Encoding:    yarpcjson.Encoding,

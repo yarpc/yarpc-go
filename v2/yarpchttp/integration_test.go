@@ -123,7 +123,7 @@ type testEnv struct {
 }
 
 type testEnvOptions struct {
-	Procedures []yarpc.Procedure
+	Procedures []yarpc.TransportProcedure
 	Inbound    *Inbound
 	Outbound   *Outbound
 }

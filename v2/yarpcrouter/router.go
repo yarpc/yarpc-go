@@ -49,7 +49,7 @@ type serviceProcedureEncoding struct {
 // procedures.
 type MapRouter struct {
 	defaultService            string
-	serviceProcedureEncodings map[serviceProcedureEncoding]yarpc.Procedure
+	serviceProcedureEncodings map[serviceProcedureEncoding]yarpc.TransportProcedure
 	serviceNames              map[string]struct{}
 }
 
@@ -58,7 +58,7 @@ type MapRouter struct {
 func NewMapRouter(defaultService string) MapRouter {
 	return MapRouter{
 		defaultService:            defaultService,
-		serviceProcedureEncodings: make(map[serviceProcedureEncoding]yarpc.Procedure),
+		serviceProcedureEncodings: make(map[serviceProcedureEncoding]yarpc.TransportProcedure),
 		serviceNames:              map[string]struct{}{defaultService: {}},
 	}
 }
@@ -70,7 +70,7 @@ func NewMapRouter(defaultService string) MapRouter {
 // same name and service name can exist if they handle different encodings.
 // If a procedure does not specify an encoding, it can only support one handler.
 // The router will select that handler regardless of the encoding.
-func (m MapRouter) Register(rs []yarpc.Procedure) {
+func (m MapRouter) Register(rs []yarpc.TransportProcedure) {
 	for _, r := range rs {
 		if r.Service == "" {
 			r.Service = m.defaultService
@@ -97,8 +97,8 @@ func (m MapRouter) Register(rs []yarpc.Procedure) {
 
 // Procedures returns a list procedures that
 // have been registered so far.
-func (m MapRouter) Procedures() []yarpc.Procedure {
-	procs := make([]yarpc.Procedure, 0, len(m.serviceProcedureEncodings))
+func (m MapRouter) Procedures() []yarpc.TransportProcedure {
+	procs := make([]yarpc.TransportProcedure, 0, len(m.serviceProcedureEncodings))
 	for _, v := range m.serviceProcedureEncodings {
 		procs = append(procs, v)
 	}
@@ -106,7 +106,7 @@ func (m MapRouter) Procedures() []yarpc.Procedure {
 	return procs
 }
 
-type sortableProcedures []yarpc.Procedure
+type sortableProcedures []yarpc.TransportProcedure
 
 func (ps sortableProcedures) Len() int {
 	return len(ps)

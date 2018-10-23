@@ -42,7 +42,7 @@ func TestMapRouter(t *testing.T) {
 	bar := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
 	bazJSON := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
 	bazThrift := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
-	m.Register([]yarpc.Procedure{
+	m.Register([]yarpc.TransportProcedure{
 		{
 			Name:        "foo",
 			HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(foo),
@@ -109,7 +109,7 @@ func TestMapRouter_Procedures(t *testing.T) {
 	bar := yarpc.NewUnaryTransportHandlerSpec(yarpctest.NewMockUnaryTransportHandler(mockCtrl))
 	foo := yarpc.NewUnaryTransportHandlerSpec(yarpctest.NewMockUnaryTransportHandler(mockCtrl))
 	aww := yarpc.NewUnaryTransportHandlerSpec(yarpctest.NewMockUnaryTransportHandler(mockCtrl))
-	m.Register([]yarpc.Procedure{
+	m.Register([]yarpc.TransportProcedure{
 		{
 			Name:        "bar",
 			Service:     "anotherservice",
@@ -127,7 +127,7 @@ func TestMapRouter_Procedures(t *testing.T) {
 		},
 	})
 
-	expectedOrderedProcedures := []yarpc.Procedure{
+	expectedOrderedProcedures := []yarpc.TransportProcedure{
 		{
 			Name:        "aww",
 			Service:     "anotherservice",
@@ -154,7 +154,7 @@ func TestMapRouter_Procedures(t *testing.T) {
 func TestEmptyProcedureRegistration(t *testing.T) {
 	m := NewMapRouter("test-service-name")
 
-	procedures := []yarpc.Procedure{
+	procedures := []yarpc.TransportProcedure{
 		{
 			Name:    "",
 			Service: "test",
@@ -254,7 +254,7 @@ func TestUnknownServiceName(t *testing.T) {
 	m := NewMapRouter("service1")
 	foo := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
 
-	m.Register([]yarpc.Procedure{
+	m.Register([]yarpc.TransportProcedure{
 		{
 			Name:        "foo",
 			HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(foo),

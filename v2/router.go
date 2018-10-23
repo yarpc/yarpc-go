@@ -29,15 +29,15 @@ import (
 // TODO: Until golang/mock#4 is fixed, imports in the generated code have to
 // be fixed by hand. They use vendor/* import paths rather than direct.
 
-// Procedure specifies a single handler registered in the RouteTable.
-type Procedure struct {
+// TransportProcedure specifies a single transport-level handler registered in the RouteTable.
+type TransportProcedure struct {
 	// Name of the procedure.
 	Name string
 
 	// Service or empty to use the default service name.
 	Service string
 
-	// TransportHandlerSpec specifying which handler and rpc type.
+	// HandlerSpec specifying which handler and rpc type.
 	HandlerSpec TransportHandlerSpec
 
 	// Encoding of the handler.
@@ -49,8 +49,8 @@ type Procedure struct {
 }
 
 // MarshalLogObject implements zap.ObjectMarshaler.
-func (p Procedure) MarshalLogObject(enc zapcore.ObjectEncoder) error {
-	// Passing a Procedure as a zap.ObjectMarshaler allocates, so we shouldn't
+func (p TransportProcedure) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	// Passing a TransportProcedure as a zap.ObjectMarshaler allocates, so we shouldn't
 	// do it on the request path.
 	enc.AddString("name", p.Name)
 	enc.AddString("service", p.Service)
@@ -60,7 +60,7 @@ func (p Procedure) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 }
 
 // Less orders procedures lexicographically on (Service, Name, Encoding).
-func (p Procedure) Less(o Procedure) bool {
+func (p TransportProcedure) Less(o TransportProcedure) bool {
 	if p.Service != o.Service {
 		return p.Service < o.Service
 	}
@@ -74,7 +74,7 @@ func (p Procedure) Less(o Procedure) bool {
 type Router interface {
 	// Procedures returns a list of procedures that
 	// have been registered so far.
-	Procedures() []Procedure
+	Procedures() []TransportProcedure
 
 	// Choose decides a handler based on a context and transport request
 	// metadata, or returns an UnrecognizedProcedureError if no handler exists
@@ -89,5 +89,5 @@ type RouteTable interface {
 	Router
 
 	// Registers zero or more procedures with the route table.
-	Register([]Procedure)
+	Register([]TransportProcedure)
 }

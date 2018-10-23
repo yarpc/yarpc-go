@@ -27,7 +27,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/v2"
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
 
@@ -61,7 +61,8 @@ func TestRouteTableMiddleware(t *testing.T) {
 
 	// register procedures
 	routeTable.EXPECT().Register(gomock.Any())
-	routeTableWithMW.Register([]yarpc.Procedure{})
+
+	routeTableWithMW.Register([]yarpc.TransportProcedure{})
 
 	// choose handlerSpec
 	routerMiddleware.EXPECT().Choose(ctx, req, routeTable).Return(spec, nil)
@@ -70,6 +71,6 @@ func TestRouteTableMiddleware(t *testing.T) {
 	assert.Equal(t, spec, spec)
 
 	// get procedures
-	routerMiddleware.EXPECT().Procedures(routeTable).Return([]yarpc.Procedure{})
+	routerMiddleware.EXPECT().Procedures(routeTable).Return([]yarpc.TransportProcedure{})
 	routeTableWithMW.Procedures()
 }

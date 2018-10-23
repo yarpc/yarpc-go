@@ -68,9 +68,9 @@ func (mr *MockRouterMiddlewareMockRecorder) Choose(arg0, arg1, arg2 interface{})
 }
 
 // Procedures mocks base method
-func (m *MockRouterMiddleware) Procedures(arg0 v2.Router) []v2.Procedure {
+func (m *MockRouterMiddleware) Procedures(arg0 v2.Router) []v2.TransportProcedure {
 	ret := m.ctrl.Call(m, "Procedures", arg0)
-	ret0, _ := ret[0].([]v2.Procedure)
+	ret0, _ := ret[0].([]v2.TransportProcedure)
 	return ret0
 }
 

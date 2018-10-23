@@ -26,9 +26,10 @@ package yarpctest
 
 import (
 	context "context"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	v2 "go.uber.org/yarpc/v2"
-	reflect "reflect"
 )
 
 // MockRouter is a mock of Router interface
@@ -68,9 +69,9 @@ func (mr *MockRouterMockRecorder) Choose(arg0, arg1 interface{}) *gomock.Call {
 }
 
 // Procedures mocks base method
-func (m *MockRouter) Procedures() []v2.Procedure {
+func (m *MockRouter) Procedures() []v2.TransportProcedure {
 	ret := m.ctrl.Call(m, "Procedures")
-	ret0, _ := ret[0].([]v2.Procedure)
+	ret0, _ := ret[0].([]v2.TransportProcedure)
 	return ret0
 }
 
@@ -116,9 +117,9 @@ func (mr *MockRouteTableMockRecorder) Choose(arg0, arg1 interface{}) *gomock.Cal
 }
 
 // Procedures mocks base method
-func (m *MockRouteTable) Procedures() []v2.Procedure {
+func (m *MockRouteTable) Procedures() []v2.TransportProcedure {
 	ret := m.ctrl.Call(m, "Procedures")
-	ret0, _ := ret[0].([]v2.Procedure)
+	ret0, _ := ret[0].([]v2.TransportProcedure)
 	return ret0
 }
 
@@ -128,7 +129,7 @@ func (mr *MockRouteTableMockRecorder) Procedures() *gomock.Call {
 }
 
 // Register mocks base method
-func (m *MockRouteTable) Register(arg0 []v2.Procedure) {
+func (m *MockRouteTable) Register(arg0 []v2.TransportProcedure) {
 	m.ctrl.Call(m, "Register", arg0)
 }
 

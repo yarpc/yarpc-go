@@ -27,6 +27,7 @@ package keyvaluepb
 import (
 	context "context"
 	fmt "fmt"
+
 	proto "github.com/gogo/protobuf/proto"
 	fx "go.uber.org/fx"
 	yarpc "go.uber.org/yarpc/v2"
@@ -97,7 +98,7 @@ type StoreYARPCServer interface {
 }
 
 // BuildStoreYARPCProcedures constructs the YARPC procedures for the Store service.
-func BuildStoreYARPCProcedures(s StoreYARPCServer) []yarpc.Procedure {
+func BuildStoreYARPCProcedures(s StoreYARPCServer) []yarpc.TransportProcedure {
 	h := &_StoreYARPCServer{server: s}
 	return yarpcprotobuf.Procedures(
 		yarpcprotobuf.ProceduresParams{
@@ -199,8 +200,8 @@ type FxStoreYARPCServerParams struct {
 type FxStoreYARPCServerResult struct {
 	fx.Out
 
-	Procedures     []yarpc.Procedure     `group:"yarpcfx"`
-	ReflectionMeta reflection.ServerMeta `group:"yarpcfx"`
+	Procedures     []yarpc.TransportProcedure `group:"yarpcfx"`
+	ReflectionMeta reflection.ServerMeta      `group:"yarpcfx"`
 }
 
 // NewFxStoreYARPCServer provides the StoreYARPCServer

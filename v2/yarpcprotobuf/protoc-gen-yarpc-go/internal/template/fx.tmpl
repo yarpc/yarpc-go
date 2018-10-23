@@ -61,7 +61,7 @@
   type {{.FxServer}}Result struct {
     fx.Out
 
-    Procedures     []yarpc.Procedure     `group:"yarpcfx"`
+    Procedures     []yarpc.TransportProcedure     `group:"yarpcfx"`
     ReflectionMeta reflection.ServerMeta `group:"yarpcfx"`
   }
 
