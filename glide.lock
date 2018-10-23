@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-10-22T15:05:26.214869054Z
+updated: 2018-10-23T15:07:32.479972003Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -32,7 +32,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 7be3631955993a734965532f776bad7093f6fc9d
+  version: d7fc20193620986259ffb1f9b9da752114ee14a4
   subpackages:
   - proto
   - ptypes
@@ -201,7 +201,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 3e7aa9e59977626dc60433e9aeadf1bb63d28295
+  version: 40a48ad93fbe707101afb2099b738471f70594ec
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
@@ -256,7 +256,7 @@ testImports:
   subpackages:
   - update-license
 - name: golang.org/x/lint
-  version: 5906bd5c48cd840279ace88b165057fbbd7fb35a
+  version: c2de83ec178541a30f8e683a40a6ac778777841a
   repo: https://github.com/golang/lint
   subpackages:
   - golint
