@@ -117,6 +117,8 @@ type Message struct {
 
 // Reflection represents the server reflection data.
 type Reflection struct {
+	// Var is the variable name used to contain
+	// the generated file descriptor closure.
 	Var      string
 	Encoding string
 }
