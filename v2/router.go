@@ -40,8 +40,7 @@ type TransportProcedure struct {
 	// HandlerSpec specifying which handler and rpc type.
 	HandlerSpec TransportHandlerSpec
 
-	// Encoding of the handler.
-	// (if present).
+	// Encoding of the handler (if present).
 	Encoding Encoding
 
 	// Human-readable signature of the handler.
@@ -60,8 +59,7 @@ type EncodingProcedure struct {
 	// HandlerSpec specifying which handler and rpc type.
 	HandlerSpec EncodingHandlerSpec
 
-	// Encoding of the handler.
-	// (if present).
+	// Encoding of the handler (if present).
 	Encoding Encoding
 
 	// Human-readable signature of the handler.

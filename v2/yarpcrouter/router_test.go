@@ -120,7 +120,7 @@ func TestNewMapRouterWithEncodingProcedures_HappyCase(t *testing.T) {
 		},
 	}
 
-	procedures := MapToTransportProcedures(encodingProcedures)
+	procedures, _ := EncodingToTransportProcedures(encodingProcedures)
 	m := NewMapRouterWithProcedures("myservice", procedures)
 	transportProcedures := m.Procedures()
 
@@ -144,11 +144,12 @@ func TestNewMapRouterWithEncodingProcedures_DecodeError(t *testing.T) {
 			Codec:       barCodec,
 		},
 	}
-	procedures := MapToTransportProcedures(encodingProcedures)
+	procedures, err := EncodingToTransportProcedures(encodingProcedures)
+	assert.NoError(t, err)
 	m := NewMapRouterWithProcedures("myservice", procedures)
 	transportProcedures := m.Procedures()
 
-	_, _, err := transportProcedures[0].HandlerSpec.Unary().Handle(context.TODO(), nil, nil)
+	_, _, err = transportProcedures[0].HandlerSpec.Unary().Handle(context.TODO(), nil, nil)
 	assert.Error(t, err)
 }
 
@@ -169,11 +170,12 @@ func TestNewMapRouterWithEncodingProcedures_HandlerError(t *testing.T) {
 			Codec:       bazCodec,
 		},
 	}
-	procedures := MapToTransportProcedures(encodingProcedures)
+	procedures, err := EncodingToTransportProcedures(encodingProcedures)
+	assert.NoError(t, err)
 	m := NewMapRouterWithProcedures("myservice", procedures)
 	transportProcedures := m.Procedures()
 
-	_, _, err := transportProcedures[0].HandlerSpec.Unary().Handle(context.TODO(), nil, nil)
+	_, _, err = transportProcedures[0].HandlerSpec.Unary().Handle(context.TODO(), nil, nil)
 	assert.Error(t, err)
 }
 
@@ -195,11 +197,12 @@ func TestNewMapRouterWithEncodingProcedures_EncodeError(t *testing.T) {
 			Codec:       quxCodec,
 		},
 	}
-	procedures := MapToTransportProcedures(encodingProcedures)
+	procedures, err := EncodingToTransportProcedures(encodingProcedures)
+	assert.NoError(t, err)
 	m := NewMapRouterWithProcedures("myservice", procedures)
 	transportProcedures := m.Procedures()
 
-	_, _, err := transportProcedures[0].HandlerSpec.Unary().Handle(context.TODO(), nil, nil)
+	_, _, err = transportProcedures[0].HandlerSpec.Unary().Handle(context.TODO(), nil, nil)
 	assert.Error(t, err)
 }
 
@@ -215,7 +218,8 @@ func TestNewMapRouterWithEncodingProcedures_OnlyAllowUnaryType(t *testing.T) {
 			HandlerSpec: spec,
 		},
 	}
-	assert.Panics(t, func() { MapToTransportProcedures(encodingProcedures) })
+	_, err := EncodingToTransportProcedures(encodingProcedures)
+	assert.Error(t, err)
 }
 
 func TestMapRouter_Procedures(t *testing.T) {
