@@ -36,27 +36,23 @@ type RouterMiddleware interface {
 	Choose(context.Context, *Request, Router) (TransportHandlerSpec, error)
 }
 
-// ApplyRouteTable applies the given RouterMiddleware middleware to the given RouterMiddleware.
-func ApplyRouteTable(r RouteTable, m RouterMiddleware) RouteTable {
+// ApplyRouter applies the given RouterMiddleware middleware to the given Router.
+func ApplyRouter(r Router, m RouterMiddleware) Router {
 	if m == nil {
 		return r
 	}
-	return routeTableWithMiddleware{r: r, m: m}
+	return routerWithMiddleware{r: r, m: m}
 }
 
-type routeTableWithMiddleware struct {
-	r RouteTable
+type routerWithMiddleware struct {
+	r Router
 	m RouterMiddleware
 }
 
-func (r routeTableWithMiddleware) Procedures() []TransportProcedure {
+func (r routerWithMiddleware) Procedures() []TransportProcedure {
 	return r.m.Procedures(r.r)
 }
 
-func (r routeTableWithMiddleware) Choose(ctx context.Context, req *Request) (TransportHandlerSpec, error) {
+func (r routerWithMiddleware) Choose(ctx context.Context, req *Request) (TransportHandlerSpec, error) {
 	return r.m.Choose(ctx, req, r.r)
-}
-
-func (r routeTableWithMiddleware) Register(procedures []TransportProcedure) {
-	r.r.Register(procedures)
 }

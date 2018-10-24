@@ -82,12 +82,3 @@ type Router interface {
 	// select a handler for a request.
 	Choose(ctx context.Context, req *Request) (TransportHandlerSpec, error)
 }
-
-// RouteTable is an mutable interface for a Router that allows Registering new
-// Procedures
-type RouteTable interface {
-	Router
-
-	// Registers zero or more procedures with the route table.
-	Register([]TransportProcedure)
-}

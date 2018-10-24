@@ -31,46 +31,41 @@ import (
 	"go.uber.org/yarpc/v2/yarpctest"
 )
 
-func TestApplyRouteTable(t *testing.T) {
+func TestApplyRouter(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	routerMiddleware := yarpctest.NewMockRouterMiddleware(ctrl)
-	routeTable := yarpctest.NewMockRouteTable(ctrl)
+	router := yarpctest.NewMockRouter(ctrl)
 
-	rtWithMW := yarpc.ApplyRouteTable(routeTable, routerMiddleware)
+	rtWithMW := yarpc.ApplyRouter(router, routerMiddleware)
 
-	routeTableWithMW, ok := rtWithMW.(yarpc.RouteTableWithMiddleware)
-	require.True(t, ok, "unexpected RouteTable type")
+	routerWithMW, ok := rtWithMW.(yarpc.RouterWithMiddleware)
+	require.True(t, ok, "unexpected Router type")
 
-	assert.Equal(t, routeTableWithMW.GetRouterMiddleware(), routerMiddleware)
-	assert.Equal(t, routeTableWithMW.GetRouteTable(), routeTable)
+	assert.Equal(t, routerWithMW.GetRouterMiddleware(), routerMiddleware)
+	assert.Equal(t, routerWithMW.GetRouter(), router)
 }
 
-func TestRouteTableMiddleware(t *testing.T) {
+func TestRouterMiddleware(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	routerMiddleware := yarpctest.NewMockRouterMiddleware(ctrl)
-	routeTable := yarpctest.NewMockRouteTable(ctrl)
+	router := yarpctest.NewMockRouter(ctrl)
 
 	ctx := context.Background()
 	req := &yarpc.Request{}
 	spec := yarpc.NewUnaryTransportHandlerSpec(yarpctest.NewMockUnaryTransportHandler(ctrl))
 
-	routeTableWithMW := yarpc.ApplyRouteTable(routeTable, routerMiddleware)
-
-	// register procedures
-	routeTable.EXPECT().Register(gomock.Any())
-
-	routeTableWithMW.Register([]yarpc.TransportProcedure{})
+	routerWithMW := yarpc.ApplyRouter(router, routerMiddleware)
 
 	// choose handlerSpec
-	routerMiddleware.EXPECT().Choose(ctx, req, routeTable).Return(spec, nil)
-	spec, err := routeTableWithMW.Choose(ctx, req)
+	routerMiddleware.EXPECT().Choose(ctx, req, router).Return(spec, nil)
+	spec, err := routerWithMW.Choose(ctx, req)
 	assert.NoError(t, err)
 	assert.Equal(t, spec, spec)
 
 	// get procedures
-	routerMiddleware.EXPECT().Procedures(routeTable).Return([]yarpc.TransportProcedure{})
-	routeTableWithMW.Procedures()
+	routerMiddleware.EXPECT().Procedures(router).Return([]yarpc.TransportProcedure{})
+	routerWithMW.Procedures()
 }

@@ -28,12 +28,13 @@ import (
 	"net/http"
 	"os"
 
+	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpchttp"
 	"go.uber.org/yarpc/v2/yarpcrouter"
 )
 
 func ExampleInbound() {
-	router := yarpcrouter.NewMapRouter("my-service")
+	router := yarpcrouter.NewMapRouter("my-service", []yarpc.TransportProcedure{})
 	inbound := &yarpchttp.Inbound{
 		Addr:   ":8888",
 		Router: router,
@@ -53,7 +54,7 @@ func ExampleMux() {
 		}
 	})
 
-	router := yarpcrouter.NewMapRouter("my-service")
+	router := yarpcrouter.NewMapRouter("my-service", []yarpc.TransportProcedure{})
 	inbound := &yarpchttp.Inbound{
 		Addr:       ":8888",
 		Router:     router,
@@ -98,7 +99,7 @@ func ExampleInterceptor() {
 	}
 
 	// Create a new inbound, attaching the interceptor
-	router := yarpcrouter.NewMapRouter("server")
+	router := yarpcrouter.NewMapRouter("server", []yarpc.TransportProcedure{})
 	inbound := &yarpchttp.Inbound{
 		Addr:        ":8889",
 		Router:      router,
