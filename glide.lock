@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-10-23T15:07:32.479972003Z
+updated: 2018-10-24T15:05:45.332285542Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -172,7 +172,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 04a2e542c03f1d053ab3e4d6e5abcd4b66e2be8e
+  version: 9b4f9f5ad5197c79fd623a3638e70d8b26cef344
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -189,7 +189,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 8a28ead16f52c8aaeffbf79239b251dfdf6c4f96
+  version: 5cd93ef61a7c8f0f858690154eb6de2e69415fa1
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -210,7 +210,7 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 8dea3dc473e90c8179e519d91302d0597c0ca1d1
+  version: 2e463a05d100327ca47ac218281906921038fd95
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
@@ -256,7 +256,7 @@ testImports:
   subpackages:
   - update-license
 - name: golang.org/x/lint
-  version: c2de83ec178541a30f8e683a40a6ac778777841a
+  version: 1baf3a9d7d675b3c7e974b7a00ded54b88a88379
   repo: https://github.com/golang/lint
   subpackages:
   - golint
