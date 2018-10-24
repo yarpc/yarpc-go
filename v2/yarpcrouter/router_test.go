@@ -36,33 +36,34 @@ func TestMapRouter(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	m := NewMapRouter("myservice")
-
 	foo := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
 	bar := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
 	bazJSON := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
 	bazThrift := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
-	m.Register([]yarpc.TransportProcedure{
-		{
-			Name:        "foo",
-			HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(foo),
+	m := NewMapRouter(
+		"myservice",
+		[]yarpc.TransportProcedure{
+			{
+				Name:        "foo",
+				HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(foo),
+			},
+			{
+				Name:        "bar",
+				Service:     "anotherservice",
+				HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(bar),
+			},
+			{
+				Name:        "baz",
+				Encoding:    "json",
+				HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(bazJSON),
+			},
+			{
+				Name:        "baz",
+				Encoding:    "thrift",
+				HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(bazThrift),
+			},
 		},
-		{
-			Name:        "bar",
-			Service:     "anotherservice",
-			HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(bar),
-		},
-		{
-			Name:        "baz",
-			Encoding:    "json",
-			HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(bazJSON),
-		},
-		{
-			Name:        "baz",
-			Encoding:    "thrift",
-			HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(bazThrift),
-		},
-	})
+	)
 
 	tests := []struct {
 		service, procedure, encoding string
@@ -104,28 +105,29 @@ func TestMapRouter_Procedures(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	m := NewMapRouter("myservice")
-
 	bar := yarpc.NewUnaryTransportHandlerSpec(yarpctest.NewMockUnaryTransportHandler(mockCtrl))
 	foo := yarpc.NewUnaryTransportHandlerSpec(yarpctest.NewMockUnaryTransportHandler(mockCtrl))
 	aww := yarpc.NewUnaryTransportHandlerSpec(yarpctest.NewMockUnaryTransportHandler(mockCtrl))
-	m.Register([]yarpc.TransportProcedure{
-		{
-			Name:        "bar",
-			Service:     "anotherservice",
-			HandlerSpec: bar,
+	m := NewMapRouter(
+		"myservice",
+		[]yarpc.TransportProcedure{
+			{
+				Name:        "bar",
+				Service:     "anotherservice",
+				HandlerSpec: bar,
+			},
+			{
+				Name:        "foo",
+				Encoding:    "json",
+				HandlerSpec: foo,
+			},
+			{
+				Name:        "aww",
+				Service:     "anotherservice",
+				HandlerSpec: aww,
+			},
 		},
-		{
-			Name:        "foo",
-			Encoding:    "json",
-			HandlerSpec: foo,
-		},
-		{
-			Name:        "aww",
-			Service:     "anotherservice",
-			HandlerSpec: aww,
-		},
-	})
+	)
 
 	expectedOrderedProcedures := []yarpc.TransportProcedure{
 		{
@@ -152,8 +154,6 @@ func TestMapRouter_Procedures(t *testing.T) {
 }
 
 func TestEmptyProcedureRegistration(t *testing.T) {
-	m := NewMapRouter("test-service-name")
-
 	procedures := []yarpc.TransportProcedure{
 		{
 			Name:    "",
@@ -162,7 +162,7 @@ func TestEmptyProcedureRegistration(t *testing.T) {
 	}
 
 	assert.Panics(t,
-		func() { m.Register(procedures) },
+		func() { _ = NewMapRouter("test-service-name", procedures) },
 		"expected router panic")
 }
 
@@ -177,7 +177,7 @@ func IgnoreTestRouterWithMiddleware(t *testing.T) {
 	routerMiddleware := yarpctest.NewMockRouterMiddleware(mockCtrl)
 	routerMiddleware.EXPECT().Choose(ctx, req, gomock.Any()).Times(1).Return(expectedSpec, nil)
 
-	router := yarpc.ApplyRouteTable(NewMapRouter("service"), routerMiddleware)
+	router := yarpc.ApplyRouter(NewMapRouter("service", []yarpc.TransportProcedure{}), routerMiddleware)
 
 	actualSpec, err := router.Choose(ctx, req)
 
@@ -251,17 +251,18 @@ func TestUnknownServiceName(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	m := NewMapRouter("service1")
 	foo := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
-
-	m.Register([]yarpc.TransportProcedure{
-		{
-			Name:        "foo",
-			HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(foo),
-			Service:     "service2",
-			Encoding:    "json",
+	m := NewMapRouter(
+		"service1",
+		[]yarpc.TransportProcedure{
+			{
+				Name:        "foo",
+				HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(foo),
+				Service:     "service2",
+				Encoding:    "json",
+			},
 		},
-	})
+	)
 
 	_, err := m.Choose(context.Background(), &yarpc.Request{
 		Service:   "wrongService",

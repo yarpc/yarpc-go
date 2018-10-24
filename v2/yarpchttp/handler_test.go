@@ -375,13 +375,15 @@ func TestHandlerPanic(t *testing.T) {
 	dialer.Start(context.Background())
 	defer dialer.Stop(context.Background())
 
-	router := yarpcrouter.NewMapRouter("yarpc-test")
-	router.Register([]yarpc.TransportProcedure{
-		{
-			Name:        "panic",
-			HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(panickedHandler{}),
+	router := yarpcrouter.NewMapRouter(
+		"yarpc-test",
+		[]yarpc.TransportProcedure{
+			{
+				Name:        "panic",
+				HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(panickedHandler{}),
+			},
 		},
-	})
+	)
 	inbound := &Inbound{
 		Addr:   "localhost:0",
 		Router: router,

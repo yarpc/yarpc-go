@@ -20,12 +20,12 @@
 
 package yarpc
 
-type RouteTableWithMiddleware = routeTableWithMiddleware
+type RouterWithMiddleware = routerWithMiddleware
 
-func (r RouteTableWithMiddleware) GetRouteTable() RouteTable {
+func (r RouterWithMiddleware) GetRouter() Router {
 	return r.r
 }
 
-func (r RouteTableWithMiddleware) GetRouterMiddleware() RouterMiddleware {
+func (r RouterWithMiddleware) GetRouterMiddleware() RouterMiddleware {
 	return r.m
 }
