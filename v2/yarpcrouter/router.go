@@ -98,14 +98,6 @@ func EncodingToTransportProcedures(encodingProcedures []yarpc.EncodingProcedure)
 	return transportProcedures, nil
 }
 
-// NewMapRouterWithProcedures constructs a new MapRouter with the given default service name and registers
-// the given transport-level procedures.
-func NewMapRouterWithProcedures(defaultService string, transportProcedures []yarpc.TransportProcedure) MapRouter {
-	router := NewMapRouter(defaultService)
-	router.Register(transportProcedures)
-	return router
-}
-
 // Allows encoding-level procedures to act as transport-level procedures.
 type unaryTransportHandler struct {
 	h yarpc.EncodingProcedure
