@@ -23,12 +23,14 @@ package grpc
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"io/ioutil"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
+	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -45,6 +47,8 @@ import (
 // UserAgent is the User-Agent that will be set for requests.
 // http://www.grpc.io/docs/guides/wire.html#user-agents
 const UserAgent = "yarpc-go/" + yarpc.Version
+
+const _grpcStatusDetailsHeaderKey = "grpc-status-details-bin"
 
 var _ transport.UnaryOutbound = (*Outbound)(nil)
 
@@ -182,7 +186,7 @@ func (o *Outbound) invoke(
 		),
 	)
 	if err != nil {
-		return invokeErrorToYARPCError(err, *responseMD)
+		return handleInvokeError(err, *responseMD)
 	}
 	// Service name match validation, return yarpcerrors.CodeInternal error if not match
 	if match, resSvcName := checkServiceMatch(request.Service, *responseMD); !match {
@@ -201,22 +205,18 @@ func metadataToIsApplicationError(responseMD metadata.MD) bool {
 	return ok && len(value) > 0 && len(value[0]) > 0
 }
 
-func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
-	if err == nil {
-		return nil
-	}
+func handleInvokeError(err error, responseMD metadata.MD) error {
 	if yarpcerrors.IsStatus(err) {
 		return err
 	}
-	status, ok := status.FromError(err)
-	// if not a yarpc error or grpc error, just return a wrapped error
+	st, ok := status.FromError(err)
+
 	if !ok {
 		return yarpcerrors.FromError(err)
 	}
-	code, ok := _grpcCodeToCode[status.Code()]
-	if !ok {
-		code = yarpcerrors.CodeUnknown
-	}
+
+	code := getCodeFromStatus(st)
+
 	var name string
 	if responseMD != nil {
 		value, ok := responseMD[ErrorNameHeader]
@@ -224,8 +224,9 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 		if ok && len(value) == 1 {
 			name = value[0]
 		}
+		addStatusDetailsToMetadata(st, responseMD)
 	}
-	message := status.Message()
+	message := st.Message()
 	// we put the name as a prefix for grpc compatibility
 	// if there was no message, the message will be the name, so we leave it as the message
 	if name != "" && message != "" && message != name {
@@ -234,6 +235,38 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 		message = ""
 	}
 	return intyarpcerrors.NewWithNamef(code, name, message)
+}
+
+// addStatusDetailsToMetadata adds a binary encoded marshalled proto of the
+// grpc `status.Status` object to responsseMD to later be encoded as a yarpc header.
+// This needs to be done because although grpc-go properly sends this over
+// over the wire under the header `grpc-status-details-bin`, it decodes and
+// unmarshalls it to the status.Status object and never propogates it to
+// metadata.
+func addStatusDetailsToMetadata(st *status.Status, responseMD metadata.MD) {
+	if p := st.Proto(); p != nil && len(p.Details) > 0 {
+		stBytes, err := proto.Marshal(p)
+		if err != nil {
+			// TODO: Don't panic
+			panic(err)
+		}
+		responseMD.Set(
+			_grpcStatusDetailsHeaderKey,
+			encodeBinaryHeader(stBytes),
+		)
+	}
+}
+
+func getCodeFromStatus(s *status.Status) yarpcerrors.Code {
+	code, ok := _grpcCodeToCode[s.Code()]
+	if !ok {
+		return yarpcerrors.CodeUnknown
+	}
+	return code
+}
+
+func encodeBinaryHeader(v []byte) string {
+	return base64.RawStdEncoding.EncodeToString(v)
 }
 
 // CallStream implements transport.StreamOutbound#CallStream.
