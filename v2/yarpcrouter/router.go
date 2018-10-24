@@ -22,6 +22,7 @@ package yarpcrouter
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -32,7 +33,7 @@ import (
 
 var (
 	_ yarpc.Router                = (*MapRouter)(nil)
-	_ yarpc.UnaryTransportHandler = &unaryTransportHandler{}
+	_ yarpc.UnaryTransportHandler = (*unaryTransportHandler)(nil)
 )
 
 type serviceProcedure struct {
@@ -73,8 +74,8 @@ func NewMapRouter(defaultService string, rs []yarpc.TransportProcedure) MapRoute
 	return router
 }
 
-// MapToTransportProcedures converts encoding-level procedures to transport-level procedures.
-func MapToTransportProcedures(encodingProcedures []yarpc.EncodingProcedure) []yarpc.TransportProcedure {
+// EncodingToTransportProcedures converts encoding-level procedures to transport-level procedures.
+func EncodingToTransportProcedures(encodingProcedures []yarpc.EncodingProcedure) ([]yarpc.TransportProcedure, error) {
 	transportProcedures := make([]yarpc.TransportProcedure, len(encodingProcedures))
 	for i, p := range encodingProcedures {
 		var transportHandlerSpec yarpc.TransportHandlerSpec
@@ -82,7 +83,7 @@ func MapToTransportProcedures(encodingProcedures []yarpc.EncodingProcedure) []ya
 		case yarpc.Unary:
 			transportHandlerSpec = yarpc.NewUnaryTransportHandlerSpec(&unaryTransportHandler{p})
 		default:
-			panic(p.HandlerSpec.Type())
+			return nil, fmt.Errorf("unknown handler spec type: %v", p.HandlerSpec.Type())
 		}
 
 		transportProcedures[i] = yarpc.TransportProcedure{
@@ -94,7 +95,7 @@ func MapToTransportProcedures(encodingProcedures []yarpc.EncodingProcedure) []ya
 		}
 	}
 
-	return transportProcedures
+	return transportProcedures, nil
 }
 
 // NewMapRouterWithProcedures constructs a new MapRouter with the given default service name and registers
@@ -111,9 +112,9 @@ type unaryTransportHandler struct {
 }
 
 func (u *unaryTransportHandler) Handle(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
-	decodedBody, codecErr := u.h.Codec.Decode(reqBuf)
-	if codecErr != nil {
-		return nil, nil, codecErr
+	decodedBody, err := u.h.Codec.Decode(reqBuf)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	body, err := u.h.HandlerSpec.Unary().Handle(ctx, decodedBody)
@@ -121,9 +122,9 @@ func (u *unaryTransportHandler) Handle(ctx context.Context, req *yarpc.Request, 
 		return nil, nil, err
 	}
 
-	encodedBody, codecErr := u.h.Codec.Encode(body)
-	if codecErr != nil {
-		return nil, nil, codecErr
+	encodedBody, err := u.h.Codec.Encode(body)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	return nil, encodedBody, nil
