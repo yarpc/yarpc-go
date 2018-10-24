@@ -18,90 +18,86 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchannel
+package yarpctchannel
 
 import (
 	"context"
+	"io"
 
 	"github.com/uber/tchannel-go"
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/introspection"
-	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
-	peerchooser "go.uber.org/yarpc/peer"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/pkg/errors"
-	"go.uber.org/yarpc/pkg/lifecycle"
-	"go.uber.org/yarpc/yarpcerrors"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/internal/internaliopool"
+	"go.uber.org/yarpc/v2/internal/internalyarpcerror"
+	"go.uber.org/yarpc/v2/yarpcencoding"
+	"go.uber.org/yarpc/v2/yarpcerror"
+	"go.uber.org/yarpc/v2/yarpcpeer"
 )
 
 var (
-	errDoNotUseContextWithHeaders = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "tchannel.ContextWithHeaders is not compatible with YARPC, use yarpc.CallOption instead")
+	errDoNotUseContextWithHeaders = yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "tchannel.ContextWithHeaders is not compatible with YARPC, use yarpc.CallOption instead")
 
-	_ transport.UnaryOutbound              = (*Outbound)(nil)
-	_ introspection.IntrospectableOutbound = (*Outbound)(nil)
+	_ yarpc.UnaryOutbound = (*Outbound)(nil)
 )
 
 // Outbound sends YARPC requests over TChannel.
-// It may be constructed using the NewOutbound or NewSingleOutbound methods on
-// the TChannel Transport.
 type Outbound struct {
-	transport *Transport
-	chooser   peer.Chooser
-	once      *lifecycle.Once
-}
+	// Chooser is a peer chooser for outbound requests.
+	//
+	// The chooser receives the request metadata and returns peers.
+	// The chooser is backed by a dialer and a peer list.
+	// You can instead use an Addr and Dialer directly, bypassing YARPC peer
+	// selection.
+	Chooser yarpc.Chooser
 
-// NewOutbound builds a new TChannel outbound that selects a peer for each
-// request using the given peer chooser.
-func (t *Transport) NewOutbound(chooser peer.Chooser) *Outbound {
-	return &Outbound{
-		once:      lifecycle.NewOnce(),
-		transport: t,
-		chooser:   chooser,
-	}
-}
+	// Addr is the host:port of the peer that will handle outbound requests.
+	//
+	// Providing an Addr and Dialer is an alternative to using YARPC peer
+	// selection.
+	// The outbound will dial this exact address for each outbound request.
+	Addr string
 
-// NewSingleOutbound builds a new TChannel outbound always using the peer with
-// the given address.
-func (t *Transport) NewSingleOutbound(addr string) *Outbound {
-	chooser := peerchooser.NewSingle(hostport.PeerIdentifier(addr), t)
-	return t.NewOutbound(chooser)
-}
+	// Dialer is a dialer to retain connections to the remote peer.
+	//
+	// Providing an Addr and Dialer is an alternative to using YARPC peer
+	// selection.
+	// The outbound will dial this exact address for each outbound request.
+	Dialer yarpc.Dialer
 
-// Chooser returns the outbound's peer chooser.
-func (o *Outbound) Chooser() peer.Chooser {
-	return o.chooser
+	// HeaderCase specifies whether to forward headers with or without
+	// canonicalizing them.
+	//
+	// The YARPC default is to canonicalize all outbound headers, since
+	// this is the common denominator between transport protocols including
+	// HTTP, and gRPC.
+	// Some TChannel services depend on the exact case of the header.
+	HeaderCase HeaderCase
+
+	ch *tchannel.Channel
 }
 
 // Call sends an RPC over this TChannel outbound.
-func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+func (o *Outbound) Call(ctx context.Context, req *yarpc.Request, reqBody *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
 	if req == nil {
-		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel outbound was nil")
-	}
-	if err := o.once.WaitUntilRunning(ctx); err != nil {
-		return nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "error waiting for tchannel outbound to start for service: %s", req.Service)
+		return nil, nil, yarpcerror.InvalidArgumentErrorf("request for tchannel outbound was nil")
 	}
 	if _, ok := ctx.(tchannel.ContextWithHeaders); ok {
-		return nil, errDoNotUseContextWithHeaders
+		return nil, nil, errDoNotUseContextWithHeaders
 	}
-	p, onFinish, err := o.getPeerForRequest(ctx, req)
+	peer, onFinish, err := o.getPeerForRequest(ctx, req)
 	if err != nil {
-		return nil, toYARPCError(req, err)
+		return nil, nil, toYARPCError(req, err)
 	}
-	res, err := p.Call(ctx, req)
-	onFinish(err)
-	return res, toYARPCError(req, err)
-}
 
-// Call sends an RPC to this specific peer.
-func (p *tchannelPeer) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	root := p.transport.ch.RootPeers()
-	tp := root.GetOrAdd(p.HostPort())
-	return callWithPeer(ctx, req, tp, p.transport.headerCase)
+	root := peer.dialer.ch.RootPeers()
+	tchannelPeer := root.GetOrAdd(peer.Identifier())
+	res, resBody, err := callWithPeer(ctx, req, reqBody, tchannelPeer, o.HeaderCase)
+	onFinish(err)
+
+	return res, resBody, toYARPCError(req, err)
 }
 
 // callWithPeer sends a request with the chosen peer.
-func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Peer, headerCase headerCase) (*transport.Response, error) {
+func callWithPeer(ctx context.Context, req *yarpc.Request, reqBody *yarpc.Buffer, peer *tchannel.Peer, headerCase HeaderCase) (*yarpc.Response, *yarpc.Buffer, error) {
 	// NB(abg): Under the current API, the local service's name is required
 	// twice: once when constructing the TChannel and then again when
 	// constructing the RPC.
@@ -118,120 +114,146 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 
 	// If the hostport is given, we use the BeginCall on the channel
 	// instead of the subchannel.
-	call, err = peer.BeginCall(
-		// TODO(abg): Set TimeoutPerAttempt in the context's retry options if
-		// TTL is set.
-		// (kris): Consider instead moving TimeoutPerAttempt to an outer
-		// layer, just clamp the context on outbound call.
-		ctx,
-		req.Service,
-		req.Procedure,
-		&callOptions,
-	)
+	call, err = peer.BeginCall(ctx, req.Service, req.Procedure, &callOptions)
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	reqHeaders := headerMap(req.Headers, headerCase)
 
-	// baggage headers are transport implementation details that are stripped out (and stored in the context). Users don't interact with it
+	// baggage headers are transport implementation details that are stripped
+	// out (and stored in the context). Users don't interact with it.
 	tracingBaggage := tchannel.InjectOutboundSpan(call.Response(), nil)
 	if err := writeHeaders(format, reqHeaders, tracingBaggage, call.Arg2Writer); err != nil {
 		// TODO(abg): This will wrap IO errors while writing headers as encode
 		// errors. We should fix that.
-		return nil, errors.RequestHeadersEncodeError(req, err)
+		return nil, nil, yarpcencoding.RequestHeadersEncodeError(req, err)
 	}
 
-	if err := writeBody(req.Body, call); err != nil {
-		return nil, err
+	if err := writeBody(reqBody, call); err != nil {
+		return nil, nil, err
 	}
 
 	res := call.Response()
 	headers, err := readHeaders(format, res.Arg2Reader)
 	if err != nil {
 		if err, ok := err.(tchannel.SystemError); ok {
-			return nil, fromSystemError(err)
+			return nil, nil, fromSystemError(err)
 		}
 		// TODO(abg): This will wrap IO errors while reading headers as decode
 		// errors. We should fix that.
-		return nil, errors.ResponseHeadersDecodeError(req, err)
+		return nil, nil, yarpcencoding.ResponseHeadersDecodeError(req, err)
 	}
 
-	resBody, err := res.Arg3Reader()
+	arg3Reader, err := res.Arg3Reader()
 	if err != nil {
 		if err, ok := err.(tchannel.SystemError); ok {
-			return nil, fromSystemError(err)
+			return nil, nil, fromSystemError(err)
 		}
-		return nil, err
+		return nil, nil, err
 	}
-
-	// service name match validation, return yarpcerrors.CodeInternal error if not match
-	if match, resSvcName := checkServiceMatchAndDeleteHeaderKey(req.Service, headers); !match {
-		return nil, yarpcerrors.InternalErrorf("service name sent from the request "+
-			"does not match the service name received in the response: sent %q, got: %q", req.Service, resSvcName)
-	}
-
-	return &transport.Response{
-		Headers:          headers,
-		Body:             resBody,
-		ApplicationError: res.ApplicationError(),
-	}, getResponseErrorAndDeleteHeaderKeys(headers)
-}
-
-func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*tchannelPeer, func(error), error) {
-	p, onFinish, err := o.chooser.Choose(ctx, treq)
+	resBody := &yarpc.Buffer{}
+	_, err = internaliopool.Copy(resBody, arg3Reader)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	tp, ok := p.(*tchannelPeer)
+	// service name match validation, return yarpcerror.CodeInternal error if not match
+	if match, resSvcName := checkServiceMatchAndDeleteHeaderKey(req.Service, headers); !match {
+		return nil, nil, yarpcerror.InternalErrorf("service name sent from the request "+
+			"does not match the service name received in the response: sent %q, got: %q", req.Service, resSvcName)
+	}
+
+	return &yarpc.Response{
+		Headers:          headers,
+		ApplicationError: res.ApplicationError(),
+	}, resBody, getResponseErrorAndDeleteHeaderKeys(headers)
+}
+
+func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*tchannelPeer, func(error), error) {
+	var peer yarpc.Peer
+	var onFinish func(error)
+	var err error
+	if o.Chooser != nil {
+		peer, onFinish, err = o.Chooser.Choose(ctx, req)
+		if err != nil {
+			return nil, nil, err
+		}
+	} else if o.Dialer != nil && o.Addr != "" {
+		peer, err = o.Dialer.RetainPeer(yarpc.Address(o.Addr), yarpc.NopSubscriber)
+		if err != nil {
+			return nil, nil, err
+		}
+		err = o.Dialer.ReleasePeer(yarpc.Address(o.Addr), yarpc.NopSubscriber)
+		if err != nil {
+			return nil, nil, err
+		}
+		onFinish = nopFinish
+	}
+
+	tchannelPeer, ok := peer.(*tchannelPeer)
 	if !ok {
-		return nil, nil, peer.ErrInvalidPeerConversion{
-			Peer:         p,
+		return nil, nil, yarpcpeer.ErrInvalidPeerConversion{
+			Peer:         peer,
 			ExpectedType: "*tchannelPeer",
 		}
 	}
 
-	return tp, onFinish, nil
+	return tchannelPeer, onFinish, nil
 }
 
-// Transports returns the underlying TChannel Transport for this outbound.
-func (o *Outbound) Transports() []transport.Transport {
-	return []transport.Transport{o.transport}
-}
+func nopFinish(error) {}
 
-// Start starts the TChannel outbound.
-func (o *Outbound) Start() error {
-	return o.once.Start(o.chooser.Start)
-}
-
-// Stop stops the TChannel outbound.
-func (o *Outbound) Stop() error {
-	return o.once.Stop(o.chooser.Stop)
-}
-
-// IsRunning returns whether the ChannelOutbound is running.
-func (o *Outbound) IsRunning() bool {
-	return o.once.IsRunning()
-}
-
-// Introspect returns basic status about this outbound.
-func (o *Outbound) Introspect() introspection.OutboundStatus {
-	state := "Stopped"
-	if o.IsRunning() {
-		state = "Running"
+func writeBody(body io.Reader, call *tchannel.OutboundCall) error {
+	w, err := call.Arg3Writer()
+	if err != nil {
+		return err
 	}
-	var chooser introspection.ChooserStatus
-	if i, ok := o.chooser.(introspection.IntrospectableChooser); ok {
-		chooser = i.Introspect()
-	} else {
-		chooser = introspection.ChooserStatus{
-			Name: "Introspection not available",
-		}
+
+	if _, err := internaliopool.Copy(w, body); err != nil {
+		return err
 	}
-	return introspection.OutboundStatus{
-		Transport: "tchannel",
-		State:     state,
-		Chooser:   chooser,
+
+	return w.Close()
+}
+
+func fromSystemError(err tchannel.SystemError) error {
+	code, ok := _tchannelCodeToCode[err.Code()]
+	if !ok {
+		// This should be unreachable.
+		return yarpcerror.Newf(yarpcerror.CodeInternal, "got tchannel.SystemError %v which did not have a matching YARPC code", err)
 	}
+	return yarpcerror.Newf(code, err.Message())
+}
+
+// ServiceHeaderKey is internal key used by YARPC, we need to remove it before give response to client
+// only does verification when there is a response service header.
+func checkServiceMatchAndDeleteHeaderKey(reqSvcName string, resHeaders yarpc.Headers) (bool, string) {
+	if resSvcName, ok := resHeaders.Get(ServiceHeaderKey); ok {
+		resHeaders.Del(ServiceHeaderKey)
+		return reqSvcName == resSvcName, resSvcName
+	}
+	return true, ""
+}
+
+func getResponseErrorAndDeleteHeaderKeys(headers yarpc.Headers) error {
+	defer func() {
+		headers.Del(ErrorCodeHeaderKey)
+		headers.Del(ErrorNameHeaderKey)
+		headers.Del(ErrorMessageHeaderKey)
+	}()
+	errorCodeString, ok := headers.Get(ErrorCodeHeaderKey)
+	if !ok {
+		return nil
+	}
+	var errorCode yarpcerror.Code
+	if err := errorCode.UnmarshalText([]byte(errorCodeString)); err != nil {
+		return err
+	}
+	if errorCode == yarpcerror.CodeOK {
+		return yarpcerror.Newf(yarpcerror.CodeInternal, "got CodeOK from error header")
+	}
+	errorName, _ := headers.Get(ErrorNameHeaderKey)
+	errorMessage, _ := headers.Get(ErrorMessageHeaderKey)
+	return internalyarpcerror.NewWithNamef(errorCode, errorName, errorMessage)
 }

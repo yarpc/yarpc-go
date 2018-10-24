@@ -18,10 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchannel
+package yarpctchannel
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -30,15 +29,13 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/uber/tchannel-go"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/encoding/json"
-	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/internal/routertest"
-	"go.uber.org/yarpc/internal/testtime"
-	pkgerrors "go.uber.org/yarpc/pkg/errors"
-	"go.uber.org/yarpc/yarpcerrors"
+	tchannel "github.com/uber/tchannel-go"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/internal/internaltesttime"
+	"go.uber.org/yarpc/v2/internal/routertest"
+	"go.uber.org/yarpc/v2/yarpcencoding"
+	"go.uber.org/yarpc/v2/yarpcerror"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 func TestHandlerErrors(t *testing.T) {
@@ -54,7 +51,7 @@ func TestHandlerErrors(t *testing.T) {
 		{
 			format:      tchannel.JSON,
 			headers:     []byte(`{"Rpc-Header-Foo": "bar"}`),
-			wantHeaders: map[string]string{"rpc-header-foo": "bar"},
+			wantHeaders: map[string]string{"Rpc-Header-Foo": "bar"},
 		},
 		{
 			format: tchannel.Thrift,
@@ -63,15 +60,15 @@ func TestHandlerErrors(t *testing.T) {
 				0x00, 0x03, 'F', 'o', 'o', // Foo
 				0x00, 0x03, 'B', 'a', 'r', // Bar
 			},
-			wantHeaders: map[string]string{"foo": "Bar"},
+			wantHeaders: map[string]string{"Foo": "Bar"},
 		},
 	}
 
 	for _, tt := range tests {
-		rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
-		router := transporttest.NewMockRouter(mockCtrl)
+		rpcHandler := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
+		router := yarpctest.NewMockRouter(mockCtrl)
 
-		spec := transport.NewUnaryHandlerSpec(rpcHandler)
+		spec := yarpc.NewUnaryTransportHandlerSpec(rpcHandler)
 		tchHandler := handler{router: router}
 
 		router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
@@ -80,26 +77,24 @@ func TestHandlerErrors(t *testing.T) {
 		).Return(spec, nil)
 
 		rpcHandler.EXPECT().Handle(
-			transporttest.NewContextMatcher(t),
-			transporttest.NewRequestMatcher(t,
-				&transport.Request{
-					Caller:          "caller",
-					Service:         "service",
-					Transport:       "tchannel",
-					Headers:         transport.HeadersFromMap(tt.wantHeaders),
-					Encoding:        transport.Encoding(tt.format),
-					Procedure:       "hello",
-					ShardKey:        "shard",
-					RoutingKey:      "routekey",
-					RoutingDelegate: "routedelegate",
-					Body:            bytes.NewReader([]byte("world")),
-				}),
-			gomock.Any(),
-		).Return(nil)
+			yarpctest.NewContextMatcher(t),
+			&yarpc.Request{
+				Caller:          "caller",
+				Service:         "service",
+				Transport:       "tchannel",
+				Headers:         yarpc.HeadersFromMap(tt.wantHeaders),
+				Encoding:        yarpc.Encoding(tt.format),
+				Procedure:       "hello",
+				ShardKey:        "shard",
+				RoutingKey:      "routekey",
+				RoutingDelegate: "routedelegate",
+			},
+			yarpc.NewBufferString("world"),
+		).Return(&yarpc.Response{}, yarpc.NewBufferString(""), nil)
 
 		respRecorder := newResponseRecorder()
 
-		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 		defer cancel()
 		tchHandler.handle(ctx, &fakeInboundCall{
 			service:         "service",
@@ -127,7 +122,7 @@ func TestHandlerFailures(t *testing.T) {
 		ctxFunc func() (context.Context, context.CancelFunc)
 
 		sendCall   *fakeInboundCall
-		expectCall func(*transporttest.MockUnaryHandler)
+		expectCall func(*yarpctest.MockUnaryTransportHandler)
 
 		wantStatus tchannel.SystemErrCode // expected status
 	}{
@@ -190,20 +185,18 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    []byte{0x00, 0x00},
 				arg3:    []byte{0x00},
 			},
-			expectCall: func(h *transporttest.MockUnaryHandler) {
+			expectCall: func(h *yarpctest.MockUnaryTransportHandler) {
 				h.EXPECT().Handle(
-					transporttest.NewContextMatcher(t, transporttest.ContextTTL(testtime.Second)),
-					transporttest.NewRequestMatcher(
-						t, &transport.Request{
-							Caller:    "bar",
-							Service:   "foo",
-							Transport: "tchannel",
-							Encoding:  raw.Encoding,
-							Procedure: "hello",
-							Body:      bytes.NewReader([]byte{0x00}),
-						},
-					), gomock.Any(),
-				).Return(fmt.Errorf("great sadness"))
+					yarpctest.NewContextMatcher(t, yarpctest.ContextTTL(internaltesttime.Second)),
+					&yarpc.Request{
+						Caller:    "bar",
+						Service:   "foo",
+						Transport: "tchannel",
+						Encoding:  yarpc.Encoding("raw"),
+						Procedure: "hello",
+					},
+					yarpc.NewBufferBytes([]byte{0x00}),
+				).Return(nil, nil, fmt.Errorf("great sadness"))
 			},
 			wantStatus: tchannel.ErrCodeUnexpected,
 		},
@@ -217,30 +210,29 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    []byte("{}"),
 				arg3:    []byte("{}"),
 			},
-			expectCall: func(h *transporttest.MockUnaryHandler) {
-				req := &transport.Request{
+			expectCall: func(h *yarpctest.MockUnaryTransportHandler) {
+				req := &yarpc.Request{
 					Caller:    "bar",
 					Service:   "foo",
 					Transport: "tchannel",
-					Encoding:  json.Encoding,
+					Encoding:  yarpc.Encoding("json"),
 					Procedure: "hello",
-					Body:      bytes.NewReader([]byte("{}")),
 				}
 				h.EXPECT().Handle(
-					transporttest.NewContextMatcher(t, transporttest.ContextTTL(testtime.Second)),
-					transporttest.NewRequestMatcher(t, req),
-					gomock.Any(),
-				).Return(
-					pkgerrors.ResponseBodyEncodeError(req, errors.New(
-						"serialization derp",
-					)))
+					yarpctest.NewContextMatcher(t, yarpctest.ContextTTL(internaltesttime.Second)),
+					req,
+					// yarpctest.NewRequestMatcher(t, req),
+					yarpc.NewBufferString("{}"),
+				).Return(nil, nil, yarpcencoding.ResponseBodyEncodeError(req, errors.New(
+					"serialization derp",
+				)))
 			},
 			wantStatus: tchannel.ErrCodeBadRequest,
 		},
 		{
 			desc: "handler timeout",
 			ctxFunc: func() (context.Context, context.CancelFunc) {
-				return context.WithTimeout(context.Background(), testtime.Millisecond)
+				return context.WithTimeout(context.Background(), internaltesttime.Millisecond)
 			},
 			sendCall: &fakeInboundCall{
 				service: "foo",
@@ -250,23 +242,22 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    []byte{0x00, 0x00},
 				arg3:    []byte{0x00},
 			},
-			expectCall: func(h *transporttest.MockUnaryHandler) {
-				req := &transport.Request{
+			expectCall: func(h *yarpctest.MockUnaryTransportHandler) {
+				req := &yarpc.Request{
 					Caller:    "bar",
 					Service:   "foo",
 					Transport: "tchannel",
-					Encoding:  raw.Encoding,
+					Encoding:  yarpc.Encoding("raw"),
 					Procedure: "waituntiltimeout",
-					Body:      bytes.NewReader([]byte{0x00}),
 				}
 				h.EXPECT().Handle(
-					transporttest.NewContextMatcher(
-						t, transporttest.ContextTTL(testtime.Millisecond)),
-					transporttest.NewRequestMatcher(t, req),
-					gomock.Any(),
-				).Do(func(ctx context.Context, _ *transport.Request, _ transport.ResponseWriter) {
+					yarpctest.NewContextMatcher(
+						t, yarpctest.ContextTTL(internaltesttime.Millisecond)),
+					req,
+					yarpc.NewBufferBytes([]byte{0x00}),
+				).Do(func(ctx context.Context, _ *yarpc.Request, _ *yarpc.Buffer) {
 					<-ctx.Done()
-				}).Return(context.DeadlineExceeded)
+				}).Return(nil, nil, context.DeadlineExceeded)
 			},
 			wantStatus: tchannel.ErrCodeTimeout,
 		},
@@ -280,21 +271,20 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    []byte{0x00, 0x00},
 				arg3:    []byte{0x00},
 			},
-			expectCall: func(h *transporttest.MockUnaryHandler) {
-				req := &transport.Request{
+			expectCall: func(h *yarpctest.MockUnaryTransportHandler) {
+				req := &yarpc.Request{
 					Caller:    "bar",
 					Service:   "foo",
 					Transport: "tchannel",
-					Encoding:  raw.Encoding,
+					Encoding:  yarpc.Encoding("raw"),
 					Procedure: "panic",
-					Body:      bytes.NewReader([]byte{0x00}),
 				}
 				h.EXPECT().Handle(
-					transporttest.NewContextMatcher(
-						t, transporttest.ContextTTL(testtime.Second)),
-					transporttest.NewRequestMatcher(t, req),
-					gomock.Any(),
-				).Do(func(context.Context, *transport.Request, transport.ResponseWriter) {
+					yarpctest.NewContextMatcher(
+						t, yarpctest.ContextTTL(internaltesttime.Second)),
+					req,
+					yarpc.NewBufferBytes([]byte{0x00}),
+				).Do(func(context.Context, *yarpc.Request, *yarpc.Buffer) {
 					panic("oops I panicked!")
 				})
 			},
@@ -303,7 +293,7 @@ func TestHandlerFailures(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 		if tt.ctx != nil {
 			ctx = tt.ctx
 		} else if tt.ctxFunc != nil {
@@ -312,8 +302,8 @@ func TestHandlerFailures(t *testing.T) {
 		defer cancel()
 
 		mockCtrl := gomock.NewController(t)
-		thandler := transporttest.NewMockUnaryHandler(mockCtrl)
-		spec := transport.NewUnaryHandlerSpec(thandler)
+		thandler := yarpctest.NewMockUnaryTransportHandler(mockCtrl)
+		spec := yarpc.NewUnaryTransportHandlerSpec(thandler)
 
 		if tt.expectCall != nil {
 			tt.expectCall(thandler)
@@ -322,7 +312,7 @@ func TestHandlerFailures(t *testing.T) {
 		resp := newResponseRecorder()
 		tt.sendCall.resp = resp
 
-		router := transporttest.NewMockRouter(mockCtrl)
+		router := yarpctest.NewMockRouter(mockCtrl)
 		router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
 			WithService(tt.sendCall.service).
 			WithProcedure(tt.sendCall.method),
@@ -340,182 +330,13 @@ func TestHandlerFailures(t *testing.T) {
 	}
 }
 
-func TestResponseWriter(t *testing.T) {
-	tests := []struct {
-		format           tchannel.Format
-		apply            func(*responseWriter)
-		arg2             []byte
-		arg3             []byte
-		applicationError bool
-		headerCase       headerCase
-	}{
-		{
-			format: tchannel.Raw,
-			apply: func(w *responseWriter) {
-				headers := transport.HeadersFromMap(map[string]string{"foo": "bar"})
-				w.AddHeaders(headers)
-				_, err := w.Write([]byte("hello "))
-				require.NoError(t, err)
-				_, err = w.Write([]byte("world"))
-				require.NoError(t, err)
-			},
-			arg2: []byte{
-				0x00, 0x01,
-				0x00, 0x03, 'f', 'o', 'o',
-				0x00, 0x03, 'b', 'a', 'r',
-			},
-			arg3: []byte("hello world"),
-		},
-		{
-			format: tchannel.Raw,
-			apply: func(w *responseWriter) {
-				headers := transport.HeadersFromMap(map[string]string{"FoO": "bAr"})
-				w.AddHeaders(headers)
-				_, err := w.Write([]byte("hello "))
-				require.NoError(t, err)
-				_, err = w.Write([]byte("world"))
-				require.NoError(t, err)
-			},
-			arg2: []byte{
-				0x00, 0x01,
-				0x00, 0x03, 'F', 'o', 'O',
-				0x00, 0x03, 'b', 'A', 'r',
-			},
-			arg3:       []byte("hello world"),
-			headerCase: originalHeaderCase,
-		},
-		{
-			format: tchannel.Raw,
-			apply: func(w *responseWriter) {
-				_, err := w.Write([]byte("foo"))
-				require.NoError(t, err)
-				_, err = w.Write([]byte("bar"))
-				require.NoError(t, err)
-			},
-			arg2: []byte{0x00, 0x00},
-			arg3: []byte("foobar"),
-		},
-		{
-			format: tchannel.JSON,
-			apply: func(w *responseWriter) {
-				headers := transport.HeadersFromMap(map[string]string{"foo": "bar"})
-				w.AddHeaders(headers)
-
-				_, err := w.Write([]byte("{}"))
-				require.NoError(t, err)
-			},
-			arg2: []byte(`{"foo":"bar"}` + "\n"),
-			arg3: []byte("{}"),
-		},
-		{
-			format: tchannel.JSON,
-			apply: func(w *responseWriter) {
-				headers := transport.HeadersFromMap(map[string]string{"FoO": "bAr"})
-				w.AddHeaders(headers)
-
-				_, err := w.Write([]byte("{}"))
-				require.NoError(t, err)
-			},
-			arg2:       []byte(`{"FoO":"bAr"}` + "\n"),
-			arg3:       []byte("{}"),
-			headerCase: originalHeaderCase,
-		},
-		{
-			format: tchannel.JSON,
-			apply: func(w *responseWriter) {
-				_, err := w.Write([]byte("{}"))
-				require.NoError(t, err)
-			},
-			arg2: []byte("{}\n"),
-			arg3: []byte("{}"),
-		},
-		{
-			format: tchannel.Raw,
-			apply: func(w *responseWriter) {
-				w.SetApplicationError()
-				_, err := w.Write([]byte("hello"))
-				require.NoError(t, err)
-			},
-			arg2:             []byte{0x00, 0x00},
-			arg3:             []byte("hello"),
-			applicationError: true,
-		},
-	}
-
-	for _, tt := range tests {
-		call := &fakeInboundCall{format: tt.format}
-		resp := newResponseRecorder()
-		call.resp = resp
-
-		w := newResponseWriter(call.Response(), call.Format(), tt.headerCase)
-		tt.apply(w)
-		assert.NoError(t, w.Close())
-
-		assert.Nil(t, resp.systemErr)
-		assert.Equal(t, tt.arg2, resp.arg2.Bytes())
-		assert.Equal(t, tt.arg3, resp.arg3.Bytes())
-
-		if tt.applicationError {
-			assert.True(t, resp.applicationError, "expected an application error")
-		}
-	}
-}
-
-func TestResponseWriterFailure(t *testing.T) {
-	tests := []struct {
-		setupResp func(*responseRecorder)
-		messages  []string
-	}{
-		{
-			setupResp: func(rr *responseRecorder) {
-				rr.arg2 = nil
-			},
-			messages: []string{"no arg2 provided"},
-		},
-		{
-			setupResp: func(rr *responseRecorder) {
-				rr.arg3 = nil
-			},
-			messages: []string{"no arg3 provided"},
-		},
-	}
-
-	for _, tt := range tests {
-		resp := newResponseRecorder()
-		tt.setupResp(resp)
-
-		w := newResponseWriter(resp, tchannel.Raw, canonicalizedHeaderCase)
-		_, err := w.Write([]byte("foo"))
-		assert.NoError(t, err)
-		_, err = w.Write([]byte("bar"))
-		assert.NoError(t, err)
-		err = w.Close()
-		assert.Error(t, err)
-		for _, msg := range tt.messages {
-			assert.Contains(t, err.Error(), msg)
-		}
-	}
-}
-
-func TestResponseWriterEmptyBodyHeaders(t *testing.T) {
-	res := newResponseRecorder()
-	w := newResponseWriter(res, tchannel.Raw, canonicalizedHeaderCase)
-
-	w.AddHeaders(transport.NewHeaders().With("foo", "bar"))
-	require.NoError(t, w.Close())
-
-	assert.NotEmpty(t, res.arg2.Bytes(), "headers must not be empty")
-	assert.Empty(t, res.arg3.Bytes(), "body must be empty but was %#v", res.arg3.Bytes())
-	assert.False(t, res.applicationError, "application error must be false")
-}
-
 func TestGetSystemError(t *testing.T) {
 	tests := []struct {
 		giveErr  error
 		wantCode tchannel.SystemErrCode
 	}{
 		{
-			giveErr:  yarpcerrors.UnavailableErrorf("test"),
+			giveErr:  yarpcerror.UnavailableErrorf("test"),
 			wantCode: tchannel.ErrCodeDeclined,
 		},
 		{
@@ -523,7 +344,7 @@ func TestGetSystemError(t *testing.T) {
 			wantCode: tchannel.ErrCodeUnexpected,
 		},
 		{
-			giveErr:  yarpcerrors.InvalidArgumentErrorf("test"),
+			giveErr:  yarpcerror.InvalidArgumentErrorf("test"),
 			wantCode: tchannel.ErrCodeBadRequest,
 		},
 		{
@@ -531,7 +352,7 @@ func TestGetSystemError(t *testing.T) {
 			wantCode: tchannel.ErrCodeBusy,
 		},
 		{
-			giveErr:  yarpcerrors.Newf(yarpcerrors.Code(1235), "test"),
+			giveErr:  yarpcerror.Newf(yarpcerror.Code(1235), "test"),
 			wantCode: tchannel.ErrCodeUnexpected,
 		},
 	}

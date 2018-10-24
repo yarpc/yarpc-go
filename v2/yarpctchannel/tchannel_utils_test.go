@@ -18,14 +18,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchannel
+// This file provides utilities to help test TChannel behavior used by
+// multiple tests.
+
+package yarpctchannel
 
 import (
 	"bytes"
 	"errors"
 	"io/ioutil"
 
-	"github.com/uber/tchannel-go"
+	tchannel "github.com/uber/tchannel-go"
 )
 
 func readArgs(r tchannel.ArgReadable) (arg2, arg3 []byte, err error) {
@@ -45,9 +48,6 @@ func writeArgs(w tchannel.ArgWritable, arg2, arg3 []byte) error {
 
 	return tchannel.NewArgWriter(w.Arg3Writer()).Write(arg3)
 }
-
-// This file provides utilities to help test TChannel behavior used by
-// multiple tests.
 
 // bufferArgWriter is a Buffer that satisfies the tchannel.ArgWriter
 // interface.

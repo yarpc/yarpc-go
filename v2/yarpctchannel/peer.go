@@ -18,26 +18,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchannel
+package yarpctchannel
 
 import (
 	"context"
 	"time"
 
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/peer/hostport"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcpeer"
 )
 
 type tchannelPeer struct {
-	*hostport.Peer
-	transport *Transport
-	addr      string
-	changed   chan struct{}
-	released  chan struct{}
-	timer     *time.Timer
+	*yarpcpeer.AbstractPeer
+
+	dialer   *Dialer
+	addr     string
+	changed  chan struct{}
+	released chan struct{}
+	timer    *time.Timer
 }
 
-func newPeer(addr string, t *Transport) *tchannelPeer {
+func newPeer(pid yarpc.Identifier, addr string, dialer *Dialer) *tchannelPeer {
 	// Create a defused timer for later use.
 	timer := time.NewTimer(0)
 	if !timer.Stop() {
@@ -45,27 +46,27 @@ func newPeer(addr string, t *Transport) *tchannelPeer {
 	}
 
 	return &tchannelPeer{
-		addr:      addr,
-		Peer:      hostport.NewPeer(hostport.PeerIdentifier(addr), t),
-		transport: t,
-		changed:   make(chan struct{}, 1),
-		released:  make(chan struct{}, 0),
-		timer:     timer,
+		AbstractPeer: yarpcpeer.NewAbstractPeer(pid),
+
+		addr:     addr,
+		dialer:   dialer,
+		changed:  make(chan struct{}, 1),
+		released: make(chan struct{}, 0),
+		timer:    timer,
 	}
 }
 
 func (p *tchannelPeer) MaintainConn() {
+	defer func() {
+		p.dialer.connectorsGroup.Done()
+	}()
+
 	cancel := func() {}
 
-	backoff := p.transport.connBackoffStrategy.Backoff()
+	backoff := p.dialer.ConnBackoff.Backoff()
 	var attempts uint
 
-	// Wait for start (so we can be certain that we have a channel).
-	<-p.transport.once.Started()
-	pl := p.transport.peerList()
-	if pl == nil {
-		return
-	}
+	pl := p.dialer.ch.RootPeers()
 
 	// Attempt to retain an open connection to each peer so long as it is
 	// retained.
@@ -74,7 +75,7 @@ func (p *tchannelPeer) MaintainConn() {
 
 		inbound, outbound := tp.NumConnections()
 		if inbound+outbound > 0 {
-			p.Peer.SetStatus(peer.Available)
+			p.setStatus(yarpc.Available)
 			// Reset on success
 			attempts = 0
 			if !p.waitForChange() {
@@ -82,17 +83,17 @@ func (p *tchannelPeer) MaintainConn() {
 			}
 
 		} else {
-			p.Peer.SetStatus(peer.Connecting)
+			p.setStatus(yarpc.Unavailable)
 
 			// Attempt to connect
 			ctx := context.Background()
-			ctx, cancel = context.WithTimeout(ctx, p.transport.connTimeout)
+			ctx, cancel = context.WithTimeout(ctx, p.dialer.ConnTimeout)
 			_, err := tp.Connect(ctx)
 
 			if err == nil {
-				p.Peer.SetStatus(peer.Available)
+				p.setStatus(yarpc.Available)
 			} else {
-				p.Peer.SetStatus(peer.Unavailable)
+				p.setStatus(yarpc.Unavailable)
 				// Back-off on fail
 				if !p.sleep(backoff.Duration(attempts)) {
 					break
@@ -103,8 +104,11 @@ func (p *tchannelPeer) MaintainConn() {
 		}
 	}
 
-	p.transport.connectorsGroup.Done()
 	cancel()
+}
+
+func (p *tchannelPeer) setStatus(status yarpc.ConnectionStatus) {
+	p.AbstractPeer.SetStatus(status)
 }
 
 func (p *tchannelPeer) Release() {
@@ -118,8 +122,8 @@ func (p *tchannelPeer) OnStatusChanged() {
 	}
 }
 
-// waitForChange waits for the transport to send a peer connection status
-// change notification, but exits early if the transport releases the peer or
+// waitForChange waits for the dialer to send a peer connection status
+// change notification, but exits early if the dialer releases the peer or
 // stops.  waitForChange returns whether it is resuming due to a connection
 // status change event.
 func (p *tchannelPeer) waitForChange() (changed bool) {
@@ -128,12 +132,10 @@ func (p *tchannelPeer) waitForChange() (changed bool) {
 		return true
 	case <-p.released:
 		return false
-	case <-p.transport.once.Stopping():
-		return false
 	}
 }
 
-// sleep waits for a duration, but exits early if the transport releases the
+// sleep waits for a duration, but exits early if the dialer releases the
 // peer or stops.  sleep returns whether it successfully waited the entire
 // duration.
 func (p *tchannelPeer) sleep(delay time.Duration) (completed bool) {
@@ -143,7 +145,6 @@ func (p *tchannelPeer) sleep(delay time.Duration) (completed bool) {
 	case <-p.timer.C:
 		return true
 	case <-p.released:
-	case <-p.transport.once.Stopping():
 	}
 
 	if !p.timer.Stop() {

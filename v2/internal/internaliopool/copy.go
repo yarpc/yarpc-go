@@ -18,31 +18,31 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchannel
+package internaliopool
 
 import (
-	"github.com/uber/tchannel-go"
-	"golang.org/x/net/context"
+	"io"
+	"sync"
 )
 
-// Channel is the interface exposed by TChannel. The TChannel transport for
-// YARPC is built on top of this interface.
-//
-// See https://godoc.org/github.com/uber/tchannel-go#Channel for more
-// information about these methods.
-type Channel interface {
-	BeginCall(
-		ctx context.Context,
-		hostPort, serviceName, methodName string,
-		callOptions *tchannel.CallOptions,
-	) (*tchannel.OutboundCall, error)
-	Close()
-	GetSubChannel(serviceName string, opts ...tchannel.SubChannelOption) *tchannel.SubChannel
-	ListenAndServe(hostPort string) error
-	PeerInfo() tchannel.LocalPeerInfo
-	RootPeers() *tchannel.RootPeerList
-	ServiceName() string
-	State() tchannel.ChannelState
+type buffer struct {
+	b []byte
 }
 
-var _ Channel = (*tchannel.Channel)(nil)
+const _copyBufSize = 1024 * 32
+
+var _pool = sync.Pool{
+	New: func() interface{} {
+		return &buffer{make([]byte, _copyBufSize)}
+	},
+}
+
+// Copy copies bytes from the Reader to the Writer until the Reader is exhausted.
+func Copy(dst io.Writer, src io.Reader) (int64, error) {
+	// To avoid unnecessary memory allocations we maintain our own pool of
+	// buffers.
+	buf := _pool.Get().(*buffer)
+	written, err := io.CopyBuffer(dst, src, buf.b)
+	_pool.Put(buf)
+	return written, err
+}

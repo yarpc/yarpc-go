@@ -18,254 +18,187 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchannel
+package yarpctchannel
 
 import (
+	"context"
 	"fmt"
-	"net"
 	"sync"
 	"time"
 
-	"github.com/opentracing/opentracing-go"
+	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
-	backoffapi "go.uber.org/yarpc/api/backoff"
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/pkg/lifecycle"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcbackoff"
+	"go.uber.org/yarpc/v2/yarpcpeer"
 	"go.uber.org/zap"
 )
 
-type headerCase int
+// Dialer is a TChannel connection dialer.
+type Dialer struct {
+	// Caller is the name of this, the calling service, for purposes of
+	// logging and establishing the caller name.
+	//
+	// This field is required.
+	Caller string
 
-const (
-	canonicalizedHeaderCase headerCase = iota
-	originalHeaderCase
-)
+	// ConnTimeout specifies the time that TChannel will wait for a connection
+	// attempt to any retained peer.
+	//
+	// The default is half of a second.
+	ConnTimeout time.Duration
 
-// Transport is a TChannel transport suitable for use with YARPC's peer
-// selection system.
-// The transport implements peer.Transport so multiple peer.List
-// implementations can retain and release shared peers.
-// The transport implements transport.Transport so it is suitable for lifecycle
-// management.
-type Transport struct {
-	lock sync.Mutex
-	once *lifecycle.Once
+	// ConnBackoff specifies the connection backoff strategy for delays between
+	// connection attempts for each peer.
+	//
+	// ConnBackoff accepts a function that creates new backoff instances.  The
+	// dialer uses this to make referentially independent backoff instances
+	// that will not be shared across goroutines.
+	//
+	// The backoff instance is a function that accepts connection attempts and
+	// returns a duration.
+	//
+	// The default is exponential backoff starting with 10ms fully jittered,
+	// doubling each attempt, with a maximum interval of 30s.
+	ConnBackoff yarpc.BackoffStrategy
 
-	ch       *tchannel.Channel
-	router   transport.Router
-	tracer   opentracing.Tracer
-	logger   *zap.Logger
-	name     string
-	addr     string
-	listener net.Listener
+	// Tracer specifies the request tracer used for RPCs passing through the
+	// TChannel outbound.
+	Tracer opentracing.Tracer
 
-	connTimeout            time.Duration
-	initialConnRetryDelay  time.Duration
-	connRetryBackoffFactor int
-	connectorsGroup        sync.WaitGroup
-	connBackoffStrategy    backoffapi.Strategy
-	headerCase             headerCase
+	// Logger sets a logger to use for internal logging.
+	//
+	// The default is to not write any logs.
+	Logger *zap.Logger
 
-	peers map[string]*tchannelPeer
+	lock            sync.Mutex
+	ch              *tchannel.Channel
+	peers           map[string]*tchannelPeer
+	connectorsGroup sync.WaitGroup
+	tracer          opentracing.Tracer
+	logger          *zap.Logger
 }
 
-// NewTransport is a YARPC transport that facilitates sending and receiving
-// YARPC requests through TChannel.
-// It uses a shared TChannel Channel for both, incoming and outgoing requests,
-// ensuring reuse of connections and other resources.
-//
-// Either the local service name (with the ServiceName option) or a user-owned
-// TChannel (with the WithChannel option) MUST be specified.
-func NewTransport(opts ...TransportOption) (*Transport, error) {
-	options := newTransportOptions()
+var _ yarpc.Dialer = (*Dialer)(nil)
 
-	for _, opt := range opts {
-		opt(&options)
-	}
+// Start starts the TChannel dialer.
+func (d *Dialer) Start(ctx context.Context) error {
+	d.lock.Lock()
+	defer d.lock.Unlock()
 
-	if options.ch != nil {
-		return nil, fmt.Errorf("NewTransport does not accept WithChannel, use NewChannelTransport")
-	}
+	// TODO hey, maybe this all belongs in Inbound.
+	// Maybe we create a channel separately in Dialer and Inbound since
+	// Hyperbahn is no longer a thing and we'll never receive requests from
+	// outbound connections.
 
-	return options.newTransport(), nil
-}
-
-func (o transportOptions) newTransport() *Transport {
-	logger := o.logger
-	if logger == nil {
-		logger = zap.NewNop()
-	}
-	headerCase := canonicalizedHeaderCase
-	if o.originalHeaders {
-		headerCase = originalHeaderCase
-	}
-	return &Transport{
-		once:                lifecycle.NewOnce(),
-		name:                o.name,
-		addr:                o.addr,
-		listener:            o.listener,
-		connTimeout:         o.connTimeout,
-		connBackoffStrategy: o.connBackoffStrategy,
-		peers:               make(map[string]*tchannelPeer),
-		tracer:              o.tracer,
-		logger:              logger,
-		headerCase:          headerCase,
-	}
-}
-
-// ListenAddr exposes the listen address of the transport.
-func (t *Transport) ListenAddr() string {
-	return t.addr
-}
-
-// RetainPeer adds a peer subscriber (typically a peer chooser) and causes the
-// transport to maintain persistent connections with that peer.
-func (t *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.Peer, error) {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-
-	p := t.getOrCreatePeer(pid)
-	p.Subscribe(sub)
-	return p, nil
-}
-
-// **NOTE** should only be called while the lock write mutex is acquired
-func (t *Transport) getOrCreatePeer(pid peer.Identifier) *tchannelPeer {
-	addr := pid.Identifier()
-	if p, ok := t.peers[addr]; ok {
-		return p
-	}
-
-	p := newPeer(addr, t)
-	t.peers[addr] = p
-	// Start a peer connection loop
-	t.connectorsGroup.Add(1)
-	go p.MaintainConn()
-
-	return p
-}
-
-// ReleasePeer releases a peer from the peer.Subscriber and removes that peer
-// from the Transport if nothing is listening to it.
-func (t *Transport) ReleasePeer(pid peer.Identifier, sub peer.Subscriber) error {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-
-	p, ok := t.peers[pid.Identifier()]
-	if !ok {
-		return peer.ErrTransportHasNoReferenceToPeer{
-			TransportName:  "tchannel.Transport",
-			PeerIdentifier: pid.Identifier(),
-		}
-	}
-
-	if err := p.Unsubscribe(sub); err != nil {
-		return err
-	}
-
-	if p.NumSubscribers() == 0 {
-		// Release the peer so that the connection retention loop stops.
-		p.Release()
-		delete(t.peers, pid.Identifier())
-	}
-
-	return nil
-}
-
-func (t *Transport) peerList() *tchannel.RootPeerList {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-
-	if t.ch == nil {
-		return nil
-	}
-
-	return t.ch.RootPeers()
-}
-
-// Start starts the TChannel transport. This starts making connections and
-// accepting inbound requests. All inbounds must have been assigned a router
-// to accept inbound requests before this is called.
-func (t *Transport) Start() error {
-	return t.once.Start(t.start)
-}
-
-func (t *Transport) start() error {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-
+	// Create a TChannel
 	chopts := tchannel.ChannelOptions{
-		Tracer: t.tracer,
-		Handler: handler{
-			router:     t.router,
-			tracer:     t.tracer,
-			headerCase: t.headerCase,
-			logger:     t.logger,
-		},
-		OnPeerStatusChanged: t.onPeerStatusChanged,
+		Tracer:              d.tracer,
+		OnPeerStatusChanged: d.onPeerStatusChanged,
 	}
-	ch, err := tchannel.NewChannel(t.name, &chopts)
+	ch, err := tchannel.NewChannel(d.Caller, &chopts)
 	if err != nil {
+		// This should be unreachable since it indicates invalid channel
+		// options.
 		return err
 	}
-	t.ch = ch
+	d.ch = ch
 
-	if t.listener != nil {
-		if err := t.ch.Serve(t.listener); err != nil {
-			return err
-		}
-	} else {
-		// Default to ListenIP if addr wasn't given.
-		addr := t.addr
-		if addr == "" {
-			listenIP, err := tchannel.ListenIP()
-			if err != nil {
-				return err
-			}
+	d.peers = make(map[string]*tchannelPeer)
 
-			addr = listenIP.String() + ":0"
-			// TODO(abg): Find a way to export this to users
-		}
-
-		// TODO(abg): If addr was just the port (":4040"), we want to use
-		// ListenIP() + ":4040" rather than just ":4040".
-		if err := t.ch.ListenAndServe(addr); err != nil {
-			return err
-		}
+	if d.ConnTimeout == 0 {
+		d.ConnTimeout = defaultConnTimeout
 	}
-
-	t.addr = t.ch.PeerInfo().HostPort
+	if d.ConnBackoff == nil {
+		d.ConnBackoff = yarpcbackoff.DefaultExponential
+	}
 
 	return nil
 }
 
 // Stop stops the TChannel transport. It starts rejecting incoming requests
 // and draining connections before closing them.
-// In a future version of YARPC, Stop will block until the underlying channel
+// TODO In a future version of YARPC, Stop will block until the underlying channel
 // has closed completely.
-func (t *Transport) Stop() error {
-	return t.once.Stop(t.stop)
-}
-
-func (t *Transport) stop() error {
-	t.ch.Close()
-	t.connectorsGroup.Wait()
+func (d *Dialer) Stop(ctx context.Context) error {
+	// Release all peers.
+	for _, peer := range d.peers {
+		peer.Release()
+	}
+	d.ch.Close()
+	d.connectorsGroup.Wait()
 	return nil
 }
 
-// IsRunning returns whether the TChannel transport is running.
-func (t *Transport) IsRunning() bool {
-	return t.once.IsRunning()
+// RetainPeer adds a peer subscriber (typically a peer chooser) and causes the
+// transport to maintain persistent connections with that peer.
+//
+// RetainPeer must be called while the dialer is running.
+func (d *Dialer) RetainPeer(pid yarpc.Identifier, sub yarpc.Subscriber) (yarpc.Peer, error) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+
+	if d.ch == nil {
+		return nil, fmt.Errorf("Dialer must be started to retain peers")
+	}
+
+	p := d.getOrCreatePeer(pid)
+	p.Subscribe(sub)
+	return p, nil
+}
+
+// **NOTE** should only be called while the lock write mutex is acquired
+func (d *Dialer) getOrCreatePeer(pid yarpc.Identifier) *tchannelPeer {
+	addr := pid.Identifier()
+	if p, ok := d.peers[addr]; ok {
+		return p
+	}
+
+	p := newPeer(pid, addr, d)
+	d.peers[addr] = p
+	// Start a peer connection loop
+	d.connectorsGroup.Add(1)
+	go p.MaintainConn()
+
+	return p
+}
+
+// ReleasePeer releases a peer from the yarpc.Subscriber and removes that peer
+// from the Dialer if nothing is listening to it.
+func (d *Dialer) ReleasePeer(pid yarpc.Identifier, sub yarpc.Subscriber) error {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+
+	p, ok := d.peers[pid.Identifier()]
+	if !ok {
+		// This is only reachable if there is a bug in a peer list.
+		return yarpcpeer.ErrDialerHasNoReferenceToPeer{
+			DialerName:     "tchannel.Dialer",
+			PeerIdentifier: pid.Identifier(),
+		}
+	}
+
+	if err := p.Unsubscribe(sub); err != nil {
+		// This is unreachable. AbstractPeer.Unsubscribe has no error-return path.
+		return err
+	}
+
+	if p.NumSubscribers() == 0 {
+		// Release the peer so that the connection retention loop stops.
+		p.Release()
+		delete(d.peers, pid.Identifier())
+	}
+
+	return nil
 }
 
 // onPeerStatusChanged receives notifications from TChannel Channel when any
 // peer's status changes.
-func (t *Transport) onPeerStatusChanged(tp *tchannel.Peer) {
-	t.lock.Lock()
-	defer t.lock.Unlock()
+func (d *Dialer) onPeerStatusChanged(tp *tchannel.Peer) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
 
-	p, ok := t.peers[tp.HostPort()]
+	p, ok := d.peers[tp.HostPort()]
 	if !ok {
 		return
 	}

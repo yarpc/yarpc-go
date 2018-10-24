@@ -18,44 +18,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchannel
+package yarpctchannel
 
 import (
-	"bytes"
-	"io/ioutil"
-	"sync"
+	"context"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/uber/tchannel-go"
+	tchannel "github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/testutils"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/internal/testtime"
-	"go.uber.org/yarpc/yarpcerrors"
-	"golang.org/x/net/context"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/internal/internaltesttime"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 func TestOutboundHeaders(t *testing.T) {
-	tests := []struct {
-		context context.Context
-		headers transport.Headers
-
+	tests := map[string]struct {
+		headers     yarpc.Headers
 		wantHeaders []byte
-		wantError   string
 	}{
-		{
-			headers: transport.NewHeaders().With("contextfoo", "bar"),
+		"original header": {
+			headers: yarpc.NewHeaders().With("contextfoo", "bar"),
 			wantHeaders: []byte{
 				0x00, 0x01,
 				0x00, 0x0A, 'c', 'o', 'n', 't', 'e', 'x', 't', 'f', 'o', 'o',
 				0x00, 0x03, 'b', 'a', 'r',
 			},
 		},
-		{
-			headers: transport.NewHeaders().With("Foo", "bar"),
+		"canonicalized header": {
+			headers: yarpc.NewHeaders().With("Foo", "bar"),
 			wantHeaders: []byte{
 				0x00, 0x01,
 				0x00, 0x03, 'f', 'o', 'o',
@@ -64,57 +57,50 @@ func TestOutboundHeaders(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		server := testutils.NewServer(t, nil)
-		defer server.Close()
-		hostport := server.PeerInfo().HostPort
+	for msg, tt := range tests {
+		t.Run(msg, func(t *testing.T) {
+			ctx := context.Background()
+			ctx, cancel := context.WithTimeout(ctx, time.Second)
+			defer cancel()
 
-		server.GetSubChannel("service").SetHandler(tchannel.HandlerFunc(
-			func(ctx context.Context, call *tchannel.InboundCall) {
-				headers, body, err := readArgs(call)
-				if assert.NoError(t, err, "failed to read request") {
-					assert.Equal(t, tt.wantHeaders, headers, "headers did not match")
-					assert.Equal(t, []byte("world"), body)
-				}
+			server := testutils.NewServer(t, nil)
+			defer server.Close()
+			addr := server.PeerInfo().HostPort
 
-				err = writeArgs(call.Response(), []byte{0x00, 0x00}, []byte("bye!"))
-				assert.NoError(t, err, "failed to write response")
-			}))
+			server.GetSubChannel("service").SetHandler(tchannel.HandlerFunc(
+				func(ctx context.Context, call *tchannel.InboundCall) {
+					headers, body, err := readArgs(call)
+					if assert.NoError(t, err, "failed to read request") {
+						assert.Equal(t, tt.wantHeaders, headers, "headers did not match")
+						assert.Equal(t, []byte("world"), body)
+					}
 
-		x, err := NewChannelTransport(ServiceName("foo"))
-		require.NoError(t, err)
-		out := x.NewSingleOutbound(hostport)
-		require.NoError(t, err)
-		require.NoError(t, out.Start(), "failed to start outbound")
-		defer out.Stop()
+					err = writeArgs(call.Response(), []byte{0x00, 0x00}, []byte("bye!"))
+					assert.NoError(t, err, "failed to write response")
+				}))
 
-		ctx := tt.context
-		if ctx == nil {
-			ctx = context.Background()
-		}
-		ctx, cancel := context.WithTimeout(ctx, testtime.Second)
-		defer cancel()
+			dialer := &Dialer{
+				Caller: "caller",
+			}
+			require.NoError(t, dialer.Start(ctx))
+			defer dialer.Stop(ctx)
 
-		res, err := out.Call(
-			ctx,
-			&transport.Request{
+			outbound := &Outbound{
+				Dialer: dialer,
+				Addr:   addr,
+			}
+
+			req := &yarpc.Request{
 				Caller:    "caller",
 				Service:   "service",
-				Encoding:  raw.Encoding,
+				Encoding:  yarpc.Encoding("raw"),
 				Procedure: "hello",
 				Headers:   tt.headers,
-				Body:      bytes.NewReader([]byte("world")),
-			},
-		)
-		if tt.wantError != "" {
-			if assert.Error(t, err, "expected error") {
-				assert.Contains(t, err.Error(), tt.wantError)
 			}
-		} else {
-			if assert.NoError(t, err, "call failed") {
-				defer res.Body.Close()
-			}
-		}
+			reqBody := yarpc.NewBufferString("world")
+			_, _, err := outbound.Call(ctx, req, reqBody)
+			assert.NoError(t, err, "call failed")
+		})
 	}
 }
 
@@ -123,33 +109,30 @@ func TestCallSuccess(t *testing.T) {
 		headerKey = "foo-BAR-BaZ"
 		headerVal = "FooBarBaz"
 	)
-	tests := []struct {
+	tests := map[string]struct {
 		msg                   string
-		options               []TransportOption
+		outbound              *Outbound
 		headerVal             []byte
 		withServiceRespHeader bool
 	}{
-		{
-			msg:     "exactCaseHeader options on",
-			options: []TransportOption{ServiceName("caller"), OriginalHeaders()},
+		"exactCaseHeader options on": {
+			outbound: &Outbound{HeaderCase: OriginalHeaderCase},
 			headerVal: []byte{
 				0x00, 0x01,
 				0x00, 0x0b, 'f', 'o', 'o', '-', 'B', 'A', 'R', '-', 'B', 'a', 'Z',
 				0x00, 0x09, 'F', 'o', 'o', 'B', 'a', 'r', 'B', 'a', 'z',
 			},
 		},
-		{
-			msg:     "exactCaseHeader options off",
-			options: []TransportOption{ServiceName("caller")},
+		"exactCaseHeader options off": {
+			outbound: &Outbound{},
 			headerVal: []byte{
 				0x00, 0x01,
 				0x00, 0x0b, 'f', 'o', 'o', '-', 'b', 'a', 'r', '-', 'b', 'a', 'z',
 				0x00, 0x09, 'F', 'o', 'o', 'B', 'a', 'r', 'B', 'a', 'z',
 			},
 		},
-		{
-			msg:     "exactCaseHeader options off",
-			options: []TransportOption{ServiceName("caller")},
+		"exactCaseHeader options off with service response header": {
+			outbound: &Outbound{},
 			headerVal: []byte{
 				0x00, 0x01,
 				0x00, 0x0b, 'f', 'o', 'o', '-', 'b', 'a', 'r', '-', 'b', 'a', 'z',
@@ -159,11 +142,11 @@ func TestCallSuccess(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.msg, func(t *testing.T) {
+	for msg, tt := range tests {
+		t.Run(msg, func(t *testing.T) {
 			server := testutils.NewServer(t, nil)
 			defer server.Close()
-			serverHostPort := server.PeerInfo().HostPort
+			serverAddr := server.PeerInfo().HostPort
 
 			server.GetSubChannel("service").SetHandler(tchannel.HandlerFunc(
 				func(ctx context.Context, call *tchannel.InboundCall) {
@@ -179,7 +162,7 @@ func TestCallSuccess(t *testing.T) {
 
 					dl, ok := ctx.Deadline()
 					assert.True(t, ok, "deadline expected")
-					assert.WithinDuration(t, time.Now(), dl, 200*testtime.Millisecond)
+					assert.WithinDuration(t, time.Now(), dl, internaltesttime.Second)
 
 					if tt.withServiceRespHeader {
 						// test with response service name header
@@ -200,47 +183,43 @@ func TestCallSuccess(t *testing.T) {
 								0x00, 0x03, 'b', 'a', 'r',
 							}, []byte("great success"))
 					}
-					assert.NoError(t, err, "o write response")
+					assert.NoError(t, err, "no write response")
 				}))
 
-			x, err := NewTransport(tt.options...)
-			require.NoError(t, err)
-			require.NoError(t, x.Start(), "failed to start transport")
-
-			out := x.NewSingleOutbound(serverHostPort)
-			require.NoError(t, out.Start(), "failed to start outbound")
-			defer out.Stop()
-
-			ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
+			ctx, cancel := context.WithTimeout(context.Background(), 200*internaltesttime.Millisecond)
 			defer cancel()
-			res, err := out.Call(
+
+			dialer := &Dialer{Caller: "caller"}
+			require.NoError(t, dialer.Start(ctx))
+			defer dialer.Stop(ctx)
+
+			tt.outbound.Dialer = dialer
+			tt.outbound.Addr = serverAddr
+
+			res, resBody, err := tt.outbound.Call(
 				ctx,
-				&transport.Request{
+				&yarpc.Request{
 					Caller:    "caller",
 					Service:   "service",
-					Encoding:  raw.Encoding,
+					Encoding:  yarpc.Encoding("raw"),
 					Procedure: "hello",
-					Headers:   transport.NewHeaders().With(headerKey, headerVal),
-					Body:      bytes.NewReader([]byte("world")),
+					Headers:   yarpc.NewHeaders().With(headerKey, headerVal),
 				},
+				yarpc.NewBufferString("world"),
 			)
 
 			if !assert.NoError(t, err, "failed to make call") {
 				return
 			}
 
+			require.NotNil(t, res)
 			assert.Equal(t, false, res.ApplicationError, "not application error")
 
 			foo, ok := res.Headers.Get("foo")
 			assert.True(t, ok, "value for foo expected")
 			assert.Equal(t, "bar", foo, "foo value mismatch")
 
-			body, err := ioutil.ReadAll(res.Body)
-			if assert.NoError(t, err, "failed to read response body") {
-				assert.Equal(t, []byte("great success"), body)
-			}
-
-			assert.NoError(t, res.Body.Close(), "failed to close response body")
+			assert.Equal(t, yarpc.NewBufferString("great success"), resBody)
 		})
 	}
 }
@@ -252,7 +231,7 @@ func TestCallFailures(t *testing.T) {
 	)
 	server := testutils.NewServer(t, nil)
 	defer server.Close()
-	serverHostPort := server.PeerInfo().HostPort
+	serverAddr := server.PeerInfo().HostPort
 
 	server.GetSubChannel("service").SetHandler(tchannel.HandlerFunc(
 		func(ctx context.Context, call *tchannel.InboundCall) {
@@ -281,52 +260,53 @@ func TestCallFailures(t *testing.T) {
 		message   string
 	}
 
-	tests := []testCase{
-		{
+	tests := map[string]testCase{
+		"unexpected method": {
 			procedure: unexpectedMethod,
 			message:   "great sadness",
 		},
-		{
+		"unknown method": {
 			procedure: unknownMethod,
 			message:   "unknown method",
 		},
-		{
+		"service name mismatch": {
 			procedure: "wrong service name",
 			message:   "does not match",
 		},
 	}
 
-	for _, tt := range tests {
-		x, err := NewTransport(ServiceName("caller"))
-		require.NoError(t, x.Start())
-		defer x.Stop()
-		require.NoError(t, err)
-		out := x.NewSingleOutbound(serverHostPort)
-		require.NoError(t, out.Start(), "failed to start outbound")
-		defer out.Stop()
+	for msg, tt := range tests {
+		t.Run(msg, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 200*internaltesttime.Millisecond)
+			defer cancel()
 
-		ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
-		defer cancel()
-		_, err = out.Call(
-			ctx,
-			&transport.Request{
-				Caller:    "caller",
-				Service:   "service",
-				Encoding:  raw.Encoding,
-				Procedure: tt.procedure,
-				Body:      bytes.NewReader([]byte("sup")),
-			},
-		)
+			dialer := &Dialer{Caller: "caller"}
+			require.NoError(t, dialer.Start(ctx))
+			defer dialer.Stop(ctx)
 
-		assert.Error(t, err, "expected failure")
-		assert.Contains(t, err.Error(), tt.message)
+			outbound := &Outbound{Dialer: dialer, Addr: serverAddr}
+
+			_, _, err := outbound.Call(
+				ctx,
+				&yarpc.Request{
+					Caller:    "caller",
+					Service:   "service",
+					Encoding:  yarpc.Encoding("raw"),
+					Procedure: tt.procedure,
+				},
+				yarpc.NewBufferString("sup"),
+			)
+
+			assert.Error(t, err, "expected failure")
+			assert.Contains(t, err.Error(), tt.message)
+		})
 	}
 }
 
 func TestCallError(t *testing.T) {
 	server := testutils.NewServer(t, nil)
 	defer server.Close()
-	serverHostPort := server.PeerInfo().HostPort
+	serverAddr := server.PeerInfo().HostPort
 
 	server.GetSubChannel("service").SetHandler(tchannel.HandlerFunc(
 		func(ctx context.Context, call *tchannel.InboundCall) {
@@ -343,7 +323,7 @@ func TestCallError(t *testing.T) {
 
 			dl, ok := ctx.Deadline()
 			assert.True(t, ok, "deadline expected")
-			assert.WithinDuration(t, time.Now(), dl, 200*testtime.Millisecond)
+			assert.WithinDuration(t, time.Now(), dl, 200*internaltesttime.Millisecond)
 
 			call.Response().SetApplicationError()
 
@@ -355,125 +335,62 @@ func TestCallError(t *testing.T) {
 			assert.NoError(t, err, "failed to write response")
 		}))
 
-	x, err := NewTransport(ServiceName("caller"))
-	require.NoError(t, err)
-	require.NoError(t, x.Start(), "failed to start transport")
-
-	out := x.NewSingleOutbound(serverHostPort)
-	require.NoError(t, out.Start(), "failed to start outbound")
-	defer out.Stop()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 200*internaltesttime.Millisecond)
 	defer cancel()
-	res, err := out.Call(
+
+	dialer := &Dialer{
+		Caller: "caller",
+	}
+	require.NoError(t, dialer.Start(ctx))
+	defer dialer.Stop(ctx)
+
+	outbound := &Outbound{
+		Dialer: dialer,
+		Addr:   serverAddr,
+	}
+
+	res, resBody, err := outbound.Call(
 		ctx,
-		&transport.Request{
+		&yarpc.Request{
 			Caller:    "caller",
 			Service:   "service",
-			Encoding:  raw.Encoding,
+			Encoding:  yarpc.Encoding("raw"),
 			Procedure: "hello",
-			Body:      bytes.NewReader([]byte("world")),
 		},
+		yarpc.NewBufferString("world"),
 	)
 
 	if !assert.NoError(t, err, "failed to make call") {
 		return
 	}
 
-	assert.Equal(t, true, res.ApplicationError, "application error")
-
-	body, err := ioutil.ReadAll(res.Body)
-	if assert.NoError(t, err, "failed to read response body") {
-		assert.Equal(t, []byte("such fail"), body)
-	}
-
-	assert.NoError(t, res.Body.Close(), "failed to close response body")
-}
-
-func TestStartMultiple(t *testing.T) {
-	serverHostPort := "localhost:4040"
-	x, err := NewTransport(ServiceName("caller"))
-	require.NoError(t, err)
-	out := x.NewSingleOutbound(serverHostPort)
-	require.NoError(t, err)
-	// TODO: If we change Start() to establish a connection to the host, this
-	// hostport will have to be changed to a real server.
-
-	var wg sync.WaitGroup
-	signal := make(chan struct{})
-
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			<-signal
-
-			err := out.Start()
-			assert.NoError(t, err)
-		}()
-	}
-	close(signal)
-	wg.Wait()
-}
-
-func TestStopMultiple(t *testing.T) {
-	serverHostPort := "localhost:4040"
-	x, err := NewTransport(ServiceName("caller"))
-	require.NoError(t, err)
-	out := x.NewSingleOutbound(serverHostPort)
-	require.NoError(t, err)
-	// TODO: If we change Start() to establish a connection to the host, this
-	// hostport will have to be changed to a real server.
-
-	require.NoError(t, out.Start())
-
-	var wg sync.WaitGroup
-	signal := make(chan struct{})
-
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			<-signal
-
-			err := out.Stop()
-			assert.NoError(t, err)
-		}()
-	}
-	close(signal)
-	wg.Wait()
+	assert.True(t, res.ApplicationError, "application error")
+	assert.Equal(t, resBody, yarpc.NewBufferString("such fail"))
 }
 
 func TestCallWithoutStarting(t *testing.T) {
-	serverHostPort := "localhost:4040"
-	x, err := NewTransport(ServiceName("caller"))
-	require.NoError(t, err)
-	out := x.NewSingleOutbound(serverHostPort)
-	require.NoError(t, err)
-	// TODO: If we change Start() to establish a connection to the host, this
-	// hostport will have to be changed to a real server.
-
-	ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 200*internaltesttime.Millisecond)
 	defer cancel()
-	_, err = out.Call(
+
+	dialer := &Dialer{Caller: "caller"}
+	outbound := &Outbound{Dialer: dialer, Addr: "127.0.0.1:4040"}
+
+	_, _, err := outbound.Call(
 		ctx,
-		&transport.Request{
+		&yarpc.Request{
 			Caller:    "caller",
 			Service:   "service",
-			Encoding:  raw.Encoding,
+			Encoding:  yarpc.Encoding("raw"),
 			Procedure: "foo",
-			Body:      bytes.NewReader([]byte("sup")),
 		},
+		yarpc.NewBufferBytes(nil),
 	)
 
-	assert.Equal(t, yarpcerrors.FailedPreconditionErrorf("error waiting for tchannel outbound to start for service: service: context finished while waiting for instance to start: context deadline exceeded"), err)
+	assert.Error(t, err)
 }
 
 func TestNoRequest(t *testing.T) {
-	tran, err := NewTransport(ServiceName("caller"))
-	require.NoError(t, err)
-	out := tran.NewSingleOutbound("localhost:0")
-
-	_, err = out.Call(context.Background(), nil)
-	assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for tchannel outbound was nil"), err)
+	outbound := &Outbound{}
+	_, _, err := outbound.Call(context.Background(), nil, nil)
+	assert.Equal(t, yarpcerror.InvalidArgumentErrorf("request for tchannel outbound was nil"), err)
 }

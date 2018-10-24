@@ -18,47 +18,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchannel_test
+package internaliopool
 
 import (
-	"log"
+	"bytes"
+	"math/rand"
+	"sync"
+	"testing"
 
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/transport/tchannel"
+	"github.com/stretchr/testify/assert"
 )
 
-func ExampleInbound() {
-	transport, err := tchannel.NewTransport(tchannel.ServiceName("myservice"))
-	if err != nil {
-		log.Fatal(err)
+func TestBuffers(t *testing.T) {
+	var wg sync.WaitGroup
+	for g := 0; g < 10; g++ {
+		wg.Add(1)
+		go func() {
+			for i := 0; i < 100; i++ {
+				inputBytes := make([]byte, rand.Intn(5000)+20)
+				_, err := rand.Read(inputBytes)
+				assert.NoError(t, err, "Unexpected error from rand.Read")
+				reader := bytes.NewReader(inputBytes)
+
+				outputBytes := make([]byte, 0, len(inputBytes))
+				writer := bytes.NewBuffer(outputBytes)
+
+				Copy(writer, reader)
+			}
+			wg.Done()
+		}()
 	}
-
-	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name:     "myservice",
-		Inbounds: yarpc.Inbounds{transport.NewInbound()},
-	})
-
-	if err := dispatcher.Start(); err != nil {
-		log.Fatal(err)
-	}
-	defer dispatcher.Stop()
-}
-
-func ExampleOutbound() {
-	transport, err := tchannel.NewTransport(tchannel.ServiceName("myclient"))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name: "myclient",
-		Outbounds: yarpc.Outbounds{
-			"myservice": {Unary: transport.NewSingleOutbound("127.0.0.0:4040")},
-		},
-	})
-
-	if err := dispatcher.Start(); err != nil {
-		log.Fatal(err)
-	}
-	defer dispatcher.Stop()
+	wg.Wait()
 }

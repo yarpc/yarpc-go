@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchannel
+package yarpctchannel
 
 import (
 	"context"
@@ -28,123 +28,65 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
 	"go.uber.org/multierr"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/bufferpool"
-	"go.uber.org/yarpc/pkg/errors"
-	"go.uber.org/yarpc/yarpcerrors"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/internal/internaliopool"
+	"go.uber.org/yarpc/v2/yarpcencoding"
+	"go.uber.org/yarpc/v2/yarpcerror"
+	"go.uber.org/yarpc/v2/yarpctransport"
 	"go.uber.org/zap"
-	ncontext "golang.org/x/net/context"
+	netcontext "golang.org/x/net/context"
 )
 
-// inboundCall provides an interface similar tchannel.InboundCall.
-//
-// We use it instead of *tchannel.InboundCall because tchannel.InboundCall is
-// not an interface, so we have little control over its behavior in tests.
-type inboundCall interface {
-	ServiceName() string
-	CallerName() string
-	MethodString() string
-	ShardKey() string
-	RoutingKey() string
-	RoutingDelegate() string
-
-	Format() tchannel.Format
-
-	Arg2Reader() (tchannel.ArgReader, error)
-	Arg3Reader() (tchannel.ArgReader, error)
-
-	Response() inboundCallResponse
-}
-
-// inboundCallResponse provides an interface similar to
-// tchannel.InboundCallResponse.
-//
-// Its purpose is the same as inboundCall: Make it easier to test functions
-// that consume InboundCallResponse without having control of
-// InboundCallResponse's behavior.
-type inboundCallResponse interface {
-	Arg2Writer() (tchannel.ArgWriter, error)
-	Arg3Writer() (tchannel.ArgWriter, error)
-	Blackhole()
-	SendSystemError(err error) error
-	SetApplicationError() error
-}
-
-// tchannelCall wraps a TChannel InboundCall into an inboundCall.
-//
-// We need to do this so that we can change the return type of call.Response()
-// to match inboundCall's Response().
-type tchannelCall struct{ *tchannel.InboundCall }
-
-func (c tchannelCall) Response() inboundCallResponse {
-	return c.InboundCall.Response()
-}
-
-// handler wraps a transport.UnaryHandler into a TChannel Handler.
+// handler wraps a yarpc.UnaryHandler into a TChannel Handler.
 type handler struct {
-	existing   map[string]tchannel.Handler
-	router     transport.Router
+	router     yarpc.Router
+	headerCase HeaderCase
 	tracer     opentracing.Tracer
-	headerCase headerCase
 	logger     *zap.Logger
 }
 
-func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
+// Handle implements the interface of a TChannel call request handler.
+func (h handler) Handle(ctx netcontext.Context, call *tchannel.InboundCall) {
+	// We pass the request on to the testable handle, by wrapping the TChannel
+	// type inbound call in a private interface we can mock or fake.
 	h.handle(ctx, tchannelCall{call})
 }
 
+// handle is the testable entry point of a handler, accepting both genuine
+// TChannel and mock inbound calls.
 func (h handler) handle(ctx context.Context, call inboundCall) {
-	// you MUST close the responseWriter no matter what unless you have a tchannel.SystemError
-	responseWriter := newResponseWriter(call.Response(), call.Format(), h.headerCase)
-
-	// echo accepted rpc-service in response header
-	responseWriter.addHeader(ServiceHeaderKey, call.ServiceName())
-
-	err := h.callHandler(ctx, call, responseWriter)
-
-	// black-hole requests on resource exhausted errors
-	if yarpcerrors.FromError(err).Code() == yarpcerrors.CodeResourceExhausted {
-		// all TChannel clients will time out instead of receiving an error
-		call.Response().Blackhole()
-		return
-	}
-	if err != nil && !responseWriter.isApplicationError {
-		// TODO: log error
-		_ = call.Response().SendSystemError(getSystemError(err))
-		return
-	}
-	if err != nil && responseWriter.isApplicationError {
-		// we have an error, so we're going to propagate it as a yarpc error,
-		// regardless of whether or not it is a system error.
-		status := yarpcerrors.FromError(errors.WrapHandlerError(err, call.ServiceName(), call.MethodString()))
-		// TODO: what to do with error? we could have a whole complicated scheme to
-		// return a SystemError here, might want to do that
-		text, _ := status.Code().MarshalText()
-		responseWriter.addHeader(ErrorCodeHeaderKey, string(text))
-		if status.Name() != "" {
-			responseWriter.addHeader(ErrorNameHeaderKey, status.Name())
+	if err := h.handleOrSystemError(ctx, call); err != nil {
+		err = call.Response().SendSystemError(getSystemError(err))
+		if err != nil {
+			// TODO tag this error sufficiently enough that it can be traced.
+			h.logger.Error("failed to respond with tchannel system error", zap.Error(err))
 		}
-		if status.Message() != "" {
-			responseWriter.addHeader(ErrorMessageHeaderKey, status.Message())
-		}
-	}
-	if err := responseWriter.Close(); err != nil {
-		// TODO: log error
-		_ = call.Response().SendSystemError(getSystemError(err))
 	}
 }
 
-func (h handler) callHandler(ctx context.Context, call inboundCall, responseWriter *responseWriter) error {
+// handleOrSystemError drives the read request, handle, and write response
+// cycle, returning an error only if that error should effect a TChannel
+// system error frame emission.
+func (h handler) handleOrSystemError(ctx context.Context, call inboundCall) error {
 	start := time.Now()
 	_, ok := ctx.Deadline()
 	if !ok {
 		return tchannel.ErrTimeoutRequired
 	}
 
-	treq := &transport.Request{
+	ctx, req, reqBody, err := h.readRequest(ctx, call)
+	if err != nil {
+		return err
+	}
+	response, responseBody, err := h.handleKernel(ctx, start, req, reqBody)
+	return h.writeResponse(ctx, call, response, responseBody, err)
+}
+
+func (h handler) readRequest(ctx context.Context, call inboundCall) (context.Context, *yarpc.Request, *yarpc.Buffer, error) {
+	req := &yarpc.Request{
 		Caller:          call.CallerName(),
 		Service:         call.ServiceName(),
-		Encoding:        transport.Encoding(call.Format()),
+		Encoding:        yarpc.Encoding(call.Format()),
 		Transport:       transportName,
 		Procedure:       call.MethodString(),
 		ShardKey:        call.ShardKey(),
@@ -154,148 +96,148 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 
 	ctx, headers, err := readRequestHeaders(ctx, call.Format(), call.Arg2Reader)
 	if err != nil {
-		return errors.RequestHeadersDecodeError(treq, err)
+		return nil, nil, nil, yarpcencoding.RequestHeadersDecodeError(req, err)
 	}
-	treq.Headers = headers
+	req.Headers = headers
 
 	if tcall, ok := call.(tchannelCall); ok {
-		tracer := h.tracer
-		ctx = tchannel.ExtractInboundSpan(ctx, tcall.InboundCall, headers.Items(), tracer)
+		ctx = tchannel.ExtractInboundSpan(ctx, tcall.InboundCall, headers.Items(), h.tracer)
 	}
 
-	body, err := call.Arg3Reader()
+	// Read request body into a buffer.
+	requestBodyReader, err := call.Arg3Reader()
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
-	defer body.Close()
-	treq.Body = body
-
-	if err := transport.ValidateRequest(treq); err != nil {
-		return err
-	}
-
-	spec, err := h.router.Choose(ctx, treq)
+	defer requestBodyReader.Close()
+	reqBody := yarpc.NewBufferBytes(nil)
+	_, err = internaliopool.Copy(reqBody, requestBodyReader)
 	if err != nil {
-		if yarpcerrors.FromError(err).Code() != yarpcerrors.CodeUnimplemented {
-			return err
-		}
-		if tcall, ok := call.(tchannelCall); !ok {
-			if m, ok := h.existing[call.MethodString()]; ok {
-				m.Handle(ctx, tcall.InboundCall)
-				return nil
-			}
-		}
-		return err
+		return nil, nil, nil, err
 	}
 
-	if err := transport.ValidateRequestContext(ctx); err != nil {
-		return err
+	return ctx, req, reqBody, nil
+}
+
+// handleKernel implements the portion of the request, handle, response
+// lifecycle that is incidental to TChannel, operating within the YARPC
+// abstraction.
+func (h handler) handleKernel(ctx context.Context, start time.Time, req *yarpc.Request, reqBody *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
+	if err := yarpc.ValidateRequest(req); err != nil {
+		return nil, nil, err
 	}
+
+	spec, err := h.router.Choose(ctx, req)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err := yarpc.ValidateRequestContext(ctx); err != nil {
+		return nil, nil, err
+	}
+
 	switch spec.Type() {
-	case transport.Unary:
-		return transport.InvokeUnaryHandler(transport.UnaryInvokeRequest{
-			Context:        ctx,
-			StartTime:      start,
-			Request:        treq,
-			ResponseWriter: responseWriter,
-			Handler:        spec.Unary(),
-			Logger:         h.logger,
+	case yarpc.Unary:
+		return yarpctransport.InvokeUnaryHandler(yarpctransport.UnaryInvokeRequest{
+			Context:   ctx,
+			StartTime: start,
+			Request:   req,
+			Buffer:    reqBody,
+			Handler:   spec.Unary(),
+			Logger:    h.logger,
 		})
 
 	default:
-		return yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport tchannel does not handle %s handlers", spec.Type().String())
+		return nil, nil, yarpcerror.Newf(yarpcerror.CodeUnimplemented, "transport tchannel does not handle %s requests", spec.Type().String())
 	}
 }
 
-type responseWriter struct {
-	failedWith         error
-	format             tchannel.Format
-	headers            transport.Headers
-	buffer             *bufferpool.Buffer
-	response           inboundCallResponse
-	isApplicationError bool
-	headerCase         headerCase
-}
-
-func newResponseWriter(response inboundCallResponse, format tchannel.Format, headerCase headerCase) *responseWriter {
-	return &responseWriter{
-		response:   response,
-		format:     format,
-		headerCase: headerCase,
+// writeResponse takes a YARPC response or error and writes a TChannel call
+// response, returns an error that should effect a TChannel system error frame,
+// or logs an error in the attempt and returns nothing.
+// Any error returned by writeResponse indicates that no response has been made
+// and to instead send a system error.
+// All other success and errors must be handled before returning.
+func (h handler) writeResponse(ctx context.Context, call inboundCall, res *yarpc.Response, responseBody *yarpc.Buffer, retErr error) error {
+	// Black-hole requests on resource exhausted errors.
+	if yarpcerror.FromError(retErr).Code() == yarpcerror.CodeResourceExhausted {
+		// All TChannel clients will time out instead of receiving an error.
+		call.Response().Blackhole()
+		// Nothing to see here. Move along.
+		return nil
 	}
-}
-
-func (rw *responseWriter) AddHeaders(h transport.Headers) {
-	for k, v := range h.OriginalItems() {
-		// TODO: is this considered a breaking change?
-		if isReservedHeaderKey(k) {
-			rw.failedWith = appendError(rw.failedWith, fmt.Errorf("cannot use reserved header key: %s", k))
-			return
+	if retErr != nil && (res == nil || !res.ApplicationError) {
+		// System error.
+		return retErr
+	}
+	if retErr != nil && res != nil && res.ApplicationError {
+		// We have an error, so we're going to propagate it as a yarpc error,
+		// regardless of whether or not it is a system error.
+		status := yarpcerror.FromError(yarpcerror.WrapHandlerError(retErr, call.ServiceName(), call.MethodString()))
+		text, err := status.Code().MarshalText()
+		if err != nil {
+			return appendError(retErr, err)
 		}
-		rw.addHeader(k, v)
-	}
-}
-
-func (rw *responseWriter) addHeader(key string, value string) {
-	rw.headers = rw.headers.With(key, value)
-}
-
-func (rw *responseWriter) SetApplicationError() {
-	rw.isApplicationError = true
-}
-
-func (rw *responseWriter) Write(s []byte) (int, error) {
-	if rw.failedWith != nil {
-		return 0, rw.failedWith
+		res.Headers = res.Headers.With(ErrorCodeHeaderKey, string(text))
+		if status.Name() != "" {
+			res.Headers = res.Headers.With(ErrorNameHeaderKey, status.Name())
+		}
+		if status.Message() != "" {
+			res.Headers = res.Headers.With(ErrorMessageHeaderKey, status.Message())
+		}
 	}
 
-	if rw.buffer == nil {
-		rw.buffer = bufferpool.Get()
-	}
-
-	n, err := rw.buffer.Write(s)
-	if err != nil {
-		rw.failedWith = appendError(rw.failedWith, err)
-	}
-	return n, err
-}
-
-func (rw *responseWriter) Close() error {
-	retErr := rw.failedWith
-	if rw.isApplicationError {
-		if err := rw.response.SetApplicationError(); err != nil {
+	// This is the point of no return. We have committed to sending a call
+	// response. Hereafter, all failures while sending the error must be logged
+	// and the response aborted.
+	if res.ApplicationError {
+		if err := call.Response().SetApplicationError(); err != nil {
 			retErr = appendError(retErr, fmt.Errorf("SetApplicationError() failed: %v", err))
 		}
 	}
 
-	headers := headerMap(rw.headers, rw.headerCase)
-	retErr = appendError(retErr, writeHeaders(rw.format, headers, nil, rw.response.Arg2Writer))
+	// Echo accepted service in response header for client side verification.
+	res.Headers = res.Headers.With(ServiceHeaderKey, call.ServiceName())
 
+	// Write application headers.
+	headers := headerMap(res.Headers, h.headerCase)
+	retErr = appendError(retErr, writeHeaders(call.Format(), headers, nil, call.Response().Arg2Writer))
+
+	// Write response body.
 	// Arg3Writer must be opened and closed regardless of if there is data
-	// However, if there is a system error, we do not want to do this
-	bodyWriter, err := rw.response.Arg3Writer()
+	// However, if there is a system error, we do not want to do this.
+	responseBodyWriter, err := call.Response().Arg3Writer()
 	if err != nil {
 		return appendError(retErr, err)
 	}
-	defer func() { retErr = appendError(retErr, bodyWriter.Close()) }()
-	if rw.buffer != nil {
-		defer bufferpool.Put(rw.buffer)
-		if _, err := rw.buffer.WriteTo(bodyWriter); err != nil {
-			return appendError(retErr, err)
+	// Hereafter, the response body writer must be closed.
+	defer func() {
+		retErr = appendError(retErr, responseBodyWriter.Close())
+	}()
+	if responseBody != nil {
+		// TODO CAREFULLY restore buffer pooling
+		// defer yarpcbufferpool.Put(responseBody)
+		if _, err := responseBody.WriteTo(responseBodyWriter); err != nil {
+			retErr = appendError(retErr, err)
 		}
 	}
 
-	return retErr
+	if retErr != nil {
+		// TODO tag this error sufficiently enough that it can be traced.
+		h.logger.Error("failed to respond to tchannel request", zap.Error(retErr))
+	}
+
+	return nil
 }
 
 func getSystemError(err error) error {
 	if _, ok := err.(tchannel.SystemError); ok {
 		return err
 	}
-	if !yarpcerrors.IsStatus(err) {
+	if !yarpcerror.IsStatus(err) {
 		return tchannel.NewSystemError(tchannel.ErrCodeUnexpected, err.Error())
 	}
-	status := yarpcerrors.FromError(err)
+	status := yarpcerror.FromError(err)
 	tchannelCode, ok := _codeToTChannelCode[status.Code()]
 	if !ok {
 		tchannelCode = tchannel.ErrCodeUnexpected

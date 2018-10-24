@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchannel
+package yarpctchannel
 
 import (
 	"context"
@@ -27,15 +27,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/uber/tchannel-go"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/yarpcerrors"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 func TestToYARPCError(t *testing.T) {
 	tests := []struct {
 		name    string
 		giveErr error
-		giveReq *transport.Request
+		giveReq *yarpc.Request
 		wantErr error
 	}{
 		{
@@ -45,8 +45,8 @@ func TestToYARPCError(t *testing.T) {
 		},
 		{
 			name:    "yarpcerror",
-			giveErr: yarpcerrors.InvalidArgumentErrorf("test"),
-			wantErr: yarpcerrors.InvalidArgumentErrorf("test"),
+			giveErr: yarpcerror.InvalidArgumentErrorf("test"),
+			wantErr: yarpcerror.InvalidArgumentErrorf("test"),
 		},
 		{
 			name:    "tchannel error",
@@ -56,14 +56,14 @@ func TestToYARPCError(t *testing.T) {
 		{
 			name:    "deadline exceeded",
 			giveErr: context.DeadlineExceeded,
-			giveReq: &transport.Request{Service: "serv", Procedure: "proc"},
-			wantErr: yarpcerrors.DeadlineExceededErrorf("deadline exceeded for service: %q, procedure: %q", "serv", "proc"),
+			giveReq: &yarpc.Request{Service: "serv", Procedure: "proc"},
+			wantErr: yarpcerror.DeadlineExceededErrorf("deadline exceeded for service: %q, procedure: %q", "serv", "proc"),
 		},
 		{
 			name:    "unknown",
 			giveErr: errors.New("test"),
-			giveReq: &transport.Request{Service: "serv", Procedure: "proc"},
-			wantErr: yarpcerrors.UnknownErrorf("received unknown error calling service: %q, procedure: %q, err: %s", "serv", "proc", "test"),
+			giveReq: &yarpc.Request{Service: "serv", Procedure: "proc"},
+			wantErr: yarpcerror.UnknownErrorf("received unknown error calling service: %q, procedure: %q, err: %s", "serv", "proc", "test"),
 		},
 	}
 	for _, tt := range tests {

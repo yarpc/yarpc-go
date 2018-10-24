@@ -18,89 +18,96 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchannel
+package yarpctchannel
 
 import (
-	"bytes"
 	"context"
-	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/internal/testtime"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/internal/internaltesttime"
+	"go.uber.org/yarpc/v2/yarpcrouter"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
-func TestInboundStartNew(t *testing.T) {
-	x, err := NewTransport(ServiceName("foo"))
-	require.NoError(t, err)
-
-	i := x.NewInbound()
-	i.SetRouter(yarpc.NewMapRouter("foo"))
-	require.NoError(t, i.Start())
-	require.NoError(t, x.Start())
-	require.NoError(t, i.Stop())
-	require.NoError(t, x.Stop())
-}
-
-func TestInboundStopWithoutStarting(t *testing.T) {
-	x, err := NewTransport(ServiceName("foo"))
-	require.NoError(t, err)
-	i := x.NewInbound()
-	assert.NoError(t, i.Stop())
-}
-
 func TestInboundInvalidAddress(t *testing.T) {
-	x, err := NewTransport(ServiceName("foo"), ListenAddr("not valid"))
-	require.NoError(t, err)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
+	defer cancel()
 
-	i := x.NewInbound()
-	i.SetRouter(yarpc.NewMapRouter("foo"))
-	assert.Nil(t, i.Start())
-	defer i.Stop()
-	assert.Error(t, x.Start())
-	defer x.Stop()
+	inbound := &Inbound{
+		Addr: "invalid",
+	}
+	if !assert.Error(t, inbound.Start(ctx)) {
+		require.NoError(t, inbound.Stop(ctx))
+	}
 }
 
-type nophandler struct{}
+type whoSentYouHandler struct{}
 
-func (nophandler) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
-	resw.Write([]byte(req.Service))
-	return nil
+func (whoSentYouHandler) Handle(ctx context.Context, req *yarpc.Request, reqBody *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
+	return &yarpc.Response{}, yarpc.NewBufferString(req.Service), nil
 }
 
 func TestInboundSubServices(t *testing.T) {
-	it, err := NewTransport(ServiceName("myservice"), ListenAddr("localhost:0"))
-	require.NoError(t, err)
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
+	defer cancel()
 
-	router := yarpc.NewMapRouter("myservice")
-	i := it.NewInbound()
-	i.SetRouter(router)
-
-	nophandlerspec := transport.NewUnaryHandlerSpec(nophandler{})
-
-	router.Register([]transport.Procedure{
-		{Name: "hello", HandlerSpec: nophandlerspec},
-		{Service: "subservice", Name: "hello", HandlerSpec: nophandlerspec},
-		{Service: "subservice", Name: "world", HandlerSpec: nophandlerspec},
-		{Service: "subservice2", Name: "hello", HandlerSpec: nophandlerspec},
-		{Service: "subservice2", Name: "monde", HandlerSpec: nophandlerspec},
+	router := yarpcrouter.NewMapRouter("myservice")
+	whoSentYouHandlerSpec := yarpc.NewUnaryTransportHandlerSpec(whoSentYouHandler{})
+	router.Register([]yarpc.Procedure{
+		{
+			Name:        "hello",
+			Encoding:    "raw",
+			HandlerSpec: whoSentYouHandlerSpec,
+		},
+		{
+			Service:     "subservice",
+			Name:        "hello",
+			Encoding:    yarpc.Encoding("raw"),
+			HandlerSpec: whoSentYouHandlerSpec,
+		},
+		{
+			Service:     "subservice",
+			Name:        "world",
+			Encoding:    yarpc.Encoding("raw"),
+			HandlerSpec: whoSentYouHandlerSpec,
+		},
+		{
+			Service:     "subservice2",
+			Name:        "hello",
+			Encoding:    yarpc.Encoding("raw"),
+			HandlerSpec: whoSentYouHandlerSpec,
+		},
+		{
+			Service:     "subservice2",
+			Name:        "monde",
+			Encoding:    yarpc.Encoding("raw"),
+			HandlerSpec: whoSentYouHandlerSpec,
+		},
 	})
 
-	require.NoError(t, i.Start())
-	require.NoError(t, it.Start())
+	t.Logf("Router %#v\n", router)
 
-	ot, err := NewTransport(ServiceName("caller"))
-	require.NoError(t, err)
-	o := ot.NewSingleOutbound(it.ListenAddr())
-	require.NoError(t, o.Start())
-	require.NoError(t, ot.Start())
+	inbound := &Inbound{
+		Service: "myservice",
+		Addr:    "127.0.0.1:0",
+		Router:  router,
+	}
+	require.NoError(t, inbound.Start(ctx))
+	defer inbound.Stop(ctx)
 
-	defer o.Stop()
+	dialer := &Dialer{
+		Caller: "caller",
+	}
+	require.NoError(t, dialer.Start(ctx))
+	defer dialer.Stop(ctx)
+
+	outbound := &Outbound{
+		Dialer: dialer,
+		Addr:   inbound.Listener.Addr().String(),
+	}
 
 	for _, tt := range []struct {
 		service   string
@@ -112,17 +119,17 @@ func TestInboundSubServices(t *testing.T) {
 		{"subservice2", "hello"},
 		{"subservice2", "monde"},
 	} {
-		ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 200*internaltesttime.Millisecond)
 		defer cancel()
-		res, err := o.Call(
+		res, resBody, err := outbound.Call(
 			ctx,
-			&transport.Request{
+			&yarpc.Request{
 				Caller:    "caller",
 				Service:   tt.service,
 				Procedure: tt.procedure,
-				Encoding:  raw.Encoding,
-				Body:      bytes.NewReader([]byte{}),
+				Encoding:  yarpc.Encoding("raw"),
 			},
+			yarpc.NewBufferBytes(nil),
 		)
 		if !assert.NoError(t, err, "failed to make call") {
 			continue
@@ -130,31 +137,33 @@ func TestInboundSubServices(t *testing.T) {
 		if !assert.Equal(t, false, res.ApplicationError, "not application error") {
 			continue
 		}
-		body, err := ioutil.ReadAll(res.Body)
-		if !assert.NoError(t, err) {
-			continue
-		}
-		assert.Equal(t, string(body), tt.service)
+		assert.Equal(t, resBody, yarpc.NewBufferString(tt.service))
 	}
-
-	require.NoError(t, i.Stop())
-	require.NoError(t, it.Stop())
-	require.NoError(t, o.Stop())
 }
 
 func TestArbitraryInboundServiceOutboundCallerName(t *testing.T) {
-	it, err := NewTransport(ServiceName("service"))
-	require.NoError(t, err)
-	i := it.NewInbound()
-	i.SetRouter(transporttest.EchoRouter{})
-	require.NoError(t, i.Start(), "failed to start inbound")
-	require.NoError(t, it.Start(), "failed to start inbound transport")
+	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
+	defer cancel()
 
-	ot, err := NewTransport(ServiceName("caller"))
-	require.NoError(t, err)
-	require.NoError(t, ot.Start(), "failed to start outbound transport")
-	o := ot.NewSingleOutbound(it.ListenAddr())
-	require.NoError(t, o.Start(), "failed to start outbound")
+	router := yarpctest.EchoRouter{}
+	inbound := &Inbound{
+		Service: "service",
+		Router:  router,
+		Addr:    "127.0.0.1:0",
+	}
+	require.NoError(t, inbound.Start(ctx))
+	defer inbound.Stop(ctx)
+
+	dialer := &Dialer{
+		Caller: "caller",
+	}
+	require.NoError(t, dialer.Start(ctx))
+	defer dialer.Stop(ctx)
+
+	outbound := &Outbound{
+		Dialer: dialer,
+		Addr:   inbound.Listener.Addr().String(),
+	}
 
 	tests := []struct {
 		msg             string
@@ -168,28 +177,24 @@ func TestArbitraryInboundServiceOutboundCallerName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
+			ctx, cancel := context.WithTimeout(context.Background(), 200*internaltesttime.Millisecond)
 			defer cancel()
-			res, err := o.Call(
+			res, resBody, err := outbound.Call(
 				ctx,
-				&transport.Request{
+				&yarpc.Request{
 					Caller:    tt.caller,
 					Service:   tt.service,
-					Encoding:  raw.Encoding,
+					Encoding:  yarpc.Encoding("raw"),
 					Procedure: "procedure",
-					Body:      bytes.NewReader([]byte(tt.msg)),
 				},
+				yarpc.NewBufferString(tt.msg),
 			)
+			assert.NotNil(t, res)
 			if !assert.NoError(t, err, "call success") {
 				return
 			}
-			resb, err := ioutil.ReadAll(res.Body)
 			assert.NoError(t, err, "read response body")
-			assert.Equal(t, string(resb), tt.msg, "response echoed")
+			assert.Equal(t, resBody, yarpc.NewBufferString(tt.msg), "response echoed")
 		})
 	}
-
-	require.NoError(t, it.Stop())
-	require.NoError(t, i.Stop())
-	require.NoError(t, o.Stop())
 }

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchannel
+package yarpctchannel
 
 import (
 	"bytes"
@@ -29,7 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
-	"go.uber.org/yarpc/api/transport"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 func TestEncodeAndDecodeHeaders(t *testing.T) {
@@ -53,7 +53,7 @@ func TestEncodeAndDecodeHeaders(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		headers := transport.HeadersFromMap(tt.headers)
+		headers := yarpc.HeadersFromMap(tt.headers)
 		assert.Equal(t, tt.bytes, encodeHeaders(tt.headers))
 
 		result, err := decodeHeaders(bytes.NewReader(tt.bytes))
@@ -127,7 +127,7 @@ func TestReadAndWriteHeaders(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		headers := transport.HeadersFromMap(tt.headers)
+		headers := yarpc.HeadersFromMap(tt.headers)
 
 		buffer := newBufferArgWriter()
 		err := writeHeaders(tt.format, tt.headers, nil, func() (tchannel.ArgWriter, error) {

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package tchannel implements a YARPC transport based on the TChannel
+// Package yarpctchannel implements a YARPC transport based on the TChannel
 // protocol. The TChannel transport provides support for Unary RPCs only.
 //
 // Usage
@@ -60,4 +60,4 @@
 // A TChannel transport may be configured using YARPC's configuration system.
 // See TransportConfig, InboundConfig, and OutboundConfig for details on the
 // different configuration parameters supported by this transport.
-package tchannel
+package yarpctchannel

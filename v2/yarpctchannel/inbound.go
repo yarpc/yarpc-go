@@ -18,79 +18,123 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchannel
+package yarpctchannel
 
 import (
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/introspection"
-	"go.uber.org/yarpc/pkg/lifecycle"
+	"context"
+	"net"
+	"sync"
+
+	opentracing "github.com/opentracing/opentracing-go"
+	tchannel "github.com/uber/tchannel-go"
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/zap"
 )
 
-// Inbound receives YARPC requests over TChannel. It may be constructed using
-// the NewInbound method on a tchannel.Transport.
+// HeaderCase indicates the treatment of header case convention.
+type HeaderCase int
+
+const (
+	// CanonicalHeaderCase indicates that YARPC will normalize the case of
+	// headers to provide behavioral parity with other transport protocols like
+	// HTTP.
+	CanonicalHeaderCase HeaderCase = iota
+	// OriginalHeaderCase indicates that YARPC will preserve the original
+	// header case when forwarding headers for behavioral parity with a
+	// TChannel proxy.
+	OriginalHeaderCase
+)
+
+// Inbound receives YARPC requests over TChannel.
 type Inbound struct {
-	once      *lifecycle.Once
-	transport *Transport
+	Service string
+
+	// Addr specifies the port the TChannel should listen on.
+	//
+	// The default is ":0" (all interfaces, OS-assigned port).
+	Addr string
+
+	// Listener sets a net.Listener to use for the channel.
+	Listener net.Listener
+
+	// Router receives inbound requests.
+	Router yarpc.Router
+
+	// HeaderCase specifies whether to forward headers without canonicalizing
+	// their type case.
+	HeaderCase HeaderCase
+
+	// Tracer specifies the request tracer used for RPCs passing through the
+	// TChannel inbound.
+	Tracer opentracing.Tracer
+
+	// Logger sets a logger to use for internal logging.
+	//
+	// The default is to not write any logs.
+	Logger *zap.Logger
+
+	lock sync.Mutex
+	ch   *tchannel.Channel
 }
 
-// NewInbound returns a new TChannel inbound backed by a shared TChannel
-// transport.
-// There should only be one inbound for TChannel since all outbounds send the
-// listening port over non-ephemeral connections so a service can deduplicate
-// locally- and remotely-initiated persistent connections.
-func (t *Transport) NewInbound() *Inbound {
-	return &Inbound{
-		once:      lifecycle.NewOnce(),
-		transport: t,
+// Start starts this Inbound.
+func (i *Inbound) Start(_ context.Context) error {
+
+	if i.Logger == nil {
+		i.Logger = zap.NewNop()
 	}
-}
 
-// SetRouter configures a router to handle incoming requests.
-// This satisfies the transport.Inbound interface, and would be called
-// by a dispatcher when it starts.
-func (i *Inbound) SetRouter(router transport.Router) {
-	i.transport.router = router
-}
+	if i.Tracer == nil {
+		i.Tracer = opentracing.GlobalTracer()
+	}
 
-// Transports returns a slice containing the Inbound's underlying
-// Transport.
-func (i *Inbound) Transports() []transport.Transport {
-	return []transport.Transport{i.transport}
-}
+	// Create a TChannel
+	chopts := tchannel.ChannelOptions{
+		Tracer: i.Tracer,
+		Handler: handler{
+			router:     i.Router,
+			tracer:     i.Tracer,
+			logger:     i.Logger,
+			headerCase: i.HeaderCase,
+		},
+	}
+	ch, err := tchannel.NewChannel(i.Service, &chopts)
+	if err != nil {
+		return err
+	}
+	i.ch = ch
 
-// Start starts this Inbound. Note that this does not start listening for
-// connections; that occurs when you start the underlying ChannelTransport is
-// started.
-func (i *Inbound) Start() error {
-	return i.once.Start(func() error {
-		i.transport.logger.Info("started TChannel inbound", zap.String("address", i.transport.addr))
-		if i.transport.router == nil || len(i.transport.router.Procedures()) == 0 {
-			i.transport.logger.Warn("no procedures specified for tchannel inbound")
+	// Create a listen address
+	if i.Addr == "" {
+		addr, err := tchannel.ListenIP()
+		if err != nil {
+			return err
 		}
-		return nil
-	})
-}
-
-// Stop stops the TChannel outbound. This currently does nothing.
-func (i *Inbound) Stop() error {
-	return i.once.Stop(nil)
-}
-
-// IsRunning returns whether the Inbound is running.
-func (i *Inbound) IsRunning() bool {
-	return i.once.IsRunning()
-}
-
-// Introspect returns the state of the inbound for introspection purposes.
-func (i *Inbound) Introspect() introspection.InboundStatus {
-	stateString := ""
-	if i.transport.ch != nil {
-		stateString = i.transport.ch.State().String()
+		i.Addr = addr.String()
 	}
-	return introspection.InboundStatus{
-		Transport: "tchannel",
-		Endpoint:  i.transport.addr,
-		State:     stateString,
+
+	if i.Listener == nil {
+		listener, err := net.Listen("tcp", i.Addr)
+		if err != nil {
+			return err
+		}
+		i.Listener = listener
 	}
+
+	err = i.ch.Serve(i.Listener)
+	if err != nil {
+		return err
+	}
+
+	i.Logger.Info("started TChannel inbound", zap.String("address", i.Listener.Addr().String()))
+	if i.Router == nil || len(i.Router.Procedures()) == 0 {
+		i.Logger.Warn("no procedures specified for tchannel inbound")
+	}
+
+	return nil
+}
+
+// Stop stops the TChannel outbound.
+func (i *Inbound) Stop(_ context.Context) error {
+	return nil
 }

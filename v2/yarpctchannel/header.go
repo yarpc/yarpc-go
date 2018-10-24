@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchannel
+package yarpctchannel
 
 import (
 	"context"
@@ -27,8 +27,8 @@ import (
 	"strings"
 
 	"github.com/uber/tchannel-go"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/transport/tchannel/internal"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpctchannel/internal"
 )
 
 const (
@@ -59,7 +59,7 @@ func readRequestHeaders(
 	ctx context.Context,
 	format tchannel.Format,
 	getReader func() (tchannel.ArgReader, error),
-) (context.Context, transport.Headers, error) {
+) (context.Context, yarpc.Headers, error) {
 	headers, err := readHeaders(format, getReader)
 	if err != nil {
 		return ctx, headers, err
@@ -75,17 +75,17 @@ func readRequestHeaders(
 // If the format is JSON, the headers are expected to be JSON encoded.
 //
 // This function always returns a non-nil Headers object in case of success.
-func readHeaders(format tchannel.Format, getReader func() (tchannel.ArgReader, error)) (transport.Headers, error) {
+func readHeaders(format tchannel.Format, getReader func() (tchannel.ArgReader, error)) (yarpc.Headers, error) {
 	if format == tchannel.JSON {
 		// JSON is special
 		var headers map[string]string
 		err := tchannel.NewArgReader(getReader()).ReadJSON(&headers)
-		return transport.HeadersFromMap(headers), err
+		return yarpc.HeadersFromMap(headers), err
 	}
 
 	r, err := getReader()
 	if err != nil {
-		return transport.Headers{}, err
+		return yarpc.Headers{}, err
 	}
 
 	headers, err := decodeHeaders(r)
@@ -140,15 +140,15 @@ func mergeHeaders(m1, m2 map[string]string) map[string]string {
 // decodeHeaders decodes headers using the format:
 //
 // 	nh:2 (k~2 v~2){nh}
-func decodeHeaders(r io.Reader) (transport.Headers, error) {
+func decodeHeaders(r io.Reader) (yarpc.Headers, error) {
 	reader := internal.NewReader(r)
 
 	count := reader.ReadUint16()
 	if count == 0 {
-		return transport.Headers{}, reader.Err()
+		return yarpc.Headers{}, reader.Err()
 	}
 
-	headers := transport.NewHeadersWithCapacity(int(count))
+	headers := yarpc.NewHeadersWithCapacity(int(count))
 	for i := 0; i < int(count) && reader.Err() == nil; i++ {
 		k := reader.ReadLen16String()
 		v := reader.ReadLen16String()
@@ -184,9 +184,9 @@ func encodeHeaders(hs map[string]string) []byte {
 	return out
 }
 
-func headerMap(hs transport.Headers, headerCase headerCase) map[string]string {
+func headerMap(hs yarpc.Headers, headerCase HeaderCase) map[string]string {
 	switch headerCase {
-	case originalHeaderCase:
+	case OriginalHeaderCase:
 		return hs.OriginalItems()
 	default:
 		return hs.Items()
