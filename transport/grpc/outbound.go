@@ -29,6 +29,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/opentracing/opentracing-go"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
@@ -46,6 +47,8 @@ import (
 // UserAgent is the User-Agent that will be set for requests.
 // http://www.grpc.io/docs/guides/wire.html#user-agents
 const UserAgent = "yarpc-go/" + yarpc.Version
+
+const _grpcStatusDetailsHeaderKey = "grpc-status-details-bin"
 
 var _ transport.UnaryOutbound = (*Outbound)(nil)
 
