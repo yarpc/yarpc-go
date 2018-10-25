@@ -124,13 +124,6 @@ func (u *unaryTransportHandler) Handle(ctx context.Context, req *yarpc.Request, 
 	return res, encodedBody, nil
 }
 
-// Register registers the procedure with the MapRouter.
-// If the procedure does not specify its service name, the procedure will
-// inherit the default service name of the router.
-// Procedures should specify their encoding, and multiple procedures with the
-// same name and service name can exist if they handle different encodings.
-// If a procedure does not specify an encoding, it can only support one handler.
-// The router will select that handler regardless of the encoding.
 func (m MapRouter) register(rs []yarpc.TransportProcedure) {
 	for _, r := range rs {
 		if r.Service == "" {
