@@ -104,22 +104,24 @@ type unaryTransportHandler struct {
 }
 
 func (u *unaryTransportHandler) Handle(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
+	res := &yarpc.Response{}
 	decodedBody, err := u.h.Codec.Decode(reqBuf)
 	if err != nil {
-		return nil, nil, err
+		return res, nil, err
 	}
 
 	body, err := u.h.HandlerSpec.Unary().Handle(ctx, decodedBody)
 	if err != nil {
-		return nil, nil, err
+		res.ApplicationError = true
+		return res, nil, err
 	}
 
 	encodedBody, err := u.h.Codec.Encode(body)
 	if err != nil {
-		return nil, nil, err
+		return res, nil, err
 	}
 
-	return nil, encodedBody, nil
+	return res, encodedBody, nil
 }
 
 // Register registers the procedure with the MapRouter.
