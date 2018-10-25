@@ -47,35 +47,6 @@ type TransportProcedure struct {
 	Signature string
 }
 
-// EncodingProcedure specifies a single encoding-level handler. The RouteTable can register an
-// EncodingProcedure after mapping it to a corresponding TransportProcedure.
-type EncodingProcedure struct {
-	// Name of the procedure.
-	Name string
-
-	// Service or empty to use the default service name.
-	Service string
-
-	// HandlerSpec specifying which handler and rpc type.
-	HandlerSpec EncodingHandlerSpec
-
-	// Encoding of the handler (if present).
-	Encoding Encoding
-
-	// Human-readable signature of the handler.
-	Signature string
-
-	// Codec to assist mapping the encoding-level handler to transport-level handler
-	Codec InboundCodec
-}
-
-// InboundCodec defines the interface YARPC uses to encode and decode request and response bodies.
-type InboundCodec interface {
-	Decode(req *Buffer) (interface{}, error)
-
-	Encode(res interface{}) (*Buffer, error)
-}
-
 // MarshalLogObject implements zap.ObjectMarshaler.
 func (p TransportProcedure) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	// Passing a TransportProcedure as a zap.ObjectMarshaler allocates, so we shouldn't
@@ -96,6 +67,46 @@ func (p TransportProcedure) Less(o TransportProcedure) bool {
 		return p.Name < o.Name
 	}
 	return p.Encoding < o.Encoding
+}
+
+// EncodingProcedure specifies a single encoding-level handler. The RouteTable can register an
+// EncodingProcedure after mapping it to a corresponding TransportProcedure.
+type EncodingProcedure struct {
+	// Name of the procedure.
+	Name string
+
+	// Service or empty to use the default service name.
+	Service string
+
+	// HandlerSpec specifying which handler and rpc type.
+	HandlerSpec EncodingHandlerSpec
+
+	// Encoding of the handler.
+	Encoding Encoding
+
+	// Human-readable signature of the handler.
+	Signature string
+
+	// Codec to assist mapping the encoding-level handler to transport-level handler
+	Codec InboundCodec
+}
+
+// MarshalLogObject implements zap.ObjectMarshaler.
+func (p EncodingProcedure) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	// Passing an EncodingProcedure as a zap.ObjectMarshaler allocates, so we shouldn't
+	// do it on the request path.
+	enc.AddString("name", p.Name)
+	enc.AddString("service", p.Service)
+	enc.AddString("encoding", string(p.Encoding))
+	enc.AddString("signature", p.Signature)
+	return enc.AddObject("handler", p.HandlerSpec)
+}
+
+// InboundCodec defines the interface YARPC uses to encode and decode request and response bodies.
+type InboundCodec interface {
+	Decode(req *Buffer) (interface{}, error)
+
+	Encode(res interface{}) (*Buffer, error)
 }
 
 // Router maintains and provides access to a collection of procedures
