@@ -21,6 +21,9 @@
 package pendingheap
 
 import (
+	"math/rand"
+	"time"
+
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/peerlist/v2"
 )
@@ -28,11 +31,14 @@ import (
 type listConfig struct {
 	capacity int
 	shuffle  bool
+	seed     int64
+	nextRand func(int) int
 }
 
 var defaultListConfig = listConfig{
 	capacity: 10,
 	shuffle:  true,
+	seed:     time.Now().UnixNano(),
 }
 
 // ListOption customizes the behavior of a pending requests peer heap.
@@ -45,6 +51,15 @@ type ListOption func(*listConfig)
 func Capacity(capacity int) ListOption {
 	return func(c *listConfig) {
 		c.capacity = capacity
+	}
+}
+
+// Seed specifies the random seed to use for shuffling peers.
+//
+// Defaults to time in nanoseconds.
+func Seed(seed int64) ListOption {
+	return func(c *listConfig) {
+		c.seed = seed
 	}
 }
 
@@ -62,11 +77,19 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 		plOpts = append(plOpts, peerlist.NoShuffle())
 	}
 
+	nextRandFn := nextRand(cfg.seed)
+	if cfg.nextRand != nil {
+		// only true in tests
+		nextRandFn = cfg.nextRand
+	}
+
 	return &List{
 		List: peerlist.New(
 			"fewest-pending-requests",
 			transport,
-			&pendingHeap{},
+			&pendingHeap{
+				nextRand: nextRandFn,
+			},
 			plOpts...,
 		),
 	}
@@ -75,4 +98,17 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 // List is a PeerList which rotates which peers are to be selected in a circle
 type List struct {
 	*peerlist.List
+}
+
+// nextRand is a convenience function for creating a new rand.Rand from a given
+// seed.
+func nextRand(seed int64) func(int) int {
+	r := rand.New(rand.NewSource(seed))
+
+	return func(numPeers int) int {
+		if numPeers == 0 {
+			return 0
+		}
+		return r.Intn(numPeers)
+	}
 }
