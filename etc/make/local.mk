@@ -20,11 +20,15 @@ STATICCHECK_FLAGS := \
 # this is currently greater than the number of examples tests
 EXAMPLES_JOBS ?= 16
 
-GEN_BINS_INTERNAL = $(BIN)/thriftrw-plugin-yarpc $(BIN)/protoc-gen-yarpc-go $(BIN)/v2/protoc-gen-yarpc-go
+GEN_BINS_INTERNAL = $(BIN)/thriftrw-plugin-yarpc $(BIN)/thriftrw-plugin-yarpc2 $(BIN)/protoc-gen-yarpc-go $(BIN)/v2/protoc-gen-yarpc-go
 
 $(BIN)/thriftrw-plugin-yarpc: ./encoding/thrift/thriftrw-plugin-yarpc/*.go
 	@mkdir -p $(BIN)
 	go build -o $(BIN)/thriftrw-plugin-yarpc ./encoding/thrift/thriftrw-plugin-yarpc
+
+$(BIN)/thriftrw-plugin-yarpc2: ./v2/yarpcthrift/thriftrw-plugin-yarpc2/*.go
+	@mkdir -p $(BIN)
+	go build -o $(BIN)/thriftrw-plugin-yarpc2 ./v2/yarpcthrift/thriftrw-plugin-yarpc2
 
 $(BIN)/protoc-gen-yarpc-go: ./encoding/protobuf/protoc-gen-yarpc-go/*.go
 	@mkdir -p $(BIN)

@@ -80,19 +80,6 @@ type thriftClient struct {
 }
 
 func (c thriftClient) Call(ctx context.Context, reqBody envelope.Enveloper, opts ...yarpc.CallOption) (wire.Value, error) {
-	// Code generated for Thrift client calls will probably be something like
-	// this:
-	//
-	// 	func (c *MyServiceClient) someMethod(ctx context.Context, arg1 Arg1Type, arg2 arg2Type, opts ...yarpc.CallOption) (returnValue, error) {
-	// 		args := myservice.SomeMethodHelper.Args(arg1, arg2)
-	// 		resBody, err := c.client.Call(ctx, args, opts...)
-	// 		var result myservice.SomeMethodResult
-	// 		if err = result.FromWire(resBody); err != nil {
-	// 			return nil, err
-	// 		}
-	// 		success, err := myservice.SomeMethodHelper.UnwrapResponse(&result)
-	// 		return success, err
-	// 	}
 	req, reqBuf, tProtocol, err := c.buildRequest(reqBody)
 	if err != nil {
 		return wire.Value{}, err

@@ -60,7 +60,7 @@ type Service struct {
 
 // BuildProcedures builds a list of Procedures from a Thrift service
 // specification.
-func BuildProcedures(s Service, opts ...RegisterOption) []yarpc.Procedure {
+func BuildProcedures(s Service, opts ...RegisterOption) []yarpc.TransportProcedure {
 	var rc registerConfig
 	for _, opt := range opts {
 		opt.applyRegisterOption(&rc)
@@ -71,7 +71,7 @@ func BuildProcedures(s Service, opts ...RegisterOption) []yarpc.Procedure {
 		proto = rc.Protocol
 	}
 
-	rs := make([]yarpc.Procedure, 0, len(s.Methods))
+	rs := make([]yarpc.TransportProcedure, 0, len(s.Methods))
 
 	for _, method := range s.Methods {
 		var spec yarpc.TransportHandlerSpec
@@ -81,7 +81,7 @@ func BuildProcedures(s Service, opts ...RegisterOption) []yarpc.Procedure {
 			Enveloping:    rc.Enveloping,
 		})
 
-		rs = append(rs, yarpc.Procedure{
+		rs = append(rs, yarpc.TransportProcedure{
 			Name:        yarpcprocedure.ToName(s.Name, method.Name),
 			HandlerSpec: spec,
 			Encoding:    Encoding,
