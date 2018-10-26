@@ -42,6 +42,8 @@ Encodings:
 - [ ] Port Thrift encoding
       - [ ] Pull the default routing name from a Thrift annotation.
       - [ ] Add `sanitization_test.go` in plugin after TChannel is ported.
+      - [ ] Revert yarpc plugin name from `thriftrw-plugin-yarpc2` to `thriftrw-plugin-yarpc`.
+      - [ ] Port https://github.com/yarpc/yarpc-go/pull/1482/files into spring.
 - [ ] Port / re-create Protobuf encoding
       - [x] Rewrite the protoc-gen-yarpc-go plugin.
       - [ ] Add end-to-end test that uses gRPC transport with protobuf encoding.

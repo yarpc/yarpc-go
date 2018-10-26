@@ -46,8 +46,8 @@ func extractProcedures(procs *[]yarpc.Procedure) fx.Option {
 	type params struct {
 		fx.In
 
-		// We need to handle both cases: A single transport.Procedure provided
-		// to the "yarpcfx" group and a []transport.Procedure provided to the
+		// We need to handle both cases: A single yarpc.Procedure provided
+		// to the "yarpcfx" group and a []yarpc.Procedure provided to the
 		// "yarpcfx" group.
 		SingleProcedures []yarpc.Procedure   `group:"yarpcfx"`
 		ProcedureLists   [][]yarpc.Procedure `group:"yarpcfx"`
