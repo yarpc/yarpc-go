@@ -26,14 +26,14 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// Type is an enum of RPC types
+// Type is an enum of RPC types.
 type Type int
 
 const (
-	// Unary types are traditional request/response RPCs
+	// Unary types are traditional request/response RPCs.
 	Unary Type = iota + 1
 	// Streaming types are Stream based RPCs (bidirectional messages over long
-	// lived connections)
+	// lived connections).
 	Streaming
 )
 
@@ -51,26 +51,26 @@ func (h TransportHandlerSpec) MarshalLogObject(enc zapcore.ObjectEncoder) error 
 	return nil
 }
 
-// Type returns the associated handler's type
+// Type returns the associated handler's type.
 func (h TransportHandlerSpec) Type() Type { return h.t }
 
-// Unary returns the Unary UnaryTransportHandler or nil
+// Unary returns the Unary UnaryTransportHandler or nil.
 func (h TransportHandlerSpec) Unary() UnaryTransportHandler { return h.unaryHandler }
 
-// Stream returns the Stream StreamTransportHandler or nil
+// Stream returns the Stream StreamTransportHandler or nil.
 func (h TransportHandlerSpec) Stream() StreamTransportHandler { return h.streamHandler }
 
-// NewUnaryTransportHandlerSpec returns a new TransportHandlerSpec with a UnaryTransportHandler
+// NewUnaryTransportHandlerSpec returns a new TransportHandlerSpec with a UnaryTransportHandler.
 func NewUnaryTransportHandlerSpec(handler UnaryTransportHandler) TransportHandlerSpec {
 	return TransportHandlerSpec{t: Unary, unaryHandler: handler}
 }
 
-// NewStreamTransportHandlerSpec returns a new TransportHandlerSpec with a StreamTransportHandler
+// NewStreamTransportHandlerSpec returns a new TransportHandlerSpec with a StreamTransportHandler.
 func NewStreamTransportHandlerSpec(handler StreamTransportHandler) TransportHandlerSpec {
 	return TransportHandlerSpec{t: Streaming, streamHandler: handler}
 }
 
-// EncodingHandlerSpec holds either UnaryEncodingHandler or StreamEncodingHandler
+// EncodingHandlerSpec holds either UnaryEncodingHandler or StreamEncodingHandler.
 type EncodingHandlerSpec struct {
 	t Type
 
@@ -84,18 +84,18 @@ func (h EncodingHandlerSpec) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	return nil
 }
 
-// Type returns the associated handler's type
+// Type returns the associated handler's type.
 func (h EncodingHandlerSpec) Type() Type { return h.t }
 
-// Unary returns the Unary UnaryEncodingHandler or nil
+// Unary returns the Unary UnaryEncodingHandler or nil.
 func (h EncodingHandlerSpec) Unary() UnaryEncodingHandler { return h.unaryHandler }
 
-// NewUnaryEncodingHandlerSpec returns a new EncodingHandlerSpec with a UnaryEncodingHandler
+// NewUnaryEncodingHandlerSpec returns a new EncodingHandlerSpec with a UnaryEncodingHandler.
 func NewUnaryEncodingHandlerSpec(handler UnaryEncodingHandler) EncodingHandlerSpec {
 	return EncodingHandlerSpec{t: Unary, unaryHandler: handler}
 }
 
-// NewStreamEncodingHandlerSpec returns a new EncodingHandlerSpec with a StreamEncodingHandler
+// NewStreamEncodingHandlerSpec returns a new EncodingHandlerSpec with a StreamEncodingHandler.
 func NewStreamEncodingHandlerSpec(handler StreamEncodingHandler) EncodingHandlerSpec {
 	return EncodingHandlerSpec{t: Streaming, streamHandler: handler}
 }
