@@ -1,8 +1,29 @@
+// Copyright (c) 2018 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 package yarpcjson
 
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,12 +69,13 @@ func TestNewCodec(t *testing.T) {
 
 func TestJsonCodec_Decode(t *testing.T) {
 	c := jsonCodec{
-		reader: mapReader{reflect.TypeOf(make(map[string]interface{}))},
+		reader: structReader{reflect.TypeOf(simpleResponse{})},
 	}
 
-	jsonContent := `{"foo": 42}`
+	jsonContent := `{"Success":true}`
 	validReqBuf := yarpc.NewBufferString(jsonContent)
-	_, err := c.Decode(validReqBuf)
+	body, err := c.Decode(validReqBuf)
+	assert.Equal(t, *body.(*simpleResponse), simpleResponse{Success: true})
 	assert.NoError(t, err)
 
 	invalidReqBuf := yarpc.NewBufferString(`invalid`)
@@ -69,7 +91,8 @@ func TestJsonCodec_Encode(t *testing.T) {
 	validResponse := simpleResponse{
 		Success: true,
 	}
-	_, err := c.Encode(validResponse)
+	body, err := c.Encode(validResponse)
+	assert.Equal(t, `{"Success":true}`, strings.TrimSuffix(body.String(), "\n"))
 	assert.NoError(t, err)
 
 	invalidResponse := make(chan int)
