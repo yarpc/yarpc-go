@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-10-26T15:05:34.022854312Z
+updated: 2018-10-29T15:03:25.390363803Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -172,7 +172,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 9b4f9f5ad5197c79fd623a3638e70d8b26cef344
+  version: c44066c5c816ec500d459a2a324a753f78531ae0
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -189,24 +189,24 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 2772b66316d2c587efeb188dcd5ebc6987656e84
+  version: 95b1ffbd15a57cc5abb3f04402b9e8ec0016a52c
   repo: https://github.com/golang/sys
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 4d1c5fb19474adfe9562c9847ba425e7da817e81
+  version: 6f8607282f41687a5ce9b5a0378084237f2f7576
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: a2dc47679d30b6c496245bafc6a166b46c5fe318
+  version: f60e5f99f0816fc2d9ecb338008ea420248d2943
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 94acd270e44e65579b9ee3cdab25034d33fed608
+  version: 8b5d7a19e2d98fbad9aaf9c599776bf066d7c70f
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
@@ -256,7 +256,7 @@ testImports:
   subpackages:
   - update-license
 - name: golang.org/x/lint
-  version: 1baf3a9d7d675b3c7e974b7a00ded54b88a88379
+  version: c67002cb31c3a748b7688c27f20d8358b4193582
   repo: https://github.com/golang/lint
   subpackages:
   - golint
