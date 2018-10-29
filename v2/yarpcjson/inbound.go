@@ -42,6 +42,15 @@ type jsonHandler struct {
 	handler reflect.Value
 }
 
+type jsonHandler2 struct {
+	handler reflect.Value
+}
+
+func (h jsonHandler2) Handle(ctx context.Context, reqBody interface{}) (interface{}, error) {
+	results := h.handler.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(reqBody)})
+	return results[0].Interface(), results[1].Interface().(error)
+}
+
 func (h jsonHandler) Handle(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
 	if err := yarpcencoding.ExpectEncodings(req, Encoding); err != nil {
 		return nil, nil, err
@@ -62,7 +71,6 @@ func (h jsonHandler) Handle(ctx context.Context, req *yarpc.Request, reqBuf *yar
 	res := &yarpc.Response{}
 	resBuf := &yarpc.Buffer{}
 	call.WriteToResponse(res)
-
 	// we want to return the appErr if it exists as this is what
 	// the previous behavior was so we deprioritize this error
 	var encodeErr error

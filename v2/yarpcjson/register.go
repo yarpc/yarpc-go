@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"reflect"
 
-	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2"
 )
 
 var (
@@ -49,6 +49,21 @@ func Procedure(name string, handler interface{}) []yarpc.TransportProcedure {
 				wrapUnaryHandler(name, handler),
 			),
 			Encoding: Encoding,
+		},
+	}
+}
+
+func procedure(name string, handler interface{}) []yarpc.EncodingProcedure {
+	return []yarpc.EncodingProcedure{
+		{
+			Name: name,
+			HandlerSpec: yarpc.NewUnaryEncodingHandlerSpec(
+				jsonHandler2{
+					handler: reflect.ValueOf(handler),
+				},
+			),
+			Encoding: Encoding,
+			Codec:    newCodec(name, handler),
 		},
 	}
 }
