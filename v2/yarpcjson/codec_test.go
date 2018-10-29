@@ -3,6 +3,7 @@ package yarpcjson
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,12 +49,13 @@ func TestNewCodec(t *testing.T) {
 
 func TestJsonCodec_Decode(t *testing.T) {
 	c := jsonCodec{
-		reader: mapReader{reflect.TypeOf(make(map[string]interface{}))},
+		reader: structReader{reflect.TypeOf(simpleResponse{})},
 	}
 
-	jsonContent := `{"foo": 42}`
+	jsonContent := `{"Success":true}`
 	validReqBuf := yarpc.NewBufferString(jsonContent)
-	_, err := c.Decode(validReqBuf)
+	body, err := c.Decode(validReqBuf)
+	assert.Equal(t, *body.(*simpleResponse), simpleResponse{Success: true})
 	assert.NoError(t, err)
 
 	invalidReqBuf := yarpc.NewBufferString(`invalid`)
@@ -69,7 +71,8 @@ func TestJsonCodec_Encode(t *testing.T) {
 	validResponse := simpleResponse{
 		Success: true,
 	}
-	_, err := c.Encode(validResponse)
+	body, err := c.Encode(validResponse)
+	assert.Equal(t, `{"Success":true}`, strings.TrimSuffix(body.String(), "\n"))
 	assert.NoError(t, err)
 
 	invalidResponse := make(chan int)
