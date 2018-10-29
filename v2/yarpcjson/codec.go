@@ -11,7 +11,7 @@ type jsonCodec struct {
 	reader requestReader
 }
 
-func newCodec(name string, handler interface{}) yarpc.InboundCodec {
+func newCodec(name string, handler interface{}) jsonCodec {
 	reqBodyType := verifyUnarySignature(name, reflect.TypeOf(handler))
 	var r requestReader
 	if reqBodyType == _interfaceEmptyType {
