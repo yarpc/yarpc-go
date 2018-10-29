@@ -65,3 +65,37 @@ func (c jsonCodec) Encode(res interface{}) (*yarpc.Buffer, error) {
 
 	return resBuf, nil
 }
+
+// requestReader is used to parse a JSON request argument from a JSON decoder.
+type requestReader interface {
+	Read(*json.Decoder) (reflect.Value, error)
+}
+
+type structReader struct {
+	// Type of the struct (not a pointer to the struct)
+	Type reflect.Type
+}
+
+func (r structReader) Read(d *json.Decoder) (reflect.Value, error) {
+	value := reflect.New(r.Type)
+	err := d.Decode(value.Interface())
+	return value, err
+}
+
+type mapReader struct {
+	Type reflect.Type // Type of the map
+}
+
+func (r mapReader) Read(d *json.Decoder) (reflect.Value, error) {
+	value := reflect.New(r.Type)
+	err := d.Decode(value.Interface())
+	return value.Elem(), err
+}
+
+type ifaceEmptyReader struct{}
+
+func (ifaceEmptyReader) Read(d *json.Decoder) (reflect.Value, error) {
+	value := reflect.New(_interfaceEmptyType)
+	err := d.Decode(value.Interface())
+	return value.Elem(), err
+}
