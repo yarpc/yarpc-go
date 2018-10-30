@@ -105,20 +105,27 @@ type unaryTransportHandler struct {
 
 func (u *unaryTransportHandler) Handle(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
 	res := &yarpc.Response{}
+	ctx, call := yarpc.NewInboundCall(ctx)
+	if err := call.ReadFromRequest(req); err != nil {
+		return nil, nil, err
+	}
+
 	decodedBody, err := u.h.Codec.Decode(reqBuf)
 	if err != nil {
 		return res, nil, err
 	}
 
-	body, err := u.h.HandlerSpec.Unary().Handle(ctx, decodedBody)
-	if err != nil {
-		res.ApplicationError = true
-		return res, nil, err
-	}
+	body, appErr := u.h.HandlerSpec.Unary().Handle(ctx, decodedBody)
+	call.WriteToResponse(res)
 
 	encodedBody, err := u.h.Codec.Encode(body)
 	if err != nil {
 		return res, nil, err
+	}
+
+	if appErr != nil {
+		res.ApplicationError = true
+		return res, encodedBody, appErr
 	}
 
 	return res, encodedBody, nil
