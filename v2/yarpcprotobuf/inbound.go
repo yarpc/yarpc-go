@@ -79,9 +79,9 @@ func (u *unaryHandler) Handle(ctx context.Context, req *yarpc.Request, buf *yarp
 
 	res := &yarpc.Response{}
 	resBuf := &yarpc.Buffer{}
-	call.WriteToResponse(res)
 
 	protoRes, appErr := u.handle(ctx, protoReq)
+	call.WriteToResponse(res)
 
 	// If the application error is not nil, return
 	// early so that we don't attempt to marshal a nil
