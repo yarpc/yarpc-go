@@ -38,6 +38,10 @@ func newMetadataWriter() *metadataWriter {
 }
 
 func (r *metadataWriter) SetResponse(res *yarpc.Response) {
+	if res == nil {
+		return
+	}
+
 	r.headerErr = multierr.Combine(r.headerErr, addApplicationHeaders(r.md, res.Headers))
 
 	if res.ApplicationError {
