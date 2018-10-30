@@ -194,10 +194,12 @@ func (h *handler) handleUnary(
 
 	err = handlerErrorToGRPCError(err, mdWriter)
 
-	// Send the response attributes back and end the stream.
-	if sendErr := serverStream.SendMsg(resBuf.Bytes()); sendErr != nil {
-		// We couldn't send the response.
-		return sendErr
+	if resBuf != nil {
+		// Send the response attributes back and end the stream.
+		if sendErr := serverStream.SendMsg(resBuf.Bytes()); sendErr != nil {
+			// We couldn't send the response.
+			return sendErr
+		}
 	}
 
 	mdWriter.SetResponse(res)
