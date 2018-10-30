@@ -41,5 +41,9 @@ type jsonHandler struct {
 
 func (h jsonHandler) Handle(ctx context.Context, reqBody interface{}) (interface{}, error) {
 	results := h.handler.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(reqBody)})
-	return results[0].Interface(), results[1].Interface().(error)
+	if appErr, _ := results[1].Interface().(error); appErr != nil {
+		return results[0].Interface(), appErr
+	}
+
+	return results[0].Interface(), nil
 }
