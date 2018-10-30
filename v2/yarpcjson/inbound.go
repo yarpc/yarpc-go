@@ -22,14 +22,12 @@ package yarpcjson
 
 import (
 	"context"
-	"encoding/json"
 	"reflect"
 
-	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcencoding"
+	"go.uber.org/yarpc/v2"
 )
 
-var _ yarpc.UnaryTransportHandler = (*jsonHandler)(nil)
+var _ yarpc.UnaryEncodingHandler = (*jsonHandler)(nil)
 
 // jsonHandler adapts a user-provided high-level handler into a transport-level
 // UnaryTransportHandler.
@@ -38,55 +36,10 @@ var _ yarpc.UnaryTransportHandler = (*jsonHandler)(nil)
 //
 // 	f(ctx context.Context, body $reqBody) ($resBody, error)
 type jsonHandler struct {
-	reader  requestReader
 	handler reflect.Value
 }
 
-type jsonHandler2 struct {
-	handler reflect.Value
-}
-
-func (h jsonHandler2) Handle(ctx context.Context, reqBody interface{}) (interface{}, error) {
+func (h jsonHandler) Handle(ctx context.Context, reqBody interface{}) (interface{}, error) {
 	results := h.handler.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(reqBody)})
 	return results[0].Interface(), results[1].Interface().(error)
-}
-
-func (h jsonHandler) Handle(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
-	if err := yarpcencoding.ExpectEncodings(req, Encoding); err != nil {
-		return nil, nil, err
-	}
-
-	ctx, call := yarpc.NewInboundCall(ctx)
-	if err := call.ReadFromRequest(req); err != nil {
-		return nil, nil, err
-	}
-
-	reqBody, err := h.reader.Read(json.NewDecoder(reqBuf))
-	if err != nil {
-		return nil, nil, yarpcencoding.RequestBodyDecodeError(req, err)
-	}
-
-	results := h.handler.Call([]reflect.Value{reflect.ValueOf(ctx), reqBody})
-
-	res := &yarpc.Response{}
-	resBuf := &yarpc.Buffer{}
-	call.WriteToResponse(res)
-	// we want to return the appErr if it exists as this is what
-	// the previous behavior was so we deprioritize this error
-	var encodeErr error
-	if result := results[0].Interface(); result != nil {
-		if err := json.NewEncoder(resBuf).Encode(result); err != nil {
-			encodeErr = yarpcencoding.ResponseBodyEncodeError(req, err)
-		}
-	}
-
-	if appErr, _ := results[1].Interface().(error); appErr != nil {
-		res.ApplicationError = true
-		// TODO(apeatsbond): now that we propogate a Response struct back, the
-		// Response should hold the actual application error. Errors returned by the
-		// handler (not through the Response) could be considered fatal.
-		return res, resBuf, appErr
-	}
-
-	return res, resBuf, encodeErr
 }

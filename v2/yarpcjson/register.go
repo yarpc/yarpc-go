@@ -34,33 +34,19 @@ var (
 	_interfaceEmptyType = reflect.TypeOf((*interface{})(nil)).Elem()
 )
 
-// Procedure builds a TransportProcedure from the given JSON handler. handler must be
+// Procedure builds an EncodingProcedure from the given JSON handler. handler must be
 // a function with a signature similar to,
 //
 // 	f(ctx context.Context, body $reqBody) ($resBody, error)
 //
-// Where $reqBody and $resBody are a map[string]interface{} or pointers to
-// structs.
-func Procedure(name string, handler interface{}) []yarpc.TransportProcedure {
-	return []yarpc.TransportProcedure{
-		{
-			Name: name,
-			HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(
-				wrapUnaryHandler(name, handler),
-			),
-			Encoding: Encoding,
-		},
-	}
-}
-
-func procedure(name string, handler interface{}) []yarpc.EncodingProcedure {
+// Where $reqBody and $resBody are of type map[string]interface{}, interface{}, or
+// struct pointers.
+func Procedure(name string, handler interface{}) []yarpc.EncodingProcedure {
 	return []yarpc.EncodingProcedure{
 		{
 			Name: name,
 			HandlerSpec: yarpc.NewUnaryEncodingHandlerSpec(
-				jsonHandler2{
-					handler: reflect.ValueOf(handler),
-				},
+				wrapUnaryHandler(name, handler),
 			),
 			Encoding: Encoding,
 			Codec:    newCodec(name, handler),
@@ -69,25 +55,9 @@ func procedure(name string, handler interface{}) []yarpc.EncodingProcedure {
 }
 
 // wrapUnaryHandler takes a valid JSON handler function and converts it into a
-// yarpc.UnaryTransportHandler.
-func wrapUnaryHandler(name string, handler interface{}) yarpc.UnaryTransportHandler {
-	reqBodyType := verifyUnarySignature(name, reflect.TypeOf(handler))
-	return newJSONHandler(reqBodyType, handler)
-}
-
-func newJSONHandler(reqBodyType reflect.Type, handler interface{}) jsonHandler {
-	var r requestReader
-	if reqBodyType == _interfaceEmptyType {
-		r = ifaceEmptyReader{}
-	} else if reqBodyType.Kind() == reflect.Map {
-		r = mapReader{reqBodyType}
-	} else {
-		// struct ptr
-		r = structReader{reqBodyType.Elem()}
-	}
-
+// yarpc.UnaryEncodingHandler.
+func wrapUnaryHandler(name string, handler interface{}) yarpc.UnaryEncodingHandler {
 	return jsonHandler{
-		reader:  r,
 		handler: reflect.ValueOf(handler),
 	}
 }
