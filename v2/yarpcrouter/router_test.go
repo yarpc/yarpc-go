@@ -162,6 +162,7 @@ func TestNewMapRouterWithEncodingProcedures_HandlerError(t *testing.T) {
 	baz := yarpc.NewUnaryEncodingHandlerSpec(bazHandler)
 	bazCodec := yarpctest.NewMockInboundCodec(mockCtrl)
 	bazCodec.EXPECT().Decode(gomock.Any()).Return(nil, nil)
+	bazCodec.EXPECT().Encode(gomock.Any()).Return(nil, nil)
 
 	encodingProcedures := []yarpc.EncodingProcedure{
 		{
