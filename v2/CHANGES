@@ -51,6 +51,7 @@ Encodings:
 
 Transports:
 - [ ] Port TChannel transport
+      - [ ] Add TChannel to gauntlet test
 - [x] Port or recreate gRPC transport
 - [ ] use `req` and `res` as variable names for consistency.
       - [x] HTTP
