@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcgrpc"
 	"go.uber.org/yarpc/v2/yarpchttp"
 	"go.uber.org/yarpc/v2/yarpcrandpeer"
 	"go.uber.org/yarpc/v2/yarpcrouter"
@@ -51,6 +52,12 @@ func newInbound(t *testing.T, transport string, listener net.Listener, procedure
 	switch transport {
 	case _http:
 		inbound = &yarpchttp.Inbound{
+			Listener: listener,
+			Router:   router,
+		}
+
+	case _gRPC:
+		inbound = &yarpcgrpc.Inbound{
 			Listener: listener,
 			Router:   router,
 		}
@@ -102,6 +109,16 @@ func newOutbounds(t *testing.T, transport string, addr string, choosers []string
 				URL:     &url.URL{Scheme: "http", Host: addr},
 			})
 
+		case _gRPC:
+			dialer := &yarpcgrpc.Dialer{}
+			require.NoError(t, dialer.Start(context.Background()))
+			dialers = append(dialers, dialer)
+
+			outbounds = append(outbounds, &yarpcgrpc.Outbound{
+				Chooser: newChooser(t, chooser, dialer, id),
+				URL:     &url.URL{Host: addr},
+			})
+
 		default:
 			t.Fatalf("unknown transport: %q", transport)
 		}
@@ -120,7 +137,7 @@ func newOutbounds(t *testing.T, transport string, addr string, choosers []string
 }
 
 func TestGuantlet(t *testing.T) {
-	transports := []string{_http}
+	transports := []string{_http, _gRPC}
 	encodings := []string{_json}
 	choosers := []string{_random}
 
