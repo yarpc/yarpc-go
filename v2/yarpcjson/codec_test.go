@@ -37,26 +37,26 @@ func TestNewCodec(t *testing.T) {
 		Func interface{}
 	}{
 		{
-			"foo",
-			func(context.Context, *struct{}) (*struct{}, error) {
+			Name: "foo",
+			Func: func(context.Context, *struct{}) (*struct{}, error) {
 				return nil, nil
 			},
 		},
 		{
-			"bar",
-			func(context.Context, map[string]interface{}) (*struct{}, error) {
+			Name: "bar",
+			Func: func(context.Context, map[string]interface{}) (*struct{}, error) {
 				return nil, nil
 			},
 		},
 		{
-			"baz",
-			func(context.Context, map[string]interface{}) (map[string]interface{}, error) {
+			Name: "baz",
+			Func: func(context.Context, map[string]interface{}) (map[string]interface{}, error) {
 				return nil, nil
 			},
 		},
 		{
-			"qux",
-			func(context.Context, interface{}) (map[string]interface{}, error) {
+			Name: "qux",
+			Func: func(context.Context, interface{}) (map[string]interface{}, error) {
 				return nil, nil
 			},
 		},
