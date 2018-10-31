@@ -44,6 +44,7 @@ import (
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcjson"
+	"go.uber.org/yarpc/v2/yarpcrouter"
 	"go.uber.org/yarpc/v2/yarpctest"
 	"google.golang.org/grpc/credentials"
 )
@@ -95,7 +96,7 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			te := testEnvOptions{
-				Procedures: yarpcjson.Procedure("test-procedure", testEchoHandler),
+				Procedures: wrapProcedures(yarpcjson.Procedure("test-procedure", testEchoHandler)),
 				Inbound: &Inbound{
 					ServerMaxRecvMsgSize: tt.serverMaxRecvMsgSize,
 					ServerMaxSendMsgSize: tt.serverMaxSendMsgSize,
@@ -159,7 +160,7 @@ func TestJSONRoundTrip(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			doWithTestEnv(t, testEnvOptions{
-				Procedures: yarpcjson.Procedure("test-procedure", testEchoHandler),
+				Procedures: wrapProcedures(yarpcjson.Procedure("test-procedure", testEchoHandler)),
 				Inbound:    tt.inbound,
 				Outbound:   tt.outbound,
 				Dialer:     tt.dialer,
@@ -187,7 +188,7 @@ func TestConcurrentCalls(t *testing.T) {
 	t.Parallel()
 
 	options := testEnvOptions{
-		Procedures: yarpcjson.Procedure("test-procedure", testEchoHandler),
+		Procedures: wrapProcedures(yarpcjson.Procedure("test-procedure", testEchoHandler)),
 	}
 
 	doWithTestEnv(t, options, func(t *testing.T, testEnv *testEnv) {
@@ -374,7 +375,7 @@ func TestTLS(t *testing.T) {
 			})
 
 			te := testEnvOptions{
-				Procedures: yarpcjson.Procedure("test-procedure", testEchoHandler),
+				Procedures: wrapProcedures(yarpcjson.Procedure("test-procedure", testEchoHandler)),
 				Inbound: &Inbound{
 					Credentials: serverCreds,
 				},
@@ -403,6 +404,11 @@ func TestTLS(t *testing.T) {
 			})
 		})
 	}
+}
+
+func wrapProcedures(procedures []yarpc.EncodingProcedure) []yarpc.TransportProcedure {
+	p, _ := yarpcrouter.EncodingToTransportProcedures(procedures)
+	return p
 }
 
 type tlsScenario struct {

@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc/v2/yarpcrouter"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/multierr"
@@ -61,8 +63,9 @@ func TestBothResponseError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("inbound(%v)-outbound(%v)", tt.inboundBothResponseError, tt.outboundBothResponseError), func(t *testing.T) {
+			procedures, _ := yarpcrouter.EncodingToTransportProcedures(yarpcjson.Procedure("testFoo", testFooHandler))
 			doWithTestEnv(t, testEnvOptions{
-				Procedures: yarpcjson.Procedure("testFoo", testFooHandler),
+				Procedures: procedures,
 				Inbound: &Inbound{
 					legacyResponseError: !tt.inboundBothResponseError,
 				},

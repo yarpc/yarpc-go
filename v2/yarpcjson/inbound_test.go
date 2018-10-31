@@ -26,6 +26,8 @@ import (
 	"errors"
 	"testing"
 
+	"go.uber.org/yarpc/v2/yarpcrouter"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/v2"
@@ -46,31 +48,11 @@ func handleWithCodec(
 	req *yarpc.Request,
 	reqBuf *yarpc.Buffer,
 ) (*yarpc.Response, *yarpc.Buffer, error) {
-	res := &yarpc.Response{}
-	ctx, call := yarpc.NewInboundCall(ctx)
-	if err := call.ReadFromRequest(req); err != nil {
-		return nil, nil, err
-	}
+	p, _ := yarpcrouter.EncodingToTransportProcedures([]yarpc.EncodingProcedure{
+		procedure,
+	})
 
-	decodedBody, err := procedure.Codec.Decode(reqBuf)
-	if err != nil {
-		return res, nil, err
-	}
-
-	body, appErr := procedure.HandlerSpec.Unary().Handle(ctx, decodedBody)
-	call.WriteToResponse(res)
-
-	encodedBody, err := procedure.Codec.Encode(body)
-	if err != nil {
-		return res, nil, err
-	}
-
-	if appErr != nil {
-		res.ApplicationError = true
-		return res, encodedBody, appErr
-	}
-
-	return res, encodedBody, nil
+	return p[0].HandlerSpec.Unary().Handle(ctx, req, reqBuf)
 }
 
 func TestHandleStructSuccess(t *testing.T) {
