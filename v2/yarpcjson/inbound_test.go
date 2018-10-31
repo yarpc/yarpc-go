@@ -28,7 +28,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/v2"
+	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcrouter"
 )
 
@@ -42,10 +42,10 @@ type simpleResponse struct {
 }
 
 func handleWithCodec(
-	procedure yarpc.EncodingProcedure,
 	ctx context.Context,
 	req *yarpc.Request,
 	reqBuf *yarpc.Buffer,
+	procedure yarpc.EncodingProcedure,
 ) (*yarpc.Response, *yarpc.Buffer, error) {
 	p, _ := yarpcrouter.EncodingToTransportProcedures([]yarpc.EncodingProcedure{
 		procedure,
@@ -69,7 +69,7 @@ func TestHandleStructSuccess(t *testing.T) {
 	}
 	reqBuf := yarpc.NewBufferString(`{"name": "foo", "attributes": {"bar": 42}}`)
 	p := Procedure("simpleProcedure", h)[0]
-	_, resBuf, err := handleWithCodec(p, context.Background(), req, reqBuf)
+	_, resBuf, err := handleWithCodec(context.Background(), req, reqBuf, p)
 
 	require.NoError(t, err)
 
@@ -92,7 +92,7 @@ func TestHandleMapSuccess(t *testing.T) {
 	}
 	reqBuf := yarpc.NewBufferString(`{"foo": 42, "bar": ["a", "b", "c"]}`)
 	p := Procedure("simpleProcedure", h)[0]
-	_, resBuf, err := handleWithCodec(p, context.Background(), req, reqBuf)
+	_, resBuf, err := handleWithCodec(context.Background(), req, reqBuf, p)
 
 	require.NoError(t, err)
 
@@ -112,7 +112,7 @@ func TestHandleInterfaceEmptySuccess(t *testing.T) {
 	}
 	reqBuf := yarpc.NewBufferString(`["a", "b", "c"]`)
 	p := Procedure("simpleProcedure", h)[0]
-	_, resBuf, err := handleWithCodec(p, context.Background(), req, reqBuf)
+	_, resBuf, err := handleWithCodec(context.Background(), req, reqBuf, p)
 
 	require.NoError(t, err)
 	assert.JSONEq(t, `["a", "b", "c"]`, resBuf.String())
@@ -130,7 +130,7 @@ func TestHandleSuccessWithResponseHeaders(t *testing.T) {
 	}
 	reqBuf := yarpc.NewBufferString(`{"name": "foo", "attributes": {"bar": 42}}`)
 	p := Procedure("simpleProcedure", h)[0]
-	res, _, err := handleWithCodec(p, context.Background(), req, reqBuf)
+	res, _, err := handleWithCodec(context.Background(), req, reqBuf, p)
 
 	require.NoError(t, err)
 	assert.Equal(t, yarpc.NewHeaders().With("foo", "bar"), res.Headers)
@@ -151,7 +151,7 @@ func TestHandleBothResponseError(t *testing.T) {
 	}
 	reqBuf := yarpc.NewBufferString(`{"name": "foo", "attributes": {"bar": 42}}`)
 	p := Procedure("simpleProcedure", h)[0]
-	_, resBuf, err := handleWithCodec(p, context.Background(), req, reqBuf)
+	_, resBuf, err := handleWithCodec(context.Background(), req, reqBuf, p)
 
 	require.Equal(t, errors.New("bar"), err)
 
