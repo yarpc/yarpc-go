@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc/v2/yarpcgrpc"
 	"go.uber.org/yarpc/v2/yarpchttp"
 	"go.uber.org/yarpc/v2/yarpcrandpeer"
+	"go.uber.org/yarpc/v2/yarpcroundrobin"
 	"go.uber.org/yarpc/v2/yarpcrouter"
 )
 
@@ -76,6 +77,11 @@ func newChooser(t *testing.T, chooser string, dialer yarpc.Dialer, id yarpc.Iden
 	switch chooser {
 	case _random:
 		pl := yarpcrandpeer.New(dialer)
+		pl.Update(update)
+		return pl
+
+	case _roundrobin:
+		pl := yarpcroundrobin.New(dialer)
 		pl.Update(update)
 		return pl
 
@@ -133,7 +139,7 @@ func newOutbounds(t *testing.T, transport string, addr string, choosers []string
 func TestGuantlet(t *testing.T) {
 	transports := []string{_http, _gRPC}
 	encodings := []string{_json}
-	choosers := []string{_random}
+	choosers := []string{_random, _roundrobin}
 
 	procedures := newProcedures()
 
