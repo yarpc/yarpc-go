@@ -27,6 +27,12 @@ import (
 	"go.uber.org/yarpc/v2"
 )
 
+var (
+	_ requestReader = structReader{}
+	_ requestReader = ifaceEmptyReader{}
+	_ requestReader = mapReader{}
+)
+
 type jsonCodec struct {
 	reader requestReader
 }
