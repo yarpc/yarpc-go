@@ -42,7 +42,7 @@ type lifecycle interface {
 }
 
 func newProcedures() []yarpc.TransportProcedure {
-	return jsonProcedures()
+	return append(append(jsonProcedures(), thriftProcedures()...))
 }
 
 func newInbound(t *testing.T, transport string, listener net.Listener, procedures []yarpc.TransportProcedure) (stop func()) {
@@ -138,7 +138,7 @@ func newOutbounds(t *testing.T, transport string, addr string, choosers []string
 
 func TestGuantlet(t *testing.T) {
 	transports := []string{_http, _gRPC}
-	encodings := []string{_json}
+	encodings := []string{_json, _thrift}
 	choosers := []string{_random, _roundrobin}
 
 	procedures := newProcedures()
@@ -162,15 +162,18 @@ func TestGuantlet(t *testing.T) {
 					Unary:   outbound,
 				}
 
-				// call with encoding clients
 				for _, encoding := range encodings {
 					t.Run(encoding, func(t *testing.T) {
+
 						var resHeaders map[string]string
 						callOptions := newCallOptions(&resHeaders)
 
+						// call with encoding clients
 						switch encoding {
 						case _json:
 							validateJSON(t, client, callOptions)
+						case _thrift:
+							validateThrift(t, client, callOptions)
 						default:
 							t.Fatalf("unsupported encoding %s", encoding)
 						}
