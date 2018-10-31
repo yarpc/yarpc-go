@@ -24,7 +24,7 @@ import (
 	"context"
 	"reflect"
 
-	"go.uber.org/yarpc/v2"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 var _ yarpc.UnaryEncodingHandler = (*jsonHandler)(nil)

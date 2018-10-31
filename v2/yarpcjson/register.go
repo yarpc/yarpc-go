@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"go.uber.org/yarpc/v2"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 var (

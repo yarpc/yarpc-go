@@ -26,11 +26,10 @@ import (
 	"errors"
 	"testing"
 
-	"go.uber.org/yarpc/v2/yarpcrouter"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcrouter"
 )
 
 type simpleRequest struct {
