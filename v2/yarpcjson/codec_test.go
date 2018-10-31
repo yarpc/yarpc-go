@@ -75,7 +75,7 @@ func TestJsonCodec_Decode(t *testing.T) {
 	jsonContent := `{"Success":true}`
 	validReqBuf := yarpc.NewBufferString(jsonContent)
 	body, err := c.Decode(validReqBuf)
-	assert.Equal(t, *body.(*simpleResponse), simpleResponse{Success: true})
+	assert.Equal(t, body.(*simpleResponse), &simpleResponse{Success: true})
 	assert.NoError(t, err)
 
 	invalidReqBuf := yarpc.NewBufferString(`invalid`)
