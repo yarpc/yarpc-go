@@ -42,7 +42,7 @@ type lifecycle interface {
 }
 
 func newProcedures() []yarpc.TransportProcedure {
-	return append(append(jsonProcedures(), thriftProcedures()...))
+	return append(append(jsonProcedures(), thriftProcedures()...), protoProcedures()...)
 }
 
 func newInbound(t *testing.T, transport string, listener net.Listener, procedures []yarpc.TransportProcedure) (stop func()) {
@@ -138,7 +138,7 @@ func newOutbounds(t *testing.T, transport string, addr string, choosers []string
 
 func TestGuantlet(t *testing.T) {
 	transports := []string{_http, _gRPC}
-	encodings := []string{_json, _thrift}
+	encodings := []string{_json, _thrift, _proto}
 	choosers := []string{_random, _roundrobin}
 
 	procedures := newProcedures()
@@ -174,6 +174,8 @@ func TestGuantlet(t *testing.T) {
 							validateJSON(t, client, callOptions)
 						case _thrift:
 							validateThrift(t, client, callOptions)
+						case _proto:
+							validateProto(t, client, callOptions)
 						default:
 							t.Fatalf("unsupported encoding %s", encoding)
 						}
