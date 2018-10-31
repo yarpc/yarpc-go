@@ -49,7 +49,7 @@ func Procedure(name string, handler interface{}) []yarpc.EncodingProcedure {
 				wrapUnaryHandler(name, handler),
 			),
 			Encoding: Encoding,
-			Codec:    newCodec(name, handler),
+			Codec:    newCodec(handler),
 		},
 	}
 }
@@ -57,15 +57,16 @@ func Procedure(name string, handler interface{}) []yarpc.EncodingProcedure {
 // wrapUnaryHandler takes a valid JSON handler function and converts it into a
 // yarpc.UnaryEncodingHandler.
 func wrapUnaryHandler(name string, handler interface{}) yarpc.UnaryEncodingHandler {
+	verifyUnarySignature(name, reflect.TypeOf(handler))
 	return jsonHandler{
 		handler: reflect.ValueOf(handler),
 	}
 }
 
 // verifyUnarySignature verifies that the given type matches what we expect from
-// JSON unary handlers and returns the request type.
-func verifyUnarySignature(n string, t reflect.Type) reflect.Type {
-	reqBodyType := verifyInputSignature(n, t)
+// JSON unary handlers.
+func verifyUnarySignature(n string, t reflect.Type) {
+	verifyInputSignature(n, t)
 
 	if t.NumOut() != 2 {
 		panic(fmt.Sprintf(
@@ -90,13 +91,11 @@ func verifyUnarySignature(n string, t reflect.Type) reflect.Type {
 			n, resBodyType,
 		))
 	}
-
-	return reqBodyType
 }
 
 // verifyInputSignature verifies that the given input argument types match
-// what we expect from JSON handlers and returns the request body type.
-func verifyInputSignature(n string, t reflect.Type) reflect.Type {
+// what we expect from JSON handlers.
+func verifyInputSignature(n string, t reflect.Type) {
 	if t.Kind() != reflect.Func {
 		panic(fmt.Sprintf(
 			"handler for %q is not a function but a %v", n, t.Kind(),
@@ -127,8 +126,6 @@ func verifyInputSignature(n string, t reflect.Type) reflect.Type {
 			n, reqBodyType,
 		))
 	}
-
-	return reqBodyType
 }
 
 // isValidReqResType checks if the given type is a pointer to a struct, a

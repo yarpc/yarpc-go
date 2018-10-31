@@ -63,7 +63,7 @@ func TestNewCodec(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		newCodec(tt.Name, tt.Func)
+		newCodec(tt.Func)
 	}
 }
 

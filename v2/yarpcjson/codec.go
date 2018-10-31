@@ -24,15 +24,15 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"go.uber.org/yarpc/v2"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 type jsonCodec struct {
 	reader requestReader
 }
 
-func newCodec(name string, handler interface{}) jsonCodec {
-	reqBodyType := verifyUnarySignature(name, reflect.TypeOf(handler))
+func newCodec(handler interface{}) jsonCodec {
+	reqBodyType := reflect.TypeOf(handler).In(1)
 	var r requestReader
 	if reqBodyType == _interfaceEmptyType {
 		r = ifaceEmptyReader{}
