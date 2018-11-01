@@ -27,47 +27,54 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.uber.org/yarpc/v2"
 )
 
 func TestNewCodec(t *testing.T) {
 	tests := []struct {
-		Name string
-		Func interface{}
+		Name           string
+		Func           interface{}
+		ExpectedReader requestReader
 	}{
 		{
 			Name: "foo",
 			Func: func(context.Context, *struct{}) (*struct{}, error) {
 				return nil, nil
 			},
+			ExpectedReader: structReader{},
 		},
 		{
 			Name: "bar",
 			Func: func(context.Context, map[string]interface{}) (*struct{}, error) {
 				return nil, nil
 			},
+			ExpectedReader: mapReader{},
 		},
 		{
 			Name: "baz",
 			Func: func(context.Context, map[string]interface{}) (map[string]interface{}, error) {
 				return nil, nil
 			},
+			ExpectedReader: mapReader{},
 		},
 		{
 			Name: "qux",
 			Func: func(context.Context, interface{}) (map[string]interface{}, error) {
 				return nil, nil
 			},
+			ExpectedReader: ifaceEmptyReader{},
 		},
 	}
 
 	for _, tt := range tests {
-		newCodec(tt.Name, tt.Func)
+		c := newCodec(tt.Name, tt.Func)
+		assert.IsType(t, tt.ExpectedReader, c.reader)
 	}
 }
 
-func TestJsonCodec_Decode(t *testing.T) {
+func TestJsonCodecDecode(t *testing.T) {
 	c := jsonCodec{
 		reader: structReader{reflect.TypeOf(simpleResponse{})},
 	}
@@ -75,15 +82,16 @@ func TestJsonCodec_Decode(t *testing.T) {
 	jsonContent := `{"Success":true}`
 	validReqBuf := yarpc.NewBufferString(jsonContent)
 	body, err := c.Decode(validReqBuf)
+	require.NoError(t, err)
 	assert.Equal(t, body.(*simpleResponse), &simpleResponse{Success: true})
-	assert.NoError(t, err)
 
 	invalidReqBuf := yarpc.NewBufferString(`invalid`)
-	_, err = c.Decode(invalidReqBuf)
+	body, err = c.Decode(invalidReqBuf)
 	assert.Error(t, err)
+	assert.Equal(t, nil, body)
 }
 
-func TestJsonCodec_Encode(t *testing.T) {
+func TestJsonCodecEncode(t *testing.T) {
 	c := jsonCodec{
 		reader: mapReader{reflect.TypeOf(make(map[string]interface{}))},
 	}
@@ -92,8 +100,8 @@ func TestJsonCodec_Encode(t *testing.T) {
 		Success: true,
 	}
 	body, err := c.Encode(validResponse)
+	require.NoError(t, err)
 	assert.Equal(t, `{"Success":true}`, strings.TrimSuffix(body.String(), "\n"))
-	assert.NoError(t, err)
 
 	invalidResponse := make(chan int)
 	_, err = c.Encode(invalidResponse)
