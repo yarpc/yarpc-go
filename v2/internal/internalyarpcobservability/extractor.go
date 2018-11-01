@@ -18,6 +18,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package yarpcobservability provides logging and metrics collection middleware for
-// YARPC.
-package yarpcobservability
+package internalyarpcobservability
+
+import (
+	"context"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+)
+
+// A ContextExtractor pulls any relevant request-scoped data (e.g., tracing
+// spans) from the request's Context.
+type ContextExtractor func(context.Context) zapcore.Field
+
+// NewNopContextExtractor returns a no-op ContextExtractor.
+func NewNopContextExtractor() ContextExtractor {
+	return ContextExtractor(func(_ context.Context) zapcore.Field { return zap.Skip() })
+}
