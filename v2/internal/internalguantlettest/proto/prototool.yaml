@@ -1,0 +1,17 @@
+# Protoc directives.
+protoc:
+  version: 3.6.1
+
+# Code generation directives.
+generate:
+  go_options:
+    import_path: go.uber.org/yarpc/v2
+
+  plugins:
+    - name: gogoslick
+      type: gogo
+      output: gen/proto
+
+    - name: yarpc-go
+      type: gogo
+      output: gen/proto
