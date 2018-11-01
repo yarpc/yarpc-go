@@ -24,8 +24,8 @@ import (
 	"context"
 	"time"
 
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -49,8 +49,8 @@ type call struct {
 
 	started   time.Time
 	ctx       context.Context
-	req       *transport.Request
-	rpcType   transport.Type
+	req       *yarpc.Request
+	rpcType   yarpc.Type
 	direction directionName
 }
 
@@ -115,7 +115,7 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 		return
 	}
 
-	if !yarpcerrors.IsStatus(err) {
+	if !yarpcerror.IsStatus(err) {
 		c.edge.serverErrLatencies.Observe(elapsed)
 		if counter, err := c.edge.serverFailures.Get(_error, "unknown_internal_yarpc"); err == nil {
 			counter.Inc()
@@ -123,29 +123,29 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 		return
 	}
 
-	errCode := yarpcerrors.FromError(err).Code()
+	errCode := yarpcerror.FromError(err).Code()
 	switch errCode {
-	case yarpcerrors.CodeCancelled,
-		yarpcerrors.CodeInvalidArgument,
-		yarpcerrors.CodeNotFound,
-		yarpcerrors.CodeAlreadyExists,
-		yarpcerrors.CodePermissionDenied,
-		yarpcerrors.CodeFailedPrecondition,
-		yarpcerrors.CodeAborted,
-		yarpcerrors.CodeOutOfRange,
-		yarpcerrors.CodeUnimplemented,
-		yarpcerrors.CodeUnauthenticated:
+	case yarpcerror.CodeCancelled,
+		yarpcerror.CodeInvalidArgument,
+		yarpcerror.CodeNotFound,
+		yarpcerror.CodeAlreadyExists,
+		yarpcerror.CodePermissionDenied,
+		yarpcerror.CodeFailedPrecondition,
+		yarpcerror.CodeAborted,
+		yarpcerror.CodeOutOfRange,
+		yarpcerror.CodeUnimplemented,
+		yarpcerror.CodeUnauthenticated:
 		c.edge.callerErrLatencies.Observe(elapsed)
 		if counter, err := c.edge.callerFailures.Get(_error, errCode.String()); err == nil {
 			counter.Inc()
 		}
 		return
-	case yarpcerrors.CodeUnknown,
-		yarpcerrors.CodeDeadlineExceeded,
-		yarpcerrors.CodeResourceExhausted,
-		yarpcerrors.CodeInternal,
-		yarpcerrors.CodeUnavailable,
-		yarpcerrors.CodeDataLoss:
+	case yarpcerror.CodeUnknown,
+		yarpcerror.CodeDeadlineExceeded,
+		yarpcerror.CodeResourceExhausted,
+		yarpcerror.CodeInternal,
+		yarpcerror.CodeUnavailable,
+		yarpcerror.CodeDataLoss:
 		c.edge.serverErrLatencies.Observe(elapsed)
 		if counter, err := c.edge.serverFailures.Get(_error, errCode.String()); err == nil {
 			counter.Inc()

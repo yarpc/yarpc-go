@@ -24,60 +24,43 @@ import (
 	"context"
 	"time"
 
-	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/v2"
 )
-
-type fakeAck struct{}
-
-func (a fakeAck) String() string { return "" }
 
 type fakeHandler struct {
 	err            error
 	applicationErr bool
 }
 
-func (h fakeHandler) Handle(_ context.Context, _ *transport.Request, rw transport.ResponseWriter) error {
+func (h fakeHandler) Handle(context.Context, *yarpc.Request, *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
+	res := &yarpc.Response{ApplicationError: h.applicationErr}
 	if h.applicationErr {
-		rw.SetApplicationError()
-		return nil
+		return res, nil, nil
 	}
-	return h.err
+	return res, nil, h.err
 }
 
-func (h fakeHandler) HandleOneway(context.Context, *transport.Request) error {
-	return h.err
-}
-
-func (h fakeHandler) HandleStream(*transport.ServerStream) error {
+func (h fakeHandler) HandleStream(*yarpc.ServerStream) error {
 	return h.err
 }
 
 type fakeOutbound struct {
-	transport.Outbound
-
 	err            error
 	applicationErr bool
 }
 
-func (o fakeOutbound) Call(context.Context, *transport.Request) (*transport.Response, error) {
+func (o fakeOutbound) Call(context.Context, *yarpc.Request, *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
 	if o.err != nil {
-		return nil, o.err
+		return nil, nil, o.err
 	}
-	return &transport.Response{ApplicationError: o.applicationErr}, nil
+	return &yarpc.Response{ApplicationError: o.applicationErr}, nil, nil
 }
 
-func (o fakeOutbound) CallOneway(context.Context, *transport.Request) (transport.Ack, error) {
+func (o fakeOutbound) CallStream(ctx context.Context, request *yarpc.Request) (*yarpc.ClientStream, error) {
 	if o.err != nil {
 		return nil, o.err
 	}
-	return fakeAck{}, nil
-}
-
-func (o fakeOutbound) CallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
-	if o.err != nil {
-		return nil, o.err
-	}
-	return transport.NewClientStream(&fakeStream{
+	return yarpc.NewClientStream(&fakeStream{
 		ctx:     ctx,
 		request: request,
 	})
@@ -85,22 +68,22 @@ func (o fakeOutbound) CallStream(ctx context.Context, request *transport.StreamR
 
 type fakeStream struct {
 	ctx     context.Context
-	request *transport.StreamRequest
+	request *yarpc.Request
 }
 
 func (s *fakeStream) Context() context.Context {
 	return s.ctx
 }
 
-func (s *fakeStream) Request() *transport.StreamRequest {
+func (s *fakeStream) Request() *yarpc.Request {
 	return s.request
 }
 
-func (s *fakeStream) SendMessage(context.Context, *transport.StreamMessage) error {
+func (s *fakeStream) SendMessage(context.Context, *yarpc.StreamMessage) error {
 	return nil
 }
 
-func (s *fakeStream) ReceiveMessage(context.Context) (*transport.StreamMessage, error) {
+func (s *fakeStream) ReceiveMessage(context.Context) (*yarpc.StreamMessage, error) {
 	return nil, nil
 }
 

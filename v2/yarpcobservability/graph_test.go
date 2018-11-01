@@ -25,7 +25,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/net/metrics"
-	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/v2"
 	"go.uber.org/zap"
 )
 
@@ -35,7 +35,7 @@ func TestEdgeNopFallbacks(t *testing.T) {
 	// is to re-use the same Registry.
 	root := metrics.New()
 	meter := root.Scope()
-	req := &transport.Request{
+	req := &yarpc.Request{
 		Caller:          "caller",
 		Service:         "service",
 		Transport:       "",

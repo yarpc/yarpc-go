@@ -27,8 +27,8 @@ import (
 
 	"go.uber.org/net/metrics"
 	"go.uber.org/net/metrics/bucket"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/digester"
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/internal/internaldigester"
 	"go.uber.org/zap"
 )
 
@@ -68,10 +68,10 @@ func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor
 }
 
 // begin starts a call along an edge.
-func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction directionName, req *transport.Request) call {
+func (g *graph) begin(ctx context.Context, rpcType yarpc.Type, direction directionName, req *yarpc.Request) call {
 	now := _timeNow()
 
-	d := digester.New()
+	d := internaldigester.New()
 	d.Add(req.Caller)
 	d.Add(req.Service)
 	d.Add(req.Transport)
@@ -94,7 +94,7 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction dir
 	}
 }
 
-func (g *graph) getOrCreateEdge(key []byte, req *transport.Request, direction string) *edge {
+func (g *graph) getOrCreateEdge(key []byte, req *yarpc.Request, direction string) *edge {
 	if e := g.getEdge(key); e != nil {
 		return e
 	}
@@ -108,7 +108,7 @@ func (g *graph) getEdge(key []byte) *edge {
 	return e
 }
 
-func (g *graph) createEdge(key []byte, req *transport.Request, direction string) *edge {
+func (g *graph) createEdge(key []byte, req *yarpc.Request, direction string) *edge {
 	g.edgesMu.Lock()
 	// Since we'll rarely hit this code path, the overhead of defer is acceptable.
 	defer g.edgesMu.Unlock()
@@ -140,7 +140,7 @@ type edge struct {
 
 // newEdge constructs a new edge. Since Registries enforce metric uniqueness,
 // edges should be cached and re-used for each RPC.
-func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, direction string) *edge {
+func newEdge(logger *zap.Logger, meter *metrics.Scope, req *yarpc.Request, direction string) *edge {
 	tags := metrics.Tags{
 		"source":           req.Caller,
 		"dest":             req.Service,
