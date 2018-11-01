@@ -75,8 +75,6 @@ type Dialer struct {
 	ch              *tchannel.Channel
 	peers           map[string]*tchannelPeer
 	connectorsGroup sync.WaitGroup
-	tracer          opentracing.Tracer
-	logger          *zap.Logger
 }
 
 var _ yarpc.Dialer = (*Dialer)(nil)
@@ -86,14 +84,8 @@ func (d *Dialer) Start(ctx context.Context) error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	// TODO hey, maybe this all belongs in Inbound.
-	// Maybe we create a channel separately in Dialer and Inbound since
-	// Hyperbahn is no longer a thing and we'll never receive requests from
-	// outbound connections.
-
-	// Create a TChannel
 	chopts := tchannel.ChannelOptions{
-		Tracer:              d.tracer,
+		Tracer:              d.Tracer,
 		OnPeerStatusChanged: d.onPeerStatusChanged,
 	}
 	ch, err := tchannel.NewChannel(d.Caller, &chopts)
@@ -107,7 +99,7 @@ func (d *Dialer) Start(ctx context.Context) error {
 	d.peers = make(map[string]*tchannelPeer)
 
 	if d.ConnTimeout == 0 {
-		d.ConnTimeout = defaultConnTimeout
+		d.ConnTimeout = DefaultConnTimeout
 	}
 	if d.ConnBackoff == nil {
 		d.ConnBackoff = yarpcbackoff.DefaultExponential
@@ -118,8 +110,8 @@ func (d *Dialer) Start(ctx context.Context) error {
 
 // Stop stops the TChannel transport. It starts rejecting incoming requests
 // and draining connections before closing them.
-// TODO In a future version of YARPC, Stop will block until the underlying channel
-// has closed completely.
+// In a future version of YARPC, Stop may block until the underlying channel
+// has drained all requests.
 func (d *Dialer) Stop(ctx context.Context) error {
 	// Release all peers.
 	for _, peer := range d.peers {
@@ -127,6 +119,7 @@ func (d *Dialer) Stop(ctx context.Context) error {
 	}
 	d.ch.Close()
 	d.connectorsGroup.Wait()
+	// TODO wait for all inbound requests to drain or context to cancel.
 	return nil
 }
 
@@ -138,6 +131,11 @@ func (d *Dialer) RetainPeer(pid yarpc.Identifier, sub yarpc.Subscriber) (yarpc.P
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
+	// TODO checking for a non-nil channel is barely sufficient.
+	// The purpose of this check is to surface improper use of the API during development.
+	// We have deliberately avoided outright preventing misuse of the API,
+	// which would entail initialization checks in every function or an API that only
+	// grants access to capability bearing instances when it is safe to use them.
 	if d.ch == nil {
 		return nil, fmt.Errorf("Dialer must be started to retain peers")
 	}

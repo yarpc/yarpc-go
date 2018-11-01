@@ -153,8 +153,7 @@ func callWithPeer(ctx context.Context, req *yarpc.Request, reqBody *yarpc.Buffer
 		return nil, nil, err
 	}
 	resBody := &yarpc.Buffer{}
-	_, err = internaliopool.Copy(resBody, arg3Reader)
-	if err != nil {
+	if _, err = internaliopool.Copy(resBody, arg3Reader); err != nil {
 		return nil, nil, err
 	}
 
@@ -237,12 +236,7 @@ func checkServiceMatchAndDeleteHeaderKey(reqSvcName string, resHeaders yarpc.Hea
 }
 
 func getResponseErrorAndDeleteHeaderKeys(headers yarpc.Headers) error {
-	defer func() {
-		headers.Del(ErrorCodeHeaderKey)
-		headers.Del(ErrorNameHeaderKey)
-		headers.Del(ErrorMessageHeaderKey)
-	}()
-	errorCodeString, ok := headers.Get(ErrorCodeHeaderKey)
+	errorCodeString, ok := popHeader(headers, ErrorCodeHeaderKey)
 	if !ok {
 		return nil
 	}
@@ -253,7 +247,15 @@ func getResponseErrorAndDeleteHeaderKeys(headers yarpc.Headers) error {
 	if errorCode == yarpcerror.CodeOK {
 		return yarpcerror.Newf(yarpcerror.CodeInternal, "got CodeOK from error header")
 	}
-	errorName, _ := headers.Get(ErrorNameHeaderKey)
-	errorMessage, _ := headers.Get(ErrorMessageHeaderKey)
+	errorName, _ := popHeader(headers, ErrorNameHeaderKey)
+	errorMessage, _ := popHeader(headers, ErrorMessageHeaderKey)
 	return internalyarpcerror.NewWithNamef(errorCode, errorName, errorMessage)
+}
+
+func popHeader(h yarpc.Headers, n string) (string, bool) {
+	v, ok := h.Get(n)
+	if ok {
+		h.Del(n)
+	}
+	return v, ok
 }

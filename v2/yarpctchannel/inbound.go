@@ -23,7 +23,6 @@ package yarpctchannel
 import (
 	"context"
 	"net"
-	"sync"
 
 	opentracing "github.com/opentracing/opentracing-go"
 	tchannel "github.com/uber/tchannel-go"
@@ -55,6 +54,8 @@ type Inbound struct {
 	Addr string
 
 	// Listener sets a net.Listener to use for the channel.
+	//
+	// If specified, Addr will be ignored.
 	Listener net.Listener
 
 	// Router receives inbound requests.
@@ -73,8 +74,7 @@ type Inbound struct {
 	// The default is to not write any logs.
 	Logger *zap.Logger
 
-	lock sync.Mutex
-	ch   *tchannel.Channel
+	ch *tchannel.Channel
 }
 
 // Start starts this Inbound.
@@ -88,7 +88,6 @@ func (i *Inbound) Start(_ context.Context) error {
 		i.Tracer = opentracing.GlobalTracer()
 	}
 
-	// Create a TChannel
 	chopts := tchannel.ChannelOptions{
 		Tracer: i.Tracer,
 		Handler: handler{
@@ -104,16 +103,15 @@ func (i *Inbound) Start(_ context.Context) error {
 	}
 	i.ch = ch
 
-	// Create a listen address
-	if i.Addr == "" {
-		addr, err := tchannel.ListenIP()
-		if err != nil {
-			return err
-		}
-		i.Addr = addr.String()
-	}
-
 	if i.Listener == nil {
+		if i.Addr == "" {
+			addr, err := tchannel.ListenIP()
+			if err != nil {
+				return err
+			}
+			i.Addr = addr.String()
+		}
+
 		listener, err := net.Listen("tcp", i.Addr)
 		if err != nil {
 			return err
@@ -126,7 +124,7 @@ func (i *Inbound) Start(_ context.Context) error {
 		return err
 	}
 
-	i.Logger.Info("started TChannel inbound", zap.String("address", i.Listener.Addr().String()))
+	i.Logger.Info("started TChannel inbound", zap.Stringer("address", i.Listener.Addr()))
 	if i.Router == nil || len(i.Router.Procedures()) == 0 {
 		i.Logger.Warn("no procedures specified for tchannel inbound")
 	}

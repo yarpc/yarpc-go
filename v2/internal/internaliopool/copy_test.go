@@ -31,19 +31,24 @@ import (
 
 func TestBuffers(t *testing.T) {
 	var wg sync.WaitGroup
-	for g := 0; g < 10; g++ {
-		wg.Add(1)
+	const parallel = 10
+	const serial = 100
+	wg.Add(parallel)
+	for g := 0; g < parallel; g++ {
 		go func() {
-			for i := 0; i < 100; i++ {
+			for i := 0; i < serial; i++ {
 				inputBytes := make([]byte, rand.Intn(5000)+20)
 				_, err := rand.Read(inputBytes)
-				assert.NoError(t, err, "Unexpected error from rand.Read")
-				reader := bytes.NewReader(inputBytes)
+				if !assert.NoError(t, err, "Unexpected error from rand.Read") {
+					reader := bytes.NewReader(inputBytes)
 
-				outputBytes := make([]byte, 0, len(inputBytes))
-				writer := bytes.NewBuffer(outputBytes)
+					outputBytes := make([]byte, 0, len(inputBytes))
+					writer := bytes.NewBuffer(outputBytes)
 
-				Copy(writer, reader)
+					copyLength, err := Copy(writer, reader)
+					assert.NoError(t, err)
+					assert.Equal(t, copyLength, len(inputBytes))
+				}
 			}
 			wg.Done()
 		}()

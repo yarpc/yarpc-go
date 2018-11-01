@@ -24,4 +24,6 @@ import "time"
 
 const transportName = "tchannel"
 
-var defaultConnTimeout = 500 * time.Millisecond
+// DefaultConnTimeout is the default timeout for establishing new outbound
+// connections.
+var DefaultConnTimeout = 500 * time.Millisecond
