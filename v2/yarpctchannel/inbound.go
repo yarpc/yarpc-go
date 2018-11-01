@@ -132,7 +132,9 @@ func (i *Inbound) Start(_ context.Context) error {
 	return nil
 }
 
-// Stop stops the TChannel outbound.
+// Stop stops the TChannel inbound.
 func (i *Inbound) Stop(_ context.Context) error {
+	i.ch.Close()
+	// TODO wait for all inbound requests to drain or context to cancel.
 	return nil
 }

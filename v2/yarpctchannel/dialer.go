@@ -119,7 +119,7 @@ func (d *Dialer) Stop(ctx context.Context) error {
 	}
 	d.ch.Close()
 	d.connectorsGroup.Wait()
-	// TODO wait for all inbound requests to drain or context to cancel.
+	// TODO wait for all outbound requests to drain or context to cancel.
 	return nil
 }
 
