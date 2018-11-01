@@ -22,8 +22,9 @@ package internalgauntlettest
 
 const (
 	// transports
-	_http = "http"
-	_gRPC = "gRPC"
+	_http     = "http"
+	_gRPC     = "gRPC"
+	_tchannel = "tchannel"
 
 	// encodings
 	_json   = "json"
