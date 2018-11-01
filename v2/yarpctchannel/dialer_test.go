@@ -66,8 +66,7 @@ func TestDialerBasics(t *testing.T) {
 		return req, nil
 	})
 
-	router := yarpcrouter.NewMapRouter("service")
-	router.Register(handleEcho)
+	router := yarpcrouter.NewMapRouter("service", handleEcho)
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
@@ -127,8 +126,7 @@ func TestDialerBellsAndWhistles(t *testing.T) {
 		return req, nil
 	})
 
-	router := yarpcrouter.NewMapRouter("service")
-	router.Register(handleEcho)
+	router := yarpcrouter.NewMapRouter("service", handleEcho)
 
 	inbound := &yarpctchannel.Inbound{
 		Service: "service",
@@ -199,8 +197,7 @@ func TestPeerListChanges(t *testing.T) {
 		return req, nil
 	})
 
-	router := yarpcrouter.NewMapRouter("service")
-	router.Register(handleEcho)
+	router := yarpcrouter.NewMapRouter("service", handleEcho)
 
 	inbound := &yarpctchannel.Inbound{
 		Service: "service",
@@ -329,8 +326,7 @@ func TestErrors(t *testing.T) {
 				return nil, handlerErr
 			})
 
-			router := yarpcrouter.NewMapRouter("service")
-			router.Register(handleEcho)
+			router := yarpcrouter.NewMapRouter("service", handleEcho)
 
 			listener, err := net.Listen("tcp", "127.0.0.1:0")
 			require.NoError(t, err)

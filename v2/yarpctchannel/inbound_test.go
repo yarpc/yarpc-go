@@ -54,9 +54,8 @@ func TestInboundSubServices(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 	defer cancel()
 
-	router := yarpcrouter.NewMapRouter("myservice")
 	whoSentYouHandlerSpec := yarpc.NewUnaryTransportHandlerSpec(whoSentYouHandler{})
-	router.Register([]yarpc.Procedure{
+	router := yarpcrouter.NewMapRouter("myservice", []yarpc.TransportProcedure{
 		{
 			Name:        "hello",
 			Encoding:    "raw",
