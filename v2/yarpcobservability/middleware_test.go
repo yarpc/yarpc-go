@@ -24,17 +24,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/net/metrics"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/internal/digester"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/internal/internaldigester"
+	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
@@ -42,19 +40,18 @@ import (
 
 func TestMiddlewareLogging(t *testing.T) {
 	defer stubTime()()
-	req := &transport.Request{
+	req := &yarpc.Request{
 		Caller:          "caller",
 		Service:         "service",
 		Transport:       "",
 		Encoding:        "raw",
 		Procedure:       "procedure",
-		Headers:         transport.NewHeaders().With("password", "super-secret"),
+		Headers:         yarpc.NewHeaders().With("password", "super-secret"),
 		ShardKey:        "shard01",
 		RoutingKey:      "routing-key",
 		RoutingDelegate: "routing-delegate",
-		Body:            strings.NewReader("body"),
 	}
-	sreq := &transport.StreamRequest{Meta: req.ToRequestMeta()}
+	reqBuf := yarpc.NewBufferString("body")
 	failed := errors.New("fail")
 
 	baseFields := func() []zapcore.Field {
@@ -149,12 +146,13 @@ func TestMiddlewareLogging(t *testing.T) {
 		}
 
 		t.Run(tt.desc+", unary inbound", func(t *testing.T) {
-			err := mw.Handle(
+			res, _, err := mw.Handle(
 				context.Background(),
 				req,
-				&transporttest.FakeResponseWriter{},
+				reqBuf,
 				newHandler(tt),
 			)
+
 			checkErr(err)
 			logContext := append(
 				baseFields(),
@@ -170,12 +168,15 @@ func TestMiddlewareLogging(t *testing.T) {
 				Context: logContext,
 			}
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
+			assert.Equal(t, tt.applicationErr, res.ApplicationError)
+			assert.Equal(t, tt.err, err)
 		})
 		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
-			res, err := mw.Call(context.Background(), req, newOutbound(tt))
+			res, _, err := mw.Call(context.Background(), req, reqBuf, newOutbound(tt))
 			checkErr(err)
 			if tt.err == nil {
 				assert.NotNil(t, res, "Expected non-nil response if call is successful.")
+				assert.Equal(t, tt.applicationErr, res.ApplicationError)
 			}
 			logContext := append(
 				baseFields(),
@@ -191,54 +192,16 @@ func TestMiddlewareLogging(t *testing.T) {
 				Context: logContext,
 			}
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
+			assert.Equal(t, tt.err, err)
 		})
 
-		// Application errors aren't applicable to oneway and streaming
+		// Application errors aren't applicable to streaming
 		if tt.applicationErr {
 			continue
 		}
 
-		t.Run(tt.desc+", oneway inbound", func(t *testing.T) {
-			err := mw.HandleOneway(context.Background(), req, newHandler(tt))
-			checkErr(err)
-			logContext := append(
-				baseFields(),
-				zap.String("direction", string(_directionInbound)),
-				zap.String("rpcType", "Oneway"),
-			)
-			logContext = append(logContext, tt.wantFields...)
-			expected := observer.LoggedEntry{
-				Entry: zapcore.Entry{
-					Level:   tt.wantErrLevel,
-					Message: tt.wantInboundMsg,
-				},
-				Context: logContext,
-			}
-			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
-		})
-		t.Run(tt.desc+", oneway outbound", func(t *testing.T) {
-			ack, err := mw.CallOneway(context.Background(), req, newOutbound(tt))
-			checkErr(err)
-			logContext := append(
-				baseFields(),
-				zap.String("direction", string(_directionOutbound)),
-				zap.String("rpcType", "Oneway"),
-			)
-			logContext = append(logContext, tt.wantFields...)
-			if tt.err == nil {
-				assert.NotNil(t, ack, "Expected non-nil ack if call is successful.")
-			}
-			expected := observer.LoggedEntry{
-				Entry: zapcore.Entry{
-					Level:   tt.wantErrLevel,
-					Message: tt.wantOutboundMsg,
-				},
-				Context: logContext,
-			}
-			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
-		})
 		t.Run(tt.desc+", stream inbound", func(t *testing.T) {
-			stream, err := transport.NewServerStream(&fakeStream{ctx: context.Background(), request: sreq})
+			stream, err := yarpc.NewServerStream(&fakeStream{ctx: context.Background(), request: req})
 			require.NoError(t, err)
 			err = mw.HandleStream(stream, newHandler(tt))
 			checkErr(err)
@@ -258,7 +221,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
 		})
 		t.Run(tt.desc+", stream outbound", func(t *testing.T) {
-			clientStream, err := mw.CallStream(context.Background(), sreq, newOutbound(tt))
+			clientStream, err := mw.CallStream(context.Background(), req, newOutbound(tt))
 			checkErr(err)
 			logContext := append(
 				baseFields(),
@@ -283,14 +246,14 @@ func TestMiddlewareLogging(t *testing.T) {
 
 func TestMiddlewareMetrics(t *testing.T) {
 	defer stubTime()()
-	req := &transport.Request{
+	req := &yarpc.Request{
 		Caller:    "caller",
 		Service:   "service",
 		Transport: "",
 		Encoding:  "raw",
 		Procedure: "procedure",
-		Body:      strings.NewReader("body"),
 	}
+	reqBuf := yarpc.NewBufferString("body")
 
 	type test struct {
 		desc               string
@@ -310,20 +273,20 @@ func TestMiddlewareMetrics(t *testing.T) {
 		},
 		{
 			desc:          "invalid argument error",
-			err:           yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "test"),
+			err:           yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "test"),
 			wantCalls:     1,
 			wantSuccesses: 0,
 			wantCallerFailures: map[string]int{
-				yarpcerrors.CodeInvalidArgument.String(): 1,
+				yarpcerror.CodeInvalidArgument.String(): 1,
 			},
 		},
 		{
 			desc:          "invalid argument error",
-			err:           yarpcerrors.Newf(yarpcerrors.CodeInternal, "test"),
+			err:           yarpcerror.Newf(yarpcerror.CodeInternal, "test"),
 			wantCalls:     1,
 			wantSuccesses: 0,
 			wantServerFailures: map[string]int{
-				yarpcerrors.CodeInternal.String(): 1,
+				yarpcerror.CodeInternal.String(): 1,
 			},
 		},
 		{
@@ -337,7 +300,7 @@ func TestMiddlewareMetrics(t *testing.T) {
 		},
 		{
 			desc:          "custom error code error",
-			err:           yarpcerrors.Newf(yarpcerrors.Code(1000), "test"),
+			err:           yarpcerror.Newf(yarpcerror.Code(1000), "test"),
 			wantCalls:     1,
 			wantSuccesses: 0,
 			wantServerFailures: map[string]int{
@@ -373,14 +336,14 @@ func TestMiddlewareMetrics(t *testing.T) {
 			mw.Handle(
 				context.Background(),
 				req,
-				&transporttest.FakeResponseWriter{},
+				reqBuf,
 				newHandler(tt),
 			)
 			validate(mw, string(_directionInbound))
 		})
 		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
 			mw := NewMiddleware(zap.NewNop(), metrics.New().Scope(), NewNopContextExtractor())
-			mw.Call(context.Background(), req, newOutbound(tt))
+			mw.Call(context.Background(), req, reqBuf, newOutbound(tt))
 			validate(mw, string(_directionOutbound))
 		})
 	}
@@ -389,8 +352,8 @@ func TestMiddlewareMetrics(t *testing.T) {
 // getKey gets the "key" that we will use to get an edge in the graph.  We use
 // a separate function to recreate the logic because extracting it out in the
 // main code could have performance implications.
-func getKey(req *transport.Request, direction string) (key []byte, free func()) {
-	d := digester.New()
+func getKey(req *yarpc.Request, direction string) (key []byte, free func()) {
+	d := internaldigester.New()
 	d.Add(req.Caller)
 	d.Add(req.Service)
 	d.Add(req.Transport)
@@ -404,7 +367,7 @@ func getKey(req *transport.Request, direction string) (key []byte, free func()) 
 
 func TestUnaryInboundApplicationErrors(t *testing.T) {
 	defer stubTime()()
-	req := &transport.Request{
+	req := &yarpc.Request{
 		Caller:          "caller",
 		Service:         "service",
 		Transport:       "",
@@ -413,8 +376,8 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		ShardKey:        "shard01",
 		RoutingKey:      "routing-key",
 		RoutingDelegate: "routing-delegate",
-		Body:            strings.NewReader("body"),
 	}
+	reqBuf := yarpc.NewBufferString("body")
 
 	expectedFields := []zapcore.Field{
 		zap.String("source", req.Caller),
@@ -435,12 +398,16 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 	core, logs := observer.New(zap.DebugLevel)
 	mw := NewMiddleware(zap.New(core), metrics.New().Scope(), NewNopContextExtractor())
 
-	assert.NoError(t, mw.Handle(
+	res, _, err := mw.Handle(
 		context.Background(),
 		req,
-		&transporttest.FakeResponseWriter{},
+		reqBuf,
 		fakeHandler{err: nil, applicationErr: true},
-	), "Unexpected transport error.")
+	)
+
+	require.NoError(t, err, "Unexpected transport error.")
+	require.NotNil(t, res)
+	require.True(t, res.ApplicationError)
 
 	expected := observer.LoggedEntry{
 		Entry: zapcore.Entry{
@@ -462,9 +429,9 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 	meter := root.Scope()
 	mw := NewMiddleware(zap.NewNop(), meter, NewNopContextExtractor())
 
-	err := mw.Handle(
+	res, _, err := mw.Handle(
 		context.Background(),
-		&transport.Request{
+		&yarpc.Request{
 			Caller:          "caller",
 			Service:         "service",
 			Transport:       "",
@@ -473,12 +440,13 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 			ShardKey:        "sk",
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
-			Body:            strings.NewReader("body"),
 		},
-		&transporttest.FakeResponseWriter{},
+		yarpc.NewBufferString("body"),
 		fakeHandler{nil, false},
 	)
-	assert.NoError(t, err, "Unexpected transport error.")
+	require.NoError(t, err, "Unexpected transport error.")
+	require.NotNil(t, res)
+	require.False(t, res.ApplicationError)
 
 	snap := root.Snapshot()
 	tags := metrics.Tags{
@@ -524,9 +492,9 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 	meter := root.Scope()
 	mw := NewMiddleware(zap.NewNop(), meter, NewNopContextExtractor())
 
-	err := mw.Handle(
+	res, _, err := mw.Handle(
 		context.Background(),
-		&transport.Request{
+		&yarpc.Request{
 			Caller:          "caller",
 			Service:         "service",
 			Transport:       "",
@@ -535,12 +503,13 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 			ShardKey:        "sk",
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
-			Body:            strings.NewReader("body"),
 		},
-		&transporttest.FakeResponseWriter{},
+		yarpc.NewBufferString("body"),
 		fakeHandler{fmt.Errorf("yuno"), false},
 	)
-	assert.Error(t, err, "Expected transport error.")
+	require.Error(t, err, "Expected transport error.")
+	require.NotNil(t, res)
+	require.False(t, res.ApplicationError)
 
 	snap := root.Snapshot()
 	tags := metrics.Tags{

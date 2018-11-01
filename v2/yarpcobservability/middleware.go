@@ -22,40 +22,19 @@ package yarpcobservability
 
 import (
 	"context"
-	"sync"
 
 	"go.uber.org/net/metrics"
-	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/v2"
 	"go.uber.org/zap"
 )
 
-var _writerPool = sync.Pool{New: func() interface{} {
-	return &writer{}
-}}
+var (
+	_ yarpc.UnaryInboundTransportMiddleware  = (*Middleware)(nil)
+	_ yarpc.UnaryOutboundTransportMiddleware = (*Middleware)(nil)
 
-// writer wraps a transport.ResponseWriter so the observing middleware can
-// detect application errors.
-type writer struct {
-	transport.ResponseWriter
-
-	isApplicationError bool
-}
-
-func newWriter(rw transport.ResponseWriter) *writer {
-	w := _writerPool.Get().(*writer)
-	w.isApplicationError = false
-	w.ResponseWriter = rw
-	return w
-}
-
-func (w *writer) SetApplicationError() {
-	w.isApplicationError = true
-	w.ResponseWriter.SetApplicationError()
-}
-
-func (w *writer) free() {
-	_writerPool.Put(w)
-}
+	_ yarpc.StreamInboundTransportMiddleware  = (*Middleware)(nil)
+	_ yarpc.StreamOutboundTransportMiddleware = (*Middleware)(nil)
+)
 
 // Middleware is logging and metrics middleware for all RPC types.
 type Middleware struct {
@@ -67,59 +46,46 @@ func NewMiddleware(logger *zap.Logger, scope *metrics.Scope, extract ContextExtr
 	return &Middleware{newGraph(scope, logger, extract)}
 }
 
-// Handle implements middleware.UnaryInbound.
-func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w transport.ResponseWriter, h transport.UnaryHandler) error {
-	call := m.graph.begin(ctx, transport.Unary, _directionInbound, req)
-	wrappedWriter := newWriter(w)
-	err := h.Handle(ctx, req, wrappedWriter)
-	call.EndWithAppError(err, wrappedWriter.isApplicationError)
-	wrappedWriter.free()
-	return err
-}
-
-// Call implements middleware.UnaryOutbound.
-func (m *Middleware) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
-	call := m.graph.begin(ctx, transport.Unary, _directionOutbound, req)
-	res, err := out.Call(ctx, req)
+// Handle implements yarpc.UnaryInbound.
+func (m *Middleware) Handle(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.Buffer, h yarpc.UnaryTransportHandler) (*yarpc.Response, *yarpc.Buffer, error) {
+	call := m.graph.begin(ctx, yarpc.Unary, _directionInbound, req)
+	res, resBuf, err := h.Handle(ctx, req, reqBuf)
 
 	isApplicationError := false
 	if res != nil {
 		isApplicationError = res.ApplicationError
 	}
 	call.EndWithAppError(err, isApplicationError)
-	return res, err
+	return res, resBuf, err
 }
 
-// HandleOneway implements middleware.OnewayInbound.
-func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
-	call := m.graph.begin(ctx, transport.Oneway, _directionInbound, req)
-	err := h.HandleOneway(ctx, req)
-	call.End(err)
-	return err
+// Call implements yarpc.UnaryOutbound.
+func (m *Middleware) Call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.Buffer, out yarpc.UnaryOutbound) (*yarpc.Response, *yarpc.Buffer, error) {
+	call := m.graph.begin(ctx, yarpc.Unary, _directionOutbound, req)
+	res, resBuf, err := out.Call(ctx, req, reqBuf)
+
+	isApplicationError := false
+	if res != nil {
+		isApplicationError = res.ApplicationError
+	}
+	call.EndWithAppError(err, isApplicationError)
+	return res, resBuf, err
 }
 
-// CallOneway implements middleware.OnewayOutbound.
-func (m *Middleware) CallOneway(ctx context.Context, req *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
-	call := m.graph.begin(ctx, transport.Oneway, _directionOutbound, req)
-	ack, err := out.CallOneway(ctx, req)
-	call.End(err)
-	return ack, err
-}
-
-// HandleStream implements middleware.StreamInbound.
-func (m *Middleware) HandleStream(serverStream *transport.ServerStream, h transport.StreamHandler) error {
-	call := m.graph.begin(serverStream.Context(), transport.Streaming, _directionInbound, serverStream.Request().Meta.ToRequest())
+// HandleStream implements yarpc.StreamInbound.
+func (m *Middleware) HandleStream(serverStream *yarpc.ServerStream, h yarpc.StreamTransportHandler) error {
+	call := m.graph.begin(serverStream.Context(), yarpc.Streaming, _directionInbound, serverStream.Request())
 	err := h.HandleStream(serverStream)
-	// TODO(pedge): wrap the *transport.ServerStream?
+	// TODO(pedge): wrap the *yarpc.ServerStream?
 	call.End(err)
 	return err
 }
 
-// CallStream implements middleware.StreamOutbound.
-func (m *Middleware) CallStream(ctx context.Context, request *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
-	call := m.graph.begin(ctx, transport.Streaming, _directionOutbound, request.Meta.ToRequest())
+// CallStream implements yarpc.StreamOutbound.
+func (m *Middleware) CallStream(ctx context.Context, request *yarpc.Request, out yarpc.StreamOutbound) (*yarpc.ClientStream, error) {
+	call := m.graph.begin(ctx, yarpc.Streaming, _directionOutbound, request)
 	clientStream, err := out.CallStream(ctx, request)
-	// TODO(pedge): wrap the *transport.ClientStream?
+	// TODO(pedge): wrap the *yarpc.ClientStream?
 	call.End(err)
 	return clientStream, err
 }
