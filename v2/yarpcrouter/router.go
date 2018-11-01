@@ -78,18 +78,18 @@ func NewMapRouter(defaultService string, rs []yarpc.TransportProcedure) MapRoute
 func EncodingToTransportProcedures(encodingProcedures []yarpc.EncodingProcedure) ([]yarpc.TransportProcedure, error) {
 	transportProcedures := make([]yarpc.TransportProcedure, len(encodingProcedures))
 	for i, p := range encodingProcedures {
-		var transportHandlerSpec yarpc.TransportHandlerSpec
+		var spec yarpc.TransportHandlerSpec
 		switch p.HandlerSpec.Type() {
 		case yarpc.Unary:
-			transportHandlerSpec = yarpc.NewUnaryTransportHandlerSpec(&unaryTransportHandler{p})
+			spec = yarpc.NewUnaryTransportHandlerSpec(&unaryTransportHandler{p})
 		default:
-			return nil, fmt.Errorf("unknown handler spec type: %v", p.HandlerSpec.Type())
+			return nil, fmt.Errorf("unsupported handler spec type: %v", p.HandlerSpec.Type())
 		}
 
 		transportProcedures[i] = yarpc.TransportProcedure{
 			Name:        p.Name,
 			Service:     p.Service,
-			HandlerSpec: transportHandlerSpec,
+			HandlerSpec: spec,
 			Encoding:    p.Encoding,
 			Signature:   p.Signature,
 		}
