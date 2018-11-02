@@ -24,7 +24,7 @@ import (
 	"encoding/json"
 	"reflect"
 
-	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2"
 )
 
 var (
