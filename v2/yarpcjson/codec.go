@@ -27,10 +27,17 @@ import (
 	yarpc "go.uber.org/yarpc/v2"
 )
 
+var (
+	_ requestReader = structReader{}
+	_ requestReader = ifaceEmptyReader{}
+	_ requestReader = mapReader{}
+)
+
 type jsonCodec struct {
 	reader requestReader
 }
 
+// newCodec constructs a JSON codec. The handler's signature should be verified before newCodec is called.
 func newCodec(handler interface{}) jsonCodec {
 	reqBodyType := reflect.TypeOf(handler).In(1)
 	var r requestReader
@@ -39,7 +46,6 @@ func newCodec(handler interface{}) jsonCodec {
 	} else if reqBodyType.Kind() == reflect.Map {
 		r = mapReader{reqBodyType}
 	} else {
-		// struct ptr
 		r = structReader{reqBodyType.Elem()}
 	}
 
@@ -78,24 +84,34 @@ type structReader struct {
 
 func (r structReader) Read(d *json.Decoder) (reflect.Value, error) {
 	value := reflect.New(r.Type)
-	err := d.Decode(value.Interface())
-	return value, err
+	if err := d.Decode(value.Interface()); err != nil {
+		return reflect.Value{}, err
+	}
+
+	return value, nil
 }
 
 type mapReader struct {
-	Type reflect.Type // Type of the map
+	// Type of the map
+	Type reflect.Type
 }
 
 func (r mapReader) Read(d *json.Decoder) (reflect.Value, error) {
 	value := reflect.New(r.Type)
-	err := d.Decode(value.Interface())
-	return value.Elem(), err
+	if err := d.Decode(value.Interface()); err != nil {
+		return reflect.Value{}, err
+	}
+
+	return value.Elem(), nil
 }
 
 type ifaceEmptyReader struct{}
 
 func (ifaceEmptyReader) Read(d *json.Decoder) (reflect.Value, error) {
 	value := reflect.New(_interfaceEmptyType)
-	err := d.Decode(value.Interface())
-	return value.Elem(), err
+	if err := d.Decode(value.Interface()); err != nil {
+		return reflect.Value{}, err
+	}
+
+	return value.Elem(), nil
 }
