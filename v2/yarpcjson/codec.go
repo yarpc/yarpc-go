@@ -38,8 +38,8 @@ type jsonCodec struct {
 }
 
 // newCodec constructs a JSON codec. The handler's signature should be verified before newCodec is called.
-func newCodec(name string, handler interface{}) jsonCodec {
-	reqBodyType := verifyUnarySignature(name, reflect.TypeOf(handler))
+func newCodec(handler interface{}) jsonCodec {
+	reqBodyType := reflect.TypeOf(handler).In(1)
 	var r requestReader
 	if reqBodyType == _interfaceEmptyType {
 		r = ifaceEmptyReader{}
