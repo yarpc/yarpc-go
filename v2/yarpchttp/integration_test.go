@@ -62,7 +62,8 @@ func TestBothResponseError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("inbound(%v)-outbound(%v)", tt.inboundBothResponseError, tt.outboundBothResponseError), func(t *testing.T) {
-			procedures, _ := yarpcrouter.EncodingToTransportProcedures(yarpcjson.Procedure("testFoo", testFooHandler))
+			procedures, err := yarpcrouter.EncodingToTransportProcedures(yarpcjson.Procedure("testFoo", testFooHandler))
+			require.NoError(t, err)
 			doWithTestEnv(t, testEnvOptions{
 				Procedures: procedures,
 				Inbound: &Inbound{
