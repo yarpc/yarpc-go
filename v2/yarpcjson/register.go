@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"reflect"
 
-	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2"
 )
 
 var (
@@ -34,14 +34,15 @@ var (
 	_interfaceEmptyType = reflect.TypeOf((*interface{})(nil)).Elem()
 )
 
-// Procedure builds an EncodingProcedure from the given JSON handler. handler must be
+// Procedure builds an EncodingProcedure from the given JSON handler. The handler must be
 // a function with a signature similar to,
 //
 // 	f(ctx context.Context, body $reqBody) ($resBody, error)
 //
 // Where $reqBody and $resBody are of type map[string]interface{}, interface{}, or
-// struct pointers.
+// struct pointers. If the handler's signature is not valid, Procedure will panic.
 func Procedure(name string, handler interface{}) []yarpc.EncodingProcedure {
+	verifyUnarySignature(name, reflect.TypeOf(handler))
 	return []yarpc.EncodingProcedure{
 		{
 			Name: name,
@@ -57,7 +58,6 @@ func Procedure(name string, handler interface{}) []yarpc.EncodingProcedure {
 // wrapUnaryHandler takes a valid JSON handler function and converts it into a
 // yarpc.UnaryEncodingHandler.
 func wrapUnaryHandler(name string, handler interface{}) yarpc.UnaryEncodingHandler {
-	verifyUnarySignature(name, reflect.TypeOf(handler))
 	return jsonHandler{
 		handler: reflect.ValueOf(handler),
 	}

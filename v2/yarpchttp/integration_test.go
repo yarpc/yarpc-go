@@ -27,14 +27,13 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/v2/yarpcrouter"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcjson"
+	"go.uber.org/yarpc/v2/yarpcrouter"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
 

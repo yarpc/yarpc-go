@@ -96,7 +96,7 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			te := testEnvOptions{
-				Procedures: wrapProcedures(yarpcjson.Procedure("test-procedure", testEchoHandler)),
+				Procedures: yarpcjson.Procedure("test-procedure", testEchoHandler),
 				Inbound: &Inbound{
 					ServerMaxRecvMsgSize: tt.serverMaxRecvMsgSize,
 					ServerMaxSendMsgSize: tt.serverMaxSendMsgSize,
@@ -160,7 +160,7 @@ func TestJSONRoundTrip(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			doWithTestEnv(t, testEnvOptions{
-				Procedures: wrapProcedures(yarpcjson.Procedure("test-procedure", testEchoHandler)),
+				Procedures: yarpcjson.Procedure("test-procedure", testEchoHandler),
 				Inbound:    tt.inbound,
 				Outbound:   tt.outbound,
 				Dialer:     tt.dialer,
@@ -188,7 +188,7 @@ func TestConcurrentCalls(t *testing.T) {
 	t.Parallel()
 
 	options := testEnvOptions{
-		Procedures: wrapProcedures(yarpcjson.Procedure("test-procedure", testEchoHandler)),
+		Procedures: yarpcjson.Procedure("test-procedure", testEchoHandler),
 	}
 
 	doWithTestEnv(t, options, func(t *testing.T, testEnv *testEnv) {
@@ -252,7 +252,7 @@ type testEnv struct {
 }
 
 type testEnvOptions struct {
-	Procedures []yarpc.TransportProcedure
+	Procedures []yarpc.EncodingProcedure
 	Inbound    *Inbound
 	Outbound   *Outbound
 	Dialer     *Dialer
@@ -287,7 +287,11 @@ func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
 	}
 
 	inbound.Addr = "127.0.0.1:0"
-	inbound.Router = yarpctest.NewFakeRouter(options.Procedures)
+	procedures, err := yarpcrouter.EncodingToTransportProcedures(options.Procedures)
+	if err != nil {
+		return nil, err
+	}
+	inbound.Router = yarpctest.NewFakeRouter(procedures)
 	if err := inbound.Start(context.Background()); err != nil {
 		return nil, err
 	}
@@ -375,7 +379,7 @@ func TestTLS(t *testing.T) {
 			})
 
 			te := testEnvOptions{
-				Procedures: wrapProcedures(yarpcjson.Procedure("test-procedure", testEchoHandler)),
+				Procedures: yarpcjson.Procedure("test-procedure", testEchoHandler),
 				Inbound: &Inbound{
 					Credentials: serverCreds,
 				},
@@ -404,11 +408,6 @@ func TestTLS(t *testing.T) {
 			})
 		})
 	}
-}
-
-func wrapProcedures(procedures []yarpc.EncodingProcedure) []yarpc.TransportProcedure {
-	p, _ := yarpcrouter.EncodingToTransportProcedures(procedures)
-	return p
 }
 
 type tlsScenario struct {
