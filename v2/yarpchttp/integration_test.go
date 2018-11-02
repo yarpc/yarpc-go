@@ -33,6 +33,7 @@ import (
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcjson"
+	"go.uber.org/yarpc/v2/yarpcrouter"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
 
@@ -61,8 +62,10 @@ func TestBothResponseError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("inbound(%v)-outbound(%v)", tt.inboundBothResponseError, tt.outboundBothResponseError), func(t *testing.T) {
+			procedures, err := yarpcrouter.EncodingToTransportProcedures(yarpcjson.Procedure("testFoo", testFooHandler))
+			require.NoError(t, err)
 			doWithTestEnv(t, testEnvOptions{
-				Procedures: yarpcjson.Procedure("testFoo", testFooHandler),
+				Procedures: procedures,
 				Inbound: &Inbound{
 					legacyResponseError: !tt.inboundBothResponseError,
 				},
