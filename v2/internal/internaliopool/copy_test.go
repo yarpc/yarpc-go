@@ -18,33 +18,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package internalgauntlettest
+package internaliopool
 
-const (
-	// transports
-	_http     = "http"
-	_gRPC     = "gRPC"
-	_tchannel = "tchannel"
+import (
+	"bytes"
+	"math/rand"
+	"sync"
+	"testing"
 
-	// encodings
-	_json   = "json"
-	_thrift = "thrift"
-	_proto  = "proto"
-
-	// peer lists
-	_roundrobin = "round-robin"
-	_random     = "random"
-
-	// for requests
-	_caller          = "caller"
-	_service         = "service"
-	_headerKeyReq    = "key-req"
-	_headerValueReq  = "value-req"
-	_routingKey      = "rk"
-	_routingDelegate = "delegate"
-	_shardKey        = "sk"
-
-	// for responses
-	_headerKeyRes   = "key-res"
-	_headerValueRes = "value-res"
+	"github.com/stretchr/testify/assert"
 )
+
+func TestBuffers(t *testing.T) {
+	var wg sync.WaitGroup
+	const parallel = 10
+	const serial = 100
+	wg.Add(parallel)
+	for g := 0; g < parallel; g++ {
+		go func() {
+			for i := 0; i < serial; i++ {
+				inputBytes := make([]byte, rand.Intn(5000)+20)
+				_, err := rand.Read(inputBytes)
+				if !assert.NoError(t, err, "Unexpected error from rand.Read") {
+					reader := bytes.NewReader(inputBytes)
+
+					outputBytes := make([]byte, 0, len(inputBytes))
+					writer := bytes.NewBuffer(outputBytes)
+
+					copyLength, err := Copy(writer, reader)
+					assert.NoError(t, err)
+					assert.Equal(t, copyLength, len(inputBytes))
+				}
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+}

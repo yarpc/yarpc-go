@@ -34,12 +34,11 @@ import (
 // requests match.
 //
 // Requests are considered to be matching if: all their primitive parameters
-// match, the headers of the received request include all the headers from the
-// source request, and the contents of the request bodies are the same.
+// match and the headers of the received request include all the headers from
+// the source request.
 type RequestMatcher struct {
-	t    *testing.T
-	req  *yarpc.Request
-	body []byte
+	t   *testing.T
+	req *yarpc.Request
 }
 
 // NewRequestMatcher constructs a new RequestMatcher from the given testing.T
@@ -47,12 +46,8 @@ type RequestMatcher struct {
 //
 // The request's contents are read in their entirety and replaced with a
 // bytes.Reader.
-func NewRequestMatcher(t *testing.T, req *yarpc.Request, reqBuf *yarpc.Buffer) RequestMatcher {
-	// make a copy of the body so that the caller can still use the buffer
-	body := reqBuf.Bytes()
-	bodyCopy := make([]byte, len(body))
-	copy(bodyCopy, body)
-	return RequestMatcher{t: t, req: req, body: bodyCopy}
+func NewRequestMatcher(t *testing.T, req *yarpc.Request) RequestMatcher {
+	return RequestMatcher{t: t, req: req}
 }
 
 // TODO: Headers like User-Agent, Content-Length, etc. make their way to the
@@ -61,7 +56,7 @@ func NewRequestMatcher(t *testing.T, req *yarpc.Request, reqBuf *yarpc.Buffer) R
 
 // Matches checks if the given object matches the Request provided in
 // NewRequestMatcher.
-func (m RequestMatcher) Matches(r *yarpc.Request, buf *yarpc.Buffer) bool {
+func (m RequestMatcher) Matches(r *yarpc.Request) bool {
 	l := m.req
 
 	if l.Caller != r.Caller {
@@ -107,17 +102,11 @@ func (m RequestMatcher) Matches(r *yarpc.Request, buf *yarpc.Buffer) bool {
 		}
 	}
 
-	rbody := buf.Bytes()
-	if !bytes.Equal(m.body, rbody) {
-		m.t.Logf("Body mismatch: %v != %v", m.body, rbody)
-		return false
-	}
-
 	return true
 }
 
 func (m RequestMatcher) String() string {
-	return fmt.Sprintf("matches request %v with body %v", m.req, m.body)
+	return fmt.Sprintf("request matching %v", m.req)
 }
 
 // checkSuperSet checks if the items in l are all also present in r.

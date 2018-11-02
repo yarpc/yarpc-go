@@ -34,6 +34,7 @@ import (
 	"go.uber.org/yarpc/v2/yarpcrandpeer"
 	"go.uber.org/yarpc/v2/yarpcroundrobin"
 	"go.uber.org/yarpc/v2/yarpcrouter"
+	"go.uber.org/yarpc/v2/yarpctchannel"
 )
 
 type lifecycle interface {
@@ -58,6 +59,13 @@ func newInbound(t *testing.T, transport string, listener net.Listener, procedure
 
 	case _gRPC:
 		inbound = &yarpcgrpc.Inbound{
+			Listener: listener,
+			Router:   router,
+		}
+
+	case _tchannel:
+		inbound = &yarpctchannel.Inbound{
+			Service:  "service",
 			Listener: listener,
 			Router:   router,
 		}
@@ -122,6 +130,18 @@ func newOutbounds(t *testing.T, transport string, addr string, choosers []string
 				URL:     &url.URL{Host: addr},
 			})
 
+		case _tchannel:
+			dialer := &yarpctchannel.Dialer{
+				Caller: "caller",
+			}
+			require.NoError(t, dialer.Start(context.Background()))
+			dialers = append(dialers, dialer)
+
+			outbounds = append(outbounds, &yarpctchannel.Outbound{
+				Chooser: newChooser(t, chooser, dialer, id),
+				Addr:    addr,
+			})
+
 		default:
 			t.Fatalf("unsupported transport: %q", transport)
 		}
@@ -137,7 +157,7 @@ func newOutbounds(t *testing.T, transport string, addr string, choosers []string
 }
 
 func TestGuantlet(t *testing.T) {
-	transports := []string{_http, _gRPC}
+	transports := []string{_http, _gRPC, _tchannel}
 	encodings := []string{_json, _thrift, _proto}
 	choosers := []string{_random, _roundrobin}
 

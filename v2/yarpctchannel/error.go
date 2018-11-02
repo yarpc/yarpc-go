@@ -18,33 +18,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package internalgauntlettest
+package yarpctchannel
 
-const (
-	// transports
-	_http     = "http"
-	_gRPC     = "gRPC"
-	_tchannel = "tchannel"
+import (
+	"context"
 
-	// encodings
-	_json   = "json"
-	_thrift = "thrift"
-	_proto  = "proto"
-
-	// peer lists
-	_roundrobin = "round-robin"
-	_random     = "random"
-
-	// for requests
-	_caller          = "caller"
-	_service         = "service"
-	_headerKeyReq    = "key-req"
-	_headerValueReq  = "value-req"
-	_routingKey      = "rk"
-	_routingDelegate = "delegate"
-	_shardKey        = "sk"
-
-	// for responses
-	_headerKeyRes   = "key-res"
-	_headerValueRes = "value-res"
+	"github.com/uber/tchannel-go"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
+
+func toYARPCError(req *yarpc.Request, err error) error {
+	if err == nil {
+		return err
+	}
+	if yarpcerror.IsStatus(err) {
+		return err
+	}
+	if err, ok := err.(tchannel.SystemError); ok {
+		return fromSystemError(err)
+	}
+	if err == context.DeadlineExceeded {
+		return yarpcerror.DeadlineExceededErrorf("deadline exceeded for service: %q, procedure: %q", req.Service, req.Procedure)
+	}
+	return yarpcerror.UnknownErrorf("received unknown error calling service: %q, procedure: %q, err: %s", req.Service, req.Procedure, err.Error())
+}
