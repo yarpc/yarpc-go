@@ -24,12 +24,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/v2"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcrouter"
 )
 
 type simpleRequest struct {
@@ -41,6 +41,21 @@ type simpleResponse struct {
 	Success bool
 }
 
+func handleWithCodec(
+	ctx context.Context,
+	t *testing.T,
+	req *yarpc.Request,
+	reqBuf *yarpc.Buffer,
+	procedure yarpc.EncodingProcedure,
+) (*yarpc.Response, *yarpc.Buffer, error) {
+	p, err := yarpcrouter.EncodingToTransportProcedures([]yarpc.EncodingProcedure{
+		procedure,
+	})
+	require.NoError(t, err)
+
+	return p[0].HandlerSpec.Unary().Handle(ctx, req, reqBuf)
+}
+
 func TestHandleStructSuccess(t *testing.T) {
 	h := func(ctx context.Context, body *simpleRequest) (*simpleResponse, error) {
 		assert.Equal(t, "simpleCall", yarpc.CallFromContext(ctx).Procedure())
@@ -50,16 +65,14 @@ func TestHandleStructSuccess(t *testing.T) {
 		return &simpleResponse{Success: true}, nil
 	}
 
-	handler := jsonHandler{
-		reader:  structReader{reflect.TypeOf(simpleRequest{})},
-		handler: reflect.ValueOf(h),
-	}
-
-	reqBuf := yarpc.NewBufferString(`{"name": "foo", "attributes": {"bar": 42}}`)
-	_, resBuf, err := handler.Handle(context.Background(), &yarpc.Request{
+	req := &yarpc.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",
-	}, reqBuf)
+	}
+	reqBuf := yarpc.NewBufferString(`{"name": "foo", "attributes": {"bar": 42}}`)
+	p := Procedure("simpleProcedure", h)[0]
+	_, resBuf, err := handleWithCodec(context.Background(), t, req, reqBuf, p)
+
 	require.NoError(t, err)
 
 	var response simpleResponse
@@ -75,16 +88,13 @@ func TestHandleMapSuccess(t *testing.T) {
 		return map[string]string{"success": "true"}, nil
 	}
 
-	handler := jsonHandler{
-		reader:  mapReader{reflect.TypeOf(make(map[string]interface{}))},
-		handler: reflect.ValueOf(h),
-	}
-
-	reqBuf := yarpc.NewBufferString(`{"foo": 42, "bar": ["a", "b", "c"]}`)
-	_, resBuf, err := handler.Handle(context.Background(), &yarpc.Request{
+	req := &yarpc.Request{
 		Procedure: "foo",
 		Encoding:  "json",
-	}, reqBuf)
+	}
+	reqBuf := yarpc.NewBufferString(`{"foo": 42, "bar": ["a", "b", "c"]}`)
+	p := Procedure("simpleProcedure", h)[0]
+	_, resBuf, err := handleWithCodec(context.Background(), t, req, reqBuf, p)
 
 	require.NoError(t, err)
 
@@ -98,13 +108,13 @@ func TestHandleInterfaceEmptySuccess(t *testing.T) {
 		return body, nil
 	}
 
-	handler := jsonHandler{reader: ifaceEmptyReader{}, handler: reflect.ValueOf(h)}
-
-	reqBuf := yarpc.NewBufferString(`["a", "b", "c"]`)
-	_, resBuf, err := handler.Handle(context.Background(), &yarpc.Request{
+	req := &yarpc.Request{
 		Procedure: "foo",
 		Encoding:  "json",
-	}, reqBuf)
+	}
+	reqBuf := yarpc.NewBufferString(`["a", "b", "c"]`)
+	p := Procedure("simpleProcedure", h)[0]
+	_, resBuf, err := handleWithCodec(context.Background(), t, req, reqBuf, p)
 
 	require.NoError(t, err)
 	assert.JSONEq(t, `["a", "b", "c"]`, resBuf.String())
@@ -116,16 +126,13 @@ func TestHandleSuccessWithResponseHeaders(t *testing.T) {
 		return &simpleResponse{Success: true}, nil
 	}
 
-	handler := jsonHandler{
-		reader:  structReader{reflect.TypeOf(simpleRequest{})},
-		handler: reflect.ValueOf(h),
-	}
-
-	reqBuf := yarpc.NewBufferString(`{"name": "foo", "attributes": {"bar": 42}}`)
-	res, _, err := handler.Handle(context.Background(), &yarpc.Request{
+	req := &yarpc.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",
-	}, reqBuf)
+	}
+	reqBuf := yarpc.NewBufferString(`{"name": "foo", "attributes": {"bar": 42}}`)
+	p := Procedure("simpleProcedure", h)[0]
+	res, _, err := handleWithCodec(context.Background(), t, req, reqBuf, p)
 
 	require.NoError(t, err)
 	assert.Equal(t, yarpc.NewHeaders().With("foo", "bar"), res.Headers)
@@ -140,16 +147,13 @@ func TestHandleBothResponseError(t *testing.T) {
 		return &simpleResponse{Success: true}, errors.New("bar")
 	}
 
-	handler := jsonHandler{
-		reader:  structReader{reflect.TypeOf(simpleRequest{})},
-		handler: reflect.ValueOf(h),
-	}
-
-	reqBuf := yarpc.NewBufferString(`{"name": "foo", "attributes": {"bar": 42}}`)
-	_, resBuf, err := handler.Handle(context.Background(), &yarpc.Request{
+	req := &yarpc.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",
-	}, reqBuf)
+	}
+	reqBuf := yarpc.NewBufferString(`{"name": "foo", "attributes": {"bar": 42}}`)
+	p := Procedure("simpleProcedure", h)[0]
+	_, resBuf, err := handleWithCodec(context.Background(), t, req, reqBuf, p)
 
 	require.Equal(t, errors.New("bar"), err)
 

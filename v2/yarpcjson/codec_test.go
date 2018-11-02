@@ -69,7 +69,7 @@ func TestNewCodec(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		c := newCodec(tt.Name, tt.Func)
+		c := newCodec(tt.Func)
 		assert.IsType(t, tt.ExpectedReader, c.reader)
 	}
 }

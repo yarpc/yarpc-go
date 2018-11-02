@@ -86,7 +86,7 @@ func TestWrapUnaryHandlerInvalid(t *testing.T) {
 
 	for _, tt := range tests {
 		assert.Panics(t, assert.PanicTestFunc(func() {
-			wrapUnaryHandler(tt.Name, tt.Func)
+			Procedure(tt.Name, tt.Func)
 		}), tt.Name)
 	}
 }
@@ -123,6 +123,8 @@ func TestWrapUnaryHandlerValid(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		wrapUnaryHandler(tt.Name, tt.Func)
+		assert.NotPanics(t, assert.PanicTestFunc(func() {
+			Procedure(tt.Name, tt.Func)
+		}), tt.Name)
 	}
 }
