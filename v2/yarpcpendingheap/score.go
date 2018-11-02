@@ -18,34 +18,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package internalgauntlettest
+package yarpcpendingheap
 
-const (
-	// transports
-	_http     = "http"
-	_gRPC     = "gRPC"
-	_tchannel = "tchannel"
-
-	// encodings
-	_json   = "json"
-	_thrift = "thrift"
-	_proto  = "proto"
-
-	// peer lists
-	_roundrobin  = "round-robin"
-	_random      = "random"
-	_pendingheap = "pending-heap"
-
-	// for requests
-	_caller          = "caller"
-	_service         = "service"
-	_headerKeyReq    = "key-req"
-	_headerValueReq  = "value-req"
-	_routingKey      = "rk"
-	_routingDelegate = "delegate"
-	_shardKey        = "sk"
-
-	// for responses
-	_headerKeyRes   = "key-res"
-	_headerValueRes = "value-res"
+import (
+	"go.uber.org/yarpc/v2"
 )
+
+// peerScore is a book-keeping object for each retained peer
+type peerScore struct {
+	// immutable after creation
+	peer yarpc.StatusPeer
+	heap *pendingHeap
+	// mutable
+	status yarpc.Status
+	score  int64
+	index  int // index in the peer list.
+	last   int // snapshot of the heap's incrementing counter.
+}
+
+func (ps *peerScore) NotifyStatusChanged(_ yarpc.Identifier) {
+	ps.heap.notifyStatusChanged(ps)
+}
+
+func scorePeer(p yarpc.StatusPeer) int64 {
+	status := p.Status()
+	score := int64(status.PendingRequestCount)
+	return score
+}

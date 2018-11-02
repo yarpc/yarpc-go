@@ -84,8 +84,10 @@ Peer Lists:
 - [ ] Port yarpcroundrobin
 - [x] Port yarpcrandpeer
 - [ ] Port yarpcchoiceoftwo
-- [ ] Port yarpcfewestpending
+- [x] Port yarpcfewestpending
 - [ ] Port yarpchashring32
+- [ ] Remove PendingRequestCount from Status
+      - [ ] pendingheap shold capture information on peerScore struct
 
 To port peer lists forward:
 - [ ] Replace functional options with options struct pattern, like net in the

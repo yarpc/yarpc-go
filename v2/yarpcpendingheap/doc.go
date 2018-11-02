@@ -18,34 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package internalgauntlettest
-
-const (
-	// transports
-	_http     = "http"
-	_gRPC     = "gRPC"
-	_tchannel = "tchannel"
-
-	// encodings
-	_json   = "json"
-	_thrift = "thrift"
-	_proto  = "proto"
-
-	// peer lists
-	_roundrobin  = "round-robin"
-	_random      = "random"
-	_pendingheap = "pending-heap"
-
-	// for requests
-	_caller          = "caller"
-	_service         = "service"
-	_headerKeyReq    = "key-req"
-	_headerValueReq  = "value-req"
-	_routingKey      = "rk"
-	_routingDelegate = "delegate"
-	_shardKey        = "sk"
-
-	// for responses
-	_headerKeyRes   = "key-res"
-	_headerValueRes = "value-res"
-)
+// Package yarpcpendingheap provides an implementation of a peer list that sends
+// traffic to the peer with the fewest pending requests, but degenerates to
+// round robin when all peers have equal pending requests, using a heap.
+package yarpcpendingheap
