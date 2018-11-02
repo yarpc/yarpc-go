@@ -31,6 +31,7 @@ import (
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcgrpc"
 	"go.uber.org/yarpc/v2/yarpchttp"
+	"go.uber.org/yarpc/v2/yarpcpendingheap"
 	"go.uber.org/yarpc/v2/yarpcrandpeer"
 	"go.uber.org/yarpc/v2/yarpcroundrobin"
 	"go.uber.org/yarpc/v2/yarpcrouter"
@@ -90,6 +91,11 @@ func newChooser(t *testing.T, chooser string, dialer yarpc.Dialer, id yarpc.Iden
 
 	case _roundrobin:
 		pl := yarpcroundrobin.New(dialer)
+		pl.Update(update)
+		return pl
+
+	case _pendingheap:
+		pl := yarpcpendingheap.New(dialer)
 		pl.Update(update)
 		return pl
 

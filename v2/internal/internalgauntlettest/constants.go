@@ -32,8 +32,9 @@ const (
 	_proto  = "proto"
 
 	// peer lists
-	_roundrobin = "round-robin"
-	_random     = "random"
+	_roundrobin  = "round-robin"
+	_random      = "random"
+	_pendingheap = "pending-heap"
 
 	// for requests
 	_caller          = "caller"
