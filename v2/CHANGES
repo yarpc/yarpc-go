@@ -35,29 +35,66 @@
       - [ ] HTTP
 - [ ] InvokeUnaryHandler: reduce package name noise at the call site by changing to a Do(ctx) method on UnaryInvokeRequest
 - [ ] support StreamHandlers in EncodingHandlerSpec
+- [ ] Restore Request/Response validation, either in the transport layer or
+      with middleware installed by Router (ServerProvider *cough*) and ClientProvider.
+      - [ ] Inbound
+            - [ ] gRPC
+            - [ ] TChannel
+            - [ ] HTTP
+      - [ ] Outbound
+            - [ ] gRPC
+            - [ ] TChannel
+            - [ ] HTTP
+- [ ] Consider removing yarpctest.NewRequestMatcher. Requests are trivial to
+      match now, except for header case mismatches.
+- [ ] Visit comment in v2/yarpctest/reqres.go:
+      TODO: Headers like User-Agent, Content-Length, etc. make their way to the
+      user-level Request object. For now, we're doing the super set check but we
+      should do something more specific once yarpc/yarpc.io#2 is resolved.
 
 Encodings:
 - [x] Drop raw encoding
 - [x] Port JSON encoding
 - [ ] Port Thrift encoding
+      - [ ] Pull the default routing name from a Thrift annotation.
+      - [ ] Add `sanitization_test.go` in plugin after TChannel is ported.
+      - [ ] Revert yarpc plugin name from `thriftrw-plugin-yarpc2` to `thriftrw-plugin-yarpc`.
+      - [ ] Port https://github.com/yarpc/yarpc-go/pull/1482/files into spring.
 - [ ] Port / re-create Protobuf encoding
       - [x] Rewrite the protoc-gen-yarpc-go plugin.
       - [ ] Add end-to-end test that uses gRPC transport with protobuf encoding.
       - [ ] Explore threading the context in Protobuf code generation, i.e. in `Stream.Receive`.
 
 Transports:
-- [ ] Port TChannel transport
+- [x] Port TChannel transport
+      - [ ] Restore buffer pooling
+      - [ ] Restore inbound_test.go
+      - [ ] Restore handler_test.go
+      - [ ] Restore outbound_test.go
+      - [ ] Gracefully shut down: stop should block until context expires or all requests drain.
+      - [ ] Add TChannel to gauntlet test
 - [x] Port or recreate gRPC transport
-- [ ] use `req` and `res` as variable names for consistency.
+- [ ] Use `req` and `res` as variable names for consistency.
       - [x] HTTP
-      - [ ] TChannel
+      - [x] TChannel
       - [x] gRPC
+
+Peer Lists:
+- [x] Port abstract peer list to v2/yarpcpeerlist
+- [ ] Port yarpcroundrobin
+- [x] Port yarpcrandpeer
+- [ ] Port yarpcchoiceoftwo
+- [x] Port yarpcfewestpending
+- [ ] Port yarpchashring32
+- [ ] Remove PendingRequestCount from Status
+      - [ ] pendingheap shold capture information on peerScore struct
 
 To port peer lists forward:
 - [ ] Replace functional options with options struct pattern, like net in the
       go standard library and the v2/yarpchttp example.
 - [ ] Remove lifecycle.
 - [ ] Drop Config and Spec, recreate in yarpcfx.
+- [ ] clean up yarpctest namespace (including removing StartAction/StopAction)
 
 To port transports forward:
 - [ ] Rename Transport to Dialer, implementing yarpc.Dialer.
@@ -81,7 +118,6 @@ To port transports forward:
 - [ ] Audit docs
 - [ ] Nit: eliminate use of "." imports for yarpctests.
 - [ ] Replace the Dispatcher throughout tests with a yarpc.Router or yarpc.Config as needed.
-- [ ] Subsume validation instead of depending on the dispatcher to add validator middleware.
 
 To port encodings forward:
 - [ ] Accept yarpc/v2.Client instead of yarpc.ClientConfig + yarpc.Outbounds.
@@ -92,6 +128,7 @@ To port encodings forward:
 - [ ] Nit: eliminate use of "." imports for yarpctests.
 
 Package changes:
+- [x] yarpcconfig -> /dev/null
 - [ ] api/transport -> v2
 - [ ] api/peer -> v2
 - [ ] api/middleware -> v2
@@ -103,6 +140,7 @@ Package changes:
 - [ ] intyarpcerrors yarpc/internal/yarpcerrors -> yarpc/v2/internal/internalyarpcerrors
 
 Name changes
+- [ ] {Mock,}{Unary,Stream}Handler -> {Mock,}{Unary,Stream}Transport{Handler,Middleware}
 - [ ] api/transport.* -> v2.*
 - [ ] api/transport/transporttest.* -> v2/yarpctest.*
 - [ ] api/peer.* -> v2.*
@@ -117,7 +155,9 @@ Name changes
 - [ ] peer/hostport.Peer -> v2/yarpcpeer.AbstractPeer
 - [ ] yarpc.OpentracingTags -> v2/yarpctracing.Tags
 - [ ] internal/errors.ZeroAddrToHostPort -> v2/internal/internalyarpcerrors.ZeroAddrToHostPort
+- [ ] internal/iopool -> v2/internal/internaliopool
 - [ ] TransportAction -> DialerAction
 - [ ] ApplyTransportActions -> ApplyDialerActions
 - [ ] peer.Single -> no longer needed
 - [ ] peer.Binder -> no longer needed
+- [ ] internal/testtime -> v2/internal/internaltesttime

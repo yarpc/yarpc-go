@@ -37,6 +37,8 @@ import (
 // Inbound receives YARPC requests using an HTTP server.
 type Inbound struct {
 	// Listener is an open listener for inbound HTTP requests.
+	//
+	// The listener will be closed on Stop(ctx).
 	Listener net.Listener
 
 	// Addr is a host:port on which to listen if no Listener is expressly provided.

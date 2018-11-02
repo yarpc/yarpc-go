@@ -102,8 +102,46 @@ ignore:
  - /internal/service-test/
  - /internal/testutils/
  - /serialize/internal/
+ - /v2/internal/internalgauntlettest/proto/gen/proto/
+ - /v2/internal/internalgauntlettest/thrift/echo/
+ - /v2/internal/internalgauntlettest/thrift/echo/echoclient/
+ - /v2/internal/internalgauntlettest/thrift/echo/echofx/
+ - /v2/internal/internalgauntlettest/thrift/echo/echoserver/
+ - /v2/internal/internalgauntlettest/thrift/echo/echotest/
  - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/templatedata/
  - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/common/
  - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/keyvalue/
  - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/stream/
+ - /v2/yarpcthrift/internal/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/atomic/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/atomic/readonlystoreclient/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/atomic/readonlystorefx/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/atomic/readonlystoreserver/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/atomic/readonlystoretest/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/atomic/storeclient/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/atomic/storefx/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/atomic/storeserver/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/atomic/storetest/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/common/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/common/baseserviceclient/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/common/baseservicefx/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/common/baseserviceserver/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/common/baseservicetest/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/common/emptyserviceclient/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/common/emptyservicefx/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/common/emptyserviceserver/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/common/emptyservicetest/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/common/extendemptyclient/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/common/extendemptyfx/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/common/extendemptyserver/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/common/extendemptytest/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/common/extendonlyclient/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/common/extendonlyfx/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/common/extendonlyserver/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/common/extendonlytest/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/weather/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/weather/weatherclient/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/weather/weatherfx/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/weather/weatherserver/
+ - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/weather/weathertest/
  - /yarpcproto/

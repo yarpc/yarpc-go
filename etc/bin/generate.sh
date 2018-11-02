@@ -103,6 +103,12 @@ thriftrw --no-recurse --plugin=yarpc --out=encoding/thrift/thriftrw-plugin-yarpc
 thriftrw --no-recurse --plugin=yarpc --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic.thrift
 thriftrw --no-recurse --plugin="yarpc --sanitize-tchannel" --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather.thrift
 
+# v2
+thriftrw --no-recurse --plugin=yarpc2 --out=v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/common.thrift
+thriftrw --no-recurse --plugin=yarpc2 --out=v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/atomic.thrift
+thriftrw --no-recurse --plugin="yarpc2 --sanitize-tchannel" --out=v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/weather.thrift
+thriftrw --no-recurse --plugin=yarpc2 --out=v2/internal/internalgauntlettest/thrift v2/internal/internalgauntlettest/thrift/echo.thrift
+
 thrift-gen --generateThrift --outputDir internal/crossdock/thrift/gen-go --inputFile internal/crossdock/thrift/echo.thrift
 thrift-gen --generateThrift --outputDir internal/crossdock/thrift/gen-go --inputFile internal/crossdock/thrift/gauntlet_tchannel.thrift | strip_thrift_warnings
 
@@ -116,6 +122,7 @@ protoc_all \
   encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto \
   encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing_no_service.proto
 protoc_all internal/examples/streaming/stream.proto
+
 
 ragel -Z -G2 -o internal/interpolate/parse.go internal/interpolate/parse.rl
 gofmt -s -w internal/interpolate/parse.go
