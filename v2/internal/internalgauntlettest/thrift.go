@@ -28,9 +28,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/internal/internalguantlettest/thrift/echo"
-	"go.uber.org/yarpc/v2/internal/internalguantlettest/thrift/echo/echoclient"
-	"go.uber.org/yarpc/v2/internal/internalguantlettest/thrift/echo/echoserver"
+	"go.uber.org/yarpc/v2/internal/internalgauntlettest/thrift/echo"
+	"go.uber.org/yarpc/v2/internal/internalgauntlettest/thrift/echo/echoclient"
+	"go.uber.org/yarpc/v2/internal/internalgauntlettest/thrift/echo/echoserver"
 	"go.uber.org/yarpc/v2/yarpcthrift"
 )
 

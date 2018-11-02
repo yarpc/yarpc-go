@@ -102,12 +102,12 @@ ignore:
  - /internal/service-test/
  - /internal/testutils/
  - /serialize/internal/
- - /v2/internal/internalguantlettest/proto/gen/proto/
- - /v2/internal/internalguantlettest/thrift/echo/
- - /v2/internal/internalguantlettest/thrift/echo/echoclient/
- - /v2/internal/internalguantlettest/thrift/echo/echofx/
- - /v2/internal/internalguantlettest/thrift/echo/echoserver/
- - /v2/internal/internalguantlettest/thrift/echo/echotest/
+ - /v2/internal/internalgauntlettest/proto/gen/proto/
+ - /v2/internal/internalgauntlettest/thrift/echo/
+ - /v2/internal/internalgauntlettest/thrift/echo/echoclient/
+ - /v2/internal/internalgauntlettest/thrift/echo/echofx/
+ - /v2/internal/internalgauntlettest/thrift/echo/echoserver/
+ - /v2/internal/internalgauntlettest/thrift/echo/echotest/
  - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/templatedata/
  - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/common/
  - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/keyvalue/

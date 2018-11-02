@@ -26,7 +26,7 @@ package echofx
 import (
 	"go.uber.org/fx"
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/internal/internalguantlettest/thrift/echo/echoserver"
+	"go.uber.org/yarpc/v2/internal/internalgauntlettest/thrift/echo/echoserver"
 	"go.uber.org/yarpc/v2/yarpcthrift"
 )
 

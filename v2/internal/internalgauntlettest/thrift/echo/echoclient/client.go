@@ -27,7 +27,7 @@ import (
 	"context"
 	"go.uber.org/thriftrw/wire"
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/internal/internalguantlettest/thrift/echo"
+	"go.uber.org/yarpc/v2/internal/internalgauntlettest/thrift/echo"
 	"go.uber.org/yarpc/v2/yarpcthrift"
 )
 

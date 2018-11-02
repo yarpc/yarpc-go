@@ -26,5 +26,5 @@ package echo
 import "go.uber.org/thriftrw/version"
 
 func init() {
-	version.CheckCompatWithGeneratedCodeAt("1.8.0", "go.uber.org/yarpc/v2/internal/internalguantlettest/thrift/echo")
+	version.CheckCompatWithGeneratedCodeAt("1.8.0", "go.uber.org/yarpc/v2/internal/internalgauntlettest/thrift/echo")
 }
