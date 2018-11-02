@@ -21,8 +21,8 @@
 package yarpcpendingheap
 
 import (
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/peer/peerlist/v2"
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcpeerlist"
 )
 
 type listConfig struct {
@@ -49,23 +49,23 @@ func Capacity(capacity int) ListOption {
 }
 
 // New creates a new pending heap.
-func New(transport peer.Transport, opts ...ListOption) *List {
+func New(dialer yarpc.Dialer, opts ...ListOption) *List {
 	cfg := defaultListConfig
 	for _, o := range opts {
 		o(&cfg)
 	}
 
-	plOpts := []peerlist.ListOption{
-		peerlist.Capacity(cfg.capacity),
+	plOpts := []yarpcpeerlist.ListOption{
+		yarpcpeerlist.Capacity(cfg.capacity),
 	}
 	if !cfg.shuffle {
-		plOpts = append(plOpts, peerlist.NoShuffle())
+		plOpts = append(plOpts, yarpcpeerlist.NoShuffle())
 	}
 
 	return &List{
-		List: peerlist.New(
+		List: yarpcpeerlist.New(
 			"fewest-pending-requests",
-			transport,
+			dialer,
 			&pendingHeap{},
 			plOpts...,
 		),
@@ -74,5 +74,5 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 
 // List is a PeerList which rotates which peers are to be selected in a circle
 type List struct {
-	*peerlist.List
+	*yarpcpeerlist.List
 }

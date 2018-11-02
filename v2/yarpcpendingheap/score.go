@@ -21,26 +21,26 @@
 package yarpcpendingheap
 
 import (
-	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/v2"
 )
 
 // peerScore is a book-keeping object for each retained peer
 type peerScore struct {
 	// immutable after creation
-	peer peer.StatusPeer
+	peer yarpc.StatusPeer
 	heap *pendingHeap
 	// mutable
-	status peer.Status
+	status yarpc.Status
 	score  int64
 	index  int // index in the peer list.
 	last   int // snapshot of the heap's incrementing counter.
 }
 
-func (ps *peerScore) NotifyStatusChanged(_ peer.Identifier) {
+func (ps *peerScore) NotifyStatusChanged(_ yarpc.Identifier) {
 	ps.heap.notifyStatusChanged(ps)
 }
 
-func scorePeer(p peer.StatusPeer) int64 {
+func scorePeer(p yarpc.StatusPeer) int64 {
 	status := p.Status()
 	score := int64(status.PendingRequestCount)
 	return score
