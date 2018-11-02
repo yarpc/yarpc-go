@@ -79,7 +79,6 @@ type Inbound struct {
 
 // Start starts this Inbound.
 func (i *Inbound) Start(_ context.Context) error {
-
 	if i.Logger == nil {
 		i.Logger = zap.NewNop()
 	}
