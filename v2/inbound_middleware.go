@@ -35,7 +35,7 @@ import (
 // UnaryInboundTransportMiddleware is re-used across requests and MAY be called multiple
 // times for the same request.
 type UnaryInboundTransportMiddleware interface {
-	Handle(ctx context.Context, req *Request, buf *Buffer, handler UnaryTransportHandler) (*Response, *Buffer, error)
+	Handle(ctx context.Context, req *Request, reqBuf *Buffer, handler UnaryTransportHandler) (*Response, *Buffer, error)
 }
 
 // NopUnaryInboundTransportMiddleware is an inbound middleware that does not do anything special. It
@@ -44,8 +44,8 @@ var NopUnaryInboundTransportMiddleware UnaryInboundTransportMiddleware = nopUnar
 
 type nopUnaryInboundTransportMiddleware struct{}
 
-func (nopUnaryInboundTransportMiddleware) Handle(ctx context.Context, req *Request, buf *Buffer, handler UnaryTransportHandler) (*Response, *Buffer, error) {
-	return handler.Handle(ctx, req, buf)
+func (nopUnaryInboundTransportMiddleware) Handle(ctx context.Context, req *Request, reqBuf *Buffer, handler UnaryTransportHandler) (*Response, *Buffer, error) {
+	return handler.Handle(ctx, req, reqBuf)
 }
 
 type unaryTransportHandlerWithMiddleware struct {
@@ -53,8 +53,8 @@ type unaryTransportHandlerWithMiddleware struct {
 	i UnaryInboundTransportMiddleware
 }
 
-func (h unaryTransportHandlerWithMiddleware) Handle(ctx context.Context, req *Request, buf *Buffer) (*Response, *Buffer, error) {
-	return h.i.Handle(ctx, req, buf, h.h)
+func (h unaryTransportHandlerWithMiddleware) Handle(ctx context.Context, req *Request, reqBuf *Buffer) (*Response, *Buffer, error) {
+	return h.i.Handle(ctx, req, reqBuf, h.h)
 }
 
 // ApplyUnaryInboundTransportMiddleware applies the given InboundMiddleware to the given UnaryTransportHandler.
@@ -69,8 +69,8 @@ func ApplyUnaryInboundTransportMiddleware(handler UnaryTransportHandler, middlew
 type UnaryInboundTransportMiddlewareFunc func(context.Context, *Request, *Buffer, UnaryTransportHandler) (*Response, *Buffer, error)
 
 // Handle for UnaryInboundTransportMiddlewareFunc
-func (f UnaryInboundTransportMiddlewareFunc) Handle(ctx context.Context, req *Request, buf *Buffer, handler UnaryTransportHandler) (*Response, *Buffer, error) {
-	return f(ctx, req, buf, handler)
+func (f UnaryInboundTransportMiddlewareFunc) Handle(ctx context.Context, req *Request, reqBuf *Buffer, handler UnaryTransportHandler) (*Response, *Buffer, error) {
+	return f(ctx, req, reqBuf, handler)
 }
 
 // UnaryInboundEncodingMiddleware defines an encoding-level middleware for handlers.
@@ -86,7 +86,7 @@ func (f UnaryInboundTransportMiddlewareFunc) Handle(ctx context.Context, req *Re
 // UnaryInboundEncodingMiddleware is re-used across requests and MAY be called multiple
 // times for the same request.
 type UnaryInboundEncodingMiddleware interface {
-	Handle(ctx context.Context, buf interface{}, h UnaryEncodingHandler) (interface{}, error)
+	Handle(ctx context.Context, reqBuf interface{}, h UnaryEncodingHandler) (interface{}, error)
 }
 
 // NopUnaryInboundEncodingMiddleware is an inbound middleware that does not do anything special. It
@@ -95,8 +95,8 @@ var NopUnaryInboundEncodingMiddleware UnaryInboundEncodingMiddleware = nopUnaryI
 
 type nopUnaryInboundEncodingMiddleware struct{}
 
-func (nopUnaryInboundEncodingMiddleware) Handle(ctx context.Context, buf interface{}, handler UnaryEncodingHandler) (interface{}, error) {
-	return handler.Handle(ctx, buf)
+func (nopUnaryInboundEncodingMiddleware) Handle(ctx context.Context, reqBuf interface{}, handler UnaryEncodingHandler) (interface{}, error) {
+	return handler.Handle(ctx, reqBuf)
 }
 
 type unaryEncodingHandlerWithMiddleware struct {
@@ -104,8 +104,8 @@ type unaryEncodingHandlerWithMiddleware struct {
 	i UnaryInboundEncodingMiddleware
 }
 
-func (h unaryEncodingHandlerWithMiddleware) Handle(ctx context.Context, buf interface{}) (interface{}, error) {
-	return h.i.Handle(ctx, buf, h.h)
+func (h unaryEncodingHandlerWithMiddleware) Handle(ctx context.Context, reqBuf interface{}) (interface{}, error) {
+	return h.i.Handle(ctx, reqBuf, h.h)
 }
 
 // ApplyUnaryInboundEncodingMiddleware applies the given middleware to the given UnaryTransportHandler.
@@ -120,8 +120,8 @@ func ApplyUnaryInboundEncodingMiddleware(handler UnaryEncodingHandler, middlewar
 type UnaryInboundEncodingMiddlewareFunc func(context.Context, *Request, *Buffer, UnaryTransportHandler) (*Response, *Buffer, error)
 
 // Handle for UnaryInboundEncodingMiddlewareFunc
-func (f UnaryInboundEncodingMiddlewareFunc) Handle(ctx context.Context, req *Request, buf *Buffer, handler UnaryTransportHandler) (*Response, *Buffer, error) {
-	return f(ctx, req, buf, handler)
+func (f UnaryInboundEncodingMiddlewareFunc) Handle(ctx context.Context, req *Request, reqBuf *Buffer, handler UnaryTransportHandler) (*Response, *Buffer, error) {
+	return f(ctx, req, reqBuf, handler)
 }
 
 // StreamInboundTransportMiddleware defines a transport-level middleware for
