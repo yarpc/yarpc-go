@@ -28,19 +28,21 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/internal/internalguantlettest/proto/gen/proto"
-	"go.uber.org/yarpc/v2/yarpcprotobuf"
+	"go.uber.org/yarpc/v2/internal/internalgauntlettest/thrift/echo"
+	"go.uber.org/yarpc/v2/internal/internalgauntlettest/thrift/echo/echoclient"
+	"go.uber.org/yarpc/v2/internal/internalgauntlettest/thrift/echo/echoserver"
+	"go.uber.org/yarpc/v2/yarpcthrift"
 )
 
-type protoHandler struct{}
+type thriftHandler struct{}
 
-func protoProcedures() []yarpc.TransportProcedure {
-	return generatedpb.BuildEchoYARPCProcedures(protoHandler{})
+func thriftProcedures() []yarpc.TransportProcedure {
+	return echoserver.New(thriftHandler{})
 }
 
-func (protoHandler) Echo(ctx context.Context, request *generatedpb.EchoRequest) (*generatedpb.EchoResponse, error) {
+func (thriftHandler) Echo(ctx context.Context, request *echo.EchoRequest) (*echo.EchoResponse, error) {
 	call := yarpc.CallFromContext(ctx)
-	err := validateCallOptions(call, yarpcprotobuf.Encoding)
+	err := validateCallOptions(call, yarpcthrift.Encoding)
 	if err != nil {
 		return nil, err
 	}
@@ -50,18 +52,18 @@ func (protoHandler) Echo(ctx context.Context, request *generatedpb.EchoRequest) 
 		return nil, err
 	}
 
-	return &generatedpb.EchoResponse{Message: request.Message}, nil
+	return &echo.EchoResponse{Message: request.Message}, nil
 }
 
-func validateProto(t *testing.T, client yarpc.Client, callOptions []yarpc.CallOption) {
+func validateThrift(t *testing.T, client yarpc.Client, callOptions []yarpc.CallOption) {
 	msg := "hello world!! (╯°□°)╯︵ ┻━┻"
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	res, err := generatedpb.NewEchoYARPCClient(client).Echo(
+	res, err := echoclient.New(client).Echo(
 		ctx,
-		&generatedpb.EchoRequest{Message: msg},
+		&echo.EchoRequest{Message: msg},
 		callOptions...)
 
 	require.NoError(t, err, "error making call")

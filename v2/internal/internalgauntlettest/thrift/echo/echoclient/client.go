@@ -21,66 +21,64 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echoserver
+package echoclient
 
 import (
 	"context"
 	"go.uber.org/thriftrw/wire"
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/internal/internalguantlettest/thrift/echo"
+	"go.uber.org/yarpc/v2/internal/internalgauntlettest/thrift/echo"
 	"go.uber.org/yarpc/v2/yarpcthrift"
 )
 
-// Interface is the server-side interface for the Echo service.
+// Interface is a client for the Echo service.
 type Interface interface {
 	Echo(
 		ctx context.Context,
 		Request *echo.EchoRequest,
+		opts ...yarpc.CallOption,
 	) (*echo.EchoResponse, error)
 }
 
-// New prepares an implementation of the Echo service for
-// registration.
+// New builds a new client for the Echo service.
 //
-// 	handler := EchoHandler{}
-// 	dispatcher.Register(echoserver.New(handler))
-func New(impl Interface, opts ...yarpcthrift.RegisterOption) []yarpc.TransportProcedure {
-	h := handler{impl}
-	service := yarpcthrift.Service{
-		Name: "Echo",
-		Methods: []yarpcthrift.Method{
-
-			yarpcthrift.Method{
-				Name:         "Echo",
-				Handler:      yarpcthrift.Handler(h.Echo),
-				Signature:    "Echo(Request *echo.EchoRequest) (*echo.EchoResponse)",
-				ThriftModule: echo.ThriftModule,
-			},
-		},
+//  yarpcClient, err := yarpc.Provider.Client("echo")
+//  if err != nil {
+//	  return err
+//  }
+// 	client := echoclient.New(yarpcClient)
+func New(c yarpc.Client, opts ...yarpcthrift.ClientOption) Interface {
+	return client{
+		c: yarpcthrift.New(
+			c,
+			"Echo",
+			opts...),
 	}
-
-	procedures := make([]yarpc.TransportProcedure, 0, 1)
-	procedures = append(procedures, yarpcthrift.BuildProcedures(service, opts...)...)
-	return procedures
 }
 
-type handler struct{ impl Interface }
+type client struct {
+	c yarpcthrift.Client
+}
 
-func (h handler) Echo(ctx context.Context, body wire.Value) (yarpcthrift.Response, error) {
-	var args echo.Echo_Echo_Args
-	if err := args.FromWire(body); err != nil {
-		return yarpcthrift.Response{}, err
+func (c client) Echo(
+	ctx context.Context,
+	_Request *echo.EchoRequest,
+	opts ...yarpc.CallOption,
+) (success *echo.EchoResponse, err error) {
+
+	args := echo.Echo_Echo_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
 	}
 
-	success, err := h.impl.Echo(ctx, args.Request)
-
-	hadError := err != nil
-	result, err := echo.Echo_Echo_Helper.WrapResponse(success, err)
-
-	var response yarpcthrift.Response
-	if err == nil {
-		response.IsApplicationError = hadError
-		response.Body = result
+	var result echo.Echo_Echo_Result
+	if err = result.FromWire(body); err != nil {
+		return
 	}
-	return response, err
+
+	success, err = echo.Echo_Echo_Helper.UnwrapResponse(&result)
+	return
 }

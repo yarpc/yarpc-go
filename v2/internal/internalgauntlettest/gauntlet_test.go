@@ -156,7 +156,7 @@ func newOutbounds(t *testing.T, transport string, addr string, choosers []string
 	return outbounds, stop
 }
 
-func TestGuantlet(t *testing.T) {
+func TestGauntlet(t *testing.T) {
 	transports := []string{_http, _gRPC, _tchannel}
 	encodings := []string{_json, _thrift, _proto}
 	choosers := []string{_random, _roundrobin}

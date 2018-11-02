@@ -27,8 +27,8 @@ import (
 	"context"
 	"github.com/golang/mock/gomock"
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/internal/internalguantlettest/thrift/echo"
-	"go.uber.org/yarpc/v2/internal/internalguantlettest/thrift/echo/echoclient"
+	"go.uber.org/yarpc/v2/internal/internalgauntlettest/thrift/echo"
+	"go.uber.org/yarpc/v2/internal/internalgauntlettest/thrift/echo/echoclient"
 )
 
 // MockClient implements a gomock-compatible mock client for service

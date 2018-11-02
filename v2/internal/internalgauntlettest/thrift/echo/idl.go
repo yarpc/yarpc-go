@@ -28,7 +28,7 @@ import "go.uber.org/thriftrw/thriftreflect"
 // ThriftModule represents the IDL file used to generate this package.
 var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "echo",
-	Package:  "go.uber.org/yarpc/v2/internal/internalguantlettest/thrift/echo",
+	Package:  "go.uber.org/yarpc/v2/internal/internalgauntlettest/thrift/echo",
 	FilePath: "echo.thrift",
 	SHA1:     "10e1b7d238b12d203b9745ea2af54576057f0808",
 	Raw:      rawIDL,
