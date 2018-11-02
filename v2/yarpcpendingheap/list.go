@@ -25,34 +25,40 @@ import (
 	"go.uber.org/yarpc/v2/yarpcpeerlist"
 )
 
-type listConfig struct {
+type listOptions struct {
 	capacity int
 	shuffle  bool
 }
 
-var defaultListConfig = listConfig{
+var defaultListOptions = listOptions{
 	capacity: 10,
 	shuffle:  true,
 }
 
 // ListOption customizes the behavior of a pending requests peer heap.
-type ListOption func(*listConfig)
+type ListOption interface {
+	apply(*listOptions)
+}
+
+type listOptionFunc func(*listOptions)
+
+func (f listOptionFunc) apply(options *listOptions) { f(options) }
 
 // Capacity specifies the default capacity of the underlying
 // data structures for this list.
 //
 // Defaults to 10.
 func Capacity(capacity int) ListOption {
-	return func(c *listConfig) {
+	return listOptionFunc(func(c *listOptions) {
 		c.capacity = capacity
-	}
+	})
 }
 
 // New creates a new pending heap.
 func New(dialer yarpc.Dialer, opts ...ListOption) *List {
-	cfg := defaultListConfig
+	cfg := defaultListOptions
 	for _, o := range opts {
-		o(&cfg)
+		o.apply(&cfg)
 	}
 
 	plOpts := []yarpcpeerlist.ListOption{

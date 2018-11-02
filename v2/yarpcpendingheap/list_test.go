@@ -346,7 +346,7 @@ func TestPeerHeapList(t *testing.T) {
 			yarpctest.ExpectPeerRetainsWithError(dialer, tt.errRetainedPeerIDs, tt.retainErr)
 			yarpctest.ExpectPeerReleases(dialer, tt.errReleasedPeerIDs, tt.releaseErr)
 
-			opts := []ListOption{Capacity(0), noShuffle}
+			opts := []ListOption{Capacity(0), noShuffle()}
 			pl := New(dialer, opts...)
 
 			deps := yarpctest.ListActionDeps{
@@ -373,6 +373,8 @@ func TestPeerHeapList(t *testing.T) {
 	}
 }
 
-var noShuffle ListOption = func(c *listConfig) {
-	c.shuffle = false
+func noShuffle() ListOption {
+	return listOptionFunc(func(options *listOptions) {
+		options.shuffle = false
+	})
 }
