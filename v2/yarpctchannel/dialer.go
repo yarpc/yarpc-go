@@ -81,9 +81,6 @@ var _ yarpc.Dialer = (*Dialer)(nil)
 
 // Start starts the TChannel dialer.
 func (d *Dialer) Start(ctx context.Context) error {
-	d.lock.Lock()
-	defer d.lock.Unlock()
-
 	chopts := tchannel.ChannelOptions{
 		Tracer:              d.Tracer,
 		OnPeerStatusChanged: d.onPeerStatusChanged,
