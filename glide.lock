@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-11-01T15:03:37.721636265Z
+updated: 2018-11-02T15:02:54.692633826Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -125,7 +125,7 @@ imports:
 - name: go.uber.org/atomic
   version: 1ea20fb1cbb1cc08cbd0d913a96dead89aa18289
 - name: go.uber.org/dig
-  version: 27eb30e15ef3e7f67cd86f2b65c618e3e308c104
+  version: bc5e6a1faffe87bfc9db86098fc01725d8d2a4c0
   subpackages:
   - internal/digreflect
   - internal/dot
@@ -172,7 +172,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: c44066c5c816ec500d459a2a324a753f78531ae0
+  version: c10e9556a7bc0e7c942242b606f0acf024ad5d6a
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -201,12 +201,12 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 45ff765b4815d34d8b80220fd05c79063b185ce1
+  version: 92b943e6bff73e0dfe9e975d94043d8f31067b06
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: b69ba1387ce2108ac9bc8e8e5e5a46e7d5c72313
+  version: c830210a61dfaa790e1920f8d0470fc27bc2efbe
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
