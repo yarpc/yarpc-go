@@ -22,6 +22,11 @@ package yarpc
 
 // Response is the low level response representation.
 type Response struct {
-	Headers          Headers
+	// Peer if present indicates the peer that handled an outbound request.
+	Peer Identifier
+
+	// Headers are response headers or trailers.
+	Headers Headers
+
 	ApplicationError bool
 }

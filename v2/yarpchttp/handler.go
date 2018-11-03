@@ -43,6 +43,7 @@ func popHeader(h http.Header, n string) string {
 // handler adapts a yarpc.Handler into a handler for net/http.
 type handler struct {
 	router              yarpc.Router
+	addr                string
 	tracer              opentracing.Tracer
 	grabHeaders         map[string]struct{}
 	legacyResponseError bool
@@ -119,6 +120,10 @@ func (h handler) callHandler(
 		Headers:         applicationHeaders.FromHTTPHeaders(httpReq.Header, yarpc.Headers{}),
 	}
 
+	if addr := popHeader(httpReq.Header, PeerHeader); addr != "" {
+		req.Peer = yarpc.Address(addr)
+	}
+
 	reqBuf, err := readCloserToBuffer(httpReq.Body)
 	if err != nil {
 		return nil, nil, err
@@ -171,8 +176,11 @@ func (h handler) callHandler(
 	}
 
 	if contentType := getContentType(req.Encoding); contentType != "" {
-		responseWriter.WriteSystemHeader("Content-Type", contentType)
+		responseWriter.WriteSystemHeader(ContentTypeHeader, contentType)
 	}
+
+	responseWriter.WriteSystemHeader(PeerHeader, h.addr)
+
 	return res, resBuf, nil
 }
 

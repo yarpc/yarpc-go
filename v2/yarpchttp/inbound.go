@@ -120,13 +120,15 @@ func (i *Inbound) Start(_ context.Context) error {
 		logger = i.Logger
 	}
 
-	var httpHandler http.Handler = handler{
+	handler := handler{
 		router:              i.Router,
 		grabHeaders:         grabHeaders,
 		legacyResponseError: i.legacyResponseError,
 		logger:              logger,
 		tracer:              tracer,
 	}
+
+	var httpHandler http.Handler = handler
 
 	if i.Interceptor != nil {
 		httpHandler = i.Interceptor(httpHandler)
@@ -153,11 +155,12 @@ func (i *Inbound) Start(_ context.Context) error {
 		}
 	}
 
+	handler.addr = i.Listener.Addr().String()
+
 	i.server = internalhttp.NewHTTPServer(server)
 	go i.server.Run(i.Listener)
 
-	addr := i.Listener.Addr().String()
-	logger.Info("started HTTP inbound", zap.String("address", addr))
+	logger.Info("started HTTP inbound", zap.Stringer("address", i.Listener.Addr()))
 	if len(i.Router.Procedures()) == 0 {
 		logger.Warn("no procedures specified for HTTP inbound")
 	}

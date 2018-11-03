@@ -153,22 +153,16 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*
 	var onFinish func(error)
 	var err error
 
-	if o.Chooser != nil {
+	if req.Peer != nil {
+		peer, onFinish, err = o.getEphemeralPeer(req.Peer)
+	} else if o.Chooser != nil {
 		peer, onFinish, err = o.Chooser.Choose(ctx, req)
 		if err != nil {
 			return nil, nil, err
 		}
 	} else if o.Dialer != nil && o.URL != nil {
 		id := yarpc.Address(o.URL.Host)
-		peer, err = o.Dialer.RetainPeer(id, yarpc.NopSubscriber)
-		if err != nil {
-			return nil, nil, err
-		}
-		err = o.Dialer.ReleasePeer(id, yarpc.NopSubscriber)
-		if err != nil {
-			return nil, nil, err
-		}
-		onFinish = nopFinish
+		peer, onFinish, err = o.getEphemeralPeer(id)
 	} else {
 		return nil, nil, yarpcerror.FailedPreconditionErrorf("HTTP Outbound must have either Chooser or Dialer and URL to make a Call")
 	}
@@ -182,6 +176,18 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*
 	}
 
 	return hp, onFinish, nil
+}
+
+func (o *Outbound) getEphemeralPeer(id yarpc.Identifier) (yarpc.Peer, func(error), error) {
+	peer, err := o.Dialer.RetainPeer(id, yarpc.NopSubscriber)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = o.Dialer.ReleasePeer(id, yarpc.NopSubscriber)
+	if err != nil {
+		return nil, nil, err
+	}
+	return peer, nopFinish, nil
 }
 
 func nopFinish(error) {}
@@ -260,6 +266,9 @@ func (o *Outbound) withCoreHeaders(httpReq *http.Request, req *yarpc.Request, tt
 	}
 	if req.RoutingDelegate != "" {
 		httpReq.Header.Set(RoutingDelegateHeader, req.RoutingDelegate)
+	}
+	if req.Peer != nil {
+		httpReq.Header.Set(PeerHeader, req.Peer.Identifier())
 	}
 
 	encoding := string(req.Encoding)

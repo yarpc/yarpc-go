@@ -31,6 +31,10 @@ var (
 
 // HTTP headers used in requests and responses to send YARPC metadata.
 const (
+	// PeerHeader is the header key for carrying the return address for a
+	// request or response.
+	PeerHeader = "Rpc-Peer"
+
 	// Name of the service sending the request. This corresponds to the
 	// Request.Caller attribute.
 	CallerHeader = "Rpc-Caller"
@@ -86,6 +90,9 @@ const (
 	// feature is supported on the server. If any non-empty value is set,
 	// this indicates true.
 	BothResponseErrorHeader = "Rpc-Both-Response-Error"
+
+	// ContentTypeHeader is the key of the HTTP Content-Type header.
+	ContentTypeHeader = "Content-Type"
 )
 
 // Valid values for the Rpc-Status header.

@@ -33,7 +33,7 @@ import (
 func NewAbstractPeer(pid yarpc.Identifier) *AbstractPeer {
 	p := &AbstractPeer{
 		pid:         pid,
-		subscribers: make(map[yarpc.Subscriber]struct{}),
+		subscribers: make(map[yarpc.Subscriber]int),
 	}
 	p.connectionStatus.Store(int32(yarpc.Unavailable))
 	return p
@@ -44,7 +44,8 @@ type AbstractPeer struct {
 	lock sync.RWMutex
 
 	pid              yarpc.Identifier
-	subscribers      map[yarpc.Subscriber]struct{}
+	subscribers      map[yarpc.Subscriber]int
+	numSubscribers   atomic.Int32
 	pending          atomic.Int32
 	connectionStatus atomic.Int32
 }
@@ -57,7 +58,8 @@ func (p *AbstractPeer) Identifier() string {
 // Subscribe adds a subscriber to the peer's subscriber map
 func (p *AbstractPeer) Subscribe(sub yarpc.Subscriber) {
 	p.lock.Lock()
-	p.subscribers[sub] = struct{}{}
+	p.subscribers[sub]++
+	p.numSubscribers.Inc()
 	p.lock.Unlock()
 }
 
@@ -72,16 +74,17 @@ func (p *AbstractPeer) Unsubscribe(sub yarpc.Subscriber) error {
 		}
 	}
 
-	delete(p.subscribers, sub)
+	p.subscribers[sub]--
+	if p.subscribers[sub] == 0 {
+		delete(p.subscribers, sub)
+	}
+	p.numSubscribers.Dec()
 	return nil
 }
 
 // NumSubscribers returns the number of subscriptions attached to the peer
 func (p *AbstractPeer) NumSubscribers() int {
-	p.lock.RLock()
-	subs := len(p.subscribers)
-	p.lock.RUnlock()
-	return subs
+	return int(p.numSubscribers.Load())
 }
 
 // Status returns the current status of the Peer

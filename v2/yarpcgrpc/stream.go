@@ -77,19 +77,21 @@ func (ss *serverStream) ReceiveMessage(_ context.Context) (*yarpc.StreamMessage,
 }
 
 type clientStream struct {
-	ctx    context.Context
-	req    *yarpc.Request
-	stream grpc.ClientStream
-	span   opentracing.Span
-	closed atomic.Bool
+	ctx      context.Context
+	req      *yarpc.Request
+	onFinish func(error)
+	stream   grpc.ClientStream
+	span     opentracing.Span
+	closed   atomic.Bool
 }
 
-func newClientStream(ctx context.Context, req *yarpc.Request, stream grpc.ClientStream, span opentracing.Span) *clientStream {
+func newClientStream(ctx context.Context, req *yarpc.Request, onFinish func(error), stream grpc.ClientStream, span opentracing.Span) *clientStream {
 	return &clientStream{
-		ctx:    ctx,
-		req:    req,
-		stream: stream,
-		span:   span,
+		ctx:      ctx,
+		req:      req,
+		onFinish: onFinish,
+		stream:   stream,
+		span:     span,
 	}
 }
 

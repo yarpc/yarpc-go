@@ -30,6 +30,10 @@ import (
 
 // Request is the low level request representation.
 type Request struct {
+	// Peer if present indicates the destination address for an outbound
+	// request or the return address of an inbound request.
+	Peer Identifier
+
 	// Name of the service making the request.
 	Caller string
 

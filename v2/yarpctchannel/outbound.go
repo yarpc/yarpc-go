@@ -173,21 +173,16 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*
 	var peer yarpc.Peer
 	var onFinish func(error)
 	var err error
-	if o.Chooser != nil {
+	if req.Peer != nil {
+		peer, onFinish, err = o.getEphemeralPeer(req.Peer)
+	} else if o.Chooser != nil {
 		peer, onFinish, err = o.Chooser.Choose(ctx, req)
 		if err != nil {
 			return nil, nil, err
 		}
 	} else if o.Dialer != nil && o.Addr != "" {
-		peer, err = o.Dialer.RetainPeer(yarpc.Address(o.Addr), yarpc.NopSubscriber)
-		if err != nil {
-			return nil, nil, err
-		}
-		err = o.Dialer.ReleasePeer(yarpc.Address(o.Addr), yarpc.NopSubscriber)
-		if err != nil {
-			return nil, nil, err
-		}
-		onFinish = nopFinish
+		id := yarpc.Address(o.Addr)
+		peer, onFinish, err = o.getEphemeralPeer(id)
 	}
 
 	tchannelPeer, ok := peer.(*tchannelPeer)
@@ -199,6 +194,18 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*
 	}
 
 	return tchannelPeer, onFinish, nil
+}
+
+func (o *Outbound) getEphemeralPeer(id yarpc.Identifier) (yarpc.Peer, func(error), error) {
+	peer, err := o.Dialer.RetainPeer(id, yarpc.NopSubscriber)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = o.Dialer.ReleasePeer(id, yarpc.NopSubscriber)
+	if err != nil {
+		return nil, nil, err
+	}
+	return peer, nopFinish, nil
 }
 
 func nopFinish(error) {}
