@@ -80,10 +80,11 @@ mockgen -destination=api/transport/transporttest/stream.go -package=transporttes
 mockgen -destination=api/transport/transporttest/transport.go -package=transporttest go.uber.org/yarpc/api/transport Transport
 
 # v2 mocks
-mockgen -destination=v2/yarpctest/mock_middleware.go -package=yarpctest go.uber.org/yarpc/v2 RouterMiddleware,UnaryInboundTransportMiddleware,UnaryOutboundTransportMiddleware,StreamInboundTransportMiddleware,StreamOutboundTransportMiddleware
-mockgen -destination=v2/yarpctest/mock_handler.go -package=yarpctest go.uber.org/yarpc/v2 UnaryTransportHandler,StreamTransportHandler,UnaryEncodingHandler
+mockgen -destination=v2/yarpctest/mock_middleware.go -package=yarpctest go.uber.org/yarpc/v2 RouterMiddleware,UnaryInboundTransportMiddleware,UnaryInboundEncodingMiddleware,UnaryOutboundTransportMiddleware,StreamInboundTransportMiddleware,StreamOutboundTransportMiddleware
+mockgen -destination=v2/yarpctest/mock_handler.go -package=yarpctest go.uber.org/yarpc/v2 UnaryTransportHandler,StreamTransportHandler,UnaryEncodingHandler,StreamEncodingHandler
 mockgen -destination=v2/yarpctest/mock_outbound.go -package=yarpctest go.uber.org/yarpc/v2 UnaryOutbound,StreamOutbound
 mockgen -destination=v2/yarpctest/mock_stream.go -package=yarpctest go.uber.org/yarpc/v2 Stream,StreamCloser
+mockgen -destination=v2/yarpctest/mock_router.go -package=yarpctest go.uber.org/yarpc/v2 Router,InboundCodec
 
 generate_stringer ConnectionStatus ./api/peer
 generate_stringer State ./pkg/lifecycle

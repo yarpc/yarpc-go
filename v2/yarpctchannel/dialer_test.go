@@ -61,10 +61,13 @@ func TestDialerBasics(t *testing.T) {
 		Note string
 	}
 
-	handleEcho := yarpcjson.Procedure("echo", func(ctx context.Context, req *Payload) (*Payload, error) {
-		t.Logf("handle echo\n")
-		return req, nil
-	})
+	handleEcho, err := yarpcrouter.EncodingToTransportProcedures(
+		yarpcjson.Procedure("echo", func(ctx context.Context, req *Payload) (*Payload, error) {
+			t.Logf("handle echo\n")
+			return req, nil
+		}),
+	)
+	require.NoError(t, err)
 
 	router := yarpcrouter.NewMapRouter("service", handleEcho)
 
@@ -118,13 +121,16 @@ func TestDialerBellsAndWhistles(t *testing.T) {
 		Note string
 	}
 
-	handleEcho := yarpcjson.Procedure("echo", func(ctx context.Context, req *Payload) (*Payload, error) {
-		t.Logf("handle echo\n")
-		// This time echoing a header.
-		call := yarpc.CallFromContext(ctx)
-		call.WriteResponseHeader("header", call.Header("header"))
-		return req, nil
-	})
+	handleEcho, err := yarpcrouter.EncodingToTransportProcedures(
+		yarpcjson.Procedure("echo", func(ctx context.Context, req *Payload) (*Payload, error) {
+			t.Logf("handle echo\n")
+			// This time echoing a header.
+			call := yarpc.CallFromContext(ctx)
+			call.WriteResponseHeader("header", call.Header("header"))
+			return req, nil
+		}),
+	)
+	require.NoError(t, err)
 
 	router := yarpcrouter.NewMapRouter("service", handleEcho)
 
@@ -167,7 +173,7 @@ func TestDialerBellsAndWhistles(t *testing.T) {
 	req := &Payload{Note: "forthcoming"}
 	res := &Payload{}
 	var headers map[string]string
-	err := client.Call(
+	err = client.Call(
 		ctx,
 		"echo",
 		req,
@@ -189,13 +195,16 @@ func TestPeerListChanges(t *testing.T) {
 		Note string
 	}
 
-	handleEcho := yarpcjson.Procedure("echo", func(ctx context.Context, req *Payload) (*Payload, error) {
-		t.Logf("handle echo\n")
-		// This time echoing a header.
-		call := yarpc.CallFromContext(ctx)
-		call.WriteResponseHeader("header", call.Header("header"))
-		return req, nil
-	})
+	handleEcho, err := yarpcrouter.EncodingToTransportProcedures(
+		yarpcjson.Procedure("echo", func(ctx context.Context, req *Payload) (*Payload, error) {
+			t.Logf("handle echo\n")
+			// This time echoing a header.
+			call := yarpc.CallFromContext(ctx)
+			call.WriteResponseHeader("header", call.Header("header"))
+			return req, nil
+		}),
+	)
+	require.NoError(t, err)
 
 	router := yarpcrouter.NewMapRouter("service", handleEcho)
 
@@ -322,9 +331,12 @@ func TestErrors(t *testing.T) {
 				Note string
 			}
 
-			handleEcho := yarpcjson.Procedure("echo", func(ctx context.Context, req *Payload) (*Payload, error) {
-				return nil, handlerErr
-			})
+			handleEcho, err := yarpcrouter.EncodingToTransportProcedures(
+				yarpcjson.Procedure("echo", func(ctx context.Context, req *Payload) (*Payload, error) {
+					return nil, handlerErr
+				}),
+			)
+			require.NoError(t, err)
 
 			router := yarpcrouter.NewMapRouter("service", handleEcho)
 

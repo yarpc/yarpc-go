@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"reflect"
 
-	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2"
 )
 
 var (
@@ -34,53 +34,39 @@ var (
 	_interfaceEmptyType = reflect.TypeOf((*interface{})(nil)).Elem()
 )
 
-// Procedure builds a TransportProcedure from the given JSON handler. handler must be
+// Procedure builds an EncodingProcedure from the given JSON handler. The handler must be
 // a function with a signature similar to,
 //
 // 	f(ctx context.Context, body $reqBody) ($resBody, error)
 //
-// Where $reqBody and $resBody are a map[string]interface{} or pointers to
-// structs.
-func Procedure(name string, handler interface{}) []yarpc.TransportProcedure {
-	return []yarpc.TransportProcedure{
+// Where $reqBody and $resBody are of type map[string]interface{}, interface{}, or
+// struct pointers. If the handler's signature is not valid, Procedure will panic.
+func Procedure(name string, handler interface{}) []yarpc.EncodingProcedure {
+	verifyUnarySignature(name, reflect.TypeOf(handler))
+	return []yarpc.EncodingProcedure{
 		{
 			Name: name,
-			HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(
+			HandlerSpec: yarpc.NewUnaryEncodingHandlerSpec(
 				wrapUnaryHandler(name, handler),
 			),
 			Encoding: Encoding,
+			Codec:    newCodec(handler),
 		},
 	}
 }
 
 // wrapUnaryHandler takes a valid JSON handler function and converts it into a
-// yarpc.UnaryTransportHandler.
-func wrapUnaryHandler(name string, handler interface{}) yarpc.UnaryTransportHandler {
-	reqBodyType := verifyUnarySignature(name, reflect.TypeOf(handler))
-	return newJSONHandler(reqBodyType, handler)
-}
-
-func newJSONHandler(reqBodyType reflect.Type, handler interface{}) jsonHandler {
-	var r requestReader
-	if reqBodyType == _interfaceEmptyType {
-		r = ifaceEmptyReader{}
-	} else if reqBodyType.Kind() == reflect.Map {
-		r = mapReader{reqBodyType}
-	} else {
-		// struct ptr
-		r = structReader{reqBodyType.Elem()}
-	}
-
+// yarpc.UnaryEncodingHandler.
+func wrapUnaryHandler(name string, handler interface{}) yarpc.UnaryEncodingHandler {
 	return jsonHandler{
-		reader:  r,
 		handler: reflect.ValueOf(handler),
 	}
 }
 
 // verifyUnarySignature verifies that the given type matches what we expect from
-// JSON unary handlers and returns the request type.
-func verifyUnarySignature(n string, t reflect.Type) reflect.Type {
-	reqBodyType := verifyInputSignature(n, t)
+// JSON unary handlers.
+func verifyUnarySignature(n string, t reflect.Type) {
+	verifyInputSignature(n, t)
 
 	if t.NumOut() != 2 {
 		panic(fmt.Sprintf(
@@ -105,13 +91,11 @@ func verifyUnarySignature(n string, t reflect.Type) reflect.Type {
 			n, resBodyType,
 		))
 	}
-
-	return reqBodyType
 }
 
 // verifyInputSignature verifies that the given input argument types match
-// what we expect from JSON handlers and returns the request body type.
-func verifyInputSignature(n string, t reflect.Type) reflect.Type {
+// what we expect from JSON handlers.
+func verifyInputSignature(n string, t reflect.Type) {
 	if t.Kind() != reflect.Func {
 		panic(fmt.Sprintf(
 			"handler for %q is not a function but a %v", n, t.Kind(),
@@ -142,8 +126,6 @@ func verifyInputSignature(n string, t reflect.Type) reflect.Type {
 			n, reqBodyType,
 		))
 	}
-
-	return reqBodyType
 }
 
 // isValidReqResType checks if the given type is a pointer to a struct, a

@@ -22,12 +22,14 @@ package yarpcrouter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
@@ -101,7 +103,131 @@ func TestMapRouter(t *testing.T) {
 	}
 }
 
-func TestMapRouter_Procedures(t *testing.T) {
+func TestNewMapRouterWithEncodingProceduresHappyCase(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	handler := yarpctest.NewMockUnaryEncodingHandler(mockCtrl)
+	handler.EXPECT().Handle(gomock.Any(), gomock.Any()).Return(nil, nil)
+	spec := yarpc.NewUnaryEncodingHandlerSpec(handler)
+	codec := yarpctest.NewMockInboundCodec(mockCtrl)
+	codec.EXPECT().Decode(gomock.Any()).Return(nil, nil)
+	codec.EXPECT().Encode(gomock.Any()).Return(nil, nil)
+
+	encodingProcedures := []yarpc.EncodingProcedure{
+		{
+			Name:        "happy_case",
+			HandlerSpec: spec,
+			Codec:       codec,
+		},
+	}
+
+	procedures, err := EncodingToTransportProcedures(encodingProcedures)
+	assert.NoError(t, err)
+	m := NewMapRouter("myservice", procedures)
+	transportProcedures := m.Procedures()
+
+	_, _, err = transportProcedures[0].HandlerSpec.Unary().Handle(context.Background(), nil, nil)
+	assert.NoError(t, err)
+}
+
+func TestNewMapRouterWithEncodingProceduresDecodeError(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	handler := yarpctest.NewMockUnaryEncodingHandler(mockCtrl)
+	spec := yarpc.NewUnaryEncodingHandlerSpec(handler)
+	codec := yarpctest.NewMockInboundCodec(mockCtrl)
+	codec.EXPECT().Decode(gomock.Any()).Return(nil, errors.New("some_error"))
+
+	encodingProcedures := []yarpc.EncodingProcedure{
+		{
+			Name:        "decode_err",
+			HandlerSpec: spec,
+			Codec:       codec,
+		},
+	}
+	procedures, err := EncodingToTransportProcedures(encodingProcedures)
+	assert.NoError(t, err)
+	m := NewMapRouter("myservice", procedures)
+	transportProcedures := m.Procedures()
+	require.Len(t, m.Procedures(), 1)
+
+	_, _, err = transportProcedures[0].HandlerSpec.Unary().Handle(context.Background(), nil, nil)
+	assert.Error(t, err)
+}
+
+func TestNewMapRouterWithEncodingProceduresHandlerError(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	handler := yarpctest.NewMockUnaryEncodingHandler(mockCtrl)
+	handler.EXPECT().Handle(gomock.Any(), gomock.Any()).Return(nil, errors.New("some_error"))
+	spec := yarpc.NewUnaryEncodingHandlerSpec(handler)
+	codec := yarpctest.NewMockInboundCodec(mockCtrl)
+	codec.EXPECT().Decode(gomock.Any()).Return(nil, nil)
+	codec.EXPECT().Encode(gomock.Any()).Return(nil, nil)
+
+	encodingProcedures := []yarpc.EncodingProcedure{
+		{
+			Name:        "handler_err",
+			HandlerSpec: spec,
+			Codec:       codec,
+		},
+	}
+	procedures, err := EncodingToTransportProcedures(encodingProcedures)
+	assert.NoError(t, err)
+	m := NewMapRouter("myservice", procedures)
+	transportProcedures := m.Procedures()
+
+	_, _, err = transportProcedures[0].HandlerSpec.Unary().Handle(context.Background(), nil, nil)
+	assert.Error(t, err)
+}
+
+func TestNewMapRouterWithEncodingProceduresEncodeError(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	handler := yarpctest.NewMockUnaryEncodingHandler(mockCtrl)
+	handler.EXPECT().Handle(gomock.Any(), gomock.Any()).Return(nil, nil)
+	spec := yarpc.NewUnaryEncodingHandlerSpec(handler)
+	codec := yarpctest.NewMockInboundCodec(mockCtrl)
+	codec.EXPECT().Decode(gomock.Any()).Return(nil, nil)
+	codec.EXPECT().Encode(gomock.Any()).Return(nil, errors.New("some_error"))
+
+	encodingProcedures := []yarpc.EncodingProcedure{
+		{
+			Name:        "encode_err",
+			HandlerSpec: spec,
+			Codec:       codec,
+		},
+	}
+	procedures, err := EncodingToTransportProcedures(encodingProcedures)
+	assert.NoError(t, err)
+	m := NewMapRouter("myservice", procedures)
+	transportProcedures := m.Procedures()
+
+	_, _, err = transportProcedures[0].HandlerSpec.Unary().Handle(context.Background(), nil, nil)
+	assert.Error(t, err)
+}
+
+func TestNewMapRouterWithEncodingProceduresOnlyAllowUnaryType(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	nonUnaryHandler := yarpctest.NewMockStreamEncodingHandler(mockCtrl)
+	spec := yarpc.NewStreamEncodingHandlerSpec(nonUnaryHandler)
+	encodingProcedures := []yarpc.EncodingProcedure{
+		{
+			Name:        "only_unary",
+			HandlerSpec: spec,
+		},
+	}
+	_, err := EncodingToTransportProcedures(encodingProcedures)
+	assert.Error(t, err)
+}
+
+func TestMapRouterProcedures(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 

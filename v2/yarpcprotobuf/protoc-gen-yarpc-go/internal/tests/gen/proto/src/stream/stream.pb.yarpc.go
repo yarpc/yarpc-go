@@ -27,7 +27,6 @@ package streampb
 import (
 	context "context"
 	fmt "fmt"
-
 	fx "go.uber.org/fx"
 	yarpc "go.uber.org/yarpc/v2"
 	yarpcprotobuf "go.uber.org/yarpc/v2/yarpcprotobuf"

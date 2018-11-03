@@ -44,6 +44,7 @@ import (
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcjson"
+	"go.uber.org/yarpc/v2/yarpcrouter"
 	"go.uber.org/yarpc/v2/yarpctest"
 	"google.golang.org/grpc/credentials"
 )
@@ -251,7 +252,7 @@ type testEnv struct {
 }
 
 type testEnvOptions struct {
-	Procedures []yarpc.TransportProcedure
+	Procedures []yarpc.EncodingProcedure
 	Inbound    *Inbound
 	Outbound   *Outbound
 	Dialer     *Dialer
@@ -286,7 +287,11 @@ func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
 	}
 
 	inbound.Addr = "127.0.0.1:0"
-	inbound.Router = yarpctest.NewFakeRouter(options.Procedures)
+	procedures, err := yarpcrouter.EncodingToTransportProcedures(options.Procedures)
+	if err != nil {
+		return nil, err
+	}
+	inbound.Router = yarpctest.NewFakeRouter(procedures)
 	if err := inbound.Start(context.Background()); err != nil {
 		return nil, err
 	}
