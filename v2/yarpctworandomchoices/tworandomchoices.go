@@ -18,15 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tworandomchoices
+package yarpctworandomchoices
 
 import (
 	"context"
 	"math/rand"
 
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/api/transport"
-	peerlist "go.uber.org/yarpc/peer/peerlist/v2"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcpeerlist"
 )
 
 type twoRandomChoicesList struct {
@@ -41,9 +40,9 @@ func newTwoRandomChoicesList(cap int, source rand.Source) *twoRandomChoicesList 
 	}
 }
 
-var _ peerlist.Implementation = (*twoRandomChoicesList)(nil)
+var _ yarpcpeerlist.Implementation = (*twoRandomChoicesList)(nil)
 
-func (l *twoRandomChoicesList) Add(peer peer.StatusPeer, _ peer.Identifier) peer.Subscriber {
+func (l *twoRandomChoicesList) Add(peer yarpc.StatusPeer, _ yarpc.Identifier) yarpc.Subscriber {
 	index := len(l.subscribers)
 	l.subscribers = append(l.subscribers, &subscriber{
 		index: index,
@@ -52,7 +51,7 @@ func (l *twoRandomChoicesList) Add(peer peer.StatusPeer, _ peer.Identifier) peer
 	return l.subscribers[index]
 }
 
-func (l *twoRandomChoicesList) Remove(peer peer.StatusPeer, _ peer.Identifier, ps peer.Subscriber) {
+func (l *twoRandomChoicesList) Remove(peer yarpc.StatusPeer, _ yarpc.Identifier, ps yarpc.Subscriber) {
 	sub, ok := ps.(*subscriber)
 	if !ok || len(l.subscribers) == 0 {
 		return
@@ -64,7 +63,7 @@ func (l *twoRandomChoicesList) Remove(peer peer.StatusPeer, _ peer.Identifier, p
 	l.subscribers = l.subscribers[0:last]
 }
 
-func (l *twoRandomChoicesList) Choose(_ context.Context, _ *transport.Request) peer.StatusPeer {
+func (l *twoRandomChoicesList) Choose(_ context.Context, _ *yarpc.Request) yarpc.StatusPeer {
 	numSubs := len(l.subscribers)
 	if numSubs == 0 {
 		return nil
@@ -101,9 +100,9 @@ func (l *twoRandomChoicesList) IsRunning() bool {
 
 type subscriber struct {
 	index int
-	peer  peer.StatusPeer
+	peer  yarpc.StatusPeer
 }
 
-var _ peer.Subscriber = (*subscriber)(nil)
+var _ yarpc.Subscriber = (*subscriber)(nil)
 
-func (*subscriber) NotifyStatusChanged(peer.Identifier) {}
+func (*subscriber) NotifyStatusChanged(yarpc.Identifier) {}

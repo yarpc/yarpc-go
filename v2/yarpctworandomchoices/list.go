@@ -18,14 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tworandomchoices
+package yarpctworandomchoices
 
 import (
 	"math/rand"
 	"time"
 
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/peer/peerlist/v2"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcpeerlist"
 )
 
 type listOptions struct {
@@ -72,7 +72,7 @@ func Source(source rand.Source) ListOption {
 }
 
 // New creates a new fewest pending requests of two random peers peer list.
-func New(transport peer.Transport, opts ...ListOption) *List {
+func New(dialer yarpc.Dialer, opts ...ListOption) *List {
 	options := defaultListOptions
 	for _, opt := range opts {
 		opt.apply(&options)
@@ -82,15 +82,15 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 		options.source = rand.NewSource(time.Now().UnixNano())
 	}
 
-	plOpts := []peerlist.ListOption{
-		peerlist.Capacity(options.capacity),
-		peerlist.NoShuffle(),
+	plOpts := []yarpcpeerlist.ListOption{
+		yarpcpeerlist.Capacity(options.capacity),
+		yarpcpeerlist.NoShuffle(),
 	}
 
 	return &List{
-		List: peerlist.New(
+		List: yarpcpeerlist.New(
 			"two-random-choices",
-			transport,
+			dialer,
 			newTwoRandomChoicesList(options.capacity, options.source),
 			plOpts...,
 		),
@@ -99,5 +99,5 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 
 // List is a PeerList that rotates which peers are to be selected randomly
 type List struct {
-	*peerlist.List
+	*yarpcpeerlist.List
 }
