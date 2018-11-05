@@ -86,18 +86,6 @@ func (l *twoRandomChoicesList) pending(index int) int {
 	return l.subscribers[index].peer.Status().PendingRequestCount
 }
 
-func (l *twoRandomChoicesList) Start() error {
-	return nil
-}
-
-func (l *twoRandomChoicesList) Stop() error {
-	return nil
-}
-
-func (l *twoRandomChoicesList) IsRunning() bool {
-	return true
-}
-
 type subscriber struct {
 	index int
 	peer  yarpc.StatusPeer
