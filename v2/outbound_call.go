@@ -33,6 +33,8 @@ import (
 // ResponseHeaders.
 type OutboundCall struct {
 	// request attributes to fill if non-nil
+	to              *Identifier
+	from            *Identifier
 	headers         []keyValuePair
 	shardKey        *string
 	routingKey      *string
@@ -70,6 +72,9 @@ func (c *OutboundCall) WriteToRequest(ctx context.Context, req *Request) (contex
 		req.Headers = req.Headers.With(h.k, h.v)
 	}
 
+	if c.to != nil {
+		req.Peer = *c.to
+	}
 	if c.shardKey != nil {
 		req.ShardKey = *c.shardKey
 	}
@@ -98,6 +103,11 @@ func (c *OutboundCall) ReadFromResponse(ctx context.Context, res *Response) (con
 			headers[k] = v
 		}
 		*c.responseHeaders = headers
+	}
+
+	// Fill in the return address, if known.
+	if res.Peer != nil && c.from != nil {
+		*c.from = res.Peer
 	}
 
 	// NB(abg): context and error are unused for now but we want to leave room

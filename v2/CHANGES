@@ -53,6 +53,11 @@
       TODO: Headers like User-Agent, Content-Length, etc. make their way to the
       user-level Request object. For now, we're doing the super set check but we
       should do something more specific once yarpc/yarpc.io#2 is resolved.
+- [ ] Consider teaching abstract peer list to prefer the req.Peer if it is
+      present and the corresponding peer is immediately available.
+- [ ] Revisit StreamMessage, which should probably be a yarpc.Buffer now,
+      simplifying the gRPC binding.
+- [x] Add support for yarpc.To and yarpc.ResponseFrom call options.
 
 Encodings:
 - [x] Drop raw encoding

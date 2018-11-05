@@ -30,6 +30,10 @@ import (
 )
 
 const (
+	// PeerHeader is the header key for carrying the return address for a
+	// request or response.
+	PeerHeader = "rpc-peer"
+
 	// CallerHeader is the header key for the name of the service sending the
 	// request. This corresponds to the Request.Caller attribute.
 	// This header is required.
@@ -89,7 +93,12 @@ func isReserved(header string) bool {
 // from the Request into a new MD.
 func requestToMetadata(req *yarpc.Request) (metadata.MD, error) {
 	md := metadata.New(nil)
-	if err := multierr.Combine(
+	var err error
+	if req.Peer != nil {
+		err = addToMetadata(md, PeerHeader, req.Peer.Identifier())
+	}
+	if err = multierr.Combine(
+		err,
 		addToMetadata(md, CallerHeader, req.Caller),
 		addToMetadata(md, ServiceHeader, req.Service),
 		addToMetadata(md, ShardKeyHeader, req.ShardKey),

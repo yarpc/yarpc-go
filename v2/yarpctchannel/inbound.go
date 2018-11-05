@@ -87,21 +87,6 @@ func (i *Inbound) Start(_ context.Context) error {
 		i.Tracer = opentracing.GlobalTracer()
 	}
 
-	chopts := tchannel.ChannelOptions{
-		Tracer: i.Tracer,
-		Handler: handler{
-			router:     i.Router,
-			tracer:     i.Tracer,
-			logger:     i.Logger,
-			headerCase: i.HeaderCase,
-		},
-	}
-	ch, err := tchannel.NewChannel(i.Service, &chopts)
-	if err != nil {
-		return err
-	}
-	i.ch = ch
-
 	if i.Listener == nil {
 		if i.Addr == "" {
 			addr, err := tchannel.ListenIP()
@@ -117,6 +102,22 @@ func (i *Inbound) Start(_ context.Context) error {
 		}
 		i.Listener = listener
 	}
+
+	chopts := tchannel.ChannelOptions{
+		Tracer: i.Tracer,
+		Handler: handler{
+			router:     i.Router,
+			tracer:     i.Tracer,
+			logger:     i.Logger,
+			headerCase: i.HeaderCase,
+			addr:       i.Listener.Addr().String(),
+		},
+	}
+	ch, err := tchannel.NewChannel(i.Service, &chopts)
+	if err != nil {
+		return err
+	}
+	i.ch = ch
 
 	err = i.ch.Serve(i.Listener)
 	if err != nil {

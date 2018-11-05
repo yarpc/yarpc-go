@@ -171,30 +171,31 @@ func callWithPeer(ctx context.Context, req *yarpc.Request, reqBody *yarpc.Buffer
 		appErr = errors.New("application error")
 	}
 	return &yarpc.Response{
+		Peer:             getPeerAndDeleteHeaderKeys(headers),
 		Headers:          headers,
 		ApplicationError: appErr,
 	}, resBody, getResponseErrorAndDeleteHeaderKeys(headers)
 }
 
 func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*tchannelPeer, func(error), error) {
-	var peer yarpc.Peer
-	var onFinish func(error)
-	var err error
+	var (
+		peer     yarpc.Peer
+		onFinish func(error)
+		err      error
+	)
 	if o.Chooser != nil {
 		peer, onFinish, err = o.Chooser.Choose(ctx, req)
-		if err != nil {
-			return nil, nil, err
-		}
-	} else if o.Dialer != nil && o.Addr != "" {
-		peer, err = o.Dialer.RetainPeer(yarpc.Address(o.Addr), yarpc.NopSubscriber)
-		if err != nil {
-			return nil, nil, err
-		}
-		err = o.Dialer.ReleasePeer(yarpc.Address(o.Addr), yarpc.NopSubscriber)
-		if err != nil {
-			return nil, nil, err
-		}
-		onFinish = nopFinish
+	} else if req.Peer != nil {
+		peer, onFinish, err = o.getEphemeralPeer(req.Peer)
+	} else if o.Addr != "" {
+		id := yarpc.Address(o.Addr)
+		peer, onFinish, err = o.getEphemeralPeer(id)
+	} else {
+		return nil, nil, yarpcerror.FailedPreconditionErrorf("TChannel outbound must have a chooser or address, or request must address a specific peer")
+	}
+
+	if err != nil {
+		return nil, nil, err
 	}
 
 	tchannelPeer, ok := peer.(*tchannelPeer)
@@ -206,6 +207,21 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*
 	}
 
 	return tchannelPeer, onFinish, nil
+}
+
+func (o *Outbound) getEphemeralPeer(id yarpc.Identifier) (yarpc.Peer, func(error), error) {
+	if o.Dialer == nil {
+		return nil, nil, yarpcpeer.ErrMissingDialer{Transport: "tchannel"}
+	}
+	peer, err := o.Dialer.RetainPeer(id, yarpc.NopSubscriber)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = o.Dialer.ReleasePeer(id, yarpc.NopSubscriber)
+	if err != nil {
+		return nil, nil, err
+	}
+	return peer, nopFinish, nil
 }
 
 func nopFinish(error) {}
@@ -240,6 +256,14 @@ func checkServiceMatchAndDeleteHeaderKey(reqSvcName string, resHeaders yarpc.Hea
 		return reqSvcName == resSvcName, resSvcName
 	}
 	return true, ""
+}
+
+func getPeerAndDeleteHeaderKeys(headers yarpc.Headers) yarpc.Identifier {
+	peer, ok := popHeader(headers, PeerHeaderKey)
+	if !ok || peer == "" {
+		return nil
+	}
+	return yarpc.Address(peer)
 }
 
 func getResponseErrorAndDeleteHeaderKeys(headers yarpc.Headers) error {

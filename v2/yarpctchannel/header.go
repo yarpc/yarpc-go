@@ -32,6 +32,9 @@ import (
 )
 
 const (
+	// PeerHeaderKey is the header key for carrying the return address for a
+	// request or response.
+	PeerHeaderKey = "$rpc$-peer"
 	// ErrorCodeHeaderKey is the response header key for the error code.
 	ErrorCodeHeaderKey = "$rpc$-error-code"
 	// ErrorNameHeaderKey is the response header key for the error name.
@@ -43,6 +46,7 @@ const (
 )
 
 var _reservedHeaderKeys = map[string]struct{}{
+	PeerHeaderKey:         {},
 	ErrorCodeHeaderKey:    {},
 	ErrorNameHeaderKey:    {},
 	ErrorMessageHeaderKey: {},

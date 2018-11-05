@@ -83,6 +83,7 @@ func (o *Outbound) Call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.B
 	}
 
 	return &yarpc.Response{
+			Peer:             metadataToPeer(responseMD),
 			Headers:          responseHeaders,
 			ApplicationError: metadataToApplicationError(invokeErr, responseMD),
 		},
@@ -146,6 +147,17 @@ func (o *Outbound) invoke(
 	}
 
 	return responseBody, responseMD, nil
+}
+
+func metadataToPeer(responseMD metadata.MD) yarpc.Identifier {
+	if responseMD == nil {
+		return nil
+	}
+	value, ok := responseMD[PeerHeader]
+	if !ok || len(value) == 0 {
+		return nil
+	}
+	return yarpc.Address(value[0])
 }
 
 func metadataToApplicationError(invokeErr error, responseMD metadata.MD) error {
@@ -252,14 +264,15 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*
 		onFinish func(error)
 		err      error
 	)
-
 	if o.Chooser != nil {
 		peer, onFinish, err = o.Chooser.Choose(ctx, req)
-	} else if o.Dialer != nil && o.URL != nil {
+	} else if req.Peer != nil {
+		peer, onFinish, err = o.getEphemeralPeer(req.Peer)
+	} else if o.URL != nil {
 		id := yarpc.Address(o.URL.Host)
 		peer, onFinish, err = o.getEphemeralPeer(id)
 	} else {
-		return nil, nil, yarpcerror.FailedPreconditionErrorf("gRPC Outbound must have either Chooser or Dialer and URL to make a Call")
+		return nil, nil, yarpcerror.FailedPreconditionErrorf("gRPC outbound must have a chooser or address, or request must address a specific peer")
 	}
 
 	if err != nil {
@@ -278,6 +291,9 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*
 }
 
 func (o *Outbound) getEphemeralPeer(id yarpc.Identifier) (yarpc.Peer, func(error), error) {
+	if o.Dialer == nil {
+		return nil, nil, yarpcpeer.ErrMissingDialer{Transport: "grpc"}
+	}
 	peer, err := o.Dialer.RetainPeer(id, yarpc.NopSubscriber)
 	if err != nil {
 		return nil, nil, err

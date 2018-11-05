@@ -41,6 +41,7 @@ import (
 type handler struct {
 	router     yarpc.Router
 	headerCase HeaderCase
+	addr       string
 	tracer     opentracing.Tracer
 	logger     *zap.Logger
 }
@@ -170,6 +171,9 @@ func (h handler) writeResponse(ctx context.Context, call inboundCall, res *yarpc
 		// System error.
 		return retErr
 	}
+
+	res.Headers = res.Headers.With(PeerHeaderKey, h.addr)
+
 	if retErr != nil && res != nil && res.ApplicationError != nil {
 		// We have an error, so we're going to propagate it as a yarpc error,
 		// regardless of whether or not it is a system error.

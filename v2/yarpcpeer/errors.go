@@ -26,6 +26,17 @@ import (
 	yarpc "go.uber.org/yarpc/v2"
 )
 
+// ErrMissingDialer indicates that direct calls to an address are not possible
+// with a particular outbound configuration since the outbound was created
+// without a Dialer, probably with a Chooser instead.
+type ErrMissingDialer struct {
+	Transport string
+}
+
+func (e ErrMissingDialer) Error() string {
+	return fmt.Sprintf("can't call direct address on peer on %q outbound that does not have a dialer", e.Transport)
+}
+
 // ErrPeerHasNoReferenceToSubscriber is called when a Peer is expected
 // to operate on a PeerSubscriber it has no reference to
 type ErrPeerHasNoReferenceToSubscriber struct {

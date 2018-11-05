@@ -28,6 +28,18 @@ package yarpc
 // API for service authors simple.
 type CallOption struct{ apply func(*OutboundCall) }
 
+// To specifies the destination address for this request, using the outbound's
+// dialer but ignoring its chooser.
+func To(id Identifier) CallOption {
+	return CallOption{func(o *OutboundCall) { o.to = &id }}
+}
+
+// ResponseFrom specifies a pointer to an identifier to fill with the address that
+// handles the request.
+func ResponseFrom(id *Identifier) CallOption {
+	return CallOption{func(o *OutboundCall) { o.from = id }}
+}
+
 // ResponseHeaders specifies that headers received in response to this request
 // should replace the given map.
 func ResponseHeaders(h *map[string]string) CallOption {
