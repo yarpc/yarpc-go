@@ -10,9 +10,11 @@ import (
 
 func TestNewClientProvider(t *testing.T) {
 	foo := yarpc.Client{Caller: "foo-caller", Service: "foo-service"}
+	bar := yarpc.Client{Caller: "bar-caller", Service: "bar-service"}
 
 	res, err := NewClientProvider(ClientProviderParams{
-		Clients: []yarpc.Client{foo},
+		SingleClients: []yarpc.Client{foo},
+		ClientLists:   [][]yarpc.Client{{bar}},
 	})
 	require.NoError(t, err)
 	provider := res.Provider
@@ -21,6 +23,11 @@ func TestNewClientProvider(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, client.Caller, "foo-caller")
 	assert.Equal(t, client.Service, "foo-service")
+
+	client, ok = provider.Client("bar-service")
+	assert.True(t, ok)
+	assert.Equal(t, client.Caller, "bar-caller")
+	assert.Equal(t, client.Service, "bar-service")
 
 	_, ok = provider.Client("unknown")
 	assert.False(t, ok)

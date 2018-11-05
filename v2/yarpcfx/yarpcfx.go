@@ -20,7 +20,8 @@ var Module = fx.Options(
 type ClientProviderParams struct {
 	fx.In
 
-	Clients []yarpc.Client `group:"yarpcfx"`
+	Clients     []yarpc.Client   `group:"yarpcfx"`
+	ClientLists [][]yarpc.Client `group:"yarpcfx"`
 }
 
 // ClientProviderResult defines the values produced by this module.
@@ -32,8 +33,13 @@ type ClientProviderResult struct {
 
 // NewClientProvider provides a yarpc.ClientProvider to the Fx application.
 func NewClientProvider(p ClientProviderParams) (ClientProviderResult, error) {
+	clients := p.Clients
+	for _, cl := range p.ClientLists {
+		clients = append(clients, cl...)
+	}
+
 	provider := yarpcclient.NewProvider()
-	for _, c := range p.Clients {
+	for _, c := range clients {
 		provider.Register(c.Service, c)
 	}
 	return ClientProviderResult{
@@ -47,7 +53,7 @@ type RouterParams struct {
 	fx.In
 
 	RouterMiddleware yarpc.RouterMiddleware       `optional:"true"`
-	SingleProcedures []yarpc.TransportProcedure   `group:"yarpcfx"`
+	Procedures       []yarpc.TransportProcedure   `group:"yarpcfx"`
 	ProcedureLists   [][]yarpc.TransportProcedure `group:"yarpcfx"`
 }
 
@@ -61,10 +67,11 @@ type RouterResult struct {
 // NewRouter registers procedures with a router, and produces it so
 // that specific transport inbounds can depend upon it.
 func NewRouter(p RouterParams) (RouterResult, error) {
-	procedures := p.SingleProcedures
+	procedures := p.Procedures
 	for _, pl := range p.ProcedureLists {
 		procedures = append(procedures, pl...)
 	}
+
 	router := yarpcrouter.NewMapRouter("foo" /* Derive from servicefx. */, procedures)
 	return RouterResult{
 		Router: yarpc.ApplyRouter(router, p.RouterMiddleware),
