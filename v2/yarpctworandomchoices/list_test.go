@@ -77,79 +77,24 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 
 		// PeerIDs expected to be in the PeerList's "Unavailable" list after the actions have been applied
 		expectedUnavailablePeers []string
-
-		// Boolean indicating whether the PeerList is "running" after the actions have been applied
-		expectedRunning bool
 	}
 	tests := []testStruct{
 		{
-			msg: "setup",
+			msg: "update and choose",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
-				yarpctest.UpdateAction{AddedPeerIDs: []string{"1"}},
-			},
-			expectedRunning: true,
-		},
-		{
-			msg: "setup with disconnected",
-			retainedAvailablePeerIDs:   []string{"1"},
-			retainedUnavailablePeerIDs: []string{"2"},
-			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
-				yarpctest.UpdateAction{AddedPeerIDs: []string{"1", "2"}},
-			},
-			expectedAvailablePeers:   []string{"1"},
-			expectedUnavailablePeers: []string{"2"},
-			expectedRunning:          true,
-		},
-		{
-			msg: "start",
-			retainedAvailablePeerIDs: []string{"1"},
-			expectedAvailablePeers:   []string{"1"},
-			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
 				yarpctest.UpdateAction{AddedPeerIDs: []string{"1"}},
 				yarpctest.ChooseAction{
 					ExpectedPeer: "1",
 				},
 			},
-			expectedRunning: true,
 		},
 		{
-			msg: "start stop",
-			retainedAvailablePeerIDs:   []string{"1", "2", "3", "4", "5", "6"},
-			retainedUnavailablePeerIDs: []string{"7", "8", "9"},
-			releasedPeerIDs:            []string{"1", "2", "3", "4", "5", "6", "7", "8", "9"},
-			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
-				yarpctest.UpdateAction{AddedPeerIDs: []string{"1", "2", "3", "4", "5", "6", "7", "8", "9"}},
-				yarpctest.StopAction{},
-				yarpctest.ChooseAction{
-					ExpectedErr:         newNotRunningError("could not wait for instance to start running: current state is \"stopped\""),
-					InputContextTimeout: 10 * time.Millisecond,
-				},
-			},
-			expectedRunning: false,
-		},
-		{
-			msg: "update, start, and choose",
-			retainedAvailablePeerIDs: []string{"1"},
-			expectedAvailablePeers:   []string{"1"},
-			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.UpdateAction{AddedPeerIDs: []string{"1"}},
-				yarpctest.StartAction{},
-				yarpctest.ChooseAction{ExpectedPeer: "1"},
-			},
-			expectedRunning: true,
-		},
-		{
-			msg: "start many and choose",
+			msg: "update many and choose",
 			retainedAvailablePeerIDs: []string{"1", "2", "3", "4", "5", "6"},
 			expectedAvailablePeers:   []string{"1", "2", "3", "4", "5", "6"},
 			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
 				yarpctest.UpdateAction{AddedPeerIDs: []string{"1", "2", "3", "4", "5", "6"}},
 				yarpctest.ChooseAction{ExpectedPeer: "1"},
 				yarpctest.ChooseAction{ExpectedPeer: "2"},
@@ -159,42 +104,14 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 				yarpctest.ChooseAction{ExpectedPeer: "1"},
 				yarpctest.ChooseAction{ExpectedPeer: "6"},
 			},
-			expectedRunning: true,
-		},
-		{
-			msg: "assure start is idempotent",
-			retainedAvailablePeerIDs: []string{"1"},
-			expectedAvailablePeers:   []string{"1"},
-			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
-				yarpctest.UpdateAction{AddedPeerIDs: []string{"1"}},
-				yarpctest.StartAction{},
-				yarpctest.StartAction{},
-				yarpctest.ChooseAction{
-					ExpectedPeer: "1",
-				},
-			},
-			expectedRunning: true,
-		},
-		{
-			msg: "stop no start",
-			retainedAvailablePeerIDs: []string{},
-			releasedPeerIDs:          []string{},
-			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StopAction{},
-				yarpctest.UpdateAction{AddedPeerIDs: []string{"1"}},
-			},
-			expectedRunning: false,
 		},
 		{
 			msg:                "update retain error",
 			errRetainedPeerIDs: []string{"1"},
 			retainErr:          yarpcpeer.ErrInvalidPeerType{},
 			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
 				yarpctest.UpdateAction{AddedPeerIDs: []string{"1"}, ExpectedErr: yarpcpeer.ErrInvalidPeerType{}},
 			},
-			expectedRunning: true,
 		},
 		{
 			msg: "update retain multiple errors",
@@ -202,137 +119,12 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			errRetainedPeerIDs:       []string{"1", "3"},
 			retainErr:                yarpcpeer.ErrInvalidPeerType{},
 			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
 				yarpctest.UpdateAction{
 					AddedPeerIDs: []string{"1", "2", "3"},
 					ExpectedErr:  multierr.Combine(yarpcpeer.ErrInvalidPeerType{}, yarpcpeer.ErrInvalidPeerType{}),
 				},
 			},
 			expectedAvailablePeers: []string{"2"},
-			expectedRunning:        true,
-		},
-		{
-			msg: "start stop release error",
-			retainedAvailablePeerIDs: []string{"1"},
-			errReleasedPeerIDs:       []string{"1"},
-			releaseErr:               yarpcpeer.ErrDialerHasNoReferenceToPeer{},
-			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
-				yarpctest.UpdateAction{AddedPeerIDs: []string{"1"}},
-				yarpctest.StopAction{
-					ExpectedErr: yarpcpeer.ErrDialerHasNoReferenceToPeer{},
-				},
-			},
-			expectedRunning: false,
-		},
-		{
-			msg: "assure stop is idempotent",
-			retainedAvailablePeerIDs: []string{"1"},
-			errReleasedPeerIDs:       []string{"1"},
-			releaseErr:               yarpcpeer.ErrDialerHasNoReferenceToPeer{},
-			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
-				yarpctest.UpdateAction{AddedPeerIDs: []string{"1"}},
-				yarpctest.ConcurrentAction{
-					Actions: []yarpctest.PeerListAction{
-						yarpctest.StopAction{
-							ExpectedErr: yarpcpeer.ErrDialerHasNoReferenceToPeer{},
-						},
-						yarpctest.StopAction{
-							ExpectedErr: yarpcpeer.ErrDialerHasNoReferenceToPeer{},
-						},
-						yarpctest.StopAction{
-							ExpectedErr: yarpcpeer.ErrDialerHasNoReferenceToPeer{},
-						},
-					},
-				},
-			},
-			expectedRunning: false,
-		},
-		{
-			msg: "start stop release multiple errors",
-			retainedAvailablePeerIDs: []string{"1", "2", "3"},
-			releasedPeerIDs:          []string{"2"},
-			errReleasedPeerIDs:       []string{"1", "3"},
-			releaseErr:               yarpcpeer.ErrDialerHasNoReferenceToPeer{},
-			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
-				yarpctest.UpdateAction{AddedPeerIDs: []string{"1", "2", "3"}},
-				yarpctest.StopAction{
-					ExpectedErr: multierr.Combine(
-						yarpcpeer.ErrDialerHasNoReferenceToPeer{},
-						yarpcpeer.ErrDialerHasNoReferenceToPeer{},
-					),
-				},
-			},
-			expectedRunning: false,
-		},
-		{
-			msg: "choose before start",
-			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.ChooseAction{
-					ExpectedErr:         newNotRunningError("context finished while waiting for instance to start: context deadline exceeded"),
-					InputContextTimeout: 10 * time.Millisecond,
-				},
-				yarpctest.ChooseAction{
-					ExpectedErr:         newNotRunningError("context finished while waiting for instance to start: context deadline exceeded"),
-					InputContextTimeout: 10 * time.Millisecond,
-				},
-			},
-			expectedRunning: false,
-		},
-		{
-			msg: "update before start",
-			retainedAvailablePeerIDs: []string{"1"},
-			expectedAvailablePeers:   []string{"1"},
-			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.ConcurrentAction{
-					Actions: []yarpctest.PeerListAction{
-						yarpctest.UpdateAction{AddedPeerIDs: []string{"1"}},
-						yarpctest.StartAction{},
-					},
-					Wait: 20 * time.Millisecond,
-				},
-			},
-			expectedRunning: true,
-		},
-		{
-			msg: "start choose no peers",
-			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
-				yarpctest.ChooseAction{
-					InputContextTimeout: 20 * time.Millisecond,
-					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
-				},
-			},
-			expectedRunning: true,
-		},
-		{
-			msg: "start then add",
-			retainedAvailablePeerIDs: []string{"1", "2"},
-			expectedAvailablePeers:   []string{"1", "2"},
-			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
-				yarpctest.UpdateAction{AddedPeerIDs: []string{"1"}},
-				yarpctest.UpdateAction{AddedPeerIDs: []string{"2"}},
-				yarpctest.ChooseAction{ExpectedPeer: "1"},
-				yarpctest.ChooseAction{ExpectedPeer: "2"},
-				yarpctest.ChooseAction{ExpectedPeer: "2"},
-			},
-			expectedRunning: true,
-		},
-		{
-			msg: "start remove",
-			retainedAvailablePeerIDs: []string{"1", "2"},
-			expectedAvailablePeers:   []string{"2"},
-			releasedPeerIDs:          []string{"1"},
-			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
-				yarpctest.UpdateAction{AddedPeerIDs: []string{"1", "2"}},
-				yarpctest.UpdateAction{RemovedPeerIDs: []string{"1"}},
-				yarpctest.ChooseAction{ExpectedPeer: "2"},
-			},
-			expectedRunning: true,
 		},
 		{
 			msg: "add retain error",
@@ -341,21 +133,18 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			errRetainedPeerIDs:       []string{"3"},
 			retainErr:                yarpcpeer.ErrInvalidPeerType{},
 			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
 				yarpctest.UpdateAction{AddedPeerIDs: []string{"1", "2"}},
 				yarpctest.UpdateAction{
 					AddedPeerIDs: []string{"3"},
 					ExpectedErr:  yarpcpeer.ErrInvalidPeerType{},
 				},
 			},
-			expectedRunning: true,
 		},
 		{
 			msg: "add duplicate peer",
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"1", "2"},
 			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
 				yarpctest.UpdateAction{AddedPeerIDs: []string{"1", "2"}},
 				yarpctest.UpdateAction{
 					AddedPeerIDs: []string{"2"},
@@ -365,14 +154,12 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 				yarpctest.ChooseAction{ExpectedPeer: "2"},
 				yarpctest.ChooseAction{ExpectedPeer: "2"},
 			},
-			expectedRunning: true,
 		},
 		{
 			msg: "remove peer not in list",
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"1", "2"},
 			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
 				yarpctest.UpdateAction{AddedPeerIDs: []string{"1", "2"}},
 				yarpctest.UpdateAction{
 					RemovedPeerIDs: []string{"3"},
@@ -382,7 +169,6 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 				yarpctest.ChooseAction{ExpectedPeer: "2"},
 				yarpctest.ChooseAction{ExpectedPeer: "2"},
 			},
-			expectedRunning: true,
 		},
 		{
 			msg: "remove release error",
@@ -391,7 +177,6 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			releaseErr:               yarpcpeer.ErrDialerHasNoReferenceToPeer{},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
 				yarpctest.UpdateAction{AddedPeerIDs: []string{"1", "2"}},
 				yarpctest.UpdateAction{
 					RemovedPeerIDs: []string{"2"},
@@ -400,14 +185,12 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 				yarpctest.ChooseAction{ExpectedPeer: "1"},
 				yarpctest.ChooseAction{ExpectedPeer: "1"},
 			},
-			expectedRunning: true,
 		},
 		{
 			msg: "block but added too late",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
 				yarpctest.ConcurrentAction{
 					Actions: []yarpctest.PeerListAction{
 						yarpctest.ChooseAction{
@@ -420,18 +203,15 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 				},
 				yarpctest.ChooseAction{ExpectedPeer: "1"},
 			},
-			expectedRunning: true,
 		},
 		{
 			msg: "no blocking with no context deadline",
 			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
 				yarpctest.ChooseAction{
 					InputContext: context.Background(),
 					ExpectedErr:  _noContextDeadlineError,
 				},
 			},
-			expectedRunning: true,
 		},
 		{
 			msg: "add unavailable peer",
@@ -440,7 +220,6 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedAvailablePeers:     []string{"1"},
 			expectedUnavailablePeers:   []string{"2"},
 			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
 				yarpctest.UpdateAction{AddedPeerIDs: []string{"1"}},
 				yarpctest.UpdateAction{AddedPeerIDs: []string{"2"}},
 				yarpctest.ChooseAction{
@@ -452,14 +231,12 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 					InputContextTimeout: 20 * time.Millisecond,
 				},
 			},
-			expectedRunning: true,
 		},
 		{
 			msg: "remove unavailable peer",
 			retainedUnavailablePeerIDs: []string{"1"},
 			releasedPeerIDs:            []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
 				yarpctest.UpdateAction{AddedPeerIDs: []string{"1"}},
 				yarpctest.UpdateAction{RemovedPeerIDs: []string{"1"}},
 				yarpctest.ChooseAction{
@@ -467,14 +244,12 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
 				},
 			},
-			expectedRunning: true,
 		},
 		{
 			msg: "notify peer is now available",
 			retainedUnavailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:     []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
 				yarpctest.UpdateAction{AddedPeerIDs: []string{"1"}},
 				yarpctest.ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
@@ -483,27 +258,23 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 				yarpctest.NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: yarpc.Available},
 				yarpctest.ChooseAction{ExpectedPeer: "1"},
 			},
-			expectedRunning: true,
 		},
 		{
 			msg: "notify peer is still available",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
 				yarpctest.UpdateAction{AddedPeerIDs: []string{"1"}},
 				yarpctest.ChooseAction{ExpectedPeer: "1"},
 				yarpctest.NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: yarpc.Available},
 				yarpctest.ChooseAction{ExpectedPeer: "1"},
 			},
-			expectedRunning: true,
 		},
 		{
 			msg: "notify peer is now unavailable",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedUnavailablePeers: []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
 				yarpctest.UpdateAction{AddedPeerIDs: []string{"1"}},
 				yarpctest.ChooseAction{ExpectedPeer: "1"},
 				yarpctest.NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: yarpc.Unavailable},
@@ -512,14 +283,12 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
 				},
 			},
-			expectedRunning: true,
 		},
 		{
 			msg: "notify peer is still unavailable",
 			retainedUnavailablePeerIDs: []string{"1"},
 			expectedUnavailablePeers:   []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
 				yarpctest.UpdateAction{AddedPeerIDs: []string{"1"}},
 				yarpctest.NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: yarpc.Unavailable},
 				yarpctest.ChooseAction{
@@ -527,19 +296,16 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
 				},
 			},
-			expectedRunning: true,
 		},
 		{
 			msg: "notify invalid peer",
 			retainedAvailablePeerIDs: []string{"1"},
 			releasedPeerIDs:          []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
-				yarpctest.StartAction{},
 				yarpctest.UpdateAction{AddedPeerIDs: []string{"1"}},
 				yarpctest.UpdateAction{RemovedPeerIDs: []string{"1"}},
 				yarpctest.NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: yarpc.Available},
 			},
-			expectedRunning: true,
 		},
 	}
 
