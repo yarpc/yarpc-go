@@ -94,7 +94,7 @@ To port peer lists forward:
       go standard library and the v2/yarpchttp example.
 - [ ] Remove lifecycle.
 - [ ] Drop Config and Spec, recreate in yarpcfx.
-- [ ] clean up yarpctest namespace (including removing StartAction/StopAction)
+- [x] clean up yarpctest namespace (including removing StartAction/StopAction)
 
 To port transports forward:
 - [ ] Rename Transport to Dialer, implementing yarpc.Dialer.
