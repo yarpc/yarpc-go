@@ -20,6 +20,8 @@ import:
   subpackages:
   - prometheus
   - prometheus/promhttp
+- package: go.uber.org/config
+  version: ^1.3
 - package: go.uber.org/fx
   version: ^1
 - package: go.uber.org/zap
