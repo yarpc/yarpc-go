@@ -171,7 +171,7 @@ func (h handler) callHandler(
 	}
 
 	if contentType := getContentType(req.Encoding); contentType != "" {
-		responseWriter.WriteSystemHeader("Content-Type", contentType)
+		responseWriter.WriteSystemHeader(ContentTypeHeader, contentType)
 	}
 	return res, resBuf, nil
 }
