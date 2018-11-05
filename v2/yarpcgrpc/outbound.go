@@ -84,7 +84,7 @@ func (o *Outbound) Call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.B
 
 	return &yarpc.Response{
 			Headers:          responseHeaders,
-			ApplicationError: metadataToIsApplicationError(responseMD),
+			ApplicationError: metadataToApplicationError(invokeErr, responseMD),
 		},
 		yarpc.NewBufferBytes(responseBody),
 		invokeErr
@@ -148,12 +148,15 @@ func (o *Outbound) invoke(
 	return responseBody, responseMD, nil
 }
 
-func metadataToIsApplicationError(responseMD metadata.MD) bool {
+func metadataToApplicationError(invokeErr error, responseMD metadata.MD) error {
 	if responseMD == nil {
-		return false
+		return nil
 	}
-	value, ok := responseMD[ApplicationErrorHeader]
-	return ok && len(value) > 0 && len(value[0]) > 0
+	_, ok := responseMD[ApplicationErrorHeader]
+	if ok {
+		return invokeErr
+	}
+	return nil
 }
 
 func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {

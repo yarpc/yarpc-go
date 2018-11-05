@@ -191,6 +191,9 @@ func (h *handler) handleUnary(
 		Handler:   handler,
 		Logger:    h.i.Logger,
 	})
+	if res.ApplicationError != nil {
+		err = res.ApplicationError
+	}
 
 	err = handlerErrorToGRPCError(err, mdWriter)
 
