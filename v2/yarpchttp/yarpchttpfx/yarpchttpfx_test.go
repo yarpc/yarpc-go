@@ -60,7 +60,6 @@ func TestNewClients(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-
 	assert.Len(t, res.Clients, 1)
 	assert.Equal(t, res.Clients[0].Caller, "foo")
 }

@@ -37,7 +37,6 @@ func NewClientProvider(p ClientProviderParams) (ClientProviderResult, error) {
 	for _, cl := range p.ClientLists {
 		clients = append(clients, cl...)
 	}
-
 	provider := yarpcclient.NewProvider()
 	for _, c := range clients {
 		provider.Register(c.Service, c)
@@ -71,7 +70,6 @@ func NewRouter(p RouterParams) (RouterResult, error) {
 	for _, pl := range p.ProcedureLists {
 		procedures = append(procedures, pl...)
 	}
-
 	router := yarpcrouter.NewMapRouter("foo" /* Derive from servicefx. */, procedures)
 	return RouterResult{
 		Router: yarpc.ApplyRouter(router, p.RouterMiddleware),

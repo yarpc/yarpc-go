@@ -13,8 +13,8 @@ func TestNewClientProvider(t *testing.T) {
 	bar := yarpc.Client{Caller: "bar-caller", Service: "bar-service"}
 
 	res, err := NewClientProvider(ClientProviderParams{
-		SingleClients: []yarpc.Client{foo},
-		ClientLists:   [][]yarpc.Client{{bar}},
+		Clients:     []yarpc.Client{foo},
+		ClientLists: [][]yarpc.Client{{bar}},
 	})
 	require.NoError(t, err)
 	provider := res.Provider
@@ -41,8 +41,8 @@ func TestNewRouter(t *testing.T) {
 	}
 
 	res, err := NewRouter(RouterParams{
-		SingleProcedures: []yarpc.TransportProcedure{single},
-		ProcedureLists:   [][]yarpc.TransportProcedure{list},
+		Procedures:     []yarpc.TransportProcedure{single},
+		ProcedureLists: [][]yarpc.TransportProcedure{list},
 	})
 	require.NoError(t, err)
 	assert.Len(t, res.Router.Procedures(), 3)
