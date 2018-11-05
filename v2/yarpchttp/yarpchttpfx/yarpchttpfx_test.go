@@ -52,7 +52,7 @@ func TestStartInbounds(t *testing.T) {
 }
 
 func TestNewOutboundsConfig(t *testing.T) {
-	cfg := strings.NewReader("yarpc: {http: {outbounds: {bar: {address: http://127.0.0.1:0, service: baz}}}}")
+	cfg := strings.NewReader("yarpc: {http: {outbounds: {bar: {address: http://127.0.0.1:0}}}}")
 	provider, err := config.NewYAML(config.Source(cfg))
 	require.NoError(t, err)
 
@@ -63,7 +63,7 @@ func TestNewOutboundsConfig(t *testing.T) {
 	assert.Equal(t,
 		OutboundsConfig{
 			Clients: map[string]OutboundConfig{
-				"bar": {Address: "http://127.0.0.1:0", Service: "baz"},
+				"bar": {Address: "http://127.0.0.1:0"},
 			},
 		},
 		res.Config,
