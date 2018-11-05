@@ -110,12 +110,12 @@ func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$yarpcthr
 		err := h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
 	<end>
 
-	hadError := err != nil
+	appErr := err
 	result, err := <$prefix>Helper.WrapResponse(<if .ReturnType>success,<end> err)
 
 	var response <$yarpcthrift>.Response
 	if err == nil {
-		response.IsApplicationError = hadError
+		response.ApplicationError = appErr
 		response.Body = result
 	}
 	return response, err

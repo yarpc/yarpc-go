@@ -22,6 +22,7 @@ package yarpcthrift
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -54,7 +55,7 @@ func TestDecodeRequest(t *testing.T) {
 	res, _, err := h.Handle(ctx, request(), requestBody())
 
 	assert.NoError(t, err, "unexpected error")
-	assert.False(t, res.ApplicationError, "application error bit set")
+	assert.NoError(t, res.ApplicationError, "application error set")
 }
 
 func TestDecodeEnveloped(t *testing.T) {
@@ -100,7 +101,7 @@ func TestDecodeRequestApplicationError(t *testing.T) {
 
 	handler := func(ctx context.Context, w wire.Value) (Response, error) {
 		// XXX setting application error bit
-		return Response{Body: fakeEnveloper(wire.Reply), IsApplicationError: true}, nil
+		return Response{Body: fakeEnveloper(wire.Reply), ApplicationError: errors.New("decode application error")}, nil
 	}
 	h := unaryTransportHandler{Protocol: proto, ThriftHandler: handler}
 
@@ -108,7 +109,7 @@ func TestDecodeRequestApplicationError(t *testing.T) {
 	res, resBody, err := h.Handle(ctx, request(), requestBody())
 	assert.NotNil(t, res)
 	assert.NotNil(t, resBody)
-	assert.True(t, res.ApplicationError, "application error bit unset")
+	assert.Error(t, res.ApplicationError, "application error unset")
 	assert.NoError(t, err, "unexpected error")
 }
 

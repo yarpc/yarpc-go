@@ -71,12 +71,12 @@ func (h handler) CompareAndSwap(ctx context.Context, body wire.Value) (yarpcthri
 
 	err := h.impl.CompareAndSwap(ctx, args.Request)
 
-	hadError := err != nil
+	appErr := err
 	result, err := atomic.Store_CompareAndSwap_Helper.WrapResponse(err)
 
 	var response yarpcthrift.Response
 	if err == nil {
-		response.IsApplicationError = hadError
+		response.ApplicationError = appErr
 		response.Body = result
 	}
 	return response, err
@@ -90,12 +90,12 @@ func (h handler) Increment(ctx context.Context, body wire.Value) (yarpcthrift.Re
 
 	err := h.impl.Increment(ctx, args.Key, args.Value)
 
-	hadError := err != nil
+	appErr := err
 	result, err := atomic.Store_Increment_Helper.WrapResponse(err)
 
 	var response yarpcthrift.Response
 	if err == nil {
-		response.IsApplicationError = hadError
+		response.ApplicationError = appErr
 		response.Body = result
 	}
 	return response, err

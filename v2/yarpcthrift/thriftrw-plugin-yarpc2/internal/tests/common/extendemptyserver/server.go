@@ -57,12 +57,12 @@ func (h handler) Hello(ctx context.Context, body wire.Value) (yarpcthrift.Respon
 
 	err := h.impl.Hello(ctx)
 
-	hadError := err != nil
+	appErr := err
 	result, err := common.ExtendEmpty_Hello_Helper.WrapResponse(err)
 
 	var response yarpcthrift.Response
 	if err == nil {
-		response.IsApplicationError = hadError
+		response.ApplicationError = appErr
 		response.Body = result
 	}
 	return response, err

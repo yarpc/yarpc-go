@@ -53,12 +53,12 @@ func (h handler) Healthy(ctx context.Context, body wire.Value) (yarpcthrift.Resp
 
 	success, err := h.impl.Healthy(ctx)
 
-	hadError := err != nil
+	appErr := err
 	result, err := common.BaseService_Healthy_Helper.WrapResponse(success, err)
 
 	var response yarpcthrift.Response
 	if err == nil {
-		response.IsApplicationError = hadError
+		response.ApplicationError = appErr
 		response.Body = result
 	}
 	return response, err
