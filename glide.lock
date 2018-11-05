@@ -150,7 +150,7 @@ imports:
   - push
   - tallypush
 - name: go.uber.org/thriftrw
-  version: f21741d67580a27b01451386c3998090905dc243
+  version: fb439a9a7f5a388d8606aae1c1ff6654b8b67fbe
   subpackages:
   - envelope
   - internal/envelope
