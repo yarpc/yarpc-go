@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcpeer"
 	"go.uber.org/yarpc/v2/yarpctracing"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -63,6 +64,9 @@ type Outbound struct {
 
 	// Tracer attaches a tracer for the outbound.
 	Tracer opentracing.Tracer
+
+	// Logger writes logs for the outbound.
+	Logger *zap.Logger
 }
 
 // Call implements yarpc.UnaryOutbound#Call.
@@ -208,7 +212,6 @@ func (o *Outbound) CallStream(ctx context.Context, req *yarpc.Request) (*yarpc.C
 	if err != nil {
 		return nil, err
 	}
-	defer func() { onFinish(err) }()
 
 	_, span, err := o.getSpanForRequest(ctx, start, req, md)
 	if err != nil {
@@ -228,7 +231,7 @@ func (o *Outbound) CallStream(ctx context.Context, req *yarpc.Request) (*yarpc.C
 		span.Finish()
 		return nil, err
 	}
-	stream := newClientStream(streamCtx, req, clientStream, span)
+	stream := newClientStream(streamCtx, req, onFinish, clientStream, span)
 	tClientStream, err := yarpc.NewClientStream(stream)
 	if err != nil {
 		span.Finish()
@@ -249,30 +252,15 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*
 
 	if o.Chooser != nil {
 		peer, onFinish, err = o.Chooser.Choose(ctx, req)
-		if err != nil {
-			return nil, nil, err
-		}
-
 	} else if o.Dialer != nil && o.URL != nil {
 		id := yarpc.Address(o.URL.Host)
-		peer, err = o.Dialer.RetainPeer(id, yarpc.NopSubscriber)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		onFinish = func(error) {
-			// Do nothing.
-			//
-			// We cannot call ReleasePeer since we only dial a single peer. If a
-			// finished request calls ReleasePeer, this will close the connection loop
-			// for all concurrent callers since they have the same subscriber.
-			// Concurrent calls would otherwise fail.
-			//
-			// This could be avoided by introducing a per request subscriber.
-		}
-
+		peer, onFinish, err = o.getEphemeralPeer(id)
 	} else {
 		return nil, nil, yarpcerror.FailedPreconditionErrorf("gRPC Outbound must have either Chooser or Dialer and URL to make a Call")
+	}
+
+	if err != nil {
+		return nil, nil, err
 	}
 
 	grpcPeer, ok := peer.(*grpcPeer)
@@ -284,6 +272,19 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*
 	}
 
 	return grpcPeer, onFinish, nil
+}
+
+func (o *Outbound) getEphemeralPeer(id yarpc.Identifier) (yarpc.Peer, func(error), error) {
+	peer, err := o.Dialer.RetainPeer(id, yarpc.NopSubscriber)
+	if err != nil {
+		return nil, nil, err
+	}
+	return peer, func(error) {
+		err = o.Dialer.ReleasePeer(id, yarpc.NopSubscriber)
+		if err != nil && o.Logger != nil {
+			o.Logger.Error("unable to release peer", zap.Error(err))
+		}
+	}, nil
 }
 
 // getSpanForRequest returns an opentracing.Span with the given metadata
