@@ -7,11 +7,11 @@
             them positional, to avoid separating and embedding Meta* for the
             streaming case.
       - [ ] Incorporate implicit buffer pooling in yarpc.Buffer (using internal/bufferpool.Buffer)
-      - [ ] Now that we propogate a Response struct back, the Response should hold the actual
+      - [x] Now that we propogate a Response struct back, the Response should hold the actual
             application error. Errors returned by the handler (not through the Response)
             could be considered fatal (T1995085). This affects transports and encodings.
-            - [ ] JSON encoding
-            - [ ] HTTP transport
+            - [x] JSON encoding
+            - [x] HTTP transport
 - [x] Change Request and Response body to yarpc.Buffer type
       - [ ] Accumulate request bodies at the inbound
 - [ ] yarpcrouter.Router needs to accept middleware to decorate registered
