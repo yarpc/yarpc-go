@@ -29,12 +29,12 @@ import (
 
 type fakeHandler struct {
 	err            error
-	applicationErr bool
+	applicationErr error
 }
 
 func (h fakeHandler) Handle(context.Context, *yarpc.Request, *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
 	res := &yarpc.Response{ApplicationError: h.applicationErr}
-	if h.applicationErr {
+	if h.applicationErr != nil {
 		return res, nil, nil
 	}
 	return res, nil, h.err
@@ -46,7 +46,7 @@ func (h fakeHandler) HandleStream(*yarpc.ServerStream) error {
 
 type fakeOutbound struct {
 	err            error
-	applicationErr bool
+	applicationErr error
 }
 
 func (o fakeOutbound) Call(context.Context, *yarpc.Request, *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
