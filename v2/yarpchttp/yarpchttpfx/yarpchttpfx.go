@@ -132,12 +132,12 @@ type OutboundsConfigResult struct {
 
 // NewOutboundsConfig produces an OutboundsConfig.
 func NewOutboundsConfig(p OutboundsConfigParams) (OutboundsConfigResult, error) {
-	ic := OutboundsConfig{}
-	if err := p.Provider.Get(_outboundConfigurationKey).Populate(&ic); err != nil {
+	oc := OutboundsConfig{}
+	if err := p.Provider.Get(_outboundConfigurationKey).Populate(&oc); err != nil {
 		return OutboundsConfigResult{}, err
 	}
 	return OutboundsConfigResult{
-		Config: ic,
+		Config: oc,
 	}, nil
 }
 
