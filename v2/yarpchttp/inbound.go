@@ -156,8 +156,7 @@ func (i *Inbound) Start(_ context.Context) error {
 	i.server = internalhttp.NewHTTPServer(server)
 	go i.server.Run(i.Listener)
 
-	addr := i.Listener.Addr().String()
-	logger.Info("started HTTP inbound", zap.String("address", addr))
+	logger.Info("started HTTP inbound", zap.Stringer("address", i.Listener.Addr()))
 	if len(i.Router.Procedures()) == 0 {
 		logger.Warn("no procedures specified for HTTP inbound")
 	}
