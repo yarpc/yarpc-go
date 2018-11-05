@@ -87,7 +87,11 @@ func (u *unaryHandler) Handle(ctx context.Context, req *yarpc.Request, buf *yarp
 	// early so that we don't attempt to marshal a nil
 	// object.
 	if appErr != nil {
-		res.ApplicationError = true
+		// TODO: This is a bit odd; we set the error in response AND return it.
+		// However, to preserve the current behavior of YARPC, this is
+		// necessary. This is most likely where the error details will be added,
+		// so we expect this to change.
+		res.ApplicationError = appErr
 		return res, resBuf, appErr
 	}
 
@@ -100,12 +104,6 @@ func (u *unaryHandler) Handle(ctx context.Context, req *yarpc.Request, buf *yarp
 	}
 	if _, err := resBuf.Write(body); err != nil {
 		return res, resBuf, err
-	}
-	if appErr != nil {
-		// TODO(apeatsbond): now that we propogate a Response struct back, the
-		// Response should hold the actual application error. Errors returned by the
-		// handler (not through the Response) could be considered fatal.
-		res.ApplicationError = true
 	}
 	return res, resBuf, appErr
 }
