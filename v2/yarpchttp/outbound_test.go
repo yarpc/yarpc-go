@@ -255,7 +255,11 @@ func TestOutboundApplicationError(t *testing.T) {
 				Procedure: "hello",
 			}, yarpc.NewBufferString("world"))
 
-			assert.Equal(t, response.ApplicationError, tt.appError, "%v: application status", tt.desc)
+			if tt.appError {
+				assert.Error(t, response.ApplicationError, "%v: application status", tt.desc)
+			} else {
+				assert.NoError(t, response.ApplicationError, "%v: application status", tt.desc)
+			}
 			assert.NoError(t, err, "%v: call failed", tt.desc)
 		})
 	}

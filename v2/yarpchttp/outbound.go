@@ -126,8 +126,7 @@ func (o *Outbound) call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.B
 	}
 
 	res := &yarpc.Response{
-		Headers:          applicationHeaders.FromHTTPHeaders(httpRes.Header, yarpc.NewHeaders()),
-		ApplicationError: httpRes.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus,
+		Headers: applicationHeaders.FromHTTPHeaders(httpRes.Header, yarpc.NewHeaders()),
 	}
 
 	resBuf, err := readCloserToBuffer(httpRes.Body)
@@ -135,10 +134,14 @@ func (o *Outbound) call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.B
 		return nil, nil, err
 	}
 
+	if httpRes.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus {
+		res.ApplicationError = getYARPCErrorFromResponse(httpRes, resBuf, true)
+	}
+
 	botResponseError := httpRes.Header.Get(BothResponseErrorHeader) == AcceptTrue
 	if botResponseError && !o.legacyResponseError {
 		if httpRes.StatusCode >= 300 {
-			return res, resBuf, getYARPCErrorFromResponse(httpRes, resBuf, true)
+			return res, resBuf, res.ApplicationError
 		}
 		return res, resBuf, nil
 	}
