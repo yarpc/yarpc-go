@@ -14,12 +14,14 @@ import (
 
 const (
 	_name                     = "yarpchttpfx"
-	_inboundConfigurationKey  = "yarpchttp.inbounds"
-	_outboundConfigurationKey = "yarpchttp.outbounds"
+	_inboundConfigurationKey  = "yarpc.http.inbounds"
+	_outboundConfigurationKey = "yarpc.http.outbounds"
 )
 
 // Module produces yarpchttp clients and starts yarpchttp inbounds.
 var Module = fx.Options(
+	fx.Provide(NewInboundConfig),
+	fx.Provide(NewOutboundsConfig),
 	fx.Provide(NewClients),
 	fx.Invoke(StartInbounds),
 )
@@ -29,25 +31,46 @@ type InboundConfig struct {
 	Address string `yaml:"address"`
 }
 
+// InboundConfigParams defines the dependencies of this module.
+type InboundConfigParams struct {
+	fx.In
+
+	Provider config.Provider
+}
+
+// InboundConfigResult defines the values produced by this module.
+type InboundConfigResult struct {
+	fx.Out
+
+	Config InboundConfig
+}
+
+// NewInboundConfig produces an InboundConfig.
+func NewInboundConfig(p InboundConfigParams) (InboundConfigResult, error) {
+	ic := InboundConfig{}
+	if err := p.Provider.Get(_inboundConfigurationKey).Populate(&ic); err != nil {
+		return InboundConfigResult{}, err
+	}
+	return InboundConfigResult{
+		Config: ic,
+	}, nil
+}
+
 // StartInboundsParams defines the dependencies of this module.
 type StartInboundsParams struct {
 	fx.In
 
 	Lifecycle fx.Lifecycle
 	Router    yarpc.Router
-	Provider  config.Provider
+	Config    InboundConfig
 	Logger    *zap.Logger        `optional:"true"`
 	Tracer    opentracing.Tracer `optional:"true"`
 }
 
-// StartInbounds constructs and starts yarpchttp inbounds.
+// StartInbounds constructs and starts inbounds.
 func StartInbounds(p StartInboundsParams) error {
-	ic := InboundConfig{}
-	if err := p.Provider.Get(_inboundConfigurationKey).Populate(&ic); err != nil {
-		return err
-	}
 	inbound := yarpchttp.Inbound{
-		Addr:   ic.Address,
+		Addr:   p.Config.Address,
 		Router: p.Router,
 		Logger: p.Logger,
 		Tracer: p.Tracer,
@@ -63,16 +86,39 @@ func StartInbounds(p StartInboundsParams) error {
 	return nil
 }
 
-// Outbounds is the configuration for constructing a set of yarpchttp
-// outbounds.
-type Outbounds struct {
+// OutboundsConfig is the configuration for constructing a set of outbounds.
+type OutboundsConfig struct {
 	Clients map[string]OutboundConfig `yaml:",inline"`
 }
 
-// OutboundConfig is the configuration for constructing a specific
-// yarpchttp outbound.
+// OutboundConfig is the configuration for constructing a specific outbound.
 type OutboundConfig struct {
 	Address string `yaml:"address"`
+}
+
+// OutboundsConfigParams defines the dependencies of this module.
+type OutboundsConfigParams struct {
+	fx.In
+
+	Provider config.Provider
+}
+
+// OutboundsConfigResult defines the values produced by this module.
+type OutboundsConfigResult struct {
+	fx.Out
+
+	Config OutboundsConfig
+}
+
+// NewOutboundsConfig produces an OutboundsConfig.
+func NewOutboundsConfig(p OutboundsConfigParams) (OutboundsConfigResult, error) {
+	ic := OutboundsConfig{}
+	if err := p.Provider.Get(_outboundConfigurationKey).Populate(&ic); err != nil {
+		return OutboundsConfigResult{}, err
+	}
+	return OutboundsConfigResult{
+		Config: ic,
+	}, nil
 }
 
 // ClientParams defines the dependencies of this module.
@@ -80,7 +126,7 @@ type ClientParams struct {
 	fx.In
 
 	Lifecycle fx.Lifecycle
-	Provider  config.Provider
+	Config    OutboundsConfig
 	Logger    *zap.Logger        `optional:"true"`
 	Tracer    opentracing.Tracer `optional:"true"`
 }
@@ -92,14 +138,10 @@ type ClientResult struct {
 	Clients []yarpc.Client `group:"yarpcfx"`
 }
 
-// NewClients produces yarpchttp yarpc.Clients.
+// NewClients produces yarpc.Clients.
 func NewClients(p ClientParams) (ClientResult, error) {
-	oc := Outbounds{}
-	if err := p.Provider.Get(_outboundConfigurationKey).Populate(&oc); err != nil {
-		return ClientResult{}, err
-	}
 	var clients []yarpc.Client
-	for name, o := range oc.Clients {
+	for name, o := range p.Config.Clients {
 		url, err := url.Parse(o.Address)
 		if err != nil {
 			return ClientResult{}, err
