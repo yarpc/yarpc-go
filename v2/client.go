@@ -39,7 +39,7 @@ type Client struct {
 	Stream StreamOutbound
 }
 
-// ClientProvider is a registry of pre-configured `yarpc.Client`s.
+// ClientProvider is a registry of pre-configured Clients.
 type ClientProvider interface {
-	Client(name string) (_ Client, ok bool)
+	Client(name string) (Client, bool)
 }

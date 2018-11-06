@@ -36,14 +36,19 @@ func TestProvider(t *testing.T) {
 	require.False(t, ok)
 	require.Equal(t, yarpc.Client{}, client)
 
-	p.Register("foo", yarpc.Client{
+	assert.NoError(t, p.Register("foo", yarpc.Client{
 		Caller: "foo-caller",
-	})
+	}))
 
 	client, ok = p.Client("foo")
 	require.True(t, ok)
 
-	assert.Equal(t, client, yarpc.Client{
-		Caller: "foo-caller",
-	})
+	assert.Equal(t,
+		yarpc.Client{
+			Caller: "foo-caller",
+		},
+		client,
+	)
+
+	assert.EqualError(t, p.Register("foo", yarpc.Client{}), `client "foo" is already registered`)
 }

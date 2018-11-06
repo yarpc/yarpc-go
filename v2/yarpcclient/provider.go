@@ -21,6 +21,8 @@
 package yarpcclient
 
 import (
+	"fmt"
+
 	"go.uber.org/yarpc/v2"
 )
 
@@ -45,6 +47,10 @@ func (p *Provider) Client(name string) (yarpc.Client, bool) {
 }
 
 // Register registers a yarpc.Client to the given name.
-func (p *Provider) Register(name string, client yarpc.Client) {
+func (p *Provider) Register(name string, client yarpc.Client) error {
+	if _, ok := p.clients[name]; ok {
+		return fmt.Errorf("client %q is already registered", name)
+	}
 	p.clients[name] = client
+	return nil
 }
