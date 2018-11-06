@@ -29,7 +29,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcrouter"
 )
 
 type simpleRequest struct {
@@ -48,7 +47,7 @@ func handleWithCodec(
 	reqBuf *yarpc.Buffer,
 	procedure yarpc.EncodingProcedure,
 ) (*yarpc.Response, *yarpc.Buffer, error) {
-	p, err := yarpcrouter.EncodingToTransportProcedures([]yarpc.EncodingProcedure{
+	p, err := yarpc.EncodingToTransportProcedures([]yarpc.EncodingProcedure{
 		procedure,
 	})
 	require.NoError(t, err)

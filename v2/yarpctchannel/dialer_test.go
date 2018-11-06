@@ -61,7 +61,7 @@ func TestDialerBasics(t *testing.T) {
 		Note string
 	}
 
-	handleEcho, err := yarpcrouter.EncodingToTransportProcedures(
+	handleEcho, err := yarpc.EncodingToTransportProcedures(
 		yarpcjson.Procedure("echo", func(ctx context.Context, req *Payload) (*Payload, error) {
 			t.Logf("handle echo\n")
 			return req, nil
@@ -121,7 +121,7 @@ func TestDialerBellsAndWhistles(t *testing.T) {
 		Note string
 	}
 
-	handleEcho, err := yarpcrouter.EncodingToTransportProcedures(
+	handleEcho, err := yarpc.EncodingToTransportProcedures(
 		yarpcjson.Procedure("echo", func(ctx context.Context, req *Payload) (*Payload, error) {
 			t.Logf("handle echo\n")
 			// This time echoing a header.
@@ -195,7 +195,7 @@ func TestPeerListChanges(t *testing.T) {
 		Note string
 	}
 
-	handleEcho, err := yarpcrouter.EncodingToTransportProcedures(
+	handleEcho, err := yarpc.EncodingToTransportProcedures(
 		yarpcjson.Procedure("echo", func(ctx context.Context, req *Payload) (*Payload, error) {
 			t.Logf("handle echo\n")
 			// This time echoing a header.
@@ -331,7 +331,7 @@ func TestErrors(t *testing.T) {
 				Note string
 			}
 
-			handleEcho, err := yarpcrouter.EncodingToTransportProcedures(
+			handleEcho, err := yarpc.EncodingToTransportProcedures(
 				yarpcjson.Procedure("echo", func(ctx context.Context, req *Payload) (*Payload, error) {
 					return nil, handlerErr
 				}),
