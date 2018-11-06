@@ -74,6 +74,9 @@ Transports:
       - [ ] Gracefully shut down: stop should block until context expires or all requests drain.
       - [ ] Add TChannel to gauntlet test
 - [x] Port or recreate gRPC transport
+      - [ ] Ecapsulate gRPC's TransportCredentials interface
+            to avoid passing a direct dependency on grpc-go to
+            YARPC dependees.
 - [ ] Use `req` and `res` as variable names for consistency.
       - [x] HTTP
       - [x] TChannel
