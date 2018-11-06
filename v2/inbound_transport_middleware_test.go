@@ -57,24 +57,6 @@ func TestUnaryNopInboundTransportMiddleware(t *testing.T) {
 	assert.Equal(t, err, handleErr)
 }
 
-func TestUnaryNopInboundEncodingMiddleware(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	h := yarpctest.NewMockUnaryEncodingHandler(mockCtrl)
-	wrappedH := yarpc.ApplyUnaryInboundEncodingMiddleware(h, yarpc.NopUnaryInboundEncodingMiddleware)
-
-	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
-	defer cancel()
-	reqBuf := yarpc.NewBufferBytes([]byte{1, 2, 3})
-
-	err := errors.New("great sadness")
-	h.EXPECT().Handle(ctx, reqBuf).Return(nil, err)
-
-	_, handleErr := wrappedH.Handle(ctx, reqBuf)
-	assert.Equal(t, err, handleErr)
-}
-
 func TestNilInboundMiddleware(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
