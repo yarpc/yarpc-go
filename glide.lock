@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-10-17T15:05:35.17548544Z
+updated: 2018-11-06T15:03:23.161222201Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -32,7 +32,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: ddf22928ea3c56eb4292a0adbbf5001b1e8e7d0d
+  version: 75dceb112b174be156fa9952e66d3e99945572b4
   subpackages:
   - proto
   - ptypes
@@ -66,7 +66,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: bcb74de08d37a417cb6789eec1d6c810040f0470
+  version: 7e9e6cabbd393fc208072eedef99188d0ce788b6
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -125,7 +125,7 @@ imports:
 - name: go.uber.org/atomic
   version: 1ea20fb1cbb1cc08cbd0d913a96dead89aa18289
 - name: go.uber.org/dig
-  version: 27eb30e15ef3e7f67cd86f2b65c618e3e308c104
+  version: bc5e6a1faffe87bfc9db86098fc01725d8d2a4c0
   subpackages:
   - internal/digreflect
   - internal/dot
@@ -145,7 +145,7 @@ imports:
   - push
   - tallypush
 - name: go.uber.org/thriftrw
-  version: 7c449ccc4449ee826f5063a81e7f48b178396ef1
+  version: f21741d67580a27b01451386c3998090905dc243
   subpackages:
   - envelope
   - internal/envelope
@@ -172,7 +172,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 49bb7cea24b1df9410e1712aa6433dae904ff66a
+  version: 10aee181995363b41f712a55844a0dd52ea04646
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -189,28 +189,28 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: fa43e7bc11baaae89f3f902b2b4d832b68234844
+  version: 3a76605856fddce5718553cbb8bd50ca492a7274
   repo: https://github.com/golang/sys
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 4d1c5fb19474adfe9562c9847ba425e7da817e81
+  version: 6f44c5a2ea40ee3593d98cdcc905cc1fdaa660e2
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 5ef16f43e633c268c7c28abdba1a0173a4d715b8
+  version: 78dc5bac0cacea7969e98b79c3b86597e0aa4e25
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 94acd270e44e65579b9ee3cdab25034d33fed608
+  version: c830210a61dfaa790e1920f8d0470fc27bc2efbe
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 8dea3dc473e90c8179e519d91302d0597c0ca1d1
+  version: 2e463a05d100327ca47ac218281906921038fd95
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
@@ -256,7 +256,7 @@ testImports:
   subpackages:
   - update-license
 - name: golang.org/x/lint
-  version: 5906bd5c48cd840279ace88b165057fbbd7fb35a
+  version: c67002cb31c3a748b7688c27f20d8358b4193582
   repo: https://github.com/golang/lint
   subpackages:
   - golint

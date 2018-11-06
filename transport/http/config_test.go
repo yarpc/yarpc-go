@@ -496,6 +496,6 @@ func useFakeBuildClient(t *testing.T, want *wantHTTPClient) TransportOption {
 		assert.Equal(t, want.DisableCompression, options.disableCompression, "http.Client: DisableCompression should match")
 		assert.Equal(t, want.ResponseHeaderTimeout, options.responseHeaderTimeout, "http.Client: ResponseHeaderTimeout should match")
 		assert.Equal(t, want.ConnTimeout, options.connTimeout, "http.Client: ConnTimeout should match")
-		return options.buildHTTPClient(nil)
+		return buildHTTPClient(options)
 	})
 }
