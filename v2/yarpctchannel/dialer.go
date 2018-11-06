@@ -79,6 +79,11 @@ type Dialer struct {
 
 var _ yarpc.Dialer = (*Dialer)(nil)
 
+// Name returns the tchannel dialer's name.
+func (d *Dialer) Name() string {
+	return "tchannel"
+}
+
 // Start starts the TChannel dialer.
 func (d *Dialer) Start(ctx context.Context) error {
 	chopts := tchannel.ChannelOptions{

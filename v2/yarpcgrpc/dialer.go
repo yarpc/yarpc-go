@@ -88,6 +88,11 @@ type dialerInternals struct {
 	tracer opentracing.Tracer
 }
 
+// Name returns the gRPC dialer's name.
+func (d *Dialer) Name() string {
+	return "grpc"
+}
+
 // Start starts the gRPC dialer.
 func (d *Dialer) Start(context.Context) error {
 	d.internal = &dialerInternals{

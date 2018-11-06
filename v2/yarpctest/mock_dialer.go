@@ -53,6 +53,18 @@ func (m *MockDialer) EXPECT() *MockDialerMockRecorder {
 	return m.recorder
 }
 
+// Name mocks base method
+func (m *MockDialer) Name() string {
+	ret := m.ctrl.Call(m, "Name")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Name indicates an expected call of Name
+func (mr *MockDialerMockRecorder) Name() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockDialer)(nil).Name))
+}
+
 // ReleasePeer mocks base method
 func (m *MockDialer) ReleasePeer(arg0 v2.Identifier, arg1 v2.Subscriber) error {
 	ret := m.ctrl.Call(m, "ReleasePeer", arg0, arg1)
