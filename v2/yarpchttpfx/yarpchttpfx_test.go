@@ -24,12 +24,30 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/config"
 	"go.uber.org/fx/fxtest"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcchooser"
+	"go.uber.org/yarpc/v2/yarpcdialer"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
+
+func newDialerProvider(t *testing.T) (provider yarpc.DialerProvider, finish func()) {
+	p := yarpcdialer.NewProvider()
+	mockCtrl := gomock.NewController(t)
+	require.NoError(t, p.Register("http", yarpctest.NewMockDialer(mockCtrl)))
+	return p, mockCtrl.Finish
+}
+
+func newChooserProvider(t *testing.T) (provider yarpc.ChooserProvider, finish func()) {
+	p := yarpcchooser.NewProvider()
+	mockCtrl := gomock.NewController(t)
+	require.NoError(t, p.Register("round-robin", yarpctest.NewMockChooser(mockCtrl)))
+	return p, mockCtrl.Finish
+}
 
 func TestNewInboundConfig(t *testing.T) {
 	cfg := strings.NewReader("yarpc: {http: {inbounds: {address: http://127.0.0.1:0}}}")
@@ -71,6 +89,11 @@ func TestNewOutboundsConfig(t *testing.T) {
 }
 
 func TestNewClients(t *testing.T) {
+	dp, df := newDialerProvider(t)
+	defer df()
+	cp, cf := newChooserProvider(t)
+	defer cf()
+
 	res, err := NewClients(ClientParams{
 		Lifecycle: fxtest.NewLifecycle(t),
 		Config: OutboundsConfig{
@@ -78,6 +101,8 @@ func TestNewClients(t *testing.T) {
 				"bar": {Address: "http://127.0.0.1:0"},
 			},
 		},
+		DialerProvider:  dp,
+		ChooserProvider: cp,
 	})
 	require.NoError(t, err)
 	assert.Len(t, res.Clients, 1)
