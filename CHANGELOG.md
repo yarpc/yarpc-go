@@ -29,9 +29,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Adds `thrift.Named` option for appropriately labelling procedures inherited
   from other thrift services.
-- The HTTP protocol now marks peers as unavailable immediately when the remote
-side closes the connection.
-
 ### Fixed
 - Calling extended Thrift service procedures previously called the base service's
   procedures.

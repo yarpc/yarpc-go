@@ -522,7 +522,7 @@ func (o *Outbound) doWithPeer(
 
 		// Note that the connection may have been lost so the peer connection
 		// maintenance loop resumes probing for availability.
-		p.onDisconnected()
+		p.OnDisconnected()
 
 		return nil, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "unknown error from http client: %s", err.Error())
 	}

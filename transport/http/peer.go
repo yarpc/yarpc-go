@@ -103,8 +103,9 @@ func (p *httpPeer) OnSuspect() {
 	}
 }
 
-func (p *httpPeer) onDisconnected() {
+func (p *httpPeer) OnDisconnected() {
 	p.Peer.SetStatus(peer.Connecting)
+
 	// Kick the state change channel (if it hasn't been kicked already).
 	select {
 	case p.changed <- struct{}{}:
@@ -129,7 +130,7 @@ func (p *httpPeer) MaintainConn() {
 	p.Peer.SetStatus(peer.Connecting)
 	for {
 		// Invariant: Status is Connecting initially, or after exponential
-		// back-off, or after onDisconnected, but still Available after
+		// back-off, or after OnDisconnected, but still Available after
 		// OnSuspect.
 		if p.isAvailable() {
 			p.Peer.SetStatus(peer.Available)
@@ -139,7 +140,7 @@ func (p *httpPeer) MaintainConn() {
 				break
 			}
 			// Invariant: the status is Connecting if change is triggered by
-			// onDisconnected, but remains Available if triggered by OnSuspect.
+			// OnDisconnected, but remains Available if triggered by OnSuspect.
 		} else {
 			p.Peer.SetStatus(peer.Unavailable)
 			// Back-off on fail
