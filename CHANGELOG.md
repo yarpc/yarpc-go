@@ -5,7 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- No changes yet.
+### Removed
+- Reverted HTTP transport marking peers as unavailable when the remote side
+  closes the connection due to a deadlock.
 
 ## [1.35.1] - 2018-10-17
 ### Fixed
