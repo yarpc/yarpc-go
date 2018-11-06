@@ -23,7 +23,10 @@ package yarpcfx
 import (
 	"go.uber.org/fx"
 	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcchooser"
 	"go.uber.org/yarpc/v2/yarpcclient"
+	"go.uber.org/yarpc/v2/yarpcdialer"
+	"go.uber.org/yarpc/v2/yarpclist"
 	"go.uber.org/yarpc/v2/yarpcrouter"
 )
 
@@ -33,6 +36,9 @@ const _name = "yarpcfx"
 // a yarpc.Router and a yarpc.ClientProvider.
 var Module = fx.Options(
 	fx.Provide(NewClientProvider),
+	fx.Provide(NewDialerProvider),
+	fx.Provide(NewChooserProvider),
+	fx.Provide(NewListProvider),
 	fx.Provide(NewRouter),
 )
 
@@ -59,9 +65,107 @@ func NewClientProvider(p ClientProviderParams) (ClientProviderResult, error) {
 	}
 	provider := yarpcclient.NewProvider()
 	for _, c := range clients {
-		provider.Register(c.Service, c)
+		if err := provider.Register(c.Service, c); err != nil {
+			return ClientProviderResult{}, err
+		}
 	}
 	return ClientProviderResult{
+		Provider: provider,
+	}, nil
+}
+
+// DialerProviderParams defines the dependencies of this module.
+type DialerProviderParams struct {
+	fx.In
+
+	Dialers     []yarpc.Dialer   `group:"yarpcfx"`
+	DialerLists [][]yarpc.Dialer `group:"yarpcfx"`
+}
+
+// DialerProviderResult defines the values produced by this module.
+type DialerProviderResult struct {
+	fx.Out
+
+	Provider yarpc.DialerProvider
+}
+
+// NewDialerProvider provides a yarpc.DialerProvider to the Fx application.
+func NewDialerProvider(p DialerProviderParams) (DialerProviderResult, error) {
+	dialers := p.Dialers
+	for _, dl := range p.DialerLists {
+		dialers = append(dialers, dl...)
+	}
+	provider := yarpcdialer.NewProvider()
+	for _, d := range dialers {
+		if err := provider.Register(d.Name(), d); err != nil {
+			return DialerProviderResult{}, err
+		}
+	}
+	return DialerProviderResult{
+		Provider: provider,
+	}, nil
+}
+
+// ChooserProviderParams defines the dependencies of this module.
+type ChooserProviderParams struct {
+	fx.In
+
+	Choosers     []yarpc.NamedChooser   `group:"yarpcfx"`
+	ChooserLists [][]yarpc.NamedChooser `group:"yarpcfx"`
+}
+
+// ChooserProviderResult defines the values produced by this module.
+type ChooserProviderResult struct {
+	fx.Out
+
+	Provider yarpc.ChooserProvider
+}
+
+// NewChooserProvider provides a yarpc.ChooserProvider to the Fx application.
+func NewChooserProvider(p ChooserProviderParams) (ChooserProviderResult, error) {
+	choosers := p.Choosers
+	for _, cl := range p.ChooserLists {
+		choosers = append(choosers, cl...)
+	}
+	provider := yarpcchooser.NewProvider()
+	for _, c := range choosers {
+		if err := provider.Register(c.Name, c.Chooser); err != nil {
+			return ChooserProviderResult{}, err
+		}
+	}
+	return ChooserProviderResult{
+		Provider: provider,
+	}, nil
+}
+
+// ListProviderParams defines the dependencies of this module.
+type ListProviderParams struct {
+	fx.In
+
+	Lists     []yarpc.NamedList   `group:"yarpcfx"`
+	ListLists [][]yarpc.NamedList `group:"yarpcfx"`
+}
+
+// ListProviderResult defines the values produced by this module.
+type ListProviderResult struct {
+	fx.Out
+
+	Provider yarpc.ListProvider
+}
+
+// NewListProvider provides a yarpc.ListProvider to the Fx application.
+func NewListProvider(p ListProviderParams) (ListProviderResult, error) {
+	lists := p.Lists
+	for _, ll := range p.ListLists {
+		lists = append(lists, ll...)
+	}
+	provider := yarpclist.NewProvider()
+	for _, l := range lists {
+		if err := provider.Register(l.Name, l.List); err != nil {
+			return ListProviderResult{}, err
+		}
+	}
+	return ListProviderResult{
 		Provider: provider,
 	}, nil
 }
