@@ -44,40 +44,6 @@ type PeerListAction interface {
 	Apply(*testing.T, yarpc.Chooser, ListActionDeps)
 }
 
-// StartAction is an action for testing PeerList.Start
-type StartAction struct {
-	ExpectedErr error
-}
-
-type starter interface {
-	Start() error
-}
-
-// Apply runs "Start" on the peerList and validates the error
-func (a StartAction) Apply(t *testing.T, pl yarpc.Chooser, deps ListActionDeps) {
-	if starter, ok := pl.(starter); ok {
-		err := starter.Start()
-		assert.Equal(t, a.ExpectedErr, err)
-	}
-}
-
-// StopAction is an action for testing PeerList.Stop
-type StopAction struct {
-	ExpectedErr error
-}
-
-type stopper interface {
-	Stop() error
-}
-
-// Apply runs "Stop" on the peerList and validates the error
-func (a StopAction) Apply(t *testing.T, pl yarpc.Chooser, deps ListActionDeps) {
-	if stopper, ok := pl.(stopper); ok {
-		err := stopper.Stop()
-		assert.Equal(t, a.ExpectedErr, err, "Stop action expected error %v, got %v", a.ExpectedErr, err)
-	}
-}
-
 // ChooseMultiAction will run Choose multiple times on the PeerList
 // It will assert if there are ANY failures
 type ChooseMultiAction struct {
