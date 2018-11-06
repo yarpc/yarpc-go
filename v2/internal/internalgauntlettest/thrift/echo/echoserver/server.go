@@ -74,12 +74,12 @@ func (h handler) Echo(ctx context.Context, body wire.Value) (yarpcthrift.Respons
 
 	success, err := h.impl.Echo(ctx, args.Request)
 
-	hadError := err != nil
+	appErr := err
 	result, err := echo.Echo_Echo_Helper.WrapResponse(success, err)
 
 	var response yarpcthrift.Response
 	if err == nil {
-		response.IsApplicationError = hadError
+		response.ApplicationError = appErr
 		response.Body = result
 	}
 	return response, err
