@@ -37,8 +37,8 @@ var defaultListOptions = listOptions{
 	capacity: 10,
 }
 
-// ListOption customizes the behavior of a fewest pending of two random peers
-// list.
+// ListOption is a variadic argument for the two-random-chocies peer list
+// constructor.
 type ListOption interface {
 	apply(*listOptions)
 }
@@ -71,7 +71,7 @@ func Source(source rand.Source) ListOption {
 	})
 }
 
-// New creates a new fewest pending requests of two random peers peer list.
+// New creates a new two-random-choices peer list.
 func New(dialer yarpc.Dialer, opts ...ListOption) *List {
 	options := defaultListOptions
 	for _, opt := range opts {
