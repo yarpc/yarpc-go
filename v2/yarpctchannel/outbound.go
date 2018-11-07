@@ -22,6 +22,7 @@ package yarpctchannel
 
 import (
 	"context"
+	"errors"
 	"io"
 
 	"github.com/uber/tchannel-go"
@@ -163,9 +164,15 @@ func callWithPeer(ctx context.Context, req *yarpc.Request, reqBody *yarpc.Buffer
 			"does not match the service name received in the response: sent %q, got: %q", req.Service, resSvcName)
 	}
 
+	var appErr error
+	if res.ApplicationError() {
+		// TODO(mhp): this is a filler error for now to preserve current yarpc
+		// error behavior. This should later be more well-defined.
+		appErr = errors.New("application error")
+	}
 	return &yarpc.Response{
 		Headers:          headers,
-		ApplicationError: res.ApplicationError(),
+		ApplicationError: appErr,
 	}, resBody, getResponseErrorAndDeleteHeaderKeys(headers)
 }
 

@@ -166,11 +166,11 @@ func (h handler) writeResponse(ctx context.Context, call inboundCall, res *yarpc
 		// Nothing to see here. Move along.
 		return nil
 	}
-	if retErr != nil && (res == nil || !res.ApplicationError) {
+	if retErr != nil && (res == nil || res.ApplicationError == nil) {
 		// System error.
 		return retErr
 	}
-	if retErr != nil && res != nil && res.ApplicationError {
+	if retErr != nil && res != nil && res.ApplicationError != nil {
 		// We have an error, so we're going to propagate it as a yarpc error,
 		// regardless of whether or not it is a system error.
 		status := yarpcerror.FromError(yarpcerror.WrapHandlerError(retErr, call.ServiceName(), call.MethodString()))
@@ -190,7 +190,7 @@ func (h handler) writeResponse(ctx context.Context, call inboundCall, res *yarpc
 	// This is the point of no return. We have committed to sending a call
 	// response. Hereafter, all failures while sending the error must be logged
 	// and the response aborted.
-	if res.ApplicationError {
+	if res.ApplicationError != nil {
 		if err := call.Response().SetApplicationError(); err != nil {
 			retErr = appendError(retErr, fmt.Errorf("SetApplicationError() failed: %v", err))
 		}

@@ -77,7 +77,11 @@ func (u *unaryTransportHandler) Handle(ctx context.Context, req *Request, reqBuf
 	}
 
 	if appErr != nil {
-		res.ApplicationError = true
+		// TODO: This is a bit odd; we set the error in response AND return it.
+		// However, to preserve the current behavior of YARPC, this is
+		// necessary. This is most likely where the error details will be added,
+		// so we expect this to change.
+		res.ApplicationError = appErr
 		return res, encodedBody, appErr
 	}
 

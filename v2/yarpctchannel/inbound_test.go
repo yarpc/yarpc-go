@@ -133,7 +133,7 @@ func TestInboundSubServices(t *testing.T) {
 		if !assert.NoError(t, err, "failed to make call") {
 			continue
 		}
-		if !assert.Equal(t, false, res.ApplicationError, "not application error") {
+		if !assert.NoError(t, res.ApplicationError, "not application error") {
 			continue
 		}
 		assert.Equal(t, resBody, yarpc.NewBufferString(tt.service))

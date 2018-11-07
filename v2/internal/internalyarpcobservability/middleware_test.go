@@ -69,7 +69,7 @@ func TestMiddlewareLogging(t *testing.T) {
 	type test struct {
 		desc            string
 		err             error // downstream error
-		applicationErr  bool  // downstream application error
+		applicationErr  error // downstream application error
 		wantErrLevel    zapcore.Level
 		wantInboundMsg  string
 		wantOutboundMsg string
@@ -104,7 +104,7 @@ func TestMiddlewareLogging(t *testing.T) {
 		},
 		{
 			desc:            "no downstream error but with application error",
-			applicationErr:  true,
+			applicationErr:  errors.New("error"),
 			wantErrLevel:    zapcore.ErrorLevel,
 			wantInboundMsg:  "Error handling inbound request.",
 			wantOutboundMsg: "Error making outbound call.",
@@ -168,7 +168,11 @@ func TestMiddlewareLogging(t *testing.T) {
 				Context: logContext,
 			}
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
-			assert.Equal(t, tt.applicationErr, res.ApplicationError)
+			if tt.applicationErr != nil {
+				assert.Error(t, res.ApplicationError)
+			} else {
+				assert.NoError(t, res.ApplicationError)
+			}
 			assert.Equal(t, tt.err, err)
 		})
 		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
@@ -176,7 +180,11 @@ func TestMiddlewareLogging(t *testing.T) {
 			checkErr(err)
 			if tt.err == nil {
 				assert.NotNil(t, res, "Expected non-nil response if call is successful.")
-				assert.Equal(t, tt.applicationErr, res.ApplicationError)
+				if tt.applicationErr != nil {
+					assert.Error(t, res.ApplicationError)
+				} else {
+					assert.NoError(t, res.ApplicationError)
+				}
 			}
 			logContext := append(
 				baseFields(),
@@ -196,7 +204,7 @@ func TestMiddlewareLogging(t *testing.T) {
 		})
 
 		// Application errors aren't applicable to streaming
-		if tt.applicationErr {
+		if tt.applicationErr != nil {
 			continue
 		}
 
@@ -258,7 +266,6 @@ func TestMiddlewareMetrics(t *testing.T) {
 	type test struct {
 		desc               string
 		err                error // downstream error
-		applicationErr     bool  // downstream application error
 		wantCalls          int
 		wantSuccesses      int
 		wantCallerFailures map[string]int
@@ -310,11 +317,11 @@ func TestMiddlewareMetrics(t *testing.T) {
 	}
 
 	newHandler := func(t test) fakeHandler {
-		return fakeHandler{err: t.err, applicationErr: t.applicationErr}
+		return fakeHandler{err: t.err}
 	}
 
 	newOutbound := func(t test) fakeOutbound {
-		return fakeOutbound{err: t.err, applicationErr: t.applicationErr}
+		return fakeOutbound{err: t.err}
 	}
 
 	for _, tt := range tests {
@@ -402,12 +409,12 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		context.Background(),
 		req,
 		reqBuf,
-		fakeHandler{err: nil, applicationErr: true},
+		fakeHandler{err: nil, applicationErr: errors.New("error")},
 	)
 
 	require.NoError(t, err, "Unexpected transport error.")
 	require.NotNil(t, res)
-	require.True(t, res.ApplicationError)
+	require.Error(t, res.ApplicationError)
 
 	expected := observer.LoggedEntry{
 		Entry: zapcore.Entry{
@@ -442,11 +449,11 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 			RoutingDelegate: "rd",
 		},
 		yarpc.NewBufferString("body"),
-		fakeHandler{nil, false},
+		fakeHandler{nil, nil},
 	)
 	require.NoError(t, err, "Unexpected transport error.")
 	require.NotNil(t, res)
-	require.False(t, res.ApplicationError)
+	require.NoError(t, res.ApplicationError)
 
 	snap := root.Snapshot()
 	tags := metrics.Tags{
@@ -505,11 +512,11 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 			RoutingDelegate: "rd",
 		},
 		yarpc.NewBufferString("body"),
-		fakeHandler{fmt.Errorf("yuno"), false},
+		fakeHandler{fmt.Errorf("yuno"), nil},
 	)
 	require.Error(t, err, "Expected transport error.")
 	require.NotNil(t, res)
-	require.False(t, res.ApplicationError)
+	require.NoError(t, res.ApplicationError)
 
 	snap := root.Snapshot()
 	tags := metrics.Tags{

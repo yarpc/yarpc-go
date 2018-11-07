@@ -51,14 +51,13 @@ func (h handler) Check(ctx context.Context, body wire.Value) (yarpcthrift.Respon
 		return yarpcthrift.Response{}, err
 	}
 
-	success, err := h.impl.Check(ctx)
+	success, appErr := h.impl.Check(ctx)
 
-	hadError := err != nil
-	result, err := weather.Weather_Check_Helper.WrapResponse(success, err)
+	result, err := weather.Weather_Check_Helper.WrapResponse(success, appErr)
 
 	var response yarpcthrift.Response
 	if err == nil {
-		response.IsApplicationError = hadError
+		response.Exception = appErr
 		response.Body = result
 	}
 	return response, err

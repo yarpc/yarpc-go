@@ -126,8 +126,7 @@ func (o *Outbound) call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.B
 	}
 
 	res := &yarpc.Response{
-		Headers:          applicationHeaders.FromHTTPHeaders(httpRes.Header, yarpc.NewHeaders()),
-		ApplicationError: httpRes.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus,
+		Headers: applicationHeaders.FromHTTPHeaders(httpRes.Header, yarpc.NewHeaders()),
 	}
 
 	resBuf, err := readCloserToBuffer(httpRes.Body)
@@ -135,10 +134,18 @@ func (o *Outbound) call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.B
 		return nil, nil, err
 	}
 
+	if httpRes.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus {
+		res.ApplicationError = getYARPCErrorFromResponse(httpRes, resBuf, true)
+	}
+
 	botResponseError := httpRes.Header.Get(BothResponseErrorHeader) == AcceptTrue
 	if botResponseError && !o.legacyResponseError {
 		if httpRes.StatusCode >= 300 {
-			return res, resBuf, getYARPCErrorFromResponse(httpRes, resBuf, true)
+			// TODO: This is a bit odd; we set the error in response AND return it.
+			// However, to preserve the current behavior of YARPC, this is
+			// necessary. This is most likely where the error details will be added,
+			// so we expect this to change.
+			return res, resBuf, res.ApplicationError
 		}
 		return res, resBuf, nil
 	}

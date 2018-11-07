@@ -23,5 +23,5 @@ package yarpc
 // Response is the low level response representation.
 type Response struct {
 	Headers          Headers
-	ApplicationError bool
+	ApplicationError error
 }
