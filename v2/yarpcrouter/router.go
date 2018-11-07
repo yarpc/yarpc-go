@@ -22,7 +22,6 @@ package yarpcrouter
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -31,10 +30,7 @@ import (
 	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
-var (
-	_ yarpc.Router                = (*MapRouter)(nil)
-	_ yarpc.UnaryTransportHandler = (*unaryTransportHandler)(nil)
-)
+var _ yarpc.Router = (*MapRouter)(nil)
 
 type serviceProcedure struct {
 	service   string
@@ -72,63 +68,6 @@ func NewMapRouter(defaultService string, rs []yarpc.TransportProcedure) MapRoute
 
 	router.register(rs)
 	return router
-}
-
-// EncodingToTransportProcedures converts encoding-level procedures to transport-level procedures.
-func EncodingToTransportProcedures(encodingProcedures []yarpc.EncodingProcedure) ([]yarpc.TransportProcedure, error) {
-	transportProcedures := make([]yarpc.TransportProcedure, len(encodingProcedures))
-	for i, p := range encodingProcedures {
-		var spec yarpc.TransportHandlerSpec
-		switch p.HandlerSpec.Type() {
-		case yarpc.Unary:
-			spec = yarpc.NewUnaryTransportHandlerSpec(&unaryTransportHandler{p})
-		default:
-			return nil, fmt.Errorf("unsupported handler spec type: %v", p.HandlerSpec.Type())
-		}
-
-		transportProcedures[i] = yarpc.TransportProcedure{
-			Name:        p.Name,
-			Service:     p.Service,
-			HandlerSpec: spec,
-			Encoding:    p.Encoding,
-			Signature:   p.Signature,
-		}
-	}
-
-	return transportProcedures, nil
-}
-
-// Allows encoding-level procedures to act as transport-level procedures.
-type unaryTransportHandler struct {
-	h yarpc.EncodingProcedure
-}
-
-func (u *unaryTransportHandler) Handle(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
-	res := &yarpc.Response{}
-	ctx, call := yarpc.NewInboundCall(ctx)
-	if err := call.ReadFromRequest(req); err != nil {
-		return nil, nil, err
-	}
-
-	decodedBody, err := u.h.Codec.Decode(reqBuf)
-	if err != nil {
-		return res, nil, err
-	}
-
-	body, appErr := u.h.HandlerSpec.Unary().Handle(ctx, decodedBody)
-	call.WriteToResponse(res)
-
-	encodedBody, err := u.h.Codec.Encode(body)
-	if err != nil {
-		return res, nil, err
-	}
-
-	if appErr != nil {
-		res.ApplicationError = true
-		return res, encodedBody, appErr
-	}
-
-	return res, encodedBody, nil
 }
 
 func (m MapRouter) register(rs []yarpc.TransportProcedure) {

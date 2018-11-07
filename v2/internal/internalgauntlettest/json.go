@@ -25,8 +25,6 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/v2/yarpcrouter"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/v2"
@@ -42,7 +40,7 @@ type jsonResponse struct {
 }
 
 func jsonProcedures() []yarpc.TransportProcedure {
-	procedures, _ := yarpcrouter.EncodingToTransportProcedures(
+	procedures, _ := yarpc.EncodingToTransportProcedures(
 		yarpcjson.Procedure("json-procedure", jsonEchoHandler),
 	)
 

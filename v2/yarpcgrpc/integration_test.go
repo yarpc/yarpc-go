@@ -44,7 +44,6 @@ import (
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcjson"
-	"go.uber.org/yarpc/v2/yarpcrouter"
 	"go.uber.org/yarpc/v2/yarpctest"
 	"google.golang.org/grpc/credentials"
 )
@@ -287,7 +286,7 @@ func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
 	}
 
 	inbound.Addr = "127.0.0.1:0"
-	procedures, err := yarpcrouter.EncodingToTransportProcedures(options.Procedures)
+	procedures, err := yarpc.EncodingToTransportProcedures(options.Procedures)
 	if err != nil {
 		return nil, err
 	}
