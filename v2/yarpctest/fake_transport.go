@@ -51,10 +51,10 @@ func InitialConnectionStatus(s yarpc.ConnectionStatus) FakeTransportOption {
 // NewFakeTransport returns a fake transport.
 func NewFakeTransport(name string, opts ...FakeTransportOption) *FakeTransport {
 	t := &FakeTransport{
-		name:                    name,
+		name: name,
 		initialConnectionStatus: yarpc.Available,
-		peers:                   make(map[string]*FakePeer),
-		mu:                      &sync.Mutex{},
+		peers: make(map[string]*FakePeer),
+		mu:    &sync.Mutex{},
 	}
 	for _, opt := range opts {
 		opt(t)
