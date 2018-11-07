@@ -69,7 +69,7 @@ func TestMiddlewareLogging(t *testing.T) {
 	type test struct {
 		desc            string
 		err             error // downstream error
-		applicationErr  bool  // downstream application error
+		applicationErr  error // downstream application error
 		wantErrLevel    zapcore.Level
 		wantInboundMsg  string
 		wantOutboundMsg string
@@ -104,7 +104,7 @@ func TestMiddlewareLogging(t *testing.T) {
 		},
 		{
 			desc:            "no downstream error but with application error",
-			applicationErr:  true,
+			applicationErr:  errors.New("error"),
 			wantErrLevel:    zapcore.ErrorLevel,
 			wantInboundMsg:  "Error handling inbound request.",
 			wantOutboundMsg: "Error making outbound call.",
@@ -118,19 +118,11 @@ func TestMiddlewareLogging(t *testing.T) {
 	}
 
 	newHandler := func(t test) fakeHandler {
-		var appErr error
-		if t.applicationErr {
-			appErr = errors.New("error")
-		}
-		return fakeHandler{err: t.err, applicationErr: appErr}
+		return fakeHandler{err: t.err, applicationErr: t.applicationErr}
 	}
 
 	newOutbound := func(t test) fakeOutbound {
-		var appErr error
-		if t.applicationErr {
-			appErr = errors.New("error")
-		}
-		return fakeOutbound{err: t.err, applicationErr: appErr}
+		return fakeOutbound{err: t.err, applicationErr: t.applicationErr}
 	}
 
 	for _, tt := range tests {
@@ -176,7 +168,7 @@ func TestMiddlewareLogging(t *testing.T) {
 				Context: logContext,
 			}
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
-			if tt.applicationErr {
+			if tt.applicationErr != nil {
 				assert.Error(t, res.ApplicationError)
 			} else {
 				assert.NoError(t, res.ApplicationError)
@@ -188,7 +180,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			checkErr(err)
 			if tt.err == nil {
 				assert.NotNil(t, res, "Expected non-nil response if call is successful.")
-				if tt.applicationErr {
+				if tt.applicationErr != nil {
 					assert.Error(t, res.ApplicationError)
 				} else {
 					assert.NoError(t, res.ApplicationError)
@@ -212,7 +204,7 @@ func TestMiddlewareLogging(t *testing.T) {
 		})
 
 		// Application errors aren't applicable to streaming
-		if tt.applicationErr {
+		if tt.applicationErr != nil {
 			continue
 		}
 
@@ -274,7 +266,6 @@ func TestMiddlewareMetrics(t *testing.T) {
 	type test struct {
 		desc               string
 		err                error // downstream error
-		applicationErr     bool  // downstream application error
 		wantCalls          int
 		wantSuccesses      int
 		wantCallerFailures map[string]int
@@ -326,19 +317,11 @@ func TestMiddlewareMetrics(t *testing.T) {
 	}
 
 	newHandler := func(t test) fakeHandler {
-		var appErr error
-		if t.applicationErr {
-			appErr = errors.New("error")
-		}
-		return fakeHandler{err: t.err, applicationErr: appErr}
+		return fakeHandler{err: t.err}
 	}
 
 	newOutbound := func(t test) fakeOutbound {
-		var appErr error
-		if t.applicationErr {
-			appErr = errors.New("error")
-		}
-		return fakeOutbound{err: t.err, applicationErr: appErr}
+		return fakeOutbound{err: t.err}
 	}
 
 	for _, tt := range tests {

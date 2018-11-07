@@ -65,8 +65,8 @@ func (t unaryTransportHandler) Handle(ctx context.Context, req *yarpc.Request, r
 
 	res, resBuf := &yarpc.Response{}, &yarpc.Buffer{}
 
-	if thriftRes.ApplicationError != nil {
-		res.ApplicationError = thriftRes.ApplicationError
+	if thriftRes.Exception != nil {
+		res.ApplicationError = thriftRes.Exception
 	}
 
 	call.WriteToResponse(res)

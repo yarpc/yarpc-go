@@ -101,7 +101,7 @@ func TestDecodeRequestApplicationError(t *testing.T) {
 
 	handler := func(ctx context.Context, w wire.Value) (Response, error) {
 		// XXX setting application error bit
-		return Response{Body: fakeEnveloper(wire.Reply), ApplicationError: errors.New("decode application error")}, nil
+		return Response{Body: fakeEnveloper(wire.Reply), Exception: errors.New("decode application error")}, nil
 	}
 	h := unaryTransportHandler{Protocol: proto, ThriftHandler: handler}
 

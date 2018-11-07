@@ -26,5 +26,5 @@ import "go.uber.org/thriftrw/envelope"
 type Response struct {
 	Body envelope.Enveloper
 
-	ApplicationError error
+	Exception error
 }

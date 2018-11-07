@@ -55,6 +55,10 @@ func (m *Middleware) Handle(ctx context.Context, req *yarpc.Request, reqBuf *yar
 	if res != nil {
 		isApplicationError = res.ApplicationError != nil
 	}
+	// TODO(mhp): Now that we are including the application error into the
+	// response, we can log with much more detail. The error in the response
+	// struct will be changing soon; the logging behavior in this middleware
+	// should be revisited after that.
 	call.EndWithAppError(err, isApplicationError)
 	return res, resBuf, err
 }

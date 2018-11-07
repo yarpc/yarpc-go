@@ -12,6 +12,8 @@
             could be considered fatal (T1995085). This affects transports and encodings.
             - [x] JSON encoding
             - [x] HTTP transport
+      - [ ] Revisit the ApplicationError field in *yarpc.Response and consider replacing it
+            with a strongly-typed metadata struct or interface.
 - [x] Change Request and Response body to yarpc.Buffer type
       - [ ] Accumulate request bodies at the inbound
 - [ ] yarpcrouter.Router needs to accept middleware to decorate registered

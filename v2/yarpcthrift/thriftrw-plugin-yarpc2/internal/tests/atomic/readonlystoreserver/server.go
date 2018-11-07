@@ -56,14 +56,13 @@ func (h handler) Integer(ctx context.Context, body wire.Value) (yarpcthrift.Resp
 		return yarpcthrift.Response{}, err
 	}
 
-	success, err := h.impl.Integer(ctx, args.Key)
+	success, appErr := h.impl.Integer(ctx, args.Key)
 
-	appErr := err
-	result, err := atomic.ReadOnlyStore_Integer_Helper.WrapResponse(success, err)
+	result, err := atomic.ReadOnlyStore_Integer_Helper.WrapResponse(success, appErr)
 
 	var response yarpcthrift.Response
 	if err == nil {
-		response.ApplicationError = appErr
+		response.Exception = appErr
 		response.Body = result
 	}
 	return response, err

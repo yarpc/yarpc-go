@@ -152,8 +152,8 @@ func metadataToApplicationError(invokeErr error, responseMD metadata.MD) error {
 	if responseMD == nil {
 		return nil
 	}
-	_, ok := responseMD[ApplicationErrorHeader]
-	if ok {
+
+	if _, ok := responseMD[ApplicationErrorHeader]; ok {
 		return invokeErr
 	}
 	return nil

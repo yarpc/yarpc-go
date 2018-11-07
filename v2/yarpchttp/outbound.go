@@ -141,6 +141,10 @@ func (o *Outbound) call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.B
 	botResponseError := httpRes.Header.Get(BothResponseErrorHeader) == AcceptTrue
 	if botResponseError && !o.legacyResponseError {
 		if httpRes.StatusCode >= 300 {
+			// TODO: This is a bit odd; we set the error in response AND return it.
+			// However, to preserve the current behavior of YARPC, this is
+			// necessary. This is most likely where the error details will be added,
+			// so we expect this to change.
 			return res, resBuf, res.ApplicationError
 		}
 		return res, resBuf, nil
