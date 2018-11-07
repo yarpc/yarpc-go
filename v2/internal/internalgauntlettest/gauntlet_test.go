@@ -90,7 +90,7 @@ func newChooser(t *testing.T, chooser string, dialer yarpc.Dialer, id yarpc.Iden
 		return pl
 
 	case _roundrobin:
-		pl := yarpcroundrobin.New(dialer)
+		pl := yarpcroundrobin.New("roundrobin", dialer)
 		pl.Update(update)
 		return pl
 

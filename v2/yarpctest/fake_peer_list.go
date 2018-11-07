@@ -51,6 +51,9 @@ func NewFakePeerList(opts ...FakePeerListOption) *FakePeerList {
 	return pl
 }
 
+// Name returns the fake List's name.
+func (c *FakePeerList) Name() string { return "fake" }
+
 // Choose pretends to choose a peer, but actually always returns an error. It's fake.
 func (c *FakePeerList) Choose(ctx context.Context, req *yarpc.Request) (yarpc.Peer, func(error), error) {
 	return nil, nil, fmt.Errorf(`fake peer list can't actually choose peers`)
