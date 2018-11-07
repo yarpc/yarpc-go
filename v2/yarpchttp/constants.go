@@ -86,6 +86,12 @@ const (
 	// feature is supported on the server. If any non-empty value is set,
 	// this indicates true.
 	BothResponseErrorHeader = "Rpc-Both-Response-Error"
+
+	// ContentTypeHeader is the key of the HTTP Content-Type header.
+	ContentTypeHeader = "Content-Type"
+
+	// TextPlainHeader is the text/plain Content-Type header value.
+	TextPlainHeader = "text/plain; charset=utf8"
 )
 
 // Valid values for the Rpc-Status header.
