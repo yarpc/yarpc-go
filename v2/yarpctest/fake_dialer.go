@@ -18,29 +18,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcchooser
+package yarpctest
 
 import (
-	"testing"
+	"fmt"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/v2/yarpctest"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
-func TestProvider(t *testing.T) {
-	p := NewProvider()
-	require.NotNil(t, p)
+// FakeDialer is a fake dialer.
+type FakeDialer struct {
+	name string
+}
 
-	_, ok := p.Chooser("foo")
-	require.False(t, ok)
+var _ yarpc.Dialer = (*FakeDialer)(nil)
 
-	fake := yarpctest.NewFakePeerChooser("foo")
-	assert.NoError(t, p.Register("foo", fake))
+// NewFakeDialer returns a fake dialer.
+func NewFakeDialer(name string) *FakeDialer {
+	return &FakeDialer{
+		name: name,
+	}
+}
 
-	chooser, ok := p.Chooser("foo")
-	require.True(t, ok)
-	assert.Equal(t, fake, chooser)
+// Name returns the fake List's name.
+func (d *FakeDialer) Name() string { return d.name }
 
-	assert.EqualError(t, p.Register("foo", nil), `chooser "foo" is already registered`)
+// RetainPeer pretends to retain a peer, but actually always returns an error. It's fake.
+func (d *FakeDialer) RetainPeer(_ yarpc.Identifier, _ yarpc.Subscriber) (yarpc.Peer, error) {
+	return nil, fmt.Errorf(`fake dialer can't actually retain peers`)
+}
+
+// ReleasePeer pretends to release a peer.
+func (d *FakeDialer) ReleasePeer(_ yarpc.Identifier, _ yarpc.Subscriber) error {
+	return nil
 }

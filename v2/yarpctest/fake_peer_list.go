@@ -39,12 +39,13 @@ func ListNop(nop string) func(*FakePeerList) {
 
 // FakePeerList is a fake peer list.
 type FakePeerList struct {
-	nop string
+	name string
+	nop  string
 }
 
 // NewFakePeerList returns a fake peer list.
-func NewFakePeerList(opts ...FakePeerListOption) *FakePeerList {
-	pl := &FakePeerList{}
+func NewFakePeerList(name string, opts ...FakePeerListOption) *FakePeerList {
+	pl := &FakePeerList{name: name}
 	for _, opt := range opts {
 		opt(pl)
 	}
@@ -52,7 +53,7 @@ func NewFakePeerList(opts ...FakePeerListOption) *FakePeerList {
 }
 
 // Name returns the fake List's name.
-func (c *FakePeerList) Name() string { return "fake" }
+func (c *FakePeerList) Name() string { return c.name }
 
 // Choose pretends to choose a peer, but actually always returns an error. It's fake.
 func (c *FakePeerList) Choose(ctx context.Context, req *yarpc.Request) (yarpc.Peer, func(error), error) {

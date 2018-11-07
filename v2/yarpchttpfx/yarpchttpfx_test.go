@@ -11,8 +11,7 @@
 // all copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -24,7 +23,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/config"
@@ -35,18 +33,18 @@ import (
 	"go.uber.org/yarpc/v2/yarpctest"
 )
 
-func newDialerProvider(t *testing.T) (provider yarpc.DialerProvider, finish func()) {
+func newDialerProvider(t *testing.T) yarpc.DialerProvider {
 	p := yarpcdialer.NewProvider()
-	mockCtrl := gomock.NewController(t)
-	require.NoError(t, p.Register("http", yarpctest.NewMockDialer(mockCtrl)))
-	return p, mockCtrl.Finish
+	http := yarpctest.NewFakeDialer("http")
+	require.NoError(t, p.Register("http", http))
+	return p
 }
 
-func newChooserProvider(t *testing.T) (provider yarpc.ChooserProvider, finish func()) {
+func newChooserProvider(t *testing.T) yarpc.ChooserProvider {
 	p := yarpcchooser.NewProvider()
-	mockCtrl := gomock.NewController(t)
-	require.NoError(t, p.Register("round-robin", yarpctest.NewMockChooser(mockCtrl)))
-	return p, mockCtrl.Finish
+	rr := yarpctest.NewFakePeerChooser("roundrobin")
+	require.NoError(t, p.Register("roundrobin", rr))
+	return p
 }
 
 func TestNewInboundConfig(t *testing.T) {
@@ -89,11 +87,19 @@ func TestNewOutboundsConfig(t *testing.T) {
 }
 
 func TestNewClients(t *testing.T) {
-	dp, df := newDialerProvider(t)
-	defer df()
-	cp, cf := newChooserProvider(t)
-	defer cf()
-
+	//tests := []struct {
+	//desc       string
+	//giveCfg    OutboundConfig
+	//wantClient yarpc.Client
+	//wantErr    string
+	//}{
+	//{
+	//desc: "Policy configured",
+	//},
+	//{
+	//desc: "Policy configured",
+	//},
+	//}
 	res, err := NewClients(ClientParams{
 		Lifecycle: fxtest.NewLifecycle(t),
 		Config: OutboundsConfig{
@@ -101,8 +107,8 @@ func TestNewClients(t *testing.T) {
 				"bar": {Address: "http://127.0.0.1:0"},
 			},
 		},
-		DialerProvider:  dp,
-		ChooserProvider: cp,
+		DialerProvider:  newDialerProvider(t),
+		ChooserProvider: newChooserProvider(t),
 	})
 	require.NoError(t, err)
 	assert.Len(t, res.Clients, 1)

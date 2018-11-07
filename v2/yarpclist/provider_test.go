@@ -35,7 +35,7 @@ func TestProvider(t *testing.T) {
 	_, ok := p.List("foo")
 	require.False(t, ok)
 
-	fake := yarpctest.NewFakePeerList()
+	fake := yarpctest.NewFakePeerList("foo")
 	assert.NoError(t, p.Register("foo", fake))
 
 	list, ok := p.List("foo")

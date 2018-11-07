@@ -26,31 +26,131 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
 func TestNewClientProvider(t *testing.T) {
-	foo := yarpc.Client{Caller: "foo-caller", Service: "foo-service"}
-	bar := yarpc.Client{Caller: "bar-caller", Service: "bar-service"}
-
-	res, err := NewClientProvider(ClientProviderParams{
-		Clients:     []yarpc.Client{foo},
-		ClientLists: [][]yarpc.Client{{bar}},
+	t.Run("duplicate registration error", func(t *testing.T) {
+		foo := yarpc.Client{Name: "foo"}
+		_, err := NewClientProvider(ClientProviderParams{
+			Clients: []yarpc.Client{foo, foo},
+		})
+		assert.EqualError(t, err, `client "foo" is already registered`)
 	})
-	require.NoError(t, err)
-	provider := res.Provider
+	t.Run("multiple clients", func(t *testing.T) {
+		foo := yarpc.Client{Name: "foo", Caller: "foo-caller", Service: "foo-service"}
+		bar := yarpc.Client{Name: "bar", Caller: "bar-caller", Service: "bar-service"}
 
-	client, ok := provider.Client("foo-service")
-	assert.True(t, ok)
-	assert.Equal(t, client.Caller, "foo-caller")
-	assert.Equal(t, client.Service, "foo-service")
+		res, err := NewClientProvider(ClientProviderParams{
+			Clients:     []yarpc.Client{foo},
+			ClientLists: [][]yarpc.Client{{bar}},
+		})
+		require.NoError(t, err)
+		provider := res.Provider
 
-	client, ok = provider.Client("bar-service")
-	assert.True(t, ok)
-	assert.Equal(t, client.Caller, "bar-caller")
-	assert.Equal(t, client.Service, "bar-service")
+		client, ok := provider.Client("foo")
+		assert.True(t, ok)
+		assert.Equal(t, client.Caller, "foo-caller")
+		assert.Equal(t, client.Service, "foo-service")
 
-	_, ok = provider.Client("unknown")
-	assert.False(t, ok)
+		client, ok = provider.Client("bar")
+		assert.True(t, ok)
+		assert.Equal(t, client.Caller, "bar-caller")
+		assert.Equal(t, client.Service, "bar-service")
+
+		_, ok = provider.Client("unknown")
+		assert.False(t, ok)
+	})
+}
+
+func TestNewDialerProvider(t *testing.T) {
+	t.Run("duplicate registration error", func(t *testing.T) {
+		foo := yarpctest.NewFakeDialer("foo")
+		_, err := NewDialerProvider(DialerProviderParams{
+			Dialers: []yarpc.Dialer{foo, foo},
+		})
+		assert.EqualError(t, err, `dialer "foo" is already registered`)
+	})
+	t.Run("multiple dialers", func(t *testing.T) {
+		foo := yarpctest.NewFakeDialer("foo")
+		bar := yarpctest.NewFakeDialer("bar")
+
+		res, err := NewDialerProvider(DialerProviderParams{
+			Dialers:     []yarpc.Dialer{foo},
+			DialerLists: [][]yarpc.Dialer{{bar}},
+		})
+		require.NoError(t, err)
+		provider := res.Provider
+
+		_, ok := provider.Dialer("foo")
+		assert.True(t, ok)
+
+		_, ok = provider.Dialer("bar")
+		assert.True(t, ok)
+
+		_, ok = provider.Dialer("unknown")
+		assert.False(t, ok)
+	})
+}
+
+func TestNewChooserProvider(t *testing.T) {
+	t.Run("duplicate registration error", func(t *testing.T) {
+		foo := yarpctest.NewFakePeerChooser("foo")
+		_, err := NewChooserProvider(ChooserProviderParams{
+			Choosers: []yarpc.Chooser{foo, foo},
+		})
+		assert.EqualError(t, err, `chooser "foo" is already registered`)
+	})
+	t.Run("multiple choosers", func(t *testing.T) {
+		foo := yarpctest.NewFakePeerChooser("foo")
+		bar := yarpctest.NewFakePeerChooser("bar")
+
+		res, err := NewChooserProvider(ChooserProviderParams{
+			Choosers:     []yarpc.Chooser{foo},
+			ChooserLists: [][]yarpc.Chooser{{bar}},
+		})
+		require.NoError(t, err)
+		provider := res.Provider
+
+		_, ok := provider.Chooser("foo")
+		assert.True(t, ok)
+
+		_, ok = provider.Chooser("bar")
+		assert.True(t, ok)
+
+		_, ok = provider.Chooser("unknown")
+		assert.False(t, ok)
+	})
+}
+
+func TestNewListProvider(t *testing.T) {
+	t.Run("duplicate registration error", func(t *testing.T) {
+		foo := yarpctest.NewFakePeerList("foo")
+		_, err := NewListProvider(ListProviderParams{
+			Lists: []yarpc.List{foo, foo},
+		})
+		assert.EqualError(t, err, `list "foo" is already registered`)
+	})
+	t.Run("multiple lists", func(t *testing.T) {
+		foo := yarpctest.NewFakePeerList("foo")
+		bar := yarpctest.NewFakePeerList("bar")
+
+		res, err := NewListProvider(ListProviderParams{
+			Lists:     []yarpc.List{foo},
+			ListLists: [][]yarpc.List{{bar}},
+		})
+		require.NoError(t, err)
+		provider := res.Provider
+
+		_, ok := provider.List("foo")
+		assert.True(t, ok)
+
+		_, ok = provider.List("bar")
+		assert.True(t, ok)
+
+		_, ok = provider.List("unknown")
+		assert.False(t, ok)
+	})
 }
 
 func TestNewRouter(t *testing.T) {

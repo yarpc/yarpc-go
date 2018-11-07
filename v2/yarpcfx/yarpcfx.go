@@ -65,7 +65,7 @@ func NewClientProvider(p ClientProviderParams) (ClientProviderResult, error) {
 	}
 	provider := yarpcclient.NewProvider()
 	for _, c := range clients {
-		if err := provider.Register(c.Service, c); err != nil {
+		if err := provider.Register(c.Name, c); err != nil {
 			return ClientProviderResult{}, err
 		}
 	}
