@@ -42,7 +42,6 @@ import (
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcrouter"
 	"go.uber.org/yarpc/v2/yarpctest"
-	"go.uber.org/zap"
 )
 
 func TestHandlerSuccess(t *testing.T) {
