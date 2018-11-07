@@ -86,7 +86,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, httpReq *http.Request) {
 		responseWriter.SetResponse(res, resBuf)
 	} else {
 		// Set the error message as the response body (not in a header)
-		responseWriter.WriteSystemHeader("Content-Type", "text/plain; charset=utf8")
+		responseWriter.WriteSystemHeader(ContentTypeHeader, TextPlainHeader)
 		responseWriter.SetResponse(res, yarpc.NewBufferString(status.Message()))
 	}
 
