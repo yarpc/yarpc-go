@@ -50,7 +50,7 @@ type handler struct {
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, httpReq *http.Request) {
-	responseWriter := newResponseWriter(w)
+	responseWriter := newResponseWriter(w, h.logger)
 	service := popHeader(httpReq.Header, ServiceHeader)
 	procedure := popHeader(httpReq.Header, ProcedureHeader)
 	bothResponseError := popHeader(httpReq.Header, AcceptsBothResponseErrorHeader) == AcceptTrue
@@ -206,13 +206,14 @@ func (h handler) createSpan(ctx context.Context, httpReq *http.Request, req *yar
 
 // responseWriter adapts a http.ResponseWriter into a yarpc.ResponseWriter.
 type responseWriter struct {
-	w   http.ResponseWriter
-	buf *yarpc.Buffer
+	w      http.ResponseWriter
+	buf    *yarpc.Buffer
+	logger *zap.Logger
 }
 
-func newResponseWriter(w http.ResponseWriter) *responseWriter {
+func newResponseWriter(w http.ResponseWriter, l *zap.Logger) *responseWriter {
 	w.Header().Set(ApplicationStatusHeader, ApplicationSuccessStatus)
-	return &responseWriter{w: w}
+	return &responseWriter{w: w, logger: l}
 }
 
 func (rw *responseWriter) WriteSystemHeader(key string, value string) {
@@ -238,8 +239,10 @@ func (rw *responseWriter) Close(httpStatusCode int) {
 	// since writing to the response body is an implicit 200.
 	rw.w.WriteHeader(httpStatusCode)
 	if rw.buf != nil {
-		// TODO: log this error?
-		_, _ = rw.buf.WriteTo(rw.w)
+		_, err := rw.buf.WriteTo(rw.w)
+		if err != nil {
+			rw.logger.Warn("error writing gRPC response during close", zap.Error(err))
+		}
 	}
 }
 
