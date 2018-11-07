@@ -31,7 +31,7 @@ import (
 
 const (
 	_name             = "yarpcroundrobinfx"
-	_configurationKey = "yarpc.peers.round-robin"
+	_configurationKey = "yarpc.peers.roundrobin"
 )
 
 // Module produces a yarpcroundrobin peer list.
