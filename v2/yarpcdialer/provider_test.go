@@ -35,7 +35,7 @@ func TestProvider(t *testing.T) {
 	_, ok := p.Dialer("foo")
 	require.False(t, ok)
 
-	fake := yarpctest.NewFakeTransport()
+	fake := yarpctest.NewFakeTransport("foo")
 	assert.NoError(t, p.Register("foo", fake))
 
 	dialer, ok := p.Dialer("foo")

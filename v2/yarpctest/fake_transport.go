@@ -49,8 +49,9 @@ func InitialConnectionStatus(s yarpc.ConnectionStatus) FakeTransportOption {
 }
 
 // NewFakeTransport returns a fake transport.
-func NewFakeTransport(opts ...FakeTransportOption) *FakeTransport {
+func NewFakeTransport(name string, opts ...FakeTransportOption) *FakeTransport {
 	t := &FakeTransport{
+		name:                    name,
 		initialConnectionStatus: yarpc.Available,
 		peers:                   make(map[string]*FakePeer),
 		mu:                      &sync.Mutex{},
@@ -63,6 +64,7 @@ func NewFakeTransport(opts ...FakeTransportOption) *FakeTransport {
 
 // FakeTransport is a fake transport.
 type FakeTransport struct {
+	name                    string
 	nopOption               string
 	initialConnectionStatus yarpc.ConnectionStatus
 	peers                   map[string]*FakePeer
@@ -106,7 +108,9 @@ func (t *FakeTransport) Peer(id yarpc.Identifier) *FakePeer {
 }
 
 // Name returns the fake's name.
-func (t *FakeTransport) Name() string { return "fake" }
+func (t *FakeTransport) Name() string {
+	return t.name
+}
 
 // RetainPeer returns a fake peer.
 func (t *FakeTransport) RetainPeer(id yarpc.Identifier, ps yarpc.Subscriber) (yarpc.Peer, error) {

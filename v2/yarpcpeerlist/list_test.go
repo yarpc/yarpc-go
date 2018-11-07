@@ -108,7 +108,7 @@ func (s *mraSub) NotifyStatusChanged(pid yarpc.Identifier) {
 }
 
 func TestPeerList(t *testing.T) {
-	fake := yarpctest.NewFakeTransport(yarpctest.InitialConnectionStatus(yarpc.Unavailable))
+	fake := yarpctest.NewFakeTransport("fake", yarpctest.InitialConnectionStatus(yarpc.Unavailable))
 	impl := &mraList{}
 	list := New("mra", fake, impl, Capacity(1), NoShuffle(), Seed(0))
 
