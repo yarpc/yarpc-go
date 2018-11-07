@@ -209,7 +209,8 @@ func NewClients(p ClientParams) (ClientResult, error) {
 		clients = append(
 			clients,
 			yarpc.Client{
-				Caller:  "foo", // TODO(amckinney): Derive from servicefx.
+				Name:    service, // TODO(amckinney): Make the client name configurable, default to service name.
+				Caller:  "foo",   // TODO(amckinney): Derive from servicefx.
 				Service: service,
 				Unary:   outbound,
 			},

@@ -110,8 +110,8 @@ func NewDialerProvider(p DialerProviderParams) (DialerProviderResult, error) {
 type ChooserProviderParams struct {
 	fx.In
 
-	Choosers     []yarpc.NamedChooser   `group:"yarpcfx"`
-	ChooserLists [][]yarpc.NamedChooser `group:"yarpcfx"`
+	Choosers     []yarpc.Chooser   `group:"yarpcfx"`
+	ChooserLists [][]yarpc.Chooser `group:"yarpcfx"`
 }
 
 // ChooserProviderResult defines the values produced by this module.
@@ -129,7 +129,7 @@ func NewChooserProvider(p ChooserProviderParams) (ChooserProviderResult, error) 
 	}
 	provider := yarpcchooser.NewProvider()
 	for _, c := range choosers {
-		if err := provider.Register(c.Name, c.Chooser); err != nil {
+		if err := provider.Register(c.Name(), c); err != nil {
 			return ChooserProviderResult{}, err
 		}
 	}
@@ -142,8 +142,8 @@ func NewChooserProvider(p ChooserProviderParams) (ChooserProviderResult, error) 
 type ListProviderParams struct {
 	fx.In
 
-	Lists     []yarpc.NamedList   `group:"yarpcfx"`
-	ListLists [][]yarpc.NamedList `group:"yarpcfx"`
+	Lists     []yarpc.List   `group:"yarpcfx"`
+	ListLists [][]yarpc.List `group:"yarpcfx"`
 }
 
 // ListProviderResult defines the values produced by this module.
@@ -161,7 +161,7 @@ func NewListProvider(p ListProviderParams) (ListProviderResult, error) {
 	}
 	provider := yarpclist.NewProvider()
 	for _, l := range lists {
-		if err := provider.Register(l.Name, l.List); err != nil {
+		if err := provider.Register(l.Name(), l); err != nil {
 			return ListProviderResult{}, err
 		}
 	}

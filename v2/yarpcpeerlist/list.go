@@ -147,6 +147,9 @@ type List struct {
 	randSrc   rand.Source
 }
 
+// Name returns the name of the list.
+func (pl *List) Name() string { return pl.name }
+
 // Update applies the additions and removals of peer Identifiers to the list
 // it returns a multi-error result of every failure that happened without
 // circuit breaking due to failures.

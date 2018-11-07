@@ -88,16 +88,16 @@ type ListParams struct {
 type ListResult struct {
 	fx.Out
 
-	Choosers []yarpc.NamedChooser `group:"yarpcfx"`
-	Lists    []yarpc.NamedList    `group:"yarpcfx"`
+	Choosers []yarpc.Chooser `group:"yarpcfx"`
+	Lists    []yarpc.List    `group:"yarpcfx"`
 }
 
 // NewList produces a a yarpcroundrobin.List into
 // the yarpc.NamedList and yarpc.NamedChooser groups.
 func NewList(p ListParams) (ListResult, error) {
 	var (
-		choosers []yarpc.NamedChooser
-		lists    []yarpc.NamedList
+		choosers []yarpc.Chooser
+		lists    []yarpc.List
 	)
 	for name, c := range p.Config.Clients {
 		dialer, ok := p.Provider.Dialer(c.Dialer)
@@ -110,20 +110,14 @@ func NewList(p ListParams) (ListResult, error) {
 			opts = append(opts, yarpcroundrobin.Capacity(c.Capacity))
 		}
 
-		list := yarpcroundrobin.New(dialer, opts...)
+		list := yarpcroundrobin.New(name, dialer, opts...)
 		choosers = append(
 			choosers,
-			yarpc.NamedChooser{
-				Name:    name,
-				Chooser: yarpc.Chooser(list),
-			},
+			yarpc.Chooser(list),
 		)
 		lists = append(
 			lists,
-			yarpc.NamedList{
-				Name: name,
-				List: yarpc.List(list),
-			},
+			yarpc.List(list),
 		)
 	}
 	return ListResult{

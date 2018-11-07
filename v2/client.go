@@ -24,6 +24,9 @@ package yarpc
 // It is used in conjunction with an encoding to send a request through
 // outbounds by RPC type.
 type Client struct {
+	// Name is the name of this client.
+	Name string
+
 	// Caller is the name of the local service.
 	Caller string
 
