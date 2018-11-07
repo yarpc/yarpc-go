@@ -427,7 +427,7 @@ func headerCopyWithout(headers http.Header, names ...string) http.Header {
 
 func TestResponseWriter(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	rw := newResponseWriter(recorder, zap.NewNop())
+	rw := newResponseWriter(recorder)
 
 	response := &yarpc.Response{
 		Headers: yarpc.HeadersFromMap(map[string]string{
