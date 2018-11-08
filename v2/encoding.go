@@ -63,7 +63,9 @@ func (u *unaryTransportHandler) Handle(ctx context.Context, req *Request, reqBuf
 		return nil, nil, err
 	}
 
-	decodedBody, err := u.h.Codec.Decode(reqBuf)
+	codec := u.h.Codec()
+
+	decodedBody, err := codec.Decode(reqBuf)
 	if err != nil {
 		return res, nil, err
 	}
@@ -71,7 +73,7 @@ func (u *unaryTransportHandler) Handle(ctx context.Context, req *Request, reqBuf
 	body, appErr := u.h.HandlerSpec.Unary().Handle(ctx, decodedBody)
 	call.WriteToResponse(res)
 
-	encodedBody, err := u.h.Codec.Encode(body)
+	encodedBody, err := codec.Encode(body)
 	if err != nil {
 		return res, nil, err
 	}

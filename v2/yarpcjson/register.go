@@ -43,6 +43,7 @@ var (
 // struct pointers. If the handler's signature is not valid, Procedure will panic.
 func Procedure(name string, handler interface{}) []yarpc.EncodingProcedure {
 	verifyUnarySignature(name, reflect.TypeOf(handler))
+	jsonCodec := newCodec(handler)
 	return []yarpc.EncodingProcedure{
 		{
 			Name: name,
@@ -50,7 +51,7 @@ func Procedure(name string, handler interface{}) []yarpc.EncodingProcedure {
 				wrapUnaryHandler(name, handler),
 			),
 			Encoding: Encoding,
-			Codec:    newCodec(handler),
+			Codec:    func() yarpc.InboundCodec { return jsonCodec },
 		},
 	}
 }
