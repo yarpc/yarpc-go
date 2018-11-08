@@ -118,7 +118,7 @@ func TestNewMapRouterWithEncodingProceduresHappyCase(t *testing.T) {
 		{
 			Name:        "happy_case",
 			HandlerSpec: spec,
-			Codec:       codec,
+			Codec:       func() yarpc.InboundCodec { return codec },
 		},
 	}
 
@@ -144,7 +144,7 @@ func TestNewMapRouterWithEncodingProceduresDecodeError(t *testing.T) {
 		{
 			Name:        "decode_err",
 			HandlerSpec: spec,
-			Codec:       codec,
+			Codec:       func() yarpc.InboundCodec { return codec },
 		},
 	}
 	procedures, err := yarpc.EncodingToTransportProcedures(encodingProcedures)
@@ -172,7 +172,7 @@ func TestNewMapRouterWithEncodingProceduresHandlerError(t *testing.T) {
 		{
 			Name:        "handler_err",
 			HandlerSpec: spec,
-			Codec:       codec,
+			Codec:       func() yarpc.InboundCodec { return codec },
 		},
 	}
 	procedures, err := yarpc.EncodingToTransportProcedures(encodingProcedures)
@@ -199,7 +199,7 @@ func TestNewMapRouterWithEncodingProceduresEncodeError(t *testing.T) {
 		{
 			Name:        "encode_err",
 			HandlerSpec: spec,
-			Codec:       codec,
+			Codec:       func() yarpc.InboundCodec { return codec },
 		},
 	}
 	procedures, err := yarpc.EncodingToTransportProcedures(encodingProcedures)

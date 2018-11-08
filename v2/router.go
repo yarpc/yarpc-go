@@ -88,7 +88,7 @@ type EncodingProcedure struct {
 	Signature string
 
 	// Codec to assist mapping the encoding-level handler to transport-level handler
-	Codec InboundCodec
+	Codec func() InboundCodec
 }
 
 // MarshalLogObject implements zap.ObjectMarshaler.
