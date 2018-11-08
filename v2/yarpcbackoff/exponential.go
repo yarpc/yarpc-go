@@ -144,14 +144,8 @@ func (e *ExponentialStrategy) Backoff() yarpc.Backoff {
 }
 
 // IsEqual returns whether this strategy is equivalent to another strategy.
-func (e *ExponentialStrategy) IsEqual(o *ExponentialStrategy) bool {
-	if e.opts.first != o.opts.first {
-		return false
-	}
-	if e.opts.max != o.opts.max {
-		return false
-	}
-	return true
+func (e *ExponentialStrategy) IsEqual(to *ExponentialStrategy) bool {
+	return e.opts.first == to.opts.first && e.opts.max == to.opts.max
 }
 
 // ExponentialBackoff is an instance of the exponential backoff strategy with
