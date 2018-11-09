@@ -189,6 +189,11 @@ func NewClients(p ClientParams) (ClientResult, error) {
 			// If a policy was not configured, we fallback
 			// to constructing a dialer and parse the
 			// configured address.
+			//
+			// TODO(amckinney): Should this be configurable?
+			// Are there cases when a service will need to
+			// reference multiple http dialers in their
+			// outbound configuration?
 			var ok bool
 			dialer, ok = p.DialerProvider.Dialer("http")
 			if !ok {
