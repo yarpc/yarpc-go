@@ -21,17 +21,11 @@
 package yarpcthrift
 
 import (
-	"context"
-
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/thriftreflect"
-	"go.uber.org/thriftrw/wire"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcprocedure"
 )
-
-// Handler is a convenience type alias for functions that act as Handlers.
-type Handler func(context.Context, wire.Value) (Response, error)
 
 // Method represents a Thrift service method.
 type Method struct {
@@ -39,7 +33,7 @@ type Method struct {
 	Name string
 
 	// The handler to call.
-	Handler Handler
+	Handler EncodingHandler
 
 	// Snippet of Go code representing the function definition of the handler.
 	// This is useful for introspection.
@@ -60,7 +54,7 @@ type Service struct {
 
 // BuildProcedures builds a list of Procedures from a Thrift service
 // specification.
-func BuildProcedures(s Service, opts ...RegisterOption) []yarpc.TransportProcedure {
+func BuildProcedures(s Service, opts ...RegisterOption) []yarpc.EncodingProcedure {
 	var rc registerConfig
 	for _, opt := range opts {
 		opt.applyRegisterOption(&rc)
@@ -71,21 +65,20 @@ func BuildProcedures(s Service, opts ...RegisterOption) []yarpc.TransportProcedu
 		proto = rc.Protocol
 	}
 
-	rs := make([]yarpc.TransportProcedure, 0, len(s.Methods))
+	rs := make([]yarpc.EncodingProcedure, 0, len(s.Methods))
 
 	for _, method := range s.Methods {
-		var spec yarpc.TransportHandlerSpec
-		spec = yarpc.NewUnaryTransportHandlerSpec(unaryTransportHandler{
-			ThriftHandler: method.Handler,
-			Protocol:      proto,
-			Enveloping:    rc.Enveloping,
-		})
-
-		rs = append(rs, yarpc.TransportProcedure{
+		var spec yarpc.EncodingHandlerSpec
+		spec = yarpc.NewUnaryEncodingHandlerSpec(method.Handler)
+		codec := func() yarpc.InboundCodec {
+			return newCodec(proto, rc.Enveloping)
+		}
+		rs = append(rs, yarpc.EncodingProcedure{
 			Name:        yarpcprocedure.ToName(s.Name, method.Name),
 			HandlerSpec: spec,
 			Encoding:    Encoding,
 			Signature:   method.Signature,
+			Codec:       codec,
 		})
 	}
 	return rs
