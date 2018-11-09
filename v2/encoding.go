@@ -22,6 +22,7 @@ package yarpc
 
 import (
 	"context"
+	"fmt"
 )
 
 var _ UnaryTransportHandler = (*unaryTransportHandler)(nil)
@@ -35,6 +36,8 @@ func EncodingToTransportProcedures(encodingProcedures []EncodingProcedure) []Tra
 		case Unary:
 			spec = NewUnaryTransportHandlerSpec(&unaryTransportHandler{p})
 			// TODO: handle Streaming case
+		default:
+			panic(fmt.Sprintf("unsupported handler spec type: %v", p.HandlerSpec.Type()))
 		}
 
 		transportProcedures[i] = TransportProcedure{

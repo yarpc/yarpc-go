@@ -24,6 +24,8 @@ import (
 	"errors"
 	"testing"
 
+	"go.uber.org/yarpc/v2/yarpcerror"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -54,6 +56,7 @@ func TestDecodeAgnosticProto(t *testing.T) {
 	// responder.
 	_, err = testCodec.Decode(reqBuf)
 	assert.EqualError(t, err, "code:internal message:tried to overwrite a responder for thrift codec")
+	assert.Equal(t, yarpcerror.FromError(err).Code(), yarpcerror.CodeInternal)
 }
 
 func TestDecodeAgnosticProtoError(t *testing.T) {
@@ -93,6 +96,7 @@ func TestDecodeEnveloped(t *testing.T) {
 	// responder.
 	_, err = testCodec.Decode(reqBuf)
 	assert.EqualError(t, err, "code:internal message:tried to overwrite a responder for thrift codec")
+	assert.Equal(t, yarpcerror.FromError(err).Code(), yarpcerror.CodeInternal)
 }
 
 func TestDecodeEnvelopedError(t *testing.T) {
@@ -149,6 +153,7 @@ func TestDecodeUnenveloped(t *testing.T) {
 	// responder.
 	_, err = testCodec.Decode(reqBuf)
 	assert.EqualError(t, err, "code:internal message:tried to overwrite a responder for thrift codec")
+	assert.Equal(t, yarpcerror.FromError(err).Code(), yarpcerror.CodeInternal)
 }
 
 func TestDecodeUnenvelopedError(t *testing.T) {
