@@ -52,7 +52,7 @@ func TestDecodeAgnosticProto(t *testing.T) {
 
 	// calling Decode again should fail, because it attempts to set a new
 	// responder.
-	res, err = testCodec.Decode(reqBuf)
+	_, err = testCodec.Decode(reqBuf)
 	assert.EqualError(t, err, "code:internal message:tried to overwrite a responder for thrift codec")
 }
 
@@ -91,7 +91,7 @@ func TestDecodeEnveloped(t *testing.T) {
 
 	// calling Decode again should fail, because it attempts to set a new
 	// responder.
-	res, err = testCodec.Decode(reqBuf)
+	_, err = testCodec.Decode(reqBuf)
 	assert.EqualError(t, err, "code:internal message:tried to overwrite a responder for thrift codec")
 }
 
@@ -147,7 +147,7 @@ func TestDecodeUnenveloped(t *testing.T) {
 
 	// calling Decode again should fail, because it attempts to set a new
 	// responder.
-	res, err = testCodec.Decode(reqBuf)
+	_, err = testCodec.Decode(reqBuf)
 	assert.EqualError(t, err, "code:internal message:tried to overwrite a responder for thrift codec")
 }
 
