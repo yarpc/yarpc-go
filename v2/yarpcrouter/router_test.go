@@ -122,12 +122,11 @@ func TestNewMapRouterWithEncodingProceduresHappyCase(t *testing.T) {
 		},
 	}
 
-	procedures, err := yarpc.EncodingToTransportProcedures(encodingProcedures)
-	assert.NoError(t, err)
+	procedures := yarpc.EncodingToTransportProcedures(encodingProcedures)
 	m := NewMapRouter("myservice", procedures)
 	transportProcedures := m.Procedures()
 
-	_, _, err = transportProcedures[0].HandlerSpec.Unary().Handle(context.Background(), nil, nil)
+	_, _, err := transportProcedures[0].HandlerSpec.Unary().Handle(context.Background(), nil, nil)
 	assert.NoError(t, err)
 }
 
@@ -147,13 +146,12 @@ func TestNewMapRouterWithEncodingProceduresDecodeError(t *testing.T) {
 			Codec:       func() yarpc.InboundCodec { return codec },
 		},
 	}
-	procedures, err := yarpc.EncodingToTransportProcedures(encodingProcedures)
-	assert.NoError(t, err)
+	procedures := yarpc.EncodingToTransportProcedures(encodingProcedures)
 	m := NewMapRouter("myservice", procedures)
 	transportProcedures := m.Procedures()
 	require.Len(t, m.Procedures(), 1)
 
-	_, _, err = transportProcedures[0].HandlerSpec.Unary().Handle(context.Background(), nil, nil)
+	_, _, err := transportProcedures[0].HandlerSpec.Unary().Handle(context.Background(), nil, nil)
 	assert.Error(t, err)
 }
 
@@ -175,12 +173,11 @@ func TestNewMapRouterWithEncodingProceduresHandlerError(t *testing.T) {
 			Codec:       func() yarpc.InboundCodec { return codec },
 		},
 	}
-	procedures, err := yarpc.EncodingToTransportProcedures(encodingProcedures)
-	assert.NoError(t, err)
+	procedures := yarpc.EncodingToTransportProcedures(encodingProcedures)
 	m := NewMapRouter("myservice", procedures)
 	transportProcedures := m.Procedures()
 
-	_, _, err = transportProcedures[0].HandlerSpec.Unary().Handle(context.Background(), nil, nil)
+	_, _, err := transportProcedures[0].HandlerSpec.Unary().Handle(context.Background(), nil, nil)
 	assert.Error(t, err)
 }
 
@@ -202,28 +199,11 @@ func TestNewMapRouterWithEncodingProceduresEncodeError(t *testing.T) {
 			Codec:       func() yarpc.InboundCodec { return codec },
 		},
 	}
-	procedures, err := yarpc.EncodingToTransportProcedures(encodingProcedures)
-	assert.NoError(t, err)
+	procedures := yarpc.EncodingToTransportProcedures(encodingProcedures)
 	m := NewMapRouter("myservice", procedures)
 	transportProcedures := m.Procedures()
 
-	_, _, err = transportProcedures[0].HandlerSpec.Unary().Handle(context.Background(), nil, nil)
-	assert.Error(t, err)
-}
-
-func TestNewMapRouterWithEncodingProceduresOnlyAllowUnaryType(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	nonUnaryHandler := yarpctest.NewMockStreamEncodingHandler(mockCtrl)
-	spec := yarpc.NewStreamEncodingHandlerSpec(nonUnaryHandler)
-	encodingProcedures := []yarpc.EncodingProcedure{
-		{
-			Name:        "only_unary",
-			HandlerSpec: spec,
-		},
-	}
-	_, err := yarpc.EncodingToTransportProcedures(encodingProcedures)
+	_, _, err := transportProcedures[0].HandlerSpec.Unary().Handle(context.Background(), nil, nil)
 	assert.Error(t, err)
 }
 

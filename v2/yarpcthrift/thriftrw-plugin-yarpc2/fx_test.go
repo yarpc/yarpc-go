@@ -87,10 +87,9 @@ func TestFxServer(t *testing.T) {
 			func() readonlystoreserver.Interface { return handler },
 			readonlystorefx.Server(),
 			func() jsonProcedures {
-				procedures, err := yarpc.EncodingToTransportProcedures(
+				procedures := yarpc.EncodingToTransportProcedures(
 					yarpcjson.Procedure("echoJSON", echoJSON),
 				)
-				require.NoError(t, err)
 				return jsonProcedures{Procedures: procedures}
 			},
 		),

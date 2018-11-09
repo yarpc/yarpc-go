@@ -22,21 +22,19 @@ package yarpc
 
 import (
 	"context"
-	"fmt"
 )
 
 var _ UnaryTransportHandler = (*unaryTransportHandler)(nil)
 
 // EncodingToTransportProcedures converts encoding-level procedures to transport-level procedures.
-func EncodingToTransportProcedures(encodingProcedures []EncodingProcedure) ([]TransportProcedure, error) {
+func EncodingToTransportProcedures(encodingProcedures []EncodingProcedure) []TransportProcedure {
 	transportProcedures := make([]TransportProcedure, len(encodingProcedures))
 	for i, p := range encodingProcedures {
 		var spec TransportHandlerSpec
 		switch p.HandlerSpec.Type() {
 		case Unary:
 			spec = NewUnaryTransportHandlerSpec(&unaryTransportHandler{p})
-		default:
-			return nil, fmt.Errorf("unsupported handler spec type: %v", p.HandlerSpec.Type())
+			// TODO: handle Streaming case
 		}
 
 		transportProcedures[i] = TransportProcedure{
@@ -48,7 +46,7 @@ func EncodingToTransportProcedures(encodingProcedures []EncodingProcedure) ([]Tr
 		}
 	}
 
-	return transportProcedures, nil
+	return transportProcedures
 }
 
 // Allows encoding-level procedures to act as transport-level procedures.

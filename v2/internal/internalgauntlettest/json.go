@@ -40,7 +40,7 @@ type jsonResponse struct {
 }
 
 func jsonProcedures() []yarpc.TransportProcedure {
-	procedures, _ := yarpc.EncodingToTransportProcedures(
+	procedures := yarpc.EncodingToTransportProcedures(
 		yarpcjson.Procedure("json-procedure", jsonEchoHandler),
 	)
 

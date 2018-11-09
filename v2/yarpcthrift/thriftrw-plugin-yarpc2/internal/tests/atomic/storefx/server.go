@@ -39,7 +39,7 @@ type ServerResult struct {
 // 	)
 func Server(opts ...yarpcthrift.RegisterOption) interface{} {
 	return func(p ServerParams) ServerResult {
-		procedures, _ := yarpc.EncodingToTransportProcedures(storeserver.New(p.Handler, opts...))
+		procedures := yarpc.EncodingToTransportProcedures(storeserver.New(p.Handler, opts...))
 		return ServerResult{Procedures: procedures}
 	}
 }

@@ -37,7 +37,7 @@ import (
 type thriftHandler struct{}
 
 func thriftProcedures() []yarpc.TransportProcedure {
-	procedures, _ := yarpc.EncodingToTransportProcedures(echoserver.New(thriftHandler{}))
+	procedures := yarpc.EncodingToTransportProcedures(echoserver.New(thriftHandler{}))
 	return procedures
 }
 

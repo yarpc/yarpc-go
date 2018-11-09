@@ -264,8 +264,7 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			procedures, err := yarpc.EncodingToTransportProcedures(tt.procedures)
-			require.NoError(t, err)
+			procedures := yarpc.EncodingToTransportProcedures(tt.procedures)
 			router := yarpcrouter.NewMapRouter("roundtrip-server", procedures)
 			listener, err := net.Listen("tcp", ":0")
 			require.NoError(t, err)

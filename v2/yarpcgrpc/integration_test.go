@@ -286,10 +286,7 @@ func newTestEnv(options testEnvOptions) (_ *testEnv, err error) {
 	}
 
 	inbound.Addr = "127.0.0.1:0"
-	procedures, err := yarpc.EncodingToTransportProcedures(options.Procedures)
-	if err != nil {
-		return nil, err
-	}
+	procedures := yarpc.EncodingToTransportProcedures(options.Procedures)
 	inbound.Router = yarpctest.NewFakeRouter(procedures)
 	if err := inbound.Start(context.Background()); err != nil {
 		return nil, err

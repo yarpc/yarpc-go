@@ -151,7 +151,7 @@ type ServerResult struct {
 // 	)
 func Server(opts ...<$yarpcthrift>.RegisterOption) interface{} {
 	return func(p ServerParams) ServerResult {
-		procedures, _ := <$yarpc>.EncodingToTransportProcedures(<$server>.New(p.Handler, opts...))
+		procedures := <$yarpc>.EncodingToTransportProcedures(<$server>.New(p.Handler, opts...))
 		return ServerResult{Procedures: procedures}
 	}
 }
