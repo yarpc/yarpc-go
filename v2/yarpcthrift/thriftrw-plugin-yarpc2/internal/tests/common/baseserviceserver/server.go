@@ -23,7 +23,7 @@ type Interface interface {
 //
 // 	handler := BaseServiceHandler{}
 // 	dispatcher.Register(baseserviceserver.New(handler))
-func New(impl Interface, opts ...yarpcthrift.RegisterOption) []yarpc.TransportProcedure {
+func New(impl Interface, opts ...yarpcthrift.RegisterOption) []yarpc.EncodingProcedure {
 	h := handler{impl}
 	service := yarpcthrift.Service{
 		Name: "BaseService",
@@ -31,14 +31,14 @@ func New(impl Interface, opts ...yarpcthrift.RegisterOption) []yarpc.TransportPr
 
 			yarpcthrift.Method{
 				Name:         "healthy",
-				Handler:      yarpcthrift.Handler(h.Healthy),
+				Handler:      yarpcthrift.EncodingHandler(h.Healthy),
 				Signature:    "Healthy() (bool)",
 				ThriftModule: common.ThriftModule,
 			},
 		},
 	}
 
-	procedures := make([]yarpc.TransportProcedure, 0, 1)
+	procedures := make([]yarpc.EncodingProcedure, 0, 1)
 	procedures = append(procedures, yarpcthrift.BuildProcedures(service, opts...)...)
 	return procedures
 }

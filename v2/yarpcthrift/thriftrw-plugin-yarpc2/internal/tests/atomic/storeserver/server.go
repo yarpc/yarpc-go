@@ -33,7 +33,7 @@ type Interface interface {
 //
 // 	handler := StoreHandler{}
 // 	dispatcher.Register(storeserver.New(handler))
-func New(impl Interface, opts ...yarpcthrift.RegisterOption) []yarpc.TransportProcedure {
+func New(impl Interface, opts ...yarpcthrift.RegisterOption) []yarpc.EncodingProcedure {
 	h := handler{impl}
 	service := yarpcthrift.Service{
 		Name: "Store",
@@ -41,21 +41,21 @@ func New(impl Interface, opts ...yarpcthrift.RegisterOption) []yarpc.TransportPr
 
 			yarpcthrift.Method{
 				Name:         "compareAndSwap",
-				Handler:      yarpcthrift.Handler(h.CompareAndSwap),
+				Handler:      yarpcthrift.EncodingHandler(h.CompareAndSwap),
 				Signature:    "CompareAndSwap(Request *atomic.CompareAndSwap)",
 				ThriftModule: atomic.ThriftModule,
 			},
 
 			yarpcthrift.Method{
 				Name:         "increment",
-				Handler:      yarpcthrift.Handler(h.Increment),
+				Handler:      yarpcthrift.EncodingHandler(h.Increment),
 				Signature:    "Increment(Key *string, Value *int64)",
 				ThriftModule: atomic.ThriftModule,
 			},
 		},
 	}
 
-	procedures := make([]yarpc.TransportProcedure, 0, 3)
+	procedures := make([]yarpc.EncodingProcedure, 0, 3)
 	procedures = append(procedures, readonlystoreserver.New(impl, opts...)...)
 	procedures = append(procedures, yarpcthrift.BuildProcedures(service, opts...)...)
 	return procedures

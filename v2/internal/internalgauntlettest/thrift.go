@@ -37,7 +37,8 @@ import (
 type thriftHandler struct{}
 
 func thriftProcedures() []yarpc.TransportProcedure {
-	return echoserver.New(thriftHandler{})
+	procedures := yarpc.EncodingToTransportProcedures(echoserver.New(thriftHandler{}))
+	return procedures
 }
 
 func (thriftHandler) Echo(ctx context.Context, request *echo.EchoRequest) (*echo.EchoResponse, error) {

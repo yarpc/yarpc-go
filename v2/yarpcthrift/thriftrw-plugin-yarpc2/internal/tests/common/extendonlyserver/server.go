@@ -19,14 +19,14 @@ type Interface interface {
 //
 // 	handler := ExtendOnlyHandler{}
 // 	dispatcher.Register(extendonlyserver.New(handler))
-func New(impl Interface, opts ...yarpcthrift.RegisterOption) []yarpc.TransportProcedure {
+func New(impl Interface, opts ...yarpcthrift.RegisterOption) []yarpc.EncodingProcedure {
 
 	service := yarpcthrift.Service{
 		Name:    "ExtendOnly",
 		Methods: []yarpcthrift.Method{},
 	}
 
-	procedures := make([]yarpc.TransportProcedure, 0, 0)
+	procedures := make([]yarpc.EncodingProcedure, 0, 0)
 	procedures = append(procedures, baseserviceserver.New(impl, opts...)...)
 	procedures = append(procedures, yarpcthrift.BuildProcedures(service, opts...)...)
 	return procedures

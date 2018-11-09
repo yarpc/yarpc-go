@@ -44,7 +44,7 @@ type Interface interface {
 //
 // 	handler := EchoHandler{}
 // 	dispatcher.Register(echoserver.New(handler))
-func New(impl Interface, opts ...yarpcthrift.RegisterOption) []yarpc.TransportProcedure {
+func New(impl Interface, opts ...yarpcthrift.RegisterOption) []yarpc.EncodingProcedure {
 	h := handler{impl}
 	service := yarpcthrift.Service{
 		Name: "Echo",
@@ -52,14 +52,14 @@ func New(impl Interface, opts ...yarpcthrift.RegisterOption) []yarpc.TransportPr
 
 			yarpcthrift.Method{
 				Name:         "Echo",
-				Handler:      yarpcthrift.Handler(h.Echo),
+				Handler:      yarpcthrift.EncodingHandler(h.Echo),
 				Signature:    "Echo(Request *echo.EchoRequest) (*echo.EchoResponse)",
 				ThriftModule: echo.ThriftModule,
 			},
 		},
 	}
 
-	procedures := make([]yarpc.TransportProcedure, 0, 1)
+	procedures := make([]yarpc.EncodingProcedure, 0, 1)
 	procedures = append(procedures, yarpcthrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
