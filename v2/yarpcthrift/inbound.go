@@ -21,131 +21,38 @@
 package yarpcthrift
 
 import (
-	"bytes"
 	"context"
 
-	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcencoding"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
-var _ yarpc.UnaryTransportHandler = (*unaryTransportHandler)(nil)
+var _ yarpc.UnaryEncodingHandler = EncodingHandler(nil)
 
-// unaryTransportHandler wraps a Thrift Handler into a yarpc.UnaryTransportHandler.
-type unaryTransportHandler struct {
-	ThriftHandler Handler
-	Protocol      protocol.Protocol
-	Enveloping    bool
-}
+// EncodingHandler wraps a Thrift handler into a yarpc.UnaryEncodingHandler.
+type EncodingHandler func(context.Context, wire.Value) (Response, error)
 
-// Handle implements yarpc.UnaryTransportHandler.
-func (t unaryTransportHandler) Handle(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
-	ctx, call := yarpc.NewInboundCall(ctx)
-
-	reqValue, responder, err := decodeRequest(call, req, reqBuf, t.Protocol, t.Enveloping)
-	if err != nil {
-		return nil, nil, err
+// Handle implements yarpc.UnaryEncodingHandler.
+func (e EncodingHandler) Handle(ctx context.Context, reqBody interface{}) (interface{}, error) {
+	reqValue, ok := reqBody.(wire.Value)
+	if !ok {
+		return nil, yarpcerror.InternalErrorf("tried to handle a non-wire.Value in thrift handler")
 	}
 
-	thriftRes, err := t.ThriftHandler(ctx, reqValue)
+	thriftRes, err := e(ctx, reqValue)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if resType := thriftRes.Body.EnvelopeType(); resType != wire.Reply {
-		return nil, nil, yarpcencoding.ResponseBodyEncodeError(
-			req, errUnexpectedEnvelopeType(resType))
+		return nil, errUnexpectedEnvelopeType(resType)
 	}
 
-	value, err := thriftRes.Body.ToWire()
+	resValue, err := thriftRes.Body.ToWire()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	res, resBuf := &yarpc.Response{}, &yarpc.Buffer{}
-
-	if thriftRes.Exception != nil {
-		res.ApplicationError = thriftRes.Exception
-	}
-
-	call.WriteToResponse(res)
-
-	if err = responder.EncodeResponse(value, wire.Reply, resBuf); err != nil {
-		return nil, nil, yarpcencoding.ResponseBodyEncodeError(req, err)
-	}
-
-	return res, resBuf, nil
-}
-
-// decodeRequest is a utility shared by Unary handlers, to decode
-// the request, regardless of enveloping.
-func decodeRequest(
-	// call is an inboundCall populated from the transport request and context.
-	call *yarpc.InboundCall,
-	req *yarpc.Request,
-	reqBuf *yarpc.Buffer,
-	// proto is the encoding protocol (e.g., Binary) or an
-	// EnvelopeAgnosticProtocol (e.g., EnvelopeAgnosticBinary)
-	proto protocol.Protocol,
-	// enveloping indicates that requests must be enveloped, used only if the
-	// protocol is not envelope agnostic.
-	enveloping bool,
-) (
-	// the wire representation of the decoded request.
-	// decodeRequest does not surface the envelope.
-	wire.Value,
-	// how to encode the response, with the enveloping
-	// strategy corresponding to the request.
-	protocol.Responder,
-	error,
-) {
-	if err := yarpcencoding.ExpectEncodings(req, Encoding); err != nil {
-		return wire.Value{}, nil, err
-	}
-
-	if err := call.ReadFromRequest(req); err != nil {
-		// not reachable
-		return wire.Value{}, nil, err
-	}
-
-	// TODO(mhp): This will be unnecessary when `yarpc.Buffer` implements `io.ReaderAt`
-	reader := bytes.NewReader(reqBuf.Bytes())
-
-	// Discover or choose the appropriate envelope
-	if agnosticProto, ok := proto.(protocol.EnvelopeAgnosticProtocol); ok {
-		return agnosticProto.DecodeRequest(wire.Call, reader)
-	}
-	if enveloping {
-		return decodeEnvelopedRequest(req, proto, reader)
-	}
-	return decodeUnenvelopedRequest(proto, reader)
-}
-
-func decodeEnvelopedRequest(
-	req *yarpc.Request,
-	proto protocol.Protocol,
-	reader *bytes.Reader,
-) (wire.Value, protocol.Responder, error) {
-	envelope, err := proto.DecodeEnveloped(reader)
-	if err != nil {
-		return wire.Value{}, nil, err
-	}
-	if envelope.Type != wire.Call {
-		err := yarpcencoding.RequestBodyDecodeError(req, errUnexpectedEnvelopeType(envelope.Type))
-		return wire.Value{}, nil, err
-	}
-	responder := protocol.EnvelopeV1Responder{Name: envelope.Name, SeqID: envelope.SeqID}
-	return envelope.Value, responder, nil
-}
-
-func decodeUnenvelopedRequest(
-	proto protocol.Protocol,
-	reader *bytes.Reader,
-) (wire.Value, protocol.Responder, error) {
-	reqValue, err := proto.Decode(reader, wire.TStruct)
-	if err != nil {
-		return wire.Value{}, nil, err
-	}
-	return reqValue, protocol.NoEnvelopeResponder, nil
+	return resValue, thriftRes.Exception
 }

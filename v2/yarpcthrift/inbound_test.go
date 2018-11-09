@@ -23,311 +23,65 @@ package yarpcthrift
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/thriftrw/protocol"
-	"go.uber.org/thriftrw/thrifttest"
 	"go.uber.org/thriftrw/wire"
-	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/internal/internaltesttime"
 )
 
-func TestDecodeRequest(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	proto := thrifttest.NewMockEnvelopeAgnosticProtocol(mockCtrl)
-	proto.EXPECT().DecodeRequest(wire.Call, gomock.Any()).Return(
-		wire.NewValueStruct(wire.Struct{}), protocol.NoEnvelopeResponder, nil)
-
-	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
-	defer cancel()
-
-	handler := func(ctx context.Context, w wire.Value) (Response, error) {
-		return Response{Body: fakeEnveloper(wire.Reply)}, nil
+func TestEncodingHandler(t *testing.T) {
+	tests := []struct {
+		reqBody       interface{}
+		retResponse   Response
+		retError      error
+		expectedError string
+	}{
+		{
+			reqBody:       "blah",
+			expectedError: "tried to handle a non-wire.Value in thrift handler",
+		},
+		{
+			reqBody:       wire.Value{},
+			retError:      errors.New("thrift handler error"),
+			expectedError: "thrift handler error",
+		},
+		{
+			reqBody:       wire.Value{},
+			retResponse:   Response{Body: fakeEnveloper(wire.OneWay)},
+			expectedError: "unexpected envelope type: OneWay",
+		},
+		{
+			reqBody: wire.Value{},
+			retResponse: Response{Body: errorEnveloper{
+				envelopeType: wire.Reply,
+				err:          errors.New("could not convert to wire value"),
+			}},
+			expectedError: "could not convert to wire value",
+		},
+		{
+			reqBody:       wire.Value{},
+			retResponse:   Response{Body: fakeEnveloper(wire.Reply), Exception: errors.New("application error")},
+			expectedError: "application error",
+		},
+		{
+			reqBody:     wire.Value{},
+			retResponse: Response{Body: fakeEnveloper(wire.Reply)},
+		},
 	}
-	h := unaryTransportHandler{Protocol: proto, ThriftHandler: handler}
 
-	res, _, err := h.Handle(ctx, request(), requestBody())
+	for _, tt := range tests {
+		h := EncodingHandler(func(context.Context, wire.Value) (Response, error) {
+			return tt.retResponse, tt.retError
+		})
 
-	assert.NoError(t, err, "unexpected error")
-	assert.NoError(t, res.ApplicationError, "application error set")
-}
-
-func TestDecodeEnveloped(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	proto := thrifttest.NewMockProtocol(mockCtrl)
-	// XXX DecodeEnveloped instead of DecodeRequest or Decode(TStruct, ...)
-	proto.EXPECT().DecodeEnveloped(gomock.Any()).Return(wire.Envelope{
-		Name:  "someMethod",
-		SeqID: 42,
-		Type:  wire.Call,
-		Value: wire.NewValueStruct(wire.Struct{}),
-	}, nil)
-
-	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
-	defer cancel()
-
-	handler := func(ctx context.Context, w wire.Value) (Response, error) {
-		assert.True(t, wire.ValuesAreEqual(wire.NewValueStruct(wire.Struct{}), w), "request body did not match")
-		return Response{Body: fakeEnveloper(wire.Reply)}, nil
+		resBody, err := h.Handle(context.Background(), tt.reqBody)
+		if tt.expectedError != "" {
+			require.Error(t, err, "expected error")
+			assert.Contains(t, err.Error(), tt.expectedError)
+		} else {
+			assert.NoError(t, err, "unexpected error")
+			assert.NotNil(t, resBody)
+		}
 	}
-	// XXX Enveloping true for this case, to induce DecodeEnveloped instead of
-	// DecodeRequest or Decode.
-	h := unaryTransportHandler{Protocol: proto, ThriftHandler: handler, Enveloping: true}
-	res, resBody, err := unaryCall(ctx, h)
-
-	assert.NotNil(t, res)
-	assert.NotNil(t, resBody)
-	assert.NoError(t, err, "unexpected error")
-}
-
-func TestDecodeRequestApplicationError(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	proto := thrifttest.NewMockEnvelopeAgnosticProtocol(mockCtrl)
-	proto.EXPECT().DecodeRequest(wire.Call, gomock.Any()).Return(
-		wire.NewValueStruct(wire.Struct{}), protocol.NoEnvelopeResponder, nil)
-
-	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
-	defer cancel()
-
-	handler := func(ctx context.Context, w wire.Value) (Response, error) {
-		// XXX setting application error bit
-		return Response{Body: fakeEnveloper(wire.Reply), Exception: errors.New("decode application error")}, nil
-	}
-	h := unaryTransportHandler{Protocol: proto, ThriftHandler: handler}
-
-	// XXX checking error bit
-	res, resBody, err := h.Handle(ctx, request(), requestBody())
-	assert.NotNil(t, res)
-	assert.NotNil(t, resBody)
-	assert.Error(t, res.ApplicationError, "application error unset")
-	assert.NoError(t, err, "unexpected error")
-}
-
-func TestDecodeRequestEncodingError(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
-	defer cancel()
-
-	// XXX handler and protocol superfluous for this case
-	h := unaryTransportHandler{}
-	req := request()
-	// XXX bogus encoding override
-	req.Encoding = yarpc.Encoding("bogus")
-	res, resBody, err := h.Handle(ctx, req, requestBody())
-
-	assert.Nil(t, res)
-	assert.Nil(t, resBody)
-	require.Error(t, err, "expected an error")
-	assert.Contains(t, err.Error(), `expected encoding "thrift" but got "bogus"`)
-}
-
-func TestDecodeRequestError(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	proto := thrifttest.NewMockEnvelopeAgnosticProtocol(mockCtrl)
-	// XXX DecodeRequest returns decode request error
-	proto.EXPECT().DecodeRequest(wire.Call, gomock.Any()).Return(
-		wire.Value{}, protocol.NoEnvelopeResponder, fmt.Errorf("decode request error"))
-
-	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
-	defer cancel()
-
-	h := unaryTransportHandler{Protocol: proto}
-	res, resBody, err := unaryCall(ctx, h)
-
-	assert.Nil(t, res)
-	assert.Nil(t, resBody)
-	require.Error(t, err, "expected an error")
-	assert.Contains(t, err.Error(), "decode request error")
-
-}
-
-func TestDecodeRequestResponseError(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	proto := thrifttest.NewMockEnvelopeAgnosticProtocol(mockCtrl)
-	// XXX threads a fake error responder, which returns an error on
-	// EncodeResponse in thriftUnaryHandler.Handle.
-	proto.EXPECT().DecodeRequest(wire.Call, gomock.Any()).Return(
-		wire.Value{}, errorResponder{fmt.Errorf("encode response error")}, nil)
-
-	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
-	defer cancel()
-
-	handler := func(ctx context.Context, w wire.Value) (Response, error) {
-		return Response{Body: fakeEnveloper(wire.Reply)}, nil
-	}
-	h := unaryTransportHandler{Protocol: proto, ThriftHandler: handler}
-	res, resBody, err := unaryCall(ctx, h)
-
-	assert.Nil(t, res)
-	assert.Nil(t, resBody)
-	require.Error(t, err, "expected an error")
-	assert.Contains(t, err.Error(), "encode response error")
-
-}
-
-func TestDecodeEnvelopedError(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	proto := thrifttest.NewMockProtocol(mockCtrl)
-	// XXX DecodeEnveloped returns error
-	proto.EXPECT().DecodeEnveloped(gomock.Any()).Return(wire.Envelope{}, fmt.Errorf("decode enveloped error"))
-
-	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
-	defer cancel()
-
-	h := unaryTransportHandler{Protocol: proto, Enveloping: true}
-	res, resBody, err := unaryCall(ctx, h)
-
-	assert.Nil(t, res)
-	assert.Nil(t, resBody)
-	require.Error(t, err, "expected an error")
-	assert.Contains(t, err.Error(), "decode enveloped error")
-
-}
-
-func TestDecodeEnvelopedEnvelopeTypeError(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	proto := thrifttest.NewMockProtocol(mockCtrl)
-	// XXX DecodeEnveloped returns OneWay instead of expected Call
-	proto.EXPECT().DecodeEnveloped(gomock.Any()).Return(wire.Envelope{Type: wire.OneWay}, nil)
-
-	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
-	defer cancel()
-
-	h := unaryTransportHandler{Protocol: proto, Enveloping: true}
-	res, resBody, err := unaryCall(ctx, h)
-
-	assert.Nil(t, res)
-	assert.Nil(t, resBody)
-	require.Error(t, err, "expected an error")
-	assert.Contains(t, err.Error(), "unexpected envelope type: OneWay")
-
-}
-
-func TestDecodeNotEnvelopedError(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	proto := thrifttest.NewMockProtocol(mockCtrl)
-	// XXX Mocked decode returns decode error
-	proto.EXPECT().Decode(gomock.Any(), wire.TStruct).Return(wire.Value{}, fmt.Errorf("decode error"))
-
-	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
-	defer cancel()
-
-	h := unaryTransportHandler{Protocol: proto}
-	res, resBody, err := unaryCall(ctx, h)
-
-	assert.Nil(t, res)
-	assert.Nil(t, resBody)
-	require.Error(t, err, "expected an error")
-	assert.Contains(t, err.Error(), "decode error")
-
-}
-
-func TestUnaryHandlerError(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	proto := thrifttest.NewMockProtocol(mockCtrl)
-	proto.EXPECT().Decode(gomock.Any(), wire.TStruct).Return(wire.Value{}, nil)
-
-	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
-	defer cancel()
-
-	handler := func(ctx context.Context, w wire.Value) (Response, error) {
-		// XXX returns error
-		return Response{}, fmt.Errorf("unary handler error")
-	}
-	h := unaryTransportHandler{Protocol: proto, ThriftHandler: handler}
-	res, resBody, err := unaryCall(ctx, h)
-
-	assert.Nil(t, res)
-	assert.Nil(t, resBody)
-	require.Error(t, err, "expected an error")
-	assert.Contains(t, err.Error(), "unary handler error")
-
-}
-
-func TestUnaryHandlerResponseEnvelopeTypeError(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	proto := thrifttest.NewMockProtocol(mockCtrl)
-	proto.EXPECT().Decode(gomock.Any(), wire.TStruct).Return(wire.Value{}, nil)
-
-	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
-	defer cancel()
-
-	handler := func(ctx context.Context, w wire.Value) (Response, error) {
-		// XXX OneWay instead of Reply
-		return Response{Body: fakeEnveloper(wire.OneWay)}, nil
-	}
-	h := unaryTransportHandler{Protocol: proto, ThriftHandler: handler}
-	res, resBody, err := unaryCall(ctx, h)
-
-	assert.Nil(t, res)
-	assert.Nil(t, resBody)
-	require.Error(t, err, "expected an error")
-	assert.Contains(t, err.Error(), "unexpected envelope type: OneWay")
-
-}
-
-func TestUnaryHandlerBodyToWireError(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	proto := thrifttest.NewMockProtocol(mockCtrl)
-	proto.EXPECT().Decode(gomock.Any(), wire.TStruct).Return(wire.Value{}, nil)
-
-	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
-	defer cancel()
-
-	handler := func(ctx context.Context, w wire.Value) (Response, error) {
-		// XXX Body.ToWire returns error
-		return Response{Body: errorEnveloper{wire.Reply, fmt.Errorf("to wire error")}}, nil
-	}
-	h := unaryTransportHandler{Protocol: proto, ThriftHandler: handler}
-	res, resBody, err := unaryCall(ctx, h)
-
-	assert.Nil(t, res)
-	assert.Nil(t, resBody)
-	require.Error(t, err, "expected an error")
-	assert.Contains(t, err.Error(), "to wire error")
-}
-
-func request() *yarpc.Request {
-	return &yarpc.Request{
-		Caller:    "caller",
-		Service:   "service",
-		Encoding:  "thrift",
-		Procedure: "MyService::someMethod",
-	}
-}
-
-func requestBody() *yarpc.Buffer {
-	return yarpc.NewBufferString("irrelevant")
-}
-
-func unaryCall(ctx context.Context, h unaryTransportHandler) (*yarpc.Response, *yarpc.Buffer, error) {
-	return h.Handle(ctx, request(), requestBody())
 }
