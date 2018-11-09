@@ -30,17 +30,9 @@ import (
 // FakePeerChooserOption is an option for NewFakePeerChooser.
 type FakePeerChooserOption func(*FakePeerChooser)
 
-// ChooserNop is a fake option for NewFakePeerChooser that sets a nop var. It's fake.
-func ChooserNop(nop string) func(*FakePeerChooser) {
-	return func(u *FakePeerChooser) {
-		u.nop = nop
-	}
-}
-
 // FakePeerChooser is a fake peer chooser.
 type FakePeerChooser struct {
 	name string
-	nop  string
 }
 
 // NewFakePeerChooser returns a fake peer list.
@@ -58,9 +50,4 @@ func (c *FakePeerChooser) Name() string { return c.name }
 // Choose pretends to choose a peer, but actually always returns an error. It's fake.
 func (c *FakePeerChooser) Choose(ctx context.Context, req *yarpc.Request) (yarpc.Peer, func(error), error) {
 	return nil, nil, fmt.Errorf(`fake peer chooser can't actually choose peers`)
-}
-
-// Nop returns the Peer Chooser's nop variable.
-func (c *FakePeerChooser) Nop() string {
-	return c.nop
 }

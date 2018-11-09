@@ -90,7 +90,7 @@ type dialerInternals struct {
 
 // Name returns the gRPC dialer's name.
 func (d *Dialer) Name() string {
-	return "grpc"
+	return transportName
 }
 
 // Start starts the gRPC dialer.

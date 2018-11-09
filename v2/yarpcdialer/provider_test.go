@@ -29,18 +29,20 @@ import (
 )
 
 func TestProvider(t *testing.T) {
-	p := NewProvider()
-	require.NotNil(t, p)
+	t.Run("registration conflict", func(t *testing.T) {
+		_, err := NewProvider(
+			yarpctest.NewFakeTransport("foo"),
+			yarpctest.NewFakeTransport("foo"),
+		)
+		assert.EqualError(t, err, `dialer "foo" was registered more than once`)
+	})
 
-	_, ok := p.Dialer("foo")
-	require.False(t, ok)
+	t.Run("successful construction", func(t *testing.T) {
+		p, err := NewProvider(yarpctest.NewFakeTransport("foo"))
+		require.NoError(t, err)
 
-	fake := yarpctest.NewFakeTransport("foo")
-	assert.NoError(t, p.Register("foo", fake))
-
-	dialer, ok := p.Dialer("foo")
-	require.True(t, ok)
-	assert.Equal(t, fake, dialer)
-
-	assert.EqualError(t, p.Register("foo", nil), `dialer "foo" is already registered`)
+		dialer, ok := p.Dialer("foo")
+		require.True(t, ok)
+		assert.Equal(t, "foo", dialer.Name())
+	})
 }

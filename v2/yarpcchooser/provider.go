@@ -34,23 +34,22 @@ type Provider struct {
 }
 
 // NewProvider returns a new ChooserProvider.
-func NewProvider() *Provider {
-	return &Provider{
-		choosers: make(map[string]yarpc.Chooser),
+func NewProvider(choosers ...yarpc.Chooser) (*Provider, error) {
+	chooserMap := make(map[string]yarpc.Chooser, len(choosers))
+	for _, c := range choosers {
+		name := c.Name()
+		if _, ok := chooserMap[name]; ok {
+			return nil, fmt.Errorf("chooser %q was registered more than once", name)
+		}
+		chooserMap[name] = c
 	}
+	return &Provider{
+		choosers: chooserMap,
+	}, nil
 }
 
 // Chooser returns a named yarpc.Chooser.
 func (p *Provider) Chooser(name string) (yarpc.Chooser, bool) {
 	c, ok := p.choosers[name]
 	return c, ok
-}
-
-// Register registers a yarpc.Chooser to the given name.
-func (p *Provider) Register(name string, chooser yarpc.Chooser) error {
-	if _, ok := p.choosers[name]; ok {
-		return fmt.Errorf("chooser %q is already registered", name)
-	}
-	p.choosers[name] = chooser
-	return nil
 }

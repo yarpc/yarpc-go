@@ -33,9 +33,8 @@ import (
 )
 
 func newDialerProvider(t *testing.T) yarpc.DialerProvider {
-	p := yarpcdialer.NewProvider()
-	http := yarpctest.NewFakeDialer("http")
-	require.NoError(t, p.Register("http", http))
+	p, err := yarpcdialer.NewProvider(yarpctest.NewFakeDialer("http"))
+	require.NoError(t, err)
 	return p
 }
 
@@ -50,7 +49,7 @@ func TestNewConfig(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t,
 		Config{
-			Clients: map[string]RoundRobinConfig{
+			Peers: map[string]RoundRobinConfig{
 				"bar": {Dialer: "http", Capacity: 100},
 			},
 		},
@@ -61,7 +60,7 @@ func TestNewList(t *testing.T) {
 	t.Run("unknown dialer", func(t *testing.T) {
 		_, err := NewList(ListParams{
 			Config: Config{
-				Clients: map[string]RoundRobinConfig{
+				Peers: map[string]RoundRobinConfig{
 					"bar": {Dialer: "dne", Capacity: 100},
 				},
 			},
@@ -73,7 +72,7 @@ func TestNewList(t *testing.T) {
 	t.Run("successfully create chooser and list", func(t *testing.T) {
 		res, err := NewList(ListParams{
 			Config: Config{
-				Clients: map[string]RoundRobinConfig{
+				Peers: map[string]RoundRobinConfig{
 					"bar": {Dialer: "http", Capacity: 100},
 				},
 			},

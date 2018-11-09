@@ -35,7 +35,7 @@ func TestNewClientProvider(t *testing.T) {
 		_, err := NewClientProvider(ClientProviderParams{
 			Clients: []yarpc.Client{foo, foo},
 		})
-		assert.EqualError(t, err, `client "foo" is already registered`)
+		assert.EqualError(t, err, `client "foo" was registered more than once`)
 	})
 	t.Run("multiple clients", func(t *testing.T) {
 		foo := yarpc.Client{Name: "foo", Caller: "foo-caller", Service: "foo-service"}
@@ -69,7 +69,7 @@ func TestNewDialerProvider(t *testing.T) {
 		_, err := NewDialerProvider(DialerProviderParams{
 			Dialers: []yarpc.Dialer{foo, foo},
 		})
-		assert.EqualError(t, err, `dialer "foo" is already registered`)
+		assert.EqualError(t, err, `dialer "foo" was registered more than once`)
 	})
 	t.Run("multiple dialers", func(t *testing.T) {
 		foo := yarpctest.NewFakeDialer("foo")
@@ -99,7 +99,7 @@ func TestNewChooserProvider(t *testing.T) {
 		_, err := NewChooserProvider(ChooserProviderParams{
 			Choosers: []yarpc.Chooser{foo, foo},
 		})
-		assert.EqualError(t, err, `chooser "foo" is already registered`)
+		assert.EqualError(t, err, `chooser "foo" was registered more than once`)
 	})
 	t.Run("multiple choosers", func(t *testing.T) {
 		foo := yarpctest.NewFakePeerChooser("foo")
@@ -129,7 +129,7 @@ func TestNewListProvider(t *testing.T) {
 		_, err := NewListProvider(ListProviderParams{
 			Lists: []yarpc.List{foo, foo},
 		})
-		assert.EqualError(t, err, `list "foo" is already registered`)
+		assert.EqualError(t, err, `list "foo" was registered more than once`)
 	})
 	t.Run("multiple lists", func(t *testing.T) {
 		foo := yarpctest.NewFakePeerList("foo")

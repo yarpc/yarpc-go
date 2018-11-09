@@ -29,18 +29,20 @@ import (
 )
 
 func TestProvider(t *testing.T) {
-	p := NewProvider()
-	require.NotNil(t, p)
+	t.Run("registration conflict", func(t *testing.T) {
+		_, err := NewProvider(
+			yarpctest.NewFakePeerList("foo"),
+			yarpctest.NewFakePeerList("foo"),
+		)
+		assert.EqualError(t, err, `list "foo" was registered more than once`)
+	})
 
-	_, ok := p.List("foo")
-	require.False(t, ok)
+	t.Run("successful construction", func(t *testing.T) {
+		p, err := NewProvider(yarpctest.NewFakePeerList("foo"))
+		require.NoError(t, err)
 
-	fake := yarpctest.NewFakePeerList("foo")
-	assert.NoError(t, p.Register("foo", fake))
-
-	list, ok := p.List("foo")
-	require.True(t, ok)
-	assert.Equal(t, fake, list)
-
-	assert.EqualError(t, p.Register("foo", nil), `list "foo" is already registered`)
+		list, ok := p.List("foo")
+		require.True(t, ok)
+		assert.Equal(t, "foo", list.Name())
+	})
 }

@@ -171,7 +171,7 @@ type dialerInternals struct {
 
 // Name returns the http dialer's name.
 func (d *Dialer) Name() string {
-	return "http"
+	return transportName
 }
 
 // Start starts the HTTP dialer.

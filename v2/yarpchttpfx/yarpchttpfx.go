@@ -111,7 +111,7 @@ func StartInbounds(p StartInboundsParams) error {
 
 // OutboundsConfig is the configuration for constructing a set of outbounds.
 type OutboundsConfig struct {
-	Clients map[string]OutboundConfig `yaml:",inline"`
+	Outbounds map[string]OutboundConfig `yaml:",inline"`
 }
 
 // OutboundConfig is the configuration for constructing a specific outbound.
@@ -173,7 +173,7 @@ type ClientResult struct {
 // NewClients produces yarpc.Clients.
 func NewClients(p ClientParams) (ClientResult, error) {
 	var clients []yarpc.Client
-	for service, o := range p.Config.Clients {
+	for service, o := range p.Config.Outbounds {
 		var (
 			chooser yarpc.Chooser
 			dialer  yarpc.Dialer

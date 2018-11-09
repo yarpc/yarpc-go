@@ -34,16 +34,14 @@ import (
 )
 
 func newDialerProvider(t *testing.T) yarpc.DialerProvider {
-	p := yarpcdialer.NewProvider()
-	http := yarpctest.NewFakeDialer("http")
-	require.NoError(t, p.Register("http", http))
+	p, err := yarpcdialer.NewProvider(yarpctest.NewFakeDialer("http"))
+	require.NoError(t, err)
 	return p
 }
 
 func newChooserProvider(t *testing.T) yarpc.ChooserProvider {
-	p := yarpcchooser.NewProvider()
-	rr := yarpctest.NewFakePeerChooser("roundrobin")
-	require.NoError(t, p.Register("roundrobin", rr))
+	p, err := yarpcchooser.NewProvider(yarpctest.NewFakePeerChooser("roundrobin"))
+	require.NoError(t, err)
 	return p
 }
 
@@ -78,7 +76,7 @@ func TestNewOutboundsConfig(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t,
 		OutboundsConfig{
-			Clients: map[string]OutboundConfig{
+			Outbounds: map[string]OutboundConfig{
 				"bar": {Address: "http://127.0.0.1:0"},
 			},
 		},
@@ -125,7 +123,7 @@ func TestNewClients(t *testing.T) {
 			res, err := NewClients(ClientParams{
 				Lifecycle: fxtest.NewLifecycle(t),
 				Config: OutboundsConfig{
-					Clients: map[string]OutboundConfig{
+					Outbounds: map[string]OutboundConfig{
 						"bar": tt.giveCfg,
 					},
 				},

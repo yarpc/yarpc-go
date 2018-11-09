@@ -63,11 +63,9 @@ func NewClientProvider(p ClientProviderParams) (ClientProviderResult, error) {
 	for _, cl := range p.ClientLists {
 		clients = append(clients, cl...)
 	}
-	provider := yarpcclient.NewProvider()
-	for _, c := range clients {
-		if err := provider.Register(c.Name, c); err != nil {
-			return ClientProviderResult{}, err
-		}
+	provider, err := yarpcclient.NewProvider(clients...)
+	if err != nil {
+		return ClientProviderResult{}, err
 	}
 	return ClientProviderResult{
 		Provider: provider,
@@ -95,11 +93,9 @@ func NewDialerProvider(p DialerProviderParams) (DialerProviderResult, error) {
 	for _, dl := range p.DialerLists {
 		dialers = append(dialers, dl...)
 	}
-	provider := yarpcdialer.NewProvider()
-	for _, d := range dialers {
-		if err := provider.Register(d.Name(), d); err != nil {
-			return DialerProviderResult{}, err
-		}
+	provider, err := yarpcdialer.NewProvider(dialers...)
+	if err != nil {
+		return DialerProviderResult{}, err
 	}
 	return DialerProviderResult{
 		Provider: provider,
@@ -127,11 +123,9 @@ func NewChooserProvider(p ChooserProviderParams) (ChooserProviderResult, error) 
 	for _, cl := range p.ChooserLists {
 		choosers = append(choosers, cl...)
 	}
-	provider := yarpcchooser.NewProvider()
-	for _, c := range choosers {
-		if err := provider.Register(c.Name(), c); err != nil {
-			return ChooserProviderResult{}, err
-		}
+	provider, err := yarpcchooser.NewProvider(choosers...)
+	if err != nil {
+		return ChooserProviderResult{}, err
 	}
 	return ChooserProviderResult{
 		Provider: provider,
@@ -159,11 +153,9 @@ func NewListProvider(p ListProviderParams) (ListProviderResult, error) {
 	for _, ll := range p.ListLists {
 		lists = append(lists, ll...)
 	}
-	provider := yarpclist.NewProvider()
-	for _, l := range lists {
-		if err := provider.Register(l.Name(), l); err != nil {
-			return ListProviderResult{}, err
-		}
+	provider, err := yarpclist.NewProvider(lists...)
+	if err != nil {
+		return ListProviderResult{}, err
 	}
 	return ListProviderResult{
 		Provider: provider,

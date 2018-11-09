@@ -42,7 +42,7 @@ var Module = fx.Options(
 
 // Config is the configuration for constructing a set of round-robin peer.Choosers.
 type Config struct {
-	Clients map[string]RoundRobinConfig `yaml:",inline"`
+	Peers map[string]RoundRobinConfig `yaml:",inline"`
 }
 
 // RoundRobinConfig is the configuration for constructing a specific round-robin peer.Chooser.
@@ -99,14 +99,14 @@ func NewList(p ListParams) (ListResult, error) {
 		choosers []yarpc.Chooser
 		lists    []yarpc.List
 	)
-	for name, c := range p.Config.Clients {
+	for name, c := range p.Config.Peers {
 		dialer, ok := p.Provider.Dialer(c.Dialer)
 		if !ok {
 			return ListResult{}, fmt.Errorf("failed to resolve dialer %q", c.Dialer)
 		}
 
 		var opts []yarpcroundrobin.ListOption
-		if c.Capacity != 0 {
+		if c.Capacity > 0 {
 			opts = append(opts, yarpcroundrobin.Capacity(c.Capacity))
 		}
 

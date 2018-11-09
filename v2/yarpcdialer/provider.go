@@ -34,23 +34,22 @@ type Provider struct {
 }
 
 // NewProvider returns a new DialerProvider.
-func NewProvider() *Provider {
+func NewProvider(dialers ...yarpc.Dialer) (*Provider, error) {
+	dialerMap := make(map[string]yarpc.Dialer, len(dialers))
+	for _, d := range dialers {
+		name := d.Name()
+		if _, ok := dialerMap[name]; ok {
+			return nil, fmt.Errorf("dialer %q was registered more than once", name)
+		}
+		dialerMap[name] = d
+	}
 	return &Provider{
-		dialers: make(map[string]yarpc.Dialer),
-	}
+		dialers: dialerMap,
+	}, nil
 }
 
-// Dialer returns a named yarpc.Dialer.
+// Dialer returns a  named yarpc.Dialer.
 func (p *Provider) Dialer(name string) (yarpc.Dialer, bool) {
-	c, ok := p.dialers[name]
-	return c, ok
-}
-
-// Register registers a yarpc.Dialer to the given name.
-func (p *Provider) Register(name string, dialer yarpc.Dialer) error {
-	if _, ok := p.dialers[name]; ok {
-		return fmt.Errorf("dialer %q is already registered", name)
-	}
-	p.dialers[name] = dialer
-	return nil
+	d, ok := p.dialers[name]
+	return d, ok
 }

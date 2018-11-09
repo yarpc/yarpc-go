@@ -34,23 +34,22 @@ type Provider struct {
 }
 
 // NewProvider returns a new ListProvider.
-func NewProvider() *Provider {
-	return &Provider{
-		lists: make(map[string]yarpc.List),
+func NewProvider(lists ...yarpc.List) (*Provider, error) {
+	listMap := make(map[string]yarpc.List, len(lists))
+	for _, c := range lists {
+		name := c.Name()
+		if _, ok := listMap[name]; ok {
+			return nil, fmt.Errorf("list %q was registered more than once", name)
+		}
+		listMap[name] = c
 	}
+	return &Provider{
+		lists: listMap,
+	}, nil
 }
 
 // List returns a named yarpc.List.
 func (p *Provider) List(name string) (yarpc.List, bool) {
 	c, ok := p.lists[name]
 	return c, ok
-}
-
-// Register registers a yarpc.List to the given name.
-func (p *Provider) Register(name string, list yarpc.List) error {
-	if _, ok := p.lists[name]; ok {
-		return fmt.Errorf("list %q is already registered", name)
-	}
-	p.lists[name] = list
-	return nil
 }

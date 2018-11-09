@@ -81,7 +81,7 @@ var _ yarpc.Dialer = (*Dialer)(nil)
 
 // Name returns the tchannel dialer's name.
 func (d *Dialer) Name() string {
-	return "tchannel"
+	return transportName
 }
 
 // Start starts the TChannel dialer.
