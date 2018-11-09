@@ -27,7 +27,7 @@ type Interface interface {
 //
 // 	handler := ReadOnlyStoreHandler{}
 // 	dispatcher.Register(readonlystoreserver.New(handler))
-func New(impl Interface, opts ...yarpcthrift.RegisterOption) []yarpc.TransportProcedure {
+func New(impl Interface, opts ...yarpcthrift.RegisterOption) []yarpc.EncodingProcedure {
 	h := handler{impl}
 	service := yarpcthrift.Service{
 		Name: "ReadOnlyStore",
@@ -35,14 +35,14 @@ func New(impl Interface, opts ...yarpcthrift.RegisterOption) []yarpc.TransportPr
 
 			yarpcthrift.Method{
 				Name:         "integer",
-				Handler:      yarpcthrift.Handler(h.Integer),
+				Handler:      yarpcthrift.EncodingHandler(h.Integer),
 				Signature:    "Integer(Key *string) (int64)",
 				ThriftModule: atomic.ThriftModule,
 			},
 		},
 	}
 
-	procedures := make([]yarpc.TransportProcedure, 0, 1)
+	procedures := make([]yarpc.EncodingProcedure, 0, 1)
 	procedures = append(procedures, baseserviceserver.New(impl, opts...)...)
 	procedures = append(procedures, yarpcthrift.BuildProcedures(service, opts...)...)
 	return procedures
