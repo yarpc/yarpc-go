@@ -53,7 +53,7 @@ func TestDecodeAgnosticProto(t *testing.T) {
 	// calling Decode again should fail, because it attempts to set a new
 	// responder.
 	res, err = testCodec.Decode(reqBuf)
-	assert.Error(t, err, "unexpected error")
+	assert.EqualError(t, err, "code:internal message:tried to overwrite a responder for thrift codec")
 }
 
 func TestDecodeAgnosticProtoError(t *testing.T) {
@@ -68,7 +68,7 @@ func TestDecodeAgnosticProtoError(t *testing.T) {
 	reqBuf := &yarpc.Buffer{}
 
 	res, err := testCodec.Decode(reqBuf)
-	assert.Error(t, err, "expected error")
+	assert.EqualError(t, err, "error decoding request")
 	assert.Nil(t, res)
 }
 
@@ -92,7 +92,7 @@ func TestDecodeEnveloped(t *testing.T) {
 	// calling Decode again should fail, because it attempts to set a new
 	// responder.
 	res, err = testCodec.Decode(reqBuf)
-	assert.Error(t, err, "unexpected error")
+	assert.EqualError(t, err, "code:internal message:tried to overwrite a responder for thrift codec")
 }
 
 func TestDecodeEnvelopedError(t *testing.T) {
@@ -107,7 +107,7 @@ func TestDecodeEnvelopedError(t *testing.T) {
 	reqBuf := &yarpc.Buffer{}
 
 	res, err := testCodec.Decode(reqBuf)
-	require.Error(t, err, "expected error")
+	assert.EqualError(t, err, "error decoding request")
 	assert.Nil(t, res)
 }
 
@@ -148,7 +148,7 @@ func TestDecodeUnenveloped(t *testing.T) {
 	// calling Decode again should fail, because it attempts to set a new
 	// responder.
 	res, err = testCodec.Decode(reqBuf)
-	assert.Error(t, err, "unexpected error")
+	assert.EqualError(t, err, "code:internal message:tried to overwrite a responder for thrift codec")
 }
 
 func TestDecodeUnenvelopedError(t *testing.T) {
@@ -163,7 +163,7 @@ func TestDecodeUnenvelopedError(t *testing.T) {
 	reqBuf := &yarpc.Buffer{}
 
 	res, err := testCodec.Decode(reqBuf)
-	require.Error(t, err, "expected error")
+	assert.EqualError(t, err, "error decoding request")
 	assert.Nil(t, res)
 }
 
@@ -188,5 +188,5 @@ func TestEncodeError(t *testing.T) {
 	// thrift codec only encodes wire.Value
 	_, err := testCodec.Encode(wire.Envelope{})
 	require.Error(t, err, "unexpected error")
-	assert.Contains(t, err.Error(), "tried to encode a nonwire.Value in thrift codec")
+	assert.Contains(t, err.Error(), "tried to encode a non-wire.Value in thrift codec")
 }

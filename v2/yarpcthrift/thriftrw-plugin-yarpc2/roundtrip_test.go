@@ -206,7 +206,8 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 			wantError: yarpcerror.WrapHandlerError(
 				&atomic.KeyDoesNotExist{Key: ptr.String("foo")},
 				"roundtrip-server",
-				"ReadOnlyStore::integer"),
+				"ReadOnlyStore::integer",
+			),
 		},
 		{
 			desc:          "readonly store: integer with readonly client",
@@ -238,7 +239,8 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 			wantError: yarpcerror.WrapHandlerError(
 				&atomic.KeyDoesNotExist{Key: ptr.String("foo")},
 				"roundtrip-server",
-				"ReadOnlyStore::integer"),
+				"ReadOnlyStore::integer",
+			),
 		},
 		{
 			desc: "store: integer failure",
@@ -254,7 +256,8 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 			wantError: yarpcerror.WrapHandlerError(
 				&atomic.KeyDoesNotExist{Key: ptr.String("foo")},
 				"roundtrip-server",
-				"ReadOnlyStore::integer"),
+				"ReadOnlyStore::integer",
+			),
 		},
 	}
 

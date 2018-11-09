@@ -32,53 +32,54 @@ import (
 
 func TestEncodingHandler(t *testing.T) {
 	tests := []struct {
-		reqBody       interface{}
-		retResponse   Response
-		retError      error
-		expectedError string
+		giveReqBody  interface{}
+		giveResponse Response
+		giveError    error
+		wantError    string
 	}{
 		{
-			reqBody:       "blah",
-			expectedError: "tried to handle a non-wire.Value in thrift handler",
+			giveReqBody: "blah",
+			wantError:   "tried to handle a non-wire.Value in thrift handler",
 		},
 		{
-			reqBody:       wire.Value{},
-			retError:      errors.New("thrift handler error"),
-			expectedError: "thrift handler error",
+			giveReqBody: wire.Value{},
+			giveError:   errors.New("thrift handler error"),
+			wantError:   "thrift handler error",
 		},
 		{
-			reqBody:       wire.Value{},
-			retResponse:   Response{Body: fakeEnveloper(wire.OneWay)},
-			expectedError: "unexpected envelope type: OneWay",
+			giveReqBody:  wire.Value{},
+			giveResponse: Response{Body: fakeEnveloper(wire.OneWay)},
+			wantError:    "unexpected envelope type: OneWay",
 		},
 		{
-			reqBody: wire.Value{},
-			retResponse: Response{Body: errorEnveloper{
+			giveReqBody: wire.Value{},
+			giveResponse: Response{Body: errorEnveloper{
 				envelopeType: wire.Reply,
 				err:          errors.New("could not convert to wire value"),
 			}},
-			expectedError: "could not convert to wire value",
+			wantError: "could not convert to wire value",
 		},
 		{
-			reqBody:       wire.Value{},
-			retResponse:   Response{Body: fakeEnveloper(wire.Reply), Exception: errors.New("application error")},
-			expectedError: "application error",
+			giveReqBody:  wire.Value{},
+			giveResponse: Response{Body: fakeEnveloper(wire.Reply), Exception: errors.New("application error")},
+			wantError:    "application error",
 		},
 		{
-			reqBody:     wire.Value{},
-			retResponse: Response{Body: fakeEnveloper(wire.Reply)},
+			giveReqBody:  wire.Value{},
+			giveResponse: Response{Body: fakeEnveloper(wire.Reply)},
 		},
 	}
 
 	for _, tt := range tests {
 		h := EncodingHandler(func(context.Context, wire.Value) (Response, error) {
-			return tt.retResponse, tt.retError
+			return tt.giveResponse, tt.giveError
 		})
+		unaryHandler := unaryEncodingHandler{h: h}
 
-		resBody, err := h.Handle(context.Background(), tt.reqBody)
-		if tt.expectedError != "" {
+		resBody, err := unaryHandler.Handle(context.Background(), tt.giveReqBody)
+		if tt.wantError != "" {
 			require.Error(t, err, "expected error")
-			assert.Contains(t, err.Error(), tt.expectedError)
+			assert.Contains(t, err.Error(), tt.wantError)
 		} else {
 			assert.NoError(t, err, "unexpected error")
 			assert.NotNil(t, resBody)

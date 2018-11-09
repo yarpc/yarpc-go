@@ -23,11 +23,10 @@ package yarpcthrift
 import (
 	"bytes"
 
-	"go.uber.org/yarpc/v2/yarpcerror"
-
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
 	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 type thriftCodec struct {
@@ -44,8 +43,9 @@ func newCodec(protocol protocol.Protocol, enveloping bool) *thriftCodec {
 	}
 }
 
-// setResponder checks whether a responder has been set and sets it to one. An
-// instance of a thrift codec should not set a responder more than once; if
+// setResponder checks whether a responder has been set and sets it to one.
+//
+// An instance of a thrift codec should not set a responder more than once; if
 // it does, it may not encode a response properly. We use this instead of
 // directly setting a responder to ensure that we only set it once.
 func (c *thriftCodec) setResponder(responder protocol.Responder) error {
@@ -104,5 +104,5 @@ func (c *thriftCodec) Encode(res interface{}) (*yarpc.Buffer, error) {
 		err := c.responder.EncodeResponse(resValue, wire.Reply, resBuf)
 		return resBuf, err
 	}
-	return nil, yarpcerror.InternalErrorf("tried to encode a nonwire.Value in thrift codec")
+	return nil, yarpcerror.InternalErrorf("tried to encode a non-wire.Value in thrift codec")
 }

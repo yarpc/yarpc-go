@@ -28,19 +28,20 @@ import (
 	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
-var _ yarpc.UnaryEncodingHandler = EncodingHandler(nil)
+var _ yarpc.UnaryEncodingHandler = unaryEncodingHandler{}
 
-// EncodingHandler wraps a Thrift handler into a yarpc.UnaryEncodingHandler.
-type EncodingHandler func(context.Context, wire.Value) (Response, error)
+type unaryEncodingHandler struct {
+	h EncodingHandler
+}
 
 // Handle implements yarpc.UnaryEncodingHandler.
-func (e EncodingHandler) Handle(ctx context.Context, reqBody interface{}) (interface{}, error) {
+func (e unaryEncodingHandler) Handle(ctx context.Context, reqBody interface{}) (interface{}, error) {
 	reqValue, ok := reqBody.(wire.Value)
 	if !ok {
 		return nil, yarpcerror.InternalErrorf("tried to handle a non-wire.Value in thrift handler")
 	}
 
-	thriftRes, err := e(ctx, reqValue)
+	thriftRes, err := e.h(ctx, reqValue)
 	if err != nil {
 		return nil, err
 	}

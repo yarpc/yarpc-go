@@ -21,11 +21,17 @@
 package yarpcthrift
 
 import (
+	"context"
+
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/thriftreflect"
+	"go.uber.org/thriftrw/wire"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcprocedure"
 )
+
+// EncodingHandler is a convenience type alias for functions that act as Handlers.
+type EncodingHandler func(context.Context, wire.Value) (Response, error)
 
 // Method represents a Thrift service method.
 type Method struct {
@@ -69,7 +75,7 @@ func BuildProcedures(s Service, opts ...RegisterOption) []yarpc.EncodingProcedur
 
 	for _, method := range s.Methods {
 		var spec yarpc.EncodingHandlerSpec
-		spec = yarpc.NewUnaryEncodingHandlerSpec(method.Handler)
+		spec = yarpc.NewUnaryEncodingHandlerSpec(unaryEncodingHandler{h: method.Handler})
 		codec := func() yarpc.InboundCodec {
 			return newCodec(proto, rc.Enveloping)
 		}
