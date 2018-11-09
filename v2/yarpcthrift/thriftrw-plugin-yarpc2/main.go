@@ -38,7 +38,7 @@ var (
 		"context",
 		"Import path at which Context is available")
 	_unaryHandlerWrapper = flag.String("unary-handler-wrapper",
-		"go.uber.org/yarpc/v2/yarpcthrift.Handler",
+		"go.uber.org/yarpc/v2/yarpcthrift.EncodingHandler",
 		"Function used to wrap generic Thrift unary function handlers into YARPC handlers")
 	_noGomock = flag.Bool("no-gomock", false,
 		"Don't generate gomock mocks for service clients")
