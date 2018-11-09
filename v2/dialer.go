@@ -30,11 +30,19 @@ type Subscriber interface {
 // request a Peer for a specific Identifier and the Dialer has the ability to
 // create a new Peer or return an existing one.
 type Dialer interface {
+	// The name of the dialer.
+	Name() string
+
 	// Get or create a Peer for the Subscriber
 	RetainPeer(Identifier, Subscriber) (Peer, error)
 
 	// Unallocate a peer from the Subscriber
 	ReleasePeer(Identifier, Subscriber) error
+}
+
+// DialerProvider is a registry of pre-configured Dialers.
+type DialerProvider interface {
+	Dialer(name string) (Dialer, bool)
 }
 
 type nopSubscriber struct{}

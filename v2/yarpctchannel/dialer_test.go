@@ -149,7 +149,7 @@ func TestDialerBellsAndWhistles(t *testing.T) {
 	t.Logf("dialer started\n")
 
 	// This time using a peer list instead of using the dialer directly.
-	peerlist := yarpcroundrobin.New(dialer)
+	peerlist := yarpcroundrobin.New("roundrobin", dialer)
 	peerlist.Update(yarpc.ListUpdates{
 		Additions: []yarpc.Identifier{
 			yarpc.Address(inbound.Listener.Addr().String()),
@@ -222,8 +222,8 @@ func TestPeerListChanges(t *testing.T) {
 	t.Logf("dialer started\n")
 
 	// Retain with multiple peer lists.
-	avery := yarpcroundrobin.New(dialer)
-	blake := yarpcroundrobin.New(dialer)
+	avery := yarpcroundrobin.New("avery", dialer)
+	blake := yarpcroundrobin.New("blake", dialer)
 
 	avery.Update(yarpc.ListUpdates{
 		Additions: []yarpc.Identifier{

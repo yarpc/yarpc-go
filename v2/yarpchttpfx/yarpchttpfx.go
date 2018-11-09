@@ -22,6 +22,8 @@ package yarpchttpfx
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/url"
 
 	opentracing "github.com/opentracing/opentracing-go"
@@ -43,6 +45,7 @@ var Module = fx.Options(
 	fx.Provide(NewInboundConfig),
 	fx.Provide(NewOutboundsConfig),
 	fx.Provide(NewClients),
+	fx.Provide(NewDialer),
 	fx.Invoke(StartInbounds),
 )
 
@@ -108,12 +111,18 @@ func StartInbounds(p StartInboundsParams) error {
 
 // OutboundsConfig is the configuration for constructing a set of outbounds.
 type OutboundsConfig struct {
-	Clients map[string]OutboundConfig `yaml:",inline"`
+	Outbounds map[string]OutboundConfig `yaml:",inline"`
 }
 
 // OutboundConfig is the configuration for constructing a specific outbound.
 type OutboundConfig struct {
+	// Specifies the address to use for this Outbound.
 	Address string `yaml:"address"`
+
+	// Specifies the peer list policy to use for this Outbound.
+	//
+	// If set, an address does not need to be configured.
+	Policy string `yaml:"policy"`
 }
 
 // OutboundsConfigParams defines the dependencies of this module.
@@ -145,8 +154,11 @@ func NewOutboundsConfig(p OutboundsConfigParams) (OutboundsConfigResult, error) 
 type ClientParams struct {
 	fx.In
 
+	Config          OutboundsConfig
+	DialerProvider  yarpc.DialerProvider
+	ChooserProvider yarpc.ChooserProvider
+
 	Lifecycle fx.Lifecycle
-	Config    OutboundsConfig
 	Logger    *zap.Logger        `optional:"true"`
 	Tracer    opentracing.Tracer `optional:"true"`
 }
@@ -161,32 +173,49 @@ type ClientResult struct {
 // NewClients produces yarpc.Clients.
 func NewClients(p ClientParams) (ClientResult, error) {
 	var clients []yarpc.Client
-	for service, o := range p.Config.Clients {
-		url, err := url.Parse(o.Address)
-		if err != nil {
-			return ClientResult{}, err
-		}
-		dialer := &yarpchttp.Dialer{
-			Tracer: p.Tracer,
-			Logger: p.Logger,
+	for service, o := range p.Config.Outbounds {
+		var (
+			chooser yarpc.Chooser
+			dialer  yarpc.Dialer
+			url     *url.URL
+		)
+		if o.Policy != "" {
+			var ok bool
+			chooser, ok = p.ChooserProvider.Chooser(o.Policy)
+			if !ok {
+				return ClientResult{}, fmt.Errorf("failed to resolve outbound peer list policy: %q", o.Policy)
+			}
+		} else {
+			// If a policy was not configured, we fallback
+			// to constructing a dialer and parse the
+			// configured address.
+			//
+			// TODO(amckinney): Should this be configurable?
+			// Are there cases when a service will need to
+			// reference multiple http dialers in their
+			// outbound configuration?
+			var ok bool
+			dialer, ok = p.DialerProvider.Dialer("http")
+			if !ok {
+				return ClientResult{}, errors.New("failed to construct outbound: an http Dialer was not found in the application container")
+			}
+			var err error
+			url, err = url.Parse(o.Address)
+			if err != nil {
+				return ClientResult{}, err
+			}
 		}
 		outbound := &yarpchttp.Outbound{
-			Dialer: dialer,
-			URL:    url,
-			Tracer: p.Tracer,
+			Chooser: chooser,
+			Dialer:  dialer,
+			URL:     url,
+			Tracer:  p.Tracer,
 		}
-		p.Lifecycle.Append(fx.Hook{
-			OnStart: func(ctx context.Context) error {
-				return dialer.Start(ctx)
-			},
-			OnStop: func(ctx context.Context) error {
-				return dialer.Stop(ctx)
-			},
-		})
 		clients = append(
 			clients,
 			yarpc.Client{
-				Caller:  "foo", // TODO(amckinney): Derive from servicefx.
+				Name:    service, // TODO(amckinney): Make the client name configurable, default to service name.
+				Caller:  "foo",   // TODO(amckinney): Derive from servicefx.
 				Service: service,
 				Unary:   outbound,
 			},
@@ -194,5 +223,40 @@ func NewClients(p ClientParams) (ClientResult, error) {
 	}
 	return ClientResult{
 		Clients: clients,
+	}, nil
+}
+
+// DialerParams defines the dependencies of this module.
+type DialerParams struct {
+	fx.In
+
+	Lifecycle fx.Lifecycle
+	Logger    *zap.Logger        `optional:"true"`
+	Tracer    opentracing.Tracer `optional:"true"`
+}
+
+// DialerResult defines the values produced by this module.
+type DialerResult struct {
+	fx.Out
+
+	Dialer yarpc.Dialer `group:"yarpcfx"`
+}
+
+// NewDialer produces a yarpc.Dialer.
+func NewDialer(p DialerParams) (DialerResult, error) {
+	dialer := &yarpchttp.Dialer{
+		Tracer: p.Tracer,
+		Logger: p.Logger,
+	}
+	p.Lifecycle.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			return dialer.Start(ctx)
+		},
+		OnStop: func(ctx context.Context) error {
+			return dialer.Stop(ctx)
+		},
+	})
+	return DialerResult{
+		Dialer: dialer,
 	}, nil
 }

@@ -18,36 +18,31 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpctest
+package yarpcdialer
 
 import (
-	"context"
-	"fmt"
+	"testing"
 
-	yarpc "go.uber.org/yarpc/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/v2/yarpctest"
 )
 
-// FakePeerChooserOption is an option for NewFakePeerChooser.
-type FakePeerChooserOption func(*FakePeerChooser)
+func TestProvider(t *testing.T) {
+	t.Run("registration conflict", func(t *testing.T) {
+		_, err := NewProvider(
+			yarpctest.NewFakeTransport("foo"),
+			yarpctest.NewFakeTransport("foo"),
+		)
+		assert.EqualError(t, err, `dialer "foo" was registered more than once`)
+	})
 
-// FakePeerChooser is a fake peer chooser.
-type FakePeerChooser struct {
-	name string
-}
+	t.Run("successful construction", func(t *testing.T) {
+		p, err := NewProvider(yarpctest.NewFakeTransport("foo"))
+		require.NoError(t, err)
 
-// NewFakePeerChooser returns a fake peer list.
-func NewFakePeerChooser(name string, opts ...FakePeerChooserOption) *FakePeerChooser {
-	pl := &FakePeerChooser{name: name}
-	for _, opt := range opts {
-		opt(pl)
-	}
-	return pl
-}
-
-// Name returns the fake Chooser's name.
-func (c *FakePeerChooser) Name() string { return c.name }
-
-// Choose pretends to choose a peer, but actually always returns an error. It's fake.
-func (c *FakePeerChooser) Choose(ctx context.Context, req *yarpc.Request) (yarpc.Peer, func(error), error) {
-	return nil, nil, fmt.Errorf(`fake peer chooser can't actually choose peers`)
+		dialer, ok := p.Dialer("foo")
+		require.True(t, ok)
+		assert.Equal(t, "foo", dialer.Name())
+	})
 }

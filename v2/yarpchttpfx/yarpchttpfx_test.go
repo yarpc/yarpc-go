@@ -11,8 +11,7 @@
 // all copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -28,8 +27,23 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/config"
 	"go.uber.org/fx/fxtest"
+	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcchooser"
+	"go.uber.org/yarpc/v2/yarpcdialer"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
+
+func newDialerProvider(t *testing.T) yarpc.DialerProvider {
+	p, err := yarpcdialer.NewProvider(yarpctest.NewFakeDialer("http"))
+	require.NoError(t, err)
+	return p
+}
+
+func newChooserProvider(t *testing.T) yarpc.ChooserProvider {
+	p, err := yarpcchooser.NewProvider(yarpctest.NewFakePeerChooser("roundrobin"))
+	require.NoError(t, err)
+	return p
+}
 
 func TestNewInboundConfig(t *testing.T) {
 	cfg := strings.NewReader("yarpc: {http: {inbounds: {address: http://127.0.0.1:0}}}")
@@ -62,7 +76,7 @@ func TestNewOutboundsConfig(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t,
 		OutboundsConfig{
-			Clients: map[string]OutboundConfig{
+			Outbounds: map[string]OutboundConfig{
 				"bar": {Address: "http://127.0.0.1:0"},
 			},
 		},
@@ -71,15 +85,62 @@ func TestNewOutboundsConfig(t *testing.T) {
 }
 
 func TestNewClients(t *testing.T) {
-	res, err := NewClients(ClientParams{
-		Lifecycle: fxtest.NewLifecycle(t),
-		Config: OutboundsConfig{
-			Clients: map[string]OutboundConfig{
-				"bar": {Address: "http://127.0.0.1:0"},
-			},
+	tests := []struct {
+		desc        string
+		giveCfg     OutboundConfig
+		wantCaller  string
+		wantName    string
+		wantService string
+		wantErr     string
+	}{
+		{
+			desc:        "policy successfully configured",
+			giveCfg:     OutboundConfig{Policy: "roundrobin"},
+			wantCaller:  "foo",
+			wantName:    "bar",
+			wantService: "bar",
 		},
-	})
-	require.NoError(t, err)
-	assert.Len(t, res.Clients, 1)
-	assert.Equal(t, res.Clients[0].Caller, "foo")
+		{
+			desc:    "policy does not exist",
+			giveCfg: OutboundConfig{Policy: "dne"},
+			wantErr: `failed to resolve outbound peer list policy: "dne"`,
+		},
+		{
+			desc:        "address successfully configured",
+			giveCfg:     OutboundConfig{Address: "http://127.0.0.1:0"},
+			wantCaller:  "foo",
+			wantName:    "bar",
+			wantService: "bar",
+		},
+		{
+			desc:    "address failed to parse",
+			giveCfg: OutboundConfig{Address: "127:0"},
+			wantErr: "parse 127:0: first path segment in URL cannot contain colon",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			res, err := NewClients(ClientParams{
+				Lifecycle: fxtest.NewLifecycle(t),
+				Config: OutboundsConfig{
+					Outbounds: map[string]OutboundConfig{
+						"bar": tt.giveCfg,
+					},
+				},
+				DialerProvider:  newDialerProvider(t),
+				ChooserProvider: newChooserProvider(t),
+			})
+			if tt.wantErr != "" {
+				assert.EqualError(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Len(t, res.Clients, 1)
+
+			client := res.Clients[0]
+			assert.Equal(t, client.Caller, tt.wantCaller)
+			assert.Equal(t, client.Name, tt.wantName)
+			assert.Equal(t, client.Service, tt.wantService)
+		})
+	}
 }

@@ -62,7 +62,7 @@ func Capacity(capacity int) ListOption {
 }
 
 // New creates a new round robin peer list.
-func New(dialer yarpc.Dialer, opts ...ListOption) *List {
+func New(name string, dialer yarpc.Dialer, opts ...ListOption) *List {
 	options := defaultListOptions
 	for _, option := range opts {
 		option.apply(&options)
@@ -78,7 +78,7 @@ func New(dialer yarpc.Dialer, opts ...ListOption) *List {
 
 	return &List{
 		List: yarpcpeerlist.New(
-			"roundrobin",
+			name,
 			dialer,
 			newPeerRing(),
 			plOpts...,

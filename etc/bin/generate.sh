@@ -85,6 +85,8 @@ mockgen -destination=v2/yarpctest/mock_handler.go -package=yarpctest go.uber.org
 mockgen -destination=v2/yarpctest/mock_outbound.go -package=yarpctest go.uber.org/yarpc/v2 UnaryOutbound,StreamOutbound
 mockgen -destination=v2/yarpctest/mock_stream.go -package=yarpctest go.uber.org/yarpc/v2 Stream,StreamCloser
 mockgen -destination=v2/yarpctest/mock_router.go -package=yarpctest go.uber.org/yarpc/v2 Router,InboundCodec
+mockgen -destination=v2/yarpctest/mock_dialer.go -package=yarpctest go.uber.org/yarpc/v2 Dialer
+mockgen -destination=v2/yarpctest/mock_list.go -package=yarpctest go.uber.org/yarpc/v2 Chooser,List
 
 generate_stringer ConnectionStatus ./api/peer
 generate_stringer State ./pkg/lifecycle

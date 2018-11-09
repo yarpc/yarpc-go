@@ -29,21 +29,32 @@ import (
 )
 
 func TestProvider(t *testing.T) {
-	p := NewProvider()
-	require.NotNil(t, p)
-
-	client, ok := p.Client("foo")
-	require.False(t, ok)
-	require.Equal(t, yarpc.Client{}, client)
-
-	p.Register("foo", yarpc.Client{
-		Caller: "foo-caller",
+	t.Run("registration conflict", func(t *testing.T) {
+		_, err := NewProvider(
+			yarpc.Client{Name: "foo"},
+			yarpc.Client{Name: "foo"},
+		)
+		assert.EqualError(t, err, `client "foo" was registered more than once`)
 	})
 
-	client, ok = p.Client("foo")
-	require.True(t, ok)
+	t.Run("successful construction", func(t *testing.T) {
+		p, err := NewProvider(
+			yarpc.Client{
+				Name:   "foo",
+				Caller: "foo-caller",
+			},
+		)
+		require.NoError(t, err)
 
-	assert.Equal(t, client, yarpc.Client{
-		Caller: "foo-caller",
+		client, ok := p.Client("foo")
+		require.True(t, ok)
+
+		assert.Equal(t,
+			yarpc.Client{
+				Name:   "foo",
+				Caller: "foo-caller",
+			},
+			client,
+		)
 	})
 }

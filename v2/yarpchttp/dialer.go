@@ -169,6 +169,11 @@ type dialerInternals struct {
 	logger *zap.Logger
 }
 
+// Name returns the http dialer's name.
+func (d *Dialer) Name() string {
+	return transportName
+}
+
 // Start starts the HTTP dialer.
 func (d *Dialer) Start(_ context.Context) error {
 	d.internal = &dialerInternals{

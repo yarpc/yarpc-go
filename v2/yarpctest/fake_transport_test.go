@@ -25,6 +25,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
@@ -42,7 +43,8 @@ func (p testPeer) Identifier() string {
 }
 
 func TestFakeTransport(t *testing.T) {
-	trans := yarpctest.NewFakeTransport()
+	trans := yarpctest.NewFakeTransport("fake")
+	assert.Equal(t, "fake", trans.Name())
 
 	wait := make(chan struct{}, 0)
 	var wg sync.WaitGroup
@@ -63,7 +65,8 @@ func TestFakeTransport(t *testing.T) {
 }
 
 func TestRetainReleasePeer(t *testing.T) {
-	trans := yarpctest.NewFakeTransport()
+	trans := yarpctest.NewFakeTransport("fake")
+	assert.Equal(t, "fake", trans.Name())
 
 	wait := make(chan struct{}, 0)
 	var wg sync.WaitGroup

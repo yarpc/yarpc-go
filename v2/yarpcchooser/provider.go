@@ -18,36 +18,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpctest
+package yarpcchooser
 
 import (
-	"context"
 	"fmt"
 
-	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2"
 )
 
-// FakePeerChooserOption is an option for NewFakePeerChooser.
-type FakePeerChooserOption func(*FakePeerChooser)
+var _ yarpc.ChooserProvider = (*Provider)(nil)
 
-// FakePeerChooser is a fake peer chooser.
-type FakePeerChooser struct {
-	name string
+// Provider implements yarpc.ChooserProvider.
+type Provider struct {
+	choosers map[string]yarpc.Chooser
 }
 
-// NewFakePeerChooser returns a fake peer list.
-func NewFakePeerChooser(name string, opts ...FakePeerChooserOption) *FakePeerChooser {
-	pl := &FakePeerChooser{name: name}
-	for _, opt := range opts {
-		opt(pl)
+// NewProvider returns a new ChooserProvider.
+func NewProvider(choosers ...yarpc.Chooser) (*Provider, error) {
+	chooserMap := make(map[string]yarpc.Chooser, len(choosers))
+	for _, c := range choosers {
+		name := c.Name()
+		if _, ok := chooserMap[name]; ok {
+			return nil, fmt.Errorf("chooser %q was registered more than once", name)
+		}
+		chooserMap[name] = c
 	}
-	return pl
+	return &Provider{
+		choosers: chooserMap,
+	}, nil
 }
 
-// Name returns the fake Chooser's name.
-func (c *FakePeerChooser) Name() string { return c.name }
-
-// Choose pretends to choose a peer, but actually always returns an error. It's fake.
-func (c *FakePeerChooser) Choose(ctx context.Context, req *yarpc.Request) (yarpc.Peer, func(error), error) {
-	return nil, nil, fmt.Errorf(`fake peer chooser can't actually choose peers`)
+// Chooser returns a named yarpc.Chooser.
+func (p *Provider) Chooser(name string) (yarpc.Chooser, bool) {
+	c, ok := p.choosers[name]
+	return c, ok
 }

@@ -21,33 +21,34 @@
 package yarpctest
 
 import (
-	"context"
 	"fmt"
 
 	yarpc "go.uber.org/yarpc/v2"
 )
 
-// FakePeerChooserOption is an option for NewFakePeerChooser.
-type FakePeerChooserOption func(*FakePeerChooser)
-
-// FakePeerChooser is a fake peer chooser.
-type FakePeerChooser struct {
+// FakeDialer is a fake dialer.
+type FakeDialer struct {
 	name string
 }
 
-// NewFakePeerChooser returns a fake peer list.
-func NewFakePeerChooser(name string, opts ...FakePeerChooserOption) *FakePeerChooser {
-	pl := &FakePeerChooser{name: name}
-	for _, opt := range opts {
-		opt(pl)
+var _ yarpc.Dialer = (*FakeDialer)(nil)
+
+// NewFakeDialer returns a fake dialer.
+func NewFakeDialer(name string) *FakeDialer {
+	return &FakeDialer{
+		name: name,
 	}
-	return pl
 }
 
-// Name returns the fake Chooser's name.
-func (c *FakePeerChooser) Name() string { return c.name }
+// Name returns the fake List's name.
+func (d *FakeDialer) Name() string { return d.name }
 
-// Choose pretends to choose a peer, but actually always returns an error. It's fake.
-func (c *FakePeerChooser) Choose(ctx context.Context, req *yarpc.Request) (yarpc.Peer, func(error), error) {
-	return nil, nil, fmt.Errorf(`fake peer chooser can't actually choose peers`)
+// RetainPeer pretends to retain a peer, but actually always returns an error. It's fake.
+func (d *FakeDialer) RetainPeer(_ yarpc.Identifier, _ yarpc.Subscriber) (yarpc.Peer, error) {
+	return nil, fmt.Errorf(`fake dialer can't actually retain peers`)
+}
+
+// ReleasePeer pretends to release a peer.
+func (d *FakeDialer) ReleasePeer(_ yarpc.Identifier, _ yarpc.Subscriber) error {
+	return nil
 }

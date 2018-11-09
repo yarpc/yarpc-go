@@ -21,6 +21,8 @@
 package yarpcclient
 
 import (
+	"fmt"
+
 	"go.uber.org/yarpc/v2"
 )
 
@@ -32,19 +34,22 @@ type Provider struct {
 }
 
 // NewProvider returns a new ClientProvider.
-func NewProvider() *Provider {
-	return &Provider{
-		clients: make(map[string]yarpc.Client),
+func NewProvider(clients ...yarpc.Client) (*Provider, error) {
+	clientMap := make(map[string]yarpc.Client, len(clients))
+	for _, c := range clients {
+		name := c.Name
+		if _, ok := clientMap[name]; ok {
+			return nil, fmt.Errorf("client %q was registered more than once", name)
+		}
+		clientMap[name] = c
 	}
+	return &Provider{
+		clients: clientMap,
+	}, nil
 }
 
 // Client returns a named yarpc.Client.
 func (p *Provider) Client(name string) (yarpc.Client, bool) {
 	c, ok := p.clients[name]
 	return c, ok
-}
-
-// Register registers a yarpc.Client to the given name.
-func (p *Provider) Register(name string, client yarpc.Client) {
-	p.clients[name] = client
 }

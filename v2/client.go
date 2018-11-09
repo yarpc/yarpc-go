@@ -24,6 +24,9 @@ package yarpc
 // It is used in conjunction with an encoding to send a request through
 // outbounds by RPC type.
 type Client struct {
+	// Name is the name of this client.
+	Name string
+
 	// Caller is the name of the local service.
 	Caller string
 
@@ -39,7 +42,7 @@ type Client struct {
 	Stream StreamOutbound
 }
 
-// ClientProvider is a registry of pre-configured `yarpc.Client`s.
+// ClientProvider is a registry of pre-configured Clients.
 type ClientProvider interface {
-	Client(name string) (_ Client, ok bool)
+	Client(name string) (Client, bool)
 }

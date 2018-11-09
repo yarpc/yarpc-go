@@ -18,36 +18,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpctest
+package yarpclist
 
 import (
-	"context"
 	"fmt"
 
-	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2"
 )
 
-// FakePeerChooserOption is an option for NewFakePeerChooser.
-type FakePeerChooserOption func(*FakePeerChooser)
+var _ yarpc.ListProvider = (*Provider)(nil)
 
-// FakePeerChooser is a fake peer chooser.
-type FakePeerChooser struct {
-	name string
+// Provider implements yarpc.ListProvider.
+type Provider struct {
+	lists map[string]yarpc.List
 }
 
-// NewFakePeerChooser returns a fake peer list.
-func NewFakePeerChooser(name string, opts ...FakePeerChooserOption) *FakePeerChooser {
-	pl := &FakePeerChooser{name: name}
-	for _, opt := range opts {
-		opt(pl)
+// NewProvider returns a new ListProvider.
+func NewProvider(lists ...yarpc.List) (*Provider, error) {
+	listMap := make(map[string]yarpc.List, len(lists))
+	for _, c := range lists {
+		name := c.Name()
+		if _, ok := listMap[name]; ok {
+			return nil, fmt.Errorf("list %q was registered more than once", name)
+		}
+		listMap[name] = c
 	}
-	return pl
+	return &Provider{
+		lists: listMap,
+	}, nil
 }
 
-// Name returns the fake Chooser's name.
-func (c *FakePeerChooser) Name() string { return c.name }
-
-// Choose pretends to choose a peer, but actually always returns an error. It's fake.
-func (c *FakePeerChooser) Choose(ctx context.Context, req *yarpc.Request) (yarpc.Peer, func(error), error) {
-	return nil, nil, fmt.Errorf(`fake peer chooser can't actually choose peers`)
+// List returns a named yarpc.List.
+func (p *Provider) List(name string) (yarpc.List, bool) {
+	c, ok := p.lists[name]
+	return c, ok
 }

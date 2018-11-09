@@ -18,36 +18,5 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpctest
-
-import (
-	"context"
-	"fmt"
-
-	yarpc "go.uber.org/yarpc/v2"
-)
-
-// FakePeerChooserOption is an option for NewFakePeerChooser.
-type FakePeerChooserOption func(*FakePeerChooser)
-
-// FakePeerChooser is a fake peer chooser.
-type FakePeerChooser struct {
-	name string
-}
-
-// NewFakePeerChooser returns a fake peer list.
-func NewFakePeerChooser(name string, opts ...FakePeerChooserOption) *FakePeerChooser {
-	pl := &FakePeerChooser{name: name}
-	for _, opt := range opts {
-		opt(pl)
-	}
-	return pl
-}
-
-// Name returns the fake Chooser's name.
-func (c *FakePeerChooser) Name() string { return c.name }
-
-// Choose pretends to choose a peer, but actually always returns an error. It's fake.
-func (c *FakePeerChooser) Choose(ctx context.Context, req *yarpc.Request) (yarpc.Peer, func(error), error) {
-	return nil, nil, fmt.Errorf(`fake peer chooser can't actually choose peers`)
-}
+// Package yarpcdialer provides an implementation for yarpc.DialerProvider.
+package yarpcdialer
