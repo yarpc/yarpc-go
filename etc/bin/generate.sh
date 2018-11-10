@@ -80,7 +80,7 @@ mockgen -destination=api/transport/transporttest/stream.go -package=transporttes
 mockgen -destination=api/transport/transporttest/transport.go -package=transporttest go.uber.org/yarpc/api/transport Transport
 
 # v2 mocks
-mockgen -destination=v2/yarpctest/mocks.go -package=yarpctest go.uber.org/yarpc/v2 Chooser,Dialer,InboundCodec,List,Router,RouterMiddleware,Stream,StreamCloser,StreamEncodingHandler,StreamInboundTransportMiddleware,StreamOutbound,StreamOutboundTransportMiddleware,StreamTransportHandler,UnaryEncodingHandler,UnaryInboundEncodingMiddleware,UnaryInboundTransportMiddleware,UnaryOutbound,UnaryOutboundTransportMiddleware,UnaryTransportHandler
+mockgen -destination=v2/yarpctest/mocks.go -package=yarpctest go.uber.org/yarpc/v2 Chooser,Dialer,Identifier,InboundCodec,List,Peer,Router,RouterMiddleware,Stream,StreamCloser,StreamEncodingHandler,StreamInboundTransportMiddleware,StreamOutbound,StreamOutboundTransportMiddleware,StreamTransportHandler,Subscriber,UnaryEncodingHandler,UnaryInboundEncodingMiddleware,UnaryInboundTransportMiddleware,UnaryOutbound,UnaryOutboundTransportMiddleware,UnaryTransportHandler
 
 generate_stringer ConnectionStatus ./api/peer
 generate_stringer State ./pkg/lifecycle
