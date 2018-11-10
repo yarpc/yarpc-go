@@ -82,9 +82,10 @@ func NewInboundConfig(p InboundConfigParams) (InboundConfigResult, error) {
 type StartInboundsParams struct {
 	fx.In
 
+	Config InboundConfig
+	Router yarpc.Router
+
 	Lifecycle fx.Lifecycle
-	Router    yarpc.Router
-	Config    InboundConfig
 	Logger    *zap.Logger        `optional:"true"`
 	Tracer    opentracing.Tracer `optional:"true"`
 }
@@ -161,6 +162,7 @@ type ClientParams struct {
 	Config          OutboundsConfig
 	Dialer          *yarpchttp.Dialer
 	ChooserProvider yarpc.ChooserProvider
+	Middleware      []yarpc.UnaryOutboundTransportMiddleware `name:"yarpcfx"`
 
 	Lifecycle fx.Lifecycle
 	Logger    *zap.Logger        `optional:"true"`
@@ -195,7 +197,8 @@ func NewClients(p ClientParams) (ClientResult, error) {
 				return ClientResult{}, err
 			}
 		}
-		outbound := &yarpchttp.Outbound{
+		var outbound yarpc.UnaryOutbound
+		outbound = &yarpchttp.Outbound{
 			Chooser: chooser,
 			Dialer:  p.Dialer,
 			URL:     url,
@@ -213,7 +216,7 @@ func NewClients(p ClientParams) (ClientResult, error) {
 				Name:    name,
 				Caller:  "foo", // TODO(amckinney): Derive from servicefx.
 				Service: service,
-				Unary:   outbound,
+				Unary:   yarpc.ApplyUnaryOutboundTransportMiddleware(outbound, p.Middleware...),
 			},
 		)
 	}

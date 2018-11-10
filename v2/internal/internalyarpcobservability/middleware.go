@@ -36,6 +36,12 @@ var (
 	_ yarpc.StreamOutboundTransportMiddleware = (*Middleware)(nil)
 )
 
+// TODO(amckinney): Consider splitting this out into two middleware:
+// one for logging, and the other for metrics.
+
+// Name is the name of the YARPC observability middleware.
+const Name = "observability"
+
 // Middleware is logging and metrics middleware for all RPC types.
 type Middleware struct {
 	graph graph
@@ -44,6 +50,11 @@ type Middleware struct {
 // NewMiddleware constructs a Middleware.
 func NewMiddleware(logger *zap.Logger, scope *metrics.Scope, extract ContextExtractor) *Middleware {
 	return &Middleware{newGraph(scope, logger, extract)}
+}
+
+// Name returns the Middleware's name.
+func (m *Middleware) Name() string {
+	return Name
 }
 
 // Handle implements yarpc.UnaryInbound.
