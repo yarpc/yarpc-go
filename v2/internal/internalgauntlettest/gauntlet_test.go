@@ -24,6 +24,7 @@ import (
 	"context"
 	"net"
 	"net/url"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -163,8 +164,11 @@ func newOutbounds(t *testing.T, transport string, addr string, choosers []string
 }
 
 func TestGauntlet(t *testing.T) {
+	// the number of times to run a single gauntlet combination with itself
+	const concurrency = 20
+
 	transports := []string{_http, _gRPC, _tchannel}
-	encodings := []string{_json, _thrift, _proto}
+	encodings := []string{_json, _thrift} //, _proto}
 	choosers := []string{_random, _roundrobin}
 
 	procedures := newProcedures()
@@ -190,30 +194,51 @@ func TestGauntlet(t *testing.T) {
 
 				for _, encoding := range encodings {
 					t.Run(encoding, func(t *testing.T) {
-
-						var resHeaders map[string]string
-						callOptions := newCallOptions(&resHeaders)
-
-						// call with encoding clients
-						switch encoding {
-						case _json:
-							validateJSON(t, client, callOptions)
-						case _thrift:
-							validateThrift(t, client, callOptions)
-						case _proto:
-							validateProto(t, client, callOptions)
-						default:
-							t.Fatalf("unsupported encoding %s", encoding)
-						}
-
-						// validate response headers
-						wantResponseHeaders := map[string]string{
-							_headerKeyRes: _headerValueRes,
-						}
-						assert.Equal(t, wantResponseHeaders, resHeaders, "response headers did not match")
+						runConcurrent(t, concurrency, client, encoding)
 					})
 				}
 			}
 		})
 	}
+}
+
+// runConcurrent runs the test 'concurrency' times
+func runConcurrent(t *testing.T, concurrency int, client yarpc.Client, encoding string) {
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+
+	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
+		go func() {
+			<-start
+			run(t, client, encoding)
+			wg.Done()
+		}()
+	}
+
+	close(start)
+	wg.Wait()
+}
+
+func run(t *testing.T, client yarpc.Client, encoding string) {
+	var resHeaders map[string]string
+	callOptions := newCallOptions(&resHeaders)
+
+	// call with encoding clients
+	switch encoding {
+	case _json:
+		validateJSON(t, client, callOptions)
+	case _thrift:
+		validateThrift(t, client, callOptions)
+	case _proto:
+		validateProto(t, client, callOptions)
+	default:
+		t.Fatalf("unsupported encoding %s", encoding)
+	}
+
+	// validate response headers
+	wantResponseHeaders := map[string]string{
+		_headerKeyRes: _headerValueRes,
+	}
+	assert.Equal(t, wantResponseHeaders, resHeaders, "response headers did not match")
 }
