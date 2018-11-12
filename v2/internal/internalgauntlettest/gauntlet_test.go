@@ -171,7 +171,7 @@ func newOutbounds(t *testing.T, transport string, addr string, choosers []string
 
 func TestGauntlet(t *testing.T) {
 	// the number of times to run a single gauntlet combination with itself
-	const concurrency = 20
+	const concurrency = 10
 
 	transports := []string{_http, _gRPC, _tchannel}
 	encodings := []string{_json, _thrift} //, _proto}
@@ -211,18 +211,15 @@ func TestGauntlet(t *testing.T) {
 // runConcurrent runs the test 'concurrency' times
 func runConcurrent(t *testing.T, concurrency int, client yarpc.Client, encoding string) {
 	var wg sync.WaitGroup
-	start := make(chan struct{})
 
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
 		go func() {
-			<-start
 			run(t, client, encoding)
 			wg.Done()
 		}()
 	}
 
-	close(start)
 	wg.Wait()
 }
 
