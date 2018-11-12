@@ -305,9 +305,9 @@ func (pl *List) removeFromUnavailablePeers(t *peerThunk) {
 // Choose selects the next available peer in the peer list
 func (pl *List) Choose(ctx context.Context, req *yarpc.Request) (yarpc.Peer, func(error), error) {
 	for {
-		pl.lock.RLock()
+		pl.lock.Lock()
 		p := pl.implementation.Choose(ctx, req)
-		pl.lock.RUnlock()
+		pl.lock.Unlock()
 
 		if p != nil {
 			t := p.(*peerThunk)
