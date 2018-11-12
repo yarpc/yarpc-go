@@ -37,6 +37,7 @@ import (
 	"go.uber.org/yarpc/v2/yarpcroundrobin"
 	"go.uber.org/yarpc/v2/yarpcrouter"
 	"go.uber.org/yarpc/v2/yarpctchannel"
+	"go.uber.org/yarpc/v2/yarpctworandomchoices"
 )
 
 type lifecycle interface {
@@ -97,6 +98,11 @@ func newChooser(t *testing.T, chooser string, dialer yarpc.Dialer, id yarpc.Iden
 
 	case _pendingheap:
 		pl := yarpcpendingheap.New("pending-heap", dialer)
+		pl.Update(update)
+		return pl
+
+	case _tworandom:
+		pl := yarpctworandomchoices.New(dialer)
 		pl.Update(update)
 		return pl
 
@@ -169,7 +175,7 @@ func TestGauntlet(t *testing.T) {
 
 	transports := []string{_http, _gRPC, _tchannel}
 	encodings := []string{_json, _thrift} //, _proto}
-	choosers := []string{_random, _roundrobin}
+	choosers := []string{_random, _roundrobin, _pendingheap, _tworandom}
 
 	procedures := newProcedures()
 

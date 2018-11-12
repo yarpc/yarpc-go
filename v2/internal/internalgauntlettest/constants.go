@@ -35,6 +35,7 @@ const (
 	_roundrobin  = "round-robin"
 	_random      = "random"
 	_pendingheap = "pending-heap"
+	_tworandom   = "two-random"
 
 	// for requests
 	_caller          = "caller"
