@@ -172,14 +172,14 @@ func (ph *pendingHeap) pushPeer(ps *peerScore) {
 	heap.Push(ph, ps)
 }
 
-// pushPeerRandom must be called in the context of a lock.
-//
-// It inserts a peer randomly into the heap among equally scored peers. This is
-// expected to be called only by Add.
+// pushPeerRandom inserts a peer randomly into the heap among equally scored
+// peers. This is expected to be called only by Add.
 //
 // This ensures that batches of peer updates are inserted randomly throughout
 // the heap, preventing hearding behavior that may be observed during batch
 // deployments.
+//
+// This must be called in the context of a lock.
 func (ph *pendingHeap) pushPeerRandom(ps *peerScore) {
 	ph.next++
 	ps.last = ph.next
