@@ -21,26 +21,13 @@
 package yarpcprotobuf
 
 import (
-	"bytes"
 	"io"
-	"sync"
 
-	"github.com/gogo/protobuf/jsonpb"
 	"github.com/gogo/protobuf/proto"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/internal/internalbufferpool"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcjson"
-)
-
-var (
-	_jsonMarshaler   = &jsonpb.Marshaler{}
-	_jsonUnmarshaler = &jsonpb.Unmarshaler{AllowUnknownFields: true}
-	_protoBufferPool = sync.Pool{
-		New: func() interface{} {
-			return proto.NewBuffer(make([]byte, 1024))
-		},
-	}
 )
 
 func unmarshal(encoding yarpc.Encoding, reader io.Reader, message proto.Message) error {
@@ -57,40 +44,37 @@ func unmarshal(encoding yarpc.Encoding, reader io.Reader, message proto.Message)
 	case Encoding:
 		return proto.Unmarshal(body, message)
 	case yarpcjson.Encoding:
-		return _jsonUnmarshaler.Unmarshal(bytes.NewReader(body), message)
+		return _jsonUnmarshaler.Unmarshal(reader, message)
 	default:
 		return yarpcerror.Newf(yarpcerror.CodeInternal, "failed to unmarshal unexpected encoding %q", encoding)
 	}
 }
 
-func marshal(encoding yarpc.Encoding, message proto.Message) ([]byte, func(), error) {
+func marshal(encoding yarpc.Encoding, message proto.Message) (*yarpc.Buffer, error) {
 	switch encoding {
 	case Encoding:
 		return marshalProto(message)
 	case yarpcjson.Encoding:
 		return marshalJSON(message)
 	default:
-		return nil, nil, yarpcerror.Newf(yarpcerror.CodeInternal, "failed to marshal unexpected encoding %q", encoding)
+		return nil, yarpcerror.Newf(yarpcerror.CodeInternal, "failed to marshal unexpected encoding %q", encoding)
 	}
 }
 
-func marshalProto(message proto.Message) ([]byte, func(), error) {
+func marshalProto(message proto.Message) (*yarpc.Buffer, error) {
 	buf := _protoBufferPool.Get().(*proto.Buffer)
 	buf.Reset()
-	cleanup := func() { _protoBufferPool.Put(buf) }
+	defer _protoBufferPool.Put(buf)
 	if err := buf.Marshal(message); err != nil {
-		cleanup()
-		return nil, nil, err
+		return nil, err
 	}
-	return buf.Bytes(), cleanup, nil
+	return yarpc.NewBufferBytes(buf.Bytes()), nil
 }
 
-func marshalJSON(message proto.Message) ([]byte, func(), error) {
-	buf := internalbufferpool.Get()
-	cleanup := func() { internalbufferpool.Put(buf) }
+func marshalJSON(message proto.Message) (*yarpc.Buffer, error) {
+	buf := &yarpc.Buffer{}
 	if err := _jsonMarshaler.Marshal(buf, message); err != nil {
-		cleanup()
-		return nil, nil, err
+		return nil, err
 	}
-	return buf.Bytes(), cleanup, nil
+	return buf, nil
 }

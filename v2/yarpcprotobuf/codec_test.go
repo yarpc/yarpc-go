@@ -19,24 +19,3 @@
 // THE SOFTWARE.
 
 package yarpcprotobuf
-
-import (
-	"bytes"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcerror"
-)
-
-func TestUnhandledEncoding(t *testing.T) {
-	t.Run("unmarshal: internal error", func(t *testing.T) {
-		err := unmarshal(yarpc.Encoding("foo"), bytes.NewReader([]byte("foo")), nil)
-		assert.Equal(t, yarpcerror.CodeInternal, yarpcerror.FromError(err).Code())
-	})
-
-	t.Run("marshal: internal error", func(t *testing.T) {
-		_, err := marshal(yarpc.Encoding("foo"), nil)
-		assert.Equal(t, yarpcerror.CodeInternal, yarpcerror.FromError(err).Code())
-	})
-}
