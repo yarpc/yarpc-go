@@ -201,7 +201,7 @@ func NewClients(p ClientParams) (ClientResult, error) {
 			URL:     url,
 			Tracer:  p.Tracer,
 		}
-		// If the outbound's name is configured, use it.
+		// If the outbound's service is configured, use it.
 		// Otherwise, default to the outbound key.
 		service := o.Service
 		if service == "" {
