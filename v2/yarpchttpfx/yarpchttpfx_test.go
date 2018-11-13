@@ -111,6 +111,13 @@ func TestNewClients(t *testing.T) {
 			giveCfg: OutboundConfig{Address: "127:0"},
 			wantErr: "parse 127:0: first path segment in URL cannot contain colon",
 		},
+		{
+			desc:        "with configured name",
+			giveCfg:     OutboundConfig{Address: "http://127.0.0.1:0", Name: "baz"},
+			wantCaller:  "foo",
+			wantName:    "baz",
+			wantService: "bar",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
