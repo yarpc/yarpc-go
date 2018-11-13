@@ -2,26 +2,6 @@
 // source: src/stream/stream.proto
 // DO NOT EDIT!
 
-// Copyright (c) 2018 Uber Technologies, Inc.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-
 package streampb
 
 import (
@@ -209,14 +189,13 @@ type HelloYARPCServer interface {
 	) error
 }
 
-// BuildHelloYARPCProcedures constructs the YARPC procedures for the Hello service.
-func BuildHelloYARPCProcedures(s HelloYARPCServer) []yarpc.TransportProcedure {
+// BuildStreamHelloYARPCProcedures constructs the YARPC stream procedures for the Hello service.
+func BuildStreamHelloYARPCProcedures(s HelloYARPCServer) []yarpc.TransportProcedure {
 	h := &_HelloYARPCServer{server: s}
-	return yarpcprotobuf.Procedures(
-		yarpcprotobuf.ProceduresParams{
+	return yarpcprotobuf.StreamProcedures(
+		yarpcprotobuf.StreamProceduresParams{
 			Service: "stream.Hello",
-			Unary:   []yarpcprotobuf.UnaryProceduresParams{},
-			Stream: []yarpcprotobuf.StreamProceduresParams{
+			Stream: []yarpcprotobuf.StreamProcedure{
 				{
 					Method: "In",
 					Handler: yarpcprotobuf.NewStreamHandler(
@@ -407,8 +386,8 @@ type FxHelloYARPCServerParams struct {
 type FxHelloYARPCServerResult struct {
 	fx.Out
 
-	Procedures     []yarpc.TransportProcedure `group:"yarpcfx"`
-	ReflectionMeta reflection.ServerMeta      `group:"yarpcfx"`
+	StreamProcedures []yarpc.TransportProcedure `group:"yarpcfx"`
+	ReflectionMeta   reflection.ServerMeta      `group:"yarpcfx"`
 }
 
 // NewFxHelloYARPCServer provides the HelloYARPCServer
@@ -422,7 +401,8 @@ type FxHelloYARPCServerResult struct {
 func NewFxHelloYARPCServer() interface{} {
 	return func(p FxHelloYARPCServerParams) FxHelloYARPCServerResult {
 		return FxHelloYARPCServerResult{
-			Procedures: BuildHelloYARPCProcedures(p.Server),
+
+			StreamProcedures: BuildStreamHelloYARPCProcedures(p.Server),
 			ReflectionMeta: reflection.ServerMeta{
 				ServiceName:     "stream.Hello",
 				FileDescriptors: yarpcFileDescriptorClosureda84cc27cf0e7d6a,

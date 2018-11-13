@@ -2,26 +2,6 @@
 // source: src/keyvalue/key_value.proto
 // DO NOT EDIT!
 
-// Copyright (c) 2018 Uber Technologies, Inc.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-
 package keyvaluepb
 
 import (
@@ -96,33 +76,32 @@ type StoreYARPCServer interface {
 	) (*common.SetResponse, error)
 }
 
-// BuildStoreYARPCProcedures constructs the YARPC procedures for the Store service.
-func BuildStoreYARPCProcedures(s StoreYARPCServer) []yarpc.TransportProcedure {
+// BuildUnaryStoreYARPCProcedures constructs the YARPC unary procedures for the Store service.
+func BuildUnaryStoreYARPCProcedures(s StoreYARPCServer) []yarpc.EncodingProcedure {
 	h := &_StoreYARPCServer{server: s}
-	return yarpcprotobuf.Procedures(
-		yarpcprotobuf.ProceduresParams{
+	return yarpcprotobuf.UnaryProcedures(
+		yarpcprotobuf.UnaryProceduresParams{
 			Service: "keyvalue.Store",
-			Unary: []yarpcprotobuf.UnaryProceduresParams{
+			Unary: []yarpcprotobuf.UnaryProcedure{
 				{
 					Method: "Get",
 					Handler: yarpcprotobuf.NewUnaryHandler(
 						yarpcprotobuf.UnaryHandlerParams{
-							Handle:      h.Get,
-							RequestType: new(common.GetRequest),
+							Handle: h.Get,
 						},
 					),
+					RequestType: func() proto.Message { return new(common.GetRequest) },
 				},
 				{
 					Method: "Set",
 					Handler: yarpcprotobuf.NewUnaryHandler(
 						yarpcprotobuf.UnaryHandlerParams{
-							Handle:      h.Set,
-							RequestType: new(common.SetRequest),
+							Handle: h.Set,
 						},
 					),
+					RequestType: func() proto.Message { return new(common.SetRequest) },
 				},
 			},
-			Stream: []yarpcprotobuf.StreamProceduresParams{},
 		},
 	)
 }
@@ -136,7 +115,20 @@ func (h *_StoreYARPCServer) Get(ctx context.Context, m proto.Message) (proto.Mes
 	if req == nil {
 		return nil, yarpcprotobuf.CastError(new(common.GetRequest), m)
 	}
-	return h.server.Get(ctx, req)
+
+	// This is intentional. While it seems like
+	//
+	//   return h.server.Get(ctx, req)
+	//
+	// will behave the same way, the dynamic value of the nil returned is
+	// strongly typed. When passed later as an interface{} inc odec.Encode(...),
+	// this nil value becomes a non-nil value, because it is strongly typed.
+	// This issue is akin to https://golang.org/doc/faq#nil_error.
+	res, err := h.server.Get(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 func (h *_StoreYARPCServer) Set(ctx context.Context, m proto.Message) (proto.Message, error) {
@@ -144,7 +136,20 @@ func (h *_StoreYARPCServer) Set(ctx context.Context, m proto.Message) (proto.Mes
 	if req == nil {
 		return nil, yarpcprotobuf.CastError(new(common.SetRequest), m)
 	}
-	return h.server.Set(ctx, req)
+
+	// This is intentional. While it seems like
+	//
+	//   return h.server.Set(ctx, req)
+	//
+	// will behave the same way, the dynamic value of the nil returned is
+	// strongly typed. When passed later as an interface{} inc odec.Encode(...),
+	// this nil value becomes a non-nil value, because it is strongly typed.
+	// This issue is akin to https://golang.org/doc/faq#nil_error.
+	res, err := h.server.Set(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 // FxStoreYARPCClientParams defines the parameters
@@ -199,8 +204,9 @@ type FxStoreYARPCServerParams struct {
 type FxStoreYARPCServerResult struct {
 	fx.Out
 
-	Procedures     []yarpc.TransportProcedure `group:"yarpcfx"`
-	ReflectionMeta reflection.ServerMeta      `group:"yarpcfx"`
+	UnaryProcedures []yarpc.EncodingProcedure `group:"yarpcfx"`
+
+	ReflectionMeta reflection.ServerMeta `group:"yarpcfx"`
 }
 
 // NewFxStoreYARPCServer provides the StoreYARPCServer
@@ -214,7 +220,8 @@ type FxStoreYARPCServerResult struct {
 func NewFxStoreYARPCServer() interface{} {
 	return func(p FxStoreYARPCServerParams) FxStoreYARPCServerResult {
 		return FxStoreYARPCServerResult{
-			Procedures: BuildStoreYARPCProcedures(p.Server),
+			UnaryProcedures: BuildUnaryStoreYARPCProcedures(p.Server),
+
 			ReflectionMeta: reflection.ServerMeta{
 				ServiceName:     "keyvalue.Store",
 				FileDescriptors: yarpcFileDescriptorClosure8a9b3e67e16f054c,

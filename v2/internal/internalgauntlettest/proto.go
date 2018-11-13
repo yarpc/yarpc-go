@@ -35,7 +35,7 @@ import (
 type protoHandler struct{}
 
 func protoProcedures() []yarpc.TransportProcedure {
-	return generatedpb.BuildEchoYARPCProcedures(protoHandler{})
+	return yarpc.EncodingToTransportProcedures(generatedpb.BuildUnaryEchoYARPCProcedures(protoHandler{}))
 }
 
 func (protoHandler) Echo(ctx context.Context, request *generatedpb.EchoRequest) (*generatedpb.EchoResponse, error) {

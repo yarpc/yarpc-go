@@ -104,7 +104,7 @@ func startInbounds(t *testing.T, transport, service string, procedures []yarpc.T
 	return listener.Addr().String(), func() { require.NoError(t, inbound.Stop(context.Background())) }
 }
 func setupStreamingEnv(t *testing.T) (client streampb.HelloYARPCClient, stop func()) {
-	procedures := streampb.BuildHelloYARPCProcedures(stream.NewServer())
+	procedures := streampb.BuildStreamHelloYARPCProcedures(stream.NewServer())
 	assert.Equal(t, 6, len(procedures))
 
 	addr, stop := startInbounds(t, "grpc", "hello", procedures)
@@ -113,10 +113,13 @@ func setupStreamingEnv(t *testing.T) (client streampb.HelloYARPCClient, stop fun
 
 func TestIntegration(t *testing.T) {
 	t.Run("simple unary exchange", func(t *testing.T) {
-		procedures := keyvaluepb.BuildStoreYARPCProcedures(keyvalue.NewServer())
+		procedures := keyvaluepb.BuildUnaryStoreYARPCProcedures(keyvalue.NewServer())
 		assert.Equal(t, 4, len(procedures))
 
-		addr, stop := startInbounds(t, "http", "keyvalue", procedures)
+		transportProcedures := yarpc.EncodingToTransportProcedures(procedures)
+		assert.Equal(t, 4, len(transportProcedures))
+
+		addr, stop := startInbounds(t, "http", "keyvalue", transportProcedures)
 		defer stop()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
