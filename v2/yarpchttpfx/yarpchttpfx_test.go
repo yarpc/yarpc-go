@@ -113,10 +113,10 @@ func TestNewClients(t *testing.T) {
 		},
 		{
 			desc:        "with configured name",
-			giveCfg:     OutboundConfig{Address: "http://127.0.0.1:0", Name: "baz"},
+			giveCfg:     OutboundConfig{Address: "http://127.0.0.1:0", Service: "baz"},
 			wantCaller:  "foo",
-			wantName:    "baz",
-			wantService: "bar",
+			wantName:    "bar",
+			wantService: "baz",
 		},
 	}
 	for _, tt := range tests {

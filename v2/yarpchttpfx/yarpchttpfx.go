@@ -115,10 +115,10 @@ type OutboundsConfig struct {
 
 // OutboundConfig is the configuration for constructing a specific outbound.
 type OutboundConfig struct {
-	// Specifies the outbound's registered name.
+	// Specifies the outbound's service name.
 	//
 	// If not set, defaults to the configured outbound key.
-	Name string `yaml:"name"`
+	Service string `yaml:"name"`
 
 	// Specifies the address to use for this Outbound.
 	Address string `yaml:"address"`
@@ -177,7 +177,7 @@ type ClientResult struct {
 // NewClients produces yarpc.Clients.
 func NewClients(p ClientParams) (ClientResult, error) {
 	var clients []yarpc.Client
-	for service, o := range p.Config.Outbounds {
+	for name, o := range p.Config.Outbounds {
 		var (
 			chooser yarpc.Chooser
 			url     *url.URL
@@ -203,9 +203,9 @@ func NewClients(p ClientParams) (ClientResult, error) {
 		}
 		// If the outbound's name is configured, use it.
 		// Otherwise, default to the outbound key.
-		name := o.Name
+		service := o.Service
 		if name == "" {
-			name = service
+			service = name
 		}
 		clients = append(
 			clients,
