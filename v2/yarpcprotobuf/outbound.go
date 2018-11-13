@@ -100,14 +100,13 @@ func (c *client) Call(
 		return nil, err
 	}
 
-	body, cleanup, err := marshal(req.Encoding, protoReq)
+	body, err := marshal(req.Encoding, protoReq)
 	if err != nil {
 		return nil, yarpcencoding.RequestBodyEncodeError(req, err)
 	}
-	defer cleanup()
 
 	reqBuf := &yarpc.Buffer{}
-	if _, err := reqBuf.Write(body); err != nil {
+	if _, err := reqBuf.Write(body.Bytes()); err != nil {
 		return nil, err
 	}
 
