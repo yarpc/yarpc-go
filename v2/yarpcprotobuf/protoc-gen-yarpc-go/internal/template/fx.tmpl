@@ -61,7 +61,8 @@
   type {{.FxServer}}Result struct {
     fx.Out
 
-    Procedures     []yarpc.TransportProcedure     `group:"yarpcfx"`
+    {{if (unaryMethods .)}} UnaryProcedures      []yarpc.EncodingProcedure      `group:"yarpcfx"`{{end}}
+    {{if (streamMethods .)}}StreamProcedures     []yarpc.TransportProcedure     `group:"yarpcfx"`{{end}}
     ReflectionMeta reflection.ServerMeta `group:"yarpcfx"`
   }
 
@@ -76,7 +77,8 @@
   func New{{.FxServer}}() interface{} {
     return func(p {{.FxServer}}Params) {{.FxServer}}Result {
       return {{.FxServer}}Result{
-        Procedures: Build{{.Procedures}}(p.Server),
+        {{if (unaryMethods .)}} UnaryProcedures: BuildUnary{{.Procedures}}(p.Server), {{end}}
+        {{if (streamMethods .)}}StreamProcedures: BuildStream{{.Procedures}}(p.Server), {{end}}
         ReflectionMeta: reflection.ServerMeta{
           ServiceName: {{printf "%q" .FQN}},
           FileDescriptors: {{$reflectionVar}},

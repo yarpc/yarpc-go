@@ -42,7 +42,20 @@
         if req == nil {
           return nil, yarpcprotobuf.CastError(new({{goType .Request $gopkg}}), m)
         }
-        return h.server.{{.Name}}(ctx, req)
+
+        // This is intentional. While it seems like
+        //
+        //   return h.server.{{.Name}}(ctx, req)
+        //
+        // will behave the same way, the dynamic value of the nil returned is
+        // strongly typed. When passed later as an interface{} inc odec.Encode(...),
+        // this nil value becomes a non-nil value, because it is strongly typed.
+        // This issue is akin to https://golang.org/doc/faq#nil_error.
+        res, err := h.server.{{.Name}}(ctx, req)
+        if err != nil {
+          return nil, err
+        }
+        return res, nil
       }
     {{end -}}
   {{end -}}
