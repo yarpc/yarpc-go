@@ -26,9 +26,8 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/v2"
+	yarpc "go.uber.org/yarpc/v2"
 )
 
 func TestResponseHeaders(t *testing.T) {
@@ -43,13 +42,6 @@ func TestResponseHeaders(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	res, _, err := h.Handle(ctx, &yarpc.Request{Encoding: Encoding}, &yarpc.Buffer{})
+	_, err := h.Handle(ctx, &yarpc.Buffer{})
 	require.Error(t, err)
-
-	headers := res.Headers.Items()
-	assert.Len(t, headers, 1)
-
-	got, ok := headers["foo-key"]
-	require.True(t, ok, "header not found")
-	assert.Equal(t, "bar-val", got)
 }
