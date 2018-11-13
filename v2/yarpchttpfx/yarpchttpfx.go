@@ -22,7 +22,6 @@ package yarpchttpfx
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 
@@ -155,7 +154,7 @@ type ClientParams struct {
 	fx.In
 
 	Config          OutboundsConfig
-	DialerProvider  yarpc.DialerProvider
+	Dialer          *yarpchttp.Dialer
 	ChooserProvider yarpc.ChooserProvider
 
 	Lifecycle fx.Lifecycle
@@ -176,7 +175,6 @@ func NewClients(p ClientParams) (ClientResult, error) {
 	for service, o := range p.Config.Outbounds {
 		var (
 			chooser yarpc.Chooser
-			dialer  yarpc.Dialer
 			url     *url.URL
 		)
 		if o.Policy != "" {
@@ -186,19 +184,6 @@ func NewClients(p ClientParams) (ClientResult, error) {
 				return ClientResult{}, fmt.Errorf("failed to resolve outbound peer list policy: %q", o.Policy)
 			}
 		} else {
-			// If a policy was not configured, we fallback
-			// to constructing a dialer and parse the
-			// configured address.
-			//
-			// TODO(amckinney): Should this be configurable?
-			// Are there cases when a service will need to
-			// reference multiple http dialers in their
-			// outbound configuration?
-			var ok bool
-			dialer, ok = p.DialerProvider.Dialer("http")
-			if !ok {
-				return ClientResult{}, errors.New("failed to construct outbound: an http Dialer was not found in the application container")
-			}
 			var err error
 			url, err = url.Parse(o.Address)
 			if err != nil {
@@ -207,7 +192,7 @@ func NewClients(p ClientParams) (ClientResult, error) {
 		}
 		outbound := &yarpchttp.Outbound{
 			Chooser: chooser,
-			Dialer:  dialer,
+			Dialer:  p.Dialer,
 			URL:     url,
 			Tracer:  p.Tracer,
 		}
@@ -239,7 +224,8 @@ type DialerParams struct {
 type DialerResult struct {
 	fx.Out
 
-	Dialer yarpc.Dialer `group:"yarpcfx"`
+	HTTPDialer *yarpchttp.Dialer
+	Dialer     yarpc.Dialer `group:"yarpcfx"`
 }
 
 // NewDialer produces a yarpc.Dialer.
@@ -257,6 +243,7 @@ func NewDialer(p DialerParams) (DialerResult, error) {
 		},
 	})
 	return DialerResult{
-		Dialer: dialer,
+		HTTPDialer: dialer,
+		Dialer:     dialer,
 	}, nil
 }

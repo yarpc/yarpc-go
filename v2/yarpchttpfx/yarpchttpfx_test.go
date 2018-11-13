@@ -29,15 +29,9 @@ import (
 	"go.uber.org/fx/fxtest"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcchooser"
-	"go.uber.org/yarpc/v2/yarpcdialer"
+	"go.uber.org/yarpc/v2/yarpchttp"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
-
-func newDialerProvider(t *testing.T) yarpc.DialerProvider {
-	p, err := yarpcdialer.NewProvider(yarpctest.NewFakeDialer("http"))
-	require.NoError(t, err)
-	return p
-}
 
 func newChooserProvider(t *testing.T) yarpc.ChooserProvider {
 	p, err := yarpcchooser.NewProvider(yarpctest.NewFakePeerChooser("roundrobin"))
@@ -127,7 +121,7 @@ func TestNewClients(t *testing.T) {
 						"bar": tt.giveCfg,
 					},
 				},
-				DialerProvider:  newDialerProvider(t),
+				Dialer:          &yarpchttp.Dialer{},
 				ChooserProvider: newChooserProvider(t),
 			})
 			if tt.wantErr != "" {
