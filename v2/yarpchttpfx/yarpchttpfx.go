@@ -118,10 +118,10 @@ type OutboundConfig struct {
 	// Specifies the address to use for this Outbound.
 	Address string `yaml:"address"`
 
-	// Specifies the peer list policy to use for this Outbound.
+	// Specifies the peer list chooser to use for this Outbound.
 	//
 	// If set, an address does not need to be configured.
-	Policy string `yaml:"policy"`
+	Chooser string `yaml:"chooser"`
 }
 
 // OutboundsConfigParams defines the dependencies of this module.
@@ -177,11 +177,11 @@ func NewClients(p ClientParams) (ClientResult, error) {
 			chooser yarpc.Chooser
 			url     *url.URL
 		)
-		if o.Policy != "" {
+		if o.Chooser != "" {
 			var ok bool
-			chooser, ok = p.ChooserProvider.Chooser(o.Policy)
+			chooser, ok = p.ChooserProvider.Chooser(o.Chooser)
 			if !ok {
-				return ClientResult{}, fmt.Errorf("failed to resolve outbound peer list policy: %q", o.Policy)
+				return ClientResult{}, fmt.Errorf("failed to resolve outbound peer list chooser: %q", o.Chooser)
 			}
 		} else {
 			var err error

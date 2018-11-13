@@ -88,16 +88,16 @@ func TestNewClients(t *testing.T) {
 		wantErr     string
 	}{
 		{
-			desc:        "policy successfully configured",
-			giveCfg:     OutboundConfig{Policy: "roundrobin"},
+			desc:        "chooser successfully configured",
+			giveCfg:     OutboundConfig{Chooser: "roundrobin"},
 			wantCaller:  "foo",
 			wantName:    "bar",
 			wantService: "bar",
 		},
 		{
-			desc:    "policy does not exist",
-			giveCfg: OutboundConfig{Policy: "dne"},
-			wantErr: `failed to resolve outbound peer list policy: "dne"`,
+			desc:    "chooser does not exist",
+			giveCfg: OutboundConfig{Chooser: "dne"},
+			wantErr: `failed to resolve outbound peer list chooser: "dne"`,
 		},
 		{
 			desc:        "address successfully configured",
