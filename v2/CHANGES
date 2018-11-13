@@ -32,7 +32,7 @@
 - [ ] Audit yarpcerrors, remove the ones that are no longer needed.
       - [ ] add staticcheck for v2/internal/internalyarpcerror/yarpcerrors.go from `local.mk`
 - [ ] Construct PRs with retroactive continuity.
-- [ ] Nit: scrape name pid and change to just id throughout.
+- [x] Nit: scrape name id and change to just id throughout.
 - [ ] Audit docs
       - [ ] gRPC
       - [ ] TChannel

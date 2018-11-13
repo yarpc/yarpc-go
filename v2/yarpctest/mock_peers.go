@@ -33,14 +33,14 @@ import (
 type MockPeerIdentifier string
 
 // Identifier returns a unique identifier for MockPeerIDs
-func (pid MockPeerIdentifier) Identifier() string {
-	return string(pid)
+func (id MockPeerIdentifier) Identifier() string {
+	return string(id)
 }
 
 // NewLightMockPeer returns a new MockPeer
-func NewLightMockPeer(pid MockPeerIdentifier, conStatus yarpc.ConnectionStatus) *LightMockPeer {
+func NewLightMockPeer(id MockPeerIdentifier, conStatus yarpc.ConnectionStatus) *LightMockPeer {
 	return &LightMockPeer{
-		MockPeerIdentifier: pid,
+		MockPeerIdentifier: id,
 		PeerStatus: yarpc.Status{
 			ConnectionStatus:    conStatus,
 			PendingRequestCount: 0,
@@ -84,11 +84,11 @@ type PeerIdentifierMatcher string
 
 // Matches returns true of got is equivalent to the PeerIdentifier Matching string
 func (pim PeerIdentifierMatcher) Matches(got interface{}) bool {
-	gotPID, ok := got.(yarpc.Identifier)
+	gotid, ok := got.(yarpc.Identifier)
 	if !ok {
 		return false
 	}
-	return gotPID.Identifier() == string(pim)
+	return gotid.Identifier() == string(pim)
 }
 
 // String returns a description of the matcher
@@ -98,11 +98,11 @@ func (pim PeerIdentifierMatcher) String() string {
 
 // CreatePeerIDs takes a slice of peerID strings and returns a slice of PeerIdentifiers
 func CreatePeerIDs(peerIDStrs []string) []yarpc.Identifier {
-	pids := make([]yarpc.Identifier, 0, len(peerIDStrs))
+	ids := make([]yarpc.Identifier, 0, len(peerIDStrs))
 	for _, id := range peerIDStrs {
-		pids = append(pids, MockPeerIdentifier(id))
+		ids = append(ids, MockPeerIdentifier(id))
 	}
-	return pids
+	return ids
 }
 
 // ExpectPeerRetains registers expectations on a MockDialer to generate peers on the RetainPeer function

@@ -30,9 +30,9 @@ import (
 )
 
 // NewAbstractPeer creates a new AbstractPeer from any identifier.
-func NewAbstractPeer(pid yarpc.Identifier) *AbstractPeer {
+func NewAbstractPeer(id yarpc.Identifier) *AbstractPeer {
 	p := &AbstractPeer{
-		pid:         pid,
+		id:          id,
 		subscribers: make(map[yarpc.Subscriber]int),
 	}
 	p.connectionStatus.Store(int32(yarpc.Unavailable))
@@ -43,7 +43,7 @@ func NewAbstractPeer(pid yarpc.Identifier) *AbstractPeer {
 type AbstractPeer struct {
 	lock sync.RWMutex
 
-	pid              yarpc.Identifier
+	id               yarpc.Identifier
 	subscribers      map[yarpc.Subscriber]int
 	numSubscribers   atomic.Int32
 	pending          atomic.Int32
@@ -52,7 +52,7 @@ type AbstractPeer struct {
 
 // Identifier returns the corresponding peer identifier string.
 func (p *AbstractPeer) Identifier() string {
-	return p.pid.Identifier()
+	return p.id.Identifier()
 }
 
 // Subscribe adds a subscriber to the peer's subscriber map
@@ -69,7 +69,7 @@ func (p *AbstractPeer) Unsubscribe(sub yarpc.Subscriber) error {
 	defer p.lock.Unlock()
 	if _, ok := p.subscribers[sub]; !ok {
 		return ErrPeerHasNoReferenceToSubscriber{
-			PeerIdentifier: p.pid,
+			PeerIdentifier: p.id,
 			PeerSubscriber: sub,
 		}
 	}
@@ -122,6 +122,6 @@ func (p *AbstractPeer) notifyStatusChanged() {
 	p.lock.RUnlock()
 
 	for _, sub := range subs {
-		sub.NotifyStatusChanged(p.pid)
+		sub.NotifyStatusChanged(p.id)
 	}
 }
