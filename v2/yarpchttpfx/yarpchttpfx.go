@@ -204,7 +204,7 @@ func NewClients(p ClientParams) (ClientResult, error) {
 		// If the outbound's name is configured, use it.
 		// Otherwise, default to the outbound key.
 		service := o.Service
-		if name == "" {
+		if service == "" {
 			service = name
 		}
 		clients = append(
