@@ -26,25 +26,9 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
-
-func TestApplyRouter(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	routerMiddleware := yarpctest.NewMockRouterMiddleware(ctrl)
-	router := yarpctest.NewMockRouter(ctrl)
-
-	rtWithMW := yarpc.ApplyRouter(router, routerMiddleware)
-
-	routerWithMW, ok := rtWithMW.(yarpc.RouterWithMiddleware)
-	require.True(t, ok, "unexpected Router type")
-
-	assert.Equal(t, routerWithMW.GetRouterMiddleware(), routerMiddleware)
-	assert.Equal(t, routerWithMW.GetRouter(), router)
-}
 
 func TestRouterMiddleware(t *testing.T) {
 	ctrl := gomock.NewController(t)
