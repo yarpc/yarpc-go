@@ -47,9 +47,38 @@ func newUnavailableError(err error) error {
 	return yarpcerror.UnavailableErrorf("fewest-pending-requests peer list timed out waiting for peer: %s", err.Error())
 }
 
+// InsertionOrder is a test option that yields control over random insertion
+// ordering. Each number corresponds to the position to swap the newly inserted
+// peer's 'last' value.
+//
+// The function MUST return a number in [0, numPeers)
+func InsertionOrder(f func(numPeers int) int) ListOption {
+	return listOptionFunc(func(c *listOptions) {
+		c.nextRand = f
+	})
+}
+
+// DisableRandomInsertion disables random insertions.
+func DisableRandomInsertion() ListOption {
+	// avoid swaps by always returning the last index
+	return InsertionOrder(func(numPeers int) int { return numPeers - 1 })
+}
+
+func nextRandFromSlice(indicies []int) func(int) int {
+	i := -1
+	return func(_ int) int {
+		i++
+		return indicies[i]
+	}
+}
+
 func TestPeerHeapList(t *testing.T) {
 	type testStruct struct {
 		msg string
+
+		// nextRand is used with the InsertionOrder(...) option. If nil, this defaults
+		// to DisableRandomInsertion()
+		nextRand func(int) int
 
 		// PeerIDs that will be returned from the dialer's OnRetain with "Available" status
 		retainedAvailablePeerIDs []string
@@ -325,6 +354,29 @@ func TestPeerHeapList(t *testing.T) {
 				yarpctest.NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: yarpc.Available},
 			},
 		},
+		{
+			msg: "random insertion",
+			// all scores are equal, degenerating to round-robin behavior
+			// peer ordering is therefore by 'last'
+			nextRand: nextRandFromSlice([]int{
+				0, // insert p1 at end of list
+				1, // insert p2 at end of list
+				2, // insert p3 at end of list
+				0, // swap p4 with index 0
+				1, // swap p5 with index 1
+			}),
+			retainedAvailablePeerIDs: []string{"1", "2", "3", "4", "5"},
+			expectedAvailablePeers:   []string{"1", "2", "3", "4", "5"},
+			peerListActions: []yarpctest.PeerListAction{
+				yarpctest.UpdateAction{AddedPeerIDs: []string{"1", "2", "3"}},
+				yarpctest.UpdateAction{AddedPeerIDs: []string{"4", "5"}},
+				yarpctest.ChooseAction{ExpectedPeer: "4"},
+				yarpctest.ChooseAction{ExpectedPeer: "5"},
+				yarpctest.ChooseAction{ExpectedPeer: "3"},
+				yarpctest.ChooseAction{ExpectedPeer: "1"},
+				yarpctest.ChooseAction{ExpectedPeer: "2"},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -346,7 +398,12 @@ func TestPeerHeapList(t *testing.T) {
 			yarpctest.ExpectPeerRetainsWithError(dialer, tt.errRetainedPeerIDs, tt.retainErr)
 			yarpctest.ExpectPeerReleases(dialer, tt.errReleasedPeerIDs, tt.releaseErr)
 
-			opts := []ListOption{Capacity(0), noShuffle()}
+			randOption := DisableRandomInsertion()
+			if tt.nextRand != nil {
+				randOption = InsertionOrder(tt.nextRand)
+			}
+			opts := []ListOption{Capacity(0), noShuffle(), randOption}
+
 			pl := New(dialer, opts...)
 
 			deps := yarpctest.ListActionDeps{
