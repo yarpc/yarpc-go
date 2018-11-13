@@ -38,6 +38,12 @@ type pendingHeap struct {
 	// scores are equal. This ends up implementing round-robin when scores are
 	// equal.
 	next int
+
+	// nextRand is used for random insertions among equally scored peers when new
+	// peers are added.
+	//
+	// nextRand MUST return a number in [0, numPeers)
+	nextRand func(numPeers int) int
 }
 
 var _ yarpcpeerlist.Implementation = (*pendingHeap)(nil)
@@ -67,7 +73,7 @@ func (ph *pendingHeap) Add(p yarpc.StatusPeer, _ yarpc.Identifier) yarpc.Subscri
 	ps.score = scorePeer(p)
 
 	ph.Lock()
-	ph.pushPeer(ps)
+	ph.pushPeerRandom(ps)
 	ph.Unlock()
 	return ps
 }
@@ -162,6 +168,28 @@ func (ph *pendingHeap) delete(index int) {
 func (ph *pendingHeap) pushPeer(ps *peerScore) {
 	ph.next++
 	ps.last = ph.next
+	heap.Push(ph, ps)
+}
+
+// pushPeerRandom inserts a peer randomly into the heap among equally scored
+// peers. This is expected to be called only by Add.
+//
+// This ensures that batches of peer updates are inserted randomly throughout
+// the heap, preventing hearding behavior that may be observed during batch
+// deployments.
+//
+// This must be called in the context of a lock.
+func (ph *pendingHeap) pushPeerRandom(ps *peerScore) {
+	ph.next++
+	ps.last = ph.next
+
+	random := ph.nextRand(len(ph.peers) + 1)
+	if random < len(ph.peers) {
+		randPeer := ph.peers[random]
+		ps.last, randPeer.last = randPeer.last, ps.last
+		heap.Fix(ph, random)
+	}
+
 	heap.Push(ph, ps)
 }
 
