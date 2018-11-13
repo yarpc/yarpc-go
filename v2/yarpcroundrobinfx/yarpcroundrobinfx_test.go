@@ -39,7 +39,7 @@ func newDialerProvider(t *testing.T) yarpc.DialerProvider {
 }
 
 func TestNewConfig(t *testing.T) {
-	cfg := strings.NewReader("yarpc: {peers: {roundrobin: {bar: {dialer: http, capacity: 100}}}}")
+	cfg := strings.NewReader("yarpc: {choosers: {roundrobin: {bar: {dialer: http, capacity: 100}}}}")
 	provider, err := config.NewYAML(config.Source(cfg))
 	require.NoError(t, err)
 
@@ -49,7 +49,7 @@ func TestNewConfig(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t,
 		Config{
-			Peers: map[string]RoundRobinConfig{
+			Choosers: map[string]RoundRobinConfig{
 				"bar": {Dialer: "http", Capacity: 100},
 			},
 		},
@@ -60,7 +60,7 @@ func TestNewList(t *testing.T) {
 	t.Run("unknown dialer", func(t *testing.T) {
 		_, err := NewList(ListParams{
 			Config: Config{
-				Peers: map[string]RoundRobinConfig{
+				Choosers: map[string]RoundRobinConfig{
 					"bar": {Dialer: "dne", Capacity: 100},
 				},
 			},
@@ -72,7 +72,7 @@ func TestNewList(t *testing.T) {
 	t.Run("successfully create chooser and list", func(t *testing.T) {
 		res, err := NewList(ListParams{
 			Config: Config{
-				Peers: map[string]RoundRobinConfig{
+				Choosers: map[string]RoundRobinConfig{
 					"bar": {Dialer: "http", Capacity: 100},
 				},
 			},

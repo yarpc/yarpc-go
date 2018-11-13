@@ -29,15 +29,9 @@ import (
 	"go.uber.org/fx/fxtest"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcchooser"
-	"go.uber.org/yarpc/v2/yarpcdialer"
+	"go.uber.org/yarpc/v2/yarpchttp"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
-
-func newDialerProvider(t *testing.T) yarpc.DialerProvider {
-	p, err := yarpcdialer.NewProvider(yarpctest.NewFakeDialer("http"))
-	require.NoError(t, err)
-	return p
-}
 
 func newChooserProvider(t *testing.T) yarpc.ChooserProvider {
 	p, err := yarpcchooser.NewProvider(yarpctest.NewFakePeerChooser("roundrobin"))
@@ -94,16 +88,16 @@ func TestNewClients(t *testing.T) {
 		wantErr     string
 	}{
 		{
-			desc:        "policy successfully configured",
-			giveCfg:     OutboundConfig{Policy: "roundrobin"},
+			desc:        "chooser successfully configured",
+			giveCfg:     OutboundConfig{Chooser: "roundrobin"},
 			wantCaller:  "foo",
 			wantName:    "bar",
 			wantService: "bar",
 		},
 		{
-			desc:    "policy does not exist",
-			giveCfg: OutboundConfig{Policy: "dne"},
-			wantErr: `failed to resolve outbound peer list policy: "dne"`,
+			desc:    "chooser does not exist",
+			giveCfg: OutboundConfig{Chooser: "dne"},
+			wantErr: `failed to resolve outbound peer list chooser: "dne"`,
 		},
 		{
 			desc:        "address successfully configured",
@@ -117,6 +111,13 @@ func TestNewClients(t *testing.T) {
 			giveCfg: OutboundConfig{Address: "127:0"},
 			wantErr: "parse 127:0: first path segment in URL cannot contain colon",
 		},
+		{
+			desc:        "with configured name",
+			giveCfg:     OutboundConfig{Address: "http://127.0.0.1:0", Service: "baz"},
+			wantCaller:  "foo",
+			wantName:    "bar",
+			wantService: "baz",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
@@ -127,7 +128,7 @@ func TestNewClients(t *testing.T) {
 						"bar": tt.giveCfg,
 					},
 				},
-				DialerProvider:  newDialerProvider(t),
+				Dialer:          &yarpchttp.Dialer{},
 				ChooserProvider: newChooserProvider(t),
 			})
 			if tt.wantErr != "" {
