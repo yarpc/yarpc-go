@@ -71,18 +71,6 @@ func (r *randomList) Choose(_ context.Context, _ *yarpc.Request) yarpc.StatusPee
 	return r.subscribers[index].peer
 }
 
-func (r *randomList) Start() error {
-	return nil
-}
-
-func (r *randomList) Stop() error {
-	return nil
-}
-
-func (r *randomList) IsRunning() bool {
-	return true
-}
-
 type subscriber struct {
 	index int
 	peer  yarpc.StatusPeer
