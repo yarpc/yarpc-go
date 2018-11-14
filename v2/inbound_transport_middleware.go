@@ -35,6 +35,7 @@ import (
 // UnaryInboundTransportMiddleware is re-used across requests and MAY be called multiple
 // times for the same request.
 type UnaryInboundTransportMiddleware interface {
+	Name() string
 	Handle(ctx context.Context, req *Request, reqBuf *Buffer, handler UnaryTransportHandler) (*Response, *Buffer, error)
 }
 
@@ -43,6 +44,8 @@ type UnaryInboundTransportMiddleware interface {
 var NopUnaryInboundTransportMiddleware UnaryInboundTransportMiddleware = nopUnaryInboundTransportMiddleware{}
 
 type nopUnaryInboundTransportMiddleware struct{}
+
+func (nopUnaryInboundTransportMiddleware) Name() string { return nopName }
 
 func (nopUnaryInboundTransportMiddleware) Handle(ctx context.Context, req *Request, reqBuf *Buffer, handler UnaryTransportHandler) (*Response, *Buffer, error) {
 	return handler.Handle(ctx, req, reqBuf)
@@ -67,6 +70,11 @@ func ApplyUnaryInboundTransportMiddleware(handler UnaryTransportHandler, middlew
 
 // UnaryInboundTransportMiddlewareFunc adapts a function into an InboundMiddleware.
 type UnaryInboundTransportMiddlewareFunc func(context.Context, *Request, *Buffer, UnaryTransportHandler) (*Response, *Buffer, error)
+
+// Name for UnaryInboundTransportMiddlewareFunc
+func (f UnaryInboundTransportMiddlewareFunc) Name() string {
+	return "UnaryInboundTransportMiddlewareFunc"
+}
 
 // Handle for UnaryInboundTransportMiddlewareFunc
 func (f UnaryInboundTransportMiddlewareFunc) Handle(ctx context.Context, req *Request, reqBuf *Buffer, handler UnaryTransportHandler) (*Response, *Buffer, error) {
