@@ -207,15 +207,3 @@ func (ph *pendingHeap) popPeer() (*peerScore, bool) {
 func (ph *pendingHeap) update(i int) {
 	heap.Fix(ph, i)
 }
-
-func (ph *pendingHeap) Start() error {
-	return nil
-}
-
-func (ph *pendingHeap) Stop() error {
-	return nil
-}
-
-func (ph *pendingHeap) IsRunning() bool {
-	return true
-}
