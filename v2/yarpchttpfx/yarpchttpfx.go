@@ -196,8 +196,7 @@ func NewClients(p ClientParams) (ClientResult, error) {
 				return ClientResult{}, err
 			}
 		}
-		var outbound yarpc.UnaryOutbound
-		outbound = &yarpchttp.Outbound{
+		outbound := &yarpchttp.Outbound{
 			Chooser: chooser,
 			Dialer:  p.Dialer,
 			URL:     url,
