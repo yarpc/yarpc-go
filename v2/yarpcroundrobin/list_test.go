@@ -201,53 +201,6 @@ func TestRoundRobinList(t *testing.T) {
 				yarpctest.ChooseAction{ExpectedPeer: "1"},
 			},
 		},
-		// Flaky in CI
-		// {
-		// 	msg: "block until add",
-		// 	retainedAvailablePeerIDs: []string{"1"},
-		// 	expectedAvailablePeers:   []string{"1"},
-		// 	peerListActions: []yarpctest.PeerListAction{
-		//
-		// 		ConcurrentAction{
-		// 			Actions: []yarpctest.PeerListAction{
-		// 				yarpctest.ChooseAction{
-		// 					InputContextTimeout: 200 * time.Millisecond,
-		// 					ExpectedPeer:        "1",
-		// 				},
-		// 				yarpctest.UpdateAction{AddedPeerIDs: []string{"1"}},
-		// 			},
-		// 			Wait: 20 * time.Millisecond,
-		// 		},
-		// 		yarpctest.ChooseAction{ExpectedPeer: "1"},
-		// 	},
-		// },
-		// {
-		// 	msg: "multiple blocking until add",
-		// 	retainedAvailablePeerIDs: []string{"1"},
-		// 	expectedAvailablePeers:   []string{"1"},
-		// 	peerListActions: []yarpctest.PeerListAction{
-		//
-		// 		ConcurrentAction{
-		// 			Actions: []yarpctest.PeerListAction{
-		// 				yarpctest.ChooseAction{
-		// 					InputContextTimeout: 200 * time.Millisecond,
-		// 					ExpectedPeer:        "1",
-		// 				},
-		// 				yarpctest.ChooseAction{
-		// 					InputContextTimeout: 200 * time.Millisecond,
-		// 					ExpectedPeer:        "1",
-		// 				},
-		// 				yarpctest.ChooseAction{
-		// 					InputContextTimeout: 200 * time.Millisecond,
-		// 					ExpectedPeer:        "1",
-		// 				},
-		// 				yarpctest.UpdateAction{AddedPeerIDs: []string{"1"}},
-		// 			},
-		// 			Wait: 10 * time.Millisecond,
-		// 		},
-		// 		yarpctest.ChooseAction{ExpectedPeer: "1"},
-		// 	},
-		// },
 		{
 			msg: "block but added too late",
 			retainedAvailablePeerIDs: []string{"1"},
@@ -266,29 +219,6 @@ func TestRoundRobinList(t *testing.T) {
 				yarpctest.ChooseAction{ExpectedPeer: "1"},
 			},
 		},
-		// Flaky in CI
-		// {
-		// 	msg: "block until new peer after removal of only peer",
-		// 	retainedAvailablePeerIDs: []string{"1", "2"},
-		// 	releasedPeerIDs:          []string{"1"},
-		// 	expectedAvailablePeers:   []string{"2"},
-		// 	peerListActions: []yarpctest.PeerListAction{
-		//
-		// 		yarpctest.UpdateAction{AddedPeerIDs: []string{"1"}},
-		// 		yarpctest.UpdateAction{RemovedPeerIDs: []string{"1"}},
-		// 		ConcurrentAction{
-		// 			Actions: []yarpctest.PeerListAction{
-		// 				yarpctest.ChooseAction{
-		// 					InputContextTimeout: 200 * time.Millisecond,
-		// 					ExpectedPeer:        "2",
-		// 				},
-		// 				yarpctest.UpdateAction{AddedPeerIDs: []string{"2"}},
-		// 			},
-		// 			Wait: 20 * time.Millisecond,
-		// 		},
-		// 		yarpctest.ChooseAction{ExpectedPeer: "2"},
-		// 	},
-		// },
 		{
 			msg: "no blocking with no context deadline",
 			peerListActions: []yarpctest.PeerListAction{
@@ -428,27 +358,6 @@ func TestRoundRobinList(t *testing.T) {
 				yarpctest.ChooseMultiAction{ExpectedPeers: []string{"1v", "2va", "8uav"}},
 			},
 		},
-		// Flaky in CI
-		// {
-		// 	msg: "block until notify available",
-		// 	retainedUnavailablePeerIDs: []string{"1"},
-		// 	expectedAvailablePeers:     []string{"1"},
-		// 	peerListActions: []yarpctest.PeerListAction{
-		//
-		// 		yarpctest.UpdateAction{AddedPeerIDs: []string{"1"}},
-		// 		ConcurrentAction{
-		// 			Actions: []yarpctest.PeerListAction{
-		// 				yarpctest.ChooseAction{
-		// 					InputContextTimeout: 200 * time.Millisecond,
-		// 					ExpectedPeer:        "1",
-		// 				},
-		// 				yarpctest.NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: yarpc.Available},
-		// 			},
-		// 			Wait: 20 * time.Millisecond,
-		// 		},
-		// 		yarpctest.ChooseAction{ExpectedPeer: "1"},
-		// 	},
-		// },
 	}
 
 	for _, tt := range tests {
