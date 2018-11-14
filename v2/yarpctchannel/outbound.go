@@ -76,7 +76,20 @@ type Outbound struct {
 	ch *tchannel.Channel
 }
 
-// Call sends an RPC over this TChannel outbound.
+// Call makes a TChannel request.
+//
+// If the outbound has a Chooser, the outbound will use the chooser to obtain a
+// peer for the duration of the request.
+// Assume that the Chooser ignores the req.Peer identifier unless the Chooser
+// specifies otherwise a custom behavior.
+// The Chooser implementation is free to interpret the req.Peer as a hint, a
+// requirement, or ignore it altogether.
+//
+// Otherwise, if the request has a specified Peer, the outbound will use the
+// Dialer to retain that peer for the duration of the request.
+//
+// Otherwise, the outbound will use the Dialer to retain the peer identified by
+// the outbound's Addr for the duration of the request.
 func (o *Outbound) Call(ctx context.Context, req *yarpc.Request, reqBody *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
 	if req == nil {
 		return nil, nil, yarpcerror.InvalidArgumentErrorf("request for tchannel outbound was nil")
