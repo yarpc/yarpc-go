@@ -177,6 +177,8 @@ func (h *handler) handleUnary(
 
 	mdWriter := newMetadataWriter()
 
+	// Add address of handler.
+	mdWriter.AddSystemHeader(PeerHeader, h.i.Listener.Addr().String())
 	// Echo accepted rpc-service in response header
 	mdWriter.AddSystemHeader(ServiceHeader, req.Service)
 

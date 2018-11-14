@@ -120,12 +120,21 @@ func (i *Inbound) Start(_ context.Context) error {
 		logger = i.Logger
 	}
 
+	if i.Listener == nil {
+		var err error
+		i.Listener, err = net.Listen("tcp", i.Addr)
+		if err != nil {
+			return err
+		}
+	}
+
 	var httpHandler http.Handler = handler{
 		router:              i.Router,
 		grabHeaders:         grabHeaders,
 		legacyResponseError: i.legacyResponseError,
 		logger:              logger,
 		tracer:              tracer,
+		addr:                i.Listener.Addr().String(),
 	}
 
 	if i.Interceptor != nil {
@@ -143,14 +152,6 @@ func (i *Inbound) Start(_ context.Context) error {
 
 	server := &http.Server{
 		Handler: httpHandler,
-	}
-
-	if i.Listener == nil {
-		var err error
-		i.Listener, err = net.Listen("tcp", i.Addr)
-		if err != nil {
-			return err
-		}
 	}
 
 	i.server = internalhttp.NewHTTPServer(server)

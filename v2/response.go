@@ -22,6 +22,18 @@ package yarpc
 
 // Response is the low level response representation.
 type Response struct {
-	Headers          Headers
+	// Peer is the address of the peer that handled the request, if known.
+	//
+	// Depending on the application, the peer that handle the request might
+	// be preferred for a follow-up request, though it is generally better
+	// to use a sharded peer chooser so retries go to an available peer if this
+	// peer is no longer available.
+	Peer Identifier
+
+	// Headers are response headers or trailers.
+	Headers Headers
+
+	// ApplicationError indicates that the response body contains a payload
+	// that represents an error in the request encoding.
 	ApplicationError error
 }

@@ -76,7 +76,20 @@ type Outbound struct {
 	ch *tchannel.Channel
 }
 
-// Call sends an RPC over this TChannel outbound.
+// Call makes a TChannel request.
+//
+// If the outbound has a Chooser, the outbound will use the chooser to obtain a
+// peer for the duration of the request.
+// Assume that the Chooser ignores the req.Peer identifier unless the Chooser
+// specifies otherwise a custom behavior.
+// The Chooser implementation is free to interpret the req.Peer as a hint, a
+// requirement, or ignore it altogether.
+//
+// Otherwise, if the request has a specified Peer, the outbound will use the
+// Dialer to retain that peer for the duration of the request.
+//
+// Otherwise, the outbound will use the Dialer to retain the peer identified by
+// the outbound's Addr for the duration of the request.
 func (o *Outbound) Call(ctx context.Context, req *yarpc.Request, reqBody *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
 	if req == nil {
 		return nil, nil, yarpcerror.InvalidArgumentErrorf("request for tchannel outbound was nil")
@@ -171,30 +184,31 @@ func callWithPeer(ctx context.Context, req *yarpc.Request, reqBody *yarpc.Buffer
 		appErr = errors.New("application error")
 	}
 	return &yarpc.Response{
+		Peer:             getPeerAndDeleteHeaderKeys(headers),
 		Headers:          headers,
 		ApplicationError: appErr,
 	}, resBody, getResponseErrorAndDeleteHeaderKeys(headers)
 }
 
 func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*tchannelPeer, func(error), error) {
-	var peer yarpc.Peer
-	var onFinish func(error)
-	var err error
+	var (
+		peer     yarpc.Peer
+		onFinish func(error)
+		err      error
+	)
 	if o.Chooser != nil {
 		peer, onFinish, err = o.Chooser.Choose(ctx, req)
-		if err != nil {
-			return nil, nil, err
-		}
-	} else if o.Dialer != nil && o.Addr != "" {
-		peer, err = o.Dialer.RetainPeer(yarpc.Address(o.Addr), yarpc.NopSubscriber)
-		if err != nil {
-			return nil, nil, err
-		}
-		err = o.Dialer.ReleasePeer(yarpc.Address(o.Addr), yarpc.NopSubscriber)
-		if err != nil {
-			return nil, nil, err
-		}
-		onFinish = nopFinish
+	} else if req.Peer != nil {
+		peer, onFinish, err = o.getEphemeralPeer(req.Peer)
+	} else if o.Addr != "" {
+		id := yarpc.Address(o.Addr)
+		peer, onFinish, err = o.getEphemeralPeer(id)
+	} else {
+		return nil, nil, yarpcerror.FailedPreconditionErrorf("TChannel outbound must have a chooser or address, or request must address a specific peer")
+	}
+
+	if err != nil {
+		return nil, nil, err
 	}
 
 	tchannelPeer, ok := peer.(*tchannelPeer)
@@ -206,6 +220,21 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*
 	}
 
 	return tchannelPeer, onFinish, nil
+}
+
+func (o *Outbound) getEphemeralPeer(id yarpc.Identifier) (yarpc.Peer, func(error), error) {
+	if o.Dialer == nil {
+		return nil, nil, yarpcpeer.ErrMissingDialer{Transport: "tchannel"}
+	}
+	peer, err := o.Dialer.RetainPeer(id, yarpc.NopSubscriber)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = o.Dialer.ReleasePeer(id, yarpc.NopSubscriber)
+	if err != nil {
+		return nil, nil, err
+	}
+	return peer, nopFinish, nil
 }
 
 func nopFinish(error) {}
@@ -240,6 +269,14 @@ func checkServiceMatchAndDeleteHeaderKey(reqSvcName string, resHeaders yarpc.Hea
 		return reqSvcName == resSvcName, resSvcName
 	}
 	return true, ""
+}
+
+func getPeerAndDeleteHeaderKeys(headers yarpc.Headers) yarpc.Identifier {
+	peer, ok := popHeader(headers, PeerHeaderKey)
+	if !ok || peer == "" {
+		return nil
+	}
+	return yarpc.Address(peer)
 }
 
 func getResponseErrorAndDeleteHeaderKeys(headers yarpc.Headers) error {

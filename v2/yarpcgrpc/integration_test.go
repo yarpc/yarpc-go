@@ -44,6 +44,7 @@ import (
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcjson"
+	"go.uber.org/yarpc/v2/yarpcrouter"
 	"go.uber.org/yarpc/v2/yarpctest"
 	"google.golang.org/grpc/credentials"
 )
@@ -491,4 +492,47 @@ func createTLSScenario(t *testing.T, clientValidity time.Duration, serverValidit
 		ClientCert: clientCert,
 		ClientKey:  clientKey,
 	}
+}
+
+func TestDirectAddress(t *testing.T) {
+	type body struct {
+		Message string
+	}
+
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	addr := yarpc.Address(listener.Addr().String())
+
+	procs, err := yarpc.EncodingToTransportProcedures(yarpcjson.Procedure("echo", func(ctx context.Context, body *body) (*body, error) {
+		return body, nil
+	}))
+	require.NoError(t, err)
+	server := &Inbound{
+		Listener: listener,
+		Router:   yarpcrouter.NewMapRouter("server", procs),
+	}
+	require.NoError(t, server.Start(ctx))
+	defer server.Stop(ctx)
+
+	dialer := &Dialer{}
+	require.NoError(t, dialer.Start(ctx))
+	defer dialer.Stop(ctx)
+
+	client := yarpcjson.New(yarpc.Client{
+		Caller:  "client",
+		Service: "server",
+		Unary: &Outbound{
+			Dialer: dialer,
+		},
+	})
+	var res body
+	var retAddr yarpc.Identifier
+	require.NoError(t, client.Call(ctx, "echo", &body{Message: "hello"}, &res, yarpc.To(addr), yarpc.ResponseFrom(&retAddr)))
+	assert.NotNil(t, retAddr)
+	assert.Equal(t, addr, retAddr)
 }

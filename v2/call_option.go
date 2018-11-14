@@ -28,6 +28,38 @@ package yarpc
 // API for service authors simple.
 type CallOption struct{ apply func(*OutboundCall) }
 
+// To specifies the destination address for this request.
+//
+// If a transport has a peer chooser, the peer chooser may consider this peer.
+// Consult the peer list's Choose documentation for how it handles a specified
+// peer.
+// In the absence of an documented behavior, assume the chooser ignores this
+// option.
+//
+// In the absence of a peer chooser, the transport should use a dialer to
+// retain this peer for the duration of the request.
+// Consult the transport's outbound Call documentation for how it handles a
+// specified peer.
+//
+// The Chooser may set the Peer on the request, such that outbound middleware
+// can see the chosen address.
+func To(id Identifier) CallOption {
+	return CallOption{func(o *OutboundCall) { o.to = &id }}
+}
+
+// ResponseFrom specifies a pointer to an identifier to fill with the address that
+// handles the request.
+//
+// Transport implementations may populate this field with the address of the
+// task that handled the request, if the handler adds the necessary metadata to
+// their response.
+// Proxies may or may not overwrite this metadata on the response path,
+// depending on whether the proxy should intercept all returned calls.
+// The identifier may be nil after a call.
+func ResponseFrom(id *Identifier) CallOption {
+	return CallOption{func(o *OutboundCall) { o.from = id }}
+}
+
 // ResponseHeaders specifies that headers received in response to this request
 // should replace the given map.
 func ResponseHeaders(h *map[string]string) CallOption {

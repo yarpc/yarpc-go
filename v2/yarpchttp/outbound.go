@@ -82,7 +82,20 @@ type Outbound struct {
 	legacyResponseError bool
 }
 
-// Call makes a HTTP request
+// Call makes an HTTP request.
+//
+// If the outbound has a Chooser, the outbound will use the chooser to obtain a
+// peer for the duration of the request.
+// Assume that the Chooser ignores the req.Peer identifier unless the Chooser
+// specifies otherwise a custom behavior.
+// The Chooser implementation is free to interpret the req.Peer as a hint, a
+// requirement, or ignore it altogether.
+//
+// Otherwise, if the request has a specified Peer, the outbound will use the
+// Dialer to retain that peer for the duration of the request.
+//
+// Otherwise, the outbound will use the Dialer to retain the peer identified
+// by the Host of the configured URL for the duration of the request.
 func (o *Outbound) Call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
 	if req == nil {
 		return nil, nil, yarpcerror.InvalidArgumentErrorf("request for http unary outbound was nil")
@@ -126,6 +139,7 @@ func (o *Outbound) call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.B
 	}
 
 	res := &yarpc.Response{
+		Peer:    yarpc.Address(httpRes.Header.Get(PeerHeader)),
 		Headers: applicationHeaders.FromHTTPHeaders(httpRes.Header, yarpc.NewHeaders()),
 	}
 
@@ -138,8 +152,8 @@ func (o *Outbound) call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.B
 		res.ApplicationError = getYARPCErrorFromResponse(httpRes, resBuf, true)
 	}
 
-	botResponseError := httpRes.Header.Get(BothResponseErrorHeader) == AcceptTrue
-	if botResponseError && !o.legacyResponseError {
+	bothResponseError := httpRes.Header.Get(BothResponseErrorHeader) == AcceptTrue
+	if bothResponseError && !o.legacyResponseError {
 		if httpRes.StatusCode >= 300 {
 			// TODO: This is a bit odd; we set the error in response AND return it.
 			// However, to preserve the current behavior of YARPC, this is
@@ -156,28 +170,24 @@ func (o *Outbound) call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.B
 }
 
 func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*httpPeer, func(error), error) {
-	var peer yarpc.Peer
-	var onFinish func(error)
-	var err error
-
+	var (
+		peer     yarpc.Peer
+		onFinish func(error)
+		err      error
+	)
 	if o.Chooser != nil {
 		peer, onFinish, err = o.Chooser.Choose(ctx, req)
-		if err != nil {
-			return nil, nil, err
-		}
-	} else if o.Dialer != nil && o.URL != nil {
+	} else if req.Peer != nil {
+		peer, onFinish, err = o.getEphemeralPeer(req.Peer)
+	} else if o.URL != nil {
 		id := yarpc.Address(o.URL.Host)
-		peer, err = o.Dialer.RetainPeer(id, yarpc.NopSubscriber)
-		if err != nil {
-			return nil, nil, err
-		}
-		err = o.Dialer.ReleasePeer(id, yarpc.NopSubscriber)
-		if err != nil {
-			return nil, nil, err
-		}
-		onFinish = nopFinish
+		peer, onFinish, err = o.getEphemeralPeer(id)
 	} else {
-		return nil, nil, yarpcerror.FailedPreconditionErrorf("HTTP Outbound must have either Chooser or Dialer and URL to make a Call")
+		return nil, nil, yarpcerror.FailedPreconditionErrorf("HTTP outbound must have a chooser or URL with host, or request must address a specific peer")
+	}
+
+	if err != nil {
+		return nil, nil, err
 	}
 
 	hp, ok := peer.(*httpPeer)
@@ -189,6 +199,21 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*
 	}
 
 	return hp, onFinish, nil
+}
+
+func (o *Outbound) getEphemeralPeer(id yarpc.Identifier) (yarpc.Peer, func(error), error) {
+	if o.Dialer == nil {
+		return nil, nil, yarpcpeer.ErrMissingDialer{Transport: "http"}
+	}
+	peer, err := o.Dialer.RetainPeer(id, yarpc.NopSubscriber)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = o.Dialer.ReleasePeer(id, yarpc.NopSubscriber)
+	if err != nil {
+		return nil, nil, err
+	}
+	return peer, nopFinish, nil
 }
 
 func nopFinish(error) {}
@@ -267,6 +292,9 @@ func (o *Outbound) withCoreHeaders(httpReq *http.Request, req *yarpc.Request, tt
 	}
 	if req.RoutingDelegate != "" {
 		httpReq.Header.Set(RoutingDelegateHeader, req.RoutingDelegate)
+	}
+	if req.Peer != nil {
+		httpReq.Header.Set(PeerHeader, req.Peer.Identifier())
 	}
 
 	encoding := string(req.Encoding)

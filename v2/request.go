@@ -30,6 +30,20 @@ import (
 
 // Request is the low level request representation.
 type Request struct {
+	// Peer, if present, is the identifier of the task making an inbound
+	// request or the destination identifier for an outbound request.
+	//
+	// The use of the Peer identifier is an implementation detail of each
+	// transport protocol, but generally, if an outbound has a Chooser,
+	// the Peer is a hint to the peer chooser to prefer the given peer if it is
+	// immediately available.
+	// Also generally, if the outbound does not have a Chooser, it should have
+	// a Dialer and the request should dial the given identifier and retain
+	// the peer for the duration of the request.
+	// The outbound may have a default destination identifier if none of the
+	// prior options are available.
+	Peer Identifier
+
 	// Name of the service making the request.
 	Caller string
 
@@ -67,6 +81,10 @@ type Request struct {
 // MarshalLogObject implements zap.ObjectMarshaler.
 func (r *Request) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	// TODO (#788): Include headers once we can omit PII.
+	if r.Peer != nil {
+		enc.AddString("peer", r.Peer.Identifier())
+	}
+	enc.AddString("caller", r.Caller)
 	enc.AddString("caller", r.Caller)
 	enc.AddString("service", r.Service)
 	enc.AddString("transport", r.Transport)
