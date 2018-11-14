@@ -121,8 +121,10 @@ func (h *_StoreYARPCServer) Get(ctx context.Context, m proto.Message) (proto.Mes
 	//   return h.server.Get(ctx, req)
 	//
 	// will behave the same way, the dynamic value of the nil returned is
-	// strongly typed. When passed later as an interface{} inc odec.Encode(...),
-	// this nil value becomes a non-nil value, because it is strongly typed.
+	// strongly typed. When carried around later as  interface{} (specifically in
+	// `codec.Encode(...)`), this nil response gets carried as a nil-of-type-response
+	// value, making it non-nil. We prefer to replace it with an absolute nil
+	// before we pass it up.
 	// This issue is akin to https://golang.org/doc/faq#nil_error.
 	res, err := h.server.Get(ctx, req)
 	if err != nil {
@@ -142,8 +144,10 @@ func (h *_StoreYARPCServer) Set(ctx context.Context, m proto.Message) (proto.Mes
 	//   return h.server.Set(ctx, req)
 	//
 	// will behave the same way, the dynamic value of the nil returned is
-	// strongly typed. When passed later as an interface{} inc odec.Encode(...),
-	// this nil value becomes a non-nil value, because it is strongly typed.
+	// strongly typed. When carried around later as  interface{} (specifically in
+	// `codec.Encode(...)`), this nil response gets carried as a nil-of-type-response
+	// value, making it non-nil. We prefer to replace it with an absolute nil
+	// before we pass it up.
 	// This issue is akin to https://golang.org/doc/faq#nil_error.
 	res, err := h.server.Set(ctx, req)
 	if err != nil {
