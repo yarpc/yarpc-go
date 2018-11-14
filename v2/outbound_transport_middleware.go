@@ -24,6 +24,8 @@ import (
 	"context"
 )
 
+const nopName = "nop"
+
 // UnaryOutboundTransportMiddleware defines transport-level middleware for
 // `UnaryTransportOutbound`s.
 //
@@ -37,6 +39,7 @@ import (
 // UnaryOutboundTransportMiddleware is re-used across requests and MAY be called
 // multiple times on the same request.
 type UnaryOutboundTransportMiddleware interface {
+	Name() string
 	Call(
 		ctx context.Context,
 		request *Request,
@@ -51,7 +54,18 @@ var NopUnaryOutboundTransportMiddleware UnaryOutboundTransportMiddleware = nopUn
 
 // ApplyUnaryOutboundTransportMiddleware applies the given UnaryOutboundTransportMiddleware to
 // the given UnaryTransportOutbound transport.
-func ApplyUnaryOutboundTransportMiddleware(o UnaryTransportOutbound, f UnaryOutboundTransportMiddleware) UnaryTransportOutbound {
+func ApplyUnaryOutboundTransportMiddleware(o UnaryTransportOutbound, f ...UnaryOutboundTransportMiddleware) UnaryOutbound {
+	if f == nil {
+		return o
+	}
+	outbound := o
+	for i := len(f) - 1; i >= 0; i-- {
+		outbound = applyUnaryOutboundTransportMiddleware(outbound, f[i])
+	}
+	return outbound
+}
+
+func applyUnaryOutboundTransportMiddleware(o UnaryOutbound, f UnaryOutboundTransportMiddleware) UnaryOutbound {
 	if f == nil {
 		return o
 	}
@@ -85,6 +99,10 @@ func (fo unaryOutboundWithMiddleware) Call(
 }
 
 type nopUnaryOutboundTransportMiddleware struct{}
+
+func (nopUnaryOutboundTransportMiddleware) Name() string {
+	return nopName
+}
 
 func (nopUnaryOutboundTransportMiddleware) Call(
 	ctx context.Context,
