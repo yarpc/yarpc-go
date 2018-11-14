@@ -63,8 +63,8 @@ func (m *Middleware) Handle(ctx context.Context, req *yarpc.Request, reqBuf *yar
 	return res, resBuf, err
 }
 
-// Call implements yarpc.UnaryOutbound.
-func (m *Middleware) Call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.Buffer, out yarpc.UnaryOutbound) (*yarpc.Response, *yarpc.Buffer, error) {
+// Call implements yarpc.UnaryTransportOutbound.
+func (m *Middleware) Call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.Buffer, out yarpc.UnaryTransportOutbound) (*yarpc.Response, *yarpc.Buffer, error) {
 	call := m.graph.begin(ctx, yarpc.Unary, _directionOutbound, req)
 	res, resBuf, err := out.Call(ctx, req, reqBuf)
 
@@ -85,8 +85,8 @@ func (m *Middleware) HandleStream(serverStream *yarpc.ServerStream, h yarpc.Stre
 	return err
 }
 
-// CallStream implements yarpc.StreamOutbound.
-func (m *Middleware) CallStream(ctx context.Context, request *yarpc.Request, out yarpc.StreamOutbound) (*yarpc.ClientStream, error) {
+// CallStream implements yarpc.StreamTransportOutbound.
+func (m *Middleware) CallStream(ctx context.Context, request *yarpc.Request, out yarpc.StreamTransportOutbound) (*yarpc.ClientStream, error) {
 	call := m.graph.begin(ctx, yarpc.Streaming, _directionOutbound, request)
 	clientStream, err := out.CallStream(ctx, request)
 	// TODO(pedge): wrap the *yarpc.ClientStream?

@@ -108,8 +108,8 @@ func newChooser(t *testing.T, chooser string, dialer yarpc.Dialer, id yarpc.Iden
 
 // returns UnaryOutbounds configured with every specified chooser
 // eg HTTP+round-robin, HTTP+random
-func newOutbounds(t *testing.T, transport string, addr string, choosers []string) (_ []yarpc.UnaryOutbound, stop func()) {
-	outbounds := make([]yarpc.UnaryOutbound, 0, len(choosers))
+func newOutbounds(t *testing.T, transport string, addr string, choosers []string) (_ []yarpc.UnaryTransportOutbound, stop func()) {
+	outbounds := make([]yarpc.UnaryTransportOutbound, 0, len(choosers))
 	dialers := make([]lifecycle, 0, len(choosers))
 
 	id := yarpc.Address(addr)

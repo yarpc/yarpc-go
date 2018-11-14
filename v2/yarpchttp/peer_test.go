@@ -39,7 +39,7 @@ package yarpchttp_test
 // 	NewClientTransport: func(t *testing.T) yarpc.Dialer {
 // 		return newTransport()
 // 	},
-// 	NewUnaryOutbound: func(trans yarpc.Dialer, pc yarpc.Chooser) yarpc.UnaryOutbound {
+// 	NewUnaryOutbound: func(trans yarpc.Dialer, pc yarpc.Chooser) yarpc.UnaryTransportOutbound {
 // 		return trans.(*yarpchttp.Transport).NewOutbound(pc)
 // 	},
 // 	NewInbound: func(trans yarpc.Dialer, addr string) yarpc.Inbound {

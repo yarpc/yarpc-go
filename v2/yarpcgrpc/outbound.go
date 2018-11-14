@@ -42,7 +42,7 @@ import (
 // http://www.grpc.io/docs/guides/wire.html#user-agents
 const UserAgent = "yarpc-go/" + yarpc.Version
 
-var _ yarpc.UnaryOutbound = (*Outbound)(nil)
+var _ yarpc.UnaryTransportOutbound = (*Outbound)(nil)
 
 // Outbound sends YARPC requests over gRPC. It is recommended that services use
 // a single HTTP dialer to construct all HTTP outbounds, ensuring efficient
@@ -219,7 +219,7 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	return intyarpcerror.NewWithNamef(code, name, message)
 }
 
-// CallStream implements yarpc.StreamOutbound#CallStream.
+// CallStream implements yarpc.StreamTransportOutbound#CallStream.
 func (o *Outbound) CallStream(ctx context.Context, req *yarpc.Request) (*yarpc.ClientStream, error) {
 	start := time.Now()
 

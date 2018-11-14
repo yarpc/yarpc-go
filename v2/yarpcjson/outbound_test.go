@@ -104,7 +104,7 @@ func TestCall(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		outbound := yarpctest.NewMockUnaryOutbound(mockCtrl)
+		outbound := yarpctest.NewMockUnaryTransportOutbound(mockCtrl)
 		client := New(yarpc.Client{
 			Caller:  caller,
 			Service: service,

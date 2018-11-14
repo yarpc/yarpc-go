@@ -35,11 +35,11 @@ type Client struct {
 
 	// If set, this is the unary outbound which sends a request and waits for
 	// the response.
-	Unary UnaryOutbound
+	Unary UnaryTransportOutbound
 
 	// If set, this is the stream outbound which creates a ClientStream that can
 	// be used to continuously send/recv requests over the connection.
-	Stream StreamOutbound
+	Stream StreamTransportOutbound
 }
 
 // ClientProvider is a registry of pre-configured Clients.

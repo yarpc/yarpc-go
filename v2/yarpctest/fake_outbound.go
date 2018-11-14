@@ -66,8 +66,8 @@ func (t *FakeTransport) NewOutbound(c yarpc.Chooser, opts ...FakeOutboundOption)
 	return o
 }
 
-var _ yarpc.UnaryOutbound = (*FakeOutbound)(nil)
-var _ yarpc.StreamOutbound = (*FakeOutbound)(nil)
+var _ yarpc.UnaryTransportOutbound = (*FakeOutbound)(nil)
+var _ yarpc.StreamTransportOutbound = (*FakeOutbound)(nil)
 
 // FakeOutbound is a unary outbound for the FakeTransport. It is fake.
 type FakeOutbound struct {

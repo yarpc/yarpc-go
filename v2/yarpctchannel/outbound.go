@@ -37,7 +37,7 @@ import (
 var (
 	errDoNotUseContextWithHeaders = yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "tchannel.ContextWithHeaders is not compatible with YARPC, use yarpc.CallOption instead")
 
-	_ yarpc.UnaryOutbound = (*Outbound)(nil)
+	_ yarpc.UnaryTransportOutbound = (*Outbound)(nil)
 )
 
 // Outbound sends YARPC requests over TChannel.

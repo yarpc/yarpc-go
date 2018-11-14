@@ -22,9 +22,9 @@ package yarpc
 
 import "context"
 
-// UnaryOutbound is a transport that knows how to send unary requests for procedure
-// calls.
-type UnaryOutbound interface {
+// UnaryTransportOutbound is a transport that knows how to send unary requests
+// for procedure calls.
+type UnaryTransportOutbound interface {
 	// Call sends the given request through this transport and returns its
 	// response.
 	//
@@ -34,9 +34,9 @@ type UnaryOutbound interface {
 	Call(context.Context, *Request, *Buffer) (*Response, *Buffer, error)
 }
 
-// StreamOutbound is a transport that knows how to send stream requests for
-// procedure calls.
-type StreamOutbound interface {
+// StreamTransportOutbound is a transport that knows how to send stream requests
+// for procedure calls.
+type StreamTransportOutbound interface {
 	// CallStream creates a stream connection based on the metadata in the
 	// request passed in.  If there is a timeout on the context, this timeout
 	// is for establishing a connection, and not for the lifetime of the stream.

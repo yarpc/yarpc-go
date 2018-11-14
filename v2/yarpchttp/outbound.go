@@ -40,7 +40,7 @@ import (
 )
 
 // This type assertion ensures that the HTTP outbound implements both yarpc.Outbound interfaces.
-var _ yarpc.UnaryOutbound = (*Outbound)(nil)
+var _ yarpc.UnaryTransportOutbound = (*Outbound)(nil)
 
 // This type assertion ensures that the HTTP outbound implements the HTTP
 // RoundTripper transport interface.

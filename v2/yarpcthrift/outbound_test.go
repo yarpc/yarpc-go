@@ -155,7 +155,7 @@ func TestClient(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
 		defer cancel()
 
-		out := yarpctest.NewMockUnaryOutbound(mockCtrl)
+		out := yarpctest.NewMockUnaryTransportOutbound(mockCtrl)
 		if tt.expectCall {
 			out.EXPECT().Call(ctx,
 				&yarpc.Request{

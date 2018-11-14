@@ -36,7 +36,7 @@ func TestUnaryNopOutboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	o := yarpctest.NewMockUnaryOutbound(mockCtrl)
+	o := yarpctest.NewMockUnaryTransportOutbound(mockCtrl)
 	wrappedO := yarpc.ApplyUnaryOutboundTransportMiddleware(o, yarpc.NopUnaryOutboundTransportMiddleware)
 
 	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
@@ -64,7 +64,7 @@ func TestNilOutboundMiddleware(t *testing.T) {
 	defer ctrl.Finish()
 
 	t.Run("unary", func(t *testing.T) {
-		out := yarpctest.NewMockUnaryOutbound(ctrl)
+		out := yarpctest.NewMockUnaryTransportOutbound(ctrl)
 		_ = yarpc.ApplyUnaryOutboundTransportMiddleware(out, nil)
 	})
 }
@@ -74,7 +74,7 @@ func TestOutboundMiddleware(t *testing.T) {
 	defer ctrl.Finish()
 
 	t.Run("unary", func(t *testing.T) {
-		out := yarpctest.NewMockUnaryOutbound(ctrl)
+		out := yarpctest.NewMockUnaryTransportOutbound(ctrl)
 		mw := yarpctest.NewMockUnaryOutboundTransportMiddleware(ctrl)
 		_ = yarpc.ApplyUnaryOutboundTransportMiddleware(out, mw)
 	})
@@ -84,7 +84,7 @@ func TestStreamNopOutboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	o := yarpctest.NewMockStreamOutbound(mockCtrl)
+	o := yarpctest.NewMockStreamTransportOutbound(mockCtrl)
 	wrappedO := yarpc.ApplyStreamOutboundTransportMiddleware(o, yarpc.NopStreamOutboundTransportMiddleware)
 
 	ctx, cancel := context.WithTimeout(context.Background(), internaltesttime.Second)
@@ -108,7 +108,7 @@ func TestStreamDefaultsToOutboundWhenNil(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	o := yarpctest.NewMockStreamOutbound(mockCtrl)
+	o := yarpctest.NewMockStreamTransportOutbound(mockCtrl)
 	wrappedO := yarpc.ApplyStreamOutboundTransportMiddleware(o, nil)
 	assert.Equal(t, wrappedO, o)
 }
@@ -117,6 +117,6 @@ func TestStreamMiddlewareCallsUnderlyingFunctions(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	o := yarpctest.NewMockStreamOutbound(mockCtrl)
+	o := yarpctest.NewMockStreamTransportOutbound(mockCtrl)
 	_ = yarpc.ApplyStreamOutboundTransportMiddleware(o, yarpc.NopStreamOutboundTransportMiddleware)
 }

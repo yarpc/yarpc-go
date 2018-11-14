@@ -25,7 +25,7 @@ import (
 )
 
 // UnaryOutboundTransportMiddleware defines transport-level middleware for
-// `UnaryOutbound`s.
+// `UnaryTransportOutbound`s.
 //
 // UnaryOutboundTransportMiddleware MAY do zero or more of the following: change the
 // context, change the request, change the returned response, handle the
@@ -41,7 +41,7 @@ type UnaryOutboundTransportMiddleware interface {
 		ctx context.Context,
 		request *Request,
 		buf *Buffer,
-		out UnaryOutbound,
+		out UnaryTransportOutbound,
 	) (*Response, *Buffer, error)
 }
 
@@ -50,8 +50,8 @@ type UnaryOutboundTransportMiddleware interface {
 var NopUnaryOutboundTransportMiddleware UnaryOutboundTransportMiddleware = nopUnaryOutboundTransportMiddleware{}
 
 // ApplyUnaryOutboundTransportMiddleware applies the given UnaryOutboundTransportMiddleware to
-// the given UnaryOutbound transport.
-func ApplyUnaryOutboundTransportMiddleware(o UnaryOutbound, f UnaryOutboundTransportMiddleware) UnaryOutbound {
+// the given UnaryTransportOutbound transport.
+func ApplyUnaryOutboundTransportMiddleware(o UnaryTransportOutbound, f UnaryOutboundTransportMiddleware) UnaryTransportOutbound {
 	if f == nil {
 		return o
 	}
@@ -59,20 +59,20 @@ func ApplyUnaryOutboundTransportMiddleware(o UnaryOutbound, f UnaryOutboundTrans
 }
 
 // UnaryOutboundTransportMiddlewareFunc adapts a function into a UnaryOutboundTransportMiddleware.
-type UnaryOutboundTransportMiddlewareFunc func(context.Context, *Request, *Buffer, UnaryOutbound) (*Response, *Buffer, error)
+type UnaryOutboundTransportMiddlewareFunc func(context.Context, *Request, *Buffer, UnaryTransportOutbound) (*Response, *Buffer, error)
 
 // Call for UnaryOutboundTransportMiddlewareFunc.
 func (f UnaryOutboundTransportMiddlewareFunc) Call(
 	ctx context.Context,
 	request *Request,
 	buf *Buffer,
-	out UnaryOutbound,
+	out UnaryTransportOutbound,
 ) (*Response, *Buffer, error) {
 	return f(ctx, request, buf, out)
 }
 
 type unaryOutboundWithMiddleware struct {
-	o UnaryOutbound
+	o UnaryTransportOutbound
 	f UnaryOutboundTransportMiddleware
 }
 
@@ -90,12 +90,12 @@ func (nopUnaryOutboundTransportMiddleware) Call(
 	ctx context.Context,
 	request *Request,
 	buf *Buffer,
-	out UnaryOutbound,
+	out UnaryTransportOutbound,
 ) (*Response, *Buffer, error) {
 	return out.Call(ctx, request, buf)
 }
 
-// StreamOutboundTransportMiddleware defines transport-level middleware for `StreamOutbound`s.
+// StreamOutboundTransportMiddleware defines transport-level middleware for `StreamTransportOutbound`s.
 //
 // StreamOutboundTransportMiddleware MAY do zero or more of the following: change the
 // context, change the request, change the returned Stream, handle the returned
@@ -107,7 +107,7 @@ func (nopUnaryOutboundTransportMiddleware) Call(
 // StreamOutboundTransportMiddleware is re-used across requests and MAY be called
 // multiple times on the same request.
 type StreamOutboundTransportMiddleware interface {
-	CallStream(ctx context.Context, request *Request, out StreamOutbound) (*ClientStream, error)
+	CallStream(ctx context.Context, request *Request, out StreamTransportOutbound) (*ClientStream, error)
 }
 
 // NopStreamOutboundTransportMiddleware is a stream outbound middleware that does not do
@@ -116,7 +116,7 @@ var NopStreamOutboundTransportMiddleware StreamOutboundTransportMiddleware = nop
 
 // ApplyStreamOutboundTransportMiddleware applies the given StreamOutboundTransportMiddleware to
 // the given StreamOutboundTransportMiddleware transport.
-func ApplyStreamOutboundTransportMiddleware(o StreamOutbound, f StreamOutboundTransportMiddleware) StreamOutbound {
+func ApplyStreamOutboundTransportMiddleware(o StreamTransportOutbound, f StreamOutboundTransportMiddleware) StreamTransportOutbound {
 	if f == nil {
 		return o
 	}
@@ -124,15 +124,15 @@ func ApplyStreamOutboundTransportMiddleware(o StreamOutbound, f StreamOutboundTr
 }
 
 // StreamOutboundTransportMiddlewareFunc adapts a function into a StreamOutboundTransportMiddleware.
-type StreamOutboundTransportMiddlewareFunc func(context.Context, *Request, StreamOutbound) (*ClientStream, error)
+type StreamOutboundTransportMiddlewareFunc func(context.Context, *Request, StreamTransportOutbound) (*ClientStream, error)
 
 // CallStream for StreamOutboundTransportMiddlewareFunc.
-func (f StreamOutboundTransportMiddlewareFunc) CallStream(ctx context.Context, request *Request, out StreamOutbound) (*ClientStream, error) {
+func (f StreamOutboundTransportMiddlewareFunc) CallStream(ctx context.Context, request *Request, out StreamTransportOutbound) (*ClientStream, error) {
 	return f(ctx, request, out)
 }
 
 type streamOutboundWithMiddleware struct {
-	o StreamOutbound
+	o StreamTransportOutbound
 	f StreamOutboundTransportMiddleware
 }
 
@@ -142,6 +142,6 @@ func (fo streamOutboundWithMiddleware) CallStream(ctx context.Context, request *
 
 type nopStreamOutboundTransportMiddleware struct{}
 
-func (nopStreamOutboundTransportMiddleware) CallStream(ctx context.Context, request *Request, out StreamOutbound) (*ClientStream, error) {
+func (nopStreamOutboundTransportMiddleware) CallStream(ctx context.Context, request *Request, out StreamTransportOutbound) (*ClientStream, error) {
 	return out.CallStream(ctx, request)
 }
