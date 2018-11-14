@@ -39,7 +39,7 @@ func newDialerProvider(t *testing.T) yarpc.DialerProvider {
 }
 
 func TestNewConfig(t *testing.T) {
-	cfg := strings.NewReader("yarpc: {choosers: {roundrobin: {bar: {dialer: http, capacity: 100}}}}")
+	cfg := strings.NewReader("yarpc: {choosers: {round-robin: {bar: {dialer: http, capacity: 100}}}}")
 	provider, err := config.NewYAML(config.Source(cfg))
 	require.NoError(t, err)
 
