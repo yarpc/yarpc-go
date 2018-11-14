@@ -48,8 +48,10 @@
         //   return h.server.{{.Name}}(ctx, req)
         //
         // will behave the same way, the dynamic value of the nil returned is
-        // strongly typed. When passed later as an interface{} inc odec.Encode(...),
-        // this nil value becomes a non-nil value, because it is strongly typed.
+        // strongly typed. When carried around later as  interface{} (specifically in
+        // `codec.Encode(...)`), this nil response gets carried as a nil-of-type-response
+        // value, making it non-nil. We prefer to replace it with an absolute nil
+        // before we pass it up.
         // This issue is akin to https://golang.org/doc/faq#nil_error.
         res, err := h.server.{{.Name}}(ctx, req)
         if err != nil {

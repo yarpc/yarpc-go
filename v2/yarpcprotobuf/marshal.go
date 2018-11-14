@@ -62,13 +62,11 @@ func marshal(encoding yarpc.Encoding, message proto.Message) (*yarpc.Buffer, err
 }
 
 func marshalProto(message proto.Message) (*yarpc.Buffer, error) {
-	buf := _protoBufferPool.Get().(*proto.Buffer)
-	buf.Reset()
-	defer _protoBufferPool.Put(buf)
-	if err := buf.Marshal(message); err != nil {
+	buf, err := proto.Marshal(message)
+	if err != nil {
 		return nil, err
 	}
-	return yarpc.NewBufferBytes(buf.Bytes()), nil
+	return yarpc.NewBufferBytes(buf), nil
 }
 
 func marshalJSON(message proto.Message) (*yarpc.Buffer, error) {

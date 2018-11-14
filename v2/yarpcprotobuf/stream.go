@@ -102,11 +102,13 @@ func writeToStream(ctx context.Context, stream yarpc.Stream, message proto.Messa
 			Body: readCloser{
 				Reader: messageBuf,
 				// this is a no-op closer, because we have nothing to clean up
-				closer: func() {},
+				closer: nop,
 			},
 		},
 	)
 }
+
+func nop() {}
 
 type readCloser struct {
 	io.Reader

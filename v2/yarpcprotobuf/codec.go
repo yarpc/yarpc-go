@@ -40,18 +40,18 @@ var (
 )
 
 type protoCodec struct {
-	reqType proto.Message
+	reqMessage proto.Message
 }
 
 func newProtoCodec(reqType func() proto.Message) *protoCodec {
-	return &protoCodec{reqType: reqType()}
+	return &protoCodec{reqMessage: reqType()}
 }
 
 func (c *protoCodec) Decode(req *yarpc.Buffer) (interface{}, error) {
-	if err := proto.Unmarshal(req.Bytes(), c.reqType); err != nil {
+	if err := proto.Unmarshal(req.Bytes(), c.reqMessage); err != nil {
 		return nil, err
 	}
-	return c.reqType, nil
+	return c.reqMessage, nil
 }
 
 func (c *protoCodec) Encode(res interface{}) (*yarpc.Buffer, error) {
