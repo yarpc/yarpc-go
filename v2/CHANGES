@@ -21,6 +21,8 @@
 - [ ] Replace functional options in yarpcpeerlist with struct options
 - [ ] Integrate the configuration into a variety of Fx modules.
       - [ ] Integrate servicefx.Metadata into each of the relevant Fx packages.
+            - [ ] HTTP
+            - [ ] TChannel
 - [ ] Create an API in yarpcfx to register and obtain peer lists by name.
       Use this API to configure the chooser for an outbound in their transport fx package.
       Use this API to send updates from a peer list updater to a peer list in the updater fx package.
