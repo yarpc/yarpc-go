@@ -19,6 +19,7 @@
 - [ ] yarpcrouter.Router needs to accept middleware to decorate registered
       procedures.
 - [ ] Replace functional options in yarpcpeerlist with struct options
+- [ ] Consider separating the auto-observability middleware into two components: logging and metrics.
 - [ ] Integrate the configuration into a variety of Fx modules.
       - [ ] Integrate servicefx.Metadata into each of the relevant Fx packages.
       - [ ] Transports
