@@ -31,13 +31,13 @@
       ordering, perhaps taking availability changes into account.
 - [ ] Audit yarpcerrors, remove the ones that are no longer needed.
       - [ ] add staticcheck for v2/internal/internalyarpcerror/yarpcerrors.go from `local.mk`
-- [x] Nit: scrape name id and change to just id throughout.
+- [x] Nit: scrape name pid and change to just id throughout.
 - [ ] Audit docs
       - [ ] gRPC
       - [ ] TChannel
       - [ ] HTTP
 - [ ] InvokeUnaryHandler: reduce package name noise at the call site by changing to a Do(ctx) method on UnaryInvokeRequest
-- [ ] support StreamHandlers in EncodingHandlerSpec (punt)
+- [x] Figure out the role of streams in EncodingHandlerSpec: streaming handlers will only apply at the transport level.
 - [ ] Restore Request/Response validation, either in the transport layer or
       with middleware installed by Router (ServerProvider *cough*) and ClientProvider.
       - [ ] Inbound
@@ -151,24 +151,24 @@ Package changes:
 - [ ] intyarpcerrors yarpc/internal/yarpcerrors -> yarpc/v2/internal/internalyarpcerrors
 
 Name changes
-- [x] {Mock,}{Unary,Stream}Handler -> {Mock,}{Unary,Stream}Transport{Handler,Middleware}
-- [x] api/transport.* -> v2.*
-- [x] api/transport/transporttest.* -> v2/yarpctest.*
-- [x] api/peer.* -> v2.*
-- [x] api/peer/peertest.* -> v2/yarpctest.*
-- [x] api/middleware.* -> v2/yarpcmiddlware.*
-- [x] api/middleware/middlewaretest.* -> v2/yarpcmiddlewaretest.*
-- [x] transport/* -> v2/yarpc*
-- [x] encoding/* -> v2/yarpc*
-- [x] yarpc.ErrTansportHasNoReferenceToPeer -> yarpcpeer.ErrDialerHasNoReferenceToPeer
-- [x] pkg/errors.WrapHandlerError -> v2/yarpcerrors.WrapHandlerError
-- [x] peer/hostport.PeerIdentifier -> v2.Address
-- [x] peer/hostport.Peer -> v2/yarpcpeer.AbstractPeer
-- [x] yarpc.OpentracingTags -> v2/yarpctracing.Tags
-- [x] internal/errors.ZeroAddrToHostPort -> v2/internal/internalyarpcerrors.ZeroAddrToHostPort
-- [x] internal/iopool -> v2/internal/internaliopool
-- [x] TransportAction -> DialerAction
-- [x] ApplyTransportActions -> ApplyDialerActions
-- [x] peer.Single -> no longer needed
-- [x] peer.Binder -> no longer needed
-- [x] internal/testtime -> v2/internal/internaltesttime
+- {Mock,}{Unary,Stream}Handler -> {Mock,}{Unary,Stream}Transport{Handler,Middleware}
+- api/transport.* -> v2.*
+- api/transport/transporttest.* -> v2/yarpctest.*
+- api/peer.* -> v2.*
+- api/peer/peertest.* -> v2/yarpctest.*
+- api/middleware.* -> v2/yarpcmiddlware.*
+- api/middleware/middlewaretest.* -> v2/yarpcmiddlewaretest.*
+- transport/* -> v2/yarpc*
+- encoding/* -> v2/yarpc*
+- yarpc.ErrTansportHasNoReferenceToPeer -> yarpcpeer.ErrDialerHasNoReferenceToPeer
+- pkg/errors.WrapHandlerError -> v2/yarpcerrors.WrapHandlerError
+- peer/hostport.PeerIdentifier -> v2.Address
+- peer/hostport.Peer -> v2/yarpcpeer.AbstractPeer
+- yarpc.OpentracingTags -> v2/yarpctracing.Tags
+- internal/errors.ZeroAddrToHostPort -> v2/internal/internalyarpcerrors.ZeroAddrToHostPort
+- internal/iopool -> v2/internal/internaliopool
+- TransportAction -> DialerAction
+- ApplyTransportActions -> ApplyDialerActions
+- peer.Single -> no longer needed
+- peer.Binder -> no longer needed
+- internal/testtime -> v2/internal/internaltesttime
