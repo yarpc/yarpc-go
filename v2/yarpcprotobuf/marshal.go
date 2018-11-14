@@ -23,11 +23,17 @@ package yarpcprotobuf
 import (
 	"io"
 
+	"github.com/gogo/protobuf/jsonpb"
 	"github.com/gogo/protobuf/proto"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/internal/internalbufferpool"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcjson"
+)
+
+var (
+	_jsonMarshaler   = &jsonpb.Marshaler{}
+	_jsonUnmarshaler = &jsonpb.Unmarshaler{AllowUnknownFields: true}
 )
 
 func unmarshal(encoding yarpc.Encoding, reader io.Reader, message proto.Message) error {

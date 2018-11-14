@@ -21,22 +21,9 @@
 package yarpcprotobuf
 
 import (
-	"sync"
-
-	"github.com/gogo/protobuf/jsonpb"
 	"github.com/gogo/protobuf/proto"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerror"
-)
-
-var (
-	_jsonMarshaler   = &jsonpb.Marshaler{}
-	_jsonUnmarshaler = &jsonpb.Unmarshaler{AllowUnknownFields: true}
-	_protoBufferPool = sync.Pool{
-		New: func() interface{} {
-			return proto.NewBuffer(make([]byte, 1024))
-		},
-	}
 )
 
 type protoCodec struct {
