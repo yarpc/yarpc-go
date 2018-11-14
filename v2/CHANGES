@@ -25,7 +25,7 @@
 - [ ] yarpchttp needs to subsume responsibility for validating requests instead
       of leaving that to middleware registered in the dispatcher.
 - [ ] Consider renaming HandlerSpecs to Routes
-- [ ] Fix round robin tests, relaxing its requirements regarding lifecycle
+- [x] Fix round robin tests, relaxing its requirements regarding lifecycle
       ordering, perhaps taking availability changes into account.
 - [ ] Audit yarpcerrors, remove the ones that are no longer needed.
       - [ ] add staticcheck for v2/internal/internalyarpcerror/yarpcerrors.go from `local.mk`
