@@ -162,7 +162,6 @@ type ClientParams struct {
 	Config          OutboundsConfig
 	Dialer          *yarpchttp.Dialer
 	ChooserProvider yarpc.ChooserProvider
-	Middleware      []yarpc.UnaryOutboundTransportMiddleware `name:"yarpcfx"`
 
 	Lifecycle fx.Lifecycle
 	Logger    *zap.Logger        `optional:"true"`
@@ -216,7 +215,7 @@ func NewClients(p ClientParams) (ClientResult, error) {
 				Name:    name,
 				Caller:  "foo", // TODO(amckinney): Derive from servicefx.
 				Service: service,
-				Unary:   yarpc.ApplyUnaryOutboundTransportMiddleware(outbound, p.Middleware...),
+				Unary:   outbound,
 			},
 		)
 	}
