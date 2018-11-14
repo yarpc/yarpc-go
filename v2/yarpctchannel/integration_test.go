@@ -47,7 +47,7 @@ func TestDirectAddress(t *testing.T) {
 
 	addr := yarpc.Address(listener.Addr().String())
 
-	procs, err := yarpc.EncodingToTransportProcedures(yarpcjson.Procedure("echo", func(ctx context.Context, body *body) (*body, error) {
+	procs := yarpc.EncodingToTransportProcedures(yarpcjson.Procedure("echo", func(ctx context.Context, body *body) (*body, error) {
 		return body, nil
 	}))
 	require.NoError(t, err)
