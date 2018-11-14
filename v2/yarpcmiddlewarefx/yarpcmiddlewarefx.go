@@ -28,66 +28,67 @@ import (
 	yarpc "go.uber.org/yarpc/v2"
 )
 
-const outboundTransportMiddlewareConfigurationKey = "yarpc.middleware.outbounds.transport"
+const outboundTransportConfigurationKey = "yarpc.middleware.outbounds.transport"
 
 // Module produces ordered slices of middleware according to
 // the middleware configuration.
 var Module = fx.Provide(
-	NewOutboundTransportMiddlewareConfig,
-	NewUnaryOutboundTransportMiddleware,
+	NewOutboundTransportConfig,
+	NewUnaryOutboundTransport,
 )
 
-// OutboundTransportMiddlewareConfig describes the configuration
+// OutboundTransportConfig describes the configuration
 // shape for an ordered list of unary outbound transport middleware.
-type OutboundTransportMiddlewareConfig struct {
+type OutboundTransportConfig struct {
 	Unary []string `yaml:"unary"`
 }
 
-// OutboundTransportMiddlewareConfigParams defines the dependencies of this module.
-type OutboundTransportMiddlewareConfigParams struct {
+// OutboundTransportConfigParams defines the dependencies of this module.
+type OutboundTransportConfigParams struct {
 	fx.In
 
 	Provider config.Provider
 }
 
-// OutboundTransportMiddlewareConfigResult defines the values produced by this module.
-type OutboundTransportMiddlewareConfigResult struct {
+// OutboundTransportConfigResult defines the values produced by this module.
+type OutboundTransportConfigResult struct {
 	fx.Out
 
-	Config OutboundTransportMiddlewareConfig
+	Config OutboundTransportConfig
 }
 
-// NewOutboundTransportMiddlewareConfig produces an UnaryOutboundTransportMiddlewareConfig.
-func NewOutboundTransportMiddlewareConfig(p OutboundTransportMiddlewareConfigParams) (OutboundTransportMiddlewareConfigResult, error) {
-	mc := OutboundTransportMiddlewareConfig{}
-	if err := p.Provider.Get(outboundTransportMiddlewareConfigurationKey).Populate(&mc); err != nil {
-		return OutboundTransportMiddlewareConfigResult{}, err
+// NewOutboundTransportConfig produces an UnaryOutboundTransportConfig.
+func NewOutboundTransportConfig(p OutboundTransportConfigParams) (OutboundTransportConfigResult, error) {
+	mc := OutboundTransportConfig{}
+	if err := p.Provider.Get(outboundTransportConfigurationKey).Populate(&mc); err != nil {
+		return OutboundTransportConfigResult{}, err
 	}
-	return OutboundTransportMiddlewareConfigResult{
+	return OutboundTransportConfigResult{
 		Config: mc,
 	}, nil
 }
 
-// UnaryOutboundTransportMiddlewareParams defines the dependencies of this module.
-type UnaryOutboundTransportMiddlewareParams struct {
+// UnaryOutboundTransportParams defines the dependencies of this module.
+type UnaryOutboundTransportParams struct {
 	fx.In
 
-	Config          OutboundTransportMiddlewareConfig
+	Config          OutboundTransportConfig
 	Middleware      []yarpc.UnaryOutboundTransportMiddleware   `group:"yarpcfx"`
 	MiddlewareLists [][]yarpc.UnaryOutboundTransportMiddleware `group:"yarpcfx"`
 }
 
-// UnaryOutboundTransportMiddlewareResult defines the values produced by this module.
-type UnaryOutboundTransportMiddlewareResult struct {
+// UnaryOutboundTransportResult defines the values produced by this module.
+type UnaryOutboundTransportResult struct {
 	fx.Out
 
-	Middleware []yarpc.UnaryOutboundTransportMiddleware `name:"yarpcfx"`
+	// An ordered slice of middleware according to the given configuration.
+	OrderedMiddleware []yarpc.UnaryOutboundTransportMiddleware `name:"yarpcfx"`
 }
 
-// NewUnaryOutboundTransportMiddleware produceds an ordered slice of unary outbound transport middleware.
-func NewUnaryOutboundTransportMiddleware(
-	p UnaryOutboundTransportMiddlewareParams,
-) (UnaryOutboundTransportMiddlewareResult, error) {
+// NewUnaryOutboundTransport produceds an ordered slice of unary outbound transport middleware.
+func NewUnaryOutboundTransport(
+	p UnaryOutboundTransportParams,
+) (UnaryOutboundTransportResult, error) {
 	// Collect all of the middleware into a single slice.
 	middleware := p.Middleware
 	for _, ml := range p.MiddlewareLists {
@@ -99,7 +100,7 @@ func NewUnaryOutboundTransportMiddleware(
 	for _, m := range middleware {
 		name := m.Name()
 		if _, ok := middlewareMap[name]; ok {
-			return UnaryOutboundTransportMiddlewareResult{}, fmt.Errorf("unary outbound transport middleware %q was registered more than once", name)
+			return UnaryOutboundTransportResult{}, fmt.Errorf("unary outbound transport middleware %q was registered more than once", name)
 		}
 		middlewareMap[name] = m
 	}
@@ -109,12 +110,12 @@ func NewUnaryOutboundTransportMiddleware(
 	for i, name := range p.Config.Unary {
 		m, ok := middlewareMap[name]
 		if !ok {
-			return UnaryOutboundTransportMiddlewareResult{}, fmt.Errorf("failed to resolve unary outbound transport middleware: %q", name)
+			return UnaryOutboundTransportResult{}, fmt.Errorf("failed to resolve unary outbound transport middleware: %q", name)
 		}
 		ordered[i] = m
 	}
 
-	return UnaryOutboundTransportMiddlewareResult{
-		Middleware: ordered,
+	return UnaryOutboundTransportResult{
+		OrderedMiddleware: ordered,
 	}, nil
 }

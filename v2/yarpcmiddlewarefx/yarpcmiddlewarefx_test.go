@@ -30,22 +30,22 @@ import (
 	yarpc "go.uber.org/yarpc/v2"
 )
 
-func TestNewOutboundTransportMiddlewareConfig(t *testing.T) {
+func TestNewOutboundTransportConfig(t *testing.T) {
 	cfg := strings.NewReader(`yarpc: {middleware: {outbounds: {transport: {unary: ["nop"]}}}}`)
 	provider, err := config.NewYAML(config.Source(cfg))
 	require.NoError(t, err)
 
-	res, err := NewOutboundTransportMiddlewareConfig(OutboundTransportMiddlewareConfigParams{
+	res, err := NewOutboundTransportConfig(OutboundTransportConfigParams{
 		Provider: provider,
 	})
 	require.NoError(t, err)
-	assert.Equal(t, OutboundTransportMiddlewareConfig{Unary: []string{"nop"}}, res.Config)
+	assert.Equal(t, OutboundTransportConfig{Unary: []string{"nop"}}, res.Config)
 }
 
-func TestNewUnaryOutboundTransportMiddleware(t *testing.T) {
+func TestNewUnaryOutboundTransport(t *testing.T) {
 	t.Run("duplicate registration error", func(t *testing.T) {
-		_, err := NewUnaryOutboundTransportMiddleware(
-			UnaryOutboundTransportMiddlewareParams{
+		_, err := NewUnaryOutboundTransport(
+			UnaryOutboundTransportParams{
 				Middleware: []yarpc.UnaryOutboundTransportMiddleware{
 					yarpc.NopUnaryOutboundTransportMiddleware,
 					yarpc.NopUnaryOutboundTransportMiddleware,
@@ -56,9 +56,9 @@ func TestNewUnaryOutboundTransportMiddleware(t *testing.T) {
 	})
 
 	t.Run("configured middleware is not available", func(t *testing.T) {
-		_, err := NewUnaryOutboundTransportMiddleware(
-			UnaryOutboundTransportMiddlewareParams{
-				Config: OutboundTransportMiddlewareConfig{
+		_, err := NewUnaryOutboundTransport(
+			UnaryOutboundTransportParams{
+				Config: OutboundTransportConfig{
 					Unary: []string{"dne"},
 				},
 			},
@@ -67,9 +67,9 @@ func TestNewUnaryOutboundTransportMiddleware(t *testing.T) {
 	})
 
 	t.Run("successful construction", func(t *testing.T) {
-		res, err := NewUnaryOutboundTransportMiddleware(
-			UnaryOutboundTransportMiddlewareParams{
-				Config: OutboundTransportMiddlewareConfig{
+		res, err := NewUnaryOutboundTransport(
+			UnaryOutboundTransportParams{
+				Config: OutboundTransportConfig{
 					Unary: []string{"nop"},
 				},
 				MiddlewareLists: [][]yarpc.UnaryOutboundTransportMiddleware{
@@ -81,7 +81,7 @@ func TestNewUnaryOutboundTransportMiddleware(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		middleware := res.Middleware
+		middleware := res.OrderedMiddleware
 		require.Len(t, middleware, 1)
 		assert.Equal(t, "nop", middleware[0].Name())
 	})
