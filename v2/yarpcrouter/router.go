@@ -32,11 +32,6 @@ import (
 
 var _ yarpc.Router = (*MapRouter)(nil)
 
-type serviceProcedure struct {
-	service   string
-	procedure string
-}
-
 type serviceProcedureEncoding struct {
 	service   string
 	procedure string

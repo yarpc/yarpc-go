@@ -1,6 +1,6 @@
 - [ ] Strike ResponseWriter out, use *yarpc.Response directly.
       - [x] Fix inbound middleware
-      - [ ] Fix inbound transports
+      - [x] Fix inbound transports
       - [ ] Consider creating a unified Unary or Caller interface that can be
             used for both inbound and outbound unary.
       - [x] Consider removing Body from Request and Response entirely, making
@@ -15,7 +15,7 @@
       - [ ] Revisit the ApplicationError field in *yarpc.Response and consider replacing it
             with a strongly-typed metadata struct or interface.
 - [x] Change Request and Response body to yarpc.Buffer type
-      - [ ] Accumulate request bodies at the inbound
+      - [x] Accumulate request bodies at the inbound
 - [ ] yarpcrouter.Router needs to accept middleware to decorate registered
       procedures.
 - [ ] Replace functional options in yarpcpeerlist with struct options
@@ -31,14 +31,13 @@
       ordering, perhaps taking availability changes into account.
 - [ ] Audit yarpcerrors, remove the ones that are no longer needed.
       - [ ] add staticcheck for v2/internal/internalyarpcerror/yarpcerrors.go from `local.mk`
-- [ ] Construct PRs with retroactive continuity.
-- [ ] Nit: scrape name pid and change to just id throughout.
+- [x] Nit: scrape name pid and change to just id throughout.
 - [ ] Audit docs
       - [ ] gRPC
       - [ ] TChannel
       - [ ] HTTP
 - [ ] InvokeUnaryHandler: reduce package name noise at the call site by changing to a Do(ctx) method on UnaryInvokeRequest
-- [ ] support StreamHandlers in EncodingHandlerSpec
+- [x] Figure out the role of streams in EncodingHandlerSpec: streaming handlers will only apply at the transport level.
 - [ ] Restore Request/Response validation, either in the transport layer or
       with middleware installed by Router (ServerProvider *cough*) and ClientProvider.
       - [ ] Inbound
@@ -93,9 +92,9 @@ Transports:
 
 Peer Lists:
 - [x] Port abstract peer list to v2/yarpcpeerlist
-- [ ] Port yarpcroundrobin
+- [x] Port yarpcroundrobin
 - [x] Port yarpcrandpeer
-- [ ] Port yarpcchoiceoftwo
+- [x] Port yarpcchoiceoftwo
 - [x] Port yarpcfewestpending
 - [ ] Port yarpchashring32
 - [ ] Remove PendingRequestCount from Status
@@ -152,24 +151,24 @@ Package changes:
 - [ ] intyarpcerrors yarpc/internal/yarpcerrors -> yarpc/v2/internal/internalyarpcerrors
 
 Name changes
-- [ ] {Mock,}{Unary,Stream}Handler -> {Mock,}{Unary,Stream}Transport{Handler,Middleware}
-- [ ] api/transport.* -> v2.*
-- [ ] api/transport/transporttest.* -> v2/yarpctest.*
-- [ ] api/peer.* -> v2.*
-- [ ] api/peer/peertest.* -> v2/yarpctest.*
-- [x] api/middleware.* -> v2/yarpcmiddlware.*
-- [ ] api/middleware/middlewaretest.* -> v2/yarpcmiddlewaretest.*
-- [ ] transport/* -> v2/yarpc*
-- [ ] encoding/* -> v2/yarpc*
-- [ ] yarpc.ErrTansportHasNoReferenceToPeer -> yarpcpeer.ErrDialerHasNoReferenceToPeer
-- [ ] pkg/errors.WrapHandlerError -> v2/yarpcerrors.WrapHandlerError
-- [ ] peer/hostport.PeerIdentifier -> v2.Address
-- [ ] peer/hostport.Peer -> v2/yarpcpeer.AbstractPeer
-- [ ] yarpc.OpentracingTags -> v2/yarpctracing.Tags
-- [ ] internal/errors.ZeroAddrToHostPort -> v2/internal/internalyarpcerrors.ZeroAddrToHostPort
-- [ ] internal/iopool -> v2/internal/internaliopool
-- [ ] TransportAction -> DialerAction
-- [ ] ApplyTransportActions -> ApplyDialerActions
-- [ ] peer.Single -> no longer needed
-- [ ] peer.Binder -> no longer needed
-- [ ] internal/testtime -> v2/internal/internaltesttime
+- {Mock,}{Unary,Stream}Handler -> {Mock,}{Unary,Stream}Transport{Handler,Middleware}
+- api/transport.* -> v2.*
+- api/transport/transporttest.* -> v2/yarpctest.*
+- api/peer.* -> v2.*
+- api/peer/peertest.* -> v2/yarpctest.*
+- api/middleware.* -> v2/yarpcmiddlware.*
+- api/middleware/middlewaretest.* -> v2/yarpcmiddlewaretest.*
+- transport/* -> v2/yarpc*
+- encoding/* -> v2/yarpc*
+- yarpc.ErrTansportHasNoReferenceToPeer -> yarpcpeer.ErrDialerHasNoReferenceToPeer
+- pkg/errors.WrapHandlerError -> v2/yarpcerrors.WrapHandlerError
+- peer/hostport.PeerIdentifier -> v2.Address
+- peer/hostport.Peer -> v2/yarpcpeer.AbstractPeer
+- yarpc.OpentracingTags -> v2/yarpctracing.Tags
+- internal/errors.ZeroAddrToHostPort -> v2/internal/internalyarpcerrors.ZeroAddrToHostPort
+- internal/iopool -> v2/internal/internaliopool
+- TransportAction -> DialerAction
+- ApplyTransportActions -> ApplyDialerActions
+- peer.Single -> no longer needed
+- peer.Binder -> no longer needed
+- internal/testtime -> v2/internal/internaltesttime

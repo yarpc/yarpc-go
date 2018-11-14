@@ -38,7 +38,7 @@ type tchannelPeer struct {
 	timer    *time.Timer
 }
 
-func newPeer(pid yarpc.Identifier, addr string, dialer *Dialer) *tchannelPeer {
+func newPeer(id yarpc.Identifier, addr string, dialer *Dialer) *tchannelPeer {
 	// Create a defused timer for later use.
 	timer := time.NewTimer(0)
 	if !timer.Stop() {
@@ -46,7 +46,7 @@ func newPeer(pid yarpc.Identifier, addr string, dialer *Dialer) *tchannelPeer {
 	}
 
 	return &tchannelPeer{
-		AbstractPeer: yarpcpeer.NewAbstractPeer(pid),
+		AbstractPeer: yarpcpeer.NewAbstractPeer(id),
 
 		addr:     addr,
 		dialer:   dialer,

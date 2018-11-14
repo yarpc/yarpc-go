@@ -88,12 +88,12 @@ type mraList struct {
 
 var _ Implementation = (*mraList)(nil)
 
-func (l *mraList) Add(peer yarpc.StatusPeer, pid yarpc.Identifier) yarpc.Subscriber {
+func (l *mraList) Add(peer yarpc.StatusPeer, id yarpc.Identifier) yarpc.Subscriber {
 	l.mra = peer
 	return &mraSub{}
 }
 
-func (l *mraList) Remove(peer yarpc.StatusPeer, pid yarpc.Identifier, ps yarpc.Subscriber) {
+func (l *mraList) Remove(peer yarpc.StatusPeer, id yarpc.Identifier, ps yarpc.Subscriber) {
 	l.mrr = peer
 }
 
@@ -104,7 +104,7 @@ func (l *mraList) Choose(ctx context.Context, req *yarpc.Request) yarpc.StatusPe
 type mraSub struct {
 }
 
-func (s *mraSub) NotifyStatusChanged(pid yarpc.Identifier) {
+func (s *mraSub) NotifyStatusChanged(id yarpc.Identifier) {
 }
 
 func TestPeerList(t *testing.T) {

@@ -50,5 +50,5 @@ type nopSubscriber struct{}
 func (nopSubscriber) NotifyStatusChanged(Identifier) {}
 
 // NopSubscriber is a peer status notification subscriber that ignores such
-// notifications, for tests and for the single peer chooser.
+// notifications, for tests and when a dialer is acting on a single peer.
 var NopSubscriber nopSubscriber

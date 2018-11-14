@@ -41,7 +41,7 @@ type subscriber struct {
 	node *ring.Ring
 }
 
-func (s *subscriber) NotifyStatusChanged(pid yarpc.Identifier) {
+func (s *subscriber) NotifyStatusChanged(id yarpc.Identifier) {
 }
 
 // peerRing provides a safe way to interact (Add/Remove/Get) with a potentially

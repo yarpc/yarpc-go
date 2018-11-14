@@ -239,25 +239,25 @@ func (d *dialerInternals) stop(ctx context.Context) error {
 }
 
 // RetainPeer gets or creates a Peer for the specified yarpc.Subscriber (usually a yarpc.Chooser)
-func (d *Dialer) RetainPeer(pid yarpc.Identifier, sub yarpc.Subscriber) (yarpc.Peer, error) {
+func (d *Dialer) RetainPeer(id yarpc.Identifier, sub yarpc.Subscriber) (yarpc.Peer, error) {
 	if d.internal == nil {
 		return nil, fmt.Errorf("yarpchttp.Dialer.RetainPeer must be called after Start")
 	}
-	return d.internal.retainPeer(pid, sub)
+	return d.internal.retainPeer(id, sub)
 }
 
-func (d *dialerInternals) retainPeer(pid yarpc.Identifier, sub yarpc.Subscriber) (yarpc.Peer, error) {
+func (d *dialerInternals) retainPeer(id yarpc.Identifier, sub yarpc.Subscriber) (yarpc.Peer, error) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	p := d.getOrCreatePeer(pid)
+	p := d.getOrCreatePeer(id)
 	p.Subscribe(sub)
 	return p, nil
 }
 
 // **NOTE** should only be called while the lock write mutex is acquired
-func (d *dialerInternals) getOrCreatePeer(pid yarpc.Identifier) *httpPeer {
-	addr := pid.Identifier()
+func (d *dialerInternals) getOrCreatePeer(id yarpc.Identifier) *httpPeer {
+	addr := id.Identifier()
 	if p, ok := d.peers[addr]; ok {
 		return p
 	}
@@ -270,22 +270,22 @@ func (d *dialerInternals) getOrCreatePeer(pid yarpc.Identifier) *httpPeer {
 }
 
 // ReleasePeer releases a peer from the yarpc.Subscriber and removes that peer from the Dialer if nothing is listening to it
-func (d *Dialer) ReleasePeer(pid yarpc.Identifier, sub yarpc.Subscriber) error {
+func (d *Dialer) ReleasePeer(id yarpc.Identifier, sub yarpc.Subscriber) error {
 	if d.internal == nil {
 		return fmt.Errorf("yarpchttp.Dialer.ReleasePeer must be called after Start")
 	}
-	return d.internal.releasePeer(pid, sub)
+	return d.internal.releasePeer(id, sub)
 }
 
-func (d *dialerInternals) releasePeer(pid yarpc.Identifier, sub yarpc.Subscriber) error {
+func (d *dialerInternals) releasePeer(id yarpc.Identifier, sub yarpc.Subscriber) error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	p, ok := d.peers[pid.Identifier()]
+	p, ok := d.peers[id.Identifier()]
 	if !ok {
 		return yarpcpeer.ErrDialerHasNoReferenceToPeer{
 			DialerName:     "http.Transport",
-			PeerIdentifier: pid.Identifier(),
+			PeerIdentifier: id.Identifier(),
 		}
 	}
 
@@ -294,7 +294,7 @@ func (d *dialerInternals) releasePeer(pid yarpc.Identifier, sub yarpc.Subscriber
 	}
 
 	if p.NumSubscribers() == 0 {
-		delete(d.peers, pid.Identifier())
+		delete(d.peers, id.Identifier())
 		p.Release()
 	}
 

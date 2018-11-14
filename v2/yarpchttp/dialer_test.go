@@ -38,11 +38,11 @@ type peerExpectation struct {
 }
 
 func createPeerIdentifierMap(ids []string) map[string]yarpc.Identifier {
-	pids := make(map[string]yarpc.Identifier, len(ids))
+	idMap := make(map[string]yarpc.Identifier, len(ids))
 	for _, id := range ids {
-		pids[id] = yarpc.Address(id)
+		idMap[id] = yarpc.Address(id)
 	}
-	return pids
+	return idMap
 }
 
 func TestDialer(t *testing.T) {

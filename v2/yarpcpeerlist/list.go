@@ -162,8 +162,8 @@ func (pl *List) Update(updates yarpc.ListUpdates) error {
 	defer pl.lock.Unlock()
 
 	var errs error
-	for _, pid := range updates.Removals {
-		errs = multierr.Append(errs, pl.removePeerIdentifier(pid))
+	for _, id := range updates.Removals {
+		errs = multierr.Append(errs, pl.removePeerIdentifier(id))
 	}
 
 	add := updates.Additions
@@ -171,21 +171,21 @@ func (pl *List) Update(updates yarpc.ListUpdates) error {
 		add = shuffle(pl.randSrc, add)
 	}
 
-	for _, pid := range add {
-		errs = multierr.Append(errs, pl.addPeerIdentifier(pid))
+	for _, id := range add {
+		errs = multierr.Append(errs, pl.addPeerIdentifier(id))
 	}
 	return errs
 }
 
 // Must be run inside a mutex.Lock()
-func (pl *List) addPeerIdentifier(pid yarpc.Identifier) error {
-	if t := pl.getThunk(pid); t != nil {
-		return yarpcpeer.ErrPeerAddAlreadyInList(pid.Identifier())
+func (pl *List) addPeerIdentifier(id yarpc.Identifier) error {
+	if t := pl.getThunk(id); t != nil {
+		return yarpcpeer.ErrPeerAddAlreadyInList(id.Identifier())
 	}
 
-	t := &peerThunk{list: pl, id: pid}
+	t := &peerThunk{list: pl, id: id}
 	t.boundOnFinish = t.onFinish
-	p, err := pl.transport.RetainPeer(pid, t)
+	p, err := pl.transport.RetainPeer(id, t)
 	if err != nil {
 		return err
 	}
@@ -259,30 +259,30 @@ func (pl *List) releaseAll(errs error, peers []*peerThunk) error {
 // removePeerIdentifier will go remove references to the peer identifier and release
 // it from the transport
 // Must be run in a mutex.Lock()
-func (pl *List) removePeerIdentifier(pid yarpc.Identifier) error {
-	t, err := pl.removePeerIdentifierReferences(pid)
+func (pl *List) removePeerIdentifier(id yarpc.Identifier) error {
+	t, err := pl.removePeerIdentifierReferences(id)
 	if err != nil {
 		// The peer has already been removed
 		return err
 	}
 
-	return pl.transport.ReleasePeer(pid, t)
+	return pl.transport.ReleasePeer(id, t)
 }
 
 // removePeerIdentifierReferences will search through the Available and Unavailable Peers
 // for the PeerID and remove it
 // Must be run in a mutex.Lock()
-func (pl *List) removePeerIdentifierReferences(pid yarpc.Identifier) (*peerThunk, error) {
-	if t := pl.availablePeers[pid.Identifier()]; t != nil {
+func (pl *List) removePeerIdentifierReferences(id yarpc.Identifier) (*peerThunk, error) {
+	if t := pl.availablePeers[id.Identifier()]; t != nil {
 		return t, pl.removeFromAvailablePeers(t)
 	}
 
-	if t, ok := pl.unavailablePeers[pid.Identifier()]; ok && t != nil {
+	if t, ok := pl.unavailablePeers[id.Identifier()]; ok && t != nil {
 		pl.removeFromUnavailablePeers(t)
 		return t, nil
 	}
 
-	return nil, yarpcpeer.ErrPeerRemoveNotInList(pid.Identifier())
+	return nil, yarpcpeer.ErrPeerRemoveNotInList(id.Identifier())
 }
 
 // removeFromAvailablePeers remove a peer from the Available Peers list the
@@ -356,9 +356,9 @@ func (pl *List) newUnavailableError(err error) error {
 
 // NotifyStatusChanged receives status change notifications for peers in the
 // list.
-func (pl *List) NotifyStatusChanged(pid yarpc.Identifier) {
+func (pl *List) NotifyStatusChanged(id yarpc.Identifier) {
 	pl.lock.RLock()
-	t := pl.getThunk(pid)
+	t := pl.getThunk(id)
 	pl.lock.RUnlock()
 
 	if t != nil {
@@ -368,25 +368,25 @@ func (pl *List) NotifyStatusChanged(pid yarpc.Identifier) {
 
 // getThunk returns either the available or unavailable peer thunk.
 // Must be called under a lock.
-func (pl *List) getThunk(pid yarpc.Identifier) *peerThunk {
-	if t := pl.availablePeers[pid.Identifier()]; t != nil {
+func (pl *List) getThunk(id yarpc.Identifier) *peerThunk {
+	if t := pl.availablePeers[id.Identifier()]; t != nil {
 		return t
 	}
-	return pl.unavailablePeers[pid.Identifier()]
+	return pl.unavailablePeers[id.Identifier()]
 }
 
 // notifyStatusChanged gets called by peer thunks
-func (pl *List) notifyStatusChanged(pid yarpc.Identifier) {
+func (pl *List) notifyStatusChanged(id yarpc.Identifier) {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
-	if t := pl.availablePeers[pid.Identifier()]; t != nil {
+	if t := pl.availablePeers[id.Identifier()]; t != nil {
 		// TODO: log error
 		_ = pl.handleAvailablePeerStatusChange(t)
 		return
 	}
 
-	if t := pl.unavailablePeers[pid.Identifier()]; t != nil {
+	if t := pl.unavailablePeers[id.Identifier()]; t != nil {
 		// TODO: log error
 		_ = pl.handleUnavailablePeerStatusChange(t)
 	}

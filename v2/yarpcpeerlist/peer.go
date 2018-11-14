@@ -59,11 +59,11 @@ func (t *peerThunk) EndRequest() {
 
 // NotifyStatusChanged forwards a status notification to the peer list and to
 // the underlying identifier chooser list.
-func (t *peerThunk) NotifyStatusChanged(pid yarpc.Identifier) {
-	t.list.notifyStatusChanged(pid)
+func (t *peerThunk) NotifyStatusChanged(id yarpc.Identifier) {
+	t.list.notifyStatusChanged(id)
 
 	if s := t.Subscriber(); s != nil {
-		s.NotifyStatusChanged(pid)
+		s.NotifyStatusChanged(id)
 	}
 }
 

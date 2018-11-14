@@ -129,7 +129,7 @@ func (d *Dialer) Stop(ctx context.Context) error {
 // transport to maintain persistent connections with that peer.
 //
 // RetainPeer must be called while the dialer is running.
-func (d *Dialer) RetainPeer(pid yarpc.Identifier, sub yarpc.Subscriber) (yarpc.Peer, error) {
+func (d *Dialer) RetainPeer(id yarpc.Identifier, sub yarpc.Subscriber) (yarpc.Peer, error) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
@@ -142,19 +142,19 @@ func (d *Dialer) RetainPeer(pid yarpc.Identifier, sub yarpc.Subscriber) (yarpc.P
 		return nil, fmt.Errorf("Dialer must be started to retain peers")
 	}
 
-	p := d.getOrCreatePeer(pid)
+	p := d.getOrCreatePeer(id)
 	p.Subscribe(sub)
 	return p, nil
 }
 
 // **NOTE** should only be called while the lock write mutex is acquired
-func (d *Dialer) getOrCreatePeer(pid yarpc.Identifier) *tchannelPeer {
-	addr := pid.Identifier()
+func (d *Dialer) getOrCreatePeer(id yarpc.Identifier) *tchannelPeer {
+	addr := id.Identifier()
 	if p, ok := d.peers[addr]; ok {
 		return p
 	}
 
-	p := newPeer(pid, addr, d)
+	p := newPeer(id, addr, d)
 	d.peers[addr] = p
 	// Start a peer connection loop
 	d.connectorsGroup.Add(1)
@@ -165,16 +165,16 @@ func (d *Dialer) getOrCreatePeer(pid yarpc.Identifier) *tchannelPeer {
 
 // ReleasePeer releases a peer from the yarpc.Subscriber and removes that peer
 // from the Dialer if nothing is listening to it.
-func (d *Dialer) ReleasePeer(pid yarpc.Identifier, sub yarpc.Subscriber) error {
+func (d *Dialer) ReleasePeer(id yarpc.Identifier, sub yarpc.Subscriber) error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	p, ok := d.peers[pid.Identifier()]
+	p, ok := d.peers[id.Identifier()]
 	if !ok {
 		// This is only reachable if there is a bug in a peer list.
 		return yarpcpeer.ErrDialerHasNoReferenceToPeer{
 			DialerName:     "tchannel.Dialer",
-			PeerIdentifier: pid.Identifier(),
+			PeerIdentifier: id.Identifier(),
 		}
 	}
 
@@ -186,7 +186,7 @@ func (d *Dialer) ReleasePeer(pid yarpc.Identifier, sub yarpc.Subscriber) error {
 	if p.NumSubscribers() == 0 {
 		// Release the peer so that the connection retention loop stops.
 		p.Release()
-		delete(d.peers, pid.Identifier())
+		delete(d.peers, id.Identifier())
 	}
 
 	return nil
