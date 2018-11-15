@@ -60,8 +60,17 @@ func (h unaryTransportHandlerWithMiddleware) Handle(ctx context.Context, req *Re
 	return h.i.Handle(ctx, req, reqBuf, h.h)
 }
 
-// ApplyUnaryInboundTransportMiddleware applies the given InboundMiddleware to the given UnaryTransportHandler.
-func ApplyUnaryInboundTransportMiddleware(handler UnaryTransportHandler, middleware UnaryInboundTransportMiddleware) UnaryTransportHandler {
+// ApplyUnaryInboundTransportMiddleware applies the given middleware to the
+// given UnaryInboundTransportHandler.
+func ApplyUnaryInboundTransportMiddleware(h UnaryTransportHandler, middleware ...UnaryInboundTransportMiddleware) UnaryTransportHandler {
+	handler := h
+	for i := len(middleware) - 1; i >= 0; i-- {
+		handler = applyUnaryInboundTransportMiddleware(handler, middleware[i])
+	}
+	return handler
+}
+
+func applyUnaryInboundTransportMiddleware(handler UnaryTransportHandler, middleware UnaryInboundTransportMiddleware) UnaryTransportHandler {
 	if middleware == nil {
 		return handler
 	}
