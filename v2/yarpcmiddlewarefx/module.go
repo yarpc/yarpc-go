@@ -29,4 +29,7 @@ import (
 var Module = fx.Provide(
 	NewOutboundTransportConfig,
 	NewUnaryOutboundTransport,
+
+	NewInboundTransportConfig,
+	NewUnaryInboundTransport,
 )
