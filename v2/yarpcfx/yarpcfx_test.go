@@ -21,6 +21,7 @@
 package yarpcfx
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -61,6 +62,42 @@ func TestNewClientProvider(t *testing.T) {
 		_, ok = provider.Client("unknown")
 		assert.False(t, ok)
 	})
+}
+
+func TestClientHasMiddleware(t *testing.T) {
+	var gotCallOder []string
+
+	var middleware = yarpc.UnaryOutboundTransportMiddlewareFunc(
+		func(ctx context.Context, _ *yarpc.Request, _ *yarpc.Buffer, o yarpc.UnaryOutbound) (*yarpc.Response, *yarpc.Buffer, error) {
+			gotCallOder = append(gotCallOder, "middleware")
+			return o.Call(ctx, nil, nil)
+		})
+
+	out := yarpctest.OutboundCallable(func(context.Context, *yarpc.Request, *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
+		gotCallOder = append(gotCallOder, "outbound")
+		return nil, nil, nil
+	})
+	trans := &yarpctest.FakeTransport{}
+
+	client := yarpc.Client{
+		Name:  "client",
+		Unary: trans.NewOutbound(nil, yarpctest.OutboundCallOverride(out)),
+	}
+
+	result, err := NewClientProvider(ClientProviderParams{
+		UnaryOutboundTransportMiddleware: []yarpc.UnaryOutboundTransportMiddleware{middleware},
+		Clients:                          []yarpc.Client{client},
+	})
+
+	require.NoError(t, err)
+
+	client, ok := result.Provider.Client("client")
+	require.True(t, ok, "could not find client")
+
+	_, _, _ = client.Unary.Call(context.Background(), nil, nil)
+
+	wantCallOrder := []string{"middleware", "outbound"}
+	assert.Equal(t, wantCallOrder, gotCallOder)
 }
 
 func TestNewDialerProvider(t *testing.T) {
