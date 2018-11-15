@@ -75,6 +75,11 @@ func applyUnaryOutboundTransportMiddleware(o UnaryOutbound, f UnaryOutboundTrans
 // UnaryOutboundTransportMiddlewareFunc adapts a function into a UnaryOutboundTransportMiddleware.
 type UnaryOutboundTransportMiddlewareFunc func(context.Context, *Request, *Buffer, UnaryOutbound) (*Response, *Buffer, error)
 
+// Name for UnaryOutboundTransportMiddlewareFunc.
+func (UnaryOutboundTransportMiddlewareFunc) Name() string {
+	return "UnaryOutboundTransportMiddlewareFunc"
+}
+
 // Call for UnaryOutboundTransportMiddlewareFunc.
 func (f UnaryOutboundTransportMiddlewareFunc) Call(
 	ctx context.Context,
