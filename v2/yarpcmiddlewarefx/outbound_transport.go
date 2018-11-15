@@ -28,8 +28,6 @@ import (
 	yarpc "go.uber.org/yarpc/v2"
 )
 
-const outboundTransportConfigurationKey = "yarpc.middleware.outbounds.transport"
-
 // OutboundTransportConfig describes the configuration
 // shape for an ordered list of unary outbound transport middleware.
 type OutboundTransportConfig struct {
