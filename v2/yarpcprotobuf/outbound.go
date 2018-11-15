@@ -100,15 +100,9 @@ func (c *client) Call(
 		return nil, err
 	}
 
-	body, cleanup, err := marshal(req.Encoding, protoReq)
+	reqBuf, err := marshal(req.Encoding, protoReq)
 	if err != nil {
 		return nil, yarpcencoding.RequestBodyEncodeError(req, err)
-	}
-	defer cleanup()
-
-	reqBuf := &yarpc.Buffer{}
-	if _, err := reqBuf.Write(body); err != nil {
-		return nil, err
 	}
 
 	res, resBuf, appErr := c.c.Unary.Call(ctx, req, reqBuf)
