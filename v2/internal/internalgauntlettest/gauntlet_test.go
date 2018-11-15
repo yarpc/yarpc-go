@@ -95,7 +95,7 @@ func newChooser(t *testing.T, chooser string, dialer yarpc.Dialer, id yarpc.Iden
 		return pl
 
 	case _pendingheap:
-		pl := yarpcpendingheap.New(dialer)
+		pl := yarpcpendingheap.New("pending-heap", dialer)
 		pl.Update(update)
 		return pl
 
