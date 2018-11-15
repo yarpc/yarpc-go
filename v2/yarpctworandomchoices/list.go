@@ -72,7 +72,7 @@ func Source(source rand.Source) ListOption {
 }
 
 // New creates a new two-random-choices peer list.
-func New(dialer yarpc.Dialer, opts ...ListOption) *List {
+func New(name string, dialer yarpc.Dialer, opts ...ListOption) *List {
 	options := defaultListOptions
 	for _, opt := range opts {
 		opt.apply(&options)
@@ -89,7 +89,7 @@ func New(dialer yarpc.Dialer, opts ...ListOption) *List {
 
 	return &List{
 		List: yarpcpeerlist.New(
-			"two-random-choices",
+			name,
 			dialer,
 			newTwoRandomChoicesList(options.capacity, options.source),
 			plOpts...,

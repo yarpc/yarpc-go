@@ -328,7 +328,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			yarpctest.ExpectPeerRetainsWithError(dialer, tt.errRetainedPeerIDs, tt.retainErr)
 			yarpctest.ExpectPeerReleases(dialer, tt.errReleasedPeerIDs, tt.releaseErr)
 
-			pl := yarpctworandomchoices.New(dialer, yarpctworandomchoices.Seed(0))
+			pl := yarpctworandomchoices.New("two-random-choices", dialer, yarpctworandomchoices.Seed(0))
 
 			deps := yarpctest.ListActionDeps{
 				Peers: peerMap,
