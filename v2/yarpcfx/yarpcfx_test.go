@@ -208,3 +208,43 @@ func TestNewRouter(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, res.Router.Procedures(), 3)
 }
+
+func TestNewRouterWithInboundMiddleware(t *testing.T) {
+	var callOrder []string
+
+	unaryMiddleware := []yarpc.UnaryInboundTransportMiddleware{
+		yarpc.UnaryInboundTransportMiddlewareFunc(
+			func(ctx context.Context, _ *yarpc.Request, _ *yarpc.Buffer, h yarpc.UnaryTransportHandler) (*yarpc.Response, *yarpc.Buffer, error) {
+				callOrder = append(callOrder, "middleware")
+				return h.Handle(ctx, nil, nil)
+			}),
+	}
+
+	handler := yarpc.UnaryTransportHandlerFunc(
+		func(context.Context, *yarpc.Request, *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
+			callOrder = append(callOrder, "handler")
+			return nil, nil, nil
+		})
+
+	procedures := []yarpc.TransportProcedure{
+		{
+			Name:        "foo",
+			HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(handler),
+		},
+	}
+
+	result, err := NewRouter(RouterParams{
+		Procedures:               procedures,
+		UnaryTransportMiddleware: unaryMiddleware,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.NotNil(t, result.Router)
+
+	assert.Len(t, result.Router.Procedures(), 1)
+
+	h := result.Router.Procedures()[0].HandlerSpec.Unary()
+	h.Handle(context.Background(), &yarpc.Request{}, &yarpc.Buffer{})
+
+	assert.Equal(t, []string{"middleware", "handler"}, callOrder)
+}
