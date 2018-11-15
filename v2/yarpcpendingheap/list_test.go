@@ -404,7 +404,7 @@ func TestPeerHeapList(t *testing.T) {
 			}
 			opts := []ListOption{Capacity(0), noShuffle(), randOption}
 
-			pl := New(dialer, opts...)
+			pl := New("fewest-pending-requests", dialer, opts...)
 
 			deps := yarpctest.ListActionDeps{
 				Peers: peerMap,

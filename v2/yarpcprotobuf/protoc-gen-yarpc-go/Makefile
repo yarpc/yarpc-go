@@ -17,6 +17,7 @@ generate:
 ifeq ($(shell which prototool),)
 	@go get -u github.com/uber/prototool/internal/cmd/prototool
 endif
+	@go install .
 	@prototool generate $(TESTS_DIR)
 
 # A simple utility used to update our test fixtures when

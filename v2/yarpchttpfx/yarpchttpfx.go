@@ -82,9 +82,10 @@ func NewInboundConfig(p InboundConfigParams) (InboundConfigResult, error) {
 type StartInboundsParams struct {
 	fx.In
 
+	Config InboundConfig
+	Router yarpc.Router
+
 	Lifecycle fx.Lifecycle
-	Router    yarpc.Router
-	Config    InboundConfig
 	Logger    *zap.Logger        `optional:"true"`
 	Tracer    opentracing.Tracer `optional:"true"`
 }

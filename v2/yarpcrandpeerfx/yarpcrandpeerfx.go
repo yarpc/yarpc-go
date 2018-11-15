@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcroundrobinfx
+package yarpcrandpeerfx
 
 import (
 	"fmt"
@@ -26,27 +26,27 @@ import (
 	"go.uber.org/config"
 	"go.uber.org/fx"
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcroundrobin"
+	"go.uber.org/yarpc/v2/yarpcrandpeer"
 )
 
 const (
-	_name             = "yarpcroundrobinfx"
-	_configurationKey = "yarpc.choosers.round-robin"
+	_name             = "yarpcrandpeerfx"
+	_configurationKey = "yarpc.choosers.random"
 )
 
-// Module produces a yarpcroundrobin peer list.
+// Module produces a yarpcrandpeer peer list.
 var Module = fx.Options(
 	fx.Provide(NewConfig),
 	fx.Provide(NewList),
 )
 
-// Config is the configuration for constructing a set of round-robin peer.Choosers.
+// Config is the configuration for constructing a set of random peer.Choosers.
 type Config struct {
-	Choosers map[string]RoundRobinConfig `yaml:",inline"`
+	Choosers map[string]RandomConfig `yaml:",inline"`
 }
 
-// RoundRobinConfig is the configuration for constructing a specific round-robin peer.Chooser.
-type RoundRobinConfig struct {
+// RandomConfig is the configuration for constructing a specific random peer.Chooser.
+type RandomConfig struct {
 	Dialer   string `yaml:"dialer"`
 	Capacity int    `yaml:"capacity"`
 }
@@ -71,9 +71,7 @@ func NewConfig(p ConfigParams) (ConfigResult, error) {
 	if err := p.Provider.Get(_configurationKey).Populate(&c); err != nil {
 		return ConfigResult{}, err
 	}
-	return ConfigResult{
-		Config: c,
-	}, nil
+	return ConfigResult{Config: c}, nil
 }
 
 // ListParams defines the dependencies of this module.
@@ -92,8 +90,7 @@ type ListResult struct {
 	Lists    []yarpc.List    `group:"yarpcfx"`
 }
 
-// NewList produces a a yarpcroundrobin.List into
-// the yarpc.NamedList and yarpc.NamedChooser groups.
+// NewList produces `yarpcrandpeer.List`s as `yarpc.Chooser`s and `yarpc.List`s.
 func NewList(p ListParams) (ListResult, error) {
 	var (
 		choosers []yarpc.Chooser
@@ -105,20 +102,15 @@ func NewList(p ListParams) (ListResult, error) {
 			return ListResult{}, fmt.Errorf("failed to resolve dialer %q", c.Dialer)
 		}
 
-		var opts []yarpcroundrobin.ListOption
+		var opts []yarpcrandpeer.ListOption
 		if c.Capacity > 0 {
-			opts = append(opts, yarpcroundrobin.Capacity(c.Capacity))
+			opts = append(opts, yarpcrandpeer.Capacity(c.Capacity))
 		}
 
-		list := yarpcroundrobin.New(name, dialer, opts...)
-		choosers = append(
-			choosers,
-			yarpc.Chooser(list),
-		)
-		lists = append(
-			lists,
-			yarpc.List(list),
-		)
+		list := yarpcrandpeer.New(name, dialer, opts...)
+
+		choosers = append(choosers, list)
+		lists = append(lists, list)
 	}
 	return ListResult{
 		Choosers: choosers,

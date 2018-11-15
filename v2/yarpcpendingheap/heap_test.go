@@ -28,11 +28,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPeerHeapRunning(t *testing.T) {
-	var ph pendingHeap
-	assert.True(t, (&ph).IsRunning(), "Always running. Nothing stops the peer heap.")
-}
-
 func TestPeerHeapEmpty(t *testing.T) {
 	var ph pendingHeap
 	assert.Zero(t, ph.Len(), "New peer heap should be empty")

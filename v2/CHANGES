@@ -19,10 +19,20 @@
 - [ ] yarpcrouter.Router needs to accept middleware to decorate registered
       procedures.
 - [ ] Replace functional options in yarpcpeerlist with struct options
+- [ ] Consider separating the auto-observability middleware into two components: logging and metrics.
 - [ ] Integrate the configuration into a variety of Fx modules.
       - [ ] Integrate servicefx.Metadata into each of the relevant Fx packages.
-            - [ ] gRPC
-- [ ] Create an API in yarpcfx to register and obtain peer lists by name.
+      - [ ] Transports
+            - [ ] HTTP
+            - [x] gRPC
+            - [ ] TChannel
+      - [ ] Peer lists
+            - [ ] Round-robin
+            - [ ] Two-random-choices
+            - [ ] Random-peer
+            - [ ] Pending-heap
+      - [ ] Middleware
+- [x] Create an API in yarpcfx to register and obtain peer lists by name.
       Use this API to configure the chooser for an outbound in their transport fx package.
       Use this API to send updates from a peer list updater to a peer list in the updater fx package.
 - [ ] yarpchttp needs to subsume responsibility for validating requests instead

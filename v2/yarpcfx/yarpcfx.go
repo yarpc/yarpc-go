@@ -46,6 +46,8 @@ var Module = fx.Options(
 type ClientProviderParams struct {
 	fx.In
 
+	UnaryOutboundTransportMiddleware []yarpc.UnaryOutboundTransportMiddleware `name:"yarpcfx" optional:"true"`
+
 	Clients     []yarpc.Client   `group:"yarpcfx"`
 	ClientLists [][]yarpc.Client `group:"yarpcfx"`
 }
@@ -62,6 +64,9 @@ func NewClientProvider(p ClientProviderParams) (ClientProviderResult, error) {
 	clients := p.Clients
 	for _, cl := range p.ClientLists {
 		clients = append(clients, cl...)
+	}
+	for _, c := range clients {
+		c.Unary = yarpc.ApplyUnaryOutboundTransportMiddleware(c.Unary, p.UnaryOutboundTransportMiddleware...)
 	}
 	provider, err := yarpcclient.NewProvider(clients...)
 	if err != nil {

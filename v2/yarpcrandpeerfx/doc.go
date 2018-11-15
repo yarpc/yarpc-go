@@ -18,4 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcprotobuf
+// Package yarpcrandpeerfx provides a random peer.List implementation into the
+// Fx application.
+package yarpcrandpeerfx

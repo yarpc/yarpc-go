@@ -25,8 +25,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcencoding"
-	"go.uber.org/yarpc/v2/yarpcjson"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 // StreamHandlerParams contains the parameters for creating a new StreamTransportHandler.
@@ -57,72 +56,21 @@ func (s *streamHandler) HandleStream(stream *yarpc.ServerStream) error {
 
 // UnaryHandlerParams contains the parameters for creating a new UnaryTransportHandler.
 type UnaryHandlerParams struct {
-	Handle      func(context.Context, proto.Message) (proto.Message, error)
-	RequestType proto.Message
+	Handle func(context.Context, proto.Message) (proto.Message, error)
 }
 
 type unaryHandler struct {
-	handle      func(context.Context, proto.Message) (proto.Message, error)
-	requestType proto.Message
+	handle func(context.Context, proto.Message) (proto.Message, error)
 }
 
 // NewUnaryHandler returns a new UnaryHandler.
-func NewUnaryHandler(p UnaryHandlerParams) yarpc.UnaryTransportHandler {
-	return &unaryHandler{p.Handle, p.RequestType}
+func NewUnaryHandler(p UnaryHandlerParams) yarpc.UnaryEncodingHandler {
+	return &unaryHandler{handle: p.Handle}
 }
 
-func (u *unaryHandler) Handle(ctx context.Context, req *yarpc.Request, buf *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
-	ctx, call, protoReq, err := toProtoRequest(ctx, req, buf, u.requestType)
-	if err != nil {
-		return nil, nil, err
+func (u *unaryHandler) Handle(ctx context.Context, reqBody interface{}) (interface{}, error) {
+	if reqMessage, ok := reqBody.(proto.Message); ok {
+		return u.handle(ctx, reqMessage)
 	}
-
-	res := &yarpc.Response{}
-	resBuf := &yarpc.Buffer{}
-
-	protoRes, appErr := u.handle(ctx, protoReq)
-	call.WriteToResponse(res)
-
-	// If the application error is not nil, return
-	// early so that we don't attempt to marshal a nil
-	// object.
-	if appErr != nil {
-		// TODO: This is a bit odd; we set the error in response AND return it.
-		// However, to preserve the current behavior of YARPC, this is
-		// necessary. This is most likely where the error details will be added,
-		// so we expect this to change.
-		res.ApplicationError = appErr
-		return res, resBuf, appErr
-	}
-
-	body, cleanup, err := marshal(req.Encoding, protoRes)
-	if cleanup != nil {
-		defer cleanup()
-	}
-	if err != nil {
-		return res, resBuf, yarpcencoding.ResponseBodyEncodeError(req, err)
-	}
-	if _, err := resBuf.Write(body); err != nil {
-		return res, resBuf, err
-	}
-	return res, resBuf, appErr
-}
-
-func toProtoRequest(
-	ctx context.Context,
-	req *yarpc.Request,
-	body *yarpc.Buffer,
-	protoReq proto.Message,
-) (context.Context, *yarpc.InboundCall, proto.Message, error) {
-	if err := yarpcencoding.ExpectEncodings(req, Encoding, yarpcjson.Encoding); err != nil {
-		return nil, nil, nil, err
-	}
-	ctx, call := yarpc.NewInboundCall(ctx)
-	if err := call.ReadFromRequest(req); err != nil {
-		return nil, nil, nil, err
-	}
-	if err := unmarshal(req.Encoding, body, protoReq); err != nil {
-		return nil, nil, nil, yarpcencoding.RequestBodyDecodeError(req, err)
-	}
-	return ctx, call, protoReq, nil
+	return nil, yarpcerror.InternalErrorf("tried to handle a non-proto.Message in protobuf handler")
 }

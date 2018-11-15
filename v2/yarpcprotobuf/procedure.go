@@ -21,63 +21,87 @@
 package yarpcprotobuf
 
 import (
+	"github.com/gogo/protobuf/proto"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcjson"
 	"go.uber.org/yarpc/v2/yarpcprocedure"
 )
 
-// ProceduresParams contains the parameters for constructing Procedures.
+// UnaryProceduresParams contains the parameters for constructing unary Procedures.
 // This is used to construct a slice of yarpc.Procedures from the context
 // of a protoc plugin, i.e. protoc-gen-yarpc-go.
-type ProceduresParams struct {
-	Service string
-	Unary   []UnaryProceduresParams
-	Stream  []StreamProceduresParams
-}
-
-// UnaryProceduresParams contains the parameters for constructing Unary procedures.
 type UnaryProceduresParams struct {
-	Method  string
-	Handler yarpc.UnaryTransportHandler
+	Service string
+	Unary   []UnaryProcedure
 }
 
-// StreamProceduresParams contains the parameters for constructing Stream procedures.
+// UnaryProcedure contains the parameters for constructing Unary procedures.
+type UnaryProcedure struct {
+	Method      string
+	Handler     yarpc.UnaryEncodingHandler
+	RequestType func() proto.Message
+}
+
+// StreamProceduresParams contains the parameters for constructing stream Procedures.
+// This is used to construct a slice of yarpc.Procedures from the context
+// of a protoc plugin, i.e. protoc-gen-yarpc-go.
 type StreamProceduresParams struct {
+	Service string
+	Stream  []StreamProcedure
+}
+
+// StreamProcedure contains the parameters for constructing Stream procedures.
+type StreamProcedure struct {
 	Method  string
 	Handler yarpc.StreamTransportHandler
 }
 
-// Procedures builds a slice of yarpc.Procedures.
+// UnaryProcedures builds a slice of yarpc.EncodingProcedures.
 // This is used to construct a slice of yarpc.Procedures from the context
 // of a protoc plugin, i.e. protoc-gen-yarpc-go.
-func Procedures(params ProceduresParams) []yarpc.TransportProcedure {
-	procedures := make([]yarpc.TransportProcedure, 0, 2*(len(params.Unary)+len(params.Stream)))
+func UnaryProcedures(params UnaryProceduresParams) []yarpc.EncodingProcedure {
+	procedures := make([]yarpc.EncodingProcedure, 0, 2*len(params.Unary))
 	for _, u := range params.Unary {
+		u := u // needed in the closure
 		procedures = append(
 			procedures,
-			yarpc.TransportProcedure{
+			yarpc.EncodingProcedure{
 				Name:        yarpcprocedure.ToName(params.Service, u.Method),
-				HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(u.Handler),
+				HandlerSpec: yarpc.NewUnaryEncodingHandlerSpec(u.Handler),
 				Encoding:    Encoding,
+				Codec: func() yarpc.InboundCodec {
+					return newProtoCodec(u.RequestType)
+				},
 			},
-			yarpc.TransportProcedure{
+			yarpc.EncodingProcedure{
 				Name:        yarpcprocedure.ToName(params.Service, u.Method),
-				HandlerSpec: yarpc.NewUnaryTransportHandlerSpec(u.Handler),
+				HandlerSpec: yarpc.NewUnaryEncodingHandlerSpec(u.Handler),
 				Encoding:    yarpcjson.Encoding,
+				Codec: func() yarpc.InboundCodec {
+					return newJSONCodec(u.RequestType)
+				},
 			},
 		)
 	}
-	for _, s := range params.Stream {
+	return procedures
+}
+
+// StreamProcedures builds a slice of yarpc.TransportProcedures.
+// This is used to construct a slice of yarpc.Procedures from the context
+// of a protoc plugin, i.e. protoc-gen-yarpc-go.
+func StreamProcedures(params StreamProceduresParams) []yarpc.TransportProcedure {
+	procedures := make([]yarpc.TransportProcedure, 0, 2*len(params.Stream))
+	for _, u := range params.Stream {
 		procedures = append(
 			procedures,
 			yarpc.TransportProcedure{
-				Name:        yarpcprocedure.ToName(params.Service, s.Method),
-				HandlerSpec: yarpc.NewStreamTransportHandlerSpec(s.Handler),
+				Name:        yarpcprocedure.ToName(params.Service, u.Method),
+				HandlerSpec: yarpc.NewStreamTransportHandlerSpec(u.Handler),
 				Encoding:    Encoding,
 			},
 			yarpc.TransportProcedure{
-				Name:        yarpcprocedure.ToName(params.Service, s.Method),
-				HandlerSpec: yarpc.NewStreamTransportHandlerSpec(s.Handler),
+				Name:        yarpcprocedure.ToName(params.Service, u.Method),
+				HandlerSpec: yarpc.NewStreamTransportHandlerSpec(u.Handler),
 				Encoding:    yarpcjson.Encoding,
 			},
 		)

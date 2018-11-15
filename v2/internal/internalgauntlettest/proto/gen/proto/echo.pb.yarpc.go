@@ -74,24 +74,23 @@ type EchoYARPCServer interface {
 	) (*EchoResponse, error)
 }
 
-// BuildEchoYARPCProcedures constructs the YARPC procedures for the Echo service.
-func BuildEchoYARPCProcedures(s EchoYARPCServer) []yarpc.TransportProcedure {
+// BuildUnaryEchoYARPCProcedures constructs the YARPC unary procedures for the Echo service.
+func BuildUnaryEchoYARPCProcedures(s EchoYARPCServer) []yarpc.EncodingProcedure {
 	h := &_EchoYARPCServer{server: s}
-	return yarpcprotobuf.Procedures(
-		yarpcprotobuf.ProceduresParams{
+	return yarpcprotobuf.UnaryProcedures(
+		yarpcprotobuf.UnaryProceduresParams{
 			Service: "uber.prototool.generated.Echo",
-			Unary: []yarpcprotobuf.UnaryProceduresParams{
+			Unary: []yarpcprotobuf.UnaryProcedure{
 				{
 					Method: "Echo",
 					Handler: yarpcprotobuf.NewUnaryHandler(
 						yarpcprotobuf.UnaryHandlerParams{
-							Handle:      h.Echo,
-							RequestType: new(EchoRequest),
+							Handle: h.Echo,
 						},
 					),
+					RequestType: func() proto.Message { return new(EchoRequest) },
 				},
 			},
-			Stream: []yarpcprotobuf.StreamProceduresParams{},
 		},
 	)
 }
@@ -160,8 +159,9 @@ type FxEchoYARPCServerParams struct {
 type FxEchoYARPCServerResult struct {
 	fx.Out
 
-	Procedures     []yarpc.TransportProcedure `group:"yarpcfx"`
-	ReflectionMeta reflection.ServerMeta      `group:"yarpcfx"`
+	UnaryProcedures []yarpc.EncodingProcedure `group:"yarpcfx"`
+
+	ReflectionMeta reflection.ServerMeta `group:"yarpcfx"`
 }
 
 // NewFxEchoYARPCServer provides the EchoYARPCServer
@@ -175,7 +175,8 @@ type FxEchoYARPCServerResult struct {
 func NewFxEchoYARPCServer() interface{} {
 	return func(p FxEchoYARPCServerParams) FxEchoYARPCServerResult {
 		return FxEchoYARPCServerResult{
-			Procedures: BuildEchoYARPCProcedures(p.Server),
+			UnaryProcedures: BuildUnaryEchoYARPCProcedures(p.Server),
+
 			ReflectionMeta: reflection.ServerMeta{
 				ServiceName:     "uber.prototool.generated.Echo",
 				FileDescriptors: yarpcFileDescriptorClosure08134aea513e0001,
