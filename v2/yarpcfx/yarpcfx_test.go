@@ -86,7 +86,7 @@ func TestClientHasMiddleware(t *testing.T) {
 
 	result, err := NewClientProvider(ClientProviderParams{
 		UnaryOutboundTransportMiddleware: []yarpc.UnaryOutboundTransportMiddleware{middleware},
-		Clients:                          []yarpc.Client{client},
+		Clients: []yarpc.Client{client},
 	})
 
 	require.NoError(t, err)
