@@ -65,16 +65,21 @@ func TestNewClientProvider(t *testing.T) {
 }
 
 func TestClientHasMiddleware(t *testing.T) {
-	var gotCallOder []string
+	var gotCallOrder []string
 
-	var middleware = yarpc.UnaryOutboundTransportMiddlewareFunc(
-		func(ctx context.Context, _ *yarpc.Request, _ *yarpc.Buffer, o yarpc.UnaryOutbound) (*yarpc.Response, *yarpc.Buffer, error) {
-			gotCallOder = append(gotCallOder, "middleware")
-			return o.Call(ctx, nil, nil)
-		})
+	var newMiddleware = func(name string) yarpc.UnaryOutboundTransportMiddleware {
+		return yarpc.NewUnaryOutboundTransportMiddleware("foo",
+			func(ctx context.Context, _ *yarpc.Request, _ *yarpc.Buffer, o yarpc.UnaryOutbound) (*yarpc.Response, *yarpc.Buffer, error) {
+				gotCallOrder = append(gotCallOrder, name)
+				return o.Call(ctx, nil, nil)
+			})
+	}
+
+	mw1 := newMiddleware("mw1")
+	mw2 := newMiddleware("mw2")
 
 	out := yarpctest.OutboundCallable(func(context.Context, *yarpc.Request, *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
-		gotCallOder = append(gotCallOder, "outbound")
+		gotCallOrder = append(gotCallOrder, "outbound")
 		return nil, nil, nil
 	})
 	trans := &yarpctest.FakeTransport{}
@@ -85,10 +90,9 @@ func TestClientHasMiddleware(t *testing.T) {
 	}
 
 	result, err := NewClientProvider(ClientProviderParams{
-		UnaryOutboundTransportMiddleware: []yarpc.UnaryOutboundTransportMiddleware{middleware},
+		UnaryOutboundTransportMiddleware: []yarpc.UnaryOutboundTransportMiddleware{mw1, mw2},
 		Clients: []yarpc.Client{client},
 	})
-
 	require.NoError(t, err)
 
 	client, ok := result.Provider.Client("client")
@@ -96,8 +100,8 @@ func TestClientHasMiddleware(t *testing.T) {
 
 	_, _, _ = client.Unary.Call(context.Background(), nil, nil)
 
-	wantCallOrder := []string{"middleware", "outbound"}
-	assert.Equal(t, wantCallOrder, gotCallOder)
+	wantCallOrder := []string{"mw1", "mw2", "outbound"}
+	assert.Equal(t, wantCallOrder, gotCallOrder)
 }
 
 func TestNewDialerProvider(t *testing.T) {
