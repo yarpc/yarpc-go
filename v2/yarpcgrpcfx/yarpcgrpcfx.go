@@ -83,10 +83,12 @@ type StartInboundsParams struct {
 	fx.In
 
 	Lifecycle fx.Lifecycle
-	Router    yarpc.Router
-	Config    InboundConfig
-	Logger    *zap.Logger        `optional:"true"`
-	Tracer    opentracing.Tracer `optional:"true"`
+
+	Router yarpc.Router
+	Config InboundConfig
+
+	Logger *zap.Logger        `optional:"true"`
+	Tracer opentracing.Tracer `optional:"true"`
 }
 
 // StartInbounds constructs and starts inbounds.
@@ -158,7 +160,8 @@ func NewOutboundsConfig(p OutboundsConfigParams) (OutboundsConfigResult, error) 
 type ClientParams struct {
 	fx.In
 
-	Lifecycle       fx.Lifecycle
+	Lifecycle fx.Lifecycle
+
 	Config          OutboundsConfig
 	Dialer          *yarpcgrpc.Dialer
 	ChooserProvider yarpc.ChooserProvider
@@ -178,24 +181,20 @@ type ClientResult struct {
 func NewClients(p ClientParams) (ClientResult, error) {
 	var clients []yarpc.Client
 	for name, o := range p.Config.Outbounds {
-		var (
-			chooser yarpc.Chooser
-			addr    *url.URL
-		)
+		var chooser yarpc.Chooser
+
 		if o.Chooser != "" {
 			var ok bool
 			chooser, ok = p.ChooserProvider.Chooser(o.Chooser)
 			if !ok {
 				return ClientResult{}, fmt.Errorf("failed to resolve outbound peer list chooser: %q", o.Chooser)
 			}
-		} else {
-			addr = &url.URL{Host: o.Address}
 		}
 
 		outbound := &yarpcgrpc.Outbound{
 			Chooser: chooser,
 			Dialer:  p.Dialer,
-			URL:     addr,
+			URL:     &url.URL{Host: o.Address},
 			Tracer:  p.Tracer,
 			Logger:  p.Logger,
 		}
@@ -226,8 +225,9 @@ type DialerParams struct {
 	fx.In
 
 	Lifecycle fx.Lifecycle
-	Logger    *zap.Logger        `optional:"true"`
-	Tracer    opentracing.Tracer `optional:"true"`
+
+	Logger *zap.Logger        `optional:"true"`
+	Tracer opentracing.Tracer `optional:"true"`
 }
 
 // DialerResult defines the values produced by this module.
