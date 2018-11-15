@@ -323,7 +323,7 @@ func TestRandPeer(t *testing.T) {
 			yarpctest.ExpectPeerRetainsWithError(transport, tt.errRetainedPeerIDs, tt.retainErr)
 			yarpctest.ExpectPeerReleases(transport, tt.errReleasedPeerIDs, tt.releaseErr)
 
-			pl := New(transport, Seed(0))
+			pl := New("random", transport, Seed(0))
 
 			deps := yarpctest.ListActionDeps{
 				Peers: peerMap,

@@ -71,7 +71,7 @@ func Source(source rand.Source) ListOption {
 }
 
 // New creates a new random peer list.
-func New(transport yarpc.Dialer, opts ...ListOption) *List {
+func New(name string, dialer yarpc.Dialer, opts ...ListOption) *List {
 	options := defaultListOptions
 	for _, opt := range opts {
 		opt.apply(&options)
@@ -88,8 +88,8 @@ func New(transport yarpc.Dialer, opts ...ListOption) *List {
 
 	return &List{
 		List: yarpcpeerlist.New(
-			"random",
-			transport,
+			name,
+			dialer,
 			newRandomList(options.capacity, options.source),
 			plOpts...,
 		),

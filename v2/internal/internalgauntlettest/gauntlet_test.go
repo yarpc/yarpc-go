@@ -85,7 +85,7 @@ func newChooser(t *testing.T, chooser string, dialer yarpc.Dialer, id yarpc.Iden
 
 	switch chooser {
 	case _random:
-		pl := yarpcrandpeer.New(dialer)
+		pl := yarpcrandpeer.New("random", dialer)
 		pl.Update(update)
 		return pl
 
