@@ -57,7 +57,7 @@ func TestUnaryNopInboundTransportMiddleware(t *testing.T) {
 	assert.Equal(t, err, handleErr)
 }
 
-func TestNilInboundMiddleware(t *testing.T) {
+func TestNilInboundTransportMiddleware(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -74,7 +74,7 @@ func TestNilInboundMiddleware(t *testing.T) {
 	})
 }
 
-func TestOrderedInboundMiddlewareAppply(t *testing.T) {
+func TestOrderedInboundTransportMiddlewareAppply(t *testing.T) {
 	gotOrder := make([]string, 0, 4)
 
 	var newMiddleware = func(name string) yarpc.UnaryInboundTransportMiddleware {
@@ -101,7 +101,7 @@ func TestOrderedInboundMiddlewareAppply(t *testing.T) {
 	assert.Equal(t, wantOrder, gotOrder, "unexpected middleware ordering")
 }
 
-func TestStreamNopInboundMiddleware(t *testing.T) {
+func TestStreamNopInboundTransportMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
