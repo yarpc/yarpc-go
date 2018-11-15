@@ -19,29 +19,3 @@
 // THE SOFTWARE.
 
 package yarpcprotobuf
-
-import (
-	"context"
-	"errors"
-	"testing"
-
-	"github.com/gogo/protobuf/proto"
-	"github.com/stretchr/testify/require"
-	yarpc "go.uber.org/yarpc/v2"
-)
-
-func TestResponseHeaders(t *testing.T) {
-	h := NewUnaryHandler(UnaryHandlerParams{
-		Handle: func(ctx context.Context, _ proto.Message) (proto.Message, error) {
-			err := yarpc.CallFromContext(ctx).WriteResponseHeader("foo-key", "bar-val")
-			require.NoError(t, err)
-
-			// currently, we still expect to get response headers when a handler returns an error
-			return nil, errors.New("")
-		},
-	})
-
-	ctx := context.Background()
-	_, err := h.Handle(ctx, &yarpc.Buffer{})
-	require.Error(t, err)
-}

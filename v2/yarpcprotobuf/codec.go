@@ -30,8 +30,8 @@ type protoCodec struct {
 	reqMessage proto.Message
 }
 
-func newProtoCodec(reqType func() proto.Message) *protoCodec {
-	return &protoCodec{reqMessage: reqType()}
+func newProtoCodec(reqMessage func() proto.Message) *protoCodec {
+	return &protoCodec{reqMessage: reqMessage()}
 }
 
 func (c *protoCodec) Decode(req *yarpc.Buffer) (interface{}, error) {
@@ -55,18 +55,18 @@ func (c *protoCodec) Encode(res interface{}) (*yarpc.Buffer, error) {
 }
 
 type jsonCodec struct {
-	reqType proto.Message
+	reqMessage proto.Message
 }
 
-func newJSONCodec(reqType func() proto.Message) *jsonCodec {
-	return &jsonCodec{reqType: reqType()}
+func newJSONCodec(reqMessage func() proto.Message) *jsonCodec {
+	return &jsonCodec{reqMessage: reqMessage()}
 }
 
 func (c *jsonCodec) Decode(req *yarpc.Buffer) (interface{}, error) {
-	if err := _jsonUnmarshaler.Unmarshal(req, c.reqType); err != nil {
+	if err := _jsonUnmarshaler.Unmarshal(req, c.reqMessage); err != nil {
 		return nil, err
 	}
-	return c.reqType, nil
+	return c.reqMessage, nil
 }
 
 func (c *jsonCodec) Encode(res interface{}) (*yarpc.Buffer, error) {

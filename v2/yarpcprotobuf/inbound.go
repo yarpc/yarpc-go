@@ -65,7 +65,7 @@ type unaryHandler struct {
 
 // NewUnaryHandler returns a new UnaryHandler.
 func NewUnaryHandler(p UnaryHandlerParams) yarpc.UnaryEncodingHandler {
-	return &unaryHandler{p.Handle}
+	return &unaryHandler{handle: p.Handle}
 }
 
 func (u *unaryHandler) Handle(ctx context.Context, reqBody interface{}) (interface{}, error) {
