@@ -147,7 +147,7 @@ func TestFxServer(t *testing.T) {
 		// TODO(mhp): After we have a way to map errors between YARPC errors
 		// and thrift exceptions, this should be revisited so that the check
 		// below actually returns well-defined thrift exceptions.
-		_, ok := err.(*yarpcerror.Status)
+		ok := yarpcerror.IsStatus(err)
 		require.True(t, ok, "error '%+v' must be a *yarpcerror.Status, not %T", err, err)
 		// assert.Equal(t, "baz", *exc.Key, "exception key did not match")
 	})

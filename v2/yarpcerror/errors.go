@@ -42,7 +42,7 @@ func New(code Code, message string, options ...StatusOption) error {
 	if code == CodeOK {
 		return nil
 	}
-	status := &Status{
+	status := &status{
 		code:    code,
 		message: message,
 	}
@@ -63,14 +63,14 @@ func New(code Code, message string, options ...StatusOption) error {
 // is not a Status, a new error with code CodeUnknown is returned.
 //
 // Returns nil if the provided error is nil.
-func FromError(err error) *Status {
+func FromError(err error) *status {
 	if err == nil {
 		return nil
 	}
-	if status, ok := err.(*Status); ok {
+	if status, ok := err.(*status); ok {
 		return status
 	}
-	return &Status{
+	return &status{
 		code:    CodeUnknown,
 		message: err.Error(),
 	}
@@ -80,12 +80,12 @@ func FromError(err error) *Status {
 //
 // This is always false if the error is nil.
 func IsStatus(err error) bool {
-	_, ok := err.(*Status)
+	_, ok := err.(*status)
 	return ok
 }
 
-// Status represents a YARPC error.
-type Status struct {
+// status represents a YARPC error.
+type status struct {
 	code    Code
 	name    string
 	message string
@@ -93,41 +93,41 @@ type Status struct {
 }
 
 // StatusOption provides options that may be called to the constructor.
-type StatusOption struct{ apply func(*Status) }
+type StatusOption struct{ apply func(*status) }
 
-// WithName returns a new Status with the given name.
+// WithName returns a new status with the given name.
 //
 // This should be used for user-defined errors.
 func WithName(name string) StatusOption {
-	return StatusOption{func(s *Status) { s.name = name }}
+	return StatusOption{func(s *status) { s.name = name }}
 }
 
 // WithDetails adds semantic metadata to a Status.
 func WithDetails(details interface{}) StatusOption {
-	return StatusOption{func(s *Status) { s.details = details }}
+	return StatusOption{func(s *status) { s.details = details }}
 }
 
 // Code returns the error code for this Status.
-func (s *Status) Code() Code {
+func (s *status) Code() Code {
 	if s == nil {
 		return CodeOK
 	}
 	return s.code
 }
 
-// Name returns the name of the error for this Status.
+// Name returns the name of the error for this status.
 //
 // This is an empty string for all built-in YARPC errors. It may be customized
 // by using WithName.
-func (s *Status) Name() string {
+func (s *status) Name() string {
 	if s == nil {
 		return ""
 	}
 	return s.name
 }
 
-// Message returns the error message for this Status.
-func (s *Status) Message() string {
+// Message returns the error message for this status.
+func (s *status) Message() string {
 	if s == nil {
 		return ""
 	}
@@ -135,7 +135,7 @@ func (s *Status) Message() string {
 }
 
 // Details returns the details field for this Status.
-func (s *Status) Details() interface{} {
+func (s *status) Details() interface{} {
 	if s == nil {
 		return nil
 	}
@@ -143,7 +143,7 @@ func (s *Status) Details() interface{} {
 }
 
 // Error implements the error interface.
-func (s *Status) Error() string {
+func (s *status) Error() string {
 	buffer := bytes.NewBuffer(nil)
 	_, _ = buffer.WriteString(`code:`)
 	_, _ = buffer.WriteString(s.code.String())

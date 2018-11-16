@@ -70,7 +70,7 @@ func TestErrorsString(t *testing.T) {
 	testAllErrorConstructors(
 		t,
 		func(t *testing.T, code Code, errorConstructor func(string, ...interface{}) error) {
-			status, ok := errorConstructor("hello %d", 1).(*Status)
+			status, ok := errorConstructor("hello %d", 1).(*status)
 			require.True(t, ok)
 			require.Equal(t, fmt.Sprintf("code:%s message:hello 1", code.String()), status.Error())
 		},
