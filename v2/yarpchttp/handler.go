@@ -69,7 +69,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, httpReq *http.Request) {
 	responseWriter.SetApplicationError()
 
 	if statusCodeText, marshalErr := status.Code().MarshalText(); marshalErr != nil {
-		status = yarpcerror.Newf(yarpcerror.CodeInternal, "error %s had code %v which is unknown", status.Error(), status.Code())
+		status = yarpcerror.FromError(yarpcerror.Newf(yarpcerror.CodeInternal, "error %s had code %v which is unknown", status.Error(), status.Code()))
 		responseWriter.WriteSystemHeader(ErrorCodeHeader, "internal")
 	} else {
 		responseWriter.WriteSystemHeader(ErrorCodeHeader, string(statusCodeText))

@@ -33,7 +33,6 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/internal/internalyarpcerror"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcpeer"
 	"go.uber.org/yarpc/v2/yarpctracing"
@@ -342,10 +341,10 @@ func getYARPCErrorFromResponse(httpRes *http.Response, resBuf *yarpc.Buffer, bot
 			code = errorCode
 		}
 	}
-	return internalyarpcerror.NewWithNamef(
+	return yarpcerror.New(
 		code,
-		httpRes.Header.Get(ErrorNameHeader),
 		strings.TrimSuffix(contents, "\n"),
+		yarpcerror.WithName(httpRes.Header.Get(ErrorNameHeader)),
 	)
 }
 

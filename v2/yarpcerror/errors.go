@@ -25,17 +25,38 @@ import (
 	"fmt"
 )
 
-// Newf returns a new Status.
+// Newf returns a new Status, with message formatting.
 //
 // The Code should never be CodeOK, if it is, this will return nil.
-func Newf(code Code, format string, args ...interface{}) *Status {
+func Newf(code Code, format string, args ...interface{}) error {
 	if code == CodeOK {
 		return nil
 	}
-	return &Status{
-		code:    code,
-		message: sprintf(format, args...),
+	return New(code, sprintf(format, args...))
+}
+
+// New return a new Status.
+//
+// The Code should never be CodeOK; if it is, this will return nil.
+func New(code Code, message string, options ...StatusOption) error {
+	if code == CodeOK {
+		return nil
 	}
+	status := &Status{
+		code:    code,
+		message: message,
+	}
+	for _, opt := range options {
+		opt.apply(status)
+	}
+
+	// The name must only contain lowercase letters from a-z and dashes (-), and
+	// cannot start or end in a dash. If the name is something else, an error with
+	// code CodeInternal will be returned.
+	if err := validateName(status.name); err != nil {
+		return err
+	}
+	return status
 }
 
 // FromError returns the Status for the provided error. If the provided error
@@ -68,31 +89,22 @@ type Status struct {
 	code    Code
 	name    string
 	message string
+	details interface{}
 }
+
+// StatusOption provides options that may be called to the constructor.
+type StatusOption struct{ apply func(*Status) }
 
 // WithName returns a new Status with the given name.
 //
 // This should be used for user-defined errors.
-//
-// The name must only contain lowercase letters from a-z and dashes (-), and
-// cannot start or end in a dash. If the name is something else, an error with
-// code CodeInternal will be returned.
-//
-// Deprecated: Use only error codes to represent the type of the error.
-func (s *Status) WithName(name string) *Status {
-	// TODO: We plan to add a WithDetails method to add semantic metadata to
-	// Statuses soon.
-	if s == nil {
-		return nil
-	}
-	if err := validateName(name); err != nil {
-		return err.(*Status)
-	}
-	return &Status{
-		code:    s.code,
-		name:    name,
-		message: s.message,
-	}
+func WithName(name string) StatusOption {
+	return StatusOption{func(s *Status) { s.name = name }}
+}
+
+// WithDetails adds semantic metadata to a Status.
+func WithDetails(details interface{}) StatusOption {
+	return StatusOption{func(s *Status) { s.details = details }}
 }
 
 // Code returns the error code for this Status.
@@ -120,6 +132,14 @@ func (s *Status) Message() string {
 		return ""
 	}
 	return s.message
+}
+
+// Details returns the details field for this Status.
+func (s *Status) Details() interface{} {
+	if s == nil {
+		return nil
+	}
+	return s.details
 }
 
 // Error implements the error interface.

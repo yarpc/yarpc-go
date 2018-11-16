@@ -28,7 +28,6 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/v2"
-	intyarpcerror "go.uber.org/yarpc/v2/internal/internalyarpcerror"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcpeer"
 	"go.uber.org/yarpc/v2/yarpctracing"
@@ -216,7 +215,7 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	} else if name != "" && message == name {
 		message = ""
 	}
-	return intyarpcerror.NewWithNamef(code, name, message)
+	return yarpcerror.New(code, message, yarpcerror.WithName(name))
 }
 
 // CallStream implements yarpc.StreamOutbound#CallStream.

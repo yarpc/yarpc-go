@@ -28,7 +28,6 @@ import (
 	"github.com/uber/tchannel-go"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/internal/internaliopool"
-	"go.uber.org/yarpc/v2/internal/internalyarpcerror"
 	"go.uber.org/yarpc/v2/yarpcencoding"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcpeer"
@@ -293,7 +292,7 @@ func getResponseErrorAndDeleteHeaderKeys(headers yarpc.Headers) error {
 	}
 	errorName, _ := popHeader(headers, ErrorNameHeaderKey)
 	errorMessage, _ := popHeader(headers, ErrorMessageHeaderKey)
-	return internalyarpcerror.NewWithNamef(errorCode, errorName, errorMessage)
+	return yarpcerror.New(errorCode, errorMessage, yarpcerror.WithName(errorName))
 }
 
 func popHeader(h yarpc.Headers, n string) (string, bool) {
