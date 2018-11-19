@@ -68,7 +68,7 @@ func TestClientHasMiddleware(t *testing.T) {
 	var gotCallOrder []string
 
 	var newMiddleware = func(name string) yarpc.UnaryOutboundTransportMiddleware {
-		return yarpc.NewUnaryOutboundTransportMiddleware("foo",
+		return yarpc.NewUnaryOutboundTransportMiddleware(name,
 			func(ctx context.Context, _ *yarpc.Request, _ *yarpc.Buffer, o yarpc.UnaryOutbound) (*yarpc.Response, *yarpc.Buffer, error) {
 				gotCallOrder = append(gotCallOrder, name)
 				return o.Call(ctx, nil, nil)
