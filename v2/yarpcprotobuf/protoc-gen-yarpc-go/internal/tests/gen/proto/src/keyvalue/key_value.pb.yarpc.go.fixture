@@ -76,33 +76,32 @@ type StoreYARPCServer interface {
 	) (*common.SetResponse, error)
 }
 
-// BuildStoreYARPCProcedures constructs the YARPC procedures for the Store service.
-func BuildStoreYARPCProcedures(s StoreYARPCServer) []yarpc.TransportProcedure {
+// BuildUnaryStoreYARPCProcedures constructs the YARPC unary procedures for the Store service.
+func BuildUnaryStoreYARPCProcedures(s StoreYARPCServer) []yarpc.EncodingProcedure {
 	h := &_StoreYARPCServer{server: s}
-	return yarpcprotobuf.Procedures(
-		yarpcprotobuf.ProceduresParams{
+	return yarpcprotobuf.UnaryProcedures(
+		yarpcprotobuf.UnaryProceduresParams{
 			Service: "keyvalue.Store",
-			Unary: []yarpcprotobuf.UnaryProceduresParams{
+			Unary: []yarpcprotobuf.UnaryProcedure{
 				{
 					Method: "Get",
 					Handler: yarpcprotobuf.NewUnaryHandler(
 						yarpcprotobuf.UnaryHandlerParams{
-							Handle:      h.Get,
-							RequestType: new(common.GetRequest),
+							Handle: h.Get,
 						},
 					),
+					RequestType: func() proto.Message { return new(common.GetRequest) },
 				},
 				{
 					Method: "Set",
 					Handler: yarpcprotobuf.NewUnaryHandler(
 						yarpcprotobuf.UnaryHandlerParams{
-							Handle:      h.Set,
-							RequestType: new(common.SetRequest),
+							Handle: h.Set,
 						},
 					),
+					RequestType: func() proto.Message { return new(common.SetRequest) },
 				},
 			},
-			Stream: []yarpcprotobuf.StreamProceduresParams{},
 		},
 	)
 }
@@ -116,7 +115,22 @@ func (h *_StoreYARPCServer) Get(ctx context.Context, m proto.Message) (proto.Mes
 	if req == nil {
 		return nil, yarpcprotobuf.CastError(new(common.GetRequest), m)
 	}
-	return h.server.Get(ctx, req)
+
+	// This is intentional. While it seems like
+	//
+	//   return h.server.Get(ctx, req)
+	//
+	// will behave the same way, the dynamic value of the nil returned is
+	// strongly typed. When carried around later as  interface{} (specifically in
+	// `codec.Encode(...)`), this nil response gets carried as a nil-of-type-response
+	// value, making it non-nil. We prefer to replace it with an absolute nil
+	// before we pass it up.
+	// This issue is akin to https://golang.org/doc/faq#nil_error.
+	res, err := h.server.Get(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 func (h *_StoreYARPCServer) Set(ctx context.Context, m proto.Message) (proto.Message, error) {
@@ -124,7 +138,22 @@ func (h *_StoreYARPCServer) Set(ctx context.Context, m proto.Message) (proto.Mes
 	if req == nil {
 		return nil, yarpcprotobuf.CastError(new(common.SetRequest), m)
 	}
-	return h.server.Set(ctx, req)
+
+	// This is intentional. While it seems like
+	//
+	//   return h.server.Set(ctx, req)
+	//
+	// will behave the same way, the dynamic value of the nil returned is
+	// strongly typed. When carried around later as  interface{} (specifically in
+	// `codec.Encode(...)`), this nil response gets carried as a nil-of-type-response
+	// value, making it non-nil. We prefer to replace it with an absolute nil
+	// before we pass it up.
+	// This issue is akin to https://golang.org/doc/faq#nil_error.
+	res, err := h.server.Set(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 // FxStoreYARPCClientParams defines the parameters
@@ -179,8 +208,9 @@ type FxStoreYARPCServerParams struct {
 type FxStoreYARPCServerResult struct {
 	fx.Out
 
-	Procedures     []yarpc.TransportProcedure `group:"yarpcfx"`
-	ReflectionMeta reflection.ServerMeta      `group:"yarpcfx"`
+	UnaryProcedures []yarpc.EncodingProcedure `group:"yarpcfx"`
+
+	ReflectionMeta reflection.ServerMeta `group:"yarpcfx"`
 }
 
 // NewFxStoreYARPCServer provides the StoreYARPCServer
@@ -194,7 +224,8 @@ type FxStoreYARPCServerResult struct {
 func NewFxStoreYARPCServer() interface{} {
 	return func(p FxStoreYARPCServerParams) FxStoreYARPCServerResult {
 		return FxStoreYARPCServerResult{
-			Procedures: BuildStoreYARPCProcedures(p.Server),
+			UnaryProcedures: BuildUnaryStoreYARPCProcedures(p.Server),
+
 			ReflectionMeta: reflection.ServerMeta{
 				ServiceName:     "keyvalue.Store",
 				FileDescriptors: yarpcFileDescriptorClosure8a9b3e67e16f054c,

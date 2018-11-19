@@ -36,7 +36,7 @@ func TestUnhandledEncoding(t *testing.T) {
 	})
 
 	t.Run("marshal: internal error", func(t *testing.T) {
-		_, _, err := marshal(yarpc.Encoding("foo"), nil)
+		_, err := marshal(yarpc.Encoding("foo"), nil)
 		assert.Equal(t, yarpcerror.CodeInternal, yarpcerror.FromError(err).Code())
 	})
 }

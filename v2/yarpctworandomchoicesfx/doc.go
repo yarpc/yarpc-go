@@ -18,4 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcprotobuf
+// Package yarpctworandomchoicesfx provides a two random chocies peer.List
+// implementation into the Fx application.
+//
+// See package yarpctworandomchoices for details on this strategy.
+package yarpctworandomchoicesfx

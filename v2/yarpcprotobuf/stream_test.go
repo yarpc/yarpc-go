@@ -66,8 +66,8 @@ func (m *mockMessage) ProtoMessage()  {}
 func (m *mockMessage) String() string { return "mock" }
 
 func TestReadFromStream(t *testing.T) {
-	_closeErr := errors.New("faild to close")
-	_readErr := errors.New("faild to read")
+	_closeErr := errors.New("failed to close")
+	_readErr := errors.New("failed to read")
 
 	tests := []struct {
 		desc     string

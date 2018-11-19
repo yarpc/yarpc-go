@@ -21,7 +21,6 @@
 package yarpcprotobuf
 
 import (
-	"bytes"
 	"context"
 	"io"
 
@@ -93,17 +92,23 @@ func readFromStream(ctx context.Context, stream yarpc.Stream, message proto.Mess
 
 // writeToStream writes a proto.Message to a stream.
 func writeToStream(ctx context.Context, stream yarpc.Stream, message proto.Message) error {
-	messageData, cleanup, err := marshal(stream.Request().Encoding, message)
+	messageBuf, err := marshal(stream.Request().Encoding, message)
 	if err != nil {
 		return err
 	}
 	return stream.SendMessage(
 		ctx,
 		&yarpc.StreamMessage{
-			Body: readCloser{Reader: bytes.NewReader(messageData), closer: cleanup},
+			Body: readCloser{
+				Reader: messageBuf,
+				// this is a no-op closer, because we have nothing to clean up
+				closer: nop,
+			},
 		},
 	)
 }
+
+func nop() {}
 
 type readCloser struct {
 	io.Reader

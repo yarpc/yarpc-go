@@ -28,26 +28,39 @@
 
   {{/* Procedure construction */}}
 
-  // Build{{.Procedures}} constructs the YARPC procedures for the {{$svc}} service.
-  func Build{{.Procedures}}(s {{.Server}}) []yarpc.TransportProcedure {
+  {{if (unaryMethods .) -}}
+  // BuildUnary{{.Procedures}} constructs the YARPC unary procedures for the {{$svc}} service.
+  func BuildUnary{{.Procedures}}(s {{.Server}}) []yarpc.EncodingProcedure {
     h := &{{.ServerImpl}}{server: s}
-    return yarpcprotobuf.Procedures(
-      yarpcprotobuf.ProceduresParams{
+    return yarpcprotobuf.UnaryProcedures(
+      yarpcprotobuf.UnaryProceduresParams{
         Service: {{printf "%q" .FQN}},
-        Unary: []yarpcprotobuf.UnaryProceduresParams{
+        Unary: []yarpcprotobuf.UnaryProcedure{
           {{range unaryMethods . -}}
           {
             Method: {{printf "%q" .Name}},
             Handler: yarpcprotobuf.NewUnaryHandler(
               yarpcprotobuf.UnaryHandlerParams{
                 Handle: h.{{.Name}},
-                RequestType: new({{goType .Request $gopkg}}),
               },
             ),
+            RequestType: func() proto.Message { return new({{goType .Request $gopkg}}) },
           },
           {{end -}}
         },
-        Stream: []yarpcprotobuf.StreamProceduresParams{
+      },
+    )
+  }
+  {{- end}}
+
+  {{if (streamMethods .) -}}
+  // BuildStream{{.Procedures}} constructs the YARPC stream procedures for the {{$svc}} service.
+  func BuildStream{{.Procedures}}(s {{.Server}}) []yarpc.TransportProcedure {
+    h := &{{.ServerImpl}}{server: s}
+    return yarpcprotobuf.StreamProcedures(
+      yarpcprotobuf.StreamProceduresParams{
+        Service: {{printf "%q" .FQN}},
+        Stream: []yarpcprotobuf.StreamProcedure{
           {{range streamMethods . -}}
           {
             Method: {{printf "%q" .Name}},
@@ -62,6 +75,7 @@
       },
     )
   }
+  {{- end}}
 {{end -}}
 
 {{end -}}{{end -}}

@@ -70,7 +70,7 @@ func Seed(seed int64) ListOption {
 }
 
 // New creates a new pending heap.
-func New(dialer yarpc.Dialer, opts ...ListOption) *List {
+func New(name string, dialer yarpc.Dialer, opts ...ListOption) *List {
 	cfg := defaultListOptions
 	for _, o := range opts {
 		o.apply(&cfg)
@@ -90,7 +90,7 @@ func New(dialer yarpc.Dialer, opts ...ListOption) *List {
 	}
 	return &List{
 		List: yarpcpeerlist.New(
-			"fewest-pending-requests",
+			name,
 			dialer,
 			&pendingHeap{
 				nextRand: nextRandFn,

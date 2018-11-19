@@ -18,4 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcprotobuf
+// Package yarpcpendingheapfx provides a fewest-pending heap peer.List
+// implementation into the Fx application.
+package yarpcpendingheapfx
