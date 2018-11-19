@@ -65,10 +65,14 @@ func NewClientProvider(p ClientProviderParams) (ClientProviderResult, error) {
 	for _, cl := range p.ClientLists {
 		clients = append(clients, cl...)
 	}
+
+	clientsWithMiddleware := make([]yarpc.Client, 0, len(clients))
 	for _, c := range clients {
 		c.Unary = yarpc.ApplyUnaryOutboundTransportMiddleware(c.Unary, p.UnaryOutboundTransportMiddleware...)
+		clientsWithMiddleware = append(clientsWithMiddleware, c)
 	}
-	provider, err := yarpcclient.NewProvider(clients...)
+
+	provider, err := yarpcclient.NewProvider(clientsWithMiddleware...)
 	if err != nil {
 		return ClientProviderResult{}, err
 	}

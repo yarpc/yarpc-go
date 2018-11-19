@@ -72,17 +72,37 @@ func applyUnaryOutboundTransportMiddleware(o UnaryOutbound, f UnaryOutboundTrans
 	return unaryOutboundWithMiddleware{o: o, f: f}
 }
 
-// UnaryOutboundTransportMiddlewareFunc adapts a function into a UnaryOutboundTransportMiddleware.
-type UnaryOutboundTransportMiddlewareFunc func(context.Context, *Request, *Buffer, UnaryOutbound) (*Response, *Buffer, error)
+// NewUnaryOutboundTransportMiddleware is a convenience constructor for creating
+// new middleware.
+func NewUnaryOutboundTransportMiddleware(
+	name string,
+	f func(context.Context, *Request, *Buffer, UnaryOutbound) (*Response, *Buffer, error),
+) UnaryOutboundTransportMiddleware {
+	return unaryOutboundTransportMiddleware{
+		name: name,
+		f:    f,
+	}
+}
 
-// Call for UnaryOutboundTransportMiddlewareFunc.
-func (f UnaryOutboundTransportMiddlewareFunc) Call(
+// unaryOutboundTransportMiddleware adapts a function and name into a middleware
+type unaryOutboundTransportMiddleware struct {
+	name string
+	f    func(context.Context, *Request, *Buffer, UnaryOutbound) (*Response, *Buffer, error)
+}
+
+// Name for unaryOutboundTransportMiddleware.
+func (u unaryOutboundTransportMiddleware) Name() string {
+	return u.name
+}
+
+// Call for unaryOutboundTransportMiddleware.
+func (u unaryOutboundTransportMiddleware) Call(
 	ctx context.Context,
 	request *Request,
 	buf *Buffer,
 	out UnaryOutbound,
 ) (*Response, *Buffer, error) {
-	return f(ctx, request, buf, out)
+	return u.f(ctx, request, buf, out)
 }
 
 type unaryOutboundWithMiddleware struct {

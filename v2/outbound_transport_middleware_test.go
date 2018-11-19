@@ -80,6 +80,26 @@ func TestOutboundMiddleware(t *testing.T) {
 	})
 }
 
+func TestUnaryOutboundTransportMiddlewareStruct(t *testing.T) {
+	t.Run("name is called", func(t *testing.T) {
+		mw := yarpc.NewUnaryOutboundTransportMiddleware("my-middleware-name", nil)
+		assert.Equal(t, "my-middleware-name", mw.Name())
+	})
+
+	t.Run("func is called", func(t *testing.T) {
+		var called bool
+
+		mw := yarpc.NewUnaryOutboundTransportMiddleware("name",
+			func(context.Context, *yarpc.Request, *yarpc.Buffer, yarpc.UnaryOutbound) (*yarpc.Response, *yarpc.Buffer, error) {
+				called = true
+				return nil, nil, nil
+			})
+
+		_, _, _ = mw.Call(context.Background(), nil, nil, nil)
+		assert.True(t, called, "middleware did not call func")
+	})
+}
+
 func TestStreamNopOutboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
