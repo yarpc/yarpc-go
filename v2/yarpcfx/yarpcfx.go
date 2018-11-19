@@ -198,16 +198,17 @@ func NewRouter(p RouterParams) (RouterResult, error) {
 		procedures = append(procedures, pl...)
 	}
 
-	proceduresWithMW := proceduresWithMiddleware(procedures, p.UnaryTransportMiddleware)
-	router := yarpcrouter.NewMapRouter("foo" /* Derive from servicefx. */, proceduresWithMW)
+	router := yarpcrouter.NewMapRouter(
+		"foo", /* Derive from servicefx. */
+		applyUnaryTransportMiddleware(procedures, p.UnaryTransportMiddleware))
 
 	return RouterResult{
 		Router: yarpc.ApplyRouter(router, p.RouterMiddleware),
 	}, nil
 }
 
-// proceduresWithMiddleware applies middleware to the procedures
-func proceduresWithMiddleware(
+// applyUnaryTransportMiddleware applies middleware to the procedures
+func applyUnaryTransportMiddleware(
 	procedures []yarpc.TransportProcedure,
 	unaryMiddleware []yarpc.UnaryInboundTransportMiddleware,
 ) []yarpc.TransportProcedure {
