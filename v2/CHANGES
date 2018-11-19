@@ -22,10 +22,12 @@
 - [ ] Consider separating the auto-observability middleware into two components: logging and metrics.
 - [ ] Integrate the configuration into a variety of Fx modules.
       - [ ] Integrate servicefx.Metadata into each of the relevant Fx packages.
+            - [ ] HTTP
+            - [ ] TChannel
       - [ ] Transports
             - [ ] HTTP
             - [x] gRPC
-            - [ ] TChannel
+            - [x] TChannel
       - [ ] Peer lists
             - [ ] Round-robin
             - [ ] Two-random-choices
