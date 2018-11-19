@@ -213,7 +213,7 @@ func TestNewRouterWithInboundMiddleware(t *testing.T) {
 	var callOrder []string
 
 	unaryMiddleware := []yarpc.UnaryInboundTransportMiddleware{
-		yarpc.UnaryInboundTransportMiddlewareFunc(
+		yarpc.NewUnaryInboundTransportMiddleware("foo",
 			func(ctx context.Context, _ *yarpc.Request, _ *yarpc.Buffer, h yarpc.UnaryTransportHandler) (*yarpc.Response, *yarpc.Buffer, error) {
 				callOrder = append(callOrder, "middleware")
 				return h.Handle(ctx, nil, nil)
