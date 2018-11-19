@@ -77,17 +77,30 @@ func applyUnaryInboundTransportMiddleware(handler UnaryTransportHandler, middlew
 	return unaryTransportHandlerWithMiddleware{h: handler, i: middleware}
 }
 
-// UnaryInboundTransportMiddlewareFunc adapts a function into an InboundMiddleware.
-type UnaryInboundTransportMiddlewareFunc func(context.Context, *Request, *Buffer, UnaryTransportHandler) (*Response, *Buffer, error)
-
-// Name for UnaryInboundTransportMiddlewareFunc
-func (f UnaryInboundTransportMiddlewareFunc) Name() string {
-	return "UnaryInboundTransportMiddlewareFunc"
+// NewUnaryInboundTransportMiddleware is a convenience constructor for creating
+// new middleware.
+func NewUnaryInboundTransportMiddleware(
+	name string,
+	f func(context.Context, *Request, *Buffer, UnaryTransportHandler) (*Response, *Buffer, error),
+) UnaryInboundTransportMiddleware {
+	return unaryInboundTransportMiddleware{
+		name: name,
+		f:    f,
+	}
 }
 
-// Handle for UnaryInboundTransportMiddlewareFunc
-func (f UnaryInboundTransportMiddlewareFunc) Handle(ctx context.Context, req *Request, reqBuf *Buffer, handler UnaryTransportHandler) (*Response, *Buffer, error) {
-	return f(ctx, req, reqBuf, handler)
+// unaryInboundTransportMiddleware adapts a function and name into a middleware.
+type unaryInboundTransportMiddleware struct {
+	name string
+	f    func(context.Context, *Request, *Buffer, UnaryTransportHandler) (*Response, *Buffer, error)
+}
+
+func (u unaryInboundTransportMiddleware) Name() string {
+	return u.name
+}
+
+func (u unaryInboundTransportMiddleware) Handle(ctx context.Context, req *Request, reqBuf *Buffer, handler UnaryTransportHandler) (*Response, *Buffer, error) {
+	return u.f(ctx, req, reqBuf, handler)
 }
 
 // StreamInboundTransportMiddleware defines a transport-level middleware for

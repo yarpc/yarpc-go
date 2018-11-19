@@ -78,7 +78,7 @@ func TestOrderedInboundMiddlewareAppply(t *testing.T) {
 	gotOrder := make([]string, 0, 4)
 
 	var newMiddleware = func(name string) yarpc.UnaryInboundTransportMiddleware {
-		return yarpc.UnaryInboundTransportMiddlewareFunc(
+		return yarpc.NewUnaryInboundTransportMiddleware(name,
 			func(ctx context.Context, _ *yarpc.Request, _ *yarpc.Buffer, h yarpc.UnaryTransportHandler) (*yarpc.Response, *yarpc.Buffer, error) {
 				gotOrder = append(gotOrder, name)
 				return h.Handle(ctx, nil, nil)
