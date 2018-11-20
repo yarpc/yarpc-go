@@ -33,7 +33,7 @@ import (
 func TestNewClientProvider(t *testing.T) {
 	t.Run("duplicate registration error", func(t *testing.T) {
 		foo := yarpc.Client{Name: "foo"}
-		_, err := NewClientProvider(ClientProviderParams{
+		_, err := newClientProvider(ClientProviderParams{
 			Clients: []yarpc.Client{foo, foo},
 		})
 		assert.EqualError(t, err, `client "foo" was registered more than once`)
@@ -42,7 +42,7 @@ func TestNewClientProvider(t *testing.T) {
 		foo := yarpc.Client{Name: "foo", Caller: "foo-caller", Service: "foo-service"}
 		bar := yarpc.Client{Name: "bar", Caller: "bar-caller", Service: "bar-service"}
 
-		res, err := NewClientProvider(ClientProviderParams{
+		res, err := newClientProvider(ClientProviderParams{
 			Clients:     []yarpc.Client{foo},
 			ClientLists: [][]yarpc.Client{{bar}},
 		})
@@ -89,7 +89,7 @@ func TestClientHasMiddleware(t *testing.T) {
 		Unary: trans.NewOutbound(nil, yarpctest.OutboundCallOverride(out)),
 	}
 
-	result, err := NewClientProvider(ClientProviderParams{
+	result, err := newClientProvider(ClientProviderParams{
 		UnaryOutboundTransportMiddleware: []yarpc.UnaryOutboundTransportMiddleware{mw1, mw2},
 		Clients: []yarpc.Client{client},
 	})
@@ -107,7 +107,7 @@ func TestClientHasMiddleware(t *testing.T) {
 func TestNewDialerProvider(t *testing.T) {
 	t.Run("duplicate registration error", func(t *testing.T) {
 		foo := yarpctest.NewFakeDialer("foo")
-		_, err := NewDialerProvider(DialerProviderParams{
+		_, err := newDialerProvider(DialerProviderParams{
 			Dialers: []yarpc.Dialer{foo, foo},
 		})
 		assert.EqualError(t, err, `dialer "foo" was registered more than once`)
@@ -116,7 +116,7 @@ func TestNewDialerProvider(t *testing.T) {
 		foo := yarpctest.NewFakeDialer("foo")
 		bar := yarpctest.NewFakeDialer("bar")
 
-		res, err := NewDialerProvider(DialerProviderParams{
+		res, err := newDialerProvider(DialerProviderParams{
 			Dialers:     []yarpc.Dialer{foo},
 			DialerLists: [][]yarpc.Dialer{{bar}},
 		})
@@ -137,7 +137,7 @@ func TestNewDialerProvider(t *testing.T) {
 func TestNewChooserProvider(t *testing.T) {
 	t.Run("duplicate registration error", func(t *testing.T) {
 		foo := yarpctest.NewFakePeerChooser("foo")
-		_, err := NewChooserProvider(ChooserProviderParams{
+		_, err := newChooserProvider(ChooserProviderParams{
 			Choosers: []yarpc.Chooser{foo, foo},
 		})
 		assert.EqualError(t, err, `chooser "foo" was registered more than once`)
@@ -146,7 +146,7 @@ func TestNewChooserProvider(t *testing.T) {
 		foo := yarpctest.NewFakePeerChooser("foo")
 		bar := yarpctest.NewFakePeerChooser("bar")
 
-		res, err := NewChooserProvider(ChooserProviderParams{
+		res, err := newChooserProvider(ChooserProviderParams{
 			Choosers:     []yarpc.Chooser{foo},
 			ChooserLists: [][]yarpc.Chooser{{bar}},
 		})
@@ -167,7 +167,7 @@ func TestNewChooserProvider(t *testing.T) {
 func TestNewListProvider(t *testing.T) {
 	t.Run("duplicate registration error", func(t *testing.T) {
 		foo := yarpctest.NewFakePeerList("foo")
-		_, err := NewListProvider(ListProviderParams{
+		_, err := newListProvider(ListProviderParams{
 			Lists: []yarpc.List{foo, foo},
 		})
 		assert.EqualError(t, err, `list "foo" was registered more than once`)
@@ -176,7 +176,7 @@ func TestNewListProvider(t *testing.T) {
 		foo := yarpctest.NewFakePeerList("foo")
 		bar := yarpctest.NewFakePeerList("bar")
 
-		res, err := NewListProvider(ListProviderParams{
+		res, err := newListProvider(ListProviderParams{
 			Lists:     []yarpc.List{foo},
 			ListLists: [][]yarpc.List{{bar}},
 		})
@@ -201,7 +201,7 @@ func TestNewRouter(t *testing.T) {
 		{Name: "Hello::SecondList"},
 	}
 
-	res, err := NewRouter(RouterParams{
+	res, err := newRouter(RouterParams{
 		Procedures:     []yarpc.TransportProcedure{single},
 		ProcedureLists: [][]yarpc.TransportProcedure{list},
 	})
@@ -233,7 +233,7 @@ func TestNewRouterWithInboundMiddleware(t *testing.T) {
 		},
 	}
 
-	result, err := NewRouter(RouterParams{
+	result, err := newRouter(RouterParams{
 		Procedures:               procedures,
 		UnaryTransportMiddleware: unaryMiddleware,
 	})
