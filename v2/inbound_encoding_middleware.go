@@ -35,6 +35,7 @@ import "context"
 // UnaryInboundEncodingMiddleware is re-used across requests and MAY be called multiple
 // times for the same request.
 type UnaryInboundEncodingMiddleware interface {
+	Name() string
 	Handle(ctx context.Context, reqBuf interface{}, h UnaryEncodingHandler) (interface{}, error)
 }
 
@@ -43,6 +44,8 @@ type UnaryInboundEncodingMiddleware interface {
 var NopUnaryInboundEncodingMiddleware UnaryInboundEncodingMiddleware = nopUnaryInboundEncodingMiddleware{}
 
 type nopUnaryInboundEncodingMiddleware struct{}
+
+func (nopUnaryInboundEncodingMiddleware) Name() string { return nopName }
 
 func (nopUnaryInboundEncodingMiddleware) Handle(ctx context.Context, reqBuf interface{}, handler UnaryEncodingHandler) (interface{}, error) {
 	return handler.Handle(ctx, reqBuf)
@@ -57,18 +60,48 @@ func (h unaryEncodingHandlerWithMiddleware) Handle(ctx context.Context, reqBuf i
 	return h.i.Handle(ctx, reqBuf, h.h)
 }
 
-// ApplyUnaryInboundEncodingMiddleware applies the given middleware to the given UnaryTransportHandler.
-func ApplyUnaryInboundEncodingMiddleware(handler UnaryEncodingHandler, middleware UnaryInboundEncodingMiddleware) UnaryEncodingHandler {
+// ApplyUnaryInboundEncodingMiddleware applies the middleware to the
+// UnaryInboundEncodingHandler.
+func ApplyUnaryInboundEncodingMiddleware(h UnaryEncodingHandler, middleware ...UnaryInboundEncodingMiddleware) UnaryEncodingHandler {
+	handler := h
+	for i := len(middleware) - 1; i >= 0; i-- {
+		handler = applyUnaryInboundEncodingMiddleware(handler, middleware[i])
+	}
+	return handler
+}
+
+func applyUnaryInboundEncodingMiddleware(handler UnaryEncodingHandler, middleware UnaryInboundEncodingMiddleware) UnaryEncodingHandler {
 	if middleware == nil {
 		return handler
 	}
 	return unaryEncodingHandlerWithMiddleware{h: handler, i: middleware}
 }
 
-// UnaryInboundEncodingMiddlewareFunc adapts a function into an InboundMiddleware.
-type UnaryInboundEncodingMiddlewareFunc func(context.Context, *Request, *Buffer, UnaryTransportHandler) (*Response, *Buffer, error)
+// NewUnaryInboundEncodingMiddleware is a convenience constructor for creating
+// new middleware.
+func NewUnaryInboundEncodingMiddleware(
+	name string,
+	f func(context.Context, interface{}, UnaryEncodingHandler) (interface{}, error),
+) UnaryInboundEncodingMiddleware {
+	return unaryInboundEncodingMiddleware{
+		name: name,
+		f:    f,
+	}
+}
 
-// Handle for UnaryInboundEncodingMiddlewareFunc
-func (f UnaryInboundEncodingMiddlewareFunc) Handle(ctx context.Context, req *Request, reqBuf *Buffer, handler UnaryTransportHandler) (*Response, *Buffer, error) {
-	return f(ctx, req, reqBuf, handler)
+// unaryInboundEncodingMiddleware adapts a function and name into a
+// UnaryInboundEncodingMiddleware.
+type unaryInboundEncodingMiddleware struct {
+	name string
+	f    func(context.Context, interface{}, UnaryEncodingHandler) (interface{}, error)
+}
+
+// Name for unaryInboundEncodingMiddleware
+func (u unaryInboundEncodingMiddleware) Name() string {
+	return u.name
+}
+
+// Handle for unaryInboundEncodingMiddleware
+func (u unaryInboundEncodingMiddleware) Handle(ctx context.Context, reqBuf interface{}, handler UnaryEncodingHandler) (interface{}, error) {
+	return u.f(ctx, reqBuf, handler)
 }

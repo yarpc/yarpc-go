@@ -28,58 +28,58 @@ import (
 	yarpc "go.uber.org/yarpc/v2"
 )
 
-// OutboundTransportConfig describes the configuration
-// shape for an ordered list of unary outbound transport middleware.
-type OutboundTransportConfig struct {
+// InboundEncodingConfig describes the configuration
+// shape for an ordered list of unary inbound encoding middleware.
+type InboundEncodingConfig struct {
 	Unary []string `yaml:"unary"`
 }
 
-// OutboundTransportConfigParams defines the dependencies of this module.
-type OutboundTransportConfigParams struct {
+// InboundEncodingConfigParams defines the dependencies of this module.
+type InboundEncodingConfigParams struct {
 	fx.In
 
 	Provider config.Provider
 }
 
-// OutboundTransportConfigResult defines the values produced by this module.
-type OutboundTransportConfigResult struct {
+// InboundEncodingConfigResult defines the values produced by this module.
+type InboundEncodingConfigResult struct {
 	fx.Out
 
-	Config OutboundTransportConfig
+	Config InboundEncodingConfig
 }
 
-// NewOutboundTransportConfig produces an UnaryOutboundTransportConfig.
-func NewOutboundTransportConfig(p OutboundTransportConfigParams) (OutboundTransportConfigResult, error) {
-	mc := OutboundTransportConfig{}
-	if err := p.Provider.Get(outboundTransportConfigurationKey).Populate(&mc); err != nil {
-		return OutboundTransportConfigResult{}, err
+// NewInboundEncodingConfig produces an UnaryInboundEncodingConfig.
+func NewInboundEncodingConfig(p InboundEncodingConfigParams) (InboundEncodingConfigResult, error) {
+	mc := InboundEncodingConfig{}
+	if err := p.Provider.Get(inboundEncodingConfigurationKey).Populate(&mc); err != nil {
+		return InboundEncodingConfigResult{}, err
 	}
-	return OutboundTransportConfigResult{
+	return InboundEncodingConfigResult{
 		Config: mc,
 	}, nil
 }
 
-// UnaryOutboundTransportParams defines the dependencies of this module.
-type UnaryOutboundTransportParams struct {
+// UnaryInboundEncodingParams defines the dependencies of this module.
+type UnaryInboundEncodingParams struct {
 	fx.In
 
-	Config          OutboundTransportConfig
-	Middleware      []yarpc.UnaryOutboundTransportMiddleware   `group:"yarpcfx"`
-	MiddlewareLists [][]yarpc.UnaryOutboundTransportMiddleware `group:"yarpcfx"`
+	Config          InboundEncodingConfig
+	Middleware      []yarpc.UnaryInboundEncodingMiddleware   `group:"yarpcfx"`
+	MiddlewareLists [][]yarpc.UnaryInboundEncodingMiddleware `group:"yarpcfx"`
 }
 
-// UnaryOutboundTransportResult defines the values produced by this module.
-type UnaryOutboundTransportResult struct {
+// UnaryInboundEncodingResult defines the values produced by this module.
+type UnaryInboundEncodingResult struct {
 	fx.Out
 
 	// An ordered slice of middleware according to the given configuration.
-	OrderedMiddleware []yarpc.UnaryOutboundTransportMiddleware `name:"yarpcfx"`
+	OrderedMiddleware []yarpc.UnaryInboundEncodingMiddleware `name:"yarpcfx"`
 }
 
-// NewUnaryOutboundTransport produces an ordered slice of unary outbound transport middleware.
-func NewUnaryOutboundTransport(
-	p UnaryOutboundTransportParams,
-) (UnaryOutboundTransportResult, error) {
+// NewUnaryInboundEncoding produces an ordered slice of unary inbound encoding middleware.
+func NewUnaryInboundEncoding(
+	p UnaryInboundEncodingParams,
+) (UnaryInboundEncodingResult, error) {
 	// Collect all of the middleware into a single slice.
 	middleware := p.Middleware
 	for _, ml := range p.MiddlewareLists {
@@ -87,26 +87,26 @@ func NewUnaryOutboundTransport(
 	}
 
 	// Compose a map of the middleware, and validate that there are not any name conflicts.
-	middlewareMap := make(map[string]yarpc.UnaryOutboundTransportMiddleware, len(middleware))
+	middlewareMap := make(map[string]yarpc.UnaryInboundEncodingMiddleware, len(middleware))
 	for _, m := range middleware {
 		name := m.Name()
 		if _, ok := middlewareMap[name]; ok {
-			return UnaryOutboundTransportResult{}, fmt.Errorf("unary outbound transport middleware %q was registered more than once", name)
+			return UnaryInboundEncodingResult{}, fmt.Errorf("unary inbound encoding middleware %q was registered more than once", name)
 		}
 		middlewareMap[name] = m
 	}
 
 	// Construct an ordered slice of middleware using the configured slice of names.
-	ordered := make([]yarpc.UnaryOutboundTransportMiddleware, len(p.Config.Unary))
+	ordered := make([]yarpc.UnaryInboundEncodingMiddleware, len(p.Config.Unary))
 	for i, name := range p.Config.Unary {
 		m, ok := middlewareMap[name]
 		if !ok {
-			return UnaryOutboundTransportResult{}, fmt.Errorf("failed to resolve unary outbound transport middleware: %q", name)
+			return UnaryInboundEncodingResult{}, fmt.Errorf("failed to resolve unary inbound encoding middleware: %q", name)
 		}
 		ordered[i] = m
 	}
 
-	return UnaryOutboundTransportResult{
+	return UnaryInboundEncodingResult{
 		OrderedMiddleware: ordered,
 	}, nil
 }

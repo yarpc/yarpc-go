@@ -872,6 +872,18 @@ func (mr *MockUnaryInboundEncodingMiddlewareMockRecorder) Handle(arg0, arg1, arg
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Handle", reflect.TypeOf((*MockUnaryInboundEncodingMiddleware)(nil).Handle), arg0, arg1, arg2)
 }
 
+// Name mocks base method
+func (m *MockUnaryInboundEncodingMiddleware) Name() string {
+	ret := m.ctrl.Call(m, "Name")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Name indicates an expected call of Name
+func (mr *MockUnaryInboundEncodingMiddlewareMockRecorder) Name() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockUnaryInboundEncodingMiddleware)(nil).Name))
+}
+
 // MockUnaryInboundTransportMiddleware is a mock of UnaryInboundTransportMiddleware interface
 type MockUnaryInboundTransportMiddleware struct {
 	ctrl     *gomock.Controller
