@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcmiddlewarefx
+package yarpcfxmiddleware
 
 import (
 	"strings"
@@ -30,51 +30,51 @@ import (
 	yarpc "go.uber.org/yarpc/v2"
 )
 
-func TestNewOutboundTransportConfig(t *testing.T) {
-	cfg := strings.NewReader(`yarpc: {middleware: {outbounds: {transport: {unary: ["nop"]}}}}`)
+func TestNewInboundTransportConfig(t *testing.T) {
+	cfg := strings.NewReader(`yarpc: {middleware: {inbounds: {transport: {unary: ["nop"]}}}}`)
 	provider, err := config.NewYAML(config.Source(cfg))
 	require.NoError(t, err)
 
-	res, err := NewOutboundTransportConfig(OutboundTransportConfigParams{
+	res, err := NewInboundTransportConfig(InboundTransportConfigParams{
 		Provider: provider,
 	})
 	require.NoError(t, err)
-	assert.Equal(t, OutboundTransportConfig{Unary: []string{"nop"}}, res.Config)
+	assert.Equal(t, InboundTransportConfig{Unary: []string{"nop"}}, res.Config)
 }
 
-func TestNewUnaryOutboundTransport(t *testing.T) {
+func TestNewUnaryInboundTransport(t *testing.T) {
 	t.Run("duplicate registration error", func(t *testing.T) {
-		_, err := NewUnaryOutboundTransport(
-			UnaryOutboundTransportParams{
-				Middleware: []yarpc.UnaryOutboundTransportMiddleware{
-					yarpc.NopUnaryOutboundTransportMiddleware,
-					yarpc.NopUnaryOutboundTransportMiddleware,
+		_, err := NewUnaryInboundTransport(
+			UnaryInboundTransportParams{
+				Middleware: []yarpc.UnaryInboundTransportMiddleware{
+					yarpc.NopUnaryInboundTransportMiddleware,
+					yarpc.NopUnaryInboundTransportMiddleware,
 				},
 			},
 		)
-		assert.EqualError(t, err, `unary outbound transport middleware "nop" was registered more than once`)
+		assert.EqualError(t, err, `unary inbound transport middleware "nop" was registered more than once`)
 	})
 
 	t.Run("configured middleware is not available", func(t *testing.T) {
-		_, err := NewUnaryOutboundTransport(
-			UnaryOutboundTransportParams{
-				Config: OutboundTransportConfig{
+		_, err := NewUnaryInboundTransport(
+			UnaryInboundTransportParams{
+				Config: InboundTransportConfig{
 					Unary: []string{"dne"},
 				},
 			},
 		)
-		assert.EqualError(t, err, `failed to resolve unary outbound transport middleware: "dne"`)
+		assert.EqualError(t, err, `failed to resolve unary inbound transport middleware: "dne"`)
 	})
 
 	t.Run("successful construction", func(t *testing.T) {
-		res, err := NewUnaryOutboundTransport(
-			UnaryOutboundTransportParams{
-				Config: OutboundTransportConfig{
+		res, err := NewUnaryInboundTransport(
+			UnaryInboundTransportParams{
+				Config: InboundTransportConfig{
 					Unary: []string{"nop"},
 				},
-				MiddlewareLists: [][]yarpc.UnaryOutboundTransportMiddleware{
+				MiddlewareLists: [][]yarpc.UnaryInboundTransportMiddleware{
 					{
-						yarpc.NopUnaryOutboundTransportMiddleware,
+						yarpc.NopUnaryInboundTransportMiddleware,
 					},
 				},
 			},

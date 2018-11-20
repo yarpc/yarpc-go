@@ -18,21 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcmiddlewarefx
+package yarpcfxmiddleware
 
-import (
-	"go.uber.org/fx"
-)
-
-// Module produces ordered slices of middleware according to
-// the middleware configuration.
-var Module = fx.Provide(
-	NewOutboundTransportConfig,
-	NewUnaryOutboundTransport,
-
-	NewInboundTransportConfig,
-	NewUnaryInboundTransport,
-
-	NewInboundEncodingConfig,
-	NewUnaryInboundEncoding,
+const (
+	outboundTransportConfigurationKey = "yarpc.middleware.outbounds.transport"
+	inboundTransportConfigurationKey  = "yarpc.middleware.inbounds.transport"
+	inboundEncodingConfigurationKey   = "yarpc.middleware.inbounds.encoding"
 )
