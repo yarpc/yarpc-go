@@ -74,6 +74,33 @@ func TestNilInboundMiddleware(t *testing.T) {
 	})
 }
 
+func TestOrderedInboundMiddlewareAppply(t *testing.T) {
+	gotOrder := make([]string, 0, 4)
+
+	var newMiddleware = func(name string) yarpc.UnaryInboundTransportMiddleware {
+		return yarpc.NewUnaryInboundTransportMiddleware(name,
+			func(ctx context.Context, _ *yarpc.Request, _ *yarpc.Buffer, h yarpc.UnaryTransportHandler) (*yarpc.Response, *yarpc.Buffer, error) {
+				gotOrder = append(gotOrder, name)
+				return h.Handle(ctx, nil, nil)
+			})
+	}
+
+	mw1 := newMiddleware("mw1")
+	mw2 := newMiddleware("mw2")
+	mw3 := newMiddleware("mw3")
+
+	handler := yarpc.UnaryTransportHandlerFunc(func(context.Context, *yarpc.Request, *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
+		gotOrder = append(gotOrder, "handler")
+		return nil, nil, nil
+	})
+
+	handlerWithMW := yarpc.ApplyUnaryInboundTransportMiddleware(handler, mw1, mw2, mw3)
+	handlerWithMW.Handle(context.Background(), &yarpc.Request{}, &yarpc.Buffer{})
+
+	wantOrder := []string{"mw1", "mw2", "mw3", "handler"}
+	assert.Equal(t, wantOrder, gotOrder, "unexpected middleware ordering")
+}
+
 func TestStreamNopInboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()

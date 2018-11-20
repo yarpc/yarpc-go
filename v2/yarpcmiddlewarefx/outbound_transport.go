@@ -28,15 +28,6 @@ import (
 	yarpc "go.uber.org/yarpc/v2"
 )
 
-const outboundTransportConfigurationKey = "yarpc.middleware.outbounds.transport"
-
-// Module produces ordered slices of middleware according to
-// the middleware configuration.
-var Module = fx.Provide(
-	NewOutboundTransportConfig,
-	NewUnaryOutboundTransport,
-)
-
 // OutboundTransportConfig describes the configuration
 // shape for an ordered list of unary outbound transport middleware.
 type OutboundTransportConfig struct {

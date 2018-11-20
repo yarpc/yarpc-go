@@ -176,9 +176,11 @@ func NewListProvider(p ListProviderParams) (ListProviderResult, error) {
 type RouterParams struct {
 	fx.In
 
-	RouterMiddleware yarpc.RouterMiddleware       `optional:"true"`
-	Procedures       []yarpc.TransportProcedure   `group:"yarpcfx"`
-	ProcedureLists   [][]yarpc.TransportProcedure `group:"yarpcfx"`
+	RouterMiddleware         yarpc.RouterMiddleware                  `optional:"true"`
+	UnaryTransportMiddleware []yarpc.UnaryInboundTransportMiddleware `group:"yarpcfx"`
+
+	Procedures     []yarpc.TransportProcedure   `group:"yarpcfx"`
+	ProcedureLists [][]yarpc.TransportProcedure `group:"yarpcfx"`
 }
 
 // RouterResult defines the values produced by this module.
@@ -195,8 +197,32 @@ func NewRouter(p RouterParams) (RouterResult, error) {
 	for _, pl := range p.ProcedureLists {
 		procedures = append(procedures, pl...)
 	}
-	router := yarpcrouter.NewMapRouter("foo" /* Derive from servicefx. */, procedures)
+
+	router := yarpcrouter.NewMapRouter(
+		"foo", /* Derive from servicefx. */
+		applyUnaryTransportMiddleware(procedures, p.UnaryTransportMiddleware))
+
 	return RouterResult{
 		Router: yarpc.ApplyRouter(router, p.RouterMiddleware),
 	}, nil
+}
+
+// applyUnaryTransportMiddleware applies middleware to the procedures
+func applyUnaryTransportMiddleware(
+	procedures []yarpc.TransportProcedure,
+	unaryMiddleware []yarpc.UnaryInboundTransportMiddleware,
+) []yarpc.TransportProcedure {
+	result := make([]yarpc.TransportProcedure, 0, len(procedures))
+
+	for _, p := range procedures {
+		switch p.HandlerSpec.Type() {
+		case yarpc.Unary:
+			handler := yarpc.ApplyUnaryInboundTransportMiddleware(p.HandlerSpec.Unary(), unaryMiddleware...)
+			p.HandlerSpec = yarpc.NewUnaryTransportHandlerSpec(handler)
+		}
+
+		result = append(result, p)
+	}
+
+	return result
 }

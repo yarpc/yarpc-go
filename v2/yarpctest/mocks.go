@@ -909,6 +909,18 @@ func (mr *MockUnaryInboundTransportMiddlewareMockRecorder) Handle(arg0, arg1, ar
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Handle", reflect.TypeOf((*MockUnaryInboundTransportMiddleware)(nil).Handle), arg0, arg1, arg2, arg3)
 }
 
+// Name mocks base method
+func (m *MockUnaryInboundTransportMiddleware) Name() string {
+	ret := m.ctrl.Call(m, "Name")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Name indicates an expected call of Name
+func (mr *MockUnaryInboundTransportMiddlewareMockRecorder) Name() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockUnaryInboundTransportMiddleware)(nil).Name))
+}
+
 // MockUnaryOutbound is a mock of UnaryOutbound interface
 type MockUnaryOutbound struct {
 	ctrl     *gomock.Controller

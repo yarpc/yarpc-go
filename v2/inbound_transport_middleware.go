@@ -35,6 +35,7 @@ import (
 // UnaryInboundTransportMiddleware is re-used across requests and MAY be called multiple
 // times for the same request.
 type UnaryInboundTransportMiddleware interface {
+	Name() string
 	Handle(ctx context.Context, req *Request, reqBuf *Buffer, handler UnaryTransportHandler) (*Response, *Buffer, error)
 }
 
@@ -43,6 +44,8 @@ type UnaryInboundTransportMiddleware interface {
 var NopUnaryInboundTransportMiddleware UnaryInboundTransportMiddleware = nopUnaryInboundTransportMiddleware{}
 
 type nopUnaryInboundTransportMiddleware struct{}
+
+func (nopUnaryInboundTransportMiddleware) Name() string { return nopName }
 
 func (nopUnaryInboundTransportMiddleware) Handle(ctx context.Context, req *Request, reqBuf *Buffer, handler UnaryTransportHandler) (*Response, *Buffer, error) {
 	return handler.Handle(ctx, req, reqBuf)
@@ -57,20 +60,47 @@ func (h unaryTransportHandlerWithMiddleware) Handle(ctx context.Context, req *Re
 	return h.i.Handle(ctx, req, reqBuf, h.h)
 }
 
-// ApplyUnaryInboundTransportMiddleware applies the given InboundMiddleware to the given UnaryTransportHandler.
-func ApplyUnaryInboundTransportMiddleware(handler UnaryTransportHandler, middleware UnaryInboundTransportMiddleware) UnaryTransportHandler {
+// ApplyUnaryInboundTransportMiddleware applies the given middleware to the
+// given UnaryInboundTransportHandler.
+func ApplyUnaryInboundTransportMiddleware(h UnaryTransportHandler, middleware ...UnaryInboundTransportMiddleware) UnaryTransportHandler {
+	handler := h
+	for i := len(middleware) - 1; i >= 0; i-- {
+		handler = applyUnaryInboundTransportMiddleware(handler, middleware[i])
+	}
+	return handler
+}
+
+func applyUnaryInboundTransportMiddleware(handler UnaryTransportHandler, middleware UnaryInboundTransportMiddleware) UnaryTransportHandler {
 	if middleware == nil {
 		return handler
 	}
 	return unaryTransportHandlerWithMiddleware{h: handler, i: middleware}
 }
 
-// UnaryInboundTransportMiddlewareFunc adapts a function into an InboundMiddleware.
-type UnaryInboundTransportMiddlewareFunc func(context.Context, *Request, *Buffer, UnaryTransportHandler) (*Response, *Buffer, error)
+// NewUnaryInboundTransportMiddleware is a convenience constructor for creating
+// new middleware.
+func NewUnaryInboundTransportMiddleware(
+	name string,
+	f func(context.Context, *Request, *Buffer, UnaryTransportHandler) (*Response, *Buffer, error),
+) UnaryInboundTransportMiddleware {
+	return unaryInboundTransportMiddleware{
+		name: name,
+		f:    f,
+	}
+}
 
-// Handle for UnaryInboundTransportMiddlewareFunc
-func (f UnaryInboundTransportMiddlewareFunc) Handle(ctx context.Context, req *Request, reqBuf *Buffer, handler UnaryTransportHandler) (*Response, *Buffer, error) {
-	return f(ctx, req, reqBuf, handler)
+// unaryInboundTransportMiddleware adapts a function and name into a middleware.
+type unaryInboundTransportMiddleware struct {
+	name string
+	f    func(context.Context, *Request, *Buffer, UnaryTransportHandler) (*Response, *Buffer, error)
+}
+
+func (u unaryInboundTransportMiddleware) Name() string {
+	return u.name
+}
+
+func (u unaryInboundTransportMiddleware) Handle(ctx context.Context, req *Request, reqBuf *Buffer, handler UnaryTransportHandler) (*Response, *Buffer, error) {
+	return u.f(ctx, req, reqBuf, handler)
 }
 
 // StreamInboundTransportMiddleware defines a transport-level middleware for
