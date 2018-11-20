@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcmiddlewarefx
+package yarpcfxmiddleware
 
 import (
 	"fmt"
@@ -48,8 +48,8 @@ type OutboundTransportConfigResult struct {
 	Config OutboundTransportConfig
 }
 
-// NewOutboundTransportConfig produces an UnaryOutboundTransportConfig.
-func NewOutboundTransportConfig(p OutboundTransportConfigParams) (OutboundTransportConfigResult, error) {
+// newOutboundTransportConfig produces an UnaryOutboundTransportConfig.
+func newOutboundTransportConfig(p OutboundTransportConfigParams) (OutboundTransportConfigResult, error) {
 	mc := OutboundTransportConfig{}
 	if err := p.Provider.Get(outboundTransportConfigurationKey).Populate(&mc); err != nil {
 		return OutboundTransportConfigResult{}, err
@@ -76,8 +76,8 @@ type UnaryOutboundTransportResult struct {
 	OrderedMiddleware []yarpc.UnaryOutboundTransportMiddleware `name:"yarpcfx"`
 }
 
-// NewUnaryOutboundTransport produces an ordered slice of unary outbound transport middleware.
-func NewUnaryOutboundTransport(
+// newUnaryOutboundTransport produces an ordered slice of unary outbound transport middleware.
+func newUnaryOutboundTransport(
 	p UnaryOutboundTransportParams,
 ) (UnaryOutboundTransportResult, error) {
 	// Collect all of the middleware into a single slice.

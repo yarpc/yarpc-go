@@ -30,18 +30,6 @@ import (
 	"go.uber.org/yarpc/v2/yarpcrouter"
 )
 
-const _name = "yarpcfx"
-
-// Module provides YARPC integration for services. The module produces
-// a yarpc.Router and a yarpc.ClientProvider.
-var Module = fx.Options(
-	fx.Provide(NewClientProvider),
-	fx.Provide(NewDialerProvider),
-	fx.Provide(NewChooserProvider),
-	fx.Provide(NewListProvider),
-	fx.Provide(NewRouter),
-)
-
 // ClientProviderParams defines the dependencies of this module.
 type ClientProviderParams struct {
 	fx.In
@@ -59,8 +47,8 @@ type ClientProviderResult struct {
 	Provider yarpc.ClientProvider
 }
 
-// NewClientProvider provides a yarpc.ClientProvider to the Fx application.
-func NewClientProvider(p ClientProviderParams) (ClientProviderResult, error) {
+// newClientProvider provides a yarpc.ClientProvider to the Fx application.
+func newClientProvider(p ClientProviderParams) (ClientProviderResult, error) {
 	clients := p.Clients
 	for _, cl := range p.ClientLists {
 		clients = append(clients, cl...)
@@ -96,8 +84,8 @@ type DialerProviderResult struct {
 	Provider yarpc.DialerProvider
 }
 
-// NewDialerProvider provides a yarpc.DialerProvider to the Fx application.
-func NewDialerProvider(p DialerProviderParams) (DialerProviderResult, error) {
+// newDialerProvider provides a yarpc.DialerProvider to the Fx application.
+func newDialerProvider(p DialerProviderParams) (DialerProviderResult, error) {
 	dialers := p.Dialers
 	for _, dl := range p.DialerLists {
 		dialers = append(dialers, dl...)
@@ -126,8 +114,8 @@ type ChooserProviderResult struct {
 	Provider yarpc.ChooserProvider
 }
 
-// NewChooserProvider provides a yarpc.ChooserProvider to the Fx application.
-func NewChooserProvider(p ChooserProviderParams) (ChooserProviderResult, error) {
+// newChooserProvider provides a yarpc.ChooserProvider to the Fx application.
+func newChooserProvider(p ChooserProviderParams) (ChooserProviderResult, error) {
 	choosers := p.Choosers
 	for _, cl := range p.ChooserLists {
 		choosers = append(choosers, cl...)
@@ -156,8 +144,8 @@ type ListProviderResult struct {
 	Provider yarpc.ListProvider
 }
 
-// NewListProvider provides a yarpc.ListProvider to the Fx application.
-func NewListProvider(p ListProviderParams) (ListProviderResult, error) {
+// newListProvider provides a yarpc.ListProvider to the Fx application.
+func newListProvider(p ListProviderParams) (ListProviderResult, error) {
 	lists := p.Lists
 	for _, ll := range p.ListLists {
 		lists = append(lists, ll...)
@@ -190,9 +178,9 @@ type RouterResult struct {
 	Router yarpc.Router
 }
 
-// NewRouter registers procedures with a router, and produces it so
+// newRouter registers procedures with a router, and produces it so
 // that specific transport inbounds can depend upon it.
-func NewRouter(p RouterParams) (RouterResult, error) {
+func newRouter(p RouterParams) (RouterResult, error) {
 	procedures := p.Procedures
 	for _, pl := range p.ProcedureLists {
 		procedures = append(procedures, pl...)

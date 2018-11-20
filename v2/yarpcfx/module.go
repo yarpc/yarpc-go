@@ -18,21 +18,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcmiddlewarefx
+package yarpcfx
 
 import (
 	"go.uber.org/fx"
+	"go.uber.org/yarpc/v2/yarpcfx/internal/internalpeerlistfx"
+	"go.uber.org/yarpc/v2/yarpcfx/internal/internaltransportfx"
+	"go.uber.org/yarpc/v2/yarpcfx/yarpcfxmiddleware"
 )
 
-// Module produces ordered slices of middleware according to
-// the middleware configuration.
-var Module = fx.Provide(
-	NewOutboundTransportConfig,
-	NewUnaryOutboundTransport,
+// Module provides YARPC integration for services. The module produces a
+// yarpc.Router, yarpc.ClientProvider and configuration for transports, peer
+// lists and middleware.
+var Module = fx.Options(
+	fx.Provide(
+		newClientProvider,
+		newDialerProvider,
+		newChooserProvider,
+		newListProvider,
+		newRouter,
+	),
 
-	NewInboundTransportConfig,
-	NewUnaryInboundTransport,
-
-	NewInboundEncodingConfig,
-	NewUnaryInboundEncoding,
+	yarpcfxmiddleware.Module,
+	internaltransportfx.Module,
+	internalpeerlistfx.Module,
 )

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcmiddlewarefx
+package yarpcfxmiddleware
 
 import (
 	"strings"
@@ -30,51 +30,51 @@ import (
 	yarpc "go.uber.org/yarpc/v2"
 )
 
-func TestNewInboundEncodingConfig(t *testing.T) {
-	cfg := strings.NewReader(`yarpc: {middleware: {inbounds: {encoding: {unary: ["nop"]}}}}`)
+func TestNewInboundTransportConfig(t *testing.T) {
+	cfg := strings.NewReader(`yarpc: {middleware: {inbounds: {transport: {unary: ["nop"]}}}}`)
 	provider, err := config.NewYAML(config.Source(cfg))
 	require.NoError(t, err)
 
-	res, err := NewInboundEncodingConfig(InboundEncodingConfigParams{
+	res, err := newInboundTransportConfig(InboundTransportConfigParams{
 		Provider: provider,
 	})
 	require.NoError(t, err)
-	assert.Equal(t, InboundEncodingConfig{Unary: []string{"nop"}}, res.Config)
+	assert.Equal(t, InboundTransportConfig{Unary: []string{"nop"}}, res.Config)
 }
 
-func TestNewUnaryInboundEncoding(t *testing.T) {
+func TestNewUnaryInboundTransport(t *testing.T) {
 	t.Run("duplicate registration error", func(t *testing.T) {
-		_, err := NewUnaryInboundEncoding(
-			UnaryInboundEncodingParams{
-				Middleware: []yarpc.UnaryInboundEncodingMiddleware{
-					yarpc.NopUnaryInboundEncodingMiddleware,
-					yarpc.NopUnaryInboundEncodingMiddleware,
+		_, err := newUnaryInboundTransport(
+			UnaryInboundTransportParams{
+				Middleware: []yarpc.UnaryInboundTransportMiddleware{
+					yarpc.NopUnaryInboundTransportMiddleware,
+					yarpc.NopUnaryInboundTransportMiddleware,
 				},
 			},
 		)
-		assert.EqualError(t, err, `unary inbound encoding middleware "nop" was registered more than once`)
+		assert.EqualError(t, err, `unary inbound transport middleware "nop" was registered more than once`)
 	})
 
 	t.Run("configured middleware is not available", func(t *testing.T) {
-		_, err := NewUnaryInboundEncoding(
-			UnaryInboundEncodingParams{
-				Config: InboundEncodingConfig{
+		_, err := newUnaryInboundTransport(
+			UnaryInboundTransportParams{
+				Config: InboundTransportConfig{
 					Unary: []string{"dne"},
 				},
 			},
 		)
-		assert.EqualError(t, err, `failed to resolve unary inbound encoding middleware: "dne"`)
+		assert.EqualError(t, err, `failed to resolve unary inbound transport middleware: "dne"`)
 	})
 
 	t.Run("successful construction", func(t *testing.T) {
-		res, err := NewUnaryInboundEncoding(
-			UnaryInboundEncodingParams{
-				Config: InboundEncodingConfig{
+		res, err := newUnaryInboundTransport(
+			UnaryInboundTransportParams{
+				Config: InboundTransportConfig{
 					Unary: []string{"nop"},
 				},
-				MiddlewareLists: [][]yarpc.UnaryInboundEncodingMiddleware{
+				MiddlewareLists: [][]yarpc.UnaryInboundTransportMiddleware{
 					{
-						yarpc.NopUnaryInboundEncodingMiddleware,
+						yarpc.NopUnaryInboundTransportMiddleware,
 					},
 				},
 			},

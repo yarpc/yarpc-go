@@ -46,14 +46,12 @@ type MapRouter struct {
 	serviceNames              map[string]struct{}
 }
 
-// NewMapRouter builds a new MapRouter that uses the given name as the
-// default service name and registers the given procedures.
+// NewMapRouter builds a new MapRouter that uses the given name as the default
+// service name and registers the given procedures.
 //
-// If a provided procedure does not specify its service name, it will
-// inherit the default service name. Multiple procedures with the
-// same name and service name may exist if they handle different encodings.
-// If a procedure does not specify an encoding, it can only support one handler.
-// The router will select that handler regardless of the encoding.
+// If a provided procedure does not specify its service name, it will inherit
+// the default service name. Multiple procedures with the same name and service
+// name may exist if they handle different encodings.
 func NewMapRouter(defaultService string, rs []yarpc.TransportProcedure) MapRouter {
 	router := MapRouter{
 		defaultService:            defaultService,
