@@ -22,15 +22,41 @@ package yarpcfx
 
 import (
 	"go.uber.org/fx"
+	"go.uber.org/yarpc/v2/yarpcfx/yarpcfxmiddleware"
+	"go.uber.org/yarpc/v2/yarpchttpfx"
+	"go.uber.org/yarpc/v2/yarpcpendingheapfx"
+	"go.uber.org/yarpc/v2/yarpcrandpeerfx"
+	"go.uber.org/yarpc/v2/yarpcroundrobinfx"
+	"go.uber.org/yarpc/v2/yarpctchannelfx"
+	"go.uber.org/yarpc/v2/yarpctworandomchoicesfx"
 )
 
 // Module provides YARPC integration for services. The module produces
 // a yarpc.Router and a yarpc.ClientProvider.
 var Module = fx.Options(
-	// yarpcfx
-	fx.Provide(newClientProvider),
-	fx.Provide(newDialerProvider),
-	fx.Provide(newChooserProvider),
-	fx.Provide(newListProvider),
-	fx.Provide(newRouter),
+
+	fx.Provide( // yarpcfx
+		newClientProvider,
+		newDialerProvider,
+		newChooserProvider,
+		newListProvider,
+		newRouter,
+	),
+
+	fx.Provide( // transports
+		yarpchttpfx.Module,
+		yarpctchannelfx.Module,
+		// TODO(apeatsbond): grpcfx when #1652 lands
+	),
+
+	fx.Provide( // peer lists
+		yarpcpendingheapfx.Module,
+		yarpcroundrobinfx.Module,
+		yarpcrandpeerfx.Module,
+		yarpctworandomchoicesfx.Module,
+	),
+
+	fx.Provide( // middleware
+		yarpcfxmiddleware.Module,
+	),
 )
