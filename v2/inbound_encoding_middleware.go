@@ -60,8 +60,17 @@ func (h unaryEncodingHandlerWithMiddleware) Handle(ctx context.Context, reqBuf i
 	return h.i.Handle(ctx, reqBuf, h.h)
 }
 
-// ApplyUnaryInboundEncodingMiddleware applies the given middleware to the given UnaryTransportHandler.
-func ApplyUnaryInboundEncodingMiddleware(handler UnaryEncodingHandler, middleware UnaryInboundEncodingMiddleware) UnaryEncodingHandler {
+// ApplyUnaryInboundEncodingMiddleware applies the middleware to the
+// UnaryInboundEncodingHandler.
+func ApplyUnaryInboundEncodingMiddleware(h UnaryEncodingHandler, middleware ...UnaryInboundEncodingMiddleware) UnaryEncodingHandler {
+	handler := h
+	for i := len(middleware) - 1; i >= 0; i-- {
+		handler = applyUnaryInboundEncodingMiddleware(handler, middleware[i])
+	}
+	return handler
+}
+
+func applyUnaryInboundEncodingMiddleware(handler UnaryEncodingHandler, middleware UnaryInboundEncodingMiddleware) UnaryEncodingHandler {
 	if middleware == nil {
 		return handler
 	}

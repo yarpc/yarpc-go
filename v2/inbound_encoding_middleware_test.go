@@ -27,6 +27,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/internal/internaltesttime"
 	"go.uber.org/yarpc/v2/yarpctest"
@@ -48,4 +49,44 @@ func TestUnaryNopInboundEncodingMiddleware(t *testing.T) {
 
 	_, handleErr := wrappedH.Handle(ctx, reqBuf)
 	assert.Equal(t, err, handleErr)
+}
+
+func TestNilInboundEncodingMiddleware(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	handler := yarpctest.NewMockUnaryEncodingHandler(ctrl)
+	mw := yarpc.ApplyUnaryInboundEncodingMiddleware(handler, nil)
+
+	handler.EXPECT().Handle(ctx, "test")
+	_, err := mw.Handle(ctx, "test")
+	require.NoError(t, err, "unexpected error calling handler")
+}
+
+func TestOrderedInboundEncodingMiddlewareAppply(t *testing.T) {
+	var gotOrder []string
+
+	var newMiddleware = func(name string) yarpc.UnaryInboundEncodingMiddleware {
+		return yarpc.NewUnaryInboundEncodingMiddleware(name,
+			func(ctx context.Context, _ interface{}, h yarpc.UnaryEncodingHandler) (interface{}, error) {
+				gotOrder = append(gotOrder, name)
+				return h.Handle(ctx, nil)
+			})
+	}
+
+	mw1 := newMiddleware("mw1")
+	mw2 := newMiddleware("mw2")
+	mw3 := newMiddleware("mw3")
+
+	handler := yarpc.UnaryEncodingHandlerFunc(func(context.Context, interface{}) (interface{}, error) {
+		gotOrder = append(gotOrder, "handler")
+		return nil, nil
+	})
+
+	handlerWithMW := yarpc.ApplyUnaryInboundEncodingMiddleware(handler, mw1, mw2, mw3)
+	_, _ = handlerWithMW.Handle(context.Background(), "nothing")
+
+	wantOrder := []string{"mw1", "mw2", "mw3", "handler"}
+	assert.Equal(t, wantOrder, gotOrder, "unexpected middleware ordering")
 }
