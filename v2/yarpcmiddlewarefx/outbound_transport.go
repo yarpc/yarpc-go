@@ -76,7 +76,7 @@ type UnaryOutboundTransportResult struct {
 	OrderedMiddleware []yarpc.UnaryOutboundTransportMiddleware `name:"yarpcfx"`
 }
 
-// NewUnaryOutboundTransport produceds an ordered slice of unary outbound transport middleware.
+// NewUnaryOutboundTransport produces an ordered slice of unary outbound transport middleware.
 func NewUnaryOutboundTransport(
 	p UnaryOutboundTransportParams,
 ) (UnaryOutboundTransportResult, error) {

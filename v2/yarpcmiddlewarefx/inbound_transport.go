@@ -76,7 +76,7 @@ type UnaryInboundTransportResult struct {
 	OrderedMiddleware []yarpc.UnaryInboundTransportMiddleware `name:"yarpcfx"`
 }
 
-// NewUnaryInboundTransport produceds an ordered slice of unary inbound transport middleware.
+// NewUnaryInboundTransport produces an ordered slice of unary inbound transport middleware.
 func NewUnaryInboundTransport(
 	p UnaryInboundTransportParams,
 ) (UnaryInboundTransportResult, error) {

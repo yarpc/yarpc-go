@@ -76,7 +76,7 @@ type UnaryInboundEncodingResult struct {
 	OrderedMiddleware []yarpc.UnaryInboundEncodingMiddleware `name:"yarpcfx"`
 }
 
-// NewUnaryInboundEncoding produceds an ordered slice of unary inbound encoding middleware.
+// NewUnaryInboundEncoding produces an ordered slice of unary inbound encoding middleware.
 func NewUnaryInboundEncoding(
 	p UnaryInboundEncodingParams,
 ) (UnaryInboundEncodingResult, error) {
