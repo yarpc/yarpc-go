@@ -32,4 +32,7 @@ var Module = fx.Provide(
 
 	NewInboundTransportConfig,
 	NewUnaryInboundTransport,
+
+	NewInboundEncodingConfig,
+	NewUnaryInboundEncoding,
 )
