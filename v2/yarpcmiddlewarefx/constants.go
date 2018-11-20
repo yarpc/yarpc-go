@@ -23,4 +23,5 @@ package yarpcmiddlewarefx
 const (
 	outboundTransportConfigurationKey = "yarpc.middleware.outbounds.transport"
 	inboundTransportConfigurationKey  = "yarpc.middleware.inbounds.transport"
+	inboundEncodingConfigurationKey   = "yarpc.middleware.inbounds.encoding"
 )
