@@ -30,18 +30,6 @@ import (
 	"go.uber.org/yarpc/v2/yarpcrouter"
 )
 
-const _name = "yarpcfx"
-
-// Module provides YARPC integration for services. The module produces
-// a yarpc.Router and a yarpc.ClientProvider.
-var Module = fx.Options(
-	fx.Provide(NewClientProvider),
-	fx.Provide(NewDialerProvider),
-	fx.Provide(NewChooserProvider),
-	fx.Provide(NewListProvider),
-	fx.Provide(NewRouter),
-)
-
 // ClientProviderParams defines the dependencies of this module.
 type ClientProviderParams struct {
 	fx.In
