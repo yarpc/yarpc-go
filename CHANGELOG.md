@@ -5,7 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- No changes yet.
+### Fixed
+- Upgrade a read-lock to a read-write lock around peer selection.
+  This addresses a data race observed in production that results in broken peer
+  list invariants.
 
 ## [1.35.2] - 2018-11-06
 ### Removed
