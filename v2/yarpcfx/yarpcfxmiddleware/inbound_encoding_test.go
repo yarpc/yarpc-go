@@ -35,7 +35,7 @@ func TestNewInboundEncodingConfig(t *testing.T) {
 	provider, err := config.NewYAML(config.Source(cfg))
 	require.NoError(t, err)
 
-	res, err := NewInboundEncodingConfig(InboundEncodingConfigParams{
+	res, err := newInboundEncodingConfig(InboundEncodingConfigParams{
 		Provider: provider,
 	})
 	require.NoError(t, err)
@@ -44,7 +44,7 @@ func TestNewInboundEncodingConfig(t *testing.T) {
 
 func TestNewUnaryInboundEncoding(t *testing.T) {
 	t.Run("duplicate registration error", func(t *testing.T) {
-		_, err := NewUnaryInboundEncoding(
+		_, err := newUnaryInboundEncoding(
 			UnaryInboundEncodingParams{
 				Middleware: []yarpc.UnaryInboundEncodingMiddleware{
 					yarpc.NopUnaryInboundEncodingMiddleware,
@@ -56,7 +56,7 @@ func TestNewUnaryInboundEncoding(t *testing.T) {
 	})
 
 	t.Run("configured middleware is not available", func(t *testing.T) {
-		_, err := NewUnaryInboundEncoding(
+		_, err := newUnaryInboundEncoding(
 			UnaryInboundEncodingParams{
 				Config: InboundEncodingConfig{
 					Unary: []string{"dne"},
@@ -67,7 +67,7 @@ func TestNewUnaryInboundEncoding(t *testing.T) {
 	})
 
 	t.Run("successful construction", func(t *testing.T) {
-		res, err := NewUnaryInboundEncoding(
+		res, err := newUnaryInboundEncoding(
 			UnaryInboundEncodingParams{
 				Config: InboundEncodingConfig{
 					Unary: []string{"nop"},

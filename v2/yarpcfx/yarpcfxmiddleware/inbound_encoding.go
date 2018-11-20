@@ -48,8 +48,8 @@ type InboundEncodingConfigResult struct {
 	Config InboundEncodingConfig
 }
 
-// NewInboundEncodingConfig produces an UnaryInboundEncodingConfig.
-func NewInboundEncodingConfig(p InboundEncodingConfigParams) (InboundEncodingConfigResult, error) {
+// newInboundEncodingConfig produces an UnaryInboundEncodingConfig.
+func newInboundEncodingConfig(p InboundEncodingConfigParams) (InboundEncodingConfigResult, error) {
 	mc := InboundEncodingConfig{}
 	if err := p.Provider.Get(inboundEncodingConfigurationKey).Populate(&mc); err != nil {
 		return InboundEncodingConfigResult{}, err
@@ -76,8 +76,8 @@ type UnaryInboundEncodingResult struct {
 	OrderedMiddleware []yarpc.UnaryInboundEncodingMiddleware `name:"yarpcfx"`
 }
 
-// NewUnaryInboundEncoding produces an ordered slice of unary inbound encoding middleware.
-func NewUnaryInboundEncoding(
+// newUnaryInboundEncoding produces an ordered slice of unary inbound encoding middleware.
+func newUnaryInboundEncoding(
 	p UnaryInboundEncodingParams,
 ) (UnaryInboundEncodingResult, error) {
 	// Collect all of the middleware into a single slice.

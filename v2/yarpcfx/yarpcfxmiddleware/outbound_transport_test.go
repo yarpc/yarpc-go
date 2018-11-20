@@ -35,7 +35,7 @@ func TestNewOutboundTransportConfig(t *testing.T) {
 	provider, err := config.NewYAML(config.Source(cfg))
 	require.NoError(t, err)
 
-	res, err := NewOutboundTransportConfig(OutboundTransportConfigParams{
+	res, err := newOutboundTransportConfig(OutboundTransportConfigParams{
 		Provider: provider,
 	})
 	require.NoError(t, err)
@@ -44,7 +44,7 @@ func TestNewOutboundTransportConfig(t *testing.T) {
 
 func TestNewUnaryOutboundTransport(t *testing.T) {
 	t.Run("duplicate registration error", func(t *testing.T) {
-		_, err := NewUnaryOutboundTransport(
+		_, err := newUnaryOutboundTransport(
 			UnaryOutboundTransportParams{
 				Middleware: []yarpc.UnaryOutboundTransportMiddleware{
 					yarpc.NopUnaryOutboundTransportMiddleware,
@@ -56,7 +56,7 @@ func TestNewUnaryOutboundTransport(t *testing.T) {
 	})
 
 	t.Run("configured middleware is not available", func(t *testing.T) {
-		_, err := NewUnaryOutboundTransport(
+		_, err := newUnaryOutboundTransport(
 			UnaryOutboundTransportParams{
 				Config: OutboundTransportConfig{
 					Unary: []string{"dne"},
@@ -67,7 +67,7 @@ func TestNewUnaryOutboundTransport(t *testing.T) {
 	})
 
 	t.Run("successful construction", func(t *testing.T) {
-		res, err := NewUnaryOutboundTransport(
+		res, err := newUnaryOutboundTransport(
 			UnaryOutboundTransportParams{
 				Config: OutboundTransportConfig{
 					Unary: []string{"nop"},

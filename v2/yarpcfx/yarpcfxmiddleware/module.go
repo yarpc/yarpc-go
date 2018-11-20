@@ -27,12 +27,12 @@ import (
 // Module produces ordered slices of middleware according to
 // the middleware configuration.
 var Module = fx.Provide(
-	NewOutboundTransportConfig,
-	NewUnaryOutboundTransport,
+	newOutboundTransportConfig,
+	newUnaryOutboundTransport,
 
-	NewInboundTransportConfig,
-	NewUnaryInboundTransport,
+	newInboundTransportConfig,
+	newUnaryInboundTransport,
 
-	NewInboundEncodingConfig,
-	NewUnaryInboundEncoding,
+	newInboundEncodingConfig,
+	newUnaryInboundEncoding,
 )
