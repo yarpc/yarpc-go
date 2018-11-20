@@ -29,11 +29,17 @@ import (
 	"sync"
 
 	"go.uber.org/atomic"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
-var _errServerStopping = yarpcerrors.UnavailableErrorf("server is shutting down")
+const _name = "drain"
+
+var (
+	_ yarpc.UnaryInboundTransportMiddleware = (*Middleware)(nil)
+
+	_errServerStopping = yarpcerror.UnavailableErrorf("server is shutting down")
+)
 
 // Middleware tracks the number of in-flight requests and provides a method to
 // wait until they're successfully drained.
@@ -51,24 +57,19 @@ func New() *Middleware {
 	}
 }
 
-// Handle implements middleware.UnaryInbound.
-func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w transport.ResponseWriter, h transport.UnaryHandler) error {
-	if err := m.before(); err != nil {
-		return err
-	}
-	err := h.Handle(ctx, req, w)
-	m.after()
-	return err
+// Name implements yarpc.UnaryInboundTransportMiddleware.
+func (m *Middleware) Name() string {
+	return _name
 }
 
-// HandleOneway implements middleware.OnewayInbound.
-func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
+// Handle implements yarpc.UnaryInboundTransportMiddleware.
+func (m *Middleware) Handle(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.Buffer, h yarpc.UnaryTransportHandler) (*yarpc.Response, *yarpc.Buffer, error) {
 	if err := m.before(); err != nil {
-		return err
+		return nil, nil, err
 	}
-	err := h.HandleOneway(ctx, req)
+	res, resBuf, err := h.Handle(ctx, req, reqBuf)
 	m.after()
-	return err
+	return res, resBuf, err
 }
 
 // Drain blocks until all in-flight requests are completed.
