@@ -20,6 +20,9 @@
 
 package yarpcerror
 
+// The name must only contain lowercase letters from a-z and dashes (-), and
+// cannot start or end in a dash. If the name is something else, an error with
+// code CodeInternal will be returned.
 func validateName(name string) error {
 	if name == "" {
 		return nil
@@ -30,10 +33,10 @@ func validateName(name string) error {
 	lenNameMinusOne := len(name) - 1
 	for i, b := range name {
 		if (i == 0 || i == lenNameMinusOne) && b == '-' {
-			return Newf(CodeInternal, "invalid error name, must only start or end with lowercase letters: %s", name)
+			return New(CodeInternal, sprintf("invalid error name, must only start or end with lowercase letters: %s", name))
 		}
 		if !((b >= 'a' && b <= 'z') || b == '-') {
-			return Newf(CodeInternal, "invalid error name, must only contain lowercase letters and dashes: %s", name)
+			return New(CodeInternal, sprintf("invalid error name, must only contain lowercase letters and dashes: %s", name))
 		}
 	}
 	return nil

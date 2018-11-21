@@ -107,7 +107,7 @@ func (o *Outbound) call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.B
 	start := time.Now()
 	deadline, ok := ctx.Deadline()
 	if !ok {
-		return nil, nil, yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "missing context deadline")
+		return nil, nil, yarpcerror.New(yarpcerror.CodeInvalidArgument, "missing context deadline")
 	}
 	ttl := deadline.Sub(start)
 
@@ -147,8 +147,11 @@ func (o *Outbound) call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.B
 		return nil, nil, err
 	}
 
+	var appErr error
 	if httpRes.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus {
-		res.ApplicationError = getYARPCErrorFromResponse(httpRes, resBuf, true)
+		appErr = getYARPCErrorFromResponse(httpRes, resBuf, true)
+		errorInfo := yarpcerror.ExtractInfo(appErr)
+		res.ApplicationErrorInfo = &errorInfo
 	}
 
 	bothResponseError := httpRes.Header.Get(BothResponseErrorHeader) == AcceptTrue
@@ -158,7 +161,7 @@ func (o *Outbound) call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.B
 			// However, to preserve the current behavior of YARPC, this is
 			// necessary. This is most likely where the error details will be added,
 			// so we expect this to change.
-			return res, resBuf, res.ApplicationError
+			return res, resBuf, appErr
 		}
 		return res, resBuf, nil
 	}
@@ -316,11 +319,11 @@ func (o *Outbound) withCoreHeaders(httpReq *http.Request, req *yarpc.Request, tt
 func readCloserToBuffer(readCloser io.ReadCloser) (*yarpc.Buffer, error) {
 	body, err := ioutil.ReadAll(readCloser)
 	if err != nil {
-		return nil, yarpcerror.Newf(yarpcerror.CodeInternal, err.Error())
+		return nil, yarpcerror.New(yarpcerror.CodeInternal, err.Error())
 	}
 
 	if err := readCloser.Close(); err != nil {
-		return nil, yarpcerror.Newf(yarpcerror.CodeInternal, err.Error())
+		return nil, yarpcerror.New(yarpcerror.CodeInternal, err.Error())
 	}
 	return yarpc.NewBufferBytes(body), nil
 }
@@ -384,7 +387,7 @@ func (o *Outbound) roundTrip(httpReq *http.Request, req *yarpc.Request, start ti
 
 	deadline, ok := ctx.Deadline()
 	if !ok {
-		return nil, yarpcerror.Newf(
+		return nil, yarpcerror.New(
 			yarpcerror.CodeInvalidArgument,
 			"missing context deadline")
 	}
@@ -447,17 +450,20 @@ func (o *Outbound) doWithPeer(
 			p.OnSuspect()
 
 			end := time.Now()
-			return nil, yarpcerror.Newf(
+			return nil, yarpcerror.New(
 				yarpcerror.CodeDeadlineExceeded,
-				"client timeout for procedure %q of service %q after %v",
-				req.Procedure, req.Service, end.Sub(start))
+				fmt.Sprintf(
+					"client timeout for procedure %q of service %q after %v",
+					req.Procedure, req.Service, end.Sub(start),
+				),
+			)
 		}
 
 		// Note that the connection may have been lost so the peer connection
 		// maintenance loop resumes probing for availability.
 		p.OnDisconnected()
 
-		return nil, yarpcerror.Newf(yarpcerror.CodeUnknown, "unknown error from http client: %s", err.Error())
+		return nil, yarpcerror.New(yarpcerror.CodeUnknown, fmt.Sprintf("unknown error from http client: %s", err.Error()))
 	}
 
 	return response, nil

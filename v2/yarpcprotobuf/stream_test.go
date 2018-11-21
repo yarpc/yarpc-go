@@ -23,6 +23,7 @@ package yarpcprotobuf
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -116,7 +117,7 @@ func TestWriteToStream(t *testing.T) {
 		require.NoError(t, err)
 
 		err = writeToStream(ctx, clientStream, nil)
-		assert.Equal(t, yarpcerror.Newf(yarpcerror.CodeInternal, "failed to marshal unexpected encoding %q", enc), err)
+		assert.Equal(t, yarpcerror.New(yarpcerror.CodeInternal, fmt.Sprintf("failed to marshal unexpected encoding %q", enc)), err)
 	})
 
 	t.Run("successful write", func(t *testing.T) {

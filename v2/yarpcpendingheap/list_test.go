@@ -36,7 +36,7 @@ import (
 )
 
 var (
-	_noContextDeadlineError = yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "can't wait for peer without a context deadline for a fewest-pending-requests peer list")
+	_noContextDeadlineError = yarpcerror.New(yarpcerror.CodeInvalidArgument, "can't wait for peer without a context deadline for a fewest-pending-requests peer list")
 )
 
 func newNotRunningError(err string) error {
@@ -108,7 +108,7 @@ func TestPeerHeapList(t *testing.T) {
 	}
 	tests := []testStruct{
 		{
-			msg: "setup",
+			msg:                      "setup",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -116,7 +116,7 @@ func TestPeerHeapList(t *testing.T) {
 			},
 		},
 		{
-			msg: "setup with disconnected",
+			msg:                        "setup with disconnected",
 			retainedAvailablePeerIDs:   []string{"1"},
 			retainedUnavailablePeerIDs: []string{"2"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -126,7 +126,7 @@ func TestPeerHeapList(t *testing.T) {
 			expectedUnavailablePeers: []string{"2"},
 		},
 		{
-			msg: "update and choose",
+			msg:                      "update and choose",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -135,7 +135,7 @@ func TestPeerHeapList(t *testing.T) {
 			},
 		},
 		{
-			msg: "update many many and choose",
+			msg:                      "update many many and choose",
 			retainedAvailablePeerIDs: []string{"1", "2", "3", "4", "5", "6"},
 			expectedAvailablePeers:   []string{"1", "2", "3", "4", "5", "6"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -158,7 +158,7 @@ func TestPeerHeapList(t *testing.T) {
 			},
 		},
 		{
-			msg: "update retain multiple errors",
+			msg:                      "update retain multiple errors",
 			retainedAvailablePeerIDs: []string{"2"},
 			errRetainedPeerIDs:       []string{"1", "3"},
 			retainErr:                yarpcpeer.ErrInvalidPeerType{},
@@ -171,7 +171,7 @@ func TestPeerHeapList(t *testing.T) {
 			expectedAvailablePeers: []string{"2"},
 		},
 		{
-			msg: "add retain error",
+			msg:                      "add retain error",
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"1", "2"},
 			errRetainedPeerIDs:       []string{"3"},
@@ -188,7 +188,7 @@ func TestPeerHeapList(t *testing.T) {
 			},
 		},
 		{
-			msg: "add duplicate peer",
+			msg:                      "add duplicate peer",
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"1", "2"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -203,7 +203,7 @@ func TestPeerHeapList(t *testing.T) {
 			},
 		},
 		{
-			msg: "remove peer not in list",
+			msg:                      "remove peer not in list",
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"1", "2"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -218,7 +218,7 @@ func TestPeerHeapList(t *testing.T) {
 			},
 		},
 		{
-			msg: "remove release error",
+			msg:                      "remove release error",
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			errReleasedPeerIDs:       []string{"2"},
 			releaseErr:               yarpcpeer.ErrDialerHasNoReferenceToPeer{},
@@ -234,7 +234,7 @@ func TestPeerHeapList(t *testing.T) {
 			},
 		},
 		{
-			msg: "block but added too late",
+			msg:                      "block but added too late",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -261,7 +261,7 @@ func TestPeerHeapList(t *testing.T) {
 			},
 		},
 		{
-			msg: "add unavailable peer",
+			msg:                        "add unavailable peer",
 			retainedAvailablePeerIDs:   []string{"1"},
 			retainedUnavailablePeerIDs: []string{"2"},
 			expectedAvailablePeers:     []string{"1"},
@@ -280,7 +280,7 @@ func TestPeerHeapList(t *testing.T) {
 			},
 		},
 		{
-			msg: "remove unavailable peer",
+			msg:                        "remove unavailable peer",
 			retainedUnavailablePeerIDs: []string{"1"},
 			releasedPeerIDs:            []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -293,7 +293,7 @@ func TestPeerHeapList(t *testing.T) {
 			},
 		},
 		{
-			msg: "notify peer is now available",
+			msg:                        "notify peer is now available",
 			retainedUnavailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:     []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -307,7 +307,7 @@ func TestPeerHeapList(t *testing.T) {
 			},
 		},
 		{
-			msg: "notify peer is still available",
+			msg:                      "notify peer is still available",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -318,7 +318,7 @@ func TestPeerHeapList(t *testing.T) {
 			},
 		},
 		{
-			msg: "notify peer is now unavailable",
+			msg:                      "notify peer is now unavailable",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedUnavailablePeers: []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -332,7 +332,7 @@ func TestPeerHeapList(t *testing.T) {
 			},
 		},
 		{
-			msg: "notify peer is still unavailable",
+			msg:                        "notify peer is still unavailable",
 			retainedUnavailablePeerIDs: []string{"1"},
 			expectedUnavailablePeers:   []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -345,7 +345,7 @@ func TestPeerHeapList(t *testing.T) {
 			},
 		},
 		{
-			msg: "notify invalid peer",
+			msg:                      "notify invalid peer",
 			retainedAvailablePeerIDs: []string{"1"},
 			releasedPeerIDs:          []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{

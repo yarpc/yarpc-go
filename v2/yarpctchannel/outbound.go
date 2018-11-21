@@ -22,7 +22,7 @@ package yarpctchannel
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"io"
 
 	"github.com/uber/tchannel-go"
@@ -34,7 +34,7 @@ import (
 )
 
 var (
-	errDoNotUseContextWithHeaders = yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "tchannel.ContextWithHeaders is not compatible with YARPC, use yarpc.CallOption instead")
+	errDoNotUseContextWithHeaders = yarpcerror.New(yarpcerror.CodeInvalidArgument, "tchannel.ContextWithHeaders is not compatible with YARPC, use yarpc.CallOption instead")
 
 	_ yarpc.UnaryOutbound = (*Outbound)(nil)
 )
@@ -176,16 +176,16 @@ func callWithPeer(ctx context.Context, req *yarpc.Request, reqBody *yarpc.Buffer
 			"does not match the service name received in the response: sent %q, got: %q", req.Service, resSvcName)
 	}
 
-	var appErr error
+	var appErrInfo *yarpcerror.Info
 	if res.ApplicationError() {
 		// TODO(mhp): this is a filler error for now to preserve current yarpc
 		// error behavior. This should later be more well-defined.
-		appErr = errors.New("application error")
+		appErrInfo = &yarpcerror.Info{}
 	}
 	return &yarpc.Response{
-		Peer:             getPeerAndDeleteHeaderKeys(headers),
-		Headers:          headers,
-		ApplicationError: appErr,
+		Peer:                 getPeerAndDeleteHeaderKeys(headers),
+		Headers:              headers,
+		ApplicationErrorInfo: appErrInfo,
 	}, resBody, getResponseErrorAndDeleteHeaderKeys(headers)
 }
 
@@ -255,9 +255,9 @@ func fromSystemError(err tchannel.SystemError) error {
 	code, ok := _tchannelCodeToCode[err.Code()]
 	if !ok {
 		// This should be unreachable.
-		return yarpcerror.Newf(yarpcerror.CodeInternal, "got tchannel.SystemError %v which did not have a matching YARPC code", err)
+		return yarpcerror.New(yarpcerror.CodeInternal, fmt.Sprintf("got tchannel.SystemError %v which did not have a matching YARPC code", err))
 	}
-	return yarpcerror.Newf(code, err.Message())
+	return yarpcerror.New(code, err.Message())
 }
 
 // ServiceHeaderKey is internal key used by YARPC, we need to remove it before give response to client
@@ -288,7 +288,7 @@ func getResponseErrorAndDeleteHeaderKeys(headers yarpc.Headers) error {
 		return err
 	}
 	if errorCode == yarpcerror.CodeOK {
-		return yarpcerror.Newf(yarpcerror.CodeInternal, "got CodeOK from error header")
+		return yarpcerror.New(yarpcerror.CodeInternal, "got CodeOK from error header")
 	}
 	errorName, _ := popHeader(headers, ErrorNameHeaderKey)
 	errorMessage, _ := popHeader(headers, ErrorMessageHeaderKey)

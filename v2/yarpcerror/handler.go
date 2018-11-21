@@ -35,5 +35,5 @@ func WrapHandlerError(err error, service string, procedure string) error {
 	if IsStatus(err) {
 		return err
 	}
-	return Newf(CodeUnknown, "error for service %q and procedure %q: %s", service, procedure, err.Error())
+	return New(CodeUnknown, sprintf("error for service %q and procedure %q: %s", service, procedure, err.Error()))
 }

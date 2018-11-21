@@ -154,6 +154,6 @@ func TestRoundTripNoDeadline(t *testing.T) {
 	require.NoError(t, err)
 
 	resp, err := outbound.RoundTrip(hreq)
-	assert.Equal(t, yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "missing context deadline"), err)
+	assert.Equal(t, yarpcerror.New(yarpcerror.CodeInvalidArgument, "missing context deadline"), err)
 	assert.Nil(t, resp)
 }

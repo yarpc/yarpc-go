@@ -352,7 +352,7 @@ func TestGetSystemError(t *testing.T) {
 			wantCode: tchannel.ErrCodeBusy,
 		},
 		{
-			giveErr:  yarpcerror.Newf(yarpcerror.Code(1235), "test"),
+			giveErr:  yarpcerror.New(yarpcerror.Code(1235), "test"),
 			wantCode: tchannel.ErrCodeUnexpected,
 		},
 	}

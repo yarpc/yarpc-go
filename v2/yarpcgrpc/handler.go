@@ -21,6 +21,7 @@
 package yarpcgrpc
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -39,7 +40,7 @@ import (
 var (
 	// errInvalidGRPCStream is applied before yarpc so it's a raw GRPC error
 	errInvalidGRPCStream = status.Error(codes.InvalidArgument, "received grpc request with invalid stream")
-	errInvalidGRPCMethod = yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "invalid stream method name for request")
+	errInvalidGRPCMethod = yarpcerror.New(yarpcerror.CodeInvalidArgument, "invalid stream method name for request")
 )
 
 type handler struct {
@@ -93,7 +94,7 @@ func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error 
 	case yarpc.Streaming:
 		err = h.handleStream(ctx, req, serverStream, start, handlerSpec.Stream())
 	default:
-		return yarpcerror.Newf(yarpcerror.CodeUnimplemented, "gRPC inbound does not handle %s handlers", handlerSpec.Type().String())
+		return yarpcerror.New(yarpcerror.CodeUnimplemented, fmt.Sprintf("gRPC inbound does not handle %s handlers", handlerSpec.Type().String()))
 	}
 
 	return yarpctracing.UpdateSpanWithErr(span, err)
@@ -105,7 +106,7 @@ func requestFromServerStream(stream grpc.ServerStream, streamMethod string) (*ya
 
 	md, ok := metadata.FromIncomingContext(ctx)
 	if md == nil || !ok {
-		return nil, yarpcerror.Newf(yarpcerror.CodeInternal, "cannot get metadata from ctx: %v", ctx)
+		return nil, yarpcerror.New(yarpcerror.CodeInternal, fmt.Sprintf("cannot get metadata from ctx: %v", ctx))
 	}
 	req, err := metadataToRequest(md)
 	if err != nil {
@@ -223,9 +224,9 @@ func handlerErrorToGRPCError(err error, mdWriter *metadataWriter) error {
 		return err
 	}
 	// we now know we have a yarpc error
-	yarpcStatus := yarpcerror.FromError(err)
-	name := yarpcStatus.Name()
-	message := yarpcStatus.Message()
+	errorInfo := yarpcerror.ExtractInfo(err)
+	name := errorInfo.Name
+	message := errorInfo.Message
 	// if the yarpc error has a name, set the header
 	if name != "" {
 		mdWriter.AddSystemHeader(ErrorNameHeader, name)
@@ -238,7 +239,7 @@ func handlerErrorToGRPCError(err error, mdWriter *metadataWriter) error {
 			message = name + ": " + message
 		}
 	}
-	grpcCode, ok := _codeToGRPCCode[yarpcStatus.Code()]
+	grpcCode, ok := _codeToGRPCCode[errorInfo.Code]
 	// should only happen if _codeToGRPCCode does not cover all codes
 	if !ok {
 		grpcCode = codes.Unknown

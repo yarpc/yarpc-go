@@ -23,6 +23,8 @@ package yarpc
 import (
 	"context"
 	"fmt"
+
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 var _ UnaryTransportHandler = (*unaryTransportHandler)(nil)
@@ -84,7 +86,8 @@ func (u *unaryTransportHandler) Handle(ctx context.Context, req *Request, reqBuf
 		// However, to preserve the current behavior of YARPC, this is
 		// necessary. This is most likely where the error details will be added,
 		// so we expect this to change.
-		res.ApplicationError = appErr
+		errorInfo := yarpcerror.ExtractInfo(appErr)
+		res.ApplicationErrorInfo = &errorInfo
 		return res, encodedBody, appErr
 	}
 

@@ -282,7 +282,7 @@ func TestConnectionFailure(t *testing.T) {
 	req := &Payload{Note: "forthcoming"}
 	res := &Payload{}
 	err = client.Call(ctx, "echo", req, res)
-	assert.Equal(t, yarpcerror.Newf(yarpcerror.CodeDeadlineExceeded, "timeout"), err)
+	assert.Equal(t, yarpcerror.New(yarpcerror.CodeDeadlineExceeded, "timeout"), err)
 }
 
 func TestErrors(t *testing.T) {
@@ -294,16 +294,16 @@ func TestErrors(t *testing.T) {
 		"implicit system error": {
 			procedure: "echo",
 			give:      fmt.Errorf("system error"),
-			want:      yarpcerror.Newf(yarpcerror.CodeUnknown, `error for service "service" and procedure "echo": system error`),
+			want:      yarpcerror.New(yarpcerror.CodeUnknown, `error for service "service" and procedure "echo": system error`),
 		},
 		"explicit system error": {
 			procedure: "echo",
-			give:      yarpcerror.Newf(yarpcerror.CodeUnknown, `error for service "service" and procedure "echo": system error`),
-			want:      yarpcerror.Newf(yarpcerror.CodeUnknown, `error for service "service" and procedure "echo": system error`),
+			give:      yarpcerror.New(yarpcerror.CodeUnknown, `error for service "service" and procedure "echo": system error`),
+			want:      yarpcerror.New(yarpcerror.CodeUnknown, `error for service "service" and procedure "echo": system error`),
 		},
 		"unimplemented": {
 			procedure: "bogus",
-			want:      yarpcerror.Newf(yarpcerror.CodeInvalidArgument, `unrecognized procedure "bogus" for service "service"`),
+			want:      yarpcerror.New(yarpcerror.CodeInvalidArgument, `unrecognized procedure "bogus" for service "service"`),
 		},
 		// This case verifies that TChannel "black holes" resource exhausted
 		// errors, inducing a client side timeout.
@@ -311,8 +311,8 @@ func TestErrors(t *testing.T) {
 		// across languages do a poor job of retry backoff.
 		"resource exhausted": {
 			procedure: "echo",
-			give:      yarpcerror.Newf(yarpcerror.CodeResourceExhausted, "no response for you"),
-			want:      yarpcerror.Newf(yarpcerror.CodeDeadlineExceeded, "timeout"),
+			give:      yarpcerror.New(yarpcerror.CodeResourceExhausted, "no response for you"),
+			want:      yarpcerror.New(yarpcerror.CodeDeadlineExceeded, "timeout"),
 		},
 	}
 

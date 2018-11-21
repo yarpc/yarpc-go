@@ -94,10 +94,12 @@ func (o *Outbound) Call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.B
 		return nil, nil, err
 	}
 
+	appErr := metadataToApplicationError(invokeErr, responseMD)
+	errorInfo := yarpcerror.ExtractInfo(appErr)
 	return &yarpc.Response{
-			Peer:             metadataToPeer(responseMD),
-			Headers:          responseHeaders,
-			ApplicationError: metadataToApplicationError(invokeErr, responseMD),
+			Peer:                 metadataToPeer(responseMD),
+			Headers:              responseHeaders,
+			ApplicationErrorInfo: &errorInfo,
 		},
 		yarpc.NewBufferBytes(responseBody),
 		invokeErr
@@ -193,7 +195,7 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	status, ok := status.FromError(err)
 	// if not a yarpc error or grpc error, just return a wrapped error
 	if !ok {
-		return yarpcerror.FromError(err)
+		return yarpcerror.WrapError(err)
 	}
 	code, ok := _grpcCodeToCode[status.Code()]
 	if !ok {

@@ -22,6 +22,7 @@ package yarpc
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"go.uber.org/yarpc/v2/yarpcerror"
@@ -120,7 +121,7 @@ func ValidateRequest(req *Request) error {
 		missingParams = append(missingParams, "encoding")
 	}
 	if len(missingParams) > 0 {
-		return yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "missing %s", strings.Join(missingParams, ", "))
+		return yarpcerror.New(yarpcerror.CodeInvalidArgument, fmt.Sprintf("missing %s", strings.Join(missingParams, ", ")))
 	}
 	return nil
 }
@@ -130,7 +131,7 @@ func ValidateRequest(req *Request) error {
 // yarpcerror.CodeInvalidArgument otherwise.
 func ValidateRequestContext(ctx context.Context) error {
 	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
-		return yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "missing TTL")
+		return yarpcerror.New(yarpcerror.CodeInvalidArgument, "missing TTL")
 	}
 	return nil
 }

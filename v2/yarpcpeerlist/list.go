@@ -22,6 +22,7 @@ package yarpcpeerlist
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"sync"
 	"time"
@@ -347,11 +348,11 @@ func (pl *List) waitForPeerAddedEvent(ctx context.Context) error {
 }
 
 func (pl *List) newNoContextDeadlineError() error {
-	return yarpcerror.Newf(yarpcerror.CodeInvalidArgument, _noContextDeadlineError, pl.name)
+	return yarpcerror.New(yarpcerror.CodeInvalidArgument, fmt.Sprintf(_noContextDeadlineError, pl.name))
 }
 
 func (pl *List) newUnavailableError(err error) error {
-	return yarpcerror.Newf(yarpcerror.CodeUnavailable, "%s peer list timed out waiting for peer: %s", pl.name, err.Error())
+	return yarpcerror.New(yarpcerror.CodeUnavailable, fmt.Sprintf("%s peer list timed out waiting for peer: %s", pl.name, err.Error()))
 }
 
 // NotifyStatusChanged receives status change notifications for peers in the

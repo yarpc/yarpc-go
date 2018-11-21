@@ -64,7 +64,7 @@ func (m *Middleware) Handle(ctx context.Context, req *yarpc.Request, reqBuf *yar
 
 	isApplicationError := false
 	if res != nil {
-		isApplicationError = res.ApplicationError != nil
+		isApplicationError = res.ApplicationErrorInfo != nil
 	}
 	// TODO(mhp): Now that we are including the application error into the
 	// response, we can log with much more detail. The error in the response
@@ -81,7 +81,7 @@ func (m *Middleware) Call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc
 
 	isApplicationError := false
 	if res != nil {
-		isApplicationError = res.ApplicationError != nil
+		isApplicationError = res.ApplicationErrorInfo != nil
 	}
 	call.EndWithAppError(err, isApplicationError)
 	return res, resBuf, err

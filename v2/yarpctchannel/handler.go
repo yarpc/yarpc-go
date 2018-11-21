@@ -149,7 +149,7 @@ func (h handler) handleKernel(ctx context.Context, start time.Time, req *yarpc.R
 		})
 
 	default:
-		return nil, nil, yarpcerror.Newf(yarpcerror.CodeUnimplemented, "transport tchannel does not handle %s requests", spec.Type().String())
+		return nil, nil, yarpcerror.New(yarpcerror.CodeUnimplemented, fmt.Sprintf("transport tchannel does not handle %s requests", spec.Type().String()))
 	}
 }
 
@@ -161,40 +161,40 @@ func (h handler) handleKernel(ctx context.Context, start time.Time, req *yarpc.R
 // All other success and errors must be handled before returning.
 func (h handler) writeResponse(ctx context.Context, call inboundCall, res *yarpc.Response, responseBody *yarpc.Buffer, retErr error) error {
 	// Black-hole requests on resource exhausted errors.
-	if yarpcerror.FromError(retErr).Code() == yarpcerror.CodeResourceExhausted {
+	if yarpcerror.ExtractInfo(retErr).Code == yarpcerror.CodeResourceExhausted {
 		// All TChannel clients will time out instead of receiving an error.
 		call.Response().Blackhole()
 		// Nothing to see here. Move along.
 		return nil
 	}
-	if retErr != nil && (res == nil || res.ApplicationError == nil) {
+	if retErr != nil && (res == nil || res.ApplicationErrorInfo == nil) {
 		// System error.
 		return retErr
 	}
 
 	res.Headers = res.Headers.With(PeerHeaderKey, h.addr)
 
-	if retErr != nil && res != nil && res.ApplicationError != nil {
+	if retErr != nil && res != nil && res.ApplicationErrorInfo != nil {
 		// We have an error, so we're going to propagate it as a yarpc error,
 		// regardless of whether or not it is a system error.
-		status := yarpcerror.FromError(yarpcerror.WrapHandlerError(retErr, call.ServiceName(), call.MethodString()))
-		text, err := status.Code().MarshalText()
+		errorInfo := res.ApplicationErrorInfo
+		text, err := errorInfo.Code.MarshalText()
 		if err != nil {
 			return appendError(retErr, err)
 		}
 		res.Headers = res.Headers.With(ErrorCodeHeaderKey, string(text))
-		if status.Name() != "" {
-			res.Headers = res.Headers.With(ErrorNameHeaderKey, status.Name())
+		if errorInfo.Name != "" {
+			res.Headers = res.Headers.With(ErrorNameHeaderKey, errorInfo.Name)
 		}
-		if status.Message() != "" {
-			res.Headers = res.Headers.With(ErrorMessageHeaderKey, status.Message())
+		if errorInfo.Message != "" {
+			res.Headers = res.Headers.With(ErrorMessageHeaderKey, errorInfo.Message)
 		}
 	}
 
 	// This is the point of no return. We have committed to sending a call
 	// response. Hereafter, all failures while sending the error must be logged
 	// and the response aborted.
-	if res.ApplicationError != nil {
+	if res.ApplicationErrorInfo != nil {
 		if err := call.Response().SetApplicationError(); err != nil {
 			retErr = appendError(retErr, fmt.Errorf("SetApplicationError() failed: %v", err))
 		}
@@ -241,12 +241,12 @@ func getSystemError(err error) error {
 	if !yarpcerror.IsStatus(err) {
 		return tchannel.NewSystemError(tchannel.ErrCodeUnexpected, err.Error())
 	}
-	status := yarpcerror.FromError(err)
-	tchannelCode, ok := _codeToTChannelCode[status.Code()]
+	errorInfo := yarpcerror.ExtractInfo(err)
+	tchannelCode, ok := _codeToTChannelCode[errorInfo.Code]
 	if !ok {
 		tchannelCode = tchannel.ErrCodeUnexpected
 	}
-	return tchannel.NewSystemError(tchannelCode, status.Message())
+	return tchannel.NewSystemError(tchannelCode, errorInfo.Message)
 }
 
 func appendError(left error, right error) error {

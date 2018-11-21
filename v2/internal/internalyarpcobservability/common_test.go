@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 type fakeHandler struct {
@@ -33,7 +34,8 @@ type fakeHandler struct {
 }
 
 func (h fakeHandler) Handle(context.Context, *yarpc.Request, *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
-	res := &yarpc.Response{ApplicationError: h.applicationErr}
+	errorInfo := yarpcerror.ExtractInfo(h.applicationErr)
+	res := &yarpc.Response{ApplicationErrorInfo: &errorInfo}
 	if h.applicationErr != nil {
 		return res, nil, nil
 	}
@@ -53,7 +55,8 @@ func (o fakeOutbound) Call(context.Context, *yarpc.Request, *yarpc.Buffer) (*yar
 	if o.err != nil {
 		return nil, nil, o.err
 	}
-	return &yarpc.Response{ApplicationError: o.applicationErr}, nil, nil
+	errorInfo := yarpcerror.ExtractInfo(o.applicationErr)
+	return &yarpc.Response{ApplicationErrorInfo: &errorInfo}, nil, nil
 }
 
 func (o fakeOutbound) CallStream(ctx context.Context, request *yarpc.Request) (*yarpc.ClientStream, error) {

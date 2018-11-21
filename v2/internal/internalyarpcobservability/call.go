@@ -123,7 +123,7 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 		return
 	}
 
-	errCode := yarpcerror.FromError(err).Code()
+	errCode := yarpcerror.ExtractInfo(err).Code
 	switch errCode {
 	case yarpcerror.CodeCancelled,
 		yarpcerror.CodeInvalidArgument,

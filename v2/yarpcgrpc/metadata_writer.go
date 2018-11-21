@@ -44,7 +44,7 @@ func (r *metadataWriter) SetResponse(res *yarpc.Response) {
 
 	r.headerErr = multierr.Combine(r.headerErr, addApplicationHeaders(r.md, res.Headers))
 
-	if res.ApplicationError != nil {
+	if res.ApplicationErrorInfo != nil {
 		r.AddSystemHeader(ApplicationErrorHeader, ApplicationErrorHeaderValue)
 	}
 }

@@ -41,7 +41,7 @@ const (
 	defaultServerMaxSendMsgSize = math.MaxInt32
 )
 
-var errRouterNotSet = yarpcerror.Newf(yarpcerror.CodeInternal, "gRPC router not set")
+var errRouterNotSet = yarpcerror.New(yarpcerror.CodeInternal, "gRPC router not set")
 
 // Inbound receives YARPC requests using a gRPC server.
 type Inbound struct {

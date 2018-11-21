@@ -21,11 +21,13 @@
 package yarpcprotobuf
 
 import (
+	"fmt"
+
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 // CastError returns an error saying that generated code could not properly cast a proto.Message to it's expected type.
 func CastError(expected, actual proto.Message) error {
-	return yarpcerror.Newf(yarpcerror.CodeInternal, "expected proto.Message to have type %T but had type %T", expected, actual)
+	return yarpcerror.New(yarpcerror.CodeInternal, fmt.Sprintf("expected proto.Message to have type %T but had type %T", expected, actual))
 }

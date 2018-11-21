@@ -256,9 +256,9 @@ func TestOutboundApplicationError(t *testing.T) {
 			}, yarpc.NewBufferString("world"))
 
 			if tt.appError {
-				assert.Error(t, response.ApplicationError, "%v: application status", tt.desc)
+				assert.NotNil(t, response.ApplicationErrorInfo, "%v: application status", tt.desc)
 			} else {
-				assert.NoError(t, response.ApplicationError, "%v: application status", tt.desc)
+				assert.Nil(t, response.ApplicationErrorInfo, "%v: application status", tt.desc)
 			}
 			assert.NoError(t, err, "%v: call failed", tt.desc)
 		})
@@ -411,7 +411,7 @@ func TestOutboundNoDeadline(t *testing.T) {
 	}
 
 	_, _, err := outbound.call(context.Background(), &yarpc.Request{}, &yarpc.Buffer{})
-	assert.Equal(t, yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "missing context deadline"), err)
+	assert.Equal(t, yarpcerror.New(yarpcerror.CodeInvalidArgument, "missing context deadline"), err)
 }
 
 func TestServiceMatchSuccess(t *testing.T) {
