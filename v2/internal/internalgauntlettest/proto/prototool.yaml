@@ -12,6 +12,6 @@ generate:
       type: gogo
       output: gen/proto
 
-    - name: yarpc-go
+    - name: yarpc-go2
       type: gogo
       output: gen/proto
