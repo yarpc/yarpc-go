@@ -21,12 +21,9 @@
 package yarpcprotobuf
 
 import (
-	"io"
-
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/gogo/protobuf/proto"
 	yarpc "go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/internal/internalbufferpool"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcjson"
 )
@@ -36,12 +33,7 @@ var (
 	_jsonUnmarshaler = &jsonpb.Unmarshaler{AllowUnknownFields: true}
 )
 
-func unmarshal(encoding yarpc.Encoding, reader io.Reader, message proto.Message) error {
-	buf := internalbufferpool.Get()
-	defer internalbufferpool.Put(buf)
-	if _, err := buf.ReadFrom(reader); err != nil {
-		return err
-	}
+func unmarshal(encoding yarpc.Encoding, buf *yarpc.Buffer, message proto.Message) error {
 	body := buf.Bytes()
 	if len(body) == 0 {
 		return nil
@@ -50,7 +42,7 @@ func unmarshal(encoding yarpc.Encoding, reader io.Reader, message proto.Message)
 	case Encoding:
 		return proto.Unmarshal(body, message)
 	case yarpcjson.Encoding:
-		return _jsonUnmarshaler.Unmarshal(reader, message)
+		return _jsonUnmarshaler.Unmarshal(buf, message)
 	default:
 		return yarpcerror.Newf(yarpcerror.CodeInternal, "failed to unmarshal unexpected encoding %q", encoding)
 	}

@@ -22,10 +22,8 @@ package yarpcprotobuf
 
 import (
 	"context"
-	"io"
 
 	"github.com/gogo/protobuf/proto"
-	"go.uber.org/multierr"
 	yarpc "go.uber.org/yarpc/v2"
 )
 
@@ -81,13 +79,10 @@ func readFromStream(ctx context.Context, stream yarpc.Stream, message proto.Mess
 	if err != nil {
 		return nil, err
 	}
-	if err := unmarshal(stream.Request().Encoding, streamMsg.Body, message); err != nil {
-		return nil, multierr.Append(err, streamMsg.Body.Close())
+	if err := unmarshal(stream.Request().Encoding, streamMsg, message); err != nil {
+		return nil, err
 	}
-	if streamMsg.Body != nil {
-		err = streamMsg.Body.Close()
-	}
-	return message, err
+	return message, nil
 }
 
 // writeToStream writes a proto.Message to a stream.
@@ -96,26 +91,5 @@ func writeToStream(ctx context.Context, stream yarpc.Stream, message proto.Messa
 	if err != nil {
 		return err
 	}
-	return stream.SendMessage(
-		ctx,
-		&yarpc.StreamMessage{
-			Body: readCloser{
-				Reader: messageBuf,
-				// this is a no-op closer, because we have nothing to clean up
-				closer: nop,
-			},
-		},
-	)
-}
-
-func nop() {}
-
-type readCloser struct {
-	io.Reader
-	closer func()
-}
-
-func (r readCloser) Close() error {
-	r.closer()
-	return nil
+	return stream.SendMessage(ctx, messageBuf)
 }

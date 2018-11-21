@@ -23,39 +23,17 @@ package yarpcprotobuf
 import (
 	"context"
 	"errors"
-	"io"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/multierr"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcjson"
 	"go.uber.org/yarpc/v2/yarpctest"
 )
-
-type mockReader struct {
-	closeErr error
-	readErr  error
-}
-
-func (r *mockReader) Read(_ []byte) (n int, err error) {
-	if r.readErr != nil {
-		return 0, r.readErr
-	}
-	bytes, err := proto.Marshal(&mockMessage{})
-	if err != nil {
-		return 0, err
-	}
-	return len(bytes), io.EOF
-}
-
-func (r *mockReader) Close() error {
-	return r.closeErr
-}
 
 type mockMessage struct{}
 
@@ -66,41 +44,19 @@ func (m *mockMessage) ProtoMessage()  {}
 func (m *mockMessage) String() string { return "mock" }
 
 func TestReadFromStream(t *testing.T) {
-	_closeErr := errors.New("failed to close")
-	_readErr := errors.New("failed to read")
-
 	tests := []struct {
 		desc     string
-		reader   *mockReader
+		buffer   *yarpc.Buffer
 		encoding yarpc.Encoding
-		err      error
 	}{
 		{
-			desc:     "decode error",
-			reader:   &mockReader{readErr: _readErr},
-			encoding: Encoding,
-			err:      _readErr,
-		},
-		{
-			desc:     "close error",
-			reader:   &mockReader{closeErr: _closeErr},
-			encoding: Encoding,
-			err:      _closeErr,
-		},
-		{
-			desc:     "decode and close multierror",
-			reader:   &mockReader{readErr: _readErr, closeErr: _closeErr},
-			encoding: Encoding,
-			err:      multierr.Append(_readErr, _closeErr),
-		},
-		{
 			desc:     "successful read with proto encoding",
-			reader:   &mockReader{},
+			buffer:   &yarpc.Buffer{},
 			encoding: Encoding,
 		},
 		{
 			desc:     "successful read with json encoding",
-			reader:   &mockReader{},
+			buffer:   &yarpc.Buffer{},
 			encoding: yarpcjson.Encoding,
 		},
 	}
@@ -113,12 +69,7 @@ func TestReadFromStream(t *testing.T) {
 			ctx := context.Background()
 			stream := yarpctest.NewMockStreamCloser(mockCtrl)
 
-			stream.EXPECT().ReceiveMessage(ctx).Return(
-				&yarpc.StreamMessage{
-					Body: tt.reader,
-				},
-				nil,
-			)
+			stream.EXPECT().ReceiveMessage(ctx).Return(tt.buffer, nil)
 			stream.EXPECT().Request().Return(
 				&yarpc.Request{
 					Encoding: tt.encoding,
@@ -127,11 +78,23 @@ func TestReadFromStream(t *testing.T) {
 
 			clientStream, err := yarpc.NewClientStream(stream)
 			require.NoError(t, err)
-
 			_, err = readFromStream(ctx, clientStream, new(mockMessage))
-			assert.Equal(t, tt.err, err)
+			require.NoError(t, err)
 		})
 	}
+}
+
+func TestReadFromStreamRecieveError(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	stream := yarpctest.NewMockStreamCloser(mockCtrl)
+
+	ctx := context.Background()
+	giveErr := errors.New("error")
+	stream.EXPECT().ReceiveMessage(ctx).Return(nil, giveErr)
+
+	_, gotErr := readFromStream(ctx, stream, new(mockMessage))
+	require.EqualError(t, gotErr, giveErr.Error())
 }
 
 func TestWriteToStream(t *testing.T) {
