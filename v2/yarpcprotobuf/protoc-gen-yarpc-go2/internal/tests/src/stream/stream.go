@@ -25,7 +25,7 @@ import (
 	"io"
 	"strings"
 
-	streampb "go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/stream"
+	streampb "go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go2/internal/tests/gen/proto/src/stream"
 )
 
 type helloServer struct{}

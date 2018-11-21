@@ -5,7 +5,7 @@ protoc:
 # Code generation directives.
 generate:
   go_options:
-    import_path: go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests
+    import_path: go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go2/internal/tests
 
   plugins:
     - name: gogoslick

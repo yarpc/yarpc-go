@@ -25,8 +25,8 @@ import (
 	"fmt"
 	"sync"
 
-	commonpb "go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/common"
-	keyvaluepb "go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/keyvalue"
+	commonpb "go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go2/internal/tests/gen/proto/src/common"
+	keyvaluepb "go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go2/internal/tests/gen/proto/src/keyvalue"
 )
 
 type kvServer struct {

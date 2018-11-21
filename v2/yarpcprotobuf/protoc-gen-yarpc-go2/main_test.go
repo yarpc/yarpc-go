@@ -34,9 +34,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	// Used to register the FileDescriptorSets with the protobuf registry.
-	_ "go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/common"
-	_ "go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/keyvalue"
-	_ "go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/stream"
+	_ "go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go2/internal/tests/gen/proto/src/common"
+	_ "go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go2/internal/tests/gen/proto/src/keyvalue"
+	_ "go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go2/internal/tests/gen/proto/src/stream"
 )
 
 func TestGenerate(t *testing.T) {
@@ -109,7 +109,7 @@ func TestGenerate(t *testing.T) {
 func getCodeGeneratorRequestBytes(t *testing.T, filename string, dependencies ...string) []byte {
 	req := &plugin_go.CodeGeneratorRequest{
 		Parameter: proto.String(
-			"Msrc/common/common.proto=go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/common",
+			"Msrc/common/common.proto=go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go2/internal/tests/gen/proto/src/common",
 		),
 		FileToGenerate: []string{
 			filename,

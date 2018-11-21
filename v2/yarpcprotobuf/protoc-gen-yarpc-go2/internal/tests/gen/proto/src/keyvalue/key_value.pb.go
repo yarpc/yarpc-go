@@ -26,7 +26,7 @@ package keyvaluepb
 import proto "github.com/gogo/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import _ "go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/common"
+import _ "go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go2/internal/tests/gen/proto/src/common"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal

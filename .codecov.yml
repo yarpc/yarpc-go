@@ -108,10 +108,10 @@ ignore:
  - /v2/internal/internalgauntlettest/thrift/echo/echofx/
  - /v2/internal/internalgauntlettest/thrift/echo/echoserver/
  - /v2/internal/internalgauntlettest/thrift/echo/echotest/
- - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/templatedata/
- - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/common/
- - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/keyvalue/
- - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/stream/
+ - /v2/yarpcprotobuf/protoc-gen-yarpc-go2/internal/templatedata/
+ - /v2/yarpcprotobuf/protoc-gen-yarpc-go2/internal/tests/gen/proto/src/common/
+ - /v2/yarpcprotobuf/protoc-gen-yarpc-go2/internal/tests/gen/proto/src/keyvalue/
+ - /v2/yarpcprotobuf/protoc-gen-yarpc-go2/internal/tests/gen/proto/src/stream/
  - /v2/yarpcthrift/internal/
  - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/atomic/
  - /v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/atomic/readonlystoreclient/

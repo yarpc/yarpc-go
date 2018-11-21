@@ -28,7 +28,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	plugin "github.com/gogo/protobuf/protoc-gen-gogo/plugin"
-	"go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/generator"
+	"go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go2/internal/generator"
 )
 
 func main() {

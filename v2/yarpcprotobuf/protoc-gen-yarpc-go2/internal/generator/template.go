@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"text/template"
 
-	"go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/templatedata"
+	"go.uber.org/yarpc/v2/yarpcprotobuf/protoc-gen-yarpc-go2/internal/templatedata"
 )
 
 var _tmpl = template.Must(
