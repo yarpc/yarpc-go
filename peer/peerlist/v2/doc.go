@@ -42,4 +42,10 @@
 //   	}
 //   }
 //
+// The abstract peer list is designed to take responsibility for concurrently
+// communicating with three parties: the outbound (which sees it as a
+// peer.Chooser), the peer list updater (which see it as a peer.List), and the
+// transport (which sees it as a bank of peer.Subscriber).
+// By taking care of concurrency, the abstract peer list frees the
+// Implementation from the concern of thread safety.
 package peerlist

@@ -416,11 +416,17 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 	}
 
 	for {
-		pl.lock.RLock()
+		pl.lock.Lock()
 		p := pl.availableChooser.Choose(ctx, req)
-		pl.lock.RUnlock()
+		pl.lock.Unlock()
 
 		if p != nil {
+			// A nil peer is an indication that there are no more peers
+			// available for pending choices.
+			// A non-nil peer indicates that we have drained the waiting
+			// channel but there may be other peer lists waiting for a peer.
+			// We re-fill the channel enabling those choices to proceed
+			// concurrently.
 			t := p.(*peerThunk)
 			pl.notifyPeerAvailable()
 			t.StartRequest()
