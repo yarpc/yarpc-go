@@ -470,9 +470,9 @@ func (mr *MockStreamMockRecorder) Context() *gomock.Call {
 }
 
 // ReceiveMessage mocks base method
-func (m *MockStream) ReceiveMessage(arg0 context.Context) (*v2.StreamMessage, error) {
+func (m *MockStream) ReceiveMessage(arg0 context.Context) (*v2.Buffer, error) {
 	ret := m.ctrl.Call(m, "ReceiveMessage", arg0)
-	ret0, _ := ret[0].(*v2.StreamMessage)
+	ret0, _ := ret[0].(*v2.Buffer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -495,7 +495,7 @@ func (mr *MockStreamMockRecorder) Request() *gomock.Call {
 }
 
 // SendMessage mocks base method
-func (m *MockStream) SendMessage(arg0 context.Context, arg1 *v2.StreamMessage) error {
+func (m *MockStream) SendMessage(arg0 context.Context, arg1 *v2.Buffer) error {
 	ret := m.ctrl.Call(m, "SendMessage", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -554,9 +554,9 @@ func (mr *MockStreamCloserMockRecorder) Context() *gomock.Call {
 }
 
 // ReceiveMessage mocks base method
-func (m *MockStreamCloser) ReceiveMessage(arg0 context.Context) (*v2.StreamMessage, error) {
+func (m *MockStreamCloser) ReceiveMessage(arg0 context.Context) (*v2.Buffer, error) {
 	ret := m.ctrl.Call(m, "ReceiveMessage", arg0)
-	ret0, _ := ret[0].(*v2.StreamMessage)
+	ret0, _ := ret[0].(*v2.Buffer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -579,7 +579,7 @@ func (mr *MockStreamCloserMockRecorder) Request() *gomock.Call {
 }
 
 // SendMessage mocks base method
-func (m *MockStreamCloser) SendMessage(arg0 context.Context, arg1 *v2.StreamMessage) error {
+func (m *MockStreamCloser) SendMessage(arg0 context.Context, arg1 *v2.Buffer) error {
 	ret := m.ctrl.Call(m, "SendMessage", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
