@@ -20,6 +20,8 @@
 
 package yarpc
 
+import "go.uber.org/yarpc/v2/yarpcerror"
+
 // Response is the low level response representation.
 type Response struct {
 	// Peer is the address of the peer that handled the request, if known.
@@ -33,7 +35,7 @@ type Response struct {
 	// Headers are response headers or trailers.
 	Headers Headers
 
-	// ApplicationError indicates that the response body contains a payload
+	// ApplicationErrorInfo indicates that the response body contains a payload
 	// that represents an error in the request encoding.
-	ApplicationError error
+	ApplicationErrorInfo *yarpcerror.Info
 }

@@ -38,7 +38,7 @@ func TestValidateName(t *testing.T) {
 
 func testValidateName(t *testing.T, name string, expectError bool) {
 	if expectError {
-		assert.Equal(t, CodeInternal, validateName(name).(*status).code, "expected error for %s", name)
+		assert.Equal(t, CodeInternal, validateName(name).(*encodingError).info.Code, "expected error for %s", name)
 	} else {
 		assert.NoError(t, validateName(name), "expected no error for %s", name)
 	}
