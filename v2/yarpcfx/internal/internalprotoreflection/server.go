@@ -3,9 +3,9 @@ package internalprotoreflection
 import (
 	"io"
 
-	"go.uber.org/yarpc/encoding/protobuf/reflection"
 	"go.uber.org/yarpc/v2"
-	rpb "go.uber.org/yarpc/v2/yarpcfx/internal/internalprotobuf/reflection/grpc_reflection_v1alpha"
+	rpb "go.uber.org/yarpc/v2/yarpcfx/internal/internalprotoreflection/grpc_reflection_v1alpha"
+	"go.uber.org/yarpc/v2/yarpcprotobuf/reflection"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -15,14 +15,14 @@ type server struct {
 	fileDescriptorIndex fileDescriptorIndex
 }
 
-// NewServer new yarpc meta procedures a dispatcher, exposing information about
-// the dispatcher itself.
+// NewServer creates a new reflection service handler from
+// 'reflection.ServerMeta's.
 func NewServer(metas []reflection.ServerMeta) ([]yarpc.TransportProcedure, error) {
 	server, err := newServerFromMetas(metas)
 	if err != nil {
 		return nil, err
 	}
-	return rpb.BuildServerReflectionYARPCProcedures(server), nil
+	return rpb.BuildStreamServerReflectionYARPCProcedures(server), nil
 }
 
 func newServerFromMetas(metas []reflection.ServerMeta) (*server, error) {
@@ -115,7 +115,7 @@ func (s *server) handleListServices(req *rpb.ServerReflectionRequest_ListService
 }
 
 // ServerReflectionInfo is the reflection service handler.
-func (s *server) ServerReflectionInfo(stream rpb.ServerReflectionServiceServerReflectionInfoYARPCServer) error {
+func (s *server) ServerReflectionInfo(stream rpb.ServerReflectionServerReflectionInfoYARPCStreamServer) error {
 	for {
 		in, err := stream.Recv()
 		if err == io.EOF {

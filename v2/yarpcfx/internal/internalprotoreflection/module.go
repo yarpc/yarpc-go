@@ -18,30 +18,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcfx
+package internalprotoreflection
 
 import (
+	"fmt"
+
 	"go.uber.org/fx"
-	"go.uber.org/yarpc/v2/yarpcfx/internal/internalpeerlistfx"
-	"go.uber.org/yarpc/v2/yarpcfx/internal/internalprotoreflection"
-	"go.uber.org/yarpc/v2/yarpcfx/internal/internaltransportfx"
-	"go.uber.org/yarpc/v2/yarpcfx/yarpcfxmiddleware"
+	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcprotobuf/reflection"
 )
 
-// Module provides YARPC integration for services. The module produces a
-// yarpc.Router, yarpc.ClientProvider and configuration for transports, peer
-// lists and middleware.
-var Module = fx.Options(
-	fx.Provide(
-		newClientProvider,
-		newDialerProvider,
-		newChooserProvider,
-		newListProvider,
-		newRouter,
-	),
+// Module provides reflection prodceudres for protobuf services.
+var Module = fx.Provide(New)
 
-	yarpcfxmiddleware.Module,
-	internalprotoreflection.Module,
-	internaltransportfx.Module,
-	internalpeerlistfx.Module,
-)
+// Params defines the dependencies of this module.
+type Params struct {
+	fx.In
+
+	ProtoReflectionMetas []reflection.ServerMeta `group:"yarpcfx"`
+}
+
+// Result defines the output of this module.
+type Result struct {
+	fx.Out
+
+	Procedures []yarpc.TransportProcedure `group:"yarpcfx"`
+}
+
+// New creates 'yarpc.TransportProcedure's from 'reflection.ServerMeta'.
+func New(p Params) (Result, error) {
+	// TODO(apeatsbond): add health.YARPCProtoHealthReflectionMeta
+	procedures, err := NewServer(p.ProtoReflectionMetas)
+	if err != nil {
+		return Result{}, fmt.Errorf("failed to construct reflection server: %v", err)
+	}
+
+	return Result{Procedures: procedures}, nil
+}

@@ -9,7 +9,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
-	"go.uber.org/yarpc/encoding/protobuf/reflection"
+	"go.uber.org/yarpc/v2/yarpcprotobuf/reflection"
 )
 
 type fileDescriptorIndex interface {

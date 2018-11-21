@@ -6,11 +6,11 @@ import (
 	"io"
 	"testing"
 
-	rpb "code.uber.internal/go/yarpcfx.git/internal/protobuf/reflection/grpc_reflection_v1alpha"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/encoding/protobuf/reflection"
+	"go.uber.org/yarpc/v2"
+	rpb "go.uber.org/yarpc/v2/yarpcfx/internal/internalprotoreflection/grpc_reflection_v1alpha"
+	"go.uber.org/yarpc/v2/yarpcprotobuf/reflection"
 )
 
 func TestNewServers(t *testing.T) {
