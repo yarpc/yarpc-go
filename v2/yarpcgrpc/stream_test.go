@@ -42,10 +42,7 @@ func newTestEchoStreamHandler(name string, numTimes int) []yarpc.TransportProced
 				return err
 			}
 
-			err = ss.SendMessage(context.Background(), &yarpc.StreamMessage{
-				Body: msg.Body,
-			})
-			if err != nil {
+			if err := ss.SendMessage(context.Background(), msg); err != nil {
 				return err
 			}
 		}
@@ -102,9 +99,7 @@ func TestStream(t *testing.T) {
 	// send and receive data
 	for i := 0; i < numSends; i++ {
 		sendMsg := fmt.Sprintf("hello world! %d", i)
-		sendStreamMsg := &yarpc.StreamMessage{
-			Body: ioutil.NopCloser(yarpc.NewBufferString(sendMsg)),
-		}
+		sendStreamMsg := yarpc.NewBufferString(sendMsg)
 
 		err := clientStream.SendMessage(context.Background(), sendStreamMsg)
 		require.NoError(t, err, "could not send message")
@@ -112,7 +107,7 @@ func TestStream(t *testing.T) {
 		recvMsg, err := clientStream.ReceiveMessage(context.Background())
 		require.NoError(t, err)
 
-		recvBytes, err := ioutil.ReadAll(recvMsg.Body)
+		recvBytes, err := ioutil.ReadAll(recvMsg)
 		require.NoError(t, err)
 		assert.Equal(t, sendMsg, string(recvBytes))
 	}

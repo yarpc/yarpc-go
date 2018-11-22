@@ -22,7 +22,6 @@ package yarpc
 
 import (
 	"context"
-	"io"
 
 	"go.uber.org/yarpc/v2/yarpcerror"
 )
@@ -58,13 +57,13 @@ func (s *ServerStream) Request() *Request {
 // SendMessage sends a request over the stream. It blocks until the message
 // has been sent.  In certain implementations, the timeout on the context
 // will be used to timeout the request.
-func (s *ServerStream) SendMessage(ctx context.Context, msg *StreamMessage) error {
+func (s *ServerStream) SendMessage(ctx context.Context, msg *Buffer) error {
 	return s.stream.SendMessage(ctx, msg)
 }
 
 // ReceiveMessage blocks until a message is received from the connection. It
 // returns an io.Reader with the contents of the message.
-func (s *ServerStream) ReceiveMessage(ctx context.Context) (*StreamMessage, error) {
+func (s *ServerStream) ReceiveMessage(ctx context.Context) (*Buffer, error) {
 	return s.stream.ReceiveMessage(ctx)
 }
 
@@ -99,13 +98,13 @@ func (s *ClientStream) Request() *Request {
 // SendMessage sends a request over the stream. It blocks until the message
 // has been sent.  In certain implementations, the timeout on the context
 // will be used to timeout the request.
-func (s *ClientStream) SendMessage(ctx context.Context, msg *StreamMessage) error {
+func (s *ClientStream) SendMessage(ctx context.Context, msg *Buffer) error {
 	return s.stream.SendMessage(ctx, msg)
 }
 
 // ReceiveMessage blocks until a message is received from the connection. It
 // returns an io.Reader with the contents of the message.
-func (s *ClientStream) ReceiveMessage(ctx context.Context) (*StreamMessage, error) {
+func (s *ClientStream) ReceiveMessage(ctx context.Context) (*Buffer, error) {
 	return s.stream.ReceiveMessage(ctx)
 }
 
@@ -134,17 +133,11 @@ type Stream interface {
 	// SendMessage sends a request over the stream. It blocks until the message
 	// has been sent.  In certain implementations, the timeout on the context
 	// will be used to timeout the request.
-	SendMessage(context.Context, *StreamMessage) error
+	SendMessage(context.Context, *Buffer) error
 
 	// ReceiveMessage blocks until a message is received from the connection. It
-	// returns an io.Reader with the contents of the message.
-	ReceiveMessage(context.Context) (*StreamMessage, error)
-}
-
-// StreamMessage represents information that can be read off of an individual
-// message in the stream.
-type StreamMessage struct {
-	Body io.ReadCloser
+	// returns a yarpc.Buffer with the contents of the message.
+	ReceiveMessage(context.Context) (*Buffer, error)
 }
 
 // StreamCloser represents an API of interacting with a Stream that is

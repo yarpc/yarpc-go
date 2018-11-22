@@ -21,7 +21,6 @@
 package yarpcprotobuf
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -31,7 +30,7 @@ import (
 
 func TestUnhandledEncoding(t *testing.T) {
 	t.Run("unmarshal: internal error", func(t *testing.T) {
-		err := unmarshal(yarpc.Encoding("foo"), bytes.NewReader([]byte("foo")), nil)
+		err := unmarshal(yarpc.Encoding("foo"), yarpc.NewBufferString("foo"), nil)
 		assert.Equal(t, yarpcerror.CodeInternal, yarpcerror.FromError(err).Code())
 	})
 

@@ -21,10 +21,8 @@
 package yarpcgrpc
 
 import (
-	"bytes"
 	"context"
 	"io"
-	"io/ioutil"
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/atomic"
@@ -35,6 +33,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+var _ yarpc.Stream = (*serverStream)(nil)
 
 type serverStream struct {
 	ctx    context.Context
@@ -58,22 +58,16 @@ func (ss *serverStream) Request() *yarpc.Request {
 	return ss.req
 }
 
-func (ss *serverStream) SendMessage(_ context.Context, m *yarpc.StreamMessage) error {
-	// TODO pool buffers for performance.
-	msg, err := ioutil.ReadAll(m.Body)
-	_ = m.Body.Close()
-	if err != nil {
-		return err
-	}
-	return toYARPCStreamError(ss.stream.SendMsg(msg))
+func (ss *serverStream) SendMessage(_ context.Context, buf *yarpc.Buffer) error {
+	return toYARPCStreamError(ss.stream.SendMsg(buf.Bytes()))
 }
 
-func (ss *serverStream) ReceiveMessage(_ context.Context) (*yarpc.StreamMessage, error) {
+func (ss *serverStream) ReceiveMessage(_ context.Context) (*yarpc.Buffer, error) {
 	var msg []byte
 	if err := ss.stream.RecvMsg(&msg); err != nil {
 		return nil, toYARPCStreamError(err)
 	}
-	return &yarpc.StreamMessage{Body: ioutil.NopCloser(bytes.NewReader(msg))}, nil
+	return yarpc.NewBufferBytes(msg), nil
 }
 
 type clientStream struct {
@@ -103,30 +97,24 @@ func (cs *clientStream) Request() *yarpc.Request {
 	return cs.req
 }
 
-func (cs *clientStream) SendMessage(_ context.Context, m *yarpc.StreamMessage) error {
+func (cs *clientStream) SendMessage(_ context.Context, buf *yarpc.Buffer) error {
 	if cs.closed.Load() { // If the stream is closed, we should not be sending messages on it.
 		return io.EOF
 	}
-	// TODO can we make a "Bytes" interface to get direct access to the bytes
-	// (instead of resorting to ReadAll (which is not necessarily performant))
-	msg, err := ioutil.ReadAll(m.Body)
-	_ = m.Body.Close()
-	if err != nil {
-		return toYARPCStreamError(err)
-	}
-	if err := cs.stream.SendMsg(msg); err != nil {
+
+	if err := cs.stream.SendMsg(buf.Bytes()); err != nil {
 		return toYARPCStreamError(cs.closeWithErr(err))
 	}
 	return nil
 }
 
-func (cs *clientStream) ReceiveMessage(context.Context) (*yarpc.StreamMessage, error) {
+func (cs *clientStream) ReceiveMessage(context.Context) (*yarpc.Buffer, error) {
 	// TODO use buffers for performance reasons.
 	var msg []byte
 	if err := cs.stream.RecvMsg(&msg); err != nil {
 		return nil, toYARPCStreamError(cs.closeWithErr(err))
 	}
-	return &yarpc.StreamMessage{Body: ioutil.NopCloser(bytes.NewReader(msg))}, nil
+	return yarpc.NewBufferBytes(msg), nil
 }
 
 func (cs *clientStream) Close(context.Context) error {

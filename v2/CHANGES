@@ -69,7 +69,7 @@
       should do something more specific once yarpc/yarpc.io#2 is resolved.
 - [ ] Consider teaching abstract peer list to prefer the req.Peer if it is
       present and the corresponding peer is immediately available.
-- [ ] Revisit StreamMessage, which should probably be a yarpc.Buffer now,
+- [x] Revisit StreamMessage, which should probably be a yarpc.Buffer now,
       simplifying the gRPC binding.
 - [x] Add support for yarpc.To and yarpc.ResponseFrom call options.
 

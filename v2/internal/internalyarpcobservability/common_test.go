@@ -66,6 +66,8 @@ func (o fakeOutbound) CallStream(ctx context.Context, request *yarpc.Request) (*
 	})
 }
 
+var _ yarpc.Stream = (*fakeStream)(nil)
+
 type fakeStream struct {
 	ctx     context.Context
 	request *yarpc.Request
@@ -79,11 +81,11 @@ func (s *fakeStream) Request() *yarpc.Request {
 	return s.request
 }
 
-func (s *fakeStream) SendMessage(context.Context, *yarpc.StreamMessage) error {
+func (s *fakeStream) SendMessage(context.Context, *yarpc.Buffer) error {
 	return nil
 }
 
-func (s *fakeStream) ReceiveMessage(context.Context) (*yarpc.StreamMessage, error) {
+func (s *fakeStream) ReceiveMessage(context.Context) (*yarpc.Buffer, error) {
 	return nil, nil
 }
 
