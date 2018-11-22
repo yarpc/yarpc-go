@@ -46,14 +46,14 @@ func (e unaryEncodingHandler) Handle(ctx context.Context, reqBody interface{}) (
 		return nil, err
 	}
 
-	if resType := thriftRes.Body.EnvelopeType(); resType != wire.Reply {
+	if resType := thriftRes.EnvelopeType(); resType != wire.Reply {
 		return nil, errUnexpectedEnvelopeType(resType)
 	}
 
-	resValue, err := thriftRes.Body.ToWire()
+	resValue, err := thriftRes.ToWire()
 	if err != nil {
 		return nil, err
 	}
 
-	return resValue, thriftRes.Exception
+	return resValue, nil
 }

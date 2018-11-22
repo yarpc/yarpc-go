@@ -27,13 +27,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/thriftrw/envelope"
 	"go.uber.org/thriftrw/wire"
 )
 
 func TestEncodingHandler(t *testing.T) {
 	tests := []struct {
 		giveReqBody  interface{}
-		giveResponse Response
+		giveResponse envelope.Enveloper
 		giveError    error
 		wantError    string
 	}{
@@ -48,30 +49,25 @@ func TestEncodingHandler(t *testing.T) {
 		},
 		{
 			giveReqBody:  wire.Value{},
-			giveResponse: Response{Body: fakeEnveloper(wire.OneWay)},
+			giveResponse: fakeEnveloper(wire.OneWay),
 			wantError:    "unexpected envelope type: OneWay",
 		},
 		{
 			giveReqBody: wire.Value{},
-			giveResponse: Response{Body: errorEnveloper{
+			giveResponse: errorEnveloper{
 				envelopeType: wire.Reply,
 				err:          errors.New("could not convert to wire value"),
-			}},
+			},
 			wantError: "could not convert to wire value",
 		},
 		{
 			giveReqBody:  wire.Value{},
-			giveResponse: Response{Body: fakeEnveloper(wire.Reply), Exception: errors.New("application error")},
-			wantError:    "application error",
-		},
-		{
-			giveReqBody:  wire.Value{},
-			giveResponse: Response{Body: fakeEnveloper(wire.Reply)},
+			giveResponse: fakeEnveloper(wire.Reply),
 		},
 	}
 
 	for _, tt := range tests {
-		h := EncodingHandler(func(context.Context, wire.Value) (Response, error) {
+		h := EncodingHandler(func(context.Context, wire.Value) (envelope.Enveloper, error) {
 			return tt.giveResponse, tt.giveError
 		})
 		unaryHandler := unaryEncodingHandler{h: h}
