@@ -92,7 +92,7 @@ func newChooser(t *testing.T, chooser string, dialer yarpc.Dialer, id yarpc.Iden
 		return pl
 
 	case _roundrobin:
-		pl := yarpcroundrobin.New("roundrobin", dialer)
+		pl := yarpcroundrobin.New("round-robin", dialer)
 		pl.Update(update)
 		return pl
 
@@ -102,7 +102,7 @@ func newChooser(t *testing.T, chooser string, dialer yarpc.Dialer, id yarpc.Iden
 		return pl
 
 	case _tworandom:
-		pl := yarpctworandomchoices.New(dialer)
+		pl := yarpctworandomchoices.New("two-random", dialer)
 		pl.Update(update)
 		return pl
 
@@ -174,7 +174,7 @@ func TestGauntlet(t *testing.T) {
 	const concurrency = 10
 
 	transports := []string{_http, _gRPC, _tchannel}
-	encodings := []string{_json, _thrift} //, _proto}
+	encodings := []string{_json, _thrift, _proto}
 	choosers := []string{_random, _roundrobin, _pendingheap, _tworandom}
 
 	procedures := newProcedures()
