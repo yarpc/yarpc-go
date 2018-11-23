@@ -105,7 +105,7 @@ func Seed(seed int64) ListOption {
 }
 
 // New creates a new peer list with an identifier chooser for available peers.
-func New(name string, transport yarpc.Dialer, implementation Implementation, opts ...ListOption) *List {
+func New(name string, dialer yarpc.Dialer, implementation Implementation, opts ...ListOption) *List {
 	options := defaultListOptions
 	for _, o := range opts {
 		o.apply(&options)
@@ -116,7 +116,7 @@ func New(name string, transport yarpc.Dialer, implementation Implementation, opt
 		unavailablePeers:   make(map[string]*peerThunk, options.capacity),
 		availablePeers:     make(map[string]*peerThunk, options.capacity),
 		implementation:     implementation,
-		transport:          transport,
+		dialer:             dialer,
 		noShuffle:          options.noShuffle,
 		randSrc:            rand.NewSource(options.seed),
 		peerAvailableEvent: make(chan struct{}, 1),
@@ -126,7 +126,7 @@ func New(name string, transport yarpc.Dialer, implementation Implementation, opt
 // List is an abstract peer list, backed by an Implementation to
 // determine which peer to choose among available peers.
 // The abstract list manages available versus unavailable peers, intercepting
-// these notifications from the transport's concrete implementation of
+// these notifications from the dialer's concrete implementation of
 // yarpc.Peer with the yarpc.Subscriber API.
 // The peer list will not choose an unavailable peer, prefering to block until
 // one becomes available.
@@ -141,7 +141,7 @@ type List struct {
 	availablePeers     map[string]*peerThunk
 	implementation     Implementation
 	peerAvailableEvent chan struct{}
-	transport          yarpc.Dialer
+	dialer             yarpc.Dialer
 
 	noShuffle bool
 	randSrc   rand.Source
@@ -185,7 +185,7 @@ func (pl *List) addPeerIdentifier(id yarpc.Identifier) error {
 
 	t := &peerThunk{list: pl, id: id}
 	t.boundOnFinish = t.onFinish
-	p, err := pl.transport.RetainPeer(id, t)
+	p, err := pl.dialer.RetainPeer(id, t)
 	if err != nil {
 		return err
 	}
@@ -246,10 +246,10 @@ func (pl *List) removeAllUnavailablePeers(toRemove map[string]*peerThunk) []*pee
 }
 
 // releaseAll will iterate through a list of peers and call release
-// on the transport
+// on the dialer
 func (pl *List) releaseAll(errs error, peers []*peerThunk) error {
 	for _, t := range peers {
-		if err := pl.transport.ReleasePeer(t.peer, t); err != nil {
+		if err := pl.dialer.ReleasePeer(t.peer, t); err != nil {
 			errs = multierr.Append(errs, err)
 		}
 	}
@@ -257,7 +257,7 @@ func (pl *List) releaseAll(errs error, peers []*peerThunk) error {
 }
 
 // removePeerIdentifier will go remove references to the peer identifier and release
-// it from the transport
+// it from the dialer
 // Must be run in a mutex.Lock()
 func (pl *List) removePeerIdentifier(id yarpc.Identifier) error {
 	t, err := pl.removePeerIdentifierReferences(id)
@@ -266,7 +266,7 @@ func (pl *List) removePeerIdentifier(id yarpc.Identifier) error {
 		return err
 	}
 
-	return pl.transport.ReleasePeer(id, t)
+	return pl.dialer.ReleasePeer(id, t)
 }
 
 // removePeerIdentifierReferences will search through the Available and Unavailable Peers
