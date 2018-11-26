@@ -2,8 +2,7 @@ IGNORE_DIRS="\
   internal/examples \
   internal/cover \
   internal/service-test \
-  internal/testutils \
-  v2/yarpcfx/internal/internalprotoreflection/grpc_reflection_v1alpha"
+  internal/testutils"
 
 WHITELIST="\
   api/peer \

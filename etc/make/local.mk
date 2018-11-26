@@ -1,6 +1,6 @@
 # Paths besides auto-detected generated files that should be excluded from
 # lint results.
-LINT_EXCLUDES_EXTRAS =
+LINT_EXCLUDES_EXTRAS = go.uber.org/yarpc/v2/yarpcfx/internal/internalprotoreflection/grpc_reflection_v1alpha
 
 # Regexes for 'go vet' rules to ignore
 FILTER_GOVET := grep -v \
