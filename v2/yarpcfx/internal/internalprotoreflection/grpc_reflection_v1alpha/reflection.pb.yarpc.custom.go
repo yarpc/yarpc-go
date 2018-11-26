@@ -15,4 +15,4 @@ package grpc_reflection_v1alpha
 // filedescriptor
 //
 // After regeneration with the yarpc plugin, update this reference
-var YARPCReflectionFileDescriptors = yarpcFileDescriptorClosure42a8ac412db3cb03
+var YARPCReflectionFileDescriptors = yarpcFileDescriptorClosureb0c166d455ec03f4
