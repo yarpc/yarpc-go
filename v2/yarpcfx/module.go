@@ -23,6 +23,7 @@ package yarpcfx
 import (
 	"go.uber.org/fx"
 	"go.uber.org/yarpc/v2/yarpcfx/internal/internalpeerlistfx"
+	"go.uber.org/yarpc/v2/yarpcfx/internal/internalprotoreflection"
 	"go.uber.org/yarpc/v2/yarpcfx/internal/internaltransportfx"
 	"go.uber.org/yarpc/v2/yarpcfx/yarpcfxmiddleware"
 )
@@ -40,6 +41,7 @@ var Module = fx.Options(
 	),
 
 	yarpcfxmiddleware.Module,
+	internalprotoreflection.Module,
 	internaltransportfx.Module,
 	internalpeerlistfx.Module,
 )

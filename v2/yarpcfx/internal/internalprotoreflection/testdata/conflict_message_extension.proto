@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+import "google/protobuf/descriptor.proto";
+
+package Foo;
+extend google.protobuf.MessageOptions {
+    bool isAFoo = 424242;
+}

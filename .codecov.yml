@@ -108,6 +108,7 @@ ignore:
  - /v2/internal/internalgauntlettest/thrift/echo/echofx/
  - /v2/internal/internalgauntlettest/thrift/echo/echoserver/
  - /v2/internal/internalgauntlettest/thrift/echo/echotest/
+ - /v2/yarpcfx/internal/internalprotoreflection/grpc_reflection_v1alpha/
  - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/templatedata/
  - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/common/
  - /v2/yarpcprotobuf/protoc-gen-yarpc-go/internal/tests/gen/proto/src/keyvalue/
