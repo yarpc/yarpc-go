@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-11-23T15:04:09.14692352Z
+updated: 2018-11-26T15:03:32.178640686Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -66,7 +66,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: aeab699e26f4d4089dba5e522e5d9babd2adbaf7
+  version: 4724e9255275ce38f7179b2478abeae4e28c904f
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
