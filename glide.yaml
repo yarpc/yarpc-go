@@ -6,8 +6,12 @@ import:
   version: 0.9.3 # TODO switch back to ^0.9.3 once Apache Thrift fixes https://issues.apache.org/jira/browse/THRIFT-4261
 - package: github.com/crossdock/crossdock-go
   version: master
+  # gogo/protobuf and golang/protobuf have incompatible versioning T2167025.
+  # These minimun versions are required.
 - package: github.com/gogo/protobuf
-  version: ^1
+  version: ^1.1.1
+- package: github.com/golang/protobuf
+  version: ^1.2.0
 - package: github.com/mattn/go-shellwords
   version: ^1
 - package: github.com/uber-go/mapdecode
