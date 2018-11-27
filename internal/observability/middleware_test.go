@@ -40,6 +40,10 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 )
 
+type fakeError struct {
+	error
+}
+
 func TestMiddlewareLogging(t *testing.T) {
 	defer stubTime()()
 	req := &transport.Request{
@@ -121,7 +125,7 @@ func TestMiddlewareLogging(t *testing.T) {
 	}
 
 	newHandler := func(t test) fakeHandler {
-		return fakeHandler{err: t.err, applicationErr: t.applicationErr}
+		return fakeHandler{err: t.err, isApplicationErr: t.applicationErr}
 	}
 
 	newOutbound := func(t test) fakeOutbound {
@@ -293,13 +297,15 @@ func TestMiddlewareMetrics(t *testing.T) {
 	}
 
 	type test struct {
-		desc               string
-		err                error // downstream error
-		applicationErr     bool  // downstream application error
-		wantCalls          int
-		wantSuccesses      int
-		wantCallerFailures map[string]int
-		wantServerFailures map[string]int
+		desc                    string
+		err                     error // downstream error
+		isApplicationErr        bool  // is downstream application error
+		applicationError        error // actual downstream application error
+		wantCalls               int
+		wantSuccesses           int
+		wantCallerFailures      map[string]int
+		wantServerFailures      map[string]int
+		wantApplicationFailures map[string]int
 	}
 
 	tests := []test{
@@ -344,14 +350,25 @@ func TestMiddlewareMetrics(t *testing.T) {
 				"1000": 1,
 			},
 		},
+		{
+			desc:          "custom application error",
+			err:           yarpcerrors.Newf(yarpcerrors.Code(1000), "test"),
+			wantCalls:     1,
+			wantSuccesses: 0,
+			wantApplicationFailures: map[string]int{
+				"fakeError": 1,
+			},
+			isApplicationErr: true,
+			applicationError: fakeError{},
+		},
 	}
 
 	newHandler := func(t test) fakeHandler {
-		return fakeHandler{err: t.err, applicationErr: t.applicationErr}
+		return fakeHandler{err: t.err, isApplicationErr: t.isApplicationErr, applicationError: t.applicationError}
 	}
 
 	newOutbound := func(t test) fakeOutbound {
-		return fakeOutbound{err: t.err, applicationErr: t.applicationErr}
+		return fakeOutbound{err: t.err, applicationErr: t.isApplicationErr}
 	}
 
 	for _, tt := range tests {
@@ -366,6 +383,11 @@ func TestMiddlewareMetrics(t *testing.T) {
 			}
 			for tagName, val := range tt.wantServerFailures {
 				assert.Equal(t, int64(val), edge.serverFailures.MustGet(_error, tagName).Load())
+			}
+			if direction == string(_directionInbound) {
+				for tagName, val := range tt.wantApplicationFailures {
+					assert.Equal(t, int64(val), edge.callerFailures.MustGet(_error, tagName).Load())
+				}
 			}
 		}
 		t.Run(tt.desc+", unary inbound", func(t *testing.T) {
@@ -439,7 +461,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		context.Background(),
 		req,
 		&transporttest.FakeResponseWriter{},
-		fakeHandler{err: nil, applicationErr: true},
+		fakeHandler{err: nil, isApplicationErr: true},
 	), "Unexpected transport error.")
 
 	expected := observer.LoggedEntry{
@@ -476,7 +498,7 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 			Body:            strings.NewReader("body"),
 		},
 		&transporttest.FakeResponseWriter{},
-		fakeHandler{nil, false},
+		fakeHandler{nil, false, nil},
 	)
 	assert.NoError(t, err, "Unexpected transport error.")
 
@@ -538,7 +560,7 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 			Body:            strings.NewReader("body"),
 		},
 		&transporttest.FakeResponseWriter{},
-		fakeHandler{fmt.Errorf("yuno"), false},
+		fakeHandler{fmt.Errorf("yuno"), false, nil},
 	)
 	assert.Error(t, err, "Expected transport error.")
 

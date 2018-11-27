@@ -32,13 +32,21 @@ type fakeAck struct{}
 func (a fakeAck) String() string { return "" }
 
 type fakeHandler struct {
-	err            error
-	applicationErr bool
+	err              error
+	isApplicationErr bool
+	applicationError error
 }
 
 func (h fakeHandler) Handle(_ context.Context, _ *transport.Request, rw transport.ResponseWriter) error {
-	if h.applicationErr {
+	if h.isApplicationErr {
 		rw.SetApplicationError()
+
+		if h.applicationError != nil {
+			if rwV2, ok := rw.(transport.ResponseWriterV2); ok {
+				rwV2.SpecifyApplicationError(h.applicationError)
+			}
+		}
+
 		return nil
 	}
 	return h.err

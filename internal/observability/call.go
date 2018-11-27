@@ -28,10 +28,12 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"reflect"
 )
 
 const (
 	_error              = "error"
+	_applicationError   = "application_error"
 	_successfulInbound  = "Handled inbound request."
 	_successfulOutbound = "Made outbound call."
 	_errorInbound       = "Error handling inbound request."
@@ -61,7 +63,13 @@ func (c call) End(err error) {
 func (c call) EndWithAppError(err error, isApplicationError bool) {
 	elapsed := _timeNow().Sub(c.started)
 	c.endLogs(elapsed, err, isApplicationError)
-	c.endStats(elapsed, err, isApplicationError)
+	c.endStats(elapsed, err, isApplicationError, nil)
+}
+
+func (c call) EndWithSpecificAppError(err error, applicationError error) {
+	elapsed := _timeNow().Sub(c.started)
+	c.endLogs(elapsed, err, true)
+	c.endStats(elapsed, err, true, applicationError)
 }
 
 func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool) {
@@ -97,7 +105,7 @@ func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool)
 	ce.Write(fields...)
 }
 
-func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool) {
+func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool, applicationError error) {
 	// TODO: We need a much better way to distinguish between caller and server
 	// errors. See T855583.
 	c.edge.calls.Inc()
@@ -112,6 +120,16 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 		if counter, err := c.edge.callerFailures.Get(_error, "application_error"); err == nil {
 			counter.Inc()
 		}
+
+		if applicationError != nil {
+			errName := reflect.TypeOf(applicationError).Name()
+			if len(errName) > 0 {
+				if counter, err := c.edge.callerFailures.Get(_error, errName); err == nil {
+					counter.Inc()
+				}
+			}
+		}
+
 		return
 	}
 

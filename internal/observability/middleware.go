@@ -39,6 +39,8 @@ type writer struct {
 	transport.ResponseWriter
 
 	isApplicationError bool
+
+	applicationError error
 }
 
 func newWriter(rw transport.ResponseWriter) *writer {
@@ -51,6 +53,10 @@ func newWriter(rw transport.ResponseWriter) *writer {
 func (w *writer) SetApplicationError() {
 	w.isApplicationError = true
 	w.ResponseWriter.SetApplicationError()
+}
+
+func (w *writer) SpecifyApplicationError(err error) {
+	w.applicationError = err
 }
 
 func (w *writer) free() {
@@ -72,7 +78,13 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 	call := m.graph.begin(ctx, transport.Unary, _directionInbound, req)
 	wrappedWriter := newWriter(w)
 	err := h.Handle(ctx, req, wrappedWriter)
-	call.EndWithAppError(err, wrappedWriter.isApplicationError)
+
+	if wrappedWriter.isApplicationError && wrappedWriter.applicationError != nil {
+		call.EndWithSpecificAppError(err, wrappedWriter.applicationError)
+	} else {
+		call.EndWithAppError(err, wrappedWriter.isApplicationError)
+	}
+
 	wrappedWriter.free()
 	return err
 }

@@ -211,6 +211,7 @@ func (m ResponseMatcher) Matches(got interface{}) bool {
 // written to it.
 type FakeResponseWriter struct {
 	IsApplicationError bool
+	ApplicationError   error
 	Headers            transport.Headers
 	Body               bytes.Buffer
 }
@@ -218,6 +219,11 @@ type FakeResponseWriter struct {
 // SetApplicationError for FakeResponseWriter.
 func (fw *FakeResponseWriter) SetApplicationError() {
 	fw.IsApplicationError = true
+}
+
+// SpecifyApplicationError for FakeResponseWriter.
+func (fw *FakeResponseWriter) SpecifyApplicationError(err error) {
+	fw.ApplicationError = err
 }
 
 // AddHeaders for FakeResponseWriter.

@@ -27,4 +27,6 @@ type Response struct {
 	Body envelope.Enveloper
 
 	IsApplicationError bool
+
+	ApplicationError error
 }

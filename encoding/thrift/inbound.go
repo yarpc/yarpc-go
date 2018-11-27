@@ -74,6 +74,10 @@ func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request,
 
 	if res.IsApplicationError {
 		rw.SetApplicationError()
+
+		if responseWriterV2, ok := rw.(transport.ResponseWriterV2); ok {
+			responseWriterV2.SpecifyApplicationError(res.ApplicationError)
+		}
 	}
 
 	if err := call.WriteToResponse(rw); err != nil {

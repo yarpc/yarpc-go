@@ -36,6 +36,10 @@ import (
 	"go.uber.org/yarpc/internal/testtime"
 )
 
+type fakeError struct {
+	error
+}
+
 func TestDecodeRequest(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -100,7 +104,11 @@ func TestDecodeRequestApplicationError(t *testing.T) {
 
 	handler := func(ctx context.Context, w wire.Value) (Response, error) {
 		// XXX setting application error bit
-		return Response{Body: fakeEnveloper(wire.Reply), IsApplicationError: true}, nil
+		return Response{
+			Body:               fakeEnveloper(wire.Reply),
+			IsApplicationError: true,
+			ApplicationError:   fakeError{},
+		}, nil
 	}
 	h := thriftUnaryHandler{Protocol: proto, UnaryHandler: handler}
 
@@ -108,6 +116,7 @@ func TestDecodeRequestApplicationError(t *testing.T) {
 	rw := new(transporttest.FakeResponseWriter)
 	err := h.Handle(ctx, request(), rw)
 	assert.True(t, rw.IsApplicationError, "application error bit unset")
+	assert.Equal(t, rw.ApplicationError, fakeError{}, "application error unset")
 
 	assert.NoError(t, err, "unexpected error")
 }

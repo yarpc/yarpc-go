@@ -24,9 +24,10 @@ import "io"
 
 // Response is the low level response representation.
 type Response struct {
-	Headers          Headers
-	Body             io.ReadCloser
-	ApplicationError bool
+	Headers                  Headers
+	Body                     io.ReadCloser
+	ApplicationError         bool
+	SpecificApplicationError error
 }
 
 // ResponseWriter allows Handlers to write responses in a streaming fashion.
@@ -46,4 +47,13 @@ type ResponseWriter interface {
 	// application error. If called, this MUST be called before any invocation
 	// of Write().
 	SetApplicationError()
+}
+
+// ResponseWriterV2 allows Handlers to write responses in a streaming fashion
+// and also specify an application error that might have happened in the call
+type ResponseWriterV2 interface {
+	ResponseWriter
+
+	// SpecifyApplicationError specifies the application error that happened on the call.
+	SpecifyApplicationError(error)
 }
