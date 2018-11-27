@@ -25,6 +25,7 @@ import (
 	"reflect"
 
 	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 var _ yarpc.UnaryEncodingHandler = (*jsonHandler)(nil)
@@ -42,7 +43,11 @@ type jsonHandler struct {
 func (h jsonHandler) Handle(ctx context.Context, reqBody interface{}) (interface{}, error) {
 	results := h.handler.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(reqBody)})
 	if appErr, _ := results[1].Interface().(error); appErr != nil {
-		return results[0].Interface(), appErr
+		return results[0].Interface(), yarpcerror.New(
+			yarpcerror.CodeUnknown,
+			appErr.Error(),
+			yarpcerror.WithDetails(appErr),
+		)
 	}
 
 	return results[0].Interface(), nil
