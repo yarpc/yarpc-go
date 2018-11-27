@@ -107,6 +107,8 @@ type InboundCodec interface {
 	Decode(req *Buffer) (interface{}, error)
 
 	Encode(res interface{}) (*Buffer, error)
+
+	EncodeError(res error) (*Buffer, error)
 }
 
 // Router maintains and provides access to a collection of procedures
