@@ -28,6 +28,9 @@ import (
 	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
+var _ yarpc.UnaryEncodingHandler = (*unaryHandler)(nil)
+var _ yarpc.StreamTransportHandler = (*streamHandler)(nil)
+
 // StreamHandlerParams contains the parameters for creating a new StreamTransportHandler.
 type StreamHandlerParams struct {
 	Handle func(*ServerStream) error
