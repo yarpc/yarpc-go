@@ -25,6 +25,7 @@ import (
 	"reflect"
 
 	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 var (
@@ -66,6 +67,19 @@ func (c jsonCodec) Decode(res *yarpc.Buffer) (interface{}, error) {
 func (c jsonCodec) Encode(res interface{}) (*yarpc.Buffer, error) {
 	resBuf := &yarpc.Buffer{}
 	if err := json.NewEncoder(resBuf).Encode(res); err != nil {
+		return nil, err
+	}
+
+	return resBuf, nil
+}
+
+func (c jsonCodec) EncodeError(err error) (*yarpc.Buffer, error) {
+	details := yarpcerror.ExtractDetails(err)
+	if details == nil {
+		return nil, nil
+	}
+	resBuf := &yarpc.Buffer{}
+	if err := json.NewEncoder(resBuf).Encode(details); err != nil {
 		return nil, err
 	}
 
