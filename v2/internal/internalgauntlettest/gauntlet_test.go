@@ -24,6 +24,7 @@ import (
 	"context"
 	"net"
 	"net/url"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,6 +37,7 @@ import (
 	"go.uber.org/yarpc/v2/yarpcroundrobin"
 	"go.uber.org/yarpc/v2/yarpcrouter"
 	"go.uber.org/yarpc/v2/yarpctchannel"
+	"go.uber.org/yarpc/v2/yarpctworandomchoices"
 )
 
 type lifecycle interface {
@@ -76,7 +78,14 @@ func newInbound(t *testing.T, transport string, listener net.Listener, procedure
 	}
 
 	require.NoError(t, inbound.Start(context.Background()))
-	return func() { assert.NoError(t, inbound.Stop(context.Background()), "could not stop inbound") }
+	return func() {
+		if transport != _http {
+			// TODO(apeatsbond): explore HTTP graceful shutdowns with concurrent
+			// requests. Without this hack, HTTP inbounds will (more often than not)
+			// hang indefinitely.
+			assert.NoError(t, inbound.Stop(context.Background()), "could not stop inbound")
+		}
+	}
 }
 
 // returns a yarpc.Chooser with ID added to the backing peer list
@@ -90,12 +99,17 @@ func newChooser(t *testing.T, chooser string, dialer yarpc.Dialer, id yarpc.Iden
 		return pl
 
 	case _roundrobin:
-		pl := yarpcroundrobin.New("roundrobin", dialer)
+		pl := yarpcroundrobin.New("round-robin", dialer)
 		pl.Update(update)
 		return pl
 
 	case _pendingheap:
 		pl := yarpcpendingheap.New("pending-heap", dialer)
+		pl.Update(update)
+		return pl
+
+	case _tworandom:
+		pl := yarpctworandomchoices.New("two-random", dialer)
 		pl.Update(update)
 		return pl
 
@@ -163,9 +177,12 @@ func newOutbounds(t *testing.T, transport string, addr string, choosers []string
 }
 
 func TestGauntlet(t *testing.T) {
+	// the number of times to run a single gauntlet combination with itself
+	const concurrency = 10
+
 	transports := []string{_http, _gRPC, _tchannel}
 	encodings := []string{_json, _thrift, _proto}
-	choosers := []string{_random, _roundrobin}
+	choosers := []string{_random, _roundrobin, _pendingheap, _tworandom}
 
 	procedures := newProcedures()
 
@@ -190,30 +207,48 @@ func TestGauntlet(t *testing.T) {
 
 				for _, encoding := range encodings {
 					t.Run(encoding, func(t *testing.T) {
-
-						var resHeaders map[string]string
-						callOptions := newCallOptions(&resHeaders)
-
-						// call with encoding clients
-						switch encoding {
-						case _json:
-							validateJSON(t, client, callOptions)
-						case _thrift:
-							validateThrift(t, client, callOptions)
-						case _proto:
-							validateProto(t, client, callOptions)
-						default:
-							t.Fatalf("unsupported encoding %s", encoding)
-						}
-
-						// validate response headers
-						wantResponseHeaders := map[string]string{
-							_headerKeyRes: _headerValueRes,
-						}
-						assert.Equal(t, wantResponseHeaders, resHeaders, "response headers did not match")
+						runConcurrent(t, concurrency, client, encoding)
 					})
 				}
 			}
 		})
 	}
+}
+
+// runConcurrent runs the test 'concurrency' times
+func runConcurrent(t *testing.T, concurrency int, client yarpc.Client, encoding string) {
+	var wg sync.WaitGroup
+
+	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
+		go func() {
+			run(t, client, encoding)
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
+}
+
+func run(t *testing.T, client yarpc.Client, encoding string) {
+	var resHeaders map[string]string
+	callOptions := newCallOptions(&resHeaders)
+
+	// call with encoding clients
+	switch encoding {
+	case _json:
+		validateJSON(t, client, callOptions)
+	case _thrift:
+		validateThrift(t, client, callOptions)
+	case _proto:
+		validateProto(t, client, callOptions)
+	default:
+		t.Fatalf("unsupported encoding %s", encoding)
+	}
+
+	// validate response headers
+	wantResponseHeaders := map[string]string{
+		_headerKeyRes: _headerValueRes,
+	}
+	assert.Equal(t, wantResponseHeaders, resHeaders, "response headers did not match")
 }
