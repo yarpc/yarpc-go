@@ -72,6 +72,7 @@
 - [x] Revisit StreamMessage, which should probably be a yarpc.Buffer now,
       simplifying the gRPC binding.
 - [x] Add support for yarpc.To and yarpc.ResponseFrom call options.
+- [ ] Reintroduce HTTP inbound graceful shutdowns in gauntlet test.
 
 Encodings:
 - [x] Drop raw encoding
