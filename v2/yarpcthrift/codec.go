@@ -98,11 +98,23 @@ func (c *thriftCodec) Decode(req *yarpc.Buffer) (interface{}, error) {
 	return reqValue, nil
 }
 
-func (c *thriftCodec) Encode(res interface{}) (*yarpc.Buffer, error) {
+func (c *thriftCodec) encode(res interface{}) (*yarpc.Buffer, error) {
 	resBuf := &yarpc.Buffer{}
 	if resValue, ok := res.(wire.Value); ok {
 		err := c.responder.EncodeResponse(resValue, wire.Reply, resBuf)
 		return resBuf, err
 	}
 	return nil, yarpcerror.InternalErrorf("tried to encode a non-wire.Value in thrift codec")
+}
+
+func (c *thriftCodec) Encode(res interface{}) (*yarpc.Buffer, error) {
+	return c.encode(res)
+}
+
+func (c *thriftCodec) EncodeError(err error) (*yarpc.Buffer, error) {
+	details := yarpcerror.ExtractDetails(err)
+	if details == nil {
+		return nil, nil
+	}
+	return c.encode(details)
 }
