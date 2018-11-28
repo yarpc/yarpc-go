@@ -43,6 +43,10 @@ type jsonHandler struct {
 func (h jsonHandler) Handle(ctx context.Context, reqBody interface{}) (interface{}, error) {
 	results := h.handler.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(reqBody)})
 	if appErr, _ := results[1].Interface().(error); appErr != nil {
+		if yarpcerror.IsStatus(appErr) {
+			return results[0].Interface(), appErr
+		}
+
 		return results[0].Interface(), yarpcerror.New(
 			yarpcerror.CodeUnknown,
 			appErr.Error(),
