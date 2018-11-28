@@ -72,14 +72,18 @@ func (u *unaryHandler) Handle(ctx context.Context, reqBody interface{}) (interfa
 	if reqMessage, ok := reqBody.(proto.Message); ok {
 		response, appErr := u.handle(ctx, reqMessage)
 		if appErr != nil {
+			if yarpcerror.IsStatus(appErr) {
+				return response, appErr
+			}
+
 			return response, yarpcerror.New(
 				yarpcerror.CodeUnknown,
 				appErr.Error(),
-				yarpcerror.WithDetails(appErr),
 			)
 		}
 
 		return response, nil
 	}
+
 	return nil, yarpcerror.InternalErrorf("tried to handle a non-proto.Message in protobuf handler")
 }
