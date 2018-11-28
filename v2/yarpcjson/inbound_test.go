@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 type simpleRequest struct {
@@ -151,7 +152,12 @@ func TestHandleBothResponseError(t *testing.T) {
 	p := Procedure("simpleProcedure", h)[0]
 	_, resBuf, err := handleWithCodec(context.Background(), req, reqBuf, p)
 
-	require.Equal(t, errors.New("bar"), err)
+	expectedError := yarpcerror.New(
+		yarpcerror.CodeUnknown,
+		"bar",
+		yarpcerror.WithDetails(errors.New("bar")),
+	)
+	require.Equal(t, expectedError, err)
 
 	var response simpleResponse
 	require.NoError(t, json.Unmarshal(resBuf.Bytes(), &response))
