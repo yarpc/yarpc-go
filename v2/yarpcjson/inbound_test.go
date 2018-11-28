@@ -163,3 +163,30 @@ func TestHandleBothResponseError(t *testing.T) {
 	require.NoError(t, json.Unmarshal(resBuf.Bytes(), &response))
 	assert.Equal(t, simpleResponse{Success: true}, response)
 }
+
+func TestHandleYarpcErrorFromApplication(t *testing.T) {
+	h := func(ctx context.Context, body *simpleRequest) (*simpleResponse, error) {
+		assert.Equal(t, "simpleCall", yarpc.CallFromContext(ctx).Procedure())
+		assert.Equal(t, "foo", body.Name)
+		assert.Equal(t, map[string]int32{"bar": 42}, body.Attributes)
+
+		return nil, yarpcerror.New(
+			yarpcerror.CodeUnknown,
+			"bar",
+		)
+	}
+
+	req := &yarpc.Request{
+		Procedure: "simpleCall",
+		Encoding:  "json",
+	}
+	reqBuf := yarpc.NewBufferString(`{"name": "foo", "attributes": {"bar": 42}}`)
+	p := Procedure("simpleProcedure", h)[0]
+	_, _, err := handleWithCodec(context.Background(), req, reqBuf, p)
+
+	expectedError := yarpcerror.New(
+		yarpcerror.CodeUnknown,
+		"bar",
+	)
+	require.Equal(t, expectedError, err)
+}
