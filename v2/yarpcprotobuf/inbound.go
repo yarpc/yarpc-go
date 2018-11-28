@@ -70,7 +70,16 @@ func NewUnaryHandler(p UnaryHandlerParams) yarpc.UnaryEncodingHandler {
 
 func (u *unaryHandler) Handle(ctx context.Context, reqBody interface{}) (interface{}, error) {
 	if reqMessage, ok := reqBody.(proto.Message); ok {
-		return u.handle(ctx, reqMessage)
+		response, appErr := u.handle(ctx, reqMessage)
+		if appErr != nil {
+			return response, yarpcerror.New(
+				yarpcerror.CodeUnknown,
+				appErr.Error(),
+				yarpcerror.WithDetails(appErr),
+			)
+		}
+
+		return response, nil
 	}
 	return nil, yarpcerror.InternalErrorf("tried to handle a non-proto.Message in protobuf handler")
 }
