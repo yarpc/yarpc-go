@@ -33,10 +33,10 @@ import (
 
 func TestEncodingHandler(t *testing.T) {
 	tests := []struct {
-		giveReqBody  interface{}
-		giveResponse envelope.Enveloper
-		giveError    error
-		wantError    string
+		giveReqBody interface{}
+		giveResBody envelope.Enveloper
+		giveError   error
+		wantError   string
 	}{
 		{
 			giveReqBody: "blah",
@@ -48,27 +48,27 @@ func TestEncodingHandler(t *testing.T) {
 			wantError:   "thrift handler error",
 		},
 		{
-			giveReqBody:  wire.Value{},
-			giveResponse: fakeEnveloper(wire.OneWay),
-			wantError:    "unexpected envelope type: OneWay",
+			giveReqBody: wire.Value{},
+			giveResBody: fakeEnveloper(wire.OneWay),
+			wantError:   "unexpected envelope type: OneWay",
 		},
 		{
 			giveReqBody: wire.Value{},
-			giveResponse: errorEnveloper{
+			giveResBody: errorEnveloper{
 				envelopeType: wire.Reply,
 				err:          errors.New("could not convert to wire value"),
 			},
 			wantError: "could not convert to wire value",
 		},
 		{
-			giveReqBody:  wire.Value{},
-			giveResponse: fakeEnveloper(wire.Reply),
+			giveReqBody: wire.Value{},
+			giveResBody: fakeEnveloper(wire.Reply),
 		},
 	}
 
 	for _, tt := range tests {
 		h := EncodingHandler(func(context.Context, wire.Value) (envelope.Enveloper, error) {
-			return tt.giveResponse, tt.giveError
+			return tt.giveResBody, tt.giveError
 		})
 		unaryHandler := unaryEncodingHandler{h: h}
 
