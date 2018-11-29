@@ -204,10 +204,8 @@ func (h *handler) handleUnary(
 		return err
 	}
 
-	if res != nil {
-		if err := handleResponse(req.Encoding, res.ApplicationErrorInfo, resBuf, serverStream, mdWriter); err != nil {
-			return err
-		}
+	if err := handleResponse(req.Encoding, res.ApplicationErrorInfo, resBuf, serverStream, mdWriter); err != nil {
+		return err
 	}
 
 	mdWriter.SetResponseHeaders(res)
@@ -263,12 +261,16 @@ func handleResponse(
 
 	// This is an application error
 	if info != nil {
-		mdWriter.AddSystemHeader(ErrorNameHeader, info.Name)
-		switch encoding {
-		case yarpcprotobuf.Encoding:
-			mdWriter.AddSystemHeader(ErrorDetailsHeader, resBuf.String())
-		case yarpcjson.Encoding, yarpcthrift.Encoding:
-			mdWriter.AddSystemHeader(ApplicationErrorHeader, resBuf.String())
+		if info.Name != "" {
+			mdWriter.AddSystemHeader(ErrorNameHeader, info.Name)
+		}
+		if resBuf != nil {
+			switch encoding {
+			case yarpcprotobuf.Encoding:
+				mdWriter.AddSystemHeader(ErrorDetailsHeader, resBuf.String())
+			case yarpcjson.Encoding, yarpcthrift.Encoding:
+				mdWriter.AddSystemHeader(ApplicationErrorHeader, resBuf.String())
+			}
 		}
 	}
 	return nil

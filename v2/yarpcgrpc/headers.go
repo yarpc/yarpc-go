@@ -67,7 +67,8 @@ const (
 	// ErrorNameHeader is the header key for the error name.
 	ErrorNameHeader = "rpc-error-name"
 	// ErrorDetailsHeader is the header key for the error details used in gRPC.
-	ErrorDetailsHeader = "grpc-error-details-bin"
+	// https://sourcegraph.com/github.com/grpc/grpc-go/-/blob/internal/transport/http_util.go#L317-326
+	ErrorDetailsHeader = "grpc-status-details-bin"
 	// ApplicationErrorHeader is the header key that will contain a non-empty value
 	// if there was an application error.
 	ApplicationErrorHeader = "rpc-application-error"
