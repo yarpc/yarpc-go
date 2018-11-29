@@ -22,6 +22,7 @@ package internalyarpcobservability
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.uber.org/yarpc/v2"
@@ -55,18 +56,18 @@ type call struct {
 }
 
 func (c call) End(err error) {
-	c.EndWithAppError(err, false)
+	c.EndWithAppError(err, nil)
 }
 
-func (c call) EndWithAppError(err error, isApplicationError bool) {
+func (c call) EndWithAppError(err error, appErrorInfo *yarpcerror.Info) {
 	elapsed := _timeNow().Sub(c.started)
-	c.endLogs(elapsed, err, isApplicationError)
-	c.endStats(elapsed, err, isApplicationError)
+	c.endLogs(elapsed, err, appErrorInfo)
+	c.endStats(elapsed, err, appErrorInfo)
 }
 
-func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool) {
+func (c call) endLogs(elapsed time.Duration, err error, appErrorInfo *yarpcerror.Info) {
 	var ce *zapcore.CheckedEntry
-	if err == nil && !isApplicationError {
+	if err == nil && appErrorInfo == nil {
 		msg := _successfulInbound
 		if c.direction != _directionInbound {
 			msg = _successfulOutbound
@@ -76,6 +77,9 @@ func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool)
 		msg := _errorInbound
 		if c.direction != _directionInbound {
 			msg = _errorOutbound
+		}
+		if appErrorInfo != nil {
+			msg = fmt.Sprintf("%s: %s: %s", msg, appErrorInfo.Name, appErrorInfo.Message)
 		}
 		ce = c.edge.logger.Check(zap.ErrorLevel, msg)
 	}
@@ -87,9 +91,9 @@ func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool)
 	fields := c.fields[:0]
 	fields = append(fields, zap.String("rpcType", c.rpcType.String()))
 	fields = append(fields, zap.Duration("latency", elapsed))
-	fields = append(fields, zap.Bool("successful", err == nil && !isApplicationError))
+	fields = append(fields, zap.Bool("successful", err == nil && appErrorInfo == nil))
 	fields = append(fields, c.extract(c.ctx))
-	if isApplicationError {
+	if appErrorInfo != nil {
 		fields = append(fields, zap.String(_error, "application_error"))
 	} else {
 		fields = append(fields, zap.Error(err))
@@ -97,17 +101,17 @@ func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool)
 	ce.Write(fields...)
 }
 
-func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool) {
+func (c call) endStats(elapsed time.Duration, err error, appErrorInfo *yarpcerror.Info) {
 	// TODO: We need a much better way to distinguish between caller and server
 	// errors. See T855583.
 	c.edge.calls.Inc()
-	if err == nil && !isApplicationError {
+	if err == nil && appErrorInfo == nil {
 		c.edge.successes.Inc()
 		c.edge.latencies.Observe(elapsed)
 		return
 	}
 	// For now, assume that all application errors are the caller's fault.
-	if isApplicationError {
+	if appErrorInfo != nil {
 		c.edge.callerErrLatencies.Observe(elapsed)
 		if counter, err := c.edge.callerFailures.Get(_error, "application_error"); err == nil {
 			counter.Inc()
@@ -140,7 +144,8 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 			counter.Inc()
 		}
 		return
-	case yarpcerror.CodeUnknown,
+	case 0,
+		yarpcerror.CodeUnknown,
 		yarpcerror.CodeDeadlineExceeded,
 		yarpcerror.CodeResourceExhausted,
 		yarpcerror.CodeInternal,

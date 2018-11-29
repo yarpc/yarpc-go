@@ -34,12 +34,14 @@ type fakeHandler struct {
 }
 
 func (h fakeHandler) Handle(context.Context, *yarpc.Request, *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
-	errorInfo := yarpcerror.ExtractInfo(h.applicationErr)
-	res := &yarpc.Response{ApplicationErrorInfo: &errorInfo}
 	if h.applicationErr != nil {
+		errorInfo := yarpcerror.ExtractInfo(h.applicationErr)
+		res := &yarpc.Response{ApplicationErrorInfo: &errorInfo}
 		return res, nil, nil
+	} else if h.err != nil {
+		return nil, nil, h.err
 	}
-	return res, nil, h.err
+	return &yarpc.Response{}, &yarpc.Buffer{}, nil
 }
 
 func (h fakeHandler) HandleStream(*yarpc.ServerStream) error {
@@ -52,11 +54,14 @@ type fakeOutbound struct {
 }
 
 func (o fakeOutbound) Call(context.Context, *yarpc.Request, *yarpc.Buffer) (*yarpc.Response, *yarpc.Buffer, error) {
-	if o.err != nil {
+	if o.applicationErr != nil {
+		errorInfo := yarpcerror.ExtractInfo(o.applicationErr)
+		res := &yarpc.Response{ApplicationErrorInfo: &errorInfo}
+		return res, nil, nil
+	} else if o.err != nil {
 		return nil, nil, o.err
 	}
-	errorInfo := yarpcerror.ExtractInfo(o.applicationErr)
-	return &yarpc.Response{ApplicationErrorInfo: &errorInfo}, nil, nil
+	return &yarpc.Response{}, &yarpc.Buffer{}, nil
 }
 
 func (o fakeOutbound) CallStream(ctx context.Context, request *yarpc.Request) (*yarpc.ClientStream, error) {

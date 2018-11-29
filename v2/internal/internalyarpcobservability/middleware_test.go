@@ -104,10 +104,10 @@ func TestMiddlewareLogging(t *testing.T) {
 		},
 		{
 			desc:            "no downstream error but with application error",
-			applicationErr:  errors.New("error"),
+			applicationErr:  yarpcerror.New(yarpcerror.CodeUnknown, "error", yarpcerror.WithName("hello")),
 			wantErrLevel:    zapcore.ErrorLevel,
-			wantInboundMsg:  "Error handling inbound request.",
-			wantOutboundMsg: "Error making outbound call.",
+			wantInboundMsg:  "Error handling inbound request.: hello: error",
+			wantOutboundMsg: "Error making outbound call.: hello: error",
 			wantFields: []zapcore.Field{
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
@@ -168,12 +168,14 @@ func TestMiddlewareLogging(t *testing.T) {
 				Context: logContext,
 			}
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
-			if tt.applicationErr != nil {
+			if tt.err != nil {
+				assert.Equal(t, tt.err, err)
+			} else if tt.applicationErr != nil {
 				assert.NotNil(t, res.ApplicationErrorInfo)
 			} else {
+				require.NotNil(t, res)
 				assert.Nil(t, res.ApplicationErrorInfo)
 			}
-			assert.Equal(t, tt.err, err)
 		})
 		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
 			res, _, err := mw.Call(context.Background(), req, reqBuf, newOutbound(tt))
@@ -409,7 +411,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		context.Background(),
 		req,
 		reqBuf,
-		fakeHandler{err: nil, applicationErr: errors.New("error")},
+		fakeHandler{err: nil, applicationErr: yarpcerror.New(yarpcerror.CodeUnknown, "error", yarpcerror.WithName("hello"))},
 	)
 
 	require.NoError(t, err, "Unexpected transport error.")
@@ -419,7 +421,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 	expected := observer.LoggedEntry{
 		Entry: zapcore.Entry{
 			Level:   zapcore.ErrorLevel,
-			Message: "Error handling inbound request.",
+			Message: "Error handling inbound request.: hello: error",
 		},
 		Context: expectedFields,
 	}
@@ -515,8 +517,7 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 		fakeHandler{fmt.Errorf("yuno"), nil},
 	)
 	require.Error(t, err, "Expected transport error.")
-	require.NotNil(t, res)
-	require.Nil(t, res.ApplicationErrorInfo)
+	require.Nil(t, res)
 
 	snap := root.Snapshot()
 	tags := metrics.Tags{

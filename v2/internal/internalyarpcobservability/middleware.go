@@ -25,6 +25,7 @@ import (
 
 	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/zap"
 )
 
@@ -62,15 +63,12 @@ func (m *Middleware) Handle(ctx context.Context, req *yarpc.Request, reqBuf *yar
 	call := m.graph.begin(ctx, yarpc.Unary, _directionInbound, req)
 	res, resBuf, err := h.Handle(ctx, req, reqBuf)
 
-	isApplicationError := false
+	var appErrorInfo *yarpcerror.Info
 	if res != nil {
-		isApplicationError = res.ApplicationErrorInfo != nil
+		appErrorInfo = res.ApplicationErrorInfo
 	}
-	// TODO(mhp): Now that we are including the application error into the
-	// response, we can log with much more detail. The error in the response
-	// struct will be changing soon; the logging behavior in this middleware
-	// should be revisited after that.
-	call.EndWithAppError(err, isApplicationError)
+
+	call.EndWithAppError(err, appErrorInfo)
 	return res, resBuf, err
 }
 
@@ -79,11 +77,12 @@ func (m *Middleware) Call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc
 	call := m.graph.begin(ctx, yarpc.Unary, _directionOutbound, req)
 	res, resBuf, err := out.Call(ctx, req, reqBuf)
 
-	isApplicationError := false
+	var appErrorInfo *yarpcerror.Info
 	if res != nil {
-		isApplicationError = res.ApplicationErrorInfo != nil
+		appErrorInfo = res.ApplicationErrorInfo
 	}
-	call.EndWithAppError(err, isApplicationError)
+
+	call.EndWithAppError(err, appErrorInfo)
 	return res, resBuf, err
 }
 
