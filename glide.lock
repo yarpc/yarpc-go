@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-11-28T15:04:40.463922754Z
+updated: 2018-11-29T15:03:39.65623679Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -32,7 +32,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 8d0c54c1246661d9a51ca0ba455d22116d485eaa
+  version: 1d3f30b51784bec5aad268e59fd3c2fc1c2fe73f
   subpackages:
   - proto
   - ptypes
@@ -172,7 +172,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: adae6a3d119ae4890b46832a2e88a95adc62b8e7
+  version: fae4c4e3ad76c295c3d6d259f898136b4bf833a8
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -201,7 +201,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: e782529d0ddd4bb872a63766185bebe89c96d1ae
+  version: c5b00d9557fd23dd2a6d9c2f4c80a31d08cac00d
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
@@ -239,7 +239,7 @@ imports:
   - status
   - tap
 - name: gopkg.in/yaml.v2
-  version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
+  version: 51d6538a90f86fe93ac480b35f37b2be17fef232
 testImports:
 - name: github.com/codahale/hdrhistogram
   version: 3a0bb77429bd3a61596f5e8a3172445844342120
