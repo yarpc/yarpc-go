@@ -66,6 +66,8 @@ const (
 	EncodingHeader = "rpc-encoding"
 	// ErrorNameHeader is the header key for the error name.
 	ErrorNameHeader = "rpc-error-name"
+	// ErrorDetailsHeader is the header key for the error details used in gRPC.
+	ErrorDetailsHeader = "grpc-error-details-bin"
 	// ApplicationErrorHeader is the header key that will contain a non-empty value
 	// if there was an application error.
 	ApplicationErrorHeader = "rpc-application-error"

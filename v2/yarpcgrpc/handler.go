@@ -28,6 +28,9 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerror"
+	"go.uber.org/yarpc/v2/yarpcjson"
+	"go.uber.org/yarpc/v2/yarpcprotobuf"
+	"go.uber.org/yarpc/v2/yarpcthrift"
 	"go.uber.org/yarpc/v2/yarpctracing"
 	"go.uber.org/yarpc/v2/yarpctransport"
 	"golang.org/x/net/context"
@@ -195,25 +198,24 @@ func (h *handler) handleUnary(
 		Logger:    h.i.Logger,
 	})
 
-	err = handlerErrorToGRPCError(err, mdWriter)
+	if err != nil {
+		err = handlerErrorToGRPCError(err, mdWriter)
+		serverStream.SetTrailer(mdWriter.MD())
+		return err
+	}
 
-	if resBuf != nil {
-		// Send the response attributes back and end the stream.
-		if sendErr := serverStream.SendMsg(resBuf.Bytes()); sendErr != nil {
-			// We couldn't send the response.
-			return sendErr
+	if res != nil {
+		if err := handleResponse(req.Encoding, res.ApplicationErrorInfo, resBuf, serverStream, mdWriter); err != nil {
+			return err
 		}
 	}
 
-	mdWriter.SetResponse(res)
+	mdWriter.SetResponseHeaders(res)
 	serverStream.SetTrailer(mdWriter.MD())
-	return err
+	return nil
 }
 
 func handlerErrorToGRPCError(err error, mdWriter *metadataWriter) error {
-	if err == nil {
-		return nil
-	}
 	// if this is an error created from grpc-go, return the error
 	if _, ok := status.FromError(err); ok {
 		return err
@@ -245,4 +247,29 @@ func handlerErrorToGRPCError(err error, mdWriter *metadataWriter) error {
 		grpcCode = codes.Unknown
 	}
 	return status.Error(grpcCode, message)
+}
+
+func handleResponse(
+	encoding yarpc.Encoding,
+	info *yarpcerror.Info,
+	resBuf *yarpc.Buffer,
+	serverStream grpc.ServerStream,
+	mdWriter *metadataWriter,
+) error {
+	// This is a regular response that we should send
+	if info == nil && resBuf != nil {
+		return serverStream.SendMsg(resBuf.Bytes())
+	}
+
+	// This is an application error
+	if info != nil {
+		mdWriter.AddSystemHeader(ErrorNameHeader, info.Name)
+		switch encoding {
+		case yarpcprotobuf.Encoding:
+			mdWriter.AddSystemHeader(ErrorDetailsHeader, resBuf.String())
+		case yarpcjson.Encoding, yarpcthrift.Encoding:
+			mdWriter.AddSystemHeader(ApplicationErrorHeader, resBuf.String())
+		}
+	}
+	return nil
 }
