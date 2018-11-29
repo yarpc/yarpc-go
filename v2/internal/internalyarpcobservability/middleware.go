@@ -63,12 +63,12 @@ func (m *Middleware) Handle(ctx context.Context, req *yarpc.Request, reqBuf *yar
 	call := m.graph.begin(ctx, yarpc.Unary, _directionInbound, req)
 	res, resBuf, err := h.Handle(ctx, req, reqBuf)
 
-	var appErrorInfo *yarpcerror.Info
+	var info *yarpcerror.Info
 	if res != nil {
-		appErrorInfo = res.ApplicationErrorInfo
+		info = res.ApplicationErrorInfo
 	}
 
-	call.EndWithAppError(err, appErrorInfo)
+	call.EndWithAppError(err, info)
 	return res, resBuf, err
 }
 
@@ -77,12 +77,12 @@ func (m *Middleware) Call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc
 	call := m.graph.begin(ctx, yarpc.Unary, _directionOutbound, req)
 	res, resBuf, err := out.Call(ctx, req, reqBuf)
 
-	var appErrorInfo *yarpcerror.Info
+	var info *yarpcerror.Info
 	if res != nil {
-		appErrorInfo = res.ApplicationErrorInfo
+		info = res.ApplicationErrorInfo
 	}
 
-	call.EndWithAppError(err, appErrorInfo)
+	call.EndWithAppError(err, info)
 	return res, resBuf, err
 }
 

@@ -22,7 +22,6 @@ package internalyarpcobservability
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"go.uber.org/yarpc/v2"
@@ -59,15 +58,15 @@ func (c call) End(err error) {
 	c.EndWithAppError(err, nil)
 }
 
-func (c call) EndWithAppError(err error, appErrorInfo *yarpcerror.Info) {
+func (c call) EndWithAppError(err error, info *yarpcerror.Info) {
 	elapsed := _timeNow().Sub(c.started)
-	c.endLogs(elapsed, err, appErrorInfo)
-	c.endStats(elapsed, err, appErrorInfo)
+	c.endLogs(elapsed, err, info)
+	c.endStats(elapsed, err, info)
 }
 
-func (c call) endLogs(elapsed time.Duration, err error, appErrorInfo *yarpcerror.Info) {
+func (c call) endLogs(elapsed time.Duration, err error, info *yarpcerror.Info) {
 	var ce *zapcore.CheckedEntry
-	if err == nil && appErrorInfo == nil {
+	if err == nil && info == nil {
 		msg := _successfulInbound
 		if c.direction != _directionInbound {
 			msg = _successfulOutbound
@@ -78,8 +77,13 @@ func (c call) endLogs(elapsed time.Duration, err error, appErrorInfo *yarpcerror
 		if c.direction != _directionInbound {
 			msg = _errorOutbound
 		}
-		if appErrorInfo != nil {
-			msg = fmt.Sprintf("%s: %s: %s", msg, appErrorInfo.Name, appErrorInfo.Message)
+		if info != nil {
+			if info.Name != "" {
+				msg = msg + ": " + info.Name
+			}
+			if info.Message != "" {
+				msg = msg + ": " + info.Message
+			}
 		}
 		ce = c.edge.logger.Check(zap.ErrorLevel, msg)
 	}
@@ -91,10 +95,14 @@ func (c call) endLogs(elapsed time.Duration, err error, appErrorInfo *yarpcerror
 	fields := c.fields[:0]
 	fields = append(fields, zap.String("rpcType", c.rpcType.String()))
 	fields = append(fields, zap.Duration("latency", elapsed))
-	fields = append(fields, zap.Bool("successful", err == nil && appErrorInfo == nil))
+	fields = append(fields, zap.Bool("successful", err == nil && info == nil))
 	fields = append(fields, c.extract(c.ctx))
-	if appErrorInfo != nil {
-		fields = append(fields, zap.String(_error, "application_error"))
+	if info != nil {
+		errName := "application_error"
+		if info.Name != "" {
+			errName = info.Name
+		}
+		fields = append(fields, zap.String(_error, errName))
 	} else {
 		fields = append(fields, zap.Error(err))
 	}
@@ -144,8 +152,7 @@ func (c call) endStats(elapsed time.Duration, err error, appErrorInfo *yarpcerro
 			counter.Inc()
 		}
 		return
-	case 0,
-		yarpcerror.CodeUnknown,
+	case yarpcerror.CodeUnknown,
 		yarpcerror.CodeDeadlineExceeded,
 		yarpcerror.CodeResourceExhausted,
 		yarpcerror.CodeInternal,
