@@ -21,9 +21,11 @@
 package yarpcprotobuf
 
 import (
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerror"
+	spb "google.golang.org/genproto/googleapis/rpc/status"
 )
 
 type protoCodec struct {
@@ -54,6 +56,38 @@ func (c *protoCodec) Encode(res interface{}) (*yarpc.Buffer, error) {
 	return nil, yarpcerror.InternalErrorf("tried to encode a non-proto.Message in protobuf codec")
 }
 
+func (c *protoCodec) EncodeError(err error) (*yarpc.Buffer, error) {
+	if err == nil {
+		return &yarpc.Buffer{}, nil
+	}
+
+	info := yarpcerror.ExtractInfo(err)
+	p := spb.Status{
+		Code:    int32(info.Code),
+		Message: info.Message,
+	}
+	if details := yarpcerror.ExtractDetails(err); details != nil {
+		if m, ok := details.(proto.Message); ok {
+			any, err := ptypes.MarshalAny(m)
+			if err != nil {
+				return nil, err
+			}
+			p.Details = append(p.Details, any)
+		} else if messages, ok := details.([]proto.Message); ok {
+			for _, m := range messages {
+				any, err := ptypes.MarshalAny(m)
+				if err != nil {
+					return nil, err
+				}
+				p.Details = append(p.Details, any)
+			}
+		} else {
+			return nil, yarpcerror.InternalErrorf("tried to encode a non-proto.Message in proto error codec")
+		}
+	}
+	return marshalProto(&p)
+}
+
 type jsonCodec struct {
 	reqMessage proto.Message
 }
@@ -70,6 +104,10 @@ func (c *jsonCodec) Decode(req *yarpc.Buffer) (interface{}, error) {
 }
 
 func (c *jsonCodec) Encode(res interface{}) (*yarpc.Buffer, error) {
+	return encodeAsJSON(res)
+}
+
+func encodeAsJSON(res interface{}) (*yarpc.Buffer, error) {
 	if res == nil {
 		return &yarpc.Buffer{}, nil
 	}
@@ -80,4 +118,17 @@ func (c *jsonCodec) Encode(res interface{}) (*yarpc.Buffer, error) {
 		return marshalJSON(message)
 	}
 	return nil, yarpcerror.InternalErrorf("tried to encode a non-proto.Message in json codec")
+}
+
+func (c *jsonCodec) EncodeError(err error) (*yarpc.Buffer, error) {
+	// Here we only encode the proto.Message error details instead of
+	// wrapping it in google/rpc/status.proto
+	// Using google/rpc/status.proto it in a status is required for the
+	// combination of grpc/proto, but undefined for proto error details
+	// with other transports/encodings.
+	details := yarpcerror.ExtractDetails(err)
+	if details == nil {
+		return nil, nil
+	}
+	return encodeAsJSON(details)
 }
