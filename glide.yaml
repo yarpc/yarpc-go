@@ -3,11 +3,9 @@ homepage: https://github.com/yarpc/yarpc-go
 license: MIT
 import:
 - package: github.com/apache/thrift
-  version: 0.9.3 # TODO switch back to ^0.9.3 once Apache Thrift fixes https://issues.apache.org/jira/browse/THRIFT-4261
+  version: 0.9.3
 - package: github.com/crossdock/crossdock-go
   version: master
-  # gogo/protobuf and golang/protobuf have incompatible versioning T2167025.
-  # These minimum versions are required.
 - package: github.com/gogo/protobuf
   version: ^1.1.1
 - package: github.com/golang/protobuf
@@ -19,7 +17,6 @@ import:
 - package: github.com/opentracing/opentracing-go
   version: ^1
 - package: github.com/prometheus/client_golang
-  # This isn't exposed to customers, so we can depend on a pre-1.0 release.
   version: ~0.8.0
   subpackages:
   - prometheus
@@ -44,7 +41,6 @@ import:
   version: ^1.10
 - package: golang.org/x/net
   version: master
-  # explicitly specifying this because glide is having issues with golang.org repos
   repo: https://github.com/golang/net
   subpackages:
   - context
@@ -52,26 +48,21 @@ import:
   version: ^1.12.0
   repo: https://github.com/grpc/grpc-go
 - package: golang.org/x/sys
-  # explicitly specifying this because glide is having issues with golang.org repos
-  # this is just a dependency of golang.org/x/net and if this problem is fixed
-  # then we no longer need to have this dependency in glide.yaml
   repo: https://github.com/golang/sys
 - package: golang.org/x/tools
-  # explicitly specifying this because glide is having issues with golang.org repos
-  # this is just a dependency of golang.org/x/net and if this problem is fixed
-  # then we no longer need to have this dependency in glide.yaml imports
-  # we should then move it to testImports
   repo: https://github.com/golang/tools
 - package: gopkg.in/yaml.v2
 - package: go.uber.org/multierr
   version: '>= 0.1, < 2.0'
 - package: github.com/golang/mock
   version: ^1
+- package: github.com/gogo/googleapis
+  version: ^1.1.0
 testImport:
 - package: golang.org/x/lint
+  repo: https://github.com/golang/lint
   subpackages:
   - golint
-  repo: https://github.com/golang/lint
 - package: github.com/kisielk/errcheck
 - package: github.com/kisielk/gotool
 - package: go.uber.org/tools

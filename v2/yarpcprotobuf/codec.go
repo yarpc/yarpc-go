@@ -21,11 +21,11 @@
 package yarpcprotobuf
 
 import (
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
+	spb "github.com/gogo/googleapis/google/rpc"
+	"github.com/gogo/protobuf/proto"
+	ptypes "github.com/gogo/protobuf/types"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerror"
-	spb "google.golang.org/genproto/googleapis/rpc/status"
 )
 
 type protoCodec struct {
