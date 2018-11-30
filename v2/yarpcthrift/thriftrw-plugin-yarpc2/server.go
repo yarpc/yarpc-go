@@ -97,11 +97,13 @@ type handler struct{ impl Interface }
 <$prefix := printf "%s.%s_%s_" (import $module.ImportPath) $service.Name .Name>
 
 <$wire := import "go.uber.org/thriftrw/wire">
+<$envelope := import "go.uber.org/thriftrw/envelope">
+<$yarpcerror := import "go.uber.org/yarpc/v2/yarpcerror">
 
-func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$yarpcthrift>.Response, error) {
+func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$envelope>.Enveloper, error) {
 	var args <$prefix>Args
 	if err := args.FromWire(body); err != nil {
-		return <$yarpcthrift>.Response{}, err
+		return nil, err
 	}
 
 	<if .ReturnType>
@@ -111,13 +113,18 @@ func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$yarpcthr
 	<end>
 
 	result, err := <$prefix>Helper.WrapResponse(<if .ReturnType>success,<end> appErr)
-
-	var response <$yarpcthrift>.Response
-	if err == nil {
-		response.Exception = appErr
-		response.Body = result
+	if err != nil {
+		return nil, err
 	}
-	return response, err
+
+	if appErr != nil {
+		return nil, <$yarpcerror>.New(
+			<$yarpcerror>.CodeUnknown,
+			appErr.Error(),
+			<$yarpcerror>.WithDetails(result),
+		)
+	}
+	return result, nil
 }
 <end><end>
 `

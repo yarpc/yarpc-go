@@ -41,19 +41,19 @@ func (e unaryEncodingHandler) Handle(ctx context.Context, reqBody interface{}) (
 		return nil, yarpcerror.InternalErrorf("tried to handle a non-wire.Value in thrift handler")
 	}
 
-	thriftRes, err := e.h(ctx, reqValue)
+	resBody, err := e.h(ctx, reqValue)
 	if err != nil {
 		return nil, err
 	}
 
-	if resType := thriftRes.Body.EnvelopeType(); resType != wire.Reply {
+	if resType := resBody.EnvelopeType(); resType != wire.Reply {
 		return nil, errUnexpectedEnvelopeType(resType)
 	}
 
-	resValue, err := thriftRes.Body.ToWire()
+	resValue, err := resBody.ToWire()
 	if err != nil {
 		return nil, err
 	}
 
-	return resValue, thriftRes.Exception
+	return resValue, nil
 }

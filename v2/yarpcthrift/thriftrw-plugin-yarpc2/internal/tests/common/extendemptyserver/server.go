@@ -5,8 +5,10 @@ package extendemptyserver
 
 import (
 	"context"
+	"go.uber.org/thriftrw/envelope"
 	"go.uber.org/thriftrw/wire"
 	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcthrift"
 	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/common"
 	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/common/emptyserviceserver"
@@ -49,20 +51,25 @@ func New(impl Interface, opts ...yarpcthrift.RegisterOption) []yarpc.EncodingPro
 
 type handler struct{ impl Interface }
 
-func (h handler) Hello(ctx context.Context, body wire.Value) (yarpcthrift.Response, error) {
+func (h handler) Hello(ctx context.Context, body wire.Value) (envelope.Enveloper, error) {
 	var args common.ExtendEmpty_Hello_Args
 	if err := args.FromWire(body); err != nil {
-		return yarpcthrift.Response{}, err
+		return nil, err
 	}
 
 	appErr := h.impl.Hello(ctx)
 
 	result, err := common.ExtendEmpty_Hello_Helper.WrapResponse(appErr)
-
-	var response yarpcthrift.Response
-	if err == nil {
-		response.Exception = appErr
-		response.Body = result
+	if err != nil {
+		return nil, err
 	}
-	return response, err
+
+	if appErr != nil {
+		return nil, yarpcerror.New(
+			yarpcerror.CodeUnknown,
+			appErr.Error(),
+			yarpcerror.WithDetails(result),
+		)
+	}
+	return result, nil
 }
