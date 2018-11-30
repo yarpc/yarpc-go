@@ -224,6 +224,19 @@ func (mr *MockInboundCodecMockRecorder) Encode(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Encode", reflect.TypeOf((*MockInboundCodec)(nil).Encode), arg0)
 }
 
+// EncodeError mocks base method
+func (m *MockInboundCodec) EncodeError(arg0 error) (*v2.Buffer, error) {
+	ret := m.ctrl.Call(m, "EncodeError", arg0)
+	ret0, _ := ret[0].(*v2.Buffer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EncodeError indicates an expected call of EncodeError
+func (mr *MockInboundCodecMockRecorder) EncodeError(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EncodeError", reflect.TypeOf((*MockInboundCodec)(nil).EncodeError), arg0)
+}
+
 // MockList is a mock of List interface
 type MockList struct {
 	ctrl     *gomock.Controller
