@@ -73,13 +73,6 @@ const (
 	// if there was an application error.
 	ApplicationErrorHeader = "rpc-application-error"
 
-	// ApplicationErrorHeaderValue is the value that will be set for
-	// ApplicationErrorHeader is there was an application error.
-	//
-	// The definition says any non-empty value is valid, however this is
-	// the specific value that will be used for now.
-	ApplicationErrorHeaderValue = "error"
-
 	baseContentType   = "application/grpc"
 	contentTypeHeader = "content-type"
 )

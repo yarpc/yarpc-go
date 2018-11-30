@@ -249,20 +249,20 @@ func handlerErrorToGRPCError(err error, mdWriter *metadataWriter) error {
 
 func handleResponse(
 	encoding yarpc.Encoding,
-	info *yarpcerror.Info,
+	errInfo *yarpcerror.Info,
 	resBuf *yarpc.Buffer,
 	serverStream grpc.ServerStream,
 	mdWriter *metadataWriter,
 ) error {
 	// This is a regular response that we should send
-	if info == nil && resBuf != nil {
+	if errInfo == nil && resBuf != nil {
 		return serverStream.SendMsg(resBuf.Bytes())
 	}
 
 	// This is an application error
-	if info != nil {
-		if info.Name != "" {
-			mdWriter.AddSystemHeader(ErrorNameHeader, info.Name)
+	if errInfo != nil {
+		if errInfo.Name != "" {
+			mdWriter.AddSystemHeader(ErrorNameHeader, errInfo.Name)
 		}
 		if resBuf != nil {
 			switch encoding {
