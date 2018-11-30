@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-11-29T15:03:39.65623679Z
+updated: 2018-11-30T15:06:29.366969072Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -72,7 +72,7 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 619930b0b4713cc1280189bf0a4c54b3fb506f60
+  version: aa55a523dc0a8297edf51bb75e8eec13eb3be45d
   subpackages:
   - internal/util
   - nfs
@@ -201,7 +201,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: c5b00d9557fd23dd2a6d9c2f4c80a31d08cac00d
+  version: 1c3d964395ce8f04f3b03b30aaed0b096c08c3c6
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
