@@ -106,7 +106,8 @@ func TestDialerBasics(t *testing.T) {
 	t.Logf("calling\n")
 	req := &Payload{Note: "forthcoming"}
 	res := &Payload{}
-	err = client.Call(ctx, "echo", req, res)
+	errDetails := &Payload{}
+	err = client.Call(ctx, "echo", req, res, errDetails)
 	require.NoError(t, err)
 	require.Equal(t, req, res)
 }
@@ -170,12 +171,14 @@ func TestDialerBellsAndWhistles(t *testing.T) {
 	t.Logf("calling\n")
 	req := &Payload{Note: "forthcoming"}
 	res := &Payload{}
+	errDetails := &Payload{}
 	var headers map[string]string
 	err := client.Call(
 		ctx,
 		"echo",
 		req,
 		res,
+		errDetails,
 		yarpc.WithHeader("HeAdEr", "forthcoming"),
 		yarpc.ResponseHeaders(&headers),
 	)
@@ -281,7 +284,8 @@ func TestConnectionFailure(t *testing.T) {
 	t.Logf("calling\n")
 	req := &Payload{Note: "forthcoming"}
 	res := &Payload{}
-	err = client.Call(ctx, "echo", req, res)
+	errDetails := &Payload{}
+	err = client.Call(ctx, "echo", req, res, errDetails)
 	assert.Equal(t, yarpcerror.New(yarpcerror.CodeDeadlineExceeded, "timeout"), err)
 }
 
@@ -369,8 +373,9 @@ func TestErrors(t *testing.T) {
 
 			req := &Payload{Note: "forthcoming"}
 			res := &Payload{}
+			errDetails := &Payload{}
 			handlerErr = tt.give
-			err = client.Call(ctx, tt.procedure, req, res)
+			err = client.Call(ctx, tt.procedure, req, res, errDetails)
 			require.Equal(t, tt.want, err)
 		})
 	}

@@ -134,13 +134,13 @@ func TestHandleSuccessWithResponseHeaders(t *testing.T) {
 	assert.Equal(t, yarpc.NewHeaders().With("foo", "bar"), res.Headers)
 }
 
-func TestHandleBothResponseError(t *testing.T) {
+func TestHandleError(t *testing.T) {
 	h := func(ctx context.Context, body *simpleRequest) (*simpleResponse, error) {
 		assert.Equal(t, "simpleCall", yarpc.CallFromContext(ctx).Procedure())
 		assert.Equal(t, "foo", body.Name)
 		assert.Equal(t, map[string]int32{"bar": 42}, body.Attributes)
 
-		return &simpleResponse{Success: true}, errors.New("bar")
+		return nil, errors.New("bar")
 	}
 
 	req := &yarpc.Request{
@@ -149,11 +149,10 @@ func TestHandleBothResponseError(t *testing.T) {
 	}
 	reqBuf := yarpc.NewBufferString(`{"name": "foo", "attributes": {"bar": 42}}`)
 	p := Procedure("simpleProcedure", h)[0]
-	_, resBuf, err := handleWithCodec(context.Background(), req, reqBuf, p)
+	res, resBuf, err := handleWithCodec(context.Background(), req, reqBuf, p)
 
-	require.Equal(t, errors.New("bar"), err)
-
-	var response simpleResponse
-	require.NoError(t, json.Unmarshal(resBuf.Bytes(), &response))
-	assert.Equal(t, simpleResponse{Success: true}, response)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	assert.NotNil(t, res.ApplicationErrorInfo)
+	assert.Nil(t, resBuf)
 }

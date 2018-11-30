@@ -113,7 +113,7 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 				defer cancel()
 
 				var res testEchoResponse
-				err := client.Call(ctx, "test-procedure", &testEchoRequest{Message: tt.value}, &res)
+				err := client.Call(ctx, "test-procedure", &testEchoRequest{Message: tt.value}, &res, &res)
 				require.Equal(t, tt.errCode.String(), yarpcerror.ExtractInfo(err).Code.String())
 			})
 		})
@@ -170,7 +170,7 @@ func TestJSONRoundTrip(t *testing.T) {
 				defer cancel()
 
 				var res testEchoResponse
-				err := client.Call(ctx, tt.procedure, tt.request, &res)
+				err := client.Call(ctx, tt.procedure, tt.request, &res, &res)
 
 				if tt.wantErr == "" {
 					require.NoError(t, err, "unexpected error")
@@ -211,7 +211,7 @@ func TestConcurrentCalls(t *testing.T) {
 				var res testEchoResponse
 
 				<-start
-				err := client.Call(ctx, "test-procedure", &testEchoRequest{Message: msg}, &res)
+				err := client.Call(ctx, "test-procedure", &testEchoRequest{Message: msg}, &res, &res)
 
 				lock.Lock()
 				errs = multierr.Combine(errs, err)
@@ -394,7 +394,7 @@ func TestTLS(t *testing.T) {
 				request := &testEchoRequest{
 					Message: "hello security!",
 				}
-				err := client.Call(ctx, "test-procedure", request, &res)
+				err := client.Call(ctx, "test-procedure", request, &res, &res)
 
 				if test.expectedErrContains == "" {
 					require.NoError(t, err)

@@ -26,6 +26,7 @@ import (
 
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcencoding"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 // New builds a new JSON client.
@@ -40,11 +41,11 @@ type Client struct {
 
 // Call performs an outbound JSON request.
 //
-// resBodyOut is a pointer to a value that can be filled with
-// json.Unmarshal.
+// resBodyOut and errorDetailsOut are pointers to a value that can be filled
+// with json.Unmarshal. errorDetailsOut are used for application errors.
 //
 // Returns the response or an error if the request failed.
-func (c Client) Call(ctx context.Context, procedure string, reqBody interface{}, resBodyOut interface{}, opts ...yarpc.CallOption) error {
+func (c Client) Call(ctx context.Context, procedure string, reqBody interface{}, resBodyOut interface{}, errorDetailsOut interface{}, opts ...yarpc.CallOption) error {
 	call := yarpc.NewOutboundCall(opts...)
 	req := yarpc.Request{
 		Caller:    c.c.Caller,
@@ -63,25 +64,41 @@ func (c Client) Call(ctx context.Context, procedure string, reqBody interface{},
 		return yarpcencoding.RequestBodyEncodeError(&req, err)
 	}
 
-	res, resBuf, appErr := c.c.Unary.Call(ctx, &req, yarpc.NewBufferBytes(encoded))
-	if res == nil {
-		return appErr
+	res, resBuf, err := c.c.Unary.Call(ctx, &req, yarpc.NewBufferBytes(encoded))
+	if err != nil {
+		return err
 	}
 
-	// we want to return the appErr if it exists as this is what
-	// the previous behavior was so we deprioritize this error
-	var decodeErr error
 	if _, err = call.ReadFromResponse(ctx, res); err != nil {
-		decodeErr = err
-	}
-	if resBuf != nil {
-		if err := json.NewDecoder(resBuf).Decode(resBodyOut); err != nil && decodeErr == nil {
-			decodeErr = yarpcencoding.ResponseBodyDecodeError(&req, err)
-		}
+		return err
 	}
 
-	if appErr != nil {
-		return appErr
+	if res.ApplicationErrorInfo != nil {
+		// In the case of a yarpcerror with error details, the details are sent
+		// over the body. If no details are attached, this buffer is empty.
+		// However, json decoding an empty buffer will throw an error, while we're
+		// okay with an empty buffer. So, we check if the buffer is empty before we
+		// decode.
+		if resBuf.Len() != 0 {
+			if err := json.NewDecoder(resBuf).Decode(errorDetailsOut); err != nil {
+				return yarpcencoding.ResponseBodyDecodeError(&req, err)
+			}
+			return yarpcerror.New(
+				res.ApplicationErrorInfo.Code,
+				res.ApplicationErrorInfo.Message,
+				yarpcerror.WithName(res.ApplicationErrorInfo.Name),
+				yarpcerror.WithDetails(errorDetailsOut),
+			)
+		}
+		return yarpcerror.New(
+			res.ApplicationErrorInfo.Code,
+			res.ApplicationErrorInfo.Message,
+			yarpcerror.WithName(res.ApplicationErrorInfo.Name),
+		)
 	}
-	return decodeErr
+
+	if err := json.NewDecoder(resBuf).Decode(resBodyOut); err != nil {
+		return yarpcencoding.ResponseBodyDecodeError(&req, err)
+	}
+	return nil
 }
