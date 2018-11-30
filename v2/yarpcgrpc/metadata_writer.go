@@ -37,16 +37,12 @@ func newMetadataWriter() *metadataWriter {
 	}
 }
 
-func (r *metadataWriter) SetResponse(res *yarpc.Response) {
+func (r *metadataWriter) SetResponseHeaders(res *yarpc.Response) {
 	if res == nil {
 		return
 	}
 
 	r.headerErr = multierr.Combine(r.headerErr, addApplicationHeaders(r.md, res.Headers))
-
-	if res.ApplicationErrorInfo != nil {
-		r.AddSystemHeader(ApplicationErrorHeader, ApplicationErrorHeaderValue)
-	}
 }
 
 func (r *metadataWriter) AddSystemHeader(key string, value string) {
