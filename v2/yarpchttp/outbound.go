@@ -147,28 +147,21 @@ func (o *Outbound) call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.B
 		return nil, nil, err
 	}
 
-	var appErr error
-	if httpRes.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus {
-		appErr = getYARPCErrorFromResponse(httpRes, resBuf, true)
-		errorInfo := yarpcerror.ExtractInfo(appErr)
-		res.ApplicationErrorInfo = &errorInfo
-	}
-
-	bothResponseError := httpRes.Header.Get(BothResponseErrorHeader) == AcceptTrue
-	if bothResponseError && !o.legacyResponseError {
-		if httpRes.StatusCode >= 300 {
-			// TODO: This is a bit odd; we set the error in response AND return it.
-			// However, to preserve the current behavior of YARPC, this is
-			// necessary. This is most likely where the error details will be added,
-			// so we expect this to change.
-			return res, resBuf, appErr
+	// we had an error
+	if httpRes.StatusCode >= 300 {
+		// this error was a yarpc application error
+		if httpRes.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus {
+			errorInfo := getApplicationErrorInfoFromResponse(httpRes)
+			res.ApplicationErrorInfo = &errorInfo
+			return res, resBuf, nil
 		}
-		return res, resBuf, nil
+		// this error was an http error
+		return nil, nil, yarpcerror.New(
+			statusCodeToBestCode(httpRes.StatusCode),
+			resBuf.String(),
+		)
 	}
-	if httpRes.StatusCode >= 200 && httpRes.StatusCode < 300 {
-		return res, resBuf, nil
-	}
-	return nil, nil, getYARPCErrorFromResponse(httpRes, resBuf, false)
+	return res, resBuf, nil
 }
 
 func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*httpPeer, func(error), error) {
@@ -328,13 +321,7 @@ func readCloserToBuffer(readCloser io.ReadCloser) (*yarpc.Buffer, error) {
 	return yarpc.NewBufferBytes(body), nil
 }
 
-func getYARPCErrorFromResponse(httpRes *http.Response, resBuf *yarpc.Buffer, bothResponseError bool) error {
-	var contents string
-	if bothResponseError {
-		contents = httpRes.Header.Get(ErrorMessageHeader)
-	} else {
-		contents = resBuf.String()
-	}
+func getApplicationErrorInfoFromResponse(httpRes *http.Response) yarpcerror.Info {
 	// use the status code if we can't get a code from the headers
 	code := statusCodeToBestCode(httpRes.StatusCode)
 	if errorCodeText := httpRes.Header.Get(ErrorCodeHeader); errorCodeText != "" {
@@ -344,11 +331,12 @@ func getYARPCErrorFromResponse(httpRes *http.Response, resBuf *yarpc.Buffer, bot
 			code = errorCode
 		}
 	}
-	return yarpcerror.New(
-		code,
-		strings.TrimSuffix(contents, "\n"),
-		yarpcerror.WithName(httpRes.Header.Get(ErrorNameHeader)),
-	)
+	message := httpRes.Header.Get(ErrorMessageHeader)
+	return yarpcerror.Info{
+		Code:    code,
+		Message: strings.TrimSuffix(message, "\n"),
+		Name:    httpRes.Header.Get(ErrorNameHeader),
+	}
 }
 
 // Only does verification if there is a response header

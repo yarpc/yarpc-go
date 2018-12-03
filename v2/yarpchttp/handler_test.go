@@ -361,8 +361,9 @@ func TestHandlerInternalFailure(t *testing.T) {
 
 	code := responseRecorder.Code
 	assert.True(t, code >= 500 && code < 600, "expected 500 level response, got '%d'", code)
+	assert.Equal(t, "error", responseRecorder.HeaderMap.Get(ApplicationStatusHeader))
 	assert.Equal(t,
-		`error for service "fake" and procedure "hello": great sadness`, responseRecorder.Body.String())
+		`error for service "fake" and procedure "hello": great sadness`, responseRecorder.HeaderMap.Get(ErrorMessageHeader))
 }
 
 type panickedHandler struct{}
