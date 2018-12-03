@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   This addresses a data race observed in production that results in broken peer
   list invariants.
 
+### Changed
+- Observability middleware: Log client side YARPC errors at debug level
+
 ## [1.35.2] - 2018-11-06
 ### Removed
 - Reverted HTTP transport marking peers as unavailable when the remote side
@@ -53,7 +56,6 @@ side closes the connection.
 ### Changed
 - HTTP inbounds gracefully shutdown with an optional timeout, defaulting to 5
   seconds.
-- Observability middleware: Log client side YARPC errors at debug level
 
 ## [1.32.4] - 2018-08-07
 ### Fixed
