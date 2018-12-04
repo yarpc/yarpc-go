@@ -218,11 +218,6 @@ func handlerErrorToGRPCError(err error, mdWriter *metadataWriter) error {
 	if _, ok := status.FromError(err); ok {
 		return err
 	}
-	// if this is not a yarpc error, return the error
-	// this will result in the error being a grpc-go error with codes.Unknown
-	if !yarpcerror.IsStatus(err) {
-		return err
-	}
 	// we now know we have a yarpc error
 	errorInfo := yarpcerror.ExtractInfo(err)
 	name := errorInfo.Name

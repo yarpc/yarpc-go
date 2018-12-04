@@ -186,17 +186,7 @@ func metadataToApplicationError(invokeErr error, responseMD metadata.MD) error {
 }
 
 func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
-	if err == nil {
-		return nil
-	}
-	if yarpcerror.IsStatus(err) {
-		return err
-	}
-	status, ok := status.FromError(err)
-	// if not a yarpc error or grpc error, just return a wrapped error
-	if !ok {
-		return yarpcerror.WrapError(err)
-	}
+	status, _ := status.FromError(err)
 	code, ok := _grpcCodeToCode[status.Code()]
 	if !ok {
 		code = yarpcerror.CodeUnknown

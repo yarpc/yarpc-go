@@ -238,9 +238,6 @@ func getSystemError(err error) error {
 	if _, ok := err.(tchannel.SystemError); ok {
 		return err
 	}
-	if !yarpcerror.IsStatus(err) {
-		return tchannel.NewSystemError(tchannel.ErrCodeUnexpected, err.Error())
-	}
 	errorInfo := yarpcerror.ExtractInfo(err)
 	tchannelCode, ok := _codeToTChannelCode[errorInfo.Code]
 	if !ok {

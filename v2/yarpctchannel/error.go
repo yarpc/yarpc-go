@@ -32,9 +32,6 @@ func toYARPCError(req *yarpc.Request, err error) error {
 	if err == nil {
 		return err
 	}
-	if yarpcerror.IsStatus(err) {
-		return err
-	}
 	if err, ok := err.(tchannel.SystemError); ok {
 		return fromSystemError(err)
 	}

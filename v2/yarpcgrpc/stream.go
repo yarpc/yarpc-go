@@ -137,14 +137,7 @@ func toYARPCStreamError(err error) error {
 	if err == io.EOF {
 		return err
 	}
-	if yarpcerror.IsStatus(err) {
-		return err
-	}
-	status, ok := status.FromError(err)
-	// if not a yarpc error or grpc error, just return a wrapped error
-	if !ok {
-		return yarpcerror.WrapError(err)
-	}
+	status, _ := status.FromError(err)
 	code, ok := _grpcCodeToCode[status.Code()]
 	if !ok {
 		code = yarpcerror.CodeUnknown
@@ -155,12 +148,6 @@ func toYARPCStreamError(err error) error {
 func toGRPCStreamError(err error) error {
 	if err == nil {
 		return nil
-	}
-
-	// if this is not a yarpc error, return the error
-	// this will result in the error being a grpc-go error with codes.Unknown
-	if !yarpcerror.IsStatus(err) {
-		return err
 	}
 	// we now know we have a yarpc error
 	errorInfo := yarpcerror.ExtractInfo(err)

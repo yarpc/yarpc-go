@@ -91,7 +91,7 @@ func TestInboundStartErrorBadGrabHeader(t *testing.T) {
 		Router:      new(yarpctest.MockRouter),
 		GrabHeaders: []string{"x-valid", "y-invalid"},
 	}
-	err := yarpcerror.WrapError(i.Start(context.Background()))
+	err := i.Start(context.Background())
 	assert.Error(t, err)
 	errorInfo := yarpcerror.ExtractInfo(err)
 	assert.Equal(t, yarpcerror.CodeInvalidArgument, errorInfo.Code)

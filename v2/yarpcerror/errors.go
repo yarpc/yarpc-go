@@ -55,49 +55,16 @@ func New(code Code, message string, options ...ErrorOption) error {
 	return encodingError
 }
 
-// // ExtractInfo returns t Status for the provided error. If the provided error
-// // is not a Status, a new error with code CodeUnknown is returned.
-// //
-// // Returns nil if the provided error is nil.
-// func FromError(err error) encodingError {
-// 	if err == nil {
-// 		return nil
-// 	}
-// 	if status, ok := err.(*encodingError); ok {
-// 		return status
-// 	}
-// 	return &encodingError{
-// 		code:    CodeUnknown,
-// 		message: err.Error(),
-// 	}
-// }
-
-// WrapError returns an error wrapped as an encodingError.
-func WrapError(err error) error {
-	if err == nil {
-		return nil
-	}
-	if encodingError, ok := err.(*encodingError); ok {
-		return encodingError
-	}
-	return &encodingError{
-		info: Info{
-			Code:    CodeUnknown,
-			Message: err.Error(),
-		},
-	}
-}
-
 // ExtractInfo casts the error into an encodingError and returns its info field.
 // If it fails to cast, it returns an empty Info struct.
 func ExtractInfo(err error) Info {
 	if err == nil {
-		return Info{}
+		return Info{Code: CodeUnknown}
 	}
 	if encodingError, ok := err.(*encodingError); ok {
 		return encodingError.info
 	}
-	return Info{}
+	return Info{Code: CodeUnknown, Message: err.Error()}
 }
 
 // ExtractDetails casts the error into an encodingError and returns its details
@@ -110,14 +77,6 @@ func ExtractDetails(err error) interface{} {
 		return encodingError.details
 	}
 	return nil
-}
-
-// IsStatus returns whether the provided error is a YARPC error.
-//
-// This is always false if the error is nil.
-func IsStatus(err error) bool {
-	_, ok := err.(*encodingError)
-	return ok
 }
 
 // encodingError represents a YARPC error.
