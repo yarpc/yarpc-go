@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-12-04T15:06:27.802420549Z
+updated: 2018-12-05T15:05:27.686926544Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -72,7 +72,7 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: aa55a523dc0a8297edf51bb75e8eec13eb3be45d
+  version: 1dc9a6cbc91aacc3e8b2d63db4d2e957a5394ac4
   subpackages:
   - internal/util
   - nfs
@@ -189,7 +189,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 4ed8d59d0b35e1e29334a206d1b3f38b1e5dfb31
+  version: a5c9d58dba9a56f97aaa86f55e638b718c5a6c42
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -201,7 +201,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: e5f3ab76ea4b26ebea349e4994ee72d38250c9b0
+  version: 22934f0fdb6201c132a3dc6120150dcb1646d74c
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
@@ -210,23 +210,28 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 2e463a05d100327ca47ac218281906921038fd95
+  version: df014850f6dee74ba2fc94874043a9f3f75fbfd8
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
   - balancer/base
   - balancer/roundrobin
+  - binarylog/grpc_binarylog_v1
   - codes
   - connectivity
   - credentials
+  - credentials/internal
   - encoding
   - encoding/proto
   - grpclog
   - internal
   - internal/backoff
+  - internal/binarylog
   - internal/channelz
   - internal/envconfig
   - internal/grpcrand
+  - internal/grpcsync
+  - internal/syscall
   - internal/transport
   - keepalive
   - metadata
