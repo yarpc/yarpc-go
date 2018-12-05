@@ -164,7 +164,7 @@ func TestNewMapRouterWithEncodingProceduresHandlerError(t *testing.T) {
 	spec := yarpc.NewUnaryEncodingHandlerSpec(handler)
 	codec := yarpctest.NewMockInboundCodec(mockCtrl)
 	codec.EXPECT().Decode(gomock.Any()).Return(nil, nil)
-	codec.EXPECT().Encode(gomock.Any()).Return(nil, nil)
+	codec.EXPECT().EncodeError(gomock.Any()).Return(nil, nil)
 
 	encodingProcedures := []yarpc.EncodingProcedure{
 		{
@@ -178,7 +178,7 @@ func TestNewMapRouterWithEncodingProceduresHandlerError(t *testing.T) {
 	transportProcedures := m.Procedures()
 
 	_, _, err := transportProcedures[0].HandlerSpec.Unary().Handle(context.Background(), nil, nil)
-	assert.Error(t, err)
+	assert.NoError(t, err)
 }
 
 func TestNewMapRouterWithEncodingProceduresEncodeError(t *testing.T) {

@@ -63,7 +63,7 @@ func TestToYARPCError(t *testing.T) {
 			name:    "unknown",
 			giveErr: errors.New("test"),
 			giveReq: &yarpc.Request{Service: "serv", Procedure: "proc"},
-			wantErr: yarpcerror.UnknownErrorf("received unknown error calling service: %q, procedure: %q, err: %s", "serv", "proc", "test"),
+			wantErr: yarpcerror.UnknownErrorf("error for service %q and procedure %q: %v", "serv", "proc", "test"),
 		},
 	}
 	for _, tt := range tests {

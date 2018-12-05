@@ -30,7 +30,7 @@ import (
 
 func toYARPCError(req *yarpc.Request, err error) error {
 	if err == nil {
-		return err
+		return nil
 	}
 	if err, ok := err.(tchannel.SystemError); ok {
 		return fromSystemError(err)
@@ -38,5 +38,8 @@ func toYARPCError(req *yarpc.Request, err error) error {
 	if err == context.DeadlineExceeded {
 		return yarpcerror.DeadlineExceededErrorf("deadline exceeded for service: %q, procedure: %q", req.Service, req.Procedure)
 	}
-	return yarpcerror.UnknownErrorf("received unknown error calling service: %q, procedure: %q, err: %s", req.Service, req.Procedure, err.Error())
+	if req == nil {
+		return err
+	}
+	return yarpcerror.WrapHandlerError(err, req.Service, req.Procedure)
 }

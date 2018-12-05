@@ -106,7 +106,7 @@ func (c *client) Call(
 	}
 
 	res, resBuf, appErr := c.c.Unary.Call(ctx, req, reqBuf)
-	if res == nil {
+	if appErr != nil {
 		return nil, appErr
 	}
 
@@ -114,12 +114,16 @@ func (c *client) Call(
 		return nil, err
 	}
 
-	if resBuf != nil {
-		if err := unmarshal(req.Encoding, resBuf, protoRes); err != nil {
-			return nil, yarpcencoding.ResponseBodyDecodeError(req, err)
-		}
+	// If we had an application error, the buffer holds our error details.
+	if res.ApplicationErrorInfo != nil {
+		return nil, decodeError(res.ApplicationErrorInfo, resBuf)
 	}
-	return protoRes, appErr
+
+	if err := unmarshal(req.Encoding, resBuf, protoRes); err != nil {
+		return nil, yarpcencoding.ResponseBodyDecodeError(req, err)
+	}
+
+	return protoRes, nil
 }
 
 // toRequest maps the outbound call to its corresponding request.

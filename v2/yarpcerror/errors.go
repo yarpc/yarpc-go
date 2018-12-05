@@ -59,7 +59,7 @@ func New(code Code, message string, options ...ErrorOption) error {
 // If it fails to cast, it returns an empty Info struct.
 func ExtractInfo(err error) Info {
 	if err == nil {
-		return Info{Code: CodeUnknown}
+		return Info{Code: CodeOK}
 	}
 	if encodingError, ok := err.(*encodingError); ok {
 		return encodingError.info

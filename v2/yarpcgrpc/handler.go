@@ -25,15 +25,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerror"
-	"go.uber.org/yarpc/v2/yarpcjson"
-	"go.uber.org/yarpc/v2/yarpcprotobuf"
-	"go.uber.org/yarpc/v2/yarpcthrift"
 	"go.uber.org/yarpc/v2/yarpctracing"
 	"go.uber.org/yarpc/v2/yarpctransport"
 	"golang.org/x/net/context"
+	spb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -218,7 +217,7 @@ func handlerErrorToGRPCError(err error, mdWriter *metadataWriter) error {
 	if _, ok := status.FromError(err); ok {
 		return err
 	}
-	// we now know we have a yarpc error
+	// we now assume we have a yarpc error
 	errorInfo := yarpcerror.ExtractInfo(err)
 	name := errorInfo.Name
 	message := errorInfo.Message
@@ -256,16 +255,22 @@ func handleResponse(
 
 	// This is an application error
 	if errInfo != nil {
+		mdWriter.AddSystemHeader(ApplicationErrorHeader, ApplicationErrorHeaderValue)
 		if errInfo.Name != "" {
 			mdWriter.AddSystemHeader(ErrorNameHeader, errInfo.Name)
 		}
 		if resBuf != nil {
-			switch encoding {
-			case yarpcprotobuf.Encoding:
-				mdWriter.AddSystemHeader(ErrorDetailsHeader, resBuf.String())
-			case yarpcjson.Encoding, yarpcthrift.Encoding:
-				mdWriter.AddSystemHeader(ApplicationErrorHeader, resBuf.String())
+			// TODO(mhp): Trying to keep yarpc's API, we unmarshal the marshaled status
+			// back and return it through our handler. This is mainly because
+			// we cannot use any reserved headers in gRPC, and the only way to
+			// send back an application error is by returning an error in our
+			// handler. In the future, if we can set the headers ourselves, we
+			// should replace this.
+			s := &spb.Status{}
+			if err := proto.Unmarshal(resBuf.Bytes(), s); err != nil {
+				return err
 			}
+			return status.FromProto(s).Err()
 		}
 	}
 	return nil

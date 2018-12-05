@@ -88,6 +88,20 @@ func (c *protoCodec) EncodeError(err error) (*yarpc.Buffer, error) {
 	return marshalProto(&p)
 }
 
+// TODO: This should probably be in an outbound codec.
+func decodeError(errorInfo *yarpcerror.Info, buf *yarpc.Buffer) error {
+	s := &spb.Status{}
+	if err := proto.Unmarshal(buf.Bytes(), s); err != nil {
+		return err
+	}
+	return yarpcerror.New(
+		errorInfo.Code,
+		errorInfo.Message,
+		yarpcerror.WithName(errorInfo.Name),
+		yarpcerror.WithDetails(s.GetDetails()),
+	)
+}
+
 type jsonCodec struct {
 	reqMessage proto.Message
 }
