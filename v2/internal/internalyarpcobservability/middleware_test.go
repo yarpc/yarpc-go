@@ -145,6 +145,17 @@ func TestMiddlewareLogging(t *testing.T) {
 			}
 		}
 
+		checkAppErr := func(res *yarpc.Response) {
+			if tt.err == nil {
+				require.NotNil(t, res, "Expected non-nil response if call is successful.")
+				if tt.applicationErr != nil {
+					assert.NotNil(t, res.ErrorInfo)
+				} else {
+					assert.Nil(t, res.ErrorInfo)
+				}
+			}
+		}
+
 		t.Run(tt.desc+", unary inbound", func(t *testing.T) {
 			res, _, err := mw.Handle(
 				context.Background(),
@@ -152,8 +163,8 @@ func TestMiddlewareLogging(t *testing.T) {
 				reqBuf,
 				newHandler(tt),
 			)
-
 			checkErr(err)
+			checkAppErr(res)
 			logContext := append(
 				baseFields(),
 				zap.String("direction", string(_directionInbound)),
@@ -168,24 +179,12 @@ func TestMiddlewareLogging(t *testing.T) {
 				Context: logContext,
 			}
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
-			if tt.applicationErr != nil {
-				assert.NotNil(t, res.ApplicationErrorInfo)
-			} else {
-				assert.Nil(t, res.ApplicationErrorInfo)
-			}
 			assert.Equal(t, tt.err, err)
 		})
 		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
 			res, _, err := mw.Call(context.Background(), req, reqBuf, newOutbound(tt))
 			checkErr(err)
-			if tt.err == nil {
-				assert.NotNil(t, res, "Expected non-nil response if call is successful.")
-				if tt.applicationErr != nil {
-					assert.NotNil(t, res.ApplicationErrorInfo)
-				} else {
-					assert.Nil(t, res.ApplicationErrorInfo)
-				}
-			}
+			checkAppErr(res)
 			logContext := append(
 				baseFields(),
 				zap.String("direction", string(_directionOutbound)),
@@ -302,7 +301,7 @@ func TestMiddlewareMetrics(t *testing.T) {
 			wantCalls:     1,
 			wantSuccesses: 0,
 			wantServerFailures: map[string]int{
-				"unknown_internal_yarpc": 1,
+				"unknown": 1,
 			},
 		},
 		{
@@ -414,7 +413,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 
 	require.NoError(t, err, "Unexpected transport error.")
 	require.NotNil(t, res)
-	require.NotNil(t, res.ApplicationErrorInfo)
+	require.NotNil(t, res.ErrorInfo)
 
 	expected := observer.LoggedEntry{
 		Entry: zapcore.Entry{
@@ -453,7 +452,7 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 	)
 	require.NoError(t, err, "Unexpected transport error.")
 	require.NotNil(t, res)
-	require.Nil(t, res.ApplicationErrorInfo)
+	require.Nil(t, res.ErrorInfo)
 
 	snap := root.Snapshot()
 	tags := metrics.Tags{
@@ -515,8 +514,7 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 		fakeHandler{fmt.Errorf("yuno"), nil},
 	)
 	require.Error(t, err, "Expected transport error.")
-	require.NotNil(t, res)
-	require.Nil(t, res.ApplicationErrorInfo)
+	require.Nil(t, res)
 
 	snap := root.Snapshot()
 	tags := metrics.Tags{
@@ -538,7 +536,7 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 		"routing_delegate": "rd",
 		"routing_key":      "rk",
 		"source":           "caller",
-		"error":            "unknown_internal_yarpc",
+		"error":            "unknown",
 	}
 	want := &metrics.RootSnapshot{
 		Counters: []metrics.Snapshot{
