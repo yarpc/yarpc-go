@@ -178,15 +178,16 @@ func callWithPeer(ctx context.Context, req *yarpc.Request, reqBody *yarpc.Buffer
 
 	var appErrInfo *yarpcerror.Info
 	if res.ApplicationError() {
-		// TODO(mhp): this is a filler error for now to preserve current yarpc
-		// error behavior. This should later be more well-defined.
-		appErrInfo = &yarpcerror.Info{}
+		appErrInfo, err = getErrorInfoAndDeleteHeaderKeys(headers)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	return &yarpc.Response{
 		Peer:                 getPeerAndDeleteHeaderKeys(headers),
 		Headers:              headers,
 		ApplicationErrorInfo: appErrInfo,
-	}, resBody, getResponseErrorAndDeleteHeaderKeys(headers)
+	}, resBody, nil
 }
 
 func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*tchannelPeer, func(error), error) {
@@ -278,21 +279,27 @@ func getPeerAndDeleteHeaderKeys(headers yarpc.Headers) yarpc.Identifier {
 	return yarpc.Address(peer)
 }
 
-func getResponseErrorAndDeleteHeaderKeys(headers yarpc.Headers) error {
+func getErrorInfoAndDeleteHeaderKeys(headers yarpc.Headers) (*yarpcerror.Info, error) {
 	errorCodeString, ok := popHeader(headers, ErrorCodeHeaderKey)
 	if !ok {
-		return nil
+		// If we're here, this means we expected an application error, but no
+		// error headers were set. This means the response buffer holds the
+		// error body, so we set a filler error info.
+		return &yarpcerror.Info{
+			Code:    yarpcerror.CodeUnknown,
+			Message: "application error",
+		}, nil
 	}
 	var errorCode yarpcerror.Code
 	if err := errorCode.UnmarshalText([]byte(errorCodeString)); err != nil {
-		return err
+		return nil, err
 	}
 	if errorCode == yarpcerror.CodeOK {
-		return yarpcerror.New(yarpcerror.CodeInternal, "got CodeOK from error header")
+		return nil, yarpcerror.New(yarpcerror.CodeInternal, "got CodeOK from error header")
 	}
 	errorName, _ := popHeader(headers, ErrorNameHeaderKey)
 	errorMessage, _ := popHeader(headers, ErrorMessageHeaderKey)
-	return yarpcerror.New(errorCode, errorMessage, yarpcerror.WithName(errorName))
+	return &yarpcerror.Info{Code: errorCode, Message: errorMessage, Name: errorName}, nil
 }
 
 func popHeader(h yarpc.Headers, n string) (string, bool) {

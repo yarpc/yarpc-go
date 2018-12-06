@@ -74,7 +74,7 @@ func TestDirectAddress(t *testing.T) {
 	})
 	var res body
 	var retAddr yarpc.Identifier
-	require.NoError(t, client.Call(ctx, "echo", &body{Message: "hello"}, &res, yarpc.To(addr), yarpc.ResponseFrom(&retAddr)))
+	require.NoError(t, client.Call(ctx, "echo", &body{Message: "hello"}, &res, &res, yarpc.To(addr), yarpc.ResponseFrom(&retAddr)))
 	assert.NotNil(t, retAddr)
 	assert.Equal(t, addr, retAddr)
 }

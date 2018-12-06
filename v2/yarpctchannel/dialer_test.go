@@ -290,7 +290,6 @@ func TestConnectionFailure(t *testing.T) {
 }
 
 func TestErrors(t *testing.T) {
-
 	tests := map[string]struct {
 		procedure  string
 		give, want error
@@ -298,7 +297,7 @@ func TestErrors(t *testing.T) {
 		"implicit system error": {
 			procedure: "echo",
 			give:      fmt.Errorf("system error"),
-			want:      yarpcerror.New(yarpcerror.CodeUnknown, `error for service "service" and procedure "echo": system error`),
+			want:      yarpcerror.New(yarpcerror.CodeUnknown, `system error`),
 		},
 		"explicit system error": {
 			procedure: "echo",
@@ -322,8 +321,6 @@ func TestErrors(t *testing.T) {
 
 	for desc, tt := range tests {
 		t.Run(desc, func(t *testing.T) {
-			var handlerErr error
-
 			ctx := context.Background()
 			ctx, cancel := context.WithTimeout(ctx, 40*internaltesttime.Millisecond)
 			defer cancel()
@@ -334,7 +331,7 @@ func TestErrors(t *testing.T) {
 
 			handleEcho := yarpc.EncodingToTransportProcedures(
 				yarpcjson.Procedure("echo", func(ctx context.Context, req *Payload) (*Payload, error) {
-					return nil, handlerErr
+					return nil, tt.give
 				}),
 			)
 
@@ -374,7 +371,6 @@ func TestErrors(t *testing.T) {
 			req := &Payload{Note: "forthcoming"}
 			res := &Payload{}
 			errDetails := &Payload{}
-			handlerErr = tt.give
 			err = client.Call(ctx, tt.procedure, req, res, errDetails)
 			require.Equal(t, tt.want, err)
 		})

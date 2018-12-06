@@ -161,26 +161,34 @@ func (h handler) handleKernel(ctx context.Context, start time.Time, req *yarpc.R
 // All other success and errors must be handled before returning.
 func (h handler) writeResponse(ctx context.Context, call inboundCall, res *yarpc.Response, responseBody *yarpc.Buffer, retErr error) error {
 	// Black-hole requests on resource exhausted errors.
-	if yarpcerror.ExtractInfo(retErr).Code == yarpcerror.CodeResourceExhausted {
+	if yarpcerror.IsResourceExhausted(retErr) {
 		// All TChannel clients will time out instead of receiving an error.
 		call.Response().Blackhole()
 		// Nothing to see here. Move along.
 		return nil
 	}
-	if retErr != nil && (res == nil || res.ApplicationErrorInfo == nil) {
+	if retErr != nil {
 		// System error.
 		return retErr
 	}
 
-	res.Headers = res.Headers.With(PeerHeaderKey, h.addr)
+	// If there was no retErr, there is a response, so beyond here, we can
+	// assume res and resBuf are non-nil.
 
-	if retErr != nil && res != nil && res.ApplicationErrorInfo != nil {
-		// We have an error, so we're going to propagate it as a yarpc error,
-		// regardless of whether or not it is a system error.
+	// This denotes that there was an application error.
+	if res.ApplicationErrorInfo != nil {
 		errorInfo := res.ApplicationErrorInfo
-		text, err := errorInfo.Code.MarshalText()
+		code := errorInfo.Code
+		// Black-hole requests on resource exhausted errors.
+		if code == yarpcerror.CodeResourceExhausted {
+			// All TChannel clients will time out instead of receiving an error.
+			call.Response().Blackhole()
+			// Nothing to see here. Move along.
+			return nil
+		}
+		text, err := code.MarshalText()
 		if err != nil {
-			return appendError(retErr, err)
+			return err
 		}
 		res.Headers = res.Headers.With(ErrorCodeHeaderKey, string(text))
 		if errorInfo.Name != "" {
@@ -189,17 +197,15 @@ func (h handler) writeResponse(ctx context.Context, call inboundCall, res *yarpc
 		if errorInfo.Message != "" {
 			res.Headers = res.Headers.With(ErrorMessageHeaderKey, errorInfo.Message)
 		}
-	}
-
-	// This is the point of no return. We have committed to sending a call
-	// response. Hereafter, all failures while sending the error must be logged
-	// and the response aborted.
-	if res.ApplicationErrorInfo != nil {
+		// This is the point of no return. We have committed to sending a call
+		// response. Hereafter, all failures while sending the error must be logged
+		// and the response aborted.
 		if err := call.Response().SetApplicationError(); err != nil {
 			retErr = appendError(retErr, fmt.Errorf("SetApplicationError() failed: %v", err))
 		}
 	}
 
+	res.Headers = res.Headers.With(PeerHeaderKey, h.addr)
 	// Echo accepted service in response header for client side verification.
 	res.Headers = res.Headers.With(ServiceHeaderKey, call.ServiceName())
 
