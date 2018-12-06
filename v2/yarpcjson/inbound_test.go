@@ -153,6 +153,6 @@ func TestHandleError(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, res)
-	assert.NotNil(t, res.ApplicationErrorInfo)
+	assert.NotNil(t, res.ErrorInfo)
 	assert.Nil(t, resBuf)
 }

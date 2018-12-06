@@ -232,7 +232,7 @@ func TestOutboundApplicationError(t *testing.T) {
 		Procedure: "hello",
 	}, yarpc.NewBufferString("world"))
 
-	assert.NotNil(t, response.ApplicationErrorInfo, "should be application error")
+	assert.NotNil(t, response.ErrorInfo, "should be application error")
 	assert.NoError(t, err, "call failed")
 
 }

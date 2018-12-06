@@ -93,7 +93,7 @@ func TestInboundStartErrorBadGrabHeader(t *testing.T) {
 	}
 	err := i.Start(context.Background())
 	assert.Error(t, err)
-	errorInfo := yarpcerror.ExtractInfo(err)
+	errorInfo := yarpcerror.GetInfo(err)
 	assert.Equal(t, yarpcerror.CodeInvalidArgument, errorInfo.Code)
 }
 
@@ -146,7 +146,7 @@ func TestInboundMux(t *testing.T) {
 	}, yarpc.NewBufferString("derp"))
 
 	if assert.Error(t, err, "RPC call to / should have failed") {
-		assert.Equal(t, yarpcerror.CodeNotFound, yarpcerror.ExtractInfo(err).Code)
+		assert.Equal(t, yarpcerror.CodeNotFound, yarpcerror.GetInfo(err).Code)
 	}
 
 	host := outbound.URL.Host

@@ -151,8 +151,8 @@ func (o *Outbound) call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.B
 	if httpRes.StatusCode >= 300 {
 		// this error was a yarpc application error
 		if httpRes.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus {
-			errorInfo := getApplicationErrorInfoFromResponse(httpRes)
-			res.ApplicationErrorInfo = &errorInfo
+			errorInfo := getErrorInfoFromResponse(httpRes)
+			res.ErrorInfo = &errorInfo
 			return res, resBuf, nil
 		}
 		// this error was an http error
@@ -321,7 +321,7 @@ func readCloserToBuffer(readCloser io.ReadCloser) (*yarpc.Buffer, error) {
 	return yarpc.NewBufferBytes(body), nil
 }
 
-func getApplicationErrorInfoFromResponse(httpRes *http.Response) yarpcerror.Info {
+func getErrorInfoFromResponse(httpRes *http.Response) yarpcerror.Info {
 	// use the status code if we can't get a code from the headers
 	code := statusCodeToBestCode(httpRes.StatusCode)
 	if errorCodeText := httpRes.Header.Get(ErrorCodeHeader); errorCodeText != "" {

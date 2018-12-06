@@ -150,7 +150,7 @@ func toGRPCStreamError(err error) error {
 		return nil
 	}
 	// we now know we have a yarpc error
-	errorInfo := yarpcerror.ExtractInfo(err)
+	errorInfo := yarpcerror.GetInfo(err)
 	grpcCode, ok := _codeToGRPCCode[errorInfo.Code]
 	// should only happen if _codeToGRPCCode does not cover all codes
 	if !ok {

@@ -32,7 +32,7 @@ func WrapHandlerError(err error, service string, procedure string) error {
 	if err == nil {
 		return nil
 	}
-	if yarpcErr, ok := err.(*encodingError); ok {
+	if yarpcErr, ok := err.(*yarpcerror); ok {
 		return yarpcErr
 	}
 	return New(CodeUnknown, sprintf("error for service %q and procedure %q: %s", service, procedure, err.Error()))

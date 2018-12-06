@@ -176,8 +176,8 @@ func (h handler) writeResponse(ctx context.Context, call inboundCall, res *yarpc
 	// assume res and resBuf are non-nil.
 
 	// This denotes that there was an application error.
-	if res.ApplicationErrorInfo != nil {
-		errorInfo := res.ApplicationErrorInfo
+	if res.ErrorInfo != nil {
+		errorInfo := res.ErrorInfo
 		code := errorInfo.Code
 		// Black-hole requests on resource exhausted errors.
 		if code == yarpcerror.CodeResourceExhausted {
@@ -244,7 +244,7 @@ func getSystemError(err error) error {
 	if _, ok := err.(tchannel.SystemError); ok {
 		return err
 	}
-	errorInfo := yarpcerror.ExtractInfo(err)
+	errorInfo := yarpcerror.GetInfo(err)
 	tchannelCode, ok := _codeToTChannelCode[errorInfo.Code]
 	if !ok {
 		tchannelCode = tchannel.ErrCodeUnexpected

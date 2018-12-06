@@ -56,7 +56,7 @@ func TestDecodeAgnosticProto(t *testing.T) {
 	// responder.
 	_, err = testCodec.Decode(reqBuf)
 	assert.EqualError(t, err, "code:internal message:tried to overwrite a responder for thrift codec")
-	assert.Equal(t, yarpcerror.ExtractInfo(err).Code, yarpcerror.CodeInternal)
+	assert.Equal(t, yarpcerror.GetInfo(err).Code, yarpcerror.CodeInternal)
 }
 
 func TestDecodeAgnosticProtoError(t *testing.T) {
@@ -96,7 +96,7 @@ func TestDecodeEnveloped(t *testing.T) {
 	// responder.
 	_, err = testCodec.Decode(reqBuf)
 	assert.EqualError(t, err, "code:internal message:tried to overwrite a responder for thrift codec")
-	assert.Equal(t, yarpcerror.ExtractInfo(err).Code, yarpcerror.CodeInternal)
+	assert.Equal(t, yarpcerror.GetInfo(err).Code, yarpcerror.CodeInternal)
 }
 
 func TestDecodeEnvelopedError(t *testing.T) {
@@ -153,7 +153,7 @@ func TestDecodeUnenveloped(t *testing.T) {
 	// responder.
 	_, err = testCodec.Decode(reqBuf)
 	assert.EqualError(t, err, "code:internal message:tried to overwrite a responder for thrift codec")
-	assert.Equal(t, yarpcerror.ExtractInfo(err).Code, yarpcerror.CodeInternal)
+	assert.Equal(t, yarpcerror.GetInfo(err).Code, yarpcerror.CodeInternal)
 }
 
 func TestDecodeUnenvelopedError(t *testing.T) {

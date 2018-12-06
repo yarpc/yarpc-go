@@ -73,7 +73,7 @@ func (c Client) Call(ctx context.Context, procedure string, reqBody interface{},
 		return err
 	}
 
-	if res.ApplicationErrorInfo != nil {
+	if res.ErrorInfo != nil {
 		// In the case of a yarpcerror with error details, the details are sent
 		// over the body. If no details are attached, this buffer is empty.
 		// However, json decoding an empty buffer will throw an error, while we're
@@ -84,16 +84,16 @@ func (c Client) Call(ctx context.Context, procedure string, reqBody interface{},
 				return yarpcencoding.ResponseBodyDecodeError(&req, err)
 			}
 			return yarpcerror.New(
-				res.ApplicationErrorInfo.Code,
-				res.ApplicationErrorInfo.Message,
-				yarpcerror.WithName(res.ApplicationErrorInfo.Name),
+				res.ErrorInfo.Code,
+				res.ErrorInfo.Message,
+				yarpcerror.WithName(res.ErrorInfo.Name),
 				yarpcerror.WithDetails(errorDetailsOut),
 			)
 		}
 		return yarpcerror.New(
-			res.ApplicationErrorInfo.Code,
-			res.ApplicationErrorInfo.Message,
-			yarpcerror.WithName(res.ApplicationErrorInfo.Name),
+			res.ErrorInfo.Code,
+			res.ErrorInfo.Message,
+			yarpcerror.WithName(res.ErrorInfo.Name),
 		)
 	}
 

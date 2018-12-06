@@ -126,7 +126,7 @@ func (c *thriftCodec) Encode(res interface{}) (*yarpc.Buffer, error) {
 }
 
 func (c *thriftCodec) EncodeError(err error) (*yarpc.Buffer, error) {
-	details := yarpcerror.ExtractDetails(err)
+	details := yarpcerror.GetDetails(err)
 	if details == nil {
 		return nil, nil
 	}

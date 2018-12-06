@@ -29,6 +29,6 @@ import (
 
 func TestWrapHandlerError(t *testing.T) {
 	assert.Nil(t, WrapHandlerError(nil, "foo", "bar"))
-	assert.Equal(t, CodeInvalidArgument, ExtractInfo(WrapHandlerError(New(CodeInvalidArgument, ""), "foo", "bar")).Code)
-	assert.Equal(t, CodeUnknown, ExtractInfo(WrapHandlerError(errors.New(""), "foo", "bar")).Code)
+	assert.Equal(t, CodeInvalidArgument, GetInfo(WrapHandlerError(New(CodeInvalidArgument, ""), "foo", "bar")).Code)
+	assert.Equal(t, CodeUnknown, GetInfo(WrapHandlerError(errors.New(""), "foo", "bar")).Code)
 }

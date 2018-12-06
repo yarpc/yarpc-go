@@ -160,7 +160,7 @@ func (o *Outbound) invoke(
 	return &yarpc.Response{
 			Peer:                 metadataToPeer(responseMD),
 			Headers:              responseHeaders,
-			ApplicationErrorInfo: errInfo,
+			ErrorInfo: errInfo,
 		},
 		yarpc.NewBufferBytes(responseBody),
 		nil

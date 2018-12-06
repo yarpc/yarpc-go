@@ -35,7 +35,7 @@ type Response struct {
 	// Headers are response headers or trailers.
 	Headers Headers
 
-	// ApplicationErrorInfo indicates that the response body contains a payload
+	// ErrorInfo indicates that the response body contains a payload
 	// that represents an error in the request encoding.
-	ApplicationErrorInfo *yarpcerror.Info
+	ErrorInfo *yarpcerror.Info
 }

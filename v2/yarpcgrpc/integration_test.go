@@ -114,7 +114,7 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 
 				var res testEchoResponse
 				err := client.Call(ctx, "test-procedure", &testEchoRequest{Message: tt.value}, &res, &res)
-				require.Equal(t, tt.errCode.String(), yarpcerror.ExtractInfo(err).Code.String())
+				require.Equal(t, tt.errCode.String(), yarpcerror.GetInfo(err).Code.String())
 			})
 		})
 	}

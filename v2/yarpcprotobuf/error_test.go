@@ -28,5 +28,5 @@ import (
 )
 
 func TestCastError(t *testing.T) {
-	assert.Equal(t, yarpcerror.CodeInternal, yarpcerror.ExtractInfo(CastError(nil, nil)).Code)
+	assert.Equal(t, yarpcerror.CodeInternal, yarpcerror.GetInfo(CastError(nil, nil)).Code)
 }

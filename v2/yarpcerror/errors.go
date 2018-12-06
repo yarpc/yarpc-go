@@ -34,74 +34,76 @@ type Info struct {
 
 // New returns a new error.
 //
-// The Code should never be CodeOK; if it is, this will return nil.
+// If the Code is CodeOK, this will return nil.
 func New(code Code, message string, options ...ErrorOption) error {
 	if code == CodeOK {
 		return nil
 	}
-	encodingError := &encodingError{
+	yarpcErr := &yarpcerror{
 		info: Info{
 			Code:    code,
 			Message: message,
 		},
 	}
 	for _, opt := range options {
-		opt.apply(encodingError)
+		opt.apply(yarpcErr)
 	}
 
-	if err := validateName(encodingError.info.Name); err != nil {
+	if err := validateName(yarpcErr.info.Name); err != nil {
 		return err
 	}
-	return encodingError
+	return yarpcErr
 }
 
-// ExtractInfo casts the error into an encodingError and returns its info field.
-// If it fails to cast, it returns an empty Info struct.
-func ExtractInfo(err error) Info {
+// GetInfo returns the relevant error yarpcerror.Info.
+//
+// If the error is nil, it returns info with CodeOK. If the error is not a
+// YARPC error, it returns info with CodeUnknown and its error message. If the
+// error is a YARPC error, it returns its error information.
+func GetInfo(err error) Info {
 	if err == nil {
 		return Info{Code: CodeOK}
 	}
-	if encodingError, ok := err.(*encodingError); ok {
-		return encodingError.info
+	if yarpcErr, ok := err.(*yarpcerror); ok {
+		return yarpcErr.info
 	}
 	return Info{Code: CodeUnknown, Message: err.Error()}
 }
 
-// ExtractDetails casts the error into an encodingError and returns its details
-// field. If it fails to cast, it returns nil.
-func ExtractDetails(err error) interface{} {
+// GetDetails returns the details field for the given error. This is only
+// non-nil for a YARPC error.
+func GetDetails(err error) interface{} {
 	if err == nil {
 		return nil
 	}
-	if encodingError, ok := err.(*encodingError); ok {
-		return encodingError.details
+	if yarpcErr, ok := err.(*yarpcerror); ok {
+		return yarpcErr.details
 	}
 	return nil
 }
 
-// encodingError represents a YARPC error.
-type encodingError struct {
+type yarpcerror struct {
 	info    Info
 	details interface{}
 }
 
 // ErrorOption provides options that may be called to the constructor.
-type ErrorOption struct{ apply func(*encodingError) }
+type ErrorOption struct{ apply func(*yarpcerror) }
 
-// WithName returns a new status with the given name.
+// WithName adds the given name to the error.
 //
 // This should be used for user-defined errors.
 func WithName(name string) ErrorOption {
-	return ErrorOption{func(s *encodingError) { s.info.Name = name }}
+	return ErrorOption{func(s *yarpcerror) { s.info.Name = name }}
 }
 
-// WithDetails adds semantic metadata to a Status.
+// WithDetails adds semantic metadata to an error.
 func WithDetails(details interface{}) ErrorOption {
-	return ErrorOption{func(s *encodingError) { s.details = details }}
+	return ErrorOption{func(s *yarpcerror) { s.details = details }}
 }
 
 // Error implements the error interface.
-func (s *encodingError) Error() string {
+func (s *yarpcerror) Error() string {
 	buffer := bytes.NewBuffer(nil)
 	_, _ = buffer.WriteString(`code:`)
 	_, _ = buffer.WriteString(s.info.Code.String())
@@ -116,180 +118,180 @@ func (s *encodingError) Error() string {
 	return buffer.String()
 }
 
-// CancelledErrorf returns a new Status with code CodeCancelled
+// CancelledErrorf returns a new error with code CodeCancelled
 // by calling New(CodeCancelled, sprintf(format, args...)).
 func CancelledErrorf(format string, args ...interface{}) error {
 	return New(CodeCancelled, sprintf(format, args...))
 }
 
-// UnknownErrorf returns a new Status with code CodeUnknown
+// UnknownErrorf returns a new error with code CodeUnknown
 // by calling New(CodeUnknown, sprintf(format, args...)).
 func UnknownErrorf(format string, args ...interface{}) error {
 	return New(CodeUnknown, sprintf(format, args...))
 }
 
-// InvalidArgumentErrorf returns a new Status with code CodeInvalidArgument
+// InvalidArgumentErrorf returns a new error with code CodeInvalidArgument
 // by calling New(CodeInvalidArgument, sprintf(format, args...)).
 func InvalidArgumentErrorf(format string, args ...interface{}) error {
 	return New(CodeInvalidArgument, sprintf(format, args...))
 }
 
-// DeadlineExceededErrorf returns a new Status with code CodeDeadlineExceeded
+// DeadlineExceededErrorf returns a new error with code CodeDeadlineExceeded
 // by calling New(CodeDeadlineExceeded, sprintf(format, args...)).
 func DeadlineExceededErrorf(format string, args ...interface{}) error {
 	return New(CodeDeadlineExceeded, sprintf(format, args...))
 }
 
-// NotFoundErrorf returns a new Status with code CodeNotFound
+// NotFoundErrorf returns a new error with code CodeNotFound
 // by calling New(CodeNotFound, sprintf(format, args...)).
 func NotFoundErrorf(format string, args ...interface{}) error {
 	return New(CodeNotFound, sprintf(format, args...))
 }
 
-// AlreadyExistsErrorf returns a new Status with code CodeAlreadyExists
+// AlreadyExistsErrorf returns a new error with code CodeAlreadyExists
 // by calling New(CodeAlreadyExists, sprintf(format, args...)).
 func AlreadyExistsErrorf(format string, args ...interface{}) error {
 	return New(CodeAlreadyExists, sprintf(format, args...))
 }
 
-// PermissionDeniedErrorf returns a new Status with code CodePermissionDenied
+// PermissionDeniedErrorf returns a new error with code CodePermissionDenied
 // by calling New(CodePermissionDenied, sprintf(format, args...)).
 func PermissionDeniedErrorf(format string, args ...interface{}) error {
 	return New(CodePermissionDenied, sprintf(format, args...))
 }
 
-// ResourceExhaustedErrorf returns a new Status with code CodeResourceExhausted
+// ResourceExhaustedErrorf returns a new error with code CodeResourceExhausted
 // by calling New(CodeResourceExhausted, sprintf(format, args...)).
 func ResourceExhaustedErrorf(format string, args ...interface{}) error {
 	return New(CodeResourceExhausted, sprintf(format, args...))
 }
 
-// FailedPreconditionErrorf returns a new Status with code CodeFailedPrecondition
+// FailedPreconditionErrorf returns a new error with code CodeFailedPrecondition
 // by calling New(CodeFailedPrecondition, sprintf(format, args...)).
 func FailedPreconditionErrorf(format string, args ...interface{}) error {
 	return New(CodeFailedPrecondition, sprintf(format, args...))
 }
 
-// AbortedErrorf returns a new Status with code CodeAborted
+// AbortedErrorf returns a new error with code CodeAborted
 // by calling New(CodeAborted, sprintf(format, args...)).
 func AbortedErrorf(format string, args ...interface{}) error {
 	return New(CodeAborted, sprintf(format, args...))
 }
 
-// OutOfRangeErrorf returns a new Status with code CodeOutOfRange
+// OutOfRangeErrorf returns a new error with code CodeOutOfRange
 // by calling New(CodeOutOfRange, sprintf(format, args...)).
 func OutOfRangeErrorf(format string, args ...interface{}) error {
 	return New(CodeOutOfRange, sprintf(format, args...))
 }
 
-// UnimplementedErrorf returns a new Status with code CodeUnimplemented
+// UnimplementedErrorf returns a new error with code CodeUnimplemented
 // by calling New(CodeUnimplemented, sprintf(format, args...)).
 func UnimplementedErrorf(format string, args ...interface{}) error {
 	return New(CodeUnimplemented, sprintf(format, args...))
 }
 
-// InternalErrorf returns a new Status with code CodeInternal
+// InternalErrorf returns a new error with code CodeInternal
 // by calling New(CodeInternal, sprintf(format, args...)).
 func InternalErrorf(format string, args ...interface{}) error {
 	return New(CodeInternal, sprintf(format, args...))
 }
 
-// UnavailableErrorf returns a new Status with code CodeUnavailable
+// UnavailableErrorf returns a new error with code CodeUnavailable
 // by calling New(CodeUnavailable, sprintf(format, args...)).
 func UnavailableErrorf(format string, args ...interface{}) error {
 	return New(CodeUnavailable, sprintf(format, args...))
 }
 
-// DataLossErrorf returns a new Status with code CodeDataLoss
+// DataLossErrorf returns a new error with code CodeDataLoss
 // by calling New(CodeDataLoss, sprintf(format, args...)).
 func DataLossErrorf(format string, args ...interface{}) error {
 	return New(CodeDataLoss, sprintf(format, args...))
 }
 
-// UnauthenticatedErrorf returns a new Status with code CodeUnauthenticated
+// UnauthenticatedErrorf returns a new error with code CodeUnauthenticated
 // by calling New(CodeUnauthenticated, sprintf(format, args...)).
 func UnauthenticatedErrorf(format string, args ...interface{}) error {
 	return New(CodeUnauthenticated, sprintf(format, args...))
 }
 
-// IsCancelled returns true if ExtractInfo(err).Code == CodeCancelled.
+// IsCancelled returns true if GetInfo(err).Code == CodeCancelled.
 func IsCancelled(err error) bool {
-	return ExtractInfo(err).Code == CodeCancelled
+	return GetInfo(err).Code == CodeCancelled
 }
 
-// IsUnknown returns true if ExtractInfo(err).Code == CodeUnknown.
+// IsUnknown returns true if GetInfo(err).Code == CodeUnknown.
 func IsUnknown(err error) bool {
-	return ExtractInfo(err).Code == CodeUnknown
+	return GetInfo(err).Code == CodeUnknown
 }
 
-// IsInvalidArgument returns true if ExtractInfo(err).Code == CodeInvalidArgument.
+// IsInvalidArgument returns true if GetInfo(err).Code == CodeInvalidArgument.
 func IsInvalidArgument(err error) bool {
-	return ExtractInfo(err).Code == CodeInvalidArgument
+	return GetInfo(err).Code == CodeInvalidArgument
 }
 
-// IsDeadlineExceeded returns true if ExtractInfo(err).Code == CodeDeadlineExceeded.
+// IsDeadlineExceeded returns true if GetInfo(err).Code == CodeDeadlineExceeded.
 func IsDeadlineExceeded(err error) bool {
-	return ExtractInfo(err).Code == CodeDeadlineExceeded
+	return GetInfo(err).Code == CodeDeadlineExceeded
 }
 
-// IsNotFound returns true if ExtractInfo(err).Code == CodeNotFound.
+// IsNotFound returns true if GetInfo(err).Code == CodeNotFound.
 func IsNotFound(err error) bool {
-	return ExtractInfo(err).Code == CodeNotFound
+	return GetInfo(err).Code == CodeNotFound
 }
 
-// IsAlreadyExists returns true if ExtractInfo(err).Code == CodeAlreadyExists.
+// IsAlreadyExists returns true if GetInfo(err).Code == CodeAlreadyExists.
 func IsAlreadyExists(err error) bool {
-	return ExtractInfo(err).Code == CodeAlreadyExists
+	return GetInfo(err).Code == CodeAlreadyExists
 }
 
-// IsPermissionDenied returns true if ExtractInfo(err).Code == CodePermissionDenied.
+// IsPermissionDenied returns true if GetInfo(err).Code == CodePermissionDenied.
 func IsPermissionDenied(err error) bool {
-	return ExtractInfo(err).Code == CodePermissionDenied
+	return GetInfo(err).Code == CodePermissionDenied
 }
 
-// IsResourceExhausted returns true if ExtractInfo(err).Code == CodeResourceExhausted.
+// IsResourceExhausted returns true if GetInfo(err).Code == CodeResourceExhausted.
 func IsResourceExhausted(err error) bool {
-	return ExtractInfo(err).Code == CodeResourceExhausted
+	return GetInfo(err).Code == CodeResourceExhausted
 }
 
-// IsFailedPrecondition returns true if ExtractInfo(err).Code == CodeFailedPrecondition.
+// IsFailedPrecondition returns true if GetInfo(err).Code == CodeFailedPrecondition.
 func IsFailedPrecondition(err error) bool {
-	return ExtractInfo(err).Code == CodeFailedPrecondition
+	return GetInfo(err).Code == CodeFailedPrecondition
 }
 
-// IsAborted returns true if ExtractInfo(err).Code == CodeAborted.
+// IsAborted returns true if GetInfo(err).Code == CodeAborted.
 func IsAborted(err error) bool {
-	return ExtractInfo(err).Code == CodeAborted
+	return GetInfo(err).Code == CodeAborted
 }
 
-// IsOutOfRange returns true if ExtractInfo(err).Code == CodeOutOfRange.
+// IsOutOfRange returns true if GetInfo(err).Code == CodeOutOfRange.
 func IsOutOfRange(err error) bool {
-	return ExtractInfo(err).Code == CodeOutOfRange
+	return GetInfo(err).Code == CodeOutOfRange
 }
 
-// IsUnimplemented returns true if ExtractInfo(err).Code == CodeUnimplemented.
+// IsUnimplemented returns true if GetInfo(err).Code == CodeUnimplemented.
 func IsUnimplemented(err error) bool {
-	return ExtractInfo(err).Code == CodeUnimplemented
+	return GetInfo(err).Code == CodeUnimplemented
 }
 
-// IsInternal returns true if ExtractInfo(err).Code == CodeInternal.
+// IsInternal returns true if GetInfo(err).Code == CodeInternal.
 func IsInternal(err error) bool {
-	return ExtractInfo(err).Code == CodeInternal
+	return GetInfo(err).Code == CodeInternal
 }
 
-// IsUnavailable returns true if ExtractInfo(err).Code == CodeUnavailable.
+// IsUnavailable returns true if GetInfo(err).Code == CodeUnavailable.
 func IsUnavailable(err error) bool {
-	return ExtractInfo(err).Code == CodeUnavailable
+	return GetInfo(err).Code == CodeUnavailable
 }
 
-// IsDataLoss returns true if ExtractInfo(err).Code == CodeDataLoss.
+// IsDataLoss returns true if GetInfo(err).Code == CodeDataLoss.
 func IsDataLoss(err error) bool {
-	return ExtractInfo(err).Code == CodeDataLoss
+	return GetInfo(err).Code == CodeDataLoss
 }
 
-// IsUnauthenticated returns true if ExtractInfo(err).Code == CodeUnauthenticated.
+// IsUnauthenticated returns true if GetInfo(err).Code == CodeUnauthenticated.
 func IsUnauthenticated(err error) bool {
-	return ExtractInfo(err).Code == CodeUnauthenticated
+	return GetInfo(err).Code == CodeUnauthenticated
 }
 
 func sprintf(format string, args ...interface{}) string {

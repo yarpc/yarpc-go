@@ -408,7 +408,7 @@ func TestHandlerPanic(t *testing.T) {
 	}, &yarpc.Buffer{})
 	defer cancel()
 
-	assert.Equal(t, yarpcerror.CodeUnknown, yarpcerror.ExtractInfo(err).Code)
+	assert.Equal(t, yarpcerror.CodeUnknown, yarpcerror.GetInfo(err).Code)
 }
 
 func headerCopyWithout(headers http.Header, names ...string) http.Header {

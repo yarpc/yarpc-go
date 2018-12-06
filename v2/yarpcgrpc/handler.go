@@ -203,7 +203,7 @@ func (h *handler) handleUnary(
 		return err
 	}
 
-	if err := handleResponse(req.Encoding, res.ApplicationErrorInfo, resBuf, serverStream, mdWriter); err != nil {
+	if err := handleResponse(req.Encoding, res.ErrorInfo, resBuf, serverStream, mdWriter); err != nil {
 		return err
 	}
 
@@ -218,7 +218,7 @@ func handlerErrorToGRPCError(err error, mdWriter *metadataWriter) error {
 		return err
 	}
 	// we now assume we have a yarpc error
-	errorInfo := yarpcerror.ExtractInfo(err)
+	errorInfo := yarpcerror.GetInfo(err)
 	name := errorInfo.Name
 	message := errorInfo.Message
 	// if the yarpc error has a name, set the header

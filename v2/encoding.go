@@ -81,8 +81,8 @@ func (u *unaryTransportHandler) Handle(ctx context.Context, req *Request, reqBuf
 		if err != nil {
 			return nil, nil, err
 		}
-		errorInfo := yarpcerror.ExtractInfo(appErr)
-		res.ApplicationErrorInfo = &errorInfo
+		errorInfo := yarpcerror.GetInfo(appErr)
+		res.ErrorInfo = &errorInfo
 		return res, encodedError, nil
 	}
 

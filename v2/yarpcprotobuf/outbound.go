@@ -115,8 +115,8 @@ func (c *client) Call(
 	}
 
 	// If we had an application error, the buffer holds our error details.
-	if res.ApplicationErrorInfo != nil {
-		return nil, decodeError(res.ApplicationErrorInfo, resBuf)
+	if res.ErrorInfo != nil {
+		return nil, decodeError(res.ErrorInfo, resBuf)
 	}
 
 	if err := unmarshal(req.Encoding, resBuf, protoRes); err != nil {

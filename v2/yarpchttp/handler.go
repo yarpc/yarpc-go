@@ -59,7 +59,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, httpReq *http.Request) {
 	responseWriter.WriteSystemHeader(ServiceHeader, service)
 
 	res, resBuf, err := h.callHandler(responseWriter, httpReq, service, procedure)
-	if err == nil && res.ApplicationErrorInfo == nil {
+	if err == nil && res.ErrorInfo == nil {
 		responseWriter.SetResponse(res, resBuf)
 		responseWriter.Close(http.StatusOK)
 		return
@@ -72,9 +72,9 @@ func (h handler) ServeHTTP(w http.ResponseWriter, httpReq *http.Request) {
 	var errorInfo yarpcerror.Info
 	if err != nil {
 		status = yarpcerror.WrapHandlerError(err, service, procedure)
-		errorInfo = yarpcerror.ExtractInfo(status)
-	} else if res.ApplicationErrorInfo != nil {
-		errorInfo = *res.ApplicationErrorInfo
+		errorInfo = yarpcerror.GetInfo(status)
+	} else if res.ErrorInfo != nil {
+		errorInfo = *res.ErrorInfo
 	}
 
 	if statusCodeText, marshalErr := errorInfo.Code.MarshalText(); marshalErr != nil {

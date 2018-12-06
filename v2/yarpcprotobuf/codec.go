@@ -61,12 +61,12 @@ func (c *protoCodec) EncodeError(err error) (*yarpc.Buffer, error) {
 		return &yarpc.Buffer{}, nil
 	}
 
-	info := yarpcerror.ExtractInfo(err)
+	info := yarpcerror.GetInfo(err)
 	p := spb.Status{
 		Code:    int32(info.Code),
 		Message: info.Message,
 	}
-	if details := yarpcerror.ExtractDetails(err); details != nil {
+	if details := yarpcerror.GetDetails(err); details != nil {
 		if m, ok := details.(proto.Message); ok {
 			any, err := ptypes.MarshalAny(m)
 			if err != nil {
@@ -140,7 +140,7 @@ func (c *jsonCodec) EncodeError(err error) (*yarpc.Buffer, error) {
 	// Using google/rpc/status.proto it in a status is required for the
 	// combination of grpc/proto, but undefined for proto error details
 	// with other transports/encodings.
-	details := yarpcerror.ExtractDetails(err)
+	details := yarpcerror.GetDetails(err)
 	if details == nil {
 		return nil, nil
 	}
