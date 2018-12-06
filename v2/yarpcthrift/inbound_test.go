@@ -49,16 +49,10 @@ func TestEncodingHandler(t *testing.T) {
 		},
 		{
 			giveReqBody: wire.Value{},
-			giveResBody: fakeEnveloper(wire.OneWay),
-			wantError:   "unexpected envelope type: OneWay",
-		},
-		{
-			giveReqBody: wire.Value{},
 			giveResBody: errorEnveloper{
 				envelopeType: wire.Reply,
 				err:          errors.New("could not convert to wire value"),
 			},
-			wantError: "could not convert to wire value",
 		},
 		{
 			giveReqBody: wire.Value{},
@@ -74,7 +68,7 @@ func TestEncodingHandler(t *testing.T) {
 
 		resBody, err := unaryHandler.Handle(context.Background(), tt.giveReqBody)
 		if tt.wantError != "" {
-			require.Error(t, err, "expected error")
+			require.Error(t, err, "expected error: %s", tt.wantError)
 			assert.Contains(t, err.Error(), tt.wantError)
 		} else {
 			assert.NoError(t, err, "unexpected error")

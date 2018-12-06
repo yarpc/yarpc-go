@@ -28,8 +28,6 @@ import (
 	"reflect"
 	"testing"
 
-	"go.uber.org/yarpc/v2/yarpcerror"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/thriftrw/ptr"
@@ -176,13 +174,10 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 					NewValue:     420,
 				},
 			},
-			// TODO(mhp): After we have a way to map errors between YARPC errors
-			// and thrift exceptions, this should be revisited so that the check
-			// below actually returns well-defined thrift exceptions.
-			wantError: yarpcerror.WrapHandlerError(&atomic.IntegerMismatchError{
+			wantError: &atomic.IntegerMismatchError{
 				ExpectedValue: 42,
 				GotValue:      43,
-			}, "roundtrip-server", "Store::compareAndSwap"),
+			},
 		},
 		{
 			desc:          "store: integer with readonly client",
@@ -200,14 +195,7 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 			newClientFunc: storeclient.New,
 			method:        "Integer",
 			methodArgs:    []interface{}{ptr.String("foo")},
-			// TODO(mhp): After we have a way to map errors between YARPC errors
-			// and thrift exceptions, this should be revisited so that the check
-			// below actually returns well-defined thrift exceptions.
-			wantError: yarpcerror.WrapHandlerError(
-				&atomic.KeyDoesNotExist{Key: ptr.String("foo")},
-				"roundtrip-server",
-				"ReadOnlyStore::integer",
-			),
+			wantError:     &atomic.KeyDoesNotExist{Key: ptr.String("foo")},
 		},
 		{
 			desc:          "readonly store: integer with readonly client",
@@ -233,14 +221,7 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 			newClientFunc: storeclient.New,
 			method:        "Integer",
 			methodArgs:    []interface{}{ptr.String("foo")},
-			// TODO(mhp): After we have a way to map errors between YARPC errors
-			// and thrift exceptions, this should be revisited so that the check
-			// below actually returns well-defined thrift exceptions.
-			wantError: yarpcerror.WrapHandlerError(
-				&atomic.KeyDoesNotExist{Key: ptr.String("foo")},
-				"roundtrip-server",
-				"ReadOnlyStore::integer",
-			),
+			wantError:     &atomic.KeyDoesNotExist{Key: ptr.String("foo")},
 		},
 		{
 			desc: "store: integer failure",
@@ -250,14 +231,7 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 			newClientFunc: storeclient.New,
 			method:        "Integer",
 			methodArgs:    []interface{}{ptr.String("foo")},
-			// TODO(mhp): After we have a way to map errors between YARPC errors
-			// and thrift exceptions, this should be revisited so that the check
-			// below actually returns well-defined thrift exceptions.
-			wantError: yarpcerror.WrapHandlerError(
-				&atomic.KeyDoesNotExist{Key: ptr.String("foo")},
-				"roundtrip-server",
-				"ReadOnlyStore::integer",
-			),
+			wantError:     &atomic.KeyDoesNotExist{Key: ptr.String("foo")},
 		},
 	}
 

@@ -35,25 +35,10 @@ type unaryEncodingHandler struct {
 }
 
 // Handle implements yarpc.UnaryEncodingHandler.
+// It takes a (context.Context, wire.Value) and returns (envelope.Enveloper, error).
 func (e unaryEncodingHandler) Handle(ctx context.Context, reqBody interface{}) (interface{}, error) {
-	reqValue, ok := reqBody.(wire.Value)
-	if !ok {
-		return nil, yarpcerror.InternalErrorf("tried to handle a non-wire.Value in thrift handler")
+	if reqValue, ok := reqBody.(wire.Value); ok {
+		return e.h(ctx, reqValue)
 	}
-
-	resBody, err := e.h(ctx, reqValue)
-	if err != nil {
-		return nil, err
-	}
-
-	if resType := resBody.EnvelopeType(); resType != wire.Reply {
-		return nil, errUnexpectedEnvelopeType(resType)
-	}
-
-	resValue, err := resBody.ToWire()
-	if err != nil {
-		return nil, err
-	}
-
-	return resValue, nil
+	return nil, yarpcerror.InternalErrorf("tried to handle a non-wire.Value in thrift handler")
 }

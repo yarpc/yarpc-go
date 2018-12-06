@@ -182,7 +182,7 @@ func TestEncode(t *testing.T) {
 	testCodec := newCodec(protocol.Binary, false)
 	testCodec.responder = responder
 
-	resBuf, err := testCodec.Encode(wire.Value{})
+	resBuf, err := testCodec.Encode(fakeEnveloper(wire.Reply))
 	assert.NoError(t, err, "unexpected error")
 	assert.NotNil(t, resBuf)
 }
@@ -190,8 +190,8 @@ func TestEncode(t *testing.T) {
 func TestEncodeError(t *testing.T) {
 	testCodec := newCodec(protocol.Binary, false)
 
-	// thrift codec only encodes wire.Value
-	_, err := testCodec.Encode(wire.Envelope{})
+	// thrift codec only encodes envelope.Enveloper
+	_, err := testCodec.Encode(wire.Value{})
 	require.Error(t, err, "unexpected error")
-	assert.Contains(t, err.Error(), "tried to encode a non-wire.Value in thrift codec")
+	assert.Contains(t, err.Error(), "tried to encode a non-envelope.Enveloper in thrift codec")
 }
