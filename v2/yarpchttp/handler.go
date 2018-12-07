@@ -65,7 +65,8 @@ func (h handler) ServeHTTP(w http.ResponseWriter, httpReq *http.Request) {
 		return
 	}
 
-	// We had an application error
+	// Any errors beyond here are treated as an application error and carried
+	// across the wire as one.
 	responseWriter.SetApplicationError()
 
 	var status error

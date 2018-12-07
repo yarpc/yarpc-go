@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 type simpleRequest struct {
@@ -153,6 +154,8 @@ func TestHandleError(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, res)
-	assert.NotNil(t, res.ErrorInfo)
-	assert.Nil(t, resBuf)
+	require.NotNil(t, res.ErrorInfo)
+	assert.Equal(t, res.ErrorInfo.Code, yarpcerror.CodeUnknown)
+	assert.Equal(t, res.ErrorInfo.Message, "bar")
+	assert.NotNil(t, resBuf)
 }

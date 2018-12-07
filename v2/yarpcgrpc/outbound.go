@@ -126,7 +126,7 @@ func (o *Outbound) invoke(
 	defer span.Finish()
 
 	var responseBody []byte
-	err = peer.clientConn.Invoke(
+	invokeErr := peer.clientConn.Invoke(
 		metadata.NewOutgoingContext(ctx, md),
 		fullMethod,
 		reqBuf.Bytes(),
@@ -134,7 +134,7 @@ func (o *Outbound) invoke(
 		callOptions...,
 	)
 
-	errInfo, appErrBody, err := invokeErrorToYARPCError(err, responseMD)
+	errInfo, appErrBody, err := invokeErrorToYARPCError(invokeErr, responseMD)
 	if err != nil {
 		return nil, nil, yarpctracing.UpdateSpanWithErr(span, err)
 	}
@@ -158,8 +158,8 @@ func (o *Outbound) invoke(
 	}
 
 	return &yarpc.Response{
-			Peer:                 metadataToPeer(responseMD),
-			Headers:              responseHeaders,
+			Peer:      metadataToPeer(responseMD),
+			Headers:   responseHeaders,
 			ErrorInfo: errInfo,
 		},
 		yarpc.NewBufferBytes(responseBody),
@@ -196,10 +196,7 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) (*yarpcerror.Inf
 			name = value[0]
 		}
 
-		appErrHeader, ok := responseMD[ApplicationErrorHeader]
-		if ok && len(appErrHeader) == 1 {
-			isAppErr = appErrHeader[0] == ApplicationErrorHeaderValue
-		}
+		_, isAppErr = responseMD[ApplicationErrorHeader]
 	}
 	message := s.Message()
 	// we put the name as a prefix for grpc compatibility

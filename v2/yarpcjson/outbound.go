@@ -42,7 +42,7 @@ type Client struct {
 // Call performs an outbound JSON request.
 //
 // resBodyOut and errorDetailsOut are pointers to a value that can be filled
-// with json.Unmarshal. errorDetailsOut are used for application errors.
+// with json.Unmarshal. errorDetailsOut are used for error details.
 //
 // Returns the response or an error if the request failed.
 func (c Client) Call(ctx context.Context, procedure string, reqBody interface{}, resBodyOut interface{}, errorDetailsOut interface{}, opts ...yarpc.CallOption) error {

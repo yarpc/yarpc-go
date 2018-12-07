@@ -142,16 +142,6 @@ func TestJSONRoundTrip(t *testing.T) {
 				Message: "hello",
 			},
 		},
-		// TODO(mhp): application errors with encodings other than protobuf will
-		// not work with grpc.
-		// {
-		// 	name:      "echo err",
-		// 	procedure: "test-procedure",
-		// 	request: &testEchoRequest{
-		// 		Error: "handler error",
-		// 	},
-		// 	wantErr: "handler error",
-		// },
 		{
 			name:      "echo err",
 			procedure: "invalid procedure",

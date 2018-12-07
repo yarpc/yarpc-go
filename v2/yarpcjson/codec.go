@@ -74,11 +74,11 @@ func (c jsonCodec) Encode(res interface{}) (*yarpc.Buffer, error) {
 }
 
 func (c jsonCodec) EncodeError(err error) (*yarpc.Buffer, error) {
+	resBuf := &yarpc.Buffer{}
 	details := yarpcerror.GetDetails(err)
 	if details == nil {
-		return nil, nil
+		return resBuf, nil
 	}
-	resBuf := &yarpc.Buffer{}
 	if err := json.NewEncoder(resBuf).Encode(details); err != nil {
 		return nil, err
 	}

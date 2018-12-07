@@ -70,8 +70,8 @@ func GetInfo(err error) Info {
 	return Info{Code: CodeUnknown, Message: err.Error()}
 }
 
-// GetDetails returns the details field for the given error. This is only
-// non-nil for a YARPC error.
+// GetDetails returns the details field for errors created with
+// yarpcerror.WithDetails(..).
 func GetDetails(err error) interface{} {
 	if err == nil {
 		return nil

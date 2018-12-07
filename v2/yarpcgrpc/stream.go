@@ -137,7 +137,7 @@ func toYARPCStreamError(err error) error {
 	if err == io.EOF {
 		return err
 	}
-	status, _ := status.FromError(err)
+	status := status.Convert(err)
 	code, ok := _grpcCodeToCode[status.Code()]
 	if !ok {
 		code = yarpcerror.CodeUnknown
