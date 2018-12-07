@@ -37,7 +37,7 @@ import (
 )
 
 var (
-	_noContextDeadlineError = yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "can't wait for peer without a context deadline for a two-random-choices peer list")
+	_noContextDeadlineError = yarpcerror.New(yarpcerror.CodeInvalidArgument, "can't wait for peer without a context deadline for a two-random-choices peer list")
 )
 
 func newNotRunningError(err string) error {

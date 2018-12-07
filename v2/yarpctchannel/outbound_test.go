@@ -213,7 +213,7 @@ func TestCallSuccess(t *testing.T) {
 			}
 
 			require.NotNil(t, res)
-			assert.NoError(t, res.ApplicationError, "not application error")
+			assert.Nil(t, res.ErrorInfo, "not application error")
 
 			foo, ok := res.Headers.Get("foo")
 			assert.True(t, ok, "value for foo expected")
@@ -364,7 +364,7 @@ func TestCallError(t *testing.T) {
 		return
 	}
 
-	assert.Error(t, res.ApplicationError, "application error")
+	assert.NotNil(t, res.ErrorInfo, "application error")
 	assert.Equal(t, resBody, yarpc.NewBufferString("such fail"))
 }
 

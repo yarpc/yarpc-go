@@ -22,6 +22,7 @@ package yarpchttp
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -54,44 +55,45 @@ func (h handler) ServeHTTP(w http.ResponseWriter, httpReq *http.Request) {
 	responseWriter := newResponseWriter(w, h.logger)
 	service := popHeader(httpReq.Header, ServiceHeader)
 	procedure := popHeader(httpReq.Header, ProcedureHeader)
-	bothResponseError := popHeader(httpReq.Header, AcceptsBothResponseErrorHeader) == AcceptTrue
 	// add response header to echo accepted rpc-service
 	responseWriter.WriteSystemHeader(ServiceHeader, service)
 
 	res, resBuf, err := h.callHandler(responseWriter, httpReq, service, procedure)
-	if err == nil {
+	if err == nil && res.ErrorInfo == nil {
 		responseWriter.SetResponse(res, resBuf)
 		responseWriter.Close(http.StatusOK)
 		return
 	}
 
-	status := yarpcerror.FromError(yarpcerror.WrapHandlerError(err, service, procedure))
+	// Any errors beyond here are treated as an application error and carried
+	// across the wire as one.
 	responseWriter.SetApplicationError()
 
-	if statusCodeText, marshalErr := status.Code().MarshalText(); marshalErr != nil {
-		status = yarpcerror.Newf(yarpcerror.CodeInternal, "error %s had code %v which is unknown", status.Error(), status.Code())
+	var status error
+	var errorInfo yarpcerror.Info
+	if err != nil {
+		status = yarpcerror.WrapHandlerError(err, service, procedure)
+		errorInfo = yarpcerror.GetInfo(status)
+	} else if res.ErrorInfo != nil {
+		errorInfo = *res.ErrorInfo
+	}
+
+	if statusCodeText, marshalErr := errorInfo.Code.MarshalText(); marshalErr != nil {
+		errorInfo = yarpcerror.Info{
+			Code:    yarpcerror.CodeInternal,
+			Message: fmt.Sprintf("error %s had unknown code %v", status.Error(), errorInfo.Code),
+		}
 		responseWriter.WriteSystemHeader(ErrorCodeHeader, "internal")
 	} else {
 		responseWriter.WriteSystemHeader(ErrorCodeHeader, string(statusCodeText))
 	}
-	if status.Name() != "" {
-		responseWriter.WriteSystemHeader(ErrorNameHeader, status.Name())
+	if errorInfo.Name != "" {
+		responseWriter.WriteSystemHeader(ErrorNameHeader, errorInfo.Name)
 	}
+	responseWriter.WriteSystemHeader(ErrorMessageHeader, errorInfo.Message)
+	responseWriter.SetResponse(res, resBuf)
 
-	if bothResponseError && !h.legacyResponseError {
-		// Write the error message as a header AND set the response body. This is
-		// intended for returning structured errors (eg via proto.Any) and still
-		// getting the server error string.
-		responseWriter.WriteSystemHeader(BothResponseErrorHeader, AcceptTrue)
-		responseWriter.WriteSystemHeader(ErrorMessageHeader, status.Message())
-		responseWriter.SetResponse(res, resBuf)
-	} else {
-		// Set the error message as the response body (not in a header)
-		responseWriter.WriteSystemHeader(ContentTypeHeader, TextPlainHeader)
-		responseWriter.SetResponse(res, yarpc.NewBufferString(status.Message()))
-	}
-
-	httpStatusCode, ok := _codeToStatusCode[status.Code()]
+	httpStatusCode, ok := _codeToStatusCode[errorInfo.Code]
 	if !ok {
 		httpStatusCode = http.StatusInternalServerError
 	}
@@ -106,7 +108,7 @@ func (h handler) callHandler(
 ) (res *yarpc.Response, resBuf *yarpc.Buffer, err error) {
 	start := time.Now()
 	if httpReq.Method != http.MethodPost {
-		return nil, nil, yarpcerror.Newf(yarpcerror.CodeNotFound, "request method was %s but only %s is allowed", httpReq.Method, http.MethodPost)
+		return nil, nil, yarpcerror.New(yarpcerror.CodeNotFound, fmt.Sprintf("request method was %s but only %s is allowed", httpReq.Method, http.MethodPost))
 	}
 	req := &yarpc.Request{
 		Caller:          popHeader(httpReq.Header, CallerHeader),
@@ -168,11 +170,11 @@ func (h handler) callHandler(
 		})
 
 	default:
-		err = yarpcerror.Newf(yarpcerror.CodeUnimplemented, "transport http does not handle %s handlers", spec.Type().String())
+		err = yarpcerror.New(yarpcerror.CodeUnimplemented, fmt.Sprintf("transport http does not handle %s handlers", spec.Type().String()))
 	}
 
 	if err != nil {
-		return res, resBuf, yarpctracing.UpdateSpanWithErr(span, err)
+		return nil, nil, yarpctracing.UpdateSpanWithErr(span, err)
 	}
 
 	if contentType := getContentType(req.Encoding); contentType != "" {

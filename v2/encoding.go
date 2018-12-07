@@ -23,6 +23,8 @@ package yarpc
 import (
 	"context"
 	"fmt"
+
+	"go.uber.org/yarpc/v2/yarpcerror"
 )
 
 var _ UnaryTransportHandler = (*unaryTransportHandler)(nil)
@@ -68,24 +70,25 @@ func (u *unaryTransportHandler) Handle(ctx context.Context, req *Request, reqBuf
 
 	decodedBody, err := codec.Decode(reqBuf)
 	if err != nil {
-		return res, nil, err
+		return nil, nil, err
 	}
 
 	body, appErr := u.h.HandlerSpec.Unary().Handle(ctx, decodedBody)
 	call.WriteToResponse(res)
 
-	encodedBody, err := codec.Encode(body)
-	if err != nil {
-		return res, nil, err
+	if appErr != nil {
+		encodedError, err := codec.EncodeError(appErr)
+		if err != nil {
+			return nil, nil, err
+		}
+		errorInfo := yarpcerror.GetInfo(appErr)
+		res.ErrorInfo = &errorInfo
+		return res, encodedError, nil
 	}
 
-	if appErr != nil {
-		// TODO: This is a bit odd; we set the error in response AND return it.
-		// However, to preserve the current behavior of YARPC, this is
-		// necessary. This is most likely where the error details will be added,
-		// so we expect this to change.
-		res.ApplicationError = appErr
-		return res, encodedBody, appErr
+	encodedBody, err := codec.Encode(body)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	return res, encodedBody, nil

@@ -69,13 +69,12 @@ func TestCall(t *testing.T) {
 			want:            map[string]interface{}{"success": true},
 		},
 		{
-			procedure:       "foo",
-			body:            []string{"foo", "bar"},
-			encodedRequest:  `["foo","bar"]`,
-			encodedResponse: `{"success": true}`,
-			responseErr:     errors.New("bar"),
-			want:            map[string]interface{}{"success": true},
-			wantErr:         "bar",
+			procedure:      "foo",
+			body:           []string{"foo", "bar"},
+			encodedRequest: `["foo","bar"]`,
+			responseErr:    errors.New("bar"),
+			wantType:       _typeOfMapInterface,
+			wantErr:        "bar",
 		},
 		{
 			procedure:       "bar",
@@ -148,7 +147,7 @@ func TestCall(t *testing.T) {
 		}
 		opts = append(opts, yarpc.ResponseHeaders(&resHeaders))
 
-		err := client.Call(ctx, tt.procedure, tt.body, &resBody, opts...)
+		err := client.Call(ctx, tt.procedure, tt.body, &resBody, &resBody, opts...)
 		if tt.wantErr != "" {
 			if assert.Error(t, err) {
 				assert.Contains(t, err.Error(), tt.wantErr)

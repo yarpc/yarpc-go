@@ -33,7 +33,6 @@ import (
 	"go.uber.org/fx/fxtest"
 	"go.uber.org/thriftrw/ptr"
 	"go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpchttp"
 	"go.uber.org/yarpc/v2/yarpcjson"
 	"go.uber.org/yarpc/v2/yarpcrouter"
@@ -144,12 +143,9 @@ func TestFxServer(t *testing.T) {
 		_, err := client.Integer(ctx, ptr.String("baz")) // baz does not exist
 		assert.Error(t, err, "request failed")
 
-		// TODO(mhp): After we have a way to map errors between YARPC errors
-		// and thrift exceptions, this should be revisited so that the check
-		// below actually returns well-defined thrift exceptions.
-		_, ok := err.(*yarpcerror.Status)
-		require.True(t, ok, "error '%+v' must be a *yarpcerror.Status, not %T", err, err)
-		// assert.Equal(t, "baz", *exc.Key, "exception key did not match")
+		exc, ok := err.(*atomic.KeyDoesNotExist)
+		require.True(t, ok, "error '%+v' must be a *KeyDoesNotExist, not %T", err, err)
+		assert.Equal(t, "baz", *exc.Key, "exception key did not match")
 	})
 
 	jsonClient := yarpcjson.New(yarpcClient)
@@ -159,7 +155,7 @@ func TestFxServer(t *testing.T) {
 
 		req := map[string]string{"hello": "world"}
 		var res map[string]string
-		err := jsonClient.Call(ctx, "echoJSON", req, &res)
+		err := jsonClient.Call(ctx, "echoJSON", req, &res, &res)
 		require.NoError(t, err, "request failed")
 		assert.Equal(t, map[string]string{"hello": "world"}, res, "response body did not match")
 	})

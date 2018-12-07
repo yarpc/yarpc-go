@@ -23,6 +23,7 @@ package yarpcthrift
 import (
 	"context"
 
+	"go.uber.org/thriftrw/envelope"
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/thriftreflect"
 	"go.uber.org/thriftrw/wire"
@@ -31,7 +32,7 @@ import (
 )
 
 // EncodingHandler is a convenience type alias for functions that act as Handlers.
-type EncodingHandler func(context.Context, wire.Value) (Response, error)
+type EncodingHandler func(context.Context, wire.Value) (envelope.Enveloper, error)
 
 // Method represents a Thrift service method.
 type Method struct {

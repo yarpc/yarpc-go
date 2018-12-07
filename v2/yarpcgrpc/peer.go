@@ -22,6 +22,7 @@ package yarpcgrpc
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"go.uber.org/yarpc/v2"
@@ -160,6 +161,6 @@ func connectivityStateToPeerConnectionStatus(connectivityState connectivity.Stat
 	case connectivity.Ready:
 		return yarpc.Available, nil
 	default:
-		return 0, yarpcerror.Newf(yarpcerror.CodeInternal, "unknown connectivity.State: %v", connectivityState)
+		return 0, yarpcerror.New(yarpcerror.CodeInternal, fmt.Sprintf("unknown connectivity.State: %v", connectivityState))
 	}
 }

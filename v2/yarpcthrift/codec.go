@@ -23,6 +23,7 @@ package yarpcthrift
 import (
 	"bytes"
 
+	"go.uber.org/thriftrw/envelope"
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
 	yarpc "go.uber.org/yarpc/v2"
@@ -98,11 +99,36 @@ func (c *thriftCodec) Decode(req *yarpc.Buffer) (interface{}, error) {
 	return reqValue, nil
 }
 
-func (c *thriftCodec) Encode(res interface{}) (*yarpc.Buffer, error) {
-	resBuf := &yarpc.Buffer{}
-	if resValue, ok := res.(wire.Value); ok {
-		err := c.responder.EncodeResponse(resValue, wire.Reply, resBuf)
-		return resBuf, err
+func (c *thriftCodec) encode(res interface{}) (*yarpc.Buffer, error) {
+	resBody, ok := res.(envelope.Enveloper)
+	if !ok {
+		return nil, yarpcerror.InternalErrorf("tried to encode a non-envelope.Enveloper in thrift codec")
 	}
-	return nil, yarpcerror.InternalErrorf("tried to encode a non-wire.Value in thrift codec")
+
+	if resType := resBody.EnvelopeType(); resType != wire.Reply {
+		return nil, errUnexpectedEnvelopeType(resType)
+	}
+
+	resValue, err := resBody.ToWire()
+	if err != nil {
+		return nil, err
+	}
+
+	resBuf := &yarpc.Buffer{}
+	if err := c.responder.EncodeResponse(resValue, wire.Reply, resBuf); err != nil {
+		return nil, err
+	}
+	return resBuf, nil
+}
+
+func (c *thriftCodec) Encode(res interface{}) (*yarpc.Buffer, error) {
+	return c.encode(res)
+}
+
+func (c *thriftCodec) EncodeError(err error) (*yarpc.Buffer, error) {
+	details := yarpcerror.GetDetails(err)
+	if details == nil {
+		return nil, nil
+	}
+	return c.encode(details)
 }

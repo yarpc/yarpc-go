@@ -93,7 +93,7 @@ func TestEncodeErrors(t *testing.T) {
 
 func assertError(t *testing.T, err error, expectedCode yarpcerror.Code, expectedWords ...string) {
 	assert.Error(t, err)
-	assert.Equal(t, expectedCode, yarpcerror.FromError(err).Code())
+	assert.Equal(t, expectedCode, yarpcerror.GetInfo(err).Code)
 	for _, expectedWord := range expectedWords {
 		assert.Contains(t, err.Error(), expectedWord)
 	}

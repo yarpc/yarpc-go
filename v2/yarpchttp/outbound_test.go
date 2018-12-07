@@ -204,65 +204,37 @@ func TestOutboundHeaders(t *testing.T) {
 }
 
 func TestOutboundApplicationError(t *testing.T) {
-	tests := []struct {
-		desc     string
-		status   string
-		appError bool
-	}{
-		{
-			desc:     "ok",
-			status:   "success",
-			appError: false,
-		},
-		{
-			desc:     "error",
-			status:   "error",
-			appError: true,
-		},
-		{
-			desc:     "not an error",
-			status:   "lolwut",
-			appError: false,
-		},
-	}
-
 	dialer := &Dialer{}
 	require.NoError(t, dialer.Start(context.Background()))
 	defer func() {
 		require.NoError(t, dialer.Stop(context.Background()))
 	}()
 
-	for _, tt := range tests {
-		t.Run(tt.desc, func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(
-				func(w http.ResponseWriter, httpReq *http.Request) {
-					w.Header().Add("Rpc-Status", tt.status)
-					defer httpReq.Body.Close()
-				},
-			))
-			defer server.Close()
+	server := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, httpReq *http.Request) {
+			w.Header().Add(ApplicationStatusHeader, ApplicationErrorStatus)
+			http.Error(w, "great sadness", http.StatusInternalServerError)
+			defer httpReq.Body.Close()
+		},
+	))
+	defer server.Close()
 
-			outbound := &Outbound{Dialer: dialer, URL: parseURL(server.URL)}
+	outbound := &Outbound{Dialer: dialer, URL: parseURL(server.URL)}
 
-			ctx := context.Background()
-			ctx, cancel := context.WithTimeout(ctx, 100*internaltesttime.Millisecond)
-			defer cancel()
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 100*internaltesttime.Millisecond)
+	defer cancel()
 
-			response, _, err := outbound.Call(ctx, &yarpc.Request{
-				Caller:    "caller",
-				Service:   "service",
-				Encoding:  yarpc.Encoding("raw"),
-				Procedure: "hello",
-			}, yarpc.NewBufferString("world"))
+	response, _, err := outbound.Call(ctx, &yarpc.Request{
+		Caller:    "caller",
+		Service:   "service",
+		Encoding:  yarpc.Encoding("raw"),
+		Procedure: "hello",
+	}, yarpc.NewBufferString("world"))
 
-			if tt.appError {
-				assert.Error(t, response.ApplicationError, "%v: application status", tt.desc)
-			} else {
-				assert.NoError(t, response.ApplicationError, "%v: application status", tt.desc)
-			}
-			assert.NoError(t, err, "%v: call failed", tt.desc)
-		})
-	}
+	assert.NotNil(t, response.ErrorInfo, "should be application error")
+	assert.NoError(t, err, "call failed")
+
 }
 
 func TestCallFailures(t *testing.T) {
@@ -302,7 +274,7 @@ func TestCallFailures(t *testing.T) {
 				Encoding:  yarpc.Encoding("raw"),
 				Procedure: "wat",
 			}, yarpc.NewBufferString("huh"))
-			assert.Error(t, err, "expected failure")
+			require.Error(t, err, "expected failure")
 			for _, msg := range tt.messages {
 				assert.Contains(t, err.Error(), msg)
 			}
@@ -411,7 +383,7 @@ func TestOutboundNoDeadline(t *testing.T) {
 	}
 
 	_, _, err := outbound.call(context.Background(), &yarpc.Request{}, &yarpc.Buffer{})
-	assert.Equal(t, yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "missing context deadline"), err)
+	assert.Equal(t, yarpcerror.New(yarpcerror.CodeInvalidArgument, "missing context deadline"), err)
 }
 
 func TestServiceMatchSuccess(t *testing.T) {

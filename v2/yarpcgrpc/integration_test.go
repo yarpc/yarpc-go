@@ -113,8 +113,8 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 				defer cancel()
 
 				var res testEchoResponse
-				err := client.Call(ctx, "test-procedure", &testEchoRequest{Message: tt.value}, &res)
-				require.Equal(t, tt.errCode.String(), yarpcerror.FromError(err).Code().String())
+				err := client.Call(ctx, "test-procedure", &testEchoRequest{Message: tt.value}, &res, &res)
+				require.Equal(t, tt.errCode.String(), yarpcerror.GetInfo(err).Code.String())
 			})
 		})
 	}
@@ -144,14 +144,6 @@ func TestJSONRoundTrip(t *testing.T) {
 		},
 		{
 			name:      "echo err",
-			procedure: "test-procedure",
-			request: &testEchoRequest{
-				Error: "handler error",
-			},
-			wantErr: "handler error",
-		},
-		{
-			name:      "echo err",
 			procedure: "invalid procedure",
 			wantErr:   "no procedure for name invalid procedure",
 		},
@@ -170,7 +162,7 @@ func TestJSONRoundTrip(t *testing.T) {
 				defer cancel()
 
 				var res testEchoResponse
-				err := client.Call(ctx, tt.procedure, tt.request, &res)
+				err := client.Call(ctx, tt.procedure, tt.request, &res, &res)
 
 				if tt.wantErr == "" {
 					require.NoError(t, err, "unexpected error")
@@ -211,7 +203,7 @@ func TestConcurrentCalls(t *testing.T) {
 				var res testEchoResponse
 
 				<-start
-				err := client.Call(ctx, "test-procedure", &testEchoRequest{Message: msg}, &res)
+				err := client.Call(ctx, "test-procedure", &testEchoRequest{Message: msg}, &res, &res)
 
 				lock.Lock()
 				errs = multierr.Combine(errs, err)
@@ -394,7 +386,7 @@ func TestTLS(t *testing.T) {
 				request := &testEchoRequest{
 					Message: "hello security!",
 				}
-				err := client.Call(ctx, "test-procedure", request, &res)
+				err := client.Call(ctx, "test-procedure", request, &res, &res)
 
 				if test.expectedErrContains == "" {
 					require.NoError(t, err)
@@ -532,7 +524,7 @@ func TestDirectAddress(t *testing.T) {
 	})
 	var res body
 	var retAddr yarpc.Identifier
-	require.NoError(t, client.Call(ctx, "echo", &body{Message: "hello"}, &res, yarpc.To(addr), yarpc.ResponseFrom(&retAddr)))
+	require.NoError(t, client.Call(ctx, "echo", &body{Message: "hello"}, &res, &res, yarpc.To(addr), yarpc.ResponseFrom(&retAddr)))
 	assert.NotNil(t, retAddr)
 	assert.Equal(t, addr, retAddr)
 }

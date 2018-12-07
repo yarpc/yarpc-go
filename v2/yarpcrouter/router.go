@@ -22,6 +22,7 @@ package yarpcrouter
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -124,8 +125,10 @@ func (m MapRouter) Choose(ctx context.Context, req *yarpc.Request) (yarpc.Transp
 
 	if _, ok := m.serviceNames[service]; !ok {
 		return yarpc.TransportHandlerSpec{},
-			yarpcerror.Newf(yarpcerror.CodeUnimplemented, "unrecognized service name %q, "+
-				"available services: %s", req.Service, getAvailableServiceNames(m.serviceNames))
+			yarpcerror.New(
+				yarpcerror.CodeUnimplemented,
+				fmt.Sprintf("unrecognized service name %q, available services: %s", req.Service, getAvailableServiceNames(m.serviceNames)),
+			)
 	}
 
 	// Fully specified combinations of service, procedure, and encoding.
@@ -138,7 +141,7 @@ func (m MapRouter) Choose(ctx context.Context, req *yarpc.Request) (yarpc.Transp
 		return procedure.HandlerSpec, nil
 	}
 
-	return yarpc.TransportHandlerSpec{}, yarpcerror.Newf(yarpcerror.CodeUnimplemented, "unrecognized procedure %q for service %q", req.Procedure, req.Service)
+	return yarpc.TransportHandlerSpec{}, yarpcerror.New(yarpcerror.CodeUnimplemented, fmt.Sprintf("unrecognized procedure %q for service %q", req.Procedure, req.Service))
 }
 
 // Extract keys from service names map and return a formatted string

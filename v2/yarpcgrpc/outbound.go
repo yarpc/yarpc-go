@@ -26,9 +26,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/v2"
-	intyarpcerror "go.uber.org/yarpc/v2/internal/internalyarpcerror"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcpeer"
 	"go.uber.org/yarpc/v2/yarpctracing"
@@ -88,30 +88,17 @@ func (o *Outbound) Call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.B
 		return nil, nil, yarpcerror.InvalidArgumentErrorf("request for grpc outbound was nil")
 	}
 
-	responseBody, responseMD, invokeErr := o.invoke(ctx, req, reqBuf)
-
-	responseHeaders, err := getApplicationHeaders(responseMD)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return &yarpc.Response{
-			Peer:             metadataToPeer(responseMD),
-			Headers:          responseHeaders,
-			ApplicationError: metadataToApplicationError(invokeErr, responseMD),
-		},
-		yarpc.NewBufferBytes(responseBody),
-		invokeErr
+	return o.invoke(ctx, req, reqBuf)
 }
 
 func (o *Outbound) invoke(
 	ctx context.Context,
 	req *yarpc.Request,
 	reqBuf *yarpc.Buffer,
-) (responseBody []byte, responseMD metadata.MD, retErr error) {
+) (_ *yarpc.Response, _ *yarpc.Buffer, retErr error) {
 	start := time.Now()
 
-	responseMD = metadata.New(nil)
+	responseMD := metadata.New(nil)
 
 	md, err := requestToMetadata(req)
 	if err != nil {
@@ -138,7 +125,8 @@ func (o *Outbound) invoke(
 	}
 	defer span.Finish()
 
-	err = peer.clientConn.Invoke(
+	var responseBody []byte
+	invokeErr := peer.clientConn.Invoke(
 		metadata.NewOutgoingContext(ctx, md),
 		fullMethod,
 		reqBuf.Bytes(),
@@ -146,8 +134,9 @@ func (o *Outbound) invoke(
 		callOptions...,
 	)
 
+	errInfo, appErrBody, err := invokeErrorToYARPCError(invokeErr, responseMD)
 	if err != nil {
-		return nil, nil, invokeErrorToYARPCError(yarpctracing.UpdateSpanWithErr(span, err), responseMD)
+		return nil, nil, yarpctracing.UpdateSpanWithErr(span, err)
 	}
 
 	// Service name match validation, return yarpcerror.CodeInternal error if not match
@@ -159,7 +148,22 @@ func (o *Outbound) invoke(
 					"does not match the service name received in the response: sent %q, got: %q", req.Service, resService))
 	}
 
-	return responseBody, responseMD, nil
+	responseHeaders, err := getApplicationHeaders(responseMD)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if appErrBody != nil {
+		responseBody = appErrBody
+	}
+
+	return &yarpc.Response{
+			Peer:      metadataToPeer(responseMD),
+			Headers:   responseHeaders,
+			ErrorInfo: errInfo,
+		},
+		yarpc.NewBufferBytes(responseBody),
+		nil
 }
 
 func metadataToPeer(responseMD metadata.MD) yarpc.Identifier {
@@ -173,42 +177,28 @@ func metadataToPeer(responseMD metadata.MD) yarpc.Identifier {
 	return yarpc.Address(value[0])
 }
 
-func metadataToApplicationError(invokeErr error, responseMD metadata.MD) error {
-	if responseMD == nil {
-		return nil
-	}
-
-	if _, ok := responseMD[ApplicationErrorHeader]; ok {
-		return invokeErr
-	}
-	return nil
-}
-
-func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
+func invokeErrorToYARPCError(err error, responseMD metadata.MD) (*yarpcerror.Info, []byte, error) {
 	if err == nil {
-		return nil
+		return nil, nil, nil
 	}
-	if yarpcerror.IsStatus(err) {
-		return err
-	}
-	status, ok := status.FromError(err)
-	// if not a yarpc error or grpc error, just return a wrapped error
-	if !ok {
-		return yarpcerror.FromError(err)
-	}
-	code, ok := _grpcCodeToCode[status.Code()]
+
+	s := status.Convert(err)
+	code, ok := _grpcCodeToCode[s.Code()]
 	if !ok {
 		code = yarpcerror.CodeUnknown
 	}
 	var name string
+	var isAppErr bool
 	if responseMD != nil {
 		value, ok := responseMD[ErrorNameHeader]
 		// TODO: what to do if the length is > 1?
 		if ok && len(value) == 1 {
 			name = value[0]
 		}
+
+		_, isAppErr = responseMD[ApplicationErrorHeader]
 	}
-	message := status.Message()
+	message := s.Message()
 	// we put the name as a prefix for grpc compatibility
 	// if there was no message, the message will be the name, so we leave it as the message
 	if name != "" && message != "" && message != name {
@@ -216,7 +206,16 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	} else if name != "" && message == name {
 		message = ""
 	}
-	return intyarpcerror.NewWithNamef(code, name, message)
+
+	if isAppErr {
+		buf, err := proto.Marshal(s.Proto())
+		if err != nil {
+			return nil, nil, err
+		}
+		return &yarpcerror.Info{Code: code, Message: message, Name: name}, buf, nil
+
+	}
+	return nil, nil, yarpcerror.New(code, message, yarpcerror.WithName(name))
 }
 
 // CallStream implements yarpc.StreamOutbound#CallStream.

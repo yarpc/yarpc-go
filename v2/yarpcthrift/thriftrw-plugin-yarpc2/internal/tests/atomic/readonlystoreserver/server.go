@@ -5,8 +5,10 @@ package readonlystoreserver
 
 import (
 	"context"
+	"go.uber.org/thriftrw/envelope"
 	"go.uber.org/thriftrw/wire"
 	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcthrift"
 	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/atomic"
 	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/common/baseserviceserver"
@@ -50,20 +52,25 @@ func New(impl Interface, opts ...yarpcthrift.RegisterOption) []yarpc.EncodingPro
 
 type handler struct{ impl Interface }
 
-func (h handler) Integer(ctx context.Context, body wire.Value) (yarpcthrift.Response, error) {
+func (h handler) Integer(ctx context.Context, body wire.Value) (envelope.Enveloper, error) {
 	var args atomic.ReadOnlyStore_Integer_Args
 	if err := args.FromWire(body); err != nil {
-		return yarpcthrift.Response{}, err
+		return nil, err
 	}
 
 	success, appErr := h.impl.Integer(ctx, args.Key)
 
 	result, err := atomic.ReadOnlyStore_Integer_Helper.WrapResponse(success, appErr)
-
-	var response yarpcthrift.Response
-	if err == nil {
-		response.Exception = appErr
-		response.Body = result
+	if err != nil {
+		return nil, err
 	}
-	return response, err
+
+	if appErr != nil {
+		return nil, yarpcerror.New(
+			yarpcerror.CodeUnknown,
+			appErr.Error(),
+			yarpcerror.WithDetails(result),
+		)
+	}
+	return result, nil
 }

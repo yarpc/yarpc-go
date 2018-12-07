@@ -106,7 +106,8 @@ func TestDialerBasics(t *testing.T) {
 	t.Logf("calling\n")
 	req := &Payload{Note: "forthcoming"}
 	res := &Payload{}
-	err = client.Call(ctx, "echo", req, res)
+	errDetails := &Payload{}
+	err = client.Call(ctx, "echo", req, res, errDetails)
 	require.NoError(t, err)
 	require.Equal(t, req, res)
 }
@@ -170,12 +171,14 @@ func TestDialerBellsAndWhistles(t *testing.T) {
 	t.Logf("calling\n")
 	req := &Payload{Note: "forthcoming"}
 	res := &Payload{}
+	errDetails := &Payload{}
 	var headers map[string]string
 	err := client.Call(
 		ctx,
 		"echo",
 		req,
 		res,
+		errDetails,
 		yarpc.WithHeader("HeAdEr", "forthcoming"),
 		yarpc.ResponseHeaders(&headers),
 	)
@@ -281,12 +284,12 @@ func TestConnectionFailure(t *testing.T) {
 	t.Logf("calling\n")
 	req := &Payload{Note: "forthcoming"}
 	res := &Payload{}
-	err = client.Call(ctx, "echo", req, res)
-	assert.Equal(t, yarpcerror.Newf(yarpcerror.CodeDeadlineExceeded, "timeout"), err)
+	errDetails := &Payload{}
+	err = client.Call(ctx, "echo", req, res, errDetails)
+	assert.Equal(t, yarpcerror.New(yarpcerror.CodeDeadlineExceeded, "timeout"), err)
 }
 
 func TestErrors(t *testing.T) {
-
 	tests := map[string]struct {
 		procedure  string
 		give, want error
@@ -294,16 +297,16 @@ func TestErrors(t *testing.T) {
 		"implicit system error": {
 			procedure: "echo",
 			give:      fmt.Errorf("system error"),
-			want:      yarpcerror.Newf(yarpcerror.CodeUnknown, `error for service "service" and procedure "echo": system error`),
+			want:      yarpcerror.New(yarpcerror.CodeUnknown, `system error`),
 		},
 		"explicit system error": {
 			procedure: "echo",
-			give:      yarpcerror.Newf(yarpcerror.CodeUnknown, `error for service "service" and procedure "echo": system error`),
-			want:      yarpcerror.Newf(yarpcerror.CodeUnknown, `error for service "service" and procedure "echo": system error`),
+			give:      yarpcerror.New(yarpcerror.CodeUnknown, `error for service "service" and procedure "echo": system error`),
+			want:      yarpcerror.New(yarpcerror.CodeUnknown, `error for service "service" and procedure "echo": system error`),
 		},
 		"unimplemented": {
 			procedure: "bogus",
-			want:      yarpcerror.Newf(yarpcerror.CodeInvalidArgument, `unrecognized procedure "bogus" for service "service"`),
+			want:      yarpcerror.New(yarpcerror.CodeInvalidArgument, `unrecognized procedure "bogus" for service "service"`),
 		},
 		// This case verifies that TChannel "black holes" resource exhausted
 		// errors, inducing a client side timeout.
@@ -311,15 +314,13 @@ func TestErrors(t *testing.T) {
 		// across languages do a poor job of retry backoff.
 		"resource exhausted": {
 			procedure: "echo",
-			give:      yarpcerror.Newf(yarpcerror.CodeResourceExhausted, "no response for you"),
-			want:      yarpcerror.Newf(yarpcerror.CodeDeadlineExceeded, "timeout"),
+			give:      yarpcerror.New(yarpcerror.CodeResourceExhausted, "no response for you"),
+			want:      yarpcerror.New(yarpcerror.CodeDeadlineExceeded, "timeout"),
 		},
 	}
 
 	for desc, tt := range tests {
 		t.Run(desc, func(t *testing.T) {
-			var handlerErr error
-
 			ctx := context.Background()
 			ctx, cancel := context.WithTimeout(ctx, 40*internaltesttime.Millisecond)
 			defer cancel()
@@ -330,7 +331,7 @@ func TestErrors(t *testing.T) {
 
 			handleEcho := yarpc.EncodingToTransportProcedures(
 				yarpcjson.Procedure("echo", func(ctx context.Context, req *Payload) (*Payload, error) {
-					return nil, handlerErr
+					return nil, tt.give
 				}),
 			)
 
@@ -369,8 +370,8 @@ func TestErrors(t *testing.T) {
 
 			req := &Payload{Note: "forthcoming"}
 			res := &Payload{}
-			handlerErr = tt.give
-			err = client.Call(ctx, tt.procedure, req, res)
+			errDetails := &Payload{}
+			err = client.Call(ctx, tt.procedure, req, res, errDetails)
 			require.Equal(t, tt.want, err)
 		})
 	}

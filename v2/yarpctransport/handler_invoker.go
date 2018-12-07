@@ -63,10 +63,13 @@ func InvokeUnaryHandler(i UnaryInvokeRequest) (res *yarpc.Response, buf *yarpc.B
 	// The handler stopped work on context deadline.
 	if err == context.DeadlineExceeded && err == i.Context.Err() {
 		deadline, _ := i.Context.Deadline()
-		err = yarpcerror.Newf(
+		err = yarpcerror.New(
 			yarpcerror.CodeDeadlineExceeded,
-			"call to procedure %q of service %q from caller %q timed out after %v",
-			i.Request.Procedure, i.Request.Service, i.Request.Caller, deadline.Sub(i.StartTime))
+			fmt.Sprintf(
+				"call to procedure %q of service %q from caller %q timed out after %v",
+				i.Request.Procedure, i.Request.Service, i.Request.Caller, deadline.Sub(i.StartTime),
+			),
+		)
 	}
 	return res, buf, err
 }

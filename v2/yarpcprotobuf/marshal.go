@@ -21,6 +21,8 @@
 package yarpcprotobuf
 
 import (
+	"fmt"
+
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/gogo/protobuf/proto"
 	yarpc "go.uber.org/yarpc/v2"
@@ -44,7 +46,7 @@ func unmarshal(encoding yarpc.Encoding, buf *yarpc.Buffer, message proto.Message
 	case yarpcjson.Encoding:
 		return _jsonUnmarshaler.Unmarshal(buf, message)
 	default:
-		return yarpcerror.Newf(yarpcerror.CodeInternal, "failed to unmarshal unexpected encoding %q", encoding)
+		return yarpcerror.New(yarpcerror.CodeInternal, fmt.Sprintf("failed to unmarshal unexpected encoding %q", encoding))
 	}
 }
 
@@ -55,7 +57,7 @@ func marshal(encoding yarpc.Encoding, message proto.Message) (*yarpc.Buffer, err
 	case yarpcjson.Encoding:
 		return marshalJSON(message)
 	default:
-		return nil, yarpcerror.Newf(yarpcerror.CodeInternal, "failed to marshal unexpected encoding %q", encoding)
+		return nil, yarpcerror.New(yarpcerror.CodeInternal, fmt.Sprintf("failed to marshal unexpected encoding %q", encoding))
 	}
 }
 

@@ -98,7 +98,7 @@ func newServerEncodingError(req *yarpc.Request, encodings []yarpc.Encoding, isRe
 	parts = append(parts,
 		fmt.Sprintf("for procedure %q of service %q from caller %q: %v",
 			req.Procedure, req.Service, req.Caller, err))
-	return yarpcerror.Newf(yarpcerror.CodeInvalidArgument, strings.Join(parts, " "))
+	return yarpcerror.New(yarpcerror.CodeInvalidArgument, strings.Join(parts, " "))
 }
 
 func newEncodingMismatchError(want []yarpc.Encoding, got yarpc.Encoding) error {

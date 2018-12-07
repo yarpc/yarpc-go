@@ -32,8 +32,8 @@ func WrapHandlerError(err error, service string, procedure string) error {
 	if err == nil {
 		return nil
 	}
-	if IsStatus(err) {
-		return err
+	if yarpcErr, ok := err.(*yarpcerror); ok {
+		return yarpcErr
 	}
-	return Newf(CodeUnknown, "error for service %q and procedure %q: %s", service, procedure, err.Error())
+	return New(CodeUnknown, sprintf("error for service %q and procedure %q: %s", service, procedure, err.Error()))
 }

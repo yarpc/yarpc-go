@@ -48,10 +48,10 @@ type testInbound interface {
 }
 
 func newKeyValueClient(t *testing.T, address string) keyvaluepb.StoreYARPCClient {
-	dialer := &yarpchttp.Dialer{}
+	dialer := &yarpcgrpc.Dialer{}
 	require.NoError(t, dialer.Start(context.Background()))
 
-	outbound := &yarpchttp.Outbound{
+	outbound := &yarpcgrpc.Outbound{
 		URL:    &url.URL{Scheme: "http", Host: address},
 		Dialer: dialer,
 	}
@@ -119,7 +119,7 @@ func TestIntegration(t *testing.T) {
 		transportProcedures := yarpc.EncodingToTransportProcedures(procedures)
 		assert.Equal(t, 4, len(transportProcedures))
 
-		addr, stop := startInbounds(t, "http", "keyvalue", transportProcedures)
+		addr, stop := startInbounds(t, "grpc", "keyvalue", transportProcedures)
 		defer stop()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)

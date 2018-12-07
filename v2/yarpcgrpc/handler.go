@@ -21,15 +21,18 @@
 package yarpcgrpc
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpctracing"
 	"go.uber.org/yarpc/v2/yarpctransport"
 	"golang.org/x/net/context"
+	spb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -39,7 +42,7 @@ import (
 var (
 	// errInvalidGRPCStream is applied before yarpc so it's a raw GRPC error
 	errInvalidGRPCStream = status.Error(codes.InvalidArgument, "received grpc request with invalid stream")
-	errInvalidGRPCMethod = yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "invalid stream method name for request")
+	errInvalidGRPCMethod = yarpcerror.New(yarpcerror.CodeInvalidArgument, "invalid stream method name for request")
 )
 
 type handler struct {
@@ -93,7 +96,7 @@ func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error 
 	case yarpc.Streaming:
 		err = h.handleStream(ctx, req, serverStream, start, handlerSpec.Stream())
 	default:
-		return yarpcerror.Newf(yarpcerror.CodeUnimplemented, "gRPC inbound does not handle %s handlers", handlerSpec.Type().String())
+		return yarpcerror.New(yarpcerror.CodeUnimplemented, fmt.Sprintf("gRPC inbound does not handle %s handlers", handlerSpec.Type().String()))
 	}
 
 	return yarpctracing.UpdateSpanWithErr(span, err)
@@ -105,7 +108,7 @@ func requestFromServerStream(stream grpc.ServerStream, streamMethod string) (*ya
 
 	md, ok := metadata.FromIncomingContext(ctx)
 	if md == nil || !ok {
-		return nil, yarpcerror.Newf(yarpcerror.CodeInternal, "cannot get metadata from ctx: %v", ctx)
+		return nil, yarpcerror.New(yarpcerror.CodeInternal, fmt.Sprintf("cannot get metadata from ctx: %v", ctx))
 	}
 	req, err := metadataToRequest(md)
 	if err != nil {
@@ -194,38 +197,30 @@ func (h *handler) handleUnary(
 		Logger:    h.i.Logger,
 	})
 
-	err = handlerErrorToGRPCError(err, mdWriter)
-
-	if resBuf != nil {
-		// Send the response attributes back and end the stream.
-		if sendErr := serverStream.SendMsg(resBuf.Bytes()); sendErr != nil {
-			// We couldn't send the response.
-			return sendErr
-		}
+	if err != nil {
+		err = handlerErrorToGRPCError(err, mdWriter)
+		serverStream.SetTrailer(mdWriter.MD())
+		return err
 	}
 
-	mdWriter.SetResponse(res)
+	if err := handleResponse(req.Encoding, res.ErrorInfo, resBuf, serverStream, mdWriter); err != nil {
+		return err
+	}
+
+	mdWriter.SetResponseHeaders(res)
 	serverStream.SetTrailer(mdWriter.MD())
-	return err
+	return nil
 }
 
 func handlerErrorToGRPCError(err error, mdWriter *metadataWriter) error {
-	if err == nil {
-		return nil
-	}
 	// if this is an error created from grpc-go, return the error
 	if _, ok := status.FromError(err); ok {
 		return err
 	}
-	// if this is not a yarpc error, return the error
-	// this will result in the error being a grpc-go error with codes.Unknown
-	if !yarpcerror.IsStatus(err) {
-		return err
-	}
-	// we now know we have a yarpc error
-	yarpcStatus := yarpcerror.FromError(err)
-	name := yarpcStatus.Name()
-	message := yarpcStatus.Message()
+	// we now assume we have a yarpc error
+	errorInfo := yarpcerror.GetInfo(err)
+	name := errorInfo.Name
+	message := errorInfo.Message
 	// if the yarpc error has a name, set the header
 	if name != "" {
 		mdWriter.AddSystemHeader(ErrorNameHeader, name)
@@ -238,10 +233,45 @@ func handlerErrorToGRPCError(err error, mdWriter *metadataWriter) error {
 			message = name + ": " + message
 		}
 	}
-	grpcCode, ok := _codeToGRPCCode[yarpcStatus.Code()]
+	grpcCode, ok := _codeToGRPCCode[errorInfo.Code]
 	// should only happen if _codeToGRPCCode does not cover all codes
 	if !ok {
 		grpcCode = codes.Unknown
 	}
 	return status.Error(grpcCode, message)
+}
+
+func handleResponse(
+	encoding yarpc.Encoding,
+	errInfo *yarpcerror.Info,
+	resBuf *yarpc.Buffer,
+	serverStream grpc.ServerStream,
+	mdWriter *metadataWriter,
+) error {
+	// This is a regular response that we should send
+	if errInfo == nil && resBuf != nil {
+		return serverStream.SendMsg(resBuf.Bytes())
+	}
+
+	// This is an application error
+	if errInfo != nil {
+		mdWriter.AddSystemHeader(ApplicationErrorHeader, ApplicationErrorHeaderValue)
+		if errInfo.Name != "" {
+			mdWriter.AddSystemHeader(ErrorNameHeader, errInfo.Name)
+		}
+		if resBuf != nil {
+			// TODO(mhp): Trying to keep yarpc's API, we unmarshal the marshaled status
+			// back and return it through our handler. This is mainly because
+			// we cannot use any reserved headers in gRPC, and the only way to
+			// send back an application error is by returning an error in our
+			// handler. In the future, if we can set the headers ourselves, we
+			// should replace this.
+			s := &spb.Status{}
+			if err := proto.Unmarshal(resBuf.Bytes(), s); err != nil {
+				return err
+			}
+			return status.FromProto(s).Err()
+		}
+	}
+	return nil
 }

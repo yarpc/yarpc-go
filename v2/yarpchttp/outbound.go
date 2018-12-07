@@ -33,7 +33,6 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"go.uber.org/yarpc/v2"
-	"go.uber.org/yarpc/v2/internal/internalyarpcerror"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcpeer"
 	"go.uber.org/yarpc/v2/yarpctracing"
@@ -108,7 +107,7 @@ func (o *Outbound) call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.B
 	start := time.Now()
 	deadline, ok := ctx.Deadline()
 	if !ok {
-		return nil, nil, yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "missing context deadline")
+		return nil, nil, yarpcerror.New(yarpcerror.CodeInvalidArgument, "missing context deadline")
 	}
 	ttl := deadline.Sub(start)
 
@@ -148,25 +147,21 @@ func (o *Outbound) call(ctx context.Context, req *yarpc.Request, reqBuf *yarpc.B
 		return nil, nil, err
 	}
 
-	if httpRes.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus {
-		res.ApplicationError = getYARPCErrorFromResponse(httpRes, resBuf, true)
-	}
-
-	bothResponseError := httpRes.Header.Get(BothResponseErrorHeader) == AcceptTrue
-	if bothResponseError && !o.legacyResponseError {
-		if httpRes.StatusCode >= 300 {
-			// TODO: This is a bit odd; we set the error in response AND return it.
-			// However, to preserve the current behavior of YARPC, this is
-			// necessary. This is most likely where the error details will be added,
-			// so we expect this to change.
-			return res, resBuf, res.ApplicationError
+	// we had an error
+	if httpRes.StatusCode >= 300 {
+		// this error was a yarpc application error
+		if httpRes.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus {
+			errorInfo := getErrorInfoFromResponse(httpRes)
+			res.ErrorInfo = &errorInfo
+			return res, resBuf, nil
 		}
-		return res, resBuf, nil
+		// this error was an http error
+		return nil, nil, yarpcerror.New(
+			statusCodeToBestCode(httpRes.StatusCode),
+			resBuf.String(),
+		)
 	}
-	if httpRes.StatusCode >= 200 && httpRes.StatusCode < 300 {
-		return res, resBuf, nil
-	}
-	return nil, nil, getYARPCErrorFromResponse(httpRes, resBuf, false)
+	return res, resBuf, nil
 }
 
 func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*httpPeer, func(error), error) {
@@ -317,22 +312,16 @@ func (o *Outbound) withCoreHeaders(httpReq *http.Request, req *yarpc.Request, tt
 func readCloserToBuffer(readCloser io.ReadCloser) (*yarpc.Buffer, error) {
 	body, err := ioutil.ReadAll(readCloser)
 	if err != nil {
-		return nil, yarpcerror.Newf(yarpcerror.CodeInternal, err.Error())
+		return nil, yarpcerror.New(yarpcerror.CodeInternal, err.Error())
 	}
 
 	if err := readCloser.Close(); err != nil {
-		return nil, yarpcerror.Newf(yarpcerror.CodeInternal, err.Error())
+		return nil, yarpcerror.New(yarpcerror.CodeInternal, err.Error())
 	}
 	return yarpc.NewBufferBytes(body), nil
 }
 
-func getYARPCErrorFromResponse(httpRes *http.Response, resBuf *yarpc.Buffer, bothResponseError bool) error {
-	var contents string
-	if bothResponseError {
-		contents = httpRes.Header.Get(ErrorMessageHeader)
-	} else {
-		contents = resBuf.String()
-	}
+func getErrorInfoFromResponse(httpRes *http.Response) yarpcerror.Info {
 	// use the status code if we can't get a code from the headers
 	code := statusCodeToBestCode(httpRes.StatusCode)
 	if errorCodeText := httpRes.Header.Get(ErrorCodeHeader); errorCodeText != "" {
@@ -342,11 +331,12 @@ func getYARPCErrorFromResponse(httpRes *http.Response, resBuf *yarpc.Buffer, bot
 			code = errorCode
 		}
 	}
-	return internalyarpcerror.NewWithNamef(
-		code,
-		httpRes.Header.Get(ErrorNameHeader),
-		strings.TrimSuffix(contents, "\n"),
-	)
+	message := httpRes.Header.Get(ErrorMessageHeader)
+	return yarpcerror.Info{
+		Code:    code,
+		Message: strings.TrimSuffix(message, "\n"),
+		Name:    httpRes.Header.Get(ErrorNameHeader),
+	}
 }
 
 // Only does verification if there is a response header
@@ -385,7 +375,7 @@ func (o *Outbound) roundTrip(httpReq *http.Request, req *yarpc.Request, start ti
 
 	deadline, ok := ctx.Deadline()
 	if !ok {
-		return nil, yarpcerror.Newf(
+		return nil, yarpcerror.New(
 			yarpcerror.CodeInvalidArgument,
 			"missing context deadline")
 	}
@@ -448,17 +438,20 @@ func (o *Outbound) doWithPeer(
 			p.OnSuspect()
 
 			end := time.Now()
-			return nil, yarpcerror.Newf(
+			return nil, yarpcerror.New(
 				yarpcerror.CodeDeadlineExceeded,
-				"client timeout for procedure %q of service %q after %v",
-				req.Procedure, req.Service, end.Sub(start))
+				fmt.Sprintf(
+					"client timeout for procedure %q of service %q after %v",
+					req.Procedure, req.Service, end.Sub(start),
+				),
+			)
 		}
 
 		// Note that the connection may have been lost so the peer connection
 		// maintenance loop resumes probing for availability.
 		p.OnDisconnected()
 
-		return nil, yarpcerror.Newf(yarpcerror.CodeUnknown, "unknown error from http client: %s", err.Error())
+		return nil, yarpcerror.New(yarpcerror.CodeUnknown, fmt.Sprintf("unknown error from http client: %s", err.Error()))
 	}
 
 	return response, nil

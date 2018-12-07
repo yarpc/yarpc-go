@@ -29,7 +29,7 @@ import (
 	"go.uber.org/yarpc/v2/yarpcpeerlist"
 )
 
-var errUnavailable = yarpcerror.Newf(yarpcerror.CodeUnavailable, "no peer available in round-robin peer list")
+var errUnavailable = yarpcerror.New(yarpcerror.CodeUnavailable, "no peer available in round-robin peer list")
 
 // newPeerRing creates a new peerRing with an initial capacity
 func newPeerRing() *peerRing {

@@ -1,5 +1,5 @@
-hash: 243d46e5369cd0d7e5f65a26a4d3320527ab430222c9f417a625b183a750b2d3
-updated: 2018-11-26T10:50:16.27446-08:00
+hash: e25d8c527c73b98394556223646c96e005fd6fa657915fa1f2ad2a4d7ff73ba7
+updated: 2018-11-29T17:51:15.666345336-08:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -15,9 +15,13 @@ imports:
   - assert
   - require
 - name: github.com/davecgh/go-spew
-  version: d8f796af33cc11cb798c1aaeb27a4ebc5099927d
+  version: 8991bc29aa16c548c550c7ff78260e27b9ab7c73
   subpackages:
   - spew
+- name: github.com/gogo/googleapis
+  version: 8558fb44d2f1fc223118afc694129d2c2d2924d1
+  subpackages:
+  - google/rpc
 - name: github.com/gogo/protobuf
   version: 636bf0302bc95575d69441b25a2603156ffdddf1
   subpackages:
@@ -63,23 +67,23 @@ imports:
   - prometheus
   - prometheus/promhttp
 - name: github.com/prometheus/client_model
-  version: 5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f
+  version: 99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 4724e9255275ce38f7179b2478abeae4e28c904f
+  version: 38c53a9f4bfcd932d1b00bfc65e256a7fba6b37a
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 619930b0b4713cc1280189bf0a4c54b3fb506f60
+  version: 780932d4fbbe0e69b84c34c20f5c8d0981e109ea
   subpackages:
   - internal/util
   - nfs
   - xfs
 - name: github.com/stretchr/testify
-  version: 8019298d9fa5a04fc2ad10ae03349df3483096a6
+  version: c679ae2cc0cb27ec3293fea7e254e47386f05d69
   subpackages:
   - assert
   - require
@@ -178,7 +182,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: adae6a3d119ae4890b46832a2e88a95adc62b8e7
+  version: fae4c4e3ad76c295c3d6d259f898136b4bf833a8
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -195,7 +199,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 62eef0e2fa9b2c385f7b2778e763486da6880d37
+  version: 3b87a42e500a6dc65dae1a55d0b641295971163e
   repo: https://github.com/golang/sys
 - name: golang.org/x/text
   version: f21a4dfb5e38f5895301dc265a8def02365cc3d0
@@ -205,12 +209,12 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 04b5d21e00f1f47bd824a6ade581e7189bacde87
+  version: ac136b6c2db7c4d43955e4bc7174db36dc0539c0
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: b5d43981345bdb2c233eb4bf3277847b48c6fdc6
+  version: aae13d27a44d62f039eeeb93e74e893886673932
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc

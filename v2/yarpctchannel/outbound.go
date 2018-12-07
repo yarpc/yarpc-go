@@ -22,20 +22,19 @@ package yarpctchannel
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"io"
 
 	"github.com/uber/tchannel-go"
 	yarpc "go.uber.org/yarpc/v2"
 	"go.uber.org/yarpc/v2/internal/internaliopool"
-	"go.uber.org/yarpc/v2/internal/internalyarpcerror"
 	"go.uber.org/yarpc/v2/yarpcencoding"
 	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcpeer"
 )
 
 var (
-	errDoNotUseContextWithHeaders = yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "tchannel.ContextWithHeaders is not compatible with YARPC, use yarpc.CallOption instead")
+	errDoNotUseContextWithHeaders = yarpcerror.New(yarpcerror.CodeInvalidArgument, "tchannel.ContextWithHeaders is not compatible with YARPC, use yarpc.CallOption instead")
 
 	_ yarpc.UnaryOutbound = (*Outbound)(nil)
 )
@@ -177,17 +176,18 @@ func callWithPeer(ctx context.Context, req *yarpc.Request, reqBody *yarpc.Buffer
 			"does not match the service name received in the response: sent %q, got: %q", req.Service, resSvcName)
 	}
 
-	var appErr error
+	var appErrInfo *yarpcerror.Info
 	if res.ApplicationError() {
-		// TODO(mhp): this is a filler error for now to preserve current yarpc
-		// error behavior. This should later be more well-defined.
-		appErr = errors.New("application error")
+		appErrInfo, err = getErrorInfoAndDeleteHeaderKeys(headers)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	return &yarpc.Response{
-		Peer:             getPeerAndDeleteHeaderKeys(headers),
-		Headers:          headers,
-		ApplicationError: appErr,
-	}, resBody, getResponseErrorAndDeleteHeaderKeys(headers)
+		Peer:      getPeerAndDeleteHeaderKeys(headers),
+		Headers:   headers,
+		ErrorInfo: appErrInfo,
+	}, resBody, nil
 }
 
 func (o *Outbound) getPeerForRequest(ctx context.Context, req *yarpc.Request) (*tchannelPeer, func(error), error) {
@@ -256,9 +256,9 @@ func fromSystemError(err tchannel.SystemError) error {
 	code, ok := _tchannelCodeToCode[err.Code()]
 	if !ok {
 		// This should be unreachable.
-		return yarpcerror.Newf(yarpcerror.CodeInternal, "got tchannel.SystemError %v which did not have a matching YARPC code", err)
+		return yarpcerror.New(yarpcerror.CodeInternal, fmt.Sprintf("got tchannel.SystemError %v which did not have a matching YARPC code", err))
 	}
-	return yarpcerror.Newf(code, err.Message())
+	return yarpcerror.New(code, err.Message())
 }
 
 // ServiceHeaderKey is internal key used by YARPC, we need to remove it before give response to client
@@ -279,21 +279,27 @@ func getPeerAndDeleteHeaderKeys(headers yarpc.Headers) yarpc.Identifier {
 	return yarpc.Address(peer)
 }
 
-func getResponseErrorAndDeleteHeaderKeys(headers yarpc.Headers) error {
+func getErrorInfoAndDeleteHeaderKeys(headers yarpc.Headers) (*yarpcerror.Info, error) {
 	errorCodeString, ok := popHeader(headers, ErrorCodeHeaderKey)
 	if !ok {
-		return nil
+		// If we're here, this means we expected an application error, but no
+		// error headers were set. This means the response buffer holds the
+		// error body, so we set a filler error info.
+		return &yarpcerror.Info{
+			Code:    yarpcerror.CodeUnknown,
+			Message: "application error",
+		}, nil
 	}
 	var errorCode yarpcerror.Code
 	if err := errorCode.UnmarshalText([]byte(errorCodeString)); err != nil {
-		return err
+		return nil, err
 	}
 	if errorCode == yarpcerror.CodeOK {
-		return yarpcerror.Newf(yarpcerror.CodeInternal, "got CodeOK from error header")
+		return nil, yarpcerror.New(yarpcerror.CodeInternal, "got CodeOK from error header")
 	}
 	errorName, _ := popHeader(headers, ErrorNameHeaderKey)
 	errorMessage, _ := popHeader(headers, ErrorMessageHeaderKey)
-	return internalyarpcerror.NewWithNamef(errorCode, errorName, errorMessage)
+	return &yarpcerror.Info{Code: errorCode, Message: errorMessage, Name: errorName}, nil
 }
 
 func popHeader(h yarpc.Headers, n string) (string, bool) {

@@ -5,8 +5,10 @@ package storeserver
 
 import (
 	"context"
+	"go.uber.org/thriftrw/envelope"
 	"go.uber.org/thriftrw/wire"
 	yarpc "go.uber.org/yarpc/v2"
+	"go.uber.org/yarpc/v2/yarpcerror"
 	"go.uber.org/yarpc/v2/yarpcthrift"
 	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/atomic"
 	"go.uber.org/yarpc/v2/yarpcthrift/thriftrw-plugin-yarpc2/internal/tests/atomic/readonlystoreserver"
@@ -63,38 +65,48 @@ func New(impl Interface, opts ...yarpcthrift.RegisterOption) []yarpc.EncodingPro
 
 type handler struct{ impl Interface }
 
-func (h handler) CompareAndSwap(ctx context.Context, body wire.Value) (yarpcthrift.Response, error) {
+func (h handler) CompareAndSwap(ctx context.Context, body wire.Value) (envelope.Enveloper, error) {
 	var args atomic.Store_CompareAndSwap_Args
 	if err := args.FromWire(body); err != nil {
-		return yarpcthrift.Response{}, err
+		return nil, err
 	}
 
 	appErr := h.impl.CompareAndSwap(ctx, args.Request)
 
 	result, err := atomic.Store_CompareAndSwap_Helper.WrapResponse(appErr)
-
-	var response yarpcthrift.Response
-	if err == nil {
-		response.Exception = appErr
-		response.Body = result
+	if err != nil {
+		return nil, err
 	}
-	return response, err
+
+	if appErr != nil {
+		return nil, yarpcerror.New(
+			yarpcerror.CodeUnknown,
+			appErr.Error(),
+			yarpcerror.WithDetails(result),
+		)
+	}
+	return result, nil
 }
 
-func (h handler) Increment(ctx context.Context, body wire.Value) (yarpcthrift.Response, error) {
+func (h handler) Increment(ctx context.Context, body wire.Value) (envelope.Enveloper, error) {
 	var args atomic.Store_Increment_Args
 	if err := args.FromWire(body); err != nil {
-		return yarpcthrift.Response{}, err
+		return nil, err
 	}
 
 	appErr := h.impl.Increment(ctx, args.Key, args.Value)
 
 	result, err := atomic.Store_Increment_Helper.WrapResponse(appErr)
-
-	var response yarpcthrift.Response
-	if err == nil {
-		response.Exception = appErr
-		response.Body = result
+	if err != nil {
+		return nil, err
 	}
-	return response, err
+
+	if appErr != nil {
+		return nil, yarpcerror.New(
+			yarpcerror.CodeUnknown,
+			appErr.Error(),
+			yarpcerror.WithDetails(result),
+		)
+	}
+	return result, nil
 }

@@ -95,13 +95,13 @@ type Inbound struct {
 // socket.
 func (i *Inbound) Start(_ context.Context) error {
 	if i.Router == nil {
-		return yarpcerror.Newf(yarpcerror.CodeInternal, "no router configured for HTTP inbound")
+		return yarpcerror.New(yarpcerror.CodeInternal, "no router configured for HTTP inbound")
 	}
 
 	grabHeaders := make(map[string]struct{}, len(i.GrabHeaders))
 	for _, header := range i.GrabHeaders {
 		if !strings.HasPrefix(header, "x-") {
-			return yarpcerror.Newf(yarpcerror.CodeInvalidArgument, "header %s does not begin with 'x-'", header)
+			return yarpcerror.New(yarpcerror.CodeInvalidArgument, fmt.Sprintf("header %s does not begin with 'x-'", header))
 		}
 		grabHeaders[header] = struct{}{}
 	}

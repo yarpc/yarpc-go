@@ -71,5 +71,5 @@ func newClientEncodingError(req *yarpc.Request, isResponse bool, isHeader bool, 
 	parts = append(parts,
 		fmt.Sprintf("for procedure %q of service %q: %v",
 			req.Procedure, req.Service, err))
-	return yarpcerror.Newf(yarpcerror.CodeInvalidArgument, strings.Join(parts, " "))
+	return yarpcerror.New(yarpcerror.CodeInvalidArgument, strings.Join(parts, " "))
 }

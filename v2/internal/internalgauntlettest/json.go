@@ -74,6 +74,7 @@ func validateJSON(t *testing.T, client yarpc.Client, callOptions []yarpc.CallOpt
 		"json-procedure",
 		&jsonRequest{Message: msg},
 		resp,
+		resp,
 		callOptions...)
 
 	require.NoError(t, err, "error making call")
