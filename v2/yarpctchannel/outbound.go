@@ -184,8 +184,8 @@ func callWithPeer(ctx context.Context, req *yarpc.Request, reqBody *yarpc.Buffer
 		}
 	}
 	return &yarpc.Response{
-		Peer:                 getPeerAndDeleteHeaderKeys(headers),
-		Headers:              headers,
+		Peer:      getPeerAndDeleteHeaderKeys(headers),
+		Headers:   headers,
 		ErrorInfo: appErrInfo,
 	}, resBody, nil
 }

@@ -75,7 +75,7 @@ func TestRandPeer(t *testing.T) {
 	}
 	tests := []testStruct{
 		{
-			msg:                      "update and choose",
+			msg: "update and choose",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -84,7 +84,7 @@ func TestRandPeer(t *testing.T) {
 			},
 		},
 		{
-			msg:                      "update many and choose",
+			msg: "update many and choose",
 			retainedAvailablePeerIDs: []string{"1", "2", "3", "4", "5", "6"},
 			expectedAvailablePeers:   []string{"1", "2", "3", "4", "5", "6"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -107,7 +107,7 @@ func TestRandPeer(t *testing.T) {
 			},
 		},
 		{
-			msg:                      "update retain multiple errors",
+			msg: "update retain multiple errors",
 			retainedAvailablePeerIDs: []string{"2"},
 			errRetainedPeerIDs:       []string{"1", "3"},
 			retainErr:                yarpcpeer.ErrInvalidPeerType{},
@@ -120,7 +120,7 @@ func TestRandPeer(t *testing.T) {
 			expectedAvailablePeers: []string{"2"},
 		},
 		{
-			msg:                      "add retain error",
+			msg: "add retain error",
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"1", "2"},
 			errRetainedPeerIDs:       []string{"3"},
@@ -134,7 +134,7 @@ func TestRandPeer(t *testing.T) {
 			},
 		},
 		{
-			msg:                      "add duplicate peer",
+			msg: "add duplicate peer",
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"1", "2"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -149,7 +149,7 @@ func TestRandPeer(t *testing.T) {
 			},
 		},
 		{
-			msg:                      "remove peer not in list",
+			msg: "remove peer not in list",
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"1", "2"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -164,7 +164,7 @@ func TestRandPeer(t *testing.T) {
 			},
 		},
 		{
-			msg:                      "remove release error",
+			msg: "remove release error",
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			errReleasedPeerIDs:       []string{"2"},
 			releaseErr:               yarpcpeer.ErrDialerHasNoReferenceToPeer{},
@@ -180,7 +180,7 @@ func TestRandPeer(t *testing.T) {
 			},
 		},
 		{
-			msg:                      "block but added too late",
+			msg: "block but added too late",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -207,7 +207,7 @@ func TestRandPeer(t *testing.T) {
 			},
 		},
 		{
-			msg:                        "add unavailable peer",
+			msg: "add unavailable peer",
 			retainedAvailablePeerIDs:   []string{"1"},
 			retainedUnavailablePeerIDs: []string{"2"},
 			expectedAvailablePeers:     []string{"1"},
@@ -226,7 +226,7 @@ func TestRandPeer(t *testing.T) {
 			},
 		},
 		{
-			msg:                        "remove unavailable peer",
+			msg: "remove unavailable peer",
 			retainedUnavailablePeerIDs: []string{"1"},
 			releasedPeerIDs:            []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -239,7 +239,7 @@ func TestRandPeer(t *testing.T) {
 			},
 		},
 		{
-			msg:                        "notify peer is now available",
+			msg: "notify peer is now available",
 			retainedUnavailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:     []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -253,7 +253,7 @@ func TestRandPeer(t *testing.T) {
 			},
 		},
 		{
-			msg:                      "notify peer is still available",
+			msg: "notify peer is still available",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -266,7 +266,7 @@ func TestRandPeer(t *testing.T) {
 		// TODO: these next 2 have same msg as prior 2, but timeout initial
 		// choos, so not actually dupes, but unclear
 		{
-			msg:                      "notify peer is now unavailable", // TODO: these
+			msg: "notify peer is now unavailable", // TODO: these
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedUnavailablePeers: []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -280,7 +280,7 @@ func TestRandPeer(t *testing.T) {
 			},
 		},
 		{
-			msg:                        "notify peer is still unavailable",
+			msg: "notify peer is still unavailable",
 			retainedUnavailablePeerIDs: []string{"1"},
 			expectedUnavailablePeers:   []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
@@ -293,7 +293,7 @@ func TestRandPeer(t *testing.T) {
 			},
 		},
 		{
-			msg:                      "notify invalid peer",
+			msg: "notify invalid peer",
 			retainedAvailablePeerIDs: []string{"1"},
 			releasedPeerIDs:          []string{"1"},
 			peerListActions: []yarpctest.PeerListAction{
