@@ -55,6 +55,7 @@ func (m *MockTransport) EXPECT() *MockTransportMockRecorder {
 
 // ReleasePeer mocks base method
 func (m *MockTransport) ReleasePeer(arg0 peer.Identifier, arg1 peer.Subscriber) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReleasePeer", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -62,11 +63,13 @@ func (m *MockTransport) ReleasePeer(arg0 peer.Identifier, arg1 peer.Subscriber) 
 
 // ReleasePeer indicates an expected call of ReleasePeer
 func (mr *MockTransportMockRecorder) ReleasePeer(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleasePeer", reflect.TypeOf((*MockTransport)(nil).ReleasePeer), arg0, arg1)
 }
 
 // RetainPeer mocks base method
 func (m *MockTransport) RetainPeer(arg0 peer.Identifier, arg1 peer.Subscriber) (peer.Peer, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RetainPeer", arg0, arg1)
 	ret0, _ := ret[0].(peer.Peer)
 	ret1, _ := ret[1].(error)
@@ -75,6 +78,7 @@ func (m *MockTransport) RetainPeer(arg0 peer.Identifier, arg1 peer.Subscriber) (
 
 // RetainPeer indicates an expected call of RetainPeer
 func (mr *MockTransportMockRecorder) RetainPeer(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetainPeer", reflect.TypeOf((*MockTransport)(nil).RetainPeer), arg0, arg1)
 }
 
@@ -103,10 +107,12 @@ func (m *MockSubscriber) EXPECT() *MockSubscriberMockRecorder {
 
 // NotifyStatusChanged mocks base method
 func (m *MockSubscriber) NotifyStatusChanged(arg0 peer.Identifier) {
+	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "NotifyStatusChanged", arg0)
 }
 
 // NotifyStatusChanged indicates an expected call of NotifyStatusChanged
 func (mr *MockSubscriberMockRecorder) NotifyStatusChanged(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyStatusChanged", reflect.TypeOf((*MockSubscriber)(nil).NotifyStatusChanged), arg0)
 }

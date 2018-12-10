@@ -55,6 +55,7 @@ func (m *MockIdentifier) EXPECT() *MockIdentifierMockRecorder {
 
 // Identifier mocks base method
 func (m *MockIdentifier) Identifier() string {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Identifier")
 	ret0, _ := ret[0].(string)
 	return ret0
@@ -62,6 +63,7 @@ func (m *MockIdentifier) Identifier() string {
 
 // Identifier indicates an expected call of Identifier
 func (mr *MockIdentifierMockRecorder) Identifier() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Identifier", reflect.TypeOf((*MockIdentifier)(nil).Identifier))
 }
 
@@ -90,16 +92,19 @@ func (m *MockPeer) EXPECT() *MockPeerMockRecorder {
 
 // EndRequest mocks base method
 func (m *MockPeer) EndRequest() {
+	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "EndRequest")
 }
 
 // EndRequest indicates an expected call of EndRequest
 func (mr *MockPeerMockRecorder) EndRequest() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndRequest", reflect.TypeOf((*MockPeer)(nil).EndRequest))
 }
 
 // Identifier mocks base method
 func (m *MockPeer) Identifier() string {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Identifier")
 	ret0, _ := ret[0].(string)
 	return ret0
@@ -107,21 +112,25 @@ func (m *MockPeer) Identifier() string {
 
 // Identifier indicates an expected call of Identifier
 func (mr *MockPeerMockRecorder) Identifier() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Identifier", reflect.TypeOf((*MockPeer)(nil).Identifier))
 }
 
 // StartRequest mocks base method
 func (m *MockPeer) StartRequest() {
+	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "StartRequest")
 }
 
 // StartRequest indicates an expected call of StartRequest
 func (mr *MockPeerMockRecorder) StartRequest() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartRequest", reflect.TypeOf((*MockPeer)(nil).StartRequest))
 }
 
 // Status mocks base method
 func (m *MockPeer) Status() peer.Status {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Status")
 	ret0, _ := ret[0].(peer.Status)
 	return ret0
@@ -129,5 +138,6 @@ func (m *MockPeer) Status() peer.Status {
 
 // Status indicates an expected call of Status
 func (mr *MockPeerMockRecorder) Status() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Status", reflect.TypeOf((*MockPeer)(nil).Status))
 }

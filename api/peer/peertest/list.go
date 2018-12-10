@@ -57,6 +57,7 @@ func (m *MockChooser) EXPECT() *MockChooserMockRecorder {
 
 // Choose mocks base method
 func (m *MockChooser) Choose(arg0 context.Context, arg1 *transport.Request) (peer.Peer, func(error), error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Choose", arg0, arg1)
 	ret0, _ := ret[0].(peer.Peer)
 	ret1, _ := ret[1].(func(error))
@@ -66,11 +67,13 @@ func (m *MockChooser) Choose(arg0 context.Context, arg1 *transport.Request) (pee
 
 // Choose indicates an expected call of Choose
 func (mr *MockChooserMockRecorder) Choose(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Choose", reflect.TypeOf((*MockChooser)(nil).Choose), arg0, arg1)
 }
 
 // IsRunning mocks base method
 func (m *MockChooser) IsRunning() bool {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsRunning")
 	ret0, _ := ret[0].(bool)
 	return ret0
@@ -78,11 +81,13 @@ func (m *MockChooser) IsRunning() bool {
 
 // IsRunning indicates an expected call of IsRunning
 func (mr *MockChooserMockRecorder) IsRunning() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRunning", reflect.TypeOf((*MockChooser)(nil).IsRunning))
 }
 
 // Start mocks base method
 func (m *MockChooser) Start() error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Start")
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -90,11 +95,13 @@ func (m *MockChooser) Start() error {
 
 // Start indicates an expected call of Start
 func (mr *MockChooserMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockChooser)(nil).Start))
 }
 
 // Stop mocks base method
 func (m *MockChooser) Stop() error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Stop")
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -102,6 +109,7 @@ func (m *MockChooser) Stop() error {
 
 // Stop indicates an expected call of Stop
 func (mr *MockChooserMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockChooser)(nil).Stop))
 }
 
@@ -130,6 +138,7 @@ func (m *MockList) EXPECT() *MockListMockRecorder {
 
 // Update mocks base method
 func (m *MockList) Update(arg0 peer.ListUpdates) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -137,6 +146,7 @@ func (m *MockList) Update(arg0 peer.ListUpdates) error {
 
 // Update indicates an expected call of Update
 func (mr *MockListMockRecorder) Update(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockList)(nil).Update), arg0)
 }
 
@@ -165,6 +175,7 @@ func (m *MockChooserList) EXPECT() *MockChooserListMockRecorder {
 
 // Choose mocks base method
 func (m *MockChooserList) Choose(arg0 context.Context, arg1 *transport.Request) (peer.Peer, func(error), error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Choose", arg0, arg1)
 	ret0, _ := ret[0].(peer.Peer)
 	ret1, _ := ret[1].(func(error))
@@ -174,11 +185,13 @@ func (m *MockChooserList) Choose(arg0 context.Context, arg1 *transport.Request) 
 
 // Choose indicates an expected call of Choose
 func (mr *MockChooserListMockRecorder) Choose(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Choose", reflect.TypeOf((*MockChooserList)(nil).Choose), arg0, arg1)
 }
 
 // IsRunning mocks base method
 func (m *MockChooserList) IsRunning() bool {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsRunning")
 	ret0, _ := ret[0].(bool)
 	return ret0
@@ -186,11 +199,13 @@ func (m *MockChooserList) IsRunning() bool {
 
 // IsRunning indicates an expected call of IsRunning
 func (mr *MockChooserListMockRecorder) IsRunning() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRunning", reflect.TypeOf((*MockChooserList)(nil).IsRunning))
 }
 
 // Start mocks base method
 func (m *MockChooserList) Start() error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Start")
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -198,11 +213,13 @@ func (m *MockChooserList) Start() error {
 
 // Start indicates an expected call of Start
 func (mr *MockChooserListMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockChooserList)(nil).Start))
 }
 
 // Stop mocks base method
 func (m *MockChooserList) Stop() error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Stop")
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -210,11 +227,13 @@ func (m *MockChooserList) Stop() error {
 
 // Stop indicates an expected call of Stop
 func (mr *MockChooserListMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockChooserList)(nil).Stop))
 }
 
 // Update mocks base method
 func (m *MockChooserList) Update(arg0 peer.ListUpdates) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -222,5 +241,6 @@ func (m *MockChooserList) Update(arg0 peer.ListUpdates) error {
 
 // Update indicates an expected call of Update
 func (mr *MockChooserListMockRecorder) Update(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockChooserList)(nil).Update), arg0)
 }

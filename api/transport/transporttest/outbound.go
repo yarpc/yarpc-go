@@ -56,6 +56,7 @@ func (m *MockUnaryOutbound) EXPECT() *MockUnaryOutboundMockRecorder {
 
 // Call mocks base method
 func (m *MockUnaryOutbound) Call(arg0 context.Context, arg1 *transport.Request) (*transport.Response, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Call", arg0, arg1)
 	ret0, _ := ret[0].(*transport.Response)
 	ret1, _ := ret[1].(error)
@@ -64,11 +65,13 @@ func (m *MockUnaryOutbound) Call(arg0 context.Context, arg1 *transport.Request) 
 
 // Call indicates an expected call of Call
 func (mr *MockUnaryOutboundMockRecorder) Call(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Call", reflect.TypeOf((*MockUnaryOutbound)(nil).Call), arg0, arg1)
 }
 
 // IsRunning mocks base method
 func (m *MockUnaryOutbound) IsRunning() bool {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsRunning")
 	ret0, _ := ret[0].(bool)
 	return ret0
@@ -76,11 +79,13 @@ func (m *MockUnaryOutbound) IsRunning() bool {
 
 // IsRunning indicates an expected call of IsRunning
 func (mr *MockUnaryOutboundMockRecorder) IsRunning() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRunning", reflect.TypeOf((*MockUnaryOutbound)(nil).IsRunning))
 }
 
 // Start mocks base method
 func (m *MockUnaryOutbound) Start() error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Start")
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -88,11 +93,13 @@ func (m *MockUnaryOutbound) Start() error {
 
 // Start indicates an expected call of Start
 func (mr *MockUnaryOutboundMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockUnaryOutbound)(nil).Start))
 }
 
 // Stop mocks base method
 func (m *MockUnaryOutbound) Stop() error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Stop")
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -100,11 +107,13 @@ func (m *MockUnaryOutbound) Stop() error {
 
 // Stop indicates an expected call of Stop
 func (mr *MockUnaryOutboundMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockUnaryOutbound)(nil).Stop))
 }
 
 // Transports mocks base method
 func (m *MockUnaryOutbound) Transports() []transport.Transport {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Transports")
 	ret0, _ := ret[0].([]transport.Transport)
 	return ret0
@@ -112,6 +121,7 @@ func (m *MockUnaryOutbound) Transports() []transport.Transport {
 
 // Transports indicates an expected call of Transports
 func (mr *MockUnaryOutboundMockRecorder) Transports() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Transports", reflect.TypeOf((*MockUnaryOutbound)(nil).Transports))
 }
 
@@ -140,6 +150,7 @@ func (m *MockOnewayOutbound) EXPECT() *MockOnewayOutboundMockRecorder {
 
 // CallOneway mocks base method
 func (m *MockOnewayOutbound) CallOneway(arg0 context.Context, arg1 *transport.Request) (transport.Ack, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CallOneway", arg0, arg1)
 	ret0, _ := ret[0].(transport.Ack)
 	ret1, _ := ret[1].(error)
@@ -148,11 +159,13 @@ func (m *MockOnewayOutbound) CallOneway(arg0 context.Context, arg1 *transport.Re
 
 // CallOneway indicates an expected call of CallOneway
 func (mr *MockOnewayOutboundMockRecorder) CallOneway(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CallOneway", reflect.TypeOf((*MockOnewayOutbound)(nil).CallOneway), arg0, arg1)
 }
 
 // IsRunning mocks base method
 func (m *MockOnewayOutbound) IsRunning() bool {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsRunning")
 	ret0, _ := ret[0].(bool)
 	return ret0
@@ -160,11 +173,13 @@ func (m *MockOnewayOutbound) IsRunning() bool {
 
 // IsRunning indicates an expected call of IsRunning
 func (mr *MockOnewayOutboundMockRecorder) IsRunning() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRunning", reflect.TypeOf((*MockOnewayOutbound)(nil).IsRunning))
 }
 
 // Start mocks base method
 func (m *MockOnewayOutbound) Start() error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Start")
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -172,11 +187,13 @@ func (m *MockOnewayOutbound) Start() error {
 
 // Start indicates an expected call of Start
 func (mr *MockOnewayOutboundMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockOnewayOutbound)(nil).Start))
 }
 
 // Stop mocks base method
 func (m *MockOnewayOutbound) Stop() error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Stop")
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -184,11 +201,13 @@ func (m *MockOnewayOutbound) Stop() error {
 
 // Stop indicates an expected call of Stop
 func (mr *MockOnewayOutboundMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockOnewayOutbound)(nil).Stop))
 }
 
 // Transports mocks base method
 func (m *MockOnewayOutbound) Transports() []transport.Transport {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Transports")
 	ret0, _ := ret[0].([]transport.Transport)
 	return ret0
@@ -196,6 +215,7 @@ func (m *MockOnewayOutbound) Transports() []transport.Transport {
 
 // Transports indicates an expected call of Transports
 func (mr *MockOnewayOutboundMockRecorder) Transports() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Transports", reflect.TypeOf((*MockOnewayOutbound)(nil).Transports))
 }
 
@@ -224,6 +244,7 @@ func (m *MockStreamOutbound) EXPECT() *MockStreamOutboundMockRecorder {
 
 // CallStream mocks base method
 func (m *MockStreamOutbound) CallStream(arg0 context.Context, arg1 *transport.StreamRequest) (*transport.ClientStream, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CallStream", arg0, arg1)
 	ret0, _ := ret[0].(*transport.ClientStream)
 	ret1, _ := ret[1].(error)
@@ -232,11 +253,13 @@ func (m *MockStreamOutbound) CallStream(arg0 context.Context, arg1 *transport.St
 
 // CallStream indicates an expected call of CallStream
 func (mr *MockStreamOutboundMockRecorder) CallStream(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CallStream", reflect.TypeOf((*MockStreamOutbound)(nil).CallStream), arg0, arg1)
 }
 
 // IsRunning mocks base method
 func (m *MockStreamOutbound) IsRunning() bool {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsRunning")
 	ret0, _ := ret[0].(bool)
 	return ret0
@@ -244,11 +267,13 @@ func (m *MockStreamOutbound) IsRunning() bool {
 
 // IsRunning indicates an expected call of IsRunning
 func (mr *MockStreamOutboundMockRecorder) IsRunning() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRunning", reflect.TypeOf((*MockStreamOutbound)(nil).IsRunning))
 }
 
 // Start mocks base method
 func (m *MockStreamOutbound) Start() error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Start")
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -256,11 +281,13 @@ func (m *MockStreamOutbound) Start() error {
 
 // Start indicates an expected call of Start
 func (mr *MockStreamOutboundMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockStreamOutbound)(nil).Start))
 }
 
 // Stop mocks base method
 func (m *MockStreamOutbound) Stop() error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Stop")
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -268,11 +295,13 @@ func (m *MockStreamOutbound) Stop() error {
 
 // Stop indicates an expected call of Stop
 func (mr *MockStreamOutboundMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockStreamOutbound)(nil).Stop))
 }
 
 // Transports mocks base method
 func (m *MockStreamOutbound) Transports() []transport.Transport {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Transports")
 	ret0, _ := ret[0].([]transport.Transport)
 	return ret0
@@ -280,5 +309,6 @@ func (m *MockStreamOutbound) Transports() []transport.Transport {
 
 // Transports indicates an expected call of Transports
 func (mr *MockStreamOutboundMockRecorder) Transports() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Transports", reflect.TypeOf((*MockStreamOutbound)(nil).Transports))
 }
