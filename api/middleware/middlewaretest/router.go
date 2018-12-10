@@ -56,6 +56,7 @@ func (m *MockRouter) EXPECT() *MockRouterMockRecorder {
 
 // Choose mocks base method
 func (m *MockRouter) Choose(arg0 context.Context, arg1 *transport.Request, arg2 transport.Router) (transport.HandlerSpec, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Choose", arg0, arg1, arg2)
 	ret0, _ := ret[0].(transport.HandlerSpec)
 	ret1, _ := ret[1].(error)
@@ -64,11 +65,13 @@ func (m *MockRouter) Choose(arg0 context.Context, arg1 *transport.Request, arg2 
 
 // Choose indicates an expected call of Choose
 func (mr *MockRouterMockRecorder) Choose(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Choose", reflect.TypeOf((*MockRouter)(nil).Choose), arg0, arg1, arg2)
 }
 
 // Procedures mocks base method
 func (m *MockRouter) Procedures(arg0 transport.Router) []transport.Procedure {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Procedures", arg0)
 	ret0, _ := ret[0].([]transport.Procedure)
 	return ret0
@@ -76,6 +79,7 @@ func (m *MockRouter) Procedures(arg0 transport.Router) []transport.Procedure {
 
 // Procedures indicates an expected call of Procedures
 func (mr *MockRouterMockRecorder) Procedures(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Procedures", reflect.TypeOf((*MockRouter)(nil).Procedures), arg0)
 }
 
@@ -104,6 +108,7 @@ func (m *MockUnaryInbound) EXPECT() *MockUnaryInboundMockRecorder {
 
 // Handle mocks base method
 func (m *MockUnaryInbound) Handle(arg0 context.Context, arg1 *transport.Request, arg2 transport.ResponseWriter, arg3 transport.UnaryHandler) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Handle", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -111,6 +116,7 @@ func (m *MockUnaryInbound) Handle(arg0 context.Context, arg1 *transport.Request,
 
 // Handle indicates an expected call of Handle
 func (mr *MockUnaryInboundMockRecorder) Handle(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Handle", reflect.TypeOf((*MockUnaryInbound)(nil).Handle), arg0, arg1, arg2, arg3)
 }
 
@@ -139,6 +145,7 @@ func (m *MockUnaryOutbound) EXPECT() *MockUnaryOutboundMockRecorder {
 
 // Call mocks base method
 func (m *MockUnaryOutbound) Call(arg0 context.Context, arg1 *transport.Request, arg2 transport.UnaryOutbound) (*transport.Response, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Call", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*transport.Response)
 	ret1, _ := ret[1].(error)
@@ -147,6 +154,7 @@ func (m *MockUnaryOutbound) Call(arg0 context.Context, arg1 *transport.Request, 
 
 // Call indicates an expected call of Call
 func (mr *MockUnaryOutboundMockRecorder) Call(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Call", reflect.TypeOf((*MockUnaryOutbound)(nil).Call), arg0, arg1, arg2)
 }
 
@@ -175,6 +183,7 @@ func (m *MockOnewayInbound) EXPECT() *MockOnewayInboundMockRecorder {
 
 // HandleOneway mocks base method
 func (m *MockOnewayInbound) HandleOneway(arg0 context.Context, arg1 *transport.Request, arg2 transport.OnewayHandler) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "HandleOneway", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -182,6 +191,7 @@ func (m *MockOnewayInbound) HandleOneway(arg0 context.Context, arg1 *transport.R
 
 // HandleOneway indicates an expected call of HandleOneway
 func (mr *MockOnewayInboundMockRecorder) HandleOneway(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleOneway", reflect.TypeOf((*MockOnewayInbound)(nil).HandleOneway), arg0, arg1, arg2)
 }
 
@@ -210,6 +220,7 @@ func (m *MockOnewayOutbound) EXPECT() *MockOnewayOutboundMockRecorder {
 
 // CallOneway mocks base method
 func (m *MockOnewayOutbound) CallOneway(arg0 context.Context, arg1 *transport.Request, arg2 transport.OnewayOutbound) (transport.Ack, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CallOneway", arg0, arg1, arg2)
 	ret0, _ := ret[0].(transport.Ack)
 	ret1, _ := ret[1].(error)
@@ -218,6 +229,7 @@ func (m *MockOnewayOutbound) CallOneway(arg0 context.Context, arg1 *transport.Re
 
 // CallOneway indicates an expected call of CallOneway
 func (mr *MockOnewayOutboundMockRecorder) CallOneway(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CallOneway", reflect.TypeOf((*MockOnewayOutbound)(nil).CallOneway), arg0, arg1, arg2)
 }
 
@@ -246,6 +258,7 @@ func (m *MockStreamInbound) EXPECT() *MockStreamInboundMockRecorder {
 
 // HandleStream mocks base method
 func (m *MockStreamInbound) HandleStream(arg0 *transport.ServerStream, arg1 transport.StreamHandler) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "HandleStream", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -253,6 +266,7 @@ func (m *MockStreamInbound) HandleStream(arg0 *transport.ServerStream, arg1 tran
 
 // HandleStream indicates an expected call of HandleStream
 func (mr *MockStreamInboundMockRecorder) HandleStream(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleStream", reflect.TypeOf((*MockStreamInbound)(nil).HandleStream), arg0, arg1)
 }
 
@@ -281,6 +295,7 @@ func (m *MockStreamOutbound) EXPECT() *MockStreamOutboundMockRecorder {
 
 // CallStream mocks base method
 func (m *MockStreamOutbound) CallStream(arg0 context.Context, arg1 *transport.StreamRequest, arg2 transport.StreamOutbound) (*transport.ClientStream, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CallStream", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*transport.ClientStream)
 	ret1, _ := ret[1].(error)
@@ -289,5 +304,6 @@ func (m *MockStreamOutbound) CallStream(arg0 context.Context, arg1 *transport.St
 
 // CallStream indicates an expected call of CallStream
 func (mr *MockStreamOutboundMockRecorder) CallStream(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CallStream", reflect.TypeOf((*MockStreamOutbound)(nil).CallStream), arg0, arg1, arg2)
 }
