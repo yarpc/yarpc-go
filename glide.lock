@@ -1,5 +1,5 @@
 hash: b9ce5e38613f491706af90585cf5b167b6fc8cc9137dd2df5edb4ba8333f8a1f
-updated: 2018-12-10T15:06:56.966921684Z
+updated: 2018-12-12T15:06:30.002626154Z
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -19,7 +19,7 @@ imports:
   subpackages:
   - spew
 - name: github.com/gogo/protobuf
-  version: 636bf0302bc95575d69441b25a2603156ffdddf1
+  version: 4cbf7e384e768b4e01799441fdf2a706a5635ae7
   subpackages:
   - jsonpb
   - proto
@@ -78,7 +78,7 @@ imports:
   - nfs
   - xfs
 - name: github.com/stretchr/testify
-  version: 8019298d9fa5a04fc2ad10ae03349df3483096a6
+  version: 199de5f3a493a9bf2dcc7fa5bf841d7759c13d7d
   subpackages:
   - assert
   - require
@@ -189,19 +189,19 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 2a47403f2ae58167c4d75973960ccc62b28cb0d8
+  version: b05ddf57801d2239d6ab0ee35f9d981e0420f4ac
   repo: https://github.com/golang/sys
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 6f44c5a2ea40ee3593d98cdcc905cc1fdaa660e2
+  version: 17bcc049122f272a32787ba38073ee47433023e9
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: e00c0697c2f106a0b15ac44d6a8da2b4217935b1
+  version: 59cd96f77e7ec4d6e1fc7489f61915a82879680d
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
