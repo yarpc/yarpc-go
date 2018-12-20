@@ -31,8 +31,10 @@ import yarpcproto "go.uber.org/yarpc/yarpcproto"
 import strings "strings"
 import reflect "reflect"
 
-import context "golang.org/x/net/context"
-import grpc "google.golang.org/grpc"
+import (
+	context "golang.org/x/net/context"
+	grpc "google.golang.org/grpc"
+)
 
 import io "io"
 
@@ -48,15 +50,13 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
 type Ping struct {
-	Beep                 string   `protobuf:"bytes,1,opt,name=beep,proto3" json:"beep,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Beep string `protobuf:"bytes,1,opt,name=beep,proto3" json:"beep,omitempty"`
 }
 
 func (m *Ping) Reset()      { *m = Ping{} }
 func (*Ping) ProtoMessage() {}
 func (*Ping) Descriptor() ([]byte, []int) {
-	return fileDescriptor_crossdock_b9725983d3c99657, []int{0}
+	return fileDescriptor_crossdock_bd3243d133fc6d19, []int{0}
 }
 func (m *Ping) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -93,15 +93,13 @@ func (m *Ping) GetBeep() string {
 }
 
 type Pong struct {
-	Boop                 string   `protobuf:"bytes,1,opt,name=boop,proto3" json:"boop,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Boop string `protobuf:"bytes,1,opt,name=boop,proto3" json:"boop,omitempty"`
 }
 
 func (m *Pong) Reset()      { *m = Pong{} }
 func (*Pong) ProtoMessage() {}
 func (*Pong) Descriptor() ([]byte, []int) {
-	return fileDescriptor_crossdock_b9725983d3c99657, []int{1}
+	return fileDescriptor_crossdock_bd3243d133fc6d19, []int{1}
 }
 func (m *Pong) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -138,15 +136,13 @@ func (m *Pong) GetBoop() string {
 }
 
 type Token struct {
-	Value                string   `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Value string `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
 }
 
 func (m *Token) Reset()      { *m = Token{} }
 func (*Token) ProtoMessage() {}
 func (*Token) Descriptor() ([]byte, []int) {
-	return fileDescriptor_crossdock_b9725983d3c99657, []int{2}
+	return fileDescriptor_crossdock_bd3243d133fc6d19, []int{2}
 }
 func (m *Token) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -306,8 +302,9 @@ var _ grpc.ClientConn
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion4
 
-// Client API for Echo service
-
+// EchoClient is the client API for Echo service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type EchoClient interface {
 	Echo(ctx context.Context, in *Ping, opts ...grpc.CallOption) (*Pong, error)
 }
@@ -329,8 +326,7 @@ func (c *echoClient) Echo(ctx context.Context, in *Ping, opts ...grpc.CallOption
 	return out, nil
 }
 
-// Server API for Echo service
-
+// EchoServer is the server API for Echo service.
 type EchoServer interface {
 	Echo(context.Context, *Ping) (*Pong, error)
 }
@@ -370,8 +366,9 @@ var _Echo_serviceDesc = grpc.ServiceDesc{
 	Metadata: "internal/crossdock/crossdockpb/crossdock.proto",
 }
 
-// Client API for Oneway service
-
+// OnewayClient is the client API for Oneway service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type OnewayClient interface {
 	Echo(ctx context.Context, in *Token, opts ...grpc.CallOption) (*yarpcproto.Oneway, error)
 }
@@ -393,8 +390,7 @@ func (c *onewayClient) Echo(ctx context.Context, in *Token, opts ...grpc.CallOpt
 	return out, nil
 }
 
-// Server API for Oneway service
-
+// OnewayServer is the server API for Oneway service.
 type OnewayServer interface {
 	Echo(context.Context, *Token) (*yarpcproto.Oneway, error)
 }
@@ -516,6 +512,9 @@ func encodeVarintCrossdock(dAtA []byte, offset int, v uint64) int {
 	return offset + 1
 }
 func (m *Ping) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	l = len(m.Beep)
@@ -526,6 +525,9 @@ func (m *Ping) Size() (n int) {
 }
 
 func (m *Pong) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	l = len(m.Boop)
@@ -536,6 +538,9 @@ func (m *Pong) Size() (n int) {
 }
 
 func (m *Token) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	l = len(m.Value)
@@ -939,11 +944,11 @@ var (
 )
 
 func init() {
-	proto.RegisterFile("internal/crossdock/crossdockpb/crossdock.proto", fileDescriptor_crossdock_b9725983d3c99657)
+	proto.RegisterFile("internal/crossdock/crossdockpb/crossdock.proto", fileDescriptor_crossdock_bd3243d133fc6d19)
 }
 
-var fileDescriptor_crossdock_b9725983d3c99657 = []byte{
-	// 251 bytes of a gzipped FileDescriptorProto
+var fileDescriptor_crossdock_bd3243d133fc6d19 = []byte{
+	// 260 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xd2, 0xcb, 0xcc, 0x2b, 0x49,
 	0x2d, 0xca, 0x4b, 0xcc, 0xd1, 0x4f, 0x2e, 0xca, 0x2f, 0x2e, 0x4e, 0xc9, 0x4f, 0xce, 0x46, 0xb0,
 	0x0a, 0x92, 0x10, 0x6c, 0xbd, 0x82, 0xa2, 0xfc, 0x92, 0x7c, 0x21, 0xd9, 0xd2, 0xa4, 0xd4, 0x22,
@@ -955,9 +960,10 @@ var fileDescriptor_crossdock_b9725983d3c99657 = []byte{
 	0x14, 0xc1, 0xc5, 0xe2, 0x9a, 0x9c, 0x91, 0x2f, 0x14, 0x00, 0xa5, 0x95, 0xf5, 0xf0, 0x3a, 0x4f,
 	0x0f, 0xe4, 0x06, 0x29, 0x82, 0x8a, 0xf2, 0xf3, 0xd2, 0x8d, 0xbc, 0xb8, 0xd8, 0xfc, 0xf3, 0x52,
 	0xcb, 0x13, 0x2b, 0x85, 0x1c, 0xa0, 0x66, 0xab, 0x10, 0xd0, 0x06, 0x76, 0xa7, 0x94, 0x10, 0xb2,
-	0x2a, 0x88, 0x09, 0x4e, 0x96, 0x17, 0x1e, 0xca, 0x31, 0xdc, 0x78, 0x28, 0xc7, 0xf0, 0xe1, 0xa1,
+	0x2a, 0x88, 0x09, 0x4e, 0x8e, 0x17, 0x1e, 0xca, 0x31, 0xdc, 0x78, 0x28, 0xc7, 0xf0, 0xe1, 0xa1,
 	0x1c, 0x63, 0xc3, 0x23, 0x39, 0xc6, 0x15, 0x8f, 0xe4, 0x18, 0x4f, 0x3c, 0x92, 0x63, 0xbc, 0xf0,
 	0x48, 0x8e, 0xf1, 0xc1, 0x23, 0x39, 0xc6, 0x17, 0x8f, 0xe4, 0x18, 0x3e, 0x3c, 0x92, 0x63, 0x9c,
-	0xf0, 0x58, 0x8e, 0x21, 0x8a, 0x1b, 0x29, 0xf8, 0x93, 0xd8, 0xc0, 0xc1, 0x67, 0x0c, 0x08, 0x00,
-	0x00, 0xff, 0xff, 0x54, 0xff, 0x2f, 0xb2, 0xa7, 0x01, 0x00, 0x00,
+	0xf0, 0x58, 0x8e, 0xe1, 0xc2, 0x63, 0x39, 0x86, 0x1b, 0x8f, 0xe5, 0x18, 0xa2, 0xb8, 0x91, 0xa2,
+	0x21, 0x89, 0x0d, 0x1c, 0x8c, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0x22, 0xd1, 0x94, 0xcf,
+	0xaf, 0x01, 0x00, 0x00,
 }
