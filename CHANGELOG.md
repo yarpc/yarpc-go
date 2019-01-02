@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   This addresses a data race observed in production that results in broken peer
   list invariants.
 
+### Added
+- Added `api/transport.WithContext` option for creating new `ServerStream` objects
+  with an updated Context.
+
 ## [1.35.2] - 2018-11-06
 ### Removed
 - Reverted HTTP transport marking peers as unavailable when the remote side
