@@ -33,10 +33,32 @@ type StreamRequest struct {
 	Meta *RequestMeta
 }
 
+// SteramOption unifies options that apply to both stream clients and servers.
+type StreamOption interface {
+	ServerStreamOption
+	ClientStreamOption
+}
+
 // ServerStreamOption are options to configure a ServerStream.
-// There are no current ServerStreamOptions implemented.
 type ServerStreamOption interface {
-	unimplemented()
+	applyServerStream(*ServerStream)
+}
+
+type withContextServerStreamOption struct {
+	ctx context.Context
+}
+
+func (o *withContextServerStreamOption) applyServerStream(s *ServerStream) {
+	s.ctx = o.ctx
+}
+
+func (o *withContextServerStreamOption) unimplemented() {
+	// implement the ClientStreamOption interface, which doesn't yet exist
+}
+
+// WithContext configures a stream to use the provided context.
+func WithContext(ctx context.Context) StreamOption {
+	return &withContextServerStreamOption{ctx: ctx}
 }
 
 // NewServerStream will create a new ServerStream.
@@ -44,17 +66,25 @@ func NewServerStream(s Stream, options ...ServerStreamOption) (*ServerStream, er
 	if s == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("non-nil stream is required")
 	}
-	return &ServerStream{stream: s}, nil
+	ss := &ServerStream{
+		ctx:    s.Context(),
+		stream: s,
+	}
+	for _, option := range options {
+		option.applyServerStream(ss)
+	}
+	return ss, nil
 }
 
 // ServerStream represents the Server API of interacting with a Stream.
 type ServerStream struct {
+	ctx    context.Context
 	stream Stream
 }
 
 // Context returns the context for the stream.
 func (s *ServerStream) Context() context.Context {
-	return s.stream.Context()
+	return s.ctx
 }
 
 // Request contains all the metadata about the request.
