@@ -2,7 +2,7 @@
 // source: encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing_no_service.proto
 // DO NOT EDIT!
 
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
