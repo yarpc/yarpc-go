@@ -38,8 +38,6 @@ import:
   version: ^1.10
 - package: golang.org/x/net
   version: master
-  # explicitly specifying this because glide is having issues with golang.org repos
-  repo: https://github.com/golang/net
   subpackages:
   - context
 - package: google.golang.org/grpc
