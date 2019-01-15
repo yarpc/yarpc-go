@@ -109,10 +109,6 @@ thrift --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift --out inter
 protoc_go yarpcproto/yarpc.proto
 protoc_all internal/examples/protobuf/examplepb/example.proto
 protoc_all internal/crossdock/crossdockpb/crossdock.proto
-protoc_all \
-  encoding/protobuf/protoc-gen-yarpc-go/internal/testing/dep.proto \
-  encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto \
-  encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing_no_service.proto
 protoc_all internal/examples/streaming/stream.proto
 
 ragel -Z -G2 -o internal/interpolate/parse.go internal/interpolate/parse.rl
