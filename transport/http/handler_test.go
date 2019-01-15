@@ -199,7 +199,7 @@ func TestHandlerHeaders(t *testing.T) {
 		rw := httptest.NewRecorder()
 		httpHandler.ServeHTTP(rw, req)
 		assert.Equal(t, 200, rw.Code, "expected 200 status code")
-		assert.Equal(t, getContentType(transport.Encoding(tt.giveEncoding)), rw.HeaderMap.Get("Content-Type"))
+		assert.Equal(t, getContentType(transport.Encoding(tt.giveEncoding)), rw.Header().Get("Content-Type"))
 	}
 }
 
@@ -302,7 +302,7 @@ func TestHandlerFailures(t *testing.T) {
 		assert.True(t, httpStatusCode >= 400 && httpStatusCode < 500, "expected 400 level code")
 		code := statusCodeToBestCode(httpStatusCode)
 		assert.Equal(t, tt.wantCode, code)
-		assert.Equal(t, "text/plain; charset=utf8", rw.HeaderMap.Get("Content-Type"))
+		assert.Equal(t, "text/plain; charset=utf8", rw.Header().Get("Content-Type"))
 	}
 }
 
