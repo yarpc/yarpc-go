@@ -22,13 +22,6 @@ steps:
         run: yarpc-go-1.10
     agents:
       queue: workers
-  - name: ":go: 1.10 lint"
-    command: "make lint"
-    plugins:
-      docker-compose#v2.0.0:
-        run: yarpc-go-1.10
-    agents:
-      queue: workers
   - name: ":go: 1.10 examples"
     command: "make examples"
     plugins:
