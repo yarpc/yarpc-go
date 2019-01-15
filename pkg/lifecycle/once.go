@@ -105,9 +105,9 @@ type Once struct {
 //      function must be called at-most-once.
 func NewOnce() *Once {
 	return &Once{
-		startCh:    make(chan struct{}, 0),
-		stoppingCh: make(chan struct{}, 0),
-		stopCh:     make(chan struct{}, 0),
+		startCh:    make(chan struct{}),
+		stoppingCh: make(chan struct{}),
+		stopCh:     make(chan struct{}),
 	}
 }
 

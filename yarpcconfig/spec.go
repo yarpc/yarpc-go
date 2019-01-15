@@ -291,7 +291,7 @@ func compileTransportSpec(spec *TransportSpec) (*compiledTransportSpec, error) {
 	out := compiledTransportSpec{Name: spec.Name}
 
 	if spec.Name == "" {
-		return nil, errors.New("Name is required")
+		return nil, errors.New("field Name is required")
 	}
 
 	switch strings.ToLower(spec.Name) {
@@ -300,7 +300,7 @@ func compileTransportSpec(spec *TransportSpec) (*compiledTransportSpec, error) {
 	}
 
 	if spec.BuildTransport == nil {
-		return nil, errors.New("BuildTransport is required")
+		return nil, errors.New("field BuildTransport is required")
 	}
 
 	var err error
@@ -478,11 +478,11 @@ func (c *compiledPeerChooserPreset) Build(t peer.Transport, k *Kit) (peer.Choose
 
 func compilePeerChooserPreset(preset PeerChooserPreset) (*compiledPeerChooserPreset, error) {
 	if preset.Name == "" {
-		return nil, errors.New("Name is required")
+		return nil, errors.New("field Name is required")
 	}
 
 	if preset.BuildPeerChooser == nil {
-		return nil, errors.New("BuildPeerChooser is required")
+		return nil, errors.New("field BuildPeerChooser is required")
 	}
 
 	v := reflect.ValueOf(preset.BuildPeerChooser)
@@ -523,11 +523,11 @@ func compilePeerChooserSpec(spec *PeerChooserSpec) (*compiledPeerChooserSpec, er
 	out := compiledPeerChooserSpec{Name: spec.Name}
 
 	if spec.Name == "" {
-		return nil, errors.New("Name is required")
+		return nil, errors.New("field Name is required")
 	}
 
 	if spec.BuildPeerChooser == nil {
-		return nil, errors.New("BuildPeerChooser is required")
+		return nil, errors.New("field BuildPeerChooser is required")
 	}
 
 	buildPeerChooser, err := compilePeerChooserConfig(spec.BuildPeerChooser)
@@ -580,11 +580,11 @@ func compilePeerListSpec(spec *PeerListSpec) (*compiledPeerListSpec, error) {
 	out := compiledPeerListSpec{Name: spec.Name}
 
 	if spec.Name == "" {
-		return nil, errors.New("Name is required")
+		return nil, errors.New("field Name is required")
 	}
 
 	if spec.BuildPeerList == nil {
-		return nil, errors.New("BuildPeerList is required")
+		return nil, errors.New("field BuildPeerList is required")
 	}
 
 	buildPeerList, err := compilePeerListConfig(spec.BuildPeerList)
@@ -636,11 +636,11 @@ func compilePeerListUpdaterSpec(spec *PeerListUpdaterSpec) (*compiledPeerListUpd
 	out := compiledPeerListUpdaterSpec{Name: spec.Name}
 
 	if spec.Name == "" {
-		return nil, errors.New("Name is required")
+		return nil, errors.New("field Name is required")
 	}
 
 	if spec.BuildPeerListUpdater == nil {
-		return nil, errors.New("BuildPeerListUpdater is required")
+		return nil, errors.New("field BuildPeerListUpdater is required")
 	}
 
 	buildPeerListUpdater, err := compilePeerListUpdaterConfig(spec.Name, spec.BuildPeerListUpdater)

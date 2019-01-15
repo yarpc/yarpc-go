@@ -55,7 +55,7 @@ func newPeer(addr string, t *Transport) *httpPeer {
 		transport:             t,
 		addr:                  addr,
 		changed:               make(chan struct{}, 1),
-		released:              make(chan struct{}, 0),
+		released:              make(chan struct{}),
 		timer:                 timer,
 		innocentUntilUnixNano: atomic.NewInt64(0),
 	}
