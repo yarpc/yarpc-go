@@ -24,7 +24,6 @@
 package lib
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -46,7 +45,7 @@ import (
 	{{range $i := .Imports}}{{if $i.Standard}}{{$i | printf "%s\n"}}{{end}}{{end}}
 
 	{{range $i := .Imports}}{{if not $i.Standard}}{{$i | printf "%s\n"}}{{end}}{{end}}
-){{end}}
+){{else}}import "github.com/gogo/protobuf/proto"{{end}}
 
 {{if ne (len .Services) 0}}var _ = ioutil.NopCloser{{end}}
 
@@ -557,11 +556,15 @@ var (
 )
 {{end}}
 
-var {{ fileDescriptorClosureVarName .File }} = [][]byte{
-	// {{ .Name }}
-	{{ encodedFileDescriptor .File }},{{range $dependency := .TransitiveDependencies }}
-	// {{ $dependency.Name }}
-	{{ encodedFileDescriptor $dependency }},{{end}}
+
+{{ $inlineDescriptor := fileDescriptorClosureVarName .File  }}
+var {{ $inlineDescriptor }} [][]byte
+
+func init() {
+	{{ $inlineDescriptor }} = [][]byte{
+		proto.FileDescriptor("{{ .Name }}"),{{range $dependency := .TransitiveDependencies }}
+ 		proto.FileDescriptor("{{ $dependency.Name }}"),{{ end }}
+	}
 }
 
 {{if .Services}}func init() { {{range $service := .Services}}
@@ -582,7 +585,6 @@ var Runner = protoplugin.NewRunner(
 			"clientStreamingMethods":       clientStreamingMethods,
 			"serverStreamingMethods":       serverStreamingMethods,
 			"clientServerStreamingMethods": clientServerStreamingMethods,
-			"encodedFileDescriptor":        encodedFileDescriptor,
 			"fileDescriptorClosureVarName": fileDescriptorClosureVarName,
 			"trimPrefixPeriod":             trimPrefixPeriod,
 		}).Parse(tmpl)),
@@ -674,36 +676,6 @@ func fileDescriptorClosureVarName(f *protoplugin.File) (string, error) {
 	// as golang identifiers and to discourage external usage of this constant.
 	h := sha256.Sum256([]byte(name))
 	return fmt.Sprintf("yarpcFileDescriptorClosure%s", hex.EncodeToString(h[:8])), nil
-}
-
-func encodedFileDescriptor(f *protoplugin.File) (string, error) {
-	fdBytes, err := f.SerializedFileDescriptor()
-	if err != nil {
-		return "", err
-	}
-
-	// Create string that contains a golang byte slice literal containing the
-	// serialized file descriptor:
-	//
-	// []byte{
-	//     0x00, 0x01, 0x02, ..., 0xFF,	// Up to 16 bytes per line
-	// }
-	//
-	var buf bytes.Buffer
-	buf.WriteString("[]byte{\n")
-	for len(fdBytes) > 0 {
-		n := 16
-		if n > len(fdBytes) {
-			n = len(fdBytes)
-		}
-		for _, c := range fdBytes[:n] {
-			fmt.Fprintf(&buf, "0x%02x,", c)
-		}
-		buf.WriteString("\n")
-		fdBytes = fdBytes[n:]
-	}
-	buf.WriteString("}")
-	return buf.String(), nil
 }
 
 func trimPrefixPeriod(s string) string {
