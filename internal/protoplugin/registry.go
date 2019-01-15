@@ -221,7 +221,7 @@ func (r *registry) loadServices(file *File) error {
 	for _, sd := range file.GetService() {
 		svc := &Service{
 			ServiceDescriptorProto: sd,
-			File: file,
+			File:                   file,
 		}
 		for _, md := range sd.GetMethod() {
 			meth, err := r.newMethod(svc, md)

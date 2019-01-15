@@ -1,10 +1,10 @@
 version: '3'
 services:
 
-  yarpc-go-1.9:
+  yarpc-go-1.10:
     build:
       context: .
-      dockerfile: Dockerfile.1.9
+      dockerfile: Dockerfile.1.10
     network_mode: "host"
     environment:
       - TEST_TIME_SCALE=5
@@ -23,10 +23,10 @@ services:
       - BUILDKITE_PROJECT_SLUG
       - BUILDKITE_REPO
 
-  yarpc-go-1.10:
+  yarpc-go-1.11:
     build:
       context: .
-      dockerfile: Dockerfile.1.10
+      dockerfile: Dockerfile.1.11
     network_mode: "host"
     environment:
       - TEST_TIME_SCALE=5

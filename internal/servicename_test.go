@@ -33,7 +33,7 @@ func TestValidServiceNames(t *testing.T) {
 		"supper-skipper",
 		"supperskipper83",
 		"supper-skipper83",
-		"a77ab7g4-51cb-4808-a9ef-875568bde54a",         // not valid UUID
+		"a77ab7g4-51cb-4808-a9ef-875568bde54a", // not valid UUID
 		"eviluuid26695g10-a384-48e7-8867-6d48b7fae80a", // not valid UUID
 		"a77gb7e4-51cb-4808-a9ef-875568bde54aeviluuid", // not valid UUID
 	}

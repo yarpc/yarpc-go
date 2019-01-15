@@ -51,12 +51,12 @@ func newPeer(addr string, t *Transport) *httpPeer {
 	}
 
 	return &httpPeer{
-		Peer:      hostport.NewPeer(hostport.PeerIdentifier(addr), t),
-		transport: t,
-		addr:      addr,
-		changed:   make(chan struct{}, 1),
-		released:  make(chan struct{}, 0),
-		timer:     timer,
+		Peer:                  hostport.NewPeer(hostport.PeerIdentifier(addr), t),
+		transport:             t,
+		addr:                  addr,
+		changed:               make(chan struct{}, 1),
+		released:              make(chan struct{}, 0),
+		timer:                 timer,
 		innocentUntilUnixNano: atomic.NewInt64(0),
 	}
 }

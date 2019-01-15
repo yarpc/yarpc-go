@@ -160,7 +160,7 @@ func TestChannelCallSuccess(t *testing.T) {
 		withServiceRespHeader bool
 	}{
 		{
-			msg: "channel call success with response service name header",
+			msg:                   "channel call success with response service name header",
 			withServiceRespHeader: true,
 		},
 		{
