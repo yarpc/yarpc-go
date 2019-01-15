@@ -49,7 +49,7 @@ func newPeer(addr string, t *Transport) *tchannelPeer {
 		Peer:      hostport.NewPeer(hostport.PeerIdentifier(addr), t),
 		transport: t,
 		changed:   make(chan struct{}, 1),
-		released:  make(chan struct{}, 0),
+		released:  make(chan struct{}),
 		timer:     timer,
 	}
 }

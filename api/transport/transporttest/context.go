@@ -78,7 +78,7 @@ func (c *ContextMatcher) Matches(got interface{}) bool {
 			return false
 		}
 
-		ttl := d.Sub(time.Now())
+		ttl := time.Until(d)
 		maxTTL := c.ttl + c.TTLDelta
 		minTTL := c.ttl - c.TTLDelta
 		if ttl > maxTTL || ttl < minTTL {

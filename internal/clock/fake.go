@@ -34,9 +34,8 @@ import (
 type FakeClock struct {
 	sync.Mutex
 
-	addLock sync.Mutex
-	now     time.Time
-	timers  timers
+	now    time.Time
+	timers timers
 }
 
 var _ Clock = (*FakeClock)(nil)

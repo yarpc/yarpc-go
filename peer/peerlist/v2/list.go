@@ -207,11 +207,11 @@ func (pl *List) updateInitialized(updates peer.ListUpdates) error {
 func (pl *List) updateUninitialized(updates peer.ListUpdates) error {
 	var errs error
 	for _, pid := range updates.Removals {
-		if _, ok := pl.uninitializedPeers[pid.Identifier()]; ok {
-			delete(pl.uninitializedPeers, pid.Identifier())
-		} else {
+		if _, ok := pl.uninitializedPeers[pid.Identifier()]; !ok {
 			errs = multierr.Append(errs, peer.ErrPeerRemoveNotInList(pid.Identifier()))
+			continue
 		}
+		delete(pl.uninitializedPeers, pid.Identifier())
 	}
 	for _, pid := range updates.Additions {
 		pl.uninitializedPeers[pid.Identifier()] = pid

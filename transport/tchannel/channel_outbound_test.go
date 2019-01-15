@@ -290,10 +290,9 @@ func TestChannelCallFailures(t *testing.T) {
 		}))
 
 	type testCase struct {
-		desc        string
-		procedure   string
-		getOutbound func(*tchannel.Channel, string) (transport.UnaryOutbound, error)
-		message     string
+		desc      string
+		procedure string
+		message   string
 	}
 
 	tests := []testCase{

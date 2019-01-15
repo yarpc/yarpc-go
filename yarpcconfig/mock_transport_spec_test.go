@@ -144,20 +144,6 @@ func (r *_transportSpecRecorder) BuildStreamOutbound(cfg interface{}, t transpor
 	return r.ctrl.RecordCall(r.m, "BuildStreamOutbound", cfg, t, kit)
 }
 
-// anyKitMatcher verifies that an instance is a *Kit.
-type anyKitMatcher struct{}
-
-func (anyKitMatcher) Matches(k interface{}) bool {
-	_, ok := k.(*Kit)
-	return ok
-}
-
-func (anyKitMatcher) String() string {
-	return "any kit"
-}
-
-var anyKit = anyKitMatcher{}
-
 // kitMatcher matches attributes of a kit
 type kitMatcher struct {
 	ServiceName string

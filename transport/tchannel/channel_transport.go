@@ -99,7 +99,6 @@ func (options transportOptions) newChannelTransport() *ChannelTransport {
 type ChannelTransport struct {
 	once              *lifecycle.Once
 	ch                Channel
-	name              string
 	addr              string
 	tracer            opentracing.Tracer
 	logger            *zap.Logger

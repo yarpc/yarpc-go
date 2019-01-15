@@ -61,12 +61,10 @@ type Transport struct {
 	listener          net.Listener
 	newResponseWriter func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
 
-	connTimeout            time.Duration
-	initialConnRetryDelay  time.Duration
-	connRetryBackoffFactor int
-	connectorsGroup        sync.WaitGroup
-	connBackoffStrategy    backoffapi.Strategy
-	headerCase             headerCase
+	connTimeout         time.Duration
+	connectorsGroup     sync.WaitGroup
+	connBackoffStrategy backoffapi.Strategy
+	headerCase          headerCase
 
 	peers map[string]*tchannelPeer
 }

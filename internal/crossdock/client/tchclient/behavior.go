@@ -33,8 +33,6 @@ const (
 	serverName = "yarpc-test"
 )
 
-var log = tchannel.SimpleLogger
-
 // Run exercises a YARPC server from a tchannel client.
 func Run(t crossdock.T) {
 	fatals := crossdock.Fatals(t)

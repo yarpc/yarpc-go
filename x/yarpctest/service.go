@@ -149,7 +149,6 @@ type wrappedDispatcher struct {
 	*yarpc.Dispatcher
 	options    []api.ServiceOption
 	procedures []transport.Procedure
-	closer     func() error
 }
 
 func (w *wrappedDispatcher) Start(t testing.TB) error {
