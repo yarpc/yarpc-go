@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-package uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing;
-
-option go_package = "testing";
-
-message Foo {
-  string id = 1;
-}
