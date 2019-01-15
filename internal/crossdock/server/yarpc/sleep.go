@@ -47,8 +47,6 @@ func WaitForTimeoutRaw(ctx context.Context, body []byte) ([]byte, error) {
 	if _, ok := ctx.Deadline(); !ok {
 		return nil, fmt.Errorf("no deadline set in context")
 	}
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	}
+	<-ctx.Done()
+	return nil, ctx.Err()
 }

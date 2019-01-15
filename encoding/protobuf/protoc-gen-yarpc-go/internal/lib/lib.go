@@ -669,7 +669,7 @@ func clientServerStreamingMethods(service *protoplugin.Service) ([]*protoplugin.
 func fileDescriptorClosureVarName(f *protoplugin.File) (string, error) {
 	name := f.GetName()
 	if name == "" {
-		return "", fmt.Errorf("Could not create fileDescriptorClosureVarName: %s has no name", f)
+		return "", fmt.Errorf("could not create fileDescriptorClosureVarName: %s has no name", f)
 	}
 
 	// Use a sha256 of the filename instead of the filename to prevent any characters that are illegal

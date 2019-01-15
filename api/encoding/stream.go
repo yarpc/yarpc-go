@@ -23,5 +23,6 @@ package encoding
 // StreamOption is an option that may be passed in at streaming function call
 // sites.
 type StreamOption interface {
+	//lint:ignore U1000 Intentionally unused.
 	unimplemented()
 }

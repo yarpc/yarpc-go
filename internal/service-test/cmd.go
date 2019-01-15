@@ -111,7 +111,7 @@ func (c *cmd) Validate() error {
 	if c.output == "" {
 		return nil
 	}
-	output := cleanOutput(string(c.stdout.Bytes()))
+	output := cleanOutput(c.stdout.String())
 	expectedOutput := cleanOutput(c.output)
 	if output != expectedOutput {
 		return c.wrapError("validation failed", fmt.Errorf("expected\n%s\ngot\n%s", expectedOutput, output))

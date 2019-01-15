@@ -77,9 +77,7 @@ func extractProcedures(procs *[]transport.Procedure) fx.Option {
 	}
 
 	return fx.Invoke(func(p params) {
-		for _, proc := range p.SingleProcedures {
-			*procs = append(*procs, proc)
-		}
+		*procs = append(*procs, p.SingleProcedures...)
 		for _, procList := range p.ProcedureLists {
 			*procs = append(*procs, procList...)
 		}

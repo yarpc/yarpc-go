@@ -227,7 +227,7 @@ func TestWildcardBeforeEncodingProcedureRegistration(t *testing.T) {
 		"expected router panic")
 }
 
-func IgnoreTestRouterWithMiddleware(t *testing.T) {
+func TestIgnoreTestRouterWithMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
