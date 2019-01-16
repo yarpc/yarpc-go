@@ -33,6 +33,7 @@ import (
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/internal/interpolate"
 	"go.uber.org/yarpc/internal/whitespace"
+	"go.uber.org/zap/zapcore"
 	"gopkg.in/yaml.v2"
 )
 
@@ -100,6 +101,69 @@ func TestConfigurator(t *testing.T) {
 		desc string
 		test func(*testing.T, *gomock.Controller) testCase
 	}{
+		{
+			desc: "no inbounds or outbounds",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.serviceName = "foo"
+				tt.give = whitespace.Expand(``)
+				tt.wantConfig = yarpc.Config{Name: "foo"}
+				return
+			},
+		},
+		{
+			desc: "application error debug logging",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				debugLevel := zapcore.DebugLevel
+
+				tt.serviceName = "foo"
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+							applicationError: debug
+				`)
+				tt.wantConfig = yarpc.Config{
+					Name: "foo",
+					Logging: yarpc.LoggingConfig{
+						Levels: yarpc.LogLevelConfig{
+							ApplicationError: &debugLevel,
+						},
+					},
+				}
+				return
+			},
+		},
+		{
+			desc: "application error, invalid type",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+							applicationError: 42
+				`)
+				tt.wantErr = []string{
+					"error decoding 'logging.levels.applicationError':",
+					"could not decode Zap log level:",
+					"expected type 'string', got unconvertible type 'int'",
+				}
+				return
+			},
+		},
+		{
+			desc: "application error, invalid level",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+							applicationError: not a level
+				`)
+				tt.wantErr = []string{
+					"error decoding 'logging.levels.applicationError':",
+					"could not decode Zap log level:",
+					`unrecognized level: "not a level"`,
+				}
+				return
+			},
+		},
 		{
 			desc: "unknown inbound",
 			test: func(*testing.T, *gomock.Controller) (tt testCase) {

@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- The log level for application errors is now configurable with yarpcconfig and
+  with yarpc.NewDispatcher.
+
 ### Fixed
 - Upgrade a read-lock to a read-write lock around peer selection.
   This addresses a data race observed in production that results in broken peer
