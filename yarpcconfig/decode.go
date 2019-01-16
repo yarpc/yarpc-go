@@ -25,13 +25,45 @@ import (
 	"fmt"
 
 	"github.com/uber-go/mapdecode"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/config"
+	"go.uber.org/zap/zapcore"
 )
 
 type yarpcConfig struct {
 	Inbounds   inbounds                       `config:"inbounds"`
 	Outbounds  clientConfigs                  `config:"outbounds"`
 	Transports map[string]config.AttributeMap `config:"transports"`
+	Logging    logging                        `config:"logging"`
+}
+
+// logging allows configuring the log levels from YAML.
+type logging struct {
+	Levels struct {
+		ApplicationError *zapLevel `config:"applicationError"`
+	} `config:"levels"`
+}
+
+// Fills values from this object into the provided YARPC config.
+func (l *logging) fill(cfg *yarpc.Config) {
+	cfg.Logging.Levels.ApplicationError = (*zapcore.Level)(l.Levels.ApplicationError)
+}
+
+type zapLevel zapcore.Level
+
+// mapdecode doesn't suport encoding.TextMarhsaler by default so we have to do
+// this manually.
+func (l *zapLevel) Decode(into mapdecode.Into) error {
+	var s string
+	if err := into(&s); err != nil {
+		return fmt.Errorf("could not decode Zap log level: %v", err)
+	}
+
+	err := (*zapcore.Level)(l).UnmarshalText([]byte(s))
+	if err != nil {
+		return fmt.Errorf("could not decode Zap log level: %v", err)
+	}
+	return err
 }
 
 type inbounds []inbound

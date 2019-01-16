@@ -277,7 +277,13 @@ func (c *Configurator) load(serviceName string, cfg *yarpcConfig) (_ yarpc.Confi
 		return yarpc.Config{}, err
 	}
 
-	return b.Build()
+	yc, err := b.Build()
+	if err != nil {
+		return yc, err
+	}
+
+	cfg.Logging.fill(&yc)
+	return yc, nil
 }
 
 func (c *Configurator) loadInboundInto(b *builder, i inbound) error {
