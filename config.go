@@ -41,14 +41,27 @@ const (
 	_packageName       = "yarpc"
 )
 
+// LogLevelConfig configures the levels at which YARPC logs various things.
+type LogLevelConfig struct {
+	// Level at which application errors are logged. Note that all Thrift
+	// exceptions are considered application errors.
+	//
+	// Defaults to ErrorLevel.
+	ApplicationError *zapcore.Level
+}
+
 // LoggingConfig describes how logging should be configured.
 type LoggingConfig struct {
 	// Supplies a logger for the dispatcher. By default, no logs are
 	// emitted.
 	Zap *zap.Logger
+
 	// If supplied, ExtractContext is used to log request-scoped
 	// information carried on the context (e.g., trace and span IDs).
 	ContextExtractor func(context.Context) zapcore.Field
+
+	// Levels configures the levels at which YARPC logs various messages.
+	Levels LogLevelConfig
 }
 
 func (c LoggingConfig) logger(name string) *zap.Logger {
