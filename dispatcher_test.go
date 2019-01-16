@@ -708,6 +708,52 @@ func TestEnableObservabilityMiddleware(t *testing.T) {
 	assert.Equal(t, 1, logs.Len())
 }
 
+func TestObservabilityMiddlewareApplicationErrorLevel(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	req := &transport.Request{
+		Service:   "test",
+		Caller:    "test",
+		Procedure: "test",
+		Encoding:  transport.Encoding("test"),
+	}
+	out := transporttest.NewMockUnaryOutbound(mockCtrl)
+	out.EXPECT().Transports().AnyTimes()
+	out.EXPECT().Call(ctx, req).Return(&transport.Response{ApplicationError: true}, nil)
+
+	core, logs := observer.New(zapcore.DebugLevel)
+
+	infoLevel := zapcore.InfoLevel
+	dispatcher := NewDispatcher(Config{
+		Name: "test",
+		Outbounds: Outbounds{
+			"my-test-service": {
+				ServiceName: "my-real-service",
+				Unary:       out,
+			},
+		},
+		Logging: LoggingConfig{
+			Zap: zap.New(core),
+			Levels: LogLevelConfig{
+				ApplicationError: &infoLevel,
+			},
+		},
+	})
+
+	cc := dispatcher.MustOutboundConfig("my-test-service")
+	_, err := cc.Outbounds.Unary.Call(ctx, req)
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, logs.Len())
+	e := logs.TakeAll()[0]
+	assert.Equal(t, zapcore.InfoLevel, e.Level)
+	assert.Equal(t, "Error making outbound call.", e.Message)
+
+}
+
 func TestDisableObservabilityMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
