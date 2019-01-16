@@ -62,9 +62,22 @@ type Middleware struct {
 	graph graph
 }
 
-// NewMiddleware constructs a Middleware.
-func NewMiddleware(logger *zap.Logger, scope *metrics.Scope, extract ContextExtractor) *Middleware {
-	return &Middleware{newGraph(scope, logger, extract)}
+// Config configures the observability middleware.
+type Config struct {
+	// Logger to which messages will be logged.
+	Logger *zap.Logger
+
+	// Scope to which metrics are emitted.
+	Scope *metrics.Scope
+
+	// Extracts request-scoped information from the context for logging.
+	ContextExtractor ContextExtractor
+}
+
+// NewMiddleware constructs an observability middleware with the provided
+// configuration.
+func NewMiddleware(cfg Config) *Middleware {
+	return &Middleware{newGraph(cfg.Scope, cfg.Logger, cfg.ContextExtractor)}
 }
 
 // Handle implements middleware.UnaryInbound.

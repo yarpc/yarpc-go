@@ -130,7 +130,11 @@ func TestMiddlewareLogging(t *testing.T) {
 
 	for _, tt := range tests {
 		core, logs := observer.New(zapcore.DebugLevel)
-		mw := NewMiddleware(zap.New(core), metrics.New().Scope(), NewNopContextExtractor())
+		mw := NewMiddleware(Config{
+			Logger:           zap.New(core),
+			Scope:            metrics.New().Scope(),
+			ContextExtractor: NewNopContextExtractor(),
+		})
 
 		getLog := func() observer.LoggedEntry {
 			entries := logs.TakeAll()
@@ -369,7 +373,11 @@ func TestMiddlewareMetrics(t *testing.T) {
 			}
 		}
 		t.Run(tt.desc+", unary inbound", func(t *testing.T) {
-			mw := NewMiddleware(zap.NewNop(), metrics.New().Scope(), NewNopContextExtractor())
+			mw := NewMiddleware(Config{
+				Logger:           zap.NewNop(),
+				Scope:            metrics.New().Scope(),
+				ContextExtractor: NewNopContextExtractor(),
+			})
 			mw.Handle(
 				context.Background(),
 				req,
@@ -379,7 +387,11 @@ func TestMiddlewareMetrics(t *testing.T) {
 			validate(mw, string(_directionInbound))
 		})
 		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
-			mw := NewMiddleware(zap.NewNop(), metrics.New().Scope(), NewNopContextExtractor())
+			mw := NewMiddleware(Config{
+				Logger:           zap.NewNop(),
+				Scope:            metrics.New().Scope(),
+				ContextExtractor: NewNopContextExtractor(),
+			})
 			mw.Call(context.Background(), req, newOutbound(tt))
 			validate(mw, string(_directionOutbound))
 		})
@@ -433,7 +445,11 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 	}
 
 	core, logs := observer.New(zap.DebugLevel)
-	mw := NewMiddleware(zap.New(core), metrics.New().Scope(), NewNopContextExtractor())
+	mw := NewMiddleware(Config{
+		Logger:           zap.New(core),
+		Scope:            metrics.New().Scope(),
+		ContextExtractor: NewNopContextExtractor(),
+	})
 
 	assert.NoError(t, mw.Handle(
 		context.Background(),
@@ -460,7 +476,11 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 	defer stubTime()()
 	root := metrics.New()
 	meter := root.Scope()
-	mw := NewMiddleware(zap.NewNop(), meter, NewNopContextExtractor())
+	mw := NewMiddleware(Config{
+		Logger:           zap.NewNop(),
+		Scope:            meter,
+		ContextExtractor: NewNopContextExtractor(),
+	})
 
 	err := mw.Handle(
 		context.Background(),
@@ -522,7 +542,11 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 	defer stubTime()()
 	root := metrics.New()
 	meter := root.Scope()
-	mw := NewMiddleware(zap.NewNop(), meter, NewNopContextExtractor())
+	mw := NewMiddleware(Config{
+		Logger:           zap.NewNop(),
+		Scope:            meter,
+		ContextExtractor: NewNopContextExtractor(),
+	})
 
 	err := mw.Handle(
 		context.Background(),

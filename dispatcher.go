@@ -100,7 +100,11 @@ func addObservingMiddleware(cfg Config, meter *metrics.Scope, logger *zap.Logger
 		return cfg
 	}
 
-	observer := observability.NewMiddleware(logger, meter, extractor)
+	observer := observability.NewMiddleware(observability.Config{
+		Logger:           logger,
+		Scope:            meter,
+		ContextExtractor: extractor,
+	})
 
 	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(observer, cfg.InboundMiddleware.Unary)
 	cfg.InboundMiddleware.Oneway = inboundmiddleware.OnewayChain(observer, cfg.InboundMiddleware.Oneway)
