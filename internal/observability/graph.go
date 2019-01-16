@@ -30,6 +30,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/digester"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var (
@@ -56,14 +57,19 @@ type graph struct {
 
 	edgesMu sync.RWMutex
 	edges   map[string]*edge
+
+	succLevel, failLevel, appErrLevel zapcore.Level
 }
 
 func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor) graph {
 	return graph{
-		edges:   make(map[string]*edge, _defaultGraphSize),
-		meter:   meter,
-		logger:  logger,
-		extract: extract,
+		edges:       make(map[string]*edge, _defaultGraphSize),
+		meter:       meter,
+		logger:      logger,
+		extract:     extract,
+		succLevel:   zapcore.DebugLevel,
+		failLevel:   zapcore.ErrorLevel,
+		appErrLevel: zapcore.ErrorLevel,
 	}
 }
 
@@ -84,13 +90,16 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction dir
 	d.Free()
 
 	return call{
-		edge:      e,
-		extract:   g.extract,
-		started:   now,
-		ctx:       ctx,
-		req:       req,
-		rpcType:   rpcType,
-		direction: direction,
+		edge:        e,
+		extract:     g.extract,
+		started:     now,
+		ctx:         ctx,
+		req:         req,
+		rpcType:     rpcType,
+		direction:   direction,
+		succLevel:   g.succLevel,
+		failLevel:   g.failLevel,
+		appErrLevel: g.appErrLevel,
 	}
 }
 
