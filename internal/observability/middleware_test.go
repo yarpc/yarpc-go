@@ -40,6 +40,51 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 )
 
+func TestNewMiddlewareLogLevels(t *testing.T) {
+	// It's a bit unfortunate that we're asserting conditions about the
+	// internal state of Middleware and graph here but short of duplicating
+	// the other test, this is the cleanest option.
+
+	infoLevel := zapcore.InfoLevel
+	warnLevel := zapcore.WarnLevel
+
+	t.Run("Success", func(t *testing.T) {
+		t.Run("default", func(t *testing.T) {
+			assert.Equal(t, zapcore.DebugLevel, NewMiddleware(Config{}).graph.succLevel)
+		})
+
+		t.Run("override", func(t *testing.T) {
+			assert.Equal(t, zapcore.InfoLevel, NewMiddleware(Config{
+				SuccessLevel: &infoLevel,
+			}).graph.succLevel)
+		})
+	})
+
+	t.Run("Failure", func(t *testing.T) {
+		t.Run("default", func(t *testing.T) {
+			assert.Equal(t, zapcore.ErrorLevel, NewMiddleware(Config{}).graph.failLevel)
+		})
+
+		t.Run("override", func(t *testing.T) {
+			assert.Equal(t, zapcore.WarnLevel, NewMiddleware(Config{
+				FailureLevel: &warnLevel,
+			}).graph.failLevel)
+		})
+	})
+
+	t.Run("ApplicationError", func(t *testing.T) {
+		t.Run("default", func(t *testing.T) {
+			assert.Equal(t, zapcore.ErrorLevel, NewMiddleware(Config{}).graph.appErrLevel)
+		})
+
+		t.Run("override", func(t *testing.T) {
+			assert.Equal(t, zapcore.WarnLevel, NewMiddleware(Config{
+				ApplicationErrorLevel: &warnLevel,
+			}).graph.appErrLevel)
+		})
+	})
+}
+
 func TestMiddlewareLogging(t *testing.T) {
 	defer stubTime()()
 	req := &transport.Request{
@@ -82,7 +127,7 @@ func TestMiddlewareLogging(t *testing.T) {
 	tests := []test{
 		{
 			desc:            "no downstream errors",
-			wantErrLevel:    zapcore.DebugLevel,
+			wantErrLevel:    zapcore.InfoLevel,
 			wantInboundMsg:  "Handled inbound request.",
 			wantOutboundMsg: "Made outbound call.",
 			wantFields: []zapcore.Field{
@@ -108,7 +153,7 @@ func TestMiddlewareLogging(t *testing.T) {
 		{
 			desc:            "no downstream error but with application error",
 			applicationErr:  true,
-			wantErrLevel:    zapcore.ErrorLevel,
+			wantErrLevel:    zapcore.WarnLevel,
 			wantInboundMsg:  "Error handling inbound request.",
 			wantOutboundMsg: "Error making outbound call.",
 			wantFields: []zapcore.Field{
@@ -128,12 +173,18 @@ func TestMiddlewareLogging(t *testing.T) {
 		return fakeOutbound{err: t.err, applicationErr: t.applicationErr}
 	}
 
+	infoLevel := zapcore.InfoLevel
+	warnLevel := zapcore.WarnLevel
+
 	for _, tt := range tests {
 		core, logs := observer.New(zapcore.DebugLevel)
 		mw := NewMiddleware(Config{
-			Logger:           zap.New(core),
-			Scope:            metrics.New().Scope(),
-			ContextExtractor: NewNopContextExtractor(),
+			Logger:                zap.New(core),
+			Scope:                 metrics.New().Scope(),
+			ContextExtractor:      NewNopContextExtractor(),
+			SuccessLevel:          &infoLevel,
+			ApplicationErrorLevel: &warnLevel,
+			// Leave failure level as the default.
 		})
 
 		getLog := func() observer.LoggedEntry {
