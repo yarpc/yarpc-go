@@ -1,5 +1,5 @@
 hash: c14a792613329b43cc3bd093bc35923f8ebbc02cb87c5449b70cb92667b1631d
-updated: 2019-01-15T10:21:13.912258497-08:00
+updated: 2019-01-16T15:06:31.885331446Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -74,13 +74,9 @@ imports:
 - name: github.com/jessevdk/go-flags
   version: c6ca198ec95c841fdb89fc0de7496fed11ab854e
 - name: github.com/kisielk/errcheck
-  version: db0ca22445717d1b2c51ac1034440e0a2a2de645
+  version: e14f8d59a22d460d56c5ee92507cd94c78fbf274
   subpackages:
   - internal/errcheck
-- name: github.com/kisielk/gotool
-  version: 80517062f582ea3340cd4baf70e86d539ae7d84d
-  subpackages:
-  - internal/load
 - name: github.com/mattn/go-shellwords
   version: 02e3cf038dcea8290e44424da473dd12be796a8a
 - name: github.com/matttproud/golang_protobuf_extensions
@@ -123,7 +119,7 @@ imports:
   subpackages:
   - parser
 - name: github.com/stretchr/testify
-  version: ffdc059bfe9ce6a4e144ba849dbedead332c6053
+  version: 363ebb24d041ccea8068222281c2e963e997b9dc
   subpackages:
   - assert
   - require
@@ -255,6 +251,8 @@ imports:
 - name: golang.org/x/sys
   version: a457fd036447854c0c02e89ea439481bdcf941a2
   repo: https://github.com/golang/sys
+  subpackages:
+  - unix
 - name: golang.org/x/text
   version: e6919f6577db79269a6443b9dc46d18f2238fb5d
   subpackages:
@@ -263,7 +261,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: bf090417da8b6150dcfe96795325f5aa78fff718
+  version: 2e4132e53b93d8d81f7a076566396511238b89b0
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
@@ -284,7 +282,7 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: df014850f6dee74ba2fc94874043a9f3f75fbfd8
+  version: a02b0774206b209466313a0b525d2c738fe407eb
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
