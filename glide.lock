@@ -1,5 +1,5 @@
 hash: c14a792613329b43cc3bd093bc35923f8ebbc02cb87c5449b70cb92667b1631d
-updated: 2019-01-22T15:06:44.848168905Z
+updated: 2019-01-23T15:07:52.371226416Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -172,7 +172,7 @@ imports:
   - internal/digreflect
   - internal/dot
 - name: go.uber.org/fx
-  version: 9c82e1daccdcbd27387a1f044bd3dc6d3f878bf4
+  version: 3de044da969b90ad0a3e4a7867a74662f645f3f9
   subpackages:
   - fxtest
   - internal/fxlog
@@ -187,7 +187,7 @@ imports:
   - push
   - tallypush
 - name: go.uber.org/thriftrw
-  version: d80cd914fa4aa64f53f4f9ff93848be420170a76
+  version: bef228cadca803eaa8ad1d33bc6d7e2408ea349b
   subpackages:
   - ast
   - compile
@@ -249,7 +249,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 054c452bb702e465e95ce8e7a3d9a6cf0cd1188d
+  version: c6b37f3e92850b723493d63fd35aad34e19e048d
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -261,7 +261,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 24cd39ecf74570612483b772d45cf9d53d908340
+  version: 9279ec27fd88b9e004f857564a7b4123cc584f63
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
@@ -278,7 +278,7 @@ imports:
   - internal/gopathwalk
   - internal/semver
 - name: google.golang.org/genproto
-  version: db91494dd46c1fdcbbde05e5ff5eb56df8f7d79a
+  version: 8819c946db4494a2259bf100a377f51aa585d893
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
@@ -318,7 +318,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 51d6538a90f86fe93ac480b35f37b2be17fef232
 - name: honnef.co/go/tools
-  version: 5bcec433c8ea69ebef8f2aabab7185230b924e0f
+  version: 072eb0b8b7d5d695a3de63ec8daaf887d3147845
   subpackages:
   - arg
   - callgraph
