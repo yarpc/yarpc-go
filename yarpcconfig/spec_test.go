@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -58,7 +58,7 @@ func TestCompileTransportSpec(t *testing.T) {
 	}{
 		{
 			desc:    "missing name",
-			wantErr: []string{"Name is required"},
+			wantErr: []string{"field Name is required"},
 		},
 		{
 			desc:    "reserved name",
@@ -611,14 +611,14 @@ func TestCompilePeerChooserSpec(t *testing.T) {
 	}{
 		{
 			desc:    "missing name",
-			wantErr: "Name is required",
+			wantErr: "field Name is required",
 		},
 		{
 			desc: "missing BuildPeerChooser",
 			spec: PeerChooserSpec{
 				Name: "random",
 			},
-			wantErr: "BuildPeerChooser is required",
+			wantErr: "field BuildPeerChooser is required",
 		},
 		{
 			desc: "not a function",
@@ -756,14 +756,14 @@ func TestCompilePeerListSpec(t *testing.T) {
 	}{
 		{
 			desc:    "missing name",
-			wantErr: "Name is required",
+			wantErr: "field Name is required",
 		},
 		{
 			desc: "missing BuildPeerList",
 			spec: PeerListSpec{
 				Name: "random",
 			},
-			wantErr: "BuildPeerList is required",
+			wantErr: "field BuildPeerList is required",
 		},
 		{
 			desc: "not a function",
@@ -866,14 +866,14 @@ func TestCompilePeerListUpdaterSpec(t *testing.T) {
 	}{
 		{
 			desc:    "missing name",
-			wantErr: "Name is required",
+			wantErr: "field Name is required",
 		},
 		{
 			desc: "missing BuildPeerListUpdater",
 			spec: PeerListUpdaterSpec{
 				Name: "random",
 			},
-			wantErr: "BuildPeerListUpdater is required",
+			wantErr: "field BuildPeerListUpdater is required",
 		},
 		{
 			desc: "not a function",
@@ -968,14 +968,14 @@ func TestCompilePeerChooserPreset(t *testing.T) {
 	}{
 		{
 			desc:    "missing name",
-			wantErr: "Name is required",
+			wantErr: "field Name is required",
 		},
 		{
 			desc: "missing BuildPeerChooser",
 			spec: PeerChooserPreset{
 				Name: "random",
 			},
-			wantErr: "BuildPeerChooser is required",
+			wantErr: "field BuildPeerChooser is required",
 		},
 		{
 			desc: "not a function",

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -33,7 +33,7 @@ func handlerTimeoutRawHandler(w http.ResponseWriter, req *http.Request) {
 	err := yarpcerrors.Newf(
 		yarpcerrors.CodeDeadlineExceeded,
 		"call to procedure %q of service %q from caller %q timed out after %v",
-		"caller", "service", "handlertimeout/raw", time.Now().Sub(start))
+		"caller", "service", "handlertimeout/raw", time.Since(start))
 	w.WriteHeader(http.StatusGatewayTimeout)
 	fmt.Fprint(w, err.Error())
 }

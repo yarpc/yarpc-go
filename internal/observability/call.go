@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -52,6 +52,8 @@ type call struct {
 	req       *transport.Request
 	rpcType   transport.Type
 	direction directionName
+
+	succLevel, failLevel, appErrLevel zapcore.Level
 }
 
 func (c call) End(err error) {
@@ -71,13 +73,18 @@ func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool)
 		if c.direction != _directionInbound {
 			msg = _successfulOutbound
 		}
-		ce = c.edge.logger.Check(zap.DebugLevel, msg)
+		ce = c.edge.logger.Check(c.succLevel, msg)
 	} else {
 		msg := _errorInbound
 		if c.direction != _directionInbound {
 			msg = _errorOutbound
 		}
-		ce = c.edge.logger.Check(zap.ErrorLevel, msg)
+
+		lvl := c.failLevel
+		if isApplicationError {
+			lvl = c.appErrLevel
+		}
+		ce = c.edge.logger.Check(lvl, msg)
 	}
 
 	if ce == nil {

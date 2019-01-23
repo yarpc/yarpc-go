@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -207,11 +207,11 @@ func (pl *List) updateInitialized(updates peer.ListUpdates) error {
 func (pl *List) updateUninitialized(updates peer.ListUpdates) error {
 	var errs error
 	for _, pid := range updates.Removals {
-		if _, ok := pl.uninitializedPeers[pid.Identifier()]; ok {
-			delete(pl.uninitializedPeers, pid.Identifier())
-		} else {
+		if _, ok := pl.uninitializedPeers[pid.Identifier()]; !ok {
 			errs = multierr.Append(errs, peer.ErrPeerRemoveNotInList(pid.Identifier()))
+			continue
 		}
+		delete(pl.uninitializedPeers, pid.Identifier())
 	}
 	for _, pid := range updates.Additions {
 		pl.uninitializedPeers[pid.Identifier()] = pid
@@ -416,11 +416,17 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 	}
 
 	for {
-		pl.lock.RLock()
+		pl.lock.Lock()
 		p := pl.availableChooser.Choose(ctx, req)
-		pl.lock.RUnlock()
+		pl.lock.Unlock()
 
 		if p != nil {
+			// A nil peer is an indication that there are no more peers
+			// available for pending choices.
+			// A non-nil peer indicates that we have drained the waiting
+			// channel but there may be other peer lists waiting for a peer.
+			// We re-fill the channel enabling those choices to proceed
+			// concurrently.
 			t := p.(*peerThunk)
 			pl.notifyPeerAvailable()
 			t.StartRequest()

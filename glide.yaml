@@ -8,6 +8,8 @@ import:
   version: master
 - package: github.com/gogo/protobuf
   version: ^1
+- package: github.com/golang/protobuf
+  version: ^1
 - package: github.com/mattn/go-shellwords
   version: ^1
 - package: github.com/uber-go/mapdecode
@@ -38,8 +40,6 @@ import:
   version: ^1.10
 - package: golang.org/x/net
   version: master
-  # explicitly specifying this because glide is having issues with golang.org repos
-  repo: https://github.com/golang/net
   subpackages:
   - context
 - package: google.golang.org/grpc
@@ -61,18 +61,19 @@ import:
   version: '>= 0.1, < 2.0'
 - package: github.com/golang/mock
   version: ^1
-testImport:
 - package: golang.org/x/lint
   subpackages:
   - golint
-  repo: https://github.com/golang/lint
 - package: github.com/kisielk/errcheck
-- package: github.com/kisielk/gotool
 - package: go.uber.org/tools
-  version: master
   subpackages:
   - update-license
 - package: honnef.co/go/tools
   subpackages:
   - cmd/staticcheck
+testImport:
 - package: github.com/stretchr/testify
+  # No version pin because some of our dependencies aren't pinning.
+  subpackages:
+  - assert
+  - require

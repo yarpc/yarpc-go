@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -67,7 +67,6 @@ func (s *SendStreamMsg) applyStream(t testing.TB, c transport.Stream) {
 		return
 	}
 	require.NoError(t, err)
-	return
 }
 
 // RecvStreamMsg is an action to receive a message from a stream.  It can
@@ -113,5 +112,4 @@ func (s *RecvStreamMsg) applyStream(t testing.TB, c transport.Stream) {
 	}
 	require.NoError(t, err)
 	require.Equal(t, s.WantBody, actualMsg, "mismatch on stream messages")
-	return
 }

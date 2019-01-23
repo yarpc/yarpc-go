@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -239,11 +239,11 @@ func getPeerListInfo(etc config.AttributeMap, kit *Kit) (name string, config con
 	switch len(names) {
 	case 0:
 		err = fmt.Errorf("no peer list or chooser provided in config, need one of: %+v", kit.peerChooserAndListSpecNames())
-	default:
-		err = fmt.Errorf("unrecognized attributes in outbound config: %+v", etc)
 	case 1:
 		name = names[0]
 		_, err = etc.Pop(name, &config)
+	default:
+		err = fmt.Errorf("unrecognized attributes in outbound config: %+v", etc)
 	}
 	return
 }
@@ -293,13 +293,13 @@ func buildPeerListUpdater(c config.AttributeMap, identify func(string) peer.Iden
 			strings.Join(configNames(c), ", "),
 			strings.Join(kit.peerListUpdaterSpecNames(), ", "),
 		)
+	case 1:
+		// fall through to logic below
 	default:
 		sort.Strings(foundUpdaters) // deterministic error message
 		return nil, fmt.Errorf(
 			"found too many peer list updaters in config: got %s",
 			strings.Join(foundUpdaters, ", "))
-	case 1:
-		// fall through to logic below
 	}
 
 	var peerListUpdaterConfig config.AttributeMap

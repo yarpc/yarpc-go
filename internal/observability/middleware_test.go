@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -39,6 +39,51 @@ import (
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 )
+
+func TestNewMiddlewareLogLevels(t *testing.T) {
+	// It's a bit unfortunate that we're asserting conditions about the
+	// internal state of Middleware and graph here but short of duplicating
+	// the other test, this is the cleanest option.
+
+	infoLevel := zapcore.InfoLevel
+	warnLevel := zapcore.WarnLevel
+
+	t.Run("Success", func(t *testing.T) {
+		t.Run("default", func(t *testing.T) {
+			assert.Equal(t, zapcore.DebugLevel, NewMiddleware(Config{}).graph.succLevel)
+		})
+
+		t.Run("override", func(t *testing.T) {
+			assert.Equal(t, zapcore.InfoLevel, NewMiddleware(Config{
+				SuccessLevel: &infoLevel,
+			}).graph.succLevel)
+		})
+	})
+
+	t.Run("Failure", func(t *testing.T) {
+		t.Run("default", func(t *testing.T) {
+			assert.Equal(t, zapcore.ErrorLevel, NewMiddleware(Config{}).graph.failLevel)
+		})
+
+		t.Run("override", func(t *testing.T) {
+			assert.Equal(t, zapcore.WarnLevel, NewMiddleware(Config{
+				FailureLevel: &warnLevel,
+			}).graph.failLevel)
+		})
+	})
+
+	t.Run("ApplicationError", func(t *testing.T) {
+		t.Run("default", func(t *testing.T) {
+			assert.Equal(t, zapcore.ErrorLevel, NewMiddleware(Config{}).graph.appErrLevel)
+		})
+
+		t.Run("override", func(t *testing.T) {
+			assert.Equal(t, zapcore.WarnLevel, NewMiddleware(Config{
+				ApplicationErrorLevel: &warnLevel,
+			}).graph.appErrLevel)
+		})
+	})
+}
 
 func TestMiddlewareLogging(t *testing.T) {
 	defer stubTime()()
@@ -82,7 +127,7 @@ func TestMiddlewareLogging(t *testing.T) {
 	tests := []test{
 		{
 			desc:            "no downstream errors",
-			wantErrLevel:    zapcore.DebugLevel,
+			wantErrLevel:    zapcore.InfoLevel,
 			wantInboundMsg:  "Handled inbound request.",
 			wantOutboundMsg: "Made outbound call.",
 			wantFields: []zapcore.Field{
@@ -108,7 +153,7 @@ func TestMiddlewareLogging(t *testing.T) {
 		{
 			desc:            "no downstream error but with application error",
 			applicationErr:  true,
-			wantErrLevel:    zapcore.ErrorLevel,
+			wantErrLevel:    zapcore.WarnLevel,
 			wantInboundMsg:  "Error handling inbound request.",
 			wantOutboundMsg: "Error making outbound call.",
 			wantFields: []zapcore.Field{
@@ -128,9 +173,19 @@ func TestMiddlewareLogging(t *testing.T) {
 		return fakeOutbound{err: t.err, applicationErr: t.applicationErr}
 	}
 
+	infoLevel := zapcore.InfoLevel
+	warnLevel := zapcore.WarnLevel
+
 	for _, tt := range tests {
 		core, logs := observer.New(zapcore.DebugLevel)
-		mw := NewMiddleware(zap.New(core), metrics.New().Scope(), NewNopContextExtractor())
+		mw := NewMiddleware(Config{
+			Logger:                zap.New(core),
+			Scope:                 metrics.New().Scope(),
+			ContextExtractor:      NewNopContextExtractor(),
+			SuccessLevel:          &infoLevel,
+			ApplicationErrorLevel: &warnLevel,
+			// Leave failure level as the default.
+		})
 
 		getLog := func() observer.LoggedEntry {
 			entries := logs.TakeAll()
@@ -369,7 +424,11 @@ func TestMiddlewareMetrics(t *testing.T) {
 			}
 		}
 		t.Run(tt.desc+", unary inbound", func(t *testing.T) {
-			mw := NewMiddleware(zap.NewNop(), metrics.New().Scope(), NewNopContextExtractor())
+			mw := NewMiddleware(Config{
+				Logger:           zap.NewNop(),
+				Scope:            metrics.New().Scope(),
+				ContextExtractor: NewNopContextExtractor(),
+			})
 			mw.Handle(
 				context.Background(),
 				req,
@@ -379,7 +438,11 @@ func TestMiddlewareMetrics(t *testing.T) {
 			validate(mw, string(_directionInbound))
 		})
 		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
-			mw := NewMiddleware(zap.NewNop(), metrics.New().Scope(), NewNopContextExtractor())
+			mw := NewMiddleware(Config{
+				Logger:           zap.NewNop(),
+				Scope:            metrics.New().Scope(),
+				ContextExtractor: NewNopContextExtractor(),
+			})
 			mw.Call(context.Background(), req, newOutbound(tt))
 			validate(mw, string(_directionOutbound))
 		})
@@ -433,7 +496,11 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 	}
 
 	core, logs := observer.New(zap.DebugLevel)
-	mw := NewMiddleware(zap.New(core), metrics.New().Scope(), NewNopContextExtractor())
+	mw := NewMiddleware(Config{
+		Logger:           zap.New(core),
+		Scope:            metrics.New().Scope(),
+		ContextExtractor: NewNopContextExtractor(),
+	})
 
 	assert.NoError(t, mw.Handle(
 		context.Background(),
@@ -460,7 +527,11 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 	defer stubTime()()
 	root := metrics.New()
 	meter := root.Scope()
-	mw := NewMiddleware(zap.NewNop(), meter, NewNopContextExtractor())
+	mw := NewMiddleware(Config{
+		Logger:           zap.NewNop(),
+		Scope:            meter,
+		ContextExtractor: NewNopContextExtractor(),
+	})
 
 	err := mw.Handle(
 		context.Background(),
@@ -522,7 +593,11 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 	defer stubTime()()
 	root := metrics.New()
 	meter := root.Scope()
-	mw := NewMiddleware(zap.NewNop(), meter, NewNopContextExtractor())
+	mw := NewMiddleware(Config{
+		Logger:           zap.NewNop(),
+		Scope:            meter,
+		ContextExtractor: NewNopContextExtractor(),
+	})
 
 	err := mw.Handle(
 		context.Background(),

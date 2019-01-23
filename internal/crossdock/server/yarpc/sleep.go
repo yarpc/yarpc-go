@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -47,8 +47,6 @@ func WaitForTimeoutRaw(ctx context.Context, body []byte) ([]byte, error) {
 	if _, ok := ctx.Deadline(); !ok {
 		return nil, fmt.Errorf("no deadline set in context")
 	}
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	}
+	<-ctx.Done()
+	return nil, ctx.Err()
 }

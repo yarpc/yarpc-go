@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -111,7 +111,7 @@ func (c *cmd) Validate() error {
 	if c.output == "" {
 		return nil
 	}
-	output := cleanOutput(string(c.stdout.Bytes()))
+	output := cleanOutput(c.stdout.String())
 	expectedOutput := cleanOutput(c.output)
 	if output != expectedOutput {
 		return c.wrapError("validation failed", fmt.Errorf("expected\n%s\ngot\n%s", expectedOutput, output))

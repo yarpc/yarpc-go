@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -49,7 +49,7 @@ func newPeer(addr string, t *Transport) *tchannelPeer {
 		Peer:      hostport.NewPeer(hostport.PeerIdentifier(addr), t),
 		transport: t,
 		changed:   make(chan struct{}, 1),
-		released:  make(chan struct{}, 0),
+		released:  make(chan struct{}),
 		timer:     timer,
 	}
 }

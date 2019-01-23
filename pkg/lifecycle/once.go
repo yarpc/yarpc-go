@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -105,9 +105,9 @@ type Once struct {
 //      function must be called at-most-once.
 func NewOnce() *Once {
 	return &Once{
-		startCh:    make(chan struct{}, 0),
-		stoppingCh: make(chan struct{}, 0),
-		stopCh:     make(chan struct{}, 0),
+		startCh:    make(chan struct{}),
+		stoppingCh: make(chan struct{}),
+		stopCh:     make(chan struct{}),
 	}
 }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -559,10 +559,10 @@ func createTLSScenario(t *testing.T, clientValidity time.Duration, serverValidit
 			},
 			SerialNumber:          big.NewInt(1),
 			BasicConstraintsValid: true,
-			IsCA:      true,
-			KeyUsage:  x509.KeyUsageCertSign,
-			NotBefore: now,
-			NotAfter:  now.Add(10 * time.Minute),
+			IsCA:                  true,
+			KeyUsage:              x509.KeyUsageCertSign,
+			NotBefore:             now,
+			NotAfter:              now.Add(10 * time.Minute),
 		},
 		&x509.Certificate{},
 		caKey.Public(),

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -34,9 +34,8 @@ import (
 type FakeClock struct {
 	sync.Mutex
 
-	addLock sync.Mutex
-	now     time.Time
-	timers  timers
+	now    time.Time
+	timers timers
 }
 
 var _ Clock = (*FakeClock)(nil)

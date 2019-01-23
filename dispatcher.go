@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -100,7 +100,12 @@ func addObservingMiddleware(cfg Config, meter *metrics.Scope, logger *zap.Logger
 		return cfg
 	}
 
-	observer := observability.NewMiddleware(logger, meter, extractor)
+	observer := observability.NewMiddleware(observability.Config{
+		Logger:                logger,
+		Scope:                 meter,
+		ContextExtractor:      extractor,
+		ApplicationErrorLevel: cfg.Logging.Levels.ApplicationError,
+	})
 
 	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(observer, cfg.InboundMiddleware.Unary)
 	cfg.InboundMiddleware.Oneway = inboundmiddleware.OnewayChain(observer, cfg.InboundMiddleware.Oneway)

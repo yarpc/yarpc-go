@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -63,8 +63,7 @@ func TestRoundTripSuccess(t *testing.T) {
 
 	// start outbound
 	httpTransport := NewTransport()
-	var out transport.UnaryOutbound
-	out = httpTransport.NewSingleOutbound(echoServer.URL)
+	var out transport.UnaryOutbound = httpTransport.NewSingleOutbound(echoServer.URL)
 	require.NoError(t, out.Start(), "failed to start outbound")
 	defer out.Stop()
 

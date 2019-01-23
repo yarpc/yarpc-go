@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -61,12 +61,10 @@ type Transport struct {
 	listener          net.Listener
 	newResponseWriter func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
 
-	connTimeout            time.Duration
-	initialConnRetryDelay  time.Duration
-	connRetryBackoffFactor int
-	connectorsGroup        sync.WaitGroup
-	connBackoffStrategy    backoffapi.Strategy
-	headerCase             headerCase
+	connTimeout         time.Duration
+	connectorsGroup     sync.WaitGroup
+	connBackoffStrategy backoffapi.Strategy
+	headerCase          headerCase
 
 	peers map[string]*tchannelPeer
 }

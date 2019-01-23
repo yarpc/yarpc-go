@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -77,9 +77,7 @@ func extractProcedures(procs *[]transport.Procedure) fx.Option {
 	}
 
 	return fx.Invoke(func(p params) {
-		for _, proc := range p.SingleProcedures {
-			*procs = append(*procs, proc)
-		}
+		*procs = append(*procs, p.SingleProcedures...)
 		for _, procList := range p.ProcedureLists {
 			*procs = append(*procs, procList...)
 		}

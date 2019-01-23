@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -221,7 +221,7 @@ func (r *registry) loadServices(file *File) error {
 	for _, sd := range file.GetService() {
 		svc := &Service{
 			ServiceDescriptorProto: sd,
-			File: file,
+			File:                   file,
 		}
 		for _, md := range sd.GetMethod() {
 			meth, err := r.newMethod(svc, md)

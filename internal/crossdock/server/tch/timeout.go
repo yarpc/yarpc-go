@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -40,7 +40,7 @@ func (handlerTimeoutRawHandler) Handle(ctx context.Context, args *raw.Args) (*ra
 	err := yarpcerrors.Newf(
 		yarpcerrors.CodeDeadlineExceeded,
 		"call to procedure %q of service %q from caller %q timed out after %v",
-		"caller", "service", "handlertimeout/raw", time.Now().Sub(start))
+		"caller", "service", "handlertimeout/raw", time.Since(start))
 	return nil, tchannel.NewSystemError(tchannel.ErrCodeTimeout, err.Error())
 }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -227,7 +227,7 @@ func TestWildcardBeforeEncodingProcedureRegistration(t *testing.T) {
 		"expected router panic")
 }
 
-func IgnoreTestRouterWithMiddleware(t *testing.T) {
+func TestIgnoreRouterWithMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 

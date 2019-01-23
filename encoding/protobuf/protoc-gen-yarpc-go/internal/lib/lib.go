@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -667,7 +667,7 @@ func clientServerStreamingMethods(service *protoplugin.Service) ([]*protoplugin.
 func fileDescriptorClosureVarName(f *protoplugin.File) (string, error) {
 	name := f.GetName()
 	if name == "" {
-		return "", fmt.Errorf("Could not create fileDescriptorClosureVarName: %s has no name", f)
+		return "", fmt.Errorf("could not create fileDescriptorClosureVarName: %s has no name", f)
 	}
 
 	// Use a sha256 of the filename instead of the filename to prevent any characters that are illegal

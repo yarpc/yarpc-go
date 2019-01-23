@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -277,7 +277,13 @@ func (c *Configurator) load(serviceName string, cfg *yarpcConfig) (_ yarpc.Confi
 		return yarpc.Config{}, err
 	}
 
-	return b.Build()
+	yc, err := b.Build()
+	if err != nil {
+		return yc, err
+	}
+
+	cfg.Logging.fill(&yc)
+	return yc, nil
 }
 
 func (c *Configurator) loadInboundInto(b *builder, i inbound) error {

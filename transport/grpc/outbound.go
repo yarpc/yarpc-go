@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,6 @@ import (
 	"context"
 	"io/ioutil"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -51,7 +50,6 @@ var _ transport.UnaryOutbound = (*Outbound)(nil)
 // Outbound is a transport.UnaryOutbound.
 type Outbound struct {
 	once        *lifecycle.Once
-	lock        sync.Mutex
 	t           *Transport
 	peerChooser peer.Chooser
 	options     *outboundOptions

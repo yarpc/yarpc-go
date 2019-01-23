@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -160,7 +160,7 @@ func TestChannelCallSuccess(t *testing.T) {
 		withServiceRespHeader bool
 	}{
 		{
-			msg: "channel call success with response service name header",
+			msg:                   "channel call success with response service name header",
 			withServiceRespHeader: true,
 		},
 		{
@@ -290,10 +290,9 @@ func TestChannelCallFailures(t *testing.T) {
 		}))
 
 	type testCase struct {
-		desc        string
-		procedure   string
-		getOutbound func(*tchannel.Channel, string) (transport.UnaryOutbound, error)
-		message     string
+		desc      string
+		procedure string
+		message   string
 	}
 
 	tests := []testCase{

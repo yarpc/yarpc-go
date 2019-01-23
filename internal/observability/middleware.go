@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,7 @@ import (
 	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var _writerPool = sync.Pool{New: func() interface{} {
@@ -62,9 +63,51 @@ type Middleware struct {
 	graph graph
 }
 
-// NewMiddleware constructs a Middleware.
-func NewMiddleware(logger *zap.Logger, scope *metrics.Scope, extract ContextExtractor) *Middleware {
-	return &Middleware{newGraph(scope, logger, extract)}
+// Config configures the observability middleware.
+type Config struct {
+	// Logger to which messages will be logged.
+	Logger *zap.Logger
+
+	// Scope to which metrics are emitted.
+	Scope *metrics.Scope
+
+	// Extracts request-scoped information from the context for logging.
+	ContextExtractor ContextExtractor
+
+	// Log level used to log successful inbound and outbound calls.
+	//
+	// Defaults to DebugLevel.
+	SuccessLevel *zapcore.Level
+
+	// Log level used to log failed inbound and outbound calls. This includes
+	// low-level network errors, TChannel error frames, etc.
+	//
+	// Defaults to ErrorLevel.
+	FailureLevel *zapcore.Level
+
+	// Log level used to log calls that failed with an application error. All
+	// Thrift exceptions are considered application errors.
+	//
+	// Defaults to ErrorLevel.
+	ApplicationErrorLevel *zapcore.Level
+}
+
+// NewMiddleware constructs an observability middleware with the provided
+// configuration.
+func NewMiddleware(cfg Config) *Middleware {
+	m := &Middleware{newGraph(cfg.Scope, cfg.Logger, cfg.ContextExtractor)}
+
+	if lvl := cfg.SuccessLevel; lvl != nil {
+		m.graph.succLevel = *lvl
+	}
+	if lvl := cfg.FailureLevel; lvl != nil {
+		m.graph.failLevel = *lvl
+	}
+	if lvl := cfg.ApplicationErrorLevel; lvl != nil {
+		m.graph.appErrLevel = *lvl
+	}
+
+	return m
 }
 
 // Handle implements middleware.UnaryInbound.

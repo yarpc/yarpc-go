@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -39,7 +39,7 @@ func TestPeerHeapEmpty(t *testing.T) {
 	popAndVerifyHeap(t, &ph)
 }
 
-func TestPeerHeapOrdering(t *testing.T) {
+func TestRoundRobinHeapOrdering(t *testing.T) {
 	p1 := &peerScore{score: 1}
 	p2 := &peerScore{score: 2}
 	p3 := &peerScore{score: 3}
@@ -55,7 +55,9 @@ func TestPeerHeapOrdering(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		var h pendingHeap
+		h := pendingHeap{
+			nextRand: nextRand(0), /* irrelevant since we're not doing random insertions*/
+		}
 		for _, ps := range tt {
 			h.pushPeer(ps)
 		}
@@ -65,8 +67,63 @@ func TestPeerHeapOrdering(t *testing.T) {
 	}
 }
 
+func TestPeerHeapInsertionOrdering(t *testing.T) {
+	p1 := &peerScore{score: 1}
+	p2 := &peerScore{score: 2}
+	p3 := &peerScore{score: 3}
+	p4 := &peerScore{score: 3} // same score as p3
+
+	tests := []struct {
+		name          string
+		give          []*peerScore
+		nextRandIndex int
+		insert        *peerScore
+		want          []*peerScore
+	}{
+		{
+			name:   "p3.last < p4.last",
+			give:   []*peerScore{p1, p2, p3},
+			insert: p4,
+			// no swap since nextRandIndex+1 == len(list)
+			nextRandIndex: 3,
+			want:          []*peerScore{p1, p2, p3, p4},
+			// p1.last = 1
+			// p2.last = 2
+			// p3.last = 3
+			// p4.last = 4
+		},
+		{
+			name:          "p4.last < p3.last",
+			give:          []*peerScore{p1, p2, p3},
+			insert:        p4,
+			nextRandIndex: 0, // swap p1.last
+			want:          []*peerScore{p1, p2, p4, p3},
+			// p1.last = 4
+			// p2.last = 2
+			// p4.last = 1
+			// p3.last = 3
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := pendingHeap{nextRand: nextRandFromSlice([]int{tt.nextRandIndex})}
+			// prepare list
+			for _, ps := range tt.give {
+				h.pushPeer(ps)
+			}
+
+			// new peer added
+			h.pushPeerRandom(tt.insert)
+
+			popped := popAndVerifyHeap(t, &h)
+			assert.Equal(t, tt.want, popped, "Unexpected ordering of peers")
+		})
+	}
+}
+
 func TestPeerHeapUpdate(t *testing.T) {
-	var h pendingHeap
+	h := pendingHeap{nextRand: nextRand(0)}
 	p1 := &peerScore{score: 1}
 	p2 := &peerScore{score: 2}
 	p3 := &peerScore{score: 3}
@@ -90,7 +147,7 @@ func TestPeerHeapUpdate(t *testing.T) {
 func TestPeerHeapDelete(t *testing.T) {
 	const numPeers = 10
 
-	var h pendingHeap
+	h := pendingHeap{nextRand: nextRand(0)}
 	peers := make([]*peerScore, numPeers)
 	for i := range peers {
 		peers[i] = &peerScore{score: int64(i)}
@@ -114,7 +171,7 @@ func (ph *pendingHeap) validate(ps *peerScore) error {
 }
 
 func TestPeerHeapValidate(t *testing.T) {
-	var h pendingHeap
+	h := pendingHeap{nextRand: nextRand(0)}
 	ps := &peerScore{score: 1}
 	h.pushPeer(ps)
 	assert.Nil(t, h.validate(ps), "peer %v should validate", ps)

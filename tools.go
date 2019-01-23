@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,9 +18,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package testing
+// +build tools
+
+package yarpc
 
 import (
-	// this is to make sure etc/bin/cover.sh picks this up with .Deps
-	_ "go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go/internal/lib"
+	// Tools we use during development.
+	_ "github.com/gogo/protobuf/protoc-gen-gogoslick"
+	_ "github.com/golang/mock/mockgen"
+	_ "github.com/kisielk/errcheck"
+	_ "github.com/uber/tchannel-go/thrift/thrift-gen"
+	_ "go.uber.org/thriftrw"
+	_ "go.uber.org/tools/update-license"
+	_ "golang.org/x/lint/golint"
+	_ "golang.org/x/tools/cmd/stringer"
+	_ "honnef.co/go/tools/cmd/staticcheck"
 )

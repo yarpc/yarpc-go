@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -45,7 +45,7 @@ func TestFakeTransport(t *testing.T) {
 	trans := yarpctest.NewFakeTransport()
 	trans.Start()
 
-	wait := make(chan struct{}, 0)
+	wait := make(chan struct{})
 	var wg sync.WaitGroup
 
 	for i := 0; i < 100; i++ {
@@ -67,7 +67,7 @@ func TestRetainReleasePeer(t *testing.T) {
 	trans := yarpctest.NewFakeTransport()
 	trans.Start()
 
-	wait := make(chan struct{}, 0)
+	wait := make(chan struct{})
 	var wg sync.WaitGroup
 
 	for i := 0; i < 100; i++ {

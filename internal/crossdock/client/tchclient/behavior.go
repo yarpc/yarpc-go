@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -32,8 +32,6 @@ const (
 	serverPort = 8082
 	serverName = "yarpc-test"
 )
-
-var log = tchannel.SimpleLogger
 
 // Run exercises a YARPC server from a tchannel client.
 func Run(t crossdock.T) {

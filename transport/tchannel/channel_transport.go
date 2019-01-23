@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -99,7 +99,6 @@ func (options transportOptions) newChannelTransport() *ChannelTransport {
 type ChannelTransport struct {
 	once              *lifecycle.Once
 	ch                Channel
-	name              string
 	addr              string
 	tracer            opentracing.Tracer
 	logger            *zap.Logger

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -78,7 +78,7 @@ func (c *ContextMatcher) Matches(got interface{}) bool {
 			return false
 		}
 
-		ttl := d.Sub(time.Now())
+		ttl := time.Until(d)
 		maxTTL := c.ttl + c.TTLDelta
 		minTTL := c.ttl - c.TTLDelta
 		if ttl > maxTTL || ttl < minTTL {

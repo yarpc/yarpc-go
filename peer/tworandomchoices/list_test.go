@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -82,7 +82,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 	}
 	tests := []testStruct{
 		{
-			msg: "setup",
+			msg:                      "setup",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
@@ -92,7 +92,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: true,
 		},
 		{
-			msg: "setup with disconnected",
+			msg:                        "setup with disconnected",
 			retainedAvailablePeerIDs:   []string{"1"},
 			retainedUnavailablePeerIDs: []string{"2"},
 			peerListActions: []PeerListAction{
@@ -104,7 +104,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning:          true,
 		},
 		{
-			msg: "start",
+			msg:                      "start",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
@@ -117,7 +117,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: true,
 		},
 		{
-			msg: "start stop",
+			msg:                        "start stop",
 			retainedAvailablePeerIDs:   []string{"1", "2", "3", "4", "5", "6"},
 			retainedUnavailablePeerIDs: []string{"7", "8", "9"},
 			releasedPeerIDs:            []string{"1", "2", "3", "4", "5", "6", "7", "8", "9"},
@@ -133,7 +133,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: false,
 		},
 		{
-			msg: "update, start, and choose",
+			msg:                      "update, start, and choose",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
@@ -144,7 +144,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: true,
 		},
 		{
-			msg: "start many and choose",
+			msg:                      "start many and choose",
 			retainedAvailablePeerIDs: []string{"1", "2", "3", "4", "5", "6"},
 			expectedAvailablePeers:   []string{"1", "2", "3", "4", "5", "6"},
 			peerListActions: []PeerListAction{
@@ -161,7 +161,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: true,
 		},
 		{
-			msg: "assure start is idempotent",
+			msg:                      "assure start is idempotent",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
@@ -176,7 +176,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: true,
 		},
 		{
-			msg: "stop no start",
+			msg:                      "stop no start",
 			retainedAvailablePeerIDs: []string{},
 			releasedPeerIDs:          []string{},
 			peerListActions: []PeerListAction{
@@ -196,7 +196,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: true,
 		},
 		{
-			msg: "update retain multiple errors",
+			msg:                      "update retain multiple errors",
 			retainedAvailablePeerIDs: []string{"2"},
 			errRetainedPeerIDs:       []string{"1", "3"},
 			retainErr:                peer.ErrInvalidPeerType{},
@@ -211,7 +211,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning:        true,
 		},
 		{
-			msg: "start stop release error",
+			msg:                      "start stop release error",
 			retainedAvailablePeerIDs: []string{"1"},
 			errReleasedPeerIDs:       []string{"1"},
 			releaseErr:               peer.ErrTransportHasNoReferenceToPeer{},
@@ -225,7 +225,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: false,
 		},
 		{
-			msg: "assure stop is idempotent",
+			msg:                      "assure stop is idempotent",
 			retainedAvailablePeerIDs: []string{"1"},
 			errReleasedPeerIDs:       []string{"1"},
 			releaseErr:               peer.ErrTransportHasNoReferenceToPeer{},
@@ -249,7 +249,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: false,
 		},
 		{
-			msg: "start stop release multiple errors",
+			msg:                      "start stop release multiple errors",
 			retainedAvailablePeerIDs: []string{"1", "2", "3"},
 			releasedPeerIDs:          []string{"2"},
 			errReleasedPeerIDs:       []string{"1", "3"},
@@ -281,7 +281,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: false,
 		},
 		{
-			msg: "update before start",
+			msg:                      "update before start",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
@@ -307,7 +307,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: true,
 		},
 		{
-			msg: "start then add",
+			msg:                      "start then add",
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"1", "2"},
 			peerListActions: []PeerListAction{
@@ -321,7 +321,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: true,
 		},
 		{
-			msg: "start remove",
+			msg:                      "start remove",
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"2"},
 			releasedPeerIDs:          []string{"1"},
@@ -334,7 +334,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: true,
 		},
 		{
-			msg: "add retain error",
+			msg:                      "add retain error",
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"1", "2"},
 			errRetainedPeerIDs:       []string{"3"},
@@ -350,7 +350,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: true,
 		},
 		{
-			msg: "add duplicate peer",
+			msg:                      "add duplicate peer",
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"1", "2"},
 			peerListActions: []PeerListAction{
@@ -367,7 +367,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: true,
 		},
 		{
-			msg: "remove peer not in list",
+			msg:                      "remove peer not in list",
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"1", "2"},
 			peerListActions: []PeerListAction{
@@ -384,7 +384,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: true,
 		},
 		{
-			msg: "remove release error",
+			msg:                      "remove release error",
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			errReleasedPeerIDs:       []string{"2"},
 			releaseErr:               peer.ErrTransportHasNoReferenceToPeer{},
@@ -402,7 +402,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: true,
 		},
 		{
-			msg: "block but added too late",
+			msg:                      "block but added too late",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
@@ -433,7 +433,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: true,
 		},
 		{
-			msg: "add unavailable peer",
+			msg:                        "add unavailable peer",
 			retainedAvailablePeerIDs:   []string{"1"},
 			retainedUnavailablePeerIDs: []string{"2"},
 			expectedAvailablePeers:     []string{"1"},
@@ -454,7 +454,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: true,
 		},
 		{
-			msg: "remove unavailable peer",
+			msg:                        "remove unavailable peer",
 			retainedUnavailablePeerIDs: []string{"1"},
 			releasedPeerIDs:            []string{"1"},
 			peerListActions: []PeerListAction{
@@ -469,7 +469,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: true,
 		},
 		{
-			msg: "notify peer is now available",
+			msg:                        "notify peer is now available",
 			retainedUnavailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:     []string{"1"},
 			peerListActions: []PeerListAction{
@@ -485,7 +485,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: true,
 		},
 		{
-			msg: "notify peer is still available",
+			msg:                      "notify peer is still available",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
@@ -498,7 +498,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: true,
 		},
 		{
-			msg: "notify peer is now unavailable",
+			msg:                      "notify peer is now unavailable",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedUnavailablePeers: []string{"1"},
 			peerListActions: []PeerListAction{
@@ -514,7 +514,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: true,
 		},
 		{
-			msg: "notify peer is still unavailable",
+			msg:                        "notify peer is still unavailable",
 			retainedUnavailablePeerIDs: []string{"1"},
 			expectedUnavailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
@@ -529,7 +529,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: true,
 		},
 		{
-			msg: "notify invalid peer",
+			msg:                      "notify invalid peer",
 			retainedAvailablePeerIDs: []string{"1"},
 			releasedPeerIDs:          []string{"1"},
 			peerListActions: []PeerListAction{

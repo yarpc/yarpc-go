@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -46,7 +46,7 @@ func TestBufferWriteTo(t *testing.T) {
 
 		sink := &bytes.Buffer{}
 		buf.WriteTo(sink)
-		assert.Equal(t, "hello world", string(sink.Bytes()), "Unexpected written bytes")
+		assert.Equal(t, "hello world", sink.String(), "Unexpected written bytes")
 	})
 }
 
@@ -164,10 +164,7 @@ func runTest(t *testing.T, f func(t *testing.T, pool *Pool)) {
 }
 
 func runConcurrently(t *testing.T, f func()) {
-	const (
-		numGoroutines = 5
-		numIterations = 20
-	)
+	const numGoroutines = 5
 
 	var wg sync.WaitGroup
 	for i := 0; i < numGoroutines; i++ {

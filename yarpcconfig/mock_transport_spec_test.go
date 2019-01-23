@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -143,20 +143,6 @@ func (r *_transportSpecRecorder) BuildOnewayOutbound(cfg interface{}, t transpor
 func (r *_transportSpecRecorder) BuildStreamOutbound(cfg interface{}, t transport.Transport, kit gomock.Matcher) *gomock.Call {
 	return r.ctrl.RecordCall(r.m, "BuildStreamOutbound", cfg, t, kit)
 }
-
-// anyKitMatcher verifies that an instance is a *Kit.
-type anyKitMatcher struct{}
-
-func (anyKitMatcher) Matches(k interface{}) bool {
-	_, ok := k.(*Kit)
-	return ok
-}
-
-func (anyKitMatcher) String() string {
-	return "any kit"
-}
-
-var anyKit = anyKitMatcher{}
 
 // kitMatcher matches attributes of a kit
 type kitMatcher struct {
