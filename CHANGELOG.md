@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.36.0] - 2019-01-23
 ### Added
 - The log level for application errors is now configurable with yarpcconfig and
   with yarpc.NewDispatcher.
@@ -1055,7 +1055,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.35.2...HEAD
+[1.36.0]: https://github.com/yarpc/yarpc-go/compare/v1.35.2...v1.36.0
 [1.35.2]: https://github.com/yarpc/yarpc-go/compare/v1.35.1...v1.35.2
 [1.35.1]: https://github.com/yarpc/yarpc-go/compare/v1.35.0...v1.35.1
 [1.35.0]: https://github.com/yarpc/yarpc-go/compare/v1.34.0...v1.35.0
