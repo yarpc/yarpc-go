@@ -68,7 +68,7 @@ Releasing
 
     ```
     sed -i '' -e "s/^const Version =.*/const Version = \"$VERSION\"/" version.go
-    make verifyversion
+    make verifyversion SUPPRESS_DOCKER=1
     ```
 
 6.  Create a commit for the release.
@@ -143,7 +143,7 @@ Releasing
 16. Verify the version number matches.
 
     ```
-    make verifyversion
+    make verifyversion SUPPRESS_DOCKER=1
     ```
 
 17. Commit and push your changes.
