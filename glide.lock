@@ -1,5 +1,5 @@
 hash: c14a792613329b43cc3bd093bc35923f8ebbc02cb87c5449b70cb92667b1631d
-updated: 2019-01-23T15:07:52.371226416Z
+updated: 2019-01-24T01:12:14.552470077Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -187,7 +187,7 @@ imports:
   - push
   - tallypush
 - name: go.uber.org/thriftrw
-  version: bef228cadca803eaa8ad1d33bc6d7e2408ea349b
+  version: 4fe4d5a28a338ad3cc955897e9586021d1732c3f
   subpackages:
   - ast
   - compile
@@ -261,7 +261,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 9279ec27fd88b9e004f857564a7b4123cc584f63
+  version: 78ee07aa9465da43bde6d5044c687571ab4362d6
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
@@ -318,7 +318,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 51d6538a90f86fe93ac480b35f37b2be17fef232
 - name: honnef.co/go/tools
-  version: 072eb0b8b7d5d695a3de63ec8daaf887d3147845
+  version: 3f36ca0168d8e4dfc42bee4d67ed3c99ae3817ed
   subpackages:
   - arg
   - callgraph
