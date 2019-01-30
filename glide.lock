@@ -1,5 +1,5 @@
 hash: c14a792613329b43cc3bd093bc35923f8ebbc02cb87c5449b70cb92667b1631d
-updated: 2019-01-29T15:07:33.132469493Z
+updated: 2019-01-30T15:06:28.451052617Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -99,7 +99,7 @@ imports:
   - prometheus
   - prometheus/promhttp
 - name: github.com/prometheus/client_model
-  version: 56726106282f1985ea77d5305743db7231b0c0a8
+  version: fd36f4220a901265f90734c3183c5f0c91daa0b8
   subpackages:
   - go
 - name: github.com/prometheus/common
@@ -109,7 +109,7 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: bf6a532e95b1f7a62adf0ab5050a5bb2237ad2f4
+  version: 316cf8ccfec56d206735d46333ca162eb374da8b
   subpackages:
   - internal/util
   - nfs
@@ -261,7 +261,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 0a99049195aff55f007fc4dfd48e3ec2b4d5f602
+  version: a06a922acc1b97001c51689385e2144227c9e820
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
