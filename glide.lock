@@ -1,5 +1,5 @@
 hash: c14a792613329b43cc3bd093bc35923f8ebbc02cb87c5449b70cb92667b1631d
-updated: 2019-02-01T15:06:33.706142095Z
+updated: 2019-02-04T15:06:26.780692843Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -109,7 +109,7 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 316cf8ccfec56d206735d46333ca162eb374da8b
+  version: 488faf799f863e27e50c516468f76ae8f1da20a5
   subpackages:
   - internal/util
   - nfs
@@ -249,7 +249,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 2970a3744de33489e46eba373c73655bc2377116
+  version: 980327fe3c65509adaad5a9ff06abdf7611b4411
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -261,7 +261,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 067a2f313b693f3c2d3c0eb328434c91c7fc9b6b
+  version: 7414d4c1f71cec71978b1aec0539171a2e42d230
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
@@ -278,7 +278,7 @@ imports:
   - internal/gopathwalk
   - internal/semver
 - name: google.golang.org/genproto
-  version: 8ac453e89fca495c0d17f98932642f392e2a11f3
+  version: 4b09977fb92221987e99d190c8f88f2c92727a29
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
