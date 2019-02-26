@@ -74,10 +74,6 @@ type Status struct {
 //
 // This should be used for user-defined errors.
 //
-// The name must only contain lowercase letters from a-z and dashes (-), and
-// cannot start or end in a dash. If the name is something else, an error with
-// code CodeInternal will be returned.
-//
 // Deprecated: Use only error codes to represent the type of the error.
 func (s *Status) WithName(name string) *Status {
 	// TODO: We plan to add a WithDetails method to add semantic metadata to
@@ -85,9 +81,7 @@ func (s *Status) WithName(name string) *Status {
 	if s == nil {
 		return nil
 	}
-	if err := validateName(name); err != nil {
-		return err.(*Status)
-	}
+
 	return &Status{
 		code:    s.code,
 		name:    name,

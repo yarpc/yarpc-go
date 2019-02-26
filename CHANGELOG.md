@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.36.2] - 2019-02-25
+### Fixed
+- Removed error name validation. 
+
 ## [1.36.1] - 2019-01-23
 ### Fixed
 - Updated dependency on ThriftRW.
@@ -1059,6 +1063,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[1.36.2]: https://github.com/yarpc/yarpc-go/compare/v1.36.1...v1.36.2
 [1.36.1]: https://github.com/yarpc/yarpc-go/compare/v1.36.0...v1.36.1
 [1.36.0]: https://github.com/yarpc/yarpc-go/compare/v1.35.2...v1.36.0
 [1.35.2]: https://github.com/yarpc/yarpc-go/compare/v1.35.1...v1.35.2

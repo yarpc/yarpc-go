@@ -86,9 +86,11 @@
 // 	  # ...
 // 	transports:
 // 	  # ...
+// 	logging:
+// 	  # ...
 //
-// See the following sections for details on the transports, inbounds, and
-// outbounds keys in the configuration.
+// See the following sections for details on the logging, transports,
+// inbounds, and outbounds keys in the configuration.
 //
 // Inbound Configuration
 //
@@ -240,6 +242,29 @@
 //
 // (For details on the configuration parameters of individual transport types,
 // check the documentation for the corresponding transport package.)
+//
+// Logging Configuration
+//
+// The 'logging' attribute configures how YARPC's observability middleware
+// logs output.
+//
+// 	logging:
+// 	  levels:
+// 	    # ...
+//
+// The following keys are supported under the 'levels' key,
+//
+// 	applicationError
+// 	  Configures the level at which application errors are logged. All Thrift
+// 	  exceptions are considered application errors. Defaults to "error".
+//
+// For example, the following configuration will have the effect of logging
+// Thrift exceptions for inbound and outbound calls ("Error handling inbound
+// request" and "Error making outbound call") at info level instead of error.
+//
+// 	logging:
+// 	  levels:
+// 	    applicationError: info
 //
 // Customizing Configuration
 //
