@@ -152,10 +152,6 @@ func TestNonYARPCErrors(t *testing.T) {
 	assert.Nil(t, FromHeaders(CodeOK, "", ""))
 }
 
-func TestFromHeadersBadName(t *testing.T) {
-	assert.Equal(t, validateName("123"), FromHeaders(CodeUnknown, "123", ""))
-}
-
 func testAllErrorConstructors(
 	t *testing.T,
 	errorConstructorFunc func(*testing.T, Code, func(string, ...interface{}) error),
