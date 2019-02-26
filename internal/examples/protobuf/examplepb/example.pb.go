@@ -23,20 +23,17 @@
 
 package examplepb
 
-import proto "github.com/gogo/protobuf/proto"
-import fmt "fmt"
-import math "math"
-import yarpcproto "go.uber.org/yarpc/yarpcproto"
-
-import strings "strings"
-import reflect "reflect"
-
 import (
-	context "golang.org/x/net/context"
+	context "context"
+	fmt "fmt"
+	proto "github.com/gogo/protobuf/proto"
+	yarpcproto "go.uber.org/yarpc/yarpcproto"
 	grpc "google.golang.org/grpc"
+	io "io"
+	math "math"
+	reflect "reflect"
+	strings "strings"
 )
-
-import io "io"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -56,7 +53,7 @@ type GetValueRequest struct {
 func (m *GetValueRequest) Reset()      { *m = GetValueRequest{} }
 func (*GetValueRequest) ProtoMessage() {}
 func (*GetValueRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_2719bbad203121bc, []int{0}
+	return fileDescriptor_43929dec9f67b739, []int{0}
 }
 func (m *GetValueRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -73,8 +70,8 @@ func (m *GetValueRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return b[:n], nil
 	}
 }
-func (dst *GetValueRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetValueRequest.Merge(dst, src)
+func (m *GetValueRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetValueRequest.Merge(m, src)
 }
 func (m *GetValueRequest) XXX_Size() int {
 	return m.Size()
@@ -99,7 +96,7 @@ type GetValueResponse struct {
 func (m *GetValueResponse) Reset()      { *m = GetValueResponse{} }
 func (*GetValueResponse) ProtoMessage() {}
 func (*GetValueResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_2719bbad203121bc, []int{1}
+	return fileDescriptor_43929dec9f67b739, []int{1}
 }
 func (m *GetValueResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -116,8 +113,8 @@ func (m *GetValueResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
-func (dst *GetValueResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetValueResponse.Merge(dst, src)
+func (m *GetValueResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetValueResponse.Merge(m, src)
 }
 func (m *GetValueResponse) XXX_Size() int {
 	return m.Size()
@@ -143,7 +140,7 @@ type SetValueRequest struct {
 func (m *SetValueRequest) Reset()      { *m = SetValueRequest{} }
 func (*SetValueRequest) ProtoMessage() {}
 func (*SetValueRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_2719bbad203121bc, []int{2}
+	return fileDescriptor_43929dec9f67b739, []int{2}
 }
 func (m *SetValueRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -160,8 +157,8 @@ func (m *SetValueRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return b[:n], nil
 	}
 }
-func (dst *SetValueRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SetValueRequest.Merge(dst, src)
+func (m *SetValueRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SetValueRequest.Merge(m, src)
 }
 func (m *SetValueRequest) XXX_Size() int {
 	return m.Size()
@@ -192,7 +189,7 @@ type SetValueResponse struct {
 func (m *SetValueResponse) Reset()      { *m = SetValueResponse{} }
 func (*SetValueResponse) ProtoMessage() {}
 func (*SetValueResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_2719bbad203121bc, []int{3}
+	return fileDescriptor_43929dec9f67b739, []int{3}
 }
 func (m *SetValueResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -209,8 +206,8 @@ func (m *SetValueResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
-func (dst *SetValueResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SetValueResponse.Merge(dst, src)
+func (m *SetValueResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SetValueResponse.Merge(m, src)
 }
 func (m *SetValueResponse) XXX_Size() int {
 	return m.Size()
@@ -228,7 +225,7 @@ type FireRequest struct {
 func (m *FireRequest) Reset()      { *m = FireRequest{} }
 func (*FireRequest) ProtoMessage() {}
 func (*FireRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_2719bbad203121bc, []int{4}
+	return fileDescriptor_43929dec9f67b739, []int{4}
 }
 func (m *FireRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -245,8 +242,8 @@ func (m *FireRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) 
 		return b[:n], nil
 	}
 }
-func (dst *FireRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_FireRequest.Merge(dst, src)
+func (m *FireRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_FireRequest.Merge(m, src)
 }
 func (m *FireRequest) XXX_Size() int {
 	return m.Size()
@@ -271,7 +268,7 @@ type EchoOutRequest struct {
 func (m *EchoOutRequest) Reset()      { *m = EchoOutRequest{} }
 func (*EchoOutRequest) ProtoMessage() {}
 func (*EchoOutRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_2719bbad203121bc, []int{5}
+	return fileDescriptor_43929dec9f67b739, []int{5}
 }
 func (m *EchoOutRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -288,8 +285,8 @@ func (m *EchoOutRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		return b[:n], nil
 	}
 }
-func (dst *EchoOutRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_EchoOutRequest.Merge(dst, src)
+func (m *EchoOutRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EchoOutRequest.Merge(m, src)
 }
 func (m *EchoOutRequest) XXX_Size() int {
 	return m.Size()
@@ -314,7 +311,7 @@ type EchoOutResponse struct {
 func (m *EchoOutResponse) Reset()      { *m = EchoOutResponse{} }
 func (*EchoOutResponse) ProtoMessage() {}
 func (*EchoOutResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_2719bbad203121bc, []int{6}
+	return fileDescriptor_43929dec9f67b739, []int{6}
 }
 func (m *EchoOutResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -331,8 +328,8 @@ func (m *EchoOutResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return b[:n], nil
 	}
 }
-func (dst *EchoOutResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_EchoOutResponse.Merge(dst, src)
+func (m *EchoOutResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EchoOutResponse.Merge(m, src)
 }
 func (m *EchoOutResponse) XXX_Size() int {
 	return m.Size()
@@ -358,7 +355,7 @@ type EchoInRequest struct {
 func (m *EchoInRequest) Reset()      { *m = EchoInRequest{} }
 func (*EchoInRequest) ProtoMessage() {}
 func (*EchoInRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_2719bbad203121bc, []int{7}
+	return fileDescriptor_43929dec9f67b739, []int{7}
 }
 func (m *EchoInRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -375,8 +372,8 @@ func (m *EchoInRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		return b[:n], nil
 	}
 }
-func (dst *EchoInRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_EchoInRequest.Merge(dst, src)
+func (m *EchoInRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EchoInRequest.Merge(m, src)
 }
 func (m *EchoInRequest) XXX_Size() int {
 	return m.Size()
@@ -408,7 +405,7 @@ type EchoInResponse struct {
 func (m *EchoInResponse) Reset()      { *m = EchoInResponse{} }
 func (*EchoInResponse) ProtoMessage() {}
 func (*EchoInResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_2719bbad203121bc, []int{8}
+	return fileDescriptor_43929dec9f67b739, []int{8}
 }
 func (m *EchoInResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -425,8 +422,8 @@ func (m *EchoInResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		return b[:n], nil
 	}
 }
-func (dst *EchoInResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_EchoInResponse.Merge(dst, src)
+func (m *EchoInResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EchoInResponse.Merge(m, src)
 }
 func (m *EchoInResponse) XXX_Size() int {
 	return m.Size()
@@ -452,7 +449,7 @@ type EchoBothRequest struct {
 func (m *EchoBothRequest) Reset()      { *m = EchoBothRequest{} }
 func (*EchoBothRequest) ProtoMessage() {}
 func (*EchoBothRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_2719bbad203121bc, []int{9}
+	return fileDescriptor_43929dec9f67b739, []int{9}
 }
 func (m *EchoBothRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -469,8 +466,8 @@ func (m *EchoBothRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return b[:n], nil
 	}
 }
-func (dst *EchoBothRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_EchoBothRequest.Merge(dst, src)
+func (m *EchoBothRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EchoBothRequest.Merge(m, src)
 }
 func (m *EchoBothRequest) XXX_Size() int {
 	return m.Size()
@@ -502,7 +499,7 @@ type EchoBothResponse struct {
 func (m *EchoBothResponse) Reset()      { *m = EchoBothResponse{} }
 func (*EchoBothResponse) ProtoMessage() {}
 func (*EchoBothResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_2719bbad203121bc, []int{10}
+	return fileDescriptor_43929dec9f67b739, []int{10}
 }
 func (m *EchoBothResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -519,8 +516,8 @@ func (m *EchoBothResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
-func (dst *EchoBothResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_EchoBothResponse.Merge(dst, src)
+func (m *EchoBothResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EchoBothResponse.Merge(m, src)
 }
 func (m *EchoBothResponse) XXX_Size() int {
 	return m.Size()
@@ -551,6 +548,48 @@ func init() {
 	proto.RegisterType((*EchoBothRequest)(nil), "uber.yarpc.internal.examples.protobuf.example.EchoBothRequest")
 	proto.RegisterType((*EchoBothResponse)(nil), "uber.yarpc.internal.examples.protobuf.example.EchoBothResponse")
 }
+
+func init() {
+	proto.RegisterFile("internal/examples/protobuf/examplepb/example.proto", fileDescriptor_43929dec9f67b739)
+}
+
+var fileDescriptor_43929dec9f67b739 = []byte{
+	// 518 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x54, 0x3f, 0x6f, 0xd3, 0x40,
+	0x14, 0xbf, 0x17, 0x97, 0x36, 0x79, 0x6d, 0x49, 0x74, 0x42, 0x28, 0xf2, 0x70, 0x2a, 0xce, 0x12,
+	0x21, 0x70, 0xaa, 0xc0, 0x02, 0xa2, 0xad, 0x54, 0x89, 0x22, 0x84, 0xa0, 0x28, 0x96, 0x10, 0x62,
+	0x29, 0x4e, 0x75, 0xd0, 0xa8, 0xce, 0xd9, 0xf8, 0x6c, 0x20, 0x1b, 0x2b, 0x12, 0x48, 0xf0, 0x2d,
+	0x10, 0x33, 0x1f, 0x82, 0x31, 0x63, 0x47, 0xe2, 0x2c, 0x8c, 0xfd, 0x08, 0xc8, 0x17, 0x9f, 0x1b,
+	0x82, 0xaa, 0x28, 0xa6, 0xdb, 0xdd, 0xf3, 0xfb, 0xfd, 0x79, 0xf6, 0xef, 0x19, 0xdb, 0x3d, 0x11,
+	0xf1, 0x50, 0xb8, 0x5e, 0x8b, 0xbf, 0x77, 0xfb, 0x81, 0xc7, 0x65, 0x2b, 0x08, 0xfd, 0xc8, 0xef,
+	0xc6, 0xaf, 0x74, 0x25, 0xe8, 0xea, 0x93, 0xad, 0x1e, 0xd1, 0x9b, 0x71, 0x97, 0x87, 0xf6, 0xc0,
+	0x0d, 0x83, 0x43, 0x5b, 0xc3, 0x6d, 0x0d, 0xb7, 0x35, 0x5c, 0x57, 0xcc, 0xab, 0xaa, 0x53, 0x95,
+	0x5b, 0x13, 0x90, 0x3a, 0x5b, 0x0d, 0xac, 0x3e, 0xe0, 0xd1, 0x33, 0xd7, 0x8b, 0x79, 0x87, 0xbf,
+	0x89, 0xb9, 0x8c, 0x68, 0x0d, 0x8d, 0x63, 0x3e, 0xa8, 0xc3, 0x06, 0x34, 0x2b, 0x9d, 0xf4, 0x68,
+	0x35, 0xb1, 0x76, 0xd6, 0x24, 0x03, 0x5f, 0x48, 0x4e, 0xaf, 0xe0, 0xa5, 0xb7, 0x69, 0xa1, 0x5e,
+	0x52, 0x7d, 0x93, 0x8b, 0x75, 0x07, 0xab, 0xce, 0x3c, 0xba, 0x73, 0xa0, 0x14, 0x6b, 0xce, 0x8c,
+	0x88, 0xd5, 0xc0, 0xd5, 0xbd, 0x5e, 0x98, 0x53, 0xe5, 0x40, 0x98, 0x06, 0x5e, 0xc7, 0xcb, 0xf7,
+	0x0f, 0x8f, 0xfc, 0xfd, 0x38, 0xd2, 0x7d, 0x75, 0x5c, 0xe9, 0x73, 0x29, 0xdd, 0xd7, 0xba, 0x53,
+	0x5f, 0xad, 0xdb, 0x58, 0xcd, 0x7b, 0xb3, 0x41, 0xae, 0xe1, 0x9a, 0xeb, 0x79, 0x07, 0x59, 0x87,
+	0xac, 0x97, 0x36, 0x8c, 0x66, 0xa5, 0xb3, 0xea, 0x7a, 0xde, 0xe3, 0xac, 0x64, 0x3d, 0xc1, 0xf5,
+	0x14, 0xf5, 0x50, 0xcc, 0x15, 0xa0, 0x0d, 0x5c, 0x17, 0x71, 0xff, 0x20, 0xcc, 0xd8, 0xa5, 0x9a,
+	0xd1, 0xe8, 0xac, 0x89, 0xb8, 0xaf, 0x15, 0xa5, 0x76, 0x9c, 0xf2, 0x65, 0x26, 0xce, 0x77, 0xfc,
+	0x74, 0xe2, 0x78, 0xd7, 0x8f, 0x8e, 0x2e, 0x48, 0xfd, 0x06, 0xd6, 0xce, 0x18, 0xe7, 0xe9, 0xb7,
+	0xbf, 0x97, 0xb0, 0xfc, 0x88, 0x0f, 0xd4, 0x77, 0xa1, 0x9f, 0x01, 0xcb, 0x3a, 0x09, 0x74, 0xdb,
+	0x5e, 0x28, 0x82, 0xf6, 0x4c, 0xce, 0xcc, 0x9d, 0xc2, 0xf8, 0x2c, 0x1d, 0x44, 0xf9, 0x71, 0x8a,
+	0xfa, 0x71, 0xfe, 0xd3, 0xcf, 0x3f, 0x69, 0x25, 0xed, 0x97, 0xb8, 0xe4, 0xf4, 0xc4, 0x31, 0x7d,
+	0x8e, 0x4b, 0x69, 0x6e, 0xe9, 0xdd, 0x05, 0x29, 0xa7, 0xc2, 0x6e, 0xd2, 0x69, 0xec, 0xbe, 0xe0,
+	0xef, 0xdc, 0x81, 0x45, 0xda, 0x3f, 0x0c, 0x34, 0xf6, 0x7c, 0x9f, 0x7e, 0x02, 0x5c, 0xc9, 0x92,
+	0x4c, 0xb7, 0x16, 0x54, 0xf9, 0x7b, 0x5b, 0xcc, 0xed, 0xa2, 0x70, 0x3d, 0x76, 0x13, 0xe8, 0x47,
+	0xc0, 0xe5, 0x49, 0xa4, 0xe9, 0xbd, 0x02, 0x74, 0xf9, 0x66, 0x99, 0x5b, 0x05, 0xd1, 0xda, 0xcb,
+	0x26, 0xd0, 0xaf, 0x80, 0x65, 0x1d, 0x70, 0x5a, 0x64, 0xb8, 0xa9, 0x5d, 0x5b, 0x38, 0x14, 0xb3,
+	0x9b, 0x95, 0xbe, 0x9d, 0x4d, 0xd8, 0xdd, 0x19, 0x8e, 0x18, 0x39, 0x19, 0x31, 0x72, 0x3a, 0x62,
+	0xf0, 0x21, 0x61, 0xf0, 0x2d, 0x61, 0xf0, 0x33, 0x61, 0x30, 0x4c, 0x18, 0xfc, 0x4a, 0x18, 0xfc,
+	0x4e, 0x18, 0x39, 0x4d, 0x18, 0x7c, 0x19, 0x33, 0x32, 0x1c, 0x33, 0x72, 0x32, 0x66, 0xe4, 0x45,
+	0x25, 0xff, 0xf9, 0x77, 0x97, 0x95, 0xd2, 0xad, 0x3f, 0x01, 0x00, 0x00, 0xff, 0xff, 0xe4, 0x9c,
+	0x50, 0xc5, 0x2b, 0x06, 0x00, 0x00,
+}
+
 func (this *GetValueRequest) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
@@ -1930,7 +1969,7 @@ func (m *GetValueRequest) Unmarshal(dAtA []byte) error {
 			}
 			b := dAtA[iNdEx]
 			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
+			wire |= uint64(b&0x7F) << shift
 			if b < 0x80 {
 				break
 			}
@@ -1958,7 +1997,7 @@ func (m *GetValueRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= (uint64(b) & 0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -1968,6 +2007,9 @@ func (m *GetValueRequest) Unmarshal(dAtA []byte) error {
 				return ErrInvalidLengthExample
 			}
 			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthExample
+			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
@@ -1980,6 +2022,9 @@ func (m *GetValueRequest) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			if skippy < 0 {
+				return ErrInvalidLengthExample
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthExample
 			}
 			if (iNdEx + skippy) > l {
@@ -2009,7 +2054,7 @@ func (m *GetValueResponse) Unmarshal(dAtA []byte) error {
 			}
 			b := dAtA[iNdEx]
 			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
+			wire |= uint64(b&0x7F) << shift
 			if b < 0x80 {
 				break
 			}
@@ -2037,7 +2082,7 @@ func (m *GetValueResponse) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= (uint64(b) & 0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2047,6 +2092,9 @@ func (m *GetValueResponse) Unmarshal(dAtA []byte) error {
 				return ErrInvalidLengthExample
 			}
 			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthExample
+			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
@@ -2059,6 +2107,9 @@ func (m *GetValueResponse) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			if skippy < 0 {
+				return ErrInvalidLengthExample
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthExample
 			}
 			if (iNdEx + skippy) > l {
@@ -2088,7 +2139,7 @@ func (m *SetValueRequest) Unmarshal(dAtA []byte) error {
 			}
 			b := dAtA[iNdEx]
 			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
+			wire |= uint64(b&0x7F) << shift
 			if b < 0x80 {
 				break
 			}
@@ -2116,7 +2167,7 @@ func (m *SetValueRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= (uint64(b) & 0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2126,6 +2177,9 @@ func (m *SetValueRequest) Unmarshal(dAtA []byte) error {
 				return ErrInvalidLengthExample
 			}
 			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthExample
+			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
@@ -2145,7 +2199,7 @@ func (m *SetValueRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= (uint64(b) & 0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2155,6 +2209,9 @@ func (m *SetValueRequest) Unmarshal(dAtA []byte) error {
 				return ErrInvalidLengthExample
 			}
 			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthExample
+			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
@@ -2167,6 +2224,9 @@ func (m *SetValueRequest) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			if skippy < 0 {
+				return ErrInvalidLengthExample
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthExample
 			}
 			if (iNdEx + skippy) > l {
@@ -2196,7 +2256,7 @@ func (m *SetValueResponse) Unmarshal(dAtA []byte) error {
 			}
 			b := dAtA[iNdEx]
 			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
+			wire |= uint64(b&0x7F) << shift
 			if b < 0x80 {
 				break
 			}
@@ -2217,6 +2277,9 @@ func (m *SetValueResponse) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			if skippy < 0 {
+				return ErrInvalidLengthExample
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthExample
 			}
 			if (iNdEx + skippy) > l {
@@ -2246,7 +2309,7 @@ func (m *FireRequest) Unmarshal(dAtA []byte) error {
 			}
 			b := dAtA[iNdEx]
 			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
+			wire |= uint64(b&0x7F) << shift
 			if b < 0x80 {
 				break
 			}
@@ -2274,7 +2337,7 @@ func (m *FireRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= (uint64(b) & 0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2284,6 +2347,9 @@ func (m *FireRequest) Unmarshal(dAtA []byte) error {
 				return ErrInvalidLengthExample
 			}
 			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthExample
+			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
@@ -2296,6 +2362,9 @@ func (m *FireRequest) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			if skippy < 0 {
+				return ErrInvalidLengthExample
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthExample
 			}
 			if (iNdEx + skippy) > l {
@@ -2325,7 +2394,7 @@ func (m *EchoOutRequest) Unmarshal(dAtA []byte) error {
 			}
 			b := dAtA[iNdEx]
 			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
+			wire |= uint64(b&0x7F) << shift
 			if b < 0x80 {
 				break
 			}
@@ -2353,7 +2422,7 @@ func (m *EchoOutRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= (uint64(b) & 0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2363,6 +2432,9 @@ func (m *EchoOutRequest) Unmarshal(dAtA []byte) error {
 				return ErrInvalidLengthExample
 			}
 			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthExample
+			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
@@ -2375,6 +2447,9 @@ func (m *EchoOutRequest) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			if skippy < 0 {
+				return ErrInvalidLengthExample
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthExample
 			}
 			if (iNdEx + skippy) > l {
@@ -2404,7 +2479,7 @@ func (m *EchoOutResponse) Unmarshal(dAtA []byte) error {
 			}
 			b := dAtA[iNdEx]
 			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
+			wire |= uint64(b&0x7F) << shift
 			if b < 0x80 {
 				break
 			}
@@ -2432,7 +2507,7 @@ func (m *EchoOutResponse) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= (uint64(b) & 0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2442,6 +2517,9 @@ func (m *EchoOutResponse) Unmarshal(dAtA []byte) error {
 				return ErrInvalidLengthExample
 			}
 			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthExample
+			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
@@ -2454,6 +2532,9 @@ func (m *EchoOutResponse) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			if skippy < 0 {
+				return ErrInvalidLengthExample
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthExample
 			}
 			if (iNdEx + skippy) > l {
@@ -2483,7 +2564,7 @@ func (m *EchoInRequest) Unmarshal(dAtA []byte) error {
 			}
 			b := dAtA[iNdEx]
 			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
+			wire |= uint64(b&0x7F) << shift
 			if b < 0x80 {
 				break
 			}
@@ -2511,7 +2592,7 @@ func (m *EchoInRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= (uint64(b) & 0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2521,6 +2602,9 @@ func (m *EchoInRequest) Unmarshal(dAtA []byte) error {
 				return ErrInvalidLengthExample
 			}
 			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthExample
+			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
@@ -2540,7 +2624,7 @@ func (m *EchoInRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.NumResponses |= (int64(b) & 0x7F) << shift
+				m.NumResponses |= int64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2552,6 +2636,9 @@ func (m *EchoInRequest) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			if skippy < 0 {
+				return ErrInvalidLengthExample
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthExample
 			}
 			if (iNdEx + skippy) > l {
@@ -2581,7 +2668,7 @@ func (m *EchoInResponse) Unmarshal(dAtA []byte) error {
 			}
 			b := dAtA[iNdEx]
 			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
+			wire |= uint64(b&0x7F) << shift
 			if b < 0x80 {
 				break
 			}
@@ -2609,7 +2696,7 @@ func (m *EchoInResponse) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= (uint64(b) & 0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2619,6 +2706,9 @@ func (m *EchoInResponse) Unmarshal(dAtA []byte) error {
 				return ErrInvalidLengthExample
 			}
 			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthExample
+			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
@@ -2631,6 +2721,9 @@ func (m *EchoInResponse) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			if skippy < 0 {
+				return ErrInvalidLengthExample
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthExample
 			}
 			if (iNdEx + skippy) > l {
@@ -2660,7 +2753,7 @@ func (m *EchoBothRequest) Unmarshal(dAtA []byte) error {
 			}
 			b := dAtA[iNdEx]
 			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
+			wire |= uint64(b&0x7F) << shift
 			if b < 0x80 {
 				break
 			}
@@ -2688,7 +2781,7 @@ func (m *EchoBothRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= (uint64(b) & 0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2698,6 +2791,9 @@ func (m *EchoBothRequest) Unmarshal(dAtA []byte) error {
 				return ErrInvalidLengthExample
 			}
 			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthExample
+			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
@@ -2717,7 +2813,7 @@ func (m *EchoBothRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.NumResponses |= (int64(b) & 0x7F) << shift
+				m.NumResponses |= int64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2729,6 +2825,9 @@ func (m *EchoBothRequest) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			if skippy < 0 {
+				return ErrInvalidLengthExample
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthExample
 			}
 			if (iNdEx + skippy) > l {
@@ -2758,7 +2857,7 @@ func (m *EchoBothResponse) Unmarshal(dAtA []byte) error {
 			}
 			b := dAtA[iNdEx]
 			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
+			wire |= uint64(b&0x7F) << shift
 			if b < 0x80 {
 				break
 			}
@@ -2786,7 +2885,7 @@ func (m *EchoBothResponse) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= (uint64(b) & 0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2796,6 +2895,9 @@ func (m *EchoBothResponse) Unmarshal(dAtA []byte) error {
 				return ErrInvalidLengthExample
 			}
 			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthExample
+			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
@@ -2808,6 +2910,9 @@ func (m *EchoBothResponse) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			if skippy < 0 {
+				return ErrInvalidLengthExample
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthExample
 			}
 			if (iNdEx + skippy) > l {
@@ -2876,8 +2981,11 @@ func skipExample(dAtA []byte) (n int, err error) {
 					break
 				}
 			}
-			iNdEx += length
 			if length < 0 {
+				return 0, ErrInvalidLengthExample
+			}
+			iNdEx += length
+			if iNdEx < 0 {
 				return 0, ErrInvalidLengthExample
 			}
 			return iNdEx, nil
@@ -2908,6 +3016,9 @@ func skipExample(dAtA []byte) (n int, err error) {
 					return 0, err
 				}
 				iNdEx = start + next
+				if iNdEx < 0 {
+					return 0, ErrInvalidLengthExample
+				}
 			}
 			return iNdEx, nil
 		case 4:
@@ -2926,44 +3037,3 @@ var (
 	ErrInvalidLengthExample = fmt.Errorf("proto: negative length found during unmarshaling")
 	ErrIntOverflowExample   = fmt.Errorf("proto: integer overflow")
 )
-
-func init() {
-	proto.RegisterFile("internal/examples/protobuf/examplepb/example.proto", fileDescriptor_example_2719bbad203121bc)
-}
-
-var fileDescriptor_example_2719bbad203121bc = []byte{
-	// 518 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x54, 0x3f, 0x6f, 0xd3, 0x40,
-	0x14, 0xbf, 0x17, 0x97, 0x36, 0x79, 0x6d, 0x49, 0x74, 0x42, 0x28, 0xf2, 0x70, 0x2a, 0xce, 0x12,
-	0x21, 0x70, 0xaa, 0xc0, 0x02, 0xa2, 0xad, 0x54, 0x89, 0x22, 0x84, 0xa0, 0x28, 0x96, 0x10, 0x62,
-	0x29, 0x4e, 0x75, 0xd0, 0xa8, 0xce, 0xd9, 0xf8, 0x6c, 0x20, 0x1b, 0x2b, 0x12, 0x48, 0xf0, 0x2d,
-	0x10, 0x33, 0x1f, 0x82, 0x31, 0x63, 0x47, 0xe2, 0x2c, 0x8c, 0xfd, 0x08, 0xc8, 0x17, 0x9f, 0x1b,
-	0x82, 0xaa, 0x28, 0xa6, 0xdb, 0xdd, 0xf3, 0xfb, 0xfd, 0x79, 0xf6, 0xef, 0x19, 0xdb, 0x3d, 0x11,
-	0xf1, 0x50, 0xb8, 0x5e, 0x8b, 0xbf, 0x77, 0xfb, 0x81, 0xc7, 0x65, 0x2b, 0x08, 0xfd, 0xc8, 0xef,
-	0xc6, 0xaf, 0x74, 0x25, 0xe8, 0xea, 0x93, 0xad, 0x1e, 0xd1, 0x9b, 0x71, 0x97, 0x87, 0xf6, 0xc0,
-	0x0d, 0x83, 0x43, 0x5b, 0xc3, 0x6d, 0x0d, 0xb7, 0x35, 0x5c, 0x57, 0xcc, 0xab, 0xaa, 0x53, 0x95,
-	0x5b, 0x13, 0x90, 0x3a, 0x5b, 0x0d, 0xac, 0x3e, 0xe0, 0xd1, 0x33, 0xd7, 0x8b, 0x79, 0x87, 0xbf,
-	0x89, 0xb9, 0x8c, 0x68, 0x0d, 0x8d, 0x63, 0x3e, 0xa8, 0xc3, 0x06, 0x34, 0x2b, 0x9d, 0xf4, 0x68,
-	0x35, 0xb1, 0x76, 0xd6, 0x24, 0x03, 0x5f, 0x48, 0x4e, 0xaf, 0xe0, 0xa5, 0xb7, 0x69, 0xa1, 0x5e,
-	0x52, 0x7d, 0x93, 0x8b, 0x75, 0x07, 0xab, 0xce, 0x3c, 0xba, 0x73, 0xa0, 0x14, 0x6b, 0xce, 0x8c,
-	0x88, 0xd5, 0xc0, 0xd5, 0xbd, 0x5e, 0x98, 0x53, 0xe5, 0x40, 0x98, 0x06, 0x5e, 0xc7, 0xcb, 0xf7,
-	0x0f, 0x8f, 0xfc, 0xfd, 0x38, 0xd2, 0x7d, 0x75, 0x5c, 0xe9, 0x73, 0x29, 0xdd, 0xd7, 0xba, 0x53,
-	0x5f, 0xad, 0xdb, 0x58, 0xcd, 0x7b, 0xb3, 0x41, 0xae, 0xe1, 0x9a, 0xeb, 0x79, 0x07, 0x59, 0x87,
-	0xac, 0x97, 0x36, 0x8c, 0x66, 0xa5, 0xb3, 0xea, 0x7a, 0xde, 0xe3, 0xac, 0x64, 0x3d, 0xc1, 0xf5,
-	0x14, 0xf5, 0x50, 0xcc, 0x15, 0xa0, 0x0d, 0x5c, 0x17, 0x71, 0xff, 0x20, 0xcc, 0xd8, 0xa5, 0x9a,
-	0xd1, 0xe8, 0xac, 0x89, 0xb8, 0xaf, 0x15, 0xa5, 0x76, 0x9c, 0xf2, 0x65, 0x26, 0xce, 0x77, 0xfc,
-	0x74, 0xe2, 0x78, 0xd7, 0x8f, 0x8e, 0x2e, 0x48, 0xfd, 0x06, 0xd6, 0xce, 0x18, 0xe7, 0xe9, 0xb7,
-	0xbf, 0x97, 0xb0, 0xfc, 0x88, 0x0f, 0xd4, 0x77, 0xa1, 0x9f, 0x01, 0xcb, 0x3a, 0x09, 0x74, 0xdb,
-	0x5e, 0x28, 0x82, 0xf6, 0x4c, 0xce, 0xcc, 0x9d, 0xc2, 0xf8, 0x2c, 0x1d, 0x44, 0xf9, 0x71, 0x8a,
-	0xfa, 0x71, 0xfe, 0xd3, 0xcf, 0x3f, 0x69, 0x25, 0xed, 0x97, 0xb8, 0xe4, 0xf4, 0xc4, 0x31, 0x7d,
-	0x8e, 0x4b, 0x69, 0x6e, 0xe9, 0xdd, 0x05, 0x29, 0xa7, 0xc2, 0x6e, 0xd2, 0x69, 0xec, 0xbe, 0xe0,
-	0xef, 0xdc, 0x81, 0x45, 0xda, 0x3f, 0x0c, 0x34, 0xf6, 0x7c, 0x9f, 0x7e, 0x02, 0x5c, 0xc9, 0x92,
-	0x4c, 0xb7, 0x16, 0x54, 0xf9, 0x7b, 0x5b, 0xcc, 0xed, 0xa2, 0x70, 0x3d, 0x76, 0x13, 0xe8, 0x47,
-	0xc0, 0xe5, 0x49, 0xa4, 0xe9, 0xbd, 0x02, 0x74, 0xf9, 0x66, 0x99, 0x5b, 0x05, 0xd1, 0xda, 0xcb,
-	0x26, 0xd0, 0xaf, 0x80, 0x65, 0x1d, 0x70, 0x5a, 0x64, 0xb8, 0xa9, 0x5d, 0x5b, 0x38, 0x14, 0xb3,
-	0x9b, 0x95, 0xbe, 0x9d, 0x4d, 0xd8, 0xdd, 0x19, 0x8e, 0x18, 0x39, 0x19, 0x31, 0x72, 0x3a, 0x62,
-	0xf0, 0x21, 0x61, 0xf0, 0x2d, 0x61, 0xf0, 0x33, 0x61, 0x30, 0x4c, 0x18, 0xfc, 0x4a, 0x18, 0xfc,
-	0x4e, 0x18, 0x39, 0x4d, 0x18, 0x7c, 0x19, 0x33, 0x32, 0x1c, 0x33, 0x72, 0x32, 0x66, 0xe4, 0x45,
-	0x25, 0xff, 0xf9, 0x77, 0x97, 0x95, 0xd2, 0xad, 0x3f, 0x01, 0x00, 0x00, 0xff, 0xff, 0xe4, 0x9c,
-	0x50, 0xc5, 0x2b, 0x06, 0x00, 0x00,
-}
