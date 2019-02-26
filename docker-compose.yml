@@ -5,7 +5,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.1.10
-    network_mode: "host"
     environment:
       - TEST_TIME_SCALE=5
       - THIS_CHUNK=${BUILDKITE_PARALLEL_JOB}
@@ -27,7 +26,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.1.11
-    network_mode: "host"
     environment:
       - TEST_TIME_SCALE=5
       - THIS_CHUNK=${BUILDKITE_PARALLEL_JOB}
