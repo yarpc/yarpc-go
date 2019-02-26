@@ -1,5 +1,5 @@
 hash: c14a792613329b43cc3bd093bc35923f8ebbc02cb87c5449b70cb92667b1631d
-updated: 2019-02-07T15:04:25.073403037Z
+updated: 2019-02-26T15:04:10.956794926Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -25,7 +25,7 @@ imports:
 - name: github.com/fatih/structtag
   version: 76ae1d6d2117609598c7d4e8f3e938145f204e8f
 - name: github.com/gogo/protobuf
-  version: 4cbf7e384e768b4e01799441fdf2a706a5635ae7
+  version: ba06b47c162d49f2af050fb4c75bcbc86a159d5c
   subpackages:
   - gogoproto
   - jsonpb
@@ -78,7 +78,7 @@ imports:
   subpackages:
   - internal/errcheck
 - name: github.com/mattn/go-shellwords
-  version: 02e3cf038dcea8290e44424da473dd12be796a8a
+  version: a72fbe27a1b0ed0df2f02754945044ce1456608b
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c182affec369e30f25d3eb8cd8a478dee585ae7d
   subpackages:
@@ -103,23 +103,24 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: cfeb6f9992ffa54aaa4f2170ade4067ee478b250
+  version: 7a3416fd1f41341905f138746c51a5092e7ddf7a
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 488faf799f863e27e50c516468f76ae8f1da20a5
+  version: 6ed1f7e1041181781dd2826d3001075d011a80cc
   subpackages:
   - internal/util
+  - iostats
   - nfs
   - xfs
 - name: github.com/samuel/go-thrift
-  version: e9042807f4f5bf47563df6992d3ea0857313e2be
+  version: e8b6b52668fe9c972220addc130edf46a9b466b1
   subpackages:
   - parser
 - name: github.com/stretchr/testify
-  version: 363ebb24d041ccea8068222281c2e963e997b9dc
+  version: 3f658bd5ac42cc0b5de5b427e95a480d5726ea76
   subpackages:
   - assert
   - require
@@ -132,7 +133,7 @@ imports:
   subpackages:
   - internal/mapstructure
 - name: github.com/uber-go/tally
-  version: ff17f3c43c065c3c2991f571e740eee43ea3a14a
+  version: e9a67ec1839e1f6e5133dbcca2f57bec12fdeda2
 - name: github.com/uber/jaeger-client-go
   version: 1a782e2da844727691fef1757c72eb190c2909f0
   subpackages:
@@ -233,7 +234,7 @@ imports:
   subpackages:
   - golint
 - name: golang.org/x/net
-  version: 65e2d4e15006aab9813ff8769e768bbf4bb667a0
+  version: fe579d43d83210096a79b46dcca0e3721058393a
   subpackages:
   - bpf
   - context
@@ -249,19 +250,19 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 41f3e6584952bb034a481797859f6ab34b6803bd
+  version: cc5685c2db1239775905f3911f0067c0fa74762f
   repo: https://github.com/golang/sys
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: e6919f6577db79269a6443b9dc46d18f2238fb5d
+  version: d14c52b222ee852cdba8b07206ca0c614b389876
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 44bcb96178d39510d2bb8a61ef1c08b85bb24a45
+  version: 2dc4ef2775b8122dd5afe2c18fd6f775e87f89e5
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
@@ -278,7 +279,7 @@ imports:
   - internal/gopathwalk
   - internal/semver
 - name: google.golang.org/genproto
-  version: 4b09977fb92221987e99d190c8f88f2c92727a29
+  version: 082222b4a5c572e33e82ee9162d1352c7cf38682
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
@@ -318,7 +319,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 51d6538a90f86fe93ac480b35f37b2be17fef232
 - name: honnef.co/go/tools
-  version: 71123fcbb8fe554a51e76ae6bab8a6f40a12db78
+  version: 466a0476246c45c74e011a03de704d72dc83da2d
   subpackages:
   - arg
   - callgraph
