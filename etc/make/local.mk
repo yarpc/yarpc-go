@@ -8,6 +8,10 @@ FILTER_GOVET := grep -v \
 	-e 'possible formatting directive in Error call' \
 	-e 'Example.*refers to unknown identifier'
 
+# Regexes for 'staticcheck' rules to ignore
+FILTER_STATICCHECK := grep -v \
+	-e 'grpc.CallCustomCodec is deprecated: use ForceCodec instead'
+
 ERRCHECK_FLAGS := -ignoretests
 ERRCHECK_EXCLUDES := \.Close\(\) \.Stop\(\) fmt\.Fprint
 FILTER_ERRCHECK := grep -v $(patsubst %,-e %, $(ERRCHECK_EXCLUDES))
@@ -86,7 +90,9 @@ golint: $(GOLINT) __eval_packages __eval_go_files ## check golint
 .PHONY: staticcheck
 staticcheck: $(STATICCHECK) __eval_packages __eval_go_files ## check staticcheck
 	$(eval STATICCHECK_LOG := $(shell mktemp -t staticcheck.XXXXX))
-	@PATH=$(BIN):$$PATH staticcheck $(STATICCHECK_FLAGS) $(PACKAGES) 2>&1 | $(FILTER_LINT) > $(STATICCHECK_LOG) || true
+	@PATH=$(BIN):$$PATH staticcheck $(STATICCHECK_FLAGS) $(PACKAGES) 2>&1 \
+		| $(FILTER_STATICCHECK) \
+		| $(FILTER_LINT) > $(STATICCHECK_LOG) || true
 	@[ ! -s "$(STATICCHECK_LOG)" ] || (echo "staticcheck failed:" | cat - $(STATICCHECK_LOG) && false)
 
 .PHONY: errcheck
