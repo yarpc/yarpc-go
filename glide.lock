@@ -1,5 +1,5 @@
 hash: c14a792613329b43cc3bd093bc35923f8ebbc02cb87c5449b70cb92667b1631d
-updated: 2019-02-28T15:07:06.317861335Z
+updated: 2019-03-01T15:06:24.154859765Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -120,7 +120,7 @@ imports:
   subpackages:
   - parser
 - name: github.com/stretchr/testify
-  version: 3f658bd5ac42cc0b5de5b427e95a480d5726ea76
+  version: 21cb1c2932a2d04c6792d5ad106243c6e36a3a7d
   subpackages:
   - assert
   - require
@@ -234,7 +234,7 @@ imports:
   subpackages:
   - golint
 - name: golang.org/x/net
-  version: c95aed5357e77a4bf7d3955c46740000a17adee1
+  version: 92fc7df08ae7536330f5a21328292abfa70520a8
   subpackages:
   - bpf
   - context
@@ -262,7 +262,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: f0a709d59f0fd2d705cf7767149e23a7a99f585b
+  version: 589c23e65e65055d47b9ad4a99723bc389136265
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
