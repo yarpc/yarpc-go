@@ -1,5 +1,5 @@
 hash: c14a792613329b43cc3bd093bc35923f8ebbc02cb87c5449b70cb92667b1631d
-updated: 2019-03-01T15:06:24.154859765Z
+updated: 2019-03-04T15:06:21.115057001Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -103,7 +103,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 7a3416fd1f41341905f138746c51a5092e7ddf7a
+  version: bf857faf208676b0294bd49959aa34c8d98163ed
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -230,11 +230,11 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/lint
-  version: 5b3e6a55c961c61f4836ae6868c17b070744c590
+  version: 5614ed5bae6fb75893070bdc0996a68765fdd275
   subpackages:
   - golint
 - name: golang.org/x/net
-  version: 92fc7df08ae7536330f5a21328292abfa70520a8
+  version: 16b79f2e4e95ea23b2bf9903c9809ff7b013ce85
   subpackages:
   - bpf
   - context
@@ -250,7 +250,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: a34e9553db1e492c9a76e60db2296ae7e5fbb772
+  version: c2f5717e611cf8e89a852a41081355194d80c943
   repo: https://github.com/golang/sys
   subpackages:
   - unix
