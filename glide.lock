@@ -1,5 +1,5 @@
 hash: c14a792613329b43cc3bd093bc35923f8ebbc02cb87c5449b70cb92667b1631d
-updated: 2019-03-07T15:04:19.005061691Z
+updated: 2019-03-08T15:07:27.0361433Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -250,7 +250,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: b294cbcfc56d2a65a30c02c78722b5df061e99b8
+  version: 584f3b12f43e1e55248c90e84804777009eed0a4
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -262,7 +262,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 69e0dcfa1121488c38c3c8f9624f7de769003896
+  version: b40df0fb21c33a42fff2bf0316d73f412f6b7b3e
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
@@ -279,7 +279,7 @@ imports:
   - internal/gopathwalk
   - internal/semver
 - name: google.golang.org/genproto
-  version: 6e86cb5d2f12401bdd82a5eccbd701b5a697e63e
+  version: 5fe7a883aa19554f42890211544aa549836af7b7
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
