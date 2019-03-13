@@ -1,5 +1,5 @@
 hash: c14a792613329b43cc3bd093bc35923f8ebbc02cb87c5449b70cb92667b1631d
-updated: 2019-03-12T15:06:20.390088759Z
+updated: 2019-03-13T15:04:43.540592385Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -103,7 +103,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: e6686eb715ab541212ad73063f1e4b92b8a554e9
+  version: 8b748030788ea01a6ceb5068504cfa01d1b335b1
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -234,7 +234,7 @@ imports:
   subpackages:
   - golint
 - name: golang.org/x/net
-  version: d8887717615a059821345a5c23649351b52a1c0b
+  version: 5c2c250b6a70e39b74bb544433a348a892b10530
   subpackages:
   - bpf
   - context
@@ -262,7 +262,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: c0c382bb4e650d9c5e3cdf44525479505dcd0d6f
+  version: e65039ee4138194d75ebaa2da35887260d5e15b2
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
