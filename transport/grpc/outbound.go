@@ -289,7 +289,7 @@ func (o *Outbound) stream(
 		return nil, err
 	}
 
-	streamCtx := metadata.NewOutgoingContext(ctx, md)
+	streamCtx := metadata.NewOutgoingContext(context.Background(), md)
 	clientStream, err := grpcPeer.clientConn.NewStream(
 		streamCtx,
 		&grpc.StreamDesc{
@@ -302,7 +302,7 @@ func (o *Outbound) stream(
 		span.Finish()
 		return nil, err
 	}
-	stream := newClientStream(streamCtx, req, clientStream, span)
+	stream := newClientStream(clientStream.Context(), req, clientStream, span)
 	tClientStream, err := transport.NewClientStream(stream)
 	if err != nil {
 		span.Finish()
