@@ -5,11 +5,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- No changes yet.
+### Fixed
+- Use separate context for grpc streams once dial has been completed.
 
 ## [1.36.2] - 2019-02-25
 ### Fixed
-- Removed error name validation. 
+- Removed error name validation.
 
 ## [1.36.1] - 2019-01-23
 ### Fixed
