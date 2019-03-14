@@ -1,5 +1,5 @@
 hash: c14a792613329b43cc3bd093bc35923f8ebbc02cb87c5449b70cb92667b1631d
-updated: 2019-03-13T15:04:43.540592385Z
+updated: 2019-03-14T15:04:28.616335434Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -230,11 +230,11 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/lint
-  version: 5614ed5bae6fb75893070bdc0996a68765fdd275
+  version: d0100b6bd8b389f0385611eb39152c4d7c3a7905
   subpackages:
   - golint
 - name: golang.org/x/net
-  version: 5c2c250b6a70e39b74bb544433a348a892b10530
+  version: 9f648a60d9775ef5c977e7669d1673a7a67bef33
   subpackages:
   - bpf
   - context
@@ -262,7 +262,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: e65039ee4138194d75ebaa2da35887260d5e15b2
+  version: 1286b2016bb195031cab5657d3244bc996b3f2dd
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
