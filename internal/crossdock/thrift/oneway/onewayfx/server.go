@@ -24,10 +24,10 @@
 package onewayfx
 
 import (
-	"go.uber.org/fx"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/internal/crossdock/thrift/oneway/onewayserver"
+	fx "go.uber.org/fx"
+	transport "go.uber.org/yarpc/api/transport"
+	thrift "go.uber.org/yarpc/encoding/thrift"
+	onewayserver "go.uber.org/yarpc/internal/crossdock/thrift/oneway/onewayserver"
 )
 
 // ServerParams defines the dependencies for the Oneway server.

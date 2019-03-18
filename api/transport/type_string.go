@@ -24,6 +24,15 @@ package transport
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[Unary-1]
+	_ = x[Oneway-2]
+	_ = x[Streaming-3]
+}
+
 const _Type_name = "UnaryOnewayStreaming"
 
 var _Type_index = [...]uint8{0, 5, 11, 20}
