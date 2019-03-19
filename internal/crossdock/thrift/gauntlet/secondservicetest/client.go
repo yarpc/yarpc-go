@@ -24,10 +24,10 @@
 package secondservicetest
 
 import (
-	"context"
-	"github.com/golang/mock/gomock"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/secondserviceclient"
+	context "context"
+	gomock "github.com/golang/mock/gomock"
+	yarpc "go.uber.org/yarpc"
+	secondserviceclient "go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/secondserviceclient"
 )
 
 // MockClient implements a gomock-compatible mock client for service

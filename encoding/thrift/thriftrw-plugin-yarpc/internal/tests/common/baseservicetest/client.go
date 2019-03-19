@@ -4,10 +4,10 @@
 package baseservicetest
 
 import (
-	"context"
-	"github.com/golang/mock/gomock"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/baseserviceclient"
+	context "context"
+	gomock "github.com/golang/mock/gomock"
+	yarpc "go.uber.org/yarpc"
+	baseserviceclient "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/baseserviceclient"
 )
 
 // MockClient implements a gomock-compatible mock client for service

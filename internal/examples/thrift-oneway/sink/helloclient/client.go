@@ -24,12 +24,12 @@
 package helloclient
 
 import (
-	"context"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink"
-	"reflect"
+	context "context"
+	yarpc "go.uber.org/yarpc"
+	transport "go.uber.org/yarpc/api/transport"
+	thrift "go.uber.org/yarpc/encoding/thrift"
+	sink "go.uber.org/yarpc/internal/examples/thrift-oneway/sink"
+	reflect "reflect"
 )
 
 // Interface is a client for the Hello service.
