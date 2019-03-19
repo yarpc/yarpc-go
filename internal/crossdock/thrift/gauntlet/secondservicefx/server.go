@@ -24,10 +24,10 @@
 package secondservicefx
 
 import (
-	"go.uber.org/fx"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/secondserviceserver"
+	fx "go.uber.org/fx"
+	transport "go.uber.org/yarpc/api/transport"
+	thrift "go.uber.org/yarpc/encoding/thrift"
+	secondserviceserver "go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/secondserviceserver"
 )
 
 // ServerParams defines the dependencies for the SecondService server.

@@ -24,10 +24,10 @@
 package onewaytest
 
 import (
-	"context"
-	"github.com/golang/mock/gomock"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/internal/crossdock/thrift/oneway/onewayclient"
+	context "context"
+	gomock "github.com/golang/mock/gomock"
+	yarpc "go.uber.org/yarpc"
+	onewayclient "go.uber.org/yarpc/internal/crossdock/thrift/oneway/onewayclient"
 )
 
 // MockClient implements a gomock-compatible mock client for service

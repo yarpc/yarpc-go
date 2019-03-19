@@ -4,11 +4,11 @@
 package fooclient
 
 import (
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/nameclient"
-	"reflect"
+	yarpc "go.uber.org/yarpc"
+	transport "go.uber.org/yarpc/api/transport"
+	thrift "go.uber.org/yarpc/encoding/thrift"
+	nameclient "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/nameclient"
+	reflect "reflect"
 )
 
 // Interface is a client for the Foo service.

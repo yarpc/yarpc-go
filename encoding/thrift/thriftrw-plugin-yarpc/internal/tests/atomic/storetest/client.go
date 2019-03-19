@@ -4,11 +4,11 @@
 package storetest
 
 import (
-	"context"
-	"github.com/golang/mock/gomock"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/storeclient"
+	context "context"
+	gomock "github.com/golang/mock/gomock"
+	yarpc "go.uber.org/yarpc"
+	atomic "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic"
+	storeclient "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/storeclient"
 )
 
 // MockClient implements a gomock-compatible mock client for service

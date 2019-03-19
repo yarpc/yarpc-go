@@ -4,10 +4,10 @@
 package extendemptyfx
 
 import (
-	"go.uber.org/fx"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendemptyclient"
+	fx "go.uber.org/fx"
+	yarpc "go.uber.org/yarpc"
+	thrift "go.uber.org/yarpc/encoding/thrift"
+	extendemptyclient "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendemptyclient"
 )
 
 // Params defines the dependencies for the ExtendEmpty client.

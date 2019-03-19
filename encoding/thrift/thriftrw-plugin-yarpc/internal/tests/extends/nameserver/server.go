@@ -4,11 +4,11 @@
 package nameserver
 
 import (
-	"context"
-	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends"
+	context "context"
+	wire "go.uber.org/thriftrw/wire"
+	transport "go.uber.org/yarpc/api/transport"
+	thrift "go.uber.org/yarpc/encoding/thrift"
+	extends "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends"
 )
 
 // Interface is the server-side interface for the Name service.

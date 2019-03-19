@@ -24,10 +24,10 @@
 package echofx
 
 import (
-	"go.uber.org/fx"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/internal/crossdock/thrift/echo/echoclient"
+	fx "go.uber.org/fx"
+	yarpc "go.uber.org/yarpc"
+	thrift "go.uber.org/yarpc/encoding/thrift"
+	echoclient "go.uber.org/yarpc/internal/crossdock/thrift/echo/echoclient"
 )
 
 // Params defines the dependencies for the Echo client.

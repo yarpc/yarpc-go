@@ -4,10 +4,10 @@
 package weatherfx
 
 import (
-	"go.uber.org/fx"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/weatherserver"
+	fx "go.uber.org/fx"
+	transport "go.uber.org/yarpc/api/transport"
+	thrift "go.uber.org/yarpc/encoding/thrift"
+	weatherserver "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/weatherserver"
 )
 
 // ServerParams defines the dependencies for the Weather server.

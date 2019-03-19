@@ -24,6 +24,15 @@ package peer
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[Unavailable-0]
+	_ = x[Connecting-1]
+	_ = x[Available-2]
+}
+
 const _ConnectionStatus_name = "UnavailableConnectingAvailable"
 
 var _ConnectionStatus_index = [...]uint8{0, 11, 21, 30}

@@ -24,10 +24,10 @@
 package hellofx
 
 import (
-	"go.uber.org/fx"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/internal/examples/thrift-hello/hello/echo/helloclient"
+	fx "go.uber.org/fx"
+	yarpc "go.uber.org/yarpc"
+	thrift "go.uber.org/yarpc/encoding/thrift"
+	helloclient "go.uber.org/yarpc/internal/examples/thrift-hello/hello/echo/helloclient"
 )
 
 // Params defines the dependencies for the Hello client.

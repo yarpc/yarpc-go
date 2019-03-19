@@ -4,14 +4,14 @@
 package readonlystoreclient
 
 import (
-	"context"
-	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/baseserviceclient"
-	"reflect"
+	context "context"
+	wire "go.uber.org/thriftrw/wire"
+	yarpc "go.uber.org/yarpc"
+	transport "go.uber.org/yarpc/api/transport"
+	thrift "go.uber.org/yarpc/encoding/thrift"
+	atomic "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic"
+	baseserviceclient "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/baseserviceclient"
+	reflect "reflect"
 )
 
 // Interface is a client for the ReadOnlyStore service.

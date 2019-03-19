@@ -4,14 +4,14 @@
 package weatherclient
 
 import (
-	"context"
+	context "context"
 	tchannel "github.com/uber/tchannel-go"
-	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather"
-	"reflect"
+	wire "go.uber.org/thriftrw/wire"
+	yarpc "go.uber.org/yarpc"
+	transport "go.uber.org/yarpc/api/transport"
+	thrift "go.uber.org/yarpc/encoding/thrift"
+	weather "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather"
+	reflect "reflect"
 )
 
 // Interface is a client for the Weather service.

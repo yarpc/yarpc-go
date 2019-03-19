@@ -24,11 +24,11 @@
 package keyvalueserver
 
 import (
-	"context"
-	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv"
+	context "context"
+	wire "go.uber.org/thriftrw/wire"
+	transport "go.uber.org/yarpc/api/transport"
+	thrift "go.uber.org/yarpc/encoding/thrift"
+	kv "go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv"
 )
 
 // Interface is the server-side interface for the KeyValue service.
