@@ -224,3 +224,27 @@ func TestPeerHeapInvalidRemoval(t *testing.T) {
 	var ph pendingHeap
 	(&ph).Remove(nil, nil, nil)
 }
+
+func TestStaleSubscriberNoPanic(t *testing.T) {
+	ph := pendingHeap{nextRand: nextRandFromSlice([]int{0, 0})}
+
+	p1 := peertest.NewLightMockPeer(peertest.MockPeerIdentifier("p1"), peer.Available)
+	p2 := peertest.NewLightMockPeer(peertest.MockPeerIdentifier("p2"), peer.Available)
+
+	// this will place p1 at the end of the slice since it now has the largest
+	// request count
+	p1.StartRequest()
+
+	// add peers to heap
+	subscriber := ph.Add(p1, p1)
+	_ = ph.Add(p2, p2)
+
+	// remove p1 from the heap
+	ph.Remove(p1, p1, subscriber)
+
+	assert.NotPanics(t, func() {
+		// For on-going requests, it's possible to still have a reference to the
+		// subscriber, even if it is not present in the heap.
+		subscriber.NotifyStatusChanged(p1)
+	}, "stale subscribers should not cause a panic")
+}
