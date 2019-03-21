@@ -1,5 +1,5 @@
 hash: c14a792613329b43cc3bd093bc35923f8ebbc02cb87c5449b70cb92667b1631d
-updated: 2019-03-20T15:04:58.619544294Z
+updated: 2019-03-21T15:04:15.047552967Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -103,7 +103,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 8b748030788ea01a6ceb5068504cfa01d1b335b1
+  version: 1ab4d74fc89940cfbc3c2b3a89821336cdefa119
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -250,19 +250,19 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 6c81ef8f67ca3f42fc9cd71dfbd5f35b0c4b5771
+  version: f7bb7a8bee54210937e93ec56d007d892c1f0580
   repo: https://github.com/golang/sys
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 5d731a35f4867878fc89f7744f7b6debb3beded6
+  version: fe223c5a2583471b2791ca99e716c65b4a76117e
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 3f1ed9edd1b43b011064eb59e5c9e73f5537ddd9
+  version: 36c10c0a621fb2fede4686e8ae7bb1d900735d53
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
@@ -284,7 +284,7 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 2fdaae294f38ed9a121193c51ec99fecd3b13eb7
+  version: 3507fb8e1a5ad030303c106fef3a47c9fdad16ad
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
