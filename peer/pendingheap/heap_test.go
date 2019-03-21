@@ -26,6 +26,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/api/peer/peertest"
 )
 
 func TestPeerHeapRunning(t *testing.T) {
@@ -155,7 +157,7 @@ func TestPeerHeapDelete(t *testing.T) {
 	}
 
 	// The first peer is the lowest, remove it so it swaps with the last peer.
-	h.delete(0)
+	h.delete(peers[0])
 
 	// Now when we pop peers, we expect peers 1 to N.
 	want := peers[1:]
@@ -199,7 +201,7 @@ func popAndVerifyHeap(t *testing.T, h *pendingHeap) []*peerScore {
 		}
 
 		if ps.score < lastScore {
-			t.Fatalf("heap returned peer %v with lower score than %v", ps, lastScore)
+			t.Fatalf("heap returned peer %+v with lower score than %v", ps, lastScore)
 		}
 		lastScore = ps.score
 	}
