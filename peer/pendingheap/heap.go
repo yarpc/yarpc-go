@@ -86,13 +86,20 @@ func (ph *pendingHeap) Remove(p peer.StatusPeer, _ peer.Identifier, sub peer.Sub
 	}
 
 	ph.Lock()
-	ph.delete(ps.index)
+	ph.delete(ps)
 	ph.Unlock()
 }
 
 func (ph *pendingHeap) notifyStatusChanged(ps *peerScore) {
 	status := ps.peer.Status()
 	ph.Lock()
+	// If the index is negative, the subscriber has already been deleted from the
+	// heap. This may occur when calling a peer and simultaneously removing it
+	// from the heap.
+	if ps.index < 0 {
+		return
+	}
+
 	ps.status = status
 	ps.score = scorePeer(ps.peer)
 	ph.update(ps.index)
@@ -153,7 +160,12 @@ func (ph *pendingHeap) Pop() interface{} {
 
 // delete removes the score at the given index.
 // delete must be called in a lock.
-func (ph *pendingHeap) delete(index int) {
+func (ph *pendingHeap) delete(ps *peerScore) {
+	if ps.index < 0 {
+		return
+	}
+	index := ps.index
+
 	// Swap the element we want to delete with the last element, then pop it off.
 	ph.Swap(index, ph.Len()-1)
 	ph.Pop()
@@ -163,6 +175,9 @@ func (ph *pendingHeap) delete(index int) {
 	if index < ph.Len() {
 		ph.update(index)
 	}
+
+	// Set the index to negative so we do not try to delete it again.
+	ps.index = -1
 }
 
 // pushPeer must be called in the context of a lock.
