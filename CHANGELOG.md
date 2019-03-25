@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+- No changes yet.
+
 ## [1.37.1] - 2019-03-25
 ### Fixed
 - Fix fewest pending heap panic that occurs when calling a peer and removing it
@@ -1072,6 +1075,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.37.1...HEAD
 [1.37.1]: https://github.com/yarpc/yarpc-go/compare/v1.37.0...v1.37.1
 [1.37.0]: https://github.com/yarpc/yarpc-go/compare/v1.36.2...v1.37.0
 [1.36.2]: https://github.com/yarpc/yarpc-go/compare/v1.36.1...v1.36.2
