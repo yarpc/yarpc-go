@@ -4,10 +4,10 @@
 package emptyserviceclient
 
 import (
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
-	"reflect"
+	yarpc "go.uber.org/yarpc"
+	transport "go.uber.org/yarpc/api/transport"
+	thrift "go.uber.org/yarpc/encoding/thrift"
+	reflect "reflect"
 )
 
 // Interface is a client for the EmptyService service.

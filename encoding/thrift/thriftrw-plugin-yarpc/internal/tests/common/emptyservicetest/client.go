@@ -4,8 +4,8 @@
 package emptyservicetest
 
 import (
-	"github.com/golang/mock/gomock"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/emptyserviceclient"
+	gomock "github.com/golang/mock/gomock"
+	emptyserviceclient "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/emptyserviceclient"
 )
 
 // MockClient implements a gomock-compatible mock client for service

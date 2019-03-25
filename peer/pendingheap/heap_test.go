@@ -26,6 +26,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/api/peer/peertest"
 )
 
 func TestPeerHeapRunning(t *testing.T) {
@@ -155,7 +157,7 @@ func TestPeerHeapDelete(t *testing.T) {
 	}
 
 	// The first peer is the lowest, remove it so it swaps with the last peer.
-	h.delete(0)
+	h.delete(peers[0])
 
 	// Now when we pop peers, we expect peers 1 to N.
 	want := peers[1:]
@@ -199,7 +201,7 @@ func popAndVerifyHeap(t *testing.T, h *pendingHeap) []*peerScore {
 		}
 
 		if ps.score < lastScore {
-			t.Fatalf("heap returned peer %v with lower score than %v", ps, lastScore)
+			t.Fatalf("heap returned peer %+v with lower score than %v", ps, lastScore)
 		}
 		lastScore = ps.score
 	}
@@ -223,4 +225,28 @@ func TestPeerHeapInvalidAdd(t *testing.T) {
 func TestPeerHeapInvalidRemoval(t *testing.T) {
 	var ph pendingHeap
 	(&ph).Remove(nil, nil, nil)
+}
+
+func TestStaleSubscriberNoPanic(t *testing.T) {
+	ph := pendingHeap{nextRand: nextRandFromSlice([]int{0, 0})}
+
+	p1 := peertest.NewLightMockPeer(peertest.MockPeerIdentifier("p1"), peer.Available)
+	p2 := peertest.NewLightMockPeer(peertest.MockPeerIdentifier("p2"), peer.Available)
+
+	// this will place p1 at the end of the slice since it now has the largest
+	// request count
+	p1.StartRequest()
+
+	// add peers to heap
+	subscriber := ph.Add(p1, p1)
+	_ = ph.Add(p2, p2)
+
+	// remove p1 from the heap
+	ph.Remove(p1, p1, subscriber)
+
+	assert.NotPanics(t, func() {
+		// For on-going requests, it's possible to still have a reference to the
+		// subscriber, even if it is not present in the heap.
+		subscriber.NotifyStatusChanged(p1)
+	}, "stale subscribers should not cause a panic")
 }

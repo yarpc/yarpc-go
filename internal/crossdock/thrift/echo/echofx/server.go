@@ -24,10 +24,10 @@
 package echofx
 
 import (
-	"go.uber.org/fx"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/internal/crossdock/thrift/echo/echoserver"
+	fx "go.uber.org/fx"
+	transport "go.uber.org/yarpc/api/transport"
+	thrift "go.uber.org/yarpc/encoding/thrift"
+	echoserver "go.uber.org/yarpc/internal/crossdock/thrift/echo/echoserver"
 )
 
 // ServerParams defines the dependencies for the Echo server.

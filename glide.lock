@@ -1,5 +1,5 @@
 hash: c14a792613329b43cc3bd093bc35923f8ebbc02cb87c5449b70cb92667b1631d
-updated: 2019-03-14T15:04:28.616335434Z
+updated: 2019-03-22T15:05:32.03958018Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -63,7 +63,7 @@ imports:
   - mockgen
   - mockgen/model
 - name: github.com/golang/protobuf
-  version: c823c79ea1570fb5ff454033735a8e68575d1d0f
+  version: b5d812f8a3706043e23a9cd5babf2e5423744d30
   subpackages:
   - proto
   - ptypes
@@ -103,13 +103,13 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 8b748030788ea01a6ceb5068504cfa01d1b335b1
+  version: 1ab4d74fc89940cfbc3c2b3a89821336cdefa119
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: d0f344d83b0c80a1bc03b547a2374a9ec6711144
+  version: 40f3c57fb1983891f95378042bd0bfd590f52384
   subpackages:
   - internal/util
   - iostats
@@ -188,7 +188,7 @@ imports:
   - push
   - tallypush
 - name: go.uber.org/thriftrw
-  version: 4fe4d5a28a338ad3cc955897e9586021d1732c3f
+  version: 4302611d78393c965f36d073e911352ed8a4eb73
   subpackages:
   - ast
   - compile
@@ -234,7 +234,7 @@ imports:
   subpackages:
   - golint
 - name: golang.org/x/net
-  version: 9f648a60d9775ef5c977e7669d1673a7a67bef33
+  version: addf6b3196f61cd44ce5a76657913698c73479d0
   subpackages:
   - bpf
   - context
@@ -250,23 +250,24 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: fead79001313d15903fb4605b4a1b781532cd93e
+  version: f49334f85ddcf0f08d7fb6dd7363e9e6d6b777eb
   repo: https://github.com/golang/sys
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 5d731a35f4867878fc89f7744f7b6debb3beded6
+  version: fe223c5a2583471b2791ca99e716c65b4a76117e
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 1286b2016bb195031cab5657d3244bc996b3f2dd
+  version: 6aabc1ca790df3e0b556593b27bc25d26b151751
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
   - go/ast/astutil
+  - go/ast/inspector
   - go/buildutil
   - go/gcexportdata
   - go/internal/cgo
@@ -279,11 +280,11 @@ imports:
   - internal/gopathwalk
   - internal/semver
 - name: google.golang.org/genproto
-  version: 5fe7a883aa19554f42890211544aa549836af7b7
+  version: e79c0c59cdb5e117ef82a6f885294df3d74065d5
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 2fdaae294f38ed9a121193c51ec99fecd3b13eb7
+  version: 3507fb8e1a5ad030303c106fef3a47c9fdad16ad
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
@@ -319,7 +320,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 51d6538a90f86fe93ac480b35f37b2be17fef232
 - name: honnef.co/go/tools
-  version: 466a0476246c45c74e011a03de704d72dc83da2d
+  version: d116c56a00f35fccc49f42d6368582e8967f9e22
   subpackages:
   - arg
   - callgraph

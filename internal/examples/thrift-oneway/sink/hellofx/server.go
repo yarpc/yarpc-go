@@ -24,10 +24,10 @@
 package hellofx
 
 import (
-	"go.uber.org/fx"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink/helloserver"
+	fx "go.uber.org/fx"
+	transport "go.uber.org/yarpc/api/transport"
+	thrift "go.uber.org/yarpc/encoding/thrift"
+	helloserver "go.uber.org/yarpc/internal/examples/thrift-oneway/sink/helloserver"
 )
 
 // ServerParams defines the dependencies for the Hello server.

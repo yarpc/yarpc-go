@@ -4,8 +4,8 @@
 package emptyserviceserver
 
 import (
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
+	transport "go.uber.org/yarpc/api/transport"
+	thrift "go.uber.org/yarpc/encoding/thrift"
 )
 
 // Interface is the server-side interface for the EmptyService service.

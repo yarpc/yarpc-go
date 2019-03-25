@@ -24,11 +24,11 @@
 package echotest
 
 import (
-	"context"
-	"github.com/golang/mock/gomock"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/internal/crossdock/thrift/echo"
-	"go.uber.org/yarpc/internal/crossdock/thrift/echo/echoclient"
+	context "context"
+	gomock "github.com/golang/mock/gomock"
+	yarpc "go.uber.org/yarpc"
+	echo "go.uber.org/yarpc/internal/crossdock/thrift/echo"
+	echoclient "go.uber.org/yarpc/internal/crossdock/thrift/echo/echoclient"
 )
 
 // MockClient implements a gomock-compatible mock client for service
