@@ -21,13 +21,16 @@
 package pendingheap
 
 import (
+	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/peer/peertest"
+	"go.uber.org/yarpc/api/transport"
 )
 
 func TestPeerHeapRunning(t *testing.T) {
@@ -249,4 +252,36 @@ func TestStaleSubscriberNoPanic(t *testing.T) {
 		// subscriber, even if it is not present in the heap.
 		subscriber.NotifyStatusChanged(p1)
 	}, "stale subscribers should not cause a panic")
+}
+
+func TestReleaseLockWithStaleSubscriber(t *testing.T) {
+	ph := pendingHeap{nextRand: nextRandFromSlice([]int{0})}
+	require.NoError(t, ph.Start())
+
+	p1 := peertest.NewLightMockPeer(peertest.MockPeerIdentifier("p1"), peer.Available)
+
+	sub1 := ph.Add(p1, p1)
+
+	subscriber, ok := sub1.(*peerScore)
+	require.True(t, ok, "unexpected subscriber type")
+
+	// remove p1 from the heap, still holding onto a reference to the subscriber
+	ph.Remove(p1, p1, subscriber)
+
+	// simulate transport (eg HTTP) ending a call to a peer
+	ph.notifyStatusChanged(subscriber)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+
+	// all subsequent calls should succeed if we're not holding onto the lock
+	go func() {
+		ph.Choose(ctx, &transport.Request{})
+		cancel()
+	}()
+
+	select {
+	case <-ctx.Done():
+	}
+
+	assert.Equal(t, context.Canceled, ctx.Err(), "expected context to be canceled")
 }
