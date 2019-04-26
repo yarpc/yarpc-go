@@ -279,9 +279,6 @@ func TestReleaseLockWithStaleSubscriber(t *testing.T) {
 		cancel()
 	}()
 
-	select {
-	case <-ctx.Done():
-	}
-
+	<-ctx.Done()
 	assert.Equal(t, context.Canceled, ctx.Err(), "expected context to be canceled")
 }
