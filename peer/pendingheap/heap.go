@@ -97,6 +97,7 @@ func (ph *pendingHeap) notifyStatusChanged(ps *peerScore) {
 	// heap. This may occur when calling a peer and simultaneously removing it
 	// from the heap.
 	if ps.index < 0 {
+		ph.Unlock()
 		return
 	}
 
