@@ -200,3 +200,13 @@ func TestIsReserved(t *testing.T) {
 	assert.True(t, isReserved(EncodingHeader))
 	assert.True(t, isReserved("rpc-foo"))
 }
+
+func TestMDReadWriterDuplicateKey(t *testing.T) {
+	const key = "uber-trace-id"
+	md := map[string][]string{
+		key: {"to-override"},
+	}
+	mdRW := mdReadWriter(md)
+	mdRW.Set(key, "overwritten")
+	assert.Equal(t, []string{"overwritten"}, md[key], "expected overwritten values")
+}

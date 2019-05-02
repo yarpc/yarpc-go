@@ -228,5 +228,5 @@ func (md mdReadWriter) ForeachKey(handler func(string, string) error) error {
 // Set implements opentracing.TextMapWriter.
 func (md mdReadWriter) Set(key string, value string) {
 	key = strings.ToLower(key)
-	md[key] = append(md[key], value)
+	md[key] = []string{value}
 }
