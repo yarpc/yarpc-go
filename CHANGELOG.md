@@ -4,8 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-- No changes yet.
+## [1.37.4] - 2019-05-02
+### Fixed
+- Fixed duplicated tracing headers being set with gRPC.
 
 ## [1.37.3] - 2019-04-29
 ### Fixed
@@ -1084,7 +1085,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.37.3...HEAD
+[1.37.4]: https://github.com/yarpc/yarpc-go/compare/v1.37.3...v1.37.4
 [1.37.3]: https://github.com/yarpc/yarpc-go/compare/v1.37.2...v1.37.3
 [1.37.2]: https://github.com/yarpc/yarpc-go/compare/v1.37.1...v1.37.2
 [1.37.1]: https://github.com/yarpc/yarpc-go/compare/v1.37.0...v1.37.1
