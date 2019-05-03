@@ -21,15 +21,14 @@
 package grpc
 
 import (
-	"bytes"
-
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/bufferpool"
 	"google.golang.org/grpc/metadata"
 )
 
 type responseWriter struct {
-	buffer    *bytes.Buffer
+	buffer    *bufferpool.Buffer
 	md        metadata.MD
 	headerErr error
 }
@@ -40,7 +39,7 @@ func newResponseWriter() *responseWriter {
 
 func (r *responseWriter) Write(p []byte) (int, error) {
 	if r.buffer == nil {
-		r.buffer = bytes.NewBuffer(make([]byte, 0, len(p)))
+		r.buffer = bufferpool.Get()
 	}
 	return r.buffer.Write(p)
 }
@@ -71,5 +70,8 @@ func (r *responseWriter) Bytes() []byte {
 }
 
 func (r *responseWriter) Close() {
+	if r.buffer != nil {
+		bufferpool.Put(r.buffer)
+	}
 	r.buffer = nil
 }
