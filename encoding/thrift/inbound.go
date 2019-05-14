@@ -23,6 +23,7 @@ package thrift
 import (
 	"bytes"
 	"context"
+	"io"
 
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
@@ -141,6 +142,11 @@ func decodeRequest(
 
 	if _, err := buf.ReadFrom(treq.Body); err != nil {
 		return wire.Value{}, nil, err
+	}
+	if closer, ok := treq.Body.(io.Closer); ok {
+		if err := closer.Close(); err != nil {
+			return wire.Value{}, nil, err
+		}
 	}
 
 	reader := bytes.NewReader(buf.Bytes())
