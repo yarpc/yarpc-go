@@ -666,3 +666,113 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 	}
 	assert.Equal(t, want, snap, "Unexpected snapshot of metrics.")
 }
+
+func TestApplicationErrorSnapShot(t *testing.T) {
+	defer stubTime()()
+
+	tests := []struct {
+		name   string
+		err    error
+		errTag string
+		appErr bool
+	}{
+		{
+			name:   "status", // eg error returned in transport middleware
+			err:    yarpcerrors.Newf(yarpcerrors.CodeAlreadyExists, "foo exists!"),
+			errTag: "already-exists",
+		},
+		{
+			name:   "status and app error", // eg Protobuf handler returning yarpcerrors.Status
+			err:    yarpcerrors.Newf(yarpcerrors.CodeAlreadyExists, "foo exists!"),
+			errTag: "already-exists",
+			appErr: true,
+		},
+		{
+			name:   "no status and app error", // eg Thrift exception
+			err:    errors.New("foo-bar-baz"),
+			errTag: "application_error",
+			appErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := metrics.New()
+			meter := root.Scope()
+			mw := NewMiddleware(Config{
+				Logger: zap.NewNop(),
+				Scope:  meter,
+			})
+
+			err := mw.Handle(
+				context.Background(),
+				&transport.Request{
+					Caller:          "caller",
+					Service:         "service",
+					Transport:       "",
+					Encoding:        "raw",
+					Procedure:       "procedure",
+					ShardKey:        "sk",
+					RoutingKey:      "rk",
+					RoutingDelegate: "rd",
+				},
+				&transporttest.FakeResponseWriter{},
+				fakeHandler{
+					err:            tt.err,
+					applicationErr: tt.appErr,
+				},
+			)
+			require.Error(t, err)
+
+			snap := root.Snapshot()
+			tags := metrics.Tags{
+				"dest":             "service",
+				"direction":        "inbound",
+				"transport":        "unknown",
+				"encoding":         "raw",
+				"procedure":        "procedure",
+				"routing_delegate": "rd",
+				"routing_key":      "rk",
+				"source":           "caller",
+			}
+			errorTags := metrics.Tags{
+				"dest":             "service",
+				"direction":        "inbound",
+				"transport":        "unknown",
+				"encoding":         "raw",
+				"procedure":        "procedure",
+				"routing_delegate": "rd",
+				"routing_key":      "rk",
+				"source":           "caller",
+				"error":            tt.errTag,
+			}
+			want := &metrics.RootSnapshot{
+				Counters: []metrics.Snapshot{
+					{Name: "caller_failures", Tags: errorTags, Value: 1},
+					{Name: "calls", Tags: tags, Value: 1},
+					{Name: "successes", Tags: tags, Value: 0},
+				},
+				Histograms: []metrics.HistogramSnapshot{
+					{
+						Name:   "caller_failure_latency_ms",
+						Tags:   tags,
+						Unit:   time.Millisecond,
+						Values: []int64{1},
+					},
+					{
+						Name: "server_failure_latency_ms",
+						Tags: tags,
+						Unit: time.Millisecond,
+					},
+					{
+						Name: "success_latency_ms",
+						Tags: tags,
+						Unit: time.Millisecond,
+					},
+				},
+			}
+			assert.Equal(t, want, snap, "Unexpected snapshot of metrics.")
+
+		})
+	}
+}
