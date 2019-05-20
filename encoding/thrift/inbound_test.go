@@ -23,11 +23,14 @@ package thrift
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/thrifttest"
 	"go.uber.org/thriftrw/wire"
@@ -200,6 +203,54 @@ func TestDecodeRequestResponseError(t *testing.T) {
 	if assert.Error(t, err, "expected an error") {
 		assert.Contains(t, err.Error(), "encode response error")
 	}
+}
+
+type closeWrapper struct {
+	io.Reader
+	closeErr error
+}
+
+func (c closeWrapper) Close() error {
+	return c.closeErr
+}
+
+func TestDecodeRequestClose(t *testing.T) {
+	t.Run("successful close", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+
+		proto := thrifttest.NewMockEnvelopeAgnosticProtocol(mockCtrl)
+		proto.EXPECT().DecodeRequest(wire.Call, gomock.Any()).Return(
+			wire.Value{}, protocol.NoEnvelopeResponder, nil)
+
+		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+		defer cancel()
+
+		handler := func(ctx context.Context, w wire.Value) (Response, error) {
+			return Response{Body: fakeEnveloper(wire.Reply)}, nil
+		}
+		h := thriftUnaryHandler{Protocol: proto, UnaryHandler: handler}
+		req := request()
+
+		// Add close method to the body.
+		req.Body = closeWrapper{req.Body, nil /* close error */}
+		err := h.Handle(ctx, req, new(transporttest.FakeResponseWriter))
+		require.NoError(t, err)
+	})
+
+	t.Run("close error", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+		defer cancel()
+
+		// Proto and Handler won't get used because of the close error.
+		h := thriftUnaryHandler{}
+		req := request()
+
+		// Add close method to the body that returns an error.
+		req.Body = closeWrapper{req.Body, errors.New("close failed")}
+		err := h.Handle(ctx, req, new(transporttest.FakeResponseWriter))
+		require.Error(t, err)
+	})
 }
 
 func TestDecodeEnvelopedError(t *testing.T) {
