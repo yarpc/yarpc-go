@@ -7,8 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [1.38.0] - 2019-05-20
 ### Changed
 - The Thrift encoding attempts to close request buffers immediately after
-  reading the request bytes. This significantly reduced TChannel/Thrift memory
-  usage in some tests.
+  reading the request bytes. This significantly reduces TChannel/Thrift memory
+  usage in some scenarios.
 
 ## [1.37.4] - 2019-05-02
 ### Fixed
