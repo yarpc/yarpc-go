@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [1.38.0] - 2019-05-20
 ### Changed
-- The Thrift encoding attempts to close request body immediately after
+- The Thrift encoding attempts to close the request body immediately after
   reading the request bytes. This significantly reduces TChannel/Thrift memory
   usage in some scenarios.
 
