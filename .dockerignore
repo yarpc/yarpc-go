@@ -23,3 +23,4 @@ internal/examples/thrift-keyvalue/keyvalue/server/server
 internal/examples/thrift-oneway/thrift-oneway
 internal/service-test/service-test
 .idea
+.vscode
