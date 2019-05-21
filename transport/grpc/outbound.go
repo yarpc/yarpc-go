@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gogo/status"
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
@@ -38,7 +39,6 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
 // UserAgent is the User-Agent that will be set for requests.
@@ -206,12 +206,12 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	if yarpcerrors.IsStatus(err) {
 		return err
 	}
-	status, ok := status.FromError(err)
+	st, ok := status.FromError(err)
 	// if not a yarpc error or grpc error, just return a wrapped error
 	if !ok {
 		return yarpcerrors.FromError(err)
 	}
-	code, ok := _grpcCodeToCode[status.Code()]
+	code, ok := _grpcCodeToCode[st.Code()]
 	if !ok {
 		code = yarpcerrors.CodeUnknown
 	}
@@ -223,7 +223,7 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 			name = value[0]
 		}
 	}
-	message := status.Message()
+	message := st.Message()
 	// we put the name as a prefix for grpc compatibility
 	// if there was no message, the message will be the name, so we leave it as the message
 	if name != "" && message != "" && message != name {
@@ -231,7 +231,12 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	} else if name != "" && message == name {
 		message = ""
 	}
-	return intyarpcerrors.NewWithNamef(code, name, message)
+
+	yarpcStatus := intyarpcerrors.NewWithNamef(code, name, message)
+	if det := st.Details(); len(det) != 0 {
+		yarpcStatus = yarpcStatus.WithDetails(det...)
+	}
+	return yarpcStatus
 }
 
 // CallStream implements transport.StreamOutbound#CallStream.

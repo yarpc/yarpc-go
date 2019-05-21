@@ -38,6 +38,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	gogostatus "github.com/gogo/status"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/multierr"
@@ -192,6 +193,18 @@ func TestYARPCNamedErrorNoMessage(t *testing.T) {
 	})
 }
 
+func TestYARPCErrorWithDetails(t *testing.T) {
+	t.Parallel()
+	te := testEnvOptions{}
+	te.do(t, func(t *testing.T, e *testEnv) {
+		e.KeyValueYARPCServer.SetNextError(
+			yarpcerrors.Newf(yarpcerrors.CodeInternal, "hello world").WithDetails(&examplepb.SetValueResponse{}),
+		)
+		err := e.SetValueYARPC(context.Background(), "foo", "bar")
+		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInternal, "hello world").WithDetails(&examplepb.SetValueResponse{}), err)
+	})
+}
+
 func TestGRPCWellKnownError(t *testing.T) {
 	t.Parallel()
 	te := testEnvOptions{}
@@ -219,6 +232,21 @@ func TestGRPCNamedErrorNoMessage(t *testing.T) {
 		e.KeyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", ""))
 		err := e.SetValueGRPC(context.Background(), "foo", "bar")
 		assert.Equal(t, status.Error(codes.Unknown, "bar"), err)
+	})
+}
+
+func TestGRPCErrorWithDetails(t *testing.T) {
+	t.Parallel()
+	te := testEnvOptions{}
+	te.do(t, func(t *testing.T, e *testEnv) {
+		e.KeyValueYARPCServer.SetNextError(
+			yarpcerrors.Newf(yarpcerrors.CodeInternal, "hello world").WithDetails(&examplepb.SetValueResponse{}),
+		)
+		err := e.SetValueGRPC(context.Background(), "foo", "bar")
+		s := gogostatus.Convert(err)
+		assert.Equal(t, codes.Internal, s.Code())
+		assert.Equal(t, "hello world", s.Message())
+		assert.Equal(t, &examplepb.SetValueResponse{}, s.Details()[0])
 	})
 }
 

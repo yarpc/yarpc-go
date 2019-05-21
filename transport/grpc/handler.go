@@ -24,6 +24,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
+	"github.com/gogo/status"
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
@@ -34,7 +36,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
 var (
@@ -253,6 +254,7 @@ func handlerErrorToGRPCError(err error, responseWriter *responseWriter) error {
 	yarpcStatus := yarpcerrors.FromError(err)
 	name := yarpcStatus.Name()
 	message := yarpcStatus.Message()
+	details := yarpcStatus.Details()
 	// if the yarpc error has a name, set the header
 	if name != "" {
 		responseWriter.AddSystemHeader(ErrorNameHeader, name)
@@ -270,5 +272,18 @@ func handlerErrorToGRPCError(err error, responseWriter *responseWriter) error {
 	if !ok {
 		grpcCode = codes.Unknown
 	}
-	return status.Error(grpcCode, message)
+
+	protoDetails := make([]proto.Message, 0)
+	for _, detail := range details {
+		if protoDetail, ok := detail.(proto.Message); ok {
+			protoDetails = append(protoDetails, protoDetail)
+		}
+	}
+
+	st := status.New(grpcCode, message)
+	st, err = st.WithDetails(protoDetails...)
+	if err != nil {
+		return err
+	}
+	return st.Err()
 }

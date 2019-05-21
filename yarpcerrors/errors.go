@@ -68,6 +68,7 @@ type Status struct {
 	code    Code
 	name    string
 	message string
+	details []interface{}
 }
 
 // WithName returns a new Status with the given name.
@@ -76,8 +77,6 @@ type Status struct {
 //
 // Deprecated: Use only error codes to represent the type of the error.
 func (s *Status) WithName(name string) *Status {
-	// TODO: We plan to add a WithDetails method to add semantic metadata to
-	// Statuses soon.
 	if s == nil {
 		return nil
 	}
@@ -86,7 +85,17 @@ func (s *Status) WithName(name string) *Status {
 		code:    s.code,
 		name:    name,
 		message: s.message,
+		details: s.details,
 	}
+}
+
+// WithDetails appends the given details to the Status's details.
+func (s *Status) WithDetails(i ...interface{}) *Status {
+	if s == nil {
+		return nil
+	}
+	s.details = append(s.details, i...)
+	return s
 }
 
 // Code returns the error code for this Status.
@@ -114,6 +123,14 @@ func (s *Status) Message() string {
 		return ""
 	}
 	return s.message
+}
+
+// Details returns the error details for this Status.
+func (s *Status) Details() []interface{} {
+	if s == nil {
+		return nil
+	}
+	return s.details
 }
 
 // Error implements the error interface.
