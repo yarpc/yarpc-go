@@ -24,6 +24,10 @@ imports:
   - spew
 - name: github.com/fatih/structtag
   version: 76ae1d6d2117609598c7d4e8f3e938145f204e8f
+- name: github.com/gogo/googleapis
+  version: d31c731455cb061f42baff3bda55bad0118b126b
+  subpackages:
+  - google/rpc
 - name: github.com/gogo/protobuf
   version: ba06b47c162d49f2af050fb4c75bcbc86a159d5c
   subpackages:
@@ -56,6 +60,8 @@ imports:
   - types
   - vanity
   - vanity/command
+- name: github.com/gogo/status
+  version: 935308aef7372e7685e8fbee162aae8f7a7e515a
 - name: github.com/golang/mock
   version: 9fa652df1129bef0e734c9cf9bf6dbae9ef3b9fa
   subpackages:
@@ -72,7 +78,7 @@ imports:
   - ptypes/empty
   - ptypes/timestamp
 - name: github.com/jessevdk/go-flags
-  version: c6ca198ec95c841fdb89fc0de7496fed11ab854e
+  version: 1c38ed7ad0cc3d9e66649ac398c30e45f395c4eb
 - name: github.com/kisielk/errcheck
   version: e14f8d59a22d460d56c5ee92507cd94c78fbf274
   subpackages:
@@ -80,7 +86,7 @@ imports:
 - name: github.com/mattn/go-shellwords
   version: a72fbe27a1b0ed0df2f02754945044ce1456608b
 - name: github.com/matttproud/golang_protobuf_extensions
-  version: c182affec369e30f25d3eb8cd8a478dee585ae7d
+  version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
   - pbutil
 - name: github.com/opentracing/opentracing-go
@@ -90,7 +96,7 @@ imports:
   - log
   - mocktracer
 - name: github.com/pmezard/go-difflib
-  version: 5d4384ee4fb2527b0a1256a821ebfc92f91efefc
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
   - difflib
 - name: github.com/prometheus/client_golang
@@ -100,7 +106,7 @@ imports:
   - prometheus/internal
   - prometheus/promhttp
 - name: github.com/prometheus/client_model
-  version: fd36f4220a901265f90734c3183c5f0c91daa0b8
+  version: 5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f
   subpackages:
   - go
 - name: github.com/prometheus/common
@@ -113,15 +119,22 @@ imports:
   version: a4ac0826abceb44c40fc71daed2b301db498b93e
   subpackages:
   - internal/fs
+  - internal/util
+  - nfs
+  - xfs
 - name: github.com/samuel/go-thrift
   version: e8b6b52668fe9c972220addc130edf46a9b466b1
   subpackages:
   - parser
 - name: github.com/stretchr/testify
-  version: 34c6fa2dc70986bccbbffcc6130f6920a924b075
+  version: 04af85275a5c7ac09d16bb3b9b2e751ed45154e5
   subpackages:
   - assert
   - require
+- name: github.com/uber-go/atomic
+  version: df976f2515e274675050de7b3f42545de80594fd
+  subpackages:
+  - utils
 - name: github.com/uber-go/mapdecode
   version: 718b4994083e432669f44a00174c5f1bcdb1434d
   subpackages:
@@ -268,12 +281,10 @@ imports:
   - go/gcexportdata
   - go/internal/gcimporter
   - go/internal/packagesdriver
+  - go/loader
   - go/packages
   - go/types/objectpath
   - go/types/typeutil
-  - internal/fastwalk
-  - internal/gopathwalk
-  - internal/semver
 - name: google.golang.org/genproto
   version: fb225487d10142b5bcc35abfc6cb9a0609614976
   subpackages:
@@ -285,7 +296,6 @@ imports:
   - balancer
   - balancer/base
   - balancer/roundrobin
-  - binarylog/grpc_binarylog_v1
   - codes
   - connectivity
   - credentials
@@ -300,7 +310,6 @@ imports:
   - internal/channelz
   - internal/envconfig
   - internal/grpcrand
-  - internal/grpcsync
   - internal/syscall
   - internal/transport
   - keepalive
@@ -314,7 +323,7 @@ imports:
   - status
   - tap
 - name: gopkg.in/yaml.v2
-  version: 51d6538a90f86fe93ac480b35f37b2be17fef232
+  version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
 - name: honnef.co/go/tools
   version: 0a11fc526260d1bcd0686bd3c9bd1167895aeea9
   subpackages:
