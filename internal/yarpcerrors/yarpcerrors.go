@@ -27,12 +27,8 @@ import (
 )
 
 // NewWithNamef calls yarpcerrors.Newf and WithName on the resulting Status.
-//
-// This is put in a separate package so that we can ignore this specific file
-// with staticcheck and existing transports can still use this logic, as
-// WithName is deprecated but we still want to handle name behavior for
-// backwards compatibility.
 func NewWithNamef(code yarpcerrors.Code, name string, format string, args ...interface{}) *yarpcerrors.Status {
+	//lint:ignore SA1019 We still want to handle name behavior for backwards compatibility in existing transports.
 	return yarpcerrors.Newf(code, format, args...).WithName(name)
 }
 
