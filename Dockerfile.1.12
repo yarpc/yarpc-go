@@ -1,4 +1,4 @@
-FROM golang:1.10.7
+FROM golang:1.12
 
 ENV SUPPRESS_DOCKER 1
 WORKDIR /go/src/go.uber.org/yarpc
