@@ -18,7 +18,7 @@ import:
   version: ^1
 - package: github.com/prometheus/client_golang
   # This isn't exposed to customers, so we can depend on a pre-1.0 release.
-  version: ~0.8.0
+  version: '>=0.8, < 0.10'
   subpackages:
   - prometheus
   - prometheus/promhttp
