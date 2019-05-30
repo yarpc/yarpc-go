@@ -7,8 +7,9 @@ GEN_GO_BIN_DEPS = \
 	go.uber.org/thriftrw \
 	go.uber.org/tools/update-license
 
-# List of vendored go executables needed for other operations
-EXTRA_GO_BIN_DEPS = \
+# List of vendored go executables needed for linting. These are not installed
+# automatically and must be requested by $(BIN)/$(basename importPath).
+LINT_DEPS = \
 	github.com/kisielk/errcheck \
 	golang.org/x/lint/golint \
 	honnef.co/go/tools/cmd/staticcheck
@@ -98,10 +99,6 @@ define generatedeprule
 GEN_BINS += $(BIN)/$(shell basename $1)
 endef
 
-define extradeprule
-EXTRA_BINS += $(BIN)/$(shell basename $1)
-endef
-
 define deprule
 ifdef SUPPRESS_DOCKER
 $(BIN)/$(shell basename $1): glide.lock $(GLIDE)
@@ -116,8 +113,8 @@ endef
 
 $(foreach i,$(GEN_GO_BIN_DEPS),$(eval $(call generatedeprule,$(i))))
 $(foreach i,$(GEN_GO_BIN_DEPS),$(eval $(call deprule,$(i))))
-$(foreach i,$(EXTRA_GO_BIN_DEPS),$(eval $(call extradeprule,$(i))))
-$(foreach i,$(EXTRA_GO_BIN_DEPS),$(eval $(call deprule,$(i))))
+
+$(foreach i,$(LINT_DEPS),$(eval $(call deprule,$(i))))
 
 THRIFTRW = $(BIN)/thriftrw
 GOLINT = $(BIN)/golint
@@ -128,7 +125,7 @@ STATICCHECK = $(BIN)/staticcheck
 predeps: $(GLIDE) $(THRIFT) $(PROTOC) $(RAGEL)
 
 .PHONY: deps
-deps: predeps glide $(GEN_BINS) $(EXTRA_BINS) ## install all dependencies
+deps: predeps glide $(GEN_BINS) $(GLIDE) ## install all dependencies
 
 .PHONY: glide
 glide: $(GLIDE) ## install glide dependencies
