@@ -1,5 +1,5 @@
 hash: 40ad63be51f6c1578f9702e79a76753fd2217d39cb5a33d2a25e15cf9e42e486
-updated: 2019-06-04T15:06:28.398902168Z
+updated: 2019-06-05T15:05:33.454979648Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -110,7 +110,7 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 833678b5bb319f2d20a475cb165c6cc59c2cc77c
+  version: a4ac0826abceb44c40fc71daed2b301db498b93e
   subpackages:
   - internal/fs
 - name: github.com/samuel/go-thrift
@@ -279,7 +279,7 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 869adfc8d5a43efc0d05780ad109106f457f51e4
+  version: 501c41df7f472c740d0674ff27122f3f48c80ce7
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
@@ -316,7 +316,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 51d6538a90f86fe93ac480b35f37b2be17fef232
 - name: honnef.co/go/tools
-  version: 5a4a2f4a438d01ba03c591f88ef312005a05063b
+  version: 0a11fc526260d1bcd0686bd3c9bd1167895aeea9
   subpackages:
   - arg
   - cmd/staticcheck
