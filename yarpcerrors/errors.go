@@ -23,6 +23,8 @@ package yarpcerrors
 import (
 	"bytes"
 	"fmt"
+
+	"github.com/gogo/protobuf/proto"
 )
 
 // Newf returns a new Status.
@@ -68,7 +70,7 @@ type Status struct {
 	code    Code
 	name    string
 	message string
-	details []interface{}
+	details []proto.Message
 }
 
 // WithName returns a new Status with the given name.
@@ -90,7 +92,8 @@ func (s *Status) WithName(name string) *Status {
 }
 
 // WithDetails appends the given details to the Status's details.
-func (s *Status) WithDetails(i ...interface{}) *Status {
+// This should be only used with protobuf.
+func (s *Status) WithDetails(i ...proto.Message) *Status {
 	if s == nil {
 		return nil
 	}
@@ -126,7 +129,7 @@ func (s *Status) Message() string {
 }
 
 // Details returns the error details for this Status.
-func (s *Status) Details() []interface{} {
+func (s *Status) Details() []proto.Message {
 	if s == nil {
 		return nil
 	}

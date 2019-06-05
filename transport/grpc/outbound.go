@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/status"
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc"
@@ -233,8 +234,14 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	}
 
 	yarpcStatus := intyarpcerrors.NewWithNamef(code, name, message)
-	if det := st.Details(); len(det) != 0 {
-		yarpcStatus = yarpcStatus.WithDetails(det...)
+	if dets := st.Details(); len(dets) != 0 {
+		details := make([]proto.Message, 0)
+		for _, det := range dets {
+			if detProto, ok := det.(proto.Message); ok {
+				details = append(details, detProto)
+			}
+		}
+		yarpcStatus = yarpcStatus.WithDetails(details...)
 	}
 	return yarpcStatus
 }
