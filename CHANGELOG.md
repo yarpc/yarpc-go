@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Fixed
-- call.HeaderNames() now creates specifies a capacity when creating a slice, 
+- call.HeaderNames() now specifies a capacity when creating a slice, 
   which should improve the call.HeaderNames()'s performance.
 
 ## [1.38.0] - 2019-05-20
