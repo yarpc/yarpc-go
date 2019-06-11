@@ -71,6 +71,8 @@ import:
 - package: honnef.co/go/tools
   subpackages:
   - cmd/staticcheck
+- package: github.com/gogo/status
+  version: ^1.1.0
 testImport:
 - package: github.com/stretchr/testify
   # No version pin because some of our dependencies aren't pinning.

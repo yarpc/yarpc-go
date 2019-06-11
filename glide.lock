@@ -24,6 +24,10 @@ imports:
   - spew
 - name: github.com/fatih/structtag
   version: 76ae1d6d2117609598c7d4e8f3e938145f204e8f
+- name: github.com/gogo/googleapis
+  version: d31c731455cb061f42baff3bda55bad0118b126b
+  subpackages:
+  - google/rpc
 - name: github.com/gogo/protobuf
   version: ba06b47c162d49f2af050fb4c75bcbc86a159d5c
   subpackages:
@@ -56,6 +60,8 @@ imports:
   - types
   - vanity
   - vanity/command
+- name: github.com/gogo/status
+  version: 935308aef7372e7685e8fbee162aae8f7a7e515a
 - name: github.com/golang/mock
   version: 9fa652df1129bef0e734c9cf9bf6dbae9ef3b9fa
   subpackages:
@@ -246,9 +252,6 @@ imports:
 - name: golang.org/x/sys
   version: 15dcb6c0061f497a3f66e3ea034b629c6dd4d99e
   repo: https://github.com/golang/sys
-  subpackages:
-  - unix
-  - windows
 - name: golang.org/x/text
   version: 342b2e1fbaa52c93f31447ad2c6abc048c63e475
   subpackages:
