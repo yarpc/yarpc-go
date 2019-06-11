@@ -52,6 +52,10 @@ func unmarshal(encoding transport.Encoding, reader io.Reader, message proto.Mess
 	if len(body) == 0 {
 		return nil
 	}
+	return unmarshalBytes(encoding, body, message)
+}
+
+func unmarshalBytes(encoding transport.Encoding, body []byte, message proto.Message) error {
 	switch encoding {
 	case Encoding:
 		return unmarshalProto(body, message)
