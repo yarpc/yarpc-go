@@ -86,7 +86,7 @@ func testIntegration(
 	err = setValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo", "bar")
 	assert.Equal(t, status.Error(codes.Unknown, "foo-bar: baz"), err)
 
-	if ttype == testutils.TransportTypeGRPC {
+	if ttype != testutils.TransportTypeTChannel {
 		keyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeUnknown, "foo-bar", protobuf.WithDetails(&examplepb.EchoBothRequest{})))
 		err = setValue(clients.KeyValueYARPCClient, "foo", "bar")
 		assert.Equal(t, protobuf.NewError(yarpcerrors.CodeUnknown, "foo-bar", protobuf.WithDetails(&examplepb.EchoBothRequest{})), err)

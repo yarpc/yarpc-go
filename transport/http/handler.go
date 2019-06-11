@@ -81,7 +81,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if details := status.Details(); details != nil {
 			responseWriter.AddSystemHeader(ErrorDetailsHeader, string(details))
 			responseWriter.ResetBuffer()
-			_, _ = fmt.Fprint(responseWriter, details)
+			_, _ = responseWriter.Write(details)
 		}
 	} else {
 		responseWriter.ResetBuffer()
