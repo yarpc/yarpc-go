@@ -26,25 +26,4 @@ var (
 		yarpcerrors.CodeDataLoss:           codes.DataLoss,
 		yarpcerrors.CodeUnauthenticated:    codes.Unauthenticated,
 	}
-
-	// _grpcCodeToCode maps all gRPC Codes to their corresponding Code.
-	_grpcCodeToCode = map[codes.Code]yarpcerrors.Code{
-		codes.OK:                 yarpcerrors.CodeOK,
-		codes.Canceled:           yarpcerrors.CodeCancelled,
-		codes.Unknown:            yarpcerrors.CodeUnknown,
-		codes.InvalidArgument:    yarpcerrors.CodeInvalidArgument,
-		codes.DeadlineExceeded:   yarpcerrors.CodeDeadlineExceeded,
-		codes.NotFound:           yarpcerrors.CodeNotFound,
-		codes.AlreadyExists:      yarpcerrors.CodeAlreadyExists,
-		codes.PermissionDenied:   yarpcerrors.CodePermissionDenied,
-		codes.ResourceExhausted:  yarpcerrors.CodeResourceExhausted,
-		codes.FailedPrecondition: yarpcerrors.CodeFailedPrecondition,
-		codes.Aborted:            yarpcerrors.CodeAborted,
-		codes.OutOfRange:         yarpcerrors.CodeOutOfRange,
-		codes.Unimplemented:      yarpcerrors.CodeUnimplemented,
-		codes.Internal:           yarpcerrors.CodeInternal,
-		codes.Unavailable:        yarpcerrors.CodeUnavailable,
-		codes.DataLoss:           yarpcerrors.CodeDataLoss,
-		codes.Unauthenticated:    yarpcerrors.CodeUnauthenticated,
-	}
 )
