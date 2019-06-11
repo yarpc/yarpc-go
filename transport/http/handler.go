@@ -78,6 +78,11 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if bothResponseError && h.bothResponseError {
 		responseWriter.AddSystemHeader(BothResponseErrorHeader, AcceptTrue)
 		responseWriter.AddSystemHeader(ErrorMessageHeader, status.Message())
+		if details := status.Details(); details != nil {
+			responseWriter.AddSystemHeader(ErrorDetailsHeader, string(details))
+			responseWriter.ResetBuffer()
+			_, _ = fmt.Fprint(responseWriter, details)
+		}
 	} else {
 		responseWriter.ResetBuffer()
 		_, _ = fmt.Fprintln(responseWriter, status.Message())
