@@ -68,6 +68,7 @@ type Status struct {
 	code    Code
 	name    string
 	message string
+	details []byte
 }
 
 // WithName returns a new Status with the given name.
@@ -86,6 +87,25 @@ func (s *Status) WithName(name string) *Status {
 		code:    s.code,
 		name:    name,
 		message: s.message,
+		details: s.details,
+	}
+}
+
+// WithDetails returns a new status with the given details bytes.
+func (s *Status) WithDetails(details []byte) *Status {
+	if s == nil {
+		return nil
+	}
+	if len(details) == 0 {
+		// this ensures that the details field is not set to some pointer if
+		// there's nothing in details.
+		details = nil
+	}
+	return &Status{
+		code:    s.code,
+		name:    s.name,
+		message: s.message,
+		details: details,
 	}
 }
 
@@ -114,6 +134,14 @@ func (s *Status) Message() string {
 		return ""
 	}
 	return s.message
+}
+
+// Details returns the error details for this Status.
+func (s *Status) Details() []byte {
+	if s == nil {
+		return nil
+	}
+	return s.details
 }
 
 // Error implements the error interface.
