@@ -151,4 +151,10 @@ func convertFromYARPCError(encoding transport.Encoding, err error) error {
 	}
 
 	return NewError(yarpcErr.Code(), yarpcErr.Message(), WithDetails(protobufDetails...))
+
+func (err *pberror) YARPCError() *yarpcerrors.Status {
+	if err == nil {
+		return nil
+	}
+	return yarpcerrors.Newf(err.code, err.message)
 }

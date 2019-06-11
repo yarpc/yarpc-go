@@ -49,6 +49,9 @@ func FromError(err error) *Status {
 	if status, ok := err.(*Status); ok {
 		return status
 	}
+	if statusImpl, ok := err.(interface{ YARPCError() *Status }); ok {
+		return statusImpl.YARPCError()
+	}
 	return &Status{
 		code:    CodeUnknown,
 		message: err.Error(),
