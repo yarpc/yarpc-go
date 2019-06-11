@@ -265,6 +265,11 @@ func handlerErrorToGRPCError(err error, responseWriter *responseWriter) error {
 			message = name + ": " + message
 		}
 	}
+
+	if body := yarpcStatus.Details(); body != nil {
+		return unmarshalError(body)
+	}
+
 	grpcCode, ok := _codeToGRPCCode[yarpcStatus.Code()]
 	// should only happen if _codeToGRPCCode does not cover all codes
 	if !ok {
