@@ -87,9 +87,9 @@ func testIntegration(
 	assert.Equal(t, status.Error(codes.Unknown, "foo-bar: baz"), err)
 
 	if ttype != testutils.TransportTypeTChannel {
-		keyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeUnknown, "foo-bar", protobuf.WithDetails(&examplepb.EchoBothRequest{})))
+		keyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeInternal, "foo-bar", protobuf.WithErrorDetails(&examplepb.EchoBothRequest{})))
 		err = setValue(clients.KeyValueYARPCClient, "foo", "bar")
-		assert.Equal(t, protobuf.NewError(yarpcerrors.CodeUnknown, "foo-bar", protobuf.WithDetails(&examplepb.EchoBothRequest{})), err)
+		assert.Equal(t, protobuf.NewError(yarpcerrors.CodeInternal, "foo-bar", protobuf.WithErrorDetails(&examplepb.EchoBothRequest{})), err)
 
 		keyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeInternal, "hello world"))
 		err = setValue(clients.KeyValueYARPCClient, "foo", "bar")

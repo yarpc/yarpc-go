@@ -19,9 +19,9 @@ func marshalError(st *status.Status) []byte {
 	if len(st.Details()) == 0 {
 		return nil
 	}
-	buf := proto.NewBuffer(make([]byte, 1024))
-	if err := buf.Marshal(st.Proto()); err != nil {
+	buf, err := proto.Marshal(st.Proto())
+	if err != nil {
 		return nil
 	}
-	return buf.Bytes()
+	return buf
 }

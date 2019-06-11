@@ -98,9 +98,6 @@ func (c *client) Call(
 		// thrift is not checking the error, should be consistent
 		defer transportResponse.Body.Close()
 	}
-	if IsProtobufError(appErr) {
-		return nil, appErr
-	}
 	if _, err := call.ReadFromResponse(ctx, transportResponse); err != nil {
 		return nil, err
 	}

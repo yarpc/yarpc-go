@@ -59,7 +59,7 @@ func GetErrorCode(err error) yarpcerrors.Code {
 	return yarpcerrors.CodeUnknown
 }
 
-// GetErrorCode returns the error message of the error.
+// GetErrorMessage returns the error message of the error.
 func GetErrorMessage(err error) string {
 	if err == nil {
 		return ""
@@ -83,20 +83,13 @@ func GetErrorDetails(err error) []proto.Message {
 	return nil
 }
 
-func IsProtobufError(err error) bool {
-	_, ok := err.(*pberror)
-	return ok
-}
-
 // ErrorOption is an option for the NewError constructor.
 type ErrorOption struct{ apply func(*pberror) }
 
-// WithDetails sets the details of the error.
-func WithDetails(details ...proto.Message) ErrorOption {
+// WithErrorDetails sets the details of the error.
+func WithErrorDetails(details ...proto.Message) ErrorOption {
 	return ErrorOption{func(err *pberror) {
-		if len(details) != 0 {
-			err.details = details
-		}
+		err.details = append(err.details, details...)
 	}}
 }
 
@@ -110,12 +103,12 @@ func convertToYARPCError(encoding transport.Encoding, err error) error {
 			return convertErr
 		}
 		detailsBytes, cleanup, marshalErr := marshal(encoding, st.Proto())
+		defer cleanup()
 		if marshalErr != nil {
 			return marshalErr
 		}
 		yarpcDet := make([]byte, len(detailsBytes))
 		copy(yarpcDet, detailsBytes)
-		cleanup()
 		return yarpcerrors.Newf(pberr.code, pberr.message).WithDetails(yarpcDet)
 	}
 	return err
@@ -150,7 +143,8 @@ func convertFromYARPCError(encoding transport.Encoding, err error) error {
 		return multierr.Combine(detailsErrs...)
 	}
 
-	return NewError(yarpcErr.Code(), yarpcErr.Message(), WithDetails(protobufDetails...))
+	return NewError(yarpcErr.Code(), yarpcErr.Message(), WithErrorDetails(protobufDetails...))
+}
 
 func (err *pberror) YARPCError() *yarpcerrors.Status {
 	if err == nil {

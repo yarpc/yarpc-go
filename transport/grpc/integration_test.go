@@ -197,9 +197,9 @@ func TestYARPCErrorWithDetails(t *testing.T) {
 	t.Parallel()
 	te := testEnvOptions{}
 	te.do(t, func(t *testing.T, e *testEnv) {
-		e.KeyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeNotFound, "hello world", protobuf.WithDetails(&examplepb.SetValueResponse{})))
+		e.KeyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeNotFound, "hello world", protobuf.WithErrorDetails(&examplepb.SetValueResponse{})))
 		err := e.SetValueYARPC(context.Background(), "foo", "bar")
-		assert.Equal(t, protobuf.NewError(yarpcerrors.CodeNotFound, "hello world", protobuf.WithDetails(&examplepb.SetValueResponse{})), err)
+		assert.Equal(t, protobuf.NewError(yarpcerrors.CodeNotFound, "hello world", protobuf.WithErrorDetails(&examplepb.SetValueResponse{})), err)
 	})
 }
 
@@ -237,7 +237,7 @@ func TestGRPCErrorWithDetails(t *testing.T) {
 	t.Parallel()
 	te := testEnvOptions{}
 	te.do(t, func(t *testing.T, e *testEnv) {
-		e.KeyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeNotFound, "hello world", protobuf.WithDetails(&examplepb.SetValueResponse{})))
+		e.KeyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeNotFound, "hello world", protobuf.WithErrorDetails(&examplepb.SetValueResponse{})))
 		err := e.SetValueGRPC(context.Background(), "foo", "bar")
 		st := gogostatus.Convert(err)
 		assert.Equal(t, st.Code(), codes.NotFound)
