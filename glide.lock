@@ -1,5 +1,5 @@
 hash: 40ad63be51f6c1578f9702e79a76753fd2217d39cb5a33d2a25e15cf9e42e486
-updated: 2019-06-11T15:03:54.994700611Z
+updated: 2019-06-12T15:04:04.258720446Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -257,7 +257,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 4bfb4c74ac90cc146b53ac8c4f95448c56af4f93
+  version: d73e1c7e250b19f9948138e2df37cea712e8f06f
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
@@ -275,7 +275,7 @@ imports:
   - internal/gopathwalk
   - internal/semver
 - name: google.golang.org/genproto
-  version: eb0b1bdb6ae60fcfc41b8d907b50dfb346112301
+  version: a7e196e89fd3a3c4d103ca540bd5dac3a736e375
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
