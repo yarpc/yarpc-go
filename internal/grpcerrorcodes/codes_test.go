@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package grpc
+package grpcerrorcodes
 
 import (
 	"testing"
@@ -27,12 +27,12 @@ import (
 )
 
 func TestCodes(t *testing.T) {
-	for code, grpcCode := range _codeToGRPCCode {
+	for code, grpcCode := range YARPCCodeToGRPCCode {
 		t.Run(code.String(), func(t *testing.T) {
-			getGRPCCode, ok := _codeToGRPCCode[code]
+			getGRPCCode, ok := YARPCCodeToGRPCCode[code]
 			require.True(t, ok)
 			require.Equal(t, grpcCode, getGRPCCode)
-			getCode, ok := _grpcCodeToCode[grpcCode]
+			getCode, ok := GrpcCodeToYARPCCode[grpcCode]
 			require.True(t, ok)
 			require.Equal(t, code, getCode)
 		})

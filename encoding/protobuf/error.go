@@ -28,6 +28,7 @@ import (
 	"github.com/gogo/status"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/grpcerrorcodes"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -118,7 +119,7 @@ func convertToYARPCError(encoding transport.Encoding, err error) error {
 		return nil
 	}
 	if pberr, ok := err.(*pberror); ok {
-		st, convertErr := status.New(_codeToGRPCCode[pberr.code], pberr.message).WithDetails(pberr.details...)
+		st, convertErr := status.New(grpcerrorcodes.YARPCCodeToGRPCCode[pberr.code], pberr.message).WithDetails(pberr.details...)
 		if convertErr != nil {
 			return convertErr
 		}
