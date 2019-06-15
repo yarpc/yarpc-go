@@ -26,7 +26,6 @@ import (
 	"github.com/gogo/googleapis/google/rpc"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/status"
-	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -35,7 +34,7 @@ import (
 type pberror struct {
 	code    yarpcerrors.Code
 	message string
-	details []proto.Message
+	details []interface{}
 }
 
 func (err *pberror) Error() string {
@@ -68,32 +67,8 @@ func NewError(code yarpcerrors.Code, message string, options ...ErrorOption) err
 	return pbErr
 }
 
-// GetErrorCode returns the error code of the error.
-func GetErrorCode(err error) yarpcerrors.Code {
-	if err == nil {
-		return yarpcerrors.CodeOK
-	}
-
-	if pberr, ok := err.(*pberror); ok {
-		return pberr.code
-	}
-	return yarpcerrors.CodeUnknown
-}
-
-// GetErrorMessage returns the error message of the error.
-func GetErrorMessage(err error) string {
-	if err == nil {
-		return ""
-	}
-
-	if pberr, ok := err.(*pberror); ok {
-		return pberr.message
-	}
-	return err.Error()
-}
-
 // GetErrorDetails returns the error details of the error.
-func GetErrorDetails(err error) []proto.Message {
+func GetErrorDetails(err error) []interface{} {
 	if err == nil {
 		return nil
 	}
@@ -107,10 +82,12 @@ func GetErrorDetails(err error) []proto.Message {
 // ErrorOption is an option for the NewError constructor.
 type ErrorOption struct{ apply func(*pberror) }
 
-// WithErrorDetails sets the details of the error.
+// WithErrorDetails adds to the details of the error.
 func WithErrorDetails(details ...proto.Message) ErrorOption {
 	return ErrorOption{func(err *pberror) {
-		err.details = append(err.details, details...)
+		for _, detail := range details {
+			err.details = append(err.details, detail)
+		}
 	}}
 }
 
@@ -119,15 +96,22 @@ func convertToYARPCError(encoding transport.Encoding, err error) error {
 		return nil
 	}
 	if pberr, ok := err.(*pberror); ok {
-		st, convertErr := status.New(grpcerrorcodes.YARPCCodeToGRPCCode[pberr.code], pberr.message).WithDetails(pberr.details...)
+		// We only use this function on the inbound side, and pberrors should be
+		// constructed using the constructor above, so we can safely assume all
+		// the details are proto.Message-typed.
+		var details []proto.Message
+		for _, detail := range pberr.details {
+			details = append(details, detail.(proto.Message))
+		}
+		st, convertErr := status.New(grpcerrorcodes.YARPCCodeToGRPCCode[pberr.code], pberr.message).WithDetails(details...)
 		if convertErr != nil {
 			return convertErr
 		}
 		detailsBytes, cleanup, marshalErr := marshal(encoding, st.Proto())
-		defer cleanup()
 		if marshalErr != nil {
 			return marshalErr
 		}
+		defer cleanup()
 		yarpcDet := make([]byte, len(detailsBytes))
 		copy(yarpcDet, detailsBytes)
 		return yarpcerrors.Newf(pberr.code, pberr.message).WithDetails(yarpcDet)
@@ -150,21 +134,15 @@ func convertFromYARPCError(encoding transport.Encoding, err error) error {
 	}
 
 	details := status.FromProto(st).Details()
-	var protobufDetails []proto.Message
-	var detailsErrs []error
-	for _, detail := range details {
-		if protoMessage, ok := detail.(proto.Message); ok {
-			protobufDetails = append(protobufDetails, protoMessage)
-		}
-		if detailsErr, ok := detail.(error); ok {
-			detailsErrs = append(detailsErrs, detailsErr)
-		}
-	}
-	if len(detailsErrs) != 0 {
-		return multierr.Combine(detailsErrs...)
-	}
+	return newErrorWithDetails(yarpcErr.Code(), yarpcErr.Message(), details)
+}
 
-	return NewError(yarpcErr.Code(), yarpcErr.Message(), WithErrorDetails(protobufDetails...))
+func newErrorWithDetails(code yarpcerrors.Code, message string, details []interface{}) error {
+	return &pberror{
+		code:    code,
+		message: message,
+		details: details,
+	}
 }
 
 func (err *pberror) YARPCError() *yarpcerrors.Status {

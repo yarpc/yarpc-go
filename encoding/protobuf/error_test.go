@@ -32,19 +32,19 @@ func TestNewOK(t *testing.T) {
 	err := NewError(yarpcerrors.CodeOK, "okay")
 	assert.Nil(t, err)
 
-	assert.Equal(t, GetErrorCode(err), yarpcerrors.CodeOK)
-	assert.Equal(t, GetErrorMessage(err), "")
+	assert.Equal(t, yarpcerrors.FromError(err).Code(), yarpcerrors.CodeOK)
+	assert.Equal(t, yarpcerrors.FromError(err).Message(), "")
 }
 
 func TestNew(t *testing.T) {
 	err := NewError(yarpcerrors.CodeNotFound, "unfounded accusation")
-	assert.Equal(t, GetErrorCode(err), yarpcerrors.CodeNotFound)
-	assert.Equal(t, GetErrorMessage(err), "unfounded accusation")
+	assert.Equal(t, yarpcerrors.FromError(err).Code(), yarpcerrors.CodeNotFound)
+	assert.Equal(t, yarpcerrors.FromError(err).Message(), "unfounded accusation")
 	assert.Contains(t, err.Error(), "unfounded accusation")
 }
 
 func TestForeignError(t *testing.T) {
 	err := errors.New("to err is go")
-	assert.Equal(t, GetErrorCode(err), yarpcerrors.CodeUnknown)
-	assert.Equal(t, GetErrorMessage(err), "to err is go")
+	assert.Equal(t, yarpcerrors.FromError(err).Code(), yarpcerrors.CodeUnknown)
+	assert.Equal(t, yarpcerrors.FromError(err).Message(), "to err is go")
 }

@@ -38,8 +38,13 @@ func Newf(code Code, format string, args ...interface{}) *Status {
 	}
 }
 
-// FromError returns the Status for the provided error. If the provided error
-// is not a Status, a new error with code CodeUnknown is returned.
+type yarpcError interface{ YARPCError() *Status }
+
+// FromError returns the Status for the provided error. If the underlying type
+// is Status, it returns itself. If the underlying error has a
+// YARPCError() *Status function, it calls the function and returns the
+// Status type. If the provided error is not a Status, a new error with
+// code CodeUnknown is returned.
 //
 // Returns nil if the provided error is nil.
 func FromError(err error) *Status {
@@ -49,7 +54,7 @@ func FromError(err error) *Status {
 	if status, ok := err.(*Status); ok {
 		return status
 	}
-	if statusImpl, ok := err.(interface{ YARPCError() *Status }); ok {
+	if statusImpl, ok := err.(yarpcError); ok {
 		return statusImpl.YARPCError()
 	}
 	return &Status{
@@ -58,12 +63,16 @@ func FromError(err error) *Status {
 	}
 }
 
-// IsStatus returns whether the provided error is a YARPC error.
+// IsStatus returns whether the provided error is a YARPC error, or has a
+// YARPCError() function to represent the error as a YARPC error.
 //
 // This is always false if the error is nil.
 func IsStatus(err error) bool {
-	_, ok := err.(*Status)
-	return ok
+	switch err.(type) {
+	case *Status, yarpcError:
+		return true
+	}
+	return false
 }
 
 // Status represents a YARPC error.

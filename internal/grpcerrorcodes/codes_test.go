@@ -32,7 +32,7 @@ func TestCodes(t *testing.T) {
 			getGRPCCode, ok := YARPCCodeToGRPCCode[code]
 			require.True(t, ok)
 			require.Equal(t, grpcCode, getGRPCCode)
-			getCode, ok := GrpcCodeToYARPCCode[grpcCode]
+			getCode, ok := GRPCCodeToYARPCCode[grpcCode]
 			require.True(t, ok)
 			require.Equal(t, code, getCode)
 		})
