@@ -23,17 +23,23 @@
 //
 // Usage
 //
-// A ChannelTransport must be constructed to use this transport. You can
-// provide an existing TChannel Channel to construct the Channel transport.
+// To use TChannel with YARPC load balancers, use the NewTransport constructor.
+// To use TChannel with a channel shared with other systems like Ringpop, use
+// NewChannelTransport.
+//
+// You can let YARPC own and manage the TChannel Channel for you by providing
+// the service name. Note that this is the name of the local service, not the
+// name of the service you will be sending requests to.
+//
+// 	tchannelTransport, err := tchannel.NewTransport(tchannel.ServiceName("myservice"))
+//
+// Alternatively, and only when necessary to share an underlying channel,
+// ChannelTransport must be constructed to use this transport. You can provide
+// an existing TChannel Channel to construct the ChannelTransport.
+// In this configuration, the transport cannot use YARPC load balancers.
 //
 // 	ch := getTChannelChannel()
 // 	tchannelTransport, err := tchannel.NewChannelTransport(tchannel.WithChannel(ch))
-//
-// Alternatively, you can let YARPC own and manage the TChannel Channel for
-// you by providing the service name. Note that this is the name of the local
-// service, not the name of the service you will be sending requests to.
-//
-// 	tchannelTransport, err := tchannel.NewChannelTransport(tchannel.ServiceName("myservice"))
 //
 // To serve a YARPC application over TChannel, pass a TChannel inbound in your
 // yarpc.Config.
