@@ -90,6 +90,7 @@ func testIntegration(
 		keyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeInternal, "foo-bar", protobuf.WithErrorDetails(&examplepb.EchoBothRequest{})))
 		err = setValue(clients.KeyValueYARPCClient, "foo", "bar")
 		assert.Equal(t, protobuf.NewError(yarpcerrors.CodeInternal, "foo-bar", protobuf.WithErrorDetails(&examplepb.EchoBothRequest{})), err)
+		assert.Equal(t, []interface{}{&examplepb.EchoBothRequest{}}, protobuf.GetErrorDetails(err))
 
 		keyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeInternal, "hello world"))
 		err = setValue(clients.KeyValueYARPCClient, "foo", "bar")
