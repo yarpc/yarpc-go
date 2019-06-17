@@ -1,5 +1,5 @@
 hash: 40ad63be51f6c1578f9702e79a76753fd2217d39cb5a33d2a25e15cf9e42e486
-updated: 2019-06-14T15:04:16.854352445Z
+updated: 2019-06-17T15:05:16.100614759Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -110,7 +110,7 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 9fb85351dfe479684bef28fbc0d04035cf65bc1f
+  version: 90b65b6334013b0a1cfce27ce5c79feb7da2f77a
   subpackages:
   - internal/fs
 - name: github.com/samuel/go-thrift
@@ -127,7 +127,7 @@ imports:
   subpackages:
   - internal/mapstructure
 - name: github.com/uber-go/tally
-  version: 24c699f78afd17db5aac42f83c1c5cad70254294
+  version: f266f90e9c4d5894364039a324a05d061f2f34e2
 - name: github.com/uber/jaeger-client-go
   version: 2f47546e3facd43297739439600bcf43f44cce5d
   subpackages:
@@ -244,7 +244,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: d442b75600c5d6484576502b3c53a55c54311be9
+  version: 15dcb6c0061f497a3f66e3ea034b629c6dd4d99e
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -257,7 +257,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: ed0dc450797fdfbe6a9ee6bf3381a02099b897f9
+  version: 5aca471b1d59ca42d39ca6419e64061391b9a6ad
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
