@@ -48,9 +48,10 @@ func (err *pberror) Error() string {
 	return b.String()
 }
 
-// NewError returns a new YARPC protobuf error. To access the error's fields, use the
-// provided `GetError*` methods. These methods are nil-safe and
-// provide default values for non-YARPC-errors.
+// NewError returns a new YARPC protobuf error. To access the error's fields,
+// use the yarpcerrors package APIs for the code and message, and the
+// `GetErrorDetails(error)` function for error details. The `yarpcerrors.Details()`
+// will not work on this error.
 //
 // If the Code is CodeOK, this will return nil.
 func NewError(code yarpcerrors.Code, message string, options ...ErrorOption) error {
@@ -68,6 +69,11 @@ func NewError(code yarpcerrors.Code, message string, options ...ErrorOption) err
 }
 
 // GetErrorDetails returns the error details of the error.
+//
+// Each element in the returned slice of interface{} is either a proto.Message
+// or an error to explain why the element is not a proto.Message, most likely
+// because the error detail could not be unmarshaled.
+// See: https://github.com/gogo/status/blob/master/status.go#L193
 func GetErrorDetails(err error) []interface{} {
 	if err == nil {
 		return nil
@@ -91,6 +97,7 @@ func WithErrorDetails(details ...proto.Message) ErrorOption {
 	}}
 }
 
+// convertToYARPCError is to be used for handling errors on the inbound side.
 func convertToYARPCError(encoding transport.Encoding, err error) error {
 	if err == nil {
 		return nil
@@ -119,6 +126,7 @@ func convertToYARPCError(encoding transport.Encoding, err error) error {
 	return err
 }
 
+// convertFromYARPCError is to be used for handling errors on the outbound side.
 func convertFromYARPCError(encoding transport.Encoding, err error) error {
 	if err == nil || !yarpcerrors.IsStatus(err) {
 		return err

@@ -28,20 +28,15 @@ import (
 
 func unmarshalError(body []byte) error {
 	protobufStatus := &rpc.Status{}
-	err := proto.Unmarshal(body, protobufStatus)
-	if err != nil {
+	if err := proto.Unmarshal(body, protobufStatus); err != nil {
 		return err
 	}
 	return status.ErrorProto(protobufStatus)
 }
 
-func marshalError(st *status.Status) []byte {
+func marshalError(st *status.Status) ([]byte, error) {
 	if len(st.Details()) == 0 {
-		return nil
+		return nil, nil
 	}
-	buf, err := proto.Marshal(st.Proto())
-	if err != nil {
-		return nil
-	}
-	return buf
+	return proto.Marshal(st.Proto())
 }
