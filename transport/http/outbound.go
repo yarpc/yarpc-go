@@ -274,14 +274,14 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	bothResponseError := response.Header.Get(BothResponseErrorHeader) == AcceptTrue
 	if bothResponseError && o.bothResponseError {
 		if response.StatusCode >= 300 {
-			return tres, getYARPCErrorFromResponse(response, true)
+			return getYARPCErrorFromResponse(tres, response, true)
 		}
 		return tres, nil
 	}
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 		return tres, nil
 	}
-	return nil, getYARPCErrorFromResponse(response, false)
+	return getYARPCErrorFromResponse(tres, response, false)
 }
 
 func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*httpPeer, func(error), error) {
@@ -378,18 +378,34 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 	return req
 }
 
-func getYARPCErrorFromResponse(response *http.Response, bothResponseError bool) error {
+func getYARPCErrorFromResponse(tres *transport.Response, response *http.Response, bothResponseError bool) (*transport.Response, error) {
 	var contents string
+	var details []byte
 	if bothResponseError {
 		contents = response.Header.Get(ErrorMessageHeader)
+		if response.Header.Get(ErrorDetailsHeader) != "" {
+			// the contents of this header and the body should be the same, but
+			// use the contents in the body, in case the contents were not ASCII and
+			// the contents were not preserved in the header.
+			var err error
+			details, err = ioutil.ReadAll(response.Body)
+			if err != nil {
+				return tres, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
+			}
+			if err := response.Body.Close(); err != nil {
+				return tres, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
+			}
+			// nil out body so that it isn't read later
+			tres.Body = nil
+		}
 	} else {
 		contentsBytes, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			return yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
+			return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 		}
 		contents = string(contentsBytes)
 		if err := response.Body.Close(); err != nil {
-			return yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
+			return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 		}
 	}
 	// use the status code if we can't get a code from the headers
@@ -401,11 +417,16 @@ func getYARPCErrorFromResponse(response *http.Response, bothResponseError bool) 
 			code = errorCode
 		}
 	}
-	return intyarpcerrors.NewWithNamef(
+	yarpcErr := intyarpcerrors.NewWithNamef(
 		code,
 		response.Header.Get(ErrorNameHeader),
 		strings.TrimSuffix(contents, "\n"),
-	)
+	).WithDetails(details)
+
+	if bothResponseError {
+		return tres, yarpcErr
+	}
+	return nil, yarpcErr
 }
 
 // Only does verification if there is a response header

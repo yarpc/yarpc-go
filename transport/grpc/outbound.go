@@ -27,10 +27,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gogo/status"
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/grpcerrorcodes"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -38,7 +40,6 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
 // UserAgent is the User-Agent that will be set for requests.
@@ -211,7 +212,7 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	if !ok {
 		return yarpcerrors.FromError(err)
 	}
-	code, ok := _grpcCodeToCode[status.Code()]
+	code, ok := grpcerrorcodes.GRPCCodeToYARPCCode[status.Code()]
 	if !ok {
 		code = yarpcerrors.CodeUnknown
 	}
@@ -231,7 +232,14 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	} else if name != "" && message == name {
 		message = ""
 	}
-	return intyarpcerrors.NewWithNamef(code, name, message)
+
+	yarpcErr := intyarpcerrors.NewWithNamef(code, name, message)
+	if details, err := marshalError(status); err != nil {
+		return err
+	} else if details != nil {
+		yarpcErr = yarpcErr.WithDetails(details)
+	}
+	return yarpcErr
 }
 
 // CallStream implements transport.StreamOutbound#CallStream.

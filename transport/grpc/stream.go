@@ -29,6 +29,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/atomic"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/grpcerrorcodes"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -154,7 +155,7 @@ func toYARPCStreamError(err error) error {
 	if !ok {
 		return yarpcerrors.FromError(err)
 	}
-	code, ok := _grpcCodeToCode[status.Code()]
+	code, ok := grpcerrorcodes.GRPCCodeToYARPCCode[status.Code()]
 	if !ok {
 		code = yarpcerrors.CodeUnknown
 	}
@@ -174,8 +175,8 @@ func toGRPCStreamError(err error) error {
 	// we now know we have a yarpc error
 	yarpcStatus := yarpcerrors.FromError(err)
 	message := yarpcStatus.Message()
-	grpcCode, ok := _codeToGRPCCode[yarpcStatus.Code()]
-	// should only happen if _codeToGRPCCode does not cover all codes
+	grpcCode, ok := grpcerrorcodes.YARPCCodeToGRPCCode[yarpcStatus.Code()]
+	// should only happen if grpcerrorcodes.YARPCCodeToGRPCCode does not cover all codes
 	if !ok {
 		grpcCode = codes.Unknown
 	}

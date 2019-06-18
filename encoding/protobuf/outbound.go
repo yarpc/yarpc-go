@@ -90,6 +90,7 @@ func (c *client) Call(
 		return nil, yarpcerrors.InternalErrorf("no unary outbounds for OutboundConfig %s", c.outboundConfig.CallerName)
 	}
 	transportResponse, appErr := unaryOutbound.Call(ctx, transportRequest)
+	appErr = convertFromYARPCError(transportRequest.Encoding, appErr)
 	if transportResponse == nil {
 		return nil, appErr
 	}
@@ -127,7 +128,8 @@ func (c *client) CallOneway(
 	if onewayOutbound == nil {
 		return nil, yarpcerrors.InternalErrorf("no oneway outbounds for OutboundConfig %s", c.outboundConfig.CallerName)
 	}
-	return onewayOutbound.CallOneway(ctx, transportRequest)
+	ack, err := onewayOutbound.CallOneway(ctx, transportRequest)
+	return ack, convertFromYARPCError(transportRequest.Encoding, err)
 }
 
 func (c *client) buildTransportRequest(ctx context.Context, requestMethodName string, request proto.Message, options []yarpc.CallOption) (context.Context, *apiencoding.OutboundCall, *transport.Request, func(), error) {
@@ -188,7 +190,7 @@ func (c *client) CallStream(
 	}
 	stream, err := streamOutbound.CallStream(ctx, streamRequest)
 	if err != nil {
-		return nil, err
+		return nil, convertFromYARPCError(streamRequest.Meta.Encoding, err)
 	}
 	return &ClientStream{stream: stream}, nil
 }

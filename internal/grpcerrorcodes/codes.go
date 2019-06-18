@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package grpc
+package grpcerrorcodes
 
 import (
 	"go.uber.org/yarpc/yarpcerrors"
@@ -26,8 +26,8 @@ import (
 )
 
 var (
-	// _codeToGRPCCode maps all Codes to their corresponding gRPC Code.
-	_codeToGRPCCode = map[yarpcerrors.Code]codes.Code{
+	// YARPCCodeToGRPCCode maps all Codes to their corresponding gRPC Code.
+	YARPCCodeToGRPCCode = map[yarpcerrors.Code]codes.Code{
 		yarpcerrors.CodeOK:                 codes.OK,
 		yarpcerrors.CodeCancelled:          codes.Canceled,
 		yarpcerrors.CodeUnknown:            codes.Unknown,
@@ -47,8 +47,8 @@ var (
 		yarpcerrors.CodeUnauthenticated:    codes.Unauthenticated,
 	}
 
-	// _grpcCodeToCode maps all gRPC Codes to their corresponding Code.
-	_grpcCodeToCode = map[codes.Code]yarpcerrors.Code{
+	// GRPCCodeToYARPCCode maps all gRPC Codes to their corresponding Code.
+	GRPCCodeToYARPCCode = map[codes.Code]yarpcerrors.Code{
 		codes.OK:                 yarpcerrors.CodeOK,
 		codes.Canceled:           yarpcerrors.CodeCancelled,
 		codes.Unknown:            yarpcerrors.CodeUnknown,

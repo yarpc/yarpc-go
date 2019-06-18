@@ -77,6 +77,12 @@ const (
 	// BothResponseError feature is enabled.
 	ErrorMessageHeader = "Rpc-Error-Message"
 
+	// ErrorDetailsHeader contains the marshaled bytes of an error. Because
+	// error details are mainly a gRPC concept, we use the header key name that
+	// gRPC uses.
+	// https://github.com/grpc/grpc-go/blob/04ea82009cdb9ecdefc6289f4c93ec919a10b3b6/internal/transport/handler_server.go#L218
+	ErrorDetailsHeader = "Grpc-Status-Details-Bin"
+
 	// AcceptsBothResponseErrorHeader says that the BothResponseError
 	// feature is supported on the client. If the value is "true",
 	// this indicates true.

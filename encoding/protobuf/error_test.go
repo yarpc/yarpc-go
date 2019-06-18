@@ -18,23 +18,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package grpc
+package protobuf
 
 import (
+	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
-func TestCodes(t *testing.T) {
-	for code, grpcCode := range _codeToGRPCCode {
-		t.Run(code.String(), func(t *testing.T) {
-			getGRPCCode, ok := _codeToGRPCCode[code]
-			require.True(t, ok)
-			require.Equal(t, grpcCode, getGRPCCode)
-			getCode, ok := _grpcCodeToCode[grpcCode]
-			require.True(t, ok)
-			require.Equal(t, code, getCode)
-		})
-	}
+func TestNewOK(t *testing.T) {
+	err := NewError(yarpcerrors.CodeOK, "okay")
+	assert.Nil(t, err)
+
+	assert.Equal(t, yarpcerrors.FromError(err).Code(), yarpcerrors.CodeOK)
+	assert.Equal(t, yarpcerrors.FromError(err).Message(), "")
+}
+
+func TestNew(t *testing.T) {
+	err := NewError(yarpcerrors.CodeNotFound, "unfounded accusation")
+	assert.Equal(t, yarpcerrors.FromError(err).Code(), yarpcerrors.CodeNotFound)
+	assert.Equal(t, yarpcerrors.FromError(err).Message(), "unfounded accusation")
+	assert.Contains(t, err.Error(), "unfounded accusation")
+}
+
+func TestForeignError(t *testing.T) {
+	err := errors.New("to err is go")
+	assert.Equal(t, yarpcerrors.FromError(err).Code(), yarpcerrors.CodeUnknown)
+	assert.Equal(t, yarpcerrors.FromError(err).Message(), "to err is go")
 }
