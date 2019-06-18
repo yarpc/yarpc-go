@@ -1,5 +1,5 @@
-hash: 40ad63be51f6c1578f9702e79a76753fd2217d39cb5a33d2a25e15cf9e42e486
-updated: 2019-06-17T15:05:16.100614759Z
+hash: 0e5fe0feec3ddf53987a3a9750da5fac22dc7bc7710369eecc35d90c188c0d73
+updated: 2019-06-18T15:03:42.151916727Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -110,7 +110,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 17f5ca1748182ddf24fc33a5a7caaaf790a52fcc
+  version: 31bed53e4047fd6c510e43a941f90cb31be0972a
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -252,6 +252,9 @@ imports:
 - name: golang.org/x/sys
   version: 15dcb6c0061f497a3f66e3ea034b629c6dd4d99e
   repo: https://github.com/golang/sys
+  subpackages:
+  - unix
+  - windows
 - name: golang.org/x/text
   version: 342b2e1fbaa52c93f31447ad2c6abc048c63e475
   subpackages:
@@ -260,7 +263,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 5aca471b1d59ca42d39ca6419e64061391b9a6ad
+  version: da514acc4774e511ba0c2955844e655a5b20938c
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
