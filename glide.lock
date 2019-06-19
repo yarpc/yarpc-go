@@ -1,5 +1,5 @@
 hash: 0e5fe0feec3ddf53987a3a9750da5fac22dc7bc7710369eecc35d90c188c0d73
-updated: 2019-06-18T15:03:42.151916727Z
+updated: 2019-06-19T15:06:24.870368278Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -217,7 +217,7 @@ imports:
   - version
   - wire
 - name: go.uber.org/tools
-  version: 422a61c266e12d86fe775edb822dce48a1e7b979
+  version: 2cfd321de3ee5d5f8a5fda2521d1703478334d98
   subpackages:
   - update-license
 - name: go.uber.org/zap
@@ -234,7 +234,7 @@ imports:
   subpackages:
   - golint
 - name: golang.org/x/net
-  version: d28f0bde5980168871434b95cfc858db9f2a7a99
+  version: b5b0513f8c1bb7c1e3e6f168fba117131fe2614a
   subpackages:
   - bpf
   - context
@@ -250,7 +250,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 15dcb6c0061f497a3f66e3ea034b629c6dd4d99e
+  version: 516e3c20635fbe39539f7ed361a15c51fec29cd8
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -263,7 +263,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: da514acc4774e511ba0c2955844e655a5b20938c
+  version: 04b924abaa25159becde493bc31b979bcecd4887
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
