@@ -88,15 +88,20 @@ type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
 }
 {{end}}
 
-// New{{$service.GetName}}YARPCClient builds a new YARPC client for the {{$service.GetName}} service.
-func New{{$service.GetName}}YARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) {{$service.GetName}}YARPCClient {
+func new{{$service.GetName}}YARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) {{$service.GetName}}YARPCClient {
 	return &_{{$service.GetName}}YARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
 			ServiceName: "{{trimPrefixPeriod $service.FQSN}}",
 			ClientConfig: clientConfig,
+			AnyResolver: anyResolver,
 			Options: options,
 		},
 	)}
+}
+
+// New{{$service.GetName}}YARPCClient builds a new YARPC client for the {{$service.GetName}} service.
+func New{{$service.GetName}}YARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) {{$service.GetName}}YARPCClient {
+	return new{{$service.GetName}}YARPCClient(clientConfig, nil, options...)
 }
 
 // {{$service.GetName}}YARPCServer is the YARPC server-side interface for the {{$service.GetName}} service.
@@ -215,6 +220,7 @@ type Fx{{$service.GetName}}YARPCClientParams struct {
 	fx.In
 
 	Provider yarpc.ClientConfig
+	AnyResolver jsonpb.AnyResolver ` + "`" + `name:"yarpcfx" optional:"true"` + "`" + `
 }
 
 // Fx{{$service.GetName}}YARPCClientResult defines the output
@@ -240,7 +246,7 @@ type Fx{{$service.GetName}}YARPCClientResult struct {
 func NewFx{{$service.GetName}}YARPCClient(name string, options ...protobuf.ClientOption) interface{} {
 	return func(params Fx{{$service.GetName}}YARPCClientParams) Fx{{$service.GetName}}YARPCClientResult {
 		return Fx{{$service.GetName}}YARPCClientResult{
-			Client: New{{$service.GetName}}YARPCClient(params.Provider.ClientConfig(name), options...),
+			Client: new{{$service.GetName}}YARPCClient(params.Provider.ClientConfig(name), params.AnyResolver, options...),
 		}
 	}
 }
