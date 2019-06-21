@@ -28,6 +28,7 @@ import (
 	"io/ioutil"
 	"reflect"
 
+	"github.com/gogo/protobuf/jsonpb"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/fx"
 	"go.uber.org/yarpc"
@@ -45,15 +46,20 @@ type KeyValueYARPCClient interface {
 	SetValue(context.Context, *SetValueRequest, ...yarpc.CallOption) (*SetValueResponse, error)
 }
 
-// NewKeyValueYARPCClient builds a new YARPC client for the KeyValue service.
-func NewKeyValueYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) KeyValueYARPCClient {
+func newKeyValueYARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) KeyValueYARPCClient {
 	return &_KeyValueYARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
 			ServiceName:  "uber.yarpc.internal.examples.protobuf.example.KeyValue",
 			ClientConfig: clientConfig,
+			AnyResolver:  anyResolver,
 			Options:      options,
 		},
 	)}
+}
+
+// NewKeyValueYARPCClient builds a new YARPC client for the KeyValue service.
+func NewKeyValueYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) KeyValueYARPCClient {
+	return newKeyValueYARPCClient(clientConfig, nil, options...)
 }
 
 // KeyValueYARPCServer is the YARPC server-side interface for the KeyValue service.
@@ -62,9 +68,13 @@ type KeyValueYARPCServer interface {
 	SetValue(context.Context, *SetValueRequest) (*SetValueResponse, error)
 }
 
-// BuildKeyValueYARPCProcedures prepares an implementation of the KeyValue service for YARPC registration.
-func BuildKeyValueYARPCProcedures(server KeyValueYARPCServer) []transport.Procedure {
-	handler := &_KeyValueYARPCHandler{server}
+type buildKeyValueYARPCProceduresParams struct {
+	Server      KeyValueYARPCServer
+	AnyResolver jsonpb.AnyResolver
+}
+
+func buildKeyValueYARPCProcedures(params buildKeyValueYARPCProceduresParams) []transport.Procedure {
+	handler := &_KeyValueYARPCHandler{params.Server}
 	return protobuf.BuildProcedures(
 		protobuf.BuildProceduresParams{
 			ServiceName: "uber.yarpc.internal.examples.protobuf.example.KeyValue",
@@ -73,8 +83,9 @@ func BuildKeyValueYARPCProcedures(server KeyValueYARPCServer) []transport.Proced
 					MethodName: "GetValue",
 					Handler: protobuf.NewUnaryHandler(
 						protobuf.UnaryHandlerParams{
-							Handle:     handler.GetValue,
-							NewRequest: newKeyValueServiceGetValueYARPCRequest,
+							Handle:      handler.GetValue,
+							NewRequest:  newKeyValueServiceGetValueYARPCRequest,
+							AnyResolver: params.AnyResolver,
 						},
 					),
 				},
@@ -82,8 +93,9 @@ func BuildKeyValueYARPCProcedures(server KeyValueYARPCServer) []transport.Proced
 					MethodName: "SetValue",
 					Handler: protobuf.NewUnaryHandler(
 						protobuf.UnaryHandlerParams{
-							Handle:     handler.SetValue,
-							NewRequest: newKeyValueServiceSetValueYARPCRequest,
+							Handle:      handler.SetValue,
+							NewRequest:  newKeyValueServiceSetValueYARPCRequest,
+							AnyResolver: params.AnyResolver,
 						},
 					),
 				},
@@ -94,6 +106,11 @@ func BuildKeyValueYARPCProcedures(server KeyValueYARPCServer) []transport.Proced
 	)
 }
 
+// BuildKeyValueYARPCProcedures prepares an implementation of the KeyValue service for YARPC registration.
+func BuildKeyValueYARPCProcedures(server KeyValueYARPCServer) []transport.Procedure {
+	return buildKeyValueYARPCProcedures(buildKeyValueYARPCProceduresParams{Server: server})
+}
+
 // FxKeyValueYARPCClientParams defines the input
 // for NewFxKeyValueYARPCClient. It provides the
 // paramaters to get a KeyValueYARPCClient in an
@@ -101,7 +118,8 @@ func BuildKeyValueYARPCProcedures(server KeyValueYARPCServer) []transport.Proced
 type FxKeyValueYARPCClientParams struct {
 	fx.In
 
-	Provider yarpc.ClientConfig
+	Provider    yarpc.ClientConfig
+	AnyResolver jsonpb.AnyResolver `name:"yarpcfx" optional:"true"`
 }
 
 // FxKeyValueYARPCClientResult defines the output
@@ -127,7 +145,7 @@ type FxKeyValueYARPCClientResult struct {
 func NewFxKeyValueYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
 	return func(params FxKeyValueYARPCClientParams) FxKeyValueYARPCClientResult {
 		return FxKeyValueYARPCClientResult{
-			Client: NewKeyValueYARPCClient(params.Provider.ClientConfig(name), options...),
+			Client: newKeyValueYARPCClient(params.Provider.ClientConfig(name), params.AnyResolver, options...),
 		}
 	}
 }
@@ -139,7 +157,8 @@ func NewFxKeyValueYARPCClient(name string, options ...protobuf.ClientOption) int
 type FxKeyValueYARPCProceduresParams struct {
 	fx.In
 
-	Server KeyValueYARPCServer
+	Server      KeyValueYARPCServer
+	AnyResolver jsonpb.AnyResolver `name:"yarpcfx" optional:"true"`
 }
 
 // FxKeyValueYARPCProceduresResult defines the output
@@ -165,7 +184,10 @@ type FxKeyValueYARPCProceduresResult struct {
 func NewFxKeyValueYARPCProcedures() interface{} {
 	return func(params FxKeyValueYARPCProceduresParams) FxKeyValueYARPCProceduresResult {
 		return FxKeyValueYARPCProceduresResult{
-			Procedures: BuildKeyValueYARPCProcedures(params.Server),
+			Procedures: buildKeyValueYARPCProcedures(buildKeyValueYARPCProceduresParams{
+				Server:      params.Server,
+				AnyResolver: params.AnyResolver,
+			}),
 			ReflectionMeta: reflection.ServerMeta{
 				ServiceName:     "uber.yarpc.internal.examples.protobuf.example.KeyValue",
 				FileDescriptors: yarpcFileDescriptorClosure43929dec9f67b739,
@@ -266,15 +288,20 @@ type SinkYARPCClient interface {
 	Fire(context.Context, *FireRequest, ...yarpc.CallOption) (yarpc.Ack, error)
 }
 
-// NewSinkYARPCClient builds a new YARPC client for the Sink service.
-func NewSinkYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) SinkYARPCClient {
+func newSinkYARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) SinkYARPCClient {
 	return &_SinkYARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
 			ServiceName:  "uber.yarpc.internal.examples.protobuf.example.Sink",
 			ClientConfig: clientConfig,
+			AnyResolver:  anyResolver,
 			Options:      options,
 		},
 	)}
+}
+
+// NewSinkYARPCClient builds a new YARPC client for the Sink service.
+func NewSinkYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) SinkYARPCClient {
+	return newSinkYARPCClient(clientConfig, nil, options...)
 }
 
 // SinkYARPCServer is the YARPC server-side interface for the Sink service.
@@ -282,9 +309,13 @@ type SinkYARPCServer interface {
 	Fire(context.Context, *FireRequest) error
 }
 
-// BuildSinkYARPCProcedures prepares an implementation of the Sink service for YARPC registration.
-func BuildSinkYARPCProcedures(server SinkYARPCServer) []transport.Procedure {
-	handler := &_SinkYARPCHandler{server}
+type buildSinkYARPCProceduresParams struct {
+	Server      SinkYARPCServer
+	AnyResolver jsonpb.AnyResolver
+}
+
+func buildSinkYARPCProcedures(params buildSinkYARPCProceduresParams) []transport.Procedure {
+	handler := &_SinkYARPCHandler{params.Server}
 	return protobuf.BuildProcedures(
 		protobuf.BuildProceduresParams{
 			ServiceName:        "uber.yarpc.internal.examples.protobuf.example.Sink",
@@ -305,6 +336,11 @@ func BuildSinkYARPCProcedures(server SinkYARPCServer) []transport.Procedure {
 	)
 }
 
+// BuildSinkYARPCProcedures prepares an implementation of the Sink service for YARPC registration.
+func BuildSinkYARPCProcedures(server SinkYARPCServer) []transport.Procedure {
+	return buildSinkYARPCProcedures(buildSinkYARPCProceduresParams{Server: server})
+}
+
 // FxSinkYARPCClientParams defines the input
 // for NewFxSinkYARPCClient. It provides the
 // paramaters to get a SinkYARPCClient in an
@@ -312,7 +348,8 @@ func BuildSinkYARPCProcedures(server SinkYARPCServer) []transport.Procedure {
 type FxSinkYARPCClientParams struct {
 	fx.In
 
-	Provider yarpc.ClientConfig
+	Provider    yarpc.ClientConfig
+	AnyResolver jsonpb.AnyResolver `name:"yarpcfx" optional:"true"`
 }
 
 // FxSinkYARPCClientResult defines the output
@@ -338,7 +375,7 @@ type FxSinkYARPCClientResult struct {
 func NewFxSinkYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
 	return func(params FxSinkYARPCClientParams) FxSinkYARPCClientResult {
 		return FxSinkYARPCClientResult{
-			Client: NewSinkYARPCClient(params.Provider.ClientConfig(name), options...),
+			Client: newSinkYARPCClient(params.Provider.ClientConfig(name), params.AnyResolver, options...),
 		}
 	}
 }
@@ -350,7 +387,8 @@ func NewFxSinkYARPCClient(name string, options ...protobuf.ClientOption) interfa
 type FxSinkYARPCProceduresParams struct {
 	fx.In
 
-	Server SinkYARPCServer
+	Server      SinkYARPCServer
+	AnyResolver jsonpb.AnyResolver `name:"yarpcfx" optional:"true"`
 }
 
 // FxSinkYARPCProceduresResult defines the output
@@ -376,7 +414,10 @@ type FxSinkYARPCProceduresResult struct {
 func NewFxSinkYARPCProcedures() interface{} {
 	return func(params FxSinkYARPCProceduresParams) FxSinkYARPCProceduresResult {
 		return FxSinkYARPCProceduresResult{
-			Procedures: BuildSinkYARPCProcedures(params.Server),
+			Procedures: buildSinkYARPCProcedures(buildSinkYARPCProceduresParams{
+				Server:      params.Server,
+				AnyResolver: params.AnyResolver,
+			}),
 			ReflectionMeta: reflection.ServerMeta{
 				ServiceName:     "uber.yarpc.internal.examples.protobuf.example.Sink",
 				FileDescriptors: yarpcFileDescriptorClosure43929dec9f67b739,
@@ -451,15 +492,20 @@ type FooServiceEchoBothYARPCClient interface {
 	CloseSend(...yarpc.StreamOption) error
 }
 
-// NewFooYARPCClient builds a new YARPC client for the Foo service.
-func NewFooYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) FooYARPCClient {
+func newFooYARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) FooYARPCClient {
 	return &_FooYARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
 			ServiceName:  "uber.yarpc.internal.examples.protobuf.example.Foo",
 			ClientConfig: clientConfig,
+			AnyResolver:  anyResolver,
 			Options:      options,
 		},
 	)}
+}
+
+// NewFooYARPCClient builds a new YARPC client for the Foo service.
+func NewFooYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) FooYARPCClient {
+	return newFooYARPCClient(clientConfig, nil, options...)
 }
 
 // FooYARPCServer is the YARPC server-side interface for the Foo service.
@@ -488,9 +534,13 @@ type FooServiceEchoBothYARPCServer interface {
 	Send(*EchoBothResponse, ...yarpc.StreamOption) error
 }
 
-// BuildFooYARPCProcedures prepares an implementation of the Foo service for YARPC registration.
-func BuildFooYARPCProcedures(server FooYARPCServer) []transport.Procedure {
-	handler := &_FooYARPCHandler{server}
+type buildFooYARPCProceduresParams struct {
+	Server      FooYARPCServer
+	AnyResolver jsonpb.AnyResolver
+}
+
+func buildFooYARPCProcedures(params buildFooYARPCProceduresParams) []transport.Procedure {
+	handler := &_FooYARPCHandler{params.Server}
 	return protobuf.BuildProcedures(
 		protobuf.BuildProceduresParams{
 			ServiceName:         "uber.yarpc.internal.examples.protobuf.example.Foo",
@@ -528,6 +578,11 @@ func BuildFooYARPCProcedures(server FooYARPCServer) []transport.Procedure {
 	)
 }
 
+// BuildFooYARPCProcedures prepares an implementation of the Foo service for YARPC registration.
+func BuildFooYARPCProcedures(server FooYARPCServer) []transport.Procedure {
+	return buildFooYARPCProcedures(buildFooYARPCProceduresParams{Server: server})
+}
+
 // FxFooYARPCClientParams defines the input
 // for NewFxFooYARPCClient. It provides the
 // paramaters to get a FooYARPCClient in an
@@ -535,7 +590,8 @@ func BuildFooYARPCProcedures(server FooYARPCServer) []transport.Procedure {
 type FxFooYARPCClientParams struct {
 	fx.In
 
-	Provider yarpc.ClientConfig
+	Provider    yarpc.ClientConfig
+	AnyResolver jsonpb.AnyResolver `name:"yarpcfx" optional:"true"`
 }
 
 // FxFooYARPCClientResult defines the output
@@ -561,7 +617,7 @@ type FxFooYARPCClientResult struct {
 func NewFxFooYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
 	return func(params FxFooYARPCClientParams) FxFooYARPCClientResult {
 		return FxFooYARPCClientResult{
-			Client: NewFooYARPCClient(params.Provider.ClientConfig(name), options...),
+			Client: newFooYARPCClient(params.Provider.ClientConfig(name), params.AnyResolver, options...),
 		}
 	}
 }
@@ -573,7 +629,8 @@ func NewFxFooYARPCClient(name string, options ...protobuf.ClientOption) interfac
 type FxFooYARPCProceduresParams struct {
 	fx.In
 
-	Server FooYARPCServer
+	Server      FooYARPCServer
+	AnyResolver jsonpb.AnyResolver `name:"yarpcfx" optional:"true"`
 }
 
 // FxFooYARPCProceduresResult defines the output
@@ -599,7 +656,10 @@ type FxFooYARPCProceduresResult struct {
 func NewFxFooYARPCProcedures() interface{} {
 	return func(params FxFooYARPCProceduresParams) FxFooYARPCProceduresResult {
 		return FxFooYARPCProceduresResult{
-			Procedures: BuildFooYARPCProcedures(params.Server),
+			Procedures: buildFooYARPCProcedures(buildFooYARPCProceduresParams{
+				Server:      params.Server,
+				AnyResolver: params.AnyResolver,
+			}),
 			ReflectionMeta: reflection.ServerMeta{
 				ServiceName:     "uber.yarpc.internal.examples.protobuf.example.Foo",
 				FileDescriptors: yarpcFileDescriptorClosure43929dec9f67b739,
