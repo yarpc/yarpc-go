@@ -98,7 +98,7 @@ func WithErrorDetails(details ...proto.Message) ErrorOption {
 }
 
 // convertToYARPCError is to be used for handling errors on the inbound side.
-func convertToYARPCError(encoding transport.Encoding, codec *codec, err error) error {
+func convertToYARPCError(encoding transport.Encoding, err error, codec *codec) error {
 	if err == nil {
 		return nil
 	}
@@ -127,7 +127,7 @@ func convertToYARPCError(encoding transport.Encoding, codec *codec, err error) e
 }
 
 // convertFromYARPCError is to be used for handling errors on the outbound side.
-func convertFromYARPCError(encoding transport.Encoding, codec *codec, err error) error {
+func convertFromYARPCError(encoding transport.Encoding, err error, codec *codec) error {
 	if err == nil || !yarpcerrors.IsStatus(err) {
 		return err
 	}

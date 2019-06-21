@@ -27,8 +27,8 @@ import (
 
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/gogo/protobuf/proto"
+	"github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/ptypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc"
@@ -180,7 +180,7 @@ func TestOutboundAnyResolver(t *testing.T) {
 			testMessage := &testpb.TestMessage{Value: testValue}
 
 			// convert to an Any so that the marshaller will use the custom resolver
-			any, err := ptypes.MarshalAny(testMessage)
+			any, err := types.MarshalAny(testMessage)
 			require.NoError(t, err)
 			any.TypeUrl = tt.anyURL // update to custom URL
 
