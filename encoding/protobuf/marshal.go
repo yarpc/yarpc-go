@@ -33,16 +33,27 @@ import (
 )
 
 var (
-	_jsonMarshaler   = &jsonpb.Marshaler{}
-	_jsonUnmarshaler = &jsonpb.Unmarshaler{AllowUnknownFields: true}
-	_bufferPool      = sync.Pool{
+	_bufferPool = sync.Pool{
 		New: func() interface{} {
 			return proto.NewBuffer(make([]byte, 1024))
 		},
 	}
 )
 
-func unmarshal(encoding transport.Encoding, reader io.Reader, message proto.Message) error {
+// codec is a private helper struct used to hold custom marshling behavior.
+type codec struct {
+	jsonMarshaler   *jsonpb.Marshaler
+	jsonUnmarshaler *jsonpb.Unmarshaler
+}
+
+func newCodec(anyResolver jsonpb.AnyResolver) *codec {
+	return &codec{
+		jsonMarshaler:   &jsonpb.Marshaler{AnyResolver: anyResolver},
+		jsonUnmarshaler: &jsonpb.Unmarshaler{AnyResolver: anyResolver, AllowUnknownFields: true},
+	}
+}
+
+func unmarshal(encoding transport.Encoding, reader io.Reader, message proto.Message, codec *codec) error {
 	buf := bufferpool.Get()
 	defer bufferpool.Put(buf)
 	if _, err := buf.ReadFrom(reader); err != nil {
@@ -52,40 +63,40 @@ func unmarshal(encoding transport.Encoding, reader io.Reader, message proto.Mess
 	if len(body) == 0 {
 		return nil
 	}
-	return unmarshalBytes(encoding, body, message)
+	return unmarshalBytes(encoding, body, message, codec)
 }
 
-func unmarshalBytes(encoding transport.Encoding, body []byte, message proto.Message) error {
+func unmarshalBytes(encoding transport.Encoding, body []byte, message proto.Message, codec *codec) error {
 	switch encoding {
 	case Encoding:
-		return unmarshalProto(body, message)
+		return unmarshalProto(body, message, codec)
 	case JSONEncoding:
-		return unmarshalJSON(body, message)
+		return unmarshalJSON(body, message, codec)
 	default:
 		return yarpcerrors.Newf(yarpcerrors.CodeInternal, "encoding.Expect should have handled encoding %q but did not", encoding)
 	}
 }
 
-func unmarshalProto(body []byte, message proto.Message) error {
+func unmarshalProto(body []byte, message proto.Message, _ *codec) error {
 	return proto.Unmarshal(body, message)
 }
 
-func unmarshalJSON(body []byte, message proto.Message) error {
-	return _jsonUnmarshaler.Unmarshal(bytes.NewReader(body), message)
+func unmarshalJSON(body []byte, message proto.Message, codec *codec) error {
+	return codec.jsonUnmarshaler.Unmarshal(bytes.NewReader(body), message)
 }
 
-func marshal(encoding transport.Encoding, message proto.Message) ([]byte, func(), error) {
+func marshal(encoding transport.Encoding, message proto.Message, codec *codec) ([]byte, func(), error) {
 	switch encoding {
 	case Encoding:
-		return marshalProto(message)
+		return marshalProto(message, codec)
 	case JSONEncoding:
-		return marshalJSON(message)
+		return marshalJSON(message, codec)
 	default:
 		return nil, nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "encoding.Expect should have handled encoding %q but did not", encoding)
 	}
 }
 
-func marshalProto(message proto.Message) ([]byte, func(), error) {
+func marshalProto(message proto.Message, _ *codec) ([]byte, func(), error) {
 	protoBuffer := getBuffer()
 	cleanup := func() { putBuffer(protoBuffer) }
 	if err := protoBuffer.Marshal(message); err != nil {
@@ -95,10 +106,10 @@ func marshalProto(message proto.Message) ([]byte, func(), error) {
 	return protoBuffer.Bytes(), cleanup, nil
 }
 
-func marshalJSON(message proto.Message) ([]byte, func(), error) {
+func marshalJSON(message proto.Message, codec *codec) ([]byte, func(), error) {
 	buf := bufferpool.Get()
 	cleanup := func() { bufferpool.Put(buf) }
-	if err := _jsonMarshaler.Marshal(buf, message); err != nil {
+	if err := codec.jsonMarshaler.Marshal(buf, message); err != nil {
 		cleanup()
 		return nil, nil, err
 	}
