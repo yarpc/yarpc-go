@@ -6,8 +6,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Fixed
+- call.HeaderNames() now specifies a capacity when creating a slice,
+  which should improve the call.HeaderNames()'s performance.
 - Observability middleware will always emit an error code if the returned error
   is from the `yarpcerrors` package.
+### Added
+- Added error details support in protobuf over gRPC and HTTP.
+- Protobuf JSON encoding can take a custom gogo/protobuf/jsonpb.AnyResolver with
+  Fx.
+
+## [1.38.0] - 2019-05-20
+### Changed
+- The Thrift encoding attempts to close the request body immediately after
+  reading the request bytes. This significantly reduces TChannel/Thrift memory
+  usage in some scenarios.
 
 ## [1.37.4] - 2019-05-02
 ### Fixed
@@ -1090,7 +1102,8 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.37.4...HEAD
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.38.0...HEAD
+[1.38.0]: https://github.com/yarpc/yarpc-go/compare/v1.37.4...v1.38.0
 [1.37.4]: https://github.com/yarpc/yarpc-go/compare/v1.37.3...v1.37.4
 [1.37.3]: https://github.com/yarpc/yarpc-go/compare/v1.37.2...v1.37.3
 [1.37.2]: https://github.com/yarpc/yarpc-go/compare/v1.37.1...v1.37.2

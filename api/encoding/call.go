@@ -120,8 +120,9 @@ func (c *Call) HeaderNames() []string {
 		return nil
 	}
 
-	var names []string
-	for k := range c.ic.req.Headers.Items() {
+	items := c.ic.req.Headers.Items()
+	names := make([]string, 0, len(items))
+	for k := range items {
 		names = append(names, k)
 	}
 	sort.Strings(names)

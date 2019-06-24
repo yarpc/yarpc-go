@@ -18,7 +18,7 @@ import:
   version: ^1
 - package: github.com/prometheus/client_golang
   # This isn't exposed to customers, so we can depend on a pre-1.0 release.
-  version: ~0.8.0
+  version: '>=0.8, < 0.10'
   subpackages:
   - prometheus
   - prometheus/promhttp
@@ -71,6 +71,8 @@ import:
 - package: honnef.co/go/tools
   subpackages:
   - cmd/staticcheck
+- package: github.com/gogo/status
+  version: ^1.1.0
 testImport:
 - package: github.com/stretchr/testify
   # No version pin because some of our dependencies aren't pinning.

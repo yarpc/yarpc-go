@@ -31,6 +31,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
@@ -63,7 +64,7 @@ func testIntegrationForTransportType(t *testing.T, transportType testutils.Trans
 			fooYARPCServer,
 			nil,
 			func(clients *exampleutil.Clients) error {
-				testIntegration(t, clients, keyValueYARPCServer, sinkYARPCServer, expectedStreamingHeaders)
+				testIntegration(t, transportType, clients, keyValueYARPCServer, sinkYARPCServer, expectedStreamingHeaders)
 				return nil
 			},
 		),
@@ -72,6 +73,7 @@ func testIntegrationForTransportType(t *testing.T, transportType testutils.Trans
 
 func testIntegration(
 	t *testing.T,
+	ttype testutils.TransportType,
 	clients *exampleutil.Clients,
 	keyValueYARPCServer *example.KeyValueYARPCServer,
 	sinkYARPCServer *example.SinkYARPCServer,
@@ -83,6 +85,18 @@ func testIntegration(
 	keyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "foo-bar", "baz"))
 	err = setValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo", "bar")
 	assert.Equal(t, status.Error(codes.Unknown, "foo-bar: baz"), err)
+
+	if ttype != testutils.TransportTypeTChannel {
+		keyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeInternal, "foo-bar", protobuf.WithErrorDetails(&examplepb.EchoBothRequest{})))
+		err = setValue(clients.KeyValueYARPCClient, "foo", "bar")
+		assert.Equal(t, protobuf.NewError(yarpcerrors.CodeInternal, "foo-bar", protobuf.WithErrorDetails(&examplepb.EchoBothRequest{})), err)
+		assert.Equal(t, []interface{}{&examplepb.EchoBothRequest{}}, protobuf.GetErrorDetails(err))
+
+		keyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeInternal, "hello world"))
+		err = setValue(clients.KeyValueYARPCClient, "foo", "bar")
+		assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.FromError(err).Code())
+		assert.Equal(t, "hello world", yarpcerrors.FromError(err).Message())
+	}
 
 	assert.NoError(t, setValue(clients.KeyValueYARPCClient, "foo", ""))
 
