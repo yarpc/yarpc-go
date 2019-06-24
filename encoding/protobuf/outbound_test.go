@@ -22,18 +22,25 @@ package protobuf
 
 import (
 	"context"
+	"io/ioutil"
 	"testing"
 
+	"github.com/gogo/protobuf/jsonpb"
+	"github.com/gogo/protobuf/proto"
+	"github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/encoding/protobuf/internal/testpb"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/yarpctest"
 )
 
 func TestInvalidOutboundEncoding(t *testing.T) {
-	client := newClient("foo", &transport.OutboundConfig{CallerName: "foo", Outbounds: transport.Outbounds{ServiceName: "bar"}})
+	client := newClient("foo", &transport.OutboundConfig{CallerName: "foo", Outbounds: transport.Outbounds{ServiceName: "bar"}}, nil /*AnyResolver*/)
 	_, _, _, _, err := client.buildTransportRequest(context.Background(), "hello", nil, nil)
 	assert.NoError(t, err)
 	client.encoding = "bat"
@@ -51,7 +58,7 @@ func TestNonOutboundConfigWithUnaryClient(t *testing.T) {
 	cc.EXPECT().GetUnaryOutbound().Return(transporttest.NewMockUnaryOutbound(mockCtrl))
 
 	assert.NotPanics(t, func() {
-		newClient("test", cc)
+		newClient("test", cc, nil /*AnyResolver*/)
 	})
 }
 
@@ -65,7 +72,7 @@ func TestNonOutboundConfigClient(t *testing.T) {
 	cc.EXPECT().GetUnaryOutbound().Do(func() { panic("bad times") })
 
 	assert.Panics(t, func() {
-		newClient("test", cc)
+		newClient("test", cc, nil /*AnyResolver*/)
 	})
 }
 
@@ -114,4 +121,76 @@ func TestNoResponseHeaders(t *testing.T) {
 
 	assert.Contains(t, err.Error(), "code:invalid-argument")
 	assert.Contains(t, err.Error(), "response headers are not supported for streams")
+}
+
+var _ jsonpb.AnyResolver = (*testResolver)(nil)
+
+func TestOutboundAnyResolver(t *testing.T) {
+	const testValue = "foo-bar-baz"
+	newReq := func() proto.Message { return &testpb.TestMessage{} }
+	customResolver := &testResolver{NewMessage: newReq}
+
+	tests := []struct {
+		name     string
+		anyURL   string
+		resolver jsonpb.AnyResolver
+		wantErr  bool
+	}{
+		{
+			name:   "nothing custom",
+			anyURL: "uber.yarpc.encoding.protobuf.TestMessage",
+		},
+		{
+			name:     "custom resolver",
+			anyURL:   "uber.yarpc.encoding.protobuf.TestMessage",
+			resolver: customResolver,
+		},
+		{
+			name:     "custom resolver, custom URL",
+			anyURL:   "foo.bar.baz",
+			resolver: customResolver,
+		},
+		{
+			name:    "custom URL, no resolver",
+			anyURL:  "foo.bar.baz",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			trans := yarpctest.NewFakeTransport()
+			// outbound that echos the body back
+			out := trans.NewOutbound(nil, yarpctest.OutboundCallOverride(
+				yarpctest.OutboundCallable(func(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+					return &transport.Response{Body: ioutil.NopCloser(req.Body)}, nil
+				}),
+			))
+
+			client := NewClient(ClientParams{
+				ClientConfig: &transport.OutboundConfig{
+					Outbounds: transport.Outbounds{
+						Unary: out,
+					},
+				},
+				AnyResolver: tt.resolver,
+				Options:     []ClientOption{UseJSON},
+			})
+
+			testMessage := &testpb.TestMessage{Value: testValue}
+
+			// convert to an Any so that the marshaller will use the custom resolver
+			any, err := types.MarshalAny(testMessage)
+			require.NoError(t, err)
+			any.TypeUrl = tt.anyURL // update to custom URL
+
+			gotMessage, err := client.Call(context.Background(), "", any, newReq)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, testMessage, gotMessage) // we expect the actual type behind the Any
+			}
+		})
+	}
 }

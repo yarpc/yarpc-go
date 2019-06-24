@@ -25,6 +25,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/gogo/protobuf/jsonpb"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
@@ -161,39 +162,50 @@ type ClientOption interface {
 type ClientParams struct {
 	ServiceName  string
 	ClientConfig transport.ClientConfig
+	AnyResolver  jsonpb.AnyResolver
 	Options      []ClientOption
 }
 
 // NewClient creates a new client.
 func NewClient(params ClientParams) Client {
-	return newClient(params.ServiceName, params.ClientConfig, params.Options...)
+	return newClient(params.ServiceName, params.ClientConfig, params.AnyResolver, params.Options...)
 }
 
 // NewStreamClient creates a new stream client.
 func NewStreamClient(params ClientParams) StreamClient {
-	return newClient(params.ServiceName, params.ClientConfig, params.Options...)
+	return newClient(params.ServiceName, params.ClientConfig, params.AnyResolver, params.Options...)
 }
 
 // UnaryHandlerParams contains the parameters for creating a new UnaryHandler.
 type UnaryHandlerParams struct {
-	Handle     func(context.Context, proto.Message) (proto.Message, error)
-	NewRequest func() proto.Message
+	Handle      func(context.Context, proto.Message) (proto.Message, error)
+	NewRequest  func() proto.Message
+	AnyResolver jsonpb.AnyResolver
 }
 
 // NewUnaryHandler returns a new UnaryHandler.
 func NewUnaryHandler(params UnaryHandlerParams) transport.UnaryHandler {
-	return newUnaryHandler(params.Handle, params.NewRequest)
+	return newUnaryHandler(
+		params.Handle,
+		params.NewRequest,
+		newCodec(params.AnyResolver),
+	)
 }
 
 // OnewayHandlerParams contains the parameters for creating a new OnewayHandler.
 type OnewayHandlerParams struct {
-	Handle     func(context.Context, proto.Message) error
-	NewRequest func() proto.Message
+	Handle      func(context.Context, proto.Message) error
+	NewRequest  func() proto.Message
+	AnyResolver jsonpb.AnyResolver
 }
 
 // NewOnewayHandler returns a new OnewayHandler.
 func NewOnewayHandler(params OnewayHandlerParams) transport.OnewayHandler {
-	return newOnewayHandler(params.Handle, params.NewRequest)
+	return newOnewayHandler(
+		params.Handle,
+		params.NewRequest,
+		newCodec(params.AnyResolver),
+	)
 }
 
 // StreamHandlerParams contains the parameters for creating a new StreamHandler.
@@ -247,6 +259,7 @@ func uniqueLowercaseStrings(s []string) []string {
 // ClientStream is a protobuf-specific client stream.
 type ClientStream struct {
 	stream *transport.ClientStream
+	codec  *codec
 }
 
 // Context returns the context of the stream.
@@ -256,12 +269,12 @@ func (c *ClientStream) Context() context.Context {
 
 // Receive will receive a protobuf message from the client stream.
 func (c *ClientStream) Receive(newMessage func() proto.Message, options ...yarpc.StreamOption) (proto.Message, error) {
-	return readFromStream(context.Background(), c.stream, newMessage)
+	return readFromStream(context.Background(), c.stream, newMessage, c.codec)
 }
 
 // Send will send a protobuf message to the client stream.
 func (c *ClientStream) Send(message proto.Message, options ...yarpc.StreamOption) error {
-	return writeToStream(context.Background(), c.stream, message)
+	return writeToStream(context.Background(), c.stream, message, c.codec)
 }
 
 // Close will close the protobuf stream.
@@ -273,6 +286,7 @@ func (c *ClientStream) Close(options ...yarpc.StreamOption) error {
 type ServerStream struct {
 	ctx    context.Context
 	stream *transport.ServerStream
+	codec  *codec
 }
 
 // Context returns the context of the stream.
@@ -282,10 +296,10 @@ func (s *ServerStream) Context() context.Context {
 
 // Receive will receive a protobuf message from the server stream.
 func (s *ServerStream) Receive(newMessage func() proto.Message, options ...yarpc.StreamOption) (proto.Message, error) {
-	return readFromStream(context.Background(), s.stream, newMessage)
+	return readFromStream(context.Background(), s.stream, newMessage, s.codec)
 }
 
 // Send will send a protobuf message to the server stream.
 func (s *ServerStream) Send(message proto.Message, options ...yarpc.StreamOption) error {
-	return writeToStream(context.Background(), s.stream, message)
+	return writeToStream(context.Background(), s.stream, message, s.codec)
 }

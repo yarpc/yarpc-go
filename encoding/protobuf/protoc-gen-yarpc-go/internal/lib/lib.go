@@ -88,15 +88,20 @@ type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
 }
 {{end}}
 
-// New{{$service.GetName}}YARPCClient builds a new YARPC client for the {{$service.GetName}} service.
-func New{{$service.GetName}}YARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) {{$service.GetName}}YARPCClient {
+func new{{$service.GetName}}YARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) {{$service.GetName}}YARPCClient {
 	return &_{{$service.GetName}}YARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
 			ServiceName: "{{trimPrefixPeriod $service.FQSN}}",
 			ClientConfig: clientConfig,
+			AnyResolver: anyResolver,
 			Options: options,
 		},
 	)}
+}
+
+// New{{$service.GetName}}YARPCClient builds a new YARPC client for the {{$service.GetName}} service.
+func New{{$service.GetName}}YARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) {{$service.GetName}}YARPCClient {
+	return new{{$service.GetName}}YARPCClient(clientConfig, nil, options...)
 }
 
 // {{$service.GetName}}YARPCServer is the YARPC server-side interface for the {{$service.GetName}} service.
@@ -134,9 +139,13 @@ type {{$service.GetName}}Service{{$method.GetName}}YARPCServer interface {
 }
 {{end}}
 
-// Build{{$service.GetName}}YARPCProcedures prepares an implementation of the {{$service.GetName}} service for YARPC registration.
-func Build{{$service.GetName}}YARPCProcedures(server {{$service.GetName}}YARPCServer) []transport.Procedure {
-	handler := &_{{$service.GetName}}YARPCHandler{server}
+type build{{$service.GetName}}YARPCProceduresParams struct {
+	Server      {{$service.GetName}}YARPCServer
+	AnyResolver jsonpb.AnyResolver
+}
+
+func build{{$service.GetName}}YARPCProcedures(params build{{$service.GetName}}YARPCProceduresParams) []transport.Procedure {
+	handler := &_{{$service.GetName}}YARPCHandler{params.Server}
 	return protobuf.BuildProcedures(
 		protobuf.BuildProceduresParams{
 			ServiceName: "{{trimPrefixPeriod $service.FQSN}}",
@@ -147,6 +156,7 @@ func Build{{$service.GetName}}YARPCProcedures(server {{$service.GetName}}YARPCSe
 						protobuf.UnaryHandlerParams{
 							Handle: handler.{{$method.GetName}},
 							NewRequest: new{{$service.GetName}}Service{{$method.GetName}}YARPCRequest,
+							AnyResolver: params.AnyResolver,
 						},
 					),
 				},
@@ -197,6 +207,11 @@ func Build{{$service.GetName}}YARPCProcedures(server {{$service.GetName}}YARPCSe
 	)
 }
 
+// Build{{$service.GetName}}YARPCProcedures prepares an implementation of the {{$service.GetName}} service for YARPC registration.
+func Build{{$service.GetName}}YARPCProcedures(server {{$service.GetName}}YARPCServer) []transport.Procedure {
+	return build{{$service.GetName}}YARPCProcedures(build{{$service.GetName}}YARPCProceduresParams{Server:server})
+}
+
 // Fx{{$service.GetName}}YARPCClientParams defines the input
 // for NewFx{{$service.GetName}}YARPCClient. It provides the
 // paramaters to get a {{$service.GetName}}YARPCClient in an
@@ -205,6 +220,7 @@ type Fx{{$service.GetName}}YARPCClientParams struct {
 	fx.In
 
 	Provider yarpc.ClientConfig
+	AnyResolver jsonpb.AnyResolver ` + "`" + `name:"yarpcfx" optional:"true"` + "`" + `
 }
 
 // Fx{{$service.GetName}}YARPCClientResult defines the output
@@ -230,7 +246,7 @@ type Fx{{$service.GetName}}YARPCClientResult struct {
 func NewFx{{$service.GetName}}YARPCClient(name string, options ...protobuf.ClientOption) interface{} {
 	return func(params Fx{{$service.GetName}}YARPCClientParams) Fx{{$service.GetName}}YARPCClientResult {
 		return Fx{{$service.GetName}}YARPCClientResult{
-			Client: New{{$service.GetName}}YARPCClient(params.Provider.ClientConfig(name), options...),
+			Client: new{{$service.GetName}}YARPCClient(params.Provider.ClientConfig(name), params.AnyResolver, options...),
 		}
 	}
 }
@@ -243,6 +259,7 @@ type Fx{{$service.GetName}}YARPCProceduresParams struct {
 	fx.In
 
 	Server {{$service.GetName}}YARPCServer
+	AnyResolver jsonpb.AnyResolver ` + "`" + `name:"yarpcfx" optional:"true"` + "`" + `
 }
 
 // Fx{{$service.GetName}}YARPCProceduresResult defines the output
@@ -268,7 +285,10 @@ type Fx{{$service.GetName}}YARPCProceduresResult struct {
 func NewFx{{$service.GetName}}YARPCProcedures() interface{} {
 	return func(params Fx{{$service.GetName}}YARPCProceduresParams) Fx{{$service.GetName}}YARPCProceduresResult {
 		return Fx{{$service.GetName}}YARPCProceduresResult{
-			Procedures: Build{{$service.GetName}}YARPCProcedures(params.Server),
+			Procedures: build{{$service.GetName}}YARPCProcedures(build{{$service.GetName}}YARPCProceduresParams{
+				Server:      params.Server,
+				AnyResolver: params.AnyResolver,
+			}),
 			ReflectionMeta: reflection.ServerMeta{
 				ServiceName: "{{trimPrefixPeriod $service.FQSN}}",
 				FileDescriptors: {{ fileDescriptorClosureVarName .File }},
@@ -590,6 +610,7 @@ var Runner = protoplugin.NewRunner(
 		"context",
 		"io/ioutil",
 		"reflect",
+		"github.com/gogo/protobuf/jsonpb",
 		"github.com/gogo/protobuf/proto",
 		"go.uber.org/fx",
 		"go.uber.org/yarpc",

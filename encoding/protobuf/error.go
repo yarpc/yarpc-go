@@ -98,7 +98,7 @@ func WithErrorDetails(details ...proto.Message) ErrorOption {
 }
 
 // convertToYARPCError is to be used for handling errors on the inbound side.
-func convertToYARPCError(encoding transport.Encoding, err error) error {
+func convertToYARPCError(encoding transport.Encoding, err error, codec *codec) error {
 	if err == nil {
 		return nil
 	}
@@ -114,7 +114,7 @@ func convertToYARPCError(encoding transport.Encoding, err error) error {
 		if convertErr != nil {
 			return convertErr
 		}
-		detailsBytes, cleanup, marshalErr := marshal(encoding, st.Proto())
+		detailsBytes, cleanup, marshalErr := marshal(encoding, st.Proto(), codec)
 		if marshalErr != nil {
 			return marshalErr
 		}
@@ -127,7 +127,7 @@ func convertToYARPCError(encoding transport.Encoding, err error) error {
 }
 
 // convertFromYARPCError is to be used for handling errors on the outbound side.
-func convertFromYARPCError(encoding transport.Encoding, err error) error {
+func convertFromYARPCError(encoding transport.Encoding, err error, codec *codec) error {
 	if err == nil || !yarpcerrors.IsStatus(err) {
 		return err
 	}
@@ -136,7 +136,7 @@ func convertFromYARPCError(encoding transport.Encoding, err error) error {
 		return err
 	}
 	st := &rpc.Status{}
-	unmarshalErr := unmarshalBytes(encoding, yarpcErr.Details(), st)
+	unmarshalErr := unmarshalBytes(encoding, yarpcErr.Details(), st, codec)
 	if unmarshalErr != nil {
 		return unmarshalErr
 	}
