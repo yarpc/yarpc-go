@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 - call.HeaderNames() now specifies a capacity when creating a slice,
   which should improve the call.HeaderNames()'s performance.
+- Observability middleware will always emit an error code if the returned error
+  is from the `yarpcerrors` package.
 ### Added
 - Added error details support in protobuf over gRPC and HTTP.
 - Protobuf JSON encoding can take a custom gogo/protobuf/jsonpb.AnyResolver with
