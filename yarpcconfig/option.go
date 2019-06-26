@@ -20,6 +20,8 @@
 
 package yarpcconfig
 
+import "net/http"
+
 // Option customizes a Configurator.
 type Option func(*Configurator)
 
@@ -42,5 +44,15 @@ type Option func(*Configurator)
 func InterpolationResolver(f func(k string) (v string, ok bool)) Option {
 	return func(c *Configurator) {
 		c.resolver = f
+	}
+}
+
+// HTTPFallbackHandler introduces an optional HTTP fallback handler for HTTP
+// transports.
+// Any HTTP transports constructed by this configurator may forward non-RPC
+// requests to this handler.
+func HTTPFallbackHandler(h http.Handler) Option {
+	return func(c *Configurator) {
+		c.fallbackHandler = h
 	}
 }

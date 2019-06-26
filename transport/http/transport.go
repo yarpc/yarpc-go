@@ -49,6 +49,7 @@ type transportOptions struct {
 	innocenceWindow       time.Duration
 	jitter                func(int64) int64
 	tracer                opentracing.Tracer
+	fallbackHandler       http.Handler
 	buildClient           func(*transportOptions) *http.Client
 	logger                *zap.Logger
 }
@@ -229,6 +230,7 @@ func (o *transportOptions) newTransport() *Transport {
 		connBackoffStrategy: o.connBackoffStrategy,
 		innocenceWindow:     o.innocenceWindow,
 		jitter:              o.jitter,
+		fallbackHandler:     o.fallbackHandler,
 		peers:               make(map[string]*httpPeer),
 		tracer:              o.tracer,
 		logger:              logger,
@@ -271,6 +273,7 @@ type Transport struct {
 	connectorsGroup     sync.WaitGroup
 	innocenceWindow     time.Duration
 	jitter              func(int64) int64
+	fallbackHandler     http.Handler
 
 	tracer opentracing.Tracer
 	logger *zap.Logger

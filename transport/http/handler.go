@@ -49,12 +49,21 @@ func popHeader(h http.Header, n string) string {
 type handler struct {
 	router            transport.Router
 	tracer            opentracing.Tracer
+	fallbackHandler   http.Handler
 	grabHeaders       map[string]struct{}
 	bothResponseError bool
 	logger            *zap.Logger
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// Fall back to a normal HTTP server for any traffic not destined to be
+	// handled as RPC.
+	encoding := req.Header.Get(EncodingHeader)
+	if encoding == "" && h.fallbackHandler != nil {
+		h.fallbackHandler.ServeHTTP(w, req)
+		return
+	}
+
 	responseWriter := newResponseWriter(w)
 	service := popHeader(req.Header, ServiceHeader)
 	procedure := popHeader(req.Header, ProcedureHeader)

@@ -22,12 +22,14 @@ package http
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/yarpcconfig"
 )
 
@@ -498,4 +500,44 @@ func useFakeBuildClient(t *testing.T, want *wantHTTPClient) TransportOption {
 		assert.Equal(t, want.ConnTimeout, options.connTimeout, "http.Client: ConnTimeout should match")
 		return buildHTTPClient(options)
 	})
+}
+
+func TestFallbackHandler(t *testing.T) {
+	env := map[string]string{}
+
+	fourZeroFour := http.HandlerFunc(func(resWriter http.ResponseWriter, req *http.Request) {
+		resWriter.Write([]byte("Not found"))
+	})
+
+	configurator := yarpcconfig.New(
+		yarpcconfig.InterpolationResolver(mapResolver(env)),
+		yarpcconfig.HTTPFallbackHandler(fourZeroFour),
+	)
+
+	cfgData := map[string]interface{}{
+		"inbounds": map[string]interface{}{
+			"http": map[string]interface{}{
+				"address": "127.0.0.1:8080",
+			},
+		},
+	}
+
+	err := configurator.RegisterTransport(TransportSpec())
+	require.NoError(t, err)
+
+	cfg, err := configurator.LoadConfig("fallbackotron", cfgData)
+	require.NoError(t, err)
+
+	dis := yarpc.NewDispatcher(cfg)
+
+	dis.Start()
+	defer dis.Stop()
+
+	res, err := http.Get("http://127.0.0.1:8080")
+	require.NoError(t, err)
+
+	resBody, err := ioutil.ReadAll(res.Body)
+	require.NoError(t, err)
+
+	assert.Equal(t, resBody, []byte("Not found"))
 }

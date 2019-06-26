@@ -104,6 +104,7 @@ func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 		shutdownTimeout:   defaultShutdownTimeout,
 		tracer:            t.tracer,
 		logger:            t.logger,
+		fallbackHandler:   t.fallbackHandler,
 		transport:         t,
 		grabHeaders:       make(map[string]struct{}),
 		bothResponseError: true,
@@ -128,6 +129,7 @@ type Inbound struct {
 	transport       *Transport
 	grabHeaders     map[string]struct{}
 	interceptor     func(http.Handler) http.Handler
+	fallbackHandler http.Handler
 
 	once *lifecycle.Once
 
@@ -174,6 +176,7 @@ func (i *Inbound) start() error {
 		tracer:            i.tracer,
 		grabHeaders:       i.grabHeaders,
 		bothResponseError: i.bothResponseError,
+		fallbackHandler:   i.fallbackHandler,
 		logger:            i.logger,
 	}
 	if i.interceptor != nil {

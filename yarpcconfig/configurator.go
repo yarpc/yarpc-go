@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 
 	"go.uber.org/multierr"
@@ -46,6 +47,7 @@ type Configurator struct {
 	knownPeerLists        map[string]*compiledPeerListSpec
 	knownPeerListUpdaters map[string]*compiledPeerListUpdaterSpec
 	resolver              interpolate.VariableResolver
+	fallbackHandler       http.Handler
 }
 
 // New sets up a new empty Configurator. The returned Configurator does not
@@ -253,7 +255,13 @@ func (c *Configurator) NewDispatcher(serviceName string, data interface{}) (*yar
 }
 
 func (c *Configurator) load(serviceName string, cfg *yarpcConfig) (_ yarpc.Config, err error) {
-	b := newBuilder(serviceName, &Kit{name: serviceName, c: c, resolver: c.resolver})
+	kit := &Kit{
+		HTTPFallbackHandler: c.fallbackHandler,
+		name:                serviceName,
+		c:                   c,
+		resolver:            c.resolver,
+	}
+	b := newBuilder(serviceName, kit)
 
 	for _, inbound := range cfg.Inbounds {
 		if e := c.loadInboundInto(b, inbound); e != nil {
