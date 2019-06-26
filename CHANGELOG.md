@@ -5,7 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- No changes yet.
+### Added
+- Configurator can now be constructed with an fallback HTTP handler.
+  All HTTP transports will divert non-RPC requests (those lacking an encoding
+  header) to this HTTP handler.
 
 ## [1.39.0] - 2019-06-25
 ### Fixed
