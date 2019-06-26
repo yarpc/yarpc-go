@@ -1,0 +1,12 @@
+FROM golang:1.12
+
+ENV SUPPRESS_DOCKER 1
+WORKDIR /go/src/go.uber.org/yarpc
+RUN apt-get update -yq && apt-get install -yq jq unzip netcat
+ADD dockerdeps.mk /go/src/go.uber.org/yarpc/
+ADD etc/make/base.mk etc/make/deps.mk /go/src/go.uber.org/yarpc/etc/make/
+RUN make -f dockerdeps.mk predeps
+ADD etc/bin/vendor-build.sh /go/src/go.uber.org/yarpc/etc/bin/
+ADD glide.yaml glide.lock /go/src/go.uber.org/yarpc/
+RUN make -f dockerdeps.mk deps
+ADD . /go/src/go.uber.org/yarpc/

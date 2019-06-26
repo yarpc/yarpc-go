@@ -34,13 +34,14 @@ func readFromStream(
 	ctx context.Context,
 	stream transport.Stream,
 	newMessage func() proto.Message,
+	codec *codec,
 ) (proto.Message, error) {
 	streamMsg, err := stream.ReceiveMessage(ctx)
 	if err != nil {
 		return nil, err
 	}
 	message := newMessage()
-	if err := unmarshal(stream.Request().Meta.Encoding, streamMsg.Body, message); err != nil {
+	if err := unmarshal(stream.Request().Meta.Encoding, streamMsg.Body, message, codec); err != nil {
 		streamMsg.Body.Close()
 		return nil, err
 	}
@@ -51,8 +52,8 @@ func readFromStream(
 }
 
 // writeToStream writes a proto.Message to a stream.
-func writeToStream(ctx context.Context, stream transport.Stream, message proto.Message) error {
-	messageData, cleanup, err := marshal(stream.Request().Meta.Encoding, message)
+func writeToStream(ctx context.Context, stream transport.Stream, message proto.Message, codec *codec) error {
+	messageData, cleanup, err := marshal(stream.Request().Meta.Encoding, message, codec)
 	if err != nil {
 		return err
 	}

@@ -38,8 +38,13 @@ func Newf(code Code, format string, args ...interface{}) *Status {
 	}
 }
 
-// FromError returns the Status for the provided error. If the provided error
-// is not a Status, a new error with code CodeUnknown is returned.
+type yarpcError interface{ YARPCError() *Status }
+
+// FromError returns the Status for the provided error. If the underlying type
+// is Status, it returns itself. If the underlying error has a
+// YARPCError() *Status function, it calls the function and returns the
+// Status type. If the provided error is not a Status, a new error with
+// code CodeUnknown is returned.
 //
 // Returns nil if the provided error is nil.
 func FromError(err error) *Status {
@@ -49,18 +54,25 @@ func FromError(err error) *Status {
 	if status, ok := err.(*Status); ok {
 		return status
 	}
+	if statusImpl, ok := err.(yarpcError); ok {
+		return statusImpl.YARPCError()
+	}
 	return &Status{
 		code:    CodeUnknown,
 		message: err.Error(),
 	}
 }
 
-// IsStatus returns whether the provided error is a YARPC error.
+// IsStatus returns whether the provided error is a YARPC error, or has a
+// YARPCError() function to represent the error as a YARPC error.
 //
 // This is always false if the error is nil.
 func IsStatus(err error) bool {
-	_, ok := err.(*Status)
-	return ok
+	switch err.(type) {
+	case *Status, yarpcError:
+		return true
+	}
+	return false
 }
 
 // Status represents a YARPC error.
@@ -68,6 +80,7 @@ type Status struct {
 	code    Code
 	name    string
 	message string
+	details []byte
 }
 
 // WithName returns a new Status with the given name.
@@ -86,6 +99,25 @@ func (s *Status) WithName(name string) *Status {
 		code:    s.code,
 		name:    name,
 		message: s.message,
+		details: s.details,
+	}
+}
+
+// WithDetails returns a new status with the given details bytes.
+func (s *Status) WithDetails(details []byte) *Status {
+	if s == nil {
+		return nil
+	}
+	if len(details) == 0 {
+		// this ensures that the details field is not set to some pointer if
+		// there's nothing in details.
+		details = nil
+	}
+	return &Status{
+		code:    s.code,
+		name:    s.name,
+		message: s.message,
+		details: details,
 	}
 }
 
@@ -114,6 +146,14 @@ func (s *Status) Message() string {
 		return ""
 	}
 	return s.message
+}
+
+// Details returns the error details for this Status.
+func (s *Status) Details() []byte {
+	if s == nil {
+		return nil
+	}
+	return s.details
 }
 
 // Error implements the error interface.

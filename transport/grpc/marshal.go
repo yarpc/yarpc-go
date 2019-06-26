@@ -18,10 +18,25 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package encoding
+package grpc
 
-// StreamOption is an option that may be passed in at streaming function call
-// sites.
-type StreamOption interface {
-	unimplemented()
+import (
+	"github.com/gogo/googleapis/google/rpc"
+	"github.com/gogo/protobuf/proto"
+	"github.com/gogo/status"
+)
+
+func unmarshalError(body []byte) error {
+	protobufStatus := &rpc.Status{}
+	if err := proto.Unmarshal(body, protobufStatus); err != nil {
+		return err
+	}
+	return status.ErrorProto(protobufStatus)
+}
+
+func marshalError(st *status.Status) ([]byte, error) {
+	if len(st.Details()) == 0 {
+		return nil, nil
+	}
+	return proto.Marshal(st.Proto())
 }

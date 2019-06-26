@@ -18,10 +18,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package encoding
+package grpcerrorcodes
 
-// StreamOption is an option that may be passed in at streaming function call
-// sites.
-type StreamOption interface {
-	unimplemented()
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestCodes(t *testing.T) {
+	for code, grpcCode := range YARPCCodeToGRPCCode {
+		t.Run(code.String(), func(t *testing.T) {
+			getGRPCCode, ok := YARPCCodeToGRPCCode[code]
+			require.True(t, ok)
+			require.Equal(t, grpcCode, getGRPCCode)
+			getCode, ok := GRPCCodeToYARPCCode[grpcCode]
+			require.True(t, ok)
+			require.Equal(t, code, getCode)
+		})
+	}
 }

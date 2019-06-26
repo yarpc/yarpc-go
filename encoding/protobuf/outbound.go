@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/gogo/protobuf/jsonpb"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc"
 	apiencoding "go.uber.org/yarpc/api/encoding"
@@ -38,14 +39,16 @@ type client struct {
 	serviceName    string
 	outboundConfig *transport.OutboundConfig
 	encoding       transport.Encoding
+	codec          *codec
 }
 
-func newClient(serviceName string, clientConfig transport.ClientConfig, options ...ClientOption) *client {
+func newClient(serviceName string, clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...ClientOption) *client {
 	outboundConfig := toOutboundConfig(clientConfig)
 	client := &client{
 		serviceName:    serviceName,
 		outboundConfig: outboundConfig,
 		encoding:       Encoding,
+		codec:          newCodec(anyResolver),
 	}
 	for _, option := range options {
 		option.apply(client)
@@ -90,6 +93,7 @@ func (c *client) Call(
 		return nil, yarpcerrors.InternalErrorf("no unary outbounds for OutboundConfig %s", c.outboundConfig.CallerName)
 	}
 	transportResponse, appErr := unaryOutbound.Call(ctx, transportRequest)
+	appErr = convertFromYARPCError(transportRequest.Encoding, appErr, c.codec)
 	if transportResponse == nil {
 		return nil, appErr
 	}
@@ -103,7 +107,7 @@ func (c *client) Call(
 	var response proto.Message
 	if transportResponse.Body != nil {
 		response = newResponse()
-		if err := unmarshal(transportRequest.Encoding, transportResponse.Body, response); err != nil {
+		if err := unmarshal(transportRequest.Encoding, transportResponse.Body, response, c.codec); err != nil {
 			return nil, errors.ResponseBodyDecodeError(transportRequest, err)
 		}
 	}
@@ -127,7 +131,8 @@ func (c *client) CallOneway(
 	if onewayOutbound == nil {
 		return nil, yarpcerrors.InternalErrorf("no oneway outbounds for OutboundConfig %s", c.outboundConfig.CallerName)
 	}
-	return onewayOutbound.CallOneway(ctx, transportRequest)
+	ack, err := onewayOutbound.CallOneway(ctx, transportRequest)
+	return ack, convertFromYARPCError(transportRequest.Encoding, err, c.codec)
 }
 
 func (c *client) buildTransportRequest(ctx context.Context, requestMethodName string, request proto.Message, options []yarpc.CallOption) (context.Context, *apiencoding.OutboundCall, *transport.Request, func(), error) {
@@ -146,7 +151,7 @@ func (c *client) buildTransportRequest(ctx context.Context, requestMethodName st
 		return nil, nil, nil, nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "can only use encodings %q or %q, but %q was specified", Encoding, JSONEncoding, transportRequest.Encoding)
 	}
 	if request != nil {
-		requestData, cleanup, err := marshal(transportRequest.Encoding, request)
+		requestData, cleanup, err := marshal(transportRequest.Encoding, request, c.codec)
 		if err != nil {
 			return nil, nil, nil, cleanup, errors.RequestBodyEncodeError(transportRequest, err)
 		}
@@ -188,7 +193,7 @@ func (c *client) CallStream(
 	}
 	stream, err := streamOutbound.CallStream(ctx, streamRequest)
 	if err != nil {
-		return nil, err
+		return nil, convertFromYARPCError(streamRequest.Meta.Encoding, err, c.codec)
 	}
 	return &ClientStream{stream: stream}, nil
 }
