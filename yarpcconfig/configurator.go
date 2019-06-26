@@ -256,10 +256,10 @@ func (c *Configurator) NewDispatcher(serviceName string, data interface{}) (*yar
 
 func (c *Configurator) load(serviceName string, cfg *yarpcConfig) (_ yarpc.Config, err error) {
 	kit := &Kit{
-		HTTPFallbackHandler: c.fallbackHandler,
-		name:                serviceName,
-		c:                   c,
-		resolver:            c.resolver,
+		name:            serviceName,
+		c:               c,
+		resolver:        c.resolver,
+		fallbackHandler: c.fallbackHandler,
 	}
 	b := newBuilder(serviceName, kit)
 

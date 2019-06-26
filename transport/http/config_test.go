@@ -503,6 +503,8 @@ func useFakeBuildClient(t *testing.T, want *wantHTTPClient) TransportOption {
 }
 
 func TestFallbackHandler(t *testing.T) {
+	type attrs map[string]interface{}
+
 	env := map[string]string{}
 
 	fourZeroFour := http.HandlerFunc(func(resWriter http.ResponseWriter, req *http.Request) {
@@ -514,9 +516,9 @@ func TestFallbackHandler(t *testing.T) {
 		yarpcconfig.HTTPFallbackHandler(fourZeroFour),
 	)
 
-	cfgData := map[string]interface{}{
-		"inbounds": map[string]interface{}{
-			"http": map[string]interface{}{
+	cfgData := attrs{
+		"inbounds": attrs{
+			"http": attrs{
 				"address": "127.0.0.1:8080",
 			},
 		},
@@ -530,8 +532,10 @@ func TestFallbackHandler(t *testing.T) {
 
 	dis := yarpc.NewDispatcher(cfg)
 
-	dis.Start()
-	defer dis.Stop()
+	require.NoError(t, dis.Start())
+	defer func() {
+		require.NoError(t, dis.Stop())
+	}()
 
 	res, err := http.Get("http://127.0.0.1:8080")
 	require.NoError(t, err)

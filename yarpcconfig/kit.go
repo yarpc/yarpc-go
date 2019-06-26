@@ -34,8 +34,6 @@ import (
 // Kit is an opaque object that carries context for the Configurator. Build
 // functions that receive this object MUST NOT modify it.
 type Kit struct {
-	HTTPFallbackHandler http.Handler
-
 	c *Configurator
 
 	name string
@@ -43,8 +41,18 @@ type Kit struct {
 	// Used to resolve interpolated variables.
 	resolver interpolate.VariableResolver
 
+	// Any HTTP transports may use this to forward non-RPC traffic to a non-RPC
+	// HTTP handler.
+	fallbackHandler http.Handler
+
 	// TransportSpec currently being used. This may or may not be set.
 	transportSpec *compiledTransportSpec
+}
+
+// HTTPFallbackHandler carries the configured HTTP handler for non–RPC
+// requests.
+func (k *Kit) HTTPFallbackHandler() http.Handler {
+	return k.fallbackHandler
 }
 
 // Returns a shallow copy of this Kit with spec set to the given value.

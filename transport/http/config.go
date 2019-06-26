@@ -143,7 +143,7 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 	}
 	options.connBackoffStrategy = strategy
 
-	options.fallbackHandler = k.HTTPFallbackHandler
+	options.fallbackHandler = k.HTTPFallbackHandler()
 
 	return options.newTransport(), nil
 }
