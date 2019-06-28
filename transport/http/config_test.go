@@ -534,7 +534,7 @@ func TestFallbackHandler(t *testing.T) {
 
 	require.NoError(t, dis.Start())
 	defer func() {
-		require.NoError(t, dis.Stop())
+		assert.NoError(t, dis.Stop())
 	}()
 
 	res, err := http.Get("http://127.0.0.1:8080")
