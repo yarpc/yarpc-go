@@ -1,5 +1,5 @@
 hash: 0e5fe0feec3ddf53987a3a9750da5fac22dc7bc7710369eecc35d90c188c0d73
-updated: 2019-07-02T15:06:21.936468776Z
+updated: 2019-07-03T15:06:29.088202405Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -116,7 +116,7 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 39e1aff1547e9a628f5714cc5f73d058ba44258e
+  version: 8f55e607908ea781ad9d08521730d73e047d9ac4
   subpackages:
   - internal/fs
   - internal/util
@@ -264,7 +264,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: f80f67146e584e84e6c179fdb72a38f367331d6e
+  version: 44aeb8b7c377f1eed68ac06f687821c6658c65a2
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
@@ -286,7 +286,7 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 501c41df7f472c740d0674ff27122f3f48c80ce7
+  version: 1d89a3c832915b2314551c1d2a506874d62e53f7
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
@@ -317,6 +317,7 @@ imports:
   - resolver
   - resolver/dns
   - resolver/passthrough
+  - serviceconfig
   - stats
   - status
   - tap
