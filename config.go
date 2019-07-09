@@ -43,9 +43,32 @@ const (
 
 // LogLevelConfig configures the levels at which YARPC logs various things.
 type LogLevelConfig struct {
-	// Level at which application errors are logged. Note that all Thrift
-	// exceptions are considered application errors.
-	//
+	// Level at which successful requests are logged.
+	// Defaults to DebugLevel.
+	Success *zapcore.Level
+	// Level at which errors are logged.
+	// Thrift exceptions are application errors, which we log as a separate
+	// class from success and failure.
+	Failure *zapcore.Level
+	// Level at which application errors are logged.
+	// All Thrift exceptions are considered application errors.
+	// Defaults to ErrorLevel.
+	ApplicationError *zapcore.Level
+
+	// Specific overrides for inbound and outbound requests.
+	Inbound, Outbound DirectionalLogLevelConfig
+}
+
+type DirectionalLogLevelConfig struct {
+	// Level at which successful requests are logged.
+	// Defaults to DebugLevel.
+	Success *zapcore.Level
+	// Level at which errors are logged.
+	// Thrift exceptions are application errors, which we log as a separate
+	// class from success and failure.
+	Failure *zapcore.Level
+	// Level at which application errors are logged.
+	// All Thrift exceptions are considered application errors.
 	// Defaults to ErrorLevel.
 	ApplicationError *zapcore.Level
 }

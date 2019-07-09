@@ -133,6 +133,34 @@ func TestConfigurator(t *testing.T) {
 			},
 		},
 		{
+			desc: "outbound success info logging",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				debugLevel := zapcore.DebugLevel
+				infoLevel := zapcore.InfoLevel
+
+				tt.serviceName = "foo"
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+							success: debug
+							outbound:
+								success: info
+				`)
+				tt.wantConfig = yarpc.Config{
+					Name: "foo",
+					Logging: yarpc.LoggingConfig{
+						Levels: yarpc.LogLevelConfig{
+							Success: &debugLevel,
+							Outbound: yarpc.DirectionalLogLevelConfig{
+								Success: &infoLevel,
+							},
+						},
+					},
+				}
+				return
+			},
+		},
+		{
 			desc: "application error, invalid type",
 			test: func(*testing.T, *gomock.Controller) (tt testCase) {
 				tt.give = whitespace.Expand(`
