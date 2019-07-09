@@ -186,6 +186,11 @@ func (h *handler) handleUnary(
 	err = handlerErrorToGRPCError(err, responseWriter)
 
 	// Send the response attributes back and end the stream.
+	//
+	// Warning: SendMsg() holds onto these bytes after returning. Therefore, we
+	// cannot pool this responseWriter.
+	//
+	// See https://github.com/yarpc/yarpc-go/pull/1738 for details.
 	if sendErr := serverStream.SendMsg(responseWriter.Bytes()); sendErr != nil {
 		// We couldn't send the response.
 		return sendErr
