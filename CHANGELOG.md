@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added fail-fast option to peer lists.  With this option enabled, a peer list
   will return an error if no peers are connected at the time of a call, instead
   of waiting for an available peer or the context to time out.
+### Fixed
+- Previously, every peer list reported itself as a "single" peer list for
+  purposes of debugging, instead of its own name.
 
 ## [1.41.0] - 2019-10-01
 ### Fixed

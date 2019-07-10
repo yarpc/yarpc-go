@@ -84,7 +84,7 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 
 	return &List{
 		List: peerlist.New(
-			"roundrobin",
+			"round-robin",
 			transport,
 			newPeerRing(),
 			plOpts...,
