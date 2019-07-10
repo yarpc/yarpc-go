@@ -1,5 +1,5 @@
 hash: 0e5fe0feec3ddf53987a3a9750da5fac22dc7bc7710369eecc35d90c188c0d73
-updated: 2019-07-09T15:03:53.168365666Z
+updated: 2019-07-10T15:06:31.160375292Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -69,7 +69,7 @@ imports:
   - mockgen
   - mockgen/model
 - name: github.com/golang/protobuf
-  version: b5d812f8a3706043e23a9cd5babf2e5423744d30
+  version: 6c65a5562fc06764971b7c5d05c76c75e84bdbf7
   subpackages:
   - proto
   - ptypes
@@ -125,7 +125,7 @@ imports:
   subpackages:
   - parser
 - name: github.com/stretchr/testify
-  version: ae5876d09ad6d0d68dff8d969e518db26e0e7969
+  version: d84e815d441de9c64a3a2f9336c32acf1e7349d1
   subpackages:
   - assert
   - require
@@ -251,7 +251,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 04f50cda93cbb67f2afa353c52f342100e80e625
+  version: 6ec70d6a5542cba804c6d16ebe8392601a0b7b60
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -264,7 +264,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: c8855242db9c1762032abe33c2dff50de3ec9d05
+  version: 7b25e351ac0e848b1efa6625bde14603cb29e2b3
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
