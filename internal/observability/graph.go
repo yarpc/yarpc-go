@@ -146,6 +146,25 @@ type edge struct {
 	latencies          *metrics.Histogram
 	callerErrLatencies *metrics.Histogram
 	serverErrLatencies *metrics.Histogram
+
+	streaming *streamEdge
+}
+
+// streamEdge metrics should only be used for streaming requests.
+type streamEdge struct {
+	sends         *metrics.Counter
+	sendSuccesses *metrics.Counter
+	sendFailures  *metrics.CounterVector
+
+	receives         *metrics.Counter
+	receiveSuccesses *metrics.Counter
+	receiveFailures  *metrics.CounterVector
+
+	streamDurations     *metrics.Histogram
+	sendLatencies       *metrics.Histogram
+	sendErrLatencies    *metrics.Histogram
+	receiveLatencies    *metrics.Histogram
+	recieveErrLatencies *metrics.Histogram
 }
 
 // newEdge constructs a new edge. Since Registries enforce metric uniqueness,
@@ -233,6 +252,140 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		logger.Error("Failed to create server failure latency distribution.", zap.Error(err))
 	}
 
+	// streaming requests
+	var streaming *streamEdge
+	if rpcType == transport.Streaming {
+		// sends
+		sends, err := meter.Counter(metrics.Spec{
+			Name:      "stream_sends",
+			Help:      "Total number of streaming messages sent.",
+			ConstTags: tags,
+		})
+		if err != nil {
+			logger.Error("Failed to create streaming sends counter.", zap.Error(err))
+		}
+		sendSuccesses, err := meter.Counter(metrics.Spec{
+			Name:      "stream_send_successes",
+			Help:      "Number of successful streaming messages sent.",
+			ConstTags: tags,
+		})
+		if err != nil {
+			logger.Error("Failed to create streaming sends successes counter.", zap.Error(err))
+		}
+		sendFailures, err := meter.CounterVector(metrics.Spec{
+			Name:      "stream_send_failures",
+			Help:      "Number streaming messages that failed to send.",
+			ConstTags: tags,
+			VarTags:   []string{_error},
+		})
+		if err != nil {
+			logger.Error("Failed to create streaming sends failure counter.", zap.Error(err))
+		}
+
+		// receives
+		receives, err := meter.Counter(metrics.Spec{
+			Name:      "stream_receives",
+			Help:      "Total number of streaming messages recevied.",
+			ConstTags: tags,
+		})
+		if err != nil {
+			logger.Error("Failed to create streaming receives counter.", zap.Error(err))
+		}
+		receiveSuccesses, err := meter.Counter(metrics.Spec{
+			Name:      "stream_receives_successes",
+			Help:      "Number of successful streaming messages received.",
+			ConstTags: tags,
+		})
+		if err != nil {
+			logger.Error("Failed to create streaming receives successes counter.", zap.Error(err))
+		}
+		receiveFailures, err := meter.CounterVector(metrics.Spec{
+			Name:      "stream_receives_failures",
+			Help:      "Number streaming messages failed to be recieved.",
+			ConstTags: tags,
+			VarTags:   []string{_error},
+		})
+		if err != nil {
+			logger.Error("Failed to create streaming receives failure counter.", zap.Error(err))
+		}
+
+		// histograms
+		streamDurations, err := meter.Histogram(metrics.HistogramSpec{
+			Spec: metrics.Spec{
+				Name:      "stream_duration_ms",
+				Help:      "Latency distribution of total stream duration.",
+				ConstTags: tags,
+			},
+			Unit:    time.Millisecond,
+			Buckets: _bucketsMs,
+		})
+		if err != nil {
+			logger.Error("Failed to create stream duration histogram.", zap.Error(err))
+		}
+		sendLatencies, err := meter.Histogram(metrics.HistogramSpec{
+			Spec: metrics.Spec{
+				Name:      "stream_send_success_latency_ms",
+				Help:      "Latency distribution of successful streaming message sends.",
+				ConstTags: tags,
+			},
+			Unit:    time.Millisecond,
+			Buckets: _bucketsMs,
+		})
+		if err != nil {
+			logger.Error("Failed to create streaming success latency histogram.", zap.Error(err))
+		}
+		sendErrLatencies, err := meter.Histogram(metrics.HistogramSpec{
+			Spec: metrics.Spec{
+				Name:      "stream_send_failure_latency_ms",
+				Help:      "Latency distribution of failed to send streaming messages.",
+				ConstTags: tags,
+			},
+			Unit:    time.Millisecond,
+			Buckets: _bucketsMs,
+		})
+		if err != nil {
+			logger.Error("Failed to create streaming server failure latency histogram.", zap.Error(err))
+		}
+		receiveLatencies, err := meter.Histogram(metrics.HistogramSpec{
+			Spec: metrics.Spec{
+				Name:      "stream_receive_success_latency_ms",
+				Help:      "Latency distribution of successful streaming message receives.",
+				ConstTags: tags,
+			},
+			Unit:    time.Millisecond,
+			Buckets: _bucketsMs,
+		})
+		if err != nil {
+			logger.Error("Failed to create streaming success latency histogram.", zap.Error(err))
+		}
+		receiveErrLatencies, err := meter.Histogram(metrics.HistogramSpec{
+			Spec: metrics.Spec{
+				Name:      "stream_receive_failure_latency_ms",
+				Help:      "Latency distribution of failed to receive streaming messages.",
+				ConstTags: tags,
+			},
+			Unit:    time.Millisecond,
+			Buckets: _bucketsMs,
+		})
+		if err != nil {
+			logger.Error("Failed to create streaming server failure latency histogram.", zap.Error(err))
+		}
+
+		streaming = &streamEdge{
+			sends:               sends,
+			sendSuccesses:       sendSuccesses,
+			sendFailures:        sendFailures,
+			receives:            receives,
+			receiveSuccesses:    receiveSuccesses,
+			receiveFailures:     receiveFailures,
+			streamDurations:     streamDurations,
+			sendLatencies:       sendLatencies,
+			sendErrLatencies:    sendErrLatencies,
+			receiveLatencies:    receiveLatencies,
+			recieveErrLatencies: receiveErrLatencies,
+		}
+	}
+
 	logger = logger.With(
 		zap.String("source", req.Caller),
 		zap.String("dest", req.Service),
@@ -252,6 +405,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		latencies:          latencies,
 		callerErrLatencies: callerErrLatencies,
 		serverErrLatencies: serverErrLatencies,
+		streaming:          streaming,
 	}
 }
 
