@@ -152,6 +152,7 @@ func (m *Middleware) CallOneway(ctx context.Context, req *transport.Request, out
 // HandleStream implements middleware.StreamInbound.
 func (m *Middleware) HandleStream(serverStream *transport.ServerStream, h transport.StreamHandler) error {
 	call := m.graph.begin(serverStream.Context(), transport.Streaming, _directionInbound, serverStream.Request().Meta.ToRequest())
+	call.EndStreamHandshake(err) //TODO(need some way to log that the initial handshake was fine)
 
 	wrappedStream, err := transport.NewServerStream(newServerStreamWrapper(call, serverStream))
 	if err != nil {
@@ -163,8 +164,7 @@ func (m *Middleware) HandleStream(serverStream *transport.ServerStream, h transp
 	}
 
 	err = h.HandleStream(wrappedStream)
-	// TODO: end stream
-	call.End(err)
+	call.EndStream(err)
 	return err
 }
 
@@ -172,7 +172,7 @@ func (m *Middleware) HandleStream(serverStream *transport.ServerStream, h transp
 func (m *Middleware) CallStream(ctx context.Context, request *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
 	call := m.graph.begin(ctx, transport.Streaming, _directionOutbound, request.Meta.ToRequest())
 	clientStream, err := out.CallStream(ctx, request)
-	call.End(err)
+	call.EndStreamHandshake(err) //TODO(need some way to log that the initial handshake was fine)
 	if err != nil {
 		return nil, err
 	}

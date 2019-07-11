@@ -161,3 +161,14 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 		}
 	}
 }
+
+func (c call) EndStream(err error) {
+	elapsed := _timeNow().Sub(c.started)
+	c.edge.streaming.streamDurations.Observe(elapsed)
+	c.log(elapsed, err, false)
+	c.endStreamStats(err)
+}
+
+func (c call) endStreamStats(err error) {
+
+}

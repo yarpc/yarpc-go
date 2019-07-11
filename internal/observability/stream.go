@@ -24,6 +24,8 @@ import (
 	"context"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
 )
 
 var _ transport.StreamCloser = (*streamWrapper)(nil)
@@ -56,15 +58,59 @@ func (s *streamWrapper) Request() *transport.StreamRequest {
 }
 
 func (s *streamWrapper) SendMessage(ctx context.Context, msg *transport.StreamMessage) error {
-	return s.stream.SendMessage(ctx, msg)
+	edge := s.call.edge.streaming
+
+	start := _timeNow()
+	err := s.stream.SendMessage(ctx, msg)
+	elapsed := _timeNow().Sub(start)
+
+	edge.sends.Inc()
+	if err == nil {
+		edge.sendSuccesses.Inc()
+		edge.sendLatencies.Observe(elapsed)
+
+	} else {
+		if sendFailuresCounter, err2 := edge.sendFailures.Get(_error, errToMetricString(err)); err2 != nil {
+			s.call.edge.logger.DPanic("could not retrieve send failure counter", zap.Error(err2))
+		} else {
+			sendFailuresCounter.Inc()
+		}
+		edge.sendErrLatencies.Observe(elapsed)
+	}
+
+	s.call.log(elapsed, err, false /* application error bit */)
+	return err
 }
 
 func (s *streamWrapper) ReceiveMessage(ctx context.Context) (*transport.StreamMessage, error) {
-	return s.stream.ReceiveMessage(ctx)
+	edge := s.call.edge.streaming
+
+	start := _timeNow()
+	msg, err := s.stream.ReceiveMessage(ctx)
+	elapsed := _timeNow().Sub(start)
+
+	edge.receives.Inc()
+	if err == nil {
+		edge.receiveSuccesses.Inc()
+		edge.receiveLatencies.Observe(elapsed)
+
+	} else {
+		if recvFailureCounter, err2 := edge.receiveFailures.Get(_error, errToMetricString(err)); err2 != nil {
+			s.call.edge.logger.DPanic("could not retrieve receive failure counter", zap.Error(err2))
+		} else {
+			recvFailureCounter.Inc()
+		}
+		edge.recieveErrLatencies.Observe(elapsed)
+	}
+
+	s.call.log(elapsed, err, false /* application error bit */)
+	return msg, err
 }
 
 func (s *streamWrapper) Close(ctx context.Context) error {
-	return s.stream.Close(ctx)
+	err := s.stream.Close(ctx)
+	s.call.EndStream(err)
+	return err
 }
 
 // This is a light wrapper so that we can re-use the same methods for
@@ -76,4 +122,13 @@ type contextCloser struct {
 
 func (c contextCloser) Close(ctx context.Context) error {
 	return nil
+}
+
+// inteded for metric tags, this returns the yarpcerrors.Status error code name
+// or "unknown_internal_yarpc"
+func errToMetricString(err error) string {
+	if yarpcerrors.IsStatus(err) {
+		return yarpcerrors.FromError(err).Code().String()
+	}
+	return "unknown_internal_yarpc"
 }
