@@ -62,11 +62,11 @@ func (c call) End(err error) {
 
 func (c call) EndWithAppError(err error, isApplicationError bool) {
 	elapsed := _timeNow().Sub(c.started)
-	c.endLogs(elapsed, err, isApplicationError)
+	c.log(elapsed, err, isApplicationError)
 	c.endStats(elapsed, err, isApplicationError)
 }
 
-func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool) {
+func (c call) log(elapsed time.Duration, err error, isApplicationError bool) {
 	var ce *zapcore.CheckedEntry
 	if err == nil && !isApplicationError {
 		msg := _successfulInbound
