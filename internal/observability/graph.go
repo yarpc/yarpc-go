@@ -93,7 +93,8 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction dir
 	d.Add(req.RoutingKey)
 	d.Add(req.RoutingDelegate)
 	d.Add(string(direction))
-	e := g.getOrCreateEdge(d.Digest(), req, string(direction))
+	d.Add(rpcType.String())
+	e := g.getOrCreateEdge(d.Digest(), req, string(direction), rpcType)
 	d.Free()
 
 	levels := &g.inboundLevels
@@ -113,11 +114,11 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction dir
 	}
 }
 
-func (g *graph) getOrCreateEdge(key []byte, req *transport.Request, direction string) *edge {
+func (g *graph) getOrCreateEdge(key []byte, req *transport.Request, direction string, rpcType transport.Type) *edge {
 	if e := g.getEdge(key); e != nil {
 		return e
 	}
-	return g.createEdge(key, req, direction)
+	return g.createEdge(key, req, direction, rpcType)
 }
 
 func (g *graph) getEdge(key []byte) *edge {
@@ -127,7 +128,7 @@ func (g *graph) getEdge(key []byte) *edge {
 	return e
 }
 
-func (g *graph) createEdge(key []byte, req *transport.Request, direction string) *edge {
+func (g *graph) createEdge(key []byte, req *transport.Request, direction string, rpcType transport.Type) *edge {
 	g.edgesMu.Lock()
 	// Since we'll rarely hit this code path, the overhead of defer is acceptable.
 	defer g.edgesMu.Unlock()
@@ -137,7 +138,7 @@ func (g *graph) createEdge(key []byte, req *transport.Request, direction string)
 		return e
 	}
 
-	e := newEdge(g.logger, g.meter, req, direction)
+	e := newEdge(g.logger, g.meter, req, direction, rpcType)
 	g.edges[string(key)] = e
 	return e
 }
@@ -159,7 +160,7 @@ type edge struct {
 
 // newEdge constructs a new edge. Since Registries enforce metric uniqueness,
 // edges should be cached and re-used for each RPC.
-func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, direction string) *edge {
+func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, direction string, rpcType transport.Type) *edge {
 	tags := metrics.Tags{
 		"source":           req.Caller,
 		"dest":             req.Service,
@@ -169,6 +170,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		"routing_key":      req.RoutingKey,
 		"routing_delegate": req.RoutingDelegate,
 		"direction":        direction,
+		"rpc_type":         rpcType.String(),
 	}
 	calls, err := meter.Counter(metrics.Spec{
 		Name:      "calls",
@@ -240,6 +242,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 	if err != nil {
 		logger.Error("Failed to create server failure latency distribution.", zap.Error(err))
 	}
+
 	logger = logger.With(
 		zap.String("source", req.Caller),
 		zap.String("dest", req.Service),

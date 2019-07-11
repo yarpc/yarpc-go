@@ -491,8 +491,8 @@ func TestMiddlewareMetrics(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		validate := func(mw *Middleware, direction string) {
-			key, free := getKey(req, direction)
+		validate := func(mw *Middleware, direction string, rpcType transport.Type) {
+			key, free := getKey(req, direction, rpcType)
 			edge := mw.graph.getEdge(key)
 			free()
 			assert.Equal(t, int64(tt.wantCalls), edge.calls.Load())
@@ -516,7 +516,7 @@ func TestMiddlewareMetrics(t *testing.T) {
 				&transporttest.FakeResponseWriter{},
 				newHandler(tt),
 			)
-			validate(mw, string(_directionInbound))
+			validate(mw, string(_directionInbound), transport.Unary)
 		})
 		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
 			mw := NewMiddleware(Config{
@@ -525,7 +525,7 @@ func TestMiddlewareMetrics(t *testing.T) {
 				ContextExtractor: NewNopContextExtractor(),
 			})
 			mw.Call(context.Background(), req, newOutbound(tt))
-			validate(mw, string(_directionOutbound))
+			validate(mw, string(_directionOutbound), transport.Unary)
 		})
 	}
 }
@@ -533,7 +533,7 @@ func TestMiddlewareMetrics(t *testing.T) {
 // getKey gets the "key" that we will use to get an edge in the graph.  We use
 // a separate function to recreate the logic because extracting it out in the
 // main code could have performance implications.
-func getKey(req *transport.Request, direction string) (key []byte, free func()) {
+func getKey(req *transport.Request, direction string, rpcType transport.Type) (key []byte, free func()) {
 	d := digester.New()
 	d.Add(req.Caller)
 	d.Add(req.Service)
@@ -543,6 +543,7 @@ func getKey(req *transport.Request, direction string) (key []byte, free func()) 
 	d.Add(req.RoutingKey)
 	d.Add(req.RoutingDelegate)
 	d.Add(direction)
+	d.Add(rpcType.String())
 	return d.Digest(), d.Free
 }
 
@@ -641,6 +642,7 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 		"procedure":        "procedure",
 		"routing_delegate": "rd",
 		"routing_key":      "rk",
+		"rpc_type":         transport.Unary.String(),
 		"source":           "caller",
 	}
 	want := &metrics.RootSnapshot{
@@ -702,23 +704,25 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 	tags := metrics.Tags{
 		"dest":             "service",
 		"direction":        "inbound",
-		"transport":        "unknown",
 		"encoding":         "raw",
 		"procedure":        "procedure",
 		"routing_delegate": "rd",
 		"routing_key":      "rk",
+		"rpc_type":         transport.Unary.String(),
 		"source":           "caller",
+		"transport":        "unknown",
 	}
 	errorTags := metrics.Tags{
 		"dest":             "service",
 		"direction":        "inbound",
-		"transport":        "unknown",
 		"encoding":         "raw",
+		"error":            "unknown_internal_yarpc",
 		"procedure":        "procedure",
 		"routing_delegate": "rd",
 		"routing_key":      "rk",
+		"rpc_type":         transport.Unary.String(),
 		"source":           "caller",
-		"error":            "unknown_internal_yarpc",
+		"transport":        "unknown",
 	}
 	want := &metrics.RootSnapshot{
 		Counters: []metrics.Snapshot{
@@ -814,6 +818,7 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 				"procedure":        "procedure",
 				"routing_delegate": "rd",
 				"routing_key":      "rk",
+				"rpc_type":         transport.Unary.String(),
 				"source":           "caller",
 			}
 			errorTags := metrics.Tags{
@@ -824,6 +829,7 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 				"procedure":        "procedure",
 				"routing_delegate": "rd",
 				"routing_key":      "rk",
+				"rpc_type":         transport.Unary.String(),
 				"source":           "caller",
 				"error":            tt.errTag,
 			}
