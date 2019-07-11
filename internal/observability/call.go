@@ -136,39 +136,28 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 	}
 
 	// Emit finer grained metrics since the error is a yarpcerrors.Status.
-	errCode := yarpcerrors.FromError(err).Code()
-	switch errCode {
-	case yarpcerrors.CodeCancelled,
-		yarpcerrors.CodeInvalidArgument,
-		yarpcerrors.CodeNotFound,
-		yarpcerrors.CodeAlreadyExists,
-		yarpcerrors.CodePermissionDenied,
-		yarpcerrors.CodeFailedPrecondition,
-		yarpcerrors.CodeAborted,
-		yarpcerrors.CodeOutOfRange,
-		yarpcerrors.CodeUnimplemented,
-		yarpcerrors.CodeUnauthenticated:
+	status := yarpcerrors.FromError(err)
+	errCode := status.Code()
+
+	switch statusFault(status) {
+	case clientFault:
 		c.edge.callerErrLatencies.Observe(elapsed)
 		if counter, err := c.edge.callerFailures.Get(_error, errCode.String()); err == nil {
 			counter.Inc()
 		}
-		return
-	case yarpcerrors.CodeUnknown,
-		yarpcerrors.CodeDeadlineExceeded,
-		yarpcerrors.CodeResourceExhausted,
-		yarpcerrors.CodeInternal,
-		yarpcerrors.CodeUnavailable,
-		yarpcerrors.CodeDataLoss:
+
+	case serverFault:
 		c.edge.serverErrLatencies.Observe(elapsed)
 		if counter, err := c.edge.serverFailures.Get(_error, errCode.String()); err == nil {
 			counter.Inc()
 		}
-		return
-	}
-	// If this code is executed we've hit an error code outside the usual error
-	// code range, so we'll just log the string representation of that code.
-	c.edge.serverErrLatencies.Observe(elapsed)
-	if counter, err := c.edge.serverFailures.Get(_error, errCode.String()); err == nil {
-		counter.Inc()
+
+	default:
+		// If this code is executed we've hit an error code outside the usual error
+		// code range, so we'll just log the string representation of that code.
+		c.edge.serverErrLatencies.Observe(elapsed)
+		if counter, err := c.edge.serverFailures.Get(_error, errCode.String()); err == nil {
+			counter.Inc()
+		}
 	}
 }
