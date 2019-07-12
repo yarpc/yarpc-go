@@ -68,10 +68,10 @@ func TestNewMiddlewareLogLevels(t *testing.T) {
 				assert.Equal(t, zapcore.InfoLevel, NewMiddleware(Config{
 					Levels: LevelsConfig{
 						Default: DirectionalLevelsConfig{
-							Success: &warnLevel, // overrridden
+							Success: &warnLevel, // overridden by Inbound.Success
 						},
 						Inbound: DirectionalLevelsConfig{
-							Success: &infoLevel,
+							Success: &infoLevel, // overrides Default.Success
 						},
 					},
 				}).graph.inboundLevels.success)

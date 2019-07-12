@@ -257,8 +257,8 @@
 //  success
 //    Configures the level at which successful requests are logged.
 //    Defaults to "debug".
-// 	applicationError
-// 	  Configures the level at which application errors are logged.
+//  applicationError
+//    Configures the level at which application errors are logged.
 //    All Thrift exceptions are considered application errors.
 //    Defaults to "error".
 //  failure

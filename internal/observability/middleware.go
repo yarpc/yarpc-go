@@ -78,12 +78,16 @@ type Config struct {
 	Levels LevelsConfig
 }
 
+// LevelsConfig specifies log level overrides for inbound traffic, outbound
+// traffic, or the defaults for either.
 type LevelsConfig struct {
 	Default  DirectionalLevelsConfig
 	Inbound  DirectionalLevelsConfig
 	Outbound DirectionalLevelsConfig
 }
 
+// DirectionalLevelsConfig may override the log levels for any combination of
+// successes, failures, and application errors.
 type DirectionalLevelsConfig struct {
 	// Log level used to log successful calls.
 	//
