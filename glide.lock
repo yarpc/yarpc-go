@@ -1,5 +1,5 @@
 hash: 0e5fe0feec3ddf53987a3a9750da5fac22dc7bc7710369eecc35d90c188c0d73
-updated: 2019-07-11T15:06:22.492998103Z
+updated: 2019-07-12T15:05:23.54686669Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -125,7 +125,7 @@ imports:
   subpackages:
   - parser
 - name: github.com/stretchr/testify
-  version: d84e815d441de9c64a3a2f9336c32acf1e7349d1
+  version: 221dbe5ed46703ee255b1da0dec05086f5035f62
   subpackages:
   - assert
   - require
@@ -251,7 +251,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 6ec70d6a5542cba804c6d16ebe8392601a0b7b60
+  version: fae7ac547cb717d141c433a2a173315e216b64c4
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -264,7 +264,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 286818132824cc7a932bc972207f079caafd739f
+  version: 9a621aea19f8341c01da59e0d42dd97700f677d0
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
@@ -324,7 +324,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 51d6538a90f86fe93ac480b35f37b2be17fef232
 - name: honnef.co/go/tools
-  version: 6c2dcfbea27de86d6a0237f3832ee3955b2624fd
+  version: 2a10c936ab6539969c9e9628858a385b19db6411
   subpackages:
   - arg
   - cmd/staticcheck
