@@ -74,22 +74,37 @@ type Config struct {
 	// Extracts request-scoped information from the context for logging.
 	ContextExtractor ContextExtractor
 
-	// Log level used to log successful inbound and outbound calls.
+	// Levels specify log levels for various classes of requests.
+	Levels LevelsConfig
+}
+
+// LevelsConfig specifies log level overrides for inbound traffic, outbound
+// traffic, or the defaults for either.
+type LevelsConfig struct {
+	Default  DirectionalLevelsConfig
+	Inbound  DirectionalLevelsConfig
+	Outbound DirectionalLevelsConfig
+}
+
+// DirectionalLevelsConfig may override the log levels for any combination of
+// successes, failures, and application errors.
+type DirectionalLevelsConfig struct {
+	// Log level used to log successful calls.
 	//
 	// Defaults to DebugLevel.
-	SuccessLevel *zapcore.Level
+	Success *zapcore.Level
 
-	// Log level used to log failed inbound and outbound calls. This includes
-	// low-level network errors, TChannel error frames, etc.
+	// Log level used to log failed calls.
+	// This includes low-level network errors, TChannel error frames, etc.
 	//
 	// Defaults to ErrorLevel.
-	FailureLevel *zapcore.Level
+	Failure *zapcore.Level
 
-	// Log level used to log calls that failed with an application error. All
-	// Thrift exceptions are considered application errors.
+	// Log level used to log calls that failed with an application error.
+	// All Thrift exceptions are considered application errors.
 	//
 	// Defaults to ErrorLevel.
-	ApplicationErrorLevel *zapcore.Level
+	ApplicationError *zapcore.Level
 }
 
 // NewMiddleware constructs an observability middleware with the provided
@@ -97,17 +112,26 @@ type Config struct {
 func NewMiddleware(cfg Config) *Middleware {
 	m := &Middleware{newGraph(cfg.Scope, cfg.Logger, cfg.ContextExtractor)}
 
-	if lvl := cfg.SuccessLevel; lvl != nil {
-		m.graph.succLevel = *lvl
-	}
-	if lvl := cfg.FailureLevel; lvl != nil {
-		m.graph.failLevel = *lvl
-	}
-	if lvl := cfg.ApplicationErrorLevel; lvl != nil {
-		m.graph.appErrLevel = *lvl
-	}
+	// Apply the default levels
+	applyLogLevelsConfig(&m.graph.inboundLevels, &cfg.Levels.Default)
+	applyLogLevelsConfig(&m.graph.outboundLevels, &cfg.Levels.Default)
+	// Override with direction-specific levels
+	applyLogLevelsConfig(&m.graph.inboundLevels, &cfg.Levels.Inbound)
+	applyLogLevelsConfig(&m.graph.outboundLevels, &cfg.Levels.Outbound)
 
 	return m
+}
+
+func applyLogLevelsConfig(dst *levels, src *DirectionalLevelsConfig) {
+	if level := src.Success; level != nil {
+		dst.success = *src.Success
+	}
+	if level := src.Failure; level != nil {
+		dst.failure = *src.Failure
+	}
+	if level := src.ApplicationError; level != nil {
+		dst.applicationError = *src.ApplicationError
+	}
 }
 
 // Handle implements middleware.UnaryInbound.

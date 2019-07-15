@@ -53,7 +53,11 @@ type call struct {
 	rpcType   transport.Type
 	direction directionName
 
-	succLevel, failLevel, appErrLevel zapcore.Level
+	levels *levels
+}
+
+type levels struct {
+	success, failure, applicationError zapcore.Level
 }
 
 func (c call) End(err error) {
@@ -73,16 +77,16 @@ func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool)
 		if c.direction != _directionInbound {
 			msg = _successfulOutbound
 		}
-		ce = c.edge.logger.Check(c.succLevel, msg)
+		ce = c.edge.logger.Check(c.levels.success, msg)
 	} else {
 		msg := _errorInbound
 		if c.direction != _directionInbound {
 			msg = _errorOutbound
 		}
 
-		lvl := c.failLevel
+		lvl := c.levels.failure
 		if isApplicationError {
-			lvl = c.appErrLevel
+			lvl = c.levels.applicationError
 		}
 		ce = c.edge.logger.Check(lvl, msg)
 	}

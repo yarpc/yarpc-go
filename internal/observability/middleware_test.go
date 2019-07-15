@@ -48,39 +48,116 @@ func TestNewMiddlewareLogLevels(t *testing.T) {
 	infoLevel := zapcore.InfoLevel
 	warnLevel := zapcore.WarnLevel
 
-	t.Run("Success", func(t *testing.T) {
-		t.Run("default", func(t *testing.T) {
-			assert.Equal(t, zapcore.DebugLevel, NewMiddleware(Config{}).graph.succLevel)
+	t.Run("Inbound", func(t *testing.T) {
+		t.Run("Success", func(t *testing.T) {
+			t.Run("default", func(t *testing.T) {
+				assert.Equal(t, zapcore.DebugLevel, NewMiddleware(Config{}).graph.inboundLevels.success)
+			})
+
+			t.Run("any direction override", func(t *testing.T) {
+				assert.Equal(t, zapcore.InfoLevel, NewMiddleware(Config{
+					Levels: LevelsConfig{
+						Default: DirectionalLevelsConfig{
+							Success: &infoLevel,
+						},
+					},
+				}).graph.inboundLevels.success)
+			})
+
+			t.Run("directional override", func(t *testing.T) {
+				assert.Equal(t, zapcore.InfoLevel, NewMiddleware(Config{
+					Levels: LevelsConfig{
+						Default: DirectionalLevelsConfig{
+							Success: &warnLevel, // overridden by Inbound.Success
+						},
+						Inbound: DirectionalLevelsConfig{
+							Success: &infoLevel, // overrides Default.Success
+						},
+					},
+				}).graph.inboundLevels.success)
+			})
 		})
 
-		t.Run("override", func(t *testing.T) {
-			assert.Equal(t, zapcore.InfoLevel, NewMiddleware(Config{
-				SuccessLevel: &infoLevel,
-			}).graph.succLevel)
+		t.Run("Failure", func(t *testing.T) {
+			t.Run("default", func(t *testing.T) {
+				assert.Equal(t, zapcore.ErrorLevel, NewMiddleware(Config{}).graph.inboundLevels.failure)
+			})
+
+			t.Run("override", func(t *testing.T) {
+				assert.Equal(t, zapcore.WarnLevel, NewMiddleware(Config{
+					Levels: LevelsConfig{
+						Inbound: DirectionalLevelsConfig{
+							Failure: &warnLevel,
+						},
+					},
+				}).graph.inboundLevels.failure)
+			})
+		})
+
+		t.Run("ApplicationError", func(t *testing.T) {
+			t.Run("default", func(t *testing.T) {
+				assert.Equal(t, zapcore.ErrorLevel, NewMiddleware(Config{}).graph.inboundLevels.applicationError)
+			})
+
+			t.Run("override", func(t *testing.T) {
+				assert.Equal(t, zapcore.WarnLevel, NewMiddleware(Config{
+					Levels: LevelsConfig{
+						Inbound: DirectionalLevelsConfig{
+							ApplicationError: &warnLevel,
+						},
+					},
+				}).graph.inboundLevels.applicationError)
+			})
 		})
 	})
 
-	t.Run("Failure", func(t *testing.T) {
-		t.Run("default", func(t *testing.T) {
-			assert.Equal(t, zapcore.ErrorLevel, NewMiddleware(Config{}).graph.failLevel)
+	t.Run("Outbound", func(t *testing.T) {
+		t.Run("Success", func(t *testing.T) {
+			t.Run("default", func(t *testing.T) {
+				assert.Equal(t, zapcore.DebugLevel, NewMiddleware(Config{}).graph.outboundLevels.success)
+			})
+
+			t.Run("override", func(t *testing.T) {
+				assert.Equal(t, zapcore.InfoLevel, NewMiddleware(Config{
+					Levels: LevelsConfig{
+						Outbound: DirectionalLevelsConfig{
+							Success: &infoLevel,
+						},
+					},
+				}).graph.outboundLevels.success)
+			})
 		})
 
-		t.Run("override", func(t *testing.T) {
-			assert.Equal(t, zapcore.WarnLevel, NewMiddleware(Config{
-				FailureLevel: &warnLevel,
-			}).graph.failLevel)
-		})
-	})
+		t.Run("Failure", func(t *testing.T) {
+			t.Run("default", func(t *testing.T) {
+				assert.Equal(t, zapcore.ErrorLevel, NewMiddleware(Config{}).graph.outboundLevels.failure)
+			})
 
-	t.Run("ApplicationError", func(t *testing.T) {
-		t.Run("default", func(t *testing.T) {
-			assert.Equal(t, zapcore.ErrorLevel, NewMiddleware(Config{}).graph.appErrLevel)
+			t.Run("override", func(t *testing.T) {
+				assert.Equal(t, zapcore.WarnLevel, NewMiddleware(Config{
+					Levels: LevelsConfig{
+						Outbound: DirectionalLevelsConfig{
+							Failure: &warnLevel,
+						},
+					},
+				}).graph.outboundLevels.failure)
+			})
 		})
 
-		t.Run("override", func(t *testing.T) {
-			assert.Equal(t, zapcore.WarnLevel, NewMiddleware(Config{
-				ApplicationErrorLevel: &warnLevel,
-			}).graph.appErrLevel)
+		t.Run("ApplicationError", func(t *testing.T) {
+			t.Run("default", func(t *testing.T) {
+				assert.Equal(t, zapcore.ErrorLevel, NewMiddleware(Config{}).graph.outboundLevels.applicationError)
+			})
+
+			t.Run("override", func(t *testing.T) {
+				assert.Equal(t, zapcore.WarnLevel, NewMiddleware(Config{
+					Levels: LevelsConfig{
+						Outbound: DirectionalLevelsConfig{
+							ApplicationError: &warnLevel,
+						},
+					},
+				}).graph.outboundLevels.applicationError)
+			})
 		})
 	})
 }
@@ -179,12 +256,16 @@ func TestMiddlewareLogging(t *testing.T) {
 	for _, tt := range tests {
 		core, logs := observer.New(zapcore.DebugLevel)
 		mw := NewMiddleware(Config{
-			Logger:                zap.New(core),
-			Scope:                 metrics.New().Scope(),
-			ContextExtractor:      NewNopContextExtractor(),
-			SuccessLevel:          &infoLevel,
-			ApplicationErrorLevel: &warnLevel,
-			// Leave failure level as the default.
+			Logger:           zap.New(core),
+			Scope:            metrics.New().Scope(),
+			ContextExtractor: NewNopContextExtractor(),
+			Levels: LevelsConfig{
+				Default: DirectionalLevelsConfig{
+					Success:          &infoLevel,
+					ApplicationError: &warnLevel,
+					// Leave failure level as the default.
+				},
+			},
 		})
 
 		getLog := func() observer.LoggedEntry {

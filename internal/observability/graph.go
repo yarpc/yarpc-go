@@ -58,18 +58,25 @@ type graph struct {
 	edgesMu sync.RWMutex
 	edges   map[string]*edge
 
-	succLevel, failLevel, appErrLevel zapcore.Level
+	inboundLevels, outboundLevels levels
 }
 
 func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor) graph {
 	return graph{
-		edges:       make(map[string]*edge, _defaultGraphSize),
-		meter:       meter,
-		logger:      logger,
-		extract:     extract,
-		succLevel:   zapcore.DebugLevel,
-		failLevel:   zapcore.ErrorLevel,
-		appErrLevel: zapcore.ErrorLevel,
+		edges:   make(map[string]*edge, _defaultGraphSize),
+		meter:   meter,
+		logger:  logger,
+		extract: extract,
+		inboundLevels: levels{
+			success:          zapcore.DebugLevel,
+			failure:          zapcore.ErrorLevel,
+			applicationError: zapcore.ErrorLevel,
+		},
+		outboundLevels: levels{
+			success:          zapcore.DebugLevel,
+			failure:          zapcore.ErrorLevel,
+			applicationError: zapcore.ErrorLevel,
+		},
 	}
 }
 
@@ -89,17 +96,20 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction dir
 	e := g.getOrCreateEdge(d.Digest(), req, string(direction))
 	d.Free()
 
+	levels := &g.inboundLevels
+	if direction != _directionInbound {
+		levels = &g.outboundLevels
+	}
+
 	return call{
-		edge:        e,
-		extract:     g.extract,
-		started:     now,
-		ctx:         ctx,
-		req:         req,
-		rpcType:     rpcType,
-		direction:   direction,
-		succLevel:   g.succLevel,
-		failLevel:   g.failLevel,
-		appErrLevel: g.appErrLevel,
+		edge:      e,
+		extract:   g.extract,
+		started:   now,
+		ctx:       ctx,
+		req:       req,
+		rpcType:   rpcType,
+		direction: direction,
+		levels:    levels,
 	}
 }
 
