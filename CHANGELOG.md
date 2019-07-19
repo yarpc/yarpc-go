@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Log level configuration can now be expressed specifically for every
   combination of inbound and outbound, for success, failure, and application
   error.
+- A peer list and transport stress tester is now in the `yarpctest` package.
 
 ## [1.39.0] - 2019-06-25
 ### Fixed
