@@ -1,5 +1,5 @@
 hash: 0e5fe0feec3ddf53987a3a9750da5fac22dc7bc7710369eecc35d90c188c0d73
-updated: 2019-07-19T15:06:20.0033886Z
+updated: 2019-07-22T15:04:31.619812016Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -110,7 +110,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 31bed53e4047fd6c510e43a941f90cb31be0972a
+  version: 33bc620f956eb70fbb8355e87df6a97891657ed5
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
