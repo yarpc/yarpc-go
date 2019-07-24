@@ -1,5 +1,5 @@
 hash: 0e5fe0feec3ddf53987a3a9750da5fac22dc7bc7710369eecc35d90c188c0d73
-updated: 2019-07-23T15:03:48.896820597Z
+updated: 2019-07-24T15:04:27.815105097Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -235,7 +235,7 @@ imports:
   subpackages:
   - golint
 - name: golang.org/x/net
-  version: da137c7871d730100384dbcf36e6f8fa493aef5b
+  version: ca1201d0de80cfde86cb01aea620983605dfe99b
   subpackages:
   - bpf
   - context
@@ -324,7 +324,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 51d6538a90f86fe93ac480b35f37b2be17fef232
 - name: honnef.co/go/tools
-  version: 2a10c936ab6539969c9e9628858a385b19db6411
+  version: a446d37d357d5781e73cf35a07099ca6638b399a
   subpackages:
   - arg
   - cmd/staticcheck
