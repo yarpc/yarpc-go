@@ -410,7 +410,6 @@ func TestStartStopFailures(t *testing.T) {
 
 			if tt.procedures != nil {
 				dispatcher.Register(tt.procedures(mockCtrl))
-				assert.Len(t, dispatcher.Procedures(), len(tt.procedures(mockCtrl)))
 			}
 
 			err := dispatcher.Start()
