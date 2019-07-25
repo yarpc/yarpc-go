@@ -225,6 +225,7 @@ type Dispatcher struct {
 	inbounds   Inbounds
 	outbounds  Outbounds
 	transports []transport.Transport
+	procedures []transport.Procedure
 
 	inboundMiddleware InboundMiddleware
 
@@ -334,7 +335,13 @@ func (d *Dispatcher) Register(rs []transport.Procedure) {
 		d.log.Info("Registration succeeded.", zap.Object("registeredProcedure", r))
 	}
 
+	d.procedures = procedures
 	d.table.Register(procedures)
+}
+
+// Procedures returns a slice of registered procedures, with middleware applied.
+func (d *Dispatcher) Procedures() []transport.Procedure {
+	return d.procedures
 }
 
 // Start starts the Dispatcher, allowing it to accept and process new incoming
