@@ -268,7 +268,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			},
 		})
 
-		getLog := func() observer.LoggedEntry {
+		getLog := func(t *testing.T) observer.LoggedEntry {
 			entries := logs.TakeAll()
 			require.Equal(t, 1, len(entries), "Unexpected number of logs written.")
 			e := entries[0]
@@ -305,7 +305,7 @@ func TestMiddlewareLogging(t *testing.T) {
 				},
 				Context: logContext,
 			}
-			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
+			assert.Equal(t, expected, getLog(t), "Unexpected log entry written.")
 		})
 		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
 			res, err := mw.Call(context.Background(), req, newOutbound(tt))
@@ -326,7 +326,7 @@ func TestMiddlewareLogging(t *testing.T) {
 				},
 				Context: logContext,
 			}
-			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
+			assert.Equal(t, expected, getLog(t), "Unexpected log entry written.")
 		})
 
 		// Application errors aren't applicable to oneway and streaming
@@ -350,7 +350,7 @@ func TestMiddlewareLogging(t *testing.T) {
 				},
 				Context: logContext,
 			}
-			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
+			assert.Equal(t, expected, getLog(t), "Unexpected log entry written.")
 		})
 		t.Run(tt.desc+", oneway outbound", func(t *testing.T) {
 			ack, err := mw.CallOneway(context.Background(), req, newOutbound(tt))
@@ -371,7 +371,7 @@ func TestMiddlewareLogging(t *testing.T) {
 				},
 				Context: logContext,
 			}
-			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
+			assert.Equal(t, expected, getLog(t), "Unexpected log entry written.")
 		})
 		t.Run(tt.desc+", stream inbound", func(t *testing.T) {
 			stream, err := transport.NewServerStream(&fakeStream{ctx: context.Background(), request: sreq})
@@ -391,7 +391,7 @@ func TestMiddlewareLogging(t *testing.T) {
 				},
 				Context: logContext,
 			}
-			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
+			assert.Equal(t, expected, getLog(t), "Unexpected log entry written.")
 		})
 		t.Run(tt.desc+", stream outbound", func(t *testing.T) {
 			clientStream, err := mw.CallStream(context.Background(), sreq, newOutbound(tt))
@@ -412,7 +412,7 @@ func TestMiddlewareLogging(t *testing.T) {
 				},
 				Context: logContext,
 			}
-			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
+			assert.Equal(t, expected, getLog(t), "Unexpected log entry written.")
 		})
 	}
 }
