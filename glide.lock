@@ -1,5 +1,5 @@
 hash: 0e5fe0feec3ddf53987a3a9750da5fac22dc7bc7710369eecc35d90c188c0d73
-updated: 2019-07-23T15:03:48.896820597Z
+updated: 2019-07-25T15:04:25.898372217Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -235,7 +235,7 @@ imports:
   subpackages:
   - golint
 - name: golang.org/x/net
-  version: da137c7871d730100384dbcf36e6f8fa493aef5b
+  version: ca1201d0de80cfde86cb01aea620983605dfe99b
   subpackages:
   - bpf
   - context
@@ -264,7 +264,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 8bb11ff117ca820938b6d899b13b3f2832ef244c
+  version: 8aa4eac1a7c108f74782725e959bedd2b844f738
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
@@ -272,6 +272,7 @@ imports:
   - go/analysis/passes/inspect
   - go/ast/astutil
   - go/ast/inspector
+  - go/buildutil
   - go/gcexportdata
   - go/internal/gcimporter
   - go/internal/packagesdriver
@@ -324,7 +325,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 51d6538a90f86fe93ac480b35f37b2be17fef232
 - name: honnef.co/go/tools
-  version: 2a10c936ab6539969c9e9628858a385b19db6411
+  version: 78a956244a878e10a48deff5b2cb216281053479
   subpackages:
   - arg
   - cmd/staticcheck
