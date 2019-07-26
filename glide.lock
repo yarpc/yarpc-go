@@ -1,5 +1,5 @@
 hash: 0e5fe0feec3ddf53987a3a9750da5fac22dc7bc7710369eecc35d90c188c0d73
-updated: 2019-07-25T15:04:25.898372217Z
+updated: 2019-07-26T15:04:55.556508068Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -251,7 +251,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: fae7ac547cb717d141c433a2a173315e216b64c4
+  version: fc99dfbffb4e5ed5758a37e31dd861afe285406b
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -264,7 +264,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 8aa4eac1a7c108f74782725e959bedd2b844f738
+  version: 2e34cfcb95cb3d24b197d58fe6d25046b8f25c86
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
@@ -287,7 +287,7 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 1d89a3c832915b2314551c1d2a506874d62e53f7
+  version: 045159ad57f3781d409358e3ade910a018c16b30
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
@@ -325,7 +325,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 51d6538a90f86fe93ac480b35f37b2be17fef232
 - name: honnef.co/go/tools
-  version: 78a956244a878e10a48deff5b2cb216281053479
+  version: 27a660a4b58b40c032f1dd332053c0e4c537496c
   subpackages:
   - arg
   - cmd/staticcheck
