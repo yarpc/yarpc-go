@@ -33,9 +33,11 @@ import (
 
 // ListStressTest describes the parameters of a stress test for a peer list implementation.
 type ListStressTest struct {
-	Workers   int
-	Duration  time.Duration
-	Timeout   time.Duration
+	Workers  int
+	Duration time.Duration
+	Timeout  time.Duration
+	// LowStress disables membership and connection churn, measuring peer
+	// selection baseline performance without interference.
 	LowStress bool
 	New       func(peer.Transport) peer.ChooserList
 }
@@ -347,7 +349,7 @@ const (
 var (
 	// Each identifier is a string: the name of its own index.
 	bitIds [numIds]peer.Identifier
-	// Reverse lookeup.
+	// Reverse lookup.
 	idIndexes map[string]int
 	shardKeys [numShardKeys]string
 )
