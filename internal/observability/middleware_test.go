@@ -176,7 +176,7 @@ func TestMiddlewareLogging(t *testing.T) {
 		RoutingDelegate: "routing-delegate",
 		Body:            strings.NewReader("body"),
 	}
-	sreq := &transport.StreamRequest{Meta: req.ToRequestMeta()}
+
 	failed := errors.New("fail")
 
 	baseFields := func() []zapcore.Field {
@@ -363,47 +363,6 @@ func TestMiddlewareLogging(t *testing.T) {
 			logContext = append(logContext, tt.wantFields...)
 			if tt.err == nil {
 				assert.NotNil(t, ack, "Expected non-nil ack if call is successful.")
-			}
-			expected := observer.LoggedEntry{
-				Entry: zapcore.Entry{
-					Level:   tt.wantErrLevel,
-					Message: tt.wantOutboundMsg,
-				},
-				Context: logContext,
-			}
-			assert.Equal(t, expected, getLog(t), "Unexpected log entry written.")
-		})
-		t.Run(tt.desc+", stream inbound", func(t *testing.T) {
-			stream, err := transport.NewServerStream(&fakeStream{ctx: context.Background(), request: sreq})
-			require.NoError(t, err)
-			err = mw.HandleStream(stream, newHandler(tt))
-			checkErr(err)
-			logContext := append(
-				baseFields(),
-				zap.String("direction", string(_directionInbound)),
-				zap.String("rpcType", "Streaming"),
-			)
-			logContext = append(logContext, tt.wantFields...)
-			expected := observer.LoggedEntry{
-				Entry: zapcore.Entry{
-					Level:   tt.wantErrLevel,
-					Message: tt.wantInboundMsg,
-				},
-				Context: logContext,
-			}
-			assert.Equal(t, expected, getLog(t), "Unexpected log entry written.")
-		})
-		t.Run(tt.desc+", stream outbound", func(t *testing.T) {
-			clientStream, err := mw.CallStream(context.Background(), sreq, newOutbound(tt))
-			checkErr(err)
-			logContext := append(
-				baseFields(),
-				zap.String("direction", string(_directionOutbound)),
-				zap.String("rpcType", "Streaming"),
-			)
-			logContext = append(logContext, tt.wantFields...)
-			if tt.err == nil {
-				assert.NotNil(t, clientStream, "Expected non-nil clientStream if call is successful.")
 			}
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
