@@ -34,6 +34,7 @@ func (a fakeAck) String() string { return "" }
 type fakeHandler struct {
 	err            error
 	applicationErr bool
+	handleStream   func(*transport.ServerStream)
 }
 
 func (h fakeHandler) Handle(_ context.Context, _ *transport.Request, rw transport.ResponseWriter) error {
@@ -47,7 +48,10 @@ func (h fakeHandler) HandleOneway(context.Context, *transport.Request) error {
 	return h.err
 }
 
-func (h fakeHandler) HandleStream(*transport.ServerStream) error {
+func (h fakeHandler) HandleStream(stream *transport.ServerStream) error {
+	if h.handleStream != nil {
+		h.handleStream(stream)
+	}
 	return h.err
 }
 
@@ -56,6 +60,7 @@ type fakeOutbound struct {
 
 	err            error
 	applicationErr bool
+	stream         fakeStream
 }
 
 func (o fakeOutbound) Call(context.Context, *transport.Request) (*transport.Response, error) {
@@ -76,15 +81,22 @@ func (o fakeOutbound) CallStream(ctx context.Context, request *transport.StreamR
 	if o.err != nil {
 		return nil, o.err
 	}
-	return transport.NewClientStream(&fakeStream{
-		ctx:     ctx,
-		request: request,
-	})
+
+	// always use passed in context and request
+	stream := o.stream
+	stream.ctx = ctx
+	stream.request = request
+
+	return transport.NewClientStream(&stream)
 }
 
 type fakeStream struct {
 	ctx     context.Context
 	request *transport.StreamRequest
+
+	sendErr    error
+	receiveErr error
+	closeErr   error
 }
 
 func (s *fakeStream) Context() context.Context {
@@ -96,15 +108,15 @@ func (s *fakeStream) Request() *transport.StreamRequest {
 }
 
 func (s *fakeStream) SendMessage(context.Context, *transport.StreamMessage) error {
-	return nil
+	return s.sendErr
 }
 
 func (s *fakeStream) ReceiveMessage(context.Context) (*transport.StreamMessage, error) {
-	return nil, nil
+	return nil, s.receiveErr
 }
 
 func (s *fakeStream) Close(context.Context) error {
-	return nil
+	return s.closeErr
 }
 
 func stubTime() func() {

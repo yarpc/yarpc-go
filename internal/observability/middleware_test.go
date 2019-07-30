@@ -376,6 +376,395 @@ func TestMiddlewareLogging(t *testing.T) {
 	}
 }
 
+func TestMiddlewareStreamingLogging(t *testing.T) {
+	defer stubTime()()
+	req := &transport.StreamRequest{
+		Meta: &transport.RequestMeta{
+			Caller:          "caller",
+			Service:         "service",
+			Transport:       "transport",
+			Encoding:        "raw",
+			Procedure:       "procedure",
+			Headers:         transport.NewHeaders().With("hello!", "goodbye!"),
+			ShardKey:        "shard-key",
+			RoutingKey:      "routing-key",
+			RoutingDelegate: "routing-delegate",
+		},
+	}
+
+	// helper function to creating logging fields for assertion
+	newZapFields := func(extraFields ...zapcore.Field) []zapcore.Field {
+		fields := []zapcore.Field{
+			zap.String("source", req.Meta.Caller),
+			zap.String("dest", req.Meta.Service),
+			zap.String("transport", req.Meta.Transport),
+			zap.String("procedure", req.Meta.Procedure),
+			zap.String("encoding", string(req.Meta.Encoding)),
+			zap.String("routingKey", req.Meta.RoutingKey),
+			zap.String("routingDelegate", req.Meta.RoutingDelegate),
+		}
+		return append(fields, extraFields...)
+	}
+
+	// create middleware
+	core, logs := observer.New(zapcore.DebugLevel)
+	infoLevel := zapcore.InfoLevel
+	mw := NewMiddleware(Config{
+		Logger:           zap.New(core),
+		Scope:            metrics.New().Scope(),
+		ContextExtractor: NewNopContextExtractor(),
+		Levels: LevelsConfig{
+			Default: DirectionalLevelsConfig{Success: &infoLevel},
+		},
+	})
+
+	// helper function to retrive observered logs, asserting the expected number
+	getLogs := func(t *testing.T, num int) []observer.LoggedEntry {
+		logs := logs.TakeAll()
+		require.Equal(t, num, len(logs), "expected exactly %d logs, got %v: %#v", num, len(logs), logs)
+
+		var entries []observer.LoggedEntry
+		for _, e := range logs {
+			// zero the time for easiy comparisons
+			e.Entry.Time = time.Time{}
+			entries = append(entries, e)
+		}
+		return entries
+	}
+
+	t.Run("success server", func(t *testing.T) {
+		stream, err := transport.NewServerStream(&fakeStream{request: req})
+		require.NoError(t, err)
+
+		err = mw.HandleStream(stream, &fakeHandler{
+			// send and receive messages in the handler
+			handleStream: func(stream *transport.ServerStream) {
+				err := stream.SendMessage(context.Background(), nil /*message*/)
+				require.NoError(t, err)
+				_, err = stream.ReceiveMessage(context.Background())
+				require.NoError(t, err)
+			}})
+		require.NoError(t, err)
+
+		logFields := func() []zapcore.Field {
+			return newZapFields(
+				zap.String("direction", string(_directionInbound)),
+				zap.String("rpcType", "Streaming"),
+				zap.Bool("successful", true),
+				zap.Skip(), // context extractor
+				zap.Skip(), // nil error
+			)
+		}
+
+		wantLogs := []observer.LoggedEntry{
+			{
+				// open stream
+				Entry: zapcore.Entry{
+					Message: _successStreamOpen,
+				},
+				Context: logFields(),
+			},
+			{
+				// send message
+				Entry: zapcore.Entry{
+					Message: _successfulStreamSend,
+				},
+				Context: logFields(),
+			},
+			{
+				// receive message
+				Entry: zapcore.Entry{
+					Message: _successfulStreamReceive,
+				},
+				Context: logFields(),
+			},
+			{
+				// close stream
+				Entry: zapcore.Entry{
+					Message: _successStreamClose,
+				},
+				Context: append(logFields(), zap.Duration("duration", 0)),
+			},
+		}
+
+		// log 1 - open stream
+		// log 2 - send message
+		// log 3 - receive message
+		// log 4 - close stream
+		gotLogs := getLogs(t, 4)
+		assert.Equal(t, wantLogs, gotLogs)
+	})
+
+	t.Run("error handler", func(t *testing.T) {
+		tests := []struct {
+			name string
+			err  error
+		}{
+			{
+				name: "client fault",
+				err:  yarpcerrors.InvalidArgumentErrorf("client err"),
+			},
+			{
+				name: "server fault",
+				err:  yarpcerrors.InternalErrorf("server err"),
+			},
+			{
+				name: "unknown fault",
+				err:  errors.New("unknown fault"),
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				stream, err := transport.NewServerStream(&fakeStream{request: req})
+				require.NoError(t, err)
+
+				err = mw.HandleStream(stream, &fakeHandler{err: tt.err})
+				require.Error(t, err)
+
+				fields := newZapFields(
+					zap.String("direction", string(_directionInbound)),
+					zap.String("rpcType", "Streaming"),
+					zap.Bool("successful", false),
+					zap.Skip(), // context extractor
+					zap.Error(tt.err),
+					zap.Duration("duration", 0),
+				)
+
+				wantLog := observer.LoggedEntry{
+					Entry: zapcore.Entry{
+						Message: _errorStreamClose,
+						Level:   zapcore.ErrorLevel,
+					},
+					Context: fields,
+				}
+
+				// The stream handler is only executed after a stream successfully connects
+				// with a client. Therefore the first streaming log will always be
+				// successful (tested in the previous subtest). We only care about the
+				// stream termination so we retrieve the last log.
+				//
+				// log 1 - open stream
+				// log 2 - close stream
+				gotLog := getLogs(t, 2)[1]
+				assert.Equal(t, wantLog, gotLog)
+			})
+		}
+	})
+
+	t.Run("error server - send and recv", func(t *testing.T) {
+		sendErr := errors.New("send err")
+		receiveErr := errors.New("receive err")
+
+		stream, err := transport.NewServerStream(&fakeStream{
+			request:    req,
+			sendErr:    sendErr,
+			receiveErr: receiveErr,
+		})
+		require.NoError(t, err)
+
+		err = mw.HandleStream(stream, &fakeHandler{
+			// send and receive messages in the handler
+			handleStream: func(stream *transport.ServerStream) {
+				err := stream.SendMessage(context.Background(), nil /*message*/)
+				require.Error(t, err)
+				_, err = stream.ReceiveMessage(context.Background())
+				require.Error(t, err)
+			}})
+		require.NoError(t, err)
+
+		fields := func() []zapcore.Field {
+			return newZapFields(
+				zap.String("direction", string(_directionInbound)),
+				zap.String("rpcType", "Streaming"),
+				zap.Bool("successful", false),
+				zap.Skip(), // context extractor
+			)
+		}
+
+		wantLogs := []observer.LoggedEntry{
+			{
+				// send message
+				Entry: zapcore.Entry{
+					Message: _errorStreamSend,
+					Level:   zapcore.ErrorLevel,
+				},
+				Context: append(fields(), zap.Error(sendErr)),
+			},
+			{
+				// receive message
+				Entry: zapcore.Entry{
+					Message: _errorStreamReceive,
+					Level:   zapcore.ErrorLevel,
+				},
+				Context: append(fields(), zap.Error(receiveErr)),
+			},
+		}
+
+		// We are only interested in the send and receive logs.
+		// log 1 - open stream
+		// log 2 - send message
+		// log 3 - receive message
+		// log 4 - close stream
+		gotLogs := getLogs(t, 4)[1:3]
+		assert.Equal(t, wantLogs, gotLogs)
+	})
+
+	t.Run("success client", func(t *testing.T) {
+		stream, err := mw.CallStream(context.Background(), req, fakeOutbound{})
+		require.NoError(t, err)
+		err = stream.SendMessage(context.Background(), nil /* message */)
+		require.NoError(t, err)
+		_, err = stream.ReceiveMessage(context.Background())
+		require.NoError(t, err)
+		require.NoError(t, stream.Close(context.Background()))
+
+		fields := func() []zapcore.Field {
+			return newZapFields(
+				zap.String("direction", string(_directionOutbound)),
+				zap.String("rpcType", "Streaming"),
+				zap.Bool("successful", true),
+				zap.Skip(), // context extractor
+				zap.Skip(), // nil error
+			)
+		}
+
+		wantLogs := []observer.LoggedEntry{
+			{
+				// stream open
+				Entry: zapcore.Entry{
+					Message: _successStreamOpen,
+				},
+				Context: fields(),
+			},
+			{
+				// stream send
+				Entry: zapcore.Entry{
+					Message: _successfulStreamSend,
+				},
+				Context: fields(),
+			},
+			{
+				// stream receive
+				Entry: zapcore.Entry{
+					Message: _successfulStreamReceive,
+				},
+				Context: fields(),
+			},
+			{
+				// stream close
+				Entry: zapcore.Entry{
+					Message: _successStreamClose,
+				},
+				Context: append(fields(), zap.Duration("duration", 0)),
+			},
+		}
+
+		// log 1 - open stream
+		// log 2 - send message
+		// log 3 - receive message
+		// log 4 - close stream
+		gotLogs := getLogs(t, 4)
+		assert.Equal(t, wantLogs, gotLogs)
+	})
+
+	t.Run("error client handshake", func(t *testing.T) {
+		clientErr := errors.New("client err")
+		_, err := mw.CallStream(context.Background(), req, fakeOutbound{err: clientErr})
+		require.Error(t, err)
+
+		fields := func() []zapcore.Field {
+			return newZapFields(
+				zap.String("direction", string(_directionOutbound)),
+				zap.String("rpcType", "Streaming"),
+				zap.Bool("successful", false),
+				zap.Skip(), // context extractor
+				zap.Error(clientErr),
+			)
+		}
+
+		wantLogs := []observer.LoggedEntry{
+			{
+				// stream open
+				Entry: zapcore.Entry{
+					Message: _errorStreamOpen,
+					Level:   zapcore.ErrorLevel,
+				},
+				Context: fields(),
+			},
+		}
+
+		// log 1 - open stream
+		gotLogs := getLogs(t, 1)
+		assert.Equal(t, wantLogs, gotLogs)
+	})
+
+	t.Run("error client - send recv close", func(t *testing.T) {
+		sendErr := errors.New("send err")
+		receiveErr := errors.New("receive err")
+		closeErr := errors.New("close err")
+
+		stream, err := mw.CallStream(context.Background(), req, fakeOutbound{
+			stream: fakeStream{
+				sendErr:    sendErr,
+				receiveErr: receiveErr,
+				closeErr:   closeErr,
+			}})
+		require.NoError(t, err)
+
+		err = stream.SendMessage(context.Background(), nil /* message */)
+		require.Error(t, err)
+		_, err = stream.ReceiveMessage(context.Background())
+		require.Error(t, err)
+		err = stream.Close(context.Background())
+		require.Error(t, err)
+
+		fields := func() []zapcore.Field {
+			return newZapFields(
+				zap.String("direction", string(_directionOutbound)),
+				zap.String("rpcType", "Streaming"),
+				zap.Bool("successful", false),
+				zap.Skip(), // context extractor
+			)
+		}
+
+		wantLogs := []observer.LoggedEntry{
+			{
+				// send message
+				Entry: zapcore.Entry{
+					Message: _errorStreamSend,
+					Level:   zapcore.ErrorLevel,
+				},
+				Context: append(fields(), zap.Error(sendErr)),
+			},
+			{
+				// receive message
+				Entry: zapcore.Entry{
+					Message: _errorStreamReceive,
+					Level:   zapcore.ErrorLevel,
+				},
+				Context: append(fields(), zap.Error(receiveErr)),
+			},
+			{
+				// close stream
+				Entry: zapcore.Entry{
+					Message: _errorStreamClose,
+					Level:   zapcore.ErrorLevel,
+				},
+				Context: append(fields(), zap.Error(closeErr), zap.Duration("duration", 0)),
+			},
+		}
+
+		// We are only interested in the send, receive and stream close logs
+		// log 1 - open stream
+		// log 2 - send message
+		// log 3 - receive message
+		// log 4 - close stream
+		gotLogs := getLogs(t, 4)[1:]
+		assert.Equal(t, wantLogs, gotLogs)
+	})
+}
+
 func TestMiddlewareMetrics(t *testing.T) {
 	defer stubTime()()
 	req := &transport.Request{
@@ -588,7 +977,7 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 			Body:            strings.NewReader("body"),
 		},
 		&transporttest.FakeResponseWriter{},
-		fakeHandler{nil, false},
+		fakeHandler{err: nil, applicationErr: false},
 	)
 	assert.NoError(t, err, "Unexpected transport error.")
 
@@ -655,7 +1044,7 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 			Body:            strings.NewReader("body"),
 		},
 		&transporttest.FakeResponseWriter{},
-		fakeHandler{fmt.Errorf("yuno"), false},
+		fakeHandler{err: fmt.Errorf("yuno"), applicationErr: false},
 	)
 	assert.Error(t, err, "Expected transport error.")
 
