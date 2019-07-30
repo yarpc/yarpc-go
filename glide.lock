@@ -1,5 +1,5 @@
 hash: 0e5fe0feec3ddf53987a3a9750da5fac22dc7bc7710369eecc35d90c188c0d73
-updated: 2019-07-29T15:04:39.168884839Z
+updated: 2019-07-30T15:06:30.313721996Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -110,7 +110,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 33bc620f956eb70fbb8355e87df6a97891657ed5
+  version: 1b791145873d67b010e4e506fb7cd7b1cd72e6f6
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -325,7 +325,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 51d6538a90f86fe93ac480b35f37b2be17fef232
 - name: honnef.co/go/tools
-  version: 92718b40cb62636e6dc9489d53660e18862cf862
+  version: 7ac815dbb9fd1cdc761659bb8fa3c3733f803e43
   subpackages:
   - arg
   - cmd/staticcheck
