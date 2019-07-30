@@ -26,6 +26,13 @@ import (
 	"go.uber.org/yarpc/api/transport"
 )
 
+const (
+	_successfulStreamReceive = "Successfully received stream message"
+	_successfulStreamSend    = "Successfully sent stream message"
+	_errorStreamReceive      = "Error receiving stream message"
+	_errorStreamSend         = "Error sending stream message"
+)
+
 var _ transport.StreamCloser = (*streamWrapper)(nil)
 
 type streamWrapper struct {
@@ -48,15 +55,22 @@ func newServerStreamWrapper(call call, stream transport.Stream) transport.Stream
 }
 
 func (s *streamWrapper) SendMessage(ctx context.Context, msg *transport.StreamMessage) error {
-	return s.StreamCloser.SendMessage(ctx, msg)
+	err := s.StreamCloser.SendMessage(ctx, msg)
+	s.call.logStreamEvent(err, _successfulStreamSend, _errorStreamSend)
+	return err
 }
 
 func (s *streamWrapper) ReceiveMessage(ctx context.Context) (*transport.StreamMessage, error) {
-	return s.StreamCloser.ReceiveMessage(ctx)
+	msg, err := s.StreamCloser.ReceiveMessage(ctx)
+	s.call.logStreamEvent(err, _successfulStreamReceive, _errorStreamReceive)
+
+	return msg, err
 }
 
 func (s *streamWrapper) Close(ctx context.Context) error {
-	return s.StreamCloser.Close(ctx)
+	err := s.StreamCloser.Close(ctx)
+	s.call.EndStream(err)
+	return err
 }
 
 // This is a light wrapper so that we can re-use the same methods for

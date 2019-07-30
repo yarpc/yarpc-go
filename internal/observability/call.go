@@ -31,11 +31,17 @@ import (
 )
 
 const (
-	_error              = "error"
+	_error = "error"
+
 	_successfulInbound  = "Handled inbound request."
 	_successfulOutbound = "Made outbound call."
 	_errorInbound       = "Error handling inbound request."
 	_errorOutbound      = "Error making outbound call."
+
+	_successStreamOpen  = "Successfully created stream"
+	_successStreamClose = "Successfully closed stream"
+	_errorStreamOpen    = "Error creating stream"
+	_errorStreamClose   = "Error closing stream"
 )
 
 // A call represents a single RPC along an edge.
@@ -175,4 +181,43 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 	if counter, err := c.edge.serverFailures.Get(_error, errCode.String()); err == nil {
 		counter.Inc()
 	}
+}
+
+// EndStreamHandshake should be invoked immediately after successfully creating
+// a stream.
+func (c call) EndStreamHandshake() {
+	c.EndStreamHandshakeWithError(nil)
+}
+
+// EndStreamHandshakeWithError should be invoked immediately after attempting to
+// create a stream.
+func (c call) EndStreamHandshakeWithError(err error) {
+	c.logStreamEvent(err, _successStreamOpen, _errorStreamOpen)
+}
+
+// EndStream should be invoked immediately after a stream closes.
+func (c call) EndStream(err error) {
+	elapsed := _timeNow().Sub(c.started)
+	c.logStreamEvent(err, _successStreamClose, _errorStreamClose, zap.Duration("duration", elapsed))
+}
+
+// logStreamEvent is a generic logging function useful for logging stream
+// events.
+func (c call) logStreamEvent(err error, succMsg, errMsg string, extraFields ...zap.Field) {
+	var ce *zapcore.CheckedEntry
+	if err != nil {
+		ce = c.edge.logger.Check(c.levels.failure, errMsg)
+	} else {
+		ce = c.edge.logger.Check(c.levels.success, succMsg)
+	}
+
+	fields := []zap.Field{
+		zap.String("rpcType", c.rpcType.String()),
+		zap.Bool("successful", err == nil),
+		c.extract(c.ctx),
+		zap.Error(err), // no-op if err == nil
+	}
+	fields = append(fields, extraFields...)
+
+	ce.Write(fields...)
 }
