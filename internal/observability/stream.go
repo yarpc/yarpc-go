@@ -24,6 +24,7 @@ import (
 	"context"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/zap"
 )
 
 const (
@@ -55,14 +56,43 @@ func newServerStreamWrapper(call call, stream transport.Stream) transport.Stream
 }
 
 func (s *streamWrapper) SendMessage(ctx context.Context, msg *transport.StreamMessage) error {
+	edge := s.call.edge.streaming
+
 	err := s.StreamCloser.SendMessage(ctx, msg)
 	s.call.logStreamEvent(err, _successfulStreamSend, _errorStreamSend)
+
+	edge.sends.Inc()
+	if err == nil {
+		edge.sendSuccesses.Inc()
+
+	} else {
+		if sendFailuresCounter, err2 := edge.sendFailures.Get(_error, errToMetricString(err)); err2 != nil {
+			s.call.edge.logger.DPanic("could not retrieve send failure counter", zap.Error(err2))
+		} else {
+			sendFailuresCounter.Inc()
+		}
+	}
+
 	return err
 }
 
 func (s *streamWrapper) ReceiveMessage(ctx context.Context) (*transport.StreamMessage, error) {
+	edge := s.call.edge.streaming
+
 	msg, err := s.StreamCloser.ReceiveMessage(ctx)
 	s.call.logStreamEvent(err, _successfulStreamReceive, _errorStreamReceive)
+
+	edge.receives.Inc()
+	if err == nil {
+		edge.receiveSuccesses.Inc()
+
+	} else {
+		if recvFailureCounter, err2 := edge.receiveFailures.Get(_error, errToMetricString(err)); err2 != nil {
+			s.call.edge.logger.DPanic("could not retrieve receive failure counter", zap.Error(err2))
+		} else {
+			recvFailureCounter.Inc()
+		}
+	}
 
 	return msg, err
 }
