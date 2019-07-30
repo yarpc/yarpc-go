@@ -1207,7 +1207,348 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 				},
 			}
 			assert.Equal(t, want, snap, "Unexpected snapshot of metrics.")
-
 		})
 	}
+}
+
+func TestStreamingMetrics(t *testing.T) {
+	defer stubTime()()
+
+	req := &transport.StreamRequest{
+		Meta: &transport.RequestMeta{
+			Caller:          "caller",
+			Service:         "service",
+			Transport:       "",
+			Encoding:        "raw",
+			Procedure:       "procedure",
+			ShardKey:        "sk",
+			RoutingKey:      "rk",
+			RoutingDelegate: "rd",
+		},
+	}
+
+	newTags := func(direction directionName, withErr string) metrics.Tags {
+		tags := metrics.Tags{
+			"dest":             "service",
+			"direction":        string(direction),
+			"encoding":         "raw",
+			"procedure":        "procedure",
+			"routing_delegate": "rd",
+			"routing_key":      "rk",
+			"rpc_type":         transport.Streaming.String(),
+			"source":           "caller",
+			"transport":        "unknown",
+		}
+		if withErr != "" {
+			tags["error"] = withErr
+		}
+		return tags
+	}
+
+	t.Run("success server", func(t *testing.T) {
+		root := metrics.New()
+		scope := root.Scope()
+		mw := NewMiddleware(Config{
+			Logger:           zap.NewNop(),
+			Scope:            scope,
+			ContextExtractor: NewNopContextExtractor(),
+		})
+
+		stream, err := transport.NewServerStream(&fakeStream{request: req})
+		require.NoError(t, err)
+		err = mw.HandleStream(stream, &fakeHandler{
+			handleStream: func(stream *transport.ServerStream) {
+				err := stream.SendMessage(context.Background(), nil /*message*/)
+				require.NoError(t, err)
+				_, err = stream.ReceiveMessage(context.Background())
+				require.NoError(t, err)
+			}})
+		require.NoError(t, err)
+
+		snap := root.Snapshot()
+		tags := newTags(_directionInbound, "")
+
+		// successful handshake, send, recv and close
+		want := &metrics.RootSnapshot{
+			Counters: []metrics.Snapshot{
+				{Name: "calls", Tags: tags, Value: 1},
+				{Name: "stream_receive_successes", Tags: tags, Value: 1},
+				{Name: "stream_receives", Tags: tags, Value: 1},
+				{Name: "stream_send_successes", Tags: tags, Value: 1},
+				{Name: "stream_sends", Tags: tags, Value: 1},
+				{Name: "successes", Tags: tags, Value: 1},
+			},
+			Gauges: []metrics.Snapshot{
+				{Name: "streams_active", Tags: tags, Value: 0}, // opened (+1) then closed (-1)
+			},
+			Histograms: []metrics.HistogramSnapshot{
+				{Name: "stream_duration_ms", Tags: tags, Unit: time.Millisecond, Values: []int64{1}},
+			},
+		}
+		assert.Equal(t, want, snap, "unexpected metrics snapshot")
+	})
+
+	t.Run("error handler", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			err     error
+			errName string
+		}{
+			{
+				name:    "client fault",
+				err:     yarpcerrors.InvalidArgumentErrorf("client err"),
+				errName: yarpcerrors.CodeInvalidArgument.String(),
+			},
+			{
+				name:    "server fault",
+				err:     yarpcerrors.InternalErrorf("server err"),
+				errName: yarpcerrors.CodeInternal.String(),
+			},
+			{
+				name:    "unknown fault",
+				err:     errors.New("unknown fault"),
+				errName: "unknown_internal_yarpc",
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				root := metrics.New()
+				scope := root.Scope()
+				mw := NewMiddleware(Config{
+					Logger:           zap.NewNop(),
+					Scope:            scope,
+					ContextExtractor: NewNopContextExtractor(),
+				})
+
+				stream, err := transport.NewServerStream(&fakeStream{request: req})
+				require.NoError(t, err)
+				err = mw.HandleStream(stream, &fakeHandler{err: tt.err})
+				require.Error(t, err)
+
+				snap := root.Snapshot()
+				successTags := newTags(_directionInbound, "")
+				errTags := newTags(_directionInbound, tt.errName)
+
+				// so we don't have create a sorting implementaion, manually place the
+				// first two expected counter snapshots, based on the error fault.
+				counters := make([]metrics.Snapshot, 0, 10)
+				if statusFault(yarpcerrors.FromError(tt.err)) == clientFault {
+					counters = append(counters,
+						metrics.Snapshot{Name: "caller_failures", Tags: errTags, Value: 1},
+						metrics.Snapshot{Name: "calls", Tags: successTags, Value: 1})
+
+				} else {
+					counters = append(counters,
+						metrics.Snapshot{Name: "calls", Tags: successTags, Value: 1},
+						metrics.Snapshot{Name: "server_failures", Tags: errTags, Value: 1})
+				}
+
+				want := &metrics.RootSnapshot{
+					// only the failure vector counters will have an error value passed
+					// into tags()
+					Counters: append(counters,
+						metrics.Snapshot{Name: "stream_receive_successes", Tags: successTags, Value: 0},
+						metrics.Snapshot{Name: "stream_receives", Tags: successTags, Value: 0},
+						metrics.Snapshot{Name: "stream_send_successes", Tags: successTags, Value: 0},
+						metrics.Snapshot{Name: "stream_sends", Tags: successTags, Value: 0},
+						metrics.Snapshot{Name: "successes", Tags: successTags, Value: 1}),
+					Gauges: []metrics.Snapshot{
+						{Name: "streams_active", Tags: successTags, Value: 0},
+					},
+					Histograms: []metrics.HistogramSnapshot{
+						{Name: "stream_duration_ms", Tags: successTags, Unit: time.Millisecond, Values: []int64{1}},
+					},
+				}
+				assert.Equal(t, want, snap, "unexpected metrics snapshot")
+			})
+		}
+	})
+
+	t.Run("error server - send and recv", func(t *testing.T) {
+		root := metrics.New()
+		scope := root.Scope()
+		mw := NewMiddleware(Config{
+			Logger:           zap.NewNop(),
+			Scope:            scope,
+			ContextExtractor: NewNopContextExtractor(),
+		})
+
+		sendErr := errors.New("send err")
+		receiveErr := errors.New("receive err")
+
+		stream, err := transport.NewServerStream(&fakeStream{
+			request:    req,
+			sendErr:    sendErr,
+			receiveErr: receiveErr,
+		})
+		require.NoError(t, err)
+
+		err = mw.HandleStream(stream, &fakeHandler{
+			handleStream: func(stream *transport.ServerStream) {
+				err := stream.SendMessage(context.Background(), nil /*message*/)
+				require.Error(t, err)
+				_, err = stream.ReceiveMessage(context.Background())
+				require.Error(t, err)
+			}})
+		require.NoError(t, err)
+
+		snap := root.Snapshot()
+		successTags := newTags(_directionInbound, "")
+		errTags := newTags(_directionInbound, "unknown_internal_yarpc")
+
+		want := &metrics.RootSnapshot{
+			Counters: []metrics.Snapshot{
+				{Name: "calls", Tags: successTags, Value: 1},
+				{Name: "stream_receive_failures", Tags: errTags, Value: 1},
+				{Name: "stream_receive_successes", Tags: successTags, Value: 0},
+				{Name: "stream_receives", Tags: successTags, Value: 1},
+				{Name: "stream_send_failures", Tags: errTags, Value: 1},
+				{Name: "stream_send_successes", Tags: successTags, Value: 0},
+				{Name: "stream_sends", Tags: successTags, Value: 1},
+				{Name: "successes", Tags: successTags, Value: 1},
+			},
+			Gauges: []metrics.Snapshot{
+				{Name: "streams_active", Tags: successTags, Value: 0}, // opened (+1) then closed (-1)
+			},
+			Histograms: []metrics.HistogramSnapshot{
+				{Name: "stream_duration_ms", Tags: successTags, Unit: time.Millisecond, Values: []int64{1}},
+			},
+		}
+		assert.Equal(t, want, snap, "unexpected metrics snapshot")
+	})
+
+	t.Run("success client", func(t *testing.T) {
+		root := metrics.New()
+		scope := root.Scope()
+		mw := NewMiddleware(Config{
+			Logger:           zap.NewNop(),
+			Scope:            scope,
+			ContextExtractor: NewNopContextExtractor(),
+		})
+
+		stream, err := mw.CallStream(context.Background(), req, fakeOutbound{})
+		require.NoError(t, err)
+		err = stream.SendMessage(context.Background(), nil /* message */)
+		require.NoError(t, err)
+		_, err = stream.ReceiveMessage(context.Background())
+		require.NoError(t, err)
+		require.NoError(t, stream.Close(context.Background()))
+
+		snap := root.Snapshot()
+		tags := newTags(_directionOutbound, "")
+
+		// successful handshake, send, recv and close
+		want := &metrics.RootSnapshot{
+			Counters: []metrics.Snapshot{
+				{Name: "calls", Tags: tags, Value: 1},
+				{Name: "stream_receive_successes", Tags: tags, Value: 1},
+				{Name: "stream_receives", Tags: tags, Value: 1},
+				{Name: "stream_send_successes", Tags: tags, Value: 1},
+				{Name: "stream_sends", Tags: tags, Value: 1},
+				{Name: "successes", Tags: tags, Value: 1},
+			},
+			Gauges: []metrics.Snapshot{
+				{Name: "streams_active", Tags: tags, Value: 0}, // opened (+1) then closed (-1)
+			},
+			Histograms: []metrics.HistogramSnapshot{
+				{Name: "stream_duration_ms", Tags: tags, Unit: time.Millisecond, Values: []int64{1}},
+			},
+		}
+		assert.Equal(t, want, snap, "unexpected metrics snapshot")
+	})
+
+	t.Run("error client handshake", func(t *testing.T) {
+		root := metrics.New()
+		scope := root.Scope()
+		mw := NewMiddleware(Config{
+			Logger:           zap.NewNop(),
+			Scope:            scope,
+			ContextExtractor: NewNopContextExtractor(),
+		})
+
+		clientErr := errors.New("client err")
+		_, err := mw.CallStream(context.Background(), req, fakeOutbound{err: clientErr})
+		require.Error(t, err)
+
+		snap := root.Snapshot()
+		successTags := newTags(_directionOutbound, "")
+		errTags := newTags(_directionOutbound, "unknown_internal_yarpc")
+
+		want := &metrics.RootSnapshot{
+			// only the failure vector counters will have an error value passed
+			// into tags()
+			Counters: []metrics.Snapshot{
+				{Name: "calls", Tags: successTags, Value: 1},
+				{Name: "server_failures", Tags: errTags, Value: 1},
+				{Name: "stream_receive_successes", Tags: successTags, Value: 0},
+				{Name: "stream_receives", Tags: successTags, Value: 0},
+				{Name: "stream_send_successes", Tags: successTags, Value: 0},
+				{Name: "stream_sends", Tags: successTags, Value: 0},
+				{Name: "successes", Tags: successTags, Value: 0},
+			},
+			Gauges: []metrics.Snapshot{
+				{Name: "streams_active", Tags: successTags, Value: 0},
+			},
+			Histograms: []metrics.HistogramSnapshot{
+				{Name: "stream_duration_ms", Tags: successTags, Unit: time.Millisecond},
+			},
+		}
+		assert.Equal(t, want, snap, "unexpected metrics snapshot")
+	})
+
+	t.Run("error client - send recv close", func(t *testing.T) {
+		root := metrics.New()
+		scope := root.Scope()
+		mw := NewMiddleware(Config{
+			Logger:           zap.NewNop(),
+			Scope:            scope,
+			ContextExtractor: NewNopContextExtractor(),
+		})
+
+		sendErr := errors.New("send err")
+		receiveErr := errors.New("receive err")
+		closeErr := errors.New("close err")
+
+		stream, err := mw.CallStream(context.Background(), req, fakeOutbound{
+			stream: fakeStream{
+				sendErr:    sendErr,
+				receiveErr: receiveErr,
+				closeErr:   closeErr,
+			}})
+		require.NoError(t, err)
+
+		err = stream.SendMessage(context.Background(), nil /* message */)
+		require.Error(t, err)
+		_, err = stream.ReceiveMessage(context.Background())
+		require.Error(t, err)
+		err = stream.Close(context.Background())
+		require.Error(t, err)
+
+		snap := root.Snapshot()
+		successTags := newTags(_directionOutbound, "")
+		errTags := newTags(_directionOutbound, "unknown_internal_yarpc")
+
+		// successful handshake, send, recv and close
+		want := &metrics.RootSnapshot{
+			Counters: []metrics.Snapshot{
+				{Name: "calls", Tags: successTags, Value: 1},
+				{Name: "server_failures", Tags: errTags, Value: 1},
+				{Name: "stream_receive_failures", Tags: errTags, Value: 1},
+				{Name: "stream_receive_successes", Tags: successTags, Value: 0},
+				{Name: "stream_receives", Tags: successTags, Value: 1},
+				{Name: "stream_send_failures", Tags: errTags, Value: 1},
+				{Name: "stream_send_successes", Tags: successTags, Value: 0},
+				{Name: "stream_sends", Tags: successTags, Value: 1},
+				{Name: "successes", Tags: successTags, Value: 1},
+			},
+			Gauges: []metrics.Snapshot{
+				{Name: "streams_active", Tags: successTags, Value: 0}, // opened (+1) then closed (-1)
+			},
+			Histograms: []metrics.HistogramSnapshot{
+				{Name: "stream_duration_ms", Tags: successTags, Unit: time.Millisecond, Values: []int64{1}},
+			},
+		}
+		assert.Equal(t, want, snap, "unexpected metrics snapshot")
+	})
 }
