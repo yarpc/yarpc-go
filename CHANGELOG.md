@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
-- Added improved logging for streams and streaming messages.
+- Added improved logging and metrics for streams and streaming messages.
 - Log level configuration can now be expressed specifically for every
   combination of inbound and outbound, for success, failure, and application
   error.
