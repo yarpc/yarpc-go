@@ -1,5 +1,5 @@
 hash: 0e5fe0feec3ddf53987a3a9750da5fac22dc7bc7710369eecc35d90c188c0d73
-updated: 2019-07-30T15:06:30.313721996Z
+updated: 2019-07-31T15:04:07.894120966Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -8,7 +8,7 @@ imports:
   subpackages:
   - lib/go/thrift
 - name: github.com/beorn7/perks
-  version: 4b2b341e8d7715fae06375aa633dbb6e91b3fb46
+  version: 37c8de3658fcb183f997c4e13e8337516ab753e6
   subpackages:
   - quantile
 - name: github.com/BurntSushi/toml
@@ -110,13 +110,13 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 1b791145873d67b010e4e506fb7cd7b1cd72e6f6
+  version: 637d7c34db122e2d1a25d061423098663758d2d3
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 8f55e607908ea781ad9d08521730d73e047d9ac4
+  version: 5b594f4dd23a9f5f0943adefc142829cf84efa05
   subpackages:
   - internal/fs
   - internal/util
@@ -189,7 +189,7 @@ imports:
   - push
   - tallypush
 - name: go.uber.org/thriftrw
-  version: 23f23e7fc269002cb7e34f4e2dc079593cd6ad36
+  version: 8cb9e79c2118f1eb873714e2d02747d6ecc62954
   subpackages:
   - ast
   - compile
@@ -251,7 +251,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: fc99dfbffb4e5ed5758a37e31dd861afe285406b
+  version: 1393eb0183657fb29200106b17a5042ec6e48dbe
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -264,7 +264,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: ff9f1409240a6589b749f29c118cc0ac9bd5bcde
+  version: ed3277de27998232ef7586f5f0d01384bfa52c37
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
