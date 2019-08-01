@@ -1,5 +1,5 @@
 hash: 0e5fe0feec3ddf53987a3a9750da5fac22dc7bc7710369eecc35d90c188c0d73
-updated: 2019-07-31T15:04:07.894120966Z
+updated: 2019-08-01T15:10:29.203865584Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -116,7 +116,7 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 5b594f4dd23a9f5f0943adefc142829cf84efa05
+  version: 5da962fa40f1c9b54ed78f10ba32429b396e712b
   subpackages:
   - internal/fs
   - internal/util
@@ -251,7 +251,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 1393eb0183657fb29200106b17a5042ec6e48dbe
+  version: cbf593c0f2f39034e9104bbf77e2ec7c48c98fc5
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -264,7 +264,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: ed3277de27998232ef7586f5f0d01384bfa52c37
+  version: 1e85ed8060aa6fdecbcb0fd2614c1e8ab5fb12fa
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
