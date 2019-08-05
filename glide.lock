@@ -1,5 +1,5 @@
 hash: 0e5fe0feec3ddf53987a3a9750da5fac22dc7bc7710369eecc35d90c188c0d73
-updated: 2019-08-02T15:06:26.812605496Z
+updated: 2019-08-05T15:04:26.735282523Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -251,7 +251,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: cbf593c0f2f39034e9104bbf77e2ec7c48c98fc5
+  version: 51ab0e2deafac1f46c46ad59cf0921be2f180c3d
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -264,7 +264,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: e9bb7d36c0606a2c422dffe30db7d628ebeb9302
+  version: 1d1727260058c6d58ebfdeb982c4657342282355
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
