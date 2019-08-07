@@ -1,5 +1,5 @@
 hash: 0e5fe0feec3ddf53987a3a9750da5fac22dc7bc7710369eecc35d90c188c0d73
-updated: 2019-08-06T15:04:13.94876229Z
+updated: 2019-08-07T15:04:32.790348051Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -134,7 +134,7 @@ imports:
   subpackages:
   - internal/mapstructure
 - name: github.com/uber-go/tally
-  version: f266f90e9c4d5894364039a324a05d061f2f34e2
+  version: 3332297784e46cd346ab6d9894fd4ea027dc9368
 - name: github.com/uber/jaeger-client-go
   version: 2f47546e3facd43297739439600bcf43f44cce5d
   subpackages:
@@ -264,7 +264,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 35ef2682e516ea0dd37d51a73b1e957db246ebbf
+  version: 88ddfcebc769cb7884c38d144ee893cfb4519053
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
@@ -325,7 +325,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 51d6538a90f86fe93ac480b35f37b2be17fef232
 - name: honnef.co/go/tools
-  version: 78855adbf1ab02103673f2f7981757833c065199
+  version: 027cf2cba24b7280cd8e106434fec715e70a364f
   subpackages:
   - arg
   - cmd/staticcheck
@@ -337,6 +337,7 @@ imports:
   - internal/cache
   - internal/passes/buildssa
   - internal/renameio
+  - internal/robustio
   - internal/sharedcheck
   - lint
   - lint/lintdsl
