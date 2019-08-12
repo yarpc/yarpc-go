@@ -1,5 +1,5 @@
 hash: 0e5fe0feec3ddf53987a3a9750da5fac22dc7bc7710369eecc35d90c188c0d73
-updated: 2019-08-09T15:07:05.761785562Z
+updated: 2019-08-12T15:06:40.621168626Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -116,7 +116,7 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 7caa6529631f8a2a61304be7915cf848f10bc1f3
+  version: e6a2613cd6b5963e75dfbccd30f893c2291648fd
   subpackages:
   - internal/fs
   - internal/util
@@ -251,7 +251,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 51ab0e2deafac1f46c46ad59cf0921be2f180c3d
+  version: 9eafafc0a87e0fd0aeeba439a4573537970c44c7
   repo: https://github.com/golang/sys
   subpackages:
   - unix
