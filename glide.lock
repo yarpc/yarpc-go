@@ -1,5 +1,5 @@
 hash: 0e5fe0feec3ddf53987a3a9750da5fac22dc7bc7710369eecc35d90c188c0d73
-updated: 2019-08-13T15:04:25.305778009Z
+updated: 2019-08-14T15:04:11.980127574Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -84,7 +84,7 @@ imports:
   subpackages:
   - internal/errcheck
 - name: github.com/mattn/go-shellwords
-  version: a72fbe27a1b0ed0df2f02754945044ce1456608b
+  version: 36a9b3c57cb5caa559ff63fb7e9b585f1c00df75
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c182affec369e30f25d3eb8cd8a478dee585ae7d
   subpackages:
@@ -235,7 +235,7 @@ imports:
   subpackages:
   - golint
 - name: golang.org/x/net
-  version: ca1201d0de80cfde86cb01aea620983605dfe99b
+  version: 74dc4d7220e7acc4e100824340f3e66577424772
   subpackages:
   - bpf
   - context
@@ -264,7 +264,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 97f12d73768f0481c12570ed574cf04a8879b04b
+  version: 9dba7caff850354a6238aa8121bf3c338e6696ba
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
@@ -287,7 +287,7 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 045159ad57f3781d409358e3ade910a018c16b30
+  version: 6eaf6f47437a6b4e2153a190160ef39a92c7eceb
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
