@@ -164,7 +164,7 @@ func TestInboundMux(t *testing.T) {
 		assert.Equal(t, yarpcerrors.CodeNotFound, yarpcerrors.FromError(err).Code())
 	}
 
-	o.setURLTemplate("http://host:port/rpc/v1")
+	o.setURLTemplate("http://host:12345/rpc/v1")
 	require.NoError(t, o.Start(), "failed to start outbound")
 	defer o.Stop()
 
