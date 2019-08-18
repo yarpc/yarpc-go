@@ -176,9 +176,19 @@ func (m *Middleware) CallOneway(ctx context.Context, req *transport.Request, out
 // HandleStream implements middleware.StreamInbound.
 func (m *Middleware) HandleStream(serverStream *transport.ServerStream, h transport.StreamHandler) error {
 	call := m.graph.begin(serverStream.Context(), transport.Streaming, _directionInbound, serverStream.Request().Meta.ToRequest())
-	err := h.HandleStream(serverStream)
-	// TODO(pedge): wrap the *transport.ServerStream?
-	call.End(err)
+	call.EndStreamHandshake()
+
+	wrappedStream, err := transport.NewServerStream(newServerStreamWrapper(call, serverStream))
+	if err != nil {
+		// This will never happen since transport.NewServerStream only returns an
+		// error for nil streams. In the nearly impossible situation where we do, we
+		// fall back to using the original, unwrapped stream.
+		m.graph.logger.DPanic("transport.ServerStream wrapping should never fail, streaming metrics are disabled")
+		wrappedStream = serverStream
+	}
+
+	err = h.HandleStream(wrappedStream)
+	call.EndStream(err)
 	return err
 }
 
@@ -186,7 +196,18 @@ func (m *Middleware) HandleStream(serverStream *transport.ServerStream, h transp
 func (m *Middleware) CallStream(ctx context.Context, request *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
 	call := m.graph.begin(ctx, transport.Streaming, _directionOutbound, request.Meta.ToRequest())
 	clientStream, err := out.CallStream(ctx, request)
-	// TODO(pedge): wrap the *transport.ClientStream?
-	call.End(err)
-	return clientStream, err
+	call.EndStreamHandshakeWithError(err)
+	if err != nil {
+		return nil, err
+	}
+
+	wrappedStream, err := transport.NewClientStream(newClientStreamWrapper(call, clientStream))
+	if err != nil {
+		// This will never happen since transport.NewClientStream only returns an
+		// error for nil streams. In the nearly impossible situation where we do, we
+		// fall back to using the original, unwrapped stream.
+		m.graph.logger.DPanic("transport.ClientStream wrapping should never fail, streaming metrics are disabled")
+		wrappedStream = clientStream
+	}
+	return wrappedStream, nil
 }
