@@ -177,17 +177,7 @@ func (m *Middleware) CallOneway(ctx context.Context, req *transport.Request, out
 func (m *Middleware) HandleStream(serverStream *transport.ServerStream, h transport.StreamHandler) error {
 	call := m.graph.begin(serverStream.Context(), transport.Streaming, _directionInbound, serverStream.Request().Meta.ToRequest())
 	call.EndStreamHandshake()
-
-	wrappedStream, err := transport.NewServerStream(newServerStreamWrapper(call, serverStream))
-	if err != nil {
-		// This will never happen since transport.NewServerStream only returns an
-		// error for nil streams. In the nearly impossible situation where we do, we
-		// fall back to using the original, unwrapped stream.
-		m.graph.logger.DPanic("transport.ServerStream wrapping should never fail, streaming metrics are disabled")
-		wrappedStream = serverStream
-	}
-
-	err = h.HandleStream(wrappedStream)
+	err := h.HandleStream(call.WrapServerStream(serverStream))
 	call.EndStream(err)
 	return err
 }
@@ -200,14 +190,5 @@ func (m *Middleware) CallStream(ctx context.Context, request *transport.StreamRe
 	if err != nil {
 		return nil, err
 	}
-
-	wrappedStream, err := transport.NewClientStream(newClientStreamWrapper(call, clientStream))
-	if err != nil {
-		// This will never happen since transport.NewClientStream only returns an
-		// error for nil streams. In the nearly impossible situation where we do, we
-		// fall back to using the original, unwrapped stream.
-		m.graph.logger.DPanic("transport.ClientStream wrapping should never fail, streaming metrics are disabled")
-		wrappedStream = clientStream
-	}
-	return wrappedStream, nil
+	return call.WrapClientStream(clientStream), nil
 }
