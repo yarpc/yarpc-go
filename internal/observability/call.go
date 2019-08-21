@@ -146,40 +146,29 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 	}
 
 	// Emit finer grained metrics since the error is a yarpcerrors.Status.
-	errCode := yarpcerrors.FromError(err).Code()
-	switch errCode {
-	case yarpcerrors.CodeCancelled,
-		yarpcerrors.CodeInvalidArgument,
-		yarpcerrors.CodeNotFound,
-		yarpcerrors.CodeAlreadyExists,
-		yarpcerrors.CodePermissionDenied,
-		yarpcerrors.CodeFailedPrecondition,
-		yarpcerrors.CodeAborted,
-		yarpcerrors.CodeOutOfRange,
-		yarpcerrors.CodeUnimplemented,
-		yarpcerrors.CodeUnauthenticated:
+	status := yarpcerrors.FromError(err)
+	errCode := status.Code()
+
+	switch statusFault(status) {
+	case clientFault:
 		c.edge.callerErrLatencies.Observe(elapsed)
 		if counter, err := c.edge.callerFailures.Get(_error, errCode.String()); err == nil {
 			counter.Inc()
 		}
-		return
-	case yarpcerrors.CodeUnknown,
-		yarpcerrors.CodeDeadlineExceeded,
-		yarpcerrors.CodeResourceExhausted,
-		yarpcerrors.CodeInternal,
-		yarpcerrors.CodeUnavailable,
-		yarpcerrors.CodeDataLoss:
+
+	case serverFault:
 		c.edge.serverErrLatencies.Observe(elapsed)
 		if counter, err := c.edge.serverFailures.Get(_error, errCode.String()); err == nil {
 			counter.Inc()
 		}
-		return
-	}
-	// If this code is executed we've hit an error code outside the usual error
-	// code range, so we'll just log the string representation of that code.
-	c.edge.serverErrLatencies.Observe(elapsed)
-	if counter, err := c.edge.serverFailures.Get(_error, errCode.String()); err == nil {
-		counter.Inc()
+
+	default:
+		// If this code is executed we've hit an error code outside the usual error
+		// code range, so we'll just log the string representation of that code.
+		c.edge.serverErrLatencies.Observe(elapsed)
+		if counter, err := c.edge.serverFailures.Get(_error, errCode.String()); err == nil {
+			counter.Inc()
+		}
 	}
 }
 
@@ -193,12 +182,69 @@ func (c call) EndStreamHandshake() {
 // create a stream.
 func (c call) EndStreamHandshakeWithError(err error) {
 	c.logStreamEvent(err, _successStreamOpen, _errorStreamOpen)
+
+	c.edge.calls.Inc()
+	if err == nil {
+		c.edge.successes.Inc()
+		c.edge.streaming.streamsActive.Inc()
+		return
+	}
+
+	c.emitStreamError(err)
 }
 
 // EndStream should be invoked immediately after a stream closes.
 func (c call) EndStream(err error) {
 	elapsed := _timeNow().Sub(c.started)
 	c.logStreamEvent(err, _successStreamClose, _errorStreamClose, zap.Duration("duration", elapsed))
+
+	c.edge.streaming.streamsActive.Dec()
+	c.edge.streaming.streamDurations.Observe(elapsed)
+	c.emitStreamError(err)
+}
+
+// This function resembles EndStats for unary calls. However, we do not special
+// case application errors and it does not measure failure latencies as those
+// measurements are irrelevant for streams.
+func (c call) emitStreamError(err error) {
+	if err == nil {
+		return
+	}
+
+	if !yarpcerrors.IsStatus(err) {
+		if counter, err := c.edge.serverFailures.Get(_error, "unknown_internal_yarpc"); err == nil {
+			counter.Inc()
+		}
+		return
+	}
+
+	// Emit finer grained metrics since the error is a yarpcerrors.Status.
+	errCode := yarpcerrors.FromError(err).Code()
+
+	switch statusFault(yarpcerrors.FromError(err)) {
+	case clientFault:
+		if counter, err2 := c.edge.callerFailures.Get(_error, errCode.String()); err2 != nil {
+			c.edge.logger.DPanic("could not retrieve caller failures counter", zap.Error(err2))
+		} else {
+			counter.Inc()
+		}
+
+	case serverFault:
+		if counter, err2 := c.edge.serverFailures.Get(_error, errCode.String()); err2 != nil {
+			c.edge.logger.DPanic("could not retrieve server failures counter", zap.Error(err2))
+		} else {
+			counter.Inc()
+		}
+
+	default:
+		// If this code is executed we've hit an error code outside the usual error
+		// code range, so we'll just log the string representation of that code.
+		if counter, err2 := c.edge.serverFailures.Get(_error, errCode.String()); err2 != nil {
+			c.edge.logger.DPanic("could not retrieve server failures counter", zap.Error(err2))
+		} else {
+			counter.Inc()
+		}
+	}
 }
 
 // logStreamEvent is a generic logging function useful for logging stream
@@ -220,4 +266,13 @@ func (c call) logStreamEvent(err error, succMsg, errMsg string, extraFields ...z
 	fields = append(fields, extraFields...)
 
 	ce.Write(fields...)
+}
+
+// inteded for metric tags, this returns the yarpcerrors.Status error code name
+// or "unknown_internal_yarpc"
+func errToMetricString(err error) string {
+	if yarpcerrors.IsStatus(err) {
+		return yarpcerrors.FromError(err).Code().String()
+	}
+	return "unknown_internal_yarpc"
 }

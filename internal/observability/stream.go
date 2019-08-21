@@ -24,6 +24,7 @@ import (
 	"context"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/zap"
 )
 
 const (
@@ -37,32 +38,79 @@ var _ transport.StreamCloser = (*streamWrapper)(nil)
 
 type streamWrapper struct {
 	transport.StreamCloser
-	call call
+
+	call   call
+	edge   *streamEdge
+	logger *zap.Logger
 }
 
-func newClientStreamWrapper(call call, stream transport.StreamCloser) transport.StreamCloser {
-	return &streamWrapper{
+func (c call) WrapClientStream(stream *transport.ClientStream) *transport.ClientStream {
+	wrapped, err := transport.NewClientStream(&streamWrapper{
 		StreamCloser: stream,
-		call:         call,
+		call:         c,
+		edge:         c.edge.streaming,
+		logger:       c.edge.logger,
+	})
+	if err != nil {
+		// This will never happen since transport.NewClientStream only returns an
+		// error for nil streams. In the nearly impossible situation where it does,
+		// we fall back to using the original, unwrapped stream.
+		c.edge.logger.DPanic("transport.ClientStream wrapping should never fail, streaming metrics are disabled")
+		wrapped = stream
 	}
+	return wrapped
 }
 
-func newServerStreamWrapper(call call, stream transport.Stream) transport.Stream {
-	return &streamWrapper{
+func (c call) WrapServerStream(stream *transport.ServerStream) *transport.ServerStream {
+	wrapped, err := transport.NewServerStream(&streamWrapper{
 		StreamCloser: nopCloser{stream},
-		call:         call,
+		call:         c,
+		edge:         c.edge.streaming,
+		logger:       c.edge.logger,
+	})
+	if err != nil {
+		// This will never happen since transport.NewServerStream only returns an
+		// error for nil streams. In the nearly impossible situation where it does,
+		// we fall back to using the original, unwrapped stream.
+		c.edge.logger.DPanic("transport.ServerStream wrapping should never fail, streaming metrics are disabled")
+		wrapped = stream
 	}
+	return wrapped
 }
 
 func (s *streamWrapper) SendMessage(ctx context.Context, msg *transport.StreamMessage) error {
 	err := s.StreamCloser.SendMessage(ctx, msg)
 	s.call.logStreamEvent(err, _successfulStreamSend, _errorStreamSend)
+
+	s.edge.sends.Inc()
+	if err == nil {
+		s.edge.sendSuccesses.Inc()
+		return nil
+	}
+
+	if sendFailuresCounter, err2 := s.edge.sendFailures.Get(_error, errToMetricString(err)); err2 != nil {
+		s.logger.DPanic("could not retrieve send failure counter", zap.Error(err2))
+	} else {
+		sendFailuresCounter.Inc()
+	}
 	return err
 }
 
 func (s *streamWrapper) ReceiveMessage(ctx context.Context) (*transport.StreamMessage, error) {
 	msg, err := s.StreamCloser.ReceiveMessage(ctx)
 	s.call.logStreamEvent(err, _successfulStreamReceive, _errorStreamReceive)
+
+	s.edge.receives.Inc()
+	if err == nil {
+		s.edge.receiveSuccesses.Inc()
+		return msg, nil
+	}
+
+	if recvFailureCounter, err2 := s.edge.receiveFailures.Get(_error, errToMetricString(err)); err2 != nil {
+		s.logger.DPanic("could not retrieve receive failure counter", zap.Error(err2))
+	} else {
+		recvFailureCounter.Inc()
+	}
 
 	return msg, err
 }
