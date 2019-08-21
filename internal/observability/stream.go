@@ -85,15 +85,14 @@ func (s *streamWrapper) SendMessage(ctx context.Context, msg *transport.StreamMe
 	s.edge.sends.Inc()
 	if err == nil {
 		s.edge.sendSuccesses.Inc()
-
-	} else {
-		if sendFailuresCounter, err2 := s.edge.sendFailures.Get(_error, errToMetricString(err)); err2 != nil {
-			s.logger.DPanic("could not retrieve send failure counter", zap.Error(err2))
-		} else {
-			sendFailuresCounter.Inc()
-		}
+		return nil
 	}
 
+	if sendFailuresCounter, err2 := s.edge.sendFailures.Get(_error, errToMetricString(err)); err2 != nil {
+		s.logger.DPanic("could not retrieve send failure counter", zap.Error(err2))
+	} else {
+		sendFailuresCounter.Inc()
+	}
 	return err
 }
 
@@ -104,13 +103,13 @@ func (s *streamWrapper) ReceiveMessage(ctx context.Context) (*transport.StreamMe
 	s.edge.receives.Inc()
 	if err == nil {
 		s.edge.receiveSuccesses.Inc()
+		return msg, nil
+	}
 
+	if recvFailureCounter, err2 := s.edge.receiveFailures.Get(_error, errToMetricString(err)); err2 != nil {
+		s.logger.DPanic("could not retrieve receive failure counter", zap.Error(err2))
 	} else {
-		if recvFailureCounter, err2 := s.edge.receiveFailures.Get(_error, errToMetricString(err)); err2 != nil {
-			s.logger.DPanic("could not retrieve receive failure counter", zap.Error(err2))
-		} else {
-			recvFailureCounter.Inc()
-		}
+		recvFailureCounter.Inc()
 	}
 
 	return msg, err
