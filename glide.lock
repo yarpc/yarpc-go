@@ -1,5 +1,5 @@
 hash: 0e5fe0feec3ddf53987a3a9750da5fac22dc7bc7710369eecc35d90c188c0d73
-updated: 2019-08-23T15:04:00.899777036Z
+updated: 2019-08-26T15:03:57.190681256Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -251,7 +251,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: fde4db37ae7ad8191b03d30d27f258b5291ae4e3
+  version: fb81701db80f1745f51259b1f286de3fe2ec80c8
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -264,7 +264,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: aa644d2adf2a0206508fa6a8f9de0e726dddf77e
+  version: 95c3470cfb70bba4d4d578afaf29e0b4b307e3b3
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
@@ -325,7 +325,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 51d6538a90f86fe93ac480b35f37b2be17fef232
 - name: honnef.co/go/tools
-  version: 8bd8df698242b0ad9dbc2a579ba7251e2f1da465
+  version: 00664db7fdb567f0b2efbbcdb7d9ed23f7135468
   subpackages:
   - arg
   - cmd/staticcheck
@@ -344,6 +344,7 @@ imports:
   - lint/lintutil
   - lint/lintutil/format
   - loader
+  - pattern
   - printf
   - simple
   - ssa
