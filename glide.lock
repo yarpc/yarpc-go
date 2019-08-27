@@ -1,5 +1,5 @@
 hash: 0e5fe0feec3ddf53987a3a9750da5fac22dc7bc7710369eecc35d90c188c0d73
-updated: 2019-08-26T15:03:57.190681256Z
+updated: 2019-08-27T15:04:18.198369658Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -149,7 +149,7 @@ imports:
   - thrift-gen/zipkincore
   - utils
 - name: github.com/uber/tchannel-go
-  version: 58b01ae38cfff68102223e374c580a40c1d91dda
+  version: 5ee9e351d45f66dc690528cbf014fe5b64b23bc9
   subpackages:
   - internal/argreader
   - json
@@ -159,7 +159,9 @@ imports:
   - testutils
   - testutils/goroutines
   - testutils/testreader
+  - testutils/thriftarg2test
   - thrift
+  - thrift/arg2
   - thrift/gen-go/meta
   - thrift/thrift-gen
   - tnet
@@ -251,7 +253,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: fb81701db80f1745f51259b1f286de3fe2ec80c8
+  version: c7b8b68b14567162c6602a7c5659ee0f26417c18
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -264,7 +266,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 95c3470cfb70bba4d4d578afaf29e0b4b307e3b3
+  version: 71894ab67ee38e5f4b1d98f5edc384c5c872c94f
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
