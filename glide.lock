@@ -1,5 +1,5 @@
 hash: 0e5fe0feec3ddf53987a3a9750da5fac22dc7bc7710369eecc35d90c188c0d73
-updated: 2019-08-30T15:04:26.507937675Z
+updated: 2019-09-06T15:04:41.404624474Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -25,11 +25,11 @@ imports:
 - name: github.com/fatih/structtag
   version: 76ae1d6d2117609598c7d4e8f3e938145f204e8f
 - name: github.com/gogo/googleapis
-  version: d31c731455cb061f42baff3bda55bad0118b126b
+  version: 0cd1026ed3d2e6809dc241eff2e2163ec715d38e
   subpackages:
   - google/rpc
 - name: github.com/gogo/protobuf
-  version: ba06b47c162d49f2af050fb4c75bcbc86a159d5c
+  version: 0ca988a254f991240804bf9821f3450d87ccbb1b
   subpackages:
   - gogoproto
   - jsonpb
@@ -110,13 +110,13 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 9b359b28d22bbf656f14e4adac914ed64a6850a4
+  version: e8215224146358493faab0295ce364cd386223b9
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 00ec24a6a2d86e7074629c8384715dbb05adccd8
+  version: 8664f2c2972d68fceb4361449e91f1ebe0ced4fe
   subpackages:
   - internal/fs
   - internal/util
@@ -125,7 +125,7 @@ imports:
   subpackages:
   - parser
 - name: github.com/stretchr/testify
-  version: 221dbe5ed46703ee255b1da0dec05086f5035f62
+  version: 85f2b59c4459e5bf57488796be8c3667cb8246d6
   subpackages:
   - assert
   - require
@@ -253,7 +253,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 1e83adbbebd0f5dc971915fd7e5db032c3d2b731
+  version: 749cb33beabd9aa6d3178e3de05bcc914f70b2bf
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -266,7 +266,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: f340ed3ae274cf744edc12c671194b31a12fe4ac
+  version: bc9f4f258ada481d391838566f2827de3e0cc111
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
@@ -285,7 +285,7 @@ imports:
   - internal/gopathwalk
   - internal/semver
 - name: google.golang.org/genproto
-  version: 24fa4b261c55da65468f2abfdae2b024eef27dfb
+  version: 92dd089d5514cecde7a465f807541f83dfd486d5
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
@@ -358,6 +358,6 @@ imports:
   - version
 testImports:
 - name: github.com/uber/jaeger-lib
-  version: 0e30338a695636fe5bcf7301e8030ce8dd2a8530
+  version: e48c2c0b31abfadbd76a92d78e0df0418e441cfe
   subpackages:
   - metrics
