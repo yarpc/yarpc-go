@@ -29,6 +29,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -341,6 +342,23 @@ func TestApplicationErrorPropagation(t *testing.T) {
 		)
 		require.True(t, yarpcerrors.IsInvalidArgument(err))
 		require.False(t, response.ApplicationError)
+	})
+}
+
+func TestCustomContextDial(t *testing.T) {
+	t.Parallel()
+	errMsg := "my custom dialer error"
+	contextDial := func(context.Context, string) (net.Conn, error) {
+		return nil, errors.New(errMsg)
+	}
+
+	te := testEnvOptions{
+		DialOptions: []DialOption{ContextDialer(contextDial)},
+	}
+	te.do(t, func(t *testing.T, e *testEnv) {
+		err := e.SetValueYARPC(context.Background(), "foo", "bar")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), errMsg)
 	})
 }
 
