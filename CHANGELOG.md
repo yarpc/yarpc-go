@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   combination of inbound and outbound, for success, failure, and application
   error.
 - A peer list and transport stress tester is now in the `yarpctest` package.
+- Added custom dialer option for outbound HTTP requests.
 
 ## [1.39.0] - 2019-06-25
 ### Fixed

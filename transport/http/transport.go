@@ -21,6 +21,7 @@
 package http
 
 import (
+	"context"
 	"math/rand"
 	"net"
 	"net/http"
@@ -47,6 +48,7 @@ type transportOptions struct {
 	connTimeout           time.Duration
 	connBackoffStrategy   backoffapi.Strategy
 	innocenceWindow       time.Duration
+	dialContext           func(ctx context.Context, network, addr string) (net.Conn, error)
 	jitter                func(int64) int64
 	tracer                opentracing.Tracer
 	buildClient           func(*transportOptions) *http.Client
@@ -183,6 +185,16 @@ func InnocenceWindow(d time.Duration) TransportOption {
 	}
 }
 
+// DialContext specifies the dial function for creating TCP connections on the
+// outbound.
+//
+// See https://golang.org/pkg/net/http/#Transport.DialContext for details.
+func DialContext(f func(ctx context.Context, network, addr string) (net.Conn, error)) TransportOption {
+	return func(options *transportOptions) {
+		options.dialContext = f
+	}
+}
+
 // Tracer configures a tracer for the transport and all its inbounds and
 // outbounds.
 func Tracer(tracer opentracing.Tracer) TransportOption {
@@ -236,14 +248,19 @@ func (o *transportOptions) newTransport() *Transport {
 }
 
 func buildHTTPClient(options *transportOptions) *http.Client {
+	dialContext := options.dialContext
+	if dialContext == nil {
+		dialContext = (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: options.keepAlive,
+		}).DialContext
+	}
+
 	return &http.Client{
 		Transport: &http.Transport{
 			// options lifted from https://golang.org/src/net/http/transport.go
-			Proxy: http.ProxyFromEnvironment,
-			Dial: (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: options.keepAlive,
-			}).Dial,
+			Proxy:                 http.ProxyFromEnvironment,
+			DialContext:           dialContext,
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
 			MaxIdleConns:          options.maxIdleConns,
