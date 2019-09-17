@@ -186,7 +186,8 @@ func InnocenceWindow(d time.Duration) TransportOption {
 }
 
 // DialContext specifies the dial function for creating TCP connections on the
-// outbound.
+// outbound. This will override the default dial context, which has a 30 second
+// timeout and respects the KeepAlive option.
 //
 // See https://golang.org/pkg/net/http/#Transport.DialContext for details.
 func DialContext(f func(ctx context.Context, network, addr string) (net.Conn, error)) TransportOption {
