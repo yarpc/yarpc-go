@@ -29,6 +29,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/yarpctest"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 func TestDirect(t *testing.T) {
@@ -67,7 +70,36 @@ func TestDirect(t *testing.T) {
 		assert.EqualError(t, err, giveErr.Error())
 	})
 
-	t.Run("choose sucess", func(t *testing.T) {
+	t.Run("release error", func(t *testing.T) {
+		const addr = "foohost:barport"
+
+		core, observedLogs := observer.New(zapcore.ErrorLevel)
+		logger := zap.New(core)
+		giveErr := errors.New("transport retain error")
+
+		trans := yarpctest.NewFakeTransport(
+			yarpctest.ReleaseErrors(giveErr, []string{addr}))
+
+		chooser, err := New(Configuration{}, trans, Logger(logger))
+		require.NoError(t, err)
+
+		_, onFinish, err := chooser.Choose(context.Background(), &transport.Request{ShardKey: addr})
+		require.NoError(t, err)
+
+		onFinish(nil)
+
+		logs := observedLogs.TakeAll()
+		require.Len(t, logs, 1, "unexpected number of logs")
+
+		logCtx := logs[0].Context[0]
+		assert.Equal(t, "error", logCtx.Key)
+
+		err, ok := logCtx.Interface.(error)
+		require.True(t, ok)
+		assert.EqualError(t, err, giveErr.Error())
+	})
+
+	t.Run("choose", func(t *testing.T) {
 		const addr = "foohost:barport"
 
 		chooser, err := New(Configuration{}, yarpctest.NewFakeTransport())
@@ -76,10 +108,10 @@ func TestDirect(t *testing.T) {
 		p, onFinish, err := chooser.Choose(context.Background(), &transport.Request{ShardKey: addr})
 		require.NoError(t, err)
 
-		require.NotNil(t, onFinish)
-		onFinish(nil)
-
 		require.NotNil(t, p)
 		assert.Equal(t, addr, p.Identifier())
+
+		require.NotNil(t, onFinish)
+		onFinish(nil)
 	})
 }

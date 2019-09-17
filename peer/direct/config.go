@@ -42,11 +42,11 @@ type Configuration struct{}
 //    destination-service:
 //      grpc:
 //        direct: {}
-func Spec() yarpcconfig.PeerChooserSpec {
+func Spec(opts ...ChooserOption) yarpcconfig.PeerChooserSpec {
 	return yarpcconfig.PeerChooserSpec{
 		Name: name,
 		BuildPeerChooser: func(cfg Configuration, t peer.Transport, _ *yarpcconfig.Kit) (peer.Chooser, error) {
-			return New(cfg, t)
+			return New(cfg, t, opts...)
 		},
 	}
 }

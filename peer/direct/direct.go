@@ -22,31 +22,54 @@ package direct
 
 import (
 	"context"
+	"fmt"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
 )
 
 var _ peer.Chooser = (*Chooser)(nil)
 
-type listConfig struct{}
+type chooserOptions struct {
+	logger *zap.Logger
+}
 
-// ListOption customizes the behavior of the peer chooser.
-type ListOption func(*listConfig)
+// ChooserOption customizes the behavior of the peer chooser.
+type ChooserOption func(*chooserOptions)
+
+// Logger sets the logger for the chooser.
+func Logger(logger *zap.Logger) ChooserOption {
+	return func(c *chooserOptions) {
+		c.logger = logger
+	}
+}
 
 // New creates a new direct peer chooser.
-func New(cfg Configuration, transport peer.Transport, opts ...ListOption) (*Chooser, error) {
+func New(cfg Configuration, transport peer.Transport, opts ...ChooserOption) (*Chooser, error) {
+	options := &chooserOptions{
+		logger: zap.NewNop(),
+	}
+	for _, opt := range opts {
+		opt(options)
+	}
+
 	if transport == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("%q chooser requires non-nil transport", name)
 	}
-	return &Chooser{transport: transport}, nil
+	return &Chooser{
+		transport: transport,
+		logger:    options.logger,
+	}, nil
 }
 
 // Chooser is a peer.Chooser that returns the peer identified by
 // transport.Request#ShardKey, suitable for directly addressing a peer.
 type Chooser struct {
 	transport peer.Transport
+	logger    *zap.Logger
 }
 
 // Start statisfies the peer.Chooser interface.
@@ -72,8 +95,8 @@ func (c *Chooser) Choose(ctx context.Context, req *transport.Request) (peer.Peer
 			yarpcerrors.InvalidArgumentErrorf("%q chooser requires ShardKey to be non-empty", name)
 	}
 
-	id := newPeerIdentifier(req.ShardKey)
-	sub := newPeerSubscriber()
+	id := hostport.Identify(req.ShardKey)
+	sub := &peerSubscriber{}
 
 	transportPeer, err := c.transport.RetainPeer(id, sub)
 	if err != nil {
@@ -81,7 +104,15 @@ func (c *Chooser) Choose(ctx context.Context, req *transport.Request) (peer.Peer
 	}
 
 	onFinish := func(error) {
-		_ = c.transport.ReleasePeer(transportPeer, sub)
+		if err := c.transport.ReleasePeer(transportPeer, sub); err != nil {
+			c.logger.Error(
+				fmt.Sprintf("error releasing peer from transport in %q chooser", name),
+				zap.Error(err))
+		}
 	}
 	return transportPeer, onFinish, nil
 }
+
+type peerSubscriber struct{}
+
+func (d *peerSubscriber) NotifyStatusChanged(_ peer.Identifier) {}
