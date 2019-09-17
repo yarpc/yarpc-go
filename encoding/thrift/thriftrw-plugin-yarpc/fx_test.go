@@ -84,6 +84,20 @@ func extractProcedures(procs *[]transport.Procedure) fx.Option {
 	})
 }
 
+func extractThriftProcedures(procs *[]transport.Procedure) fx.Option {
+	type params struct {
+		fx.In
+
+		Procedures [][]transport.Procedure `group:"thrift"`
+	}
+
+	return fx.Invoke(func(p params) {
+		for _, procList := range p.Procedures {
+			*procs = append(*procs, procList...)
+		}
+	})
+}
+
 func echoRaw(ctx context.Context, req []byte) ([]byte, error) { return req, nil }
 
 func TestFxServer(t *testing.T) {
@@ -99,7 +113,13 @@ func TestFxServer(t *testing.T) {
 		"answer": 42,
 	}
 
-	var procedures []transport.Procedure
+	var (
+		procedures []transport.Procedure
+		// the 'thrift' value group is unused in YARPC, so we only test that the
+		// procedures are provided correctly
+		thriftProcedures []transport.Procedure
+	)
+
 	serverApp := fxtest.New(t,
 		fx.Provide(
 			func() readonlystoreserver.Interface { return handler },
@@ -109,6 +129,7 @@ func TestFxServer(t *testing.T) {
 			},
 		),
 		extractProcedures(&procedures),
+		extractThriftProcedures(&thriftProcedures),
 	)
 	defer serverApp.RequireStart().RequireStop()
 
@@ -117,6 +138,12 @@ func TestFxServer(t *testing.T) {
 		Name:     "myserver",
 		Inbounds: yarpc.Inbounds{inbound},
 	})
+
+	// ensure we provide the same procedures into the container under different
+	// value groups: `yarpcfx` and `thrift`.
+	require.NotNil(t, thriftProcedures, "thrift procedures were not added to 'thrift' value group")
+	assert.Len(t, thriftProcedures, len(procedures)-1) // subtract one for the "raw" procedure we manually added
+
 	serverD.Register(procedures)
 	require.NoError(t, serverD.Start(), "failed to start server")
 	defer func() {

@@ -45,7 +45,8 @@ type ServerParams struct {
 type ServerResult struct {
 	fx.Out
 
-	Procedures []transport.Procedure `group:"yarpcfx"`
+	Procedures       []transport.Procedure `group:"yarpcfx"`
+	ThriftProcedures []transport.Procedure `group:"thrift"`
 }
 
 // Server provides procedures for KeyValue to an Fx application. It expects a
@@ -60,6 +61,9 @@ type ServerResult struct {
 func Server(opts ...thrift.RegisterOption) interface{} {
 	return func(p ServerParams) ServerResult {
 		procedures := keyvalueserver.New(p.Handler, opts...)
-		return ServerResult{Procedures: procedures}
+		return ServerResult{
+			Procedures:       procedures,
+			ThriftProcedures: procedures,
+		}
 	}
 }
