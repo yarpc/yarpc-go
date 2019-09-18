@@ -29,6 +29,8 @@ import (
 	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
+var emptyDialOpts = &dialOptions{}
+
 // Transport is a grpc transport.Transport.
 //
 // This currently does not have any additional functionality over creating
@@ -101,7 +103,7 @@ func (t *Transport) NewOutbound(peerChooser peer.Chooser, options ...OutboundOpt
 // peer.Transport that supports custom DialOptions instead of using the
 // grpc.Transport as a peer.Transport.
 func (t *Transport) RetainPeer(pid peer.Identifier, ps peer.Subscriber) (peer.Peer, error) {
-	return t.retainPeer(pid, nil, ps)
+	return t.retainPeer(pid, emptyDialOpts, ps)
 }
 
 func (t *Transport) retainPeer(pid peer.Identifier, options *dialOptions, ps peer.Subscriber) (peer.Peer, error) {
