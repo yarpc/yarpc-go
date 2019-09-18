@@ -21,14 +21,21 @@
 package http
 
 import (
+	"context"
+	"errors"
+	"net"
+	"net/http"
 	"testing"
 	"time"
 
 	"github.com/crossdock/crossdock-go/assert"
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
 	"go.uber.org/yarpc/internal/testtime"
+	ypeer "go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/peer/hostport"
 )
 
 // NoJitter is a transport option only available in tests, to disable jitter
@@ -288,6 +295,32 @@ func TestTransportClientOpaqueOptions(t *testing.T) {
 	)
 
 	assert.NotNil(t, transport.client)
+}
+
+func TestDialContext(t *testing.T) {
+	errMsg := "my custom dialer error message"
+	dialContext := func(ctx context.Context, network, addr string) (net.Conn, error) {
+		return nil, errors.New(errMsg)
+	}
+
+	transport := NewTransport(DialContext(dialContext))
+
+	require.NoError(t, transport.Start())
+	defer func() { assert.NoError(t, transport.Stop()) }()
+
+	req, err := http.NewRequest("GET", "http://foo.bar", nil)
+	require.NoError(t, err)
+
+	outbound := transport.NewOutbound(ypeer.NewSingle(hostport.Identify("foo"), transport))
+	require.NoError(t, outbound.Start())
+	defer func() { assert.NoError(t, outbound.Stop()) }()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	_, err = outbound.RoundTrip(req.WithContext(ctx))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), errMsg)
 }
 
 type testIdentifier struct {
