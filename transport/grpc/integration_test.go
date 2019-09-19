@@ -55,6 +55,7 @@ import (
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/procedure"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap/zaptest"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -276,24 +277,29 @@ func TestGRPCResponseAndError(t *testing.T) {
 
 func TestYARPCMaxMsgSize(t *testing.T) {
 	t.Parallel()
-	value := strings.Repeat("a", defaultServerMaxRecvMsgSize*2)
-	te := testEnvOptions{}
-	te.do(t, func(t *testing.T, e *testEnv) {
-		assert.Equal(t, yarpcerrors.CodeResourceExhausted, yarpcerrors.FromError(e.SetValueYARPC(context.Background(), "foo", value)).Code())
+	value := strings.Repeat("a", defaultServerMaxRecvMsgSize+1)
+	t.Run("too big", func(t *testing.T) {
+		te := testEnvOptions{}
+		te.do(t, func(t *testing.T, e *testEnv) {
+			assert.Equal(t, yarpcerrors.CodeResourceExhausted, yarpcerrors.FromError(e.SetValueYARPC(context.Background(), "foo", value)).Code())
+		})
 	})
-	te = testEnvOptions{
-		TransportOptions: []TransportOption{
-			ClientMaxRecvMsgSize(math.MaxInt32),
-			ClientMaxSendMsgSize(math.MaxInt32),
-			ServerMaxRecvMsgSize(math.MaxInt32),
-			ServerMaxSendMsgSize(math.MaxInt32),
-		},
-	}
-	te.do(t, func(t *testing.T, e *testEnv) {
-		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", value))
-		getValue, err := e.GetValueYARPC(context.Background(), "foo")
-		assert.NoError(t, err)
-		assert.Equal(t, value, getValue)
+	t.Run("just right", func(t *testing.T) {
+		te := testEnvOptions{
+			TransportOptions: []TransportOption{
+				ClientMaxRecvMsgSize(math.MaxInt32),
+				ClientMaxSendMsgSize(math.MaxInt32),
+				ServerMaxRecvMsgSize(math.MaxInt32),
+				ServerMaxSendMsgSize(math.MaxInt32),
+			},
+		}
+		te.do(t, func(t *testing.T, e *testEnv) {
+			if assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", value)) {
+				getValue, err := e.GetValueYARPC(context.Background(), "foo")
+				assert.NoError(t, err)
+				assert.Equal(t, value, getValue)
+			}
+		})
 	})
 }
 
@@ -302,10 +308,11 @@ func TestLargeEcho(t *testing.T) {
 	value := strings.Repeat("a", 32768)
 	te := testEnvOptions{}
 	te.do(t, func(t *testing.T, e *testEnv) {
-		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", value))
-		getValue, err := e.GetValueYARPC(context.Background(), "foo")
-		assert.NoError(t, err)
-		assert.Equal(t, value, getValue)
+		if assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", value)) {
+			getValue, err := e.GetValueYARPC(context.Background(), "foo")
+			assert.NoError(t, err)
+			assert.Equal(t, value, getValue)
+		}
 	})
 }
 
@@ -386,6 +393,7 @@ type testEnvOptions struct {
 
 func (te *testEnvOptions) do(t *testing.T, f func(*testing.T, *testEnv)) {
 	testEnv, err := newTestEnv(
+		t,
 		te.TransportOptions,
 		te.InboundOptions,
 		te.OutboundOptions,
@@ -399,6 +407,7 @@ func (te *testEnvOptions) do(t *testing.T, f func(*testing.T, *testEnv)) {
 }
 
 func newTestEnv(
+	t *testing.T,
 	transportOptions []TransportOption,
 	inboundOptions []InboundOption,
 	outboundOptions []OutboundOption,
@@ -408,7 +417,19 @@ func newTestEnv(
 	procedures := examplepb.BuildKeyValueYARPCProcedures(keyValueYARPCServer)
 	testRouter := newTestRouter(procedures)
 
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return nil, err
+	}
+
+	logger := zaptest.NewLogger(t)
+	transportOptions = append(transportOptions, Logger(logger))
 	trans := NewTransport(transportOptions...)
+	inbound := trans.NewInbound(listener, inboundOptions...)
+	inbound.SetRouter(testRouter)
+	chooser := peer.NewSingle(hostport.Identify(listener.Addr().String()), trans.NewDialer(dialOptions...))
+	outbound := trans.NewOutbound(chooser, outboundOptions...)
+
 	if err := trans.Start(); err != nil {
 		return nil, err
 	}
@@ -418,19 +439,21 @@ func newTestEnv(
 		}
 	}()
 
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return nil, err
-	}
-
-	inbound := trans.NewInbound(listener, inboundOptions...)
-	inbound.SetRouter(testRouter)
 	if err := inbound.Start(); err != nil {
 		return nil, err
 	}
 	defer func() {
 		if err != nil {
 			err = multierr.Append(err, inbound.Stop())
+		}
+	}()
+
+	if err := outbound.Start(); err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err != nil {
+			err = multierr.Append(err, outbound.Stop())
 		}
 	}()
 
@@ -441,18 +464,6 @@ func newTestEnv(
 		return nil, err
 	}
 	keyValueClient := examplepb.NewKeyValueClient(clientConn)
-
-	chooser := peer.NewSingle(hostport.Identify(listener.Addr().String()), trans.NewDialer(dialOptions...))
-	outbound := trans.NewOutbound(chooser, outboundOptions...)
-
-	if err := outbound.Start(); err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err != nil {
-			err = multierr.Append(err, outbound.Stop())
-		}
-	}()
 
 	caller := "example-client"
 	service := "example"
