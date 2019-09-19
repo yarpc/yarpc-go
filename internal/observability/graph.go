@@ -58,18 +58,25 @@ type graph struct {
 	edgesMu sync.RWMutex
 	edges   map[string]*edge
 
-	succLevel, failLevel, appErrLevel zapcore.Level
+	inboundLevels, outboundLevels levels
 }
 
 func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor) graph {
 	return graph{
-		edges:       make(map[string]*edge, _defaultGraphSize),
-		meter:       meter,
-		logger:      logger,
-		extract:     extract,
-		succLevel:   zapcore.DebugLevel,
-		failLevel:   zapcore.ErrorLevel,
-		appErrLevel: zapcore.ErrorLevel,
+		edges:   make(map[string]*edge, _defaultGraphSize),
+		meter:   meter,
+		logger:  logger,
+		extract: extract,
+		inboundLevels: levels{
+			success:          zapcore.DebugLevel,
+			failure:          zapcore.ErrorLevel,
+			applicationError: zapcore.ErrorLevel,
+		},
+		outboundLevels: levels{
+			success:          zapcore.DebugLevel,
+			failure:          zapcore.ErrorLevel,
+			applicationError: zapcore.ErrorLevel,
+		},
 	}
 }
 
@@ -86,28 +93,32 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction dir
 	d.Add(req.RoutingKey)
 	d.Add(req.RoutingDelegate)
 	d.Add(string(direction))
-	e := g.getOrCreateEdge(d.Digest(), req, string(direction))
+	d.Add(rpcType.String())
+	e := g.getOrCreateEdge(d.Digest(), req, string(direction), rpcType)
 	d.Free()
 
+	levels := &g.inboundLevels
+	if direction != _directionInbound {
+		levels = &g.outboundLevels
+	}
+
 	return call{
-		edge:        e,
-		extract:     g.extract,
-		started:     now,
-		ctx:         ctx,
-		req:         req,
-		rpcType:     rpcType,
-		direction:   direction,
-		succLevel:   g.succLevel,
-		failLevel:   g.failLevel,
-		appErrLevel: g.appErrLevel,
+		edge:      e,
+		extract:   g.extract,
+		started:   now,
+		ctx:       ctx,
+		req:       req,
+		rpcType:   rpcType,
+		direction: direction,
+		levels:    levels,
 	}
 }
 
-func (g *graph) getOrCreateEdge(key []byte, req *transport.Request, direction string) *edge {
+func (g *graph) getOrCreateEdge(key []byte, req *transport.Request, direction string, rpcType transport.Type) *edge {
 	if e := g.getEdge(key); e != nil {
 		return e
 	}
-	return g.createEdge(key, req, direction)
+	return g.createEdge(key, req, direction, rpcType)
 }
 
 func (g *graph) getEdge(key []byte) *edge {
@@ -117,7 +128,7 @@ func (g *graph) getEdge(key []byte) *edge {
 	return e
 }
 
-func (g *graph) createEdge(key []byte, req *transport.Request, direction string) *edge {
+func (g *graph) createEdge(key []byte, req *transport.Request, direction string, rpcType transport.Type) *edge {
 	g.edgesMu.Lock()
 	// Since we'll rarely hit this code path, the overhead of defer is acceptable.
 	defer g.edgesMu.Unlock()
@@ -127,7 +138,7 @@ func (g *graph) createEdge(key []byte, req *transport.Request, direction string)
 		return e
 	}
 
-	e := newEdge(g.logger, g.meter, req, direction)
+	e := newEdge(g.logger, g.meter, req, direction, rpcType)
 	g.edges[string(key)] = e
 	return e
 }
@@ -145,11 +156,27 @@ type edge struct {
 	latencies          *metrics.Histogram
 	callerErrLatencies *metrics.Histogram
 	serverErrLatencies *metrics.Histogram
+
+	streaming *streamEdge
+}
+
+// streamEdge metrics should only be used for streaming requests.
+type streamEdge struct {
+	sends         *metrics.Counter
+	sendSuccesses *metrics.Counter
+	sendFailures  *metrics.CounterVector
+
+	receives         *metrics.Counter
+	receiveSuccesses *metrics.Counter
+	receiveFailures  *metrics.CounterVector
+
+	streamDurations *metrics.Histogram
+	streamsActive   *metrics.Gauge
 }
 
 // newEdge constructs a new edge. Since Registries enforce metric uniqueness,
 // edges should be cached and re-used for each RPC.
-func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, direction string) *edge {
+func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, direction string, rpcType transport.Type) *edge {
 	tags := metrics.Tags{
 		"source":           req.Caller,
 		"dest":             req.Service,
@@ -159,7 +186,10 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		"routing_key":      req.RoutingKey,
 		"routing_delegate": req.RoutingDelegate,
 		"direction":        direction,
+		"rpc_type":         rpcType.String(),
 	}
+
+	// metrics for all RPCs
 	calls, err := meter.Counter(metrics.Spec{
 		Name:      "calls",
 		Help:      "Total number of RPCs.",
@@ -194,42 +224,139 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 	if err != nil {
 		logger.Error("Failed to create server failures vector.", zap.Error(err))
 	}
-	latencies, err := meter.Histogram(metrics.HistogramSpec{
-		Spec: metrics.Spec{
-			Name:      "success_latency_ms",
-			Help:      "Latency distribution of successful RPCs.",
-			ConstTags: tags,
-		},
-		Unit:    time.Millisecond,
-		Buckets: _bucketsMs,
-	})
-	if err != nil {
-		logger.Error("Failed to create success latency distribution.", zap.Error(err))
+
+	// metrics for only unary and oneway
+	var latencies, callerErrLatencies, serverErrLatencies *metrics.Histogram
+	if rpcType == transport.Unary || rpcType == transport.Oneway {
+		latencies, err = meter.Histogram(metrics.HistogramSpec{
+			Spec: metrics.Spec{
+				Name:      "success_latency_ms",
+				Help:      "Latency distribution of successful RPCs.",
+				ConstTags: tags,
+			},
+			Unit:    time.Millisecond,
+			Buckets: _bucketsMs,
+		})
+		if err != nil {
+			logger.Error("Failed to create success latency distribution.", zap.Error(err))
+		}
+		callerErrLatencies, err = meter.Histogram(metrics.HistogramSpec{
+			Spec: metrics.Spec{
+				Name:      "caller_failure_latency_ms",
+				Help:      "Latency distribution of RPCs failed because of caller error.",
+				ConstTags: tags,
+			},
+			Unit:    time.Millisecond,
+			Buckets: _bucketsMs,
+		})
+		if err != nil {
+			logger.Error("Failed to create caller failure latency distribution.", zap.Error(err))
+		}
+		serverErrLatencies, err = meter.Histogram(metrics.HistogramSpec{
+			Spec: metrics.Spec{
+				Name:      "server_failure_latency_ms",
+				Help:      "Latency distribution of RPCs failed because of server error.",
+				ConstTags: tags,
+			},
+			Unit:    time.Millisecond,
+			Buckets: _bucketsMs,
+		})
+		if err != nil {
+			logger.Error("Failed to create server failure latency distribution.", zap.Error(err))
+		}
 	}
-	callerErrLatencies, err := meter.Histogram(metrics.HistogramSpec{
-		Spec: metrics.Spec{
-			Name:      "caller_failure_latency_ms",
-			Help:      "Latency distribution of RPCs failed because of caller error.",
+
+	// metrics for only streams
+	var streaming *streamEdge
+	if rpcType == transport.Streaming {
+		// sends
+		sends, err := meter.Counter(metrics.Spec{
+			Name:      "stream_sends",
+			Help:      "Total number of streaming messages sent.",
 			ConstTags: tags,
-		},
-		Unit:    time.Millisecond,
-		Buckets: _bucketsMs,
-	})
-	if err != nil {
-		logger.Error("Failed to create caller failure latency distribution.", zap.Error(err))
-	}
-	serverErrLatencies, err := meter.Histogram(metrics.HistogramSpec{
-		Spec: metrics.Spec{
-			Name:      "server_failure_latency_ms",
-			Help:      "Latency distribution of RPCs failed because of server error.",
+		})
+		if err != nil {
+			logger.DPanic("Failed to create streaming sends counter.", zap.Error(err))
+		}
+		sendSuccesses, err := meter.Counter(metrics.Spec{
+			Name:      "stream_send_successes",
+			Help:      "Number of successful streaming messages sent.",
 			ConstTags: tags,
-		},
-		Unit:    time.Millisecond,
-		Buckets: _bucketsMs,
-	})
-	if err != nil {
-		logger.Error("Failed to create server failure latency distribution.", zap.Error(err))
+		})
+		if err != nil {
+			logger.DPanic("Failed to create streaming sends successes counter.", zap.Error(err))
+		}
+		sendFailures, err := meter.CounterVector(metrics.Spec{
+			Name:      "stream_send_failures",
+			Help:      "Number streaming messages that failed to send.",
+			ConstTags: tags,
+			VarTags:   []string{_error},
+		})
+		if err != nil {
+			logger.DPanic("Failed to create streaming sends failure counter.", zap.Error(err))
+		}
+
+		// receives
+		receives, err := meter.Counter(metrics.Spec{
+			Name:      "stream_receives",
+			Help:      "Total number of streaming messages recevied.",
+			ConstTags: tags,
+		})
+		if err != nil {
+			logger.DPanic("Failed to create streaming receives counter.", zap.Error(err))
+		}
+		receiveSuccesses, err := meter.Counter(metrics.Spec{
+			Name:      "stream_receive_successes",
+			Help:      "Number of successful streaming messages received.",
+			ConstTags: tags,
+		})
+		if err != nil {
+			logger.DPanic("Failed to create streaming receives successes counter.", zap.Error(err))
+		}
+		receiveFailures, err := meter.CounterVector(metrics.Spec{
+			Name:      "stream_receive_failures",
+			Help:      "Number streaming messages failed to be recieved.",
+			ConstTags: tags,
+			VarTags:   []string{_error},
+		})
+		if err != nil {
+			logger.DPanic("Failed to create streaming receives failure counter.", zap.Error(err))
+		}
+
+		// entire stream
+		streamDurations, err := meter.Histogram(metrics.HistogramSpec{
+			Spec: metrics.Spec{
+				Name:      "stream_duration_ms",
+				Help:      "Latency distribution of total stream duration.",
+				ConstTags: tags,
+			},
+			Unit:    time.Millisecond,
+			Buckets: _bucketsMs,
+		})
+		if err != nil {
+			logger.DPanic("Failed to create stream duration histogram.", zap.Error(err))
+		}
+		streamsActive, err := meter.Gauge(metrics.Spec{
+			Name:      "streams_active",
+			Help:      "Number of active streams.",
+			ConstTags: tags,
+		})
+		if err != nil {
+			logger.DPanic("Failed to create active stream gauge.", zap.Error(err))
+		}
+
+		streaming = &streamEdge{
+			sends:            sends,
+			sendSuccesses:    sendSuccesses,
+			sendFailures:     sendFailures,
+			receives:         receives,
+			receiveSuccesses: receiveSuccesses,
+			receiveFailures:  receiveFailures,
+			streamDurations:  streamDurations,
+			streamsActive:    streamsActive,
+		}
 	}
+
 	logger = logger.With(
 		zap.String("source", req.Caller),
 		zap.String("dest", req.Service),
@@ -249,6 +376,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		latencies:          latencies,
 		callerErrLatencies: callerErrLatencies,
 		serverErrLatencies: serverErrLatencies,
+		streaming:          streaming,
 	}
 }
 

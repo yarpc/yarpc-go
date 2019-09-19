@@ -101,10 +101,26 @@ func addObservingMiddleware(cfg Config, meter *metrics.Scope, logger *zap.Logger
 	}
 
 	observer := observability.NewMiddleware(observability.Config{
-		Logger:                logger,
-		Scope:                 meter,
-		ContextExtractor:      extractor,
-		ApplicationErrorLevel: cfg.Logging.Levels.ApplicationError,
+		Logger:           logger,
+		Scope:            meter,
+		ContextExtractor: extractor,
+		Levels: observability.LevelsConfig{
+			Default: observability.DirectionalLevelsConfig{
+				Success:          cfg.Logging.Levels.Success,
+				Failure:          cfg.Logging.Levels.Failure,
+				ApplicationError: cfg.Logging.Levels.ApplicationError,
+			},
+			Inbound: observability.DirectionalLevelsConfig{
+				Success:          cfg.Logging.Levels.Inbound.Success,
+				Failure:          cfg.Logging.Levels.Inbound.Failure,
+				ApplicationError: cfg.Logging.Levels.Inbound.ApplicationError,
+			},
+			Outbound: observability.DirectionalLevelsConfig{
+				Success:          cfg.Logging.Levels.Outbound.Success,
+				Failure:          cfg.Logging.Levels.Outbound.Failure,
+				ApplicationError: cfg.Logging.Levels.Outbound.ApplicationError,
+			},
+		},
 	})
 
 	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(observer, cfg.InboundMiddleware.Unary)

@@ -21,7 +21,9 @@
 package grpc
 
 import (
+	"context"
 	"math"
+	"net"
 
 	"go.uber.org/yarpc/api/backoff"
 	intbackoff "go.uber.org/yarpc/internal/backoff"
@@ -154,6 +156,16 @@ func DialerCredentials(creds credentials.TransportCredentials) DialOption {
 	}
 }
 
+// ContextDialer sets the dialer for creating outbound connections.
+//
+// See https://godoc.org/google.golang.org/grpc#WithContextDialer for more
+// details.
+func ContextDialer(f func(context.Context, string) (net.Conn, error)) DialOption {
+	return func(dialOptions *dialOptions) {
+		dialOptions.contextDialer = f
+	}
+}
+
 type transportOptions struct {
 	backoffStrategy      backoff.Strategy
 	tracer               opentracing.Tracer
@@ -210,17 +222,20 @@ func newOutboundOptions(options []OutboundOption) *outboundOptions {
 }
 
 type dialOptions struct {
-	creds credentials.TransportCredentials
+	creds         credentials.TransportCredentials
+	contextDialer func(context.Context, string) (net.Conn, error)
 }
 
 func (d *dialOptions) grpcOptions() []grpc.DialOption {
-	var credsOption grpc.DialOption
-	if d == nil || d.creds == nil {
-		credsOption = grpc.WithInsecure()
-	} else {
+	credsOption := grpc.WithInsecure()
+	if d.creds != nil {
 		credsOption = grpc.WithTransportCredentials(d.creds)
 	}
-	return []grpc.DialOption{credsOption}
+
+	return []grpc.DialOption{
+		credsOption,
+		grpc.WithContextDialer(d.contextDialer),
+	}
 }
 
 func newDialOptions(options []DialOption) *dialOptions {

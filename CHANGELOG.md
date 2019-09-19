@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.40.0] - 2019-09-19
+### Added
+- Added improved logging and metrics for streams and streaming messages.
+- Log level configuration can now be expressed specifically for every
+  combination of inbound and outbound, for success, failure, and application
+  error.
+- A peer list and transport stress tester is now in the `yarpctest` package.
+- Added `direct` peer chooser to enable directly addressable peers.
+- Added custom dialer option for outbound HTTP requests.
+- Added custom dialer option for outbound gRPC requests.
+
 ## [1.39.0] - 2019-06-25
 ### Fixed
 - call.HeaderNames() now specifies a capacity when creating a slice,
@@ -1102,6 +1113,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[1.40.0]: https://github.com/yarpc/yarpc-go/compare/v1.39.0...v1.40.0
 [1.39.0]: https://github.com/yarpc/yarpc-go/compare/v1.38.0...v1.39.0
 [1.38.0]: https://github.com/yarpc/yarpc-go/compare/v1.37.4...v1.38.0
 [1.37.4]: https://github.com/yarpc/yarpc-go/compare/v1.37.3...v1.37.4

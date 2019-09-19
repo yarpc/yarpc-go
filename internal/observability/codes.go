@@ -18,7 +18,46 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
+package observability
 
-// Version is the current version of YARPC.
-const Version = "1.40.0"
+import (
+	"go.uber.org/yarpc/yarpcerrors"
+)
+
+// TODO(apeatsbond): This code may be worth exporting in the yarpcerrors
+// package.
+
+type fault int
+
+const (
+	unknownFault fault = iota
+	clientFault
+	serverFault
+)
+
+// determine whether the status code is a client, server or indeterminate fault.
+func statusFault(status *yarpcerrors.Status) fault {
+	switch status.Code() {
+	case yarpcerrors.CodeCancelled,
+		yarpcerrors.CodeInvalidArgument,
+		yarpcerrors.CodeNotFound,
+		yarpcerrors.CodeAlreadyExists,
+		yarpcerrors.CodePermissionDenied,
+		yarpcerrors.CodeFailedPrecondition,
+		yarpcerrors.CodeAborted,
+		yarpcerrors.CodeOutOfRange,
+		yarpcerrors.CodeUnimplemented,
+		yarpcerrors.CodeUnauthenticated:
+		return clientFault
+
+	case yarpcerrors.CodeUnknown,
+		yarpcerrors.CodeDeadlineExceeded,
+		yarpcerrors.CodeResourceExhausted,
+		yarpcerrors.CodeInternal,
+		yarpcerrors.CodeUnavailable,
+		yarpcerrors.CodeDataLoss:
+		return serverFault
+	}
+
+	return unknownFault
+}

@@ -40,13 +40,37 @@ type yarpcConfig struct {
 // logging allows configuring the log levels from YAML.
 type logging struct {
 	Levels struct {
+		// Defaults regardless of direction.
+		Success          *zapLevel `config:"success"`
+		Failure          *zapLevel `config:"failure"`
 		ApplicationError *zapLevel `config:"applicationError"`
+
+		// Directional overrides.
+		Inbound  levels `config:"inbound"`
+		Outbound levels `config:"outbound"`
 	} `config:"levels"`
+}
+
+type levels struct {
+	Success          *zapLevel `config:"success"`
+	Failure          *zapLevel `config:"failure"`
+	ApplicationError *zapLevel `config:"applicationError"`
 }
 
 // Fills values from this object into the provided YARPC config.
 func (l *logging) fill(cfg *yarpc.Config) {
+	cfg.Logging.Levels.Success = (*zapcore.Level)(l.Levels.Success)
+	cfg.Logging.Levels.Failure = (*zapcore.Level)(l.Levels.Failure)
 	cfg.Logging.Levels.ApplicationError = (*zapcore.Level)(l.Levels.ApplicationError)
+
+	l.Levels.Inbound.fill(&cfg.Logging.Levels.Inbound)
+	l.Levels.Outbound.fill(&cfg.Logging.Levels.Outbound)
+}
+
+func (l *levels) fill(cfg *yarpc.DirectionalLogLevelConfig) {
+	cfg.Success = (*zapcore.Level)(l.Success)
+	cfg.Failure = (*zapcore.Level)(l.Failure)
+	cfg.ApplicationError = (*zapcore.Level)(l.ApplicationError)
 }
 
 type zapLevel zapcore.Level

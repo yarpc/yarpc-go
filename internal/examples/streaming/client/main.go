@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/examples/streaming"
@@ -56,8 +55,11 @@ func do() error {
 	}
 	defer dispatcher.Stop()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	// Specifying a deadline on the context affects the entire stream. As this is
+	// generally not the desired behavior, we use a cancelable context instead.
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
 	stream, err := client.HelloThere(ctx, yarpc.WithHeader("test", "testtest"))
 	if err != nil {
 		return fmt.Errorf("failed to create stream: %s", err.Error())

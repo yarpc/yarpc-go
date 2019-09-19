@@ -18,7 +18,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
+package direct
 
-// Version is the current version of YARPC.
-const Version = "1.40.0"
+import (
+	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/yarpcconfig"
+)
+
+const name = "direct"
+
+// Configuration describes how to build a direct peer chooser.
+type Configuration struct{}
+
+// Spec returns a configuration specification for the direct peer chooser. The
+// chooser uses transport.Request#ShardKey as the peer dentifier.
+//
+//  cfg := yarpcconfig.New()
+//  cfg.MustRegisterPeerChooser(direct.Spec())
+//
+// This enables the direct chooser:
+//
+//  outbounds:
+//    destination-service:
+//      grpc:
+//        direct: {}
+func Spec(opts ...ChooserOption) yarpcconfig.PeerChooserSpec {
+	return yarpcconfig.PeerChooserSpec{
+		Name: name,
+		BuildPeerChooser: func(cfg Configuration, t peer.Transport, _ *yarpcconfig.Kit) (peer.Chooser, error) {
+			return New(cfg, t, opts...)
+		},
+	}
+}

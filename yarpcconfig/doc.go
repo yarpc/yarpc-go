@@ -254,9 +254,16 @@
 //
 // The following keys are supported under the 'levels' key,
 //
-// 	applicationError
-// 	  Configures the level at which application errors are logged. All Thrift
-// 	  exceptions are considered application errors. Defaults to "error".
+//  success
+//    Configures the level at which successful requests are logged.
+//    Defaults to "debug".
+//  applicationError
+//    Configures the level at which application errors are logged.
+//    All Thrift exceptions are considered application errors.
+//    Defaults to "error".
+//  failure
+//    Configures the level at which all other failures are logged.
+//    Default is "error".
 //
 // For example, the following configuration will have the effect of logging
 // Thrift exceptions for inbound and outbound calls ("Error handling inbound
@@ -265,6 +272,26 @@
 // 	logging:
 // 	  levels:
 // 	    applicationError: info
+//
+// The 'logging' attribute also has 'inbound' and 'outbound' sections
+// to specify log levels that depend on the traffic direction.
+// For example, the following configuration will only override the log level
+// for successful outbound requests.
+//
+//  logging:
+//    levels:
+//      inbound:
+//        success: debug
+//
+// The log levels are:
+//
+//  debug
+//  info
+//  warn
+//  error
+//  dpanic
+//  panic
+//  fatal
 //
 // Customizing Configuration
 //
