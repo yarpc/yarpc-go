@@ -6,7 +6,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Fixed
-- Release responseWriter buffer during error condition
+- Release responseWriter buffer during error condition.
+### Changed
+- Relaxed service name validation to allow e-mail addresses.
 
 ## [1.40.0] - 2019-09-19
 ### Added
