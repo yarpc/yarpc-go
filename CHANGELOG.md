@@ -6,7 +6,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Fixed
-- Release responseWriter buffer during error condition.
+- Added ReleaseBuffer() function and call it with "defer". Also removed
+  "defer bufferpool.Put(hw.buffer)" from Close() function. This ensures that
+  responseWriter buffer will be put back to buffer pool from single location.
+  This change addresses the issue in which responseWriter buffer was not put
+  back to buffer pool under error conditions.
 ### Changed
 - Relaxed service name validation to allow e-mail addresses.
 

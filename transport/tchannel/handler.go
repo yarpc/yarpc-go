@@ -110,6 +110,7 @@ func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
 func (h handler) handle(ctx context.Context, call inboundCall) {
 	// you MUST close the responseWriter no matter what unless you have a tchannel.SystemError
 	responseWriter := h.newResponseWriter(call.Response(), call.Format(), h.headerCase)
+	defer responseWriter.ReleaseBuffer()
 
 	// echo accepted rpc-service in response header
 	responseWriter.AddHeader(ServiceHeaderKey, call.ServiceName())
@@ -120,7 +121,6 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	if yarpcerrors.FromError(err).Code() == yarpcerrors.CodeResourceExhausted {
 		// all TChannel clients will time out instead of receiving an error
 		call.Response().Blackhole()
-		responseWriter.ReleaseBuffer()
 		return
 	}
 	if err != nil && !responseWriter.IsApplicationError() {
@@ -128,7 +128,6 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 			h.logger.Error("SendSystemError failed", zap.Error(err))
 		}
 		h.logger.Error("handler failed", zap.Error(err))
-		responseWriter.ReleaseBuffer()
 		return
 	}
 	if err != nil && responseWriter.IsApplicationError() {
@@ -299,12 +298,10 @@ func (hw *handlerWriter) Close() error {
 	// However, if there is a system error, we do not want to do this
 	bodyWriter, err := hw.response.Arg3Writer()
 	if err != nil {
-		hw.ReleaseBuffer()
 		return appendError(retErr, err)
 	}
 	defer func() { retErr = appendError(retErr, bodyWriter.Close()) }()
 	if hw.buffer != nil {
-		defer bufferpool.Put(hw.buffer)
 		if _, err := hw.buffer.WriteTo(bodyWriter); err != nil {
 			return appendError(retErr, err)
 		}
