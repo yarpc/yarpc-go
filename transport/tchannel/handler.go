@@ -313,6 +313,7 @@ func (hw *handlerWriter) Close() error {
 func (hw *handlerWriter) ReleaseBuffer() {
 	if hw.buffer != nil {
 		bufferpool.Put(hw.buffer)
+		hw.buffer = nil
 	}
 }
 
