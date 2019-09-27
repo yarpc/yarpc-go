@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/yarpctest"
 )
@@ -221,4 +222,19 @@ func TestPeerList(t *testing.T) {
 			hostport.Identify("3.3.3.3:4040"),
 		},
 	}))
+}
+
+func TestFailFast(t *testing.T) {
+	fake := yarpctest.NewFakeTransport(yarpctest.InitialConnectionStatus(peer.Unavailable))
+	impl := &mraList{}
+	list := New("mra", fake, impl, FailFast())
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+
+	require.NoError(t, list.Start())
+
+	_, _, err := list.Choose(ctx, &transport.Request{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no peer available")
 }

@@ -67,6 +67,7 @@ type Implementation interface {
 type listOptions struct {
 	capacity  int
 	noShuffle bool
+	failFast  bool
 	seed      int64
 }
 
@@ -101,6 +102,16 @@ func NoShuffle() ListOption {
 	})
 }
 
+// FailFast indicates that the peer list should not wait for peers to be added,
+// when choosing a peer.
+//
+// This option is particularly useful for proxies.
+func FailFast() ListOption {
+	return listOptionFunc(func(options *listOptions) {
+		options.failFast = true
+	})
+}
+
 // Seed specifies the random seed to use for shuffling peers
 //
 // Defaults to approximately the process start time in nanoseconds.
@@ -126,6 +137,7 @@ func New(name string, transport peer.Transport, availableChooser Implementation,
 		availableChooser:   availableChooser,
 		transport:          transport,
 		noShuffle:          options.noShuffle,
+		failFast:           options.failFast,
 		randSrc:            rand.NewSource(options.seed),
 		peerAvailableEvent: make(chan struct{}, 1),
 	}
@@ -155,6 +167,7 @@ type List struct {
 	transport          peer.Transport
 
 	noShuffle bool
+	failFast  bool
 	randSrc   rand.Source
 
 	once *lifecycle.Once
@@ -431,6 +444,9 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 			pl.notifyPeerAvailable()
 			t.StartRequest()
 			return t.peer, t.boundOnFinish, nil
+		}
+		if p == nil && pl.failFast {
+			return nil, nil, yarpcerrors.Newf(yarpcerrors.CodeUnavailable, "%s peer list has no peer available", pl.name)
 		}
 		if err := pl.waitForPeerAddedEvent(ctx); err != nil {
 			return nil, nil, err
