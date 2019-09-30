@@ -16,12 +16,6 @@ import:
   version: '>=0.3, < 2.0'
 - package: github.com/opentracing/opentracing-go
   version: ^1
-- package: github.com/prometheus/client_golang
-  # This isn't exposed to customers, so we can depend on a pre-1.0 release.
-  version: '>=0.8, < 0.10'
-  subpackages:
-  - prometheus
-  - prometheus/promhttp
 - package: go.uber.org/fx
   version: ^1
 - package: go.uber.org/zap
