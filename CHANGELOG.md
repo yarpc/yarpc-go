@@ -7,8 +7,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Fixed
 - Fixed TChannel memory pressure that would occur during server-side errors.
-### Changed
-- Relaxed service name validation to allow e-mail addresses.
 
 ## [1.40.0] - 2019-09-19
 ### Added

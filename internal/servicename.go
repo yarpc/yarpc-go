@@ -32,12 +32,9 @@ import (
 var _uuidRegexp = regexp.MustCompile("[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}")
 
 // ValidateServiceName returns an error if the given servive name is invalid.
-// Valid names are
-//  - at least two characters long
-//  - start with [a-z]
-//  - contain only [0-9a-z@.] and non-consecutive hyphens
-//  - end in [0-9a-z]
-//  - not UUIDs
+// Valid names are at least two characters long, start with [a-z], contain only
+// [0-9a-z] and non-consecutive hyphens, and end in [0-9a-z]. Furthermore,
+// names may not contain UUIDs.
 func ValidateServiceName(name string) error {
 	if len(name) < 2 {
 		// Short names aren't safe to check any further.
@@ -48,7 +45,6 @@ func ValidateServiceName(name string) error {
 		checkFirstCharacter(name),
 		checkForbiddenCharacters(name),
 		checkUUIDs(name),
-		checkLastCharacter(name),
 	)
 }
 
@@ -57,6 +53,9 @@ func checkHyphens(name string) error {
 		if name[i-1] == '-' && name[i] == '-' {
 			return fmt.Errorf("service name %q contains consecutive hyphens", name)
 		}
+	}
+	if name[len(name)-1] == '-' {
+		return fmt.Errorf("service name %q ends with a hyphen", name)
 	}
 	return nil
 }
@@ -68,14 +67,6 @@ func checkFirstCharacter(name string) error {
 	return nil
 }
 
-func checkLastCharacter(name string) error {
-	last := name[len(name)-1]
-	if ('a' <= last && last <= 'z') || ('0' <= last && last <= '9') {
-		return nil
-	}
-	return fmt.Errorf("service name %q doesn't end with a lowercase ASCII letter or number", name)
-}
-
 func checkForbiddenCharacters(name string) error {
 	for _, c := range name {
 		switch {
@@ -85,10 +76,8 @@ func checkForbiddenCharacters(name string) error {
 			continue
 		case c == '-':
 			continue
-		case c == '@', c == '.': // allow email addresses for CLIs
-			continue
 		default:
-			return fmt.Errorf("service name %q contains characters other than [0-9a-z@.] and hyphens, found %q", name, c)
+			return fmt.Errorf("service name %q contains characters other than [0-9a-z] and hyphens", name)
 		}
 	}
 	return nil
