@@ -77,6 +77,7 @@ type responseWriter interface {
 	AddHeaders(h transport.Headers)
 	AddHeader(key string, value string)
 	Close() error
+	ReleaseBuffer()
 	IsApplicationError() bool
 	SetApplicationError()
 	Write(s []byte) (int, error)
@@ -109,6 +110,7 @@ func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
 func (h handler) handle(ctx context.Context, call inboundCall) {
 	// you MUST close the responseWriter no matter what unless you have a tchannel.SystemError
 	responseWriter := h.newResponseWriter(call.Response(), call.Format(), h.headerCase)
+	defer responseWriter.ReleaseBuffer()
 
 	// echo accepted rpc-service in response header
 	responseWriter.AddHeader(ServiceHeaderKey, call.ServiceName())
@@ -300,13 +302,19 @@ func (hw *handlerWriter) Close() error {
 	}
 	defer func() { retErr = appendError(retErr, bodyWriter.Close()) }()
 	if hw.buffer != nil {
-		defer bufferpool.Put(hw.buffer)
 		if _, err := hw.buffer.WriteTo(bodyWriter); err != nil {
 			return appendError(retErr, err)
 		}
 	}
 
 	return retErr
+}
+
+func (hw *handlerWriter) ReleaseBuffer() {
+	if hw.buffer != nil {
+		bufferpool.Put(hw.buffer)
+		hw.buffer = nil
+	}
 }
 
 func getSystemError(err error) error {
