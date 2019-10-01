@@ -31,6 +31,7 @@ import (
 type listConfig struct {
 	capacity int
 	shuffle  bool
+	failFast bool
 	seed     int64
 	nextRand func(int) int
 }
@@ -63,6 +64,17 @@ func Seed(seed int64) ListOption {
 	}
 }
 
+// FailFast indicates that the peer list should not wait for a peer to become
+// available when choosing a peer.
+//
+// This option is preferrable when the better failure mode is to retry from the
+// origin, since another proxy instance might already have a connection.
+func FailFast() ListOption {
+	return func(c *listConfig) {
+		c.failFast = true
+	}
+}
+
 // New creates a new pending heap.
 func New(transport peer.Transport, opts ...ListOption) *List {
 	cfg := defaultListConfig
@@ -75,6 +87,9 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 	}
 	if !cfg.shuffle {
 		plOpts = append(plOpts, peerlist.NoShuffle())
+	}
+	if cfg.failFast {
+		plOpts = append(plOpts, peerlist.FailFast())
 	}
 
 	nextRandFn := nextRand(cfg.seed)
