@@ -21,9 +21,18 @@
 package randpeer
 
 import (
+	"fmt"
+
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/yarpcconfig"
+	"go.uber.org/yarpc/yarpcerrors"
 )
+
+// Configuration descripes how to build a random peer list.
+type Configuration struct {
+	Capacity *int `config:"capacity"`
+	FailFast bool `config:"failFast"`
+}
 
 // Spec returns a configuration specification for the random peer list
 // implementation, making it possible to select a random peer with transports
@@ -46,8 +55,22 @@ import (
 func Spec() yarpcconfig.PeerListSpec {
 	return yarpcconfig.PeerListSpec{
 		Name: "random",
-		BuildPeerList: func(c struct{}, t peer.Transport, k *yarpcconfig.Kit) (peer.ChooserList, error) {
-			return New(t), nil
+		BuildPeerList: func(cfg Configuration, t peer.Transport, k *yarpcconfig.Kit) (peer.ChooserList, error) {
+			opts := make([]ListOption, 0, 2)
+
+			if cfg.Capacity != nil {
+				if *cfg.Capacity <= 0 {
+					return nil, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument,
+						fmt.Sprintf("Capacity must be greater than 0. Got: %d.", *cfg.Capacity))
+				}
+				opts = append(opts, Capacity(*cfg.Capacity))
+			}
+
+			if cfg.FailFast {
+				opts = append(opts, FailFast())
+			}
+
+			return New(t, opts...), nil
 		},
 	}
 }
