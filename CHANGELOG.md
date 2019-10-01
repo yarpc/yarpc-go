@@ -5,7 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- No changes yet.
+### Added
+- Added fail-fast option to peer lists.  With this option enabled, a peer list
+  will return an error if no peers are connected at the time of a call, instead
+  of waiting.
 
 ## [1.41.0] - 2019-10-01
 ### Fixed
