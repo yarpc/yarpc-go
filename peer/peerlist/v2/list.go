@@ -444,9 +444,8 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 			pl.notifyPeerAvailable()
 			t.StartRequest()
 			return t.peer, t.boundOnFinish, nil
-		}
-		if p == nil && pl.failFast {
-			return nil, nil, yarpcerrors.Newf(yarpcerrors.CodeUnavailable, "%s peer list has no peer available", pl.name)
+		} else if pl.failFast {
+			return nil, nil, yarpcerrors.Newf(yarpcerrors.CodeUnavailable, "%q peer list has no peer available", pl.name)
 		}
 		if err := pl.waitForPeerAddedEvent(ctx); err != nil {
 			return nil, nil, err
