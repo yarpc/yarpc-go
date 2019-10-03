@@ -46,15 +46,15 @@ import (
 )
 
 var (
-	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "can't wait for peer without a context deadline for a roundrobin peer list")
+	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "can't wait for peer without a context deadline for a round-robin peer list")
 )
 
 func newNotRunningError(err string) error {
-	return yarpcerrors.FailedPreconditionErrorf("roundrobin peer list is not running: %s", err)
+	return yarpcerrors.FailedPreconditionErrorf("round-robin peer list is not running: %s", err)
 }
 
 func newUnavailableError(err error) error {
-	return yarpcerrors.UnavailableErrorf("roundrobin peer list timed out waiting for peer: %s", err.Error())
+	return yarpcerrors.UnavailableErrorf("round-robin peer list timed out waiting for peer: %s", err.Error())
 }
 
 func TestRoundRobinList(t *testing.T) {
@@ -943,7 +943,7 @@ func TestIntrospect(t *testing.T) {
 	}))
 
 	chooserStatus := pl.Introspect()
-	assert.Equal(t, "Single", chooserStatus.Name)
+	assert.Equal(t, "round-robin", chooserStatus.Name)
 	assert.Equal(t, "Running (2/3 available)", chooserStatus.State)
 
 	peerIdentifierToPeerStatus := make(map[string]introspection.PeerStatus, len(chooserStatus.Peers))

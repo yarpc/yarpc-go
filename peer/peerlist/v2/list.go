@@ -643,7 +643,7 @@ func (pl *List) Introspect() introspection.ChooserStatus {
 	}
 
 	return introspection.ChooserStatus{
-		Name: "Single",
+		Name: pl.name,
 		State: fmt.Sprintf("%s (%d/%d available)", state, len(availables),
 			len(availables)+len(unavailables)),
 		Peers: peersStatus,
