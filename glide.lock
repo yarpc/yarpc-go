@@ -1,5 +1,5 @@
-hash: 0e5fe0feec3ddf53987a3a9750da5fac22dc7bc7710369eecc35d90c188c0d73
-updated: 2019-08-30T15:04:26.507937675Z
+hash: 9b8d3811307b10587adfda29d4ab3cebd2de6affbebb4d56de856b46f7d18d42
+updated: 2019-10-03T15:04:24.470433461Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -23,13 +23,13 @@ imports:
   subpackages:
   - spew
 - name: github.com/fatih/structtag
-  version: 76ae1d6d2117609598c7d4e8f3e938145f204e8f
+  version: 3878f9fb88e63e26ea1e6c97ab985cb55452fee5
 - name: github.com/gogo/googleapis
-  version: d31c731455cb061f42baff3bda55bad0118b126b
+  version: b8d18e97a9a193c846d32143391f6033a9d69849
   subpackages:
   - google/rpc
 - name: github.com/gogo/protobuf
-  version: ba06b47c162d49f2af050fb4c75bcbc86a159d5c
+  version: 0ca988a254f991240804bf9821f3450d87ccbb1b
   subpackages:
   - gogoproto
   - jsonpb
@@ -100,7 +100,7 @@ imports:
   subpackages:
   - difflib
 - name: github.com/prometheus/client_golang
-  version: 2641b987480bca71fb39738eb8c8b0d577cb1d76
+  version: 170205fb58decfd011f1550d4cfb737230d7ae4f
   subpackages:
   - prometheus
   - prometheus/internal
@@ -110,13 +110,13 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 9b359b28d22bbf656f14e4adac914ed64a6850a4
+  version: 287d3e634a1e550c9e463dd7e5a75a422c614505
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 00ec24a6a2d86e7074629c8384715dbb05adccd8
+  version: d3b299e382e6acf1baa852560d862eca4ff643c8
   subpackages:
   - internal/fs
   - internal/util
@@ -125,7 +125,7 @@ imports:
   subpackages:
   - parser
 - name: github.com/stretchr/testify
-  version: 221dbe5ed46703ee255b1da0dec05086f5035f62
+  version: 85f2b59c4459e5bf57488796be8c3667cb8246d6
   subpackages:
   - assert
   - require
@@ -136,7 +136,7 @@ imports:
 - name: github.com/uber-go/tally
   version: 3332297784e46cd346ab6d9894fd4ea027dc9368
 - name: github.com/uber/jaeger-client-go
-  version: 85825f3f682a6fb24b12a4604be2a101432c7534
+  version: d4d621cd6ed9aa5f1fc91eb0d0211d336bd6b79d
   subpackages:
   - internal/baggage
   - internal/spanlog
@@ -183,9 +183,9 @@ imports:
   - internal/fxreflect
   - internal/lifecycle
 - name: go.uber.org/multierr
-  version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
+  version: 71e610a0e48dbda460d9c18adca8b5f2de04a7c1
 - name: go.uber.org/net/metrics
-  version: 0327310766f9da183152db859680ae0345c31957
+  version: 05a053b545cba614bf12635803f4749dab7bd0d0
   subpackages:
   - bucket
   - push
@@ -230,14 +230,16 @@ imports:
   - internal/bufferpool
   - internal/color
   - internal/exit
+  - internal/ztest
   - zapcore
+  - zaptest
   - zaptest/observer
 - name: golang.org/x/lint
-  version: 959b441ac422379a43da2230f62be024250818b0
+  version: 16217165b5de779cb6a5e4fc81fa9c1166fda457
   subpackages:
   - golint
 - name: golang.org/x/net
-  version: ba9fcec4b297b415637633c5a6e8fa592e4a16c3
+  version: 2ec189313ef0a07735684caebd1ba8b8ebca456f
   subpackages:
   - bpf
   - context
@@ -253,7 +255,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 1e83adbbebd0f5dc971915fd7e5db032c3d2b731
+  version: b397fe3ad8ed895c98fa54584f61835a88e65ff5
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -266,7 +268,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: f340ed3ae274cf744edc12c671194b31a12fe4ac
+  version: 9ade4c73f2afdb56d278b4e3587f70b0c0f0cb9d
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
@@ -276,8 +278,10 @@ imports:
   - go/ast/inspector
   - go/buildutil
   - go/gcexportdata
+  - go/internal/cgo
   - go/internal/gcimporter
   - go/internal/packagesdriver
+  - go/loader
   - go/packages
   - go/types/objectpath
   - go/types/typeutil
@@ -285,11 +289,11 @@ imports:
   - internal/gopathwalk
   - internal/semver
 - name: google.golang.org/genproto
-  version: 24fa4b261c55da65468f2abfdae2b024eef27dfb
+  version: c459b9ce5143dd819763d9329ff92a8e35e61bd9
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 6eaf6f47437a6b4e2153a190160ef39a92c7eceb
+  version: f6d0f9ee430895e87ef1ceb5ac8f39725bafceef
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
@@ -325,14 +329,16 @@ imports:
   - status
   - tap
 - name: gopkg.in/yaml.v2
-  version: 51d6538a90f86fe93ac480b35f37b2be17fef232
+  version: f221b8435cfb71e54062f6c6e99e9ade30b124d5
 - name: honnef.co/go/tools
-  version: 00664db7fdb567f0b2efbbcdb7d9ed23f7135468
+  version: b8911aca9f34e9cbf8829dc5cbbe7cecf3b0c42d
   subpackages:
   - arg
   - cmd/staticcheck
+  - code
   - config
   - deprecated
+  - edit
   - facts
   - functions
   - go/types/typeutil
@@ -348,9 +354,10 @@ imports:
   - loader
   - pattern
   - printf
+  - report
   - simple
   - ssa
-  - ssautil
+  - ssa/ssautil
   - staticcheck
   - staticcheck/vrp
   - stylecheck
@@ -358,6 +365,6 @@ imports:
   - version
 testImports:
 - name: github.com/uber/jaeger-lib
-  version: 0e30338a695636fe5bcf7301e8030ce8dd2a8530
+  version: a87ae9d84fb038a8d79266298970720be7c80fcd
   subpackages:
   - metrics
