@@ -46,16 +46,16 @@ func statusFault(status *yarpcerrors.Status) fault {
 		yarpcerrors.CodeFailedPrecondition,
 		yarpcerrors.CodeAborted,
 		yarpcerrors.CodeOutOfRange,
-		yarpcerrors.CodeUnimplemented,
-		yarpcerrors.CodeUnauthenticated:
+		yarpcerrors.CodeUnauthenticated,
+		yarpcerrors.CodeResourceExhausted:
 		return clientFault
 
 	case yarpcerrors.CodeUnknown,
 		yarpcerrors.CodeDeadlineExceeded,
-		yarpcerrors.CodeResourceExhausted,
 		yarpcerrors.CodeInternal,
 		yarpcerrors.CodeUnavailable,
-		yarpcerrors.CodeDataLoss:
+		yarpcerrors.CodeDataLoss,
+		yarpcerrors.CodeUnimplemented:
 		return serverFault
 	}
 

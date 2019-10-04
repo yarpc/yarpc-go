@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 - Previously, every peer list reported itself as a "single" peer list for
   purposes of debugging, instead of its own name.
+- Metrics emit `CodeResourceExhausted` as a client error and `CodeUnimplemented`
+  as a server error.
 
 ## [1.41.0] - 2019-10-01
 ### Fixed
