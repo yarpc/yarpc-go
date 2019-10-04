@@ -113,6 +113,17 @@ func (c *Call) Header(k string) string {
 	return ""
 }
 
+// AllHeaders returns map of request headers where
+// key is a header name in lower case
+// and value is a header value
+func (c *Call) AllHeaders() map[string]string {
+	headers := make(map[string]string)
+	for k, v := range c.ic.req.Headers.Items() {
+		headers[k] = v
+	}
+	return headers
+}
+
 // HeaderNames returns a sorted list of the names of user defined headers
 // provided with this request.
 func (c *Call) HeaderNames() []string {

@@ -58,7 +58,7 @@ func TestCallFromContext(t *testing.T) {
 			Transport:       "trans",
 			Encoding:        transport.Encoding("baz"),
 			Procedure:       "hello",
-			Headers:         transport.NewHeaders().With("foo", "bar"),
+			Headers:         transport.NewHeaders().With("foo", "bar").With("Hello", "World"),
 			ShardKey:        "one",
 			RoutingKey:      "two",
 			RoutingDelegate: "three",
@@ -72,8 +72,14 @@ func TestCallFromContext(t *testing.T) {
 	assert.Equal(t, transport.Encoding("baz"), call.Encoding())
 	assert.Equal(t, "hello", call.Procedure())
 	assert.Equal(t, "bar", call.Header("foo"))
-	assert.Equal(t, []string{"foo"}, call.HeaderNames())
+	assert.Equal(t, []string{"foo", "hello"}, call.HeaderNames())
 	assert.Equal(t, "one", call.ShardKey())
 	assert.Equal(t, "two", call.RoutingKey())
 	assert.Equal(t, "three", call.RoutingDelegate())
+
+	expectedHeaders := map[string]string{
+		"foo":   "bar",
+		"hello": "World",
+	}
+	assert.Equal(t, expectedHeaders, call.AllHeaders())
 }

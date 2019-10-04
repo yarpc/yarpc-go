@@ -140,6 +140,13 @@ func (c *Call) Header(k string) string {
 	return (*encoding.Call)(c).Header(k)
 }
 
+// AllHeaders returns map of request headers where
+// key is a header name in lower case
+// and value is a header value
+func (c *Call) AllHeaders() map[string]string {
+	return (*encoding.Call)(c).AllHeaders()
+}
+
 // HeaderNames returns a sorted list of the names of user defined headers
 // provided with this request.
 func (c *Call) HeaderNames() []string {

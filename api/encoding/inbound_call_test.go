@@ -63,6 +63,13 @@ func TestInboundCallReadFromRequest(t *testing.T) {
 	assert.Equal(t, "true", call.Header("success"))
 	assert.Equal(t, "", call.Header("does-not-exist"))
 
+	expectedHeaders := map[string]string{
+		"hello":   "World",
+		"foo":     "bar",
+		"success": "true",
+	}
+	assert.Equal(t, expectedHeaders, call.AllHeaders())
+
 	headerNames := call.HeaderNames()
 	sort.Strings(headerNames)
 	assert.Equal(t, []string{"foo", "hello", "success"}, headerNames)
