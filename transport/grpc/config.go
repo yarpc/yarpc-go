@@ -150,6 +150,7 @@ func (c InboundTLSConfig) newInboundCredentials() (credentials.TransportCredenti
 //        address: ":443"
 //        tls:
 //          enabled: true
+//        compressor: gzip
 //
 type OutboundConfig struct {
 	yarpcconfig.PeerChooser
@@ -157,10 +158,12 @@ type OutboundConfig struct {
 	// Address to connect to if no peer options set.
 	Address string            `config:"address,interpolate"`
 	TLS     OutboundTLSConfig `config:"tls"`
+	// Compressor to use by default if the server side supports it
+	Compressor string `config:"compressor"`
 }
 
 func (c OutboundConfig) dialOptions() []DialOption {
-	return c.TLS.dialOptions()
+	return append(c.TLS.dialOptions(), Compressor(c.Compressor))
 }
 
 // OutboundTLSConfig configures TLS for a gRPC outbound.

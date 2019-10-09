@@ -95,8 +95,9 @@ func TestTransportSpec(t *testing.T) {
 	}
 
 	type wantOutbound struct {
-		Address string
-		TLS     bool
+		Address    string
+		TLS        bool
+		Compressor string
 	}
 
 	type test struct {
@@ -139,6 +140,23 @@ func TestTransportSpec(t *testing.T) {
 			wantOutbounds: map[string]wantOutbound{
 				"myservice": {
 					Address: "localhost:54569",
+				},
+			},
+		},
+		{
+			desc: "simple outbound with compressor",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					transportName: attrs{
+						"address":    "localhost:54569",
+						"compressor": "gzip",
+					},
+				},
+			},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {
+					Address:    "localhost:54569",
+					Compressor: "gzip",
 				},
 			},
 		},
