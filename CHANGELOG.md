@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   interface.
   This will allow outbound observability middleware to carry the transport name
   in metrics properly.
+- Added the circus load balancer.  The circus is a high performance fewest
+  pending requests strategy that degenerates to round-robin.  It earns its
+  performance by using just a pair of linked lists allocated in an arena and
+  tracking pending request counts inexactly.
 ### Changed
 - This change reduces the API surface of the peer list implementations to
   remove a previously public embedded type and replace it with implementations
