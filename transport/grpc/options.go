@@ -25,10 +25,9 @@ import (
 	"math"
 	"net"
 
+	opentracing "github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/backoff"
 	intbackoff "go.uber.org/yarpc/internal/backoff"
-
-	"github.com/opentracing/opentracing-go"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -166,6 +165,13 @@ func ContextDialer(f func(context.Context, string) (net.Conn, error)) DialOption
 	}
 }
 
+// Compressor sets the compressor to be used by default for gRPC connections
+func Compressor(compressor string) DialOption {
+	return func(dialOptions *dialOptions) {
+		dialOptions.defaultCompressor = compressor
+	}
+}
+
 type transportOptions struct {
 	backoffStrategy      backoff.Strategy
 	tracer               opentracing.Tracer
@@ -222,8 +228,9 @@ func newOutboundOptions(options []OutboundOption) *outboundOptions {
 }
 
 type dialOptions struct {
-	creds         credentials.TransportCredentials
-	contextDialer func(context.Context, string) (net.Conn, error)
+	creds             credentials.TransportCredentials
+	contextDialer     func(context.Context, string) (net.Conn, error)
+	defaultCompressor string
 }
 
 func (d *dialOptions) grpcOptions() []grpc.DialOption {
@@ -232,10 +239,16 @@ func (d *dialOptions) grpcOptions() []grpc.DialOption {
 		credsOption = grpc.WithTransportCredentials(d.creds)
 	}
 
-	return []grpc.DialOption{
+	opts := []grpc.DialOption{
 		credsOption,
 		grpc.WithContextDialer(d.contextDialer),
 	}
+
+	if d.defaultCompressor != "" {
+		opts = append(opts, grpc.WithDefaultCallOptions(grpc.UseCompressor(d.defaultCompressor)))
+	}
+
+	return opts
 }
 
 func newDialOptions(options []DialOption) *dialOptions {
