@@ -1,5 +1,5 @@
-hash: 0e5fe0feec3ddf53987a3a9750da5fac22dc7bc7710369eecc35d90c188c0d73
-updated: 2019-08-30T15:04:26.507937675Z
+hash: b96c4d16c667159550719c15c63cffb65bfc610754a5c04e9c1d0bbfd8ec7d9f
+updated: 2019-10-10T10:37:07.205506-07:00
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -23,7 +23,7 @@ imports:
   subpackages:
   - spew
 - name: github.com/fatih/structtag
-  version: 76ae1d6d2117609598c7d4e8f3e938145f204e8f
+  version: 3878f9fb88e63e26ea1e6c97ab985cb55452fee5
 - name: github.com/gogo/googleapis
   version: d31c731455cb061f42baff3bda55bad0118b126b
   subpackages:
@@ -100,7 +100,7 @@ imports:
   subpackages:
   - difflib
 - name: github.com/prometheus/client_golang
-  version: 2641b987480bca71fb39738eb8c8b0d577cb1d76
+  version: 170205fb58decfd011f1550d4cfb737230d7ae4f
   subpackages:
   - prometheus
   - prometheus/internal
@@ -136,7 +136,7 @@ imports:
 - name: github.com/uber-go/tally
   version: 3332297784e46cd346ab6d9894fd4ea027dc9368
 - name: github.com/uber/jaeger-client-go
-  version: 85825f3f682a6fb24b12a4604be2a101432c7534
+  version: d4d621cd6ed9aa5f1fc91eb0d0211d336bd6b79d
   subpackages:
   - internal/baggage
   - internal/spanlog
@@ -183,9 +183,9 @@ imports:
   - internal/fxreflect
   - internal/lifecycle
 - name: go.uber.org/multierr
-  version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
+  version: 71e610a0e48dbda460d9c18adca8b5f2de04a7c1
 - name: go.uber.org/net/metrics
-  version: 0327310766f9da183152db859680ae0345c31957
+  version: 05a053b545cba614bf12635803f4749dab7bd0d0
   subpackages:
   - bucket
   - push
@@ -230,14 +230,16 @@ imports:
   - internal/bufferpool
   - internal/color
   - internal/exit
+  - internal/ztest
   - zapcore
+  - zaptest
   - zaptest/observer
 - name: golang.org/x/lint
   version: 959b441ac422379a43da2230f62be024250818b0
   subpackages:
   - golint
 - name: golang.org/x/net
-  version: ba9fcec4b297b415637633c5a6e8fa592e4a16c3
+  version: 3b0461eec859c4b73bb64fdc8285971fd33e3938
   subpackages:
   - bpf
   - context
@@ -255,9 +257,6 @@ imports:
 - name: golang.org/x/sys
   version: 1e83adbbebd0f5dc971915fd7e5db032c3d2b731
   repo: https://github.com/golang/sys
-  subpackages:
-  - unix
-  - windows
 - name: golang.org/x/text
   version: 3d0f7978add91030e5e8976ff65ccdd828286cba
   subpackages:
@@ -289,7 +288,7 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 6eaf6f47437a6b4e2153a190160ef39a92c7eceb
+  version: f6d0f9ee430895e87ef1ceb5ac8f39725bafceef
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - balancer
@@ -358,6 +357,6 @@ imports:
   - version
 testImports:
 - name: github.com/uber/jaeger-lib
-  version: 0e30338a695636fe5bcf7301e8030ce8dd2a8530
+  version: a87ae9d84fb038a8d79266298970720be7c80fcd
   subpackages:
   - metrics
