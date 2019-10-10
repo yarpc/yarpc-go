@@ -1,5 +1,5 @@
-hash: 9b8d3811307b10587adfda29d4ab3cebd2de6affbebb4d56de856b46f7d18d42
-updated: 2019-10-10T15:04:04.558216014Z
+hash: b96c4d16c667159550719c15c63cffb65bfc610754a5c04e9c1d0bbfd8ec7d9f
+updated: 2019-10-10T10:37:07.205506-07:00
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -25,11 +25,11 @@ imports:
 - name: github.com/fatih/structtag
   version: 3878f9fb88e63e26ea1e6c97ab985cb55452fee5
 - name: github.com/gogo/googleapis
-  version: b8d18e97a9a193c846d32143391f6033a9d69849
+  version: d31c731455cb061f42baff3bda55bad0118b126b
   subpackages:
   - google/rpc
 - name: github.com/gogo/protobuf
-  version: 0ca988a254f991240804bf9821f3450d87ccbb1b
+  version: ba06b47c162d49f2af050fb4c75bcbc86a159d5c
   subpackages:
   - gogoproto
   - jsonpb
@@ -110,13 +110,13 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 287d3e634a1e550c9e463dd7e5a75a422c614505
+  version: 9b359b28d22bbf656f14e4adac914ed64a6850a4
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: aee14273b394209f45977b2d7a6b730071adf5e2
+  version: 00ec24a6a2d86e7074629c8384715dbb05adccd8
   subpackages:
   - internal/fs
   - internal/util
@@ -125,7 +125,7 @@ imports:
   subpackages:
   - parser
 - name: github.com/stretchr/testify
-  version: 85f2b59c4459e5bf57488796be8c3667cb8246d6
+  version: 221dbe5ed46703ee255b1da0dec05086f5035f62
   subpackages:
   - assert
   - require
@@ -235,11 +235,11 @@ imports:
   - zaptest
   - zaptest/observer
 - name: golang.org/x/lint
-  version: 16217165b5de779cb6a5e4fc81fa9c1166fda457
+  version: 959b441ac422379a43da2230f62be024250818b0
   subpackages:
   - golint
 - name: golang.org/x/net
-  version: d66e71096ffb9f08f36d9aefcae80ce319de6d68
+  version: 3b0461eec859c4b73bb64fdc8285971fd33e3938
   subpackages:
   - bpf
   - context
@@ -255,11 +255,8 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 06d7bd2c5f4f4a6cc6e910b611851044253bd7d1
+  version: 1e83adbbebd0f5dc971915fd7e5db032c3d2b731
   repo: https://github.com/golang/sys
-  subpackages:
-  - unix
-  - windows
 - name: golang.org/x/text
   version: 3d0f7978add91030e5e8976ff65ccdd828286cba
   subpackages:
@@ -268,7 +265,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 0337d82405ff9ebcb2638658c98761e12f51693e
+  version: f340ed3ae274cf744edc12c671194b31a12fe4ac
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
@@ -278,10 +275,8 @@ imports:
   - go/ast/inspector
   - go/buildutil
   - go/gcexportdata
-  - go/internal/cgo
   - go/internal/gcimporter
   - go/internal/packagesdriver
-  - go/loader
   - go/packages
   - go/types/objectpath
   - go/types/typeutil
@@ -289,7 +284,7 @@ imports:
   - internal/gopathwalk
   - internal/semver
 - name: google.golang.org/genproto
-  version: 548a555dbc03994223efbaba0090152849259498
+  version: 24fa4b261c55da65468f2abfdae2b024eef27dfb
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
@@ -329,16 +324,14 @@ imports:
   - status
   - tap
 - name: gopkg.in/yaml.v2
-  version: f221b8435cfb71e54062f6c6e99e9ade30b124d5
+  version: 51d6538a90f86fe93ac480b35f37b2be17fef232
 - name: honnef.co/go/tools
-  version: a2fc4037bf9fb9a7662bf915cde585ccc17c1c2b
+  version: 00664db7fdb567f0b2efbbcdb7d9ed23f7135468
   subpackages:
   - arg
   - cmd/staticcheck
-  - code
   - config
   - deprecated
-  - edit
   - facts
   - functions
   - go/types/typeutil
@@ -354,10 +347,9 @@ imports:
   - loader
   - pattern
   - printf
-  - report
   - simple
   - ssa
-  - ssa/ssautil
+  - ssautil
   - staticcheck
   - staticcheck/vrp
   - stylecheck
