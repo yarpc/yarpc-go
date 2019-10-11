@@ -1,5 +1,5 @@
-hash: b96c4d16c667159550719c15c63cffb65bfc610754a5c04e9c1d0bbfd8ec7d9f
-updated: 2019-10-10T10:37:07.205506-07:00
+hash: eae06dc9789023809cfc6e99aec4ed41f2ef5ef40e08e7d9067a3bdea1455b5a
+updated: 2019-10-11T14:10:56.731699-07:00
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -239,7 +239,7 @@ imports:
   subpackages:
   - golint
 - name: golang.org/x/net
-  version: 3b0461eec859c4b73bb64fdc8285971fd33e3938
+  version: d66e71096ffb9f08f36d9aefcae80ce319de6d68
   subpackages:
   - bpf
   - context
