@@ -663,3 +663,38 @@ func TestGetSystemError(t *testing.T) {
 		})
 	}
 }
+
+func TestIsTChannelTimeoutError(t *testing.T) {
+	tests := []struct {
+		name       string
+		giveErr    error
+		wantResult bool
+	}{
+		{
+			name: "plain error",
+			giveErr:    errors.New("test"),
+			wantResult: false,
+		},
+		{
+			name: "none timeout tchannel error",
+			giveErr:  tchannel.NewSystemError(tchannel.ErrCodeBusy, "test"),
+			wantResult: false,
+		},
+		{
+			name: "yarpc timeout error",
+			giveErr:  yarpcerrors.Newf(_tchannelCodeToCode[tchannel.ErrCodeTimeout], "time out"),
+			wantResult: true,
+		},
+		{
+			name: "tchannel timeout error",
+			giveErr:  tchannel.NewSystemError(tchannel.ErrCodeTimeout, "time out"),
+			wantResult: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(string(tt.name), func(t *testing.T) {
+			isTimeoutError := isTChannelTimeoutError(tt.giveErr)
+			assert.Equal(t, tt.wantResult, isTimeoutError, "unexpected result, expected %t, got %t", tt.wantResult, isTimeoutError)
+		})
+	}
+}

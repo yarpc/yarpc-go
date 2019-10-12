@@ -145,7 +145,9 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 			responseWriter.AddHeader(ErrorMessageHeaderKey, status.Message())
 		}
 	}
-	if err := responseWriter.Close(); err != nil {
+	// try to close response writer, however, if the caller has timed out, there is no
+	// way to write anything back (including system error).
+	if err := responseWriter.Close(); err != nil && !isTChannelTimeoutError(err) {
 		if err := call.Response().SendSystemError(getSystemError(err)); err != nil {
 			h.logger.Error("SendSystemError failed", zap.Error(err))
 		}
@@ -330,6 +332,15 @@ func getSystemError(err error) error {
 		tchannelCode = tchannel.ErrCodeUnexpected
 	}
 	return tchannel.NewSystemError(tchannelCode, status.Message())
+}
+
+func isTChannelTimeoutError(err error) bool {
+	if tchannelerr, ok := getSystemError(err).(tchannel.SystemError); ok {
+		if tchannelerr.Code() == tchannel.ErrCodeTimeout {
+			return true
+		}
+	}
+	return false
 }
 
 func appendError(left error, right error) error {
