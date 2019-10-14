@@ -1,5 +1,5 @@
 hash: eae06dc9789023809cfc6e99aec4ed41f2ef5ef40e08e7d9067a3bdea1455b5a
-updated: 2019-10-11T14:10:56.731699-07:00
+updated: 2019-10-14T15:04:12.552609178Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -110,13 +110,13 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 9b359b28d22bbf656f14e4adac914ed64a6850a4
+  version: 287d3e634a1e550c9e463dd7e5a75a422c614505
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 00ec24a6a2d86e7074629c8384715dbb05adccd8
+  version: aee14273b394209f45977b2d7a6b730071adf5e2
   subpackages:
   - internal/fs
   - internal/util
@@ -125,7 +125,7 @@ imports:
   subpackages:
   - parser
 - name: github.com/stretchr/testify
-  version: 221dbe5ed46703ee255b1da0dec05086f5035f62
+  version: 85f2b59c4459e5bf57488796be8c3667cb8246d6
   subpackages:
   - assert
   - require
@@ -235,11 +235,11 @@ imports:
   - zaptest
   - zaptest/observer
 - name: golang.org/x/lint
-  version: 959b441ac422379a43da2230f62be024250818b0
+  version: 16217165b5de779cb6a5e4fc81fa9c1166fda457
   subpackages:
   - golint
 - name: golang.org/x/net
-  version: d66e71096ffb9f08f36d9aefcae80ce319de6d68
+  version: 491137f692577e390404f177a0515c9f86f79754
   subpackages:
   - bpf
   - context
@@ -255,8 +255,11 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 1e83adbbebd0f5dc971915fd7e5db032c3d2b731
+  version: b09406accb4736d857a32bf9444cd7edae2ffa79
   repo: https://github.com/golang/sys
+  subpackages:
+  - unix
+  - windows
 - name: golang.org/x/text
   version: 3d0f7978add91030e5e8976ff65ccdd828286cba
   subpackages:
@@ -265,7 +268,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: f340ed3ae274cf744edc12c671194b31a12fe4ac
+  version: 5fa5b1782b2c597541464a432bc01e7ff6de2c19
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
@@ -275,8 +278,10 @@ imports:
   - go/ast/inspector
   - go/buildutil
   - go/gcexportdata
+  - go/internal/cgo
   - go/internal/gcimporter
   - go/internal/packagesdriver
+  - go/loader
   - go/packages
   - go/types/objectpath
   - go/types/typeutil
@@ -284,7 +289,7 @@ imports:
   - internal/gopathwalk
   - internal/semver
 - name: google.golang.org/genproto
-  version: 24fa4b261c55da65468f2abfdae2b024eef27dfb
+  version: 548a555dbc03994223efbaba0090152849259498
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
@@ -324,14 +329,16 @@ imports:
   - status
   - tap
 - name: gopkg.in/yaml.v2
-  version: 51d6538a90f86fe93ac480b35f37b2be17fef232
+  version: f221b8435cfb71e54062f6c6e99e9ade30b124d5
 - name: honnef.co/go/tools
-  version: 00664db7fdb567f0b2efbbcdb7d9ed23f7135468
+  version: a2fc4037bf9fb9a7662bf915cde585ccc17c1c2b
   subpackages:
   - arg
   - cmd/staticcheck
+  - code
   - config
   - deprecated
+  - edit
   - facts
   - functions
   - go/types/typeutil
@@ -347,9 +354,10 @@ imports:
   - loader
   - pattern
   - printf
+  - report
   - simple
   - ssa
-  - ssautil
+  - ssa/ssautil
   - staticcheck
   - staticcheck/vrp
   - stylecheck
