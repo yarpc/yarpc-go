@@ -671,23 +671,23 @@ func TestIsTChannelTimeoutError(t *testing.T) {
 		wantResult bool
 	}{
 		{
-			name: "plain error",
+			name:       "plain error",
 			giveErr:    errors.New("test"),
 			wantResult: false,
 		},
 		{
-			name: "none timeout tchannel error",
-			giveErr:  tchannel.NewSystemError(tchannel.ErrCodeBusy, "test"),
+			name:       "no timeout tchannel error",
+			giveErr:    tchannel.NewSystemError(tchannel.ErrCodeBusy, "test"),
 			wantResult: false,
 		},
 		{
-			name: "yarpc timeout error",
-			giveErr:  yarpcerrors.Newf(_tchannelCodeToCode[tchannel.ErrCodeTimeout], "time out"),
+			name:       "yarpc timeout error",
+			giveErr:    yarpcerrors.Newf(_tchannelCodeToCode[tchannel.ErrCodeTimeout], "time out"),
 			wantResult: true,
 		},
 		{
-			name: "tchannel timeout error",
-			giveErr:  tchannel.NewSystemError(tchannel.ErrCodeTimeout, "time out"),
+			name:       "tchannel timeout error",
+			giveErr:    tchannel.NewSystemError(tchannel.ErrCodeTimeout, "time out"),
 			wantResult: true,
 		},
 	}
