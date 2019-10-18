@@ -532,7 +532,7 @@ func (o *Outbound) doWithPeer(
 			// Note that the connection experienced a time out, which may
 			// indicate that the connection is half-open, that the destination
 			// died without sending a TCP FIN packet.
-			p.OnSuspect()
+			p.onSuspect()
 
 			end := time.Now()
 			return nil, yarpcerrors.Newf(
@@ -543,7 +543,7 @@ func (o *Outbound) doWithPeer(
 
 		// Note that the connection may have been lost so the peer connection
 		// maintenance loop resumes probing for availability.
-		p.OnDisconnected()
+		p.onDisconnected()
 
 		return nil, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "unknown error from http client: %s", err.Error())
 	}

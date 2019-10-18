@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   purposes of debugging, instead of its own name.
 - Metrics emit `CodeResourceExhausted` as a client error and `CodeUnimplemented`
   as a server error.
+- Simplified the flow of status change notifications for the HTTP transport to
+  reduce the liklihood of deadlocks.
 - Avoid "SendSystemError failed" and "responseWriter failed to close" server
   logs when TChannel callers time out.
 
