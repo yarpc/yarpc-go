@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package hostport
+package abstractpeer
 
 import (
 	"sync"
@@ -40,7 +40,7 @@ func Identify(peer string) peer.Identifier {
 	return PeerIdentifier(peer)
 }
 
-// NewPeer creates a new hostport.Peer from a hostport.PeerIdentifier, peer.Transport, and peer.Subscriber
+// NewPeer creates a new abstractpeer.Peer from a abstractpeer.PeerIdentifier, peer.Transport, and peer.Subscriber
 func NewPeer(pid PeerIdentifier, transport peer.Transport) *Peer {
 	p := &Peer{
 		PeerIdentifier: pid,
@@ -64,12 +64,12 @@ type Peer struct {
 }
 
 // HostPort surfaces the HostPort in this function, if you want to access the hostport directly (for a downstream call)
-// You need to cast the Peer to a *hostport.Peer and run this function
+// You need to cast the Peer to a *abstractpeer.Peer and run this function
 func (p *Peer) HostPort() string {
 	return string(p.PeerIdentifier)
 }
 
-// Transport returns the peer.Transport that is in charge of this hostport.Peer (and should be the one to handle requests)
+// Transport returns the peer.Transport that is in charge of this abstractpeer.Peer (and should be the one to handle requests)
 func (p *Peer) Transport() peer.Transport {
 	return p.transport
 }
@@ -104,7 +104,7 @@ func (p *Peer) NumSubscribers() int {
 	return subs
 }
 
-// Status returns the current status of the hostport.Peer
+// Status returns the current status of the abstractpeer.Peer
 func (p *Peer) Status() peer.Status {
 	return peer.Status{
 		PendingRequestCount: int(p.pending.Load()),
@@ -115,22 +115,21 @@ func (p *Peer) Status() peer.Status {
 // SetStatus sets the status of the Peer (to be used by the peer.Transport)
 func (p *Peer) SetStatus(status peer.ConnectionStatus) {
 	p.connectionStatus.Store(int32(status))
-	p.notifyStatusChanged()
 }
 
 // StartRequest runs at the beginning of a request.
 func (p *Peer) StartRequest() {
 	p.pending.Inc()
-	p.notifyStatusChanged()
 }
 
 // EndRequest should be run after a request has finished.
 func (p *Peer) EndRequest() {
 	p.pending.Dec()
-	p.notifyStatusChanged()
 }
 
-func (p *Peer) notifyStatusChanged() {
+// NotifyStatusChanged broadcasts a status change notification to all
+// subscribers.
+func (p *Peer) NotifyStatusChanged() {
 	p.lock.RLock()
 	subs := make([]peer.Subscriber, 0, len(p.subscribers))
 	for sub := range p.subscribers {
