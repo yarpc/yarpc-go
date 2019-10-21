@@ -46,15 +46,17 @@ import (
 )
 
 var (
-	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "can't wait for peer without a context deadline for a round-robin peer list")
+	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, `"round-robin" peer list can't wait for peer without a context deadline`)
+	_notRunningErrorFormat  = `"round-robin" peer list is not running: %s`
+	_unavailableErrorFormat = `"round-robin" peer list timed out waiting for peer: %s`
 )
 
 func newNotRunningError(err string) error {
-	return yarpcerrors.FailedPreconditionErrorf("round-robin peer list is not running: %s", err)
+	return yarpcerrors.FailedPreconditionErrorf(_notRunningErrorFormat, err)
 }
 
 func newUnavailableError(err error) error {
-	return yarpcerrors.UnavailableErrorf("round-robin peer list timed out waiting for peer: %s", err.Error())
+	return yarpcerrors.UnavailableErrorf(_unavailableErrorFormat, err.Error())
 }
 
 func TestRoundRobinList(t *testing.T) {
