@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/peer/peerlist/v2"
+	"go.uber.org/yarpc/peer/abstractlist"
 )
 
 type listConfig struct {
@@ -71,19 +71,19 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 		o(&cfg)
 	}
 
-	plOpts := []peerlist.ListOption{
-		peerlist.Capacity(cfg.capacity),
-		peerlist.Seed(cfg.seed),
+	plOpts := []abstractlist.Option{
+		abstractlist.Capacity(cfg.capacity),
+		abstractlist.Seed(cfg.seed),
 	}
 	if !cfg.shuffle {
-		plOpts = append(plOpts, peerlist.NoShuffle())
+		plOpts = append(plOpts, abstractlist.NoShuffle())
 	}
 	if cfg.failFast {
-		plOpts = append(plOpts, peerlist.FailFast())
+		plOpts = append(plOpts, abstractlist.FailFast())
 	}
 
 	return &List{
-		List: peerlist.New(
+		List: abstractlist.New(
 			"round-robin",
 			transport,
 			newPeerRing(),
@@ -94,5 +94,5 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 
 // List is a PeerList which rotates which peers are to be selected in a circle
 type List struct {
-	*peerlist.List
+	*abstractlist.List
 }
