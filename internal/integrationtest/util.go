@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net"
 	"sync"
 	"testing"
 	"time"
@@ -108,7 +109,10 @@ func (s TransportSpec) NewServer(t *testing.T, addr string) (*yarpc.Dispatcher, 
 // exercise a transport dropping connections if the transport is stopped before
 // a pending request can complete.
 func (s TransportSpec) TestConnectAndStopRoundRobin(t *testing.T) {
-	addr := "127.0.0.1:31172"
+	conn, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	addr := conn.Addr().String()
+	conn.Close()
 
 	client, rawClient := s.NewClient(t, []string{addr})
 
@@ -133,7 +137,7 @@ func (s TransportSpec) TestConcurrentClientsRoundRobin(t *testing.T) {
 	var wg sync.WaitGroup
 	count := concurrentAttempts
 
-	server, addr := s.NewServer(t, ":0")
+	server, addr := s.NewServer(t, "127.0.0.1:0")
 	defer server.Stop()
 
 	client, rawClient := s.NewClient(t, []string{addr})
