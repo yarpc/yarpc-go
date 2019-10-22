@@ -250,7 +250,7 @@ func TestStaleSubscriberNoPanic(t *testing.T) {
 	assert.NotPanics(t, func() {
 		// For on-going requests, it's possible to still have a reference to the
 		// subscriber, even if it is not present in the heap.
-		subscriber.NotifyStatusChanged(p1)
+		subscriber.UpdatePendingRequestCount(p1, 0)
 	}, "stale subscribers should not cause a panic")
 }
 

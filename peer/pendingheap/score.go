@@ -22,7 +22,10 @@ package pendingheap
 
 import (
 	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/peer/abstractlist"
 )
+
+var _ abstractlist.Subscriber = (*peerScore)(nil)
 
 // peerScore is a book-keeping object for each retained peer
 type peerScore struct {
@@ -36,7 +39,7 @@ type peerScore struct {
 	last   int // snapshot of the heap's incrementing counter.
 }
 
-func (ps *peerScore) NotifyStatusChanged(_ peer.Identifier) {
+func (ps *peerScore) UpdatePendingRequestCount(_ peer.Identifier, _ int) {
 	ps.heap.notifyStatusChanged(ps)
 }
 
