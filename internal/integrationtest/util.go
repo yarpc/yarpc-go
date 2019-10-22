@@ -41,8 +41,9 @@ import (
 )
 
 const (
-	maxAttempts        = 1000
-	concurrentAttempts = 100
+	_maxAttempts        = 1000
+	_concurrentAttempts = 100
+	_unconnectableAddr  = "0.0.0.1:1"
 )
 
 // TransportSpec specifies how to create test clients and servers for a transport.
@@ -109,10 +110,7 @@ func (s TransportSpec) NewServer(t *testing.T, addr string) (*yarpc.Dispatcher, 
 // exercise a transport dropping connections if the transport is stopped before
 // a pending request can complete.
 func (s TransportSpec) TestConnectAndStopRoundRobin(t *testing.T) {
-	conn, err := net.Listen("tcp", "127.0.0.1:0")
-	require.NoError(t, err)
-	addr := conn.Addr().String()
-	conn.Close()
+	addr := _unconnectableAddr
 
 	client, rawClient := s.NewClient(t, []string{addr})
 
@@ -135,7 +133,7 @@ func (s TransportSpec) TestConnectAndStopRoundRobin(t *testing.T) {
 // apply to cover connection reuse.
 func (s TransportSpec) TestConcurrentClientsRoundRobin(t *testing.T) {
 	var wg sync.WaitGroup
-	count := concurrentAttempts
+	count := _concurrentAttempts
 
 	server, addr := s.NewServer(t, "127.0.0.1:0")
 	defer server.Stop()
@@ -162,7 +160,10 @@ func (s TransportSpec) TestConcurrentClientsRoundRobin(t *testing.T) {
 // TestBackoffConnRoundRobin is a reusable test that any transport can apply to
 // cover connection management backoff.
 func (s TransportSpec) TestBackoffConnRoundRobin(t *testing.T) {
-	addr := "127.0.0.1:31782"
+	conn, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	addr := conn.Addr().String()
+	conn.Close()
 
 	done := make(chan struct{})
 	go func() {
@@ -197,7 +198,7 @@ func Blast(ctx context.Context, t *testing.T, rawClient raw.Client) {
 
 // CallUntilSuccess sends a request until it succeeds.
 func CallUntilSuccess(t *testing.T, rawClient raw.Client, interval time.Duration) {
-	for i := 0; i < maxAttempts; i++ {
+	for i := 0; i < _maxAttempts; i++ {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, interval)
 		err := Call(ctx, rawClient)
