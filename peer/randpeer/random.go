@@ -21,12 +21,11 @@
 package randpeer
 
 import (
-	"context"
 	"math/rand"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	peerlist "go.uber.org/yarpc/peer/peerlist/v2"
+	"go.uber.org/yarpc/peer/abstractlist"
 )
 
 type randomList struct {
@@ -41,9 +40,9 @@ func newRandomList(cap int, source rand.Source) *randomList {
 	}
 }
 
-var _ peerlist.Implementation = (*randomList)(nil)
+var _ abstractlist.Implementation = (*randomList)(nil)
 
-func (r *randomList) Add(peer peer.StatusPeer, _ peer.Identifier) peer.Subscriber {
+func (r *randomList) Add(peer peer.StatusPeer, _ peer.Identifier) abstractlist.Subscriber {
 	index := len(r.subscribers)
 	r.subscribers = append(r.subscribers, &subscriber{
 		index: index,
@@ -52,7 +51,7 @@ func (r *randomList) Add(peer peer.StatusPeer, _ peer.Identifier) peer.Subscribe
 	return r.subscribers[index]
 }
 
-func (r *randomList) Remove(peer peer.StatusPeer, _ peer.Identifier, ps peer.Subscriber) {
+func (r *randomList) Remove(peer peer.StatusPeer, _ peer.Identifier, ps abstractlist.Subscriber) {
 	sub, ok := ps.(*subscriber)
 	if !ok || len(r.subscribers) == 0 {
 		return
@@ -64,7 +63,7 @@ func (r *randomList) Remove(peer peer.StatusPeer, _ peer.Identifier, ps peer.Sub
 	r.subscribers = r.subscribers[0:last]
 }
 
-func (r *randomList) Choose(_ context.Context, _ *transport.Request) peer.StatusPeer {
+func (r *randomList) Choose(_ *transport.Request) peer.StatusPeer {
 	if len(r.subscribers) == 0 {
 		return nil
 	}
@@ -72,23 +71,11 @@ func (r *randomList) Choose(_ context.Context, _ *transport.Request) peer.Status
 	return r.subscribers[index].peer
 }
 
-func (r *randomList) Start() error {
-	return nil
-}
-
-func (r *randomList) Stop() error {
-	return nil
-}
-
-func (r *randomList) IsRunning() bool {
-	return true
-}
-
 type subscriber struct {
 	index int
 	peer  peer.StatusPeer
 }
 
-var _ peer.Subscriber = (*subscriber)(nil)
+var _ abstractlist.Subscriber = (*subscriber)(nil)
 
-func (*subscriber) NotifyStatusChanged(peer.Identifier) {}
+func (*subscriber) UpdatePendingRequestCount(int) {}
