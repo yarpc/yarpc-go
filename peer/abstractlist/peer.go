@@ -18,66 +18,114 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package peerlist
+package abstractlist
 
 import (
-	"sync"
-
 	"go.uber.org/yarpc/api/peer"
 )
 
-// peerThunk captures a peer and its corresponding subscriber,
-// and serves as a subscriber by proxy.
-type peerThunk struct {
-	lock          sync.RWMutex
+var _ peer.Peer = (*peerFacade)(nil)
+
+// peerFacade captures a peer and its corresponding Subscriber,
+// and serves as a Peer by proxy.
+// This allows a transport to send connection status changes into a peer list
+// without the list having to look them up by their identifier every time.
+// It also allows the list to retain a single onFinish closure for the lifetime
+// of the peer, always returning the same func for the peer whenever it is
+// chosen.
+type peerFacade struct {
 	list          *List
 	id            peer.Identifier
 	peer          peer.Peer
-	subscriber    peer.Subscriber
+	status        peer.Status
+	subscriber    Subscriber
 	boundOnFinish func(error)
 }
 
-func (t *peerThunk) onFinish(error) {
-	t.peer.EndRequest()
+func newPeerFacade(pl *List, id peer.Identifier) *peerFacade {
+	return &peerFacade{list: pl, id: id}
 }
 
-func (t *peerThunk) Identifier() string {
-	return t.peer.Identifier()
+// StartRequest is vestigial.
+//
+// The peer.Peer interface requires StartRequest because transports used to
+// track the pending request count.
+// This responsibility is now handled by the abstract peer list itself.
+func (p *peerFacade) StartRequest() {}
+
+// EndRequest is vestigial.
+//
+// The peer.Peer interface requires EndRequest because transports used to
+// track the pending request count.
+// This responsibility is now handled by the abstract peer list itself.
+func (p *peerFacade) EndRequest() {}
+
+// NotifyStatusChanged receives status notifications and adjusts the peer list
+// accodingly.
+//
+// Peers that become unavailable are removed from the implementation of the
+// data structure that tracks candidates for selection.
+// Peers that become available are restored to that collection.
+func (p *peerFacade) NotifyStatusChanged(pid peer.Identifier) {
+	p.list.lock.Lock()
+	defer p.list.lock.Unlock()
+
+	p.notifyStatusChanged(pid)
 }
 
-func (t *peerThunk) Status() peer.Status {
-	return t.peer.Status()
-}
-
-func (t *peerThunk) StartRequest() {
-	t.peer.StartRequest()
-}
-
-func (t *peerThunk) EndRequest() {
-	t.peer.EndRequest()
-}
-
-// NotifyStatusChanged forwards a status notification to the peer list and to
-// the underlying identifier chooser list.
-func (t *peerThunk) NotifyStatusChanged(pid peer.Identifier) {
-	t.list.notifyStatusChanged(pid)
-
-	if s := t.Subscriber(); s != nil {
-		s.NotifyStatusChanged(pid)
+func (p *peerFacade) notifyStatusChanged(id peer.Identifier) {
+	status := p.peer.Status().ConnectionStatus
+	if p.status.ConnectionStatus != status {
+		p.status.ConnectionStatus = status
+		switch status {
+		case peer.Unavailable, peer.Connecting:
+			p.list.implementation.Remove(p, p.id, p.subscriber)
+			p.subscriber = nil
+		case peer.Available:
+			sub := p.list.implementation.Add(p, p.id)
+			p.subscriber = sub
+			p.list.notifyPeerAvailable()
+		}
 	}
 }
 
-// SetSubscriber assigns a subscriber to the subscriber thunk.
-func (t *peerThunk) SetSubscriber(s peer.Subscriber) {
-	t.lock.Lock()
-	t.subscriber = s
-	t.lock.Unlock()
+func (p *peerFacade) remove() {
+	if p.status.ConnectionStatus == peer.Available {
+		p.list.implementation.Remove(p, p.id, p.subscriber)
+		p.subscriber = nil
+	}
+	p.status.ConnectionStatus = peer.Unavailable
 }
 
-// Subscriber returns the subscriber.
-func (t *peerThunk) Subscriber() peer.Subscriber {
-	t.lock.RLock()
-	s := t.subscriber
-	t.lock.RUnlock()
-	return s
+func (p *peerFacade) onStart() {
+	p.list.lock.Lock()
+	defer p.list.lock.Unlock()
+
+	p.status.PendingRequestCount++
+	if p.subscriber != nil {
+		p.subscriber.UpdatePendingRequestCount(p.id, p.status.PendingRequestCount)
+	}
+}
+
+func (p *peerFacade) onFinish(error) {
+	p.list.lock.Lock()
+	defer p.list.lock.Unlock()
+
+	p.status.PendingRequestCount--
+	if p.subscriber != nil {
+		p.subscriber.UpdatePendingRequestCount(p.id, p.status.PendingRequestCount)
+	}
+}
+
+func (p *peerFacade) Identifier() string {
+	return p.peer.Identifier()
+}
+
+func (p *peerFacade) Status() peer.Status {
+	return p.peer.Status()
+}
+
+// String returns the "id:status" of the peer for debugging.
+func (p *peerFacade) String() string {
+	return p.id.Identifier() + ":" + p.status.ConnectionStatus.String()
 }

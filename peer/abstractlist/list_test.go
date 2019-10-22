@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package peerlist
+package abstractlist
 
 import (
 	"context"
@@ -30,16 +30,24 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/testtime"
-	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/peer/abstractpeer"
 	"go.uber.org/yarpc/yarpctest"
 )
 
 const (
-	id1 = hostport.PeerIdentifier("1.2.3.4:1234")
-	id2 = hostport.PeerIdentifier("4.3.2.1:4321")
-	id3 = hostport.PeerIdentifier("1.1.1.1:1111")
+	id1 = abstractpeer.PeerIdentifier("1.2.3.4:1234")
+	id2 = abstractpeer.PeerIdentifier("4.3.2.1:4321")
+	id3 = abstractpeer.PeerIdentifier("1.1.1.1:1111")
 )
 
+// values returns a slice of the values contained in a map of peers.
+func values(m map[string]peer.Identifier) []peer.Identifier {
+	vs := make([]peer.Identifier, 0, len(m))
+	for _, v := range m {
+		vs = append(vs, v)
+	}
+	return vs
+}
 func TestValues(t *testing.T) {
 	vs := values(map[string]peer.Identifier{})
 	assert.Equal(t, []peer.Identifier{}, vs)
@@ -91,12 +99,12 @@ type mraList struct {
 
 var _ Implementation = (*mraList)(nil)
 
-func (l *mraList) Add(peer peer.StatusPeer, pid peer.Identifier) peer.Subscriber {
+func (l *mraList) Add(peer peer.StatusPeer, pid peer.Identifier) Subscriber {
 	l.mra = peer
 	return &mraSub{}
 }
 
-func (l *mraList) Remove(peer peer.StatusPeer, pid peer.Identifier, ps peer.Subscriber) {
+func (l *mraList) Remove(peer peer.StatusPeer, pid peer.Identifier, ps Subscriber) {
 	l.mrr = peer
 }
 
@@ -119,8 +127,7 @@ func (l *mraList) IsRunning() bool {
 type mraSub struct {
 }
 
-func (s *mraSub) NotifyStatusChanged(pid peer.Identifier) {
-}
+func (s *mraSub) UpdatePendingRequestCount(pid peer.Identifier, pending int) {}
 
 func TestPeerList(t *testing.T) {
 	fake := yarpctest.NewFakeTransport(yarpctest.InitialConnectionStatus(peer.Unavailable))
@@ -132,8 +139,8 @@ func TestPeerList(t *testing.T) {
 
 	assert.NoError(t, list.Update(peer.ListUpdates{
 		Additions: []peer.Identifier{
-			hostport.Identify("1.1.1.1:4040"),
-			hostport.Identify("2.2.2.2:4040"),
+			abstractpeer.Identify("1.1.1.1:4040"),
+			abstractpeer.Identify("2.2.2.2:4040"),
 		},
 		Removals: []peer.Identifier{},
 	}))
@@ -141,28 +148,28 @@ func TestPeerList(t *testing.T) {
 	// Invalid updates before start
 	assert.Error(t, list.Update(peer.ListUpdates{
 		Additions: []peer.Identifier{
-			hostport.Identify("1.1.1.1:4040"),
+			abstractpeer.Identify("1.1.1.1:4040"),
 		},
 		Removals: []peer.Identifier{
-			hostport.Identify("3.3.3.3:4040"),
+			abstractpeer.Identify("3.3.3.3:4040"),
 		},
 	}))
 
 	assert.Equal(t, 0, list.NumAvailable())
 	assert.Equal(t, 0, list.NumUnavailable())
 	assert.Equal(t, 2, list.NumUninitialized())
-	assert.False(t, list.Available(hostport.Identify("2.2.2.2:4040")))
-	assert.True(t, list.Uninitialized(hostport.Identify("2.2.2.2:4040")))
+	assert.False(t, list.Available(abstractpeer.Identify("2.2.2.2:4040")))
+	assert.True(t, list.Uninitialized(abstractpeer.Identify("2.2.2.2:4040")))
 
 	require.NoError(t, list.Start())
 
 	// Connect to the peer and simulate a request.
-	fake.SimulateConnect(hostport.Identify("2.2.2.2:4040"))
+	fake.SimulateConnect(abstractpeer.Identify("2.2.2.2:4040"))
 	assert.Equal(t, 1, list.NumAvailable())
 	assert.Equal(t, 1, list.NumUnavailable())
 	assert.Equal(t, 0, list.NumUninitialized())
-	assert.True(t, list.Available(hostport.Identify("2.2.2.2:4040")))
-	assert.False(t, list.Uninitialized(hostport.Identify("2.2.2.2:4040")))
+	assert.True(t, list.Available(abstractpeer.Identify("2.2.2.2:4040")))
+	assert.False(t, list.Uninitialized(abstractpeer.Identify("2.2.2.2:4040")))
 	peers = list.Peers()
 	assert.Len(t, peers, 2)
 	p, onFinish, err := list.Choose(context.Background(), &transport.Request{})
@@ -171,7 +178,7 @@ func TestPeerList(t *testing.T) {
 	onFinish(nil)
 
 	// Simulate a second connection and request.
-	fake.SimulateConnect(hostport.Identify("1.1.1.1:4040"))
+	fake.SimulateConnect(abstractpeer.Identify("1.1.1.1:4040"))
 	assert.Equal(t, 2, list.NumAvailable())
 	assert.Equal(t, 0, list.NumUnavailable())
 	assert.Equal(t, 0, list.NumUninitialized())
@@ -182,25 +189,25 @@ func TestPeerList(t *testing.T) {
 	require.NoError(t, err)
 	onFinish(nil)
 
-	fake.SimulateDisconnect(hostport.Identify("2.2.2.2:4040"))
+	fake.SimulateDisconnect(abstractpeer.Identify("2.2.2.2:4040"))
 	assert.Equal(t, "2.2.2.2:4040", impl.mrr.Identifier())
 
 	assert.NoError(t, list.Update(peer.ListUpdates{
 		Additions: []peer.Identifier{
-			hostport.Identify("3.3.3.3:4040"),
+			abstractpeer.Identify("3.3.3.3:4040"),
 		},
 		Removals: []peer.Identifier{
-			hostport.Identify("2.2.2.2:4040"),
+			abstractpeer.Identify("2.2.2.2:4040"),
 		},
 	}))
 
 	// Invalid updates
 	assert.Error(t, list.Update(peer.ListUpdates{
 		Additions: []peer.Identifier{
-			hostport.Identify("3.3.3.3:4040"),
+			abstractpeer.Identify("3.3.3.3:4040"),
 		},
 		Removals: []peer.Identifier{
-			hostport.Identify("4.4.4.4:4040"),
+			abstractpeer.Identify("4.4.4.4:4040"),
 		},
 	}))
 
@@ -209,17 +216,17 @@ func TestPeerList(t *testing.T) {
 	// Invalid updates, after stop
 	assert.Error(t, list.Update(peer.ListUpdates{
 		Additions: []peer.Identifier{
-			hostport.Identify("3.3.3.3:4040"),
+			abstractpeer.Identify("3.3.3.3:4040"),
 		},
 		Removals: []peer.Identifier{
-			hostport.Identify("4.4.4.4:4040"),
+			abstractpeer.Identify("4.4.4.4:4040"),
 		},
 	}))
 
 	assert.NoError(t, list.Update(peer.ListUpdates{
 		Additions: []peer.Identifier{},
 		Removals: []peer.Identifier{
-			hostport.Identify("3.3.3.3:4040"),
+			abstractpeer.Identify("3.3.3.3:4040"),
 		},
 	}))
 }

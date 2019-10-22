@@ -18,23 +18,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package peerlist provides a utility for managing peer availability with a
+// Package abstractlist provides a utility for managing peer availability with a
 // separate implementation of peer selection from just among available peers.
-// The peer list implements the peer.ChooserList interface and accepts a
-// peerlist.Implementation to provide the implementation-specific concern of,
+// The peer list implements the peer.ChooserList interface and accepts an
+// abstractlist.Implementation to provide the implementation-specific concern of,
 // for example, a *roundrobin.List.
 //
 // The example is an implementation of peer.ChooserList using a random peer selection
 // strategy, returned by newRandomListImplementation(), implementing
-// peerlist.Implementation.
+// abstractlist.Implementation.
 //
 //   type List struct {
-//   	*peerlist.List
+//   	*abstractlist.List
 //   }
 //
 //   func New(transport peer.Transport) *List {
 //   	return &List{
-//   		List: peerlist.New(
+//   		List: abstractlist.New(
 //   			"random",
 //   			transport,
 //   			newRandomListImplementation(),
@@ -48,4 +48,4 @@
 // transport (which sees it as a bank of peer.Subscriber).
 // By taking care of concurrency, the abstract peer list frees the
 // Implementation from the concern of thread safety.
-package peerlist
+package abstractlist

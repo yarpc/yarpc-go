@@ -18,16 +18,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package peerlist
+package abstractlist
 
 import (
 	"context"
 	"fmt"
 	"math/rand"
+	"sort"
 	"sync"
 	"time"
 
-	"go.uber.org/atomic"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -38,7 +38,8 @@ import (
 )
 
 var (
-	_noContextDeadlineError = "can't wait for peer without a context deadline for a %s peer list"
+	_noContextDeadlineError = "%q peer list can't wait for peer without a context deadline"
+	_unavailableError       = "%q peer list timed out waiting for peer: %s"
 )
 
 // Implementation is a collection of available peers, with its own
@@ -46,58 +47,70 @@ var (
 // The available peer list encapsulates the logic for selecting from among
 // available peers, whereas a ChooserList is responsible for retaining,
 // releasing, and monitoring peer availability.
-// Use "go.uber.org/yarpc/peer/peerlist".List in conjunction with a
-// ListImplementation to produce a "go.uber.org/yarpc/api/peer".List.
+// Use "go.uber.org/yarpc/peer/abstractlist".List in conjunction with an
+// Implementation to produce a "go.uber.org/yarpc/api/peer".List.
 //
-// peerlist.List and peerlist.Implementation compose well with sharding schemes
-// the degenerate to returning the only available peer.
+// abstractlist.List and abstractlist.Implementation compose well with sharding
+// schemes the degenerate to returning the only available peer.
 //
-// The peerlist.List calls Add, Remove, and Choose under a write lock so the
-// implementation is free to perform mutations on its own data without locks.
+// The abstractlist.List calls Add, Remove, and Choose under a write lock so
+// the implementation is free to perform mutations on its own data without
+// locks.
 type Implementation interface {
-	transport.Lifecycle
-
-	Add(peer.StatusPeer, peer.Identifier) peer.Subscriber
-	Remove(peer.StatusPeer, peer.Identifier, peer.Subscriber)
+	Add(peer.StatusPeer, peer.Identifier) Subscriber
+	Remove(peer.StatusPeer, peer.Identifier, Subscriber)
 	// Choose must return an available peer under a list read lock, so must
 	// not block.
 	Choose(context.Context, *transport.Request) peer.StatusPeer
 }
 
-type listOptions struct {
+// Subscriber is a callback that implementations of peer list data structures
+// must provide.
+//
+// The peer list uses the Subscriber to send notifications when a peer’s
+// pending request count changes.
+// A peer list implementation may have a single subscriber or a subscriber for
+// each peer.
+//
+// Peer list data structure implementations
+type Subscriber interface {
+	UpdatePendingRequestCount(peer.Identifier, int)
+}
+
+type options struct {
 	capacity  int
 	noShuffle bool
 	failFast  bool
 	seed      int64
 }
 
-var defaultListOptions = listOptions{
+var defaultOptions = options{
 	capacity: 10,
 	seed:     time.Now().UnixNano(),
 }
 
-// ListOption customizes the behavior of a list.
-type ListOption interface {
-	apply(*listOptions)
+// Option customizes the behavior of a list.
+type Option interface {
+	apply(*options)
 }
 
-type listOptionFunc func(*listOptions)
+type optionFunc func(*options)
 
-func (f listOptionFunc) apply(options *listOptions) { f(options) }
+func (f optionFunc) apply(options *options) { f(options) }
 
 // Capacity specifies the default capacity of the underlying
 // data structures for this list
 //
 // Defaults to 10.
-func Capacity(capacity int) ListOption {
-	return listOptionFunc(func(options *listOptions) {
+func Capacity(capacity int) Option {
+	return optionFunc(func(options *options) {
 		options.capacity = capacity
 	})
 }
 
-// NoShuffle disables the default behavior of shuffling peerlist order.
-func NoShuffle() ListOption {
-	return listOptionFunc(func(options *listOptions) {
+// NoShuffle disables the default behavior of shuffling peer list order.
+func NoShuffle() Option {
+	return optionFunc(func(options *options) {
 		options.noShuffle = true
 	})
 }
@@ -106,8 +119,8 @@ func NoShuffle() ListOption {
 // when choosing a peer.
 //
 // This option is particularly useful for proxies.
-func FailFast() ListOption {
-	return listOptionFunc(func(options *listOptions) {
+func FailFast() Option {
+	return optionFunc(func(options *options) {
 		options.failFast = true
 	})
 }
@@ -115,15 +128,15 @@ func FailFast() ListOption {
 // Seed specifies the random seed to use for shuffling peers
 //
 // Defaults to approximately the process start time in nanoseconds.
-func Seed(seed int64) ListOption {
-	return listOptionFunc(func(options *listOptions) {
+func Seed(seed int64) Option {
+	return optionFunc(func(options *options) {
 		options.seed = seed
 	})
 }
 
 // New creates a new peer list with an identifier chooser for available peers.
-func New(name string, transport peer.Transport, availableChooser Implementation, opts ...ListOption) *List {
-	options := defaultListOptions
+func New(name string, transport peer.Transport, implementation Implementation, opts ...Option) *List {
+	options := defaultOptions
 	for _, o := range opts {
 		o.apply(&options)
 	}
@@ -131,10 +144,9 @@ func New(name string, transport peer.Transport, availableChooser Implementation,
 	return &List{
 		once:               lifecycle.NewOnce(),
 		name:               name,
-		uninitializedPeers: make(map[string]peer.Identifier, options.capacity),
-		unavailablePeers:   make(map[string]*peerThunk, options.capacity),
-		availablePeers:     make(map[string]*peerThunk, options.capacity),
-		availableChooser:   availableChooser,
+		peers:              make(map[string]*peerFacade, options.capacity),
+		offlinePeers:       make(map[string]peer.Identifier, options.capacity),
+		implementation:     implementation,
 		transport:          transport,
 		noShuffle:          options.noShuffle,
 		failFast:           options.failFast,
@@ -147,31 +159,33 @@ func New(name string, transport peer.Transport, availableChooser Implementation,
 // determine which peer to choose among available peers.
 // The abstract list manages available versus unavailable peers, intercepting
 // these notifications from the transport's concrete implementation of
-// peer.Peer with the peer.Subscriber API.
+// peer.StatusPeer with the peer.Subscriber API.
 // The peer list will not choose an unavailable peer, prefering to block until
 // one becomes available.
 //
 // The list is a suitable basis for concrete implementations like round-robin.
 type List struct {
 	lock sync.RWMutex
+	once *lifecycle.Once
 
 	name string
 
-	shouldRetainPeers  atomic.Bool
-	uninitializedPeers map[string]peer.Identifier
-
-	unavailablePeers   map[string]*peerThunk
-	availablePeers     map[string]*peerThunk
-	availableChooser   Implementation
+	peers              map[string]*peerFacade
+	offlinePeers       map[string]peer.Identifier
+	implementation     Implementation
 	peerAvailableEvent chan struct{}
 	transport          peer.Transport
 
 	noShuffle bool
 	failFast  bool
 	randSrc   rand.Source
-
-	once *lifecycle.Once
 }
+
+// Name returns the name of the list.
+func (pl *List) Name() string { return pl.name }
+
+// Transport returns the underlying transport for retaining and releasing peers.
+func (pl *List) Transport() peer.Transport { return pl.transport }
 
 // Update applies the additions and removals of peer Identifiers to the list
 // it returns a multi-error result of every failure that happened without
@@ -184,21 +198,16 @@ func (pl *List) Update(updates peer.ListUpdates) error {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
-	if pl.shouldRetainPeers.Load() {
-		return pl.updateInitialized(updates)
+	if !pl.once.IsRunning() {
+		return pl.updateOffline(updates)
 	}
-	return pl.updateUninitialized(updates)
+	return pl.updateOnline(updates)
 }
 
-// updateInitialized applies peer list updates when the peer list
-// is able to retain peers, putting the updates into the available
-// or unavailable containers.
-//
-// Must be run inside a mutex.Lock()
-func (pl *List) updateInitialized(updates peer.ListUpdates) error {
+func (pl *List) updateOnline(updates peer.ListUpdates) error {
 	var errs error
-	for _, pid := range updates.Removals {
-		errs = multierr.Append(errs, pl.removePeerIdentifier(pid))
+	for _, id := range updates.Removals {
+		errs = multierr.Append(errs, pl.remove(id))
 	}
 
 	add := updates.Additions
@@ -206,74 +215,21 @@ func (pl *List) updateInitialized(updates peer.ListUpdates) error {
 		add = shuffle(pl.randSrc, add)
 	}
 
-	for _, pid := range add {
-		errs = multierr.Append(errs, pl.addPeerIdentifier(pid))
+	for _, id := range add {
+		errs = multierr.Append(errs, pl.add(id))
 	}
 	return errs
 }
 
-// updateUninitialized applies peer list updates when the peer list
-// is **not** able to retain peers, putting the updates into a single
-// uninitialized peer list.
-//
-// Must be run inside a mutex.Lock()
-func (pl *List) updateUninitialized(updates peer.ListUpdates) error {
+func (pl *List) updateOffline(updates peer.ListUpdates) error {
 	var errs error
-	for _, pid := range updates.Removals {
-		if _, ok := pl.uninitializedPeers[pid.Identifier()]; !ok {
-			errs = multierr.Append(errs, peer.ErrPeerRemoveNotInList(pid.Identifier()))
-			continue
-		}
-		delete(pl.uninitializedPeers, pid.Identifier())
+	for _, id := range updates.Removals {
+		errs = multierr.Append(errs, pl.removeOffline(id))
 	}
-	for _, pid := range updates.Additions {
-		pl.uninitializedPeers[pid.Identifier()] = pid
+	for _, id := range updates.Additions {
+		errs = multierr.Append(errs, pl.addOffline(id))
 	}
-
 	return errs
-}
-
-// Must be run inside a mutex.Lock()
-func (pl *List) addPeerIdentifier(pid peer.Identifier) error {
-	if t := pl.getThunk(pid); t != nil {
-		return peer.ErrPeerAddAlreadyInList(pid.Identifier())
-	}
-
-	t := &peerThunk{list: pl, id: pid}
-	t.boundOnFinish = t.onFinish
-	p, err := pl.transport.RetainPeer(pid, t)
-	if err != nil {
-		return err
-	}
-	t.peer = p
-	return pl.addPeer(t)
-}
-
-// Must be run in a mutex.Lock()
-func (pl *List) addPeer(t *peerThunk) error {
-	if t.peer.Status().ConnectionStatus != peer.Available {
-		return pl.addToUnavailablePeers(t)
-	}
-
-	return pl.addToAvailablePeers(t)
-}
-
-// Must be run in a mutex.Lock()
-func (pl *List) addToUnavailablePeers(t *peerThunk) error {
-	pl.unavailablePeers[t.peer.Identifier()] = t
-	return nil
-}
-
-// Must be run in a mutex.Lock()
-func (pl *List) addToAvailablePeers(t *peerThunk) error {
-	if pl.availablePeers[t.peer.Identifier()] != nil {
-		return peer.ErrPeerAddAlreadyInList(t.peer.Identifier())
-	}
-	sub := pl.availableChooser.Add(t, t.id)
-	t.SetSubscriber(sub)
-	pl.availablePeers[t.Identifier()] = t
-	pl.notifyPeerAvailable()
-	return nil
 }
 
 // Start notifies the List that requests will start coming
@@ -285,24 +241,16 @@ func (pl *List) start() error {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
-	if err := pl.availableChooser.Start(); err != nil {
-		return err
-	}
+	all := pl.offlinePeerIdentifiers()
 
-	add := values(pl.uninitializedPeers)
-	if !pl.noShuffle {
-		add = shuffle(pl.randSrc, add)
-	}
-
-	var errs error
-	for _, pid := range add {
-		errs = multierr.Append(errs, pl.addPeerIdentifier(pid))
-		delete(pl.uninitializedPeers, pid.Identifier())
-	}
-
-	pl.shouldRetainPeers.Store(true)
-
-	return errs
+	var err error
+	err = multierr.Append(err, pl.updateOffline(peer.ListUpdates{
+		Removals: all,
+	}))
+	err = multierr.Append(err, pl.updateOnline(peer.ListUpdates{
+		Additions: all,
+	}))
+	return err
 }
 
 // Stop notifies the List that requests will stop coming
@@ -310,139 +258,118 @@ func (pl *List) Stop() error {
 	return pl.once.Stop(pl.stop)
 }
 
-// stop will release all the peers from the list
 func (pl *List) stop() error {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
-	var errs error
+	all := pl.onlinePeerIdentifiers()
 
-	if err := pl.availableChooser.Stop(); err != nil {
-		errs = multierr.Append(errs, err)
-	}
-
-	availablePeers := pl.removeAllAvailablePeers(pl.availablePeers)
-	errs = pl.releaseAll(errs, availablePeers)
-	pl.addToUninitialized(availablePeers)
-
-	unavailablePeers := pl.removeAllUnavailablePeers(pl.unavailablePeers)
-	errs = pl.releaseAll(errs, unavailablePeers)
-	pl.addToUninitialized(unavailablePeers)
-
-	pl.shouldRetainPeers.Store(false)
-
-	return errs
+	var err error
+	err = multierr.Append(err, pl.updateOnline(peer.ListUpdates{
+		Removals: all,
+	}))
+	err = multierr.Append(err, pl.updateOffline(peer.ListUpdates{
+		Additions: all,
+	}))
+	return err
 }
 
-func (pl *List) addToUninitialized(thunks []*peerThunk) {
-	for _, t := range thunks {
-		pl.uninitializedPeers[t.id.Identifier()] = t.id
-	}
+// IsRunning returns whether the peer list is running.
+func (pl *List) IsRunning() bool {
+	return pl.once.IsRunning()
 }
 
-// removeAllAvailablePeers will clear the availablePeers list and return all
-// the Peers in the list in a slice
-// Must be run in a mutex.Lock()
-func (pl *List) removeAllAvailablePeers(toRemove map[string]*peerThunk) []*peerThunk {
-	thunks := make([]*peerThunk, 0, len(toRemove))
-	for id, t := range toRemove {
-		thunks = append(thunks, t)
-		delete(pl.availablePeers, id)
-		pl.availableChooser.Remove(t, t.id, t.Subscriber())
-	}
-	return thunks
-}
+// add retains a peer and sets up a thunk (a thin proxy for a peer) to receive
+// connection status notifications from the dialer and track pending request
+// counts.
+//
+// add does not add the peer to the list of peers available for choosing (the
+// Implementation).
+// The thunk is responsible for adding and removing the peer from the
+// collection of available peers based on connection status notifications.
+// Must be run inside a mutex.Lock()
+func (pl *List) add(id peer.Identifier) error {
+	addr := id.Identifier()
 
-// removeAllUnavailablePeers will clear the unavailablePeers list and
-// return all the Peers in the list in a slice
-// Must be run in a mutex.Lock()
-func (pl *List) removeAllUnavailablePeers(toRemove map[string]*peerThunk) []*peerThunk {
-	thunks := make([]*peerThunk, 0, len(toRemove))
-	for id, t := range toRemove {
-		thunks = append(thunks, t)
-		delete(toRemove, id)
+	if _, ok := pl.peers[addr]; ok {
+		return peer.ErrPeerAddAlreadyInList(addr)
 	}
-	return thunks
-}
 
-// releaseAll will iterate through a list of peers and call release
-// on the transport
-func (pl *List) releaseAll(errs error, peers []*peerThunk) error {
-	for _, t := range peers {
-		if err := pl.transport.ReleasePeer(t.peer, t); err != nil {
-			errs = multierr.Append(errs, err)
-		}
-	}
-	return errs
-}
+	t := newPeerFacade(pl, id)
+	t.boundOnFinish = t.onFinish
 
-// removePeerIdentifier will go remove references to the peer identifier and release
-// it from the transport
-// Must be run in a mutex.Lock()
-func (pl *List) removePeerIdentifier(pid peer.Identifier) error {
-	t, err := pl.removePeerIdentifierReferences(pid)
+	p, err := pl.transport.RetainPeer(id, t)
 	if err != nil {
-		// The peer has already been removed
 		return err
 	}
 
-	return pl.transport.ReleasePeer(pid, t)
-}
+	t.peer = p
+	pl.peers[addr] = t
+	t.notifyStatusChanged(p)
 
-// removePeerIdentifierReferences will search through the Available and Unavailable Peers
-// for the PeerID and remove it
-// Must be run in a mutex.Lock()
-func (pl *List) removePeerIdentifierReferences(pid peer.Identifier) (*peerThunk, error) {
-	if t := pl.availablePeers[pid.Identifier()]; t != nil {
-		return t, pl.removeFromAvailablePeers(t)
-	}
-
-	if t, ok := pl.unavailablePeers[pid.Identifier()]; ok && t != nil {
-		pl.removeFromUnavailablePeers(t)
-		return t, nil
-	}
-
-	return nil, peer.ErrPeerRemoveNotInList(pid.Identifier())
-}
-
-// removeFromAvailablePeers remove a peer from the Available Peers list the
-// Peer should already be validated as non-nil and in the Available list.
-// Must be run in a mutex.Lock()
-func (pl *List) removeFromAvailablePeers(t *peerThunk) error {
-	delete(pl.availablePeers, t.peer.Identifier())
-	pl.availableChooser.Remove(t, t.id, t.Subscriber())
-	t.SetSubscriber(nil)
 	return nil
 }
 
-// removeFromUnavailablePeers remove a peer from the Unavailable Peers list the
-// Peer should already be validated as non-nil and in the Unavailable list.
+func (pl *List) addOffline(id peer.Identifier) error {
+	addr := id.Identifier()
+
+	if _, ok := pl.offlinePeers[addr]; ok {
+		return peer.ErrPeerAddAlreadyInList(addr)
+	}
+
+	pl.offlinePeers[addr] = id
+	return nil
+}
+
+// remove releases and forgets a peer.
 // Must be run in a mutex.Lock()
-func (pl *List) removeFromUnavailablePeers(t *peerThunk) {
-	delete(pl.unavailablePeers, t.peer.Identifier())
+func (pl *List) remove(id peer.Identifier) error {
+	addr := id.Identifier()
+
+	t, ok := pl.peers[addr]
+	if !ok {
+		return peer.ErrPeerRemoveNotInList(addr)
+	}
+
+	t.remove()
+	delete(pl.peers, addr)
+
+	return pl.transport.ReleasePeer(id, t)
+}
+
+func (pl *List) removeOffline(id peer.Identifier) error {
+	addr := id.Identifier()
+
+	_, ok := pl.offlinePeers[addr]
+	if !ok {
+		return peer.ErrPeerRemoveNotInList(addr)
+	}
+
+	delete(pl.offlinePeers, addr)
+
+	return nil
 }
 
 // Choose selects the next available peer in the peer list
 func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, func(error), error) {
 	if err := pl.once.WaitUntilRunning(ctx); err != nil {
-		return nil, nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "%s peer list is not running", pl.name)
+		return nil, nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "%q peer list is not running", pl.name)
 	}
-
 	for {
-		pl.lock.Lock()
-		p := pl.availableChooser.Choose(ctx, req)
-		pl.lock.Unlock()
-
+		p := pl.choose(ctx, req)
+		// choose signals that there are no available peers by returning nil.
+		// Thereafter, every Choose call will wait for a peer or peers to
+		// become available again.
 		if p != nil {
-			// A nil peer is an indication that there are no more peers
-			// available for pending choices.
-			// A non-nil peer indicates that we have drained the waiting
-			// channel but there may be other peer lists waiting for a peer.
-			// We re-fill the channel enabling those choices to proceed
-			// concurrently.
-			t := p.(*peerThunk)
+			// We call notifyPeerAvailable because there is a chance that more
+			// than one chooser is blocked in waitForPeerAddedEvent.
+			// Once a peer becomes available, all of these goroutines should
+			// resume, not just one, until no peers are available again.
+			// The underlying channel has a limited capacity, so every success
+			// must trigger the rest to resume.
 			pl.notifyPeerAvailable()
-			t.StartRequest()
+			t := p.(*peerFacade)
+			t.onStart()
 			return t.peer, t.boundOnFinish, nil
 		} else if pl.failFast {
 			return nil, nil, yarpcerrors.Newf(yarpcerrors.CodeUnavailable, "%q peer list has no peer available", pl.name)
@@ -453,9 +380,12 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 	}
 }
 
-// IsRunning returns whether the peer list is running.
-func (pl *List) IsRunning() bool {
-	return pl.once.IsRunning()
+// choose in a function so panics in the implementation still unlock.
+func (pl *List) choose(ctx context.Context, req *transport.Request) peer.StatusPeer {
+	pl.lock.Lock()
+	defer pl.lock.Unlock()
+
+	return pl.implementation.Choose(ctx, req)
 }
 
 // notifyPeerAvailable writes to a channel indicating that a Peer is currently
@@ -488,143 +418,152 @@ func (pl *List) newNoContextDeadlineError() error {
 }
 
 func (pl *List) newUnavailableError(err error) error {
-	return yarpcerrors.Newf(yarpcerrors.CodeUnavailable, "%s peer list timed out waiting for peer: %s", pl.name, err.Error())
+	return yarpcerrors.Newf(yarpcerrors.CodeUnavailable, _unavailableError, pl.name, err.Error())
 }
 
 // NotifyStatusChanged receives status change notifications for peers in the
 // list.
 func (pl *List) NotifyStatusChanged(pid peer.Identifier) {
 	pl.lock.RLock()
-	t := pl.getThunk(pid)
+	p := pl.peers[pid.Identifier()]
 	pl.lock.RUnlock()
 
-	if t != nil {
-		t.NotifyStatusChanged(t.id)
+	if p != nil {
+		p.NotifyStatusChanged(p.id)
 	}
-}
-
-// getThunk returns either the available or unavailable peer thunk.
-// Must be called under a lock.
-func (pl *List) getThunk(pid peer.Identifier) *peerThunk {
-	if t := pl.availablePeers[pid.Identifier()]; t != nil {
-		return t
-	}
-	return pl.unavailablePeers[pid.Identifier()]
-}
-
-// notifyStatusChanged gets called by peer thunks
-func (pl *List) notifyStatusChanged(pid peer.Identifier) {
-	pl.lock.Lock()
-	defer pl.lock.Unlock()
-
-	if t := pl.availablePeers[pid.Identifier()]; t != nil {
-		// TODO: log error
-		_ = pl.handleAvailablePeerStatusChange(t)
-		return
-	}
-
-	if t := pl.unavailablePeers[pid.Identifier()]; t != nil {
-		// TODO: log error
-		_ = pl.handleUnavailablePeerStatusChange(t)
-	}
-	// No action required
-}
-
-// handleAvailablePeerStatusChange checks the connection status of a connected
-// peer to potentially move that Peer from the implementation data structure to
-// the unavailable peer map
-// Must be run in a mutex.Lock()
-func (pl *List) handleAvailablePeerStatusChange(t *peerThunk) error {
-	if t.peer.Status().ConnectionStatus == peer.Available {
-		// Peer is in the proper pool, ignore
-		return nil
-	}
-
-	pl.availableChooser.Remove(t, t.id, t.Subscriber())
-	t.SetSubscriber(nil)
-	delete(pl.availablePeers, t.peer.Identifier())
-
-	return pl.addToUnavailablePeers(t)
-
-}
-
-// handleUnavailablePeerStatusChange checks the connection status of an unavailable peer to potentially
-// move that Peer from the unavailablePeerMap into the available Peer Ring
-// Must be run in a mutex.Lock()
-func (pl *List) handleUnavailablePeerStatusChange(t *peerThunk) error {
-	if t.peer.Status().ConnectionStatus != peer.Available {
-		// Peer is in the proper pool, ignore
-		return nil
-	}
-
-	pl.removeFromUnavailablePeers(t)
-	return pl.addToAvailablePeers(t)
-}
-
-// Available returns whether the identifier peer is available for traffic.
-func (pl *List) Available(p peer.Identifier) bool {
-	_, ok := pl.availablePeers[p.Identifier()]
-	return ok
-}
-
-// Uninitialized returns whether a peer is waiting for the peer list to start.
-func (pl *List) Uninitialized(p peer.Identifier) bool {
-	_, ok := pl.uninitializedPeers[p.Identifier()]
-	return ok
-}
-
-// Peers returns a snapshot of all retained (available and
-// unavailable) peers.
-func (pl *List) Peers() []peer.Peer {
-	pl.lock.RLock()
-	defer pl.lock.RUnlock()
-	peers := make([]peer.Peer, 0)
-	for _, t := range pl.availablePeers {
-		peers = append(peers, t.peer)
-	}
-	for _, t := range pl.unavailablePeers {
-		peers = append(peers, t.peer)
-	}
-	return peers
 }
 
 // NumAvailable returns how many peers are available.
 func (pl *List) NumAvailable() int {
-	return len(pl.availablePeers)
+	pl.lock.RLock()
+	defer pl.lock.RUnlock()
+
+	num := 0
+	for _, p := range pl.peers {
+		if p.status.ConnectionStatus == peer.Available {
+			num++
+		}
+	}
+	return num
 }
 
-// NumUnavailable returns how many peers are unavailable.
+// NumUnavailable returns how many peers are unavailable while the list is
+// running.
 func (pl *List) NumUnavailable() int {
-	return len(pl.unavailablePeers)
+	pl.lock.RLock()
+	defer pl.lock.RUnlock()
+
+	num := 0
+	for _, p := range pl.peers {
+		if p.status.ConnectionStatus == peer.Unavailable {
+			num++
+		}
+	}
+	return num
 }
 
-// NumUninitialized returns how many peers are unavailable.
+// NumUninitialized returns how many peers are unavailable because the peer
+// list was stopped or has not yet started.
 func (pl *List) NumUninitialized() int {
-	return len(pl.uninitializedPeers)
+	pl.lock.RLock()
+	defer pl.lock.RUnlock()
+
+	return len(pl.offlinePeers)
+}
+
+// String returns a representation of the peer list state for debugging.
+func (pl *List) String() string {
+	pl.lock.RLock()
+	defer pl.lock.RUnlock()
+
+	peers := ""
+	for _, peer := range pl.peers {
+		peers += " " + peer.String()
+	}
+
+	return fmt.Sprintf("[%s%s]", pl.name, peers)
+}
+
+// Available returns whether the identifier peer is available for traffic.
+func (pl *List) Available(pid peer.Identifier) bool {
+	pl.lock.RLock()
+	defer pl.lock.RUnlock()
+
+	if p, ok := pl.peers[pid.Identifier()]; ok {
+		return p.Status().ConnectionStatus == peer.Available
+	}
+	return false
+}
+
+// Uninitialized returns whether the identifier peer is present but uninitialized.
+func (pl *List) Uninitialized(pid peer.Identifier) bool {
+	pl.lock.RLock()
+	defer pl.lock.RUnlock()
+
+	_, exists := pl.offlinePeers[pid.Identifier()]
+	return exists
+}
+
+// Peers returns a snapshot of all retained (available and
+// unavailable) peers.
+func (pl *List) Peers() []peer.StatusPeer {
+	pl.lock.RLock()
+	defer pl.lock.RUnlock()
+
+	peers := make([]peer.StatusPeer, 0)
+	for _, p := range pl.peers {
+		peers = append(peers, p.peer)
+	}
+	return peers
+}
+
+func (pl *List) onlinePeerIdentifiers() []peer.Identifier {
+	addrs := make([]string, 0, len(pl.peers))
+	for addr := range pl.peers {
+		addrs = append(addrs, addr)
+	}
+	sort.Strings(addrs)
+
+	ids := make([]peer.Identifier, len(addrs))
+	for i, addr := range addrs {
+		ids[i] = pl.peers[addr].peer
+	}
+	return ids
+}
+
+func (pl *List) offlinePeerIdentifiers() []peer.Identifier {
+	addrs := make([]string, 0, len(pl.offlinePeers))
+	for addr := range pl.offlinePeers {
+		addrs = append(addrs, addr)
+	}
+	sort.Strings(addrs)
+
+	ids := make([]peer.Identifier, len(addrs))
+	for i, addr := range addrs {
+		id := pl.offlinePeers[addr]
+		ids[i] = id
+	}
+	return ids
 }
 
 // Introspect returns a ChooserStatus with a summary of the Peers.
 func (pl *List) Introspect() introspection.ChooserStatus {
-	state := "Stopped"
-	if pl.IsRunning() {
-		state = "Running"
+	peers := pl.Peers()
+
+	available := 0
+	unavailable := 0
+	for _, p := range peers {
+		if p.Status().ConnectionStatus == peer.Available {
+			available++
+		} else {
+			unavailable++
+		}
 	}
 
-	pl.lock.Lock()
-	availables := make([]peer.Peer, 0, len(pl.availablePeers))
-	for _, t := range pl.availablePeers {
-		availables = append(availables, t.peer)
-	}
-	unavailables := make([]peer.Peer, 0, len(pl.unavailablePeers))
-	for _, t := range pl.unavailablePeers {
-		unavailables = append(unavailables, t.peer)
-	}
-	pl.lock.Unlock()
+	peerStatuses := make([]introspection.PeerStatus, 0,
+		len(pl.peers))
 
-	peersStatus := make([]introspection.PeerStatus, 0,
-		len(availables)+len(unavailables))
-
-	buildPeerStatus := func(peer peer.Peer) introspection.PeerStatus {
+	buildPeerStatus := func(peer peer.StatusPeer) introspection.PeerStatus {
 		ps := peer.Status()
 		return introspection.PeerStatus{
 			Identifier: peer.Identifier(),
@@ -634,19 +573,15 @@ func (pl *List) Introspect() introspection.ChooserStatus {
 		}
 	}
 
-	for _, peer := range availables {
-		peersStatus = append(peersStatus, buildPeerStatus(peer))
-	}
-
-	for _, peer := range unavailables {
-		peersStatus = append(peersStatus, buildPeerStatus(peer))
+	for _, peer := range peers {
+		peerStatuses = append(peerStatuses, buildPeerStatus(peer))
 	}
 
 	return introspection.ChooserStatus{
 		Name: pl.name,
-		State: fmt.Sprintf("%s (%d/%d available)", state, len(availables),
-			len(availables)+len(unavailables)),
-		Peers: peersStatus,
+		State: fmt.Sprintf("%s (%d/%d available)", pl.once.State(), available,
+			available+unavailable),
+		Peers: peerStatuses,
 	}
 }
 
@@ -661,13 +596,4 @@ func shuffle(src rand.Source, in []peer.Identifier) []peer.Identifier {
 		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
 	}
 	return shuffled
-}
-
-// values returns a slice of the values contained in a map of peers.
-func values(m map[string]peer.Identifier) []peer.Identifier {
-	vs := make([]peer.Identifier, 0, len(m))
-	for _, v := range m {
-		vs = append(vs, v)
-	}
-	return vs
 }
