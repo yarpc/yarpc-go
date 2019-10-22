@@ -32,7 +32,6 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/integrationtest"
 	"go.uber.org/yarpc/internal/testtime"
-	"go.uber.org/yarpc/internal/yarpctest"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/transport/http"
 )
@@ -63,7 +62,7 @@ var spec = integrationtest.TransportSpec{
 		return x.(*http.Transport).NewInbound(addr)
 	},
 	Addr: func(x peer.Transport, ib transport.Inbound) string {
-		return yarpctest.ZeroAddrToHostPort(ib.(*http.Inbound).Addr())
+		return ib.(*http.Inbound).Addr().String()
 	},
 }
 
@@ -72,10 +71,10 @@ func TestHTTPWithRoundRobin(t *testing.T) {
 	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 	defer cancel()
 
-	permanent, permanentAddr := spec.NewServer(t, ":0")
+	permanent, permanentAddr := spec.NewServer(t, "127.0.0.1:0")
 	defer permanent.Stop()
 
-	temporary, temporaryAddr := spec.NewServer(t, ":0")
+	temporary, temporaryAddr := spec.NewServer(t, "127.0.0.1:0")
 	defer temporary.Stop()
 
 	// Construct a client with a bank of peers. We will keep one running all
@@ -107,7 +106,7 @@ func TestHTTPWithRoundRobin(t *testing.T) {
 }
 
 func TestHTTPOnSuspect(t *testing.T) {
-	server, serverAddr := spec.NewServer(t, ":0")
+	server, serverAddr := spec.NewServer(t, "127.0.0.1:0")
 
 	client, c := spec.NewClient(t, []string{serverAddr})
 	defer client.Stop()
