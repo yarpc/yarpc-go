@@ -37,11 +37,10 @@ type grpcPeer struct {
 	t          *Transport
 	clientConn *grpc.ClientConn
 	stoppingC  chan struct{}
-	stoppedC   chan error
+	stoppedC   chan struct{}
 	lock       sync.Mutex
 	stopping   bool
 	stopped    bool
-	stoppedErr error
 }
 
 func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, error) {
@@ -63,15 +62,15 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 		t:          t,
 		clientConn: clientConn,
 		stoppingC:  make(chan struct{}),
-		stoppedC:   make(chan error, 1),
+		stoppedC:   make(chan struct{}),
 	}
 	go grpcPeer.monitor()
 	return grpcPeer, nil
 }
 
 func (p *grpcPeer) monitor() {
+	defer p.monitorStop()
 	if !p.monitorStart() {
-		p.monitorStop(nil)
 		return
 	}
 
@@ -87,7 +86,6 @@ func (p *grpcPeer) monitor() {
 		if changed {
 			peerConnectionStatus, err = connectivityStateToPeerConnectionStatus(connectivityState)
 			if err != nil {
-				p.monitorStop(err)
 				return
 			}
 			p.Peer.SetStatus(peerConnectionStatus)
@@ -105,7 +103,6 @@ func (p *grpcPeer) monitor() {
 
 		newConnectivityState, loop := p.monitorLoopWait(ctx, cancel, connectivityState)
 		if !loop {
-			p.monitorStop(nil)
 			return
 		}
 		changed = connectivityState != newConnectivityState
@@ -127,11 +124,10 @@ func (p *grpcPeer) monitorStart() bool {
 }
 
 // this should only be called by monitor()
-func (p *grpcPeer) monitorStop(err error) {
+func (p *grpcPeer) monitorStop() {
 	p.Peer.SetStatus(peer.Unavailable)
 	// Close always returns an error
 	_ = p.clientConn.Close()
-	p.stoppedC <- err
 	close(p.stoppedC)
 }
 
@@ -171,12 +167,9 @@ func (p *grpcPeer) stop() {
 func (p *grpcPeer) wait() error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	if p.stopped {
-		return p.stoppedErr
-	}
-	p.stoppedErr = <-p.stoppedC
-	p.stopped = true
-	return p.stoppedErr
+
+	<-p.stoppedC
+	return nil
 }
 
 func connectivityStateToPeerConnectionStatus(connectivityState connectivity.State) (peer.ConnectionStatus, error) {
