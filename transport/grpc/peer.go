@@ -94,7 +94,7 @@ func (p *grpcPeer) monitor() {
 		}
 
 		var ctx context.Context
-		var cancel context.CancelFunc
+		cancel := noop
 		if peerConnectionStatus == peer.Available {
 			attempts = 0
 			ctx = context.Background()
@@ -140,24 +140,20 @@ func (p *grpcPeer) monitorStop(err error) {
 //
 // return true to continue looping
 func (p *grpcPeer) monitorLoopWait(ctx context.Context, cancel context.CancelFunc, connectivityState connectivity.State) (connectivity.State, bool) {
+	defer cancel()
+
 	changedC := make(chan bool, 1)
 	go func() { changedC <- p.clientConn.WaitForStateChange(ctx, connectivityState) }()
 
 	loop := false
 	select {
 	case changed := <-changedC:
-		if cancel != nil {
-			cancel()
-		}
 		if changed {
 			connectivityState = p.clientConn.GetState()
 		}
 		loop = true
 	case <-p.stoppingC:
 	case <-p.t.once.Stopping():
-		if cancel != nil {
-			cancel()
-		}
 	}
 	return connectivityState, loop
 }
@@ -196,3 +192,5 @@ func connectivityStateToPeerConnectionStatus(connectivityState connectivity.Stat
 		return 0, yarpcerrors.Newf(yarpcerrors.CodeInternal, "unknown connectivity.State: %v", connectivityState)
 	}
 }
+
+func noop() {}
