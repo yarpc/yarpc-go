@@ -26,7 +26,7 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	peerlist "go.uber.org/yarpc/peer/peerlist/v2"
+	"go.uber.org/yarpc/peer/abstractlist"
 )
 
 type twoRandomChoicesList struct {
@@ -41,9 +41,9 @@ func newTwoRandomChoicesList(cap int, source rand.Source) *twoRandomChoicesList 
 	}
 }
 
-var _ peerlist.Implementation = (*twoRandomChoicesList)(nil)
+var _ abstractlist.Implementation = (*twoRandomChoicesList)(nil)
 
-func (l *twoRandomChoicesList) Add(peer peer.StatusPeer, _ peer.Identifier) peer.Subscriber {
+func (l *twoRandomChoicesList) Add(peer peer.StatusPeer, _ peer.Identifier) abstractlist.Subscriber {
 	index := len(l.subscribers)
 	l.subscribers = append(l.subscribers, &subscriber{
 		index: index,
@@ -52,7 +52,7 @@ func (l *twoRandomChoicesList) Add(peer peer.StatusPeer, _ peer.Identifier) peer
 	return l.subscribers[index]
 }
 
-func (l *twoRandomChoicesList) Remove(peer peer.StatusPeer, _ peer.Identifier, ps peer.Subscriber) {
+func (l *twoRandomChoicesList) Remove(peer peer.StatusPeer, _ peer.Identifier, ps abstractlist.Subscriber) {
 	sub, ok := ps.(*subscriber)
 	if !ok || len(l.subscribers) == 0 {
 		return
@@ -104,6 +104,6 @@ type subscriber struct {
 	peer  peer.StatusPeer
 }
 
-var _ peer.Subscriber = (*subscriber)(nil)
+var _ abstractlist.Subscriber = (*subscriber)(nil)
 
-func (*subscriber) NotifyStatusChanged(peer.Identifier) {}
+func (*subscriber) UpdatePendingRequestCount(peer.Identifier, int) {}
