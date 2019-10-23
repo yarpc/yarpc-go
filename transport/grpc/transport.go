@@ -65,9 +65,7 @@ func (t *Transport) Stop() error {
 	return t.once.Stop(func() error {
 		t.lock.Lock()
 		defer t.lock.Unlock()
-		for _, grpcPeer := range t.addressToPeer {
-			grpcPeer.stop()
-		}
+
 		var err error
 		for _, grpcPeer := range t.addressToPeer {
 			err = multierr.Append(err, grpcPeer.wait())
