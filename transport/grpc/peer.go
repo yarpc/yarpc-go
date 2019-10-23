@@ -62,7 +62,7 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 		Peer:       hostport.NewPeer(hostport.PeerIdentifier(address), t),
 		t:          t,
 		clientConn: clientConn,
-		stoppingC:  make(chan struct{}, 1),
+		stoppingC:  make(chan struct{}),
 		stoppedC:   make(chan error, 1),
 	}
 	go grpcPeer.monitor()
@@ -163,7 +163,6 @@ func (p *grpcPeer) stop() {
 	defer p.lock.Unlock()
 	if !p.stopping {
 		// this is selected on in monitor()
-		p.stoppingC <- struct{}{}
 		close(p.stoppingC)
 		p.stopping = true
 	}
