@@ -33,18 +33,12 @@ type peerScore struct {
 	peer peer.StatusPeer
 	heap *pendingHeap
 	// mutable
-	status peer.Status
-	score  int64
-	index  int // index in the peer list.
-	last   int // snapshot of the heap's incrementing counter.
+	status  peer.Status
+	pending int
+	index   int // index in the peer list.
+	last    int // snapshot of the heap's incrementing counter.
 }
 
-func (ps *peerScore) UpdatePendingRequestCount(_ peer.Identifier, _ int) {
-	ps.heap.notifyStatusChanged(ps)
-}
-
-func scorePeer(p peer.StatusPeer) int64 {
-	status := p.Status()
-	score := int64(status.PendingRequestCount)
-	return score
+func (ps *peerScore) UpdatePendingRequestCount(_ peer.Identifier, pendingRequestCount int) {
+	ps.heap.updatePendingRequestCount(ps, pendingRequestCount)
 }

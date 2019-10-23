@@ -71,7 +71,6 @@ func (ph *pendingHeap) Add(p peer.StatusPeer, _ peer.Identifier) abstractlist.Su
 	}
 
 	ps := &peerScore{peer: p, heap: ph}
-	ps.score = scorePeer(p)
 
 	ph.Lock()
 	ph.pushPeerRandom(ps)
@@ -90,8 +89,7 @@ func (ph *pendingHeap) Remove(p peer.StatusPeer, _ peer.Identifier, sub abstract
 	ph.Unlock()
 }
 
-func (ph *pendingHeap) notifyStatusChanged(ps *peerScore) {
-	status := ps.peer.Status()
+func (ph *pendingHeap) updatePendingRequestCount(ps *peerScore, pendingRequestCount int) {
 	ph.Lock()
 	// If the index is negative, the subscriber has already been deleted from the
 	// heap. This may occur when calling a peer and simultaneously removing it
@@ -101,8 +99,7 @@ func (ph *pendingHeap) notifyStatusChanged(ps *peerScore) {
 		return
 	}
 
-	ps.status = status
-	ps.score = scorePeer(ps.peer)
+	ps.pending = pendingRequestCount
 	ph.update(ps.index)
 	ph.Unlock()
 }
@@ -120,10 +117,10 @@ func (ph *pendingHeap) Len() int {
 func (ph *pendingHeap) Less(i, j int) bool {
 	p1 := ph.peers[i]
 	p2 := ph.peers[j]
-	if p1.score == p2.score {
+	if p1.pending == p2.pending {
 		return p1.last < p2.last
 	}
-	return p1.score < p2.score
+	return p1.pending < p2.pending
 }
 
 // Swap implements the heap.Interface. Do NOT use this method directly.
