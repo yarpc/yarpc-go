@@ -15,7 +15,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Metrics emit `CodeResourceExhausted` as a client error and `CodeUnimplemented`
   as a server error.
 - Simplified the flow of status change notifications for the HTTP transport to
-  reduce the liklihood of deadlocks.
+  reduce the likelihood of deadlocks.
+- Pivoted all peer lists onto a new `peer/abstractlist` implementation which
+  tracks pending request counts directly, instead of sharing information with
+  other peer lists through their common dialer.
+  This should also reduce the likelihood of deadlocks.
 
 ## [1.41.0] - 2019-10-01
 ### Fixed

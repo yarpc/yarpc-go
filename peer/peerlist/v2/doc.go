@@ -18,6 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// Package peerlist is deprecated in favor of
+// `go.uber.org/yarpc/peer/abstractlist` which additionally tracks pending
+// request count without coordination with the transport.
+//
 // Package peerlist provides a utility for managing peer availability with a
 // separate implementation of peer selection from just among available peers.
 // The peer list implements the peer.ChooserList interface and accepts a

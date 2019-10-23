@@ -19,9 +19,10 @@
 // THE SOFTWARE.
 
 // Package peerlist is deprecated in favor of
-// `go.uber.org/yarpc/peer/peerlist/v2` which can additionally convey peer list
+// `go.uber.org/yarpc/peer/abstractlist` which can additionally convey peer list
 // identifiers to the peerlist.Implementation without a wrapper type, allowing
-// a peer list updater to communicate shard information for example.
+// a peer list updater to communicate shard information for example, and tracks
+// pending request count without coordination with the transport.
 //
 // Package peerlist provides a utility for managing peer availability with a
 // separate implementation of peer selection from just among available peers.
