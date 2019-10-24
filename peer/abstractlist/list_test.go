@@ -111,7 +111,7 @@ func (l *mraList) Remove(peer peer.StatusPeer, pid peer.Identifier, ps Subscribe
 	l.mrr = peer
 }
 
-func (l *mraList) Choose(ctx context.Context, req *transport.Request) peer.StatusPeer {
+func (l *mraList) Choose(req *transport.Request) peer.StatusPeer {
 	return l.mra
 }
 

@@ -37,31 +37,26 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
-var (
-	_noContextDeadlineError = "%q peer list can't wait for peer without a context deadline"
-	_unavailableError       = "%q peer list timed out waiting for peer: %s"
-)
-
 // Implementation is a collection of available peers, with its own
-// subscribers for peer status change notifications.
-// The available peer list encapsulates the logic for selecting from among
-// available peers, whereas a ChooserList is responsible for retaining,
-// releasing, and monitoring peer availability.
+// subscribers for pending request count change notifications.
+// The abstract list uses the implementation to track peers that can be
+// returned by Choose, as opposed to those that were added but reported
+// unavailable by the underlying transport.
 // Use "go.uber.org/yarpc/peer/abstractlist".List in conjunction with an
-// Implementation to produce a "go.uber.org/yarpc/api/peer".List.
-//
-// abstractlist.List and abstractlist.Implementation compose well with sharding
-// schemes the degenerate to returning the only available peer.
+// Implementation to produce a "go.uber.org/yarpc/api/peer".ChooserList.
 //
 // The abstractlist.List calls Add, Remove, and Choose under a write lock so
 // the implementation is free to perform mutations on its own data without
 // locks.
+//
+// Choose must return nil immediately if the collection is empty.
+// The abstractlist.List guarantees that peers will only be added if they're
+// absent, and only removed they are present.
+// Choose should not block.
 type Implementation interface {
 	Add(peer.StatusPeer, peer.Identifier) Subscriber
 	Remove(peer.StatusPeer, peer.Identifier, Subscriber)
-	// Choose must return an available peer under a list read lock, so must
-	// not block.
-	Choose(context.Context, *transport.Request) peer.StatusPeer
+	Choose(*transport.Request) peer.StatusPeer
 }
 
 // Subscriber is a callback that implementations of peer list data structures
@@ -71,8 +66,6 @@ type Implementation interface {
 // pending request count changes.
 // A peer list implementation may have a single subscriber or a subscriber for
 // each peer.
-//
-// Peer list data structure implementations
 type Subscriber interface {
 	UpdatePendingRequestCount(peer.Identifier, int)
 }
@@ -164,6 +157,13 @@ func New(name string, transport peer.Transport, implementation Implementation, o
 // one becomes available.
 //
 // The list is a suitable basis for concrete implementations like round-robin.
+//
+// This abstract list does not participate in the transport’s pending request
+// count tracking.
+// The list tracks pending request counts for the peers that it chooses, does
+// not inform the transport of these choices, and ignores notifications from
+// the transport about choices other peer lists that share the same peers have
+// made.
 type List struct {
 	lock sync.RWMutex
 	once *lifecycle.Once
@@ -190,6 +190,17 @@ func (pl *List) Transport() peer.Transport { return pl.transport }
 // Update applies the additions and removals of peer Identifiers to the list
 // it returns a multi-error result of every failure that happened without
 // circuit breaking due to failures.
+//
+// Updates must be serialized so no peer is removed if it is absent and no peer
+// is added if it is present.
+// Updates should not have overlapping additions and removals, but the list
+// will tollerate this case, but may cause existing connections to close and be
+// replaced.
+//
+// Update will return errors if its invariants are violated, regardless of
+// whether updates are sent while the list is running.
+// Updates may be interleaved with Start and Stop in any order any number of
+// times.
 func (pl *List) Update(updates peer.ListUpdates) error {
 	if len(updates.Additions) == 0 && len(updates.Removals) == 0 {
 		return nil
@@ -204,6 +215,7 @@ func (pl *List) Update(updates peer.ListUpdates) error {
 	return pl.updateOnline(updates)
 }
 
+// updateOnline must be run under a list lock.
 func (pl *List) updateOnline(updates peer.ListUpdates) error {
 	var errs error
 	for _, id := range updates.Removals {
@@ -221,6 +233,7 @@ func (pl *List) updateOnline(updates peer.ListUpdates) error {
 	return errs
 }
 
+// updateOffline must be run under a list lock.
 func (pl *List) updateOffline(updates peer.ListUpdates) error {
 	var errs error
 	for _, id := range updates.Removals {
@@ -279,15 +292,16 @@ func (pl *List) IsRunning() bool {
 	return pl.once.IsRunning()
 }
 
-// add retains a peer and sets up a thunk (a thin proxy for a peer) to receive
+// add retains a peer and sets up a facade (a thin proxy for a peer) to receive
 // connection status notifications from the dialer and track pending request
 // counts.
 //
 // add does not add the peer to the list of peers available for choosing (the
 // Implementation).
-// The thunk is responsible for adding and removing the peer from the
+// The facade is responsible for adding and removing the peer from the
 // collection of available peers based on connection status notifications.
-// Must be run inside a mutex.Lock()
+//
+// add must be run inside a list lock.
 func (pl *List) add(id peer.Identifier) error {
 	addr := id.Identifier()
 
@@ -295,21 +309,23 @@ func (pl *List) add(id peer.Identifier) error {
 		return peer.ErrPeerAddAlreadyInList(addr)
 	}
 
-	t := newPeerFacade(pl, id)
-	t.boundOnFinish = t.onFinish
+	f := newPeerFacade(pl, id)
+	f.boundOnFinish = f.onFinish
 
-	p, err := pl.transport.RetainPeer(id, t)
+	// The transport must not call back before returning.
+	p, err := pl.transport.RetainPeer(id, f)
 	if err != nil {
 		return err
 	}
 
-	t.peer = p
-	pl.peers[addr] = t
-	t.notifyStatusChanged(p)
+	f.peer = p
+	pl.peers[addr] = f
+	f.notifyStatusChanged(p)
 
 	return nil
 }
 
+// addOffline must be run under a list lock.
 func (pl *List) addOffline(id peer.Identifier) error {
 	addr := id.Identifier()
 
@@ -322,19 +338,21 @@ func (pl *List) addOffline(id peer.Identifier) error {
 }
 
 // remove releases and forgets a peer.
-// Must be run in a mutex.Lock()
+//
+// remove must be run under a list lock.
 func (pl *List) remove(id peer.Identifier) error {
 	addr := id.Identifier()
 
-	t, ok := pl.peers[addr]
+	f, ok := pl.peers[addr]
 	if !ok {
 		return peer.ErrPeerRemoveNotInList(addr)
 	}
 
-	t.remove()
+	f.remove()
 	delete(pl.peers, addr)
 
-	return pl.transport.ReleasePeer(id, t)
+	// The transport must not call back before returning.
+	return pl.transport.ReleasePeer(id, f)
 }
 
 func (pl *List) removeOffline(id peer.Identifier) error {
@@ -350,16 +368,26 @@ func (pl *List) removeOffline(id peer.Identifier) error {
 	return nil
 }
 
-// Choose selects the next available peer in the peer list
+// Choose selects the next available peer in the peer list.
 func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, func(error), error) {
+	// Choose runs without a lock because it spends the bulk of its time in a
+	// wait loop.
+
+	// We wait for the chooser to start and produce an error if the list does
+	// not start before the context deadline times out.
+	// This ensures that the developer sees a meaningful error if they forget
+	// to run the lifecycle methods.
 	if err := pl.once.WaitUntilRunning(ctx); err != nil {
 		return nil, nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "%q peer list is not running", pl.name)
 	}
+
 	for {
-		p := pl.choose(ctx, req)
+		p := pl.choose(req)
 		// choose signals that there are no available peers by returning nil.
 		// Thereafter, every Choose call will wait for a peer or peers to
 		// become available again.
+		// We reach for an available peer optimistically, resorting to waiting
+		// for a notification only if the underlying list is empty.
 		if p != nil {
 			// We call notifyPeerAvailable because there is a chance that more
 			// than one chooser is blocked in waitForPeerAddedEvent.
@@ -368,9 +396,9 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 			// The underlying channel has a limited capacity, so every success
 			// must trigger the rest to resume.
 			pl.notifyPeerAvailable()
-			t := p.(*peerFacade)
-			t.onStart()
-			return t.peer, t.boundOnFinish, nil
+			f := p.(*peerFacade)
+			f.onStart()
+			return f.peer, f.boundOnFinish, nil
 		} else if pl.failFast {
 			return nil, nil, yarpcerrors.Newf(yarpcerrors.CodeUnavailable, "%q peer list has no peer available", pl.name)
 		}
@@ -380,12 +408,13 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 	}
 }
 
-// choose in a function so panics in the implementation still unlock.
-func (pl *List) choose(ctx context.Context, req *transport.Request) peer.StatusPeer {
+// choose guards the underlying implementation's consistency around a lock, and
+// recovers the lock if the underlying list panics.
+func (pl *List) choose(req *transport.Request) peer.StatusPeer {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
-	return pl.implementation.Choose(ctx, req)
+	return pl.implementation.Choose(req)
 }
 
 // NotifyStatusChanged receives status change notifications for peers in the
@@ -394,19 +423,19 @@ func (pl *List) choose(ctx context.Context, req *transport.Request) peer.StatusP
 // This function exists only as is necessary for dispatching connection status
 // changes from tests.
 func (pl *List) NotifyStatusChanged(pid peer.Identifier) {
-	pl.lock.RLock()
-	p := pl.peers[pid.Identifier()]
-	// We must release the lock because the underlying NotifyStatusChanged will
-	// reaquire it.
-	pl.lock.RUnlock()
+	pl.lock.Lock()
+	defer pl.lock.Unlock()
 
+	p := pl.peers[pid.Identifier()]
 	if p != nil {
-		p.NotifyStatusChanged(p.id)
+		p.notifyStatusChanged(p.id)
 	}
 }
 
 // notifyPeerAvailable writes to a channel indicating that a Peer is currently
-// available for requests
+// available for requests.
+//
+// notifyPeerAvailable may be called without a list lock.
 func (pl *List) notifyPeerAvailable() {
 	select {
 	case pl.peerAvailableEvent <- struct{}{}:
@@ -416,7 +445,8 @@ func (pl *List) notifyPeerAvailable() {
 
 // waitForPeerAddedEvent waits until a peer is added to the peer list or the
 // given context finishes.
-// Must NOT be run in a mutex.Lock()
+//
+// waitForPeerAddedEvent must not be run under a lock.
 func (pl *List) waitForPeerAddedEvent(ctx context.Context) error {
 	if _, ok := ctx.Deadline(); !ok {
 		return pl.newNoContextDeadlineError()
@@ -431,40 +461,35 @@ func (pl *List) waitForPeerAddedEvent(ctx context.Context) error {
 }
 
 func (pl *List) newNoContextDeadlineError() error {
-	return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, _noContextDeadlineError, pl.name)
+	return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "%q peer list can't wait for peer without a context deadline", pl.name)
 }
 
 func (pl *List) newUnavailableError(err error) error {
-	return yarpcerrors.Newf(yarpcerrors.CodeUnavailable, _unavailableError, pl.name, err.Error())
+	return yarpcerrors.Newf(yarpcerrors.CodeUnavailable, "%q peer list timed out waiting for peer: %s", pl.name, err.Error())
 }
 
-// NumAvailable returns how many peers are available.
-func (pl *List) NumAvailable() int {
+func (pl *List) countPeersWithStatus(status peer.ConnectionStatus) int {
 	pl.lock.RLock()
 	defer pl.lock.RUnlock()
 
 	num := 0
 	for _, p := range pl.peers {
-		if p.status.ConnectionStatus == peer.Available {
+		if p.status.ConnectionStatus == status {
 			num++
 		}
 	}
 	return num
+}
+
+// NumAvailable returns how many peers are available.
+func (pl *List) NumAvailable() int {
+	return pl.countPeersWithStatus(peer.Available)
 }
 
 // NumUnavailable returns how many peers are unavailable while the list is
 // running.
 func (pl *List) NumUnavailable() int {
-	pl.lock.RLock()
-	defer pl.lock.RUnlock()
-
-	num := 0
-	for _, p := range pl.peers {
-		if p.status.ConnectionStatus == peer.Unavailable {
-			num++
-		}
-	}
-	return num
+	return pl.countPeersWithStatus(peer.Unavailable)
 }
 
 // NumUninitialized returns how many peers are unavailable because the peer
@@ -496,13 +521,12 @@ func (pl *List) Uninitialized(pid peer.Identifier) bool {
 	return exists
 }
 
-// Peers returns a snapshot of all retained (available and
-// unavailable) peers.
+// Peers returns a snapshot of all retained (available and unavailable) peers.
 func (pl *List) Peers() []peer.StatusPeer {
 	pl.lock.RLock()
 	defer pl.lock.RUnlock()
 
-	peers := make([]peer.StatusPeer, 0)
+	peers := make([]peer.StatusPeer, 0, len(pl.peers))
 	for _, p := range pl.peers {
 		peers = append(peers, p.peer)
 	}
@@ -510,6 +534,8 @@ func (pl *List) Peers() []peer.StatusPeer {
 }
 
 func (pl *List) onlinePeerIdentifiers() []peer.Identifier {
+	// This is not duplicate code with offlinePeerIdentifiers, as it traverses
+	// peers instead of offlinePeers.
 	addrs := make([]string, 0, len(pl.peers))
 	for addr := range pl.peers {
 		addrs = append(addrs, addr)
@@ -524,6 +550,8 @@ func (pl *List) onlinePeerIdentifiers() []peer.Identifier {
 }
 
 func (pl *List) offlinePeerIdentifiers() []peer.Identifier {
+	// This is not duplicate code with offlinePeerIdentifiers, as it traverses
+	// offlinePeers instead of onlinePeers.
 	addrs := make([]string, 0, len(pl.offlinePeers))
 	for addr := range pl.offlinePeers {
 		addrs = append(addrs, addr)
@@ -540,8 +568,8 @@ func (pl *List) offlinePeerIdentifiers() []peer.Identifier {
 
 // Introspect returns a ChooserStatus with a summary of the Peers.
 func (pl *List) Introspect() introspection.ChooserStatus {
-	pl.lock.Lock()
-	defer pl.lock.Unlock()
+	pl.lock.RLock()
+	defer pl.lock.RUnlock()
 
 	available := 0
 	unavailable := 0
