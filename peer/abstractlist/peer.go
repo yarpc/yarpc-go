@@ -78,13 +78,13 @@ func (p *peerFacade) notifyStatusChanged(id peer.Identifier) {
 	if p.status.ConnectionStatus != status {
 		p.status.ConnectionStatus = status
 		switch status {
-		case peer.Unavailable, peer.Connecting:
-			p.list.implementation.Remove(p, p.id, p.subscriber)
-			p.subscriber = nil
 		case peer.Available:
 			sub := p.list.implementation.Add(p, p.id)
 			p.subscriber = sub
 			p.list.notifyPeerAvailable()
+		default:
+			p.list.implementation.Remove(p, p.id, p.subscriber)
+			p.subscriber = nil
 		}
 	}
 }
