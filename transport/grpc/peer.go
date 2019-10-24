@@ -35,7 +35,6 @@ type grpcPeer struct {
 	t          *Transport
 	ctx        context.Context
 	cancel     context.CancelFunc
-	status     peer.ConnectionStatus
 	clientConn *grpc.ClientConn
 	stoppedC   chan struct{}
 }
@@ -72,29 +71,22 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 }
 
 func (p *grpcPeer) monitor() {
-	p.setStatus(peer.Unavailable)
+	p.Peer.SetStatus(peer.Unavailable)
 	var grpcStatus connectivity.State
 	for {
 		grpcStatus = p.clientConn.GetState()
 		yarpcStatus := grpcStatusToYARPCStatus(grpcStatus)
-		p.setStatus(yarpcStatus)
+		p.Peer.SetStatus(yarpcStatus)
 
 		if !p.clientConn.WaitForStateChange(p.ctx, grpcStatus) {
 			break
 		}
 	}
-	p.setStatus(peer.Unavailable)
+	p.Peer.SetStatus(peer.Unavailable)
 
 	// Close always returns an error.
 	_ = p.clientConn.Close()
 	close(p.stoppedC)
-}
-
-func (p *grpcPeer) setStatus(status peer.ConnectionStatus) {
-	if p.status != status {
-		p.status = status
-		p.Peer.SetStatus(status)
-	}
 }
 
 func (p *grpcPeer) stop() {
