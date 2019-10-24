@@ -22,11 +22,9 @@ package grpc
 
 import (
 	"context"
-	"sync"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 )
@@ -35,12 +33,11 @@ type grpcPeer struct {
 	*hostport.Peer
 
 	t          *Transport
+	ctx        context.Context
+	cancel     context.CancelFunc
+	status     peer.ConnectionStatus
 	clientConn *grpc.ClientConn
-	stoppingC  chan struct{}
 	stoppedC   chan struct{}
-	lock       sync.Mutex
-	stopping   bool
-	stopped    bool
 }
 
 func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, error) {
@@ -57,132 +54,64 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 	if err != nil {
 		return nil, err
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
 	grpcPeer := &grpcPeer{
 		Peer:       hostport.NewPeer(hostport.PeerIdentifier(address), t),
 		t:          t,
+		ctx:        ctx,
+		cancel:     cancel,
 		clientConn: clientConn,
-		stoppingC:  make(chan struct{}),
 		stoppedC:   make(chan struct{}),
 	}
+
 	go grpcPeer.monitor()
+
 	return grpcPeer, nil
 }
 
 func (p *grpcPeer) monitor() {
-	defer p.monitorStop()
-	if !p.monitorStart() {
-		return
-	}
-
-	var attempts uint
-	backoff := p.t.options.backoffStrategy.Backoff()
-
-	connectivityState := p.clientConn.GetState()
-	changed := true
+	p.setStatus(peer.Unavailable)
+	var grpcStatus connectivity.State
 	for {
-		var peerConnectionStatus peer.ConnectionStatus
-		var err error
-		// will be called the first time since changed is initialized to true
-		if changed {
-			peerConnectionStatus, err = connectivityStateToPeerConnectionStatus(connectivityState)
-			if err != nil {
-				return
-			}
-			p.Peer.SetStatus(peerConnectionStatus)
-		}
+		grpcStatus = p.clientConn.GetState()
+		yarpcStatus := grpcStatusToYARPCStatus(grpcStatus)
+		p.setStatus(yarpcStatus)
 
-		var ctx context.Context
-		cancel := noop
-		if peerConnectionStatus == peer.Available {
-			attempts = 0
-			ctx = context.Background()
-		} else {
-			attempts++
-			ctx, cancel = context.WithTimeout(context.Background(), backoff.Duration(attempts))
+		if !p.clientConn.WaitForStateChange(p.ctx, grpcStatus) {
+			break
 		}
-
-		newConnectivityState, loop := p.monitorLoopWait(ctx, cancel, connectivityState)
-		if !loop {
-			return
-		}
-		changed = connectivityState != newConnectivityState
-		connectivityState = newConnectivityState
 	}
-}
+	p.setStatus(peer.Unavailable)
 
-// return true if the transport is started
-// return false is monitor was stopped in the meantime
-// this should only be called by monitor()
-func (p *grpcPeer) monitorStart() bool {
-	select {
-	// wait for start so we can be certain that we have a channel
-	case <-p.t.once.Started():
-		return true
-	case <-p.stoppingC:
-		return false
-	}
-}
-
-// this should only be called by monitor()
-func (p *grpcPeer) monitorStop() {
-	p.Peer.SetStatus(peer.Unavailable)
-	// Close always returns an error
+	// Close always returns an error.
 	_ = p.clientConn.Close()
 	close(p.stoppedC)
 }
 
-// this should only be called by monitor()
-// this does not correlate to wait() at all
-//
-// return true to continue looping
-func (p *grpcPeer) monitorLoopWait(ctx context.Context, cancel context.CancelFunc, connectivityState connectivity.State) (connectivity.State, bool) {
-	defer cancel()
-
-	changedC := make(chan bool, 1)
-	go func() { changedC <- p.clientConn.WaitForStateChange(ctx, connectivityState) }()
-
-	loop := false
-	select {
-	case changed := <-changedC:
-		if changed {
-			connectivityState = p.clientConn.GetState()
-		}
-		loop = true
-	case <-p.stoppingC:
-	case <-p.t.once.Stopping():
+func (p *grpcPeer) setStatus(status peer.ConnectionStatus) {
+	if p.status != status {
+		p.status = status
+		p.Peer.SetStatus(status)
 	}
-	return connectivityState, loop
 }
 
 func (p *grpcPeer) stop() {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	if !p.stopping {
-		// this is selected on in monitor()
-		close(p.stoppingC)
-		p.stopping = true
-	}
+	p.cancel()
 }
 
-func (p *grpcPeer) wait() error {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
+func (p *grpcPeer) wait() {
 	<-p.stoppedC
-	return nil
 }
 
-func connectivityStateToPeerConnectionStatus(connectivityState connectivity.State) (peer.ConnectionStatus, error) {
-	switch connectivityState {
-	case connectivity.Idle, connectivity.TransientFailure, connectivity.Shutdown:
-		return peer.Unavailable, nil
-	case connectivity.Connecting:
-		return peer.Connecting, nil
+func grpcStatusToYARPCStatus(grpcStatus connectivity.State) peer.ConnectionStatus {
+	switch grpcStatus {
 	case connectivity.Ready:
-		return peer.Available, nil
+		return peer.Available
+	case connectivity.Connecting:
+		return peer.Connecting
 	default:
-		return 0, yarpcerrors.Newf(yarpcerrors.CodeInternal, "unknown connectivity.State: %v", connectivityState)
+		return peer.Unavailable
 	}
 }
-
-func noop() {}

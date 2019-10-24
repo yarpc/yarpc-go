@@ -24,7 +24,6 @@ import (
 	"net"
 	"sync"
 
-	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/pkg/lifecycle"
 )
@@ -66,11 +65,13 @@ func (t *Transport) Stop() error {
 		t.lock.Lock()
 		defer t.lock.Unlock()
 
-		var err error
 		for _, grpcPeer := range t.addressToPeer {
-			err = multierr.Append(err, grpcPeer.wait())
+			grpcPeer.stop()
 		}
-		return err
+		for _, grpcPeer := range t.addressToPeer {
+			grpcPeer.wait()
+		}
+		return nil
 	})
 }
 
@@ -143,7 +144,7 @@ func (t *Transport) ReleasePeer(pid peer.Identifier, ps peer.Subscriber) error {
 	if p.NumSubscribers() == 0 {
 		delete(t.addressToPeer, address)
 		p.stop()
-		return p.wait()
+		p.wait()
 	}
 	return nil
 }
