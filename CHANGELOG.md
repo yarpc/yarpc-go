@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   as a server error.
 - Simplified the flow of status change notifications for the HTTP transport to
   reduce the liklihood of deadlocks.
+- Removed a bug from the gRPC transport that would cause a very rare deadlock
+  during production deploys and restarts.
+  The gRPC peer release method would synchronize with the connection status
+  change monitor loop, waiting for it to exit.
+  This would wait forever since retain was called while holding a lock on the
+  list.
 
 ## [1.41.0] - 2019-10-01
 ### Fixed
