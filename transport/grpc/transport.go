@@ -144,7 +144,6 @@ func (t *Transport) ReleasePeer(pid peer.Identifier, ps peer.Subscriber) error {
 	if p.NumSubscribers() == 0 {
 		delete(t.addressToPeer, address)
 		p.stop()
-		p.wait()
 	}
 	return nil
 }
