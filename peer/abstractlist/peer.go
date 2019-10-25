@@ -26,24 +26,20 @@ import (
 
 var _ peer.Peer = (*peerFacade)(nil)
 
-// peerFacade captures a peer and its corresponding Subscriber,
-// and serves as a Peer by proxy.
+// peerFacade captures a peer and its corresponding Subscriber, and serves as a
+// Peer by proxy.
 // This allows a transport to send connection status changes into a peer list
 // without the list having to look them up by their identifier every time.
 // It also allows the list to retain a single onFinish closure for the lifetime
 // of the peer, always returning the same func for the peer whenever it is
 // chosen.
 type peerFacade struct {
-	list          *List
-	id            peer.Identifier
-	peer          peer.Peer
-	status        peer.Status
-	subscriber    Subscriber
-	boundOnFinish func(error)
-}
-
-func newPeerFacade(pl *List, id peer.Identifier) *peerFacade {
-	return &peerFacade{list: pl, id: id}
+	list       *List
+	id         peer.Identifier
+	peer       peer.Peer
+	status     peer.Status
+	subscriber Subscriber
+	onFinish   func(error)
 }
 
 // StartRequest is vestigial.
@@ -51,14 +47,14 @@ func newPeerFacade(pl *List, id peer.Identifier) *peerFacade {
 // The peer.Peer interface requires StartRequest because transports used to
 // track the pending request count.
 // This responsibility is now handled by the abstract peer list itself.
-func (p *peerFacade) StartRequest() {}
+func (pf *peerFacade) StartRequest() {}
 
 // EndRequest is vestigial.
 //
 // The peer.Peer interface requires EndRequest because transports used to
 // track the pending request count.
 // This responsibility is now handled by the abstract peer list itself.
-func (p *peerFacade) EndRequest() {}
+func (pf *peerFacade) EndRequest() {}
 
 // NotifyStatusChanged receives status notifications and adjusts the peer list
 // accodingly.
@@ -66,69 +62,16 @@ func (p *peerFacade) EndRequest() {}
 // Peers that become unavailable are removed from the implementation of the
 // data structure that tracks candidates for selection.
 // Peers that become available are restored to that collection.
-func (p *peerFacade) NotifyStatusChanged(pid peer.Identifier) {
-	p.list.lock.Lock()
-	defer p.list.lock.Unlock()
-
-	p.notifyStatusChanged(pid)
+func (pf *peerFacade) NotifyStatusChanged(pid peer.Identifier) {
+	pf.list.lockAndNotifyStatusChanged(pf)
 }
 
-func (p *peerFacade) notifyStatusChanged(id peer.Identifier) {
-	status := p.peer.Status().ConnectionStatus
-	if p.status.ConnectionStatus != status {
-		p.status.ConnectionStatus = status
-		switch status {
-		case peer.Available:
-			sub := p.list.implementation.Add(p, p.id)
-			p.subscriber = sub
-			p.list.notifyPeerAvailable()
-		default:
-			p.list.implementation.Remove(p, p.id, p.subscriber)
-			p.subscriber = nil
-		}
-	}
+func (pf *peerFacade) Identifier() string {
+	// pf.peer is lock safe only because we never write it, not even to nil it
+	// out, even after releasing the peer.
+	return pf.peer.Identifier()
 }
 
-func (p *peerFacade) remove() {
-	if p.status.ConnectionStatus == peer.Available {
-		p.list.implementation.Remove(p, p.id, p.subscriber)
-		p.subscriber = nil
-	}
-	p.status.ConnectionStatus = peer.Unavailable
-}
-
-func (p *peerFacade) onStart() {
-	p.list.lock.Lock()
-	defer p.list.lock.Unlock()
-
-	p.status.PendingRequestCount++
-	if p.subscriber != nil {
-		p.subscriber.UpdatePendingRequestCount(p.id, p.status.PendingRequestCount)
-	}
-}
-
-func (p *peerFacade) onFinish(error) {
-	p.list.lock.Lock()
-	defer p.list.lock.Unlock()
-
-	p.status.PendingRequestCount--
-	if p.subscriber != nil {
-		p.subscriber.UpdatePendingRequestCount(p.id, p.status.PendingRequestCount)
-	}
-}
-
-func (p *peerFacade) Identifier() string {
-	return p.peer.Identifier()
-}
-
-func (p *peerFacade) Status() peer.Status {
-	p.list.lock.Lock()
-	defer p.list.lock.Unlock()
-
-	return p.status
-}
-
-// String returns the "id:status" of the peer for debugging.
-func (p *peerFacade) String() string {
-	return p.id.Identifier() + ":" + p.status.ConnectionStatus.String()
+func (pf *peerFacade) Status() peer.Status {
+	return pf.list.status(pf)
 }

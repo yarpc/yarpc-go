@@ -309,18 +309,18 @@ func (pl *List) add(id peer.Identifier) error {
 		return peer.ErrPeerAddAlreadyInList(addr)
 	}
 
-	f := newPeerFacade(pl, id)
-	f.boundOnFinish = f.onFinish
+	pf := &peerFacade{list: pl, id: id}
+	pf.onFinish = pl.onFinishFunc(pf)
 
 	// The transport must not call back before returning.
-	p, err := pl.transport.RetainPeer(id, f)
+	p, err := pl.transport.RetainPeer(id, pf)
 	if err != nil {
 		return err
 	}
 
-	f.peer = p
-	pl.peers[addr] = f
-	f.notifyStatusChanged(p)
+	pf.peer = p
+	pl.peers[addr] = pf
+	pl.notifyStatusChanged(pf)
 
 	return nil
 }
@@ -343,16 +343,21 @@ func (pl *List) addOffline(id peer.Identifier) error {
 func (pl *List) remove(id peer.Identifier) error {
 	addr := id.Identifier()
 
-	f, ok := pl.peers[addr]
+	pf, ok := pl.peers[addr]
 	if !ok {
 		return peer.ErrPeerRemoveNotInList(addr)
 	}
 
-	f.remove()
+	if pf.status.ConnectionStatus == peer.Available {
+		pl.implementation.Remove(pf, pf.id, pf.subscriber)
+		pf.subscriber = nil
+	}
+	pf.status.ConnectionStatus = peer.Unavailable
+
 	delete(pl.peers, addr)
 
 	// The transport must not call back before returning.
-	return pl.transport.ReleasePeer(id, f)
+	return pl.transport.ReleasePeer(id, pf)
 }
 
 func (pl *List) removeOffline(id peer.Identifier) error {
@@ -398,9 +403,9 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 			// The underlying channel has a limited capacity, so every success
 			// must trigger the rest to resume.
 			pl.notifyPeerAvailable()
-			f := p.(*peerFacade)
-			f.onStart()
-			return f.peer, f.boundOnFinish, nil
+			pf := p.(*peerFacade)
+			pl.onStart(pf)
+			return pf.peer, pf.onFinish, nil
 		}
 		if pl.failFast {
 			return nil, nil, yarpcerrors.Newf(yarpcerrors.CodeUnavailable, "%q peer list has no peer available", pl.name)
@@ -420,6 +425,32 @@ func (pl *List) choose(req *transport.Request) peer.StatusPeer {
 	return pl.implementation.Choose(req)
 }
 
+func (pl *List) onStart(pf *peerFacade) {
+	pl.lock.Lock()
+	defer pl.lock.Unlock()
+
+	pf.status.PendingRequestCount++
+	if pf.subscriber != nil {
+		pf.subscriber.UpdatePendingRequestCount(pf.id, pf.status.PendingRequestCount)
+	}
+}
+
+func (pl *List) onFinish(pf *peerFacade, err error) {
+	pl.lock.Lock()
+	defer pl.lock.Unlock()
+
+	pf.status.PendingRequestCount--
+	if pf.subscriber != nil {
+		pf.subscriber.UpdatePendingRequestCount(pf.id, pf.status.PendingRequestCount)
+	}
+}
+
+func (pl *List) onFinishFunc(pf *peerFacade) func(error) {
+	return func(err error) {
+		pl.onFinish(pf, err)
+	}
+}
+
 // NotifyStatusChanged receives status change notifications for peers in the
 // list.
 //
@@ -429,9 +460,42 @@ func (pl *List) NotifyStatusChanged(pid peer.Identifier) {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
-	p := pl.peers[pid.Identifier()]
-	if p != nil {
-		p.notifyStatusChanged(p.id)
+	pf := pl.peers[pid.Identifier()]
+	pl.notifyStatusChanged(pf)
+}
+
+func (pl *List) lockAndNotifyStatusChanged(pf *peerFacade) {
+	pl.lock.Lock()
+	defer pl.lock.Unlock()
+
+	pl.notifyStatusChanged(pf)
+}
+
+func (pl *List) status(pf *peerFacade) peer.Status {
+	pl.lock.RLock()
+	defer pl.lock.RUnlock()
+
+	return pf.status
+}
+
+// notifyStatusChanged must be run under a list lock.
+func (pl *List) notifyStatusChanged(pf *peerFacade) {
+	if pf == nil {
+		return
+	}
+
+	status := pf.peer.Status().ConnectionStatus
+	if pf.status.ConnectionStatus != status {
+		pf.status.ConnectionStatus = status
+		switch status {
+		case peer.Available:
+			sub := pf.list.implementation.Add(pf, pf.id)
+			pf.subscriber = sub
+			pf.list.notifyPeerAvailable()
+		default:
+			pf.list.implementation.Remove(pf, pf.id, pf.subscriber)
+			pf.subscriber = nil
+		}
 	}
 }
 
@@ -472,8 +536,8 @@ func (pl *List) countPeersWithStatus(status peer.ConnectionStatus) int {
 	defer pl.lock.RUnlock()
 
 	num := 0
-	for _, p := range pl.peers {
-		if p.status.ConnectionStatus == status {
+	for _, pf := range pl.peers {
+		if pf.status.ConnectionStatus == status {
 			num++
 		}
 	}
@@ -505,8 +569,8 @@ func (pl *List) Available(pid peer.Identifier) bool {
 	pl.lock.RLock()
 	defer pl.lock.RUnlock()
 
-	if p, ok := pl.peers[pid.Identifier()]; ok {
-		return p.status.ConnectionStatus == peer.Available
+	if pf, ok := pl.peers[pid.Identifier()]; ok {
+		return pf.status.ConnectionStatus == peer.Available
 	}
 	return false
 }
@@ -526,8 +590,8 @@ func (pl *List) Peers() []peer.StatusPeer {
 	defer pl.lock.RUnlock()
 
 	peers := make([]peer.StatusPeer, 0, len(pl.peers))
-	for _, p := range pl.peers {
-		peers = append(peers, p.peer)
+	for _, pf := range pl.peers {
+		peers = append(peers, pf.peer)
 	}
 	return peers
 }
@@ -572,8 +636,8 @@ func (pl *List) Introspect() introspection.ChooserStatus {
 
 	available := 0
 	unavailable := 0
-	for _, p := range pl.peers {
-		if p.status.ConnectionStatus == peer.Available {
+	for _, pf := range pl.peers {
+		if pf.status.ConnectionStatus == peer.Available {
 			available++
 		} else {
 			unavailable++
@@ -583,18 +647,18 @@ func (pl *List) Introspect() introspection.ChooserStatus {
 	peerStatuses := make([]introspection.PeerStatus, 0,
 		len(pl.peers))
 
-	buildPeerStatus := func(p *peerFacade) introspection.PeerStatus {
-		ps := p.status
+	buildPeerStatus := func(pf *peerFacade) introspection.PeerStatus {
+		ps := pf.status
 		return introspection.PeerStatus{
-			Identifier: p.peer.Identifier(),
+			Identifier: pf.peer.Identifier(),
 			State: fmt.Sprintf("%s, %d pending request(s)",
 				ps.ConnectionStatus.String(),
 				ps.PendingRequestCount),
 		}
 	}
 
-	for _, p := range pl.peers {
-		peerStatuses = append(peerStatuses, buildPeerStatus(p))
+	for _, pf := range pl.peers {
+		peerStatuses = append(peerStatuses, buildPeerStatus(pf))
 	}
 
 	return introspection.ChooserStatus{
