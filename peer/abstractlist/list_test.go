@@ -137,6 +137,9 @@ func TestPeerList(t *testing.T) {
 	impl := &mraList{}
 	list := New("mra", fake, impl, Capacity(1), NoShuffle(), Seed(0))
 
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+
 	peers := list.Peers()
 	assert.Len(t, peers, 0)
 
@@ -175,7 +178,8 @@ func TestPeerList(t *testing.T) {
 	assert.False(t, list.Uninitialized(abstractpeer.Identify("2.2.2.2:4040")))
 	peers = list.Peers()
 	assert.Len(t, peers, 2)
-	p, onFinish, err := list.Choose(context.Background(), &transport.Request{})
+	p, onFinish, err := list.Choose(ctx, &transport.Request{})
+	require.NoError(t, err)
 	assert.Equal(t, "2.2.2.2:4040", p.Identifier())
 	require.NoError(t, err)
 	onFinish(nil)
@@ -187,7 +191,7 @@ func TestPeerList(t *testing.T) {
 	assert.Equal(t, 0, list.NumUninitialized())
 	peers = list.Peers()
 	assert.Len(t, peers, 2)
-	p, onFinish, err = list.Choose(context.Background(), &transport.Request{})
+	p, onFinish, err = list.Choose(ctx, &transport.Request{})
 	assert.Equal(t, "1.1.1.1:4040", p.Identifier())
 	require.NoError(t, err)
 	onFinish(nil)

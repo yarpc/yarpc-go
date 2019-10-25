@@ -370,9 +370,9 @@ func (pl *List) removeOffline(id peer.Identifier) error {
 
 // Choose selects the next available peer in the peer list.
 func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, func(error), error) {
-	// Choose runs without a lock because it spends the bulk of its time in a
-	// wait loop.
-
+	if _, ok := ctx.Deadline(); !ok {
+		return nil, nil, pl.newNoContextDeadlineError()
+	}
 	// We wait for the chooser to start and produce an error if the list does
 	// not start before the context deadline times out.
 	// This ensures that the developer sees a meaningful error if they forget
@@ -381,6 +381,8 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 		return nil, nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "%q peer list is not running", pl.name)
 	}
 
+	// Choose runs without a lock because it spends the bulk of its time in a
+	// wait loop.
 	for {
 		p := pl.choose(req)
 		// choose signals that there are no available peers by returning nil.
@@ -399,7 +401,8 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 			f := p.(*peerFacade)
 			f.onStart()
 			return f.peer, f.boundOnFinish, nil
-		} else if pl.failFast {
+		}
+		if pl.failFast {
 			return nil, nil, yarpcerrors.Newf(yarpcerrors.CodeUnavailable, "%q peer list has no peer available", pl.name)
 		}
 		if err := pl.waitForPeerAddedEvent(ctx); err != nil {
@@ -448,10 +451,6 @@ func (pl *List) notifyPeerAvailable() {
 //
 // waitForPeerAddedEvent must not be run under a lock.
 func (pl *List) waitForPeerAddedEvent(ctx context.Context) error {
-	if _, ok := ctx.Deadline(); !ok {
-		return pl.newNoContextDeadlineError()
-	}
-
 	select {
 	case <-pl.peerAvailableEvent:
 		return nil
