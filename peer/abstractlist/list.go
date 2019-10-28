@@ -67,7 +67,7 @@ type Implementation interface {
 // A peer list implementation may have a single subscriber or a subscriber for
 // each peer.
 type Subscriber interface {
-	UpdatePendingRequestCount(peer.Identifier, int)
+	UpdatePendingRequestCount(int)
 }
 
 type options struct {
@@ -431,7 +431,7 @@ func (pl *List) onStart(pf *peerFacade) {
 
 	pf.status.PendingRequestCount++
 	if pf.subscriber != nil {
-		pf.subscriber.UpdatePendingRequestCount(pf.id, pf.status.PendingRequestCount)
+		pf.subscriber.UpdatePendingRequestCount(pf.status.PendingRequestCount)
 	}
 }
 
@@ -441,7 +441,7 @@ func (pl *List) onFinish(pf *peerFacade, err error) {
 
 	pf.status.PendingRequestCount--
 	if pf.subscriber != nil {
-		pf.subscriber.UpdatePendingRequestCount(pf.id, pf.status.PendingRequestCount)
+		pf.subscriber.UpdatePendingRequestCount(pf.status.PendingRequestCount)
 	}
 }
 

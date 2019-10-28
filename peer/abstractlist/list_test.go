@@ -127,10 +127,9 @@ func (l *mraList) IsRunning() bool {
 	return true
 }
 
-type mraSub struct {
-}
+type mraSub struct{}
 
-func (s *mraSub) UpdatePendingRequestCount(pid peer.Identifier, pending int) {}
+func (s *mraSub) UpdatePendingRequestCount(int) {}
 
 func TestPeerList(t *testing.T) {
 	fake := yarpctest.NewFakeTransport(yarpctest.InitialConnectionStatus(peer.Unavailable))
