@@ -285,7 +285,7 @@ func TestParseBinary(t *testing.T) {
 			want:  []byte("ab"),
 		},
 		{
-			value: map[interface{}]interface{}{"file": "../testdata/valid.json"},
+			value: map[interface{}]interface{}{"file": "./testdata/valid.json"},
 			want:  []byte(`{"k1": "v1", "k2": 5}` + "\n"),
 		},
 		{

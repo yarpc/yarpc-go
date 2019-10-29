@@ -25,17 +25,42 @@ import (
 	"os"
 	"testing"
 
-	"github.com/yarpc/yab/internal/thrifttest"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/thriftrw/compile"
 	"go.uber.org/thriftrw/wire"
 )
 
+// DummyFS is an in-memory implementation of the Filesystem interface.
+type DummyFS map[string][]byte
+
+// Read returns the contents for the specified file.
+func (fs DummyFS) Read(filename string) ([]byte, error) {
+	if contents, ok := fs[filename]; ok {
+		return contents, nil
+	}
+	return nil, os.ErrNotExist
+}
+
+// Abs returns the absolute path for the specified file.
+// The dummy implementation always returns the original path.
+func (DummyFS) Abs(filename string) (string, error) {
+	return filename, nil
+}
+
+// thriftTestParse parses the given file contents as a Thrift file with no dependencies.
+func thriftTestParse(t *testing.T, contents string) *compile.Module {
+	fs := DummyFS{
+		"file.thrift": []byte(contents),
+	}
+	compiled, err := compile.Compile("file.thrift", compile.Filesystem(fs))
+	require.NoError(t, err, "Failed to compile thrift file:\n%s", contents)
+	return compiled
+}
+
 // getFuncSpecs returns the spec for a service named "Test".
 func getFuncSpecs(t *testing.T, contents string) map[string]*compile.FunctionSpec {
-	module := thrifttest.Parse(t, contents)
+	module := thriftTestParse(t, contents)
 	svc, err := module.LookupService("Test")
 	require.NoError(t, err, "Thrift contents missing service Test")
 	return svc.Functions

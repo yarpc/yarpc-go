@@ -2,13 +2,14 @@ package main
 
 import (
 	"bytes"
+	"os"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"strings"
 
-	"github.com/yarpc/ydump/thrift"
+	"go.uber.org/yarpc/x/ydump/thrift"
 
 	"go.uber.org/thriftrw/compile"
 	"go.uber.org/thriftrw/protocol"
@@ -19,8 +20,6 @@ var (
 	_thriftFile = flag.String("t", "", "Thrift file with the type")
 	_thriftName = flag.String("symbol", "", "Thrift symbol name (can be function.arg, or function.res)")
 
-	_in       = flag.String("in", "input", "Input file name")
-	_out      = flag.String("out", "output", "Output file name")
 	_serialze = flag.Bool("serialize", false, "Whether to serialize or deserialize a value")
 )
 
@@ -44,9 +43,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	input, err := ioutil.ReadFile(*_in)
+	input, err := ioutil.ReadAll(os.Stdin)
 	if err != nil {
-		log.Fatalf("Failed to open input file: %v", err)
+		log.Fatalf("Failed to read stdin: %v", err)
 	}
 
 	var output []byte
@@ -59,7 +58,7 @@ func main() {
 		log.Fatalf("Faield to convert: %v", err)
 	}
 
-	if err := ioutil.WriteFile(*_out, output, 0666); err != nil {
+	if _, err := os.Stdout.Write(output); err != nil {
 		log.Fatalf("Failed to write output: %v", err)
 	}
 }
