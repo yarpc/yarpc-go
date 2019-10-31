@@ -24,19 +24,14 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/peer/peertest"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/testtime"
 )
-
-func TestPeerHeapRunning(t *testing.T) {
-	var ph pendingHeap
-	assert.True(t, (&ph).IsRunning(), "Always running. Nothing stops the peer heap.")
-}
 
 func TestPeerHeapEmpty(t *testing.T) {
 	var ph pendingHeap
@@ -45,12 +40,12 @@ func TestPeerHeapEmpty(t *testing.T) {
 }
 
 func TestRoundRobinHeapOrdering(t *testing.T) {
-	p1 := &peerScore{score: 1}
-	p2 := &peerScore{score: 2}
-	p3 := &peerScore{score: 3}
+	p1 := &peerScore{pending: 1}
+	p2 := &peerScore{pending: 2}
+	p3 := &peerScore{pending: 3}
 
-	// same score as p3, but always pushed after p3, so it will be returned last.
-	p4 := &peerScore{score: 3}
+	// same pending as p3, but always pushed after p3, so it will be returned last.
+	p4 := &peerScore{pending: 3}
 
 	want := []*peerScore{p1, p2, p3, p4}
 	tests := [][]*peerScore{
@@ -73,10 +68,10 @@ func TestRoundRobinHeapOrdering(t *testing.T) {
 }
 
 func TestPeerHeapInsertionOrdering(t *testing.T) {
-	p1 := &peerScore{score: 1}
-	p2 := &peerScore{score: 2}
-	p3 := &peerScore{score: 3}
-	p4 := &peerScore{score: 3} // same score as p3
+	p1 := &peerScore{pending: 1}
+	p2 := &peerScore{pending: 2}
+	p3 := &peerScore{pending: 3}
+	p4 := &peerScore{pending: 3} // same pending as p3
 
 	tests := []struct {
 		name          string
@@ -129,9 +124,9 @@ func TestPeerHeapInsertionOrdering(t *testing.T) {
 
 func TestPeerHeapUpdate(t *testing.T) {
 	h := pendingHeap{nextRand: nextRand(0)}
-	p1 := &peerScore{score: 1}
-	p2 := &peerScore{score: 2}
-	p3 := &peerScore{score: 3}
+	p1 := &peerScore{pending: 1}
+	p2 := &peerScore{pending: 2}
+	p3 := &peerScore{pending: 3}
 
 	h.pushPeer(p3)
 	h.pushPeer(p1)
@@ -141,8 +136,8 @@ func TestPeerHeapUpdate(t *testing.T) {
 	require.True(t, ok, "pop with non-empty heap should succeed")
 	assert.Equal(t, p1, ps, "Wrong peer")
 
-	// Now update p2's score to be higher than p3.
-	p2.score = 10
+	// Now update p2's pending to be higher than p3.
+	p2.pending = 10
 	h.update(p2.index)
 
 	popped := popAndVerifyHeap(t, &h)
@@ -155,7 +150,7 @@ func TestPeerHeapDelete(t *testing.T) {
 	h := pendingHeap{nextRand: nextRand(0)}
 	peers := make([]*peerScore, numPeers)
 	for i := range peers {
-		peers[i] = &peerScore{score: int64(i)}
+		peers[i] = &peerScore{pending: i}
 		h.pushPeer(peers[i])
 	}
 
@@ -177,7 +172,7 @@ func (ph *pendingHeap) validate(ps *peerScore) error {
 
 func TestPeerHeapValidate(t *testing.T) {
 	h := pendingHeap{nextRand: nextRand(0)}
-	ps := &peerScore{score: 1}
+	ps := &peerScore{pending: 1}
 	h.pushPeer(ps)
 	assert.Nil(t, h.validate(ps), "peer %v should validate", ps)
 
@@ -190,7 +185,7 @@ func TestPeerHeapValidate(t *testing.T) {
 func popAndVerifyHeap(t *testing.T, h *pendingHeap) []*peerScore {
 	var popped []*peerScore
 
-	lastScore := int64(-1)
+	lastScore := -1
 	for h.Len() > 0 {
 		verifyIndexes(t, h)
 
@@ -199,14 +194,14 @@ func popAndVerifyHeap(t *testing.T, h *pendingHeap) []*peerScore {
 		popped = append(popped, ps)
 
 		if lastScore == -1 {
-			lastScore = ps.score
+			lastScore = ps.pending
 			continue
 		}
 
-		if ps.score < lastScore {
-			t.Fatalf("heap returned peer %+v with lower score than %v", ps, lastScore)
+		if ps.pending < lastScore {
+			t.Fatalf("heap returned peer %+v with fewer pending requests than %v", ps, lastScore)
 		}
-		lastScore = ps.score
+		lastScore = ps.pending
 	}
 
 	_, ok := h.popPeer()
@@ -250,13 +245,12 @@ func TestStaleSubscriberNoPanic(t *testing.T) {
 	assert.NotPanics(t, func() {
 		// For on-going requests, it's possible to still have a reference to the
 		// subscriber, even if it is not present in the heap.
-		subscriber.NotifyStatusChanged(p1)
+		subscriber.UpdatePendingRequestCount(0)
 	}, "stale subscribers should not cause a panic")
 }
 
 func TestReleaseLockWithStaleSubscriber(t *testing.T) {
 	ph := pendingHeap{nextRand: nextRandFromSlice([]int{0})}
-	require.NoError(t, ph.Start())
 
 	p1 := peertest.NewLightMockPeer(peertest.MockPeerIdentifier("p1"), peer.Available)
 
@@ -269,13 +263,12 @@ func TestReleaseLockWithStaleSubscriber(t *testing.T) {
 	ph.Remove(p1, p1, subscriber)
 
 	// simulate transport (eg HTTP) ending a call to a peer
-	ph.notifyStatusChanged(subscriber)
+	ph.updatePendingRequestCount(subscriber, 0)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*testtime.Millisecond)
 
-	// all subsequent calls should succeed if we're not holding onto the lock
 	go func() {
-		ph.Choose(ctx, &transport.Request{})
+		ph.Choose(&transport.Request{})
 		cancel()
 	}()
 

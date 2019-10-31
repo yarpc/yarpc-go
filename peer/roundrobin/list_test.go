@@ -39,22 +39,26 @@ import (
 	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/whitespace"
+	"go.uber.org/yarpc/peer/abstractpeer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/yarpcconfig"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/yarpc/yarpctest"
 )
 
 var (
-	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "can't wait for peer without a context deadline for a round-robin peer list")
+	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, `"round-robin" peer list can't wait for peer without a context deadline`)
+	_notRunningErrorFormat  = `"round-robin" peer list is not running: %s`
+	_unavailableErrorFormat = `"round-robin" peer list timed out waiting for peer: %s`
 )
 
 func newNotRunningError(err string) error {
-	return yarpcerrors.FailedPreconditionErrorf("round-robin peer list is not running: %s", err)
+	return yarpcerrors.FailedPreconditionErrorf(_notRunningErrorFormat, err)
 }
 
 func newUnavailableError(err error) error {
-	return yarpcerrors.UnavailableErrorf("round-robin peer list timed out waiting for peer: %s", err.Error())
+	return yarpcerrors.UnavailableErrorf(_unavailableErrorFormat, err.Error())
 }
 
 func TestRoundRobinList(t *testing.T) {
@@ -932,15 +936,38 @@ func TestRoundRobinList(t *testing.T) {
 }
 
 func TestIntrospect(t *testing.T) {
-	pl := New(testTransport{})
-	assert.NoError(t, pl.Start())
+	trans := yarpctest.NewFakeTransport(yarpctest.InitialConnectionStatus(peer.Unavailable))
+	pl := New(trans, noShuffle)
 	assert.NoError(t, pl.Update(peer.ListUpdates{
 		Additions: []peer.Identifier{
-			newTestPeer("foo", 0, peer.Unavailable),
-			newTestPeer("bar", 1, peer.Available),
-			newTestPeer("baz", 2, peer.Available),
+			abstractpeer.Identify("foo"),
+			abstractpeer.Identify("bar"),
+			abstractpeer.Identify("baz"),
 		},
 	}))
+	require.NoError(t, pl.Start())
+
+	trans.SimulateConnect(abstractpeer.Identify("bar"))
+	trans.SimulateConnect(abstractpeer.Identify("baz"))
+
+	// Simulate some load.
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+	{
+		p, _, err := pl.Choose(ctx, &transport.Request{})
+		require.NoError(t, err)
+		assert.Equal(t, p.Identifier(), "bar")
+	}
+	{
+		p, _, err := pl.Choose(ctx, &transport.Request{})
+		require.NoError(t, err)
+		assert.Equal(t, p.Identifier(), "baz")
+	}
+	{
+		p, _, err := pl.Choose(ctx, &transport.Request{})
+		require.NoError(t, err)
+		assert.Equal(t, p.Identifier(), "bar")
+	}
 
 	chooserStatus := pl.Introspect()
 	assert.Equal(t, "round-robin", chooserStatus.Name)
@@ -951,8 +978,8 @@ func TestIntrospect(t *testing.T) {
 		peerIdentifierToPeerStatus[peerStatus.Identifier] = peerStatus
 	}
 	checkPeerStatus(t, peerIdentifierToPeerStatus, "foo", "Unavailable, 0 pending request(s)")
-	checkPeerStatus(t, peerIdentifierToPeerStatus, "bar", "Available, 1 pending request(s)")
-	checkPeerStatus(t, peerIdentifierToPeerStatus, "baz", "Available, 2 pending request(s)")
+	checkPeerStatus(t, peerIdentifierToPeerStatus, "bar", "Available, 2 pending request(s)")
+	checkPeerStatus(t, peerIdentifierToPeerStatus, "baz", "Available, 1 pending request(s)")
 }
 
 func checkPeerStatus(
@@ -965,49 +992,6 @@ func checkPeerStatus(
 	assert.True(t, ok)
 	assert.Equal(t, expectedState, peerStatus.State)
 }
-
-type testTransport struct{}
-
-func (testTransport) RetainPeer(peerIdentifier peer.Identifier, _ peer.Subscriber) (peer.Peer, error) {
-	return peerIdentifier.(*testPeer), nil
-}
-
-func (testTransport) ReleasePeer(peer.Identifier, peer.Subscriber) error {
-	return nil
-}
-
-type testPeer struct {
-	identifier          string
-	pendingRequestCount int
-	connectionStatus    peer.ConnectionStatus
-}
-
-func newTestPeer(
-	identifier string,
-	pendingRequestCount int,
-	connectionStatus peer.ConnectionStatus,
-) *testPeer {
-	return &testPeer{
-		identifier,
-		pendingRequestCount,
-		connectionStatus,
-	}
-}
-
-func (p *testPeer) Identifier() string {
-	return p.identifier
-}
-
-func (p *testPeer) Status() peer.Status {
-	return peer.Status{
-		PendingRequestCount: p.pendingRequestCount,
-		ConnectionStatus:    p.connectionStatus,
-	}
-}
-
-func (*testPeer) StartRequest() {}
-
-func (*testPeer) EndRequest() {}
 
 var noShuffle ListOption = func(c *listConfig) {
 	c.shuffle = false

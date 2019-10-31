@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/peer/peerlist/v2"
+	"go.uber.org/yarpc/peer/abstractlist"
 )
 
 type listConfig struct {
@@ -82,14 +82,14 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 		o(&cfg)
 	}
 
-	plOpts := []peerlist.ListOption{
-		peerlist.Capacity(cfg.capacity),
+	plOpts := []abstractlist.Option{
+		abstractlist.Capacity(cfg.capacity),
 	}
 	if !cfg.shuffle {
-		plOpts = append(plOpts, peerlist.NoShuffle())
+		plOpts = append(plOpts, abstractlist.NoShuffle())
 	}
 	if cfg.failFast {
-		plOpts = append(plOpts, peerlist.FailFast())
+		plOpts = append(plOpts, abstractlist.FailFast())
 	}
 
 	nextRandFn := nextRand(cfg.seed)
@@ -99,7 +99,7 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 	}
 
 	return &List{
-		List: peerlist.New(
+		List: abstractlist.New(
 			"fewest-pending-requests",
 			transport,
 			&pendingHeap{
@@ -110,9 +110,9 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 	}
 }
 
-// List is a PeerList which rotates which peers are to be selected in a circle
+// List is a peer list which rotates which peers are to be selected in a circle
 type List struct {
-	*peerlist.List
+	*abstractlist.List
 }
 
 // nextRand is a convenience function for creating a new rand.Rand from a given
