@@ -46,15 +46,15 @@ import (
 )
 
 var (
-	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "can't wait for peer without a context deadline for a random peer list")
+	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, `"random" peer list can't wait for peer without a context deadline`)
 )
 
 func newNotRunningError(err string) error {
-	return yarpcerrors.FailedPreconditionErrorf("random peer list is not running: %s", err)
+	return yarpcerrors.FailedPreconditionErrorf(`"random" peer list is not running: %s`, err)
 }
 
 func newUnavailableError(err error) error {
-	return yarpcerrors.UnavailableErrorf("random peer list timed out waiting for peer: %s", err.Error())
+	return yarpcerrors.UnavailableErrorf(`"random" peer list timed out waiting for peer: %s`, err.Error())
 }
 
 func TestRandPeer(t *testing.T) {

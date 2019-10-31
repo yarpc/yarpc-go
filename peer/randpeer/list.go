@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/peer/peerlist/v2"
+	"go.uber.org/yarpc/peer/abstractlist"
 )
 
 type listOptions struct {
@@ -93,17 +93,17 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 		options.source = rand.NewSource(time.Now().UnixNano())
 	}
 
-	plOpts := []peerlist.ListOption{
-		peerlist.Capacity(options.capacity),
-		peerlist.NoShuffle(),
+	plOpts := []abstractlist.Option{
+		abstractlist.Capacity(options.capacity),
+		abstractlist.NoShuffle(),
 	}
 
 	if options.failFast {
-		plOpts = append(plOpts, peerlist.FailFast())
+		plOpts = append(plOpts, abstractlist.FailFast())
 	}
 
 	return &List{
-		List: peerlist.New(
+		List: abstractlist.New(
 			"random",
 			transport,
 			newRandomList(options.capacity, options.source),
@@ -114,5 +114,5 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 
 // List is a PeerList that rotates which peers are to be selected randomly
 type List struct {
-	*peerlist.List
+	*abstractlist.List
 }
