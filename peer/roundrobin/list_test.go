@@ -23,29 +23,38 @@ package roundrobin
 import (
 	"context"
 	"fmt"
+	"net"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/multierr"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
+	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/yarpc/internal/whitespace"
 	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/transport/http"
+	"go.uber.org/yarpc/yarpcconfig"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
 var (
-	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "can't wait for peer without a context deadline for a roundrobin peer list")
+	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "can't wait for peer without a context deadline for a round-robin peer list")
 )
 
 func newNotRunningError(err string) error {
-	return yarpcerrors.FailedPreconditionErrorf("roundrobin peer list is not running: %s", err)
+	return yarpcerrors.FailedPreconditionErrorf("round-robin peer list is not running: %s", err)
 }
 
 func newUnavailableError(err error) error {
-	return yarpcerrors.UnavailableErrorf("roundrobin peer list timed out waiting for peer: %s", err.Error())
+	return yarpcerrors.UnavailableErrorf("round-robin peer list timed out waiting for peer: %s", err.Error())
 }
 
 func TestRoundRobinList(t *testing.T) {
@@ -934,7 +943,7 @@ func TestIntrospect(t *testing.T) {
 	}))
 
 	chooserStatus := pl.Introspect()
-	assert.Equal(t, "Single", chooserStatus.Name)
+	assert.Equal(t, "round-robin", chooserStatus.Name)
 	assert.Equal(t, "Running (2/3 available)", chooserStatus.State)
 
 	peerIdentifierToPeerStatus := make(map[string]introspection.PeerStatus, len(chooserStatus.Peers))
@@ -1008,4 +1017,45 @@ func seed(seed int64) ListOption {
 	return func(c *listConfig) {
 		c.seed = seed
 	}
+}
+
+func TestFailFastConfig(t *testing.T) {
+	conn, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	require.NoError(t, conn.Close())
+
+	serviceName := "test"
+	config := whitespace.Expand(fmt.Sprintf(`
+		outbounds:
+			nowhere:
+				http:
+					round-robin:
+						peers:
+							- %q
+						capacity: 10
+						failFast: true
+	`, conn.Addr()))
+	cfgr := yarpcconfig.New()
+	cfgr.MustRegisterTransport(http.TransportSpec())
+	cfgr.MustRegisterPeerList(Spec())
+	cfg, err := cfgr.LoadConfigFromYAML(serviceName, strings.NewReader(config))
+	require.NoError(t, err)
+
+	d := yarpc.NewDispatcher(cfg)
+	d.Start()
+	defer d.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+
+	client := d.MustOutboundConfig("nowhere")
+	_, err = client.Outbounds.Unary.Call(ctx, &transport.Request{
+		Service:   "service",
+		Caller:    "caller",
+		Encoding:  transport.Encoding("blank"),
+		Procedure: "bogus",
+		Body:      strings.NewReader("nada"),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no peer available")
 }

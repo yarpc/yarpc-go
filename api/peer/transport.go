@@ -22,12 +22,23 @@ package peer
 
 // Subscriber listens to changes of a Peer over time.
 type Subscriber interface {
-	// The Peer Notifies the Subscriber when its status changes (e.g. connections status, pending requests)
+	// The Peer Notifies the Subscriber when its status changes (e.g.
+	// connections status, pending requests)
+	//
+	// NotifyStatusChanged may call methods of the corresponding Peer,
+	// particularly Status.
+	// So, subscriber methods must not be called while holding a lock on the
+	// Transport.
 	NotifyStatusChanged(Identifier)
 }
 
-// Transport manages Peers across different Subscribers.  A Subscriber will request a Peer for a specific
-// PeerIdentifier and the Transport has the ability to create a new Peer or return an existing one.
+// Transport manages Peers across different Subscribers.
+//
+// A Subscriber will request a Peer for a specific PeerIdentifier and the
+// Transport has the ability to create a new Peer or return an existing one.
+//
+// RetainPeer and ReleasePeer must not call or synchronize with goroutines that
+// call methods of the Subscriber.
 type Transport interface {
 	// Get or create a Peer for the Subscriber
 	RetainPeer(Identifier, Subscriber) (Peer, error)

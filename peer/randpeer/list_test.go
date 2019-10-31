@@ -22,16 +22,26 @@ package randpeer_test
 
 import (
 	"context"
+	"fmt"
+	"net"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/multierr"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/yarpc/internal/whitespace"
 	"go.uber.org/yarpc/peer/randpeer"
+	"go.uber.org/yarpc/transport/http"
+	"go.uber.org/yarpc/yarpcconfig"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -586,4 +596,45 @@ func TestRandPeer(t *testing.T) {
 			assert.Equal(t, tt.expectedRunning, pl.IsRunning(), "Peer list should match expected final running state")
 		})
 	}
+}
+
+func TestFailFastConfig(t *testing.T) {
+	conn, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	require.NoError(t, conn.Close())
+
+	serviceName := "test"
+	config := whitespace.Expand(fmt.Sprintf(`
+		outbounds:
+			nowhere:
+				http:
+					random:
+						peers:
+							- %q
+						capacity: 10
+						failFast: true
+	`, conn.Addr()))
+	cfgr := yarpcconfig.New()
+	cfgr.MustRegisterTransport(http.TransportSpec())
+	cfgr.MustRegisterPeerList(randpeer.Spec())
+	cfg, err := cfgr.LoadConfigFromYAML(serviceName, strings.NewReader(config))
+	require.NoError(t, err)
+
+	d := yarpc.NewDispatcher(cfg)
+	d.Start()
+	defer d.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+
+	client := d.MustOutboundConfig("nowhere")
+	_, err = client.Outbounds.Unary.Call(ctx, &transport.Request{
+		Service:   "service",
+		Caller:    "caller",
+		Encoding:  transport.Encoding("blank"),
+		Procedure: "bogus",
+		Body:      strings.NewReader("nada"),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no peer available")
 }

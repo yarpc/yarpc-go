@@ -31,6 +31,7 @@ import (
 // Configuration descripes how to build a round-robin peer list.
 type Configuration struct {
 	Capacity *int `config:"capacity"`
+	FailFast bool `config:"failFast"`
 }
 
 // Spec returns a configuration specification for the round-robin peer list
@@ -51,20 +52,38 @@ type Configuration struct {
 //            peers:
 //              - 127.0.0.1:8080
 //              - 127.0.0.1:8081
+//
+// Other than a specific peer or peers list, use any peer list updater
+// registered with a yarpc Configurator.
+// The configuration allows for alternative initial allocation capacity and a
+// fail-fast option.
+// With fail-fast enabled, the peer list will return an error immediately if no
+// peers are available (connected) at the time the request is sent.
+//
+//  round-robin:
+//    peers:
+//      - 127.0.0.1:8080
+//    capacity: 1
+//    failFast: true
 func Spec() yarpcconfig.PeerListSpec {
 	return yarpcconfig.PeerListSpec{
 		Name: "round-robin",
 		BuildPeerList: func(cfg Configuration, t peer.Transport, k *yarpcconfig.Kit) (peer.ChooserList, error) {
-			if cfg.Capacity == nil {
-				return New(t), nil
+			opts := make([]ListOption, 0, 2)
+
+			if cfg.Capacity != nil {
+				if *cfg.Capacity <= 0 {
+					return nil, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument,
+						fmt.Sprintf("Capacity must be greater than 0. Got: %d.", *cfg.Capacity))
+				}
+				opts = append(opts, Capacity(*cfg.Capacity))
 			}
 
-			if *cfg.Capacity <= 0 {
-				return nil, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument,
-					fmt.Sprintf("Capacity must be greater than 0. Got: %d.", *cfg.Capacity))
+			if cfg.FailFast {
+				opts = append(opts, FailFast())
 			}
 
-			return New(t, Capacity(*cfg.Capacity)), nil
+			return New(t, opts...), nil
 		},
 	}
 }

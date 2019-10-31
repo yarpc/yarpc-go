@@ -31,6 +31,7 @@ import (
 type listOptions struct {
 	capacity int
 	source   rand.Source
+	failFast bool
 }
 
 var defaultListOptions = listOptions{
@@ -70,6 +71,17 @@ func Source(source rand.Source) ListOption {
 	})
 }
 
+// FailFast indicates that the peer list should not wait for a peer to become
+// available when choosing a peer.
+//
+// This option is preferrable when the better failure mode is to retry from the
+// origin, since another proxy instance might already have a connection.
+func FailFast() ListOption {
+	return listOptionFunc(func(options *listOptions) {
+		options.failFast = true
+	})
+}
+
 // New creates a new random peer list.
 func New(transport peer.Transport, opts ...ListOption) *List {
 	options := defaultListOptions
@@ -84,6 +96,10 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 	plOpts := []peerlist.ListOption{
 		peerlist.Capacity(options.capacity),
 		peerlist.NoShuffle(),
+	}
+
+	if options.failFast {
+		plOpts = append(plOpts, peerlist.FailFast())
 	}
 
 	return &List{
