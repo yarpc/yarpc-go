@@ -96,12 +96,18 @@ type ChooseAction struct {
 // Apply runs "Choose" on the peerList and validates the peer && error
 func (a ChooseAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) {
 	ctx := a.InputContext
+	custom := ctx != nil
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if a.InputContextTimeout != 0 {
+	if !custom || a.InputContextTimeout > 0 {
+		timeout := a.InputContextTimeout
+		if timeout == 0 {
+			timeout = testtime.Second
+		}
+
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, a.InputContextTimeout)
+		ctx, cancel = context.WithTimeout(ctx, timeout)
 		defer cancel()
 	}
 
