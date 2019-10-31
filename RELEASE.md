@@ -36,9 +36,9 @@ Releasing
     it.
 
     ```
-    git checkout master
-    git pull
-    git checkout -b $(whoami)/release
+    get fetch origin
+    git checkout origin/master
+    git checkout -B $(whoami)/release
     ```
 
 3.  Merge the branch with the changes being released into the newly created
