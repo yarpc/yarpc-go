@@ -22,12 +22,11 @@ package pendingheap
 
 import (
 	"container/heap"
-	"context"
 	"sync"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/peer/peerlist/v2"
+	"go.uber.org/yarpc/peer/abstractlist"
 )
 
 type pendingHeap struct {
@@ -47,9 +46,9 @@ type pendingHeap struct {
 	nextRand func(numPeers int) int
 }
 
-var _ peerlist.Implementation = (*pendingHeap)(nil)
+var _ abstractlist.Implementation = (*pendingHeap)(nil)
 
-func (ph *pendingHeap) Choose(ctx context.Context, req *transport.Request) peer.StatusPeer {
+func (ph *pendingHeap) Choose(req *transport.Request) peer.StatusPeer {
 	ph.Lock()
 	ps, ok := ph.popPeer()
 	if !ok {
@@ -65,13 +64,12 @@ func (ph *pendingHeap) Choose(ctx context.Context, req *transport.Request) peer.
 	return ps.peer
 }
 
-func (ph *pendingHeap) Add(p peer.StatusPeer, _ peer.Identifier) peer.Subscriber {
+func (ph *pendingHeap) Add(p peer.StatusPeer, _ peer.Identifier) abstractlist.Subscriber {
 	if p == nil {
 		return nil
 	}
 
 	ps := &peerScore{peer: p, heap: ph}
-	ps.score = scorePeer(p)
 
 	ph.Lock()
 	ph.pushPeerRandom(ps)
@@ -79,7 +77,7 @@ func (ph *pendingHeap) Add(p peer.StatusPeer, _ peer.Identifier) peer.Subscriber
 	return ps
 }
 
-func (ph *pendingHeap) Remove(p peer.StatusPeer, _ peer.Identifier, sub peer.Subscriber) {
+func (ph *pendingHeap) Remove(p peer.StatusPeer, _ peer.Identifier, sub abstractlist.Subscriber) {
 	ps, ok := sub.(*peerScore)
 	if !ok {
 		return
@@ -90,8 +88,7 @@ func (ph *pendingHeap) Remove(p peer.StatusPeer, _ peer.Identifier, sub peer.Sub
 	ph.Unlock()
 }
 
-func (ph *pendingHeap) notifyStatusChanged(ps *peerScore) {
-	status := ps.peer.Status()
+func (ph *pendingHeap) updatePendingRequestCount(ps *peerScore, pendingRequestCount int) {
 	ph.Lock()
 	// If the index is negative, the subscriber has already been deleted from the
 	// heap. This may occur when calling a peer and simultaneously removing it
@@ -101,8 +98,7 @@ func (ph *pendingHeap) notifyStatusChanged(ps *peerScore) {
 		return
 	}
 
-	ps.status = status
-	ps.score = scorePeer(ps.peer)
+	ps.pending = pendingRequestCount
 	ph.update(ps.index)
 	ph.Unlock()
 }
@@ -120,10 +116,10 @@ func (ph *pendingHeap) Len() int {
 func (ph *pendingHeap) Less(i, j int) bool {
 	p1 := ph.peers[i]
 	p2 := ph.peers[j]
-	if p1.score == p2.score {
+	if p1.pending == p2.pending {
 		return p1.last < p2.last
 	}
-	return p1.score < p2.score
+	return p1.pending < p2.pending
 }
 
 // Swap implements the heap.Interface. Do NOT use this method directly.
@@ -223,16 +219,4 @@ func (ph *pendingHeap) popPeer() (*peerScore, bool) {
 // update must be called in the context of a lock.
 func (ph *pendingHeap) update(i int) {
 	heap.Fix(ph, i)
-}
-
-func (ph *pendingHeap) Start() error {
-	return nil
-}
-
-func (ph *pendingHeap) Stop() error {
-	return nil
-}
-
-func (ph *pendingHeap) IsRunning() bool {
-	return true
 }

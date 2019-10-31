@@ -45,15 +45,15 @@ import (
 )
 
 var (
-	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "can't wait for peer without a context deadline for a fewest-pending-requests peer list")
+	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, `"fewest-pending-requests" peer list can't wait for peer without a context deadline`)
 )
 
 func newNotRunningError(err string) error {
-	return yarpcerrors.FailedPreconditionErrorf("fewest-pending-requests peer list is not running: %s", err)
+	return yarpcerrors.FailedPreconditionErrorf(`"fewest-pending-requests" peer list is not running: %s`, err)
 }
 
 func newUnavailableError(err error) error {
-	return yarpcerrors.UnavailableErrorf("fewest-pending-requests peer list timed out waiting for peer: %s", err.Error())
+	return yarpcerrors.UnavailableErrorf(`"fewest-pending-requests" peer list timed out waiting for peer: %s`, err.Error())
 }
 
 // InsertionOrder is a test option that yields control over random insertion
