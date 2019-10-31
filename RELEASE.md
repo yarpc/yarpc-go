@@ -36,7 +36,7 @@ Releasing
     it.
 
     ```
-    get fetch origin
+    git fetch origin master
     git checkout origin/master
     git checkout -B $(whoami)/release
     ```
