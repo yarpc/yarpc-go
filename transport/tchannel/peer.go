@@ -56,7 +56,7 @@ func newPeer(addr string, t *Transport) *tchannelPeer {
 	}
 }
 
-func (p *tchannelPeer) MaintainConn() {
+func (p *tchannelPeer) maintainConnection() {
 	cancel := func() {}
 
 	backoff := p.transport.connBackoffStrategy.Backoff()
@@ -109,7 +109,7 @@ func (p *tchannelPeer) MaintainConn() {
 	cancel()
 }
 
-func (p *tchannelPeer) Release() {
+func (p *tchannelPeer) release() {
 	close(p.released)
 }
 
@@ -118,7 +118,7 @@ func (p *tchannelPeer) setConnectionStatus(status peer.ConnectionStatus) {
 	p.Peer.NotifyStatusChanged()
 }
 
-func (p *tchannelPeer) OnStatusChanged() {
+func (p *tchannelPeer) notifyConnectionStatusChanged() {
 	select {
 	case p.changed <- struct{}{}:
 	default:

@@ -141,7 +141,7 @@ func (t *Transport) getOrCreatePeer(pid peer.Identifier) *tchannelPeer {
 	t.peers[addr] = p
 	// Start a peer connection loop
 	t.connectorsGroup.Add(1)
-	go p.MaintainConn()
+	go p.maintainConnection()
 	go p.monitorPendingRequestCount()
 
 	return p
@@ -167,7 +167,7 @@ func (t *Transport) ReleasePeer(pid peer.Identifier, sub peer.Subscriber) error 
 
 	if p.NumSubscribers() == 0 {
 		// Release the peer so that the connection retention loop stops.
-		p.Release()
+		p.release()
 		delete(t.peers, pid.Identifier())
 	}
 
@@ -271,5 +271,5 @@ func (t *Transport) onPeerStatusChanged(tp *tchannel.Peer) {
 	if !ok {
 		return
 	}
-	p.OnStatusChanged()
+	p.notifyConnectionStatusChanged()
 }
