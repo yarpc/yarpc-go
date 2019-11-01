@@ -35,6 +35,7 @@ import (
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
 )
 
 // Implementation is a collection of available peers, with its own
@@ -75,6 +76,7 @@ type options struct {
 	noShuffle bool
 	failFast  bool
 	seed      int64
+	logger    *zap.Logger
 }
 
 var defaultOptions = options{
@@ -98,6 +100,13 @@ func (f optionFunc) apply(options *options) { f(options) }
 func Capacity(capacity int) Option {
 	return optionFunc(func(options *options) {
 		options.capacity = capacity
+	})
+}
+
+// Logger specifies a logger.
+func Logger(logger *zap.Logger) Option {
+	return optionFunc(func(options *options) {
+		options.logger = logger
 	})
 }
 
@@ -134,9 +143,15 @@ func New(name string, transport peer.Transport, implementation Implementation, o
 		o.apply(&options)
 	}
 
+	logger := options.logger
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
 	return &List{
 		once:               lifecycle.NewOnce(),
 		name:               name,
+		logger:             logger,
 		peers:              make(map[string]*peerFacade, options.capacity),
 		offlinePeers:       make(map[string]peer.Identifier, options.capacity),
 		implementation:     implementation,
@@ -168,7 +183,8 @@ type List struct {
 	lock sync.RWMutex
 	once *lifecycle.Once
 
-	name string
+	name   string
+	logger *zap.Logger
 
 	peers              map[string]*peerFacade
 	offlinePeers       map[string]peer.Identifier
@@ -202,6 +218,10 @@ func (pl *List) Transport() peer.Transport { return pl.transport }
 // Updates may be interleaved with Start and Stop in any order any number of
 // times.
 func (pl *List) Update(updates peer.ListUpdates) error {
+	pl.logger.Debug("peer list update",
+		zap.Int("additions", len(updates.Additions)),
+		zap.Int("removals", len(updates.Removals)))
+
 	if len(updates.Additions) == 0 && len(updates.Removals) == 0 {
 		return nil
 	}

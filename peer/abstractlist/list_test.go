@@ -34,6 +34,8 @@ import (
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/peer/abstractpeer"
 	"go.uber.org/yarpc/yarpctest"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 const (
@@ -134,7 +136,9 @@ func (s *mraSub) UpdatePendingRequestCount(int) {}
 func TestPeerList(t *testing.T) {
 	fake := yarpctest.NewFakeTransport(yarpctest.InitialConnectionStatus(peer.Unavailable))
 	impl := &mraList{}
-	list := New("mra", fake, impl, Capacity(1), NoShuffle(), Seed(0))
+	core, log := observer.New(zap.DebugLevel)
+	logger := zap.New(core)
+	list := New("mra", fake, impl, Capacity(1), NoShuffle(), Seed(0), Logger(logger))
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
@@ -149,6 +153,15 @@ func TestPeerList(t *testing.T) {
 		},
 		Removals: []peer.Identifier{},
 	}))
+
+	{
+		entries := log.FilterMessage("peer list update").AllUntimed()
+		require.Len(t, entries, 1)
+		assert.Equal(t, map[string]interface{}{
+			"additions": int64(2),
+			"removals":  int64(0),
+		}, entries[0].ContextMap())
+	}
 
 	// Invalid updates before start
 	assert.Error(t, list.Update(peer.ListUpdates{
