@@ -52,6 +52,7 @@ func values(m map[string]peer.Identifier) []peer.Identifier {
 	}
 	return vs
 }
+
 func TestValues(t *testing.T) {
 	vs := values(map[string]peer.Identifier{})
 	assert.Equal(t, []peer.Identifier{}, vs)
@@ -175,9 +176,7 @@ func TestPeerList(t *testing.T) {
 
 	assert.Equal(t, 0, list.NumAvailable())
 	assert.Equal(t, 0, list.NumUnavailable())
-	assert.Equal(t, 2, list.NumUninitialized())
 	assert.False(t, list.Available(abstractpeer.Identify("2.2.2.2:4040")))
-	assert.True(t, list.Uninitialized(abstractpeer.Identify("2.2.2.2:4040")))
 
 	require.NoError(t, list.Start())
 
@@ -185,9 +184,7 @@ func TestPeerList(t *testing.T) {
 	fake.SimulateConnect(abstractpeer.Identify("2.2.2.2:4040"))
 	assert.Equal(t, 1, list.NumAvailable())
 	assert.Equal(t, 1, list.NumUnavailable())
-	assert.Equal(t, 0, list.NumUninitialized())
 	assert.True(t, list.Available(abstractpeer.Identify("2.2.2.2:4040")))
-	assert.False(t, list.Uninitialized(abstractpeer.Identify("2.2.2.2:4040")))
 	peers = list.Peers()
 	assert.Len(t, peers, 2)
 	p, onFinish, err := list.Choose(ctx, &transport.Request{})
@@ -200,7 +197,6 @@ func TestPeerList(t *testing.T) {
 	fake.SimulateConnect(abstractpeer.Identify("1.1.1.1:4040"))
 	assert.Equal(t, 2, list.NumAvailable())
 	assert.Equal(t, 0, list.NumUnavailable())
-	assert.Equal(t, 0, list.NumUninitialized())
 	peers = list.Peers()
 	assert.Len(t, peers, 2)
 	p, onFinish, err = list.Choose(ctx, &transport.Request{})
