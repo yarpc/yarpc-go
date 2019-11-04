@@ -31,7 +31,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/multierr"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
@@ -75,14 +74,6 @@ func TestRoundRobinList(t *testing.T) {
 		// PeerIDs that will be released from the transport
 		releasedPeerIDs []string
 
-		// PeerIDs that will return "retainErr" from the transport's OnRetain function
-		errRetainedPeerIDs []string
-		retainErr          error
-
-		// PeerIDs that will return "releaseErr" from the transport's OnRelease function
-		errReleasedPeerIDs []string
-		releaseErr         error
-
 		// A list of actions that will be applied on the PeerList
 		peerListActions []PeerListAction
 
@@ -91,9 +82,6 @@ func TestRoundRobinList(t *testing.T) {
 
 		// PeerIDs expected to be in the PeerList's "Unavailable" list after the actions have been applied
 		expectedUnavailablePeers []string
-
-		// PeerIDs expected to be in the PeerList's "Uninitialized" list after the actions have been applied
-		expectedUninitializedPeers []string
 
 		// Boolean indicating whether the PeerList is "running" after the actions have been applied
 		expectedRunning bool
@@ -151,8 +139,7 @@ func TestRoundRobinList(t *testing.T) {
 					InputContextTimeout: 10 * time.Millisecond,
 				},
 			},
-			expectedUninitializedPeers: []string{"1", "2", "3", "4", "5", "6", "7", "8", "9"},
-			expectedRunning:            false,
+			expectedRunning: false,
 		},
 		{
 			msg:                      "start many and choose",
@@ -194,90 +181,6 @@ func TestRoundRobinList(t *testing.T) {
 				StopAction{},
 			},
 			expectedRunning: false,
-		},
-		{
-			msg:                "update retain error",
-			errRetainedPeerIDs: []string{"1"},
-			retainErr:          peer.ErrInvalidPeerType{},
-			peerListActions: []PeerListAction{
-				StartAction{},
-				UpdateAction{AddedPeerIDs: []string{"1"}, ExpectedErr: peer.ErrInvalidPeerType{}},
-			},
-			expectedRunning: true,
-		},
-		{
-			msg:                      "update retain multiple errors",
-			retainedAvailablePeerIDs: []string{"2"},
-			errRetainedPeerIDs:       []string{"1", "3"},
-			retainErr:                peer.ErrInvalidPeerType{},
-			peerListActions: []PeerListAction{
-				StartAction{},
-				UpdateAction{
-					AddedPeerIDs: []string{"1", "2", "3"},
-					ExpectedErr:  multierr.Combine(peer.ErrInvalidPeerType{}, peer.ErrInvalidPeerType{}),
-				},
-			},
-			expectedAvailablePeers: []string{"2"},
-			expectedRunning:        true,
-		},
-		{
-			msg:                      "start stop release error",
-			retainedAvailablePeerIDs: []string{"1"},
-			errReleasedPeerIDs:       []string{"1"},
-			releaseErr:               peer.ErrTransportHasNoReferenceToPeer{},
-			peerListActions: []PeerListAction{
-				StartAction{},
-				UpdateAction{AddedPeerIDs: []string{"1"}},
-				StopAction{
-					ExpectedErr: peer.ErrTransportHasNoReferenceToPeer{},
-				},
-			},
-			expectedUninitializedPeers: []string{"1"},
-			expectedRunning:            false,
-		},
-		{
-			msg:                      "assure stop is idempotent",
-			retainedAvailablePeerIDs: []string{"1"},
-			errReleasedPeerIDs:       []string{"1"},
-			releaseErr:               peer.ErrTransportHasNoReferenceToPeer{},
-			peerListActions: []PeerListAction{
-				StartAction{},
-				UpdateAction{AddedPeerIDs: []string{"1"}},
-				ConcurrentAction{
-					Actions: []PeerListAction{
-						StopAction{
-							ExpectedErr: peer.ErrTransportHasNoReferenceToPeer{},
-						},
-						StopAction{
-							ExpectedErr: peer.ErrTransportHasNoReferenceToPeer{},
-						},
-						StopAction{
-							ExpectedErr: peer.ErrTransportHasNoReferenceToPeer{},
-						},
-					},
-				},
-			},
-			expectedUninitializedPeers: []string{"1"},
-			expectedRunning:            false,
-		},
-		{
-			msg:                      "start stop release multiple errors",
-			retainedAvailablePeerIDs: []string{"1", "2", "3"},
-			releasedPeerIDs:          []string{"2"},
-			errReleasedPeerIDs:       []string{"1", "3"},
-			releaseErr:               peer.ErrTransportHasNoReferenceToPeer{},
-			peerListActions: []PeerListAction{
-				StartAction{},
-				UpdateAction{AddedPeerIDs: []string{"1", "2", "3"}},
-				StopAction{
-					ExpectedErr: multierr.Combine(
-						peer.ErrTransportHasNoReferenceToPeer{},
-						peer.ErrTransportHasNoReferenceToPeer{},
-					),
-				},
-			},
-			expectedUninitializedPeers: []string{"1", "2", "3"},
-			expectedRunning:            false,
 		},
 		{
 			msg: "choose before start",
@@ -387,25 +290,6 @@ func TestRoundRobinList(t *testing.T) {
 			shuffle:         true,
 		},
 		{
-			msg:                      "add retain error",
-			retainedAvailablePeerIDs: []string{"1", "2"},
-			expectedAvailablePeers:   []string{"1", "2"},
-			errRetainedPeerIDs:       []string{"3"},
-			retainErr:                peer.ErrInvalidPeerType{},
-			peerListActions: []PeerListAction{
-				StartAction{},
-				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
-				UpdateAction{
-					AddedPeerIDs: []string{"3"},
-					ExpectedErr:  peer.ErrInvalidPeerType{},
-				},
-				ChooseAction{ExpectedPeer: "1"},
-				ChooseAction{ExpectedPeer: "2"},
-				ChooseAction{ExpectedPeer: "1"},
-			},
-			expectedRunning: true,
-		},
-		{
 			msg:                      "add duplicate peer",
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"1", "2"},
@@ -435,24 +319,6 @@ func TestRoundRobinList(t *testing.T) {
 				},
 				ChooseAction{ExpectedPeer: "1"},
 				ChooseAction{ExpectedPeer: "2"},
-				ChooseAction{ExpectedPeer: "1"},
-			},
-			expectedRunning: true,
-		},
-		{
-			msg:                      "remove release error",
-			retainedAvailablePeerIDs: []string{"1", "2"},
-			errReleasedPeerIDs:       []string{"2"},
-			releaseErr:               peer.ErrTransportHasNoReferenceToPeer{},
-			expectedAvailablePeers:   []string{"1"},
-			peerListActions: []PeerListAction{
-				StartAction{},
-				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
-				UpdateAction{
-					RemovedPeerIDs: []string{"2"},
-					ExpectedErr:    peer.ErrTransportHasNoReferenceToPeer{},
-				},
-				ChooseAction{ExpectedPeer: "1"},
 				ChooseAction{ExpectedPeer: "1"},
 			},
 			expectedRunning: true,
@@ -736,8 +602,7 @@ func TestRoundRobinList(t *testing.T) {
 				UpdateAction{AddedPeerIDs: []string{"2"}},
 				UpdateAction{RemovedPeerIDs: []string{"1"}},
 			},
-			expectedUninitializedPeers: []string{"2"},
-			expectedRunning:            false,
+			expectedRunning: false,
 		},
 		{
 			msg: "update after stop",
@@ -748,8 +613,7 @@ func TestRoundRobinList(t *testing.T) {
 				UpdateAction{AddedPeerIDs: []string{"2"}},
 				UpdateAction{RemovedPeerIDs: []string{"1"}},
 			},
-			expectedUninitializedPeers: []string{"2"},
-			expectedRunning:            false,
+			expectedRunning: false,
 		},
 		{
 			msg: "remove peer not in list before start",
@@ -760,8 +624,7 @@ func TestRoundRobinList(t *testing.T) {
 					ExpectedErr:    peer.ErrPeerRemoveNotInList("3"),
 				},
 			},
-			expectedUninitializedPeers: []string{"1", "2"},
-			expectedRunning:            false,
+			expectedRunning: false,
 		},
 		{
 			msg:                      "update before start",
@@ -782,8 +645,7 @@ func TestRoundRobinList(t *testing.T) {
 				StartAction{},
 				StopAction{},
 			},
-			expectedUninitializedPeers: []string{"1", "2"},
-			expectedRunning:            false,
+			expectedRunning: false,
 		},
 		{
 			msg:                      "update before start, and update after stop",
@@ -795,8 +657,7 @@ func TestRoundRobinList(t *testing.T) {
 				StopAction{},
 				UpdateAction{AddedPeerIDs: []string{"3"}, RemovedPeerIDs: []string{"1"}},
 			},
-			expectedUninitializedPeers: []string{"2", "3"},
-			expectedRunning:            false,
+			expectedRunning: false,
 		},
 		{
 			msg:                      "concurrent update and start",
@@ -829,8 +690,7 @@ func TestRoundRobinList(t *testing.T) {
 					},
 				},
 			},
-			expectedUninitializedPeers: []string{"1"},
-			expectedRunning:            false,
+			expectedRunning: false,
 		},
 		{
 			msg: "notify before start",
@@ -839,8 +699,7 @@ func TestRoundRobinList(t *testing.T) {
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Available, Unretained: true},
 				NotifyStatusChangeAction{PeerID: "2", NewConnectionStatus: peer.Unavailable, Unretained: true},
 			},
-			expectedUninitializedPeers: []string{"1", "2"},
-			expectedRunning:            false,
+			expectedRunning: false,
 		},
 		{
 			msg:                      "notify after stop",
@@ -853,8 +712,7 @@ func TestRoundRobinList(t *testing.T) {
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Available},
 				NotifyStatusChangeAction{PeerID: "2", NewConnectionStatus: peer.Unavailable},
 			},
-			expectedUninitializedPeers: []string{"1", "2"},
-			expectedRunning:            false,
+			expectedRunning: false,
 		},
 		{
 			msg:                        "start with available and unavailable",
@@ -878,8 +736,7 @@ func TestRoundRobinList(t *testing.T) {
 				UpdateAction{AddedPeerIDs: []string{"1", "2", "3", "4"}},
 				StopAction{},
 			},
-			expectedUninitializedPeers: []string{"1", "2", "3", "4"},
-			expectedRunning:            false,
+			expectedRunning: false,
 		},
 	}
 
@@ -897,10 +754,6 @@ func TestRoundRobinList(t *testing.T) {
 				tt.retainedUnavailablePeerIDs,
 			)
 			ExpectPeerReleases(transport, tt.releasedPeerIDs, nil)
-
-			// Unhealthy Transport Retain/Release
-			ExpectPeerRetainsWithError(transport, tt.errRetainedPeerIDs, tt.retainErr)
-			ExpectPeerReleases(transport, tt.errReleasedPeerIDs, tt.releaseErr)
 
 			opts := []ListOption{seed(0), Logger(zaptest.NewLogger(t))}
 			if !tt.shuffle {
@@ -923,12 +776,6 @@ func TestRoundRobinList(t *testing.T) {
 			for _, expectedUnavailablePeer := range tt.expectedUnavailablePeers {
 				ok := !pl.Available(hostport.PeerIdentifier(expectedUnavailablePeer))
 				assert.True(t, ok, fmt.Sprintf("expected peer: %s was not in unavailable peerlist", expectedUnavailablePeer))
-			}
-
-			assert.Equal(t, len(tt.expectedUninitializedPeers), pl.NumUninitialized(), "invalid uninitialized peerlist size")
-			for _, expectedUninitializedPeer := range tt.expectedUninitializedPeers {
-				ok := pl.Uninitialized(hostport.PeerIdentifier(expectedUninitializedPeer))
-				assert.True(t, ok, fmt.Sprintf("expected peer: %s was not in uninitialized peerlist", expectedUninitializedPeer))
 			}
 
 			assert.Equal(t, tt.expectedRunning, pl.IsRunning(), "List was not in the expected state")

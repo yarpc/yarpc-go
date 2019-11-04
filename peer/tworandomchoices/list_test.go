@@ -32,7 +32,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/multierr"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
@@ -69,14 +68,6 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 
 		// PeerIDs that will be released from the transport
 		releasedPeerIDs []string
-
-		// PeerIDs that will return "retainErr" from the transport's OnRetain function
-		errRetainedPeerIDs []string
-		retainErr          error
-
-		// PeerIDs that will return "releaseErr" from the transport's OnRelease function
-		errReleasedPeerIDs []string
-		releaseErr         error
 
 		// A list of actions that will be applied on the PeerList
 		peerListActions []PeerListAction
@@ -196,87 +187,6 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: false,
 		},
 		{
-			msg:                "update retain error",
-			errRetainedPeerIDs: []string{"1"},
-			retainErr:          peer.ErrInvalidPeerType{},
-			peerListActions: []PeerListAction{
-				StartAction{},
-				UpdateAction{AddedPeerIDs: []string{"1"}, ExpectedErr: peer.ErrInvalidPeerType{}},
-			},
-			expectedRunning: true,
-		},
-		{
-			msg:                      "update retain multiple errors",
-			retainedAvailablePeerIDs: []string{"2"},
-			errRetainedPeerIDs:       []string{"1", "3"},
-			retainErr:                peer.ErrInvalidPeerType{},
-			peerListActions: []PeerListAction{
-				StartAction{},
-				UpdateAction{
-					AddedPeerIDs: []string{"1", "2", "3"},
-					ExpectedErr:  multierr.Combine(peer.ErrInvalidPeerType{}, peer.ErrInvalidPeerType{}),
-				},
-			},
-			expectedAvailablePeers: []string{"2"},
-			expectedRunning:        true,
-		},
-		{
-			msg:                      "start stop release error",
-			retainedAvailablePeerIDs: []string{"1"},
-			errReleasedPeerIDs:       []string{"1"},
-			releaseErr:               peer.ErrTransportHasNoReferenceToPeer{},
-			peerListActions: []PeerListAction{
-				StartAction{},
-				UpdateAction{AddedPeerIDs: []string{"1"}},
-				StopAction{
-					ExpectedErr: peer.ErrTransportHasNoReferenceToPeer{},
-				},
-			},
-			expectedRunning: false,
-		},
-		{
-			msg:                      "assure stop is idempotent",
-			retainedAvailablePeerIDs: []string{"1"},
-			errReleasedPeerIDs:       []string{"1"},
-			releaseErr:               peer.ErrTransportHasNoReferenceToPeer{},
-			peerListActions: []PeerListAction{
-				StartAction{},
-				UpdateAction{AddedPeerIDs: []string{"1"}},
-				ConcurrentAction{
-					Actions: []PeerListAction{
-						StopAction{
-							ExpectedErr: peer.ErrTransportHasNoReferenceToPeer{},
-						},
-						StopAction{
-							ExpectedErr: peer.ErrTransportHasNoReferenceToPeer{},
-						},
-						StopAction{
-							ExpectedErr: peer.ErrTransportHasNoReferenceToPeer{},
-						},
-					},
-				},
-			},
-			expectedRunning: false,
-		},
-		{
-			msg:                      "start stop release multiple errors",
-			retainedAvailablePeerIDs: []string{"1", "2", "3"},
-			releasedPeerIDs:          []string{"2"},
-			errReleasedPeerIDs:       []string{"1", "3"},
-			releaseErr:               peer.ErrTransportHasNoReferenceToPeer{},
-			peerListActions: []PeerListAction{
-				StartAction{},
-				UpdateAction{AddedPeerIDs: []string{"1", "2", "3"}},
-				StopAction{
-					ExpectedErr: multierr.Combine(
-						peer.ErrTransportHasNoReferenceToPeer{},
-						peer.ErrTransportHasNoReferenceToPeer{},
-					),
-				},
-			},
-			expectedRunning: false,
-		},
-		{
 			msg: "choose before start",
 			peerListActions: []PeerListAction{
 				ChooseAction{
@@ -344,22 +254,6 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			expectedRunning: true,
 		},
 		{
-			msg:                      "add retain error",
-			retainedAvailablePeerIDs: []string{"1", "2"},
-			expectedAvailablePeers:   []string{"1", "2"},
-			errRetainedPeerIDs:       []string{"3"},
-			retainErr:                peer.ErrInvalidPeerType{},
-			peerListActions: []PeerListAction{
-				StartAction{},
-				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
-				UpdateAction{
-					AddedPeerIDs: []string{"3"},
-					ExpectedErr:  peer.ErrInvalidPeerType{},
-				},
-			},
-			expectedRunning: true,
-		},
-		{
 			msg:                      "add duplicate peer",
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"1", "2"},
@@ -390,24 +284,6 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 				ChooseAction{ExpectedPeer: "1"},
 				ChooseAction{ExpectedPeer: "2"},
 				ChooseAction{ExpectedPeer: "2"},
-			},
-			expectedRunning: true,
-		},
-		{
-			msg:                      "remove release error",
-			retainedAvailablePeerIDs: []string{"1", "2"},
-			errReleasedPeerIDs:       []string{"2"},
-			releaseErr:               peer.ErrTransportHasNoReferenceToPeer{},
-			expectedAvailablePeers:   []string{"1"},
-			peerListActions: []PeerListAction{
-				StartAction{},
-				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
-				UpdateAction{
-					RemovedPeerIDs: []string{"2"},
-					ExpectedErr:    peer.ErrTransportHasNoReferenceToPeer{},
-				},
-				ChooseAction{ExpectedPeer: "1"},
-				ChooseAction{ExpectedPeer: "1"},
 			},
 			expectedRunning: true,
 		},
@@ -566,10 +442,6 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 				tt.retainedUnavailablePeerIDs,
 			)
 			ExpectPeerReleases(transport, tt.releasedPeerIDs, nil)
-
-			// Unhealthy Transport Retain/Release
-			ExpectPeerRetainsWithError(transport, tt.errRetainedPeerIDs, tt.retainErr)
-			ExpectPeerReleases(transport, tt.errReleasedPeerIDs, tt.releaseErr)
 
 			logger := zaptest.NewLogger(t)
 			pl := New(transport, Seed(0), Logger(logger))

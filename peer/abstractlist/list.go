@@ -24,7 +24,6 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"sort"
 	"sync"
 	"time"
 
@@ -153,7 +152,7 @@ func New(name string, transport peer.Transport, implementation Implementation, o
 		name:               name,
 		logger:             logger,
 		peers:              make(map[string]*peerFacade, options.capacity),
-		offlinePeers:       make(map[string]peer.Identifier, options.capacity),
+		plans:              make(map[string]peer.Identifier, options.capacity),
 		implementation:     implementation,
 		transport:          transport,
 		noShuffle:          options.noShuffle,
@@ -180,21 +179,39 @@ func New(name string, transport peer.Transport, implementation Implementation, o
 // the transport about choices other peer lists that share the same peers have
 // made.
 type List struct {
-	lock sync.RWMutex
-	once *lifecycle.Once
-
 	name   string
 	logger *zap.Logger
 
+	once               *lifecycle.Once
+	lock               sync.RWMutex
 	peers              map[string]*peerFacade
-	offlinePeers       map[string]peer.Identifier
 	implementation     Implementation
 	peerAvailableEvent chan struct{}
 	transport          peer.Transport
 
+	updatesLock sync.RWMutex
+	plans       map[string]peer.Identifier
+	updates     []operation
+	recycle     []operation
+	started     bool
+	stopped     bool
+
 	noShuffle bool
 	failFast  bool
 	randSrc   rand.Source
+}
+
+type opCode byte
+
+const (
+	addCode opCode = iota + 1
+	removeCode
+	stopCode
+)
+
+type operation struct {
+	Code opCode
+	Id   peer.Identifier
 }
 
 // Name returns the name of the list.
@@ -226,107 +243,132 @@ func (pl *List) Update(updates peer.ListUpdates) error {
 		return nil
 	}
 
-	pl.lock.Lock()
-	defer pl.lock.Unlock()
-
-	if !pl.once.IsRunning() {
-		return pl.updateOffline(updates)
+	if err := pl.update(updates); err != nil {
+		return err
 	}
-	return pl.updateOnline(updates)
+
+	pl.notifyFlushNeeded()
+
+	return nil
 }
 
-// updateOnline must be run under a list lock.
-func (pl *List) updateOnline(updates peer.ListUpdates) error {
+func (pl *List) update(updates peer.ListUpdates) error {
+	// We can shuffle the additions before taking on the lock, to minimize the
+	// duration we hold the lock.
+	additions := updates.Additions
+	if !pl.noShuffle {
+		additions = shuffle(pl.randSrc, additions)
+	}
+
+	pl.updatesLock.Lock()
+	defer pl.updatesLock.Unlock()
+
 	var errs error
 	for _, id := range updates.Removals {
 		errs = multierr.Append(errs, pl.remove(id))
 	}
-
-	add := updates.Additions
-	if !pl.noShuffle {
-		add = shuffle(pl.randSrc, add)
-	}
-
-	for _, id := range add {
+	for _, id := range additions {
 		errs = multierr.Append(errs, pl.add(id))
 	}
+
 	return errs
 }
 
-// updateOffline must be run under a list lock.
-func (pl *List) updateOffline(updates peer.ListUpdates) error {
-	var errs error
-	for _, id := range updates.Removals {
-		errs = multierr.Append(errs, pl.removeOffline(id))
+func (pl *List) remove(id peer.Identifier) error {
+	addr := id.Identifier()
+
+	_, ok := pl.plans[addr]
+	if !ok {
+		return peer.ErrPeerRemoveNotInList(addr)
 	}
-	for _, id := range updates.Additions {
-		errs = multierr.Append(errs, pl.addOffline(id))
-	}
-	return errs
+
+	delete(pl.plans, addr)
+
+	pl.updates = append(pl.updates, operation{
+		Code: removeCode,
+		Id:   id,
+	})
+
+	pl.logger.Debug("enqueue peer to remove", zap.String("address", addr))
+
+	return nil
 }
 
-// Start notifies the List that requests will start coming
-func (pl *List) Start() error {
-	return pl.once.Start(pl.start)
-}
-
-func (pl *List) start() error {
-	pl.lock.Lock()
-	defer pl.lock.Unlock()
-
-	all := pl.offlinePeerIdentifiers()
-
-	var err error
-	err = multierr.Append(err, pl.updateOffline(peer.ListUpdates{
-		Removals: all,
-	}))
-	err = multierr.Append(err, pl.updateOnline(peer.ListUpdates{
-		Additions: all,
-	}))
-	return err
-}
-
-// Stop notifies the List that requests will stop coming
-func (pl *List) Stop() error {
-	return pl.once.Stop(pl.stop)
-}
-
-func (pl *List) stop() error {
-	pl.lock.Lock()
-	defer pl.lock.Unlock()
-
-	all := pl.onlinePeerIdentifiers()
-
-	var err error
-	err = multierr.Append(err, pl.updateOnline(peer.ListUpdates{
-		Removals: all,
-	}))
-	err = multierr.Append(err, pl.updateOffline(peer.ListUpdates{
-		Additions: all,
-	}))
-	return err
-}
-
-// IsRunning returns whether the peer list is running.
-func (pl *List) IsRunning() bool {
-	return pl.once.IsRunning()
-}
-
-// add retains a peer and sets up a facade (a thin proxy for a peer) to receive
-// connection status notifications from the dialer and track pending request
-// counts.
-//
-// add does not add the peer to the list of peers available for choosing (the
-// Implementation).
-// The facade is responsible for adding and removing the peer from the
-// collection of available peers based on connection status notifications.
-//
-// add must be run inside a list lock.
+// addOffline must be run under a list lock.
 func (pl *List) add(id peer.Identifier) error {
 	addr := id.Identifier()
 
-	if _, ok := pl.peers[addr]; ok {
+	if _, ok := pl.plans[addr]; ok {
 		return peer.ErrPeerAddAlreadyInList(addr)
+	}
+
+	pl.plans[addr] = id
+
+	pl.updates = append(pl.updates, operation{
+		Code: addCode,
+		Id:   id,
+	})
+
+	pl.logger.Debug("enqueue peer to add", zap.String("address", addr))
+
+	return nil
+}
+
+// notifyFlushNeeded must not be called while holding the update queue lock nor the
+// list lock.
+func (pl *List) notifyFlushNeeded() {
+	// TODO or when AutoFlush is enabled for tests.
+	if pl.once.IsRunning() {
+		pl.Flush()
+	}
+}
+
+// Flush effects all enqueued updates synchronously and should only be used to
+// synchronize tests.
+func (pl *List) Flush() {
+	pl.updatesLock.Lock()
+	defer pl.updatesLock.Unlock()
+
+	pl.lock.Lock()
+	defer pl.lock.Unlock()
+
+	if pl.stopped {
+		return
+	}
+
+	for _, op := range pl.updates {
+		switch op.Code {
+		case addCode:
+			pl.doAdd(op.Id)
+		case removeCode:
+			pl.doRemove(op.Id)
+		case stopCode:
+			pl.doStop()
+			pl.stopped = true
+			return
+		}
+	}
+
+	// Clear updates, retain all prior allocated capacity.
+	pl.updates = pl.updates[0:0]
+}
+
+// doAdd retains a peer and sets up a facade (a thin proxy for a peer)
+// to receive connection status notifications from the dialer and track pending
+// request counts.
+//
+// doAdd does not add the peer to the list of peers available for
+// choosing (the Implementation).
+// The facade is responsible for adding and removing the peer from the
+// collection of available peers based on connection status notifications.
+//
+// doAdd must be run inside a list lock.
+func (pl *List) doAdd(id peer.Identifier) {
+	addr := id.Identifier()
+
+	if _, ok := pl.peers[addr]; ok {
+		pl.logger.DPanic("assertion error: adding peer that is already present", zap.String("address", addr))
+		return
 	}
 
 	pf := &peerFacade{list: pl, id: id}
@@ -335,37 +377,27 @@ func (pl *List) add(id peer.Identifier) error {
 	// The transport must not call back before returning.
 	p, err := pl.transport.RetainPeer(id, pf)
 	if err != nil {
-		return err
+		pl.logger.DPanic("error retaining peer for peer list", zap.Error(err))
+		return
 	}
 
 	pf.peer = p
 	pl.peers[addr] = pf
 	pl.notifyStatusChanged(pf)
 
-	return nil
+	pl.logger.Debug("added peer", zap.String("address", addr))
 }
 
-// addOffline must be run under a list lock.
-func (pl *List) addOffline(id peer.Identifier) error {
-	addr := id.Identifier()
-
-	if _, ok := pl.offlinePeers[addr]; ok {
-		return peer.ErrPeerAddAlreadyInList(addr)
-	}
-
-	pl.offlinePeers[addr] = id
-	return nil
-}
-
-// remove releases and forgets a peer.
+// doRemove releases and forgets a peer.
 //
-// remove must be run under a list lock.
-func (pl *List) remove(id peer.Identifier) error {
+// doRemove must be run under a list lock.
+func (pl *List) doRemove(id peer.Identifier) {
 	addr := id.Identifier()
 
 	pf, ok := pl.peers[addr]
 	if !ok {
-		return peer.ErrPeerRemoveNotInList(addr)
+		pl.logger.DPanic("assertion error: removing peer that is currently absent", zap.String("address", addr))
+		return
 	}
 
 	if pf.status.ConnectionStatus == peer.Available {
@@ -376,21 +408,63 @@ func (pl *List) remove(id peer.Identifier) error {
 
 	delete(pl.peers, addr)
 
+	pl.logger.Debug("removed peer", zap.String("address", addr))
+
 	// The transport must not call back before returning.
-	return pl.transport.ReleasePeer(id, pf)
+	if err := pl.transport.ReleasePeer(id, pf); err != nil {
+		pl.logger.DPanic("error releasing peer for peer list", zap.Error(err))
+	}
 }
 
-func (pl *List) removeOffline(id peer.Identifier) error {
-	addr := id.Identifier()
-
-	_, ok := pl.offlinePeers[addr]
-	if !ok {
-		return peer.ErrPeerRemoveNotInList(addr)
+func (pl *List) doStop() {
+	for _, peer := range pl.peers {
+		pl.doRemove(peer)
 	}
+}
 
-	delete(pl.offlinePeers, addr)
+// Start notifies the List that requests will start coming
+func (pl *List) Start() error {
+	return pl.once.Start(pl.start)
+}
 
+func (pl *List) start() error {
+	pl.logger.Debug("starting peer list")
+
+	// TODO flush in goroutine
+	pl.Flush()
+
+	pl.logger.Debug("started peer list")
 	return nil
+}
+
+// Stop notifies the List that requests will stop coming
+func (pl *List) Stop() error {
+	return pl.once.Stop(pl.stop)
+}
+
+func (pl *List) stop() error {
+	pl.logger.Debug("stopping peer list")
+	pl.stopUpdates()
+
+	// TODO flush conditionally
+	pl.Flush()
+
+	pl.logger.Debug("stopped peer list")
+	return nil
+}
+
+func (pl *List) stopUpdates() {
+	pl.updatesLock.Lock()
+	defer pl.updatesLock.Unlock()
+
+	pl.updates = append(pl.updates, operation{
+		Code: stopCode,
+	})
+}
+
+// IsRunning returns whether the peer list is running.
+func (pl *List) IsRunning() bool {
+	return pl.once.IsRunning()
 }
 
 // Choose selects the next available peer in the peer list.
@@ -575,15 +649,6 @@ func (pl *List) NumUnavailable() int {
 	return pl.countPeersWithStatus(peer.Unavailable)
 }
 
-// NumUninitialized returns how many peers are unavailable because the peer
-// list was stopped or has not yet started.
-func (pl *List) NumUninitialized() int {
-	pl.lock.RLock()
-	defer pl.lock.RUnlock()
-
-	return len(pl.offlinePeers)
-}
-
 // Available returns whether the identifier peer is available for traffic.
 func (pl *List) Available(pid peer.Identifier) bool {
 	pl.lock.RLock()
@@ -593,15 +658,6 @@ func (pl *List) Available(pid peer.Identifier) bool {
 		return pf.status.ConnectionStatus == peer.Available
 	}
 	return false
-}
-
-// Uninitialized returns whether the identifier peer is present but uninitialized.
-func (pl *List) Uninitialized(pid peer.Identifier) bool {
-	pl.lock.RLock()
-	defer pl.lock.RUnlock()
-
-	_, exists := pl.offlinePeers[pid.Identifier()]
-	return exists
 }
 
 // Peers returns a snapshot of all retained (available and unavailable) peers.
@@ -614,39 +670,6 @@ func (pl *List) Peers() []peer.StatusPeer {
 		peers = append(peers, pf.peer)
 	}
 	return peers
-}
-
-func (pl *List) onlinePeerIdentifiers() []peer.Identifier {
-	// This is not duplicate code with offlinePeerIdentifiers, as it traverses
-	// peers instead of offlinePeers.
-	addrs := make([]string, 0, len(pl.peers))
-	for addr := range pl.peers {
-		addrs = append(addrs, addr)
-	}
-	sort.Strings(addrs)
-
-	ids := make([]peer.Identifier, len(addrs))
-	for i, addr := range addrs {
-		ids[i] = pl.peers[addr].peer
-	}
-	return ids
-}
-
-func (pl *List) offlinePeerIdentifiers() []peer.Identifier {
-	// This is not duplicate code with offlinePeerIdentifiers, as it traverses
-	// offlinePeers instead of onlinePeers.
-	addrs := make([]string, 0, len(pl.offlinePeers))
-	for addr := range pl.offlinePeers {
-		addrs = append(addrs, addr)
-	}
-	sort.Strings(addrs)
-
-	ids := make([]peer.Identifier, len(addrs))
-	for i, addr := range addrs {
-		id := pl.offlinePeers[addr]
-		ids[i] = id
-	}
-	return ids
 }
 
 // Introspect returns a ChooserStatus with a summary of the Peers.
