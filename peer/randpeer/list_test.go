@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package randpeer_test
+package randpeer
 
 import (
 	"context"
@@ -39,7 +39,6 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/whitespace"
-	"go.uber.org/yarpc/peer/randpeer"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/yarpcconfig"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -573,7 +572,7 @@ func TestRandPeer(t *testing.T) {
 			ExpectPeerReleases(transport, tt.errReleasedPeerIDs, tt.releaseErr)
 
 			logger := zaptest.NewLogger(t)
-			pl := randpeer.New(transport, randpeer.Seed(0), randpeer.Logger(logger))
+			pl := New(transport, Seed(0), Logger(logger))
 
 			deps := ListActionDeps{
 				Peers: peerMap,
@@ -618,7 +617,7 @@ func TestFailFastConfig(t *testing.T) {
 	`, conn.Addr()))
 	cfgr := yarpcconfig.New()
 	cfgr.MustRegisterTransport(http.TransportSpec())
-	cfgr.MustRegisterPeerList(randpeer.Spec())
+	cfgr.MustRegisterPeerList(Spec())
 	cfg, err := cfgr.LoadConfigFromYAML(serviceName, strings.NewReader(config))
 	require.NoError(t, err)
 
