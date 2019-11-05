@@ -25,6 +25,7 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/abstractlist"
+	"go.uber.org/zap"
 )
 
 type listConfig struct {
@@ -32,6 +33,7 @@ type listConfig struct {
 	shuffle  bool
 	failFast bool
 	seed     int64
+	logger   *zap.Logger
 }
 
 var defaultListConfig = listConfig{
@@ -64,6 +66,13 @@ func FailFast() ListOption {
 	}
 }
 
+// Logger specifies a logger.
+func Logger(logger *zap.Logger) ListOption {
+	return func(c *listConfig) {
+		c.logger = logger
+	}
+}
+
 // New creates a new round robin peer list.
 func New(transport peer.Transport, opts ...ListOption) *List {
 	cfg := defaultListConfig
@@ -74,6 +83,9 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 	plOpts := []abstractlist.Option{
 		abstractlist.Capacity(cfg.capacity),
 		abstractlist.Seed(cfg.seed),
+	}
+	if cfg.logger != nil {
+		plOpts = append(plOpts, abstractlist.Logger(cfg.logger))
 	}
 	if !cfg.shuffle {
 		plOpts = append(plOpts, abstractlist.NoShuffle())
