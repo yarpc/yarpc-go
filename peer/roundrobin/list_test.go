@@ -913,19 +913,19 @@ func TestRoundRobinList(t *testing.T) {
 			}
 			ApplyPeerListActions(t, pl, tt.peerListActions, deps)
 
-			assert.Equal(t, pl.NumAvailable(), len(tt.expectedAvailablePeers), "invalid available peerlist size")
+			assert.Equal(t, len(tt.expectedAvailablePeers), pl.NumAvailable(), "invalid available peerlist size")
 			for _, expectedRingPeer := range tt.expectedAvailablePeers {
 				ok := pl.Available(hostport.PeerIdentifier(expectedRingPeer))
 				assert.True(t, ok, fmt.Sprintf("expected peer: %s was not in available peerlist", expectedRingPeer))
 			}
 
-			assert.Equal(t, pl.NumUnavailable(), len(tt.expectedUnavailablePeers), "invalid unavailable peerlist size")
+			assert.Equal(t, len(tt.expectedUnavailablePeers), pl.NumUnavailable(), "invalid unavailable peerlist size")
 			for _, expectedUnavailablePeer := range tt.expectedUnavailablePeers {
 				ok := !pl.Available(hostport.PeerIdentifier(expectedUnavailablePeer))
 				assert.True(t, ok, fmt.Sprintf("expected peer: %s was not in unavailable peerlist", expectedUnavailablePeer))
 			}
 
-			assert.Equal(t, pl.NumUninitialized(), len(tt.expectedUninitializedPeers), "invalid uninitialized peerlist size")
+			assert.Equal(t, len(tt.expectedUninitializedPeers), pl.NumUninitialized(), "invalid uninitialized peerlist size")
 			for _, expectedUninitializedPeer := range tt.expectedUninitializedPeers {
 				ok := pl.Uninitialized(hostport.PeerIdentifier(expectedUninitializedPeer))
 				assert.True(t, ok, fmt.Sprintf("expected peer: %s was not in uninitialized peerlist", expectedUninitializedPeer))
