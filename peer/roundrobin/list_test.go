@@ -755,7 +755,7 @@ func TestRoundRobinList(t *testing.T) {
 			)
 			ExpectPeerReleases(transport, tt.releasedPeerIDs, nil)
 
-			opts := []ListOption{seed(0), Logger(zaptest.NewLogger(t))}
+			opts := []ListOption{seed(0), autoFlush, Logger(zaptest.NewLogger(t))}
 			if !tt.shuffle {
 				opts = append(opts, noShuffle)
 			}
@@ -843,6 +843,10 @@ func checkPeerStatus(
 
 var noShuffle ListOption = func(c *listConfig) {
 	c.shuffle = false
+}
+
+var autoFlush ListOption = func(c *listConfig) {
+	c.autoFlush = true
 }
 
 func seed(seed int64) ListOption {

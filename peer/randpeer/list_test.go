@@ -48,6 +48,10 @@ var (
 	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, `"random" peer list can't wait for peer without a context deadline`)
 )
 
+var autoFlush ListOption = listOptionFunc(func(c *listOptions) {
+	c.autoFlush = true
+})
+
 func newNotRunningError(err string) error {
 	return yarpcerrors.FailedPreconditionErrorf(`"random" peer list is not running: %s`, err)
 }
@@ -444,7 +448,7 @@ func TestRandPeer(t *testing.T) {
 			ExpectPeerReleases(transport, tt.releasedPeerIDs, nil)
 
 			logger := zaptest.NewLogger(t)
-			pl := New(transport, Seed(0), Logger(logger))
+			pl := New(transport, Seed(0), autoFlush, Logger(logger))
 
 			deps := ListActionDeps{
 				Peers: peerMap,

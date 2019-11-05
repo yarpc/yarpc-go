@@ -44,6 +44,10 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
+var autoFlush ListOption = listOptionFunc(func(c *listOptions) {
+	c.autoFlush = true
+})
+
 var (
 	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, `"two-random-choices" peer list can't wait for peer without a context deadline`)
 )
@@ -444,7 +448,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			ExpectPeerReleases(transport, tt.releasedPeerIDs, nil)
 
 			logger := zaptest.NewLogger(t)
-			pl := New(transport, Seed(0), Logger(logger))
+			pl := New(transport, Seed(0), autoFlush, Logger(logger))
 
 			deps := ListActionDeps{
 				Peers: peerMap,

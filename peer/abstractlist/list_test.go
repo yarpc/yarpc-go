@@ -139,7 +139,13 @@ func TestPeerList(t *testing.T) {
 	impl := &mraList{}
 	core, log := observer.New(zap.DebugLevel)
 	logger := zap.New(core)
-	list := New("mra", fake, impl, Capacity(1), NoShuffle(), Seed(0), Logger(logger))
+	list := New("mra", fake, impl,
+		Capacity(1),
+		AutoFlush(),
+		NoShuffle(),
+		Seed(0),
+		Logger(logger),
+	)
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
@@ -249,7 +255,7 @@ func TestPeerList(t *testing.T) {
 func TestFailWait(t *testing.T) {
 	fake := yarpctest.NewFakeTransport(yarpctest.InitialConnectionStatus(peer.Available))
 	impl := &mraList{}
-	list := New("mra", fake, impl)
+	list := New("mra", fake, impl, AutoFlush())
 
 	require.NoError(t, list.Start())
 
@@ -296,7 +302,7 @@ func TestFailWait(t *testing.T) {
 func TestFailFast(t *testing.T) {
 	fake := yarpctest.NewFakeTransport(yarpctest.InitialConnectionStatus(peer.Unavailable))
 	impl := &mraList{}
-	list := New("mra", fake, impl, FailFast())
+	list := New("mra", fake, impl, FailFast(), AutoFlush())
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
@@ -311,7 +317,7 @@ func TestFailFast(t *testing.T) {
 func TestIntrospect(t *testing.T) {
 	fake := yarpctest.NewFakeTransport(yarpctest.InitialConnectionStatus(peer.Unavailable))
 	impl := &mraList{}
-	list := New("mra", fake, impl, FailFast())
+	list := New("mra", fake, impl, FailFast(), AutoFlush())
 
 	assert.Equal(t, introspection.ChooserStatus{
 		Name:  "mra",
@@ -372,7 +378,7 @@ func TestIntrospect(t *testing.T) {
 func TestWaitForNeverStarted(t *testing.T) {
 	fake := yarpctest.NewFakeTransport(yarpctest.InitialConnectionStatus(peer.Unavailable))
 	impl := &mraList{}
-	list := New("mra", fake, impl, FailFast())
+	list := New("mra", fake, impl, FailFast(), AutoFlush())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 0)
 	defer cancel()

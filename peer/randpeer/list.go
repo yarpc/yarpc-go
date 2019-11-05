@@ -30,10 +30,11 @@ import (
 )
 
 type listOptions struct {
-	capacity int
-	source   rand.Source
-	failFast bool
-	logger   *zap.Logger
+	capacity  int
+	source    rand.Source
+	failFast  bool
+	autoFlush bool
+	logger    *zap.Logger
 }
 
 var defaultListOptions = listOptions{
@@ -112,6 +113,9 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 	}
 	if options.failFast {
 		plOpts = append(plOpts, abstractlist.FailFast())
+	}
+	if options.autoFlush {
+		plOpts = append(plOpts, abstractlist.AutoFlush())
 	}
 
 	return &List{

@@ -525,7 +525,7 @@ func TestPeerHeapList(t *testing.T) {
 			if tt.nextRand != nil {
 				randOption = InsertionOrder(tt.nextRand)
 			}
-			opts := []ListOption{Capacity(0), noShuffle, randOption, Logger(logger), Seed(0)}
+			opts := []ListOption{Capacity(0), noShuffle, autoFlush, randOption, Logger(logger), Seed(0)}
 
 			pl := New(transport, opts...)
 
@@ -556,6 +556,10 @@ func TestPeerHeapList(t *testing.T) {
 
 var noShuffle ListOption = func(c *listConfig) {
 	c.shuffle = false
+}
+
+var autoFlush ListOption = func(c *listConfig) {
+	c.autoFlush = true
 }
 
 func TestFailFastConfig(t *testing.T) {

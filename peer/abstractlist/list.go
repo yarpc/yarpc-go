@@ -74,6 +74,7 @@ type options struct {
 	capacity  int
 	noShuffle bool
 	failFast  bool
+	autoFlush bool
 	seed      int64
 	logger    *zap.Logger
 }
@@ -126,6 +127,23 @@ func FailFast() Option {
 	})
 }
 
+// AutoFlush causes all peer list updates to synchronize peers retained and
+// released before returning.
+//
+// Updates are normally anachronous because there is some risk that there will
+// exist a deadlock between the peer list and transport implementations, since
+// updates induce retention and release of transport peers, which in turn
+// induces connection status notifications to the list.
+// Desynchronizing these communication channels protects the peer list updater
+// from stalling.
+//
+// AutoFlush should only be used in tests.
+func AutoFlush() Option {
+	return optionFunc(func(options *options) {
+		options.autoFlush = true
+	})
+}
+
 // Seed specifies the random seed to use for shuffling peers
 //
 // Defaults to approximately the process start time in nanoseconds.
@@ -156,9 +174,12 @@ func New(name string, transport peer.Transport, implementation Implementation, o
 		implementation:     implementation,
 		transport:          transport,
 		noShuffle:          options.noShuffle,
+		autoFlush:          options.autoFlush,
 		failFast:           options.failFast,
 		randSrc:            rand.NewSource(options.seed),
 		peerAvailableEvent: make(chan struct{}, 1),
+		flushEvent:         make(chan struct{}, 1),
+		flusherStopped:     make(chan struct{}),
 	}
 }
 
@@ -179,26 +200,30 @@ func New(name string, transport peer.Transport, implementation Implementation, o
 // the transport about choices other peer lists that share the same peers have
 // made.
 type List struct {
-	name   string
-	logger *zap.Logger
-
-	once               *lifecycle.Once
-	lock               sync.RWMutex
-	peers              map[string]*peerFacade
-	implementation     Implementation
-	peerAvailableEvent chan struct{}
-	transport          peer.Transport
-
-	updatesLock sync.RWMutex
-	plans       map[string]peer.Identifier
-	updates     []operation
-	recycle     []operation
-	started     bool
-	stopped     bool
-
+	// immutable
+	name      string
+	logger    *zap.Logger
 	noShuffle bool
 	failFast  bool
+	autoFlush bool
 	randSrc   rand.Source
+
+	// synchronized under lock
+	lock               sync.RWMutex
+	once               *lifecycle.Once
+	peerAvailableEvent chan struct{}
+	peers              map[string]*peerFacade
+	implementation     Implementation
+	transport          peer.Transport
+
+	// synchronized under updatesLock
+	updatesLock    sync.RWMutex
+	flushEvent     chan struct{}
+	flusherStopped chan struct{}
+	plans          map[string]peer.Identifier
+	updates        []operation
+	started        bool
+	stopped        bool
 }
 
 type opCode byte
@@ -317,10 +342,32 @@ func (pl *List) add(id peer.Identifier) error {
 // notifyFlushNeeded must not be called while holding the update queue lock nor the
 // list lock.
 func (pl *List) notifyFlushNeeded() {
-	// TODO or when AutoFlush is enabled for tests.
-	if pl.once.IsRunning() {
-		pl.Flush()
+	if pl.autoFlush {
+		if pl.once.IsRunning() {
+			pl.Flush()
+		}
+	} else {
+		// A non-blocking write to the flush event to induce the flusher to
+		// resume once, if this has not already been scheduled.
+		select {
+		case pl.flushEvent <- struct{}{}:
+		default:
+		}
 	}
+}
+
+// flusher must be run in a goroutine, until the list is stopped.
+func (pl *List) flusher() {
+Loop:
+	for {
+		select {
+		case <-pl.once.Stopping():
+			break Loop
+		case <-pl.flushEvent:
+			pl.Flush()
+		}
+	}
+	close(pl.flusherStopped)
 }
 
 // Flush effects all enqueued updates synchronously and should only be used to
@@ -430,8 +477,11 @@ func (pl *List) Start() error {
 func (pl *List) start() error {
 	pl.logger.Debug("starting peer list")
 
-	// TODO flush in goroutine
-	pl.Flush()
+	if pl.autoFlush {
+		pl.Flush()
+	} else {
+		go pl.flusher()
+	}
 
 	pl.logger.Debug("started peer list")
 	return nil
@@ -446,8 +496,11 @@ func (pl *List) stop() error {
 	pl.logger.Debug("stopping peer list")
 	pl.stopUpdates()
 
-	// TODO flush conditionally
-	pl.Flush()
+	if pl.autoFlush {
+		pl.Flush()
+	} else {
+		<-pl.flusherStopped
+	}
 
 	pl.logger.Debug("stopped peer list")
 	return nil

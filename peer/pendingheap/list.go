@@ -30,12 +30,13 @@ import (
 )
 
 type listConfig struct {
-	capacity int
-	shuffle  bool
-	failFast bool
-	seed     int64
-	nextRand func(int) int
-	logger   *zap.Logger
+	capacity  int
+	shuffle   bool
+	failFast  bool
+	autoFlush bool
+	seed      int64
+	nextRand  func(int) int
+	logger    *zap.Logger
 }
 
 var defaultListConfig = listConfig{
@@ -100,6 +101,9 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 	}
 	if cfg.failFast {
 		plOpts = append(plOpts, abstractlist.FailFast())
+	}
+	if cfg.autoFlush {
+		plOpts = append(plOpts, abstractlist.AutoFlush())
 	}
 
 	nextRandFn := nextRand(cfg.seed)
