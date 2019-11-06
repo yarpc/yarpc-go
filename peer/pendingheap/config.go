@@ -66,10 +66,17 @@ type Configuration struct {
 //    capacity: 1
 //    failFast: true
 func Spec() yarpcconfig.PeerListSpec {
+	return SpecWithOptions()
+}
+
+// SpecWithOptions accepts additional list constructor options.
+func SpecWithOptions(options ...ListOption) yarpcconfig.PeerListSpec {
 	return yarpcconfig.PeerListSpec{
 		Name: "fewest-pending-requests",
 		BuildPeerList: func(cfg Configuration, t peer.Transport, k *yarpcconfig.Kit) (peer.ChooserList, error) {
-			opts := make([]ListOption, 0, 2)
+			opts := make([]ListOption, 0, len(options)+2)
+
+			opts = append(opts, options...)
 
 			if cfg.Capacity != nil {
 				if *cfg.Capacity <= 0 {

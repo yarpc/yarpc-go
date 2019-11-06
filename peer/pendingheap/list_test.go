@@ -42,6 +42,7 @@ import (
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/yarpcconfig"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap/zaptest"
 )
 
 var (
@@ -649,11 +650,13 @@ func TestPeerHeapList(t *testing.T) {
 			ExpectPeerRetainsWithError(transport, tt.errRetainedPeerIDs, tt.retainErr)
 			ExpectPeerReleases(transport, tt.errReleasedPeerIDs, tt.releaseErr)
 
+			logger := zaptest.NewLogger(t)
+
 			randOption := DisableRandomInsertion()
 			if tt.nextRand != nil {
 				randOption = InsertionOrder(tt.nextRand)
 			}
-			opts := []ListOption{Capacity(0), noShuffle, randOption}
+			opts := []ListOption{Capacity(0), noShuffle, randOption, Logger(logger), Seed(0)}
 
 			pl := New(transport, opts...)
 

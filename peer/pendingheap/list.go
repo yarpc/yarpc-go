@@ -26,6 +26,7 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/abstractlist"
+	"go.uber.org/zap"
 )
 
 type listConfig struct {
@@ -34,6 +35,7 @@ type listConfig struct {
 	failFast bool
 	seed     int64
 	nextRand func(int) int
+	logger   *zap.Logger
 }
 
 var defaultListConfig = listConfig{
@@ -64,6 +66,13 @@ func Seed(seed int64) ListOption {
 	}
 }
 
+// Logger provides an optional logger for the list.
+func Logger(logger *zap.Logger) ListOption {
+	return func(c *listConfig) {
+		c.logger = logger
+	}
+}
+
 // FailFast indicates that the peer list should not wait for a peer to become
 // available when choosing a peer.
 //
@@ -84,6 +93,7 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 
 	plOpts := []abstractlist.Option{
 		abstractlist.Capacity(cfg.capacity),
+		abstractlist.Logger(cfg.logger),
 	}
 	if !cfg.shuffle {
 		plOpts = append(plOpts, abstractlist.NoShuffle())
