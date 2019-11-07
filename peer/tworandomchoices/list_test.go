@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tworandomchoices_test
+package tworandomchoices
 
 import (
 	"context"
@@ -39,7 +39,6 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/whitespace"
-	"go.uber.org/yarpc/peer/tworandomchoices"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/yarpcconfig"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -573,7 +572,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			ExpectPeerReleases(transport, tt.errReleasedPeerIDs, tt.releaseErr)
 
 			logger := zaptest.NewLogger(t)
-			pl := tworandomchoices.New(transport, tworandomchoices.Seed(0), tworandomchoices.Logger(logger))
+			pl := New(transport, Seed(0), Logger(logger))
 
 			deps := ListActionDeps{
 				Peers: peerMap,
@@ -618,7 +617,7 @@ func TestFailFastConfig(t *testing.T) {
 	`, conn.Addr()))
 	cfgr := yarpcconfig.New()
 	cfgr.MustRegisterTransport(http.TransportSpec())
-	cfgr.MustRegisterPeerList(tworandomchoices.Spec())
+	cfgr.MustRegisterPeerList(Spec())
 	cfg, err := cfgr.LoadConfigFromYAML(serviceName, strings.NewReader(config))
 	require.NoError(t, err)
 
