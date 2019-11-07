@@ -26,12 +26,14 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/abstractlist"
+	"go.uber.org/zap"
 )
 
 type listOptions struct {
 	capacity int
 	source   rand.Source
 	failFast bool
+	logger   *zap.Logger
 }
 
 var defaultListOptions = listOptions{
@@ -82,6 +84,13 @@ func FailFast() ListOption {
 	})
 }
 
+// Logger specifies a logger.
+func Logger(logger *zap.Logger) ListOption {
+	return listOptionFunc(func(options *listOptions) {
+		options.logger = logger
+	})
+}
+
 // New creates a new random peer list.
 func New(transport peer.Transport, opts ...ListOption) *List {
 	options := defaultListOptions
@@ -98,6 +107,9 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 		abstractlist.NoShuffle(),
 	}
 
+	if options.logger != nil {
+		plOpts = append(plOpts, abstractlist.Logger(options.logger))
+	}
 	if options.failFast {
 		plOpts = append(plOpts, abstractlist.FailFast())
 	}
