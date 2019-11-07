@@ -678,8 +678,8 @@ func TestPeerHeapList(t *testing.T) {
 			sort.Strings(availablePeers)
 			sort.Strings(unavailablePeers)
 
-			assert.Equal(t, availablePeers, tt.expectedAvailablePeers, "incorrect available peers")
-			assert.Equal(t, unavailablePeers, tt.expectedUnavailablePeers, "incorrect unavailable peers")
+			assert.Equal(t, tt.expectedAvailablePeers, availablePeers, "incorrect available peers")
+			assert.Equal(t, tt.expectedUnavailablePeers, unavailablePeers, "incorrect unavailable peers")
 			assert.Equal(t, tt.expectedRunning, pl.IsRunning(), "Peer list should match expected final running state")
 		})
 	}
