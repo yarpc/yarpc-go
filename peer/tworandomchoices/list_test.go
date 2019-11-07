@@ -43,6 +43,7 @@ import (
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/yarpcconfig"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap/zaptest"
 )
 
 var (
@@ -571,7 +572,8 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			ExpectPeerRetainsWithError(transport, tt.errRetainedPeerIDs, tt.retainErr)
 			ExpectPeerReleases(transport, tt.errReleasedPeerIDs, tt.releaseErr)
 
-			pl := tworandomchoices.New(transport, tworandomchoices.Seed(0))
+			logger := zaptest.NewLogger(t)
+			pl := tworandomchoices.New(transport, tworandomchoices.Seed(0), tworandomchoices.Logger(logger))
 
 			deps := ListActionDeps{
 				Peers: peerMap,
