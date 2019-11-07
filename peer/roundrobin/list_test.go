@@ -45,6 +45,7 @@ import (
 	"go.uber.org/yarpc/yarpcconfig"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/yarpc/yarpctest"
+	"go.uber.org/zap/zaptest"
 )
 
 var (
@@ -901,7 +902,7 @@ func TestRoundRobinList(t *testing.T) {
 			ExpectPeerRetainsWithError(transport, tt.errRetainedPeerIDs, tt.retainErr)
 			ExpectPeerReleases(transport, tt.errReleasedPeerIDs, tt.releaseErr)
 
-			opts := []ListOption{seed(0)}
+			opts := []ListOption{seed(0), Logger(zaptest.NewLogger(t))}
 			if !tt.shuffle {
 				opts = append(opts, noShuffle)
 			}
