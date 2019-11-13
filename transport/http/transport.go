@@ -306,7 +306,7 @@ func (a *Transport) Start() error {
 // Stop stops the HTTP transport.
 func (a *Transport) Stop() error {
 	return a.once.Stop(func() error {
-		a.client.CloseIdleConnections()
+		closeIdleConnections(a.client)
 		a.connectorsGroup.Wait()
 		return nil
 	})
