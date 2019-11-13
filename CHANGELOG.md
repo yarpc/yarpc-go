@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   transports to reduce the liklihood of deadlocks.
 - Increase default HTTP timeout to avoid stop timeout errors when the server
   has a new idle connection.
+- Close idle connections when the transport is closed.
 
 ## [1.42.0] - 2019-10-31 (Spooky)
 ### Added
