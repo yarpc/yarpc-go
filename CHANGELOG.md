@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 - Simplified the flow of status change notifications for the gRPC and TChannel
   transports to reduce the liklihood of deadlocks.
+- Increase default HTTP timeout to avoid stop timeout errors when the server
+  has a new idle connection.
 
 ## [1.42.0] - 2019-10-31 (Spooky)
 ### Added
