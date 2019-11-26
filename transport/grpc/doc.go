@@ -19,7 +19,7 @@
 // THE SOFTWARE.
 
 // Package grpc implements a YARPC transport based on the gRPC protocol.
-// The gRPC transport provides support for Unary RPCs only.
+// The gRPC transport provides support for unary and streaming RPCs.
 //
 // Usage
 //
