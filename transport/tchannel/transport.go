@@ -142,7 +142,6 @@ func (t *Transport) getOrCreatePeer(pid peer.Identifier) *tchannelPeer {
 	// Start a peer connection loop
 	t.connectorsGroup.Add(1)
 	go p.maintainConnection()
-	go p.monitorPendingRequestCount()
 
 	return p
 }
