@@ -54,10 +54,17 @@ type Configuration struct {
 //              - 127.0.0.1:8080
 //              - 127.0.0.1:8081
 func Spec() yarpcconfig.PeerListSpec {
+	return SpecWithOptions()
+}
+
+// SpecWithOptions accepts additional list constructor options.
+func SpecWithOptions(options ...ListOption) yarpcconfig.PeerListSpec {
 	return yarpcconfig.PeerListSpec{
 		Name: "two-random-choices",
 		BuildPeerList: func(cfg Configuration, t peer.Transport, k *yarpcconfig.Kit) (peer.ChooserList, error) {
-			opts := make([]ListOption, 0, 2)
+			opts := make([]ListOption, 0, len(options)+2)
+
+			opts = append(opts, options...)
 
 			if cfg.Capacity != nil {
 				if *cfg.Capacity <= 0 {

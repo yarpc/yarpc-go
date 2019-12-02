@@ -24,18 +24,19 @@ import (
 	"context"
 
 	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/peer/abstractpeer"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 )
 
 type grpcPeer struct {
-	*hostport.Peer
+	*abstractpeer.Peer
 
 	t          *Transport
 	ctx        context.Context
 	cancel     context.CancelFunc
 	clientConn *grpc.ClientConn
+	changedC   chan struct{}
 	stoppedC   chan struct{}
 }
 
@@ -57,36 +58,75 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 	ctx, cancel := context.WithCancel(context.Background())
 
 	grpcPeer := &grpcPeer{
-		Peer:       hostport.NewPeer(hostport.PeerIdentifier(address), t),
+		Peer:       abstractpeer.NewPeer(abstractpeer.PeerIdentifier(address), t),
 		t:          t,
 		ctx:        ctx,
 		cancel:     cancel,
 		clientConn: clientConn,
+		changedC:   make(chan struct{}),
 		stoppedC:   make(chan struct{}),
 	}
 
-	go grpcPeer.monitor()
+	go grpcPeer.monitorConnectionStatus()
+	go grpcPeer.monitorPendingRequestCount()
 
 	return grpcPeer, nil
 }
 
-func (p *grpcPeer) monitor() {
-	p.Peer.SetStatus(peer.Unavailable)
+func (p *grpcPeer) monitorConnectionStatus() {
+	p.setConnectionStatus(peer.Unavailable)
 	var grpcStatus connectivity.State
 	for {
 		grpcStatus = p.clientConn.GetState()
 		yarpcStatus := grpcStatusToYARPCStatus(grpcStatus)
-		p.Peer.SetStatus(yarpcStatus)
+		p.setConnectionStatus(yarpcStatus)
 
 		if !p.clientConn.WaitForStateChange(p.ctx, grpcStatus) {
 			break
 		}
 	}
-	p.Peer.SetStatus(peer.Unavailable)
+	p.setConnectionStatus(peer.Unavailable)
 
 	// Close always returns an error.
 	_ = p.clientConn.Close()
 	close(p.stoppedC)
+}
+
+func (p *grpcPeer) setConnectionStatus(status peer.ConnectionStatus) {
+	p.Peer.SetStatus(status)
+	p.Peer.NotifyStatusChanged()
+}
+
+func (p *grpcPeer) monitorPendingRequestCount() {
+	for {
+		select {
+		case <-p.ctx.Done():
+			return
+		case <-p.changedC:
+			p.Peer.NotifyStatusChanged()
+		}
+	}
+}
+
+func (p *grpcPeer) notifyPendingRequestCountChanged() {
+	// kick the pending request count change channel.
+	// monitorPendingRequestCount broadcasts changes to subscribers so
+	// StartRequest() and EndRequest() don't reply to peer lists on the stack,
+	// possibly causing deadlock.
+	select {
+	case p.changedC <- struct{}{}:
+	default:
+	}
+}
+
+func (p *grpcPeer) StartRequest() {
+	p.Peer.StartRequest()
+	p.notifyPendingRequestCountChanged()
+}
+
+func (p *grpcPeer) EndRequest() {
+	p.Peer.EndRequest()
+	p.notifyPendingRequestCountChanged()
 }
 
 func (p *grpcPeer) stop() {

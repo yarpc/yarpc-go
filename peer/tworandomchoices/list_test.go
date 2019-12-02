@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tworandomchoices_test
+package tworandomchoices
 
 import (
 	"context"
@@ -39,22 +39,22 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/whitespace"
-	"go.uber.org/yarpc/peer/tworandomchoices"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/yarpcconfig"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap/zaptest"
 )
 
 var (
-	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "can't wait for peer without a context deadline for a two-random-choices peer list")
+	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, `"two-random-choices" peer list can't wait for peer without a context deadline`)
 )
 
 func newNotRunningError(err string) error {
-	return yarpcerrors.FailedPreconditionErrorf("two-random-choices peer list is not running: %s", err)
+	return yarpcerrors.FailedPreconditionErrorf(`"two-random-choices" peer list is not running: %s`, err)
 }
 
 func newUnavailableError(err error) error {
-	return yarpcerrors.UnavailableErrorf("two-random-choices peer list timed out waiting for peer: %s", err.Error())
+	return yarpcerrors.UnavailableErrorf(`"two-random-choices" peer list timed out waiting for peer: %s`, err.Error())
 }
 
 func TestTwoRandomChoicesPeer(t *testing.T) {
@@ -571,7 +571,8 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			ExpectPeerRetainsWithError(transport, tt.errRetainedPeerIDs, tt.retainErr)
 			ExpectPeerReleases(transport, tt.errReleasedPeerIDs, tt.releaseErr)
 
-			pl := tworandomchoices.New(transport, tworandomchoices.Seed(0))
+			logger := zaptest.NewLogger(t)
+			pl := New(transport, Seed(0), Logger(logger))
 
 			deps := ListActionDeps{
 				Peers: peerMap,
@@ -591,8 +592,8 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			sort.Strings(availablePeers)
 			sort.Strings(unavailablePeers)
 
-			assert.Equal(t, availablePeers, tt.expectedAvailablePeers, "incorrect available peers")
-			assert.Equal(t, unavailablePeers, tt.expectedUnavailablePeers, "incorrect unavailable peers")
+			assert.Equal(t, tt.expectedAvailablePeers, availablePeers, "incorrect available peers")
+			assert.Equal(t, tt.expectedUnavailablePeers, unavailablePeers, "incorrect unavailable peers")
 			assert.Equal(t, tt.expectedRunning, pl.IsRunning(), "Peer list should match expected final running state")
 		})
 	}
@@ -616,7 +617,7 @@ func TestFailFastConfig(t *testing.T) {
 	`, conn.Addr()))
 	cfgr := yarpcconfig.New()
 	cfgr.MustRegisterTransport(http.TransportSpec())
-	cfgr.MustRegisterPeerList(tworandomchoices.Spec())
+	cfgr.MustRegisterPeerList(Spec())
 	cfg, err := cfgr.LoadConfigFromYAML(serviceName, strings.NewReader(config))
 	require.NoError(t, err)
 

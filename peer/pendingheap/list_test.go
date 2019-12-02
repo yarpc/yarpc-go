@@ -42,18 +42,19 @@ import (
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/yarpcconfig"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap/zaptest"
 )
 
 var (
-	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "can't wait for peer without a context deadline for a fewest-pending-requests peer list")
+	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, `"fewest-pending-requests" peer list can't wait for peer without a context deadline`)
 )
 
 func newNotRunningError(err string) error {
-	return yarpcerrors.FailedPreconditionErrorf("fewest-pending-requests peer list is not running: %s", err)
+	return yarpcerrors.FailedPreconditionErrorf(`"fewest-pending-requests" peer list is not running: %s`, err)
 }
 
 func newUnavailableError(err error) error {
-	return yarpcerrors.UnavailableErrorf("fewest-pending-requests peer list timed out waiting for peer: %s", err.Error())
+	return yarpcerrors.UnavailableErrorf(`"fewest-pending-requests" peer list timed out waiting for peer: %s`, err.Error())
 }
 
 // InsertionOrder is a test option that yields control over random insertion
@@ -649,11 +650,13 @@ func TestPeerHeapList(t *testing.T) {
 			ExpectPeerRetainsWithError(transport, tt.errRetainedPeerIDs, tt.retainErr)
 			ExpectPeerReleases(transport, tt.errReleasedPeerIDs, tt.releaseErr)
 
+			logger := zaptest.NewLogger(t)
+
 			randOption := DisableRandomInsertion()
 			if tt.nextRand != nil {
 				randOption = InsertionOrder(tt.nextRand)
 			}
-			opts := []ListOption{Capacity(0), noShuffle, randOption}
+			opts := []ListOption{Capacity(0), noShuffle, randOption, Logger(logger), Seed(0)}
 
 			pl := New(transport, opts...)
 
@@ -675,8 +678,8 @@ func TestPeerHeapList(t *testing.T) {
 			sort.Strings(availablePeers)
 			sort.Strings(unavailablePeers)
 
-			assert.Equal(t, availablePeers, tt.expectedAvailablePeers, "incorrect available peers")
-			assert.Equal(t, unavailablePeers, tt.expectedUnavailablePeers, "incorrect unavailable peers")
+			assert.Equal(t, tt.expectedAvailablePeers, availablePeers, "incorrect available peers")
+			assert.Equal(t, tt.expectedUnavailablePeers, unavailablePeers, "incorrect unavailable peers")
 			assert.Equal(t, tt.expectedRunning, pl.IsRunning(), "Peer list should match expected final running state")
 		})
 	}

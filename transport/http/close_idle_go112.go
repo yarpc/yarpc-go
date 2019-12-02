@@ -18,7 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
+// +build go1.12
 
-// Version is the current version of YARPC.
-const Version = "1.42.1"
+package http
+
+import "net/http"
+
+// Once YARPC only supports Go1.12+, we can inline this into the callers.
+func closeIdleConnections(client *http.Client) {
+	client.CloseIdleConnections()
+}
