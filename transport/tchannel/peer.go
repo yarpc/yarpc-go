@@ -25,11 +25,12 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/peer/abstractpeer"
 )
 
 type tchannelPeer struct {
-	*hostport.Peer
+	*abstractpeer.Peer
+
 	transport *Transport
 	addr      string
 	changed   chan struct{}
@@ -46,7 +47,7 @@ func newPeer(addr string, t *Transport) *tchannelPeer {
 
 	return &tchannelPeer{
 		addr:      addr,
-		Peer:      hostport.NewPeer(hostport.PeerIdentifier(addr), t),
+		Peer:      abstractpeer.NewPeer(abstractpeer.PeerIdentifier(addr), t),
 		transport: t,
 		changed:   make(chan struct{}, 1),
 		released:  make(chan struct{}),
@@ -54,7 +55,7 @@ func newPeer(addr string, t *Transport) *tchannelPeer {
 	}
 }
 
-func (p *tchannelPeer) MaintainConn() {
+func (p *tchannelPeer) maintainConnection() {
 	cancel := func() {}
 
 	backoff := p.transport.connBackoffStrategy.Backoff()
@@ -74,7 +75,7 @@ func (p *tchannelPeer) MaintainConn() {
 
 		inbound, outbound := tp.NumConnections()
 		if inbound+outbound > 0 {
-			p.Peer.SetStatus(peer.Available)
+			p.setConnectionStatus(peer.Available)
 			// Reset on success
 			attempts = 0
 			if !p.waitForChange() {
@@ -82,7 +83,7 @@ func (p *tchannelPeer) MaintainConn() {
 			}
 
 		} else {
-			p.Peer.SetStatus(peer.Connecting)
+			p.setConnectionStatus(peer.Connecting)
 
 			// Attempt to connect
 			ctx := context.Background()
@@ -90,9 +91,9 @@ func (p *tchannelPeer) MaintainConn() {
 			_, err := tp.Connect(ctx)
 
 			if err == nil {
-				p.Peer.SetStatus(peer.Available)
+				p.setConnectionStatus(peer.Available)
 			} else {
-				p.Peer.SetStatus(peer.Unavailable)
+				p.setConnectionStatus(peer.Unavailable)
 				// Back-off on fail
 				if !p.sleep(backoff.Duration(attempts)) {
 					break
@@ -107,11 +108,16 @@ func (p *tchannelPeer) MaintainConn() {
 	cancel()
 }
 
-func (p *tchannelPeer) Release() {
+func (p *tchannelPeer) release() {
 	close(p.released)
 }
 
-func (p *tchannelPeer) OnStatusChanged() {
+func (p *tchannelPeer) setConnectionStatus(status peer.ConnectionStatus) {
+	p.Peer.SetStatus(status)
+	p.Peer.NotifyStatusChanged()
+}
+
+func (p *tchannelPeer) notifyConnectionStatusChanged() {
 	select {
 	case p.changed <- struct{}{}:
 	default:
@@ -151,3 +157,13 @@ func (p *tchannelPeer) sleep(delay time.Duration) (completed bool) {
 	}
 	return false
 }
+
+// StartRequest and EndRequest are no-ops now.
+// They previously aggregated pending request count from all subscibed peer
+// lists and distributed change notifications.
+// This was fraught with concurrency hazards so we moved pending request count
+// tracking into the lists themselves.
+
+func (p *tchannelPeer) StartRequest() {}
+
+func (p *tchannelPeer) EndRequest() {}

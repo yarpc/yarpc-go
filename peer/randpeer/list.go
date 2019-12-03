@@ -25,13 +25,15 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/peer/peerlist/v2"
+	"go.uber.org/yarpc/peer/abstractlist"
+	"go.uber.org/zap"
 )
 
 type listOptions struct {
 	capacity int
 	source   rand.Source
 	failFast bool
+	logger   *zap.Logger
 }
 
 var defaultListOptions = listOptions{
@@ -82,6 +84,13 @@ func FailFast() ListOption {
 	})
 }
 
+// Logger specifies a logger.
+func Logger(logger *zap.Logger) ListOption {
+	return listOptionFunc(func(options *listOptions) {
+		options.logger = logger
+	})
+}
+
 // New creates a new random peer list.
 func New(transport peer.Transport, opts ...ListOption) *List {
 	options := defaultListOptions
@@ -93,17 +102,20 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 		options.source = rand.NewSource(time.Now().UnixNano())
 	}
 
-	plOpts := []peerlist.ListOption{
-		peerlist.Capacity(options.capacity),
-		peerlist.NoShuffle(),
+	plOpts := []abstractlist.Option{
+		abstractlist.Capacity(options.capacity),
+		abstractlist.NoShuffle(),
 	}
 
+	if options.logger != nil {
+		plOpts = append(plOpts, abstractlist.Logger(options.logger))
+	}
 	if options.failFast {
-		plOpts = append(plOpts, peerlist.FailFast())
+		plOpts = append(plOpts, abstractlist.FailFast())
 	}
 
 	return &List{
-		List: peerlist.New(
+		List: abstractlist.New(
 			"random",
 			transport,
 			newRandomList(options.capacity, options.source),
@@ -114,5 +126,5 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 
 // List is a PeerList that rotates which peers are to be selected randomly
 type List struct {
-	*peerlist.List
+	*abstractlist.List
 }

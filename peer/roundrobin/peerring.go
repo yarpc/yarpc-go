@@ -22,11 +22,10 @@ package roundrobin
 
 import (
 	"container/ring"
-	"context"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/peer/peerlist/v2"
+	"go.uber.org/yarpc/peer/abstractlist"
 )
 
 // newPeerRing creates a new peerRing with an initial capacity
@@ -39,8 +38,7 @@ type subscriber struct {
 	node *ring.Ring
 }
 
-func (s *subscriber) NotifyStatusChanged(pid peer.Identifier) {
-}
+func (s *subscriber) UpdatePendingRequestCount(int) {}
 
 // peerRing provides a safe way to interact (Add/Remove/Get) with a potentially
 // changing list of peer objects
@@ -49,11 +47,11 @@ type peerRing struct {
 	nextNode *ring.Ring
 }
 
-var _ peerlist.Implementation = (*peerRing)(nil)
+var _ abstractlist.Implementation = (*peerRing)(nil)
 
 // Add a peer.StatusPeer to the end of the peerRing, if the ring is empty it
 // initializes the nextNode marker
-func (pr *peerRing) Add(p peer.StatusPeer, _ peer.Identifier) peer.Subscriber {
+func (pr *peerRing) Add(p peer.StatusPeer, _ peer.Identifier) abstractlist.Subscriber {
 	sub := &subscriber{peer: p}
 	newNode := ring.New(1)
 	newNode.Value = sub
@@ -71,7 +69,7 @@ func (pr *peerRing) Add(p peer.StatusPeer, _ peer.Identifier) peer.Subscriber {
 
 // Remove the peer from the ring. Use the subscriber to address the node of the
 // ring directly.
-func (pr *peerRing) Remove(p peer.StatusPeer, _ peer.Identifier, s peer.Subscriber) {
+func (pr *peerRing) Remove(p peer.StatusPeer, _ peer.Identifier, s abstractlist.Subscriber) {
 	sub, ok := s.(*subscriber)
 	if !ok {
 		// Don't panic.
@@ -95,7 +93,7 @@ func (pr *peerRing) isNextNode(node *ring.Ring) bool {
 
 // Choose returns the next peer in the ring, or nil if there is no peer in the ring
 // after it has the next peer, it increments the nextPeer marker in the ring
-func (pr *peerRing) Choose(_ context.Context, _ *transport.Request) peer.StatusPeer {
+func (pr *peerRing) Choose(_ *transport.Request) peer.StatusPeer {
 	if pr.nextNode == nil {
 		return nil
 	}
@@ -120,16 +118,4 @@ func popNodeFromRing(rNode *ring.Ring) {
 
 func pushBeforeNode(curNode, newNode *ring.Ring) {
 	curNode.Prev().Link(newNode)
-}
-
-func (pr *peerRing) Start() error {
-	return nil
-}
-
-func (pr *peerRing) Stop() error {
-	return nil
-}
-
-func (pr *peerRing) IsRunning() bool {
-	return true
 }

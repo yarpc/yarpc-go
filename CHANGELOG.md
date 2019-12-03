@@ -5,6 +5,21 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Fixed
+- Avoid "SendSystemError failed" and "responseWriter failed to close" server
+  logs when TChannel callers time out.
+
+## [1.42.1] - 2019-11-27 (Gobble)
+### Fixed
+- Simplified the flow of status change notifications for the gRPC and TChannel
+  transports to reduce the liklihood of deadlocks.
+- Increase default HTTP timeout to avoid stop timeout errors when the server
+  has a new idle connection.
+- Close idle connections when the transport is closed.
+- Avoid "SendSystemError failed" and "responseWriter failed to close" server
+  logs when TChannel callers time out.
+
+## [1.42.0] - 2019-10-31 (Spooky)
 ### Added
 - Added fail-fast option to peer lists.  With this option enabled, a peer list
   will return an error if no peers are connected at the time of a call, instead
@@ -16,8 +31,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   as a server error.
 - Simplified the flow of status change notifications for the HTTP transport to
   reduce the liklihood of deadlocks.
-- Avoid "SendSystemError failed" and "responseWriter failed to close" server
-  logs when TChannel callers time out.
+- Removed a bug from the gRPC transport that would cause a very rare deadlock
+  during production deploys and restarts.
+  The gRPC peer release method would synchronize with the connection status
+  change monitor loop, waiting for it to exit.
+  This would wait forever since retain was called while holding a lock on the
+  list.
 
 ## [1.41.0] - 2019-10-01
 ### Fixed
@@ -1132,7 +1151,9 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.41.0...HEAD
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.42.1...HEAD
+[1.42.1]: https://github.com/yarpc/yarpc-go/compare/v1.42.0...v1.42.1
+[1.42.0]: https://github.com/yarpc/yarpc-go/compare/v1.41.0...v1.42.0
 [1.41.0]: https://github.com/yarpc/yarpc-go/compare/v1.40.0...v1.41.0
 [1.40.0]: https://github.com/yarpc/yarpc-go/compare/v1.39.0...v1.40.0
 [1.39.0]: https://github.com/yarpc/yarpc-go/compare/v1.38.0...v1.39.0

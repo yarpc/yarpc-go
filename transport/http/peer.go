@@ -79,20 +79,15 @@ func (p *httpPeer) isAvailable() bool {
 	return false
 }
 
-func (p *httpPeer) StartRequest() {
-	p.Peer.StartRequest()
-	p.notifyStatusChanged()
-}
+// StartRequest and EndRequest are no-ops now.
+// They previously aggregated pending request count from all subscibed peer
+// lists and distributed change notifications.
+// This was fraught with concurrency hazards so we moved pending request count
+// tracking into the lists themselves.
 
-func (p *httpPeer) EndRequest() {
-	p.Peer.EndRequest()
-	p.notifyStatusChanged()
-}
+func (p *httpPeer) StartRequest() {}
 
-func (p *httpPeer) setStatus(status peer.ConnectionStatus) {
-	p.Peer.SetStatus(status)
-	p.notifyStatusChanged()
-}
+func (p *httpPeer) EndRequest() {}
 
 func (p *httpPeer) notifyStatusChanged() {
 	// Kick the state change channel (if it hasn't been kicked already).
@@ -171,22 +166,20 @@ func (p *httpPeer) MaintainConn() {
 	p.transport.connectorsGroup.Done()
 }
 
+func (p *httpPeer) setStatus(status peer.ConnectionStatus) {
+	p.Peer.SetStatus(status)
+	p.Peer.NotifyStatusChanged()
+}
+
 // waitForChange waits for the transport to send a peer connection status
 // change notification, but exits early if the transport releases the peer or
 // stops.  waitForChange returns whether it is resuming due to a connection
 // status change event.
 func (p *httpPeer) waitForChange() (changed bool) {
-	// Wait for a connection status change
-	// Broadcast all other status changed.
-	prev := p.Status().ConnectionStatus
 	for {
 		select {
 		case <-p.changed:
-			p.Peer.NotifyStatusChanged()
-			next := p.Status().ConnectionStatus
-			if prev != next {
-				return true
-			}
+			return true
 		case <-p.released:
 			return false
 		}

@@ -119,7 +119,7 @@ func main() {
 			},
 		},
 	} {
-		for i := 1; i <= 100000; i *= 10 {
+		for i := 1; i <= 1000; i *= 10 {
 			for _, lowStress := range []bool{false, true} {
 				report := yarpctest.ListStressTest{
 					Workers:   i,

@@ -36,7 +36,13 @@ import (
 	"go.uber.org/zap"
 )
 
-const defaultShutdownTimeout = 5 * time.Second
+// We want a value that's around 5 seconds, but slightly higher than how
+// long a successful HTTP shutdown can take.
+// There's a specific path in the HTTP shutdown path that can take 5 seconds:
+// https://golang.org/src/net/http/server.go?s=83923:83977#L2710
+// This avoids timeouts in shutdown caused by new idle connections, without
+// making the timeout too large.
+const defaultShutdownTimeout = 6 * time.Second
 
 // InboundOption customizes the behavior of an HTTP Inbound constructed with
 // NewInbound.

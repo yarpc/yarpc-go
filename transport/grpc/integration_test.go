@@ -26,7 +26,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"errors"
@@ -58,7 +57,6 @@ import (
 	"go.uber.org/zap/zaptest"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 )
 
@@ -86,74 +84,6 @@ func TestGRPCBasic(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "bar", value)
 	})
-}
-
-func TestTLSWithYARPCAndGRPC(t *testing.T) {
-	tests := []struct {
-		clientValidity      time.Duration
-		serverValidity      time.Duration
-		expectedErrContains string
-		name                string
-	}{
-		{
-			clientValidity: time.Minute,
-			serverValidity: time.Minute,
-			name:           "valid certs both sides",
-		},
-		{
-			clientValidity:      time.Minute,
-			serverValidity:      -1,
-			expectedErrContains: "transport: authentication handshake failed: x509: certificate has expired or is not yet valid",
-			name:                "invalid server cert",
-		},
-		{
-			clientValidity:      -1,
-			serverValidity:      time.Minute,
-			expectedErrContains: "remote error: tls: bad certificate",
-			name:                "invalid client cert",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			scenario := createTLSScenario(t, test.clientValidity, test.serverValidity)
-
-			serverCreds := credentials.NewTLS(&tls.Config{
-				GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
-					return &tls.Certificate{
-						Certificate: [][]byte{scenario.ServerCert.Raw},
-						Leaf:        scenario.ServerCert,
-						PrivateKey:  scenario.ServerKey,
-					}, nil
-				},
-				ClientAuth: tls.RequireAndVerifyClientCert,
-				ClientCAs:  scenario.CAs,
-			})
-
-			clientCreds := credentials.NewTLS(&tls.Config{
-				GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
-					return &tls.Certificate{
-						Certificate: [][]byte{scenario.ClientCert.Raw},
-						Leaf:        scenario.ClientCert,
-						PrivateKey:  scenario.ClientKey,
-					}, nil
-				},
-				RootCAs: scenario.CAs,
-			})
-
-			te := testEnvOptions{
-				InboundOptions: []InboundOption{InboundCredentials(serverCreds)},
-				DialOptions:    []DialOption{DialerCredentials(clientCreds)},
-			}
-			te.do(t, func(t *testing.T, e *testEnv) {
-				err := e.SetValueYARPC(context.Background(), "foo", "bar")
-				expectErrorContains(t, err, test.expectedErrContains)
-
-				err = e.SetValueGRPC(context.Background(), "foo", "bar")
-				expectErrorContains(t, err, test.expectedErrContains)
-			})
-		})
-	}
 }
 
 func expectErrorContains(t *testing.T, err error, contains string) {
