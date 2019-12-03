@@ -335,12 +335,7 @@ func getSystemError(err error) error {
 }
 
 func isTChannelTimeoutError(err error) bool {
-	if tchannelerr, ok := getSystemError(err).(tchannel.SystemError); ok {
-		if tchannelerr.Code() == tchannel.ErrCodeTimeout {
-			return true
-		}
-	}
-	return false
+	return tchannel.GetSystemErrorCode(err) == tchannel.ErrCodeTimeout
 }
 
 func appendError(left error, right error) error {
