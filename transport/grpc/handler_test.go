@@ -22,7 +22,6 @@ package grpc
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"testing"
 
@@ -31,7 +30,7 @@ import (
 )
 
 func TestInvalidStreamContext(t *testing.T) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
 	tran := NewTransport()
@@ -46,7 +45,7 @@ func TestInvalidStreamContext(t *testing.T) {
 }
 
 func TestInvalidStreamMethod(t *testing.T) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
 	tran := NewTransport()
@@ -61,7 +60,7 @@ func TestInvalidStreamMethod(t *testing.T) {
 }
 
 func TestInvalidStreamRequest(t *testing.T) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
 	tran := NewTransport()
@@ -77,7 +76,7 @@ func TestInvalidStreamRequest(t *testing.T) {
 }
 
 func TestInvalidStreamEmptyHeader(t *testing.T) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
 	tran := NewTransport()
@@ -98,7 +97,7 @@ func TestInvalidStreamEmptyHeader(t *testing.T) {
 }
 
 func TestInvalidStreamMultipleHeaders(t *testing.T) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
 	tran := NewTransport()

@@ -23,7 +23,6 @@ package grpc
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -48,7 +47,7 @@ func TestNoRequest(t *testing.T) {
 }
 
 func TestCallStreamWhenNotRunning(t *testing.T) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
 	tran := NewTransport()
@@ -62,7 +61,7 @@ func TestCallStreamWhenNotRunning(t *testing.T) {
 }
 
 func TestCallStreamWithNoRequestMeta(t *testing.T) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
 	tran := NewTransport()
@@ -80,7 +79,7 @@ func TestCallStreamWithNoRequestMeta(t *testing.T) {
 }
 
 func TestCallStreamWithInvalidHeader(t *testing.T) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
 	tran := NewTransport()
@@ -107,7 +106,7 @@ func TestCallStreamWithInvalidHeader(t *testing.T) {
 }
 
 func TestCallStreamWithInvalidProcedure(t *testing.T) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
 	tran := NewTransport()
