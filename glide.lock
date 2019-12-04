@@ -1,5 +1,5 @@
-hash: f2a700163e75a56917c8c949123eadbaf5fe665005813a6d4bdf486cf6c56e8b
-updated: 2019-12-04T20:54:58.572691587Z
+hash: c1916eab0d24ec5d9fa26f9d529cbc9b09543799fd3daf6552b66aa5ad98bc9f
+updated: 2019-12-04T23:35:37.120696637Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -268,7 +268,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 660eba4da30b912b1dd4b8279a97ff2a6ea1da25
+  version: d79e56da46fea5b916033cace6d265502581c7cc
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
@@ -278,10 +278,8 @@ imports:
   - go/ast/inspector
   - go/buildutil
   - go/gcexportdata
-  - go/internal/cgo
   - go/internal/gcimporter
   - go/internal/packagesdriver
-  - go/loader
   - go/packages
   - go/types/objectpath
   - go/types/typeutil
@@ -334,34 +332,30 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 1f64d6156d11335c3f22d9330b0ad14fc1e789ce
 - name: honnef.co/go/tools
-  version: 32de78dc1c6c931f2bf017870750b0ca80006601
+  version: afd67930eec2a9ed3e9b19f684d17a062285f16a
   subpackages:
   - arg
   - cmd/staticcheck
-  - code
   - config
   - deprecated
-  - edit
   - facts
   - functions
   - go/types/typeutil
   - internal/cache
-  - internal/passes/buildir
+  - internal/passes/buildssa
   - internal/renameio
-  - internal/robustio
   - internal/sharedcheck
-  - ir
-  - ir/irutil
   - lint
   - lint/lintdsl
   - lint/lintutil
   - lint/lintutil/format
   - loader
-  - pattern
   - printf
-  - report
   - simple
+  - ssa
+  - ssautil
   - staticcheck
+  - staticcheck/vrp
   - stylecheck
   - unused
   - version
