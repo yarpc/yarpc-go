@@ -65,6 +65,7 @@ import:
   subpackages:
   - update-license
 - package: honnef.co/go/tools
+  version: 2019.2.3
   subpackages:
   - cmd/staticcheck
 - package: github.com/gogo/status
