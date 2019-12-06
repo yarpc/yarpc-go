@@ -1,5 +1,5 @@
 hash: c1916eab0d24ec5d9fa26f9d529cbc9b09543799fd3daf6552b66aa5ad98bc9f
-updated: 2019-12-05T15:04:23.091684213Z
+updated: 2019-12-06T15:07:41.647249098Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -23,7 +23,7 @@ imports:
   subpackages:
   - spew
 - name: github.com/fatih/structtag
-  version: 3878f9fb88e63e26ea1e6c97ab985cb55452fee5
+  version: 72c94723f1e6825195e0d8e9857fca28cd23d835
 - name: github.com/gogo/googleapis
   version: d31c731455cb061f42baff3bda55bad0118b126b
   subpackages:
@@ -239,7 +239,7 @@ imports:
   subpackages:
   - golint
 - name: golang.org/x/net
-  version: 5ee1b9f4859acd2e99987ef94ec7a58427c53bef
+  version: 1ddd1de85cb0337b623b740a609d35817d516a8d
   subpackages:
   - bpf
   - context
@@ -268,7 +268,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: d1f10d1c4e255575ef5161427fac1a82b5d5ddf8
+  version: 3393d29bb9feddd4fb8d6d2f81faf9f50b70616d
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/stringer
@@ -287,7 +287,7 @@ imports:
   - internal/gopathwalk
   - internal/semver
 - name: google.golang.org/genproto
-  version: 3fa9dbf08042c806feeb0b21b23e07587714c143
+  version: 51378566eb590fa106d1025ea12835a4416dda84
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
