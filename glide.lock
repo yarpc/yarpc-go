@@ -1,5 +1,5 @@
 hash: c1916eab0d24ec5d9fa26f9d529cbc9b09543799fd3daf6552b66aa5ad98bc9f
-updated: 2019-12-27T15:03:02.466173243Z
+updated: 2019-12-30T15:04:42.136892482Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -255,13 +255,13 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: c709ea063b76879dc9915358f55d4d77c16ab6d5
+  version: 04cbcbbfeed8aa0b2b010b2ddab558e9f717fd3e
   repo: https://github.com/golang/sys
   subpackages:
   - unix
   - windows
 - name: golang.org/x/text
-  version: cbf43d21aaebfdfeb81d91a5f444d13a3046e686
+  version: 929e72ca90deac4784bbe451caf10faa5b256ebe
   subpackages:
   - secure/bidirule
   - transform
