@@ -123,6 +123,7 @@ func (s *streamHandler) HandleStream(stream *transport.ServerStream) error {
 	protoStream := &ServerStream{
 		ctx:    ctx,
 		stream: stream,
+		codec:  s.codec,
 	}
 	return convertToYARPCError(transportRequest.Meta.Encoding, s.handle(protoStream), s.codec)
 }
