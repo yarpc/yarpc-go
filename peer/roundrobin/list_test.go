@@ -970,7 +970,7 @@ func TestIntrospect(t *testing.T) {
 		assert.Equal(t, p.Identifier(), "bar")
 	}
 
-	chooserStatus := pl.list.Introspect()
+	chooserStatus := pl.Introspect()
 	assert.Equal(t, "round-robin", chooserStatus.Name)
 	assert.Equal(t, "Running (2/3 available)", chooserStatus.State)
 

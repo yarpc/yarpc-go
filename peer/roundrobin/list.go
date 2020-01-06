@@ -180,3 +180,8 @@ func (l *List) NotifyStatusChanged(pid peer.Identifier) {
 func (l *List) Introspect() introspection.ChooserStatus {
 	return l.list.Introspect()
 }
+
+// Peers produces a slice of all retained peers.
+func (l *List) Peers() []peer.StatusPeer {
+	return l.list.Peers()
+}
