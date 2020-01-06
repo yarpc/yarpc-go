@@ -667,7 +667,7 @@ func TestPeerHeapList(t *testing.T) {
 
 			var availablePeers []string
 			var unavailablePeers []string
-			for _, p := range pl.Peers() {
+			for _, p := range pl.list.Peers() {
 				ps := p.Status()
 				if ps.ConnectionStatus == peer.Available {
 					availablePeers = append(availablePeers, p.Identifier())
