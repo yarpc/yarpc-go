@@ -28,8 +28,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/crossdock/crossdock-go/assert"
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"

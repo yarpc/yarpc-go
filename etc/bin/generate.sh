@@ -111,6 +111,7 @@ protoc_go yarpcproto/yarpc.proto
 protoc_all internal/examples/protobuf/examplepb/example.proto
 protoc_all internal/crossdock/crossdockpb/crossdock.proto
 protoc_all internal/examples/streaming/stream.proto
+protoc_all internal/prototest/examplepb/example.proto
 
 ragel -Z -G2 -o internal/interpolate/parse.go internal/interpolate/parse.rl
 gofmt -s -w internal/interpolate/parse.go
