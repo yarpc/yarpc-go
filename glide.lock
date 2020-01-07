@@ -1,5 +1,5 @@
 hash: c1916eab0d24ec5d9fa26f9d529cbc9b09543799fd3daf6552b66aa5ad98bc9f
-updated: 2020-01-02T15:04:04.936706059Z
+updated: 2020-01-06T15:02:25.691436669Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -191,7 +191,7 @@ imports:
   - push
   - tallypush
 - name: go.uber.org/thriftrw
-  version: 3934cedb5d52491fd98e0203eb2a61b00b7da282
+  version: b762dca4b84a285fe198edfac0ab194615ccbf9d
   subpackages:
   - ast
   - compile
@@ -209,7 +209,6 @@ imports:
   - internal/plugin
   - internal/plugin/builtin/pluginapigen
   - internal/process
-  - internal/semver
   - plugin
   - plugin/api
   - protocol
@@ -255,7 +254,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: c96a22e43c9c1088b5e506727c975511357d9f68
+  version: 5f8ca72cd6325689efbbfd415c3e82ec8be1f5a4
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -268,9 +267,11 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 9497f49d570963b8bec1585ad3f100787f6c3d1c
+  version: 774c71fcf11405d0a5ce0aba75dc113822d62178
   repo: https://github.com/golang/tools
   subpackages:
+  - cmd/goimports
+  - cmd/goyacc
   - cmd/stringer
   - go/analysis
   - go/analysis/passes/inspect
@@ -285,6 +286,8 @@ imports:
   - go/types/typeutil
   - internal/fastwalk
   - internal/gopathwalk
+  - internal/imports
+  - internal/module
   - internal/semver
 - name: google.golang.org/genproto
   version: f3c370f40bfba3cb25c5c2f823a1a8031b5ad724
