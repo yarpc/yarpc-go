@@ -307,15 +307,19 @@ func TestCustomContextDial(t *testing.T) {
 // enabled.
 func TestGRPCCompression(t *testing.T) {
 	t.Parallel()
+	metrics := newMetrics(nil, nil)
 	compressors := []*testCompressor{
-		newCompressor("test-good"),
-		newCompressor("test-fail-comp"),
-		newCompressor("test-fail-decomp"),
-		newCompressor("test-gzip"),
+		newCompressor("test-good", metrics),
+		newCompressor("test-fail-comp", metrics),
+		newCompressor("test-fail-decomp", metrics),
+		newCompressor("test-gzip", metrics),
 	}
 	for _, comp := range compressors {
 		encoding.RegisterCompressor(comp)
 	}
+
+	tagsCompression := map[string]string{"stage": "compress"}
+	tagsDecompression := map[string]string{"stage": "decompress"}
 
 	tests := []struct {
 		testEnvOptions
@@ -323,7 +327,7 @@ func TestGRPCCompression(t *testing.T) {
 		msg         string
 		compressor  string
 		wantErr     string
-		wantMetrics []compressionMetric
+		wantMetrics []metric
 	}{
 		{
 			msg: "no compression",
@@ -337,47 +341,47 @@ func TestGRPCCompression(t *testing.T) {
 			wantErr:    "code:internal message:grpc: Compressor is not installed for requested grpc-encoding \"test-unknown\"",
 		},
 		{
-			msg:        "fail compression",
+			msg:        "fail compression of request",
 			compressor: "test-fail-comp",
 			wantErr:    "code:internal message:grpc: error while compressing: assert.AnError general error for testing",
-			wantMetrics: []compressionMetric{
-				{true, 0}, // failed compression of request
+			wantMetrics: []metric{
+				{0, tagsCompression},
 			},
 		},
 		{
-			msg:        "fail decompression",
+			msg:        "fail decompression of request",
 			compressor: "test-fail-decomp",
 			wantErr:    "code:internal message:grpc: failed to decompress the received message assert.AnError general error for testing",
-			wantMetrics: []compressionMetric{
-				{true, 32777},
-				{false, 0}, // failed decompression of request
+			wantMetrics: []metric{
+				{32777, tagsCompression},
+				{0, tagsDecompression},
 			},
 		},
 		{
-			msg:        "ok",
+			msg:        "ok, dummy compression",
 			compressor: "test-good",
-			wantMetrics: []compressionMetric{
-				{true, 32777},  // client compression of request
-				{false, 32777}, // server decompression of request
-				{true, 0},      // compression
-				{true, 5},      // compression
-				{false, 5},     // decompression
-				{true, 32772},  // server compression of response
-				{false, 32772}, // client decompression of response
+			wantMetrics: []metric{
+				{32777, tagsCompression},
+				{32777, tagsDecompression},
+				{0, tagsCompression},
+				{5, tagsCompression},
+				{5, tagsDecompression},
+				{32772, tagsCompression},
+				{32772, tagsDecompression},
 			},
 		},
 		{
-			msg:        "gzip",
+			msg:        "ok, gzip compression",
 			compressor: "test-gzip",
-			wantMetrics: []compressionMetric{
-				{true, 82},
-				{false, 82},
-				{true, 23},
-				{false, 23},
-				{true, 29},
-				{false, 29},
-				{true, 75},
-				{false, 75},
+			wantMetrics: []metric{
+				{82, tagsCompression},
+				{82, tagsDecompression},
+				{23, tagsCompression},
+				{23, tagsDecompression},
+				{29, tagsCompression},
+				{29, tagsDecompression},
+				{75, tagsCompression},
+				{75, tagsDecompression},
 			},
 		},
 	}
@@ -385,9 +389,7 @@ func TestGRPCCompression(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.msg, func(t *testing.T) {
-			for _, comp := range compressors {
-				comp.resetMetrics()
-			}
+			metrics.reset()
 
 			if tt.compressor != "" {
 				tt.testEnvOptions.DialOptions = []DialOption{Compressor(tt.compressor)}
@@ -400,36 +402,84 @@ func TestGRPCCompression(t *testing.T) {
 					assert.EqualError(t, err, tt.wantErr)
 				} else if assert.NoError(t, err) {
 					getValue, err := e.GetValueYARPC(context.Background(), "foo")
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					assert.Equal(t, value, getValue)
 				}
 			})
-
-			for _, comp := range compressors {
-				if comp.Name() == tt.compressor {
-					assert.Equal(t, tt.wantMetrics, comp.metrics)
-				} else {
-					assert.Empty(t, comp.metrics, "compressor %s was called whilst not expected", comp.Name())
-				}
-			}
+			assert.Equal(t, newMetrics(tt.wantMetrics, map[string]string{
+				"compressor": tt.compressor,
+			}), metrics)
 		})
 	}
 }
 
+type metricCollection struct {
+	metrics []metric
+}
+
+func (c *metricCollection) reset() {
+	c.metrics = c.metrics[:0]
+}
+
+func newMetrics(metrics []metric, tags map[string]string) *metricCollection {
+	c := metricCollection{
+		metrics: make([]metric, len(metrics)),
+	}
+	for i, m := range metrics {
+		c.metrics[i] = metric{
+			bytes: m.bytes,
+			tags:  map[string]string{},
+		}
+		for key, value := range m.tags {
+			c.metrics[i].tags[key] = value
+		}
+		for key, value := range tags {
+			c.metrics[i].tags[key] = value
+		}
+	}
+	return &c
+}
+
+type metric struct {
+	bytes int
+	tags  map[string]string
+}
+
+func (m *metric) Increment(value int) {
+	m.bytes += value
+}
+
+// new creates a new metrics data point and passes returns it as one element slice
+func (m *metricCollection) new(stage, compressor string) *metric {
+	l := len(m.metrics)
+	m.metrics = append(m.metrics, metric{
+		bytes: 0,
+		tags: map[string]string{
+			"compressor": compressor,
+			"stage":      stage,
+		},
+	})
+	return &m.metrics[l]
+}
+
+type counter interface {
+	Increment(value int)
+}
+
 type testCompressor struct {
 	name       string
-	metrics    []compressionMetric
+	metrics    *metricCollection
 	comperr    error
 	decomperr  error
 	enableGZip bool
 }
 
-func newCompressor(name string) *testCompressor {
+func newCompressor(name string, metrics *metricCollection) *testCompressor {
 	comp := testCompressor{
-		name: name,
+		name:    name,
+		metrics: metrics,
 	}
 
-	comp.resetMetrics()
 	switch strings.TrimPrefix(name, "test-") {
 	case "fail-comp":
 		comp.comperr = assert.AnError
@@ -441,68 +491,49 @@ func newCompressor(name string) *testCompressor {
 	return &comp
 }
 
-type compressionMetric struct {
-	isComp bool
-	bytes  int
-}
-
-func (c *testCompressor) resetMetrics() {
-	c.metrics = make([]compressionMetric, 0)
-}
-
-// newMetrics creates a new metrics data point and passes returns it as one element slice
-func (c *testCompressor) newMetrics(isCompression bool) []compressionMetric {
-	l := len(c.metrics)
-	c.metrics = append(c.metrics, compressionMetric{
-		isComp: isCompression,
-		bytes:  0,
-	})
-	return c.metrics[l : l+1]
-}
-
 func (c *testCompressor) Name() string { return c.name }
 
 func (c *testCompressor) Compress(w io.Writer) (io.WriteCloser, error) {
-	var wc io.WriteCloser = &byteMeter{
+	metered := byteMeter{
 		Writer:  w,
-		metrics: c.newMetrics(true),
+		counter: c.metrics.new("compress", c.name),
 	}
 
-	if c.enableGZip {
-		wc = gzip.NewWriter(wc)
+	if !c.enableGZip {
+		return &metered, c.comperr
 	}
 
-	return wc, c.comperr
+	return gzip.NewWriter(&metered), nil
 }
 
-// Decompress maybe should return io.ReadCloser? because it is rather weird why you have this.
 func (c *testCompressor) Decompress(r io.Reader) (io.Reader, error) {
-	r = &byteMeter{
+	metered := byteMeter{
 		Reader:  r,
-		metrics: c.newMetrics(false),
+		counter: c.metrics.new("decompress", c.name),
 	}
 
-	if c.enableGZip {
-		return gzip.NewReader(r)
+	if !c.enableGZip {
+		return &metered, c.decomperr
 	}
 
-	return r, c.decomperr
+	return gzip.NewReader(&metered)
 }
 
+// byteMeter is a test type wrapper that counts the number of bytes transferred within the compressors.
 type byteMeter struct {
 	io.Writer
 	io.Reader
-	metrics []compressionMetric
+	counter counter
 }
 
 func (w *byteMeter) Write(p []byte) (int, error) {
-	w.metrics[0].bytes += len(p)
+	w.counter.Increment(len(p))
 	return w.Writer.Write(p)
 }
 
 func (r *byteMeter) Read(p []byte) (int, error) {
 	l, err := r.Reader.Read(p)
-	r.metrics[0].bytes += l
+	r.counter.Increment(l)
 	return l, err
 }
 
