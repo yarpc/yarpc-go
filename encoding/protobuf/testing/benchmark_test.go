@@ -26,9 +26,9 @@ import (
 	"testing"
 
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/examples/protobuf/example"
-	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
-	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
+	"go.uber.org/yarpc/internal/prototest/example"
+	"go.uber.org/yarpc/internal/prototest/examplepb"
+	"go.uber.org/yarpc/internal/prototest/exampleutil"
 	"go.uber.org/yarpc/internal/grpcctx"
 	"go.uber.org/yarpc/internal/testutils"
 	"google.golang.org/grpc"
