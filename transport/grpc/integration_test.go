@@ -329,19 +329,33 @@ func TestGRPCCompression(t *testing.T) {
 			msg: "no compression",
 		},
 		{
-			// we need 2 separate processes to test the case where we have the content encoding negotiation when the client side sends the compression request, which the server does not support
+			// we need 2 separate processes to test the case where we have the
+			// content encoding negotiation when the client side sends the
+			// compression request, which the server does not support
 			msg:        "unknown compressor on the client-side",
 			compressor: "test-unknown",
 			wantErr:    "code:internal message:grpc: Compressor is not installed for requested grpc-encoding \"test-unknown\"",
 		},
 		{
+			msg:        "fail compression",
+			compressor: "test-fail-comp",
+			wantErr:    "code:internal message:grpc: error while compressing: assert.AnError general error for testing",
+			wantMetrics: []compressionMetric{
+				{true, 0}, // failed compression of request
+			},
+		},
+		{
+			msg:        "fail decompression",
+			compressor: "test-fail-decomp",
+			wantErr:    "code:internal message:grpc: failed to decompress the received message assert.AnError general error for testing",
+			wantMetrics: []compressionMetric{
+				{true, 32777},
+				{false, 0}, // failed decompression of request
+			},
+		},
+		{
 			msg:        "ok",
 			compressor: "test-good",
-			// We should have the following chain of events:
-			// - compress request
-			// - decompress request
-			// - compress response
-			// - decompress response
 			wantMetrics: []compressionMetric{
 				{true, 32777},  // client compression of request
 				{false, 32777}, // server decompression of request
@@ -353,44 +367,17 @@ func TestGRPCCompression(t *testing.T) {
 			},
 		},
 		{
-			msg:        "fail compression",
-			compressor: "test-fail-comp",
-			// We should have the following chain of events:
-			// - compress request
-			wantErr: "code:internal message:grpc: error while compressing: assert.AnError general error for testing",
-			wantMetrics: []compressionMetric{
-				{true, 0},
-			},
-		},
-		{
-			msg:        "fail decompression",
-			compressor: "test-fail-decomp",
-			// We should have the following chain of events:
-			// - compress request
-			// - decompress request
-			wantErr: "code:internal message:grpc: failed to decompress the received message assert.AnError general error for testing",
-			wantMetrics: []compressionMetric{
-				{true, 32777},
-				{false, 0},
-			},
-		},
-		{
 			msg:        "gzip",
 			compressor: "test-gzip",
-			// We should have the following chain of events:
-			// - compress request
-			// - decompress request
-			// - compress response
-			// - decompress response
 			wantMetrics: []compressionMetric{
-				{true, 32777},
-				{false, 32777},
-				{true, 0},
-				{false, 0},
-				{true, 5},
-				{false, 5},
-				{true, 32772},
-				{false, 32772},
+				{true, 82},
+				{false, 82},
+				{true, 23},
+				{false, 23},
+				{true, 29},
+				{false, 29},
+				{true, 75},
+				{false, 75},
 			},
 		},
 	}
@@ -476,42 +463,41 @@ func (c *testCompressor) newMetrics(isCompression bool) []compressionMetric {
 func (c *testCompressor) Name() string { return c.name }
 
 func (c *testCompressor) Compress(w io.Writer) (io.WriteCloser, error) {
-	wc := nopCloser(w)
-	if c.enableGZip {
-		wc = gzip.NewWriter(w)
+	var wc io.WriteCloser = &byteMeter{
+		Writer:  w,
+		metrics: c.newMetrics(true),
 	}
 
-	return &byteMeter{
-		WriteCloser: wc,
-		metrics:     c.newMetrics(true),
-	}, c.comperr
+	if c.enableGZip {
+		wc = gzip.NewWriter(wc)
+	}
+
+	return wc, c.comperr
 }
 
 // Decompress maybe should return io.ReadCloser? because it is rather weird why you have this.
 func (c *testCompressor) Decompress(r io.Reader) (io.Reader, error) {
-	if c.enableGZip {
-		var err error
-		r, err = gzip.NewReader(r)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &byteMeter{
+	r = &byteMeter{
 		Reader:  r,
 		metrics: c.newMetrics(false),
-	}, c.decomperr
+	}
+
+	if c.enableGZip {
+		return gzip.NewReader(r)
+	}
+
+	return r, c.decomperr
 }
 
 type byteMeter struct {
-	io.WriteCloser
+	io.Writer
 	io.Reader
 	metrics []compressionMetric
 }
 
 func (w *byteMeter) Write(p []byte) (int, error) {
 	w.metrics[0].bytes += len(p)
-	return w.WriteCloser.Write(p)
+	return w.Writer.Write(p)
 }
 
 func (r *byteMeter) Read(p []byte) (int, error) {
@@ -520,12 +506,7 @@ func (r *byteMeter) Read(p []byte) (int, error) {
 	return l, err
 }
 
-type closer struct{ io.Writer }
-
-func (w *closer) Close() error { return nil }
-func nopCloser(w io.Writer) io.WriteCloser {
-	return &closer{w}
-}
+func (w *byteMeter) Close() error { return nil }
 
 type testEnv struct {
 	Caller              string
