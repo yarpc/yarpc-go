@@ -22,5 +22,5 @@ package testing
 
 import (
 	// this is to make sure etc/bin/cover.sh picks this up with .Deps
-	_ "go.uber.org/yarpc/internal/examples/protobuf/example"
+	_ "go.uber.org/yarpc/internal/prototest/example"
 )
