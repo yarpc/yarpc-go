@@ -13,11 +13,11 @@ require (
 	github.com/uber/tchannel-go v1.16.0
 	go.uber.org/fx v1.10.0
 	go.uber.org/multierr v1.4.0
-	go.uber.org/thriftrw v1.20.2
+	go.uber.org/thriftrw v1.21.0
 	go.uber.org/yarpc v1.42.1
 	go.uber.org/zap v1.13.0
 	golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553
-	google.golang.org/genproto v0.0.0-20191223191004-3caeed10a8bf // indirect
+	google.golang.org/genproto v0.0.0-20191230161307-f3c370f40bfb // indirect
 	google.golang.org/grpc v1.26.0
 	gopkg.in/yaml.v2 v2.2.7 // indirect
 )
