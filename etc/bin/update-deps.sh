@@ -123,24 +123,26 @@ if [ -n "$(git_status --porcelain)" ]; then
 fi
 
 echo "--- Updating dependencies"
-make glide-cc glide-up
+go get -u
+(cd internal/examples && go get -u)
+(cd internal/crossdock && go get -u)
 
 case "$(git_status --porcelain)" in
   "")
     echo "Nothing changed. Exiting."
     exit 0
     ;;
-  " M glide.lock")
-    echo "--- glide.lock changed"
+  " M "*"go.mod"|" M "*"go.sum")
+    echo "--- Dependencies changed."
     # Keep going
     ;;
   *)
-    echo "Unexpected changes after a glide up:"
+    echo "Unexpected changes after a go get -u:"
     git_status
     exit 1
 esac
 
-git add glide.lock
+git add -a
 git commit -m "Update dependencies at $(now)"
 
 echo "--- Updating generated code"

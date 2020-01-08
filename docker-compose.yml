@@ -21,6 +21,7 @@ services:
       - BUILDKITE_JOB_ID
       - BUILDKITE_PROJECT_SLUG
       - BUILDKITE_REPO
+      - GO111MODULE=on
 
   yarpc-go-1.12:
     build:
@@ -42,6 +43,7 @@ services:
       - BUILDKITE_JOB_ID
       - BUILDKITE_PROJECT_SLUG
       - BUILDKITE_REPO
+      - GO111MODULE=on
       - SSH_AUTH_SOCK=/ssh-agent
     volumes:
       - $SSH_AUTH_SOCK:/ssh-agent
