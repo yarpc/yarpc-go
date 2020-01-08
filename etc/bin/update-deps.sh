@@ -107,15 +107,24 @@ now() {
   date +%Y-%m-%dT%H:%M:%S
 }
 
-# Use this instead of calling `git status` directly.
-git_status()
+changed_files()
 {
   # BuildKite's docker-compose plugin generates a fake docker-compose so we
   # need to ignore it anytime we do git status.
-  git status "$@" | grep -v '?? docker-compose.buildkite'
+  git --no-pager diff --name-only "$@" | grep -v '^docker-compose.buildkite'
 }
 
-if [ -n "$(git_status --porcelain)" ]; then
+# update_module $DIR updates the Go module in $DIR.
+update_module()
+{
+  echo "--- Updating module $1"
+  (cd "$1" && go get -u && go mod tidy)
+  if [ -n "$(changed_files)" ]; then
+    git add --verbose "$1/go.mod" "$1/go.sum"
+  fi
+}
+
+if [ -n "$(changed_files)" ]; then
   echo "Working tree is dirty."
   echo "Please verify that you don't have any uncommitted changes."
   git status
@@ -123,32 +132,29 @@ if [ -n "$(git_status --porcelain)" ]; then
 fi
 
 echo "--- Updating dependencies"
-make glide-cc glide-up
+update_module "."
+update_module "internal/examples"
+update_module "internal/crossdock"
 
-case "$(git_status --porcelain)" in
-  "")
-    echo "Nothing changed. Exiting."
-    exit 0
-    ;;
-  " M glide.lock")
-    echo "--- glide.lock changed"
-    # Keep going
-    ;;
-  *)
-    echo "Unexpected changes after a glide up:"
-    git_status
-    exit 1
-esac
+if [ -z "$(changed_files --staged)" ]; then
+  echo "Nothing changed. Exiting."
+  exit 0
+fi
 
-git add glide.lock
+echo "--- Committing update"
 git commit -m "Update dependencies at $(now)"
 
 echo "--- Updating generated code"
 make generate
 
+# Generated code might affect dependencies.
+go mod tidy
+(cd internal/examples && go mod tidy)
+(cd internal/crossdock && go mod tidy)
+
 # We want to push directly to the remote only if the generated code did not
 # change and all tests pass.
-if [ -z "$(git_status --porcelain)" ]; then
+if [ -z "$(changed_files)" ]; then
   if make lint test examples; then
     echo "--- Generated code did not change and the tests passed."
     echo "--- Pushing changes and exiting."
@@ -157,8 +163,7 @@ if [ -z "$(git_status --porcelain)" ]; then
   fi
 else
   # Check in the generated code ignoring the BuildKite docker-compose.
-  git add -A
-  git rm --cached docker-compose.buildkite*
+  changed_files | xargs git add --verbose
   git commit -m "Update generated code at $(now)"
 fi
 
@@ -199,3 +204,5 @@ change.
 Thanks!""",
 }))
 EOF
+
+# vim:ts=2 sw=2 et:

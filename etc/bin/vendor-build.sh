@@ -11,57 +11,13 @@ if [[ -z "$2" ]]; then
 	exit 1
 fi
 
-if [[ ! -d vendor ]]; then
-	echo "Must be run from a directory containing vendored code."
-	exit 1
-fi
-
 function die() {
 	echo "$1" >&2
 	exit 1
 }
 
-function abspath() {
-	# We use a subshell here so the directory change isn't persisted.
-	(cd "$1" || die "Directory $1 does not exist"; pwd)
-}
-
-# findGlideLock dir looks for glide.lock in dir or any of its parent
-# directories.
-#
-# Returns the full path to glide.lock or an empty string.
-function findGlideLock() {
-	if [[ -e "$1/glide.lock" ]]; then
-		echo "$1/glide.lock"
-		return
-	fi
-
-	if [[ "$GOPATH/src" == "$1" ]]; then
-		return
-	fi
-
-	findGlideLock "$(abspath "$1/..")"
-}
-
 outputDir="$1"
 importPath="$2"
 
-# not an absolute path
-if [[ "${outputDir#/}" == "$outputDir" ]]; then
-	outputDir="$(pwd)/$outputDir"
-fi
-
-GOPATH=$(mktemp -d)
-export GOPATH
-
-ln -s "$PWD/vendor" "$GOPATH/src" || die "Failed to symlink vendor"
-cd "$GOPATH/src/$importPath" || die "Cannot find $importPath"
-
-# We have dependencies
-glideLock=$(findGlideLock "$GOPATH/src/$importPath")
-if [[ -n "$glideLock" ]]; then
-	(cd "$(dirname "$glideLock")" && glide install) || die "Could not install dependencies"
-	trap 'rm -rf $(dirname $glideLock)/vendor' EXIT
-fi
-
-go build -o "$outputDir/$(basename "$importPath")" . || dir "Failed to build"
+GOBIN="$outputDir" go install "$importPath" \
+	|| die "Failed to build and install $importPath"
