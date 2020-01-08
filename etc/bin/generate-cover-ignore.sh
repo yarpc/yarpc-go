@@ -15,7 +15,7 @@ source "${DIR}/etc/bin/helpers.sh"
 cd "${DIR}"
 
 remove_existing_nocover_files() {
-  find . -name \.nocover | sed 's/^\.\///' | grep -v -e ^vendor\/ -e ^\.glide\/ | xargs rm
+  find . -name \.nocover | sed 's/^\.\///' | grep -v -e '^vendor/' | xargs rm
 }
 
 add_nocover_files() {

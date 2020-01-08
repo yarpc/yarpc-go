@@ -122,25 +122,30 @@ if [ -n "$(git_status --porcelain)" ]; then
   exit 1
 fi
 
-echo "--- Updating dependencies"
-make glide-cc glide-up
+echo "--- Updating dependencies for YARPC"
+go get -u
+echo "--- Updating dependencies for examples"
+(cd internal/examples && go get -u)
+echo "--- Updating dependencies for crossdock"
+(cd internal/crossdock && go get -u)
 
 case "$(git_status --porcelain)" in
   "")
     echo "Nothing changed. Exiting."
     exit 0
     ;;
-  " M glide.lock")
-    echo "--- glide.lock changed"
+  " M "*"go.mod"|" M "*"go.sum")
+    echo "--- Dependencies changed."
     # Keep going
     ;;
   *)
-    echo "Unexpected changes after a glide up:"
+    echo "Unexpected changes after a go get -u:"
     git_status
     exit 1
 esac
 
-git add glide.lock
+git add -A
+git rm --cached docker-compose.buildkite*
 git commit -m "Update dependencies at $(now)"
 
 echo "--- Updating generated code"
