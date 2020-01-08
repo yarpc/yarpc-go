@@ -87,19 +87,19 @@ generate_stringer ConnectionStatus ./api/peer
 generate_stringer State ./pkg/lifecycle
 generate_stringer Type ./api/transport
 
-thriftrw --plugin=yarpc --out=internal/crossdock/thrift internal/crossdock/thrift/echo.thrift
-thriftrw --plugin=yarpc --out=internal/crossdock/thrift internal/crossdock/thrift/oneway.thrift
-thriftrw --plugin=yarpc --out=internal/crossdock/thrift internal/crossdock/thrift/gauntlet.thrift
-thriftrw --plugin=yarpc --out=internal/examples/thrift-oneway internal/examples/thrift-oneway/sink.thrift
-thriftrw --plugin=yarpc --out=internal/examples/thrift-hello/hello internal/examples/thrift-hello/hello/echo.thrift
-thriftrw --plugin=yarpc --out=internal/examples/thrift-keyvalue/keyvalue internal/examples/thrift-keyvalue/keyvalue/kv.thrift
-thriftrw --out=encoding/thrift encoding/thrift/internal.thrift
-thriftrw --out=serialize serialize/internal.thrift
+thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/crossdock/thrift --out=internal/crossdock/thrift internal/crossdock/thrift/echo.thrift
+thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/crossdock/thrift --out=internal/crossdock/thrift internal/crossdock/thrift/oneway.thrift
+thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/crossdock/thrift --out=internal/crossdock/thrift internal/crossdock/thrift/gauntlet.thrift
+thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/examples/thrift-oneway --out=internal/examples/thrift-oneway internal/examples/thrift-oneway/sink.thrift
+thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/examples/thrift-hello/hello --out=internal/examples/thrift-hello/hello internal/examples/thrift-hello/hello/echo.thrift
+thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue --out=internal/examples/thrift-keyvalue/keyvalue internal/examples/thrift-keyvalue/keyvalue/kv.thrift
+thriftrw --pkg-prefix=go.uber.org/yarpc/encoding/thrift --out=encoding/thrift encoding/thrift/internal.thrift
+thriftrw --pkg-prefix=go.uber.org/yarpc/serialize --out=serialize serialize/internal.thrift
 
-thriftrw --no-recurse --plugin=yarpc --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends.thrift
-thriftrw --no-recurse --plugin=yarpc --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common.thrift
-thriftrw --no-recurse --plugin=yarpc --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic.thrift
-thriftrw --no-recurse --plugin="yarpc --sanitize-tchannel" --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather.thrift
+thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends.thrift
+thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common.thrift
+thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic.thrift
+thriftrw --no-recurse --plugin="yarpc --sanitize-tchannel" --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather.thrift
 
 thrift-gen --generateThrift --outputDir internal/crossdock/thrift/gen-go --inputFile internal/crossdock/thrift/echo.thrift
 thrift-gen --generateThrift --outputDir internal/crossdock/thrift/gen-go --inputFile internal/crossdock/thrift/gauntlet_tchannel.thrift | strip_thrift_warnings
