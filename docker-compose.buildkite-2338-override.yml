@@ -1,0 +1,4 @@
+version: '3'
+services:
+  yarpc-go-1.12:
+    image: 027047743804.dkr.ecr.us-east-2.amazonaws.com/uber:yarpc-go-yarpc-go-1.12-build-2338
