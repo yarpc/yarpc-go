@@ -122,9 +122,11 @@ if [ -n "$(git_status --porcelain)" ]; then
   exit 1
 fi
 
-echo "--- Updating dependencies"
+echo "--- Updating dependencies for YARPC"
 go get -u
+echo "--- Updating dependencies for examples"
 (cd internal/examples && go get -u)
+echo "--- Updating dependencies for crossdock"
 (cd internal/crossdock && go get -u)
 
 case "$(git_status --porcelain)" in
@@ -142,7 +144,7 @@ case "$(git_status --porcelain)" in
     exit 1
 esac
 
-git add -a
+git add -A
 git commit -m "Update dependencies at $(now)"
 
 echo "--- Updating generated code"
