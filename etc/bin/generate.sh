@@ -21,6 +21,8 @@ generate_stringer() {
   stringer "-type=${1}" "${2}"
 }
 
+GOGO_PROTO_DIR=$(go mod download -json github.com/gogo/protobuf | jq -r .Dir)
+
 # Run protoc
 #
 # $1: plugin
@@ -28,8 +30,7 @@ generate_stringer() {
 # $3: other options
 protoc_with_imports() {
   protoc \
-    -I vendor \
-    -I vendor/github.com/gogo/protobuf/protobuf \
+    -I "$GOGO_PROTO_DIR/protobuf" \
     -I . \
     "--${1}_out=${2}Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/protoc-gen-gogo/descriptor,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto,Myarpcproto/yarpc.proto=go.uber.org/yarpc/yarpcproto,Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types:." \
   "${@:3}"
