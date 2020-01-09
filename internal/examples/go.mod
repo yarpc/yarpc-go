@@ -11,9 +11,7 @@ require (
 	go.uber.org/thriftrw v1.21.0
 	go.uber.org/yarpc v1.42.1
 	go.uber.org/zap v1.13.0
-	google.golang.org/genproto v0.0.0-20191230161307-f3c370f40bfb // indirect
 	google.golang.org/grpc v1.26.0
-	gopkg.in/yaml.v2 v2.2.7 // indirect
 )
 
 replace go.uber.org/yarpc => ../..
