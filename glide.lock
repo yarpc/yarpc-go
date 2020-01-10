@@ -1,5 +1,5 @@
 hash: c1916eab0d24ec5d9fa26f9d529cbc9b09543799fd3daf6552b66aa5ad98bc9f
-updated: 2020-01-09T15:04:15.329661834Z
+updated: 2020-01-10T15:04:40.976140301Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -116,7 +116,7 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 314d69e47b2ad51b7f9fc48aed1b706fab8de26d
+  version: 436b8d67311d20a1554856a974008796024691cb
   subpackages:
   - internal/fs
   - internal/util
@@ -267,7 +267,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 89082a3841783366cb82b3dc4ce9258fb3dad1a9
+  version: 428f1ab0ca03a50bf8ac61408423f510675cd5a9
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/goimports
