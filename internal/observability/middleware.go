@@ -160,6 +160,8 @@ func (m *Middleware) Call(ctx context.Context, req *transport.Request, out trans
 // HandleOneway implements middleware.OnewayInbound.
 func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
 	call := m.graph.begin(ctx, transport.Oneway, _directionInbound, req)
+	defer m.handlePanicForCall(call)
+
 	err := h.HandleOneway(ctx, req)
 	call.End(err)
 	return err
@@ -176,6 +178,8 @@ func (m *Middleware) CallOneway(ctx context.Context, req *transport.Request, out
 // HandleStream implements middleware.StreamInbound.
 func (m *Middleware) HandleStream(serverStream *transport.ServerStream, h transport.StreamHandler) error {
 	call := m.graph.begin(serverStream.Context(), transport.Streaming, _directionInbound, serverStream.Request().Meta.ToRequest())
+	defer m.handlePanicForCall(call)
+
 	call.EndStreamHandshake()
 	err := h.HandleStream(call.WrapServerStream(serverStream))
 	call.EndStream(err)
@@ -191,4 +195,19 @@ func (m *Middleware) CallStream(ctx context.Context, request *transport.StreamRe
 		return nil, err
 	}
 	return call.WrapClientStream(clientStream), nil
+}
+
+// handlePanicForCall checks for a panic without actually recovering from it
+// it must be called in defer otherwise recover will act as a no-op
+// The only action this method takes is to emit panic metrics
+func (m *Middleware) handlePanicForCall(call call) {
+	// We only want to emit panic metrics without actually recovering from it
+	// Actual recovery from a panic happens at top of the stack in transport's Handler Invoker
+	// As this middleware is the one and only one with Metrics responsibility, we just panic again after
+	// checking for panic without actually recovering from it
+	if e := recover(); e != nil {
+		// Emit only the panic metrics
+		call.EndWithPanic(e)
+		panic(e)
+	}
 }

@@ -276,3 +276,11 @@ func errToMetricString(err error) string {
 	}
 	return "unknown_internal_yarpc"
 }
+
+// EndWithPanic ends the call with minimal metrics required for panics
+func (c call) EndWithPanic(recovered interface{}) {
+	// count calls, panics and as panic are server faults, lets count these towards serverErr latencies
+	c.edge.calls.Inc()
+	c.edge.serverErrLatencies.Observe(_timeNow().Sub(c.started))
+	c.edge.panics.Inc()
+}
