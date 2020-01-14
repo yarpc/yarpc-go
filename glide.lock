@@ -1,5 +1,5 @@
 hash: c1916eab0d24ec5d9fa26f9d529cbc9b09543799fd3daf6552b66aa5ad98bc9f
-updated: 2020-01-13T15:07:22.032584149Z
+updated: 2020-01-14T15:06:36.781766879Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -84,7 +84,7 @@ imports:
   subpackages:
   - internal/errcheck
 - name: github.com/mattn/go-shellwords
-  version: 36a9b3c57cb5caa559ff63fb7e9b585f1c00df75
+  version: e75dab3fb173e2c75f0957bea15440005e9bec3e
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c182affec369e30f25d3eb8cd8a478dee585ae7d
   subpackages:
@@ -254,7 +254,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 548cf772de5052aa878ccb47cdeb7d262b75c8ec
+  version: 86b910548bc16777f40503131aa424ae0a092199
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -267,7 +267,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: eac381796e91db0acd689726cce5b78086509607
+  version: d31a08c2edf2cd930cbead4c1e6e3e1b26e94bd5
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/goimports
@@ -290,7 +290,7 @@ imports:
   - internal/module
   - internal/semver
 - name: google.golang.org/genproto
-  version: bd8f9a0ef82f9870cb10caef4f23c348069600cb
+  version: e1de0a7b01eb2fc11d735e4bfb79d2e53ec9edb3
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
