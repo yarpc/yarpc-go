@@ -1215,6 +1215,70 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 	}
 }
 
+func TestApplicationPanicsSnapshot(t *testing.T) {
+	req := &transport.StreamRequest{
+		Meta: &transport.RequestMeta{
+			Caller:          "caller",
+			Service:         "service",
+			Transport:       "",
+			Encoding:        "raw",
+			Procedure:       "procedure",
+			ShardKey:        "sk",
+			RoutingKey:      "rk",
+			RoutingDelegate: "rd",
+		},
+	}
+	tags := metrics.Tags{
+		"dest":             "service",
+		"direction":        string(_directionInbound),
+		"encoding":         "raw",
+		"procedure":        "procedure",
+		"routing_delegate": "rd",
+		"routing_key":      "rk",
+		"rpc_type":         transport.Streaming.String(),
+		"source":           "caller",
+		"transport":        "unknown",
+	}
+
+	root := metrics.New()
+	scope := root.Scope()
+	mw := NewMiddleware(Config{
+		Logger:           zap.NewNop(),
+		Scope:            scope,
+		ContextExtractor: NewNopContextExtractor(),
+	})
+
+	stream, err := transport.NewServerStream(&fakeStream{request: req})
+	require.NoError(t, err)
+
+	// As our fake handler is mocked to panic in the call, test that the invocation panics
+	assert.Panics(t, func() {
+		err = mw.HandleStream(stream, &fakeHandler{applicationPanic: true})
+		require.NoError(t, err)
+
+		want := &metrics.RootSnapshot{
+			// only the failure vector counters will have an error value passed
+			// into tags()
+			Counters: []metrics.Snapshot{
+				{Name: "calls", Tags: tags, Value: 1},
+				{Name: "panics", Tags: tags, Value: 1},
+				{Name: "stream_receive_successes", Tags: tags, Value: 0},
+				{Name: "stream_receives", Tags: tags, Value: 0},
+				{Name: "stream_send_successes", Tags: tags, Value: 0},
+				{Name: "stream_sends", Tags: tags, Value: 0},
+				{Name: "successes", Tags: tags, Value: 1},
+			},
+			Gauges: []metrics.Snapshot{
+				{Name: "streams_active", Tags: tags, Value: 0},
+			},
+			Histograms: []metrics.HistogramSnapshot{
+				{Name: "stream_duration_ms", Tags: tags, Unit: time.Millisecond, Values: []int64{1}},
+			},
+		}
+		assert.Equal(t, want, root.Snapshot(), "unexpected metrics snapshot")
+	})
+}
+
 func TestStreamingMetrics(t *testing.T) {
 	defer stubTime()()
 
@@ -1296,7 +1360,6 @@ func TestStreamingMetrics(t *testing.T) {
 	t.Run("error handler", func(t *testing.T) {
 		tests := []struct {
 			name    string
-			panics  bool
 			err     error
 			errName string
 		}{
@@ -1315,10 +1378,6 @@ func TestStreamingMetrics(t *testing.T) {
 				err:     errors.New("unknown fault"),
 				errName: "unknown_internal_yarpc",
 			},
-			{
-				name:   "server panic",
-				panics: true,
-			},
 		}
 
 		for _, tt := range tests {
@@ -1333,61 +1392,46 @@ func TestStreamingMetrics(t *testing.T) {
 
 				stream, err := transport.NewServerStream(&fakeStream{request: req})
 				require.NoError(t, err)
+				err = mw.HandleStream(stream, &fakeHandler{err: tt.err})
+				require.Error(t, err)
 
-				handleStreamAndValidateFn := func() {
-					err = mw.HandleStream(stream, &fakeHandler{err: tt.err, applicationPanic: tt.panics})
-					if tt.panics {
-						require.NoError(t, err)
-					} else {
-						require.Error(t, err)
-					}
+				snap := root.Snapshot()
+				successTags := newTags(_directionInbound, "")
+				errTags := newTags(_directionInbound, tt.errName)
 
-					snap := root.Snapshot()
-					successTags := newTags(_directionInbound, "")
-					errTags := newTags(_directionInbound, tt.errName)
+				// so we don't have create a sorting implementaion, manually place the
+				// first two expected counter snapshots, based on the error fault.
+				counters := make([]metrics.Snapshot, 0, 10)
+				if statusFault(yarpcerrors.FromError(tt.err)) == clientFault {
+					counters = append(counters,
+						metrics.Snapshot{Name: "caller_failures", Tags: errTags, Value: 1},
+						metrics.Snapshot{Name: "calls", Tags: successTags, Value: 1},
+						metrics.Snapshot{Name: "panics", Tags: successTags, Value: 0})
 
-					// so we don't have create a sorting implementaion, manually place the
-					// first two expected counter snapshots, based on the error fault.
-					counters := make([]metrics.Snapshot, 0, 10)
-					if tt.panics {
-						counters = append(counters,
-							metrics.Snapshot{Name: "calls", Tags: successTags, Value: 1},
-							metrics.Snapshot{Name: "panics", Tags: successTags, Value: 1})
-					} else if statusFault(yarpcerrors.FromError(tt.err)) == clientFault {
-						counters = append(counters,
-							metrics.Snapshot{Name: "caller_failures", Tags: errTags, Value: 1},
-							metrics.Snapshot{Name: "calls", Tags: successTags, Value: 1},
-							metrics.Snapshot{Name: "panics", Tags: successTags, Value: 0})
-					} else {
-						counters = append(counters,
-							metrics.Snapshot{Name: "calls", Tags: successTags, Value: 1},
-							metrics.Snapshot{Name: "panics", Tags: successTags, Value: 0},
-							metrics.Snapshot{Name: "server_failures", Tags: errTags, Value: 1})
-					}
-
-					want := &metrics.RootSnapshot{
-						// only the failure vector counters will have an error value passed
-						// into tags()
-						Counters: append(counters,
-							metrics.Snapshot{Name: "stream_receive_successes", Tags: successTags, Value: 0},
-							metrics.Snapshot{Name: "stream_receives", Tags: successTags, Value: 0},
-							metrics.Snapshot{Name: "stream_send_successes", Tags: successTags, Value: 0},
-							metrics.Snapshot{Name: "stream_sends", Tags: successTags, Value: 0},
-							metrics.Snapshot{Name: "successes", Tags: successTags, Value: 1}),
-						Gauges: []metrics.Snapshot{
-							{Name: "streams_active", Tags: successTags, Value: 0},
-						},
-						Histograms: []metrics.HistogramSnapshot{
-							{Name: "stream_duration_ms", Tags: successTags, Unit: time.Millisecond, Values: []int64{1}},
-						},
-					}
-					assert.Equal(t, want, snap, "unexpected metrics snapshot")
-				}
-				if tt.panics {
-					assert.Panics(t, handleStreamAndValidateFn)
 				} else {
-					assert.NotPanics(t, handleStreamAndValidateFn)
+					counters = append(counters,
+						metrics.Snapshot{Name: "calls", Tags: successTags, Value: 1},
+						metrics.Snapshot{Name: "panics", Tags: successTags, Value: 0},
+						metrics.Snapshot{Name: "server_failures", Tags: errTags, Value: 1})
 				}
+
+				want := &metrics.RootSnapshot{
+					// only the failure vector counters will have an error value passed
+					// into tags()
+					Counters: append(counters,
+						metrics.Snapshot{Name: "stream_receive_successes", Tags: successTags, Value: 0},
+						metrics.Snapshot{Name: "stream_receives", Tags: successTags, Value: 0},
+						metrics.Snapshot{Name: "stream_send_successes", Tags: successTags, Value: 0},
+						metrics.Snapshot{Name: "stream_sends", Tags: successTags, Value: 0},
+						metrics.Snapshot{Name: "successes", Tags: successTags, Value: 1}),
+					Gauges: []metrics.Snapshot{
+						{Name: "streams_active", Tags: successTags, Value: 0},
+					},
+					Histograms: []metrics.HistogramSnapshot{
+						{Name: "stream_duration_ms", Tags: successTags, Unit: time.Millisecond, Values: []int64{1}},
+					},
+				}
+				assert.Equal(t, want, snap, "unexpected metrics snapshot")
 			})
 		}
 	})

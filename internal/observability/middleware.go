@@ -137,6 +137,8 @@ func applyLogLevelsConfig(dst *levels, src *DirectionalLevelsConfig) {
 // Handle implements middleware.UnaryInbound.
 func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w transport.ResponseWriter, h transport.UnaryHandler) error {
 	call := m.graph.begin(ctx, transport.Unary, _directionInbound, req)
+	defer m.handlePanicForCall(call)
+
 	wrappedWriter := newWriter(w)
 	err := h.Handle(ctx, req, wrappedWriter)
 	call.EndWithAppError(err, wrappedWriter.isApplicationError)
