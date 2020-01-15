@@ -76,6 +76,12 @@ func (c call) EndWithAppError(err error, isApplicationError bool) {
 	c.endStats(elapsed, err, isApplicationError)
 }
 
+// EndWithPanic ends the call with additional panic metrrics
+func (c call) EndWithPanic(err error) {
+	c.edge.panics.Inc()
+	c.EndWithAppError(err, true)
+}
+
 func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool) {
 	var ce *zapcore.CheckedEntry
 	if err == nil && !isApplicationError {
@@ -203,6 +209,12 @@ func (c call) EndStream(err error) {
 	c.emitStreamError(err)
 }
 
+// EndStreamWithPanic ends the stream call with additional panic metrrics
+func (c call) EndStreamWithPanic(err error) {
+	c.edge.panics.Inc()
+	c.EndStream(err)
+}
+
 // This function resembles EndStats for unary calls. However, we do not special
 // case application errors and it does not measure failure latencies as those
 // measurements are irrelevant for streams.
@@ -275,12 +287,4 @@ func errToMetricString(err error) string {
 		return yarpcerrors.FromError(err).Code().String()
 	}
 	return "unknown_internal_yarpc"
-}
-
-// EndWithPanic ends the call with minimal metrics required for panics
-func (c call) EndWithPanic(recovered interface{}) {
-	// count calls, panics and as panic are server faults, lets count these towards serverErr latencies
-	c.edge.calls.Inc()
-	c.edge.serverErrLatencies.Observe(_timeNow().Sub(c.started))
-	c.edge.panics.Inc()
 }
