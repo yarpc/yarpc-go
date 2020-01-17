@@ -141,6 +141,19 @@ cover: $(THRIFTRW) __eval_chunked_packages ## run chunked tests and output code 
 	PATH=$(BIN):$$PATH go run ./internal/cover/main.go $(CHUNKED_PACKAGES)
 	go tool cover -html=coverage.txt -o cover.html
 
+.PHONY: crossdock-cover
+crossdock-cover:
+	cd internal/crossdock && \
+		PATH=$(BIN):$$PATH go run ../cover/main.go $$(go list ./...) && \
+		go tool cover -html=coverage.txt -o cover.html
+	mv internal/crossdock/coverage.txt crossdock.coverage.txt
+	mv internal/crossdock/cover.html crossdock.cover.html
+
+.PHONY: crossdock-codecov
+crossdock-codecov: SHELL := /bin/bash
+crossdock-codecov: crossdock-cover
+	bash <(curl -s https://codecov.io/bash) -c -f crossdock.coverage.txt
+
 .PHONY: codecov
 codecov: SHELL := /bin/bash
 codecov: cover ## run code coverage and upload to codecov.io

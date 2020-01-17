@@ -37,6 +37,13 @@ steps:
         run: yarpc-go-1.12
     agents:
       queue: workers
+  - name: ":go: 1.12 crossdock"
+    command: "make crossdock-codecov"
+    plugins:
+      docker-compose#v2.0.0:
+        run: yarpc-go-1.12
+    agents:
+      queue: workers
   - name: ":go: 1.12 lint"
     command: "make lint"
     plugins:

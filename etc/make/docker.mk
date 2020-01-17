@@ -80,6 +80,10 @@ test: deps ## run all tests
 cover: deps ## run all tests and output code coverage
 	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make cover
 
+.PHONY: crossdock-cover
+crossdock-cover: deps
+	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make crossdock-cover
+
 .PHONY: codecov
 codecov: SHELL := /bin/bash
 codecov: deps ## run code coverage and upload to coveralls
