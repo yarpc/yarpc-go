@@ -1,5 +1,5 @@
 hash: c1916eab0d24ec5d9fa26f9d529cbc9b09543799fd3daf6552b66aa5ad98bc9f
-updated: 2020-01-16T15:04:07.765911625Z
+updated: 2020-01-17T15:02:26.003668743Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -84,7 +84,7 @@ imports:
   subpackages:
   - internal/errcheck
 - name: github.com/mattn/go-shellwords
-  version: e75dab3fb173e2c75f0957bea15440005e9bec3e
+  version: 15c6c4ba21242f0256740b9417601db2d57a263b
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c182affec369e30f25d3eb8cd8a478dee585ae7d
   subpackages:
@@ -136,7 +136,7 @@ imports:
 - name: github.com/uber-go/tally
   version: 4292fb62574242de9fb0be278fc17d45defa5d33
 - name: github.com/uber/jaeger-client-go
-  version: 56611ffff7c29c5b9aa926b84faadda4a609cc59
+  version: 2d55657eac169e2a86b4fcc1a421e26a9a485b63
   subpackages:
   - internal/baggage
   - internal/reporterstats
@@ -255,7 +255,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: b77594299b429d05028403d72b68172959c7dad5
+  version: 59e60aa80a0c64fa4b088976ee16ad7f04252c25
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -268,7 +268,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 473961ec044c1c001df816e5edb29e4a31db4c01
+  version: 39095c1d176c032bd8915f1173c0c77f502f579d
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/goimports
@@ -289,6 +289,7 @@ imports:
   - internal/gopathwalk
   - internal/imports
   - internal/module
+  - internal/packagesinternal
   - internal/semver
 - name: google.golang.org/genproto
   version: ca5a22157cba8746e7aa978de1b1ac4085150840
