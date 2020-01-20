@@ -1,5 +1,5 @@
 hash: c1916eab0d24ec5d9fa26f9d529cbc9b09543799fd3daf6552b66aa5ad98bc9f
-updated: 2020-01-17T15:02:26.003668743Z
+updated: 2020-01-20T15:04:53.024119833Z
 imports:
 - name: github.com/anmitsu/go-shlex
   version: 648efa622239a2f6ff949fed78ee37b48d499ba4
@@ -106,11 +106,11 @@ imports:
   - prometheus/internal
   - prometheus/promhttp
 - name: github.com/prometheus/client_model
-  version: d1d2010b5beead3fa1c5f271a5cf626e40b3ad6e
+  version: 7bc5445566f0fe75b15de23e6b93886e982d7bf9
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 629b6ff9b3aafafba54ab96663903fde9544f037
+  version: d978bcb1309602d68bb4ba69cf3f8ed900e07308
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -255,7 +255,7 @@ imports:
   - ipv6
   - trace
 - name: golang.org/x/sys
-  version: 59e60aa80a0c64fa4b088976ee16ad7f04252c25
+  version: c1edf535530b1d509c819c16854c5f743b4c3144
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -268,7 +268,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 39095c1d176c032bd8915f1173c0c77f502f579d
+  version: eb0d8dd85bcce4e3c0c1da6bbc384d5ad84035bf
   repo: https://github.com/golang/tools
   subpackages:
   - cmd/goimports
@@ -292,7 +292,7 @@ imports:
   - internal/packagesinternal
   - internal/semver
 - name: google.golang.org/genproto
-  version: ca5a22157cba8746e7aa978de1b1ac4085150840
+  version: 32f20d992d240fbca6ef7dec6c05d1f024314e02
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
