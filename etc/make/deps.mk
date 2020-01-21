@@ -14,38 +14,24 @@ LINT_DEPS = \
 	golang.org/x/lint/golint \
 	honnef.co/go/tools/cmd/staticcheck
 
-# all we want is go get -u github.com/Masterminds/glide
-# but have to pin to 0.12.3 due to https://github.com/Masterminds/glide/issues/745
-GLIDE_VERSION := 0.12.3
 THRIFT_VERSION := 1.0.0-dev
 PROTOC_VERSION := 3.5.1
 RAGEL_VERSION := 6.10
 
-GLIDE_OS := $(UNAME_OS)
 THRIFT_OS := $(UNAME_OS)
 PROTOC_OS := $(UNAME_OS)
 RAGEL_OS := $(UNAME_OS)
 
-GLIDE_ARCH := $(UNAME_ARCH)
 THRIFT_ARCH := $(UNAME_ARCH)
 PROTOC_ARCH := $(UNAME_ARCH)
 RAGEL_ARCH := $(UNAME_ARCH)
 
 ifeq ($(UNAME_OS),Darwin)
-GLIDE_OS := darwin
 PROTOC_OS := osx
 else
-GLIDE_OS = linux
 PROTOC_OS = linux
 endif
 
-ifeq ($(UNAME_ARCH),x86_64)
-GLIDE_ARCH = amd64
-endif
-
-GLIDE_LIB = $(LIB)/glide-$(GLIDE_VERSION)
-GLIDE_TAR = $(GLIDE_LIB)/glide.tar.gz
-GLIDE = $(BIN)/glide
 THRIFT_LIB = $(LIB)/thrift-$(THRIFT_VERSION)
 THRIFT_TAR = $(THRIFT_LIB)/thrift.tar.gz
 THRIFT = $(BIN)/thrift
@@ -57,7 +43,6 @@ RAGEL_BIN = $(RAGEL_LIB)/ragel
 RAGEL = $(BIN)/ragel
 
 GEN_BINS = $(THRIFT) $(PROTOC) $(RAGEL)
-EXTRA_BINS = $(GLIDE)
 
 $(RAGEL_BIN):
 	@mkdir -p $(RAGEL_LIB)
@@ -67,15 +52,6 @@ $(RAGEL): $(RAGEL_BIN)
 	@mkdir -p $(BIN)
 	cp $(RAGEL_BIN) $(RAGEL)
 	@chmod +x $(RAGEL)
-
-$(GLIDE_TAR):
-	@mkdir -p $(GLIDE_LIB)
-	curl -L "https://github.com/Masterminds/glide/releases/download/v$(GLIDE_VERSION)/glide-v$(GLIDE_VERSION)-$(GLIDE_OS)-$(GLIDE_ARCH).tar.gz" > $(GLIDE_TAR)
-
-$(GLIDE): $(GLIDE_TAR)
-	@mkdir -p $(BIN)
-	cd $(GLIDE_LIB); tar xzf $(GLIDE_TAR)
-	cp $(GLIDE_LIB)/$(GLIDE_OS)-$(GLIDE_ARCH)/glide $(GLIDE)
 
 $(THRIFT_TAR):
 	@mkdir -p $(THRIFT_LIB)
@@ -101,11 +77,11 @@ endef
 
 define deprule
 ifdef SUPPRESS_DOCKER
-$(BIN)/$(shell basename $1): glide.lock $(GLIDE)
+$(BIN)/$(shell basename $1): go.mod
 	@mkdir -p $(BIN)
 	PATH=$(BIN):$(PATH) ./etc/bin/vendor-build.sh $(BIN) $1
 else
-$(BIN)/$(shell basename $1): $(GLIDE)
+$(BIN)/$(shell basename $1): go.mod
 	@mkdir -p $(BIN)
 	PATH=$(BIN):$(PATH) ./etc/bin/vendor-build.sh $(BIN) $1
 endif
@@ -122,19 +98,7 @@ ERRCHECK = $(BIN)/errcheck
 STATICCHECK = $(BIN)/staticcheck
 
 .PHONY: predeps
-predeps: $(GLIDE) $(THRIFT) $(PROTOC) $(RAGEL)
+predeps: $(THRIFT) $(PROTOC) $(RAGEL)
 
 .PHONY: deps
-deps: predeps glide $(GEN_BINS) $(GLIDE) ## install all dependencies
-
-.PHONY: glide
-glide: $(GLIDE) ## install glide dependencies
-	PATH=$$PATH:$(BIN) glide install
-
-.PHONY: glide-up
-glide-up: $(GLIDE) ## update glide dependencies
-	PATH=$$PATH:$(BIN) glide up
-
-.PHONY: glide-cc
-glide-cc: $(GLIDE) ## clear the glide cache
-	PATH=$$PATH:$(BIN) glide cc
+deps: predeps $(GEN_BINS) ## install all dependencies
