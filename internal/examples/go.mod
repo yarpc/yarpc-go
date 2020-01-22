@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/gogo/protobuf v1.3.1
-	github.com/golang/mock v1.3.1
+	github.com/golang/mock v1.4.0
 	github.com/stretchr/testify v1.4.0
 	go.uber.org/fx v1.10.0
 	go.uber.org/multierr v1.4.0
