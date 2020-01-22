@@ -22,6 +22,7 @@ package observability
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"go.uber.org/net/metrics"
@@ -137,6 +138,8 @@ func applyLogLevelsConfig(dst *levels, src *DirectionalLevelsConfig) {
 // Handle implements middleware.UnaryInbound.
 func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w transport.ResponseWriter, h transport.UnaryHandler) error {
 	call := m.graph.begin(ctx, transport.Unary, _directionInbound, req)
+	defer m.handlePanicForCall(call, transport.Unary)
+
 	wrappedWriter := newWriter(w)
 	err := h.Handle(ctx, req, wrappedWriter)
 	call.EndWithAppError(err, wrappedWriter.isApplicationError)
@@ -176,6 +179,8 @@ func (m *Middleware) CallOneway(ctx context.Context, req *transport.Request, out
 // HandleStream implements middleware.StreamInbound.
 func (m *Middleware) HandleStream(serverStream *transport.ServerStream, h transport.StreamHandler) error {
 	call := m.graph.begin(serverStream.Context(), transport.Streaming, _directionInbound, serverStream.Request().Meta.ToRequest())
+	defer m.handlePanicForCall(call, transport.Streaming)
+
 	call.EndStreamHandshake()
 	err := h.HandleStream(call.WrapServerStream(serverStream))
 	call.EndStream(err)
@@ -191,4 +196,25 @@ func (m *Middleware) CallStream(ctx context.Context, request *transport.StreamRe
 		return nil, err
 	}
 	return call.WrapClientStream(clientStream), nil
+}
+
+// handlePanicForCall checks for a panic without actually recovering from it
+// it must be called in defer otherwise recover will act as a no-op
+// The only action this method takes is to emit panic metrics
+func (m *Middleware) handlePanicForCall(call call, transportType transport.Type) {
+	// We only want to emit panic metrics without actually recovering from it
+	// Actual recovery from a panic happens at top of the stack in transport's Handler Invoker
+	// As this middleware is the one and only one with Metrics responsibility, we just panic again after
+	// checking for panic without actually recovering from it
+	if e := recover(); e != nil {
+		err := fmt.Errorf("panic: %v", e)
+
+		// Emit only the panic metrics
+		if transportType == transport.Streaming {
+			call.EndStreamWithPanic(err)
+		} else {
+			call.EndWithPanic(err)
+		}
+		panic(e)
+	}
 }
