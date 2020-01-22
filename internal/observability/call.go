@@ -76,7 +76,7 @@ func (c call) EndWithAppError(err error, isApplicationError bool) {
 	c.endStats(elapsed, err, isApplicationError)
 }
 
-// EndWithPanic ends the call with additional panic metrrics
+// EndWithPanic ends the call with additional panic metrics
 func (c call) EndWithPanic(err error) {
 	c.edge.panics.Inc()
 	c.EndWithAppError(err, true)
@@ -209,7 +209,7 @@ func (c call) EndStream(err error) {
 	c.emitStreamError(err)
 }
 
-// EndStreamWithPanic ends the stream call with additional panic metrrics
+// EndStreamWithPanic ends the stream call with additional panic metrics
 func (c call) EndStreamWithPanic(err error) {
 	c.edge.panics.Inc()
 	c.EndStream(err)

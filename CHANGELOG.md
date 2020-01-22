@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   concrete types.
   However, we expect that in practice, peer lists are used as either peer.List,
   peer.Chooser, or for the private introspection interface.
+- Emit metrics for Panics occurred while handling the inbound calls.
 
 ## [1.42.1] - 2019-11-27 (Gobble)
 ### Fixed
