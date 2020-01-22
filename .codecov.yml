@@ -112,6 +112,9 @@ ignore:
  - /internal/examples/thrift-oneway/sink/hellofx/
  - /internal/examples/thrift-oneway/sink/helloserver/
  - /internal/examples/thrift-oneway/sink/hellotest/
+ - /internal/prototest/example/
+ - /internal/prototest/examplepb/
+ - /internal/prototest/exampleutil/
  - /internal/service-test/
  - /internal/testutils/
  - /serialize/internal/
