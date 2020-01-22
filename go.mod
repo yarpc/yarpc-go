@@ -10,7 +10,7 @@ require (
 	github.com/gogo/googleapis v1.3.2
 	github.com/gogo/protobuf v1.3.1
 	github.com/gogo/status v1.1.0
-	github.com/golang/mock v1.3.1
+	github.com/golang/mock v1.4.0
 	github.com/golang/protobuf v1.3.3-0.20190920234318-1680a479a2cf
 	github.com/google/go-cmp v0.4.0 // indirect
 	github.com/kisielk/errcheck v1.2.0
@@ -40,9 +40,9 @@ require (
 	go.uber.org/zap v1.13.0
 	golang.org/x/lint v0.0.0-20191125180803-fdd1cda4f05f
 	golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa
-	golang.org/x/sys v0.0.0-20200121082415-34d275377bf9 // indirect
+	golang.org/x/sys v0.0.0-20200122134326-e047566fdf82 // indirect
 	golang.org/x/text v0.3.2 // indirect
-	golang.org/x/tools v0.0.0-20200121145236-13c74800b9d2
+	golang.org/x/tools v0.0.0-20200122042241-dc16b66866f1
 	google.golang.org/genproto v0.0.0-20200117163144-32f20d992d24 // indirect
 	google.golang.org/grpc v1.26.0
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
