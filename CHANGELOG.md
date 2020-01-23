@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- Observability middleware now emits metrics for panics that occur on the stack
+  of an inbound call handler.
 ### Changed
 - This change reduces the API surface of the peer list implementations to
   remove a previously public embedded type and replace it with implementations
@@ -13,7 +16,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   concrete types.
   However, we expect that in practice, peer lists are used as either peer.List,
   peer.Chooser, or for the private introspection interface.
-- Observability middleware now emits metrics for panics that occur on the stack of an inbound call handler.
 
 ## [1.42.1] - 2019-11-27 (Gobble)
 ### Fixed
