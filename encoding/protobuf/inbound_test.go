@@ -111,3 +111,31 @@ func TestInboundAnyResolver(t *testing.T) {
 		})
 	}
 }
+
+func TestNewStreamHandlerHasAllFieldsSet(t *testing.T){
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	stream := transporttest.NewMockStreamCloser(mockCtrl)
+	stream.EXPECT().Context().Return(context.Background())
+	stream.EXPECT().Request().Return(
+		&transport.StreamRequest{
+			Meta: &transport.RequestMeta{
+				Encoding: JSONEncoding,
+			},
+		},
+	)
+
+	serverStream, err := transport.NewServerStream(stream)
+
+	f := func(stream *ServerStream) error{
+		assert.NotNil(t, stream.codec)
+		assert.NotNil(t, stream.stream)
+		assert.NotNil(t, stream.ctx)
+		return nil
+	}
+	streamHandler := NewStreamHandler(StreamHandlerParams{Handle:f})
+
+	err = streamHandler.HandleStream(serverStream)
+	assert.NoError(t, err)
+}
