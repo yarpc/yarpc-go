@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package protobuf
+package protobuf_test
 
 import (
 	"context"
@@ -28,100 +28,13 @@ import (
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/types"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/encoding/protobuf/internal/testpb"
-	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/yarpc/yarpctest"
 )
-
-func TestInvalidOutboundEncoding(t *testing.T) {
-	client := newClient("foo", &transport.OutboundConfig{CallerName: "foo", Outbounds: transport.Outbounds{ServiceName: "bar"}}, nil /*AnyResolver*/)
-	_, _, _, _, err := client.buildTransportRequest(context.Background(), "hello", nil, nil)
-	assert.NoError(t, err)
-	client.encoding = "bat"
-	_, _, _, _, err = client.buildTransportRequest(context.Background(), "hello", nil, nil)
-	assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.FromError(err).Code())
-}
-
-func TestNonOutboundConfigWithUnaryClient(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	cc := transporttest.NewMockClientConfig(mockCtrl)
-	cc.EXPECT().Caller().Return("caller")
-	cc.EXPECT().Service().Return("service")
-	cc.EXPECT().GetUnaryOutbound().Return(transporttest.NewMockUnaryOutbound(mockCtrl))
-
-	assert.NotPanics(t, func() {
-		newClient("test", cc, nil /*AnyResolver*/)
-	})
-}
-
-func TestNonOutboundConfigClient(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	cc := transporttest.NewMockClientConfig(mockCtrl)
-	cc.EXPECT().Caller().Return("caller")
-	cc.EXPECT().Service().Return("service")
-	cc.EXPECT().GetUnaryOutbound().Do(func() { panic("bad times") })
-
-	assert.Panics(t, func() {
-		newClient("test", cc, nil /*AnyResolver*/)
-	})
-}
-
-func TestInvalidStreamClientEncoding(t *testing.T) {
-	client := &client{
-		serviceName: "test",
-		outboundConfig: &transport.OutboundConfig{
-			Outbounds: transport.Outbounds{},
-		},
-		encoding: transport.Encoding("raw"),
-	}
-
-	_, err := client.CallStream(context.Background(), "somemethod")
-
-	assert.Contains(t, err.Error(), "code:internal")
-	assert.Contains(t, err.Error(), "can only use encodings")
-}
-
-func TestNoStreamOutbound(t *testing.T) {
-	client := &client{
-		serviceName: "test",
-		outboundConfig: &transport.OutboundConfig{
-			Outbounds: transport.Outbounds{},
-		},
-		encoding: Encoding,
-	}
-
-	_, err := client.CallStream(context.Background(), "somemethod")
-
-	assert.Contains(t, err.Error(), "code:internal")
-	assert.Contains(t, err.Error(), "no stream outbounds for OutboundConfig")
-}
-
-func TestNoResponseHeaders(t *testing.T) {
-	client := &client{
-		serviceName: "test",
-		outboundConfig: &transport.OutboundConfig{
-			Outbounds: transport.Outbounds{},
-		},
-		encoding: Encoding,
-	}
-
-	headers := make(map[string]string)
-
-	_, err := client.CallStream(context.Background(), "somemethod", yarpc.ResponseHeaders(&headers))
-
-	assert.Contains(t, err.Error(), "code:invalid-argument")
-	assert.Contains(t, err.Error(), "response headers are not supported for streams")
-}
 
 var _ jsonpb.AnyResolver = (*testResolver)(nil)
 
@@ -167,14 +80,14 @@ func TestOutboundAnyResolver(t *testing.T) {
 				}),
 			))
 
-			client := NewClient(ClientParams{
+			client := protobuf.NewClient(protobuf.ClientParams{
 				ClientConfig: &transport.OutboundConfig{
 					Outbounds: transport.Outbounds{
 						Unary: out,
 					},
 				},
 				AnyResolver: tt.resolver,
-				Options:     []ClientOption{UseJSON},
+				Options:     []protobuf.ClientOption{protobuf.UseJSON},
 			})
 
 			testMessage := &testpb.TestMessage{Value: testValue}
