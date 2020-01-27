@@ -107,7 +107,7 @@ thrift-gen --generateThrift --outputDir internal/crossdock/thrift/gen-go --input
 
 thrift --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift --out internal/crossdock/thrift/gen-go internal/crossdock/thrift/gauntlet_apache.thrift | strip_thrift_warnings
 
-protoc_go encoding/protobuf/internal/testpb/test.proto
+protoc_all encoding/protobuf/internal/testpb/test.proto
 protoc_go yarpcproto/yarpc.proto
 protoc_all internal/examples/protobuf/examplepb/example.proto
 protoc_all internal/crossdock/crossdockpb/crossdock.proto
