@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Observability middleware now emits metrics for panics that occur on the stack
   of an inbound call handler.
+- The `transporttest` package now provides a `Pipe` constructor, which creates
+  a bound pair of transport layer streams, for testing streaming protocols like
+  gRPC.
 ### Changed
 - This change reduces the API surface of the peer list implementations to
   remove a previously public embedded type and replace it with implementations
