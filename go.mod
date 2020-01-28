@@ -19,6 +19,7 @@ require (
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prashantv/protectmem v0.0.0-20171002184600-e20412882b3a // indirect
+	github.com/prometheus/client_golang v1.4.0 // indirect
 	github.com/prometheus/common v0.9.1 // indirect
 	github.com/prometheus/procfs v0.0.8 // indirect
 	github.com/samuel/go-thrift v0.0.0-20191111193933-5165175b40af // indirect
@@ -42,8 +43,8 @@ require (
 	golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa
 	golang.org/x/sys v0.0.0-20200124204421-9fbb57f87de9 // indirect
 	golang.org/x/text v0.3.2 // indirect
-	golang.org/x/tools v0.0.0-20200125223703-d33eef8e6825
-	google.golang.org/genproto v0.0.0-20200127141224-2548664c049f // indirect
+	golang.org/x/tools v0.0.0-20200128002243-345141a36859
+	google.golang.org/genproto v0.0.0-20200128133413-58ce757ed39b // indirect
 	google.golang.org/grpc v1.26.0
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.2.8
