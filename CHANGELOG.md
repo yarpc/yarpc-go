@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - The `transporttest` package now provides a `Pipe` constructor, which creates
   a bound pair of transport layer streams, for testing streaming protocols like
   gRPC.
+- The `yarpctest.FakeOutbound` can now send requests to a `transport.Router`.
+  This allows end to end testing with a client and server in memory.
 ### Changed
 - This change reduces the API surface of the peer list implementations to
   remove a previously public embedded type and replace it with implementations
