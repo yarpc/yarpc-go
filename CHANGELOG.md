@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   peer.Chooser, or for the private introspection interface.
 ### Fixed
 - Fixed Streaming Protobuf-flavored-JSON nil pointer panic.
+- Log entries for EOF stream messages are now considered successes to avoid
+  setting off false alarms.
+  The successful log entries still carry the "error" field, which will reflect
+  the EOF error.
 
 ## [1.42.1] - 2019-11-27 (Gobble)
 ### Fixed
