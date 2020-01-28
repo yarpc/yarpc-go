@@ -195,5 +195,5 @@ func (c *client) CallStream(
 	if err != nil {
 		return nil, convertFromYARPCError(streamRequest.Meta.Encoding, err, c.codec)
 	}
-	return &ClientStream{stream: stream}, nil
+	return &ClientStream{stream: stream, codec: c.codec}, nil
 }
