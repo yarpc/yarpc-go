@@ -187,7 +187,7 @@ func (c call) EndStreamHandshake() {
 // EndStreamHandshakeWithError should be invoked immediately after attempting to
 // create a stream.
 func (c call) EndStreamHandshakeWithError(err error) {
-	c.logStreamEvent(err, _successStreamOpen, _errorStreamOpen)
+	c.logStreamEvent(err, err == nil, _successStreamOpen, _errorStreamOpen)
 
 	c.edge.calls.Inc()
 	if err == nil {
@@ -202,7 +202,7 @@ func (c call) EndStreamHandshakeWithError(err error) {
 // EndStream should be invoked immediately after a stream closes.
 func (c call) EndStream(err error) {
 	elapsed := _timeNow().Sub(c.started)
-	c.logStreamEvent(err, _successStreamClose, _errorStreamClose, zap.Duration("duration", elapsed))
+	c.logStreamEvent(err, err == nil, _successStreamClose, _errorStreamClose, zap.Duration("duration", elapsed))
 
 	c.edge.streaming.streamsActive.Dec()
 	c.edge.streaming.streamDurations.Observe(elapsed)
@@ -261,17 +261,20 @@ func (c call) emitStreamError(err error) {
 
 // logStreamEvent is a generic logging function useful for logging stream
 // events.
-func (c call) logStreamEvent(err error, succMsg, errMsg string, extraFields ...zap.Field) {
+func (c call) logStreamEvent(err error, success bool, succMsg, errMsg string, extraFields ...zap.Field) {
 	var ce *zapcore.CheckedEntry
-	if err != nil {
-		ce = c.edge.logger.Check(c.levels.failure, errMsg)
-	} else {
+	// Success is usually only when the error is nil.
+	// The only exception is when emitting an error from ReceiveMessage, which
+	// returns EOF when the stream closes normally.
+	if success {
 		ce = c.edge.logger.Check(c.levels.success, succMsg)
+	} else {
+		ce = c.edge.logger.Check(c.levels.failure, errMsg)
 	}
 
 	fields := []zap.Field{
 		zap.String("rpcType", c.rpcType.String()),
-		zap.Bool("successful", err == nil),
+		zap.Bool("successful", success),
 		c.extract(c.ctx),
 		zap.Error(err), // no-op if err == nil
 	}

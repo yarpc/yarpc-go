@@ -24,7 +24,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -761,6 +763,107 @@ func TestMiddlewareStreamingLogging(t *testing.T) {
 		// log 3 - receive message
 		// log 4 - close stream
 		gotLogs := getLogs(t, 4)[1:]
+		assert.Equal(t, wantLogs, gotLogs)
+	})
+
+	t.Run("EOF is a success with an error", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		clientStream, serverStream, finish, err := transporttest.MessagePipe(ctx, req)
+		require.NoError(t, err)
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			finish(mw.HandleStream(serverStream, &fakeHandler{
+				// send and receive messages in the handler
+				handleStream: func(stream *transport.ServerStream) {
+					// echo loop
+					for {
+						msg, err := stream.ReceiveMessage(ctx)
+						if err == io.EOF {
+							return
+						}
+						err = stream.SendMessage(ctx, msg)
+						if err == io.EOF {
+							return
+						}
+					}
+				},
+			}))
+			wg.Done()
+		}()
+
+		{
+			err := clientStream.SendMessage(ctx, nil)
+			require.NoError(t, err)
+		}
+
+		{
+			msg, err := clientStream.ReceiveMessage(ctx)
+			require.NoError(t, err)
+			assert.Nil(t, msg)
+		}
+
+		require.NoError(t, clientStream.Close(ctx))
+
+		wg.Wait()
+
+		logFields := func(err error) []zapcore.Field {
+			return newZapFields(
+				zap.String("direction", string(_directionInbound)),
+				zap.String("rpcType", "Streaming"),
+				zap.Bool("successful", true),
+				zap.Skip(), // context extractor
+				zap.Error(err),
+			)
+		}
+
+		wantLogs := []observer.LoggedEntry{
+			{
+				// open stream
+				Entry: zapcore.Entry{
+					Message: _successStreamOpen,
+				},
+				Context: logFields(nil),
+			},
+			{
+				// receive message
+				Entry: zapcore.Entry{
+					Message: _successfulStreamReceive,
+				},
+				Context: logFields(nil),
+			},
+			{
+				// send message
+				Entry: zapcore.Entry{
+					Message: _successfulStreamSend,
+				},
+				Context: logFields(nil),
+			},
+			{
+				// receive message (EOF)
+				Entry: zapcore.Entry{
+					Message: _successfulStreamReceive,
+				},
+				Context: logFields(io.EOF),
+			},
+			{
+				// close stream
+				Entry: zapcore.Entry{
+					Message: _successStreamClose,
+				},
+				Context: append(logFields(nil), zap.Duration("duration", 0)),
+			},
+		}
+
+		// log 1 - open stream
+		// log 2 - receive message
+		// log 3 - send message
+		// log 4 - receive message
+		// log 5 - close stream
+		gotLogs := getLogs(t, 5)
 		assert.Equal(t, wantLogs, gotLogs)
 	})
 }
