@@ -32,12 +32,16 @@ type fakeAck struct{}
 func (a fakeAck) String() string { return "" }
 
 type fakeHandler struct {
-	err            error
-	applicationErr bool
-	handleStream   func(*transport.ServerStream)
+	err              error
+	applicationErr   bool
+	applicationPanic bool
+	handleStream     func(*transport.ServerStream)
 }
 
 func (h fakeHandler) Handle(_ context.Context, _ *transport.Request, rw transport.ResponseWriter) error {
+	if h.applicationPanic {
+		panic("application panicked")
+	}
 	if h.applicationErr {
 		rw.SetApplicationError()
 	}
@@ -45,10 +49,16 @@ func (h fakeHandler) Handle(_ context.Context, _ *transport.Request, rw transpor
 }
 
 func (h fakeHandler) HandleOneway(context.Context, *transport.Request) error {
+	if h.applicationPanic {
+		panic("application panicked")
+	}
 	return h.err
 }
 
 func (h fakeHandler) HandleStream(stream *transport.ServerStream) error {
+	if h.applicationPanic {
+		panic("application panicked")
+	}
 	if h.handleStream != nil {
 		h.handleStream(stream)
 	}
