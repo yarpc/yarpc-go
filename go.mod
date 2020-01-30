@@ -11,7 +11,7 @@ require (
 	github.com/gogo/protobuf v1.3.1
 	github.com/gogo/status v1.1.0
 	github.com/golang/mock v1.4.0
-	github.com/golang/protobuf v1.3.3-0.20190920234318-1680a479a2cf
+	github.com/golang/protobuf v1.3.3
 	github.com/google/go-cmp v0.4.0 // indirect
 	github.com/kisielk/errcheck v1.2.0
 	github.com/kr/pretty v0.2.0 // indirect
@@ -43,7 +43,7 @@ require (
 	golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa
 	golang.org/x/sys v0.0.0-20200124204421-9fbb57f87de9 // indirect
 	golang.org/x/text v0.3.2 // indirect
-	golang.org/x/tools v0.0.0-20200129045341-207d3de1faaf
+	golang.org/x/tools v0.0.0-20200130002326-2f3ba24bd6e7
 	google.golang.org/genproto v0.0.0-20200128133413-58ce757ed39b // indirect
 	google.golang.org/grpc v1.27.0
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
