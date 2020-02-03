@@ -40,10 +40,11 @@ require (
 	go.uber.org/tools v0.0.0-20190618225709-2cfd321de3ee
 	go.uber.org/zap v1.13.0
 	golang.org/x/lint v0.0.0-20200130185559-910be7a94367
-	golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa
-	golang.org/x/sys v0.0.0-20200124204421-9fbb57f87de9 // indirect
+	golang.org/x/mod v0.2.0 // indirect
+	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
+	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5 // indirect
 	golang.org/x/text v0.3.2 // indirect
-	golang.org/x/tools v0.0.0-20200131143746-097c1f2eed26
+	golang.org/x/tools v0.0.0-20200203023011-6f24f261dadb
 	google.golang.org/genproto v0.0.0-20200128133413-58ce757ed39b // indirect
 	google.golang.org/grpc v1.27.0
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
