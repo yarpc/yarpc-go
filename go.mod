@@ -15,7 +15,7 @@ require (
 	github.com/google/go-cmp v0.4.0 // indirect
 	github.com/kisielk/errcheck v1.2.0
 	github.com/kr/pretty v0.2.0 // indirect
-	github.com/mattn/go-shellwords v1.0.9
+	github.com/mattn/go-shellwords v1.0.10
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prashantv/protectmem v0.0.0-20171002184600-e20412882b3a // indirect
@@ -44,8 +44,8 @@ require (
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5 // indirect
 	golang.org/x/text v0.3.2 // indirect
-	golang.org/x/tools v0.0.0-20200204074204-1cc6d1ef6c74
-	google.golang.org/genproto v0.0.0-20200204135345-fa8e72b47b90 // indirect
+	golang.org/x/tools v0.0.0-20200205141839-4abfd4a1628e
+	google.golang.org/genproto v0.0.0-20200205142000-a86caf926a67 // indirect
 	google.golang.org/grpc v1.27.0
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.2.8
