@@ -22,10 +22,13 @@ package yarpctest
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/ioutil"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
@@ -56,6 +59,15 @@ func OutboundCallOverride(callable OutboundCallable) FakeOutboundOption {
 	}
 }
 
+// OutboundRouter returns an option to set the router for outbound requests.
+// This connects the outbound to the inbound side of a handler for testing
+// purposes.
+func OutboundRouter(router transport.Router) FakeOutboundOption {
+	return func(o *FakeOutbound) {
+		o.router = router
+	}
+}
+
 // NewOutbound returns a FakeOutbound with a given peer chooser and options.
 func (t *FakeTransport) NewOutbound(c peer.Chooser, opts ...FakeOutboundOption) *FakeOutbound {
 	o := &FakeOutbound{
@@ -76,6 +88,7 @@ type FakeOutbound struct {
 	chooser      peer.Chooser
 	nopOption    string
 	callOverride OutboundCallable
+	router       transport.Router
 }
 
 // Chooser returns theis FakeOutbound's peer chooser.
@@ -113,15 +126,75 @@ func (o *FakeOutbound) Call(ctx context.Context, req *transport.Request) (*trans
 	if o.callOverride != nil {
 		return o.callOverride(ctx, req)
 	}
-	return nil, fmt.Errorf(`no outbound callable specified on the fake outbound`)
+
+	if o.router == nil {
+		return nil, errors.New(`no outbound callable specified on the fake outbound`)
+	}
+
+	handler, err := o.router.Choose(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	unaryHandler := handler.Unary()
+	if unaryHandler == nil {
+		return nil, fmt.Errorf(`procedure %q for encoding %q does not handle unary requests`, req.Procedure, req.Encoding)
+	}
+
+	resWriter := &transporttest.FakeResponseWriter{}
+	if err := unaryHandler.Handle(ctx, req, resWriter); err != nil {
+		return nil, err
+	}
+	return &transport.Response{
+		ApplicationError: resWriter.IsApplicationError,
+		Headers:          resWriter.Headers,
+		Body:             ioutil.NopCloser(&resWriter.Body),
+	}, nil
 }
 
 // CallOneway pretends to send a oneway RPC, but actually just returns an error.
 func (o *FakeOutbound) CallOneway(ctx context.Context, req *transport.Request) (transport.Ack, error) {
-	return nil, fmt.Errorf(`fake outbound does not support call oneway`)
+	if o.router == nil {
+		return nil, errors.New(`fake outbound does not support call oneway`)
+	}
+
+	handler, err := o.router.Choose(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	onewayHandler := handler.Oneway()
+	if onewayHandler == nil {
+		return nil, fmt.Errorf(`procedure %q for encoding %q does not handle oneway requests`, req.Procedure, req.Encoding)
+	}
+
+	return nil, onewayHandler.HandleOneway(ctx, req)
 }
 
 // CallStream pretends to send a Stream RPC, but actually just returns an error.
-func (o *FakeOutbound) CallStream(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error) {
-	return nil, fmt.Errorf(`fake outbound does not support call stream`)
+func (o *FakeOutbound) CallStream(ctx context.Context, streamReq *transport.StreamRequest) (*transport.ClientStream, error) {
+	if o.router == nil {
+		return nil, errors.New(`fake outbound does not support call stream`)
+	}
+
+	req := streamReq.Meta.ToRequest()
+	handler, err := o.router.Choose(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	streamHandler := handler.Stream()
+	if streamHandler == nil {
+		return nil, fmt.Errorf(`procedure %q for encoding %q does not handle streaming requests`, req.Procedure, req.Encoding)
+	}
+
+	clientStream, serverStream, finish, err := transporttest.MessagePipe(ctx, streamReq)
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		finish(streamHandler.HandleStream(serverStream))
+	}()
+	return clientStream, nil
 }

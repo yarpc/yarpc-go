@@ -32,6 +32,7 @@ func MultiOutbound(caller, service string, outbounds transport.Outbounds) transp
 			ServiceName: service,
 			Unary:       outbounds.Unary,
 			Oneway:      outbounds.Oneway,
+			Stream:      outbounds.Stream,
 		},
 	}
 }

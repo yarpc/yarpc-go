@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Observability middleware now emits metrics for panics that occur on the stack
   of an inbound call handler.
+- The `transporttest` package now provides a `Pipe` constructor, which creates
+  a bound pair of transport layer streams, for testing streaming protocols like
+  gRPC.
+- The `yarpctest.FakeOutbound` can now send requests to a `transport.Router`.
+  This allows end to end testing with a client and server in memory.
 ### Changed
 - This change reduces the API surface of the peer list implementations to
   remove a previously public embedded type and replace it with implementations
@@ -16,6 +21,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   concrete types.
   However, we expect that in practice, peer lists are used as either peer.List,
   peer.Chooser, or for the private introspection interface.
+### Fixed
+- Fixed Streaming Protobuf-flavored-JSON nil pointer panic.
 
 ## [1.42.1] - 2019-11-27 (Gobble)
 ### Fixed
