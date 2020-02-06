@@ -59,7 +59,6 @@ import (
 	"go.uber.org/zap/zaptest"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/encoding"
 	"google.golang.org/grpc/status"
 )
 
@@ -306,18 +305,6 @@ func TestCustomContextDial(t *testing.T) {
 // the server has the same compressors registered and have the same compressor
 // enabled.
 func TestGRPCCompression(t *testing.T) {
-	t.Parallel()
-	metrics := newMetrics(nil, nil)
-	compressors := []*testCompressor{
-		newCompressor("test-good", metrics),
-		newCompressor("test-fail-comp", metrics),
-		newCompressor("test-fail-decomp", metrics),
-		newCompressor("test-gzip", metrics),
-	}
-	for _, comp := range compressors {
-		encoding.RegisterCompressor(comp)
-	}
-
 	tagsCompression := map[string]string{"stage": "compress"}
 	tagsDecompression := map[string]string{"stage": "decompress"}
 
@@ -325,7 +312,7 @@ func TestGRPCCompression(t *testing.T) {
 		testEnvOptions
 
 		msg         string
-		compressor  string
+		compressor  transport.Compressor
 		wantErr     string
 		wantMetrics []metric
 	}{
@@ -333,16 +320,8 @@ func TestGRPCCompression(t *testing.T) {
 			msg: "no compression",
 		},
 		{
-			// we need 2 separate processes to test the case where we have the
-			// content encoding negotiation when the client side sends the
-			// compression request, which the server does not support
-			msg:        "unknown compressor on the client-side",
-			compressor: "test-unknown",
-			wantErr:    "code:internal message:grpc: Compressor is not installed for requested grpc-encoding \"test-unknown\"",
-		},
-		{
 			msg:        "fail compression of request",
-			compressor: "test-fail-comp",
+			compressor: _badCompressor,
 			wantErr:    "code:internal message:grpc: error while compressing: assert.AnError general error for testing",
 			wantMetrics: []metric{
 				{0, tagsCompression},
@@ -350,7 +329,7 @@ func TestGRPCCompression(t *testing.T) {
 		},
 		{
 			msg:        "fail decompression of request",
-			compressor: "test-fail-decomp",
+			compressor: _badDecompressor,
 			wantErr:    "code:internal message:grpc: failed to decompress the received message assert.AnError general error for testing",
 			wantMetrics: []metric{
 				{32777, tagsCompression},
@@ -359,7 +338,7 @@ func TestGRPCCompression(t *testing.T) {
 		},
 		{
 			msg:        "ok, dummy compression",
-			compressor: "test-good",
+			compressor: _goodCompressor,
 			wantMetrics: []metric{
 				{32777, tagsCompression},
 				{32777, tagsDecompression},
@@ -372,7 +351,7 @@ func TestGRPCCompression(t *testing.T) {
 		},
 		{
 			msg:        "ok, gzip compression",
-			compressor: "test-gzip",
+			compressor: _gzipCompressor,
 			wantMetrics: []metric{
 				{82, tagsCompression},
 				{82, tagsDecompression},
@@ -389,11 +368,9 @@ func TestGRPCCompression(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.msg, func(t *testing.T) {
-			metrics.reset()
+			_metrics.reset()
 
-			if tt.compressor != "" {
-				tt.testEnvOptions.DialOptions = []DialOption{Compressor(tt.compressor)}
-			}
+			tt.testEnvOptions.DialOptions = []DialOption{Compressor(tt.compressor)}
 			tt.do(t, func(t *testing.T, e *testEnv) {
 				value := strings.Repeat("a", 32*1024)
 				err := e.SetValueYARPC(context.Background(), "foo", value)
@@ -406,9 +383,14 @@ func TestGRPCCompression(t *testing.T) {
 					assert.Equal(t, value, getValue)
 				}
 			})
+
+			compressor := ""
+			if tt.compressor != nil {
+				compressor = tt.compressor.Name()
+			}
 			assert.Equal(t, newMetrics(tt.wantMetrics, map[string]string{
-				"compressor": tt.compressor,
-			}), metrics)
+				"compressor": compressor,
+			}), _metrics)
 		})
 	}
 }
@@ -450,16 +432,16 @@ func (m *metric) Increment(value int) {
 }
 
 // new creates a new metrics data point and passes returns it as one element slice
-func (m *metricCollection) new(stage, compressor string) *metric {
-	l := len(m.metrics)
-	m.metrics = append(m.metrics, metric{
+func (c *metricCollection) new(stage, compressor string) *metric {
+	l := len(c.metrics)
+	c.metrics = append(c.metrics, metric{
 		bytes: 0,
 		tags: map[string]string{
 			"compressor": compressor,
 			"stage":      stage,
 		},
 	})
-	return &m.metrics[l]
+	return &c.metrics[l]
 }
 
 type counter interface {
@@ -474,20 +456,33 @@ type testCompressor struct {
 	enableGZip bool
 }
 
-func newCompressor(name string, metrics *metricCollection) *testCompressor {
+type testCompressorBehavior int
+
+const (
+	testCompressorOk = 1 << iota
+	testCompressorFailToCompress
+	testCompressorFailToDecompress
+	testCompressorGzip
+)
+
+func newCompressor(name string, behavior testCompressorBehavior, metrics *metricCollection) *testCompressor {
 	comp := testCompressor{
 		name:    name,
 		metrics: metrics,
 	}
 
-	switch strings.TrimPrefix(name, "test-") {
-	case "fail-comp":
+	if behavior&testCompressorFailToCompress != 0 {
 		comp.comperr = assert.AnError
-	case "fail-decomp":
+	}
+
+	if behavior&testCompressorFailToDecompress != 0 {
 		comp.decomperr = assert.AnError
-	case "gzip":
+	}
+
+	if behavior&testCompressorGzip != 0 {
 		comp.enableGZip = true
 	}
+
 	return &comp
 }
 
@@ -499,11 +494,10 @@ func (c *testCompressor) Compress(w io.Writer) (io.WriteCloser, error) {
 		counter: c.metrics.new("compress", c.name),
 	}
 
-	if !c.enableGZip {
-		return &metered, c.comperr
+	if c.enableGZip {
+		return gzip.NewWriter(&metered), nil
 	}
-
-	return gzip.NewWriter(&metered), nil
+	return &metered, c.comperr
 }
 
 func (c *testCompressor) Decompress(r io.Reader) (io.Reader, error) {
@@ -512,11 +506,11 @@ func (c *testCompressor) Decompress(r io.Reader) (io.Reader, error) {
 		counter: c.metrics.new("decompress", c.name),
 	}
 
-	if !c.enableGZip {
-		return &metered, c.decomperr
+	if c.enableGZip {
+		return gzip.NewReader(&metered)
 	}
 
-	return gzip.NewReader(&metered)
+	return &metered, c.decomperr
 }
 
 // byteMeter is a test type wrapper that counts the number of bytes transferred within the compressors.
@@ -526,18 +520,18 @@ type byteMeter struct {
 	counter counter
 }
 
-func (w *byteMeter) Write(p []byte) (int, error) {
-	w.counter.Increment(len(p))
-	return w.Writer.Write(p)
+func (m *byteMeter) Write(p []byte) (int, error) {
+	m.counter.Increment(len(p))
+	return m.Writer.Write(p)
 }
 
-func (r *byteMeter) Read(p []byte) (int, error) {
-	l, err := r.Reader.Read(p)
-	r.counter.Increment(l)
+func (m *byteMeter) Read(p []byte) (int, error) {
+	l, err := m.Reader.Read(p)
+	m.counter.Increment(l)
 	return l, err
 }
 
-func (w *byteMeter) Close() error { return nil }
+func (m *byteMeter) Close() error { return nil }
 
 type testEnv struct {
 	Caller              string
@@ -782,10 +776,10 @@ func createTLSScenario(t *testing.T, clientValidity time.Duration, serverValidit
 			},
 			SerialNumber:          big.NewInt(1),
 			BasicConstraintsValid: true,
-			IsCA:      true,
-			KeyUsage:  x509.KeyUsageCertSign,
-			NotBefore: now,
-			NotAfter:  now.Add(10 * time.Minute),
+			IsCA:                  true,
+			KeyUsage:              x509.KeyUsageCertSign,
+			NotBefore:             now,
+			NotAfter:              now.Add(10 * time.Minute),
 		},
 		&x509.Certificate{},
 		caKey.Public(),

@@ -44,37 +44,37 @@ func TestNewTransportSpecOptions(t *testing.T) {
 
 func TestConfigBuildInboundOtherTransport(t *testing.T) {
 	transportSpec := &transportSpec{}
-	_, err := transportSpec.buildInbound(&InboundConfig{}, testTransport{}, nil)
+	_, err := transportSpec.buildInbound(&InboundConfig{}, testTransport{}, _kit)
 	require.Equal(t, newTransportCastError(testTransport{}), err)
 }
 
 func TestConfigBuildInboundRequiredAddress(t *testing.T) {
 	transportSpec := &transportSpec{}
-	_, err := transportSpec.buildInbound(&InboundConfig{}, NewTransport(), nil)
+	_, err := transportSpec.buildInbound(&InboundConfig{}, NewTransport(), _kit)
 	require.Equal(t, newRequiredFieldMissingError("address"), err)
 }
 
 func TestConfigBuildUnaryOutboundOtherTransport(t *testing.T) {
 	transportSpec := &transportSpec{}
-	_, err := transportSpec.buildUnaryOutbound(&OutboundConfig{}, testTransport{}, nil)
+	_, err := transportSpec.buildUnaryOutbound(&OutboundConfig{}, testTransport{}, _kit)
 	require.Equal(t, newTransportCastError(testTransport{}), err)
 }
 
 func TestConfigBuildUnaryOutboundRequiredAddress(t *testing.T) {
 	transportSpec := &transportSpec{}
-	_, err := transportSpec.buildUnaryOutbound(&OutboundConfig{}, NewTransport(), nil)
+	_, err := transportSpec.buildUnaryOutbound(&OutboundConfig{}, NewTransport(), _kit)
 	require.Equal(t, newRequiredFieldMissingError("address"), err)
 }
 
 func TestConfigBuildStreamOutboundOtherTransport(t *testing.T) {
 	transportSpec := &transportSpec{}
-	_, err := transportSpec.buildStreamOutbound(&OutboundConfig{}, testTransport{}, nil)
+	_, err := transportSpec.buildStreamOutbound(&OutboundConfig{}, testTransport{}, _kit)
 	require.Equal(t, newTransportCastError(testTransport{}), err)
 }
 
 func TestConfigBuildStreamOutboundRequiredAddress(t *testing.T) {
 	transportSpec := &transportSpec{}
-	_, err := transportSpec.buildStreamOutbound(&OutboundConfig{}, NewTransport(), nil)
+	_, err := transportSpec.buildStreamOutbound(&OutboundConfig{}, NewTransport(), _kit)
 	require.Equal(t, newRequiredFieldMissingError("address"), err)
 }
 

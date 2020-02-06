@@ -162,8 +162,10 @@ type OutboundConfig struct {
 	Compressor string `config:"compressor"`
 }
 
-func (c OutboundConfig) dialOptions() []DialOption {
-	return append(c.TLS.dialOptions(), Compressor(c.Compressor))
+func (c OutboundConfig) dialOptions(kit *yarpcconfig.Kit) []DialOption {
+	opts := c.TLS.dialOptions()
+	opts = append(opts, Compressor(kit.Compressor(c.Compressor)))
+	return opts
 }
 
 // OutboundTLSConfig configures TLS for a gRPC outbound.
@@ -258,7 +260,7 @@ func (t *transportSpec) buildOutbound(outboundConfig *OutboundConfig, tr transpo
 		return nil, newTransportCastError(tr)
 	}
 
-	dialer := trans.NewDialer(outboundConfig.dialOptions()...)
+	dialer := trans.NewDialer(outboundConfig.dialOptions(kit)...)
 
 	var chooser peer.Chooser
 	if outboundConfig.Empty() {

@@ -27,6 +27,7 @@ import (
 
 	opentracing "github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/backoff"
+	"go.uber.org/yarpc/api/transport"
 	intbackoff "go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -166,9 +167,14 @@ func ContextDialer(f func(context.Context, string) (net.Conn, error)) DialOption
 }
 
 // Compressor sets the compressor to be used by default for gRPC connections
-func Compressor(compressor string) DialOption {
+func Compressor(compressor transport.Compressor) DialOption {
 	return func(dialOptions *dialOptions) {
-		dialOptions.defaultCompressor = compressor
+		if compressor != nil {
+			// We assume that the grpc-go compressor was also globally
+			// registered and just use the name.
+			// Future implementations may elect to actually use the compressor.
+			dialOptions.defaultCompressor = compressor.Name()
+		}
 	}
 }
 
