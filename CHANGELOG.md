@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
+- gRPC now supports compression.
+  The packages `compressor/gzip` and `compressor/snappy` provide
+  compressors accepted by the gRPC `Compressor` dialer option.
 - Observability middleware now emits metrics for panics that occur on the stack
   of an inbound call handler.
 - The `transporttest` package now provides a `Pipe` constructor, which creates
