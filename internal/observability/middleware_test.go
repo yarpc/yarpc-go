@@ -1318,7 +1318,7 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 	}
 }
 
-func TestStreamingInboundApplicationPanics(t *testing.T) {
+func TestUnaryInboundApplicationPanics(t *testing.T) {
 	var err error
 	root := metrics.New()
 	scope := root.Scope()
@@ -1348,6 +1348,9 @@ func TestStreamingInboundApplicationPanics(t *testing.T) {
 	errTags := newTags(_directionInbound, "application_error")
 
 	t.Run("Test panic in Handle", func(t *testing.T) {
+		t.Skip() // This test flaps. https://github.com/yarpc/yarpc-go/issues/1882
+		// Relevant bucket marked XXX below.
+
 		// As our fake handler is mocked to panic in the call, test that the invocation panics
 		assert.Panics(t, func() {
 			err = mw.Handle(
@@ -1380,7 +1383,7 @@ func TestStreamingInboundApplicationPanics(t *testing.T) {
 					Name:   "caller_failure_latency_ms",
 					Tags:   tags,
 					Unit:   time.Millisecond,
-					Values: []int64{1},
+					Values: []int64{1}, // XXX this test flaps mysteriously. This figure is sometimes higher.
 				},
 				{
 					Name: "server_failure_latency_ms",
@@ -1398,7 +1401,7 @@ func TestStreamingInboundApplicationPanics(t *testing.T) {
 	})
 }
 
-func TestUnaryInboundApplicationPanics(t *testing.T) {
+func TestStreamingInboundApplicationPanics(t *testing.T) {
 	root := metrics.New()
 	scope := root.Scope()
 	mw := NewMiddleware(Config{
@@ -1442,6 +1445,9 @@ func TestUnaryInboundApplicationPanics(t *testing.T) {
 	errTags := newTags(_directionInbound, "unknown_internal_yarpc")
 
 	t.Run("Test panic in HandleStream", func(t *testing.T) {
+		t.Skip() // This test flaps. https://github.com/yarpc/yarpc-go/issues/1882
+		// Relevant bucket marked XXX below.
+
 		// As our fake handler is mocked to panic in the call, test that the invocation panics
 		assert.Panics(t, func() {
 			err = mw.HandleStream(stream, &fakeHandler{applicationPanic: true})
@@ -1463,7 +1469,7 @@ func TestUnaryInboundApplicationPanics(t *testing.T) {
 				{Name: "streams_active", Tags: tags, Value: 0},
 			},
 			Histograms: []metrics.HistogramSnapshot{
-				{Name: "stream_duration_ms", Tags: tags, Unit: time.Millisecond, Values: []int64{1}},
+				{Name: "stream_duration_ms", Tags: tags, Unit: time.Millisecond, Values: []int64{1}}, // XXX sometimes >1.
 			},
 		}
 		assert.Equal(t, want, root.Snapshot(), "unexpected metrics snapshot")
