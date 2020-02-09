@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   This peer selection strategy uses the `ShardKey` call option to
   pin traffic to an arbitrary peer that is relatively stable as the peer list
   membership changes.
+- Prioritization for graceful degradation of quality of service.
+  The `api/priority` module introduces the notion of a prioritizer.
+  The `yarpcpriority` module is an implementation that takes tier, headers, and
+  time into account to produce broad spectrum priorities for requests and
+  coordinates those priorities with other load shedders through a "priority"
+  trace header.
+  The `middleware/inboundbuffermiddleware` module introduces an inbound unary
+  middleware that will buffer requests and limit concurrent handlers, shedding
+  unservable load based on priority.
 - Observability middleware now emits metrics for panics that occur on the stack
   of an inbound call handler.
 - The `transporttest` package now provides a `Pipe` constructor, which creates
