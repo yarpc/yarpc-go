@@ -29,6 +29,7 @@ import (
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal"
+	"go.uber.org/yarpc/internal/firstoutboundmiddleware"
 	"go.uber.org/yarpc/internal/inboundmiddleware"
 	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/internal/outboundmiddleware"
@@ -80,6 +81,7 @@ func NewDispatcher(cfg Config) *Dispatcher {
 
 	meter, stopMeter := cfg.Metrics.scope(cfg.Name, logger)
 	cfg = addObservingMiddleware(cfg, meter, logger, extractor)
+	cfg = addFirstOutboundMiddleware(cfg)
 
 	return &Dispatcher{
 		name:              cfg.Name,
@@ -131,6 +133,16 @@ func addObservingMiddleware(cfg Config, meter *metrics.Scope, logger *zap.Logger
 	cfg.OutboundMiddleware.Oneway = outboundmiddleware.OnewayChain(cfg.OutboundMiddleware.Oneway, observer)
 	cfg.OutboundMiddleware.Stream = outboundmiddleware.StreamChain(cfg.OutboundMiddleware.Stream, observer)
 
+	return cfg
+}
+
+// Add the first outbound middleware, which ensures that `transport.Request`
+// will have appropriate fields.
+func addFirstOutboundMiddleware(cfg Config) Config {
+	first := firstoutboundmiddleware.New()
+	cfg.OutboundMiddleware.Unary = outboundmiddleware.UnaryChain(first, cfg.OutboundMiddleware.Unary)
+	cfg.OutboundMiddleware.Oneway = outboundmiddleware.OnewayChain(first, cfg.OutboundMiddleware.Oneway)
+	cfg.OutboundMiddleware.Stream = outboundmiddleware.StreamChain(first, cfg.OutboundMiddleware.Stream)
 	return cfg
 }
 
