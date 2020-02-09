@@ -151,19 +151,20 @@ func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
 		serviceName := outboundKey
 
 		// apply outbound middleware and create ValidatorOutbounds
+
 		if outs.Unary != nil {
 			unaryOutbound = middleware.ApplyUnaryOutbound(outs.Unary, mw.Unary)
-			unaryOutbound = request.UnaryValidatorOutbound{UnaryOutbound: unaryOutbound}
+			unaryOutbound = request.UnaryValidatorOutbound{UnaryOutbound: unaryOutbound, Namer: namerOrNil(unaryOutbound)}
 		}
 
 		if outs.Oneway != nil {
 			onewayOutbound = middleware.ApplyOnewayOutbound(outs.Oneway, mw.Oneway)
-			onewayOutbound = request.OnewayValidatorOutbound{OnewayOutbound: onewayOutbound}
+			onewayOutbound = request.OnewayValidatorOutbound{OnewayOutbound: onewayOutbound, Namer: namerOrNil(onewayOutbound)}
 		}
 
 		if outs.Stream != nil {
 			streamOutbound = middleware.ApplyStreamOutbound(outs.Stream, mw.Stream)
-			streamOutbound = request.StreamValidatorOutbound{StreamOutbound: streamOutbound}
+			streamOutbound = request.StreamValidatorOutbound{StreamOutbound: streamOutbound, Namer: namerOrNil(streamOutbound)}
 		}
 
 		if outs.ServiceName != "" {
@@ -179,6 +180,13 @@ func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
 	}
 
 	return outboundSpecs
+}
+
+func namerOrNil(o transport.Outbound) (namer transport.Namer) {
+	if n, ok := o.(transport.Namer); ok {
+		namer = n
+	}
+	return
 }
 
 // collectTransports iterates over all inbounds and outbounds and collects all

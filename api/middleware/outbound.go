@@ -27,6 +27,12 @@ import (
 	"go.uber.org/yarpc/internal/introspection"
 )
 
+var (
+	_ transport.Namer = (*unaryOutboundWithMiddleware)(nil)
+	_ transport.Namer = (*onewayOutboundWithMiddleware)(nil)
+	_ transport.Namer = (*streamOutboundWithMiddleware)(nil)
+)
+
 // UnaryOutbound defines transport-level middleware for
 // `UnaryOutbound`s.
 //
@@ -53,7 +59,13 @@ func ApplyUnaryOutbound(o transport.UnaryOutbound, f UnaryOutbound) transport.Un
 	if f == nil {
 		return o
 	}
-	return unaryOutboundWithMiddleware{o: o, f: f}
+
+	var name string
+	if namer, ok := o.(transport.Namer); ok {
+		name = namer.Name()
+	}
+
+	return unaryOutboundWithMiddleware{o: o, f: f, name: name}
 }
 
 // UnaryOutboundFunc adapts a function into a UnaryOutbound middleware.
@@ -65,8 +77,13 @@ func (f UnaryOutboundFunc) Call(ctx context.Context, request *transport.Request,
 }
 
 type unaryOutboundWithMiddleware struct {
-	o transport.UnaryOutbound
-	f UnaryOutbound
+	name string
+	o    transport.UnaryOutbound
+	f    UnaryOutbound
+}
+
+func (fo unaryOutboundWithMiddleware) Name() string {
+	return fo.name
 }
 
 func (fo unaryOutboundWithMiddleware) Transports() []transport.Transport {
@@ -127,7 +144,13 @@ func ApplyOnewayOutbound(o transport.OnewayOutbound, f OnewayOutbound) transport
 	if f == nil {
 		return o
 	}
-	return onewayOutboundWithMiddleware{o: o, f: f}
+
+	var name string
+	if namer, ok := o.(transport.Namer); ok {
+		name = namer.Name()
+	}
+
+	return onewayOutboundWithMiddleware{o: o, f: f, name: name}
 }
 
 // OnewayOutboundFunc adapts a function into a OnewayOutbound middleware.
@@ -139,8 +162,13 @@ func (f OnewayOutboundFunc) CallOneway(ctx context.Context, request *transport.R
 }
 
 type onewayOutboundWithMiddleware struct {
-	o transport.OnewayOutbound
-	f OnewayOutbound
+	name string
+	o    transport.OnewayOutbound
+	f    OnewayOutbound
+}
+
+func (fo onewayOutboundWithMiddleware) Name() string {
+	return fo.name
 }
 
 func (fo onewayOutboundWithMiddleware) Transports() []transport.Transport {
@@ -202,7 +230,13 @@ func ApplyStreamOutbound(o transport.StreamOutbound, f StreamOutbound) transport
 	if f == nil {
 		return o
 	}
-	return streamOutboundWithMiddleware{o: o, f: f}
+
+	var name string
+	if namer, ok := o.(transport.Namer); ok {
+		name = namer.Name()
+	}
+
+	return streamOutboundWithMiddleware{o: o, f: f, name: name}
 }
 
 // StreamOutboundFunc adapts a function into a StreamOutbound middleware.
@@ -214,8 +248,13 @@ func (f StreamOutboundFunc) CallStream(ctx context.Context, request *transport.S
 }
 
 type streamOutboundWithMiddleware struct {
-	o transport.StreamOutbound
-	f StreamOutbound
+	name string
+	o    transport.StreamOutbound
+	f    StreamOutbound
+}
+
+func (fo streamOutboundWithMiddleware) Name() string {
+	return fo.name
 }
 
 func (fo streamOutboundWithMiddleware) Transports() []transport.Transport {

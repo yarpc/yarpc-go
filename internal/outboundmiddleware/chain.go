@@ -28,6 +28,12 @@ import (
 	"go.uber.org/yarpc/internal/introspection"
 )
 
+var (
+	_ transport.Namer = (*unaryChainExec)(nil)
+	_ transport.Namer = (*onewayChainExec)(nil)
+	_ transport.Namer = (*streamChainExec)(nil)
+)
+
 // UnaryChain combines a series of `UnaryOutbound`s into a single `UnaryOutbound`.
 func UnaryChain(mw ...middleware.UnaryOutbound) middleware.UnaryOutbound {
 	unchained := make([]middleware.UnaryOutbound, 0, len(mw))
@@ -66,6 +72,14 @@ func (c unaryChain) Call(ctx context.Context, request *transport.Request, out tr
 type unaryChainExec struct {
 	Chain []middleware.UnaryOutbound
 	Final transport.UnaryOutbound
+}
+
+func (x unaryChainExec) Name() string {
+	var name string
+	if namer, ok := x.Final.(transport.Namer); ok {
+		name = namer.Name()
+	}
+	return name
 }
 
 func (x unaryChainExec) Transports() []transport.Transport {
@@ -140,6 +154,14 @@ type onewayChainExec struct {
 	Final transport.OnewayOutbound
 }
 
+func (x onewayChainExec) Name() string {
+	var name string
+	if namer, ok := x.Final.(transport.Namer); ok {
+		name = namer.Name()
+	}
+	return name
+}
+
 func (x onewayChainExec) Transports() []transport.Transport {
 	return x.Final.Transports()
 }
@@ -210,6 +232,14 @@ func (c streamChain) CallStream(ctx context.Context, request *transport.StreamRe
 type streamChainExec struct {
 	Chain []middleware.StreamOutbound
 	Final transport.StreamOutbound
+}
+
+func (x streamChainExec) Name() string {
+	var name string
+	if namer, ok := x.Final.(transport.Namer); ok {
+		name = namer.Name()
+	}
+	return name
 }
 
 func (x streamChainExec) Transports() []transport.Transport {
