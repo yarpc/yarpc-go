@@ -46,6 +46,7 @@ import (
 
 // this ensures the HTTP outbound implements both transport.Outbound interfaces
 var (
+	_ transport.Namer                      = (*Outbound)(nil)
 	_ transport.UnaryOutbound              = (*Outbound)(nil)
 	_ transport.OnewayOutbound             = (*Outbound)(nil)
 	_ introspection.IntrospectableOutbound = (*Outbound)(nil)
@@ -166,6 +167,11 @@ type Outbound struct {
 
 	// should only be false in testing
 	bothResponseError bool
+}
+
+// Name is the transport name that will be set on `transport.Request` struct.
+func (o *Outbound) Name() string {
+	return transportName
 }
 
 // setURLTemplate configures an alternate URL template.

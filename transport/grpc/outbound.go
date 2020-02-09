@@ -69,6 +69,11 @@ func newOutbound(t *Transport, peerChooser peer.Chooser, options ...OutboundOpti
 	}
 }
 
+// Name is the transport name that will be set on `transport.Request` struct.
+func (o *Outbound) Name() string {
+	return transportName
+}
+
 // Start implements transport.Lifecycle#Start.
 func (o *Outbound) Start() error {
 	return o.once.Start(o.peerChooser.Start)

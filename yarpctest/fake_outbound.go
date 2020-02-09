@@ -32,6 +32,13 @@ import (
 	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
+var (
+	_ transport.Namer          = (*FakeOutbound)(nil)
+	_ transport.UnaryOutbound  = (*FakeOutbound)(nil)
+	_ transport.OnewayOutbound = (*FakeOutbound)(nil)
+	_ transport.StreamOutbound = (*FakeOutbound)(nil)
+)
+
 // FakeOutboundOption is an option for FakeTransport.NewOutbound.
 type FakeOutboundOption func(*FakeOutbound)
 
@@ -42,6 +49,13 @@ type FakeOutboundOption func(*FakeOutbound)
 func NopOutboundOption(nopOption string) FakeOutboundOption {
 	return func(o *FakeOutbound) {
 		o.nopOption = nopOption
+	}
+}
+
+// OutboundName sets the name of the "fake" outbound.
+func OutboundName(name string) FakeOutboundOption {
+	return func(o *FakeOutbound) {
+		o.name = name
 	}
 }
 
@@ -71,6 +85,7 @@ func OutboundRouter(router transport.Router) FakeOutboundOption {
 // NewOutbound returns a FakeOutbound with a given peer chooser and options.
 func (t *FakeTransport) NewOutbound(c peer.Chooser, opts ...FakeOutboundOption) *FakeOutbound {
 	o := &FakeOutbound{
+		name:      "fake",
 		once:      lifecycle.NewOnce(),
 		transport: t,
 		chooser:   c,
@@ -83,12 +98,18 @@ func (t *FakeTransport) NewOutbound(c peer.Chooser, opts ...FakeOutboundOption) 
 
 // FakeOutbound is a unary outbound for the FakeTransport. It is fake.
 type FakeOutbound struct {
+	name         string
 	once         *lifecycle.Once
 	transport    *FakeTransport
 	chooser      peer.Chooser
 	nopOption    string
 	callOverride OutboundCallable
 	router       transport.Router
+}
+
+// Name is the transport of the outbound.
+func (o *FakeOutbound) Name() string {
+	return o.name
 }
 
 // Chooser returns theis FakeOutbound's peer chooser.

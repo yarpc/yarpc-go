@@ -22,7 +22,10 @@ package transport
 
 import "context"
 
-// Outbound is the common interface for all outbounds
+// Outbound is the common interface for all outbounds.
+//
+// Outbounds should also implement the Namer interface so that YARPC can
+// properly update the Request.Transport field.
 type Outbound interface {
 	Lifecycle
 
@@ -34,6 +37,15 @@ type Outbound interface {
 	// across multiple transport protocols during a transport protocol
 	// migration.
 	Transports() []Transport
+}
+
+// Namer is an additional interface that Outbounds may implement in order
+// properly set the transport.Request#Transport field.
+//
+// This interface is not embeded into Outbound to preserve backwards
+// compatiblity.
+type Namer interface {
+	Name() string
 }
 
 // UnaryOutbound is a transport that knows how to send unary requests for procedure
