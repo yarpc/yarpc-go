@@ -63,6 +63,23 @@ func OutboundName(name string) FakeOutboundOption {
 // `Call` method.
 type OutboundCallable func(ctx context.Context, req *transport.Request) (*transport.Response, error)
 
+// OutboundOnewayCallable is a function that will be called for for an outbound's
+// `Call` method.
+type OutboundOnewayCallable func(context.Context, *transport.Request) (transport.Ack, error)
+
+// OutboundStreamCallable is a function that will be called for for an outbound's
+// `Call` method.
+type OutboundStreamCallable func(context.Context, *transport.StreamRequest) (*transport.ClientStream, error)
+
+// OutboundRouter returns an option to set the router for outbound requests.
+// This connects the outbound to the inbound side of a handler for testing
+// purposes.
+func OutboundRouter(router transport.Router) FakeOutboundOption {
+	return func(o *FakeOutbound) {
+		o.router = router
+	}
+}
+
 // OutboundCallOverride returns an option to set the "callOverride" for a
 // FakeTransport.NewOutbound.
 // This can be used to set the functionality for the FakeOutbound's `Call`
@@ -73,12 +90,25 @@ func OutboundCallOverride(callable OutboundCallable) FakeOutboundOption {
 	}
 }
 
-// OutboundRouter returns an option to set the router for outbound requests.
-// This connects the outbound to the inbound side of a handler for testing
-// purposes.
-func OutboundRouter(router transport.Router) FakeOutboundOption {
+// OutboundCallOnewayOverride returns an option to set the "callOverride" for a
+// FakeTransport.NewOutbound.
+//
+// This can be used to set the functionality for the FakeOutbound's `CallOneway`
+// function.
+func OutboundCallOnewayOverride(callable OutboundOnewayCallable) FakeOutboundOption {
 	return func(o *FakeOutbound) {
-		o.router = router
+		o.callOnewayOverride = callable
+	}
+}
+
+// OutboundCallStreamOverride returns an option to set the "callOverride" for a
+// FakeTransport.NewOutbound.
+//
+// This can be used to set the functionality for the FakeOutbound's `CallStream`
+// function.
+func OutboundCallStreamOverride(callable OutboundStreamCallable) FakeOutboundOption {
+	return func(o *FakeOutbound) {
+		o.callStreamOverride = callable
 	}
 }
 
@@ -98,13 +128,16 @@ func (t *FakeTransport) NewOutbound(c peer.Chooser, opts ...FakeOutboundOption) 
 
 // FakeOutbound is a unary outbound for the FakeTransport. It is fake.
 type FakeOutbound struct {
-	name         string
-	once         *lifecycle.Once
-	transport    *FakeTransport
-	chooser      peer.Chooser
-	nopOption    string
-	callOverride OutboundCallable
-	router       transport.Router
+	name      string
+	once      *lifecycle.Once
+	transport *FakeTransport
+	chooser   peer.Chooser
+	nopOption string
+	router    transport.Router
+
+	callOverride       OutboundCallable
+	callOnewayOverride OutboundOnewayCallable
+	callStreamOverride OutboundStreamCallable
 }
 
 // Name is the transport of the outbound.
@@ -142,7 +175,12 @@ func (o *FakeOutbound) Transports() []transport.Transport {
 	return []transport.Transport{o.transport}
 }
 
-// Call pretends to send a unary RPC, but actually just returns an error.
+// Call mimicks sending a oneway RPC.
+//
+// By default, this returns a error.
+// The OutboundCallOverride option supplies an alternate implementation.
+// Alternately, the OutboundRouter option may allow this function to route a
+// unary request to a unary handler.
 func (o *FakeOutbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if o.callOverride != nil {
 		return o.callOverride(ctx, req)
@@ -173,8 +211,17 @@ func (o *FakeOutbound) Call(ctx context.Context, req *transport.Request) (*trans
 	}, nil
 }
 
-// CallOneway pretends to send a oneway RPC, but actually just returns an error.
+// CallOneway mimicks sending a oneway RPC.
+//
+// By default, this returns an error.
+// The OutboundCallOnewayOverride supplies an alternate implementation.
+// Atlernately, the OutboundRouter options may route the request through to a
+// oneway handler.
 func (o *FakeOutbound) CallOneway(ctx context.Context, req *transport.Request) (transport.Ack, error) {
+	if o.callOnewayOverride != nil {
+		return o.callOnewayOverride(ctx, req)
+	}
+
 	if o.router == nil {
 		return nil, errors.New(`fake outbound does not support call oneway`)
 	}
@@ -192,8 +239,17 @@ func (o *FakeOutbound) CallOneway(ctx context.Context, req *transport.Request) (
 	return nil, onewayHandler.HandleOneway(ctx, req)
 }
 
-// CallStream pretends to send a Stream RPC, but actually just returns an error.
+// CallStream mimicks sending a streaming RPC.
+//
+// By default, this returns an error.
+// The OutboundCallStreamOverride option provides a hook to change the behavior.
+// Alternately, the OutboundRouter option may route the request through to a
+// streaming handler.
 func (o *FakeOutbound) CallStream(ctx context.Context, streamReq *transport.StreamRequest) (*transport.ClientStream, error) {
+	if o.callStreamOverride != nil {
+		return o.callStreamOverride(ctx, streamReq)
+	}
+
 	if o.router == nil {
 		return nil, errors.New(`fake outbound does not support call stream`)
 	}
