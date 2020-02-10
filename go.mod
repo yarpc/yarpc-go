@@ -27,7 +27,7 @@ require (
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/stretchr/testify v1.4.0
 	github.com/uber-go/mapdecode v1.0.0
-	github.com/uber-go/tally v3.3.14+incompatible
+	github.com/uber-go/tally v3.3.15+incompatible
 	github.com/uber/jaeger-client-go v2.22.1+incompatible
 	github.com/uber/jaeger-lib v2.2.0+incompatible // indirect
 	github.com/uber/tchannel-go v1.16.0
@@ -44,8 +44,8 @@ require (
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5 // indirect
 	golang.org/x/text v0.3.2 // indirect
-	golang.org/x/tools v0.0.0-20200207131002-533eb2654509
-	google.golang.org/genproto v0.0.0-20200205142000-a86caf926a67 // indirect
+	golang.org/x/tools v0.0.0-20200207224406-61798d64f025
+	google.golang.org/genproto v0.0.0-20200210034751-acff78025515 // indirect
 	google.golang.org/grpc v1.27.1
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.2.8
