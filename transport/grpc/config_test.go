@@ -44,37 +44,37 @@ func TestNewTransportSpecOptions(t *testing.T) {
 
 func TestConfigBuildInboundOtherTransport(t *testing.T) {
 	transportSpec := &transportSpec{}
-	_, err := transportSpec.buildInbound(&InboundConfig{}, testTransport{}, nil)
+	_, err := transportSpec.buildInbound(&InboundConfig{}, testTransport{}, _kit)
 	require.Equal(t, newTransportCastError(testTransport{}), err)
 }
 
 func TestConfigBuildInboundRequiredAddress(t *testing.T) {
 	transportSpec := &transportSpec{}
-	_, err := transportSpec.buildInbound(&InboundConfig{}, NewTransport(), nil)
+	_, err := transportSpec.buildInbound(&InboundConfig{}, NewTransport(), _kit)
 	require.Equal(t, newRequiredFieldMissingError("address"), err)
 }
 
 func TestConfigBuildUnaryOutboundOtherTransport(t *testing.T) {
 	transportSpec := &transportSpec{}
-	_, err := transportSpec.buildUnaryOutbound(&OutboundConfig{}, testTransport{}, nil)
+	_, err := transportSpec.buildUnaryOutbound(&OutboundConfig{}, testTransport{}, _kit)
 	require.Equal(t, newTransportCastError(testTransport{}), err)
 }
 
 func TestConfigBuildUnaryOutboundRequiredAddress(t *testing.T) {
 	transportSpec := &transportSpec{}
-	_, err := transportSpec.buildUnaryOutbound(&OutboundConfig{}, NewTransport(), nil)
+	_, err := transportSpec.buildUnaryOutbound(&OutboundConfig{}, NewTransport(), _kit)
 	require.Equal(t, newRequiredFieldMissingError("address"), err)
 }
 
 func TestConfigBuildStreamOutboundOtherTransport(t *testing.T) {
 	transportSpec := &transportSpec{}
-	_, err := transportSpec.buildStreamOutbound(&OutboundConfig{}, testTransport{}, nil)
+	_, err := transportSpec.buildStreamOutbound(&OutboundConfig{}, testTransport{}, _kit)
 	require.Equal(t, newTransportCastError(testTransport{}), err)
 }
 
 func TestConfigBuildStreamOutboundRequiredAddress(t *testing.T) {
 	transportSpec := &transportSpec{}
-	_, err := transportSpec.buildStreamOutbound(&OutboundConfig{}, NewTransport(), nil)
+	_, err := transportSpec.buildStreamOutbound(&OutboundConfig{}, NewTransport(), _kit)
 	require.Equal(t, newRequiredFieldMissingError("address"), err)
 }
 
@@ -95,8 +95,9 @@ func TestTransportSpec(t *testing.T) {
 	}
 
 	type wantOutbound struct {
-		Address string
-		TLS     bool
+		Address    string
+		TLS        bool
+		Compressor string
 	}
 
 	type test struct {
@@ -139,6 +140,23 @@ func TestTransportSpec(t *testing.T) {
 			wantOutbounds: map[string]wantOutbound{
 				"myservice": {
 					Address: "localhost:54569",
+				},
+			},
+		},
+		{
+			desc: "simple outbound with compressor",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					transportName: attrs{
+						"address":    "localhost:54569",
+						"compressor": "gzip",
+					},
+				},
+			},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {
+					Address:    "localhost:54569",
+					Compressor: "gzip",
 				},
 			},
 		},
