@@ -205,9 +205,6 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 	if transportOptions.tracer == nil {
 		transportOptions.tracer = opentracing.GlobalTracer()
 	}
-	if transportOptions.tracer == nil {
-		transportOptions.tracer = opentracing.NoopTracer{}
-	}
 	return transportOptions
 }
 

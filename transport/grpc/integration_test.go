@@ -41,6 +41,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	gogostatus "github.com/gogo/status"
+	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/multierr"
@@ -64,7 +65,11 @@ import (
 
 func TestYARPCBasic(t *testing.T) {
 	t.Parallel()
-	te := testEnvOptions{}
+	te := testEnvOptions{
+		TransportOptions: []TransportOption{
+			Tracer(opentracing.NoopTracer{}),
+		},
+	}
 	te.do(t, func(t *testing.T, e *testEnv) {
 		_, err := e.GetValueYARPC(context.Background(), "foo")
 		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeNotFound, "foo"), err)
