@@ -5,7 +5,9 @@ go 1.13
 require (
 	github.com/apache/thrift v0.13.0 // indirect
 	github.com/bmizerany/perks v0.0.0-20141205001514-d9a9656a3a4b // indirect
+	github.com/cactus/go-statsd-client/statsd v0.0.0-20191106001114-12b4e2b38748 // indirect
 	github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd // indirect
+	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13
 	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/gogo/googleapis v1.3.2
 	github.com/gogo/protobuf v1.3.1
@@ -27,10 +29,12 @@ require (
 	github.com/streadway/quantile v0.0.0-20150917103942-b0c588724d25 // indirect
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/stretchr/testify v1.4.0
+	github.com/uber-common/bark v1.2.1 // indirect
 	github.com/uber-go/mapdecode v1.0.0
 	github.com/uber-go/tally v3.3.15+incompatible
 	github.com/uber/jaeger-client-go v2.22.1+incompatible
 	github.com/uber/jaeger-lib v2.2.0+incompatible // indirect
+	github.com/uber/ringpop-go v0.8.5
 	github.com/uber/tchannel-go v1.16.0
 	go.uber.org/atomic v1.5.1
 	go.uber.org/fx v1.10.0

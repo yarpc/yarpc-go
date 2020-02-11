@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - gRPC now supports compression.
   The packages `compressor/gzip` and `compressor/snappy` provide
   compressors accepted by the gRPC `Compressor` dialer option.
+- The `peer/hashring32` package now provides support for consistent hashing
+  that is compatible with RingPop hash ring topologies.
+  This peer selection strategy uses the `ShardKey` call option to
+  pin traffic to an arbitrary peer that is relatively stable as the peer list
+  membership changes.
 - Observability middleware now emits metrics for panics that occur on the stack
   of an inbound call handler.
 - The `transporttest` package now provides a `Pipe` constructor, which creates
