@@ -38,6 +38,10 @@ import (
 	"google.golang.org/grpc"
 )
 
+func TestNamer(t *testing.T) {
+	assert.Equal(t, transportName, NewTransport().NewOutbound(nil).Name())
+}
+
 func TestNoRequest(t *testing.T) {
 	tran := NewTransport()
 	out := tran.NewSingleOutbound("localhost:0")

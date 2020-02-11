@@ -38,6 +38,12 @@ import (
 	"golang.org/x/net/context"
 )
 
+func TestNamer(t *testing.T) {
+	trans, err := NewTransport()
+	require.NoError(t, err)
+	assert.Equal(t, transportName, trans.NewOutbound(nil).Name())
+}
+
 func TestOutboundHeaders(t *testing.T) {
 	tests := []struct {
 		name            string

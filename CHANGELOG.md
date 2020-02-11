@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   gRPC.
 - The `yarpctest.FakeOutbound` can now send requests to a `transport.Router`.
   This allows end to end testing with a client and server in memory.
+  The `OutboundCallOverride`, `OutboundCallOnewayOverride` (new), and
+  `OutboundCallStreamOverride` (new) are now a complete set that allow tests to
+  hook any of the call behaviors.
+- All outbounds now implement `Name` and a new `transport.Namer` interface.
+  This will allow outbound observability middleware to carry the transport name
+  in metrics properly.
 ### Changed
 - This change reduces the API surface of the peer list implementations to
   remove a previously public embedded type and replace it with implementations

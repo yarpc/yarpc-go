@@ -51,6 +51,10 @@ func TestNewOutbound(t *testing.T) {
 	assert.Equal(t, chooser, out.Chooser())
 }
 
+func TestNamer(t *testing.T) {
+	assert.Equal(t, transportName, NewOutbound(nil).Name())
+}
+
 func TestNewSingleOutboundPanic(t *testing.T) {
 	require.Panics(t, func() {
 		// invalid url should cause panic

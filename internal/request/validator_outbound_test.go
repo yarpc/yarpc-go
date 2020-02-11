@@ -42,7 +42,7 @@ func TestCall(t *testing.T) {
 
 	t.Run("unary", func(t *testing.T) {
 		out := transporttest.NewMockUnaryOutbound(ctrl)
-		validatorOut := UnaryValidatorOutbound{out}
+		validatorOut := UnaryValidatorOutbound{UnaryOutbound: out}
 
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
@@ -54,7 +54,7 @@ func TestCall(t *testing.T) {
 
 	t.Run("oneway", func(t *testing.T) {
 		out := transporttest.NewMockOnewayOutbound(ctrl)
-		validatorOut := OnewayValidatorOutbound{out}
+		validatorOut := OnewayValidatorOutbound{OnewayOutbound: out}
 
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
@@ -67,8 +67,8 @@ func TestCall(t *testing.T) {
 
 func TestCallErrors(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	validatorOut := UnaryValidatorOutbound{transporttest.NewMockUnaryOutbound(ctrl)}
-	validatorOutOneway := OnewayValidatorOutbound{transporttest.NewMockOnewayOutbound(ctrl)}
+	validatorOut := UnaryValidatorOutbound{UnaryOutbound: transporttest.NewMockUnaryOutbound(ctrl)}
+	validatorOutOneway := OnewayValidatorOutbound{OnewayOutbound: transporttest.NewMockOnewayOutbound(ctrl)}
 
 	tests := []struct {
 		name string
@@ -98,6 +98,9 @@ func TestCallErrors(t *testing.T) {
 			assert.Nil(t, ack)
 			assert.Error(t, err, "expected error from invalid request")
 		})
+
+		// Streaming requests without deadlines are valid, so this this test
+		// table does not apply.
 	}
 }
 
@@ -105,12 +108,17 @@ func TestIntrospect(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	t.Run("unary", func(t *testing.T) {
-		validatorOut := UnaryValidatorOutbound{transporttest.NewMockUnaryOutbound(ctrl)}
+		validatorOut := UnaryValidatorOutbound{UnaryOutbound: transporttest.NewMockUnaryOutbound(ctrl)}
 		assert.Equal(t, introspection.OutboundStatusNotSupported, validatorOut.Introspect())
 	})
 
-	t.Run("unary", func(t *testing.T) {
-		validatorOut := OnewayValidatorOutbound{transporttest.NewMockOnewayOutbound(ctrl)}
+	t.Run("oneway", func(t *testing.T) {
+		validatorOut := OnewayValidatorOutbound{OnewayOutbound: transporttest.NewMockOnewayOutbound(ctrl)}
+		assert.Equal(t, introspection.OutboundStatusNotSupported, validatorOut.Introspect())
+	})
+
+	t.Run("stream", func(t *testing.T) {
+		validatorOut := StreamValidatorOutbound{StreamOutbound: transporttest.NewMockStreamOutbound(ctrl)}
 		assert.Equal(t, introspection.OutboundStatusNotSupported, validatorOut.Introspect())
 	})
 }
