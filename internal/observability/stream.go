@@ -103,12 +103,13 @@ func (s *streamWrapper) ReceiveMessage(ctx context.Context) (*transport.StreamMe
 	// This is the only special case.
 	// All other log events treat EOF as an error, including when sending a
 	// message or concluding a handshake.
-	s.call.logStreamEvent(err, err == nil || err == io.EOF, _successfulStreamReceive, _errorStreamReceive)
+	success := err == nil || err == io.EOF
+	s.call.logStreamEvent(err, success, _successfulStreamReceive, _errorStreamReceive)
 
 	s.edge.receives.Inc()
-	if err == nil {
+	if success {
 		s.edge.receiveSuccesses.Inc()
-		return msg, nil
+		return msg, err
 	}
 
 	if recvFailureCounter, err2 := s.edge.receiveFailures.Get(_error, errToMetricString(err)); err2 != nil {
