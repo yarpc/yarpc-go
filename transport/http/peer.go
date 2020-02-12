@@ -27,6 +27,7 @@ import (
 	"go.uber.org/atomic"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/abstractpeer"
+	"go.uber.org/zap"
 )
 
 type httpPeer struct {
@@ -115,6 +116,14 @@ func (p *httpPeer) onSuspect() {
 	innocentDurationUnixNano := p.transport.jitter(p.transport.innocenceWindow.Nanoseconds())
 	p.innocentUntilUnixNano.Store(now + innocentDurationUnixNano)
 
+	p.transport.logger.Info(
+		"peer marked suspicious due to timeout",
+		zap.String("peer", p.addr),
+		zap.Duration("duration", time.Duration(innocentDurationUnixNano)),
+		zap.Time("until", time.Unix(0, innocentDurationUnixNano)),
+		zap.String("transport", "http"),
+	)
+
 	p.notifyStatusChanged()
 }
 
@@ -154,7 +163,16 @@ func (p *httpPeer) MaintainConn() {
 		} else {
 			p.setStatus(peer.Unavailable)
 			// Back-off on fail
-			if !p.sleep(backoff.Duration(attempts)) {
+			dur := backoff.Duration(attempts)
+			p.transport.logger.Info(
+				"peer connect retry back-off",
+				zap.String("peer", p.addr),
+				zap.Duration("sleep", dur),
+				zap.Time("until", time.Now().Add(dur)),
+				zap.Int("attempt", int(attempts)),
+				zap.String("transport", "http"),
+			)
+			if !p.sleep(dur) {
 				break
 			}
 			attempts++
@@ -167,6 +185,12 @@ func (p *httpPeer) MaintainConn() {
 }
 
 func (p *httpPeer) setStatus(status peer.ConnectionStatus) {
+	p.transport.logger.Info(
+		"peer status change",
+		zap.String("status", status.String()),
+		zap.String("peer", p.Peer.Identifier()),
+		zap.String("transport", "http"),
+	)
 	p.Peer.SetStatus(status)
 	p.Peer.NotifyStatusChanged()
 }
