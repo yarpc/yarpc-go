@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   interface.
   This will allow outbound observability middleware to carry the transport name
   in metrics properly.
+- Dialers now emit logs for connection status changes, suspicion, and back-off
+  parameters.
 ### Changed
 - This change reduces the API surface of the peer list implementations to
   remove a previously public embedded type and replace it with implementations

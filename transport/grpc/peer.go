@@ -25,6 +25,7 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/abstractpeer"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 )
@@ -90,6 +91,12 @@ func (p *grpcPeer) monitorConnectionStatus() {
 }
 
 func (p *grpcPeer) setConnectionStatus(status peer.ConnectionStatus) {
+	p.t.options.logger.Info(
+		"peer status change",
+		zap.String("status", status.String()),
+		zap.String("peer", p.Peer.Identifier()),
+		zap.String("transport", "grpc"),
+	)
 	p.Peer.SetStatus(status)
 	p.Peer.NotifyStatusChanged()
 }

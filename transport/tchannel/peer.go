@@ -26,6 +26,7 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/abstractpeer"
+	"go.uber.org/zap"
 )
 
 type tchannelPeer struct {
@@ -113,6 +114,12 @@ func (p *tchannelPeer) release() {
 }
 
 func (p *tchannelPeer) setConnectionStatus(status peer.ConnectionStatus) {
+	p.transport.logger.Info(
+		"peer status change",
+		zap.String("status", status.String()),
+		zap.String("peer", p.Peer.Identifier()),
+		zap.String("tchannel", "tchannel"),
+	)
 	p.Peer.SetStatus(status)
 	p.Peer.NotifyStatusChanged()
 }
