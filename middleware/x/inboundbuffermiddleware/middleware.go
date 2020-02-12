@@ -22,6 +22,7 @@ package inboundbuffermiddleware
 
 import (
 	"context"
+	"strconv"
 	"sync"
 	"time"
 
@@ -31,6 +32,8 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 )
+
+const _delayNsHeader = "buffer-delay-ns"
 
 // Buffer is an inbound unary middleware that ensures gradual degradation in
 // the face of excess load, quality of service for higher priority requests,
@@ -51,11 +54,12 @@ type Buffer struct {
 }
 
 type entity struct {
-	ctx   context.Context
-	req   *transport.Request
-	res   transport.ResponseWriter
-	errCh chan error
-	next  transport.UnaryHandler
+	ctx     context.Context
+	req     *transport.Request
+	res     transport.ResponseWriter
+	errCh   chan error
+	next    transport.UnaryHandler
+	arrived time.Time
 }
 
 // New creates a buffer, an inbound unary middleware.
@@ -187,11 +191,12 @@ func (b *Buffer) put(ctx context.Context, req *transport.Request, res transport.
 
 	errCh := make(chan error, 1)
 	b.entities[i] = entity{
-		ctx:   ctx,
-		req:   req,
-		res:   res,
-		errCh: errCh,
-		next:  next,
+		ctx:     ctx,
+		req:     req,
+		res:     res,
+		errCh:   errCh,
+		next:    next,
+		arrived: time.Now(),
 	}
 	return errCh
 }
@@ -212,6 +217,10 @@ func (b *Buffer) pop() (ctx context.Context, req *transport.Request, res transpo
 	errCh = e.errCh
 	next = e.next
 	ok = true
+
+	// Add buffer induced delay to response headers.
+	delayNs := strconv.Itoa(int(time.Since(e.arrived)))
+	res.AddHeaders(transport.NewHeaders().With(_delayNsHeader, delayNs))
 
 	// Release garbage.
 	b.entities[i] = entity{}

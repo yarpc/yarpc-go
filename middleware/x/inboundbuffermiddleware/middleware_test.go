@@ -59,7 +59,6 @@ func (slowHandler) Handle(ctx context.Context, req *transport.Request, resw tran
 
 func TestStress(t *testing.T) {
 	body := "Hello, World!\n\n"
-	// handler := transporttest.EchoHandler{}
 	var handler slowHandler
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*testtime.Second)
@@ -71,9 +70,10 @@ func TestStress(t *testing.T) {
 	concurrency := 64
 
 	type result struct {
-		errors  int
-		drops   int
-		corrupt int
+		errors       int
+		drops        int
+		corrupt      int
+		missingDelay int
 	}
 
 	resCh := make(chan result)
@@ -86,10 +86,13 @@ func TestStress(t *testing.T) {
 				err := buffer.Handle(ctx, &transport.Request{
 					Body: bytes.NewBufferString(body),
 				}, resw, handler)
+
 				if yarpcerrors.IsResourceExhausted(err) {
 					res.drops++
 				} else if err != nil {
 					res.errors++
+				} else if _, ok := resw.Headers.Get("buffer-delay-ns"); !ok {
+					res.missingDelay++
 				} else if resw.Body.String() != body {
 					res.corrupt++
 				}
@@ -109,6 +112,7 @@ func TestStress(t *testing.T) {
 
 	require.NoError(t, buffer.Stop(ctx))
 	assert.Zero(t, res.corrupt)
+	assert.Zero(t, res.missingDelay)
 
 	// Report
 	t.Logf("%#v\n", res)
