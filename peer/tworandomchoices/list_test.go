@@ -53,10 +53,6 @@ func newNotRunningError(err string) error {
 	return yarpcerrors.FailedPreconditionErrorf(`"two-random-choices" peer list is not running: %s`, err)
 }
 
-func newUnavailableError(err error) error {
-	return yarpcerrors.UnavailableErrorf(`"two-random-choices" peer list timed out waiting for peer: %s`, err.Error())
-}
-
 func TestTwoRandomChoicesPeer(t *testing.T) {
 	type testStruct struct {
 		msg string
@@ -311,7 +307,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 				StartAction{},
 				ChooseAction{
 					InputContextTimeout: 20 * time.Millisecond,
-					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+					ExpectedErrMsg:      "peer list has no peers",
 				},
 			},
 			expectedRunning: true,
@@ -421,7 +417,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 					Actions: []PeerListAction{
 						ChooseAction{
 							InputContextTimeout: 10 * time.Millisecond,
-							ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+							ExpectedErrMsg:      "peer list has no peers",
 						},
 						UpdateAction{AddedPeerIDs: []string{"1"}},
 					},
@@ -473,7 +469,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 				UpdateAction{RemovedPeerIDs: []string{"1"}},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
-					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+					ExpectedErrMsg:      "peer list has no peers",
 				},
 			},
 			expectedRunning: true,
@@ -487,7 +483,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 				UpdateAction{AddedPeerIDs: []string{"1"}},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
-					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+					ExpectedErrMsg:      "has 1 peer but it is not responsive",
 				},
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Available},
 				ChooseAction{ExpectedPeer: "1"},
@@ -518,7 +514,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Unavailable},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
-					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+					ExpectedErrMsg:      "has 1 peer but it is not responsive",
 				},
 			},
 			expectedRunning: true,
@@ -533,7 +529,7 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Unavailable},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
-					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+					ExpectedErrMsg:      "1 peer but it is not responsive",
 				},
 			},
 			expectedRunning: true,
@@ -637,5 +633,5 @@ func TestFailFastConfig(t *testing.T) {
 		Body:      strings.NewReader("nada"),
 	})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "no peer available")
+	assert.Contains(t, err.Error(), "peer list has 1 peer but it is not responsive")
 }

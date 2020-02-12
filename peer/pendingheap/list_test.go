@@ -53,10 +53,6 @@ func newNotRunningError(err string) error {
 	return yarpcerrors.FailedPreconditionErrorf(`"fewest-pending-requests" peer list is not running: %s`, err)
 }
 
-func newUnavailableError(err error) error {
-	return yarpcerrors.UnavailableErrorf(`"fewest-pending-requests" peer list timed out waiting for peer: %s`, err.Error())
-}
-
 // InsertionOrder is a test option that yields control over random insertion
 // ordering. Each number corresponds to the position to swap the newly inserted
 // peer's 'last' value.
@@ -165,7 +161,7 @@ func TestPeerHeapList(t *testing.T) {
 				UpdateAction{AddedPeerIDs: []string{"1", "2", "3", "4", "5", "6", "7", "8", "9"}},
 				StopAction{},
 				ChooseAction{
-					ExpectedErr:         newNotRunningError("could not wait for instance to start running: current state is \"stopped\""),
+					ExpectedErrMsg:      "is not running",
 					InputContextTimeout: 10 * time.Millisecond,
 				},
 			},
@@ -340,7 +336,7 @@ func TestPeerHeapList(t *testing.T) {
 				StartAction{},
 				ChooseAction{
 					InputContextTimeout: 20 * time.Millisecond,
-					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+					ExpectedErrMsg:      "peer list has no peers",
 				},
 			},
 			expectedRunning: true,
@@ -475,7 +471,7 @@ func TestPeerHeapList(t *testing.T) {
 					Actions: []PeerListAction{
 						ChooseAction{
 							InputContextTimeout: 10 * time.Millisecond,
-							ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+							ExpectedErrMsg:      "peer list has no peers",
 						},
 						UpdateAction{AddedPeerIDs: []string{"1"}},
 					},
@@ -527,7 +523,7 @@ func TestPeerHeapList(t *testing.T) {
 				UpdateAction{RemovedPeerIDs: []string{"1"}},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
-					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+					ExpectedErrMsg:      "peer list has no peers",
 				},
 			},
 			expectedRunning: true,
@@ -541,7 +537,7 @@ func TestPeerHeapList(t *testing.T) {
 				UpdateAction{AddedPeerIDs: []string{"1"}},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
-					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+					ExpectedErrMsg:      "list has 1 peer but it is not responsive",
 				},
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Available},
 				ChooseAction{ExpectedPeer: "1"},
@@ -572,7 +568,7 @@ func TestPeerHeapList(t *testing.T) {
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Unavailable},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
-					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+					ExpectedErrMsg:      "peer list has 1 peer but it is not responsive",
 				},
 			},
 			expectedRunning: true,
@@ -587,7 +583,7 @@ func TestPeerHeapList(t *testing.T) {
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Unavailable},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
-					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+					ExpectedErrMsg:      "has 1 peer but it is not responsive",
 				},
 			},
 			expectedRunning: true,
@@ -727,5 +723,5 @@ func TestFailFastConfig(t *testing.T) {
 		Body:      strings.NewReader("nada"),
 	})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "no peer available")
+	assert.Contains(t, err.Error(), "peer list has 1 peer but it is not responsive")
 }

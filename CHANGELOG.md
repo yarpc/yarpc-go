@@ -35,6 +35,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   concrete types.
   However, we expect that in practice, peer lists are used as either peer.List,
   peer.Chooser, or for the private introspection interface.
+- Peer list peer unavailability errors now provide additional context including
+  the number of assigned peers and whether fail-fast is enabled.
 ### Fixed
 - Fixed Streaming Protobuf-flavored-JSON nil pointer panic.
 - Log entries for EOF stream messages are now considered successes to avoid
