@@ -17,6 +17,7 @@ require (
 	github.com/golang/snappy v0.0.1
 	github.com/google/go-cmp v0.4.0 // indirect
 	github.com/kisielk/errcheck v1.2.0
+	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/mattn/go-shellwords v1.0.10
 	github.com/opentracing/opentracing-go v1.1.0
@@ -47,10 +48,10 @@ require (
 	golang.org/x/lint v0.0.0-20200130185559-910be7a94367
 	golang.org/x/mod v0.2.0 // indirect
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
-	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5 // indirect
+	golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4 // indirect
 	golang.org/x/text v0.3.2 // indirect
-	golang.org/x/tools v0.0.0-20200211045251-2de505fc5306
-	google.golang.org/genproto v0.0.0-20200211111953-2dc5924e3898 // indirect
+	golang.org/x/tools v0.0.0-20200211205636-11eff242d136
+	google.golang.org/genproto v0.0.0-20200212121238-0849286c0f0e // indirect
 	google.golang.org/grpc v1.27.1
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.2.8
