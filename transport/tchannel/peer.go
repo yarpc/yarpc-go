@@ -114,7 +114,7 @@ func (p *tchannelPeer) release() {
 }
 
 func (p *tchannelPeer) setConnectionStatus(status peer.ConnectionStatus) {
-	p.transport.logger.Info(
+	p.transport.logger.Debug(
 		"peer status change",
 		zap.String("status", status.String()),
 		zap.String("peer", p.Peer.Identifier()),

@@ -78,7 +78,7 @@ func (p *httpPeer) isAvailable() bool {
 		return true
 	}
 
-	p.transport.logger.Error(
+	p.transport.logger.Debug(
 		"unable to connect to peer, marking as unavailable",
 		zap.String("peer", p.addr),
 		zap.String("transport", "http"),
@@ -123,7 +123,7 @@ func (p *httpPeer) onSuspect() {
 	innocentDurationUnixNano := p.transport.jitter(p.transport.innocenceWindow.Nanoseconds())
 	p.innocentUntilUnixNano.Store(now + innocentDurationUnixNano)
 
-	p.transport.logger.Info(
+	p.transport.logger.Debug(
 		"peer marked suspicious due to timeout",
 		zap.String("peer", p.addr),
 		zap.Duration("duration", time.Duration(innocentDurationUnixNano)),
@@ -171,7 +171,7 @@ func (p *httpPeer) MaintainConn() {
 			p.setStatus(peer.Unavailable)
 			// Back-off on fail
 			dur := backoff.Duration(attempts)
-			p.transport.logger.Info(
+			p.transport.logger.Debug(
 				"peer connect retry back-off",
 				zap.String("peer", p.addr),
 				zap.Duration("sleep", dur),
@@ -192,7 +192,7 @@ func (p *httpPeer) MaintainConn() {
 }
 
 func (p *httpPeer) setStatus(status peer.ConnectionStatus) {
-	p.transport.logger.Info(
+	p.transport.logger.Debug(
 		"peer status change",
 		zap.String("status", status.String()),
 		zap.String("peer", p.Peer.Identifier()),
