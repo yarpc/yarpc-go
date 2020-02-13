@@ -21,6 +21,7 @@
 package grpc
 
 import (
+	"go.uber.org/yarpc/compressor/grpc"
 	"go.uber.org/yarpc/yarpcconfig"
 	"google.golang.org/grpc/encoding"
 )
@@ -49,6 +50,7 @@ func init() {
 		_gzipCompressor,
 	}
 	for _, compressor := range compressors {
-		encoding.RegisterCompressor(compressor)
+		adapter := yarpcgrpccompressor.New(compressor)
+		encoding.RegisterCompressor(adapter)
 	}
 }

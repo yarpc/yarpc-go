@@ -44,13 +44,15 @@ type Option interface {
 //
 //  import (
 //      "google.golang.org/grpc/encoding"
+//      "go.uber.org/yarpc/compressor/grpc"
 //      "go.uber.org/yarpc/compressor/snappy"
 //  )
 //
 //  var SnappyCompressor = yarpcsnappy.New()
 //
 //  func init()
-//      encoding.RegisterCompressor(SnappyCompressor)
+//      sc := yarpcgrpccompressor.New(SnappyCompressor)
+//      encoding.RegisterCompressor(sc)
 //  }
 //
 // If you are constructing your YARPC clients directly through the API,
@@ -125,7 +127,7 @@ func (w *writer) Close() error {
 }
 
 // Decompress creates a snappy decompressor.
-func (c *Compressor) Decompress(r io.Reader) (io.Reader, error) {
+func (c *Compressor) Decompress(r io.Reader) (io.ReadCloser, error) {
 	dr, got := c.decompressors.Get().(*reader)
 	if got {
 		dr.reader.Reset(r)
@@ -142,12 +144,13 @@ type reader struct {
 	pool   *sync.Pool
 }
 
-var _ io.Reader = (*reader)(nil)
+var _ io.ReadCloser = (*reader)(nil)
 
 func (r *reader) Read(buf []byte) (n int, err error) {
-	n, err = r.reader.Read(buf)
-	if err == io.EOF {
-		r.pool.Put(r)
-	}
-	return n, err
+	return r.reader.Read(buf)
+}
+
+func (r *reader) Close() error {
+	r.pool.Put(r)
+	return nil
 }

@@ -18,17 +18,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package yarpcgrpccompressor_test
 
-import "io"
+import (
+	"testing"
 
-// Compressor represents a compression strategy and supports creating new
-// compression and decompression streams for that strategy.
-//
-// This interface is equivalent to the compressor API proposed by grpc-go.
-// https://godoc.org/google.golang.org/grpc/encoding#Compressor
-type Compressor interface {
-	Name() string
-	Compress(w io.Writer) (io.WriteCloser, error)
-	Decompress(r io.Reader) (io.ReadCloser, error)
+	"go.uber.org/yarpc/compressor/grpc"
+	"go.uber.org/yarpc/compressor/gzip"
+	"google.golang.org/grpc/encoding"
+)
+
+func TestCompressorRegistration(t *testing.T) {
+	gz := yarpcgzip.New()
+	gg := yarpcgrpccompressor.New(gz)
+	encoding.RegisterCompressor(gg)
 }

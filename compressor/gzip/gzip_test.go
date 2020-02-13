@@ -37,7 +37,6 @@ var quote = "Now is the time for all good men to come to the aid of their countr
 var input = []byte(quote + quote + quote)
 
 func TestGzip(t *testing.T) {
-
 	buf := bytes.NewBuffer(nil)
 	writer, err := yarpcgzip.New().Compress(buf)
 	require.NoError(t, err)
@@ -51,6 +50,7 @@ func TestGzip(t *testing.T) {
 
 	output, err := ioutil.ReadAll(str)
 	require.NoError(t, err)
+	require.NoError(t, str.Close())
 
 	assert.Equal(t, input, output)
 }
@@ -71,6 +71,7 @@ func TestCompressionPooling(t *testing.T) {
 
 		output, err := ioutil.ReadAll(str)
 		require.NoError(t, err)
+		require.NoError(t, str.Close())
 
 		assert.Equal(t, input, output)
 	}
@@ -102,6 +103,7 @@ func TestEveryCompressionLevel(t *testing.T) {
 
 			output, err := ioutil.ReadAll(str)
 			require.NoError(t, err)
+			require.NoError(t, str.Close())
 
 			assert.Equal(t, input, output)
 		})

@@ -48,6 +48,7 @@ func TestSnappy(t *testing.T) {
 
 	output, err := ioutil.ReadAll(str)
 	require.NoError(t, err)
+	require.NoError(t, str.Close())
 
 	assert.Equal(t, input, output)
 }
@@ -68,6 +69,7 @@ func TestCompressionPooling(t *testing.T) {
 
 		output, err := ioutil.ReadAll(str)
 		require.NoError(t, err)
+		require.NoError(t, str.Close())
 
 		assert.Equal(t, input, output)
 	}

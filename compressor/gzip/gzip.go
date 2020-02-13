@@ -53,22 +53,27 @@ func (o levelOption) apply(opts *Compressor) {
 // New returns a GZIP compression strategy, suitable for configuring an
 // outbound dialer.
 //
-// The compressor is compatible with the gRPC experimental compressor system.
-// However, since gRPC requires global registration of compressors,
-// you must arrange for the compressor to be registered in your
-// application initialization.
+// The compressor needs to be adapted and registered to be compatible
+// with the gRPC compressor system.
+// Since gRPC requires global registration of compressors, you must arrange for
+// the compressor to be registered in your application initialization.
+// The adapter converts an io.Reader into an io.ReadCloser so that reading EOF
+// will implicitly trigger Close, a behavior gRPC-go relies upon to reuse
+// readers.
 //
 //  import (
 //      "compress/gzip"
 //
 //      "google.golang.org/grpc/encoding"
+//      "go.uber.org/yarpc/compressor/grpc"
 //      "go.uber.org/yarpc/compressor/gzip"
 //  )
 //
 //  var GZIPCompressor = yarpcgzip.New(yarpcgzip.Level(gzip.BestCompression))
 //
 //  func init()
-//      encoding.RegisterCompressor(GZIPCompressor)
+//      gz := yarpcgrpccompressor.New(GZIPCompressor)
+//      encoding.RegisterCompressor(gz)
 //  }
 //
 // If you are constructing your YARPC clients directly through the API,
@@ -156,7 +161,7 @@ func (w *writer) Close() error {
 }
 
 // Decompress obtains a gzip decompressor.
-func (c *Compressor) Decompress(r io.Reader) (io.Reader, error) {
+func (c *Compressor) Decompress(r io.Reader) (io.ReadCloser, error) {
 	if dr, got := c.decompressors.Get().(*reader); got {
 		if err := dr.reader.Reset(r); err != nil {
 			c.decompressors.Put(r)
@@ -182,14 +187,15 @@ type reader struct {
 	pool   *sync.Pool
 }
 
-var _ io.Reader = (*reader)(nil)
+var _ io.ReadCloser = (*reader)(nil)
 
 func (r *reader) Read(buf []byte) (n int, err error) {
-	n, err = r.reader.Read(buf)
-	if err == io.EOF {
-		r.pool.Put(r)
-	}
-	return n, err
+	return r.reader.Read(buf)
+}
+
+func (r *reader) Close() error {
+	r.pool.Put(r)
+	return nil
 }
 
 // DecompressedSize returns the decompressed size of the given GZIP compressed
