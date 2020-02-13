@@ -77,6 +77,13 @@ func (p *httpPeer) isAvailable() bool {
 	if conn != nil && err == nil {
 		return true
 	}
+
+	p.transport.logger.Error(
+		"unable to connect to peer, marking as unavailable",
+		zap.String("peer", p.addr),
+		zap.String("transport", "http"),
+	)
+
 	return false
 }
 
