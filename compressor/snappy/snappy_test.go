@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package snappy_test
+package yarpcsnappy_test
 
 import (
 	"bytes"
@@ -30,26 +30,68 @@ import (
 	"go.uber.org/yarpc/compressor/snappy"
 )
 
-func TestSnappy(t *testing.T) {
-	input := []byte("Now is the time for all good men to come to the aid of their country")
+// This should be compressible:
+var quote = "Now is the time for all good men to come to the aid of their country"
+var input = []byte(quote + quote + quote)
 
+func TestSnappy(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-	writer, err := snappy.Compressor{}.Compress(buf)
+	writer, err := yarpcsnappy.New().Compress(buf)
 	require.NoError(t, err)
 
 	_, err = writer.Write(input)
 	require.NoError(t, err)
 	require.NoError(t, writer.Close())
 
-	str, err := snappy.Compressor{}.Decompress(buf)
+	str, err := yarpcsnappy.New().Decompress(buf)
 	require.NoError(t, err)
 
 	output, err := ioutil.ReadAll(str)
 	require.NoError(t, err)
+	require.NoError(t, str.Close())
 
 	assert.Equal(t, input, output)
 }
 
+func TestCompressionPooling(t *testing.T) {
+	compressor := yarpcsnappy.New()
+	for i := 0; i < 128; i++ {
+		buf := bytes.NewBuffer(nil)
+		writer, err := compressor.Compress(buf)
+		require.NoError(t, err)
+
+		_, err = writer.Write(input)
+		require.NoError(t, err)
+		require.NoError(t, writer.Close())
+
+		str, err := compressor.Decompress(buf)
+		require.NoError(t, err)
+
+		output, err := ioutil.ReadAll(str)
+		require.NoError(t, err)
+		require.NoError(t, str.Close())
+
+		assert.Equal(t, input, output)
+	}
+}
+
 func TestSnappyName(t *testing.T) {
-	assert.Equal(t, "snappy", snappy.Compressor{}.Name())
+	assert.Equal(t, "snappy", yarpcsnappy.New().Name())
+}
+
+func TestSnappyCompression(t *testing.T) {
+	compressor := yarpcsnappy.New()
+
+	buf := bytes.NewBuffer(nil)
+	writer, err := compressor.Compress(buf)
+	require.NoError(t, err)
+
+	_, err = writer.Write(input)
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	// Sanity check
+	assert.True(t, buf.Len() < len(input), "one would think the compressed data would be smaller")
+	t.Logf("decompress: %d\n", len(input))
+	t.Logf("compressed: %d\n", buf.Len())
 }

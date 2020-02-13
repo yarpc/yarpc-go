@@ -18,24 +18,48 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package snappy provides a YARPC binding for snappy compression.
+// Package yarpcsnappy provides a YARPC binding for snappy compression.
+package yarpcsnappy
+
+import (
+	"io"
+	"sync"
+
+	"github.com/golang/snappy"
+	"go.uber.org/yarpc/api/transport"
+)
+
+// Option is an option argument for the Snappy compressor constructor, New.
+type Option interface {
+	apply(*Compressor)
+}
+
+// New returns a Snappy compression strategy, suitable for configuring
+// an outbound dialer.
 //
-// To use snappy with gzip in particular, you will need to
-// register the Compressor with grpc-go, the underlying implementation
-// of gRPC which makes extensive use of global variables for
-// depencencies.
+// The compressor is compatible with the gRPC experimental compressor system.
+// However, since gRPC requires global registration of compressors,
+// you must arrange for the compressor to be registered in your
+// application initialization.
 //
 //  import (
 //      "google.golang.org/grpc/encoding"
+//      "go.uber.org/yarpc/compressor/grpc"
 //      "go.uber.org/yarpc/compressor/snappy"
 //  )
-//  encoding.RegisterCompressor(snappy.Compressor)
+//
+//  var SnappyCompressor = yarpcsnappy.New()
+//
+//  func init()
+//      sc := yarpcgrpccompressor.New(SnappyCompressor)
+//      encoding.RegisterCompressor(sc)
+//  }
 //
 // If you are constructing your YARPC clients directly through the API,
 // create a gRPC dialer with the Compressor option.
 //
 //  trans := grpc.NewTransport()
-//  dialer := trans.NewDialer(grpc.Compressor(snappy.Compressor))
+//  dialer := trans.NewDialer(grpc.Compressor(SnappyCompressor))
 //  peers := roundrobin.New(dialer)
 //  outbound := trans.NewOutbound(peers)
 //
@@ -44,7 +68,7 @@
 // with your configurator.
 //
 //  configurator := yarpcconfig.New()
-//  configurator.MustRegisterCompressor(snappy.Compressor)
+//  configurator.MustRegisterCompressor(SnappyCompressor)
 //
 // Then, using the compression strategy for outbound requests
 // on a particular client, just set the compressor to snappy.
@@ -56,31 +80,77 @@
 //        tls:
 //          enabled: true
 //        compressor: snappy
-package snappy
-
-import (
-	"io"
-
-	"github.com/golang/snappy"
-	"go.uber.org/yarpc/api/transport"
-)
+//
+func New(...Option) *Compressor {
+	return &Compressor{}
+}
 
 // Compressor represents the snappy streaming compression strategy.
-type Compressor struct{}
+type Compressor struct {
+	compressors   sync.Pool
+	decompressors sync.Pool
+}
 
-var _ transport.Compressor = Compressor{}
+var _ transport.Compressor = (*Compressor)(nil)
 
 // Name is snappy.
-func (Compressor) Name() string {
+func (*Compressor) Name() string {
 	return "snappy"
 }
 
 // Compress creates a snappy compressor.
-func (Compressor) Compress(w io.Writer) (io.WriteCloser, error) {
-	return snappy.NewBufferedWriter(w), nil
+func (c *Compressor) Compress(w io.Writer) (io.WriteCloser, error) {
+	if cw, got := c.compressors.Get().(*writer); got {
+		cw.writer.Reset(w)
+		return cw, nil
+	}
+	return &writer{
+		writer: snappy.NewBufferedWriter(w),
+		pool:   &c.compressors,
+	}, nil
+}
+
+type writer struct {
+	writer *snappy.Writer
+	pool   *sync.Pool
+}
+
+var _ io.WriteCloser = (*writer)(nil)
+
+func (w *writer) Write(buf []byte) (int, error) {
+	return w.writer.Write(buf)
+}
+
+func (w *writer) Close() error {
+	defer w.pool.Put(w)
+	return w.writer.Close()
 }
 
 // Decompress creates a snappy decompressor.
-func (Compressor) Decompress(r io.Reader) (io.Reader, error) {
-	return snappy.NewReader(r), nil
+func (c *Compressor) Decompress(r io.Reader) (io.ReadCloser, error) {
+	dr, got := c.decompressors.Get().(*reader)
+	if got {
+		dr.reader.Reset(r)
+		return dr, nil
+	}
+	return &reader{
+		reader: snappy.NewReader(r),
+		pool:   &c.decompressors,
+	}, nil
+}
+
+type reader struct {
+	reader *snappy.Reader
+	pool   *sync.Pool
+}
+
+var _ io.ReadCloser = (*reader)(nil)
+
+func (r *reader) Read(buf []byte) (n int, err error) {
+	return r.reader.Read(buf)
+}
+
+func (r *reader) Close() error {
+	r.pool.Put(r)
+	return nil
 }

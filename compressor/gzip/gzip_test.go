@@ -18,11 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package gzip_test
+package yarpcgzip_test
 
 import (
 	"bytes"
+	"compress/gzip"
 	"io/ioutil"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -30,26 +32,108 @@ import (
 	"go.uber.org/yarpc/compressor/gzip"
 )
 
-func TestGzip(t *testing.T) {
-	input := []byte("Now is the time for all good men to come to the aid of their country")
+// This should be compressible:
+var quote = "Now is the time for all good men to come to the aid of their country"
+var input = []byte(quote + quote + quote)
 
+func TestGzip(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-	writer, err := gzip.Compressor{}.Compress(buf)
+	writer, err := yarpcgzip.New().Compress(buf)
 	require.NoError(t, err)
 
 	_, err = writer.Write(input)
 	require.NoError(t, err)
 	require.NoError(t, writer.Close())
 
-	str, err := gzip.Compressor{}.Decompress(buf)
+	str, err := yarpcgzip.New().Decompress(buf)
 	require.NoError(t, err)
 
 	output, err := ioutil.ReadAll(str)
 	require.NoError(t, err)
+	require.NoError(t, str.Close())
 
 	assert.Equal(t, input, output)
 }
 
+func TestCompressionPooling(t *testing.T) {
+	compressor := yarpcgzip.New()
+	for i := 0; i < 128; i++ {
+		buf := bytes.NewBuffer(nil)
+		writer, err := compressor.Compress(buf)
+		require.NoError(t, err)
+
+		_, err = writer.Write(input)
+		require.NoError(t, err)
+		require.NoError(t, writer.Close())
+
+		str, err := compressor.Decompress(buf)
+		require.NoError(t, err)
+
+		output, err := ioutil.ReadAll(str)
+		require.NoError(t, err)
+		require.NoError(t, str.Close())
+
+		assert.Equal(t, input, output)
+	}
+}
+
+func TestEveryCompressionLevel(t *testing.T) {
+	levels := []int{
+		gzip.NoCompression,
+		gzip.BestSpeed,
+		gzip.BestCompression,
+		gzip.DefaultCompression,
+		gzip.HuffmanOnly,
+	}
+
+	for _, level := range levels {
+		t.Run(strconv.Itoa(level), func(t *testing.T) {
+			compressor := yarpcgzip.New(yarpcgzip.Level(level))
+
+			buf := bytes.NewBuffer(nil)
+			writer, err := compressor.Compress(buf)
+			require.NoError(t, err)
+
+			_, err = writer.Write(input)
+			require.NoError(t, err)
+			require.NoError(t, writer.Close())
+
+			str, err := compressor.Decompress(buf)
+			require.NoError(t, err)
+
+			output, err := ioutil.ReadAll(str)
+			require.NoError(t, err)
+			require.NoError(t, str.Close())
+
+			assert.Equal(t, input, output)
+		})
+	}
+}
+
 func TestGzipName(t *testing.T) {
-	assert.Equal(t, "gzip", gzip.Compressor{}.Name())
+	assert.Equal(t, "gzip", yarpcgzip.New().Name())
+}
+
+func TestDecompressedSize(t *testing.T) {
+	compressor := yarpcgzip.New(yarpcgzip.Level(gzip.BestCompression))
+
+	buf := bytes.NewBuffer(nil)
+	writer, err := compressor.Compress(buf)
+	require.NoError(t, err)
+
+	_, err = writer.Write(input)
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	assert.Equal(t, len(input), compressor.DecompressedSize(buf.Bytes()))
+
+	// Sanity check
+	assert.True(t, buf.Len() < len(input), "one would think the compressed data would be smaller")
+	t.Logf("decompress: %d\n", len(input))
+	t.Logf("compressed: %d\n", buf.Len())
+}
+
+func TestDecompressedSizeError(t *testing.T) {
+	compressor := yarpcgzip.New(yarpcgzip.Level(gzip.BestCompression))
+	assert.Equal(t, -1, compressor.DecompressedSize([]byte{}))
 }

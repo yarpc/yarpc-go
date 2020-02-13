@@ -505,7 +505,7 @@ func (c *testCompressor) Compress(w io.Writer) (io.WriteCloser, error) {
 	return &metered, c.comperr
 }
 
-func (c *testCompressor) Decompress(r io.Reader) (io.Reader, error) {
+func (c *testCompressor) Decompress(r io.Reader) (io.ReadCloser, error) {
 	metered := byteMeter{
 		Reader:  r,
 		counter: c.metrics.new("decompress", c.name),
