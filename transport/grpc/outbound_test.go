@@ -38,8 +38,8 @@ import (
 	"google.golang.org/grpc"
 )
 
-func TestNamer(t *testing.T) {
-	assert.Equal(t, transportName, NewTransport().NewOutbound(nil).Name())
+func TestTransportNamer(t *testing.T) {
+	assert.Equal(t, transportName, NewTransport().NewOutbound(nil).TransportName())
 }
 
 func TestNoRequest(t *testing.T) {

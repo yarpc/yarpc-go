@@ -38,13 +38,12 @@ func TestFirstOutboundMiddleware(t *testing.T) {
 	// should see the name of the transport, instead of an empty string.
 
 	const (
-		transportName = "transport-name"
+		transportName = "fake"
 		serviceName   = "service-name"
 	)
 
 	newOutboundConfig := func(outboundMiddleware yarpc.OutboundMiddleware) *transport.OutboundConfig {
-		outbound := yarpctest.NewFakeTransport().
-			NewOutbound(nil, yarpctest.OutboundName(transportName))
+		outbound := yarpctest.NewFakeTransport().NewOutbound(nil)
 
 		dispatcher := yarpc.NewDispatcher(yarpc.Config{
 			Name: serviceName,

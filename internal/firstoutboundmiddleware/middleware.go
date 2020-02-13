@@ -71,7 +71,7 @@ func update(req *transport.Request, out transport.Outbound) {
 	// Request forwarding in transport layer proxies needs this when copying
 	// requests to a different outbound type.
 	if namer, ok := out.(transport.Namer); ok {
-		req.Transport = namer.Name()
+		req.Transport = namer.TransportName()
 	}
 }
 
@@ -83,6 +83,6 @@ func updateStream(req *transport.StreamRequest, out transport.Outbound) {
 	// Request forwarding in transport layer proxies needs this when copying
 	// requests to a different outbound type.
 	if namer, ok := out.(transport.Namer); ok {
-		req.Meta.Transport = namer.Name()
+		req.Meta.Transport = namer.TransportName()
 	}
 }

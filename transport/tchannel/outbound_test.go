@@ -38,10 +38,10 @@ import (
 	"golang.org/x/net/context"
 )
 
-func TestNamer(t *testing.T) {
+func TestTransportNamer(t *testing.T) {
 	trans, err := NewTransport()
 	require.NoError(t, err)
-	assert.Equal(t, transportName, trans.NewOutbound(nil).Name())
+	assert.Equal(t, transportName, trans.NewOutbound(nil).TransportName())
 }
 
 func TestOutboundHeaders(t *testing.T) {

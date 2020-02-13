@@ -24,7 +24,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   The `OutboundCallOverride`, `OutboundCallOnewayOverride` (new), and
   `OutboundCallStreamOverride` (new) are now a complete set that allow tests to
   hook any of the call behaviors.
-- All outbounds now implement `Name` and a new `transport.Namer` interface.
+- All outbounds now implement `TransportName` and a new `transport.Namer`
+  interface.
   This will allow outbound observability middleware to carry the transport name
   in metrics properly.
 ### Changed
