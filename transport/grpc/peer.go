@@ -91,7 +91,7 @@ func (p *grpcPeer) monitorConnectionStatus() {
 }
 
 func (p *grpcPeer) setConnectionStatus(status peer.ConnectionStatus) {
-	p.t.options.logger.Info(
+	p.t.options.logger.Debug(
 		"peer status change",
 		zap.String("status", status.String()),
 		zap.String("peer", p.Peer.Identifier()),
