@@ -45,7 +45,7 @@ type Outbound interface {
 // This interface is not embeded into Outbound to preserve backwards
 // compatiblity.
 type Namer interface {
-	Name() string
+	TransportName() string
 }
 
 // UnaryOutbound is a transport that knows how to send unary requests for procedure

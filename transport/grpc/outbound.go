@@ -69,8 +69,9 @@ func newOutbound(t *Transport, peerChooser peer.Chooser, options ...OutboundOpti
 	}
 }
 
-// Name is the transport name that will be set on `transport.Request` struct.
-func (o *Outbound) Name() string {
+// TransportName is the transport name that will be set on `transport.Request`
+// struct.
+func (o *Outbound) TransportName() string {
 	return transportName
 }
 

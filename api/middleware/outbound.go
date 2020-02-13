@@ -62,7 +62,7 @@ func ApplyUnaryOutbound(o transport.UnaryOutbound, f UnaryOutbound) transport.Un
 
 	var name string
 	if namer, ok := o.(transport.Namer); ok {
-		name = namer.Name()
+		name = namer.TransportName()
 	}
 
 	return unaryOutboundWithMiddleware{o: o, f: f, name: name}
@@ -82,7 +82,7 @@ type unaryOutboundWithMiddleware struct {
 	f    UnaryOutbound
 }
 
-func (fo unaryOutboundWithMiddleware) Name() string {
+func (fo unaryOutboundWithMiddleware) TransportName() string {
 	return fo.name
 }
 
@@ -147,7 +147,7 @@ func ApplyOnewayOutbound(o transport.OnewayOutbound, f OnewayOutbound) transport
 
 	var name string
 	if namer, ok := o.(transport.Namer); ok {
-		name = namer.Name()
+		name = namer.TransportName()
 	}
 
 	return onewayOutboundWithMiddleware{o: o, f: f, name: name}
@@ -167,7 +167,7 @@ type onewayOutboundWithMiddleware struct {
 	f    OnewayOutbound
 }
 
-func (fo onewayOutboundWithMiddleware) Name() string {
+func (fo onewayOutboundWithMiddleware) TransportName() string {
 	return fo.name
 }
 
@@ -233,7 +233,7 @@ func ApplyStreamOutbound(o transport.StreamOutbound, f StreamOutbound) transport
 
 	var name string
 	if namer, ok := o.(transport.Namer); ok {
-		name = namer.Name()
+		name = namer.TransportName()
 	}
 
 	return streamOutboundWithMiddleware{o: o, f: f, name: name}
@@ -253,7 +253,7 @@ type streamOutboundWithMiddleware struct {
 	f    StreamOutbound
 }
 
-func (fo streamOutboundWithMiddleware) Name() string {
+func (fo streamOutboundWithMiddleware) TransportName() string {
 	return fo.name
 }
 

@@ -74,10 +74,10 @@ type unaryChainExec struct {
 	Final transport.UnaryOutbound
 }
 
-func (x unaryChainExec) Name() string {
+func (x unaryChainExec) TransportName() string {
 	var name string
 	if namer, ok := x.Final.(transport.Namer); ok {
-		name = namer.Name()
+		name = namer.TransportName()
 	}
 	return name
 }
@@ -154,10 +154,10 @@ type onewayChainExec struct {
 	Final transport.OnewayOutbound
 }
 
-func (x onewayChainExec) Name() string {
+func (x onewayChainExec) TransportName() string {
 	var name string
 	if namer, ok := x.Final.(transport.Namer); ok {
-		name = namer.Name()
+		name = namer.TransportName()
 	}
 	return name
 }
@@ -234,10 +234,10 @@ type streamChainExec struct {
 	Final transport.StreamOutbound
 }
 
-func (x streamChainExec) Name() string {
+func (x streamChainExec) TransportName() string {
 	var name string
 	if namer, ok := x.Final.(transport.Namer); ok {
-		name = namer.Name()
+		name = namer.TransportName()
 	}
 	return name
 }

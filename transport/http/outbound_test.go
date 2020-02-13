@@ -51,8 +51,8 @@ func TestNewOutbound(t *testing.T) {
 	assert.Equal(t, chooser, out.Chooser())
 }
 
-func TestNamer(t *testing.T) {
-	assert.Equal(t, transportName, NewOutbound(nil).Name())
+func TestTransportNamer(t *testing.T) {
+	assert.Equal(t, transportName, NewOutbound(nil).TransportName())
 }
 
 func TestNewSingleOutboundPanic(t *testing.T) {

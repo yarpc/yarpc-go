@@ -33,10 +33,7 @@ import (
 )
 
 func TestFirstOutboundMidleware(t *testing.T) {
-	const overrideName = "override"
-
 	out := yarpctest.NewFakeTransport().NewOutbound(nil,
-		yarpctest.OutboundName(overrideName),
 		yarpctest.OutboundCallOverride(
 			func(context.Context, *transport.Request) (*transport.Response, error) { return nil, nil },
 		),
@@ -55,7 +52,7 @@ func TestFirstOutboundMidleware(t *testing.T) {
 		_, err := outWithMiddleware.Call(context.Background(), req)
 		require.NoError(t, err)
 
-		assert.Equal(t, overrideName, string(req.Transport))
+		assert.Equal(t, "fake", string(req.Transport))
 	})
 
 	t.Run("oneway", func(t *testing.T) {
@@ -65,7 +62,7 @@ func TestFirstOutboundMidleware(t *testing.T) {
 		_, err := outWithMiddleware.CallOneway(context.Background(), req)
 		require.NoError(t, err)
 
-		assert.Equal(t, overrideName, string(req.Transport))
+		assert.Equal(t, "fake", string(req.Transport))
 	})
 
 	t.Run("stream", func(t *testing.T) {
@@ -75,6 +72,6 @@ func TestFirstOutboundMidleware(t *testing.T) {
 		_, err := outWithMiddleware.CallStream(context.Background(), streamReq)
 		require.NoError(t, err)
 
-		assert.Equal(t, overrideName, string(streamReq.Meta.Transport))
+		assert.Equal(t, "fake", string(streamReq.Meta.Transport))
 	})
 }

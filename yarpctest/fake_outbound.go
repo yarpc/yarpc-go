@@ -140,9 +140,9 @@ type FakeOutbound struct {
 	callStreamOverride OutboundStreamCallable
 }
 
-// Name is the transport of the outbound.
-func (o *FakeOutbound) Name() string {
-	return o.name
+// TransportName is "fake".
+func (o *FakeOutbound) TransportName() string {
+	return "fake"
 }
 
 // Chooser returns theis FakeOutbound's peer chooser.
