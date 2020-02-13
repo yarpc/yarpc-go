@@ -51,15 +51,10 @@ import (
 var (
 	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, `"round-robin" peer list can't wait for peer without a context deadline`)
 	_notRunningErrorFormat  = `"round-robin" peer list is not running: %s`
-	_unavailableErrorFormat = `"round-robin" peer list timed out waiting for peer: %s`
 )
 
 func newNotRunningError(err string) error {
 	return yarpcerrors.FailedPreconditionErrorf(_notRunningErrorFormat, err)
-}
-
-func newUnavailableError(err error) error {
-	return yarpcerrors.UnavailableErrorf(_unavailableErrorFormat, err.Error())
 }
 
 func TestRoundRobinList(t *testing.T) {
@@ -309,7 +304,7 @@ func TestRoundRobinList(t *testing.T) {
 				StartAction{},
 				ChooseAction{
 					InputContextTimeout: 20 * time.Millisecond,
-					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+					ExpectedErrMsg:      "peer list has no peers",
 				},
 			},
 			expectedRunning: true,
@@ -516,7 +511,7 @@ func TestRoundRobinList(t *testing.T) {
 					Actions: []PeerListAction{
 						ChooseAction{
 							InputContextTimeout: 10 * time.Millisecond,
-							ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+							ExpectedErrMsg:      "peer list has no peers",
 						},
 						UpdateAction{AddedPeerIDs: []string{"1"}},
 					},
@@ -586,7 +581,7 @@ func TestRoundRobinList(t *testing.T) {
 				UpdateAction{RemovedPeerIDs: []string{"1"}},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
-					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+					ExpectedErrMsg:      "has no peers",
 				},
 			},
 			expectedRunning: true,
@@ -600,7 +595,7 @@ func TestRoundRobinList(t *testing.T) {
 				UpdateAction{AddedPeerIDs: []string{"1"}},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
-					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+					ExpectedErrMsg:      "has 1 peer but it is not responsive",
 				},
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Available},
 				ChooseAction{ExpectedPeer: "1"},
@@ -631,7 +626,7 @@ func TestRoundRobinList(t *testing.T) {
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Unavailable},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
-					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+					ExpectedErrMsg:      "has 1 peer but it is not responsive",
 				},
 			},
 			expectedRunning: true,
@@ -646,7 +641,7 @@ func TestRoundRobinList(t *testing.T) {
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Unavailable},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
-					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+					ExpectedErrMsg:      "has 1 peer but it is not responsive",
 				},
 			},
 			expectedRunning: true,
@@ -1042,5 +1037,5 @@ func TestFailFastConfig(t *testing.T) {
 		Body:      strings.NewReader("nada"),
 	})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "no peer available")
+	assert.Contains(t, err.Error(), "has 1 peer but it is not responsive")
 }
