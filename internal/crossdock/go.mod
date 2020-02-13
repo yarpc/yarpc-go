@@ -17,7 +17,6 @@ require (
 	go.uber.org/yarpc v1.42.1
 	go.uber.org/zap v1.13.0
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
-	golang.org/x/tools v0.0.0-20200212150539-ea181f53ac56 // indirect
 	google.golang.org/grpc v1.27.1
 )
 
