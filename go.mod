@@ -19,6 +19,7 @@ require (
 	github.com/kisielk/errcheck v1.2.0
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-shellwords v1.0.10
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/pkg/errors v0.9.1 // indirect
@@ -50,7 +51,7 @@ require (
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4 // indirect
 	golang.org/x/text v0.3.2 // indirect
-	golang.org/x/tools v0.0.0-20200214144324-88be01311a71
+	golang.org/x/tools v0.0.0-20200216192241-b320d3a0f5a2
 	google.golang.org/genproto v0.0.0-20200212174721-66ed5ce911ce // indirect
 	google.golang.org/grpc v1.27.1
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
