@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,10 @@ package transport
 
 import "context"
 
-// Outbound is the common interface for all outbounds
+// Outbound is the common interface for all outbounds.
+//
+// Outbounds should also implement the Namer interface so that YARPC can
+// properly update the Request.Transport field.
 type Outbound interface {
 	Lifecycle
 
@@ -34,6 +37,15 @@ type Outbound interface {
 	// across multiple transport protocols during a transport protocol
 	// migration.
 	Transports() []Transport
+}
+
+// Namer is an additional interface that Outbounds may implement in order
+// properly set the transport.Request#Transport field.
+//
+// This interface is not embeded into Outbound to preserve backwards
+// compatiblity.
+type Namer interface {
+	TransportName() string
 }
 
 // UnaryOutbound is a transport that knows how to send unary requests for procedure

@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,15 +22,16 @@ package grpc
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"math/big"
 	"net"
@@ -40,15 +41,16 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	gogostatus "github.com/gogo/status"
+	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/internal/clientconfig"
-	"go.uber.org/yarpc/internal/examples/protobuf/example"
-	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/grpcctx"
+	"go.uber.org/yarpc/internal/prototest/example"
+	"go.uber.org/yarpc/internal/prototest/examplepb"
 	"go.uber.org/yarpc/internal/testtime"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	"go.uber.org/yarpc/peer"
@@ -58,13 +60,16 @@ import (
 	"go.uber.org/zap/zaptest"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 )
 
 func TestYARPCBasic(t *testing.T) {
 	t.Parallel()
-	te := testEnvOptions{}
+	te := testEnvOptions{
+		TransportOptions: []TransportOption{
+			Tracer(opentracing.NoopTracer{}),
+		},
+	}
 	te.do(t, func(t *testing.T, e *testEnv) {
 		_, err := e.GetValueYARPC(context.Background(), "foo")
 		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeNotFound, "foo"), err)
@@ -86,74 +91,6 @@ func TestGRPCBasic(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "bar", value)
 	})
-}
-
-func TestTLSWithYARPCAndGRPC(t *testing.T) {
-	tests := []struct {
-		clientValidity      time.Duration
-		serverValidity      time.Duration
-		expectedErrContains string
-		name                string
-	}{
-		{
-			clientValidity: time.Minute,
-			serverValidity: time.Minute,
-			name:           "valid certs both sides",
-		},
-		{
-			clientValidity:      time.Minute,
-			serverValidity:      -1,
-			expectedErrContains: "transport: authentication handshake failed: x509: certificate has expired or is not yet valid",
-			name:                "invalid server cert",
-		},
-		{
-			clientValidity:      -1,
-			serverValidity:      time.Minute,
-			expectedErrContains: "remote error: tls: bad certificate",
-			name:                "invalid client cert",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			scenario := createTLSScenario(t, test.clientValidity, test.serverValidity)
-
-			serverCreds := credentials.NewTLS(&tls.Config{
-				GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
-					return &tls.Certificate{
-						Certificate: [][]byte{scenario.ServerCert.Raw},
-						Leaf:        scenario.ServerCert,
-						PrivateKey:  scenario.ServerKey,
-					}, nil
-				},
-				ClientAuth: tls.RequireAndVerifyClientCert,
-				ClientCAs:  scenario.CAs,
-			})
-
-			clientCreds := credentials.NewTLS(&tls.Config{
-				GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
-					return &tls.Certificate{
-						Certificate: [][]byte{scenario.ClientCert.Raw},
-						Leaf:        scenario.ClientCert,
-						PrivateKey:  scenario.ClientKey,
-					}, nil
-				},
-				RootCAs: scenario.CAs,
-			})
-
-			te := testEnvOptions{
-				InboundOptions: []InboundOption{InboundCredentials(serverCreds)},
-				DialOptions:    []DialOption{DialerCredentials(clientCreds)},
-			}
-			te.do(t, func(t *testing.T, e *testEnv) {
-				err := e.SetValueYARPC(context.Background(), "foo", "bar")
-				expectErrorContains(t, err, test.expectedErrContains)
-
-				err = e.SetValueGRPC(context.Background(), "foo", "bar")
-				expectErrorContains(t, err, test.expectedErrContains)
-			})
-		})
-	}
 }
 
 func expectErrorContains(t *testing.T, err error, contains string) {
@@ -368,6 +305,238 @@ func TestCustomContextDial(t *testing.T) {
 		assert.Contains(t, err.Error(), errMsg)
 	})
 }
+
+// TestGRPCCompression aims to test the compression when both, the client and
+// the server has the same compressors registered and have the same compressor
+// enabled.
+func TestGRPCCompression(t *testing.T) {
+	tagsCompression := map[string]string{"stage": "compress"}
+	tagsDecompression := map[string]string{"stage": "decompress"}
+
+	tests := []struct {
+		testEnvOptions
+
+		msg         string
+		compressor  transport.Compressor
+		wantErr     string
+		wantMetrics []metric
+	}{
+		{
+			msg: "no compression",
+		},
+		{
+			msg:        "fail compression of request",
+			compressor: _badCompressor,
+			wantErr:    "code:internal message:grpc: error while compressing: assert.AnError general error for testing",
+			wantMetrics: []metric{
+				{0, tagsCompression},
+			},
+		},
+		{
+			msg:        "fail decompression of request",
+			compressor: _badDecompressor,
+			wantErr:    "code:internal message:grpc: failed to decompress the received message assert.AnError general error for testing",
+			wantMetrics: []metric{
+				{32777, tagsCompression},
+				{0, tagsDecompression},
+			},
+		},
+		{
+			msg:        "ok, dummy compression",
+			compressor: _goodCompressor,
+			wantMetrics: []metric{
+				{32777, tagsCompression},
+				{32777, tagsDecompression},
+				{0, tagsCompression},
+				{5, tagsCompression},
+				{5, tagsDecompression},
+				{32772, tagsCompression},
+				{32772, tagsDecompression},
+			},
+		},
+		{
+			msg:        "ok, gzip compression",
+			compressor: _gzipCompressor,
+			wantMetrics: []metric{
+				{82, tagsCompression},
+				{82, tagsDecompression},
+				{23, tagsCompression},
+				{23, tagsDecompression},
+				{29, tagsCompression},
+				{29, tagsDecompression},
+				{75, tagsCompression},
+				{75, tagsDecompression},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.msg, func(t *testing.T) {
+			_metrics.reset()
+
+			tt.testEnvOptions.DialOptions = []DialOption{Compressor(tt.compressor)}
+			tt.do(t, func(t *testing.T, e *testEnv) {
+				value := strings.Repeat("a", 32*1024)
+				err := e.SetValueYARPC(context.Background(), "foo", value)
+				if tt.wantErr != "" {
+					assert.Error(t, err)
+					assert.EqualError(t, err, tt.wantErr)
+				} else if assert.NoError(t, err) {
+					getValue, err := e.GetValueYARPC(context.Background(), "foo")
+					require.NoError(t, err)
+					assert.Equal(t, value, getValue)
+				}
+			})
+
+			compressor := ""
+			if tt.compressor != nil {
+				compressor = tt.compressor.Name()
+			}
+			assert.Equal(t, newMetrics(tt.wantMetrics, map[string]string{
+				"compressor": compressor,
+			}), _metrics)
+		})
+	}
+}
+
+type metricCollection struct {
+	metrics []metric
+}
+
+func (c *metricCollection) reset() {
+	c.metrics = c.metrics[:0]
+}
+
+func newMetrics(metrics []metric, tags map[string]string) *metricCollection {
+	c := metricCollection{
+		metrics: make([]metric, len(metrics)),
+	}
+	for i, m := range metrics {
+		c.metrics[i] = metric{
+			bytes: m.bytes,
+			tags:  map[string]string{},
+		}
+		for key, value := range m.tags {
+			c.metrics[i].tags[key] = value
+		}
+		for key, value := range tags {
+			c.metrics[i].tags[key] = value
+		}
+	}
+	return &c
+}
+
+type metric struct {
+	bytes int
+	tags  map[string]string
+}
+
+func (m *metric) Increment(value int) {
+	m.bytes += value
+}
+
+// new creates a new metrics data point and passes returns it as one element slice
+func (c *metricCollection) new(stage, compressor string) *metric {
+	l := len(c.metrics)
+	c.metrics = append(c.metrics, metric{
+		bytes: 0,
+		tags: map[string]string{
+			"compressor": compressor,
+			"stage":      stage,
+		},
+	})
+	return &c.metrics[l]
+}
+
+type counter interface {
+	Increment(value int)
+}
+
+type testCompressor struct {
+	name       string
+	metrics    *metricCollection
+	comperr    error
+	decomperr  error
+	enableGZip bool
+}
+
+type testCompressorBehavior int
+
+const (
+	testCompressorOk = 1 << iota
+	testCompressorFailToCompress
+	testCompressorFailToDecompress
+	testCompressorGzip
+)
+
+func newCompressor(name string, behavior testCompressorBehavior, metrics *metricCollection) *testCompressor {
+	comp := testCompressor{
+		name:    name,
+		metrics: metrics,
+	}
+
+	if behavior&testCompressorFailToCompress != 0 {
+		comp.comperr = assert.AnError
+	}
+
+	if behavior&testCompressorFailToDecompress != 0 {
+		comp.decomperr = assert.AnError
+	}
+
+	if behavior&testCompressorGzip != 0 {
+		comp.enableGZip = true
+	}
+
+	return &comp
+}
+
+func (c *testCompressor) Name() string { return c.name }
+
+func (c *testCompressor) Compress(w io.Writer) (io.WriteCloser, error) {
+	metered := byteMeter{
+		Writer:  w,
+		counter: c.metrics.new("compress", c.name),
+	}
+
+	if c.enableGZip {
+		return gzip.NewWriter(&metered), nil
+	}
+	return &metered, c.comperr
+}
+
+func (c *testCompressor) Decompress(r io.Reader) (io.ReadCloser, error) {
+	metered := byteMeter{
+		Reader:  r,
+		counter: c.metrics.new("decompress", c.name),
+	}
+
+	if c.enableGZip {
+		return gzip.NewReader(&metered)
+	}
+
+	return &metered, c.decomperr
+}
+
+// byteMeter is a test type wrapper that counts the number of bytes transferred within the compressors.
+type byteMeter struct {
+	io.Writer
+	io.Reader
+	counter counter
+}
+
+func (m *byteMeter) Write(p []byte) (int, error) {
+	m.counter.Increment(len(p))
+	return m.Writer.Write(p)
+}
+
+func (m *byteMeter) Read(p []byte) (int, error) {
+	l, err := m.Reader.Read(p)
+	m.counter.Increment(l)
+	return l, err
+}
+
+func (m *byteMeter) Close() error { return nil }
 
 type testEnv struct {
 	Caller              string

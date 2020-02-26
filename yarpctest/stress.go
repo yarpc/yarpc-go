@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -36,6 +36,9 @@ type ListStressTest struct {
 	Workers  int
 	Duration time.Duration
 	Timeout  time.Duration
+	// Latency is the minimum latency of an individual call.
+	// Higher latencies drive up concurrency per worker.
+	Latency time.Duration
 	// LowStress disables membership and connection churn, measuring peer
 	// selection baseline performance without interference.
 	LowStress bool
@@ -70,6 +73,7 @@ func (t ListStressTest) Run(logger Logger) *ListStressTestReport {
 		stop:      make(chan struct{}),
 		reports:   make(chan *ListStressTestReport),
 		timeout:   t.Timeout,
+		latency:   t.Latency,
 		transport: transport,
 		list:      list,
 		logger:    logger,
@@ -184,6 +188,7 @@ type stressor struct {
 	// memory to the test for merging.
 	reports   chan *ListStressTestReport
 	timeout   time.Duration
+	latency   time.Duration
 	transport *FakeTransport
 	list      peer.ChooserList
 	logger    Logger
@@ -307,11 +312,11 @@ Loop:
 		// particular, but this is harmless for all other choosers.
 		shardKey := shardKeys[rng.Int63()&shardKeysMask]
 		ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
-		defer cancel()
 		start := time.Now()
 		peer, onFinish, err := s.list.Choose(ctx, &transport.Request{ShardKey: shardKey})
 		stop := time.Now()
 		if err != nil {
+			cancel()
 			s.logger.Logf("choose error: %s\n", err.Error())
 			report.Errors++
 			continue
@@ -320,6 +325,9 @@ Loop:
 		// based on the identifier of the peer that was selected, to show how
 		// each list behaves in the face of variations in speed of individual
 		// instances.
+		if s.latency > 0 {
+			time.Sleep(s.latency)
+		}
 		onFinish(nil)
 		cancel()
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -37,7 +37,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"go/build"
 	"io"
 	"io/ioutil"
 	"log"
@@ -45,6 +44,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"golang.org/x/tools/go/packages"
 )
 
 func main() {
@@ -60,8 +61,8 @@ var (
 	errNoImportPath = fmt.Errorf("could not determine import path for the Go package in the current directory")
 )
 
-func run(packages []string) error {
-	if len(packages) == 0 {
+func run(args []string) error {
+	if len(args) == 0 {
 		return errUsage
 	}
 
@@ -70,19 +71,32 @@ func run(packages []string) error {
 		return fmt.Errorf("could not determine current directory: %v", err)
 	}
 
-	rootPkg, err := build.ImportDir(cwd, build.ImportMode(0))
+	pkgs, err := packages.Load(&packages.Config{
+		Mode: packages.NeedName,
+		Dir:  cwd,
+	}, ".")
 	if err != nil {
-		return errNoGoPackage
+		return err
 	}
 
-	rootImportPath := rootPkg.ImportPath
+	var rootPkg *packages.Package
+	switch len(pkgs) {
+	case 0:
+		return errNoGoPackage
+	case 1:
+		rootPkg = pkgs[0]
+	default:
+		return fmt.Errorf("found %d Go packagess in %q, expected 1", len(pkgs), cwd)
+	}
+
+	rootImportPath := rootPkg.PkgPath
 	if len(rootImportPath) == 0 {
 		return errNoImportPath
 	}
 
 	// All provided packages must be under rootImport.
 	rootPackagePrefix := rootImportPath + "/"
-	for _, importPath := range packages {
+	for _, importPath := range args {
 		if importPath == rootImportPath {
 			continue
 		}
@@ -109,7 +123,7 @@ func run(packages []string) error {
 		"-covermode=count",
 		fmt.Sprintf("-coverpkg=%v/...", rootImportPath),
 	}
-	testArgs = append(testArgs, packages...)
+	testArgs = append(testArgs, args...)
 	cmd := exec.Command("go", testArgs...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

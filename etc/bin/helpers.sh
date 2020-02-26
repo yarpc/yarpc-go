@@ -1,6 +1,7 @@
 IGNORE_DIRS="\
   internal/examples \
   internal/cover \
+  internal/prototest \
   internal/service-test \
   internal/testutils"
 
@@ -63,7 +64,7 @@ dirnames() {
 }
 
 go_files() {
-  find . -name '*.go' | sed 's/^\.\///' | grep -v -e ^vendor\/ -e ^\.glide\/
+  find . -name '*.go' | sed 's/^\.\///' | grep -v -e '^vendor/'
 }
 
 generated_go_files() {

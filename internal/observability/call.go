@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -74,6 +74,12 @@ func (c call) EndWithAppError(err error, isApplicationError bool) {
 	elapsed := _timeNow().Sub(c.started)
 	c.endLogs(elapsed, err, isApplicationError)
 	c.endStats(elapsed, err, isApplicationError)
+}
+
+// EndWithPanic ends the call with additional panic metrics
+func (c call) EndWithPanic(err error) {
+	c.edge.panics.Inc()
+	c.EndWithAppError(err, true)
 }
 
 func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool) {
@@ -181,7 +187,7 @@ func (c call) EndStreamHandshake() {
 // EndStreamHandshakeWithError should be invoked immediately after attempting to
 // create a stream.
 func (c call) EndStreamHandshakeWithError(err error) {
-	c.logStreamEvent(err, _successStreamOpen, _errorStreamOpen)
+	c.logStreamEvent(err, err == nil, _successStreamOpen, _errorStreamOpen)
 
 	c.edge.calls.Inc()
 	if err == nil {
@@ -196,11 +202,17 @@ func (c call) EndStreamHandshakeWithError(err error) {
 // EndStream should be invoked immediately after a stream closes.
 func (c call) EndStream(err error) {
 	elapsed := _timeNow().Sub(c.started)
-	c.logStreamEvent(err, _successStreamClose, _errorStreamClose, zap.Duration("duration", elapsed))
+	c.logStreamEvent(err, err == nil, _successStreamClose, _errorStreamClose, zap.Duration("duration", elapsed))
 
 	c.edge.streaming.streamsActive.Dec()
 	c.edge.streaming.streamDurations.Observe(elapsed)
 	c.emitStreamError(err)
+}
+
+// EndStreamWithPanic ends the stream call with additional panic metrics
+func (c call) EndStreamWithPanic(err error) {
+	c.edge.panics.Inc()
+	c.EndStream(err)
 }
 
 // This function resembles EndStats for unary calls. However, we do not special
@@ -249,17 +261,20 @@ func (c call) emitStreamError(err error) {
 
 // logStreamEvent is a generic logging function useful for logging stream
 // events.
-func (c call) logStreamEvent(err error, succMsg, errMsg string, extraFields ...zap.Field) {
+func (c call) logStreamEvent(err error, success bool, succMsg, errMsg string, extraFields ...zap.Field) {
 	var ce *zapcore.CheckedEntry
-	if err != nil {
-		ce = c.edge.logger.Check(c.levels.failure, errMsg)
-	} else {
+	// Success is usually only when the error is nil.
+	// The only exception is when emitting an error from ReceiveMessage, which
+	// returns EOF when the stream closes normally.
+	if success {
 		ce = c.edge.logger.Check(c.levels.success, succMsg)
+	} else {
+		ce = c.edge.logger.Check(c.levels.failure, errMsg)
 	}
 
 	fields := []zap.Field{
 		zap.String("rpcType", c.rpcType.String()),
-		zap.Bool("successful", err == nil),
+		zap.Bool("successful", success),
 		c.extract(c.ctx),
 		zap.Error(err), // no-op if err == nil
 	}

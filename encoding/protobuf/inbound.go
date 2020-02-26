@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -123,6 +123,7 @@ func (s *streamHandler) HandleStream(stream *transport.ServerStream) error {
 	protoStream := &ServerStream{
 		ctx:    ctx,
 		stream: stream,
+		codec:  s.codec,
 	}
 	return convertToYARPCError(transportRequest.Meta.Encoding, s.handle(protoStream), s.codec)
 }

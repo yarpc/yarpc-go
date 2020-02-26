@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -150,6 +150,7 @@ type edge struct {
 
 	calls          *metrics.Counter
 	successes      *metrics.Counter
+	panics         *metrics.Counter
 	callerFailures *metrics.CounterVector
 	serverFailures *metrics.CounterVector
 
@@ -205,6 +206,14 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 	})
 	if err != nil {
 		logger.Error("Failed to create successes counter.", zap.Error(err))
+	}
+	panics, err := meter.Counter(metrics.Spec{
+		Name:      "panics",
+		Help:      "Number of RPCs failed because of panic.",
+		ConstTags: tags,
+	})
+	if err != nil {
+		logger.Error("Failed to create panics counter.", zap.Error(err))
 	}
 	callerFailures, err := meter.CounterVector(metrics.Spec{
 		Name:      "caller_failures",
@@ -371,6 +380,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		logger:             logger,
 		calls:              calls,
 		successes:          successes,
+		panics:             panics,
 		callerFailures:     callerFailures,
 		serverFailures:     serverFailures,
 		latencies:          latencies,

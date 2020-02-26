@@ -65,10 +65,15 @@ import:
   subpackages:
   - update-license
 - package: honnef.co/go/tools
+  version: 2019.2.3
   subpackages:
   - cmd/staticcheck
 - package: github.com/gogo/status
   version: ^1.1.0
+# Version 1.2.0 of prometheus/client_golang uses xxhash/v2, which we cannot
+# pull from Glide. Use older versions until we can upgrade to Go modules.
+- package: github.com/prometheus/client_golang
+  version: '>= 0.9, < 1.2.0'
 testImport:
 - package: github.com/stretchr/testify
   # No version pin because some of our dependencies aren't pinning.

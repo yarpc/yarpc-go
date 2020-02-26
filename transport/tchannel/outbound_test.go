@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -37,6 +37,12 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/net/context"
 )
+
+func TestTransportNamer(t *testing.T) {
+	trans, err := NewTransport()
+	require.NoError(t, err)
+	assert.Equal(t, transportName, trans.NewOutbound(nil).TransportName())
+}
 
 func TestOutboundHeaders(t *testing.T) {
 	tests := []struct {

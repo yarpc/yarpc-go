@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -51,15 +51,10 @@ import (
 var (
 	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, `"round-robin" peer list can't wait for peer without a context deadline`)
 	_notRunningErrorFormat  = `"round-robin" peer list is not running: %s`
-	_unavailableErrorFormat = `"round-robin" peer list timed out waiting for peer: %s`
 )
 
 func newNotRunningError(err string) error {
 	return yarpcerrors.FailedPreconditionErrorf(_notRunningErrorFormat, err)
-}
-
-func newUnavailableError(err error) error {
-	return yarpcerrors.UnavailableErrorf(_unavailableErrorFormat, err.Error())
 }
 
 func TestRoundRobinList(t *testing.T) {
@@ -309,7 +304,7 @@ func TestRoundRobinList(t *testing.T) {
 				StartAction{},
 				ChooseAction{
 					InputContextTimeout: 20 * time.Millisecond,
-					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+					ExpectedErrMsg:      "peer list has no peers",
 				},
 			},
 			expectedRunning: true,
@@ -516,7 +511,7 @@ func TestRoundRobinList(t *testing.T) {
 					Actions: []PeerListAction{
 						ChooseAction{
 							InputContextTimeout: 10 * time.Millisecond,
-							ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+							ExpectedErrMsg:      "peer list has no peers",
 						},
 						UpdateAction{AddedPeerIDs: []string{"1"}},
 					},
@@ -586,7 +581,7 @@ func TestRoundRobinList(t *testing.T) {
 				UpdateAction{RemovedPeerIDs: []string{"1"}},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
-					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+					ExpectedErrMsg:      "has no peers",
 				},
 			},
 			expectedRunning: true,
@@ -600,7 +595,7 @@ func TestRoundRobinList(t *testing.T) {
 				UpdateAction{AddedPeerIDs: []string{"1"}},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
-					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+					ExpectedErrMsg:      "has 1 peer but it is not responsive",
 				},
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Available},
 				ChooseAction{ExpectedPeer: "1"},
@@ -631,7 +626,7 @@ func TestRoundRobinList(t *testing.T) {
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Unavailable},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
-					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+					ExpectedErrMsg:      "has 1 peer but it is not responsive",
 				},
 			},
 			expectedRunning: true,
@@ -646,7 +641,7 @@ func TestRoundRobinList(t *testing.T) {
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Unavailable},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
-					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
+					ExpectedErrMsg:      "has 1 peer but it is not responsive",
 				},
 			},
 			expectedRunning: true,
@@ -913,21 +908,21 @@ func TestRoundRobinList(t *testing.T) {
 			}
 			ApplyPeerListActions(t, pl, tt.peerListActions, deps)
 
-			assert.Equal(t, len(tt.expectedAvailablePeers), pl.NumAvailable(), "invalid available peerlist size")
+			assert.Equal(t, len(tt.expectedAvailablePeers), pl.list.NumAvailable(), "invalid available peerlist size")
 			for _, expectedRingPeer := range tt.expectedAvailablePeers {
-				ok := pl.Available(hostport.PeerIdentifier(expectedRingPeer))
+				ok := pl.list.Available(hostport.PeerIdentifier(expectedRingPeer))
 				assert.True(t, ok, fmt.Sprintf("expected peer: %s was not in available peerlist", expectedRingPeer))
 			}
 
-			assert.Equal(t, len(tt.expectedUnavailablePeers), pl.NumUnavailable(), "invalid unavailable peerlist size")
+			assert.Equal(t, len(tt.expectedUnavailablePeers), pl.list.NumUnavailable(), "invalid unavailable peerlist size")
 			for _, expectedUnavailablePeer := range tt.expectedUnavailablePeers {
-				ok := !pl.Available(hostport.PeerIdentifier(expectedUnavailablePeer))
+				ok := !pl.list.Available(hostport.PeerIdentifier(expectedUnavailablePeer))
 				assert.True(t, ok, fmt.Sprintf("expected peer: %s was not in unavailable peerlist", expectedUnavailablePeer))
 			}
 
-			assert.Equal(t, len(tt.expectedUninitializedPeers), pl.NumUninitialized(), "invalid uninitialized peerlist size")
+			assert.Equal(t, len(tt.expectedUninitializedPeers), pl.list.NumUninitialized(), "invalid uninitialized peerlist size")
 			for _, expectedUninitializedPeer := range tt.expectedUninitializedPeers {
-				ok := pl.Uninitialized(hostport.PeerIdentifier(expectedUninitializedPeer))
+				ok := pl.list.Uninitialized(hostport.PeerIdentifier(expectedUninitializedPeer))
 				assert.True(t, ok, fmt.Sprintf("expected peer: %s was not in uninitialized peerlist", expectedUninitializedPeer))
 			}
 
@@ -1042,5 +1037,5 @@ func TestFailFastConfig(t *testing.T) {
 		Body:      strings.NewReader("nada"),
 	})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "no peer available")
+	assert.Contains(t, err.Error(), "has 1 peer but it is not responsive")
 }

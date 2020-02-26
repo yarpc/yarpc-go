@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,9 +25,11 @@ import (
 	"fmt"
 	"math/rand"
 	"sort"
+	"strconv"
 	"sync"
 	"time"
 
+	"go.uber.org/atomic"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -188,6 +190,8 @@ type List struct {
 
 	peers              map[string]*peerFacade
 	offlinePeers       map[string]peer.Identifier
+	numPeers           atomic.Int32
+	numAvailable       atomic.Int32
 	implementation     Implementation
 	peerAvailableEvent chan struct{}
 	transport          peer.Transport
@@ -340,6 +344,7 @@ func (pl *List) add(id peer.Identifier) error {
 
 	pf.peer = p
 	pl.peers[addr] = pf
+	pl.numPeers.Inc()
 	pl.notifyStatusChanged(pf)
 
 	return nil
@@ -369,11 +374,13 @@ func (pl *List) remove(id peer.Identifier) error {
 	}
 
 	if pf.status.ConnectionStatus == peer.Available {
+		pl.numAvailable.Dec()
 		pl.implementation.Remove(pf, pf.id, pf.subscriber)
 		pf.subscriber = nil
 	}
 	pf.status.ConnectionStatus = peer.Unavailable
 
+	pl.numPeers.Dec()
 	delete(pl.peers, addr)
 
 	// The transport must not call back before returning.
@@ -428,7 +435,7 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 			return pf.peer, pf.onFinish, nil
 		}
 		if pl.failFast {
-			return nil, nil, yarpcerrors.Newf(yarpcerrors.CodeUnavailable, "%q peer list has no peer available", pl.name)
+			return nil, nil, pl.newUnavailableError(nil)
 		}
 		if err := pl.waitForPeerAddedEvent(ctx); err != nil {
 			return nil, nil, err
@@ -511,8 +518,10 @@ func (pl *List) notifyStatusChanged(pf *peerFacade) {
 		case peer.Available:
 			sub := pf.list.implementation.Add(pf, pf.id)
 			pf.subscriber = sub
+			pl.numAvailable.Inc()
 			pf.list.notifyPeerAvailable()
 		default:
+			pl.numAvailable.Dec()
 			pf.list.implementation.Remove(pf, pf.id, pf.subscriber)
 			pf.subscriber = nil
 		}
@@ -548,31 +557,48 @@ func (pl *List) newNoContextDeadlineError() error {
 }
 
 func (pl *List) newUnavailableError(err error) error {
-	return yarpcerrors.Newf(yarpcerrors.CodeUnavailable, "%q peer list timed out waiting for peer: %s", pl.name, err.Error())
+	return yarpcerrors.Newf(yarpcerrors.CodeUnavailable, "%q peer list %s", pl.name, pl.unavailableErrorMessage(err))
 }
 
-func (pl *List) countPeersWithStatus(status peer.ConnectionStatus) int {
-	pl.lock.RLock()
-	defer pl.lock.RUnlock()
-
-	num := 0
-	for _, pf := range pl.peers {
-		if pf.status.ConnectionStatus == status {
-			num++
-		}
+func (pl *List) unavailableErrorMessage(err error) string {
+	num := int(pl.numPeers.Load())
+	if num == 0 {
+		return "has no peers, " + pl.noPeersMessage(err)
 	}
-	return num
+	if num == 1 {
+		return "has 1 peer but it is not responsive, " + pl.unavailablePeersMessage(err)
+	}
+	return "has " + strconv.Itoa(num) + " peers but none are responsive, " + pl.unavailablePeersMessage(err)
+}
+
+func (pl *List) noPeersMessage(err error) string {
+	if pl.failFast {
+		return "did not wait for peers to be added (fail-fast is enabled)"
+	}
+	return "waited for peers to be added but timed out (fail-fast is not enabled): " + err.Error()
+}
+
+func (pl *List) unavailablePeersMessage(err error) string {
+	if pl.failFast {
+		return "did not wait for a connection to open (fail-fast is enabled)"
+	}
+	return "timed out waiting for a connection to open (fail-fast is not enabled): " + err.Error()
 }
 
 // NumAvailable returns how many peers are available.
 func (pl *List) NumAvailable() int {
-	return pl.countPeersWithStatus(peer.Available)
+	return int(pl.numAvailable.Load())
 }
 
 // NumUnavailable returns how many peers are unavailable while the list is
 // running.
 func (pl *List) NumUnavailable() int {
-	return pl.countPeersWithStatus(peer.Unavailable)
+	// Although we have atomics, we still need the lock to capture a consistent
+	// snapshot.
+	pl.lock.RLock()
+	defer pl.lock.RUnlock()
+
+	return int(pl.numPeers.Load() - pl.numAvailable.Load())
 }
 
 // NumUninitialized returns how many peers are unavailable because the peer

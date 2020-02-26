@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/abstractpeer"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 )
@@ -36,7 +37,6 @@ type grpcPeer struct {
 	ctx        context.Context
 	cancel     context.CancelFunc
 	clientConn *grpc.ClientConn
-	changedC   chan struct{}
 	stoppedC   chan struct{}
 }
 
@@ -63,12 +63,10 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 		ctx:        ctx,
 		cancel:     cancel,
 		clientConn: clientConn,
-		changedC:   make(chan struct{}),
 		stoppedC:   make(chan struct{}),
 	}
 
 	go grpcPeer.monitorConnectionStatus()
-	go grpcPeer.monitorPendingRequestCount()
 
 	return grpcPeer, nil
 }
@@ -93,41 +91,25 @@ func (p *grpcPeer) monitorConnectionStatus() {
 }
 
 func (p *grpcPeer) setConnectionStatus(status peer.ConnectionStatus) {
+	p.t.options.logger.Debug(
+		"peer status change",
+		zap.String("status", status.String()),
+		zap.String("peer", p.Peer.Identifier()),
+		zap.String("transport", "grpc"),
+	)
 	p.Peer.SetStatus(status)
 	p.Peer.NotifyStatusChanged()
 }
 
-func (p *grpcPeer) monitorPendingRequestCount() {
-	for {
-		select {
-		case <-p.ctx.Done():
-			return
-		case <-p.changedC:
-			p.Peer.NotifyStatusChanged()
-		}
-	}
-}
+// StartRequest and EndRequest are no-ops now.
+// They previously aggregated pending request count from all subscibed peer
+// lists and distributed change notifications.
+// This was fraught with concurrency hazards so we moved pending request count
+// tracking into the lists themselves.
 
-func (p *grpcPeer) notifyPendingRequestCountChanged() {
-	// kick the pending request count change channel.
-	// monitorPendingRequestCount broadcasts changes to subscribers so
-	// StartRequest() and EndRequest() don't reply to peer lists on the stack,
-	// possibly causing deadlock.
-	select {
-	case p.changedC <- struct{}{}:
-	default:
-	}
-}
+func (p *grpcPeer) StartRequest() {}
 
-func (p *grpcPeer) StartRequest() {
-	p.Peer.StartRequest()
-	p.notifyPendingRequestCountChanged()
-}
-
-func (p *grpcPeer) EndRequest() {
-	p.Peer.EndRequest()
-	p.notifyPendingRequestCountChanged()
-}
+func (p *grpcPeer) EndRequest() {}
 
 func (p *grpcPeer) stop() {
 	p.cancel()

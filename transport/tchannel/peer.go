@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/abstractpeer"
+	"go.uber.org/zap"
 )
 
 type tchannelPeer struct {
@@ -34,7 +35,6 @@ type tchannelPeer struct {
 	transport *Transport
 	addr      string
 	changed   chan struct{}
-	pending   chan struct{}
 	released  chan struct{}
 	timer     *time.Timer
 }
@@ -114,6 +114,12 @@ func (p *tchannelPeer) release() {
 }
 
 func (p *tchannelPeer) setConnectionStatus(status peer.ConnectionStatus) {
+	p.transport.logger.Debug(
+		"peer status change",
+		zap.String("status", status.String()),
+		zap.String("peer", p.Peer.Identifier()),
+		zap.String("tchannel", "tchannel"),
+	)
 	p.Peer.SetStatus(status)
 	p.Peer.NotifyStatusChanged()
 }
@@ -159,34 +165,12 @@ func (p *tchannelPeer) sleep(delay time.Duration) (completed bool) {
 	return false
 }
 
-func (p *tchannelPeer) monitorPendingRequestCount() {
-	for {
-		select {
-		case <-p.released:
-			return
-		case <-p.pending:
-			p.Peer.NotifyStatusChanged()
-		}
-	}
-}
+// StartRequest and EndRequest are no-ops now.
+// They previously aggregated pending request count from all subscibed peer
+// lists and distributed change notifications.
+// This was fraught with concurrency hazards so we moved pending request count
+// tracking into the lists themselves.
 
-func (p *tchannelPeer) notifyPendingRequestCountChanged() {
-	// kick the pending request count change channel.
-	// monitorPendingRequestCount broadcasts changes to subscribers so
-	// StartRequest() and EndRequest() don't reply to peer lists on the stack,
-	// possibly causing deadlock.
-	select {
-	case p.pending <- struct{}{}:
-	default:
-	}
-}
+func (p *tchannelPeer) StartRequest() {}
 
-func (p *tchannelPeer) StartRequest() {
-	p.Peer.StartRequest()
-	p.notifyPendingRequestCountChanged()
-}
-
-func (p *tchannelPeer) EndRequest() {
-	p.Peer.EndRequest()
-	p.notifyPendingRequestCountChanged()
-}
+func (p *tchannelPeer) EndRequest() {}

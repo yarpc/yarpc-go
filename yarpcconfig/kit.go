@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,7 @@ import (
 	"sort"
 	"strings"
 
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/interpolate"
 )
 
@@ -119,4 +120,10 @@ func (k *Kit) peerListUpdaterSpecNames() (names []string) {
 	}
 	sort.Strings(names)
 	return
+}
+
+// Compressor returns the known compressor for the given name or nil if the
+// named compressor is not known.
+func (k *Kit) Compressor(name string) transport.Compressor {
+	return k.c.knownCompressors[name]
 }

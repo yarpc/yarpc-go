@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -66,6 +66,11 @@ func (t *Transport) NewOutbound(chooser peer.Chooser) *Outbound {
 func (t *Transport) NewSingleOutbound(addr string) *Outbound {
 	chooser := peerchooser.NewSingle(hostport.PeerIdentifier(addr), t)
 	return t.NewOutbound(chooser)
+}
+
+// TransportName is the transport name that will be set on `transport.Request` struct.
+func (o *Outbound) TransportName() string {
+	return transportName
 }
 
 // Chooser returns the outbound's peer chooser.

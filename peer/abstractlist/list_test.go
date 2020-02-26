@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -293,7 +293,7 @@ func TestFailWait(t *testing.T) {
 
 		_, _, err := list.Choose(ctx, &transport.Request{})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "peer list timed out waiting for peer: context deadline exceeded")
+		assert.Contains(t, err.Error(), "has 1 peer but it is not responsive")
 	}
 }
 
@@ -309,7 +309,7 @@ func TestFailFast(t *testing.T) {
 
 	_, _, err := list.Choose(ctx, &transport.Request{})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "no peer available")
+	assert.Contains(t, err.Error(), "has no peers")
 }
 
 func TestIntrospect(t *testing.T) {

@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -31,6 +31,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/examples/streaming"
 	"go.uber.org/yarpc/transport/grpc"
+	"go.uber.org/zap"
 )
 
 type handler struct {
@@ -78,16 +79,21 @@ func main() {
 }
 
 func do() error {
+	logger := zap.NewExample()
+
 	var inbound transport.Inbound
 	listener, err := net.Listen("tcp", "127.0.0.1:24039")
 	if err != nil {
 		return err
 	}
-	inbound = grpc.NewTransport().NewInbound(listener)
+	inbound = grpc.NewTransport(grpc.Logger(logger)).NewInbound(listener)
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name:     "keyvalue",
 		Inbounds: yarpc.Inbounds{inbound},
+		Logging: yarpc.LoggingConfig{
+			Zap: logger,
+		},
 	})
 
 	handler := &handler{}

@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package protobuf
+package protobuf_test
 
 import (
 	"bytes"
@@ -33,6 +33,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/encoding/protobuf/internal/testpb"
 )
 
@@ -82,7 +83,7 @@ func TestInboundAnyResolver(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := NewUnaryHandler(UnaryHandlerParams{
+			handler := protobuf.NewUnaryHandler(protobuf.UnaryHandlerParams{
 				Handle: func(context.Context, proto.Message) (proto.Message, error) {
 					testMessage := &testpb.TestMessage{Value: "foo-bar-baz"}
 
@@ -96,7 +97,7 @@ func TestInboundAnyResolver(t *testing.T) {
 			})
 
 			req := &transport.Request{
-				Encoding: JSONEncoding,
+				Encoding: protobuf.JSONEncoding,
 				Body:     bytes.NewReader(nil),
 			}
 

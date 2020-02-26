@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -49,6 +49,10 @@ func TestNewOutbound(t *testing.T) {
 	out := NewOutbound(chooser)
 	require.NotNil(t, out)
 	assert.Equal(t, chooser, out.Chooser())
+}
+
+func TestTransportNamer(t *testing.T) {
+	assert.Equal(t, transportName, NewOutbound(nil).TransportName())
 }
 
 func TestNewSingleOutboundPanic(t *testing.T) {

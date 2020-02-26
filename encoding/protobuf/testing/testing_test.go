@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -32,10 +32,10 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/protobuf"
-	"go.uber.org/yarpc/internal/examples/protobuf/example"
-	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
-	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
 	"go.uber.org/yarpc/internal/grpcctx"
+	"go.uber.org/yarpc/internal/prototest/example"
+	"go.uber.org/yarpc/internal/prototest/examplepb"
+	"go.uber.org/yarpc/internal/prototest/exampleutil"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/testutils"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"

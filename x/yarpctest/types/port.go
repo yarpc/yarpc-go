@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +21,6 @@
 package types
 
 import (
-	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -60,7 +59,7 @@ func (p *PortProvider) NamedPort(id string) *Port {
 }
 
 func newPort(t testing.TB) *Port {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	pieces := strings.Split(listener.Addr().String(), ":")
 	port, err := strconv.ParseInt(pieces[len(pieces)-1], 10, 0)

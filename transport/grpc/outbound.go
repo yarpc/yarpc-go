@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -67,6 +67,12 @@ func newOutbound(t *Transport, peerChooser peer.Chooser, options ...OutboundOpti
 		peerChooser: peerChooser,
 		options:     newOutboundOptions(options),
 	}
+}
+
+// TransportName is the transport name that will be set on `transport.Request`
+// struct.
+func (o *Outbound) TransportName() string {
+	return transportName
 }
 
 // Start implements transport.Lifecycle#Start.

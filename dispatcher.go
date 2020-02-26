@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,7 @@ import (
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal"
+	"go.uber.org/yarpc/internal/firstoutboundmiddleware"
 	"go.uber.org/yarpc/internal/inboundmiddleware"
 	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/internal/outboundmiddleware"
@@ -80,6 +81,7 @@ func NewDispatcher(cfg Config) *Dispatcher {
 
 	meter, stopMeter := cfg.Metrics.scope(cfg.Name, logger)
 	cfg = addObservingMiddleware(cfg, meter, logger, extractor)
+	cfg = addFirstOutboundMiddleware(cfg)
 
 	return &Dispatcher{
 		name:              cfg.Name,
@@ -134,6 +136,16 @@ func addObservingMiddleware(cfg Config, meter *metrics.Scope, logger *zap.Logger
 	return cfg
 }
 
+// Add the first outbound middleware, which ensures that `transport.Request`
+// will have appropriate fields.
+func addFirstOutboundMiddleware(cfg Config) Config {
+	first := firstoutboundmiddleware.New()
+	cfg.OutboundMiddleware.Unary = outboundmiddleware.UnaryChain(first, cfg.OutboundMiddleware.Unary)
+	cfg.OutboundMiddleware.Oneway = outboundmiddleware.OnewayChain(first, cfg.OutboundMiddleware.Oneway)
+	cfg.OutboundMiddleware.Stream = outboundmiddleware.StreamChain(first, cfg.OutboundMiddleware.Stream)
+	return cfg
+}
+
 // convertOutbounds applies outbound middleware and creates validator outbounds
 func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
 	outboundSpecs := make(Outbounds, len(outbounds))
@@ -151,19 +163,20 @@ func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
 		serviceName := outboundKey
 
 		// apply outbound middleware and create ValidatorOutbounds
+
 		if outs.Unary != nil {
 			unaryOutbound = middleware.ApplyUnaryOutbound(outs.Unary, mw.Unary)
-			unaryOutbound = request.UnaryValidatorOutbound{UnaryOutbound: unaryOutbound}
+			unaryOutbound = request.UnaryValidatorOutbound{UnaryOutbound: unaryOutbound, Namer: namerOrNil(unaryOutbound)}
 		}
 
 		if outs.Oneway != nil {
 			onewayOutbound = middleware.ApplyOnewayOutbound(outs.Oneway, mw.Oneway)
-			onewayOutbound = request.OnewayValidatorOutbound{OnewayOutbound: onewayOutbound}
+			onewayOutbound = request.OnewayValidatorOutbound{OnewayOutbound: onewayOutbound, Namer: namerOrNil(onewayOutbound)}
 		}
 
 		if outs.Stream != nil {
 			streamOutbound = middleware.ApplyStreamOutbound(outs.Stream, mw.Stream)
-			streamOutbound = request.StreamValidatorOutbound{StreamOutbound: streamOutbound}
+			streamOutbound = request.StreamValidatorOutbound{StreamOutbound: streamOutbound, Namer: namerOrNil(streamOutbound)}
 		}
 
 		if outs.ServiceName != "" {
@@ -179,6 +192,13 @@ func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
 	}
 
 	return outboundSpecs
+}
+
+func namerOrNil(o transport.Outbound) (namer transport.Namer) {
+	if n, ok := o.(transport.Namer); ok {
+		namer = n
+	}
+	return
 }
 
 // collectTransports iterates over all inbounds and outbounds and collects all

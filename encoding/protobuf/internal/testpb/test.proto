@@ -8,3 +8,7 @@ message TestMessage {
   string value = 1;
 }
 
+service Test {
+  rpc Unary(TestMessage) returns (TestMessage);
+  rpc Duplex(stream TestMessage) returns (stream TestMessage);
+}

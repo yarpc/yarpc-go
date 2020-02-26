@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -91,6 +91,7 @@ type ChooseAction struct {
 	InputRequest        *transport.Request
 	ExpectedPeer        string
 	ExpectedErr         error
+	ExpectedErrMsg      string
 }
 
 // Apply runs "Choose" on the peerList and validates the peer && error
@@ -114,6 +115,12 @@ func (a ChooseAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) 
 	p, finish, err := pl.Choose(ctx, a.InputRequest)
 	if err == nil {
 		finish(nil)
+	}
+
+	if a.ExpectedErrMsg != "" {
+		assert.Nil(t, p)
+		assert.Contains(t, err.Error(), a.ExpectedErrMsg)
+		return
 	}
 
 	if a.ExpectedErr != nil {

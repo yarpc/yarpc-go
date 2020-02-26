@@ -21,6 +21,8 @@ generate_stringer() {
   stringer "-type=${1}" "${2}"
 }
 
+GOGO_PROTO_DIR=$(go mod download -json github.com/gogo/protobuf | jq -r .Dir)
+
 # Run protoc
 #
 # $1: plugin
@@ -28,8 +30,7 @@ generate_stringer() {
 # $3: other options
 protoc_with_imports() {
   protoc \
-    -I vendor \
-    -I vendor/github.com/gogo/protobuf/protobuf \
+    -I "$GOGO_PROTO_DIR/protobuf" \
     -I . \
     "--${1}_out=${2}Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/protoc-gen-gogo/descriptor,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto,Myarpcproto/yarpc.proto=go.uber.org/yarpc/yarpcproto,Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types:." \
   "${@:3}"
@@ -87,30 +88,31 @@ generate_stringer ConnectionStatus ./api/peer
 generate_stringer State ./pkg/lifecycle
 generate_stringer Type ./api/transport
 
-thriftrw --plugin=yarpc --out=internal/crossdock/thrift internal/crossdock/thrift/echo.thrift
-thriftrw --plugin=yarpc --out=internal/crossdock/thrift internal/crossdock/thrift/oneway.thrift
-thriftrw --plugin=yarpc --out=internal/crossdock/thrift internal/crossdock/thrift/gauntlet.thrift
-thriftrw --plugin=yarpc --out=internal/examples/thrift-oneway internal/examples/thrift-oneway/sink.thrift
-thriftrw --plugin=yarpc --out=internal/examples/thrift-hello/hello internal/examples/thrift-hello/hello/echo.thrift
-thriftrw --plugin=yarpc --out=internal/examples/thrift-keyvalue/keyvalue internal/examples/thrift-keyvalue/keyvalue/kv.thrift
-thriftrw --out=encoding/thrift encoding/thrift/internal.thrift
-thriftrw --out=serialize serialize/internal.thrift
+thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/crossdock/thrift --out=internal/crossdock/thrift internal/crossdock/thrift/echo.thrift
+thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/crossdock/thrift --out=internal/crossdock/thrift internal/crossdock/thrift/oneway.thrift
+thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/crossdock/thrift --out=internal/crossdock/thrift internal/crossdock/thrift/gauntlet.thrift
+thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/examples/thrift-oneway --out=internal/examples/thrift-oneway internal/examples/thrift-oneway/sink.thrift
+thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/examples/thrift-hello/hello --out=internal/examples/thrift-hello/hello internal/examples/thrift-hello/hello/echo.thrift
+thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue --out=internal/examples/thrift-keyvalue/keyvalue internal/examples/thrift-keyvalue/keyvalue/kv.thrift
+thriftrw --pkg-prefix=go.uber.org/yarpc/encoding/thrift --out=encoding/thrift encoding/thrift/internal.thrift
+thriftrw --pkg-prefix=go.uber.org/yarpc/serialize --out=serialize serialize/internal.thrift
 
-thriftrw --no-recurse --plugin=yarpc --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends.thrift
-thriftrw --no-recurse --plugin=yarpc --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common.thrift
-thriftrw --no-recurse --plugin=yarpc --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic.thrift
-thriftrw --no-recurse --plugin="yarpc --sanitize-tchannel" --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather.thrift
+thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends.thrift
+thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common.thrift
+thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic.thrift
+thriftrw --no-recurse --plugin="yarpc --sanitize-tchannel" --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather.thrift
 
 thrift-gen --generateThrift --outputDir internal/crossdock/thrift/gen-go --inputFile internal/crossdock/thrift/echo.thrift
 thrift-gen --generateThrift --outputDir internal/crossdock/thrift/gen-go --inputFile internal/crossdock/thrift/gauntlet_tchannel.thrift | strip_thrift_warnings
 
 thrift --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift --out internal/crossdock/thrift/gen-go internal/crossdock/thrift/gauntlet_apache.thrift | strip_thrift_warnings
 
-protoc_go encoding/protobuf/internal/testpb/test.proto
+protoc_all encoding/protobuf/internal/testpb/test.proto
 protoc_go yarpcproto/yarpc.proto
 protoc_all internal/examples/protobuf/examplepb/example.proto
 protoc_all internal/crossdock/crossdockpb/crossdock.proto
 protoc_all internal/examples/streaming/stream.proto
+protoc_all internal/prototest/examplepb/example.proto
 
 ragel -Z -G2 -o internal/interpolate/parse.go internal/interpolate/parse.rl
 gofmt -s -w internal/interpolate/parse.go

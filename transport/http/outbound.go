@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -46,6 +46,7 @@ import (
 
 // this ensures the HTTP outbound implements both transport.Outbound interfaces
 var (
+	_ transport.Namer                      = (*Outbound)(nil)
 	_ transport.UnaryOutbound              = (*Outbound)(nil)
 	_ transport.OnewayOutbound             = (*Outbound)(nil)
 	_ introspection.IntrospectableOutbound = (*Outbound)(nil)
@@ -166,6 +167,11 @@ type Outbound struct {
 
 	// should only be false in testing
 	bothResponseError bool
+}
+
+// TransportName is the transport name that will be set on `transport.Request` struct.
+func (o *Outbound) TransportName() string {
+	return transportName
 }
 
 // setURLTemplate configures an alternate URL template.

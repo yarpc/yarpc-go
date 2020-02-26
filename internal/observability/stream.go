@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,7 @@ package observability
 
 import (
 	"context"
+	"io"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/zap"
@@ -80,7 +81,7 @@ func (c call) WrapServerStream(stream *transport.ServerStream) *transport.Server
 
 func (s *streamWrapper) SendMessage(ctx context.Context, msg *transport.StreamMessage) error {
 	err := s.StreamCloser.SendMessage(ctx, msg)
-	s.call.logStreamEvent(err, _successfulStreamSend, _errorStreamSend)
+	s.call.logStreamEvent(err, err == nil, _successfulStreamSend, _errorStreamSend)
 
 	s.edge.sends.Inc()
 	if err == nil {
@@ -98,12 +99,17 @@ func (s *streamWrapper) SendMessage(ctx context.Context, msg *transport.StreamMe
 
 func (s *streamWrapper) ReceiveMessage(ctx context.Context) (*transport.StreamMessage, error) {
 	msg, err := s.StreamCloser.ReceiveMessage(ctx)
-	s.call.logStreamEvent(err, _successfulStreamReceive, _errorStreamReceive)
+	// Receiving EOF does not constitute an error for the purposes of metrics and alerts.
+	// This is the only special case.
+	// All other log events treat EOF as an error, including when sending a
+	// message or concluding a handshake.
+	success := err == nil || err == io.EOF
+	s.call.logStreamEvent(err, success, _successfulStreamReceive, _errorStreamReceive)
 
 	s.edge.receives.Inc()
-	if err == nil {
+	if success {
 		s.edge.receiveSuccesses.Inc()
-		return msg, nil
+		return msg, err
 	}
 
 	if recvFailureCounter, err2 := s.edge.receiveFailures.Get(_error, errToMetricString(err)); err2 != nil {

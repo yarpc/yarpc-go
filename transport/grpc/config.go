@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -150,6 +150,7 @@ func (c InboundTLSConfig) newInboundCredentials() (credentials.TransportCredenti
 //        address: ":443"
 //        tls:
 //          enabled: true
+//        compressor: gzip
 //
 type OutboundConfig struct {
 	yarpcconfig.PeerChooser
@@ -157,10 +158,14 @@ type OutboundConfig struct {
 	// Address to connect to if no peer options set.
 	Address string            `config:"address,interpolate"`
 	TLS     OutboundTLSConfig `config:"tls"`
+	// Compressor to use by default if the server side supports it
+	Compressor string `config:"compressor"`
 }
 
-func (c OutboundConfig) dialOptions() []DialOption {
-	return c.TLS.dialOptions()
+func (c OutboundConfig) dialOptions(kit *yarpcconfig.Kit) []DialOption {
+	opts := c.TLS.dialOptions()
+	opts = append(opts, Compressor(kit.Compressor(c.Compressor)))
+	return opts
 }
 
 // OutboundTLSConfig configures TLS for a gRPC outbound.
@@ -255,7 +260,7 @@ func (t *transportSpec) buildOutbound(outboundConfig *OutboundConfig, tr transpo
 		return nil, newTransportCastError(tr)
 	}
 
-	dialer := trans.NewDialer(outboundConfig.dialOptions()...)
+	dialer := trans.NewDialer(outboundConfig.dialOptions(kit)...)
 
 	var chooser peer.Chooser
 	if outboundConfig.Empty() {

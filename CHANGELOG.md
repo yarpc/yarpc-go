@@ -4,6 +4,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.43.0] - 2020-02-25
+### Added
+- gRPC now supports compression.
+  The packages `compressor/gzip` and `compressor/snappy` provide
+  compressors accepted by the gRPC `Compressor` dialer option.
+- The `peer/hashring32` package now provides support for consistent hashing
+  that is compatible with RingPop hash ring topologies.
+  This peer selection strategy uses the `ShardKey` call option to
+  pin traffic to an arbitrary peer that is relatively stable as the peer list
+  membership changes.
+- Observability middleware now emits metrics for panics that occur on the stack
+  of an inbound call handler.
+- The `transporttest` package now provides a `Pipe` constructor, which creates
+  a bound pair of transport layer streams, for testing streaming protocols like
+  gRPC.
+- The `yarpctest.FakeOutbound` can now send requests to a `transport.Router`.
+  This allows end to end testing with a client and server in memory.
+  The `OutboundCallOverride`, `OutboundCallOnewayOverride` (new), and
+  `OutboundCallStreamOverride` (new) are now a complete set that allow tests to
+  hook any of the call behaviors.
+- All outbounds now implement `TransportName` and a new `transport.Namer`
+  interface.
+  This will allow outbound observability middleware to carry the transport name
+  in metrics properly.
+### Changed
+- This change reduces the API surface of the peer list implementations to
+  remove a previously public embedded type and replace it with implementations
+  of the underlying interfaces.
+  The new type does not provide all of the public interface of the previous
+  concrete types.
+  However, we expect that in practice, peer lists are used as either peer.List,
+  peer.Chooser, or for the private introspection interface.
+- Peer list peer unavailability errors now provide additional context including
+  the number of assigned peers and whether fail-fast is enabled.
+### Fixed
+- Fixed Streaming Protobuf-flavored-JSON nil pointer panic.
+- Log entries for EOF stream messages are now considered successes to avoid
+  setting off false alarms.
+  The successful log entries still carry the "error" field, which will reflect
+  the EOF error.
+
 ## [1.42.1] - 2019-11-27 (Gobble)
 ### Fixed
 - Simplified the flow of status change notifications for the gRPC and TChannel
@@ -1144,6 +1185,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[1.43.0]: https://github.com/yarpc/yarpc-go/compare/v1.42.1...v1.43.0
 [1.42.1]: https://github.com/yarpc/yarpc-go/compare/v1.42.0...v1.42.1
 [1.42.0]: https://github.com/yarpc/yarpc-go/compare/v1.41.0...v1.42.0
 [1.41.0]: https://github.com/yarpc/yarpc-go/compare/v1.40.0...v1.41.0

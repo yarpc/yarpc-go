@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,5 +22,5 @@ package testing
 
 import (
 	// this is to make sure etc/bin/cover.sh picks this up with .Deps
-	_ "go.uber.org/yarpc/internal/examples/protobuf/example"
+	_ "go.uber.org/yarpc/internal/prototest/example"
 )

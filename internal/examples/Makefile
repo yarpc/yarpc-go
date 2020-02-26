@@ -1,10 +1,12 @@
+export GOBIN ?= $(shell pwd)/bin
+
 ifdef RUN
 SERVICE_TEST_FLAGS += --no-validate-output
 endif
 ifdef V
 SERVICE_TEST_FLAGS += --debug
 endif
-SERVICE_TEST := service-test $(SERVICE_TEST_FLAGS)
+SERVICE_TEST := $(GOBIN)/service-test $(SERVICE_TEST_FLAGS)
 
 .PHONY: all
 all: \
@@ -24,7 +26,7 @@ all: \
 
 .PHONY: install
 install:
-	go install ../service-test
+	cd .. && go install go.uber.org/yarpc/internal/service-test
 
 .PHONY: build-json-keyvalue
 build-json-keyvalue:
