@@ -22,11 +22,17 @@ package tchannel_test
 
 import (
 	"context"
+	"errors"
+	"net"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/peer/peertest"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/x/yarpctest"
 	"go.uber.org/yarpc/x/yarpctest/api"
 	"go.uber.org/yarpc/x/yarpctest/types"
@@ -66,4 +72,29 @@ func TestHandleResourceExhausted(t *testing.T) {
 		10,
 	)
 	requests.Run(t)
+}
+
+func TestDialerOption(t *testing.T) {
+	customDialerErr := errors.New("error from custom dialer function")
+
+	trans, err := tchannel.NewTransport(
+		tchannel.ServiceName("foo-service"),
+		tchannel.Dialer(
+			func(ctx context.Context, network, hostPort string) (net.Conn, error) {
+				return nil, customDialerErr
+			}))
+	require.NoError(t, err)
+	require.NoError(t, trans.Start())
+	defer func() { assert.NoError(t, trans.Stop()) }()
+
+	out := trans.NewOutbound(peer.NewSingle(peertest.MockPeerIdentifier("bar-peer"), trans))
+	require.NoError(t, out.Start())
+	defer func() { assert.NoError(t, out.Stop()) }()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	_, err = out.Call(ctx, &transport.Request{Service: "bar-service"})
+	require.Error(t, err, "expected dialer error")
+	assert.Contains(t, err.Error(), customDialerErr.Error())
 }
