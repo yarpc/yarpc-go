@@ -21,6 +21,7 @@
 package tchannel
 
 import (
+	"context"
 	"net"
 	"time"
 
@@ -53,6 +54,7 @@ type transportOptions struct {
 	logger              *zap.Logger
 	addr                string
 	listener            net.Listener
+	dialer              func(ctx context.Context, network, hostPort string) (net.Conn, error)
 	name                string
 	connTimeout         time.Duration
 	connBackoffStrategy backoffapi.Strategy
@@ -129,6 +131,16 @@ func ListenAddr(addr string) TransportOption {
 func Listener(l net.Listener) TransportOption {
 	return func(t *transportOptions) {
 		t.listener = l
+	}
+}
+
+// Dialer sets a dialer function for outbound calls.
+//
+// The function signature matches the net.Dialer DialContext method.
+// https://golang.org/pkg/net/#Dialer.DialContext
+func Dialer(dialer func(ctx context.Context, network, hostPort string) (net.Conn, error)) TransportOption {
+	return func(t *transportOptions) {
+		t.dialer = dialer
 	}
 }
 

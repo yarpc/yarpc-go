@@ -21,6 +21,7 @@
 package tchannel
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"sync"
@@ -59,6 +60,7 @@ type Transport struct {
 	name              string
 	addr              string
 	listener          net.Listener
+	dialer            func(ctx context.Context, network, hostPort string) (net.Conn, error)
 	newResponseWriter func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
 
 	connTimeout         time.Duration
@@ -104,6 +106,7 @@ func (o transportOptions) newTransport() *Transport {
 		name:                o.name,
 		addr:                o.addr,
 		listener:            o.listener,
+		dialer:              o.dialer,
 		connTimeout:         o.connTimeout,
 		connBackoffStrategy: o.connBackoffStrategy,
 		peers:               make(map[string]*tchannelPeer),
@@ -205,6 +208,7 @@ func (t *Transport) start() error {
 			newResponseWriter: t.newResponseWriter,
 		},
 		OnPeerStatusChanged: t.onPeerStatusChanged,
+		Dialer:              t.dialer,
 	}
 	ch, err := tchannel.NewChannel(t.name, &chopts)
 	if err != nil {
