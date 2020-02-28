@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 - No changes yet.
 
+## [1.44.0] - 2020-02-27
+### Added
+- The TChannel Transport now supports a custom dialer function option.
+
 ## [1.43.0] - 2020-02-25
 ### Added
 - gRPC now supports compression.
@@ -1197,7 +1201,8 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.43.0...HEAD
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.44.0...HEAD
+[1.44.0]: https://github.com/yarpc/yarpc-go/compare/v1.43.0...v1.44.0
 [1.43.0]: https://github.com/yarpc/yarpc-go/compare/v1.42.1...v1.43.0
 [1.42.1]: https://github.com/yarpc/yarpc-go/compare/v1.42.0...v1.42.1
 [1.42.0]: https://github.com/yarpc/yarpc-go/compare/v1.41.0...v1.42.0
