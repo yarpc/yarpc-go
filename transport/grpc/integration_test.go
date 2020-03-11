@@ -27,6 +27,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"errors"
@@ -60,6 +61,7 @@ import (
 	"go.uber.org/zap/zaptest"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 )
 
@@ -91,15 +93,6 @@ func TestGRPCBasic(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "bar", value)
 	})
-}
-
-func expectErrorContains(t *testing.T, err error, contains string) {
-	if contains == "" {
-		assert.NoError(t, err)
-	} else {
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), contains)
-	}
 }
 
 func TestYARPCWellKnownError(t *testing.T) {
@@ -396,6 +389,82 @@ func TestGRPCCompression(t *testing.T) {
 			assert.Equal(t, newMetrics(tt.wantMetrics, map[string]string{
 				"compressor": compressor,
 			}), _metrics)
+		})
+	}
+}
+
+func TestTLSWithYARPCAndGRPC(t *testing.T) {
+	tests := []struct {
+		name           string
+		clientValidity time.Duration
+		serverValidity time.Duration
+		wantErr        bool
+	}{
+		{
+			name:           "valid certs both sides",
+			clientValidity: time.Minute,
+			serverValidity: time.Minute,
+		},
+		{
+			name:           "invalid server cert",
+			clientValidity: time.Minute,
+			serverValidity: -1,
+			wantErr:        true,
+		},
+		{
+			name:           "invalid client cert",
+			clientValidity: -1,
+			serverValidity: time.Minute,
+			wantErr:        true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scenario := createTLSScenario(t, tt.clientValidity, tt.serverValidity)
+
+			serverCreds := credentials.NewTLS(&tls.Config{
+				GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
+					return &tls.Certificate{
+						Certificate: [][]byte{scenario.ServerCert.Raw},
+						Leaf:        scenario.ServerCert,
+						PrivateKey:  scenario.ServerKey,
+					}, nil
+				},
+				ClientAuth: tls.RequireAndVerifyClientCert,
+				ClientCAs:  scenario.CAs,
+			})
+
+			clientCreds := credentials.NewTLS(&tls.Config{
+				GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+					return &tls.Certificate{
+						Certificate: [][]byte{scenario.ClientCert.Raw},
+						Leaf:        scenario.ClientCert,
+						PrivateKey:  scenario.ClientKey,
+					}, nil
+				},
+				RootCAs: scenario.CAs,
+			})
+
+			te := testEnvOptions{
+				InboundOptions: []InboundOption{InboundCredentials(serverCreds)},
+				DialOptions:    []DialOption{DialerCredentials(clientCreds)},
+			}
+			te.do(t, func(t *testing.T, e *testEnv) {
+				err := e.SetValueYARPC(context.Background(), "foo", "bar")
+				if tt.wantErr {
+					assert.Error(t, err)
+				} else {
+					assert.NoError(t, err)
+				}
+
+				err = e.SetValueGRPC(context.Background(), "foo", "bar")
+				if tt.wantErr {
+					assert.Error(t, err)
+				} else {
+					assert.NoError(t, err)
+				}
+			})
 		})
 	}
 }
