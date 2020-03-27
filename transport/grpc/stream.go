@@ -32,7 +32,6 @@ import (
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
@@ -160,25 +159,4 @@ func toYARPCStreamError(err error) error {
 		code = yarpcerrors.CodeUnknown
 	}
 	return yarpcerrors.Newf(code, status.Message())
-}
-
-func toGRPCStreamError(err error) error {
-	if err == nil {
-		return nil
-	}
-
-	// if this is not a yarpc error, return the error
-	// this will result in the error being a grpc-go error with codes.Unknown
-	if !yarpcerrors.IsStatus(err) {
-		return err
-	}
-	// we now know we have a yarpc error
-	yarpcStatus := yarpcerrors.FromError(err)
-	message := yarpcStatus.Message()
-	grpcCode, ok := grpcerrorcodes.YARPCCodeToGRPCCode[yarpcStatus.Code()]
-	// should only happen if grpcerrorcodes.YARPCCodeToGRPCCode does not cover all codes
-	if !ok {
-		grpcCode = codes.Unknown
-	}
-	return status.Error(grpcCode, message)
 }

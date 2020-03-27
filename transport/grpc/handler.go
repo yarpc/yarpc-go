@@ -53,7 +53,9 @@ func newHandler(i *Inbound, l *zap.Logger) *handler {
 	return &handler{i: i, logger: l}
 }
 
-func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error {
+func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) (err error) {
+	defer func() { err = toGRPCError(err) }()
+
 	start := time.Now()
 	ctx := serverStream.Context()
 	streamMethod, ok := grpc.MethodFromServerStream(serverStream)
@@ -74,7 +76,7 @@ func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error 
 	case transport.Unary:
 		return h.handleUnary(ctx, transportRequest, serverStream, streamMethod, start, handlerSpec.Unary())
 	case transport.Streaming:
-		return toGRPCStreamError(h.handleStream(ctx, transportRequest, serverStream, start, handlerSpec.Stream()))
+		return h.handleStream(ctx, transportRequest, serverStream, start, handlerSpec.Stream())
 	}
 	return yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport grpc does not handle %s handlers", handlerSpec.Type().String())
 }
@@ -242,6 +244,10 @@ func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Req
 	})
 }
 
+// handlerErrorToGRPCError converts a yarpcerror to gRPC status error,
+// taking into account error details.
+//
+// This should only be used to wrap a return from a UnaryHandler.
 func handlerErrorToGRPCError(err error, responseWriter *responseWriter) error {
 	if err == nil {
 		return nil
@@ -276,6 +282,32 @@ func handlerErrorToGRPCError(err error, responseWriter *responseWriter) error {
 		return unmarshalError(body)
 	}
 
+	grpcCode, ok := grpcerrorcodes.YARPCCodeToGRPCCode[yarpcStatus.Code()]
+	// should only happen if grpcerrorcodes.YARPCCodeToGRPCCode does not cover all codes
+	if !ok {
+		grpcCode = codes.Unknown
+	}
+	return status.Error(grpcCode, message)
+}
+
+// toGRPCError converts errors to gRPC status errors. gRPC status errors are
+// returned as is.
+//
+// This MUST NOT be used for coverting YARPC error details to gRPC error
+// details. Use toGRPCErrorWithDetails instead.
+func toGRPCError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	// if this is not a yarpc error, return the error
+	// this will result in the error being a grpc-go error with codes.Unknown
+	if !yarpcerrors.IsStatus(err) {
+		return err
+	}
+	// we now know we have a yarpc error
+	yarpcStatus := yarpcerrors.FromError(err)
+	message := yarpcStatus.Message()
 	grpcCode, ok := grpcerrorcodes.YARPCCodeToGRPCCode[yarpcStatus.Code()]
 	// should only happen if grpcerrorcodes.YARPCCodeToGRPCCode does not cover all codes
 	if !ok {

@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - yarpctest: Add `ContextWithCall` function to ease testing of functions that
   use `yarpc.CallFromContext`.
+### Fixed
+- gRPC inbounds correctly convert YARPC error codes to gRPC error codes, outside
+  of handler errors. Previously, well-defined YARPC errors were wrapped with an
+  `Unknown` gRPC code for unimplemneted procedures.
 
 ## [1.44.0] - 2020-02-27
 ### Added

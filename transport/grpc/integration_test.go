@@ -31,7 +31,6 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"errors"
-	"fmt"
 	"io"
 	"math"
 	"math/big"
@@ -826,7 +825,7 @@ func (r *testRouter) Choose(_ context.Context, request *transport.Request) (tran
 			return procedure.HandlerSpec, nil
 		}
 	}
-	return transport.HandlerSpec{}, fmt.Errorf("no procedure for name %s", request.Procedure)
+	return transport.HandlerSpec{}, yarpcerrors.UnimplementedErrorf("no procedure for name %s", request.Procedure)
 }
 
 type tlsScenario struct {
@@ -914,4 +913,44 @@ func createTLSScenario(t *testing.T, clientValidity time.Duration, serverValidit
 		ClientCert: clientCert,
 		ClientKey:  clientKey,
 	}
+}
+
+func TestYARPCErrorsConverted(t *testing.T) {
+	// Ensures that all returned errors are gRPC errors and not YARPC errors
+
+	trans := NewTransport()
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	inbound := trans.NewInbound(listener)
+
+	outbound := trans.NewSingleOutbound(listener.Addr().String())
+
+	router := &testRouter{}
+	inbound.SetRouter(router)
+
+	require.NoError(t, trans.Start())
+	defer func() { assert.NoError(t, trans.Stop()) }()
+
+	require.NoError(t, inbound.Start())
+	defer func() { assert.NoError(t, inbound.Stop()) }()
+
+	require.NoError(t, outbound.Start())
+	defer func() { assert.NoError(t, outbound.Stop()) }()
+
+	t.Run("no procedure", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		_, err := outbound.Call(ctx, &transport.Request{
+			Caller:    "caller",
+			Service:   "service",
+			Encoding:  "encoding",
+			Procedure: "no procedure",
+			Body:      bytes.NewBufferString("foo-body"),
+		})
+
+		require.Error(t, err)
+		assert.True(t, yarpcerrors.IsUnimplemented(err))
+	})
 }
