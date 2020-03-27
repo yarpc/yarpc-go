@@ -25,6 +25,7 @@ import (
 	"sync"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
@@ -34,7 +35,8 @@ import (
 var (
 	errRouterNotSet = yarpcerrors.Newf(yarpcerrors.CodeInternal, "router not set")
 
-	_ transport.Inbound = (*Inbound)(nil)
+	_ introspection.IntrospectableInbound = (*Inbound)(nil)
+	_ transport.Inbound                   = (*Inbound)(nil)
 )
 
 // Inbound is a grpc transport.Inbound.
@@ -151,4 +153,21 @@ func (i *Inbound) stop() error {
 	}
 	i.server = nil
 	return nil
+}
+
+// Introspect returns the current state of the inbound.
+func (i *Inbound) Introspect() introspection.InboundStatus {
+	state := "Stopped"
+	if i.IsRunning() {
+		state = "Started"
+	}
+	var addrString string
+	if addr := i.Addr(); addr != nil {
+		addrString = addr.String()
+	}
+	return introspection.InboundStatus{
+		Transport: transportName,
+		Endpoint:  addrString,
+		State:     state,
+	}
 }
