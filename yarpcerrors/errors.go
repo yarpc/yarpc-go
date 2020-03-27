@@ -22,6 +22,7 @@ package yarpcerrors
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 )
 
@@ -33,8 +34,8 @@ func Newf(code Code, format string, args ...interface{}) *Status {
 		return nil
 	}
 	return &Status{
-		code:    code,
-		message: sprintf(format, args...),
+		code: code,
+		err:  fmt.Errorf(format, args...),
 	}
 }
 
@@ -58,9 +59,16 @@ func FromError(err error) *Status {
 		return statusImpl.YARPCError()
 	}
 	return &Status{
-		code:    CodeUnknown,
-		message: err.Error(),
+		code: CodeUnknown,
+		err:  err,
 	}
+}
+
+// Unwrap supports errors.Unwrap.
+//
+// See "errors" package documentation for details.
+func (s *Status) Unwrap() error {
+	return errors.Unwrap(s.err)
 }
 
 // IsStatus returns whether the provided error is a YARPC error, or has a
@@ -79,7 +87,7 @@ func IsStatus(err error) bool {
 type Status struct {
 	code    Code
 	name    string
-	message string
+	err     error
 	details []byte
 }
 
@@ -98,7 +106,7 @@ func (s *Status) WithName(name string) *Status {
 	return &Status{
 		code:    s.code,
 		name:    name,
-		message: s.message,
+		err:     s.err,
 		details: s.details,
 	}
 }
@@ -116,7 +124,7 @@ func (s *Status) WithDetails(details []byte) *Status {
 	return &Status{
 		code:    s.code,
 		name:    s.name,
-		message: s.message,
+		err:     s.err,
 		details: details,
 	}
 }
@@ -145,7 +153,7 @@ func (s *Status) Message() string {
 	if s == nil {
 		return ""
 	}
-	return s.message
+	return s.err.Error()
 }
 
 // Details returns the error details for this Status.
@@ -165,9 +173,9 @@ func (s *Status) Error() string {
 		_, _ = buffer.WriteString(` name:`)
 		_, _ = buffer.WriteString(s.name)
 	}
-	if s.message != "" {
+	if s.err != nil && s.err.Error() != "" {
 		_, _ = buffer.WriteString(` message:`)
-		_, _ = buffer.WriteString(s.message)
+		_, _ = buffer.WriteString(s.err.Error())
 	}
 	return buffer.String()
 }
@@ -409,11 +417,4 @@ func NamedErrorf(name string, format string, args ...interface{}) error {
 // Deprecated: Use Newf and WithName instead.
 func FromHeaders(code Code, name string, message string) error {
 	return Newf(code, message).WithName(name)
-}
-
-func sprintf(format string, args ...interface{}) string {
-	if len(args) == 0 {
-		return format
-	}
-	return fmt.Sprintf(format, args...)
 }

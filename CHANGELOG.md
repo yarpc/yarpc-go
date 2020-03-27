@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - yarpctest: Add `ContextWithCall` function to ease testing of functions that
   use `yarpc.CallFromContext`.
+- `yarpcerrors` supports the `errors.Unwrap` API.
 
 ## [1.44.0] - 2020-02-27
 ### Added
