@@ -24,6 +24,8 @@ import (
 	"context"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/inboundcall"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 // InboundCall holds information about the inbound call and its response.
@@ -36,8 +38,6 @@ type InboundCall struct {
 	req                    *transport.Request
 	disableResponseHeaders bool
 }
-
-type inboundCallKey struct{} // context key for *InboundCall
 
 // NewInboundCall builds a new InboundCall with the given context.
 //
@@ -71,13 +71,7 @@ func NewInboundCallWithOptions(ctx context.Context, opts ...InboundCallOption) (
 	for _, opt := range opts {
 		opt.apply(call)
 	}
-	return context.WithValue(ctx, inboundCallKey{}, call), call
-}
-
-// getInboundCall returns the inbound call on this context or nil.
-func getInboundCall(ctx context.Context) (*InboundCall, bool) {
-	call, ok := ctx.Value(inboundCallKey{}).(*InboundCall)
-	return call, ok
+	return inboundcall.WithMetadata(ctx, (*inboundCallMetadata)(call)), call
 }
 
 // ReadFromRequest reads information from the given request.
@@ -115,5 +109,54 @@ func (ic *InboundCall) WriteToResponse(resw transport.ResponseWriter) error {
 		resw.AddHeaders(headers)
 	}
 
+	return nil
+}
+
+// inboundCallMetadata wraps an InboundCall to implement inboundcall.Metadata.
+type inboundCallMetadata InboundCall
+
+var _ inboundcall.Metadata = (*inboundCallMetadata)(nil)
+
+func (ic *inboundCallMetadata) Caller() string {
+	return ic.req.Caller
+}
+
+func (ic *inboundCallMetadata) Service() string {
+	return ic.req.Service
+}
+
+func (ic *inboundCallMetadata) Transport() string {
+	return ic.req.Transport
+}
+
+func (ic *inboundCallMetadata) Procedure() string {
+	return ic.req.Procedure
+}
+
+func (ic *inboundCallMetadata) Encoding() transport.Encoding {
+	return ic.req.Encoding
+}
+
+func (ic *inboundCallMetadata) Headers() transport.Headers {
+	return ic.req.Headers
+}
+
+func (ic *inboundCallMetadata) ShardKey() string {
+	return ic.req.ShardKey
+}
+
+func (ic *inboundCallMetadata) RoutingKey() string {
+	return ic.req.RoutingKey
+}
+
+func (ic *inboundCallMetadata) RoutingDelegate() string {
+	return ic.req.RoutingDelegate
+}
+
+func (ic *inboundCallMetadata) WriteResponseHeader(k, v string) error {
+	if ic.disableResponseHeaders {
+		return yarpcerrors.InvalidArgumentErrorf("call does not support setting response headers")
+	}
+	ic.resHeaders = append(ic.resHeaders, keyValuePair{k: k, v: v})
 	return nil
 }
