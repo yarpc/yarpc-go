@@ -74,10 +74,7 @@ type fakeOutbound struct {
 }
 
 func (o fakeOutbound) Call(context.Context, *transport.Request) (*transport.Response, error) {
-	if o.err != nil {
-		return nil, o.err
-	}
-	return &transport.Response{ApplicationError: o.applicationErr}, nil
+	return &transport.Response{ApplicationError: o.applicationErr}, o.err
 }
 
 func (o fakeOutbound) CallOneway(context.Context, *transport.Request) (transport.Ack, error) {

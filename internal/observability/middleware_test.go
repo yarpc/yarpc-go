@@ -180,6 +180,8 @@ func TestMiddlewareLogging(t *testing.T) {
 	}
 
 	failed := errors.New("fail")
+	yErr := yarpcerrors.Newf(yarpcerrors.CodeAborted, "fail")
+	yErrDetails := yarpcerrors.Newf(yarpcerrors.CodeAborted, "fail").WithDetails([]byte("err detail"))
 
 	baseFields := func() []zapcore.Field {
 		return []zapcore.Field{
@@ -230,7 +232,8 @@ func TestMiddlewareLogging(t *testing.T) {
 			},
 		},
 		{
-			desc:            "no downstream error but with application error",
+			// ie Thrift application error
+			desc:            "application error",
 			applicationErr:  true,
 			wantErrLevel:    zapcore.WarnLevel,
 			wantInboundMsg:  "Error handling inbound request.",
@@ -240,6 +243,51 @@ func TestMiddlewareLogging(t *testing.T) {
 				zap.Bool("successful", false),
 				zap.Skip(),
 				zap.String("error", "application_error"),
+			},
+		},
+		{
+			// ie raw error return from Protobuf handler
+			desc:            "err, app error",
+			err:             failed,
+			applicationErr:  true,
+			wantErrLevel:    zapcore.ErrorLevel,
+			wantInboundMsg:  "Error handling inbound request.",
+			wantOutboundMsg: "Error making outbound call.",
+			wantFields: []zapcore.Field{
+				zap.Duration("latency", 0),
+				zap.Bool("successful", false),
+				zap.Skip(),
+				zap.Error(failed),
+			},
+		},
+		{
+			// ie yarpcerror return from Protobuf handler
+			desc:            "yarpcerror, app error",
+			err:             yErr,
+			applicationErr:  true,
+			wantErrLevel:    zapcore.ErrorLevel,
+			wantInboundMsg:  "Error handling inbound request.",
+			wantOutboundMsg: "Error making outbound call.",
+			wantFields: []zapcore.Field{
+				zap.Duration("latency", 0),
+				zap.Bool("successful", false),
+				zap.Skip(),
+				zap.Error(yErr),
+			},
+		},
+		{
+			// ie error detail return from Protobuf handler
+			desc:            "err details, app error",
+			err:             yErrDetails,
+			applicationErr:  true,
+			wantErrLevel:    zapcore.WarnLevel,
+			wantInboundMsg:  "Error handling inbound request.",
+			wantOutboundMsg: "Error making outbound call.",
+			wantFields: []zapcore.Field{
+				zap.Duration("latency", 0),
+				zap.Bool("successful", false),
+				zap.Skip(),
+				zap.Error(yErrDetails),
 			},
 		},
 	}
@@ -309,6 +357,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			}
 			assert.Equal(t, expected, getLog(t), "Unexpected log entry written.")
 		})
+
 		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
 			res, err := mw.Call(context.Background(), req, newOutbound(tt))
 			checkErr(err)
@@ -354,6 +403,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			}
 			assert.Equal(t, expected, getLog(t), "Unexpected log entry written.")
 		})
+
 		t.Run(tt.desc+", oneway outbound", func(t *testing.T) {
 			ack, err := mw.CallOneway(context.Background(), req, newOutbound(tt))
 			checkErr(err)
