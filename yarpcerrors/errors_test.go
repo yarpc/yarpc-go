@@ -164,3 +164,12 @@ func testAllErrorConstructors(
 	}
 	t.Run("Named", namedFunc)
 }
+
+func TestErrUnwrap(t *testing.T) {
+	myErr := errors.New("my custom error")
+	yErr := AbortedErrorf("wrap my custom err: %w", myErr)
+
+	assert.Equal(t, FromError(yErr).Message(), "wrap my custom err: my custom error", "unexpected message")
+	assert.Equal(t, myErr, errors.Unwrap(yErr), "expected original error")
+	assert.True(t, errors.Is(yErr, myErr), "expected original error")
+}
