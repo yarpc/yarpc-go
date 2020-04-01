@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - gRPC inbounds correctly convert all YARPC error codes to gRPC error codes,
   outside of handler errors. Previously, well-defined YARPC errors were wrapped
   with an `Unknown` gRPC code for unimplemented procedures.
+- Fixes `idleConnTimeout` not propgated to the underlying http transport.
 
 ## [1.44.0] - 2020-02-27
 ### Added
