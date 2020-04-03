@@ -83,6 +83,7 @@ func (ts *transportSpec) Spec() yarpcconfig.TransportSpec {
 //      keepAlive: 30s
 //      maxIdleConns: 2
 //      maxIdleConnsPerHost: 2
+//      idleConnTimeout: 90s
 //      disableKeepAlives: false
 //      disableCompression: false
 //      responseHeaderTimeout: 0s
@@ -123,6 +124,9 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 	}
 	if tc.MaxIdleConnsPerHost > 0 {
 		options.maxIdleConnsPerHost = tc.MaxIdleConnsPerHost
+	}
+	if tc.IdleConnTimeout > 0 {
+		options.idleConnTimeout = tc.IdleConnTimeout
 	}
 	if tc.DisableKeepAlives {
 		options.disableKeepAlives = true
