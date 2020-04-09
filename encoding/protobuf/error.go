@@ -21,6 +21,7 @@
 package protobuf
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/gogo/googleapis/google/rpc"
@@ -30,6 +31,8 @@ import (
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
 	"go.uber.org/yarpc/yarpcerrors"
 )
+
+var _ error = (*pberror)(nil)
 
 type pberror struct {
 	code    yarpcerrors.Code
@@ -70,6 +73,8 @@ func NewError(code yarpcerrors.Code, message string, options ...ErrorOption) err
 
 // GetErrorDetails returns the error details of the error.
 //
+// This method supports extracting details from wrapped errors.
+//
 // Each element in the returned slice of interface{} is either a proto.Message
 // or an error to explain why the element is not a proto.Message, most likely
 // because the error detail could not be unmarshaled.
@@ -78,9 +83,9 @@ func GetErrorDetails(err error) []interface{} {
 	if err == nil {
 		return nil
 	}
-
-	if pberr, ok := err.(*pberror); ok {
-		return pberr.details
+	var target *pberror
+	if errors.As(err, &target) {
+		return target.details
 	}
 	return nil
 }
