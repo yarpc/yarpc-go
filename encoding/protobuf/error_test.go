@@ -22,9 +22,12 @@ package protobuf
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
+	"github.com/gogo/protobuf/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -47,4 +50,23 @@ func TestForeignError(t *testing.T) {
 	err := errors.New("to err is go")
 	assert.Equal(t, yarpcerrors.FromError(err).Code(), yarpcerrors.CodeUnknown)
 	assert.Equal(t, yarpcerrors.FromError(err).Message(), "to err is go")
+}
+
+func TestConvertToYARPCErrorWithWrappedError(t *testing.T) {
+	errDetail := &types.BytesValue{Value: []byte("err detail bytes")}
+
+	pbErr := NewError(
+		yarpcerrors.CodeAborted,
+		"aborted",
+		WithErrorDetails(errDetail))
+
+	wrappedErr := fmt.Errorf("wrapped err 2: %w", fmt.Errorf("wrapped err 1: %w", pbErr))
+
+	err := convertToYARPCError(Encoding, wrappedErr, &codec{})
+	require.True(t, yarpcerrors.IsStatus(err), "unexpected error")
+	assert.Equal(t, yarpcerrors.FromError(err).Code(), yarpcerrors.CodeAborted, "unexpected err code")
+	assert.Equal(t, yarpcerrors.FromError(err).Message(), "aborted", "unexpected error message")
+
+	gotDetails := yarpcerrors.FromError(err).Details()
+	assert.NotEmpty(t, gotDetails, "no details marshaled")
 }
