@@ -107,7 +107,8 @@ func convertToYARPCError(encoding transport.Encoding, err error, codec *codec) e
 	if err == nil {
 		return nil
 	}
-	if pberr, ok := err.(*pberror); ok {
+	var pberr *pberror
+	if errors.As(err, &pberr) {
 		// We only use this function on the inbound side, and pberrors should be
 		// constructed using the constructor above, so we can safely assume all
 		// the details are proto.Message-typed.
