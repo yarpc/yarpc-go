@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - gRPC inbound supports introspection, suitable for debug pages.
 - yarpctest: Add `ContextWithCall` function to ease testing of functions that
   use `yarpc.CallFromContext`.
-- `yarpcerrors` supports the `errors.Unwrap` API.
+- `yarpcerrors` are aligned with the `errors` API introduced in Go 1.13
+  (https://blog.golang.org/go1.13-errors). `yarpcerrors.IsStatus`,
+  `yarpcerrors.FromError`, support wrapped errors, and `yarpcerrors.Status`
+  implements `Unwrap() error`.
 ### Fixed
 - gRPC inbounds correctly convert all YARPC error codes to gRPC error codes,
   outside of handler errors. Previously, well-defined YARPC errors were wrapped

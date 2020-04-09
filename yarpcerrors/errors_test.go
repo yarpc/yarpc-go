@@ -211,3 +211,27 @@ func TestFromError(t *testing.T) {
 		assert.Equal(t, "custom err", st.Message())
 	})
 }
+
+func TestIsStatus(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
+		assert.False(t, IsStatus(nil))
+	})
+
+	t.Run("unknown err", func(t *testing.T) {
+		err := errors.New("foo")
+		assert.False(t, IsStatus(err), "unexpected Status")
+	})
+
+	t.Run("wrapped Status", func(t *testing.T) {
+		err := fmt.Errorf("wrap 2: %w",
+			FailedPreconditionErrorf("wrap 1: %w", // yarpc error
+				errors.New("inner")))
+
+		assert.True(t, IsStatus(err), "expected YARPC error")
+	})
+
+	t.Run("wrapped Status interface", func(t *testing.T) {
+		err := fmt.Errorf("wrapped: %w", customYARPCError{err: "custom err"})
+		assert.True(t, IsStatus(err))
+	})
+}

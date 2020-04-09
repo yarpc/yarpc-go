@@ -53,20 +53,26 @@ func FromError(err error) *Status {
 		return nil
 	}
 
-	var st *Status
-	if errors.As(err, &st) {
+	if st, ok := fromError(err); ok {
 		return st
-	}
-
-	var yErr yarpcError
-	if errors.As(err, &yErr) {
-		return yErr.YARPCError()
 	}
 
 	return &Status{
 		code: CodeUnknown,
 		err:  err,
 	}
+}
+
+func fromError(err error) (st *Status, ok bool) {
+	if errors.As(err, &st) {
+		return st, true
+	}
+
+	var yerr yarpcError
+	if errors.As(err, &yerr) {
+		return yerr.YARPCError(), true
+	}
+	return nil, false
 }
 
 // Unwrap supports errors.Unwrap.
@@ -77,15 +83,13 @@ func (s *Status) Unwrap() error {
 }
 
 // IsStatus returns whether the provided error is a YARPC error, or has a
-// YARPCError() function to represent the error as a YARPC error.
+// YARPCError() function to represent the error as a YARPC error. This includes
+// wrapped errors.
 //
-// This is always false if the error is nil.
+// This is false if the error is nil.
 func IsStatus(err error) bool {
-	switch err.(type) {
-	case *Status, yarpcError:
-		return true
-	}
-	return false
+	_, ok := fromError(err)
+	return ok
 }
 
 // Status represents a YARPC error.
