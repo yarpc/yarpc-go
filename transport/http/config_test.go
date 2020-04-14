@@ -99,6 +99,7 @@ func TestTransportSpec(t *testing.T) {
 				KeepAlive:           30 * time.Second,
 				MaxIdleConnsPerHost: 2,
 				ConnTimeout:         defaultConnTimeout,
+				IdleConnTimeout:     defaultIdleConnTimeout,
 			},
 		},
 		{
@@ -111,6 +112,7 @@ func TestTransportSpec(t *testing.T) {
 				KeepAlive:           5 * time.Second,
 				MaxIdleConnsPerHost: 42,
 				ConnTimeout:         defaultConnTimeout,
+				IdleConnTimeout:     defaultIdleConnTimeout,
 			},
 		},
 		{
