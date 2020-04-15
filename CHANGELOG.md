@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   outside of handler errors. Previously, well-defined YARPC errors were wrapped
   with an `Unknown` gRPC code for unimplemented procedures.
 - Fixes `idleConnTimeout` not propgated to the underlying http transport.
+- HTTP does not hold onto connections forever by default. `IdleConnTimeout`
+  now defaults to 15 minutes.
 - `protobuf.GetErrorDetails` can extract error details from wrapped errors.
 
 ## [1.44.0] - 2020-02-27
