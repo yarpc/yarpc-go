@@ -179,7 +179,9 @@ func TestMiddlewareLogging(t *testing.T) {
 		Body:            strings.NewReader("body"),
 	}
 
-	failed := errors.New("fail")
+	rawErr := errors.New("fail")
+	yErrNoDetails := yarpcerrors.Newf(yarpcerrors.CodeAborted, "fail")
+	yErrWithDetails := yarpcerrors.Newf(yarpcerrors.CodeAborted, "fail").WithDetails([]byte("err detail"))
 
 	baseFields := func() []zapcore.Field {
 		return []zapcore.Field{
@@ -205,7 +207,7 @@ func TestMiddlewareLogging(t *testing.T) {
 
 	tests := []test{
 		{
-			desc:            "no downstream errors",
+			desc:            "sucess",
 			wantErrLevel:    zapcore.InfoLevel,
 			wantInboundMsg:  "Handled inbound request.",
 			wantOutboundMsg: "Made outbound call.",
@@ -218,7 +220,7 @@ func TestMiddlewareLogging(t *testing.T) {
 		},
 		{
 			desc:            "downstream transport error",
-			err:             failed,
+			err:             rawErr,
 			wantErrLevel:    zapcore.ErrorLevel,
 			wantInboundMsg:  "Error handling inbound request.",
 			wantOutboundMsg: "Error making outbound call.",
@@ -226,11 +228,11 @@ func TestMiddlewareLogging(t *testing.T) {
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
 				zap.Skip(),
-				zap.Error(failed),
+				zap.Error(rawErr),
 			},
 		},
 		{
-			desc:            "no downstream error but with application error",
+			desc:            "thrift application error",
 			applicationErr:  true,
 			wantErrLevel:    zapcore.WarnLevel,
 			wantInboundMsg:  "Error handling inbound request.",
@@ -240,6 +242,51 @@ func TestMiddlewareLogging(t *testing.T) {
 				zap.Bool("successful", false),
 				zap.Skip(),
 				zap.String("error", "application_error"),
+			},
+		},
+		{
+			// ie 'errors.New' return in Protobuf handler
+			desc:            "err and app error",
+			err:             rawErr,
+			applicationErr:  true, // always true for Protobuf handler errors
+			wantErrLevel:    zapcore.ErrorLevel,
+			wantInboundMsg:  "Error handling inbound request.",
+			wantOutboundMsg: "Error making outbound call.",
+			wantFields: []zapcore.Field{
+				zap.Duration("latency", 0),
+				zap.Bool("successful", false),
+				zap.Skip(),
+				zap.Error(rawErr),
+			},
+		},
+		{
+			// ie 'yarpcerror' or 'protobuf.NewError` return in Protobuf handler
+			desc:            "yarpcerror, app error",
+			err:             yErrNoDetails,
+			applicationErr:  true, // always true for Protobuf handler errors
+			wantErrLevel:    zapcore.ErrorLevel,
+			wantInboundMsg:  "Error handling inbound request.",
+			wantOutboundMsg: "Error making outbound call.",
+			wantFields: []zapcore.Field{
+				zap.Duration("latency", 0),
+				zap.Bool("successful", false),
+				zap.Skip(),
+				zap.Error(yErrNoDetails),
+			},
+		},
+		{
+			// ie Protobuf error detail return in Protobuf handler
+			desc:            "err details, app error",
+			err:             yErrWithDetails,
+			applicationErr:  true, // always true for Protobuf handler errors
+			wantErrLevel:    zapcore.WarnLevel,
+			wantInboundMsg:  "Error handling inbound request.",
+			wantOutboundMsg: "Error making outbound call.",
+			wantFields: []zapcore.Field{
+				zap.Duration("latency", 0),
+				zap.Bool("successful", false),
+				zap.Skip(),
+				zap.Error(yErrWithDetails),
 			},
 		},
 	}
