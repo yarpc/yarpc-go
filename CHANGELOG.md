@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   (https://blog.golang.org/go1.13-errors). `yarpcerrors.IsStatus`,
   `yarpcerrors.FromError`, support wrapped errors, and `yarpcerrors.Status`
   implements `Unwrap() error`.
+### Changed
+- Dropped library dependency on development tools.
 ### Fixed
 - gRPC inbounds correctly convert all YARPC error codes to gRPC error codes,
   outside of handler errors. Previously, well-defined YARPC errors were wrapped
@@ -60,7 +62,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   peer.Chooser, or for the private introspection interface.
 - Peer list peer unavailability errors now provide additional context including
   the number of assigned peers and whether fail-fast is enabled.
-- Drop library dependency on development tools.
 ### Fixed
 - Fixed Streaming Protobuf-flavored-JSON nil pointer panic.
 - Log entries for EOF stream messages are now considered successes to avoid
