@@ -31,11 +31,12 @@ import (
 )
 
 func ExampleDispatcher_minimal() {
-	dispatcher := yarpc.NewDispatcher(yarpc.Config{Name: "myFancyService"})
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{Name: "my-fancy-service"})
 	if err := dispatcher.Start(); err != nil {
 		log.Fatal(err)
 	}
 	defer dispatcher.Stop()
+	// Output:
 }
 
 // global dispatcher used in the registration examples
@@ -47,16 +48,26 @@ func ExampleDispatcher_Register_raw() {
 	}
 
 	dispatcher.Register(raw.Procedure("echo", handler))
+	// Output:
+}
+
+type Request struct {
+	key string
+}
+
+type Response struct {
+	val string
 }
 
 // Excuse the weird naming of this function. This lets is show as "JSON"
 // rather than "Json"
 
 func ExampleDispatcher_Register_jSON() {
-	handler := func(ctx context.Context, key string) (string, error) {
-		fmt.Println("key", key)
-		return "value", nil
+	handler := func(ctx context.Context, req *Request) (*Response, error) {
+		fmt.Println("key", req.key)
+		return &Response{val: "value"}, nil
 	}
 
 	dispatcher.Register(json.Procedure("get", handler))
+	// Output:
 }
