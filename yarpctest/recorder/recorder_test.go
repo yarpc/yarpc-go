@@ -202,7 +202,7 @@ func withDisconnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)
 
 func withConnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 	httpTransport := http.NewTransport()
-	serverHTTP := httpTransport.NewInbound(":0")
+	serverHTTP := httpTransport.NewInbound("127.0.0.1:0")
 	serverDisp := yarpc.NewDispatcher(yarpc.Config{
 		Name:     "server",
 		Inbounds: yarpc.Inbounds{serverHTTP},

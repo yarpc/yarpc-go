@@ -29,7 +29,7 @@ import (
 )
 
 func TestInboundMechanics(t *testing.T) {
-	listener, err := net.Listen("tcp", ":0")
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	inbound := NewTransport().NewInbound(listener)
 

@@ -46,7 +46,7 @@ func do() error {
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "hello",
 		Inbounds: yarpc.Inbounds{
-			httpTransport.NewInbound(":8888"),
+			httpTransport.NewInbound("127.0.0.1:8888"),
 		},
 		Outbounds: yarpc.Outbounds{
 			"hello": {

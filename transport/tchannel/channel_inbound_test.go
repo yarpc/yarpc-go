@@ -64,7 +64,7 @@ func TestChannelInboundStartAlreadyListening(t *testing.T) {
 	ch, err := tchannel.NewChannel("foo", nil)
 	require.NoError(t, err)
 
-	require.NoError(t, ch.ListenAndServe(":0"))
+	require.NoError(t, ch.ListenAndServe("127.0.0.1:0"))
 	assert.Equal(t, tchannel.ChannelListening, ch.State())
 
 	x, err := NewChannelTransport(WithChannel(ch))

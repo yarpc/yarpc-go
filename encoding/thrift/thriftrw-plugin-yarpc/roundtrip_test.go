@@ -220,7 +220,7 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			httpInbound := http.NewTransport().NewInbound(":0")
+			httpInbound := http.NewTransport().NewInbound("127.0.0.1:0")
 
 			server := yarpc.NewDispatcher(yarpc.Config{
 				Name:     "roundtrip-server",
