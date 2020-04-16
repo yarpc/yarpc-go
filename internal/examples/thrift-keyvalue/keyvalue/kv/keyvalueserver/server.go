@@ -29,6 +29,7 @@ import (
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
 	kv "go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv"
+	yarpcerrors "go.uber.org/yarpc/yarpcerrors"
 )
 
 // Interface is the server-side interface for the KeyValue service.
@@ -90,7 +91,8 @@ type handler struct{ impl Interface }
 func (h handler) GetValue(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args kv.KeyValue_GetValue_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'KeyValue' procedure 'GetValue': %w", err)
 	}
 
 	success, err := h.impl.GetValue(ctx, args.Key)
@@ -109,7 +111,8 @@ func (h handler) GetValue(ctx context.Context, body wire.Value) (thrift.Response
 func (h handler) SetValue(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args kv.KeyValue_SetValue_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'KeyValue' procedure 'SetValue': %w", err)
 	}
 
 	err := h.impl.SetValue(ctx, args.Key, args.Value)

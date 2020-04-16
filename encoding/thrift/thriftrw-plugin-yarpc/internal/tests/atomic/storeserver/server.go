@@ -10,6 +10,7 @@ import (
 	thrift "go.uber.org/yarpc/encoding/thrift"
 	atomic "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic"
 	readonlystoreserver "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreserver"
+	yarpcerrors "go.uber.org/yarpc/yarpcerrors"
 )
 
 // Interface is the server-side interface for the Store service.
@@ -100,7 +101,8 @@ type handler struct{ impl Interface }
 func (h handler) CompareAndSwap(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args atomic.Store_CompareAndSwap_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'Store' procedure 'CompareAndSwap': %w", err)
 	}
 
 	err := h.impl.CompareAndSwap(ctx, args.Request)
@@ -128,7 +130,8 @@ func (h handler) Forget(ctx context.Context, body wire.Value) error {
 func (h handler) Increment(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args atomic.Store_Increment_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'Store' procedure 'Increment': %w", err)
 	}
 
 	err := h.impl.Increment(ctx, args.Key, args.Value)

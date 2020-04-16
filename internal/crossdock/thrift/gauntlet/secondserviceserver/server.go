@@ -29,6 +29,7 @@ import (
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
 	gauntlet "go.uber.org/yarpc/internal/crossdock/thrift/gauntlet"
+	yarpcerrors "go.uber.org/yarpc/yarpcerrors"
 )
 
 // Interface is the server-side interface for the SecondService service.
@@ -88,7 +89,8 @@ type handler struct{ impl Interface }
 func (h handler) BlahBlah(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.SecondService_BlahBlah_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'SecondService' procedure 'BlahBlah': %w", err)
 	}
 
 	err := h.impl.BlahBlah(ctx)
@@ -107,7 +109,8 @@ func (h handler) BlahBlah(ctx context.Context, body wire.Value) (thrift.Response
 func (h handler) SecondtestString(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.SecondService_SecondtestString_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'SecondService' procedure 'SecondtestString': %w", err)
 	}
 
 	success, err := h.impl.SecondtestString(ctx, args.Thing)
