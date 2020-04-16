@@ -32,7 +32,7 @@ var regex = regexp.MustCompile(`127\.0\.0\.1:[0-9]+`)
 
 func TestZeroAddrToHostPort(t *testing.T) {
 	for i := 0; i < 10; i++ {
-		listener, err := net.Listen("tcp", ":0")
+		listener, err := net.Listen("tcp", "127.0.0.1:0")
 		require.NoError(t, err)
 		require.True(t, regex.MatchString(ZeroAddrToHostPort(listener.Addr())))
 		require.NoError(t, listener.Close())

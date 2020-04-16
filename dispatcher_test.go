@@ -59,7 +59,7 @@ func basicConfig(t testing.TB) Config {
 		Name: "test",
 		Inbounds: Inbounds{
 			tchannelTransport.NewInbound(),
-			httpTransport.NewInbound(":0"),
+			httpTransport.NewInbound("127.0.0.1:0"),
 		},
 	}
 }
@@ -823,16 +823,16 @@ func TestObservabilityConfig(t *testing.T) {
 
 func TestIntrospect(t *testing.T) {
 	httpTransport := http.NewTransport()
-	tchannelChannelTransport, err := tchannel.NewChannelTransport(tchannel.ServiceName("test"), tchannel.ListenAddr(":4040"))
+	tchannelChannelTransport, err := tchannel.NewChannelTransport(tchannel.ServiceName("test"), tchannel.ListenAddr("127.0.0.1:4040"))
 	require.NoError(t, err)
-	tchannelTransport, err := tchannel.NewTransport(tchannel.ServiceName("test"), tchannel.ListenAddr(":5050"))
+	tchannelTransport, err := tchannel.NewTransport(tchannel.ServiceName("test"), tchannel.ListenAddr("127.0.0.1:5050"))
 	require.NoError(t, err)
 	httpOutbound := httpTransport.NewSingleOutbound("http://127.0.0.1:1234")
 
 	config := Config{
 		Name: "test",
 		Inbounds: Inbounds{
-			httpTransport.NewInbound(":0"),
+			httpTransport.NewInbound("127.0.0.1:0"),
 			tchannelChannelTransport.NewInbound(),
 			tchannelTransport.NewInbound(),
 		},
@@ -861,9 +861,9 @@ func TestIntrospect(t *testing.T) {
 
 	inboundStatus := getInboundStatus(t, dispatcherStatus.Inbounds, "http", "")
 	assert.Equal(t, "Stopped", inboundStatus.State)
-	inboundStatus = getInboundStatus(t, dispatcherStatus.Inbounds, "tchannel", ":4040")
+	inboundStatus = getInboundStatus(t, dispatcherStatus.Inbounds, "tchannel", "127.0.0.1:4040")
 	assert.Equal(t, "ChannelClient", inboundStatus.State)
-	inboundStatus = getInboundStatus(t, dispatcherStatus.Inbounds, "tchannel", ":5050")
+	inboundStatus = getInboundStatus(t, dispatcherStatus.Inbounds, "tchannel", "127.0.0.1:5050")
 	assert.Equal(t, "", inboundStatus.State)
 
 	outboundStatus := getOutboundStatus(t, dispatcherStatus.Outbounds, "test-client-http", "unary")
