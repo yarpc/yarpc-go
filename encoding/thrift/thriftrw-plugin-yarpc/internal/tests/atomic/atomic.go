@@ -933,14 +933,14 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "atomic",
 	Package:  "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic",
 	FilePath: "atomic.thrift",
-	SHA1:     "8ac690c0a021bad15c751f1b1209b03c3340e5e9",
+	SHA1:     "05404c365186efd5cbceb965fe5455362b9b6158",
 	Includes: []*thriftreflect.ThriftModule{
 		common.ThriftModule,
 	},
 	Raw: rawIDL,
 }
 
-const rawIDL = "include \"./common.thrift\"\n\nexception KeyDoesNotExist {\n    1: optional string key\n}\n\nexception IntegerMismatchError {\n    1: required i64 expectedValue\n    2: required i64 gotValue\n}\n\nstruct CompareAndSwap {\n    1: required string key\n    2: required i64 currentValue\n    3: required i64 newValue\n}\n\nservice ReadOnlyStore extends common.BaseService {\n    i64 integer(1: string key) throws (1: KeyDoesNotExist doesNotExist)\n}\n\nservice Store extends ReadOnlyStore {\n    void increment(1: string key, 2: i64 value)\n\n    void compareAndSwap(1: CompareAndSwap request)\n        throws (1: IntegerMismatchError mismatch)\n\n    oneway void forget(1: string key)\n}\n\n\n// this struct intentionally has the same shape as the `CompareAndSwap` wrapper\n// `Store_CompareAndSwap_Args`, except all fields are optional.\nstruct OptionalCompareAndSwapWrapper {\n    1: optional OptionalCompareAndSwap cas\n}\n\nstruct OptionalCompareAndSwap {\n    1: optional string key\n    2: optional i64 currentValue\n    3: optional i64 newValue\n}\n"
+const rawIDL = "include \"./common.thrift\"\n\nexception KeyDoesNotExist {\n    1: optional string key\n}\n\nexception IntegerMismatchError {\n    1: required i64 expectedValue\n    2: required i64 gotValue\n}\n\nstruct CompareAndSwap {\n    1: required string key\n    2: required i64 currentValue\n    3: required i64 newValue\n}\n\nservice ReadOnlyStore extends common.BaseService {\n    i64 integer(1: string key) throws (1: KeyDoesNotExist doesNotExist)\n}\n\nservice Store extends ReadOnlyStore {\n    void increment(1: string key, 2: i64 value)\n\n    void compareAndSwap(1: CompareAndSwap request)\n        throws (1: IntegerMismatchError mismatch)\n\n    oneway void forget(1: string key)\n}\n\n\n// This struct intentionally has the same shape as the `CompareAndSwap` wrapper\n// `Store_CompareAndSwap_Args`, except all fields are optional.\n\n// We use this to generate an invalid payload for testing.\nstruct OptionalCompareAndSwapWrapper {\n    1: optional OptionalCompareAndSwap cas\n}\n\nstruct OptionalCompareAndSwap {\n    1: optional string key\n    2: optional i64 currentValue\n    3: optional i64 newValue\n}\n"
 
 // ReadOnlyStore_Integer_Args represents the arguments for the ReadOnlyStore.integer function.
 //
