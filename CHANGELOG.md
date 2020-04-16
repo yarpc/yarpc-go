@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   `yarpcerrors.FromError`, support wrapped errors, and `yarpcerrors.Status`
   implements `Unwrap() error`.
 ### Changed
+- Inbound Thrift requests that fail during `wire.Value#FromWire` are returned as
+  `yarpcerrors.CodeInvalidArgument`, to indicate a client error.
 - Dropped library dependency on development tools.
 ### Fixed
 - gRPC inbounds correctly convert all YARPC error codes to gRPC error codes,
