@@ -10,6 +10,7 @@ import (
 	thrift "go.uber.org/yarpc/encoding/thrift"
 	common "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common"
 	emptyserviceserver "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/emptyserviceserver"
+	yarpcerrors "go.uber.org/yarpc/yarpcerrors"
 )
 
 // Interface is the server-side interface for the ExtendEmpty service.
@@ -66,7 +67,8 @@ type handler struct{ impl Interface }
 func (h handler) Hello(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args common.ExtendEmpty_Hello_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ExtendEmpty' procedure 'Hello': %w", err)
 	}
 
 	err := h.impl.Hello(ctx)

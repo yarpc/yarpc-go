@@ -9,6 +9,7 @@ import (
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
 	weather "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather"
+	yarpcerrors "go.uber.org/yarpc/yarpcerrors"
 )
 
 // Interface is the server-side interface for the Weather service.
@@ -52,7 +53,8 @@ type handler struct{ impl Interface }
 func (h handler) Check(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args weather.Weather_Check_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'Weather' procedure 'Check': %w", err)
 	}
 
 	success, err := h.impl.Check(ctx)
