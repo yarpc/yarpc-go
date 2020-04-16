@@ -90,7 +90,7 @@ func (h handler) assertBaggage(ctx context.Context) {
 }
 
 func createGRPCDispatcher(t *testing.T, tracer opentracing.Tracer) *yarpc.Dispatcher {
-	listener, err := net.Listen("tcp", ":0")
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	grpcTransport := grpc.NewTransport(grpc.Tracer(tracer))
 	return yarpc.NewDispatcher(yarpc.Config{
@@ -114,7 +114,7 @@ func createHTTPDispatcher(tracer opentracing.Tracer) *yarpc.Dispatcher {
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
 		Inbounds: yarpc.Inbounds{
-			httpTransport.NewInbound(":18080"),
+			httpTransport.NewInbound("127.0.0.1:18080"),
 		},
 		Outbounds: yarpc.Outbounds{
 			"yarpc-test": {

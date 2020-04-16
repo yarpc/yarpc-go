@@ -33,7 +33,7 @@ import (
 
 func ExampleInbound() {
 	transport := http.NewTransport()
-	inbound := transport.NewInbound(":8888")
+	inbound := transport.NewInbound("127.0.0.1:8888")
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name:     "myservice",
@@ -59,7 +59,7 @@ func ExampleMux() {
 	// This inbound will serve the YARPC service on the path /yarpc.  The
 	// /health endpoint on the Mux will be left alone.
 	transport := http.NewTransport()
-	inbound := transport.NewInbound(":8888", http.Mux("/yarpc", mux))
+	inbound := transport.NewInbound("127.0.0.1:8888", http.Mux("/yarpc", mux))
 
 	// Fire up a dispatcher with the new inbound.
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
@@ -107,7 +107,7 @@ func ExampleInterceptor() {
 
 	// Create a new inbound, attaching the interceptor
 	transport := http.NewTransport()
-	inbound := transport.NewInbound(":8889", http.Interceptor(intercept))
+	inbound := transport.NewInbound("127.0.0.1:8889", http.Interceptor(intercept))
 
 	// Fire up a dispatcher with the new inbound.
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{

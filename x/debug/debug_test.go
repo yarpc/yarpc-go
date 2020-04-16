@@ -81,7 +81,7 @@ func newTestDispatcher() *yarpc.Dispatcher {
 	return yarpc.NewDispatcher(yarpc.Config{
 		Name: "test",
 		Inbounds: yarpc.Inbounds{
-			httpTransport.NewInbound(":0"),
+			httpTransport.NewInbound("127.0.0.1:0"),
 		},
 		Outbounds: yarpc.Outbounds{
 			"test-client": {

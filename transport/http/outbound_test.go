@@ -58,7 +58,7 @@ func TestTransportNamer(t *testing.T) {
 func TestNewSingleOutboundPanic(t *testing.T) {
 	require.Panics(t, func() {
 		// invalid url should cause panic
-		NewTransport().NewSingleOutbound(":")
+		NewTransport().NewSingleOutbound("127.0.0.1:")
 	},
 		"expected to panic")
 }

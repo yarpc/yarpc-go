@@ -62,10 +62,10 @@ func TestPeerWithRoundRobin(t *testing.T) {
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 
-	permanent, permanentAddr := spec.NewServer(t, ":0")
+	permanent, permanentAddr := spec.NewServer(t, "127.0.0.1:0")
 	defer permanent.Stop()
 
-	temporary, temporaryAddr := spec.NewServer(t, ":0")
+	temporary, temporaryAddr := spec.NewServer(t, "127.0.0.1:0")
 	defer temporary.Stop()
 
 	// Construct a client with a bank of peers. We will keep one running all
