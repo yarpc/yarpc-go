@@ -550,19 +550,397 @@ func (v *KeyDoesNotExist) Error() string {
 	return v.String()
 }
 
+type OptionalCompareAndSwap struct {
+	Key          *string `json:"key,omitempty"`
+	CurrentValue *int64  `json:"currentValue,omitempty"`
+	NewValue     *int64  `json:"newValue,omitempty"`
+}
+
+// ToWire translates a OptionalCompareAndSwap struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *OptionalCompareAndSwap) ToWire() (wire.Value, error) {
+	var (
+		fields [3]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Key != nil {
+		w, err = wire.NewValueString(*(v.Key)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.CurrentValue != nil {
+		w, err = wire.NewValueI64(*(v.CurrentValue)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+	if v.NewValue != nil {
+		w, err = wire.NewValueI64(*(v.NewValue)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 3, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a OptionalCompareAndSwap struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a OptionalCompareAndSwap struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v OptionalCompareAndSwap
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *OptionalCompareAndSwap) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Key = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 2:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.CurrentValue = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 3:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.NewValue = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a OptionalCompareAndSwap
+// struct.
+func (v *OptionalCompareAndSwap) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [3]string
+	i := 0
+	if v.Key != nil {
+		fields[i] = fmt.Sprintf("Key: %v", *(v.Key))
+		i++
+	}
+	if v.CurrentValue != nil {
+		fields[i] = fmt.Sprintf("CurrentValue: %v", *(v.CurrentValue))
+		i++
+	}
+	if v.NewValue != nil {
+		fields[i] = fmt.Sprintf("NewValue: %v", *(v.NewValue))
+		i++
+	}
+
+	return fmt.Sprintf("OptionalCompareAndSwap{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _I64_EqualsPtr(lhs, rhs *int64) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return (x == y)
+	}
+	return lhs == nil && rhs == nil
+}
+
+// Equals returns true if all the fields of this OptionalCompareAndSwap match the
+// provided OptionalCompareAndSwap.
+//
+// This function performs a deep comparison.
+func (v *OptionalCompareAndSwap) Equals(rhs *OptionalCompareAndSwap) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.Key, rhs.Key) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.CurrentValue, rhs.CurrentValue) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.NewValue, rhs.NewValue) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of OptionalCompareAndSwap.
+func (v *OptionalCompareAndSwap) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Key != nil {
+		enc.AddString("key", *v.Key)
+	}
+	if v.CurrentValue != nil {
+		enc.AddInt64("currentValue", *v.CurrentValue)
+	}
+	if v.NewValue != nil {
+		enc.AddInt64("newValue", *v.NewValue)
+	}
+	return err
+}
+
+// GetKey returns the value of Key if it is set or its
+// zero value if it is unset.
+func (v *OptionalCompareAndSwap) GetKey() (o string) {
+	if v != nil && v.Key != nil {
+		return *v.Key
+	}
+
+	return
+}
+
+// IsSetKey returns true if Key is not nil.
+func (v *OptionalCompareAndSwap) IsSetKey() bool {
+	return v != nil && v.Key != nil
+}
+
+// GetCurrentValue returns the value of CurrentValue if it is set or its
+// zero value if it is unset.
+func (v *OptionalCompareAndSwap) GetCurrentValue() (o int64) {
+	if v != nil && v.CurrentValue != nil {
+		return *v.CurrentValue
+	}
+
+	return
+}
+
+// IsSetCurrentValue returns true if CurrentValue is not nil.
+func (v *OptionalCompareAndSwap) IsSetCurrentValue() bool {
+	return v != nil && v.CurrentValue != nil
+}
+
+// GetNewValue returns the value of NewValue if it is set or its
+// zero value if it is unset.
+func (v *OptionalCompareAndSwap) GetNewValue() (o int64) {
+	if v != nil && v.NewValue != nil {
+		return *v.NewValue
+	}
+
+	return
+}
+
+// IsSetNewValue returns true if NewValue is not nil.
+func (v *OptionalCompareAndSwap) IsSetNewValue() bool {
+	return v != nil && v.NewValue != nil
+}
+
+type OptionalCompareAndSwapWrapper struct {
+	Cas *OptionalCompareAndSwap `json:"cas,omitempty"`
+}
+
+// ToWire translates a OptionalCompareAndSwapWrapper struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *OptionalCompareAndSwapWrapper) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Cas != nil {
+		w, err = v.Cas.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _OptionalCompareAndSwap_Read(w wire.Value) (*OptionalCompareAndSwap, error) {
+	var v OptionalCompareAndSwap
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a OptionalCompareAndSwapWrapper struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a OptionalCompareAndSwapWrapper struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v OptionalCompareAndSwapWrapper
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *OptionalCompareAndSwapWrapper) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.Cas, err = _OptionalCompareAndSwap_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a OptionalCompareAndSwapWrapper
+// struct.
+func (v *OptionalCompareAndSwapWrapper) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Cas != nil {
+		fields[i] = fmt.Sprintf("Cas: %v", v.Cas)
+		i++
+	}
+
+	return fmt.Sprintf("OptionalCompareAndSwapWrapper{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this OptionalCompareAndSwapWrapper match the
+// provided OptionalCompareAndSwapWrapper.
+//
+// This function performs a deep comparison.
+func (v *OptionalCompareAndSwapWrapper) Equals(rhs *OptionalCompareAndSwapWrapper) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Cas == nil && rhs.Cas == nil) || (v.Cas != nil && rhs.Cas != nil && v.Cas.Equals(rhs.Cas))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of OptionalCompareAndSwapWrapper.
+func (v *OptionalCompareAndSwapWrapper) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Cas != nil {
+		err = multierr.Append(err, enc.AddObject("cas", v.Cas))
+	}
+	return err
+}
+
+// GetCas returns the value of Cas if it is set or its
+// zero value if it is unset.
+func (v *OptionalCompareAndSwapWrapper) GetCas() (o *OptionalCompareAndSwap) {
+	if v != nil && v.Cas != nil {
+		return v.Cas
+	}
+
+	return
+}
+
+// IsSetCas returns true if Cas is not nil.
+func (v *OptionalCompareAndSwapWrapper) IsSetCas() bool {
+	return v != nil && v.Cas != nil
+}
+
 // ThriftModule represents the IDL file used to generate this package.
 var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "atomic",
 	Package:  "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic",
 	FilePath: "atomic.thrift",
-	SHA1:     "2bc145384bb2472af911bf797c7c23331111638a",
+	SHA1:     "8ac690c0a021bad15c751f1b1209b03c3340e5e9",
 	Includes: []*thriftreflect.ThriftModule{
 		common.ThriftModule,
 	},
 	Raw: rawIDL,
 }
 
-const rawIDL = "include \"./common.thrift\"\n\nexception KeyDoesNotExist {\n    1: optional string key\n}\n\nexception IntegerMismatchError {\n    1: required i64 expectedValue\n    2: required i64 gotValue\n}\n\nstruct CompareAndSwap {\n    1: required string key\n    2: required i64 currentValue\n    3: required i64 newValue\n}\n\nservice ReadOnlyStore extends common.BaseService {\n    i64 integer(1: string key) throws (1: KeyDoesNotExist doesNotExist)\n}\n\nservice Store extends ReadOnlyStore {\n    void increment(1: string key, 2: i64 value)\n\n    void compareAndSwap(1: CompareAndSwap request)\n        throws (1: IntegerMismatchError mismatch)\n\n    oneway void forget(1: string key)\n}\n\n"
+const rawIDL = "include \"./common.thrift\"\n\nexception KeyDoesNotExist {\n    1: optional string key\n}\n\nexception IntegerMismatchError {\n    1: required i64 expectedValue\n    2: required i64 gotValue\n}\n\nstruct CompareAndSwap {\n    1: required string key\n    2: required i64 currentValue\n    3: required i64 newValue\n}\n\nservice ReadOnlyStore extends common.BaseService {\n    i64 integer(1: string key) throws (1: KeyDoesNotExist doesNotExist)\n}\n\nservice Store extends ReadOnlyStore {\n    void increment(1: string key, 2: i64 value)\n\n    void compareAndSwap(1: CompareAndSwap request)\n        throws (1: IntegerMismatchError mismatch)\n\n    oneway void forget(1: string key)\n}\n\n\n// this struct intentionally has the same shape as the `CompareAndSwap` wrapper\n// `Store_CompareAndSwap_Args`, except all fields are optional.\nstruct OptionalCompareAndSwapWrapper {\n    1: optional OptionalCompareAndSwap cas\n}\n\nstruct OptionalCompareAndSwap {\n    1: optional string key\n    2: optional i64 currentValue\n    3: optional i64 newValue\n}\n"
 
 // ReadOnlyStore_Integer_Args represents the arguments for the ReadOnlyStore.integer function.
 //
@@ -955,16 +1333,6 @@ func (v *ReadOnlyStore_Integer_Result) String() string {
 	}
 
 	return fmt.Sprintf("ReadOnlyStore_Integer_Result{%v}", strings.Join(fields[:i], ", "))
-}
-
-func _I64_EqualsPtr(lhs, rhs *int64) bool {
-	if lhs != nil && rhs != nil {
-
-		x := *lhs
-		y := *rhs
-		return (x == y)
-	}
-	return lhs == nil && rhs == nil
 }
 
 // Equals returns true if all the fields of this ReadOnlyStore_Integer_Result match the

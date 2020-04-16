@@ -28,3 +28,15 @@ service Store extends ReadOnlyStore {
     oneway void forget(1: string key)
 }
 
+
+// this struct intentionally has the same shape as the `CompareAndSwap` wrapper
+// `Store_CompareAndSwap_Args`, except all fields are optional.
+struct OptionalCompareAndSwapWrapper {
+    1: optional OptionalCompareAndSwap cas
+}
+
+struct OptionalCompareAndSwap {
+    1: optional string key
+    2: optional i64 currentValue
+    3: optional i64 newValue
+}
