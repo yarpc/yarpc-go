@@ -89,7 +89,7 @@ func do() error {
 	case "http":
 		inbound = http.NewTransport(http.Logger(logger)).NewInbound("127.0.0.1:24042")
 		go func() {
-			if err := gohttp.ListenAndServe(":3242", nil); err != nil {
+			if err := gohttp.ListenAndServe("127.0.0.1:3242", nil); err != nil {
 				log.Fatal(err)
 			}
 		}()
@@ -104,7 +104,7 @@ func do() error {
 		}
 		inbound = tchannelTransport.NewInbound()
 		go func() {
-			if err := gohttp.ListenAndServe(":3243", nil); err != nil {
+			if err := gohttp.ListenAndServe("127.0.0.1:3243", nil); err != nil {
 				log.Fatal(err)
 			}
 		}()
@@ -115,7 +115,7 @@ func do() error {
 		}
 		inbound = grpc.NewTransport(grpc.Logger(logger)).NewInbound(listener)
 		go func() {
-			if err := gohttp.ListenAndServe(":3244", nil); err != nil {
+			if err := gohttp.ListenAndServe("127.0.0.1:3244", nil); err != nil {
 				log.Fatal(err)
 			}
 		}()

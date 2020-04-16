@@ -84,7 +84,7 @@ func TestWithRoundRobin(t *testing.T) {
 	temporary, temporaryAddr := spec.NewServer(t, "")
 	defer temporary.Stop()
 
-	l, err := net.Listen("tcp", ":0")
+	l, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err, "listen for bogus server")
 	invalidAddr := l.Addr().String()
 	defer l.Close()
