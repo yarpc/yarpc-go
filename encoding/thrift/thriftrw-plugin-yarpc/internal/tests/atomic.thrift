@@ -29,8 +29,10 @@ service Store extends ReadOnlyStore {
 }
 
 
-// this struct intentionally has the same shape as the `CompareAndSwap` wrapper
+// This struct intentionally has the same shape as the `CompareAndSwap` wrapper
 // `Store_CompareAndSwap_Args`, except all fields are optional.
+
+// We use this to generate an invalid payload for testing.
 struct OptionalCompareAndSwapWrapper {
     1: optional OptionalCompareAndSwap cas
 }

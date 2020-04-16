@@ -378,11 +378,12 @@ func TestFromWireInvalidArg(t *testing.T) {
 	require.Equal(t, "Store::compareAndSwap", procedure.Name)
 	require.Equal(t, transport.Unary, procedure.HandlerSpec.Type())
 
-	// this struct has the same shape as the `CompareAndSwap` wrapper
-	// `Store_CompareAndSwap_Args`, except all fields are optional.
+	// This struct is identical to the `CompareAndSwap` wrapper
+	// `Store_CompareAndSwap_Args`, except all fields are optional. This will
+	// allow us to produce an invalid payload.
 	//
-	// The handler will fail to unmarshal the identical it into
-	// 'Store_CompareAndSwap_Args'.
+	// The handler will fail to unmarshal this type as it is missing required
+	// fields.
 	request := &atomic.OptionalCompareAndSwapWrapper{Cas: &atomic.OptionalCompareAndSwap{}}
 	val, err := request.ToWire()
 	require.NoError(t, err, "unable to covert type to wire.Value")
