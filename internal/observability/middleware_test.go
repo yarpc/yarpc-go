@@ -207,7 +207,7 @@ func TestMiddlewareLogging(t *testing.T) {
 
 	tests := []test{
 		{
-			desc:            "sucess",
+			desc:            "success",
 			wantErrLevel:    zapcore.InfoLevel,
 			wantInboundMsg:  "Handled inbound request.",
 			wantOutboundMsg: "Made outbound call.",
