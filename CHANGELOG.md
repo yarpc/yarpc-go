@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - HTTP does not hold onto connections forever by default. `IdleConnTimeout`
   now defaults to 15 minutes.
 - `protobuf.GetErrorDetails` can extract error details from wrapped errors.
+- observability: errors returned from Protobuf handlers are logged with their
+  error message instead of `application_error`.
+- `encoding/protobuf` error details (`yarpcerrors.Status` with details) are
+  logged at application error log level. This matches behavior with Thrift
+  exceptions.
 
 ## [1.44.0] - 2020-02-27
 ### Added
