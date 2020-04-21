@@ -99,6 +99,7 @@ func TestTransportSpec(t *testing.T) {
 				KeepAlive:           30 * time.Second,
 				MaxIdleConnsPerHost: 2,
 				ConnTimeout:         defaultConnTimeout,
+				IdleConnTimeout:     defaultIdleConnTimeout,
 			},
 		},
 		{
@@ -111,6 +112,7 @@ func TestTransportSpec(t *testing.T) {
 				KeepAlive:           5 * time.Second,
 				MaxIdleConnsPerHost: 42,
 				ConnTimeout:         defaultConnTimeout,
+				IdleConnTimeout:     defaultIdleConnTimeout,
 			},
 		},
 		{
@@ -490,8 +492,7 @@ func useFakeBuildClient(t *testing.T, want *wantHTTPClient) TransportOption {
 		assert.Equal(t, want.KeepAlive, options.keepAlive, "http.Client: KeepAlive should match")
 		assert.Equal(t, want.MaxIdleConns, options.maxIdleConns, "http.Client: MaxIdleConns should match")
 		assert.Equal(t, want.MaxIdleConnsPerHost, options.maxIdleConnsPerHost, "http.Client: MaxIdleConnsPerHost should match")
-		// TODO(kris): not sure why the default is not zero.
-		// assert.Equal(t, want.IdleConnTimeout, options.idleConnTimeout, "http.Client: IdleConnTimeout should match")
+		assert.Equal(t, want.IdleConnTimeout, options.idleConnTimeout, "http.Client: IdleConnTimeout should match")
 		assert.Equal(t, want.DisableKeepAlives, options.disableKeepAlives, "http.Client: DisableKeepAlives should match")
 		assert.Equal(t, want.DisableCompression, options.disableCompression, "http.Client: DisableCompression should match")
 		assert.Equal(t, want.ResponseHeaderTimeout, options.responseHeaderTimeout, "http.Client: ResponseHeaderTimeout should match")

@@ -18,55 +18,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package protobuf
+package protobuf_test
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/gogo/protobuf/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
-func TestNewOK(t *testing.T) {
-	err := NewError(yarpcerrors.CodeOK, "okay")
-	assert.Nil(t, err)
-
-	assert.Equal(t, yarpcerrors.FromError(err).Code(), yarpcerrors.CodeOK)
-	assert.Equal(t, yarpcerrors.FromError(err).Message(), "")
-}
-
-func TestNew(t *testing.T) {
-	err := NewError(yarpcerrors.CodeNotFound, "unfounded accusation")
-	assert.Equal(t, yarpcerrors.FromError(err).Code(), yarpcerrors.CodeNotFound)
-	assert.Equal(t, yarpcerrors.FromError(err).Message(), "unfounded accusation")
-	assert.Contains(t, err.Error(), "unfounded accusation")
-}
-
-func TestForeignError(t *testing.T) {
-	err := errors.New("to err is go")
-	assert.Equal(t, yarpcerrors.FromError(err).Code(), yarpcerrors.CodeUnknown)
-	assert.Equal(t, yarpcerrors.FromError(err).Message(), "to err is go")
-}
-
-func TestConvertToYARPCErrorWithWrappedError(t *testing.T) {
+func TestGetDetailsFromWrappedError(t *testing.T) {
 	errDetail := &types.BytesValue{Value: []byte("err detail bytes")}
 
-	pbErr := NewError(
+	pbErr := protobuf.NewError(
 		yarpcerrors.CodeAborted,
 		"aborted",
-		WithErrorDetails(errDetail))
+		protobuf.WithErrorDetails(errDetail))
 
 	wrappedErr := fmt.Errorf("wrapped err 2: %w", fmt.Errorf("wrapped err 1: %w", pbErr))
 
-	err := convertToYARPCError(Encoding, wrappedErr, &codec{})
-	require.True(t, yarpcerrors.IsStatus(err), "unexpected error")
-	assert.Equal(t, yarpcerrors.FromError(err).Code(), yarpcerrors.CodeAborted, "unexpected err code")
-	assert.Equal(t, yarpcerrors.FromError(err).Message(), "aborted", "unexpected error message")
-
-	gotDetails := yarpcerrors.FromError(err).Details()
-	assert.NotEmpty(t, gotDetails, "no details marshaled")
+	details := protobuf.GetErrorDetails(wrappedErr)
+	require.Len(t, details, 1, "expected exactly one detail")
+	assert.Equal(t, errDetail, details[0], "unexpected detail")
 }

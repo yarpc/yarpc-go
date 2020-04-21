@@ -83,6 +83,8 @@ func (c call) EndWithPanic(err error) {
 }
 
 func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool) {
+	appErrBitWithNoError := isApplicationError && err == nil // ie Thrift exception
+
 	var ce *zapcore.CheckedEntry
 	if err == nil && !isApplicationError {
 		msg := _successfulInbound
@@ -97,9 +99,25 @@ func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool)
 		}
 
 		lvl := c.levels.failure
-		if isApplicationError {
+
+		// For logging purposes, application errors are
+		//  - Thrift exceptions (appErrBitWithNoError == true)
+		//  - `yarpcerror`s with error details (ie created with `encoding/protobuf.NewError`)
+		//
+		// This will be the least surprising behavior for users migrating from
+		// Thrift exceptions to Protobuf error details.
+		//
+		// Unfortunately, all errors returned from a Protobuf handler are marked as
+		// an application error on the 'transport.ResponseWriter'. Therefore, we
+		// distinguish an application error from a regular error by inspecting if an
+		// error detail was set.
+		//
+		// https://github.com/yarpc/yarpc-go/pull/1912
+		hasErrDetails := len(yarpcerrors.FromError(err).Details()) > 0
+		if appErrBitWithNoError || (isApplicationError && hasErrDetails) {
 			lvl = c.levels.applicationError
 		}
+
 		ce = c.edge.logger.Check(lvl, msg)
 	}
 
@@ -112,7 +130,7 @@ func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool)
 	fields = append(fields, zap.Duration("latency", elapsed))
 	fields = append(fields, zap.Bool("successful", err == nil && !isApplicationError))
 	fields = append(fields, c.extract(c.ctx))
-	if isApplicationError {
+	if appErrBitWithNoError {
 		fields = append(fields, zap.String(_error, "application_error"))
 	} else {
 		fields = append(fields, zap.Error(err))

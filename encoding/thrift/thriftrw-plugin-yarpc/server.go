@@ -33,8 +33,8 @@ const serverTemplate = `
 <$pkgname := printf "%sserver" (lower .Name)>
 package <$pkgname>
 
-<$thrift    := import "go.uber.org/yarpc/encoding/thrift">
-<$transport := import "go.uber.org/yarpc/api/transport">
+<$thrift      := import "go.uber.org/yarpc/encoding/thrift">
+<$transport   := import "go.uber.org/yarpc/api/transport">
 
 <$contextImportPath   := .ContextImportPath>
 <$onewayWrapperImport := .OnewayWrapperImport>
@@ -130,10 +130,12 @@ func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) error {
 	return h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
 }
 <else>
+<$yarpcerrors := import "go.uber.org/yarpc/yarpcerrors">
 func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$thrift>.Response, error) {
 	var args <$prefix>Args
 	if err := args.FromWire(body); err != nil {
-		return <$thrift>.Response{}, err
+		return <$thrift>.Response{}, <$yarpcerrors>.InvalidArgumentErrorf(
+			"could not decode Thrift request for service '<$service.Name>' procedure '<.Name>': %w", err)
 	}
 
 	<if .ReturnType>

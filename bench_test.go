@@ -169,7 +169,7 @@ func Benchmark_HTTP_YARPCToYARPC(b *testing.B) {
 	httpTransport := yhttp.NewTransport()
 	serverCfg := yarpc.Config{
 		Name:     "server",
-		Inbounds: yarpc.Inbounds{httpTransport.NewInbound(":8999")},
+		Inbounds: yarpc.Inbounds{httpTransport.NewInbound("127.0.0.1:8999")},
 	}
 
 	clientCfg := yarpc.Config{
@@ -216,7 +216,7 @@ func Benchmark_HTTP_NetHTTPToYARPC(b *testing.B) {
 	httpTransport := yhttp.NewTransport()
 	serverCfg := yarpc.Config{
 		Name:     "server",
-		Inbounds: yarpc.Inbounds{httpTransport.NewInbound(":8996")},
+		Inbounds: yarpc.Inbounds{httpTransport.NewInbound("127.0.0.1:8996")},
 	}
 
 	withDispatcher(
@@ -275,7 +275,7 @@ func Benchmark_TChannel_YARPCToTChannel(b *testing.B) {
 	defer serverCh.Close()
 
 	serverCh.Register(traw.Wrap(tchannelEcho{t: b}), "echo")
-	require.NoError(b, serverCh.ListenAndServe(":0"), "failed to start up TChannel")
+	require.NoError(b, serverCh.ListenAndServe("127.0.0.1:0"), "failed to start up TChannel")
 
 	clientTChannel, err := ytchannel.NewChannelTransport(ytchannel.ServiceName("client"))
 	require.NoError(b, err)
@@ -324,7 +324,7 @@ func Benchmark_TChannel_TChannelToTChannel(b *testing.B) {
 	defer serverCh.Close()
 
 	serverCh.Register(traw.Wrap(tchannelEcho{t: b}), "echo")
-	require.NoError(b, serverCh.ListenAndServe(":0"), "failed to start up TChannel")
+	require.NoError(b, serverCh.ListenAndServe("127.0.0.1:0"), "failed to start up TChannel")
 
 	clientCh, err := tchannel.NewChannel("client", nil)
 	require.NoError(b, err, "failed to build client TChannel")

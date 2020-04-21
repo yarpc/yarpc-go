@@ -69,26 +69,26 @@ func TestStartAddrInUse(t *testing.T) {
 	}
 }
 func TestShutdownAndListen(t *testing.T) {
-	server := NewHTTPServer(&http.Server{Addr: ":0"})
+	server := NewHTTPServer(&http.Server{Addr: "127.0.0.1:0"})
 	require.NoError(t, server.ListenAndServe())
 	require.NoError(t, server.Shutdown(context.Background()))
 	require.Error(t, server.ListenAndServe())
 }
 
 func TestShutdownWithoutStart(t *testing.T) {
-	server := NewHTTPServer(&http.Server{Addr: ":0"})
+	server := NewHTTPServer(&http.Server{Addr: "127.0.0.1:0"})
 	require.NoError(t, server.Shutdown(context.Background()))
 }
 
 func TestStartTwice(t *testing.T) {
-	server := NewHTTPServer(&http.Server{Addr: ":0"})
+	server := NewHTTPServer(&http.Server{Addr: "127.0.0.1:0"})
 	require.NoError(t, server.ListenAndServe())
 	require.Error(t, server.ListenAndServe())
 	require.NoError(t, server.Shutdown(context.Background()))
 }
 
 func TestShutdownTwice(t *testing.T) {
-	server := NewHTTPServer(&http.Server{Addr: ":0"})
+	server := NewHTTPServer(&http.Server{Addr: "127.0.0.1:0"})
 	require.NoError(t, server.ListenAndServe())
 	require.NoError(t, server.Shutdown(context.Background()))
 	require.NoError(t, server.Shutdown(context.Background()))
@@ -100,7 +100,7 @@ func TestListenFail(t *testing.T) {
 }
 
 func TestShutdownError(t *testing.T) {
-	server := NewHTTPServer(&http.Server{Addr: ":0"})
+	server := NewHTTPServer(&http.Server{Addr: "127.0.0.1:0"})
 	require.NoError(t, server.ListenAndServe())
 	require.NoError(t, server.Listener().Close())
 	time.Sleep(5 * testtime.Millisecond)

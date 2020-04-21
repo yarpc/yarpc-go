@@ -29,6 +29,7 @@ import (
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
 	gauntlet "go.uber.org/yarpc/internal/crossdock/thrift/gauntlet"
+	yarpcerrors "go.uber.org/yarpc/yarpcerrors"
 )
 
 // Interface is the server-side interface for the ThriftTest service.
@@ -398,7 +399,8 @@ type handler struct{ impl Interface }
 func (h handler) TestBinary(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestBinary_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ThriftTest' procedure 'TestBinary': %w", err)
 	}
 
 	success, err := h.impl.TestBinary(ctx, args.Thing)
@@ -417,7 +419,8 @@ func (h handler) TestBinary(ctx context.Context, body wire.Value) (thrift.Respon
 func (h handler) TestByte(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestByte_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ThriftTest' procedure 'TestByte': %w", err)
 	}
 
 	success, err := h.impl.TestByte(ctx, args.Thing)
@@ -436,7 +439,8 @@ func (h handler) TestByte(ctx context.Context, body wire.Value) (thrift.Response
 func (h handler) TestDouble(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestDouble_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ThriftTest' procedure 'TestDouble': %w", err)
 	}
 
 	success, err := h.impl.TestDouble(ctx, args.Thing)
@@ -455,7 +459,8 @@ func (h handler) TestDouble(ctx context.Context, body wire.Value) (thrift.Respon
 func (h handler) TestEnum(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestEnum_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ThriftTest' procedure 'TestEnum': %w", err)
 	}
 
 	success, err := h.impl.TestEnum(ctx, args.Thing)
@@ -474,7 +479,8 @@ func (h handler) TestEnum(ctx context.Context, body wire.Value) (thrift.Response
 func (h handler) TestException(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestException_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ThriftTest' procedure 'TestException': %w", err)
 	}
 
 	err := h.impl.TestException(ctx, args.Arg)
@@ -493,7 +499,8 @@ func (h handler) TestException(ctx context.Context, body wire.Value) (thrift.Res
 func (h handler) TestI32(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestI32_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ThriftTest' procedure 'TestI32': %w", err)
 	}
 
 	success, err := h.impl.TestI32(ctx, args.Thing)
@@ -512,7 +519,8 @@ func (h handler) TestI32(ctx context.Context, body wire.Value) (thrift.Response,
 func (h handler) TestI64(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestI64_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ThriftTest' procedure 'TestI64': %w", err)
 	}
 
 	success, err := h.impl.TestI64(ctx, args.Thing)
@@ -531,7 +539,8 @@ func (h handler) TestI64(ctx context.Context, body wire.Value) (thrift.Response,
 func (h handler) TestInsanity(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestInsanity_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ThriftTest' procedure 'TestInsanity': %w", err)
 	}
 
 	success, err := h.impl.TestInsanity(ctx, args.Argument)
@@ -550,7 +559,8 @@ func (h handler) TestInsanity(ctx context.Context, body wire.Value) (thrift.Resp
 func (h handler) TestList(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestList_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ThriftTest' procedure 'TestList': %w", err)
 	}
 
 	success, err := h.impl.TestList(ctx, args.Thing)
@@ -569,7 +579,8 @@ func (h handler) TestList(ctx context.Context, body wire.Value) (thrift.Response
 func (h handler) TestMap(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestMap_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ThriftTest' procedure 'TestMap': %w", err)
 	}
 
 	success, err := h.impl.TestMap(ctx, args.Thing)
@@ -588,7 +599,8 @@ func (h handler) TestMap(ctx context.Context, body wire.Value) (thrift.Response,
 func (h handler) TestMapMap(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestMapMap_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ThriftTest' procedure 'TestMapMap': %w", err)
 	}
 
 	success, err := h.impl.TestMapMap(ctx, args.Hello)
@@ -607,7 +619,8 @@ func (h handler) TestMapMap(ctx context.Context, body wire.Value) (thrift.Respon
 func (h handler) TestMulti(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestMulti_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ThriftTest' procedure 'TestMulti': %w", err)
 	}
 
 	success, err := h.impl.TestMulti(ctx, args.Arg0, args.Arg1, args.Arg2, args.Arg3, args.Arg4, args.Arg5)
@@ -626,7 +639,8 @@ func (h handler) TestMulti(ctx context.Context, body wire.Value) (thrift.Respons
 func (h handler) TestMultiException(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestMultiException_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ThriftTest' procedure 'TestMultiException': %w", err)
 	}
 
 	success, err := h.impl.TestMultiException(ctx, args.Arg0, args.Arg1)
@@ -645,7 +659,8 @@ func (h handler) TestMultiException(ctx context.Context, body wire.Value) (thrif
 func (h handler) TestNest(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestNest_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ThriftTest' procedure 'TestNest': %w", err)
 	}
 
 	success, err := h.impl.TestNest(ctx, args.Thing)
@@ -673,7 +688,8 @@ func (h handler) TestOneway(ctx context.Context, body wire.Value) error {
 func (h handler) TestSet(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestSet_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ThriftTest' procedure 'TestSet': %w", err)
 	}
 
 	success, err := h.impl.TestSet(ctx, args.Thing)
@@ -692,7 +708,8 @@ func (h handler) TestSet(ctx context.Context, body wire.Value) (thrift.Response,
 func (h handler) TestString(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestString_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ThriftTest' procedure 'TestString': %w", err)
 	}
 
 	success, err := h.impl.TestString(ctx, args.Thing)
@@ -711,7 +728,8 @@ func (h handler) TestString(ctx context.Context, body wire.Value) (thrift.Respon
 func (h handler) TestStringMap(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestStringMap_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ThriftTest' procedure 'TestStringMap': %w", err)
 	}
 
 	success, err := h.impl.TestStringMap(ctx, args.Thing)
@@ -730,7 +748,8 @@ func (h handler) TestStringMap(ctx context.Context, body wire.Value) (thrift.Res
 func (h handler) TestStruct(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestStruct_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ThriftTest' procedure 'TestStruct': %w", err)
 	}
 
 	success, err := h.impl.TestStruct(ctx, args.Thing)
@@ -749,7 +768,8 @@ func (h handler) TestStruct(ctx context.Context, body wire.Value) (thrift.Respon
 func (h handler) TestTypedef(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestTypedef_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ThriftTest' procedure 'TestTypedef': %w", err)
 	}
 
 	success, err := h.impl.TestTypedef(ctx, args.Thing)
@@ -768,7 +788,8 @@ func (h handler) TestTypedef(ctx context.Context, body wire.Value) (thrift.Respo
 func (h handler) TestVoid(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestVoid_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ThriftTest' procedure 'TestVoid': %w", err)
 	}
 
 	err := h.impl.TestVoid(ctx)

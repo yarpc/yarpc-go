@@ -42,7 +42,7 @@ import (
 )
 
 func setupTest(t *testing.T, p []transport.Procedure) (*yarpc.Dispatcher, func()) {
-	httpInbound := http.NewTransport().NewInbound(":0")
+	httpInbound := http.NewTransport().NewInbound("127.0.0.1:0")
 
 	server := yarpc.NewDispatcher(yarpc.Config{
 		Name:     "server",

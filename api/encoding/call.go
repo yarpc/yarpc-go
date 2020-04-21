@@ -25,13 +25,14 @@ import (
 	"sort"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/inboundcall"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
 type keyValuePair struct{ k, v string }
 
 // Call provides information about the current request inside handlers.
-type Call struct{ ic *InboundCall }
+type Call struct{ md inboundcall.Metadata }
 
 // CallFromContext retrieves information about the current incoming request
 // from the given context. Returns nil if the context is not a valid request
@@ -39,8 +40,8 @@ type Call struct{ ic *InboundCall }
 //
 // The object is valid only as long as the request is ongoing.
 func CallFromContext(ctx context.Context) *Call {
-	if ic, ok := getInboundCall(ctx); ok {
-		return &Call{ic}
+	if md, ok := inboundcall.GetMetadata(ctx); ok {
+		return &Call{md}
 	}
 	return nil
 }
@@ -52,11 +53,7 @@ func (c *Call) WriteResponseHeader(k, v string) error {
 			"failed to write response header: " +
 				"Call was nil, make sure CallFromContext was called with a request context")
 	}
-	if c.ic.disableResponseHeaders {
-		return yarpcerrors.InvalidArgumentErrorf("call does not support setting response headers")
-	}
-	c.ic.resHeaders = append(c.ic.resHeaders, keyValuePair{k: k, v: v})
-	return nil
+	return c.md.WriteResponseHeader(k, v)
 }
 
 // Caller returns the name of the service making this request.
@@ -64,7 +61,7 @@ func (c *Call) Caller() string {
 	if c == nil {
 		return ""
 	}
-	return c.ic.req.Caller
+	return c.md.Caller()
 }
 
 // Service returns the name of the service being called.
@@ -72,7 +69,7 @@ func (c *Call) Service() string {
 	if c == nil {
 		return ""
 	}
-	return c.ic.req.Service
+	return c.md.Service()
 }
 
 // Transport returns the name of the transport being called.
@@ -80,7 +77,7 @@ func (c *Call) Transport() string {
 	if c == nil {
 		return ""
 	}
-	return c.ic.req.Transport
+	return c.md.Transport()
 }
 
 // Procedure returns the name of the procedure being called.
@@ -88,7 +85,7 @@ func (c *Call) Procedure() string {
 	if c == nil {
 		return ""
 	}
-	return c.ic.req.Procedure
+	return c.md.Procedure()
 }
 
 // Encoding returns the encoding for this request.
@@ -96,7 +93,7 @@ func (c *Call) Encoding() transport.Encoding {
 	if c == nil {
 		return ""
 	}
-	return c.ic.req.Encoding
+	return c.md.Encoding()
 }
 
 // Header returns the value of the given request header provided with the
@@ -106,7 +103,7 @@ func (c *Call) Header(k string) string {
 		return ""
 	}
 
-	if v, ok := c.ic.req.Headers.Get(k); ok {
+	if v, ok := c.md.Headers().Get(k); ok {
 		return v
 	}
 
@@ -120,7 +117,7 @@ func (c *Call) HeaderNames() []string {
 		return nil
 	}
 
-	items := c.ic.req.Headers.Items()
+	items := c.md.Headers().Items()
 	names := make([]string, 0, len(items))
 	for k := range items {
 		names = append(names, k)
@@ -134,7 +131,7 @@ func (c *Call) ShardKey() string {
 	if c == nil {
 		return ""
 	}
-	return c.ic.req.ShardKey
+	return c.md.ShardKey()
 }
 
 // RoutingKey returns the routing key for this request.
@@ -142,7 +139,7 @@ func (c *Call) RoutingKey() string {
 	if c == nil {
 		return ""
 	}
-	return c.ic.req.RoutingKey
+	return c.md.RoutingKey()
 }
 
 // RoutingDelegate returns the routing delegate for this request.
@@ -150,5 +147,5 @@ func (c *Call) RoutingDelegate() string {
 	if c == nil {
 		return ""
 	}
-	return c.ic.req.RoutingDelegate
+	return c.md.RoutingDelegate()
 }

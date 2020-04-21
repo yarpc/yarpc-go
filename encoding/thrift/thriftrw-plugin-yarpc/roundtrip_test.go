@@ -20,6 +20,7 @@
 package main_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -29,6 +30,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/ptr"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
@@ -49,6 +51,7 @@ import (
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/yarpctest"
 	"go.uber.org/yarpc/transport/http"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 func TestRoundTrip(t *testing.T) {
@@ -220,7 +223,7 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			httpInbound := http.NewTransport().NewInbound(":0")
+			httpInbound := http.NewTransport().NewInbound("127.0.0.1:0")
 
 			server := yarpc.NewDispatcher(yarpc.Config{
 				Name:     "roundtrip-server",
@@ -365,4 +368,38 @@ func (extendEmptyHandler) Hello(ctx context.Context) error {
 
 func (extendEmptyHandler) Healthy(ctx context.Context) (bool, error) {
 	return true, nil
+}
+
+func TestFromWireInvalidArg(t *testing.T) {
+	procedures := storeserver.New(nil /*server impl*/)
+	require.Len(t, procedures, 5, "unexpected number of procedures")
+
+	procedure := procedures[2]
+	require.Equal(t, "Store::compareAndSwap", procedure.Name)
+	require.Equal(t, transport.Unary, procedure.HandlerSpec.Type())
+
+	// This struct is identical to the `CompareAndSwap` wrapper
+	// `Store_CompareAndSwap_Args`, except all fields are optional. This will
+	// allow us to produce an invalid payload.
+	//
+	// The handler will fail to unmarshal this type as it is missing required
+	// fields.
+	request := &atomic.OptionalCompareAndSwapWrapper{Cas: &atomic.OptionalCompareAndSwap{}}
+	val, err := request.ToWire()
+	require.NoError(t, err, "unable to covert type to wire.Value")
+
+	var body bytes.Buffer
+	err = (protocol.Binary).Encode(val, &body)
+	require.NoError(t, err, "could not marshal message to bytes")
+
+	err = procedure.HandlerSpec.Unary().Handle(context.Background(), &transport.Request{
+		Encoding: thrift.Encoding,
+		Body:     &body,
+	}, nil /*response writer*/)
+
+	require.Error(t, err, "expected handler error")
+	assert.True(t, yarpcerrors.IsStatus(err), "unkown error")
+	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.FromError(err).Code(), "unexpected code")
+	assert.Contains(t, yarpcerrors.FromError(err).Message(), "Store", "expected Thrift service name in message")
+	assert.Contains(t, yarpcerrors.FromError(err).Message(), "CompareAndSwap", "expected Thrift procedure name in message")
 }

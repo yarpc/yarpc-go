@@ -18,23 +18,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpctest
+package inboundcall
 
 import (
-	"net"
-	"regexp"
-	"testing"
+	"context"
 
-	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/transport"
 )
 
-var regex = regexp.MustCompile(`127\.0\.0\.1:[0-9]+`)
+// Metadata holds metadata for an incoming request. This includes metadata
+// about the inbound request as well as response metadata.
+//
+// This drives the behavior of yarpc.Call and encoding.Call.
+type Metadata interface {
+	WriteResponseHeader(k, v string) error
+	Caller() string
+	Service() string
+	Transport() string
+	Procedure() string
+	Encoding() transport.Encoding
+	Headers() transport.Headers
+	ShardKey() string
+	RoutingKey() string
+	RoutingDelegate() string
+}
 
-func TestZeroAddrToHostPort(t *testing.T) {
-	for i := 0; i < 10; i++ {
-		listener, err := net.Listen("tcp", "127.0.0.1:0")
-		require.NoError(t, err)
-		require.True(t, regex.MatchString(ZeroAddrToHostPort(listener.Addr())))
-		require.NoError(t, listener.Close())
-	}
+type metadataKey struct{} // context key for Metadata
+
+// WithMetadata places the provided metadata on the context.
+func WithMetadata(ctx context.Context, md Metadata) context.Context {
+	return context.WithValue(ctx, metadataKey{}, md)
+}
+
+// GetMetadata retrieves inbound call metadata from a context.
+func GetMetadata(ctx context.Context) (Metadata, bool) {
+	md, ok := ctx.Value(metadataKey{}).(Metadata)
+	return md, ok
 }

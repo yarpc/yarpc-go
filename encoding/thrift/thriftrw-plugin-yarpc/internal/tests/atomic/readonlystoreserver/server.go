@@ -10,6 +10,7 @@ import (
 	thrift "go.uber.org/yarpc/encoding/thrift"
 	atomic "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic"
 	baseserviceserver "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/baseserviceserver"
+	yarpcerrors "go.uber.org/yarpc/yarpcerrors"
 )
 
 // Interface is the server-side interface for the ReadOnlyStore service.
@@ -67,7 +68,8 @@ type handler struct{ impl Interface }
 func (h handler) Integer(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args atomic.ReadOnlyStore_Integer_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'ReadOnlyStore' procedure 'Integer': %w", err)
 	}
 
 	success, err := h.impl.Integer(ctx, args.Key)

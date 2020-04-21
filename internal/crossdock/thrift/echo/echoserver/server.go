@@ -29,6 +29,7 @@ import (
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
 	echo "go.uber.org/yarpc/internal/crossdock/thrift/echo"
+	yarpcerrors "go.uber.org/yarpc/yarpcerrors"
 )
 
 // Interface is the server-side interface for the Echo service.
@@ -73,7 +74,8 @@ type handler struct{ impl Interface }
 func (h handler) Echo(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args echo.Echo_Echo_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'Echo' procedure 'Echo': %w", err)
 	}
 
 	success, err := h.impl.Echo(ctx, args.Ping)

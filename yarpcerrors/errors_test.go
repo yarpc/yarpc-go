@@ -164,3 +164,74 @@ func testAllErrorConstructors(
 	}
 	t.Run("Named", namedFunc)
 }
+
+func TestErrUnwrap(t *testing.T) {
+	myErr := errors.New("my custom error")
+	yErr := AbortedErrorf("wrap my custom err: %w", myErr)
+
+	assert.Equal(t, FromError(yErr).Message(), "wrap my custom err: my custom error", "unexpected message")
+	assert.Equal(t, myErr, errors.Unwrap(yErr), "expected original error")
+	assert.True(t, errors.Is(yErr, myErr), "expected original error")
+}
+
+type customYARPCError struct {
+	err string
+}
+
+func (e customYARPCError) Error() string {
+	return e.err
+}
+func (e customYARPCError) YARPCError() *Status {
+	return FromError(DataLossErrorf(e.err))
+}
+
+func TestFromError(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
+		assert.Nil(t, FromError(nil))
+	})
+
+	t.Run("unknown err", func(t *testing.T) {
+		st := FromError(errors.New("foo"))
+		assert.Equal(t, CodeUnknown.String(), st.Code().String(), "unexpected code")
+	})
+
+	t.Run("wrapped Status", func(t *testing.T) {
+		wrappedErr := fmt.Errorf("wrap 2: %w",
+			FailedPreconditionErrorf("wrap 1: %w", // yarpc error
+				errors.New("inner")))
+
+		st := FromError(wrappedErr)
+		assert.Equal(t, CodeFailedPrecondition.String(), st.Code().String(), "unexpected Code")
+		assert.Equal(t, "wrap 1: inner", st.Message())
+	})
+
+	t.Run("wrapped Status interface", func(t *testing.T) {
+		st := FromError(fmt.Errorf("wrapped: %w", customYARPCError{err: "custom err"}))
+		assert.Equal(t, CodeDataLoss.String(), st.Code().String(), "unexpected Code")
+		assert.Equal(t, "custom err", st.Message())
+	})
+}
+
+func TestIsStatus(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
+		assert.False(t, IsStatus(nil))
+	})
+
+	t.Run("unknown err", func(t *testing.T) {
+		err := errors.New("foo")
+		assert.False(t, IsStatus(err), "unexpected Status")
+	})
+
+	t.Run("wrapped Status", func(t *testing.T) {
+		err := fmt.Errorf("wrap 2: %w",
+			FailedPreconditionErrorf("wrap 1: %w", // yarpc error
+				errors.New("inner")))
+
+		assert.True(t, IsStatus(err), "expected YARPC error")
+	})
+
+	t.Run("wrapped Status interface", func(t *testing.T) {
+		err := fmt.Errorf("wrapped: %w", customYARPCError{err: "custom err"})
+		assert.True(t, IsStatus(err))
+	})
+}

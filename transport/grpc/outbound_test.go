@@ -251,7 +251,7 @@ func TestCallServiceMatch(t *testing.T) {
 					return nil
 				}),
 			)
-			listener, err := net.Listen("tcp", ":0")
+			listener, err := net.Listen("tcp", "127.0.0.1:0")
 			require.NoError(t, err)
 			go func() {
 				err := server.Serve(listener)

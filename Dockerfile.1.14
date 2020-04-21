@@ -1,4 +1,4 @@
-FROM golang:1.12
+FROM golang:1.14
 
 ENV SUPPRESS_DOCKER 1
 WORKDIR /yarpc
@@ -11,7 +11,7 @@ ADD etc/bin/vendor-build.sh /yarpc/etc/bin/
 # Download and cache dependencies in the image so that we're not constantly
 # re-downloading them locally.
 
-ADD tools.go go.mod go.sum /yarpc/
+ADD tools_test.go go.mod go.sum /yarpc/
 RUN go mod download
 
 ADD internal/examples/go.mod /yarpc/internal/examples/
