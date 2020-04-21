@@ -27,8 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/peer"
@@ -241,7 +241,7 @@ func TestCallServiceMatch(t *testing.T) {
 					}
 
 					// Send the response attributes back and end the stream.
-					if sendErr := stream.SendMsg(&empty.Empty{}); sendErr != nil {
+					if sendErr := stream.SendMsg(&types.Empty{}); sendErr != nil {
 						// We couldn't send the response.
 						return sendErr
 					}
