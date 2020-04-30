@@ -26,11 +26,18 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/peer/direct"
 	. "go.uber.org/yarpc/x/yarpctest"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
 func TestStreaming(t *testing.T) {
+	newChooser := func(id peer.Identifier, transport peer.Transport) (peer.Chooser, error) {
+		return direct.New(direct.Configuration{}, transport.NewDialer())
+		// return peerchooser.NewSingle(id, transport)
+	}
+
 	p := NewPortProvider(t)
 	tests := []struct {
 		name     string
@@ -290,6 +297,38 @@ func TestStreaming(t *testing.T) {
 						SendStreamDecodeErrorAndExpectError(yarpcerrors.InternalErrorf("test"), yarpcerrors.InternalErrorf("test").Error()),
 					),
 				),
+			),
+		},
+		{
+			name: "single use chooser",
+			services: Lifecycles(
+				GRPCService(
+					Name("myservice"),
+					p.NamedPort("10"),
+					Proc(
+						Name("proc"),
+						EchoStreamHandler(),
+					),
+				),
+			),
+			requests: ConcurrentAction(
+				RepeatAction(
+					GRPCStreamRequest(
+						p.NamedPort("10"),
+						Service("myservice"),
+						Procedure("proc"),
+						Chooser(newChooser),
+						ClientStreamActions(
+							SendStreamMsg("test"),
+							RecvStreamMsg("test"),
+							SendStreamMsg("test2"),
+							RecvStreamMsg("test2"),
+							CloseStream(),
+						),
+					),
+					10,
+				),
+				3,
 			),
 		},
 		{

@@ -282,10 +282,12 @@ func (o *Outbound) stream(
 
 	grpcPeer, ok := apiPeer.(*grpcPeer)
 	if !ok {
-		return nil, peer.ErrInvalidPeerConversion{
+		err := peer.ErrInvalidPeerConversion{
 			Peer:         apiPeer,
 			ExpectedType: "*grpcPeer",
 		}
+		onFinish(err)
+		return nil, err
 	}
 
 	tracer := o.t.options.tracer
@@ -299,6 +301,7 @@ func (o *Outbound) stream(
 
 	if err := tracer.Inject(span.Context(), opentracing.HTTPHeaders, mdReadWriter(md)); err != nil {
 		span.Finish()
+		onFinish(err)
 		return nil, err
 	}
 
@@ -313,11 +316,13 @@ func (o *Outbound) stream(
 	)
 	if err != nil {
 		span.Finish()
+		onFinish(err)
 		return nil, err
 	}
 	stream := newClientStream(streamCtx, req, clientStream, span, onFinish)
 	tClientStream, err := transport.NewClientStream(stream)
 	if err != nil {
+		onFinish(err)
 		span.Finish()
 		return nil, err
 	}

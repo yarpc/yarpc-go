@@ -20,7 +20,10 @@
 
 package types
 
-import "go.uber.org/yarpc/x/yarpctest/api"
+import (
+	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/x/yarpctest/api"
+)
 
 // Service is a concrete type that represents the "service" for a request.
 // It can be used in multiple interfaces.
@@ -68,4 +71,20 @@ func (n *ShardKey) ApplyRequest(opts *api.RequestOpts) {
 // ApplyClientStreamRequest implements api.ClientStreamRequestOption
 func (n *ShardKey) ApplyClientStreamRequest(opts *api.ClientStreamRequestOpts) {
 	opts.GiveRequest.Meta.ShardKey = n.ShardKey
+}
+
+// ChooserFactory is a concrete type that providers the peer chooser for the
+// request.
+type ChooserFactory struct {
+	NewChooser func(peer.Identifier, peer.Transport) (peer.Chooser, error)
+}
+
+// ApplyRequest implements api.RequestOption
+func (n *ChooserFactory) ApplyRequest(opts *api.RequestOpts) {
+	// opts.GiveRequest.ShardKey = n.ShardKey
+}
+
+// ApplyClientStreamRequest implements api.ClientStreamRequestOption
+func (n *ChooserFactory) ApplyClientStreamRequest(opts *api.ClientStreamRequestOpts) {
+	opts.NewChooser = n.NewChooser
 }
