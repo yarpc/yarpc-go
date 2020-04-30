@@ -279,7 +279,6 @@ func (o *Outbound) stream(
 	if err != nil {
 		return nil, err
 	}
-	defer func() { onFinish(err) }()
 
 	grpcPeer, ok := apiPeer.(*grpcPeer)
 	if !ok {
@@ -316,7 +315,7 @@ func (o *Outbound) stream(
 		span.Finish()
 		return nil, err
 	}
-	stream := newClientStream(streamCtx, req, clientStream, span)
+	stream := newClientStream(streamCtx, req, clientStream, span, onFinish)
 	tClientStream, err := transport.NewClientStream(stream)
 	if err != nil {
 		span.Finish()
