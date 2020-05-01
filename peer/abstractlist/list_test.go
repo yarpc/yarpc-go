@@ -33,6 +33,7 @@ import (
 	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/peer/abstractpeer"
+	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/yarpctest"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
@@ -384,4 +385,24 @@ func TestWaitForNeverStarted(t *testing.T) {
 	_, _, err := list.Choose(ctx, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "context finished while waiting for instance to start: context deadline exceeded")
+}
+
+func TestDefaultChooseTimeout(t *testing.T) {
+	fakeTransport := yarpctest.NewFakeTransport()
+	listImplementation := &mraList{}
+	req := &transport.Request{}
+
+	list := New("foo-list", fakeTransport, listImplementation, DefaultChooseTimeout(0))
+	require.NoError(t, list.Start(), "peer list failed to start")
+
+	err := list.Update(peer.ListUpdates{Additions: []peer.Identifier{
+		hostport.PeerIdentifier("foo:peer"),
+	}})
+	require.NoError(t, err, "could not add fake peer to list")
+
+	// no deadline
+	ctx := context.Background()
+
+	_, _, err = list.Choose(ctx, req)
+	assert.NoError(t, err, "expected to choose peer without context deadline")
 }

@@ -45,10 +45,6 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-var (
-	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, `"random" peer list can't wait for peer without a context deadline`)
-)
-
 func newNotRunningError(err string) error {
 	return yarpcerrors.FailedPreconditionErrorf(`"random" peer list is not running: %s`, err)
 }
@@ -424,17 +420,6 @@ func TestRandPeer(t *testing.T) {
 					Wait: 20 * time.Millisecond,
 				},
 				ChooseAction{ExpectedPeer: "1"},
-			},
-			expectedRunning: true,
-		},
-		{
-			msg: "no blocking with no context deadline",
-			peerListActions: []PeerListAction{
-				StartAction{},
-				ChooseAction{
-					InputContext: context.Background(),
-					ExpectedErr:  _noContextDeadlineError,
-				},
 			},
 			expectedRunning: true,
 		},
