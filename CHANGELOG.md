@@ -5,10 +5,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- `abstractlist` accepts a `DefaultChooseTimeout` option for applying to
+`context`s without deadlines.
 ### Fixed
 - yarpcerrors: `fmt` verbs are ignored when no args are passed to error
   constructors.
 - Fix gRPC streaming when used with the direct peer chooser.
+- Streaming calls do not require contexts with deadlines. Users should use
+  cancelable contexts for long-lived streams instead of timeouts.
 
 ## [1.45.0] - 2020-04-21
 ### Added

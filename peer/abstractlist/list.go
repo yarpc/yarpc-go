@@ -74,16 +74,18 @@ type Subscriber interface {
 }
 
 type options struct {
-	capacity  int
-	noShuffle bool
-	failFast  bool
-	seed      int64
-	logger    *zap.Logger
+	capacity             int
+	defaultChooseTimeout time.Duration
+	noShuffle            bool
+	failFast             bool
+	seed                 int64
+	logger               *zap.Logger
 }
 
 var defaultOptions = options{
-	capacity: 10,
-	seed:     time.Now().UnixNano(),
+	defaultChooseTimeout: 500 * time.Millisecond,
+	capacity:             10,
+	seed:                 time.Now().UnixNano(),
 }
 
 // Option customizes the behavior of a list.
@@ -135,6 +137,17 @@ func FailFast() Option {
 func Seed(seed int64) Option {
 	return optionFunc(func(options *options) {
 		options.seed = seed
+	})
+}
+
+// DefaultChooseTimeout specifies the default timeout to add to 'Choose' calls
+// without context deadlines. This prevents long-lived streams from setting
+// calling deadlines.
+//
+// Defaults to 500ms.
+func DefaultChooseTimeout(timeout time.Duration) Option {
+	return optionFunc(func(options *options) {
+		options.defaultChooseTimeout = timeout
 	})
 }
 
@@ -196,9 +209,10 @@ type List struct {
 	peerAvailableEvent chan struct{}
 	transport          peer.Transport
 
-	noShuffle bool
-	failFast  bool
-	randSrc   rand.Source
+	defaultChooseTimeout time.Duration
+	noShuffle            bool
+	failFast             bool
+	randSrc              rand.Source
 }
 
 // Name returns the name of the list.
@@ -403,7 +417,11 @@ func (pl *List) removeOffline(id peer.Identifier) error {
 // Choose selects the next available peer in the peer list.
 func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, func(error), error) {
 	if _, ok := ctx.Deadline(); !ok {
-		return nil, nil, pl.newNoContextDeadlineError()
+		// set the default timeout on the chooser so that we do not wait
+		// indefinitely for a peer to become available
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, pl.defaultChooseTimeout)
+		defer cancel()
 	}
 	// We wait for the chooser to start and produce an error if the list does
 	// not start before the context deadline times out.
@@ -550,10 +568,6 @@ func (pl *List) waitForPeerAddedEvent(ctx context.Context) error {
 	case <-ctx.Done():
 		return pl.newUnavailableError(ctx.Err())
 	}
-}
-
-func (pl *List) newNoContextDeadlineError() error {
-	return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "%q peer list can't wait for peer without a context deadline", pl.name)
 }
 
 func (pl *List) newUnavailableError(err error) error {
