@@ -43,8 +43,7 @@ func ShardKey(key string) *types.ShardKey {
 	return &types.ShardKey{ShardKey: key}
 }
 
-// ShardKey specifies that "shard key" header for a request. It is a shared
-// option across different requests.
+// Chooser overrides the peer.Chooser for a request.
 func Chooser(f func(peer.Identifier, peer.Transport) (peer.Chooser, error)) *types.ChooserFactory {
 	return &types.ChooserFactory{NewChooser: f}
 }
