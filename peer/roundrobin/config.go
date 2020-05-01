@@ -22,6 +22,7 @@ package roundrobin
 
 import (
 	"fmt"
+	"time"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/yarpcconfig"
@@ -32,6 +33,10 @@ import (
 type Configuration struct {
 	Capacity *int `config:"capacity"`
 	FailFast bool `config:"failFast"`
+	// DefaultChooseTimeout specifies the deadline to add to Choose calls if not
+	// present. This enables calls without deadlines, ie streaming, to choose
+	// peers without waiting indefinitely.
+	DefaultChooseTimeout *time.Duration `config:"defaultChooseTimeout"`
 }
 
 // Spec returns a configuration specification for the round-robin peer list
@@ -59,12 +64,15 @@ type Configuration struct {
 // fail-fast option.
 // With fail-fast enabled, the peer list will return an error immediately if no
 // peers are available (connected) at the time the request is sent.
+// The default choose timeout enables calls without deadlines, ie streaming, to
+// choose peers without waiting indefinitely.
 //
 //  round-robin:
 //    peers:
 //      - 127.0.0.1:8080
 //    capacity: 1
 //    failFast: true
+//    defaultChooseTimeout: 1s
 func Spec() yarpcconfig.PeerListSpec {
 	return SpecWithOptions()
 }
@@ -74,7 +82,7 @@ func SpecWithOptions(options ...ListOption) yarpcconfig.PeerListSpec {
 	return yarpcconfig.PeerListSpec{
 		Name: "round-robin",
 		BuildPeerList: func(cfg Configuration, t peer.Transport, k *yarpcconfig.Kit) (peer.ChooserList, error) {
-			opts := make([]ListOption, 0, len(options)+2)
+			opts := make([]ListOption, 0, len(options)+3)
 
 			opts = append(opts, options...)
 
@@ -85,11 +93,12 @@ func SpecWithOptions(options ...ListOption) yarpcconfig.PeerListSpec {
 				}
 				opts = append(opts, Capacity(*cfg.Capacity))
 			}
-
 			if cfg.FailFast {
 				opts = append(opts, FailFast())
 			}
-
+			if cfg.DefaultChooseTimeout != nil {
+				opts = append(opts, DefaultChooseTimeout(*cfg.DefaultChooseTimeout))
+			}
 			return New(t, opts...), nil
 		},
 	}

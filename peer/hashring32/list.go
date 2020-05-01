@@ -24,6 +24,7 @@ package hashring32
 
 import (
 	"context"
+	"time"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -34,10 +35,11 @@ import (
 )
 
 type options struct {
-	offsetHeader       string
-	peerOverrideHeader string
-	peerRingOptions    []hashring32.Option
-	logger             *zap.Logger
+	offsetHeader         string
+	peerOverrideHeader   string
+	peerRingOptions      []hashring32.Option
+	defaultChooseTimeout *time.Duration
+	logger               *zap.Logger
 }
 
 // Option customizes the behavior of hashring32 implementation.
@@ -115,6 +117,21 @@ func (o loggerOption) apply(opts *options) {
 	opts.logger = o.logger
 }
 
+// DefaultChooseTimeout specifies the default timeout to add to 'Choose' calls
+// without context deadlines. This prevents long-lived streams from setting
+// calling deadlines.
+//
+// Defaults to 500ms.
+func DefaultChooseTimeout(timeout time.Duration) Option {
+	return optionFunc(func(options *options) {
+		options.defaultChooseTimeout = &timeout
+	})
+}
+
+type optionFunc func(*options)
+
+func (f optionFunc) apply(options *options) { f(options) }
+
 // New creates a new hashring32 peer list.
 func New(transport peer.Transport, hashFunc hashring32.HashFunc32, opts ...Option) *List {
 	var options options
@@ -129,8 +146,14 @@ func New(transport peer.Transport, hashFunc hashring32.HashFunc32, opts ...Optio
 
 	ring := newPeerRing(hashFunc, options.offsetHeader, options.peerOverrideHeader, logger, options.peerRingOptions...)
 
+	plOpts := []abstractlist.Option{abstractlist.Logger(logger)}
+
+	if options.defaultChooseTimeout != nil {
+		plOpts = append(plOpts, abstractlist.DefaultChooseTimeout(*options.defaultChooseTimeout))
+	}
+
 	return &List{
-		list: abstractlist.New("hashring32", transport, ring, abstractlist.Logger(logger)),
+		list: abstractlist.New("hashring32", transport, ring, plOpts...),
 	}
 }
 
