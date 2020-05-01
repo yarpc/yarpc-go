@@ -35,7 +35,7 @@ import (
 )
 
 func TestStreaming(t *testing.T) {
-	newChooser := func(id peer.Identifier, transport peer.Transport) (peer.Chooser, error) {
+	newDirectChooser := func(id peer.Identifier, transport peer.Transport) (peer.Chooser, error) {
 		trans, ok := transport.(*grpc.Transport)
 		if !ok {
 			return nil, fmt.Errorf("transport was not a grpc.Transport")
@@ -306,6 +306,9 @@ func TestStreaming(t *testing.T) {
 			),
 		},
 		{
+			// The direct chooser is rather unique in that it releases the peer in
+			// the onFinish function. Other choosers reuse the peer across calls and
+			// only release it as part of chooser.Stop().
 			name: "single use chooser",
 			services: Lifecycles(
 				GRPCService(
@@ -324,7 +327,7 @@ func TestStreaming(t *testing.T) {
 						Service("myservice"),
 						Procedure("proc"),
 						ShardKey(fmt.Sprintf("127.0.0.1:%d", p.NamedPort("10").Port)),
-						Chooser(newChooser),
+						Chooser(newDirectChooser),
 						ClientStreamActions(
 							SendStreamMsg("test"),
 							RecvStreamMsg("test"),
