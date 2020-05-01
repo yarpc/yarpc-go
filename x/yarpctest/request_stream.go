@@ -37,7 +37,6 @@ import (
 // GRPCStreamRequest creates a new grpc stream request.
 func GRPCStreamRequest(options ...api.ClientStreamRequestOption) api.Action {
 	return api.ActionFunc(func(t testing.TB) {
-
 		opts := api.NewClientStreamRequestOpts()
 		for _, option := range options {
 			option.ApplyClientStreamRequest(&opts)

@@ -79,11 +79,6 @@ type ChooserFactory struct {
 	NewChooser func(peer.Identifier, peer.Transport) (peer.Chooser, error)
 }
 
-// ApplyRequest implements api.RequestOption
-func (n *ChooserFactory) ApplyRequest(opts *api.RequestOpts) {
-	// opts.GiveRequest.ShardKey = n.ShardKey
-}
-
 // ApplyClientStreamRequest implements api.ClientStreamRequestOption
 func (n *ChooserFactory) ApplyClientStreamRequest(opts *api.ClientStreamRequestOpts) {
 	opts.NewChooser = n.NewChooser
