@@ -22,19 +22,25 @@ package grpc_test
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/direct"
+	"go.uber.org/yarpc/transport/grpc"
 	. "go.uber.org/yarpc/x/yarpctest"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
 func TestStreaming(t *testing.T) {
 	newChooser := func(id peer.Identifier, transport peer.Transport) (peer.Chooser, error) {
-		return direct.New(direct.Configuration{}, transport.NewDialer())
+		trans, ok := transport.(*grpc.Transport)
+		if !ok {
+			return nil, fmt.Errorf("transport was not a grpc.Transport")
+		}
+		return direct.New(direct.Configuration{}, trans.NewDialer())
 		// return peerchooser.NewSingle(id, transport)
 	}
 
@@ -317,6 +323,7 @@ func TestStreaming(t *testing.T) {
 						p.NamedPort("10"),
 						Service("myservice"),
 						Procedure("proc"),
+						ShardKey(fmt.Sprintf("127.0.0.1:%d", p.NamedPort("10").Port)),
 						Chooser(newChooser),
 						ClientStreamActions(
 							SendStreamMsg("test"),
