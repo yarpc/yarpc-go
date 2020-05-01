@@ -21,6 +21,8 @@
 package hashring32
 
 import (
+	"time"
+
 	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/hashring32/internal/farmhashring"
@@ -47,6 +49,11 @@ type Config struct {
 	PeerOverrideHeader string `config:"peerOverrideHeader"`
 
 	ReplicaDelimiter string `config:"replicaDelimiter"`
+
+	// DefaultChooseTimeout specifies the deadline to add to Choose calls if not
+	// present. This enables calls without deadlines, ie streaming, to choose
+	// peers without waiting indefinitely.
+	DefaultChooseTimeout *time.Duration `config:"defaultChooseTimeout"`
 }
 
 // Spec returns a configuration specification for the hashed peer list
@@ -58,13 +65,21 @@ func Spec(logger *zap.Logger, meter *metrics.Scope) yarpcconfig.PeerListSpec {
 	return yarpcconfig.PeerListSpec{
 		Name: "hashring32",
 		BuildPeerList: func(c Config, t peer.Transport, k *yarpcconfig.Kit) (peer.ChooserList, error) {
-			return New(
-				t,
-				farmhashring.Fingerprint32,
+			opts := []Option{
 				OffsetHeader(c.OffsetHeader),
 				ReplicaDelimiter(c.ReplicaDelimiter),
 				PeerOverrideHeader(c.PeerOverrideHeader),
 				Logger(logger),
+			}
+
+			if c.DefaultChooseTimeout != nil {
+				opts = append(opts, DefaultChooseTimeout(*c.DefaultChooseTimeout))
+			}
+
+			return New(
+				t,
+				farmhashring.Fingerprint32,
+				opts...,
 			), nil
 		},
 	}

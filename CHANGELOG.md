@@ -6,8 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
-- `abstractlist` accepts a `DefaultChooseTimeout` option for applying to
-`context`s without deadlines.
+- peer lists accepts a `DefaultChooseTimeout` configuration for applying to
+  `context`s without deadlines.
 ### Fixed
 - yarpcerrors: `fmt` verbs are ignored when no args are passed to error
   constructors.

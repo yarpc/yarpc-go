@@ -33,10 +33,11 @@ import (
 )
 
 type listOptions struct {
-	capacity int
-	source   rand.Source
-	failFast bool
-	logger   *zap.Logger
+	capacity             int
+	source               rand.Source
+	failFast             bool
+	defaultChooseTimeout *time.Duration
+	logger               *zap.Logger
 }
 
 var defaultListOptions = listOptions{
@@ -94,6 +95,17 @@ func Logger(logger *zap.Logger) ListOption {
 	})
 }
 
+// DefaultChooseTimeout specifies the default timeout to add to 'Choose' calls
+// without context deadlines. This prevents long-lived streams from setting
+// calling deadlines.
+//
+// Defaults to 500ms.
+func DefaultChooseTimeout(timeout time.Duration) ListOption {
+	return listOptionFunc(func(c *listOptions) {
+		c.defaultChooseTimeout = &timeout
+	})
+}
+
 // New creates a new random peer list.
 func New(transport peer.Transport, opts ...ListOption) *List {
 	options := defaultListOptions
@@ -115,6 +127,9 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 	}
 	if options.failFast {
 		plOpts = append(plOpts, abstractlist.FailFast())
+	}
+	if options.defaultChooseTimeout != nil {
+		plOpts = append(plOpts, abstractlist.DefaultChooseTimeout(*options.defaultChooseTimeout))
 	}
 
 	return &List{
