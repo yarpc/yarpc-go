@@ -33,9 +33,17 @@ func Newf(code Code, format string, args ...interface{}) *Status {
 	if code == CodeOK {
 		return nil
 	}
+
+	var err error
+	if len(args) == 0 {
+		err = errors.New(format)
+	} else {
+		err = fmt.Errorf(format, args...)
+	}
+
 	return &Status{
 		code: code,
-		err:  fmt.Errorf(format, args...),
+		err:  err,
 	}
 }
 
