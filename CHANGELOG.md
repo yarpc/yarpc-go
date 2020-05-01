@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Fixed
-- Fix gRPC streaming when used with the direct peer chooser
+- Fix gRPC streaming when used with the direct peer chooser.
 
 ## [1.45.0] - 2020-04-21
 ### Added
