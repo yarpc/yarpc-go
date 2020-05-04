@@ -23,7 +23,9 @@ package api
 import (
 	"testing"
 
+	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	peerchooser "go.uber.org/yarpc/peer"
 )
 
 // ClientStreamRequestOpts are configuration options for a yarpc stream request.
@@ -32,6 +34,7 @@ type ClientStreamRequestOpts struct {
 	GiveRequest   *transport.StreamRequest
 	StreamActions []ClientStreamAction
 	WantErrMsgs   []string
+	NewChooser    func(peer.Identifier, peer.Transport) (peer.Chooser, error)
 }
 
 // NewClientStreamRequestOpts initializes a ClientStreamRequestOpts struct.
@@ -42,6 +45,9 @@ func NewClientStreamRequestOpts() ClientStreamRequestOpts {
 				Caller:   "unknown",
 				Encoding: transport.Encoding("raw"),
 			},
+		},
+		NewChooser: func(id peer.Identifier, transport peer.Transport) (peer.Chooser, error) {
+			return peerchooser.NewSingle(id, transport), nil
 		},
 	}
 }
