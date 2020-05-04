@@ -235,3 +235,8 @@ func TestIsStatus(t *testing.T) {
 		assert.True(t, IsStatus(err))
 	})
 }
+
+func TestErrorWithFmtVerbs(t *testing.T) {
+	err := errors.New(`http://foo%s: invalid URL escape "%s"`)
+	assert.EqualError(t, UnknownErrorf(err.Error()), FromError(err).Error())
+}

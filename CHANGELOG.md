@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Fixed
+- yarpcerrors: `fmt` verbs are ignored when no args are passed to error
+  constructors.
 - Fix gRPC streaming when used with the direct peer chooser.
 
 ## [1.45.0] - 2020-04-21
