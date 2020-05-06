@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   context error. Dropped responses are logged under the `dropped` field.
 - Introspection APIs are added to `api/x/introspection`. This enabling custom
   outbounds, inbounds and peer lists to use YARPC's existing `x/debug` page.
+- Introduced `api/x/restriction` for preventing unwanted transport-encoding
+  combinations. This may cause panics for existing Fx services on start-up.
 ### Fixed
 - yarpcerrors: `fmt` verbs are ignored when no args are passed to error
   constructors.
