@@ -68,16 +68,19 @@ const fxClientTemplate = `
 <$pkgname := printf "%sfx" (lower .Name)>
 package <$pkgname>
 
-<$yarpc := import "go.uber.org/yarpc">
-<$thrift := import "go.uber.org/yarpc/encoding/thrift">
-<$client := import .ClientPackagePath>
-<$fx := import "go.uber.org/fx">
+<$yarpc       := import "go.uber.org/yarpc">
+<$transport   := import "go.uber.org/yarpc/api/transport">
+<$restriction := import "go.uber.org/yarpc/api/x/restriction">
+<$thrift      := import "go.uber.org/yarpc/encoding/thrift">
+<$client      := import .ClientPackagePath>
+<$fx          := import "go.uber.org/fx">
 
 // Params defines the dependencies for the <.Name> client.
 type Params struct {
 	<$fx>.In
 
 	Provider <$yarpc>.ClientConfig
+	Restriction <$restriction>.Checker ` + "`optional:\"true\"`" + `
 }
 
 // Result defines the output of the <.Name> client module. It provides a
@@ -101,7 +104,13 @@ type Result struct {
 // 	)
 func Client(name string, opts ...<$thrift>.ClientOption) interface{} {
 	return func(p Params) Result {
-		client := <$client>.New(p.Provider.ClientConfig(name), opts...)
+		cc := p.Provider.ClientConfig(name)
+		if namer, ok := cc.GetUnaryOutbound().(transport.Namer); ok && p.Restriction != nil {
+			if err := p.Restriction.Check(thrift.Encoding, namer.TransportName()); err != nil {
+				panic(err.Error())
+			}
+		}
+		client := <$client>.New(cc, opts...)
 		return Result{Client: client}
 	}
 }`
