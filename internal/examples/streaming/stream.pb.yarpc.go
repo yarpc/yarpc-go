@@ -33,6 +33,7 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/x/restriction"
 	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/encoding/protobuf/reflection"
 )
@@ -180,7 +181,8 @@ type FxHelloYARPCClientParams struct {
 	fx.In
 
 	Provider    yarpc.ClientConfig
-	AnyResolver jsonpb.AnyResolver `name:"yarpcfx" optional:"true"`
+	AnyResolver jsonpb.AnyResolver  `name:"yarpcfx" optional:"true"`
+	Restriction restriction.Checker `optional:"true"`
 }
 
 // FxHelloYARPCClientResult defines the output
@@ -205,8 +207,18 @@ type FxHelloYARPCClientResult struct {
 //  )
 func NewFxHelloYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
 	return func(params FxHelloYARPCClientParams) FxHelloYARPCClientResult {
+		cc := params.Provider.ClientConfig(name)
+
+		if params.Restriction != nil {
+			if namer, ok := cc.GetUnaryOutbound().(transport.Namer); ok {
+				if err := params.Restriction.Check(protobuf.Encoding, namer.TransportName()); err != nil {
+					panic(err.Error())
+				}
+			}
+		}
+
 		return FxHelloYARPCClientResult{
-			Client: newHelloYARPCClient(params.Provider.ClientConfig(name), params.AnyResolver, options...),
+			Client: newHelloYARPCClient(cc, params.AnyResolver, options...),
 		}
 	}
 }

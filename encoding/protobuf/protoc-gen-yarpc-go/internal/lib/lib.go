@@ -221,6 +221,7 @@ type Fx{{$service.GetName}}YARPCClientParams struct {
 
 	Provider yarpc.ClientConfig
 	AnyResolver jsonpb.AnyResolver ` + "`" + `name:"yarpcfx" optional:"true"` + "`" + `
+	Restriction restriction.Checker ` + "`" + `optional:"true"` + "`" + `
 }
 
 // Fx{{$service.GetName}}YARPCClientResult defines the output
@@ -245,8 +246,18 @@ type Fx{{$service.GetName}}YARPCClientResult struct {
 //  )
 func NewFx{{$service.GetName}}YARPCClient(name string, options ...protobuf.ClientOption) interface{} {
 	return func(params Fx{{$service.GetName}}YARPCClientParams) Fx{{$service.GetName}}YARPCClientResult {
+		cc := params.Provider.ClientConfig(name)
+
+		if params.Restriction != nil{
+			if namer, ok := cc.GetUnaryOutbound().(transport.Namer); ok {
+				if err := params.Restriction.Check(protobuf.Encoding, namer.TransportName()); err != nil {
+					panic(err.Error())
+				}
+			}
+		}
+
 		return Fx{{$service.GetName}}YARPCClientResult{
-			Client: new{{$service.GetName}}YARPCClient(params.Provider.ClientConfig(name), params.AnyResolver, options...),
+			Client: new{{$service.GetName}}YARPCClient(cc, params.AnyResolver, options...),
 		}
 	}
 }
@@ -615,6 +626,7 @@ var Runner = protoplugin.NewRunner(
 		"go.uber.org/fx",
 		"go.uber.org/yarpc",
 		"go.uber.org/yarpc/api/transport",
+		"go.uber.org/yarpc/api/x/restriction",
 		"go.uber.org/yarpc/encoding/protobuf",
 		"go.uber.org/yarpc/encoding/protobuf/reflection",
 	},
