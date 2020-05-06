@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package main
+package main_test
 
 import (
 	"context"
@@ -33,36 +33,76 @@ import (
 	"go.uber.org/thriftrw/ptr"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/x/restriction"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreclient"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystorefx"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreserver"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/storeclient"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/storefx"
 	"go.uber.org/yarpc/transport/http"
 )
 
 func TestFxClient(t *testing.T) {
+	const storeServiceName = "store"
+
 	d := yarpc.NewDispatcher(yarpc.Config{
 		Name: "myservice",
 		Outbounds: yarpc.Outbounds{
-			"store": {Unary: http.NewTransport().NewSingleOutbound("http://127.0.0.1/yarpc")},
+			storeServiceName: {Unary: http.NewTransport().NewSingleOutbound("http://127.0.0.1/yarpc")},
 		},
 	})
 
-	assert.NotPanics(t, func() {
-		p := storefx.Params{
-			Provider: d,
-		}
-		f := storefx.Client("store").(func(storefx.Params) storefx.Result)
-		f(p)
-	}, "failed to build client")
+	t.Run("success", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			p := storefx.Params{
+				Provider: d,
+			}
+			f := storefx.Client(storeServiceName).(func(storefx.Params) storefx.Result)
+			f(p)
+		}, "failed to build client")
+	})
 
-	assert.Panics(t, func() {
-		f := storefx.Client("not-store").(func(*yarpc.Dispatcher) storeclient.Interface)
-		f(d)
-	}, "expected panic")
+	t.Run("invalid config", func(t *testing.T) {
+		assert.PanicsWithValue(t, `no configured outbound transport for outbound key "not-store"`, func() {
+			f := storefx.Client("not-store").(func(storefx.Params) storefx.Result)
+			f(storefx.Params{
+				Provider: d,
+			})
+		}, "expected panics")
+	})
+
+	t.Run("restriction success", func(t *testing.T) {
+		r, err := restriction.NewChecker(restriction.Tuple{
+			Transport: "http", Encoding: "thrift",
+		})
+		require.NoError(t, err, "could not create restriction checker")
+
+		assert.NotPanics(t, func() {
+			p := storefx.Params{
+				Provider:    d,
+				Restriction: r,
+			}
+			f := storefx.Client(storeServiceName).(func(storefx.Params) storefx.Result)
+			f(p)
+		}, "failed to build client")
+	})
+
+	t.Run("restriction error", func(t *testing.T) {
+		r, err := restriction.NewChecker(restriction.Tuple{
+			Transport: "grpc", Encoding: "protobuf",
+		})
+		require.NoError(t, err, "could not create restriction checker")
+
+		assert.PanicsWithValue(t, `"http/thrift" is not a whitelisted combination, available: "grpc/protobuf"`, func() {
+			p := storefx.Params{
+				Provider:    d,
+				Restriction: r,
+			}
+			f := storefx.Client(storeServiceName).(func(storefx.Params) storefx.Result)
+			f(p)
+		}, "failed to build client")
+	})
 }
 
 func extractProcedures(procs *[]transport.Procedure) fx.Option {
