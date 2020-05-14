@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - peer lists accepts a `DefaultChooseTimeout` configuration for applying to
   `context`s without deadlines.
+- gRPC-go version is added to debug pages.
 ### Fixed
 - yarpcerrors: `fmt` verbs are ignored when no args are passed to error
   constructors.
