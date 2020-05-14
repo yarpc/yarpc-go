@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fix gRPC streaming when used with the direct peer chooser.
 - Streaming calls do not require contexts with deadlines. Users should use
   cancelable contexts for long-lived streams instead of timeouts.
+- Outbound status on debug pages is ordered by outbound name.
 ## Removed
 - The `x/yarpcmeta` package is completely removed.
 
