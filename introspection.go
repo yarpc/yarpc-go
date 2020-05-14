@@ -27,12 +27,12 @@ import (
 	tchannel "github.com/uber/tchannel-go"
 	thriftrw "go.uber.org/thriftrw/version"
 	"go.uber.org/yarpc/internal/introspection"
+	"google.golang.org/grpc"
 )
 
 // Introspect returns detailed information about the dispatcher. This function
 // acquires a lots of locks throughout and should only be called with some
-// reserve. This method is public merely for use by the package yarpcmeta. The
-// result of this function is internal to yarpc anyway.
+// reserve.
 func (d *Dispatcher) Introspect() introspection.DispatcherStatus {
 	var inbounds []introspection.InboundStatus
 	for _, i := range d.inbounds {
@@ -89,5 +89,6 @@ var PackageVersions = []introspection.PackageVersion{
 	{Name: "yarpc", Version: Version},
 	{Name: "tchannel", Version: tchannel.VersionInfo},
 	{Name: "thriftrw", Version: thriftrw.Version},
+	{Name: "grpc-go", Version: grpc.Version},
 	{Name: "go", Version: runtime.Version()},
 }
