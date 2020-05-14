@@ -27,6 +27,7 @@ import (
 	tchannel "github.com/uber/tchannel-go"
 	thriftrw "go.uber.org/thriftrw/version"
 	"go.uber.org/yarpc/internal/introspection"
+	"google.golang.org/grpc"
 )
 
 // Introspect returns detailed information about the dispatcher. This function
@@ -88,5 +89,6 @@ var PackageVersions = []introspection.PackageVersion{
 	{Name: "yarpc", Version: Version},
 	{Name: "tchannel", Version: tchannel.VersionInfo},
 	{Name: "thriftrw", Version: thriftrw.Version},
+	{Name: "grpc-go", Version: grpc.Version},
 	{Name: "go", Version: runtime.Version()},
 }
