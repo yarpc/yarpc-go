@@ -70,7 +70,7 @@ func (t *Transport) NewSingleOutbound(addr string) *Outbound {
 
 // TransportName is the transport name that will be set on `transport.Request` struct.
 func (o *Outbound) TransportName() string {
-	return transportName
+	return TransportName
 }
 
 // Chooser returns the outbound's peer chooser.

@@ -22,6 +22,10 @@ package tchannel
 
 import "time"
 
-const transportName = "tchannel"
+// TransportName is the name of the transport.
+//
+// This value is what is used as transport.Request#Transport and transport.Namer
+// for Outbounds.
+const TransportName = "tchannel"
 
 var defaultConnTimeout = 500 * time.Millisecond

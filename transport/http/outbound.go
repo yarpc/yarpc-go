@@ -171,7 +171,7 @@ type Outbound struct {
 
 // TransportName is the transport name that will be set on `transport.Request` struct.
 func (o *Outbound) TransportName() string {
-	return transportName
+	return TransportName
 }
 
 // setURLTemplate configures an alternate URL template.

@@ -39,7 +39,7 @@ import (
 )
 
 func TestTransportNamer(t *testing.T) {
-	assert.Equal(t, transportName, NewTransport().NewOutbound(nil).TransportName())
+	assert.Equal(t, TransportName, NewTransport().NewOutbound(nil).TransportName())
 }
 
 func TestNoRequest(t *testing.T) {

@@ -47,7 +47,7 @@ func TransportSpec(opts ...Option) yarpcconfig.TransportSpec {
 		panic(err.Error())
 	}
 	return yarpcconfig.TransportSpec{
-		Name:                transportName,
+		Name:                TransportName,
 		BuildTransport:      transportSpec.buildTransport,
 		BuildInbound:        transportSpec.buildInbound,
 		BuildUnaryOutbound:  transportSpec.buildUnaryOutbound,

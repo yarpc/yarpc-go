@@ -134,7 +134,7 @@ func TestTransportSpec(t *testing.T) {
 			desc: "simple outbound",
 			outboundCfg: attrs{
 				"myservice": attrs{
-					transportName: attrs{"address": "localhost:54569"},
+					TransportName: attrs{"address": "localhost:54569"},
 				},
 			},
 			wantOutbounds: map[string]wantOutbound{
@@ -147,7 +147,7 @@ func TestTransportSpec(t *testing.T) {
 			desc: "simple outbound with compressor",
 			outboundCfg: attrs{
 				"myservice": attrs{
-					transportName: attrs{
+					TransportName: attrs{
 						"address":    "localhost:54569",
 						"compressor": "gzip",
 					},
@@ -164,7 +164,7 @@ func TestTransportSpec(t *testing.T) {
 			desc: "outbound interpolation",
 			outboundCfg: attrs{
 				"myservice": attrs{
-					transportName: attrs{"address": "${ADDR}"},
+					TransportName: attrs{"address": "${ADDR}"},
 				},
 			},
 			env: map[string]string{"ADDR": "127.0.0.1:54570"},
@@ -178,7 +178,7 @@ func TestTransportSpec(t *testing.T) {
 			desc: "simple outbound with peer",
 			outboundCfg: attrs{
 				"myservice": attrs{
-					transportName: attrs{"peer": "localhost:54569"},
+					TransportName: attrs{"peer": "localhost:54569"},
 				},
 			},
 		},
@@ -186,7 +186,7 @@ func TestTransportSpec(t *testing.T) {
 			desc: "outbound bad peer list",
 			outboundCfg: attrs{
 				"myservice": attrs{
-					transportName: attrs{
+					TransportName: attrs{
 						"least-pending": []string{
 							"127.0.0.1:8080",
 							"127.0.0.1:8081",
@@ -204,7 +204,7 @@ func TestTransportSpec(t *testing.T) {
 			desc: "unknown preset",
 			outboundCfg: attrs{
 				"myservice": attrs{
-					transportName: attrs{"with": "derp"},
+					TransportName: attrs{"with": "derp"},
 				},
 			},
 			wantErrors: []string{
@@ -258,7 +258,7 @@ func TestTransportSpec(t *testing.T) {
 			desc: "TLS enabled on an outbound",
 			outboundCfg: attrs{
 				"myservice": attrs{
-					transportName: attrs{
+					TransportName: attrs{
 						"address": "localhost:54816",
 						"tls": attrs{
 							"enabled": true,
@@ -288,10 +288,10 @@ func TestTransportSpec(t *testing.T) {
 
 			cfgData := make(attrs)
 			if tt.transportCfg != nil {
-				cfgData["transports"] = attrs{transportName: tt.transportCfg}
+				cfgData["transports"] = attrs{TransportName: tt.transportCfg}
 			}
 			if tt.inboundCfg != nil {
-				cfgData["inbounds"] = attrs{transportName: tt.inboundCfg}
+				cfgData["inbounds"] = attrs{TransportName: tt.inboundCfg}
 			}
 			if tt.outboundCfg != nil {
 				cfgData["outbounds"] = tt.outboundCfg

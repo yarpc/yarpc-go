@@ -166,7 +166,7 @@ func (i *Inbound) Introspect() introspection.InboundStatus {
 		addrString = addr.String()
 	}
 	return introspection.InboundStatus{
-		Transport: transportName,
+		Transport: TransportName,
 		Endpoint:  addrString,
 		State:     state,
 	}
