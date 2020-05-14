@@ -52,7 +52,7 @@ func TestInboundIntrospection(t *testing.T) {
 	inbound := NewTransport().NewInbound(listener)
 	inbound.SetRouter(newTestRouter(nil))
 
-	assert.Equal(t, transportName, inbound.Introspect().Transport, "unexpected transport name")
+	assert.Equal(t, TransportName, inbound.Introspect().Transport, "unexpected transport name")
 	assert.Equal(t, "Stopped", inbound.Introspect().State, "expected 'Stopped' state")
 	assert.Empty(t, inbound.Introspect().Endpoint, "unexpected endpoint")
 

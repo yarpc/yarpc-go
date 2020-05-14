@@ -52,7 +52,7 @@ func TestNewOutbound(t *testing.T) {
 }
 
 func TestTransportNamer(t *testing.T) {
-	assert.Equal(t, transportName, NewOutbound(nil).TransportName())
+	assert.Equal(t, TransportName, NewOutbound(nil).TransportName())
 }
 
 func TestNewSingleOutboundPanic(t *testing.T) {

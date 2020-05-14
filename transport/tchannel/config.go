@@ -91,7 +91,7 @@ type transportSpec struct {
 
 func (ts *transportSpec) Spec() yarpcconfig.TransportSpec {
 	return yarpcconfig.TransportSpec{
-		Name:               transportName,
+		Name:               TransportName,
 		BuildTransport:     ts.buildTransport,
 		BuildInbound:       ts.buildInbound,
 		BuildUnaryOutbound: ts.buildUnaryOutbound,
