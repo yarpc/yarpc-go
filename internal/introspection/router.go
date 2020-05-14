@@ -33,8 +33,7 @@ type Procedure struct {
 }
 
 // IntrospectProcedures is a convenience function that translate a slice of
-// transport.Procedure to a slice of introspection.Procedure. This output is
-// used in debug and yarpcmeta.
+// transport.Procedure to a slice of introspection.Procedure.
 func IntrospectProcedures(routerProcs []transport.Procedure) []Procedure {
 	procedures := make([]Procedure, 0, len(routerProcs))
 	for _, p := range routerProcs {

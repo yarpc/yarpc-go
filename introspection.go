@@ -32,8 +32,7 @@ import (
 
 // Introspect returns detailed information about the dispatcher. This function
 // acquires a lots of locks throughout and should only be called with some
-// reserve. This method is public merely for use by the package yarpcmeta. The
-// result of this function is internal to yarpc anyway.
+// reserve.
 func (d *Dispatcher) Introspect() introspection.DispatcherStatus {
 	var inbounds []introspection.InboundStatus
 	for _, i := range d.inbounds {

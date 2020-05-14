@@ -38,7 +38,6 @@ import (
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
-	"go.uber.org/yarpc/x/yarpcmeta"
 	"go.uber.org/zap"
 )
 
@@ -133,8 +132,6 @@ func do() error {
 
 	handler := handler{items: make(map[string]string)}
 	dispatcher.Register(keyvalueserver.New(&handler))
-
-	yarpcmeta.Register(dispatcher)
 
 	if err := dispatcher.Start(); err != nil {
 		return err
