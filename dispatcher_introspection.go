@@ -23,6 +23,7 @@ package yarpc
 import (
 	"fmt"
 	"runtime"
+	"sort"
 
 	tchannel "github.com/uber/tchannel-go"
 	thriftrw "go.uber.org/thriftrw/version"
@@ -73,6 +74,9 @@ func (d *Dispatcher) Introspect() introspection.DispatcherStatus {
 			outbounds = append(outbounds, status)
 		}
 	}
+
+	sort.Sort(outboundStatuses(outbounds)) // keep debug pages deterministic
+
 	procedures := introspection.IntrospectProcedures(d.table.Procedures())
 	return introspection.DispatcherStatus{
 		Name:            d.name,
@@ -91,4 +95,16 @@ var PackageVersions = []introspection.PackageVersion{
 	{Name: "thriftrw", Version: thriftrw.Version},
 	{Name: "grpc-go", Version: grpc.Version},
 	{Name: "go", Version: runtime.Version()},
+}
+
+type outboundStatuses []introspection.OutboundStatus
+
+func (o outboundStatuses) Len() int {
+	return len(o)
+}
+func (o outboundStatuses) Less(i, j int) bool {
+	return o[i].OutboundKey < o[j].OutboundKey && o[i].RPCType < o[j].RPCType
+}
+func (o outboundStatuses) Swap(i, j int) {
+	o[i], o[j] = o[j], o[i]
 }
