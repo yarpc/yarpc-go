@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Outbound status on debug pages is ordered by outbound name.
 ## Removed
 - The `x/yarpcmeta` package is completely removed.
+- tchannel: dropped "handler failed" log. Context error override change makes
+  this log redundant as richer information exists in observability logs.
 
 ## [1.45.0] - 2020-04-21
 ### Added
