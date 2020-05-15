@@ -875,21 +875,21 @@ func TestIntrospect(t *testing.T) {
 			{
 				outboundKey: "test-client-http",
 				endpoint:    "http://127.0.0.1:1234",
-				rpcType:     "unary",
+				rpcType:     "oneway",
 			},
 			{
 				outboundKey: "test-client-http",
 				endpoint:    "http://127.0.0.1:1234",
-				rpcType:     "oneway",
-			},
-			{
-				outboundKey: "test-client-tchannel-channel",
-				endpoint:    "127.0.0.1:2345",
 				rpcType:     "unary",
 			},
 			{
 				outboundKey: "test-client-tchannel",
 				endpoint:    "127.0.0.1:3456",
+				rpcType:     "unary",
+			},
+			{
+				outboundKey: "test-client-tchannel-channel",
+				endpoint:    "127.0.0.1:2345",
 				rpcType:     "unary",
 			},
 		}

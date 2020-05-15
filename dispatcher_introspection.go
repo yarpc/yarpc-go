@@ -103,7 +103,11 @@ func (o outboundStatuses) Len() int {
 	return len(o)
 }
 func (o outboundStatuses) Less(i, j int) bool {
-	return o[i].OutboundKey < o[j].OutboundKey && o[i].RPCType < o[j].RPCType
+	if o[i].OutboundKey == o[j].OutboundKey {
+		return o[i].RPCType < o[j].RPCType
+	}
+
+	return o[i].OutboundKey < o[j].OutboundKey
 }
 func (o outboundStatuses) Swap(i, j int) {
 	o[i], o[j] = o[j], o[i]
