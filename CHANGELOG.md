@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - peer lists accepts a `DefaultChooseTimeout` configuration for applying to
   `context`s without deadlines.
 - gRPC-go version is added to debug pages.
+### Changed
+- observability: if a context deadline exceeded (timeout) or context cancelled
+  error is observed, handler responses (success and errors) are replaced by the
+  context error.
 ### Fixed
 - yarpcerrors: `fmt` verbs are ignored when no args are passed to error
   constructors.
