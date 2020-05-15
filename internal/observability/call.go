@@ -22,6 +22,7 @@ package observability
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
@@ -42,6 +43,11 @@ const (
 	_successStreamClose = "Successfully closed stream"
 	_errorStreamOpen    = "Error creating stream"
 	_errorStreamClose   = "Error closing stream"
+
+	_dropped           = "dropped"
+	_droppedAppErrLog  = "dropped application error due to context timeout or cancelation"
+	_droppedErrLogFmt  = "dropped error due to context timeout or cancelation: %v"
+	_droppedSuccessLog = "dropped handler success due to context timeout or cancelation"
 )
 
 // A call represents a single RPC along an edge.
@@ -51,7 +57,7 @@ const (
 type call struct {
 	edge    *edge
 	extract ContextExtractor
-	fields  [5]zapcore.Field
+	fields  [6]zapcore.Field
 
 	started   time.Time
 	ctx       context.Context
@@ -80,7 +86,18 @@ func (c call) EndHandleWithAppError(err error, isApplicationError bool, ctxOverr
 		return
 	}
 
-	c.endWithAppError(ctxOverrideErr, isApplicationError)
+	// We'll override the user's response with the appropriate context error. Also, log
+	// the dropped response.
+	var droppedField zap.Field
+	if isApplicationError && err == nil { // Thrift exceptions
+		droppedField = zap.String(_dropped, _droppedAppErrLog)
+	} else if err != nil { // other errors
+		droppedField = zap.String(_dropped, fmt.Sprintf(_droppedErrLogFmt, err))
+	} else {
+		droppedField = zap.String(_dropped, _droppedSuccessLog)
+	}
+
+	c.endWithAppError(ctxOverrideErr, false /* application error */, droppedField)
 }
 
 func (c call) endWithAppError(err error, isApplicationError bool, extraLogFields ...zap.Field) {

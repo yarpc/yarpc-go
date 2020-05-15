@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 - observability: if a context deadline exceeded (timeout) or context cancelled
   error is observed, handler responses (success and errors) are replaced by the
-  context error.
+  context error. Dropped responses are logged under the `dropped` field.
 ### Fixed
 - yarpcerrors: `fmt` verbs are ignored when no args are passed to error
   constructors.
