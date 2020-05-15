@@ -142,7 +142,7 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 
 	wrappedWriter := newWriter(w)
 	err := h.Handle(ctx, req, wrappedWriter)
-	call.EndWithAppError(err, wrappedWriter.isApplicationError)
+	call.EndHandleWithAppError(err, wrappedWriter.isApplicationError)
 	wrappedWriter.free()
 	return err
 }
@@ -156,7 +156,7 @@ func (m *Middleware) Call(ctx context.Context, req *transport.Request, out trans
 	if res != nil {
 		isApplicationError = res.ApplicationError
 	}
-	call.EndWithAppError(err, isApplicationError)
+	call.EndCallWithAppError(err, isApplicationError)
 	return res, err
 }
 
