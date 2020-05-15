@@ -334,10 +334,9 @@ func Run(t crossdock.T) {
 				"RPC-Encoding":   "raw",
 				"Context-TTL-MS": "100",
 			},
-			wantStatus: 504,
-			skipStatus: 400,
-			wantBodyContains: `call to procedure "waitfortimeout/raw"` +
-				` of service "yarpc-test" from caller "yarpc-test" timed out after`,
+			wantStatus:       504,
+			skipStatus:       400,
+			wantBodyContains: `call to procedure "waitfortimeout/raw" of service "yarpc-test" from caller "yarpc-test" timed out`,
 		},
 		{
 			// We call sleep through the proxy Phone.
@@ -361,7 +360,7 @@ func Run(t crossdock.T) {
 				` "yarpc-test": BadRequest: unrecognized procedure "sleep" for` +
 				` service "yarpc-test"` + "\n",
 			wantStatus:       504,
-			wantBodyContains: `client timeout for procedure "sleep" of service "yarpc-test" after`,
+			wantBodyContains: `call to procedure "phone" of service "yarpc-test" from caller "yarpc-test" timed out`,
 		},
 	}
 

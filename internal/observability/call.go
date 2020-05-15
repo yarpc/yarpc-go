@@ -74,8 +74,13 @@ func (c call) EndCallWithAppError(err error, isApplicationError bool) {
 	c.endWithAppError(err, isApplicationError)
 }
 
-func (c call) EndHandleWithAppError(err error, isApplicationError bool) {
-	c.endWithAppError(err, isApplicationError)
+func (c call) EndHandleWithAppError(err error, isApplicationError bool, ctxOverrideErr error) {
+	if ctxOverrideErr == nil {
+		c.endWithAppError(err, isApplicationError)
+		return
+	}
+
+	c.endWithAppError(ctxOverrideErr, isApplicationError)
 }
 
 func (c call) endWithAppError(err error, isApplicationError bool) {
