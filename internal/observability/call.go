@@ -83,9 +83,9 @@ func (c call) EndHandleWithAppError(err error, isApplicationError bool, ctxOverr
 	c.endWithAppError(ctxOverrideErr, isApplicationError)
 }
 
-func (c call) endWithAppError(err error, isApplicationError bool) {
+func (c call) endWithAppError(err error, isApplicationError bool, extraLogFields ...zap.Field) {
 	elapsed := _timeNow().Sub(c.started)
-	c.endLogs(elapsed, err, isApplicationError)
+	c.endLogs(elapsed, err, isApplicationError, extraLogFields...)
 	c.endStats(elapsed, err, isApplicationError)
 }
 
@@ -95,7 +95,7 @@ func (c call) EndWithPanic(err error) {
 	c.endWithAppError(err, true)
 }
 
-func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool) {
+func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool, extraLogFields ...zap.Field) {
 	appErrBitWithNoError := isApplicationError && err == nil // ie Thrift exception
 
 	var ce *zapcore.CheckedEntry
@@ -148,6 +148,7 @@ func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool)
 	} else {
 		fields = append(fields, zap.Error(err))
 	}
+	fields = append(fields, extraLogFields...)
 	ce.Write(fields...)
 }
 
