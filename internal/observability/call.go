@@ -67,10 +67,18 @@ type levels struct {
 }
 
 func (c call) End(err error) {
-	c.EndWithAppError(err, false)
+	c.endWithAppError(err, false)
 }
 
-func (c call) EndWithAppError(err error, isApplicationError bool) {
+func (c call) EndCallWithAppError(err error, isApplicationError bool) {
+	c.endWithAppError(err, isApplicationError)
+}
+
+func (c call) EndHandleWithAppError(err error, isApplicationError bool) {
+	c.endWithAppError(err, isApplicationError)
+}
+
+func (c call) endWithAppError(err error, isApplicationError bool) {
 	elapsed := _timeNow().Sub(c.started)
 	c.endLogs(elapsed, err, isApplicationError)
 	c.endStats(elapsed, err, isApplicationError)
@@ -79,7 +87,7 @@ func (c call) EndWithAppError(err error, isApplicationError bool) {
 // EndWithPanic ends the call with additional panic metrics
 func (c call) EndWithPanic(err error) {
 	c.edge.panics.Inc()
-	c.EndWithAppError(err, true)
+	c.endWithAppError(err, true)
 }
 
 func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool) {
