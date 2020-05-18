@@ -36,7 +36,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/introspection"
+	"go.uber.org/yarpc/api/x/introspection"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/whitespace"
 	"go.uber.org/yarpc/peer/abstractpeer"
