@@ -26,6 +26,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - The `x/yarpcmeta` package is completely removed.
 - tchannel: dropped "handler failed" log. Context error override change makes
   this log redundant as richer information exists in observability logs.
+- tchannel: when callers time out, TChannel servers will not log
+  "SendSystemError failed" and "responseWriter failed to close" messages, since
+  they are unactionable.
 
 ## [1.45.0] - 2020-04-21
 ### Added
