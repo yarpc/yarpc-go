@@ -127,7 +127,6 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 		if err := call.Response().SendSystemError(getSystemError(err)); err != nil {
 			h.logger.Error("SendSystemError failed", zap.Error(err))
 		}
-		h.logger.Error("handler failed", zap.Error(err))
 		return
 	}
 	if err != nil && responseWriter.IsApplicationError() {
