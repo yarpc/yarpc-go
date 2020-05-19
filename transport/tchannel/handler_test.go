@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -658,4 +659,106 @@ func TestGetSystemError(t *testing.T) {
 			assert.Equal(t, tt.wantCode, tchErr.Code())
 		})
 	}
+}
+
+func TestHandlerSystemErrorLogs(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	zapCore, observedLogs := observer.New(zapcore.ErrorLevel)
+	router := transporttest.NewMockRouter(mockCtrl)
+	transportHandler := &testUnaryHandler{}
+	spec := transport.NewUnaryHandlerSpec(transportHandler)
+
+	tchannelHandler := handler{
+		router:            router,
+		logger:            zap.New(zapCore),
+		newResponseWriter: newHandlerWriter,
+	}
+
+	router.EXPECT().Choose(gomock.Any(), gomock.Any()).Return(spec, nil).Times(4)
+
+	inboundCall := &fakeInboundCall{
+		service: "foo-service",
+		caller:  "foo-caller",
+		method:  "foo-method",
+		format:  tchannel.JSON,
+		arg2:    []byte{},
+		arg3:    []byte{},
+		resp:    newFaultyResponseRecorder(),
+	}
+
+	t.Run("client awaiting response", func(t *testing.T) {
+		t.Run("handler success", func(t *testing.T) {
+			transportHandler.reset()
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+
+			tchannelHandler.handle(ctx, inboundCall)
+			logs := observedLogs.TakeAll()
+			require.Len(t, logs, 2, "unexpected number of logs")
+
+			assert.Equal(t, logs[0].Message, "SendSystemError failed", "unexpected log message")
+			assert.Equal(t, logs[1].Message, "responseWriter failed to close", "unexpected log message")
+		})
+
+		t.Run("handler error", func(t *testing.T) {
+			transportHandler.reset()
+			transportHandler.err = errors.New("handler error")
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+
+			tchannelHandler.handle(ctx, inboundCall)
+			logs := observedLogs.TakeAll()
+			require.Len(t, logs, 1, "unexpected number of logs")
+
+			assert.Equal(t, logs[0].Message, "SendSystemError failed", "unexpected log message")
+		})
+	})
+
+	t.Run("client timed out", func(t *testing.T) {
+		t.Run("handler success", func(t *testing.T) {
+			transportHandler.reset()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			defer cancel()
+
+			transportHandler.fn = func() { <-ctx.Done() } // ensure client times out
+
+			tchannelHandler.handle(ctx, inboundCall)
+			require.Empty(t, observedLogs.TakeAll(), "expected no logs")
+		})
+
+		t.Run("handler err", func(t *testing.T) {
+			transportHandler.reset()
+			transportHandler.err = errors.New("handler error")
+
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			defer cancel()
+
+			transportHandler.fn = func() { <-ctx.Done() } // ensure client times out
+
+			tchannelHandler.handle(ctx, inboundCall)
+			require.Empty(t, observedLogs.TakeAll(), "expected no logs")
+		})
+	})
+}
+
+type testUnaryHandler struct {
+	err error
+	fn  func()
+}
+
+func (h *testUnaryHandler) Handle(context.Context, *transport.Request, transport.ResponseWriter) error {
+	if h.fn != nil {
+		h.fn()
+	}
+	return h.err
+}
+
+func (h *testUnaryHandler) reset() {
+	h.err = nil
+	h.fn = nil
 }
