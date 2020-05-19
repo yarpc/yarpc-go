@@ -20,13 +20,17 @@
 
 package introspection
 
+import (
+	xintrospection "go.uber.org/yarpc/api/x/introspection"
+)
+
 // DispatcherStatus represent detailed introspection information about a
 // dispatcher.
 type DispatcherStatus struct {
-	Name            string           `json:"name"`
-	ID              string           `json:"id"`
-	Procedures      []Procedure      `json:"procedures"`
-	Inbounds        []InboundStatus  `json:"inbounds"`
-	Outbounds       []OutboundStatus `json:"outbounds"`
-	PackageVersions []PackageVersion `json:"packageVersions"`
+	Name            string                          `json:"name"`
+	ID              string                          `json:"id"`
+	Procedures      []Procedure                     `json:"procedures"`
+	Inbounds        []xintrospection.InboundStatus  `json:"inbounds"`
+	Outbounds       []xintrospection.OutboundStatus `json:"outbounds"`
+	PackageVersions []PackageVersion                `json:"packageVersions"`
 }

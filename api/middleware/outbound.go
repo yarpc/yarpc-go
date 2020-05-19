@@ -24,7 +24,7 @@ import (
 	"context"
 
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/introspection"
+	"go.uber.org/yarpc/api/x/introspection"
 )
 
 var (

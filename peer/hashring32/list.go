@@ -28,7 +28,7 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/introspection"
+	"go.uber.org/yarpc/api/x/introspection"
 	"go.uber.org/yarpc/peer/abstractlist"
 	"go.uber.org/yarpc/peer/hashring32/internal/hashring32"
 	"go.uber.org/zap"
