@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.46.0] - 2020-05-20
 ### Added
 - peer lists accepts a `DefaultChooseTimeout` configuration for applying to
   `context`s without deadlines.
@@ -1244,7 +1244,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.45.0...HEAD
+[1.46.0]: https://github.com/yarpc/yarpc-go/compare/v1.45.0...v1.46.0
 [1.45.0]: https://github.com/yarpc/yarpc-go/compare/v1.44.0...v1.45.0
 [1.44.0]: https://github.com/yarpc/yarpc-go/compare/v1.43.0...v1.44.0
 [1.43.0]: https://github.com/yarpc/yarpc-go/compare/v1.42.1...v1.43.0
