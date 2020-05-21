@@ -6,6 +6,8 @@ package emptyservicefx
 import (
 	fx "go.uber.org/fx"
 	yarpc "go.uber.org/yarpc"
+	transport "go.uber.org/yarpc/api/transport"
+	restriction "go.uber.org/yarpc/api/x/restriction"
 	thrift "go.uber.org/yarpc/encoding/thrift"
 	emptyserviceclient "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/emptyserviceclient"
 )
@@ -14,7 +16,8 @@ import (
 type Params struct {
 	fx.In
 
-	Provider yarpc.ClientConfig
+	Provider    yarpc.ClientConfig
+	Restriction restriction.Checker `optional:"true"`
 }
 
 // Result defines the output of the EmptyService client module. It provides a
@@ -38,7 +41,13 @@ type Result struct {
 // 	)
 func Client(name string, opts ...thrift.ClientOption) interface{} {
 	return func(p Params) Result {
-		client := emptyserviceclient.New(p.Provider.ClientConfig(name), opts...)
+		cc := p.Provider.ClientConfig(name)
+		if namer, ok := cc.GetUnaryOutbound().(transport.Namer); ok && p.Restriction != nil {
+			if err := p.Restriction.Check(thrift.Encoding, namer.TransportName()); err != nil {
+				panic(err.Error())
+			}
+		}
+		client := emptyserviceclient.New(cc, opts...)
 		return Result{Client: client}
 	}
 }

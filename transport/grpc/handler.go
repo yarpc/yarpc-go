@@ -92,7 +92,7 @@ func (h *handler) getBasicTransportRequest(ctx context.Context, streamMethod str
 	if err != nil {
 		return nil, err
 	}
-	transportRequest.Transport = transportName
+	transportRequest.Transport = TransportName
 
 	procedure, err := procedureFromStreamMethod(streamMethod)
 	if err != nil {
@@ -139,7 +139,7 @@ func (h *handler) handleStream(
 	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
 		ParentSpanContext: parentSpanCtx,
 		Tracer:            tracer,
-		TransportName:     transportName,
+		TransportName:     TransportName,
 		StartTime:         start,
 		ExtraTags:         yarpc.OpentracingTags,
 	}
@@ -219,7 +219,7 @@ func (h *handler) handleUnaryBeforeErrorConversion(
 	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
 		ParentSpanContext: parentSpanCtx,
 		Tracer:            tracer,
-		TransportName:     transportName,
+		TransportName:     TransportName,
 		StartTime:         start,
 		ExtraTags:         yarpc.OpentracingTags,
 	}

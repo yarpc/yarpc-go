@@ -23,34 +23,36 @@ package yarpc
 import (
 	"fmt"
 	"runtime"
+	"sort"
 
 	tchannel "github.com/uber/tchannel-go"
 	thriftrw "go.uber.org/thriftrw/version"
+	xintrospection "go.uber.org/yarpc/api/x/introspection"
 	"go.uber.org/yarpc/internal/introspection"
+	"google.golang.org/grpc"
 )
 
 // Introspect returns detailed information about the dispatcher. This function
 // acquires a lots of locks throughout and should only be called with some
-// reserve. This method is public merely for use by the package yarpcmeta. The
-// result of this function is internal to yarpc anyway.
+// reserve.
 func (d *Dispatcher) Introspect() introspection.DispatcherStatus {
-	var inbounds []introspection.InboundStatus
+	var inbounds []xintrospection.InboundStatus
 	for _, i := range d.inbounds {
-		var status introspection.InboundStatus
-		if i, ok := i.(introspection.IntrospectableInbound); ok {
+		var status xintrospection.InboundStatus
+		if i, ok := i.(xintrospection.IntrospectableInbound); ok {
 			status = i.Introspect()
 		} else {
-			status = introspection.InboundStatus{
+			status = xintrospection.InboundStatus{
 				Transport: "Introspection not supported",
 			}
 		}
 		inbounds = append(inbounds, status)
 	}
-	var outbounds []introspection.OutboundStatus
+	var outbounds []xintrospection.OutboundStatus
 	for outboundKey, o := range d.outbounds {
 		if o.Unary != nil {
-			var status introspection.OutboundStatus
-			if o, ok := o.Unary.(introspection.IntrospectableOutbound); ok {
+			var status xintrospection.OutboundStatus
+			if o, ok := o.Unary.(xintrospection.IntrospectableOutbound); ok {
 				status = o.Introspect()
 			} else {
 				status.Transport = "Introspection not supported"
@@ -61,8 +63,8 @@ func (d *Dispatcher) Introspect() introspection.DispatcherStatus {
 			outbounds = append(outbounds, status)
 		}
 		if o.Oneway != nil {
-			var status introspection.OutboundStatus
-			if o, ok := o.Oneway.(introspection.IntrospectableOutbound); ok {
+			var status xintrospection.OutboundStatus
+			if o, ok := o.Oneway.(xintrospection.IntrospectableOutbound); ok {
 				status = o.Introspect()
 			} else {
 				status.Transport = "Introspection not supported"
@@ -73,6 +75,9 @@ func (d *Dispatcher) Introspect() introspection.DispatcherStatus {
 			outbounds = append(outbounds, status)
 		}
 	}
+
+	sort.Sort(outboundStatuses(outbounds)) // keep debug pages deterministic
+
 	procedures := introspection.IntrospectProcedures(d.table.Procedures())
 	return introspection.DispatcherStatus{
 		Name:            d.name,
@@ -89,5 +94,22 @@ var PackageVersions = []introspection.PackageVersion{
 	{Name: "yarpc", Version: Version},
 	{Name: "tchannel", Version: tchannel.VersionInfo},
 	{Name: "thriftrw", Version: thriftrw.Version},
+	{Name: "grpc-go", Version: grpc.Version},
 	{Name: "go", Version: runtime.Version()},
+}
+
+type outboundStatuses []xintrospection.OutboundStatus
+
+func (o outboundStatuses) Len() int {
+	return len(o)
+}
+func (o outboundStatuses) Less(i, j int) bool {
+	if o[i].OutboundKey == o[j].OutboundKey {
+		return o[i].RPCType < o[j].RPCType
+	}
+
+	return o[i].OutboundKey < o[j].OutboundKey
+}
+func (o outboundStatuses) Swap(i, j int) {
+	o[i], o[j] = o[j], o[i]
 }

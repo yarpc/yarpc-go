@@ -27,6 +27,7 @@ import (
 
 	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -142,7 +143,11 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 
 	wrappedWriter := newWriter(w)
 	err := h.Handle(ctx, req, wrappedWriter)
-	call.EndWithAppError(err, wrappedWriter.isApplicationError)
+	ctxErr := ctxErrOverride(ctx, req)
+	call.EndHandleWithAppError(err, wrappedWriter.isApplicationError, ctxErr)
+	if ctxErr != nil {
+		err = ctxErr
+	}
 	wrappedWriter.free()
 	return err
 }
@@ -156,7 +161,7 @@ func (m *Middleware) Call(ctx context.Context, req *transport.Request, out trans
 	if res != nil {
 		isApplicationError = res.ApplicationError
 	}
-	call.EndWithAppError(err, isApplicationError)
+	call.EndCallWithAppError(err, isApplicationError)
 	return res, err
 }
 
@@ -196,6 +201,22 @@ func (m *Middleware) CallStream(ctx context.Context, request *transport.StreamRe
 		return nil, err
 	}
 	return call.WrapClientStream(clientStream), nil
+}
+
+func ctxErrOverride(ctx context.Context, req *transport.Request) (ctxErr error) {
+	if ctx.Err() == context.DeadlineExceeded {
+		return yarpcerrors.DeadlineExceededErrorf(
+			"call to procedure %q of service %q from caller %q timed out",
+			req.Procedure, req.Service, req.Caller)
+	}
+
+	if ctx.Err() == context.Canceled {
+		return yarpcerrors.CancelledErrorf(
+			"call to procedure %q of service %q from caller %q was canceled",
+			req.Procedure, req.Service, req.Caller)
+	}
+
+	return nil
 }
 
 // handlePanicForCall checks for a panic without actually recovering from it

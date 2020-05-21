@@ -36,7 +36,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/introspection"
+	"go.uber.org/yarpc/api/x/introspection"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/whitespace"
 	"go.uber.org/yarpc/peer/abstractpeer"
@@ -48,10 +48,7 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-var (
-	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, `"round-robin" peer list can't wait for peer without a context deadline`)
-	_notRunningErrorFormat  = `"round-robin" peer list is not running: %s`
-)
+var _notRunningErrorFormat = `"round-robin" peer list is not running: %s`
 
 func newNotRunningError(err string) error {
 	return yarpcerrors.FailedPreconditionErrorf(_notRunningErrorFormat, err)
@@ -545,17 +542,6 @@ func TestRoundRobinList(t *testing.T) {
 		// 	},
 		// 	expectedRunning: true,
 		// },
-		{
-			msg: "no blocking with no context deadline",
-			peerListActions: []PeerListAction{
-				StartAction{},
-				ChooseAction{
-					InputContext: context.Background(),
-					ExpectedErr:  _noContextDeadlineError,
-				},
-			},
-			expectedRunning: true,
-		},
 		{
 			msg:                        "add unavailable peer",
 			retainedAvailablePeerIDs:   []string{"1"},

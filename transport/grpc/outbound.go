@@ -72,7 +72,7 @@ func newOutbound(t *Transport, peerChooser peer.Chooser, options ...OutboundOpti
 // TransportName is the transport name that will be set on `transport.Request`
 // struct.
 func (o *Outbound) TransportName() string {
-	return transportName
+	return TransportName
 }
 
 // Start implements transport.Lifecycle#Start.
@@ -165,7 +165,7 @@ func (o *Outbound) invoke(
 	tracer := o.t.options.tracer
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        tracer,
-		TransportName: transportName,
+		TransportName: TransportName,
 		StartTime:     start,
 		ExtraTags:     yarpc.OpentracingTags,
 	}
@@ -279,20 +279,21 @@ func (o *Outbound) stream(
 	if err != nil {
 		return nil, err
 	}
-	defer func() { onFinish(err) }()
 
 	grpcPeer, ok := apiPeer.(*grpcPeer)
 	if !ok {
-		return nil, peer.ErrInvalidPeerConversion{
+		err := peer.ErrInvalidPeerConversion{
 			Peer:         apiPeer,
 			ExpectedType: "*grpcPeer",
 		}
+		onFinish(err)
+		return nil, err
 	}
 
 	tracer := o.t.options.tracer
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        tracer,
-		TransportName: transportName,
+		TransportName: TransportName,
 		StartTime:     start,
 		ExtraTags:     yarpc.OpentracingTags,
 	}
@@ -300,6 +301,7 @@ func (o *Outbound) stream(
 
 	if err := tracer.Inject(span.Context(), opentracing.HTTPHeaders, mdReadWriter(md)); err != nil {
 		span.Finish()
+		onFinish(err)
 		return nil, err
 	}
 
@@ -314,11 +316,13 @@ func (o *Outbound) stream(
 	)
 	if err != nil {
 		span.Finish()
+		onFinish(err)
 		return nil, err
 	}
-	stream := newClientStream(streamCtx, req, clientStream, span)
+	stream := newClientStream(streamCtx, req, clientStream, span, onFinish)
 	tClientStream, err := transport.NewClientStream(stream)
 	if err != nil {
+		onFinish(err)
 		span.Finish()
 		return nil, err
 	}

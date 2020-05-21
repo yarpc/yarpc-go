@@ -22,15 +22,27 @@ package grpc_test
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/peer/direct"
+	"go.uber.org/yarpc/transport/grpc"
 	. "go.uber.org/yarpc/x/yarpctest"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
 func TestStreaming(t *testing.T) {
+	newDirectChooser := func(id peer.Identifier, transport peer.Transport) (peer.Chooser, error) {
+		trans, ok := transport.(*grpc.Transport)
+		if !ok {
+			return nil, fmt.Errorf("transport was not a grpc.Transport")
+		}
+		return direct.New(direct.Configuration{}, trans.NewDialer())
+	}
+
 	p := NewPortProvider(t)
 	tests := []struct {
 		name     string
@@ -290,6 +302,43 @@ func TestStreaming(t *testing.T) {
 						SendStreamDecodeErrorAndExpectError(yarpcerrors.InternalErrorf("test"), yarpcerrors.InternalErrorf("test").Error()),
 					),
 				),
+			),
+		},
+		{
+			// The direct chooser is rather unique in that it releases the peer in
+			// the onFinish function. Other choosers reuse the peer across calls and
+			// only release it as part of chooser.Stop(). This case ensures we don't
+			// call onFinish prematurely.
+			name: "single use chooser",
+			services: Lifecycles(
+				GRPCService(
+					Name("myservice"),
+					p.NamedPort("10"),
+					Proc(
+						Name("proc"),
+						EchoStreamHandler(),
+					),
+				),
+			),
+			requests: ConcurrentAction(
+				RepeatAction(
+					GRPCStreamRequest(
+						p.NamedPort("10"),
+						Service("myservice"),
+						Procedure("proc"),
+						ShardKey(fmt.Sprintf("127.0.0.1:%d", p.NamedPort("10").Port)),
+						Chooser(newDirectChooser),
+						ClientStreamActions(
+							SendStreamMsg("test"),
+							RecvStreamMsg("test"),
+							SendStreamMsg("test2"),
+							RecvStreamMsg("test2"),
+							CloseStream(),
+						),
+					),
+					10,
+				),
+				3,
 			),
 		},
 		{

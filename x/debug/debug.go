@@ -27,7 +27,6 @@ import (
 	"runtime/debug"
 
 	"go.uber.org/yarpc"
-
 	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/zap"
 )

@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -199,7 +200,6 @@ func TestHandlerFailures(t *testing.T) {
 			newResponseWriter: newHandlerWriter,
 			recorder:          newResponseRecorder(),
 			wantLogLevel:      zapcore.ErrorLevel,
-			wantLogMessage:    "handler failed",
 		},
 		{
 			desc: "arg2 reader error",
@@ -215,7 +215,6 @@ func TestHandlerFailures(t *testing.T) {
 			newResponseWriter: newHandlerWriter,
 			recorder:          newResponseRecorder(),
 			wantLogLevel:      zapcore.ErrorLevel,
-			wantLogMessage:    "handler failed",
 		},
 		{
 			desc: "arg2 parse error",
@@ -231,7 +230,6 @@ func TestHandlerFailures(t *testing.T) {
 			newResponseWriter: newHandlerWriter,
 			recorder:          newResponseRecorder(),
 			wantLogLevel:      zapcore.ErrorLevel,
-			wantLogMessage:    "handler failed",
 		},
 		{
 			desc: "arg3 reader error",
@@ -247,7 +245,6 @@ func TestHandlerFailures(t *testing.T) {
 			newResponseWriter: newHandlerWriter,
 			recorder:          newResponseRecorder(),
 			wantLogLevel:      zapcore.ErrorLevel,
-			wantLogMessage:    "handler failed",
 		},
 		{
 			desc: "internal error",
@@ -278,7 +275,6 @@ func TestHandlerFailures(t *testing.T) {
 			newResponseWriter: newHandlerWriter,
 			recorder:          newResponseRecorder(),
 			wantLogLevel:      zapcore.ErrorLevel,
-			wantLogMessage:    "handler failed",
 		},
 		{
 			desc: "arg3 encode error",
@@ -312,7 +308,6 @@ func TestHandlerFailures(t *testing.T) {
 			newResponseWriter: newHandlerWriter,
 			recorder:          newResponseRecorder(),
 			wantLogLevel:      zapcore.ErrorLevel,
-			wantLogMessage:    "handler failed",
 		},
 		{
 			desc: "handler timeout",
@@ -349,7 +344,6 @@ func TestHandlerFailures(t *testing.T) {
 			newResponseWriter: newHandlerWriter,
 			recorder:          newResponseRecorder(),
 			wantLogLevel:      zapcore.ErrorLevel,
-			wantLogMessage:    "handler failed",
 		},
 		{
 			desc: "handler panic",
@@ -405,57 +399,60 @@ func TestHandlerFailures(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-		if tt.ctx != nil {
-			ctx = tt.ctx
-		} else if tt.ctxFunc != nil {
-			ctx, cancel = tt.ctxFunc()
-		}
-		defer cancel()
+		t.Run(tt.desc, func(t *testing.T) {
 
-		core, logs := observer.New(zapcore.ErrorLevel)
-		mockCtrl := gomock.NewController(t)
-		thandler := transporttest.NewMockUnaryHandler(mockCtrl)
-		spec := transport.NewUnaryHandlerSpec(thandler)
-
-		if tt.expectCall != nil {
-			tt.expectCall(thandler)
-		}
-
-		resp := tt.recorder
-		tt.sendCall.resp = resp
-
-		router := transporttest.NewMockRouter(mockCtrl)
-		router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
-			WithService(tt.sendCall.service).
-			WithProcedure(tt.sendCall.method),
-		).Return(spec, nil).AnyTimes()
-
-		handler{router: router, logger: zap.New(core).Named("tchannel"), newResponseWriter: tt.newResponseWriter}.handle(ctx, tt.sendCall)
-		err := resp.SystemError()
-		require.Error(t, err, "expected error for %q", tt.desc)
-
-		systemErr, isSystemErr := err.(tchannel.SystemError)
-		require.True(t, isSystemErr, "expected %v for %q to be a system error", err, tt.desc)
-		assert.Equal(t, tt.wantStatus, systemErr.Code(), tt.desc)
-
-		getLog := func() observer.LoggedEntry {
-			entries := logs.TakeAll()
-			return entries[0]
-		}
-
-		if tt.wantLogMessage != "" {
-			log := getLog()
-			logContext := log.ContextMap()
-			assert.Equal(t, tt.wantLogLevel, log.Entry.Level, "Unexpected log level")
-			assert.Equal(t, tt.wantLogMessage, log.Entry.Message, "Unexpected log message written")
-			assert.Equal(t, "tchannel", log.LoggerName, "Unexpected logger name")
-			if tt.wantErrMessage != "" {
-				assert.Equal(t, tt.wantErrMessage, logContext["error"], "Unexpected error message")
+			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+			if tt.ctx != nil {
+				ctx = tt.ctx
+			} else if tt.ctxFunc != nil {
+				ctx, cancel = tt.ctxFunc()
 			}
-		}
+			defer cancel()
 
-		mockCtrl.Finish()
+			core, logs := observer.New(zapcore.ErrorLevel)
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			thandler := transporttest.NewMockUnaryHandler(mockCtrl)
+			spec := transport.NewUnaryHandlerSpec(thandler)
+
+			if tt.expectCall != nil {
+				tt.expectCall(thandler)
+			}
+
+			resp := tt.recorder
+			tt.sendCall.resp = resp
+
+			router := transporttest.NewMockRouter(mockCtrl)
+			router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
+				WithService(tt.sendCall.service).
+				WithProcedure(tt.sendCall.method),
+			).Return(spec, nil).AnyTimes()
+
+			handler{router: router, logger: zap.New(core).Named("tchannel"), newResponseWriter: tt.newResponseWriter}.handle(ctx, tt.sendCall)
+			err := resp.SystemError()
+			require.Error(t, err, "expected error for %q", tt.desc)
+
+			systemErr, isSystemErr := err.(tchannel.SystemError)
+			require.True(t, isSystemErr, "expected %v for %q to be a system error", err, tt.desc)
+			assert.Equal(t, tt.wantStatus, systemErr.Code(), tt.desc)
+
+			getLog := func() observer.LoggedEntry {
+				entries := logs.TakeAll()
+				return entries[0]
+			}
+
+			if tt.wantLogMessage != "" {
+				log := getLog()
+				logContext := log.ContextMap()
+				assert.Equal(t, tt.wantLogLevel, log.Entry.Level, "Unexpected log level")
+				assert.Equal(t, tt.wantLogMessage, log.Entry.Message, "Unexpected log message written")
+				assert.Equal(t, "tchannel", log.LoggerName, "Unexpected logger name")
+				if tt.wantErrMessage != "" {
+					assert.Equal(t, tt.wantErrMessage, logContext["error"], "Unexpected error message")
+				}
+			}
+		})
 	}
 }
 
@@ -662,4 +659,106 @@ func TestGetSystemError(t *testing.T) {
 			assert.Equal(t, tt.wantCode, tchErr.Code())
 		})
 	}
+}
+
+func TestHandlerSystemErrorLogs(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	zapCore, observedLogs := observer.New(zapcore.ErrorLevel)
+	router := transporttest.NewMockRouter(mockCtrl)
+	transportHandler := &testUnaryHandler{}
+	spec := transport.NewUnaryHandlerSpec(transportHandler)
+
+	tchannelHandler := handler{
+		router:            router,
+		logger:            zap.New(zapCore),
+		newResponseWriter: newHandlerWriter,
+	}
+
+	router.EXPECT().Choose(gomock.Any(), gomock.Any()).Return(spec, nil).Times(4)
+
+	inboundCall := &fakeInboundCall{
+		service: "foo-service",
+		caller:  "foo-caller",
+		method:  "foo-method",
+		format:  tchannel.JSON,
+		arg2:    []byte{},
+		arg3:    []byte{},
+		resp:    newFaultyResponseRecorder(),
+	}
+
+	t.Run("client awaiting response", func(t *testing.T) {
+		t.Run("handler success", func(t *testing.T) {
+			transportHandler.reset()
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+
+			tchannelHandler.handle(ctx, inboundCall)
+			logs := observedLogs.TakeAll()
+			require.Len(t, logs, 2, "unexpected number of logs")
+
+			assert.Equal(t, logs[0].Message, "SendSystemError failed", "unexpected log message")
+			assert.Equal(t, logs[1].Message, "responseWriter failed to close", "unexpected log message")
+		})
+
+		t.Run("handler error", func(t *testing.T) {
+			transportHandler.reset()
+			transportHandler.err = errors.New("handler error")
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+
+			tchannelHandler.handle(ctx, inboundCall)
+			logs := observedLogs.TakeAll()
+			require.Len(t, logs, 1, "unexpected number of logs")
+
+			assert.Equal(t, logs[0].Message, "SendSystemError failed", "unexpected log message")
+		})
+	})
+
+	t.Run("client timed out", func(t *testing.T) {
+		t.Run("handler success", func(t *testing.T) {
+			transportHandler.reset()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			defer cancel()
+
+			transportHandler.fn = func() { <-ctx.Done() } // ensure client times out
+
+			tchannelHandler.handle(ctx, inboundCall)
+			require.Empty(t, observedLogs.TakeAll(), "expected no logs")
+		})
+
+		t.Run("handler err", func(t *testing.T) {
+			transportHandler.reset()
+			transportHandler.err = errors.New("handler error")
+
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			defer cancel()
+
+			transportHandler.fn = func() { <-ctx.Done() } // ensure client times out
+
+			tchannelHandler.handle(ctx, inboundCall)
+			require.Empty(t, observedLogs.TakeAll(), "expected no logs")
+		})
+	})
+}
+
+type testUnaryHandler struct {
+	err error
+	fn  func()
+}
+
+func (h *testUnaryHandler) Handle(context.Context, *transport.Request, transport.ResponseWriter) error {
+	if h.fn != nil {
+		h.fn()
+	}
+	return h.err
+}
+
+func (h *testUnaryHandler) reset() {
+	h.err = nil
+	h.fn = nil
 }

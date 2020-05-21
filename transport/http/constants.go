@@ -22,7 +22,11 @@ package http
 
 import "time"
 
-const transportName = "http"
+// TransportName is the name of the transport.
+//
+// This value is what is used as transport.Request#Transport and transport.Namer
+// for Outbounds.
+const TransportName = "http"
 
 var (
 	defaultConnTimeout     = 500 * time.Millisecond

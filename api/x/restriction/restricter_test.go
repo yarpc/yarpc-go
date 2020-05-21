@@ -18,50 +18,52 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcmeta
+package restriction
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/encoding/json"
+	"go.uber.org/yarpc/api/transport"
 )
 
-func TestProcedures(t *testing.T) {
-	disp := yarpc.NewDispatcher(yarpc.Config{
-		Name: "myservice",
+func TestRestricter(t *testing.T) {
+	const (
+		testEncoding  = transport.Encoding("test-encoding")
+		testTransport = "test-transport"
+	)
+
+	t.Run("no tuples", func(t *testing.T) {
+		c, err := NewChecker( /* empty */ )
+		assert.Error(t, err, "expected successful creation")
+		assert.Nil(t, c, "expected nil checker")
 	})
-	ms := &service{disp}
 
-	r, err := ms.procs(context.Background(), nil)
-	require.NoError(t, err)
-	assert.Equal(t, "myservice", r.Service)
-	found := false
-	for _, p := range r.Procedures {
-		if p.Name == "myprocedure" {
-			found = true
-			break
-		}
-	}
-	assert.False(t, found)
+	t.Run("whitelisted tuple", func(t *testing.T) {
+		r, err := NewChecker(Tuple{
+			Transport: testTransport,
+			Encoding:  testEncoding,
+		})
+		require.NoError(t, err, "expected successful creation")
 
-	disp.Register(json.Procedure("myprocedure",
-		func(context.Context, interface{}) (interface{}, error) {
-			return nil, nil
-		}))
+		t.Run("success", func(t *testing.T) {
+			err = r.Check(testEncoding, testTransport)
+			assert.NoError(t, err, "expected success")
+		})
 
-	r, err = ms.procs(context.Background(), nil)
-	require.NoError(t, err)
-	assert.Equal(t, "myservice", r.Service)
-	found = false
-	for _, p := range r.Procedures {
-		if p.Name == "myprocedure" {
-			found = true
-			break
-		}
-	}
-	assert.True(t, found)
+		t.Run("err", func(t *testing.T) {
+			err = r.Check("enc", "trans")
+			assert.EqualError(t, err,
+				`"trans/enc" is not a whitelisted combination, available: "test-transport/test-encoding"`)
+		})
+	})
+
+	t.Run("invalid tuple", func(t *testing.T) {
+		_, err := NewChecker(Tuple{
+			Transport: "",
+			Encoding:  "",
+		})
+		require.EqualError(t, err, "tuple missing must have all fields set")
+	})
 }

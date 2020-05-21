@@ -76,19 +76,21 @@ func (ss *serverStream) ReceiveMessage(_ context.Context) (*transport.StreamMess
 }
 
 type clientStream struct {
-	ctx    context.Context
-	req    *transport.StreamRequest
-	stream grpc.ClientStream
-	span   opentracing.Span
-	closed atomic.Bool
+	ctx     context.Context
+	req     *transport.StreamRequest
+	stream  grpc.ClientStream
+	span    opentracing.Span
+	closed  atomic.Bool
+	release func(error)
 }
 
-func newClientStream(ctx context.Context, req *transport.StreamRequest, stream grpc.ClientStream, span opentracing.Span) *clientStream {
+func newClientStream(ctx context.Context, req *transport.StreamRequest, stream grpc.ClientStream, span opentracing.Span, release func(error)) *clientStream {
 	return &clientStream{
-		ctx:    ctx,
-		req:    req,
-		stream: stream,
-		span:   span,
+		ctx:     ctx,
+		req:     req,
+		stream:  stream,
+		span:    span,
+		release: release,
 	}
 }
 
@@ -135,6 +137,7 @@ func (cs *clientStream) closeWithErr(err error) error {
 	if !cs.closed.Swap(true) {
 		err = transport.UpdateSpanWithErr(cs.span, err)
 		cs.span.Finish()
+		cs.release(err)
 	}
 	return err
 }

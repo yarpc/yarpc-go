@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.46.0] - 2020-05-20
+### Added
+- peer lists accepts a `DefaultChooseTimeout` configuration for applying to
+  `context`s without deadlines.
+- gRPC-go version is added to debug pages.
+### Changed
+- observability: if a context deadline exceeded (timeout) or context cancelled
+  error is observed, handler responses (success and errors) are replaced by the
+  context error. Dropped responses are logged under the `dropped` field.
+- Introspection APIs are added to `api/x/introspection`. This enabling custom
+  outbounds, inbounds and peer lists to use YARPC's existing `x/debug` page.
+- Introduced `api/x/restriction` for preventing unwanted transport-encoding
+  combinations. This may cause panics for existing Fx services on start-up.
+### Fixed
+- yarpcerrors: `fmt` verbs are ignored when no args are passed to error
+  constructors.
+- Fix gRPC streaming when used with the direct peer chooser.
+- Streaming calls do not require contexts with deadlines. Users should use
+  cancelable contexts for long-lived streams instead of timeouts.
+- Outbound status on debug pages is ordered by outbound name.
+## Removed
+- The `x/yarpcmeta` package is completely removed.
+- tchannel: dropped "handler failed" log. Context error override change makes
+  this log redundant as richer information exists in observability logs.
+- tchannel: when callers time out, TChannel servers will not log
+  "SendSystemError failed" and "responseWriter failed to close" messages, since
+  they are unactionable.
+
 ## [1.45.0] - 2020-04-21
 ### Added
 - gRPC inbound supports introspection, suitable for debug pages.
@@ -1216,6 +1244,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[1.46.0]: https://github.com/yarpc/yarpc-go/compare/v1.45.0...v1.46.0
 [1.45.0]: https://github.com/yarpc/yarpc-go/compare/v1.44.0...v1.45.0
 [1.44.0]: https://github.com/yarpc/yarpc-go/compare/v1.43.0...v1.44.0
 [1.43.0]: https://github.com/yarpc/yarpc-go/compare/v1.42.1...v1.43.0

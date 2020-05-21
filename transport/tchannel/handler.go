@@ -123,11 +123,15 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 		call.Response().Blackhole()
 		return
 	}
+
+	clientTimedOut := ctx.Err() == context.DeadlineExceeded
+
 	if err != nil && !responseWriter.IsApplicationError() {
-		if err := call.Response().SendSystemError(getSystemError(err)); err != nil {
-			h.logger.Error("SendSystemError failed", zap.Error(err))
+		sendSysErr := call.Response().SendSystemError(getSystemError(err))
+		if sendSysErr != nil && !clientTimedOut {
+			// only log errors if client is still waiting for our response
+			h.logger.Error("SendSystemError failed", zap.Error(sendSysErr))
 		}
-		h.logger.Error("handler failed", zap.Error(err))
 		return
 	}
 	if err != nil && responseWriter.IsApplicationError() {
@@ -145,11 +149,11 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 			responseWriter.AddHeader(ErrorMessageHeaderKey, status.Message())
 		}
 	}
-	if err := responseWriter.Close(); err != nil {
-		if err := call.Response().SendSystemError(getSystemError(err)); err != nil {
-			h.logger.Error("SendSystemError failed", zap.Error(err))
+	if reswErr := responseWriter.Close(); reswErr != nil && !clientTimedOut {
+		if sendSysErr := call.Response().SendSystemError(getSystemError(reswErr)); sendSysErr != nil {
+			h.logger.Error("SendSystemError failed", zap.Error(sendSysErr))
 		}
-		h.logger.Error("responseWriter failed to close", zap.Error(err))
+		h.logger.Error("responseWriter failed to close", zap.Error(reswErr))
 	}
 }
 
@@ -164,7 +168,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 		Caller:          call.CallerName(),
 		Service:         call.ServiceName(),
 		Encoding:        transport.Encoding(call.Format()),
-		Transport:       transportName,
+		Transport:       TransportName,
 		Procedure:       call.MethodString(),
 		ShardKey:        call.ShardKey(),
 		RoutingKey:      call.RoutingKey(),

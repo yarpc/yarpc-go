@@ -20,4 +20,8 @@
 
 package grpc
 
-const transportName = "grpc"
+// TransportName is the name of the transport.
+//
+// This value is what is used as transport.Request#Transport and transport.Namer
+// for Outbounds.
+const TransportName = "grpc"

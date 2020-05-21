@@ -22,6 +22,7 @@ package randpeer
 
 import (
 	"fmt"
+	"time"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/yarpcconfig"
@@ -32,6 +33,10 @@ import (
 type Configuration struct {
 	Capacity *int `config:"capacity"`
 	FailFast bool `config:"failFast"`
+	// DefaultChooseTimeout specifies the deadline to add to Choose calls if not
+	// present. This enables calls without deadlines, ie streaming, to choose
+	// peers without waiting indefinitely.
+	DefaultChooseTimeout *time.Duration `config:"defaultChooseTimeout"`
 }
 
 // Spec returns a configuration specification for the random peer list
@@ -76,7 +81,9 @@ func SpecWithOptions(options ...ListOption) yarpcconfig.PeerListSpec {
 			if cfg.FailFast {
 				opts = append(opts, FailFast())
 			}
-
+			if cfg.DefaultChooseTimeout != nil {
+				opts = append(opts, DefaultChooseTimeout(*cfg.DefaultChooseTimeout))
+			}
 			return New(t, opts...), nil
 		},
 	}
