@@ -182,6 +182,7 @@ func TestMiddlewareLogging(t *testing.T) {
 	rawErr := errors.New("fail")
 	yErrNoDetails := yarpcerrors.Newf(yarpcerrors.CodeAborted, "fail")
 	yErrWithDetails := yarpcerrors.Newf(yarpcerrors.CodeAborted, "fail").WithDetails([]byte("err detail"))
+	yErrResourceExhausted := yarpcerrors.CodeResourceExhausted
 
 	baseFields := func() []zapcore.Field {
 		return []zapcore.Field{
@@ -196,13 +197,15 @@ func TestMiddlewareLogging(t *testing.T) {
 	}
 
 	type test struct {
-		desc            string
-		err             error // downstream error
-		applicationErr  bool  // downstream application error
-		wantErrLevel    zapcore.Level
-		wantInboundMsg  string
-		wantOutboundMsg string
-		wantFields      []zapcore.Field
+		desc               string
+		err                error             // downstream error
+		applicationErr     bool              // downstream application error
+		applicationErrName string            // downstream application error name
+		applicationErrCode *yarpcerrors.Code // downstream application error code
+		wantErrLevel       zapcore.Level
+		wantInboundMsg     string
+		wantOutboundMsg    string
+		wantFields         []zapcore.Field
 	}
 
 	tests := []test{
@@ -232,7 +235,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			},
 		},
 		{
-			desc:            "thrift application error",
+			desc:            "thrift application error with no name",
 			applicationErr:  true,
 			wantErrLevel:    zapcore.WarnLevel,
 			wantInboundMsg:  "Error handling inbound request.",
@@ -242,6 +245,23 @@ func TestMiddlewareLogging(t *testing.T) {
 				zap.Bool("successful", false),
 				zap.Skip(),
 				zap.String("error", "application_error"),
+			},
+		},
+		{
+			desc:               "thrift application error with name and code",
+			applicationErr:     true,
+			applicationErrName: "FunkyThriftError",
+			applicationErrCode: &yErrResourceExhausted,
+			wantErrLevel:       zapcore.WarnLevel,
+			wantInboundMsg:     "Error handling inbound request.",
+			wantOutboundMsg:    "Error making outbound call.",
+			wantFields: []zapcore.Field{
+				zap.Duration("latency", 0),
+				zap.Bool("successful", false),
+				zap.Skip(),
+				zap.String("error", "application_error"),
+				zap.String("errorName", "FunkyThriftError"),
+				zap.String("errorCode", "resource-exhausted"),
 			},
 		},
 		{
@@ -292,11 +312,21 @@ func TestMiddlewareLogging(t *testing.T) {
 	}
 
 	newHandler := func(t test) fakeHandler {
-		return fakeHandler{err: t.err, applicationErr: t.applicationErr}
+		return fakeHandler{
+			err:                t.err,
+			applicationErr:     t.applicationErr,
+			applicationErrName: t.applicationErrName,
+			applicationErrCode: t.applicationErrCode,
+		}
 	}
 
 	newOutbound := func(t test) fakeOutbound {
-		return fakeOutbound{err: t.err, applicationErr: t.applicationErr}
+		return fakeOutbound{
+			err:                t.err,
+			applicationErr:     t.applicationErr,
+			applicationErrName: t.applicationErrName,
+			applicationErrCode: t.applicationErrCode,
+		}
 	}
 
 	infoLevel := zapcore.InfoLevel
@@ -467,14 +497,14 @@ func TestMiddlewareStreamingLogging(t *testing.T) {
 		},
 	})
 
-	// helper function to retrive observered logs, asserting the expected number
+	// helper function to retrieve observed logs, asserting the expected number
 	getLogs := func(t *testing.T, num int) []observer.LoggedEntry {
 		logs := logs.TakeAll()
 		require.Equal(t, num, len(logs), "expected exactly %d logs, got %v: %#v", num, len(logs), logs)
 
 		var entries []observer.LoggedEntry
 		for _, e := range logs {
-			// zero the time for easiy comparisons
+			// zero the time for easy comparisons
 			e.Entry.Time = time.Time{}
 			entries = append(entries, e)
 		}
@@ -926,14 +956,24 @@ func TestMiddlewareMetrics(t *testing.T) {
 		Body:      strings.NewReader("body"),
 	}
 
+	yErrAlreadyExists := yarpcerrors.CodeAlreadyExists
+	yErrCodeUnknown := yarpcerrors.CodeUnknown
+
+	type failureTags struct {
+		errorTag     string
+		errorNameTag string
+	}
+
 	type test struct {
 		desc               string
-		err                error // downstream error
-		applicationErr     bool  // downstream application error
+		err                error             // downstream error
+		applicationErr     bool              // downstream application error
+		applicationErrName string            // downstream application error name
+		applicationErrCode *yarpcerrors.Code // downstream application error code
 		wantCalls          int
 		wantSuccesses      int
-		wantCallerFailures map[string]int
-		wantServerFailures map[string]int
+		wantCallerFailures map[failureTags]int
+		wantServerFailures map[failureTags]int
 	}
 
 	tests := []test{
@@ -947,17 +987,23 @@ func TestMiddlewareMetrics(t *testing.T) {
 			err:           yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "test"),
 			wantCalls:     1,
 			wantSuccesses: 0,
-			wantCallerFailures: map[string]int{
-				yarpcerrors.CodeInvalidArgument.String(): 1,
+			wantCallerFailures: map[failureTags]int{
+				{
+					errorTag:     yarpcerrors.CodeInvalidArgument.String(),
+					errorNameTag: _notSet,
+				}: 1,
 			},
 		},
 		{
-			desc:          "invalid argument error",
+			desc:          "internal error",
 			err:           yarpcerrors.Newf(yarpcerrors.CodeInternal, "test"),
 			wantCalls:     1,
 			wantSuccesses: 0,
-			wantServerFailures: map[string]int{
-				yarpcerrors.CodeInternal.String(): 1,
+			wantServerFailures: map[failureTags]int{
+				{
+					errorTag:     yarpcerrors.CodeInternal.String(),
+					errorNameTag: _notSet,
+				}: 1,
 			},
 		},
 		{
@@ -965,8 +1011,11 @@ func TestMiddlewareMetrics(t *testing.T) {
 			err:           errors.New("test"),
 			wantCalls:     1,
 			wantSuccesses: 0,
-			wantServerFailures: map[string]int{
-				"unknown_internal_yarpc": 1,
+			wantServerFailures: map[failureTags]int{
+				{
+					errorTag:     "unknown_internal_yarpc",
+					errorNameTag: _notSet,
+				}: 1,
 			},
 		},
 		{
@@ -974,18 +1023,86 @@ func TestMiddlewareMetrics(t *testing.T) {
 			err:           yarpcerrors.Newf(yarpcerrors.Code(1000), "test"),
 			wantCalls:     1,
 			wantSuccesses: 0,
-			wantServerFailures: map[string]int{
-				"1000": 1,
+			wantServerFailures: map[failureTags]int{
+				{
+					errorTag:     "1000",
+					errorNameTag: _notSet,
+				}: 1,
+			},
+		},
+		{
+			desc:               "application error name with no code",
+			wantCalls:          1,
+			wantSuccesses:      0,
+			applicationErr:     true,
+			applicationErrName: "SomeError",
+			wantCallerFailures: map[failureTags]int{
+				{
+					errorTag:     "application_error",
+					errorNameTag: "SomeError",
+				}: 1,
+			},
+		},
+		{
+			desc:               "application error name with YARPC code - caller failure",
+			wantCalls:          1,
+			wantSuccesses:      0,
+			applicationErr:     true,
+			applicationErrName: "SomeError",
+			applicationErrCode: &yErrAlreadyExists,
+			wantCallerFailures: map[failureTags]int{
+				{
+					errorTag:     "already-exists",
+					errorNameTag: "SomeError",
+				}: 1,
+			},
+		},
+		{
+			desc:               "application error name with YARPC code - server failure",
+			wantCalls:          1,
+			wantSuccesses:      0,
+			applicationErr:     true,
+			applicationErrName: "InternalServerPain",
+			applicationErrCode: &yErrCodeUnknown,
+			wantServerFailures: map[failureTags]int{
+				{
+					errorTag:     "unknown",
+					errorNameTag: "InternalServerPain",
+				}: 1,
+			},
+		},
+		{
+			desc:               "application error with YARPC code and empty name",
+			wantCalls:          1,
+			wantSuccesses:      0,
+			applicationErr:     true,
+			applicationErrName: "",
+			applicationErrCode: &yErrAlreadyExists,
+			wantCallerFailures: map[failureTags]int{
+				{
+					errorTag:     "already-exists",
+					errorNameTag: _notSet,
+				}: 1,
 			},
 		},
 	}
 
 	newHandler := func(t test) fakeHandler {
-		return fakeHandler{err: t.err, applicationErr: t.applicationErr}
+		return fakeHandler{
+			err:                t.err,
+			applicationErr:     t.applicationErr,
+			applicationErrName: t.applicationErrName,
+			applicationErrCode: t.applicationErrCode,
+		}
 	}
 
 	newOutbound := func(t test) fakeOutbound {
-		return fakeOutbound{err: t.err, applicationErr: t.applicationErr}
+		return fakeOutbound{
+			err:                t.err,
+			applicationErr:     t.applicationErr,
+			applicationErrName: t.applicationErrName,
+			applicationErrCode: t.applicationErrCode,
+		}
 	}
 
 	for _, tt := range tests {
@@ -993,14 +1110,20 @@ func TestMiddlewareMetrics(t *testing.T) {
 			key, free := getKey(req, direction, rpcType)
 			edge := mw.graph.getEdge(key)
 			free()
-			assert.Equal(t, int64(tt.wantCalls), edge.calls.Load())
-			assert.Equal(t, int64(tt.wantSuccesses), edge.successes.Load())
-			assert.Equal(t, int64(0), edge.panics.Load())
-			for tagName, val := range tt.wantCallerFailures {
-				assert.Equal(t, int64(val), edge.callerFailures.MustGet(_error, tagName).Load())
+			assert.EqualValues(t, tt.wantCalls, edge.calls.Load(), "expected calls mismatch")
+			assert.EqualValues(t, tt.wantSuccesses, edge.successes.Load(), "expected successes mismatch")
+			assert.EqualValues(t, 0, edge.panics.Load(), "expected panics mismatch")
+			for failureTags, num := range tt.wantCallerFailures {
+				assert.EqualValues(t, num, edge.callerFailures.MustGet(
+					_error, failureTags.errorTag,
+					_errorNameMetricsKey, failureTags.errorNameTag,
+				).Load(), "expected caller failures mismatch")
 			}
-			for tagName, val := range tt.wantServerFailures {
-				assert.Equal(t, int64(val), edge.serverFailures.MustGet(_error, tagName).Load())
+			for failureTags, num := range tt.wantServerFailures {
+				assert.EqualValues(t, num, edge.serverFailures.MustGet(
+					_error, failureTags.errorTag,
+					_errorNameMetricsKey, failureTags.errorNameTag,
+				).Load(), "expected server failures mismatch")
 			}
 		}
 		t.Run(tt.desc+", unary inbound", func(t *testing.T) {
@@ -1048,6 +1171,9 @@ func getKey(req *transport.Request, direction string, rpcType transport.Type) (k
 
 func TestUnaryInboundApplicationErrors(t *testing.T) {
 	defer stubTime()()
+
+	yErrAlreadyExists := yarpcerrors.CodeAlreadyExists
+
 	req := &transport.Request{
 		Caller:          "caller",
 		Service:         "service",
@@ -1074,6 +1200,8 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		zap.Bool("successful", false),
 		zap.Skip(),
 		zap.String("error", "application_error"),
+		zap.String("errorName", "SomeFakeError"),
+		zap.String("errorCode", "already-exists"),
 	}
 
 	core, logs := observer.New(zap.DebugLevel)
@@ -1087,7 +1215,12 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		context.Background(),
 		req,
 		&transporttest.FakeResponseWriter{},
-		fakeHandler{err: nil, applicationErr: true},
+		fakeHandler{
+			err:                nil,
+			applicationErr:     true,
+			applicationErrName: "SomeFakeError",
+			applicationErrCode: &yErrAlreadyExists,
+		},
 	), "Unexpected transport error.")
 
 	expected := observer.LoggedEntry{
@@ -1217,6 +1350,7 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 		"direction":        "inbound",
 		"encoding":         "raw",
 		"error":            "unknown_internal_yarpc",
+		"error_name":       _notSet,
 		"procedure":        "procedure",
 		"routing_delegate": "rd",
 		"routing_key":      "rk",
@@ -1257,27 +1391,33 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 	defer stubTime()()
 
 	tests := []struct {
-		name   string
-		err    error
-		errTag string
-		appErr bool
+		name       string
+		err        error
+		errTag     string
+		errNameTag string
+		appErr     bool
+		appErrName string
 	}{
 		{
-			name:   "status", // eg error returned in transport middleware
-			err:    yarpcerrors.Newf(yarpcerrors.CodeAlreadyExists, "foo exists!"),
-			errTag: "already-exists",
+			name:       "status", // eg error returned in transport middleware
+			err:        yarpcerrors.Newf(yarpcerrors.CodeAlreadyExists, "foo exists!"),
+			errTag:     "already-exists",
+			errNameTag: _notSet,
 		},
 		{
-			name:   "status and app error", // eg Protobuf handler returning yarpcerrors.Status
-			err:    yarpcerrors.Newf(yarpcerrors.CodeAlreadyExists, "foo exists!"),
-			errTag: "already-exists",
-			appErr: true,
+			name:       "status and app error", // eg Protobuf handler returning yarpcerrors.Status
+			err:        yarpcerrors.Newf(yarpcerrors.CodeAlreadyExists, "foo exists!"),
+			errTag:     "already-exists",
+			errNameTag: _notSet,
+			appErr:     true,
 		},
 		{
-			name:   "no status and app error", // eg Thrift exception
-			err:    errors.New("foo-bar-baz"),
-			errTag: "application_error",
-			appErr: true,
+			name:       "no status and app error", // eg Thrift exception
+			err:        errors.New("foo-bar-baz"),
+			errTag:     "application_error",
+			errNameTag: "FakeError1",
+			appErr:     true,
+			appErrName: "FakeError1",
 		},
 	}
 
@@ -1304,8 +1444,9 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 				},
 				&transporttest.FakeResponseWriter{},
 				fakeHandler{
-					err:            tt.err,
-					applicationErr: tt.appErr,
+					err:                tt.err,
+					applicationErr:     tt.appErr,
+					applicationErrName: tt.appErrName,
 				},
 			)
 			require.Error(t, err)
@@ -1333,6 +1474,7 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 				"rpc_type":         transport.Unary.String(),
 				"source":           "caller",
 				"error":            tt.errTag,
+				"error_name":       tt.errNameTag,
 			}
 			want := &metrics.RootSnapshot{
 				Counters: []metrics.Snapshot{
@@ -1540,7 +1682,7 @@ func TestStreamingMetrics(t *testing.T) {
 		},
 	}
 
-	newTags := func(direction directionName, withErr string) metrics.Tags {
+	newTags := func(direction directionName, withErr string, withCallerFailureErrName string) metrics.Tags {
 		tags := metrics.Tags{
 			"dest":             "service",
 			"direction":        string(direction),
@@ -1554,6 +1696,9 @@ func TestStreamingMetrics(t *testing.T) {
 		}
 		if withErr != "" {
 			tags["error"] = withErr
+		}
+		if withCallerFailureErrName != "" {
+			tags[_errorNameMetricsKey] = withCallerFailureErrName
 		}
 		return tags
 	}
@@ -1579,7 +1724,7 @@ func TestStreamingMetrics(t *testing.T) {
 		require.NoError(t, err)
 
 		snap := root.Snapshot()
-		tags := newTags(_directionInbound, "")
+		tags := newTags(_directionInbound, "" /* withErr */, "" /* withCallerFailureErrName */)
 
 		// successful handshake, send, recv and close
 		want := &metrics.RootSnapshot{
@@ -1604,24 +1749,28 @@ func TestStreamingMetrics(t *testing.T) {
 
 	t.Run("error handler", func(t *testing.T) {
 		tests := []struct {
-			name    string
-			err     error
-			errName string
+			name       string
+			err        error
+			errName    string
+			appErrName string
 		}{
 			{
-				name:    "client fault",
-				err:     yarpcerrors.InvalidArgumentErrorf("client err"),
-				errName: yarpcerrors.CodeInvalidArgument.String(),
+				name:       "client fault",
+				err:        yarpcerrors.InvalidArgumentErrorf("client err"),
+				errName:    yarpcerrors.CodeInvalidArgument.String(),
+				appErrName: _notSet,
 			},
 			{
-				name:    "server fault",
-				err:     yarpcerrors.InternalErrorf("server err"),
-				errName: yarpcerrors.CodeInternal.String(),
+				name:       "server fault",
+				err:        yarpcerrors.InternalErrorf("server err"),
+				errName:    yarpcerrors.CodeInternal.String(),
+				appErrName: _notSet,
 			},
 			{
-				name:    "unknown fault",
-				err:     errors.New("unknown fault"),
-				errName: "unknown_internal_yarpc",
+				name:       "unknown fault",
+				err:        errors.New("unknown fault"),
+				errName:    "unknown_internal_yarpc",
+				appErrName: _notSet,
 			},
 		}
 
@@ -1641,13 +1790,13 @@ func TestStreamingMetrics(t *testing.T) {
 				require.Error(t, err)
 
 				snap := root.Snapshot()
-				successTags := newTags(_directionInbound, "")
-				errTags := newTags(_directionInbound, tt.errName)
+				successTags := newTags(_directionInbound, "", "")
+				errTags := newTags(_directionInbound, tt.errName, tt.appErrName)
 
-				// so we don't have create a sorting implementaion, manually place the
+				// so we don't have create a sorting implementation, manually place the
 				// first two expected counter snapshots, based on the error fault.
 				counters := make([]metrics.Snapshot, 0, 10)
-				if statusFault(yarpcerrors.FromError(tt.err)) == clientFault {
+				if faultFromCode(yarpcerrors.FromError(tt.err).Code()) == clientFault {
 					counters = append(counters,
 						metrics.Snapshot{Name: "caller_failures", Tags: errTags, Value: 1},
 						metrics.Snapshot{Name: "calls", Tags: successTags, Value: 1},
@@ -1710,8 +1859,8 @@ func TestStreamingMetrics(t *testing.T) {
 		require.NoError(t, err)
 
 		snap := root.Snapshot()
-		successTags := newTags(_directionInbound, "")
-		errTags := newTags(_directionInbound, "unknown_internal_yarpc")
+		successTags := newTags(_directionInbound, "", "")
+		errTags := newTags(_directionInbound, "unknown_internal_yarpc", "")
 
 		want := &metrics.RootSnapshot{
 			Counters: []metrics.Snapshot{
@@ -1753,7 +1902,7 @@ func TestStreamingMetrics(t *testing.T) {
 		require.NoError(t, stream.Close(context.Background()))
 
 		snap := root.Snapshot()
-		tags := newTags(_directionOutbound, "")
+		tags := newTags(_directionOutbound, "", "")
 
 		// successful handshake, send, recv and close
 		want := &metrics.RootSnapshot{
@@ -1790,8 +1939,8 @@ func TestStreamingMetrics(t *testing.T) {
 		require.Error(t, err)
 
 		snap := root.Snapshot()
-		successTags := newTags(_directionOutbound, "")
-		errTags := newTags(_directionOutbound, "unknown_internal_yarpc")
+		successTags := newTags(_directionOutbound, "", "")
+		errTags := newTags(_directionOutbound, "unknown_internal_yarpc", _notSet)
 
 		want := &metrics.RootSnapshot{
 			// only the failure vector counters will have an error value passed
@@ -1845,15 +1994,16 @@ func TestStreamingMetrics(t *testing.T) {
 		require.Error(t, err)
 
 		snap := root.Snapshot()
-		successTags := newTags(_directionOutbound, "")
-		errTags := newTags(_directionOutbound, "unknown_internal_yarpc")
+		successTags := newTags(_directionOutbound, "", "")
+		errTags := newTags(_directionOutbound, "unknown_internal_yarpc", "")
+		serverFailureTags := newTags(_directionOutbound, "unknown_internal_yarpc", _notSet)
 
 		// successful handshake, send, recv and close
 		want := &metrics.RootSnapshot{
 			Counters: []metrics.Snapshot{
 				{Name: "calls", Tags: successTags, Value: 1},
 				{Name: "panics", Tags: successTags, Value: 0},
-				{Name: "server_failures", Tags: errTags, Value: 1},
+				{Name: "server_failures", Tags: serverFailureTags, Value: 1},
 				{Name: "stream_receive_failures", Tags: errTags, Value: 1},
 				{Name: "stream_receive_successes", Tags: successTags, Value: 0},
 				{Name: "stream_receives", Tags: successTags, Value: 1},
