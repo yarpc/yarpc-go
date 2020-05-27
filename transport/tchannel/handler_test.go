@@ -457,6 +457,8 @@ func TestHandlerFailures(t *testing.T) {
 }
 
 func TestResponseWriter(t *testing.T) {
+	yErrAborted := yarpcerrors.CodeAborted
+
 	tests := []struct {
 		format           tchannel.Format
 		apply            func(responseWriter)
@@ -549,10 +551,24 @@ func TestResponseWriter(t *testing.T) {
 			format: tchannel.Raw,
 			apply: func(w responseWriter) {
 				w.SetApplicationError()
+				w.SetApplicationErrorMeta(
+					&transport.ApplicationErrorMeta{
+						Name: "bAz",
+						Code: &yErrAborted,
+					},
+				)
 				_, err := w.Write([]byte("hello"))
 				require.NoError(t, err)
 			},
-			arg2:             []byte{0x00, 0x00},
+			arg2: []byte{
+				0x00, 0x02,
+				0x00, 0x1c, '$', 'r', 'p', 'c', '$', '-', 'a', 'p', 'p', 'l', 'i', 'c', 'a', 't', 'i', 'o', 'n',
+				'-', 'e', 'r', 'r', 'o', 'r', '-', 'c', 'o', 'd', 'e',
+				0x00, 0x02, '1', '0',
+				0x00, 0x1c, '$', 'r', 'p', 'c', '$', '-', 'a', 'p', 'p', 'l', 'i', 'c', 'a', 't', 'i', 'o', 'n',
+				'-', 'e', 'r', 'r', 'o', 'r', '-', 'n', 'a', 'm', 'e',
+				0x00, 0x03, 'b', 'A', 'z',
+			},
 			arg3:             []byte("hello"),
 			applicationError: true,
 		},
@@ -568,7 +584,7 @@ func TestResponseWriter(t *testing.T) {
 		assert.NoError(t, w.Close())
 
 		assert.Nil(t, resp.systemErr)
-		assert.Equal(t, tt.arg2, resp.arg2.Bytes())
+		assert.Equal(t, tt.arg2, resp.arg2.Bytes(), "headers mismatch")
 		assert.Equal(t, tt.arg3, resp.arg3.Bytes())
 
 		if tt.applicationError {

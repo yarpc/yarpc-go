@@ -182,6 +182,11 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		Headers:          headers,
 		Body:             resBody,
 		ApplicationError: res.ApplicationError(),
+		ApplicationErrorMeta: &transport.ApplicationErrorMeta{
+			Err:  nil,
+			Name: "",
+			Code: nil,
+		},
 	}
 	return resp, err
 }
