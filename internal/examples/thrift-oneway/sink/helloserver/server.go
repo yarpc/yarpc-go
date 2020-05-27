@@ -29,6 +29,7 @@ import (
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
 	sink "go.uber.org/yarpc/internal/examples/thrift-oneway/sink"
+	yarpcerrors "go.uber.org/yarpc/yarpcerrors"
 )
 
 // Interface is the server-side interface for the Hello service.
@@ -69,6 +70,10 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 }
 
 type handler struct{ impl Interface }
+
+type errorNamer interface{ ErrorName() string }
+
+type yarpcErrorCodeExtractor interface{ YARPCCode() *yarpcerrors.Code }
 
 func (h handler) Sink(ctx context.Context, body wire.Value) error {
 	var args sink.Hello_Sink_Args
