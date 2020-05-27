@@ -54,7 +54,7 @@ type g struct {
 }
 
 func (g g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceResponse, error) {
-	generators := []genFunc{clientGenerator, serverGenerator}
+	generators := []genFunc{clientGenerator, serverGenerator, yarpcErrorGenerator}
 	if !*_noFx {
 		generators = append(generators, fxGenerator)
 	}

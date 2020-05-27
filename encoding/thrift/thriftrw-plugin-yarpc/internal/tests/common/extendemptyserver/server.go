@@ -64,6 +64,10 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
+type errorNamer interface{ ErrorName() string }
+
+type yarpcErrorCodeExtractor interface{ YARPCCode() *yarpcerrors.Code }
+
 func (h handler) Hello(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args common.ExtendEmpty_Hello_Args
 	if err := args.FromWire(body); err != nil {
@@ -71,15 +75,23 @@ func (h handler) Hello(ctx context.Context, body wire.Value) (thrift.Response, e
 			"could not decode Thrift request for service 'ExtendEmpty' procedure 'Hello': %w", err)
 	}
 
-	err := h.impl.Hello(ctx)
+	appErr := h.impl.Hello(ctx)
 
-	hadError := err != nil
-	result, err := common.ExtendEmpty_Hello_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := common.ExtendEmpty_Hello_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(errorNamer); ok {
+			response.ApplicationErrorName = namer.ErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
+			response.ApplicationErrorCode = extractor.YARPCCode()
+		}
+		response.ApplicationError = appErr
 	}
+
 	return response, err
 }

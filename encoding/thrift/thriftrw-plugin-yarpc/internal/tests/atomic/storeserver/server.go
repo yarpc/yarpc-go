@@ -98,6 +98,10 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
+type errorNamer interface{ ErrorName() string }
+
+type yarpcErrorCodeExtractor interface{ YARPCCode() *yarpcerrors.Code }
+
 func (h handler) CompareAndSwap(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args atomic.Store_CompareAndSwap_Args
 	if err := args.FromWire(body); err != nil {
@@ -105,16 +109,24 @@ func (h handler) CompareAndSwap(ctx context.Context, body wire.Value) (thrift.Re
 			"could not decode Thrift request for service 'Store' procedure 'CompareAndSwap': %w", err)
 	}
 
-	err := h.impl.CompareAndSwap(ctx, args.Request)
+	appErr := h.impl.CompareAndSwap(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := atomic.Store_CompareAndSwap_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := atomic.Store_CompareAndSwap_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(errorNamer); ok {
+			response.ApplicationErrorName = namer.ErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
+			response.ApplicationErrorCode = extractor.YARPCCode()
+		}
+		response.ApplicationError = appErr
 	}
+
 	return response, err
 }
 
@@ -134,15 +146,23 @@ func (h handler) Increment(ctx context.Context, body wire.Value) (thrift.Respons
 			"could not decode Thrift request for service 'Store' procedure 'Increment': %w", err)
 	}
 
-	err := h.impl.Increment(ctx, args.Key, args.Value)
+	appErr := h.impl.Increment(ctx, args.Key, args.Value)
 
-	hadError := err != nil
-	result, err := atomic.Store_Increment_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := atomic.Store_Increment_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(errorNamer); ok {
+			response.ApplicationErrorName = namer.ErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
+			response.ApplicationErrorCode = extractor.YARPCCode()
+		}
+		response.ApplicationError = appErr
 	}
+
 	return response, err
 }
