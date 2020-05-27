@@ -32,12 +32,15 @@ import (
 )
 
 const (
-	_error = "error"
-
-	_successfulInbound  = "Handled inbound request."
-	_successfulOutbound = "Made outbound call."
-	_errorInbound       = "Error handling inbound request."
-	_errorOutbound      = "Error making outbound call."
+	_error               = "error"
+	_errorNameMetricsKey = "error_name"
+	_errorNameLogKey     = "errorName"
+	_errorCodeLogKey     = "errorCode"
+	_notSet              = "__not_set__"
+	_successfulInbound   = "Handled inbound request."
+	_successfulOutbound  = "Made outbound call."
+	_errorInbound        = "Error handling inbound request."
+	_errorOutbound       = "Error making outbound call."
 
 	_successStreamOpen  = "Successfully created stream"
 	_successStreamClose = "Successfully closed stream"
@@ -57,7 +60,7 @@ const (
 type call struct {
 	edge    *edge
 	extract ContextExtractor
-	fields  [6]zapcore.Field
+	fields  [8]zapcore.Field
 
 	started   time.Time
 	ctx       context.Context
@@ -73,16 +76,24 @@ type levels struct {
 }
 
 func (c call) End(err error) {
-	c.endWithAppError(err, false)
+	c.endWithAppError(err, false /* isApplicationError */, nil /* applicationErrorMeta */)
 }
 
-func (c call) EndCallWithAppError(err error, isApplicationError bool) {
-	c.endWithAppError(err, isApplicationError)
+func (c call) EndCallWithAppError(
+	err error,
+	isApplicationError bool,
+	applicationErrorMeta *transport.ApplicationErrorMeta,
+) {
+	c.endWithAppError(err, isApplicationError, applicationErrorMeta)
 }
 
-func (c call) EndHandleWithAppError(err error, isApplicationError bool, ctxOverrideErr error) {
+func (c call) EndHandleWithAppError(
+	err error,
+	isApplicationError bool,
+	applicationErrorMeta *transport.ApplicationErrorMeta,
+	ctxOverrideErr error) {
 	if ctxOverrideErr == nil {
-		c.endWithAppError(err, isApplicationError)
+		c.endWithAppError(err, isApplicationError, applicationErrorMeta)
 		return
 	}
 
@@ -97,22 +108,36 @@ func (c call) EndHandleWithAppError(err error, isApplicationError bool, ctxOverr
 		droppedField = zap.String(_dropped, _droppedSuccessLog)
 	}
 
-	c.endWithAppError(ctxOverrideErr, false /* application error */, droppedField)
+	c.endWithAppError(
+		ctxOverrideErr,
+		false, /* application error */
+		nil,   /* application failure */
+		droppedField,
+	)
 }
 
-func (c call) endWithAppError(err error, isApplicationError bool, extraLogFields ...zap.Field) {
+func (c call) endWithAppError(
+	err error,
+	isApplicationError bool,
+	applicationErrorMeta *transport.ApplicationErrorMeta,
+	extraLogFields ...zap.Field) {
 	elapsed := _timeNow().Sub(c.started)
-	c.endLogs(elapsed, err, isApplicationError, extraLogFields...)
-	c.endStats(elapsed, err, isApplicationError)
+	c.endLogs(elapsed, err, isApplicationError, applicationErrorMeta, extraLogFields...)
+	c.endStats(elapsed, err, isApplicationError, applicationErrorMeta)
 }
 
 // EndWithPanic ends the call with additional panic metrics
 func (c call) EndWithPanic(err error) {
 	c.edge.panics.Inc()
-	c.endWithAppError(err, true)
+	c.endWithAppError(err, true /* isApplicationError */, nil /* applicationErrorMeta */)
 }
 
-func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool, extraLogFields ...zap.Field) {
+func (c call) endLogs(
+	elapsed time.Duration,
+	err error,
+	isApplicationError bool,
+	applicationErrorMeta *transport.ApplicationErrorMeta,
+	extraLogFields ...zap.Field) {
 	appErrBitWithNoError := isApplicationError && err == nil // ie Thrift exception
 
 	var ce *zapcore.CheckedEntry
@@ -162,6 +187,14 @@ func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool,
 	fields = append(fields, c.extract(c.ctx))
 	if appErrBitWithNoError {
 		fields = append(fields, zap.String(_error, "application_error"))
+		if applicationErrorMeta != nil {
+			if applicationErrorMeta.Name != "" {
+				fields = append(fields, zap.String(_errorNameLogKey, applicationErrorMeta.Name))
+			}
+			if applicationErrorMeta.Code != nil {
+				fields = append(fields, zap.String(_errorCodeLogKey, applicationErrorMeta.Code.String()))
+			}
+		}
 	} else {
 		fields = append(fields, zap.Error(err))
 	}
@@ -169,9 +202,12 @@ func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool,
 	ce.Write(fields...)
 }
 
-func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool) {
-	// TODO: We need a much better way to distinguish between caller and server
-	// errors. See T855583.
+func (c call) endStats(
+	elapsed time.Duration,
+	err error,
+	isApplicationError bool,
+	applicationErrorMeta *transport.ApplicationErrorMeta,
+) {
 	c.edge.calls.Inc()
 	if err == nil && !isApplicationError {
 		c.edge.successes.Inc()
@@ -181,39 +217,64 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 
 	isStatus := yarpcerrors.IsStatus(err)
 
-	// If the error is not a yarpcerrors.Status, we cannot determine a code or
-	// fault. Assume that these application errors are the caller's fault and emit
-	// a generic error tag.
-	if isApplicationError && !isStatus {
+	if isStatus {
+		status := yarpcerrors.FromError(err)
+		errCode := status.Code()
+		c.endStatsFromFault(elapsed, errCode, _notSet)
+		return
+	}
+
+	appErrorName := _notSet
+	if applicationErrorMeta != nil && applicationErrorMeta.Name != "" {
+		appErrorName = applicationErrorMeta.Name
+	}
+
+	if isApplicationError {
+		if applicationErrorMeta != nil && applicationErrorMeta.Code != nil {
+			c.endStatsFromFault(elapsed, *applicationErrorMeta.Code, appErrorName)
+			return
+		}
+
+		// It is an application error but not a Status and no YARPC Code is found.
+		// Assume it's a caller's fault and emit generic error data.
 		c.edge.callerErrLatencies.Observe(elapsed)
-		if counter, err := c.edge.callerFailures.Get(_error, "application_error"); err == nil {
+
+		if counter, err := c.edge.callerFailures.Get(
+			_error, "application_error",
+			_errorNameMetricsKey, appErrorName,
+		); err == nil {
 			counter.Inc()
 		}
 		return
 	}
 
-	if !isStatus {
-		c.edge.serverErrLatencies.Observe(elapsed)
-		if counter, err := c.edge.serverFailures.Get(_error, "unknown_internal_yarpc"); err == nil {
-			counter.Inc()
-		}
-		return
+	c.edge.serverErrLatencies.Observe(elapsed)
+	if counter, err := c.edge.serverFailures.Get(
+		_error, "unknown_internal_yarpc",
+		_errorNameMetricsKey, _notSet,
+	); err == nil {
+		counter.Inc()
 	}
+}
 
-	// Emit finer grained metrics since the error is a yarpcerrors.Status.
-	status := yarpcerrors.FromError(err)
-	errCode := status.Code()
-
-	switch statusFault(status) {
+// Emits stats based on a caller or server failure, inferred by a YARPC Code.
+func (c call) endStatsFromFault(elapsed time.Duration, code yarpcerrors.Code, applicationErrorName string) {
+	switch faultFromCode(code) {
 	case clientFault:
 		c.edge.callerErrLatencies.Observe(elapsed)
-		if counter, err := c.edge.callerFailures.Get(_error, errCode.String()); err == nil {
+		if counter, err := c.edge.callerFailures.Get(
+			_error, code.String(),
+			_errorNameMetricsKey, applicationErrorName,
+		); err == nil {
 			counter.Inc()
 		}
 
 	case serverFault:
 		c.edge.serverErrLatencies.Observe(elapsed)
-		if counter, err := c.edge.serverFailures.Get(_error, errCode.String()); err == nil {
+		if counter, err := c.edge.serverFailures.Get(
+			_error, code.String(),
+			_errorNameMetricsKey, applicationErrorName,
+		); err == nil {
 			counter.Inc()
 		}
 
@@ -221,7 +282,10 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 		// If this code is executed we've hit an error code outside the usual error
 		// code range, so we'll just log the string representation of that code.
 		c.edge.serverErrLatencies.Observe(elapsed)
-		if counter, err := c.edge.serverFailures.Get(_error, errCode.String()); err == nil {
+		if counter, err := c.edge.serverFailures.Get(
+			_error, code.String(),
+			_errorNameMetricsKey, applicationErrorName,
+		); err == nil {
 			counter.Inc()
 		}
 	}
@@ -273,7 +337,10 @@ func (c call) emitStreamError(err error) {
 	}
 
 	if !yarpcerrors.IsStatus(err) {
-		if counter, err := c.edge.serverFailures.Get(_error, "unknown_internal_yarpc"); err == nil {
+		if counter, err := c.edge.serverFailures.Get(
+			_error, "unknown_internal_yarpc",
+			_errorNameMetricsKey, _notSet,
+		); err == nil {
 			counter.Inc()
 		}
 		return
@@ -282,16 +349,22 @@ func (c call) emitStreamError(err error) {
 	// Emit finer grained metrics since the error is a yarpcerrors.Status.
 	errCode := yarpcerrors.FromError(err).Code()
 
-	switch statusFault(yarpcerrors.FromError(err)) {
+	switch faultFromCode(yarpcerrors.FromError(err).Code()) {
 	case clientFault:
-		if counter, err2 := c.edge.callerFailures.Get(_error, errCode.String()); err2 != nil {
+		if counter, err2 := c.edge.callerFailures.Get(
+			_error, errCode.String(),
+			_errorNameMetricsKey, _notSet,
+		); err2 != nil {
 			c.edge.logger.DPanic("could not retrieve caller failures counter", zap.Error(err2))
 		} else {
 			counter.Inc()
 		}
 
 	case serverFault:
-		if counter, err2 := c.edge.serverFailures.Get(_error, errCode.String()); err2 != nil {
+		if counter, err2 := c.edge.serverFailures.Get(
+			_error, errCode.String(),
+			_errorNameMetricsKey, _notSet,
+		); err2 != nil {
 			c.edge.logger.DPanic("could not retrieve server failures counter", zap.Error(err2))
 		} else {
 			counter.Inc()
@@ -300,7 +373,10 @@ func (c call) emitStreamError(err error) {
 	default:
 		// If this code is executed we've hit an error code outside the usual error
 		// code range, so we'll just log the string representation of that code.
-		if counter, err2 := c.edge.serverFailures.Get(_error, errCode.String()); err2 != nil {
+		if counter, err2 := c.edge.serverFailures.Get(
+			_error, errCode.String(),
+			_errorNameMetricsKey, _notSet,
+		); err2 != nil {
 			c.edge.logger.DPanic("could not retrieve server failures counter", zap.Error(err2))
 		} else {
 			counter.Inc()

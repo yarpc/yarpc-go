@@ -35,9 +35,9 @@ const (
 	serverFault
 )
 
-// determine whether the status code is a client, server or indeterminate fault.
-func statusFault(status *yarpcerrors.Status) fault {
-	switch status.Code() {
+// determine whether the status code is a client, server or indeterminate fault based on a YARPC Code.
+func faultFromCode(code yarpcerrors.Code) fault {
+	switch code {
 	case yarpcerrors.CodeCancelled,
 		yarpcerrors.CodeInvalidArgument,
 		yarpcerrors.CodeNotFound,
