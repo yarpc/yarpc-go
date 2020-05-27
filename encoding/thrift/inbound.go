@@ -75,6 +75,14 @@ func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request,
 
 	if res.IsApplicationError {
 		rw.SetApplicationError()
+
+		if applicationErrorMetaSetter, ok := rw.(transport.ApplicationErrorMetaSetter); ok {
+			applicationErrorMetaSetter.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
+				Err:  res.ApplicationError,
+				Name: res.ApplicationErrorName,
+				Code: res.ApplicationErrorCode,
+			})
+		}
 	}
 
 	if err := call.WriteToResponse(rw); err != nil {
