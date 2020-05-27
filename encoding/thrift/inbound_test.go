@@ -37,6 +37,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 func TestDecodeRequest(t *testing.T) {
@@ -101,9 +102,16 @@ func TestDecodeRequestApplicationError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 
+	codeNotFound := yarpcerrors.CodeNotFound
+
 	handler := func(ctx context.Context, w wire.Value) (Response, error) {
 		// XXX setting application error bit
-		return Response{Body: fakeEnveloper(wire.Reply), IsApplicationError: true}, nil
+		return Response{
+			Body:                 fakeEnveloper(wire.Reply),
+			IsApplicationError:   true,
+			ApplicationErrorName: "thrift-defined-error",
+			ApplicationErrorCode: &codeNotFound,
+		}, nil
 	}
 	h := thriftUnaryHandler{Protocol: proto, UnaryHandler: handler}
 
@@ -111,6 +119,10 @@ func TestDecodeRequestApplicationError(t *testing.T) {
 	rw := new(transporttest.FakeResponseWriter)
 	err := h.Handle(ctx, request(), rw)
 	assert.True(t, rw.IsApplicationError, "application error bit unset")
+	assert.Equal(t, "thrift-defined-error", rw.ApplicationErrorMeta.Name,
+		"application error name mismatch")
+	assert.Equal(t, &codeNotFound, rw.ApplicationErrorMeta.Code,
+		"application error code mismatch")
 
 	assert.NoError(t, err, "unexpected error")
 }
