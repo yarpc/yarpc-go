@@ -118,4 +118,3 @@ ignore:
  - /internal/service-test/
  - /internal/testutils/
  - /serialize/internal/
- - /yarpcproto/

@@ -32,7 +32,7 @@ protoc_with_imports() {
   protoc \
     -I "$GOGO_PROTO_DIR/protobuf" \
     -I . \
-    "--${1}_out=${2}Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/protoc-gen-gogo/descriptor,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto,Myarpcproto/yarpc.proto=go.uber.org/yarpc/yarpcproto,Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types:." \
+    "--${1}_out=${2}Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/protoc-gen-gogo/descriptor,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto,Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types:." \
   "${@:3}"
 }
 
@@ -108,7 +108,6 @@ thrift-gen --generateThrift --outputDir internal/crossdock/thrift/gen-go --input
 thrift --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift --out internal/crossdock/thrift/gen-go internal/crossdock/thrift/gauntlet_apache.thrift | strip_thrift_warnings
 
 protoc_all encoding/protobuf/internal/testpb/test.proto
-protoc_go yarpcproto/yarpc.proto
 protoc_all internal/examples/protobuf/examplepb/example.proto
 protoc_all internal/crossdock/crossdockpb/crossdock.proto
 protoc_all internal/examples/streaming/stream.proto
@@ -121,7 +120,6 @@ generated_by_ragel internal/interpolate/parse.go
 touch internal/crossdock/thrift/gen-go/echo/.nocover
 touch internal/crossdock/thrift/gen-go/gauntlet_apache/.nocover
 touch internal/crossdock/thrift/gen-go/gauntlet_tchannel/.nocover
-touch yarpcproto/.nocover
 
 rm -rf internal/crossdock/thrift/gen-go/gauntlet_apache/second_service-remote # generated and not needed
 rm -rf internal/crossdock/thrift/gen-go/gauntlet_apache/thrift_test-remote # generated and not needed

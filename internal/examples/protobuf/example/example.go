@@ -113,68 +113,6 @@ func (k *KeyValueYARPCServer) SetNextError(err error) {
 	k.nextError = err
 }
 
-// SinkYARPCServer implements examplepb.SinkYARPCServer.
-type SinkYARPCServer struct {
-	sync.RWMutex
-	values   []string
-	fireDone chan struct{}
-}
-
-// NewSinkYARPCServer returns a new SinkYARPCServer.
-func NewSinkYARPCServer(withFireDone bool) *SinkYARPCServer {
-	var fireDone chan struct{}
-	if withFireDone {
-		fireDone = make(chan struct{})
-	}
-	return &SinkYARPCServer{sync.RWMutex{}, make([]string, 0), fireDone}
-}
-
-// Fire implements Fire.
-func (s *SinkYARPCServer) Fire(ctx context.Context, request *examplepb.FireRequest) error {
-	if request == nil {
-		return errRequestNil
-	}
-	if request.Value == "" {
-		return errRequestValueNil
-	}
-	s.Lock()
-	s.values = append(s.values, request.Value)
-	s.Unlock()
-	if s.fireDone == nil {
-		return nil
-	}
-	select {
-	case s.fireDone <- struct{}{}:
-	case <-time.After(FireDoneTimeout):
-		return yarpcerrors.Newf(yarpcerrors.CodeDeadlineExceeded, "fire done not handled after %v", FireDoneTimeout)
-	}
-	return nil
-}
-
-// Values returns a copy of the values that have been fired.
-func (s *SinkYARPCServer) Values() []string {
-	s.RLock()
-	values := make([]string, len(s.values))
-	copy(values, s.values)
-	s.RUnlock()
-	return values
-}
-
-// WaitFireDone blocks until a fire is done, if withFireDone is set.
-//
-// If will timeout after FireDoneTimeout and return error.
-func (s *SinkYARPCServer) WaitFireDone() error {
-	if s.fireDone == nil {
-		return nil
-	}
-	select {
-	case <-s.fireDone:
-	case <-time.After(FireDoneTimeout):
-		return yarpcerrors.Newf(yarpcerrors.CodeDeadlineExceeded, "fire not done after %v", FireDoneTimeout)
-	}
-	return nil
-}
-
 // FooYARPCServer implements examplepb.FooYARPCServer.
 type FooYARPCServer struct {
 	expectedHeaders transport.Headers
