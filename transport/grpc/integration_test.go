@@ -39,8 +39,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
-	gogostatus "github.com/gogo/status"
+	"github.com/golang/protobuf/proto"
 	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -170,7 +169,7 @@ func TestGRPCErrorWithDetails(t *testing.T) {
 	te.do(t, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeNotFound, "hello world", protobuf.WithErrorDetails(&examplepb.SetValueResponse{})))
 		err := e.SetValueGRPC(context.Background(), "foo", "bar")
-		st := gogostatus.Convert(err)
+		st := status.Convert(err)
 		assert.Equal(t, st.Code(), codes.NotFound)
 		assert.Equal(t, st.Message(), "hello world")
 		assert.Equal(t, st.Details(), []interface{}{&examplepb.SetValueResponse{}})

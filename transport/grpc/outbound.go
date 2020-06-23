@@ -27,7 +27,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gogo/status"
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
@@ -40,6 +39,7 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 // UserAgent is the User-Agent that will be set for requests.

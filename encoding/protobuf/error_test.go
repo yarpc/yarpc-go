@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -53,7 +53,7 @@ func TestForeignError(t *testing.T) {
 }
 
 func TestConvertToYARPCErrorWithWrappedError(t *testing.T) {
-	errDetail := &types.BytesValue{Value: []byte("err detail bytes")}
+	errDetail := &wrappers.BytesValue{Value: []byte("err detail bytes")}
 
 	pbErr := NewError(
 		yarpcerrors.CodeAborted,

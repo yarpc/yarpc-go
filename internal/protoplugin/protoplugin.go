@@ -43,9 +43,9 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/gogo/protobuf/proto"
-	"github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
-	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/protoc-gen-go/descriptor"
+	plugin_go "github.com/golang/protobuf/protoc-gen-go/plugin"
 )
 
 // Do is a helper function for protobuf plugins.
