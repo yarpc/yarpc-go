@@ -24,8 +24,8 @@ package yarpc
 
 import (
 	// Tools we use during development.
-	_ "github.com/gogo/protobuf/protoc-gen-gogoslick"
 	_ "github.com/golang/mock/mockgen"
+	_ "github.com/golang/protobuf/protoc-gen-go"
 	_ "github.com/kisielk/errcheck"
 	_ "github.com/uber/tchannel-go/thrift/thrift-gen"
 	_ "go.uber.org/thriftrw"

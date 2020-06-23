@@ -9,10 +9,8 @@ require (
 	github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd // indirect
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13
 	github.com/fatih/structtag v1.2.0 // indirect
-	github.com/gogo/googleapis v1.3.2
-	github.com/gogo/protobuf v1.3.1
-	github.com/gogo/status v1.1.0
 	github.com/golang/mock v1.4.0
+	github.com/golang/protobuf v1.3.5
 	github.com/golang/snappy v0.0.1
 	github.com/google/go-cmp v0.4.0 // indirect
 	github.com/kisielk/errcheck v1.2.0
@@ -51,7 +49,7 @@ require (
 	golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4 // indirect
 	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/tools v0.0.0-20200216192241-b320d3a0f5a2
-	google.golang.org/genproto v0.0.0-20200212174721-66ed5ce911ce // indirect
+	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
 	google.golang.org/grpc v1.27.1
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.2.8

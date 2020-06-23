@@ -21,8 +21,6 @@ generate_stringer() {
   stringer "-type=${1}" "${2}"
 }
 
-GOGO_PROTO_DIR=$(go mod download -json github.com/gogo/protobuf | jq -r .Dir)
-
 # Run protoc
 #
 # $1: plugin
@@ -30,18 +28,17 @@ GOGO_PROTO_DIR=$(go mod download -json github.com/gogo/protobuf | jq -r .Dir)
 # $3: other options
 protoc_with_imports() {
   protoc \
-    -I "$GOGO_PROTO_DIR/protobuf" \
     -I . \
-    "--${1}_out=${2}Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/protoc-gen-gogo/descriptor,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto,Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types:." \
+    "--${1}_out=${2}:." \
   "${@:3}"
 }
 
 protoc_go() {
-  protoc_with_imports "gogoslick" "" $@
+  protoc_with_imports "go" "" $@
 }
 
 protoc_go_grpc() {
-  protoc_with_imports "gogoslick" "plugins=grpc," $@
+  protoc_with_imports "go" "plugins=grpc," $@
 }
 
 protoc_yarpc_go() {

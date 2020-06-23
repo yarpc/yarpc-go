@@ -5,8 +5,8 @@ go 1.13
 require (
 	github.com/apache/thrift v0.13.0
 	github.com/crossdock/crossdock-go v0.0.0-20160816171116-049aabb0122b
-	github.com/gogo/protobuf v1.3.1
 	github.com/golang/mock v1.4.0
+	github.com/golang/protobuf v1.3.5
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/stretchr/testify v1.4.0
 	github.com/uber/jaeger-client-go v2.22.1+incompatible
