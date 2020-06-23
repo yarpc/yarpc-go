@@ -36,7 +36,6 @@ import (
 	"go.uber.org/yarpc/api/x/restriction"
 	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/encoding/protobuf/reflection"
-	"go.uber.org/yarpc/yarpcproto"
 )
 
 var _ = ioutil.NopCloser
@@ -245,222 +244,20 @@ var (
 	emptyEchoServiceEchoYARPCResponse = &Pong{}
 )
 
-// OnewayYARPCClient is the YARPC client-side interface for the Oneway service.
-type OnewayYARPCClient interface {
-	Echo(context.Context, *Token, ...yarpc.CallOption) (yarpc.Ack, error)
-}
-
-func newOnewayYARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) OnewayYARPCClient {
-	return &_OnewayYARPCCaller{protobuf.NewStreamClient(
-		protobuf.ClientParams{
-			ServiceName:  "uber.yarpc.internal.crossdock.Oneway",
-			ClientConfig: clientConfig,
-			AnyResolver:  anyResolver,
-			Options:      options,
-		},
-	)}
-}
-
-// NewOnewayYARPCClient builds a new YARPC client for the Oneway service.
-func NewOnewayYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) OnewayYARPCClient {
-	return newOnewayYARPCClient(clientConfig, nil, options...)
-}
-
-// OnewayYARPCServer is the YARPC server-side interface for the Oneway service.
-type OnewayYARPCServer interface {
-	Echo(context.Context, *Token) error
-}
-
-type buildOnewayYARPCProceduresParams struct {
-	Server      OnewayYARPCServer
-	AnyResolver jsonpb.AnyResolver
-}
-
-func buildOnewayYARPCProcedures(params buildOnewayYARPCProceduresParams) []transport.Procedure {
-	handler := &_OnewayYARPCHandler{params.Server}
-	return protobuf.BuildProcedures(
-		protobuf.BuildProceduresParams{
-			ServiceName:        "uber.yarpc.internal.crossdock.Oneway",
-			UnaryHandlerParams: []protobuf.BuildProceduresUnaryHandlerParams{},
-			OnewayHandlerParams: []protobuf.BuildProceduresOnewayHandlerParams{
-				{
-					MethodName: "Echo",
-					Handler: protobuf.NewOnewayHandler(
-						protobuf.OnewayHandlerParams{
-							Handle:     handler.Echo,
-							NewRequest: newOnewayServiceEchoYARPCRequest,
-						},
-					),
-				},
-			},
-			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{},
-		},
-	)
-}
-
-// BuildOnewayYARPCProcedures prepares an implementation of the Oneway service for YARPC registration.
-func BuildOnewayYARPCProcedures(server OnewayYARPCServer) []transport.Procedure {
-	return buildOnewayYARPCProcedures(buildOnewayYARPCProceduresParams{Server: server})
-}
-
-// FxOnewayYARPCClientParams defines the input
-// for NewFxOnewayYARPCClient. It provides the
-// paramaters to get a OnewayYARPCClient in an
-// Fx application.
-type FxOnewayYARPCClientParams struct {
-	fx.In
-
-	Provider    yarpc.ClientConfig
-	AnyResolver jsonpb.AnyResolver  `name:"yarpcfx" optional:"true"`
-	Restriction restriction.Checker `optional:"true"`
-}
-
-// FxOnewayYARPCClientResult defines the output
-// of NewFxOnewayYARPCClient. It provides a
-// OnewayYARPCClient to an Fx application.
-type FxOnewayYARPCClientResult struct {
-	fx.Out
-
-	Client OnewayYARPCClient
-
-	// We are using an fx.Out struct here instead of just returning a client
-	// so that we can add more values or add named versions of the client in
-	// the future without breaking any existing code.
-}
-
-// NewFxOnewayYARPCClient provides a OnewayYARPCClient
-// to an Fx application using the given name for routing.
-//
-//  fx.Provide(
-//    crossdockpb.NewFxOnewayYARPCClient("service-name"),
-//    ...
-//  )
-func NewFxOnewayYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
-	return func(params FxOnewayYARPCClientParams) FxOnewayYARPCClientResult {
-		cc := params.Provider.ClientConfig(name)
-
-		if params.Restriction != nil {
-			if namer, ok := cc.GetUnaryOutbound().(transport.Namer); ok {
-				if err := params.Restriction.Check(protobuf.Encoding, namer.TransportName()); err != nil {
-					panic(err.Error())
-				}
-			}
-		}
-
-		return FxOnewayYARPCClientResult{
-			Client: newOnewayYARPCClient(cc, params.AnyResolver, options...),
-		}
-	}
-}
-
-// FxOnewayYARPCProceduresParams defines the input
-// for NewFxOnewayYARPCProcedures. It provides the
-// paramaters to get OnewayYARPCServer procedures in an
-// Fx application.
-type FxOnewayYARPCProceduresParams struct {
-	fx.In
-
-	Server      OnewayYARPCServer
-	AnyResolver jsonpb.AnyResolver `name:"yarpcfx" optional:"true"`
-}
-
-// FxOnewayYARPCProceduresResult defines the output
-// of NewFxOnewayYARPCProcedures. It provides
-// OnewayYARPCServer procedures to an Fx application.
-//
-// The procedures are provided to the "yarpcfx" value group.
-// Dig 1.2 or newer must be used for this feature to work.
-type FxOnewayYARPCProceduresResult struct {
-	fx.Out
-
-	Procedures     []transport.Procedure `group:"yarpcfx"`
-	ReflectionMeta reflection.ServerMeta `group:"yarpcfx"`
-}
-
-// NewFxOnewayYARPCProcedures provides OnewayYARPCServer procedures to an Fx application.
-// It expects a OnewayYARPCServer to be present in the container.
-//
-//  fx.Provide(
-//    crossdockpb.NewFxOnewayYARPCProcedures(),
-//    ...
-//  )
-func NewFxOnewayYARPCProcedures() interface{} {
-	return func(params FxOnewayYARPCProceduresParams) FxOnewayYARPCProceduresResult {
-		return FxOnewayYARPCProceduresResult{
-			Procedures: buildOnewayYARPCProcedures(buildOnewayYARPCProceduresParams{
-				Server:      params.Server,
-				AnyResolver: params.AnyResolver,
-			}),
-			ReflectionMeta: reflection.ServerMeta{
-				ServiceName:     "uber.yarpc.internal.crossdock.Oneway",
-				FileDescriptors: yarpcFileDescriptorClosure6acfd671bab786d8,
-			},
-		}
-	}
-}
-
-type _OnewayYARPCCaller struct {
-	streamClient protobuf.StreamClient
-}
-
-func (c *_OnewayYARPCCaller) Echo(ctx context.Context, request *Token, options ...yarpc.CallOption) (yarpc.Ack, error) {
-	return c.streamClient.CallOneway(ctx, "Echo", request, options...)
-}
-
-type _OnewayYARPCHandler struct {
-	server OnewayYARPCServer
-}
-
-func (h *_OnewayYARPCHandler) Echo(ctx context.Context, requestMessage proto.Message) error {
-	var request *Token
-	var ok bool
-	if requestMessage != nil {
-		request, ok = requestMessage.(*Token)
-		if !ok {
-			return protobuf.CastError(emptyOnewayServiceEchoYARPCRequest, requestMessage)
-		}
-	}
-	return h.server.Echo(ctx, request)
-}
-
-func newOnewayServiceEchoYARPCRequest() proto.Message {
-	return &Token{}
-}
-
-func newOnewayServiceEchoYARPCResponse() proto.Message {
-	return &yarpcproto.Oneway{}
-}
-
-var (
-	emptyOnewayServiceEchoYARPCRequest  = &Token{}
-	emptyOnewayServiceEchoYARPCResponse = &yarpcproto.Oneway{}
-)
-
 var yarpcFileDescriptorClosure6acfd671bab786d8 = [][]byte{
 	// internal/crossdock/crossdockpb/crossdock.proto
 	[]byte{
 		0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xd2, 0xcb, 0xcc, 0x2b, 0x49,
 		0x2d, 0xca, 0x4b, 0xcc, 0xd1, 0x4f, 0x2e, 0xca, 0x2f, 0x2e, 0x4e, 0xc9, 0x4f, 0xce, 0x46, 0xb0,
 		0x0a, 0x92, 0x10, 0x6c, 0xbd, 0x82, 0xa2, 0xfc, 0x92, 0x7c, 0x21, 0xd9, 0xd2, 0xa4, 0xd4, 0x22,
-		0xbd, 0xca, 0xc4, 0xa2, 0x82, 0x64, 0xb8, 0x56, 0x3d, 0xb8, 0x22, 0x29, 0x31, 0xb0, 0x0c, 0x58,
-		0xa9, 0x3e, 0x44, 0x11, 0x98, 0xad, 0x24, 0xc5, 0xc5, 0x12, 0x90, 0x99, 0x97, 0x2e, 0x24, 0xc4,
-		0xc5, 0x92, 0x94, 0x9a, 0x5a, 0x20, 0xc1, 0xa8, 0xc0, 0xa8, 0xc1, 0x19, 0x04, 0x66, 0x83, 0xe5,
-		0xf2, 0xa1, 0x72, 0xf9, 0xf9, 0x08, 0xb9, 0xfc, 0xfc, 0x02, 0x25, 0x59, 0x2e, 0xd6, 0x90, 0xfc,
-		0xec, 0xd4, 0x3c, 0x21, 0x11, 0x2e, 0xd6, 0xb2, 0xc4, 0x9c, 0xd2, 0x54, 0xa8, 0x2c, 0x84, 0x63,
-		0x14, 0xc1, 0xc5, 0xe2, 0x9a, 0x9c, 0x91, 0x2f, 0x14, 0x00, 0xa5, 0x95, 0xf5, 0xf0, 0x3a, 0x4f,
-		0x0f, 0xe4, 0x06, 0x29, 0x82, 0x8a, 0xf2, 0xf3, 0xd2, 0x8d, 0xbc, 0xb8, 0xd8, 0xfc, 0xf3, 0x52,
-		0xcb, 0x13, 0x2b, 0x85, 0x1c, 0xa0, 0x66, 0xab, 0x10, 0xd0, 0x06, 0x76, 0xa7, 0x94, 0x10, 0xb2,
-		0x2a, 0x88, 0x09, 0x4e, 0xbc, 0x51, 0xdc, 0x48, 0x41, 0x9a, 0xc4, 0x06, 0x0e, 0x12, 0x63, 0x40,
-		0x00, 0x00, 0x00, 0xff, 0xff, 0xec, 0x56, 0xe1, 0xbf, 0x7b, 0x01, 0x00, 0x00,
-	},
-	// yarpcproto/yarpc.proto
-	[]byte{
-		0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0xab, 0x4c, 0x2c, 0x2a,
-		0x48, 0x2e, 0x28, 0xca, 0x2f, 0xc9, 0xd7, 0x07, 0x33, 0xf5, 0xc0, 0x6c, 0x21, 0xae, 0xd2, 0xa4,
-		0xd4, 0x22, 0x3d, 0xb0, 0x88, 0x92, 0x14, 0x17, 0x9b, 0x7f, 0x5e, 0x6a, 0x79, 0x62, 0xa5, 0x90,
-		0x00, 0x17, 0x73, 0x62, 0x72, 0xb6, 0x04, 0xa3, 0x02, 0xa3, 0x06, 0x47, 0x10, 0x88, 0xe9, 0xc4,
-		0x13, 0xc5, 0x85, 0x30, 0x21, 0x89, 0x0d, 0x4c, 0x19, 0x03, 0x02, 0x00, 0x00, 0xff, 0xff, 0x71,
-		0x5c, 0xc2, 0xd9, 0x56, 0x00, 0x00, 0x00,
+		0xbd, 0xca, 0xc4, 0xa2, 0x82, 0x64, 0xb8, 0x56, 0x3d, 0xb8, 0x22, 0x25, 0x29, 0x2e, 0x96, 0x80,
+		0xcc, 0xbc, 0x74, 0x21, 0x21, 0x2e, 0x96, 0xa4, 0xd4, 0xd4, 0x02, 0x09, 0x46, 0x05, 0x46, 0x0d,
+		0xce, 0x20, 0x30, 0x1b, 0x2c, 0x97, 0x0f, 0x95, 0xcb, 0xcf, 0x47, 0xc8, 0xe5, 0xe7, 0x17, 0x28,
+		0xc9, 0x72, 0xb1, 0x86, 0xe4, 0x67, 0xa7, 0xe6, 0x09, 0x89, 0x70, 0xb1, 0x96, 0x25, 0xe6, 0x94,
+		0xa6, 0x42, 0x65, 0x21, 0x1c, 0xa3, 0x08, 0x2e, 0x16, 0xd7, 0xe4, 0x8c, 0x7c, 0xa1, 0x00, 0x28,
+		0xad, 0xac, 0x87, 0xd7, 0x19, 0x7a, 0x20, 0x37, 0x48, 0x11, 0x54, 0x94, 0x9f, 0x97, 0xee, 0xc4,
+		0x1b, 0xc5, 0x8d, 0xe4, 0xdd, 0x24, 0x36, 0xb0, 0x2f, 0x8d, 0x01, 0x01, 0x00, 0x00, 0xff, 0xff,
+		0x71, 0x97, 0xff, 0x4f, 0x17, 0x01, 0x00, 0x00,
 	},
 }
 
@@ -468,11 +265,6 @@ func init() {
 	yarpc.RegisterClientBuilder(
 		func(clientConfig transport.ClientConfig, structField reflect.StructField) EchoYARPCClient {
 			return NewEchoYARPCClient(clientConfig, protobuf.ClientBuilderOptions(clientConfig, structField)...)
-		},
-	)
-	yarpc.RegisterClientBuilder(
-		func(clientConfig transport.ClientConfig, structField reflect.StructField) OnewayYARPCClient {
-			return NewOnewayYARPCClient(clientConfig, protobuf.ClientBuilderOptions(clientConfig, structField)...)
 		},
 	)
 }

@@ -39,9 +39,6 @@ set baz qux
 get baz
 get foo
 get baz
-fire foo
-fire bar
-fired-values
 exit`
 	testOutput = `get foo
 get foo failed: foo
@@ -59,10 +56,6 @@ get foo
 foo = bar
 get baz
 baz = qux
-fire foo
-fire bar
-fired-values
-foo bar
 exit`
 )
 
