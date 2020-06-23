@@ -97,12 +97,14 @@ func TestOutboundAnyResolver(t *testing.T) {
 			require.NoError(t, err)
 			any.TypeUrl = tt.anyURL // update to custom URL
 
-			gotMessage, err := client.Call(context.Background(), "", any, newReq)
+			gotMessageI, err := client.Call(context.Background(), "", any, newReq)
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				assert.Equal(t, testMessage, gotMessage) // we expect the actual type behind the Any
+				gotMessage, ok := gotMessageI.(*testpb.TestMessage)
+				require.True(t, ok, "unexpected message, got %T", gotMessageI)
+				assert.Equal(t, testMessage.Value, gotMessage.Value) // we expect the actual type behind the Any
 			}
 		})
 	}
