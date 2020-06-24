@@ -23,10 +23,10 @@ package protobuf
 import (
 	"context"
 
-	"github.com/golang/protobuf/proto"
 	apiencoding "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/pkg/errors"
+	"google.golang.org/protobuf/proto"
 )
 
 type unaryHandler struct {
@@ -59,12 +59,8 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 		return err
 	}
 	var responseData []byte
-	var responseCleanup func()
 	if response != nil {
-		responseData, responseCleanup, err = marshal(transportRequest.Encoding, response, u.codec)
-		if responseCleanup != nil {
-			defer responseCleanup()
-		}
+		responseData, err = marshal(transportRequest.Encoding, response, u.codec)
 		if err != nil {
 			return errors.ResponseBodyEncodeError(transportRequest, err)
 		}

@@ -28,8 +28,8 @@ import (
 	"path"
 	"text/template"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/protoc-gen-go/plugin"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/pluginpb"
 )
 
 var (
@@ -78,8 +78,8 @@ func newGenerator(
 	}
 }
 
-func (g *generator) Generate(targets []*File) ([]*plugin_go.CodeGeneratorResponse_File, error) {
-	var files []*plugin_go.CodeGeneratorResponse_File
+func (g *generator) Generate(targets []*File) ([]*pluginpb.CodeGeneratorResponse_File, error) {
+	var files []*pluginpb.CodeGeneratorResponse_File
 	for _, file := range targets {
 		code, err := g.generate(file)
 		if err == errNoTargetService {
@@ -96,7 +96,7 @@ func (g *generator) Generate(targets []*File) ([]*plugin_go.CodeGeneratorRespons
 		if err != nil {
 			return nil, err
 		}
-		files = append(files, &plugin_go.CodeGeneratorResponse_File{
+		files = append(files, &pluginpb.CodeGeneratorResponse_File{
 			Name:    proto.String(output),
 			Content: proto.String(string(formatted)),
 		})

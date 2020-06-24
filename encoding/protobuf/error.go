@@ -24,7 +24,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
+	// lint:file-ignore SA1019 no need to migrate to google.golang.org/protobuf yet
+	v1proto "github.com/golang/protobuf/proto"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -94,7 +95,7 @@ func GetErrorDetails(err error) []interface{} {
 type ErrorOption struct{ apply func(*pberror) }
 
 // WithErrorDetails adds to the details of the error.
-func WithErrorDetails(details ...proto.Message) ErrorOption {
+func WithErrorDetails(details ...v1proto.Message) ErrorOption {
 	return ErrorOption{func(err *pberror) {
 		for _, detail := range details {
 			err.details = append(err.details, detail)
@@ -111,23 +112,20 @@ func convertToYARPCError(encoding transport.Encoding, err error, codec *codec) e
 	if errors.As(err, &pberr) {
 		// We only use this function on the inbound side, and pberrors should be
 		// constructed using the constructor above, so we can safely assume all
-		// the details are proto.Message-typed.
-		var details []proto.Message
+		// the details are 'v1proto.Message's.
+		var details []v1proto.Message
 		for _, detail := range pberr.details {
-			details = append(details, detail.(proto.Message))
+			details = append(details, detail.(v1proto.Message))
 		}
 		st, convertErr := status.New(grpcerrorcodes.YARPCCodeToGRPCCode[pberr.code], pberr.message).WithDetails(details...)
 		if convertErr != nil {
 			return convertErr
 		}
-		detailsBytes, cleanup, marshalErr := marshal(encoding, st.Proto(), codec)
+		detailsBytes, marshalErr := marshal(encoding, v1proto.MessageV2(st.Proto()), codec)
 		if marshalErr != nil {
 			return marshalErr
 		}
-		defer cleanup()
-		yarpcDet := make([]byte, len(detailsBytes))
-		copy(yarpcDet, detailsBytes)
-		return yarpcerrors.Newf(pberr.code, pberr.message).WithDetails(yarpcDet)
+		return yarpcerrors.Newf(pberr.code, pberr.message).WithDetails(detailsBytes)
 	}
 	return err
 }
@@ -142,7 +140,7 @@ func convertFromYARPCError(encoding transport.Encoding, err error, codec *codec)
 		return err
 	}
 	st := &spb.Status{}
-	unmarshalErr := unmarshalBytes(encoding, yarpcErr.Details(), st, codec)
+	unmarshalErr := unmarshalBytes(encoding, yarpcErr.Details(), v1proto.MessageV2(st), codec)
 	if unmarshalErr != nil {
 		return unmarshalErr
 	}

@@ -24,8 +24,6 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/golang/protobuf/jsonpb"
-	"github.com/golang/protobuf/proto"
 	"go.uber.org/yarpc"
 	apiencoding "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
@@ -33,6 +31,7 @@ import (
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/pkg/procedure"
 	"go.uber.org/yarpc/yarpcerrors"
+	"google.golang.org/protobuf/proto"
 )
 
 type client struct {
@@ -42,7 +41,7 @@ type client struct {
 	codec          *codec
 }
 
-func newClient(serviceName string, clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...ClientOption) *client {
+func newClient(serviceName string, clientConfig transport.ClientConfig, anyResolver Resolver, options ...ClientOption) *client {
 	outboundConfig := toOutboundConfig(clientConfig)
 	client := &client{
 		serviceName:    serviceName,
@@ -81,10 +80,8 @@ func (c *client) Call(
 	newResponse func() proto.Message,
 	options ...yarpc.CallOption,
 ) (proto.Message, error) {
-	ctx, call, transportRequest, cleanup, err := c.buildTransportRequest(ctx, requestMethodName, request, options)
-	if cleanup != nil {
-		defer cleanup()
-	}
+	ctx, call, transportRequest, err := c.buildTransportRequest(ctx, requestMethodName, request, options)
+
 	if err != nil {
 		return nil, err
 	}
@@ -120,10 +117,7 @@ func (c *client) CallOneway(
 	request proto.Message,
 	options ...yarpc.CallOption,
 ) (transport.Ack, error) {
-	ctx, _, transportRequest, cleanup, err := c.buildTransportRequest(ctx, requestMethodName, request, options)
-	if cleanup != nil {
-		defer cleanup()
-	}
+	ctx, _, transportRequest, err := c.buildTransportRequest(ctx, requestMethodName, request, options)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +129,7 @@ func (c *client) CallOneway(
 	return ack, convertFromYARPCError(transportRequest.Encoding, err, c.codec)
 }
 
-func (c *client) buildTransportRequest(ctx context.Context, requestMethodName string, request proto.Message, options []yarpc.CallOption) (context.Context, *apiencoding.OutboundCall, *transport.Request, func(), error) {
+func (c *client) buildTransportRequest(ctx context.Context, requestMethodName string, request proto.Message, options []yarpc.CallOption) (context.Context, *apiencoding.OutboundCall, *transport.Request, error) {
 	transportRequest := &transport.Request{
 		Caller:    c.outboundConfig.CallerName,
 		Service:   c.outboundConfig.Outbounds.ServiceName,
@@ -145,22 +139,22 @@ func (c *client) buildTransportRequest(ctx context.Context, requestMethodName st
 	call := apiencoding.NewOutboundCall(encoding.FromOptions(options)...)
 	ctx, err := call.WriteToRequest(ctx, transportRequest)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, err
 	}
 	if transportRequest.Encoding != Encoding && transportRequest.Encoding != JSONEncoding {
-		return nil, nil, nil, nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "can only use encodings %q or %q, but %q was specified", Encoding, JSONEncoding, transportRequest.Encoding)
+		return nil, nil, nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "can only use encodings %q or %q, but %q was specified", Encoding, JSONEncoding, transportRequest.Encoding)
 	}
 	if request != nil {
-		requestData, cleanup, err := marshal(transportRequest.Encoding, request, c.codec)
+		requestData, err := marshal(transportRequest.Encoding, request, c.codec)
 		if err != nil {
-			return nil, nil, nil, cleanup, errors.RequestBodyEncodeError(transportRequest, err)
+			return nil, nil, nil, errors.RequestBodyEncodeError(transportRequest, err)
 		}
 		if requestData != nil {
 			transportRequest.Body = bytes.NewReader(requestData)
 		}
-		return ctx, call, transportRequest, cleanup, nil
+		return ctx, call, transportRequest, nil
 	}
-	return ctx, call, transportRequest, nil, nil
+	return ctx, call, transportRequest, nil
 }
 
 func (c *client) CallStream(

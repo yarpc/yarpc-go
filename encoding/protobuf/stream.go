@@ -23,10 +23,10 @@ package protobuf
 import (
 	"bytes"
 	"context"
-	"io"
+	"io/ioutil"
 
-	"github.com/golang/protobuf/proto"
 	"go.uber.org/yarpc/api/transport"
+	"google.golang.org/protobuf/proto"
 )
 
 // readFromStream reads a proto.Message from a stream.
@@ -53,24 +53,13 @@ func readFromStream(
 
 // writeToStream writes a proto.Message to a stream.
 func writeToStream(ctx context.Context, stream transport.Stream, message proto.Message, codec *codec) error {
-	messageData, cleanup, err := marshal(stream.Request().Meta.Encoding, message, codec)
+	messageData, err := marshal(stream.Request().Meta.Encoding, message, codec)
 	if err != nil {
 		return err
 	}
 	return stream.SendMessage(
 		ctx,
 		&transport.StreamMessage{
-			Body: readCloser{Reader: bytes.NewReader(messageData), closer: cleanup},
-		},
-	)
-}
-
-type readCloser struct {
-	io.Reader
-	closer func()
-}
-
-func (r readCloser) Close() error {
-	r.closer()
-	return nil
+			Body: ioutil.NopCloser(bytes.NewReader(messageData)),
+		})
 }

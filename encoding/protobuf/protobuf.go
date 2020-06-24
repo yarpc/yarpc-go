@@ -25,12 +25,11 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/golang/protobuf/jsonpb"
-	"github.com/golang/protobuf/proto"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/pkg/procedure"
 	"go.uber.org/yarpc/yarpcerrors"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -162,7 +161,7 @@ type ClientOption interface {
 type ClientParams struct {
 	ServiceName  string
 	ClientConfig transport.ClientConfig
-	AnyResolver  jsonpb.AnyResolver
+	AnyResolver  Resolver
 	Options      []ClientOption
 }
 
@@ -180,7 +179,7 @@ func NewStreamClient(params ClientParams) StreamClient {
 type UnaryHandlerParams struct {
 	Handle      func(context.Context, proto.Message) (proto.Message, error)
 	NewRequest  func() proto.Message
-	AnyResolver jsonpb.AnyResolver
+	AnyResolver Resolver
 }
 
 // NewUnaryHandler returns a new UnaryHandler.
@@ -196,7 +195,7 @@ func NewUnaryHandler(params UnaryHandlerParams) transport.UnaryHandler {
 type OnewayHandlerParams struct {
 	Handle      func(context.Context, proto.Message) error
 	NewRequest  func() proto.Message
-	AnyResolver jsonpb.AnyResolver
+	AnyResolver Resolver
 }
 
 // NewOnewayHandler returns a new OnewayHandler.

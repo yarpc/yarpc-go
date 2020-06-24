@@ -28,14 +28,13 @@ import (
 	"io/ioutil"
 	"reflect"
 
-	"github.com/golang/protobuf/jsonpb"
-	"github.com/golang/protobuf/proto"
 	"go.uber.org/fx"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/restriction"
 	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/encoding/protobuf/reflection"
+	"google.golang.org/protobuf/proto"
 )
 
 var _ = ioutil.NopCloser
@@ -54,7 +53,7 @@ type TestServiceDuplexYARPCClient interface {
 	CloseSend(...yarpc.StreamOption) error
 }
 
-func newTestYARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) TestYARPCClient {
+func newTestYARPCClient(clientConfig transport.ClientConfig, anyResolver protobuf.Resolver, options ...protobuf.ClientOption) TestYARPCClient {
 	return &_TestYARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
 			ServiceName:  "uber.yarpc.encoding.protobuf.Test",
@@ -85,7 +84,7 @@ type TestServiceDuplexYARPCServer interface {
 
 type buildTestYARPCProceduresParams struct {
 	Server      TestYARPCServer
-	AnyResolver jsonpb.AnyResolver
+	AnyResolver protobuf.Resolver
 }
 
 func buildTestYARPCProcedures(params buildTestYARPCProceduresParams) []transport.Procedure {
@@ -133,7 +132,7 @@ type FxTestYARPCClientParams struct {
 	fx.In
 
 	Provider    yarpc.ClientConfig
-	AnyResolver jsonpb.AnyResolver  `name:"yarpcfx" optional:"true"`
+	AnyResolver protobuf.Resolver   `name:"yarpcfx" optional:"true"`
 	Restriction restriction.Checker `optional:"true"`
 }
 
@@ -183,7 +182,7 @@ type FxTestYARPCProceduresParams struct {
 	fx.In
 
 	Server      TestYARPCServer
-	AnyResolver jsonpb.AnyResolver `name:"yarpcfx" optional:"true"`
+	AnyResolver protobuf.Resolver `name:"yarpcfx" optional:"true"`
 }
 
 // FxTestYARPCProceduresResult defines the output

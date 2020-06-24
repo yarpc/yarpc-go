@@ -25,12 +25,12 @@ package yarpc
 import (
 	// Tools we use during development.
 	_ "github.com/golang/mock/mockgen"
-	_ "github.com/golang/protobuf/protoc-gen-go"
 	_ "github.com/kisielk/errcheck"
 	_ "github.com/uber/tchannel-go/thrift/thrift-gen"
 	_ "go.uber.org/thriftrw"
 	_ "go.uber.org/tools/update-license"
 	_ "golang.org/x/lint/golint"
 	_ "golang.org/x/tools/cmd/stringer"
+	_ "google.golang.org/protobuf/cmd/protoc-gen-go"
 	_ "honnef.co/go/tools/cmd/staticcheck"
 )

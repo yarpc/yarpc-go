@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/peer"
@@ -36,6 +35,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestTransportNamer(t *testing.T) {
@@ -241,7 +241,7 @@ func TestCallServiceMatch(t *testing.T) {
 					}
 
 					// Send the response attributes back and end the stream.
-					if sendErr := stream.SendMsg(&empty.Empty{}); sendErr != nil {
+					if sendErr := stream.SendMsg(&emptypb.Empty{}); sendErr != nil {
 						// We couldn't send the response.
 						return sendErr
 					}
