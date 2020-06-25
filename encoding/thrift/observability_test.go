@@ -47,13 +47,17 @@ const (
 	_wantSuccess              = "success"
 	_wantExceptionWithCode    = "exception with code"
 	_wantExceptionWithoutCode = "exception with no code"
+
+	// from observability middleware
+	_errorInbound  = "Error handling inbound request."
+	_errorOutbound = "Error making outbound call."
 )
 
 func TestThriftExceptionObservability(t *testing.T) {
 	// TODO(apeatsbond): add HTTP test when feature complete.
 
 	t.Run("exception with annotation", func(t *testing.T) {
-		client, cleanup := initClientAndServer(t)
+		client, observedLogs, cleanup := initClientAndServer(t)
 		defer cleanup()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -66,10 +70,18 @@ func TestThriftExceptionObservability(t *testing.T) {
 		require.True(t, ok, "unexpected Thrift exception")
 		assert.Equal(t, _wantExceptionWithCode, ex.Val, "unexpected response")
 
+		t.Run("logs", func(t *testing.T) {
+			wantFields := []zapcore.Field{
+				zap.String("error", "application_error"),
+				zap.String("errorName", "ExceptionWithCode"),
+				zap.String("errorCode", "invalid-argument"),
+			}
+			assertLogs(t, wantFields, observedLogs.TakeAll())
+		})
 	})
 
 	t.Run("exception without annotation ", func(t *testing.T) {
-		client, cleanup := initClientAndServer(t)
+		client, observedLogs, cleanup := initClientAndServer(t)
 		defer cleanup()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -82,13 +94,49 @@ func TestThriftExceptionObservability(t *testing.T) {
 		require.True(t, ok, "unexpected Thrift exception")
 		assert.Equal(t, _wantExceptionWithoutCode, ex.Val, "unexpected response")
 
+		t.Run("logs", func(t *testing.T) {
+			wantFields := []zapcore.Field{
+				zap.String("error", "application_error"),
+				zap.String("errorName", "ExceptionWithoutCode"),
+			}
+			assertLogs(t, wantFields, observedLogs.TakeAll())
+		})
 	})
+}
+
+func assertLogs(t *testing.T, wantFields []zapcore.Field, logs []observer.LoggedEntry) {
+	require.Len(t, logs, 2, "unexpected number of logs")
+
+	t.Run("inbound", func(t *testing.T) {
+		require.Equal(t, _errorInbound, logs[0].Message, "unexpected log")
+		assertLogFields(t, wantFields, logs[0].Context)
+	})
+
+	t.Run("outbound", func(t *testing.T) {
+		require.Equal(t, _errorOutbound, logs[1].Message, "unexpected log")
+		assertLogFields(t, wantFields, logs[1].Context)
+	})
+}
+
+func assertLogFields(t *testing.T, wantFields, gotContext []zapcore.Field) {
+	gotFields := make(map[string]zapcore.Field)
+	for _, log := range gotContext {
+		gotFields[log.Key] = log
+	}
+
+	for _, want := range wantFields {
+		got, ok := gotFields[want.Key]
+		if assert.True(t, ok, "key %q not found", want.Key) {
+			assert.Equal(t, want, got, "unexpected log field")
+		}
+	}
 }
 
 func initClientAndServer(
 	t *testing.T,
 ) (
 	client testserviceclient.Interface,
+	observedLogs *observer.ObservedLogs,
 	cleanup func(),
 ) {
 	loggerCore, observedLogs := observer.New(zapcore.DebugLevel)
@@ -99,7 +147,7 @@ func initClientAndServer(
 
 	_ = observedLogs.TakeAll() // ignore all start up logs
 
-	return client, func() {
+	return client, observedLogs, func() {
 		cleanupServer()
 		cleanupClient()
 	}
