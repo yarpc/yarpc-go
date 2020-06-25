@@ -16,6 +16,11 @@ coverage:
 ignore:
  - /encoding/protobuf/internal/testpb/
  - /encoding/thrift/internal/
+ - /encoding/thrift/internal/observabilitytest/test/
+ - /encoding/thrift/internal/observabilitytest/test/testserviceclient/
+ - /encoding/thrift/internal/observabilitytest/test/testservicefx/
+ - /encoding/thrift/internal/observabilitytest/test/testserviceserver/
+ - /encoding/thrift/internal/observabilitytest/test/testservicetest/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreclient/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystorefx/
