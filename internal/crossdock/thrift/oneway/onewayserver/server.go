@@ -71,9 +71,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
-type errorNamer interface{ ErrorName() string }
+type yarpcErrorNamer interface{ YARPCErrorName() string }
 
-type yarpcErrorCodeExtractor interface{ YARPCCode() *yarpcerrors.Code }
+type yarpcErrorCoder interface{ YARPCErrorCode() *yarpcerrors.Code }
 
 func (h handler) Echo(ctx context.Context, body wire.Value) error {
 	var args oneway.Oneway_Echo_Args

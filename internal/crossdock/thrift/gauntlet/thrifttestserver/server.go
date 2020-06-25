@@ -396,9 +396,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
-type errorNamer interface{ ErrorName() string }
+type yarpcErrorNamer interface{ YARPCErrorName() string }
 
-type yarpcErrorCodeExtractor interface{ YARPCCode() *yarpcerrors.Code }
+type yarpcErrorCoder interface{ YARPCErrorCode() *yarpcerrors.Code }
 
 func (h handler) TestBinary(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestBinary_Args
@@ -416,11 +416,11 @@ func (h handler) TestBinary(ctx context.Context, body wire.Value) (thrift.Respon
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
@@ -444,11 +444,11 @@ func (h handler) TestByte(ctx context.Context, body wire.Value) (thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
@@ -472,11 +472,11 @@ func (h handler) TestDouble(ctx context.Context, body wire.Value) (thrift.Respon
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
@@ -500,11 +500,11 @@ func (h handler) TestEnum(ctx context.Context, body wire.Value) (thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
@@ -528,11 +528,11 @@ func (h handler) TestException(ctx context.Context, body wire.Value) (thrift.Res
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
@@ -556,11 +556,11 @@ func (h handler) TestI32(ctx context.Context, body wire.Value) (thrift.Response,
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
@@ -584,11 +584,11 @@ func (h handler) TestI64(ctx context.Context, body wire.Value) (thrift.Response,
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
@@ -612,11 +612,11 @@ func (h handler) TestInsanity(ctx context.Context, body wire.Value) (thrift.Resp
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
@@ -640,11 +640,11 @@ func (h handler) TestList(ctx context.Context, body wire.Value) (thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
@@ -668,11 +668,11 @@ func (h handler) TestMap(ctx context.Context, body wire.Value) (thrift.Response,
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
@@ -696,11 +696,11 @@ func (h handler) TestMapMap(ctx context.Context, body wire.Value) (thrift.Respon
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
@@ -724,11 +724,11 @@ func (h handler) TestMulti(ctx context.Context, body wire.Value) (thrift.Respons
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
@@ -752,11 +752,11 @@ func (h handler) TestMultiException(ctx context.Context, body wire.Value) (thrif
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
@@ -780,11 +780,11 @@ func (h handler) TestNest(ctx context.Context, body wire.Value) (thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
@@ -817,11 +817,11 @@ func (h handler) TestSet(ctx context.Context, body wire.Value) (thrift.Response,
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
@@ -845,11 +845,11 @@ func (h handler) TestString(ctx context.Context, body wire.Value) (thrift.Respon
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
@@ -873,11 +873,11 @@ func (h handler) TestStringMap(ctx context.Context, body wire.Value) (thrift.Res
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
@@ -901,11 +901,11 @@ func (h handler) TestStruct(ctx context.Context, body wire.Value) (thrift.Respon
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
@@ -929,11 +929,11 @@ func (h handler) TestTypedef(ctx context.Context, body wire.Value) (thrift.Respo
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
@@ -957,11 +957,11 @@ func (h handler) TestVoid(ctx context.Context, body wire.Value) (thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}

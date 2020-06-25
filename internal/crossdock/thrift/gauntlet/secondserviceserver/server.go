@@ -86,9 +86,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
-type errorNamer interface{ ErrorName() string }
+type yarpcErrorNamer interface{ YARPCErrorName() string }
 
-type yarpcErrorCodeExtractor interface{ YARPCCode() *yarpcerrors.Code }
+type yarpcErrorCoder interface{ YARPCErrorCode() *yarpcerrors.Code }
 
 func (h handler) BlahBlah(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.SecondService_BlahBlah_Args
@@ -106,11 +106,11 @@ func (h handler) BlahBlah(ctx context.Context, body wire.Value) (thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
@@ -134,11 +134,11 @@ func (h handler) SecondtestString(ctx context.Context, body wire.Value) (thrift.
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
 		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
