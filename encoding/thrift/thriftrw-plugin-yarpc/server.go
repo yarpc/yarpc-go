@@ -115,9 +115,9 @@ type handler struct{ impl Interface }
 
 <$yarpcerrors := import "go.uber.org/yarpc/yarpcerrors">
 
-type errorNamer interface { ErrorName() string }
+type yarpcErrorNamer interface { YARPCErrorName() string }
 
-type yarpcErrorCodeExtractor interface { YARPCCode() *yarpcerrors.Code }
+type yarpcErrorCoder interface { YARPCErrorCode() *yarpcerrors.Code }
 <end>
 
 <$service := .>
@@ -158,12 +158,12 @@ func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$thrift>.
 	var response <$thrift>.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Body = result	
-		if namer, ok := appErr.(errorNamer); ok {
-			response.ApplicationErrorName = namer.ErrorName()
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
  		}
-		if extractor, ok := appErr.(yarpcErrorCodeExtractor); ok {
-			response.ApplicationErrorCode = extractor.YARPCCode()
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		response.ApplicationError = appErr
 	}
