@@ -232,6 +232,7 @@ func TestMiddlewareLogging(t *testing.T) {
 				zap.Bool("successful", false),
 				zap.Skip(),
 				zap.Error(rawErr),
+				zap.String(_errorCodeLogKey, "unknown"),
 			},
 		},
 		{
@@ -277,6 +278,7 @@ func TestMiddlewareLogging(t *testing.T) {
 				zap.Bool("successful", false),
 				zap.Skip(),
 				zap.Error(rawErr),
+				zap.String(_errorCodeLogKey, "unknown"),
 			},
 		},
 		{
@@ -292,6 +294,7 @@ func TestMiddlewareLogging(t *testing.T) {
 				zap.Bool("successful", false),
 				zap.Skip(),
 				zap.Error(yErrNoDetails),
+				zap.String(_errorCodeLogKey, "aborted"),
 			},
 		},
 		{
@@ -307,6 +310,7 @@ func TestMiddlewareLogging(t *testing.T) {
 				zap.Bool("successful", false),
 				zap.Skip(),
 				zap.Error(yErrWithDetails),
+				zap.String(_errorCodeLogKey, "aborted"),
 			},
 		},
 	}

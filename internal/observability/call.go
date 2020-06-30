@@ -197,6 +197,9 @@ func (c call) endLogs(
 		}
 	} else {
 		fields = append(fields, zap.Error(err))
+		if code := yarpcerrors.FromError(err).Code(); code != yarpcerrors.CodeOK {
+			fields = append(fields, zap.String(_errorCodeLogKey, code.String()))
+		}
 	}
 	fields = append(fields, extraLogFields...)
 	ce.Write(fields...)
