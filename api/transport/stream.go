@@ -27,6 +27,9 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
+// StreamHeaders is a mapping from metadata keys to values.
+type StreamHeaders map[string][]string
+
 // StreamRequest represents a streaming request.  It contains basic stream
 // metadata.
 type StreamRequest struct {
@@ -40,6 +43,8 @@ type ServerStreamOption interface {
 }
 
 // NewServerStream will create a new ServerStream.
+// The Stream can implement StreamHeaderWriter if the underlying transport
+// supports stream headers.
 func NewServerStream(s Stream, options ...ServerStreamOption) (*ServerStream, error) {
 	if s == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("non-nil stream is required")
@@ -50,6 +55,11 @@ func NewServerStream(s Stream, options ...ServerStreamOption) (*ServerStream, er
 // ServerStream represents the Server API of interacting with a Stream.
 type ServerStream struct {
 	stream Stream
+}
+
+// StreamHeaderWriter is the interface for sending stream headers.
+type StreamHeaderWriter interface {
+	SendHeader(md StreamHeaders) error
 }
 
 // Context returns the context for the stream.
@@ -75,6 +85,15 @@ func (s *ServerStream) ReceiveMessage(ctx context.Context) (*StreamMessage, erro
 	return s.stream.ReceiveMessage(ctx)
 }
 
+// SendHeader sends the header metadata.
+// It fails if called multiple times.
+func (s *ServerStream) SendHeader(headers StreamHeaders) error {
+	if w, ok := s.stream.(StreamHeaderWriter); ok {
+		return w.SendHeader(headers)
+	}
+	return yarpcerrors.UnimplementedErrorf("transport does not support stream headers")
+}
+
 // ClientStreamOption is an option for configuring a client stream.
 // There are no current ClientStreamOptions implemented.
 type ClientStreamOption interface {
@@ -82,6 +101,8 @@ type ClientStreamOption interface {
 }
 
 // NewClientStream will create a new ClientStream.
+// The StreamCloser can implement StreamMessageReader if the underlying transport
+// supports stream headers.
 func NewClientStream(s StreamCloser, options ...ClientStreamOption) (*ClientStream, error) {
 	if s == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("non-nil stream with close is required")
@@ -92,6 +113,11 @@ func NewClientStream(s StreamCloser, options ...ClientStreamOption) (*ClientStre
 // ClientStream represents the Client API of interacting with a Stream.
 type ClientStream struct {
 	stream StreamCloser
+}
+
+// StreamHeaderReader is the interface for reading stream headers.
+type StreamHeaderReader interface {
+	Header() (StreamHeaders, error)
 }
 
 // Context returns the context for the stream.
@@ -123,6 +149,15 @@ func (s *ClientStream) ReceiveMessage(ctx context.Context) (*StreamMessage, erro
 // connection will be forced closed by the client.
 func (s *ClientStream) Close(ctx context.Context) error {
 	return s.stream.Close(ctx)
+}
+
+// Header returns the header metadata received from the server if there
+// is any. It blocks if the metadata is not available.
+func (s *ClientStream) Header() (StreamHeaders, error) {
+	if r, ok := s.stream.(StreamHeaderReader); ok {
+		return r.Header()
+	}
+	return nil, nil
 }
 
 // StreamCloser represents an API of interacting with a Stream that is
