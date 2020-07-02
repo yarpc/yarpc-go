@@ -63,6 +63,9 @@ func (w *writer) SetApplicationErrorMeta(applicationErrorMeta *transport.Applica
 	}
 
 	w.applicationErrorMeta = applicationErrorMeta
+	if appErrMetaSetter, ok := w.ResponseWriter.(transport.ApplicationErrorMetaSetter); ok {
+		appErrMetaSetter.SetApplicationErrorMeta(applicationErrorMeta)
+	}
 }
 
 func (w *writer) free() {
