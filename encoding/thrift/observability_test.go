@@ -57,7 +57,7 @@ func TestThriftExceptionObservability(t *testing.T) {
 	// TODO(apeatsbond): add HTTP test when feature complete.
 
 	t.Run("exception with annotation", func(t *testing.T) {
-		client, observedLogs, cleanup := initClientAndServer(t)
+		client, observedLogs, clientMetricsRoot, serverMetricsRoot, cleanup := initClientAndServer(t)
 		defer cleanup()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -78,10 +78,28 @@ func TestThriftExceptionObservability(t *testing.T) {
 			}
 			assertLogs(t, wantFields, observedLogs.TakeAll())
 		})
+
+		t.Run("metrics", func(t *testing.T) {
+			wantCounters := []counterAssertion{
+				{
+					Name: "caller_failures",
+					Tags: map[string]string{
+						"error":      "invalid-argument",
+						"error_name": "ExceptionWithCode",
+					},
+					Value: 1,
+				},
+				{Name: "calls", Value: 1},
+				{Name: "panics"},
+				{Name: "successes"},
+			}
+
+			assertClientAndServerMetrics(t, wantCounters, clientMetricsRoot, serverMetricsRoot)
+		})
 	})
 
 	t.Run("exception without annotation ", func(t *testing.T) {
-		client, observedLogs, cleanup := initClientAndServer(t)
+		client, observedLogs, clientMetricsRoot, serverMetricsRoot, cleanup := initClientAndServer(t)
 		defer cleanup()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -100,6 +118,24 @@ func TestThriftExceptionObservability(t *testing.T) {
 				zap.String("errorName", "ExceptionWithoutCode"),
 			}
 			assertLogs(t, wantFields, observedLogs.TakeAll())
+		})
+
+		t.Run("metrics", func(t *testing.T) {
+			wantCounters := []counterAssertion{
+				{
+					Name: "caller_failures",
+					Tags: map[string]string{
+						"error":      "application_error",
+						"error_name": "ExceptionWithoutCode",
+					},
+					Value: 1,
+				},
+				{Name: "calls", Value: 1},
+				{Name: "panics"},
+				{Name: "successes"},
+			}
+
+			assertClientAndServerMetrics(t, wantCounters, clientMetricsRoot, serverMetricsRoot)
 		})
 	})
 }
@@ -132,22 +168,51 @@ func assertLogFields(t *testing.T, wantFields, gotContext []zapcore.Field) {
 	}
 }
 
+type counterAssertion struct {
+	Name  string
+	Tags  map[string]string
+	Value int
+}
+
+func assertClientAndServerMetrics(t *testing.T, counterAssertions []counterAssertion, clientSnapshot, serverSnapshot *metrics.Root) {
+	t.Run("inbound", func(t *testing.T) {
+		assertMetrics(t, counterAssertions, serverSnapshot.Snapshot().Counters)
+	})
+	t.Run("outbound", func(t *testing.T) {
+		assertMetrics(t, counterAssertions, clientSnapshot.Snapshot().Counters)
+	})
+}
+
+func assertMetrics(t *testing.T, counterAssertions []counterAssertion, snapshot []metrics.Snapshot) {
+	require.Len(t, counterAssertions, len(snapshot), "unexpected number of counters")
+
+	for i, wantCounter := range counterAssertions {
+		require.Equal(t, wantCounter.Name, snapshot[i].Name, "unexpected counter")
+		assert.EqualValues(t, wantCounter.Value, snapshot[i].Value, "unexpected counter value")
+		for wantTagKey, wantTagVal := range wantCounter.Tags {
+			assert.Equal(t, wantTagVal, snapshot[i].Tags[wantTagKey], "unexpected value for %q", wantTagKey)
+		}
+	}
+}
+
 func initClientAndServer(
 	t *testing.T,
 ) (
 	client testserviceclient.Interface,
 	observedLogs *observer.ObservedLogs,
+	clientMetricsRoot *metrics.Root,
+	serverMetricsRoot *metrics.Root,
 	cleanup func(),
 ) {
 	loggerCore, observedLogs := observer.New(zapcore.DebugLevel)
-	metricsRoot := metrics.New()
+	clientMetricsRoot, serverMetricsRoot = metrics.New(), metrics.New()
 
-	serverAddr, cleanupServer := newServer(t, loggerCore, metricsRoot)
-	client, cleanupClient := newClient(t, serverAddr, loggerCore, metricsRoot)
+	serverAddr, cleanupServer := newServer(t, loggerCore, serverMetricsRoot)
+	client, cleanupClient := newClient(t, serverAddr, loggerCore, clientMetricsRoot)
 
 	_ = observedLogs.TakeAll() // ignore all start up logs
 
-	return client, observedLogs, func() {
+	return client, observedLogs, clientMetricsRoot, serverMetricsRoot, func() {
 		cleanupServer()
 		cleanupClient()
 	}
