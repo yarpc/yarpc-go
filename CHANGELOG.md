@@ -10,12 +10,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   `errorCode` field. Errors created outside of `protobuf.NewError` and
   `yarpcerrors` will yield `CodeUnknown`.
 - Using the `yarpc.code` annotation, services may specify an associated
-`yarpcerrors.Code` for Thrift exceptions.
+`yarpcerrors.Code` for Thrift exceptions (TChannel-only).
 - Metrics and logs now include Thrift exception names and related YARPC code, if
   annotated. If a `yarpc.code` annotation is specified for a Thrift exception,
   metrics will classify it as a client or server failure, like a `yarpcerrors`
   error. If the YARPC code is not specified for the Thrift exception, it will
-  continue to be assumed a client failure.
+  continue to be assumed a client failure. (TChannel-only)
 
 ### Removed
 - Removed `yarpcproto` package that enabled "oneway" Protobuf signatures.
