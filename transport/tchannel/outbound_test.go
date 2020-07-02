@@ -292,7 +292,19 @@ func TestApplicationError(t *testing.T) {
 		func(ctx context.Context, call *tchannel.InboundCall) {
 			call.Response().SetApplicationError()
 
-			err := writeArgs(call.Response(), []byte{0x00, 0x00}, []byte("foo"))
+			err := writeArgs(
+				call.Response(),
+				[]byte{
+					0x00, 0x02,
+					0x00, 0x1c, '$', 'r', 'p', 'c', '$', '-', 'a', 'p', 'p', 'l', 'i', 'c', 'a', 't', 'i', 'o', 'n',
+					'-', 'e', 'r', 'r', 'o', 'r', '-', 'c', 'o', 'd', 'e',
+					0x00, 0x02, '1', '0',
+					0x00, 0x1c, '$', 'r', 'p', 'c', '$', '-', 'a', 'p', 'p', 'l', 'i', 'c', 'a', 't', 'i', 'o', 'n',
+					'-', 'e', 'r', 'r', 'o', 'r', '-', 'n', 'a', 'm', 'e',
+					0x00, 0x03, 'b', 'A', 'z',
+				},
+				[]byte("foo"),
+			)
 			assert.NoError(t, err, "failed to write response")
 		}))
 
@@ -314,6 +326,19 @@ func TestApplicationError(t *testing.T) {
 	)
 	require.NoError(t, err, "failed to make call")
 	assert.True(t, res.ApplicationError, "application error was not set")
+	assert.NotNil(t, res.ApplicationErrorMeta.Code, "application error code was not set")
+	assert.Equal(
+		t,
+		yarpcerrors.CodeAborted,
+		*res.ApplicationErrorMeta.Code,
+		"application error code does not match the expected one",
+	)
+	assert.Equal(
+		t,
+		"bAz",
+		res.ApplicationErrorMeta.Name,
+		"application error name does not match the expected one",
+	)
 
 }
 

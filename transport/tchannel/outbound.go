@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/peer"
@@ -175,6 +176,9 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		return nil, err
 	}
 
+	applicationErrorName, _ := headers.Get(ApplicationErrorNameHeaderKey)
+	applicationErrorCode := getApplicationErrorCodeFromHeaders(headers)
+
 	err = getResponseError(headers)
 	deleteReservedHeaders(headers)
 
@@ -184,11 +188,26 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		ApplicationError: res.ApplicationError(),
 		ApplicationErrorMeta: &transport.ApplicationErrorMeta{
 			Err:  nil,
-			Name: "",
-			Code: nil,
+			Name: applicationErrorName,
+			Code: applicationErrorCode,
 		},
 	}
 	return resp, err
+}
+
+func getApplicationErrorCodeFromHeaders(headers transport.Headers) *yarpcerrors.Code {
+	errorCodeHeader, found := headers.Get(ApplicationErrorCodeHeaderKey)
+	if !found {
+		return nil
+	}
+
+	errorCode, err := strconv.Atoi(errorCodeHeader)
+	if err != nil {
+		return nil
+	}
+
+	yarpcCode := yarpcerrors.Code(errorCode)
+	return &yarpcCode
 }
 
 func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*tchannelPeer, func(error), error) {
