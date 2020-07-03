@@ -23,6 +23,7 @@ package main
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"go.uber.org/thriftrw/compile"
 	"go.uber.org/thriftrw/plugin"
@@ -78,6 +79,8 @@ var (
 		yarpcerrors.CodeDataLoss:           "yarpcerrors.CodeDataLoss",
 		yarpcerrors.CodeUnauthenticated:    "yarpcerrors.CodeUnauthenticated",
 	}
+
+	_availableCodes = fmt.Sprintf(`Available codes: %s`, yarpcerrorsCodesToString())
 )
 
 func yarpcErrorGenerator(data *templateData, files map[string][]byte) error {
@@ -119,7 +122,7 @@ func getYARPCErrorCode(t *compile.StructSpec) string {
 	var errorCode yarpcerrors.Code
 
 	if err := errorCode.UnmarshalText([]byte(errorCodeString)); err != nil {
-		panic(fmt.Sprintf("invalid yarpc.code annotation: %v", err))
+		panic(fmt.Sprintf("invalid yarpc.code annotation: %s\n%s", err.Error(), _availableCodes))
 	}
 
 	result, ok := _errorCodeToTypeName[errorCode]
@@ -133,4 +136,25 @@ func getYARPCErrorCode(t *compile.StructSpec) string {
 
 func getYARPCErrorName(t *compile.StructSpec) string {
 	return fmt.Sprintf("%q", t.ThriftName())
+}
+
+func yarpcerrorsCodesToString() string {
+	return strings.Join([]string{
+		yarpcerrors.CodeCancelled.String(),
+		yarpcerrors.CodeUnknown.String(),
+		yarpcerrors.CodeInvalidArgument.String(),
+		yarpcerrors.CodeDeadlineExceeded.String(),
+		yarpcerrors.CodeNotFound.String(),
+		yarpcerrors.CodeAlreadyExists.String(),
+		yarpcerrors.CodePermissionDenied.String(),
+		yarpcerrors.CodeResourceExhausted.String(),
+		yarpcerrors.CodeFailedPrecondition.String(),
+		yarpcerrors.CodeAborted.String(),
+		yarpcerrors.CodeOutOfRange.String(),
+		yarpcerrors.CodeUnimplemented.String(),
+		yarpcerrors.CodeInternal.String(),
+		yarpcerrors.CodeUnavailable.String(),
+		yarpcerrors.CodeDataLoss.String(),
+		yarpcerrors.CodeUnauthenticated.String(),
+	}, ",")
 }
