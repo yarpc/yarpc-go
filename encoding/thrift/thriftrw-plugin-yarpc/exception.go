@@ -22,11 +22,11 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"go.uber.org/thriftrw/compile"
 	"go.uber.org/thriftrw/plugin"
 	"go.uber.org/yarpc/yarpcerrors"
-	"path/filepath"
 )
 
 const (
@@ -42,11 +42,12 @@ package <$pkgname>
 
 <range $key, $val := .Types>
 	<if (isException $val)>
-	<$yarpcerrors := import "go.uber.org/yarpc/yarpcerrors" ->	
-	// Code is the <$yarpcerrors>.Code that should be associated with <$val.Name>.	
+	<$yarpcerrors := import "go.uber.org/yarpc/yarpcerrors" ->
+	// YARPCErrorCode returns <if isSetYARPCCode .Annotations>a <getYARPCErrorCode .><else> nil<end> for <$val.Name>.
+	//
 	// This is derived from the yarpc.code annotation on the Thrift exception.
 	func (e *<$val.Name>) YARPCErrorCode() *<$yarpcerrors>.Code {
-		<if isSetYARPCCode .Annotations> code:= yarpcerrors.Code(<getYARPCErrorCode .>) 
+		<if isSetYARPCCode .Annotations>code := <getYARPCErrorCode .>
 		return &code
 		<else>
 		return nil
@@ -57,6 +58,27 @@ package <$pkgname>
 	<end>
 <end>
 `
+
+var (
+	_errorCodeToTypeName = map[yarpcerrors.Code]string{
+		yarpcerrors.CodeCancelled:          "yarpcerrors.CodeCancelled",
+		yarpcerrors.CodeUnknown:            "yarpcerrors.CodeUnknown",
+		yarpcerrors.CodeInvalidArgument:    "yarpcerrors.CodeInvalidArgument",
+		yarpcerrors.CodeDeadlineExceeded:   "yarpcerrors.CodeDeadlineExceeded",
+		yarpcerrors.CodeNotFound:           "yarpcerrors.CodeNotFound",
+		yarpcerrors.CodeAlreadyExists:      "yarpcerrors.CodeAlreadyExists",
+		yarpcerrors.CodePermissionDenied:   "yarpcerrors.CodePermissionDenied",
+		yarpcerrors.CodeResourceExhausted:  "yarpcerrors.CodeResourceExhausted",
+		yarpcerrors.CodeFailedPrecondition: "yarpcerrors.CodeFailedPrecondition",
+		yarpcerrors.CodeAborted:            "yarpcerrors.CodeAborted",
+		yarpcerrors.CodeOutOfRange:         "yarpcerrors.CodeOutOfRange",
+		yarpcerrors.CodeUnimplemented:      "yarpcerrors.CodeUnimplemented",
+		yarpcerrors.CodeInternal:           "yarpcerrors.CodeInternal",
+		yarpcerrors.CodeUnavailable:        "yarpcerrors.CodeUnavailable",
+		yarpcerrors.CodeDataLoss:           "yarpcerrors.CodeDataLoss",
+		yarpcerrors.CodeUnauthenticated:    "yarpcerrors.CodeUnauthenticated",
+	}
+)
 
 func yarpcErrorGenerator(data *templateData, files map[string][]byte) error {
 	// kv.thrift => .../kv/types_yarpc.go
@@ -92,7 +114,7 @@ func yarpcErrorGenerator(data *templateData, files map[string][]byte) error {
 	return err
 }
 
-func getYARPCErrorCode(t *compile.StructSpec) int {
+func getYARPCErrorCode(t *compile.StructSpec) string {
 	errorCodeString := t.Annotations[_errorCodeAnnotationKey]
 	var errorCode yarpcerrors.Code
 
@@ -100,7 +122,13 @@ func getYARPCErrorCode(t *compile.StructSpec) int {
 		panic(fmt.Sprintf("invalid yarpc.code annotation: %v", err))
 	}
 
-	return int(errorCode)
+	result, ok := _errorCodeToTypeName[errorCode]
+	if !ok {
+		// if it's a valid code, it should be in our map, so this should never happen
+		panic("thriftrw-plugin-yarpc: fatal error, could not find code after successful marshal")
+	}
+
+	return result
 }
 
 func getYARPCErrorName(t *compile.StructSpec) string {

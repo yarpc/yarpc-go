@@ -21,7 +21,39 @@
 // thriftrw-plugin-yarpc implements a plugin for ThriftRW that generates code
 // compatible with YARPC.
 //
-// For more information, check the documentation of the parent package.
+// thriftrw-plugin-yarpc supports "yarpc.code" annotations on Thrift exceptions.
+// For example:
+//
+//  exception ExceptionWithCode {
+//    1: required string val
+//  } (
+//    yarpc.code = "invalid-argument"
+//  )
+//
+// The "yarpc.code" annotation can be any code from yarpcerrors, except
+// 'CodeOK'. Available string names satisfy `Code.UnmarshalText`. These include:
+//  - "cancelled"
+//  - "unknown"
+//  - "invalid-argument"
+//  - "deadline-exceeded"
+//  - "not-found"
+//  - "already-exists"
+//  - "permission-denied"
+//  - "resource-exhausted"
+//  - "failed-precondition"
+//  - "aborted"
+//  - "out-of-range"
+//  - "unimplemented"
+//  - "internal"
+//  - "unavailable"
+//  - "data-loss"
+//  - "unauthenticated"
+//
+// Adding codes will affect YARPC's observability middleware classification of
+// client and server errors for Thrift exceptions.
+//
+// For more information on the Thrift encoding, check the documentation of the
+// parent package.
 package main
 
 import (
