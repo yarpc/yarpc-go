@@ -5,20 +5,22 @@ package atomic
 
 import yarpcerrors "go.uber.org/yarpc/yarpcerrors"
 
-// Code is the yarpcerrors.Code that should be associated with IntegerMismatchError.
+// YARPCErrorCode returns a yarpcerrors.CodeInvalidArgument for IntegerMismatchError.
+//
 // This is derived from the yarpc.code annotation on the Thrift exception.
 func (e *IntegerMismatchError) YARPCErrorCode() *yarpcerrors.Code {
-	code := yarpcerrors.Code(3)
+	code := yarpcerrors.CodeInvalidArgument
 	return &code
 }
 
 // Name is the error name for IntegerMismatchError.
 func (e *IntegerMismatchError) YARPCErrorName() string { return "IntegerMismatchError" }
 
-// Code is the yarpcerrors.Code that should be associated with KeyDoesNotExist.
+// YARPCErrorCode returns a yarpcerrors.CodeInvalidArgument for KeyDoesNotExist.
+//
 // This is derived from the yarpc.code annotation on the Thrift exception.
 func (e *KeyDoesNotExist) YARPCErrorCode() *yarpcerrors.Code {
-	code := yarpcerrors.Code(3)
+	code := yarpcerrors.CodeInvalidArgument
 	return &code
 }
 
