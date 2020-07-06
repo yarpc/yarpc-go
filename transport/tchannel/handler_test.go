@@ -553,16 +553,18 @@ func TestResponseWriter(t *testing.T) {
 				w.SetApplicationError()
 				w.SetApplicationErrorMeta(
 					&transport.ApplicationErrorMeta{
-						Name: "bAz",
-						Code: &yErrAborted,
+						Name:    "bAz",
+						Code:    &yErrAborted,
+						Message: "App Error Message",
 					},
 				)
 				_, err := w.Write([]byte("hello"))
 				require.NoError(t, err)
 			},
 			arg2: map[string]string{
-				"$rpc$-application-error-code": "10",
-				"$rpc$-application-error-name": "bAz",
+				"$rpc$-application-error-code":    "10",
+				"$rpc$-application-error-name":    "bAz",
+				"$rpc$-application-error-message": "App Error Message",
 			},
 			arg3:             []byte("hello"),
 			applicationError: true,

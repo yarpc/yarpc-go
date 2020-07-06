@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   metrics will classify it as a client or server failure, like a `yarpcerrors`
   error. If the YARPC code is not specified for the Thrift exception, it will
   continue to be assumed a client failure. (TChannel-only)
+- observability: Thrift exceptions are logged under the `appErrMessage` field
+  (TChannel-only).
 
 ### Removed
 - Removed `yarpcproto` package that enabled "oneway" Protobuf signatures.
