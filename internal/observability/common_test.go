@@ -51,7 +51,6 @@ func (h fakeHandler) Handle(_ context.Context, _ *transport.Request, rw transpor
 
 	if applicationErrorMetaSetter, ok := rw.(transport.ApplicationErrorMetaSetter); ok {
 		applicationErrorMetaSetter.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
-			Err:  nil,
 			Name: h.applicationErrName,
 			Code: h.applicationErrCode,
 		})
@@ -91,9 +90,9 @@ func (o fakeOutbound) Call(context.Context, *transport.Request) (*transport.Resp
 	return &transport.Response{
 		ApplicationError: o.applicationErr,
 		ApplicationErrorMeta: &transport.ApplicationErrorMeta{
-			Err:  nil,
-			Name: o.applicationErrName,
-			Code: o.applicationErrCode,
+			Message: "",
+			Name:    o.applicationErrName,
+			Code:    o.applicationErrCode,
 		}}, o.err
 }
 

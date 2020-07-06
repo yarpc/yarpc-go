@@ -21,8 +21,9 @@
 package transport
 
 import (
-	"go.uber.org/yarpc/yarpcerrors"
 	"io"
+
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 // Response is the low level response representation.
@@ -55,13 +56,14 @@ type ResponseWriter interface {
 }
 
 // ApplicationErrorMeta contains additional information to describe the
-// application error, such as an error name and code. This information is
-// optional for backwards-compatibility and may not be present in all
+// application error, such as an error name, code and message.
+//
+// Fields are optional for backwards-compatibility and may not be present in all
 // responses.
 type ApplicationErrorMeta struct {
-	Err  error
-	Name string            // optional
-	Code *yarpcerrors.Code // optional
+	Message string
+	Name    string
+	Code    *yarpcerrors.Code
 }
 
 // ApplicationErrorMetaSetter enables setting the name of an

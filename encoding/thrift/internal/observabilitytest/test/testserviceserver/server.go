@@ -97,7 +97,9 @@ func (h handler) Call(ctx context.Context, body wire.Value) (thrift.Response, er
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err

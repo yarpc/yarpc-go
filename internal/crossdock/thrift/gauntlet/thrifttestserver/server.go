@@ -422,7 +422,9 @@ func (h handler) TestBinary(ctx context.Context, body wire.Value) (thrift.Respon
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
@@ -450,7 +452,9 @@ func (h handler) TestByte(ctx context.Context, body wire.Value) (thrift.Response
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
@@ -478,7 +482,9 @@ func (h handler) TestDouble(ctx context.Context, body wire.Value) (thrift.Respon
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
@@ -506,7 +512,9 @@ func (h handler) TestEnum(ctx context.Context, body wire.Value) (thrift.Response
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
@@ -534,7 +542,9 @@ func (h handler) TestException(ctx context.Context, body wire.Value) (thrift.Res
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
@@ -562,7 +572,9 @@ func (h handler) TestI32(ctx context.Context, body wire.Value) (thrift.Response,
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
@@ -590,7 +602,9 @@ func (h handler) TestI64(ctx context.Context, body wire.Value) (thrift.Response,
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
@@ -618,7 +632,9 @@ func (h handler) TestInsanity(ctx context.Context, body wire.Value) (thrift.Resp
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
@@ -646,7 +662,9 @@ func (h handler) TestList(ctx context.Context, body wire.Value) (thrift.Response
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
@@ -674,7 +692,9 @@ func (h handler) TestMap(ctx context.Context, body wire.Value) (thrift.Response,
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
@@ -702,7 +722,9 @@ func (h handler) TestMapMap(ctx context.Context, body wire.Value) (thrift.Respon
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
@@ -730,7 +752,9 @@ func (h handler) TestMulti(ctx context.Context, body wire.Value) (thrift.Respons
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
@@ -758,7 +782,9 @@ func (h handler) TestMultiException(ctx context.Context, body wire.Value) (thrif
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
@@ -786,7 +812,9 @@ func (h handler) TestNest(ctx context.Context, body wire.Value) (thrift.Response
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
@@ -823,7 +851,9 @@ func (h handler) TestSet(ctx context.Context, body wire.Value) (thrift.Response,
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
@@ -851,7 +881,9 @@ func (h handler) TestString(ctx context.Context, body wire.Value) (thrift.Respon
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
@@ -879,7 +911,9 @@ func (h handler) TestStringMap(ctx context.Context, body wire.Value) (thrift.Res
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
@@ -907,7 +941,9 @@ func (h handler) TestStruct(ctx context.Context, body wire.Value) (thrift.Respon
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
@@ -935,7 +971,9 @@ func (h handler) TestTypedef(ctx context.Context, body wire.Value) (thrift.Respo
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
@@ -963,7 +1001,9 @@ func (h handler) TestVoid(ctx context.Context, body wire.Value) (thrift.Response
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
