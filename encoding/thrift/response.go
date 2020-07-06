@@ -31,9 +31,7 @@ type Response struct {
 
 	IsApplicationError bool
 
-	ApplicationError error
-
-	ApplicationErrorName string
-
-	ApplicationErrorCode *yarpcerrors.Code
+	ApplicationErrorMessage string
+	ApplicationErrorName    string
+	ApplicationErrorCode    *yarpcerrors.Code
 }

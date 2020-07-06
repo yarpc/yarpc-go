@@ -187,9 +187,9 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		Body:             resBody,
 		ApplicationError: res.ApplicationError(),
 		ApplicationErrorMeta: &transport.ApplicationErrorMeta{
-			Err:  nil,
-			Name: applicationErrorName,
-			Code: applicationErrorCode,
+			Message: "",
+			Name:    applicationErrorName,
+			Code:    applicationErrorCode,
 		},
 	}
 	return resp, err

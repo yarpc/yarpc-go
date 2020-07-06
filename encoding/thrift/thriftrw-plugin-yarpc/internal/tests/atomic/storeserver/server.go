@@ -124,7 +124,9 @@ func (h handler) CompareAndSwap(ctx context.Context, body wire.Value) (thrift.Re
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
@@ -161,7 +163,9 @@ func (h handler) Increment(ctx context.Context, body wire.Value) (thrift.Respons
 		if extractor, ok := appErr.(yarpcErrorCoder); ok {
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
-		response.ApplicationError = appErr
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
 
 	return response, err
