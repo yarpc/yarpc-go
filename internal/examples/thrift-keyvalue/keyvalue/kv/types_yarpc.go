@@ -25,7 +25,7 @@ package kv
 
 import yarpcerrors "go.uber.org/yarpc/yarpcerrors"
 
-// YARPCErrorCode returns  nil for ResourceDoesNotExist.
+// YARPCErrorCode returns nil for ResourceDoesNotExist.
 //
 // This is derived from the yarpc.code annotation on the Thrift exception.
 func (e *ResourceDoesNotExist) YARPCErrorCode() *yarpcerrors.Code {

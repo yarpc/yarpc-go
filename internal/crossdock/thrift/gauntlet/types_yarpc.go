@@ -25,7 +25,7 @@ package gauntlet
 
 import yarpcerrors "go.uber.org/yarpc/yarpcerrors"
 
-// YARPCErrorCode returns  nil for Xception.
+// YARPCErrorCode returns nil for Xception.
 //
 // This is derived from the yarpc.code annotation on the Thrift exception.
 func (e *Xception) YARPCErrorCode() *yarpcerrors.Code {
@@ -36,7 +36,7 @@ func (e *Xception) YARPCErrorCode() *yarpcerrors.Code {
 // Name is the error name for Xception.
 func (e *Xception) YARPCErrorName() string { return "Xception" }
 
-// YARPCErrorCode returns  nil for Xception2.
+// YARPCErrorCode returns nil for Xception2.
 //
 // This is derived from the yarpc.code annotation on the Thrift exception.
 func (e *Xception2) YARPCErrorCode() *yarpcerrors.Code {

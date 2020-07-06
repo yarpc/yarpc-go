@@ -44,7 +44,7 @@ package <$pkgname>
 <range $key, $val := .Types>
 	<if (isException $val)>
 	<$yarpcerrors := import "go.uber.org/yarpc/yarpcerrors" ->
-	// YARPCErrorCode returns <if isSetYARPCCode .Annotations>a <getYARPCErrorCode .><else> nil<end> for <$val.Name>.
+	// YARPCErrorCode returns <if isSetYARPCCode .Annotations>a <getYARPCErrorCode .><else>nil<end> for <$val.Name>.
 	//
 	// This is derived from the yarpc.code annotation on the Thrift exception.
 	func (e *<$val.Name>) YARPCErrorCode() *<$yarpcerrors>.Code {
