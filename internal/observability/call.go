@@ -32,15 +32,19 @@ import (
 )
 
 const (
-	_error               = "error"
+	_error = "error"
+
 	_errorNameMetricsKey = "error_name"
-	_errorNameLogKey     = "errorName"
-	_errorCodeLogKey     = "errorCode"
 	_notSet              = "__not_set__"
-	_successfulInbound   = "Handled inbound request."
-	_successfulOutbound  = "Made outbound call."
-	_errorInbound        = "Error handling inbound request."
-	_errorOutbound       = "Error making outbound call."
+
+	_errorNameLogKey       = "errorName"
+	_errorCodeLogKey       = "errorCode"
+	_appErrorMessageLogKey = "appErrorMessage"
+
+	_successfulInbound  = "Handled inbound request."
+	_successfulOutbound = "Made outbound call."
+	_errorInbound       = "Error handling inbound request."
+	_errorOutbound      = "Error making outbound call."
 
 	_successStreamOpen  = "Successfully created stream"
 	_successStreamClose = "Successfully closed stream"
@@ -60,7 +64,7 @@ const (
 type call struct {
 	edge    *edge
 	extract ContextExtractor
-	fields  [8]zapcore.Field
+	fields  [9]zapcore.Field
 
 	started   time.Time
 	ctx       context.Context
@@ -193,6 +197,9 @@ func (c call) endLogs(
 			}
 			if applicationErrorMeta.Code != nil {
 				fields = append(fields, zap.String(_errorCodeLogKey, applicationErrorMeta.Code.String()))
+			}
+			if applicationErrorMeta.Message != "" {
+				fields = append(fields, zap.String(_appErrorMessageLogKey, applicationErrorMeta.Message))
 			}
 		}
 	} else {

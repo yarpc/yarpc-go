@@ -183,6 +183,7 @@ func TestMiddlewareLogging(t *testing.T) {
 	yErrNoDetails := yarpcerrors.Newf(yarpcerrors.CodeAborted, "fail")
 	yErrWithDetails := yarpcerrors.Newf(yarpcerrors.CodeAborted, "fail").WithDetails([]byte("err detail"))
 	yErrResourceExhausted := yarpcerrors.CodeResourceExhausted
+	appErrMessage := "an app error message, usually from thriftEx.Error()!"
 
 	baseFields := func() []zapcore.Field {
 		return []zapcore.Field{
@@ -197,15 +198,16 @@ func TestMiddlewareLogging(t *testing.T) {
 	}
 
 	type test struct {
-		desc               string
-		err                error             // downstream error
-		applicationErr     bool              // downstream application error
-		applicationErrName string            // downstream application error name
-		applicationErrCode *yarpcerrors.Code // downstream application error code
-		wantErrLevel       zapcore.Level
-		wantInboundMsg     string
-		wantOutboundMsg    string
-		wantFields         []zapcore.Field
+		desc                  string
+		err                   error             // downstream error
+		applicationErr        bool              // downstream application error
+		applicationErrName    string            // downstream application error name
+		applicationErrMessage string            // downstream application error message
+		applicationErrCode    *yarpcerrors.Code // downstream application error code
+		wantErrLevel          zapcore.Level
+		wantInboundMsg        string
+		wantOutboundMsg       string
+		wantFields            []zapcore.Field
 	}
 
 	tests := []test{
@@ -236,26 +238,29 @@ func TestMiddlewareLogging(t *testing.T) {
 			},
 		},
 		{
-			desc:            "thrift application error with no name",
-			applicationErr:  true,
-			wantErrLevel:    zapcore.WarnLevel,
-			wantInboundMsg:  "Error handling inbound request.",
-			wantOutboundMsg: "Error making outbound call.",
+			desc:                  "thrift application error with no name",
+			applicationErr:        true,
+			applicationErrMessage: appErrMessage,
+			wantErrLevel:          zapcore.WarnLevel,
+			wantInboundMsg:        "Error handling inbound request.",
+			wantOutboundMsg:       "Error making outbound call.",
 			wantFields: []zapcore.Field{
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
 				zap.Skip(),
 				zap.String("error", "application_error"),
+				zap.String("appErrorMessage", appErrMessage),
 			},
 		},
 		{
-			desc:               "thrift application error with name and code",
-			applicationErr:     true,
-			applicationErrName: "FunkyThriftError",
-			applicationErrCode: &yErrResourceExhausted,
-			wantErrLevel:       zapcore.WarnLevel,
-			wantInboundMsg:     "Error handling inbound request.",
-			wantOutboundMsg:    "Error making outbound call.",
+			desc:                  "thrift application error with name and code",
+			applicationErr:        true,
+			applicationErrName:    "FunkyThriftError",
+			applicationErrMessage: appErrMessage,
+			applicationErrCode:    &yErrResourceExhausted,
+			wantErrLevel:          zapcore.WarnLevel,
+			wantInboundMsg:        "Error handling inbound request.",
+			wantOutboundMsg:       "Error making outbound call.",
 			wantFields: []zapcore.Field{
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
@@ -263,6 +268,7 @@ func TestMiddlewareLogging(t *testing.T) {
 				zap.String("error", "application_error"),
 				zap.String("errorName", "FunkyThriftError"),
 				zap.String("errorCode", "resource-exhausted"),
+				zap.String("appErrorMessage", appErrMessage),
 			},
 		},
 		{
@@ -317,19 +323,21 @@ func TestMiddlewareLogging(t *testing.T) {
 
 	newHandler := func(t test) fakeHandler {
 		return fakeHandler{
-			err:                t.err,
-			applicationErr:     t.applicationErr,
-			applicationErrName: t.applicationErrName,
-			applicationErrCode: t.applicationErrCode,
+			err:                   t.err,
+			applicationErr:        t.applicationErr,
+			applicationErrName:    t.applicationErrName,
+			applicationErrMessage: t.applicationErrMessage,
+			applicationErrCode:    t.applicationErrCode,
 		}
 	}
 
 	newOutbound := func(t test) fakeOutbound {
 		return fakeOutbound{
-			err:                t.err,
-			applicationErr:     t.applicationErr,
-			applicationErrName: t.applicationErrName,
-			applicationErrCode: t.applicationErrCode,
+			err:                   t.err,
+			applicationErr:        t.applicationErr,
+			applicationErrName:    t.applicationErrName,
+			applicationErrMessage: t.applicationErrMessage,
+			applicationErrCode:    t.applicationErrCode,
 		}
 	}
 
