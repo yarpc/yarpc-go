@@ -273,13 +273,14 @@ func (hw *handlerWriter) SetApplicationErrorMeta(applicationErrorMeta *transport
 	if applicationErrorMeta == nil {
 		return
 	}
-
 	if applicationErrorMeta.Code != nil {
 		hw.AddHeader(ApplicationErrorCodeHeaderKey, strconv.Itoa(int(*applicationErrorMeta.Code)))
 	}
-
 	if applicationErrorMeta.Name != "" {
 		hw.AddHeader(ApplicationErrorNameHeaderKey, applicationErrorMeta.Name)
+	}
+	if applicationErrorMeta.Message != "" {
+		hw.AddHeader(ApplicationErrorMessageHeaderKey, applicationErrorMeta.Message)
 	}
 }
 

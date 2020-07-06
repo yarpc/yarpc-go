@@ -295,13 +295,16 @@ func TestApplicationError(t *testing.T) {
 			err := writeArgs(
 				call.Response(),
 				[]byte{
-					0x00, 0x02,
+					0x00, 0x03,
 					0x00, 0x1c, '$', 'r', 'p', 'c', '$', '-', 'a', 'p', 'p', 'l', 'i', 'c', 'a', 't', 'i', 'o', 'n',
 					'-', 'e', 'r', 'r', 'o', 'r', '-', 'c', 'o', 'd', 'e',
 					0x00, 0x02, '1', '0',
 					0x00, 0x1c, '$', 'r', 'p', 'c', '$', '-', 'a', 'p', 'p', 'l', 'i', 'c', 'a', 't', 'i', 'o', 'n',
 					'-', 'e', 'r', 'r', 'o', 'r', '-', 'n', 'a', 'm', 'e',
 					0x00, 0x03, 'b', 'A', 'z',
+					0x00, 0x1f, '$', 'r', 'p', 'c', '$', '-', 'a', 'p', 'p', 'l', 'i', 'c', 'a', 't', 'i', 'o', 'n',
+					'-', 'e', 'r', 'r', 'o', 'r', '-', 'm', 'e', 's', 's', 'a', 'g', 'e',
+					0x00, 0x03, 'F', 'o', 'O',
 				},
 				[]byte("foo"),
 			)
@@ -325,8 +328,9 @@ func TestApplicationError(t *testing.T) {
 		},
 	)
 	require.NoError(t, err, "failed to make call")
-	assert.True(t, res.ApplicationError, "application error was not set")
-	assert.NotNil(t, res.ApplicationErrorMeta.Code, "application error code was not set")
+	require.True(t, res.ApplicationError, "application error was not set")
+	require.NotNil(t, res.ApplicationErrorMeta.Code, "application error code was not set")
+	assert.Equal(t, "FoO", res.ApplicationErrorMeta.Message, "unexpected error message")
 	assert.Equal(
 		t,
 		yarpcerrors.CodeAborted,
