@@ -33,12 +33,13 @@ type fakeAck struct{}
 func (a fakeAck) String() string { return "" }
 
 type fakeHandler struct {
-	err                error
-	applicationErr     bool
-	applicationErrName string
-	applicationErrCode *yarpcerrors.Code
-	applicationPanic   bool
-	handleStream       func(*transport.ServerStream)
+	err                   error
+	applicationErr        bool
+	applicationErrName    string
+	applicationErrMessage string
+	applicationErrCode    *yarpcerrors.Code
+	applicationPanic      bool
+	handleStream          func(*transport.ServerStream)
 }
 
 func (h fakeHandler) Handle(_ context.Context, _ *transport.Request, rw transport.ResponseWriter) error {
@@ -47,13 +48,14 @@ func (h fakeHandler) Handle(_ context.Context, _ *transport.Request, rw transpor
 	}
 	if h.applicationErr {
 		rw.SetApplicationError()
-	}
 
-	if applicationErrorMetaSetter, ok := rw.(transport.ApplicationErrorMetaSetter); ok {
-		applicationErrorMetaSetter.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
-			Name: h.applicationErrName,
-			Code: h.applicationErrCode,
-		})
+		if applicationErrorMetaSetter, ok := rw.(transport.ApplicationErrorMetaSetter); ok {
+			applicationErrorMetaSetter.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
+				Message: h.applicationErrMessage,
+				Name:    h.applicationErrName,
+				Code:    h.applicationErrCode,
+			})
+		}
 	}
 
 	return h.err
@@ -79,18 +81,19 @@ func (h fakeHandler) HandleStream(stream *transport.ServerStream) error {
 type fakeOutbound struct {
 	transport.Outbound
 
-	err                error
-	applicationErr     bool
-	applicationErrName string
-	applicationErrCode *yarpcerrors.Code
-	stream             fakeStream
+	err                   error
+	applicationErr        bool
+	applicationErrName    string
+	applicationErrMessage string
+	applicationErrCode    *yarpcerrors.Code
+	stream                fakeStream
 }
 
 func (o fakeOutbound) Call(context.Context, *transport.Request) (*transport.Response, error) {
 	return &transport.Response{
 		ApplicationError: o.applicationErr,
 		ApplicationErrorMeta: &transport.ApplicationErrorMeta{
-			Message: "",
+			Message: o.applicationErrMessage,
 			Name:    o.applicationErrName,
 			Code:    o.applicationErrCode,
 		}}, o.err
