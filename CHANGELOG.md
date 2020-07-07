@@ -10,15 +10,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   `errorCode` field. Errors created outside of `protobuf.NewError` and
   `yarpcerrors` will yield `CodeUnknown`.
 - Using the `rpc.code` annotation, services may specify an associated
-`yarpcerrors.Code` for Thrift exceptions (TChannel-only).
+  `yarpcerrors.Code` for Thrift exceptions.
 - Metrics and logs now include Thrift exception names and related YARPC code, if
   annotated. If a `rpc.code` annotation is specified for a Thrift exception,
   metrics will classify it as a client or server failure, like a `yarpcerrors`
   error. If the YARPC code is not specified for the Thrift exception, it will
-  continue to be assumed a client failure. (TChannel-only)
-- observability: Thrift exceptions are logged under the `appErrMessage` field
-  (TChannel-only).
-
+  continue to be assumed a client failure.
+- observability: Thrift exceptions are logged under the `appErrMessage` field.
 ### Removed
 - Removed `yarpcproto` package that enabled "oneway" Protobuf signatures.
 

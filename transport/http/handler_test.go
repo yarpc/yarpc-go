@@ -27,6 +27,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -416,6 +417,12 @@ func headerCopyWithout(headers http.Header, names ...string) http.Header {
 }
 
 func TestResponseWriter(t *testing.T) {
+	const (
+		appErrMessage = "thrift ex message"
+		appErrName    = "thrift ex name"
+	)
+	appErrCode := yarpcerrors.CodeAborted
+
 	recorder := httptest.NewRecorder()
 	writer := newResponseWriter(recorder)
 
@@ -425,6 +432,12 @@ func TestResponseWriter(t *testing.T) {
 	})
 	writer.AddHeaders(headers)
 
+	writer.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
+		Message: appErrMessage,
+		Name:    appErrName,
+		Code:    &appErrCode,
+	})
+
 	_, err := writer.Write([]byte("hello"))
 	require.NoError(t, err)
 	writer.Close(http.StatusOK)
@@ -432,4 +445,8 @@ func TestResponseWriter(t *testing.T) {
 	assert.Equal(t, "bar", recorder.Header().Get("rpc-header-foo"))
 	assert.Equal(t, "123", recorder.Header().Get("rpc-header-shard-key"))
 	assert.Equal(t, "hello", recorder.Body.String())
+
+	assert.Equal(t, appErrMessage, recorder.Header().Get(_applicationErrorMessageHeader))
+	assert.Equal(t, appErrName, recorder.Header().Get(_applicationErrorNameHeader))
+	assert.Equal(t, strconv.Itoa(int(appErrCode)), recorder.Header().Get(_applicationErrorCodeHeader))
 }
