@@ -34,6 +34,7 @@ import (
 	"go.uber.org/yarpc/encoding/thrift/internal/observabilitytest/test"
 	"go.uber.org/yarpc/encoding/thrift/internal/observabilitytest/test/testserviceclient"
 	"go.uber.org/yarpc/encoding/thrift/internal/observabilitytest/test/testserviceserver"
+	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -54,13 +55,11 @@ const (
 )
 
 func TestThriftExceptionObservability(t *testing.T) {
-	transports := []string{tchannel.TransportName}
-	for _, _ = range transports {
+	transports := []string{tchannel.TransportName, http.TransportName}
 
-		// TODO(apeatsbond): add HTTP test when feature complete.
-
+	for _, trans := range transports {
 		t.Run("exception with annotation", func(t *testing.T) {
-			client, observedLogs, clientMetricsRoot, serverMetricsRoot, cleanup := initClientAndServer(t)
+			client, observedLogs, clientMetricsRoot, serverMetricsRoot, cleanup := initClientAndServer(t, trans)
 			defer cleanup()
 
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -103,7 +102,7 @@ func TestThriftExceptionObservability(t *testing.T) {
 		})
 
 		t.Run("exception without annotation ", func(t *testing.T) {
-			client, observedLogs, clientMetricsRoot, serverMetricsRoot, cleanup := initClientAndServer(t)
+			client, observedLogs, clientMetricsRoot, serverMetricsRoot, cleanup := initClientAndServer(t, trans)
 			defer cleanup()
 
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -203,6 +202,7 @@ func assertMetrics(t *testing.T, counterAssertions []counterAssertion, snapshot 
 
 func initClientAndServer(
 	t *testing.T,
+	trans string,
 ) (
 	client testserviceclient.Interface,
 	observedLogs *observer.ObservedLogs,
@@ -213,8 +213,8 @@ func initClientAndServer(
 	loggerCore, observedLogs := observer.New(zapcore.DebugLevel)
 	clientMetricsRoot, serverMetricsRoot = metrics.New(), metrics.New()
 
-	serverAddr, cleanupServer := newServer(t, loggerCore, serverMetricsRoot)
-	client, cleanupClient := newClient(t, serverAddr, loggerCore, clientMetricsRoot)
+	serverAddr, cleanupServer := newServer(t, trans, loggerCore, serverMetricsRoot)
+	client, cleanupClient := newClient(t, trans, serverAddr, loggerCore, clientMetricsRoot)
 
 	_ = observedLogs.TakeAll() // ignore all start up logs
 
@@ -224,17 +224,34 @@ func initClientAndServer(
 	}
 }
 
-func newServer(t *testing.T, loggerCore zapcore.Core, metricsRoot *metrics.Root) (addr string, cleanup func()) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	require.NoError(t, err)
-	trans, err := tchannel.NewTransport(
-		tchannel.ServiceName(_serverName),
-		tchannel.Listener(listener))
-	require.NoError(t, err)
+func newServer(t *testing.T, transportType string, loggerCore zapcore.Core, metricsRoot *metrics.Root) (addr string, cleanup func()) {
+	var inbound transport.Inbound
+
+	switch transportType {
+	case tchannel.TransportName:
+		listen, err := net.Listen("tcp", "127.0.0.1:0")
+		require.NoError(t, err)
+
+		trans, err := tchannel.NewTransport(
+			tchannel.ServiceName(_serverName),
+			tchannel.Listener(listen))
+		require.NoError(t, err)
+
+		inbound = trans.NewInbound()
+		addr = listen.Addr().String()
+
+	case http.TransportName:
+		hInbound := http.NewTransport().NewInbound("127.0.0.1:0")
+		defer func() { addr = "http://" + hInbound.Addr().String() }() // can only get addr after dispatcher has started
+		inbound = hInbound
+
+	default:
+		t.Fatal("unknown transport")
+	}
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name:     _serverName,
-		Inbounds: yarpc.Inbounds{trans.NewInbound()},
+		Inbounds: yarpc.Inbounds{inbound},
 		Logging: yarpc.LoggingConfig{
 			Zap: zap.New(loggerCore),
 		},
@@ -246,21 +263,29 @@ func newServer(t *testing.T, loggerCore zapcore.Core, metricsRoot *metrics.Root)
 	dispatcher.Register(testserviceserver.New(&testServer{}))
 	require.NoError(t, dispatcher.Start(), "could not start server dispatcher")
 
-	addr = listener.Addr().String()
 	cleanup = func() { assert.NoError(t, dispatcher.Stop(), "could not stop dispatcher") }
 	return addr, cleanup
 }
 
-func newClient(t *testing.T, serverAddr string, loggerCore zapcore.Core, metricsRoot *metrics.Root) (client testserviceclient.Interface, cleanup func()) {
-	trans, err := tchannel.NewTransport(tchannel.ServiceName(_clientName))
-	require.NoError(t, err)
+func newClient(t *testing.T, transportType string, serverAddr string, loggerCore zapcore.Core, metricsRoot *metrics.Root) (client testserviceclient.Interface, cleanup func()) {
+	var out transport.UnaryOutbound
+
+	switch transportType {
+	case tchannel.TransportName:
+		trans, err := tchannel.NewTransport(tchannel.ServiceName(_clientName))
+		require.NoError(t, err)
+		out = trans.NewSingleOutbound(serverAddr)
+
+	case http.TransportName:
+		out = http.NewTransport().NewSingleOutbound(serverAddr)
+	}
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: _clientName,
 		Outbounds: map[string]transport.Outbounds{
 			_serverName: {
 				ServiceName: _serverName,
-				Unary:       trans.NewSingleOutbound(serverAddr),
+				Unary:       out,
 			},
 		},
 		Logging: yarpc.LoggingConfig{
