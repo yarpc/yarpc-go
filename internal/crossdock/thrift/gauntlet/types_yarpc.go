@@ -27,7 +27,7 @@ import yarpcerrors "go.uber.org/yarpc/yarpcerrors"
 
 // YARPCErrorCode returns nil for Xception.
 //
-// This is derived from the yarpc.code annotation on the Thrift exception.
+// This is derived from the rpc.code annotation on the Thrift exception.
 func (e *Xception) YARPCErrorCode() *yarpcerrors.Code {
 
 	return nil
@@ -38,7 +38,7 @@ func (e *Xception) YARPCErrorName() string { return "Xception" }
 
 // YARPCErrorCode returns nil for Xception2.
 //
-// This is derived from the yarpc.code annotation on the Thrift exception.
+// This is derived from the rpc.code annotation on the Thrift exception.
 func (e *Xception2) YARPCErrorCode() *yarpcerrors.Code {
 
 	return nil

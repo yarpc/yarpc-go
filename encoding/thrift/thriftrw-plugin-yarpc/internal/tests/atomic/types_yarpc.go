@@ -7,7 +7,7 @@ import yarpcerrors "go.uber.org/yarpc/yarpcerrors"
 
 // YARPCErrorCode returns a yarpcerrors.CodeInvalidArgument for IntegerMismatchError.
 //
-// This is derived from the yarpc.code annotation on the Thrift exception.
+// This is derived from the rpc.code annotation on the Thrift exception.
 func (e *IntegerMismatchError) YARPCErrorCode() *yarpcerrors.Code {
 	code := yarpcerrors.CodeInvalidArgument
 	return &code
@@ -18,7 +18,7 @@ func (e *IntegerMismatchError) YARPCErrorName() string { return "IntegerMismatch
 
 // YARPCErrorCode returns a yarpcerrors.CodeInvalidArgument for KeyDoesNotExist.
 //
-// This is derived from the yarpc.code annotation on the Thrift exception.
+// This is derived from the rpc.code annotation on the Thrift exception.
 func (e *KeyDoesNotExist) YARPCErrorCode() *yarpcerrors.Code {
 	code := yarpcerrors.CodeInvalidArgument
 	return &code
