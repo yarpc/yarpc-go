@@ -25,6 +25,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -765,6 +766,42 @@ func TestHandlerSystemErrorLogs(t *testing.T) {
 			require.Empty(t, observedLogs.TakeAll(), "expected no logs")
 		})
 	})
+}
+
+func TestTruncatedHeader(t *testing.T) {
+	tests := []struct {
+		name         string
+		value        string
+		wantTruncate bool
+	}{
+		{
+			name:  "no-op",
+			value: "foo bar",
+		},
+		{
+			name:  "max",
+			value: strings.Repeat("a", _maxAppErrMessageHeaderLen),
+		},
+		{
+			name:         "truncate",
+			value:        strings.Repeat("b", _maxAppErrMessageHeaderLen+1),
+			wantTruncate: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := truncateAppErrMessage(tt.value)
+
+			if !tt.wantTruncate {
+				assert.Equal(t, tt.value, got, "expected no-op")
+				return
+			}
+
+			assert.True(t, strings.HasSuffix(got, _truncatedHeaderMessage), "unexpected truncate suffix")
+			assert.Len(t, got, _maxAppErrMessageHeaderLen, "did not truncate")
+		})
+	}
 }
 
 type testUnaryHandler struct {
