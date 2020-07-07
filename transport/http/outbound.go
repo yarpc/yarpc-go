@@ -27,6 +27,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -275,6 +276,11 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, transport.NewHeaders()),
 		Body:             response.Body,
 		ApplicationError: response.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus,
+		ApplicationErrorMeta: &transport.ApplicationErrorMeta{
+			Message: response.Header.Get(_applicationErrorMessageHeader),
+			Name:    response.Header.Get(_applicationErrorNameHeader),
+			Code:    getYARPCApplicationErrorCode(response.Header.Get(_applicationErrorCodeHeader)),
+		},
 	}
 
 	bothResponseError := response.Header.Get(BothResponseErrorHeader) == AcceptTrue
@@ -288,6 +294,20 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 		return tres, nil
 	}
 	return getYARPCErrorFromResponse(tres, response, false)
+}
+
+func getYARPCApplicationErrorCode(code string) *yarpcerrors.Code {
+	if code == "" {
+		return nil
+	}
+
+	errorCode, err := strconv.Atoi(code)
+	if err != nil {
+		return nil
+	}
+
+	yarpcCode := yarpcerrors.Code(errorCode)
+	return &yarpcCode
 }
 
 func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*httpPeer, func(error), error) {

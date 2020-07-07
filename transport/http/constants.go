@@ -99,6 +99,13 @@ const (
 	BothResponseErrorHeader = "Rpc-Both-Response-Error"
 )
 
+const (
+	// Headers for propagating transport.ApplicationErrorMeta.
+	_applicationErrorNameHeader    = "Rpc-Application-Error-Name"
+	_applicationErrorCodeHeader    = "Rpc-Application-Error-Code"
+	_applicationErrorMessageHeader = "Rpc-Application-Error-Message"
+)
+
 // Valid values for the Rpc-Status header.
 const (
 	// The request was successful.
