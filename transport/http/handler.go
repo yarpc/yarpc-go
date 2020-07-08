@@ -282,8 +282,16 @@ func (rw *responseWriter) SetApplicationErrorMeta(meta *transport.ApplicationErr
 		rw.w.Header().Set(_applicationErrorNameHeader, meta.Name)
 	}
 	if meta.Message != "" {
-		rw.w.Header().Set(_applicationErrorMessageHeader, meta.Message)
+		rw.w.Header().Set(_applicationErrorMessageHeader, truncateAppErrMessage(meta.Message))
 	}
+}
+
+func truncateAppErrMessage(val string) string {
+	if len(val) <= _maxAppErrMessageHeaderLen {
+		return val
+	}
+	stripIndex := _maxAppErrMessageHeaderLen - len(_truncatedHeaderMessage)
+	return val[:stripIndex] + _truncatedHeaderMessage
 }
 
 func (rw *responseWriter) AddSystemHeader(key string, value string) {
