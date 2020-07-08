@@ -28,6 +28,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -449,4 +450,40 @@ func TestResponseWriter(t *testing.T) {
 	assert.Equal(t, appErrMessage, recorder.Header().Get(_applicationErrorMessageHeader))
 	assert.Equal(t, appErrName, recorder.Header().Get(_applicationErrorNameHeader))
 	assert.Equal(t, strconv.Itoa(int(appErrCode)), recorder.Header().Get(_applicationErrorCodeHeader))
+}
+
+func TestTruncatedHeader(t *testing.T) {
+	tests := []struct {
+		name         string
+		value        string
+		wantTruncate bool
+	}{
+		{
+			name:  "no-op",
+			value: "foo bar",
+		},
+		{
+			name:  "max",
+			value: strings.Repeat("a", _maxAppErrMessageHeaderLen),
+		},
+		{
+			name:         "truncate",
+			value:        strings.Repeat("b", _maxAppErrMessageHeaderLen*2),
+			wantTruncate: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := truncateAppErrMessage(tt.value)
+
+			if !tt.wantTruncate {
+				assert.Equal(t, tt.value, got, "expected no-op")
+				return
+			}
+
+			assert.True(t, strings.HasSuffix(got, _truncatedHeaderMessage), "unexpected truncate suffix")
+			assert.Len(t, got, _maxAppErrMessageHeaderLen, "did not truncate")
+		})
+	}
 }
