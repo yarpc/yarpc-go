@@ -21,16 +21,16 @@
 // thriftrw-plugin-yarpc implements a plugin for ThriftRW that generates code
 // compatible with YARPC.
 //
-// thriftrw-plugin-yarpc supports "yarpc.code" annotations on Thrift exceptions.
+// thriftrw-plugin-yarpc supports "rpc.code" annotations on Thrift exceptions.
 // For example:
 //
 //  exception ExceptionWithCode {
 //    1: required string val
 //  } (
-//    yarpc.code = "invalid-argument"
+//    rpc.code = "invalid-argument"
 //  )
 //
-// The "yarpc.code" annotation can be any code from yarpcerrors, except
+// The "rpc.code" annotation can be any code from yarpcerrors, except
 // 'CodeOK'. Available string names satisfy `Code.UnmarshalText`. These include:
 //  - "cancelled"
 //  - "unknown"

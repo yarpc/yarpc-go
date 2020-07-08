@@ -44,7 +44,7 @@ func TestGetYARPCErrorCode(t *testing.T) {
 			Annotations: map[string]string{_errorCodeAnnotationKey: "foo"},
 		}
 		assert.PanicsWithValue(t,
-			"invalid yarpc.code annotation: unknown code string: foo\nAvailable codes: cancelled,unknown,invalid-argument,deadline-exceeded,not-found,already-exists,permission-denied,resource-exhausted,failed-precondition,aborted,out-of-range,unimplemented,internal,unavailable,data-loss,unauthenticated",
+			"invalid rpc.code annotation: unknown code string: foo\nAvailable codes: cancelled,unknown,invalid-argument,deadline-exceeded,not-found,already-exists,permission-denied,resource-exhausted,failed-precondition,aborted,out-of-range,unimplemented,internal,unavailable,data-loss,unauthenticated",
 			func() { getYARPCErrorCode(spec) },
 			"unexpected panic")
 	})

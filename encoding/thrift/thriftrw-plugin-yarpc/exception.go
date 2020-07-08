@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	_errorCodeAnnotationKey = "yarpc.code"
+	_errorCodeAnnotationKey = "rpc.code"
 )
 
 const yarpcerrorTemplate = `
@@ -46,7 +46,7 @@ package <$pkgname>
 	<$yarpcerrors := import "go.uber.org/yarpc/yarpcerrors" ->
 	// YARPCErrorCode returns <if isSetYARPCCode .Annotations>a <getYARPCErrorCode .><else>nil<end> for <$val.Name>.
 	//
-	// This is derived from the yarpc.code annotation on the Thrift exception.
+	// This is derived from the rpc.code annotation on the Thrift exception.
 	func (e *<$val.Name>) YARPCErrorCode() *<$yarpcerrors>.Code {
 		<if isSetYARPCCode .Annotations>code := <getYARPCErrorCode .>
 		return &code
@@ -122,7 +122,7 @@ func getYARPCErrorCode(t *compile.StructSpec) string {
 	var errorCode yarpcerrors.Code
 
 	if err := errorCode.UnmarshalText([]byte(errorCodeString)); err != nil {
-		panic(fmt.Sprintf("invalid yarpc.code annotation: %s\n%s", err.Error(), _availableCodes))
+		panic(fmt.Sprintf("invalid rpc.code annotation: %s\n%s", err.Error(), _availableCodes))
 	}
 
 	result, ok := _errorCodeToTypeName[errorCode]

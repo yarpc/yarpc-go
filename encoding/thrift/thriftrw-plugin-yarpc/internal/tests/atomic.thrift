@@ -3,14 +3,14 @@ include "./common.thrift"
 exception KeyDoesNotExist {
     1: optional string key
 } (
-    yarpc.code = "invalid-argument"
+    rpc.code = "invalid-argument"
 )
 
 exception IntegerMismatchError {
     1: required i64 expectedValue
     2: required i64 gotValue
 } (
-    yarpc.code = "invalid-argument"
+    rpc.code = "invalid-argument"
 )
 
 struct CompareAndSwap {
