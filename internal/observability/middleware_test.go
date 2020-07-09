@@ -219,8 +219,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			wantFields: []zapcore.Field{
 				zap.Duration("latency", 0),
 				zap.Bool("successful", true),
-				zap.Skip(),
-				zap.Skip(),
+				zap.Skip(), // ContextExtractor
 			},
 		},
 		{
@@ -266,8 +265,8 @@ func TestMiddlewareLogging(t *testing.T) {
 				zap.Bool("successful", false),
 				zap.Skip(),
 				zap.String("error", "application_error"),
-				zap.String("errorName", "FunkyThriftError"),
 				zap.String("errorCode", "resource-exhausted"),
+				zap.String("errorName", "FunkyThriftError"),
 				zap.String("appErrorMessage", appErrMessage),
 			},
 		},
@@ -1212,8 +1211,8 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		zap.Bool("successful", false),
 		zap.Skip(),
 		zap.String("error", "application_error"),
-		zap.String("errorName", "SomeFakeError"),
 		zap.String("errorCode", "already-exists"),
+		zap.String("errorName", "SomeFakeError"),
 	}
 
 	core, logs := observer.New(zap.DebugLevel)
