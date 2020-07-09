@@ -207,6 +207,16 @@ func (c call) endLogs(
 	} else if isApplicationError { // Protobuf error
 		fields = append(fields, zap.Error(err))
 		fields = append(fields, zap.String(_errorCodeLogKey, yarpcerrors.FromError(err).Code().String()))
+		if applicationErrorMeta != nil {
+			// ignore transport.ApplicationErrorMeta#Code, since we should get this
+			// directly from the error
+			if applicationErrorMeta.Name != "" {
+				fields = append(fields, zap.String(_errorNameLogKey, applicationErrorMeta.Name))
+			}
+			if applicationErrorMeta.Message != "" {
+				fields = append(fields, zap.String(_appErrorMessageLogKey, applicationErrorMeta.Message))
+			}
+		}
 
 	} else if err != nil { // unknown error
 		fields = append(fields, zap.Error(err))
