@@ -141,7 +141,7 @@ func getYARPCErrorCode(t *compile.StructSpec) string {
 	errorCodeString := t.Annotations[_errorCodeAnnotationKey]
 	yCode, ok := _gRPCCodeNameToYARPCErrorCodeType[errorCodeString]
 	if !ok {
-		panic(fmt.Sprintf("invalid rpc.code annotation: %q\n%s", errorCodeString, _availableCodes))
+		panic(fmt.Sprintf("invalid rpc.code annotation for %q: %q\n%s", t.Name, errorCodeString, _availableCodes))
 	}
 	return yCode
 }
