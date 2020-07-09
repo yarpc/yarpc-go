@@ -303,6 +303,26 @@ func TestMiddlewareLogging(t *testing.T) {
 			},
 		},
 		{
+			// ie 'protobuf.NewError' return in Protobuf handler
+			desc:                  "yarpcerror, app error with name and code",
+			err:                   yErrNoDetails,
+			applicationErr:        true, // always true for Protobuf handler errors
+			wantErrLevel:          zapcore.ErrorLevel,
+			applicationErrMessage: appErrMessage,
+			applicationErrName:    "MyErrMessageName",
+			wantInboundMsg:        "Error handling inbound request.",
+			wantOutboundMsg:       "Error making outbound call.",
+			wantFields: []zapcore.Field{
+				zap.Duration("latency", 0),
+				zap.Bool("successful", false),
+				zap.Skip(), // ContextExtractor
+				zap.Error(yErrNoDetails),
+				zap.String(_errorCodeLogKey, "aborted"),
+				zap.String(_errorNameLogKey, "MyErrMessageName"),
+				zap.String(_appErrorMessageLogKey, appErrMessage),
+			},
+		},
+		{
 			// ie Protobuf error detail return in Protobuf handler
 			desc:            "err details, app error",
 			err:             yErrWithDetails,
