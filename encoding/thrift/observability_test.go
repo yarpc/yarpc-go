@@ -54,92 +54,96 @@ const (
 )
 
 func TestThriftExceptionObservability(t *testing.T) {
-	// TODO(apeatsbond): add HTTP test when feature complete.
+	transports := []string{tchannel.TransportName}
+	for _, _ = range transports {
 
-	t.Run("exception with annotation", func(t *testing.T) {
-		client, observedLogs, clientMetricsRoot, serverMetricsRoot, cleanup := initClientAndServer(t)
-		defer cleanup()
+		// TODO(apeatsbond): add HTTP test when feature complete.
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
+		t.Run("exception with annotation", func(t *testing.T) {
+			client, observedLogs, clientMetricsRoot, serverMetricsRoot, cleanup := initClientAndServer(t)
+			defer cleanup()
 
-		_, err := client.Call(ctx, _wantExceptionWithCode)
-		require.Error(t, err, "expected call error")
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
 
-		ex, ok := err.(*test.ExceptionWithCode)
-		require.True(t, ok, "unexpected Thrift exception")
-		assert.Equal(t, _wantExceptionWithCode, ex.Val, "unexpected response")
+			_, err := client.Call(ctx, _wantExceptionWithCode)
+			require.Error(t, err, "expected call error")
 
-		t.Run("logs", func(t *testing.T) {
-			wantFields := []zapcore.Field{
-				zap.String("error", "application_error"),
-				zap.String("errorName", "ExceptionWithCode"),
-				zap.String("errorCode", "invalid-argument"),
-				zap.String("appErrorMessage", "ExceptionWithCode{Val: exception with code}"),
-			}
-			assertLogs(t, wantFields, observedLogs.TakeAll())
-		})
+			ex, ok := err.(*test.ExceptionWithCode)
+			require.True(t, ok, "unexpected Thrift exception %v", err)
+			assert.Equal(t, _wantExceptionWithCode, ex.Val, "unexpected response")
 
-		t.Run("metrics", func(t *testing.T) {
-			wantCounters := []counterAssertion{
-				{
-					Name: "caller_failures",
-					Tags: map[string]string{
-						"error":      "invalid-argument",
-						"error_name": "ExceptionWithCode",
+			t.Run("logs", func(t *testing.T) {
+				wantFields := []zapcore.Field{
+					zap.String("error", "application_error"),
+					zap.String("errorName", "ExceptionWithCode"),
+					zap.String("errorCode", "invalid-argument"),
+					zap.String("appErrorMessage", "ExceptionWithCode{Val: exception with code}"),
+				}
+				assertLogs(t, wantFields, observedLogs.TakeAll())
+			})
+
+			t.Run("metrics", func(t *testing.T) {
+				wantCounters := []counterAssertion{
+					{
+						Name: "caller_failures",
+						Tags: map[string]string{
+							"error":      "invalid-argument",
+							"error_name": "ExceptionWithCode",
+						},
+						Value: 1,
 					},
-					Value: 1,
-				},
-				{Name: "calls", Value: 1},
-				{Name: "panics"},
-				{Name: "successes"},
-			}
+					{Name: "calls", Value: 1},
+					{Name: "panics"},
+					{Name: "successes"},
+				}
 
-			assertClientAndServerMetrics(t, wantCounters, clientMetricsRoot, serverMetricsRoot)
-		})
-	})
-
-	t.Run("exception without annotation ", func(t *testing.T) {
-		client, observedLogs, clientMetricsRoot, serverMetricsRoot, cleanup := initClientAndServer(t)
-		defer cleanup()
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-
-		_, err := client.Call(ctx, _wantExceptionWithoutCode)
-		require.Error(t, err, "expected call error")
-
-		ex, ok := err.(*test.ExceptionWithoutCode)
-		require.True(t, ok, "unexpected Thrift exception")
-		assert.Equal(t, _wantExceptionWithoutCode, ex.Val, "unexpected response")
-
-		t.Run("logs", func(t *testing.T) {
-			wantFields := []zapcore.Field{
-				zap.String("error", "application_error"),
-				zap.String("errorName", "ExceptionWithoutCode"),
-				zap.String("appErrorMessage", "ExceptionWithoutCode{Val: exception with no code}"),
-			}
-			assertLogs(t, wantFields, observedLogs.TakeAll())
+				assertClientAndServerMetrics(t, wantCounters, clientMetricsRoot, serverMetricsRoot)
+			})
 		})
 
-		t.Run("metrics", func(t *testing.T) {
-			wantCounters := []counterAssertion{
-				{
-					Name: "caller_failures",
-					Tags: map[string]string{
-						"error":      "application_error",
-						"error_name": "ExceptionWithoutCode",
+		t.Run("exception without annotation ", func(t *testing.T) {
+			client, observedLogs, clientMetricsRoot, serverMetricsRoot, cleanup := initClientAndServer(t)
+			defer cleanup()
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+
+			_, err := client.Call(ctx, _wantExceptionWithoutCode)
+			require.Error(t, err, "expected call error")
+
+			ex, ok := err.(*test.ExceptionWithoutCode)
+			require.True(t, ok, "unexpected Thrift exception")
+			assert.Equal(t, _wantExceptionWithoutCode, ex.Val, "unexpected response")
+
+			t.Run("logs", func(t *testing.T) {
+				wantFields := []zapcore.Field{
+					zap.String("error", "application_error"),
+					zap.String("errorName", "ExceptionWithoutCode"),
+					zap.String("appErrorMessage", "ExceptionWithoutCode{Val: exception with no code}"),
+				}
+				assertLogs(t, wantFields, observedLogs.TakeAll())
+			})
+
+			t.Run("metrics", func(t *testing.T) {
+				wantCounters := []counterAssertion{
+					{
+						Name: "caller_failures",
+						Tags: map[string]string{
+							"error":      "application_error",
+							"error_name": "ExceptionWithoutCode",
+						},
+						Value: 1,
 					},
-					Value: 1,
-				},
-				{Name: "calls", Value: 1},
-				{Name: "panics"},
-				{Name: "successes"},
-			}
+					{Name: "calls", Value: 1},
+					{Name: "panics"},
+					{Name: "successes"},
+				}
 
-			assertClientAndServerMetrics(t, wantCounters, clientMetricsRoot, serverMetricsRoot)
+				assertClientAndServerMetrics(t, wantCounters, clientMetricsRoot, serverMetricsRoot)
+			})
 		})
-	})
+	}
 }
 
 func assertLogs(t *testing.T, wantFields []zapcore.Field, logs []observer.LoggedEntry) {
