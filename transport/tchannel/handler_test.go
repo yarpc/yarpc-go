@@ -784,7 +784,7 @@ func TestTruncatedHeader(t *testing.T) {
 		},
 		{
 			name:         "truncate",
-			value:        strings.Repeat("b", _maxAppErrMessageHeaderLen+1),
+			value:        strings.Repeat("b", _maxAppErrMessageHeaderLen*2),
 			wantTruncate: true,
 		},
 	}

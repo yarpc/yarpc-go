@@ -288,7 +288,7 @@ func truncateAppErrMessage(val string) string {
 	if len(val) <= _maxAppErrMessageHeaderLen {
 		return val
 	}
-	stripIndex := len(val) - len(_truncatedHeaderMessage) - 1
+	stripIndex := _maxAppErrMessageHeaderLen - len(_truncatedHeaderMessage)
 	return val[:stripIndex] + _truncatedHeaderMessage
 }
 
