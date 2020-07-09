@@ -28,8 +28,11 @@ import (
 )
 
 func TestGetYARPCErrorCode(t *testing.T) {
+	const exName = "MyException"
+
 	t.Run("success", func(t *testing.T) {
 		spec := &compile.StructSpec{
+			Name:        exName,
 			Annotations: map[string]string{_errorCodeAnnotationKey: "ABORTED"},
 		}
 		assert.NotPanics(t, func() {
@@ -41,12 +44,12 @@ func TestGetYARPCErrorCode(t *testing.T) {
 
 	t.Run("panic fail", func(t *testing.T) {
 		spec := &compile.StructSpec{
+			Name:        exName,
 			Annotations: map[string]string{_errorCodeAnnotationKey: "foo"},
 		}
 		assert.PanicsWithValue(t,
-			"invalid rpc.code annotation: \"foo\"\nAvailable codes: CANCELLED,UNKNOWN,INVALID_ARGUMENT,DEADLINE_EXCEEDED,NOT_FOUND,ALREADY_EXISTS,PERMISSION_DENIED,RESOURCE_EXHAUSTED,FAILED_PRECONDITION,ABORTED,OUT_OF_RANGE,UNIMPLEMENTED,INTERNAL,UNAVAILABLE,DATA_LOSS,UNAUTHENTICATED",
+			"invalid rpc.code annotation for \"MyException\": \"foo\"\nAvailable codes: CANCELLED,UNKNOWN,INVALID_ARGUMENT,DEADLINE_EXCEEDED,NOT_FOUND,ALREADY_EXISTS,PERMISSION_DENIED,RESOURCE_EXHAUSTED,FAILED_PRECONDITION,ABORTED,OUT_OF_RANGE,UNIMPLEMENTED,INTERNAL,UNAVAILABLE,DATA_LOSS,UNAUTHENTICATED",
 			func() { getYARPCErrorCode(spec) },
 			"unexpected panic")
 	})
-
 }
