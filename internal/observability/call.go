@@ -189,25 +189,30 @@ func (c call) endLogs(
 	fields = append(fields, zap.Duration("latency", elapsed))
 	fields = append(fields, zap.Bool("successful", err == nil && !isApplicationError))
 	fields = append(fields, c.extract(c.ctx))
-	if appErrBitWithNoError {
+
+	if appErrBitWithNoError { // Thrift exception
 		fields = append(fields, zap.String(_error, "application_error"))
 		if applicationErrorMeta != nil {
-			if applicationErrorMeta.Name != "" {
-				fields = append(fields, zap.String(_errorNameLogKey, applicationErrorMeta.Name))
-			}
 			if applicationErrorMeta.Code != nil {
 				fields = append(fields, zap.String(_errorCodeLogKey, applicationErrorMeta.Code.String()))
+			}
+			if applicationErrorMeta.Name != "" {
+				fields = append(fields, zap.String(_errorNameLogKey, applicationErrorMeta.Name))
 			}
 			if applicationErrorMeta.Message != "" {
 				fields = append(fields, zap.String(_appErrorMessageLogKey, applicationErrorMeta.Message))
 			}
 		}
-	} else {
+
+	} else if isApplicationError { // Protobuf error
 		fields = append(fields, zap.Error(err))
-		if code := yarpcerrors.FromError(err).Code(); code != yarpcerrors.CodeOK {
-			fields = append(fields, zap.String(_errorCodeLogKey, code.String()))
-		}
+		fields = append(fields, zap.String(_errorCodeLogKey, yarpcerrors.FromError(err).Code().String()))
+
+	} else if err != nil { // unknown error
+		fields = append(fields, zap.Error(err))
+		fields = append(fields, zap.String(_errorCodeLogKey, yarpcerrors.FromError(err).Code().String()))
 	}
+
 	fields = append(fields, extraLogFields...)
 	ce.Write(fields...)
 }
