@@ -27,27 +27,33 @@
 //  exception ExceptionWithCode {
 //    1: required string val
 //  } (
-//    rpc.code = "invalid-argument"
+//    rpc.code = "INVALID_ARGUMENT"
 //  )
 //
-// The "rpc.code" annotation can be any code from yarpcerrors, except
-// 'CodeOK'. Available string names satisfy `Code.UnmarshalText`. These include:
-//  - "cancelled"
-//  - "unknown"
-//  - "invalid-argument"
-//  - "deadline-exceeded"
-//  - "not-found"
-//  - "already-exists"
-//  - "permission-denied"
-//  - "resource-exhausted"
-//  - "failed-precondition"
-//  - "aborted"
-//  - "out-of-range"
-//  - "unimplemented"
-//  - "internal"
-//  - "unavailable"
-//  - "data-loss"
-//  - "unauthenticated"
+// The "rpc.code" annotation can be any code matching the string name of gRPC
+// status enum codes. YARPC error codes match 1-1 with these codes, however gRPC
+// uses a different string name representation. We choose to use the raw gRPC
+// enum code names instead to ensure cross-language compatibility with other
+// languages, such as Java.
+//  - https://github.com/googleapis/googleapis/blob/master/google/rpc/code.proto
+//
+// Available string names method:
+//  - "CANCELLED"
+//  - "UNKNOWN"
+//  - "INVALID_ARGUMENT"
+//  - "DEADLINE_EXCEEDED"
+//  - "NOT_FOUND"
+//  - "ALREADY_EXISTS"
+//  - "PERMISSION_DENIED"
+//  - "RESOURCE_EXHAUSTED"
+//  - "FAILED_PRECONDITION"
+//  - "ABORTED"
+//  - "OUT_OF_RANGE"
+//  - "UNIMPLEMENTED"
+//  - "INTERNAL"
+//  - "UNAVAILABLE"
+//  - "DATA_LOSS"
+//  - "UNAUTHENTICATED"
 //
 // Adding codes will affect YARPC's observability middleware classification of
 // client and server errors for Thrift exceptions.

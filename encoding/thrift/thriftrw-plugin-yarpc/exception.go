@@ -27,7 +27,6 @@ import (
 
 	"go.uber.org/thriftrw/compile"
 	"go.uber.org/thriftrw/plugin"
-	"go.uber.org/yarpc/yarpcerrors"
 )
 
 const (
@@ -61,26 +60,47 @@ package <$pkgname>
 `
 
 var (
-	_errorCodeToTypeName = map[yarpcerrors.Code]string{
-		yarpcerrors.CodeCancelled:          "yarpcerrors.CodeCancelled",
-		yarpcerrors.CodeUnknown:            "yarpcerrors.CodeUnknown",
-		yarpcerrors.CodeInvalidArgument:    "yarpcerrors.CodeInvalidArgument",
-		yarpcerrors.CodeDeadlineExceeded:   "yarpcerrors.CodeDeadlineExceeded",
-		yarpcerrors.CodeNotFound:           "yarpcerrors.CodeNotFound",
-		yarpcerrors.CodeAlreadyExists:      "yarpcerrors.CodeAlreadyExists",
-		yarpcerrors.CodePermissionDenied:   "yarpcerrors.CodePermissionDenied",
-		yarpcerrors.CodeResourceExhausted:  "yarpcerrors.CodeResourceExhausted",
-		yarpcerrors.CodeFailedPrecondition: "yarpcerrors.CodeFailedPrecondition",
-		yarpcerrors.CodeAborted:            "yarpcerrors.CodeAborted",
-		yarpcerrors.CodeOutOfRange:         "yarpcerrors.CodeOutOfRange",
-		yarpcerrors.CodeUnimplemented:      "yarpcerrors.CodeUnimplemented",
-		yarpcerrors.CodeInternal:           "yarpcerrors.CodeInternal",
-		yarpcerrors.CodeUnavailable:        "yarpcerrors.CodeUnavailable",
-		yarpcerrors.CodeDataLoss:           "yarpcerrors.CodeDataLoss",
-		yarpcerrors.CodeUnauthenticated:    "yarpcerrors.CodeUnauthenticated",
+	_gRPCCodeNameToYARPCErrorCodeType = map[string]string{
+		// https://github.com/googleapis/googleapis/blob/master/google/rpc/code.proto
+		"CANCELLED":           "yarpcerrors.CodeCancelled",
+		"UNKNOWN":             "yarpcerrors.CodeUnknown",
+		"INVALID_ARGUMENT":    "yarpcerrors.CodeInvalidArgument",
+		"DEADLINE_EXCEEDED":   "yarpcerrors.CodeDeadlineExceeded",
+		"NOT_FOUND":           "yarpcerrors.CodeNotFound",
+		"ALREADY_EXISTS":      "yarpcerrors.CodeAlreadyExists",
+		"PERMISSION_DENIED":   "yarpcerrors.CodePermissionDenied",
+		"RESOURCE_EXHAUSTED":  "yarpcerrors.CodeResourceExhausted",
+		"FAILED_PRECONDITION": "yarpcerrors.CodeFailedPrecondition",
+		"ABORTED":             "yarpcerrors.CodeAborted",
+		"OUT_OF_RANGE":        "yarpcerrors.CodeOutOfRange",
+		"UNIMPLEMENTED":       "yarpcerrors.CodeUnimplemented",
+		"INTERNAL":            "yarpcerrors.CodeInternal",
+		"UNAVAILABLE":         "yarpcerrors.CodeUnavailable",
+		"DATA_LOSS":           "yarpcerrors.CodeDataLoss",
+		"UNAUTHENTICATED":     "yarpcerrors.CodeUnauthenticated",
 	}
 
-	_availableCodes = fmt.Sprintf(`Available codes: %s`, yarpcerrorsCodesToString())
+	_availableCodes = fmt.Sprintf(`Available codes: %s`, strings.Join(
+		// Codes are listed below in enum-order, derived from:
+		// - https://github.com/googleapis/googleapis/blob/master/google/rpc/code.proto
+		[]string{
+			"CANCELLED",
+			"UNKNOWN",
+			"INVALID_ARGUMENT",
+			"DEADLINE_EXCEEDED",
+			"NOT_FOUND",
+			"ALREADY_EXISTS",
+			"PERMISSION_DENIED",
+			"RESOURCE_EXHAUSTED",
+			"FAILED_PRECONDITION",
+			"ABORTED",
+			"OUT_OF_RANGE",
+			"UNIMPLEMENTED",
+			"INTERNAL",
+			"UNAVAILABLE",
+			"DATA_LOSS",
+			"UNAUTHENTICATED",
+		}, ","))
 )
 
 func yarpcErrorGenerator(data *templateData, files map[string][]byte) error {
@@ -119,42 +139,13 @@ func yarpcErrorGenerator(data *templateData, files map[string][]byte) error {
 
 func getYARPCErrorCode(t *compile.StructSpec) string {
 	errorCodeString := t.Annotations[_errorCodeAnnotationKey]
-	var errorCode yarpcerrors.Code
-
-	if err := errorCode.UnmarshalText([]byte(errorCodeString)); err != nil {
-		panic(fmt.Sprintf("invalid rpc.code annotation: %s\n%s", err.Error(), _availableCodes))
-	}
-
-	result, ok := _errorCodeToTypeName[errorCode]
+	yCode, ok := _gRPCCodeNameToYARPCErrorCodeType[errorCodeString]
 	if !ok {
-		// if it's a valid code, it should be in our map, so this should never happen
-		panic("thriftrw-plugin-yarpc: fatal error, could not find code after successful marshal")
+		panic(fmt.Sprintf("invalid rpc.code annotation: %q\n%s", errorCodeString, _availableCodes))
 	}
-
-	return result
+	return yCode
 }
 
 func getYARPCErrorName(t *compile.StructSpec) string {
 	return fmt.Sprintf("%q", t.ThriftName())
-}
-
-func yarpcerrorsCodesToString() string {
-	return strings.Join([]string{
-		yarpcerrors.CodeCancelled.String(),
-		yarpcerrors.CodeUnknown.String(),
-		yarpcerrors.CodeInvalidArgument.String(),
-		yarpcerrors.CodeDeadlineExceeded.String(),
-		yarpcerrors.CodeNotFound.String(),
-		yarpcerrors.CodeAlreadyExists.String(),
-		yarpcerrors.CodePermissionDenied.String(),
-		yarpcerrors.CodeResourceExhausted.String(),
-		yarpcerrors.CodeFailedPrecondition.String(),
-		yarpcerrors.CodeAborted.String(),
-		yarpcerrors.CodeOutOfRange.String(),
-		yarpcerrors.CodeUnimplemented.String(),
-		yarpcerrors.CodeInternal.String(),
-		yarpcerrors.CodeUnavailable.String(),
-		yarpcerrors.CodeDataLoss.String(),
-		yarpcerrors.CodeUnauthenticated.String(),
-	}, ",")
 }
