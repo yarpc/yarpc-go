@@ -1,7 +1,7 @@
 exception ExceptionWithCode {
     1: required string val
 } (
-    rpc.code = "invalid-argument"
+    rpc.code = "INVALID_ARGUMENT"
 )
 
 exception ExceptionWithoutCode {

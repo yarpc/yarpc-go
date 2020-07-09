@@ -30,7 +30,7 @@ import (
 func TestGetYARPCErrorCode(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		spec := &compile.StructSpec{
-			Annotations: map[string]string{_errorCodeAnnotationKey: "aborted"},
+			Annotations: map[string]string{_errorCodeAnnotationKey: "ABORTED"},
 		}
 		assert.NotPanics(t, func() {
 			want := "yarpcerrors.CodeAborted"
@@ -44,7 +44,7 @@ func TestGetYARPCErrorCode(t *testing.T) {
 			Annotations: map[string]string{_errorCodeAnnotationKey: "foo"},
 		}
 		assert.PanicsWithValue(t,
-			"invalid rpc.code annotation: unknown code string: foo\nAvailable codes: cancelled,unknown,invalid-argument,deadline-exceeded,not-found,already-exists,permission-denied,resource-exhausted,failed-precondition,aborted,out-of-range,unimplemented,internal,unavailable,data-loss,unauthenticated",
+			"invalid rpc.code annotation: \"foo\"\nAvailable codes: CANCELLED,UNKNOWN,INVALID_ARGUMENT,DEADLINE_EXCEEDED,NOT_FOUND,ALREADY_EXISTS,PERMISSION_DENIED,RESOURCE_EXHAUSTED,FAILED_PRECONDITION,ABORTED,OUT_OF_RANGE,UNIMPLEMENTED,INTERNAL,UNAVAILABLE,DATA_LOSS,UNAUTHENTICATED",
 			func() { getYARPCErrorCode(spec) },
 			"unexpected panic")
 	})
