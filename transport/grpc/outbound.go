@@ -119,9 +119,10 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 		return nil, err
 	}
 	return &transport.Response{
-		Body:             ioutil.NopCloser(bytes.NewBuffer(responseBody)),
-		Headers:          responseHeaders,
-		ApplicationError: metadataToIsApplicationError(responseMD),
+		Body:                 ioutil.NopCloser(bytes.NewBuffer(responseBody)),
+		Headers:              responseHeaders,
+		ApplicationError:     metadataToIsApplicationError(responseMD),
+		ApplicationErrorMeta: metadataToApplicationErrorMeta(responseMD),
 	}, invokeErr
 }
 
