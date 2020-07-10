@@ -1,7 +1,7 @@
 exception ExceptionWithCode {
     1: required string val
 } (
-    rpc.code = "INVALID_ARGUMENT"
+    rpc.code = "DATA_LOSS" // server error
 )
 
 exception ExceptionWithoutCode {
