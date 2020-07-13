@@ -318,11 +318,11 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "test",
 	Package:  "go.uber.org/yarpc/encoding/thrift/internal/observabilitytest/test",
 	FilePath: "test.thrift",
-	SHA1:     "f07207affcfb87ac57bdb9c77ddbf92ef5c6ddba",
+	SHA1:     "3c501036fe37f678648dd479c821bc57aa17b7d1",
 	Raw:      rawIDL,
 }
 
-const rawIDL = "exception ExceptionWithCode {\n    1: required string val\n} (\n    rpc.code = \"INVALID_ARGUMENT\"\n)\n\nexception ExceptionWithoutCode {\n    1: required string val\n}\n\nservice TestService  {\n    string Call(1: required string key) throws (\n      1: ExceptionWithCode exCode,\n      2: ExceptionWithoutCode exNoCode,\n    )\n}\n"
+const rawIDL = "exception ExceptionWithCode {\n    1: required string val\n} (\n    rpc.code = \"DATA_LOSS\" // server error\n)\n\nexception ExceptionWithoutCode {\n    1: required string val\n}\n\nservice TestService  {\n    string Call(1: required string key) throws (\n      1: ExceptionWithCode exCode,\n      2: ExceptionWithoutCode exNoCode,\n    )\n}\n"
 
 // TestService_Call_Args represents the arguments for the TestService.Call function.
 //

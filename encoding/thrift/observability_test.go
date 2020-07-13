@@ -76,7 +76,7 @@ func TestThriftExceptionObservability(t *testing.T) {
 				wantFields := []zapcore.Field{
 					zap.String("error", "application_error"),
 					zap.String("errorName", "ExceptionWithCode"),
-					zap.String("errorCode", "invalid-argument"),
+					zap.String("errorCode", "data-loss"),
 					zap.String("appErrorMessage", "ExceptionWithCode{Val: exception with code}"),
 				}
 				assertLogs(t, wantFields, observedLogs.TakeAll())
@@ -84,16 +84,18 @@ func TestThriftExceptionObservability(t *testing.T) {
 
 			t.Run("metrics", func(t *testing.T) {
 				wantCounters := []counterAssertion{
+					{Name: "calls", Value: 1},
+					{Name: "panics"},
+					// Thrift exceptions without annotations are always classified as
+					// client_failures, so this metric check below is important
 					{
-						Name: "caller_failures",
+						Name: "server_failures",
 						Tags: map[string]string{
-							"error":      "invalid-argument",
+							"error":      "data-loss",
 							"error_name": "ExceptionWithCode",
 						},
 						Value: 1,
 					},
-					{Name: "calls", Value: 1},
-					{Name: "panics"},
 					{Name: "successes"},
 				}
 
