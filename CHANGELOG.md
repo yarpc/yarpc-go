@@ -6,17 +6,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
-- observability: Errors are logged with their associated error code under the
-  `errorCode` field. Errors created outside of `protobuf.NewError` and
-  `yarpcerrors` will yield `CodeUnknown`.
-- Using the `rpc.code` annotation, services may specify an associated code for
-  Thrift exceptions.
-- Metrics and logs now include Thrift exception names and related YARPC code, if
-  annotated. If a `rpc.code` annotation is specified for a Thrift exception,
-  metrics will classify it as a client or server failure, like a `yarpcerrors`
-  error. If the YARPC code is not specified for the Thrift exception, it will
-  continue to be assumed a client failure.
-- observability: Thrift exceptions are logged under the `appErrMessage` field.
+- thrift: Using the `rpc.code` annotation, services may specify an associated
+  error code for Thrift exceptions. Metrics will classify the exception as a
+  client or server failure like a `yarpcerrors` error. If a Thrift exception is
+  not annotated with a code, it will continue to be classified as a client
+  failure.
+- logging: Errors and annotated Thrift exceptions are logged with their error
+  code under the `errorCode` field. Errors created outside of
+  `protobuf.NewError` and `yarpcerrors` will yield `CodeUnknown`.
+- logging: Thrift exceptions and Protobuf error details are logged under the
+  `appErrMessage` field.
 ### Removed
 - Removed `yarpcproto` package that enabled "oneway" Protobuf signatures.
 
