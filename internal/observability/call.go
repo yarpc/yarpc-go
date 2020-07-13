@@ -240,18 +240,16 @@ func (c call) endStats(
 		return
 	}
 
-	isStatus := yarpcerrors.IsStatus(err)
-
-	if isStatus {
-		status := yarpcerrors.FromError(err)
-		errCode := status.Code()
-		c.endStatsFromFault(elapsed, errCode, _notSet)
-		return
-	}
-
 	appErrorName := _notSet
 	if applicationErrorMeta != nil && applicationErrorMeta.Name != "" {
 		appErrorName = applicationErrorMeta.Name
+	}
+
+	if yarpcerrors.IsStatus(err) {
+		status := yarpcerrors.FromError(err)
+		errCode := status.Code()
+		c.endStatsFromFault(elapsed, errCode, appErrorName)
+		return
 	}
 
 	if isApplicationError {
