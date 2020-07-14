@@ -47,8 +47,7 @@ type writer struct {
 
 func newWriter(rw transport.ResponseWriter) *writer {
 	w := _writerPool.Get().(*writer)
-	w.isApplicationError = false
-	w.ResponseWriter = rw
+	*w = writer{ResponseWriter: rw} // reset
 	return w
 }
 
