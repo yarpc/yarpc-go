@@ -2034,3 +2034,22 @@ func TestStreamingMetrics(t *testing.T) {
 		assert.Equal(t, want, snap, "unexpected metrics snapshot")
 	})
 }
+
+func TestNewWriterIsEmpty(t *testing.T) {
+	code := yarpcerrors.CodeDataLoss
+
+	// set all fields on the response writer
+	w := newWriter(&transporttest.FakeResponseWriter{})
+	require.NotNil(t, w, "writer must not be nil")
+
+	w.SetApplicationError()
+	w.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
+		Message: "foo", Name: "bar", Code: &code,
+	})
+	w.free()
+
+	w = newWriter(nil /*transport.ResponseWriter*/)
+	require.NotNil(t, w, "writer must not be nil")
+	assert.Equal(t, writer{}, *w,
+		"expected empty writer, fields were likely not cleared in the pool")
+}
