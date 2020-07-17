@@ -22,18 +22,54 @@ package tchannel
 
 import (
 	"context"
+	"errors"
 
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
+// GetResponseErrorMeta extracts the TChannel specific error response information
+// from an error. Returns nil if no information is available.
+//
+// This API is experimental and subject to change or break at anytime.
+func GetResponseErrorMeta(err error) *ResponseErrorMeta {
+	if err == nil {
+		return nil
+	}
+
+	var meta *ytchanError
+	if !errors.As(err, &meta) {
+		return nil
+	}
+	return &ResponseErrorMeta{
+		Code: meta.err.Code(),
+	}
+}
+
+// ResponseErrorMeta exposes TChannel specific information from an error.
+//
+// This API is experimental and subject to change or break at anytime.
+type ResponseErrorMeta struct {
+	Code tchannel.SystemErrCode
+}
+
+// private error for propagating transparently
+type ytchanError struct {
+	err tchannel.SystemError
+}
+
+func (y *ytchanError) Error() string { return y.err.Message() }
+
 func fromSystemError(err tchannel.SystemError) error {
 	code, ok := _tchannelCodeToCode[err.Code()]
 	if !ok {
 		return yarpcerrors.Newf(yarpcerrors.CodeInternal, "got tchannel.SystemError %v which did not have a matching YARPC code", err)
 	}
-	return yarpcerrors.Newf(code, err.Message())
+
+	// transparently wrap our private error so we can extract it with
+	// GetResponseErrorMeta.
+	return yarpcerrors.Newf(code, "%w", &ytchanError{err: err})
 }
 
 func toYARPCError(req *transport.Request, err error) error {
