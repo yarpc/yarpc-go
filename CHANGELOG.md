@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - logging: Thrift exceptions and Protobuf error details are logged under the
   `appErrMessage` field.
 - grpc: Enabled outbound introspection for debug pages.
+- experimental: Added `tchannel.GetResponseErrorMeta` API for retrieving native
+  TChannel error response codes.
 ### Removed
 - Removed `yarpcproto` package that enabled "oneway" Protobuf signatures.
 
