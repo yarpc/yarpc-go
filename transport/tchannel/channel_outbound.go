@@ -22,12 +22,10 @@ package tchannel
 
 import (
 	"context"
-	"io"
 
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
-	"go.uber.org/yarpc/internal/iopool"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/pkg/lifecycle"
@@ -218,42 +216,4 @@ func (o *ChannelOutbound) Introspect() introspection.OutboundStatus {
 		Endpoint:  o.addr,
 		State:     state,
 	}
-}
-
-func writeBody(body io.Reader, call *tchannel.OutboundCall) error {
-	w, err := call.Arg3Writer()
-	if err != nil {
-		return err
-	}
-
-	if _, err := iopool.Copy(w, body); err != nil {
-		return err
-	}
-
-	return w.Close()
-}
-
-func fromSystemError(err tchannel.SystemError) error {
-	code, ok := _tchannelCodeToCode[err.Code()]
-	if !ok {
-		return yarpcerrors.Newf(yarpcerrors.CodeInternal, "got tchannel.SystemError %v which did not have a matching YARPC code", err)
-	}
-	return yarpcerrors.Newf(code, err.Message())
-}
-
-func getResponseError(headers transport.Headers) error {
-	errorCodeString, ok := headers.Get(ErrorCodeHeaderKey)
-	if !ok {
-		return nil
-	}
-	var errorCode yarpcerrors.Code
-	if err := errorCode.UnmarshalText([]byte(errorCodeString)); err != nil {
-		return err
-	}
-	if errorCode == yarpcerrors.CodeOK {
-		return yarpcerrors.Newf(yarpcerrors.CodeInternal, "got CodeOK from error header")
-	}
-	errorName, _ := headers.Get(ErrorNameHeaderKey)
-	errorMessage, _ := headers.Get(ErrorMessageHeaderKey)
-	return intyarpcerrors.NewWithNamef(errorCode, errorName, errorMessage)
 }
