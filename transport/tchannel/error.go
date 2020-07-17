@@ -28,6 +28,14 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
+func fromSystemError(err tchannel.SystemError) error {
+	code, ok := _tchannelCodeToCode[err.Code()]
+	if !ok {
+		return yarpcerrors.Newf(yarpcerrors.CodeInternal, "got tchannel.SystemError %v which did not have a matching YARPC code", err)
+	}
+	return yarpcerrors.Newf(code, err.Message())
+}
+
 func toYARPCError(req *transport.Request, err error) error {
 	if err == nil {
 		return err
