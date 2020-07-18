@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   `protobuf.NewError` and `yarpcerrors` will yield `CodeUnknown`.
 - logging: Thrift exceptions and Protobuf error details are logged under the
   `appErrMessage` field.
+- grpc: Enabled outbound introspection for debug pages.
 ### Removed
 - Removed `yarpcproto` package that enabled "oneway" Protobuf signatures.
 
