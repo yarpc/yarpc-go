@@ -23,6 +23,7 @@ package grpc
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"io/ioutil"
 
@@ -34,6 +35,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+)
+
+var (
+	_ transport.StreamHeadersWriter = (*serverStream)(nil)
+	_ transport.StreamHeadersReader = (*clientStream)(nil)
 )
 
 type serverStream struct {
@@ -76,10 +82,10 @@ func (ss *serverStream) ReceiveMessage(_ context.Context) (*transport.StreamMess
 	return &transport.StreamMessage{Body: ioutil.NopCloser(bytes.NewReader(msg))}, nil
 }
 
-func (ss *serverStream) SendHeader(headers transport.StreamHeaders) error {
-	md := make(metadata.MD, len(headers))
-	for k, vs := range headers {
-		md.Set(k, vs...)
+func (ss *serverStream) SendHeaders(headers transport.Headers) error {
+	md := make(metadata.MD, headers.Len())
+	for k, v := range headers.Items() {
+		md.Set(k, v)
 	}
 	return ss.stream.SendHeader(md)
 }
@@ -142,14 +148,23 @@ func (cs *clientStream) Close(context.Context) error {
 	return cs.stream.CloseSend()
 }
 
-func (cs *clientStream) Header() (transport.StreamHeaders, error) {
+func (cs *clientStream) Headers() (transport.Headers, error) {
 	md, err := cs.stream.Header()
 	if err != nil {
-		return nil, err
+		return transport.NewHeaders(), err
 	}
-	headers := make(transport.StreamHeaders, len(md))
+	headers := transport.NewHeadersWithCapacity(len(md))
 	for k, vs := range md {
-		headers[k] = vs
+		v := vs[0]
+		if len(vs) > 1 {
+			b, err := json.Marshal(vs)
+			if err != nil {
+				return headers, err
+			}
+			v = string(b)
+		}
+
+		headers = headers.With(k, v)
 	}
 	return headers, nil
 }

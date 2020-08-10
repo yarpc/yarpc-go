@@ -27,9 +27,6 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
-// StreamHeaders is a mapping from metadata keys to values.
-type StreamHeaders map[string][]string
-
 // StreamRequest represents a streaming request.  It contains basic stream
 // metadata.
 type StreamRequest struct {
@@ -43,7 +40,7 @@ type ServerStreamOption interface {
 }
 
 // NewServerStream will create a new ServerStream.
-// The Stream can implement StreamHeaderWriter if the underlying transport
+// The Stream can implement StreamHeadersWriter if the underlying transport
 // supports stream headers.
 func NewServerStream(s Stream, options ...ServerStreamOption) (*ServerStream, error) {
 	if s == nil {
@@ -57,9 +54,9 @@ type ServerStream struct {
 	stream Stream
 }
 
-// StreamHeaderWriter is the interface for sending stream headers.
-type StreamHeaderWriter interface {
-	SendHeader(md StreamHeaders) error
+// StreamHeadersWriter is the interface for sending stream headers.
+type StreamHeadersWriter interface {
+	SendHeaders(headers Headers) error
 }
 
 // Context returns the context for the stream.
@@ -85,11 +82,11 @@ func (s *ServerStream) ReceiveMessage(ctx context.Context) (*StreamMessage, erro
 	return s.stream.ReceiveMessage(ctx)
 }
 
-// SendHeader sends the header metadata.
+// SendHeaders sends the one-time response headers to an initial stream connect.
 // It fails if called multiple times.
-func (s *ServerStream) SendHeader(headers StreamHeaders) error {
-	if w, ok := s.stream.(StreamHeaderWriter); ok {
-		return w.SendHeader(headers)
+func (s *ServerStream) SendHeaders(headers Headers) error {
+	if w, ok := s.stream.(StreamHeadersWriter); ok {
+		return w.SendHeaders(headers)
 	}
 	return yarpcerrors.UnimplementedErrorf("transport does not support stream headers")
 }
@@ -115,9 +112,9 @@ type ClientStream struct {
 	stream StreamCloser
 }
 
-// StreamHeaderReader is the interface for reading stream headers.
-type StreamHeaderReader interface {
-	Header() (StreamHeaders, error)
+// StreamHeadersReader is the interface for reading stream headers.
+type StreamHeadersReader interface {
+	Headers() (Headers, error)
 }
 
 // Context returns the context for the stream.
@@ -151,13 +148,13 @@ func (s *ClientStream) Close(ctx context.Context) error {
 	return s.stream.Close(ctx)
 }
 
-// Header returns the header metadata received from the server if there
-// is any. It blocks if the metadata is not available.
-func (s *ClientStream) Header() (StreamHeaders, error) {
-	if r, ok := s.stream.(StreamHeaderReader); ok {
-		return r.Header()
+// Headers returns the initial stream response headers received from the server if there
+// are any. It blocks if the headers are not available.
+func (s *ClientStream) Headers() (Headers, error) {
+	if r, ok := s.stream.(StreamHeadersReader); ok {
+		return r.Headers()
 	}
-	return nil, nil
+	return NewHeaders(), yarpcerrors.UnimplementedErrorf("transport does not support stream headers")
 }
 
 // StreamCloser represents an API of interacting with a Stream that is
