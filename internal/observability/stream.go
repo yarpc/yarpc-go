@@ -35,7 +35,11 @@ const (
 	_errorStreamSend         = "Error sending stream message"
 )
 
-var _ transport.StreamCloser = (*streamWrapper)(nil)
+var (
+	_ transport.StreamCloser        = (*streamWrapper)(nil)
+	_ transport.StreamHeadersWriter = (*streamWrapper)(nil)
+	_ transport.StreamHeadersReader = (*streamWrapper)(nil)
+)
 
 type streamWrapper struct {
 	transport.StreamCloser
@@ -127,6 +131,14 @@ func (s *streamWrapper) Close(ctx context.Context) error {
 	return err
 }
 
+func (s *streamWrapper) SendHeaders(headers transport.Headers) error {
+	return transport.WriteStreamHeaders(s.StreamCloser, headers)
+}
+
+func (s *streamWrapper) Headers() (transport.Headers, error) {
+	return transport.ReadStreamHeaders(s.StreamCloser)
+}
+
 // This is a light wrapper so that we can re-use the same methods for
 // instrumenting observability. The transport.ClientStream has an additional
 // Close(ctx) method, unlike the transport.ServerStream.
@@ -136,4 +148,8 @@ type nopCloser struct {
 
 func (c nopCloser) Close(ctx context.Context) error {
 	return nil
+}
+
+func (c nopCloser) SendHeaders(headers transport.Headers) error {
+	return transport.WriteStreamHeaders(c.Stream, headers)
 }

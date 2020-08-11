@@ -163,7 +163,6 @@ func (cs *clientStream) Headers() (transport.Headers, error) {
 			}
 			v = string(b)
 		}
-
 		headers = headers.With(k, v)
 	}
 	return headers, nil

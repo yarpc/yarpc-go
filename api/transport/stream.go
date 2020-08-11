@@ -59,6 +59,14 @@ type StreamHeadersWriter interface {
 	SendHeaders(headers Headers) error
 }
 
+// WriteStreamHeaders performs the type assertion.
+func WriteStreamHeaders(s Stream, headers Headers) error {
+	if w, ok := s.(StreamHeadersWriter); ok {
+		return w.SendHeaders(headers)
+	}
+	return yarpcerrors.UnimplementedErrorf("transport does not support stream headers")
+}
+
 // Context returns the context for the stream.
 func (s *ServerStream) Context() context.Context {
 	return s.stream.Context()
@@ -85,10 +93,7 @@ func (s *ServerStream) ReceiveMessage(ctx context.Context) (*StreamMessage, erro
 // SendHeaders sends the one-time response headers to an initial stream connect.
 // It fails if called multiple times.
 func (s *ServerStream) SendHeaders(headers Headers) error {
-	if w, ok := s.stream.(StreamHeadersWriter); ok {
-		return w.SendHeaders(headers)
-	}
-	return yarpcerrors.UnimplementedErrorf("transport does not support stream headers")
+	return WriteStreamHeaders(s.stream, headers)
 }
 
 // ClientStreamOption is an option for configuring a client stream.
@@ -115,6 +120,14 @@ type ClientStream struct {
 // StreamHeadersReader is the interface for reading stream headers.
 type StreamHeadersReader interface {
 	Headers() (Headers, error)
+}
+
+// ReadStreamHeaders performs the type assertion.
+func ReadStreamHeaders(s Stream) (Headers, error) {
+	if r, ok := s.(StreamHeadersReader); ok {
+		return r.Headers()
+	}
+	return NewHeaders(), yarpcerrors.UnimplementedErrorf("transport does not support stream headers")
 }
 
 // Context returns the context for the stream.
@@ -151,10 +164,7 @@ func (s *ClientStream) Close(ctx context.Context) error {
 // Headers returns the initial stream response headers received from the server if there
 // are any. It blocks if the headers are not available.
 func (s *ClientStream) Headers() (Headers, error) {
-	if r, ok := s.stream.(StreamHeadersReader); ok {
-		return r.Headers()
-	}
-	return NewHeaders(), yarpcerrors.UnimplementedErrorf("transport does not support stream headers")
+	return ReadStreamHeaders(s.stream)
 }
 
 // StreamCloser represents an API of interacting with a Stream that is

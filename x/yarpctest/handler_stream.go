@@ -143,3 +143,10 @@ func StreamHandlerError(err error) api.ServerStreamAction {
 		return err
 	})
 }
+
+// StreamSendHeaders is an action to send stream headers.
+func StreamSendHeaders(headers map[string]string) api.ServerStreamAction {
+	return api.ServerStreamActionFunc(func(c *transport.ServerStream) error {
+		return c.SendHeaders(transport.HeadersFromMap(headers))
+	})
+}

@@ -106,3 +106,16 @@ func CloseStream() api.ClientStreamAction {
 		require.NoError(t, c.Close(context.Background()))
 	})
 }
+
+// Headers is an action to fetch the client stream headers.
+func WantHeaders(want map[string]string) api.ClientStreamAction {
+	return api.ClientStreamActionFunc(func(t testing.TB, c *transport.ClientStream) {
+		got, err := c.Headers()
+		require.NoError(t, err)
+		for k, v := range want {
+			g, ok := got.Get(k)
+			require.True(t, ok)
+			assert.Equal(t, v, g)
+		}
+	})
+}
