@@ -119,6 +119,7 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 	format := tchannel.Format(req.Encoding)
 	callOptions := tchannel.CallOptions{
 		Format:          format,
+		CallerName:      req.Caller,
 		ShardKey:        req.ShardKey,
 		RoutingKey:      req.RoutingKey,
 		RoutingDelegate: req.RoutingDelegate,
