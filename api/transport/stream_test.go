@@ -59,7 +59,7 @@ func TestServerStreamHeaders(t *testing.T) {
 	})
 }
 
-var _ transport.StreamHeadersWriter = (*fakeWriter)(nil)
+var _ transport.StreamHeadersSender = (*fakeWriter)(nil)
 
 type fakeWriter struct {
 	transport.Stream

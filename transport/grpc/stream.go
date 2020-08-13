@@ -23,7 +23,6 @@ package grpc
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"io"
 	"io/ioutil"
 
@@ -38,7 +37,7 @@ import (
 )
 
 var (
-	_ transport.StreamHeadersWriter = (*serverStream)(nil)
+	_ transport.StreamHeadersSender = (*serverStream)(nil)
 	_ transport.StreamHeadersReader = (*clientStream)(nil)
 )
 
@@ -155,15 +154,9 @@ func (cs *clientStream) Headers() (transport.Headers, error) {
 	}
 	headers := transport.NewHeadersWithCapacity(len(md))
 	for k, vs := range md {
-		v := vs[0]
-		if len(vs) > 1 {
-			b, err := json.Marshal(vs)
-			if err != nil {
-				return headers, err
-			}
-			v = string(b)
+		if len(vs) > 0 {
+			headers = headers.With(k, vs[0])
 		}
-		headers = headers.With(k, v)
 	}
 	return headers, nil
 }

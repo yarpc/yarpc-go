@@ -40,7 +40,7 @@ type ServerStreamOption interface {
 }
 
 // NewServerStream will create a new ServerStream.
-// The Stream can implement StreamHeadersWriter if the underlying transport
+// The Stream can implement StreamHeadersSender if the underlying transport
 // supports stream headers.
 func NewServerStream(s Stream, options ...ServerStreamOption) (*ServerStream, error) {
 	if s == nil {
@@ -54,17 +54,17 @@ type ServerStream struct {
 	stream Stream
 }
 
-// StreamHeadersWriter is the interface for sending stream headers.
-type StreamHeadersWriter interface {
+// StreamHeadersSender is the interface for sending stream headers.
+type StreamHeadersSender interface {
 	SendHeaders(headers Headers) error
 }
 
-// WriteStreamHeaders performs the type assertion.
-func WriteStreamHeaders(s Stream, headers Headers) error {
-	if w, ok := s.(StreamHeadersWriter); ok {
+// SendStreamHeaders conditionally type asserts a Stream to a StreamHeadersSender to send the provided headers.
+func SendStreamHeaders(s Stream, headers Headers) error {
+	if w, ok := s.(StreamHeadersSender); ok {
 		return w.SendHeaders(headers)
 	}
-	return yarpcerrors.UnimplementedErrorf("transport does not support stream headers")
+	return yarpcerrors.UnimplementedErrorf("stream does not support sending headers")
 }
 
 // Context returns the context for the stream.
@@ -93,7 +93,7 @@ func (s *ServerStream) ReceiveMessage(ctx context.Context) (*StreamMessage, erro
 // SendHeaders sends the one-time response headers to an initial stream connect.
 // It fails if called multiple times.
 func (s *ServerStream) SendHeaders(headers Headers) error {
-	return WriteStreamHeaders(s.stream, headers)
+	return SendStreamHeaders(s.stream, headers)
 }
 
 // ClientStreamOption is an option for configuring a client stream.
@@ -103,7 +103,7 @@ type ClientStreamOption interface {
 }
 
 // NewClientStream will create a new ClientStream.
-// The StreamCloser can implement StreamMessageReader if the underlying transport
+// The StreamCloser can implement StreamMessageReader if the underlying stream
 // supports stream headers.
 func NewClientStream(s StreamCloser, options ...ClientStreamOption) (*ClientStream, error) {
 	if s == nil {
@@ -122,12 +122,12 @@ type StreamHeadersReader interface {
 	Headers() (Headers, error)
 }
 
-// ReadStreamHeaders performs the type assertion.
+// ReadStreamHeaders conditionally type asserts a Stream to a StreamHeadersReader to read the received headers.
 func ReadStreamHeaders(s Stream) (Headers, error) {
 	if r, ok := s.(StreamHeadersReader); ok {
 		return r.Headers()
 	}
-	return NewHeaders(), yarpcerrors.UnimplementedErrorf("transport does not support stream headers")
+	return NewHeaders(), yarpcerrors.UnimplementedErrorf("stream does not support reading headers")
 }
 
 // Context returns the context for the stream.

@@ -37,7 +37,7 @@ const (
 
 var (
 	_ transport.StreamCloser        = (*streamWrapper)(nil)
-	_ transport.StreamHeadersWriter = (*streamWrapper)(nil)
+	_ transport.StreamHeadersSender = (*streamWrapper)(nil)
 	_ transport.StreamHeadersReader = (*streamWrapper)(nil)
 )
 
@@ -132,7 +132,7 @@ func (s *streamWrapper) Close(ctx context.Context) error {
 }
 
 func (s *streamWrapper) SendHeaders(headers transport.Headers) error {
-	return transport.WriteStreamHeaders(s.StreamCloser, headers)
+	return transport.SendStreamHeaders(s.StreamCloser, headers)
 }
 
 func (s *streamWrapper) Headers() (transport.Headers, error) {
@@ -151,5 +151,5 @@ func (c nopCloser) Close(ctx context.Context) error {
 }
 
 func (c nopCloser) SendHeaders(headers transport.Headers) error {
-	return transport.WriteStreamHeaders(c.Stream, headers)
+	return transport.SendStreamHeaders(c.Stream, headers)
 }
