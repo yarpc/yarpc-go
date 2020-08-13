@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - grpc: Enabled outbound introspection for debug pages.
 - experimental: Added `tchannel.GetResponseErrorMeta` API for retrieving native
   TChannel error response codes.
+### Fixed
+- tchannel: middleware may modify the outbound `transport.Request#Caller` field,
+  similar to gRPC and HTTP outbounds.
 ### Removed
 - Removed `yarpcproto` package that enabled "oneway" Protobuf signatures.
 

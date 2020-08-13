@@ -201,6 +201,46 @@ func TestCallSuccess(t *testing.T) {
 	assert.True(t, handlerInvoked, "handler was never called by client")
 }
 
+func TestCallWithModifiedCallerName(t *testing.T) {
+	const (
+		destService         = "server"
+		alternateCallerName = "alternate-caller"
+	)
+
+	server := testutils.NewServer(t, nil)
+	defer server.Close()
+
+	server.GetSubChannel(destService).SetHandler(tchannel.HandlerFunc(
+		func(ctx context.Context, call *tchannel.InboundCall) {
+			assert.Equal(t, alternateCallerName, call.CallerName())
+			_, _, err := readArgs(call)
+			assert.NoError(t, err, "failed to read request")
+
+			err = writeArgs(call.Response(), []byte{0x00, 0x00} /*headers*/, nil /*body*/)
+			assert.NoError(t, err, "failed to write response")
+		}))
+
+	out := newSingleOutbound(t, server.PeerInfo().HostPort)
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	res, err := out.Call(
+		ctx,
+		&transport.Request{
+			Caller:    alternateCallerName, // newSingleOutbound uses "caller", this should override it
+			Service:   destService,
+			Encoding:  "bar",
+			Procedure: "baz",
+			Body:      bytes.NewBuffer(nil),
+		},
+	)
+
+	require.NoError(t, err, "failed to make call")
+	assert.NoError(t, res.Body.Close(), "failed to close response body")
+}
+
 func TestCallFailures(t *testing.T) {
 	const (
 		unexpectedMethod = "unexpected"
