@@ -107,7 +107,7 @@ func CloseStream() api.ClientStreamAction {
 	})
 }
 
-// Headers is an action to fetch the client stream headers.
+// WantHeaders is an action to fetch the client stream headers.
 func WantHeaders(want map[string]string) api.ClientStreamAction {
 	return api.ClientStreamActionFunc(func(t testing.TB, c *transport.ClientStream) {
 		got, err := c.Headers()
