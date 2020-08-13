@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
+- gRPC Streaming: Added the ability to send and read stream response headers.
 - thrift: Using the `rpc.code` annotation, services may specify an associated
   error code for Thrift exceptions. Metrics will classify the exception as a
   client or server failure like a `yarpcerrors` error. If a Thrift exception is
