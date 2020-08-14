@@ -116,7 +116,7 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 		list: abstractlist.New(
 			"round-robin",
 			transport,
-			newPeerRing(),
+			NewImplementation(),
 			plOpts...,
 		),
 	}

@@ -22,6 +22,7 @@ package tworandomchoices
 
 import (
 	"math/rand"
+	"time"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -33,14 +34,28 @@ type twoRandomChoicesList struct {
 	random      *rand.Rand
 }
 
+// Option configures the peer list implementation constructor.
+type Option interface {
+	apply(*options)
+}
+
+type options struct{}
+
+// NewImplementation creates a new fewest pending heap
+// abstractlist.Implementation.
+//
+// Use this constructor instead of NewList, when wanting to do custom peer
+// connection management.
+func NewImplementation(opts ...Option) abstractlist.Implementation {
+	return newTwoRandomChoicesList(10, rand.NewSource(time.Now().UnixNano()))
+}
+
 func newTwoRandomChoicesList(cap int, source rand.Source) *twoRandomChoicesList {
 	return &twoRandomChoicesList{
 		subscribers: make([]*subscriber, 0, cap),
 		random:      rand.New(source),
 	}
 }
-
-var _ abstractlist.Implementation = (*twoRandomChoicesList)(nil)
 
 func (l *twoRandomChoicesList) Add(peer peer.StatusPeer, _ peer.Identifier) abstractlist.Subscriber {
 	index := len(l.subscribers)
