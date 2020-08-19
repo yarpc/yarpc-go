@@ -115,9 +115,7 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 		list: abstractlist.New(
 			"fewest-pending-requests",
 			transport,
-			&pendingHeap{
-				nextRand: nextRandFn,
-			},
+			newHeap(nextRandFn),
 			plOpts...,
 		),
 	}
