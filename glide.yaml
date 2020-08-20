@@ -72,6 +72,8 @@ import:
 # pull from Glide. Use older versions until we can upgrade to Go modules.
 - package: github.com/prometheus/client_golang
   version: '>= 0.9, < 1.2.0'
+- package: github.com/dgryski/go-farm
+  version: master
 testImport:
 - package: github.com/stretchr/testify
   # No version pin because some of our dependencies aren't pinning.
