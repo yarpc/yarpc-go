@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 - tchannel: middleware may modify the outbound `transport.Request#Caller` field,
   similar to gRPC and HTTP outbounds.
+- Added `github.com/dgryski/go-farm` dependency to `glide.yaml` for legacy
+  projects.
 ### Removed
 - Removed `yarpcproto` package that enabled "oneway" Protobuf signatures.
 
