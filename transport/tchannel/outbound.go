@@ -181,7 +181,7 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 
 	applicationErrorName, _ := headers.Get(ApplicationErrorNameHeaderKey)
 	applicationErrorCode := getApplicationErrorCodeFromHeaders(headers)
-	applicationErrorMessage, _ := headers.Get(ApplicationErrorMessageHeaderKey)
+	applicationErrorDetails, _ := headers.Get(ApplicationErrorDetailsHeaderKey)
 
 	err = getResponseError(headers)
 	deleteReservedHeaders(headers)
@@ -191,7 +191,7 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		Body:             resBody,
 		ApplicationError: res.ApplicationError(),
 		ApplicationErrorMeta: &transport.ApplicationErrorMeta{
-			Message: applicationErrorMessage,
+			Details: applicationErrorDetails,
 			Name:    applicationErrorName,
 			Code:    applicationErrorCode,
 		},

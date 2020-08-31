@@ -37,9 +37,9 @@ const (
 	_errorNameMetricsKey = "error_name"
 	_notSet              = "__not_set__"
 
-	_errorNameLogKey       = "errorName"
-	_errorCodeLogKey       = "errorCode"
-	_appErrorMessageLogKey = "appErrorMessage"
+	_errorNameLogKey    = "errorName"
+	_errorCodeLogKey    = "errorCode"
+	_errorDetailsLogKey = "errorDetails"
 
 	_successfulInbound  = "Handled inbound request."
 	_successfulOutbound = "Made outbound call."
@@ -199,8 +199,8 @@ func (c call) endLogs(
 			if applicationErrorMeta.Name != "" {
 				fields = append(fields, zap.String(_errorNameLogKey, applicationErrorMeta.Name))
 			}
-			if applicationErrorMeta.Message != "" {
-				fields = append(fields, zap.String(_appErrorMessageLogKey, applicationErrorMeta.Message))
+			if applicationErrorMeta.Details != "" {
+				fields = append(fields, zap.String(_errorDetailsLogKey, applicationErrorMeta.Details))
 			}
 		}
 
@@ -213,8 +213,8 @@ func (c call) endLogs(
 			if applicationErrorMeta.Name != "" {
 				fields = append(fields, zap.String(_errorNameLogKey, applicationErrorMeta.Name))
 			}
-			if applicationErrorMeta.Message != "" {
-				fields = append(fields, zap.String(_appErrorMessageLogKey, applicationErrorMeta.Message))
+			if applicationErrorMeta.Details != "" {
+				fields = append(fields, zap.String(_errorDetailsLogKey, applicationErrorMeta.Details))
 			}
 		}
 

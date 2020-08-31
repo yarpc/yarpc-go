@@ -162,7 +162,7 @@ func setApplicationErrorMeta(pberr *pberror, resw transport.ResponseWriter) {
 
 	applicationErroMetaSetter.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
 		Name:    appErrName,
-		Message: fmt.Sprintf(_errDetailsFmt, strings.Join(details, " , ")),
+		Details: fmt.Sprintf(_errDetailsFmt, strings.Join(details, " , ")),
 	})
 }
 

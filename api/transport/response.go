@@ -56,14 +56,14 @@ type ResponseWriter interface {
 }
 
 // ApplicationErrorMeta contains additional information to describe the
-// application error, such as an error name, code and message.
+// application error, using an error name, code and details string.
 //
 // Fields are optional for backwards-compatibility and may not be present in all
 // responses.
 type ApplicationErrorMeta struct {
-	Message string
-	Name    string
 	Code    *yarpcerrors.Code
+	Name    string
+	Details string
 }
 
 // ApplicationErrorMetaSetter enables setting the name of an

@@ -343,7 +343,7 @@ func TestApplicationError(t *testing.T) {
 					'-', 'e', 'r', 'r', 'o', 'r', '-', 'n', 'a', 'm', 'e',
 					0x00, 0x03, 'b', 'A', 'z',
 					0x00, 0x1f, '$', 'r', 'p', 'c', '$', '-', 'a', 'p', 'p', 'l', 'i', 'c', 'a', 't', 'i', 'o', 'n',
-					'-', 'e', 'r', 'r', 'o', 'r', '-', 'm', 'e', 's', 's', 'a', 'g', 'e',
+					'-', 'e', 'r', 'r', 'o', 'r', '-', 'd', 'e', 't', 'a', 'i', 'l', 's',
 					0x00, 0x03, 'F', 'o', 'O',
 				},
 				[]byte("foo"),
@@ -370,7 +370,7 @@ func TestApplicationError(t *testing.T) {
 	require.NoError(t, err, "failed to make call")
 	require.True(t, res.ApplicationError, "application error was not set")
 	require.NotNil(t, res.ApplicationErrorMeta.Code, "application error code was not set")
-	assert.Equal(t, "FoO", res.ApplicationErrorMeta.Message, "unexpected error message")
+	assert.Equal(t, "FoO", res.ApplicationErrorMeta.Details, "unexpected error message")
 	assert.Equal(
 		t,
 		yarpcerrors.CodeAborted,

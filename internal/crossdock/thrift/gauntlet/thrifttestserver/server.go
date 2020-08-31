@@ -423,7 +423,7 @@ func (h handler) TestBinary(ctx context.Context, body wire.Value) (thrift.Respon
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 
@@ -453,7 +453,7 @@ func (h handler) TestByte(ctx context.Context, body wire.Value) (thrift.Response
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 
@@ -483,7 +483,7 @@ func (h handler) TestDouble(ctx context.Context, body wire.Value) (thrift.Respon
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 
@@ -513,7 +513,7 @@ func (h handler) TestEnum(ctx context.Context, body wire.Value) (thrift.Response
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 
@@ -543,7 +543,7 @@ func (h handler) TestException(ctx context.Context, body wire.Value) (thrift.Res
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 
@@ -573,7 +573,7 @@ func (h handler) TestI32(ctx context.Context, body wire.Value) (thrift.Response,
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 
@@ -603,7 +603,7 @@ func (h handler) TestI64(ctx context.Context, body wire.Value) (thrift.Response,
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 
@@ -633,7 +633,7 @@ func (h handler) TestInsanity(ctx context.Context, body wire.Value) (thrift.Resp
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 
@@ -663,7 +663,7 @@ func (h handler) TestList(ctx context.Context, body wire.Value) (thrift.Response
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 
@@ -693,7 +693,7 @@ func (h handler) TestMap(ctx context.Context, body wire.Value) (thrift.Response,
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 
@@ -723,7 +723,7 @@ func (h handler) TestMapMap(ctx context.Context, body wire.Value) (thrift.Respon
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 
@@ -753,7 +753,7 @@ func (h handler) TestMulti(ctx context.Context, body wire.Value) (thrift.Respons
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 
@@ -783,7 +783,7 @@ func (h handler) TestMultiException(ctx context.Context, body wire.Value) (thrif
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 
@@ -813,7 +813,7 @@ func (h handler) TestNest(ctx context.Context, body wire.Value) (thrift.Response
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 
@@ -852,7 +852,7 @@ func (h handler) TestSet(ctx context.Context, body wire.Value) (thrift.Response,
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 
@@ -882,7 +882,7 @@ func (h handler) TestString(ctx context.Context, body wire.Value) (thrift.Respon
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 
@@ -912,7 +912,7 @@ func (h handler) TestStringMap(ctx context.Context, body wire.Value) (thrift.Res
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 
@@ -942,7 +942,7 @@ func (h handler) TestStruct(ctx context.Context, body wire.Value) (thrift.Respon
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 
@@ -972,7 +972,7 @@ func (h handler) TestTypedef(ctx context.Context, body wire.Value) (thrift.Respo
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 
@@ -1002,7 +1002,7 @@ func (h handler) TestVoid(ctx context.Context, body wire.Value) (thrift.Response
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 

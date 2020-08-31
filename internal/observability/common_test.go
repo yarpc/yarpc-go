@@ -36,7 +36,7 @@ type fakeHandler struct {
 	err                   error
 	applicationErr        bool
 	applicationErrName    string
-	applicationErrMessage string
+	applicationErrDetails string
 	applicationErrCode    *yarpcerrors.Code
 	applicationPanic      bool
 	handleStream          func(*transport.ServerStream)
@@ -51,7 +51,7 @@ func (h fakeHandler) Handle(_ context.Context, _ *transport.Request, rw transpor
 
 		if applicationErrorMetaSetter, ok := rw.(transport.ApplicationErrorMetaSetter); ok {
 			applicationErrorMetaSetter.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
-				Message: h.applicationErrMessage,
+				Details: h.applicationErrDetails,
 				Name:    h.applicationErrName,
 				Code:    h.applicationErrCode,
 			})
@@ -84,7 +84,7 @@ type fakeOutbound struct {
 	err                   error
 	applicationErr        bool
 	applicationErrName    string
-	applicationErrMessage string
+	applicationErrDetails string
 	applicationErrCode    *yarpcerrors.Code
 	stream                fakeStream
 }
@@ -93,7 +93,7 @@ func (o fakeOutbound) Call(context.Context, *transport.Request) (*transport.Resp
 	return &transport.Response{
 		ApplicationError: o.applicationErr,
 		ApplicationErrorMeta: &transport.ApplicationErrorMeta{
-			Message: o.applicationErrMessage,
+			Details: o.applicationErrDetails,
 			Name:    o.applicationErrName,
 			Code:    o.applicationErrCode,
 		}}, o.err

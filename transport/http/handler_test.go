@@ -419,7 +419,7 @@ func headerCopyWithout(headers http.Header, names ...string) http.Header {
 
 func TestResponseWriter(t *testing.T) {
 	const (
-		appErrMessage = "thrift ex message"
+		appErrDetails = "thrift ex message"
 		appErrName    = "thrift ex name"
 	)
 	appErrCode := yarpcerrors.CodeAborted
@@ -434,7 +434,7 @@ func TestResponseWriter(t *testing.T) {
 	writer.AddHeaders(headers)
 
 	writer.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
-		Message: appErrMessage,
+		Details: appErrDetails,
 		Name:    appErrName,
 		Code:    &appErrCode,
 	})
@@ -447,7 +447,7 @@ func TestResponseWriter(t *testing.T) {
 	assert.Equal(t, "123", recorder.Header().Get("rpc-header-shard-key"))
 	assert.Equal(t, "hello", recorder.Body.String())
 
-	assert.Equal(t, appErrMessage, recorder.Header().Get(_applicationErrorMessageHeader))
+	assert.Equal(t, appErrDetails, recorder.Header().Get(_applicationErrorDetailsHeader))
 	assert.Equal(t, appErrName, recorder.Header().Get(_applicationErrorNameHeader))
 	assert.Equal(t, strconv.Itoa(int(appErrCode)), recorder.Header().Get(_applicationErrorCodeHeader))
 }
@@ -464,18 +464,18 @@ func TestTruncatedHeader(t *testing.T) {
 		},
 		{
 			name:  "max",
-			value: strings.Repeat("a", _maxAppErrMessageHeaderLen),
+			value: strings.Repeat("a", _maxAppErrDetailsHeaderLen),
 		},
 		{
 			name:         "truncate",
-			value:        strings.Repeat("b", _maxAppErrMessageHeaderLen*2),
+			value:        strings.Repeat("b", _maxAppErrDetailsHeaderLen*2),
 			wantTruncate: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := truncateAppErrMessage(tt.value)
+			got := truncateAppErrDetails(tt.value)
 
 			if !tt.wantTruncate {
 				assert.Equal(t, tt.value, got, "expected no-op")
@@ -483,7 +483,7 @@ func TestTruncatedHeader(t *testing.T) {
 			}
 
 			assert.True(t, strings.HasSuffix(got, _truncatedHeaderMessage), "unexpected truncate suffix")
-			assert.Len(t, got, _maxAppErrMessageHeaderLen, "did not truncate")
+			assert.Len(t, got, _maxAppErrDetailsHeaderLen, "did not truncate")
 		})
 	}
 }

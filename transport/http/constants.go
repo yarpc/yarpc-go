@@ -103,11 +103,11 @@ const (
 	// Headers for propagating transport.ApplicationErrorMeta.
 	_applicationErrorNameHeader    = "Rpc-Application-Error-Name"
 	_applicationErrorCodeHeader    = "Rpc-Application-Error-Code"
-	_applicationErrorMessageHeader = "Rpc-Application-Error-Message"
+	_applicationErrorDetailsHeader = "Rpc-Application-Error-Details"
 
-	// largest header value length for `transport.ApplicationErrorMeta#Message`
-	_maxAppErrMessageHeaderLen = 256
-	// truncated message if we've exceeded the '_maxAppErrMessageHeaderLen'
+	// largest header value length for `transport.ApplicationErrorMeta#Details`
+	_maxAppErrDetailsHeaderLen = 256
+	// truncated message if we've exceeded the '_maxAppErrDetailsHeaderLen'
 	_truncatedHeaderMessage = " (truncated)"
 )
 

@@ -29,9 +29,9 @@ const (
 	// for Outbounds.
 	TransportName = "tchannel"
 
-	// largest header value length for `transport.ApplicationErrorMeta#Message`
-	_maxAppErrMessageHeaderLen = 256
-	// truncated message if we've exceeded the '_maxAppErrMessageHeaderLen'
+	// largest header value length for `transport.ApplicationErrorMeta#Details`
+	_maxAppErrDetailsHeaderLen = 256
+	// truncated message if we've exceeded the '_maxAppErrDetailsHeaderLen'
 	_truncatedHeaderMessage = " (truncated)"
 )
 

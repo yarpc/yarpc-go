@@ -557,7 +557,7 @@ func TestResponseWriter(t *testing.T) {
 					&transport.ApplicationErrorMeta{
 						Name:    "bAz",
 						Code:    &yErrAborted,
-						Message: "App Error Message",
+						Details: "App Error Details",
 					},
 				)
 				_, err := w.Write([]byte("hello"))
@@ -566,7 +566,7 @@ func TestResponseWriter(t *testing.T) {
 			arg2: map[string]string{
 				"$rpc$-application-error-code":    "10",
 				"$rpc$-application-error-name":    "bAz",
-				"$rpc$-application-error-message": "App Error Message",
+				"$rpc$-application-error-details": "App Error Details",
 			},
 			arg3:             []byte("hello"),
 			applicationError: true,
@@ -781,18 +781,18 @@ func TestTruncatedHeader(t *testing.T) {
 		},
 		{
 			name:  "max",
-			value: strings.Repeat("a", _maxAppErrMessageHeaderLen),
+			value: strings.Repeat("a", _maxAppErrDetailsHeaderLen),
 		},
 		{
 			name:         "truncate",
-			value:        strings.Repeat("b", _maxAppErrMessageHeaderLen*2),
+			value:        strings.Repeat("b", _maxAppErrDetailsHeaderLen*2),
 			wantTruncate: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := truncateAppErrMessage(tt.value)
+			got := truncateAppErrDetails(tt.value)
 
 			if !tt.wantTruncate {
 				assert.Equal(t, tt.value, got, "expected no-op")
@@ -800,7 +800,7 @@ func TestTruncatedHeader(t *testing.T) {
 			}
 
 			assert.True(t, strings.HasSuffix(got, _truncatedHeaderMessage), "unexpected truncate suffix")
-			assert.Len(t, got, _maxAppErrMessageHeaderLen, "did not truncate")
+			assert.Len(t, got, _maxAppErrDetailsHeaderLen, "did not truncate")
 		})
 	}
 }

@@ -279,16 +279,16 @@ func (hw *handlerWriter) SetApplicationErrorMeta(applicationErrorMeta *transport
 	if applicationErrorMeta.Name != "" {
 		hw.AddHeader(ApplicationErrorNameHeaderKey, applicationErrorMeta.Name)
 	}
-	if applicationErrorMeta.Message != "" {
-		hw.AddHeader(ApplicationErrorMessageHeaderKey, truncateAppErrMessage(applicationErrorMeta.Message))
+	if applicationErrorMeta.Details != "" {
+		hw.AddHeader(ApplicationErrorDetailsHeaderKey, truncateAppErrDetails(applicationErrorMeta.Details))
 	}
 }
 
-func truncateAppErrMessage(val string) string {
-	if len(val) <= _maxAppErrMessageHeaderLen {
+func truncateAppErrDetails(val string) string {
+	if len(val) <= _maxAppErrDetailsHeaderLen {
 		return val
 	}
-	stripIndex := _maxAppErrMessageHeaderLen - len(_truncatedHeaderMessage)
+	stripIndex := _maxAppErrDetailsHeaderLen - len(_truncatedHeaderMessage)
 	return val[:stripIndex] + _truncatedHeaderMessage
 }
 

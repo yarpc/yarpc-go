@@ -115,7 +115,7 @@ func (h handler) GetValue(ctx context.Context, body wire.Value) (thrift.Response
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 
@@ -145,7 +145,7 @@ func (h handler) SetValue(ctx context.Context, body wire.Value) (thrift.Response
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 

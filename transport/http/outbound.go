@@ -277,7 +277,7 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 		Body:             response.Body,
 		ApplicationError: response.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus,
 		ApplicationErrorMeta: &transport.ApplicationErrorMeta{
-			Message: response.Header.Get(_applicationErrorMessageHeader),
+			Details: response.Header.Get(_applicationErrorDetailsHeader),
 			Name:    response.Header.Get(_applicationErrorNameHeader),
 			Code:    getYARPCApplicationErrorCode(response.Header.Get(_applicationErrorCodeHeader)),
 		},
