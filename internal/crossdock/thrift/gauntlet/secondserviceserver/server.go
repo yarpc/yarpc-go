@@ -86,6 +86,10 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
+type yarpcErrorNamer interface{ YARPCErrorName() string }
+
+type yarpcErrorCoder interface{ YARPCErrorCode() *yarpcerrors.Code }
+
 func (h handler) BlahBlah(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.SecondService_BlahBlah_Args
 	if err := args.FromWire(body); err != nil {
@@ -93,16 +97,26 @@ func (h handler) BlahBlah(ctx context.Context, body wire.Value) (thrift.Response
 			"could not decode Thrift request for service 'SecondService' procedure 'BlahBlah': %w", err)
 	}
 
-	err := h.impl.BlahBlah(ctx)
+	appErr := h.impl.BlahBlah(ctx)
 
-	hadError := err != nil
-	result, err := gauntlet.SecondService_BlahBlah_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := gauntlet.SecondService_BlahBlah_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
@@ -113,15 +127,25 @@ func (h handler) SecondtestString(ctx context.Context, body wire.Value) (thrift.
 			"could not decode Thrift request for service 'SecondService' procedure 'SecondtestString': %w", err)
 	}
 
-	success, err := h.impl.SecondtestString(ctx, args.Thing)
+	success, appErr := h.impl.SecondtestString(ctx, args.Thing)
 
-	hadError := err != nil
-	result, err := gauntlet.SecondService_SecondtestString_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := gauntlet.SecondService_SecondtestString_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
+
 	return response, err
 }

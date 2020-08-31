@@ -22,11 +22,14 @@ package tchannel
 
 import (
 	"context"
+	"io"
+	"strconv"
 
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
+	"go.uber.org/yarpc/internal/iopool"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -116,6 +119,7 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 	format := tchannel.Format(req.Encoding)
 	callOptions := tchannel.CallOptions{
 		Format:          format,
+		CallerName:      req.Caller,
 		ShardKey:        req.ShardKey,
 		RoutingKey:      req.RoutingKey,
 		RoutingDelegate: req.RoutingDelegate,
@@ -175,6 +179,10 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		return nil, err
 	}
 
+	applicationErrorName, _ := headers.Get(ApplicationErrorNameHeaderKey)
+	applicationErrorCode := getApplicationErrorCodeFromHeaders(headers)
+	applicationErrorMessage, _ := headers.Get(ApplicationErrorMessageHeaderKey)
+
 	err = getResponseError(headers)
 	deleteReservedHeaders(headers)
 
@@ -182,8 +190,58 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		Headers:          headers,
 		Body:             resBody,
 		ApplicationError: res.ApplicationError(),
+		ApplicationErrorMeta: &transport.ApplicationErrorMeta{
+			Message: applicationErrorMessage,
+			Name:    applicationErrorName,
+			Code:    applicationErrorCode,
+		},
 	}
 	return resp, err
+}
+
+func writeBody(body io.Reader, call *tchannel.OutboundCall) error {
+	w, err := call.Arg3Writer()
+	if err != nil {
+		return err
+	}
+
+	if _, err := iopool.Copy(w, body); err != nil {
+		return err
+	}
+
+	return w.Close()
+}
+
+func getResponseError(headers transport.Headers) error {
+	errorCodeString, ok := headers.Get(ErrorCodeHeaderKey)
+	if !ok {
+		return nil
+	}
+	var errorCode yarpcerrors.Code
+	if err := errorCode.UnmarshalText([]byte(errorCodeString)); err != nil {
+		return err
+	}
+	if errorCode == yarpcerrors.CodeOK {
+		return yarpcerrors.Newf(yarpcerrors.CodeInternal, "got CodeOK from error header")
+	}
+	errorName, _ := headers.Get(ErrorNameHeaderKey)
+	errorMessage, _ := headers.Get(ErrorMessageHeaderKey)
+	return intyarpcerrors.NewWithNamef(errorCode, errorName, errorMessage)
+}
+
+func getApplicationErrorCodeFromHeaders(headers transport.Headers) *yarpcerrors.Code {
+	errorCodeHeader, found := headers.Get(ApplicationErrorCodeHeaderKey)
+	if !found {
+		return nil
+	}
+
+	errorCode, err := strconv.Atoi(errorCodeHeader)
+	if err != nil {
+		return nil
+	}
+
+	yarpcCode := yarpcerrors.Code(errorCode)
+	return &yarpcCode
 }
 
 func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*tchannelPeer, func(error), error) {

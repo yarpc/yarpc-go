@@ -18,8 +18,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package clock provides swappable real and fake clocks.
-// The real clock is a stateless wrapper around the "time" module.
-// The fake clock provides manual control over progress.
-// They share a common Clock and Timer interface.
-package clock
+package main
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/thriftrw/compile"
+)
+
+func TestGetYARPCErrorCode(t *testing.T) {
+	const exName = "MyException"
+
+	t.Run("success", func(t *testing.T) {
+		spec := &compile.StructSpec{
+			Name:        exName,
+			Annotations: map[string]string{_errorCodeAnnotationKey: "ABORTED"},
+		}
+		assert.NotPanics(t, func() {
+			want := "yarpcerrors.CodeAborted"
+			got := getYARPCErrorCode(spec)
+			assert.Equal(t, want, got)
+		}, "unexpected panic")
+	})
+
+	t.Run("panic fail", func(t *testing.T) {
+		spec := &compile.StructSpec{
+			Name:        exName,
+			Annotations: map[string]string{_errorCodeAnnotationKey: "foo"},
+		}
+		assert.PanicsWithValue(t,
+			"invalid rpc.code annotation for \"MyException\": \"foo\"\nAvailable codes: CANCELLED,UNKNOWN,INVALID_ARGUMENT,DEADLINE_EXCEEDED,NOT_FOUND,ALREADY_EXISTS,PERMISSION_DENIED,RESOURCE_EXHAUSTED,FAILED_PRECONDITION,ABORTED,OUT_OF_RANGE,UNIMPLEMENTED,INTERNAL,UNAVAILABLE,DATA_LOSS,UNAUTHENTICATED",
+			func() { getYARPCErrorCode(spec) },
+			"unexpected panic")
+	})
+}

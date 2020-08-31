@@ -36,24 +36,35 @@ var _writerPool = sync.Pool{New: func() interface{} {
 	return &writer{}
 }}
 
-// writer wraps a transport.ResponseWriter so the observing middleware can
-// detect application errors.
+// writer wraps a transport.ResponseWriter and a transport.ApplicationErrorMetaSetter so the observing middleware can
+// detect application errors and their metadata.
 type writer struct {
 	transport.ResponseWriter
 
-	isApplicationError bool
+	isApplicationError   bool
+	applicationErrorMeta *transport.ApplicationErrorMeta
 }
 
 func newWriter(rw transport.ResponseWriter) *writer {
 	w := _writerPool.Get().(*writer)
-	w.isApplicationError = false
-	w.ResponseWriter = rw
+	*w = writer{ResponseWriter: rw} // reset
 	return w
 }
 
 func (w *writer) SetApplicationError() {
 	w.isApplicationError = true
 	w.ResponseWriter.SetApplicationError()
+}
+
+func (w *writer) SetApplicationErrorMeta(applicationErrorMeta *transport.ApplicationErrorMeta) {
+	if applicationErrorMeta == nil {
+		return
+	}
+
+	w.applicationErrorMeta = applicationErrorMeta
+	if appErrMetaSetter, ok := w.ResponseWriter.(transport.ApplicationErrorMetaSetter); ok {
+		appErrMetaSetter.SetApplicationErrorMeta(applicationErrorMeta)
+	}
 }
 
 func (w *writer) free() {
@@ -144,7 +155,11 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 	wrappedWriter := newWriter(w)
 	err := h.Handle(ctx, req, wrappedWriter)
 	ctxErr := ctxErrOverride(ctx, req)
-	call.EndHandleWithAppError(err, wrappedWriter.isApplicationError, ctxErr)
+	call.EndHandleWithAppError(
+		err,
+		wrappedWriter.isApplicationError,
+		wrappedWriter.applicationErrorMeta,
+		ctxErr)
 	if ctxErr != nil {
 		err = ctxErr
 	}
@@ -158,10 +173,12 @@ func (m *Middleware) Call(ctx context.Context, req *transport.Request, out trans
 	res, err := out.Call(ctx, req)
 
 	isApplicationError := false
+	var applicationErrorMeta *transport.ApplicationErrorMeta
 	if res != nil {
 		isApplicationError = res.ApplicationError
+		applicationErrorMeta = res.ApplicationErrorMeta
 	}
-	call.EndCallWithAppError(err, isApplicationError)
+	call.EndCallWithAppError(err, isApplicationError, applicationErrorMeta)
 	return res, err
 }
 

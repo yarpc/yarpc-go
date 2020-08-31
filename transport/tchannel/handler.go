@@ -23,6 +23,7 @@ package tchannel
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -80,6 +81,7 @@ type responseWriter interface {
 	ReleaseBuffer()
 	IsApplicationError() bool
 	SetApplicationError()
+	SetApplicationErrorMeta(meta *transport.ApplicationErrorMeta)
 	Write(s []byte) (int, error)
 }
 
@@ -265,6 +267,29 @@ func (hw *handlerWriter) AddHeader(key string, value string) {
 
 func (hw *handlerWriter) SetApplicationError() {
 	hw.applicationError = true
+}
+
+func (hw *handlerWriter) SetApplicationErrorMeta(applicationErrorMeta *transport.ApplicationErrorMeta) {
+	if applicationErrorMeta == nil {
+		return
+	}
+	if applicationErrorMeta.Code != nil {
+		hw.AddHeader(ApplicationErrorCodeHeaderKey, strconv.Itoa(int(*applicationErrorMeta.Code)))
+	}
+	if applicationErrorMeta.Name != "" {
+		hw.AddHeader(ApplicationErrorNameHeaderKey, applicationErrorMeta.Name)
+	}
+	if applicationErrorMeta.Message != "" {
+		hw.AddHeader(ApplicationErrorMessageHeaderKey, truncateAppErrMessage(applicationErrorMeta.Message))
+	}
+}
+
+func truncateAppErrMessage(val string) string {
+	if len(val) <= _maxAppErrMessageHeaderLen {
+		return val
+	}
+	stripIndex := _maxAppErrMessageHeaderLen - len(_truncatedHeaderMessage)
+	return val[:stripIndex] + _truncatedHeaderMessage
 }
 
 func (hw *handlerWriter) IsApplicationError() bool {

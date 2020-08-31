@@ -28,8 +28,18 @@ import (
 	"go.uber.org/yarpc/peer/abstractlist"
 )
 
-// newPeerRing creates a new peerRing with an initial capacity
-func newPeerRing() *peerRing {
+// Option configures the peer list implementation constructor.
+type Option interface {
+	apply(*options)
+}
+
+type options struct{}
+
+// NewImplementation creates a new round-robin abstractlist.Implementation.
+//
+// Use this constructor instead of NewList, when wanting to do custom peer
+// connection management.
+func NewImplementation(opts ...Option) abstractlist.Implementation {
 	return &peerRing{}
 }
 
@@ -46,8 +56,6 @@ func (s *subscriber) UpdatePendingRequestCount(int) {}
 type peerRing struct {
 	nextNode *ring.Ring
 }
-
-var _ abstractlist.Implementation = (*peerRing)(nil)
 
 // Add a peer.StatusPeer to the end of the peerRing, if the ring is empty it
 // initializes the nextNode marker

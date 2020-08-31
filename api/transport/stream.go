@@ -40,6 +40,8 @@ type ServerStreamOption interface {
 }
 
 // NewServerStream will create a new ServerStream.
+// The Stream can implement StreamHeadersSender if the underlying transport
+// supports stream headers.
 func NewServerStream(s Stream, options ...ServerStreamOption) (*ServerStream, error) {
 	if s == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("non-nil stream is required")
@@ -50,6 +52,19 @@ func NewServerStream(s Stream, options ...ServerStreamOption) (*ServerStream, er
 // ServerStream represents the Server API of interacting with a Stream.
 type ServerStream struct {
 	stream Stream
+}
+
+// StreamHeadersSender is the interface for sending stream headers.
+type StreamHeadersSender interface {
+	SendHeaders(headers Headers) error
+}
+
+// SendStreamHeaders conditionally type asserts a Stream to a StreamHeadersSender to send the provided headers.
+func SendStreamHeaders(s Stream, headers Headers) error {
+	if w, ok := s.(StreamHeadersSender); ok {
+		return w.SendHeaders(headers)
+	}
+	return yarpcerrors.UnimplementedErrorf("stream does not support sending headers")
 }
 
 // Context returns the context for the stream.
@@ -75,6 +90,12 @@ func (s *ServerStream) ReceiveMessage(ctx context.Context) (*StreamMessage, erro
 	return s.stream.ReceiveMessage(ctx)
 }
 
+// SendHeaders sends the one-time response headers to an initial stream connect.
+// It fails if called multiple times.
+func (s *ServerStream) SendHeaders(headers Headers) error {
+	return SendStreamHeaders(s.stream, headers)
+}
+
 // ClientStreamOption is an option for configuring a client stream.
 // There are no current ClientStreamOptions implemented.
 type ClientStreamOption interface {
@@ -82,6 +103,8 @@ type ClientStreamOption interface {
 }
 
 // NewClientStream will create a new ClientStream.
+// The StreamCloser can implement StreamMessageReader if the underlying stream
+// supports stream headers.
 func NewClientStream(s StreamCloser, options ...ClientStreamOption) (*ClientStream, error) {
 	if s == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("non-nil stream with close is required")
@@ -92,6 +115,19 @@ func NewClientStream(s StreamCloser, options ...ClientStreamOption) (*ClientStre
 // ClientStream represents the Client API of interacting with a Stream.
 type ClientStream struct {
 	stream StreamCloser
+}
+
+// StreamHeadersReader is the interface for reading stream headers.
+type StreamHeadersReader interface {
+	Headers() (Headers, error)
+}
+
+// ReadStreamHeaders conditionally type asserts a Stream to a StreamHeadersReader to read the received headers.
+func ReadStreamHeaders(s Stream) (Headers, error) {
+	if r, ok := s.(StreamHeadersReader); ok {
+		return r.Headers()
+	}
+	return NewHeaders(), yarpcerrors.UnimplementedErrorf("stream does not support reading headers")
 }
 
 // Context returns the context for the stream.
@@ -123,6 +159,12 @@ func (s *ClientStream) ReceiveMessage(ctx context.Context) (*StreamMessage, erro
 // connection will be forced closed by the client.
 func (s *ClientStream) Close(ctx context.Context) error {
 	return s.stream.Close(ctx)
+}
+
+// Headers returns the initial stream response headers received from the server if there
+// are any. It blocks if the headers are not available.
+func (s *ClientStream) Headers() (Headers, error) {
+	return ReadStreamHeaders(s.stream)
 }
 
 // StreamCloser represents an API of interacting with a Stream that is

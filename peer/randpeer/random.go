@@ -22,6 +22,7 @@ package randpeer
 
 import (
 	"math/rand"
+	"time"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -33,14 +34,27 @@ type randomList struct {
 	random      *rand.Rand
 }
 
+// Option configures the peer list implementation constructor.
+type Option interface {
+	apply(*options)
+}
+
+type options struct{}
+
+// NewImplementation creates a new random abstractlist.Implementation.
+//
+// Use this constructor instead of NewList, when wanting to do custom peer
+// connection management.
+func NewImplementation(opts ...Option) abstractlist.Implementation {
+	return newRandomList(10, rand.NewSource(time.Now().UnixNano()))
+}
+
 func newRandomList(cap int, source rand.Source) *randomList {
 	return &randomList{
 		subscribers: make([]*subscriber, 0, cap),
 		random:      rand.New(source),
 	}
 }
-
-var _ abstractlist.Implementation = (*randomList)(nil)
 
 func (r *randomList) Add(peer peer.StatusPeer, _ peer.Identifier) abstractlist.Subscriber {
 	index := len(r.subscribers)

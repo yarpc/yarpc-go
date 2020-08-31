@@ -88,6 +88,10 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
+type yarpcErrorNamer interface{ YARPCErrorName() string }
+
+type yarpcErrorCoder interface{ YARPCErrorCode() *yarpcerrors.Code }
+
 func (h handler) GetValue(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args kv.KeyValue_GetValue_Args
 	if err := args.FromWire(body); err != nil {
@@ -95,16 +99,26 @@ func (h handler) GetValue(ctx context.Context, body wire.Value) (thrift.Response
 			"could not decode Thrift request for service 'KeyValue' procedure 'GetValue': %w", err)
 	}
 
-	success, err := h.impl.GetValue(ctx, args.Key)
+	success, appErr := h.impl.GetValue(ctx, args.Key)
 
-	hadError := err != nil
-	result, err := kv.KeyValue_GetValue_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := kv.KeyValue_GetValue_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
@@ -115,15 +129,25 @@ func (h handler) SetValue(ctx context.Context, body wire.Value) (thrift.Response
 			"could not decode Thrift request for service 'KeyValue' procedure 'SetValue': %w", err)
 	}
 
-	err := h.impl.SetValue(ctx, args.Key, args.Value)
+	appErr := h.impl.SetValue(ctx, args.Key, args.Value)
 
-	hadError := err != nil
-	result, err := kv.KeyValue_SetValue_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := kv.KeyValue_SetValue_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorMessage = appErr.Error()
+		}
 	}
+
 	return response, err
 }

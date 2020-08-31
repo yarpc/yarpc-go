@@ -25,9 +25,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -62,11 +64,61 @@ func TestConvertToYARPCErrorWithWrappedError(t *testing.T) {
 
 	wrappedErr := fmt.Errorf("wrapped err 2: %w", fmt.Errorf("wrapped err 1: %w", pbErr))
 
-	err := convertToYARPCError(Encoding, wrappedErr, &codec{})
+	err := convertToYARPCError(Encoding, wrappedErr, &codec{}, nil /* resw */)
 	require.True(t, yarpcerrors.IsStatus(err), "unexpected error")
 	assert.Equal(t, yarpcerrors.FromError(err).Code(), yarpcerrors.CodeAborted, "unexpected err code")
 	assert.Equal(t, yarpcerrors.FromError(err).Message(), "aborted", "unexpected error message")
 
 	gotDetails := yarpcerrors.FromError(err).Details()
 	assert.NotEmpty(t, gotDetails, "no details marshaled")
+}
+
+func TestConvertToYARPCErrorApplicationErrorMeta(t *testing.T) {
+	errDetails := []proto.Message{
+		&types.StringValue{Value: "detail message"},
+		&types.Int32Value{Value: 42},
+		&types.BytesValue{Value: []byte("detail bytes")},
+	}
+
+	pbErr := NewError(
+		yarpcerrors.CodeAborted,
+		"aborted",
+		WithErrorDetails(errDetails...))
+
+	resw := &transporttest.FakeResponseWriter{}
+	err := convertToYARPCError(Encoding, pbErr, &codec{}, resw)
+	require.Error(t, err)
+
+	require.NotNil(t, resw.ApplicationErrorMeta)
+	assert.Equal(t, "StringValue", resw.ApplicationErrorMeta.Name, "expected first error detail name")
+	assert.Equal(t,
+		"[]{ StringValue{value:\"detail message\" } , Int32Value{value:42 } , BytesValue{value:\"detail bytes\" } }",
+		resw.ApplicationErrorMeta.Message,
+		"unexpected string of error details")
+	assert.Nil(t, resw.ApplicationErrorMeta.Code, "code should nil")
+}
+
+func TestMessageNameWithoutPackage(t *testing.T) {
+	tests := []struct {
+		name string
+		give string
+		want string
+	}{
+		{
+			name: "fqn",
+			give: "uber.foo.bar.baz.MessageName",
+			want: "MessageName",
+		},
+		{
+			name: "not fully qualified",
+			give: "MyMessage",
+			want: "MyMessage",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, messageNameWithoutPackage(tt.give), "unexpected trim")
+		})
+	}
 }

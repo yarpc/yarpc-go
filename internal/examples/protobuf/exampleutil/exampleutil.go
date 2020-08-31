@@ -32,13 +32,10 @@ import (
 // Clients holds all clients.
 type Clients struct {
 	KeyValueYARPCClient     examplepb.KeyValueYARPCClient
-	SinkYARPCClient         examplepb.SinkYARPCClient
 	FooYARPCClient          examplepb.FooYARPCClient
 	KeyValueYARPCJSONClient examplepb.KeyValueYARPCClient
-	SinkYARPCJSONClient     examplepb.SinkYARPCClient
 	FooYARPCJSONClient      examplepb.FooYARPCClient
 	KeyValueGRPCClient      examplepb.KeyValueClient
-	SinkGRPCClient          examplepb.SinkClient
 	FooGRPCClient           examplepb.FooClient
 	ContextWrapper          *grpcctx.ContextWrapper
 }
@@ -47,7 +44,6 @@ type Clients struct {
 func WithClients(
 	transportType testutils.TransportType,
 	keyValueYARPCServer examplepb.KeyValueYARPCServer,
-	sinkYARPCServer examplepb.SinkYARPCServer,
 	fooYARPCServer examplepb.FooYARPCServer,
 	logger *zap.Logger,
 	f func(*Clients) error,
@@ -55,9 +51,6 @@ func WithClients(
 	var procedures []transport.Procedure
 	if keyValueYARPCServer != nil {
 		procedures = append(procedures, examplepb.BuildKeyValueYARPCProcedures(keyValueYARPCServer)...)
-	}
-	if sinkYARPCServer != nil {
-		procedures = append(procedures, examplepb.BuildSinkYARPCProcedures(sinkYARPCServer)...)
 	}
 	if fooYARPCServer != nil {
 		procedures = append(procedures, examplepb.BuildFooYARPCProcedures(fooYARPCServer)...)
@@ -71,13 +64,10 @@ func WithClients(
 			return f(
 				&Clients{
 					examplepb.NewKeyValueYARPCClient(clientInfo.ClientConfig),
-					examplepb.NewSinkYARPCClient(clientInfo.ClientConfig),
 					examplepb.NewFooYARPCClient(clientInfo.ClientConfig),
 					examplepb.NewKeyValueYARPCClient(clientInfo.ClientConfig, protobuf.UseJSON),
-					examplepb.NewSinkYARPCClient(clientInfo.ClientConfig, protobuf.UseJSON),
 					examplepb.NewFooYARPCClient(clientInfo.ClientConfig, protobuf.UseJSON),
 					examplepb.NewKeyValueClient(clientInfo.GRPCClientConn),
-					examplepb.NewSinkClient(clientInfo.GRPCClientConn),
 					examplepb.NewFooClient(clientInfo.GRPCClientConn),
 					clientInfo.ContextWrapper,
 				},

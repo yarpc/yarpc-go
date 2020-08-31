@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/x/introspection"
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
@@ -46,7 +47,10 @@ import (
 // http://www.grpc.io/docs/guides/wire.html#user-agents
 const UserAgent = "yarpc-go/" + yarpc.Version
 
-var _ transport.UnaryOutbound = (*Outbound)(nil)
+var (
+	_ transport.UnaryOutbound              = (*Outbound)(nil)
+	_ introspection.IntrospectableOutbound = (*Outbound)(nil)
+)
 
 // Outbound is a transport.UnaryOutbound.
 type Outbound struct {
@@ -119,9 +123,10 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 		return nil, err
 	}
 	return &transport.Response{
-		Body:             ioutil.NopCloser(bytes.NewBuffer(responseBody)),
-		Headers:          responseHeaders,
-		ApplicationError: metadataToIsApplicationError(responseMD),
+		Body:                 ioutil.NopCloser(bytes.NewBuffer(responseBody)),
+		Headers:              responseHeaders,
+		ApplicationError:     metadataToIsApplicationError(responseMD),
+		ApplicationErrorMeta: metadataToApplicationErrorMeta(responseMD),
 	}, invokeErr
 }
 
@@ -327,6 +332,27 @@ func (o *Outbound) stream(
 		return nil, err
 	}
 	return tClientStream, nil
+}
+
+// Introspect implements introspection.IntrospectableOutbound interface.
+func (o *Outbound) Introspect() introspection.OutboundStatus {
+	state := "Stopped"
+	if o.IsRunning() {
+		state = "Running"
+	}
+	var chooser introspection.ChooserStatus
+	if i, ok := o.peerChooser.(introspection.IntrospectableChooser); ok {
+		chooser = i.Introspect()
+	} else {
+		chooser = introspection.ChooserStatus{
+			Name: "Introspection not available",
+		}
+	}
+	return introspection.OutboundStatus{
+		Transport: TransportName,
+		State:     state,
+		Chooser:   chooser,
+	}
 }
 
 // Only does verification when there is a response service header key

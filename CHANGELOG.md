@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Added
+- gRPC Streaming: Added the ability to send and read stream response headers.
+- thrift: Using the `rpc.code` annotation, services may specify an associated
+  error code for Thrift exceptions. Metrics will classify the exception as a
+  client or server failure like a `yarpcerrors` error. If a Thrift exception is
+  not annotated with a code, it will continue to be classified as a client
+  failure.
+- logging: Errors and annotated Thrift exceptions are logged with their error
+  code under the `errorCode` field. Errors created outside of
+  `protobuf.NewError` and `yarpcerrors` will yield `CodeUnknown`.
+- logging: Thrift exceptions and Protobuf error details are logged under the
+  `appErrMessage` field.
+- grpc: Enabled outbound introspection for debug pages.
+- experimental: Added `tchannel.GetResponseErrorMeta` API for retrieving native
+  TChannel error response codes.
+### Fixed
+- tchannel: middleware may modify the outbound `transport.Request#Caller` field,
+  similar to gRPC and HTTP outbounds.
+- Added `github.com/dgryski/go-farm` dependency to `glide.yaml` for legacy
+  projects.
+### Removed
+- Removed `yarpcproto` package that enabled "oneway" Protobuf signatures.
+
 ## [1.46.0] - 2020-05-20
 ### Added
 - peer lists accepts a `DefaultChooseTimeout` configuration for applying to
@@ -1244,6 +1268,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.46.0...HEAD
 [1.46.0]: https://github.com/yarpc/yarpc-go/compare/v1.45.0...v1.46.0
 [1.45.0]: https://github.com/yarpc/yarpc-go/compare/v1.44.0...v1.45.0
 [1.44.0]: https://github.com/yarpc/yarpc-go/compare/v1.43.0...v1.44.0

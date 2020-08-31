@@ -25,6 +25,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -457,15 +458,19 @@ func TestHandlerFailures(t *testing.T) {
 }
 
 func TestResponseWriter(t *testing.T) {
+	yErrAborted := yarpcerrors.CodeAborted
+
 	tests := []struct {
+		name             string
 		format           tchannel.Format
 		apply            func(responseWriter)
-		arg2             []byte
+		arg2             map[string]string // use map since ordering isn't guaranteed
 		arg3             []byte
 		applicationError bool
 		headerCase       headerCase
 	}{
 		{
+			name:   "raw lowercase headers",
 			format: tchannel.Raw,
 			apply: func(w responseWriter) {
 				headers := transport.HeadersFromMap(map[string]string{"foo": "bar"})
@@ -475,14 +480,11 @@ func TestResponseWriter(t *testing.T) {
 				_, err = w.Write([]byte("world"))
 				require.NoError(t, err)
 			},
-			arg2: []byte{
-				0x00, 0x01,
-				0x00, 0x03, 'f', 'o', 'o',
-				0x00, 0x03, 'b', 'a', 'r',
-			},
+			arg2: map[string]string{"foo": "bar"},
 			arg3: []byte("hello world"),
 		},
 		{
+			name:   "raw mixed-case headers",
 			format: tchannel.Raw,
 			apply: func(w responseWriter) {
 				headers := transport.HeadersFromMap(map[string]string{"FoO": "bAr"})
@@ -492,15 +494,12 @@ func TestResponseWriter(t *testing.T) {
 				_, err = w.Write([]byte("world"))
 				require.NoError(t, err)
 			},
-			arg2: []byte{
-				0x00, 0x01,
-				0x00, 0x03, 'F', 'o', 'O',
-				0x00, 0x03, 'b', 'A', 'r',
-			},
+			arg2:       map[string]string{"FoO": "bAr"},
 			arg3:       []byte("hello world"),
 			headerCase: originalHeaderCase,
 		},
 		{
+			name:   "raw multiple writes",
 			format: tchannel.Raw,
 			apply: func(w responseWriter) {
 				_, err := w.Write([]byte("foo"))
@@ -508,10 +507,11 @@ func TestResponseWriter(t *testing.T) {
 				_, err = w.Write([]byte("bar"))
 				require.NoError(t, err)
 			},
-			arg2: []byte{0x00, 0x00},
+			arg2: nil,
 			arg3: []byte("foobar"),
 		},
 		{
+			name:   "json lowercase headers",
 			format: tchannel.JSON,
 			apply: func(w responseWriter) {
 				headers := transport.HeadersFromMap(map[string]string{"foo": "bar"})
@@ -520,10 +520,11 @@ func TestResponseWriter(t *testing.T) {
 				_, err := w.Write([]byte("{}"))
 				require.NoError(t, err)
 			},
-			arg2: []byte(`{"foo":"bar"}` + "\n"),
+			arg2: map[string]string{"foo": "bar"},
 			arg3: []byte("{}"),
 		},
 		{
+			name:   "json mixed-case headers",
 			format: tchannel.JSON,
 			apply: func(w responseWriter) {
 				headers := transport.HeadersFromMap(map[string]string{"FoO": "bAr"})
@@ -532,48 +533,69 @@ func TestResponseWriter(t *testing.T) {
 				_, err := w.Write([]byte("{}"))
 				require.NoError(t, err)
 			},
-			arg2:       []byte(`{"FoO":"bAr"}` + "\n"),
+			arg2:       map[string]string{"FoO": "bAr"},
 			arg3:       []byte("{}"),
 			headerCase: originalHeaderCase,
 		},
 		{
+			name:   "json empty",
 			format: tchannel.JSON,
 			apply: func(w responseWriter) {
 				_, err := w.Write([]byte("{}"))
 				require.NoError(t, err)
 			},
-			arg2: []byte("{}\n"),
+			arg2: nil,
 			arg3: []byte("{}"),
 		},
 		{
+			name:   "application error write",
 			format: tchannel.Raw,
 			apply: func(w responseWriter) {
 				w.SetApplicationError()
+				w.SetApplicationErrorMeta(
+					&transport.ApplicationErrorMeta{
+						Name:    "bAz",
+						Code:    &yErrAborted,
+						Message: "App Error Message",
+					},
+				)
 				_, err := w.Write([]byte("hello"))
 				require.NoError(t, err)
 			},
-			arg2:             []byte{0x00, 0x00},
+			arg2: map[string]string{
+				"$rpc$-application-error-code":    "10",
+				"$rpc$-application-error-name":    "bAz",
+				"$rpc$-application-error-message": "App Error Message",
+			},
 			arg3:             []byte("hello"),
 			applicationError: true,
 		},
 	}
 
 	for _, tt := range tests {
-		call := &fakeInboundCall{format: tt.format}
-		resp := newResponseRecorder()
-		call.resp = resp
+		t.Run(tt.name, func(t *testing.T) {
 
-		w := newHandlerWriter(call.Response(), call.Format(), tt.headerCase)
-		tt.apply(w)
-		assert.NoError(t, w.Close())
+			call := &fakeInboundCall{format: tt.format}
+			resp := newResponseRecorder()
+			call.resp = resp
 
-		assert.Nil(t, resp.systemErr)
-		assert.Equal(t, tt.arg2, resp.arg2.Bytes())
-		assert.Equal(t, tt.arg3, resp.arg3.Bytes())
+			w := newHandlerWriter(call.Response(), call.Format(), tt.headerCase)
+			tt.apply(w)
+			assert.NoError(t, w.Close())
 
-		if tt.applicationError {
-			assert.True(t, resp.applicationError, "expected an application error")
-		}
+			assert.Nil(t, resp.systemErr)
+
+			// read headers as a map since ordering is not guaranteed
+			gotHeaders, err := readHeaders(tt.format, func() (tchannel.ArgReader, error) { return resp.arg2, nil })
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.arg2, gotHeaders.OriginalItems(), "headers mismatch")
+			assert.Equal(t, tt.arg3, resp.arg3.Bytes())
+
+			if tt.applicationError {
+				assert.True(t, resp.applicationError, "expected an application error")
+			}
+		})
 	}
 }
 
@@ -744,6 +766,42 @@ func TestHandlerSystemErrorLogs(t *testing.T) {
 			require.Empty(t, observedLogs.TakeAll(), "expected no logs")
 		})
 	})
+}
+
+func TestTruncatedHeader(t *testing.T) {
+	tests := []struct {
+		name         string
+		value        string
+		wantTruncate bool
+	}{
+		{
+			name:  "no-op",
+			value: "foo bar",
+		},
+		{
+			name:  "max",
+			value: strings.Repeat("a", _maxAppErrMessageHeaderLen),
+		},
+		{
+			name:         "truncate",
+			value:        strings.Repeat("b", _maxAppErrMessageHeaderLen*2),
+			wantTruncate: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := truncateAppErrMessage(tt.value)
+
+			if !tt.wantTruncate {
+				assert.Equal(t, tt.value, got, "expected no-op")
+				return
+			}
+
+			assert.True(t, strings.HasSuffix(got, _truncatedHeaderMessage), "unexpected truncate suffix")
+			assert.Len(t, got, _maxAppErrMessageHeaderLen, "did not truncate")
+		})
+	}
 }
 
 type testUnaryHandler struct {

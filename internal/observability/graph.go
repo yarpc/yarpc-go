@@ -219,7 +219,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		Name:      "caller_failures",
 		Help:      "Number of RPCs failed because of caller error.",
 		ConstTags: tags,
-		VarTags:   []string{_error},
+		VarTags:   []string{_error, _errorNameMetricsKey},
 	})
 	if err != nil {
 		logger.Error("Failed to create caller failures vector.", zap.Error(err))
@@ -228,7 +228,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		Name:      "server_failures",
 		Help:      "Number of RPCs failed because of server error.",
 		ConstTags: tags,
-		VarTags:   []string{_error},
+		VarTags:   []string{_error, _errorNameMetricsKey},
 	})
 	if err != nil {
 		logger.Error("Failed to create server failures vector.", zap.Error(err))

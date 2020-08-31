@@ -201,6 +201,46 @@ func TestCallSuccess(t *testing.T) {
 	assert.True(t, handlerInvoked, "handler was never called by client")
 }
 
+func TestCallWithModifiedCallerName(t *testing.T) {
+	const (
+		destService         = "server"
+		alternateCallerName = "alternate-caller"
+	)
+
+	server := testutils.NewServer(t, nil)
+	defer server.Close()
+
+	server.GetSubChannel(destService).SetHandler(tchannel.HandlerFunc(
+		func(ctx context.Context, call *tchannel.InboundCall) {
+			assert.Equal(t, alternateCallerName, call.CallerName())
+			_, _, err := readArgs(call)
+			assert.NoError(t, err, "failed to read request")
+
+			err = writeArgs(call.Response(), []byte{0x00, 0x00} /*headers*/, nil /*body*/)
+			assert.NoError(t, err, "failed to write response")
+		}))
+
+	out := newSingleOutbound(t, server.PeerInfo().HostPort)
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	res, err := out.Call(
+		ctx,
+		&transport.Request{
+			Caller:    alternateCallerName, // newSingleOutbound uses "caller", this should override it
+			Service:   destService,
+			Encoding:  "bar",
+			Procedure: "baz",
+			Body:      bytes.NewBuffer(nil),
+		},
+	)
+
+	require.NoError(t, err, "failed to make call")
+	assert.NoError(t, res.Body.Close(), "failed to close response body")
+}
+
 func TestCallFailures(t *testing.T) {
 	const (
 		unexpectedMethod = "unexpected"
@@ -292,7 +332,22 @@ func TestApplicationError(t *testing.T) {
 		func(ctx context.Context, call *tchannel.InboundCall) {
 			call.Response().SetApplicationError()
 
-			err := writeArgs(call.Response(), []byte{0x00, 0x00}, []byte("foo"))
+			err := writeArgs(
+				call.Response(),
+				[]byte{
+					0x00, 0x03,
+					0x00, 0x1c, '$', 'r', 'p', 'c', '$', '-', 'a', 'p', 'p', 'l', 'i', 'c', 'a', 't', 'i', 'o', 'n',
+					'-', 'e', 'r', 'r', 'o', 'r', '-', 'c', 'o', 'd', 'e',
+					0x00, 0x02, '1', '0',
+					0x00, 0x1c, '$', 'r', 'p', 'c', '$', '-', 'a', 'p', 'p', 'l', 'i', 'c', 'a', 't', 'i', 'o', 'n',
+					'-', 'e', 'r', 'r', 'o', 'r', '-', 'n', 'a', 'm', 'e',
+					0x00, 0x03, 'b', 'A', 'z',
+					0x00, 0x1f, '$', 'r', 'p', 'c', '$', '-', 'a', 'p', 'p', 'l', 'i', 'c', 'a', 't', 'i', 'o', 'n',
+					'-', 'e', 'r', 'r', 'o', 'r', '-', 'm', 'e', 's', 's', 'a', 'g', 'e',
+					0x00, 0x03, 'F', 'o', 'O',
+				},
+				[]byte("foo"),
+			)
 			assert.NoError(t, err, "failed to write response")
 		}))
 
@@ -313,7 +368,21 @@ func TestApplicationError(t *testing.T) {
 		},
 	)
 	require.NoError(t, err, "failed to make call")
-	assert.True(t, res.ApplicationError, "application error was not set")
+	require.True(t, res.ApplicationError, "application error was not set")
+	require.NotNil(t, res.ApplicationErrorMeta.Code, "application error code was not set")
+	assert.Equal(t, "FoO", res.ApplicationErrorMeta.Message, "unexpected error message")
+	assert.Equal(
+		t,
+		yarpcerrors.CodeAborted,
+		*res.ApplicationErrorMeta.Code,
+		"application error code does not match the expected one",
+	)
+	assert.Equal(
+		t,
+		"bAz",
+		res.ApplicationErrorMeta.Name,
+		"application error name does not match the expected one",
+	)
 
 }
 

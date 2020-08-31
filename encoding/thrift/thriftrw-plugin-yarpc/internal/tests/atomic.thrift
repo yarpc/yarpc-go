@@ -2,12 +2,16 @@ include "./common.thrift"
 
 exception KeyDoesNotExist {
     1: optional string key
-}
+} (
+    rpc.code = "INVALID_ARGUMENT"
+)
 
 exception IntegerMismatchError {
     1: required i64 expectedValue
     2: required i64 gotValue
-}
+} (
+    rpc.code = "INVALID_ARGUMENT"
+)
 
 struct CompareAndSwap {
     1: required string key

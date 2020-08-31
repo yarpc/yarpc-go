@@ -76,7 +76,7 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 	if appErr != nil {
 		responseWriter.SetApplicationError()
 	}
-	return convertToYARPCError(transportRequest.Encoding, appErr, u.codec)
+	return convertToYARPCError(transportRequest.Encoding, appErr, u.codec, responseWriter)
 }
 
 type onewayHandler struct {
@@ -102,7 +102,7 @@ func (o *onewayHandler) HandleOneway(ctx context.Context, transportRequest *tran
 	if err != nil {
 		return err
 	}
-	return convertToYARPCError(transportRequest.Encoding, o.handleOneway(ctx, request), o.codec)
+	return convertToYARPCError(transportRequest.Encoding, o.handleOneway(ctx, request), o.codec, nil /*responseWriter*/)
 }
 
 type streamHandler struct {
@@ -125,7 +125,7 @@ func (s *streamHandler) HandleStream(stream *transport.ServerStream) error {
 		stream: stream,
 		codec:  s.codec,
 	}
-	return convertToYARPCError(transportRequest.Meta.Encoding, s.handle(protoStream), s.codec)
+	return convertToYARPCError(transportRequest.Meta.Encoding, s.handle(protoStream), s.codec, nil /*responseWriter*/)
 }
 
 func getProtoRequest(ctx context.Context, transportRequest *transport.Request, newRequest func() proto.Message, codec *codec) (context.Context, *apiencoding.InboundCall, proto.Message, error) {

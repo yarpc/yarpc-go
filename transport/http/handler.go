@@ -25,6 +25,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -239,6 +240,11 @@ func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transp
 	return ctx, span
 }
 
+var (
+	_ transport.ResponseWriter             = (*responseWriter)(nil)
+	_ transport.ApplicationErrorMetaSetter = (*responseWriter)(nil)
+)
+
 // responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.
 type responseWriter struct {
 	w      http.ResponseWriter
@@ -263,6 +269,29 @@ func (rw *responseWriter) AddHeaders(h transport.Headers) {
 
 func (rw *responseWriter) SetApplicationError() {
 	rw.w.Header().Set(ApplicationStatusHeader, ApplicationErrorStatus)
+}
+
+func (rw *responseWriter) SetApplicationErrorMeta(meta *transport.ApplicationErrorMeta) {
+	if meta == nil {
+		return
+	}
+	if meta.Code != nil {
+		rw.w.Header().Set(_applicationErrorCodeHeader, strconv.Itoa(int(*meta.Code)))
+	}
+	if meta.Name != "" {
+		rw.w.Header().Set(_applicationErrorNameHeader, meta.Name)
+	}
+	if meta.Message != "" {
+		rw.w.Header().Set(_applicationErrorMessageHeader, truncateAppErrMessage(meta.Message))
+	}
+}
+
+func truncateAppErrMessage(val string) string {
+	if len(val) <= _maxAppErrMessageHeaderLen {
+		return val
+	}
+	stripIndex := _maxAppErrMessageHeaderLen - len(_truncatedHeaderMessage)
+	return val[:stripIndex] + _truncatedHeaderMessage
 }
 
 func (rw *responseWriter) AddSystemHeader(key string, value string) {
