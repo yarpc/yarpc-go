@@ -652,7 +652,7 @@ func TestGetSystemError(t *testing.T) {
 		},
 	}
 	for i, tt := range tests {
-		t.Run(string(i), func(t *testing.T) {
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
 			gotErr := getSystemError(tt.giveErr)
 			tchErr, ok := gotErr.(tchannel.SystemError)
 			require.True(t, ok, "did not return tchannel error")
