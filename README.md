@@ -45,22 +45,22 @@ the containing `x` package and their APIs will be locked.
 
 ### Setup
 
-To start developing with yaprc-go, run the following command to setup your environment:
+To start developing with yarpc-go, run the following command to setup your environment:
 
 ```
-cd $GOPATH/src/github.com
-git clone https://github.com/yarpc/yarpc-go.git yarpc/yarpc-go
+cd $GOPATH/src
+git clone https://github.com/yarpc/yarpc-go.git go.uber.org/yarpc
 make
 ```
 
-### Unittest
+### Running Tests
 
-To run the test into a pre-configured docker container, run the following command:
+To run tests into a pre-configured docker container, run the following command:
 ```
 make test
 ```
 
-To run the test locally, run the following command:
+To run tests locally, run the following command:
 ```
 SUPPRESS_DOCKER=1 make test
 ```
