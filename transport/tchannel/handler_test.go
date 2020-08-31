@@ -25,6 +25,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -674,7 +675,7 @@ func TestGetSystemError(t *testing.T) {
 		},
 	}
 	for i, tt := range tests {
-		t.Run(string(i), func(t *testing.T) {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			gotErr := getSystemError(tt.giveErr)
 			tchErr, ok := gotErr.(tchannel.SystemError)
 			require.True(t, ok, "did not return tchannel error")

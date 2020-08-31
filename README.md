@@ -40,3 +40,29 @@ the containing `x` package and their APIs will be locked.
 
 [cov-img]: https://codecov.io/gh/yarpc/yarpc-go/branch/master/graph/badge.svg
 [cov]: https://codecov.io/gh/yarpc/yarpc-go/branch/master
+
+## Development
+
+### Setup
+
+To start developing with yarpc-go, run the following command to setup your environment:
+
+```
+cd $GOPATH/src
+git clone https://github.com/yarpc/yarpc-go.git go.uber.org/yarpc
+make
+```
+
+### Running Tests
+
+To run tests into a pre-configured docker container, run the following command:
+```
+make test
+```
+
+To run tests locally, run the following command:
+```
+SUPPRESS_DOCKER=1 make test
+```
+
+Happy development!
