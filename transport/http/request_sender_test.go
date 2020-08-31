@@ -71,7 +71,7 @@ func TestSender(t *testing.T) {
 			msg:       "http.Client sender, http server request",
 			req:       serverReq,
 			sender:    http.DefaultClient,
-			wantError: "http: Request.RequestURI can't be set in client requests.",
+			wantError: "http: Request.RequestURI can't be set in client requests",
 		},
 		{
 			msg:            "transportSender, http client request",

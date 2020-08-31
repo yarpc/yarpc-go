@@ -28,6 +28,11 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+var (
+	_ transport.ResponseWriter             = (*responseWriter)(nil)
+	_ transport.ApplicationErrorMetaSetter = (*responseWriter)(nil)
+)
+
 type responseWriter struct {
 	buffer    *bytes.Buffer
 	md        metadata.MD
@@ -58,6 +63,18 @@ func (r *responseWriter) AddHeaders(headers transport.Headers) {
 
 func (r *responseWriter) SetApplicationError() {
 	r.AddSystemHeader(ApplicationErrorHeader, ApplicationErrorHeaderValue)
+}
+func (r *responseWriter) SetApplicationErrorMeta(meta *transport.ApplicationErrorMeta) {
+	if meta == nil {
+		return
+	}
+
+	if meta.Name != "" {
+		r.AddSystemHeader(_applicationErrorNameHeader, meta.Name)
+	}
+	if meta.Details != "" {
+		r.AddSystemHeader(_applicationErrorDetailsHeader, meta.Details)
+	}
 }
 
 func (r *responseWriter) AddSystemHeader(key string, value string) {

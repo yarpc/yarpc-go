@@ -26,9 +26,31 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/abstractlist"
+	"go.uber.org/yarpc/peer/hashring32/internal/farmhashring"
 	"go.uber.org/yarpc/peer/hashring32/internal/hashring32"
 	"go.uber.org/zap"
 )
+
+// NewImplementation creates a new hashring32 abstractlist.Implementation.
+//
+// Use this constructor instead of NewList, when wanting to do custom peer
+// connection management.
+func NewImplementation(opts ...Option) abstractlist.Implementation {
+	options := options{
+		logger: zap.NewNop(),
+	}
+	for _, o := range opts {
+		o.apply(&options)
+	}
+
+	return newPeerRing(
+		farmhashring.Fingerprint32,
+		options.offsetHeader,
+		options.peerOverrideHeader,
+		options.logger,
+		options.peerRingOptions...,
+	)
+}
 
 // newPeerRing creates a new peerRing with an initial capacity
 func newPeerRing(hashFunc hashring32.HashFunc32, offsetHeader, peerOverrideHeader string, logger *zap.Logger, option ...hashring32.Option) *peerRing {

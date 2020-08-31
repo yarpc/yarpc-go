@@ -42,7 +42,7 @@ type options struct {
 	logger               *zap.Logger
 }
 
-// Option customizes the behavior of hashring32 implementation.
+// Option customizes the behavior of hashring32 peer list.
 type Option interface {
 	apply(*options)
 }

@@ -283,3 +283,21 @@ func TestCallServiceMatch(t *testing.T) {
 		})
 	}
 }
+
+func TestOutboundIntrospection(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	grpcTransport := NewTransport()
+	o := grpcTransport.NewSingleOutbound(listener.Addr().String())
+
+	assert.Equal(t, TransportName, o.Introspect().Transport)
+	assert.Equal(t, "Stopped", o.Introspect().State)
+	assert.False(t, o.IsRunning())
+
+	require.NoError(t, o.Start(), "could not start outbound")
+	assert.Equal(t, "Running", o.Introspect().State)
+
+	require.NoError(t, o.Stop(), "could not stop outbound")
+	assert.Equal(t, "Stopped", o.Introspect().State)
+}

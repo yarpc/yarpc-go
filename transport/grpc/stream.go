@@ -32,7 +32,13 @@ import (
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+)
+
+var (
+	_ transport.StreamHeadersSender = (*serverStream)(nil)
+	_ transport.StreamHeadersReader = (*clientStream)(nil)
 )
 
 type serverStream struct {
@@ -73,6 +79,14 @@ func (ss *serverStream) ReceiveMessage(_ context.Context) (*transport.StreamMess
 		return nil, toYARPCStreamError(err)
 	}
 	return &transport.StreamMessage{Body: ioutil.NopCloser(bytes.NewReader(msg))}, nil
+}
+
+func (ss *serverStream) SendHeaders(headers transport.Headers) error {
+	md := make(metadata.MD, headers.Len())
+	for k, v := range headers.Items() {
+		md.Set(k, v)
+	}
+	return ss.stream.SendHeader(md)
 }
 
 type clientStream struct {
@@ -131,6 +145,20 @@ func (cs *clientStream) ReceiveMessage(context.Context) (*transport.StreamMessag
 func (cs *clientStream) Close(context.Context) error {
 	_ = cs.closeWithErr(nil)
 	return cs.stream.CloseSend()
+}
+
+func (cs *clientStream) Headers() (transport.Headers, error) {
+	md, err := cs.stream.Header()
+	if err != nil {
+		return transport.NewHeaders(), err
+	}
+	headers := transport.NewHeadersWithCapacity(len(md))
+	for k, vs := range md {
+		if len(vs) > 0 {
+			headers = headers.With(k, vs[0])
+		}
+	}
+	return headers, nil
 }
 
 func (cs *clientStream) closeWithErr(err error) error {

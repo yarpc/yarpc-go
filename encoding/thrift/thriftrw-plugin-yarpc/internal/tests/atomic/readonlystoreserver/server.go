@@ -65,6 +65,10 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
+type yarpcErrorNamer interface{ YARPCErrorName() string }
+
+type yarpcErrorCoder interface{ YARPCErrorCode() *yarpcerrors.Code }
+
 func (h handler) Integer(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args atomic.ReadOnlyStore_Integer_Args
 	if err := args.FromWire(body); err != nil {
@@ -72,15 +76,25 @@ func (h handler) Integer(ctx context.Context, body wire.Value) (thrift.Response,
 			"could not decode Thrift request for service 'ReadOnlyStore' procedure 'Integer': %w", err)
 	}
 
-	success, err := h.impl.Integer(ctx, args.Key)
+	success, appErr := h.impl.Integer(ctx, args.Key)
 
-	hadError := err != nil
-	result, err := atomic.ReadOnlyStore_Integer_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := atomic.ReadOnlyStore_Integer_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }

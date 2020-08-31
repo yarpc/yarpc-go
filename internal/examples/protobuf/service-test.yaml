@@ -12,9 +12,6 @@ run:
       get baz
       get foo
       get baz
-      fire foo
-      fire bar
-      fired-values
       exit
     output: |
       get foo
@@ -33,8 +30,4 @@ run:
       foo = bar
       get baz
       baz = qux
-      fire foo
-      fire bar
-      fired-values
-      foo bar
       exit

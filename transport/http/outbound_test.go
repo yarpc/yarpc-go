@@ -211,10 +211,18 @@ func TestOutboundHeaders(t *testing.T) {
 }
 
 func TestOutboundApplicationError(t *testing.T) {
+	const (
+		appErrDetails = "thrift ex message"
+		appErrName    = "thrift ex name"
+	)
+
 	tests := []struct {
-		desc     string
-		status   string
-		appError bool
+		desc          string
+		status        string
+		appError      bool
+		appErrName    string
+		appErrDetails string
+		appErrCode    yarpcerrors.Code
 	}{
 		{
 			desc:     "ok",
@@ -222,9 +230,12 @@ func TestOutboundApplicationError(t *testing.T) {
 			appError: false,
 		},
 		{
-			desc:     "error",
-			status:   "error",
-			appError: true,
+			desc:          "error",
+			status:        "error",
+			appError:      true,
+			appErrName:    appErrName,
+			appErrDetails: appErrDetails,
+			appErrCode:    yarpcerrors.CodeNotFound,
 		},
 		{
 			desc:     "not an error",
@@ -239,6 +250,13 @@ func TestOutboundApplicationError(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("Rpc-Status", tt.status)
+
+				if tt.appError {
+					w.Header().Add(_applicationErrorDetailsHeader, tt.appErrDetails)
+					w.Header().Add(_applicationErrorNameHeader, tt.appErrName)
+					w.Header().Add(_applicationErrorCodeHeader, strconv.Itoa(int(tt.appErrCode)))
+				}
+
 				defer r.Body.Close()
 			},
 		))
@@ -262,6 +280,12 @@ func TestOutboundApplicationError(t *testing.T) {
 		})
 
 		assert.Equal(t, res.ApplicationError, tt.appError, "%v: application status", tt.desc)
+		if tt.appError {
+			require.NotNil(t, res.ApplicationErrorMeta)
+			assert.Equal(t, tt.appErrDetails, res.ApplicationErrorMeta.Details)
+			assert.Equal(t, tt.appErrName, res.ApplicationErrorMeta.Name)
+			assert.Equal(t, &tt.appErrCode, res.ApplicationErrorMeta.Code)
+		}
 
 		if !assert.NoError(t, err, "%v: call failed", tt.desc) {
 			continue

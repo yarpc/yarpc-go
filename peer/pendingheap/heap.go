@@ -23,6 +23,7 @@ package pendingheap
 import (
 	"container/heap"
 	"sync"
+	"time"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -46,7 +47,27 @@ type pendingHeap struct {
 	nextRand func(numPeers int) int
 }
 
-var _ abstractlist.Implementation = (*pendingHeap)(nil)
+// Option configures the peer list implementation constructor.
+type Option interface {
+	apply(*options)
+}
+
+type options struct{}
+
+// NewImplementation creates a new fewest pending heap
+// abstractlist.Implementation.
+//
+// Use this constructor instead of NewList, when wanting to do custom peer
+// connection management.
+func NewImplementation(opts ...Option) abstractlist.Implementation {
+	return newHeap(nextRand(time.Now().UnixNano()))
+}
+
+func newHeap(nextRand func(numPeers int) int) *pendingHeap {
+	return &pendingHeap{
+		nextRand: nextRand,
+	}
+}
 
 func (ph *pendingHeap) Choose(req *transport.Request) peer.StatusPeer {
 	ph.Lock()

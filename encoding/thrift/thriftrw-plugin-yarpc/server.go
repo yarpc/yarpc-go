@@ -110,7 +110,15 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Proced
 	return procedures
 }
 
+<if .Functions>
 type handler struct{ impl Interface }
+
+<$yarpcerrors := import "go.uber.org/yarpc/yarpcerrors">
+
+type yarpcErrorNamer interface { YARPCErrorName() string }
+
+type yarpcErrorCoder interface { YARPCErrorCode() *yarpcerrors.Code }
+<end>
 
 <$service := .>
 <$module := .Module>
@@ -139,19 +147,29 @@ func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$thrift>.
 	}
 
 	<if .ReturnType>
-		success, err := h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
+		success, appErr := h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
 	<else>
-		err := h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
+		appErr := h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
 	<end>
 
-	hadError := err != nil
-	result, err := <$prefix>Helper.WrapResponse(<if .ReturnType>success,<end> err)
+	hadError := appErr != nil
+	result, err := <$prefix>Helper.WrapResponse(<if .ReturnType>success,<end> appErr)
 
 	var response <$thrift>.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+ 		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 <end>

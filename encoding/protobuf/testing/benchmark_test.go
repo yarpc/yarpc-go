@@ -75,9 +75,8 @@ func BenchmarkIntegrationGRPCAll(b *testing.B) {
 
 func benchmarkForTransportType(b *testing.B, transportType testutils.TransportType, f func(*exampleutil.Clients) error) {
 	keyValueYARPCServer := example.NewKeyValueYARPCServer()
-	sinkYARPCServer := example.NewSinkYARPCServer(false)
 	fooYARPCServer := example.NewFooYARPCServer(transport.NewHeaders())
-	exampleutil.WithClients(transportType, keyValueYARPCServer, sinkYARPCServer, fooYARPCServer, nil, f)
+	exampleutil.WithClients(transportType, keyValueYARPCServer, fooYARPCServer, nil, f)
 }
 
 func benchmarkIntegrationYARPC(b *testing.B, keyValueYARPCClient examplepb.KeyValueYARPCClient) {

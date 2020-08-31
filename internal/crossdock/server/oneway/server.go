@@ -27,7 +27,6 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/internal/crossdock/crossdockpb"
 	"go.uber.org/yarpc/internal/crossdock/thrift/oneway/onewayserver"
 	"go.uber.org/yarpc/transport/http"
 )
@@ -50,7 +49,6 @@ func Start() {
 	dispatcher.Register(raw.OnewayProcedure("echo/raw", h.EchoRaw))
 	dispatcher.Register(json.OnewayProcedure("echo/json", h.EchoJSON))
 	dispatcher.Register(onewayserver.New(&thriftHandler{h}))
-	dispatcher.Register(crossdockpb.BuildOnewayYARPCProcedures(&protoHandler{h}))
 
 	if err := dispatcher.Start(); err != nil {
 		log.Println("oneway server dispatcher failed to load:", err.Error())

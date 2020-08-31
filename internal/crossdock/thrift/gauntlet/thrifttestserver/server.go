@@ -396,6 +396,10 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
+type yarpcErrorNamer interface{ YARPCErrorName() string }
+
+type yarpcErrorCoder interface{ YARPCErrorCode() *yarpcerrors.Code }
+
 func (h handler) TestBinary(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestBinary_Args
 	if err := args.FromWire(body); err != nil {
@@ -403,16 +407,26 @@ func (h handler) TestBinary(ctx context.Context, body wire.Value) (thrift.Respon
 			"could not decode Thrift request for service 'ThriftTest' procedure 'TestBinary': %w", err)
 	}
 
-	success, err := h.impl.TestBinary(ctx, args.Thing)
+	success, appErr := h.impl.TestBinary(ctx, args.Thing)
 
-	hadError := err != nil
-	result, err := gauntlet.ThriftTest_TestBinary_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestBinary_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
@@ -423,16 +437,26 @@ func (h handler) TestByte(ctx context.Context, body wire.Value) (thrift.Response
 			"could not decode Thrift request for service 'ThriftTest' procedure 'TestByte': %w", err)
 	}
 
-	success, err := h.impl.TestByte(ctx, args.Thing)
+	success, appErr := h.impl.TestByte(ctx, args.Thing)
 
-	hadError := err != nil
-	result, err := gauntlet.ThriftTest_TestByte_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestByte_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
@@ -443,16 +467,26 @@ func (h handler) TestDouble(ctx context.Context, body wire.Value) (thrift.Respon
 			"could not decode Thrift request for service 'ThriftTest' procedure 'TestDouble': %w", err)
 	}
 
-	success, err := h.impl.TestDouble(ctx, args.Thing)
+	success, appErr := h.impl.TestDouble(ctx, args.Thing)
 
-	hadError := err != nil
-	result, err := gauntlet.ThriftTest_TestDouble_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestDouble_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
@@ -463,16 +497,26 @@ func (h handler) TestEnum(ctx context.Context, body wire.Value) (thrift.Response
 			"could not decode Thrift request for service 'ThriftTest' procedure 'TestEnum': %w", err)
 	}
 
-	success, err := h.impl.TestEnum(ctx, args.Thing)
+	success, appErr := h.impl.TestEnum(ctx, args.Thing)
 
-	hadError := err != nil
-	result, err := gauntlet.ThriftTest_TestEnum_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestEnum_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
@@ -483,16 +527,26 @@ func (h handler) TestException(ctx context.Context, body wire.Value) (thrift.Res
 			"could not decode Thrift request for service 'ThriftTest' procedure 'TestException': %w", err)
 	}
 
-	err := h.impl.TestException(ctx, args.Arg)
+	appErr := h.impl.TestException(ctx, args.Arg)
 
-	hadError := err != nil
-	result, err := gauntlet.ThriftTest_TestException_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestException_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
@@ -503,16 +557,26 @@ func (h handler) TestI32(ctx context.Context, body wire.Value) (thrift.Response,
 			"could not decode Thrift request for service 'ThriftTest' procedure 'TestI32': %w", err)
 	}
 
-	success, err := h.impl.TestI32(ctx, args.Thing)
+	success, appErr := h.impl.TestI32(ctx, args.Thing)
 
-	hadError := err != nil
-	result, err := gauntlet.ThriftTest_TestI32_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestI32_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
@@ -523,16 +587,26 @@ func (h handler) TestI64(ctx context.Context, body wire.Value) (thrift.Response,
 			"could not decode Thrift request for service 'ThriftTest' procedure 'TestI64': %w", err)
 	}
 
-	success, err := h.impl.TestI64(ctx, args.Thing)
+	success, appErr := h.impl.TestI64(ctx, args.Thing)
 
-	hadError := err != nil
-	result, err := gauntlet.ThriftTest_TestI64_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestI64_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
@@ -543,16 +617,26 @@ func (h handler) TestInsanity(ctx context.Context, body wire.Value) (thrift.Resp
 			"could not decode Thrift request for service 'ThriftTest' procedure 'TestInsanity': %w", err)
 	}
 
-	success, err := h.impl.TestInsanity(ctx, args.Argument)
+	success, appErr := h.impl.TestInsanity(ctx, args.Argument)
 
-	hadError := err != nil
-	result, err := gauntlet.ThriftTest_TestInsanity_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestInsanity_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
@@ -563,16 +647,26 @@ func (h handler) TestList(ctx context.Context, body wire.Value) (thrift.Response
 			"could not decode Thrift request for service 'ThriftTest' procedure 'TestList': %w", err)
 	}
 
-	success, err := h.impl.TestList(ctx, args.Thing)
+	success, appErr := h.impl.TestList(ctx, args.Thing)
 
-	hadError := err != nil
-	result, err := gauntlet.ThriftTest_TestList_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestList_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
@@ -583,16 +677,26 @@ func (h handler) TestMap(ctx context.Context, body wire.Value) (thrift.Response,
 			"could not decode Thrift request for service 'ThriftTest' procedure 'TestMap': %w", err)
 	}
 
-	success, err := h.impl.TestMap(ctx, args.Thing)
+	success, appErr := h.impl.TestMap(ctx, args.Thing)
 
-	hadError := err != nil
-	result, err := gauntlet.ThriftTest_TestMap_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestMap_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
@@ -603,16 +707,26 @@ func (h handler) TestMapMap(ctx context.Context, body wire.Value) (thrift.Respon
 			"could not decode Thrift request for service 'ThriftTest' procedure 'TestMapMap': %w", err)
 	}
 
-	success, err := h.impl.TestMapMap(ctx, args.Hello)
+	success, appErr := h.impl.TestMapMap(ctx, args.Hello)
 
-	hadError := err != nil
-	result, err := gauntlet.ThriftTest_TestMapMap_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestMapMap_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
@@ -623,16 +737,26 @@ func (h handler) TestMulti(ctx context.Context, body wire.Value) (thrift.Respons
 			"could not decode Thrift request for service 'ThriftTest' procedure 'TestMulti': %w", err)
 	}
 
-	success, err := h.impl.TestMulti(ctx, args.Arg0, args.Arg1, args.Arg2, args.Arg3, args.Arg4, args.Arg5)
+	success, appErr := h.impl.TestMulti(ctx, args.Arg0, args.Arg1, args.Arg2, args.Arg3, args.Arg4, args.Arg5)
 
-	hadError := err != nil
-	result, err := gauntlet.ThriftTest_TestMulti_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestMulti_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
@@ -643,16 +767,26 @@ func (h handler) TestMultiException(ctx context.Context, body wire.Value) (thrif
 			"could not decode Thrift request for service 'ThriftTest' procedure 'TestMultiException': %w", err)
 	}
 
-	success, err := h.impl.TestMultiException(ctx, args.Arg0, args.Arg1)
+	success, appErr := h.impl.TestMultiException(ctx, args.Arg0, args.Arg1)
 
-	hadError := err != nil
-	result, err := gauntlet.ThriftTest_TestMultiException_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestMultiException_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
@@ -663,16 +797,26 @@ func (h handler) TestNest(ctx context.Context, body wire.Value) (thrift.Response
 			"could not decode Thrift request for service 'ThriftTest' procedure 'TestNest': %w", err)
 	}
 
-	success, err := h.impl.TestNest(ctx, args.Thing)
+	success, appErr := h.impl.TestNest(ctx, args.Thing)
 
-	hadError := err != nil
-	result, err := gauntlet.ThriftTest_TestNest_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestNest_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
@@ -692,16 +836,26 @@ func (h handler) TestSet(ctx context.Context, body wire.Value) (thrift.Response,
 			"could not decode Thrift request for service 'ThriftTest' procedure 'TestSet': %w", err)
 	}
 
-	success, err := h.impl.TestSet(ctx, args.Thing)
+	success, appErr := h.impl.TestSet(ctx, args.Thing)
 
-	hadError := err != nil
-	result, err := gauntlet.ThriftTest_TestSet_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestSet_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
@@ -712,16 +866,26 @@ func (h handler) TestString(ctx context.Context, body wire.Value) (thrift.Respon
 			"could not decode Thrift request for service 'ThriftTest' procedure 'TestString': %w", err)
 	}
 
-	success, err := h.impl.TestString(ctx, args.Thing)
+	success, appErr := h.impl.TestString(ctx, args.Thing)
 
-	hadError := err != nil
-	result, err := gauntlet.ThriftTest_TestString_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestString_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
@@ -732,16 +896,26 @@ func (h handler) TestStringMap(ctx context.Context, body wire.Value) (thrift.Res
 			"could not decode Thrift request for service 'ThriftTest' procedure 'TestStringMap': %w", err)
 	}
 
-	success, err := h.impl.TestStringMap(ctx, args.Thing)
+	success, appErr := h.impl.TestStringMap(ctx, args.Thing)
 
-	hadError := err != nil
-	result, err := gauntlet.ThriftTest_TestStringMap_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestStringMap_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
@@ -752,16 +926,26 @@ func (h handler) TestStruct(ctx context.Context, body wire.Value) (thrift.Respon
 			"could not decode Thrift request for service 'ThriftTest' procedure 'TestStruct': %w", err)
 	}
 
-	success, err := h.impl.TestStruct(ctx, args.Thing)
+	success, appErr := h.impl.TestStruct(ctx, args.Thing)
 
-	hadError := err != nil
-	result, err := gauntlet.ThriftTest_TestStruct_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestStruct_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
@@ -772,16 +956,26 @@ func (h handler) TestTypedef(ctx context.Context, body wire.Value) (thrift.Respo
 			"could not decode Thrift request for service 'ThriftTest' procedure 'TestTypedef': %w", err)
 	}
 
-	success, err := h.impl.TestTypedef(ctx, args.Thing)
+	success, appErr := h.impl.TestTypedef(ctx, args.Thing)
 
-	hadError := err != nil
-	result, err := gauntlet.ThriftTest_TestTypedef_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestTypedef_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
@@ -792,15 +986,25 @@ func (h handler) TestVoid(ctx context.Context, body wire.Value) (thrift.Response
 			"could not decode Thrift request for service 'ThriftTest' procedure 'TestVoid': %w", err)
 	}
 
-	err := h.impl.TestVoid(ctx)
+	appErr := h.impl.TestVoid(ctx)
 
-	hadError := err != nil
-	result, err := gauntlet.ThriftTest_TestVoid_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestVoid_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }

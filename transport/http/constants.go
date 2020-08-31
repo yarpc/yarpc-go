@@ -99,6 +99,18 @@ const (
 	BothResponseErrorHeader = "Rpc-Both-Response-Error"
 )
 
+const (
+	// Headers for propagating transport.ApplicationErrorMeta.
+	_applicationErrorNameHeader    = "Rpc-Application-Error-Name"
+	_applicationErrorCodeHeader    = "Rpc-Application-Error-Code"
+	_applicationErrorDetailsHeader = "Rpc-Application-Error-Details"
+
+	// largest header value length for `transport.ApplicationErrorMeta#Details`
+	_maxAppErrDetailsHeaderLen = 256
+	// truncated message if we've exceeded the '_maxAppErrDetailsHeaderLen'
+	_truncatedHeaderMessage = " (truncated)"
+)
+
 // Valid values for the Rpc-Status header.
 const (
 	// The request was successful.

@@ -29,6 +29,7 @@ import (
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
 	oneway "go.uber.org/yarpc/internal/crossdock/thrift/oneway"
+	yarpcerrors "go.uber.org/yarpc/yarpcerrors"
 )
 
 // Interface is the server-side interface for the Oneway service.
@@ -69,6 +70,10 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 }
 
 type handler struct{ impl Interface }
+
+type yarpcErrorNamer interface{ YARPCErrorName() string }
+
+type yarpcErrorCoder interface{ YARPCErrorCode() *yarpcerrors.Code }
 
 func (h handler) Echo(ctx context.Context, body wire.Value) error {
 	var args oneway.Oneway_Echo_Args

@@ -226,6 +226,7 @@ func TestStreaming(t *testing.T) {
 					Proc(
 						Name("proc"),
 						OrderedStreamHandler(
+							StreamSendHeaders(map[string]string{"key": "value"}),
 							WantHeader("req_key", "req_val"),
 							WantHeader("req_key2", "req_val2"),
 							RecvStreamMsg("test"),
@@ -241,6 +242,7 @@ func TestStreaming(t *testing.T) {
 					WithHeader("req_key", "req_val"),
 					WithHeader("req_key2", "req_val2"),
 					ClientStreamActions(
+						WantHeaders(map[string]string{"key": "value"}),
 						SendStreamMsg("test"),
 						RecvStreamErr(io.EOF.Error()),
 					),

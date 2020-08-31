@@ -22,10 +22,17 @@ package tchannel
 
 import "time"
 
-// TransportName is the name of the transport.
-//
-// This value is what is used as transport.Request#Transport and transport.Namer
-// for Outbounds.
-const TransportName = "tchannel"
+const (
+	// TransportName is the name of the transport.
+	//
+	// This value is what is used as transport.Request#Transport and transport.Namer
+	// for Outbounds.
+	TransportName = "tchannel"
+
+	// largest header value length for `transport.ApplicationErrorMeta#Details`
+	_maxAppErrDetailsHeaderLen = 256
+	// truncated message if we've exceeded the '_maxAppErrDetailsHeaderLen'
+	_truncatedHeaderMessage = " (truncated)"
+)
 
 var defaultConnTimeout = 500 * time.Millisecond

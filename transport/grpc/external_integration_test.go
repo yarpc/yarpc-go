@@ -22,6 +22,7 @@ package grpc_test
 
 import (
 	"context"
+	"errors"
 	"net"
 	"testing"
 	"time"
@@ -29,6 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/prototest/example"
@@ -36,6 +38,9 @@ import (
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/peer/roundrobin"
 	"go.uber.org/yarpc/transport/grpc"
+	"go.uber.org/yarpc/x/yarpctest"
+	"go.uber.org/yarpc/x/yarpctest/api"
+	"go.uber.org/yarpc/x/yarpctest/types"
 )
 
 func TestStreamingWithNoCtxDeadline(t *testing.T) {
@@ -115,4 +120,63 @@ func waitForPeerAvailable(t *testing.T, peerList *roundrobin.List, wait time.Dur
 	case <-peerAvailable:
 		return
 	}
+}
+
+func TestFoo(t *testing.T) {
+	const (
+		serviceName   = "test-service"
+		procedureName = "test-procedure"
+
+		appErrName    = "ProtoAppErrName"
+		appErrDetails = " this is an app error detail string!"
+
+		portName = "port"
+	)
+
+	handler := &types.UnaryHandler{
+		Handler: api.UnaryHandlerFunc(func(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
+			// simulate Protobuf encoding setting `transport.ApplicationErrorMeta`
+			metaSetter, ok := resw.(transport.ApplicationErrorMetaSetter)
+			if !ok {
+				return errors.New("missing transport.ApplicationErrorMetaSetter")
+			}
+			metaSetter.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
+				Name:    appErrName,
+				Details: appErrDetails,
+			})
+			return nil
+		})}
+
+	outboundMwAssertion := middleware.UnaryOutboundFunc(
+		func(ctx context.Context, req *transport.Request, next transport.UnaryOutbound) (*transport.Response, error) {
+			res, err := next.Call(ctx, req)
+
+			// verify gRPC propagating `transport.ApplicationErrorMeta`
+			require.NotNil(t, res.ApplicationErrorMeta, "missing transport.ApplicationErrorMeta")
+			assert.Equal(t, appErrName, res.ApplicationErrorMeta.Name, "incorrect app error name")
+			assert.Equal(t, appErrDetails, res.ApplicationErrorMeta.Details, "incorrect app error message")
+			assert.Nil(t, res.ApplicationErrorMeta.Code, "unexpected code")
+
+			return res, err
+		})
+
+	portProvider := yarpctest.NewPortProvider(t)
+	service := yarpctest.GRPCService(
+		yarpctest.Name(serviceName),
+		portProvider.NamedPort(portName),
+		yarpctest.Proc(yarpctest.Name(procedureName), handler),
+	)
+	require.NoError(t, service.Start(t))
+	defer func() { assert.NoError(t, service.Stop(t)) }()
+
+	request := yarpctest.GRPCRequest(
+		yarpctest.Service(serviceName),
+		portProvider.NamedPort(portName),
+		yarpctest.Procedure(procedureName),
+		yarpctest.GiveTimeout(time.Second),
+		api.RequestOptionFunc(func(opts *api.RequestOpts) {
+			opts.UnaryMiddleware = []middleware.UnaryOutbound{outboundMwAssertion}
+		}),
+	)
+	request.Run(t)
 }
