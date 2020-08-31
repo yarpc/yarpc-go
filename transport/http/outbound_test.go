@@ -212,7 +212,7 @@ func TestOutboundHeaders(t *testing.T) {
 
 func TestOutboundApplicationError(t *testing.T) {
 	const (
-		appErrMessage = "thrift ex message"
+		appErrDetails = "thrift ex message"
 		appErrName    = "thrift ex name"
 	)
 
@@ -221,7 +221,7 @@ func TestOutboundApplicationError(t *testing.T) {
 		status        string
 		appError      bool
 		appErrName    string
-		appErrMessage string
+		appErrDetails string
 		appErrCode    yarpcerrors.Code
 	}{
 		{
@@ -234,7 +234,7 @@ func TestOutboundApplicationError(t *testing.T) {
 			status:        "error",
 			appError:      true,
 			appErrName:    appErrName,
-			appErrMessage: appErrMessage,
+			appErrDetails: appErrDetails,
 			appErrCode:    yarpcerrors.CodeNotFound,
 		},
 		{
@@ -252,7 +252,7 @@ func TestOutboundApplicationError(t *testing.T) {
 				w.Header().Add("Rpc-Status", tt.status)
 
 				if tt.appError {
-					w.Header().Add(_applicationErrorMessageHeader, tt.appErrMessage)
+					w.Header().Add(_applicationErrorDetailsHeader, tt.appErrDetails)
 					w.Header().Add(_applicationErrorNameHeader, tt.appErrName)
 					w.Header().Add(_applicationErrorCodeHeader, strconv.Itoa(int(tt.appErrCode)))
 				}
@@ -282,7 +282,7 @@ func TestOutboundApplicationError(t *testing.T) {
 		assert.Equal(t, res.ApplicationError, tt.appError, "%v: application status", tt.desc)
 		if tt.appError {
 			require.NotNil(t, res.ApplicationErrorMeta)
-			assert.Equal(t, tt.appErrMessage, res.ApplicationErrorMeta.Message)
+			assert.Equal(t, tt.appErrDetails, res.ApplicationErrorMeta.Details)
 			assert.Equal(t, tt.appErrName, res.ApplicationErrorMeta.Name)
 			assert.Equal(t, &tt.appErrCode, res.ApplicationErrorMeta.Code)
 		}

@@ -69,9 +69,9 @@ const (
 	// _applicationErrorNameHeader is the header for the name of the application
 	// error.
 	_applicationErrorNameHeader = "rpc-application-error-name"
-	// _applicationErrorNameHeader is the header for the the application error
-	// message.
-	_applicationErrorMessageHeader = "rpc-application-error-message"
+	// _applicationErrorDetailsHeader is the header for the the application error
+	// meta details string.
+	_applicationErrorDetailsHeader = "rpc-application-error-details"
 
 	// ApplicationErrorHeaderValue is the value that will be set for
 	// ApplicationErrorHeader is there was an application error.
@@ -157,16 +157,16 @@ func metadataToApplicationErrorMeta(responseMD metadata.MD) *transport.Applicati
 		return nil
 	}
 
-	var message, name string
-	if header := responseMD[_applicationErrorMessageHeader]; len(header) == 1 {
-		message = header[0]
+	var details, name string
+	if header := responseMD[_applicationErrorDetailsHeader]; len(header) == 1 {
+		details = header[0]
 	}
 	if header := responseMD[_applicationErrorNameHeader]; len(header) == 1 {
 		name = header[0]
 	}
 
 	return &transport.ApplicationErrorMeta{
-		Message: message,
+		Details: details,
 		Name:    name,
 		// ignore Code, this should be derived from the error since codes are
 		// natively supported in gRPC and YARPC

@@ -93,7 +93,7 @@ func TestConvertToYARPCErrorApplicationErrorMeta(t *testing.T) {
 	assert.Equal(t, "StringValue", resw.ApplicationErrorMeta.Name, "expected first error detail name")
 	assert.Equal(t,
 		"[]{ StringValue{value:\"detail message\" } , Int32Value{value:42 } , BytesValue{value:\"detail bytes\" } }",
-		resw.ApplicationErrorMeta.Message,
+		resw.ApplicationErrorMeta.Details,
 		"unexpected string of error details")
 	assert.Nil(t, resw.ApplicationErrorMeta.Code, "code should nil")
 }

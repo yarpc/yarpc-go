@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   code under the `errorCode` field. Errors created outside of
   `protobuf.NewError` and `yarpcerrors` will yield `CodeUnknown`.
 - logging: Thrift exceptions and Protobuf error details are logged under the
-  `appErrMessage` field.
+  `errorDetails` field.
 - grpc: Enabled outbound introspection for debug pages.
 - experimental: Added `tchannel.GetResponseErrorMeta` API for retrieving native
   TChannel error response codes.

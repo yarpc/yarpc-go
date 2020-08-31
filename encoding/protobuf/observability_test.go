@@ -68,7 +68,7 @@ func TestProtobufErrorDetailObservability(t *testing.T) {
 		wantFields := []zapcore.Field{
 			zap.String("errorCode", "invalid-argument"),
 			zap.String("errorName", "StringValue"),
-			zap.String("appErrorMessage", "[]{ StringValue{value:\"string value\" } , Int32Value{value:100 } }"),
+			zap.String("errorDetails", "[]{ StringValue{value:\"string value\" } , Int32Value{value:100 } }"),
 		}
 		assertLogs(t, wantFields, observedLogs.TakeAll())
 	})
