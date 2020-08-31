@@ -183,7 +183,7 @@ func TestMiddlewareLogging(t *testing.T) {
 	yErrNoDetails := yarpcerrors.Newf(yarpcerrors.CodeAborted, "fail")
 	yErrWithDetails := yarpcerrors.Newf(yarpcerrors.CodeAborted, "fail").WithDetails([]byte("err detail"))
 	yErrResourceExhausted := yarpcerrors.CodeResourceExhausted
-	appErrMessage := "an app error message, usually from thriftEx.Error()!"
+	appErrDetails := "an app error detail string, usually from thriftEx.Error()!"
 
 	baseFields := func() []zapcore.Field {
 		return []zapcore.Field{
@@ -202,7 +202,7 @@ func TestMiddlewareLogging(t *testing.T) {
 		err                   error             // downstream error
 		applicationErr        bool              // downstream application error
 		applicationErrName    string            // downstream application error name
-		applicationErrMessage string            // downstream application error message
+		applicationErrDetails string            // downstream application error message
 		applicationErrCode    *yarpcerrors.Code // downstream application error code
 		wantErrLevel          zapcore.Level
 		wantInboundMsg        string
@@ -239,7 +239,7 @@ func TestMiddlewareLogging(t *testing.T) {
 		{
 			desc:                  "thrift application error with no name",
 			applicationErr:        true,
-			applicationErrMessage: appErrMessage,
+			applicationErrDetails: appErrDetails,
 			wantErrLevel:          zapcore.WarnLevel,
 			wantInboundMsg:        "Error handling inbound request.",
 			wantOutboundMsg:       "Error making outbound call.",
@@ -248,14 +248,14 @@ func TestMiddlewareLogging(t *testing.T) {
 				zap.Bool("successful", false),
 				zap.Skip(),
 				zap.String("error", "application_error"),
-				zap.String("appErrorMessage", appErrMessage),
+				zap.String("errorDetails", appErrDetails),
 			},
 		},
 		{
 			desc:                  "thrift application error with name and code",
 			applicationErr:        true,
 			applicationErrName:    "FunkyThriftError",
-			applicationErrMessage: appErrMessage,
+			applicationErrDetails: appErrDetails,
 			applicationErrCode:    &yErrResourceExhausted,
 			wantErrLevel:          zapcore.WarnLevel,
 			wantInboundMsg:        "Error handling inbound request.",
@@ -267,7 +267,7 @@ func TestMiddlewareLogging(t *testing.T) {
 				zap.String("error", "application_error"),
 				zap.String("errorCode", "resource-exhausted"),
 				zap.String("errorName", "FunkyThriftError"),
-				zap.String("appErrorMessage", appErrMessage),
+				zap.String("errorDetails", appErrDetails),
 			},
 		},
 		{
@@ -308,7 +308,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			err:                   yErrNoDetails,
 			applicationErr:        true, // always true for Protobuf handler errors
 			wantErrLevel:          zapcore.ErrorLevel,
-			applicationErrMessage: appErrMessage,
+			applicationErrDetails: appErrDetails,
 			applicationErrName:    "MyErrMessageName",
 			wantInboundMsg:        "Error handling inbound request.",
 			wantOutboundMsg:       "Error making outbound call.",
@@ -319,7 +319,7 @@ func TestMiddlewareLogging(t *testing.T) {
 				zap.Error(yErrNoDetails),
 				zap.String(_errorCodeLogKey, "aborted"),
 				zap.String(_errorNameLogKey, "MyErrMessageName"),
-				zap.String(_appErrorMessageLogKey, appErrMessage),
+				zap.String(_errorDetailsLogKey, appErrDetails),
 			},
 		},
 		{
@@ -345,7 +345,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			err:                   t.err,
 			applicationErr:        t.applicationErr,
 			applicationErrName:    t.applicationErrName,
-			applicationErrMessage: t.applicationErrMessage,
+			applicationErrDetails: t.applicationErrDetails,
 			applicationErrCode:    t.applicationErrCode,
 		}
 	}
@@ -355,7 +355,7 @@ func TestMiddlewareLogging(t *testing.T) {
 			err:                   t.err,
 			applicationErr:        t.applicationErr,
 			applicationErrName:    t.applicationErrName,
-			applicationErrMessage: t.applicationErrMessage,
+			applicationErrDetails: t.applicationErrDetails,
 			applicationErrCode:    t.applicationErrCode,
 		}
 	}
@@ -2063,7 +2063,7 @@ func TestNewWriterIsEmpty(t *testing.T) {
 
 	w.SetApplicationError()
 	w.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
-		Message: "foo", Name: "bar", Code: &code,
+		Details: "foo", Name: "bar", Code: &code,
 	})
 	w.free()
 

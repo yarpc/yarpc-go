@@ -128,7 +128,7 @@ func TestFoo(t *testing.T) {
 		procedureName = "test-procedure"
 
 		appErrName    = "ProtoAppErrName"
-		appErrMessage = " this is an app error message!"
+		appErrDetails = " this is an app error detail string!"
 
 		portName = "port"
 	)
@@ -142,7 +142,7 @@ func TestFoo(t *testing.T) {
 			}
 			metaSetter.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
 				Name:    appErrName,
-				Message: appErrMessage,
+				Details: appErrDetails,
 			})
 			return nil
 		})}
@@ -154,7 +154,7 @@ func TestFoo(t *testing.T) {
 			// verify gRPC propagating `transport.ApplicationErrorMeta`
 			require.NotNil(t, res.ApplicationErrorMeta, "missing transport.ApplicationErrorMeta")
 			assert.Equal(t, appErrName, res.ApplicationErrorMeta.Name, "incorrect app error name")
-			assert.Equal(t, appErrMessage, res.ApplicationErrorMeta.Message, "incorrect app error message")
+			assert.Equal(t, appErrDetails, res.ApplicationErrorMeta.Details, "incorrect app error message")
 			assert.Nil(t, res.ApplicationErrorMeta.Code, "unexpected code")
 
 			return res, err

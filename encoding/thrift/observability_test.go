@@ -77,7 +77,7 @@ func TestThriftExceptionObservability(t *testing.T) {
 					zap.String("error", "application_error"),
 					zap.String("errorName", "ExceptionWithCode"),
 					zap.String("errorCode", "data-loss"),
-					zap.String("appErrorMessage", "ExceptionWithCode{Val: exception with code}"),
+					zap.String("errorDetails", "ExceptionWithCode{Val: exception with code}"),
 				}
 				assertLogs(t, wantFields, observedLogs.TakeAll())
 			})
@@ -121,7 +121,7 @@ func TestThriftExceptionObservability(t *testing.T) {
 				wantFields := []zapcore.Field{
 					zap.String("error", "application_error"),
 					zap.String("errorName", "ExceptionWithoutCode"),
-					zap.String("appErrorMessage", "ExceptionWithoutCode{Val: exception with no code}"),
+					zap.String("errorDetails", "ExceptionWithoutCode{Val: exception with no code}"),
 				}
 				assertLogs(t, wantFields, observedLogs.TakeAll())
 			})

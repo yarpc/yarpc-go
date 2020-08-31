@@ -77,7 +77,7 @@ func (h handler) Healthy(ctx context.Context, body wire.Value) (thrift.Response,
 			response.ApplicationErrorCode = extractor.YARPCErrorCode()
 		}
 		if appErr != nil {
-			response.ApplicationErrorMessage = appErr.Error()
+			response.ApplicationErrorDetails = appErr.Error()
 		}
 	}
 
