@@ -304,7 +304,7 @@ func TestConfigurator(t *testing.T) {
 						http: {address: ":80"}
 					transports:
 						http:
-							keepAlive: "thirty"
+							keepAlive: thirty
 				`)
 
 				http := mockTransportSpecBuilder{
@@ -317,7 +317,8 @@ func TestConfigurator(t *testing.T) {
 				tt.wantErr = []string{
 					"failed to decode transport configuration:",
 					"error decoding 'KeepAlive'",
-					"invalid duration thirty",
+					`invalid duration`,
+					`thirty`,
 				}
 
 				return
