@@ -64,3 +64,5 @@ To run the test locally, run the following command:
 ```
 SUPPRESS_DOCKER=1 make test
 ```
+
+Happy development!
