@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.47.1] - 2020-09-02
+### Removed
+- Reverted `go.mod` Go version from 1.14 to 1.13.
+
 ## [1.47.0] - 2020-08-31
 ### Added
 - gRPC Streaming: Added the ability to send and read stream response headers.
@@ -1268,6 +1272,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[1.47.1]: https://github.com/yarpc/yarpc-go/compare/v1.47.0...v1.47.1
 [1.47.0]: https://github.com/yarpc/yarpc-go/compare/v1.46.0...v1.47.0
 [1.46.0]: https://github.com/yarpc/yarpc-go/compare/v1.45.0...v1.46.0
 [1.45.0]: https://github.com/yarpc/yarpc-go/compare/v1.44.0...v1.45.0
