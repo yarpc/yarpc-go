@@ -5,7 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- No changes yet.
+### Added
+- peer/hashring32: Support using an application header as the shard key, instead
+  of `transport.Request#ShardKey`
 
 ## [1.47.1] - 2020-09-02
 ### Removed
