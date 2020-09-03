@@ -21,6 +21,7 @@
 package yarpcerrors
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -171,7 +172,20 @@ func TestErrUnwrap(t *testing.T) {
 
 	assert.Equal(t, FromError(yErr).Message(), "wrap my custom err: my custom error", "unexpected message")
 	assert.Equal(t, myErr, errors.Unwrap(yErr), "expected original error")
+	assert.Equal(t, myErr, errors.Unwrap(FromError(myErr)), "expected original error")
 	assert.True(t, errors.Is(yErr, myErr), "expected original error")
+}
+
+func TestErrUnwrapIs(t *testing.T) {
+	err := FromError(context.DeadlineExceeded)
+	assert.True(t, errors.Is(err, context.DeadlineExceeded), "errors be errors, yo")
+}
+
+func TestErrUnwrapNil(t *testing.T) {
+	assert.NotPanics(t, func() {
+		var err *Status
+		errors.Unwrap(err)
+	})
 }
 
 type customYARPCError struct {

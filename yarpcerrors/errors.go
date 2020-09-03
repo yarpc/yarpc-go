@@ -87,7 +87,10 @@ func fromError(err error) (st *Status, ok bool) {
 //
 // See "errors" package documentation for details.
 func (s *Status) Unwrap() error {
-	return errors.Unwrap(s.err)
+	if s == nil {
+		return nil
+	}
+	return s.err
 }
 
 // IsStatus returns whether the provided error is a YARPC error, or has a
