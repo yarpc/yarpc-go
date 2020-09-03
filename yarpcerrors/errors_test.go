@@ -21,6 +21,7 @@
 package yarpcerrors
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -171,7 +172,51 @@ func TestErrUnwrap(t *testing.T) {
 
 	assert.Equal(t, FromError(yErr).Message(), "wrap my custom err: my custom error", "unexpected message")
 	assert.Equal(t, myErr, errors.Unwrap(yErr), "expected original error")
+	assert.Equal(t, myErr, errors.Unwrap(FromError(myErr)), "expected original error")
 	assert.True(t, errors.Is(yErr, myErr), "expected original error")
+}
+
+func TestErrUnwrapIs(t *testing.T) {
+	t.Run("FromError", func(t *testing.T) {
+		err := FromError(context.DeadlineExceeded)
+		assert.True(t, errors.Is(err, context.DeadlineExceeded), "errors be errors, yo")
+	})
+
+	t.Run("DeadlineExceededErrorf", func(t *testing.T) {
+		err := DeadlineExceededErrorf("Past due: %w", context.DeadlineExceeded)
+		assert.True(t, errors.Is(err, context.DeadlineExceeded), "errors be errors, yo")
+	})
+}
+
+func TestErrUnwrapNewf(t *testing.T) {
+	t.Run("no format", func(t *testing.T) {
+		err := Newf(CodeAborted, "not going to do it")
+		assert.NoError(t, errors.Unwrap(err))
+	})
+
+	t.Run("formatted with v verb", func(t *testing.T) {
+		origErr := errors.New("something broke")
+		err := Newf(CodeAborted, "not going to do it: %v", origErr)
+		assert.NoError(t, errors.Unwrap(err)) // %v hides the inner error
+	})
+
+	t.Run("wrapped with w verb", func(t *testing.T) {
+		origErr := errors.New("something broke")
+		err := Newf(CodeAborted, "not going to do it: %w", origErr)
+		assert.Equal(t, origErr, errors.Unwrap(err))
+	})
+}
+
+func TestErrUnwrapNil(t *testing.T) {
+	assert.NotPanics(t, func() {
+		var err *Status
+		errors.Unwrap(err)
+	})
+
+	assert.NotPanics(t, func() {
+		err := &Status{}
+		errors.Unwrap(err)
+	})
 }
 
 type customYARPCError struct {

@@ -65,9 +65,12 @@ func FromError(err error) *Status {
 		return st
 	}
 
+	// Extra wrapping ensures Unwrap works consistently across *Status created
+	// by FromError and Newf.
+	// https://github.com/yarpc/yarpc-go/pull/1966
 	return &Status{
 		code: CodeUnknown,
-		err:  err,
+		err:  fmt.Errorf("%w", err),
 	}
 }
 
@@ -87,6 +90,9 @@ func fromError(err error) (st *Status, ok bool) {
 //
 // See "errors" package documentation for details.
 func (s *Status) Unwrap() error {
+	if s == nil {
+		return nil
+	}
 	return errors.Unwrap(s.err)
 }
 
