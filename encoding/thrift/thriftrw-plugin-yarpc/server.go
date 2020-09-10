@@ -176,7 +176,7 @@ func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$thrift>.
 <end>
 `
 
-func serverGenerator(data *templateData, files map[string][]byte) (err error) {
+func serverGenerator(data *serviceTemplateData, files map[string][]byte) (err error) {
 	packageName := filepath.Base(data.ServerPackagePath())
 	// kv.thrift => .../kv/keyvalueserver/server.go
 	path := filepath.Join(data.Module.Directory, packageName, "server.go")

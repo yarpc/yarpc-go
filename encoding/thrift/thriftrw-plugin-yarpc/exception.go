@@ -103,7 +103,7 @@ var (
 		}, ","))
 )
 
-func yarpcErrorGenerator(data *templateData, files map[string][]byte) error {
+func yarpcErrorGenerator(data *serviceTemplateData, files map[string][]byte) error {
 	// kv.thrift => .../kv/types_yarpc.go
 	path := filepath.Join(data.Module.Directory, "types_yarpc.go")
 
