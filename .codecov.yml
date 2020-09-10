@@ -60,6 +60,7 @@ ignore:
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/namefx/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/nameserver/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/nametest/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/noservices/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/weatherclient/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/weatherfx/

@@ -107,6 +107,16 @@ type serviceTemplateData struct {
 	SanitizeTChannel    bool
 }
 
+// moduleTemplateData contains the data for code gen templates. This should be
+// used by templates that operate on types
+//
+// use serviceTemplateData for generators that rely on service definitions
+type moduleTemplateData struct {
+	Module *api.Module
+
+	ContextImportPath string
+}
+
 // ParentServerPackagePath returns the import path for the immediate parent
 // service's YARPC server package or an empty string if this service doesn't
 // extend another service.
@@ -127,7 +137,10 @@ func (d *serviceTemplateData) ParentClientPackagePath() string {
 	return d.Parents[0].ClientPackagePath()
 }
 
-// genFunc is a function that generates some part of the code needed by the
+// moduleGenFunc is a function that generates some part of the code needed by the
+// plugin.
+type moduleGenFunc func(*moduleTemplateData, map[string][]byte) error
+
 // serviceGenFunc is a function that generates some part of the code needed by the
 // plugin.
 type serviceGenFunc func(*serviceTemplateData, map[string][]byte) error

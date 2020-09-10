@@ -92,9 +92,13 @@ type g struct {
 }
 
 func (g g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceResponse, error) {
+	// moduleGenerators apply to all Thrift IDL files, even when no service
+	// definition exists
+	moduleGenerators := []moduleGenFunc{yarpcErrorGenerator}
+
 	// serviceGenerators apply only when one or more services are defined in the
 	// Thrift IDL file.
-	serviceGenerators := []serviceGenFunc{clientGenerator, serverGenerator, yarpcErrorGenerator}
+	serviceGenerators := []serviceGenFunc{clientGenerator, serverGenerator}
 	if !*_noFx {
 		serviceGenerators = append(serviceGenerators, fxGenerator)
 	}
@@ -118,7 +122,18 @@ func (g g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceRespon
 			SanitizeTChannel:    g.SanitizeTChannel,
 		}
 		for _, gen := range serviceGenerators {
+			if err := gen(&data, files); err != nil {
+				return nil, err
+			}
+		}
+	}
 
+	for _, moduleID := range req.RootModules {
+		data := moduleTemplateData{
+			Module:            req.Modules[moduleID],
+			ContextImportPath: *_context,
+		}
+		for _, gen := range moduleGenerators {
 			if err := gen(&data, files); err != nil {
 				return nil, err
 			}

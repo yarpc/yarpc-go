@@ -24,7 +24,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/thriftrw/compile"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/noservices"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 func TestGetYARPCErrorCode(t *testing.T) {
@@ -51,5 +54,23 @@ func TestGetYARPCErrorCode(t *testing.T) {
 			"invalid rpc.code annotation for \"MyException\": \"foo\"\nAvailable codes: CANCELLED,UNKNOWN,INVALID_ARGUMENT,DEADLINE_EXCEEDED,NOT_FOUND,ALREADY_EXISTS,PERMISSION_DENIED,RESOURCE_EXHAUSTED,FAILED_PRECONDITION,ABORTED,OUT_OF_RANGE,UNIMPLEMENTED,INTERNAL,UNAVAILABLE,DATA_LOSS,UNAUTHENTICATED",
 			func() { getYARPCErrorCode(spec) },
 			"unexpected panic")
+	})
+}
+
+func TestGeneratedExceptionAnnotations(t *testing.T) {
+	// If we have complier errors within this test, it likely
+	// means that the generated types file is not being generated.
+
+	t.Run("exception without annotation", func(t *testing.T) {
+		ex := noservices.ExWithoutAnnotation{}
+		assert.Nil(t, ex.YARPCErrorCode(), "unexpected code")
+		assert.Equal(t, ex.YARPCErrorName(), "ExWithoutAnnotation")
+	})
+
+	t.Run("exception with annotation", func(t *testing.T) {
+		ex := noservices.ExWithAnnotation{}
+		require.NotNil(t, ex.YARPCErrorCode())
+		assert.Equal(t, yarpcerrors.CodeOutOfRange.String(), ex.YARPCErrorCode().String())
+		assert.Equal(t, ex.YARPCErrorName(), "ExWithAnnotation")
 	})
 }
