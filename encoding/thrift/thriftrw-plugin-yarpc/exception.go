@@ -38,7 +38,7 @@ const yarpcerrorTemplate = `
 // @generated
 
 <$pkgname := (lower .Name)>
-package <$pkgname>
+package .Name
 
 <range $key, $val := .Types>
 	<if (isException $val)>
