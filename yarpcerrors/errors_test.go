@@ -285,3 +285,24 @@ func TestErrorWithFmtVerbs(t *testing.T) {
 	err := errors.New(`http://foo%s: invalid URL escape "%s"`)
 	assert.EqualError(t, UnknownErrorf(err.Error()), FromError(err).Error())
 }
+
+func TestWrapError(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
+		var we *wrapError
+		assert.Empty(t, we.Error())
+		assert.NoError(t, errors.Unwrap(we))
+	})
+
+	t.Run("empty", func(t *testing.T) {
+		we := &wrapError{}
+		assert.Empty(t, we.Error())
+		assert.NoError(t, errors.Unwrap(we))
+	})
+
+	t.Run("full", func(t *testing.T) {
+		inner := errors.New("i'm a little error")
+		we := &wrapError{err: inner}
+		assert.Equal(t, inner.Error(), we.Error())
+		assert.Equal(t, inner, errors.Unwrap(we))
+	})
+}

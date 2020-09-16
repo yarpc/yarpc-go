@@ -70,7 +70,7 @@ func FromError(err error) *Status {
 	// https://github.com/yarpc/yarpc-go/pull/1966
 	return &Status{
 		code: CodeUnknown,
-		err:  fmt.Errorf("%w", err),
+		err:  &wrapError{err: err},
 	}
 }
 
@@ -201,6 +201,27 @@ func (s *Status) Error() string {
 		_, _ = buffer.WriteString(s.err.Error())
 	}
 	return buffer.String()
+}
+
+// wrapError does what it says on the tin.
+type wrapError struct {
+	err error
+}
+
+// Error returns the inner error message.
+func (e *wrapError) Error() string {
+	if e == nil || e.err == nil {
+		return ""
+	}
+	return e.err.Error()
+}
+
+// Unwrap returns the inner error.
+func (e *wrapError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.err
 }
 
 // CancelledErrorf returns a new Status with code CodeCancelled
