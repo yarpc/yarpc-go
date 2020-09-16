@@ -152,7 +152,7 @@ func DelimitedReplicaFormatter(delimiter string) ReplicaFormatterFunc {
 	}
 }
 
-// NumPeersEstimate specifies an estimate for the nubmer of identified peers
+// NumPeersEstimate specifies an estimate for the number of identified peers
 // the hashring will contain.
 //
 // This figure and the number of replicas determines the initial capacity of the ring slice.

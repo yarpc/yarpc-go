@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   `errors.Is` and `errors.Unwrap`.
 - thrift plugin: `types_yarpc.go` file, which contains exception annotations is
   always generated.
+- thrift plugin: `types_yarpc.go` recognizes case-sensitive Thrift file names
+  for generating correct Go package name.
 
 ## [1.47.1] - 2020-09-02
 ### Removed
