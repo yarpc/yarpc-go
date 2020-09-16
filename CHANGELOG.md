@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Fixed
+- errors returned by `yarpcerrors.FromError` now behave properly when using
+  `errors.Is` and `errors.Unwrap`.
 - thrift plugin: `types_yarpc.go` file, which contains exception annotations is
   always generated.
 - thrift plugin: `types_yarpc.go` recognizes case-sensitive Thrift file names
