@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.47.2] - 2020-09-16
 ### Fixed
 - errors returned by `yarpcerrors.FromError` now behave properly when using
   `errors.Is` and `errors.Unwrap`.
@@ -1281,7 +1281,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.47.1...HEAD
+[1.47.2]: https://github.com/yarpc/yarpc-go/compare/v1.47.1...v1.47.2
 [1.47.1]: https://github.com/yarpc/yarpc-go/compare/v1.47.0...v1.47.1
 [1.47.0]: https://github.com/yarpc/yarpc-go/compare/v1.46.0...v1.47.0
 [1.46.0]: https://github.com/yarpc/yarpc-go/compare/v1.45.0...v1.46.0
