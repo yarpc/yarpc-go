@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.47.2] - 2020-09-16
+### Fixed
+- errors returned by `yarpcerrors.FromError` now behave properly when using
+  `errors.Is` and `errors.Unwrap`.
+- thrift plugin: `types_yarpc.go` file, which contains exception annotations is
+  always generated.
+- thrift plugin: `types_yarpc.go` recognizes case-sensitive Thrift file names
+  for generating correct Go package name.
+
 ## [1.47.1] - 2020-09-02
 ### Removed
 - Reverted `go.mod` Go version from 1.14 to 1.13.
@@ -1272,6 +1281,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[1.47.2]: https://github.com/yarpc/yarpc-go/compare/v1.47.1...v1.47.2
 [1.47.1]: https://github.com/yarpc/yarpc-go/compare/v1.47.0...v1.47.1
 [1.47.0]: https://github.com/yarpc/yarpc-go/compare/v1.46.0...v1.47.0
 [1.46.0]: https://github.com/yarpc/yarpc-go/compare/v1.45.0...v1.46.0

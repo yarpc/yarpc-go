@@ -31,7 +31,7 @@ import:
 - package: go.uber.org/net/metrics
   version: ^1
 - package: go.uber.org/thriftrw
-  version: ^1.10
+  version: ^1.25.0
 - package: golang.org/x/net
   version: master
   subpackages:
