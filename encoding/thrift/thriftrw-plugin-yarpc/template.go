@@ -94,9 +94,9 @@ func (s *Svc) FxPackagePath() string {
 	return fmt.Sprintf("%s/%sfx", s.Module.ImportPath, strings.ToLower(s.Name))
 }
 
-// templateData contains all the data needed for the different code gen
-// templates used by this plugin.
-type templateData struct {
+// serviceTemplateData contains the data for code gen templates that operate on
+// a Thrift service.
+type serviceTemplateData struct {
 	*Svc
 
 	ContextImportPath   string
@@ -107,10 +107,20 @@ type templateData struct {
 	SanitizeTChannel    bool
 }
 
+// moduleTemplateData contains the data for code gen templates. This should be
+// used by templates that operate on types
+//
+// use serviceTemplateData for generators that rely on service definitions
+type moduleTemplateData struct {
+	Module *api.Module
+
+	ContextImportPath string
+}
+
 // ParentServerPackagePath returns the import path for the immediate parent
 // service's YARPC server package or an empty string if this service doesn't
 // extend another service.
-func (d *templateData) ParentServerPackagePath() string {
+func (d *serviceTemplateData) ParentServerPackagePath() string {
 	if len(d.Parents) == 0 {
 		return ""
 	}
@@ -120,16 +130,20 @@ func (d *templateData) ParentServerPackagePath() string {
 // ParentClientPackagePath returns the import path for the immediate parent
 // service's YARPC client package or an empty string if this service doesn't
 // extend another service.
-func (d *templateData) ParentClientPackagePath() string {
+func (d *serviceTemplateData) ParentClientPackagePath() string {
 	if len(d.Parents) == 0 {
 		return ""
 	}
 	return d.Parents[0].ClientPackagePath()
 }
 
-// genFunc is a function that generates some part of the code needed by the
+// moduleGenFunc is a function that generates some part of the code needed by the
 // plugin.
-type genFunc func(*templateData, map[string][]byte) error
+type moduleGenFunc func(*moduleTemplateData, map[string][]byte) error
+
+// serviceGenFunc is a function that generates some part of the code needed by the
+// plugin.
+type serviceGenFunc func(*serviceTemplateData, map[string][]byte) error
 
 // Default options for the template
 var templateOptions = []plugin.TemplateOption{

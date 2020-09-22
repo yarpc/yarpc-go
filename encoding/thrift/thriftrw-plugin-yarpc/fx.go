@@ -162,7 +162,7 @@ func Server(opts ...<$thrift>.RegisterOption) interface{} {
 }
 `
 
-func fxGenerator(data *templateData, files map[string][]byte) (err error) {
+func fxGenerator(data *serviceTemplateData, files map[string][]byte) (err error) {
 	packageName := filepath.Base(data.FxPackagePath())
 
 	// kv.thrift => .../kv/keyvaluefx/doc.go

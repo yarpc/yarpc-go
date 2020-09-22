@@ -106,7 +106,7 @@ func (mr *_MockClientRecorder) <.Name>(
 <end>
 `
 
-func gomockGenerator(data *templateData, files map[string][]byte) (err error) {
+func gomockGenerator(data *serviceTemplateData, files map[string][]byte) (err error) {
 	packageName := filepath.Base(data.TestPackagePath())
 	// kv.thrift => .../kv/keyvaluetest/client.go
 	path := filepath.Join(data.Module.Directory, packageName, "client.go")

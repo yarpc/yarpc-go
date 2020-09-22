@@ -135,7 +135,7 @@ func (c client) <.Name>(
 <end>
 `
 
-func clientGenerator(data *templateData, files map[string][]byte) (err error) {
+func clientGenerator(data *serviceTemplateData, files map[string][]byte) (err error) {
 	packageName := filepath.Base(data.ClientPackagePath())
 	// kv.thrift => .../kv/keyvalueclient/client.go
 	path := filepath.Join(data.Module.Directory, packageName, "client.go")

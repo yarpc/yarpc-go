@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - peer/hashring32: Support using an application header as the shard key, instead
   of `transport.Request#ShardKey`
 
+## [1.47.2] - 2020-09-16
+### Fixed
+- errors returned by `yarpcerrors.FromError` now behave properly when using
+  `errors.Is` and `errors.Unwrap`.
+- thrift plugin: `types_yarpc.go` file, which contains exception annotations is
+  always generated.
+- thrift plugin: `types_yarpc.go` recognizes case-sensitive Thrift file names
+  for generating correct Go package name.
+
 ## [1.47.1] - 2020-09-02
 ### Removed
 - Reverted `go.mod` Go version from 1.14 to 1.13.
@@ -1277,7 +1286,8 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.47.1...HEAD
+[Unrleased]: https://github.com/yarpc/yarpc-go/compare/v1.47.2...HEAD
+[1.47.2]: https://github.com/yarpc/yarpc-go/compare/v1.47.1...v1.47.2
 [1.47.1]: https://github.com/yarpc/yarpc-go/compare/v1.47.0...v1.47.1
 [1.47.0]: https://github.com/yarpc/yarpc-go/compare/v1.46.0...v1.47.0
 [1.46.0]: https://github.com/yarpc/yarpc-go/compare/v1.45.0...v1.46.0

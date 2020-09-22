@@ -92,22 +92,28 @@ type g struct {
 }
 
 func (g g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceResponse, error) {
-	generators := []genFunc{clientGenerator, serverGenerator, yarpcErrorGenerator}
+	// moduleGenerators apply to all Thrift IDL files, even when no service
+	// definition exists
+	moduleGenerators := []moduleGenFunc{yarpcErrorGenerator}
+
+	// serviceGenerators apply only when one or more services are defined in the
+	// Thrift IDL file.
+	serviceGenerators := []serviceGenFunc{clientGenerator, serverGenerator}
 	if !*_noFx {
-		generators = append(generators, fxGenerator)
+		serviceGenerators = append(serviceGenerators, fxGenerator)
 	}
 	if !*_noGomock {
-		generators = append(generators, gomockGenerator)
+		serviceGenerators = append(serviceGenerators, gomockGenerator)
 	}
 
 	unaryWrapperImport, unaryWrapperFunc := splitFunctionPath(*_unaryHandlerWrapper)
 	onewayWrapperImport, onewayWrapperFunc := splitFunctionPath(*_onewayHandlerWrapper)
 
 	files := make(map[string][]byte)
+
 	for _, serviceID := range req.RootServices {
-		svc := buildSvc(serviceID, req)
-		data := templateData{
-			Svc:                 svc,
+		data := serviceTemplateData{
+			Svc:                 buildSvc(serviceID, req),
 			ContextImportPath:   *_context,
 			UnaryWrapperImport:  unaryWrapperImport,
 			UnaryWrapperFunc:    unaryWrapperFunc,
@@ -115,8 +121,19 @@ func (g g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceRespon
 			OnewayWrapperFunc:   onewayWrapperFunc,
 			SanitizeTChannel:    g.SanitizeTChannel,
 		}
+		for _, gen := range serviceGenerators {
+			if err := gen(&data, files); err != nil {
+				return nil, err
+			}
+		}
+	}
 
-		for _, gen := range generators {
+	for _, moduleID := range req.RootModules {
+		data := moduleTemplateData{
+			Module:            req.Modules[moduleID],
+			ContextImportPath: *_context,
+		}
+		for _, gen := range moduleGenerators {
 			if err := gen(&data, files); err != nil {
 				return nil, err
 			}
