@@ -87,8 +87,8 @@ func (o peerOverrideHeaderOption) apply(opts *options) {
 // AlternateShardKeyHeader allows clients to pass a header containing the shard
 // identifier for a specific peer to override the destination address for the
 // outgoing request.
-func AlternateShardKeyHeader(peerOverrideHeader string) Option {
-	return peerOverrideHeaderOption{peerOverrideHeader: peerOverrideHeader}
+func AlternateShardKeyHeader(alternateShardKeyHeader string) Option {
+	return alternateShardKeyHeaderOption{alternateShardKeyHeader: alternateShardKeyHeader}
 }
 
 type alternateShardKeyHeaderOption struct {
