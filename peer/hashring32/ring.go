@@ -47,19 +47,21 @@ func NewImplementation(opts ...Option) abstractlist.Implementation {
 		farmhashring.Fingerprint32,
 		options.offsetHeader,
 		options.peerOverrideHeader,
+		options.alternateShardKeyHeader,
 		options.logger,
 		options.peerRingOptions...,
 	)
 }
 
 // newPeerRing creates a new peerRing with an initial capacity
-func newPeerRing(hashFunc hashring32.HashFunc32, offsetHeader, peerOverrideHeader string, logger *zap.Logger, option ...hashring32.Option) *peerRing {
+func newPeerRing(hashFunc hashring32.HashFunc32, offsetHeader, peerOverrideHeader, alternateShardKeyHeader string, logger *zap.Logger, option ...hashring32.Option) *peerRing {
 	return &peerRing{
-		ring:               hashring32.New(hashFunc, option...),
-		subscribers:        make(map[string]*subscriber),
-		offsetHeader:       offsetHeader,
-		peerOverrideHeader: peerOverrideHeader,
-		logger:             logger,
+		ring:                    hashring32.New(hashFunc, option...),
+		subscribers:             make(map[string]*subscriber),
+		offsetHeader:            offsetHeader,
+		peerOverrideHeader:      peerOverrideHeader,
+		logger:                  logger,
+		alternateShardKeyHeader: alternateShardKeyHeader,
 	}
 }
 
@@ -73,11 +75,12 @@ func (s *subscriber) UpdatePendingRequestCount(int) {}
 // changing list of peer objects
 // peerRing is NOT Thread-safe, make sure to only call peerRing functions with a lock
 type peerRing struct {
-	ring               *hashring32.Hashring32
-	subscribers        map[string]*subscriber
-	offsetHeader       string
-	peerOverrideHeader string
-	logger             *zap.Logger
+	ring                    *hashring32.Hashring32
+	subscribers             map[string]*subscriber
+	offsetHeader            string
+	peerOverrideHeader      string
+	alternateShardKeyHeader string
+	logger                  *zap.Logger
 }
 
 var _ abstractlist.Implementation = (*peerRing)(nil)
@@ -153,8 +156,13 @@ func (pr *peerRing) Choose(req *transport.Request) peer.StatusPeer {
 		}
 	}
 
+	shardKey := req.ShardKey
+	if pr.alternateShardKeyHeader != "" {
+		shardKey, _ = req.Headers.Get(pr.alternateShardKeyHeader)
+	}
+
 	ids, err := pr.ring.Choose(hashring32.Shard{
-		Key: req.ShardKey,
+		Key: shardKey,
 		N:   n,
 	})
 	if err != nil {

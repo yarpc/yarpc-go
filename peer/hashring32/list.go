@@ -35,11 +35,12 @@ import (
 )
 
 type options struct {
-	offsetHeader         string
-	peerOverrideHeader   string
-	peerRingOptions      []hashring32.Option
-	defaultChooseTimeout *time.Duration
-	logger               *zap.Logger
+	offsetHeader            string
+	peerOverrideHeader      string
+	alternateShardKeyHeader string
+	peerRingOptions         []hashring32.Option
+	defaultChooseTimeout    *time.Duration
+	logger                  *zap.Logger
 }
 
 // Option customizes the behavior of hashring32 peer list.
@@ -81,6 +82,21 @@ type peerOverrideHeaderOption struct {
 
 func (o peerOverrideHeaderOption) apply(opts *options) {
 	opts.peerOverrideHeader = o.peerOverrideHeader
+}
+
+// AlternateShardKeyHeader allows clients to pass a header containing the shard
+// identifier for a specific peer to override the destination address for the
+// outgoing request.
+func AlternateShardKeyHeader(alternateShardKeyHeader string) Option {
+	return alternateShardKeyHeaderOption{alternateShardKeyHeader: alternateShardKeyHeader}
+}
+
+type alternateShardKeyHeaderOption struct {
+	alternateShardKeyHeader string
+}
+
+func (o alternateShardKeyHeaderOption) apply(opts *options) {
+	opts.alternateShardKeyHeader = o.alternateShardKeyHeader
 }
 
 // ReplicaDelimiter overrides the the delimiter the hash ring uses to construct
@@ -144,7 +160,14 @@ func New(transport peer.Transport, hashFunc hashring32.HashFunc32, opts ...Optio
 		logger = zap.NewNop()
 	}
 
-	ring := newPeerRing(hashFunc, options.offsetHeader, options.peerOverrideHeader, logger, options.peerRingOptions...)
+	ring := newPeerRing(
+		hashFunc,
+		options.offsetHeader,
+		options.peerOverrideHeader,
+		options.alternateShardKeyHeader,
+		logger,
+		options.peerRingOptions...,
+	)
 
 	plOpts := []abstractlist.Option{abstractlist.Logger(logger)}
 

@@ -83,6 +83,54 @@ func TestAddRemoveAndChoose(t *testing.T) {
 
 }
 
+func TestAddRemoveAndChooseWithAlternateShardKeyHeader(t *testing.T) {
+	trans := yarpctest.NewFakeTransport(yarpctest.InitialConnectionStatus(peer.Available))
+	pl := New(
+		trans,
+		farmhashring.Fingerprint32,
+		ReplicaDelimiter("#"),
+		AlternateShardKeyHeader("test-header-shard-key"),
+		Logger(zaptest.NewLogger(t)),
+	)
+
+	pl.Start()
+
+	pl.Update(
+		peer.ListUpdates{
+			Additions: []peer.Identifier{
+				&FakeShardIdentifier{id: "id1", shard: "shard-1"},
+				&FakeShardIdentifier{id: "id2", shard: "shard-2"},
+			},
+		},
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	r, _, err := pl.Choose(ctx, &transport.Request{Headers: transport.NewHeaders().With("test-header-shard-key", "foo1")})
+	require.NoError(t, err)
+	assert.Equal(t, "id1", r.Identifier())
+
+	r, _, err = pl.Choose(ctx, &transport.Request{Headers: transport.NewHeaders().With("test-header-shard-key", "foo2")})
+	require.NoError(t, err)
+	assert.Equal(t, "id2", r.Identifier())
+
+	pl.Update(
+		peer.ListUpdates{
+			Removals: []peer.Identifier{
+				&FakeShardIdentifier{id: "id2", shard: "shard2"},
+			},
+		},
+	)
+
+	r, _, _ = pl.Choose(ctx, &transport.Request{Headers: transport.NewHeaders().With("test-header-shard-key", "foo1")})
+	assert.Equal(t, "id1", r.Identifier())
+
+	r, _, _ = pl.Choose(ctx, &transport.Request{Headers: transport.NewHeaders().With("test-header-shard-key", "foo2")})
+	assert.Equal(t, "id1", r.Identifier())
+
+}
+
 func TestOverrideChooseAndRemoveOverrideChoose(t *testing.T) {
 	var headers transport.Headers
 	trans := yarpctest.NewFakeTransport(yarpctest.InitialConnectionStatus(peer.Available))
