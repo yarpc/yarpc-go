@@ -45,7 +45,7 @@ const (
 func makeHashring32() *Hashring32 {
 	return New(
 		farmhashring.Fingerprint32,
-		NumReplicas(100),
+		NumReplicas(1),
 		NumPeersEstimate(1500),
 	)
 }
@@ -225,12 +225,20 @@ func BenchmarkHashring32Adds1000(b *testing.B) {
 	benchmarkAdds(b, makeHashring32(), 1000)
 }
 
+func BenchmarkHashring32Adds10000(b *testing.B) {
+	benchmarkAdds(b, makeHashring32(), 10000)
+}
+
 func BenchmarkHashring32Removes100(b *testing.B) {
 	benchmarkRemoves(b, makeHashring32(), 100)
 }
 
 func BenchmarkHashring32Removes1000(b *testing.B) {
 	benchmarkRemoves(b, makeHashring32(), 1000)
+}
+
+func BenchmarkHashring32Removes10000(b *testing.B) {
+	benchmarkRemoves(b, makeHashring32(), 10000)
 }
 
 func BenchmarkHashring32Include100(b *testing.B) {
@@ -241,6 +249,10 @@ func BenchmarkHashring32Include1000(b *testing.B) {
 	benchmarkInclude(b, makeHashring32(), 1000)
 }
 
+func BenchmarkHashring32Include10000(b *testing.B) {
+	benchmarkInclude(b, makeHashring32(), 10000)
+}
+
 func BenchmarkHashring32Exclude100(b *testing.B) {
 	benchmarkExclude(b, makeHashring32(), 100)
 }
@@ -249,12 +261,20 @@ func BenchmarkHashring32Exclude1000(b *testing.B) {
 	benchmarkExclude(b, makeHashring32(), 1000)
 }
 
+func BenchmarkHashring32Exclude10000(b *testing.B) {
+	benchmarkExclude(b, makeHashring32(), 10000)
+}
+
 func BenchmarkHashring32Choose100NoHint(b *testing.B) {
 	benchmarkChoose(b, makeHashring32(), 100)
 }
 
 func BenchmarkHashring32Choose1000NoHint(b *testing.B) {
 	benchmarkChoose(b, makeHashring32(), 1000)
+}
+
+func BenchmarkHashring32Choose10000NoHint(b *testing.B) {
+	benchmarkChoose(b, makeHashring32(), 10000)
 }
 
 func BenchmarkHashring32Set100Updates10(b *testing.B) {
@@ -275,6 +295,7 @@ func benchmarkAdds(b *testing.B, hashring32 *Hashring32, capacity int) {
 	b.StopTimer()
 	updates := generateStringsGroup(capacity)
 	b.StartTimer()
+	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		hashring32.Set(generateEmptySet())
@@ -289,6 +310,7 @@ func benchmarkRemoves(b *testing.B, hashring32 *Hashring32, capacity int) {
 	b.StopTimer()
 	updates := generateStringsGroup(capacity)
 	b.StartTimer()
+	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		hashring32.Set(deepCopy(updates))
@@ -303,6 +325,7 @@ func benchmarkInclude(b *testing.B, hashring32 *Hashring32, capacity int) {
 	b.StopTimer()
 	updates := generateStringsGroup(capacity)
 	b.StartTimer()
+	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		hashring32.Set(generateEmptySet())
@@ -315,6 +338,7 @@ func benchmarkExclude(b *testing.B, hashring32 *Hashring32, capacity int) {
 	b.StopTimer()
 	updates := generateStringsGroup(capacity)
 	b.StartTimer()
+	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		hashring32.Set(deepCopy(updates))
@@ -331,6 +355,7 @@ func benchmarkChoose(b *testing.B, hashring32 *Hashring32, capacity int, shards 
 	numShards := len(shards)
 	k := 0
 	b.StartTimer()
+	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < capacity; j++ {
 			if numShards == 0 {
@@ -365,6 +390,7 @@ func benchmarkSet(b *testing.B, hashring32 *Hashring32, capacity, numUpdates int
 		j++
 	}
 	b.StartTimer()
+	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		hashring32.Set(old)

@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	defaultNumReplicas      = 100
+	defaultNumReplicas      = 1
 	defaultNumPeersEstimate = 1500
 )
 
