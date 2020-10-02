@@ -133,6 +133,46 @@ func (o loggerOption) apply(opts *options) {
 	opts.logger = o.logger
 }
 
+// NumReplicas allos client to specify the number of replicas to use for each peer.
+//
+// More replicas produces a more even distribution of entities and slower
+// membership updates.
+func NumReplicas(n int) Option {
+	return numReplicasOption{numReplicas: n}
+}
+
+type numReplicasOption struct {
+	numReplicas int
+}
+
+func (n numReplicasOption) apply(opts *options) {
+	opts.peerRingOptions = append(
+		opts.peerRingOptions,
+		hashring32.NumReplicas(
+			n.numReplicas,
+		),
+	)
+}
+
+// NumPeersEstimate allows client to specifiy an estimate for the number of identified peers
+// the hashring will contain.
+func NumPeersEstimate(n int) Option {
+	return numPeersEstimateOption{numPeersEstimate: n}
+}
+
+type numPeersEstimateOption struct {
+	numPeersEstimate int
+}
+
+func (n numPeersEstimateOption) apply(opts *options) {
+	opts.peerRingOptions = append(
+		opts.peerRingOptions,
+		hashring32.NumPeersEstimate(
+			n.numPeersEstimate,
+		),
+	)
+}
+
 // DefaultChooseTimeout specifies the default timeout to add to 'Choose' calls
 // without context deadlines. This prevents long-lived streams from setting
 // calling deadlines.

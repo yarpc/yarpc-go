@@ -43,6 +43,8 @@ func TestAddRemoveAndChoose(t *testing.T) {
 		PeerOverrideHeader("poTest"),
 		ReplicaDelimiter("#"),
 		Logger(zaptest.NewLogger(t)),
+		NumReplicas(5),
+		NumPeersEstimate(2),
 	)
 
 	pl.Start()
@@ -91,6 +93,8 @@ func TestAddRemoveAndChooseWithAlternateShardKeyHeader(t *testing.T) {
 		ReplicaDelimiter("#"),
 		AlternateShardKeyHeader("test-header-shard-key"),
 		Logger(zaptest.NewLogger(t)),
+		NumReplicas(5),
+		NumPeersEstimate(2),
 	)
 
 	pl.Start()
@@ -140,6 +144,8 @@ func TestOverrideChooseAndRemoveOverrideChoose(t *testing.T) {
 		OffsetHeader("test"),
 		PeerOverrideHeader("poTest"),
 		ReplicaDelimiter("#"),
+		NumReplicas(5),
+		NumPeersEstimate(2),
 	)
 
 	pl.Start()

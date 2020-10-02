@@ -22,6 +22,7 @@ package hashring32
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/api/peer"
@@ -32,9 +33,15 @@ import (
 
 func TestPendingHeapConfig(t *testing.T) {
 	s := Spec(nil, nil)
+	duration := time.Second * 1
+
 	c := Config{
-		OffsetHeader:     "offsetHeader",
-		ReplicaDelimiter: "#",
+		OffsetHeader:            "offsetHeader",
+		ReplicaDelimiter:        "#",
+		NumReplicas:             5,
+		NumPeersEstimate:        1000,
+		AlternateShardKeyHeader: "test-header",
+		DefaultChooseTimeout:    &duration,
 	}
 	build := s.BuildPeerList.(func(c Config, t peer.Transport, k *yarpcconfig.Kit) (peer.ChooserList, error))
 	pl, err := build(c, yarpctest.NewFakeTransport(), nil)
