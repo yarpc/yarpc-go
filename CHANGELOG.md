@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - peer/hashring32: Support using an application header as the shard key, instead
   of `transport.Request#ShardKey`
+- peer/hashring32: options NumReplicas and NumPeersEstimate are not private
+  anymore and can be used by consumer of the pkg.
+
 
 ## [1.47.2] - 2020-09-16
 ### Fixed
