@@ -157,6 +157,7 @@ type edge struct {
 	latencies          *metrics.Histogram
 	callerErrLatencies *metrics.Histogram
 	serverErrLatencies *metrics.Histogram
+	ttls               *metrics.Histogram
 
 	streaming *streamEdge
 }
@@ -235,7 +236,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 	}
 
 	// metrics for only unary and oneway
-	var latencies, callerErrLatencies, serverErrLatencies *metrics.Histogram
+	var latencies, callerErrLatencies, serverErrLatencies, ttls *metrics.Histogram
 	if rpcType == transport.Unary || rpcType == transport.Oneway {
 		latencies, err = meter.Histogram(metrics.HistogramSpec{
 			Spec: metrics.Spec{
@@ -272,6 +273,18 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		})
 		if err != nil {
 			logger.Error("Failed to create server failure latency distribution.", zap.Error(err))
+		}
+		ttls, err = meter.Histogram(metrics.HistogramSpec{
+			Spec: metrics.Spec{
+				Name:      "caller_ttl_ms",
+				Help:      "TTL distribution of the RPCs passed by the caller",
+				ConstTags: tags,
+			},
+			Unit:    time.Millisecond,
+			Buckets: _bucketsMs,
+		})
+		if err != nil {
+			logger.Error("Failed to create caller ttl distribution.", zap.Error(err))
 		}
 	}
 
@@ -386,6 +399,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		latencies:          latencies,
 		callerErrLatencies: callerErrLatencies,
 		serverErrLatencies: serverErrLatencies,
+		ttls:               ttls,
 		streaming:          streaming,
 	}
 }

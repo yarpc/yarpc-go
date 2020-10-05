@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   of `transport.Request#ShardKey`
 - peer/hashring32: options NumReplicas and NumPeersEstimate are not private
   anymore and can be used by consumer of the pkg.
+- observability: introduced inbound requests TTL histogram using context deadline 
+  to monitor caller TTL distribution
 
 
 ## [1.47.2] - 2020-09-16

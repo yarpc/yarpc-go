@@ -234,6 +234,13 @@ func (c call) endStats(
 	applicationErrorMeta *transport.ApplicationErrorMeta,
 ) {
 	c.edge.calls.Inc()
+
+	if c.direction == _directionInbound {
+		if deadlineTime, ok := c.ctx.Deadline(); ok {
+			c.edge.ttls.Observe(deadlineTime.Sub(c.started))
+		}
+	}
+
 	if err == nil && !isApplicationError {
 		c.edge.successes.Inc()
 		c.edge.latencies.Observe(elapsed)
