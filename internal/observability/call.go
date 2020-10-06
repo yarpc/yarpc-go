@@ -307,6 +307,11 @@ func (c call) endStatsFromFault(elapsed time.Duration, code yarpcerrors.Code, ap
 		); err == nil {
 			counter.Inc()
 		}
+		if c.direction == _directionInbound && code == yarpcerrors.CodeDeadlineExceeded {
+			if deadlineTime, ok := c.ctx.Deadline(); ok {
+				c.edge.timeoutTtls.Observe(deadlineTime.Sub(c.started))
+			}
+		}
 
 	default:
 		// If this code is executed we've hit an error code outside the usual error

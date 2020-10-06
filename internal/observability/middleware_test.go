@@ -1324,12 +1324,6 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 				Unit: time.Millisecond,
 			},
 			{
-				Name:   "caller_ttl_ms",
-				Tags:   tags,
-				Unit:   time.Millisecond,
-				Values: []int64{ttlMs},
-			},
-			{
 				Name: "server_failure_latency_ms",
 				Tags: tags,
 				Unit: time.Millisecond,
@@ -1339,6 +1333,17 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 				Tags:   tags,
 				Unit:   time.Millisecond,
 				Values: []int64{1},
+			},
+			{
+				Name: "timeout_ttl_ms",
+				Tags: tags,
+				Unit: time.Millisecond,
+			},
+			{
+				Name:   "ttl_ms",
+				Tags:   tags,
+				Unit:   time.Millisecond,
+				Values: []int64{ttlMs},
 			},
 		},
 	}
@@ -1412,7 +1417,97 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 				Unit: time.Millisecond,
 			},
 			{
-				Name: "caller_ttl_ms",
+				Name:   "server_failure_latency_ms",
+				Tags:   tags,
+				Unit:   time.Millisecond,
+				Values: []int64{1},
+			},
+			{
+				Name: "success_latency_ms",
+				Tags: tags,
+				Unit: time.Millisecond,
+			},
+			{
+				Name: "timeout_ttl_ms",
+				Tags: tags,
+				Unit: time.Millisecond,
+			},
+			{
+				Name: "ttl_ms",
+				Tags: tags,
+				Unit: time.Millisecond,
+			},
+		},
+	}
+	assert.Equal(t, want, snap, "Unexpected snapshot of metrics.")
+}
+
+func TestMiddlewareFailureWithDeadlineExceededSnapshot(t *testing.T) {
+	defer stubTimeWithTimeVal(time.Now())()
+
+	ttlMs := int64(1000)
+	root := metrics.New()
+	meter := root.Scope()
+	mw := NewMiddleware(Config{
+		Logger:           zap.NewNop(),
+		Scope:            meter,
+		ContextExtractor: NewNopContextExtractor(),
+	})
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*time.Duration(ttlMs)))
+	defer cancel()
+	err := mw.Handle(
+		ctx,
+		&transport.Request{
+			Caller:          "caller",
+			Service:         "service",
+			Transport:       "",
+			Encoding:        "raw",
+			Procedure:       "procedure",
+			ShardKey:        "sk",
+			RoutingKey:      "rk",
+			RoutingDelegate: "rd",
+			Body:            strings.NewReader("body"),
+		},
+		&transporttest.FakeResponseWriter{},
+		fakeHandler{err: yarpcerrors.DeadlineExceededErrorf("test deadline"), applicationErr: false},
+	)
+	assert.Error(t, err, "Expected transport error.")
+
+	snap := root.Snapshot()
+	tags := metrics.Tags{
+		"dest":             "service",
+		"direction":        "inbound",
+		"encoding":         "raw",
+		"procedure":        "procedure",
+		"routing_delegate": "rd",
+		"routing_key":      "rk",
+		"rpc_type":         transport.Unary.String(),
+		"source":           "caller",
+		"transport":        "unknown",
+	}
+	errorTags := metrics.Tags{
+		"dest":             "service",
+		"direction":        "inbound",
+		"encoding":         "raw",
+		"error":            "deadline-exceeded",
+		"error_name":       _notSet,
+		"procedure":        "procedure",
+		"routing_delegate": "rd",
+		"routing_key":      "rk",
+		"rpc_type":         transport.Unary.String(),
+		"source":           "caller",
+		"transport":        "unknown",
+	}
+	want := &metrics.RootSnapshot{
+		Counters: []metrics.Snapshot{
+			{Name: "calls", Tags: tags, Value: 1},
+			{Name: "panics", Tags: tags, Value: 0},
+			{Name: "server_failures", Tags: errorTags, Value: 1},
+			{Name: "successes", Tags: tags, Value: 0},
+		},
+		Histograms: []metrics.HistogramSnapshot{
+			{
+				Name: "caller_failure_latency_ms",
 				Tags: tags,
 				Unit: time.Millisecond,
 			},
@@ -1427,14 +1522,24 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 				Tags: tags,
 				Unit: time.Millisecond,
 			},
+			{
+				Name:   "timeout_ttl_ms",
+				Tags:   tags,
+				Unit:   time.Millisecond,
+				Values: []int64{ttlMs},
+			},
+			{
+				Name:   "ttl_ms",
+				Tags:   tags,
+				Unit:   time.Millisecond,
+				Values: []int64{ttlMs},
+			},
 		},
 	}
 	assert.Equal(t, want, snap, "Unexpected snapshot of metrics.")
 }
 
 func TestApplicationErrorSnapShot(t *testing.T) {
-	defer stubTime()()
-
 	tests := []struct {
 		name       string
 		err        error
@@ -1468,15 +1573,19 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			defer stubTimeWithTimeVal(time.Now())()
+
+			ttlMs := int64(1000)
 			root := metrics.New()
 			meter := root.Scope()
 			mw := NewMiddleware(Config{
 				Logger: zap.NewNop(),
 				Scope:  meter,
 			})
-
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(ttlMs)*time.Millisecond)
+			defer cancel()
 			err := mw.Handle(
-				context.Background(),
+				ctx,
 				&transport.Request{
 					Caller:          "caller",
 					Service:         "service",
@@ -1536,11 +1645,6 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 						Values: []int64{1},
 					},
 					{
-						Name: "caller_ttl_ms",
-						Tags: tags,
-						Unit: time.Millisecond,
-					},
-					{
 						Name: "server_failure_latency_ms",
 						Tags: tags,
 						Unit: time.Millisecond,
@@ -1549,6 +1653,17 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 						Name: "success_latency_ms",
 						Tags: tags,
 						Unit: time.Millisecond,
+					},
+					{
+						Name: "timeout_ttl_ms",
+						Tags: tags,
+						Unit: time.Millisecond,
+					},
+					{
+						Name:   "ttl_ms",
+						Tags:   tags,
+						Unit:   time.Millisecond,
+						Values: []int64{ttlMs},
 					},
 				},
 			}
