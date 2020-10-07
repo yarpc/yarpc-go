@@ -234,6 +234,13 @@ func (c call) endStats(
 	applicationErrorMeta *transport.ApplicationErrorMeta,
 ) {
 	c.edge.calls.Inc()
+
+	if c.direction == _directionInbound {
+		if deadlineTime, ok := c.ctx.Deadline(); ok {
+			c.edge.ttls.Observe(deadlineTime.Sub(c.started))
+		}
+	}
+
 	if err == nil && !isApplicationError {
 		c.edge.successes.Inc()
 		c.edge.latencies.Observe(elapsed)
@@ -299,6 +306,11 @@ func (c call) endStatsFromFault(elapsed time.Duration, code yarpcerrors.Code, ap
 			_errorNameMetricsKey, applicationErrorName,
 		); err == nil {
 			counter.Inc()
+		}
+		if c.direction == _directionInbound && code == yarpcerrors.CodeDeadlineExceeded {
+			if deadlineTime, ok := c.ctx.Deadline(); ok {
+				c.edge.timeoutTtls.Observe(deadlineTime.Sub(c.started))
+			}
 		}
 
 	default:

@@ -48,7 +48,23 @@ type Config struct {
 	// implied by the shard key.
 	PeerOverrideHeader string `config:"peerOverrideHeader"`
 
+	// AlternateShardKeyHeader allows clients to pass a header containing the shard
+	// identifier for a specific peer to override the destination address for the
+	// outgoing request.
+	AlternateShardKeyHeader string `config:"alternateShardKeyHeader"`
+
 	ReplicaDelimiter string `config:"replicaDelimiter"`
+
+	// NumReplicas specifies the number of replicas to use for each peer in the ring.
+	// Default is 100
+	NumReplicas int `config:"numReplicas"`
+
+	// NumPeersEstimate specifies an estimate for the number of identified peers
+	// the hashring will contain.
+	//
+	// This figure and the number of replicas determines the initial capacity of the ring slice.
+	// Default is 1500
+	NumPeersEstimate int `config:"numPeersEstimate"`
 
 	// DefaultChooseTimeout specifies the deadline to add to Choose calls if not
 	// present. This enables calls without deadlines, ie streaming, to choose
@@ -60,7 +76,7 @@ type Config struct {
 // implementation, making it possible to select peer based on a specified hashing
 // function.
 func Spec(logger *zap.Logger, meter *metrics.Scope) yarpcconfig.PeerListSpec {
-	// TODO thread meter thorugh list options to abstract list metrics.
+	// TODO thread meter through list options to abstract list metrics.
 
 	return yarpcconfig.PeerListSpec{
 		Name: "hashring32",
@@ -69,11 +85,20 @@ func Spec(logger *zap.Logger, meter *metrics.Scope) yarpcconfig.PeerListSpec {
 				OffsetHeader(c.OffsetHeader),
 				ReplicaDelimiter(c.ReplicaDelimiter),
 				PeerOverrideHeader(c.PeerOverrideHeader),
+				AlternateShardKeyHeader(c.AlternateShardKeyHeader),
 				Logger(logger),
 			}
 
 			if c.DefaultChooseTimeout != nil {
 				opts = append(opts, DefaultChooseTimeout(*c.DefaultChooseTimeout))
+			}
+
+			if c.NumReplicas != 0 {
+				opts = append(opts, NumReplicas(c.NumReplicas))
+			}
+
+			if c.NumPeersEstimate != 0 {
+				opts = append(opts, NumPeersEstimate(c.NumPeersEstimate))
 			}
 
 			return New(

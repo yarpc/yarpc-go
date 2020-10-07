@@ -35,11 +35,12 @@ import (
 )
 
 type options struct {
-	offsetHeader         string
-	peerOverrideHeader   string
-	peerRingOptions      []hashring32.Option
-	defaultChooseTimeout *time.Duration
-	logger               *zap.Logger
+	offsetHeader            string
+	peerOverrideHeader      string
+	alternateShardKeyHeader string
+	peerRingOptions         []hashring32.Option
+	defaultChooseTimeout    *time.Duration
+	logger                  *zap.Logger
 }
 
 // Option customizes the behavior of hashring32 peer list.
@@ -83,6 +84,21 @@ func (o peerOverrideHeaderOption) apply(opts *options) {
 	opts.peerOverrideHeader = o.peerOverrideHeader
 }
 
+// AlternateShardKeyHeader allows clients to pass a header containing the shard
+// identifier for a specific peer to override the destination address for the
+// outgoing request.
+func AlternateShardKeyHeader(alternateShardKeyHeader string) Option {
+	return alternateShardKeyHeaderOption{alternateShardKeyHeader: alternateShardKeyHeader}
+}
+
+type alternateShardKeyHeaderOption struct {
+	alternateShardKeyHeader string
+}
+
+func (o alternateShardKeyHeaderOption) apply(opts *options) {
+	opts.alternateShardKeyHeader = o.alternateShardKeyHeader
+}
+
 // ReplicaDelimiter overrides the the delimiter the hash ring uses to construct
 // replica identifiers from peer identifiers and replica numbers.
 //
@@ -117,6 +133,46 @@ func (o loggerOption) apply(opts *options) {
 	opts.logger = o.logger
 }
 
+// NumReplicas allos client to specify the number of replicas to use for each peer.
+//
+// More replicas produces a more even distribution of entities and slower
+// membership updates.
+func NumReplicas(n int) Option {
+	return numReplicasOption{numReplicas: n}
+}
+
+type numReplicasOption struct {
+	numReplicas int
+}
+
+func (n numReplicasOption) apply(opts *options) {
+	opts.peerRingOptions = append(
+		opts.peerRingOptions,
+		hashring32.NumReplicas(
+			n.numReplicas,
+		),
+	)
+}
+
+// NumPeersEstimate allows client to specifiy an estimate for the number of identified peers
+// the hashring will contain.
+func NumPeersEstimate(n int) Option {
+	return numPeersEstimateOption{numPeersEstimate: n}
+}
+
+type numPeersEstimateOption struct {
+	numPeersEstimate int
+}
+
+func (n numPeersEstimateOption) apply(opts *options) {
+	opts.peerRingOptions = append(
+		opts.peerRingOptions,
+		hashring32.NumPeersEstimate(
+			n.numPeersEstimate,
+		),
+	)
+}
+
 // DefaultChooseTimeout specifies the default timeout to add to 'Choose' calls
 // without context deadlines. This prevents long-lived streams from setting
 // calling deadlines.
@@ -144,7 +200,14 @@ func New(transport peer.Transport, hashFunc hashring32.HashFunc32, opts ...Optio
 		logger = zap.NewNop()
 	}
 
-	ring := newPeerRing(hashFunc, options.offsetHeader, options.peerOverrideHeader, logger, options.peerRingOptions...)
+	ring := newPeerRing(
+		hashFunc,
+		options.offsetHeader,
+		options.peerOverrideHeader,
+		options.alternateShardKeyHeader,
+		logger,
+		options.peerRingOptions...,
+	)
 
 	plOpts := []abstractlist.Option{abstractlist.Logger(logger)}
 

@@ -149,7 +149,11 @@ func (s *fakeStream) Close(context.Context) error {
 }
 
 func stubTime() func() {
+	return stubTimeWithTimeVal(time.Time{})
+}
+
+func stubTimeWithTimeVal(timeVal time.Time) func() {
 	prev := _timeNow
-	_timeNow = func() time.Time { return time.Time{} }
+	_timeNow = func() time.Time { return timeVal }
 	return func() { _timeNow = prev }
 }

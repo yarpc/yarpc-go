@@ -73,7 +73,7 @@
 //     rpc Echo(EchoRequest) returns (EchoResponse) {}
 //   }
 //
-// And the following configuation:
+// And the following configuration:
 //
 //   service:
 //     name: hello

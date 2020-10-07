@@ -157,6 +157,8 @@ type edge struct {
 	latencies          *metrics.Histogram
 	callerErrLatencies *metrics.Histogram
 	serverErrLatencies *metrics.Histogram
+	ttls               *metrics.Histogram
+	timeoutTtls        *metrics.Histogram
 
 	streaming *streamEdge
 }
@@ -235,7 +237,8 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 	}
 
 	// metrics for only unary and oneway
-	var latencies, callerErrLatencies, serverErrLatencies *metrics.Histogram
+	var latencies, callerErrLatencies, serverErrLatencies,
+		ttls, timeoutTtls *metrics.Histogram
 	if rpcType == transport.Unary || rpcType == transport.Oneway {
 		latencies, err = meter.Histogram(metrics.HistogramSpec{
 			Spec: metrics.Spec{
@@ -272,6 +275,30 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		})
 		if err != nil {
 			logger.Error("Failed to create server failure latency distribution.", zap.Error(err))
+		}
+		ttls, err = meter.Histogram(metrics.HistogramSpec{
+			Spec: metrics.Spec{
+				Name:      "ttl_ms",
+				Help:      "TTL distribution of the RPCs passed by the caller",
+				ConstTags: tags,
+			},
+			Unit:    time.Millisecond,
+			Buckets: _bucketsMs,
+		})
+		if err != nil {
+			logger.Error("Failed to create ttl distribution.", zap.Error(err))
+		}
+		timeoutTtls, err = meter.Histogram(metrics.HistogramSpec{
+			Spec: metrics.Spec{
+				Name:      "timeout_ttl_ms",
+				Help:      "TTL distribution of the RPCs passed by caller which failed due to timeout",
+				ConstTags: tags,
+			},
+			Unit:    time.Millisecond,
+			Buckets: _bucketsMs,
+		})
+		if err != nil {
+			logger.Error("Failed to create timeout ttl distribution.", zap.Error(err))
 		}
 	}
 
@@ -386,6 +413,8 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		latencies:          latencies,
 		callerErrLatencies: callerErrLatencies,
 		serverErrLatencies: serverErrLatencies,
+		ttls:               ttls,
+		timeoutTtls:        timeoutTtls,
 		streaming:          streaming,
 	}
 }
