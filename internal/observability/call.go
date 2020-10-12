@@ -236,13 +236,13 @@ func (c call) endStats(
 ) {
 	c.edge.calls.Inc()
 
-	if body, ok := c.req.Body.(*bufferpool.Buffer); ok {
-		c.edge.requestPayloadSizes.IncBucket(body.Size())
-	}
-
 	if c.direction == _directionInbound {
 		if deadlineTime, ok := c.ctx.Deadline(); ok {
 			c.edge.ttls.Observe(deadlineTime.Sub(c.started))
+		}
+
+		if body, ok := c.req.Body.(*bufferpool.Buffer); ok {
+			c.edge.requestPayloadSizes.IncBucket(body.Size())
 		}
 	}
 
