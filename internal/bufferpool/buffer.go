@@ -37,6 +37,9 @@ type Buffer struct {
 	// released tracks whether the buffer has been released.
 	released bool
 
+	// size holds total bytes written on the buffer
+	size int64
+
 	buf *bytes.Buffer
 }
 
@@ -79,6 +82,7 @@ func (b *Buffer) Read(p []byte) (int, error) {
 func (b *Buffer) ReadFrom(r io.Reader) (int64, error) {
 	version := b.preOp()
 	n, err := b.buf.ReadFrom(r)
+	b.size += n
 	b.postOp(version)
 	return n, err
 }
@@ -87,6 +91,7 @@ func (b *Buffer) ReadFrom(r io.Reader) (int64, error) {
 func (b *Buffer) Write(p []byte) (int, error) {
 	version := b.preOp()
 	n, err := b.buf.Write(p)
+	b.size += int64(n)
 	b.postOp(version)
 	return n, err
 }
@@ -120,7 +125,13 @@ func (b *Buffer) Len() int {
 func (b *Buffer) Reset() {
 	version := b.preOp()
 	b.buf.Reset()
+	b.size = 0
 	b.postOp(version)
+}
+
+// Size returns the total bytes written on the buffer
+func (b *Buffer) Size() int64 {
+	return b.size
 }
 
 // Release releases the buffer back to the buffer pool.

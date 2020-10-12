@@ -188,12 +188,26 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 		ctx = tchannel.ExtractInboundSpan(ctx, tcall.InboundCall, headers.Items(), tracer)
 	}
 
+	buf := bufferpool.Get()
+	defer bufferpool.Put(buf)
+
 	body, err := call.Arg3Reader()
 	if err != nil {
 		return err
 	}
 	defer body.Close()
-	treq.Body = body
+
+	_, err = buf.ReadFrom(body)
+	if err != nil {
+		return err
+	}
+
+	err = body.Close()
+	if err != nil {
+		return err
+	}
+
+	treq.Body = buf
 
 	if err := transport.ValidateRequest(treq); err != nil {
 		return err

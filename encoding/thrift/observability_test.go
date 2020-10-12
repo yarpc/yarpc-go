@@ -147,6 +147,43 @@ func TestThriftExceptionObservability(t *testing.T) {
 	}
 }
 
+func TestThriftMetrics(t *testing.T) {
+	transports := []string{tchannel.TransportName, http.TransportName}
+
+	for _, trans := range transports {
+		t.Run(trans+" thift call", func(t *testing.T) {
+			client, _, clientMetricsRoot, serverMetricsRoot, cleanup := initClientAndServer(t, trans)
+			defer cleanup()
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+
+			_, err := client.Call(ctx, _wantSuccess)
+			require.NoError(t, err, "unexpected error")
+
+			t.Run("counters", func(t *testing.T) {
+				wantCounters := []counterAssertion{
+					{Name: "calls", Value: 1},
+					{Name: "panics"},
+					{Name: "successes", Value: 1},
+				}
+				assertClientAndServerMetrics(t, wantCounters, clientMetricsRoot, serverMetricsRoot)
+			})
+			t.Run("inbound histograms", func(t *testing.T) {
+				wantHistograms := []histogramAssertion{
+					{Name: "caller_failure_latency_ms"},
+					{Name: "request_payload_size_bytes", Value: []int64{16}},
+					{Name: "server_failure_latency_ms"},
+					{Name: "success_latency_ms", Value: []int64{1}},
+					{Name: "timeout_ttl_ms"},
+					{Name: "ttl_ms", Value: []int64{1000}},
+				}
+				assertHistogram(t, wantHistograms, serverMetricsRoot.Snapshot().Histograms)
+			})
+		})
+	}
+}
+
 func assertLogs(t *testing.T, wantFields []zapcore.Field, logs []observer.LoggedEntry) {
 	require.Len(t, logs, 2, "unexpected number of logs")
 
@@ -181,6 +218,12 @@ type counterAssertion struct {
 	Value int
 }
 
+type histogramAssertion struct {
+	Name  string
+	Tags  map[string]string
+	Value []int64
+}
+
 func assertClientAndServerMetrics(t *testing.T, counterAssertions []counterAssertion, clientSnapshot, serverSnapshot *metrics.Root) {
 	t.Run("inbound", func(t *testing.T) {
 		assertMetrics(t, counterAssertions, serverSnapshot.Snapshot().Counters)
@@ -196,6 +239,18 @@ func assertMetrics(t *testing.T, counterAssertions []counterAssertion, snapshot 
 	for i, wantCounter := range counterAssertions {
 		require.Equal(t, wantCounter.Name, snapshot[i].Name, "unexpected counter")
 		assert.EqualValues(t, wantCounter.Value, snapshot[i].Value, "unexpected counter value")
+		for wantTagKey, wantTagVal := range wantCounter.Tags {
+			assert.Equal(t, wantTagVal, snapshot[i].Tags[wantTagKey], "unexpected value for %q", wantTagKey)
+		}
+	}
+}
+
+func assertHistogram(t *testing.T, histogramAssertions []histogramAssertion, snapshot []metrics.HistogramSnapshot) {
+	require.Len(t, histogramAssertions, len(snapshot), "unexpected number of histograms")
+
+	for i, wantCounter := range histogramAssertions {
+		require.Equal(t, wantCounter.Name, snapshot[i].Name, "unexpected histogram")
+		assert.EqualValues(t, wantCounter.Value, snapshot[i].Values, "unexpected histogram value")
 		for wantTagKey, wantTagVal := range wantCounter.Tags {
 			assert.Equal(t, wantTagVal, snapshot[i].Tags[wantTagKey], "unexpected value for %q", wantTagKey)
 		}

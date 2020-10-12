@@ -35,6 +35,7 @@ import (
 	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/internal/digester"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
@@ -1279,6 +1280,11 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 		ContextExtractor: NewNopContextExtractor(),
 	})
 
+	buf := bufferpool.Get()
+	defer bufferpool.Put(buf)
+
+	buf.Write([]byte("body"))
+
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*time.Duration(ttlMs)))
 	defer cancel()
 	err := mw.Handle(
@@ -1292,7 +1298,7 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 			ShardKey:        "sk",
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
-			Body:            strings.NewReader("body"),
+			Body:            buf,
 		},
 		&transporttest.FakeResponseWriter{},
 		fakeHandler{err: nil, applicationErr: false},
@@ -1322,6 +1328,12 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 				Name: "caller_failure_latency_ms",
 				Tags: tags,
 				Unit: time.Millisecond,
+			},
+			{
+				Name:   "request_payload_size_bytes",
+				Tags:   tags,
+				Unit:   time.Millisecond,
+				Values: []int64{4},
 			},
 			{
 				Name: "server_failure_latency_ms",
@@ -1360,6 +1372,11 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 		ContextExtractor: NewNopContextExtractor(),
 	})
 
+	buf := bufferpool.Get()
+	defer bufferpool.Put(buf)
+
+	buf.Write([]byte("test body"))
+
 	err := mw.Handle(
 		context.Background(),
 		&transport.Request{
@@ -1371,7 +1388,7 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 			ShardKey:        "sk",
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
-			Body:            strings.NewReader("body"),
+			Body:            buf,
 		},
 		&transporttest.FakeResponseWriter{},
 		fakeHandler{err: fmt.Errorf("yuno"), applicationErr: false},
@@ -1417,6 +1434,12 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 				Unit: time.Millisecond,
 			},
 			{
+				Name:   "request_payload_size_bytes",
+				Tags:   tags,
+				Unit:   time.Millisecond,
+				Values: []int64{16},
+			},
+			{
 				Name:   "server_failure_latency_ms",
 				Tags:   tags,
 				Unit:   time.Millisecond,
@@ -1453,6 +1476,12 @@ func TestMiddlewareFailureWithDeadlineExceededSnapshot(t *testing.T) {
 		Scope:            meter,
 		ContextExtractor: NewNopContextExtractor(),
 	})
+
+	buf := bufferpool.Get()
+	defer bufferpool.Put(buf)
+
+	buf.Write([]byte("test body"))
+
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*time.Duration(ttlMs)))
 	defer cancel()
 	err := mw.Handle(
@@ -1466,7 +1495,7 @@ func TestMiddlewareFailureWithDeadlineExceededSnapshot(t *testing.T) {
 			ShardKey:        "sk",
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
-			Body:            strings.NewReader("body"),
+			Body:            buf,
 		},
 		&transporttest.FakeResponseWriter{},
 		fakeHandler{err: yarpcerrors.DeadlineExceededErrorf("test deadline"), applicationErr: false},
@@ -1510,6 +1539,12 @@ func TestMiddlewareFailureWithDeadlineExceededSnapshot(t *testing.T) {
 				Name: "caller_failure_latency_ms",
 				Tags: tags,
 				Unit: time.Millisecond,
+			},
+			{
+				Name:   "request_payload_size_bytes",
+				Tags:   tags,
+				Unit:   time.Millisecond,
+				Values: []int64{16},
 			},
 			{
 				Name:   "server_failure_latency_ms",
@@ -1645,6 +1680,11 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 						Values: []int64{1},
 					},
 					{
+						Name: "request_payload_size_bytes",
+						Tags: tags,
+						Unit: time.Millisecond,
+					},
+					{
 						Name: "server_failure_latency_ms",
 						Tags: tags,
 						Unit: time.Millisecond,
@@ -1738,6 +1778,11 @@ func TestUnaryInboundApplicationPanics(t *testing.T) {
 					Tags:   tags,
 					Unit:   time.Millisecond,
 					Values: []int64{1}, // XXX this test flaps mysteriously. This figure is sometimes higher.
+				},
+				{
+					Name: "request_payload_size_bytes",
+					Tags: tags,
+					Unit: time.Millisecond,
 				},
 				{
 					Name: "server_failure_latency_ms",

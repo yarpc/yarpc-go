@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -234,6 +235,10 @@ func (c call) endStats(
 	applicationErrorMeta *transport.ApplicationErrorMeta,
 ) {
 	c.edge.calls.Inc()
+
+	if body, ok := c.req.Body.(*bufferpool.Buffer); ok {
+		c.edge.requestPayloadSizes.IncBucket(body.Size())
+	}
 
 	if c.direction == _directionInbound {
 		if deadlineTime, ok := c.ctx.Deadline(); ok {
