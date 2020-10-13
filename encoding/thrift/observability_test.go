@@ -173,6 +173,7 @@ func TestThriftMetrics(t *testing.T) {
 				wantHistograms := []histogramAssertion{
 					{Name: "caller_failure_latency_ms"},
 					{Name: "request_payload_size_bytes", Value: []int64{16}},
+					{Name: "response_payload_size_bytes", Value: []int64{16}},
 					{Name: "server_failure_latency_ms"},
 					{Name: "success_latency_ms", Value: []int64{1}},
 					{Name: "timeout_ttl_ms"},

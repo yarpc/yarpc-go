@@ -43,6 +43,8 @@ type writer struct {
 
 	isApplicationError   bool
 	applicationErrorMeta *transport.ApplicationErrorMeta
+
+	responseSize int64
 }
 
 func newWriter(rw transport.ResponseWriter) *writer {
@@ -65,6 +67,11 @@ func (w *writer) SetApplicationErrorMeta(applicationErrorMeta *transport.Applica
 	if appErrMetaSetter, ok := w.ResponseWriter.(transport.ApplicationErrorMetaSetter); ok {
 		appErrMetaSetter.SetApplicationErrorMeta(applicationErrorMeta)
 	}
+}
+
+func (w *writer) Write(p []byte) (n int, err error) {
+	w.responseSize += int64(len(p))
+	return w.ResponseWriter.Write(p)
 }
 
 func (w *writer) free() {
@@ -157,8 +164,7 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 	ctxErr := ctxErrOverride(ctx, req)
 	call.EndHandleWithAppError(
 		err,
-		wrappedWriter.isApplicationError,
-		wrappedWriter.applicationErrorMeta,
+		wrappedWriter,
 		ctxErr)
 	if ctxErr != nil {
 		err = ctxErr

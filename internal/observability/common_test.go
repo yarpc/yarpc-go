@@ -40,6 +40,7 @@ type fakeHandler struct {
 	applicationErrCode    *yarpcerrors.Code
 	applicationPanic      bool
 	handleStream          func(*transport.ServerStream)
+	responseData          []byte
 }
 
 func (h fakeHandler) Handle(_ context.Context, _ *transport.Request, rw transport.ResponseWriter) error {
@@ -56,6 +57,10 @@ func (h fakeHandler) Handle(_ context.Context, _ *transport.Request, rw transpor
 				Code:    h.applicationErrCode,
 			})
 		}
+	}
+
+	if h.responseData != nil {
+		rw.Write(h.responseData)
 	}
 
 	return h.err

@@ -157,14 +157,14 @@ type edge struct {
 	callerFailures *metrics.CounterVector
 	serverFailures *metrics.CounterVector
 
-	latencies           *metrics.Histogram
-	callerErrLatencies  *metrics.Histogram
-	serverErrLatencies  *metrics.Histogram
-	ttls                *metrics.Histogram
-	timeoutTtls         *metrics.Histogram
-	requestPayloadSizes *metrics.Histogram
-
-	streaming *streamEdge
+	latencies            *metrics.Histogram
+	callerErrLatencies   *metrics.Histogram
+	serverErrLatencies   *metrics.Histogram
+	ttls                 *metrics.Histogram
+	timeoutTtls          *metrics.Histogram
+	requestPayloadSizes  *metrics.Histogram
+	responsePayloadSizes *metrics.Histogram
+	streaming            *streamEdge
 }
 
 // streamEdge metrics should only be used for streaming requests.
@@ -241,8 +241,8 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 	}
 
 	// metrics for only unary and oneway
-	var latencies, callerErrLatencies, serverErrLatencies,
-		ttls, timeoutTtls, requestPayloadSizes *metrics.Histogram
+	var latencies, callerErrLatencies, serverErrLatencies, ttls, timeoutTtls,
+		requestPayloadSizes, responsePayloadSizes *metrics.Histogram
 	if rpcType == transport.Unary || rpcType == transport.Oneway {
 		latencies, err = meter.Histogram(metrics.HistogramSpec{
 			Spec: metrics.Spec{
@@ -315,6 +315,18 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		})
 		if err != nil {
 			logger.Error("Failed to create request payload size histogram.", zap.Error(err))
+		}
+		responsePayloadSizes, err = meter.Histogram(metrics.HistogramSpec{
+			Spec: metrics.Spec{
+				Name:      "response_payload_size_bytes",
+				Help:      "Response payload size distribution of the RPCs in bytes",
+				ConstTags: tags,
+			},
+			Unit:    time.Millisecond, // Unit is relevent for this histogram
+			Buckets: _bucketsBytes,
+		})
+		if err != nil {
+			logger.Error("Failed to create response payload size histogram.", zap.Error(err))
 		}
 	}
 
@@ -420,19 +432,20 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		zap.String("direction", direction),
 	)
 	return &edge{
-		logger:              logger,
-		calls:               calls,
-		successes:           successes,
-		panics:              panics,
-		callerFailures:      callerFailures,
-		serverFailures:      serverFailures,
-		requestPayloadSizes: requestPayloadSizes,
-		latencies:           latencies,
-		callerErrLatencies:  callerErrLatencies,
-		serverErrLatencies:  serverErrLatencies,
-		ttls:                ttls,
-		timeoutTtls:         timeoutTtls,
-		streaming:           streaming,
+		logger:               logger,
+		calls:                calls,
+		successes:            successes,
+		panics:               panics,
+		callerFailures:       callerFailures,
+		serverFailures:       serverFailures,
+		requestPayloadSizes:  requestPayloadSizes,
+		responsePayloadSizes: responsePayloadSizes,
+		latencies:            latencies,
+		callerErrLatencies:   callerErrLatencies,
+		serverErrLatencies:   serverErrLatencies,
+		ttls:                 ttls,
+		timeoutTtls:          timeoutTtls,
+		streaming:            streaming,
 	}
 }
 

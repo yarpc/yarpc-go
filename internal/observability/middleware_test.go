@@ -1301,7 +1301,7 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 			Body:            buf,
 		},
 		&transporttest.FakeResponseWriter{},
-		fakeHandler{err: nil, applicationErr: false},
+		fakeHandler{err: nil, applicationErr: false, responseData: []byte("test response")},
 	)
 	assert.NoError(t, err, "Unexpected transport error.")
 
@@ -1334,6 +1334,12 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 				Tags:   tags,
 				Unit:   time.Millisecond,
 				Values: []int64{4},
+			},
+			{
+				Name:   "response_payload_size_bytes",
+				Tags:   tags,
+				Unit:   time.Millisecond,
+				Values: []int64{16},
 			},
 			{
 				Name: "server_failure_latency_ms",
@@ -1391,7 +1397,7 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 			Body:            buf,
 		},
 		&transporttest.FakeResponseWriter{},
-		fakeHandler{err: fmt.Errorf("yuno"), applicationErr: false},
+		fakeHandler{err: fmt.Errorf("yuno"), applicationErr: false, responseData: []byte("error")},
 	)
 	assert.Error(t, err, "Expected transport error.")
 
@@ -1438,6 +1444,11 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 				Tags:   tags,
 				Unit:   time.Millisecond,
 				Values: []int64{16},
+			},
+			{
+				Name: "response_payload_size_bytes",
+				Tags: tags,
+				Unit: time.Millisecond,
 			},
 			{
 				Name:   "server_failure_latency_ms",
@@ -1498,7 +1509,11 @@ func TestMiddlewareFailureWithDeadlineExceededSnapshot(t *testing.T) {
 			Body:            buf,
 		},
 		&transporttest.FakeResponseWriter{},
-		fakeHandler{err: yarpcerrors.DeadlineExceededErrorf("test deadline"), applicationErr: false},
+		fakeHandler{
+			err:            yarpcerrors.DeadlineExceededErrorf("test deadline"),
+			applicationErr: false,
+			responseData:   []byte("deadline response"),
+		},
 	)
 	assert.Error(t, err, "Expected transport error.")
 
@@ -1545,6 +1560,11 @@ func TestMiddlewareFailureWithDeadlineExceededSnapshot(t *testing.T) {
 				Tags:   tags,
 				Unit:   time.Millisecond,
 				Values: []int64{16},
+			},
+			{
+				Name: "response_payload_size_bytes",
+				Tags: tags,
+				Unit: time.Millisecond,
 			},
 			{
 				Name:   "server_failure_latency_ms",
@@ -1685,6 +1705,11 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 						Unit: time.Millisecond,
 					},
 					{
+						Name: "response_payload_size_bytes",
+						Tags: tags,
+						Unit: time.Millisecond,
+					},
+					{
 						Name: "server_failure_latency_ms",
 						Tags: tags,
 						Unit: time.Millisecond,
@@ -1781,6 +1806,11 @@ func TestUnaryInboundApplicationPanics(t *testing.T) {
 				},
 				{
 					Name: "request_payload_size_bytes",
+					Tags: tags,
+					Unit: time.Millisecond,
+				},
+				{
+					Name: "response_payload_size_bytes",
 					Tags: tags,
 					Unit: time.Millisecond,
 				},
