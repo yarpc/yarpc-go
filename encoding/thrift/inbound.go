@@ -30,6 +30,7 @@ import (
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
+	"go.uber.org/yarpc/internal/utils"
 	"go.uber.org/yarpc/pkg/errors"
 )
 
@@ -148,14 +149,12 @@ func decodeRequest(
 		return wire.Value{}, nil, err
 	}
 
-	if _, err := buf.ReadFrom(treq.Body); err != nil {
-		return wire.Value{}, nil, err
-	}
-	if err := closeReader(treq.Body); err != nil {
+	body, err := utils.ReadBytes(treq.Body, buf)
+	if err != nil {
 		return wire.Value{}, nil, err
 	}
 
-	reader := bytes.NewReader(buf.Bytes())
+	reader := bytes.NewReader(body)
 
 	// Discover or choose the appropriate envelope
 	if agnosticProto, ok := proto.(protocol.EnvelopeAgnosticProtocol); ok {

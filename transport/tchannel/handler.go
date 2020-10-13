@@ -197,13 +197,10 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 	}
 	defer body.Close()
 
-	_, err = buf.ReadFrom(body)
-	if err != nil {
+	if _, err = buf.ReadFrom(body); err != nil {
 		return err
 	}
-
-	err = body.Close()
-	if err != nil {
+	if err = body.Close(); err != nil {
 		return err
 	}
 
