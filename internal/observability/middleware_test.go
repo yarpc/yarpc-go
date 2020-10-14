@@ -21,6 +21,7 @@
 package observability
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -2049,11 +2050,23 @@ func TestStreamingMetrics(t *testing.T) {
 			ContextExtractor: NewNopContextExtractor(),
 		})
 
-		stream, err := transport.NewServerStream(&fakeStream{request: req})
+		stream, err := transport.NewServerStream(
+			&fakeStream{
+				request: req,
+				receiveMsg: &transport.StreamMessage{
+					Body: readCloser{bytes.NewReader([]byte("Foobar"))},
+				},
+			},
+		)
 		require.NoError(t, err)
 		err = mw.HandleStream(stream, &fakeHandler{
 			handleStream: func(stream *transport.ServerStream) {
-				err := stream.SendMessage(context.Background(), nil /*message*/)
+				err := stream.SendMessage(
+					context.Background(),
+					&transport.StreamMessage{
+						Body: readCloser{bytes.NewReader([]byte("test"))},
+					},
+				)
 				require.NoError(t, err)
 				_, err = stream.ReceiveMessage(context.Background())
 				require.NoError(t, err)
@@ -2079,6 +2092,8 @@ func TestStreamingMetrics(t *testing.T) {
 			},
 			Histograms: []metrics.HistogramSnapshot{
 				{Name: "stream_duration_ms", Tags: tags, Unit: time.Millisecond, Values: []int64{1}},
+				{Name: "stream_request_payload_size_bytes", Tags: tags, Unit: time.Millisecond, Values: []int64{8}},
+				{Name: "stream_response_payload_size_bytes", Tags: tags, Unit: time.Millisecond, Values: []int64{4}},
 			},
 		}
 		assert.Equal(t, want, snap, "unexpected metrics snapshot")
@@ -2160,6 +2175,8 @@ func TestStreamingMetrics(t *testing.T) {
 					},
 					Histograms: []metrics.HistogramSnapshot{
 						{Name: "stream_duration_ms", Tags: successTags, Unit: time.Millisecond, Values: []int64{1}},
+						{Name: "stream_request_payload_size_bytes", Tags: successTags, Unit: time.Millisecond},
+						{Name: "stream_response_payload_size_bytes", Tags: successTags, Unit: time.Millisecond},
 					},
 				}
 				assert.Equal(t, want, snap, "unexpected metrics snapshot")
@@ -2216,6 +2233,8 @@ func TestStreamingMetrics(t *testing.T) {
 			},
 			Histograms: []metrics.HistogramSnapshot{
 				{Name: "stream_duration_ms", Tags: successTags, Unit: time.Millisecond, Values: []int64{1}},
+				{Name: "stream_request_payload_size_bytes", Tags: successTags, Unit: time.Millisecond},
+				{Name: "stream_response_payload_size_bytes", Tags: successTags, Unit: time.Millisecond},
 			},
 		}
 		assert.Equal(t, want, snap, "unexpected metrics snapshot")
@@ -2257,6 +2276,8 @@ func TestStreamingMetrics(t *testing.T) {
 			},
 			Histograms: []metrics.HistogramSnapshot{
 				{Name: "stream_duration_ms", Tags: tags, Unit: time.Millisecond, Values: []int64{1}},
+				{Name: "stream_request_payload_size_bytes", Tags: tags, Unit: time.Millisecond},
+				{Name: "stream_response_payload_size_bytes", Tags: tags, Unit: time.Millisecond},
 			},
 		}
 		assert.Equal(t, want, snap, "unexpected metrics snapshot")
@@ -2297,6 +2318,8 @@ func TestStreamingMetrics(t *testing.T) {
 			},
 			Histograms: []metrics.HistogramSnapshot{
 				{Name: "stream_duration_ms", Tags: successTags, Unit: time.Millisecond},
+				{Name: "stream_request_payload_size_bytes", Tags: successTags, Unit: time.Millisecond},
+				{Name: "stream_response_payload_size_bytes", Tags: successTags, Unit: time.Millisecond},
 			},
 		}
 		assert.Equal(t, want, snap, "unexpected metrics snapshot")
@@ -2354,6 +2377,8 @@ func TestStreamingMetrics(t *testing.T) {
 			},
 			Histograms: []metrics.HistogramSnapshot{
 				{Name: "stream_duration_ms", Tags: successTags, Unit: time.Millisecond, Values: []int64{1}},
+				{Name: "stream_request_payload_size_bytes", Tags: successTags, Unit: time.Millisecond},
+				{Name: "stream_response_payload_size_bytes", Tags: successTags, Unit: time.Millisecond},
 			},
 		}
 		assert.Equal(t, want, snap, "unexpected metrics snapshot")
@@ -2377,4 +2402,12 @@ func TestNewWriterIsEmpty(t *testing.T) {
 	require.NotNil(t, w, "writer must not be nil")
 	assert.Equal(t, writer{}, *w,
 		"expected empty writer, fields were likely not cleared in the pool")
+}
+
+type readCloser struct {
+	*bytes.Reader
+}
+
+func (r readCloser) Close() error {
+	return nil
 }

@@ -128,6 +128,8 @@ type fakeStream struct {
 	ctx     context.Context
 	request *transport.StreamRequest
 
+	receiveMsg *transport.StreamMessage
+
 	sendErr    error
 	receiveErr error
 	closeErr   error
@@ -146,7 +148,7 @@ func (s *fakeStream) SendMessage(context.Context, *transport.StreamMessage) erro
 }
 
 func (s *fakeStream) ReceiveMessage(context.Context) (*transport.StreamMessage, error) {
-	return nil, s.receiveErr
+	return s.receiveMsg, s.receiveErr
 }
 
 func (s *fakeStream) Close(context.Context) error {

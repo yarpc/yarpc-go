@@ -177,8 +177,11 @@ type streamEdge struct {
 	receiveSuccesses *metrics.Counter
 	receiveFailures  *metrics.CounterVector
 
-	streamDurations *metrics.Histogram
-	streamsActive   *metrics.Gauge
+	streamDurations            *metrics.Histogram
+	streamRequestPayloadSizes  *metrics.Histogram
+	streamResponsePayloadSizes *metrics.Histogram
+
+	streamsActive *metrics.Gauge
 }
 
 // newEdge constructs a new edge. Since Registries enforce metric uniqueness,
@@ -400,6 +403,33 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		if err != nil {
 			logger.DPanic("Failed to create stream duration histogram.", zap.Error(err))
 		}
+
+		streamRequestPayloadSizes, err := meter.Histogram(metrics.HistogramSpec{
+			Spec: metrics.Spec{
+				Name:      "stream_request_payload_size_bytes",
+				Help:      "Stream request payload size distribution",
+				ConstTags: tags,
+			},
+			Unit:    time.Millisecond,
+			Buckets: _bucketsBytes,
+		})
+		if err != nil {
+			logger.DPanic("Failed to create stream request payload size histogram", zap.Error(err))
+		}
+
+		streamResponsePayloadSizes, err := meter.Histogram(metrics.HistogramSpec{
+			Spec: metrics.Spec{
+				Name:      "stream_response_payload_size_bytes",
+				Help:      "Stream response payload size distribution",
+				ConstTags: tags,
+			},
+			Unit:    time.Millisecond,
+			Buckets: _bucketsBytes,
+		})
+		if err != nil {
+			logger.DPanic("Failed to create stream response payload size histogram", zap.Error(err))
+		}
+
 		streamsActive, err := meter.Gauge(metrics.Spec{
 			Name:      "streams_active",
 			Help:      "Number of active streams.",
@@ -416,8 +446,12 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 			receives:         receives,
 			receiveSuccesses: receiveSuccesses,
 			receiveFailures:  receiveFailures,
-			streamDurations:  streamDurations,
-			streamsActive:    streamsActive,
+
+			streamDurations:            streamDurations,
+			streamRequestPayloadSizes:  streamRequestPayloadSizes,
+			streamResponsePayloadSizes: streamResponsePayloadSizes,
+
+			streamsActive: streamsActive,
 		}
 	}
 
