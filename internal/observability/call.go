@@ -79,8 +79,8 @@ type levels struct {
 	success, failure, applicationError zapcore.Level
 }
 
-func (c call) End(err error) {
-	c.endWithAppError(err, false /* isApplicationError */, nil /* applicationErrorMeta */, 0, 0)
+func (c call) End(err error, requestSize int) {
+	c.endWithAppError(err, false /* isApplicationError */, nil /* applicationErrorMeta */, requestSize, 0)
 }
 
 func (c call) EndCallWithAppError(
