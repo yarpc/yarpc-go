@@ -398,6 +398,40 @@ func TestHandlerFailures(t *testing.T) {
 			wantLogMessage:    "SendSystemError failed",
 			wantErrMessage:    "SendSystemError failure",
 		},
+		{
+			desc: "test arg3 close error",
+			sendCall: &fakeInboundCall{
+				service: "foo",
+				caller:  "bar",
+				method:  "hello",
+				format:  tchannel.Raw,
+				arg2:    []byte{0x00, 0x00},
+				arg3:    []byte{0x00},
+
+				arg3CloseErr: tchannel.NewSystemError(tchannel.ErrCodeNetwork, "test error"),
+			},
+			wantStatus:        tchannel.ErrCodeNetwork,
+			newResponseWriter: newHandlerWriter,
+			recorder:          newFaultyResponseRecorder(),
+			wantErrMessage:    "test arg3 close error",
+		},
+		{
+			desc: "test arg3 read error",
+			sendCall: &fakeInboundCall{
+				service: "foo",
+				caller:  "bar",
+				method:  "hello",
+				format:  tchannel.Raw,
+				arg2:    []byte{0x00, 0x00},
+				arg3:    []byte{0x00, 0x00},
+
+				arg3ReadErr: tchannel.NewSystemError(tchannel.ErrCodeNetwork, "test error"),
+			},
+			wantStatus:        tchannel.ErrCodeNetwork,
+			newResponseWriter: newHandlerWriter,
+			recorder:          newFaultyResponseRecorder(),
+			wantErrMessage:    "test arg3 read error",
+		},
 	}
 
 	for _, tt := range tests {

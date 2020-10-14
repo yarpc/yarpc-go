@@ -69,7 +69,7 @@ func TestResponseErrorMetaIntegration(t *testing.T) {
 	defer cancel()
 	_, err = client.Call(ctx, &transport.Request{
 		Service: "foo",
-		Body:    bytes.NewBufferString("bar"),
+		Body:    bytes.NewReader([]byte("bar")),
 	})
 	require.Error(t, err, "expected call failure")
 

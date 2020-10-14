@@ -254,7 +254,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 					Procedure: testProcedure,
 					Encoding:  raw.Encoding,
 					Headers:   tt.requestHeaders,
-					Body:      bytes.NewBufferString(tt.requestBody),
+					Body:      bytes.NewReader([]byte(tt.requestBody)),
 				})
 
 				handler := unaryHandlerFunc(func(_ context.Context, r *transport.Request, w transport.ResponseWriter) error {
@@ -286,7 +286,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 						Procedure: testProcedure,
 						Encoding:  raw.Encoding,
 						Headers:   tt.requestHeaders,
-						Body:      bytes.NewBufferString(tt.requestBody),
+						Body:      bytes.NewReader([]byte(tt.requestBody)),
 					})
 
 					if tt.wantError != nil {

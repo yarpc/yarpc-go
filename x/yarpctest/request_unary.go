@@ -192,7 +192,7 @@ func matchResponse(actualResp *transport.Response, expectedResp *transport.Respo
 // Body sets the body on a request to the raw representation of the msg field.
 func Body(msg string) api.RequestOption {
 	return api.RequestOptionFunc(func(opts *api.RequestOpts) {
-		opts.GiveRequest.Body = bytes.NewBufferString(msg)
+		opts.GiveRequest.Body = bytes.NewReader([]byte(msg))
 	})
 }
 

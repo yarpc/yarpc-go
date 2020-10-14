@@ -102,6 +102,15 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	if req.Method != http.MethodPost {
 		return yarpcerrors.Newf(yarpcerrors.CodeNotFound, "request method was %s but only %s is allowed", req.Method, http.MethodPost)
 	}
+
+	buf := bufferpool.Get()
+	defer bufferpool.Put(buf)
+
+	_, err := buf.ReadFrom(req.Body)
+	if err != nil {
+		return err
+	}
+
 	treq := &transport.Request{
 		Caller:          popHeader(req.Header, CallerHeader),
 		Service:         service,
@@ -112,7 +121,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		RoutingKey:      popHeader(req.Header, RoutingKeyHeader),
 		RoutingDelegate: popHeader(req.Header, RoutingDelegateHeader),
 		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}),
-		Body:            req.Body,
+		Body:            bytes.NewReader(buf.Bytes()),
 	}
 	for header := range h.grabHeaders {
 		if value := req.Header.Get(header); value != "" {
@@ -184,7 +193,7 @@ func handleOnewayRequest(
 	if _, err := iopool.Copy(&buff, treq.Body); err != nil {
 		return err
 	}
-	treq.Body = &buff
+	treq.Body = bytes.NewReader(buff.Bytes())
 
 	// create a new context for oneway requests since the HTTP handler cancels
 	// http.Request's context when ServeHTTP returns

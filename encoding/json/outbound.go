@@ -121,7 +121,7 @@ func (c jsonClient) CallOneway(ctx context.Context, procedure string, reqBody in
 	if err := json.NewEncoder(&buff).Encode(reqBody); err != nil {
 		return nil, errors.RequestBodyEncodeError(&treq, err)
 	}
-	treq.Body = &buff
+	treq.Body = bytes.NewReader(buff.Bytes())
 
 	return c.cc.GetOnewayOutbound().CallOneway(ctx, &treq)
 }

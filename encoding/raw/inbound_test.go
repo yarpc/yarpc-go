@@ -24,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -128,7 +129,7 @@ func TestRawHandler(t *testing.T) {
 			Procedure: tt.procedure,
 			Headers:   tt.headers,
 			Encoding:  "raw",
-			Body:      chunkReader,
+			Body:      &wrapperReader{chunkReader},
 		}, resw)
 
 		if tt.wantErr != "" {
@@ -145,3 +146,11 @@ func TestRawHandler(t *testing.T) {
 		}
 	}
 }
+
+type wrapperReader struct {
+	io.Reader
+}
+
+func (wrapperReader) ReadAt(buf []byte, offset int64) (n int, err error) { return }
+
+func (wrapperReader) Len() int { return 0 }

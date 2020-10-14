@@ -126,7 +126,7 @@ func TestOutboundHeaders(t *testing.T) {
 					Encoding:  raw.Encoding,
 					Procedure: "hello",
 					Headers:   transport.HeadersFromMap(tt.giveHeaders),
-					Body:      bytes.NewBufferString("body"),
+					Body:      bytes.NewReader([]byte("body")),
 				},
 			)
 
@@ -181,7 +181,7 @@ func TestCallSuccess(t *testing.T) {
 			Service:   "service",
 			Encoding:  raw.Encoding,
 			Procedure: "hello",
-			Body:      bytes.NewBufferString("world"),
+			Body:      bytes.NewReader([]byte("world")),
 		},
 	)
 
@@ -233,7 +233,7 @@ func TestCallWithModifiedCallerName(t *testing.T) {
 			Service:   destService,
 			Encoding:  "bar",
 			Procedure: "baz",
-			Body:      bytes.NewBuffer(nil),
+			Body:      bytes.NewReader(nil),
 		},
 	)
 
@@ -364,7 +364,7 @@ func TestApplicationError(t *testing.T) {
 			Service:   "service",
 			Encoding:  raw.Encoding,
 			Procedure: "hello",
-			Body:      &bytes.Buffer{},
+			Body:      bytes.NewReader(nil),
 		},
 	)
 	require.NoError(t, err, "failed to make call")

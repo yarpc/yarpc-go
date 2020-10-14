@@ -21,6 +21,7 @@
 package observability
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -1292,7 +1293,7 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 			ShardKey:        "sk",
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
-			Body:            strings.NewReader("body"),
+			Body:            bytes.NewReader([]byte("body")),
 		},
 		&transporttest.FakeResponseWriter{},
 		fakeHandler{err: nil, applicationErr: false},
@@ -1371,7 +1372,7 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 			ShardKey:        "sk",
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
-			Body:            strings.NewReader("body"),
+			Body:            bytes.NewReader([]byte("test body")),
 		},
 		&transporttest.FakeResponseWriter{},
 		fakeHandler{err: fmt.Errorf("yuno"), applicationErr: false},
@@ -1466,7 +1467,7 @@ func TestMiddlewareFailureWithDeadlineExceededSnapshot(t *testing.T) {
 			ShardKey:        "sk",
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
-			Body:            strings.NewReader("body"),
+			Body:            bytes.NewReader([]byte("test body")),
 		},
 		&transporttest.FakeResponseWriter{},
 		fakeHandler{err: yarpcerrors.DeadlineExceededErrorf("test deadline"), applicationErr: false},

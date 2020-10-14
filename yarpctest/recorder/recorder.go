@@ -339,7 +339,7 @@ func (r *Recorder) requestToRequestRecord(request *transport.Request) requestRec
 	if err != nil {
 		r.logger.Fatal(err)
 	}
-	request.Body = ioutil.NopCloser(bytes.NewReader(requestBody))
+	request.Body = bytes.NewReader(requestBody)
 	return requestRecord{
 		Caller:          request.Caller,
 		Service:         request.Service,

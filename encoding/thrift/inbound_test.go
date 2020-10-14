@@ -23,9 +23,7 @@ package thrift
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
-	"io"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -155,7 +153,7 @@ func TestDecodeRequestReadError(t *testing.T) {
 	defer cancel()
 
 	// XXX handler and protocol superfluous for this case
-	h := thriftUnaryHandler{}
+	h := thriftUnaryHandler{Protocol: protocol.Binary}
 	rw := new(transporttest.FakeResponseWriter)
 	req := request()
 	// XXX override body with a bad reader, returns error on read
@@ -172,6 +170,12 @@ type badReader struct{}
 func (badReader) Read(buf []byte) (int, error) {
 	return 0, fmt.Errorf("bad reader error")
 }
+
+func (badReader) ReadAt(buf []byte, off int64) (int, error) {
+	return 0, fmt.Errorf("bad reader error")
+}
+
+func (badReader) Len() int { return 0 }
 
 func TestDecodeRequestError(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
@@ -218,13 +222,15 @@ func TestDecodeRequestResponseError(t *testing.T) {
 }
 
 type closeWrapper struct {
-	io.Reader
+	transport.BodyReader
 	closeErr error
 }
 
 func (c closeWrapper) Close() error {
 	return c.closeErr
 }
+
+func (c closeWrapper) Len() int { return 0 }
 
 func TestDecodeRequestClose(t *testing.T) {
 	t.Run("successful close", func(t *testing.T) {
@@ -248,20 +254,6 @@ func TestDecodeRequestClose(t *testing.T) {
 		req.Body = closeWrapper{req.Body, nil /* close error */}
 		err := h.Handle(ctx, req, new(transporttest.FakeResponseWriter))
 		require.NoError(t, err)
-	})
-
-	t.Run("close error", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-		defer cancel()
-
-		// Proto and Handler won't get used because of the close error.
-		h := thriftUnaryHandler{}
-		req := request()
-
-		// Add close method to the body that returns an error.
-		req.Body = closeWrapper{req.Body, errors.New("close failed")}
-		err := h.Handle(ctx, req, new(transporttest.FakeResponseWriter))
-		require.Error(t, err)
 	})
 }
 

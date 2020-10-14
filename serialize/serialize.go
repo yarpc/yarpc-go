@@ -109,7 +109,7 @@ func FromBytes(tracer opentracing.Tracer, request []byte) (opentracing.SpanConte
 		Encoding:  transport.Encoding(rpc.Encoding),
 		Procedure: rpc.Procedure,
 		Headers:   transport.HeadersFromMap(rpc.Headers),
-		Body:      bytes.NewBuffer(rpc.Body),
+		Body:      bytes.NewReader(rpc.Body),
 	}
 
 	if rpc.ShardKey != nil {

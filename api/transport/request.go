@@ -65,7 +65,16 @@ type Request struct {
 	RoutingDelegate string
 
 	// Request payload.
-	Body io.Reader
+	Body BodyReader
+}
+
+// BodyReader wraps io Reader, io ReaderAt and Len method
+type BodyReader interface {
+	io.Reader
+	io.ReaderAt
+
+	// Len returns the current size of the buffer
+	Len() int
 }
 
 // ToRequestMeta converts a Request into a RequestMeta.

@@ -238,7 +238,7 @@ func (c thriftClient) buildTransportRequest(reqBody envelope.Enveloper) (*transp
 		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
 	}
 
-	treq.Body = &buffer
+	treq.Body = bytes.NewReader(buffer.Bytes())
 	return &treq, proto, nil
 }
 

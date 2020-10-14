@@ -25,7 +25,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"reflect"
 	"testing"
 
@@ -167,6 +166,6 @@ func TestHandleBothResponseError(t *testing.T) {
 	assert.Equal(t, simpleResponse{Success: true}, response)
 }
 
-func jsonBody(s string) io.Reader {
+func jsonBody(s string) *bytes.Reader {
 	return bytes.NewReader([]byte(s))
 }

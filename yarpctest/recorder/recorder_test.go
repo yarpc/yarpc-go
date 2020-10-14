@@ -96,7 +96,7 @@ func (r *randomGenerator) Request() transport.Request {
 		ShardKey:        r.Atom(),
 		RoutingKey:      r.Atom(),
 		RoutingDelegate: r.Atom(),
-		Body:            ioutil.NopCloser(bytes.NewReader(bodyData)),
+		Body:            bytes.NewReader(bodyData),
 	}
 }
 
@@ -160,7 +160,7 @@ func TestHash(t *testing.T) {
 
 	// Body
 	r = request
-	request.Body = ioutil.NopCloser(bytes.NewReader([]byte(rgen.Atom())))
+	request.Body = bytes.NewReader([]byte(rgen.Atom()))
 	requestRecord = recorder.requestToRequestRecord(&r)
 	assert.NotEqual(t, recorder.hashRequestRecord(&requestRecord), referenceHash)
 }

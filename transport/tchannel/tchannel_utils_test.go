@@ -23,6 +23,7 @@ package tchannel
 import (
 	"bytes"
 	"errors"
+	"io"
 	"io/ioutil"
 
 	"github.com/uber/tchannel-go"
@@ -74,6 +75,9 @@ type fakeInboundCall struct {
 	format          tchannel.Format
 	arg2, arg3      []byte
 	resp            inboundCallResponse
+
+	arg3CloseErr error
+	arg3ReadErr  error
 }
 
 func (i *fakeInboundCall) ServiceName() string           { return i.service }
@@ -96,7 +100,24 @@ func (i *fakeInboundCall) Arg3Reader() (tchannel.ArgReader, error) {
 	if i.arg3 == nil {
 		return nil, errors.New("no arg3 provided")
 	}
-	return ioutil.NopCloser(bytes.NewReader(i.arg3)), nil
+	return errorReaderCloser{bytes.NewReader(i.arg3), i.arg3CloseErr, i.arg3ReadErr}, nil
+}
+
+type errorReaderCloser struct {
+	io.Reader
+	closeErr error
+	readErr  error
+}
+
+func (e errorReaderCloser) Read(p []byte) (n int, err error) {
+	if e.readErr != nil {
+		return 0, e.readErr
+	}
+	return e.Reader.Read(p)
+}
+
+func (e errorReaderCloser) Close() error {
+	return e.closeErr
 }
 
 // recorder wraps the inboundCallResponse interface to mock errors from responseRecorder's

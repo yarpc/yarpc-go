@@ -394,7 +394,7 @@ func TestFromWireInvalidArg(t *testing.T) {
 
 	err = procedure.HandlerSpec.Unary().Handle(context.Background(), &transport.Request{
 		Encoding: thrift.Encoding,
-		Body:     &body,
+		Body:     bytes.NewReader(body.Bytes()),
 	}, nil /*response writer*/)
 
 	require.Error(t, err, "expected handler error")
