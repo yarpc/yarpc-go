@@ -23,13 +23,13 @@ package thrift
 import (
 	"bytes"
 	"context"
+	"io"
 
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
-	"go.uber.org/yarpc/internal/utils"
 	"go.uber.org/yarpc/pkg/errors"
 )
 
@@ -148,12 +148,14 @@ func decodeRequest(
 		return wire.Value{}, nil, err
 	}
 
-	body, err := utils.ReadBytes(treq.Body, buf)
-	if err != nil {
+	if _, err := buf.ReadFrom(treq.Body); err != nil {
+		return wire.Value{}, nil, err
+	}
+	if err := closeReader(treq.Body); err != nil {
 		return wire.Value{}, nil, err
 	}
 
-	reader := bytes.NewReader(body)
+	reader := bytes.NewReader(buf.Bytes())
 
 	// Discover or choose the appropriate envelope
 	if agnosticProto, ok := proto.(protocol.EnvelopeAgnosticProtocol); ok {
@@ -195,4 +197,14 @@ func decodeUnenvelopedRequest(
 	}
 	responder := protocol.NoEnvelopeResponder
 	return reqValue, responder, err
+}
+
+// closeReader calls Close is r implements io.Closer, does nothing otherwise.
+func closeReader(r io.Reader) error {
+	closer, ok := r.(io.Closer)
+	if !ok {
+		return nil
+	}
+
+	return closer.Close()
 }
