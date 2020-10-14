@@ -23,7 +23,6 @@ package thrift
 import (
 	"bytes"
 	"context"
-	"io"
 
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
@@ -196,14 +195,4 @@ func decodeUnenvelopedRequest(
 	}
 	responder := protocol.NoEnvelopeResponder
 	return reqValue, responder, err
-}
-
-// closeReader calls Close is r implements io.Closer, does nothing otherwise.
-func closeReader(r io.Reader) error {
-	closer, ok := r.(io.Closer)
-	if !ok {
-		return nil
-	}
-
-	return closer.Close()
 }

@@ -35,7 +35,7 @@ func TestReadBytes_WithoutCopy(t *testing.T) {
 	body := bufferpool.Get()
 	defer bufferpool.Put(body)
 
-	_, err := body.Write([]byte("test"))
+	body.Write([]byte("test"))
 
 	buf := bufferpool.Get()
 	defer bufferpool.Put(buf)

@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -80,8 +79,19 @@ type levels struct {
 	success, failure, applicationError zapcore.Level
 }
 
+type callResult struct {
+	err            error
+	ctxOverrideErr error
+
+	isApplicationError   bool
+	applicationErrorMeta *transport.ApplicationErrorMeta
+
+	requestSize  int
+	responseSize int
+}
+
 func (c call) End(err error) {
-	c.endWithAppError(err, false /* isApplicationError */, nil, 0 /* applicationErrorMeta */)
+	c.endWithAppError(&callResult{err: err})
 }
 
 func (c call) EndCallWithAppError(
@@ -89,53 +99,52 @@ func (c call) EndCallWithAppError(
 	isApplicationError bool,
 	applicationErrorMeta *transport.ApplicationErrorMeta,
 ) {
-	c.endWithAppError(err, isApplicationError, applicationErrorMeta, 0)
+	c.endWithAppError(&callResult{
+		err:                  err,
+		isApplicationError:   isApplicationError,
+		applicationErrorMeta: applicationErrorMeta,
+	})
 }
 
-func (c call) EndHandleWithAppError(
-	err error,
-	rw *writer,
-	ctxOverrideErr error) {
-	if ctxOverrideErr == nil {
-		c.endWithAppError(err, rw.isApplicationError, rw.applicationErrorMeta, rw.responseSize)
+func (c call) EndHandleWithAppError(res *callResult) {
+	if res.ctxOverrideErr == nil {
+		c.endWithAppError(res)
 		return
 	}
 
 	// We'll override the user's response with the appropriate context error. Also, log
 	// the dropped response.
 	var droppedField zap.Field
-	if rw.isApplicationError && err == nil { // Thrift exceptions
+	if res.isApplicationError && res.err == nil { // Thrift exceptions
 		droppedField = zap.String(_dropped, _droppedAppErrLog)
-	} else if err != nil { // other errors
-		droppedField = zap.String(_dropped, fmt.Sprintf(_droppedErrLogFmt, err))
+	} else if res.err != nil { // other errors
+		droppedField = zap.String(_dropped, fmt.Sprintf(_droppedErrLogFmt, res.err))
 	} else {
 		droppedField = zap.String(_dropped, _droppedSuccessLog)
 	}
 
 	c.endWithAppError(
-		ctxOverrideErr,
-		false, /* application error */
-		nil,   /* application failure */
-		rw.responseSize,
+		&callResult{
+			err:          res.ctxOverrideErr,
+			requestSize:  res.requestSize,
+			responseSize: res.responseSize,
+		},
 		droppedField,
 	)
 }
 
 func (c call) endWithAppError(
-	err error,
-	isApplicationError bool,
-	applicationErrorMeta *transport.ApplicationErrorMeta,
-	responseSize int64,
+	res *callResult,
 	extraLogFields ...zap.Field) {
 	elapsed := _timeNow().Sub(c.started)
-	c.endLogs(elapsed, err, isApplicationError, applicationErrorMeta, extraLogFields...)
-	c.endStats(elapsed, err, isApplicationError, responseSize, applicationErrorMeta)
+	c.endLogs(elapsed, res.err, res.isApplicationError, res.applicationErrorMeta, extraLogFields...)
+	c.endStats(elapsed, res)
 }
 
 // EndWithPanic ends the call with additional panic metrics
 func (c call) EndWithPanic(err error) {
 	c.edge.panics.Inc()
-	c.endWithAppError(err, true /* isApplicationError */, nil, 0 /* applicationErrorMeta */)
+	c.endWithAppError(&callResult{err: err, isApplicationError: true} /* applicationErrorMeta */)
 }
 
 func (c call) endLogs(
@@ -231,10 +240,7 @@ func (c call) endLogs(
 
 func (c call) endStats(
 	elapsed time.Duration,
-	err error,
-	isApplicationError bool,
-	responseSize int64,
-	applicationErrorMeta *transport.ApplicationErrorMeta,
+	res *callResult,
 ) {
 	c.edge.calls.Inc()
 
@@ -243,36 +249,36 @@ func (c call) endStats(
 			c.edge.ttls.Observe(deadlineTime.Sub(c.started))
 		}
 
-		if body, ok := c.req.Body.(*bufferpool.Buffer); ok {
-			c.edge.requestPayloadSizes.IncBucket(body.Size())
+		if res.requestSize > 0 {
+			c.edge.requestPayloadSizes.IncBucket(int64(res.requestSize))
 		}
 	}
 
-	if err == nil && !isApplicationError {
+	if res.err == nil && !res.isApplicationError {
 		c.edge.successes.Inc()
 		c.edge.latencies.Observe(elapsed)
 
-		if c.direction == _directionInbound && responseSize > 0 {
-			c.edge.responsePayloadSizes.IncBucket(responseSize)
+		if c.direction == _directionInbound && res.responseSize > 0 {
+			c.edge.responsePayloadSizes.IncBucket(int64(res.responseSize))
 		}
 		return
 	}
 
 	appErrorName := _notSet
-	if applicationErrorMeta != nil && applicationErrorMeta.Name != "" {
-		appErrorName = applicationErrorMeta.Name
+	if res.applicationErrorMeta != nil && res.applicationErrorMeta.Name != "" {
+		appErrorName = res.applicationErrorMeta.Name
 	}
 
-	if yarpcerrors.IsStatus(err) {
-		status := yarpcerrors.FromError(err)
+	if yarpcerrors.IsStatus(res.err) {
+		status := yarpcerrors.FromError(res.err)
 		errCode := status.Code()
 		c.endStatsFromFault(elapsed, errCode, appErrorName)
 		return
 	}
 
-	if isApplicationError {
-		if applicationErrorMeta != nil && applicationErrorMeta.Code != nil {
-			c.endStatsFromFault(elapsed, *applicationErrorMeta.Code, appErrorName)
+	if res.isApplicationError {
+		if res.applicationErrorMeta != nil && res.applicationErrorMeta.Code != nil {
+			c.endStatsFromFault(elapsed, *res.applicationErrorMeta.Code, appErrorName)
 			return
 		}
 

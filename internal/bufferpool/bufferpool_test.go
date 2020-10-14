@@ -90,7 +90,6 @@ func TestBufferReuse(t *testing.T) {
 	runTest(t, func(t *testing.T, pool *Pool) {
 		runConcurrently(t, func() {
 			buf := pool.Get()
-			assert.Equal(t, int64(0), buf.Size(), "Expected zero written size")
 			assert.Equal(t, 0, len(buf.Bytes()), "Expected zero buffer size")
 
 			io.WriteString(buf, "test")
@@ -135,13 +134,6 @@ func TestBuffers(t *testing.T) {
 		assert.Equal(t, buf.Len(), len(bs), "Expected same buffer size")
 
 		Put(buf)
-	})
-}
-
-func TestBufferSize(t *testing.T) {
-	runTestWithBuffer(t, func(t *testing.T, buf *Buffer) {
-		buf.Write([]byte("hello world"))
-		assert.Equal(t, int64(11), buf.Size(), "Unexpected buffer size")
 	})
 }
 

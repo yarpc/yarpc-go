@@ -26,10 +26,14 @@ import (
 	"go.uber.org/yarpc/internal/bufferpool"
 )
 
+type bytesWrapper interface {
+	Bytes() []byte
+}
+
 // ReadBytes returns bytes from the reader
-// It avoids double copy if body is an instance of buffer and returns the bytes directly
+// It avoids double copy if body can return the bytes directly
 func ReadBytes(body io.Reader, buf *bufferpool.Buffer) ([]byte, error) {
-	if buf, ok := body.(*bufferpool.Buffer); ok {
+	if buf, ok := body.(bytesWrapper); ok {
 		return buf.Bytes(), nil
 	}
 

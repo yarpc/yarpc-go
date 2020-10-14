@@ -44,7 +44,7 @@ type writer struct {
 	isApplicationError   bool
 	applicationErrorMeta *transport.ApplicationErrorMeta
 
-	responseSize int64
+	responseSize int
 }
 
 func newWriter(rw transport.ResponseWriter) *writer {
@@ -70,7 +70,7 @@ func (w *writer) SetApplicationErrorMeta(applicationErrorMeta *transport.Applica
 }
 
 func (w *writer) Write(p []byte) (n int, err error) {
-	w.responseSize += int64(len(p))
+	w.responseSize += len(p)
 	return w.ResponseWriter.Write(p)
 }
 
@@ -127,6 +127,10 @@ type DirectionalLevelsConfig struct {
 	ApplicationError *zapcore.Level
 }
 
+type lenWrapper interface {
+	Len() int
+}
+
 // NewMiddleware constructs an observability middleware with the provided
 // configuration.
 func NewMiddleware(cfg Config) *Middleware {
@@ -159,13 +163,28 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 	call := m.graph.begin(ctx, transport.Unary, _directionInbound, req)
 	defer m.handlePanicForCall(call, transport.Unary)
 
+	var requestSize int
+
+	if call.direction == _directionInbound {
+		if wrapper, ok := req.Body.(lenWrapper); ok {
+			requestSize = wrapper.Len()
+		}
+	}
+
 	wrappedWriter := newWriter(w)
 	err := h.Handle(ctx, req, wrappedWriter)
 	ctxErr := ctxErrOverride(ctx, req)
-	call.EndHandleWithAppError(
-		err,
-		wrappedWriter,
-		ctxErr)
+
+	result := &callResult{
+		err:                  err,
+		ctxOverrideErr:       ctxErr,
+		isApplicationError:   wrappedWriter.isApplicationError,
+		applicationErrorMeta: wrappedWriter.applicationErrorMeta,
+		requestSize:          requestSize,
+		responseSize:         wrappedWriter.responseSize,
+	}
+	call.EndHandleWithAppError(result)
+
 	if ctxErr != nil {
 		err = ctxErr
 	}
