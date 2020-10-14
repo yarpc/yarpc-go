@@ -175,15 +175,13 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 	err := h.Handle(ctx, req, wrappedWriter)
 	ctxErr := ctxErrOverride(ctx, req)
 
-	result := &callResult{
-		err:                  err,
-		ctxOverrideErr:       ctxErr,
-		isApplicationError:   wrappedWriter.isApplicationError,
-		applicationErrorMeta: wrappedWriter.applicationErrorMeta,
-		requestSize:          requestSize,
-		responseSize:         wrappedWriter.responseSize,
-	}
-	call.EndHandleWithAppError(result)
+	call.EndHandleWithAppError(
+		err,
+		wrappedWriter.isApplicationError,
+		wrappedWriter.applicationErrorMeta,
+		ctxErr,
+		requestSize,
+		wrappedWriter.responseSize)
 
 	if ctxErr != nil {
 		err = ctxErr
