@@ -79,8 +79,8 @@ type levels struct {
 	success, failure, applicationError zapcore.Level
 }
 
-func (c call) End(err error) {
-	c.endWithAppError(err, false /* isApplicationError */, nil /* applicationErrorMeta */)
+func (c call) End(err error, requestSize int) {
+	c.endWithAppError(err, false /* isApplicationError */, nil /* applicationErrorMeta */, requestSize, 0)
 }
 
 func (c call) EndCallWithAppError(
@@ -88,16 +88,17 @@ func (c call) EndCallWithAppError(
 	isApplicationError bool,
 	applicationErrorMeta *transport.ApplicationErrorMeta,
 ) {
-	c.endWithAppError(err, isApplicationError, applicationErrorMeta)
+	c.endWithAppError(err, isApplicationError, applicationErrorMeta, 0, 0)
 }
 
-func (c call) EndHandleWithAppError(
-	err error,
+func (c call) EndHandleWithAppError(err error,
 	isApplicationError bool,
 	applicationErrorMeta *transport.ApplicationErrorMeta,
-	ctxOverrideErr error) {
+	ctxOverrideErr error,
+	requestSize int,
+	responseSize int) {
 	if ctxOverrideErr == nil {
-		c.endWithAppError(err, isApplicationError, applicationErrorMeta)
+		c.endWithAppError(err, isApplicationError, applicationErrorMeta, requestSize, responseSize)
 		return
 	}
 
@@ -112,10 +113,11 @@ func (c call) EndHandleWithAppError(
 		droppedField = zap.String(_dropped, _droppedSuccessLog)
 	}
 
-	c.endWithAppError(
-		ctxOverrideErr,
+	c.endWithAppError(ctxOverrideErr,
 		false, /* application error */
 		nil,   /* application failure */
+		requestSize,
+		responseSize,
 		droppedField,
 	)
 }
@@ -124,16 +126,18 @@ func (c call) endWithAppError(
 	err error,
 	isApplicationError bool,
 	applicationErrorMeta *transport.ApplicationErrorMeta,
+	requestSize int,
+	responseSize int,
 	extraLogFields ...zap.Field) {
 	elapsed := _timeNow().Sub(c.started)
 	c.endLogs(elapsed, err, isApplicationError, applicationErrorMeta, extraLogFields...)
-	c.endStats(elapsed, err, isApplicationError, applicationErrorMeta)
+	c.endStats(elapsed, err, isApplicationError, applicationErrorMeta, requestSize, responseSize)
 }
 
 // EndWithPanic ends the call with additional panic metrics
 func (c call) EndWithPanic(err error) {
 	c.edge.panics.Inc()
-	c.endWithAppError(err, true /* isApplicationError */, nil /* applicationErrorMeta */)
+	c.endWithAppError(err, true /* isApplicationError */, nil, 0, 0 /* applicationErrorMeta */)
 }
 
 func (c call) endLogs(
@@ -232,6 +236,8 @@ func (c call) endStats(
 	err error,
 	isApplicationError bool,
 	applicationErrorMeta *transport.ApplicationErrorMeta,
+	requestSize int,
+	responseSize int,
 ) {
 	c.edge.calls.Inc()
 
@@ -239,11 +245,19 @@ func (c call) endStats(
 		if deadlineTime, ok := c.ctx.Deadline(); ok {
 			c.edge.ttls.Observe(deadlineTime.Sub(c.started))
 		}
+
+		if requestSize > 0 {
+			c.edge.requestPayloadSizes.IncBucket(int64(requestSize))
+		}
 	}
 
 	if err == nil && !isApplicationError {
 		c.edge.successes.Inc()
 		c.edge.latencies.Observe(elapsed)
+
+		if c.direction == _directionInbound && responseSize > 0 {
+			c.edge.responsePayloadSizes.IncBucket(int64(responseSize))
+		}
 		return
 	}
 

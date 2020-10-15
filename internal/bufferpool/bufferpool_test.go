@@ -90,6 +90,8 @@ func TestBufferReuse(t *testing.T) {
 	runTest(t, func(t *testing.T, pool *Pool) {
 		runConcurrently(t, func() {
 			buf := pool.Get()
+			assert.Equal(t, 0, len(buf.Bytes()), "Expected zero buffer size")
+
 			io.WriteString(buf, "test")
 			buf.Release()
 		})
