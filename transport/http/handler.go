@@ -103,14 +103,6 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		return yarpcerrors.Newf(yarpcerrors.CodeNotFound, "request method was %s but only %s is allowed", req.Method, http.MethodPost)
 	}
 
-	buf := bufferpool.Get()
-	defer bufferpool.Put(buf)
-
-	_, retErr = buf.ReadFrom(req.Body)
-	if retErr != nil {
-		return
-	}
-
 	treq := &transport.Request{
 		Caller:          popHeader(req.Header, CallerHeader),
 		Service:         service,
@@ -121,7 +113,8 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		RoutingKey:      popHeader(req.Header, RoutingKeyHeader),
 		RoutingDelegate: popHeader(req.Header, RoutingDelegateHeader),
 		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}),
-		Body:            buf,
+		Body:            req.Body,
+		BodySize:        int(req.ContentLength),
 	}
 	for header := range h.grabHeaders {
 		if value := req.Header.Get(header); value != "" {

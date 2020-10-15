@@ -178,6 +178,7 @@ func (h *handler) handleUnary(
 	// Buffers are documented to always return a nil error.
 	_, _ = requestBuffer.Write(requestData)
 	transportRequest.Body = requestBuffer
+	transportRequest.BodySize = len(requestData)
 
 	responseWriter := newResponseWriter()
 	defer responseWriter.Close()

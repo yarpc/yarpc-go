@@ -78,7 +78,10 @@ func (ss *serverStream) ReceiveMessage(_ context.Context) (*transport.StreamMess
 	if err := ss.stream.RecvMsg(&msg); err != nil {
 		return nil, toYARPCStreamError(err)
 	}
-	return &transport.StreamMessage{Body: readCloser{bytes.NewReader(msg)}}, nil
+	return &transport.StreamMessage{
+		Body:     readCloser{bytes.NewReader(msg)},
+		BodySize: len(msg),
+	}, nil
 }
 
 type readCloser struct {

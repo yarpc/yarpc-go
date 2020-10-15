@@ -204,6 +204,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 	}
 
 	treq.Body = buf
+	treq.BodySize = buf.Len()
 
 	if err := transport.ValidateRequest(treq); err != nil {
 		return err
