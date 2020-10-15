@@ -35,6 +35,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/encoding/protobuf/internal/testpb"
+	"go.uber.org/yarpc/internal/testutils"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
@@ -74,7 +75,7 @@ func TestProtobufErrorDetailObservability(t *testing.T) {
 	})
 
 	t.Run("metrics", func(t *testing.T) {
-		wantCounters := []counterAssertion{
+		wantCounters := []testutils.CounterAssertion{
 			{
 				Name: "caller_failures",
 				Tags: map[string]string{
@@ -88,8 +89,8 @@ func TestProtobufErrorDetailObservability(t *testing.T) {
 			{Name: "successes"},
 		}
 
-		assertMetrics(t, wantCounters, clientMetricsRoot.Snapshot().Counters)
-		assertMetrics(t, wantCounters, serverMetricsRoot.Snapshot().Counters)
+		testutils.AssertCounters(t, wantCounters, clientMetricsRoot.Snapshot().Counters)
+		testutils.AssertCounters(t, wantCounters, serverMetricsRoot.Snapshot().Counters)
 	})
 }
 
@@ -104,26 +105,26 @@ func TestProtobufMetrics(t *testing.T) {
 	require.NoError(t, err, "unexpected call error")
 
 	t.Run("counters", func(t *testing.T) {
-		wantCounters := []counterAssertion{
+		wantCounters := []testutils.CounterAssertion{
 			{Name: "calls", Value: 1},
 			{Name: "panics"},
 			{Name: "successes", Value: 1},
 		}
 
-		assertMetrics(t, wantCounters, clientMetricsRoot.Snapshot().Counters)
-		assertMetrics(t, wantCounters, serverMetricsRoot.Snapshot().Counters)
+		testutils.AssertCounters(t, wantCounters, clientMetricsRoot.Snapshot().Counters)
+		testutils.AssertCounters(t, wantCounters, serverMetricsRoot.Snapshot().Counters)
 	})
 	t.Run("inbound histograms", func(t *testing.T) {
-		wantHistograms := []histogramAssertion{
+		wantHistograms := []testutils.HistogramAssertion{
 			{Name: "caller_failure_latency_ms"},
 			{Name: "request_payload_size_bytes", Value: []int64{16}},
 			{Name: "response_payload_size_bytes", Value: []int64{16}},
 			{Name: "server_failure_latency_ms"},
-			{Name: "success_latency_ms", Value: []int64{1}},
+			{Name: "success_latency_ms", IgnoreValueCompare: true, ValueLength: 1},
 			{Name: "timeout_ttl_ms"},
 			{Name: "ttl_ms", Value: []int64{1000}},
 		}
-		assertHistogram(t, wantHistograms, serverMetricsRoot.Snapshot().Histograms)
+		testutils.AssertHistograms(t, wantHistograms, serverMetricsRoot.Snapshot().Histograms)
 	})
 }
 
@@ -152,7 +153,7 @@ func TestProtobufStreamMetrics(t *testing.T) {
 	assert.Error(t, err)
 
 	t.Run("counters", func(t *testing.T) {
-		clientCounters := []counterAssertion{
+		clientCounters := []testutils.CounterAssertion{
 			{Name: "calls", Value: 1},
 			{Name: "panics"},
 			{Name: "stream_receive_failures", Value: 1},
@@ -163,7 +164,7 @@ func TestProtobufStreamMetrics(t *testing.T) {
 			{Name: "successes", Value: 1},
 		}
 
-		serverCounters := []counterAssertion{
+		serverCounters := []testutils.CounterAssertion{
 			{Name: "calls", Value: 1},
 			{Name: "panics"},
 			{Name: "server_failures", Value: 1},
@@ -174,16 +175,16 @@ func TestProtobufStreamMetrics(t *testing.T) {
 			{Name: "successes", Value: 1},
 		}
 
-		assertMetrics(t, clientCounters, clientMetricsRoot.Snapshot().Counters)
-		assertMetrics(t, serverCounters, serverMetricsRoot.Snapshot().Counters)
+		testutils.AssertCounters(t, clientCounters, clientMetricsRoot.Snapshot().Counters)
+		testutils.AssertCounters(t, serverCounters, serverMetricsRoot.Snapshot().Counters)
 	})
 	t.Run("inbound histograms", func(t *testing.T) {
-		wantHistograms := []histogramAssertion{
-			{Name: "stream_duration_ms", Value: []int64{1}},
+		wantHistograms := []testutils.HistogramAssertion{
+			{Name: "stream_duration_ms", IgnoreValueCompare: true, ValueLength: 1},
 			{Name: "stream_request_payload_size_bytes", Value: []int64{8}},
 			{Name: "stream_response_payload_size_bytes", Value: []int64{8}},
 		}
-		assertHistogram(t, wantHistograms, serverMetricsRoot.Snapshot().Histograms)
+		testutils.AssertHistograms(t, wantHistograms, serverMetricsRoot.Snapshot().Histograms)
 	})
 }
 
@@ -211,42 +212,6 @@ func assertLogFields(t *testing.T, wantFields, gotContext []zapcore.Field) {
 		got, ok := gotFields[want.Key]
 		if assert.True(t, ok, "key %q not found", want.Key) {
 			assert.Equal(t, want, got, "unexpected log field")
-		}
-	}
-}
-
-type counterAssertion struct {
-	Name  string
-	Tags  map[string]string
-	Value int
-}
-
-type histogramAssertion struct {
-	Name  string
-	Tags  map[string]string
-	Value []int64
-}
-
-func assertMetrics(t *testing.T, counterAssertions []counterAssertion, snapshot []metrics.Snapshot) {
-	require.Len(t, counterAssertions, len(snapshot), snapshot)
-
-	for i, wantCounter := range counterAssertions {
-		require.Equal(t, wantCounter.Name, snapshot[i].Name, "unexpected counter")
-		assert.EqualValues(t, wantCounter.Value, snapshot[i].Value, "unexpected counter value for %s", wantCounter.Name)
-		for wantTagKey, wantTagVal := range wantCounter.Tags {
-			assert.Equal(t, wantTagVal, snapshot[i].Tags[wantTagKey], "unexpected value for %q", wantTagKey)
-		}
-	}
-}
-
-func assertHistogram(t *testing.T, histogramAssertions []histogramAssertion, snapshot []metrics.HistogramSnapshot) {
-	require.Len(t, histogramAssertions, len(snapshot), "unexpected number of histograms")
-
-	for i, wantHistogram := range histogramAssertions {
-		require.Equal(t, wantHistogram.Name, snapshot[i].Name, "unexpected histogram")
-		assert.EqualValues(t, wantHistogram.Value, snapshot[i].Values, "unexpected histogram value for %s", wantHistogram.Name)
-		for wantTagKey, wantTagVal := range wantHistogram.Tags {
-			assert.Equal(t, wantTagVal, snapshot[i].Tags[wantTagKey], "unexpected value for %q", wantTagKey)
 		}
 	}
 }

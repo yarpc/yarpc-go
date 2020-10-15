@@ -175,14 +175,15 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 	err := h.Handle(ctx, req, wrappedWriter)
 	ctxErr := ctxErrOverride(ctx, req)
 
-	// TODO: refactor EndHandleWithAppError to accept args in a callResult struct
 	call.EndHandleWithAppError(
-		err,
-		wrappedWriter.isApplicationError,
-		wrappedWriter.applicationErrorMeta,
-		ctxErr,
-		requestSize,
-		wrappedWriter.responseSize)
+		callResult{
+			err:                  err,
+			ctxOverrideErr:       ctxErr,
+			isApplicationError:   wrappedWriter.isApplicationError,
+			applicationErrorMeta: wrappedWriter.applicationErrorMeta,
+			requestSize:          requestSize,
+			responseSize:         wrappedWriter.responseSize,
+		})
 
 	if ctxErr != nil {
 		err = ctxErr
@@ -202,7 +203,12 @@ func (m *Middleware) Call(ctx context.Context, req *transport.Request, out trans
 		isApplicationError = res.ApplicationError
 		applicationErrorMeta = res.ApplicationErrorMeta
 	}
-	call.EndCallWithAppError(err, isApplicationError, applicationErrorMeta)
+	callRes := callResult{
+		err:                  err,
+		isApplicationError:   isApplicationError,
+		applicationErrorMeta: applicationErrorMeta,
+	}
+	call.EndCallWithAppError(callRes)
 	return res, err
 }
 
@@ -214,7 +220,7 @@ func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h
 		requestSize = wrapper.Len()
 	}
 	err := h.HandleOneway(ctx, req)
-	call.End(err, requestSize)
+	call.End(callResult{err: err, requestSize: requestSize})
 	return err
 }
 
@@ -222,7 +228,7 @@ func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h
 func (m *Middleware) CallOneway(ctx context.Context, req *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
 	call := m.graph.begin(ctx, transport.Oneway, _directionOutbound, req)
 	ack, err := out.CallOneway(ctx, req)
-	call.End(err, 0)
+	call.End(callResult{err: err})
 	return ack, err
 }
 
