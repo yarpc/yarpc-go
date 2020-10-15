@@ -105,7 +105,9 @@ func (o fakeOutbound) Call(context.Context, *transport.Request) (*transport.Resp
 			Details: o.applicationErrDetails,
 			Name:    o.applicationErrName,
 			Code:    o.applicationErrCode,
-		}, Body: ioutil.NopCloser(bytes.NewReader(o.body)), BodySize: len(o.body)}, o.err
+		},
+		Body:     ioutil.NopCloser(bytes.NewReader(o.body)),
+		BodySize: len(o.body)}, o.err
 }
 
 func (o fakeOutbound) CallOneway(context.Context, *transport.Request) (transport.Ack, error) {
