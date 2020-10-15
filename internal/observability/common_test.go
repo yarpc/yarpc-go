@@ -21,7 +21,9 @@
 package observability
 
 import (
+	"bytes"
 	"context"
+	"io/ioutil"
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
@@ -92,6 +94,8 @@ type fakeOutbound struct {
 	applicationErrDetails string
 	applicationErrCode    *yarpcerrors.Code
 	stream                fakeStream
+
+	body []byte
 }
 
 func (o fakeOutbound) Call(context.Context, *transport.Request) (*transport.Response, error) {
@@ -101,7 +105,7 @@ func (o fakeOutbound) Call(context.Context, *transport.Request) (*transport.Resp
 			Details: o.applicationErrDetails,
 			Name:    o.applicationErrName,
 			Code:    o.applicationErrCode,
-		}}, o.err
+		}, Body: ioutil.NopCloser(bytes.NewReader(o.body)), BodySize: len(o.body)}, o.err
 }
 
 func (o fakeOutbound) CallOneway(context.Context, *transport.Request) (transport.Ack, error) {

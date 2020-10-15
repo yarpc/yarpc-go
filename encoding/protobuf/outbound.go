@@ -157,6 +157,7 @@ func (c *client) buildTransportRequest(ctx context.Context, requestMethodName st
 		}
 		if requestData != nil {
 			transportRequest.Body = bytes.NewReader(requestData)
+			transportRequest.BodySize = len(requestData)
 		}
 		return ctx, call, transportRequest, cleanup, nil
 	}

@@ -86,3 +86,14 @@ func AssertClientAndServerCounters(t *testing.T, counterAssertions []CounterAsse
 		AssertCounters(t, counterAssertions, clientSnapshot.Snapshot().Counters)
 	})
 }
+
+// AssertClientAndServerHistograms asserts expected histograms on client and server snapshots
+func AssertClientAndServerHistograms(t *testing.T, histogramAssertions []HistogramAssertion,
+	clientSnapshot, serverSnapshot *metrics.Root) {
+	t.Run("inbound", func(t *testing.T) {
+		AssertHistograms(t, histogramAssertions, serverSnapshot.Snapshot().Histograms)
+	})
+	t.Run("outbound", func(t *testing.T) {
+		AssertHistograms(t, histogramAssertions, clientSnapshot.Snapshot().Histograms)
+	})
+}
