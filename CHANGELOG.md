@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - observability: Add request and response payload size histogram
+### Fixed
+- yarpc: service name can contain `_` now.
 
 ## [1.48.0] - 2020-10-07
 ### Added
