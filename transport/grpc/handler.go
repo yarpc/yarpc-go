@@ -171,6 +171,7 @@ func (h *handler) handleUnary(
 	if err := serverStream.RecvMsg(&requestData); err != nil {
 		return err
 	}
+	// TODO: avoid redundant buffer copy
 	requestBuffer := bufferpool.Get()
 	defer bufferpool.Put(requestBuffer)
 

@@ -148,6 +148,7 @@ func decodeRequest(
 		return wire.Value{}, nil, err
 	}
 
+	// TODO: extra copy can be avoid if body already implements Bytes() method
 	if _, err := buf.ReadFrom(treq.Body); err != nil {
 		return wire.Value{}, nil, err
 	}

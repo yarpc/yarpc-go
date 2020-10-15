@@ -43,6 +43,8 @@ type writer struct {
 
 	isApplicationError   bool
 	applicationErrorMeta *transport.ApplicationErrorMeta
+
+	responseSize int
 }
 
 func newWriter(rw transport.ResponseWriter) *writer {
@@ -65,6 +67,11 @@ func (w *writer) SetApplicationErrorMeta(applicationErrorMeta *transport.Applica
 	if appErrMetaSetter, ok := w.ResponseWriter.(transport.ApplicationErrorMetaSetter); ok {
 		appErrMetaSetter.SetApplicationErrorMeta(applicationErrorMeta)
 	}
+}
+
+func (w *writer) Write(p []byte) (n int, err error) {
+	w.responseSize += len(p)
+	return w.ResponseWriter.Write(p)
 }
 
 func (w *writer) free() {
@@ -120,6 +127,10 @@ type DirectionalLevelsConfig struct {
 	ApplicationError *zapcore.Level
 }
 
+type lenWrapper interface {
+	Len() int
+}
+
 // NewMiddleware constructs an observability middleware with the provided
 // configuration.
 func NewMiddleware(cfg Config) *Middleware {
@@ -152,14 +163,27 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 	call := m.graph.begin(ctx, transport.Unary, _directionInbound, req)
 	defer m.handlePanicForCall(call, transport.Unary)
 
+	var requestSize int
+	// Emits metrics only if body implements len method, mainly to avoid extra
+	// buffer copy just to measure the size. Metric won't be emitted if
+	// middleware changes body which does not implement Len method
+	if body, ok := req.Body.(lenWrapper); ok {
+		requestSize = body.Len()
+	}
+
 	wrappedWriter := newWriter(w)
 	err := h.Handle(ctx, req, wrappedWriter)
 	ctxErr := ctxErrOverride(ctx, req)
+
+	// TODO: refactor EndHandleWithAppError to accept args in a callResult struct
 	call.EndHandleWithAppError(
 		err,
 		wrappedWriter.isApplicationError,
 		wrappedWriter.applicationErrorMeta,
-		ctxErr)
+		ctxErr,
+		requestSize,
+		wrappedWriter.responseSize)
+
 	if ctxErr != nil {
 		err = ctxErr
 	}
@@ -185,8 +209,12 @@ func (m *Middleware) Call(ctx context.Context, req *transport.Request, out trans
 // HandleOneway implements middleware.OnewayInbound.
 func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
 	call := m.graph.begin(ctx, transport.Oneway, _directionInbound, req)
+	var requestSize int
+	if wrapper, ok := req.Body.(lenWrapper); ok {
+		requestSize = wrapper.Len()
+	}
 	err := h.HandleOneway(ctx, req)
-	call.End(err)
+	call.End(err, requestSize)
 	return err
 }
 
@@ -194,7 +222,7 @@ func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h
 func (m *Middleware) CallOneway(ctx context.Context, req *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
 	call := m.graph.begin(ctx, transport.Oneway, _directionOutbound, req)
 	ack, err := out.CallOneway(ctx, req)
-	call.End(err)
+	call.End(err, 0)
 	return ack, err
 }
 

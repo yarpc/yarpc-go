@@ -21,6 +21,7 @@
 package observability
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -35,6 +36,7 @@ import (
 	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/internal/digester"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
@@ -1279,6 +1281,11 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 		ContextExtractor: NewNopContextExtractor(),
 	})
 
+	buf := bufferpool.Get()
+	defer bufferpool.Put(buf)
+
+	buf.Write([]byte("body"))
+
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*time.Duration(ttlMs)))
 	defer cancel()
 	err := mw.Handle(
@@ -1292,10 +1299,10 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 			ShardKey:        "sk",
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
-			Body:            strings.NewReader("body"),
+			Body:            buf,
 		},
 		&transporttest.FakeResponseWriter{},
-		fakeHandler{err: nil, applicationErr: false},
+		fakeHandler{responseData: []byte("test response")},
 	)
 	assert.NoError(t, err, "Unexpected transport error.")
 
@@ -1320,6 +1327,115 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 		Histograms: []metrics.HistogramSnapshot{
 			{
 				Name: "caller_failure_latency_ms",
+				Tags: tags,
+				Unit: time.Millisecond,
+			},
+			{
+				Name:   "request_payload_size_bytes",
+				Tags:   tags,
+				Unit:   time.Millisecond,
+				Values: []int64{4},
+			},
+			{
+				Name:   "response_payload_size_bytes",
+				Tags:   tags,
+				Unit:   time.Millisecond,
+				Values: []int64{16},
+			},
+			{
+				Name: "server_failure_latency_ms",
+				Tags: tags,
+				Unit: time.Millisecond,
+			},
+			{
+				Name:   "success_latency_ms",
+				Tags:   tags,
+				Unit:   time.Millisecond,
+				Values: []int64{1},
+			},
+			{
+				Name: "timeout_ttl_ms",
+				Tags: tags,
+				Unit: time.Millisecond,
+			},
+			{
+				Name:   "ttl_ms",
+				Tags:   tags,
+				Unit:   time.Millisecond,
+				Values: []int64{ttlMs},
+			},
+		},
+	}
+	assert.Equal(t, want, snap, "Unexpected snapshot of metrics.")
+}
+
+func TestMiddlewareSuccessSnapshotForOneWay(t *testing.T) {
+	defer stubTimeWithTimeVal(time.Now())()
+	ttlMs := int64(1000)
+	root := metrics.New()
+	meter := root.Scope()
+	mw := NewMiddleware(Config{
+		Logger:           zap.NewNop(),
+		Scope:            meter,
+		ContextExtractor: NewNopContextExtractor(),
+	})
+
+	buf := bufferpool.Get()
+	defer bufferpool.Put(buf)
+
+	buf.Write([]byte("body"))
+
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*time.Duration(ttlMs)))
+	defer cancel()
+	err := mw.HandleOneway(
+		ctx,
+		&transport.Request{
+			Caller:          "caller",
+			Service:         "service",
+			Transport:       "",
+			Encoding:        "raw",
+			Procedure:       "procedure",
+			ShardKey:        "sk",
+			RoutingKey:      "rk",
+			RoutingDelegate: "rd",
+			Body:            buf,
+		},
+		fakeHandler{responseData: []byte("test response")},
+	)
+	assert.NoError(t, err, "Unexpected transport error.")
+
+	snap := root.Snapshot()
+	tags := metrics.Tags{
+		"dest":             "service",
+		"direction":        "inbound",
+		"transport":        "unknown",
+		"encoding":         "raw",
+		"procedure":        "procedure",
+		"routing_delegate": "rd",
+		"routing_key":      "rk",
+		"rpc_type":         transport.Oneway.String(),
+		"source":           "caller",
+	}
+	want := &metrics.RootSnapshot{
+		Counters: []metrics.Snapshot{
+			{Name: "calls", Tags: tags, Value: 1},
+			{Name: "panics", Tags: tags, Value: 0},
+			{Name: "successes", Tags: tags, Value: 1},
+		},
+		Histograms: []metrics.HistogramSnapshot{
+			{
+				Name: "caller_failure_latency_ms",
+				Tags: tags,
+				Unit: time.Millisecond,
+			},
+			{
+				Name:   "request_payload_size_bytes",
+				Tags:   tags,
+				Unit:   time.Millisecond,
+				Values: []int64{4},
+			},
+			{
+				Name: "response_payload_size_bytes",
 				Tags: tags,
 				Unit: time.Millisecond,
 			},
@@ -1360,6 +1476,11 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 		ContextExtractor: NewNopContextExtractor(),
 	})
 
+	buf := bufferpool.Get()
+	defer bufferpool.Put(buf)
+
+	buf.Write([]byte("test body"))
+
 	err := mw.Handle(
 		context.Background(),
 		&transport.Request{
@@ -1371,10 +1492,10 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 			ShardKey:        "sk",
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
-			Body:            strings.NewReader("body"),
+			Body:            buf,
 		},
 		&transporttest.FakeResponseWriter{},
-		fakeHandler{err: fmt.Errorf("yuno"), applicationErr: false},
+		fakeHandler{err: fmt.Errorf("yuno"), applicationErr: false, responseData: []byte("error")},
 	)
 	assert.Error(t, err, "Expected transport error.")
 
@@ -1417,6 +1538,17 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 				Unit: time.Millisecond,
 			},
 			{
+				Name:   "request_payload_size_bytes",
+				Tags:   tags,
+				Unit:   time.Millisecond,
+				Values: []int64{16},
+			},
+			{
+				Name: "response_payload_size_bytes",
+				Tags: tags,
+				Unit: time.Millisecond,
+			},
+			{
 				Name:   "server_failure_latency_ms",
 				Tags:   tags,
 				Unit:   time.Millisecond,
@@ -1453,6 +1585,12 @@ func TestMiddlewareFailureWithDeadlineExceededSnapshot(t *testing.T) {
 		Scope:            meter,
 		ContextExtractor: NewNopContextExtractor(),
 	})
+
+	buf := bufferpool.Get()
+	defer bufferpool.Put(buf)
+
+	buf.Write([]byte("test body"))
+
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*time.Duration(ttlMs)))
 	defer cancel()
 	err := mw.Handle(
@@ -1466,10 +1604,14 @@ func TestMiddlewareFailureWithDeadlineExceededSnapshot(t *testing.T) {
 			ShardKey:        "sk",
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
-			Body:            strings.NewReader("body"),
+			Body:            buf,
 		},
 		&transporttest.FakeResponseWriter{},
-		fakeHandler{err: yarpcerrors.DeadlineExceededErrorf("test deadline"), applicationErr: false},
+		fakeHandler{
+			err:            yarpcerrors.DeadlineExceededErrorf("test deadline"),
+			applicationErr: false,
+			responseData:   []byte("deadline response"),
+		},
 	)
 	assert.Error(t, err, "Expected transport error.")
 
@@ -1508,6 +1650,17 @@ func TestMiddlewareFailureWithDeadlineExceededSnapshot(t *testing.T) {
 		Histograms: []metrics.HistogramSnapshot{
 			{
 				Name: "caller_failure_latency_ms",
+				Tags: tags,
+				Unit: time.Millisecond,
+			},
+			{
+				Name:   "request_payload_size_bytes",
+				Tags:   tags,
+				Unit:   time.Millisecond,
+				Values: []int64{16},
+			},
+			{
+				Name: "response_payload_size_bytes",
 				Tags: tags,
 				Unit: time.Millisecond,
 			},
@@ -1645,6 +1798,16 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 						Values: []int64{1},
 					},
 					{
+						Name: "request_payload_size_bytes",
+						Tags: tags,
+						Unit: time.Millisecond,
+					},
+					{
+						Name: "response_payload_size_bytes",
+						Tags: tags,
+						Unit: time.Millisecond,
+					},
+					{
 						Name: "server_failure_latency_ms",
 						Tags: tags,
 						Unit: time.Millisecond,
@@ -1738,6 +1901,16 @@ func TestUnaryInboundApplicationPanics(t *testing.T) {
 					Tags:   tags,
 					Unit:   time.Millisecond,
 					Values: []int64{1}, // XXX this test flaps mysteriously. This figure is sometimes higher.
+				},
+				{
+					Name: "request_payload_size_bytes",
+					Tags: tags,
+					Unit: time.Millisecond,
+				},
+				{
+					Name: "response_payload_size_bytes",
+					Tags: tags,
+					Unit: time.Millisecond,
 				},
 				{
 					Name: "server_failure_latency_ms",
@@ -1877,11 +2050,23 @@ func TestStreamingMetrics(t *testing.T) {
 			ContextExtractor: NewNopContextExtractor(),
 		})
 
-		stream, err := transport.NewServerStream(&fakeStream{request: req})
+		stream, err := transport.NewServerStream(
+			&fakeStream{
+				request: req,
+				receiveMsg: &transport.StreamMessage{
+					Body: readCloser{bytes.NewReader([]byte("Foobar"))},
+				},
+			},
+		)
 		require.NoError(t, err)
 		err = mw.HandleStream(stream, &fakeHandler{
 			handleStream: func(stream *transport.ServerStream) {
-				err := stream.SendMessage(context.Background(), nil /*message*/)
+				err := stream.SendMessage(
+					context.Background(),
+					&transport.StreamMessage{
+						Body: readCloser{bytes.NewReader([]byte("test"))},
+					},
+				)
 				require.NoError(t, err)
 				_, err = stream.ReceiveMessage(context.Background())
 				require.NoError(t, err)
@@ -1907,6 +2092,8 @@ func TestStreamingMetrics(t *testing.T) {
 			},
 			Histograms: []metrics.HistogramSnapshot{
 				{Name: "stream_duration_ms", Tags: tags, Unit: time.Millisecond, Values: []int64{1}},
+				{Name: "stream_request_payload_size_bytes", Tags: tags, Unit: time.Millisecond, Values: []int64{8}},
+				{Name: "stream_response_payload_size_bytes", Tags: tags, Unit: time.Millisecond, Values: []int64{4}},
 			},
 		}
 		assert.Equal(t, want, snap, "unexpected metrics snapshot")
@@ -1988,6 +2175,8 @@ func TestStreamingMetrics(t *testing.T) {
 					},
 					Histograms: []metrics.HistogramSnapshot{
 						{Name: "stream_duration_ms", Tags: successTags, Unit: time.Millisecond, Values: []int64{1}},
+						{Name: "stream_request_payload_size_bytes", Tags: successTags, Unit: time.Millisecond},
+						{Name: "stream_response_payload_size_bytes", Tags: successTags, Unit: time.Millisecond},
 					},
 				}
 				assert.Equal(t, want, snap, "unexpected metrics snapshot")
@@ -2044,6 +2233,8 @@ func TestStreamingMetrics(t *testing.T) {
 			},
 			Histograms: []metrics.HistogramSnapshot{
 				{Name: "stream_duration_ms", Tags: successTags, Unit: time.Millisecond, Values: []int64{1}},
+				{Name: "stream_request_payload_size_bytes", Tags: successTags, Unit: time.Millisecond},
+				{Name: "stream_response_payload_size_bytes", Tags: successTags, Unit: time.Millisecond},
 			},
 		}
 		assert.Equal(t, want, snap, "unexpected metrics snapshot")
@@ -2085,6 +2276,8 @@ func TestStreamingMetrics(t *testing.T) {
 			},
 			Histograms: []metrics.HistogramSnapshot{
 				{Name: "stream_duration_ms", Tags: tags, Unit: time.Millisecond, Values: []int64{1}},
+				{Name: "stream_request_payload_size_bytes", Tags: tags, Unit: time.Millisecond},
+				{Name: "stream_response_payload_size_bytes", Tags: tags, Unit: time.Millisecond},
 			},
 		}
 		assert.Equal(t, want, snap, "unexpected metrics snapshot")
@@ -2125,6 +2318,8 @@ func TestStreamingMetrics(t *testing.T) {
 			},
 			Histograms: []metrics.HistogramSnapshot{
 				{Name: "stream_duration_ms", Tags: successTags, Unit: time.Millisecond},
+				{Name: "stream_request_payload_size_bytes", Tags: successTags, Unit: time.Millisecond},
+				{Name: "stream_response_payload_size_bytes", Tags: successTags, Unit: time.Millisecond},
 			},
 		}
 		assert.Equal(t, want, snap, "unexpected metrics snapshot")
@@ -2182,6 +2377,8 @@ func TestStreamingMetrics(t *testing.T) {
 			},
 			Histograms: []metrics.HistogramSnapshot{
 				{Name: "stream_duration_ms", Tags: successTags, Unit: time.Millisecond, Values: []int64{1}},
+				{Name: "stream_request_payload_size_bytes", Tags: successTags, Unit: time.Millisecond},
+				{Name: "stream_response_payload_size_bytes", Tags: successTags, Unit: time.Millisecond},
 			},
 		}
 		assert.Equal(t, want, snap, "unexpected metrics snapshot")
@@ -2205,4 +2402,12 @@ func TestNewWriterIsEmpty(t *testing.T) {
 	require.NotNil(t, w, "writer must not be nil")
 	assert.Equal(t, writer{}, *w,
 		"expected empty writer, fields were likely not cleared in the pool")
+}
+
+type readCloser struct {
+	*bytes.Reader
+}
+
+func (r readCloser) Close() error {
+	return nil
 }
