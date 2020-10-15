@@ -67,7 +67,8 @@ type Request struct {
 	// Request payload.
 	Body io.Reader
 
-	// Request payload size
+	// Request payload size before any compression applied by the protocol
+	// HTTP requests set this value as content-length header
 	BodySize int
 }
 
