@@ -76,6 +76,8 @@ func checkForbiddenCharacters(name string) error {
 			continue
 		case c == '-':
 			continue
+		case c == '_':
+			continue
 		default:
 			return fmt.Errorf("service name %q contains characters other than [0-9a-z] and hyphens", name)
 		}
