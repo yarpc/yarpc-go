@@ -175,9 +175,8 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 	err := h.Handle(ctx, req, wrappedWriter)
 	ctxErr := ctxErrOverride(ctx, req)
 
-	// TODO: refactor EndHandleWithAppError to accept args in a callResult struct
 	call.EndHandleWithAppError(
-		&callResult{
+		callResult{
 			err:                  err,
 			ctxOverrideErr:       ctxErr,
 			isApplicationError:   wrappedWriter.isApplicationError,
@@ -204,7 +203,12 @@ func (m *Middleware) Call(ctx context.Context, req *transport.Request, out trans
 		isApplicationError = res.ApplicationError
 		applicationErrorMeta = res.ApplicationErrorMeta
 	}
-	call.EndCallWithAppError(&callResult{err: err, isApplicationError: isApplicationError, applicationErrorMeta: applicationErrorMeta})
+	callRes := callResult{
+		err:                  err,
+		isApplicationError:   isApplicationError,
+		applicationErrorMeta: applicationErrorMeta,
+	}
+	call.EndCallWithAppError(callRes)
 	return res, err
 }
 
@@ -216,7 +220,7 @@ func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h
 		requestSize = wrapper.Len()
 	}
 	err := h.HandleOneway(ctx, req)
-	call.End(&callResult{err: err, requestSize: requestSize})
+	call.End(callResult{err: err, requestSize: requestSize})
 	return err
 }
 
@@ -224,7 +228,7 @@ func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h
 func (m *Middleware) CallOneway(ctx context.Context, req *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
 	call := m.graph.begin(ctx, transport.Oneway, _directionOutbound, req)
 	ack, err := out.CallOneway(ctx, req)
-	call.End(&callResult{err: err})
+	call.End(callResult{err: err})
 	return ack, err
 }
 

@@ -90,15 +90,15 @@ type levels struct {
 	success, failure, applicationError zapcore.Level
 }
 
-func (c call) End(res *callResult) {
+func (c call) End(res callResult) {
 	c.endWithAppError(res)
 }
 
-func (c call) EndCallWithAppError(res *callResult) {
+func (c call) EndCallWithAppError(res callResult) {
 	c.endWithAppError(res)
 }
 
-func (c call) EndHandleWithAppError(res *callResult) {
+func (c call) EndHandleWithAppError(res callResult) {
 	if res.ctxOverrideErr == nil {
 		c.endWithAppError(res)
 		return
@@ -115,17 +115,18 @@ func (c call) EndHandleWithAppError(res *callResult) {
 		droppedField = zap.String(_dropped, _droppedSuccessLog)
 	}
 
-	c.endWithAppError(&callResult{
-		err:          res.ctxOverrideErr,
-		requestSize:  res.requestSize,
-		responseSize: res.responseSize,
-	},
+	c.endWithAppError(
+		callResult{
+			err:          res.ctxOverrideErr,
+			requestSize:  res.requestSize,
+			responseSize: res.responseSize,
+		},
 		droppedField,
 	)
 }
 
 func (c call) endWithAppError(
-	res *callResult,
+	res callResult,
 	extraLogFields ...zap.Field) {
 	elapsed := _timeNow().Sub(c.started)
 	c.endLogs(elapsed, res.err, res.isApplicationError, res.applicationErrorMeta, extraLogFields...)
@@ -135,7 +136,7 @@ func (c call) endWithAppError(
 // EndWithPanic ends the call with additional panic metrics
 func (c call) EndWithPanic(err error) {
 	c.edge.panics.Inc()
-	c.endWithAppError(&callResult{err: err, isApplicationError: true})
+	c.endWithAppError(callResult{err: err, isApplicationError: true})
 }
 
 func (c call) endLogs(
@@ -231,7 +232,7 @@ func (c call) endLogs(
 
 func (c call) endStats(
 	elapsed time.Duration,
-	res *callResult,
+	res callResult,
 ) {
 	c.edge.calls.Inc()
 
