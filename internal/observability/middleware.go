@@ -164,17 +164,18 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 	defer m.handlePanicForCall(call, transport.Unary)
 
 	var requestSize int
-
-	if call.direction == _directionInbound {
-		if wrapper, ok := req.Body.(lenWrapper); ok {
-			requestSize = wrapper.Len()
-		}
+	// Emits metrics only if body implements len method, mainly to avoid extra
+	// buffer copy just to measure the size. Metric won't be emitted if
+	// middleware changes body which does not implement Len method
+	if body, ok := req.Body.(lenWrapper); ok {
+		requestSize = body.Len()
 	}
 
 	wrappedWriter := newWriter(w)
 	err := h.Handle(ctx, req, wrappedWriter)
 	ctxErr := ctxErrOverride(ctx, req)
 
+	// TODO: refactor EndHandleWithAppError to accept args in a callResult struct
 	call.EndHandleWithAppError(
 		err,
 		wrappedWriter.isApplicationError,
