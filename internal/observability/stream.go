@@ -85,9 +85,7 @@ func (c call) WrapServerStream(stream *transport.ServerStream) *transport.Server
 
 func (s *streamWrapper) SendMessage(ctx context.Context, msg *transport.StreamMessage) error {
 	if s.call.direction == _directionInbound && msg != nil {
-		if body, ok := msg.Body.(lenWrapper); ok {
-			s.edge.streamResponsePayloadSizes.IncBucket(int64(body.Len()))
-		}
+		s.edge.streamResponsePayloadSizes.IncBucket(int64(msg.BodySize))
 	}
 
 	err := s.StreamCloser.SendMessage(ctx, msg)
@@ -110,9 +108,7 @@ func (s *streamWrapper) SendMessage(ctx context.Context, msg *transport.StreamMe
 func (s *streamWrapper) ReceiveMessage(ctx context.Context) (*transport.StreamMessage, error) {
 	msg, err := s.StreamCloser.ReceiveMessage(ctx)
 	if err == nil && msg != nil && s.call.direction == _directionInbound {
-		if body, ok := msg.Body.(lenWrapper); ok {
-			s.edge.streamRequestPayloadSizes.IncBucket(int64(body.Len()))
-		}
+		s.edge.streamRequestPayloadSizes.IncBucket(int64(msg.BodySize))
 	}
 	// Receiving EOF does not constitute an error for the purposes of metrics and alerts.
 	// This is the only special case.

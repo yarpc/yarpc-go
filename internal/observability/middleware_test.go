@@ -1300,6 +1300,7 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
 			Body:            buf,
+			BodySize:        buf.Len(),
 		},
 		&transporttest.FakeResponseWriter{},
 		fakeHandler{responseData: []byte("test response")},
@@ -1399,6 +1400,7 @@ func TestMiddlewareSuccessSnapshotForOneWay(t *testing.T) {
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
 			Body:            buf,
+			BodySize:        buf.Len(),
 		},
 		fakeHandler{responseData: []byte("test response")},
 	)
@@ -1493,6 +1495,7 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
 			Body:            buf,
+			BodySize:        buf.Len(),
 		},
 		&transporttest.FakeResponseWriter{},
 		fakeHandler{err: fmt.Errorf("yuno"), applicationErr: false, responseData: []byte("error")},
@@ -1605,6 +1608,7 @@ func TestMiddlewareFailureWithDeadlineExceededSnapshot(t *testing.T) {
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
 			Body:            buf,
+			BodySize:        buf.Len(),
 		},
 		&transporttest.FakeResponseWriter{},
 		fakeHandler{
@@ -2054,7 +2058,8 @@ func TestStreamingMetrics(t *testing.T) {
 			&fakeStream{
 				request: req,
 				receiveMsg: &transport.StreamMessage{
-					Body: readCloser{bytes.NewReader([]byte("Foobar"))},
+					Body:     readCloser{bytes.NewReader([]byte("Foobar"))},
+					BodySize: 6,
 				},
 			},
 		)
@@ -2064,7 +2069,8 @@ func TestStreamingMetrics(t *testing.T) {
 				err := stream.SendMessage(
 					context.Background(),
 					&transport.StreamMessage{
-						Body: readCloser{bytes.NewReader([]byte("test"))},
+						Body:     readCloser{bytes.NewReader([]byte("test"))},
+						BodySize: 4,
 					},
 				)
 				require.NoError(t, err)

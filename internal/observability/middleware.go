@@ -127,10 +127,6 @@ type DirectionalLevelsConfig struct {
 	ApplicationError *zapcore.Level
 }
 
-type lenWrapper interface {
-	Len() int
-}
-
 // NewMiddleware constructs an observability middleware with the provided
 // configuration.
 func NewMiddleware(cfg Config) *Middleware {
@@ -163,14 +159,6 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 	call := m.graph.begin(ctx, transport.Unary, _directionInbound, req)
 	defer m.handlePanicForCall(call, transport.Unary)
 
-	var requestSize int
-	// Emits metrics only if body implements len method, mainly to avoid extra
-	// buffer copy just to measure the size. Metric won't be emitted if
-	// middleware changes body which does not implement Len method
-	if body, ok := req.Body.(lenWrapper); ok {
-		requestSize = body.Len()
-	}
-
 	wrappedWriter := newWriter(w)
 	err := h.Handle(ctx, req, wrappedWriter)
 	ctxErr := ctxErrOverride(ctx, req)
@@ -181,7 +169,7 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 		wrappedWriter.isApplicationError,
 		wrappedWriter.applicationErrorMeta,
 		ctxErr,
-		requestSize,
+		req.BodySize,
 		wrappedWriter.responseSize)
 
 	if ctxErr != nil {
@@ -209,12 +197,8 @@ func (m *Middleware) Call(ctx context.Context, req *transport.Request, out trans
 // HandleOneway implements middleware.OnewayInbound.
 func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
 	call := m.graph.begin(ctx, transport.Oneway, _directionInbound, req)
-	var requestSize int
-	if wrapper, ok := req.Body.(lenWrapper); ok {
-		requestSize = wrapper.Len()
-	}
 	err := h.HandleOneway(ctx, req)
-	call.End(err, requestSize)
+	call.End(err, req.BodySize)
 	return err
 }
 

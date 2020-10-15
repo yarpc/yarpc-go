@@ -66,6 +66,9 @@ type Request struct {
 
 	// Request payload.
 	Body io.Reader
+
+	// Request payload size
+	BodySize int
 }
 
 // ToRequestMeta converts a Request into a RequestMeta.

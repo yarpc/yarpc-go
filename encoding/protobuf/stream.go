@@ -63,6 +63,7 @@ func writeToStream(ctx context.Context, stream transport.Stream, message proto.M
 				Reader: bytes.NewReader(messageData),
 				closer: cleanup,
 			},
+			BodySize: len(messageData),
 		},
 	)
 }
