@@ -240,15 +240,13 @@ func (c call) endStats(
 		c.edge.ttls.Observe(deadlineTime.Sub(c.started))
 	}
 
-	if res.requestSize > 0 {
-		c.edge.requestPayloadSizes.IncBucket(int64(res.requestSize))
-	}
+	c.edge.requestPayloadSizes.IncBucket(int64(res.requestSize))
 
 	if res.err == nil && !res.isApplicationError {
 		c.edge.successes.Inc()
 		c.edge.latencies.Observe(elapsed)
 
-		if res.responseSize > 0 {
+		if c.rpcType == transport.Unary {
 			c.edge.responsePayloadSizes.IncBucket(int64(res.responseSize))
 		}
 		return

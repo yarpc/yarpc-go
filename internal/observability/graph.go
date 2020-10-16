@@ -40,8 +40,8 @@ var (
 	// configurable.
 	_bucketsMs = bucket.NewRPCLatency()
 	// Bytes buckets for payload size histograms, containing exponential buckets
-	// from 1B to 4MB
-	_bucketsBytes = bucket.NewExponential(1, 2, 23)
+	// in range of 0B, 1B, 2B, ... 4MB
+	_bucketsBytes = append([]int64{0}, bucket.NewExponential(1, 2, 23)...)
 )
 
 type directionName string
