@@ -236,21 +236,19 @@ func (c call) endStats(
 ) {
 	c.edge.calls.Inc()
 
-	if c.direction == _directionInbound {
-		if deadlineTime, ok := c.ctx.Deadline(); ok {
-			c.edge.ttls.Observe(deadlineTime.Sub(c.started))
-		}
+	if deadlineTime, ok := c.ctx.Deadline(); ok {
+		c.edge.ttls.Observe(deadlineTime.Sub(c.started))
+	}
 
-		if res.requestSize > 0 {
-			c.edge.requestPayloadSizes.IncBucket(int64(res.requestSize))
-		}
+	if res.requestSize > 0 {
+		c.edge.requestPayloadSizes.IncBucket(int64(res.requestSize))
 	}
 
 	if res.err == nil && !res.isApplicationError {
 		c.edge.successes.Inc()
 		c.edge.latencies.Observe(elapsed)
 
-		if c.direction == _directionInbound && res.responseSize > 0 {
+		if res.responseSize > 0 {
 			c.edge.responsePayloadSizes.IncBucket(int64(res.responseSize))
 		}
 		return
@@ -316,7 +314,7 @@ func (c call) endStatsFromFault(elapsed time.Duration, code yarpcerrors.Code, ap
 		); err == nil {
 			counter.Inc()
 		}
-		if c.direction == _directionInbound && code == yarpcerrors.CodeDeadlineExceeded {
+		if code == yarpcerrors.CodeDeadlineExceeded {
 			if deadlineTime, ok := c.ctx.Deadline(); ok {
 				c.edge.timeoutTtls.Observe(deadlineTime.Sub(c.started))
 			}

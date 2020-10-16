@@ -151,6 +151,7 @@ func (c thriftClient) Call(ctx context.Context, reqBody envelope.Enveloper, opts
 		return wire.Value{}, err
 	}
 
+	// TODO: Avoid double copy and reuse the buffer read by tchannel outbound
 	buf := bytes.NewBuffer(make([]byte, 0, _defaultBufferSize))
 	if _, err = buf.ReadFrom(tres.Body); err != nil {
 		return wire.Value{}, err
@@ -239,6 +240,7 @@ func (c thriftClient) buildTransportRequest(reqBody envelope.Enveloper) (*transp
 	}
 
 	treq.Body = &buffer
+	treq.BodySize = buffer.Len()
 	return &treq, proto, nil
 }
 

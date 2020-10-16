@@ -124,7 +124,7 @@ func TestProtobufMetrics(t *testing.T) {
 			{Name: "timeout_ttl_ms"},
 			{Name: "ttl_ms", Value: []int64{1000}},
 		}
-		testutils.AssertHistograms(t, wantHistograms, serverMetricsRoot.Snapshot().Histograms)
+		testutils.AssertClientAndServerHistograms(t, wantHistograms, clientMetricsRoot, serverMetricsRoot)
 	})
 }
 

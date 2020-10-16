@@ -275,6 +275,7 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	tres := &transport.Response{
 		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, transport.NewHeaders()),
 		Body:             response.Body,
+		BodySize:         int(response.ContentLength),
 		ApplicationError: response.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus,
 		ApplicationErrorMeta: &transport.ApplicationErrorMeta{
 			Details: response.Header.Get(_applicationErrorDetailsHeader),
