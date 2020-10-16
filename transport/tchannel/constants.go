@@ -33,6 +33,8 @@ const (
 	_maxAppErrDetailsHeaderLen = 256
 	// truncated message if we've exceeded the '_maxAppErrDetailsHeaderLen'
 	_truncatedHeaderMessage = " (truncated)"
+
+	_defaultBufferSize = 1024 // 1k
 )
 
 var defaultConnTimeout = 500 * time.Millisecond

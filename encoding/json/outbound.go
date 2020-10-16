@@ -77,6 +77,8 @@ func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interfac
 	}
 
 	treq.Body = bytes.NewReader(encoded)
+	treq.BodySize = len(encoded)
+
 	tres, appErr := c.cc.GetUnaryOutbound().Call(ctx, &treq)
 	if tres == nil {
 		return appErr

@@ -21,8 +21,10 @@
 package tchannel
 
 import (
+	"bytes"
 	"context"
 	"io"
+	"io/ioutil"
 	"strconv"
 
 	"github.com/uber/tchannel-go"
@@ -174,6 +176,15 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		return nil, err
 	}
 
+	buf := bytes.NewBuffer(make([]byte, 0, _defaultBufferSize))
+	if _, err = buf.ReadFrom(resBody); err != nil {
+		return nil, err
+	}
+
+	if err = resBody.Close(); err != nil {
+		return nil, err
+	}
+
 	respService, _ := headers.Get(ServiceHeaderKey) // validateServiceName handles empty strings
 	if err := validateServiceName(req.Service, respService); err != nil {
 		return nil, err
@@ -188,7 +199,8 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 
 	resp := &transport.Response{
 		Headers:          headers,
-		Body:             resBody,
+		Body:             ioutil.NopCloser(buf),
+		BodySize:         buf.Len(),
 		ApplicationError: res.ApplicationError(),
 		ApplicationErrorMeta: &transport.ApplicationErrorMeta{
 			Details: applicationErrorDetails,

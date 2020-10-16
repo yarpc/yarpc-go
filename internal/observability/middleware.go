@@ -187,14 +187,18 @@ func (m *Middleware) Call(ctx context.Context, req *transport.Request, out trans
 
 	isApplicationError := false
 	var applicationErrorMeta *transport.ApplicationErrorMeta
+	var responseSize int
 	if res != nil {
 		isApplicationError = res.ApplicationError
 		applicationErrorMeta = res.ApplicationErrorMeta
+		responseSize = res.BodySize
 	}
 	callRes := callResult{
 		err:                  err,
 		isApplicationError:   isApplicationError,
 		applicationErrorMeta: applicationErrorMeta,
+		requestSize:          req.BodySize,
+		responseSize:         responseSize,
 	}
 	call.EndCallWithAppError(callRes)
 	return res, err
@@ -212,7 +216,7 @@ func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h
 func (m *Middleware) CallOneway(ctx context.Context, req *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
 	call := m.graph.begin(ctx, transport.Oneway, _directionOutbound, req)
 	ack, err := out.CallOneway(ctx, req)
-	call.End(callResult{err: err})
+	call.End(callResult{err: err, requestSize: req.BodySize})
 	return ack, err
 }
 
