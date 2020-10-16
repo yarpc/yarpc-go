@@ -55,6 +55,8 @@ func TestClient(t *testing.T) {
 		wantRequestEnvelope *wire.Envelope // expect EncodeEnveloped(x)
 		wantRequestBody     *wire.Value    // expect Encode(x)
 		wantError           string         // whether an error is expected
+
+		responseBody io.ReadCloser
 	}{
 		{
 			desc:            "happy case",
@@ -73,6 +75,7 @@ func TestClient(t *testing.T) {
 				Type:  wire.Reply,
 				Value: wire.NewValueStruct(wire.Struct{}),
 			},
+			responseBody: readCloser{bytes.NewReader([]byte("irrelevant"))},
 		},
 		{
 			desc:             "happy case without enveloping",
@@ -80,6 +83,7 @@ func TestClient(t *testing.T) {
 			wantRequestBody:  valueptr(wire.NewValueStruct(wire.Struct{})),
 			expectCall:       true,
 			giveResponseBody: valueptr(wire.NewValueStruct(wire.Struct{})),
+			responseBody:     readCloser{bytes.NewReader([]byte("irrelevant"))},
 		},
 		{
 			desc:            "wrong envelope type for request",
@@ -87,6 +91,7 @@ func TestClient(t *testing.T) {
 			giveRequestBody: fakeEnveloper(wire.Reply),
 			wantError: `failed to encode "thrift" request body for procedure ` +
 				`"MyService::someMethod" of service "service": unexpected envelope type: Reply`,
+			responseBody: readCloser{bytes.NewReader([]byte("irrelevant"))},
 		},
 		{
 			desc:            "TApplicationException",
@@ -111,6 +116,7 @@ func TestClient(t *testing.T) {
 			wantError: `thrift request to procedure "MyService::someMethod" of ` +
 				`service "service" encountered an internal failure: ` +
 				"TApplicationException{Message: great sadness, Type: PROTOCOL_ERROR}",
+			responseBody: readCloser{bytes.NewReader([]byte("irrelevant"))},
 		},
 		{
 			desc:            "wrong envelope type for response",
@@ -131,6 +137,7 @@ func TestClient(t *testing.T) {
 			},
 			wantError: `failed to decode "thrift" response body for procedure ` +
 				`"MyService::someMethod" of service "service": unexpected envelope type: Call`,
+			responseBody: ioutil.NopCloser(bytes.NewReader([]byte("irrelevant"))),
 		},
 	}
 
@@ -170,7 +177,7 @@ func TestClient(t *testing.T) {
 					Body:      bytes.NewReader([]byte("irrelevant")),
 				}),
 			).Return(&transport.Response{
-				Body: ioutil.NopCloser(bytes.NewReader([]byte("irrelevant"))),
+				Body: tt.responseBody,
 			}, nil)
 		}
 
@@ -322,3 +329,9 @@ func TestClientOneway(t *testing.T) {
 		}
 	}
 }
+
+type readCloser struct {
+	*bytes.Reader
+}
+
+func (r readCloser) Close() error { return nil }

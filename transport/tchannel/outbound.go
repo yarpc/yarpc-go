@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"io/ioutil"
 	"strconv"
 
 	"github.com/uber/tchannel-go"
@@ -199,7 +198,7 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 
 	resp := &transport.Response{
 		Headers:          headers,
-		Body:             ioutil.NopCloser(buf),
+		Body:             readCloser{bytes.NewReader(buf.Bytes())},
 		BodySize:         buf.Len(),
 		ApplicationError: res.ApplicationError(),
 		ApplicationErrorMeta: &transport.ApplicationErrorMeta{
@@ -313,3 +312,9 @@ func (o *Outbound) Introspect() introspection.OutboundStatus {
 		Chooser:   chooser,
 	}
 }
+
+type readCloser struct {
+	*bytes.Reader
+}
+
+func (r readCloser) Close() error { return nil }
