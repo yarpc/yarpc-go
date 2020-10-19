@@ -1999,9 +1999,10 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 						Values: []int64{1},
 					},
 					{
-						Name: "request_payload_size_bytes",
-						Tags: tags,
-						Unit: time.Millisecond,
+						Name:   "request_payload_size_bytes",
+						Tags:   tags,
+						Unit:   time.Millisecond,
+						Values: []int64{0},
 					},
 					{
 						Name: "response_payload_size_bytes",
@@ -2104,14 +2105,16 @@ func TestUnaryInboundApplicationPanics(t *testing.T) {
 					Values: []int64{1}, // XXX this test flaps mysteriously. This figure is sometimes higher.
 				},
 				{
-					Name: "request_payload_size_bytes",
-					Tags: tags,
-					Unit: time.Millisecond,
+					Name:   "request_payload_size_bytes",
+					Tags:   tags,
+					Unit:   time.Millisecond,
+					Values: []int64{0},
 				},
 				{
-					Name: "response_payload_size_bytes",
-					Tags: tags,
-					Unit: time.Millisecond,
+					Name:   "response_payload_size_bytes",
+					Tags:   tags,
+					Unit:   time.Millisecond,
+					Values: []int64{0},
 				},
 				{
 					Name: "server_failure_latency_ms",
