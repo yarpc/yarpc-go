@@ -21,6 +21,7 @@
 package tchannel
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strconv"
@@ -203,7 +204,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 		return err
 	}
 
-	treq.Body = buf
+	treq.Body = bytes.NewReader(buf.Bytes())
 	treq.BodySize = buf.Len()
 
 	if err := transport.ValidateRequest(treq); err != nil {
