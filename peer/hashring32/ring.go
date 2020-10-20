@@ -21,7 +21,9 @@
 package hashring32
 
 import (
+	"math/rand"
 	"strconv"
+	"time"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -48,20 +50,23 @@ func NewImplementation(opts ...Option) abstractlist.Implementation {
 		options.offsetHeader,
 		options.peerOverrideHeader,
 		options.alternateShardKeyHeader,
+		options.offsetGeneratorValue,
 		options.logger,
 		options.peerRingOptions...,
 	)
 }
 
 // newPeerRing creates a new peerRing with an initial capacity
-func newPeerRing(hashFunc hashring32.HashFunc32, offsetHeader, peerOverrideHeader, alternateShardKeyHeader string, logger *zap.Logger, option ...hashring32.Option) *peerRing {
+func newPeerRing(hashFunc hashring32.HashFunc32, offsetHeader, peerOverrideHeader, alternateShardKeyHeader string, offsetGeneratorValue int, logger *zap.Logger, option ...hashring32.Option) *peerRing {
 	return &peerRing{
 		ring:                    hashring32.New(hashFunc, option...),
 		subscribers:             make(map[string]*subscriber),
 		offsetHeader:            offsetHeader,
+		offsetGeneratorValue:    offsetGeneratorValue,
 		peerOverrideHeader:      peerOverrideHeader,
 		logger:                  logger,
 		alternateShardKeyHeader: alternateShardKeyHeader,
+		random:                  rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
@@ -78,9 +83,11 @@ type peerRing struct {
 	ring                    *hashring32.Hashring32
 	subscribers             map[string]*subscriber
 	offsetHeader            string
+	offsetGeneratorValue    int
 	peerOverrideHeader      string
 	alternateShardKeyHeader string
 	logger                  *zap.Logger
+	random                  *rand.Rand
 }
 
 var _ abstractlist.Implementation = (*peerRing)(nil)
@@ -154,6 +161,10 @@ func (pr *peerRing) Choose(req *transport.Request) peer.StatusPeer {
 		if err != nil {
 			pr.logger.Error("yarpc/hashring32: offset header is not a valid integer", zap.String("offsetHeader", key), zap.Error(err))
 		}
+	}
+
+	if !ok && pr.offsetGeneratorValue != 0 {
+		n = pr.random.Intn(pr.offsetGeneratorValue)
 	}
 
 	shardKey := req.ShardKey

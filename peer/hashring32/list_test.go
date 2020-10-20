@@ -192,3 +192,40 @@ func TestOverrideChooseAndRemoveOverrideChoose(t *testing.T) {
 	t.Log("chose a third time")
 
 }
+
+func TestAddRemoveAndChooseWithOffsetGeneratorValue(t *testing.T) {
+	trans := yarpctest.NewFakeTransport(yarpctest.InitialConnectionStatus(peer.Available))
+	pl := New(
+		trans,
+		farmhashring.Fingerprint32,
+		OffsetGeneratorValue(3),
+		Logger(zaptest.NewLogger(t)),
+		NumReplicas(5),
+		NumPeersEstimate(2),
+	)
+
+	pl.Start()
+
+	pl.Update(
+		peer.ListUpdates{
+			Additions: []peer.Identifier{
+				&FakeShardIdentifier{id: "id1", shard: "shard-1"},
+				&FakeShardIdentifier{id: "id2", shard: "shard-2"},
+				&FakeShardIdentifier{id: "id3", shard: "shard-3"},
+				&FakeShardIdentifier{id: "id4", shard: "shard-4"},
+				&FakeShardIdentifier{id: "id5", shard: "shard-5"},
+			},
+		},
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	for i := 0; i < 100; i++ {
+		r, _, err := pl.Choose(ctx, &transport.Request{ShardKey: "foo1"})
+		require.NoError(t, err)
+		assert.NotEqual(t, "id4", r.Identifier())
+		assert.NotEqual(t, "id5", r.Identifier())
+	}
+
+}
