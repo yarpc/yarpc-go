@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - observability: Add request and response payload size histogram
 - api: expose `BodySize` field in the transport request/response, middleware can use
   this field to get or update the request/response body size
+- hashring32: new option OffsetGeneratorValue
 ### Fixed
 - yarpc: service name can contain `_` now.
 
