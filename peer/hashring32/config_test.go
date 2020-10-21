@@ -48,3 +48,21 @@ func TestPendingHeapConfig(t *testing.T) {
 	assert.NoError(t, err, "must construct a peer list")
 	pl.Update(peer.ListUpdates{Additions: []peer.Identifier{hostport.PeerIdentifier("127.0.0.1:8080")}})
 }
+
+func TestOffsetGeneratorValueConfig(t *testing.T) {
+	s := Spec(nil, nil)
+	duration := time.Second * 1
+
+	c := Config{
+		OffsetGeneratorValue:    4,
+		ReplicaDelimiter:        "#",
+		NumReplicas:             5,
+		NumPeersEstimate:        1000,
+		AlternateShardKeyHeader: "test-header",
+		DefaultChooseTimeout:    &duration,
+	}
+	build := s.BuildPeerList.(func(c Config, t peer.Transport, k *yarpcconfig.Kit) (peer.ChooserList, error))
+	pl, err := build(c, yarpctest.NewFakeTransport(), nil)
+	assert.NoError(t, err, "must construct a peer list")
+	pl.Update(peer.ListUpdates{Additions: []peer.Identifier{hostport.PeerIdentifier("127.0.0.1:8080")}})
+}
