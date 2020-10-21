@@ -161,9 +161,7 @@ func (pr *peerRing) Choose(req *transport.Request) peer.StatusPeer {
 		if err != nil {
 			pr.logger.Error("yarpc/hashring32: offset header is not a valid integer", zap.String("offsetHeader", key), zap.Error(err))
 		}
-	}
-
-	if !ok && pr.offsetGeneratorValue != 0 {
+	} else if pr.offsetGeneratorValue != 0 {
 		n = pr.random.Intn(pr.offsetGeneratorValue)
 	}
 
