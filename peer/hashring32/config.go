@@ -36,6 +36,15 @@ type Config struct {
 	// in the Choose function.
 	OffsetHeader string `config:"offsetHeader"`
 
+	// OffsetGeneratorValue allows clients to generate an offset automatically when using hashring32
+	//
+	// For example, if this value is set to 4, the offset used by hashring32
+	// will be between [0-4].
+	//
+	// It should be noted that this option will not be used if the option
+	// OffsetHeader is being used.
+	OffsetGeneratorValue int `config:"offsetGeneratorValue"`
+
 	// PeerOverrideHeader allows clients to pass a header containing the shard
 	// identifier for a specific peer to override the destination address for
 	// the outgoing request.
@@ -99,6 +108,10 @@ func Spec(logger *zap.Logger, meter *metrics.Scope) yarpcconfig.PeerListSpec {
 
 			if c.NumPeersEstimate != 0 {
 				opts = append(opts, NumPeersEstimate(c.NumPeersEstimate))
+			}
+
+			if c.OffsetGeneratorValue != 0 && c.OffsetHeader == "" {
+				opts = append(opts, OffsetGeneratorValue(c.OffsetGeneratorValue))
 			}
 
 			return New(

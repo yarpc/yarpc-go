@@ -36,6 +36,7 @@ import (
 
 type options struct {
 	offsetHeader            string
+	offsetGeneratorValue    int
 	peerOverrideHeader      string
 	alternateShardKeyHeader string
 	peerRingOptions         []hashring32.Option
@@ -60,6 +61,26 @@ type offsetHeaderOption struct {
 
 func (o offsetHeaderOption) apply(opts *options) {
 	opts.offsetHeader = o.offsetHeader
+}
+
+// OffsetGeneratorValue is the option function that client might give
+// if they want to generate an offset automatically when using hashring32
+//
+// For example, if this value is set to 4, the offset used by hashring32
+// will be between [0-4].
+//
+// It should be noted that this option will not be used if the option
+// OffsetHeader is being used.
+func OffsetGeneratorValue(offsetGenerator int) Option {
+	return offsetGeneratorValueOption{offsetGeneratorValue: offsetGenerator}
+}
+
+type offsetGeneratorValueOption struct {
+	offsetGeneratorValue int
+}
+
+func (o offsetGeneratorValueOption) apply(opts *options) {
+	opts.offsetGeneratorValue = o.offsetGeneratorValue
 }
 
 // PeerOverrideHeader allows clients to pass a header containing the shard
@@ -205,6 +226,7 @@ func New(transport peer.Transport, hashFunc hashring32.HashFunc32, opts ...Optio
 		options.offsetHeader,
 		options.peerOverrideHeader,
 		options.alternateShardKeyHeader,
+		options.offsetGeneratorValue,
 		logger,
 		options.peerRingOptions...,
 	)
