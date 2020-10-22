@@ -43,6 +43,8 @@ type writer struct {
 
 	isApplicationError   bool
 	applicationErrorMeta *transport.ApplicationErrorMeta
+
+	responseSize int
 }
 
 func newWriter(rw transport.ResponseWriter) *writer {
@@ -65,6 +67,11 @@ func (w *writer) SetApplicationErrorMeta(applicationErrorMeta *transport.Applica
 	if appErrMetaSetter, ok := w.ResponseWriter.(transport.ApplicationErrorMetaSetter); ok {
 		appErrMetaSetter.SetApplicationErrorMeta(applicationErrorMeta)
 	}
+}
+
+func (w *writer) Write(p []byte) (n int, err error) {
+	w.responseSize += len(p)
+	return w.ResponseWriter.Write(p)
 }
 
 func (w *writer) free() {
@@ -155,11 +162,17 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 	wrappedWriter := newWriter(w)
 	err := h.Handle(ctx, req, wrappedWriter)
 	ctxErr := ctxErrOverride(ctx, req)
+
 	call.EndHandleWithAppError(
-		err,
-		wrappedWriter.isApplicationError,
-		wrappedWriter.applicationErrorMeta,
-		ctxErr)
+		callResult{
+			err:                  err,
+			ctxOverrideErr:       ctxErr,
+			isApplicationError:   wrappedWriter.isApplicationError,
+			applicationErrorMeta: wrappedWriter.applicationErrorMeta,
+			requestSize:          req.BodySize,
+			responseSize:         wrappedWriter.responseSize,
+		})
+
 	if ctxErr != nil {
 		err = ctxErr
 	}
@@ -174,11 +187,20 @@ func (m *Middleware) Call(ctx context.Context, req *transport.Request, out trans
 
 	isApplicationError := false
 	var applicationErrorMeta *transport.ApplicationErrorMeta
+	var responseSize int
 	if res != nil {
 		isApplicationError = res.ApplicationError
 		applicationErrorMeta = res.ApplicationErrorMeta
+		responseSize = res.BodySize
 	}
-	call.EndCallWithAppError(err, isApplicationError, applicationErrorMeta)
+	callRes := callResult{
+		err:                  err,
+		isApplicationError:   isApplicationError,
+		applicationErrorMeta: applicationErrorMeta,
+		requestSize:          req.BodySize,
+		responseSize:         responseSize,
+	}
+	call.EndCallWithAppError(callRes)
 	return res, err
 }
 
@@ -186,7 +208,7 @@ func (m *Middleware) Call(ctx context.Context, req *transport.Request, out trans
 func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
 	call := m.graph.begin(ctx, transport.Oneway, _directionInbound, req)
 	err := h.HandleOneway(ctx, req)
-	call.End(err)
+	call.End(callResult{err: err, requestSize: req.BodySize})
 	return err
 }
 
@@ -194,7 +216,7 @@ func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h
 func (m *Middleware) CallOneway(ctx context.Context, req *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
 	call := m.graph.begin(ctx, transport.Oneway, _directionOutbound, req)
 	ack, err := out.CallOneway(ctx, req)
-	call.End(err)
+	call.End(callResult{err: err, requestSize: req.BodySize})
 	return ack, err
 }
 

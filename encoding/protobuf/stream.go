@@ -23,7 +23,6 @@ package protobuf
 import (
 	"bytes"
 	"context"
-	"io"
 
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc/api/transport"
@@ -60,13 +59,17 @@ func writeToStream(ctx context.Context, stream transport.Stream, message proto.M
 	return stream.SendMessage(
 		ctx,
 		&transport.StreamMessage{
-			Body: readCloser{Reader: bytes.NewReader(messageData), closer: cleanup},
+			Body: readCloser{
+				Reader: bytes.NewReader(messageData),
+				closer: cleanup,
+			},
+			BodySize: len(messageData),
 		},
 	)
 }
 
 type readCloser struct {
-	io.Reader
+	*bytes.Reader
 	closer func()
 }
 

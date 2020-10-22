@@ -102,6 +102,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	if req.Method != http.MethodPost {
 		return yarpcerrors.Newf(yarpcerrors.CodeNotFound, "request method was %s but only %s is allowed", req.Method, http.MethodPost)
 	}
+
 	treq := &transport.Request{
 		Caller:          popHeader(req.Header, CallerHeader),
 		Service:         service,
@@ -113,6 +114,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		RoutingDelegate: popHeader(req.Header, RoutingDelegateHeader),
 		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}),
 		Body:            req.Body,
+		BodySize:        int(req.ContentLength),
 	}
 	for header := range h.grabHeaders {
 		if value := req.Header.Get(header); value != "" {

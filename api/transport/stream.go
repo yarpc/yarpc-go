@@ -200,5 +200,6 @@ type Stream interface {
 // StreamMessage represents information that can be read off of an individual
 // message in the stream.
 type StreamMessage struct {
-	Body io.ReadCloser
+	Body     io.ReadCloser
+	BodySize int
 }

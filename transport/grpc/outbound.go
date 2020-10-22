@@ -124,6 +124,7 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 	}
 	return &transport.Response{
 		Body:                 ioutil.NopCloser(bytes.NewBuffer(responseBody)),
+		BodySize:             len(responseBody),
 		Headers:              responseHeaders,
 		ApplicationError:     metadataToIsApplicationError(responseMD),
 		ApplicationErrorMeta: metadataToApplicationErrorMeta(responseMD),

@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 
 	"go.uber.org/thriftrw/envelope"
 	"go.uber.org/thriftrw/protocol"
@@ -151,12 +152,23 @@ func (c thriftClient) Call(ctx context.Context, reqBody envelope.Enveloper, opts
 		return wire.Value{}, err
 	}
 
-	buf := bytes.NewBuffer(make([]byte, 0, _defaultBufferSize))
-	if _, err = buf.ReadFrom(tres.Body); err != nil {
-		return wire.Value{}, err
+	var bodyReader io.ReaderAt
+
+	// optimization for avoiding additional buffer copy as tchannel outbound
+	// already decodes the body into io.ReaderAt compatible type
+	// thrift deserialiser reads sets, maps, and lists lazilly which makes
+	// buffer pool unusable as response handling is out of scope of this method
+	if body, ok := tres.Body.(io.ReaderAt); ok {
+		bodyReader = body
+	} else {
+		buf := bytes.NewBuffer(make([]byte, 0, _defaultBufferSize))
+		if _, err = buf.ReadFrom(tres.Body); err != nil {
+			return wire.Value{}, err
+		}
+		bodyReader = bytes.NewReader(buf.Bytes())
 	}
 
-	envelope, err := proto.DecodeEnveloped(bytes.NewReader(buf.Bytes()))
+	envelope, err := proto.DecodeEnveloped(bodyReader)
 	if err != nil {
 		return wire.Value{}, errors.ResponseBodyDecodeError(treq, err)
 	}
@@ -239,6 +251,7 @@ func (c thriftClient) buildTransportRequest(reqBody envelope.Enveloper) (*transp
 	}
 
 	treq.Body = &buffer
+	treq.BodySize = buffer.Len()
 	return &treq, proto, nil
 }
 

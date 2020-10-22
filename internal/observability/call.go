@@ -75,65 +75,68 @@ type call struct {
 	levels *levels
 }
 
+type callResult struct {
+	err            error
+	ctxOverrideErr error
+
+	isApplicationError   bool
+	applicationErrorMeta *transport.ApplicationErrorMeta
+
+	requestSize  int
+	responseSize int
+}
+
 type levels struct {
 	success, failure, applicationError zapcore.Level
 }
 
-func (c call) End(err error) {
-	c.endWithAppError(err, false /* isApplicationError */, nil /* applicationErrorMeta */)
+func (c call) End(res callResult) {
+	c.endWithAppError(res)
 }
 
-func (c call) EndCallWithAppError(
-	err error,
-	isApplicationError bool,
-	applicationErrorMeta *transport.ApplicationErrorMeta,
-) {
-	c.endWithAppError(err, isApplicationError, applicationErrorMeta)
+func (c call) EndCallWithAppError(res callResult) {
+	c.endWithAppError(res)
 }
 
-func (c call) EndHandleWithAppError(
-	err error,
-	isApplicationError bool,
-	applicationErrorMeta *transport.ApplicationErrorMeta,
-	ctxOverrideErr error) {
-	if ctxOverrideErr == nil {
-		c.endWithAppError(err, isApplicationError, applicationErrorMeta)
+func (c call) EndHandleWithAppError(res callResult) {
+	if res.ctxOverrideErr == nil {
+		c.endWithAppError(res)
 		return
 	}
 
 	// We'll override the user's response with the appropriate context error. Also, log
 	// the dropped response.
 	var droppedField zap.Field
-	if isApplicationError && err == nil { // Thrift exceptions
+	if res.isApplicationError && res.err == nil { // Thrift exceptions
 		droppedField = zap.String(_dropped, _droppedAppErrLog)
-	} else if err != nil { // other errors
-		droppedField = zap.String(_dropped, fmt.Sprintf(_droppedErrLogFmt, err))
+	} else if res.err != nil { // other errors
+		droppedField = zap.String(_dropped, fmt.Sprintf(_droppedErrLogFmt, res.err))
 	} else {
 		droppedField = zap.String(_dropped, _droppedSuccessLog)
 	}
 
 	c.endWithAppError(
-		ctxOverrideErr,
-		false, /* application error */
-		nil,   /* application failure */
+		callResult{
+			err:          res.ctxOverrideErr,
+			requestSize:  res.requestSize,
+			responseSize: res.responseSize,
+		},
 		droppedField,
 	)
 }
 
 func (c call) endWithAppError(
-	err error,
-	isApplicationError bool,
-	applicationErrorMeta *transport.ApplicationErrorMeta,
+	res callResult,
 	extraLogFields ...zap.Field) {
 	elapsed := _timeNow().Sub(c.started)
-	c.endLogs(elapsed, err, isApplicationError, applicationErrorMeta, extraLogFields...)
-	c.endStats(elapsed, err, isApplicationError, applicationErrorMeta)
+	c.endLogs(elapsed, res.err, res.isApplicationError, res.applicationErrorMeta, extraLogFields...)
+	c.endStats(elapsed, res)
 }
 
 // EndWithPanic ends the call with additional panic metrics
 func (c call) EndWithPanic(err error) {
 	c.edge.panics.Inc()
-	c.endWithAppError(err, true /* isApplicationError */, nil /* applicationErrorMeta */)
+	c.endWithAppError(callResult{err: err, isApplicationError: true})
 }
 
 func (c call) endLogs(
@@ -229,39 +232,41 @@ func (c call) endLogs(
 
 func (c call) endStats(
 	elapsed time.Duration,
-	err error,
-	isApplicationError bool,
-	applicationErrorMeta *transport.ApplicationErrorMeta,
+	res callResult,
 ) {
 	c.edge.calls.Inc()
 
-	if c.direction == _directionInbound {
-		if deadlineTime, ok := c.ctx.Deadline(); ok {
-			c.edge.ttls.Observe(deadlineTime.Sub(c.started))
-		}
+	if deadlineTime, ok := c.ctx.Deadline(); ok {
+		c.edge.ttls.Observe(deadlineTime.Sub(c.started))
 	}
 
-	if err == nil && !isApplicationError {
+	c.edge.requestPayloadSizes.IncBucket(int64(res.requestSize))
+
+	if res.err == nil && !res.isApplicationError {
 		c.edge.successes.Inc()
 		c.edge.latencies.Observe(elapsed)
+
+		if c.rpcType == transport.Unary {
+			c.edge.responsePayloadSizes.IncBucket(int64(res.responseSize))
+		}
 		return
 	}
 
 	appErrorName := _notSet
-	if applicationErrorMeta != nil && applicationErrorMeta.Name != "" {
-		appErrorName = applicationErrorMeta.Name
+	if res.applicationErrorMeta != nil && res.applicationErrorMeta.Name != "" {
+		appErrorName = res.applicationErrorMeta.Name
 	}
 
-	if yarpcerrors.IsStatus(err) {
-		status := yarpcerrors.FromError(err)
+	if yarpcerrors.IsStatus(res.err) {
+		status := yarpcerrors.FromError(res.err)
 		errCode := status.Code()
 		c.endStatsFromFault(elapsed, errCode, appErrorName)
 		return
 	}
 
-	if isApplicationError {
-		if applicationErrorMeta != nil && applicationErrorMeta.Code != nil {
-			c.endStatsFromFault(elapsed, *applicationErrorMeta.Code, appErrorName)
+	if res.isApplicationError {
+		if res.applicationErrorMeta != nil && res.applicationErrorMeta.Code != nil {
+			c.endStatsFromFault(elapsed, *res.applicationErrorMeta.Code, appErrorName)
 			return
 		}
 
@@ -307,7 +312,7 @@ func (c call) endStatsFromFault(elapsed time.Duration, code yarpcerrors.Code, ap
 		); err == nil {
 			counter.Inc()
 		}
-		if c.direction == _directionInbound && code == yarpcerrors.CodeDeadlineExceeded {
+		if code == yarpcerrors.CodeDeadlineExceeded {
 			if deadlineTime, ok := c.ctx.Deadline(); ok {
 				c.edge.timeoutTtls.Observe(deadlineTime.Sub(c.started))
 			}

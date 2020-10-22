@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.49.0] - 2020-10-22
+### Added
+- observability: Add request and response payload size histogram
+- api: expose `BodySize` field in the transport request/response, middleware can use
+  this field to get or update the request/response body size
+- hashring32: new option OffsetGeneratorValue
+### Fixed
+- yarpc: service name can contain `_` now.
+
 ## [1.48.0] - 2020-10-07
 ### Added
 - peer/hashring32: Support using an application header as the shard key, instead
@@ -1290,6 +1299,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[1.49.0]: https://github.com/yarpc/yarpc-go/compare/v1.48.0...v1.49.0
 [1.48.0]: https://github.com/yarpc/yarpc-go/compare/v1.47.2...v1.48.0
 [1.47.2]: https://github.com/yarpc/yarpc-go/compare/v1.47.1...v1.47.2
 [1.47.1]: https://github.com/yarpc/yarpc-go/compare/v1.47.0...v1.47.1

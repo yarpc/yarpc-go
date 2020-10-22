@@ -21,7 +21,9 @@
 package observability
 
 import (
+	"bytes"
 	"context"
+	"io/ioutil"
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
@@ -40,6 +42,7 @@ type fakeHandler struct {
 	applicationErrCode    *yarpcerrors.Code
 	applicationPanic      bool
 	handleStream          func(*transport.ServerStream)
+	responseData          []byte
 }
 
 func (h fakeHandler) Handle(_ context.Context, _ *transport.Request, rw transport.ResponseWriter) error {
@@ -56,6 +59,10 @@ func (h fakeHandler) Handle(_ context.Context, _ *transport.Request, rw transpor
 				Code:    h.applicationErrCode,
 			})
 		}
+	}
+
+	if h.responseData != nil {
+		rw.Write(h.responseData)
 	}
 
 	return h.err
@@ -87,6 +94,8 @@ type fakeOutbound struct {
 	applicationErrDetails string
 	applicationErrCode    *yarpcerrors.Code
 	stream                fakeStream
+
+	body []byte
 }
 
 func (o fakeOutbound) Call(context.Context, *transport.Request) (*transport.Response, error) {
@@ -96,7 +105,9 @@ func (o fakeOutbound) Call(context.Context, *transport.Request) (*transport.Resp
 			Details: o.applicationErrDetails,
 			Name:    o.applicationErrName,
 			Code:    o.applicationErrCode,
-		}}, o.err
+		},
+		Body:     ioutil.NopCloser(bytes.NewReader(o.body)),
+		BodySize: len(o.body)}, o.err
 }
 
 func (o fakeOutbound) CallOneway(context.Context, *transport.Request) (transport.Ack, error) {
@@ -123,6 +134,8 @@ type fakeStream struct {
 	ctx     context.Context
 	request *transport.StreamRequest
 
+	receiveMsg *transport.StreamMessage
+
 	sendErr    error
 	receiveErr error
 	closeErr   error
@@ -141,7 +154,7 @@ func (s *fakeStream) SendMessage(context.Context, *transport.StreamMessage) erro
 }
 
 func (s *fakeStream) ReceiveMessage(context.Context) (*transport.StreamMessage, error) {
-	return nil, s.receiveErr
+	return s.receiveMsg, s.receiveErr
 }
 
 func (s *fakeStream) Close(context.Context) error {

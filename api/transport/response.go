@@ -28,8 +28,14 @@ import (
 
 // Response is the low level response representation.
 type Response struct {
-	Headers          Headers
-	Body             io.ReadCloser
+	Headers Headers
+	Body    io.ReadCloser
+	// Response payload size before any compression applied by the protocol
+	// When using the HTTP transport, this value is set from the HTTP header
+	// content-length. It should be noted that this value is set manually and
+	// will not be updated automatically if the body is being modified
+	BodySize int
+
 	ApplicationError bool
 	// ApplicationErrorMeta adds information about the application error.
 	// This field will only be set if `ApplicationError` is true.

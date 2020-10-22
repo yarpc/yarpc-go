@@ -48,12 +48,15 @@ type thriftOnewayHandler struct {
 }
 
 func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
-	buf := bufferpool.Get()
-	defer bufferpool.Put(buf)
-
 	ctx, call := encodingapi.NewInboundCall(ctx)
 
-	reqValue, responder, err := decodeRequest(call, buf, treq, wire.Call, t.Protocol, t.Enveloping)
+	bodyReader, release, err := getReaderAt(treq.Body)
+	if err != nil {
+		return err
+	}
+	defer release()
+
+	reqValue, responder, err := decodeRequest(call, treq, bodyReader, wire.Call, t.Protocol, t.Enveloping)
 	if err != nil {
 		return err
 	}
@@ -98,12 +101,15 @@ func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request,
 }
 
 func (t thriftOnewayHandler) HandleOneway(ctx context.Context, treq *transport.Request) error {
-	buf := bufferpool.Get()
-	defer bufferpool.Put(buf)
+	bodyReader, release, err := getReaderAt(treq.Body)
+	if err != nil {
+		return err
+	}
+	defer release()
 
 	ctx, call := encodingapi.NewInboundCall(ctx)
 
-	reqValue, _, err := decodeRequest(call, buf, treq, wire.OneWay, t.Protocol, t.Enveloping)
+	reqValue, _, err := decodeRequest(call, treq, bodyReader, wire.OneWay, t.Protocol, t.Enveloping)
 	if err != nil {
 		return err
 	}
@@ -116,11 +122,8 @@ func (t thriftOnewayHandler) HandleOneway(ctx context.Context, treq *transport.R
 func decodeRequest(
 	// call is an inboundCall populated from the transport request and context.
 	call *encodingapi.InboundCall,
-	// buf is a byte buffer from the buffer pool, that will be released back to
-	// the buffer pool by the caller after it is finished with the decoded
-	// request payload. Thrift requests read sets, maps, and lists lazilly.
-	buf *bufferpool.Buffer,
 	treq *transport.Request,
+	reader io.ReaderAt,
 	// reqEnvelopeType indicates the expected envelope type, if an envelope is
 	// present.
 	reqEnvelopeType wire.EnvelopeType,
@@ -148,15 +151,6 @@ func decodeRequest(
 		return wire.Value{}, nil, err
 	}
 
-	if _, err := buf.ReadFrom(treq.Body); err != nil {
-		return wire.Value{}, nil, err
-	}
-	if err := closeReader(treq.Body); err != nil {
-		return wire.Value{}, nil, err
-	}
-
-	reader := bytes.NewReader(buf.Bytes())
-
 	// Discover or choose the appropriate envelope
 	if agnosticProto, ok := proto.(protocol.EnvelopeAgnosticProtocol); ok {
 		return agnosticProto.DecodeRequest(reqEnvelopeType, reader)
@@ -171,7 +165,7 @@ func decodeEnvelopedRequest(
 	treq *transport.Request,
 	reqEnvelopeType wire.EnvelopeType,
 	proto protocol.Protocol,
-	reader *bytes.Reader,
+	reader io.ReaderAt,
 ) (wire.Value, protocol.Responder, error) {
 	var envelope wire.Envelope
 	envelope, err := proto.DecodeEnveloped(reader)
@@ -189,7 +183,7 @@ func decodeEnvelopedRequest(
 
 func decodeUnenvelopedRequest(
 	proto protocol.Protocol,
-	reader *bytes.Reader,
+	reader io.ReaderAt,
 ) (wire.Value, protocol.Responder, error) {
 	reqValue, err := proto.Decode(reader, wire.TStruct)
 	if err != nil {
@@ -207,4 +201,30 @@ func closeReader(r io.Reader) error {
 	}
 
 	return closer.Close()
+}
+
+// getReaderAt returns an io.ReaderAt compatible reader
+// If the body is already readerAt compatible then reuse the same which
+// avoids redundant copy. If not, it creates readerAt using bufferpool which
+// must be released by caller after it has finished handling the request as
+// thrift requests read sets, maps, and lists lazilly.
+// This is mainly done as tchannel transport handler decodes the body into
+// a io.ReaderAt compatible instance which gets resued here
+func getReaderAt(body io.Reader) (reader io.ReaderAt, release func(), err error) {
+	release = func() {}
+	if readerBody, ok := body.(io.ReaderAt); ok {
+		reader = readerBody
+		return
+	}
+
+	buf := bufferpool.Get()
+	if _, err = buf.ReadFrom(body); err != nil {
+		return
+	}
+	if err = closeReader(body); err != nil {
+		return
+	}
+	reader = bytes.NewReader(buf.Bytes())
+	release = func() { bufferpool.Put(buf) }
+	return
 }

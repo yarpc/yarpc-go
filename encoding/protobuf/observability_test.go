@@ -35,6 +35,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/encoding/protobuf/internal/testpb"
+	"go.uber.org/yarpc/internal/testutils"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
@@ -74,7 +75,7 @@ func TestProtobufErrorDetailObservability(t *testing.T) {
 	})
 
 	t.Run("metrics", func(t *testing.T) {
-		wantCounters := []counterAssertion{
+		wantCounters := []testutils.CounterAssertion{
 			{
 				Name: "caller_failures",
 				Tags: map[string]string{
@@ -88,7 +89,102 @@ func TestProtobufErrorDetailObservability(t *testing.T) {
 			{Name: "successes"},
 		}
 
-		assertClientAndServerMetrics(t, wantCounters, clientMetricsRoot, serverMetricsRoot)
+		testutils.AssertCounters(t, wantCounters, clientMetricsRoot.Snapshot().Counters)
+		testutils.AssertCounters(t, wantCounters, serverMetricsRoot.Snapshot().Counters)
+	})
+}
+
+func TestProtobufMetrics(t *testing.T) {
+	client, _, clientMetricsRoot, serverMetricsRoot, cleanup := initClientAndServer(t)
+	defer cleanup()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	_, err := client.Unary(ctx, &testpb.TestMessage{Value: "success"})
+	require.NoError(t, err, "unexpected call error")
+
+	t.Run("counters", func(t *testing.T) {
+		wantCounters := []testutils.CounterAssertion{
+			{Name: "calls", Value: 1},
+			{Name: "panics"},
+			{Name: "successes", Value: 1},
+		}
+
+		testutils.AssertCounters(t, wantCounters, clientMetricsRoot.Snapshot().Counters)
+		testutils.AssertCounters(t, wantCounters, serverMetricsRoot.Snapshot().Counters)
+	})
+	t.Run("inbound histograms", func(t *testing.T) {
+		wantHistograms := []testutils.HistogramAssertion{
+			{Name: "caller_failure_latency_ms"},
+			{Name: "request_payload_size_bytes", Value: []int64{16}},
+			{Name: "response_payload_size_bytes", Value: []int64{16}},
+			{Name: "server_failure_latency_ms"},
+			{Name: "success_latency_ms", IgnoreValueCompare: true, ValueLength: 1},
+			{Name: "timeout_ttl_ms"},
+			{Name: "ttl_ms", Value: []int64{1000}},
+		}
+		testutils.AssertClientAndServerHistograms(t, wantHistograms, clientMetricsRoot, serverMetricsRoot)
+	})
+}
+
+func TestProtobufStreamMetrics(t *testing.T) {
+	client, _, clientMetricsRoot, serverMetricsRoot, cleanup := initClientAndServer(t)
+	defer cleanup()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Hour)
+	defer cancel()
+
+	stream, err := client.Duplex(ctx)
+	require.NoError(t, err, "unexpected error on stream creation")
+
+	msg := &testpb.TestMessage{Value: "echo"}
+
+	err = stream.Send(msg)
+	require.NoError(t, err, "unexpected error on stream send")
+
+	reply, err := stream.Recv()
+	require.NoError(t, err, "unexpected error on stream receive")
+	assert.Equal(t, msg, reply)
+
+	stream.CloseSend()
+
+	_, err = stream.Recv()
+	assert.Error(t, err)
+
+	t.Run("counters", func(t *testing.T) {
+		clientCounters := []testutils.CounterAssertion{
+			{Name: "calls", Value: 1},
+			{Name: "panics"},
+			{Name: "stream_receive_failures", Value: 1},
+			{Name: "stream_receive_successes", Value: 1},
+			{Name: "stream_receives", Value: 2},
+			{Name: "stream_send_successes", Value: 1},
+			{Name: "stream_sends", Value: 1},
+			{Name: "successes", Value: 1},
+		}
+
+		serverCounters := []testutils.CounterAssertion{
+			{Name: "calls", Value: 1},
+			{Name: "panics"},
+			{Name: "server_failures", Value: 1},
+			{Name: "stream_receive_successes", Value: 2},
+			{Name: "stream_receives", Value: 2},
+			{Name: "stream_send_successes", Value: 1},
+			{Name: "stream_sends", Value: 1},
+			{Name: "successes", Value: 1},
+		}
+
+		testutils.AssertCounters(t, clientCounters, clientMetricsRoot.Snapshot().Counters)
+		testutils.AssertCounters(t, serverCounters, serverMetricsRoot.Snapshot().Counters)
+	})
+	t.Run("inbound histograms", func(t *testing.T) {
+		wantHistograms := []testutils.HistogramAssertion{
+			{Name: "stream_duration_ms", IgnoreValueCompare: true, ValueLength: 1},
+			{Name: "stream_request_payload_size_bytes", Value: []int64{8}},
+			{Name: "stream_response_payload_size_bytes", Value: []int64{8}},
+		}
+		testutils.AssertHistograms(t, wantHistograms, serverMetricsRoot.Snapshot().Histograms)
 	})
 }
 
@@ -116,33 +212,6 @@ func assertLogFields(t *testing.T, wantFields, gotContext []zapcore.Field) {
 		got, ok := gotFields[want.Key]
 		if assert.True(t, ok, "key %q not found", want.Key) {
 			assert.Equal(t, want, got, "unexpected log field")
-		}
-	}
-}
-
-type counterAssertion struct {
-	Name  string
-	Tags  map[string]string
-	Value int
-}
-
-func assertClientAndServerMetrics(t *testing.T, counterAssertions []counterAssertion, clientSnapshot, serverSnapshot *metrics.Root) {
-	t.Run("inbound", func(t *testing.T) {
-		assertMetrics(t, counterAssertions, serverSnapshot.Snapshot().Counters)
-	})
-	t.Run("outbound", func(t *testing.T) {
-		assertMetrics(t, counterAssertions, clientSnapshot.Snapshot().Counters)
-	})
-}
-
-func assertMetrics(t *testing.T, counterAssertions []counterAssertion, snapshot []metrics.Snapshot) {
-	require.Len(t, counterAssertions, len(snapshot), "unexpected number of counters")
-
-	for i, wantCounter := range counterAssertions {
-		require.Equal(t, wantCounter.Name, snapshot[i].Name, "unexpected counter")
-		assert.EqualValues(t, wantCounter.Value, snapshot[i].Value, "unexpected counter value")
-		for wantTagKey, wantTagVal := range wantCounter.Tags {
-			assert.Equal(t, wantTagVal, snapshot[i].Tags[wantTagKey], "unexpected value for %q", wantTagKey)
 		}
 	}
 }
@@ -189,12 +258,14 @@ func newServer(t *testing.T, loggerCore zapcore.Core, metricsRoot *metrics.Root)
 }
 
 func newClient(t *testing.T, serverAddr string, loggerCore zapcore.Core, metricsRoot *metrics.Root) (client testpb.TestYARPCClient, cleanup func()) {
+	outbound := grpc.NewTransport().NewSingleOutbound(serverAddr)
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: _clientName,
 		Outbounds: map[string]transport.Outbounds{
 			_serverName: {
 				ServiceName: _serverName,
-				Unary:       grpc.NewTransport().NewSingleOutbound(serverAddr),
+				Unary:       outbound,
+				Stream:      outbound,
 			},
 		},
 		Logging: yarpc.LoggingConfig{Zap: zap.New(loggerCore)},
@@ -210,7 +281,10 @@ func newClient(t *testing.T, serverAddr string, loggerCore zapcore.Core, metrics
 
 type observabilityTestServer struct{}
 
-func (observabilityTestServer) Unary(context.Context, *testpb.TestMessage) (*testpb.TestMessage, error) {
+func (observabilityTestServer) Unary(ctx context.Context, msg *testpb.TestMessage) (*testpb.TestMessage, error) {
+	if msg.Value == "success" {
+		return &testpb.TestMessage{Value: msg.Value}, nil
+	}
 	details := []proto.Message{
 		&types.StringValue{Value: "string value"},
 		&types.Int32Value{Value: 100},
@@ -218,4 +292,15 @@ func (observabilityTestServer) Unary(context.Context, *testpb.TestMessage) (*tes
 	return nil, protobuf.NewError(yarpcerrors.CodeInvalidArgument, "my message", protobuf.WithErrorDetails(details...))
 }
 
-func (observabilityTestServer) Duplex(testpb.TestServiceDuplexYARPCServer) error { return nil }
+func (observabilityTestServer) Duplex(stream testpb.TestServiceDuplexYARPCServer) error {
+	for {
+		msg, err := stream.Recv()
+		if err != nil {
+			return err
+		}
+		err = stream.Send(msg)
+		if err != nil {
+			return err
+		}
+	}
+}

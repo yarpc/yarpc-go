@@ -171,12 +171,14 @@ func (h *handler) handleUnary(
 	if err := serverStream.RecvMsg(&requestData); err != nil {
 		return err
 	}
+	// TODO: avoid redundant buffer copy
 	requestBuffer := bufferpool.Get()
 	defer bufferpool.Put(requestBuffer)
 
 	// Buffers are documented to always return a nil error.
 	_, _ = requestBuffer.Write(requestData)
 	transportRequest.Body = requestBuffer
+	transportRequest.BodySize = len(requestData)
 
 	responseWriter := newResponseWriter()
 	defer responseWriter.Close()

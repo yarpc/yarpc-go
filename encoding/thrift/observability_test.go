@@ -34,6 +34,7 @@ import (
 	"go.uber.org/yarpc/encoding/thrift/internal/observabilitytest/test"
 	"go.uber.org/yarpc/encoding/thrift/internal/observabilitytest/test/testserviceclient"
 	"go.uber.org/yarpc/encoding/thrift/internal/observabilitytest/test/testserviceserver"
+	"go.uber.org/yarpc/internal/testutils"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/zap"
@@ -83,7 +84,7 @@ func TestThriftExceptionObservability(t *testing.T) {
 			})
 
 			t.Run("metrics", func(t *testing.T) {
-				wantCounters := []counterAssertion{
+				wantCounters := []testutils.CounterAssertion{
 					{Name: "calls", Value: 1},
 					{Name: "panics"},
 					// Thrift exceptions without annotations are always classified as
@@ -99,7 +100,7 @@ func TestThriftExceptionObservability(t *testing.T) {
 					{Name: "successes"},
 				}
 
-				assertClientAndServerMetrics(t, wantCounters, clientMetricsRoot, serverMetricsRoot)
+				testutils.AssertClientAndServerCounters(t, wantCounters, clientMetricsRoot, serverMetricsRoot)
 			})
 		})
 
@@ -127,7 +128,7 @@ func TestThriftExceptionObservability(t *testing.T) {
 			})
 
 			t.Run("metrics", func(t *testing.T) {
-				wantCounters := []counterAssertion{
+				wantCounters := []testutils.CounterAssertion{
 					{
 						Name: "caller_failures",
 						Tags: map[string]string{
@@ -141,7 +142,45 @@ func TestThriftExceptionObservability(t *testing.T) {
 					{Name: "successes"},
 				}
 
-				assertClientAndServerMetrics(t, wantCounters, clientMetricsRoot, serverMetricsRoot)
+				testutils.AssertClientAndServerCounters(t, wantCounters, clientMetricsRoot, serverMetricsRoot)
+			})
+		})
+	}
+}
+
+func TestThriftMetrics(t *testing.T) {
+	transports := []string{tchannel.TransportName, http.TransportName}
+
+	for _, trans := range transports {
+		t.Run(trans+" thift call", func(t *testing.T) {
+			client, _, clientMetricsRoot, serverMetricsRoot, cleanup := initClientAndServer(t, trans)
+			defer cleanup()
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+
+			_, err := client.Call(ctx, _wantSuccess)
+			require.NoError(t, err, "unexpected error")
+
+			t.Run("counters", func(t *testing.T) {
+				wantCounters := []testutils.CounterAssertion{
+					{Name: "calls", Value: 1},
+					{Name: "panics"},
+					{Name: "successes", Value: 1},
+				}
+				testutils.AssertClientAndServerCounters(t, wantCounters, clientMetricsRoot, serverMetricsRoot)
+			})
+			t.Run("inbound histograms", func(t *testing.T) {
+				wantHistograms := []testutils.HistogramAssertion{
+					{Name: "caller_failure_latency_ms"},
+					{Name: "request_payload_size_bytes", Value: []int64{16}},
+					{Name: "response_payload_size_bytes", Value: []int64{16}},
+					{Name: "server_failure_latency_ms"},
+					{Name: "success_latency_ms", IgnoreValueCompare: true, ValueLength: 1},
+					{Name: "timeout_ttl_ms"},
+					{Name: "ttl_ms", Value: []int64{1000}},
+				}
+				testutils.AssertClientAndServerHistograms(t, wantHistograms, clientMetricsRoot, serverMetricsRoot)
 			})
 		})
 	}
@@ -171,33 +210,6 @@ func assertLogFields(t *testing.T, wantFields, gotContext []zapcore.Field) {
 		got, ok := gotFields[want.Key]
 		if assert.True(t, ok, "key %q not found", want.Key) {
 			assert.Equal(t, want, got, "unexpected log field")
-		}
-	}
-}
-
-type counterAssertion struct {
-	Name  string
-	Tags  map[string]string
-	Value int
-}
-
-func assertClientAndServerMetrics(t *testing.T, counterAssertions []counterAssertion, clientSnapshot, serverSnapshot *metrics.Root) {
-	t.Run("inbound", func(t *testing.T) {
-		assertMetrics(t, counterAssertions, serverSnapshot.Snapshot().Counters)
-	})
-	t.Run("outbound", func(t *testing.T) {
-		assertMetrics(t, counterAssertions, clientSnapshot.Snapshot().Counters)
-	})
-}
-
-func assertMetrics(t *testing.T, counterAssertions []counterAssertion, snapshot []metrics.Snapshot) {
-	require.Len(t, counterAssertions, len(snapshot), "unexpected number of counters")
-
-	for i, wantCounter := range counterAssertions {
-		require.Equal(t, wantCounter.Name, snapshot[i].Name, "unexpected counter")
-		assert.EqualValues(t, wantCounter.Value, snapshot[i].Value, "unexpected counter value")
-		for wantTagKey, wantTagVal := range wantCounter.Tags {
-			assert.Equal(t, wantTagVal, snapshot[i].Tags[wantTagKey], "unexpected value for %q", wantTagKey)
 		}
 	}
 }
