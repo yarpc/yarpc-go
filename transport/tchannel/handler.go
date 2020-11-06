@@ -264,7 +264,6 @@ func newHandlerWriter(response inboundCallResponse, format tchannel.Format, head
 
 func (hw *handlerWriter) AddHeaders(h transport.Headers) {
 	for k, v := range h.OriginalItems() {
-		// TODO: is this considered a breaking change?
 		if isReservedHeaderKey(k) {
 			hw.failedWith = appendError(hw.failedWith, fmt.Errorf("cannot use reserved header key: %s", k))
 			return
