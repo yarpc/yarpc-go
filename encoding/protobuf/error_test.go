@@ -196,5 +196,5 @@ func TestPbErrorToYARPCErrorWithNonProtoDetail(t *testing.T) {
 	}
 	err := pberr.YARPCError()
 	assert.Equal(t, yarpcerrors.CodeUnknown, err.Code())
-	assert.Equal(t, "Proto error detail is not proto.Message compatible", err.Message())
+	assert.Equal(t, "proto error detail is not proto.Message compatible", err.Message())
 }

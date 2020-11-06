@@ -133,7 +133,7 @@ func createStatusWithDetail(pberr *pberror, encoding transport.Encoding, codec *
 		if pbdetail, ok := detail.(proto.Message); ok {
 			details = append(details, pbdetail)
 		} else {
-			return nil, errors.New("Proto error detail is not proto.Message compatible")
+			return nil, errors.New("proto error detail is not proto.Message compatible")
 		}
 	}
 
@@ -220,13 +220,13 @@ func newErrorWithDetails(code yarpcerrors.Code, message string, details []interf
 	}
 }
 
-func (pberr *pberror) YARPCError() *yarpcerrors.Status {
-	if pberr == nil {
+func (err *pberror) YARPCError() *yarpcerrors.Status {
+	if err == nil {
 		return nil
 	}
-	status, err := createStatusWithDetail(pberr, Encoding, newCodec(nil))
-	if err != nil {
-		return yarpcerrors.FromError(err)
+	status, statusErr := createStatusWithDetail(err, Encoding, newCodec(nil))
+	if statusErr != nil {
+		return yarpcerrors.FromError(statusErr)
 	}
 	return status
 }
