@@ -188,7 +188,7 @@ func TestPbErrorToYARPCError(t *testing.T) {
 	}
 }
 
-func TestPbErrorToYARPCErrorWithNonProtoDetail(t *testing.T) {
+func TestPbErrorToYARPCErrorWithIncompatibleProtoDetail(t *testing.T) {
 	pberr := pberror{
 		code:    yarpcerrors.CodeAborted,
 		message: "test wrong proto",
@@ -197,4 +197,58 @@ func TestPbErrorToYARPCErrorWithNonProtoDetail(t *testing.T) {
 	err := pberr.YARPCError()
 	assert.Equal(t, yarpcerrors.CodeUnknown, err.Code())
 	assert.Equal(t, "proto error detail is not proto.Message compatible", err.Message())
+}
+
+func TestConvertToYARPCErrorWithIncorrectEncoding(t *testing.T) {
+	pberr := &pberror{code: yarpcerrors.CodeAborted, message: "test"}
+	err := convertToYARPCError("thrift", pberr, &codec{}, nil)
+	assert.Error(t, err, "unexpected empty error")
+	assert.Equal(t, err.Error(),
+		"code:internal message:encoding.Expect should have handled encoding \"thrift\" but did not")
+}
+
+func TestConvertFromYARPCError(t *testing.T) {
+	t.Run("incorrect encoding", func(t *testing.T) {
+		yerr := yarpcerrors.Newf(yarpcerrors.CodeAborted, "test").WithDetails([]byte{1, 2})
+		err := convertFromYARPCError("thrift", yerr, &codec{})
+		assert.Equal(t, err.Error(),
+			"code:internal message:encoding.Expect should have handled encoding \"thrift\" but did not")
+	})
+	t.Run("empty details", func(t *testing.T) {
+		yerr := yarpcerrors.Newf(yarpcerrors.CodeAborted, "test")
+		err := convertFromYARPCError(Encoding, yerr, &codec{})
+		assert.Equal(t, err.Error(), "code:aborted message:test")
+	})
+}
+
+func TestCreateStatusWithDetailErrors(t *testing.T) {
+	t.Run("unsupported code", func(t *testing.T) {
+		pberr := &pberror{code: yarpcerrors.CodeOK, message: "test"}
+		_, err := createStatusWithDetail(pberr, Encoding, &codec{})
+		assert.Error(t, err, "unexpected empty error")
+		assert.Equal(t, err.Error(), "no error details for status with code OK")
+	})
+
+	t.Run("unsupported encoding", func(t *testing.T) {
+		pberr := &pberror{code: yarpcerrors.CodeAborted}
+		_, err := createStatusWithDetail(pberr, "thrift", &codec{})
+		assert.Error(t, err, "unexpected empty error")
+		assert.Equal(t, err.Error(),
+			"code:internal message:encoding.Expect should have handled encoding \"thrift\" but did not")
+	})
+}
+
+func TestErrorHandling(t *testing.T) {
+	t.Run("GetErrorDetail empty error handling", func(t *testing.T) {
+		details := GetErrorDetails(nil)
+		assert.Nil(t, details, "unexpected details")
+	})
+	t.Run("GetErrorDetail non pberror", func(t *testing.T) {
+		details := GetErrorDetails(errors.New("test"))
+		assert.Nil(t, details, "unexpected details")
+	})
+	t.Run("PbError empty error handling", func(t *testing.T) {
+		var pbErr *pberror
+		assert.Nil(t, pbErr.YARPCError(), "unexpected yarpcerror")
+	})
 }
