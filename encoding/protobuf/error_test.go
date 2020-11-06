@@ -25,12 +25,15 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/gogo/googleapis/google/rpc"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/types"
+	"github.com/gogo/status"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/yarpcerrors"
+	"google.golang.org/grpc/codes"
 )
 
 func TestNewOK(t *testing.T) {
@@ -121,4 +124,77 @@ func TestMessageNameWithoutPackage(t *testing.T) {
 			assert.Equal(t, tt.want, messageNameWithoutPackage(tt.give), "unexpected trim")
 		})
 	}
+}
+
+type yarpcError interface{ YARPCError() *yarpcerrors.Status }
+
+func TestPbErrorToYARPCError(t *testing.T) {
+	tests := []struct {
+		name             string
+		code             yarpcerrors.Code
+		message          string
+		details          []proto.Message
+		expectedGRPCCode codes.Code
+	}{
+		{
+			name:             "pbError without details",
+			code:             yarpcerrors.CodeAborted,
+			message:          "simple test",
+			expectedGRPCCode: codes.Aborted,
+		},
+		{
+			name:             "pbError with single detail",
+			code:             yarpcerrors.CodeInternal,
+			message:          "internal error",
+			expectedGRPCCode: codes.Internal,
+			details: []proto.Message{
+				&types.StringValue{Value: "test value"},
+			},
+		},
+		{
+			name:             "pbError with multiple details",
+			code:             yarpcerrors.CodeNotFound,
+			message:          "not found error",
+			expectedGRPCCode: codes.NotFound,
+			details: []proto.Message{
+				&types.StringValue{Value: "test value"},
+				&types.Int32Value{Value: 45},
+				&types.Any{Value: []byte{1, 2, 3, 4, 5}},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var errOpts []ErrorOption
+			if len(tt.details) > 0 {
+				errOpts = append(errOpts, WithErrorDetails(tt.details...))
+			}
+			pberror := NewError(tt.code, tt.message, errOpts...)
+			st := pberror.(yarpcError).YARPCError()
+			assert.Equal(t, st.Code(), tt.code)
+			assert.Equal(t, st.Message(), tt.message)
+
+			statusPb := rpc.Status{}
+			proto.Unmarshal(st.Details(), &statusPb)
+			status := status.FromProto(&statusPb)
+
+			assert.Equal(t, tt.expectedGRPCCode, status.Code(), "unexpected grpc status code")
+			assert.Equal(t, tt.message, status.Message(), "unexpected grpc status message")
+			for i, detail := range tt.details {
+				assert.Equal(t, detail, status.Details()[i])
+			}
+		})
+	}
+}
+
+func TestPbErrorToYARPCErrorWithNonProtoDetail(t *testing.T) {
+	pberr := pberror{
+		code:    yarpcerrors.CodeAborted,
+		message: "test wrong proto",
+		details: []interface{}{pberror{}},
+	}
+	err := pberr.YARPCError()
+	assert.Equal(t, yarpcerrors.CodeUnknown, err.Code())
+	assert.Equal(t, "Proto error detail is not proto.Message compatible", err.Message())
 }

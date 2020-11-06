@@ -117,29 +117,38 @@ func convertToYARPCError(encoding transport.Encoding, err error, codec *codec, r
 	}
 	var pberr *pberror
 	if errors.As(err, &pberr) {
-		// We only use this function on the inbound side, and pberrors should be
-		// constructed using the constructor above, so we can safely assume all
-		// the details are proto.Message-typed.
-		var details []proto.Message
-		for _, detail := range pberr.details {
-			details = append(details, detail.(proto.Message))
-		}
 		setApplicationErrorMeta(pberr, resw)
-
-		st, convertErr := status.New(grpcerrorcodes.YARPCCodeToGRPCCode[pberr.code], pberr.message).WithDetails(details...)
-		if convertErr != nil {
-			return convertErr
+		status, sterr := createStatusWithDetail(pberr, encoding, codec)
+		if sterr != nil {
+			return sterr
 		}
-		detailsBytes, cleanup, marshalErr := marshal(encoding, st.Proto(), codec)
-		if marshalErr != nil {
-			return marshalErr
-		}
-		defer cleanup()
-		yarpcDet := make([]byte, len(detailsBytes))
-		copy(yarpcDet, detailsBytes)
-		return yarpcerrors.Newf(pberr.code, pberr.message).WithDetails(yarpcDet)
+		return status
 	}
 	return err
+}
+
+func createStatusWithDetail(pberr *pberror, encoding transport.Encoding, codec *codec) (*yarpcerrors.Status, error) {
+	var details []proto.Message
+	for _, detail := range pberr.details {
+		if pbdetail, ok := detail.(proto.Message); ok {
+			details = append(details, pbdetail)
+		} else {
+			return nil, errors.New("Proto error detail is not proto.Message compatible")
+		}
+	}
+
+	st, convertErr := status.New(grpcerrorcodes.YARPCCodeToGRPCCode[pberr.code], pberr.message).WithDetails(details...)
+	if convertErr != nil {
+		return nil, convertErr
+	}
+	detailsBytes, cleanup, marshalErr := marshal(encoding, st.Proto(), codec)
+	if marshalErr != nil {
+		return nil, marshalErr
+	}
+	defer cleanup()
+	yarpcDet := make([]byte, len(detailsBytes))
+	copy(yarpcDet, detailsBytes)
+	return yarpcerrors.Newf(pberr.code, pberr.message).WithDetails(yarpcDet), nil
 }
 
 func setApplicationErrorMeta(pberr *pberror, resw transport.ResponseWriter) {
@@ -211,9 +220,13 @@ func newErrorWithDetails(code yarpcerrors.Code, message string, details []interf
 	}
 }
 
-func (err *pberror) YARPCError() *yarpcerrors.Status {
-	if err == nil {
+func (pberr *pberror) YARPCError() *yarpcerrors.Status {
+	if pberr == nil {
 		return nil
 	}
-	return yarpcerrors.Newf(err.code, err.message)
+	status, err := createStatusWithDetail(pberr, Encoding, newCodec(nil))
+	if err != nil {
+		return yarpcerrors.FromError(err)
+	}
+	return status
 }
