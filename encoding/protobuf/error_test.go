@@ -95,7 +95,7 @@ func TestConvertToYARPCErrorApplicationErrorMeta(t *testing.T) {
 	require.NotNil(t, resw.ApplicationErrorMeta)
 	assert.Equal(t, "StringValue", resw.ApplicationErrorMeta.Name, "expected first error detail name")
 	assert.Equal(t,
-		"[]{ StringValue{value:\"detail message\" } , Int32Value{value:42 } , BytesValue{value:\"detail bytes\" } }",
+		`[]{ StringValue{value:"detail message" } , Int32Value{value:42 } , BytesValue{value:"detail bytes" } }`,
 		resw.ApplicationErrorMeta.Details,
 		"unexpected string of error details")
 	assert.Nil(t, resw.ApplicationErrorMeta.Code, "code should nil")
@@ -176,11 +176,13 @@ func TestPbErrorToYARPCError(t *testing.T) {
 			assert.Equal(t, st.Message(), tt.message)
 
 			statusPb := rpc.Status{}
-			proto.Unmarshal(st.Details(), &statusPb)
-			status := status.FromProto(&statusPb)
+			err := proto.Unmarshal(st.Details(), &statusPb)
+			assert.NoError(t, err, "unexpected unmarshal error")
 
+			status := status.FromProto(&statusPb)
 			assert.Equal(t, tt.expectedGRPCCode, status.Code(), "unexpected grpc status code")
 			assert.Equal(t, tt.message, status.Message(), "unexpected grpc status message")
+			assert.Len(t, status.Details(), len(tt.details), "unexpected details length")
 			for i, detail := range tt.details {
 				assert.Equal(t, detail, status.Details()[i])
 			}
@@ -212,7 +214,7 @@ func TestConvertFromYARPCError(t *testing.T) {
 		yerr := yarpcerrors.Newf(yarpcerrors.CodeAborted, "test").WithDetails([]byte{1, 2})
 		err := convertFromYARPCError("thrift", yerr, &codec{})
 		assert.Equal(t, err.Error(),
-			"code:internal message:encoding.Expect should have handled encoding \"thrift\" but did not")
+			`code:internal message:encoding.Expect should have handled encoding "thrift" but did not`)
 	})
 	t.Run("empty details", func(t *testing.T) {
 		yerr := yarpcerrors.Newf(yarpcerrors.CodeAborted, "test")
@@ -240,12 +242,10 @@ func TestCreateStatusWithDetailErrors(t *testing.T) {
 
 func TestErrorHandling(t *testing.T) {
 	t.Run("GetErrorDetail empty error handling", func(t *testing.T) {
-		details := GetErrorDetails(nil)
-		assert.Nil(t, details, "unexpected details")
+		assert.Nil(t, GetErrorDetails(nil), "unexpected details")
 	})
 	t.Run("GetErrorDetail non pberror", func(t *testing.T) {
-		details := GetErrorDetails(errors.New("test"))
-		assert.Nil(t, details, "unexpected details")
+		assert.Nil(t, GetErrorDetails(errors.New("test")), "unexpected details")
 	})
 	t.Run("PbError empty error handling", func(t *testing.T) {
 		var pbErr *pberror

@@ -128,7 +128,7 @@ func convertToYARPCError(encoding transport.Encoding, err error, codec *codec, r
 }
 
 func createStatusWithDetail(pberr *pberror, encoding transport.Encoding, codec *codec) (*yarpcerrors.Status, error) {
-	var details []proto.Message
+	details := make([]proto.Message, 0, len(pberr.details))
 	for _, detail := range pberr.details {
 		if pbdetail, ok := detail.(proto.Message); ok {
 			details = append(details, pbdetail)
