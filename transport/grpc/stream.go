@@ -26,6 +26,7 @@ import (
 	"io"
 	"io/ioutil"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/atomic"
 	"go.uber.org/yarpc/api/transport"
@@ -200,5 +201,13 @@ func toYARPCStreamError(err error) error {
 	if !ok {
 		code = yarpcerrors.CodeUnknown
 	}
-	return yarpcerrors.Newf(code, status.Message())
+	yarpcerr := yarpcerrors.Newf(code, status.Message())
+	if len(status.Details()) > 0 {
+		details, err := proto.Marshal(status.Proto())
+		if err != nil {
+			return yarpcerrors.FromError(err)
+		}
+		yarpcerr = yarpcerr.WithDetails(details)
+	}
+	return yarpcerr
 }

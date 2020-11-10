@@ -55,7 +55,16 @@ func (errorServer) Unary(ctx context.Context, msg *testpb.TestMessage) (*testpb.
 }
 
 func (errorServer) Duplex(stream testpb.TestServiceDuplexYARPCServer) error {
-	return nil
+	testDetails := []proto.Message{
+		&types.StringValue{Value: "string value"},
+		&types.Int32Value{Value: 100},
+	}
+	msg, err := stream.Recv()
+	if err != nil {
+		return err
+	}
+	return protobuf.NewError(yarpcerrors.CodeInvalidArgument, msg.Value,
+		protobuf.WithErrorDetails(testDetails...))
 }
 
 func TestProtoGrpcServerErrorDetails(t *testing.T) {
@@ -110,6 +119,71 @@ func TestProtoGrpcServerErrorDetails(t *testing.T) {
 		&types.StringValue{Value: "string value"},
 		&types.Int32Value{Value: 100},
 	}
+	actualDetails := protobuf.GetErrorDetails(err)
+	assert.Equal(t, expectedDetails, actualDetails, "unexpected error details")
+}
+
+func TestProtoGrpcStreamServerErrorDetails(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	inbound := grpc.NewTransport().NewInbound(listener)
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name:     _serverName,
+		Inbounds: yarpc.Inbounds{inbound},
+		Logging:  yarpc.LoggingConfig{},
+		Metrics:  yarpc.MetricsConfig{},
+	})
+
+	dispatcher.Register(testpb.BuildTestYARPCProcedures(&errorServer{}))
+	require.NoError(t, dispatcher.Start(), "could not start server dispatcher")
+
+	addr := inbound.Addr().String()
+	outbound := grpc.NewTransport().NewSingleOutbound(addr)
+	clientDispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name: _clientName,
+		Outbounds: map[string]transport.Outbounds{
+			_serverName: {
+				ServiceName: _serverName,
+				Unary:       outbound,
+				Stream:      outbound,
+			},
+		},
+		Logging: yarpc.LoggingConfig{},
+		Metrics: yarpc.MetricsConfig{},
+	})
+
+	client := testpb.NewTestYARPCClient(clientDispatcher.ClientConfig(_serverName))
+	require.NoError(t, clientDispatcher.Start(), "could not start client dispatcher")
+
+	defer func() {
+		assert.NoError(t, dispatcher.Stop(), "could not stop dispatcher")
+		assert.NoError(t, clientDispatcher.Stop(), "could not stop client dispatcher")
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	const errorMsg = "stream error msg"
+	expectedDetails := []interface{}{
+		&types.StringValue{Value: "string value"},
+		&types.Int32Value{Value: 100},
+	}
+
+	streamHandle, err := client.Duplex(ctx)
+	assert.NoError(t, err, "unexpected error")
+
+	err = streamHandle.Send(&testpb.TestMessage{Value: errorMsg})
+	assert.NoError(t, err, "unexpected error")
+
+	msg, err := streamHandle.Recv()
+	assert.Nil(t, msg, "unexpected non-nil reply")
+	assert.Error(t, err, "unexpected nil error")
+
+	st := yarpcerrors.FromError(err)
+	assert.Equal(t, yarpcerrors.CodeInvalidArgument, st.Code(), "unexpected error code")
+	assert.Equal(t, errorMsg, st.Message(), "unexpected error message")
+
 	actualDetails := protobuf.GetErrorDetails(err)
 	assert.Equal(t, expectedDetails, actualDetails, "unexpected error details")
 }

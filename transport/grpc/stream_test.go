@@ -26,13 +26,17 @@ import (
 	"io"
 	"testing"
 
+	"github.com/gogo/protobuf/types"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/peer/direct"
 	"go.uber.org/yarpc/transport/grpc"
 	. "go.uber.org/yarpc/x/yarpctest"
 	"go.uber.org/yarpc/yarpcerrors"
 )
+
+type yarpcError interface{ YARPCError() *yarpcerrors.Status }
 
 func TestStreaming(t *testing.T) {
 	newDirectChooser := func(id peer.Identifier, transport peer.Transport) (peer.Chooser, error) {
@@ -42,7 +46,9 @@ func TestStreaming(t *testing.T) {
 		}
 		return direct.New(direct.Configuration{}, trans.NewDialer())
 	}
-
+	protoerr := protobuf.NewError(yarpcerrors.CodeAborted, "test error",
+		protobuf.WithErrorDetails(&types.StringValue{Value: "val"}))
+	yerr := protoerr.(yarpcError).YARPCError()
 	p := NewPortProvider(t)
 	tests := []struct {
 		name     string
@@ -364,6 +370,43 @@ func TestStreaming(t *testing.T) {
 					Procedure("proc"),
 					ClientStreamActions(
 						RecvStreamErr(io.EOF.Error()),
+					),
+				),
+			),
+		},
+
+		{
+			name: "stream with error details",
+			services: Lifecycles(
+				GRPCService(
+					Name("myservice"),
+					p.NamedPort("13"),
+					Proc(
+						Name("proc"),
+						OrderedStreamHandler(
+							RecvStreamMsg("test"),
+							RecvStreamErr(io.EOF.Error()),
+							SendStreamMsg("test1"),
+							SendStreamMsg("test2"),
+							SendStreamMsg("test3"),
+							StreamHandlerError(protoerr),
+						),
+					),
+				),
+			),
+			requests: Actions(
+				GRPCStreamRequest(
+					p.NamedPort("13"),
+					Service("myservice"),
+					Procedure("proc"),
+					ClientStreamActions(
+						SendStreamMsg("test"),
+						CloseStream(),
+						SendStreamMsgAndExpectError("lala", io.EOF.Error()),
+						RecvStreamMsg("test1"),
+						RecvStreamMsg("test2"),
+						RecvStreamMsg("test3"),
+						RecvStreamErrInstance(yerr),
 					),
 				),
 			),
