@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Fixed
+- proto: pass protobuf error details in gRPC streams
 - proto: pass error details on proto-error to yarpcerror conversion
 
 ## [1.49.0] - 2020-10-22
