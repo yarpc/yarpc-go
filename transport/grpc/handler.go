@@ -250,7 +250,8 @@ func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Req
 // handlerErrorToGRPCError converts a yarpcerror to gRPC status error,
 // taking into account error details.
 //
-// This should only be used to wrap a return from a UnaryHandler.
+// This method is used from unary and stream handlers. Stream handler passes
+// nil responseWriter
 func handlerErrorToGRPCError(err error, responseWriter *responseWriter) error {
 	if err == nil {
 		return nil

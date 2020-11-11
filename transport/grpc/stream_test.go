@@ -36,8 +36,6 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
-type yarpcError interface{ YARPCError() *yarpcerrors.Status }
-
 func TestStreaming(t *testing.T) {
 	newDirectChooser := func(id peer.Identifier, transport peer.Transport) (peer.Chooser, error) {
 		trans, ok := transport.(*grpc.Transport)
@@ -48,7 +46,6 @@ func TestStreaming(t *testing.T) {
 	}
 	protoerr := protobuf.NewError(yarpcerrors.CodeAborted, "test error",
 		protobuf.WithErrorDetails(&types.StringValue{Value: "val"}))
-	yerr := protoerr.(yarpcError).YARPCError()
 	p := NewPortProvider(t)
 	tests := []struct {
 		name     string
@@ -384,11 +381,7 @@ func TestStreaming(t *testing.T) {
 					Proc(
 						Name("proc"),
 						OrderedStreamHandler(
-							RecvStreamMsg("test"),
-							RecvStreamErr(io.EOF.Error()),
 							SendStreamMsg("test1"),
-							SendStreamMsg("test2"),
-							SendStreamMsg("test3"),
 							StreamHandlerError(protoerr),
 						),
 					),
@@ -400,13 +393,8 @@ func TestStreaming(t *testing.T) {
 					Service("myservice"),
 					Procedure("proc"),
 					ClientStreamActions(
-						SendStreamMsg("test"),
-						CloseStream(),
-						SendStreamMsgAndExpectError("lala", io.EOF.Error()),
 						RecvStreamMsg("test1"),
-						RecvStreamMsg("test2"),
-						RecvStreamMsg("test3"),
-						RecvStreamErrInstance(yerr),
+						RecvStreamErrInstance(yarpcerrors.FromError(protoerr)),
 					),
 				),
 			),
