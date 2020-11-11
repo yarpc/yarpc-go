@@ -204,7 +204,8 @@ func toYARPCStreamError(err error) error {
 	details, err := marshalError(status)
 	if err != nil {
 		return yarpcerrors.FromError(err)
-	} else if details != nil {
+	}
+	if details != nil {
 		yarpcerr = yarpcerr.WithDetails(details)
 	}
 	return yarpcerr
