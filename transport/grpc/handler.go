@@ -151,12 +151,13 @@ func (h *handler) handleStream(
 	if err != nil {
 		return err
 	}
-
-	return transport.UpdateSpanWithErr(span, transport.InvokeStreamHandler(transport.StreamInvokeRequest{
+	apperr := transport.InvokeStreamHandler(transport.StreamInvokeRequest{
 		Stream:  tServerStream,
 		Handler: streamHandler,
 		Logger:  h.logger,
-	}))
+	})
+	apperr = handlerErrorToGRPCError(apperr, nil)
+	return transport.UpdateSpanWithErr(span, apperr)
 }
 
 func (h *handler) handleUnary(
@@ -249,7 +250,8 @@ func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Req
 // handlerErrorToGRPCError converts a yarpcerror to gRPC status error,
 // taking into account error details.
 //
-// This should only be used to wrap a return from a UnaryHandler.
+// This method is used from unary and stream handlers. Stream handler passes
+// nil responseWriter
 func handlerErrorToGRPCError(err error, responseWriter *responseWriter) error {
 	if err == nil {
 		return nil
@@ -269,7 +271,9 @@ func handlerErrorToGRPCError(err error, responseWriter *responseWriter) error {
 	message := yarpcStatus.Message()
 	// if the yarpc error has a name, set the header
 	if name != "" {
-		responseWriter.AddSystemHeader(ErrorNameHeader, name)
+		if responseWriter != nil {
+			responseWriter.AddSystemHeader(ErrorNameHeader, name)
+		}
 		if message == "" {
 			// if the message is empty, set the message to the name for grpc compatibility
 			message = name

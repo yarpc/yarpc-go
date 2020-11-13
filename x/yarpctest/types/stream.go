@@ -78,6 +78,8 @@ type RecvStreamMsg struct {
 	WantBody          []byte
 	WantDecodeErrMsgs []string
 	WantErrMsgs       []string
+
+	WantErr error
 }
 
 // ApplyClientStream implements ClientStreamAction
@@ -98,6 +100,11 @@ func (s *RecvStreamMsg) applyStream(t testing.TB, c transport.Stream) {
 		for _, wantErrMsg := range s.WantErrMsgs {
 			require.Contains(t, err.Error(), wantErrMsg)
 		}
+		return
+	}
+	if s.WantErr != nil {
+		require.Error(t, err)
+		require.Equal(t, s.WantErr, err)
 		return
 	}
 	require.NoError(t, err)
