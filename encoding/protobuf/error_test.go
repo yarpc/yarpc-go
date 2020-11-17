@@ -25,12 +25,15 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/gogo/googleapis/google/rpc"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/types"
+	"github.com/gogo/status"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/yarpcerrors"
+	"google.golang.org/grpc/codes"
 )
 
 func TestNewOK(t *testing.T) {
@@ -92,7 +95,7 @@ func TestConvertToYARPCErrorApplicationErrorMeta(t *testing.T) {
 	require.NotNil(t, resw.ApplicationErrorMeta)
 	assert.Equal(t, "StringValue", resw.ApplicationErrorMeta.Name, "expected first error detail name")
 	assert.Equal(t,
-		"[]{ StringValue{value:\"detail message\" } , Int32Value{value:42 } , BytesValue{value:\"detail bytes\" } }",
+		`[]{ StringValue{value:"detail message" } , Int32Value{value:42 } , BytesValue{value:"detail bytes" } }`,
 		resw.ApplicationErrorMeta.Details,
 		"unexpected string of error details")
 	assert.Nil(t, resw.ApplicationErrorMeta.Code, "code should nil")
@@ -121,4 +124,131 @@ func TestMessageNameWithoutPackage(t *testing.T) {
 			assert.Equal(t, tt.want, messageNameWithoutPackage(tt.give), "unexpected trim")
 		})
 	}
+}
+
+type yarpcError interface{ YARPCError() *yarpcerrors.Status }
+
+func TestPbErrorToYARPCError(t *testing.T) {
+	tests := []struct {
+		name             string
+		code             yarpcerrors.Code
+		message          string
+		details          []proto.Message
+		expectedGRPCCode codes.Code
+	}{
+		{
+			name:             "pbError without details",
+			code:             yarpcerrors.CodeAborted,
+			message:          "simple test",
+			expectedGRPCCode: codes.Aborted,
+		},
+		{
+			name:             "pbError with single detail",
+			code:             yarpcerrors.CodeInternal,
+			message:          "internal error",
+			expectedGRPCCode: codes.Internal,
+			details: []proto.Message{
+				&types.StringValue{Value: "test value"},
+			},
+		},
+		{
+			name:             "pbError with multiple details",
+			code:             yarpcerrors.CodeNotFound,
+			message:          "not found error",
+			expectedGRPCCode: codes.NotFound,
+			details: []proto.Message{
+				&types.StringValue{Value: "test value"},
+				&types.Int32Value{Value: 45},
+				&types.Any{Value: []byte{1, 2, 3, 4, 5}},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var errOpts []ErrorOption
+			if len(tt.details) > 0 {
+				errOpts = append(errOpts, WithErrorDetails(tt.details...))
+			}
+			pberror := NewError(tt.code, tt.message, errOpts...)
+			st := pberror.(yarpcError).YARPCError()
+			assert.Equal(t, st.Code(), tt.code)
+			assert.Equal(t, st.Message(), tt.message)
+
+			statusPb := rpc.Status{}
+			err := proto.Unmarshal(st.Details(), &statusPb)
+			assert.NoError(t, err, "unexpected unmarshal error")
+
+			status := status.FromProto(&statusPb)
+			assert.Equal(t, tt.expectedGRPCCode, status.Code(), "unexpected grpc status code")
+			assert.Equal(t, tt.message, status.Message(), "unexpected grpc status message")
+			assert.Len(t, status.Details(), len(tt.details), "unexpected details length")
+			for i, detail := range tt.details {
+				assert.Equal(t, detail, status.Details()[i])
+			}
+		})
+	}
+}
+
+func TestPbErrorToYARPCErrorWithIncompatibleProtoDetail(t *testing.T) {
+	pberr := pberror{
+		code:    yarpcerrors.CodeAborted,
+		message: "test wrong proto",
+		details: []interface{}{pberror{}},
+	}
+	err := pberr.YARPCError()
+	assert.Equal(t, yarpcerrors.CodeUnknown, err.Code())
+	assert.Equal(t, "proto error detail is not proto.Message compatible", err.Message())
+}
+
+func TestConvertToYARPCErrorWithIncorrectEncoding(t *testing.T) {
+	pberr := &pberror{code: yarpcerrors.CodeAborted, message: "test"}
+	err := convertToYARPCError("thrift", pberr, &codec{}, nil)
+	assert.Error(t, err, "unexpected empty error")
+	assert.Equal(t, err.Error(),
+		"code:internal message:encoding.Expect should have handled encoding \"thrift\" but did not")
+}
+
+func TestConvertFromYARPCError(t *testing.T) {
+	t.Run("incorrect encoding", func(t *testing.T) {
+		yerr := yarpcerrors.Newf(yarpcerrors.CodeAborted, "test").WithDetails([]byte{1, 2})
+		err := convertFromYARPCError("thrift", yerr, &codec{})
+		assert.Equal(t, err.Error(),
+			`code:internal message:encoding.Expect should have handled encoding "thrift" but did not`)
+	})
+	t.Run("empty details", func(t *testing.T) {
+		yerr := yarpcerrors.Newf(yarpcerrors.CodeAborted, "test")
+		err := convertFromYARPCError(Encoding, yerr, &codec{})
+		assert.Equal(t, err.Error(), "code:aborted message:test")
+	})
+}
+
+func TestCreateStatusWithDetailErrors(t *testing.T) {
+	t.Run("unsupported code", func(t *testing.T) {
+		pberr := &pberror{code: yarpcerrors.CodeOK, message: "test"}
+		_, err := createStatusWithDetail(pberr, Encoding, &codec{})
+		assert.Error(t, err, "unexpected empty error")
+		assert.Equal(t, err.Error(), "no error details for status with code OK")
+	})
+
+	t.Run("unsupported encoding", func(t *testing.T) {
+		pberr := &pberror{code: yarpcerrors.CodeAborted}
+		_, err := createStatusWithDetail(pberr, "thrift", &codec{})
+		assert.Error(t, err, "unexpected empty error")
+		assert.Equal(t, err.Error(),
+			"code:internal message:encoding.Expect should have handled encoding \"thrift\" but did not")
+	})
+}
+
+func TestErrorHandling(t *testing.T) {
+	t.Run("GetErrorDetail empty error handling", func(t *testing.T) {
+		assert.Nil(t, GetErrorDetails(nil), "unexpected details")
+	})
+	t.Run("GetErrorDetail non pberror", func(t *testing.T) {
+		assert.Nil(t, GetErrorDetails(errors.New("test")), "unexpected details")
+	})
+	t.Run("PbError empty error handling", func(t *testing.T) {
+		var pbErr *pberror
+		assert.Nil(t, pbErr.YARPCError(), "unexpected yarpcerror")
+	})
 }
