@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- No changes yet.
+
+## [1.49.1] - 2020-11-17
 ### Fixed
 - proto: pass protobuf error details in gRPC streams
 - proto: pass error details on proto-error to yarpcerror conversion
@@ -1303,8 +1306,8 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
-
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.49.0...HEAD
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.49.1...HEAD
+[1.49.1]: https://github.com/yarpc/yarpc-go/compare/v1.49.0...v1.49.1
 [1.49.0]: https://github.com/yarpc/yarpc-go/compare/v1.48.0...v1.49.0
 [1.48.0]: https://github.com/yarpc/yarpc-go/compare/v1.47.2...v1.48.0
 [1.47.2]: https://github.com/yarpc/yarpc-go/compare/v1.47.1...v1.47.2
