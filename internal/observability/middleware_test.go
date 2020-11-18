@@ -1271,7 +1271,8 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 }
 
 func TestMiddlewareSuccessSnapshot(t *testing.T) {
-	defer stubTimeWithTimeVal(time.Now())()
+	timeVal := time.Now()
+	defer stubTimeWithTimeVal(timeVal)()
 	ttlMs := int64(1000)
 	root := metrics.New()
 	meter := root.Scope()
@@ -1286,7 +1287,7 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 
 	buf.Write([]byte("body"))
 
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*time.Duration(ttlMs)))
+	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(time.Millisecond*time.Duration(ttlMs)))
 	defer cancel()
 	err := mw.Handle(
 		ctx,
@@ -1371,7 +1372,8 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 }
 
 func TestMiddlewareSuccessSnapshotForCall(t *testing.T) {
-	defer stubTimeWithTimeVal(time.Now())()
+	timeVal := time.Now()
+	defer stubTimeWithTimeVal(timeVal)()
 	ttlMs := int64(1000)
 	root := metrics.New()
 	meter := root.Scope()
@@ -1386,7 +1388,7 @@ func TestMiddlewareSuccessSnapshotForCall(t *testing.T) {
 
 	buf.Write([]byte("body"))
 
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*time.Duration(ttlMs)))
+	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(time.Millisecond*time.Duration(ttlMs)))
 	defer cancel()
 	_, err := mw.Call(
 		ctx,
@@ -1470,7 +1472,8 @@ func TestMiddlewareSuccessSnapshotForCall(t *testing.T) {
 }
 
 func TestMiddlewareSuccessSnapshotForCallOnWay(t *testing.T) {
-	defer stubTimeWithTimeVal(time.Now())()
+	timeVal := time.Now()
+	defer stubTimeWithTimeVal(timeVal)()
 	ttlMs := int64(1000)
 	root := metrics.New()
 	meter := root.Scope()
@@ -1485,7 +1488,7 @@ func TestMiddlewareSuccessSnapshotForCallOnWay(t *testing.T) {
 
 	buf.Write([]byte("body"))
 
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*time.Duration(ttlMs)))
+	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(time.Millisecond*time.Duration(ttlMs)))
 	defer cancel()
 	_, err := mw.CallOneway(
 		ctx,
@@ -1568,7 +1571,8 @@ func TestMiddlewareSuccessSnapshotForCallOnWay(t *testing.T) {
 }
 
 func TestMiddlewareSuccessSnapshotForOneWay(t *testing.T) {
-	defer stubTimeWithTimeVal(time.Now())()
+	timeVal := time.Now()
+	defer stubTimeWithTimeVal(timeVal)()
 	ttlMs := int64(1000)
 	root := metrics.New()
 	meter := root.Scope()
@@ -1583,7 +1587,7 @@ func TestMiddlewareSuccessSnapshotForOneWay(t *testing.T) {
 
 	buf.Write([]byte("body"))
 
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*time.Duration(ttlMs)))
+	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(time.Millisecond*time.Duration(ttlMs)))
 	defer cancel()
 	err := mw.HandleOneway(
 		ctx,
@@ -1775,7 +1779,8 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 }
 
 func TestMiddlewareFailureWithDeadlineExceededSnapshot(t *testing.T) {
-	defer stubTimeWithTimeVal(time.Now())()
+	timeVal := time.Now()
+	defer stubTimeWithTimeVal(timeVal)()
 
 	ttlMs := int64(1000)
 	root := metrics.New()
@@ -1791,7 +1796,7 @@ func TestMiddlewareFailureWithDeadlineExceededSnapshot(t *testing.T) {
 
 	buf.Write([]byte("test body"))
 
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*time.Duration(ttlMs)))
+	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(time.Millisecond*time.Duration(ttlMs)))
 	defer cancel()
 	err := mw.Handle(
 		ctx,
@@ -1927,7 +1932,8 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			defer stubTimeWithTimeVal(time.Now())()
+			timeVal := time.Now()
+			defer stubTimeWithTimeVal(timeVal)()
 
 			ttlMs := int64(1000)
 			root := metrics.New()
@@ -1936,7 +1942,7 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 				Logger: zap.NewNop(),
 				Scope:  meter,
 			})
-			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(ttlMs)*time.Millisecond)
+			ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(time.Millisecond*time.Duration(ttlMs)))
 			defer cancel()
 			err := mw.Handle(
 				ctx,
