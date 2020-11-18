@@ -37,7 +37,7 @@ func readFromStream(
 ) (proto.Message, error) {
 	streamMsg, err := stream.ReceiveMessage(ctx)
 	if err != nil {
-		return nil, err
+		return nil, convertFromYARPCError(Encoding, err, codec)
 	}
 	message := newMessage()
 	if err := unmarshal(stream.Request().Meta.Encoding, streamMsg.Body, message, codec); err != nil {
