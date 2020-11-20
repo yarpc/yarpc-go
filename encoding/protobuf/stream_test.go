@@ -75,7 +75,7 @@ func TestUnary(t *testing.T) {
 			sent := &testpb.TestMessage{Value: "echo"}
 			received, err := client.Unary(ctx, sent)
 			require.NoError(t, err)
-			assert.Equal(t, sent, received)
+			assert.Equal(t, sent.Value, received.Value)
 		})
 	}
 }
@@ -138,7 +138,7 @@ func TestDuplexStream(t *testing.T) {
 			{
 				msg, err := str.Recv()
 				require.NoError(t, err)
-				assert.Equal(t, sent, msg)
+				assert.Equal(t, sent.Value, msg.Value)
 			}
 
 			// Close the client side of the stream.

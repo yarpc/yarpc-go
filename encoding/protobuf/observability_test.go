@@ -26,8 +26,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/types"
+	v1proto "github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/net/metrics"
@@ -285,7 +285,7 @@ func (observabilityTestServer) Unary(ctx context.Context, msg *testpb.TestMessag
 	if msg.Value == "success" {
 		return &testpb.TestMessage{Value: msg.Value}, nil
 	}
-	details := []proto.Message{
+	details := []v1proto.Message{
 		&types.StringValue{Value: "string value"},
 		&types.Int32Value{Value: 100},
 	}

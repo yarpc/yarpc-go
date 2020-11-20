@@ -29,11 +29,13 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/types"
 	"github.com/gogo/status"
+	v1proto "github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 func TestNewOK(t *testing.T) {
@@ -58,7 +60,7 @@ func TestForeignError(t *testing.T) {
 }
 
 func TestConvertToYARPCErrorWithWrappedError(t *testing.T) {
-	errDetail := &types.BytesValue{Value: []byte("err detail bytes")}
+	errDetail := &wrapperspb.BytesValue{Value: []byte("err detail bytes")}
 
 	pbErr := NewError(
 		yarpcerrors.CodeAborted,
@@ -77,7 +79,7 @@ func TestConvertToYARPCErrorWithWrappedError(t *testing.T) {
 }
 
 func TestConvertToYARPCErrorApplicationErrorMeta(t *testing.T) {
-	errDetails := []proto.Message{
+	errDetails := []v1proto.Message{
 		&types.StringValue{Value: "detail message"},
 		&types.Int32Value{Value: 42},
 		&types.BytesValue{Value: []byte("detail bytes")},
@@ -133,7 +135,7 @@ func TestPbErrorToYARPCError(t *testing.T) {
 		name             string
 		code             yarpcerrors.Code
 		message          string
-		details          []proto.Message
+		details          []v1proto.Message
 		expectedGRPCCode codes.Code
 	}{
 		{
@@ -147,7 +149,7 @@ func TestPbErrorToYARPCError(t *testing.T) {
 			code:             yarpcerrors.CodeInternal,
 			message:          "internal error",
 			expectedGRPCCode: codes.Internal,
-			details: []proto.Message{
+			details: []v1proto.Message{
 				&types.StringValue{Value: "test value"},
 			},
 		},
@@ -156,7 +158,7 @@ func TestPbErrorToYARPCError(t *testing.T) {
 			code:             yarpcerrors.CodeNotFound,
 			message:          "not found error",
 			expectedGRPCCode: codes.NotFound,
-			details: []proto.Message{
+			details: []v1proto.Message{
 				&types.StringValue{Value: "test value"},
 				&types.Int32Value{Value: 45},
 				&types.Any{Value: []byte{1, 2, 3, 4, 5}},

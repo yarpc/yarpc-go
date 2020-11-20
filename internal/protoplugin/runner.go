@@ -24,8 +24,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/gogo/protobuf/proto"
-	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/pluginpb"
 )
 
 type runner struct {
@@ -52,7 +52,7 @@ func newRunner(
 	}
 }
 
-func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGeneratorResponse {
+func (r *runner) Run(request *pluginpb.CodeGeneratorRequest) *pluginpb.CodeGeneratorResponse {
 	registry := newRegistry()
 	if request.Parameter != nil {
 		for _, p := range strings.Split(request.GetParameter(), ",") {
@@ -103,10 +103,10 @@ func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGen
 	return newResponseFiles(out)
 }
 
-func newResponseFiles(files []*plugin_go.CodeGeneratorResponse_File) *plugin_go.CodeGeneratorResponse {
-	return &plugin_go.CodeGeneratorResponse{File: files}
+func newResponseFiles(files []*pluginpb.CodeGeneratorResponse_File) *pluginpb.CodeGeneratorResponse {
+	return &pluginpb.CodeGeneratorResponse{File: files}
 }
 
-func newResponseError(err error) *plugin_go.CodeGeneratorResponse {
-	return &plugin_go.CodeGeneratorResponse{Error: proto.String(err.Error())}
+func newResponseError(err error) *pluginpb.CodeGeneratorResponse {
+	return &pluginpb.CodeGeneratorResponse{Error: proto.String(err.Error())}
 }

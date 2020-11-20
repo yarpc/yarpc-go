@@ -34,10 +34,10 @@ import (
 
 func TestInvalidOutboundEncoding(t *testing.T) {
 	client := newClient("foo", &transport.OutboundConfig{CallerName: "foo", Outbounds: transport.Outbounds{ServiceName: "bar"}}, nil /*AnyResolver*/)
-	_, _, _, _, err := client.buildTransportRequest(context.Background(), "hello", nil, nil)
+	_, _, _, err := client.buildTransportRequest(context.Background(), "hello", nil, nil)
 	assert.NoError(t, err)
 	client.encoding = "bat"
-	_, _, _, _, err = client.buildTransportRequest(context.Background(), "hello", nil, nil)
+	_, _, _, err = client.buildTransportRequest(context.Background(), "hello", nil, nil)
 	assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.FromError(err).Code())
 }
 

@@ -28,14 +28,14 @@ import (
 	"io/ioutil"
 	"reflect"
 
-	"github.com/gogo/protobuf/jsonpb"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/jsonpb"
 	"go.uber.org/fx"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/restriction"
 	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/encoding/protobuf/reflection"
+	"google.golang.org/protobuf/proto"
 )
 
 var _ = ioutil.NopCloser
@@ -45,7 +45,7 @@ type EchoYARPCClient interface {
 	Echo(context.Context, *Ping, ...yarpc.CallOption) (*Pong, error)
 }
 
-func newEchoYARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) EchoYARPCClient {
+func newEchoYARPCClient(clientConfig transport.ClientConfig, anyResolver protobuf.Resolver, options ...protobuf.ClientOption) EchoYARPCClient {
 	return &_EchoYARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
 			ServiceName:  "uber.yarpc.internal.crossdock.Echo",
@@ -68,7 +68,7 @@ type EchoYARPCServer interface {
 
 type buildEchoYARPCProceduresParams struct {
 	Server      EchoYARPCServer
-	AnyResolver jsonpb.AnyResolver
+	AnyResolver protobuf.Resolver
 }
 
 func buildEchoYARPCProcedures(params buildEchoYARPCProceduresParams) []transport.Procedure {
@@ -107,7 +107,7 @@ type FxEchoYARPCClientParams struct {
 	fx.In
 
 	Provider    yarpc.ClientConfig
-	AnyResolver jsonpb.AnyResolver  `name:"yarpcfx" optional:"true"`
+	AnyResolver protobuf.Resolver  `name:"yarpcfx" optional:"true"`
 	Restriction restriction.Checker `optional:"true"`
 }
 
@@ -157,7 +157,7 @@ type FxEchoYARPCProceduresParams struct {
 	fx.In
 
 	Server      EchoYARPCServer
-	AnyResolver jsonpb.AnyResolver `name:"yarpcfx" optional:"true"`
+	AnyResolver protobuf.Resolver `name:"yarpcfx" optional:"true"`
 }
 
 // FxEchoYARPCProceduresResult defines the output

@@ -30,6 +30,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/types"
 	"github.com/gogo/status"
+	v1proto "github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc"
@@ -45,7 +46,7 @@ import (
 type errorServer struct{}
 
 func (errorServer) Unary(ctx context.Context, msg *testpb.TestMessage) (*testpb.TestMessage, error) {
-	testDetails := []proto.Message{
+	testDetails := []v1proto.Message{
 		&types.StringValue{Value: "string value"},
 		&types.Int32Value{Value: 100},
 	}
@@ -55,7 +56,7 @@ func (errorServer) Unary(ctx context.Context, msg *testpb.TestMessage) (*testpb.
 }
 
 func (errorServer) Duplex(stream testpb.TestServiceDuplexYARPCServer) error {
-	testDetails := []proto.Message{
+	testDetails := []v1proto.Message{
 		&types.StringValue{Value: "string value"},
 		&types.Int32Value{Value: 100},
 	}
@@ -191,7 +192,7 @@ func TestProtoGrpcStreamServerErrorDetails(t *testing.T) {
 type errorRawServer struct{}
 
 func (errorRawServer) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
-	testDetails := []proto.Message{
+	testDetails := []v1proto.Message{
 		&types.StringValue{Value: "string value"},
 		&types.Int32Value{Value: 100},
 	}
@@ -273,7 +274,7 @@ func TestJSONGrpcServerErrorDetails(t *testing.T) {
 	})
 
 	dispatcher.Register(json.Procedure("test", func(ctx context.Context, req *struct{}) (*struct{}, error) {
-		testDetails := []proto.Message{
+		testDetails := []v1proto.Message{
 			&types.StringValue{Value: "string value"},
 			&types.Int32Value{Value: 100},
 		}

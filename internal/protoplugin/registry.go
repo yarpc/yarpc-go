@@ -26,8 +26,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
-	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
+	"google.golang.org/protobuf/types/descriptorpb"
+	"google.golang.org/protobuf/types/pluginpb"
 )
 
 type registry struct {
@@ -55,7 +55,7 @@ func newRegistry() *registry {
 	}
 }
 
-func (r *registry) Load(req *plugin_go.CodeGeneratorRequest) error {
+func (r *registry) Load(req *pluginpb.CodeGeneratorRequest) error {
 	for _, file := range req.GetProtoFile() {
 		r.loadFile(file)
 	}
@@ -136,7 +136,7 @@ func (r *registry) ReserveGoPackageAlias(alias, pkgpath string) error {
 // loadFile loads messages, enumerations and fields from "file".
 // It does not loads services and methods in "file".  You need to call
 // loadServices after loadFiles is called for all files to load services and methods.
-func (r *registry) loadFile(file *descriptor.FileDescriptorProto) {
+func (r *registry) loadFile(file *descriptorpb.FileDescriptorProto) {
 	pkg := &GoPackage{
 		Path: r.goPackagePath(file),
 		Name: defaultGoPackageName(file),
@@ -159,7 +159,7 @@ func (r *registry) loadFile(file *descriptor.FileDescriptorProto) {
 	r.registerEnum(f, nil, file.GetEnumType())
 }
 
-func (r *registry) registerMsg(file *File, outerPath []string, msgs []*descriptor.DescriptorProto) {
+func (r *registry) registerMsg(file *File, outerPath []string, msgs []*descriptorpb.DescriptorProto) {
 	for i, md := range msgs {
 		m := &Message{
 			DescriptorProto: md,
@@ -184,7 +184,7 @@ func (r *registry) registerMsg(file *File, outerPath []string, msgs []*descripto
 	}
 }
 
-func (r *registry) registerEnum(file *File, outerPath []string, enums []*descriptor.EnumDescriptorProto) {
+func (r *registry) registerEnum(file *File, outerPath []string, enums []*descriptorpb.EnumDescriptorProto) {
 	for i, ed := range enums {
 		e := &Enum{
 			EnumDescriptorProto: ed,
@@ -200,7 +200,7 @@ func (r *registry) registerEnum(file *File, outerPath []string, enums []*descrip
 // goPackagePath returns the go package path which go files generated from "f" should have.
 // It respects the mapping registered by AddPkgMap if exists. Or use go_package as import path
 // if it includes a slash,  Otherwide, it generates a path from the file name of "f".
-func (r *registry) goPackagePath(f *descriptor.FileDescriptorProto) string {
+func (r *registry) goPackagePath(f *descriptorpb.FileDescriptorProto) string {
 	name := f.GetName()
 	if pkg, ok := r.pkgMap[name]; ok {
 		return path.Join(r.prefix, pkg)
@@ -239,7 +239,7 @@ func (r *registry) loadServices(file *File) error {
 	return nil
 }
 
-func (r *registry) newMethod(svc *Service, md *descriptor.MethodDescriptorProto) (*Method, error) {
+func (r *registry) newMethod(svc *Service, md *descriptorpb.MethodDescriptorProto) (*Method, error) {
 	requestType, err := r.LookupMessage(svc.File.GetPackage(), md.GetInputType())
 	if err != nil {
 		return nil, err
@@ -293,7 +293,7 @@ func (r *registry) loadTransitiveFileDependenciesRecurse(file *File, seen map[st
 
 // defaultGoPackageName returns the default go package name to be used for go files generated from "f".
 // You might need to use an unique alias for the package when you import it.  Use ReserveGoPackageAlias to get a unique alias.
-func defaultGoPackageName(f *descriptor.FileDescriptorProto) string {
+func defaultGoPackageName(f *descriptorpb.FileDescriptorProto) string {
 	name := packageIdentityName(f)
 	return strings.Replace(name, ".", "_", -1)
 }
@@ -301,7 +301,7 @@ func defaultGoPackageName(f *descriptor.FileDescriptorProto) string {
 // packageIdentityName returns the identity of packages.
 // protoc-gen-grpc-gateway rejects CodeGenerationRequests which contains more than one packages
 // as protoc-gen-go does.
-func packageIdentityName(f *descriptor.FileDescriptorProto) string {
+func packageIdentityName(f *descriptorpb.FileDescriptorProto) string {
 	if f.Options != nil && f.Options.GoPackage != nil {
 		gopkg := f.Options.GetGoPackage()
 		idx := strings.LastIndex(gopkg, "/")

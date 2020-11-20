@@ -28,14 +28,14 @@ import (
 	"io/ioutil"
 	"reflect"
 
-	"github.com/gogo/protobuf/jsonpb"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/jsonpb"
 	"go.uber.org/fx"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/restriction"
 	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/encoding/protobuf/reflection"
+	"google.golang.org/protobuf/proto"
 )
 
 var _ = ioutil.NopCloser
@@ -70,7 +70,7 @@ type HelloServiceHelloThereYARPCClient interface {
 	CloseSend(...yarpc.StreamOption) error
 }
 
-func newHelloYARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) HelloYARPCClient {
+func newHelloYARPCClient(clientConfig transport.ClientConfig, anyResolver protobuf.Resolver, options ...protobuf.ClientOption) HelloYARPCClient {
 	return &_HelloYARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
 			ServiceName:  "uber.yarpc.internal.examples.streaming.Hello",
@@ -115,7 +115,7 @@ type HelloServiceHelloThereYARPCServer interface {
 
 type buildHelloYARPCProceduresParams struct {
 	Server      HelloYARPCServer
-	AnyResolver jsonpb.AnyResolver
+	AnyResolver protobuf.Resolver
 }
 
 func buildHelloYARPCProcedures(params buildHelloYARPCProceduresParams) []transport.Procedure {
@@ -181,7 +181,7 @@ type FxHelloYARPCClientParams struct {
 	fx.In
 
 	Provider    yarpc.ClientConfig
-	AnyResolver jsonpb.AnyResolver  `name:"yarpcfx" optional:"true"`
+	AnyResolver protobuf.Resolver  `name:"yarpcfx" optional:"true"`
 	Restriction restriction.Checker `optional:"true"`
 }
 
@@ -231,7 +231,7 @@ type FxHelloYARPCProceduresParams struct {
 	fx.In
 
 	Server      HelloYARPCServer
-	AnyResolver jsonpb.AnyResolver `name:"yarpcfx" optional:"true"`
+	AnyResolver protobuf.Resolver `name:"yarpcfx" optional:"true"`
 }
 
 // FxHelloYARPCProceduresResult defines the output

@@ -88,7 +88,7 @@ type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
 }
 {{end}}
 
-func new{{$service.GetName}}YARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) {{$service.GetName}}YARPCClient {
+func new{{$service.GetName}}YARPCClient(clientConfig transport.ClientConfig, anyResolver protobuf.Resolver, options ...protobuf.ClientOption) {{$service.GetName}}YARPCClient {
 	return &_{{$service.GetName}}YARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
 			ServiceName: "{{trimPrefixPeriod $service.FQSN}}",
@@ -141,7 +141,7 @@ type {{$service.GetName}}Service{{$method.GetName}}YARPCServer interface {
 
 type build{{$service.GetName}}YARPCProceduresParams struct {
 	Server      {{$service.GetName}}YARPCServer
-	AnyResolver jsonpb.AnyResolver
+	AnyResolver protobuf.Resolver
 }
 
 func build{{$service.GetName}}YARPCProcedures(params build{{$service.GetName}}YARPCProceduresParams) []transport.Procedure {
@@ -220,7 +220,7 @@ type Fx{{$service.GetName}}YARPCClientParams struct {
 	fx.In
 
 	Provider yarpc.ClientConfig
-	AnyResolver jsonpb.AnyResolver ` + "`" + `name:"yarpcfx" optional:"true"` + "`" + `
+	AnyResolver protobuf.Resolver ` + "`" + `name:"yarpcfx" optional:"true"` + "`" + `
 	Restriction restriction.Checker ` + "`" + `optional:"true"` + "`" + `
 }
 
@@ -270,7 +270,7 @@ type Fx{{$service.GetName}}YARPCProceduresParams struct {
 	fx.In
 
 	Server {{$service.GetName}}YARPCServer
-	AnyResolver jsonpb.AnyResolver ` + "`" + `name:"yarpcfx" optional:"true"` + "`" + `
+	AnyResolver protobuf.Resolver ` + "`" + `name:"yarpcfx" optional:"true"` + "`" + `
 }
 
 // Fx{{$service.GetName}}YARPCProceduresResult defines the output
@@ -621,8 +621,8 @@ var Runner = protoplugin.NewRunner(
 		"context",
 		"io/ioutil",
 		"reflect",
-		"github.com/gogo/protobuf/jsonpb",
-		"github.com/gogo/protobuf/proto",
+		"github.com/golang/protobuf/jsonpb",
+		"google.golang.org/protobuf/proto",
 		"go.uber.org/fx",
 		"go.uber.org/yarpc",
 		"go.uber.org/yarpc/api/transport",

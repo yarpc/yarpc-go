@@ -43,9 +43,9 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/gogo/protobuf/proto"
-	"github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
-	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/descriptorpb"
+	"google.golang.org/protobuf/types/pluginpb"
 )
 
 // Do is a helper function for protobuf plugins.
@@ -64,12 +64,12 @@ func Do(runner Runner, reader io.Reader, writer io.Writer) error {
 }
 
 // ReadRequest reads the request from the reader.
-func ReadRequest(reader io.Reader) (*plugin_go.CodeGeneratorRequest, error) {
+func ReadRequest(reader io.Reader) (*pluginpb.CodeGeneratorRequest, error) {
 	input, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}
-	request := &plugin_go.CodeGeneratorRequest{}
+	request := &pluginpb.CodeGeneratorRequest{}
 	if err := proto.Unmarshal(input, request); err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func ReadRequest(reader io.Reader) (*plugin_go.CodeGeneratorRequest, error) {
 }
 
 // WriteResponse writes the response to the writer.
-func WriteResponse(writer io.Writer, response *plugin_go.CodeGeneratorResponse) error {
+func WriteResponse(writer io.Writer, response *pluginpb.CodeGeneratorResponse) error {
 	buf, err := proto.Marshal(response)
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ func WriteResponse(writer io.Writer, response *plugin_go.CodeGeneratorResponse) 
 
 // Runner runs the plugin logic.
 type Runner interface {
-	Run(*plugin_go.CodeGeneratorRequest) *plugin_go.CodeGeneratorResponse
+	Run(*pluginpb.CodeGeneratorRequest) *pluginpb.CodeGeneratorResponse
 }
 
 // NewRunner returns a new Runner.
@@ -139,7 +139,7 @@ func (g *GoPackage) String() string {
 
 // File wraps descriptor.FileDescriptorProto for richer features.
 type File struct {
-	*descriptor.FileDescriptorProto
+	*descriptorpb.FileDescriptorProto
 	GoPackage              *GoPackage
 	Messages               []*Message
 	Enums                  []*Enum
@@ -149,7 +149,7 @@ type File struct {
 
 // SerializedFileDescriptor returns a gzipped marshalled representation of the FileDescriptor.
 func (f *File) SerializedFileDescriptor() ([]byte, error) {
-	pb := proto.Clone(f.FileDescriptorProto).(*descriptor.FileDescriptorProto)
+	pb := proto.Clone(f.FileDescriptorProto).(*descriptorpb.FileDescriptorProto)
 	pb.SourceCodeInfo = nil
 
 	b, err := proto.Marshal(pb)
@@ -173,7 +173,7 @@ func (f *File) SerializedFileDescriptor() ([]byte, error) {
 
 // Message describes a protocol buffer message types.
 type Message struct {
-	*descriptor.DescriptorProto
+	*descriptorpb.DescriptorProto
 	File *File
 	// Outers is a list of outer messages if this message is a nested type.
 	Outers []string
@@ -214,7 +214,7 @@ func (m *Message) GoType(currentPackage string) string {
 
 // Enum describes a protocol buffer enum type.
 type Enum struct {
-	*descriptor.EnumDescriptorProto
+	*descriptorpb.EnumDescriptorProto
 	File *File
 	// Outers is a list of outer messages if this enum is a nested type.
 	Outers []string
@@ -234,7 +234,7 @@ func (e *Enum) FQEN() string {
 
 // Service wraps descriptor.ServiceDescriptorProto for richer features.
 type Service struct {
-	*descriptor.ServiceDescriptorProto
+	*descriptorpb.ServiceDescriptorProto
 	File    *File
 	Methods []*Method
 }
@@ -251,7 +251,7 @@ func (s *Service) FQSN() string {
 
 // Method wraps descriptor.MethodDescriptorProto for richer features.
 type Method struct {
-	*descriptor.MethodDescriptorProto
+	*descriptorpb.MethodDescriptorProto
 	Service      *Service
 	RequestType  *Message
 	ResponseType *Message
@@ -259,7 +259,7 @@ type Method struct {
 
 // Field wraps descriptor.FieldDescriptorProto for richer features.
 type Field struct {
-	*descriptor.FieldDescriptorProto
+	*descriptorpb.FieldDescriptorProto
 	// Message is the message type which this field belongs to.
 	Message *Message
 	// FieldMessage is the message type of the field.

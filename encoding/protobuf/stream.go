@@ -24,8 +24,8 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc/api/transport"
+	"google.golang.org/protobuf/proto"
 )
 
 // readFromStream reads a proto.Message from a stream.
@@ -52,7 +52,7 @@ func readFromStream(
 
 // writeToStream writes a proto.Message to a stream.
 func writeToStream(ctx context.Context, stream transport.Stream, message proto.Message, codec *codec) error {
-	messageData, cleanup, err := marshal(stream.Request().Meta.Encoding, message, codec)
+	messageData, err := marshal(stream.Request().Meta.Encoding, message, codec)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,6 @@ func writeToStream(ctx context.Context, stream transport.Stream, message proto.M
 		&transport.StreamMessage{
 			Body: readCloser{
 				Reader: bytes.NewReader(messageData),
-				closer: cleanup,
 			},
 			BodySize: len(messageData),
 		},

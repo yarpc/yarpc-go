@@ -1,7 +1,7 @@
 # List of vendored go executables needed for make generate
 GEN_GO_BIN_DEPS = \
 	github.com/golang/mock/mockgen \
-	github.com/gogo/protobuf/protoc-gen-gogoslick \
+	github.com/golang/protobuf/protoc-gen-go \
 	github.com/uber/tchannel-go/thrift/thrift-gen \
 	golang.org/x/tools/cmd/stringer \
 	go.uber.org/thriftrw \
