@@ -25,8 +25,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
 	"go.uber.org/multierr"
+	"google.golang.org/protobuf/types/pluginpb"
 )
 
 var errNoFileName = errors.New("no name on CodeGeneratorResponse_File")
@@ -39,8 +39,8 @@ func newMultiRunner(runners ...Runner) *multiRunner {
 	return &multiRunner{runners: runners}
 }
 
-func (m *multiRunner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGeneratorResponse {
-	nameToFile := make(map[string]*plugin_go.CodeGeneratorResponse_File)
+func (m *multiRunner) Run(request *pluginpb.CodeGeneratorRequest) *pluginpb.CodeGeneratorResponse {
+	nameToFile := make(map[string]*pluginpb.CodeGeneratorResponse_File)
 	var responseErr error
 	for _, runner := range m.runners {
 		response := runner.Run(request)
@@ -62,7 +62,7 @@ func (m *multiRunner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.Co
 	if responseErr != nil {
 		return newResponseError(responseErr)
 	}
-	files := make([]*plugin_go.CodeGeneratorResponse_File, 0, len(nameToFile))
+	files := make([]*pluginpb.CodeGeneratorResponse_File, 0, len(nameToFile))
 	for _, file := range nameToFile {
 		files = append(files, file)
 	}

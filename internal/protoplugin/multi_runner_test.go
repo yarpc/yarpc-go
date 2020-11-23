@@ -24,10 +24,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
-	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/multierr"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/pluginpb"
 )
 
 func TestMultiRunnerRun(t *testing.T) {
@@ -126,13 +126,13 @@ func newErrorTestRunner(err error) *testRunner {
 	}
 }
 
-func (r *testRunner) Run(*plugin_go.CodeGeneratorRequest) *plugin_go.CodeGeneratorResponse {
+func (r *testRunner) Run(*pluginpb.CodeGeneratorRequest) *pluginpb.CodeGeneratorResponse {
 	if r.err != nil {
 		return newResponseError(r.err)
 	}
-	files := make([]*plugin_go.CodeGeneratorResponse_File, 0, len(r.fileNames))
+	files := make([]*pluginpb.CodeGeneratorResponse_File, 0, len(r.fileNames))
 	for _, fileName := range r.fileNames {
-		files = append(files, &plugin_go.CodeGeneratorResponse_File{
+		files = append(files, &pluginpb.CodeGeneratorResponse_File{
 			Name: proto.String(fileName),
 		})
 	}

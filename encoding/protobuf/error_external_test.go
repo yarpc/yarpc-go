@@ -24,15 +24,15 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/gogo/protobuf/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/yarpcerrors"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 func TestGetDetailsFromWrappedError(t *testing.T) {
-	errDetail := &types.BytesValue{Value: []byte("err detail bytes")}
+	errDetail := &wrapperspb.BytesValue{Value: []byte("err detail bytes")}
 
 	pbErr := protobuf.NewError(
 		yarpcerrors.CodeAborted,

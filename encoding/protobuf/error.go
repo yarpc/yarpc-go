@@ -25,12 +25,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gogo/googleapis/google/rpc"
-	"github.com/gogo/protobuf/proto"
-	"github.com/gogo/status"
+	// lint:file-ignore SA1019 no need to migrate to google.golang.org/protobuf yet
+	v1proto "github.com/golang/protobuf/proto"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
 	"go.uber.org/yarpc/yarpcerrors"
+	spb "google.golang.org/genproto/googleapis/rpc/status"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -86,7 +87,7 @@ func NewError(code yarpcerrors.Code, message string, options ...ErrorOption) err
 // Each element in the returned slice of interface{} is either a proto.Message
 // or an error to explain why the element is not a proto.Message, most likely
 // because the error detail could not be unmarshaled.
-// See: https://github.com/gogo/status/blob/master/status.go#L193
+// See: https://godoc.org/google.golang.org/grpc/internal/status#Status.Details
 func GetErrorDetails(err error) []interface{} {
 	if err == nil {
 		return nil
@@ -102,7 +103,7 @@ func GetErrorDetails(err error) []interface{} {
 type ErrorOption struct{ apply func(*pberror) }
 
 // WithErrorDetails adds to the details of the error.
-func WithErrorDetails(details ...proto.Message) ErrorOption {
+func WithErrorDetails(details ...v1proto.Message) ErrorOption {
 	return ErrorOption{func(err *pberror) {
 		for _, detail := range details {
 			err.details = append(err.details, detail)
@@ -128,9 +129,9 @@ func convertToYARPCError(encoding transport.Encoding, err error, codec *codec, r
 }
 
 func createStatusWithDetail(pberr *pberror, encoding transport.Encoding, codec *codec) (*yarpcerrors.Status, error) {
-	details := make([]proto.Message, 0, len(pberr.details))
+	details := make([]v1proto.Message, 0, len(pberr.details))
 	for _, detail := range pberr.details {
-		if pbdetail, ok := detail.(proto.Message); ok {
+		if pbdetail, ok := detail.(v1proto.Message); ok {
 			details = append(details, pbdetail)
 		} else {
 			return nil, errors.New("proto error detail is not proto.Message compatible")
@@ -141,11 +142,10 @@ func createStatusWithDetail(pberr *pberror, encoding transport.Encoding, codec *
 	if convertErr != nil {
 		return nil, convertErr
 	}
-	detailsBytes, cleanup, marshalErr := marshal(encoding, st.Proto(), codec)
+	detailsBytes, marshalErr := marshal(encoding, st.Proto(), codec)
 	if marshalErr != nil {
 		return nil, marshalErr
 	}
-	defer cleanup()
 	yarpcDet := make([]byte, len(detailsBytes))
 	copy(yarpcDet, detailsBytes)
 	return yarpcerrors.Newf(pberr.code, pberr.message).WithDetails(yarpcDet), nil
@@ -159,14 +159,14 @@ func setApplicationErrorMeta(pberr *pberror, resw transport.ResponseWriter) {
 
 	var appErrName string
 	if len(pberr.details) > 0 { // only grab the first name since this will be emitted with metrics
-		appErrName = messageNameWithoutPackage(proto.MessageName(
-			pberr.details[0].(proto.Message)),
+		appErrName = messageNameWithoutPackage(v1proto.MessageName(
+			pberr.details[0].(v1proto.Message)),
 		)
 	}
 
 	details := make([]string, 0, len(pberr.details))
 	for _, detail := range pberr.details {
-		details = append(details, protobufMessageToString(detail.(proto.Message)))
+		details = append(details, protobufMessageToString(detail.(v1proto.Message)))
 	}
 
 	applicationErroMetaSetter.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
@@ -187,10 +187,10 @@ func messageNameWithoutPackage(messageName string) string {
 	return messageName
 }
 
-func protobufMessageToString(message proto.Message) string {
+func protobufMessageToString(message v1proto.Message) string {
 	return fmt.Sprintf(_errDetailFmt,
-		messageNameWithoutPackage(proto.MessageName(message)),
-		proto.CompactTextString(message))
+		messageNameWithoutPackage(v1proto.MessageName(message)),
+		v1proto.CompactTextString(message))
 }
 
 // convertFromYARPCError is to be used for handling errors on the outbound side.
@@ -202,8 +202,8 @@ func convertFromYARPCError(encoding transport.Encoding, err error, codec *codec)
 	if yarpcErr.Details() == nil {
 		return err
 	}
-	st := &rpc.Status{}
-	unmarshalErr := unmarshalBytes(encoding, yarpcErr.Details(), st, codec)
+	st := &spb.Status{}
+	unmarshalErr := unmarshalBytes(encoding, yarpcErr.Details(), v1proto.MessageV2(st), codec)
 	if unmarshalErr != nil {
 		return unmarshalErr
 	}
