@@ -20,91 +20,90 @@
 
 package protobuf_test
 
-// import (
-// 	"context"
-// 	"io/ioutil"
-// 	"testing"
+import (
+	"context"
+	"io/ioutil"
+	"testing"
 
-// 	"github.com/stretchr/testify/assert"
-// 	"github.com/stretchr/testify/require"
-// 	"go.uber.org/yarpc/api/transport"
-// 	"go.uber.org/yarpc/encoding/protobuf"
-// 	"go.uber.org/yarpc/encoding/protobuf/internal/testpb"
-// 	"go.uber.org/yarpc/yarpctest"
-// 	"google.golang.org/protobuf/proto"
-// 	"google.golang.org/protobuf/types/known/anypb"
-// )
+	"github.com/golang/protobuf/jsonpb"
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/protobuf"
+	"go.uber.org/yarpc/encoding/protobuf/internal/testpb"
+	"go.uber.org/yarpc/yarpctest"
+)
 
-// var _ protobuf.Resolver = (*testResolver)(nil)
+var _ jsonpb.AnyResolver = (*testResolver)(nil)
 
-// func TestOutboundAnyResolver(t *testing.T) {
-// 	const testValue = "foo-bar-baz"
-// 	newReq := func() proto.Message { return &testpb.TestMessage{} }
-// 	customResolver := &testResolver{NewMessage: newReq}
+func TestOutboundAnyResolver(t *testing.T) {
+	const testValue = "foo-bar-baz"
+	newReq := func() proto.Message { return &testpb.TestMessage{} }
+	customResolver := &testResolver{NewMessage: newReq}
 
-// 	tests := []struct {
-// 		name     string
-// 		anyURL   string
-// 		resolver protobuf.Resolver
-// 		wantErr  bool
-// 	}{
-// 		{
-// 			name:   "nothing custom",
-// 			anyURL: "uber.yarpc.encoding.protobuf.TestMessage",
-// 		},
-// 		{
-// 			name:     "custom resolver",
-// 			anyURL:   "uber.yarpc.encoding.protobuf.TestMessage",
-// 			resolver: customResolver,
-// 		},
-// 		{
-// 			name:     "custom resolver, custom URL",
-// 			anyURL:   "foo.bar.baz",
-// 			resolver: customResolver,
-// 		},
-// 		{
-// 			name:    "custom URL, no resolver",
-// 			anyURL:  "foo.bar.baz",
-// 			wantErr: true,
-// 		},
-// 	}
+	tests := []struct {
+		name     string
+		anyURL   string
+		resolver jsonpb.AnyResolver
+		wantErr  bool
+	}{
+		{
+			name:   "nothing custom",
+			anyURL: "uber.yarpc.encoding.protobuf.TestMessage",
+		},
+		{
+			name:     "custom resolver",
+			anyURL:   "uber.yarpc.encoding.protobuf.TestMessage",
+			resolver: customResolver,
+		},
+		{
+			name:     "custom resolver, custom URL",
+			anyURL:   "foo.bar.baz",
+			resolver: customResolver,
+		},
+		{
+			name:    "custom URL, no resolver",
+			anyURL:  "foo.bar.baz",
+			wantErr: true,
+		},
+	}
 
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			trans := yarpctest.NewFakeTransport()
-// 			// outbound that echos the body back
-// 			out := trans.NewOutbound(nil, yarpctest.OutboundCallOverride(
-// 				yarpctest.OutboundCallable(func(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-// 					return &transport.Response{Body: ioutil.NopCloser(req.Body)}, nil
-// 				}),
-// 			))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			trans := yarpctest.NewFakeTransport()
+			// outbound that echos the body back
+			out := trans.NewOutbound(nil, yarpctest.OutboundCallOverride(
+				yarpctest.OutboundCallable(func(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+					return &transport.Response{Body: ioutil.NopCloser(req.Body)}, nil
+				}),
+			))
 
-// 			client := protobuf.NewClient(protobuf.ClientParams{
-// 				ClientConfig: &transport.OutboundConfig{
-// 					Outbounds: transport.Outbounds{
-// 						Unary: out,
-// 					},
-// 				},
-// 				AnyResolver: tt.resolver,
-// 				Options:     []protobuf.ClientOption{protobuf.UseJSON},
-// 			})
+			client := protobuf.NewClient(protobuf.ClientParams{
+				ClientConfig: &transport.OutboundConfig{
+					Outbounds: transport.Outbounds{
+						Unary: out,
+					},
+				},
+				AnyResolver: tt.resolver,
+				Options:     []protobuf.ClientOption{protobuf.UseJSON},
+			})
 
-// 			testMessage := &testpb.TestMessage{Value: testValue}
+			testMessage := &testpb.TestMessage{Value: testValue}
 
-// 			// convert to an Any so that the marshaller will use the custom resolver
-// 			any, err := anypb.MarshalTo(testMessage)
-// 			require.NoError(t, err)
-// 			any.TypeUrl = tt.anyURL // update to custom URL
+			// convert to an Any so that the marshaller will use the custom resolver
+			any, err := ptypes.MarshalAny(testMessage)
+			require.NoError(t, err)
+			any.TypeUrl = tt.anyURL // update to custom URL
 
-// 			gotMessageI, err := client.Call(context.Background(), "", any, newReq)
-// 			if tt.wantErr {
-// 				require.Error(t, err)
-// 			} else {
-// 				require.NoError(t, err)
-// 				gotMessage, ok := gotMessageI.(*testpb.TestMessage)
-// 				require.True(t, ok, "unexpected message, got %T", gotMessageI)
-// 				assert.Equal(t, testMessage.Value, gotMessage.Value) // we expect the actual type behind the Any
-// 			}
-// 		})
-// 	}
-// }
+			gotMessage, err := client.Call(context.Background(), "", any, newReq)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, testMessage, gotMessage) // we expect the actual type behind the Any
+			}
+		})
+	}
+}

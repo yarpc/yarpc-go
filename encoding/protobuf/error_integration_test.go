@@ -105,7 +105,7 @@ func TestProtoGrpcServerErrorDetails(t *testing.T) {
 		assert.NoError(t, clientDispatcher.Stop(), "could not stop client dispatcher")
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Hour)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
 	const errorMsg = "error msg"
@@ -318,9 +318,9 @@ func TestJSONGrpcServerErrorDetails(t *testing.T) {
 	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcStatus.Code(), "unexpected error code")
 	assert.Equal(t, "error message", yarpcStatus.Message(), "unexpected error message")
 
-	var statusRpc rpcStatus.Status
-	proto.Unmarshal(yarpcStatus.Details(), &statusRpc)
-	status := status.FromProto(&statusRpc)
+	var rpcStatus rpcStatus.Status
+	proto.Unmarshal(yarpcStatus.Details(), &rpcStatus)
+	status := status.FromProto(&rpcStatus)
 	expectedDetails := []interface{}{
 		&wrappers.StringValue{Value: "string value"},
 		&wrappers.Int32Value{Value: 100},

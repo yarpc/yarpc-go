@@ -347,3 +347,9 @@ func init() {
 		},
 	)
 }
+
+func init() {
+
+	proto.RegisterType((*TestMessage)(nil), "uber.yarpc.encoding.protobuf.TestMessage")
+
+}

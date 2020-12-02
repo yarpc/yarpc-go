@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"testing"
 
-	v1proto "github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/any"
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/stretchr/testify/assert"
@@ -78,7 +78,7 @@ func TestConvertToYARPCErrorWithWrappedError(t *testing.T) {
 }
 
 func TestConvertToYARPCErrorApplicationErrorMeta(t *testing.T) {
-	errDetails := []v1proto.Message{
+	errDetails := []proto.Message{
 		&wrappers.StringValue{Value: "detail message"},
 		&wrappers.Int32Value{Value: 42},
 		&wrappers.BytesValue{Value: []byte("detail bytes")},
@@ -134,7 +134,7 @@ func TestPbErrorToYARPCError(t *testing.T) {
 		name             string
 		code             yarpcerrors.Code
 		message          string
-		details          []v1proto.Message
+		details          []proto.Message
 		expectedGRPCCode codes.Code
 	}{
 		{
@@ -148,7 +148,7 @@ func TestPbErrorToYARPCError(t *testing.T) {
 			code:             yarpcerrors.CodeInternal,
 			message:          "internal error",
 			expectedGRPCCode: codes.Internal,
-			details: []v1proto.Message{
+			details: []proto.Message{
 				&wrappers.StringValue{Value: "test value"},
 			},
 		},
@@ -157,7 +157,7 @@ func TestPbErrorToYARPCError(t *testing.T) {
 			code:             yarpcerrors.CodeNotFound,
 			message:          "not found error",
 			expectedGRPCCode: codes.NotFound,
-			details: []v1proto.Message{
+			details: []proto.Message{
 				&wrappers.StringValue{Value: "test value"},
 				&wrappers.Int32Value{Value: 45},
 				&any.Any{Value: []byte{1, 2, 3, 4, 5}},
@@ -177,7 +177,7 @@ func TestPbErrorToYARPCError(t *testing.T) {
 			assert.Equal(t, st.Message(), tt.message)
 
 			statusPb := rpcStatus.Status{}
-			err := v1proto.Unmarshal(st.Details(), &statusPb)
+			err := proto.Unmarshal(st.Details(), &statusPb)
 			assert.NoError(t, err, "unexpected unmarshal error")
 
 			status := status.FromProto(&statusPb)
@@ -185,7 +185,7 @@ func TestPbErrorToYARPCError(t *testing.T) {
 			assert.Equal(t, tt.message, status.Message(), "unexpected grpc status message")
 			assert.Len(t, status.Details(), len(tt.details), "unexpected details length")
 			for i, detail := range tt.details {
-				if !v1proto.Equal(detail, status.Details()[i].(v1proto.Message)) {
+				if !proto.Equal(detail, status.Details()[i].(proto.Message)) {
 					t.Errorf("non comparable messages")
 				}
 			}

@@ -26,7 +26,7 @@ import (
 	"strings"
 
 	// lint:file-ignore SA1019 no need to migrate to google.golang.org/protobuf yet
-	v1proto "github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -103,7 +103,7 @@ func GetErrorDetails(err error) []interface{} {
 type ErrorOption struct{ apply func(*pberror) }
 
 // WithErrorDetails adds to the details of the error.
-func WithErrorDetails(details ...v1proto.Message) ErrorOption {
+func WithErrorDetails(details ...proto.Message) ErrorOption {
 	return ErrorOption{func(err *pberror) {
 		for _, detail := range details {
 			err.details = append(err.details, detail)
@@ -129,9 +129,9 @@ func convertToYARPCError(encoding transport.Encoding, err error, codec *codec, r
 }
 
 func createStatusWithDetail(pberr *pberror, encoding transport.Encoding, codec *codec) (*yarpcerrors.Status, error) {
-	details := make([]v1proto.Message, 0, len(pberr.details))
+	details := make([]proto.Message, 0, len(pberr.details))
 	for _, detail := range pberr.details {
-		if pbdetail, ok := detail.(v1proto.Message); ok {
+		if pbdetail, ok := detail.(proto.Message); ok {
 			details = append(details, pbdetail)
 		} else {
 			return nil, errors.New("proto error detail is not proto.Message compatible")
@@ -160,14 +160,14 @@ func setApplicationErrorMeta(pberr *pberror, resw transport.ResponseWriter) {
 
 	var appErrName string
 	if len(pberr.details) > 0 { // only grab the first name since this will be emitted with metrics
-		appErrName = messageNameWithoutPackage(v1proto.MessageName(
-			pberr.details[0].(v1proto.Message)),
+		appErrName = messageNameWithoutPackage(proto.MessageName(
+			pberr.details[0].(proto.Message)),
 		)
 	}
 
 	details := make([]string, 0, len(pberr.details))
 	for _, detail := range pberr.details {
-		details = append(details, protobufMessageToString(detail.(v1proto.Message)))
+		details = append(details, protobufMessageToString(detail.(proto.Message)))
 	}
 
 	applicationErroMetaSetter.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
@@ -188,10 +188,10 @@ func messageNameWithoutPackage(messageName string) string {
 	return messageName
 }
 
-func protobufMessageToString(message v1proto.Message) string {
+func protobufMessageToString(message proto.Message) string {
 	return fmt.Sprintf(_errDetailFmt,
-		messageNameWithoutPackage(v1proto.MessageName(message)),
-		v1proto.CompactTextString(message))
+		messageNameWithoutPackage(proto.MessageName(message)),
+		proto.CompactTextString(message))
 }
 
 // convertFromYARPCError is to be used for handling errors on the outbound side.

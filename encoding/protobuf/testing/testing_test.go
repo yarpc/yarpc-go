@@ -175,7 +175,7 @@ func testIntegration(
 }
 
 func getValue(keyValueYARPCClient examplepb.KeyValueYARPCClient, key string, options ...yarpc.CallOption) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1000*testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	response, err := keyValueYARPCClient.GetValue(ctx, &examplepb.GetValueRequest{Key: key}, options...)
 	if response != nil {
@@ -185,14 +185,14 @@ func getValue(keyValueYARPCClient examplepb.KeyValueYARPCClient, key string, opt
 }
 
 func setValue(keyValueYARPCClient examplepb.KeyValueYARPCClient, key string, value string, options ...yarpc.CallOption) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 1000*testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	_, err := keyValueYARPCClient.SetValue(ctx, &examplepb.SetValueRequest{Key: key, Value: value}, options...)
 	return err
 }
 
 func getValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *grpcctx.ContextWrapper, key string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1000*testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	response, err := keyValueGRPCClient.GetValue(contextWrapper.Wrap(ctx), &examplepb.GetValueRequest{Key: key})
 	if response != nil {
@@ -202,14 +202,14 @@ func getValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *g
 }
 
 func setValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *grpcctx.ContextWrapper, key string, value string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 1000*testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	_, err := keyValueGRPCClient.SetValue(contextWrapper.Wrap(ctx), &examplepb.SetValueRequest{Key: key, Value: value})
 	return err
 }
 
 func echoOut(fooYARPCClient examplepb.FooYARPCClient, messages []string, options ...yarpc.CallOption) ([]string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1000*testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	client, err := fooYARPCClient.EchoOut(ctx, options...)
 	if err != nil {
@@ -228,7 +228,7 @@ func echoOut(fooYARPCClient examplepb.FooYARPCClient, messages []string, options
 }
 
 func echoIn(fooYARPCClient examplepb.FooYARPCClient, message string, numResponses int, options ...yarpc.CallOption) ([]string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1000*testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	client, err := fooYARPCClient.EchoIn(ctx, &examplepb.EchoInRequest{Message: message, NumResponses: int64(numResponses)}, options...)
 	if err != nil {
@@ -245,7 +245,7 @@ func echoIn(fooYARPCClient examplepb.FooYARPCClient, message string, numResponse
 }
 
 func echoBoth(fooYARPCClient examplepb.FooYARPCClient, message string, numResponses int, count int, options ...yarpc.CallOption) ([]string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1000*testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	client, err := fooYARPCClient.EchoBoth(ctx, options...)
 	if err != nil {
