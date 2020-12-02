@@ -26,8 +26,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
-	"github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/net/metrics"
@@ -286,8 +286,8 @@ func (observabilityTestServer) Unary(ctx context.Context, msg *testpb.TestMessag
 		return &testpb.TestMessage{Value: msg.Value}, nil
 	}
 	details := []proto.Message{
-		&types.StringValue{Value: "string value"},
-		&types.Int32Value{Value: 100},
+		&wrappers.StringValue{Value: "string value"},
+		&wrappers.Int32Value{Value: 100},
 	}
 	return nil, protobuf.NewError(yarpcerrors.CodeInvalidArgument, "my message", protobuf.WithErrorDetails(details...))
 }

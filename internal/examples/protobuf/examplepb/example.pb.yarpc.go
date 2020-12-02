@@ -28,14 +28,14 @@ import (
 	"io/ioutil"
 	"reflect"
 
-	"github.com/gogo/protobuf/jsonpb"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/jsonpb"
 	"go.uber.org/fx"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/restriction"
 	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/encoding/protobuf/reflection"
+	"google.golang.org/protobuf/proto"
 )
 
 var _ = ioutil.NopCloser
@@ -46,7 +46,7 @@ type KeyValueYARPCClient interface {
 	SetValue(context.Context, *SetValueRequest, ...yarpc.CallOption) (*SetValueResponse, error)
 }
 
-func newKeyValueYARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) KeyValueYARPCClient {
+func newKeyValueYARPCClient(clientConfig transport.ClientConfig, anyResolver protobuf.Resolver, options ...protobuf.ClientOption) KeyValueYARPCClient {
 	return &_KeyValueYARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
 			ServiceName:  "uber.yarpc.internal.examples.protobuf.example.KeyValue",
@@ -70,7 +70,7 @@ type KeyValueYARPCServer interface {
 
 type buildKeyValueYARPCProceduresParams struct {
 	Server      KeyValueYARPCServer
-	AnyResolver jsonpb.AnyResolver
+	AnyResolver protobuf.Resolver
 }
 
 func buildKeyValueYARPCProcedures(params buildKeyValueYARPCProceduresParams) []transport.Procedure {
@@ -119,7 +119,7 @@ type FxKeyValueYARPCClientParams struct {
 	fx.In
 
 	Provider    yarpc.ClientConfig
-	AnyResolver jsonpb.AnyResolver  `name:"yarpcfx" optional:"true"`
+	AnyResolver protobuf.Resolver  `name:"yarpcfx" optional:"true"`
 	Restriction restriction.Checker `optional:"true"`
 }
 
@@ -169,7 +169,7 @@ type FxKeyValueYARPCProceduresParams struct {
 	fx.In
 
 	Server      KeyValueYARPCServer
-	AnyResolver jsonpb.AnyResolver `name:"yarpcfx" optional:"true"`
+	AnyResolver protobuf.Resolver `name:"yarpcfx" optional:"true"`
 }
 
 // FxKeyValueYARPCProceduresResult defines the output
@@ -323,7 +323,7 @@ type FooServiceEchoBothYARPCClient interface {
 	CloseSend(...yarpc.StreamOption) error
 }
 
-func newFooYARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) FooYARPCClient {
+func newFooYARPCClient(clientConfig transport.ClientConfig, anyResolver protobuf.Resolver, options ...protobuf.ClientOption) FooYARPCClient {
 	return &_FooYARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
 			ServiceName:  "uber.yarpc.internal.examples.protobuf.example.Foo",
@@ -367,7 +367,7 @@ type FooServiceEchoBothYARPCServer interface {
 
 type buildFooYARPCProceduresParams struct {
 	Server      FooYARPCServer
-	AnyResolver jsonpb.AnyResolver
+	AnyResolver protobuf.Resolver
 }
 
 func buildFooYARPCProcedures(params buildFooYARPCProceduresParams) []transport.Procedure {
@@ -422,7 +422,7 @@ type FxFooYARPCClientParams struct {
 	fx.In
 
 	Provider    yarpc.ClientConfig
-	AnyResolver jsonpb.AnyResolver  `name:"yarpcfx" optional:"true"`
+	AnyResolver protobuf.Resolver  `name:"yarpcfx" optional:"true"`
 	Restriction restriction.Checker `optional:"true"`
 }
 
@@ -472,7 +472,7 @@ type FxFooYARPCProceduresParams struct {
 	fx.In
 
 	Server      FooYARPCServer
-	AnyResolver jsonpb.AnyResolver `name:"yarpcfx" optional:"true"`
+	AnyResolver protobuf.Resolver `name:"yarpcfx" optional:"true"`
 }
 
 // FxFooYARPCProceduresResult defines the output

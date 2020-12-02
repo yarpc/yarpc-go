@@ -25,15 +25,16 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/gogo/googleapis/google/rpc"
-	"github.com/gogo/protobuf/proto"
-	"github.com/gogo/protobuf/types"
-	"github.com/gogo/status"
+	v1proto "github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes/any"
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/yarpcerrors"
+	rpcStatus "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestNewOK(t *testing.T) {
@@ -58,7 +59,7 @@ func TestForeignError(t *testing.T) {
 }
 
 func TestConvertToYARPCErrorWithWrappedError(t *testing.T) {
-	errDetail := &types.BytesValue{Value: []byte("err detail bytes")}
+	errDetail := &wrappers.BytesValue{Value: []byte("err detail bytes")}
 
 	pbErr := NewError(
 		yarpcerrors.CodeAborted,
@@ -77,10 +78,10 @@ func TestConvertToYARPCErrorWithWrappedError(t *testing.T) {
 }
 
 func TestConvertToYARPCErrorApplicationErrorMeta(t *testing.T) {
-	errDetails := []proto.Message{
-		&types.StringValue{Value: "detail message"},
-		&types.Int32Value{Value: 42},
-		&types.BytesValue{Value: []byte("detail bytes")},
+	errDetails := []v1proto.Message{
+		&wrappers.StringValue{Value: "detail message"},
+		&wrappers.Int32Value{Value: 42},
+		&wrappers.BytesValue{Value: []byte("detail bytes")},
 	}
 
 	pbErr := NewError(
@@ -133,7 +134,7 @@ func TestPbErrorToYARPCError(t *testing.T) {
 		name             string
 		code             yarpcerrors.Code
 		message          string
-		details          []proto.Message
+		details          []v1proto.Message
 		expectedGRPCCode codes.Code
 	}{
 		{
@@ -147,8 +148,8 @@ func TestPbErrorToYARPCError(t *testing.T) {
 			code:             yarpcerrors.CodeInternal,
 			message:          "internal error",
 			expectedGRPCCode: codes.Internal,
-			details: []proto.Message{
-				&types.StringValue{Value: "test value"},
+			details: []v1proto.Message{
+				&wrappers.StringValue{Value: "test value"},
 			},
 		},
 		{
@@ -156,10 +157,10 @@ func TestPbErrorToYARPCError(t *testing.T) {
 			code:             yarpcerrors.CodeNotFound,
 			message:          "not found error",
 			expectedGRPCCode: codes.NotFound,
-			details: []proto.Message{
-				&types.StringValue{Value: "test value"},
-				&types.Int32Value{Value: 45},
-				&types.Any{Value: []byte{1, 2, 3, 4, 5}},
+			details: []v1proto.Message{
+				&wrappers.StringValue{Value: "test value"},
+				&wrappers.Int32Value{Value: 45},
+				&any.Any{Value: []byte{1, 2, 3, 4, 5}},
 			},
 		},
 	}
@@ -175,8 +176,8 @@ func TestPbErrorToYARPCError(t *testing.T) {
 			assert.Equal(t, st.Code(), tt.code)
 			assert.Equal(t, st.Message(), tt.message)
 
-			statusPb := rpc.Status{}
-			err := proto.Unmarshal(st.Details(), &statusPb)
+			statusPb := rpcStatus.Status{}
+			err := v1proto.Unmarshal(st.Details(), &statusPb)
 			assert.NoError(t, err, "unexpected unmarshal error")
 
 			status := status.FromProto(&statusPb)
@@ -184,7 +185,9 @@ func TestPbErrorToYARPCError(t *testing.T) {
 			assert.Equal(t, tt.message, status.Message(), "unexpected grpc status message")
 			assert.Len(t, status.Details(), len(tt.details), "unexpected details length")
 			for i, detail := range tt.details {
-				assert.Equal(t, detail, status.Details()[i])
+				if !v1proto.Equal(detail, status.Details()[i].(v1proto.Message)) {
+					t.Errorf("non comparable messages")
+				}
 			}
 		})
 	}

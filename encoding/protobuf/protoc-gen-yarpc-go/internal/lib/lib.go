@@ -601,6 +601,15 @@ var {{ fileDescriptorClosureVarName .File }} = [][]byte{
 		},
 	){{end}}
 }{{end}}
+
+func init() {
+	{{range $msg := .Messages}}
+		proto.RegisterType((*{{$msg.GetName}})(nil), "{{trimPrefixPeriod $msg.FQMN}}")
+	{{end}}
+	{{range $msg := .Enum}}
+		proto.RegisterType((*{{$msg.GetName}})(nil), "{{trimPrefixPeriod $msg.FQMN}}")
+	{{end}}
+}
 `
 
 // Runner is the Runner used for protoc-gen-yarpc-go.
@@ -621,8 +630,8 @@ var Runner = protoplugin.NewRunner(
 		"context",
 		"io/ioutil",
 		"reflect",
-		"github.com/gogo/protobuf/jsonpb",
-		"github.com/gogo/protobuf/proto",
+		"github.com/golang/protobuf/jsonpb",
+		"github.com/golang/protobuf/proto",
 		"go.uber.org/fx",
 		"go.uber.org/yarpc",
 		"go.uber.org/yarpc/api/transport",

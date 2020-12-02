@@ -47,7 +47,9 @@ func Newf(code Code, format string, args ...interface{}) *Status {
 	}
 }
 
-type yarpcError interface{ YARPCError() *Status }
+type yarpcError interface{
+	YARPCError() *Status
+}
 
 // FromError returns the Status for the provided error.
 //

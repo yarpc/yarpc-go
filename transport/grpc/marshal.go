@@ -21,17 +21,17 @@
 package grpc
 
 import (
-	"github.com/gogo/googleapis/google/rpc"
-	"github.com/gogo/protobuf/proto"
-	"github.com/gogo/status"
+	"github.com/golang/protobuf/proto"
+	spb "google.golang.org/genproto/googleapis/rpc/status"
+	"google.golang.org/grpc/status"
 )
 
 func unmarshalError(body []byte) error {
-	protobufStatus := &rpc.Status{}
-	if err := proto.Unmarshal(body, protobufStatus); err != nil {
+	st := &spb.Status{}
+	if err := proto.Unmarshal(body, st); err != nil {
 		return err
 	}
-	return status.ErrorProto(protobufStatus)
+	return status.ErrorProto(st)
 }
 
 func marshalError(st *status.Status) ([]byte, error) {

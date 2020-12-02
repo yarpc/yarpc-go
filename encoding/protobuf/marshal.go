@@ -25,8 +25,8 @@ import (
 	"io"
 	"sync"
 
-	"github.com/gogo/protobuf/jsonpb"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/jsonpb"
+	"github.com/golang/protobuf/proto"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -99,11 +99,11 @@ func marshal(encoding transport.Encoding, message proto.Message, codec *codec) (
 func marshalProto(message proto.Message, _ *codec) ([]byte, func(), error) {
 	protoBuffer := getBuffer()
 	cleanup := func() { putBuffer(protoBuffer) }
-	if err := protoBuffer.Marshal(message); err != nil {
-		cleanup()
+	data,  err := proto.Marshal(message)
+	if err != nil {
 		return nil, nil, err
 	}
-	return protoBuffer.Bytes(), cleanup, nil
+	return data, cleanup, nil
 }
 
 func marshalJSON(message proto.Message, codec *codec) ([]byte, func(), error) {

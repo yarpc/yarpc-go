@@ -39,8 +39,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
-	gogostatus "github.com/gogo/status"
+	"github.com/golang/protobuf/proto"
 	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -130,7 +129,12 @@ func TestYARPCErrorWithDetails(t *testing.T) {
 	te.do(t, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeNotFound, "hello world", protobuf.WithErrorDetails(&examplepb.SetValueResponse{})))
 		err := e.SetValueYARPC(context.Background(), "foo", "bar")
-		assert.Equal(t, protobuf.NewError(yarpcerrors.CodeNotFound, "hello world", protobuf.WithErrorDetails(&examplepb.SetValueResponse{})), err)
+
+		assert.Equal(t, yarpcerrors.CodeNotFound, yarpcerrors.FromError(err).Code())
+		assert.Equal(t, "hello world", yarpcerrors.FromError(err).Message())
+		deets := protobuf.GetErrorDetails(err)
+		require.Len(t, deets, 1, "unexpected")
+		assert.IsType(t, deets[0], &examplepb.SetValueResponse{})
 	})
 }
 
@@ -170,10 +174,12 @@ func TestGRPCErrorWithDetails(t *testing.T) {
 	te.do(t, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeNotFound, "hello world", protobuf.WithErrorDetails(&examplepb.SetValueResponse{})))
 		err := e.SetValueGRPC(context.Background(), "foo", "bar")
-		st := gogostatus.Convert(err)
-		assert.Equal(t, st.Code(), codes.NotFound)
-		assert.Equal(t, st.Message(), "hello world")
-		assert.Equal(t, st.Details(), []interface{}{&examplepb.SetValueResponse{}})
+		st := status.Convert(err)
+		assert.Equal(t, codes.NotFound, st.Code())
+		assert.Equal(t, "hello world", st.Message())
+
+		require.Len(t, st.Details(), 1)
+		assert.IsType(t, &examplepb.SetValueResponse{}, st.Details()[0])
 	})
 }
 
