@@ -606,9 +606,6 @@ func init() {
 	{{range $msg := .Messages}}
 		proto.RegisterType((*{{$msg.GetName}})(nil), "{{trimPrefixPeriod $msg.FQMN}}")
 	{{end}}
-	{{range $msg := .Enum}}
-		proto.RegisterType((*{{$msg.GetName}})(nil), "{{trimPrefixPeriod $msg.FQMN}}")
-	{{end}}
 }
 `
 

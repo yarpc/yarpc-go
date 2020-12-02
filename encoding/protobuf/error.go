@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"strings"
 
-	// lint:file-ignore SA1019 no need to migrate to google.golang.org/protobuf yet
 	"github.com/golang/protobuf/proto"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
