@@ -247,6 +247,7 @@ func TestTransport(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			transport := NewTransport()
+			defer transport.Stop()
 
 			deps := TransportDeps{
 				PeerIdentifiers: createPeerIdentifierMap(tt.identifiers),
