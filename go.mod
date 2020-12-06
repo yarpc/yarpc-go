@@ -39,7 +39,7 @@ require (
 	github.com/uber/tchannel-go v1.16.0
 	go.uber.org/atomic v1.5.1
 	go.uber.org/fx v1.10.0
-	go.uber.org/goleak v1.0.0 // indirect
+	go.uber.org/goleak v1.0.0
 	go.uber.org/multierr v1.4.0
 	go.uber.org/net/metrics v1.3.0
 	go.uber.org/thriftrw v1.25.0
