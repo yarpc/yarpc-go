@@ -27,12 +27,13 @@ import (
 )
 
 func unmarshalError(body []byte) error {
-	st := &statuspb.Status{}
-	if err := proto.Unmarshal(body, st); err != nil {
+	protobufStatus := &statuspb.Status{}
+	if err := proto.Unmarshal(body, protobufStatus); err != nil {
 		return err
 	}
-	return status.ErrorProto(st)
+	return status.ErrorProto(protobufStatus)
 }
+
 
 func marshalError(st *status.Status) ([]byte, error) {
 	if len(st.Details()) == 0 {

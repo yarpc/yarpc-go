@@ -53,7 +53,7 @@ func newRunner(
 
 func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGeneratorResponse {
 	registry := newRegistry()
-	appendGogoRegistry := false
+	registerGhProtoRegistry := false
 	if request.Parameter != nil {
 		for _, p := range strings.Split(request.GetParameter(), ",") {
 			spec := strings.SplitN(p, "=", 2)
@@ -67,7 +67,7 @@ func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGen
 			case strings.HasPrefix(name, "M"):
 				registry.AddPackageMap(name[1:], value)
 			case name == "gogo_registry" && value == "true":
-				appendGogoRegistry = true
+				registerGhProtoRegistry = true
 			default:
 				if r.unknownFlagHandler != nil {
 					if err := r.unknownFlagHandler(name, value); err != nil {
@@ -94,7 +94,7 @@ func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGen
 		if err != nil {
 			return newResponseError(err)
 		}
-		file.GogoRegistry = appendGogoRegistry
+		file.GhProtoRegistry = registerGhProtoRegistry
 		targets = append(targets, file)
 	}
 

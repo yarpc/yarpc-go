@@ -185,7 +185,7 @@ func getValue(keyValueYARPCClient examplepb.KeyValueYARPCClient, key string, opt
 }
 
 func setValue(keyValueYARPCClient examplepb.KeyValueYARPCClient, key string, value string, options ...yarpc.CallOption) error {
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second*10000)
 	defer cancel()
 	_, err := keyValueYARPCClient.SetValue(ctx, &examplepb.SetValueRequest{Key: key, Value: value}, options...)
 	return err

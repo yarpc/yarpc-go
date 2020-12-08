@@ -602,7 +602,7 @@ var {{ fileDescriptorClosureVarName .File }} = [][]byte{
 	){{end}}
 }{{end}}
 
-{{if .GogoRegistry}}func init() {
+{{if .GhProtoRegistry}}func init() {
 	{{range $msg := .Messages}}
 		proto.RegisterType((*{{$msg.GetName}})(nil), "{{trimPrefixPeriod $msg.FQMN}}")
 	{{end}}

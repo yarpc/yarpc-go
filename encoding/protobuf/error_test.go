@@ -185,9 +185,7 @@ func TestPbErrorToYARPCError(t *testing.T) {
 			assert.Equal(t, tt.message, status.Message(), "unexpected grpc status message")
 			assert.Len(t, status.Details(), len(tt.details), "unexpected details length")
 			for i, detail := range tt.details {
-				if !proto.Equal(detail, status.Details()[i].(proto.Message)) {
-					t.Errorf("non comparable messages")
-				}
+				assert.True(t,proto.Equal(detail, status.Details()[i].(proto.Message)),"non comparable messages")
 			}
 		})
 	}

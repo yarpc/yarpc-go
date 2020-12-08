@@ -138,7 +138,7 @@ func TestDuplexStream(t *testing.T) {
 			{
 				msg, err := str.Recv()
 				require.NoError(t, err)
-				assert.Equal(t, sent.Value, msg.Value)
+				assert.Equal(t, sent, msg)
 			}
 
 			// Close the client side of the stream.
