@@ -91,6 +91,7 @@ func TestCallSuccess(t *testing.T) {
 	defer successServer.Close()
 
 	httpTransport := NewTransport()
+	defer httpTransport.Stop()
 	out := httpTransport.NewSingleOutbound(successServer.URL)
 	require.NoError(t, out.Start(), "failed to start outbound")
 	defer out.Stop()
@@ -162,6 +163,7 @@ func TestOutboundHeaders(t *testing.T) {
 	}
 
 	httpTransport := NewTransport()
+	defer httpTransport.Stop()
 
 	for _, tt := range tests {
 		server := httptest.NewServer(http.HandlerFunc(
@@ -245,6 +247,7 @@ func TestOutboundApplicationError(t *testing.T) {
 	}
 
 	httpTransport := NewTransport()
+	defer httpTransport.Stop()
 
 	for _, tt := range tests {
 		server := httptest.NewServer(http.HandlerFunc(
@@ -308,6 +311,7 @@ func TestCallFailures(t *testing.T) {
 	defer internalErrorServer.Close()
 
 	httpTransport := NewTransport()
+	defer httpTransport.Stop()
 
 	tests := []struct {
 		url      string
@@ -341,6 +345,7 @@ func TestCallFailures(t *testing.T) {
 
 func TestStartMultiple(t *testing.T) {
 	httpTransport := NewTransport()
+	defer httpTransport.Stop()
 	out := httpTransport.NewSingleOutbound("http://localhost:9999")
 
 	var wg sync.WaitGroup
@@ -362,6 +367,7 @@ func TestStartMultiple(t *testing.T) {
 
 func TestStopMultiple(t *testing.T) {
 	httpTransport := NewTransport()
+	defer httpTransport.Stop()
 	out := httpTransport.NewSingleOutbound("http://127.0.0.1:9999")
 
 	err := out.Start()
@@ -386,6 +392,7 @@ func TestStopMultiple(t *testing.T) {
 
 func TestCallWithoutStarting(t *testing.T) {
 	httpTransport := NewTransport()
+	defer httpTransport.Stop()
 	out := httpTransport.NewSingleOutbound("http://127.0.0.1:9999")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
@@ -443,7 +450,10 @@ func TestGetPeerForRequestErr(t *testing.T) {
 
 func TestWithCoreHeaders(t *testing.T) {
 	endpoint := "http://127.0.0.1:9999"
-	out := NewTransport().NewSingleOutbound(endpoint)
+	httpTransport := NewTransport()
+	defer httpTransport.Stop()
+	out := httpTransport.NewSingleOutbound(endpoint)
+	defer out.Stop()
 	require.NoError(t, out.Start())
 
 	httpReq := httptest.NewRequest("", endpoint, nil)
@@ -466,6 +476,7 @@ func TestWithCoreHeaders(t *testing.T) {
 
 func TestNoRequest(t *testing.T) {
 	tran := NewTransport()
+	defer tran.Stop()
 	out := tran.NewSingleOutbound("localhost:0")
 
 	_, err := out.Call(context.Background(), nil)
@@ -476,7 +487,9 @@ func TestNoRequest(t *testing.T) {
 }
 
 func TestOutboundNoDeadline(t *testing.T) {
-	out := NewTransport().NewSingleOutbound("http://foo-host:8080")
+	tran := NewTransport()
+	defer tran.Stop()
+	out := tran.NewSingleOutbound("http://foo-host:8080")
 
 	_, err := out.call(context.Background(), &transport.Request{})
 	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing context deadline"), err)
@@ -494,6 +507,7 @@ func TestServiceMatchSuccess(t *testing.T) {
 	defer matchServer.Close()
 
 	httpTransport := NewTransport()
+	defer httpTransport.Stop()
 	out := httpTransport.NewSingleOutbound(matchServer.URL)
 	require.NoError(t, out.Start(), "failed to start outbound")
 	defer out.Stop()
@@ -518,6 +532,7 @@ func TestServiceMatchFailed(t *testing.T) {
 	defer mismatchServer.Close()
 
 	httpTransport := NewTransport()
+	defer httpTransport.Stop()
 	out := httpTransport.NewSingleOutbound(mismatchServer.URL)
 	require.NoError(t, out.Start(), "failed to start outbound")
 	defer out.Stop()
@@ -542,6 +557,7 @@ func TestServiceMatchNoHeader(t *testing.T) {
 	defer noHeaderServer.Close()
 
 	httpTransport := NewTransport()
+	defer httpTransport.Stop()
 	out := httpTransport.NewSingleOutbound(noHeaderServer.URL)
 	require.NoError(t, out.Start(), "failed to start outbound")
 	defer out.Stop()

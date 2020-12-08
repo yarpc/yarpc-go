@@ -38,7 +38,7 @@ require (
 	github.com/uber/tchannel-go v1.20.1
 	go.uber.org/atomic v1.7.0
 	go.uber.org/fx v1.10.0
-	go.uber.org/goleak v1.0.0 // indirect
+	go.uber.org/goleak v1.0.0
 	go.uber.org/multierr v1.6.0
 	go.uber.org/net/metrics v1.3.0
 	go.uber.org/thriftrw v1.25.0
@@ -49,7 +49,7 @@ require (
 	golang.org/x/sys v0.0.0-20201119102817-f84b799fce68 // indirect
 	golang.org/x/text v0.3.4 // indirect
 	golang.org/x/tools v0.0.0-20201125231158-b5590deeca9b
-	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
+	google.golang.org/genproto v0.0.0-20200212174721-66ed5ce911ce
 	google.golang.org/grpc v1.33.1
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.3.0
