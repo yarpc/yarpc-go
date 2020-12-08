@@ -32,7 +32,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/yarpcerrors"
-	rpcStatus "google.golang.org/genproto/googleapis/rpc/status"
+	statuspb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -176,7 +176,7 @@ func TestPbErrorToYARPCError(t *testing.T) {
 			assert.Equal(t, st.Code(), tt.code)
 			assert.Equal(t, st.Message(), tt.message)
 
-			statusPb := rpcStatus.Status{}
+			statusPb := statuspb.Status{}
 			err := proto.Unmarshal(st.Details(), &statusPb)
 			assert.NoError(t, err, "unexpected unmarshal error")
 

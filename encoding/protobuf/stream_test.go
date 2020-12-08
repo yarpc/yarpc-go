@@ -75,7 +75,7 @@ func TestUnary(t *testing.T) {
 			sent := &testpb.TestMessage{Value: "echo"}
 			received, err := client.Unary(ctx, sent)
 			require.NoError(t, err)
-			assert.Equal(t, sent.Value, received.Value)
+			assert.Equal(t, sent, received)
 		})
 	}
 }

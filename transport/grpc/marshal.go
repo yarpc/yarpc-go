@@ -22,12 +22,12 @@ package grpc
 
 import (
 	"github.com/golang/protobuf/proto"
-	spb "google.golang.org/genproto/googleapis/rpc/status"
+	statuspb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/status"
 )
 
 func unmarshalError(body []byte) error {
-	st := &spb.Status{}
+	st := &statuspb.Status{}
 	if err := proto.Unmarshal(body, st); err != nil {
 		return err
 	}

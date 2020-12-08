@@ -38,7 +38,7 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/yarpcerrors"
-	rpcStatus "google.golang.org/genproto/googleapis/rpc/status"
+	statuspb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/status"
 )
 
@@ -250,9 +250,9 @@ func TestRawGrpcServerErrorDetails(t *testing.T) {
 	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcStatus.Code(), "unexpected error code")
 	assert.Equal(t, "error message", yarpcStatus.Message(), "unexpected error message")
 
-	var rpcStatus rpcStatus.Status
-	proto.Unmarshal(yarpcStatus.Details(), &rpcStatus)
-	status := status.FromProto(&rpcStatus)
+	var statuspb statuspb.Status
+	proto.Unmarshal(yarpcStatus.Details(), &statuspb)
+	status := status.FromProto(&statuspb)
 	expectedDetails := []interface{}{
 		&wrappers.StringValue{Value: "string value"},
 		&wrappers.Int32Value{Value: 100},
@@ -314,9 +314,9 @@ func TestJSONGrpcServerErrorDetails(t *testing.T) {
 	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcStatus.Code(), "unexpected error code")
 	assert.Equal(t, "error message", yarpcStatus.Message(), "unexpected error message")
 
-	var rpcStatus rpcStatus.Status
-	proto.Unmarshal(yarpcStatus.Details(), &rpcStatus)
-	status := status.FromProto(&rpcStatus)
+	var statuspb statuspb.Status
+	proto.Unmarshal(yarpcStatus.Details(), &statuspb)
+	status := status.FromProto(&statuspb)
 	expectedDetails := []interface{}{
 		&wrappers.StringValue{Value: "string value"},
 		&wrappers.Int32Value{Value: 100},
