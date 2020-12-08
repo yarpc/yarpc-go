@@ -12,6 +12,11 @@ message HelloResponse {
   string id = 1;
 }
 
+enum Status {
+  STATUS_1 = 0;
+  STATUS_2 = 1;
+}
+
 service Hello {
   rpc HelloUnary(HelloRequest) returns (HelloResponse) {}
   rpc HelloThere(stream HelloRequest) returns (stream HelloResponse) {}

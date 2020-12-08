@@ -53,6 +53,7 @@ func newRunner(
 
 func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGeneratorResponse {
 	registry := newRegistry()
+	appendGogoRegistry := false
 	if request.Parameter != nil {
 		for _, p := range strings.Split(request.GetParameter(), ",") {
 			spec := strings.SplitN(p, "=", 2)
@@ -65,6 +66,8 @@ func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGen
 				registry.SetPrefix(value)
 			case strings.HasPrefix(name, "M"):
 				registry.AddPackageMap(name[1:], value)
+			case name == "gogo_registry" && value == "true":
+				appendGogoRegistry = true
 			default:
 				if r.unknownFlagHandler != nil {
 					if err := r.unknownFlagHandler(name, value); err != nil {
@@ -74,7 +77,6 @@ func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGen
 			}
 		}
 	}
-
 	generator := newGenerator(
 		registry,
 		r.tmpl,
@@ -92,6 +94,7 @@ func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGen
 		if err != nil {
 			return newResponseError(err)
 		}
+		file.GogoRegistry = appendGogoRegistry
 		targets = append(targets, file)
 	}
 

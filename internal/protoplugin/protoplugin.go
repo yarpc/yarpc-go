@@ -145,6 +145,7 @@ type File struct {
 	Enums                  []*Enum
 	Services               []*Service
 	TransitiveDependencies []*File
+	GogoRegistry bool
 }
 
 // SerializedFileDescriptor returns a gzipped marshalled representation of the FileDescriptor.

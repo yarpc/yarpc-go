@@ -602,11 +602,15 @@ var {{ fileDescriptorClosureVarName .File }} = [][]byte{
 	){{end}}
 }{{end}}
 
-func init() {
+{{if .GogoRegistry}}func init() {
 	{{range $msg := .Messages}}
 		proto.RegisterType((*{{$msg.GetName}})(nil), "{{trimPrefixPeriod $msg.FQMN}}")
 	{{end}}
-}
+	{{range $enum := .Enums}}
+		proto.RegisterEnum("{{trimPrefixPeriod $enum.FQEN}}", {{$enum.GetName}}_name, {{$enum.GetName}}_value)
+	{{end}}
+	}
+{{end}}
 `
 
 // Runner is the Runner used for protoc-gen-yarpc-go.

@@ -105,7 +105,7 @@ func TestProtoGrpcServerErrorDetails(t *testing.T) {
 		assert.NoError(t, clientDispatcher.Stop(), "could not stop client dispatcher")
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10000)
 	defer cancel()
 
 	const errorMsg = "error msg"
@@ -120,9 +120,7 @@ func TestProtoGrpcServerErrorDetails(t *testing.T) {
 		&wrappers.Int32Value{Value: 100},
 	}
 	actualDetails := protobuf.GetErrorDetails(err)
-	if !proto.Equal(expectedDetails[0].(proto.Message), actualDetails[0].(proto.Message)) {
-		t.Errorf("unexpected error details")
-	}
+	assert.True(t, proto.Equal(expectedDetails[0].(proto.Message), actualDetails[0].(proto.Message)),"unexpected error details")
 }
 
 func TestProtoGrpcStreamServerErrorDetails(t *testing.T) {
@@ -187,9 +185,7 @@ func TestProtoGrpcStreamServerErrorDetails(t *testing.T) {
 	assert.Equal(t, errorMsg, st.Message(), "unexpected error message")
 
 	actualDetails := protobuf.GetErrorDetails(err)
-	if !proto.Equal(expectedDetails[0].(proto.Message), actualDetails[0].(proto.Message)) {
-		t.Errorf("unexpected error details")
-	}
+	assert.True(t, proto.Equal(expectedDetails[0].(proto.Message), actualDetails[0].(proto.Message)),"unexpected error details")
 }
 
 type errorRawServer struct{}
