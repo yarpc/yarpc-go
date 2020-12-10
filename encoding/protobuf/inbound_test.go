@@ -26,9 +26,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/gogo/protobuf/jsonpb"
-	"github.com/gogo/protobuf/proto"
-	"github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/jsonpb"
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
@@ -87,7 +87,7 @@ func TestInboundAnyResolver(t *testing.T) {
 				Handle: func(context.Context, proto.Message) (proto.Message, error) {
 					testMessage := &testpb.TestMessage{Value: "foo-bar-baz"}
 
-					any, err := types.MarshalAny(testMessage)
+					any, err := ptypes.MarshalAny(testMessage)
 					assert.NoError(t, err)
 					any.TypeUrl = tt.anyURL // update to custom URL
 					return any, nil

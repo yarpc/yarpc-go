@@ -24,8 +24,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
-	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/protoc-gen-go/plugin"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/multierr"
 )

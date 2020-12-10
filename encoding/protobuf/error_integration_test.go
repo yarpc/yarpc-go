@@ -26,10 +26,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/googleapis/google/rpc"
-	"github.com/gogo/protobuf/proto"
-	"github.com/gogo/protobuf/types"
-	"github.com/gogo/status"
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc"
@@ -40,14 +38,16 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/yarpcerrors"
+	statuspb "google.golang.org/genproto/googleapis/rpc/status"
+	"google.golang.org/grpc/status"
 )
 
 type errorServer struct{}
 
 func (errorServer) Unary(ctx context.Context, msg *testpb.TestMessage) (*testpb.TestMessage, error) {
 	testDetails := []proto.Message{
-		&types.StringValue{Value: "string value"},
-		&types.Int32Value{Value: 100},
+		&wrappers.StringValue{Value: "string value"},
+		&wrappers.Int32Value{Value: 100},
 	}
 	return nil,
 		protobuf.NewError(yarpcerrors.CodeInvalidArgument, msg.Value,
@@ -56,8 +56,8 @@ func (errorServer) Unary(ctx context.Context, msg *testpb.TestMessage) (*testpb.
 
 func (errorServer) Duplex(stream testpb.TestServiceDuplexYARPCServer) error {
 	testDetails := []proto.Message{
-		&types.StringValue{Value: "string value"},
-		&types.Int32Value{Value: 100},
+		&wrappers.StringValue{Value: "string value"},
+		&wrappers.Int32Value{Value: 100},
 	}
 	msg, err := stream.Recv()
 	if err != nil {
@@ -105,7 +105,7 @@ func TestProtoGrpcServerErrorDetails(t *testing.T) {
 		assert.NoError(t, clientDispatcher.Stop(), "could not stop client dispatcher")
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10000)
 	defer cancel()
 
 	const errorMsg = "error msg"
@@ -116,11 +116,11 @@ func TestProtoGrpcServerErrorDetails(t *testing.T) {
 	assert.Equal(t, yarpcerrors.CodeInvalidArgument, st.Code(), "unexpected error code")
 	assert.Equal(t, errorMsg, st.Message(), "unexpected error message")
 	expectedDetails := []interface{}{
-		&types.StringValue{Value: "string value"},
-		&types.Int32Value{Value: 100},
+		&wrappers.StringValue{Value: "string value"},
+		&wrappers.Int32Value{Value: 100},
 	}
 	actualDetails := protobuf.GetErrorDetails(err)
-	assert.Equal(t, expectedDetails, actualDetails, "unexpected error details")
+	assert.True(t, proto.Equal(expectedDetails[0].(proto.Message), actualDetails[0].(proto.Message)),"unexpected error details")
 }
 
 func TestProtoGrpcStreamServerErrorDetails(t *testing.T) {
@@ -166,8 +166,8 @@ func TestProtoGrpcStreamServerErrorDetails(t *testing.T) {
 
 	const errorMsg = "stream error msg"
 	expectedDetails := []interface{}{
-		&types.StringValue{Value: "string value"},
-		&types.Int32Value{Value: 100},
+		&wrappers.StringValue{Value: "string value"},
+		&wrappers.Int32Value{Value: 100},
 	}
 
 	streamHandle, err := client.Duplex(ctx)
@@ -185,15 +185,15 @@ func TestProtoGrpcStreamServerErrorDetails(t *testing.T) {
 	assert.Equal(t, errorMsg, st.Message(), "unexpected error message")
 
 	actualDetails := protobuf.GetErrorDetails(err)
-	assert.Equal(t, expectedDetails, actualDetails, "unexpected error details")
+	assert.True(t, proto.Equal(expectedDetails[0].(proto.Message), actualDetails[0].(proto.Message)),"unexpected error details")
 }
 
 type errorRawServer struct{}
 
 func (errorRawServer) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
 	testDetails := []proto.Message{
-		&types.StringValue{Value: "string value"},
-		&types.Int32Value{Value: 100},
+		&wrappers.StringValue{Value: "string value"},
+		&wrappers.Int32Value{Value: 100},
 	}
 	return protobuf.NewError(yarpcerrors.CodeInvalidArgument, "error message",
 		protobuf.WithErrorDetails(testDetails...))
@@ -250,12 +250,12 @@ func TestRawGrpcServerErrorDetails(t *testing.T) {
 	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcStatus.Code(), "unexpected error code")
 	assert.Equal(t, "error message", yarpcStatus.Message(), "unexpected error message")
 
-	var rpcStatus rpc.Status
-	proto.Unmarshal(yarpcStatus.Details(), &rpcStatus)
-	status := status.FromProto(&rpcStatus)
+	var statuspb statuspb.Status
+	proto.Unmarshal(yarpcStatus.Details(), &statuspb)
+	status := status.FromProto(&statuspb)
 	expectedDetails := []interface{}{
-		&types.StringValue{Value: "string value"},
-		&types.Int32Value{Value: 100},
+		&wrappers.StringValue{Value: "string value"},
+		&wrappers.Int32Value{Value: 100},
 	}
 	assert.Equal(t, expectedDetails, status.Details(), "unexpected error details")
 }
@@ -274,8 +274,8 @@ func TestJSONGrpcServerErrorDetails(t *testing.T) {
 
 	dispatcher.Register(json.Procedure("test", func(ctx context.Context, req *struct{}) (*struct{}, error) {
 		testDetails := []proto.Message{
-			&types.StringValue{Value: "string value"},
-			&types.Int32Value{Value: 100},
+			&wrappers.StringValue{Value: "string value"},
+			&wrappers.Int32Value{Value: 100},
 		}
 		return nil, protobuf.NewError(yarpcerrors.CodeInvalidArgument, "error message",
 			protobuf.WithErrorDetails(testDetails...))
@@ -314,12 +314,12 @@ func TestJSONGrpcServerErrorDetails(t *testing.T) {
 	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcStatus.Code(), "unexpected error code")
 	assert.Equal(t, "error message", yarpcStatus.Message(), "unexpected error message")
 
-	var rpcStatus rpc.Status
-	proto.Unmarshal(yarpcStatus.Details(), &rpcStatus)
-	status := status.FromProto(&rpcStatus)
+	var statuspb statuspb.Status
+	proto.Unmarshal(yarpcStatus.Details(), &statuspb)
+	status := status.FromProto(&statuspb)
 	expectedDetails := []interface{}{
-		&types.StringValue{Value: "string value"},
-		&types.Int32Value{Value: 100},
+		&wrappers.StringValue{Value: "string value"},
+		&wrappers.Int32Value{Value: 100},
 	}
 	assert.Equal(t, expectedDetails, status.Details(), "unexpected error details")
 

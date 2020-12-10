@@ -26,7 +26,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/encoding/protobuf"
@@ -45,7 +45,7 @@ func TestStreaming(t *testing.T) {
 		return direct.New(direct.Configuration{}, trans.NewDialer())
 	}
 	protoerr := protobuf.NewError(yarpcerrors.CodeAborted, "test error",
-		protobuf.WithErrorDetails(&types.StringValue{Value: "val"}))
+		protobuf.WithErrorDetails(&wrappers.StringValue{Value: "val"}))
 	p := NewPortProvider(t)
 	tests := []struct {
 		name     string

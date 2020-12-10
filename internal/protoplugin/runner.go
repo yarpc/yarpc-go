@@ -21,11 +21,10 @@
 package protoplugin
 
 import (
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/protoc-gen-go/plugin"
 	"strings"
 	"text/template"
-
-	"github.com/gogo/protobuf/proto"
-	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
 )
 
 type runner struct {
@@ -54,6 +53,7 @@ func newRunner(
 
 func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGeneratorResponse {
 	registry := newRegistry()
+	registerGhProtoRegistry := false
 	if request.Parameter != nil {
 		for _, p := range strings.Split(request.GetParameter(), ",") {
 			spec := strings.SplitN(p, "=", 2)
@@ -66,6 +66,8 @@ func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGen
 				registry.SetPrefix(value)
 			case strings.HasPrefix(name, "M"):
 				registry.AddPackageMap(name[1:], value)
+			case name == "gogo_registry" && value == "true":
+				registerGhProtoRegistry = true
 			default:
 				if r.unknownFlagHandler != nil {
 					if err := r.unknownFlagHandler(name, value); err != nil {
@@ -75,7 +77,6 @@ func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGen
 			}
 		}
 	}
-
 	generator := newGenerator(
 		registry,
 		r.tmpl,
@@ -93,6 +94,7 @@ func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGen
 		if err != nil {
 			return newResponseError(err)
 		}
+		file.GhProtoRegistry = registerGhProtoRegistry
 		targets = append(targets, file)
 	}
 

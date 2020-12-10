@@ -29,6 +29,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/protobuf"
@@ -86,8 +87,11 @@ func testIntegration(
 	if ttype != testutils.TransportTypeTChannel {
 		keyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeInternal, "foo-bar", protobuf.WithErrorDetails(&examplepb.EchoBothRequest{})))
 		err = setValue(clients.KeyValueYARPCClient, "foo", "bar")
-		assert.Equal(t, protobuf.NewError(yarpcerrors.CodeInternal, "foo-bar", protobuf.WithErrorDetails(&examplepb.EchoBothRequest{})), err)
-		assert.Equal(t, []interface{}{&examplepb.EchoBothRequest{}}, protobuf.GetErrorDetails(err))
+		assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.FromError(err).Code())
+		assert.Equal(t, "foo-bar", yarpcerrors.FromError(err).Message())
+ 		deets := protobuf.GetErrorDetails(err)
+		require.Len(t, deets, 1, "unexpected number of details")
+		assert.IsType(t, deets[0], &examplepb.EchoBothRequest{})
 
 		keyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeInternal, "hello world"))
 		err = setValue(clients.KeyValueYARPCClient, "foo", "bar")
@@ -181,7 +185,7 @@ func getValue(keyValueYARPCClient examplepb.KeyValueYARPCClient, key string, opt
 }
 
 func setValue(keyValueYARPCClient examplepb.KeyValueYARPCClient, key string, value string, options ...yarpc.CallOption) error {
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second*10000)
 	defer cancel()
 	_, err := keyValueYARPCClient.SetValue(ctx, &examplepb.SetValueRequest{Key: key, Value: value}, options...)
 	return err

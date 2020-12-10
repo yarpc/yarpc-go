@@ -26,7 +26,6 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/gogo/status"
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/atomic"
 	"go.uber.org/yarpc/api/transport"
@@ -34,6 +33,7 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 var (

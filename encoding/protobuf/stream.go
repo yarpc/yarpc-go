@@ -24,7 +24,7 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"go.uber.org/yarpc/api/transport"
 )
 
