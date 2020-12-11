@@ -226,9 +226,13 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil")
 	}
 
-	_, err := o.call(ctx, treq)
+	res, err := o.call(ctx, treq)
 	if err != nil {
 		return nil, err
+	}
+
+	if err = res.Body.Close(); err != nil {
+		return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 	}
 
 	return time.Now(), nil
@@ -267,6 +271,9 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 
 	// Service name match validation, return yarpcerrors.CodeInternal error if not match
 	if match, resSvcName := checkServiceMatch(treq.Service, response.Header); !match {
+		if err = response.Body.Close(); err != nil {
+			return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
+		}
 		return nil, transport.UpdateSpanWithErr(span,
 			yarpcerrors.InternalErrorf("service name sent from the request "+
 				"does not match the service name received in the response, sent %q, got: %q", treq.Service, resSvcName))
