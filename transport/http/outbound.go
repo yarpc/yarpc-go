@@ -226,6 +226,8 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil")
 	}
 
+	// res is used to close the response body to avoid memory/connection leak
+	// even when the response body is empty
 	res, err := o.call(ctx, treq)
 	if err != nil {
 		return nil, err
