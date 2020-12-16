@@ -5,7 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- No changes yet.
+### Added
+- gRPC: accept dialer options in gRPC transportSpec config
 
 ## [1.49.1] - 2020-11-17
 ### Fixed
