@@ -99,8 +99,8 @@ func marshal(encoding transport.Encoding, message proto.Message, codec *codec) (
 func marshalProto(message proto.Message, _ *codec) ([]byte, func(), error) {
 	protoBuffer := getBuffer()
 	cleanup := func() { putBuffer(protoBuffer) }
-	err := gogoGhProtoMarshal(message,protoBuffer)
-	if err != nil {
+	if err := protoBuffer.Marshal(message); err != nil {
+		cleanup()
 		return nil, nil, err
 	}
 	return protoBuffer.Bytes(), cleanup, nil

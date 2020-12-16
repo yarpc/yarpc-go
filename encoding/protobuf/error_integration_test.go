@@ -257,7 +257,7 @@ func TestRawGrpcServerErrorDetails(t *testing.T) {
 		&wrappers.StringValue{Value: "string value"},
 		&wrappers.Int32Value{Value: 100},
 	}
-	assert.Equal(t, expectedDetails, status.Details(), "unexpected error details")
+	assert.True(t, proto.Equal(expectedDetails[0].(proto.Message), status.Details()[0].(proto.Message)),"unexpected error details")
 }
 
 func TestJSONGrpcServerErrorDetails(t *testing.T) {
@@ -321,6 +321,6 @@ func TestJSONGrpcServerErrorDetails(t *testing.T) {
 		&wrappers.StringValue{Value: "string value"},
 		&wrappers.Int32Value{Value: 100},
 	}
-	assert.Equal(t, expectedDetails, status.Details(), "unexpected error details")
+	assert.True(t, proto.Equal(expectedDetails[0].(proto.Message), status.Details()[0].(proto.Message)),"unexpected error details")
 
 }
