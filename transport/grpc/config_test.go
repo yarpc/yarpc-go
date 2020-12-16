@@ -276,7 +276,7 @@ func TestTransportSpec(t *testing.T) {
 			},
 		},
 		{
-			desc: "simple outbound with dial custom dialer",
+			desc: "simple outbound with custom dialer option",
 			outboundCfg: attrs{
 				"myservice": attrs{
 					TransportName: attrs{"address": "localhost:54569"},
