@@ -22,6 +22,7 @@ package grpc
 
 import (
 	"context"
+	"net"
 	"testing"
 	"time"
 
@@ -95,9 +96,10 @@ func TestTransportSpec(t *testing.T) {
 	}
 
 	type wantOutbound struct {
-		Address    string
-		TLS        bool
-		Compressor string
+		Address                 string
+		TLS                     bool
+		Compressor              string
+		WantCustomContextDialer bool
 	}
 
 	type test struct {
@@ -273,6 +275,23 @@ func TestTransportSpec(t *testing.T) {
 				},
 			},
 		},
+		{
+			desc: "simple outbound with dial custom dialer",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{"address": "localhost:54569"},
+				},
+			},
+			opts: []Option{ContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+				return (&net.Dialer{}).DialContext(ctx, "TCP", addr)
+			})},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {
+					Address:                 "localhost:54569",
+					WantCustomContextDialer: true,
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -353,6 +372,9 @@ func TestTransportSpec(t *testing.T) {
 					dialer, ok := single.Transport().(*Dialer)
 					require.True(t, ok, "expected *Dialer, got %T", single.Transport())
 					assert.Equal(t, wantOutbound.TLS, dialer.options.creds != nil)
+					if wantOutbound.WantCustomContextDialer {
+						assert.NotNil(t, dialer.options.contextDialer, "expected custom context dialer")
+					}
 				}
 			}
 		})
