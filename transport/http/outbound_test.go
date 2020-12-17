@@ -118,6 +118,118 @@ func TestCallSuccess(t *testing.T) {
 	}
 }
 
+func TestCallOneWaySuccessWithBody(t *testing.T) {
+	successServer := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, req *http.Request) {
+			defer req.Body.Close()
+
+			ttl := req.Header.Get(TTLMSHeader)
+			ttlms, err := strconv.Atoi(ttl)
+			assert.NoError(t, err, "can parse TTL header")
+			assert.InDelta(t, ttlms, testtime.X*1000.0, testtime.X*5.0, "ttl header within tolerance")
+
+			assert.Equal(t, "caller", req.Header.Get(CallerHeader))
+			assert.Equal(t, "service", req.Header.Get(ServiceHeader))
+			assert.Equal(t, "raw", req.Header.Get(EncodingHeader))
+			assert.Equal(t, "hello", req.Header.Get(ProcedureHeader))
+
+			body, err := ioutil.ReadAll(req.Body)
+			if assert.NoError(t, err) {
+				assert.Equal(t, []byte("world"), body)
+			}
+
+			w.Header().Set("rpc-header-foo", "bar")
+			_, err = w.Write([]byte("great success"))
+			assert.NoError(t, err)
+		},
+	))
+	defer successServer.Close()
+
+	httpTransport := NewTransport()
+	defer httpTransport.Stop()
+	out := httpTransport.NewSingleOutbound(successServer.URL)
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+	ack, err := out.CallOneway(ctx, &transport.Request{
+		Caller:    "caller",
+		Service:   "service",
+		Encoding:  raw.Encoding,
+		Procedure: "hello",
+		Body:      bytes.NewReader([]byte("world")),
+	})
+	require.NoError(t, err)
+	require.NotNil(t, ack)
+}
+
+func TestCallOneWaySuccess(t *testing.T) {
+	successServer := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, req *http.Request) {
+			defer req.Body.Close()
+
+			ttl := req.Header.Get(TTLMSHeader)
+			ttlms, err := strconv.Atoi(ttl)
+			assert.NoError(t, err, "can parse TTL header")
+			assert.InDelta(t, ttlms, testtime.X*1000.0, testtime.X*5.0, "ttl header within tolerance")
+
+			assert.Equal(t, "caller", req.Header.Get(CallerHeader))
+			assert.Equal(t, "service", req.Header.Get(ServiceHeader))
+			assert.Equal(t, "raw", req.Header.Get(EncodingHeader))
+			assert.Equal(t, "hello", req.Header.Get(ProcedureHeader))
+
+			body, err := ioutil.ReadAll(req.Body)
+			if assert.NoError(t, err) {
+				assert.Equal(t, []byte("world"), body)
+			}
+
+			w.Header().Set("rpc-header-foo", "bar")
+			assert.NoError(t, err)
+		},
+	))
+	defer successServer.Close()
+
+	httpTransport := NewTransport()
+	defer httpTransport.Stop()
+	out := httpTransport.NewSingleOutbound(successServer.URL)
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+	ack, err := out.CallOneway(ctx, &transport.Request{
+		Caller:    "caller",
+		Service:   "service",
+		Encoding:  raw.Encoding,
+		Procedure: "hello",
+		Body:      bytes.NewReader([]byte("world")),
+	})
+	require.NoError(t, err)
+	require.NotNil(t, ack)
+}
+
+func TestCallOneWayFailWithoutDeadline(t *testing.T) {
+	successServer := httptest.NewServer(nil)
+	defer successServer.Close()
+
+	httpTransport := NewTransport()
+	defer httpTransport.Stop()
+	out := httpTransport.NewSingleOutbound(successServer.URL)
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
+
+	ack, err := out.CallOneway(context.Background(), &transport.Request{
+		Caller:    "caller",
+		Service:   "service",
+		Encoding:  raw.Encoding,
+		Procedure: "hello",
+		Body:      bytes.NewReader([]byte("world")),
+	})
+	require.Error(t, err)
+	require.Nil(t, ack)
+}
+
 func TestAddReservedHeader(t *testing.T) {
 	tests := []string{
 		"Rpc-Foo",
