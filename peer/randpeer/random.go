@@ -22,6 +22,7 @@ package randpeer
 
 import (
 	"math/rand"
+	"sync"
 	"time"
 
 	"go.uber.org/yarpc/api/peer"
@@ -32,6 +33,8 @@ import (
 type randomList struct {
 	subscribers []*subscriber
 	random      *rand.Rand
+
+	m sync.RWMutex
 }
 
 // Option configures the peer list implementation constructor.
@@ -57,6 +60,9 @@ func newRandomList(cap int, source rand.Source) *randomList {
 }
 
 func (r *randomList) Add(peer peer.StatusPeer, _ peer.Identifier) abstractlist.Subscriber {
+	r.m.Lock()
+	defer r.m.Unlock()
+
 	index := len(r.subscribers)
 	r.subscribers = append(r.subscribers, &subscriber{
 		index: index,
@@ -66,6 +72,9 @@ func (r *randomList) Add(peer peer.StatusPeer, _ peer.Identifier) abstractlist.S
 }
 
 func (r *randomList) Remove(peer peer.StatusPeer, _ peer.Identifier, ps abstractlist.Subscriber) {
+	r.m.Lock()
+	defer r.m.Unlock()
+
 	sub, ok := ps.(*subscriber)
 	if !ok || len(r.subscribers) == 0 {
 		return
@@ -78,6 +87,9 @@ func (r *randomList) Remove(peer peer.StatusPeer, _ peer.Identifier, ps abstract
 }
 
 func (r *randomList) Choose(_ *transport.Request) peer.StatusPeer {
+	r.m.RLock()
+	defer r.m.RUnlock()
+
 	if len(r.subscribers) == 0 {
 		return nil
 	}
