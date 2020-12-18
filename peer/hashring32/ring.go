@@ -23,6 +23,7 @@ package hashring32
 import (
 	"math/rand"
 	"strconv"
+	"sync"
 	"time"
 
 	"go.uber.org/yarpc/api/peer"
@@ -78,7 +79,6 @@ func (s *subscriber) UpdatePendingRequestCount(int) {}
 
 // peerRing provides a safe way to interact (Add/Remove/Get) with a potentially
 // changing list of peer objects
-// peerRing is NOT Thread-safe, make sure to only call peerRing functions with a lock
 type peerRing struct {
 	ring                    *hashring32.Hashring32
 	subscribers             map[string]*subscriber
@@ -88,6 +88,8 @@ type peerRing struct {
 	alternateShardKeyHeader string
 	logger                  *zap.Logger
 	random                  *rand.Rand
+
+	m sync.RWMutex
 }
 
 var _ abstractlist.Implementation = (*peerRing)(nil)
@@ -101,6 +103,9 @@ type shardIdentifier interface {
 // Add a string to the end of the peerRing, if the ring is empty
 // it initializes the ring marker
 func (pr *peerRing) Add(p peer.StatusPeer, pid peer.Identifier) abstractlist.Subscriber {
+	pr.m.Lock()
+	defer pr.m.Unlock()
+
 	sub := &subscriber{peer: p}
 	shardID := getShardID(pid)
 	pr.ring.Add(shardID)
@@ -112,6 +117,9 @@ func (pr *peerRing) Add(p peer.StatusPeer, pid peer.Identifier) abstractlist.Sub
 // Remove the peer from the ring. Use the subscriber to address the node of the
 // ring directly.
 func (pr *peerRing) Remove(p peer.StatusPeer, pid peer.Identifier, s abstractlist.Subscriber) {
+	pr.m.Lock()
+	defer pr.m.Unlock()
+
 	sub, ok := s.(*subscriber)
 	if !ok {
 		// Don't panic.
@@ -146,6 +154,9 @@ func (pr *peerRing) getPeerOverride(req *transport.Request) peer.StatusPeer {
 
 // Choose returns the assigned peer in the ring
 func (pr *peerRing) Choose(req *transport.Request) peer.StatusPeer {
+	pr.m.RLock()
+	defer pr.m.RUnlock()
+
 	// Client may want this request to go to a specific destination.
 	overridePeer := pr.getPeerOverride(req)
 	if overridePeer != nil {
