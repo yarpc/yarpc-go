@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Fixed
 - Http: fix memory and connection leak in http outbound call handler
-- peer: the peer strategies provided by yarpc (hashring32, pendingheap,
+- peer: the peer implementations provided by yarpc (hashring32, pendingheap,
   randpeer, roundrobin, tworandomchoices) are thread-safe now
 
 ## [1.49.1] - 2020-11-17
