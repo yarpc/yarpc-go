@@ -23,6 +23,7 @@ package grpc
 import (
 	"context"
 	"net"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -31,6 +32,8 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/yarpcconfig"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 )
 
 func TestNewTransportSpecOptions(t *testing.T) {
@@ -379,6 +382,58 @@ func TestTransportSpec(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestContextDialerOptionUsage(t *testing.T) {
+	type attrs map[string]interface{}
+
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer lis.Close()
+	server := grpc.NewServer()
+	defer server.Stop()
+	go func() {
+		require.NoError(t, server.Serve(lis))
+	}()
+
+	dialContextInvoked := int32(0)
+	dialer := func(ctx context.Context, addr string) (net.Conn, error) {
+		atomic.AddInt32(&dialContextInvoked, 1)
+		return (&net.Dialer{}).DialContext(ctx, "tcp", addr)
+	}
+	configurator := yarpcconfig.New()
+	err = configurator.RegisterTransport(TransportSpec(ContextDialer(dialer)))
+	require.NoError(t, err)
+	cfgData := attrs{
+		"outbounds": attrs{
+			"myservice": attrs{
+				TransportName: attrs{"address": lis.Addr().String()},
+			},
+		},
+	}
+	cfg, err := configurator.LoadConfig("foo", cfgData)
+	require.NoError(t, err)
+	outbound, ok := cfg.Outbounds["myservice"].Unary.(*Outbound)
+	require.True(t, ok)
+	defer outbound.Stop()
+	single := outbound.peerChooser.(*peer.Single)
+	require.NoError(t, single.Start())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	peer, _, err := single.Choose(ctx, &transport.Request{})
+	require.NoError(t, err)
+	grpcPeer, ok := peer.(*grpcPeer)
+	require.True(t, ok)
+
+	for {
+		state := grpcPeer.clientConn.GetState()
+		if grpcPeer.clientConn.GetState() == connectivity.Ready {
+			break
+		}
+		grpcPeer.clientConn.WaitForStateChange(ctx, state)
+	}
+	require.Equal(t, connectivity.Ready, grpcPeer.clientConn.GetState())
+	require.Equal(t, int32(1), dialContextInvoked)
 }
 
 func mapResolver(m map[string]string) func(string) (string, bool) {
