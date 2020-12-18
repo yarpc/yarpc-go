@@ -33,12 +33,15 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/peer/peertest"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/yarpc/peer/abstractpeer"
+	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -116,6 +119,118 @@ func TestCallSuccess(t *testing.T) {
 	if assert.NoError(t, err) {
 		assert.Equal(t, []byte("great success"), body)
 	}
+}
+
+func TestCallOneWaySuccessWithBody(t *testing.T) {
+	successServer := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, req *http.Request) {
+			defer req.Body.Close()
+
+			ttl := req.Header.Get(TTLMSHeader)
+			ttlms, err := strconv.Atoi(ttl)
+			assert.NoError(t, err, "can parse TTL header")
+			assert.InDelta(t, ttlms, testtime.X*1000.0, testtime.X*5.0, "ttl header within tolerance")
+
+			assert.Equal(t, "caller", req.Header.Get(CallerHeader))
+			assert.Equal(t, "service", req.Header.Get(ServiceHeader))
+			assert.Equal(t, "raw", req.Header.Get(EncodingHeader))
+			assert.Equal(t, "hello", req.Header.Get(ProcedureHeader))
+
+			body, err := ioutil.ReadAll(req.Body)
+			if assert.NoError(t, err) {
+				assert.Equal(t, []byte("world"), body)
+			}
+
+			w.Header().Set("rpc-header-foo", "bar")
+			_, err = w.Write([]byte("great success"))
+			assert.NoError(t, err)
+		},
+	))
+	defer successServer.Close()
+
+	httpTransport := NewTransport()
+	defer httpTransport.Stop()
+	out := httpTransport.NewSingleOutbound(successServer.URL)
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+	ack, err := out.CallOneway(ctx, &transport.Request{
+		Caller:    "caller",
+		Service:   "service",
+		Encoding:  raw.Encoding,
+		Procedure: "hello",
+		Body:      bytes.NewReader([]byte("world")),
+	})
+	require.NoError(t, err)
+	require.NotNil(t, ack)
+}
+
+func TestCallOneWaySuccess(t *testing.T) {
+	successServer := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, req *http.Request) {
+			defer req.Body.Close()
+
+			ttl := req.Header.Get(TTLMSHeader)
+			ttlms, err := strconv.Atoi(ttl)
+			assert.NoError(t, err, "can parse TTL header")
+			assert.InDelta(t, ttlms, testtime.X*1000.0, testtime.X*5.0, "ttl header within tolerance")
+
+			assert.Equal(t, "caller", req.Header.Get(CallerHeader))
+			assert.Equal(t, "service", req.Header.Get(ServiceHeader))
+			assert.Equal(t, "raw", req.Header.Get(EncodingHeader))
+			assert.Equal(t, "hello", req.Header.Get(ProcedureHeader))
+
+			body, err := ioutil.ReadAll(req.Body)
+			if assert.NoError(t, err) {
+				assert.Equal(t, []byte("world"), body)
+			}
+
+			w.Header().Set("rpc-header-foo", "bar")
+			assert.NoError(t, err)
+		},
+	))
+	defer successServer.Close()
+
+	httpTransport := NewTransport()
+	defer httpTransport.Stop()
+	out := httpTransport.NewSingleOutbound(successServer.URL)
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+	ack, err := out.CallOneway(ctx, &transport.Request{
+		Caller:    "caller",
+		Service:   "service",
+		Encoding:  raw.Encoding,
+		Procedure: "hello",
+		Body:      bytes.NewReader([]byte("world")),
+	})
+	require.NoError(t, err)
+	require.NotNil(t, ack)
+}
+
+func TestCallOneWayFailWithoutDeadline(t *testing.T) {
+	successServer := httptest.NewServer(nil)
+	defer successServer.Close()
+
+	httpTransport := NewTransport()
+	defer httpTransport.Stop()
+	out := httpTransport.NewSingleOutbound(successServer.URL)
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
+
+	ack, err := out.CallOneway(context.Background(), &transport.Request{
+		Caller:    "caller",
+		Service:   "service",
+		Encoding:  raw.Encoding,
+		Procedure: "hello",
+		Body:      bytes.NewReader([]byte("world")),
+	})
+	require.Error(t, err)
+	require.Nil(t, ack)
 }
 
 func TestAddReservedHeader(t *testing.T) {
@@ -568,4 +683,100 @@ func TestServiceMatchNoHeader(t *testing.T) {
 		Service: "Service",
 	})
 	require.NoError(t, err)
+}
+
+type RoundTripFunc func(req *http.Request) *http.Response
+
+func (f RoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req), nil
+}
+
+type errorReadCloser struct {
+	closeErr error
+}
+
+func (errorReadCloser) Read(p []byte) (n int, err error) {
+	return
+}
+
+func (e errorReadCloser) Close() error {
+	return e.closeErr
+}
+
+func TestCallResponseCloseError(t *testing.T) {
+	httpTransport := Transport{
+		client: &http.Client{
+			Transport: RoundTripFunc(func(req *http.Request) *http.Response {
+				return &http.Response{
+					StatusCode: 200,
+					Body:       errorReadCloser{closeErr: errors.New("test error")},
+					Header: http.Header{
+						"Rpc-Service": []string{"wrong-service"},
+					},
+				}
+			}),
+		},
+		tracer: opentracing.GlobalTracer(),
+	}
+	ctrl := gomock.NewController(t)
+	chooser := peertest.NewMockChooser(ctrl)
+	chooser.EXPECT().Start().Return(nil)
+	peer := &httpPeer{
+		Peer: &abstractpeer.Peer{},
+	}
+	chooser.EXPECT().Choose(gomock.Any(), gomock.Any()).Return(peer, func(error) {}, nil)
+	o := &Outbound{
+		once:              lifecycle.NewOnce(),
+		chooser:           chooser,
+		urlTemplate:       defaultURLTemplate,
+		tracer:            httpTransport.tracer,
+		transport:         &httpTransport,
+		bothResponseError: true,
+	}
+	err := o.Start()
+	require.NoError(t, err)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+	_, err = o.Call(ctx, &transport.Request{
+		Service: "Service",
+	})
+	require.Errorf(t, err, "Received unexpected error:code:internal message:test error")
+}
+
+func TestCallOneWayResponseCloseError(t *testing.T) {
+	httpTransport := Transport{
+		client: &http.Client{
+			Transport: RoundTripFunc(func(req *http.Request) *http.Response {
+				return &http.Response{
+					StatusCode: 200,
+					Body:       errorReadCloser{closeErr: errors.New("test error")},
+					Header:     http.Header{},
+				}
+			}),
+		},
+		tracer: opentracing.GlobalTracer(),
+	}
+	ctrl := gomock.NewController(t)
+	chooser := peertest.NewMockChooser(ctrl)
+	chooser.EXPECT().Start().Return(nil)
+	peer := &httpPeer{
+		Peer: &abstractpeer.Peer{},
+	}
+	chooser.EXPECT().Choose(gomock.Any(), gomock.Any()).Return(peer, func(error) {}, nil)
+	o := &Outbound{
+		once:              lifecycle.NewOnce(),
+		chooser:           chooser,
+		urlTemplate:       defaultURLTemplate,
+		tracer:            httpTransport.tracer,
+		transport:         &httpTransport,
+		bothResponseError: true,
+	}
+	err := o.Start()
+	require.NoError(t, err)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+	_, err = o.CallOneway(ctx, &transport.Request{
+		Service: "Service",
+	})
+	require.Errorf(t, err, "Received unexpected error:code:internal message:test error")
 }
