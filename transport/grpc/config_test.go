@@ -23,7 +23,6 @@ package grpc
 import (
 	"context"
 	"net"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -386,6 +385,8 @@ func TestTransportSpec(t *testing.T) {
 
 func TestContextDialerOptionUsage(t *testing.T) {
 	type attrs map[string]interface{}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
@@ -396,14 +397,13 @@ func TestContextDialerOptionUsage(t *testing.T) {
 		require.NoError(t, server.Serve(lis))
 	}()
 
-	dialContextInvoked := int32(0)
+	dialContextInvoked := 0
 	dialer := func(ctx context.Context, addr string) (net.Conn, error) {
-		atomic.AddInt32(&dialContextInvoked, 1)
+		dialContextInvoked++
 		return (&net.Dialer{}).DialContext(ctx, "tcp", addr)
 	}
 	configurator := yarpcconfig.New()
-	err = configurator.RegisterTransport(TransportSpec(ContextDialer(dialer)))
-	require.NoError(t, err)
+	require.NoError(t, configurator.RegisterTransport(TransportSpec(ContextDialer(dialer))))
 	cfgData := attrs{
 		"outbounds": attrs{
 			"myservice": attrs{
@@ -411,29 +411,27 @@ func TestContextDialerOptionUsage(t *testing.T) {
 			},
 		},
 	}
-	cfg, err := configurator.LoadConfig("foo", cfgData)
+	cfg, err := configurator.LoadConfig("myservice", cfgData)
 	require.NoError(t, err)
 	outbound, ok := cfg.Outbounds["myservice"].Unary.(*Outbound)
-	require.True(t, ok)
+	require.True(t, ok, "expected a gRPC outbound")
+	require.NoError(t, outbound.Start())
 	defer outbound.Stop()
-	single := outbound.peerChooser.(*peer.Single)
-	require.NoError(t, single.Start())
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	peer, _, err := single.Choose(ctx, &transport.Request{})
+
+	peer, _, err := outbound.peerChooser.Choose(ctx, &transport.Request{})
 	require.NoError(t, err)
 	grpcPeer, ok := peer.(*grpcPeer)
-	require.True(t, ok)
+	require.True(t, ok, "expected a gRPC peer")
 
 	for {
 		state := grpcPeer.clientConn.GetState()
-		if grpcPeer.clientConn.GetState() == connectivity.Ready {
+		if state == connectivity.Ready {
 			break
 		}
 		grpcPeer.clientConn.WaitForStateChange(ctx, state)
 	}
-	require.Equal(t, connectivity.Ready, grpcPeer.clientConn.GetState())
-	require.Equal(t, int32(1), dialContextInvoked)
+	require.Equal(t, connectivity.Ready, grpcPeer.clientConn.GetState(), "expected gRPC connection in Ready state")
+	require.Equal(t, 1, dialContextInvoked, "counter should increment by one from dialer invocation")
 }
 
 func mapResolver(m map[string]string) func(string) (string, bool) {
