@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- gRPC: accept dialer options in gRPC transportSpec config
 ### Fixed
 - Http: fix memory and connection leak in http outbound call handler
 - peer: the peer implementations provided by yarpc (hashring32, pendingheap,
