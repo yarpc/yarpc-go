@@ -47,6 +47,7 @@ func faultFromCode(code yarpcerrors.Code) fault {
 		yarpcerrors.CodeAborted,
 		yarpcerrors.CodeOutOfRange,
 		yarpcerrors.CodeUnauthenticated,
+		yarpcerrors.CodeUnimplemented,
 		yarpcerrors.CodeResourceExhausted:
 		return clientFault
 
@@ -54,8 +55,7 @@ func faultFromCode(code yarpcerrors.Code) fault {
 		yarpcerrors.CodeDeadlineExceeded,
 		yarpcerrors.CodeInternal,
 		yarpcerrors.CodeUnavailable,
-		yarpcerrors.CodeDataLoss,
-		yarpcerrors.CodeUnimplemented:
+		yarpcerrors.CodeDataLoss:
 		return serverFault
 	}
 
