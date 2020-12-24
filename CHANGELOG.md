@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Fixed
 - Http: fix memory and connection leak in http outbound call handler
+- Observability: error code CodeUnimplemented will be marked as an `application_error`
 
 ## [1.49.1] - 2020-11-17
 ### Fixed
