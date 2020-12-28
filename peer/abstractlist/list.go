@@ -52,6 +52,12 @@ import (
 // the implementation is free to perform mutations on its own data without
 // locks.
 //
+// It should be noted that since the abstractlist.List is using a write
+// lock for Add, Remove and Choose, performances of the abstract.List
+// might be limited for a given implementation.
+// For instance, a tworandomchoices implementation would not need
+// a write lock for the method Choose but only a read lock.
+//
 // Choose must return nil immediately if the collection is empty.
 // The abstractlist.List guarantees that peers will only be added if they're
 // absent, and only removed they are present.
@@ -464,6 +470,10 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 // choose guards the underlying implementation's consistency around a lock, and
 // recovers the lock if the underlying list panics.
 func (pl *List) choose(req *transport.Request) peer.StatusPeer {
+	// Even if all of the implementation provided by yarpc
+	// implements their own locking system - since v1.50.0
+	// this lock is needed for supporting potential
+	// implementation defined outside of yarpc
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
