@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - gRPC: accept dialer options in gRPC transportSpec config
 ### Fixed
 - Http: fix memory and connection leak in http outbound call handler
+- Observability: error code CodeUnimplemented will be marked as an `application_error`
 - peer: the peer implementations provided by yarpc (hashring32, pendingheap,
   randpeer, roundrobin, tworandomchoices) are thread-safe now
 
