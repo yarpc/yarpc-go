@@ -80,11 +80,10 @@ func New(hash HashFunc32, options ...Option) *Hashring32 {
 	ring.hashesArray = make([]uint32, 0, capacity)
 	ring.membersMapByHash = make(map[uint32](map[string]struct{}), capacity)
 	ring.membersSet = make(map[string]struct{}, ring.numPeersEstimate)
-	// TODO: Adjust parameters base on benchmarks
 	ring.sorter = radixsort32.New(
 		radixsort32.Radix(16),
 		radixsort32.MaxLen(capacity),
-		radixsort32.MinLen(1000))
+		radixsort32.MinLen(6000))
 
 	return ring
 }

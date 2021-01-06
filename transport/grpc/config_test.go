@@ -22,6 +22,7 @@ package grpc
 
 import (
 	"context"
+	"net"
 	"testing"
 	"time"
 
@@ -30,6 +31,8 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/yarpcconfig"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 )
 
 func TestNewTransportSpecOptions(t *testing.T) {
@@ -95,9 +98,10 @@ func TestTransportSpec(t *testing.T) {
 	}
 
 	type wantOutbound struct {
-		Address    string
-		TLS        bool
-		Compressor string
+		Address                 string
+		TLS                     bool
+		Compressor              string
+		WantCustomContextDialer bool
 	}
 
 	type test struct {
@@ -273,6 +277,23 @@ func TestTransportSpec(t *testing.T) {
 				},
 			},
 		},
+		{
+			desc: "simple outbound with custom dialer option",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{"address": "localhost:54569"},
+				},
+			},
+			opts: []Option{ContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+				return (&net.Dialer{}).DialContext(ctx, "TCP", addr)
+			})},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {
+					Address:                 "localhost:54569",
+					WantCustomContextDialer: true,
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -353,10 +374,64 @@ func TestTransportSpec(t *testing.T) {
 					dialer, ok := single.Transport().(*Dialer)
 					require.True(t, ok, "expected *Dialer, got %T", single.Transport())
 					assert.Equal(t, wantOutbound.TLS, dialer.options.creds != nil)
+					if wantOutbound.WantCustomContextDialer {
+						assert.NotNil(t, dialer.options.contextDialer, "expected custom context dialer")
+					}
 				}
 			}
 		})
 	}
+}
+
+func TestContextDialerOptionUsage(t *testing.T) {
+	type attrs map[string]interface{}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer lis.Close()
+	server := grpc.NewServer()
+	defer server.Stop()
+	go func() {
+		require.NoError(t, server.Serve(lis))
+	}()
+
+	dialContextInvoked := 0
+	dialer := func(ctx context.Context, addr string) (net.Conn, error) {
+		dialContextInvoked++
+		return (&net.Dialer{}).DialContext(ctx, "tcp", addr)
+	}
+	configurator := yarpcconfig.New()
+	require.NoError(t, configurator.RegisterTransport(TransportSpec(ContextDialer(dialer))))
+	cfgData := attrs{
+		"outbounds": attrs{
+			"myservice": attrs{
+				TransportName: attrs{"address": lis.Addr().String()},
+			},
+		},
+	}
+	cfg, err := configurator.LoadConfig("myservice", cfgData)
+	require.NoError(t, err)
+	outbound, ok := cfg.Outbounds["myservice"].Unary.(*Outbound)
+	require.True(t, ok, "expected a gRPC outbound")
+	require.NoError(t, outbound.Start())
+	defer outbound.Stop()
+
+	peer, _, err := outbound.peerChooser.Choose(ctx, &transport.Request{})
+	require.NoError(t, err)
+	grpcPeer, ok := peer.(*grpcPeer)
+	require.True(t, ok, "expected a gRPC peer")
+
+	for {
+		state := grpcPeer.clientConn.GetState()
+		if state == connectivity.Ready {
+			break
+		}
+		grpcPeer.clientConn.WaitForStateChange(ctx, state)
+	}
+	require.Equal(t, connectivity.Ready, grpcPeer.clientConn.GetState(), "expected gRPC connection in Ready state")
+	require.Equal(t, 1, dialContextInvoked, "counter should increment by one from dialer invocation")
 }
 
 func mapResolver(m map[string]string) func(string) (string, bool) {

@@ -22,6 +22,7 @@ package roundrobin
 
 import (
 	"container/ring"
+	"sync"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -52,14 +53,18 @@ func (s *subscriber) UpdatePendingRequestCount(int) {}
 
 // peerRing provides a safe way to interact (Add/Remove/Get) with a potentially
 // changing list of peer objects
-// peerRing is NOT Thread-safe, make sure to only call peerRing functions with a lock
 type peerRing struct {
 	nextNode *ring.Ring
+
+	m sync.RWMutex
 }
 
 // Add a peer.StatusPeer to the end of the peerRing, if the ring is empty it
 // initializes the nextNode marker
 func (pr *peerRing) Add(p peer.StatusPeer, _ peer.Identifier) abstractlist.Subscriber {
+	pr.m.Lock()
+	defer pr.m.Unlock()
+
 	sub := &subscriber{peer: p}
 	newNode := ring.New(1)
 	newNode.Value = sub
@@ -78,6 +83,9 @@ func (pr *peerRing) Add(p peer.StatusPeer, _ peer.Identifier) abstractlist.Subsc
 // Remove the peer from the ring. Use the subscriber to address the node of the
 // ring directly.
 func (pr *peerRing) Remove(p peer.StatusPeer, _ peer.Identifier, s abstractlist.Subscriber) {
+	pr.m.Lock()
+	defer pr.m.Unlock()
+
 	sub, ok := s.(*subscriber)
 	if !ok {
 		// Don't panic.
@@ -102,6 +110,9 @@ func (pr *peerRing) isNextNode(node *ring.Ring) bool {
 // Choose returns the next peer in the ring, or nil if there is no peer in the ring
 // after it has the next peer, it increments the nextPeer marker in the ring
 func (pr *peerRing) Choose(_ *transport.Request) peer.StatusPeer {
+	pr.m.Lock()
+	defer pr.m.Unlock()
+
 	if pr.nextNode == nil {
 		return nil
 	}
