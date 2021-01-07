@@ -73,7 +73,7 @@ line feed`),
 	}
 	_, err = out.Call(ctx, req)
 
-	require.Contains(t, err.Error(), yarpcerrors.InvalidArgumentErrorf("grpc request header value includes invalid characters").Error())
+	require.Contains(t, err.Error(), yarpcerrors.InvalidArgumentErrorf("grpc request header value contains invalid characters including ASCII 0xd, 0xa, or 0x0").Error())
 }
 
 func TestCallStreamWhenNotRunning(t *testing.T) {
