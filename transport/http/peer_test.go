@@ -23,6 +23,7 @@ package http_test
 import (
 	"context"
 	"runtime"
+	"sync"
 	"testing"
 	"time"
 
@@ -130,7 +131,12 @@ func TestHTTPOnSuspect(t *testing.T) {
 	integrationtest.Blast(ctx, t, c)
 
 	// Induce the peer management loop to exit through its shutdown path.
-	go server.Stop()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		server.Stop()
+	}()
 	ctx = context.Background()
 	ctx, cancel = context.WithTimeout(ctx, 50*testtime.Millisecond)
 	defer cancel()
@@ -144,6 +150,10 @@ func TestHTTPOnSuspect(t *testing.T) {
 			break
 		}
 	}
+
+	// wait group to make sure the server is well stopped when we reach this step
+	// goroutine leak with the test otherwise
+	wg.Wait()
 }
 
 func TestIntegration(t *testing.T) {
