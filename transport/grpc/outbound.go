@@ -109,6 +109,9 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 	if request == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for grpc outbound was nil")
 	}
+	if err := validateRequest(request); err != nil {
+		return nil, err
+	}
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "error waiting for grpc outbound to start for service: %s", request.Service)
 	}
@@ -129,6 +132,21 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 		ApplicationError:     metadataToIsApplicationError(responseMD),
 		ApplicationErrorMeta: metadataToApplicationErrorMeta(responseMD),
 	}, invokeErr
+}
+
+func validateRequest(req *transport.Request) error {
+	for _, v := range req.Headers.Items() {
+		// from https://httpwg.org/specs/rfc7540.html#rfc.section.10.3:
+		// HTTP/2 allows header field values that are not valid.
+		// While most of the values that can be encoded will not alter header field parsing,
+		// carriage return (CR, ASCII 0xd), line feed (LF, ASCII 0xa),
+		// and the zero character (NUL, ASCII 0x0) might be exploited
+		// by an attacker if they are translated verbatim.
+		if strings.ContainsRune(v, '\r') || strings.ContainsRune(v, '\n') || strings.ContainsRune(v, '\x00') {
+			return yarpcerrors.InvalidArgumentErrorf("grpc request header value includes invalid characters")
+		}
+	}
+	return nil
 }
 
 func (o *Outbound) invoke(
