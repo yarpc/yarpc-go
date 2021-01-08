@@ -48,8 +48,9 @@ import (
 const UserAgent = "yarpc-go/" + yarpc.Version
 
 var (
-	_ transport.UnaryOutbound              = (*Outbound)(nil)
-	_ introspection.IntrospectableOutbound = (*Outbound)(nil)
+	_                         transport.UnaryOutbound              = (*Outbound)(nil)
+	_                         introspection.IntrospectableOutbound = (*Outbound)(nil)
+	invalidHeaderValueCharSet                                      = "\r\n" + string('\x00') // NUL
 )
 
 // Outbound is a transport.UnaryOutbound.
@@ -142,7 +143,11 @@ func validateRequest(req *transport.Request) error {
 		// carriage return (CR, ASCII 0xd), line feed (LF, ASCII 0xa),
 		// and the zero character (NUL, ASCII 0x0) might be exploited
 		// by an attacker if they are translated verbatim.
-		if strings.ContainsRune(v, '\r') || strings.ContainsRune(v, '\n') || strings.ContainsRune(v, '\x00') {
+		// This should be done by grpc-go but the workaround in https://github.com/grpc/grpc-go/pull/610
+		// does not cover this case.
+		// This validation can be entirely removed if the https://github.com/grpc/grpc/issues/4672
+		// is solved properly.
+		if strings.ContainsAny(v, invalidHeaderValueCharSet) {
 			return yarpcerrors.InvalidArgumentErrorf("grpc request header value contains invalid characters including ASCII 0xd, 0xa, or 0x0")
 		}
 	}
