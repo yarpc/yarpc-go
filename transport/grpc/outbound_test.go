@@ -61,19 +61,25 @@ func TestCallWithInvalidHeaderValue(t *testing.T) {
 	defer tran.Stop()
 	defer out.Stop()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
-	defer cancel()
-	req := &transport.Request{
-		Caller:    "caller",
-		Service:   "service",
-		Encoding:  transport.Encoding("raw"),
-		Procedure: "proc",
-		Headers: transport.NewHeaders().With("valid-key", `value with
-line feed`),
+	malformedValues := []string{
+		"value with line feed\n",
+		"value with carriage return\r",
+		"value with Nul" + string('\x00'),
 	}
-	_, err = out.Call(ctx, req)
+	for _, v := range malformedValues {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+		defer cancel()
+		req := &transport.Request{
+			Caller:    "caller",
+			Service:   "service",
+			Encoding:  transport.Encoding("raw"),
+			Procedure: "proc",
+			Headers:   transport.NewHeaders().With("valid-key", v),
+		}
+		_, err = out.Call(ctx, req)
 
-	require.Contains(t, err.Error(), yarpcerrors.InvalidArgumentErrorf("grpc request header value contains invalid characters including ASCII 0xd, 0xa, or 0x0").Error())
+		require.Contains(t, err.Error(), yarpcerrors.InvalidArgumentErrorf("grpc request header value contains invalid characters including ASCII 0xd, 0xa, or 0x0").Error())
+	}
 }
 
 func TestCallStreamWhenNotRunning(t *testing.T) {
