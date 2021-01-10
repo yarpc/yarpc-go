@@ -294,6 +294,9 @@ func (o *Outbound) stream(
 		return nil, yarpcerrors.InvalidArgumentErrorf("stream request requires a request metadata")
 	}
 	treq := req.Meta.ToRequest()
+	if err := validateRequest(treq); err != nil {
+		return nil, err
+	}
 	md, err := transportRequestToMetadata(treq)
 	if err != nil {
 		return nil, err
