@@ -297,6 +297,7 @@ func (o *Outbound) stream(
 	if err := validateRequest(treq); err != nil {
 		return nil, err
 	}
+
 	md, err := transportRequestToMetadata(treq)
 	if err != nil {
 		return nil, err
