@@ -5,7 +5,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- No changes yet.
+### Added
+- gRPC: accept dialer options in gRPC transportSpec config
+### Fixed
+- Http: fix memory and connection leak in http outbound call handler
+- Observability: error code CodeUnimplemented will be marked as an `application_error`
+- peer: the peer implementations provided by yarpc (hashring32, pendingheap,
+  randpeer, roundrobin, tworandomchoices) are thread-safe now
 
 ## [1.49.1] - 2020-11-17
 ### Fixed
@@ -1306,6 +1312,7 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
+
 [Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.49.1...HEAD
 [1.49.1]: https://github.com/yarpc/yarpc-go/compare/v1.49.0...v1.49.1
 [1.49.0]: https://github.com/yarpc/yarpc-go/compare/v1.48.0...v1.49.0
