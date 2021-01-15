@@ -1,5 +1,5 @@
 steps:
-  - name: ":docker: :package: 1.5"
+  - name: ":docker: :package: 1.15"
     plugins:
       docker-compose#v2.0.0:
         build: yarpc-go-1.15
