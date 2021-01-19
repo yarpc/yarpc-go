@@ -25,6 +25,7 @@ import (
 	"sync"
 	"time"
 
+	"go.uber.org/atomic"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/abstractlist"
@@ -68,7 +69,6 @@ func (l *twoRandomChoicesList) Add(peer peer.StatusPeer, _ peer.Identifier) abst
 	l.subscribers = append(l.subscribers, &subscriber{
 		index: index,
 		peer:  peer,
-		list:  l,
 	})
 	return l.subscribers[index]
 }
@@ -104,28 +104,20 @@ func (l *twoRandomChoicesList) Choose(_ *transport.Request) peer.StatusPeer {
 	if j >= numSubs {
 		j -= numSubs
 	}
-	if l.subscribers[i].pending > l.subscribers[j].pending {
+	if l.subscribers[i].pending.Load() > l.subscribers[j].pending.Load() {
 		i = j
 	}
 	return l.subscribers[i].peer
 }
 
-func (l *twoRandomChoicesList) updatePendingRequestCountForPeer(s *subscriber, pendingRequestCount int) {
-	l.m.Lock()
-	defer l.m.Unlock()
-
-	s.pending = pendingRequestCount
-}
-
 type subscriber struct {
 	index   int
 	peer    peer.StatusPeer
-	pending int
-	list    *twoRandomChoicesList
+	pending atomic.Int32
 }
 
 var _ abstractlist.Subscriber = (*subscriber)(nil)
 
 func (s *subscriber) UpdatePendingRequestCount(pendingRequestCount int) {
-	s.list.updatePendingRequestCountForPeer(s, pendingRequestCount)
+	s.pending.Store(int32(pendingRequestCount))
 }
