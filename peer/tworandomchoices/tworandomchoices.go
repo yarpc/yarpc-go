@@ -110,7 +110,7 @@ func (l *twoRandomChoicesList) Choose(_ *transport.Request) peer.StatusPeer {
 	return l.subscribers[i].peer
 }
 
-func (l *twoRandomChoicesList) UpdatePendingRequestCountForPeer(s *subscriber, pendingRequestCount int) {
+func (l *twoRandomChoicesList) updatePendingRequestCountForPeer(s *subscriber, pendingRequestCount int) {
 	l.m.Lock()
 	defer l.m.Unlock()
 
@@ -127,5 +127,5 @@ type subscriber struct {
 var _ abstractlist.Subscriber = (*subscriber)(nil)
 
 func (s *subscriber) UpdatePendingRequestCount(pendingRequestCount int) {
-	s.list.UpdatePendingRequestCountForPeer(s, pendingRequestCount)
+	s.list.updatePendingRequestCountForPeer(s, pendingRequestCount)
 }
