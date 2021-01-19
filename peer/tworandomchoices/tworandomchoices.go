@@ -68,6 +68,7 @@ func (l *twoRandomChoicesList) Add(peer peer.StatusPeer, _ peer.Identifier) abst
 	l.subscribers = append(l.subscribers, &subscriber{
 		index: index,
 		peer:  peer,
+		list:  l,
 	})
 	return l.subscribers[index]
 }
@@ -103,32 +104,28 @@ func (l *twoRandomChoicesList) Choose(_ *transport.Request) peer.StatusPeer {
 	if j >= numSubs {
 		j -= numSubs
 	}
-	if l.subscribers[i].pendingRequestCount() > l.subscribers[j].pendingRequestCount() {
+	if l.subscribers[i].pending > l.subscribers[j].pending {
 		i = j
 	}
 	return l.subscribers[i].peer
+}
+
+func (l *twoRandomChoicesList) UpdatePendingRequestCountForPeer(s *subscriber, pendingRequestCount int) {
+	l.m.Lock()
+	defer l.m.Unlock()
+
+	s.pending = pendingRequestCount
 }
 
 type subscriber struct {
 	index   int
 	peer    peer.StatusPeer
 	pending int
-
-	m sync.RWMutex
+	list    *twoRandomChoicesList
 }
 
 var _ abstractlist.Subscriber = (*subscriber)(nil)
 
 func (s *subscriber) UpdatePendingRequestCount(pendingRequestCount int) {
-	s.m.Lock()
-	defer s.m.Unlock()
-
-	s.pending = pendingRequestCount
-}
-
-func (s *subscriber) pendingRequestCount() int {
-	s.m.RLock()
-	defer s.m.RUnlock()
-
-	return s.pending
+	s.list.UpdatePendingRequestCountForPeer(s, pendingRequestCount)
 }
