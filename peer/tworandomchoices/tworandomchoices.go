@@ -103,24 +103,32 @@ func (l *twoRandomChoicesList) Choose(_ *transport.Request) peer.StatusPeer {
 	if j >= numSubs {
 		j -= numSubs
 	}
-	if l.pending(i) > l.pending(j) {
+	if l.subscribers[i].pendingRequestCount() > l.subscribers[j].pendingRequestCount() {
 		i = j
 	}
 	return l.subscribers[i].peer
-}
-
-func (l *twoRandomChoicesList) pending(index int) int {
-	return l.subscribers[index].pending
 }
 
 type subscriber struct {
 	index   int
 	peer    peer.StatusPeer
 	pending int
+
+	m sync.RWMutex
 }
 
 var _ abstractlist.Subscriber = (*subscriber)(nil)
 
 func (s *subscriber) UpdatePendingRequestCount(pendingRequestCount int) {
+	s.m.Lock()
+	defer s.m.Unlock()
+
 	s.pending = pendingRequestCount
+}
+
+func (s *subscriber) pendingRequestCount() int {
+	s.m.RLock()
+	defer s.m.RUnlock()
+
+	return s.pending
 }
