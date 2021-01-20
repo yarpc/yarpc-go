@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -63,6 +63,7 @@ func TestRoundTripSuccess(t *testing.T) {
 
 	// start outbound
 	httpTransport := NewTransport()
+	defer httpTransport.Stop()
 	var out transport.UnaryOutbound = httpTransport.NewSingleOutbound(echoServer.URL)
 	require.NoError(t, out.Start(), "failed to start outbound")
 	defer out.Stop()
@@ -99,9 +100,12 @@ func TestRoundTripTimeout(t *testing.T) {
 		func(w http.ResponseWriter, r *http.Request) {
 			<-r.Context().Done() // never respond
 		}))
+	defer server.Close()
 
+	tran := NewTransport()
+	defer tran.Stop()
 	// start outbound
-	out := NewTransport().NewSingleOutbound(server.URL)
+	out := tran.NewSingleOutbound(server.URL)
 	require.NoError(t, out.Start(), "failed to start outbound")
 	defer out.Stop()
 
@@ -131,8 +135,11 @@ func TestRoundTripTimeout(t *testing.T) {
 func TestRoundTripNoDeadline(t *testing.T) {
 	URL := "http://foo-host"
 
-	out := NewTransport().NewSingleOutbound(URL)
+	tran := NewTransport()
+	defer tran.Stop()
+	out := tran.NewSingleOutbound(URL)
 	require.NoError(t, out.Start(), "could not start outbound")
+	defer out.Stop()
 
 	hreq, err := http.NewRequest("GET", URL, nil /* body */)
 	require.NoError(t, err)

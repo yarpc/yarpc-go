@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -96,8 +96,7 @@ func TestInboundStartError(t *testing.T) {
 	x := NewTransport()
 	i := x.NewInbound("invalid")
 	i.SetRouter(new(transporttest.MockRouter))
-	err := i.Start()
-	assert.Error(t, err, "expected failure")
+	assert.Error(t, i.Start(), "expected failure")
 }
 
 func TestInboundStartErrorBadGrabHeader(t *testing.T) {
@@ -119,6 +118,7 @@ func TestInboundMux(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	httpTransport := NewTransport()
+	defer httpTransport.Stop()
 	// TODO transport lifecycle
 
 	mux := http.NewServeMux()
