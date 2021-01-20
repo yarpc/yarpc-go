@@ -75,6 +75,7 @@ type Implementation interface {
 // pending request count changes.
 // A peer list implementation may have a single subscriber or a subscriber for
 // each peer.
+// UpdatePendingRequestCount is thread safe to be called
 type Subscriber interface {
 	UpdatePendingRequestCount(int)
 }
