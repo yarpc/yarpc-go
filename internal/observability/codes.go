@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -47,6 +47,7 @@ func faultFromCode(code yarpcerrors.Code) fault {
 		yarpcerrors.CodeAborted,
 		yarpcerrors.CodeOutOfRange,
 		yarpcerrors.CodeUnauthenticated,
+		yarpcerrors.CodeUnimplemented,
 		yarpcerrors.CodeResourceExhausted:
 		return clientFault
 
@@ -54,8 +55,7 @@ func faultFromCode(code yarpcerrors.Code) fault {
 		yarpcerrors.CodeDeadlineExceeded,
 		yarpcerrors.CodeInternal,
 		yarpcerrors.CodeUnavailable,
-		yarpcerrors.CodeDataLoss,
-		yarpcerrors.CodeUnimplemented:
+		yarpcerrors.CodeDataLoss:
 		return serverFault
 	}
 

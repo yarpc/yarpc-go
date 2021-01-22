@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -48,8 +48,9 @@ import (
 const UserAgent = "yarpc-go/" + yarpc.Version
 
 var (
-	_ transport.UnaryOutbound              = (*Outbound)(nil)
-	_ introspection.IntrospectableOutbound = (*Outbound)(nil)
+	_                         transport.UnaryOutbound              = (*Outbound)(nil)
+	_                         introspection.IntrospectableOutbound = (*Outbound)(nil)
+	invalidHeaderValueCharSet                                      = "\r\n" + string('\x00') // NUL
 )
 
 // Outbound is a transport.UnaryOutbound.
@@ -109,6 +110,9 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 	if request == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for grpc outbound was nil")
 	}
+	if err := validateRequest(request); err != nil {
+		return nil, err
+	}
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "error waiting for grpc outbound to start for service: %s", request.Service)
 	}
@@ -129,6 +133,25 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 		ApplicationError:     metadataToIsApplicationError(responseMD),
 		ApplicationErrorMeta: metadataToApplicationErrorMeta(responseMD),
 	}, invokeErr
+}
+
+func validateRequest(req *transport.Request) error {
+	for _, v := range req.Headers.Items() {
+		// from https://httpwg.org/specs/rfc7540.html#rfc.section.10.3:
+		// HTTP/2 allows header field values that are not valid.
+		// While most of the values that can be encoded will not alter header field parsing,
+		// carriage return (CR, ASCII 0xd), line feed (LF, ASCII 0xa),
+		// and the zero character (NUL, ASCII 0x0) might be exploited
+		// by an attacker if they are translated verbatim.
+		// This should be done by grpc-go but the workaround in https://github.com/grpc/grpc-go/pull/610
+		// does not cover this case.
+		// This validation can be entirely removed if the https://github.com/grpc/grpc/issues/4672
+		// is solved properly.
+		if strings.ContainsAny(v, invalidHeaderValueCharSet) {
+			return yarpcerrors.InvalidArgumentErrorf("grpc request header value contains invalid characters including ASCII 0xd, 0xa, or 0x0")
+		}
+	}
+	return nil
 }
 
 func (o *Outbound) invoke(
@@ -271,6 +294,10 @@ func (o *Outbound) stream(
 		return nil, yarpcerrors.InvalidArgumentErrorf("stream request requires a request metadata")
 	}
 	treq := req.Meta.ToRequest()
+	if err := validateRequest(treq); err != nil {
+		return nil, err
+	}
+
 	md, err := transportRequestToMetadata(treq)
 	if err != nil {
 		return nil, err
