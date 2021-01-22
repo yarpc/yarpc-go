@@ -22,12 +22,14 @@ package grpc
 
 import (
 	"context"
+	"time"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/abstractpeer"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
+	"google.golang.org/grpc/keepalive"
 )
 
 type grpcPeer struct {
@@ -48,6 +50,11 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 			grpc.MaxCallRecvMsgSize(t.options.clientMaxRecvMsgSize),
 			grpc.MaxCallSendMsgSize(t.options.clientMaxSendMsgSize),
 		),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                time.Second * 20,
+			Timeout:             time.Second * 10,
+			PermitWithoutStream: true,
+		}),
 	}, options.grpcOptions()...)
 
 	clientConn, err := grpc.Dial(address, dialOptions...)
