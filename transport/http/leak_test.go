@@ -17,51 +17,14 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-
-package tchclient
+package http
 
 import (
-	"fmt"
+	"testing"
 
-	"github.com/crossdock/crossdock-go"
-	"github.com/uber/tchannel-go"
-	"go.uber.org/yarpc/internal/crossdock/client/params"
+	"go.uber.org/goleak"
 )
 
-const (
-	serverPort = 8082
-	serverName = "yarpc-test"
-)
-
-// Run exercises a YARPC server from a tchannel client.
-func Run(t crossdock.T) {
-	fatals := crossdock.Fatals(t)
-
-	encoding := t.Param(params.Encoding)
-	server := t.Param(params.Server)
-	serverHostPort := fmt.Sprintf("%v:%v", server, serverPort)
-
-	ch, err := tchannel.NewChannel("tchannel-client", nil)
-	fatals.NoError(err, "Could not create channel")
-
-	call := call{Channel: ch, ServerHostPort: serverHostPort}
-
-	switch encoding {
-	case "raw":
-		runRaw(t, call)
-	case "json":
-		runJSON(t, call)
-	case "thrift":
-		runThrift(t, call)
-	default:
-		fatals.Fail("", "unknown encoding %q", encoding)
-	}
-}
-
-// call contains the details needed for each tchannel scheme
-// to make an outbound call. Because the way you connect is not uniform
-// between schemes, it's not enough to just add a peer and go.
-type call struct {
-	Channel        *tchannel.Channel
-	ServerHostPort string
+func TestMain(m *testing.M) {
+	goleak.VerifyTestMain(m)
 }

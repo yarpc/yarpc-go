@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -38,6 +38,13 @@ import (
 	"google.golang.org/grpc"
 )
 
+// shared between Unary and Streaming InvalidHeaderValue tests.
+var malformedValues = []string{
+	"value with line feed\n",
+	"value with carriage return\r",
+	"value with Nul" + string('\x00'),
+}
+
 func TestTransportNamer(t *testing.T) {
 	assert.Equal(t, TransportName, NewTransport().NewOutbound(nil).TransportName())
 }
@@ -48,6 +55,33 @@ func TestNoRequest(t *testing.T) {
 
 	_, err := out.Call(context.Background(), nil)
 	assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for grpc outbound was nil"), err)
+}
+
+func TestCallWithInvalidHeaderValue(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	tran := NewTransport()
+	out := tran.NewSingleOutbound(listener.Addr().String())
+	require.NoError(t, tran.Start())
+	require.NoError(t, out.Start())
+	defer tran.Stop()
+	defer out.Stop()
+
+	for _, v := range malformedValues {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+		defer cancel()
+		req := &transport.Request{
+			Caller:    "caller",
+			Service:   "service",
+			Encoding:  transport.Encoding("raw"),
+			Procedure: "proc",
+			Headers:   transport.NewHeaders().With("valid-key", v),
+		}
+		_, err = out.Call(ctx, req)
+
+		require.Contains(t, err.Error(), yarpcerrors.InvalidArgumentErrorf("grpc request header value contains invalid characters including ASCII 0xd, 0xa, or 0x0").Error())
+	}
 }
 
 func TestCallStreamWhenNotRunning(t *testing.T) {
@@ -82,7 +116,7 @@ func TestCallStreamWithNoRequestMeta(t *testing.T) {
 	require.Contains(t, err.Error(), yarpcerrors.InvalidArgumentErrorf("stream request requires a request metadata").Error())
 }
 
-func TestCallStreamWithInvalidHeader(t *testing.T) {
+func TestCallWithReservedHeaderKey(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
@@ -133,6 +167,35 @@ func TestCallStreamWithInvalidProcedure(t *testing.T) {
 	_, err = out.CallStream(ctx, req)
 
 	require.Contains(t, err.Error(), yarpcerrors.InvalidArgumentErrorf("invalid procedure name: ").Error())
+}
+
+func TestCallStreamWithInvalidHeaderValue(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	tran := NewTransport()
+	out := tran.NewSingleOutbound(listener.Addr().String())
+	require.NoError(t, tran.Start())
+	require.NoError(t, out.Start())
+	defer tran.Stop()
+	defer out.Stop()
+
+	for _, v := range malformedValues {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+		defer cancel()
+		req := &transport.StreamRequest{
+			Meta: &transport.RequestMeta{
+				Caller:    "caller",
+				Service:   "service",
+				Encoding:  transport.Encoding("raw"),
+				Procedure: "proc",
+				Headers:   transport.NewHeaders().With("valid-key", v),
+			},
+		}
+		_, err = out.CallStream(ctx, req)
+
+		require.Contains(t, err.Error(), yarpcerrors.InvalidArgumentErrorf("grpc request header value contains invalid characters including ASCII 0xd, 0xa, or 0x0").Error())
+	}
 }
 
 func TestCallStreamWithChooserError(t *testing.T) {
