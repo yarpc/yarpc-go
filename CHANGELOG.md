@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+- No changes yet.
+
 ## [1.50.0] - 2021-01-22
 ### Added
 - gRPC: accept dialer options in gRPC transportSpec config
@@ -1313,6 +1316,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.50.0...HEAD
 [1.50.0]: https://github.com/yarpc/yarpc-go/compare/v1.50.0...v1.50.1
 [1.49.1]: https://github.com/yarpc/yarpc-go/compare/v1.49.0...v1.49.1
 [1.49.0]: https://github.com/yarpc/yarpc-go/compare/v1.48.0...v1.49.0
