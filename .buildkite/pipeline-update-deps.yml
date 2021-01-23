@@ -1,17 +1,17 @@
 steps:
-  - name: ":docker: :package: 1.13"
+  - name: ":docker: :package: 1.14"
     plugins:
       docker-compose#v2.0.0:
-        build: yarpc-go-1.13
+        build: yarpc-go-1.14
         image-repository: 027047743804.dkr.ecr.us-east-2.amazonaws.com/uber
     agents:
       queue: builders
   - wait
-  - name: ":go: 1.13 update-deps"
+  - name: ":go: 1.14 update-deps"
     command: "etc/bin/update-deps.sh"
     plugins:
       docker-compose#v2.0.0:
-        run: yarpc-go-1.13
+        run: yarpc-go-1.14
         env:
           # The script needs the following environment variables in addition
           # to those provided by the docker-compose.
