@@ -118,7 +118,7 @@ changed_files()
 update_module()
 {
   echo "--- Updating module $1"
-  (cd "$1" && go get -u && go mod tidy)
+  (cd "$1" && go get -u all && go mod tidy)
   if [ -n "$(changed_files)" ]; then
     git add --verbose "$1/go.mod" "$1/go.sum"
   fi
