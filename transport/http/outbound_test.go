@@ -635,6 +635,47 @@ func TestServiceMatchSuccess(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestGRPCInHTTPOut(t *testing.T) {
+	matchServer := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, req *http.Request) {
+			defer req.Body.Close()
+			h := req.Header
+			// make sure all pesudo fields are reset
+			for _, k := range http2PseudoHeaders {
+				assert.Zero(t, h.Get(k))
+			}
+			assert.Equal(t, "app-val1", h.Get("Rpc-Header-app-key1"))
+			assert.Equal(t, "test-authority", req.Host)
+			_, err := w.Write([]byte("http header return"))
+			assert.NoError(t, err)
+		},
+	))
+	defer matchServer.Close()
+
+	httpTransport := NewTransport()
+	defer httpTransport.Stop()
+	out := httpTransport.NewSingleOutbound(matchServer.URL)
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+	_, err := out.Call(ctx, &transport.Request{
+		Service:   "Service",
+		Transport: "grpc",
+		Headers: transport.HeadersFromMap(
+			map[string]string{
+				"app-key1":   "app-val1",
+				":authority": "test-authority",
+				":method":    "PUT",
+				":path":      "www.example.com",
+				":scheme":    "http",
+			},
+		),
+	})
+	require.NoError(t, err)
+}
+
 func TestServiceMatchFailed(t *testing.T) {
 	mismatchServer := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, req *http.Request) {
