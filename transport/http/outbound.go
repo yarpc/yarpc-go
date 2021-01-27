@@ -53,7 +53,18 @@ var (
 	_ introspection.IntrospectableOutbound = (*Outbound)(nil)
 )
 
-var defaultURLTemplate, _ = url.Parse("http://localhost")
+const http2AuthorityPseudoHeader = ":authority"
+
+var (
+	defaultURLTemplate, _ = url.Parse("http://localhost")
+	// from https://tools.ietf.org/html/rfc7540#section-8.1.2.3
+	http2PseudoHeaders = []string{
+		":method",
+		":scheme",
+		http2AuthorityPseudoHeader,
+		":path",
+	}
+)
 
 // OutboundOption customizes an HTTP Outbound.
 type OutboundOption func(*Outbound)
@@ -342,8 +353,23 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 	if err != nil {
 		return nil, err
 	}
+	// grpc in, http out case
+	if treq.Transport == "grpc" {
+		// from https://tools.ietf.org/html/rfc7540#section-8.1.2.3
+		// For ":authority", ...
+		// An intermediary that converts an HTTP/2 request to HTTP/1.1 MUST
+		// create a Host header field if one is not present in a request by
+		// copying the value of the ":authority" pseudo-header field.
+		if v, ok := treq.Headers.Get(http2AuthorityPseudoHeader); ok {
+			hreq.Host = v
+		}
+		// strip all http2 pseud-header fields
+		for _, k := range http2PseudoHeaders {
+			treq.Headers.Del(k)
+		}
+	}
 	hreq.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
-	return hreq, err
+	return hreq, nil
 }
 
 func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, *http.Request, opentracing.Span, error) {
