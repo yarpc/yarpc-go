@@ -363,7 +363,7 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 		if v, ok := treq.Headers.Get(http2AuthorityPseudoHeader); ok {
 			hreq.Host = v
 		}
-		// strip all http2 pseud-header fields
+		// strip all http2 pseudo-header fields
 		for _, k := range http2PseudoHeaders {
 			treq.Headers.Del(k)
 		}

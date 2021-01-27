@@ -688,12 +688,14 @@ func TestGRPCInHTTPOut(t *testing.T) {
 		func(w http.ResponseWriter, req *http.Request) {
 			defer req.Body.Close()
 			h := req.Header
-			// make sure all pesudo fields are reset
+			// make sure all pesudo-header fields are unset
 			for _, k := range http2PseudoHeaders {
 				assert.Zero(t, h.Get(k))
 			}
-			assert.Equal(t, "app-val1", h.Get("Rpc-Header-app-key1"))
+			// Host field came from ":authority" pesudo-header field
 			assert.Equal(t, "test-authority", req.Host)
+			// other application header are still set and prefixed
+			assert.Equal(t, "app-val1", h.Get("Rpc-Header-app-key1"))
 			_, err := w.Write([]byte("http header return"))
 			assert.NoError(t, err)
 		},
