@@ -49,6 +49,7 @@ type inboundCall interface {
 	ShardKey() string
 	RoutingKey() string
 	RoutingDelegate() string
+	CallerProcedure() string
 
 	Format() tchannel.Format
 
@@ -176,6 +177,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 		ShardKey:        call.ShardKey(),
 		RoutingKey:      call.RoutingKey(),
 		RoutingDelegate: call.RoutingDelegate(),
+		CallerProcedure: call.CallerProcedure(),
 	}
 
 	ctx, headers, err := readRequestHeaders(ctx, call.Format(), call.Arg2Reader)

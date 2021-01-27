@@ -101,6 +101,7 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction dir
 	d.Add(req.Procedure)
 	d.Add(req.RoutingKey)
 	d.Add(req.RoutingDelegate)
+	d.Add(req.CallerProcedure)
 	d.Add(string(direction))
 	d.Add(rpcType.String())
 	e := g.getOrCreateEdge(d.Digest(), req, string(direction), rpcType)
@@ -201,6 +202,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist []str
 		"encoding":         string(req.Encoding),
 		"routing_key":      req.RoutingKey,
 		"routing_delegate": req.RoutingDelegate,
+		"source_procedure": req.CallerProcedure,
 		"direction":        direction,
 		"rpc_type":         rpcType.String(),
 	}
@@ -473,6 +475,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist []str
 		zap.String("encoding", string(req.Encoding)),
 		zap.String("routingKey", req.RoutingKey),
 		zap.String("routingDelegate", req.RoutingDelegate),
+		zap.String("sourceProcedure", req.CallerProcedure),
 		zap.String("direction", direction),
 	)
 	return &edge{

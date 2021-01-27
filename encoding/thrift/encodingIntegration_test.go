@@ -39,7 +39,6 @@ func validateReq(testname string, ctx context.Context) (bool, string) {
 			}
 		}
 	}
-	//fmt.Println("Entered in validateReq :  ", testname)
 	return true, ""
 }
 
@@ -66,16 +65,6 @@ func TestThriftMetrics1(t *testing.T) {
 				"Procedure":       "TestService::Call",
 			},
 		},
-		/*
-			{
-				name: "test2",
-				req:  &yarpctest.Call{},
-				expReq: map[string]string{
-					"CallerProcedure": "",
-					"Procedure":       "TestService::Call",
-				},
-			},
-		*/
 	}
 	allTests = make(map[string]testStructure)
 
@@ -89,11 +78,6 @@ func TestThriftMetrics1(t *testing.T) {
 				allTests[testName] = test
 				runTest(t, test, client, testName)
 			}
-			//ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-			//defer cancel()
-
-			//_, err := client.Call(ctx, _wantSuccess)
-			//require.NoError(t, err, "unexpected error")
 		})
 	}
 }
@@ -108,13 +92,4 @@ func (testServer1) Call(ctx context.Context, val string) (string, error) {
 	}
 
 	return "", &test.ExceptionWithoutCode{Val: err}
-	/*
-		switch val {
-		case _wantExceptionWithoutCode:
-			return "", &test.ExceptionWithoutCode{Val: val}
-		case _wantExceptionWithCode:
-			return "", &test.ExceptionWithCode{Val: val}
-		default: // success
-			return val, nil
-		}*/
 }

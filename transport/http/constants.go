@@ -69,6 +69,10 @@ const (
 	// Request.RoutingDelegate attribute.
 	RoutingDelegateHeader = "Rpc-Routing-Delegate"
 
+	// CallerProcedureHeader is the header key for the name of the rpc procedure from the service sending the
+	// request. This corresponds to the Request.CallerProcedure attribute.
+	CallerProcedureHeader = "Rpc-Caller-Procedure"
+
 	// Whether the response body contains an application error.
 	ApplicationStatusHeader = "Rpc-Status"
 
