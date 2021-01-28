@@ -402,10 +402,6 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 		req.Header.Set(RoutingDelegateHeader, treq.RoutingDelegate)
 	}
 
-	if treq.CallerProcedure != "" {
-		req.Header.Set(CallerProcedureHeader, treq.CallerProcedure)
-	}
-
 	encoding := string(treq.Encoding)
 	if encoding != "" {
 		req.Header.Set(EncodingHeader, encoding)
@@ -526,7 +522,6 @@ func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start 
 			ShardKey:        hreq.Header.Get(ShardKeyHeader),
 			RoutingKey:      hreq.Header.Get(RoutingKeyHeader),
 			RoutingDelegate: hreq.Header.Get(RoutingDelegateHeader),
-			CallerProcedure: hreq.Header.Get(CallerProcedureHeader),
 			Headers:         applicationHeaders.FromHTTPHeaders(hreq.Header, transport.Headers{}),
 		}
 	}

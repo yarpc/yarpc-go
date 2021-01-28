@@ -29,12 +29,12 @@ func validateReq(testname string, ctx context.Context) (bool, string) {
 		switch name {
 		case "CallerProcedure":
 			if call.CallerProcedure() != value {
-				err := "TestName(" + testname + ") - CallerProcedure '" + call.CallerProcedure() + "' does match with expected value '" + value + "'"
+				err := "TestName(" + testname + ") - CallerProcedure '" + call.CallerProcedure() + "' does not match with expected value '" + value + "'"
 				return false, err
 			}
 		case "Procedure":
 			if call.Procedure() != value {
-				err := "TestName(" + testname + ") - Procedure '" + call.Procedure() + "' does match with expected value '" + value + "'"
+				err := "TestName(" + testname + ") - Procedure '" + call.Procedure() + "' does not match with expected value '" + value + "'"
 				return false, err
 			}
 		}
@@ -61,7 +61,7 @@ func TestThriftMetrics1(t *testing.T) {
 				Procedure: "ABC1",
 			},
 			expReq: map[string]string{
-				"CallerProcedure": "ABC1",
+				"CallerProcedure": "",
 				"Procedure":       "TestService::Call",
 			},
 		},

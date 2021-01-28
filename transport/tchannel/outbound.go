@@ -124,7 +124,6 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		ShardKey:        req.ShardKey,
 		RoutingKey:      req.RoutingKey,
 		RoutingDelegate: req.RoutingDelegate,
-		CallerProcedure: req.CallerProcedure,
 	}
 
 	// If the hostport is given, we use the BeginCall on the channel
