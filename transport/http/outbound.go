@@ -360,7 +360,7 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 		// An intermediary that converts an HTTP/2 request to HTTP/1.1 MUST
 		// create a Host header field if one is not present in a request by
 		// copying the value of the ":authority" pseudo-header field.
-		if v, ok := treq.Headers.Get(http2AuthorityPseudoHeader); ok {
+		if v, ok := treq.Headers.Get(http2AuthorityPseudoHeader); ok && hreq.Host == "" {
 			hreq.Host = v
 		}
 		// strip all http2 pseudo-header fields
