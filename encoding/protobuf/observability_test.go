@@ -22,6 +22,7 @@ package protobuf_test
 
 import (
 	"context"
+	"net"
 	"testing"
 	"time"
 
@@ -29,17 +30,30 @@ import (
 	"github.com/gogo/protobuf/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/net/metrics"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/encoding/protobuf/internal/testpb"
 	"go.uber.org/yarpc/internal/testutils"
+	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/yarpcerrors"
-	"go.uber.org/yarpc/yarpctest"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
+)
+
+const (
+	_clientName = "caller"
+	_serverName = "callee"
+
+	// from observability middleware
+	_errorInbound  = "Error handling inbound request."
+	_errorOutbound = "Error making outbound call."
 )
 
 func TestProtobufErrorDetailObservability(t *testing.T) {
-	client, observedLogs, clientMetricsRoot, serverMetricsRoot, cleanup := initClientAndServer(t, &observabilityTestServer{})
+	client, observedLogs, clientMetricsRoot, serverMetricsRoot, cleanup := initClientAndServer(t)
 	defer cleanup()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -81,11 +95,10 @@ func TestProtobufErrorDetailObservability(t *testing.T) {
 }
 
 func TestProtobufMetrics(t *testing.T) {
-	client, _, clientMetricsRoot, serverMetricsRoot, cleanup := initClientAndServer(t, &observabilityTestServer{})
+	client, _, clientMetricsRoot, serverMetricsRoot, cleanup := initClientAndServer(t)
 	defer cleanup()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	ctx = yarpctest.ContextWithCall(ctx, &yarpctest.Call{Procedure: "ABC"})
 	defer cancel()
 
 	_, err := client.Unary(ctx, &testpb.TestMessage{Value: "success"})
@@ -116,7 +129,7 @@ func TestProtobufMetrics(t *testing.T) {
 }
 
 func TestProtobufStreamMetrics(t *testing.T) {
-	client, _, clientMetricsRoot, serverMetricsRoot, cleanup := initClientAndServer(t, &observabilityTestServer{})
+	client, _, clientMetricsRoot, serverMetricsRoot, cleanup := initClientAndServer(t)
 	defer cleanup()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Hour)
@@ -173,6 +186,97 @@ func TestProtobufStreamMetrics(t *testing.T) {
 		}
 		testutils.AssertHistograms(t, wantHistograms, serverMetricsRoot.Snapshot().Histograms)
 	})
+}
+
+func assertLogs(t *testing.T, wantFields []zapcore.Field, logs []observer.LoggedEntry) {
+	require.Len(t, logs, 2, "unexpected number of logs")
+
+	t.Run("inbound", func(t *testing.T) {
+		require.Equal(t, _errorInbound, logs[0].Message, "unexpected log")
+		assertLogFields(t, wantFields, logs[0].Context)
+	})
+
+	t.Run("outbound", func(t *testing.T) {
+		require.Equal(t, _errorOutbound, logs[1].Message, "unexpected log")
+		assertLogFields(t, wantFields, logs[1].Context)
+	})
+}
+
+func assertLogFields(t *testing.T, wantFields, gotContext []zapcore.Field) {
+	gotFields := make(map[string]zapcore.Field)
+	for _, log := range gotContext {
+		gotFields[log.Key] = log
+	}
+
+	for _, want := range wantFields {
+		got, ok := gotFields[want.Key]
+		if assert.True(t, ok, "key %q not found", want.Key) {
+			assert.Equal(t, want, got, "unexpected log field")
+		}
+	}
+}
+
+func initClientAndServer(t *testing.T) (
+	client testpb.TestYARPCClient,
+	observedLogs *observer.ObservedLogs,
+	clientMetricsRoot *metrics.Root,
+	serverMetricsRoot *metrics.Root,
+	cleanup func(),
+) {
+	loggerCore, observedLogs := observer.New(zapcore.DebugLevel)
+	clientMetricsRoot, serverMetricsRoot = metrics.New(), metrics.New()
+
+	serverAddr, cleanupServer := newServer(t, loggerCore, serverMetricsRoot)
+	client, cleanupClient := newClient(t, serverAddr, loggerCore, clientMetricsRoot)
+
+	_ = observedLogs.TakeAll() // ignore all start up logs
+
+	return client, observedLogs, clientMetricsRoot, serverMetricsRoot, func() {
+		cleanupServer()
+		cleanupClient()
+	}
+}
+
+func newServer(t *testing.T, loggerCore zapcore.Core, metricsRoot *metrics.Root) (addr string, cleanup func()) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	inbound := grpc.NewTransport().NewInbound(listener)
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name:     _serverName,
+		Inbounds: yarpc.Inbounds{inbound},
+		Logging:  yarpc.LoggingConfig{Zap: zap.New(loggerCore)},
+		Metrics:  yarpc.MetricsConfig{Metrics: metricsRoot.Scope()},
+	})
+
+	dispatcher.Register(testpb.BuildTestYARPCProcedures(&observabilityTestServer{}))
+	require.NoError(t, dispatcher.Start(), "could not start server dispatcher")
+
+	addr = inbound.Addr().String()
+	cleanup = func() { assert.NoError(t, dispatcher.Stop(), "could not stop dispatcher") }
+	return addr, cleanup
+}
+
+func newClient(t *testing.T, serverAddr string, loggerCore zapcore.Core, metricsRoot *metrics.Root) (client testpb.TestYARPCClient, cleanup func()) {
+	outbound := grpc.NewTransport().NewSingleOutbound(serverAddr)
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name: _clientName,
+		Outbounds: map[string]transport.Outbounds{
+			_serverName: {
+				ServiceName: _serverName,
+				Unary:       outbound,
+				Stream:      outbound,
+			},
+		},
+		Logging: yarpc.LoggingConfig{Zap: zap.New(loggerCore)},
+		Metrics: yarpc.MetricsConfig{Metrics: metricsRoot.Scope()},
+	})
+
+	client = testpb.NewTestYARPCClient(dispatcher.ClientConfig(_serverName))
+	require.NoError(t, dispatcher.Start(), "could not start client dispatcher")
+
+	cleanup = func() { assert.NoError(t, dispatcher.Stop(), "could not stop dispatcher") }
+	return client, cleanup
 }
 
 type observabilityTestServer struct{}

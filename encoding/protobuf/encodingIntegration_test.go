@@ -22,15 +22,19 @@ package protobuf_test
 
 import (
 	"context"
+	"net"
 	"testing"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/types"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/encoding/protobuf/internal/testpb"
+	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/yarpc/yarpctest"
 )
@@ -74,7 +78,7 @@ func runTest(t *testing.T, test testStructure, client testpb.TestYARPCClient) {
 }
 
 func TestProtobufEncoding(t *testing.T) {
-	client, _, _, _, cleanup := initClientAndServer(t, &encodingIntegrationTestServer{})
+	client, cleanup := initalizeClientAndServer(t, &encodingIntegrationTestServer{})
 
 	defer cleanup()
 
@@ -104,6 +108,56 @@ func TestProtobufEncoding(t *testing.T) {
 		runTest(t, test, client)
 	}
 
+}
+
+func initalizeClientAndServer(t *testing.T, server testpb.TestYARPCServer) (
+	client testpb.TestYARPCClient,
+	cleanup func(),
+) {
+	serverAddr, cleanupServer := CreateServer(t, server)
+	client, cleanupClient := CreateClient(t, serverAddr)
+	return client, func() {
+		cleanupServer()
+		cleanupClient()
+	}
+}
+
+func CreateServer(t *testing.T, server testpb.TestYARPCServer) (addr string, cleanup func()) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	inbound := grpc.NewTransport().NewInbound(listener)
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name:     _serverName,
+		Inbounds: yarpc.Inbounds{inbound},
+	})
+
+	dispatcher.Register(testpb.BuildTestYARPCProcedures(server))
+	require.NoError(t, dispatcher.Start(), "could not start server dispatcher")
+
+	addr = inbound.Addr().String()
+	cleanup = func() { assert.NoError(t, dispatcher.Stop(), "could not stop dispatcher") }
+	return addr, cleanup
+}
+
+func CreateClient(t *testing.T, serverAddr string) (client testpb.TestYARPCClient, cleanup func()) {
+	outbound := grpc.NewTransport().NewSingleOutbound(serverAddr)
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name: _clientName,
+		Outbounds: map[string]transport.Outbounds{
+			_serverName: {
+				ServiceName: _serverName,
+				Unary:       outbound,
+				Stream:      outbound,
+			},
+		},
+	})
+
+	client = testpb.NewTestYARPCClient(dispatcher.ClientConfig(_serverName))
+	require.NoError(t, dispatcher.Start(), "could not start client dispatcher")
+
+	cleanup = func() { assert.NoError(t, dispatcher.Stop(), "could not stop dispatcher") }
+	return client, cleanup
 }
 
 type encodingIntegrationTestServer struct{}
