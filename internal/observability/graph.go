@@ -57,6 +57,7 @@ type graph struct {
 	meter   *metrics.Scope
 	logger  *zap.Logger
 	extract ContextExtractor
+	metricTagsBlocklist *[]string
 
 	edgesMu sync.RWMutex
 	edges   map[string]*edge
@@ -64,12 +65,13 @@ type graph struct {
 	inboundLevels, outboundLevels levels
 }
 
-func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor) graph {
+func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor, metricTagsBlocklist *[]string) graph {
 	return graph{
-		edges:   make(map[string]*edge, _defaultGraphSize),
-		meter:   meter,
-		logger:  logger,
-		extract: extract,
+		edges:               make(map[string]*edge, _defaultGraphSize),
+		meter:               meter,
+		logger:              logger,
+		extract:             extract,
+		metricTagsBlocklist: metricTagsBlocklist,
 		inboundLevels: levels{
 			success:          zapcore.DebugLevel,
 			failure:          zapcore.ErrorLevel,
@@ -186,8 +188,8 @@ type streamEdge struct {
 
 // newEdge constructs a new edge. Since Registries enforce metric uniqueness,
 // edges should be cached and re-used for each RPC.
-func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, direction string, rpcType transport.Type) *edge {
-	tags := metrics.Tags{
+func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, direction string, rpcType transport.Type, metricTagsBlocklist *[]string) *edge {
+	rawTags := metrics.Tags{
 		"source":           req.Caller,
 		"dest":             req.Service,
 		"transport":        unknownIfEmpty(req.Transport),
@@ -199,11 +201,19 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		"rpc_type":         rpcType.String(),
 	}
 
+	if metricTagsBlocklist != nil {
+		for _, filteredKey := range *metricTagsBlocklist {
+			delete(rawTags, filteredKey)
+		}
+	}
+
+	filteredTags := rawTags
+
 	// metrics for all RPCs
 	calls, err := meter.Counter(metrics.Spec{
 		Name:      "calls",
 		Help:      "Total number of RPCs.",
-		ConstTags: tags,
+		ConstTags: filteredTags,
 	})
 	if err != nil {
 		logger.Error("Failed to create calls counter.", zap.Error(err))
@@ -211,7 +221,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 	successes, err := meter.Counter(metrics.Spec{
 		Name:      "successes",
 		Help:      "Number of successful RPCs.",
-		ConstTags: tags,
+		ConstTags: filteredTags,
 	})
 	if err != nil {
 		logger.Error("Failed to create successes counter.", zap.Error(err))
@@ -219,7 +229,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 	panics, err := meter.Counter(metrics.Spec{
 		Name:      "panics",
 		Help:      "Number of RPCs failed because of panic.",
-		ConstTags: tags,
+		ConstTags: filteredTags,
 	})
 	if err != nil {
 		logger.Error("Failed to create panics counter.", zap.Error(err))
@@ -227,7 +237,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 	callerFailures, err := meter.CounterVector(metrics.Spec{
 		Name:      "caller_failures",
 		Help:      "Number of RPCs failed because of caller error.",
-		ConstTags: tags,
+		ConstTags: filteredTags,
 		VarTags:   []string{_error, _errorNameMetricsKey},
 	})
 	if err != nil {
@@ -236,7 +246,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 	serverFailures, err := meter.CounterVector(metrics.Spec{
 		Name:      "server_failures",
 		Help:      "Number of RPCs failed because of server error.",
-		ConstTags: tags,
+		ConstTags: filteredTags,
 		VarTags:   []string{_error, _errorNameMetricsKey},
 	})
 	if err != nil {
@@ -251,7 +261,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 			Spec: metrics.Spec{
 				Name:      "success_latency_ms",
 				Help:      "Latency distribution of successful RPCs.",
-				ConstTags: tags,
+				ConstTags: filteredTags,
 			},
 			Unit:    time.Millisecond,
 			Buckets: _bucketsMs,
@@ -263,7 +273,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 			Spec: metrics.Spec{
 				Name:      "caller_failure_latency_ms",
 				Help:      "Latency distribution of RPCs failed because of caller error.",
-				ConstTags: tags,
+				ConstTags: filteredTags,
 			},
 			Unit:    time.Millisecond,
 			Buckets: _bucketsMs,
@@ -275,7 +285,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 			Spec: metrics.Spec{
 				Name:      "server_failure_latency_ms",
 				Help:      "Latency distribution of RPCs failed because of server error.",
-				ConstTags: tags,
+				ConstTags: filteredTags,
 			},
 			Unit:    time.Millisecond,
 			Buckets: _bucketsMs,
@@ -287,7 +297,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 			Spec: metrics.Spec{
 				Name:      "ttl_ms",
 				Help:      "TTL distribution of the RPCs passed by the caller",
-				ConstTags: tags,
+				ConstTags: filteredTags,
 			},
 			Unit:    time.Millisecond,
 			Buckets: _bucketsMs,
@@ -299,7 +309,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 			Spec: metrics.Spec{
 				Name:      "timeout_ttl_ms",
 				Help:      "TTL distribution of the RPCs passed by caller which failed due to timeout",
-				ConstTags: tags,
+				ConstTags: filteredTags,
 			},
 			Unit:    time.Millisecond,
 			Buckets: _bucketsMs,
@@ -311,7 +321,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 			Spec: metrics.Spec{
 				Name:      "request_payload_size_bytes",
 				Help:      "Request payload size distribution of the RPCs in bytes",
-				ConstTags: tags,
+				ConstTags: filteredTags,
 			},
 			Unit:    time.Millisecond, // Unit is relevent for this histogram
 			Buckets: _bucketsBytes,
@@ -323,7 +333,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 			Spec: metrics.Spec{
 				Name:      "response_payload_size_bytes",
 				Help:      "Response payload size distribution of the RPCs in bytes",
-				ConstTags: tags,
+				ConstTags: filteredTags,
 			},
 			Unit:    time.Millisecond, // Unit is relevent for this histogram
 			Buckets: _bucketsBytes,
@@ -340,7 +350,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		sends, err := meter.Counter(metrics.Spec{
 			Name:      "stream_sends",
 			Help:      "Total number of streaming messages sent.",
-			ConstTags: tags,
+			ConstTags: filteredTags,
 		})
 		if err != nil {
 			logger.DPanic("Failed to create streaming sends counter.", zap.Error(err))
@@ -348,7 +358,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		sendSuccesses, err := meter.Counter(metrics.Spec{
 			Name:      "stream_send_successes",
 			Help:      "Number of successful streaming messages sent.",
-			ConstTags: tags,
+			ConstTags: filteredTags,
 		})
 		if err != nil {
 			logger.DPanic("Failed to create streaming sends successes counter.", zap.Error(err))
@@ -356,7 +366,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		sendFailures, err := meter.CounterVector(metrics.Spec{
 			Name:      "stream_send_failures",
 			Help:      "Number streaming messages that failed to send.",
-			ConstTags: tags,
+			ConstTags: filteredTags,
 			VarTags:   []string{_error},
 		})
 		if err != nil {
@@ -367,7 +377,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		receives, err := meter.Counter(metrics.Spec{
 			Name:      "stream_receives",
 			Help:      "Total number of streaming messages recevied.",
-			ConstTags: tags,
+			ConstTags: filteredTags,
 		})
 		if err != nil {
 			logger.DPanic("Failed to create streaming receives counter.", zap.Error(err))
@@ -375,7 +385,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		receiveSuccesses, err := meter.Counter(metrics.Spec{
 			Name:      "stream_receive_successes",
 			Help:      "Number of successful streaming messages received.",
-			ConstTags: tags,
+			ConstTags: filteredTags,
 		})
 		if err != nil {
 			logger.DPanic("Failed to create streaming receives successes counter.", zap.Error(err))
@@ -383,7 +393,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		receiveFailures, err := meter.CounterVector(metrics.Spec{
 			Name:      "stream_receive_failures",
 			Help:      "Number streaming messages failed to be recieved.",
-			ConstTags: tags,
+			ConstTags: filteredTags,
 			VarTags:   []string{_error},
 		})
 		if err != nil {
@@ -395,7 +405,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 			Spec: metrics.Spec{
 				Name:      "stream_duration_ms",
 				Help:      "Latency distribution of total stream duration.",
-				ConstTags: tags,
+				ConstTags: filteredTags,
 			},
 			Unit:    time.Millisecond,
 			Buckets: _bucketsMs,
@@ -408,7 +418,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 			Spec: metrics.Spec{
 				Name:      "stream_request_payload_size_bytes",
 				Help:      "Stream request payload size distribution",
-				ConstTags: tags,
+				ConstTags: filteredTags,
 			},
 			Unit:    time.Millisecond,
 			Buckets: _bucketsBytes,
@@ -421,7 +431,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 			Spec: metrics.Spec{
 				Name:      "stream_response_payload_size_bytes",
 				Help:      "Stream response payload size distribution",
-				ConstTags: tags,
+				ConstTags: filteredTags,
 			},
 			Unit:    time.Millisecond,
 			Buckets: _bucketsBytes,
@@ -433,7 +443,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		streamsActive, err := meter.Gauge(metrics.Spec{
 			Name:      "streams_active",
 			Help:      "Number of active streams.",
-			ConstTags: tags,
+			ConstTags: filteredTags,
 		})
 		if err != nil {
 			logger.DPanic("Failed to create active stream gauge.", zap.Error(err))
