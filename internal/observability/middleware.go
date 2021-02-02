@@ -91,7 +91,11 @@ type Config struct {
 	// Scope to which metrics are emitted.
 	Scope *metrics.Scope
 
-	// Extracts request-scoped information from the context for logging.
+	// MetricTagsBlocklist of metric tags being suppressed from being tagged on
+	// metrics emitted by the middleware.
+	MetricTagsBlocklist []string
+
+	// ContextExtractor Extracts request-scoped information from the context for logging.
 	ContextExtractor ContextExtractor
 
 	// Levels specify log levels for various classes of requests.
@@ -130,7 +134,7 @@ type DirectionalLevelsConfig struct {
 // NewMiddleware constructs an observability middleware with the provided
 // configuration.
 func NewMiddleware(cfg Config) *Middleware {
-	m := &Middleware{newGraph(cfg.Scope, cfg.Logger, cfg.ContextExtractor)}
+	m := &Middleware{newGraph(cfg.Scope, cfg.Logger, cfg.ContextExtractor, cfg.MetricTagsBlocklist)}
 
 	// Apply the default levels
 	applyLogLevelsConfig(&m.graph.inboundLevels, &cfg.Levels.Default)
