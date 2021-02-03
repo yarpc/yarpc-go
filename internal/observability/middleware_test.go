@@ -1414,14 +1414,15 @@ func TestMiddlewareSuccessSnapshotWithTagsFiltered(t *testing.T) {
 
 	snap := root.Snapshot()
 	tags := metrics.Tags{
-		"dest":        "service",
-		"direction":   "inbound",
-		"transport":   "unknown",
-		"encoding":    "raw",
-		"procedure":   "procedure",
-		"routing_key": "rk",
-		"rpc_type":    transport.Unary.String(),
-		"source":      "caller",
+		"dest":             "service",
+		"direction":        "inbound",
+		"transport":        "unknown",
+		"encoding":         "raw",
+		"procedure":        "procedure",
+		"routing_key":      "rk",
+		"routing_delegate": "__redacted__",
+		"rpc_type":         transport.Unary.String(),
+		"source":           "caller",
 	}
 	want := &metrics.RootSnapshot{
 		Counters: []metrics.Snapshot{
