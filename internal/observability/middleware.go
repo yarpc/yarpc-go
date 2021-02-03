@@ -91,7 +91,8 @@ type Config struct {
 	// Scope to which metrics are emitted.
 	Scope *metrics.Scope
 
-	// TODO
+	// List of metric tags being suppressed from being tagged on
+	// metrics emitted by the middleware
 	MetricTagsBlocklist *[]string
 
 	// Extracts request-scoped information from the context for logging.
