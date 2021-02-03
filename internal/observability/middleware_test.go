@@ -1270,7 +1270,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 	assert.Equal(t, expected, entry, "Unexpected log entry written.")
 }
 
-func TestMiddlewareSuccessSnapshot(t *testing.T) {
+func TestMiddlewareSuccessSnapshotNoTagsFiltering(t *testing.T) {
 	timeVal := time.Now()
 	defer stubTimeWithTimeVal(timeVal)()
 	ttlMs := int64(1000)
@@ -1319,6 +1319,109 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 		"routing_key":      "rk",
 		"rpc_type":         transport.Unary.String(),
 		"source":           "caller",
+	}
+	want := &metrics.RootSnapshot{
+		Counters: []metrics.Snapshot{
+			{Name: "calls", Tags: tags, Value: 1},
+			{Name: "panics", Tags: tags, Value: 0},
+			{Name: "successes", Tags: tags, Value: 1},
+		},
+		Histograms: []metrics.HistogramSnapshot{
+			{
+				Name: "caller_failure_latency_ms",
+				Tags: tags,
+				Unit: time.Millisecond,
+			},
+			{
+				Name:   "request_payload_size_bytes",
+				Tags:   tags,
+				Unit:   time.Millisecond,
+				Values: []int64{4},
+			},
+			{
+				Name:   "response_payload_size_bytes",
+				Tags:   tags,
+				Unit:   time.Millisecond,
+				Values: []int64{16},
+			},
+			{
+				Name: "server_failure_latency_ms",
+				Tags: tags,
+				Unit: time.Millisecond,
+			},
+			{
+				Name:   "success_latency_ms",
+				Tags:   tags,
+				Unit:   time.Millisecond,
+				Values: []int64{1},
+			},
+			{
+				Name: "timeout_ttl_ms",
+				Tags: tags,
+				Unit: time.Millisecond,
+			},
+			{
+				Name:   "ttl_ms",
+				Tags:   tags,
+				Unit:   time.Millisecond,
+				Values: []int64{ttlMs},
+			},
+		},
+	}
+	assert.Equal(t, want, snap, "Unexpected snapshot of metrics.")
+}
+
+func TestMiddlewareSuccessSnapshotWithTagsFiltered(t *testing.T) {
+	timeVal := time.Now()
+	defer stubTimeWithTimeVal(timeVal)()
+	ttlMs := int64(1000)
+	root := metrics.New()
+	meter := root.Scope()
+	mw := NewMiddleware(Config{
+		Logger:           zap.NewNop(),
+		Scope:            meter,
+		ContextExtractor: NewNopContextExtractor(),
+		MetricTagsBlocklist: []string{
+			"routing_delegate",
+		},
+	})
+
+	buf := bufferpool.Get()
+	defer bufferpool.Put(buf)
+
+	buf.Write([]byte("body"))
+
+	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(time.Millisecond*time.Duration(ttlMs)))
+	defer cancel()
+	err := mw.Handle(
+		ctx,
+		&transport.Request{
+			Caller:          "caller",
+			Service:         "service",
+			Transport:       "",
+			Encoding:        "raw",
+			Procedure:       "procedure",
+			ShardKey:        "sk",
+			RoutingKey:      "rk",
+			RoutingDelegate: "rd",
+			Body:            buf,
+			BodySize:        buf.Len(),
+		},
+		&transporttest.FakeResponseWriter{},
+		fakeHandler{responseData: []byte("test response")},
+	)
+	assert.NoError(t, err, "Unexpected transport error.")
+
+	snap := root.Snapshot()
+	tags := metrics.Tags{
+		"dest":        "service",
+		"direction":   "inbound",
+		"transport":   "unknown",
+		"encoding":    "raw",
+		"procedure":   "procedure",
+		"routing_key": "rk",
+		"rpc_type":    transport.Unary.String(),
+		"source":      "caller",
 	}
 	want := &metrics.RootSnapshot{
 		Counters: []metrics.Snapshot{
