@@ -54,9 +54,9 @@ const (
 // A graph represents a collection of services: each service is a node, and we
 // collect stats for each caller-callee-transport-encoding-procedure-rk-sk-rd edge.
 type graph struct {
-	meter   *metrics.Scope
-	logger  *zap.Logger
-	extract ContextExtractor
+	meter               *metrics.Scope
+	logger              *zap.Logger
+	extract             ContextExtractor
 	metricTagsBlocklist []string
 
 	edgesMu sync.RWMutex
@@ -143,7 +143,7 @@ func (g *graph) createEdge(key []byte, req *transport.Request, direction string,
 		return e
 	}
 
-	e := newEdge(g.logger, g.meter, g.metricTagsBlocklist, direction, rpcType, req)
+	e := newEdge(g.logger, g.meter, g.metricTagsBlocklist, req, direction, rpcType)
 	g.edges[string(key)] = e
 	return e
 }
@@ -188,7 +188,7 @@ type streamEdge struct {
 
 // newEdge constructs a new edge. Since Registries enforce metric uniqueness,
 // edges should be cached and re-used for each RPC.
-func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist []string, direction string, rpcType transport.Type, req *transport.Request) *edge {
+func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist []string, req *transport.Request, direction string, rpcType transport.Type) *edge {
 	tags := metrics.Tags{
 		"source":           req.Caller,
 		"dest":             req.Service,
