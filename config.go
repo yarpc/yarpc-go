@@ -131,6 +131,9 @@ type MetricsConfig struct {
 	// default, metrics are collected in memory but not pushed.
 	// TODO deprecate this option for metrics configuration.
 	Tally tally.Scope
+	// Tags that should be suppressed from all the metrics emitted from w/in
+	// YARPC middleware
+	TagsBlocklist []string
 }
 
 func (c MetricsConfig) scope(name string, logger *zap.Logger) (*metrics.Scope, context.CancelFunc) {
