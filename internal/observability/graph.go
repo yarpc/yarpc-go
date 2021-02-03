@@ -188,7 +188,7 @@ type streamEdge struct {
 
 // newEdge constructs a new edge. Since Registries enforce metric uniqueness,
 // edges should be cached and re-used for each RPC.
-func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist *[]string, direction string, rpcType transport.Type, req *transport.Request) *edge {
+func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist []string, direction string, rpcType transport.Type, req *transport.Request) *edge {
 	tags := metrics.Tags{
 		"source":           req.Caller,
 		"dest":             req.Service,
@@ -202,7 +202,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist *[]st
 	}
 
 	if metricTagsBlocklist != nil {
-		for _, filteredKey := range *metricTagsBlocklist {
+		for _, filteredKey := range metricTagsBlocklist {
 			delete(tags, filteredKey)
 		}
 	}
