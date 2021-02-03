@@ -35,17 +35,17 @@ type yarpcConfig struct {
 	Outbounds  clientConfigs                  `config:"outbounds"`
 	Transports map[string]config.AttributeMap `config:"transports"`
 	Logging    logging                        `config:"logging"`
-	Metrics    metrics						  `config:"metrics"`
+	Metrics    metrics                        `config:"metrics"`
 }
 
 // metrics allows configuring the way metrics are emitted from YAML
 type metrics struct {
-	tagsBlocklist []string `config:"tagsBlocklist"`
+	TagsBlocklist []string `config:"tagsBlocklist"`
 }
 
 // Fills values from this object into the provided YARPC config.
 func (m *metrics) fill(cfg *yarpc.Config) {
-	cfg.Metrics.TagsBlocklist = m.tagsBlocklist
+	cfg.Metrics.TagsBlocklist = m.TagsBlocklist
 }
 
 // logging allows configuring the log levels from YAML.
