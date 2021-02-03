@@ -203,7 +203,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist []str
 
 	if metricTagsBlocklist != nil {
 		for _, filteredKey := range metricTagsBlocklist {
-			delete(tags, filteredKey)
+			tags[filteredKey] = "__redacted__"
 		}
 	}
 
