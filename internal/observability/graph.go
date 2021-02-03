@@ -57,7 +57,7 @@ type graph struct {
 	meter   *metrics.Scope
 	logger  *zap.Logger
 	extract ContextExtractor
-	metricTagsBlocklist *[]string
+	metricTagsBlocklist []string
 
 	edgesMu sync.RWMutex
 	edges   map[string]*edge
@@ -65,7 +65,7 @@ type graph struct {
 	inboundLevels, outboundLevels levels
 }
 
-func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor, metricTagsBlocklist *[]string) graph {
+func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor, metricTagsBlocklist []string) graph {
 	return graph{
 		edges:               make(map[string]*edge, _defaultGraphSize),
 		meter:               meter,

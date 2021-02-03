@@ -93,7 +93,7 @@ type Config struct {
 
 	// List of metric tags being suppressed from being tagged on
 	// metrics emitted by the middleware
-	MetricTagsBlocklist *[]string
+	MetricTagsBlocklist []string
 
 	// Extracts request-scoped information from the context for logging.
 	ContextExtractor ContextExtractor
