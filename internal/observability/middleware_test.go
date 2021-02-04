@@ -1420,7 +1420,7 @@ func TestMiddlewareSuccessSnapshotWithTagsFiltered(t *testing.T) {
 		"encoding":         "raw",
 		"procedure":        "procedure",
 		"routing_key":      "rk",
-		"routing_delegate": "__redacted__",
+		"routing_delegate": "__dropped__",
 		"rpc_type":         transport.Unary.String(),
 		"source":           "caller",
 	}
