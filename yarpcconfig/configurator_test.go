@@ -161,6 +161,26 @@ func TestConfigurator(t *testing.T) {
 			},
 		},
 		{
+			desc: "metric tags blocklist",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.serviceName = "foo"
+				tt.give = whitespace.Expand(`
+					metrics:
+						tagsBlocklist:
+							- "routing_delegate"
+				`)
+				tt.wantConfig = yarpc.Config{
+					Name: "foo",
+					Metrics: yarpc.MetricsConfig{
+						TagsBlocklist: []string{
+							"routing_delegate",
+						},
+					},
+				}
+				return
+			},
+		},
+		{
 			desc: "application error, invalid type",
 			test: func(*testing.T, *gomock.Controller) (tt testCase) {
 				tt.give = whitespace.Expand(`
