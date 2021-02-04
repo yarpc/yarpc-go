@@ -1270,7 +1270,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 	assert.Equal(t, expected, entry, "Unexpected log entry written.")
 }
 
-func TestMiddlewareSuccessSnapshotNoTagsFiltering(t *testing.T) {
+func TestMiddlewareSuccessSnapshot(t *testing.T) {
 	timeVal := time.Now()
 	defer stubTimeWithTimeVal(timeVal)()
 	ttlMs := int64(1000)

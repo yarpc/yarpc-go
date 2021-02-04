@@ -91,11 +91,11 @@ type Config struct {
 	// Scope to which metrics are emitted.
 	Scope *metrics.Scope
 
-	// List of metric tags being suppressed from being tagged on
-	// metrics emitted by the middleware
+	// MetricTagsBlocklist of metric tags being suppressed from being tagged on
+	// metrics emitted by the middleware.
 	MetricTagsBlocklist []string
 
-	// Extracts request-scoped information from the context for logging.
+	// ContextExtractor Extracts request-scoped information from the context for logging.
 	ContextExtractor ContextExtractor
 
 	// Levels specify log levels for various classes of requests.
