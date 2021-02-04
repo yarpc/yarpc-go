@@ -1319,7 +1319,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
-[1.51.0]: https://github.com/yarpc/yarpc-go/compare/v1.50.0...v1.50.1
+[1.51.0]: https://github.com/yarpc/yarpc-go/compare/v1.50.0...v1.51.0
 [1.50.0]: https://github.com/yarpc/yarpc-go/compare/v1.49.1...v1.50.0
 [1.49.1]: https://github.com/yarpc/yarpc-go/compare/v1.49.0...v1.49.1
 [1.49.0]: https://github.com/yarpc/yarpc-go/compare/v1.48.0...v1.49.0
