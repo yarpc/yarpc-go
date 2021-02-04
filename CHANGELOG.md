@@ -5,7 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- Add metric tags blocklist to enable stubbing of high cardinality tags emitted from the middleware 
+### Added
+- observability: Add metric tags blocklist configuration. Allows to stub high cardinality tags emitted
+  in the observability middleware
 
 ## [1.50.0] - 2021-01-22
 ### Added
