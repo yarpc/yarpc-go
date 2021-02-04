@@ -26,32 +26,69 @@ package encoding
 // Encoding authors should accept yarpc.CallOptions and convert them to
 // encoding.CallOptions to use with NewOutboundCall. This will keep the
 // API for service authors simple.
-type CallOption struct{ apply func(*OutboundCall) }
+type CallOption struct {
+	opt callOption
+}
+
+type callOption interface {
+	apply(*OutboundCall)
+}
+
+type responseHeadersOptions map[string]string
+
+func (r *responseHeadersOptions) apply(call *OutboundCall) {
+	call.responseHeaders = (*map[string]string)(r)
+}
 
 // ResponseHeaders specifies that headers received in response to this request
 // should replace the given map.
 func ResponseHeaders(h *map[string]string) CallOption {
-	return CallOption{func(o *OutboundCall) { o.responseHeaders = h }}
+	return CallOption{(*responseHeadersOptions)(h)}
+}
+
+type headerOption keyValuePair
+
+func (r headerOption) apply(call *OutboundCall) {
+	call.headers = append(call.headers, keyValuePair(r))
 }
 
 // WithHeader adds a new header to the request.
 func WithHeader(k, v string) CallOption {
-	return CallOption{func(o *OutboundCall) {
-		o.headers = append(o.headers, keyValuePair{k: k, v: v})
-	}}
+	return CallOption{headerOption(keyValuePair{k: k, v: v})}
+}
+
+type shardKeyOption string
+
+func (r shardKeyOption) apply(call *OutboundCall) {
+	x := string(r)
+	call.shardKey = &x
 }
 
 // WithShardKey sets the shard key for the request.
 func WithShardKey(sk string) CallOption {
-	return CallOption{func(o *OutboundCall) { o.shardKey = &sk }}
+	return CallOption{shardKeyOption(sk)}
+}
+
+type routingKeyOption string
+
+func (r routingKeyOption) apply(call *OutboundCall) {
+	x := string(r)
+	call.routingKey = &x
 }
 
 // WithRoutingKey sets the routing key for the request.
 func WithRoutingKey(rk string) CallOption {
-	return CallOption{func(o *OutboundCall) { o.routingKey = &rk }}
+	return CallOption{routingKeyOption(rk)}
+}
+
+type routingDelegateOption string
+
+func (r routingDelegateOption) apply(call *OutboundCall) {
+	x := string(r)
+	call.routingDelegate = &x
 }
 
 // WithRoutingDelegate sets the routing delegate for the request.
 func WithRoutingDelegate(rd string) CallOption {
-	return CallOption{func(o *OutboundCall) { o.routingDelegate = &rd }}
+	return CallOption{routingDelegateOption(rd)}
 }
