@@ -49,7 +49,7 @@ type directionName string
 const (
 	_directionOutbound directionName = "outbound"
 	_directionInbound  directionName = "inbound"
-	_filteredTagVal                  = "__redacted__"
+	_redactedTagVal                  = "__redacted__"
 )
 
 // A graph represents a collection of services: each service is a node, and we
@@ -203,7 +203,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist []str
 	}
 
 	for _, tagName := range metricTagsBlocklist {
-		tags[tagName] = _filteredTagVal
+		tags[tagName] = _redactedTagVal
 	}
 
 	// metrics for all RPCs
