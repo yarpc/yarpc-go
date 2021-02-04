@@ -49,7 +49,7 @@ type directionName string
 const (
 	_directionOutbound directionName = "outbound"
 	_directionInbound  directionName = "inbound"
-	_redactedTagVal                  = "__redacted__"
+	_redactedTagVal                  = "__dropped__"
 )
 
 // A graph represents a collection of services: each service is a node, and we
