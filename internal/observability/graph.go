@@ -49,14 +49,19 @@ type directionName string
 const (
 	_directionOutbound directionName = "outbound"
 	_directionInbound  directionName = "inbound"
+
+	// _droppedTagValue represents the value of a metric tag when the tag
+	// is being blocked.
+	_droppedTagValue = "__dropped__"
 )
 
 // A graph represents a collection of services: each service is a node, and we
 // collect stats for each caller-callee-transport-encoding-procedure-rk-sk-rd edge.
 type graph struct {
-	meter   *metrics.Scope
-	logger  *zap.Logger
-	extract ContextExtractor
+	meter               *metrics.Scope
+	logger              *zap.Logger
+	extract             ContextExtractor
+	metricTagsBlocklist []string
 
 	edgesMu sync.RWMutex
 	edges   map[string]*edge
@@ -64,12 +69,13 @@ type graph struct {
 	inboundLevels, outboundLevels levels
 }
 
-func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor) graph {
+func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor, metricTagsBlocklist []string) graph {
 	return graph{
-		edges:   make(map[string]*edge, _defaultGraphSize),
-		meter:   meter,
-		logger:  logger,
-		extract: extract,
+		edges:               make(map[string]*edge, _defaultGraphSize),
+		meter:               meter,
+		logger:              logger,
+		extract:             extract,
+		metricTagsBlocklist: metricTagsBlocklist,
 		inboundLevels: levels{
 			success:          zapcore.DebugLevel,
 			failure:          zapcore.ErrorLevel,
@@ -141,7 +147,7 @@ func (g *graph) createEdge(key []byte, req *transport.Request, direction string,
 		return e
 	}
 
-	e := newEdge(g.logger, g.meter, req, direction, rpcType)
+	e := newEdge(g.logger, g.meter, g.metricTagsBlocklist, req, direction, rpcType)
 	g.edges[string(key)] = e
 	return e
 }
@@ -186,7 +192,7 @@ type streamEdge struct {
 
 // newEdge constructs a new edge. Since Registries enforce metric uniqueness,
 // edges should be cached and re-used for each RPC.
-func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, direction string, rpcType transport.Type) *edge {
+func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist []string, req *transport.Request, direction string, rpcType transport.Type) *edge {
 	tags := metrics.Tags{
 		"source":           req.Caller,
 		"dest":             req.Service,
@@ -197,6 +203,10 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, req *transport.Request, d
 		"routing_delegate": req.RoutingDelegate,
 		"direction":        direction,
 		"rpc_type":         rpcType.String(),
+	}
+
+	for _, tagName := range metricTagsBlocklist {
+		tags[tagName] = _droppedTagValue
 	}
 
 	// metrics for all RPCs

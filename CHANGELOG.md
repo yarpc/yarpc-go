@@ -4,9 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.51.0] - 2021-02-04
+### Added
+- observability: Add metric tags blocklist configuration. Allows to stub high cardinality tags emitted
+  in the observability middleware
+
 ## [1.50.0] - 2021-01-22
 ### Added
 - gRPC: accept dialer options in gRPC transportSpec config
+
 ### Fixed
 - Http: fix memory and connection leak in http outbound call handler
 - Observability: error code CodeUnimplemented will be marked as an `application_error`
@@ -1313,7 +1319,8 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
-[1.50.0]: https://github.com/yarpc/yarpc-go/compare/v1.50.0...v1.50.1
+[1.51.0]: https://github.com/yarpc/yarpc-go/compare/v1.50.0...v1.51.0
+[1.50.0]: https://github.com/yarpc/yarpc-go/compare/v1.49.1...v1.50.0
 [1.49.1]: https://github.com/yarpc/yarpc-go/compare/v1.49.0...v1.49.1
 [1.49.0]: https://github.com/yarpc/yarpc-go/compare/v1.48.0...v1.49.0
 [1.48.0]: https://github.com/yarpc/yarpc-go/compare/v1.47.2...v1.48.0

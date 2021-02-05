@@ -313,6 +313,7 @@ func (c *Configurator) load(serviceName string, cfg *yarpcConfig) (_ yarpc.Confi
 	}
 
 	cfg.Logging.fill(&yc)
+	cfg.Metrics.fill(&yc)
 	return yc, nil
 }
 
