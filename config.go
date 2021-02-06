@@ -165,6 +165,7 @@ func (c MetricsConfig) scope(name string, logger *zap.Logger) (*metrics.Scope, c
 	meter := parent.Tagged(metrics.Tags{
 		"component":  _packageName,
 		"dispatcher": name,
+		"version":    Version,
 	})
 
 	// When we have c.Metrics, we do not push
