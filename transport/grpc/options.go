@@ -32,6 +32,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 )
 
 const (
@@ -178,6 +179,16 @@ func Compressor(compressor transport.Compressor) DialOption {
 	}
 }
 
+// KeepaliveParams sets the gRPC keepalive parameters of the outbound
+// connection.
+// See https://pkg.go.dev/google.golang.org/grpc#WithKeepaliveParams for more
+// details.
+func KeepaliveParams(params keepalive.ClientParameters) DialOption {
+	return func(dialOptions *dialOptions) {
+		dialOptions.keepaliveParams = &params
+	}
+}
+
 type transportOptions struct {
 	backoffStrategy      backoff.Strategy
 	tracer               opentracing.Tracer
@@ -234,6 +245,7 @@ type dialOptions struct {
 	creds             credentials.TransportCredentials
 	contextDialer     func(context.Context, string) (net.Conn, error)
 	defaultCompressor string
+	keepaliveParams   *keepalive.ClientParameters
 }
 
 func (d *dialOptions) grpcOptions() []grpc.DialOption {
@@ -249,6 +261,10 @@ func (d *dialOptions) grpcOptions() []grpc.DialOption {
 
 	if d.defaultCompressor != "" {
 		opts = append(opts, grpc.WithDefaultCallOptions(grpc.UseCompressor(d.defaultCompressor)))
+	}
+
+	if d.keepaliveParams != nil {
+		opts = append(opts, grpc.WithKeepaliveParams(*d.keepaliveParams))
 	}
 
 	return opts
