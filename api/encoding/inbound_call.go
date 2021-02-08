@@ -22,6 +22,7 @@ package encoding
 
 import (
 	"context"
+	"sync"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/inboundcall"
@@ -34,6 +35,7 @@ import (
 // incoming request on the Context and send response headers through
 // WriteResponseHeader.
 type InboundCall struct {
+	headersMutext          sync.Mutex
 	resHeaders             []keyValuePair
 	req                    *transport.Request
 	disableResponseHeaders bool
@@ -157,6 +159,9 @@ func (ic *inboundCallMetadata) WriteResponseHeader(k, v string) error {
 	if ic.disableResponseHeaders {
 		return yarpcerrors.InvalidArgumentErrorf("call does not support setting response headers")
 	}
+
+	ic.headersMutext.Lock()
+	defer ic.headersMutext.Unlock()
 	ic.resHeaders = append(ic.resHeaders, keyValuePair{k: k, v: v})
 	return nil
 }

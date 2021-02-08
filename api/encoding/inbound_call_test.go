@@ -77,6 +77,12 @@ func TestInboundCallWriteToResponse(t *testing.T) {
 		{
 			desc: "no headers",
 		},
+		{
+			sendHeaders: map[string]string{
+				"header1": "value1",
+			},
+			wantHeaders: transport.NewHeaders().With("header1", "value1"),
+		},
 	}
 
 	for _, tt := range tests {
@@ -92,4 +98,62 @@ func TestInboundCallWriteToResponse(t *testing.T) {
 			assert.Equal(t, tt.wantHeaders, resw.Headers)
 		})
 	}
+}
+
+func TestInboundCallWriteToResponseParallel(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		desc        string
+		sendHeaders map[string]string
+	}{
+		{
+			desc: "no headers",
+		},
+		{
+			sendHeaders: map[string]string{
+				"header1": "value1",
+			},
+		},
+		{
+			sendHeaders: map[string]string{
+				"header2": "value2",
+			},
+		},
+		{
+			sendHeaders: map[string]string{
+				"header3": "value3",
+			},
+		},
+		{
+			sendHeaders: map[string]string{
+				"header4": "value4",
+			},
+		},
+		{
+			sendHeaders: map[string]string{
+				"header5": "value5",
+			},
+		},
+	}
+
+	var resw transporttest.FakeResponseWriter
+	ctx, inboundCall := NewInboundCall(context.Background())
+	call := CallFromContext(ctx)
+	wantHeaders := transport.NewHeaders().
+		With("header1", "value1").
+		With("header2", "value2").
+		With("header3", "value3").
+		With("header4", "value4").
+		With("header5", "value5")
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			for k, v := range tt.sendHeaders {
+				call.WriteResponseHeader(k, v)
+			}
+			assert.NoError(t, inboundCall.WriteToResponse(&resw))
+		})
+	}
+
+	assert.Equal(t, wantHeaders, resw.Headers)
 }
