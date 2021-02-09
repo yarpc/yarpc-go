@@ -2249,6 +2249,107 @@ func TestUnaryInboundApplicationPanics(t *testing.T) {
 	})
 }
 
+func TestOneWayInboundApplicationPanics(t *testing.T) {
+	var err error
+	root := metrics.New()
+	scope := root.Scope()
+	mw := NewMiddleware(Config{
+		Logger:           zap.NewNop(),
+		Scope:            scope,
+		ContextExtractor: NewNopContextExtractor(),
+	})
+	newTags := func(direction directionName, withErr string) metrics.Tags {
+		tags := metrics.Tags{
+			"dest":             "service",
+			"direction":        string(direction),
+			"encoding":         "raw",
+			"procedure":        "procedure",
+			"routing_delegate": "rd",
+			"routing_key":      "rk",
+			"rpc_type":         transport.Oneway.String(),
+			"source":           "caller",
+			"transport":        "unknown",
+		}
+		if withErr != "" {
+			tags["error"] = withErr
+			tags["error_name"] = "__not_set__"
+		}
+		return tags
+	}
+	tags := newTags(_directionInbound, "")
+	errTags := newTags(_directionInbound, "application_error")
+
+	t.Run("Test panic in Handle", func(t *testing.T) {
+		// As our fake handler is mocked to panic in the call, test that the invocation panics
+		assert.Panics(t, func() {
+			err = mw.HandleOneway(
+				context.Background(),
+				&transport.Request{
+					Caller:          "caller",
+					Service:         "service",
+					Transport:       "",
+					Encoding:        "raw",
+					Procedure:       "procedure",
+					ShardKey:        "sk",
+					RoutingKey:      "rk",
+					RoutingDelegate: "rd",
+				},
+				fakeHandler{applicationPanic: true},
+			)
+		})
+		require.NoError(t, err)
+
+		want := &metrics.RootSnapshot{
+			Counters: []metrics.Snapshot{
+				{Name: "caller_failures", Tags: errTags, Value: 1},
+				{Name: "calls", Tags: tags, Value: 1},
+				{Name: "panics", Tags: tags, Value: 1},
+				{Name: "successes", Tags: tags, Value: 0},
+			},
+			Histograms: []metrics.HistogramSnapshot{
+				{
+					Name:   "caller_failure_latency_ms",
+					Tags:   tags,
+					Unit:   time.Millisecond,
+					Values: []int64{1},
+				},
+				{
+					Name:   "request_payload_size_bytes",
+					Tags:   tags,
+					Unit:   time.Millisecond,
+					Values: []int64{0},
+				},
+				{
+					Name: "response_payload_size_bytes",
+					Tags: tags,
+					Unit: time.Millisecond,
+				},
+				{
+					Name: "server_failure_latency_ms",
+					Tags: tags,
+					Unit: time.Millisecond,
+				},
+				{
+					Name: "success_latency_ms",
+					Tags: tags,
+					Unit: time.Millisecond,
+				},
+				{
+					Name: "timeout_ttl_ms",
+					Tags: tags,
+					Unit: time.Millisecond,
+				},
+				{
+					Name: "ttl_ms",
+					Tags: tags,
+					Unit: time.Millisecond,
+				},
+			},
+		}
+		assert.Equal(t, want, root.Snapshot(), "unexpected metrics snapshot")
+	})
+}
+
 func TestStreamingInboundApplicationPanics(t *testing.T) {
 	root := metrics.New()
 	scope := root.Scope()

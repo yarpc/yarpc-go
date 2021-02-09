@@ -211,6 +211,7 @@ func (m *Middleware) Call(ctx context.Context, req *transport.Request, out trans
 // HandleOneway implements middleware.OnewayInbound.
 func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
 	call := m.graph.begin(ctx, transport.Oneway, _directionInbound, req)
+	defer m.handlePanicForCall(call, transport.Oneway)
 	err := h.HandleOneway(ctx, req)
 	call.End(callResult{err: err, requestSize: req.BodySize})
 	return err
