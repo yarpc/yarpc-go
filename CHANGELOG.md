@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - gRPC: accept keepalive parameters for the outbound gRPC connection.
-- observability: panic metrics are reported for Oneway request.
+- observability: panic metrics are reported for inbound oneway request.
 
 ## [1.51.0] - 2021-02-04
 ### Added
