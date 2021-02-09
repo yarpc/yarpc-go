@@ -2170,6 +2170,7 @@ func TestUnaryInboundApplicationPanics(t *testing.T) {
 		}
 		if withErr != "" {
 			tags["error"] = withErr
+			tags["error_name"] = "__not_set__"
 		}
 		return tags
 	}
@@ -2177,9 +2178,6 @@ func TestUnaryInboundApplicationPanics(t *testing.T) {
 	errTags := newTags(_directionInbound, "application_error")
 
 	t.Run("Test panic in Handle", func(t *testing.T) {
-		t.Skip() // This test flaps. https://github.com/yarpc/yarpc-go/issues/1882
-		// Relevant bucket marked XXX below.
-
 		// As our fake handler is mocked to panic in the call, test that the invocation panics
 		assert.Panics(t, func() {
 			err = mw.Handle(
@@ -2212,7 +2210,7 @@ func TestUnaryInboundApplicationPanics(t *testing.T) {
 					Name:   "caller_failure_latency_ms",
 					Tags:   tags,
 					Unit:   time.Millisecond,
-					Values: []int64{1}, // XXX this test flaps mysteriously. This figure is sometimes higher.
+					Values: []int64{1},
 				},
 				{
 					Name:   "request_payload_size_bytes",
@@ -2221,10 +2219,9 @@ func TestUnaryInboundApplicationPanics(t *testing.T) {
 					Values: []int64{0},
 				},
 				{
-					Name:   "response_payload_size_bytes",
-					Tags:   tags,
-					Unit:   time.Millisecond,
-					Values: []int64{0},
+					Name: "response_payload_size_bytes",
+					Tags: tags,
+					Unit: time.Millisecond,
 				},
 				{
 					Name: "server_failure_latency_ms",
@@ -2233,6 +2230,16 @@ func TestUnaryInboundApplicationPanics(t *testing.T) {
 				},
 				{
 					Name: "success_latency_ms",
+					Tags: tags,
+					Unit: time.Millisecond,
+				},
+				{
+					Name: "timeout_ttl_ms",
+					Tags: tags,
+					Unit: time.Millisecond,
+				},
+				{
+					Name: "ttl_ms",
 					Tags: tags,
 					Unit: time.Millisecond,
 				},
@@ -2279,6 +2286,7 @@ func TestStreamingInboundApplicationPanics(t *testing.T) {
 		}
 		if withErr != "" {
 			tags["error"] = withErr
+			tags["error_name"] = "__not_set__"
 		}
 		return tags
 	}
@@ -2286,7 +2294,7 @@ func TestStreamingInboundApplicationPanics(t *testing.T) {
 	errTags := newTags(_directionInbound, "unknown_internal_yarpc")
 
 	t.Run("Test panic in HandleStream", func(t *testing.T) {
-		t.Skip() // This test flaps. https://github.com/yarpc/yarpc-go/issues/1882
+		//t.Skip() // This test flaps. https://github.com/yarpc/yarpc-go/issues/1882
 		// Relevant bucket marked XXX below.
 
 		// As our fake handler is mocked to panic in the call, test that the invocation panics
@@ -2310,7 +2318,22 @@ func TestStreamingInboundApplicationPanics(t *testing.T) {
 				{Name: "streams_active", Tags: tags, Value: 0},
 			},
 			Histograms: []metrics.HistogramSnapshot{
-				{Name: "stream_duration_ms", Tags: tags, Unit: time.Millisecond, Values: []int64{1}}, // XXX sometimes >1.
+				{
+					Name:   "stream_duration_ms",
+					Tags:   tags,
+					Unit:   time.Millisecond,
+					Values: []int64{1},
+				}, // XXX sometimes >1.
+				{
+					Name: "stream_request_payload_size_bytes",
+					Tags: tags,
+					Unit: time.Millisecond,
+				},
+				{
+					Name: "stream_response_payload_size_bytes",
+					Tags: tags,
+					Unit: time.Millisecond,
+				},
 			},
 		}
 		assert.Equal(t, want, root.Snapshot(), "unexpected metrics snapshot")
