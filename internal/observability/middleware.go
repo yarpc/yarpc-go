@@ -22,7 +22,6 @@ package observability
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"go.uber.org/net/metrics"
@@ -272,8 +271,7 @@ func (m *Middleware) handlePanicForCall(call call, transportType transport.Type)
 	// As this middleware is the one and only one with Metrics responsibility, we just panic again after
 	// checking for panic without actually recovering from it
 	if e := recover(); e != nil {
-		err := fmt.Errorf("panic: %v", e)
-
+		err := yarpcerrors.InternalErrorf("panic %v", e)
 		// Emit only the panic metrics
 		if transportType == transport.Streaming {
 			call.EndStreamWithPanic(err)

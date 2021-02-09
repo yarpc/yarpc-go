@@ -2175,7 +2175,7 @@ func TestUnaryInboundApplicationPanics(t *testing.T) {
 		return tags
 	}
 	tags := newTags(_directionInbound, "")
-	errTags := newTags(_directionInbound, "application_error")
+	errTags := newTags(_directionInbound, "internal")
 
 	t.Run("Test panic in Handle", func(t *testing.T) {
 		// As our fake handler is mocked to panic in the call, test that the invocation panics
@@ -2200,17 +2200,16 @@ func TestUnaryInboundApplicationPanics(t *testing.T) {
 
 		want := &metrics.RootSnapshot{
 			Counters: []metrics.Snapshot{
-				{Name: "caller_failures", Tags: errTags, Value: 1},
 				{Name: "calls", Tags: tags, Value: 1},
 				{Name: "panics", Tags: tags, Value: 1},
+				{Name: "server_failures", Tags: errTags, Value: 1},
 				{Name: "successes", Tags: tags, Value: 0},
 			},
 			Histograms: []metrics.HistogramSnapshot{
 				{
-					Name:   "caller_failure_latency_ms",
-					Tags:   tags,
-					Unit:   time.Millisecond,
-					Values: []int64{1},
+					Name: "caller_failure_latency_ms",
+					Tags: tags,
+					Unit: time.Millisecond,
 				},
 				{
 					Name:   "request_payload_size_bytes",
@@ -2224,9 +2223,10 @@ func TestUnaryInboundApplicationPanics(t *testing.T) {
 					Unit: time.Millisecond,
 				},
 				{
-					Name: "server_failure_latency_ms",
-					Tags: tags,
-					Unit: time.Millisecond,
+					Name:   "server_failure_latency_ms",
+					Tags:   tags,
+					Unit:   time.Millisecond,
+					Values: []int64{1},
 				},
 				{
 					Name: "success_latency_ms",
@@ -2277,7 +2277,7 @@ func TestOneWayInboundApplicationPanics(t *testing.T) {
 		return tags
 	}
 	tags := newTags(_directionInbound, "")
-	errTags := newTags(_directionInbound, "application_error")
+	errTags := newTags(_directionInbound, "internal")
 
 	t.Run("Test panic in Handle", func(t *testing.T) {
 		// As our fake handler is mocked to panic in the call, test that the invocation panics
@@ -2301,17 +2301,16 @@ func TestOneWayInboundApplicationPanics(t *testing.T) {
 
 		want := &metrics.RootSnapshot{
 			Counters: []metrics.Snapshot{
-				{Name: "caller_failures", Tags: errTags, Value: 1},
 				{Name: "calls", Tags: tags, Value: 1},
 				{Name: "panics", Tags: tags, Value: 1},
+				{Name: "server_failures", Tags: errTags, Value: 1},
 				{Name: "successes", Tags: tags, Value: 0},
 			},
 			Histograms: []metrics.HistogramSnapshot{
 				{
-					Name:   "caller_failure_latency_ms",
-					Tags:   tags,
-					Unit:   time.Millisecond,
-					Values: []int64{1},
+					Name: "caller_failure_latency_ms",
+					Tags: tags,
+					Unit: time.Millisecond,
 				},
 				{
 					Name:   "request_payload_size_bytes",
@@ -2325,9 +2324,10 @@ func TestOneWayInboundApplicationPanics(t *testing.T) {
 					Unit: time.Millisecond,
 				},
 				{
-					Name: "server_failure_latency_ms",
-					Tags: tags,
-					Unit: time.Millisecond,
+					Name:   "server_failure_latency_ms",
+					Tags:   tags,
+					Unit:   time.Millisecond,
+					Values: []int64{1},
 				},
 				{
 					Name: "success_latency_ms",
@@ -2392,7 +2392,7 @@ func TestStreamingInboundApplicationPanics(t *testing.T) {
 		return tags
 	}
 	tags := newTags(_directionInbound, "")
-	errTags := newTags(_directionInbound, "unknown_internal_yarpc")
+	errTags := newTags(_directionInbound, "internal")
 
 	t.Run("Test panic in HandleStream", func(t *testing.T) {
 		// As our fake handler is mocked to panic in the call, test that the invocation panics
