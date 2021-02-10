@@ -84,6 +84,7 @@ func (c call) WrapServerStream(stream *transport.ServerStream) *transport.Server
 }
 
 func (s *streamWrapper) SendMessage(ctx context.Context, msg *transport.StreamMessage) error {
+	// TODO: handle panic for metrics
 	if s.call.direction == _directionInbound && msg != nil {
 		s.edge.streamResponsePayloadSizes.IncBucket(int64(msg.BodySize))
 	}
@@ -106,6 +107,7 @@ func (s *streamWrapper) SendMessage(ctx context.Context, msg *transport.StreamMe
 }
 
 func (s *streamWrapper) ReceiveMessage(ctx context.Context) (*transport.StreamMessage, error) {
+	// TODO: handle panic for metrics
 	msg, err := s.StreamCloser.ReceiveMessage(ctx)
 	if err == nil && msg != nil && s.call.direction == _directionInbound {
 		s.edge.streamRequestPayloadSizes.IncBucket(int64(msg.BodySize))
