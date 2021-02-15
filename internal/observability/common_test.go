@@ -93,12 +93,17 @@ type fakeOutbound struct {
 	applicationErrName    string
 	applicationErrDetails string
 	applicationErrCode    *yarpcerrors.Code
+	applicationPanic      bool
 	stream                fakeStream
 
 	body []byte
 }
 
 func (o fakeOutbound) Call(context.Context, *transport.Request) (*transport.Response, error) {
+	if o.applicationPanic {
+		panic("application panicked")
+	}
+
 	return &transport.Response{
 		ApplicationError: o.applicationErr,
 		ApplicationErrorMeta: &transport.ApplicationErrorMeta{
@@ -111,6 +116,10 @@ func (o fakeOutbound) Call(context.Context, *transport.Request) (*transport.Resp
 }
 
 func (o fakeOutbound) CallOneway(context.Context, *transport.Request) (transport.Ack, error) {
+	if o.applicationPanic {
+		panic("application panicked")
+	}
+
 	if o.err != nil {
 		return nil, o.err
 	}
@@ -118,6 +127,10 @@ func (o fakeOutbound) CallOneway(context.Context, *transport.Request) (transport
 }
 
 func (o fakeOutbound) CallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
+	if o.applicationPanic {
+		panic("application panicked")
+	}
+
 	if o.err != nil {
 		return nil, o.err
 	}

@@ -33,6 +33,7 @@ import (
 	"go.uber.org/yarpc/yarpcconfig"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
+	"google.golang.org/grpc/keepalive"
 )
 
 func TestNewTransportSpecOptions(t *testing.T) {
@@ -102,6 +103,7 @@ func TestTransportSpec(t *testing.T) {
 		TLS                     bool
 		Compressor              string
 		WantCustomContextDialer bool
+		Keepalive               bool
 	}
 
 	type test struct {
@@ -294,6 +296,24 @@ func TestTransportSpec(t *testing.T) {
 				},
 			},
 		},
+		{
+			desc: "simple outbound with keepalive params",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{"address": "localhost:54569"},
+				},
+			},
+			opts: []Option{KeepaliveParams(keepalive.ClientParameters{
+				Timeout: time.Second * 10,
+				Time:    time.Second * 30,
+			})},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {
+					Address:   "localhost:54569",
+					Keepalive: true,
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -376,6 +396,9 @@ func TestTransportSpec(t *testing.T) {
 					assert.Equal(t, wantOutbound.TLS, dialer.options.creds != nil)
 					if wantOutbound.WantCustomContextDialer {
 						assert.NotNil(t, dialer.options.contextDialer, "expected custom context dialer")
+					}
+					if wantOutbound.Keepalive {
+						assert.NotNil(t, dialer.options.keepaliveParams, "expected keepalive parameters")
 					}
 				}
 			}
