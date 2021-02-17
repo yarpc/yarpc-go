@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- No changes yet.
+
+## [1.52.0] - 2021-02-12
 ### Added
 - gRPC: accept keepalive parameters for the outbound gRPC connection.
 - observability: panic metrics are now also reported for these type of requests:
@@ -1328,6 +1331,8 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.52.0...HEAD
+[1.52.0]: https://github.com/yarpc/yarpc-go/compare/v1.51.0...v1.52.0
 [1.51.0]: https://github.com/yarpc/yarpc-go/compare/v1.50.0...v1.51.0
 [1.50.0]: https://github.com/yarpc/yarpc-go/compare/v1.49.1...v1.50.0
 [1.49.1]: https://github.com/yarpc/yarpc-go/compare/v1.49.0...v1.49.1
