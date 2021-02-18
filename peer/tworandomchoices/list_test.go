@@ -602,17 +602,19 @@ func TestParallelChoose(t *testing.T) {
 		impl.Add(nil, nil)
 	}
 
-	var wg sync.WaitGroup
-	for i := 0; i < 100; i++ {
-		wg.Add(1)
-		go func() {
-			for j := 0; j < 5000; j++ {
-				impl.Choose(nil)
-			}
-			wg.Done()
-		}()
-	}
-	wg.Wait()
+	assert.NotPanics(t, func() {
+		var wg sync.WaitGroup
+		for i := 0; i < 100; i++ {
+			wg.Add(1)
+			go func() {
+				for j := 0; j < 5000; j++ {
+					impl.Choose(nil)
+				}
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+	})
 }
 
 func TestFailFastConfig(t *testing.T) {
