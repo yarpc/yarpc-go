@@ -89,8 +89,8 @@ func (l *twoRandomChoicesList) Remove(peer peer.StatusPeer, _ peer.Identifier, p
 }
 
 func (l *twoRandomChoicesList) Choose(_ *transport.Request) peer.StatusPeer {
-	l.m.RLock()
-	defer l.m.RUnlock()
+	l.m.Lock()
+	defer l.m.Unlock()
 
 	numSubs := len(l.subscribers)
 	if numSubs == 0 {

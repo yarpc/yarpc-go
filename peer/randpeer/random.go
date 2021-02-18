@@ -87,8 +87,8 @@ func (r *randomList) Remove(peer peer.StatusPeer, _ peer.Identifier, ps abstract
 }
 
 func (r *randomList) Choose(_ *transport.Request) peer.StatusPeer {
-	r.m.RLock()
-	defer r.m.RUnlock()
+	r.m.Lock()
+	defer r.m.Unlock()
 
 	if len(r.subscribers) == 0 {
 		return nil

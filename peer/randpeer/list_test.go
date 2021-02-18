@@ -26,6 +26,7 @@ import (
 	"net"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -619,4 +620,24 @@ func TestFailFastConfig(t *testing.T) {
 	})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "has 1 peer but it is not responsive")
+}
+
+func TestParallelChoose(t *testing.T) {
+	impl := NewImplementation()
+
+	for i := 0; i < 5000; i++ {
+		impl.Add(nil, nil)
+	}
+
+	var wg sync.WaitGroup
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func() {
+			for j := 0; j < 5000; j++ {
+				impl.Choose(nil)
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
 }
