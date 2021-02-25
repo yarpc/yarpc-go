@@ -338,12 +338,12 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Reques
 
 func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error) {
 	newURL := *o.urlTemplate
-	if hreq, err := http.NewRequest("POST", newURL.String(), treq.Body); err != nil {
+	hreq, err := http.NewRequest("POST", newURL.String(), treq.Body)
+	if err != nil {
 		return nil, err
-	} else {
-		hreq.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
-		return hreq, err
 	}
+	hreq.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
+	return hreq, err
 }
 
 func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, *http.Request, opentracing.Span, error) {
