@@ -85,7 +85,7 @@ func TestCreateRequest(t *testing.T) {
 			wantError:   true,
 		},
 		{
-			desc: "wrong uri",
+			desc: "successful creation",
 			treq: &transport.Request{
 				Headers: transport.HeadersFromMap(appHeader),
 			},
