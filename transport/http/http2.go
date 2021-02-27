@@ -37,9 +37,9 @@ const (
 )
 
 var (
-	errMalformedHTTP2ConnectRequestExtraScheme    = malformedHTTP2ConnectRequestError(http2SchemePseudoHeader, false)
-	errMalformedHTTP2ConnectRequestExtraPath      = malformedHTTP2ConnectRequestError(http2PathPseudoHeader, false)
-	errMalformedHTTP2ConnectRequestExtraAuthority = malformedHTTP2ConnectRequestError(http2AuthorityPseudoHeader, true)
+	errMalformedHTTP2ConnectRequestExtraScheme      = malformedHTTP2ConnectRequestError(http2SchemePseudoHeader, false)
+	errMalformedHTTP2ConnectRequestExtraPath        = malformedHTTP2ConnectRequestError(http2PathPseudoHeader, false)
+	errMalformedHTTP2ConnectRequestMissingAuthority = malformedHTTP2ConnectRequestError(http2AuthorityPseudoHeader, true)
 )
 
 func malformedHTTP2ConnectRequestError(h string, shouldContain bool) error {
@@ -71,5 +71,5 @@ func fromHTTP2ConnectRequest(treq *transport.Request) (*http.Request, error) {
 		url := &url.URL{Host: a}
 		return http.NewRequest(http.MethodConnect, url.String(), nil)
 	}
-	return nil, errMalformedHTTP2ConnectRequestExtraAuthority
+	return nil, errMalformedHTTP2ConnectRequestMissingAuthority
 }
