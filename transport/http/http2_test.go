@@ -32,26 +32,26 @@ func TestFromHTTP2ConnectRequest(t *testing.T) {
 	tests := []struct {
 		desc      string
 		treq      *transport.Request
-		wantError error
+		wantError string
 	}{
 		{
 			desc: "malformed CONNECT request: :scheme header set",
 			treq: &transport.Request{
 				Headers: transport.HeadersFromMap(map[string]string{":scheme": "http2"}),
 			},
-			wantError: errMalformedHTTP2ConnectRequestExtraScheme,
+			wantError: `HTTP2 CONNECT request must not contain pseudo header ":scheme"`,
 		},
 		{
 			desc: "malformed CONNECT request: :path header set",
 			treq: &transport.Request{
 				Headers: transport.HeadersFromMap(map[string]string{":path": "foo/path"}),
 			},
-			wantError: errMalformedHTTP2ConnectRequestExtraPath,
+			wantError: `HTTP2 CONNECT request must not contain pseudo header ":path"`,
 		},
 		{
 			desc:      "malformed CONNECT request: :authority header missing",
 			treq:      &transport.Request{},
-			wantError: errMalformedHTTP2ConnectRequestExtraAuthority,
+			wantError: `HTTP2 CONNECT request must contain pseudo header ":authority"`,
 		},
 		{
 			desc: "malformed CONNECT request: :authority header missing",
@@ -64,8 +64,8 @@ func TestFromHTTP2ConnectRequest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
 			req, err := fromHTTP2ConnectRequest(tt.treq)
-			if tt.wantError != nil {
-				assert.EqualError(t, err, tt.wantError.Error())
+			if tt.wantError != "" {
+				assert.EqualError(t, err, tt.wantError)
 				return
 			}
 			assert.Equal(t, http.MethodConnect, req.Method)
