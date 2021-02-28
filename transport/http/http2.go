@@ -34,6 +34,8 @@ const (
 	http2MethodPseudoHeader    = ":method"
 	http2AuthorityPseudoHeader = ":authority"
 	http2PathPseudoHeader      = ":path"
+	// https://www.iana.org/assignments/message-headers/message-headers.xhtml
+	httpHostHeader = "Host"
 )
 
 var (
@@ -106,16 +108,16 @@ func fromHTTP2NonConnectRequest(treq *transport.Request) (*http.Request, error) 
 		return nil, errMalformedHTTP2NonConnectRequestMissingPath
 	}
 
-	url := &url.URL{Scheme: scheme, Path: path}
-	hreq, err := http.NewRequest(method, url.String(), treq.Body)
-	if err != nil {
-		return nil, err
-	}
+	host, hasHostHeader := treq.Headers.Get(httpHostHeader)
+	url := &url.URL{Scheme: scheme, Host: host, Path: path}
+	hreq, _ := http.NewRequest(method, url.String(), treq.Body)
 	// An intermediary that converts an HTTP/2 request to HTTP/1.1 MUST
 	// create a Host header field if one is not present in a request by
 	// copying the value of the ":authority" pseudo-header field.
-	if a, ok := treq.Headers.Get(http2AuthorityPseudoHeader); ok && hreq.Host == "" {
-		hreq.Host = a
+	if !hasHostHeader {
+		if a, ok := treq.Headers.Get(http2AuthorityPseudoHeader); ok {
+			hreq.Host = a
+		}
 	}
-	return hreq, err
+	return hreq, nil
 }
