@@ -21,6 +21,8 @@
 package http
 
 import (
+	"bytes"
+	"io/ioutil"
 	"net/http"
 	"testing"
 
@@ -71,6 +73,97 @@ func TestFromHTTP2ConnectRequest(t *testing.T) {
 			}
 			require.NoError(t, err)
 			assert.Equal(t, http.MethodConnect, req.Method)
+		})
+	}
+}
+
+func TestFromHTTP2NonConnectRequest(t *testing.T) {
+	const (
+		method    = http.MethodPost
+		authority = "test-authority"
+	)
+	body := ioutil.NopCloser(bytes.NewReader([]byte{}))
+	tests := []struct {
+		desc      string
+		treq      *transport.Request
+		wantError string
+		wantHost  string
+	}{
+		{
+			desc:      "malformed request: :method header missing",
+			treq:      &transport.Request{},
+			wantError: `HTTP2 non-CONNECT request must contain pseudo header ":method"`,
+		},
+		{
+			desc: "malformed request: :scheme header missing",
+			treq: &transport.Request{
+				Headers: transport.HeadersFromMap(map[string]string{":method": method}),
+			},
+			wantError: `HTTP2 non-CONNECT request must contain pseudo header ":scheme"`,
+		},
+		{
+			desc: "malformed request: :path header missing",
+			treq: &transport.Request{
+				Headers: transport.HeadersFromMap(map[string]string{":method": method, ":scheme": "http"}),
+			},
+			wantError: `HTTP2 non-CONNECT request must contain pseudo header ":path"`,
+		},
+		{
+			desc: "wellformed request without invalid :authority value",
+			treq: &transport.Request{
+				Headers: transport.HeadersFromMap(
+					map[string]string{
+						":method": method,
+						":scheme": "http",
+						":path":   "foo/path",
+					}),
+				Body: body,
+			},
+		},
+		{
+			desc: "wellformed request with :authority and Host header",
+			treq: &transport.Request{
+				Headers: transport.HeadersFromMap(
+					map[string]string{
+						":method":      method,
+						":scheme":      "http",
+						":path":        "foo/path",
+						":authority":   authority,
+						httpHostHeader: "example.com",
+					}),
+				Body: body,
+			},
+			wantHost: "example.com", // host header has higher precedence than :authority header
+		},
+		{
+			desc: "wellformed request with :authority but no Host header",
+			treq: &transport.Request{
+				Headers: transport.HeadersFromMap(
+					map[string]string{
+						":method":    method,
+						":scheme":    "http",
+						":path":      "foo/path",
+						":authority": authority,
+					}),
+				Body: body,
+			},
+			wantHost: authority,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			req, err := fromHTTP2NonConnectRequest(tt.treq)
+			if tt.wantError != "" {
+				assert.EqualError(t, err, tt.wantError)
+				return
+			}
+			require.NoError(t, err)
+			if tt.wantHost != "" {
+				assert.Equal(t, tt.wantHost, req.Host)
+			}
+			assert.Equal(t, method, req.Method)
+			assert.Equal(t, body, req.Body)
 		})
 	}
 }

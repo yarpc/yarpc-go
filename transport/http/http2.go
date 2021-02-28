@@ -34,12 +34,20 @@ const (
 	http2MethodPseudoHeader    = ":method"
 	http2AuthorityPseudoHeader = ":authority"
 	http2PathPseudoHeader      = ":path"
+	// https://www.iana.org/assignments/message-headers/message-headers.xhtml
+	httpHostHeader = "Host"
 )
 
 var (
+	// CONNECT requests
 	errMalformedHTTP2ConnectRequestExtraScheme      = malformedHTTP2ConnectRequestError(http2SchemePseudoHeader, false)
 	errMalformedHTTP2ConnectRequestExtraPath        = malformedHTTP2ConnectRequestError(http2PathPseudoHeader, false)
 	errMalformedHTTP2ConnectRequestMissingAuthority = malformedHTTP2ConnectRequestError(http2AuthorityPseudoHeader, true)
+
+	// non-CONNECT request
+	errMalformedHTTP2NonConnectRequestMissingMethod = malformedHTTP2NonConnectRequestError(http2MethodPseudoHeader)
+	errMalformedHTTP2NonConnectRequestMissingScheme = malformedHTTP2NonConnectRequestError(http2SchemePseudoHeader)
+	errMalformedHTTP2NonConnectRequestMissingPath   = malformedHTTP2NonConnectRequestError(http2PathPseudoHeader)
 )
 
 func malformedHTTP2ConnectRequestError(h string, shouldContain bool) error {
@@ -50,6 +58,10 @@ func malformedHTTP2ConnectRequestError(h string, shouldContain bool) error {
 		base += fmt.Sprintf("must not contain pseudo header %q", h)
 	}
 	return errors.New(base)
+}
+
+func malformedHTTP2NonConnectRequestError(h string) error {
+	return fmt.Errorf("HTTP2 non-CONNECT request must contain pseudo header %q", h)
 }
 
 // take a HTTP/2 request with CONNECT method, mostly with grpc implementation request
@@ -72,4 +84,40 @@ func fromHTTP2ConnectRequest(treq *transport.Request) (*http.Request, error) {
 		return http.NewRequest(http.MethodConnect, url.String(), nil)
 	}
 	return nil, errMalformedHTTP2ConnectRequestMissingAuthority
+}
+
+// take a HTTP/2 request NOT with CONNECT method, mostly with grpc implementation request
+// and convert to a HTTP/1.X equivalent request.
+// All comments below are quotes from RFC7540:
+// https://tools.ietf.org/html/rfc7540#section-8.1.2.3
+func fromHTTP2NonConnectRequest(treq *transport.Request) (*http.Request, error) {
+	// All HTTP/2 requests MUST include exactly one valid value for the
+	// ":method", ":scheme", and ":path" pseudo-header fields,unless it is
+	// a CONNECT request. An HTTP request that omits
+	// mandatory pseudo-header fields is malformed
+	method, ok := treq.Headers.Get(http2MethodPseudoHeader)
+	if !ok {
+		return nil, errMalformedHTTP2NonConnectRequestMissingMethod
+	}
+	scheme, ok := treq.Headers.Get(http2SchemePseudoHeader)
+	if !ok {
+		return nil, errMalformedHTTP2NonConnectRequestMissingScheme
+	}
+	path, ok := treq.Headers.Get(http2PathPseudoHeader)
+	if !ok {
+		return nil, errMalformedHTTP2NonConnectRequestMissingPath
+	}
+
+	host, hasHostHeader := treq.Headers.Get(httpHostHeader)
+	url := &url.URL{Scheme: scheme, Host: host, Path: path}
+	hreq, _ := http.NewRequest(method, url.String(), treq.Body)
+	// An intermediary that converts an HTTP/2 request to HTTP/1.1 MUST
+	// create a Host header field if one is not present in a request by
+	// copying the value of the ":authority" pseudo-header field.
+	if !hasHostHeader {
+		if a, ok := treq.Headers.Get(http2AuthorityPseudoHeader); ok {
+			hreq.Host = a
+		}
+	}
+	return hreq, nil
 }
