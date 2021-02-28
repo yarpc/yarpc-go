@@ -74,3 +74,48 @@ func TestFromHTTP2ConnectRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestFromHTTP2NonConnectRequest(t *testing.T) {
+	tests := []struct {
+		desc      string
+		treq      *transport.Request
+		wantError string
+	}{
+		{
+			desc:      "malformed request: :method header missing",
+			treq:      &transport.Request{},
+			wantError: `HTTP2 non-CONNECT request must contain pseudo header ":method"`,
+		},
+		{
+			desc: "malformed request: :scheme header missing",
+			treq: &transport.Request{
+				Headers: transport.HeadersFromMap(map[string]string{":method": "POST"}),
+			},
+			wantError: `HTTP2 non-CONNECT request must contain pseudo header ":scheme"`,
+		},
+		{
+			desc: "malformed request: :path header missing",
+			treq: &transport.Request{
+				Headers: transport.HeadersFromMap(map[string]string{":method": "POST", ":scheme": "http"}),
+			},
+			wantError: `HTTP2 non-CONNECT request must contain pseudo header ":path"`,
+		},
+		{
+			desc: "malformed CONNECT request: :authority header missing",
+			treq: &transport.Request{
+				Headers: transport.HeadersFromMap(map[string]string{":authority": "127.0.0.1:1234"}),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			req, err := fromHTTP2ConnectRequest(tt.treq)
+			if tt.wantError != "" {
+				assert.EqualError(t, err, tt.wantError)
+				return
+			}
+			assert.Equal(t, http.MethodConnect, req.Method)
+		})
+	}
+}
