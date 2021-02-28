@@ -54,7 +54,7 @@ func TestFromHTTP2ConnectRequest(t *testing.T) {
 			wantError: `HTTP2 CONNECT request must contain pseudo header ":authority"`,
 		},
 		{
-			desc: "malformed CONNECT request: :authority header missing",
+			desc: "wellformed CONNECT request",
 			treq: &transport.Request{
 				Headers: transport.HeadersFromMap(map[string]string{":authority": "127.0.0.1:1234"}),
 			},
