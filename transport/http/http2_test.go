@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
 )
 
@@ -68,6 +69,7 @@ func TestFromHTTP2ConnectRequest(t *testing.T) {
 				assert.EqualError(t, err, tt.wantError)
 				return
 			}
+			require.NoError(t, err)
 			assert.Equal(t, http.MethodConnect, req.Method)
 		})
 	}
