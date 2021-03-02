@@ -2,7 +2,10 @@ package thrift_test
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift/internal/observabilitytest/test"
 	"go.uber.org/yarpc/encoding/thrift/internal/observabilitytest/test/testserviceclient"
 	"go.uber.org/yarpc/encoding/thrift/internal/observabilitytest/test/testserviceserver"
 	"go.uber.org/yarpc/transport/http"
@@ -18,72 +20,77 @@ import (
 	"go.uber.org/yarpc/yarpctest"
 )
 
-type testStructure struct {
-	name   string
-	req    *yarpctest.Call
-	expReq map[string]string
-}
-
-var allTests map[string]testStructure
-
-func validateReq(testname string, ctx context.Context) (bool, string) {
-	test := allTests[testname]
-	call := yarpc.CallFromContext(ctx)
-	for name, value := range test.expReq {
-		switch name {
-		case "CallerProcedure":
-			if call.CallerProcedure() != value {
-				err := "TestName(" + testname + ") - CallerProcedure '" + call.CallerProcedure() + "' does not match with expected value '" + value + "'"
-				return false, err
-			}
-		case "Procedure":
-			if call.Procedure() != value {
-				err := "TestName(" + testname + ") - Procedure '" + call.Procedure() + "' does not match with expected value '" + value + "'"
-				return false, err
-			}
-		}
-	}
-	return true, ""
-}
-
-func runTest(t *testing.T, test testStructure, client testserviceclient.Interface, testName string) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	ctx = yarpctest.ContextWithCall(ctx, test.req)
-	defer cancel()
-
-	_, err := client.Call(ctx, testName)
-	require.NoError(t, err, "unexpected error")
-}
-
-func TestThriftMetrics1(t *testing.T) {
-	transports := []string{tchannel.TransportName, http.TransportName}
-
-	tests := []testStructure{
+func TestThriftEncoding(t *testing.T) {
+	for _, test := range []struct {
+		desc            string
+		transport       string
+		request         *yarpctest.Call
+		expectedHeaders map[string]string
+	}{
 		{
-			name: "test1",
-			req: &yarpctest.Call{
+			desc:      "test1",
+			transport: tchannel.TransportName,
+			request: &yarpctest.Call{
 				Procedure: "ABC1",
 			},
-			expReq: map[string]string{
+			expectedHeaders: map[string]string{
+				"CallerProcedure": "ABC1",
+				"Procedure":       "TestService::Call",
+			},
+		},
+		{
+			desc:      "test2",
+			transport: tchannel.TransportName,
+			request:   &yarpctest.Call{},
+			expectedHeaders: map[string]string{
 				"CallerProcedure": "",
 				"Procedure":       "TestService::Call",
 			},
 		},
-	}
-	allTests = make(map[string]testStructure)
+		{
+			desc:      "test3",
+			transport: http.TransportName,
+			request: &yarpctest.Call{
+				Procedure: "ABC1",
+			},
+			expectedHeaders: map[string]string{
+				"CallerProcedure": "ABC1",
+				"Procedure":       "TestService::Call",
+			},
+		},
+		{
+			desc:      "test4",
+			transport: http.TransportName,
+			request:   &yarpctest.Call{},
+			expectedHeaders: map[string]string{
+				"CallerProcedure": "",
+				"Procedure":       "TestService::Call",
+			},
+		},
+	} {
 
-	for _, trans := range transports {
-		t.Run(trans+" thift call", func(t *testing.T) {
-			client, cleanup := CreateClientAndServer(t, trans, testServer1{})
+		t.Run(test.desc, func(t *testing.T) {
+			client, cleanup := CreateClientAndServer(t, test.transport, testServer1{})
 			defer cleanup()
 
-			for _, test := range tests {
-				testName := trans + "_" + test.name
-				allTests[testName] = test
-				runTest(t, test, client, testName)
-			}
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			ctx = yarpctest.ContextWithCall(ctx, test.request)
+			defer cancel()
+
+			headersStr := mapToStr(test.expectedHeaders)
+			_, err := client.Call(ctx, headersStr)
+			require.NoError(t, err, "unexpected call error")
 		})
 	}
+
+}
+
+func mapToStr(m map[string]string) string {
+	var arr []string
+	for name, value := range m {
+		arr = append(arr, fmt.Sprintf("%s|%s", name, value))
+	}
+	return strings.Join(arr, " ")
 }
 
 func CreateClientAndServer(
@@ -171,14 +178,45 @@ func CreateClient(t *testing.T, transportType string, serverAddr string) (client
 	return client, cleanup
 }
 
+func validateHeader(headerName string, expectedValue string, call *yarpc.Call) (result bool, err string) {
+	result = true
+	err = ""
+	switch headerName {
+	case "CallerProcedure":
+		value := call.CallerProcedure()
+		if value != expectedValue {
+			result = false
+			err = fmt.Sprintf("CallerProcedure validation failed - expected('%s'), received('%s')", expectedValue, value)
+		}
+	case "Procedure":
+		value := call.Procedure()
+		if value != expectedValue {
+			result = false
+			err = fmt.Sprintf("Procedure validation failed - expected('%s'), received('%s')", expectedValue, value)
+		}
+	default:
+		result = false
+		err = fmt.Sprintf("Invalid input header: '%s'", headerName)
+	}
+	return result, err
+}
+
 type testServer1 struct{}
 
 func (testServer1) Call(ctx context.Context, val string) (string, error) {
-
-	ok, err := validateReq(val, ctx)
-	if ok == true {
-		return val, nil
+	call := yarpc.CallFromContext(ctx)
+	if call == nil {
+		return "", errors.New("Invalid call context")
 	}
 
-	return "", &test.ExceptionWithoutCode{Val: err}
+	for _, pair := range strings.Split(val, " ") {
+		arr := strings.Split(pair, "|")
+		header := arr[0]
+		value := arr[1]
+		if _, err := validateHeader(header, value, call); err != "" {
+			return "", errors.New(err)
+		}
+	}
+
+	return val, nil
 }

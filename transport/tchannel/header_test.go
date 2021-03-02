@@ -64,6 +64,48 @@ func TestEncodeAndDecodeHeaders(t *testing.T) {
 	}
 }
 
+func TestCallerProcedureHeader(t *testing.T) {
+	tests := []struct {
+		treq    transport.Request
+		headers map[string]string
+	}{
+		{
+			treq:    transport.Request{},
+			headers: nil,
+		},
+		{
+			treq: transport.Request{
+				CallerProcedure: "ABC",
+			},
+			headers: map[string]string{
+				CallerProcedureHeader: "ABC",
+			},
+		},
+		{
+			treq: transport.Request{
+				Procedure:       "XYZ",
+				CallerProcedure: "ABC",
+				Headers:         transport.HeadersFromMap(map[string]string{"header": "value"}),
+			},
+			headers: map[string]string{
+				CallerProcedureHeader: "ABC",
+				"header":              "value",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		headers := addCallerProcedureHeader(&tt.treq, tt.treq.Headers.OriginalItems())
+		assert.Equal(t, tt.headers, headers)
+
+		treq := tt.treq
+		theaders := transport.HeadersFromMap(tt.headers)
+
+		moveCallerProcedureToRequest(&treq, &theaders)
+		assert.Equal(t, tt.treq, treq)
+	}
+}
+
 func TestDecodeHeaderErrors(t *testing.T) {
 	tests := [][]byte{
 		{0x00, 0x01},

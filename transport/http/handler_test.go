@@ -57,6 +57,7 @@ func TestHandlerSuccess(t *testing.T) {
 	headers.Set(ShardKeyHeader, "shard")
 	headers.Set(RoutingKeyHeader, "routekey")
 	headers.Set(RoutingDelegateHeader, "routedelegate")
+	headers.Set(CallerProcedureHeader, "callerprocedure")
 
 	router := transporttest.NewMockRouter(mockCtrl)
 	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
@@ -81,6 +82,7 @@ func TestHandlerSuccess(t *testing.T) {
 				ShardKey:        "shard",
 				RoutingKey:      "routekey",
 				RoutingDelegate: "routedelegate",
+				CallerProcedure: "callerprocedure",
 				Body:            bytes.NewReader([]byte("Nyuck Nyuck")),
 			},
 		),

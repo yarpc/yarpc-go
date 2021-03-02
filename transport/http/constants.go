@@ -40,6 +40,10 @@ const (
 	// Request.Caller attribute.
 	CallerHeader = "Rpc-Caller"
 
+	// Name of the procedure of the caller sending the request. This corresponds to the
+	// Request.CallerProcedure attribute.
+	CallerProcedureHeader = "Rpc-Caller-Procedure"
+
 	// Name of the encoding used for the request body. This corresponds to the
 	// Request.Encoding attribute.
 	EncodingHeader = "Rpc-Encoding"

@@ -77,8 +77,9 @@ func update(ctx context.Context, req *transport.Request, out transport.Outbound)
 
 	// Update the caller procedure to the current procedure making this request
 	call := encoding.CallFromContext(ctx)
-	req.CallerProcedure = call.Procedure()
-
+	if call != nil {
+		req.CallerProcedure = call.Procedure()
+	}
 }
 
 func updateStream(ctx context.Context, req *transport.StreamRequest, out transport.Outbound) {
@@ -94,5 +95,7 @@ func updateStream(ctx context.Context, req *transport.StreamRequest, out transpo
 
 	// Update the caller procedure to the current procedure making this request
 	call := encoding.CallFromContext(ctx)
-	req.Meta.CallerProcedure = call.Procedure()
+	if call != nil {
+		req.Meta.CallerProcedure = call.Procedure()
+	}
 }

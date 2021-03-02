@@ -182,6 +182,8 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 	if err != nil {
 		return errors.RequestHeadersDecodeError(treq, err)
 	}
+
+	treq = moveCallerProcedureToRequest(treq, &headers)
 	treq.Headers = headers
 
 	if tcall, ok := call.(tchannelCall); ok {
