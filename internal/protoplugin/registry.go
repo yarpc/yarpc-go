@@ -304,7 +304,11 @@ func defaultGoPackageName(f *descriptor.FileDescriptorProto) string {
 func packageIdentityName(f *descriptor.FileDescriptorProto) string {
 	if f.Options != nil && f.Options.GoPackage != nil {
 		gopkg := f.Options.GetGoPackage()
-		idx := strings.LastIndex(gopkg, "/")
+		idx := strings.Index(gopkg, ";")
+		if idx >= 0 {
+			return gopkg[idx+1:]
+		}
+		idx = strings.LastIndex(gopkg, "/")
 		if idx < 0 {
 			return gopkg
 		}
