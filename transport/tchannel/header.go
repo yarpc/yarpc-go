@@ -48,7 +48,7 @@ const (
 	ApplicationErrorDetailsHeaderKey = "$rpc$-application-error-details"
 	// ApplicationErrorCodeHeaderKey is the response header key for the application error code.
 	ApplicationErrorCodeHeaderKey = "$rpc$-application-error-code"
-	// CallerProcedureHeader is the procedure of the caller making the request
+	// CallerProcedureHeader is the header key for the procedure of the caller making the request.
 	CallerProcedureHeader = "$rpc$-caller-procedure"
 )
 
@@ -171,8 +171,9 @@ func decodeHeaders(r io.Reader) (transport.Headers, error) {
 	return headers, reader.Err()
 }
 
-// moves CallerProcedure header from headers to transport req
-func moveCallerProcedureToRequest(req *transport.Request, headers *transport.Headers) *transport.Request {
+// moveCallerProcedureHeaderToRequest copies callerProcedure from headers to req.CallerProcedure
+// and then deletes it from headers.
+func moveCallerProcedureHeaderToRequest(req *transport.Request, headers *transport.Headers) *transport.Request {
 	if callerProcedure, ok := headers.Get(CallerProcedureHeader); ok {
 		req.CallerProcedure = callerProcedure
 		headers.Del(CallerProcedureHeader)
@@ -181,8 +182,8 @@ func moveCallerProcedureToRequest(req *transport.Request, headers *transport.Hea
 	return req
 }
 
-// add callerProcedure header as an application header
-func addCallerProcedureHeader(req *transport.Request, reqHeaders map[string]string) map[string]string {
+// addCallerProcedureToHeader add callerProcedure header as an application header.
+func addCallerProcedureToHeader(req *transport.Request, reqHeaders map[string]string) map[string]string {
 	if req.CallerProcedure == "" {
 		return reqHeaders
 	}

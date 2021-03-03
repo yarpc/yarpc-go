@@ -64,7 +64,7 @@ type Request struct {
 	// override the routing key and service.
 	RoutingDelegate string
 
-	// CallerProcedure refers to the name of the rpc procedure from the service making this request
+	// CallerProcedure refers to the name of the rpc procedure from the service making this request.
 	CallerProcedure string
 
 	// Request payload.
@@ -196,7 +196,7 @@ type RequestMeta struct {
 	// override the routing key and service.
 	RoutingDelegate string
 
-	// CallerProcedure refers to the name of the rpc procedure of the service making this request
+	// CallerProcedure refers to the name of the rpc procedure of the service making this request.
 	CallerProcedure string
 }
 

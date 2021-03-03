@@ -401,7 +401,6 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 	if treq.RoutingDelegate != "" {
 		req.Header.Set(RoutingDelegateHeader, treq.RoutingDelegate)
 	}
-
 	if treq.CallerProcedure != "" {
 		req.Header.Set(CallerProcedureHeader, treq.CallerProcedure)
 	}

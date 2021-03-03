@@ -577,6 +577,7 @@ func TestWithCoreHeaders(t *testing.T) {
 	routingKey := "routing"
 	routingDelegate := "delegate"
 	callerProcedure := "callerprocedure"
+
 	treq := &transport.Request{
 		ShardKey:        shardKey,
 		RoutingKey:      routingKey,

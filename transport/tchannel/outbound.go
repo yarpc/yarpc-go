@@ -144,7 +144,8 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 	}
 	reqHeaders := headerMap(req.Headers, headerCase)
 
-	reqHeaders = addCallerProcedureHeader(req, reqHeaders)
+	// for tchannel, callerProcedure is added to application headers.
+	reqHeaders = addCallerProcedureToHeader(req, reqHeaders)
 
 	// baggage headers are transport implementation details that are stripped out (and stored in the context). Users don't interact with it
 	tracingBaggage := tchannel.InjectOutboundSpan(call.Response(), nil)

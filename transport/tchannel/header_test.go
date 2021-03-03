@@ -64,48 +64,82 @@ func TestEncodeAndDecodeHeaders(t *testing.T) {
 	}
 }
 
-func TestCallerProcedureHeader(t *testing.T) {
-	tests := []struct {
-		treq    transport.Request
-		headers map[string]string
+func TestAddCallerProcedureHeader(t *testing.T) {
+	for _, tt := range []struct {
+		desc            string
+		treq            transport.Request
+		headers         map[string]string
+		expectedHeaders map[string]string
 	}{
 		{
-			treq:    transport.Request{},
-			headers: nil,
-		},
-		{
-			treq: transport.Request{
-				CallerProcedure: "ABC",
-			},
-			headers: map[string]string{
-				CallerProcedureHeader: "ABC",
-			},
-		},
-		{
-			treq: transport.Request{
-				Procedure:       "XYZ",
-				CallerProcedure: "ABC",
-				Headers:         transport.HeadersFromMap(map[string]string{"header": "value"}),
-			},
-			headers: map[string]string{
+			desc:    "valid_callerProcedure_and_valid_header",
+			treq:    transport.Request{CallerProcedure: "ABC"},
+			headers: map[string]string{"header": "value"},
+			expectedHeaders: map[string]string{
 				CallerProcedureHeader: "ABC",
 				"header":              "value",
 			},
 		},
-	}
-
-	for _, tt := range tests {
-		headers := addCallerProcedureHeader(&tt.treq, tt.treq.Headers.OriginalItems())
-		assert.Equal(t, tt.headers, headers)
-
-		treq := tt.treq
-		theaders := transport.HeadersFromMap(tt.headers)
-
-		moveCallerProcedureToRequest(&treq, &theaders)
-		assert.Equal(t, tt.treq, treq)
+		{
+			desc:            "valid_callerProcedure_and_empty_header",
+			treq:            transport.Request{CallerProcedure: "ABC"},
+			headers:         nil,
+			expectedHeaders: map[string]string{CallerProcedureHeader: "ABC"},
+		},
+		{
+			desc:            "empty_callerProcedure_and_empty_header",
+			treq:            transport.Request{},
+			headers:         nil,
+			expectedHeaders: nil,
+		},
+		{
+			desc:            "empty_callerProcedure_and_valid_header",
+			treq:            transport.Request{},
+			headers:         map[string]string{"header": "value"},
+			expectedHeaders: map[string]string{"header": "value"},
+		},
+	} {
+		t.Run(tt.desc, func(t *testing.T) {
+			headers := addCallerProcedureToHeader(&tt.treq, tt.headers)
+			assert.Equal(t, tt.expectedHeaders, headers)
+		})
 	}
 }
 
+func TestMoveCallerProcedureToRequest(t *testing.T) {
+	for _, tt := range []struct {
+		desc            string
+		treq            transport.Request
+		headers         map[string]string
+		expectedTreq    transport.Request
+		expectedHeaders map[string]string
+	}{
+		{
+			desc:            "no_callerProcedureReq_in_headers",
+			treq:            transport.Request{},
+			headers:         map[string]string{"header": "value"},
+			expectedTreq:    transport.Request{},
+			expectedHeaders: map[string]string{"header": "value"},
+		},
+		{
+			desc: "callerProcedureReq_set_in_headers",
+			treq: transport.Request{},
+			headers: map[string]string{
+				"header":              "value",
+				CallerProcedureHeader: "ABC",
+			},
+			expectedTreq:    transport.Request{CallerProcedure: "ABC"},
+			expectedHeaders: map[string]string{"header": "value"},
+		},
+	} {
+		t.Run(tt.desc, func(t *testing.T) {
+			headers := transport.HeadersFromMap(tt.headers)
+			treq := moveCallerProcedureHeaderToRequest(&tt.treq, &headers)
+			assert.Equal(t, tt.expectedTreq, *treq)
+			assert.Equal(t, transport.HeadersFromMap(tt.expectedHeaders), headers)
+		})
+	}
+}
 func TestDecodeHeaderErrors(t *testing.T) {
 	tests := [][]byte{
 		{0x00, 0x01},
