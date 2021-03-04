@@ -22,7 +22,6 @@ package observability
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"go.uber.org/net/metrics"
@@ -187,6 +186,8 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 // Call implements middleware.UnaryOutbound.
 func (m *Middleware) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	call := m.graph.begin(ctx, transport.Unary, _directionOutbound, req)
+	defer m.handlePanicForCall(call, transport.Unary)
+
 	res, err := out.Call(ctx, req)
 
 	isApplicationError := false
@@ -211,6 +212,8 @@ func (m *Middleware) Call(ctx context.Context, req *transport.Request, out trans
 // HandleOneway implements middleware.OnewayInbound.
 func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
 	call := m.graph.begin(ctx, transport.Oneway, _directionInbound, req)
+	defer m.handlePanicForCall(call, transport.Oneway)
+
 	err := h.HandleOneway(ctx, req)
 	call.End(callResult{err: err, requestSize: req.BodySize})
 	return err
@@ -219,6 +222,8 @@ func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h
 // CallOneway implements middleware.OnewayOutbound.
 func (m *Middleware) CallOneway(ctx context.Context, req *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
 	call := m.graph.begin(ctx, transport.Oneway, _directionOutbound, req)
+	defer m.handlePanicForCall(call, transport.Oneway)
+
 	ack, err := out.CallOneway(ctx, req)
 	call.End(callResult{err: err, requestSize: req.BodySize})
 	return ack, err
@@ -238,6 +243,13 @@ func (m *Middleware) HandleStream(serverStream *transport.ServerStream, h transp
 // CallStream implements middleware.StreamOutbound.
 func (m *Middleware) CallStream(ctx context.Context, request *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
 	call := m.graph.begin(ctx, transport.Streaming, _directionOutbound, request.Meta.ToRequest())
+	defer m.handlePanicForCall(call, transport.Streaming)
+
+	// TODO: metrics for outbound stream and inbound stream are not reported
+	// in the same way. HandleStream increases the metric calls by 1 before passing
+	// the request while CallStream does it after passing the request.
+	// In case of panics in CallStream, the metrics calls will not be increased
+	// while it will in HandleStream.
 	clientStream, err := out.CallStream(ctx, request)
 	call.EndStreamHandshakeWithError(err)
 	if err != nil {
@@ -264,15 +276,14 @@ func ctxErrOverride(ctx context.Context, req *transport.Request) (ctxErr error) 
 
 // handlePanicForCall checks for a panic without actually recovering from it
 // it must be called in defer otherwise recover will act as a no-op
-// The only action this method takes is to emit panic metrics
+// The only action this method takes is to emit panic metrics.
 func (m *Middleware) handlePanicForCall(call call, transportType transport.Type) {
 	// We only want to emit panic metrics without actually recovering from it
 	// Actual recovery from a panic happens at top of the stack in transport's Handler Invoker
 	// As this middleware is the one and only one with Metrics responsibility, we just panic again after
-	// checking for panic without actually recovering from it
+	// checking for panic without actually recovering from it.
 	if e := recover(); e != nil {
-		err := fmt.Errorf("panic: %v", e)
-
+		err := yarpcerrors.InternalErrorf("panic %v", e)
 		// Emit only the panic metrics
 		if transportType == transport.Streaming {
 			call.EndStreamWithPanic(err)

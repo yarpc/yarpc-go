@@ -26,6 +26,7 @@ import (
 	"net"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -578,6 +579,42 @@ func TestTwoRandomChoicesPeer(t *testing.T) {
 			assert.Equal(t, tt.expectedRunning, pl.IsRunning(), "Peer list should match expected final running state")
 		})
 	}
+}
+
+func BenchmarkParallelChoose(b *testing.B) {
+	impl := NewImplementation()
+
+	for i := 0; i < 5000; i++ {
+		impl.Add(nil, nil)
+	}
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			impl.Choose(nil)
+		}
+	})
+}
+
+func TestParallelChoose(t *testing.T) {
+	impl := NewImplementation()
+
+	for i := 0; i < 5000; i++ {
+		impl.Add(nil, nil)
+	}
+
+	assert.NotPanics(t, func() {
+		var wg sync.WaitGroup
+		for i := 0; i < 100; i++ {
+			wg.Add(1)
+			go func() {
+				for j := 0; j < 5000; j++ {
+					impl.Choose(nil)
+				}
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+	})
 }
 
 func TestFailFastConfig(t *testing.T) {

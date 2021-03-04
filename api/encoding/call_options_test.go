@@ -18,7 +18,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
+package encoding
 
-// Version is the current version of YARPC.
-const Version = "1.53.0-dev"
+import (
+	"reflect"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+// Ensuring these are equal via `reflect.DeepEqual` ensures that gomock by default can assert equality on CallOptions
+// in tests without custom matchers
+func TestCallOptionsReflectEquals(t *testing.T) {
+	opt1 := WithHeader("a-header", "a-value")
+	opt2 := WithHeader("a-header", "a-value")
+
+	require.True(t, reflect.DeepEqual(opt1, opt2))
+}
+
+func TestManyCallOptionsReflectEquals(t *testing.T) {
+	opts1 := []CallOption{WithHeader("a-header", "a-value"), WithRoutingKey("a-routing-key")}
+	opts2 := []CallOption{WithHeader("a-header", "a-value"), WithRoutingKey("a-routing-key")}
+	opts3 := []CallOption{WithShardKey("a-shard-key")}
+
+	require.True(t, reflect.DeepEqual(opts1, opts2))
+	require.False(t, reflect.DeepEqual(opts1, opts3))
+	require.False(t, reflect.DeepEqual(opts2, opts3))
+}

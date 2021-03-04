@@ -136,7 +136,7 @@ func (c call) endWithAppError(
 // EndWithPanic ends the call with additional panic metrics
 func (c call) EndWithPanic(err error) {
 	c.edge.panics.Inc()
-	c.endWithAppError(callResult{err: err, isApplicationError: true})
+	c.endWithAppError(callResult{err: err})
 }
 
 func (c call) endLogs(
