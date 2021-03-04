@@ -65,6 +65,8 @@ const (
 	// ApplicationErrorHeader is the header key that will contain a non-empty value
 	// if there was an application error.
 	ApplicationErrorHeader = "rpc-application-error"
+	// Load header is used to send load reports back to the caller.
+	LoadHeader = "rpc-load"
 
 	// _applicationErrorNameHeader is the header for the name of the application
 	// error.
@@ -89,6 +91,11 @@ const (
 // transport.CanonicalizeHeaderKey
 
 func isReserved(header string) bool {
+	// Allow setting the load header by the application.
+	// This is to be used by opt-in middlewares.
+	if header == LoadHeader {
+		return false
+	}
 	return strings.HasPrefix(strings.ToLower(header), "rpc-")
 }
 
