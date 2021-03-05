@@ -171,9 +171,9 @@ func decodeHeaders(r io.Reader) (transport.Headers, error) {
 	return headers, reader.Err()
 }
 
-// moveCallerProcedureHeaderToRequest copies callerProcedure from headers to req.CallerProcedure
+// headerCallerProcedureToRequest copies callerProcedure from headers to req.CallerProcedure
 // and then deletes it from headers.
-func moveCallerProcedureHeaderToRequest(req *transport.Request, headers *transport.Headers) *transport.Request {
+func headerCallerProcedureToRequest(req *transport.Request, headers *transport.Headers) *transport.Request {
 	if callerProcedure, ok := headers.Get(CallerProcedureHeader); ok {
 		req.CallerProcedure = callerProcedure
 		headers.Del(CallerProcedureHeader)
@@ -182,8 +182,8 @@ func moveCallerProcedureHeaderToRequest(req *transport.Request, headers *transpo
 	return req
 }
 
-// addCallerProcedureToHeader add callerProcedure header as an application header.
-func addCallerProcedureToHeader(req *transport.Request, reqHeaders map[string]string) map[string]string {
+// requestCallerProcedureToHeader add callerProcedure header as an application header.
+func requestCallerProcedureToHeader(req *transport.Request, reqHeaders map[string]string) map[string]string {
 	if req.CallerProcedure == "" {
 		return reqHeaders
 	}

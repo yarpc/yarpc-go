@@ -100,7 +100,7 @@ func TestAddCallerProcedureHeader(t *testing.T) {
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
-			headers := addCallerProcedureToHeader(&tt.treq, tt.headers)
+			headers := requestCallerProcedureToHeader(&tt.treq, tt.headers)
 			assert.Equal(t, tt.expectedHeaders, headers)
 		})
 	}
@@ -134,7 +134,7 @@ func TestMoveCallerProcedureToRequest(t *testing.T) {
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
 			headers := transport.HeadersFromMap(tt.headers)
-			treq := moveCallerProcedureHeaderToRequest(&tt.treq, &headers)
+			treq := headerCallerProcedureToRequest(&tt.treq, &headers)
 			assert.Equal(t, tt.expectedTreq, *treq)
 			assert.Equal(t, transport.HeadersFromMap(tt.expectedHeaders), headers)
 		})
