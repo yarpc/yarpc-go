@@ -257,21 +257,22 @@
 //  success
 //    Configures the level at which successful requests are logged.
 //    Defaults to "debug".
-//  applicationError
-//    Configures the level at which application errors are logged.
-//    All Thrift exceptions are considered application errors.
+//  serverError
+//    Configures the level at which server errors are logged.
 //    Defaults to "error".
-//  failure
-//    Configures the level at which all other failures are logged.
+//  clientError
+//    Configures the level at which all client errors are logged.
+//    All Thrift exceptions are considered application errors if
+//    they are not annotated with the option rpc.code.
 //    Default is "error".
 //
 // For example, the following configuration will have the effect of logging
-// Thrift exceptions for inbound and outbound calls ("Error handling inbound
+// client errors for inbound and outbound calls ("Error handling inbound
 // request" and "Error making outbound call") at info level instead of error.
 //
 // 	logging:
 // 	  levels:
-// 	    applicationError: info
+// 	    clientError: info
 //
 // The 'logging' attribute also has 'inbound' and 'outbound' sections
 // to specify log levels that depend on the traffic direction.

@@ -303,6 +303,10 @@ func (c *Configurator) load(serviceName string, cfg *yarpcConfig) (_ yarpc.Confi
 		}
 	}
 
+	if e := c.validateLogging(cfg.Logging); e != nil {
+		err = multierr.Append(err, e)
+	}
+
 	if err != nil {
 		return yarpc.Config{}, err
 	}
@@ -392,4 +396,21 @@ func (c *Configurator) spec(name string) (*compiledTransportSpec, error) {
 		return nil, fmt.Errorf("unknown transport %q", name)
 	}
 	return spec, nil
+}
+
+// validateLogging validates if the given logging is valid or not.
+func (c *Configurator) validateLogging(l logging) error {
+	if (l.Levels.ApplicationError != nil || l.Levels.Failure != nil) && (l.Levels.ServerError != nil || l.Levels.ClientError != nil) {
+		return fmt.Errorf("invalid logging configuration, failure/applicationError configuration can not be used with serverError/clientError")
+	}
+
+	if (l.Levels.Outbound.ApplicationError != nil || l.Levels.Outbound.Failure != nil) && (l.Levels.Outbound.ServerError != nil || l.Levels.Outbound.ClientError != nil) {
+		return fmt.Errorf("invalid outbound logging configuration, failure/applicationError configuration can not be used with serverError/clientError")
+	}
+
+	if (l.Levels.Inbound.ApplicationError != nil || l.Levels.Inbound.Failure != nil) && (l.Levels.Inbound.ServerError != nil || l.Levels.Inbound.ClientError != nil) {
+		return fmt.Errorf("invalid inbound logging configuration, failure/applicationError configuration can not be used with serverError/clientError")
+	}
+
+	return nil
 }

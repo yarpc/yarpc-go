@@ -84,33 +84,81 @@ func TestNewMiddlewareLogLevels(t *testing.T) {
 
 		t.Run("Failure", func(t *testing.T) {
 			t.Run("default", func(t *testing.T) {
-				assert.Equal(t, zapcore.ErrorLevel, NewMiddleware(Config{}).graph.inboundLevels.failure)
+				m := NewMiddleware(Config{})
+				assert.Equal(t, zapcore.ErrorLevel, m.graph.inboundLevels.failure)
+				assert.False(t, m.graph.inboundLevels.useApplicationErrorFailureLevels)
 			})
 
 			t.Run("override", func(t *testing.T) {
-				assert.Equal(t, zapcore.WarnLevel, NewMiddleware(Config{
+				m := NewMiddleware(Config{
 					Levels: LevelsConfig{
 						Inbound: DirectionalLevelsConfig{
 							Failure: &warnLevel,
 						},
 					},
-				}).graph.inboundLevels.failure)
+				})
+				assert.Equal(t, zapcore.WarnLevel, m.graph.inboundLevels.failure)
+				assert.True(t, m.graph.inboundLevels.useApplicationErrorFailureLevels)
 			})
 		})
 
 		t.Run("ApplicationError", func(t *testing.T) {
 			t.Run("default", func(t *testing.T) {
-				assert.Equal(t, zapcore.ErrorLevel, NewMiddleware(Config{}).graph.inboundLevels.applicationError)
+				m := NewMiddleware(Config{})
+				assert.Equal(t, zapcore.ErrorLevel, m.graph.inboundLevels.applicationError)
+				assert.False(t, m.graph.inboundLevels.useApplicationErrorFailureLevels)
 			})
 
 			t.Run("override", func(t *testing.T) {
-				assert.Equal(t, zapcore.WarnLevel, NewMiddleware(Config{
+				m := NewMiddleware(Config{
 					Levels: LevelsConfig{
 						Inbound: DirectionalLevelsConfig{
 							ApplicationError: &warnLevel,
 						},
 					},
-				}).graph.inboundLevels.applicationError)
+				})
+				assert.Equal(t, zapcore.WarnLevel, m.graph.inboundLevels.applicationError)
+				assert.True(t, m.graph.inboundLevels.useApplicationErrorFailureLevels)
+			})
+		})
+
+		t.Run("ClientError", func(t *testing.T) {
+			t.Run("default", func(t *testing.T) {
+				m := NewMiddleware(Config{})
+				assert.Equal(t, zapcore.ErrorLevel, m.graph.inboundLevels.clientError)
+				assert.False(t, m.graph.inboundLevels.useApplicationErrorFailureLevels)
+			})
+
+			t.Run("override", func(t *testing.T) {
+				m := NewMiddleware(Config{
+					Levels: LevelsConfig{
+						Inbound: DirectionalLevelsConfig{
+							ClientError: &warnLevel,
+						},
+					},
+				})
+				assert.Equal(t, zapcore.WarnLevel, m.graph.inboundLevels.clientError)
+				assert.False(t, m.graph.inboundLevels.useApplicationErrorFailureLevels)
+			})
+		})
+
+		t.Run("serverError", func(t *testing.T) {
+			t.Run("default", func(t *testing.T) {
+				m := NewMiddleware(Config{})
+				assert.Equal(t, zapcore.ErrorLevel, m.graph.inboundLevels.serverError)
+				assert.False(t, m.graph.inboundLevels.useApplicationErrorFailureLevels)
+			})
+
+			t.Run("override", func(t *testing.T) {
+				m := NewMiddleware(Config{
+					Levels: LevelsConfig{
+						Inbound: DirectionalLevelsConfig{
+							ServerError: &warnLevel,
+						},
+					},
+				})
+				assert.Equal(t, zapcore.WarnLevel, m.graph.inboundLevels.serverError)
+				assert.False(t, m.graph.inboundLevels.useApplicationErrorFailureLevels)
 			})
 		})
 	})
@@ -118,55 +166,108 @@ func TestNewMiddlewareLogLevels(t *testing.T) {
 	t.Run("Outbound", func(t *testing.T) {
 		t.Run("Success", func(t *testing.T) {
 			t.Run("default", func(t *testing.T) {
-				assert.Equal(t, zapcore.DebugLevel, NewMiddleware(Config{}).graph.outboundLevels.success)
+				m := NewMiddleware(Config{})
+				assert.Equal(t, zapcore.DebugLevel, m.graph.outboundLevels.success)
+				assert.False(t, m.graph.outboundLevels.useApplicationErrorFailureLevels)
 			})
 
 			t.Run("override", func(t *testing.T) {
-				assert.Equal(t, zapcore.InfoLevel, NewMiddleware(Config{
+				m := NewMiddleware(Config{
 					Levels: LevelsConfig{
 						Outbound: DirectionalLevelsConfig{
 							Success: &infoLevel,
 						},
 					},
-				}).graph.outboundLevels.success)
+				})
+				assert.Equal(t, zapcore.InfoLevel, m.graph.outboundLevels.success)
+				assert.False(t, m.graph.outboundLevels.useApplicationErrorFailureLevels)
 			})
 		})
 
 		t.Run("Failure", func(t *testing.T) {
 			t.Run("default", func(t *testing.T) {
-				assert.Equal(t, zapcore.ErrorLevel, NewMiddleware(Config{}).graph.outboundLevels.failure)
+				m := NewMiddleware(Config{})
+				assert.Equal(t, zapcore.ErrorLevel, m.graph.outboundLevels.failure)
+				assert.False(t, m.graph.outboundLevels.useApplicationErrorFailureLevels)
 			})
 
 			t.Run("override", func(t *testing.T) {
-				assert.Equal(t, zapcore.WarnLevel, NewMiddleware(Config{
+				m := NewMiddleware(Config{
 					Levels: LevelsConfig{
 						Outbound: DirectionalLevelsConfig{
 							Failure: &warnLevel,
 						},
 					},
-				}).graph.outboundLevels.failure)
+				})
+				assert.Equal(t, zapcore.WarnLevel, m.graph.outboundLevels.failure)
+				assert.True(t, m.graph.outboundLevels.useApplicationErrorFailureLevels)
 			})
 		})
 
 		t.Run("ApplicationError", func(t *testing.T) {
 			t.Run("default", func(t *testing.T) {
-				assert.Equal(t, zapcore.ErrorLevel, NewMiddleware(Config{}).graph.outboundLevels.applicationError)
+				m := NewMiddleware(Config{})
+				assert.Equal(t, zapcore.ErrorLevel, m.graph.outboundLevels.applicationError)
+				assert.False(t, m.graph.outboundLevels.useApplicationErrorFailureLevels)
 			})
 
 			t.Run("override", func(t *testing.T) {
-				assert.Equal(t, zapcore.WarnLevel, NewMiddleware(Config{
+				m := NewMiddleware(Config{
 					Levels: LevelsConfig{
 						Outbound: DirectionalLevelsConfig{
 							ApplicationError: &warnLevel,
 						},
 					},
-				}).graph.outboundLevels.applicationError)
+				})
+				assert.Equal(t, zapcore.WarnLevel, m.graph.outboundLevels.applicationError)
+				assert.True(t, m.graph.outboundLevels.useApplicationErrorFailureLevels)
+			})
+		})
+
+		t.Run("ClientError", func(t *testing.T) {
+			t.Run("default", func(t *testing.T) {
+				m := NewMiddleware(Config{})
+				assert.Equal(t, zapcore.ErrorLevel, m.graph.outboundLevels.clientError)
+				assert.False(t, m.graph.outboundLevels.useApplicationErrorFailureLevels)
+			})
+
+			t.Run("override", func(t *testing.T) {
+				m := NewMiddleware(Config{
+					Levels: LevelsConfig{
+						Outbound: DirectionalLevelsConfig{
+							ClientError: &warnLevel,
+						},
+					},
+				})
+				assert.Equal(t, zapcore.WarnLevel, m.graph.outboundLevels.clientError)
+				assert.False(t, m.graph.outboundLevels.useApplicationErrorFailureLevels)
+			})
+		})
+
+		t.Run("ServerError", func(t *testing.T) {
+			t.Run("default", func(t *testing.T) {
+				m := NewMiddleware(Config{})
+				assert.Equal(t, zapcore.ErrorLevel, m.graph.outboundLevels.serverError)
+				assert.False(t, m.graph.outboundLevels.useApplicationErrorFailureLevels)
+			})
+
+			t.Run("override", func(t *testing.T) {
+				m := NewMiddleware(Config{
+					Levels: LevelsConfig{
+						Outbound: DirectionalLevelsConfig{
+							ServerError: &warnLevel,
+						},
+					},
+				})
+				assert.Equal(t, zapcore.WarnLevel, m.graph.outboundLevels.serverError)
+				assert.False(t, m.graph.outboundLevels.useApplicationErrorFailureLevels)
 			})
 		})
 	})
+
 }
 
-func TestMiddlewareLogging(t *testing.T) {
+func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 	defer stubTime()()
 	req := &transport.Request{
 		Caller:          "caller",
@@ -488,7 +589,366 @@ func TestMiddlewareLogging(t *testing.T) {
 	}
 }
 
-func TestMiddlewareStreamingLogging(t *testing.T) {
+func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
+	defer stubTime()()
+	req := &transport.Request{
+		Caller:          "caller",
+		Service:         "service",
+		Transport:       "",
+		Encoding:        "raw",
+		Procedure:       "procedure",
+		Headers:         transport.NewHeaders().With("password", "super-secret"),
+		ShardKey:        "shard01",
+		RoutingKey:      "routing-key",
+		RoutingDelegate: "routing-delegate",
+		Body:            strings.NewReader("body"),
+	}
+
+	rawErr := errors.New("fail")
+	yErrNoDetails := yarpcerrors.Newf(yarpcerrors.CodeAborted, "fail")
+	yErrWithDetails := yarpcerrors.Newf(yarpcerrors.CodeAborted, "fail").WithDetails([]byte("err detail"))
+	yErrResourceExhausted := yarpcerrors.CodeResourceExhausted
+	yErrInternal := yarpcerrors.CodeInternal
+	appErrDetails := "an app error detail string, usually from thriftEx.Error()!"
+	yServerErrInternal := yarpcerrors.Newf(yarpcerrors.CodeInternal, "internal")
+
+	baseFields := func() []zapcore.Field {
+		return []zapcore.Field{
+			zap.String("source", req.Caller),
+			zap.String("dest", req.Service),
+			zap.String("transport", unknownIfEmpty(req.Transport)),
+			zap.String("procedure", req.Procedure),
+			zap.String("encoding", string(req.Encoding)),
+			zap.String("routingKey", req.RoutingKey),
+			zap.String("routingDelegate", req.RoutingDelegate),
+		}
+	}
+
+	type test struct {
+		desc                  string
+		err                   error             // downstream error
+		applicationErr        bool              // downstream application error
+		applicationErrName    string            // downstream application error name
+		applicationErrDetails string            // downstream application error message
+		applicationErrCode    *yarpcerrors.Code // downstream application error code
+		wantErrLevel          zapcore.Level
+		wantInboundMsg        string
+		wantOutboundMsg       string
+		wantFields            []zapcore.Field
+	}
+
+	tests := []test{
+		{
+			desc:            "success",
+			wantErrLevel:    zapcore.InfoLevel,
+			wantInboundMsg:  "Handled inbound request.",
+			wantOutboundMsg: "Made outbound call.",
+			wantFields: []zapcore.Field{
+				zap.Duration("latency", 0),
+				zap.Bool("successful", true),
+				zap.Skip(), // ContextExtractor
+			},
+		},
+		{
+			desc:            "downstream transport error",
+			err:             rawErr,
+			wantErrLevel:    zapcore.ErrorLevel,
+			wantInboundMsg:  "Error handling inbound request.",
+			wantOutboundMsg: "Error making outbound call.",
+			wantFields: []zapcore.Field{
+				zap.Duration("latency", 0),
+				zap.Bool("successful", false),
+				zap.Skip(),
+				zap.Error(rawErr),
+				zap.String(_errorCodeLogKey, "unknown"),
+			},
+		},
+		{
+			desc:                  "thrift application error with no name",
+			applicationErr:        true,
+			applicationErrDetails: appErrDetails,
+			wantErrLevel:          zapcore.WarnLevel,
+			wantInboundMsg:        "Error handling inbound request.",
+			wantOutboundMsg:       "Error making outbound call.",
+			wantFields: []zapcore.Field{
+				zap.Duration("latency", 0),
+				zap.Bool("successful", false),
+				zap.Skip(),
+				zap.String("error", "application_error"),
+				zap.String("errorDetails", appErrDetails),
+			},
+		},
+		{
+			desc:                  "thrift application error with name and code",
+			applicationErr:        true,
+			applicationErrName:    "FunkyThriftError",
+			applicationErrDetails: appErrDetails,
+			applicationErrCode:    &yErrResourceExhausted,
+			wantErrLevel:          zapcore.WarnLevel,
+			wantInboundMsg:        "Error handling inbound request.",
+			wantOutboundMsg:       "Error making outbound call.",
+			wantFields: []zapcore.Field{
+				zap.Duration("latency", 0),
+				zap.Bool("successful", false),
+				zap.Skip(),
+				zap.String("error", "application_error"),
+				zap.String("errorCode", "resource-exhausted"),
+				zap.String("errorName", "FunkyThriftError"),
+				zap.String("errorDetails", appErrDetails),
+			},
+		},
+		{
+			desc:                  "thrift application error with name and code (internal code error)",
+			applicationErr:        true,
+			applicationErrName:    "FunkyThriftError",
+			applicationErrDetails: appErrDetails,
+			applicationErrCode:    &yErrInternal,
+			wantErrLevel:          zapcore.ErrorLevel,
+			wantInboundMsg:        "Error handling inbound request.",
+			wantOutboundMsg:       "Error making outbound call.",
+			wantFields: []zapcore.Field{
+				zap.Duration("latency", 0),
+				zap.Bool("successful", false),
+				zap.Skip(),
+				zap.String("error", "application_error"),
+				zap.String("errorCode", "internal"),
+				zap.String("errorName", "FunkyThriftError"),
+				zap.String("errorDetails", appErrDetails),
+			},
+		},
+		{
+			// ie 'errors.New' return in Protobuf handler
+			desc:            "err and app error",
+			err:             rawErr,
+			applicationErr:  true, // always true for Protobuf handler errors
+			wantErrLevel:    zapcore.ErrorLevel,
+			wantInboundMsg:  "Error handling inbound request.",
+			wantOutboundMsg: "Error making outbound call.",
+			wantFields: []zapcore.Field{
+				zap.Duration("latency", 0),
+				zap.Bool("successful", false),
+				zap.Skip(),
+				zap.Error(rawErr),
+				zap.String(_errorCodeLogKey, "unknown"),
+			},
+		},
+		{
+			// ie 'yarpcerror' or 'protobuf.NewError` return in Protobuf handler
+			desc:            "yarpcerror, app error",
+			err:             yErrNoDetails,
+			applicationErr:  true, // always true for Protobuf handler errors
+			wantErrLevel:    zapcore.WarnLevel,
+			wantInboundMsg:  "Error handling inbound request.",
+			wantOutboundMsg: "Error making outbound call.",
+			wantFields: []zapcore.Field{
+				zap.Duration("latency", 0),
+				zap.Bool("successful", false),
+				zap.Skip(),
+				zap.Error(yErrNoDetails),
+				zap.String(_errorCodeLogKey, "aborted"),
+			},
+		},
+		{
+			// ie 'protobuf.NewError' return in Protobuf handler
+			desc:                  "yarpcerror, app error with name and code",
+			err:                   yErrNoDetails,
+			applicationErr:        true, // always true for Protobuf handler errors
+			wantErrLevel:          zapcore.WarnLevel,
+			applicationErrDetails: appErrDetails,
+			applicationErrName:    "MyErrMessageName",
+			wantInboundMsg:        "Error handling inbound request.",
+			wantOutboundMsg:       "Error making outbound call.",
+			wantFields: []zapcore.Field{
+				zap.Duration("latency", 0),
+				zap.Bool("successful", false),
+				zap.Skip(), // ContextExtractor
+				zap.Error(yErrNoDetails),
+				zap.String(_errorCodeLogKey, "aborted"),
+				zap.String(_errorNameLogKey, "MyErrMessageName"),
+				zap.String(_errorDetailsLogKey, appErrDetails),
+			},
+		},
+		{
+			// ie Protobuf error detail return in Protobuf handler
+			desc:            "err details, app error",
+			err:             yErrWithDetails,
+			applicationErr:  true, // always true for Protobuf handler errors
+			wantErrLevel:    zapcore.WarnLevel,
+			wantInboundMsg:  "Error handling inbound request.",
+			wantOutboundMsg: "Error making outbound call.",
+			wantFields: []zapcore.Field{
+				zap.Duration("latency", 0),
+				zap.Bool("successful", false),
+				zap.Skip(),
+				zap.Error(yErrWithDetails),
+				zap.String(_errorCodeLogKey, "aborted"),
+			},
+		},
+		{
+			// ie Protobuf error internal
+			desc:            "err internal, app error",
+			err:             yServerErrInternal,
+			applicationErr:  true, // always true for Protobuf handler errors
+			wantErrLevel:    zapcore.ErrorLevel,
+			wantInboundMsg:  "Error handling inbound request.",
+			wantOutboundMsg: "Error making outbound call.",
+			wantFields: []zapcore.Field{
+				zap.Duration("latency", 0),
+				zap.Bool("successful", false),
+				zap.Skip(),
+				zap.Error(yServerErrInternal),
+				zap.String(_errorCodeLogKey, "internal"),
+			},
+		},
+	}
+
+	newHandler := func(t test) fakeHandler {
+		return fakeHandler{
+			err:                   t.err,
+			applicationErr:        t.applicationErr,
+			applicationErrName:    t.applicationErrName,
+			applicationErrDetails: t.applicationErrDetails,
+			applicationErrCode:    t.applicationErrCode,
+		}
+	}
+
+	newOutbound := func(t test) fakeOutbound {
+		return fakeOutbound{
+			err:                   t.err,
+			applicationErr:        t.applicationErr,
+			applicationErrName:    t.applicationErrName,
+			applicationErrDetails: t.applicationErrDetails,
+			applicationErrCode:    t.applicationErrCode,
+		}
+	}
+
+	infoLevel := zapcore.InfoLevel
+	warnLevel := zapcore.WarnLevel
+
+	for _, tt := range tests {
+		core, logs := observer.New(zapcore.DebugLevel)
+		mw := NewMiddleware(Config{
+			Logger:           zap.New(core),
+			Scope:            metrics.New().Scope(),
+			ContextExtractor: NewNopContextExtractor(),
+			Levels: LevelsConfig{
+				Default: DirectionalLevelsConfig{
+					Success:     &infoLevel,
+					ClientError: &warnLevel,
+					// Leave failure level as the default.
+				},
+			},
+		})
+
+		getLog := func(t *testing.T) observer.LoggedEntry {
+			entries := logs.TakeAll()
+			require.Equal(t, 1, len(entries), "Unexpected number of logs written.")
+			e := entries[0]
+			e.Entry.Time = time.Time{}
+			return e
+		}
+
+		checkErr := func(err error) {
+			if tt.err != nil {
+				assert.Error(t, err, "Expected an error from middleware.")
+			} else {
+				assert.NoError(t, err, "Unexpected error from middleware.")
+			}
+		}
+
+		t.Run(tt.desc+", unary inbound", func(t *testing.T) {
+			err := mw.Handle(
+				context.Background(),
+				req,
+				&transporttest.FakeResponseWriter{},
+				newHandler(tt),
+			)
+			checkErr(err)
+			logContext := append(
+				baseFields(),
+				zap.String("direction", string(_directionInbound)),
+				zap.String("rpcType", "Unary"),
+			)
+			logContext = append(logContext, tt.wantFields...)
+			expected := observer.LoggedEntry{
+				Entry: zapcore.Entry{
+					Level:   tt.wantErrLevel,
+					Message: tt.wantInboundMsg,
+				},
+				Context: logContext,
+			}
+			assert.Equal(t, expected, getLog(t), "Unexpected log entry written.")
+		})
+		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
+			res, err := mw.Call(context.Background(), req, newOutbound(tt))
+			checkErr(err)
+			if tt.err == nil {
+				assert.NotNil(t, res, "Expected non-nil response if call is successful.")
+			}
+			logContext := append(
+				baseFields(),
+				zap.String("direction", string(_directionOutbound)),
+				zap.String("rpcType", "Unary"),
+			)
+			logContext = append(logContext, tt.wantFields...)
+			expected := observer.LoggedEntry{
+				Entry: zapcore.Entry{
+					Level:   tt.wantErrLevel,
+					Message: tt.wantOutboundMsg,
+				},
+				Context: logContext,
+			}
+			assert.Equal(t, expected, getLog(t), "Unexpected log entry written.")
+		})
+
+		// Application errors aren't applicable to oneway and streaming
+		if tt.applicationErr {
+			continue
+		}
+
+		t.Run(tt.desc+", oneway inbound", func(t *testing.T) {
+			err := mw.HandleOneway(context.Background(), req, newHandler(tt))
+			checkErr(err)
+			logContext := append(
+				baseFields(),
+				zap.String("direction", string(_directionInbound)),
+				zap.String("rpcType", "Oneway"),
+			)
+			logContext = append(logContext, tt.wantFields...)
+			expected := observer.LoggedEntry{
+				Entry: zapcore.Entry{
+					Level:   tt.wantErrLevel,
+					Message: tt.wantInboundMsg,
+				},
+				Context: logContext,
+			}
+			assert.Equal(t, expected, getLog(t), "Unexpected log entry written.")
+		})
+		t.Run(tt.desc+", oneway outbound", func(t *testing.T) {
+			ack, err := mw.CallOneway(context.Background(), req, newOutbound(tt))
+			checkErr(err)
+			logContext := append(
+				baseFields(),
+				zap.String("direction", string(_directionOutbound)),
+				zap.String("rpcType", "Oneway"),
+			)
+			logContext = append(logContext, tt.wantFields...)
+			if tt.err == nil {
+				assert.NotNil(t, ack, "Expected non-nil ack if call is successful.")
+			}
+			expected := observer.LoggedEntry{
+				Entry: zapcore.Entry{
+					Level:   tt.wantErrLevel,
+					Message: tt.wantOutboundMsg,
+				},
+				Context: logContext,
+			}
+			assert.Equal(t, expected, getLog(t), "Unexpected log entry written.")
+		})
+	}
+}
+
+func TestMiddlewareStreamingSuccess(t *testing.T) {
 	defer stubTime()()
 	req := &transport.StreamRequest{
 		Meta: &transport.RequestMeta{
@@ -521,12 +981,16 @@ func TestMiddlewareStreamingLogging(t *testing.T) {
 	// create middleware
 	core, logs := observer.New(zapcore.DebugLevel)
 	infoLevel := zapcore.InfoLevel
+	errorLevel := zapcore.ErrorLevel
 	mw := NewMiddleware(Config{
 		Logger:           zap.New(core),
 		Scope:            metrics.New().Scope(),
 		ContextExtractor: NewNopContextExtractor(),
 		Levels: LevelsConfig{
-			Default: DirectionalLevelsConfig{Success: &infoLevel},
+			Default: DirectionalLevelsConfig{
+				Success: &infoLevel,
+				Failure: &errorLevel,
+			},
 		},
 	})
 
@@ -606,6 +1070,125 @@ func TestMiddlewareStreamingLogging(t *testing.T) {
 		gotLogs := getLogs(t, 4)
 		assert.Equal(t, wantLogs, gotLogs)
 	})
+
+	t.Run("success client", func(t *testing.T) {
+		stream, err := mw.CallStream(context.Background(), req, fakeOutbound{})
+		require.NoError(t, err)
+		err = stream.SendMessage(context.Background(), nil /* message */)
+		require.NoError(t, err)
+		_, err = stream.ReceiveMessage(context.Background())
+		require.NoError(t, err)
+		require.NoError(t, stream.Close(context.Background()))
+
+		fields := func() []zapcore.Field {
+			return newZapFields(
+				zap.String("direction", string(_directionOutbound)),
+				zap.String("rpcType", "Streaming"),
+				zap.Bool("successful", true),
+				zap.Skip(), // context extractor
+				zap.Skip(), // nil error
+			)
+		}
+
+		wantLogs := []observer.LoggedEntry{
+			{
+				// stream open
+				Entry: zapcore.Entry{
+					Message: _successStreamOpen,
+				},
+				Context: fields(),
+			},
+			{
+				// stream send
+				Entry: zapcore.Entry{
+					Message: _successfulStreamSend,
+				},
+				Context: fields(),
+			},
+			{
+				// stream receive
+				Entry: zapcore.Entry{
+					Message: _successfulStreamReceive,
+				},
+				Context: fields(),
+			},
+			{
+				// stream close
+				Entry: zapcore.Entry{
+					Message: _successStreamClose,
+				},
+				Context: append(fields(), zap.Duration("duration", 0)),
+			},
+		}
+
+		// log 1 - open stream
+		// log 2 - send message
+		// log 3 - receive message
+		// log 4 - close stream
+		gotLogs := getLogs(t, 4)
+		assert.Equal(t, wantLogs, gotLogs)
+	})
+}
+
+func TestMiddlewareStreamingLoggingErrorWithFailureConfiguration(t *testing.T) {
+	defer stubTime()()
+	req := &transport.StreamRequest{
+		Meta: &transport.RequestMeta{
+			Caller:          "caller",
+			Service:         "service",
+			Transport:       "transport",
+			Encoding:        "raw",
+			Procedure:       "procedure",
+			Headers:         transport.NewHeaders().With("hello!", "goodbye!"),
+			ShardKey:        "shard-key",
+			RoutingKey:      "routing-key",
+			RoutingDelegate: "routing-delegate",
+		},
+	}
+
+	// helper function to creating logging fields for assertion
+	newZapFields := func(extraFields ...zapcore.Field) []zapcore.Field {
+		fields := []zapcore.Field{
+			zap.String("source", req.Meta.Caller),
+			zap.String("dest", req.Meta.Service),
+			zap.String("transport", req.Meta.Transport),
+			zap.String("procedure", req.Meta.Procedure),
+			zap.String("encoding", string(req.Meta.Encoding)),
+			zap.String("routingKey", req.Meta.RoutingKey),
+			zap.String("routingDelegate", req.Meta.RoutingDelegate),
+		}
+		return append(fields, extraFields...)
+	}
+
+	// create middleware
+	core, logs := observer.New(zapcore.DebugLevel)
+	infoLevel := zapcore.InfoLevel
+	errorLevel := zapcore.ErrorLevel
+	mw := NewMiddleware(Config{
+		Logger:           zap.New(core),
+		Scope:            metrics.New().Scope(),
+		ContextExtractor: NewNopContextExtractor(),
+		Levels: LevelsConfig{
+			Default: DirectionalLevelsConfig{
+				Success: &infoLevel,
+				Failure: &errorLevel,
+			},
+		},
+	})
+
+	// helper function to retrieve observed logs, asserting the expected number
+	getLogs := func(t *testing.T, num int) []observer.LoggedEntry {
+		logs := logs.TakeAll()
+		require.Equal(t, num, len(logs), "expected exactly %d logs, got %v: %#v", num, len(logs), logs)
+
+		var entries []observer.LoggedEntry
+		for _, e := range logs {
+			// zero the time for easy comparisons
+			e.Entry.Time = time.Time{}
+			entries = append(entries, e)
+		}
+		return entries
+	}
 
 	t.Run("error handler", func(t *testing.T) {
 		tests := []struct {
@@ -719,64 +1302,6 @@ func TestMiddlewareStreamingLogging(t *testing.T) {
 		// log 3 - receive message
 		// log 4 - close stream
 		gotLogs := getLogs(t, 4)[1:3]
-		assert.Equal(t, wantLogs, gotLogs)
-	})
-
-	t.Run("success client", func(t *testing.T) {
-		stream, err := mw.CallStream(context.Background(), req, fakeOutbound{})
-		require.NoError(t, err)
-		err = stream.SendMessage(context.Background(), nil /* message */)
-		require.NoError(t, err)
-		_, err = stream.ReceiveMessage(context.Background())
-		require.NoError(t, err)
-		require.NoError(t, stream.Close(context.Background()))
-
-		fields := func() []zapcore.Field {
-			return newZapFields(
-				zap.String("direction", string(_directionOutbound)),
-				zap.String("rpcType", "Streaming"),
-				zap.Bool("successful", true),
-				zap.Skip(), // context extractor
-				zap.Skip(), // nil error
-			)
-		}
-
-		wantLogs := []observer.LoggedEntry{
-			{
-				// stream open
-				Entry: zapcore.Entry{
-					Message: _successStreamOpen,
-				},
-				Context: fields(),
-			},
-			{
-				// stream send
-				Entry: zapcore.Entry{
-					Message: _successfulStreamSend,
-				},
-				Context: fields(),
-			},
-			{
-				// stream receive
-				Entry: zapcore.Entry{
-					Message: _successfulStreamReceive,
-				},
-				Context: fields(),
-			},
-			{
-				// stream close
-				Entry: zapcore.Entry{
-					Message: _successStreamClose,
-				},
-				Context: append(fields(), zap.Duration("duration", 0)),
-			},
-		}
-
-		// log 1 - open stream
-		// log 2 - send message
-		// log 3 - receive message
-		// log 4 - close stream
-		gotLogs := getLogs(t, 4)
 		assert.Equal(t, wantLogs, gotLogs)
 	})
 
@@ -975,6 +1500,128 @@ func TestMiddlewareStreamingLogging(t *testing.T) {
 		// log 5 - close stream
 		gotLogs := getLogs(t, 5)
 		assert.Equal(t, wantLogs, gotLogs)
+	})
+}
+
+func TestMiddlewareStreamingLoggingErrorWithServerClientConfiguration(t *testing.T) {
+	defer stubTime()()
+	req := &transport.StreamRequest{
+		Meta: &transport.RequestMeta{
+			Caller:          "caller",
+			Service:         "service",
+			Transport:       "transport",
+			Encoding:        "raw",
+			Procedure:       "procedure",
+			Headers:         transport.NewHeaders().With("hello!", "goodbye!"),
+			ShardKey:        "shard-key",
+			RoutingKey:      "routing-key",
+			RoutingDelegate: "routing-delegate",
+		},
+	}
+
+	// helper function to creating logging fields for assertion
+	newZapFields := func(extraFields ...zapcore.Field) []zapcore.Field {
+		fields := []zapcore.Field{
+			zap.String("source", req.Meta.Caller),
+			zap.String("dest", req.Meta.Service),
+			zap.String("transport", req.Meta.Transport),
+			zap.String("procedure", req.Meta.Procedure),
+			zap.String("encoding", string(req.Meta.Encoding)),
+			zap.String("routingKey", req.Meta.RoutingKey),
+			zap.String("routingDelegate", req.Meta.RoutingDelegate),
+		}
+		return append(fields, extraFields...)
+	}
+
+	// create middleware
+	core, logs := observer.New(zapcore.DebugLevel)
+	infoLevel := zapcore.InfoLevel
+	warnLevel := zapcore.WarnLevel
+	mw := NewMiddleware(Config{
+		Logger:           zap.New(core),
+		Scope:            metrics.New().Scope(),
+		ContextExtractor: NewNopContextExtractor(),
+		Levels: LevelsConfig{
+			Default: DirectionalLevelsConfig{
+				Success:     &infoLevel,
+				ClientError: &warnLevel,
+			},
+		},
+	})
+
+	// helper function to retrieve observed logs, asserting the expected number
+	getLogs := func(t *testing.T, num int) []observer.LoggedEntry {
+		logs := logs.TakeAll()
+		require.Equal(t, num, len(logs), "expected exactly %d logs, got %v: %#v", num, len(logs), logs)
+
+		var entries []observer.LoggedEntry
+		for _, e := range logs {
+			// zero the time for easy comparisons
+			e.Entry.Time = time.Time{}
+			entries = append(entries, e)
+		}
+		return entries
+	}
+
+	t.Run("error handler", func(t *testing.T) {
+		tests := []struct {
+			name      string
+			err       error
+			wantLevel zapcore.Level
+		}{
+			{
+				name:      "client fault",
+				err:       yarpcerrors.InvalidArgumentErrorf("client err"),
+				wantLevel: zapcore.WarnLevel,
+			},
+			{
+				name:      "server fault",
+				err:       yarpcerrors.InternalErrorf("server err"),
+				wantLevel: zapcore.ErrorLevel,
+			},
+			{
+				name:      "unknown fault",
+				err:       errors.New("unknown fault"),
+				wantLevel: zapcore.ErrorLevel,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				stream, err := transport.NewServerStream(&fakeStream{request: req})
+				require.NoError(t, err)
+
+				err = mw.HandleStream(stream, &fakeHandler{err: tt.err})
+				require.Error(t, err)
+
+				fields := newZapFields(
+					zap.String("direction", string(_directionInbound)),
+					zap.String("rpcType", "Streaming"),
+					zap.Bool("successful", false),
+					zap.Skip(), // context extractor
+					zap.Error(tt.err),
+					zap.Duration("duration", 0),
+				)
+
+				wantLog := observer.LoggedEntry{
+					Entry: zapcore.Entry{
+						Message: _errorStreamClose,
+						Level:   tt.wantLevel,
+					},
+					Context: fields,
+				}
+
+				// The stream handler is only executed after a stream successfully connects
+				// with a client. Therefore the first streaming log will always be
+				// successful (tested in the previous subtest). We only care about the
+				// stream termination so we retrieve the last log.
+				//
+				// log 1 - open stream
+				// log 2 - close stream
+				gotLog := getLogs(t, 2)[1]
+				assert.Equal(t, wantLog, gotLog)
+			})
+		}
 	})
 }
 
