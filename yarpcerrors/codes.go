@@ -31,17 +31,20 @@ const (
 	CodeOK Code = 0
 
 	// CodeCancelled means the operation was cancelled, typically by the caller.
+	// This is considered as a client error.
 	CodeCancelled Code = 1
 
 	// CodeUnknown means an unknown error. Errors raised by APIs
 	// that do not return enough error information
 	// may be converted to this error.
+	// This is considered as a server error.
 	CodeUnknown Code = 2
 
 	// CodeInvalidArgument means the client specified an invalid argument.
 	// Note that this differs from `FailedPrecondition`. `InvalidArgument`
 	// indicates arguments that are problematic regardless of the state of
 	// the system (e.g., a malformed file name).
+	// This is considered as a client error.
 	CodeInvalidArgument Code = 3
 
 	// CodeDeadlineExceeded means the deadline expired before the operation could
@@ -49,16 +52,19 @@ const (
 	// may be returned even if the operation has completed successfully. For example,
 	// a successful response from a server could have been delayed long
 	// enough for the deadline to expire.
+	// This is considered as a server error.
 	CodeDeadlineExceeded Code = 4
 
 	// CodeNotFound means some requested entity (e.g., file or directory) was not found.
 	// For privacy reasons, this code *may* be returned when the client
 	// does not have the access rights to the entity, though such usage is
 	// discouraged.
+	// This is considered as a client error.
 	CodeNotFound Code = 5
 
 	// CodeAlreadyExists means the entity that a client attempted to create
 	// (e.g., file or directory) already exists.
+	// This is considered as a client error.
 	CodeAlreadyExists Code = 6
 
 	// CodePermissionDenied means the caller does not have permission to execute
@@ -67,10 +73,12 @@ const (
 	// instead for those errors). `PermissionDenied` must not be
 	// used if the caller can not be identified (use `Unauthenticated`
 	// instead for those errors).
+	// This is considered as a client error.
 	CodePermissionDenied Code = 7
 
 	// CodeResourceExhausted means some resource has been exhausted, perhaps a per-user
 	// quota, or perhaps the entire file system is out of space.
+	// This is considered as a client error.
 	CodeResourceExhausted Code = 8
 
 	// CodeFailedPrecondition means the operation was rejected because the system is not
@@ -88,6 +96,7 @@ const (
 	//      fails because the directory is non-empty, `FailedPrecondition`
 	//      should be returned since the client should not retry unless
 	//      the files are deleted from the directory.
+	// This is considered as a client error.
 	CodeFailedPrecondition Code = 9
 
 	// CodeAborted means the operation was aborted, typically due to a concurrency issue
@@ -95,6 +104,7 @@ const (
 	//
 	// See the guidelines above for deciding between `FailedPrecondition`,
 	// `Aborted`, and `Unavailable`.
+	// This is considered as a client error.
 	CodeAborted Code = 10
 
 	// CodeOutOfRange means the operation was attempted past the valid range.
@@ -112,15 +122,18 @@ const (
 	// error) when it applies so that callers who are iterating through
 	// a space can easily look for an `OutOfRange` error to detect when
 	// they are done.
+	// This is considered as a client error.
 	CodeOutOfRange Code = 11
 
 	// CodeUnimplemented means the operation is not implemented or is not
 	// supported/enabled in this service.
+	// This is considered as a client error.
 	CodeUnimplemented Code = 12
 
 	// CodeInternal means an internal error. This means that some invariants expected
 	// by the underlying system have been broken. This error code is reserved
 	// for serious errors.
+	// This is considered as a server error.
 	CodeInternal Code = 13
 
 	// CodeUnavailable means the service is currently unavailable. This is most likely a
@@ -128,13 +141,16 @@ const (
 	//
 	// See the guidelines above for deciding between `FailedPrecondition`,
 	// `Aborted`, and `Unavailable`.
+	// This is considered as a server error.
 	CodeUnavailable Code = 14
 
 	// CodeDataLoss means unrecoverable data loss or corruption.
+	// This is considered as a server error.
 	CodeDataLoss Code = 15
 
 	// CodeUnauthenticated means the request does not have valid authentication
 	// credentials for the operation.
+	// This is considered as a client error.
 	CodeUnauthenticated Code = 16
 )
 
