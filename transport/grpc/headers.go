@@ -34,6 +34,10 @@ const (
 	// request. This corresponds to the Request.Caller attribute.
 	// This header is required.
 	CallerHeader = "rpc-caller"
+	// CallerProcedureHeader is the header key for the name of the rpc procedure from the service sending the
+	// request. This corresponds to the Request.CallerProcedure attribute.
+	// This header is optional.
+	CallerProcedureHeader = "rpc-caller-procedure"
 	// ServiceHeader is the header key for the name of the service to which
 	// the request is being sent. This corresponds to the Request.Service attribute.
 	// This header is also used in responses to ensure requests are processed by the
@@ -103,6 +107,7 @@ func transportRequestToMetadata(request *transport.Request) (metadata.MD, error)
 		addToMetadata(md, RoutingKeyHeader, request.RoutingKey),
 		addToMetadata(md, RoutingDelegateHeader, request.RoutingDelegate),
 		addToMetadata(md, EncodingHeader, string(request.Encoding)),
+		addToMetadata(md, CallerProcedureHeader, request.CallerProcedure),
 	); err != nil {
 		return md, err
 	}
@@ -139,6 +144,8 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 			request.RoutingDelegate = value
 		case EncodingHeader:
 			request.Encoding = transport.Encoding(value)
+		case CallerProcedureHeader:
+			request.CallerProcedure = value
 		case contentTypeHeader:
 			// if request.Encoding was set, do not parse content-type
 			// this results in EncodingHeader overriding content-type

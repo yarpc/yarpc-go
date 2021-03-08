@@ -46,32 +46,38 @@ func TestFirstOutboundMidleware(t *testing.T) {
 	)
 
 	t.Run("unary", func(t *testing.T) {
-		req := &transport.Request{Transport: "" /* not set */}
+		req := &transport.Request{Transport: "", CallerProcedure: "" /* not set */}
 
 		outWithMiddleware := middleware.ApplyUnaryOutbound(out, firstoutboundmiddleware.New())
-		_, err := outWithMiddleware.Call(context.Background(), req)
+		ctx := yarpctest.ContextWithCall(context.Background(), &yarpctest.Call{Transport: "", Procedure: "ABC"})
+		_, err := outWithMiddleware.Call(ctx, req)
 		require.NoError(t, err)
 
 		assert.Equal(t, "fake", string(req.Transport))
+		assert.Equal(t, "ABC", string(req.CallerProcedure))
 	})
 
 	t.Run("oneway", func(t *testing.T) {
 		req := &transport.Request{Transport: "" /* not set */}
 
 		outWithMiddleware := middleware.ApplyOnewayOutbound(out, firstoutboundmiddleware.New())
-		_, err := outWithMiddleware.CallOneway(context.Background(), req)
+		ctx := yarpctest.ContextWithCall(context.Background(), &yarpctest.Call{Transport: "", Procedure: "ABC"})
+		_, err := outWithMiddleware.CallOneway(ctx, req)
 		require.NoError(t, err)
 
 		assert.Equal(t, "fake", string(req.Transport))
+		assert.Equal(t, "ABC", string(req.CallerProcedure))
 	})
 
 	t.Run("stream", func(t *testing.T) {
 		streamReq := &transport.StreamRequest{Meta: &transport.RequestMeta{Transport: "" /* not set */}}
 
 		outWithMiddleware := middleware.ApplyStreamOutbound(out, firstoutboundmiddleware.New())
-		_, err := outWithMiddleware.CallStream(context.Background(), streamReq)
+		ctx := yarpctest.ContextWithCall(context.Background(), &yarpctest.Call{Transport: "", Procedure: "ABC"})
+		_, err := outWithMiddleware.CallStream(ctx, streamReq)
 		require.NoError(t, err)
 
 		assert.Equal(t, "fake", string(streamReq.Meta.Transport))
+		assert.Equal(t, "ABC", string(streamReq.Meta.CallerProcedure))
 	})
 }

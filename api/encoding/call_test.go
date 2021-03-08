@@ -41,6 +41,7 @@ func TestNilCall(t *testing.T) {
 	assert.Equal(t, "", call.ShardKey())
 	assert.Equal(t, "", call.RoutingKey())
 	assert.Equal(t, "", call.RoutingDelegate())
+	assert.Equal(t, "", call.CallerProcedure())
 	assert.Equal(t, "", call.Header("foo"))
 	assert.Empty(t, call.HeaderNames())
 
@@ -58,6 +59,7 @@ func TestReadFromRequest(t *testing.T) {
 		ShardKey:        "sk",
 		RoutingKey:      "rk",
 		RoutingDelegate: "rd",
+		CallerProcedure: "cp",
 		Headers:         transport.NewHeaders().With("foo", "bar"),
 	})
 	call := CallFromContext(ctx)
@@ -72,6 +74,7 @@ func TestReadFromRequest(t *testing.T) {
 	assert.Equal(t, "rk", call.RoutingKey())
 	assert.Equal(t, "rd", call.RoutingDelegate())
 	assert.Equal(t, "bar", call.Header("foo"))
+	assert.Equal(t, "cp", call.CallerProcedure())
 	assert.Len(t, call.HeaderNames(), 1)
 
 	assert.NoError(t, call.WriteResponseHeader("foo2", "bar2"))
@@ -90,6 +93,7 @@ func TestReadFromRequestMeta(t *testing.T) {
 		ShardKey:        "sk",
 		RoutingKey:      "rk",
 		RoutingDelegate: "rd",
+		CallerProcedure: "cp",
 		Headers:         transport.NewHeaders().With("foo", "bar"),
 	})
 	call := CallFromContext(ctx)
@@ -103,6 +107,7 @@ func TestReadFromRequestMeta(t *testing.T) {
 	assert.Equal(t, "sk", call.ShardKey())
 	assert.Equal(t, "rk", call.RoutingKey())
 	assert.Equal(t, "rd", call.RoutingDelegate())
+	assert.Equal(t, "cp", call.CallerProcedure())
 	assert.Equal(t, "bar", call.Header("foo"))
 	assert.Len(t, call.HeaderNames(), 1)
 
@@ -122,6 +127,7 @@ func TestDisabledResponseHeaders(t *testing.T) {
 		ShardKey:        "sk",
 		RoutingKey:      "rk",
 		RoutingDelegate: "rd",
+		CallerProcedure: "cp",
 		Headers:         transport.NewHeaders().With("foo", "bar"),
 	})
 	call := CallFromContext(ctx)
@@ -135,6 +141,7 @@ func TestDisabledResponseHeaders(t *testing.T) {
 	assert.Equal(t, "sk", call.ShardKey())
 	assert.Equal(t, "rk", call.RoutingKey())
 	assert.Equal(t, "rd", call.RoutingDelegate())
+	assert.Equal(t, "cp", call.CallerProcedure())
 	assert.Equal(t, "bar", call.Header("foo"))
 	assert.Len(t, call.HeaderNames(), 1)
 
