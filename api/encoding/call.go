@@ -149,3 +149,11 @@ func (c *Call) RoutingDelegate() string {
 	}
 	return c.md.RoutingDelegate()
 }
+
+// CallerProcedure returns the name of the procedure from the service making this request.
+func (c *Call) CallerProcedure() string {
+	if c == nil {
+		return ""
+	}
+	return c.md.CallerProcedure()
+}

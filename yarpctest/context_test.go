@@ -66,6 +66,7 @@ func TestContextWithCall(t *testing.T) {
 				RoutingKey:      "routingkey",
 				RoutingDelegate: "routingdelegate",
 				ResponseHeaders: tt.resHeaders,
+				CallerProcedure: "callerProcedure",
 			})
 			call := yarpc.CallFromContext(ctx)
 
@@ -79,6 +80,7 @@ func TestContextWithCall(t *testing.T) {
 			assert.Equal(t, "shardkey", call.ShardKey())
 			assert.Equal(t, "routingkey", call.RoutingKey())
 			assert.Equal(t, "routingdelegate", call.RoutingDelegate())
+			assert.Equal(t, "callerProcedure", call.CallerProcedure())
 
 			assert.NoError(t, call.WriteResponseHeader("baz", "qux"))
 			assert.Equal(t, tt.wantResHeaders, tt.resHeaders)

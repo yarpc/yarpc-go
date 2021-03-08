@@ -64,6 +64,9 @@ type Request struct {
 	// override the routing key and service.
 	RoutingDelegate string
 
+	// CallerProcedure refers to the name of the rpc procedure from the service making this request.
+	CallerProcedure string
+
 	// Request payload.
 	Body io.Reader
 
@@ -86,6 +89,7 @@ func (r *Request) ToRequestMeta() *RequestMeta {
 		ShardKey:        r.ShardKey,
 		RoutingKey:      r.RoutingKey,
 		RoutingDelegate: r.RoutingDelegate,
+		CallerProcedure: r.CallerProcedure,
 	}
 }
 
@@ -100,6 +104,7 @@ func (r *Request) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddString("shardKey", r.ShardKey)
 	enc.AddString("routingKey", r.RoutingKey)
 	enc.AddString("routingDelegate", r.RoutingDelegate)
+	enc.AddString("callerProcedure", r.CallerProcedure)
 	return nil
 }
 
@@ -190,6 +195,9 @@ type RequestMeta struct {
 	// for the destined service for routing purposes. The routing delegate may
 	// override the routing key and service.
 	RoutingDelegate string
+
+	// CallerProcedure refers to the name of the rpc procedure of the service making this request.
+	CallerProcedure string
 }
 
 // ToRequest converts a RequestMeta into a Request.
@@ -207,5 +215,6 @@ func (r *RequestMeta) ToRequest() *Request {
 		ShardKey:        r.ShardKey,
 		RoutingKey:      r.RoutingKey,
 		RoutingDelegate: r.RoutingDelegate,
+		CallerProcedure: r.CallerProcedure,
 	}
 }
