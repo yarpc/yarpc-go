@@ -268,9 +268,11 @@
 //  applicationError
 //    Configures the level at which application errors are logged.
 //    All Thrift exceptions are considered application errors.
+//    Default is "error".
 //    This is deprecated.
 //  failure
 //    Configures the level at which all other failures are logged.
+//    Default is "error".
 //    This is deprecated.
 //
 // For example, the following configuration will have the effect of logging
