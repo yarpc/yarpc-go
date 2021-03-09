@@ -103,7 +103,7 @@ func TestTransportSpec(t *testing.T) {
 		TLS                     bool
 		Compressor              string
 		WantCustomContextDialer bool
-		Keepalive               bool
+		Keepalive               *keepalive.ClientParameters
 	}
 
 	type test struct {
@@ -309,8 +309,115 @@ func TestTransportSpec(t *testing.T) {
 			})},
 			wantOutbounds: map[string]wantOutbound{
 				"myservice": {
-					Address:   "localhost:54569",
-					Keepalive: true,
+					Address: "localhost:54569",
+					Keepalive: &keepalive.ClientParameters{
+						Timeout: time.Second * 10,
+						Time:    time.Second * 30,
+					},
+				},
+			},
+		},
+		{
+			desc: "Outbound with keepalive from attrs",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54816",
+						"grpc-keepalive": attrs{
+							"enabled":               "true",
+							"time":                  "30s",
+							"timeout":               "20s",
+							"permit-without-stream": "true",
+						},
+					},
+				},
+			},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {
+					Address: "localhost:54816",
+					Keepalive: &keepalive.ClientParameters{
+						Timeout:             time.Second * 20,
+						Time:                time.Second * 30,
+						PermitWithoutStream: true,
+					},
+				},
+			},
+		},
+		{
+			desc: "Outbound with keepalive defaults",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54816",
+						"grpc-keepalive": attrs{
+							"enabled": "true",
+						},
+					},
+				},
+			},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {
+					Address: "localhost:54816",
+					Keepalive: &keepalive.ClientParameters{
+						Timeout: time.Second * 30,
+						Time:    time.Second * 30,
+					},
+				},
+			},
+		},
+		{
+			desc: "invalid keepalive time",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54816",
+						"grpc-keepalive": attrs{
+							"enabled": "true",
+							"time":    "10foo",
+							"timeout": "10",
+						},
+					},
+				},
+			},
+			wantErrors: []string{
+				`could not parse gRPC keepalive time: time: unknown unit`,
+			},
+		},
+		{
+			desc: "invalid keepalive timeout",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54816",
+						"grpc-keepalive": attrs{
+							"enabled": "true",
+							"time":    "10s",
+							"timeout": "10foo",
+						},
+					},
+				},
+			},
+			wantErrors: []string{
+				`could not parse gRPC keepalive timeout: time: unknown unit`,
+			},
+		},
+		{
+			desc: "keepalive from attrs disabled",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54816",
+						"grpc-keepalive": attrs{
+							"enabled": "false",
+							"time":    "10",
+							"timeout": "10",
+						},
+					},
+				},
+			},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {
+					Address: "localhost:54816",
 				},
 			},
 		},
@@ -397,8 +504,12 @@ func TestTransportSpec(t *testing.T) {
 					if wantOutbound.WantCustomContextDialer {
 						assert.NotNil(t, dialer.options.contextDialer, "expected custom context dialer")
 					}
-					if wantOutbound.Keepalive {
-						assert.NotNil(t, dialer.options.keepaliveParams, "expected keepalive parameters")
+
+					if wantOutbound.Keepalive != nil {
+						require.NotNil(t, dialer.options.keepaliveParams, "expected keepalive parameters")
+						assert.Equal(t, wantOutbound.Keepalive, dialer.options.keepaliveParams)
+					} else {
+						require.Nil(t, dialer.options.keepaliveParams, "unexpected keepalive paramters")
 					}
 				}
 			}
