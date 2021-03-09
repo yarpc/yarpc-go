@@ -47,6 +47,7 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				RoutingKeyHeader, "example-routing-key",
 				RoutingDelegateHeader, "example-routing-delegate",
 				EncodingHeader, "example-encoding",
+				CallerProcedureHeader, "example-caller-procedure",
 				"foo", "bar",
 				"baz", "bat",
 			),
@@ -57,6 +58,7 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				RoutingKey:      "example-routing-key",
 				RoutingDelegate: "example-routing-delegate",
 				Encoding:        "example-encoding",
+				CallerProcedure: "example-caller-procedure",
 				Headers: transport.HeadersFromMap(map[string]string{
 					"foo": "bar",
 					"baz": "bat",
@@ -140,6 +142,7 @@ func TestTransportRequestToMetadata(t *testing.T) {
 				ShardKeyHeader, "example-shard-key",
 				RoutingKeyHeader, "example-routing-key",
 				RoutingDelegateHeader, "example-routing-delegate",
+				CallerProcedureHeader, "example-caller-procedure",
 				EncodingHeader, "example-encoding",
 				"foo", "bar",
 				"baz", "bat",
@@ -150,6 +153,7 @@ func TestTransportRequestToMetadata(t *testing.T) {
 				ShardKey:        "example-shard-key",
 				RoutingKey:      "example-routing-key",
 				RoutingDelegate: "example-routing-delegate",
+				CallerProcedure: "example-caller-procedure",
 				Encoding:        "example-encoding",
 				Headers: transport.HeadersFromMap(map[string]string{
 					"foo": "bar",

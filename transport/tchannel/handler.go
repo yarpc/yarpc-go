@@ -182,6 +182,10 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 	if err != nil {
 		return errors.RequestHeadersDecodeError(treq, err)
 	}
+
+	// callerProcedure is a rpc header but recevied in application headers, so moving this header to transprotRequest
+	// by updating treq.CallerProcedure.
+	treq = headerCallerProcedureToRequest(treq, &headers)
 	treq.Headers = headers
 
 	if tcall, ok := call.(tchannelCall); ok {

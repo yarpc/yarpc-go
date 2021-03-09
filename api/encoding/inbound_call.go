@@ -153,6 +153,10 @@ func (ic *inboundCallMetadata) RoutingDelegate() string {
 	return ic.req.RoutingDelegate
 }
 
+func (ic *inboundCallMetadata) CallerProcedure() string {
+	return ic.req.CallerProcedure
+}
+
 func (ic *inboundCallMetadata) WriteResponseHeader(k, v string) error {
 	if ic.disableResponseHeaders {
 		return yarpcerrors.InvalidArgumentErrorf("call does not support setting response headers")

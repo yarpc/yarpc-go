@@ -166,6 +166,11 @@ func (c *Call) RoutingDelegate() string {
 	return (*encoding.Call)(c).RoutingDelegate()
 }
 
+// CallerProcedure returns the name of the procedure from the service making this request.
+func (c *Call) CallerProcedure() string {
+	return (*encoding.Call)(c).CallerProcedure()
+}
+
 // StreamOption defines options that may be passed in at streaming function
 // call sites.
 //
