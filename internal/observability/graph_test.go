@@ -44,6 +44,7 @@ func TestEdgeNopFallbacks(t *testing.T) {
 		ShardKey:        "sk",
 		RoutingKey:      "rk",
 		RoutingDelegate: "rd",
+		CallerProcedure: "cp",
 	}
 
 	var tagsBlocklist []string
