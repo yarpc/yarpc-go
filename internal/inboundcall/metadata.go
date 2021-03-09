@@ -41,6 +41,7 @@ type Metadata interface {
 	ShardKey() string
 	RoutingKey() string
 	RoutingDelegate() string
+	CallerProcedure() string
 }
 
 type metadataKey struct{} // context key for Metadata

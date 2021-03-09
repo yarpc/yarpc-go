@@ -38,6 +38,7 @@ type Call struct {
 	ShardKey        string
 	RoutingKey      string
 	RoutingDelegate string
+	CallerProcedure string
 
 	// If set, this map will be filled with response headers written to
 	// yarpc.Call.
@@ -72,6 +73,7 @@ func (c callMetadata) Service() string              { return c.c.Service }
 func (c callMetadata) Transport() string            { return c.c.Transport }
 func (c callMetadata) Procedure() string            { return c.c.Procedure }
 func (c callMetadata) Encoding() transport.Encoding { return c.c.Encoding }
+func (c callMetadata) CallerProcedure() string      { return c.c.CallerProcedure }
 
 func (c callMetadata) Headers() transport.Headers {
 	return transport.HeadersFromMap(c.c.Headers)

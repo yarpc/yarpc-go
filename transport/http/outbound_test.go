@@ -621,17 +621,20 @@ func TestWithCoreHeaders(t *testing.T) {
 	shardKey := "sharding"
 	routingKey := "routing"
 	routingDelegate := "delegate"
+	callerProcedure := "callerprocedure"
 
 	treq := &transport.Request{
 		ShardKey:        shardKey,
 		RoutingKey:      routingKey,
 		RoutingDelegate: routingDelegate,
+		CallerProcedure: callerProcedure,
 	}
 	result := out.withCoreHeaders(httpReq, treq, time.Second)
 
 	assert.Equal(t, shardKey, result.Header.Get(ShardKeyHeader))
 	assert.Equal(t, routingKey, result.Header.Get(RoutingKeyHeader))
 	assert.Equal(t, routingDelegate, result.Header.Get(RoutingDelegateHeader))
+	assert.Equal(t, callerProcedure, result.Header.Get(CallerProcedureHeader))
 }
 
 func TestNoRequest(t *testing.T) {
