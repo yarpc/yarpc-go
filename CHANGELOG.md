@@ -5,7 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- No changes yet.
+- observability:
+  - emit the source_procedure tag in metrics, uses req.CallerProcedure to populate this tag
+  - add the sourceProcedure tag in logging, uses req.CallerProcedure to populate this tag
 
 ## [1.52.0] - 2021-02-12
 ### Added
