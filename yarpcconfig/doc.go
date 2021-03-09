@@ -265,6 +265,13 @@
 //    All Thrift exceptions are considered application errors if
 //    they are not annotated with the option rpc.code.
 //    Default is "error".
+//  applicationError
+//    Configures the level at which application errors are logged.
+//    All Thrift exceptions are considered application errors.
+//    This is deprecated.
+//  failure
+//    Configures the level at which all other failures are logged.
+//    This is deprecated.
 //
 // For example, the following configuration will have the effect of logging
 // client errors for inbound and outbound calls ("Error handling inbound
