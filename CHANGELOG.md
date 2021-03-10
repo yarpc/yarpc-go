@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
-- gRPC: accept keepalive paramters from yaml configurator for the gRPC outbounds.
+- gRPC: accept keepalive parameters for gRPC outbound configuration.
 
 ## [1.52.0] - 2021-02-12
 ### Added

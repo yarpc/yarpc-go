@@ -212,7 +212,9 @@ func (c OutboundKeepaliveConfig) dialOptions() ([]DialOption, error) {
 
 	var err error
 
-	keepaliveTime := time.Second * 30
+	// gRPC keepalive expects time to be minimum 10s.
+	// read more: https://pkg.go.dev/google.golang.org/grpc/keepalive#ClientParameters
+	keepaliveTime := time.Second * 10
 	if c.Time != "" {
 		keepaliveTime, err = time.ParseDuration(c.Time)
 		if err != nil {
@@ -220,7 +222,9 @@ func (c OutboundKeepaliveConfig) dialOptions() ([]DialOption, error) {
 		}
 	}
 
-	keepaliveTimeout := time.Second * 30
+	// gRPC keepalive defaults timeout to 20s.
+	// read more: https://pkg.go.dev/google.golang.org/grpc/keepalive#ClientParameters
+	keepaliveTimeout := time.Second * 20
 	if c.Timeout != "" {
 		keepaliveTimeout, err = time.ParseDuration(c.Timeout)
 		if err != nil {
