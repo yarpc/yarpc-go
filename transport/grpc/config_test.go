@@ -359,8 +359,8 @@ func TestTransportSpec(t *testing.T) {
 				"myservice": {
 					Address: "localhost:54816",
 					Keepalive: &keepalive.ClientParameters{
-						Timeout: time.Second * 30,
-						Time:    time.Second * 30,
+						Timeout: time.Second * 20,
+						Time:    time.Second * 10,
 					},
 				},
 			},
