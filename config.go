@@ -50,12 +50,22 @@ type DirectionalLogLevelConfig struct {
 	// Level at which errors are logged.
 	// Thrift exceptions are application errors, which we log as a separate
 	// class from success and failure.
+	// Deprecated in favor of ServerError and ClientError.
 	Failure *zapcore.Level
 	// Level at which application errors are logged.
 	// All Thrift exceptions are considered application errors.
 	// All errors from Protobuf handlers are application errors.
 	// Defaults to ErrorLevel.
+	// Deprecated in favor of ServerError and ClientError.
 	ApplicationError *zapcore.Level
+	// Level at which client errors are logged.
+	// All Thrift exceptions are considered application errors if
+	// they are not annotated with the option rpc.code.
+	// Defaults to ErrorLevel.
+	ClientError *zapcore.Level
+	// Level at which server errors are logged.
+	// Defaults to ErrorLevel.
+	ServerError *zapcore.Level
 }
 
 // LogLevelConfig configures the levels at which YARPC logs various things.
@@ -70,14 +80,27 @@ type LogLevelConfig struct {
 	// class from success and failure.
 	// Can be overridden by Inbound.Failure or Outbound.Failure for inbound or
 	// outbound requests.
+	// Deprecated in favor of ServerError and ClientError.
 	Failure *zapcore.Level
 	// Level at which application errors are logged.
 	// All Thrift exceptions are considered application errors.
 	// Defaults to ErrorLevel.
 	// Can be overridden by Inbound.ApplicationError or
 	// Outbound.ApplicationError for inbound or outbound requests.
+	// Deprecated in favor of ServerError and ClientError.
 	ApplicationError *zapcore.Level
-
+	// Level at which client errors are logged.
+	// All Thrift exceptions are considered application errors if
+	// they are not annotated with the option rpc.code.
+	// Defaults to ErrorLevel.
+	// Can be overridden by Inbound.ApplicationError or
+	// Outbound.ApplicationError for inbound or outbound requests.
+	ClientError *zapcore.Level
+	// Level at which server errors are logged.
+	// Defaults to ErrorLevel.
+	// Can be overridden by Inbound.ApplicationError or
+	// Outbound.ApplicationError for inbound or outbound requests.
+	ServerError *zapcore.Level
 	// Specific overrides for inbound and outbound requests.
 	Inbound, Outbound DirectionalLogLevelConfig
 }

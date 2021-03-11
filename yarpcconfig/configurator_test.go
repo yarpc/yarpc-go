@@ -133,6 +133,75 @@ func TestConfigurator(t *testing.T) {
 			},
 		},
 		{
+			desc: "server error debug logging",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				debugLevel := zapcore.DebugLevel
+
+				tt.serviceName = "foo"
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+							serverError: debug
+				`)
+				tt.wantConfig = yarpc.Config{
+					Name: "foo",
+					Logging: yarpc.LoggingConfig{
+						Levels: yarpc.LogLevelConfig{
+							ServerError: &debugLevel,
+						},
+					},
+				}
+				return
+			},
+		},
+		{
+			desc: "client error debug logging",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				debugLevel := zapcore.DebugLevel
+
+				tt.serviceName = "foo"
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+							clientError: debug
+				`)
+				tt.wantConfig = yarpc.Config{
+					Name: "foo",
+					Logging: yarpc.LoggingConfig{
+						Levels: yarpc.LogLevelConfig{
+							ClientError: &debugLevel,
+						},
+					},
+				}
+				return
+			},
+		},
+		{
+			desc: "client and server error debug logging",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				debugLevel := zapcore.DebugLevel
+				infoLevel := zapcore.InfoLevel
+
+				tt.serviceName = "foo"
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+							serverError: debug
+							clientError: info
+				`)
+				tt.wantConfig = yarpc.Config{
+					Name: "foo",
+					Logging: yarpc.LoggingConfig{
+						Levels: yarpc.LogLevelConfig{
+							ClientError: &infoLevel,
+							ServerError: &debugLevel,
+						},
+					},
+				}
+				return
+			},
+		},
+		{
 			desc: "outbound success info logging",
 			test: func(*testing.T, *gomock.Controller) (tt testCase) {
 				debugLevel := zapcore.DebugLevel
@@ -153,6 +222,118 @@ func TestConfigurator(t *testing.T) {
 							Success: &debugLevel,
 							Outbound: yarpc.DirectionalLogLevelConfig{
 								Success: &infoLevel,
+							},
+						},
+					},
+				}
+				return
+			},
+		},
+		{
+			desc: "outbound success server error info logging",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				debugLevel := zapcore.DebugLevel
+				infoLevel := zapcore.InfoLevel
+
+				tt.serviceName = "foo"
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+							serverError: debug
+							outbound:
+								serverError: info
+				`)
+				tt.wantConfig = yarpc.Config{
+					Name: "foo",
+					Logging: yarpc.LoggingConfig{
+						Levels: yarpc.LogLevelConfig{
+							ServerError: &debugLevel,
+							Outbound: yarpc.DirectionalLogLevelConfig{
+								ServerError: &infoLevel,
+							},
+						},
+					},
+				}
+				return
+			},
+		},
+		{
+			desc: "outbound success client error info logging",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				debugLevel := zapcore.DebugLevel
+				infoLevel := zapcore.InfoLevel
+
+				tt.serviceName = "foo"
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+							clientError: debug
+							outbound:
+								clientError: info
+				`)
+				tt.wantConfig = yarpc.Config{
+					Name: "foo",
+					Logging: yarpc.LoggingConfig{
+						Levels: yarpc.LogLevelConfig{
+							ClientError: &debugLevel,
+							Outbound: yarpc.DirectionalLogLevelConfig{
+								ClientError: &infoLevel,
+							},
+						},
+					},
+				}
+				return
+			},
+		},
+		{
+			desc: "inbound success server error info logging",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				debugLevel := zapcore.DebugLevel
+				infoLevel := zapcore.InfoLevel
+
+				tt.serviceName = "foo"
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+							serverError: debug
+							inbound:
+								serverError: info
+				`)
+				tt.wantConfig = yarpc.Config{
+					Name: "foo",
+					Logging: yarpc.LoggingConfig{
+						Levels: yarpc.LogLevelConfig{
+							ServerError: &debugLevel,
+							Inbound: yarpc.DirectionalLogLevelConfig{
+								ServerError: &infoLevel,
+							},
+						},
+					},
+				}
+				return
+			},
+		},
+		{
+			desc: "inbound success client error info logging",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				debugLevel := zapcore.DebugLevel
+				infoLevel := zapcore.InfoLevel
+
+				tt.serviceName = "foo"
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+							clientError: debug
+							inbound:
+								clientError: info
+				`)
+				tt.wantConfig = yarpc.Config{
+					Name: "foo",
+					Logging: yarpc.LoggingConfig{
+						Levels: yarpc.LogLevelConfig{
+							ClientError: &debugLevel,
+							Inbound: yarpc.DirectionalLogLevelConfig{
+								ClientError: &infoLevel,
 							},
 						},
 					},
@@ -208,6 +389,312 @@ func TestConfigurator(t *testing.T) {
 					"error decoding 'logging.levels.applicationError':",
 					"could not decode Zap log level:",
 					`unrecognized level: "not a level"`,
+				}
+				return
+			},
+		},
+		{
+			desc: "server error, invalid type",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+							serverError: 42
+				`)
+				tt.wantErr = []string{
+					"error decoding 'logging.levels.serverError':",
+					"could not decode Zap log level:",
+					"expected type 'string', got unconvertible type 'int'",
+				}
+				return
+			},
+		},
+		{
+			desc: "server error, invalid level",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+							serverError: not a level
+				`)
+				tt.wantErr = []string{
+					"error decoding 'logging.levels.serverError':",
+					"could not decode Zap log level:",
+					`unrecognized level: "not a level"`,
+				}
+				return
+			},
+		},
+		{
+			desc: "client error, invalid type",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+							clientError: 42
+				`)
+				tt.wantErr = []string{
+					"error decoding 'logging.levels.clientError':",
+					"could not decode Zap log level:",
+					"expected type 'string', got unconvertible type 'int'",
+				}
+				return
+			},
+		},
+		{
+			desc: "client error, invalid level",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+							clientError: not a level
+				`)
+				tt.wantErr = []string{
+					"error decoding 'logging.levels.clientError':",
+					"could not decode Zap log level:",
+					`unrecognized level: "not a level"`,
+				}
+				return
+			},
+		},
+		{
+			desc: "invalid usage of application error with server error",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+							applicationError: debug
+							serverError: debug
+				`)
+				tt.wantErr = []string{
+					"invalid logging configuration, failure/applicationError configuration can not be used with serverError/clientError",
+				}
+				return
+			},
+		},
+		{
+			desc: "invalid usage of outbound application error with client error",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+						  outbound:
+								applicationError: debug
+								clientError: debug
+				`)
+				tt.wantErr = []string{
+					"invalid outbound logging configuration, failure/applicationError configuration can not be used with serverError/clientError",
+				}
+				return
+			},
+		},
+		{
+			desc: "invalid usage of outbound failure with server error",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+						  outbound:
+							  failure: debug
+							  serverError: debug
+				`)
+				tt.wantErr = []string{
+					"invalid outbound logging configuration, failure/applicationError configuration can not be used with serverError/clientError",
+				}
+				return
+			},
+		},
+		{
+			desc: "invalid usage of outbound failure with client error",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+						  outbound:
+							  failure: debug
+							  clientError: debug
+				`)
+				tt.wantErr = []string{
+					"invalid outbound logging configuration, failure/applicationError configuration can not be used with serverError/clientError",
+				}
+				return
+			},
+		},
+
+		{
+			desc: "invalid usage of outbound application error with server error",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+						  outbound:
+							  applicationError: debug
+							  serverError: debug
+				`)
+				tt.wantErr = []string{
+					"invalid outbound logging configuration, failure/applicationError configuration can not be used with serverError/clientError",
+				}
+				return
+			},
+		},
+		{
+			desc: "invalid usage of outbound application error with client error",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+						  outbound:
+							  applicationError: debug
+							  clientError: debug
+				`)
+				tt.wantErr = []string{
+					"invalid outbound logging configuration, failure/applicationError configuration can not be used with serverError/clientError",
+				}
+				return
+			},
+		},
+		{
+			desc: "invalid usage of outbound failure with server error",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+						  outbound:
+							  failure: debug
+							  serverError: debug
+				`)
+				tt.wantErr = []string{
+					"invalid outbound logging configuration, failure/applicationError configuration can not be used with serverError/clientError",
+				}
+				return
+			},
+		},
+		{
+			desc: "invalid usage of outbound failure with client error",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+						  outbound:
+							  failure: debug
+							  clientError: debug
+				`)
+				tt.wantErr = []string{
+					"invalid outbound logging configuration, failure/applicationError configuration can not be used with serverError/clientError",
+				}
+				return
+			},
+		},
+
+		{
+			desc: "invalid usage of inbound application error with client error",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+						  inbound:
+								applicationError: debug
+								clientError: debug
+				`)
+				tt.wantErr = []string{
+					"invalid inbound logging configuration, failure/applicationError configuration can not be used with serverError/clientError",
+				}
+				return
+			},
+		},
+		{
+			desc: "invalid usage of inbound failure with server error",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+						  inbound:
+							  failure: debug
+							  serverError: debug
+				`)
+				tt.wantErr = []string{
+					"invalid inbound logging configuration, failure/applicationError configuration can not be used with serverError/clientError",
+				}
+				return
+			},
+		},
+		{
+			desc: "invalid usage of inbound failure with client error",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+						  inbound:
+							  failure: debug
+							  clientError: debug
+				`)
+				tt.wantErr = []string{
+					"invalid inbound logging configuration, failure/applicationError configuration can not be used with serverError/clientError",
+				}
+				return
+			},
+		},
+
+		{
+			desc: "invalid usage of inbound application error with server error",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+						  inbound:
+							  applicationError: debug
+							  serverError: debug
+				`)
+				tt.wantErr = []string{
+					"invalid inbound logging configuration, failure/applicationError configuration can not be used with serverError/clientError",
+				}
+				return
+			},
+		},
+		{
+			desc: "invalid usage of inbound application error with client error",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+						  inbound:
+							  applicationError: debug
+							  clientError: debug
+				`)
+				tt.wantErr = []string{
+					"invalid inbound logging configuration, failure/applicationError configuration can not be used with serverError/clientError",
+				}
+				return
+			},
+		},
+		{
+			desc: "invalid usage of inbound failure with server error",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+						  inbound:
+							  failure: debug
+							  serverError: debug
+				`)
+				tt.wantErr = []string{
+					"invalid inbound logging configuration, failure/applicationError configuration can not be used with serverError/clientError",
+				}
+				return
+			},
+		},
+		{
+			desc: "invalid usage of inbound failure with client error",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					logging:
+						levels:
+						  inbound:
+							  failure: debug
+							  clientError: debug
+				`)
+				tt.wantErr = []string{
+					"invalid inbound logging configuration, failure/applicationError configuration can not be used with serverError/clientError",
 				}
 				return
 			},
