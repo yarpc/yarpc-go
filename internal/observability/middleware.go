@@ -121,13 +121,27 @@ type DirectionalLevelsConfig struct {
 	// This includes low-level network errors, TChannel error frames, etc.
 	//
 	// Defaults to ErrorLevel.
+	// Deprecated in favor of ServerError and ClientError.
 	Failure *zapcore.Level
 
 	// Log level used to log calls that failed with an application error.
 	// All Thrift exceptions are considered application errors.
 	//
 	// Defaults to ErrorLevel.
+	// Deprecated in favor of ServerError and ClientError.
 	ApplicationError *zapcore.Level
+
+	// Log level used to log calls that failed with an server error.
+	//
+	// Defaults to ErrorLevel.
+	ServerError *zapcore.Level
+
+	// Log level used to log calls that failed with an client error.
+	// All Thrift exceptions are considered application errors if
+	// there are not annotated with the option rpc.code.
+	//
+	// Defaults to ErrorLevel.
+	ClientError *zapcore.Level
 }
 
 // NewMiddleware constructs an observability middleware with the provided
@@ -150,10 +164,18 @@ func applyLogLevelsConfig(dst *levels, src *DirectionalLevelsConfig) {
 		dst.success = *src.Success
 	}
 	if level := src.Failure; level != nil {
+		dst.useApplicationErrorFailureLevels = true
 		dst.failure = *src.Failure
 	}
 	if level := src.ApplicationError; level != nil {
+		dst.useApplicationErrorFailureLevels = true
 		dst.applicationError = *src.ApplicationError
+	}
+	if level := src.ServerError; level != nil {
+		dst.serverError = *src.ServerError
+	}
+	if level := src.ClientError; level != nil {
+		dst.clientError = *src.ClientError
 	}
 }
 

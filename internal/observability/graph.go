@@ -80,11 +80,15 @@ func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor
 			success:          zapcore.DebugLevel,
 			failure:          zapcore.ErrorLevel,
 			applicationError: zapcore.ErrorLevel,
+			serverError:      zapcore.ErrorLevel,
+			clientError:      zapcore.ErrorLevel,
 		},
 		outboundLevels: levels{
 			success:          zapcore.DebugLevel,
 			failure:          zapcore.ErrorLevel,
 			applicationError: zapcore.ErrorLevel,
+			serverError:      zapcore.ErrorLevel,
+			clientError:      zapcore.ErrorLevel,
 		},
 	}
 }

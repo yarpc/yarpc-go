@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - gRPC: accept keepalive parameters for gRPC outbound configuration.
+- observability: deprecation of logging levels `applicationError` and `serverError` in favor
+  of `serverError` and `clientError`.
 
 ## [1.52.0] - 2021-02-12
 ### Added
