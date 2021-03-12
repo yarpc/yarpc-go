@@ -112,16 +112,22 @@ func addObservingMiddleware(cfg Config, meter *metrics.Scope, logger *zap.Logger
 				Success:          cfg.Logging.Levels.Success,
 				Failure:          cfg.Logging.Levels.Failure,
 				ApplicationError: cfg.Logging.Levels.ApplicationError,
+				ServerError:      cfg.Logging.Levels.ServerError,
+				ClientError:      cfg.Logging.Levels.ClientError,
 			},
 			Inbound: observability.DirectionalLevelsConfig{
 				Success:          cfg.Logging.Levels.Inbound.Success,
 				Failure:          cfg.Logging.Levels.Inbound.Failure,
 				ApplicationError: cfg.Logging.Levels.Inbound.ApplicationError,
+				ServerError:      cfg.Logging.Levels.Inbound.ServerError,
+				ClientError:      cfg.Logging.Levels.Inbound.ClientError,
 			},
 			Outbound: observability.DirectionalLevelsConfig{
 				Success:          cfg.Logging.Levels.Outbound.Success,
 				Failure:          cfg.Logging.Levels.Outbound.Failure,
 				ApplicationError: cfg.Logging.Levels.Outbound.ApplicationError,
+				ServerError:      cfg.Logging.Levels.Outbound.ServerError,
+				ClientError:      cfg.Logging.Levels.Outbound.ClientError,
 			},
 		},
 	})

@@ -87,7 +87,14 @@ type callResult struct {
 }
 
 type levels struct {
-	success, failure, applicationError zapcore.Level
+	success, failure, applicationError, serverError, clientError zapcore.Level
+
+	// useApplicationErrorFailureLevels is used to know which levels should be
+	// used between applicationError/failure and clientError/serverError.
+	// by default serverError and clientError will be used.
+	// useApplicationErrorFailureLevels should be set to true if applicationError
+	// or failure are set.
+	useApplicationErrorFailureLevels bool
 }
 
 func (c call) End(res callResult) {
@@ -160,24 +167,52 @@ func (c call) endLogs(
 			msg = _errorOutbound
 		}
 
-		lvl := c.levels.failure
+		var lvl zapcore.Level
+		// use applicationError and failure logging levels
+		// this is deprecated and will only be used by yarpc service
+		// which have added configuration for loggers.
+		if c.levels.useApplicationErrorFailureLevels {
+			lvl = c.levels.failure
 
-		// For logging purposes, application errors are
-		//  - Thrift exceptions (appErrBitWithNoError == true)
-		//  - `yarpcerror`s with error details (ie created with `encoding/protobuf.NewError`)
-		//
-		// This will be the least surprising behavior for users migrating from
-		// Thrift exceptions to Protobuf error details.
-		//
-		// Unfortunately, all errors returned from a Protobuf handler are marked as
-		// an application error on the 'transport.ResponseWriter'. Therefore, we
-		// distinguish an application error from a regular error by inspecting if an
-		// error detail was set.
-		//
-		// https://github.com/yarpc/yarpc-go/pull/1912
-		hasErrDetails := len(yarpcerrors.FromError(err).Details()) > 0
-		if appErrBitWithNoError || (isApplicationError && hasErrDetails) {
-			lvl = c.levels.applicationError
+			// For logging purposes, application errors are
+			//  - Thrift exceptions (appErrBitWithNoError == true)
+			//  - `yarpcerror`s with error details (ie created with `encoding/protobuf.NewError`)
+			//
+			// This will be the least surprising behavior for users migrating from
+			// Thrift exceptions to Protobuf error details.
+			//
+			// Unfortunately, all errors returned from a Protobuf handler are marked as
+			// an application error on the 'transport.ResponseWriter'. Therefore, we
+			// distinguish an application error from a regular error by inspecting if an
+			// error detail was set.
+			//
+			// https://github.com/yarpc/yarpc-go/pull/1912
+			hasErrDetails := len(yarpcerrors.FromError(err).Details()) > 0
+			if appErrBitWithNoError || (isApplicationError && hasErrDetails) {
+				lvl = c.levels.applicationError
+			}
+		} else {
+			var code *yarpcerrors.Code
+			lvl = c.levels.serverError
+
+			if appErrBitWithNoError { // thrift exception
+				if applicationErrorMeta != nil && applicationErrorMeta.Code != nil { // thrift exception with rpc.code
+					code = applicationErrorMeta.Code
+				} else {
+					lvl = c.levels.clientError
+				}
+			}
+
+			if err != nil { // tchannel/HTTP/gRPC errors
+				c := yarpcerrors.FromError(err).Code()
+				code = &c
+			}
+
+			if code != nil {
+				if fault := faultFromCode(*code); fault == clientFault {
+					lvl = c.levels.clientError
+				}
+			}
 		}
 
 		ce = c.edge.logger.Check(lvl, msg)
@@ -434,7 +469,18 @@ func (c call) logStreamEvent(err error, success bool, succMsg, errMsg string, ex
 	if success {
 		ce = c.edge.logger.Check(c.levels.success, succMsg)
 	} else {
-		ce = c.edge.logger.Check(c.levels.failure, errMsg)
+		var lvl zapcore.Level
+		if c.levels.useApplicationErrorFailureLevels {
+			lvl = c.levels.failure
+		} else {
+			lvl = c.levels.serverError
+			code := yarpcerrors.FromError(err).Code()
+			if fault := faultFromCode(code); fault == clientFault {
+				lvl = c.levels.clientError
+			}
+		}
+
+		ce = c.edge.logger.Check(lvl, errMsg)
 	}
 
 	fields := []zap.Field{

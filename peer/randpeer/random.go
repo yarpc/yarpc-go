@@ -87,8 +87,10 @@ func (r *randomList) Remove(peer peer.StatusPeer, _ peer.Identifier, ps abstract
 }
 
 func (r *randomList) Choose(_ *transport.Request) peer.StatusPeer {
-	r.m.RLock()
-	defer r.m.RUnlock()
+	// Usage of a wite lock because r.random.Intn is not thread safe
+	// see: https://golang.org/pkg/math/rand/
+	r.m.Lock()
+	defer r.m.Unlock()
 
 	if len(r.subscribers) == 0 {
 		return nil

@@ -27,6 +27,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"sync"
 	"testing"
@@ -64,6 +65,50 @@ func TestNewSingleOutboundPanic(t *testing.T) {
 		NewTransport().NewSingleOutbound("127.0.0.1:")
 	},
 		"expected to panic")
+}
+
+func TestCreateRequest(t *testing.T) {
+	appHeader := map[string]string{
+		"app-key1": "app-val1",
+		"app-key2": "app-val2",
+	}
+	tests := []struct {
+		desc        string
+		urlTemplate *url.URL
+		treq        *transport.Request
+		wantError   bool
+	}{
+		{
+			desc:        "wrong uri",
+			urlTemplate: &url.URL{Scheme: "%"}, // invalid
+			treq:        &transport.Request{},
+			wantError:   true,
+		},
+		{
+			desc: "successful creation",
+			treq: &transport.Request{
+				Headers: transport.HeadersFromMap(appHeader),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			o := &Outbound{urlTemplate: defaultURLTemplate}
+			if tt.urlTemplate != nil {
+				o.urlTemplate = tt.urlTemplate
+			}
+			hreq, err := o.createRequest(tt.treq)
+			if tt.wantError {
+				assert.Error(t, err)
+				return
+			}
+			assert.Len(t, hreq.Header, len(appHeader), "wrong number of header")
+			for k, v := range appHeader {
+				assert.Equal(t, v, hreq.Header.Get(ApplicationHeaderPrefix+k), "header value mismatch")
+			}
+		})
+	}
 }
 
 func TestCallSuccess(t *testing.T) {
@@ -576,17 +621,20 @@ func TestWithCoreHeaders(t *testing.T) {
 	shardKey := "sharding"
 	routingKey := "routing"
 	routingDelegate := "delegate"
+	callerProcedure := "callerprocedure"
 
 	treq := &transport.Request{
 		ShardKey:        shardKey,
 		RoutingKey:      routingKey,
 		RoutingDelegate: routingDelegate,
+		CallerProcedure: callerProcedure,
 	}
 	result := out.withCoreHeaders(httpReq, treq, time.Second)
 
 	assert.Equal(t, shardKey, result.Header.Get(ShardKeyHeader))
 	assert.Equal(t, routingKey, result.Header.Get(RoutingKeyHeader))
 	assert.Equal(t, routingDelegate, result.Header.Get(RoutingDelegateHeader))
+	assert.Equal(t, callerProcedure, result.Header.Get(CallerProcedureHeader))
 }
 
 func TestNoRequest(t *testing.T) {

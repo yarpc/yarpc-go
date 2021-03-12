@@ -252,7 +252,6 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	if err != nil {
 		return nil, err
 	}
-	hreq.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
 	ctx, hreq, span, err := o.withOpentracingSpan(ctx, hreq, treq, start)
 	if err != nil {
 		return nil, err
@@ -339,7 +338,12 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Reques
 
 func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error) {
 	newURL := *o.urlTemplate
-	return http.NewRequest("POST", newURL.String(), treq.Body)
+	hreq, err := http.NewRequest("POST", newURL.String(), treq.Body)
+	if err != nil {
+		return nil, err
+	}
+	hreq.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
+	return hreq, err
 }
 
 func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, *http.Request, opentracing.Span, error) {
@@ -400,6 +404,9 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 	}
 	if treq.RoutingDelegate != "" {
 		req.Header.Set(RoutingDelegateHeader, treq.RoutingDelegate)
+	}
+	if treq.CallerProcedure != "" {
+		req.Header.Set(CallerProcedureHeader, treq.CallerProcedure)
 	}
 
 	encoding := string(treq.Encoding)
@@ -522,6 +529,7 @@ func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start 
 			ShardKey:        hreq.Header.Get(ShardKeyHeader),
 			RoutingKey:      hreq.Header.Get(RoutingKeyHeader),
 			RoutingDelegate: hreq.Header.Get(RoutingDelegateHeader),
+			CallerProcedure: hreq.Header.Get(CallerProcedureHeader),
 			Headers:         applicationHeaders.FromHTTPHeaders(hreq.Header, transport.Headers{}),
 		}
 	}

@@ -23,6 +23,7 @@ package grpc
 import (
 	"fmt"
 	"net"
+	"time"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -30,6 +31,7 @@ import (
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/yarpcconfig"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 )
 
 // TransportSpec returns a TransportSpec for the gRPC transport.
@@ -151,6 +153,11 @@ func (c InboundTLSConfig) newInboundCredentials() (credentials.TransportCredenti
 //        tls:
 //          enabled: true
 //        compressor: gzip
+//        grpc-keepalive:
+//          enabled: true
+//          time:    10s
+//          timeout: 30s
+//          permit-without-stream: true
 //
 type OutboundConfig struct {
 	yarpcconfig.PeerChooser
@@ -159,13 +166,21 @@ type OutboundConfig struct {
 	Address string            `config:"address,interpolate"`
 	TLS     OutboundTLSConfig `config:"tls"`
 	// Compressor to use by default if the server side supports it
-	Compressor string `config:"compressor"`
+	Compressor string                  `config:"compressor"`
+	Keepalive  OutboundKeepaliveConfig `config:"grpc-keepalive"`
 }
 
-func (c OutboundConfig) dialOptions(kit *yarpcconfig.Kit) []DialOption {
+func (c OutboundConfig) dialOptions(kit *yarpcconfig.Kit) ([]DialOption, error) {
 	opts := c.TLS.dialOptions()
 	opts = append(opts, Compressor(kit.Compressor(c.Compressor)))
-	return opts
+
+	keepaliveOpts, err := c.Keepalive.dialOptions()
+	if err != nil {
+		return nil, err
+	}
+
+	opts = append(opts, keepaliveOpts...)
+	return opts, nil
 }
 
 // OutboundTLSConfig configures TLS for a gRPC outbound.
@@ -180,6 +195,49 @@ func (c OutboundTLSConfig) dialOptions() []DialOption {
 	creds := credentials.NewClientTLSFromCert(nil, "")
 	option := DialerCredentials(creds)
 	return []DialOption{option}
+}
+
+// OutboundKeepaliveConfig configures gRPC keepalive for a gRPC outbound.
+type OutboundKeepaliveConfig struct {
+	Enabled             bool   `config:"enabled"`
+	Time                string `config:"time"`
+	Timeout             string `config:"timeout"`
+	PermitWithoutStream bool   `config:"permit-without-stream"`
+}
+
+func (c OutboundKeepaliveConfig) dialOptions() ([]DialOption, error) {
+	if !c.Enabled {
+		return nil, nil
+	}
+
+	var err error
+
+	// gRPC keepalive expects time to be minimum 10s.
+	// read more: https://pkg.go.dev/google.golang.org/grpc/keepalive#ClientParameters
+	keepaliveTime := time.Second * 10
+	if c.Time != "" {
+		keepaliveTime, err = time.ParseDuration(c.Time)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse gRPC keepalive time: %v", err)
+		}
+	}
+
+	// gRPC keepalive defaults timeout to 20s.
+	// read more: https://pkg.go.dev/google.golang.org/grpc/keepalive#ClientParameters
+	keepaliveTimeout := time.Second * 20
+	if c.Timeout != "" {
+		keepaliveTimeout, err = time.ParseDuration(c.Timeout)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse gRPC keepalive timeout: %v", err)
+		}
+	}
+
+	option := KeepaliveParams(keepalive.ClientParameters{
+		Time:                keepaliveTime,
+		Timeout:             keepaliveTimeout,
+		PermitWithoutStream: c.PermitWithoutStream,
+	})
+	return []DialOption{option}, nil
 }
 
 type transportSpec struct {
@@ -263,7 +321,12 @@ func (t *transportSpec) buildOutbound(outboundConfig *OutboundConfig, tr transpo
 		return nil, newTransportCastError(tr)
 	}
 
-	dialer := trans.NewDialer(append(outboundConfig.dialOptions(kit), t.DialOptions...)...)
+	dialOpts, err := outboundConfig.dialOptions(kit)
+	if err != nil {
+		return nil, err
+	}
+
+	dialer := trans.NewDialer(append(dialOpts, t.DialOptions...)...)
 	var chooser peer.Chooser
 	if outboundConfig.Empty() {
 		if outboundConfig.Address == "" {
