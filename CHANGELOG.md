@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+- No changes yet.
+
 ## [1.53.0] - 2021-03-12
 ### Added
 - gRPC: accept keepalive parameters for gRPC outbound configuration.
@@ -1339,6 +1342,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.53.0...HEAD
 [1.53.0]: https://github.com/yarpc/yarpc-go/compare/v1.52.0...v1.53.0
 [1.52.0]: https://github.com/yarpc/yarpc-go/compare/v1.51.0...v1.52.0
 [1.51.0]: https://github.com/yarpc/yarpc-go/compare/v1.50.0...v1.51.0
