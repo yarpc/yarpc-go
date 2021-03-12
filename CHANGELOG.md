@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - gRPC: accept keepalive parameters for gRPC outbound configuration.
 - observability: deprecation of logging levels `applicationError` and `serverError` in favor
   of `serverError` and `clientError`.
+- The `transport.Request` provides a new field `CallerProcedure`. A header `rpc-caller-procedure`
+  is also propagated for outbound calls. This field represents the origin procedure where the
+  requests was sent.
+### Fixed
+- peer: concurrency issue when using `rand` for the peer strategies `randpeer` and `tworandomchoices`
 
 ## [1.52.0] - 2021-02-12
 ### Added
