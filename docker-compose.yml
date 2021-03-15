@@ -4,7 +4,7 @@ services:
   yarpc-go-1.13:
     build:
       context: .
-      dockerfile: Dockerfile.1.13
+      dockerfile: Dockerfile.1.14
     environment:
       - TEST_TIME_SCALE=5
       - THIS_CHUNK=${BUILDKITE_PARALLEL_JOB}
@@ -30,7 +30,7 @@ services:
   yarpc-go-1.14:
     build:
       context: .
-      dockerfile: Dockerfile.1.14
+      dockerfile: Dockerfile.1.13
     environment:
       - TEST_TIME_SCALE=5
       - THIS_CHUNK=${BUILDKITE_PARALLEL_JOB}
