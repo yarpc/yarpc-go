@@ -234,8 +234,8 @@ func TestGetApplicationHeaders(t *testing.T) {
 		},
 		{
 			msg: "success",
-			meta: map[string][]string{
-				"rpc-service":         []string{"foo"}, // reserved
+			meta: metadata.MD{
+				"rpc-service":         []string{"foo"}, // reserved header
 				"test-header-empty":   []string{},      // no value
 				"test-header-valid-1": []string{"test-value-1"},
 				"test-Header-Valid-2": []string{"test-value-2"},
@@ -247,7 +247,7 @@ func TestGetApplicationHeaders(t *testing.T) {
 		},
 		{
 			msg: "error: multiple values for one header",
-			meta: map[string][]string{
+			meta: metadata.MD{
 				"test-header-valid": []string{"test-value"},
 				"test-header-dup":   []string{"test-value-1", "test-value-2"},
 			},
@@ -263,7 +263,6 @@ func TestGetApplicationHeaders(t *testing.T) {
 				assert.Contains(t, err.Error(), tt.wantErr, "unexpecte error message")
 				return
 			}
-
 			require.NoError(t, err, "failed to extract application headers")
 			assert.Equal(t, tt.wantHeaders, got.Items(), "unexpected headers")
 		})
