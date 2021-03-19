@@ -251,7 +251,7 @@ func TestGetApplicationHeaders(t *testing.T) {
 				"test-header-valid": []string{"test-value"},
 				"test-header-dup":   []string{"test-value-1", "test-value-2"},
 			},
-			wantErr: "header has more than one value: test-header-dup",
+			wantErr: "header has more than one value: test-header-dup:[test-value-1 test-value-2]",
 		},
 	}
 
