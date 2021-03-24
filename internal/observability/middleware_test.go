@@ -279,6 +279,7 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 		ShardKey:        "shard01",
 		RoutingKey:      "routing-key",
 		RoutingDelegate: "routing-delegate",
+		CallerProcedure: "caller-procedure",
 		Body:            strings.NewReader("body"),
 	}
 
@@ -297,6 +298,7 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 			zap.String("encoding", string(req.Encoding)),
 			zap.String("routingKey", req.RoutingKey),
 			zap.String("routingDelegate", req.RoutingDelegate),
+			zap.String("sourceProcedure", req.CallerProcedure),
 		}
 	}
 
@@ -621,6 +623,7 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 			zap.String("encoding", string(req.Encoding)),
 			zap.String("routingKey", req.RoutingKey),
 			zap.String("routingDelegate", req.RoutingDelegate),
+			zap.String("sourceProcedure", req.CallerProcedure),
 		}
 	}
 
@@ -961,6 +964,7 @@ func TestMiddlewareStreamingSuccess(t *testing.T) {
 			ShardKey:        "shard-key",
 			RoutingKey:      "routing-key",
 			RoutingDelegate: "routing-delegate",
+			CallerProcedure: "caller-procedure",
 		},
 	}
 
@@ -974,6 +978,7 @@ func TestMiddlewareStreamingSuccess(t *testing.T) {
 			zap.String("encoding", string(req.Meta.Encoding)),
 			zap.String("routingKey", req.Meta.RoutingKey),
 			zap.String("routingDelegate", req.Meta.RoutingDelegate),
+			zap.String("sourceProcedure", req.Meta.CallerProcedure),
 		}
 		return append(fields, extraFields...)
 	}
@@ -1156,6 +1161,7 @@ func TestMiddlewareStreamingLoggingErrorWithFailureConfiguration(t *testing.T) {
 			zap.String("encoding", string(req.Meta.Encoding)),
 			zap.String("routingKey", req.Meta.RoutingKey),
 			zap.String("routingDelegate", req.Meta.RoutingDelegate),
+			zap.String("sourceProcedure", req.Meta.CallerProcedure),
 		}
 		return append(fields, extraFields...)
 	}
@@ -1516,6 +1522,7 @@ func TestMiddlewareStreamingLoggingErrorWithServerClientConfiguration(t *testing
 			ShardKey:        "shard-key",
 			RoutingKey:      "routing-key",
 			RoutingDelegate: "routing-delegate",
+			CallerProcedure: "caller-procedure",
 		},
 	}
 
@@ -1529,6 +1536,7 @@ func TestMiddlewareStreamingLoggingErrorWithServerClientConfiguration(t *testing
 			zap.String("encoding", string(req.Meta.Encoding)),
 			zap.String("routingKey", req.Meta.RoutingKey),
 			zap.String("routingDelegate", req.Meta.RoutingDelegate),
+			zap.String("sourceProcedure", req.Meta.CallerProcedure),
 		}
 		return append(fields, extraFields...)
 	}
@@ -1844,6 +1852,7 @@ func getKey(req *transport.Request, direction string, rpcType transport.Type) (k
 	d.Add(req.Procedure)
 	d.Add(req.RoutingKey)
 	d.Add(req.RoutingDelegate)
+	d.Add(req.CallerProcedure)
 	d.Add(direction)
 	d.Add(rpcType.String())
 	return d.Digest(), d.Free
@@ -1874,6 +1883,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		zap.String("encoding", string(req.Encoding)),
 		zap.String("routingKey", req.RoutingKey),
 		zap.String("routingDelegate", req.RoutingDelegate),
+		zap.String("sourceProcedure", req.CallerProcedure),
 		zap.String("direction", string(_directionInbound)),
 		zap.String("rpcType", "Unary"),
 		zap.Duration("latency", 0),
