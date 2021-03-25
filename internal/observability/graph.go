@@ -105,7 +105,6 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction dir
 	d.Add(req.Procedure)
 	d.Add(req.RoutingKey)
 	d.Add(req.RoutingDelegate)
-	d.Add(req.CallerProcedure)
 	d.Add(string(direction))
 	d.Add(rpcType.String())
 	e := g.getOrCreateEdge(d.Digest(), req, string(direction), rpcType)

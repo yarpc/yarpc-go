@@ -1852,7 +1852,6 @@ func getKey(req *transport.Request, direction string, rpcType transport.Type) (k
 	d.Add(req.Procedure)
 	d.Add(req.RoutingKey)
 	d.Add(req.RoutingDelegate)
-	d.Add(req.CallerProcedure)
 	d.Add(direction)
 	d.Add(rpcType.String())
 	return d.Digest(), d.Free
