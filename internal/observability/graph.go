@@ -477,7 +477,6 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist []str
 		zap.String("encoding", string(req.Encoding)),
 		zap.String("routingKey", req.RoutingKey),
 		zap.String("routingDelegate", req.RoutingDelegate),
-		zap.String("sourceProcedure", req.CallerProcedure),
 		zap.String("direction", direction),
 	)
 	return &edge{

@@ -64,7 +64,7 @@ const (
 type call struct {
 	edge    *edge
 	extract ContextExtractor
-	fields  [9]zapcore.Field
+	fields  [10]zapcore.Field
 
 	started   time.Time
 	ctx       context.Context
@@ -146,6 +146,14 @@ func (c call) EndWithPanic(err error) {
 	c.endWithAppError(callResult{err: err})
 }
 
+// addMoreFieldsFromTransportRequest adds the fields which are part of transport request but not part of the edge.
+// Dont forget to increase the capacity of call.fields by 1 if adding field here.
+func (c call) addMoreFieldsFromTransportRequest(fields []zap.Field) []zap.Field {
+	// add callerProcedure in to logs
+	fields = append(fields, zap.String("sourceProcedure", c.req.CallerProcedure))
+	return fields
+}
+
 func (c call) endLogs(
 	elapsed time.Duration,
 	err error,
@@ -223,6 +231,7 @@ func (c call) endLogs(
 	}
 
 	fields := c.fields[:0]
+	fields = c.addMoreFieldsFromTransportRequest(fields)
 	fields = append(fields, zap.String("rpcType", c.rpcType.String()))
 	fields = append(fields, zap.Duration("latency", elapsed))
 	fields = append(fields, zap.Bool("successful", err == nil && !isApplicationError))
@@ -483,12 +492,13 @@ func (c call) logStreamEvent(err error, success bool, succMsg, errMsg string, ex
 		ce = c.edge.logger.Check(lvl, errMsg)
 	}
 
-	fields := []zap.Field{
-		zap.String("rpcType", c.rpcType.String()),
+	fields := c.fields[:0]
+	fields = c.addMoreFieldsFromTransportRequest(fields)
+	fields = append(fields, zap.String("rpcType", c.rpcType.String()),
 		zap.Bool("successful", success),
 		c.extract(c.ctx),
 		zap.Error(err), // no-op if err == nil
-	}
+	)
 	fields = append(fields, extraFields...)
 
 	ce.Write(fields...)

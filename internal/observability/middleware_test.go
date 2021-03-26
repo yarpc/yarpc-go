@@ -298,7 +298,6 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 			zap.String("encoding", string(req.Encoding)),
 			zap.String("routingKey", req.RoutingKey),
 			zap.String("routingDelegate", req.RoutingDelegate),
-			zap.String("sourceProcedure", req.CallerProcedure),
 		}
 	}
 
@@ -510,6 +509,7 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 			logContext := append(
 				baseFields(),
 				zap.String("direction", string(_directionInbound)),
+				zap.String("sourceProcedure", req.CallerProcedure),
 				zap.String("rpcType", "Unary"),
 			)
 			logContext = append(logContext, tt.wantFields...)
@@ -531,6 +531,7 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 			logContext := append(
 				baseFields(),
 				zap.String("direction", string(_directionOutbound)),
+				zap.String("sourceProcedure", req.CallerProcedure),
 				zap.String("rpcType", "Unary"),
 			)
 			logContext = append(logContext, tt.wantFields...)
@@ -555,6 +556,7 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 			logContext := append(
 				baseFields(),
 				zap.String("direction", string(_directionInbound)),
+				zap.String("sourceProcedure", req.CallerProcedure),
 				zap.String("rpcType", "Oneway"),
 			)
 			logContext = append(logContext, tt.wantFields...)
@@ -573,6 +575,7 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 			logContext := append(
 				baseFields(),
 				zap.String("direction", string(_directionOutbound)),
+				zap.String("sourceProcedure", req.CallerProcedure),
 				zap.String("rpcType", "Oneway"),
 			)
 			logContext = append(logContext, tt.wantFields...)
@@ -587,6 +590,89 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 				Context: logContext,
 			}
 			assert.Equal(t, expected, getLog(t), "Unexpected log entry written.")
+		})
+	}
+}
+
+func TestMiddlewareLoggingDifferentCallerProcedureWithSameEdge(t *testing.T) {
+	defer stubTime()()
+	req := &transport.Request{
+		Caller:    "caller",
+		Service:   "service",
+		Encoding:  "raw",
+		Procedure: "procedure",
+	}
+
+	baseFields := func() []zapcore.Field {
+		return []zapcore.Field{
+			zap.String("source", req.Caller),
+			zap.String("dest", req.Service),
+			zap.String("transport", unknownIfEmpty(req.Transport)),
+			zap.String("procedure", req.Procedure),
+			zap.String("encoding", string(req.Encoding)),
+			zap.String("routingKey", req.RoutingKey),
+			zap.String("routingDelegate", req.RoutingDelegate),
+		}
+	}
+
+	infoLevel := zapcore.InfoLevel
+	warnLevel := zapcore.WarnLevel
+
+	core, logs := observer.New(zapcore.DebugLevel)
+	mw := NewMiddleware(Config{
+		Logger:           zap.New(core),
+		Scope:            metrics.New().Scope(),
+		ContextExtractor: NewNopContextExtractor(),
+		Levels: LevelsConfig{
+			Default: DirectionalLevelsConfig{
+				Success:          &infoLevel,
+				ApplicationError: &warnLevel,
+				// Leave failure level as the default.
+			},
+		},
+	})
+
+	getLog := func(t *testing.T) observer.LoggedEntry {
+		entries := logs.TakeAll()
+		e := entries[len(entries)-1]
+		e.Entry.Time = time.Time{}
+		return e
+	}
+
+	wantFields := []zapcore.Field{
+		zap.Duration("latency", 0),
+		zap.Bool("successful", true),
+		zap.Skip(), // ContextExtractor
+	}
+
+	for i := 0; i < 2; i++ {
+		req.CallerProcedure = fmt.Sprintf("caller-procedure-%d", i)
+
+		t.Run(fmt.Sprintf("unary_inbound_%d", i), func(t *testing.T) {
+			err := mw.Handle(
+				context.Background(),
+				req,
+				&transporttest.FakeResponseWriter{},
+				fakeHandler{},
+			)
+			assert.NoError(t, err, "Unexpected error from middleware.")
+			logContext := append(
+				baseFields(),
+				zap.String("direction", string(_directionInbound)),
+				zap.String("sourceProcedure", req.CallerProcedure),
+				zap.String("rpcType", "Unary"),
+			)
+
+			logContext = append(logContext, wantFields...)
+			expected := observer.LoggedEntry{
+				Entry: zapcore.Entry{
+					Level:   zapcore.InfoLevel,
+					Message: "Handled inbound request.",
+				},
+				Context: logContext,
+			}
+			l := getLog(t)
+			assert.Equal(t, expected, l, "Unexpected log entry written.")
 		})
 	}
 }
@@ -623,7 +709,6 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 			zap.String("encoding", string(req.Encoding)),
 			zap.String("routingKey", req.RoutingKey),
 			zap.String("routingDelegate", req.RoutingDelegate),
-			zap.String("sourceProcedure", req.CallerProcedure),
 		}
 	}
 
@@ -870,6 +955,7 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 			logContext := append(
 				baseFields(),
 				zap.String("direction", string(_directionInbound)),
+				zap.String("sourceProcedure", req.CallerProcedure),
 				zap.String("rpcType", "Unary"),
 			)
 			logContext = append(logContext, tt.wantFields...)
@@ -891,6 +977,7 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 			logContext := append(
 				baseFields(),
 				zap.String("direction", string(_directionOutbound)),
+				zap.String("sourceProcedure", req.CallerProcedure),
 				zap.String("rpcType", "Unary"),
 			)
 			logContext = append(logContext, tt.wantFields...)
@@ -915,6 +1002,7 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 			logContext := append(
 				baseFields(),
 				zap.String("direction", string(_directionInbound)),
+				zap.String("sourceProcedure", req.CallerProcedure),
 				zap.String("rpcType", "Oneway"),
 			)
 			logContext = append(logContext, tt.wantFields...)
@@ -933,6 +1021,7 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 			logContext := append(
 				baseFields(),
 				zap.String("direction", string(_directionOutbound)),
+				zap.String("sourceProcedure", req.CallerProcedure),
 				zap.String("rpcType", "Oneway"),
 			)
 			logContext = append(logContext, tt.wantFields...)
@@ -978,7 +1067,6 @@ func TestMiddlewareStreamingSuccess(t *testing.T) {
 			zap.String("encoding", string(req.Meta.Encoding)),
 			zap.String("routingKey", req.Meta.RoutingKey),
 			zap.String("routingDelegate", req.Meta.RoutingDelegate),
-			zap.String("sourceProcedure", req.Meta.CallerProcedure),
 		}
 		return append(fields, extraFields...)
 	}
@@ -1030,6 +1118,7 @@ func TestMiddlewareStreamingSuccess(t *testing.T) {
 		logFields := func() []zapcore.Field {
 			return newZapFields(
 				zap.String("direction", string(_directionInbound)),
+				zap.String("sourceProcedure", req.Meta.CallerProcedure),
 				zap.String("rpcType", "Streaming"),
 				zap.Bool("successful", true),
 				zap.Skip(), // context extractor
@@ -1088,6 +1177,7 @@ func TestMiddlewareStreamingSuccess(t *testing.T) {
 		fields := func() []zapcore.Field {
 			return newZapFields(
 				zap.String("direction", string(_directionOutbound)),
+				zap.String("sourceProcedure", req.Meta.CallerProcedure),
 				zap.String("rpcType", "Streaming"),
 				zap.Bool("successful", true),
 				zap.Skip(), // context extractor
@@ -1161,7 +1251,6 @@ func TestMiddlewareStreamingLoggingErrorWithFailureConfiguration(t *testing.T) {
 			zap.String("encoding", string(req.Meta.Encoding)),
 			zap.String("routingKey", req.Meta.RoutingKey),
 			zap.String("routingDelegate", req.Meta.RoutingDelegate),
-			zap.String("sourceProcedure", req.Meta.CallerProcedure),
 		}
 		return append(fields, extraFields...)
 	}
@@ -1225,6 +1314,7 @@ func TestMiddlewareStreamingLoggingErrorWithFailureConfiguration(t *testing.T) {
 
 				fields := newZapFields(
 					zap.String("direction", string(_directionInbound)),
+					zap.String("sourceProcedure", req.Meta.CallerProcedure),
 					zap.String("rpcType", "Streaming"),
 					zap.Bool("successful", false),
 					zap.Skip(), // context extractor
@@ -1277,6 +1367,7 @@ func TestMiddlewareStreamingLoggingErrorWithFailureConfiguration(t *testing.T) {
 		fields := func() []zapcore.Field {
 			return newZapFields(
 				zap.String("direction", string(_directionInbound)),
+				zap.String("sourceProcedure", req.Meta.CallerProcedure),
 				zap.String("rpcType", "Streaming"),
 				zap.Bool("successful", false),
 				zap.Skip(), // context extractor
@@ -1319,6 +1410,7 @@ func TestMiddlewareStreamingLoggingErrorWithFailureConfiguration(t *testing.T) {
 		fields := func() []zapcore.Field {
 			return newZapFields(
 				zap.String("direction", string(_directionOutbound)),
+				zap.String("sourceProcedure", req.Meta.CallerProcedure),
 				zap.String("rpcType", "Streaming"),
 				zap.Bool("successful", false),
 				zap.Skip(), // context extractor
@@ -1365,6 +1457,7 @@ func TestMiddlewareStreamingLoggingErrorWithFailureConfiguration(t *testing.T) {
 		fields := func() []zapcore.Field {
 			return newZapFields(
 				zap.String("direction", string(_directionOutbound)),
+				zap.String("sourceProcedure", req.Meta.CallerProcedure),
 				zap.String("rpcType", "Streaming"),
 				zap.Bool("successful", false),
 				zap.Skip(), // context extractor
@@ -1454,6 +1547,7 @@ func TestMiddlewareStreamingLoggingErrorWithFailureConfiguration(t *testing.T) {
 		logFields := func(err error) []zapcore.Field {
 			return newZapFields(
 				zap.String("direction", string(_directionInbound)),
+				zap.String("sourceProcedure", req.Meta.CallerProcedure),
 				zap.String("rpcType", "Streaming"),
 				zap.Bool("successful", true),
 				zap.Skip(), // context extractor
@@ -1536,7 +1630,6 @@ func TestMiddlewareStreamingLoggingErrorWithServerClientConfiguration(t *testing
 			zap.String("encoding", string(req.Meta.Encoding)),
 			zap.String("routingKey", req.Meta.RoutingKey),
 			zap.String("routingDelegate", req.Meta.RoutingDelegate),
-			zap.String("sourceProcedure", req.Meta.CallerProcedure),
 		}
 		return append(fields, extraFields...)
 	}
@@ -1604,6 +1697,7 @@ func TestMiddlewareStreamingLoggingErrorWithServerClientConfiguration(t *testing
 
 				fields := newZapFields(
 					zap.String("direction", string(_directionInbound)),
+					zap.String("sourceProcedure", req.Meta.CallerProcedure),
 					zap.String("rpcType", "Streaming"),
 					zap.Bool("successful", false),
 					zap.Skip(), // context extractor
@@ -1882,8 +1976,8 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		zap.String("encoding", string(req.Encoding)),
 		zap.String("routingKey", req.RoutingKey),
 		zap.String("routingDelegate", req.RoutingDelegate),
-		zap.String("sourceProcedure", req.CallerProcedure),
 		zap.String("direction", string(_directionInbound)),
+		zap.String("sourceProcedure", req.CallerProcedure),
 		zap.String("rpcType", "Unary"),
 		zap.Duration("latency", 0),
 		zap.Bool("successful", false),
