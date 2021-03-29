@@ -596,24 +596,6 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 
 func TestMiddlewareLoggingDifferentCallerProcedureWithSameEdge(t *testing.T) {
 	defer stubTime()()
-	req := &transport.Request{
-		Caller:    "caller",
-		Service:   "service",
-		Encoding:  "raw",
-		Procedure: "procedure",
-	}
-
-	baseFields := func() []zapcore.Field {
-		return []zapcore.Field{
-			zap.String("source", req.Caller),
-			zap.String("dest", req.Service),
-			zap.String("transport", unknownIfEmpty(req.Transport)),
-			zap.String("procedure", req.Procedure),
-			zap.String("encoding", string(req.Encoding)),
-			zap.String("routingKey", req.RoutingKey),
-			zap.String("routingDelegate", req.RoutingDelegate),
-		}
-	}
 
 	infoLevel := zapcore.InfoLevel
 	warnLevel := zapcore.WarnLevel
@@ -639,31 +621,46 @@ func TestMiddlewareLoggingDifferentCallerProcedureWithSameEdge(t *testing.T) {
 		return e
 	}
 
-	wantFields := []zapcore.Field{
-		zap.Duration("latency", 0),
-		zap.Bool("successful", true),
-		zap.Skip(), // ContextExtractor
-	}
+	for _, tt := range []struct {
+		desc string
+		req  transport.Request
+	}{
+		{
+			desc: "caller1",
+			req: transport.Request{
+				Caller:          "caller",
+				Service:         "service",
+				Encoding:        "raw",
+				Procedure:       "procedure",
+				CallerProcedure: "callerProcedure_1",
+			},
+		},
+	} {
+		logContext := []zapcore.Field{
+			zap.String("source", tt.req.Caller),
+			zap.String("dest", tt.req.Service),
+			zap.String("transport", unknownIfEmpty(tt.req.Transport)),
+			zap.String("procedure", tt.req.Procedure),
+			zap.String("encoding", string(tt.req.Encoding)),
+			zap.String("routingKey", tt.req.RoutingKey),
+			zap.String("routingDelegate", tt.req.RoutingDelegate),
+			zap.String("direction", string(_directionInbound)),
+			zap.String("sourceProcedure", tt.req.CallerProcedure),
+			zap.String("rpcType", "Unary"),
+			zap.Duration("latency", 0),
+			zap.Bool("successful", true),
+			zap.Skip(), // ContextExtractor
+		}
 
-	for i := 0; i < 2; i++ {
-		req.CallerProcedure = fmt.Sprintf("caller-procedure-%d", i)
-
-		t.Run(fmt.Sprintf("unary_inbound_%d", i), func(t *testing.T) {
+		t.Run(tt.desc, func(t *testing.T) {
 			err := mw.Handle(
 				context.Background(),
-				req,
+				&tt.req,
 				&transporttest.FakeResponseWriter{},
 				fakeHandler{},
 			)
 			assert.NoError(t, err, "Unexpected error from middleware.")
-			logContext := append(
-				baseFields(),
-				zap.String("direction", string(_directionInbound)),
-				zap.String("sourceProcedure", req.CallerProcedure),
-				zap.String("rpcType", "Unary"),
-			)
 
-			logContext = append(logContext, wantFields...)
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
 					Level:   zapcore.InfoLevel,
