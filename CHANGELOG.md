@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Removed
-- Disable CallerProcedure header temporarily by stop propoagating this header in the outbound middleware.
+- Disable `rpc-caller-procedure` header temporarily by stop propoagating CallerProcedure in the outbound middleware.
 
 ## [1.53.0] - 2021-03-12
 ### Added
