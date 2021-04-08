@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Removed
 - Disable `rpc-caller-procedure` header temporarily by stop propoagating CallerProcedure in the outbound middleware.
 
+## [1.53.1] - 2021-03-30
+- v1.53.1 is v1.52.0. v1.53.0 has a backward compatible issue with the new header
+  `rpc-caller-procedure` added in v1.53.0.
+
 ## [1.53.0] - 2021-03-12
 ### Added
 - gRPC: accept keepalive parameters for gRPC outbound configuration.
@@ -1344,6 +1348,7 @@ This release requires regeneration of ThriftRW code.
 - Initial release.
 
 [Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.53.0...HEAD
+[1.53.1]: https://github.com/yarpc/yarpc-go/compare/v1.51.0...v1.52.0
 [1.53.0]: https://github.com/yarpc/yarpc-go/compare/v1.52.0...v1.53.0
 [1.52.0]: https://github.com/yarpc/yarpc-go/compare/v1.51.0...v1.52.0
 [1.51.0]: https://github.com/yarpc/yarpc-go/compare/v1.50.0...v1.51.0
