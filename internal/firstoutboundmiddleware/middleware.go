@@ -26,7 +26,6 @@ package firstoutboundmiddleware
 import (
 	"context"
 
-	"go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 )
@@ -74,12 +73,6 @@ func update(ctx context.Context, req *transport.Request, out transport.Outbound)
 	if namer, ok := out.(transport.Namer); ok {
 		req.Transport = namer.TransportName()
 	}
-
-	// Update the caller procedure to the current procedure making this request
-	call := encoding.CallFromContext(ctx)
-	if call != nil {
-		req.CallerProcedure = call.Procedure()
-	}
 }
 
 func updateStream(ctx context.Context, req *transport.StreamRequest, out transport.Outbound) {
@@ -91,11 +84,5 @@ func updateStream(ctx context.Context, req *transport.StreamRequest, out transpo
 	// requests to a different outbound type.
 	if namer, ok := out.(transport.Namer); ok {
 		req.Meta.Transport = namer.TransportName()
-	}
-
-	// Update the caller procedure to the current procedure making this request
-	call := encoding.CallFromContext(ctx)
-	if call != nil {
-		req.Meta.CallerProcedure = call.Procedure()
 	}
 }
