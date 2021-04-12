@@ -59,3 +59,5 @@ require (
 )
 
 replace github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.1.0
+
+replace github.com/codahale/hdrhistogram => github.com/HdrHistogram/hdrhistogram-go v1.0.0
