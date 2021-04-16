@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.53.2] - 2021-04-16
 ### Removed
 - Disable `rpc-caller-procedure` header temporarily by stop propoagating CallerProcedure in the outbound middleware.
 
@@ -1347,7 +1347,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.53.0...HEAD
+[1.53.2]: https://github.com/yarpc/yarpc-go/compare/v1.53.1...v1.53.2
 [1.53.1]: https://github.com/yarpc/yarpc-go/compare/v1.51.0...v1.52.0
 [1.53.0]: https://github.com/yarpc/yarpc-go/compare/v1.52.0...v1.53.0
 [1.52.0]: https://github.com/yarpc/yarpc-go/compare/v1.51.0...v1.52.0
