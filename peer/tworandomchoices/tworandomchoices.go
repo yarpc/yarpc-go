@@ -101,11 +101,16 @@ func (l *twoRandomChoicesList) Choose(_ *transport.Request) peer.StatusPeer {
 	if numSubs == 1 {
 		return l.subscribers[0].peer
 	}
-	i := l.random.Intn(numSubs)
-	j := i + 1 + l.random.Intn(numSubs-1)
-	if j >= numSubs {
-		j -= numSubs
+	i := rand.Intn(numSubs)
+	s := rand.Intn(numSubs)
+	if i == j {
+		if j == 0 {
+			j = numSubs - 1
+		} else {
+			j--
+		}
 	}
+
 	if l.subscribers[i].pending.Load() > l.subscribers[j].pending.Load() {
 		i = j
 	}
