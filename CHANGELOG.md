@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Removed
 - Disable `rpc-caller-procedure` header temporarily by stop propoagating CallerProcedure in the outbound middleware.
+### Added
+- gRPC: log header values upon validation error
 
 ## [1.53.1] - 2021-03-30
 - v1.53.1 is v1.52.0. v1.53.0 has a backward compatible issue with the new header
