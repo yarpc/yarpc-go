@@ -116,7 +116,7 @@ func TestInvalidStreamMultipleHeaders(t *testing.T) {
 	_, err = h.getBasicTransportRequest(ctx, "service/proc")
 
 	require.Contains(t, err.Error(), "code:invalid-argument")
-	require.Contains(t, err.Error(), "header has more than one value: rpc-caller")
+	require.Contains(t, err.Error(), "header has more than one value: rpc-caller:[caller1 caller2]")
 }
 
 func TestToGRPCError(t *testing.T) {
