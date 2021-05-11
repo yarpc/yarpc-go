@@ -21,43 +21,32 @@
 package introspection
 
 import (
-	"fmt"
+	"testing"
 
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/pkg/procedure"
+	"github.com/stretchr/testify/assert"
 )
 
-const proto = "proto"
-
-// Procedure represent a registered procedure on a dispatcher.
-type Procedure struct {
-	Name      string `json:"name"`
-	Encoding  string `json:"encoding"`
-	Signature string `json:"signature"`
-	RPCType   string `json:"rpcType"`
-}
-
-// ProcedureName outputs a encoding-native procedure name.
-func (p Procedure) ProcedureName() string {
-	// see transport/grpc/util.go#toFullMethod
-	if p.Encoding == proto {
-		svc, method := procedure.FromName(p.Name)
-		return fmt.Sprintf("/%s/%s", svc, method)
+func TestProcedureName(t *testing.T) {
+	tests := []struct {
+		msg  string
+		p    Procedure
+		want string
+	}{
+		{
+			msg:  "proto encoding",
+			p:    Procedure{Encoding: "proto", Name: "full.path.to.service::method"},
+			want: "/full.path.to.service/method",
+		},
+		{
+			msg:  "thrift encoding",
+			p:    Procedure{Encoding: "thrift ", Name: "full.path.to.service::method"},
+			want: "full.path.to.service::method",
+		},
 	}
-	return p.Name
-}
 
-// IntrospectProcedures is a convenience function that translate a slice of
-// transport.Procedure to a slice of introspection.Procedure.
-func IntrospectProcedures(routerProcs []transport.Procedure) []Procedure {
-	procedures := make([]Procedure, 0, len(routerProcs))
-	for _, p := range routerProcs {
-		procedures = append(procedures, Procedure{
-			Name:      p.Name,
-			Encoding:  string(p.Encoding),
-			Signature: p.Signature,
-			RPCType:   p.HandlerSpec.Type().String(),
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.p.ProcedureName(), "procedure name mismatch")
 		})
 	}
-	return procedures
 }
