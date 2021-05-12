@@ -1932,7 +1932,7 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 	buf := bufferpool.Get()
 	defer bufferpool.Put(buf)
 
-	buf.Write([]byte("body"))
+	buf.Write(make([]byte, 1024*1024*128))
 
 	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(time.Millisecond*time.Duration(ttlMs)))
 	defer cancel()
@@ -1951,7 +1951,7 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 			BodySize:        buf.Len(),
 		},
 		&transporttest.FakeResponseWriter{},
-		fakeHandler{responseData: []byte("test response")},
+		fakeHandler{responseData: make([]byte, 1024*1024*256)},
 	)
 	assert.NoError(t, err, "Unexpected transport error.")
 
@@ -1983,13 +1983,13 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 				Name:   "request_payload_size_bytes",
 				Tags:   tags,
 				Unit:   time.Millisecond,
-				Values: []int64{4},
+				Values: []int64{134217728}, // 128MB
 			},
 			{
 				Name:   "response_payload_size_bytes",
 				Tags:   tags,
 				Unit:   time.Millisecond,
-				Values: []int64{16},
+				Values: []int64{268435456}, // 256MB
 			},
 			{
 				Name: "server_failure_latency_ms",
