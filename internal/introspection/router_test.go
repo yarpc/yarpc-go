@@ -38,8 +38,13 @@ func TestProcedureName(t *testing.T) {
 			want: "/full.path.to.service/method",
 		},
 		{
+			msg:  "json encoding",
+			p:    Procedure{Encoding: "json", Name: "full.path.to.service::method"},
+			want: "full.path.to.service::method",
+		},
+		{
 			msg:  "thrift encoding",
-			p:    Procedure{Encoding: "thrift ", Name: "full.path.to.service::method"},
+			p:    Procedure{Encoding: "thrift", Name: "full.path.to.service::method"},
 			want: "full.path.to.service::method",
 		},
 	}
