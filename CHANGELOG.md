@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - observability: extend response, and request payload size histogram buckets up to 256MB.
+### Fixed
+- introspection: wrong display of proto procedure name.
 
 ## [1.53.2] - 2021-04-16
 ### Removed
