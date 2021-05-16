@@ -21,6 +21,7 @@
 package grpc
 
 import (
+	"fmt"
 	"net"
 	"sync"
 
@@ -103,12 +104,15 @@ func (i *Inbound) Transports() []transport.Transport {
 }
 
 func (i *Inbound) start() error {
+	fmt.Printf("[jz]: here, starting gRPC inbound transport: %+v\n", i.t)
 	i.lock.Lock()
 	defer i.lock.Unlock()
 	if i.router == nil {
+		fmt.Printf("[jz]: here, no router set, skip gRPC inbound\n")
 		return errRouterNotSet
 	}
 
+	fmt.Printf("[jz]: here, creating handlr for gRPC inbound\n")
 	handler := newHandler(i, i.t.options.logger)
 
 	serverOptions := []grpc.ServerOption{
@@ -119,15 +123,19 @@ func (i *Inbound) start() error {
 	}
 
 	if i.options.creds != nil {
+		fmt.Println("[jz]: grpc, crentials are not empty")
 		serverOptions = append(serverOptions, grpc.Creds(i.options.creds))
 	}
 
 	server := grpc.NewServer(serverOptions...)
 
+	fmt.Printf("[jz]: here, right before starting gRPC inbound\n")
 	go func() {
+		fmt.Printf("[jz]: here, starting gRPC inbound at adress: %v\n", i.listener.Addr())
+		fmt.Printf("[jz]: %+v, logger:%+v\n", i.t.options, i.t.options.logger)
 		i.t.options.logger.Info("started GRPC inbound", zap.Stringer("address", i.listener.Addr()))
 		if len(i.router.Procedures()) == 0 {
-			i.t.options.logger.Warn("no procedures specified for GRPC inbound")
+			i.t.options.logger.Error("no procedures specified for GRPC inbound")
 		}
 		// TODO there should be some mechanism to block here
 		// there is a race because the listener gets set in the grpc
@@ -139,9 +147,11 @@ func (i *Inbound) start() error {
 		//
 		// TODO Server always returns a non-nil error but should
 		// we do something with some or all errors?
+		fmt.Printf("[jz]: here, serving gRPC inbound at adress: %v\n", i.listener.Addr())
 		_ = server.Serve(i.listener)
 	}()
 	i.server = server
+	fmt.Printf("[jz]: here, right after starting gRPC inbound\n")
 	return nil
 }
 

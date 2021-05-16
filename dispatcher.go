@@ -83,6 +83,11 @@ func NewDispatcher(cfg Config) *Dispatcher {
 	cfg = addObservingMiddleware(cfg, meter, logger, extractor)
 	cfg = addFirstOutboundMiddleware(cfg)
 
+	fmt.Printf("[jz] configured inbounds: num:%d, inbounds:%+v\n", len(cfg.Inbounds), cfg.Inbounds)
+	for i, in := range cfg.Inbounds {
+		fmt.Printf("[jz] inbound %d: %+v\n", i, in)
+	}
+
 	return &Dispatcher{
 		name:              cfg.Name,
 		table:             middleware.ApplyRouteTable(NewMapRouter(cfg.Name), cfg.RouterMiddleware),
