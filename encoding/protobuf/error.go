@@ -144,10 +144,10 @@ func convertToYARPCError(encoding transport.Encoding, err error, codec *codec, r
 }
 
 func createStatusWithDetail(pberr *pberror, encoding transport.Encoding, codec *codec) (*yarpcerrors.Status, error) {
-	st := status.New(grpcerrorcodes.YARPCCodeToGRPCCode[pberr.code], pberr.message)
-	st.Proto().Details = pberr.details
+	st := status.New(grpcerrorcodes.YARPCCodeToGRPCCode[pberr.code], pberr.message).Proto()
+	st.Details = pberr.details
 
-	detailsBytes, cleanup, marshalErr := marshal(encoding, st.Proto(), codec)
+	detailsBytes, cleanup, marshalErr := marshal(encoding, st, codec)
 	if marshalErr != nil {
 		return nil, marshalErr
 	}
