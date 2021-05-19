@@ -27,6 +27,7 @@ import (
 
 	"github.com/gogo/googleapis/google/rpc"
 	"github.com/gogo/protobuf/proto"
+	"github.com/gogo/protobuf/types"
 	"github.com/gogo/status"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
@@ -45,7 +46,7 @@ var _ error = (*pberror)(nil)
 type pberror struct {
 	code    yarpcerrors.Code
 	message string
-	details []interface{}
+	details []*types.Any
 }
 
 func (err *pberror) Error() string {
@@ -93,7 +94,16 @@ func GetErrorDetails(err error) []interface{} {
 	}
 	var target *pberror
 	if errors.As(err, &target) {
-		return target.details
+		results := make([]interface{}, 0, len(target.details))
+		for _, any := range target.details {
+			detail := &types.DynamicAny{}
+			if err := types.UnmarshalAny(any, detail); err != nil {
+				results = append(results, err)
+				continue
+			}
+			results = append(results, detail.Message)
+		}
+		return results
 	}
 	return nil
 }
@@ -105,7 +115,13 @@ type ErrorOption struct{ apply func(*pberror) }
 func WithErrorDetails(details ...proto.Message) ErrorOption {
 	return ErrorOption{func(err *pberror) {
 		for _, detail := range details {
-			err.details = append(err.details, detail)
+			//err.details = append(err.details, detail)
+			any, _ := types.MarshalAny(detail)
+			// TODO: handle error
+			// if err != nil {
+			// 	return nil, err
+			// }
+			err.details = append(err.details, any)
 		}
 	}}
 }
@@ -128,19 +144,9 @@ func convertToYARPCError(encoding transport.Encoding, err error, codec *codec, r
 }
 
 func createStatusWithDetail(pberr *pberror, encoding transport.Encoding, codec *codec) (*yarpcerrors.Status, error) {
-	details := make([]proto.Message, 0, len(pberr.details))
-	for _, detail := range pberr.details {
-		if pbdetail, ok := detail.(proto.Message); ok {
-			details = append(details, pbdetail)
-		} else {
-			return nil, errors.New("proto error detail is not proto.Message compatible")
-		}
-	}
+	st := status.New(grpcerrorcodes.YARPCCodeToGRPCCode[pberr.code], pberr.message)
+	st.Proto().Details = pberr.details
 
-	st, convertErr := status.New(grpcerrorcodes.YARPCCodeToGRPCCode[pberr.code], pberr.message).WithDetails(details...)
-	if convertErr != nil {
-		return nil, convertErr
-	}
 	detailsBytes, cleanup, marshalErr := marshal(encoding, st.Proto(), codec)
 	if marshalErr != nil {
 		return nil, marshalErr
@@ -157,15 +163,16 @@ func setApplicationErrorMeta(pberr *pberror, resw transport.ResponseWriter) {
 		return
 	}
 
+	decodedDetails := GetErrorDetails(pberr)
 	var appErrName string
-	if len(pberr.details) > 0 { // only grab the first name since this will be emitted with metrics
+	if len(decodedDetails) > 0 { // only grab the first name since this will be emitted with metrics
 		appErrName = messageNameWithoutPackage(proto.MessageName(
-			pberr.details[0].(proto.Message)),
+			decodedDetails[0].(proto.Message)),
 		)
 	}
 
-	details := make([]string, 0, len(pberr.details))
-	for _, detail := range pberr.details {
+	details := make([]string, 0, len(decodedDetails))
+	for _, detail := range decodedDetails {
 		details = append(details, protobufMessageToString(detail.(proto.Message)))
 	}
 
@@ -208,11 +215,10 @@ func convertFromYARPCError(encoding transport.Encoding, err error, codec *codec)
 		return unmarshalErr
 	}
 
-	details := status.FromProto(st).Details()
-	return newErrorWithDetails(yarpcErr.Code(), yarpcErr.Message(), details)
+	return newErrorWithDetails(yarpcErr.Code(), yarpcErr.Message(), st.GetDetails())
 }
 
-func newErrorWithDetails(code yarpcerrors.Code, message string, details []interface{}) error {
+func newErrorWithDetails(code yarpcerrors.Code, message string, details []*types.Any) error {
 	return &pberror{
 		code:    code,
 		message: message,
