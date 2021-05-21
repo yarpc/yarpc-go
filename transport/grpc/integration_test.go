@@ -130,7 +130,10 @@ func TestYARPCErrorWithDetails(t *testing.T) {
 	te.do(t, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeNotFound, "hello world", protobuf.WithErrorDetails(&examplepb.SetValueResponse{})))
 		err := e.SetValueYARPC(context.Background(), "foo", "bar")
-		assert.Equal(t, protobuf.NewError(yarpcerrors.CodeNotFound, "hello world", protobuf.WithErrorDetails(&examplepb.SetValueResponse{})), err)
+		require.Len(t, protobuf.GetErrorDetails(err), 1)
+		assert.Equal(t, protobuf.GetErrorDetails(err)[0], &examplepb.SetValueResponse{})
+		assert.Equal(t, yarpcerrors.FromError(err).Code(), yarpcerrors.CodeNotFound)
+		assert.Equal(t, yarpcerrors.FromError(err).Message(), "hello world")
 	})
 }
 

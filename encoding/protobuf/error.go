@@ -75,7 +75,9 @@ func NewError(code yarpcerrors.Code, message string, options ...ErrorOption) err
 		message: message,
 	}
 	for _, opt := range options {
-		opt.apply(pbErr)
+		if err := opt.apply(pbErr); err != nil {
+			return err
+		}
 	}
 	return pbErr
 }
@@ -109,20 +111,21 @@ func GetErrorDetails(err error) []interface{} {
 }
 
 // ErrorOption is an option for the NewError constructor.
-type ErrorOption struct{ apply func(*pberror) }
+type ErrorOption struct{ apply func(*pberror) error }
 
 // WithErrorDetails adds to the details of the error.
+// If any errors are encountered, it returns the first error encountered.
+// See: https://github.com/gogo/status/blob/master/status.go#L175
 func WithErrorDetails(details ...proto.Message) ErrorOption {
-	return ErrorOption{func(err *pberror) {
+	return ErrorOption{func(err *pberror) error {
 		for _, detail := range details {
-			//err.details = append(err.details, detail)
-			any, _ := types.MarshalAny(detail)
-			// TODO: handle error
-			// if err != nil {
-			// 	return nil, err
-			// }
+			any, terr := types.MarshalAny(detail)
+			if terr != nil {
+				return terr
+			}
 			err.details = append(err.details, any)
 		}
+		return nil
 	}}
 }
 
@@ -144,6 +147,10 @@ func convertToYARPCError(encoding transport.Encoding, err error, codec *codec, r
 }
 
 func createStatusWithDetail(pberr *pberror, encoding transport.Encoding, codec *codec) (*yarpcerrors.Status, error) {
+	if pberr.code == yarpcerrors.CodeOK {
+		return nil, errors.New("no status error for error with code OK")
+	}
+
 	st := status.New(grpcerrorcodes.YARPCCodeToGRPCCode[pberr.code], pberr.message).Proto()
 	st.Details = pberr.details
 
