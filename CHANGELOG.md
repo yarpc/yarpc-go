@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - observability: extend response, and request payload size histogram buckets up to 256MB.
 ### Fixed
 - introspection: wrong display of proto procedure name.
+- error details: propagation of protobuf error details did not work if the any message was not
+  registered in the gogo proto registry.
 
 ## [1.53.2] - 2021-04-16
 ### Removed
