@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.54.0] - 2021-06-01
 ### Added
 - observability: extend response, and request payload size histogram buckets up to 256MB.
 ### Fixed
@@ -1357,7 +1357,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.53.2...HEAD
+[1.54.0]: https://github.com/yarpc/yarpc-go/compare/v1.53.2...v1.54.0
 [1.53.2]: https://github.com/yarpc/yarpc-go/compare/v1.53.1...v1.53.2
 [1.53.1]: https://github.com/yarpc/yarpc-go/compare/v1.51.0...v1.52.0
 [1.53.0]: https://github.com/yarpc/yarpc-go/compare/v1.52.0...v1.53.0
