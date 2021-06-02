@@ -18,7 +18,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
+package introspection
 
-// Version is the current version of YARPC.
-const Version = "1.54.0"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestProcedureName(t *testing.T) {
+	tests := []struct {
+		msg  string
+		p    Procedure
+		want string
+	}{
+		{
+			msg:  "proto encoding",
+			p:    Procedure{Encoding: "proto", Name: "full.path.to.service::method"},
+			want: "/full.path.to.service/method",
+		},
+		{
+			msg:  "json encoding",
+			p:    Procedure{Encoding: "json", Name: "full.path.to.service::method"},
+			want: "full.path.to.service::method",
+		},
+		{
+			msg:  "thrift encoding",
+			p:    Procedure{Encoding: "thrift", Name: "full.path.to.service::method"},
+			want: "full.path.to.service::method",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.p.ProcedureName(), "procedure name mismatch")
+		})
+	}
+}

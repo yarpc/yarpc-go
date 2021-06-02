@@ -1948,10 +1948,12 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
 			Body:            buf,
-			BodySize:        buf.Len(),
+			// overwrite with fixed value of 256MB to test large bucket.
+			// large buffer body causes CI to timeout.
+			BodySize: 1024 * 1024 * 256,
 		},
 		&transporttest.FakeResponseWriter{},
-		fakeHandler{responseData: []byte("test response")},
+		fakeHandler{responseData: make([]byte, 1024*1024*16)},
 	)
 	assert.NoError(t, err, "Unexpected transport error.")
 
@@ -1983,13 +1985,13 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 				Name:   "request_payload_size_bytes",
 				Tags:   tags,
 				Unit:   time.Millisecond,
-				Values: []int64{4},
+				Values: []int64{268435456}, // 256MB
 			},
 			{
 				Name:   "response_payload_size_bytes",
 				Tags:   tags,
 				Unit:   time.Millisecond,
-				Values: []int64{16},
+				Values: []int64{16777216}, // 16MB
 			},
 			{
 				Name: "server_failure_latency_ms",
