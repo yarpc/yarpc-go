@@ -286,7 +286,7 @@ func TestErrorWithFmtVerbs(t *testing.T) {
 	assert.EqualError(t, UnknownErrorf(err.Error()), FromError(err).Error())
 }
 
-func TestWrapError(t *testing.T) {
+func TestInternalWrapError(t *testing.T) {
 	t.Run("nil", func(t *testing.T) {
 		var we *wrapError
 		assert.Empty(t, we.Error())
@@ -304,5 +304,37 @@ func TestWrapError(t *testing.T) {
 		we := &wrapError{err: inner}
 		assert.Equal(t, inner.Error(), we.Error())
 		assert.Equal(t, inner, errors.Unwrap(we))
+	})
+}
+
+type customAppError struct{
+	data int
+}
+
+func (customAppError) Error() string {
+	return "custom application error"
+}
+
+func TestWrap(t *testing.T) {
+	t.Run("ok status should return no error to be consistent with Newf", func(t *testing.T) {
+		appError := errors.New("app error")
+		err := Wrap(CodeOK, appError)
+		assert.Nil(t, err)
+	})
+
+	t.Run("non-ok status should return status wrapping the original error", func(t *testing.T) {
+		var appError error
+		appError = customAppError{
+			data: 1,
+		}
+		err := Wrap(CodeInvalidArgument, appError)
+		assert.NotNil(t, err)
+		assert.True(t, IsInvalidArgument(err))
+		assert.EqualError(t, errors.Unwrap(err), appError.Error())
+
+		var extractErr customAppError
+		assert.True(t, errors.As(err, &extractErr))
+		assert.EqualError(t, extractErr, appError.Error() )
+		assert.Equal(t, 1, extractErr.data)
 	})
 }

@@ -26,6 +26,19 @@ import (
 	"fmt"
 )
 
+// Wrap returns a new Status that wraps the original error.
+//
+// The Code should never be CodeOK, if it is, this will return nil.
+func Wrap(code Code, err error) *Status {
+	if code == CodeOK {
+		return nil
+	}
+	return &Status{
+		code: code,
+		err:  &wrapError{err: err},
+	}
+}
+
 // Newf returns a new Status.
 //
 // The Code should never be CodeOK, if it is, this will return nil.
