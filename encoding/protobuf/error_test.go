@@ -213,8 +213,15 @@ func TestConvertFromYARPCError(t *testing.T) {
 }
 
 func TestCreateStatusWithDetailErrors(t *testing.T) {
-	t.Run("unsupported code", func(t *testing.T) {
+	t.Run("code ok", func(t *testing.T) {
 		pberr := &pberror{code: yarpcerrors.CodeOK, message: "test"}
+		_, err := createStatusWithDetail(pberr, Encoding, &codec{})
+		assert.Error(t, err, "unexpected empty error")
+		assert.Equal(t, err.Error(), "no status error for error with code OK")
+	})
+
+	t.Run("unsupported code", func(t *testing.T) {
+		pberr := &pberror{code: 99, message: "test"}
 		_, err := createStatusWithDetail(pberr, Encoding, &codec{})
 		assert.Error(t, err, "unexpected empty error")
 		assert.Equal(t, err.Error(), "no status error for error with code OK")
