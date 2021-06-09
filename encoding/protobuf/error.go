@@ -152,7 +152,7 @@ func createStatusWithDetail(pberr *pberror, encoding transport.Encoding, codec *
 	}
 
 	st := status.New(grpcerrorcodes.YARPCCodeToGRPCCode[pberr.code], pberr.message)
-	// Here we check that status.New is a valid error
+	// Here we check that status.New has returned a valid error.
 	if st.Err() == nil {
 		return nil, errors.New("no status error for error with code OK")
 	}
