@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Fixed
 - protobuf error: a protobuf error created with an invalid code returns a unknown
-  error again.
+  error.
+- protobuf error details: protobuf.GetErrorDetails returns nil instead of an empty array
+  if there is no details in the given error.
 
 ## [1.54.0] - 2021-06-01
 ### Added

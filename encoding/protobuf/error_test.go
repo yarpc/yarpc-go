@@ -224,7 +224,7 @@ func TestCreateStatusWithDetailErrors(t *testing.T) {
 		pberr := &pberror{code: 99, message: "test"}
 		_, err := createStatusWithDetail(pberr, Encoding, &codec{})
 		assert.Error(t, err, "unexpected empty error")
-		assert.Equal(t, err.Error(), "no status error for error with code OK")
+		assert.Equal(t, err.Error(), "no status error for error with code 99")
 	})
 
 	t.Run("unsupported encoding", func(t *testing.T) {
@@ -242,6 +242,12 @@ func TestErrorHandling(t *testing.T) {
 	})
 	t.Run("GetErrorDetail non pberror", func(t *testing.T) {
 		assert.Nil(t, GetErrorDetails(errors.New("test")), "unexpected details")
+	})
+	t.Run("GetErrorDetail with no error detail", func(t *testing.T) {
+		err := NewError(
+			yarpcerrors.CodeAborted,
+			"aborted")
+		assert.Nil(t, GetErrorDetails(err), "unexpected details")
 	})
 	t.Run("PbError empty error handling", func(t *testing.T) {
 		var pbErr *pberror
