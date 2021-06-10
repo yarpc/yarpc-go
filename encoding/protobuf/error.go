@@ -154,7 +154,7 @@ func createStatusWithDetail(pberr *pberror, encoding transport.Encoding, codec *
 	st := status.New(grpcerrorcodes.YARPCCodeToGRPCCode[pberr.code], pberr.message)
 	// Here we check that status.New has returned a valid error.
 	if st.Err() == nil {
-		return nil, errors.New(fmt.Sprintf("no status error for error with code %d", pberr.code))
+		return nil, fmt.Errorf("no status error for error with code %d", pberr.code)
 	}
 	pst := st.Proto()
 	pst.Details = pberr.details
