@@ -5,7 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- No changes yet.
+### Fixed
+- error details: protobuf.GetErrorDetails returns nil instead of an empty array
+  if there is no details in the given error.
 
 ## [1.54.0] - 2021-06-01
 ### Added

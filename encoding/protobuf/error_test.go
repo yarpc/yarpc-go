@@ -236,6 +236,12 @@ func TestErrorHandling(t *testing.T) {
 	t.Run("GetErrorDetail non pberror", func(t *testing.T) {
 		assert.Nil(t, GetErrorDetails(errors.New("test")), "unexpected details")
 	})
+	t.Run("GetErrorDetail with no error detail", func(t *testing.T) {
+		err := NewError(
+			yarpcerrors.CodeAborted,
+			"aborted")
+		assert.Nil(t, GetErrorDetails(err), "unexpected details")
+	})
 	t.Run("PbError empty error handling", func(t *testing.T) {
 		var pbErr *pberror
 		assert.Nil(t, pbErr.YARPCError(), "unexpected yarpcerror")
