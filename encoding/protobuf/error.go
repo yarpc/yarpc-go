@@ -95,7 +95,7 @@ func GetErrorDetails(err error) []interface{} {
 		return nil
 	}
 	var target *pberror
-	if errors.As(err, &target) {
+	if errors.As(err, &target) && len(target.details) > 0 {
 		results := make([]interface{}, 0, len(target.details))
 		for _, any := range target.details {
 			detail := &types.DynamicAny{}
