@@ -95,7 +95,7 @@ func GetErrorDetails(err error) []interface{} {
 		return nil
 	}
 	var target *pberror
-	if errors.As(err, &target) {
+	if errors.As(err, &target) && len(target.details) > 0 {
 		results := make([]interface{}, 0, len(target.details))
 		for _, any := range target.details {
 			detail := &types.DynamicAny{}
@@ -151,10 +151,15 @@ func createStatusWithDetail(pberr *pberror, encoding transport.Encoding, codec *
 		return nil, errors.New("no status error for error with code OK")
 	}
 
-	st := status.New(grpcerrorcodes.YARPCCodeToGRPCCode[pberr.code], pberr.message).Proto()
-	st.Details = pberr.details
+	st := status.New(grpcerrorcodes.YARPCCodeToGRPCCode[pberr.code], pberr.message)
+	// Here we check that status.New has returned a valid error.
+	if st.Err() == nil {
+		return nil, fmt.Errorf("no status error for error with code %d", pberr.code)
+	}
+	pst := st.Proto()
+	pst.Details = pberr.details
 
-	detailsBytes, cleanup, marshalErr := marshal(encoding, st, codec)
+	detailsBytes, cleanup, marshalErr := marshal(encoding, pst, codec)
 	if marshalErr != nil {
 		return nil, marshalErr
 	}
