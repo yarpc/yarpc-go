@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 - No changes yet.
 
-## [1.54.1] - 2021-06-01
+## [1.54.2] - 2021-06-11
+- go.uber.org/yarpc@v1.54.1 points to v1.54.0 instead of v1.54.1. This release unblocks
+  go.uber.org/yarpc to serve v1.54.1 through v1.54.2.
+
+## [1.54.1] - 2021-06-11
 ### Fixed
 - protobuf error: a protobuf error created with an invalid code returns a unknown
   error.
@@ -1367,7 +1371,8 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.54.1...HEAD
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.54.2...HEAD
+[1.54.2]: https://github.com/yarpc/yarpc-go/compare/v1.54.1...v1.54.2
 [1.54.1]: https://github.com/yarpc/yarpc-go/compare/v1.54.0...v1.54.1
 [1.54.0]: https://github.com/yarpc/yarpc-go/compare/v1.53.2...v1.54.0
 [1.53.2]: https://github.com/yarpc/yarpc-go/compare/v1.53.1...v1.53.2
