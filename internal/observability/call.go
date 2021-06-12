@@ -64,7 +64,7 @@ const (
 type call struct {
 	edge    *edge
 	extract ContextExtractor
-	fields  [9]zapcore.Field
+	fields  [10]zapcore.Field
 
 	started   time.Time
 	ctx       context.Context
@@ -223,6 +223,7 @@ func (c call) endLogs(
 	}
 
 	fields := c.fields[:0]
+	fields = append(fields, zap.String("sourceProcedure", c.req.CallerProcedure))
 	fields = append(fields, zap.String("rpcType", c.rpcType.String()))
 	fields = append(fields, zap.Duration("latency", elapsed))
 	fields = append(fields, zap.Bool("successful", err == nil && !isApplicationError))
@@ -483,12 +484,13 @@ func (c call) logStreamEvent(err error, success bool, succMsg, errMsg string, ex
 		ce = c.edge.logger.Check(lvl, errMsg)
 	}
 
-	fields := []zap.Field{
-		zap.String("rpcType", c.rpcType.String()),
+	fields := c.fields[:0]
+	fields = append(fields, zap.String("sourceProcedure", c.req.CallerProcedure))
+	fields = append(fields, zap.String("rpcType", c.rpcType.String()),
 		zap.Bool("successful", success),
 		c.extract(c.ctx),
 		zap.Error(err), // no-op if err == nil
-	}
+	)
 	fields = append(fields, extraFields...)
 
 	ce.Write(fields...)

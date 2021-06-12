@@ -5,7 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- No changes yet.
+### Added
+- observability: added key `sourceProcedure` in logging. The value of the key will be the `CallerProcedure` value of the request.
 
 ## [1.54.2] - 2021-06-11
 - go.uber.org/yarpc@v1.54.1 points to v1.54.0 instead of v1.54.1. This release unblocks
