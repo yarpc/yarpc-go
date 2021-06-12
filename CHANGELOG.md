@@ -5,7 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- No changes yet.
+- observability:
+  - emit the source_procedure tag in metrics, uses req.CallerProcedure to populate this tag
+  - add the sourceProcedure tag in logging, uses req.CallerProcedure to populate this tag
 
 ## [1.54.2] - 2021-06-11
 - go.uber.org/yarpc@v1.54.1 points to v1.54.0 instead of v1.54.1. This release unblocks

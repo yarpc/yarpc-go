@@ -279,6 +279,7 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 		ShardKey:        "shard01",
 		RoutingKey:      "routing-key",
 		RoutingDelegate: "routing-delegate",
+		CallerProcedure: "caller-procedure",
 		Body:            strings.NewReader("body"),
 	}
 
@@ -297,6 +298,7 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 			zap.String("encoding", string(req.Encoding)),
 			zap.String("routingKey", req.RoutingKey),
 			zap.String("routingDelegate", req.RoutingDelegate),
+			zap.String("sourceProcedure", req.CallerProcedure),
 		}
 	}
 
@@ -1143,6 +1145,7 @@ func TestMiddlewareStreamingLoggingErrorWithFailureConfiguration(t *testing.T) {
 			ShardKey:        "shard-key",
 			RoutingKey:      "routing-key",
 			RoutingDelegate: "routing-delegate",
+			CallerProcedure: "caller-procedure",
 		},
 	}
 
@@ -1156,6 +1159,7 @@ func TestMiddlewareStreamingLoggingErrorWithFailureConfiguration(t *testing.T) {
 			zap.String("encoding", string(req.Meta.Encoding)),
 			zap.String("routingKey", req.Meta.RoutingKey),
 			zap.String("routingDelegate", req.Meta.RoutingDelegate),
+			zap.String("sourceProcedure", req.Meta.CallerProcedure),
 		}
 		return append(fields, extraFields...)
 	}
@@ -1628,12 +1632,13 @@ func TestMiddlewareStreamingLoggingErrorWithServerClientConfiguration(t *testing
 func TestMiddlewareMetrics(t *testing.T) {
 	defer stubTime()()
 	req := &transport.Request{
-		Caller:    "caller",
-		Service:   "service",
-		Transport: "",
-		Encoding:  "raw",
-		Procedure: "procedure",
-		Body:      strings.NewReader("body"),
+		Caller:          "caller",
+		Service:         "service",
+		Transport:       "",
+		Encoding:        "raw",
+		Procedure:       "procedure",
+		CallerProcedure: "callerprocedure",
+		Body:            strings.NewReader("body"),
 	}
 
 	yErrAlreadyExists := yarpcerrors.CodeAlreadyExists
@@ -1844,6 +1849,7 @@ func getKey(req *transport.Request, direction string, rpcType transport.Type) (k
 	d.Add(req.Procedure)
 	d.Add(req.RoutingKey)
 	d.Add(req.RoutingDelegate)
+	d.Add(req.CallerProcedure)
 	d.Add(direction)
 	d.Add(rpcType.String())
 	return d.Digest(), d.Free
@@ -1863,6 +1869,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		ShardKey:        "shard01",
 		RoutingKey:      "routing-key",
 		RoutingDelegate: "routing-delegate",
+		CallerProcedure: "caller-procedure",
 		Body:            strings.NewReader("body"),
 	}
 
@@ -1874,6 +1881,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		zap.String("encoding", string(req.Encoding)),
 		zap.String("routingKey", req.RoutingKey),
 		zap.String("routingDelegate", req.RoutingDelegate),
+		zap.String("sourceProcedure", req.CallerProcedure),
 		zap.String("direction", string(_directionInbound)),
 		zap.String("rpcType", "Unary"),
 		zap.Duration("latency", 0),
@@ -1947,6 +1955,7 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 			ShardKey:        "sk",
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
+			CallerProcedure: "cp",
 			Body:            buf,
 			// overwrite with fixed value of 256MB to test large bucket.
 			// large buffer body causes CI to timeout.
@@ -1965,6 +1974,7 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 		"encoding":         "raw",
 		"procedure":        "procedure",
 		"routing_delegate": "rd",
+		"source_procedure": "cp",
 		"routing_key":      "rk",
 		"rpc_type":         transport.Unary.String(),
 		"source":           "caller",
@@ -2053,6 +2063,7 @@ func TestMiddlewareSuccessSnapshotWithTagsFiltered(t *testing.T) {
 			ShardKey:        "sk",
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
+			CallerProcedure: "cp",
 			Body:            buf,
 			BodySize:        buf.Len(),
 		},
@@ -2070,6 +2081,7 @@ func TestMiddlewareSuccessSnapshotWithTagsFiltered(t *testing.T) {
 		"procedure":        "procedure",
 		"routing_key":      "rk",
 		"routing_delegate": "__dropped__",
+		"source_procedure": "cp",
 		"rpc_type":         transport.Unary.String(),
 		"source":           "caller",
 	}
@@ -2154,6 +2166,7 @@ func TestMiddlewareSuccessSnapshotForCall(t *testing.T) {
 			ShardKey:        "sk",
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
+			CallerProcedure: "cp",
 			Body:            buf,
 			BodySize:        buf.Len(),
 		},
@@ -2169,6 +2182,7 @@ func TestMiddlewareSuccessSnapshotForCall(t *testing.T) {
 		"encoding":         "raw",
 		"procedure":        "procedure",
 		"routing_delegate": "rd",
+		"source_procedure": "cp",
 		"routing_key":      "rk",
 		"rpc_type":         transport.Unary.String(),
 		"source":           "caller",
@@ -2254,6 +2268,7 @@ func TestMiddlewareSuccessSnapshotForCallOnWay(t *testing.T) {
 			ShardKey:        "sk",
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
+			CallerProcedure: "cp",
 			Body:            buf,
 			BodySize:        buf.Len(),
 		},
@@ -2269,6 +2284,7 @@ func TestMiddlewareSuccessSnapshotForCallOnWay(t *testing.T) {
 		"encoding":         "raw",
 		"procedure":        "procedure",
 		"routing_delegate": "rd",
+		"source_procedure": "cp",
 		"routing_key":      "rk",
 		"rpc_type":         transport.Oneway.String(),
 		"source":           "caller",
@@ -2353,6 +2369,7 @@ func TestMiddlewareSuccessSnapshotForOneWay(t *testing.T) {
 			ShardKey:        "sk",
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
+			CallerProcedure: "cp",
 			Body:            buf,
 			BodySize:        buf.Len(),
 		},
@@ -2368,6 +2385,7 @@ func TestMiddlewareSuccessSnapshotForOneWay(t *testing.T) {
 		"encoding":         "raw",
 		"procedure":        "procedure",
 		"routing_delegate": "rd",
+		"source_procedure": "cp",
 		"routing_key":      "rk",
 		"rpc_type":         transport.Oneway.String(),
 		"source":           "caller",
@@ -2448,6 +2466,7 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 			ShardKey:        "sk",
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
+			CallerProcedure: "cp",
 			Body:            buf,
 			BodySize:        buf.Len(),
 		},
@@ -2463,6 +2482,7 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 		"encoding":         "raw",
 		"procedure":        "procedure",
 		"routing_delegate": "rd",
+		"source_procedure": "cp",
 		"routing_key":      "rk",
 		"rpc_type":         transport.Unary.String(),
 		"source":           "caller",
@@ -2476,6 +2496,7 @@ func TestMiddlewareFailureSnapshot(t *testing.T) {
 		"error_name":       _notSet,
 		"procedure":        "procedure",
 		"routing_delegate": "rd",
+		"source_procedure": "cp",
 		"routing_key":      "rk",
 		"rpc_type":         transport.Unary.String(),
 		"source":           "caller",
@@ -2562,6 +2583,7 @@ func TestMiddlewareFailureWithDeadlineExceededSnapshot(t *testing.T) {
 			ShardKey:        "sk",
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
+			CallerProcedure: "cp",
 			Body:            buf,
 			BodySize:        buf.Len(),
 		},
@@ -2581,6 +2603,7 @@ func TestMiddlewareFailureWithDeadlineExceededSnapshot(t *testing.T) {
 		"encoding":         "raw",
 		"procedure":        "procedure",
 		"routing_delegate": "rd",
+		"source_procedure": "cp",
 		"routing_key":      "rk",
 		"rpc_type":         transport.Unary.String(),
 		"source":           "caller",
@@ -2594,6 +2617,7 @@ func TestMiddlewareFailureWithDeadlineExceededSnapshot(t *testing.T) {
 		"error_name":       _notSet,
 		"procedure":        "procedure",
 		"routing_delegate": "rd",
+		"source_procedure": "cp",
 		"routing_key":      "rk",
 		"rpc_type":         transport.Unary.String(),
 		"source":           "caller",
@@ -2708,6 +2732,7 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 					ShardKey:        "sk",
 					RoutingKey:      "rk",
 					RoutingDelegate: "rd",
+					CallerProcedure: "cp",
 				},
 				&transporttest.FakeResponseWriter{},
 				fakeHandler{
@@ -2726,6 +2751,7 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 				"encoding":         "raw",
 				"procedure":        "procedure",
 				"routing_delegate": "rd",
+				"source_procedure": "cp",
 				"routing_key":      "rk",
 				"rpc_type":         transport.Unary.String(),
 				"source":           "caller",
@@ -2737,6 +2763,7 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 				"encoding":         "raw",
 				"procedure":        "procedure",
 				"routing_delegate": "rd",
+				"source_procedure": "cp",
 				"routing_key":      "rk",
 				"rpc_type":         transport.Unary.String(),
 				"source":           "caller",
@@ -2812,6 +2839,7 @@ func TestUnaryInboundApplicationPanics(t *testing.T) {
 			"encoding":         "raw",
 			"procedure":        "procedure",
 			"routing_delegate": "rd",
+			"source_procedure": "cp",
 			"routing_key":      "rk",
 			"rpc_type":         transport.Unary.String(),
 			"source":           "caller",
@@ -2840,6 +2868,7 @@ func TestUnaryInboundApplicationPanics(t *testing.T) {
 					ShardKey:        "sk",
 					RoutingKey:      "rk",
 					RoutingDelegate: "rd",
+					CallerProcedure: "cp",
 				},
 				&transporttest.FakeResponseWriter{},
 				fakeHandler{applicationPanic: true},
@@ -2914,6 +2943,7 @@ func TestUnaryOutboundApplicationPanics(t *testing.T) {
 			"encoding":         "raw",
 			"procedure":        "procedure",
 			"routing_delegate": "rd",
+			"source_procedure": "cp",
 			"routing_key":      "rk",
 			"rpc_type":         transport.Unary.String(),
 			"source":           "caller",
@@ -2942,6 +2972,7 @@ func TestUnaryOutboundApplicationPanics(t *testing.T) {
 					ShardKey:        "sk",
 					RoutingKey:      "rk",
 					RoutingDelegate: "rd",
+					CallerProcedure: "cp",
 				},
 				fakeOutbound{applicationPanic: true},
 			)
@@ -3014,6 +3045,7 @@ func TestOnewayInboundApplicationPanics(t *testing.T) {
 			"encoding":         "raw",
 			"procedure":        "procedure",
 			"routing_delegate": "rd",
+			"source_procedure": "cp",
 			"routing_key":      "rk",
 			"rpc_type":         transport.Oneway.String(),
 			"source":           "caller",
@@ -3042,6 +3074,7 @@ func TestOnewayInboundApplicationPanics(t *testing.T) {
 					ShardKey:        "sk",
 					RoutingKey:      "rk",
 					RoutingDelegate: "rd",
+					CallerProcedure: "cp",
 				},
 				fakeHandler{applicationPanic: true},
 			)
@@ -3115,6 +3148,7 @@ func TestOnewayOutboundApplicationPanics(t *testing.T) {
 			"encoding":         "raw",
 			"procedure":        "procedure",
 			"routing_delegate": "rd",
+			"source_procedure": "cp",
 			"routing_key":      "rk",
 			"rpc_type":         transport.Oneway.String(),
 			"source":           "caller",
@@ -3143,6 +3177,7 @@ func TestOnewayOutboundApplicationPanics(t *testing.T) {
 					ShardKey:        "sk",
 					RoutingKey:      "rk",
 					RoutingDelegate: "rd",
+					CallerProcedure: "cp",
 				},
 				fakeOutbound{applicationPanic: true},
 			)
@@ -3219,6 +3254,7 @@ func TestStreamingInboundApplicationPanics(t *testing.T) {
 				ShardKey:        "sk",
 				RoutingKey:      "rk",
 				RoutingDelegate: "rd",
+				CallerProcedure: "cp",
 			},
 		},
 	})
@@ -3231,6 +3267,7 @@ func TestStreamingInboundApplicationPanics(t *testing.T) {
 			"procedure":        "procedure",
 			"routing_delegate": "rd",
 			"routing_key":      "rk",
+			"source_procedure": "cp",
 			"rpc_type":         transport.Streaming.String(),
 			"source":           "caller",
 			"transport":        "unknown",
@@ -3307,6 +3344,7 @@ func TestStreamingOutboundApplicationPanics(t *testing.T) {
 				ShardKey:        "sk",
 				RoutingKey:      "rk",
 				RoutingDelegate: "rd",
+				CallerProcedure: "cp",
 			},
 		},
 	})
@@ -3318,6 +3356,7 @@ func TestStreamingOutboundApplicationPanics(t *testing.T) {
 			"encoding":         "raw",
 			"procedure":        "procedure",
 			"routing_delegate": "rd",
+			"source_procedure": "cp",
 			"routing_key":      "rk",
 			"rpc_type":         transport.Streaming.String(),
 			"source":           "caller",
@@ -3392,6 +3431,7 @@ func TestStreamingMetrics(t *testing.T) {
 			ShardKey:        "sk",
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
+			CallerProcedure: "cp",
 		},
 	}
 
@@ -3402,6 +3442,7 @@ func TestStreamingMetrics(t *testing.T) {
 			"encoding":         "raw",
 			"procedure":        "procedure",
 			"routing_delegate": "rd",
+			"source_procedure": "cp",
 			"routing_key":      "rk",
 			"rpc_type":         transport.Streaming.String(),
 			"source":           "caller",
