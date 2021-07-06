@@ -25,6 +25,7 @@ import (
 	"fmt"
 
 	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/protocol/stream"
 	"go.uber.org/thriftrw/thriftreflect"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport"
@@ -46,6 +47,12 @@ type UnaryHandler func(context.Context, wire.Value) (Response, error)
 
 // OnewayHandler is a convenience type alias for functions that act as OnewayHandlers.
 type OnewayHandler func(context.Context, wire.Value) error
+
+// UnaryStreamHandler is a convenience type alias for functions that act as StreamHandlers.
+type UnaryStreamHandler func(context.Context, stream.Reader, stream.Writer) (Response, error)
+
+// OnewayStreamHandler is a convenience type alias for functions that act as OnewayStreamHandlers.
+type OnewayStreamHandler func(context.Context, stream.Reader) error
 
 // HandlerSpec represents the handler behind a Thrift service method.
 type HandlerSpec struct {
