@@ -26,6 +26,7 @@ import (
 	"io"
 
 	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/protocol/binary"
 	"go.uber.org/thriftrw/wire"
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
@@ -177,7 +178,7 @@ func decodeEnvelopedRequest(
 		return wire.Value{}, nil, err
 	}
 	reqValue := envelope.Value
-	responder := protocol.EnvelopeV1Responder{Name: envelope.Name, SeqID: envelope.SeqID}
+	responder := binary.EnvelopeV1Responder{Name: envelope.Name, SeqID: envelope.SeqID}
 	return reqValue, responder, nil
 }
 
@@ -189,7 +190,7 @@ func decodeUnenvelopedRequest(
 	if err != nil {
 		return wire.Value{}, nil, err
 	}
-	responder := protocol.NoEnvelopeResponder
+	responder := binary.NoEnvelopeResponder
 	return reqValue, responder, err
 }
 

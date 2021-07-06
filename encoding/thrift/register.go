@@ -25,6 +25,7 @@ import (
 	"fmt"
 
 	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/protocol/binary"
 	"go.uber.org/thriftrw/thriftreflect"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport"
@@ -87,7 +88,7 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 		opt.applyRegisterOption(&rc)
 	}
 
-	proto := protocol.Binary
+	var proto protocol.Protocol = binary.Default
 	if rc.Protocol != nil {
 		proto = rc.Protocol
 	}
