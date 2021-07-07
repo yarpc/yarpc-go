@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+- No changes yet
+
 ## [1.55.0] - 2021-07-06
 - Downgrade github.com/apache/thrift to the previously-compatible version (0.10)
 
@@ -1371,6 +1374,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.55.0...HEAD
 [1.55.0]: https://github.com/yarpc/yarpc-go/compare/v1.54.2...v1.55.0
 [1.54.2]: https://github.com/yarpc/yarpc-go/compare/v1.54.1...v1.54.2
 [1.54.1]: https://github.com/yarpc/yarpc-go/compare/v1.54.0...v1.54.1
