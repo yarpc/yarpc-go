@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.55.0] - 2021-07-06
+- Downgrade github.com/apache/thrift to the previously-compatible version (0.10)
+
 ## [1.54.2] - 2021-06-11
 - go.uber.org/yarpc@v1.54.1 points to v1.54.0 instead of v1.54.1. This release unblocks
   go.uber.org/yarpc to serve v1.54.1 through v1.54.2.
@@ -1368,6 +1371,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[1.55.0]: https://github.com/yarpc/yarpc-go/compare/v1.54.2...v1.55.0
 [1.54.2]: https://github.com/yarpc/yarpc-go/compare/v1.54.1...v1.54.2
 [1.54.1]: https://github.com/yarpc/yarpc-go/compare/v1.54.0...v1.54.1
 [1.54.0]: https://github.com/yarpc/yarpc-go/compare/v1.53.2...v1.54.0
