@@ -157,7 +157,7 @@ func (c thriftClient) Call(ctx context.Context, reqBody envelope.Enveloper, opts
 
 	// optimization for avoiding additional buffer copy as tchannel outbound
 	// already decodes the body into io.ReaderAt compatible type
-	// thrift deserialiser reads sets, maps, and lists lazilly which makes
+	// thrift deserializer reads sets, maps, and lists lazily which makes
 	// buffer pool unusable as response handling is out of scope of this method
 	if body, ok := tres.Body.(io.ReaderAt); ok {
 		bodyReader = body
