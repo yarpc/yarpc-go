@@ -96,7 +96,9 @@ func (c *Chooser) Choose(ctx context.Context, req *transport.Request) (peer.Peer
 	}
 
 	id := hostport.Identify(req.ShardKey)
-	sub := &peerSubscriber{}
+	sub := &peerSubscriber{
+		peerIdentifier: id,
+	}
 
 	transportPeer, err := c.transport.RetainPeer(id, sub)
 	if err != nil {
@@ -113,6 +115,8 @@ func (c *Chooser) Choose(ctx context.Context, req *transport.Request) (peer.Peer
 	return transportPeer, onFinish, nil
 }
 
-type peerSubscriber struct{}
+type peerSubscriber struct {
+	peerIdentifier peer.Identifier
+}
 
 func (d *peerSubscriber) NotifyStatusChanged(_ peer.Identifier) {}
