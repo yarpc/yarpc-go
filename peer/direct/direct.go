@@ -96,7 +96,9 @@ func (c *Chooser) Choose(ctx context.Context, req *transport.Request) (peer.Peer
 	}
 
 	id := hostport.Identify(req.ShardKey)
-	sub := &peerSubscriber{}
+	sub := &peerSubscriber{
+		peerIdentifier: id,
+	}
 
 	transportPeer, err := c.transport.RetainPeer(id, sub)
 	if err != nil {
@@ -113,6 +115,14 @@ func (c *Chooser) Choose(ctx context.Context, req *transport.Request) (peer.Peer
 	return transportPeer, onFinish, nil
 }
 
-type peerSubscriber struct{}
+type peerSubscriber struct {
+	// Even if the peerIdentifier of peerSubscriber is not used,
+	// struct with no fields does not behave the same way as struct with fields.
+	// For instance, with no fields and p1 := &peerSubscriber{}, p2 := &peerSubscriber{}
+	// &p1 == &p2 will be true.
+	// Internally, YARPC stores this *peerSubscriber as a hash's key. p1 and p2 must be differents.
+	// More details here: https://dave.cheney.net/2014/03/25/the-empty-struct
+	peerIdentifier peer.Identifier
+}
 
 func (d *peerSubscriber) NotifyStatusChanged(_ peer.Identifier) {}
