@@ -115,3 +115,9 @@ func TestDirect(t *testing.T) {
 		onFinish(nil)
 	})
 }
+
+func TestPeerSubscriber(t *testing.T) {
+	p1 := &peerSubscriber{}
+	p2 := &peerSubscriber{}
+	assert.False(t, p1 == p2)
+}
