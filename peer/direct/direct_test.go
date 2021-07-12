@@ -23,11 +23,14 @@ package direct
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/yarpctest"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -124,7 +127,37 @@ func TestDirect(t *testing.T) {
 // Internally, YARPC stores this *peerSubscriber as a hash's key. p1 and p2 must be different.
 // More details here: https://dave.cheney.net/2014/03/25/the-empty-struct
 func TestPeerSubscriber(t *testing.T) {
-	p1 := &peerSubscriber{}
-	p2 := &peerSubscriber{}
-	assert.False(t, p1 == p2)
+	t.Run("peerSubscriber as map key", func(t *testing.T) {
+		p1 := &peerSubscriber{}
+		p2 := &peerSubscriber{}
+		subscribers := map[*peerSubscriber]struct{}{}
+		subscribers[p1] = struct{}{}
+		subscribers[p2] = struct{}{}
+		assert.Equal(t, 2, len(subscribers))
+	})
+
+	t.Run("concurrent call with peerSubscriber and grpc transport", func(t *testing.T) {
+		// Here we test that concurrent calls of RetainPeer and ReleasePeer
+		// methods from grpc.NewTransport does not return any errors.
+		const addr = "foohost:barport"
+		numberOfChooseCalls := 100
+		grpcTransport := grpc.NewTransport()
+
+		var wg sync.WaitGroup
+		wg.Add(numberOfChooseCalls)
+		for i := 0; i < numberOfChooseCalls; i++ {
+			go func() {
+				defer wg.Done()
+				id := hostport.Identify(addr)
+				sub := &peerSubscriber{
+					peerIdentifier: id,
+				}
+				transportPeer, err := grpcTransport.RetainPeer(id, sub)
+				assert.NoError(t, err)
+				err = grpcTransport.ReleasePeer(transportPeer, sub)
+				assert.NoError(t, err)
+			}()
+		}
+		wg.Wait()
+	})
 }
