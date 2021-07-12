@@ -288,10 +288,15 @@ func buildPeerListUpdater(c config.AttributeMap, identify func(string) peer.Iden
 
 	switch len(foundUpdaters) {
 	case 0:
+		updaterSpecNames := kit.peerListUpdaterSpecNames()
+		reason := "no peer list updaters are registered"
+		if len(updaterSpecNames) > 0 {
+			reason = "need one of " + strings.Join(updaterSpecNames, ", ")
+		}
 		return nil, fmt.Errorf(
-			"no recognized peer list updater in config: got %s; need one of %s",
+			"no recognized peer list updater in config: got %s; %s",
 			strings.Join(configNames(c), ", "),
-			strings.Join(kit.peerListUpdaterSpecNames(), ", "),
+			reason,
 		)
 	case 1:
 		// fall through to logic below
