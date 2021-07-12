@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Fixed
-- peer/direct: peer connections were closed even if they were still used.
+- peer/direct: peer connections were closed even if they were still in use.
 
 ## [1.55.0] - 2021-07-06
 - Downgrade github.com/apache/thrift to the previously-compatible version (0.10)

@@ -120,7 +120,7 @@ type peerSubscriber struct {
 	// struct with no fields does not behave the same way as struct with fields.
 	// For instance, with no fields and p1 := &peerSubscriber{}, p2 := &peerSubscriber{}
 	// &p1 == &p2 will be true.
-	// Internally, YARPC stores this *peerSubscriber as a hash's key. p1 and p2 must be differents.
+	// Internally, YARPC stores this *peerSubscriber as a hash's key. p1 and p2 must be different.
 	// More details here: https://dave.cheney.net/2014/03/25/the-empty-struct
 	peerIdentifier peer.Identifier
 }
