@@ -21,8 +21,13 @@
 package introspection
 
 import (
+	"fmt"
+
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/pkg/procedure"
 )
+
+const proto = "proto"
 
 // Procedure represent a registered procedure on a dispatcher.
 type Procedure struct {
@@ -30,6 +35,16 @@ type Procedure struct {
 	Encoding  string `json:"encoding"`
 	Signature string `json:"signature"`
 	RPCType   string `json:"rpcType"`
+}
+
+// ProcedureName outputs a encoding-native procedure name.
+func (p Procedure) ProcedureName() string {
+	// see transport/grpc/util.go#toFullMethod
+	if p.Encoding == proto {
+		svc, method := procedure.FromName(p.Name)
+		return fmt.Sprintf("/%s/%s", svc, method)
+	}
+	return p.Name
 }
 
 // IntrospectProcedures is a convenience function that translate a slice of

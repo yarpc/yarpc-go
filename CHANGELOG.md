@@ -5,9 +5,31 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-### Changed
-- Clarify error message for the special case of attempting to use a peer list
+### Fixed
+- configuration: clarify error message for the special case of attempting to use a peer list
   updater when none have been registered.
+
+## [1.55.0] - 2021-07-06
+- Downgrade github.com/apache/thrift to the previously-compatible version (0.10)
+
+## [1.54.2] - 2021-06-11
+- go.uber.org/yarpc@v1.54.1 points to v1.54.0 instead of v1.54.1. This release unblocks
+  go.uber.org/yarpc to serve v1.54.1 through v1.54.2.
+
+## [1.54.1] - 2021-06-11
+### Fixed
+- protobuf error: a protobuf error created with an invalid code returns a unknown
+  error.
+- protobuf error details: protobuf.GetErrorDetails returns nil instead of an empty array
+  if there is no details in the given error.
+
+## [1.54.0] - 2021-06-01
+### Added
+- observability: extend response, and request payload size histogram buckets up to 256MB.
+### Fixed
+- introspection: wrong display of proto procedure name.
+- error details: propagation of protobuf error details did not work if the any message was not
+  registered in the gogo proto registry.
 
 ## [1.53.2] - 2021-04-16
 ### Removed
@@ -1354,6 +1376,11 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.55.0...HEAD
+[1.55.0]: https://github.com/yarpc/yarpc-go/compare/v1.54.2...v1.55.0
+[1.54.2]: https://github.com/yarpc/yarpc-go/compare/v1.54.1...v1.54.2
+[1.54.1]: https://github.com/yarpc/yarpc-go/compare/v1.54.0...v1.54.1
+[1.54.0]: https://github.com/yarpc/yarpc-go/compare/v1.53.2...v1.54.0
 [1.53.2]: https://github.com/yarpc/yarpc-go/compare/v1.53.1...v1.53.2
 [1.53.1]: https://github.com/yarpc/yarpc-go/compare/v1.51.0...v1.52.0
 [1.53.0]: https://github.com/yarpc/yarpc-go/compare/v1.52.0...v1.53.0

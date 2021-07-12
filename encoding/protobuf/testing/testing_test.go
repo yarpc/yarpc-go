@@ -29,6 +29,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/protobuf"
@@ -86,8 +87,10 @@ func testIntegration(
 	if ttype != testutils.TransportTypeTChannel {
 		keyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeInternal, "foo-bar", protobuf.WithErrorDetails(&examplepb.EchoBothRequest{})))
 		err = setValue(clients.KeyValueYARPCClient, "foo", "bar")
-		assert.Equal(t, protobuf.NewError(yarpcerrors.CodeInternal, "foo-bar", protobuf.WithErrorDetails(&examplepb.EchoBothRequest{})), err)
-		assert.Equal(t, []interface{}{&examplepb.EchoBothRequest{}}, protobuf.GetErrorDetails(err))
+		require.Len(t, protobuf.GetErrorDetails(err), 1)
+		assert.Equal(t, protobuf.GetErrorDetails(err)[0], &examplepb.EchoBothRequest{})
+		assert.Equal(t, yarpcerrors.FromError(err).Code(), yarpcerrors.CodeInternal)
+		assert.Equal(t, yarpcerrors.FromError(err).Message(), "foo-bar")
 
 		keyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeInternal, "hello world"))
 		err = setValue(clients.KeyValueYARPCClient, "foo", "bar")

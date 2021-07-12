@@ -102,7 +102,7 @@ var (
 		</tr>
 		{{range .Procedures}}
 		<tr>
-			<td>{{.Name}}</td>
+			<td>{{.ProcedureName}}</td>
 			<td>{{.Encoding}}</td>
 			<td>{{.Signature}}</td>
 			<td>{{.RPCType}}</td>

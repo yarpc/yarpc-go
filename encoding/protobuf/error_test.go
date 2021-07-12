@@ -190,17 +190,6 @@ func TestPbErrorToYARPCError(t *testing.T) {
 	}
 }
 
-func TestPbErrorToYARPCErrorWithIncompatibleProtoDetail(t *testing.T) {
-	pberr := pberror{
-		code:    yarpcerrors.CodeAborted,
-		message: "test wrong proto",
-		details: []interface{}{pberror{}},
-	}
-	err := pberr.YARPCError()
-	assert.Equal(t, yarpcerrors.CodeUnknown, err.Code())
-	assert.Equal(t, "proto error detail is not proto.Message compatible", err.Message())
-}
-
 func TestConvertToYARPCErrorWithIncorrectEncoding(t *testing.T) {
 	pberr := &pberror{code: yarpcerrors.CodeAborted, message: "test"}
 	err := convertToYARPCError("thrift", pberr, &codec{}, nil)
@@ -224,11 +213,18 @@ func TestConvertFromYARPCError(t *testing.T) {
 }
 
 func TestCreateStatusWithDetailErrors(t *testing.T) {
-	t.Run("unsupported code", func(t *testing.T) {
+	t.Run("code ok", func(t *testing.T) {
 		pberr := &pberror{code: yarpcerrors.CodeOK, message: "test"}
 		_, err := createStatusWithDetail(pberr, Encoding, &codec{})
 		assert.Error(t, err, "unexpected empty error")
-		assert.Equal(t, err.Error(), "no error details for status with code OK")
+		assert.Equal(t, err.Error(), "no status error for error with code OK")
+	})
+
+	t.Run("unsupported code", func(t *testing.T) {
+		pberr := &pberror{code: 99, message: "test"}
+		_, err := createStatusWithDetail(pberr, Encoding, &codec{})
+		assert.Error(t, err, "unexpected empty error")
+		assert.Equal(t, err.Error(), "no status error for error with code 99")
 	})
 
 	t.Run("unsupported encoding", func(t *testing.T) {
@@ -247,8 +243,28 @@ func TestErrorHandling(t *testing.T) {
 	t.Run("GetErrorDetail non pberror", func(t *testing.T) {
 		assert.Nil(t, GetErrorDetails(errors.New("test")), "unexpected details")
 	})
+	t.Run("GetErrorDetail with no error detail", func(t *testing.T) {
+		err := NewError(
+			yarpcerrors.CodeAborted,
+			"aborted")
+		assert.Nil(t, GetErrorDetails(err), "unexpected details")
+	})
 	t.Run("PbError empty error handling", func(t *testing.T) {
 		var pbErr *pberror
 		assert.Nil(t, pbErr.YARPCError(), "unexpected yarpcerror")
+	})
+	t.Run("PbError with nil detail message", func(t *testing.T) {
+		pbErr := &pberror{
+			details: []*types.Any{nil},
+		}
+		require.Len(t, GetErrorDetails(pbErr), 1)
+		assert.Equal(t, GetErrorDetails(pbErr)[0], fmt.Errorf("message is nil"))
+	})
+	t.Run("NewError with nil error detail", func(t *testing.T) {
+		err := NewError(
+			yarpcerrors.CodeAborted,
+			"aborted",
+			WithErrorDetails([]proto.Message{nil}...))
+		assert.Equal(t, err, fmt.Errorf("proto: Marshal called with nil"))
 	})
 }
