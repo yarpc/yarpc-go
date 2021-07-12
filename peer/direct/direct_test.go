@@ -142,7 +142,7 @@ func TestPeerSubscriber(t *testing.T) {
 		const addr = "foohost:barport"
 		numberOfChooseCalls := 100
 		grpcTransport := grpc.NewTransport()
-
+		dialer := grpcTransport.NewDialer()
 		var wg sync.WaitGroup
 		wg.Add(numberOfChooseCalls)
 		for i := 0; i < numberOfChooseCalls; i++ {
@@ -152,9 +152,9 @@ func TestPeerSubscriber(t *testing.T) {
 				sub := &peerSubscriber{
 					peerIdentifier: id,
 				}
-				transportPeer, err := grpcTransport.RetainPeer(id, sub)
+				transportPeer, err := dialer.RetainPeer(id, sub)
 				assert.NoError(t, err)
-				err = grpcTransport.ReleasePeer(transportPeer, sub)
+				err = dialer.ReleasePeer(transportPeer, sub)
 				assert.NoError(t, err)
 			}()
 		}
