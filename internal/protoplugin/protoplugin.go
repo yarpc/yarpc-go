@@ -46,6 +46,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
 	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
+	gogogen "github.com/golang/protobuf/protoc-gen-go/generator"
 )
 
 // Do is a helper function for protobuf plugins.
@@ -199,7 +200,7 @@ func (m *Message) FQMN() string {
 func (m *Message) GoType(currentPackage string) string {
 	var components []string
 	components = append(components, m.Outers...)
-	components = append(components, m.GetName())
+	components = append(components, gogogen.CamelCase(m.GetName()))
 
 	name := strings.Join(components, "_")
 	if m.File.GoPackage.Path == currentPackage {
