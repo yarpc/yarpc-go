@@ -140,11 +140,12 @@ func TestPeerSubscriber(t *testing.T) {
 		// Here we test that concurrent calls of RetainPeer and ReleasePeer
 		// methods from grpc.NewTransport does not return any errors.
 		const addr = "foohost:barport"
-		numberOfConcurrentCalls := 100
-		grpcTransport := grpc.NewTransport()
-		dialer := grpcTransport.NewDialer()
+		dialer := grpc.NewTransport().NewDialer()
+
 		var wg sync.WaitGroup
+		numberOfConcurrentCalls := 100
 		wg.Add(numberOfConcurrentCalls)
+
 		for i := 0; i < numberOfConcurrentCalls; i++ {
 			go func() {
 				defer wg.Done()
