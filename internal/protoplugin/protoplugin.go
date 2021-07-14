@@ -45,8 +45,8 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
+	gogogen "github.com/gogo/protobuf/protoc-gen-gogo/generator"
 	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
-	gogogen "github.com/golang/protobuf/protoc-gen-go/generator"
 )
 
 // Do is a helper function for protobuf plugins.
