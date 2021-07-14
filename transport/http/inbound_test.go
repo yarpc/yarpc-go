@@ -243,8 +243,12 @@ func TestMuxWithInterceptor(t *testing.T) {
 }
 
 func TestMultipleInterceptors(t *testing.T) {
-	const yarpcResp = "YARPC response"
-	// This should the underlying yarpc handler.
+	const (
+		yarpcResp  = "YARPC response"
+		healthResp = "health response"
+		userResp   = "user response"
+	)
+	// This should be the underlying yarpc handler.
 	// For the ease of testing, register it last.
 	baseHandler := Interceptor(func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -254,7 +258,7 @@ func TestMultipleInterceptors(t *testing.T) {
 	healthInterceptor := Interceptor(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == "/health" {
-				io.WriteString(w, "health")
+				io.WriteString(w, healthResp)
 			} else {
 				h.ServeHTTP(w, r)
 			}
@@ -264,7 +268,7 @@ func TestMultipleInterceptors(t *testing.T) {
 	userInterceptor := Interceptor(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == "/user" {
-				io.WriteString(w, "user")
+				io.WriteString(w, userResp)
 			} else {
 				h.ServeHTTP(w, r)
 			}
@@ -287,7 +291,7 @@ func TestMultipleInterceptors(t *testing.T) {
 			msg:          "no user interceptor, /health",
 			interceptors: []InboundOption{healthInterceptor},
 			url:          "/health",
-			want:         "health",
+			want:         healthResp,
 		},
 		{
 			msg:          "no user interceptor, /user",
@@ -305,13 +309,13 @@ func TestMultipleInterceptors(t *testing.T) {
 			msg:          "user interceptor, /health",
 			interceptors: []InboundOption{healthInterceptor, userInterceptor},
 			url:          "/health",
-			want:         "health",
+			want:         healthResp,
 		},
 		{
 			msg:          "user interceptor, /user",
 			interceptors: []InboundOption{healthInterceptor, userInterceptor},
 			url:          "/user",
-			want:         "user",
+			want:         userResp,
 		},
 	}
 
