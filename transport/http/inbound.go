@@ -69,7 +69,7 @@ func Mux(pattern string, mux *http.ServeMux) InboundOption {
 // YARPC.
 func Interceptor(interceptor func(yarpcHandler http.Handler) http.Handler) InboundOption {
 	return func(i *Inbound) {
-		i.interceptor = interceptor
+		i.interceptors = append(i.interceptors, interceptor)
 	}
 }
 
@@ -133,7 +133,7 @@ type Inbound struct {
 	logger          *zap.Logger
 	transport       *Transport
 	grabHeaders     map[string]struct{}
-	interceptor     func(http.Handler) http.Handler
+	interceptors    []func(http.Handler) http.Handler
 
 	once *lifecycle.Once
 
@@ -182,8 +182,12 @@ func (i *Inbound) start() error {
 		bothResponseError: i.bothResponseError,
 		logger:            i.logger,
 	}
-	if i.interceptor != nil {
-		httpHandler = i.interceptor(httpHandler)
+
+	// We want the first interceptor to be added last
+	for len(i.interceptors) > 0 {
+		last := len(i.interceptors) - 1
+		httpHandler = i.interceptors[last](httpHandler)
+		i.interceptors = i.interceptors[:last]
 	}
 	if i.mux != nil {
 		i.mux.Handle(i.muxPattern, httpHandler)
