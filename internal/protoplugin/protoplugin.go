@@ -200,6 +200,10 @@ func (m *Message) FQMN() string {
 func (m *Message) GoType(currentPackage string) string {
 	var components []string
 	components = append(components, m.Outers...)
+	// gogo_protobuf uses CamelCaseSlice which internally uses CamelCase for the GoType name conversion.
+	// see: https://github.com/gogo/protobuf/blob/v1.3.1/protoc-gen-gogo/generator/generator.go#L1810
+	// Added gogogen.CamelCase({message_name}) to keep GoTypes consistent between gogo_protobuf and yarpc generated
+	// protobuf files.
 	components = append(components, gogogen.CamelCase(m.GetName()))
 
 	name := strings.Join(components, "_")
