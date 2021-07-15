@@ -45,6 +45,9 @@ message EchoBothResponse {
   string message = 1;
 }
 
+// Get2ndMessageRequest and Get2ndMessageResponse messages are added
+// to ensure yarpc generated code and protoc-gen-gogo generated code
+// GoType conventions are aligned.
 message Get2ndMessageRequest {
    string message = 1;
 }
