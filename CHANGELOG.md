@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.55.1] - 2021-07-14
 ### Fixed
 - peer/direct: peer connections were closed even if they were still in use.
 - configuration: clarify error message for the special case of attempting to use a peer list
@@ -1378,7 +1378,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.55.0...HEAD
+[1.55.1]: https://github.com/yarpc/yarpc-go/compare/v1.55.0...v1.55.1
 [1.55.0]: https://github.com/yarpc/yarpc-go/compare/v1.54.2...v1.55.0
 [1.54.2]: https://github.com/yarpc/yarpc-go/compare/v1.54.1...v1.54.2
 [1.54.1]: https://github.com/yarpc/yarpc-go/compare/v1.54.0...v1.54.1
