@@ -12,7 +12,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - peer/direct: peer connections were closed even if they were still in use.
 - configuration: clarify error message for the special case of attempting to use a peer list
   updater when none have been registered.
-- protoplugin: generated golang code from the yarpc plugin follows same GoType conventions as gogo/protobuf.  
+- protoplugin: GoType conventions aligned with gogo/protobuf.  
+- http: allow multiple interception options and execute in order at runtime.
 
 ## [1.55.0] - 2021-07-06
 - Downgrade github.com/apache/thrift to the previously-compatible version (0.10)
