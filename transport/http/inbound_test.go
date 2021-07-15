@@ -245,14 +245,22 @@ func TestMuxWithInterceptor(t *testing.T) {
 func TestMultipleInterceptors(t *testing.T) {
 	const (
 		yarpcResp  = "YARPC response"
+		viaResp    = "Via response"
 		healthResp = "health response"
 		userResp   = "user response"
 	)
-	// This should be the underlying yarpc handler.
-	// For the ease of testing, register it last.
+	// This should be the underlying yarpc handler but it can't be set directly
+	// For the ease of testing, use an interceptor and register it last.
 	baseHandler := Interceptor(func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			io.WriteString(w, yarpcResp)
+		})
+	})
+
+	viaInterceptor := Interceptor(func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			io.WriteString(w, viaResp)
+			h.ServeHTTP(w, r)
 		})
 	})
 
@@ -317,6 +325,12 @@ func TestMultipleInterceptors(t *testing.T) {
 			interceptors: []InboundOption{healthInterceptor, userInterceptor},
 			url:          "/user",
 			want:         userResp,
+		},
+		{
+			msg:          "ordering guaranteed",
+			interceptors: []InboundOption{viaInterceptor},
+			url:          "/yarpc",
+			want:         viaResp + yarpcResp,
 		},
 	}
 
