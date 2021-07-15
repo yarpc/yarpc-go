@@ -255,6 +255,7 @@ func TestMultipleInterceptors(t *testing.T) {
 			io.WriteString(w, yarpcResp)
 		})
 	})
+
 	healthInterceptor := Interceptor(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == "/health" {
