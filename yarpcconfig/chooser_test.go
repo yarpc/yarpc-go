@@ -51,11 +51,12 @@ import (
 
 func TestChooserConfigurator(t *testing.T) {
 	tests := []struct {
-		desc    string
-		given   string
-		env     map[string]string
-		wantErr []string
-		test    func(*testing.T, yarpc.Config)
+		desc                 string
+		given                string
+		env                  map[string]string
+		overrideConfigurator func() *yarpcconfig.Configurator
+		wantErr              []string
+		test                 func(*testing.T, yarpc.Config)
 	}{
 		{
 			desc: "single static peer",
@@ -648,6 +649,8 @@ func TestChooserConfigurator(t *testing.T) {
 			wantErr: []string{
 				`failed to configure unary outbound for "their-service": `,
 				`no recognized peer list updater in config`,
+				`got bogus-updater`,
+				`need one of fake-updater, invalid-updater`,
 			},
 		},
 		{
@@ -1026,19 +1029,58 @@ func TestChooserConfigurator(t *testing.T) {
 				_ = chooser
 			},
 		},
+		{
+			desc: "invalid peer list updater",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								fake-list:
+									bogus-updater: 10
+			`),
+			overrideConfigurator: func() *yarpcconfig.Configurator {
+				// Unlike yarpctest.NewFakeConfigurator, this does _not_ have
+				// any registered peer list updaters.
+				configer := yarpcconfig.New(yarpcconfig.InterpolationResolver(mapVariableResolver(nil)))
+				configer.MustRegisterTransport(yarpctest.FakeTransportSpec())
+				configer.MustRegisterPeerChooser(yarpctest.FakePeerChooserSpec())
+				configer.MustRegisterPeerList(yarpctest.FakePeerListSpec())
+				configer.MustRegisterTransport(http.TransportSpec())
+				configer.MustRegisterTransport(tchannel.TransportSpec(tchannel.Tracer(opentracing.NoopTracer{})))
+				configer.MustRegisterPeerList(peerheap.Spec())
+				configer.MustRegisterPeerList(pendingheap.Spec())
+				configer.MustRegisterPeerList(roundrobin.Spec())
+				configer.MustRegisterPeerChooser(invalidPeerChooserSpec())
+				configer.MustRegisterPeerList(invalidPeerListSpec())
+				//configer.MustRegisterPeerListUpdater(invalidPeerListUpdaterSpec()) //None
+				return configer
+			},
+			wantErr: []string{
+				`failed to configure unary outbound for "their-service": `,
+				`no recognized peer list updater in config`,
+				`got bogus-updater`,
+				`no peer list updaters are registered`,
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			configer := yarpctest.NewFakeConfigurator(yarpcconfig.InterpolationResolver(mapVariableResolver(tt.env)))
-			configer.MustRegisterTransport(http.TransportSpec())
-			configer.MustRegisterTransport(tchannel.TransportSpec(tchannel.Tracer(opentracing.NoopTracer{})))
-			configer.MustRegisterPeerList(peerheap.Spec())
-			configer.MustRegisterPeerList(pendingheap.Spec())
-			configer.MustRegisterPeerList(roundrobin.Spec())
-			configer.MustRegisterPeerChooser(invalidPeerChooserSpec())
-			configer.MustRegisterPeerList(invalidPeerListSpec())
-			configer.MustRegisterPeerListUpdater(invalidPeerListUpdaterSpec())
+			var configer *yarpcconfig.Configurator
+			if tt.overrideConfigurator != nil {
+				configer = tt.overrideConfigurator()
+			} else {
+				configer = yarpctest.NewFakeConfigurator(yarpcconfig.InterpolationResolver(mapVariableResolver(tt.env)))
+				configer.MustRegisterTransport(http.TransportSpec())
+				configer.MustRegisterTransport(tchannel.TransportSpec(tchannel.Tracer(opentracing.NoopTracer{})))
+				configer.MustRegisterPeerList(peerheap.Spec())
+				configer.MustRegisterPeerList(pendingheap.Spec())
+				configer.MustRegisterPeerList(roundrobin.Spec())
+				configer.MustRegisterPeerChooser(invalidPeerChooserSpec())
+				configer.MustRegisterPeerList(invalidPeerListSpec())
+				configer.MustRegisterPeerListUpdater(invalidPeerListUpdaterSpec())
+			}
 
 			config, err := configer.LoadConfigFromYAML("fake-service", strings.NewReader(tt.given))
 			if err != nil {

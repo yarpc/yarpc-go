@@ -23,11 +23,14 @@ package direct
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/yarpctest"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -113,5 +116,49 @@ func TestDirect(t *testing.T) {
 
 		require.NotNil(t, onFinish)
 		onFinish(nil)
+	})
+}
+
+// TestPeerSubscriber tests that two new created peerSubscriber
+// are not even.
+// struct with no fields does not behave the same way as struct with fields.
+// For instance, with no fields and p1 := &peerSubscriber{}, p2 := &peerSubscriber{}
+// &p1 == &p2 will be true.
+// Internally, YARPC stores this *peerSubscriber as a hash's key. p1 and p2 must be different.
+// More details here: https://dave.cheney.net/2014/03/25/the-empty-struct
+func TestPeerSubscriber(t *testing.T) {
+	t.Run("peerSubscriber as map key", func(t *testing.T) {
+		p1 := &peerSubscriber{}
+		p2 := &peerSubscriber{}
+		subscribers := map[*peerSubscriber]struct{}{}
+		subscribers[p1] = struct{}{}
+		subscribers[p2] = struct{}{}
+		assert.Equal(t, 2, len(subscribers))
+	})
+
+	t.Run("concurrent call with peerSubscriber and grpc transport", func(t *testing.T) {
+		// Here we test that concurrent calls of RetainPeer and ReleasePeer
+		// methods from grpc.NewTransport does not return any errors.
+		const addr = "foohost:barport"
+		dialer := grpc.NewTransport().NewDialer()
+
+		var wg sync.WaitGroup
+		numberOfConcurrentCalls := 100
+		wg.Add(numberOfConcurrentCalls)
+
+		for i := 0; i < numberOfConcurrentCalls; i++ {
+			go func() {
+				defer wg.Done()
+				id := hostport.Identify(addr)
+				sub := &peerSubscriber{
+					peerIdentifier: id,
+				}
+				transportPeer, err := dialer.RetainPeer(id, sub)
+				assert.NoError(t, err)
+				err = dialer.ReleasePeer(transportPeer, sub)
+				assert.NoError(t, err)
+			}()
+		}
+		wg.Wait()
 	})
 }
