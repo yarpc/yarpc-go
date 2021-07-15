@@ -135,8 +135,7 @@ type Inbound struct {
 	logger          *zap.Logger
 	transport       *Transport
 	grabHeaders     map[string]struct{}
-	// will be empty after the inbound is started
-	interceptors []func(http.Handler) http.Handler
+	interceptors    []func(http.Handler) http.Handler
 
 	once *lifecycle.Once
 
