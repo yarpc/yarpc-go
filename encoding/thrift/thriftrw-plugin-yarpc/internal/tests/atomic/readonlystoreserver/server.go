@@ -5,6 +5,7 @@ package readonlystoreserver
 
 import (
 	context "context"
+	stream "go.uber.org/thriftrw/protocol/stream"
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
@@ -40,6 +41,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.Integer),
+
+					NoWire: Integer_NoWireHandler{impl},
 				},
 				Signature:    "Integer(Key *string) (int64)",
 				ThriftModule: atomic.ThriftModule,
@@ -97,4 +100,60 @@ func (h handler) Integer(ctx context.Context, body wire.Value) (thrift.Response,
 	}
 
 	return response, err
+}
+
+type Integer_NoWireHandler struct{ impl Interface }
+
+func (h Integer_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		rw stream.ResponseWriter
+
+		request stream.Body
+		err     error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, request, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, h)
+
+	} else {
+
+		request, err = h.ReadBody(ctx, nwc.StreamReader)
+
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ReadOnlyStore' procedure 'Integer': %w", err)
+	}
+
+	args := request.(*atomic.ReadOnlyStore_Integer_Args)
+
+	success, appErr := h.impl.Integer(ctx, args.Key)
+
+	hadError := appErr != nil
+	result, err := atomic.ReadOnlyStore_Integer_Helper.WrapResponse(success, appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+func (h Integer_NoWireHandler) ReadBody(ctx context.Context, sr stream.Reader) (stream.Body, error) {
+	var args atomic.ReadOnlyStore_Integer_Args
+	err := args.Decode(sr)
+	return &args, err
 }

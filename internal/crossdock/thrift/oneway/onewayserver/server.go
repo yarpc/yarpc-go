@@ -25,6 +25,7 @@ package onewayserver
 
 import (
 	context "context"
+	stream "go.uber.org/thriftrw/protocol/stream"
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
@@ -57,6 +58,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:   transport.Oneway,
 					Oneway: thrift.OnewayHandler(h.Echo),
+
+					NoWire: Echo_NoWireHandler{impl},
 				},
 				Signature:    "Echo(Token *string)",
 				ThriftModule: oneway.ThriftModule,
@@ -82,4 +85,39 @@ func (h handler) Echo(ctx context.Context, body wire.Value) error {
 	}
 
 	return h.impl.Echo(ctx, args.Token)
+}
+
+type Echo_NoWireHandler struct{ impl Interface }
+
+func (h Echo_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		request stream.Body
+		err     error
+	)
+
+	if nwc.RequestReader != nil {
+
+		_, request, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, h)
+
+	} else {
+
+		request, err = h.ReadBody(ctx, nwc.StreamReader)
+
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'Oneway' procedure 'Echo': %w", err)
+	}
+
+	args := request.(*oneway.Oneway_Echo_Args)
+
+	return thrift.NoWireResponse{}, h.impl.Echo(ctx, args.Token)
+
+}
+
+func (h Echo_NoWireHandler) ReadBody(ctx context.Context, sr stream.Reader) (stream.Body, error) {
+	var args oneway.Oneway_Echo_Args
+	err := args.Decode(sr)
+	return &args, err
 }

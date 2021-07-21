@@ -5,6 +5,7 @@ package extendemptyserver
 
 import (
 	context "context"
+	stream "go.uber.org/thriftrw/protocol/stream"
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
@@ -39,6 +40,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.Hello),
+
+					NoWire: Hello_NoWireHandler{impl},
 				},
 				Signature:    "Hello()",
 				ThriftModule: common.ThriftModule,
@@ -96,4 +99,57 @@ func (h handler) Hello(ctx context.Context, body wire.Value) (thrift.Response, e
 	}
 
 	return response, err
+}
+
+type Hello_NoWireHandler struct{ impl Interface }
+
+func (h Hello_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, _, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, h)
+
+	} else {
+
+		_, err = h.ReadBody(ctx, nwc.StreamReader)
+
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ExtendEmpty' procedure 'Hello': %w", err)
+	}
+
+	appErr := h.impl.Hello(ctx)
+
+	hadError := appErr != nil
+	result, err := common.ExtendEmpty_Hello_Helper.WrapResponse(appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+func (h Hello_NoWireHandler) ReadBody(ctx context.Context, sr stream.Reader) (stream.Body, error) {
+	var args common.ExtendEmpty_Hello_Args
+	err := args.Decode(sr)
+	return &args, err
 }

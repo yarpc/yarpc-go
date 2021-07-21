@@ -25,6 +25,7 @@ package secondserviceserver
 
 import (
 	context "context"
+	stream "go.uber.org/thriftrw/protocol/stream"
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
@@ -61,6 +62,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.BlahBlah),
+
+					NoWire: BlahBlah_NoWireHandler{impl},
 				},
 				Signature:    "BlahBlah()",
 				ThriftModule: gauntlet.ThriftModule,
@@ -72,6 +75,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.SecondtestString),
+
+					NoWire: SecondtestString_NoWireHandler{impl},
 				},
 				Signature:    "SecondtestString(Thing *string) (string)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -148,4 +153,113 @@ func (h handler) SecondtestString(ctx context.Context, body wire.Value) (thrift.
 	}
 
 	return response, err
+}
+
+type BlahBlah_NoWireHandler struct{ impl Interface }
+
+func (h BlahBlah_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, _, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, h)
+
+	} else {
+
+		_, err = h.ReadBody(ctx, nwc.StreamReader)
+
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'SecondService' procedure 'BlahBlah': %w", err)
+	}
+
+	appErr := h.impl.BlahBlah(ctx)
+
+	hadError := appErr != nil
+	result, err := gauntlet.SecondService_BlahBlah_Helper.WrapResponse(appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+func (h BlahBlah_NoWireHandler) ReadBody(ctx context.Context, sr stream.Reader) (stream.Body, error) {
+	var args gauntlet.SecondService_BlahBlah_Args
+	err := args.Decode(sr)
+	return &args, err
+}
+
+type SecondtestString_NoWireHandler struct{ impl Interface }
+
+func (h SecondtestString_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		rw stream.ResponseWriter
+
+		request stream.Body
+		err     error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, request, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, h)
+
+	} else {
+
+		request, err = h.ReadBody(ctx, nwc.StreamReader)
+
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'SecondService' procedure 'SecondtestString': %w", err)
+	}
+
+	args := request.(*gauntlet.SecondService_SecondtestString_Args)
+
+	success, appErr := h.impl.SecondtestString(ctx, args.Thing)
+
+	hadError := appErr != nil
+	result, err := gauntlet.SecondService_SecondtestString_Helper.WrapResponse(success, appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+func (h SecondtestString_NoWireHandler) ReadBody(ctx context.Context, sr stream.Reader) (stream.Body, error) {
+	var args gauntlet.SecondService_SecondtestString_Args
+	err := args.Decode(sr)
+	return &args, err
 }

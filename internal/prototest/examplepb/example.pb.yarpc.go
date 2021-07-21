@@ -740,7 +740,7 @@ var (
 
 // TestMessageNameParityYARPCClient is the YARPC client-side interface for the TestMessageNameParity service.
 type TestMessageNameParityYARPCClient interface {
-	MessageName(context.Context, *Get2NdMessageRequest, ...yarpc.CallOption) (*Get2NdMessageResponse, error)
+	MessageName(context.Context, *Get2ndMessageRequest, ...yarpc.CallOption) (*Get2ndMessageResponse, error)
 }
 
 func newTestMessageNameParityYARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) TestMessageNameParityYARPCClient {
@@ -761,7 +761,7 @@ func NewTestMessageNameParityYARPCClient(clientConfig transport.ClientConfig, op
 
 // TestMessageNameParityYARPCServer is the YARPC server-side interface for the TestMessageNameParity service.
 type TestMessageNameParityYARPCServer interface {
-	MessageName(context.Context, *Get2NdMessageRequest) (*Get2NdMessageResponse, error)
+	MessageName(context.Context, *Get2ndMessageRequest) (*Get2ndMessageResponse, error)
 }
 
 type buildTestMessageNameParityYARPCProceduresParams struct {
@@ -897,12 +897,12 @@ type _TestMessageNameParityYARPCCaller struct {
 	streamClient protobuf.StreamClient
 }
 
-func (c *_TestMessageNameParityYARPCCaller) MessageName(ctx context.Context, request *Get2NdMessageRequest, options ...yarpc.CallOption) (*Get2NdMessageResponse, error) {
+func (c *_TestMessageNameParityYARPCCaller) MessageName(ctx context.Context, request *Get2ndMessageRequest, options ...yarpc.CallOption) (*Get2ndMessageResponse, error) {
 	responseMessage, err := c.streamClient.Call(ctx, "MessageName", request, newTestMessageNameParityServiceMessageNameYARPCResponse, options...)
 	if responseMessage == nil {
 		return nil, err
 	}
-	response, ok := responseMessage.(*Get2NdMessageResponse)
+	response, ok := responseMessage.(*Get2ndMessageResponse)
 	if !ok {
 		return nil, protobuf.CastError(emptyTestMessageNameParityServiceMessageNameYARPCResponse, responseMessage)
 	}
@@ -914,10 +914,10 @@ type _TestMessageNameParityYARPCHandler struct {
 }
 
 func (h *_TestMessageNameParityYARPCHandler) MessageName(ctx context.Context, requestMessage proto.Message) (proto.Message, error) {
-	var request *Get2NdMessageRequest
+	var request *Get2ndMessageRequest
 	var ok bool
 	if requestMessage != nil {
-		request, ok = requestMessage.(*Get2NdMessageRequest)
+		request, ok = requestMessage.(*Get2ndMessageRequest)
 		if !ok {
 			return nil, protobuf.CastError(emptyTestMessageNameParityServiceMessageNameYARPCRequest, requestMessage)
 		}
@@ -930,16 +930,16 @@ func (h *_TestMessageNameParityYARPCHandler) MessageName(ctx context.Context, re
 }
 
 func newTestMessageNameParityServiceMessageNameYARPCRequest() proto.Message {
-	return &Get2NdMessageRequest{}
+	return &Get2ndMessageRequest{}
 }
 
 func newTestMessageNameParityServiceMessageNameYARPCResponse() proto.Message {
-	return &Get2NdMessageResponse{}
+	return &Get2ndMessageResponse{}
 }
 
 var (
-	emptyTestMessageNameParityServiceMessageNameYARPCRequest  = &Get2NdMessageRequest{}
-	emptyTestMessageNameParityServiceMessageNameYARPCResponse = &Get2NdMessageResponse{}
+	emptyTestMessageNameParityServiceMessageNameYARPCRequest  = &Get2ndMessageRequest{}
+	emptyTestMessageNameParityServiceMessageNameYARPCResponse = &Get2ndMessageResponse{}
 )
 
 var yarpcFileDescriptorClosurebab15b635bbc13f7 = [][]byte{

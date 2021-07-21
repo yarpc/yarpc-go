@@ -25,6 +25,7 @@ package keyvalueserver
 
 import (
 	context "context"
+	stream "go.uber.org/thriftrw/protocol/stream"
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
@@ -63,6 +64,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.GetValue),
+
+					NoWire: GetValue_NoWireHandler{impl},
 				},
 				Signature:    "GetValue(Key *string) (string)",
 				ThriftModule: kv.ThriftModule,
@@ -74,6 +77,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.SetValue),
+
+					NoWire: SetValue_NoWireHandler{impl},
 				},
 				Signature:    "SetValue(Key *string, Value *string)",
 				ThriftModule: kv.ThriftModule,
@@ -150,4 +155,116 @@ func (h handler) SetValue(ctx context.Context, body wire.Value) (thrift.Response
 	}
 
 	return response, err
+}
+
+type GetValue_NoWireHandler struct{ impl Interface }
+
+func (h GetValue_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		rw stream.ResponseWriter
+
+		request stream.Body
+		err     error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, request, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, h)
+
+	} else {
+
+		request, err = h.ReadBody(ctx, nwc.StreamReader)
+
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'KeyValue' procedure 'GetValue': %w", err)
+	}
+
+	args := request.(*kv.KeyValue_GetValue_Args)
+
+	success, appErr := h.impl.GetValue(ctx, args.Key)
+
+	hadError := appErr != nil
+	result, err := kv.KeyValue_GetValue_Helper.WrapResponse(success, appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+func (h GetValue_NoWireHandler) ReadBody(ctx context.Context, sr stream.Reader) (stream.Body, error) {
+	var args kv.KeyValue_GetValue_Args
+	err := args.Decode(sr)
+	return &args, err
+}
+
+type SetValue_NoWireHandler struct{ impl Interface }
+
+func (h SetValue_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		rw stream.ResponseWriter
+
+		request stream.Body
+		err     error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, request, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, h)
+
+	} else {
+
+		request, err = h.ReadBody(ctx, nwc.StreamReader)
+
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'KeyValue' procedure 'SetValue': %w", err)
+	}
+
+	args := request.(*kv.KeyValue_SetValue_Args)
+
+	appErr := h.impl.SetValue(ctx, args.Key, args.Value)
+
+	hadError := appErr != nil
+	result, err := kv.KeyValue_SetValue_Helper.WrapResponse(appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+func (h SetValue_NoWireHandler) ReadBody(ctx context.Context, sr stream.Reader) (stream.Body, error) {
+	var args kv.KeyValue_SetValue_Args
+	err := args.Decode(sr)
+	return &args, err
 }
