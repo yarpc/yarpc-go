@@ -25,6 +25,7 @@ package thrifttestserver
 
 import (
 	context "context"
+	stream "go.uber.org/thriftrw/protocol/stream"
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
@@ -162,6 +163,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestBinary),
+
+					NoWire: TestBinary_NoWireHandler{impl},
 				},
 				Signature:    "TestBinary(Thing []byte) ([]byte)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -173,6 +176,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestByte),
+
+					NoWire: TestByte_NoWireHandler{impl},
 				},
 				Signature:    "TestByte(Thing *int8) (int8)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -184,6 +189,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestDouble),
+
+					NoWire: TestDouble_NoWireHandler{impl},
 				},
 				Signature:    "TestDouble(Thing *float64) (float64)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -195,6 +202,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestEnum),
+
+					NoWire: TestEnum_NoWireHandler{impl},
 				},
 				Signature:    "TestEnum(Thing *gauntlet.Numberz) (gauntlet.Numberz)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -206,6 +215,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestException),
+
+					NoWire: TestException_NoWireHandler{impl},
 				},
 				Signature:    "TestException(Arg *string)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -217,6 +228,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestI32),
+
+					NoWire: TestI32_NoWireHandler{impl},
 				},
 				Signature:    "TestI32(Thing *int32) (int32)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -228,6 +241,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestI64),
+
+					NoWire: TestI64_NoWireHandler{impl},
 				},
 				Signature:    "TestI64(Thing *int64) (int64)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -239,6 +254,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestInsanity),
+
+					NoWire: TestInsanity_NoWireHandler{impl},
 				},
 				Signature:    "TestInsanity(Argument *gauntlet.Insanity) (map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -250,6 +267,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestList),
+
+					NoWire: TestList_NoWireHandler{impl},
 				},
 				Signature:    "TestList(Thing []int32) ([]int32)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -261,6 +280,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestMap),
+
+					NoWire: TestMap_NoWireHandler{impl},
 				},
 				Signature:    "TestMap(Thing map[int32]int32) (map[int32]int32)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -272,6 +293,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestMapMap),
+
+					NoWire: TestMapMap_NoWireHandler{impl},
 				},
 				Signature:    "TestMapMap(Hello *int32) (map[int32]map[int32]int32)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -283,6 +306,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestMulti),
+
+					NoWire: TestMulti_NoWireHandler{impl},
 				},
 				Signature:    "TestMulti(Arg0 *int8, Arg1 *int32, Arg2 *int64, Arg3 map[int16]string, Arg4 *gauntlet.Numberz, Arg5 *gauntlet.UserId) (*gauntlet.Xtruct)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -294,6 +319,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestMultiException),
+
+					NoWire: TestMultiException_NoWireHandler{impl},
 				},
 				Signature:    "TestMultiException(Arg0 *string, Arg1 *string) (*gauntlet.Xtruct)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -305,6 +332,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestNest),
+
+					NoWire: TestNest_NoWireHandler{impl},
 				},
 				Signature:    "TestNest(Thing *gauntlet.Xtruct2) (*gauntlet.Xtruct2)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -316,6 +345,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:   transport.Oneway,
 					Oneway: thrift.OnewayHandler(h.TestOneway),
+
+					NoWire: TestOneway_NoWireHandler{impl},
 				},
 				Signature:    "TestOneway(SecondsToSleep *int32)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -327,6 +358,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestSet),
+
+					NoWire: TestSet_NoWireHandler{impl},
 				},
 				Signature:    "TestSet(Thing map[int32]struct{}) (map[int32]struct{})",
 				ThriftModule: gauntlet.ThriftModule,
@@ -338,6 +371,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestString),
+
+					NoWire: TestString_NoWireHandler{impl},
 				},
 				Signature:    "TestString(Thing *string) (string)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -349,6 +384,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestStringMap),
+
+					NoWire: TestStringMap_NoWireHandler{impl},
 				},
 				Signature:    "TestStringMap(Thing map[string]string) (map[string]string)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -360,6 +397,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestStruct),
+
+					NoWire: TestStruct_NoWireHandler{impl},
 				},
 				Signature:    "TestStruct(Thing *gauntlet.Xtruct) (*gauntlet.Xtruct)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -371,6 +410,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestTypedef),
+
+					NoWire: TestTypedef_NoWireHandler{impl},
 				},
 				Signature:    "TestTypedef(Thing *gauntlet.UserId) (gauntlet.UserId)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -382,6 +423,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestVoid),
+
+					NoWire: TestVoid_NoWireHandler{impl},
 				},
 				Signature:    "TestVoid()",
 				ThriftModule: gauntlet.ThriftModule,
@@ -1007,4 +1050,970 @@ func (h handler) TestVoid(ctx context.Context, body wire.Value) (thrift.Response
 	}
 
 	return response, err
+}
+
+type TestBinary_NoWireHandler struct{ impl Interface }
+
+func (h TestBinary_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.ThriftTest_TestBinary_Args
+
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestBinary': %w", err)
+	}
+
+	success, appErr := h.impl.TestBinary(ctx, args.Thing)
+
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestBinary_Helper.WrapResponse(success, appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type TestByte_NoWireHandler struct{ impl Interface }
+
+func (h TestByte_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.ThriftTest_TestByte_Args
+
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestByte': %w", err)
+	}
+
+	success, appErr := h.impl.TestByte(ctx, args.Thing)
+
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestByte_Helper.WrapResponse(success, appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type TestDouble_NoWireHandler struct{ impl Interface }
+
+func (h TestDouble_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.ThriftTest_TestDouble_Args
+
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestDouble': %w", err)
+	}
+
+	success, appErr := h.impl.TestDouble(ctx, args.Thing)
+
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestDouble_Helper.WrapResponse(success, appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type TestEnum_NoWireHandler struct{ impl Interface }
+
+func (h TestEnum_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.ThriftTest_TestEnum_Args
+
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestEnum': %w", err)
+	}
+
+	success, appErr := h.impl.TestEnum(ctx, args.Thing)
+
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestEnum_Helper.WrapResponse(success, appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type TestException_NoWireHandler struct{ impl Interface }
+
+func (h TestException_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.ThriftTest_TestException_Args
+
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestException': %w", err)
+	}
+
+	appErr := h.impl.TestException(ctx, args.Arg)
+
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestException_Helper.WrapResponse(appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type TestI32_NoWireHandler struct{ impl Interface }
+
+func (h TestI32_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.ThriftTest_TestI32_Args
+
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestI32': %w", err)
+	}
+
+	success, appErr := h.impl.TestI32(ctx, args.Thing)
+
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestI32_Helper.WrapResponse(success, appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type TestI64_NoWireHandler struct{ impl Interface }
+
+func (h TestI64_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.ThriftTest_TestI64_Args
+
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestI64': %w", err)
+	}
+
+	success, appErr := h.impl.TestI64(ctx, args.Thing)
+
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestI64_Helper.WrapResponse(success, appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type TestInsanity_NoWireHandler struct{ impl Interface }
+
+func (h TestInsanity_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.ThriftTest_TestInsanity_Args
+
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestInsanity': %w", err)
+	}
+
+	success, appErr := h.impl.TestInsanity(ctx, args.Argument)
+
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestInsanity_Helper.WrapResponse(success, appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type TestList_NoWireHandler struct{ impl Interface }
+
+func (h TestList_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.ThriftTest_TestList_Args
+
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestList': %w", err)
+	}
+
+	success, appErr := h.impl.TestList(ctx, args.Thing)
+
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestList_Helper.WrapResponse(success, appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type TestMap_NoWireHandler struct{ impl Interface }
+
+func (h TestMap_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.ThriftTest_TestMap_Args
+
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestMap': %w", err)
+	}
+
+	success, appErr := h.impl.TestMap(ctx, args.Thing)
+
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestMap_Helper.WrapResponse(success, appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type TestMapMap_NoWireHandler struct{ impl Interface }
+
+func (h TestMapMap_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.ThriftTest_TestMapMap_Args
+
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestMapMap': %w", err)
+	}
+
+	success, appErr := h.impl.TestMapMap(ctx, args.Hello)
+
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestMapMap_Helper.WrapResponse(success, appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type TestMulti_NoWireHandler struct{ impl Interface }
+
+func (h TestMulti_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.ThriftTest_TestMulti_Args
+
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestMulti': %w", err)
+	}
+
+	success, appErr := h.impl.TestMulti(ctx, args.Arg0, args.Arg1, args.Arg2, args.Arg3, args.Arg4, args.Arg5)
+
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestMulti_Helper.WrapResponse(success, appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type TestMultiException_NoWireHandler struct{ impl Interface }
+
+func (h TestMultiException_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.ThriftTest_TestMultiException_Args
+
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestMultiException': %w", err)
+	}
+
+	success, appErr := h.impl.TestMultiException(ctx, args.Arg0, args.Arg1)
+
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestMultiException_Helper.WrapResponse(success, appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type TestNest_NoWireHandler struct{ impl Interface }
+
+func (h TestNest_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.ThriftTest_TestNest_Args
+
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestNest': %w", err)
+	}
+
+	success, appErr := h.impl.TestNest(ctx, args.Thing)
+
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestNest_Helper.WrapResponse(success, appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type TestOneway_NoWireHandler struct{ impl Interface }
+
+func (h TestOneway_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.ThriftTest_TestOneway_Args
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		_, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestOneway': %w", err)
+	}
+
+	return thrift.NoWireResponse{}, h.impl.TestOneway(ctx, args.SecondsToSleep)
+
+}
+
+type TestSet_NoWireHandler struct{ impl Interface }
+
+func (h TestSet_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.ThriftTest_TestSet_Args
+
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestSet': %w", err)
+	}
+
+	success, appErr := h.impl.TestSet(ctx, args.Thing)
+
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestSet_Helper.WrapResponse(success, appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type TestString_NoWireHandler struct{ impl Interface }
+
+func (h TestString_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.ThriftTest_TestString_Args
+
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestString': %w", err)
+	}
+
+	success, appErr := h.impl.TestString(ctx, args.Thing)
+
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestString_Helper.WrapResponse(success, appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type TestStringMap_NoWireHandler struct{ impl Interface }
+
+func (h TestStringMap_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.ThriftTest_TestStringMap_Args
+
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestStringMap': %w", err)
+	}
+
+	success, appErr := h.impl.TestStringMap(ctx, args.Thing)
+
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestStringMap_Helper.WrapResponse(success, appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type TestStruct_NoWireHandler struct{ impl Interface }
+
+func (h TestStruct_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.ThriftTest_TestStruct_Args
+
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestStruct': %w", err)
+	}
+
+	success, appErr := h.impl.TestStruct(ctx, args.Thing)
+
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestStruct_Helper.WrapResponse(success, appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type TestTypedef_NoWireHandler struct{ impl Interface }
+
+func (h TestTypedef_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.ThriftTest_TestTypedef_Args
+
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestTypedef': %w", err)
+	}
+
+	success, appErr := h.impl.TestTypedef(ctx, args.Thing)
+
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestTypedef_Helper.WrapResponse(success, appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type TestVoid_NoWireHandler struct{ impl Interface }
+
+func (h TestVoid_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.ThriftTest_TestVoid_Args
+
+		rw stream.ResponseWriter
+
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+
+		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestVoid': %w", err)
+	}
+
+	appErr := h.impl.TestVoid(ctx)
+
+	hadError := appErr != nil
+	result, err := gauntlet.ThriftTest_TestVoid_Helper.WrapResponse(appErr)
+	var response thrift.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
 }

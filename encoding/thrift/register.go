@@ -52,6 +52,7 @@ type HandlerSpec struct {
 	Type   transport.Type
 	Unary  UnaryHandler
 	Oneway OnewayHandler
+	NoWire NoWireHandler
 }
 
 // Method represents a Thrift service method.

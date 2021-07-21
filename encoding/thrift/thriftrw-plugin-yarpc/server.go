@@ -86,6 +86,7 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Proced
 					Type: <$transport>.Unary,
 					Unary: <import $unaryWrapperImport>.<$unaryWrapperFunc>(h.<.Name>),
 				<end>
+					NoWire: <.Name>_NoWireHandler{impl},
 				},
 				Signature: "<.Name>(<range $i, $v := .Arguments><if ne $i 0>, <end><.Name> <formatType .Type><end>)<if not .OneWay | and .ReturnType> (<formatType .ReturnType>)<end>",
 				ThriftModule: <import $module.ImportPath>.ThriftModule,
@@ -173,6 +174,69 @@ func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$thrift>.
 	return response, err
 }
 <end>
+<end>
+
+<range .Functions>
+<$context := import $contextImportPath>
+<$stream := import "go.uber.org/thriftrw/protocol/stream">
+<$yarpcerrors := import "go.uber.org/yarpc/yarpcerrors">
+<$prefix := printf "%s.%s_%s_" (import $module.ImportPath) $service.Name .Name>
+
+type <.Name>_NoWireHandler struct { impl Interface }
+
+func (h <.Name>_NoWireHandler) Handle(ctx <$context>.Context, nwc *<$thrift>.NoWireCall) (<$thrift>.NoWireResponse, error) {
+	var (
+		args <$prefix>Args
+		<if not .OneWay>
+		rw <$stream>.ResponseWriter
+		<end>
+		err error
+	)
+
+	if nwc.RequestReader != nil {
+		<if .OneWay>
+		_, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+		<else>
+		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+		<end>
+	} else {
+		err = args.Decode(nwc.StreamReader)
+	}
+
+	if err != nil {
+		return <$thrift>.NoWireResponse{}, <$yarpcerrors>.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service '<$service.Name>' procedure '<.Name>': %w", err)
+	}
+
+	<if .OneWay>
+	return <$thrift>.NoWireResponse{}, h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
+	<else>
+		<if .ReturnType>
+		success, appErr := h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
+		<else>
+		appErr := h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
+		<end>
+
+	hadError := appErr != nil
+	result, err := <$prefix>Helper.WrapResponse(<if .ReturnType>success,<end> appErr)
+	var response <$thrift>.NoWireResponse
+	response.ResponseWriter = rw
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+	<end>
+}
 <end>
 `
 
