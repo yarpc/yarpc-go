@@ -22,12 +22,24 @@ package thrift
 
 import (
 	"go.uber.org/thriftrw/envelope"
+	"go.uber.org/thriftrw/protocol/stream"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
 // Response contains the raw response from a generated Thrift handler.
 type Response struct {
 	Body envelope.Enveloper
+
+	IsApplicationError bool
+
+	ApplicationErrorDetails string
+	ApplicationErrorName    string
+	ApplicationErrorCode    *yarpcerrors.Code
+}
+
+type NoWireResponse struct {
+	Body           stream.Enveloper
+	ResponseWriter stream.ResponseWriter
 
 	IsApplicationError bool
 
