@@ -27,6 +27,7 @@ type clientConfig struct {
 	Protocol    protocol.Protocol
 	Enveloping  bool
 	Multiplexed bool
+	NoWire      bool
 }
 
 // ClientOption customizes the behavior of a Thrift client.
@@ -38,6 +39,7 @@ type registerConfig struct {
 	ServiceName string
 	Protocol    protocol.Protocol
 	Enveloping  bool
+	NoWire      bool
 }
 
 // RegisterOption customizes the behavior of a Thrift handler during
@@ -153,4 +155,22 @@ func (p protocolOption) applyRegisterOption(c *registerConfig) {
 // It defaults to the Binary protocol.
 func Protocol(p protocol.Protocol) Option {
 	return protocolOption{Protocol: p}
+}
+
+// NoWire is an option that specifies to *not* use the thriftrw.Wire
+// intermediary format.  Note that if this is enabled, and a
+// 'protocol.Protocol' is provided (e.g., via thrift.Protocol)m that provided
+// protocol must be able to satisfy the 'stream.Protocol' interface.
+func NoWire(enable bool) Option {
+	return noWireOption{Enable: enable}
+}
+
+type noWireOption struct{ Enable bool }
+
+func (nw noWireOption) applyClientOption(c *clientConfig) {
+	c.NoWire = nw.Enable
+}
+
+func (nw noWireOption) applyRegisterOption(c *registerConfig) {
+	c.NoWire = nw.Enable
 }
