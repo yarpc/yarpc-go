@@ -242,6 +242,121 @@ func TestMuxWithInterceptor(t *testing.T) {
 	}
 }
 
+func TestMultipleInterceptors(t *testing.T) {
+	const (
+		yarpcResp  = "YARPC response"
+		viaResp    = "Via response"
+		healthResp = "health response"
+		userResp   = "user response"
+	)
+	// This should be the underlying yarpc handler but it can't be set directly
+	// For the ease of testing, use an interceptor and register it last.
+	baseHandler := Interceptor(func(http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			io.WriteString(w, yarpcResp)
+		})
+	})
+
+	viaInterceptor := Interceptor(func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			io.WriteString(w, viaResp)
+			h.ServeHTTP(w, r)
+		})
+	})
+
+	healthInterceptor := Interceptor(func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/health" {
+				io.WriteString(w, healthResp)
+			} else {
+				h.ServeHTTP(w, r)
+			}
+		})
+	})
+
+	userInterceptor := Interceptor(func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/user" {
+				io.WriteString(w, userResp)
+			} else {
+				h.ServeHTTP(w, r)
+			}
+		})
+	})
+
+	tests := []struct {
+		msg          string
+		interceptors []InboundOption
+		url          string
+		want         string
+	}{
+		{
+			msg:          "no user interceptor, /yarpc",
+			interceptors: []InboundOption{healthInterceptor},
+			url:          "/yarpc",
+			want:         yarpcResp,
+		},
+		{
+			msg:          "no user interceptor, /health",
+			interceptors: []InboundOption{healthInterceptor},
+			url:          "/health",
+			want:         healthResp,
+		},
+		{
+			msg:          "no user interceptor, /user",
+			interceptors: []InboundOption{healthInterceptor},
+			url:          "/user",
+			want:         yarpcResp,
+		},
+		{
+			msg:          "user interceptor, /yarpc",
+			interceptors: []InboundOption{healthInterceptor, userInterceptor},
+			url:          "/yarpc",
+			want:         yarpcResp,
+		},
+		{
+			msg:          "user interceptor, /health",
+			interceptors: []InboundOption{healthInterceptor, userInterceptor},
+			url:          "/health",
+			want:         healthResp,
+		},
+		{
+			msg:          "user interceptor, /user",
+			interceptors: []InboundOption{healthInterceptor, userInterceptor},
+			url:          "/user",
+			want:         userResp,
+		},
+		{
+			msg:          "ordering guaranteed",
+			interceptors: []InboundOption{viaInterceptor},
+			url:          "/yarpc",
+			want:         viaResp + yarpcResp,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			transport := NewTransport()
+			inbound := transport.NewInbound("127.0.0.1:0", append(tt.interceptors, baseHandler)...)
+			inbound.SetRouter(newTestRouter(nil))
+			require.NoError(t, inbound.Start(), "Failed to start inbound")
+			defer inbound.Stop()
+
+			dispatcher := yarpc.NewDispatcher(yarpc.Config{
+				Name:     "server",
+				Inbounds: yarpc.Inbounds{inbound},
+			})
+			require.NoError(t, dispatcher.Start(), "Failed to start dispatcher")
+			defer dispatcher.Stop()
+
+			url := fmt.Sprintf("http://%v%v", inbound.Addr(), tt.url)
+			_, body, err := httpGet(t, url)
+			require.NoError(t, err, "request failed")
+			assert.Equal(t, tt.want, string(body))
+		})
+	}
+}
+
 func TestRequestAfterStop(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {

@@ -67,9 +67,11 @@ func Mux(pattern string, mux *http.ServeMux) InboundOption {
 // route requests through YARPC. The http.Handler returned by this function
 // may delegate requests to the provided YARPC handler to route them through
 // YARPC.
+// Interceptors are applied in LIFO order, leading to an earlier interceptor's
+// handler being executed before latter interceptor handlers
 func Interceptor(interceptor func(yarpcHandler http.Handler) http.Handler) InboundOption {
 	return func(i *Inbound) {
-		i.interceptor = interceptor
+		i.interceptors = append(i.interceptors, interceptor)
 	}
 }
 
@@ -133,7 +135,7 @@ type Inbound struct {
 	logger          *zap.Logger
 	transport       *Transport
 	grabHeaders     map[string]struct{}
-	interceptor     func(http.Handler) http.Handler
+	interceptors    []func(http.Handler) http.Handler
 
 	once *lifecycle.Once
 
@@ -182,8 +184,13 @@ func (i *Inbound) start() error {
 		bothResponseError: i.bothResponseError,
 		logger:            i.logger,
 	}
-	if i.interceptor != nil {
-		httpHandler = i.interceptor(httpHandler)
+
+	// reverse iterating because we want the last from options to wrap the
+	// the underlying yarpc http handlers.
+	// This way, the first from the option will be the
+	// outermost wrapper http.Handler and it will be invoked first during request handling.
+	for j := len(i.interceptors) - 1; j >= 0; j-- {
+		httpHandler = i.interceptors[j](httpHandler)
 	}
 	if i.mux != nil {
 		i.mux.Handle(i.muxPattern, httpHandler)
