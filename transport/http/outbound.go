@@ -343,7 +343,7 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 	if err != nil {
 		return nil, err
 	}
-	// YARPC needs to omit the HTTP/2 pseudo headers when a HTTP/2 request (gRPC)
+	// YARPC needs to remove all the HTTP/2 pseudo headers when a HTTP/2 request (gRPC)
 	// was propagated from a YARPC transport middleware to a HTTP/1 service.
 	// It should be noted that net/http will return an error if a pseudo
 	// header is given along a HTTP/1 request.
