@@ -6,13 +6,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 - http: allow multiple interception options and execute in order at runtime.
+- http: remove HTTP/2 pseudo headers for HTTP/2 requests propagated to HTTP/1 service through
+  YARPC transport middleware.
 
 ## [1.55.1] - 2021-07-14
 ### Fixed
 - peer/direct: peer connections were closed even if they were still in use.
 - configuration: clarify error message for the special case of attempting to use a peer list
   updater when none have been registered.
-- protoplugin: generated golang code from the yarpc plugin follows same GoType conventions as gogo/protobuf.  
+- protoplugin: generated golang code from the yarpc plugin follows same GoType conventions as gogo/protobuf.
 
 ## [1.55.0] - 2021-07-06
 - Downgrade github.com/apache/thrift to the previously-compatible version (0.10)
