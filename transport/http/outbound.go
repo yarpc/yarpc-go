@@ -371,8 +371,6 @@ func deleteHTTP2PseudoHeadersIfNeeded(from *transport.Request) {
 	for _, k := range _http2PseudoHeaders {
 		from.Headers.Del(k)
 	}
-
-	return
 }
 
 func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, *http.Request, opentracing.Span, error) {
