@@ -343,43 +343,36 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 	if err != nil {
 		return nil, err
 	}
-
 	// YARPC needs to omit the HTTP/2 pseudo headers when a HTTP/2 request (gRPC)
 	// was propagated from a YARPC transport middleware to a HTTP/1 service.
 	// It should be noted that net/http will return an error if a pseudo
 	// header is given along a HTTP/1 request.
 	// see: https://cs.opensource.google/go/x/net/+/c6fcb2db:http/httpguts/httplex.go;l=203
-	hreq = omitHTTP2PseudoHeadersIfNeeded(treq, hreq)
-	hreq.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
+	headers := deleteHTTP2PseudoHeadersIfNeeded(treq)
+	hreq.Header = applicationHeaders.ToHTTPHeaders(headers, nil)
 	return hreq, nil
 }
 
-func omitHTTP2PseudoHeadersIfNeeded(treq *transport.Request, hreq *http.Request) *http.Request {
+func deleteHTTP2PseudoHeadersIfNeeded(from *transport.Request) transport.Headers {
 	// Internally, YARPC uses the transport name gRPC for HTTP2 requests.
 	// There is no reference of http2 with transport.Request.
-	if treq.Transport != grpc.TransportName {
-		return hreq
+	if from.Transport != grpc.TransportName {
+		return from.Headers
 	}
 
-	// from https://tools.ietf.org/html/rfc7540#section-8.1.2.3
-	// For ":authority", ...
-	// An intermediary that converts an HTTP/2 request to HTTP/1.1 MUST
-	// create a Host header field if one is not present in a request by
-	// copying the value of the ":authority" pseudo-header field.
-	if v, ok := treq.Headers.Get(_http2AuthorityPseudoHeader); ok && hreq.Host == "" {
-		hreq.Host = v
-	}
-	// deleting all other http2 pseudo-header fields
+	// deleting all http2 pseudo-header fields
 	// RFC https://tools.ietf.org/html/rfc7540#section-8.1.2.3 does not mention
 	// what to do with those headers though.
 	// :method -> this can be removed, YARPC uses POST for all HTTP requests.
 	// :path -> this can be removed, this is handled by YARPC with RPC-procedure.
 	// :scheme -> this can be removed, scheme is defined in the URI (http or https).
+	// :authority -> even if the RFC advises to copy :authority into host, it is safe to remove it
+	// here. Host of the request is controlled with the configuration.
 	for _, k := range _http2PseudoHeaders {
-		treq.Headers.Del(k)
+		from.Headers.Del(k)
 	}
 
-	return hreq
+	return from.Headers
 }
 
 func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, *http.Request, opentracing.Span, error) {
