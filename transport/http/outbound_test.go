@@ -689,7 +689,7 @@ func TestGRPCInHTTPOut(t *testing.T) {
 			defer req.Body.Close()
 			h := req.Header
 			// make sure all pesudo-header fields are unset
-			for _, k := range http2PseudoHeaders {
+			for _, k := range _http2PseudoHeaders {
 				assert.Zero(t, h.Get(k))
 			}
 			// Host field came from ":authority" pesudo-header field
