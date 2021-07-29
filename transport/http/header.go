@@ -71,8 +71,7 @@ func (hm headerMapper) FromHTTPHeaders(from http.Header, to transport.Headers) t
 
 func (hm headerMapper) deleteHTTP2PseudoHeadersIfNeeded(from transport.Headers) transport.Headers {
 	// deleting all http2 pseudo-header fields
-	// RFC https://tools.ietf.org/html/rfc7540#section-8.1.2.3 does not mention
-	// what to do with those headers though.
+	// RFC https://tools.ietf.org/html/rfc7540#section-8.1.2.3
 	// :method -> this can be removed, YARPC uses POST for all HTTP requests.
 	// :path -> this can be removed, this is handled by YARPC with RPC-procedure.
 	// :scheme -> this can be removed, scheme is defined in the URI (http or https).
