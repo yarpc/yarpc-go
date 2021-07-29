@@ -320,6 +320,13 @@ func TestOutboundHeaders(t *testing.T) {
 				"X-Bar":        "BAZ",
 			},
 		},
+		{
+			desc:    "pseudo headers",
+			headers: transport.NewHeaders().With(":authority", "localhost").With(":path", "/my/path").With(":scheme", "http").With(":method", "POST").With("baz", "Qux"),
+			wantHeaders: map[string]string{
+				"Rpc-Header-Baz": "Qux",
+			},
+		},
 	}
 
 	httpTransport := NewTransport()
@@ -679,47 +686,6 @@ func TestServiceMatchSuccess(t *testing.T) {
 	defer cancel()
 	_, err := out.Call(ctx, &transport.Request{
 		Service: "Service",
-	})
-	require.NoError(t, err)
-}
-
-func TestGRPCInHTTPOut(t *testing.T) {
-	matchServer := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, req *http.Request) {
-			defer req.Body.Close()
-			h := req.Header
-			// make sure all pesudo-header fields are unset
-			for _, k := range _http2PseudoHeaders {
-				assert.Zero(t, h.Get(k))
-			}
-			// other application header are still set and prefixed
-			assert.Equal(t, "app-val1", h.Get("Rpc-Header-app-key1"))
-			_, err := w.Write([]byte("http header return"))
-			assert.NoError(t, err)
-		},
-	))
-	defer matchServer.Close()
-
-	httpTransport := NewTransport()
-	defer httpTransport.Stop()
-	out := httpTransport.NewSingleOutbound(matchServer.URL)
-	require.NoError(t, out.Start(), "failed to start outbound")
-	defer out.Stop()
-
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-	defer cancel()
-	_, err := out.Call(ctx, &transport.Request{
-		Service:   "Service",
-		Transport: "grpc",
-		Headers: transport.HeadersFromMap(
-			map[string]string{
-				"app-key1":   "app-val1",
-				":authority": "test-authority",
-				":method":    "PUT",
-				":path":      "www.example.com",
-				":scheme":    "http",
-			},
-		),
 	})
 	require.NoError(t, err)
 }
