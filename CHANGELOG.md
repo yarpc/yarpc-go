@@ -5,12 +5,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- No changes yet.
+### Fixed
+- http: remove HTTP/2 pseudo headers for HTTP/2 requests propagated to HTTP/1 service through
+  YARPC transport middleware.
 
 ## [1.56.0] - 2021-07-22
 - http: allow multiple interception options and execute in order at runtime.
-- http: remove HTTP/2 pseudo headers for HTTP/2 requests propagated to HTTP/1 service through
-  YARPC transport middleware.
 
 ## [1.55.1] - 2021-07-14
 ### Fixed
