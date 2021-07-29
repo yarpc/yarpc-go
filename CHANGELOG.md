@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- No changes yet.
+
+## [1.56.0] - 2021-07-22
 - http: allow multiple interception options and execute in order at runtime.
 - http: remove HTTP/2 pseudo headers for HTTP/2 requests propagated to HTTP/1 service through
   YARPC transport middleware.
@@ -1383,7 +1386,8 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.55.1...HEAD
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.56.0...HEAD
+[1.56.0]: https://github.com/yarpc/yarpc-go/compare/v1.55.1...v1.56.0
 [1.55.1]: https://github.com/yarpc/yarpc-go/compare/v1.55.0...v1.55.1
 [1.55.0]: https://github.com/yarpc/yarpc-go/compare/v1.54.2...v1.55.0
 [1.54.2]: https://github.com/yarpc/yarpc-go/compare/v1.54.1...v1.54.2
