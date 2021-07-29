@@ -342,8 +342,14 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 	if err != nil {
 		return nil, err
 	}
-	hreq.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
-	return hreq, err
+	// YARPC needs to remove all the HTTP/2 pseudo headers when a HTTP/2 request (gRPC)
+	// was propagated from a YARPC transport middleware to a HTTP/1 service.
+	// It should be noted that net/http will return an error if a pseudo
+	// header is given along a HTTP/1 request.
+	// see: https://cs.opensource.google/go/x/net/+/c6fcb2db:http/httpguts/httplex.go;l=203
+	headers := applicationHeaders.deleteHTTP2PseudoHeadersIfNeeded(treq.Headers)
+	hreq.Header = applicationHeaders.ToHTTPHeaders(headers, nil)
+	return hreq, nil
 }
 
 func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, *http.Request, opentracing.Span, error) {

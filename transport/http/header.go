@@ -21,6 +21,7 @@
 package http
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
@@ -66,4 +67,21 @@ func (hm headerMapper) FromHTTPHeaders(from http.Header, to transport.Headers) t
 		// Note: undefined behavior for multiple occurrences of the same header
 	}
 	return to
+}
+
+func (hm headerMapper) deleteHTTP2PseudoHeadersIfNeeded(from transport.Headers) transport.Headers {
+	// deleting all http2 pseudo-header fields
+	// RFC https://tools.ietf.org/html/rfc7540#section-8.1.2.3
+	// :method -> this can be removed, YARPC uses POST for all HTTP requests.
+	// :path -> this can be removed, this is handled by YARPC with RPC-procedure.
+	// :scheme -> this can be removed, scheme is defined in the URI (http or https).
+	// :authority -> even if the RFC advises to copy :authority into host header, it is safe to remove it
+	// here. Host of the request is controlled through the YARPC outbound configuration.
+	for _, k := range _http2PseudoHeaders {
+		if v, ok := from.Get(k); ok {
+			from.Del(k)
+			log.Printf("WARN: HTTP2 pseudo-header %s:%s was deleted", k, v)
+		}
+	}
+	return from
 }

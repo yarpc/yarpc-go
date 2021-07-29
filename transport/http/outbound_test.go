@@ -320,6 +320,13 @@ func TestOutboundHeaders(t *testing.T) {
 				"X-Bar":        "BAZ",
 			},
 		},
+		{
+			desc:    "pseudo headers",
+			headers: transport.NewHeaders().With(":authority", "localhost").With(":path", "/my/path").With(":scheme", "http").With(":method", "POST").With("baz", "Qux"),
+			wantHeaders: map[string]string{
+				"Rpc-Header-Baz": "Qux",
+			},
+		},
 	}
 
 	httpTransport := NewTransport()
