@@ -50,6 +50,10 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 			Service:      "Hello",
 			ClientConfig: c,
 		}, opts...),
+		nwc: thrift.NewNoWire(thrift.Config{
+			Service:      "Hello",
+			ClientConfig: c,
+		}, opts...),
 	}
 }
 
@@ -62,7 +66,8 @@ func init() {
 }
 
 type client struct {
-	c thrift.Client
+	c   thrift.Client
+	nwc thrift.NoWireClient
 }
 
 func (c client) Sink(

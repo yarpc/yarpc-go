@@ -33,6 +33,10 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 			Service:      "ExtendEmpty",
 			ClientConfig: c,
 		}, opts...),
+		nwc: thrift.NewNoWire(thrift.Config{
+			Service:      "ExtendEmpty",
+			ClientConfig: c,
+		}, opts...),
 
 		Interface: emptyserviceclient.New(
 			c,
@@ -55,7 +59,8 @@ func init() {
 type client struct {
 	emptyserviceclient.Interface
 
-	c thrift.Client
+	c   thrift.Client
+	nwc thrift.NoWireClient
 }
 
 func (c client) Hello(
@@ -63,17 +68,24 @@ func (c client) Hello(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result common.ExtendEmpty_Hello_Result
 	args := common.ExtendEmpty_Hello_Helper.Args()
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		err = c.nwc.Call(ctx, args, &result, opts...)
+		if err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		body, err = c.c.Call(ctx, args, opts...)
+		if err != nil {
+			return
+		}
 
-	var result common.ExtendEmpty_Hello_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = common.ExtendEmpty_Hello_Helper.UnwrapResponse(&result)

@@ -45,6 +45,8 @@ func ClientBuilderOptions(_ transport.ClientConfig, f reflect.StructField) []Cli
 			opts = append(opts, Multiplexed)
 		case "enveloped":
 			opts = append(opts, Enveloped)
+		case "nowire":
+			opts = append(opts, NoWire(true))
 		default:
 			// Ignore unknown options
 		}
