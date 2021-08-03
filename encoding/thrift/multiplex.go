@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/protocol/stream"
 	"go.uber.org/thriftrw/wire"
 )
 
@@ -47,4 +48,47 @@ func (m multiplexedOutboundProtocol) DecodeEnveloped(r io.ReaderAt) (wire.Envelo
 	e, err := m.Protocol.DecodeEnveloped(r)
 	e.Name = strings.TrimPrefix(e.Name, m.Service+":")
 	return e, err
+}
+
+type multiplexedOutboundNoWireProtocol struct {
+	stream.Protocol
+
+	Service string
+}
+
+func (m multiplexedOutboundNoWireProtocol) Writer(w io.Writer) stream.Writer {
+	return multiplexedWriter{
+		Writer:  m.Protocol.Writer(w),
+		Service: m.Service,
+	}
+}
+
+func (m multiplexedOutboundNoWireProtocol) Reader(r io.Reader) stream.Reader {
+	return multiplexedReader{
+		Reader:  m.Protocol.Reader(r),
+		Service: m.Service,
+	}
+}
+
+type multiplexedWriter struct {
+	stream.Writer
+
+	Service string
+}
+
+func (w multiplexedWriter) WriteEnvelopeBegin(eh stream.EnvelopeHeader) error {
+	eh.Name = w.Service + ":" + eh.Name
+	return w.Writer.WriteEnvelopeBegin(eh)
+}
+
+type multiplexedReader struct {
+	stream.Reader
+
+	Service string
+}
+
+func (r multiplexedReader) ReadEnvelopeBegin() (stream.EnvelopeHeader, error) {
+	eh, err := r.Reader.ReadEnvelopeBegin()
+	eh.Name = strings.TrimPrefix(eh.Name, r.Service+":")
+	return eh, err
 }
