@@ -25,6 +25,10 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 			Service:      "ExtendOnly",
 			ClientConfig: c,
 		}, opts...),
+		nwc: thrift.NewNoWire(thrift.Config{
+			Service:      "ExtendOnly",
+			ClientConfig: c,
+		}, opts...),
 
 		Interface: baseserviceclient.New(
 			c,
@@ -47,5 +51,6 @@ func init() {
 type client struct {
 	baseserviceclient.Interface
 
-	c thrift.Client
+	c   thrift.Client
+	nwc thrift.NoWireClient
 }

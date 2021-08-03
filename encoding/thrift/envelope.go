@@ -25,6 +25,7 @@ import (
 	"io"
 
 	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/protocol/stream"
 	"go.uber.org/thriftrw/wire"
 )
 
@@ -55,3 +56,45 @@ func (ev disableEnvelopingProtocol) DecodeEnveloped(r io.ReaderAt) (wire.Envelop
 		Value: value,
 	}, err
 }
+
+type disableEnvelopingNoWireProtocol struct {
+	stream.Protocol
+
+	Type wire.EnvelopeType
+}
+
+func (evsp disableEnvelopingNoWireProtocol) Reader(r io.Reader) stream.Reader {
+	return disableEnvelopingReader{
+		Reader: evsp.Protocol.Reader(r),
+		Type:   evsp.Type,
+	}
+}
+
+func (evsp disableEnvelopingNoWireProtocol) Writer(w io.Writer) stream.Writer {
+	return disableEnvelopingWriter{
+		Writer: evsp.Protocol.Writer(w),
+	}
+}
+
+type disableEnvelopingReader struct {
+	stream.Reader
+
+	Type wire.EnvelopeType
+}
+
+func (evr disableEnvelopingReader) ReadEnvelopeBegin() (stream.EnvelopeHeader, error) {
+	return stream.EnvelopeHeader{
+		Name:  "",
+		Type:  evr.Type,
+		SeqID: 1,
+	}, nil
+}
+
+func (evr disableEnvelopingReader) ReadEnvelopeEnd() error { return nil }
+
+type disableEnvelopingWriter struct {
+	stream.Writer
+}
+
+func (evw disableEnvelopingWriter) WriteEnvelopeBegin(stream.EnvelopeHeader) error { return nil }
+func (evw disableEnvelopingWriter) WriteEnvelopeEnd() error                        { return nil }
