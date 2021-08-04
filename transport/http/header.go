@@ -21,7 +21,6 @@
 package http
 
 import (
-	"log"
 	"net/http"
 	"strings"
 
@@ -78,9 +77,8 @@ func (hm headerMapper) deleteHTTP2PseudoHeadersIfNeeded(from transport.Headers) 
 	// :authority -> even if the RFC advises to copy :authority into host header, it is safe to remove it
 	// here. Host of the request is controlled through the YARPC outbound configuration.
 	for _, k := range _http2PseudoHeaders {
-		if v, ok := from.Get(k); ok {
+		if _, ok := from.Get(k); ok {
 			from.Del(k)
-			log.Printf("WARN: HTTP2 pseudo-header %s:%s was deleted", k, v)
 		}
 	}
 	return from
