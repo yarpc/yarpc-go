@@ -26,6 +26,7 @@ import (
 
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/protocol/binary"
+	"go.uber.org/thriftrw/protocol/stream"
 	"go.uber.org/thriftrw/thriftreflect"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport"
@@ -94,6 +95,13 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 		proto = rc.Protocol
 	}
 
+	var streamProto stream.Protocol = binary.Default
+	if rc.Protocol != nil && rc.NoWire {
+		if sp, ok := rc.Protocol.(stream.Protocol); ok {
+			streamProto = sp
+		}
+	}
+
 	svc := s.Name
 	if rc.ServiceName != "" {
 		svc = rc.ServiceName
@@ -105,17 +113,33 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 		var spec transport.HandlerSpec
 		switch method.HandlerSpec.Type {
 		case transport.Unary:
-			spec = transport.NewUnaryHandlerSpec(thriftUnaryHandler{
-				UnaryHandler: method.HandlerSpec.Unary,
-				Protocol:     proto,
-				Enveloping:   rc.Enveloping,
-			})
+			if rc.NoWire {
+				spec = transport.NewUnaryHandlerSpec(thriftNoWireHandler{
+					NoWireHandler: method.HandlerSpec.NoWire,
+					Protocol:      streamProto,
+					Enveloping:    rc.Enveloping,
+				})
+			} else {
+				spec = transport.NewUnaryHandlerSpec(thriftUnaryHandler{
+					UnaryHandler: method.HandlerSpec.Unary,
+					Protocol:     proto,
+					Enveloping:   rc.Enveloping,
+				})
+			}
 		case transport.Oneway:
-			spec = transport.NewOnewayHandlerSpec(thriftOnewayHandler{
-				OnewayHandler: method.HandlerSpec.Oneway,
-				Protocol:      proto,
-				Enveloping:    rc.Enveloping,
-			})
+			if rc.NoWire {
+				spec = transport.NewOnewayHandlerSpec(thriftNoWireHandler{
+					NoWireHandler: method.HandlerSpec.NoWire,
+					Protocol:      streamProto,
+					Enveloping:    rc.Enveloping,
+				})
+			} else {
+				spec = transport.NewOnewayHandlerSpec(thriftOnewayHandler{
+					OnewayHandler: method.HandlerSpec.Oneway,
+					Protocol:      proto,
+					Enveloping:    rc.Enveloping,
+				})
+			}
 		default:
 			panic(fmt.Sprintf("Invalid handler type for %T", method))
 		}
