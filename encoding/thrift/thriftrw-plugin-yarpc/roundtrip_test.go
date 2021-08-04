@@ -55,27 +55,34 @@ import (
 )
 
 func TestRoundTrip(t *testing.T) {
-	tests := []struct{ enveloped, multiplexed bool }{
-		{true, true},
+	tests := []struct{ enveloped, multiplexed, nowire bool }{
+		{true, true, true},
+		{true, true, false},
 		// Skipping for now until flaky test fixed.
 		// Uncomment this when fixed.
 		// https://github.com/yarpc/yarpc-go/issues/1171
-		//{true, false},
-		{false, true},
-		{false, false},
+		//{true, false, true},
+		//{true, false, false},
+		{false, true, true},
+		{false, true, false},
+		{false, false, true},
+		{false, false, false},
 	}
 
 	for _, tt := range tests {
-		name := fmt.Sprintf("enveloped(%v)/multiplexed(%v)", tt.enveloped, tt.multiplexed)
-		t.Run(name, func(t *testing.T) { testRoundTrip(t, tt.enveloped, tt.multiplexed) })
+		name := fmt.Sprintf("enveloped(%v)/multiplexed(%v)/nowire(%v)", tt.enveloped, tt.multiplexed, tt.nowire)
+		t.Run(name, func(t *testing.T) { testRoundTrip(t, tt.enveloped, tt.multiplexed, tt.nowire) })
 	}
 }
 
-func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
+func testRoundTrip(t *testing.T, enveloped, multiplexed, nowire bool) {
+	t.Helper()
+
 	var serverOpts []thrift.RegisterOption
 	if enveloped {
 		serverOpts = append(serverOpts, thrift.Enveloped)
 	}
+	serverOpts = append(serverOpts, thrift.NoWire(nowire))
 
 	var clientOpts []string
 	if enveloped {
