@@ -113,13 +113,7 @@ func (h Integer_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCal
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(

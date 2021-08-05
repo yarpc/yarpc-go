@@ -193,15 +193,11 @@ func (h <.Name>_NoWireHandler) Handle(ctx <$context>.Context, nwc *<$thrift>.NoW
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-		<if .OneWay>
-		_, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-		<else>
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-		<end>
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	<if .OneWay>
+	_, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	<else>
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	<end>
 
 	if err != nil {
 		return <$thrift>.NoWireResponse{}, <$yarpcerrors>.InvalidArgumentErrorf(
