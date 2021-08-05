@@ -22,6 +22,7 @@ package http
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"net"
 	"net/http"
@@ -226,6 +227,7 @@ func buildClient(f func(*transportOptions) *http.Client) TransportOption {
 
 // NewTransport creates a new HTTP transport for managing peers and sending requests
 func NewTransport(opts ...TransportOption) *Transport {
+	fmt.Println(">>>>>>>> adding a debug statement in http.transport.......")
 	options := newTransportOptions()
 	for _, opt := range opts {
 		opt(&options)
