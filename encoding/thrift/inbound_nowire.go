@@ -34,6 +34,15 @@ import (
 
 var _emptyResponse = NoWireResponse{}
 
+// thriftNoWireHandler is similar to thriftUnaryHandler and thriftOnewayHandler
+// except that thriftNoWireHandler implements both transport.UnaryHandler and
+// transport.OnewayHandler through a single type, utilizing the "nowire"
+// (streaming in the ThriftRW context, bypassing the intermediate "Wire"
+// representation) implementation.
+//
+// The UnaryHandler and OnewayHandler implementations then call into type that
+// implements NoWireHandler, which understands how to unpack and invoke the
+// request, given the ThriftRW primitives for reading the raw representation.
 type thriftNoWireHandler struct {
 	NoWireHandler NoWireHandler
 	Protocol      stream.Protocol
@@ -56,7 +65,7 @@ func (t thriftNoWireHandler) Handle(ctx context.Context, treq *transport.Request
 	ctx, call := encodingapi.NewInboundCall(ctx)
 	defer closeReader(treq.Body)
 
-	res, err := doRequest(ctx, call, treq, rw, t.NoWireHandler, wire.Call, t.Protocol, t.Enveloping)
+	res, err := decodeNoWireRequest(ctx, call, treq, rw, t.NoWireHandler, wire.Call, t.Protocol, t.Enveloping)
 	if err != nil {
 		return err
 	}
@@ -94,11 +103,15 @@ func (t thriftNoWireHandler) HandleOneway(ctx context.Context, treq *transport.R
 	ctx, call := encodingapi.NewInboundCall(ctx)
 	defer closeReader(treq.Body)
 
-	_, err := doRequest(ctx, call, treq, nil, t.NoWireHandler, wire.OneWay, t.Protocol, t.Enveloping)
+	_, err := decodeNoWireRequest(ctx, call, treq, nil, t.NoWireHandler, wire.OneWay, t.Protocol, t.Enveloping)
 	return err
 }
 
-func doRequest(
+// decodeNoWireRequest is a shared utility between the implementations of
+// transport.UnaryHandler and transport.OnewayHandler, to decode and execute the
+// request regardless of enveloping, via the "nowire" implementation in
+// ThriftRW.
+func decodeNoWireRequest(
 	ctx context.Context,
 	call *encodingapi.InboundCall,
 	treq *transport.Request,
