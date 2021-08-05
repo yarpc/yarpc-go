@@ -1063,13 +1063,7 @@ func (h TestBinary_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWire
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
@@ -1110,13 +1104,7 @@ func (h TestByte_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCa
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
@@ -1157,13 +1145,7 @@ func (h TestDouble_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWire
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
@@ -1204,13 +1186,7 @@ func (h TestEnum_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCa
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
@@ -1251,13 +1227,7 @@ func (h TestException_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoW
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
@@ -1298,13 +1268,7 @@ func (h TestI32_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCal
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
@@ -1345,13 +1309,7 @@ func (h TestI64_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCal
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
@@ -1392,13 +1350,7 @@ func (h TestInsanity_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWi
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
@@ -1439,13 +1391,7 @@ func (h TestList_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCa
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
@@ -1486,13 +1432,7 @@ func (h TestMap_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCal
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
@@ -1533,13 +1473,7 @@ func (h TestMapMap_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWire
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
@@ -1580,13 +1514,7 @@ func (h TestMulti_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireC
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
@@ -1627,13 +1555,7 @@ func (h TestMultiException_NoWireHandler) Handle(ctx context.Context, nwc *thrif
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
@@ -1674,13 +1596,7 @@ func (h TestNest_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCa
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
@@ -1719,13 +1635,7 @@ func (h TestOneway_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWire
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		_, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	_, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
@@ -1747,13 +1657,7 @@ func (h TestSet_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCal
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
@@ -1794,13 +1698,7 @@ func (h TestString_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWire
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
@@ -1841,13 +1739,7 @@ func (h TestStringMap_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoW
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
@@ -1888,13 +1780,7 @@ func (h TestStruct_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWire
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
@@ -1935,13 +1821,7 @@ func (h TestTypedef_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWir
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
@@ -1982,13 +1862,7 @@ func (h TestVoid_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCa
 		err error
 	)
 
-	if nwc.RequestReader != nil {
-
-		rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	} else {
-		err = args.Decode(nwc.StreamReader)
-	}
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
 
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(

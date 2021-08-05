@@ -49,14 +49,24 @@ type thriftNoWireHandler struct {
 	Enveloping    bool
 }
 
+var (
+	_ transport.OnewayHandler = (*thriftNoWireHandler)(nil)
+	_ transport.UnaryHandler  = (*thriftNoWireHandler)(nil)
+)
+
+// NoWireCall contains all of the required objects needed for an underlying
+// Handle needs to unpack any given request.
 type NoWireCall struct {
 	Reader        io.Reader
 	RequestReader stream.RequestReader
 	EnvelopeType  wire.EnvelopeType
-
-	StreamReader stream.Reader
 }
 
+// NoWireHandler is implemented by the generated code for each method that the
+// server needs to implement.  It is responsible for unpacking the request,
+// executing it, and returning a NoWireResponse that contains information about
+// how to construct a response as well as any relevant metadata while executing
+// the request.
 type NoWireHandler interface {
 	Handle(context.Context, *NoWireCall) (NoWireResponse, error)
 }
@@ -129,45 +139,69 @@ func decodeNoWireRequest(
 		return _emptyResponse, err
 	}
 
+	nwc := NoWireCall{
+		Reader:       treq.Body,
+		EnvelopeType: reqEnvelopeType,
+	}
+
 	if reqReader, ok := proto.(stream.RequestReader); ok {
-		nwc := NoWireCall{
-			Reader:        treq.Body,
-			RequestReader: reqReader,
-			EnvelopeType:  reqEnvelopeType,
+		nwc.RequestReader = reqReader
+	} else {
+		nwc.RequestReader = &reqReaderProto{
+			Protocol:   proto,
+			treq:       treq,
+			enveloping: enveloping,
 		}
-		return noWireHandler.Handle(ctx, &nwc)
 	}
+	return noWireHandler.Handle(ctx, &nwc)
+}
 
-	streamReader := proto.Reader(treq.Body)
-	defer streamReader.Close()
+// reqReaderProto is an implementation of ThriftRW's stream.RequestReader in
+// case the provided stream.Protocol does not implement the necessary
+// `ReadRequest` to discover the correct enveloping.
+type reqReaderProto struct {
+	stream.Protocol
 
-	if enveloping {
-		eh, err := streamReader.ReadEnvelopeBegin()
+	treq       *transport.Request
+	enveloping bool
+}
+
+var _ stream.RequestReader = (*reqReaderProto)(nil)
+
+func (p *reqReaderProto) ReadRequest(
+	ctx context.Context,
+	et wire.EnvelopeType,
+	r io.Reader,
+	body stream.BodyReader,
+) (stream.ResponseWriter, error) {
+	sr := p.Protocol.Reader(r)
+	defer sr.Close()
+
+	if p.enveloping {
+		eh, err := sr.ReadEnvelopeBegin()
 		if err != nil {
-			return _emptyResponse, err
-		}
-		if eh.Type != reqEnvelopeType {
-			return _emptyResponse, errors.RequestBodyDecodeError(treq, errUnexpectedEnvelopeType(eh.Type))
+			return nil, errors.RequestBodyDecodeError(p.treq, err)
 		}
 
-		responder := binary.EnvelopeV1Responder{Name: eh.Name, SeqID: eh.SeqID}
-		nwc := NoWireCall{StreamReader: streamReader}
-		resp, err := noWireHandler.Handle(ctx, &nwc)
-		if err != nil {
-			return _emptyResponse, err
+		if eh.Type != et {
+			return nil, errors.RequestBodyDecodeError(p.treq, errUnexpectedEnvelopeType(eh.Type))
 		}
 
-		resp.ResponseWriter = responder
-		return resp, streamReader.ReadEnvelopeEnd()
+		if err := body.Decode(sr); err != nil {
+			return nil, errors.RequestBodyDecodeError(p.treq, err)
+		}
+
+		if err := sr.ReadEnvelopeEnd(); err != nil {
+			return nil, errors.RequestBodyDecodeError(p.treq, err)
+		}
+		return binary.EnvelopeV1Responder{
+			Name:  eh.Name,
+			SeqID: eh.SeqID,
+		}, nil
 	}
 
-	responder := binary.NoEnvelopeResponder
-	nwc := NoWireCall{StreamReader: streamReader}
-	resp, err := noWireHandler.Handle(ctx, &nwc)
-	if err != nil {
-		return _emptyResponse, err
+	if err := body.Decode(sr); err != nil {
+		return nil, errors.RequestBodyDecodeError(p.treq, err)
 	}
-
-	resp.ResponseWriter = responder
-	return resp, nil
+	return binary.NoEnvelopeResponder, nil
 }
