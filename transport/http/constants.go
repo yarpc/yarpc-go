@@ -130,3 +130,20 @@ const (
 // ApplicationHeaderPrefix is the prefix added to application header keys to
 // send them in requests or responses.
 const ApplicationHeaderPrefix = "Rpc-Header-"
+
+const (
+	_http2AuthorityPseudoHeader = ":authority"
+	_http2MethodPseudoHeader    = ":method"
+	_http2PathPseudoHeader      = ":path"
+	_http2SchemePseudoHeader    = ":scheme"
+)
+
+var (
+	// list of pseusdo htt2 headers from https://tools.ietf.org/html/rfc7540#section-8.1.2.3
+	_http2PseudoHeaders = []string{
+		_http2AuthorityPseudoHeader,
+		_http2MethodPseudoHeader,
+		_http2PathPseudoHeader,
+		_http2SchemePseudoHeader,
+	}
+)

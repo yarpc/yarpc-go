@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.56.1] - 2021-08-08
+### Fixed
+- http: remove HTTP/2 pseudo headers for HTTP/2 requests propagated to HTTP/1 service through
+  YARPC transport middleware.
+
 ## [1.56.0] - 2021-07-22
 - http: allow multiple interception options and execute in order at runtime.
 
@@ -12,7 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - peer/direct: peer connections were closed even if they were still in use.
 - configuration: clarify error message for the special case of attempting to use a peer list
   updater when none have been registered.
-- protoplugin: generated golang code from the yarpc plugin follows same GoType conventions as gogo/protobuf.  
+- protoplugin: generated golang code from the yarpc plugin follows same GoType conventions as gogo/protobuf.
 
 ## [1.55.0] - 2021-07-06
 - Downgrade github.com/apache/thrift to the previously-compatible version (0.10)
@@ -1381,6 +1386,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[1.56.1]: https://github.com/yarpc/yarpc-go/compare/v1.56.0...v1.56.1
 [1.56.0]: https://github.com/yarpc/yarpc-go/compare/v1.55.1...v1.56.0
 [1.55.1]: https://github.com/yarpc/yarpc-go/compare/v1.55.0...v1.55.1
 [1.55.0]: https://github.com/yarpc/yarpc-go/compare/v1.54.2...v1.55.0
