@@ -34,6 +34,23 @@ import (
 
 var _emptyResponse = NoWireResponse{}
 
+// NoWireCall contains all of the required objects needed for an underlying
+// Handle needs to unpack any given request.
+type NoWireCall struct {
+	Reader        io.Reader
+	RequestReader stream.RequestReader
+	EnvelopeType  wire.EnvelopeType
+}
+
+// NoWireHandler is implemented by the generated code for each method that the
+// server needs to implement.  It is responsible for unpacking the request,
+// executing it, and returning a NoWireResponse that contains information about
+// how to construct a response as well as any relevant metadata while executing
+// the request.
+type NoWireHandler interface {
+	Handle(context.Context, *NoWireCall) (NoWireResponse, error)
+}
+
 // thriftNoWireHandler is similar to thriftUnaryHandler and thriftOnewayHandler
 // except that thriftNoWireHandler implements both transport.UnaryHandler and
 // transport.OnewayHandler through a single type, utilizing the "nowire"
@@ -53,23 +70,6 @@ var (
 	_ transport.OnewayHandler = (*thriftNoWireHandler)(nil)
 	_ transport.UnaryHandler  = (*thriftNoWireHandler)(nil)
 )
-
-// NoWireCall contains all of the required objects needed for an underlying
-// Handle needs to unpack any given request.
-type NoWireCall struct {
-	Reader        io.Reader
-	RequestReader stream.RequestReader
-	EnvelopeType  wire.EnvelopeType
-}
-
-// NoWireHandler is implemented by the generated code for each method that the
-// server needs to implement.  It is responsible for unpacking the request,
-// executing it, and returning a NoWireResponse that contains information about
-// how to construct a response as well as any relevant metadata while executing
-// the request.
-type NoWireHandler interface {
-	Handle(context.Context, *NoWireCall) (NoWireResponse, error)
-}
 
 func (t thriftNoWireHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
 	ctx, call := encodingapi.NewInboundCall(ctx)
