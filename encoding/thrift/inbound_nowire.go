@@ -75,7 +75,7 @@ func (t thriftNoWireHandler) Handle(ctx context.Context, treq *transport.Request
 	ctx, call := encodingapi.NewInboundCall(ctx)
 	defer closeReader(treq.Body)
 
-	res, err := decodeNoWireRequest(ctx, call, treq, rw, t.NoWireHandler, wire.Call, t.Protocol, t.Enveloping)
+	res, err := t.decodeAndHandle(ctx, call, treq, rw, wire.Call)
 	if err != nil {
 		return err
 	}
@@ -113,23 +113,20 @@ func (t thriftNoWireHandler) HandleOneway(ctx context.Context, treq *transport.R
 	ctx, call := encodingapi.NewInboundCall(ctx)
 	defer closeReader(treq.Body)
 
-	_, err := decodeNoWireRequest(ctx, call, treq, nil, t.NoWireHandler, wire.OneWay, t.Protocol, t.Enveloping)
+	_, err := t.decodeAndHandle(ctx, call, treq, nil, wire.OneWay)
 	return err
 }
 
-// decodeNoWireRequest is a shared utility between the implementations of
-// transport.UnaryHandler and transport.OnewayHandler, to decode and execute the
-// request regardless of enveloping, via the "nowire" implementation in
+// decodeAhdnHandle is a shared utility between the implementations of
+// transport.UnaryHandler and transport.OnewayHandler, to decode and execute
+// the request regardless of enveloping, via the "nowire" implementation in
 // ThriftRW.
-func decodeNoWireRequest(
+func (t thriftNoWireHandler) decodeAndHandle(
 	ctx context.Context,
 	call *encodingapi.InboundCall,
 	treq *transport.Request,
 	rw transport.ResponseWriter,
-	noWireHandler NoWireHandler,
 	reqEnvelopeType wire.EnvelopeType,
-	proto stream.Protocol,
-	enveloping bool,
 ) (NoWireResponse, error) {
 	if err := errors.ExpectEncodings(treq, Encoding); err != nil {
 		return _emptyResponse, err
@@ -144,16 +141,16 @@ func decodeNoWireRequest(
 		EnvelopeType: reqEnvelopeType,
 	}
 
-	if reqReader, ok := proto.(stream.RequestReader); ok {
+	if reqReader, ok := t.Protocol.(stream.RequestReader); ok {
 		nwc.RequestReader = reqReader
 	} else {
 		nwc.RequestReader = &reqReaderProto{
-			Protocol:   proto,
+			Protocol:   t.Protocol,
 			treq:       treq,
-			enveloping: enveloping,
+			enveloping: t.Enveloping,
 		}
 	}
-	return noWireHandler.Handle(ctx, &nwc)
+	return t.NoWireHandler.Handle(ctx, &nwc)
 }
 
 // reqReaderProto is an implementation of ThriftRW's stream.RequestReader in
