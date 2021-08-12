@@ -88,16 +88,14 @@ func (h handler) Sink(ctx context.Context, body wire.Value) error {
 
 type Sink_NoWireHandler struct{ impl Interface }
 
-func (h Sink_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h Sink_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args sink.Hello_Sink_Args
 
 		err error
 	)
 
-	_, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	if err != nil {
+	if _, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args); err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'Hello' procedure 'Sink': %w", err)
 	}

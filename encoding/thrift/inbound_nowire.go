@@ -48,7 +48,7 @@ type NoWireCall struct {
 // how to construct a response as well as any relevant metadata while executing
 // the request.
 type NoWireHandler interface {
-	Handle(context.Context, *NoWireCall) (NoWireResponse, error)
+	HandleNoWire(context.Context, *NoWireCall) (NoWireResponse, error)
 }
 
 // thriftNoWireHandler is similar to thriftUnaryHandler and thriftOnewayHandler
@@ -61,7 +61,7 @@ type NoWireHandler interface {
 // implements NoWireHandler, which understands how to unpack and invoke the
 // request, given the ThriftRW primitives for reading the raw representation.
 type thriftNoWireHandler struct {
-	NoWireHandler NoWireHandler
+	Handler       NoWireHandler
 	RequestReader stream.RequestReader
 }
 
@@ -88,7 +88,6 @@ func (t thriftNoWireHandler) Handle(ctx context.Context, treq *transport.Request
 
 	if res.IsApplicationError {
 		rw.SetApplicationError()
-
 		if applicationErrorMetaSetter, ok := rw.(transport.ApplicationErrorMetaSetter); ok {
 			applicationErrorMetaSetter.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
 				Details: res.ApplicationErrorDetails,
@@ -120,7 +119,7 @@ func (t thriftNoWireHandler) HandleOneway(ctx context.Context, treq *transport.R
 	return err
 }
 
-// decodeAhdnHandle is a shared utility between the implementations of
+// decodeAndHandle is a shared utility between the implementations of
 // transport.UnaryHandler and transport.OnewayHandler, to decode and execute
 // the request regardless of enveloping, via the "nowire" implementation in
 // ThriftRW.
@@ -145,5 +144,5 @@ func (t thriftNoWireHandler) decodeAndHandle(
 		RequestReader: t.RequestReader,
 	}
 
-	return t.NoWireHandler.Handle(ctx, &nwc)
+	return t.Handler.HandleNoWire(ctx, &nwc)
 }

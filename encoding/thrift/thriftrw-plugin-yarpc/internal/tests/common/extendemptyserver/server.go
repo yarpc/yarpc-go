@@ -103,17 +103,14 @@ func (h handler) Hello(ctx context.Context, body wire.Value) (thrift.Response, e
 
 type Hello_NoWireHandler struct{ impl Interface }
 
-func (h Hello_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h Hello_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args common.ExtendEmpty_Hello_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ExtendEmpty' procedure 'Hello': %w", err)

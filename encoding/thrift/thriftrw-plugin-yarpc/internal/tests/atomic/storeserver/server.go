@@ -180,17 +180,14 @@ func (h handler) Increment(ctx context.Context, body wire.Value) (thrift.Respons
 
 type CompareAndSwap_NoWireHandler struct{ impl Interface }
 
-func (h CompareAndSwap_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h CompareAndSwap_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args atomic.Store_CompareAndSwap_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'Store' procedure 'CompareAndSwap': %w", err)
@@ -221,16 +218,14 @@ func (h CompareAndSwap_NoWireHandler) Handle(ctx context.Context, nwc *thrift.No
 
 type Forget_NoWireHandler struct{ impl Interface }
 
-func (h Forget_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h Forget_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args atomic.Store_Forget_Args
 
 		err error
 	)
 
-	_, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	if err != nil {
+	if _, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args); err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'Store' procedure 'Forget': %w", err)
 	}
@@ -241,17 +236,14 @@ func (h Forget_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall
 
 type Increment_NoWireHandler struct{ impl Interface }
 
-func (h Increment_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h Increment_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args atomic.Store_Increment_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'Store' procedure 'Increment': %w", err)

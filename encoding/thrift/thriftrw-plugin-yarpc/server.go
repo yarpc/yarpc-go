@@ -183,34 +183,32 @@ func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$thrift>.
 
 type <.Name>_NoWireHandler struct { impl Interface }
 
-func (h <.Name>_NoWireHandler) Handle(ctx <$context>.Context, nwc *<$thrift>.NoWireCall) (<$thrift>.NoWireResponse, error) {
+func (h <.Name>_NoWireHandler) HandleNoWire(ctx <$context>.Context, nwc *<$thrift>.NoWireCall) (<$thrift>.NoWireResponse, error) {
 	var (
 		args <$prefix>Args
-		<if not .OneWay>
-		rw <import "go.uber.org/thriftrw/protocol/stream">.ResponseWriter
-		<end>
+		<if not .OneWay>rw <import "go.uber.org/thriftrw/protocol/stream">.ResponseWriter<end>
 		err error
 	)
 
 	<if .OneWay>
-	_, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if _, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args); err != nil {
+		return <$thrift>.NoWireResponse{}, <$yarpcerrors>.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service '<$service.Name>' procedure '<.Name>': %w", err)
+	}
+
+	return <$thrift>.NoWireResponse{}, h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
 	<else>
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-	<end>
-
 	if err != nil {
 		return <$thrift>.NoWireResponse{}, <$yarpcerrors>.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service '<$service.Name>' procedure '<.Name>': %w", err)
 	}
 
-	<if .OneWay>
-	return <$thrift>.NoWireResponse{}, h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
+	<if .ReturnType>
+	success, appErr := h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
 	<else>
-		<if .ReturnType>
-		success, appErr := h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
-		<else>
-		appErr := h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
-		<end>
+	appErr := h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
+	<end>
 
 	hadError := appErr != nil
 	result, err := <$prefix>Helper.WrapResponse(<if .ReturnType>success,<end> appErr)
