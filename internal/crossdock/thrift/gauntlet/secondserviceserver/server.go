@@ -157,17 +157,14 @@ func (h handler) SecondtestString(ctx context.Context, body wire.Value) (thrift.
 
 type BlahBlah_NoWireHandler struct{ impl Interface }
 
-func (h BlahBlah_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h BlahBlah_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.SecondService_BlahBlah_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'SecondService' procedure 'BlahBlah': %w", err)
@@ -198,17 +195,14 @@ func (h BlahBlah_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCa
 
 type SecondtestString_NoWireHandler struct{ impl Interface }
 
-func (h SecondtestString_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h SecondtestString_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.SecondService_SecondtestString_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'SecondService' procedure 'SecondtestString': %w", err)

@@ -79,7 +79,7 @@ type responseHandler struct {
 
 var _ NoWireHandler = (*responseHandler)(nil)
 
-func (rh *responseHandler) Handle(ctx context.Context, nwc *NoWireCall) (NoWireResponse, error) {
+func (rh *responseHandler) HandleNoWire(ctx context.Context, nwc *NoWireCall) (NoWireResponse, error) {
 	rh.t.Helper()
 
 	// All calls to Handle must have everything in a NoWireCall set.
@@ -105,7 +105,7 @@ func TestDecodeNoWireRequestUnary(t *testing.T) {
 	}
 	proto := binary.Default
 	h := thriftNoWireHandler{
-		NoWireHandler: &rh,
+		Handler:       &rh,
 		RequestReader: proto,
 	}
 
@@ -128,7 +128,7 @@ func TestDecodeNoWireRequestOneway(t *testing.T) {
 	}
 	proto := binary.Default
 	h := thriftNoWireHandler{
-		NoWireHandler: &rh,
+		Handler:       &rh,
 		RequestReader: proto,
 	}
 
@@ -151,7 +151,7 @@ func TestNoWireHandleIncorrectResponseEnvelope(t *testing.T) {
 	}
 	proto := binary.Default
 	h := thriftNoWireHandler{
-		NoWireHandler: &rh,
+		Handler:       &rh,
 		RequestReader: proto,
 	}
 
@@ -177,7 +177,7 @@ func TestNoWireHandleWriteResponseError(t *testing.T) {
 	br := &bodyReader{}
 	rh := responseHandler{t: t, reqBody: br, body: re}
 	h := thriftNoWireHandler{
-		NoWireHandler: &rh,
+		Handler:       &rh,
 		RequestReader: proto,
 	}
 
@@ -194,7 +194,7 @@ func TestNoWireHandleWriteResponseError(t *testing.T) {
 func TestDecodeNoWireRequestExpectEncodingsError(t *testing.T) {
 	re := responseEnveloper{name: "caller", envelopeType: wire.Reply}
 	h := thriftNoWireHandler{
-		NoWireHandler: &responseHandler{t: t, body: re},
+		Handler:       &responseHandler{t: t, body: re},
 		RequestReader: binary.Default,
 	}
 
@@ -214,7 +214,7 @@ func TestDecodeNoWireAppliationError(t *testing.T) {
 	br := &bodyReader{}
 	re := responseEnveloper{name: "caller", envelopeType: wire.Reply}
 	h := thriftNoWireHandler{
-		NoWireHandler: &responseHandler{
+		Handler: &responseHandler{
 			t:        t,
 			reqBody:  br,
 			body:     re,

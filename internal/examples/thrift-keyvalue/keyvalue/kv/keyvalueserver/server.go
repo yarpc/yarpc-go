@@ -159,17 +159,14 @@ func (h handler) SetValue(ctx context.Context, body wire.Value) (thrift.Response
 
 type GetValue_NoWireHandler struct{ impl Interface }
 
-func (h GetValue_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h GetValue_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args kv.KeyValue_GetValue_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'KeyValue' procedure 'GetValue': %w", err)
@@ -200,17 +197,14 @@ func (h GetValue_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCa
 
 type SetValue_NoWireHandler struct{ impl Interface }
 
-func (h SetValue_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h SetValue_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args kv.KeyValue_SetValue_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'KeyValue' procedure 'SetValue': %w", err)

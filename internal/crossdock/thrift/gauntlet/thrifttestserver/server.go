@@ -1054,17 +1054,14 @@ func (h handler) TestVoid(ctx context.Context, body wire.Value) (thrift.Response
 
 type TestBinary_NoWireHandler struct{ impl Interface }
 
-func (h TestBinary_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h TestBinary_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestBinary_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestBinary': %w", err)
@@ -1095,17 +1092,14 @@ func (h TestBinary_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWire
 
 type TestByte_NoWireHandler struct{ impl Interface }
 
-func (h TestByte_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h TestByte_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestByte_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestByte': %w", err)
@@ -1136,17 +1130,14 @@ func (h TestByte_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCa
 
 type TestDouble_NoWireHandler struct{ impl Interface }
 
-func (h TestDouble_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h TestDouble_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestDouble_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestDouble': %w", err)
@@ -1177,17 +1168,14 @@ func (h TestDouble_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWire
 
 type TestEnum_NoWireHandler struct{ impl Interface }
 
-func (h TestEnum_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h TestEnum_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestEnum_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestEnum': %w", err)
@@ -1218,17 +1206,14 @@ func (h TestEnum_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCa
 
 type TestException_NoWireHandler struct{ impl Interface }
 
-func (h TestException_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h TestException_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestException_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestException': %w", err)
@@ -1259,17 +1244,14 @@ func (h TestException_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoW
 
 type TestI32_NoWireHandler struct{ impl Interface }
 
-func (h TestI32_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h TestI32_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestI32_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestI32': %w", err)
@@ -1300,17 +1282,14 @@ func (h TestI32_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCal
 
 type TestI64_NoWireHandler struct{ impl Interface }
 
-func (h TestI64_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h TestI64_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestI64_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestI64': %w", err)
@@ -1341,17 +1320,14 @@ func (h TestI64_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCal
 
 type TestInsanity_NoWireHandler struct{ impl Interface }
 
-func (h TestInsanity_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h TestInsanity_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestInsanity_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestInsanity': %w", err)
@@ -1382,17 +1358,14 @@ func (h TestInsanity_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWi
 
 type TestList_NoWireHandler struct{ impl Interface }
 
-func (h TestList_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h TestList_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestList_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestList': %w", err)
@@ -1423,17 +1396,14 @@ func (h TestList_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCa
 
 type TestMap_NoWireHandler struct{ impl Interface }
 
-func (h TestMap_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h TestMap_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestMap_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestMap': %w", err)
@@ -1464,17 +1434,14 @@ func (h TestMap_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCal
 
 type TestMapMap_NoWireHandler struct{ impl Interface }
 
-func (h TestMapMap_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h TestMapMap_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestMapMap_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestMapMap': %w", err)
@@ -1505,17 +1472,14 @@ func (h TestMapMap_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWire
 
 type TestMulti_NoWireHandler struct{ impl Interface }
 
-func (h TestMulti_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h TestMulti_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestMulti_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestMulti': %w", err)
@@ -1546,17 +1510,14 @@ func (h TestMulti_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireC
 
 type TestMultiException_NoWireHandler struct{ impl Interface }
 
-func (h TestMultiException_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h TestMultiException_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestMultiException_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestMultiException': %w", err)
@@ -1587,17 +1548,14 @@ func (h TestMultiException_NoWireHandler) Handle(ctx context.Context, nwc *thrif
 
 type TestNest_NoWireHandler struct{ impl Interface }
 
-func (h TestNest_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h TestNest_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestNest_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestNest': %w", err)
@@ -1628,16 +1586,14 @@ func (h TestNest_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCa
 
 type TestOneway_NoWireHandler struct{ impl Interface }
 
-func (h TestOneway_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h TestOneway_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestOneway_Args
 
 		err error
 	)
 
-	_, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
-	if err != nil {
+	if _, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args); err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestOneway': %w", err)
 	}
@@ -1648,17 +1604,14 @@ func (h TestOneway_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWire
 
 type TestSet_NoWireHandler struct{ impl Interface }
 
-func (h TestSet_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h TestSet_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestSet_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestSet': %w", err)
@@ -1689,17 +1642,14 @@ func (h TestSet_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCal
 
 type TestString_NoWireHandler struct{ impl Interface }
 
-func (h TestString_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h TestString_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestString_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestString': %w", err)
@@ -1730,17 +1680,14 @@ func (h TestString_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWire
 
 type TestStringMap_NoWireHandler struct{ impl Interface }
 
-func (h TestStringMap_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h TestStringMap_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestStringMap_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestStringMap': %w", err)
@@ -1771,17 +1718,14 @@ func (h TestStringMap_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoW
 
 type TestStruct_NoWireHandler struct{ impl Interface }
 
-func (h TestStruct_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h TestStruct_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestStruct_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestStruct': %w", err)
@@ -1812,17 +1756,14 @@ func (h TestStruct_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWire
 
 type TestTypedef_NoWireHandler struct{ impl Interface }
 
-func (h TestTypedef_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h TestTypedef_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestTypedef_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestTypedef': %w", err)
@@ -1853,17 +1794,14 @@ func (h TestTypedef_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWir
 
 type TestVoid_NoWireHandler struct{ impl Interface }
 
-func (h TestVoid_NoWireHandler) Handle(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h TestVoid_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestVoid_Args
-
-		rw stream.ResponseWriter
-
-		err error
+		rw   stream.ResponseWriter
+		err  error
 	)
 
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
-
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'ThriftTest' procedure 'TestVoid': %w", err)
