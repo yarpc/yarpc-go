@@ -178,7 +178,6 @@ func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$thrift>.
 
 <range .Functions>
 <$context := import $contextImportPath>
-<$stream := import "go.uber.org/thriftrw/protocol/stream">
 <$yarpcerrors := import "go.uber.org/yarpc/yarpcerrors">
 <$prefix := printf "%s.%s_%s_" (import $module.ImportPath) $service.Name .Name>
 
@@ -188,7 +187,7 @@ func (h <.Name>_NoWireHandler) Handle(ctx <$context>.Context, nwc *<$thrift>.NoW
 	var (
 		args <$prefix>Args
 		<if not .OneWay>
-		rw <$stream>.ResponseWriter
+		rw <import "go.uber.org/thriftrw/protocol/stream">.ResponseWriter
 		<end>
 		err error
 	)
