@@ -24,6 +24,7 @@ import (
 	"context"
 	"io"
 
+	"go.uber.org/multierr"
 	"go.uber.org/thriftrw/protocol/stream"
 	"go.uber.org/thriftrw/wire"
 	encodingapi "go.uber.org/yarpc/api/encoding"
@@ -69,9 +70,11 @@ var (
 	_ transport.UnaryHandler  = (*thriftNoWireHandler)(nil)
 )
 
-func (t thriftNoWireHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
+func (t thriftNoWireHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) (err error) {
 	ctx, call := encodingapi.NewInboundCall(ctx)
-	defer closeReader(treq.Body)
+	defer func() {
+		err = multierr.Append(err, closeReader(treq.Body))
+	}()
 
 	res, err := t.decodeAndHandle(ctx, call, treq, rw, wire.Call)
 	if err != nil {
@@ -107,11 +110,13 @@ func (t thriftNoWireHandler) Handle(ctx context.Context, treq *transport.Request
 	return nil
 }
 
-func (t thriftNoWireHandler) HandleOneway(ctx context.Context, treq *transport.Request) error {
+func (t thriftNoWireHandler) HandleOneway(ctx context.Context, treq *transport.Request) (err error) {
 	ctx, call := encodingapi.NewInboundCall(ctx)
-	defer closeReader(treq.Body)
+	defer func() {
+		err = multierr.Append(err, closeReader(treq.Body))
+	}()
 
-	_, err := t.decodeAndHandle(ctx, call, treq, nil, wire.OneWay)
+	_, err = t.decodeAndHandle(ctx, call, treq, nil, wire.OneWay)
 	return err
 }
 
