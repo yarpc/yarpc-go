@@ -95,10 +95,10 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 		proto = rc.Protocol
 	}
 
-	var streamProto stream.Protocol = binary.Default
+	var streamReqReader stream.RequestReader = binary.Default
 	if rc.Protocol != nil && rc.NoWire {
-		if sp, ok := rc.Protocol.(stream.Protocol); ok {
-			streamProto = sp
+		if sp, ok := rc.Protocol.(stream.RequestReader); ok {
+			streamReqReader = sp
 		}
 	}
 
@@ -116,8 +116,7 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 			if rc.NoWire {
 				spec = transport.NewUnaryHandlerSpec(thriftNoWireHandler{
 					NoWireHandler: method.HandlerSpec.NoWire,
-					Protocol:      streamProto,
-					Enveloping:    rc.Enveloping,
+					RequestReader: streamReqReader,
 				})
 			} else {
 				spec = transport.NewUnaryHandlerSpec(thriftUnaryHandler{
@@ -130,8 +129,7 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 			if rc.NoWire {
 				spec = transport.NewOnewayHandlerSpec(thriftNoWireHandler{
 					NoWireHandler: method.HandlerSpec.NoWire,
-					Protocol:      streamProto,
-					Enveloping:    rc.Enveloping,
+					RequestReader: streamReqReader,
 				})
 			} else {
 				spec = transport.NewOnewayHandlerSpec(thriftOnewayHandler{
