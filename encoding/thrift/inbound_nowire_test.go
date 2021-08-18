@@ -171,9 +171,9 @@ func TestDecodeNoWireRequestEnveloping(t *testing.T) {
 	require.NoError(t, h.Handle(ctx, request(), rw))
 	assert.Equal(t, _body, br.body, "request body expected to be decoded")
 
-	rrp, ok := rh.nwc.RequestReader.(*reqReaderProto)
+	rrp, ok := rh.nwc.RequestReader.(*envelopeRequestReader)
 	require.True(t, ok)
-	assert.Equal(t, proto, rrp.Protocol)
+	assert.Equal(t, proto, rrp.proto)
 }
 
 func TestDecodeNoWireRequestEnvelopingFalse(t *testing.T) {
@@ -205,9 +205,9 @@ func TestDecodeNoWireRequestEnvelopingFalse(t *testing.T) {
 	require.NoError(t, h.Handle(ctx, request(), rw))
 	assert.Equal(t, _body, br.body, "request body expected to be decoded")
 
-	rrp, ok := rh.nwc.RequestReader.(*reqReaderProto)
+	rrp, ok := rh.nwc.RequestReader.(*noEnvelopeReader)
 	require.True(t, ok)
-	assert.Equal(t, proto, rrp.Protocol)
+	assert.Equal(t, proto, rrp.proto)
 }
 
 func TestNoWireHandleIncorrectResponseEnvelope(t *testing.T) {
@@ -357,14 +357,20 @@ func TestReqReaderNotEnvelopingDecodeError(t *testing.T) {
 	assert.Contains(t, err.Error(), "another decode error")
 }
 
-func testEnvelopedReadRequest(t *testing.T, proto stream.Protocol, body stream.BodyReader, enveloping bool) (stream.ResponseWriter, error) {
+func testEnvelopedReadRequest(
+	t *testing.T,
+	proto stream.Protocol,
+	body stream.BodyReader,
+	enveloping bool,
+) (stream.ResponseWriter, error) {
 	t.Helper()
 
 	req := request()
-	rrp := reqReaderProto{
-		Protocol:   proto,
-		treq:       req,
-		enveloping: enveloping,
+	var rrp stream.RequestReader
+	if enveloping {
+		rrp = &envelopeRequestReader{proto: proto, treq: req}
+	} else {
+		rrp = &noEnvelopeReader{proto: proto, treq: req}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
