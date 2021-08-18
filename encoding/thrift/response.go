@@ -37,10 +37,19 @@ type Response struct {
 	ApplicationErrorCode    *yarpcerrors.Code
 }
 
+// NoWireResponse is the response from a generated Thrift handler that can
+// process requests that use the "nowire" implementation.
 type NoWireResponse struct {
-	Body           stream.Enveloper
+	// Body contains the response body. It knows how to encode itself into
+	// the "nowire" representation.
+	Body stream.Enveloper
+
+	// ResponseWriter encodes the body into an output stream.
 	ResponseWriter stream.ResponseWriter
 
+	// IsApplicationError reports whether the response indicates an
+	// appliation-level error. If true, a Thrift exception was thrown by
+	// the handler.
 	IsApplicationError bool
 
 	ApplicationErrorDetails string
