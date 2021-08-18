@@ -24,7 +24,6 @@ import (
 	"context"
 	"io"
 
-	"go.uber.org/thriftrw/protocol/binary"
 	"go.uber.org/thriftrw/protocol/stream"
 	"go.uber.org/thriftrw/wire"
 	encodingapi "go.uber.org/yarpc/api/encoding"
@@ -62,8 +61,7 @@ type NoWireHandler interface {
 // request, given the ThriftRW primitives for reading the raw representation.
 type thriftNoWireHandler struct {
 	NoWireHandler NoWireHandler
-	Protocol      stream.Protocol
-	Enveloping    bool
+	RequestReader stream.RequestReader
 }
 
 var (
@@ -137,92 +135,10 @@ func (t thriftNoWireHandler) decodeAndHandle(
 	}
 
 	nwc := NoWireCall{
-		Reader:       treq.Body,
-		EnvelopeType: reqEnvelopeType,
-	}
-
-	// If the underlying nowire transport supports envelope-agnostic
-	// request decoding, use that. Otherwise, build a RequestReader based
-	// on envelope configuration.
-	if reqReader, ok := t.Protocol.(stream.RequestReader); ok {
-		nwc.RequestReader = reqReader
-	} else if t.Enveloping {
-		nwc.RequestReader = &envelopeRequestReader{
-			proto: t.Protocol,
-			treq:  treq,
-		}
-	} else {
-		nwc.RequestReader = &noEnvelopeReader{
-			proto: t.Protocol,
-			treq:  treq,
-		}
+		Reader:        treq.Body,
+		EnvelopeType:  reqEnvelopeType,
+		RequestReader: t.RequestReader,
 	}
 
 	return t.NoWireHandler.Handle(ctx, &nwc)
-}
-
-// envelopeRequestReader implements ThriftRW's stream.RequestReader, decoding
-// requests with enveloping support.
-type envelopeRequestReader struct {
-	proto stream.Protocol
-	treq  *transport.Request
-}
-
-var _ stream.RequestReader = (*envelopeRequestReader)(nil)
-
-func (p *envelopeRequestReader) ReadRequest(
-	ctx context.Context,
-	et wire.EnvelopeType,
-	r io.Reader,
-	body stream.BodyReader,
-) (stream.ResponseWriter, error) {
-	sr := p.proto.Reader(r)
-	defer sr.Close()
-
-	eh, err := sr.ReadEnvelopeBegin()
-	if err != nil {
-		return nil, errors.RequestBodyDecodeError(p.treq, err)
-	}
-
-	if eh.Type != et {
-		return nil, errors.RequestBodyDecodeError(p.treq, errUnexpectedEnvelopeType(eh.Type))
-	}
-
-	if err := body.Decode(sr); err != nil {
-		return nil, errors.RequestBodyDecodeError(p.treq, err)
-	}
-
-	if err := sr.ReadEnvelopeEnd(); err != nil {
-		return nil, errors.RequestBodyDecodeError(p.treq, err)
-	}
-
-	return binary.EnvelopeV1Responder{
-		Name:  eh.Name,
-		SeqID: eh.SeqID,
-	}, nil
-}
-
-// noEnvelopeReader implements ThriftRW's stream.RequestReader, decoding
-// requests without enveloping support.
-type noEnvelopeReader struct {
-	proto stream.Protocol
-	treq  *transport.Request
-}
-
-var _ stream.RequestReader = (*noEnvelopeReader)(nil)
-
-func (p *noEnvelopeReader) ReadRequest(
-	ctx context.Context,
-	et wire.EnvelopeType,
-	r io.Reader,
-	body stream.BodyReader,
-) (stream.ResponseWriter, error) {
-	sr := p.proto.Reader(r)
-	defer sr.Close()
-
-	if err := body.Decode(sr); err != nil {
-		return nil, errors.RequestBodyDecodeError(p.treq, err)
-	}
-
-	return binary.NoEnvelopeResponder, nil
 }
