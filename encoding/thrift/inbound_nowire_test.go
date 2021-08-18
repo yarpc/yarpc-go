@@ -31,7 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/thriftrw/protocol/binary"
 	"go.uber.org/thriftrw/protocol/stream"
-	streamtest "go.uber.org/thriftrw/thrifttest/stream"
+	"go.uber.org/thriftrw/thrifttest/streamtest"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/internal/testtime"
