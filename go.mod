@@ -14,7 +14,6 @@ require (
 	github.com/gogo/status v1.1.0
 	github.com/golang/mock v1.4.0
 	github.com/golang/snappy v0.0.1
-	github.com/google/go-cmp v0.4.0 // indirect
 	github.com/kisielk/errcheck v1.2.0
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
@@ -24,7 +23,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prashantv/protectmem v0.0.0-20171002184600-e20412882b3a // indirect
 	github.com/prometheus/client_golang v1.4.1 // indirect
-	github.com/prometheus/common v0.9.1 // indirect
 	github.com/prometheus/procfs v0.0.9 // indirect
 	github.com/samuel/go-thrift v0.0.0-20191111193933-5165175b40af // indirect
 	github.com/streadway/quantile v0.0.0-20150917103942-b0c588724d25 // indirect
@@ -53,9 +51,6 @@ require (
 	golang.org/x/tools v0.0.0-20200216192241-b320d3a0f5a2
 	google.golang.org/genproto v0.0.0-20200212174721-66ed5ce911ce // indirect
 	google.golang.org/grpc v1.28.0
-	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.2.8
 	honnef.co/go/tools v0.0.1-2019.2.3
 )
-
-replace github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.1.0
