@@ -23,7 +23,6 @@ package thrift
 import (
 	"context"
 	"fmt"
-	"io"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -47,14 +46,6 @@ type bodyReader struct {
 func (br *bodyReader) Decode(sr stream.Reader) error {
 	br.body = _body
 	return br.err
-}
-
-type responseWriter struct{ err error }
-
-var _ stream.ResponseWriter = (*responseWriter)(nil)
-
-func (rw responseWriter) WriteResponse(wire.EnvelopeType, io.Writer, stream.Enveloper) error {
-	return rw.err
 }
 
 type responseHandler struct {
@@ -179,11 +170,16 @@ func TestNoWireHandleWriteResponseError(t *testing.T) {
 	env := streamtest.NewMockEnveloper(mockCtrl)
 	env.EXPECT().EnvelopeType().Return(wire.Reply).Times(1)
 
-	proto := streamtest.NewMockRequestReader(mockCtrl)
-	proto.EXPECT().ReadRequest(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(responseWriter{err: fmt.Errorf("write response error")}, nil)
+	rw := new(transporttest.FakeResponseWriter)
+	streamRw := streamtest.NewMockResponseWriter(mockCtrl)
+	streamRw.EXPECT().WriteResponse(wire.Reply, rw, env).Return(fmt.Errorf("write response error")).Times(1)
 
+	req := request()
 	br := &bodyReader{}
+	proto := streamtest.NewMockRequestReader(mockCtrl)
+	proto.EXPECT().ReadRequest(gomock.Any(), wire.Call, req.Body, br).
+		Return(streamRw, nil)
+
 	rh := responseHandler{t: t, reqBody: br, body: env}
 	h := thriftNoWireHandler{
 		Handler:       &rh,
@@ -193,8 +189,6 @@ func TestNoWireHandleWriteResponseError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 
-	req := request()
-	rw := new(transporttest.FakeResponseWriter)
 	err := h.Handle(ctx, req, rw)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "write response error")
