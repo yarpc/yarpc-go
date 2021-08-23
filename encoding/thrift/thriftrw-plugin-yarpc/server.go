@@ -181,7 +181,7 @@ func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$thrift>.
 <$yarpcerrors := import "go.uber.org/yarpc/yarpcerrors">
 <$prefix := printf "%s.%s_%s_" (import $module.ImportPath) $service.Name .Name>
 
-type <.Name>_NoWireHandler struct { impl Interface }
+type <.Name>_NoWireHandler struct{ impl Interface }
 
 func (h <.Name>_NoWireHandler) HandleNoWire(ctx <$context>.Context, nwc *<$thrift>.NoWireCall) (<$thrift>.NoWireResponse, error) {
 	var (
