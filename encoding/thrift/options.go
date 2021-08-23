@@ -158,9 +158,10 @@ func Protocol(p protocol.Protocol) Option {
 }
 
 // NoWire is an option that specifies to *not* use the thriftrw.Wire
-// intermediary format.  Note that if this is enabled, and a
-// 'protocol.Protocol' is provided (e.g., via thrift.Protocol)m that provided
-// protocol must be able to satisfy the 'stream.Protocol' interface.
+// intermediary format. Note that if this is enabled, and a
+// 'protocol.Protocol' is provided (e.g., via thrift.Protocol) that provided
+// protocol must be able to satisfy the 'stream.RequestReader' interface.
+// Will become the default option.
 func NoWire(enable bool) Option {
 	return noWireOption{Enable: enable}
 }

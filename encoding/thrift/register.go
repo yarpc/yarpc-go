@@ -95,8 +95,10 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 		proto = rc.Protocol
 	}
 
+	// Only if we're trying to use the 'NoWire' implementation do we check if the
+	// config's `Protocol` provides the streaming ones needed.
 	var streamReqReader stream.RequestReader = binary.Default
-	if rc.Protocol != nil && rc.NoWire {
+	if rc.NoWire && rc.Protocol != nil {
 		if sp, ok := rc.Protocol.(stream.RequestReader); ok {
 			streamReqReader = sp
 		}
@@ -115,7 +117,7 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 		case transport.Unary:
 			if rc.NoWire {
 				spec = transport.NewUnaryHandlerSpec(thriftNoWireHandler{
-					NoWireHandler: method.HandlerSpec.NoWire,
+					Handler:       method.HandlerSpec.NoWire,
 					RequestReader: streamReqReader,
 				})
 			} else {
@@ -128,7 +130,7 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 		case transport.Oneway:
 			if rc.NoWire {
 				spec = transport.NewOnewayHandlerSpec(thriftNoWireHandler{
-					NoWireHandler: method.HandlerSpec.NoWire,
+					Handler:       method.HandlerSpec.NoWire,
 					RequestReader: streamReqReader,
 				})
 			} else {
