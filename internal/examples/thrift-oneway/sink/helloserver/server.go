@@ -57,8 +57,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:   transport.Oneway,
 					Oneway: thrift.OnewayHandler(h.Sink),
-
-					NoWire: Sink_NoWireHandler{impl},
+					NoWire: sink_NoWireHandler{impl},
 				},
 				Signature:    "Sink(Snk *sink.SinkRequest)",
 				ThriftModule: sink.ThriftModule,
@@ -86,9 +85,9 @@ func (h handler) Sink(ctx context.Context, body wire.Value) error {
 	return h.impl.Sink(ctx, args.Snk)
 }
 
-type Sink_NoWireHandler struct{ impl Interface }
+type sink_NoWireHandler struct{ impl Interface }
 
-func (h Sink_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h sink_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args sink.Hello_Sink_Args
 

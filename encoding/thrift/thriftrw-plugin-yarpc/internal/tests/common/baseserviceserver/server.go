@@ -35,10 +35,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "healthy",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.Healthy),
-
-					NoWire: Healthy_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.Healthy),
+					NoWire: healthy_NoWireHandler{impl},
 				},
 				Signature:    "Healthy() (bool)",
 				ThriftModule: common.ThriftModule,
@@ -87,9 +86,9 @@ func (h handler) Healthy(ctx context.Context, body wire.Value) (thrift.Response,
 	return response, err
 }
 
-type Healthy_NoWireHandler struct{ impl Interface }
+type healthy_NoWireHandler struct{ impl Interface }
 
-func (h Healthy_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h healthy_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args common.BaseService_Healthy_Args
 		rw   stream.ResponseWriter
@@ -106,8 +105,7 @@ func (h Healthy_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoW
 
 	hadError := appErr != nil
 	result, err := common.BaseService_Healthy_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result

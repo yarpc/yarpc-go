@@ -50,10 +50,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "compareAndSwap",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.CompareAndSwap),
-
-					NoWire: CompareAndSwap_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.CompareAndSwap),
+					NoWire: compareandswap_NoWireHandler{impl},
 				},
 				Signature:    "CompareAndSwap(Request *atomic.CompareAndSwap)",
 				ThriftModule: atomic.ThriftModule,
@@ -65,8 +64,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:   transport.Oneway,
 					Oneway: thrift.OnewayHandler(h.Forget),
-
-					NoWire: Forget_NoWireHandler{impl},
+					NoWire: forget_NoWireHandler{impl},
 				},
 				Signature:    "Forget(Key *string)",
 				ThriftModule: atomic.ThriftModule,
@@ -76,10 +74,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "increment",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.Increment),
-
-					NoWire: Increment_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.Increment),
+					NoWire: increment_NoWireHandler{impl},
 				},
 				Signature:    "Increment(Key *string, Value *int64)",
 				ThriftModule: atomic.ThriftModule,
@@ -178,9 +175,9 @@ func (h handler) Increment(ctx context.Context, body wire.Value) (thrift.Respons
 	return response, err
 }
 
-type CompareAndSwap_NoWireHandler struct{ impl Interface }
+type compareandswap_NoWireHandler struct{ impl Interface }
 
-func (h CompareAndSwap_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h compareandswap_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args atomic.Store_CompareAndSwap_Args
 		rw   stream.ResponseWriter
@@ -197,8 +194,7 @@ func (h CompareAndSwap_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thr
 
 	hadError := appErr != nil
 	result, err := atomic.Store_CompareAndSwap_Helper.WrapResponse(appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -216,9 +212,9 @@ func (h CompareAndSwap_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thr
 
 }
 
-type Forget_NoWireHandler struct{ impl Interface }
+type forget_NoWireHandler struct{ impl Interface }
 
-func (h Forget_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h forget_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args atomic.Store_Forget_Args
 
@@ -234,9 +230,9 @@ func (h Forget_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWi
 
 }
 
-type Increment_NoWireHandler struct{ impl Interface }
+type increment_NoWireHandler struct{ impl Interface }
 
-func (h Increment_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h increment_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args atomic.Store_Increment_Args
 		rw   stream.ResponseWriter
@@ -253,8 +249,7 @@ func (h Increment_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.N
 
 	hadError := appErr != nil
 	result, err := atomic.Store_Increment_Helper.WrapResponse(appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result

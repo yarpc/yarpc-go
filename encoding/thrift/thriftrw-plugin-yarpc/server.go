@@ -85,8 +85,8 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Proced
 				<else>
 					Type: <$transport>.Unary,
 					Unary: <import $unaryWrapperImport>.<$unaryWrapperFunc>(h.<.Name>),
-				<end>
-					NoWire: <.Name>_NoWireHandler{impl},
+				<end ->
+					NoWire: <(lower .Name)>_NoWireHandler{impl},
 				},
 				Signature: "<.Name>(<range $i, $v := .Arguments><if ne $i 0>, <end><.Name> <formatType .Type><end>)<if not .OneWay | and .ReturnType> (<formatType .ReturnType>)<end>",
 				ThriftModule: <import $module.ImportPath>.ThriftModule,
@@ -181,9 +181,9 @@ func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$thrift>.
 <$yarpcerrors := import "go.uber.org/yarpc/yarpcerrors">
 <$prefix := printf "%s.%s_%s_" (import $module.ImportPath) $service.Name .Name>
 
-type <.Name>_NoWireHandler struct{ impl Interface }
+type <(lower .Name)>_NoWireHandler struct{ impl Interface }
 
-func (h <.Name>_NoWireHandler) HandleNoWire(ctx <$context>.Context, nwc *<$thrift>.NoWireCall) (<$thrift>.NoWireResponse, error) {
+func (h <(lower .Name)>_NoWireHandler) HandleNoWire(ctx <$context>.Context, nwc *<$thrift>.NoWireCall) (<$thrift>.NoWireResponse, error) {
 	var (
 		args <$prefix>Args
 		<if not .OneWay>rw <import "go.uber.org/thriftrw/protocol/stream">.ResponseWriter<end>

@@ -35,10 +35,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "check",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.Check),
-
-					NoWire: Check_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.Check),
+					NoWire: check_NoWireHandler{impl},
 				},
 				Signature:    "Check() (string)",
 				ThriftModule: weather.ThriftModule,
@@ -87,9 +86,9 @@ func (h handler) Check(ctx context.Context, body wire.Value) (thrift.Response, e
 	return response, err
 }
 
-type Check_NoWireHandler struct{ impl Interface }
+type check_NoWireHandler struct{ impl Interface }
 
-func (h Check_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h check_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args weather.Weather_Check_Args
 		rw   stream.ResponseWriter
@@ -106,8 +105,7 @@ func (h Check_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWir
 
 	hadError := appErr != nil
 	result, err := weather.Weather_Check_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result

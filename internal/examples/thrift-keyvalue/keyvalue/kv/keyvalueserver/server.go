@@ -62,10 +62,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "getValue",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetValue),
-
-					NoWire: GetValue_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.GetValue),
+					NoWire: getvalue_NoWireHandler{impl},
 				},
 				Signature:    "GetValue(Key *string) (string)",
 				ThriftModule: kv.ThriftModule,
@@ -75,10 +74,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "setValue",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.SetValue),
-
-					NoWire: SetValue_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.SetValue),
+					NoWire: setvalue_NoWireHandler{impl},
 				},
 				Signature:    "SetValue(Key *string, Value *string)",
 				ThriftModule: kv.ThriftModule,
@@ -157,9 +155,9 @@ func (h handler) SetValue(ctx context.Context, body wire.Value) (thrift.Response
 	return response, err
 }
 
-type GetValue_NoWireHandler struct{ impl Interface }
+type getvalue_NoWireHandler struct{ impl Interface }
 
-func (h GetValue_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h getvalue_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args kv.KeyValue_GetValue_Args
 		rw   stream.ResponseWriter
@@ -176,8 +174,7 @@ func (h GetValue_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.No
 
 	hadError := appErr != nil
 	result, err := kv.KeyValue_GetValue_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -195,9 +192,9 @@ func (h GetValue_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.No
 
 }
 
-type SetValue_NoWireHandler struct{ impl Interface }
+type setvalue_NoWireHandler struct{ impl Interface }
 
-func (h SetValue_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h setvalue_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args kv.KeyValue_SetValue_Args
 		rw   stream.ResponseWriter
@@ -214,8 +211,7 @@ func (h SetValue_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.No
 
 	hadError := appErr != nil
 	result, err := kv.KeyValue_SetValue_Helper.WrapResponse(appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result

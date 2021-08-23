@@ -60,10 +60,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "blahBlah",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.BlahBlah),
-
-					NoWire: BlahBlah_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.BlahBlah),
+					NoWire: blahblah_NoWireHandler{impl},
 				},
 				Signature:    "BlahBlah()",
 				ThriftModule: gauntlet.ThriftModule,
@@ -73,10 +72,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "secondtestString",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.SecondtestString),
-
-					NoWire: SecondtestString_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.SecondtestString),
+					NoWire: secondteststring_NoWireHandler{impl},
 				},
 				Signature:    "SecondtestString(Thing *string) (string)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -155,9 +153,9 @@ func (h handler) SecondtestString(ctx context.Context, body wire.Value) (thrift.
 	return response, err
 }
 
-type BlahBlah_NoWireHandler struct{ impl Interface }
+type blahblah_NoWireHandler struct{ impl Interface }
 
-func (h BlahBlah_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h blahblah_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.SecondService_BlahBlah_Args
 		rw   stream.ResponseWriter
@@ -174,8 +172,7 @@ func (h BlahBlah_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.No
 
 	hadError := appErr != nil
 	result, err := gauntlet.SecondService_BlahBlah_Helper.WrapResponse(appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -193,9 +190,9 @@ func (h BlahBlah_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.No
 
 }
 
-type SecondtestString_NoWireHandler struct{ impl Interface }
+type secondteststring_NoWireHandler struct{ impl Interface }
 
-func (h SecondtestString_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h secondteststring_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.SecondService_SecondtestString_Args
 		rw   stream.ResponseWriter
@@ -212,8 +209,7 @@ func (h SecondtestString_NoWireHandler) HandleNoWire(ctx context.Context, nwc *t
 
 	hadError := appErr != nil
 	result, err := gauntlet.SecondService_SecondtestString_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result

@@ -39,10 +39,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "integer",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.Integer),
-
-					NoWire: Integer_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.Integer),
+					NoWire: integer_NoWireHandler{impl},
 				},
 				Signature:    "Integer(Key *string) (int64)",
 				ThriftModule: atomic.ThriftModule,
@@ -102,9 +101,9 @@ func (h handler) Integer(ctx context.Context, body wire.Value) (thrift.Response,
 	return response, err
 }
 
-type Integer_NoWireHandler struct{ impl Interface }
+type integer_NoWireHandler struct{ impl Interface }
 
-func (h Integer_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h integer_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args atomic.ReadOnlyStore_Integer_Args
 		rw   stream.ResponseWriter
@@ -121,8 +120,7 @@ func (h Integer_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoW
 
 	hadError := appErr != nil
 	result, err := atomic.ReadOnlyStore_Integer_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
