@@ -49,17 +49,6 @@ func (br *bodyReader) Decode(sr stream.Reader) error {
 	return br.err
 }
 
-type responseEnveloper struct {
-	name         string
-	envelopeType wire.EnvelopeType
-}
-
-var _ stream.Enveloper = (*responseEnveloper)(nil)
-
-func (re responseEnveloper) MethodName() string              { return re.name }
-func (re responseEnveloper) EnvelopeType() wire.EnvelopeType { return re.envelopeType }
-func (re responseEnveloper) Encode(stream.Writer) error      { return nil }
-
 type responseWriter struct{ err error }
 
 var _ stream.ResponseWriter = (*responseWriter)(nil)
@@ -98,10 +87,17 @@ func (rh *responseHandler) HandleNoWire(ctx context.Context, nwc *NoWireCall) (N
 }
 
 func TestDecodeNoWireRequestUnary(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	env := streamtest.NewMockEnveloper(mockCtrl)
+	env.EXPECT().EnvelopeType().Return(wire.Reply).Times(1)
+	env.EXPECT().Encode(gomock.Any()).Return(nil).Times(1)
+
 	rh := responseHandler{
 		t:       t,
 		reqBody: &bodyReader{},
-		body:    responseEnveloper{name: "caller", envelopeType: wire.Reply},
+		body:    env,
 	}
 	proto := binary.Default
 	h := thriftNoWireHandler{
@@ -121,10 +117,15 @@ func TestDecodeNoWireRequestUnary(t *testing.T) {
 }
 
 func TestDecodeNoWireRequestOneway(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	// OneWay calls have no calls to the response body
+	env := streamtest.NewMockEnveloper(mockCtrl)
 	rh := responseHandler{
 		t:       t,
 		reqBody: &bodyReader{},
-		body:    responseEnveloper{name: "caller", envelopeType: wire.Reply},
+		body:    env,
 	}
 	proto := binary.Default
 	h := thriftNoWireHandler{
@@ -143,11 +144,17 @@ func TestDecodeNoWireRequestOneway(t *testing.T) {
 }
 
 func TestNoWireHandleIncorrectResponseEnvelope(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	env := streamtest.NewMockEnveloper(mockCtrl)
+	env.EXPECT().EnvelopeType().Return(wire.Exception).Times(1)
+
 	br := &bodyReader{}
 	rh := responseHandler{
 		t:       t,
 		reqBody: br,
-		body:    responseEnveloper{name: "caller", envelopeType: wire.Exception},
+		body:    env,
 	}
 	proto := binary.Default
 	h := thriftNoWireHandler{
@@ -169,13 +176,15 @@ func TestNoWireHandleWriteResponseError(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
+	env := streamtest.NewMockEnveloper(mockCtrl)
+	env.EXPECT().EnvelopeType().Return(wire.Reply).Times(1)
+
 	proto := streamtest.NewMockRequestReader(mockCtrl)
 	proto.EXPECT().ReadRequest(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(responseWriter{err: fmt.Errorf("write response error")}, nil)
 
-	re := responseEnveloper{name: "caller", envelopeType: wire.Reply}
 	br := &bodyReader{}
-	rh := responseHandler{t: t, reqBody: br, body: re}
+	rh := responseHandler{t: t, reqBody: br, body: env}
 	h := thriftNoWireHandler{
 		Handler:       &rh,
 		RequestReader: proto,
@@ -192,9 +201,13 @@ func TestNoWireHandleWriteResponseError(t *testing.T) {
 }
 
 func TestDecodeNoWireRequestExpectEncodingsError(t *testing.T) {
-	re := responseEnveloper{name: "caller", envelopeType: wire.Reply}
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	// incorrect encoding in response should result in no calls to the response body
+	env := streamtest.NewMockEnveloper(mockCtrl)
 	h := thriftNoWireHandler{
-		Handler:       &responseHandler{t: t, body: re},
+		Handler:       &responseHandler{t: t, body: env},
 		RequestReader: binary.Default,
 	}
 
@@ -211,13 +224,19 @@ func TestDecodeNoWireRequestExpectEncodingsError(t *testing.T) {
 }
 
 func TestDecodeNoWireAppliationError(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	env := streamtest.NewMockEnveloper(mockCtrl)
+	env.EXPECT().EnvelopeType().Return(wire.Reply).Times(1)
+	env.EXPECT().Encode(gomock.Any()).Return(nil).Times(1)
+
 	br := &bodyReader{}
-	re := responseEnveloper{name: "caller", envelopeType: wire.Reply}
 	h := thriftNoWireHandler{
 		Handler: &responseHandler{
 			t:        t,
 			reqBody:  br,
-			body:     re,
+			body:     env,
 			appError: true,
 		},
 		RequestReader: binary.Default,
@@ -227,7 +246,6 @@ func TestDecodeNoWireAppliationError(t *testing.T) {
 	defer cancel()
 
 	req := request()
-
 	rw := new(transporttest.FakeResponseWriter)
 	require.NoError(t, h.Handle(ctx, req, rw))
 	assert.True(t, rw.IsApplicationError)
