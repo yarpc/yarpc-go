@@ -212,8 +212,7 @@ func (h <.Name>_NoWireHandler) HandleNoWire(ctx <$context>.Context, nwc *<$thrif
 
 	hadError := appErr != nil
 	result, err := <$prefix>Helper.WrapResponse(<if .ReturnType>success,<end> appErr)
-	var response <$thrift>.NoWireResponse
-	response.ResponseWriter = rw
+	response := <$thrift>.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
