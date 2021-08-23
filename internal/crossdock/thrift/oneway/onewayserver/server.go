@@ -57,8 +57,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:   transport.Oneway,
 					Oneway: thrift.OnewayHandler(h.Echo),
-
-					NoWire: Echo_NoWireHandler{impl},
+					NoWire: echo_NoWireHandler{impl},
 				},
 				Signature:    "Echo(Token *string)",
 				ThriftModule: oneway.ThriftModule,
@@ -86,9 +85,9 @@ func (h handler) Echo(ctx context.Context, body wire.Value) error {
 	return h.impl.Echo(ctx, args.Token)
 }
 
-type Echo_NoWireHandler struct{ impl Interface }
+type echo_NoWireHandler struct{ impl Interface }
 
-func (h Echo_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h echo_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args oneway.Oneway_Echo_Args
 

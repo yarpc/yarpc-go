@@ -56,10 +56,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "echo",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.Echo),
-
-					NoWire: Echo_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.Echo),
+					NoWire: echo_NoWireHandler{impl},
 				},
 				Signature:    "Echo(Ping *echo.Ping) (*echo.Pong)",
 				ThriftModule: echo.ThriftModule,
@@ -108,9 +107,9 @@ func (h handler) Echo(ctx context.Context, body wire.Value) (thrift.Response, er
 	return response, err
 }
 
-type Echo_NoWireHandler struct{ impl Interface }
+type echo_NoWireHandler struct{ impl Interface }
 
-func (h Echo_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h echo_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args echo.Echo_Echo_Args
 		rw   stream.ResponseWriter
@@ -127,8 +126,7 @@ func (h Echo_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWire
 
 	hadError := appErr != nil
 	result, err := echo.Echo_Echo_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result

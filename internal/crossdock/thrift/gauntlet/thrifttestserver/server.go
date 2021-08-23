@@ -161,10 +161,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "testBinary",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.TestBinary),
-
-					NoWire: TestBinary_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestBinary),
+					NoWire: testbinary_NoWireHandler{impl},
 				},
 				Signature:    "TestBinary(Thing []byte) ([]byte)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -174,10 +173,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "testByte",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.TestByte),
-
-					NoWire: TestByte_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestByte),
+					NoWire: testbyte_NoWireHandler{impl},
 				},
 				Signature:    "TestByte(Thing *int8) (int8)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -187,10 +185,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "testDouble",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.TestDouble),
-
-					NoWire: TestDouble_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestDouble),
+					NoWire: testdouble_NoWireHandler{impl},
 				},
 				Signature:    "TestDouble(Thing *float64) (float64)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -200,10 +197,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "testEnum",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.TestEnum),
-
-					NoWire: TestEnum_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestEnum),
+					NoWire: testenum_NoWireHandler{impl},
 				},
 				Signature:    "TestEnum(Thing *gauntlet.Numberz) (gauntlet.Numberz)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -213,10 +209,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "testException",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.TestException),
-
-					NoWire: TestException_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestException),
+					NoWire: testexception_NoWireHandler{impl},
 				},
 				Signature:    "TestException(Arg *string)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -226,10 +221,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "testI32",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.TestI32),
-
-					NoWire: TestI32_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestI32),
+					NoWire: testi32_NoWireHandler{impl},
 				},
 				Signature:    "TestI32(Thing *int32) (int32)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -239,10 +233,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "testI64",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.TestI64),
-
-					NoWire: TestI64_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestI64),
+					NoWire: testi64_NoWireHandler{impl},
 				},
 				Signature:    "TestI64(Thing *int64) (int64)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -252,10 +245,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "testInsanity",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.TestInsanity),
-
-					NoWire: TestInsanity_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestInsanity),
+					NoWire: testinsanity_NoWireHandler{impl},
 				},
 				Signature:    "TestInsanity(Argument *gauntlet.Insanity) (map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -265,10 +257,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "testList",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.TestList),
-
-					NoWire: TestList_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestList),
+					NoWire: testlist_NoWireHandler{impl},
 				},
 				Signature:    "TestList(Thing []int32) ([]int32)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -278,10 +269,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "testMap",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.TestMap),
-
-					NoWire: TestMap_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestMap),
+					NoWire: testmap_NoWireHandler{impl},
 				},
 				Signature:    "TestMap(Thing map[int32]int32) (map[int32]int32)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -291,10 +281,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "testMapMap",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.TestMapMap),
-
-					NoWire: TestMapMap_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestMapMap),
+					NoWire: testmapmap_NoWireHandler{impl},
 				},
 				Signature:    "TestMapMap(Hello *int32) (map[int32]map[int32]int32)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -304,10 +293,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "testMulti",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.TestMulti),
-
-					NoWire: TestMulti_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestMulti),
+					NoWire: testmulti_NoWireHandler{impl},
 				},
 				Signature:    "TestMulti(Arg0 *int8, Arg1 *int32, Arg2 *int64, Arg3 map[int16]string, Arg4 *gauntlet.Numberz, Arg5 *gauntlet.UserId) (*gauntlet.Xtruct)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -317,10 +305,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "testMultiException",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.TestMultiException),
-
-					NoWire: TestMultiException_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestMultiException),
+					NoWire: testmultiexception_NoWireHandler{impl},
 				},
 				Signature:    "TestMultiException(Arg0 *string, Arg1 *string) (*gauntlet.Xtruct)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -330,10 +317,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "testNest",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.TestNest),
-
-					NoWire: TestNest_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestNest),
+					NoWire: testnest_NoWireHandler{impl},
 				},
 				Signature:    "TestNest(Thing *gauntlet.Xtruct2) (*gauntlet.Xtruct2)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -345,8 +331,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:   transport.Oneway,
 					Oneway: thrift.OnewayHandler(h.TestOneway),
-
-					NoWire: TestOneway_NoWireHandler{impl},
+					NoWire: testoneway_NoWireHandler{impl},
 				},
 				Signature:    "TestOneway(SecondsToSleep *int32)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -356,10 +341,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "testSet",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.TestSet),
-
-					NoWire: TestSet_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestSet),
+					NoWire: testset_NoWireHandler{impl},
 				},
 				Signature:    "TestSet(Thing map[int32]struct{}) (map[int32]struct{})",
 				ThriftModule: gauntlet.ThriftModule,
@@ -369,10 +353,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "testString",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.TestString),
-
-					NoWire: TestString_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestString),
+					NoWire: teststring_NoWireHandler{impl},
 				},
 				Signature:    "TestString(Thing *string) (string)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -382,10 +365,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "testStringMap",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.TestStringMap),
-
-					NoWire: TestStringMap_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestStringMap),
+					NoWire: teststringmap_NoWireHandler{impl},
 				},
 				Signature:    "TestStringMap(Thing map[string]string) (map[string]string)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -395,10 +377,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "testStruct",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.TestStruct),
-
-					NoWire: TestStruct_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestStruct),
+					NoWire: teststruct_NoWireHandler{impl},
 				},
 				Signature:    "TestStruct(Thing *gauntlet.Xtruct) (*gauntlet.Xtruct)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -408,10 +389,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "testTypedef",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.TestTypedef),
-
-					NoWire: TestTypedef_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestTypedef),
+					NoWire: testtypedef_NoWireHandler{impl},
 				},
 				Signature:    "TestTypedef(Thing *gauntlet.UserId) (gauntlet.UserId)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -421,10 +401,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "testVoid",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.TestVoid),
-
-					NoWire: TestVoid_NoWireHandler{impl},
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestVoid),
+					NoWire: testvoid_NoWireHandler{impl},
 				},
 				Signature:    "TestVoid()",
 				ThriftModule: gauntlet.ThriftModule,
@@ -1052,9 +1031,9 @@ func (h handler) TestVoid(ctx context.Context, body wire.Value) (thrift.Response
 	return response, err
 }
 
-type TestBinary_NoWireHandler struct{ impl Interface }
+type testbinary_NoWireHandler struct{ impl Interface }
 
-func (h TestBinary_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h testbinary_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestBinary_Args
 		rw   stream.ResponseWriter
@@ -1071,8 +1050,7 @@ func (h TestBinary_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.
 
 	hadError := appErr != nil
 	result, err := gauntlet.ThriftTest_TestBinary_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -1090,9 +1068,9 @@ func (h TestBinary_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.
 
 }
 
-type TestByte_NoWireHandler struct{ impl Interface }
+type testbyte_NoWireHandler struct{ impl Interface }
 
-func (h TestByte_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h testbyte_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestByte_Args
 		rw   stream.ResponseWriter
@@ -1109,8 +1087,7 @@ func (h TestByte_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.No
 
 	hadError := appErr != nil
 	result, err := gauntlet.ThriftTest_TestByte_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -1128,9 +1105,9 @@ func (h TestByte_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.No
 
 }
 
-type TestDouble_NoWireHandler struct{ impl Interface }
+type testdouble_NoWireHandler struct{ impl Interface }
 
-func (h TestDouble_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h testdouble_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestDouble_Args
 		rw   stream.ResponseWriter
@@ -1147,8 +1124,7 @@ func (h TestDouble_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.
 
 	hadError := appErr != nil
 	result, err := gauntlet.ThriftTest_TestDouble_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -1166,9 +1142,9 @@ func (h TestDouble_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.
 
 }
 
-type TestEnum_NoWireHandler struct{ impl Interface }
+type testenum_NoWireHandler struct{ impl Interface }
 
-func (h TestEnum_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h testenum_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestEnum_Args
 		rw   stream.ResponseWriter
@@ -1185,8 +1161,7 @@ func (h TestEnum_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.No
 
 	hadError := appErr != nil
 	result, err := gauntlet.ThriftTest_TestEnum_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -1204,9 +1179,9 @@ func (h TestEnum_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.No
 
 }
 
-type TestException_NoWireHandler struct{ impl Interface }
+type testexception_NoWireHandler struct{ impl Interface }
 
-func (h TestException_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h testexception_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestException_Args
 		rw   stream.ResponseWriter
@@ -1223,8 +1198,7 @@ func (h TestException_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thri
 
 	hadError := appErr != nil
 	result, err := gauntlet.ThriftTest_TestException_Helper.WrapResponse(appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -1242,9 +1216,9 @@ func (h TestException_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thri
 
 }
 
-type TestI32_NoWireHandler struct{ impl Interface }
+type testi32_NoWireHandler struct{ impl Interface }
 
-func (h TestI32_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h testi32_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestI32_Args
 		rw   stream.ResponseWriter
@@ -1261,8 +1235,7 @@ func (h TestI32_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoW
 
 	hadError := appErr != nil
 	result, err := gauntlet.ThriftTest_TestI32_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -1280,9 +1253,9 @@ func (h TestI32_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoW
 
 }
 
-type TestI64_NoWireHandler struct{ impl Interface }
+type testi64_NoWireHandler struct{ impl Interface }
 
-func (h TestI64_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h testi64_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestI64_Args
 		rw   stream.ResponseWriter
@@ -1299,8 +1272,7 @@ func (h TestI64_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoW
 
 	hadError := appErr != nil
 	result, err := gauntlet.ThriftTest_TestI64_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -1318,9 +1290,9 @@ func (h TestI64_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoW
 
 }
 
-type TestInsanity_NoWireHandler struct{ impl Interface }
+type testinsanity_NoWireHandler struct{ impl Interface }
 
-func (h TestInsanity_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h testinsanity_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestInsanity_Args
 		rw   stream.ResponseWriter
@@ -1337,8 +1309,7 @@ func (h TestInsanity_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrif
 
 	hadError := appErr != nil
 	result, err := gauntlet.ThriftTest_TestInsanity_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -1356,9 +1327,9 @@ func (h TestInsanity_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrif
 
 }
 
-type TestList_NoWireHandler struct{ impl Interface }
+type testlist_NoWireHandler struct{ impl Interface }
 
-func (h TestList_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h testlist_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestList_Args
 		rw   stream.ResponseWriter
@@ -1375,8 +1346,7 @@ func (h TestList_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.No
 
 	hadError := appErr != nil
 	result, err := gauntlet.ThriftTest_TestList_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -1394,9 +1364,9 @@ func (h TestList_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.No
 
 }
 
-type TestMap_NoWireHandler struct{ impl Interface }
+type testmap_NoWireHandler struct{ impl Interface }
 
-func (h TestMap_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h testmap_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestMap_Args
 		rw   stream.ResponseWriter
@@ -1413,8 +1383,7 @@ func (h TestMap_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoW
 
 	hadError := appErr != nil
 	result, err := gauntlet.ThriftTest_TestMap_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -1432,9 +1401,9 @@ func (h TestMap_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoW
 
 }
 
-type TestMapMap_NoWireHandler struct{ impl Interface }
+type testmapmap_NoWireHandler struct{ impl Interface }
 
-func (h TestMapMap_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h testmapmap_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestMapMap_Args
 		rw   stream.ResponseWriter
@@ -1451,8 +1420,7 @@ func (h TestMapMap_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.
 
 	hadError := appErr != nil
 	result, err := gauntlet.ThriftTest_TestMapMap_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -1470,9 +1438,9 @@ func (h TestMapMap_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.
 
 }
 
-type TestMulti_NoWireHandler struct{ impl Interface }
+type testmulti_NoWireHandler struct{ impl Interface }
 
-func (h TestMulti_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h testmulti_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestMulti_Args
 		rw   stream.ResponseWriter
@@ -1489,8 +1457,7 @@ func (h TestMulti_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.N
 
 	hadError := appErr != nil
 	result, err := gauntlet.ThriftTest_TestMulti_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -1508,9 +1475,9 @@ func (h TestMulti_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.N
 
 }
 
-type TestMultiException_NoWireHandler struct{ impl Interface }
+type testmultiexception_NoWireHandler struct{ impl Interface }
 
-func (h TestMultiException_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h testmultiexception_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestMultiException_Args
 		rw   stream.ResponseWriter
@@ -1527,8 +1494,7 @@ func (h TestMultiException_NoWireHandler) HandleNoWire(ctx context.Context, nwc 
 
 	hadError := appErr != nil
 	result, err := gauntlet.ThriftTest_TestMultiException_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -1546,9 +1512,9 @@ func (h TestMultiException_NoWireHandler) HandleNoWire(ctx context.Context, nwc 
 
 }
 
-type TestNest_NoWireHandler struct{ impl Interface }
+type testnest_NoWireHandler struct{ impl Interface }
 
-func (h TestNest_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h testnest_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestNest_Args
 		rw   stream.ResponseWriter
@@ -1565,8 +1531,7 @@ func (h TestNest_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.No
 
 	hadError := appErr != nil
 	result, err := gauntlet.ThriftTest_TestNest_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -1584,9 +1549,9 @@ func (h TestNest_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.No
 
 }
 
-type TestOneway_NoWireHandler struct{ impl Interface }
+type testoneway_NoWireHandler struct{ impl Interface }
 
-func (h TestOneway_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h testoneway_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestOneway_Args
 
@@ -1602,9 +1567,9 @@ func (h TestOneway_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.
 
 }
 
-type TestSet_NoWireHandler struct{ impl Interface }
+type testset_NoWireHandler struct{ impl Interface }
 
-func (h TestSet_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h testset_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestSet_Args
 		rw   stream.ResponseWriter
@@ -1621,8 +1586,7 @@ func (h TestSet_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoW
 
 	hadError := appErr != nil
 	result, err := gauntlet.ThriftTest_TestSet_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -1640,9 +1604,9 @@ func (h TestSet_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoW
 
 }
 
-type TestString_NoWireHandler struct{ impl Interface }
+type teststring_NoWireHandler struct{ impl Interface }
 
-func (h TestString_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h teststring_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestString_Args
 		rw   stream.ResponseWriter
@@ -1659,8 +1623,7 @@ func (h TestString_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.
 
 	hadError := appErr != nil
 	result, err := gauntlet.ThriftTest_TestString_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -1678,9 +1641,9 @@ func (h TestString_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.
 
 }
 
-type TestStringMap_NoWireHandler struct{ impl Interface }
+type teststringmap_NoWireHandler struct{ impl Interface }
 
-func (h TestStringMap_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h teststringmap_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestStringMap_Args
 		rw   stream.ResponseWriter
@@ -1697,8 +1660,7 @@ func (h TestStringMap_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thri
 
 	hadError := appErr != nil
 	result, err := gauntlet.ThriftTest_TestStringMap_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -1716,9 +1678,9 @@ func (h TestStringMap_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thri
 
 }
 
-type TestStruct_NoWireHandler struct{ impl Interface }
+type teststruct_NoWireHandler struct{ impl Interface }
 
-func (h TestStruct_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h teststruct_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestStruct_Args
 		rw   stream.ResponseWriter
@@ -1735,8 +1697,7 @@ func (h TestStruct_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.
 
 	hadError := appErr != nil
 	result, err := gauntlet.ThriftTest_TestStruct_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -1754,9 +1715,9 @@ func (h TestStruct_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.
 
 }
 
-type TestTypedef_NoWireHandler struct{ impl Interface }
+type testtypedef_NoWireHandler struct{ impl Interface }
 
-func (h TestTypedef_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h testtypedef_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestTypedef_Args
 		rw   stream.ResponseWriter
@@ -1773,8 +1734,7 @@ func (h TestTypedef_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift
 
 	hadError := appErr != nil
 	result, err := gauntlet.ThriftTest_TestTypedef_Helper.WrapResponse(success, appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
@@ -1792,9 +1752,9 @@ func (h TestTypedef_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift
 
 }
 
-type TestVoid_NoWireHandler struct{ impl Interface }
+type testvoid_NoWireHandler struct{ impl Interface }
 
-func (h TestVoid_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+func (h testvoid_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
 		args gauntlet.ThriftTest_TestVoid_Args
 		rw   stream.ResponseWriter
@@ -1811,8 +1771,7 @@ func (h TestVoid_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.No
 
 	hadError := appErr != nil
 	result, err := gauntlet.ThriftTest_TestVoid_Helper.WrapResponse(appErr)
-	var response thrift.NoWireResponse
-	response.ResponseWriter = rw
+	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
