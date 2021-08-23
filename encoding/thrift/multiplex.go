@@ -57,37 +57,37 @@ type multiplexedOutboundNoWireProtocol struct {
 }
 
 func (m multiplexedOutboundNoWireProtocol) Writer(w io.Writer) stream.Writer {
-	return multiplexedWriter{
+	return multiplexedNoWireWriter{
 		Writer:  m.Protocol.Writer(w),
 		Service: m.Service,
 	}
 }
 
 func (m multiplexedOutboundNoWireProtocol) Reader(r io.Reader) stream.Reader {
-	return multiplexedReader{
+	return multiplexedNoWireReader{
 		Reader:  m.Protocol.Reader(r),
 		Service: m.Service,
 	}
 }
 
-type multiplexedWriter struct {
+type multiplexedNoWireWriter struct {
 	stream.Writer
 
 	Service string
 }
 
-func (w multiplexedWriter) WriteEnvelopeBegin(eh stream.EnvelopeHeader) error {
+func (w multiplexedNoWireWriter) WriteEnvelopeBegin(eh stream.EnvelopeHeader) error {
 	eh.Name = w.Service + ":" + eh.Name
 	return w.Writer.WriteEnvelopeBegin(eh)
 }
 
-type multiplexedReader struct {
+type multiplexedNoWireReader struct {
 	stream.Reader
 
 	Service string
 }
 
-func (r multiplexedReader) ReadEnvelopeBegin() (stream.EnvelopeHeader, error) {
+func (r multiplexedNoWireReader) ReadEnvelopeBegin() (stream.EnvelopeHeader, error) {
 	eh, err := r.Reader.ReadEnvelopeBegin()
 	eh.Name = strings.TrimPrefix(eh.Name, r.Service+":")
 	return eh, err
