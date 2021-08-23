@@ -64,7 +64,7 @@ type disableEnvelopingNoWireProtocol struct {
 }
 
 func (evsp disableEnvelopingNoWireProtocol) Reader(r io.Reader) stream.Reader {
-	return disableEnvelopingReader{
+	return disableEnvelopingNoWireReader{
 		Reader: evsp.Protocol.Reader(r),
 		Type:   evsp.Type,
 	}
@@ -76,13 +76,13 @@ func (evsp disableEnvelopingNoWireProtocol) Writer(w io.Writer) stream.Writer {
 	}
 }
 
-type disableEnvelopingReader struct {
+type disableEnvelopingNoWireReader struct {
 	stream.Reader
 
 	Type wire.EnvelopeType
 }
 
-func (evr disableEnvelopingReader) ReadEnvelopeBegin() (stream.EnvelopeHeader, error) {
+func (evr disableEnvelopingNoWireReader) ReadEnvelopeBegin() (stream.EnvelopeHeader, error) {
 	return stream.EnvelopeHeader{
 		Name:  "",
 		Type:  evr.Type,
@@ -90,7 +90,7 @@ func (evr disableEnvelopingReader) ReadEnvelopeBegin() (stream.EnvelopeHeader, e
 	}, nil
 }
 
-func (evr disableEnvelopingReader) ReadEnvelopeEnd() error { return nil }
+func (evr disableEnvelopingNoWireReader) ReadEnvelopeEnd() error { return nil }
 
 type disableEnvelopingWriter struct {
 	stream.Writer
