@@ -40,15 +40,12 @@ require (
 	go.uber.org/goleak v1.0.0
 	go.uber.org/multierr v1.4.0
 	go.uber.org/net/metrics v1.3.0
-	go.uber.org/thriftrw v1.25.0
+	go.uber.org/thriftrw v1.28.1-0.20210819172219-1ceda9c81fb3
 	go.uber.org/tools v0.0.0-20190618225709-2cfd321de3ee
 	go.uber.org/zap v1.13.0
 	golang.org/x/lint v0.0.0-20200130185559-910be7a94367
-	golang.org/x/mod v0.2.0 // indirect
-	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
-	golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4 // indirect
-	golang.org/x/text v0.3.2 // indirect
-	golang.org/x/tools v0.0.0-20200216192241-b320d3a0f5a2
+	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
+	golang.org/x/tools v0.1.5
 	google.golang.org/genproto v0.0.0-20200212174721-66ed5ce911ce // indirect
 	google.golang.org/grpc v1.28.0
 	gopkg.in/yaml.v2 v2.2.8

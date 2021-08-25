@@ -13,10 +13,10 @@ require (
 	github.com/uber/tchannel-go v1.16.0
 	go.uber.org/fx v1.10.0
 	go.uber.org/multierr v1.4.0
-	go.uber.org/thriftrw v1.25.0
+	go.uber.org/thriftrw v1.28.1-0.20210819172219-1ceda9c81fb3
 	go.uber.org/yarpc v1.42.1
 	go.uber.org/zap v1.13.0
-	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
+	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
 	google.golang.org/grpc v1.28.0
 )
 
