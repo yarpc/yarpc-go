@@ -26,6 +26,7 @@ import (
 	"io"
 
 	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/protocol/envelope"
 	"go.uber.org/thriftrw/wire"
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
@@ -139,7 +140,7 @@ func decodeRequest(
 	wire.Value,
 	// how to encode the response, with the enveloping
 	// strategy corresponding to the request. It is not used for oneway handlers.
-	protocol.Responder,
+	envelope.Responder,
 	error,
 ) {
 	if err := errors.ExpectEncodings(treq, Encoding); err != nil {
@@ -166,7 +167,7 @@ func decodeEnvelopedRequest(
 	reqEnvelopeType wire.EnvelopeType,
 	proto protocol.Protocol,
 	reader io.ReaderAt,
-) (wire.Value, protocol.Responder, error) {
+) (wire.Value, envelope.Responder, error) {
 	var envelope wire.Envelope
 	envelope, err := proto.DecodeEnveloped(reader)
 	if err != nil {
@@ -177,6 +178,7 @@ func decodeEnvelopedRequest(
 		return wire.Value{}, nil, err
 	}
 	reqValue := envelope.Value
+	//lint:ignore SA1019 explicit use for known enveloping
 	responder := protocol.EnvelopeV1Responder{Name: envelope.Name, SeqID: envelope.SeqID}
 	return reqValue, responder, nil
 }
@@ -184,11 +186,12 @@ func decodeEnvelopedRequest(
 func decodeUnenvelopedRequest(
 	proto protocol.Protocol,
 	reader io.ReaderAt,
-) (wire.Value, protocol.Responder, error) {
+) (wire.Value, envelope.Responder, error) {
 	reqValue, err := proto.Decode(reader, wire.TStruct)
 	if err != nil {
 		return wire.Value{}, nil, err
 	}
+	//lint:ignore SA1019 explicit use for known enveloping
 	responder := protocol.NoEnvelopeResponder
 	return reqValue, responder, err
 }
