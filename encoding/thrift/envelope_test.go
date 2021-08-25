@@ -30,7 +30,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/protocol/binary"
 	"go.uber.org/thriftrw/wire"
 )
 
@@ -63,7 +63,7 @@ func TestDisableEnveloperEncode(t *testing.T) {
 		generate(&e.SeqID, rand)
 
 		var buffer bytes.Buffer
-		proto := disableEnvelopingProtocol{protocol.Binary, wire.Reply}
+		proto := disableEnvelopingProtocol{binary.Default, wire.Reply}
 		if !assert.NoError(t, proto.EncodeEnveloped(e, &buffer)) {
 			continue
 		}
