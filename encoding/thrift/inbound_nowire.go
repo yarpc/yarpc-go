@@ -43,7 +43,7 @@ type NoWireCall struct {
 }
 
 // NoWireHandler is implemented by the generated code for each method that the
-// server needs to implement.  It is responsible for unpacking the request,
+// server needs to implement. It is responsible for unpacking the request,
 // executing it, and returning a NoWireResponse that contains information about
 // how to construct a response as well as any relevant metadata while executing
 // the request.
