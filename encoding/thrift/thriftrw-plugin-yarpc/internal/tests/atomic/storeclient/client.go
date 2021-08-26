@@ -87,14 +87,12 @@ func (c client) CompareAndSwap(
 	args := atomic.Store_CompareAndSwap_Helper.Args(_Request)
 
 	if c.nwc != nil && c.nwc.Enabled() {
-		err = c.nwc.Call(ctx, args, &result, opts...)
-		if err != nil {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
 			return
 		}
 	} else {
 		var body wire.Value
-		body, err = c.c.Call(ctx, args, opts...)
-		if err != nil {
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
 			return
 		}
 
@@ -127,14 +125,12 @@ func (c client) Increment(
 	args := atomic.Store_Increment_Helper.Args(_Key, _Value)
 
 	if c.nwc != nil && c.nwc.Enabled() {
-		err = c.nwc.Call(ctx, args, &result, opts...)
-		if err != nil {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
 			return
 		}
 	} else {
 		var body wire.Value
-		body, err = c.c.Call(ctx, args, opts...)
-		if err != nil {
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
 			return
 		}
 

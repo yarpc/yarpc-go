@@ -89,7 +89,7 @@ func (w multiplexedNoWireWriter) WriteEnvelopeBegin(eh stream.EnvelopeHeader) er
 }
 
 // multiplexedNoWireReader overrides the normal ReadEnvelopeBegin with stripping
-// away the service name from the envlope.
+// away the service name from the envelope.
 type multiplexedNoWireReader struct {
 	stream.Reader
 
