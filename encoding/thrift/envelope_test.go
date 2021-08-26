@@ -23,6 +23,7 @@ package thrift
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"math/rand"
 	"reflect"
 	"testing"
@@ -30,7 +31,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/thriftrw/protocol/binary"
+	"go.uber.org/thriftrw/protocol/stream"
 	"go.uber.org/thriftrw/wire"
 )
 
@@ -98,4 +101,32 @@ func generate(v interface{}, r *rand.Rand) {
 	}
 
 	reflect.ValueOf(v).Elem().Set(out)
+}
+
+func TestDisableEnveloperNoWireRead(t *testing.T) {
+	cont := "some buffered contents"
+
+	buf := bytes.NewBuffer([]byte(cont))
+	evnw := disableEnvelopingNoWireProtocol{Protocol: binary.Default, Type: wire.Call}
+	sr := evnw.Reader(buf)
+	evh, err := sr.ReadEnvelopeBegin()
+	require.NoError(t, err)
+	assert.Equal(t, wire.Call, evh.Type)
+
+	err = sr.ReadEnvelopeEnd()
+	require.NoError(t, err)
+
+	rem, err := io.ReadAll(buf)
+	require.NoError(t, err)
+	assert.Equal(t, cont, string(rem), "readenvelope is not supposed to read anything from the buffer")
+}
+
+func TestDisableEnveloperNoWireWrite(t *testing.T) {
+	buf := bytes.Buffer{}
+	evnw := disableEnvelopingNoWireProtocol{Protocol: binary.Default, Type: wire.OneWay}
+	sw := evnw.Writer(&buf)
+
+	assert.NoError(t, sw.WriteEnvelopeBegin(stream.EnvelopeHeader{Name: "foo", Type: wire.Exception}))
+	assert.NoError(t, sw.WriteEnvelopeEnd())
+	assert.Zero(t, buf.Len(), "writeenvelope is not supposed to write to the buffer")
 }

@@ -50,6 +50,11 @@ func (m multiplexedOutboundProtocol) DecodeEnveloped(r io.ReaderAt) (wire.Envelo
 	return e, err
 }
 
+// multiplexedOutboundNoWireProtocol is a 'stream.Protocol' for outbound
+// requests that adds the name of the service to the envelope name for outbound
+// requests and strips it away for inbound requests. For both the underlying
+// 'stream.Reader' and 'stream.Writer' only the 'Begin's are overridden as the
+// 'End's are already no-ops.
 type multiplexedOutboundNoWireProtocol struct {
 	stream.Protocol
 
@@ -70,6 +75,8 @@ func (m multiplexedOutboundNoWireProtocol) Reader(r io.Reader) stream.Reader {
 	}
 }
 
+// multiplexedNoWireWriter overrides the normal WriteEnvelopeBegin with adding
+// the service name to the envelope name.
 type multiplexedNoWireWriter struct {
 	stream.Writer
 
@@ -81,6 +88,8 @@ func (w multiplexedNoWireWriter) WriteEnvelopeBegin(eh stream.EnvelopeHeader) er
 	return w.Writer.WriteEnvelopeBegin(eh)
 }
 
+// multiplexedNoWireReader overrides the normal ReadEnvelopeBegin with stripping
+// away the service name from the envlope.
 type multiplexedNoWireReader struct {
 	stream.Reader
 
