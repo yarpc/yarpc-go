@@ -81,14 +81,12 @@ func (c client) Echo(
 	args := echo.Hello_Echo_Helper.Args(_Echo)
 
 	if c.nwc != nil && c.nwc.Enabled() {
-		err = c.nwc.Call(ctx, args, &result, opts...)
-		if err != nil {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
 			return
 		}
 	} else {
 		var body wire.Value
-		body, err = c.c.Call(ctx, args, opts...)
-		if err != nil {
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
 			return
 		}
 

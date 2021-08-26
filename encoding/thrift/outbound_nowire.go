@@ -23,6 +23,7 @@ package thrift
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"go.uber.org/thriftrw/protocol/binary"
 	"go.uber.org/thriftrw/protocol/stream"
@@ -56,7 +57,8 @@ type NoWireClient interface {
 	Enabled() bool
 }
 
-// NewNoWire creates a new Thrift client.
+// NewNoWire creates a new Thrift client that leverages ThriftRW's "streaming"
+// implementation.
 func NewNoWire(c Config, opts ...ClientOption) NoWireClient {
 	// Code generated for Thrift client instantiation will probably be something
 	// like this:
@@ -82,6 +84,10 @@ func NewNoWire(c Config, opts ...ClientOption) NoWireClient {
 	if cc.Protocol != nil {
 		if val, ok := cc.Protocol.(stream.Protocol); ok {
 			p = val
+		} else {
+			panic(fmt.Sprintf(
+				"You have found a bug in YARPC. Please file a bug report at https://github.com/yarpc/yarpc-go/issues with this message: "+
+					"NewNoWire expected provided protocol %T to implement stream.Protocol", cc.Protocol))
 		}
 	}
 

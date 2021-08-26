@@ -76,7 +76,7 @@ func (evnw disableEnvelopingNoWireProtocol) Reader(r io.Reader) stream.Reader {
 }
 
 func (evnw disableEnvelopingNoWireProtocol) Writer(w io.Writer) stream.Writer {
-	return disableEnvelopingWriter{
+	return disableEnvelopingNoWireWriter{
 		Writer: evnw.Protocol.Writer(w),
 	}
 }
@@ -89,18 +89,20 @@ type disableEnvelopingNoWireReader struct {
 	Type wire.EnvelopeType
 }
 
-func (evr disableEnvelopingNoWireReader) ReadEnvelopeBegin() (stream.EnvelopeHeader, error) {
+func (evnwr disableEnvelopingNoWireReader) ReadEnvelopeBegin() (stream.EnvelopeHeader, error) {
 	return stream.EnvelopeHeader{
 		Name:  "", // we don't use the decoded name anywhere
-		Type:  evr.Type,
+		Type:  evnwr.Type,
 		SeqID: 1,
 	}, nil
 }
 
-// disableEnvelopingWriter overrides the normal WriteEnvelopeBegin with not
+// disableEnvelopingNoWireWriter overrides the normal WriteEnvelopeBegin with not
 // performing any writing of any enveloping.
-type disableEnvelopingWriter struct {
+type disableEnvelopingNoWireWriter struct {
 	stream.Writer
 }
 
-func (evw disableEnvelopingWriter) WriteEnvelopeBegin(stream.EnvelopeHeader) error { return nil }
+func (evnww disableEnvelopingNoWireWriter) WriteEnvelopeBegin(stream.EnvelopeHeader) error {
+	return nil
+}

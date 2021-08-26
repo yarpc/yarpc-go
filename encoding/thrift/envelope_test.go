@@ -83,29 +83,8 @@ func TestDisableEnveloperEncode(t *testing.T) {
 	}
 }
 
-// generate generates a random value into the given pointer.
-//
-// 	var i int
-// 	generate(&i, rand)
-//
-// If the type implements the quick.Generator interface, that is used.
-func generate(v interface{}, r *rand.Rand) {
-	t := reflect.TypeOf(v)
-	if t.Kind() != reflect.Ptr {
-		panic(fmt.Sprintf("%v is not a pointer type", t))
-	}
-
-	out, ok := quick.Value(t.Elem(), r)
-	if !ok {
-		panic(fmt.Sprintf("could not generate a value for %v", t))
-	}
-
-	reflect.ValueOf(v).Elem().Set(out)
-}
-
 func TestDisableEnveloperNoWireRead(t *testing.T) {
 	cont := "some buffered contents"
-
 	buf := bytes.NewBuffer([]byte(cont))
 	evnw := disableEnvelopingNoWireProtocol{Protocol: binary.Default, Type: wire.Call}
 	sr := evnw.Reader(buf)
@@ -126,7 +105,30 @@ func TestDisableEnveloperNoWireWrite(t *testing.T) {
 	evnw := disableEnvelopingNoWireProtocol{Protocol: binary.Default, Type: wire.OneWay}
 	sw := evnw.Writer(&buf)
 
-	assert.NoError(t, sw.WriteEnvelopeBegin(stream.EnvelopeHeader{Name: "foo", Type: wire.Exception}))
-	assert.NoError(t, sw.WriteEnvelopeEnd())
+	err := sw.WriteEnvelopeBegin(stream.EnvelopeHeader{Name: "foo", Type: wire.Exception})
+	require.NoError(t, err)
+
+	err = sw.WriteEnvelopeEnd()
+	assert.NoError(t, err)
 	assert.Zero(t, buf.Len(), "writeenvelope is not supposed to write to the buffer")
+}
+
+// generate generates a random value into the given pointer.
+//
+// 	var i int
+// 	generate(&i, rand)
+//
+// If the type implements the quick.Generator interface, that is used.
+func generate(v interface{}, r *rand.Rand) {
+	t := reflect.TypeOf(v)
+	if t.Kind() != reflect.Ptr {
+		panic(fmt.Sprintf("%v is not a pointer type", t))
+	}
+
+	out, ok := quick.Value(t.Elem(), r)
+	if !ok {
+		panic(fmt.Sprintf("could not generate a value for %v", t))
+	}
+
+	reflect.ValueOf(v).Elem().Set(out)
 }

@@ -27,10 +27,7 @@ import (
 	"go.uber.org/thriftrw/wire"
 )
 
-const (
-	_irrelevant = "irrelevant"
-	_response   = "response"
-)
+const _irrelevant = "irrelevant"
 
 type fakeBodyReader struct {
 	body string
@@ -42,6 +39,8 @@ func (f *fakeBodyReader) Decode(sr stream.Reader) error {
 	return err
 }
 
+// TODO(witriew): fakeEnveloper should be created with a constructor, allowing
+// its uses to dictate the returned values for MethodName and encoded string.
 type fakeEnveloper wire.EnvelopeType
 
 func (fakeEnveloper) MethodName() string {

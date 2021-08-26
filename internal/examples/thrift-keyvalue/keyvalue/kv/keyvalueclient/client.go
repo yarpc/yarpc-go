@@ -88,14 +88,12 @@ func (c client) GetValue(
 	args := kv.KeyValue_GetValue_Helper.Args(_Key)
 
 	if c.nwc != nil && c.nwc.Enabled() {
-		err = c.nwc.Call(ctx, args, &result, opts...)
-		if err != nil {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
 			return
 		}
 	} else {
 		var body wire.Value
-		body, err = c.c.Call(ctx, args, opts...)
-		if err != nil {
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
 			return
 		}
 
@@ -119,14 +117,12 @@ func (c client) SetValue(
 	args := kv.KeyValue_SetValue_Helper.Args(_Key, _Value)
 
 	if c.nwc != nil && c.nwc.Enabled() {
-		err = c.nwc.Call(ctx, args, &result, opts...)
-		if err != nil {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
 			return
 		}
 	} else {
 		var body wire.Value
-		body, err = c.c.Call(ctx, args, opts...)
-		if err != nil {
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
 			return
 		}
 

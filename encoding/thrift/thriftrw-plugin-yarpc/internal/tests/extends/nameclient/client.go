@@ -59,14 +59,12 @@ func (c client) Name(
 	args := extends.Name_Name_Helper.Args()
 
 	if c.nwc != nil && c.nwc.Enabled() {
-		err = c.nwc.Call(ctx, args, &result, opts...)
-		if err != nil {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
 			return
 		}
 	} else {
 		var body wire.Value
-		body, err = c.c.Call(ctx, args, opts...)
-		if err != nil {
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
 			return
 		}
 
