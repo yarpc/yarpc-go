@@ -57,9 +57,14 @@ func (ev disableEnvelopingProtocol) DecodeEnveloped(r io.ReaderAt) (wire.Envelop
 	}, err
 }
 
+// disableEnvelopingNoWireProtocol wraps a 'stream.Protocol' to explicitly not
+// perform any enveloping for payloads. For both the underlying 'stream.Reader'
+// and 'stream.Writer' only the 'Begin's are overridden as the 'End's are
+// already no-ops.
 type disableEnvelopingNoWireProtocol struct {
 	stream.Protocol
 
+	// EnvelopeType to use for decoded envelopes.
 	Type wire.EnvelopeType
 }
 
@@ -76,6 +81,8 @@ func (evnw disableEnvelopingNoWireProtocol) Writer(w io.Writer) stream.Writer {
 	}
 }
 
+// disableEnvelopingNoWireReader overrides the normal ReadEnvelopeBegin with
+// returning a fake envelope header without performing any reading.
 type disableEnvelopingNoWireReader struct {
 	stream.Reader
 
@@ -84,17 +91,16 @@ type disableEnvelopingNoWireReader struct {
 
 func (evr disableEnvelopingNoWireReader) ReadEnvelopeBegin() (stream.EnvelopeHeader, error) {
 	return stream.EnvelopeHeader{
-		Name:  "",
+		Name:  "", // we don't use the decoded name anywhere
 		Type:  evr.Type,
 		SeqID: 1,
 	}, nil
 }
 
-func (evr disableEnvelopingNoWireReader) ReadEnvelopeEnd() error { return nil }
-
+// disableEnvelopingWriter overrides the normal WriteEnvelopeBegin with not
+// performing any writing of any enveloping.
 type disableEnvelopingWriter struct {
 	stream.Writer
 }
 
 func (evw disableEnvelopingWriter) WriteEnvelopeBegin(stream.EnvelopeHeader) error { return nil }
-func (evw disableEnvelopingWriter) WriteEnvelopeEnd() error                        { return nil }

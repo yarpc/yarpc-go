@@ -39,11 +39,13 @@ import (
 const _body = "decoded"
 
 type bodyReader struct {
+	sr   stream.Reader
 	body string
 	err  error
 }
 
 func (br *bodyReader) Decode(sr stream.Reader) error {
+	br.sr = sr
 	br.body = _body
 	return br.err
 }

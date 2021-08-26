@@ -23,8 +23,24 @@ package thrift
 import (
 	"io"
 
+	"go.uber.org/thriftrw/protocol/stream"
 	"go.uber.org/thriftrw/wire"
 )
+
+const (
+	_irrelevant = "irrelevant"
+	_response   = "response"
+)
+
+type fakeBodyReader struct {
+	body string
+}
+
+func (f *fakeBodyReader) Decode(sr stream.Reader) error {
+	s, err := sr.ReadString()
+	f.body = s
+	return err
+}
 
 type fakeEnveloper wire.EnvelopeType
 
@@ -38,6 +54,10 @@ func (e fakeEnveloper) EnvelopeType() wire.EnvelopeType {
 
 func (fakeEnveloper) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{}), nil
+}
+
+func (fakeEnveloper) Encode(sw stream.Writer) error {
+	return sw.WriteString(_irrelevant)
 }
 
 type errorEnveloper struct {
@@ -57,10 +77,18 @@ func (e errorEnveloper) ToWire() (wire.Value, error) {
 	return wire.Value{}, e.err
 }
 
+func (e errorEnveloper) Encode(stream.Writer) error {
+	return e.err
+}
+
 type errorResponder struct {
 	err error
 }
 
 func (e errorResponder) EncodeResponse(v wire.Value, et wire.EnvelopeType, w io.Writer) error {
+	return e.err
+}
+
+func (e errorResponder) WriteResponse(wire.EnvelopeType, io.Writer, stream.Enveloper) error {
 	return e.err
 }
