@@ -176,7 +176,9 @@ func (c noWireThriftClient) Call(ctx context.Context, reqBody stream.Enveloper, 
 		if err := exc.Decode(sr); err != nil {
 			return errors.ResponseBodyDecodeError(treq, err)
 		}
-		defer sr.ReadEnvelopeEnd()
+		defer func() {
+			_ = sr.ReadEnvelopeEnd()
+		}()
 
 		return thriftException{
 			Service:   treq.Service,
