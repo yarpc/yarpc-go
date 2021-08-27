@@ -58,6 +58,8 @@ var defaultURLTemplate, _ = url.Parse("http://localhost")
 // OutboundOption customizes an HTTP Outbound.
 type OutboundOption func(*Outbound)
 
+type tokenFetcher func() string
+
 func (OutboundOption) httpOption() {}
 
 // URLTemplate specifies the URL this outbound makes requests to. For
@@ -89,6 +91,30 @@ func AddHeader(key, value string) OutboundOption {
 			o.headers = make(http.Header)
 		}
 		o.headers.Add(key, value)
+	}
+}
+
+// AddDynamicHeader specifies that an HTTP outbound should always include the given
+// header in outgoung requests.
+//
+// 	httpTransport.NewOutbound(chooser, http.AddHeader("X-Token", "TOKEN"))
+//
+// Note that headers starting with "Rpc-" are reserved by YARPC. This function
+// will panic if the header starts with "Rpc-".
+func AddDynamicHeader(key string, f tokenFetcher) OutboundOption {
+	token := f()
+	fmt.Println("outbound.go::AddDynamicHeader()::>>>>>>>>>>>>>>>>>>>> ", token)
+	if strings.HasPrefix(strings.ToLower(key), "rpc-") {
+		panic(fmt.Errorf(
+			"invalid header name %q: "+
+				`headers starting with "Rpc-" are reserved by YARPC`, key))
+	}
+
+	return func(o *Outbound) {
+		if o.headers == nil {
+			o.headers = make(http.Header)
+		}
+		o.headers.Add(key, token)
 	}
 }
 
