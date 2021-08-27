@@ -34,6 +34,7 @@ import (
 	"go.uber.org/thriftrw/protocol"
 	tbinary "go.uber.org/thriftrw/protocol/binary"
 	"go.uber.org/thriftrw/protocol/stream"
+	"go.uber.org/thriftrw/thrifttest"
 	"go.uber.org/thriftrw/thrifttest/streamtest"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport"
@@ -317,6 +318,17 @@ func TestNoWireClientOneway(t *testing.T) {
 			assert.Equal(t, "success", ack.String())
 		})
 	}
+}
+
+func TestNoNewWireBadProtocolConfig(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	proto := thrifttest.NewMockProtocol(mockCtrl)
+	assert.Panics(t,
+		func() {
+			NewNoWire(Config{}, Protocol(proto))
+		})
 }
 
 // encodeThriftString prefixes the passed in string with an int32 that contains
