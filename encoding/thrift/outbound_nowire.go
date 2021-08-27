@@ -86,8 +86,7 @@ func NewNoWire(c Config, opts ...ClientOption) NoWireClient {
 			p = val
 		} else {
 			panic(fmt.Sprintf(
-				"You have found a bug in YARPC. Please file a bug report at https://github.com/yarpc/yarpc-go/issues with this message: "+
-					"NewNoWire expected provided protocol %T to implement stream.Protocol", cc.Protocol))
+				"Protocol config option provided, NewNoWire expects provided protocol %T to implement stream.Protocol", cc.Protocol))
 		}
 	}
 
@@ -177,6 +176,8 @@ func (c noWireThriftClient) Call(ctx context.Context, reqBody stream.Enveloper, 
 		if err := exc.Decode(sr); err != nil {
 			return errors.ResponseBodyDecodeError(treq, err)
 		}
+		defer sr.ReadEnvelopeEnd()
+
 		return thriftException{
 			Service:   treq.Service,
 			Procedure: treq.Procedure,

@@ -59,24 +59,24 @@ func TestNoWireClientCall(t *testing.T) {
 		{
 			desc:             "positive case, without enveloping",
 			giveRequestBody:  fakeEnveloper(wire.Call),
-			giveResponseBody: encodeThriftString(_response),
+			giveResponseBody: encodeThriftString(t, _response),
 			expectCall:       true,
-			wantRequestBody:  encodeThriftString(_irrelevant),
+			wantRequestBody:  encodeThriftString(t, _irrelevant),
 			wantResponseBody: _response,
 		},
 		{
 			desc:            "positive case, with enveloping",
 			giveRequestBody: fakeEnveloper(wire.Call),
-			giveResponseBody: "\x80\x01\x00\x02" + // strict envelope version + wire.Reply
-				encodeThriftString("someMethod") +
-				"\x00\x00\x00\x01" + // seqID
-				encodeThriftString(_response),
+			giveResponseBody: encodeEnvelopeType(t, wire.Reply) +
+				encodeThriftString(t, "someMethod") +
+				encodeEnvelopeSeqID(t, 1) +
+				encodeThriftString(t, _response),
 			clientOptions: []ClientOption{Enveloped},
 			expectCall:    true,
-			wantRequestBody: "\x80\x01\x00\x01" + // strict envelope version + wire.Call
-				encodeThriftString("someMethod") +
-				"\x00\x00\x00\x01" + // seqID
-				encodeThriftString(_irrelevant),
+			wantRequestBody: encodeEnvelopeType(t, wire.Call) +
+				encodeThriftString(t, "someMethod") +
+				encodeEnvelopeSeqID(t, 1) +
+				encodeThriftString(t, _irrelevant),
 			wantResponseBody: _response,
 		},
 		{
@@ -88,14 +88,14 @@ func TestNoWireClientCall(t *testing.T) {
 			desc:            "response envelope exception (TApplicationException) decoding error",
 			giveRequestBody: fakeEnveloper(wire.Call),
 			clientOptions:   []ClientOption{Enveloped},
-			giveResponseBody: "\x80\x01\x00\x03" + // strict envelope version + wire.Exception
-				encodeThriftString("someMethod") +
-				"\x00\x00\x00\x01", // seqID
+			giveResponseBody: encodeEnvelopeType(t, wire.Exception) +
+				encodeThriftString(t, "someMethod") +
+				encodeEnvelopeSeqID(t, 1),
 			expectCall: true,
-			wantRequestBody: "\x80\x01\x00\x01" + // strict envelope version + wire.Call
-				encodeThriftString("someMethod") +
-				"\x00\x00\x00\x01" + // seqID
-				encodeThriftString(_irrelevant),
+			wantRequestBody: encodeEnvelopeType(t, wire.Call) +
+				encodeThriftString(t, "someMethod") +
+				encodeEnvelopeSeqID(t, 1) +
+				encodeThriftString(t, _irrelevant),
 			wantResponseBody: _response,
 			wantError:        `failed to decode "thrift" response body for procedure "MyService::someMethod" of service "service": unexpected EOF`,
 		},
@@ -103,31 +103,31 @@ func TestNoWireClientCall(t *testing.T) {
 			desc:            "response envelope exception (TApplicationException) error",
 			giveRequestBody: fakeEnveloper(wire.Call),
 			clientOptions:   []ClientOption{Enveloped},
-			giveResponseBody: "\x80\x01\x00\x03" + // strict envelope version + wire.Exception
-				encodeThriftString("someMethod") +
-				"\x00\x00\x00\x01" + // seqID
-				encodeThriftString(_response),
+			giveResponseBody: encodeEnvelopeType(t, wire.Exception) +
+				encodeThriftString(t, "someMethod") +
+				encodeEnvelopeSeqID(t, 1) +
+				encodeThriftString(t, _response),
 			expectCall: true,
-			wantRequestBody: "\x80\x01\x00\x01" + // strict envelope version + wire.Call
-				encodeThriftString("someMethod") +
-				"\x00\x00\x00\x01" + // seqID
-				encodeThriftString(_irrelevant),
+			wantRequestBody: encodeEnvelopeType(t, wire.Call) +
+				encodeThriftString(t, "someMethod") +
+				encodeEnvelopeSeqID(t, 1) +
+				encodeThriftString(t, _irrelevant),
 			wantResponseBody: _response,
 			wantError:        "encountered an internal failure: TApplicationException{}",
 		},
 		{
 			desc:            "unexpected response envelope type",
 			giveRequestBody: fakeEnveloper(wire.Call),
-			giveResponseBody: "\x80\x01\x00\x01" + // strict envelope version + wire.Reply
-				encodeThriftString("someMethod") +
-				"\x00\x00\x00\x01" + // seqID
-				encodeThriftString(_response),
+			giveResponseBody: encodeEnvelopeType(t, wire.Call) +
+				encodeThriftString(t, "someMethod") +
+				encodeEnvelopeSeqID(t, 1) +
+				encodeThriftString(t, _response),
 			clientOptions: []ClientOption{Enveloped},
 			expectCall:    true,
-			wantRequestBody: "\x80\x01\x00\x01" + // strict envelope version + wire.Call
-				encodeThriftString("someMethod") +
-				"\x00\x00\x00\x01" + // seqID
-				encodeThriftString(_irrelevant),
+			wantRequestBody: encodeEnvelopeType(t, wire.Call) +
+				encodeThriftString(t, "someMethod") +
+				encodeEnvelopeSeqID(t, 1) +
+				encodeThriftString(t, _irrelevant),
 			wantResponseBody: _response,
 			wantError:        `failed to decode "thrift" response body for procedure "MyService::someMethod" of service "service": unexpected envelope type: Call`,
 		},
@@ -217,17 +217,17 @@ func TestNoWireClientOneway(t *testing.T) {
 			msg:             "positive case, without enveloping",
 			giveRequestBody: fakeEnveloper(wire.OneWay),
 			expectCall:      true,
-			wantRequestBody: encodeThriftString(_irrelevant),
+			wantRequestBody: encodeThriftString(t, _irrelevant),
 		},
 		{
 			msg:             "positive case, with enveloping",
 			giveRequestBody: fakeEnveloper(wire.OneWay),
 			clientOptions:   []ClientOption{Enveloped},
 			expectCall:      true,
-			wantRequestBody: "\x80\x01\x00\x04" + // strict envelope version + wire.Oneway
-				encodeThriftString("someMethod") +
-				"\x00\x00\x00\x01" + // seqID
-				encodeThriftString(_irrelevant),
+			wantRequestBody: encodeEnvelopeType(t, wire.OneWay) +
+				encodeThriftString(t, "someMethod") +
+				encodeEnvelopeSeqID(t, 1) +
+				encodeThriftString(t, _irrelevant),
 		},
 		{
 			msg:             "unexpected request envelope type",
@@ -239,10 +239,10 @@ func TestNoWireClientOneway(t *testing.T) {
 			giveRequestBody: fakeEnveloper(wire.OneWay),
 			clientOptions:   []ClientOption{Enveloped},
 			expectCall:      true,
-			wantRequestBody: "\x80\x01\x00\x04" + // strict envelope version + wire.Oneway
-				encodeThriftString("someMethod") +
-				"\x00\x00\x00\x01" + // seqID
-				encodeThriftString(_irrelevant),
+			wantRequestBody: encodeEnvelopeType(t, wire.OneWay) +
+				encodeThriftString(t, "someMethod") +
+				encodeEnvelopeSeqID(t, 1) +
+				encodeThriftString(t, _irrelevant),
 			wantError: "oneway outbound error",
 		},
 	}
@@ -321,10 +321,27 @@ func TestNoWireClientOneway(t *testing.T) {
 
 // encodeThriftString prefixes the passed in string with an int32 that contains
 // the length of the string, compliant to the Thrift protocol.
-func encodeThriftString(s string) string {
-	buf := make([]byte, 4)
-	bigEndian := binary.BigEndian
-	bigEndian.PutUint32(buf, uint32(len(s)))
+func encodeThriftString(t *testing.T, s string) string {
+	t.Helper()
 
+	buf := make([]byte, 4)
+	binary.BigEndian.PutUint32(buf, uint32(len(s)))
 	return string(buf) + s
+}
+
+func encodeEnvelopeSeqID(t *testing.T, seqID int) string {
+	t.Helper()
+
+	buf := make([]byte, 4)
+	binary.BigEndian.PutUint32(buf, uint32(seqID))
+	return string(buf)
+}
+
+func encodeEnvelopeType(t *testing.T, et wire.EnvelopeType) string {
+	t.Helper()
+
+	buf := make([]byte, 4)
+	version := uint32(0x80010000) | uint32(et)
+	binary.BigEndian.PutUint32(buf, version)
+	return string(buf)
 }
