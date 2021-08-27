@@ -331,6 +331,56 @@ func TestNoNewWireBadProtocolConfig(t *testing.T) {
 		})
 }
 
+func TestBuildTransportRequestWriteError(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	sp := streamtest.NewMockProtocol(mockCtrl)
+	sw := streamtest.NewMockWriter(mockCtrl)
+	sp.EXPECT().Writer(gomock.Any()).Return(sw).AnyTimes()
+
+	nwc := noWireThriftClient{
+		cc:         clientconfig.MultiOutbound("caller", "service", transport.Outbounds{}),
+		p:          sp,
+		Enveloping: true,
+	}
+
+	wantEnvHeader := stream.EnvelopeHeader{
+		Name:  "someMethod",
+		Type:  wire.Call,
+		SeqID: 1,
+	}
+
+	t.Run("envelope begin", func(t *testing.T) {
+		sw.EXPECT().Close().Return(nil)
+		sw.EXPECT().WriteEnvelopeBegin(wantEnvHeader).Return(errors.New("writeenvelopebegin error"))
+
+		_, _, err := nwc.buildTransportRequest(fakeEnveloper(wire.Call))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `failed to encode "thrift" request body for procedure "::someMethod" of service "service": writeenvelopebegin error`)
+	})
+
+	t.Run("encode", func(t *testing.T) {
+		sw.EXPECT().Close().Return(nil)
+		sw.EXPECT().WriteEnvelopeBegin(wantEnvHeader).Return(nil)
+
+		_, _, err := nwc.buildTransportRequest(errorEnveloper{envelopeType: wire.Call, err: errors.New("encode error")})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `failed to encode "thrift" request body for procedure "::someMethod" of service "service": encode error`)
+	})
+
+	t.Run("encode", func(t *testing.T) {
+		sw.EXPECT().Close().Return(nil)
+		sw.EXPECT().WriteEnvelopeBegin(wantEnvHeader).Return(nil)
+		sw.EXPECT().WriteString(_irrelevant).Return(nil)
+		sw.EXPECT().WriteEnvelopeEnd().Return(errors.New("writeenvelopeend error"))
+
+		_, _, err := nwc.buildTransportRequest(fakeEnveloper(wire.Call))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `failed to encode "thrift" request body for procedure "::someMethod" of service "service": writeenvelopeend error`)
+	})
+}
+
 // encodeThriftString prefixes the passed in string with an int32 that contains
 // the length of the string, compliant to the Thrift protocol.
 func encodeThriftString(t *testing.T, s string) string {
