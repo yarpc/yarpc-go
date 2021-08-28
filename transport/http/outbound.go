@@ -58,7 +58,7 @@ var defaultURLTemplate, _ = url.Parse("http://localhost")
 // OutboundOption customizes an HTTP Outbound.
 type OutboundOption func(*Outbound)
 
-type tokenFetcher func() string
+type DynamicHeaderFun func(env, domain string) string
 
 func (OutboundOption) httpOption() {}
 
@@ -94,28 +94,10 @@ func AddHeader(key, value string) OutboundOption {
 	}
 }
 
-// AddDynamicHeader specifies that an HTTP outbound should always include the given
-// header in outgoung requests.
-//
-// 	httpTransport.NewOutbound(chooser, http.AddHeader("X-Token", "TOKEN"))
-//
-// Note that headers starting with "Rpc-" are reserved by YARPC. This function
-// will panic if the header starts with "Rpc-".
-func AddDynamicHeader(key string, f tokenFetcher) OutboundOption {
-	token := f()
-	fmt.Println("outbound.go::AddDynamicHeader()::>>>>>>>>>>>>>>>>>>>> ", token)
-	if strings.HasPrefix(strings.ToLower(key), "rpc-") {
-		panic(fmt.Errorf(
-			"invalid header name %q: "+
-				`headers starting with "Rpc-" are reserved by YARPC`, key))
-	}
-
-	return func(o *Outbound) {
-		if o.headers == nil {
-			o.headers = make(http.Header)
-		}
-		o.headers.Add(key, token)
-	}
+// AddDynamicHeader fetches the value of the header to be added by executing the function passed as parameter.
+func AddDynamicHeader(key string, f DynamicHeaderFun, env, domain string) OutboundOption {
+	token := f(env, domain)
+	return AddHeader(key, token)
 }
 
 // NewOutbound builds an HTTP outbound that sends requests to peers supplied
