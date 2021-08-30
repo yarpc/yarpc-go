@@ -58,7 +58,11 @@ var defaultURLTemplate, _ = url.Parse("http://localhost")
 // OutboundOption customizes an HTTP Outbound.
 type OutboundOption func(*Outbound)
 
-type DynamicHeaderFun func(env, domain string) string
+//type DynamicHeaderFun func(env, domain string) string
+// DynamicHeader
+type DynamicHeader interface {
+	GetDynamicHeader() string
+}
 
 func (OutboundOption) httpOption() {}
 
@@ -95,8 +99,9 @@ func AddHeader(key, value string) OutboundOption {
 }
 
 // AddDynamicHeader fetches the value of the header to be added by executing the function passed as parameter.
-func AddDynamicHeader(key string, f DynamicHeaderFun, env, domain string) OutboundOption {
-	token := f(env, domain)
+func AddDynamicHeader(key string, dh DynamicHeader) OutboundOption {
+	// token := f(env, domain)
+	token := dh.GetDynamicHeader()
 	return AddHeader(key, token)
 }
 
