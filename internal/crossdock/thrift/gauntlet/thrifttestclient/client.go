@@ -176,6 +176,10 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 			Service:      "ThriftTest",
 			ClientConfig: c,
 		}, opts...),
+		nwc: thrift.NewNoWire(thrift.Config{
+			Service:      "ThriftTest",
+			ClientConfig: c,
+		}, opts...),
 	}
 }
 
@@ -188,7 +192,8 @@ func init() {
 }
 
 type client struct {
-	c thrift.Client
+	c   thrift.Client
+	nwc thrift.NoWireClient
 }
 
 func (c client) TestBinary(
@@ -197,17 +202,22 @@ func (c client) TestBinary(
 	opts ...yarpc.CallOption,
 ) (success []byte, err error) {
 
+	var result gauntlet.ThriftTest_TestBinary_Result
 	args := gauntlet.ThriftTest_TestBinary_Helper.Args(_Thing)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.ThriftTest_TestBinary_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = gauntlet.ThriftTest_TestBinary_Helper.UnwrapResponse(&result)
@@ -220,17 +230,22 @@ func (c client) TestByte(
 	opts ...yarpc.CallOption,
 ) (success int8, err error) {
 
+	var result gauntlet.ThriftTest_TestByte_Result
 	args := gauntlet.ThriftTest_TestByte_Helper.Args(_Thing)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.ThriftTest_TestByte_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = gauntlet.ThriftTest_TestByte_Helper.UnwrapResponse(&result)
@@ -243,17 +258,22 @@ func (c client) TestDouble(
 	opts ...yarpc.CallOption,
 ) (success float64, err error) {
 
+	var result gauntlet.ThriftTest_TestDouble_Result
 	args := gauntlet.ThriftTest_TestDouble_Helper.Args(_Thing)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.ThriftTest_TestDouble_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = gauntlet.ThriftTest_TestDouble_Helper.UnwrapResponse(&result)
@@ -266,17 +286,22 @@ func (c client) TestEnum(
 	opts ...yarpc.CallOption,
 ) (success gauntlet.Numberz, err error) {
 
+	var result gauntlet.ThriftTest_TestEnum_Result
 	args := gauntlet.ThriftTest_TestEnum_Helper.Args(_Thing)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.ThriftTest_TestEnum_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = gauntlet.ThriftTest_TestEnum_Helper.UnwrapResponse(&result)
@@ -289,17 +314,22 @@ func (c client) TestException(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result gauntlet.ThriftTest_TestException_Result
 	args := gauntlet.ThriftTest_TestException_Helper.Args(_Arg)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.ThriftTest_TestException_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = gauntlet.ThriftTest_TestException_Helper.UnwrapResponse(&result)
@@ -312,17 +342,22 @@ func (c client) TestI32(
 	opts ...yarpc.CallOption,
 ) (success int32, err error) {
 
+	var result gauntlet.ThriftTest_TestI32_Result
 	args := gauntlet.ThriftTest_TestI32_Helper.Args(_Thing)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.ThriftTest_TestI32_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = gauntlet.ThriftTest_TestI32_Helper.UnwrapResponse(&result)
@@ -335,17 +370,22 @@ func (c client) TestI64(
 	opts ...yarpc.CallOption,
 ) (success int64, err error) {
 
+	var result gauntlet.ThriftTest_TestI64_Result
 	args := gauntlet.ThriftTest_TestI64_Helper.Args(_Thing)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.ThriftTest_TestI64_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = gauntlet.ThriftTest_TestI64_Helper.UnwrapResponse(&result)
@@ -358,17 +398,22 @@ func (c client) TestInsanity(
 	opts ...yarpc.CallOption,
 ) (success map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, err error) {
 
+	var result gauntlet.ThriftTest_TestInsanity_Result
 	args := gauntlet.ThriftTest_TestInsanity_Helper.Args(_Argument)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.ThriftTest_TestInsanity_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = gauntlet.ThriftTest_TestInsanity_Helper.UnwrapResponse(&result)
@@ -381,17 +426,22 @@ func (c client) TestList(
 	opts ...yarpc.CallOption,
 ) (success []int32, err error) {
 
+	var result gauntlet.ThriftTest_TestList_Result
 	args := gauntlet.ThriftTest_TestList_Helper.Args(_Thing)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.ThriftTest_TestList_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = gauntlet.ThriftTest_TestList_Helper.UnwrapResponse(&result)
@@ -404,17 +454,22 @@ func (c client) TestMap(
 	opts ...yarpc.CallOption,
 ) (success map[int32]int32, err error) {
 
+	var result gauntlet.ThriftTest_TestMap_Result
 	args := gauntlet.ThriftTest_TestMap_Helper.Args(_Thing)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.ThriftTest_TestMap_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = gauntlet.ThriftTest_TestMap_Helper.UnwrapResponse(&result)
@@ -427,17 +482,22 @@ func (c client) TestMapMap(
 	opts ...yarpc.CallOption,
 ) (success map[int32]map[int32]int32, err error) {
 
+	var result gauntlet.ThriftTest_TestMapMap_Result
 	args := gauntlet.ThriftTest_TestMapMap_Helper.Args(_Hello)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.ThriftTest_TestMapMap_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = gauntlet.ThriftTest_TestMapMap_Helper.UnwrapResponse(&result)
@@ -455,17 +515,22 @@ func (c client) TestMulti(
 	opts ...yarpc.CallOption,
 ) (success *gauntlet.Xtruct, err error) {
 
+	var result gauntlet.ThriftTest_TestMulti_Result
 	args := gauntlet.ThriftTest_TestMulti_Helper.Args(_Arg0, _Arg1, _Arg2, _Arg3, _Arg4, _Arg5)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.ThriftTest_TestMulti_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = gauntlet.ThriftTest_TestMulti_Helper.UnwrapResponse(&result)
@@ -479,17 +544,22 @@ func (c client) TestMultiException(
 	opts ...yarpc.CallOption,
 ) (success *gauntlet.Xtruct, err error) {
 
+	var result gauntlet.ThriftTest_TestMultiException_Result
 	args := gauntlet.ThriftTest_TestMultiException_Helper.Args(_Arg0, _Arg1)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.ThriftTest_TestMultiException_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = gauntlet.ThriftTest_TestMultiException_Helper.UnwrapResponse(&result)
@@ -502,17 +572,22 @@ func (c client) TestNest(
 	opts ...yarpc.CallOption,
 ) (success *gauntlet.Xtruct2, err error) {
 
+	var result gauntlet.ThriftTest_TestNest_Result
 	args := gauntlet.ThriftTest_TestNest_Helper.Args(_Thing)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.ThriftTest_TestNest_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = gauntlet.ThriftTest_TestNest_Helper.UnwrapResponse(&result)
@@ -534,17 +609,22 @@ func (c client) TestSet(
 	opts ...yarpc.CallOption,
 ) (success map[int32]struct{}, err error) {
 
+	var result gauntlet.ThriftTest_TestSet_Result
 	args := gauntlet.ThriftTest_TestSet_Helper.Args(_Thing)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.ThriftTest_TestSet_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = gauntlet.ThriftTest_TestSet_Helper.UnwrapResponse(&result)
@@ -557,17 +637,22 @@ func (c client) TestString(
 	opts ...yarpc.CallOption,
 ) (success string, err error) {
 
+	var result gauntlet.ThriftTest_TestString_Result
 	args := gauntlet.ThriftTest_TestString_Helper.Args(_Thing)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.ThriftTest_TestString_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = gauntlet.ThriftTest_TestString_Helper.UnwrapResponse(&result)
@@ -580,17 +665,22 @@ func (c client) TestStringMap(
 	opts ...yarpc.CallOption,
 ) (success map[string]string, err error) {
 
+	var result gauntlet.ThriftTest_TestStringMap_Result
 	args := gauntlet.ThriftTest_TestStringMap_Helper.Args(_Thing)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.ThriftTest_TestStringMap_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = gauntlet.ThriftTest_TestStringMap_Helper.UnwrapResponse(&result)
@@ -603,17 +693,22 @@ func (c client) TestStruct(
 	opts ...yarpc.CallOption,
 ) (success *gauntlet.Xtruct, err error) {
 
+	var result gauntlet.ThriftTest_TestStruct_Result
 	args := gauntlet.ThriftTest_TestStruct_Helper.Args(_Thing)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.ThriftTest_TestStruct_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = gauntlet.ThriftTest_TestStruct_Helper.UnwrapResponse(&result)
@@ -626,17 +721,22 @@ func (c client) TestTypedef(
 	opts ...yarpc.CallOption,
 ) (success gauntlet.UserId, err error) {
 
+	var result gauntlet.ThriftTest_TestTypedef_Result
 	args := gauntlet.ThriftTest_TestTypedef_Helper.Args(_Thing)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.ThriftTest_TestTypedef_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = gauntlet.ThriftTest_TestTypedef_Helper.UnwrapResponse(&result)
@@ -648,17 +748,22 @@ func (c client) TestVoid(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result gauntlet.ThriftTest_TestVoid_Result
 	args := gauntlet.ThriftTest_TestVoid_Helper.Args()
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.ThriftTest_TestVoid_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = gauntlet.ThriftTest_TestVoid_Helper.UnwrapResponse(&result)

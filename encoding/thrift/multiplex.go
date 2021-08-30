@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/protocol/stream"
 	"go.uber.org/thriftrw/wire"
 )
 
@@ -47,4 +48,56 @@ func (m multiplexedOutboundProtocol) DecodeEnveloped(r io.ReaderAt) (wire.Envelo
 	e, err := m.Protocol.DecodeEnveloped(r)
 	e.Name = strings.TrimPrefix(e.Name, m.Service+":")
 	return e, err
+}
+
+// multiplexedOutboundNoWireProtocol is a 'stream.Protocol' for outbound
+// requests that adds the name of the service to the envelope name for outbound
+// requests and strips it away for inbound requests. For both the underlying
+// 'stream.Reader' and 'stream.Writer' only the 'Begin's are overridden as the
+// 'End's are already no-ops.
+type multiplexedOutboundNoWireProtocol struct {
+	stream.Protocol
+
+	Service string
+}
+
+func (m multiplexedOutboundNoWireProtocol) Writer(w io.Writer) stream.Writer {
+	return multiplexedNoWireWriter{
+		Writer:  m.Protocol.Writer(w),
+		Service: m.Service,
+	}
+}
+
+func (m multiplexedOutboundNoWireProtocol) Reader(r io.Reader) stream.Reader {
+	return multiplexedNoWireReader{
+		Reader:  m.Protocol.Reader(r),
+		Service: m.Service,
+	}
+}
+
+// multiplexedNoWireWriter overrides the normal WriteEnvelopeBegin with adding
+// the service name to the envelope name.
+type multiplexedNoWireWriter struct {
+	stream.Writer
+
+	Service string
+}
+
+func (w multiplexedNoWireWriter) WriteEnvelopeBegin(eh stream.EnvelopeHeader) error {
+	eh.Name = w.Service + ":" + eh.Name
+	return w.Writer.WriteEnvelopeBegin(eh)
+}
+
+// multiplexedNoWireReader overrides the normal ReadEnvelopeBegin with stripping
+// away the service name from the envelope.
+type multiplexedNoWireReader struct {
+	stream.Reader
+
+	Service string
+}
+
+func (r multiplexedNoWireReader) ReadEnvelopeBegin() (stream.EnvelopeHeader, error) {
+	eh, err := r.Reader.ReadEnvelopeBegin()
+	eh.Name = strings.TrimPrefix(eh.Name, r.Service+":")
+	return eh, err
 }

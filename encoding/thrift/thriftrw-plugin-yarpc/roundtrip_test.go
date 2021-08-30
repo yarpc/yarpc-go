@@ -30,7 +30,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/protocol/binary"
 	"go.uber.org/thriftrw/ptr"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
@@ -55,27 +55,42 @@ import (
 )
 
 func TestRoundTrip(t *testing.T) {
-	tests := []struct{ enveloped, multiplexed bool }{
-		{true, true},
+	tests := []struct{ enveloped, multiplexed, nowireServer, nowireClient bool }{
+		{true, true, true, true},
+		{true, true, true, false},
+		{true, true, false, true},
+		{true, true, false, false},
 		// Skipping for now until flaky test fixed.
 		// Uncomment this when fixed.
 		// https://github.com/yarpc/yarpc-go/issues/1171
-		//{true, false},
-		{false, true},
-		{false, false},
+		//{true, false, true, true},
+		//{true, false, true, false},
+		//{true, false, false, true},
+		//{true, false, false, false},
+		{false, true, true, true},
+		{false, true, true, false},
+		{false, true, false, true},
+		{false, true, false, false},
+		{false, false, true, true},
+		{false, false, true, false},
+		{false, false, false, true},
+		{false, false, false, false},
 	}
 
 	for _, tt := range tests {
-		name := fmt.Sprintf("enveloped(%v)/multiplexed(%v)", tt.enveloped, tt.multiplexed)
-		t.Run(name, func(t *testing.T) { testRoundTrip(t, tt.enveloped, tt.multiplexed) })
+		name := fmt.Sprintf("enveloped(%v)/multiplexed(%v)/nowireServer(%v)/nowireClient(%v)", tt.enveloped, tt.multiplexed, tt.nowireServer, tt.nowireClient)
+		t.Run(name, func(t *testing.T) { testRoundTrip(t, tt.enveloped, tt.multiplexed, tt.nowireServer, tt.nowireClient) })
 	}
 }
 
-func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
+func testRoundTrip(t *testing.T, enveloped, multiplexed, nowireServer, nowireClient bool) {
+	t.Helper()
+
 	var serverOpts []thrift.RegisterOption
 	if enveloped {
 		serverOpts = append(serverOpts, thrift.Enveloped)
 	}
+	serverOpts = append(serverOpts, thrift.NoWire(nowireServer))
 
 	var clientOpts []string
 	if enveloped {
@@ -83,6 +98,9 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 	}
 	if multiplexed {
 		clientOpts = append(clientOpts, "multiplexed")
+	}
+	if nowireClient {
+		clientOpts = append(clientOpts, "nowire")
 	}
 
 	var thriftTag string
@@ -389,7 +407,7 @@ func TestFromWireInvalidArg(t *testing.T) {
 	require.NoError(t, err, "unable to covert type to wire.Value")
 
 	var body bytes.Buffer
-	err = (protocol.Binary).Encode(val, &body)
+	err = binary.Default.Encode(val, &body)
 	require.NoError(t, err, "could not marshal message to bytes")
 
 	err = procedure.HandlerSpec.Unary().Handle(context.Background(), &transport.Request{

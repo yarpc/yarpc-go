@@ -25,6 +25,7 @@ import (
 	"io"
 
 	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/protocol/stream"
 	"go.uber.org/thriftrw/wire"
 )
 
@@ -54,4 +55,54 @@ func (ev disableEnvelopingProtocol) DecodeEnveloped(r io.ReaderAt) (wire.Envelop
 		SeqID: 1,
 		Value: value,
 	}, err
+}
+
+// disableEnvelopingNoWireProtocol wraps a 'stream.Protocol' to explicitly not
+// perform any enveloping for payloads. For both the underlying 'stream.Reader'
+// and 'stream.Writer' only the 'Begin's are overridden as the 'End's are
+// already no-ops.
+type disableEnvelopingNoWireProtocol struct {
+	stream.Protocol
+
+	// EnvelopeType to use for decoded envelopes.
+	Type wire.EnvelopeType
+}
+
+func (evnw disableEnvelopingNoWireProtocol) Reader(r io.Reader) stream.Reader {
+	return disableEnvelopingNoWireReader{
+		Reader: evnw.Protocol.Reader(r),
+		Type:   evnw.Type,
+	}
+}
+
+func (evnw disableEnvelopingNoWireProtocol) Writer(w io.Writer) stream.Writer {
+	return disableEnvelopingNoWireWriter{
+		Writer: evnw.Protocol.Writer(w),
+	}
+}
+
+// disableEnvelopingNoWireReader overrides the normal ReadEnvelopeBegin with
+// returning a fake envelope header without performing any reading.
+type disableEnvelopingNoWireReader struct {
+	stream.Reader
+
+	Type wire.EnvelopeType
+}
+
+func (evnwr disableEnvelopingNoWireReader) ReadEnvelopeBegin() (stream.EnvelopeHeader, error) {
+	return stream.EnvelopeHeader{
+		Name:  "", // we don't use the decoded name anywhere
+		Type:  evnwr.Type,
+		SeqID: 1,
+	}, nil
+}
+
+// disableEnvelopingNoWireWriter overrides the normal WriteEnvelopeBegin with not
+// performing any writing of any enveloping.
+type disableEnvelopingNoWireWriter struct {
+	stream.Writer
+}
+
+func (evnww disableEnvelopingNoWireWriter) WriteEnvelopeBegin(stream.EnvelopeHeader) error {
+	return nil
 }

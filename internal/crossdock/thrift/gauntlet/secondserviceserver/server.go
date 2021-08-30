@@ -25,6 +25,7 @@ package secondserviceserver
 
 import (
 	context "context"
+	stream "go.uber.org/thriftrw/protocol/stream"
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
@@ -59,8 +60,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "blahBlah",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.BlahBlah),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.BlahBlah),
+					NoWire: blahblah_NoWireHandler{impl},
 				},
 				Signature:    "BlahBlah()",
 				ThriftModule: gauntlet.ThriftModule,
@@ -70,8 +72,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "secondtestString",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.SecondtestString),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.SecondtestString),
+					NoWire: secondteststring_NoWireHandler{impl},
 				},
 				Signature:    "SecondtestString(Thing *string) (string)",
 				ThriftModule: gauntlet.ThriftModule,
@@ -148,4 +151,78 @@ func (h handler) SecondtestString(ctx context.Context, body wire.Value) (thrift.
 	}
 
 	return response, err
+}
+
+type blahblah_NoWireHandler struct{ impl Interface }
+
+func (h blahblah_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.SecondService_BlahBlah_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'SecondService' procedure 'BlahBlah': %w", err)
+	}
+
+	appErr := h.impl.BlahBlah(ctx)
+
+	hadError := appErr != nil
+	result, err := gauntlet.SecondService_BlahBlah_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type secondteststring_NoWireHandler struct{ impl Interface }
+
+func (h secondteststring_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args gauntlet.SecondService_SecondtestString_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'SecondService' procedure 'SecondtestString': %w", err)
+	}
+
+	success, appErr := h.impl.SecondtestString(ctx, args.Thing)
+
+	hadError := appErr != nil
+	result, err := gauntlet.SecondService_SecondtestString_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
 }

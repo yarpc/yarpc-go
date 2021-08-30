@@ -70,6 +70,10 @@ func New(c <$transport>.ClientConfig, opts ...<$thrift>.ClientOption) Interface 
 			Service: "<.Name>",
 			ClientConfig: c,
 		}, opts...),
+		nwc: <$thrift>.NewNoWire(<$thrift>.Config{
+			Service: "<.Name>",
+			ClientConfig: c,
+		}, opts...),
 		<if .Parent>
 		Interface: <import .ParentClientPackagePath>.New(
 			c,
@@ -95,6 +99,7 @@ type client struct {
 	<if .Parent><import .ParentClientPackagePath>.Interface
 	<end>
 	c <$thrift>.Client
+	nwc <$thrift>.NoWireClient
 }
 
 <$service := .>
@@ -114,18 +119,23 @@ func (c client) <.Name>(
 }
 <else>) (<if .ReturnType>success <formatType .ReturnType>,<end> err error) {
 	<$wire := import "go.uber.org/thriftrw/wire">
+	var result <$prefix>Result
 	args := <$prefix>Helper.Args(<range .Arguments>_<.Name>, <end>)
 
 	<if $sanitize>ctx = <import "github.com/uber/tchannel-go">.WithoutHeaders(ctx)<end>
-	var body <$wire>.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body <$wire>.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result <$prefix>Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	<if .ReturnType>success, <end>err = <$prefix>Helper.UnwrapResponse(&result)
