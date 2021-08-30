@@ -6,11 +6,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
-- thrift: add server and client encoding implementations to use thriftrw's streaming.
-  Thriftrw's streaming is a faster way of encoding/decoding thrift payload.
+- thrift: add server and client encoding implementations to use ThriftRW's streaming.
+  ThriftRW's streaming is an optimized way of encoding/decoding thrift payloads.
 - thrift: add an option, `NoWire(enabled bool)` to enable thriftrw's streaming.
 ### Changed
-- Bump go.uber.org/thriftrw to v1.29.0 (thriftrw/thriftrw-go#539).
+- Bump minimum version of go.uber.org/thriftrw to v1.29.0.
 
 ## [1.56.1] - 2021-08-08
 ### Fixed
