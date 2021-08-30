@@ -5,7 +5,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- No changes yet.
+### Added
+- thrift: Add server and client implementations that use thriftrw's streaming
+	implementation
+- thrift: Add an option, `NoWire(bool)` that works for clients and servers to
+	enable use the thriftrw's streaming implementation.
+### Changed
+- Bump go.uber.org/thriftrw to v1.29.0 (thriftrw/thriftrw-go#539)
 
 ## [1.56.1] - 2021-08-08
 ### Fixed
