@@ -28,6 +28,7 @@ import (
 
 	"go.uber.org/thriftrw/envelope"
 	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/protocol/binary"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc"
 	encodingapi "go.uber.org/yarpc/api/encoding"
@@ -80,7 +81,7 @@ func New(c Config, opts ...ClientOption) Client {
 		opt.applyClientOption(&cc)
 	}
 
-	p := protocol.Binary
+	var p protocol.Protocol = binary.Default
 	if cc.Protocol != nil {
 		p = cc.Protocol
 	}

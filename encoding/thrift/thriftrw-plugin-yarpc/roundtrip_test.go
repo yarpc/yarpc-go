@@ -30,7 +30,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/protocol/binary"
 	"go.uber.org/thriftrw/ptr"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
@@ -389,7 +389,7 @@ func TestFromWireInvalidArg(t *testing.T) {
 	require.NoError(t, err, "unable to covert type to wire.Value")
 
 	var body bytes.Buffer
-	err = (protocol.Binary).Encode(val, &body)
+	err = binary.Default.Encode(val, &body)
 	require.NoError(t, err, "could not marshal message to bytes")
 
 	err = procedure.HandlerSpec.Unary().Handle(context.Background(), &transport.Request{
