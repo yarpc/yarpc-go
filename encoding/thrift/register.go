@@ -26,6 +26,7 @@ import (
 
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/protocol/binary"
+	"go.uber.org/thriftrw/protocol/stream"
 	"go.uber.org/thriftrw/thriftreflect"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport"
@@ -94,6 +95,15 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 		proto = rc.Protocol
 	}
 
+	// Only if we're trying to use the 'NoWire' implementation do we check if the
+	// config's `Protocol` provides the streaming ones needed.
+	var streamReqReader stream.RequestReader = binary.Default
+	if rc.NoWire && rc.Protocol != nil {
+		if sp, ok := rc.Protocol.(stream.RequestReader); ok {
+			streamReqReader = sp
+		}
+	}
+
 	svc := s.Name
 	if rc.ServiceName != "" {
 		svc = rc.ServiceName
@@ -105,17 +115,31 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 		var spec transport.HandlerSpec
 		switch method.HandlerSpec.Type {
 		case transport.Unary:
-			spec = transport.NewUnaryHandlerSpec(thriftUnaryHandler{
-				UnaryHandler: method.HandlerSpec.Unary,
-				Protocol:     proto,
-				Enveloping:   rc.Enveloping,
-			})
+			if rc.NoWire {
+				spec = transport.NewUnaryHandlerSpec(thriftNoWireHandler{
+					Handler:       method.HandlerSpec.NoWire,
+					RequestReader: streamReqReader,
+				})
+			} else {
+				spec = transport.NewUnaryHandlerSpec(thriftUnaryHandler{
+					UnaryHandler: method.HandlerSpec.Unary,
+					Protocol:     proto,
+					Enveloping:   rc.Enveloping,
+				})
+			}
 		case transport.Oneway:
-			spec = transport.NewOnewayHandlerSpec(thriftOnewayHandler{
-				OnewayHandler: method.HandlerSpec.Oneway,
-				Protocol:      proto,
-				Enveloping:    rc.Enveloping,
-			})
+			if rc.NoWire {
+				spec = transport.NewOnewayHandlerSpec(thriftNoWireHandler{
+					Handler:       method.HandlerSpec.NoWire,
+					RequestReader: streamReqReader,
+				})
+			} else {
+				spec = transport.NewOnewayHandlerSpec(thriftOnewayHandler{
+					OnewayHandler: method.HandlerSpec.Oneway,
+					Protocol:      proto,
+					Enveloping:    rc.Enveloping,
+				})
+			}
 		default:
 			panic(fmt.Sprintf("Invalid handler type for %T", method))
 		}
