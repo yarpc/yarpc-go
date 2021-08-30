@@ -5,6 +5,7 @@ package storeserver
 
 import (
 	context "context"
+	stream "go.uber.org/thriftrw/protocol/stream"
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
@@ -49,8 +50,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "compareAndSwap",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.CompareAndSwap),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.CompareAndSwap),
+					NoWire: compareandswap_NoWireHandler{impl},
 				},
 				Signature:    "CompareAndSwap(Request *atomic.CompareAndSwap)",
 				ThriftModule: atomic.ThriftModule,
@@ -62,6 +64,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:   transport.Oneway,
 					Oneway: thrift.OnewayHandler(h.Forget),
+					NoWire: forget_NoWireHandler{impl},
 				},
 				Signature:    "Forget(Key *string)",
 				ThriftModule: atomic.ThriftModule,
@@ -71,8 +74,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "increment",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.Increment),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.Increment),
+					NoWire: increment_NoWireHandler{impl},
 				},
 				Signature:    "Increment(Key *string, Value *int64)",
 				ThriftModule: atomic.ThriftModule,
@@ -169,4 +173,96 @@ func (h handler) Increment(ctx context.Context, body wire.Value) (thrift.Respons
 	}
 
 	return response, err
+}
+
+type compareandswap_NoWireHandler struct{ impl Interface }
+
+func (h compareandswap_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args atomic.Store_CompareAndSwap_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'Store' procedure 'CompareAndSwap': %w", err)
+	}
+
+	appErr := h.impl.CompareAndSwap(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := atomic.Store_CompareAndSwap_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type forget_NoWireHandler struct{ impl Interface }
+
+func (h forget_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args atomic.Store_Forget_Args
+
+		err error
+	)
+
+	if _, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args); err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'Store' procedure 'Forget': %w", err)
+	}
+
+	return thrift.NoWireResponse{}, h.impl.Forget(ctx, args.Key)
+
+}
+
+type increment_NoWireHandler struct{ impl Interface }
+
+func (h increment_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args atomic.Store_Increment_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'Store' procedure 'Increment': %w", err)
+	}
+
+	appErr := h.impl.Increment(ctx, args.Key, args.Value)
+
+	hadError := appErr != nil
+	result, err := atomic.Store_Increment_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
 }

@@ -25,6 +25,7 @@ package keyvalueserver
 
 import (
 	context "context"
+	stream "go.uber.org/thriftrw/protocol/stream"
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
@@ -61,8 +62,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "getValue",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetValue),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.GetValue),
+					NoWire: getvalue_NoWireHandler{impl},
 				},
 				Signature:    "GetValue(Key *string) (string)",
 				ThriftModule: kv.ThriftModule,
@@ -72,8 +74,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "setValue",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.SetValue),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.SetValue),
+					NoWire: setvalue_NoWireHandler{impl},
 				},
 				Signature:    "SetValue(Key *string, Value *string)",
 				ThriftModule: kv.ThriftModule,
@@ -150,4 +153,78 @@ func (h handler) SetValue(ctx context.Context, body wire.Value) (thrift.Response
 	}
 
 	return response, err
+}
+
+type getvalue_NoWireHandler struct{ impl Interface }
+
+func (h getvalue_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args kv.KeyValue_GetValue_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'KeyValue' procedure 'GetValue': %w", err)
+	}
+
+	success, appErr := h.impl.GetValue(ctx, args.Key)
+
+	hadError := appErr != nil
+	result, err := kv.KeyValue_GetValue_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type setvalue_NoWireHandler struct{ impl Interface }
+
+func (h setvalue_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args kv.KeyValue_SetValue_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'KeyValue' procedure 'SetValue': %w", err)
+	}
+
+	appErr := h.impl.SetValue(ctx, args.Key, args.Value)
+
+	hadError := appErr != nil
+	result, err := kv.KeyValue_SetValue_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
 }

@@ -5,6 +5,7 @@ package baseserviceserver
 
 import (
 	context "context"
+	stream "go.uber.org/thriftrw/protocol/stream"
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
@@ -34,8 +35,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "healthy",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.Healthy),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.Healthy),
+					NoWire: healthy_NoWireHandler{impl},
 				},
 				Signature:    "Healthy() (bool)",
 				ThriftModule: common.ThriftModule,
@@ -82,4 +84,41 @@ func (h handler) Healthy(ctx context.Context, body wire.Value) (thrift.Response,
 	}
 
 	return response, err
+}
+
+type healthy_NoWireHandler struct{ impl Interface }
+
+func (h healthy_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args common.BaseService_Healthy_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'BaseService' procedure 'Healthy': %w", err)
+	}
+
+	success, appErr := h.impl.Healthy(ctx)
+
+	hadError := appErr != nil
+	result, err := common.BaseService_Healthy_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
 }

@@ -25,6 +25,7 @@ package helloserver
 
 import (
 	context "context"
+	stream "go.uber.org/thriftrw/protocol/stream"
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
@@ -55,8 +56,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "echo",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.Echo),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.Echo),
+					NoWire: echo_NoWireHandler{impl},
 				},
 				Signature:    "Echo(Echo *echo.EchoRequest) (*echo.EchoResponse)",
 				ThriftModule: echo.ThriftModule,
@@ -103,4 +105,41 @@ func (h handler) Echo(ctx context.Context, body wire.Value) (thrift.Response, er
 	}
 
 	return response, err
+}
+
+type echo_NoWireHandler struct{ impl Interface }
+
+func (h echo_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args echo.Hello_Echo_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'Hello' procedure 'Echo': %w", err)
+	}
+
+	success, appErr := h.impl.Echo(ctx, args.Echo)
+
+	hadError := appErr != nil
+	result, err := echo.Hello_Echo_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
 }
