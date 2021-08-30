@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.57.0] - 2021-08-30
 ### Added
 - thrift: add server and client encoding implementations to use ThriftRW's streaming.
   ThriftRW's streaming is an optimized way of encoding/decoding thrift payloads.
@@ -1394,6 +1394,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[1.57.0]: https://github.com/yarpc/yarpc-go/compare/v1.56.1...v1.57.0
 [1.56.1]: https://github.com/yarpc/yarpc-go/compare/v1.56.0...v1.56.1
 [1.56.0]: https://github.com/yarpc/yarpc-go/compare/v1.55.1...v1.56.0
 [1.55.1]: https://github.com/yarpc/yarpc-go/compare/v1.55.0...v1.55.1
