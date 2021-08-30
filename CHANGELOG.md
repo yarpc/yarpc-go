@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - thrift: Add server and client implementations that use thriftrw's streaming
-	implementation
+  implementation
 - thrift: Add an option, `NoWire(bool)` that works for clients and servers to
-	enable use the thriftrw's streaming implementation.
+  enable use the thriftrw's streaming implementation.
 ### Changed
 - Bump go.uber.org/thriftrw to v1.29.0 (thriftrw/thriftrw-go#539)
 
