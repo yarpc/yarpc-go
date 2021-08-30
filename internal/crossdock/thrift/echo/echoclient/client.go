@@ -51,6 +51,10 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 			Service:      "Echo",
 			ClientConfig: c,
 		}, opts...),
+		nwc: thrift.NewNoWire(thrift.Config{
+			Service:      "Echo",
+			ClientConfig: c,
+		}, opts...),
 	}
 }
 
@@ -63,7 +67,8 @@ func init() {
 }
 
 type client struct {
-	c thrift.Client
+	c   thrift.Client
+	nwc thrift.NoWireClient
 }
 
 func (c client) Echo(
@@ -72,17 +77,22 @@ func (c client) Echo(
 	opts ...yarpc.CallOption,
 ) (success *echo.Pong, err error) {
 
+	var result echo.Echo_Echo_Result
 	args := echo.Echo_Echo_Helper.Args(_Ping)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result echo.Echo_Echo_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = echo.Echo_Echo_Helper.UnwrapResponse(&result)

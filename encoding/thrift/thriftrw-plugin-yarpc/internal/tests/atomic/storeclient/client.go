@@ -47,6 +47,10 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 			Service:      "Store",
 			ClientConfig: c,
 		}, opts...),
+		nwc: thrift.NewNoWire(thrift.Config{
+			Service:      "Store",
+			ClientConfig: c,
+		}, opts...),
 
 		Interface: readonlystoreclient.New(
 			c,
@@ -69,7 +73,8 @@ func init() {
 type client struct {
 	readonlystoreclient.Interface
 
-	c thrift.Client
+	c   thrift.Client
+	nwc thrift.NoWireClient
 }
 
 func (c client) CompareAndSwap(
@@ -78,17 +83,22 @@ func (c client) CompareAndSwap(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result atomic.Store_CompareAndSwap_Result
 	args := atomic.Store_CompareAndSwap_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result atomic.Store_CompareAndSwap_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = atomic.Store_CompareAndSwap_Helper.UnwrapResponse(&result)
@@ -111,17 +121,22 @@ func (c client) Increment(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result atomic.Store_Increment_Result
 	args := atomic.Store_Increment_Helper.Args(_Key, _Value)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result atomic.Store_Increment_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = atomic.Store_Increment_Helper.UnwrapResponse(&result)

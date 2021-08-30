@@ -31,6 +31,10 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 			Service:      "Weather",
 			ClientConfig: c,
 		}, opts...),
+		nwc: thrift.NewNoWire(thrift.Config{
+			Service:      "Weather",
+			ClientConfig: c,
+		}, opts...),
 	}
 }
 
@@ -43,7 +47,8 @@ func init() {
 }
 
 type client struct {
-	c thrift.Client
+	c   thrift.Client
+	nwc thrift.NoWireClient
 }
 
 func (c client) Check(
@@ -51,18 +56,23 @@ func (c client) Check(
 	opts ...yarpc.CallOption,
 ) (success string, err error) {
 
+	var result weather.Weather_Check_Result
 	args := weather.Weather_Check_Helper.Args()
 
 	ctx = tchannel.WithoutHeaders(ctx)
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result weather.Weather_Check_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = weather.Weather_Check_Helper.UnwrapResponse(&result)
