@@ -56,6 +56,10 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 			Service:      "SecondService",
 			ClientConfig: c,
 		}, opts...),
+		nwc: thrift.NewNoWire(thrift.Config{
+			Service:      "SecondService",
+			ClientConfig: c,
+		}, opts...),
 	}
 }
 
@@ -68,7 +72,8 @@ func init() {
 }
 
 type client struct {
-	c thrift.Client
+	c   thrift.Client
+	nwc thrift.NoWireClient
 }
 
 func (c client) BlahBlah(
@@ -76,17 +81,22 @@ func (c client) BlahBlah(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result gauntlet.SecondService_BlahBlah_Result
 	args := gauntlet.SecondService_BlahBlah_Helper.Args()
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.SecondService_BlahBlah_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = gauntlet.SecondService_BlahBlah_Helper.UnwrapResponse(&result)
@@ -99,17 +109,22 @@ func (c client) SecondtestString(
 	opts ...yarpc.CallOption,
 ) (success string, err error) {
 
+	var result gauntlet.SecondService_SecondtestString_Result
 	args := gauntlet.SecondService_SecondtestString_Helper.Args(_Thing)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result gauntlet.SecondService_SecondtestString_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = gauntlet.SecondService_SecondtestString_Helper.UnwrapResponse(&result)

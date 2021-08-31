@@ -5,6 +5,7 @@ package extendemptyserver
 
 import (
 	context "context"
+	stream "go.uber.org/thriftrw/protocol/stream"
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
@@ -37,8 +38,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "hello",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.Hello),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.Hello),
+					NoWire: hello_NoWireHandler{impl},
 				},
 				Signature:    "Hello()",
 				ThriftModule: common.ThriftModule,
@@ -96,4 +98,41 @@ func (h handler) Hello(ctx context.Context, body wire.Value) (thrift.Response, e
 	}
 
 	return response, err
+}
+
+type hello_NoWireHandler struct{ impl Interface }
+
+func (h hello_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args common.ExtendEmpty_Hello_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'ExtendEmpty' procedure 'Hello': %w", err)
+	}
+
+	appErr := h.impl.Hello(ctx)
+
+	hadError := appErr != nil
+	result, err := common.ExtendEmpty_Hello_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
 }

@@ -27,7 +27,7 @@ import (
 	"io/ioutil"
 
 	"github.com/opentracing/opentracing-go"
-	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/protocol/binary"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/serialize/internal"
@@ -74,7 +74,7 @@ func ToBytes(tracer opentracing.Tracer, spanContext opentracing.SpanContext, req
 	if err := writer.WriteByte(version); err != nil {
 		return nil, err
 	}
-	err = protocol.Binary.Encode(wireValue, &writer)
+	err = binary.Default.Encode(wireValue, &writer)
 	return writer.Bytes(), err
 }
 
@@ -93,7 +93,7 @@ func FromBytes(tracer opentracing.Tracer, request []byte) (opentracing.SpanConte
 	}
 
 	reader := bytes.NewReader(request[1:])
-	wireValue, err := protocol.Binary.Decode(reader, wire.TStruct)
+	wireValue, err := binary.Default.Decode(reader, wire.TStruct)
 	if err != nil {
 		return nil, nil, err
 	}

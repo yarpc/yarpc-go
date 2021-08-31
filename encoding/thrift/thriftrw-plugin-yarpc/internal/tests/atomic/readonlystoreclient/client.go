@@ -34,6 +34,10 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 			Service:      "ReadOnlyStore",
 			ClientConfig: c,
 		}, opts...),
+		nwc: thrift.NewNoWire(thrift.Config{
+			Service:      "ReadOnlyStore",
+			ClientConfig: c,
+		}, opts...),
 
 		Interface: baseserviceclient.New(
 			c,
@@ -56,7 +60,8 @@ func init() {
 type client struct {
 	baseserviceclient.Interface
 
-	c thrift.Client
+	c   thrift.Client
+	nwc thrift.NoWireClient
 }
 
 func (c client) Integer(
@@ -65,17 +70,22 @@ func (c client) Integer(
 	opts ...yarpc.CallOption,
 ) (success int64, err error) {
 
+	var result atomic.ReadOnlyStore_Integer_Result
 	args := atomic.ReadOnlyStore_Integer_Helper.Args(_Key)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result atomic.ReadOnlyStore_Integer_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = atomic.ReadOnlyStore_Integer_Helper.UnwrapResponse(&result)

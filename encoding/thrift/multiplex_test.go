@@ -22,11 +22,15 @@ package thrift
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/thriftrw/protocol/stream"
 	"go.uber.org/thriftrw/thrifttest"
+	"go.uber.org/thriftrw/thrifttest/streamtest"
 	"go.uber.org/thriftrw/wire"
 )
 
@@ -52,24 +56,48 @@ func TestMultiplexedEncode(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		mockProto := thrifttest.NewMockProtocol(mockCtrl)
-		proto := multiplexedOutboundProtocol{
-			Protocol: mockProto,
-			Service:  tt.service,
-		}
+		testName := strings.Join([]string{tt.service, tt.giveName, tt.wantName}, "-")
 
-		giveEnvelope := wire.Envelope{
-			Value: wire.NewValueStruct(wire.Struct{Fields: []wire.Field{}}),
-			Type:  wire.Call,
-			Name:  tt.giveName,
-			SeqID: 42,
-		}
+		t.Run("wireproto-"+testName, func(t *testing.T) {
+			mockProto := thrifttest.NewMockProtocol(mockCtrl)
+			proto := multiplexedOutboundProtocol{
+				Protocol: mockProto,
+				Service:  tt.service,
+			}
 
-		wantEnvelope := giveEnvelope
-		wantEnvelope.Name = tt.wantName
-		mockProto.EXPECT().EncodeEnveloped(wantEnvelope, gomock.Any()).Return(nil)
+			giveEnvelope := wire.Envelope{
+				Value: wire.NewValueStruct(wire.Struct{Fields: []wire.Field{}}),
+				Type:  wire.Call,
+				Name:  tt.giveName,
+				SeqID: 42,
+			}
 
-		assert.NoError(t, proto.EncodeEnveloped(giveEnvelope, new(bytes.Buffer)))
+			wantEnvelope := giveEnvelope
+			wantEnvelope.Name = tt.wantName
+			mockProto.EXPECT().EncodeEnveloped(wantEnvelope, gomock.Any()).Return(nil)
+
+			assert.NoError(t, proto.EncodeEnveloped(giveEnvelope, new(bytes.Buffer)))
+		})
+
+		t.Run("nowireproto-"+testName, func(t *testing.T) {
+			mockStreamWriter := streamtest.NewMockWriter(mockCtrl)
+			streamWriter := multiplexedNoWireWriter{
+				Writer:  mockStreamWriter,
+				Service: tt.service,
+			}
+
+			giveEnvelope := stream.EnvelopeHeader{
+				Type:  wire.Call,
+				Name:  tt.giveName,
+				SeqID: 42,
+			}
+
+			wantEnvelope := giveEnvelope
+			wantEnvelope.Name = tt.wantName
+			mockStreamWriter.EXPECT().WriteEnvelopeBegin(wantEnvelope).Return(nil)
+
+			assert.NoError(t, streamWriter.WriteEnvelopeBegin(giveEnvelope))
+		})
 	}
 }
 
@@ -95,23 +123,46 @@ func TestMultiplexedDecode(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		mockProto := thrifttest.NewMockProtocol(mockCtrl)
-		proto := multiplexedOutboundProtocol{
-			Protocol: mockProto,
-			Service:  tt.service,
-		}
+		testName := strings.Join([]string{tt.service, tt.giveName, tt.wantName}, "-")
 
-		mockProto.EXPECT().DecodeEnveloped(gomock.Any()).Return(
-			wire.Envelope{
-				Value: wire.NewValueStruct(wire.Struct{Fields: []wire.Field{}}),
-				Type:  wire.Call,
-				Name:  tt.giveName,
-				SeqID: 42,
-			}, nil)
+		t.Run("wireproto-"+testName, func(t *testing.T) {
+			mockProto := thrifttest.NewMockProtocol(mockCtrl)
+			proto := multiplexedOutboundProtocol{
+				Protocol: mockProto,
+				Service:  tt.service,
+			}
 
-		gotEnvelope, err := proto.DecodeEnveloped(bytes.NewReader([]byte{}))
-		if assert.NoError(t, err) {
+			mockProto.EXPECT().DecodeEnveloped(gomock.Any()).Return(
+				wire.Envelope{
+					Value: wire.NewValueStruct(wire.Struct{Fields: []wire.Field{}}),
+					Type:  wire.Call,
+					Name:  tt.giveName,
+					SeqID: 42,
+				}, nil)
+
+			gotEnvelope, err := proto.DecodeEnveloped(bytes.NewReader([]byte{}))
+			if assert.NoError(t, err) {
+				assert.Equal(t, tt.wantName, gotEnvelope.Name)
+			}
+		})
+
+		t.Run("nowireproto-"+testName, func(t *testing.T) {
+			mockStreamReader := streamtest.NewMockReader(mockCtrl)
+			streamReader := multiplexedNoWireReader{
+				Reader:  mockStreamReader,
+				Service: tt.service,
+			}
+
+			mockStreamReader.EXPECT().ReadEnvelopeBegin().Return(
+				stream.EnvelopeHeader{
+					Type:  wire.Call,
+					Name:  tt.giveName,
+					SeqID: 42,
+				}, nil)
+
+			gotEnvelope, err := streamReader.ReadEnvelopeBegin()
+			require.NoError(t, err)
 			assert.Equal(t, tt.wantName, gotEnvelope.Name)
-		}
+		})
 	}
 }

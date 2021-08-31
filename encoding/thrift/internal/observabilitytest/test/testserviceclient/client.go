@@ -51,6 +51,10 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 			Service:      "TestService",
 			ClientConfig: c,
 		}, opts...),
+		nwc: thrift.NewNoWire(thrift.Config{
+			Service:      "TestService",
+			ClientConfig: c,
+		}, opts...),
 	}
 }
 
@@ -63,7 +67,8 @@ func init() {
 }
 
 type client struct {
-	c thrift.Client
+	c   thrift.Client
+	nwc thrift.NoWireClient
 }
 
 func (c client) Call(
@@ -72,17 +77,22 @@ func (c client) Call(
 	opts ...yarpc.CallOption,
 ) (success string, err error) {
 
+	var result test.TestService_Call_Result
 	args := test.TestService_Call_Helper.Args(_Key)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result test.TestService_Call_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = test.TestService_Call_Helper.UnwrapResponse(&result)
