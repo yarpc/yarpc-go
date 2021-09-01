@@ -40,7 +40,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// This implements a test that verifies that the code in interna/tests/ is up to
+// This implements a test that verifies that the code in internal/tests/ is up to
 // date.
 
 const _testPackage = "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests"
