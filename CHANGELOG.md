@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Changed
 - Bump minimum version of go.uber.org/thriftrw to v1.29.1.
+
 ## [1.57.0] - 2021-08-30
 ### Added
 - thrift: add server and client encoding implementations to use ThriftRW's streaming.
