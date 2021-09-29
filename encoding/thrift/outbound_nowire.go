@@ -75,7 +75,9 @@ func NewNoWire(c Config, opts ...ClientOption) NoWireClient {
 	// So Config is really the internal config as far as consumers of the
 	// generated client are concerned.
 
-	var cc clientConfig
+	// default NoWire to true because this is the our final state to achieve
+	// but we still allow users to opt out by overriding NoWire to false.
+	cc := clientConfig{NoWire: true}
 	for _, opt := range opts {
 		opt.applyClientOption(&cc)
 	}
