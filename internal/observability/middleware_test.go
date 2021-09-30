@@ -2013,7 +2013,7 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 				Name:   "ttl_ms",
 				Tags:   tags,
 				Unit:   time.Millisecond,
-				Values: []int64{ttlMs},
+				Values: []int64{120000},
 			},
 		},
 	}
@@ -2117,7 +2117,7 @@ func TestMiddlewareSuccessSnapshotWithTagsFiltered(t *testing.T) {
 				Name:   "ttl_ms",
 				Tags:   tags,
 				Unit:   time.Millisecond,
-				Values: []int64{120000},
+				Values: []int64{ttlMs},
 			},
 		},
 	}
