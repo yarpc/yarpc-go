@@ -1927,6 +1927,7 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 		Logger:           zap.NewNop(),
 		Scope:            meter,
 		ContextExtractor: NewNopContextExtractor(),
+		LatencyBucketsMs: []int64{1, 20000},
 	})
 
 	buf := bufferpool.Get()
@@ -2013,7 +2014,7 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 				Name:   "ttl_ms",
 				Tags:   tags,
 				Unit:   time.Millisecond,
-				Values: []int64{ttlMs},
+				Values: []int64{20000},
 			},
 		},
 	}

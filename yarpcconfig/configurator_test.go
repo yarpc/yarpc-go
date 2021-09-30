@@ -362,6 +362,25 @@ func TestConfigurator(t *testing.T) {
 			},
 		},
 		{
+			desc: "latency buckets",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.serviceName = "foo"
+				tt.give = whitespace.Expand(`
+					metrics:
+						latencyBucketsMs: [1, 2, 3, 10, 100]
+				`)
+				tt.wantConfig = yarpc.Config{
+					Name: "foo",
+					Metrics: yarpc.MetricsConfig{
+						LatencyBucketsMs: []int64{
+							1, 2, 3, 10, 100,
+						},
+					},
+				}
+				return
+			},
+		},
+		{
 			desc: "application error, invalid type",
 			test: func(*testing.T, *gomock.Controller) (tt testCase) {
 				tt.give = whitespace.Expand(`

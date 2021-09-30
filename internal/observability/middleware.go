@@ -94,6 +94,10 @@ type Config struct {
 	// metrics emitted by the middleware.
 	MetricTagsBlocklist []string
 
+	// LatencyBucketsMs is a ordered list of latency buckets in milliseconds used
+	// by the middleware for all the latency histograms.
+	LatencyBucketsMs []int64
+
 	// ContextExtractor Extracts request-scoped information from the context for logging.
 	ContextExtractor ContextExtractor
 
@@ -147,7 +151,7 @@ type DirectionalLevelsConfig struct {
 // NewMiddleware constructs an observability middleware with the provided
 // configuration.
 func NewMiddleware(cfg Config) *Middleware {
-	m := &Middleware{newGraph(cfg.Scope, cfg.Logger, cfg.ContextExtractor, cfg.MetricTagsBlocklist)}
+	m := &Middleware{newGraph(cfg)}
 
 	// Apply the default levels
 	applyLogLevelsConfig(&m.graph.inboundLevels, &cfg.Levels.Default)

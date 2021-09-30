@@ -40,12 +40,14 @@ type yarpcConfig struct {
 
 // metrics allows configuring the way metrics are emitted from YAML
 type metrics struct {
-	TagsBlocklist []string `config:"tagsBlocklist"`
+	TagsBlocklist    []string `config:"tagsBlocklist"`
+	LatencyBucketsMs []int64  `config:"latencyBucketsMs"`
 }
 
 // Fills values from this object into the provided YARPC config.
 func (m *metrics) fill(cfg *yarpc.Config) {
 	cfg.Metrics.TagsBlocklist = m.TagsBlocklist
+	cfg.Metrics.LatencyBucketsMs = m.LatencyBucketsMs
 }
 
 // logging allows configuring the log levels from YAML.

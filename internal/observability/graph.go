@@ -36,8 +36,7 @@ import (
 var (
 	_timeNow          = time.Now // for tests
 	_defaultGraphSize = 128
-	// Latency buckets for histograms. At some point, we may want to make these
-	// configurable.
+	// Default latency buckets for histograms.
 	_bucketsMs = bucket.NewRPCLatency()
 	// Bytes buckets for payload size histograms, containing exponential buckets
 	// in range of 0B, 1B, 2B, ... 256MB.
@@ -62,6 +61,7 @@ type graph struct {
 	logger              *zap.Logger
 	extract             ContextExtractor
 	metricTagsBlocklist []string
+	latencyBucketsMs    []int64
 
 	edgesMu sync.RWMutex
 	edges   map[string]*edge
@@ -69,13 +69,14 @@ type graph struct {
 	inboundLevels, outboundLevels levels
 }
 
-func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor, metricTagsBlocklist []string) graph {
+func newGraph(cfg Config) graph {
 	return graph{
 		edges:               make(map[string]*edge, _defaultGraphSize),
-		meter:               meter,
-		logger:              logger,
-		extract:             extract,
-		metricTagsBlocklist: metricTagsBlocklist,
+		meter:               cfg.Scope,
+		logger:              cfg.Logger,
+		extract:             cfg.ContextExtractor,
+		latencyBucketsMs:    cfg.LatencyBucketsMs,
+		metricTagsBlocklist: cfg.MetricTagsBlocklist,
 		inboundLevels: levels{
 			success:          zapcore.DebugLevel,
 			failure:          zapcore.ErrorLevel,
@@ -151,7 +152,7 @@ func (g *graph) createEdge(key []byte, req *transport.Request, direction string,
 		return e
 	}
 
-	e := newEdge(g.logger, g.meter, g.metricTagsBlocklist, req, direction, rpcType)
+	e := newEdge(g.logger, g.meter, g.metricTagsBlocklist, req, direction, rpcType, g.latencyBucketsMs)
 	g.edges[string(key)] = e
 	return e
 }
@@ -196,7 +197,8 @@ type streamEdge struct {
 
 // newEdge constructs a new edge. Since Registries enforce metric uniqueness,
 // edges should be cached and re-used for each RPC.
-func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist []string, req *transport.Request, direction string, rpcType transport.Type) *edge {
+func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist []string,
+	req *transport.Request, direction string, rpcType transport.Type, latencyBucketsMs []int64) *edge {
 	tags := metrics.Tags{
 		"source":           req.Caller,
 		"dest":             req.Service,
@@ -257,6 +259,10 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist []str
 		logger.Error("Failed to create server failures vector.", zap.Error(err))
 	}
 
+	if len(latencyBucketsMs) == 0 {
+		latencyBucketsMs = _bucketsMs
+	}
+
 	// metrics for only unary and oneway
 	var latencies, callerErrLatencies, serverErrLatencies, ttls, timeoutTtls,
 		requestPayloadSizes, responsePayloadSizes *metrics.Histogram
@@ -268,7 +274,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist []str
 				ConstTags: tags,
 			},
 			Unit:    time.Millisecond,
-			Buckets: _bucketsMs,
+			Buckets: latencyBucketsMs,
 		})
 		if err != nil {
 			logger.Error("Failed to create success latency distribution.", zap.Error(err))
@@ -280,7 +286,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist []str
 				ConstTags: tags,
 			},
 			Unit:    time.Millisecond,
-			Buckets: _bucketsMs,
+			Buckets: latencyBucketsMs,
 		})
 		if err != nil {
 			logger.Error("Failed to create caller failure latency distribution.", zap.Error(err))
@@ -292,7 +298,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist []str
 				ConstTags: tags,
 			},
 			Unit:    time.Millisecond,
-			Buckets: _bucketsMs,
+			Buckets: latencyBucketsMs,
 		})
 		if err != nil {
 			logger.Error("Failed to create server failure latency distribution.", zap.Error(err))
@@ -304,7 +310,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist []str
 				ConstTags: tags,
 			},
 			Unit:    time.Millisecond,
-			Buckets: _bucketsMs,
+			Buckets: latencyBucketsMs,
 		})
 		if err != nil {
 			logger.Error("Failed to create ttl distribution.", zap.Error(err))
@@ -316,7 +322,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist []str
 				ConstTags: tags,
 			},
 			Unit:    time.Millisecond,
-			Buckets: _bucketsMs,
+			Buckets: latencyBucketsMs,
 		})
 		if err != nil {
 			logger.Error("Failed to create timeout ttl distribution.", zap.Error(err))
@@ -412,7 +418,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist []str
 				ConstTags: tags,
 			},
 			Unit:    time.Millisecond,
-			Buckets: _bucketsMs,
+			Buckets: latencyBucketsMs,
 		})
 		if err != nil {
 			logger.DPanic("Failed to create stream duration histogram.", zap.Error(err))

@@ -49,11 +49,11 @@ func TestEdgeNopFallbacks(t *testing.T) {
 	var tagsBlocklist []string
 
 	// Should succeed, covered by middleware tests.
-	_ = newEdge(zap.NewNop(), meter, tagsBlocklist, req, string(_directionOutbound), transport.Unary)
+	_ = newEdge(zap.NewNop(), meter, tagsBlocklist, req, string(_directionOutbound), transport.Unary, nil)
 
 	// Should fall back to no-op metrics.
 	// Usage of nil metrics should not panic, should not observe changes.
-	e := newEdge(zap.NewNop(), meter, tagsBlocklist, req, string(_directionOutbound), transport.Unary)
+	e := newEdge(zap.NewNop(), meter, tagsBlocklist, req, string(_directionOutbound), transport.Unary, nil)
 
 	e.calls.Inc()
 	assert.Equal(t, int64(0), e.calls.Load(), "Expected to fall back to no-op metrics.")

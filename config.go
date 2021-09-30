@@ -157,6 +157,9 @@ type MetricsConfig struct {
 	// TagsBlocklist enlists tags' keys that should be suppressed from all the metrics
 	// emitted from w/in YARPC middleware.
 	TagsBlocklist []string
+	// LatencyBucketsMs is a ordered list of latency buckets in milliseconds used
+	// for all the latency histograms emitted w/in YARPC observability middleware.
+	LatencyBucketsMs []int64
 }
 
 func (c MetricsConfig) scope(name string, logger *zap.Logger) (*metrics.Scope, context.CancelFunc) {
