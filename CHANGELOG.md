@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 - Bump minimum version of go.uber.org/thriftrw to v1.29.2.
 - Default to thriftrw NoWire for both client and server.
+- Increase latency histogram buckets upto 120s.
 
 ## [1.57.1] - 2021-09-31
 ### Changed
