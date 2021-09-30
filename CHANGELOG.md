@@ -5,7 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- No changes yet.
+### Changed
+- Bump minimum version of go.uber.org/thriftrw to v1.29.2.
+- Default to thriftrw NoWire for both client and server.
 
 ## [1.57.1] - 2021-09-31
 ### Changed

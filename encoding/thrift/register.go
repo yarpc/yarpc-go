@@ -85,7 +85,9 @@ type Service struct {
 // BuildProcedures builds a list of Procedures from a Thrift service
 // specification.
 func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
-	var rc registerConfig
+	// default NoWire to true because this is the our final state to achieve
+	// but we still allow users to opt out by overriding NoWire to false.
+	rc := registerConfig{NoWire: true}
 	for _, opt := range opts {
 		opt.applyRegisterOption(&rc)
 	}
