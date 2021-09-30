@@ -1920,7 +1920,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 func TestMiddlewareSuccessSnapshot(t *testing.T) {
 	timeVal := time.Now()
 	defer stubTimeWithTimeVal(timeVal)()
-	ttlMs := int64(1000)
+	ttlMs := int64(119999)
 	root := metrics.New()
 	meter := root.Scope()
 	mw := NewMiddleware(Config{
@@ -2117,7 +2117,7 @@ func TestMiddlewareSuccessSnapshotWithTagsFiltered(t *testing.T) {
 				Name:   "ttl_ms",
 				Tags:   tags,
 				Unit:   time.Millisecond,
-				Values: []int64{ttlMs},
+				Values: []int64{120000},
 			},
 		},
 	}

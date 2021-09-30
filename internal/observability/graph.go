@@ -38,7 +38,9 @@ var (
 	_defaultGraphSize = 128
 	// Latency buckets for histograms. At some point, we may want to make these
 	// configurable.
-	_bucketsMs = bucket.NewRPCLatency()
+	_bucketsMs = append(bucket.NewRPCLatency(),
+		20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000, 110000, 120000,
+	)
 	// Bytes buckets for payload size histograms, containing exponential buckets
 	// in range of 0B, 1B, 2B, ... 256MB.
 	_bucketsBytes = append([]int64{0}, bucket.NewExponential(1, 2, 29)...)
