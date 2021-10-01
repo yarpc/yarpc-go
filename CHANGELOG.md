@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+- No changes yet.
+
 ## [1.58.0] - 2021-09-29
 ### Changed
 - Bump minimum version of go.uber.org/thriftrw to v1.29.2.
@@ -1400,9 +1403,8 @@ This release requires regeneration of ThriftRW code.
 
 
 ## 0.1.0 - 2016-08-31
-
 - Initial release.
-
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.58.0...HEAD
 [1.58.0]: https://github.com/yarpc/yarpc-go/compare/v1.57.1...v1.58.0
 [1.57.1]: https://github.com/yarpc/yarpc-go/compare/v1.57.0...v1.57.1
 [1.57.0]: https://github.com/yarpc/yarpc-go/compare/v1.56.1...v1.57.0
