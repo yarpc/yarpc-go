@@ -28,6 +28,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
@@ -135,6 +136,121 @@ func TestInboundSubServices(t *testing.T) {
 			continue
 		}
 		assert.Equal(t, string(body), tt.service)
+	}
+
+	require.NoError(t, i.Stop())
+	require.NoError(t, it.Stop())
+	require.NoError(t, o.Stop())
+}
+
+type nopNativehandler struct{}
+
+func (nopNativehandler) Handle(ctx context.Context, call *tchannel.InboundCall) {
+	reader, err := call.Arg2Reader()
+	if err != nil {
+		panic(err)
+	}
+	ioutil.ReadAll(reader)
+	reader.Close()
+
+	reader, err = call.Arg3Reader()
+	if err != nil {
+		panic(err)
+	}
+	ioutil.ReadAll(reader)
+	reader.Close()
+
+	writer, err := call.Response().Arg2Writer()
+	if err != nil {
+		panic(err)
+	}
+	writer.Write([]byte{0, 0})
+	writer.Close()
+
+	writer, err = call.Response().Arg3Writer()
+	if err != nil {
+		panic(err)
+	}
+
+	if _, err := writer.Write([]byte("myservice-native")); err != nil {
+		panic(err)
+	}
+	writer.Close()
+}
+
+type testNativeMethods struct {
+	methods []NativeTchannelMethod
+}
+
+func (t *testNativeMethods) Methods() []NativeTchannelMethod {
+	return t.methods
+}
+
+func TestInboundWithNativeHandlers(t *testing.T) {
+	nativeMethods := &testNativeMethods{
+		methods: []NativeTchannelMethod{
+			{
+				Handler: nopNativehandler{},
+				Name:    "myservice::echo",
+			},
+		},
+	}
+	it, err := NewTransport(ServiceName("myservice"), ListenAddr("localhost:0"),
+		WithNativeTchannelMethods([]string{"myservice::echo"}, nativeMethods))
+	require.NoError(t, err)
+
+	router := yarpc.NewMapRouter("myservice")
+	i := it.NewInbound()
+	i.SetRouter(router)
+
+	nophandlerspec := transport.NewUnaryHandlerSpec(nophandler{})
+
+	router.Register([]transport.Procedure{
+		{Name: "myservice::hello", HandlerSpec: nophandlerspec},
+	})
+
+	require.NoError(t, i.Start())
+	require.NoError(t, it.Start())
+
+	ot, err := NewTransport(ServiceName("caller"))
+	require.NoError(t, err)
+	o := ot.NewSingleOutbound(it.ListenAddr())
+	require.NoError(t, o.Start())
+	require.NoError(t, ot.Start())
+
+	defer o.Stop()
+
+	for _, tt := range []struct {
+		service          string
+		procedure        string
+		expectedResponse string
+	}{
+		{"myservice", "myservice::hello", "myservice"},
+		{"myservice", "myservice::echo", "myservice-native"},
+	} {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*testtime.Second)
+		defer cancel()
+		res, err := o.Call(
+			ctx,
+			&transport.Request{
+				Caller:    "caller",
+				Service:   tt.service,
+				Procedure: tt.procedure,
+				Encoding:  raw.Encoding,
+				Body:      bytes.NewReader([]byte{}),
+			},
+		)
+		if !assert.NoError(t, err, "failed to make call") {
+			continue
+		}
+		if !assert.Equal(t, false, res.ApplicationError, "not application error") {
+			continue
+		}
+		body, err := ioutil.ReadAll(res.Body)
+		if !assert.NoError(t, err) {
+			continue
+		}
+		assert.Equal(t, string(body), tt.expectedResponse)
 	}
 
 	require.NoError(t, i.Stop())

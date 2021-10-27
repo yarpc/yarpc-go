@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
+	"github.com/uber/tchannel-go"
 	backoffapi "go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/zap"
@@ -59,6 +60,8 @@ type transportOptions struct {
 	connTimeout         time.Duration
 	connBackoffStrategy backoffapi.Strategy
 	originalHeaders     bool
+	skipHandlerMethods  []string
+	nativeMethods       NativeTchannelMethods
 }
 
 // newTransportOptions constructs the default transport options struct
@@ -193,5 +196,30 @@ func ConnBackoff(s backoffapi.Strategy) TransportOption {
 func OriginalHeaders() TransportOption {
 	return func(options *transportOptions) {
 		options.originalHeaders = true
+	}
+}
+
+// NativeTchannelMethod holds method name and handler. Method name must be fully
+// qualified name, for example "meta::health".
+type NativeTchannelMethod struct {
+	Name    string
+	Handler tchannel.Handler
+}
+
+// NativeTchannelMethods interface exposes a method `Methods` which returns all
+// the native tchannel methods.
+type NativeTchannelMethods interface {
+	Methods() []NativeTchannelMethod
+}
+
+// WithNativeTchannelMethods specifies the list of methods whose requests must
+// be handled by the provided native TChannel method handlers.
+//
+// Requests with other methods will be handled by the Yarpc router.
+// This is useful for gradual migration.
+func WithNativeTchannelMethods(skipMethods []string, nativeMethods NativeTchannelMethods) TransportOption {
+	return func(option *transportOptions) {
+		option.skipHandlerMethods = skipMethods
+		option.nativeMethods = nativeMethods
 	}
 }

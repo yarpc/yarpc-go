@@ -69,6 +69,9 @@ type Transport struct {
 	headerCase          headerCase
 
 	peers map[string]*tchannelPeer
+
+	skipHandlerMethods []string
+	nativeMethods      NativeTchannelMethods
 }
 
 // NewTransport is a YARPC transport that facilitates sending and receiving
@@ -114,6 +117,8 @@ func (o transportOptions) newTransport() *Transport {
 		logger:              logger,
 		headerCase:          headerCase,
 		newResponseWriter:   newHandlerWriter,
+		skipHandlerMethods:  o.skipHandlerMethods,
+		nativeMethods:       o.nativeMethods,
 	}
 }
 
@@ -209,12 +214,19 @@ func (t *Transport) start() error {
 		},
 		OnPeerStatusChanged: t.onPeerStatusChanged,
 		Dialer:              t.dialer,
+		SkipHandlerMethods:  t.skipHandlerMethods,
 	}
 	ch, err := tchannel.NewChannel(t.name, &chopts)
 	if err != nil {
 		return err
 	}
 	t.ch = ch
+
+	if len(t.skipHandlerMethods) > 0 && t.nativeMethods != nil {
+		for _, method := range t.nativeMethods.Methods() {
+			ch.Register(method.Handler, method.Name)
+		}
+	}
 
 	if t.listener != nil {
 		if err := t.ch.Serve(t.listener); err != nil {
