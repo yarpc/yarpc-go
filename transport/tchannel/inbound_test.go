@@ -179,24 +179,27 @@ func (nopNativehandler) Handle(ctx context.Context, call *tchannel.InboundCall) 
 }
 
 type testNativeMethods struct {
-	methods []NativeTchannelMethod
+	methods []NativeTChannelMethod
 }
 
-func (t *testNativeMethods) Methods() []NativeTchannelMethod {
+func (t *testNativeMethods) Methods() []NativeTChannelMethod {
 	return t.methods
+}
+
+func (t *testNativeMethods) SkipMethodNames() []string {
+	return []string{"myservice::tchannelnativemethod"}
 }
 
 func TestInboundWithNativeHandlers(t *testing.T) {
 	nativeMethods := &testNativeMethods{
-		methods: []NativeTchannelMethod{
+		methods: []NativeTChannelMethod{
 			{
 				Handler: nopNativehandler{},
-				Name:    "myservice::echo",
+				Name:    "myservice::tchannelnativemethod",
 			},
 		},
 	}
-	it, err := NewTransport(ServiceName("myservice"), ListenAddr("localhost:0"),
-		WithNativeTchannelMethods([]string{"myservice::echo"}, nativeMethods))
+	it, err := NewTransport(ServiceName("myservice"), ListenAddr("localhost:0"), WithNativeTChannelMethods(nativeMethods))
 	require.NoError(t, err)
 
 	router := yarpc.NewMapRouter("myservice")
@@ -206,7 +209,7 @@ func TestInboundWithNativeHandlers(t *testing.T) {
 	nophandlerspec := transport.NewUnaryHandlerSpec(nophandler{})
 
 	router.Register([]transport.Procedure{
-		{Name: "myservice::hello", HandlerSpec: nophandlerspec},
+		{Name: "myservice::yarpcmethod", HandlerSpec: nophandlerspec},
 	})
 
 	require.NoError(t, i.Start())
@@ -225,8 +228,8 @@ func TestInboundWithNativeHandlers(t *testing.T) {
 		procedure        string
 		expectedResponse string
 	}{
-		{"myservice", "myservice::hello", "myservice"},
-		{"myservice", "myservice::echo", "myservice-native"},
+		{"myservice", "myservice::yarpcmethod", "myservice"},
+		{"myservice", "myservice::tchannelnativemethod", "myservice-native"},
 	} {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*testtime.Second)
 		defer cancel()
@@ -240,16 +243,10 @@ func TestInboundWithNativeHandlers(t *testing.T) {
 				Body:      bytes.NewReader([]byte{}),
 			},
 		)
-		if !assert.NoError(t, err, "failed to make call") {
-			continue
-		}
-		if !assert.Equal(t, false, res.ApplicationError, "not application error") {
-			continue
-		}
+		require.NoError(t, err, "failed to make call")
+		require.False(t, res.ApplicationError, "not application error")
 		body, err := ioutil.ReadAll(res.Body)
-		if !assert.NoError(t, err) {
-			continue
-		}
+		require.NoError(t, err)
 		assert.Equal(t, string(body), tt.expectedResponse)
 	}
 

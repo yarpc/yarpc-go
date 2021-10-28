@@ -70,8 +70,7 @@ type Transport struct {
 
 	peers map[string]*tchannelPeer
 
-	skipHandlerMethods []string
-	nativeMethods      NativeTchannelMethods
+	nativeTChannelMethods NativeTChannelMethods
 }
 
 // NewTransport is a YARPC transport that facilitates sending and receiving
@@ -105,20 +104,19 @@ func (o transportOptions) newTransport() *Transport {
 		headerCase = originalHeaderCase
 	}
 	return &Transport{
-		once:                lifecycle.NewOnce(),
-		name:                o.name,
-		addr:                o.addr,
-		listener:            o.listener,
-		dialer:              o.dialer,
-		connTimeout:         o.connTimeout,
-		connBackoffStrategy: o.connBackoffStrategy,
-		peers:               make(map[string]*tchannelPeer),
-		tracer:              o.tracer,
-		logger:              logger,
-		headerCase:          headerCase,
-		newResponseWriter:   newHandlerWriter,
-		skipHandlerMethods:  o.skipHandlerMethods,
-		nativeMethods:       o.nativeMethods,
+		once:                  lifecycle.NewOnce(),
+		name:                  o.name,
+		addr:                  o.addr,
+		listener:              o.listener,
+		dialer:                o.dialer,
+		connTimeout:           o.connTimeout,
+		connBackoffStrategy:   o.connBackoffStrategy,
+		peers:                 make(map[string]*tchannelPeer),
+		tracer:                o.tracer,
+		logger:                logger,
+		headerCase:            headerCase,
+		newResponseWriter:     newHandlerWriter,
+		nativeTChannelMethods: o.nativeTChannelMethods,
 	}
 }
 
@@ -203,6 +201,11 @@ func (t *Transport) start() error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
+	var skipHandlerMethods []string
+	if t.nativeTChannelMethods != nil {
+		skipHandlerMethods = t.nativeTChannelMethods.SkipMethodNames()
+	}
+
 	chopts := tchannel.ChannelOptions{
 		Tracer: t.tracer,
 		Handler: handler{
@@ -214,7 +217,7 @@ func (t *Transport) start() error {
 		},
 		OnPeerStatusChanged: t.onPeerStatusChanged,
 		Dialer:              t.dialer,
-		SkipHandlerMethods:  t.skipHandlerMethods,
+		SkipHandlerMethods:  skipHandlerMethods,
 	}
 	ch, err := tchannel.NewChannel(t.name, &chopts)
 	if err != nil {
@@ -222,8 +225,8 @@ func (t *Transport) start() error {
 	}
 	t.ch = ch
 
-	if len(t.skipHandlerMethods) > 0 && t.nativeMethods != nil {
-		for _, method := range t.nativeMethods.Methods() {
+	if t.nativeTChannelMethods != nil {
+		for _, method := range t.nativeTChannelMethods.Methods() {
 			ch.Register(method.Handler, method.Name)
 		}
 	}
