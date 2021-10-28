@@ -226,8 +226,8 @@ func (t *Transport) start() error {
 	t.ch = ch
 
 	if t.nativeTChannelMethods != nil {
-		for _, method := range t.nativeTChannelMethods.Methods() {
-			ch.Register(method.Handler, method.Name)
+		for name, handler := range t.nativeTChannelMethods.Methods() {
+			ch.Register(handler, name)
 		}
 	}
 

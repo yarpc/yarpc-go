@@ -198,18 +198,15 @@ func OriginalHeaders() TransportOption {
 	}
 }
 
-// NativeTChannelMethod holds method name and handler. Method name must be fully
-// qualified name, for example "meta::health".
-type NativeTChannelMethod struct {
-	Name    string
-	Handler tchannel.Handler
-}
-
-// NativeTChannelMethods interface exposes a methods which returns all
+// NativeTChannelMethods interface exposes methods which returns all
 // the native TChannel methods and list of method names whose requests must
 // be handled by the provided TChannel handlers.
 type NativeTChannelMethods interface {
-	Methods() []NativeTChannelMethod
+	// Methods returns a map of all the native handlers by method name.
+	Methods() map[string]tchannel.Handler
+
+	// SkipMethodNames returns a list of method names whose requests must be
+	// handled by the provide TChannel handlers.
 	SkipMethodNames() []string
 }
 

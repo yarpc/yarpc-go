@@ -179,10 +179,10 @@ func (nopNativehandler) Handle(ctx context.Context, call *tchannel.InboundCall) 
 }
 
 type testNativeMethods struct {
-	methods []NativeTChannelMethod
+	methods map[string]tchannel.Handler
 }
 
-func (t *testNativeMethods) Methods() []NativeTChannelMethod {
+func (t *testNativeMethods) Methods() map[string]tchannel.Handler {
 	return t.methods
 }
 
@@ -192,11 +192,8 @@ func (t *testNativeMethods) SkipMethodNames() []string {
 
 func TestInboundWithNativeHandlers(t *testing.T) {
 	nativeMethods := &testNativeMethods{
-		methods: []NativeTChannelMethod{
-			{
-				Handler: nopNativehandler{},
-				Name:    "myservice::tchannelnativemethod",
-			},
+		methods: map[string]tchannel.Handler{
+			"myservice::tchannelnativemethod": nopNativehandler{},
 		},
 	}
 	it, err := NewTransport(ServiceName("myservice"), ListenAddr("localhost:0"), WithNativeTChannelMethods(nativeMethods))
