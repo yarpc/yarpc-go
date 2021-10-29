@@ -69,6 +69,8 @@ type Transport struct {
 	headerCase          headerCase
 
 	peers map[string]*tchannelPeer
+
+	nativeTChannelMethods NativeTChannelMethods
 }
 
 // NewTransport is a YARPC transport that facilitates sending and receiving
@@ -102,18 +104,19 @@ func (o transportOptions) newTransport() *Transport {
 		headerCase = originalHeaderCase
 	}
 	return &Transport{
-		once:                lifecycle.NewOnce(),
-		name:                o.name,
-		addr:                o.addr,
-		listener:            o.listener,
-		dialer:              o.dialer,
-		connTimeout:         o.connTimeout,
-		connBackoffStrategy: o.connBackoffStrategy,
-		peers:               make(map[string]*tchannelPeer),
-		tracer:              o.tracer,
-		logger:              logger,
-		headerCase:          headerCase,
-		newResponseWriter:   newHandlerWriter,
+		once:                  lifecycle.NewOnce(),
+		name:                  o.name,
+		addr:                  o.addr,
+		listener:              o.listener,
+		dialer:                o.dialer,
+		connTimeout:           o.connTimeout,
+		connBackoffStrategy:   o.connBackoffStrategy,
+		peers:                 make(map[string]*tchannelPeer),
+		tracer:                o.tracer,
+		logger:                logger,
+		headerCase:            headerCase,
+		newResponseWriter:     newHandlerWriter,
+		nativeTChannelMethods: o.nativeTChannelMethods,
 	}
 }
 
@@ -198,6 +201,11 @@ func (t *Transport) start() error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
+	var skipHandlerMethods []string
+	if t.nativeTChannelMethods != nil {
+		skipHandlerMethods = t.nativeTChannelMethods.SkipMethodNames()
+	}
+
 	chopts := tchannel.ChannelOptions{
 		Tracer: t.tracer,
 		Handler: handler{
@@ -209,12 +217,19 @@ func (t *Transport) start() error {
 		},
 		OnPeerStatusChanged: t.onPeerStatusChanged,
 		Dialer:              t.dialer,
+		SkipHandlerMethods:  skipHandlerMethods,
 	}
 	ch, err := tchannel.NewChannel(t.name, &chopts)
 	if err != nil {
 		return err
 	}
 	t.ch = ch
+
+	if t.nativeTChannelMethods != nil {
+		for name, handler := range t.nativeTChannelMethods.Methods() {
+			ch.Register(handler, name)
+		}
+	}
 
 	if t.listener != nil {
 		if err := t.ch.Serve(t.listener); err != nil {
