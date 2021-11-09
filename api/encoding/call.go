@@ -110,6 +110,21 @@ func (c *Call) Header(k string) string {
 	return ""
 }
 
+// OriginalHeaders returns a copy of the given request headers provided with the request.
+// The header key are not canonicalized and suitable for case-sensitive transport like TChannel.
+func (c *Call) OriginalHeaders() map[string]string {
+	if c == nil {
+		return nil
+	}
+
+	items := c.md.Headers().OriginalItems()
+	h := make(map[string]string, len(items))
+	for k, v := range items {
+		h[k] = v
+	}
+	return h
+}
+
 // HeaderNames returns a sorted list of the names of user defined headers
 // provided with this request.
 func (c *Call) HeaderNames() []string {
