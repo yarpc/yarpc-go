@@ -44,6 +44,7 @@ func TestNilCall(t *testing.T) {
 	assert.Equal(t, "", call.CallerProcedure())
 	assert.Equal(t, "", call.Header("foo"))
 	assert.Empty(t, call.HeaderNames())
+	assert.Nil(t, call.OriginalHeaders())
 
 	assert.Error(t, call.WriteResponseHeader("foo", "bar"))
 }
