@@ -145,6 +145,12 @@ func (c *Call) Header(k string) string {
 	return (*encoding.Call)(c).Header(k)
 }
 
+// OriginalHeaders returns a copy of the given request headers provided with the request.
+// The header key are not canonicalized and suitable for case-sensitive transport like TChannel.
+func (c *Call) OriginalHeaders() map[string]string {
+	return (*encoding.Call)(c).OriginalHeaders()
+}
+
 // HeaderNames returns a sorted list of the names of user defined headers
 // provided with this request.
 func (c *Call) HeaderNames() []string {

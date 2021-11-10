@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
+	"github.com/uber/tchannel-go"
 	backoffapi "go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/zap"
@@ -49,16 +50,17 @@ var _ Option = (TransportOption)(nil)
 // peer lists.
 // TODO update above when NewTransport is real.
 type transportOptions struct {
-	ch                  Channel
-	tracer              opentracing.Tracer
-	logger              *zap.Logger
-	addr                string
-	listener            net.Listener
-	dialer              func(ctx context.Context, network, hostPort string) (net.Conn, error)
-	name                string
-	connTimeout         time.Duration
-	connBackoffStrategy backoffapi.Strategy
-	originalHeaders     bool
+	ch                    Channel
+	tracer                opentracing.Tracer
+	logger                *zap.Logger
+	addr                  string
+	listener              net.Listener
+	dialer                func(ctx context.Context, network, hostPort string) (net.Conn, error)
+	name                  string
+	connTimeout           time.Duration
+	connBackoffStrategy   backoffapi.Strategy
+	originalHeaders       bool
+	nativeTChannelMethods NativeTChannelMethods
 }
 
 // newTransportOptions constructs the default transport options struct
@@ -193,5 +195,28 @@ func ConnBackoff(s backoffapi.Strategy) TransportOption {
 func OriginalHeaders() TransportOption {
 	return func(options *transportOptions) {
 		options.originalHeaders = true
+	}
+}
+
+// NativeTChannelMethods interface exposes methods which returns all
+// the native TChannel methods and list of method names whose requests must
+// be handled by the provided TChannel handlers.
+type NativeTChannelMethods interface {
+	// Methods returns a map of all the native handlers by method name.
+	Methods() map[string]tchannel.Handler
+
+	// SkipMethodNames returns a list of method names whose requests must be
+	// handled by the provide TChannel handlers.
+	SkipMethodNames() []string
+}
+
+// WithNativeTChannelMethods specifies the list of methods whose requests must
+// be handled by the provided native TChannel method handlers.
+//
+// Requests with other methods will be handled by the Yarpc router.
+// This is useful for gradual migration.
+func WithNativeTChannelMethods(nativeMethods NativeTChannelMethods) TransportOption {
+	return func(option *transportOptions) {
+		option.nativeTChannelMethods = nativeMethods
 	}
 }
