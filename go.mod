@@ -34,7 +34,7 @@ require (
 	github.com/uber/jaeger-client-go v2.22.1+incompatible
 	github.com/uber/jaeger-lib v2.2.0+incompatible // indirect
 	github.com/uber/ringpop-go v0.8.5
-	github.com/uber/tchannel-go v1.22.1
+	github.com/uber/tchannel-go v1.22.2
 	go.uber.org/atomic v1.5.1
 	go.uber.org/fx v1.10.0
 	go.uber.org/goleak v1.0.0
