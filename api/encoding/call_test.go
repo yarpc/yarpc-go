@@ -44,6 +44,7 @@ func TestNilCall(t *testing.T) {
 	assert.Equal(t, "", call.CallerProcedure())
 	assert.Equal(t, "", call.Header("foo"))
 	assert.Empty(t, call.HeaderNames())
+	assert.Nil(t, call.OriginalHeaders())
 
 	assert.Error(t, call.WriteResponseHeader("foo", "bar"))
 }
@@ -60,7 +61,8 @@ func TestReadFromRequest(t *testing.T) {
 		RoutingKey:      "rk",
 		RoutingDelegate: "rd",
 		CallerProcedure: "cp",
-		Headers:         transport.NewHeaders().With("foo", "bar"),
+		// later header's key/value takes precedence
+		Headers: transport.NewHeaders().With("Foo", "Bar").With("foo", "bar"),
 	})
 	call := CallFromContext(ctx)
 	require.NotNil(t, call)
@@ -74,6 +76,7 @@ func TestReadFromRequest(t *testing.T) {
 	assert.Equal(t, "rk", call.RoutingKey())
 	assert.Equal(t, "rd", call.RoutingDelegate())
 	assert.Equal(t, "bar", call.Header("foo"))
+	assert.Equal(t, map[string]string{"Foo": "Bar", "foo": "bar"}, call.OriginalHeaders())
 	assert.Equal(t, "cp", call.CallerProcedure())
 	assert.Len(t, call.HeaderNames(), 1)
 
@@ -94,7 +97,8 @@ func TestReadFromRequestMeta(t *testing.T) {
 		RoutingKey:      "rk",
 		RoutingDelegate: "rd",
 		CallerProcedure: "cp",
-		Headers:         transport.NewHeaders().With("foo", "bar"),
+		// later header's key/value takes precedence
+		Headers: transport.NewHeaders().With("Foo", "Bar").With("foo", "bar"),
 	})
 	call := CallFromContext(ctx)
 	require.NotNil(t, call)
@@ -109,6 +113,7 @@ func TestReadFromRequestMeta(t *testing.T) {
 	assert.Equal(t, "rd", call.RoutingDelegate())
 	assert.Equal(t, "cp", call.CallerProcedure())
 	assert.Equal(t, "bar", call.Header("foo"))
+	assert.Equal(t, map[string]string{"Foo": "Bar", "foo": "bar"}, call.OriginalHeaders())
 	assert.Len(t, call.HeaderNames(), 1)
 
 	assert.NoError(t, call.WriteResponseHeader("foo2", "bar2"))

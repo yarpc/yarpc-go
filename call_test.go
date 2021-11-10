@@ -53,12 +53,13 @@ func TestCallFromContext(t *testing.T) {
 	ctx, inboundCall := encoding.NewInboundCall(context.Background())
 	err := inboundCall.ReadFromRequest(
 		&transport.Request{
-			Caller:          "foo",
-			Service:         "bar",
-			Transport:       "trans",
-			Encoding:        transport.Encoding("baz"),
-			Procedure:       "hello",
-			Headers:         transport.NewHeaders().With("foo", "bar"),
+			Caller:    "foo",
+			Service:   "bar",
+			Transport: "trans",
+			Encoding:  transport.Encoding("baz"),
+			Procedure: "hello",
+			// later header's key/value takes precedence
+			Headers:         transport.NewHeaders().With("Foo", "Bar").With("foo", "bar"),
 			ShardKey:        "one",
 			RoutingKey:      "two",
 			RoutingDelegate: "three",
@@ -73,6 +74,7 @@ func TestCallFromContext(t *testing.T) {
 	assert.Equal(t, transport.Encoding("baz"), call.Encoding())
 	assert.Equal(t, "hello", call.Procedure())
 	assert.Equal(t, "bar", call.Header("foo"))
+	assert.Equal(t, map[string]string{"Foo": "Bar", "foo": "bar"}, call.OriginalHeaders())
 	assert.Equal(t, []string{"foo"}, call.HeaderNames())
 	assert.Equal(t, "one", call.ShardKey())
 	assert.Equal(t, "two", call.RoutingKey())
