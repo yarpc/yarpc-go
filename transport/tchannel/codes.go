@@ -30,16 +30,28 @@ var (
 	//
 	// This only covers system-level errors, so if the code is not in the map,
 	// it should not result in TChannel returning a system-level error.
+	// There are some yarpcerrors (e.g. NotFound, Unauthenticated,
+	// PermissionDenied) that have no corresponding code in the tchannel
+	// protocol. We still include them in this map and map them to the
+	// closest approximation (often BadRequest, if it's a client error)
+	// so they don't all get grouped into ErrCodeUnexpected.
 	_codeToTChannelCode = map[yarpcerrors.Code]tchannel.SystemErrCode{
-		yarpcerrors.CodeCancelled:         tchannel.ErrCodeCancelled,
-		yarpcerrors.CodeUnknown:           tchannel.ErrCodeUnexpected,
-		yarpcerrors.CodeInvalidArgument:   tchannel.ErrCodeBadRequest,
-		yarpcerrors.CodeDeadlineExceeded:  tchannel.ErrCodeTimeout,
-		yarpcerrors.CodeUnimplemented:     tchannel.ErrCodeBadRequest,
-		yarpcerrors.CodeInternal:          tchannel.ErrCodeUnexpected,
-		yarpcerrors.CodeUnavailable:       tchannel.ErrCodeDeclined,
-		yarpcerrors.CodeDataLoss:          tchannel.ErrCodeProtocol,
-		yarpcerrors.CodeResourceExhausted: tchannel.ErrCodeBusy,
+		yarpcerrors.CodeCancelled:          tchannel.ErrCodeCancelled,
+		yarpcerrors.CodeUnknown:            tchannel.ErrCodeUnexpected,
+		yarpcerrors.CodeInvalidArgument:    tchannel.ErrCodeBadRequest,
+		yarpcerrors.CodeDeadlineExceeded:   tchannel.ErrCodeTimeout,
+		yarpcerrors.CodeNotFound:           tchannel.ErrCodeBadRequest,
+		yarpcerrors.CodeAlreadyExists:      tchannel.ErrCodeBadRequest,
+		yarpcerrors.CodePermissionDenied:   tchannel.ErrCodeBadRequest,
+		yarpcerrors.CodeResourceExhausted:  tchannel.ErrCodeBusy,
+		yarpcerrors.CodeFailedPrecondition: tchannel.ErrCodeBadRequest,
+		yarpcerrors.CodeAborted:            tchannel.ErrCodeCancelled,
+		yarpcerrors.CodeOutOfRange:         tchannel.ErrCodeBadRequest,
+		yarpcerrors.CodeUnimplemented:      tchannel.ErrCodeBadRequest,
+		yarpcerrors.CodeInternal:           tchannel.ErrCodeUnexpected,
+		yarpcerrors.CodeUnavailable:        tchannel.ErrCodeDeclined,
+		yarpcerrors.CodeDataLoss:           tchannel.ErrCodeProtocol,
+		yarpcerrors.CodeUnauthenticated:    tchannel.ErrCodeBadRequest,
 	}
 
 	// _tchannelCodeToCode maps TChannel SystemErrCodes to their corresponding Code.
