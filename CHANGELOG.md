@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - tchannel: add option to accept native tchannel handlers.
+- tchannel: map missing yarpcerrors codes
 
 ## [1.58.0] - 2021-09-29
 ### Changed
