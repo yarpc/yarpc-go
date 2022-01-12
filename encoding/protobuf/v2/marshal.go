@@ -22,14 +22,14 @@ package v2
 
 import (
 	"bytes"
+	"io"
+	"sync"
+
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/yarpcerrors"
-	"io"
-	"sync"
 )
 
 const (
@@ -37,7 +37,6 @@ const (
 	Encoding transport.Encoding = "proto"
 
 	// JSONEncoding is the name of the JSON encoding.
-	//
 	// Protobuf handlers are able to handle both Encoding and JSONEncoding encodings.
 	JSONEncoding transport.Encoding = "json"
 )
@@ -97,9 +96,9 @@ func unmarshalJSON(body []byte, message proto.Message, codec *codec) error {
 
 func marshal(encoding transport.Encoding, message proto.Message, codec *codec) ([]byte, func(), error) {
 	switch encoding {
-	case protobuf.Encoding:
+	case Encoding:
 		return marshalProto(message, codec)
-	case protobuf.JSONEncoding:
+	case JSONEncoding:
 		return marshalJSON(message, codec)
 	default:
 		return nil, nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "encoding.Expect should have handled encoding %q but did not", encoding)
