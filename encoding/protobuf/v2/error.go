@@ -30,6 +30,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
 	"go.uber.org/yarpc/yarpcerrors"
+	rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/anypb"
 )
@@ -217,13 +218,13 @@ func convertFromYARPCError(encoding transport.Encoding, err error, codec *codec)
 	if yarpcErr.Details() == nil {
 		return err
 	}
-	st := &status.Status{}
-	unmarshalErr := unmarshalBytes(encoding, yarpcErr.Details(), st.Proto(), codec)
+	st := &rpc_status.Status{}
+	unmarshalErr := unmarshalBytes(encoding, yarpcErr.Details(), st, codec)
 	if unmarshalErr != nil {
 		return unmarshalErr
 	}
 
-	return newErrorWithDetails(yarpcErr.Code(), yarpcErr.Message(), st.Proto().GetDetails())
+	return newErrorWithDetails(yarpcErr.Code(), yarpcErr.Message(), st.GetDetails())
 }
 
 func newErrorWithDetails(code yarpcerrors.Code, message string, details []*any.Any) error {
