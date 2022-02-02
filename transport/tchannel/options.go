@@ -222,8 +222,8 @@ func WithNativeTChannelMethods(nativeMethods NativeTChannelMethods) TransportOpt
 	}
 }
 
-// WithDisableRpcServiceHeader disables adding the $rpc$-service header
-func WithDisableRpcServiceHeader() TransportOption {
+// DisableRpcServiceHeader disables adding the $rpc$-service header
+func DisableRpcServiceHeader() TransportOption {
 	return func(option *transportOptions) {
 		option.disableRpcServiceHeader = true
 	}
