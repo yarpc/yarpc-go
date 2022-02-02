@@ -18,32 +18,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package v2_test
+package v2
 
 import (
-	"fmt"
-	"testing"
-
-	"github.com/golang/protobuf/ptypes/wrappers"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/encoding/protobuf/v2"
-	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/runtime/protoiface"
+	"google.golang.org/protobuf/runtime/protoimpl"
 )
 
-func TestGetDetailsFromWrappedError(t *testing.T) {
-	errDetail := &wrappers.BytesValue{Value: []byte("err detail bytes")}
-
-	pbErr := v2.NewError(
-		yarpcerrors.CodeAborted,
-		"aborted",
-		v2.WithErrorDetails(errDetail))
-
-	wrappedErr := fmt.Errorf("wrapped err 2: %w", fmt.Errorf("wrapped err 1: %w", pbErr))
-
-	details := v2.GetErrorDetails(wrappedErr)
-	require.Len(t, details, 1, "expected exactly one detail")
-	errDet := details[0].(proto.Message)
-	assert.True(t, proto.Equal(errDetail, errDet), "unexpected detail")
+// ProtobufMessageV1 converts either a v1 or v2 message to a v1 message.
+func ProtobufMessageV1(message proto.Message) protoiface.MessageV1 {
+	return protoimpl.X.ProtoMessageV1Of(message)
 }

@@ -25,21 +25,19 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/any"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
 	"go.uber.org/yarpc/yarpcerrors"
 	rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
 const (
 	// format for converting error details to string
 	_errDetailsFmt = "[]{ %s }"
-	// format for converting a single message to string
-	_errDetailFmt = "%s{%s}"
 )
 
 var _ error = (*pberror)(nil)
@@ -115,7 +113,7 @@ type ErrorOption struct{ apply func(*pberror) error }
 func WithErrorDetails(details ...proto.Message) ErrorOption {
 	return ErrorOption{func(err *pberror) error {
 		for _, detail := range details {
-			any, terr := anypb.New(proto.MessageV2(detail))
+			any, terr := anypb.New(detail)
 			if terr != nil {
 				return terr
 			}
@@ -155,11 +153,10 @@ func createStatusWithDetail(pberr *pberror, encoding transport.Encoding, codec *
 	pst := st.Proto()
 	pst.Details = pberr.details
 
-	detailsBytes, cleanup, marshalErr := marshal(encoding, pst, codec)
+	detailsBytes, marshalErr := marshal(encoding, pst, codec)
 	if marshalErr != nil {
 		return nil, marshalErr
 	}
-	defer cleanup()
 	yarpcDet := make([]byte, len(detailsBytes))
 	copy(yarpcDet, detailsBytes)
 	return yarpcerrors.Newf(pberr.code, pberr.message).WithDetails(yarpcDet), nil
@@ -174,13 +171,13 @@ func setApplicationErrorMeta(pberr *pberror, resw transport.ResponseWriter) {
 	decodedDetails := GetErrorDetails(pberr)
 	var appErrName string
 	if len(decodedDetails) > 0 { // only grab the first name since this will be emitted with metrics
-		decodedMsg := proto.MessageV2(decodedDetails[0].(proto.Message))
-		appErrName = messageNameWithoutPackage(string(decodedMsg.ProtoReflect().Descriptor().FullName()))
+		decodedMsg := decodedDetails[0].(proto.Message)
+		appErrName = messageNameWithoutPackage(string(proto.MessageName(decodedMsg)))
 	}
 
 	details := make([]string, 0, len(decodedDetails))
 	for _, detail := range decodedDetails {
-		details = append(details, protobufMessageToString(detail.(proto.Message)))
+		details = append(details, protobufMessageNameToString(detail.(proto.Message)))
 	}
 
 	applicationErroMetaSetter.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
@@ -201,12 +198,8 @@ func messageNameWithoutPackage(messageName string) string {
 	return messageName
 }
 
-func protobufMessageToString(message proto.Message) string {
-	newMsg := proto.MessageV2(message)
-	newMsg.ProtoReflect().Descriptor().FullName()
-	return fmt.Sprintf(_errDetailFmt,
-		messageNameWithoutPackage(proto.MessageName(message)),
-		proto.CompactTextString(message))
+func protobufMessageNameToString(message proto.Message) string {
+	return messageNameWithoutPackage(string(proto.MessageName(message)))
 }
 
 // convertFromYARPCError is to be used for handling errors on the outbound side.

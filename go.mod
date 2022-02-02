@@ -28,7 +28,7 @@ require (
 	github.com/samuel/go-thrift v0.0.0-20191111193933-5165175b40af // indirect
 	github.com/streadway/quantile v0.0.0-20150917103942-b0c588724d25 // indirect
 	github.com/stretchr/objx v0.2.0 // indirect
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.5.1
 	github.com/uber-common/bark v1.2.1 // indirect
 	github.com/uber-go/mapdecode v1.0.0
 	github.com/uber-go/tally v3.3.15+incompatible
