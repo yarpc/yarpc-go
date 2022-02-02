@@ -25,13 +25,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
+	golang_proto "github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/any"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
 	"go.uber.org/yarpc/yarpcerrors"
 	rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -115,7 +116,7 @@ type ErrorOption struct{ apply func(*pberror) error }
 func WithErrorDetails(details ...proto.Message) ErrorOption {
 	return ErrorOption{func(err *pberror) error {
 		for _, detail := range details {
-			any, terr := anypb.New(proto.MessageV2(detail))
+			any, terr := anypb.New(detail)
 			if terr != nil {
 				return terr
 			}
@@ -155,7 +156,7 @@ func createStatusWithDetail(pberr *pberror, encoding transport.Encoding, codec *
 	pst := st.Proto()
 	pst.Details = pberr.details
 
-	detailsBytes, cleanup, marshalErr := marshal(encoding, pst, codec)
+	detailsBytes, cleanup, marshalErr := marshal(encoding, golang_proto.MessageV2(pst), codec)
 	if marshalErr != nil {
 		return nil, marshalErr
 	}
@@ -174,8 +175,8 @@ func setApplicationErrorMeta(pberr *pberror, resw transport.ResponseWriter) {
 	decodedDetails := GetErrorDetails(pberr)
 	var appErrName string
 	if len(decodedDetails) > 0 { // only grab the first name since this will be emitted with metrics
-		decodedMsg := proto.MessageV2(decodedDetails[0].(proto.Message))
-		appErrName = messageNameWithoutPackage(string(decodedMsg.ProtoReflect().Descriptor().FullName()))
+		decodedMsg := decodedDetails[0].(proto.Message)
+		appErrName = messageNameWithoutPackage(string(proto.MessageName(decodedMsg)))
 	}
 
 	details := make([]string, 0, len(decodedDetails))
@@ -202,11 +203,10 @@ func messageNameWithoutPackage(messageName string) string {
 }
 
 func protobufMessageToString(message proto.Message) string {
-	newMsg := proto.MessageV2(message)
-	newMsg.ProtoReflect().Descriptor().FullName()
+
 	return fmt.Sprintf(_errDetailFmt,
-		messageNameWithoutPackage(proto.MessageName(message)),
-		proto.CompactTextString(message))
+		messageNameWithoutPackage(string(proto.MessageName(message))),
+		golang_proto.CompactTextString(golang_proto.MessageV1(message)))
 }
 
 // convertFromYARPCError is to be used for handling errors on the outbound side.
@@ -219,7 +219,7 @@ func convertFromYARPCError(encoding transport.Encoding, err error, codec *codec)
 		return err
 	}
 	st := &rpc_status.Status{}
-	unmarshalErr := unmarshalBytes(encoding, yarpcErr.Details(), st, codec)
+	unmarshalErr := unmarshalBytes(encoding, yarpcErr.Details(), golang_proto.MessageV2(st), codec)
 	if unmarshalErr != nil {
 		return unmarshalErr
 	}

@@ -26,10 +26,11 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/jsonpb"
-	"github.com/golang/protobuf/proto"
+	golang_proto "github.com/golang/protobuf/proto"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/yarpcerrors"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -44,7 +45,7 @@ const (
 var (
 	_bufferPool = sync.Pool{
 		New: func() interface{} {
-			return proto.NewBuffer(make([]byte, 1024))
+			return golang_proto.NewBuffer(make([]byte, 1024))
 		},
 	}
 )
@@ -91,7 +92,7 @@ func unmarshalProto(body []byte, message proto.Message, _ *codec) error {
 }
 
 func unmarshalJSON(body []byte, message proto.Message, codec *codec) error {
-	return codec.jsonUnmarshaler.Unmarshal(bytes.NewReader(body), message)
+	return codec.jsonUnmarshaler.Unmarshal(bytes.NewReader(body), golang_proto.MessageV1(message))
 }
 
 func marshal(encoding transport.Encoding, message proto.Message, codec *codec) ([]byte, func(), error) {
@@ -108,27 +109,27 @@ func marshal(encoding transport.Encoding, message proto.Message, codec *codec) (
 func marshalProto(message proto.Message, _ *codec) ([]byte, func(), error) {
 	protoBuffer := getBuffer()
 	cleanup := func() { putBuffer(protoBuffer) }
-	if err := protoBuffer.Marshal(message); err != nil {
+	if err := protoBuffer.Marshal(golang_proto.MessageV1(message)); err != nil {
 		cleanup()
 		return nil, nil, err
 	}
 	return protoBuffer.Bytes(), cleanup, nil
 }
 
-func getBuffer() *proto.Buffer {
-	buf := _bufferPool.Get().(*proto.Buffer)
+func getBuffer() *golang_proto.Buffer {
+	buf := _bufferPool.Get().(*golang_proto.Buffer)
 	buf.Reset()
 	return buf
 }
 
-func putBuffer(buf *proto.Buffer) {
+func putBuffer(buf *golang_proto.Buffer) {
 	_bufferPool.Put(buf)
 }
 
 func marshalJSON(message proto.Message, codec *codec) ([]byte, func(), error) {
 	buf := bufferpool.Get()
 	cleanup := func() { bufferpool.Put(buf) }
-	if err := codec.jsonMarshaler.Marshal(buf, message); err != nil {
+	if err := codec.jsonMarshaler.Marshal(buf, golang_proto.MessageV1(message)); err != nil {
 		cleanup()
 		return nil, nil, err
 	}
