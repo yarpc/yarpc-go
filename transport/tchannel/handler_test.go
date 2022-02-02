@@ -825,7 +825,7 @@ func TestRpcServiceHeader(t *testing.T) {
 	h.handle(ctx, call)
 	assert.Equal(t, expectedServiceHeader, hw.headers.OriginalItems()[ServiceHeaderKey])
 
-	h.disableRpcServiceHeader = true
+	h.excludeServiceHeaderInResponse = true
 	hw.headers.Del(ServiceHeaderKey)
 	h.handle(ctx, call)
 	assert.Equal(t, "", hw.headers.OriginalItems()[ServiceHeaderKey])

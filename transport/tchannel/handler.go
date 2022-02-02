@@ -98,13 +98,13 @@ func (c tchannelCall) Response() inboundCallResponse {
 
 // handler wraps a transport.UnaryHandler into a TChannel Handler.
 type handler struct {
-	existing                map[string]tchannel.Handler
-	router                  transport.Router
-	tracer                  opentracing.Tracer
-	headerCase              headerCase
-	logger                  *zap.Logger
-	newResponseWriter       func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
-	disableRpcServiceHeader bool
+	existing                       map[string]tchannel.Handler
+	router                         transport.Router
+	tracer                         opentracing.Tracer
+	headerCase                     headerCase
+	logger                         *zap.Logger
+	newResponseWriter              func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
+	excludeServiceHeaderInResponse bool
 }
 
 func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
@@ -116,7 +116,7 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	responseWriter := h.newResponseWriter(call.Response(), call.Format(), h.headerCase)
 	defer responseWriter.ReleaseBuffer()
 
-	if !h.disableRpcServiceHeader {
+	if !h.excludeServiceHeaderInResponse {
 		// echo accepted rpc-service in response header
 		responseWriter.AddHeader(ServiceHeaderKey, call.ServiceName())
 	}

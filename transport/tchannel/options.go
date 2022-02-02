@@ -50,18 +50,18 @@ var _ Option = (TransportOption)(nil)
 // peer lists.
 // TODO update above when NewTransport is real.
 type transportOptions struct {
-	ch                      Channel
-	tracer                  opentracing.Tracer
-	logger                  *zap.Logger
-	addr                    string
-	listener                net.Listener
-	dialer                  func(ctx context.Context, network, hostPort string) (net.Conn, error)
-	name                    string
-	connTimeout             time.Duration
-	connBackoffStrategy     backoffapi.Strategy
-	originalHeaders         bool
-	nativeTChannelMethods   NativeTChannelMethods
-	disableRpcServiceHeader bool
+	ch                             Channel
+	tracer                         opentracing.Tracer
+	logger                         *zap.Logger
+	addr                           string
+	listener                       net.Listener
+	dialer                         func(ctx context.Context, network, hostPort string) (net.Conn, error)
+	name                           string
+	connTimeout                    time.Duration
+	connBackoffStrategy            backoffapi.Strategy
+	originalHeaders                bool
+	nativeTChannelMethods          NativeTChannelMethods
+	excludeServiceHeaderInResponse bool
 }
 
 // newTransportOptions constructs the default transport options struct
@@ -222,9 +222,9 @@ func WithNativeTChannelMethods(nativeMethods NativeTChannelMethods) TransportOpt
 	}
 }
 
-// DisableRpcServiceHeader disables adding the $rpc$-service header
-func DisableRpcServiceHeader() TransportOption {
+// ExcludeServiceHeaderInResponse stop adding the $rpc$-service response header for inbounds
+func ExcludeServiceHeaderInResponse() TransportOption {
 	return func(option *transportOptions) {
-		option.disableRpcServiceHeader = true
+		option.excludeServiceHeaderInResponse = true
 	}
 }

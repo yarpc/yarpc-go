@@ -70,8 +70,8 @@ type Transport struct {
 
 	peers map[string]*tchannelPeer
 
-	nativeTChannelMethods   NativeTChannelMethods
-	disableRpcServiceHeader bool
+	nativeTChannelMethods          NativeTChannelMethods
+	excludeServiceHeaderInResponse bool
 }
 
 // NewTransport is a YARPC transport that facilitates sending and receiving
@@ -105,20 +105,20 @@ func (o transportOptions) newTransport() *Transport {
 		headerCase = originalHeaderCase
 	}
 	return &Transport{
-		once:                    lifecycle.NewOnce(),
-		name:                    o.name,
-		addr:                    o.addr,
-		listener:                o.listener,
-		dialer:                  o.dialer,
-		connTimeout:             o.connTimeout,
-		connBackoffStrategy:     o.connBackoffStrategy,
-		peers:                   make(map[string]*tchannelPeer),
-		tracer:                  o.tracer,
-		logger:                  logger,
-		headerCase:              headerCase,
-		newResponseWriter:       newHandlerWriter,
-		nativeTChannelMethods:   o.nativeTChannelMethods,
-		disableRpcServiceHeader: o.disableRpcServiceHeader,
+		once:                           lifecycle.NewOnce(),
+		name:                           o.name,
+		addr:                           o.addr,
+		listener:                       o.listener,
+		dialer:                         o.dialer,
+		connTimeout:                    o.connTimeout,
+		connBackoffStrategy:            o.connBackoffStrategy,
+		peers:                          make(map[string]*tchannelPeer),
+		tracer:                         o.tracer,
+		logger:                         logger,
+		headerCase:                     headerCase,
+		newResponseWriter:              newHandlerWriter,
+		nativeTChannelMethods:          o.nativeTChannelMethods,
+		excludeServiceHeaderInResponse: o.excludeServiceHeaderInResponse,
 	}
 }
 
@@ -211,12 +211,12 @@ func (t *Transport) start() error {
 	chopts := tchannel.ChannelOptions{
 		Tracer: t.tracer,
 		Handler: handler{
-			router:                  t.router,
-			tracer:                  t.tracer,
-			headerCase:              t.headerCase,
-			logger:                  t.logger,
-			newResponseWriter:       t.newResponseWriter,
-			disableRpcServiceHeader: t.disableRpcServiceHeader,
+			router:                         t.router,
+			tracer:                         t.tracer,
+			headerCase:                     t.headerCase,
+			logger:                         t.logger,
+			newResponseWriter:              t.newResponseWriter,
+			excludeServiceHeaderInResponse: t.excludeServiceHeaderInResponse,
 		},
 		OnPeerStatusChanged: t.onPeerStatusChanged,
 		Dialer:              t.dialer,
