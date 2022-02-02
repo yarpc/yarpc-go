@@ -805,6 +805,32 @@ func TestTruncatedHeader(t *testing.T) {
 	}
 }
 
+func TestRpcServiceHeader(t *testing.T) {
+	hw := &handlerWriter{}
+	h := handler{
+		headerCase: canonicalizedHeaderCase,
+		newResponseWriter: func(inboundCallResponse, tchannel.Format, headerCase) responseWriter {
+			return hw
+		},
+	}
+	resp := newResponseRecorder()
+	expectedServiceHeader := "foo"
+	call := &fakeInboundCall{
+		service: expectedServiceHeader,
+		resp:    resp,
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	h.handle(ctx, call)
+	assert.Equal(t, expectedServiceHeader, hw.headers.OriginalItems()[ServiceHeaderKey])
+
+	h.excludeServiceHeaderInResponse = true
+	hw.headers.Del(ServiceHeaderKey)
+	h.handle(ctx, call)
+	assert.Equal(t, "", hw.headers.OriginalItems()[ServiceHeaderKey])
+}
+
 type testUnaryHandler struct {
 	err error
 	fn  func()
