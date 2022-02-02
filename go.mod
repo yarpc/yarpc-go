@@ -47,8 +47,9 @@ require (
 	golang.org/x/lint v0.0.0-20200130185559-910be7a94367
 	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
 	golang.org/x/tools v0.1.5
-	google.golang.org/genproto v0.0.0-20200212174721-66ed5ce911ce // indirect
+	google.golang.org/genproto v0.0.0-20200212174721-66ed5ce911ce
 	google.golang.org/grpc v1.28.0
+	google.golang.org/protobuf v1.26.0
 	gopkg.in/yaml.v2 v2.2.8
 	honnef.co/go/tools v0.0.1-2019.2.3
 )
