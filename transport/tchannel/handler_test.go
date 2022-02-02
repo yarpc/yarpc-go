@@ -809,7 +809,7 @@ func TestRpcServiceHeader(t *testing.T) {
 	hw := &handlerWriter{}
 	h := handler{
 		headerCase: canonicalizedHeaderCase,
-		newResponseWriter: func(_ inboundCallResponse, _ tchannel.Format, _ headerCase) responseWriter {
+		newResponseWriter: func(inboundCallResponse, tchannel.Format, headerCase) responseWriter {
 			return hw
 		},
 	}
