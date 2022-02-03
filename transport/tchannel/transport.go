@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Uber Technologies, Inc.
+// Copyright (c) 2022 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -70,7 +70,8 @@ type Transport struct {
 
 	peers map[string]*tchannelPeer
 
-	nativeTChannelMethods NativeTChannelMethods
+	nativeTChannelMethods          NativeTChannelMethods
+	excludeServiceHeaderInResponse bool
 }
 
 // NewTransport is a YARPC transport that facilitates sending and receiving
@@ -104,19 +105,20 @@ func (o transportOptions) newTransport() *Transport {
 		headerCase = originalHeaderCase
 	}
 	return &Transport{
-		once:                  lifecycle.NewOnce(),
-		name:                  o.name,
-		addr:                  o.addr,
-		listener:              o.listener,
-		dialer:                o.dialer,
-		connTimeout:           o.connTimeout,
-		connBackoffStrategy:   o.connBackoffStrategy,
-		peers:                 make(map[string]*tchannelPeer),
-		tracer:                o.tracer,
-		logger:                logger,
-		headerCase:            headerCase,
-		newResponseWriter:     newHandlerWriter,
-		nativeTChannelMethods: o.nativeTChannelMethods,
+		once:                           lifecycle.NewOnce(),
+		name:                           o.name,
+		addr:                           o.addr,
+		listener:                       o.listener,
+		dialer:                         o.dialer,
+		connTimeout:                    o.connTimeout,
+		connBackoffStrategy:            o.connBackoffStrategy,
+		peers:                          make(map[string]*tchannelPeer),
+		tracer:                         o.tracer,
+		logger:                         logger,
+		headerCase:                     headerCase,
+		newResponseWriter:              newHandlerWriter,
+		nativeTChannelMethods:          o.nativeTChannelMethods,
+		excludeServiceHeaderInResponse: o.excludeServiceHeaderInResponse,
 	}
 }
 
@@ -209,11 +211,12 @@ func (t *Transport) start() error {
 	chopts := tchannel.ChannelOptions{
 		Tracer: t.tracer,
 		Handler: handler{
-			router:            t.router,
-			tracer:            t.tracer,
-			headerCase:        t.headerCase,
-			logger:            t.logger,
-			newResponseWriter: t.newResponseWriter,
+			router:                         t.router,
+			tracer:                         t.tracer,
+			headerCase:                     t.headerCase,
+			logger:                         t.logger,
+			newResponseWriter:              t.newResponseWriter,
+			excludeServiceHeaderInResponse: t.excludeServiceHeaderInResponse,
 		},
 		OnPeerStatusChanged: t.onPeerStatusChanged,
 		Dialer:              t.dialer,

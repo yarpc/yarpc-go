@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Uber Technologies, Inc.
+// Copyright (c) 2022 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -50,17 +50,18 @@ var _ Option = (TransportOption)(nil)
 // peer lists.
 // TODO update above when NewTransport is real.
 type transportOptions struct {
-	ch                    Channel
-	tracer                opentracing.Tracer
-	logger                *zap.Logger
-	addr                  string
-	listener              net.Listener
-	dialer                func(ctx context.Context, network, hostPort string) (net.Conn, error)
-	name                  string
-	connTimeout           time.Duration
-	connBackoffStrategy   backoffapi.Strategy
-	originalHeaders       bool
-	nativeTChannelMethods NativeTChannelMethods
+	ch                             Channel
+	tracer                         opentracing.Tracer
+	logger                         *zap.Logger
+	addr                           string
+	listener                       net.Listener
+	dialer                         func(ctx context.Context, network, hostPort string) (net.Conn, error)
+	name                           string
+	connTimeout                    time.Duration
+	connBackoffStrategy            backoffapi.Strategy
+	originalHeaders                bool
+	nativeTChannelMethods          NativeTChannelMethods
+	excludeServiceHeaderInResponse bool
 }
 
 // newTransportOptions constructs the default transport options struct
@@ -218,5 +219,12 @@ type NativeTChannelMethods interface {
 func WithNativeTChannelMethods(nativeMethods NativeTChannelMethods) TransportOption {
 	return func(option *transportOptions) {
 		option.nativeTChannelMethods = nativeMethods
+	}
+}
+
+// ExcludeServiceHeaderInResponse stop adding the $rpc$-service response header for inbounds
+func ExcludeServiceHeaderInResponse() TransportOption {
+	return func(option *transportOptions) {
+		option.excludeServiceHeaderInResponse = true
 	}
 }
