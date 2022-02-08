@@ -92,7 +92,7 @@ func unmarshalProto(body []byte, message proto.Message, _ *codec) error {
 }
 
 func unmarshalJSON(body []byte, message proto.Message, codec *codec) error {
-	return codec.jsonUnmarshaler.Unmarshal(bytes.NewReader(body), golang_proto.MessageV1(message))
+	return codec.jsonUnmarshaler.Unmarshal(bytes.NewReader(body), ProtobufMessageV1(message))
 }
 
 func marshal(encoding transport.Encoding, message proto.Message, codec *codec) ([]byte, func(), error) {
@@ -109,7 +109,7 @@ func marshal(encoding transport.Encoding, message proto.Message, codec *codec) (
 func marshalProto(message proto.Message, _ *codec) ([]byte, func(), error) {
 	protoBuffer := getBuffer()
 	cleanup := func() { putBuffer(protoBuffer) }
-	if err := protoBuffer.Marshal(golang_proto.MessageV1(message)); err != nil {
+	if err := protoBuffer.Marshal(ProtobufMessageV1(message)); err != nil {
 		cleanup()
 		return nil, nil, err
 	}
@@ -129,7 +129,7 @@ func putBuffer(buf *golang_proto.Buffer) {
 func marshalJSON(message proto.Message, codec *codec) ([]byte, func(), error) {
 	buf := bufferpool.Get()
 	cleanup := func() { bufferpool.Put(buf) }
-	if err := codec.jsonMarshaler.Marshal(buf, golang_proto.MessageV1(message)); err != nil {
+	if err := codec.jsonMarshaler.Marshal(buf, ProtobufMessageV1(message)); err != nil {
 		cleanup()
 		return nil, nil, err
 	}

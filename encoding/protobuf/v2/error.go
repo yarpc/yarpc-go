@@ -156,7 +156,7 @@ func createStatusWithDetail(pberr *pberror, encoding transport.Encoding, codec *
 	pst := st.Proto()
 	pst.Details = pberr.details
 
-	detailsBytes, cleanup, marshalErr := marshal(encoding, golang_proto.MessageV2(pst), codec)
+	detailsBytes, cleanup, marshalErr := marshal(encoding, pst, codec)
 	if marshalErr != nil {
 		return nil, marshalErr
 	}
@@ -203,10 +203,9 @@ func messageNameWithoutPackage(messageName string) string {
 }
 
 func protobufMessageToString(message proto.Message) string {
-
 	return fmt.Sprintf(_errDetailFmt,
 		messageNameWithoutPackage(string(proto.MessageName(message))),
-		golang_proto.CompactTextString(golang_proto.MessageV1(message)))
+		golang_proto.CompactTextString(ProtobufMessageV1(message)))
 }
 
 // convertFromYARPCError is to be used for handling errors on the outbound side.
@@ -219,7 +218,7 @@ func convertFromYARPCError(encoding transport.Encoding, err error, codec *codec)
 		return err
 	}
 	st := &rpc_status.Status{}
-	unmarshalErr := unmarshalBytes(encoding, yarpcErr.Details(), golang_proto.MessageV2(st), codec)
+	unmarshalErr := unmarshalBytes(encoding, yarpcErr.Details(), st, codec)
 	if unmarshalErr != nil {
 		return unmarshalErr
 	}
@@ -245,3 +244,4 @@ func (err *pberror) YARPCError() *yarpcerrors.Status {
 	}
 	return status
 }
+

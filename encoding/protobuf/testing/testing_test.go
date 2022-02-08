@@ -82,7 +82,7 @@ func testIntegration(
 	assert.Equal(t, intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "foo-bar", "baz"), err)
 	keyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "foo-bar", "baz"))
 	err = setValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo", "bar")
-	assert.Equal(t, status.Error(codes.Unknown, "foo-bar: baz"), err)
+	assert.Equal(t, status.Error(codes.Unknown, "foo-bar: baz").Error(), err.Error())
 
 	if ttype != testutils.TransportTypeTChannel {
 		keyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeInternal, "foo-bar", protobuf.WithErrorDetails(&examplepb.EchoBothRequest{})))
@@ -103,7 +103,7 @@ func testIntegration(
 	_, err = getValue(clients.KeyValueYARPCClient, "foo")
 	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeNotFound, "foo"), err)
 	_, err = getValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo")
-	assert.Equal(t, status.Error(codes.NotFound, "foo"), err)
+	assert.Equal(t, status.Error(codes.NotFound, "foo").Error(), err.Error())
 	_, err = getValue(clients.KeyValueYARPCJSONClient, "foo")
 	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeNotFound, "foo"), err)
 

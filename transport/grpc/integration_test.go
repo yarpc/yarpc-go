@@ -86,7 +86,7 @@ func TestGRPCBasic(t *testing.T) {
 	te := testEnvOptions{}
 	te.do(t, func(t *testing.T, e *testEnv) {
 		_, err := e.GetValueGRPC(context.Background(), "foo")
-		assert.Equal(t, status.Error(codes.NotFound, "foo"), err)
+		assert.Equal(t, status.Error(codes.NotFound, "foo").Error(), err.Error())
 		assert.NoError(t, e.SetValueGRPC(context.Background(), "foo", "bar"))
 		value, err := e.GetValueGRPC(context.Background(), "foo")
 		assert.NoError(t, err)
@@ -143,7 +143,7 @@ func TestGRPCWellKnownError(t *testing.T) {
 	te.do(t, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
 		err := e.SetValueGRPC(context.Background(), "foo", "bar")
-		assert.Equal(t, status.Error(codes.FailedPrecondition, "bar 1"), err)
+		assert.Equal(t, status.Error(codes.FailedPrecondition, "bar 1").Error(), err.Error())
 	})
 }
 
@@ -153,7 +153,7 @@ func TestGRPCNamedError(t *testing.T) {
 	te.do(t, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", "baz 1"))
 		err := e.SetValueGRPC(context.Background(), "foo", "bar")
-		assert.Equal(t, status.Error(codes.Unknown, "bar: baz 1"), err)
+		assert.Equal(t, status.Error(codes.Unknown, "bar: baz 1").Error(), err.Error())
 	})
 }
 
@@ -163,7 +163,7 @@ func TestGRPCNamedErrorNoMessage(t *testing.T) {
 	te.do(t, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", ""))
 		err := e.SetValueGRPC(context.Background(), "foo", "bar")
-		assert.Equal(t, status.Error(codes.Unknown, "bar"), err)
+		assert.Equal(t, status.Error(codes.Unknown, "bar").Error(), err.Error())
 	})
 }
 

@@ -26,7 +26,6 @@ import (
 	"strings"
 	"testing"
 
-	golang_proto "github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/any"
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/stretchr/testify/assert"
@@ -179,7 +178,7 @@ func TestPbErrorToYARPCError(t *testing.T) {
 			assert.Equal(t, st.Message(), tt.message)
 
 			statusPb := rpc_status.Status{}
-			err := proto.Unmarshal(st.Details(), golang_proto.MessageV2(&statusPb))
+			err := proto.Unmarshal(st.Details(), &statusPb)
 			assert.NoError(t, err, "unexpected unmarshal error")
 
 			status := status.FromProto(&statusPb)
