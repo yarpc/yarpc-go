@@ -244,4 +244,3 @@ func (err *pberror) YARPCError() *yarpcerrors.Status {
 	}
 	return status
 }
-

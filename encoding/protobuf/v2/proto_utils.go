@@ -7,6 +7,6 @@ import (
 )
 
 // ProtobufMessageV1 converts either a v1 or v2 message to a v1 message.
-func ProtobufMessageV1(message proto.Message) protoiface.MessageV1{
+func ProtobufMessageV1(message proto.Message) protoiface.MessageV1 {
 	return protoimpl.X.ProtoMessageV1Of(message)
 }
