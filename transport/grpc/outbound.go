@@ -178,6 +178,7 @@ func (o *Outbound) invoke(
 	if responseMD != nil {
 		callOptions = []grpc.CallOption{grpc.Trailer(responseMD)}
 	}
+	callOptions = append(callOptions, grpc.CallContentSubtype("yarpc"))
 	apiPeer, onFinish, err := o.peerChooser.Choose(ctx, request)
 	if err != nil {
 		return err
@@ -346,6 +347,7 @@ func (o *Outbound) stream(
 			ServerStreams: true,
 		},
 		fullMethod,
+		grpc.CallContentSubtype("yarpc"),
 	)
 	if err != nil {
 		span.Finish()

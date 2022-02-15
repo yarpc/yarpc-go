@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"strings"
 
-	golang_proto "github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/any"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
@@ -39,8 +38,6 @@ import (
 const (
 	// format for converting error details to string
 	_errDetailsFmt = "[]{ %s }"
-	// format for converting a single message to string
-	_errDetailFmt = "%s{%s}"
 )
 
 var _ error = (*pberror)(nil)
@@ -156,11 +153,10 @@ func createStatusWithDetail(pberr *pberror, encoding transport.Encoding, codec *
 	pst := st.Proto()
 	pst.Details = pberr.details
 
-	detailsBytes, cleanup, marshalErr := marshal(encoding, pst, codec)
+	detailsBytes, marshalErr := marshal(encoding, pst, codec)
 	if marshalErr != nil {
 		return nil, marshalErr
 	}
-	defer cleanup()
 	yarpcDet := make([]byte, len(detailsBytes))
 	copy(yarpcDet, detailsBytes)
 	return yarpcerrors.Newf(pberr.code, pberr.message).WithDetails(yarpcDet), nil
@@ -181,7 +177,7 @@ func setApplicationErrorMeta(pberr *pberror, resw transport.ResponseWriter) {
 
 	details := make([]string, 0, len(decodedDetails))
 	for _, detail := range decodedDetails {
-		details = append(details, protobufMessageToString(detail.(proto.Message)))
+		details = append(details, protobufMessageNameToString(detail.(proto.Message)))
 	}
 
 	applicationErroMetaSetter.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
@@ -202,10 +198,8 @@ func messageNameWithoutPackage(messageName string) string {
 	return messageName
 }
 
-func protobufMessageToString(message proto.Message) string {
-	return fmt.Sprintf(_errDetailFmt,
-		messageNameWithoutPackage(string(proto.MessageName(message))),
-		golang_proto.CompactTextString(ProtobufMessageV1(message)))
+func protobufMessageNameToString(message proto.Message) string {
+	return messageNameWithoutPackage(string(proto.MessageName(message)))
 }
 
 // convertFromYARPCError is to be used for handling errors on the outbound side.

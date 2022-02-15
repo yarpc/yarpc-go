@@ -35,7 +35,7 @@ var (
 	// Millisecond is a millisecond dilated into test time by TEST_TIME_SCALE.
 	Millisecond = time.Millisecond
 	// Second is a second dilated into test time by TEST_TIME_SCALE.
-	Second = time.Second
+	Second = time.Second*1000
 )
 
 func init() {
@@ -49,7 +49,7 @@ func init() {
 	}
 
 	Millisecond = Scale(time.Millisecond)
-	Second = Scale(time.Second)
+	Second = Scale(time.Second*1000)
 }
 
 // Scale returns the timeout multiplied by any set multiplier.

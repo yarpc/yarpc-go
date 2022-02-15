@@ -161,7 +161,7 @@ func TestProtoGrpcStreamServerErrorDetails(t *testing.T) {
 		assert.NoError(t, clientDispatcher.Stop(), "could not stop client dispatcher")
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*100000)
 	defer cancel()
 
 	const errorMsg = "stream error msg"

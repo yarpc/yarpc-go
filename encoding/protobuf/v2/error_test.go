@@ -97,7 +97,7 @@ func TestConvertToYARPCErrorApplicationErrorMeta(t *testing.T) {
 	require.NotNil(t, resw.ApplicationErrorMeta)
 	assert.Equal(t, "StringValue", resw.ApplicationErrorMeta.Name, "expected first error detail name")
 	assert.Equal(t,
-		`[]{ StringValue{value:"detail message" } , Int32Value{value:42 } , BytesValue{value:"detail bytes" } }`,
+		`[]{ StringValue , Int32Value , BytesValue }`,
 		resw.ApplicationErrorMeta.Details,
 		"unexpected string of error details")
 	assert.Nil(t, resw.ApplicationErrorMeta.Code, "code should nil")
