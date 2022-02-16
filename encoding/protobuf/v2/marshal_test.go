@@ -32,6 +32,6 @@ import (
 func TestUnhandledEncoding(t *testing.T) {
 	assert.Equal(t, yarpcerrors.CodeInternal,
 		yarpcerrors.FromError(unmarshal(transport.Encoding("foo"), bytes.NewReader([]byte("foo")), nil, newCodec(nil))).Code())
-	_, err := marshal(transport.Encoding("foo"), nil, newCodec(nil))
+	_, _, err := marshal(transport.Encoding("foo"), nil, newCodec(nil))
 	assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.FromError(err).Code())
 }
