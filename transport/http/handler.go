@@ -270,6 +270,10 @@ func (rw *responseWriter) AddHeaders(h transport.Headers) {
 	applicationHeaders.ToHTTPHeaders(h, rw.w.Header())
 }
 
+func (rw *responseWriter) AddHeader(k, v string) {
+	applicationHeaders.ToHTTPHeader(rw.w.Header(), k, v)
+}
+
 func (rw *responseWriter) SetApplicationError() {
 	rw.w.Header().Set(ApplicationStatusHeader, ApplicationErrorStatus)
 }

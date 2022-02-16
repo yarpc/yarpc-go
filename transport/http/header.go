@@ -50,6 +50,20 @@ func (hm headerMapper) ToHTTPHeaders(from transport.Headers, to http.Header) htt
 	return to
 }
 
+// toHTTPHeader adds a key, value header pair into a transport header.
+//
+// The header pair: 'key': 'value' is written to 'to'. The final header collection
+// is returned.
+//
+// If 'to' is nil, a new map will be assigned.
+func (hm headerMapper) ToHTTPHeader(to http.Header, key, value string) http.Header {
+	if to == nil {
+		to = make(http.Header, 1)
+	}
+	to.Add(hm.Prefix+transport.CanonicalizeHeaderKey(key), value)
+	return to
+}
+
 // fromHTTPHeaders converts HTTP headers to application headers.
 //
 // Headers are read from 'from' and written to 'to'. The final header collection

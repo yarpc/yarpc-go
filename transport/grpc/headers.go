@@ -184,15 +184,20 @@ func metadataToApplicationErrorMeta(responseMD metadata.MD) *transport.Applicati
 // addApplicationHeaders adds the headers to md.
 func addApplicationHeaders(md metadata.MD, headers transport.Headers) error {
 	for header, value := range headers.Items() {
-		header = transport.CanonicalizeHeaderKey(header)
-		if isReserved(header) {
-			return yarpcerrors.InvalidArgumentErrorf("cannot use reserved header in application headers: %s", header)
-		}
-		if err := addToMetadata(md, header, value); err != nil {
+		if err := addApplicationHeader(md, header, value); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// addApplicationHeaders adds the header pair 'key': 'value' to 'md'.
+func addApplicationHeader(md metadata.MD, key, value string) error {
+	key = transport.CanonicalizeHeaderKey(key)
+	if isReserved(key) {
+		return yarpcerrors.InvalidArgumentErrorf("cannot use reserved header in application headers: %s", key)
+	}
+	return addToMetadata(md, key, value)
 }
 
 // getApplicationHeaders returns the headers from md without any reserved headers.

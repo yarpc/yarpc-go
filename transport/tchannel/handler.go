@@ -78,6 +78,7 @@ type inboundCallResponse interface {
 type responseWriter interface {
 	AddHeaders(h transport.Headers)
 	AddHeader(key string, value string)
+	addHeader(key string, value string)
 	Close() error
 	ReleaseBuffer()
 	IsApplicationError() bool
@@ -118,7 +119,7 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 
 	if !h.excludeServiceHeaderInResponse {
 		// echo accepted rpc-service in response header
-		responseWriter.AddHeader(ServiceHeaderKey, call.ServiceName())
+		responseWriter.addHeader(ServiceHeaderKey, call.ServiceName())
 	}
 
 	err := h.callHandler(ctx, call, responseWriter)
@@ -147,12 +148,12 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 		// TODO: what to do with error? we could have a whole complicated scheme to
 		// return a SystemError here, might want to do that
 		text, _ := status.Code().MarshalText()
-		responseWriter.AddHeader(ErrorCodeHeaderKey, string(text))
+		responseWriter.addHeader(ErrorCodeHeaderKey, string(text))
 		if status.Name() != "" {
-			responseWriter.AddHeader(ErrorNameHeaderKey, status.Name())
+			responseWriter.addHeader(ErrorNameHeaderKey, status.Name())
 		}
 		if status.Message() != "" {
-			responseWriter.AddHeader(ErrorMessageHeaderKey, status.Message())
+			responseWriter.addHeader(ErrorMessageHeaderKey, status.Message())
 		}
 	}
 	if reswErr := responseWriter.Close(); reswErr != nil && !clientTimedOut {
@@ -271,15 +272,19 @@ func newHandlerWriter(response inboundCallResponse, format tchannel.Format, head
 
 func (hw *handlerWriter) AddHeaders(h transport.Headers) {
 	for k, v := range h.OriginalItems() {
-		if isReservedHeaderKey(k) {
-			hw.failedWith = appendError(hw.failedWith, fmt.Errorf("cannot use reserved header key: %s", k))
-			return
-		}
 		hw.AddHeader(k, v)
 	}
 }
 
 func (hw *handlerWriter) AddHeader(key string, value string) {
+	if isReservedHeaderKey(key) {
+		hw.failedWith = appendError(hw.failedWith, fmt.Errorf("cannot use reserved header key: %s", key))
+		return
+	}
+	hw.addHeader(key, value)
+}
+
+func (hw *handlerWriter) addHeader(key string, value string) {
 	hw.headers = hw.headers.With(key, value)
 }
 
@@ -292,13 +297,13 @@ func (hw *handlerWriter) SetApplicationErrorMeta(applicationErrorMeta *transport
 		return
 	}
 	if applicationErrorMeta.Code != nil {
-		hw.AddHeader(ApplicationErrorCodeHeaderKey, strconv.Itoa(int(*applicationErrorMeta.Code)))
+		hw.addHeader(ApplicationErrorCodeHeaderKey, strconv.Itoa(int(*applicationErrorMeta.Code)))
 	}
 	if applicationErrorMeta.Name != "" {
-		hw.AddHeader(ApplicationErrorNameHeaderKey, applicationErrorMeta.Name)
+		hw.addHeader(ApplicationErrorNameHeaderKey, applicationErrorMeta.Name)
 	}
 	if applicationErrorMeta.Details != "" {
-		hw.AddHeader(ApplicationErrorDetailsHeaderKey, truncateAppErrDetails(applicationErrorMeta.Details))
+		hw.addHeader(ApplicationErrorDetailsHeaderKey, truncateAppErrDetails(applicationErrorMeta.Details))
 	}
 }
 
