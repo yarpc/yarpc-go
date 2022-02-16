@@ -21,7 +21,6 @@
 package grpc
 
 import (
-	"google.golang.org/grpc/encoding"
 	"net"
 	"sync"
 
@@ -109,9 +108,11 @@ func (i *Inbound) start() error {
 	if i.router == nil {
 		return errRouterNotSet
 	}
-	encoding.RegisterCodec(customCodec{})
+
 	handler := newHandler(i, i.t.options.logger)
+
 	serverOptions := []grpc.ServerOption{
+		grpc.CustomCodec(customCodec{}),
 		grpc.UnknownServiceHandler(handler.handle),
 		grpc.MaxRecvMsgSize(i.t.options.serverMaxRecvMsgSize),
 		grpc.MaxSendMsgSize(i.t.options.serverMaxSendMsgSize),

@@ -20,17 +20,10 @@
 
 package grpc
 
-import (
-	"fmt"
-	"github.com/gogo/protobuf/proto"
-)
+import "fmt"
 
 // customCodec pass bytes to/from the wire without modification.
 type customCodec struct{}
-
-func (c customCodec) Name() string {
-	return "yarpc"
-}
 
 // Marshal takes a []byte and passes it through as a []byte.
 func (customCodec) Marshal(obj interface{}) ([]byte, error) {
@@ -68,26 +61,3 @@ func newCustomCodecMarshalCastError(actualObject interface{}) error {
 func newCustomCodecUnmarshalCastError(actualObject interface{}) error {
 	return fmt.Errorf("expected object to be of type *[]byte but got %T", actualObject)
 }
-
-
-// customCodec pass bytes to/from the wire without modification.
-type gogoCustomeCodec struct{}
-
-func (c gogoCustomeCodec) Name() string {
-	return "gogocodec"
-}
-
-// Marshal takes a []byte and passes it through as a []byte.
-func (gogoCustomeCodec) Marshal(obj interface{}) ([]byte, error) {
-	return proto.Marshal(obj.(proto.Message))
-}
-
-// Unmarshal takes a []byte pointer as obj and points it to data.
-func (gogoCustomeCodec) Unmarshal(data []byte, obj interface{}) error {
-	return proto.Unmarshal(data, obj.(proto.Message))
-}
-
-func (gogoCustomeCodec) String() string {
-	return "gogocodec"
-}
-
