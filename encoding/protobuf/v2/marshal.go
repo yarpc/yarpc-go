@@ -106,6 +106,7 @@ func marshalProto(message proto.Message, _ *codec) ([]byte, func(), error) {
 	cleanup := func() { bufferpool.Put(buf) }
 	data, err := proto.MarshalOptions{}.MarshalAppend(buf.Bytes(),message)
 	if err != nil {
+		cleanup()
 		return nil,nil, err
 	}
 	return data, cleanup, nil
