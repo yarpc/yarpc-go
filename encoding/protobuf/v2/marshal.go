@@ -39,7 +39,7 @@ const (
 	JSONEncoding transport.Encoding = "json"
 )
 
-// AnyResolver provides interface for looking up or iterating over descriptor types
+// AnyResolver provides interface for looking up or iterating over descriptor types.
 type AnyResolver interface {
 	protoregistry.ExtensionTypeResolver
 	protoregistry.MessageTypeResolver
@@ -90,29 +90,31 @@ func unmarshalJSON(body []byte, message proto.Message, codec *codec) error {
 	return codec.jsonUnmarshaler.Unmarshal(body, message)
 }
 
-func marshal(encoding transport.Encoding, message proto.Message, codec *codec) ([]byte, error) {
+func marshal(encoding transport.Encoding, message proto.Message, codec *codec) ([]byte, func(), error) {
 	switch encoding {
 	case Encoding:
 		return marshalProto(message, codec)
 	case JSONEncoding:
 		return marshalJSON(message, codec)
 	default:
-		return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "encoding.Expect should have handled encoding %q but did not", encoding)
+		return nil, nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "encoding.Expect should have handled encoding %q but did not", encoding)
 	}
 }
 
-func marshalProto(message proto.Message, _ *codec) ([]byte, error) {
-	data, err := proto.Marshal(message)
+func marshalProto(message proto.Message, _ *codec) ([]byte, func(), error) {
+	buf := bufferpool.Get()
+	cleanup := func() { bufferpool.Put(buf) }
+	data, err := proto.MarshalOptions{}.MarshalAppend(buf.Bytes(),message)
 	if err != nil {
-		return nil, err
+		return nil,nil, err
 	}
-	return data, nil
+	return data, cleanup, nil
 }
 
-func marshalJSON(message proto.Message, codec *codec) ([]byte, error) {
+func marshalJSON(message proto.Message, codec *codec) ([]byte, func(), error) {
 	data, err := codec.jsonMarshaler.Marshal(message)
 	if err != nil {
-		return nil, err
+		return nil,nil, err
 	}
-	return data, nil
+	return data, func() {}, nil
 }
