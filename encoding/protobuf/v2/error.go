@@ -153,7 +153,7 @@ func createStatusWithDetail(pberr *pberror, encoding transport.Encoding, codec *
 	pst := st.Proto()
 	pst.Details = pberr.details
 
-	detailsBytes,cleanup, marshalErr := marshal(encoding, pst, codec)
+	detailsBytes, cleanup, marshalErr := marshal(encoding, pst, codec)
 	if marshalErr != nil {
 		return nil, marshalErr
 	}
