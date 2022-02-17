@@ -34,7 +34,8 @@ import (
 var (
 	_bufferPool = sync.Pool{
 		New: func() interface{} {
-			return make([]byte, 1024)
+			newBuf := make([]byte, 1024)
+			return &newBuf
 		},
 	}
 )
@@ -113,12 +114,12 @@ func marshal(encoding transport.Encoding, message proto.Message, codec *codec) (
 func marshalProto(message proto.Message, _ *codec) ([]byte, func(), error) {
 	buf := getBuffer()
 	cleanup := func() { putBuffer(buf) }
-	data, err := proto.MarshalOptions{}.MarshalAppend(buf, message)
+	data, err := proto.MarshalOptions{}.MarshalAppend(*buf, message)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
-	return data, func() { putBuffer(data) }, nil
+	return data, func() { putBuffer(&data) }, nil
 }
 
 func marshalJSON(message proto.Message, codec *codec) ([]byte, func(), error) {
@@ -129,12 +130,17 @@ func marshalJSON(message proto.Message, codec *codec) ([]byte, func(), error) {
 	return data, func() {}, nil
 }
 
-func getBuffer() []byte {
-	buf := _bufferPool.Get().([]byte)
-	buf = buf[:0]
-	return buf
+func getBuffer() *[]byte {
+	newbuf := _bufferPool.Get().(*[]byte)
+	return resetBuf(newbuf)
 }
 
-func putBuffer(buf []byte) {
+func putBuffer(buf *[]byte) {
 	_bufferPool.Put(buf)
+}
+
+func resetBuf(buf *[]byte) *[]byte {
+	buffer := *buf
+	buffer = buffer[:0]
+	return &buffer
 }
