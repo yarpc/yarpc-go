@@ -104,10 +104,10 @@ func marshal(encoding transport.Encoding, message proto.Message, codec *codec) (
 func marshalProto(message proto.Message, _ *codec) ([]byte, func(), error) {
 	buf := bufferpool.Get()
 	cleanup := func() { bufferpool.Put(buf) }
-	data, err := proto.MarshalOptions{}.MarshalAppend(buf.Bytes(),message)
+	data, err := proto.MarshalOptions{}.MarshalAppend(buf.Bytes(), message)
 	if err != nil {
 		cleanup()
-		return nil,nil, err
+		return nil, nil, err
 	}
 	return data, cleanup, nil
 }
@@ -115,7 +115,7 @@ func marshalProto(message proto.Message, _ *codec) ([]byte, func(), error) {
 func marshalJSON(message proto.Message, codec *codec) ([]byte, func(), error) {
 	data, err := codec.jsonMarshaler.Marshal(message)
 	if err != nil {
-		return nil,nil, err
+		return nil, nil, err
 	}
 	return data, func() {}, nil
 }
