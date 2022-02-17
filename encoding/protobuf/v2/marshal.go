@@ -28,6 +28,15 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"io"
+	"sync"
+)
+
+var (
+	_bufferPool = sync.Pool{
+		New: func() interface{} {
+			return make([]byte, 1024)
+		},
+	}
 )
 
 const (
@@ -102,9 +111,9 @@ func marshal(encoding transport.Encoding, message proto.Message, codec *codec) (
 }
 
 func marshalProto(message proto.Message, _ *codec) ([]byte, func(), error) {
-	buf := bufferpool.Get()
-	cleanup := func() { bufferpool.Put(buf) }
-	data, err := proto.MarshalOptions{}.MarshalAppend(buf.Bytes(), message)
+	buf := getBuffer()
+	cleanup := func() { putBuffer(buf) }
+	data, err := proto.MarshalOptions{}.MarshalAppend(buf, message)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
@@ -118,4 +127,14 @@ func marshalJSON(message proto.Message, codec *codec) ([]byte, func(), error) {
 		return nil, nil, err
 	}
 	return data, func() {}, nil
+}
+
+func getBuffer() []byte {
+	buf := _bufferPool.Get().([]byte)
+	buf = buf[:0]
+	return buf
+}
+
+func putBuffer(buf []byte) {
+	_bufferPool.Put(buf)
 }
