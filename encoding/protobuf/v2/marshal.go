@@ -118,7 +118,7 @@ func marshalProto(message proto.Message, _ *codec) ([]byte, func(), error) {
 		cleanup()
 		return nil, nil, err
 	}
-	return data, cleanup, nil
+	return data, func() { putBuffer(data) }, nil
 }
 
 func marshalJSON(message proto.Message, codec *codec) ([]byte, func(), error) {
