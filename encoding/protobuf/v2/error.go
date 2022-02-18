@@ -23,6 +23,7 @@ package v2
 import (
 	"errors"
 	"fmt"
+	"google.golang.org/protobuf/encoding/prototext"
 	"strings"
 
 	"github.com/golang/protobuf/ptypes/any"
@@ -38,6 +39,8 @@ import (
 const (
 	// format for converting error details to string
 	_errDetailsFmt = "[]{ %s }"
+	// format for converting a single message to string
+	_errDetailFmt = "%s{%s}"
 )
 
 var _ error = (*pberror)(nil)
@@ -178,7 +181,7 @@ func setApplicationErrorMeta(pberr *pberror, resw transport.ResponseWriter) {
 
 	details := make([]string, 0, len(decodedDetails))
 	for _, detail := range decodedDetails {
-		details = append(details, protobufMessageNameToString(detail.(proto.Message)))
+		details = append(details, protobufMessageToString(detail.(proto.Message)))
 	}
 
 	applicationErroMetaSetter.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
@@ -199,8 +202,10 @@ func messageNameWithoutPackage(messageName string) string {
 	return messageName
 }
 
-func protobufMessageNameToString(message proto.Message) string {
-	return messageNameWithoutPackage(string(proto.MessageName(message)))
+func protobufMessageToString(message proto.Message) string {
+	return fmt.Sprintf(_errDetailFmt,
+		messageNameWithoutPackage(string(proto.MessageName(message))),
+		prototext.MarshalOptions{}.Format(message))
 }
 
 // convertFromYARPCError is to be used for handling errors on the outbound side.
