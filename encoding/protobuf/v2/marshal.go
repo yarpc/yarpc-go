@@ -119,7 +119,8 @@ func marshalProto(message proto.Message, _ *codec) ([]byte, func(), error) {
 		cleanup()
 		return nil, nil, err
 	}
-	return data, func() { putBuffer(&data) }, nil
+	*buf = data
+	return data, cleanup, nil
 }
 
 func marshalJSON(message proto.Message, codec *codec) ([]byte, func(), error) {
@@ -132,15 +133,14 @@ func marshalJSON(message proto.Message, codec *codec) ([]byte, func(), error) {
 
 func getBuffer() *[]byte {
 	newbuf := _bufferPool.Get().(*[]byte)
-	return resetBuf(newbuf)
+	resetBuf(newbuf)
+	return newbuf
 }
 
 func putBuffer(buf *[]byte) {
 	_bufferPool.Put(buf)
 }
 
-func resetBuf(buf *[]byte) *[]byte {
-	buffer := *buf
-	buffer = buffer[:0]
-	return &buffer
+func resetBuf(buf *[]byte) {
+	*buf = (*buf)[:0]
 }
