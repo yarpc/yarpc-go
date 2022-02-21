@@ -23,15 +23,16 @@ package v2
 import (
 	"errors"
 	"fmt"
+	"google.golang.org/protobuf/encoding/prototext"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/any"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
 	"go.uber.org/yarpc/yarpcerrors"
 	rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -115,7 +116,7 @@ type ErrorOption struct{ apply func(*pberror) error }
 func WithErrorDetails(details ...proto.Message) ErrorOption {
 	return ErrorOption{func(err *pberror) error {
 		for _, detail := range details {
-			any, terr := anypb.New(proto.MessageV2(detail))
+			any, terr := anypb.New(detail)
 			if terr != nil {
 				return terr
 			}
@@ -174,8 +175,8 @@ func setApplicationErrorMeta(pberr *pberror, resw transport.ResponseWriter) {
 	decodedDetails := GetErrorDetails(pberr)
 	var appErrName string
 	if len(decodedDetails) > 0 { // only grab the first name since this will be emitted with metrics
-		decodedMsg := proto.MessageV2(decodedDetails[0].(proto.Message))
-		appErrName = messageNameWithoutPackage(string(decodedMsg.ProtoReflect().Descriptor().FullName()))
+		decodedMsg := decodedDetails[0].(proto.Message)
+		appErrName = messageNameWithoutPackage(string(proto.MessageName(decodedMsg)))
 	}
 
 	details := make([]string, 0, len(decodedDetails))
@@ -202,11 +203,9 @@ func messageNameWithoutPackage(messageName string) string {
 }
 
 func protobufMessageToString(message proto.Message) string {
-	newMsg := proto.MessageV2(message)
-	newMsg.ProtoReflect().Descriptor().FullName()
 	return fmt.Sprintf(_errDetailFmt,
-		messageNameWithoutPackage(proto.MessageName(message)),
-		proto.CompactTextString(message))
+		messageNameWithoutPackage(string(proto.MessageName(message))),
+		prototext.MarshalOptions{}.Format(message))
 }
 
 // convertFromYARPCError is to be used for handling errors on the outbound side.

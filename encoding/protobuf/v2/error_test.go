@@ -26,7 +26,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/any"
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/stretchr/testify/assert"
@@ -36,6 +35,7 @@ import (
 	rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestNewOK(t *testing.T) {
@@ -97,7 +97,7 @@ func TestConvertToYARPCErrorApplicationErrorMeta(t *testing.T) {
 	require.NotNil(t, resw.ApplicationErrorMeta)
 	assert.Equal(t, "StringValue", resw.ApplicationErrorMeta.Name, "expected first error detail name")
 	assert.Equal(t,
-		`[]{ StringValue{value:"detail message" } , Int32Value{value:42 } , BytesValue{value:"detail bytes" } }`,
+		`[]{ StringValue{value:"detail message"} , Int32Value{value:42} , BytesValue{value:"detail bytes"} }`,
 		resw.ApplicationErrorMeta.Details,
 		"unexpected string of error details")
 	assert.Nil(t, resw.ApplicationErrorMeta.Code, "code should nil")
@@ -186,7 +186,7 @@ func TestPbErrorToYARPCError(t *testing.T) {
 			assert.Equal(t, tt.message, status.Message(), "unexpected grpc status message")
 			assert.Len(t, status.Details(), len(tt.details), "unexpected details length")
 			for i, detail := range tt.details {
-				assert.True(t, proto.Equal(detail,status.Details()[i].(proto.Message)))
+				assert.True(t, proto.Equal(detail, status.Details()[i].(proto.Message)))
 			}
 		})
 	}

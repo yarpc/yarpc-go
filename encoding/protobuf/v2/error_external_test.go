@@ -24,12 +24,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/encoding/protobuf/v2"
 	"go.uber.org/yarpc/yarpcerrors"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestGetDetailsFromWrappedError(t *testing.T) {

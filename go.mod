@@ -28,7 +28,7 @@ require (
 	github.com/samuel/go-thrift v0.0.0-20191111193933-5165175b40af // indirect
 	github.com/streadway/quantile v0.0.0-20150917103942-b0c588724d25 // indirect
 	github.com/stretchr/objx v0.2.0 // indirect
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.5.1
 	github.com/uber-common/bark v1.2.1 // indirect
 	github.com/uber-go/mapdecode v1.0.0
 	github.com/uber-go/tally v3.3.15+incompatible
@@ -47,8 +47,9 @@ require (
 	golang.org/x/lint v0.0.0-20200130185559-910be7a94367
 	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
 	golang.org/x/tools v0.1.5
-	google.golang.org/genproto v0.0.0-20200212174721-66ed5ce911ce // indirect
+	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
 	google.golang.org/grpc v1.28.0
+	google.golang.org/protobuf v1.26.0
 	gopkg.in/yaml.v2 v2.2.8
 	honnef.co/go/tools v0.0.1-2019.2.3
 )
