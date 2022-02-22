@@ -21,9 +21,11 @@
 package grpc
 
 import (
+	"crypto/tls"
 	"net"
 	"sync"
 
+	"github.com/soheilhy/cmux"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
 	"go.uber.org/yarpc/pkg/lifecycle"
@@ -41,13 +43,15 @@ var (
 
 // Inbound is a grpc transport.Inbound.
 type Inbound struct {
-	once     *lifecycle.Once
-	lock     sync.RWMutex
-	t        *Transport
-	listener net.Listener
-	options  *inboundOptions
-	router   transport.Router
-	server   *grpc.Server
+	once      *lifecycle.Once
+	lock      sync.RWMutex
+	t         *Transport
+	listener  net.Listener
+	options   *inboundOptions
+	router    transport.Router
+	server    *grpc.Server
+	tlsserver *grpc.Server
+	mux       cmux.CMux
 }
 
 // newInbound returns a new Inbound for the given listener.
@@ -118,11 +122,29 @@ func (i *Inbound) start() error {
 		grpc.MaxSendMsgSize(i.t.options.serverMaxSendMsgSize),
 	}
 
-	if i.options.creds != nil {
+	if !i.options.muxTls && i.options.creds != nil {
 		serverOptions = append(serverOptions, grpc.Creds(i.options.creds))
 	}
 
-	server := grpc.NewServer(serverOptions...)
+	var server, tlsserver *grpc.Server
+	var listener, tlslistener net.Listener
+	var mux cmux.CMux
+
+	listener = i.listener
+	server = grpc.NewServer(serverOptions...)
+
+	if i.options.muxTls {
+		mux = cmux.New(i.listener)
+		tlslistener = mux.Match(cmux.TLS(
+			tls.VersionSSL30,
+			tls.VersionTLS10,
+			tls.VersionTLS11,
+			tls.VersionTLS12,
+			tls.VersionTLS13,
+		))
+		listener = mux.Match(cmux.Any())
+		tlsserver = grpc.NewServer(append(serverOptions, grpc.Creds(i.options.creds))...)
+	}
 
 	go func() {
 		i.t.options.logger.Info("started GRPC inbound", zap.Stringer("address", i.listener.Addr()))
@@ -139,9 +161,19 @@ func (i *Inbound) start() error {
 		//
 		// TODO Server always returns a non-nil error but should
 		// we do something with some or all errors?
-		_ = server.Serve(i.listener)
+		_ = server.Serve(listener)
 	}()
+	if tlsserver != nil {
+		go func() {
+			_ = tlsserver.Serve(tlslistener)
+		}()
+		go func() {
+			_ = mux.Serve()
+		}()
+	}
 	i.server = server
+	i.tlsserver = tlsserver
+	i.mux = mux
 	return nil
 }
 
@@ -151,7 +183,15 @@ func (i *Inbound) stop() error {
 	if i.server != nil {
 		i.server.GracefulStop()
 	}
+	if i.tlsserver != nil {
+		i.tlsserver.GracefulStop()
+	}
+	if i.mux != nil {
+		i.mux.Close()
+	}
+	i.tlsserver = nil
 	i.server = nil
+	i.mux = nil
 	return nil
 }
 

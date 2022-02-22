@@ -139,6 +139,14 @@ func InboundCredentials(creds credentials.TransportCredentials) InboundOption {
 	}
 }
 
+// InboundMuxTls returns an InboundOption that enables multiplexing tls and non-tls
+// for connections on same inbound port.
+func InboundMuxTls(t bool) InboundOption {
+	return func(inboundOptions *inboundOptions) {
+		inboundOptions.muxTls = t
+	}
+}
+
 // OutboundOption is an option for an outbound.
 type OutboundOption func(*outboundOptions)
 
@@ -220,7 +228,8 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 }
 
 type inboundOptions struct {
-	creds credentials.TransportCredentials
+	muxTls bool
+	creds  credentials.TransportCredentials
 }
 
 func newInboundOptions(options []InboundOption) *inboundOptions {

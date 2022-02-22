@@ -25,6 +25,7 @@ require (
 	github.com/prometheus/client_golang v1.4.1 // indirect
 	github.com/prometheus/procfs v0.0.9 // indirect
 	github.com/samuel/go-thrift v0.0.0-20191111193933-5165175b40af // indirect
+	github.com/soheilhy/cmux v0.1.5
 	github.com/streadway/quantile v0.0.0-20150917103942-b0c588724d25 // indirect
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/stretchr/testify v1.4.0
