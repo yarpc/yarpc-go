@@ -58,7 +58,7 @@ func TestReadFromStreamDecodeError(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = readFromStream(ctx, clientStream, func() proto.Message { return nil },
-	newCodec(nil /*AnyResolver*/))
+		newCodec(nil /*AnyResolver*/))
 
 	assert.Equal(t, wantErr, err)
 }
