@@ -44,8 +44,11 @@ func (hm headerMapper) ToHTTPHeaders(from transport.Headers, to http.Header) htt
 	if to == nil {
 		to = make(http.Header, from.Len())
 	}
-	for k, v := range from.Items() {
-		to.Add(hm.Prefix+k, v)
+	for k, v := range from.OriginalItems() {
+		if !strings.HasPrefix(k, hm.Prefix) {
+			k = hm.Prefix + k
+		}
+		to.Add(k, v)
 	}
 	return to
 }
@@ -60,7 +63,10 @@ func (hm headerMapper) ToHTTPHeader(to http.Header, key, value string) http.Head
 	if to == nil {
 		to = make(http.Header, 1)
 	}
-	to.Add(hm.Prefix+transport.CanonicalizeHeaderKey(key), value)
+	if !strings.HasPrefix(key, hm.Prefix) {
+		key = hm.Prefix + key
+	}
+	to.Add(key, value)
 	return to
 }
 

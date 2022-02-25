@@ -460,7 +460,7 @@ func Benchmark_ResponseWriter_AddHeaders(b *testing.B) {
 		rw := newResponseWriter(recorder)
 		for i := 0; i < b.N; i++ {
 			rw.AddHeaders(transport.NewHeadersWithCapacity(1).With(
-				"abc", "",
+				"foo", "bar",
 			))
 		}
 	})
@@ -470,7 +470,17 @@ func Benchmark_ResponseWriter_AddHeaders(b *testing.B) {
 		rw := newResponseWriter(recorder)
 		for i := 0; i < b.N; i++ {
 			rw.AddHeaders(transport.NewHeadersWithCapacity(1).With(
-				"Abc", "",
+				"Foo", "bar",
+			))
+		}
+	})
+
+	b.Run("titlecase with rpc-header prefix", func(b *testing.B) {
+		recorder := httptest.NewRecorder()
+		rw := newResponseWriter(recorder)
+		for i := 0; i < b.N; i++ {
+			rw.AddHeaders(transport.NewHeadersWithCapacity(1).With(
+				"Rpc-Header-Foo", "bar",
 			))
 		}
 	})
@@ -481,7 +491,7 @@ func Benchmark_ResponseWriter_AddHeader(b *testing.B) {
 		recorder := httptest.NewRecorder()
 		rw := newResponseWriter(recorder)
 		for i := 0; i < b.N; i++ {
-			rw.AddHeader("abc", "")
+			rw.AddHeader("foo", "bar")
 		}
 	})
 
@@ -489,7 +499,15 @@ func Benchmark_ResponseWriter_AddHeader(b *testing.B) {
 		recorder := httptest.NewRecorder()
 		rw := newResponseWriter(recorder)
 		for i := 0; i < b.N; i++ {
-			rw.AddHeader("Abc", "")
+			rw.AddHeader("Foo", "bar")
+		}
+	})
+
+	b.Run("titlecase with rpc-header prefix", func(b *testing.B) {
+		recorder := httptest.NewRecorder()
+		rw := newResponseWriter(recorder)
+		for i := 0; i < b.N; i++ {
+			rw.AddHeader("Rpc-Header-Foo", "bar")
 		}
 	})
 }

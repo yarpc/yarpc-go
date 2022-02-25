@@ -58,14 +58,14 @@ func (r *responseWriter) AddHeaders(headers transport.Headers) {
 	if r.md == nil {
 		r.md = metadata.New(nil)
 	}
-	r.headerErr = multierr.Combine(r.headerErr, addApplicationHeaders(r.md, headers))
+	r.headerErr = multierr.Append(r.headerErr, addApplicationHeaders(r.md, headers))
 }
 
 func (r *responseWriter) AddHeader(key, value string) {
 	if r.md == nil {
 		r.md = metadata.New(nil)
 	}
-	r.headerErr = multierr.Combine(r.headerErr, addApplicationHeader(r.md, key, value))
+	r.headerErr = multierr.Append(r.headerErr, addApplicationHeader(r.md, key, value))
 }
 
 func (r *responseWriter) SetApplicationError() {

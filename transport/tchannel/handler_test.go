@@ -653,7 +653,7 @@ func Benchmark_ResponseWriter_AddHeaders(b *testing.B) {
 		rw := newHandlerWriter(nil, tchannel.Raw, canonicalizedHeaderCase)
 		for i := 0; i < b.N; i++ {
 			rw.AddHeaders(transport.NewHeadersWithCapacity(1).With(
-				"abc", "",
+				"foo", "bar",
 			))
 		}
 	})
@@ -662,7 +662,7 @@ func Benchmark_ResponseWriter_AddHeaders(b *testing.B) {
 		rw := newHandlerWriter(nil, tchannel.Raw, canonicalizedHeaderCase)
 		for i := 0; i < b.N; i++ {
 			rw.AddHeaders(transport.NewHeadersWithCapacity(1).With(
-				"Abc", "",
+				"Foo", "bar",
 			))
 		}
 	})
@@ -672,14 +672,14 @@ func Benchmark_ResponseWriter_AddHeader(b *testing.B) {
 	b.Run("lowercase", func(b *testing.B) {
 		rw := newHandlerWriter(nil, tchannel.Raw, canonicalizedHeaderCase)
 		for i := 0; i < b.N; i++ {
-			rw.AddHeader("abc", "")
+			rw.AddHeader("foo", "bar")
 		}
 	})
 
 	b.Run("titlecase", func(b *testing.B) {
 		rw := newHandlerWriter(nil, tchannel.Raw, canonicalizedHeaderCase)
 		for i := 0; i < b.N; i++ {
-			rw.AddHeader("Abc", "")
+			rw.AddHeader("Foo", "bar")
 		}
 	})
 }

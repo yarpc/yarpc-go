@@ -271,7 +271,7 @@ func newHandlerWriter(response inboundCallResponse, format tchannel.Format, head
 }
 
 func (hw *handlerWriter) AddHeaders(h transport.Headers) {
-	for k, v := range h.OriginalItems() {
+	for k, v := range h.Items() {
 		hw.AddHeader(k, v)
 	}
 }
