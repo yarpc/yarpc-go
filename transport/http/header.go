@@ -44,11 +44,9 @@ func (hm headerMapper) ToHTTPHeaders(from transport.Headers, to http.Header) htt
 	if to == nil {
 		to = make(http.Header, from.Len())
 	}
+	// We use the original header-key, if the key is written in a MIME canoicalized form we save an allocation.
 	for k, v := range from.OriginalItems() {
-		if !strings.HasPrefix(k, hm.Prefix) {
-			k = hm.Prefix + k
-		}
-		to.Add(k, v)
+		hm.ToHTTPHeader(to, k, v)
 	}
 	return to
 }

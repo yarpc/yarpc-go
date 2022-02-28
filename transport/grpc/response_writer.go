@@ -88,7 +88,7 @@ func (r *responseWriter) AddSystemHeader(key string, value string) {
 	if r.md == nil {
 		r.md = metadata.New(nil)
 	}
-	r.headerErr = multierr.Combine(r.headerErr, addToMetadata(r.md, key, value))
+	r.headerErr = multierr.Append(r.headerErr, addToMetadata(r.md, key, value))
 }
 
 func (r *responseWriter) Bytes() []byte {

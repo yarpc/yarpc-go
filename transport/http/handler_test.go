@@ -434,6 +434,7 @@ func TestResponseWriter(t *testing.T) {
 		"shard-key": "123",
 	})
 	writer.AddHeaders(headers)
+	writer.AddHeader("partition-key", "321")
 
 	writer.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
 		Details: appErrDetails,
@@ -447,6 +448,7 @@ func TestResponseWriter(t *testing.T) {
 
 	assert.Equal(t, "bar", recorder.Header().Get("rpc-header-foo"))
 	assert.Equal(t, "123", recorder.Header().Get("rpc-header-shard-key"))
+	assert.Equal(t, "321", recorder.Header().Get("rpc-header-partition-key"))
 	assert.Equal(t, "hello", recorder.Body.String())
 
 	assert.Equal(t, appErrDetails, recorder.Header().Get(_applicationErrorDetailsHeader))

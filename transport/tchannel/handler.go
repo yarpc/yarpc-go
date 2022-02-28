@@ -271,6 +271,7 @@ func newHandlerWriter(response inboundCallResponse, format tchannel.Format, head
 }
 
 func (hw *handlerWriter) AddHeaders(h transport.Headers) {
+	// We use the lowercased keys in the headers, that will save us an allocation.
 	for k, v := range h.Items() {
 		hw.AddHeader(k, v)
 	}
