@@ -34,7 +34,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TlsScenario holds client & server tls credentials.
+// TLSScenario holds client & server tls credentials.
 type TLSScenario struct {
 	CAs        *x509.CertPool
 	ServerCert *x509.Certificate
