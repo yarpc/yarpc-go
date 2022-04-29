@@ -35,7 +35,7 @@ import (
 )
 
 // TlsScenario holds client & server tls credentials.
-type TlsScenario struct {
+type TLSScenario struct {
 	CAs        *x509.CertPool
 	ServerCert *x509.Certificate
 	ServerKey  *ecdsa.PrivateKey
@@ -45,7 +45,7 @@ type TlsScenario struct {
 
 // Create returns client and server TLS credentials generated during
 // the runtime only for testing.
-func Create(t *testing.T, clientValidity time.Duration, serverValidity time.Duration) TlsScenario {
+func Create(t *testing.T, clientValidity time.Duration, serverValidity time.Duration) TLSScenario {
 	now := time.Now()
 
 	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -115,7 +115,7 @@ func Create(t *testing.T, clientValidity time.Duration, serverValidity time.Dura
 	pool := x509.NewCertPool()
 	pool.AddCert(ca)
 
-	return TlsScenario{
+	return TLSScenario{
 		CAs:        pool,
 		ServerCert: serverCert,
 		ServerKey:  serverKey,
