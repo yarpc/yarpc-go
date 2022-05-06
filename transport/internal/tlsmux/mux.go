@@ -49,10 +49,10 @@ func (m *mux) Accept() (net.Conn, error) {
 	// TODO(jronak): avoid slow connections causing head of the line blocking by spawning
 	// connection processing in separate routine.
 
-	return m.mux(conn)
+	return m.handle(conn)
 }
 
-func (m *mux) mux(conn net.Conn) (net.Conn, error) {
+func (m *mux) handle(conn net.Conn) (net.Conn, error) {
 	cs := &connSniffer{Conn: conn}
 	// TODO(jronak): set temporary connection read and write timeout.
 	cs.startSniffing()
