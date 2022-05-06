@@ -30,10 +30,17 @@ import (
 type connSniffer struct {
 	net.Conn
 
-	sniffing bool         // true when sniffing.
-	buf      bytes.Buffer // holds sniffed data.
+	// set to true when sniffing mode is enabled.
+	sniffing bool
+	// buf stores bytes read from the underlying connection when in sniffing
+	// mode. When sniffing mode is disabled, buffered bytes is returned.
+	buf bytes.Buffer
 }
 
+// Read returns bytes read from the underlying connection. When sniffing is
+// true, data read from the connection is stored in the buffer. When sniffing
+// mode is disabled, data is first read from the buffer and once the buffer is
+// empty the underlying connection is read.
 func (c *connSniffer) Read(b []byte) (int, error) {
 	if !c.sniffing && c.buf.Len() != 0 {
 		// Read from the buffer when in non-sniffing mode and buffer is not empty.
