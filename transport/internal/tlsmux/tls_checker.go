@@ -25,10 +25,16 @@ import "io"
 const (
 	_tlsHandshakeHeaderLength = 5
 
+	// Based on handshake(22) of ContentType from:
+	// https://datatracker.ietf.org/doc/html/rfc8446#section-5.1
 	_tlsContentTypeHandshake = 22
-	_tlsMajorVersion         = 3
-	_tlsMinorVersion         = 1
+	// TLS 1.0 is rename of SSL3.1, which implies major version is 3 and minor
+	// version is >= 1.
+	_tlsMajorVersion = 3
+	_tlsMinorVersion = 1
 
+	// Offsets below have been derived from TLSPlaintext struct from:
+	// https://datatracker.ietf.org/doc/html/rfc8446#section-5.1
 	_tlsContentTypeOffset  = 0
 	_tlsMajorVersionOffset = 1
 	_tlsMinorVersionOffset = 2
