@@ -209,7 +209,11 @@ func (i *Inbound) start() error {
 		Addr:    i.addr,
 		Handler: httpHandler,
 	})
-	i.server.WithTls(i.tlsConfig)
+	if i.tlsConfig != nil {
+		i.server.WithTls(func(lis net.Listener) net.Listener {
+			return tls.NewListener(lis, i.tlsConfig)
+		})
+	}
 	if err := i.server.ListenAndServe(); err != nil {
 		return err
 	}

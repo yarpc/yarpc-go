@@ -22,14 +22,12 @@ package net
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"net"
 	"net/http"
 	"sync"
 
 	"go.uber.org/atomic"
-	"go.uber.org/yarpc/transport/internal/tlsmux"
 )
 
 var (
@@ -42,11 +40,11 @@ var (
 type HTTPServer struct {
 	*http.Server
 
-	lock      sync.RWMutex
-	listener  net.Listener
-	done      chan error
-	stopped   atomic.Bool
-	tlsConfig *tls.Config
+	lock     sync.RWMutex
+	listener net.Listener
+	done     chan error
+	stopped  atomic.Bool
+	tlsLis   func(net.Listener) net.Listener
 }
 
 // NewHTTPServer wraps the given http.Server into an HTTPServer.
@@ -57,8 +55,8 @@ func NewHTTPServer(s *http.Server) *HTTPServer {
 	}
 }
 
-func (h *HTTPServer) WithTls(config *tls.Config) {
-	h.tlsConfig = config
+func (h *HTTPServer) WithTls(fn func(net.Listener) net.Listener) {
+	h.tlsLis = fn
 }
 
 // Listener returns the listener for this server or nil if the server isn't
@@ -99,8 +97,8 @@ func (h *HTTPServer) ListenAndServe() error {
 		return err
 	}
 
-	if h.tlsConfig != nil {
-		h.listener = tlsmux.NewListener(h.listener, h.tlsConfig)
+	if h.tlsLis != nil {
+		h.listener = h.tlsLis(h.listener)
 	}
 
 	go h.serve(h.listener)
