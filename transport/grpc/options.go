@@ -22,6 +22,7 @@ package grpc
 
 import (
 	"context"
+	"crypto/tls"
 	"math"
 	"net"
 
@@ -139,6 +140,14 @@ func InboundCredentials(creds credentials.TransportCredentials) InboundOption {
 	}
 }
 
+// InboundCredentials returns an InboundOption that sets credentials for incoming
+// connections.
+func InboundTLS(config *tls.Config) InboundOption {
+	return func(inboundOptions *inboundOptions) {
+		inboundOptions.tlsConfig = config
+	}
+}
+
 // OutboundOption is an option for an outbound.
 type OutboundOption func(*outboundOptions)
 
@@ -220,7 +229,8 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 }
 
 type inboundOptions struct {
-	creds credentials.TransportCredentials
+	creds     credentials.TransportCredentials
+	tlsConfig *tls.Config
 }
 
 func newInboundOptions(options []InboundOption) *inboundOptions {

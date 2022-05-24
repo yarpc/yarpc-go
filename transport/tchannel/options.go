@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"context"
+	"crypto/tls"
 	"net"
 	"time"
 
@@ -62,6 +63,7 @@ type transportOptions struct {
 	originalHeaders                bool
 	nativeTChannelMethods          NativeTChannelMethods
 	excludeServiceHeaderInResponse bool
+	tlsConfig                      *tls.Config
 }
 
 // newTransportOptions constructs the default transport options struct
@@ -226,5 +228,12 @@ func WithNativeTChannelMethods(nativeMethods NativeTChannelMethods) TransportOpt
 func ExcludeServiceHeaderInResponse() TransportOption {
 	return func(option *transportOptions) {
 		option.excludeServiceHeaderInResponse = true
+	}
+}
+
+// ExcludeServiceHeaderInResponse stop adding the $rpc$-service response header for inbounds
+func InboundTls(config *tls.Config) TransportOption {
+	return func(option *transportOptions) {
+		option.tlsConfig = config
 	}
 }

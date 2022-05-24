@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
 	"sync"
@@ -33,6 +34,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/yarpc/transport/internal/tlsmux"
 	"go.uber.org/zap"
 )
 
@@ -72,6 +74,7 @@ type Transport struct {
 
 	nativeTChannelMethods          NativeTChannelMethods
 	excludeServiceHeaderInResponse bool
+	tlsConfig                      *tls.Config
 }
 
 // NewTransport is a YARPC transport that facilitates sending and receiving
@@ -119,6 +122,7 @@ func (o transportOptions) newTransport() *Transport {
 		newResponseWriter:              newHandlerWriter,
 		nativeTChannelMethods:          o.nativeTChannelMethods,
 		excludeServiceHeaderInResponse: o.excludeServiceHeaderInResponse,
+		tlsConfig:                      o.tlsConfig,
 	}
 }
 
@@ -235,7 +239,12 @@ func (t *Transport) start() error {
 	}
 
 	if t.listener != nil {
-		if err := t.ch.Serve(t.listener); err != nil {
+		lis := t.listener
+
+		if t.tlsConfig != nil {
+			lis = tlsmux.NewListener(lis, t.tlsConfig)
+		}
+		if err := t.ch.Serve(lis); err != nil {
 			return err
 		}
 	} else {
@@ -251,9 +260,18 @@ func (t *Transport) start() error {
 			// TODO(abg): Find a way to export this to users
 		}
 
+		lis, err := net.Listen("tcp", addr)
+		if err != nil {
+			return err
+		}
+
+		if t.tlsConfig != nil {
+			lis = tlsmux.NewListener(lis, t.tlsConfig)
+		}
+
 		// TODO(abg): If addr was just the port (":4040"), we want to use
 		// ListenIP() + ":4040" rather than just ":4040".
-		if err := t.ch.ListenAndServe(addr); err != nil {
+		if err := t.ch.Serve(lis); err != nil {
 			return err
 		}
 	}

@@ -22,6 +22,7 @@ package http
 
 import (
 	"context"
+	"crypto/tls"
 	"net"
 	"net/http"
 	"strings"
@@ -103,6 +104,12 @@ func ShutdownTimeout(timeout time.Duration) InboundOption {
 	}
 }
 
+func InboundTLS(config *tls.Config) InboundOption {
+	return func(i *Inbound) {
+		i.tlsConfig = config
+	}
+}
+
 // NewInbound builds a new HTTP inbound that listens on the given address and
 // sharing this transport.
 func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
@@ -141,6 +148,7 @@ type Inbound struct {
 
 	// should only be false in testing
 	bothResponseError bool
+	tlsConfig         *tls.Config
 }
 
 // Tracer configures a tracer on this inbound.
@@ -201,6 +209,7 @@ func (i *Inbound) start() error {
 		Addr:    i.addr,
 		Handler: httpHandler,
 	})
+	i.server.WithTls(i.tlsConfig)
 	if err := i.server.ListenAndServe(); err != nil {
 		return err
 	}

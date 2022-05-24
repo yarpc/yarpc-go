@@ -27,6 +27,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/yarpc/transport/internal/tlsmux"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -139,7 +140,11 @@ func (i *Inbound) start() error {
 		//
 		// TODO Server always returns a non-nil error but should
 		// we do something with some or all errors?
-		_ = server.Serve(i.listener)
+		listener := i.listener
+		if i.options.tlsConfig != nil {
+			listener = tlsmux.NewListener(listener, i.options.tlsConfig)
+		}
+		_ = server.Serve(listener)
 	}()
 	i.server = server
 	return nil
