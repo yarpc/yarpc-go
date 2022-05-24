@@ -33,6 +33,7 @@ import (
 	"go.uber.org/yarpc/api/x/introspection"
 	intnet "go.uber.org/yarpc/internal/net"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/yarpc/transport/internal/tlsmux"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 )
@@ -211,7 +212,7 @@ func (i *Inbound) start() error {
 	})
 	if i.tlsConfig != nil {
 		i.server.WithTls(func(lis net.Listener) net.Listener {
-			return tls.NewListener(lis, i.tlsConfig)
+			return tlsmux.NewListener(lis, i.tlsConfig)
 		})
 	}
 	if err := i.server.ListenAndServe(); err != nil {
