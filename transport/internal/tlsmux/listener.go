@@ -25,23 +25,23 @@ import (
 	"net"
 )
 
-// mux provides a listener which accepts both TLS and non-TLS connections.
-type mux struct {
+// listener wraps original net listener and it accepts both TLS and non-TLS connections.
+type listener struct {
 	net.Listener
 	tlsConfig *tls.Config
 }
 
 // NewListener returns a multiplexed listener which accepts both TLS and non-TLS connections.
-func NewListener(listener net.Listener, tlsConfig *tls.Config) net.Listener {
-	return &mux{
-		Listener:  listener,
+func NewListener(lis net.Listener, tlsConfig *tls.Config) net.Listener {
+	return &listener{
+		Listener:  lis,
 		tlsConfig: tlsConfig,
 	}
 }
 
 // Accept returns the multiplexed connetions.
-func (m *mux) Accept() (net.Conn, error) {
-	conn, err := m.Listener.Accept()
+func (l *listener) Accept() (net.Conn, error) {
+	conn, err := l.Listener.Accept()
 	if err != nil {
 		return nil, err
 	}
@@ -49,10 +49,10 @@ func (m *mux) Accept() (net.Conn, error) {
 	// TODO(jronak): avoid slow connections causing head of the line blocking by spawning
 	// connection processing in separate routine.
 
-	return m.handle(conn)
+	return l.handle(conn)
 }
 
-func (m *mux) handle(conn net.Conn) (net.Conn, error) {
+func (l *listener) handle(conn net.Conn) (net.Conn, error) {
 	cs := &connSniffer{Conn: conn}
 	// TODO(jronak): set temporary connection read and write timeout.
 
@@ -65,7 +65,7 @@ func (m *mux) handle(conn net.Conn) (net.Conn, error) {
 	if isTLS {
 		// TODO(jronak): initiate tls handshake to catch tls errors and
 		// version metrics.
-		return tls.Server(cs, m.tlsConfig), nil
+		return tls.Server(cs, l.tlsConfig), nil
 	}
 
 	return cs, nil
