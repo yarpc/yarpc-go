@@ -23,6 +23,7 @@ package tlsmux
 import (
 	"bytes"
 	"crypto/tls"
+	"fmt"
 	"net"
 	"testing"
 
@@ -39,7 +40,7 @@ func TestIsTLSClientHelloRecord(t *testing.T) {
 
 	t.Run("read_error", func(t *testing.T) {
 		isTLS, err := isTLSClientHelloRecord(bytes.NewBuffer(nil))
-		assert.Error(t, err, "unexpected error")
+		assert.Error(t, err, "unexpected success")
 		assert.False(t, isTLS, "unexpected tls")
 	})
 
@@ -49,11 +50,30 @@ func TestIsTLSClientHelloRecord(t *testing.T) {
 		assert.False(t, isTLS, "unexpected tls")
 	})
 
-	t.Run("tls", func(t *testing.T) {
-		tlsClientHelloHeader := []byte{22, 3, 1, 0, 238}
-		isTLS, err := isTLSClientHelloRecord(bytes.NewBuffer(tlsClientHelloHeader))
-		assert.NoError(t, err, "unexpected error")
-		assert.True(t, isTLS, "unexpected tls")
+	t.Run("tls_header", func(t *testing.T) {
+		tests := []struct {
+			minorVersion  int
+			expectSuccess bool
+		}{
+			{minorVersion: 0, expectSuccess: false},
+			{minorVersion: 1, expectSuccess: true},
+			{minorVersion: 2, expectSuccess: true},
+			{minorVersion: 3, expectSuccess: true},
+			{minorVersion: 4, expectSuccess: true},
+		}
+
+		for _, tt := range tests {
+			t.Run(fmt.Sprintf("minor_version_%d", tt.minorVersion), func(t *testing.T) {
+				tlsClientHelloHeader := []byte{22, 3, byte(tt.minorVersion), 0, 238}
+				isTLS, err := isTLSClientHelloRecord(bytes.NewBuffer(tlsClientHelloHeader))
+				assert.NoError(t, err, "unexpected error")
+				if tt.expectSuccess {
+					assert.True(t, isTLS, "unexpected non tls")
+				} else {
+					assert.False(t, isTLS, "unexpected tls")
+				}
+			})
+		}
 	})
 
 	t.Run("e2e_tls", func(t *testing.T) {

@@ -54,7 +54,7 @@ func (c *connSniffer) Read(b []byte) (int, error) {
 
 	n, err := c.Conn.Read(b)
 	if err != nil {
-		return 0, err
+		return n, err
 	}
 
 	// Store in buffer when sniffing.

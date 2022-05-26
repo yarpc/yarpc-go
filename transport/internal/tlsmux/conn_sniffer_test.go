@@ -34,6 +34,10 @@ type mockConn struct {
 	buf *bytes.Buffer
 }
 
+func newMockConn(data []byte) *mockConn {
+	return &mockConn{buf: bytes.NewBuffer(data)}
+}
+
 func (m *mockConn) Read(b []byte) (int, error) {
 	return m.buf.Read(b)
 }
@@ -41,8 +45,10 @@ func (m *mockConn) Read(b []byte) (int, error) {
 func TestConnSniffer(t *testing.T) {
 	t.Run("must_read_directly_when_not_sniffing", func(t *testing.T) {
 		data := []byte("test")
-		sniffer := &connSniffer{Conn: &mockConn{buf: bytes.NewBuffer(data)}, disableSniffing: true}
-
+		sniffer := &connSniffer{
+			Conn:            newMockConn(data),
+			disableSniffing: true,
+		}
 		buf := make([]byte, 4)
 		n, err := sniffer.Read(buf)
 		require.NoError(t, err, "unexpected error")
@@ -53,7 +59,9 @@ func TestConnSniffer(t *testing.T) {
 
 	t.Run("must_store_data_when_sniffing", func(t *testing.T) {
 		data := []byte("test")
-		sniffer := &connSniffer{Conn: &mockConn{buf: bytes.NewBuffer(data)}}
+		sniffer := &connSniffer{
+			Conn: newMockConn(data),
+		}
 		require.False(t, sniffer.disableSniffing, "unexpected sniffing value")
 
 		buf := make([]byte, 2)
@@ -61,28 +69,30 @@ func TestConnSniffer(t *testing.T) {
 		require.NoError(t, err, "unexpected error")
 		assert.Equal(t, 2, n, "unexpected length")
 		assert.Equal(t, data[:2], buf, "unexpected data")
-		assert.Equal(t, data[:2], sniffer.buf.Bytes(), "unexpected buffer capacity")
+		assert.Equal(t, data[:2], sniffer.buf.Bytes(), "unexpected buffer content")
 
 		n, err = sniffer.Read(buf)
 		require.NoError(t, err, "unexpected error")
 		assert.Equal(t, 2, n, "unexpected length")
 		assert.Equal(t, data[2:], buf, "unexpected data")
-		assert.Equal(t, data, sniffer.buf.Bytes(), "unexpected buffer capacity")
+		assert.Equal(t, data, sniffer.buf.Bytes(), "unexpected buffer content")
 	})
 
 	t.Run("must_empty_buffer_after_sniffing", func(t *testing.T) {
 		data := []byte("test")
 		sniffer := &connSniffer{
-			Conn:            &mockConn{buf: bytes.NewBuffer(data[2:])},
-			disableSniffing: true,
-			buf:             *bytes.NewBuffer(data[:2]),
+			Conn: newMockConn(data),
 		}
+
+		buf := make([]byte, 2)
+		n, err := sniffer.Read(buf)
+		require.NoError(t, err, "unexpected error")
+		assert.Equal(t, 2, n, "unexpected length")
 
 		sniffer.stopSniffing()
 		require.True(t, sniffer.disableSniffing, "unexpected sniffing value")
 
-		buf := make([]byte, 2)
-		n, err := sniffer.Read(buf)
+		n, err = sniffer.Read(buf)
 		require.NoError(t, err, "unexpected error")
 		assert.Equal(t, 2, n, "unexpected length")
 		assert.Equal(t, data[:2], buf, "unexpected data")
