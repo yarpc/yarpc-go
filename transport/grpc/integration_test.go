@@ -24,16 +24,10 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"crypto/tls"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	"errors"
 	"io"
 	"math"
-	"math/big"
 	"net"
 	"strings"
 	"testing"
@@ -56,6 +50,7 @@ import (
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/procedure"
+	"go.uber.org/yarpc/transport/internal/tlsscenario"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap/zaptest"
 	"google.golang.org/grpc"
@@ -423,7 +418,7 @@ func TestTLSWithYARPCAndGRPC(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			scenario := createTLSScenario(t, tt.clientValidity, tt.serverValidity)
+			scenario := tlsscenario.Create(t, tt.clientValidity, tt.serverValidity)
 
 			serverCreds := credentials.NewTLS(&tls.Config{
 				GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
@@ -829,93 +824,6 @@ func (r *testRouter) Choose(_ context.Context, request *transport.Request) (tran
 		}
 	}
 	return transport.HandlerSpec{}, yarpcerrors.UnimplementedErrorf("no procedure for name %s", request.Procedure)
-}
-
-type tlsScenario struct {
-	CAs        *x509.CertPool
-	ServerCert *x509.Certificate
-	ServerKey  *ecdsa.PrivateKey
-	ClientCert *x509.Certificate
-	ClientKey  *ecdsa.PrivateKey
-}
-
-func createTLSScenario(t *testing.T, clientValidity time.Duration, serverValidity time.Duration) tlsScenario {
-	now := time.Now()
-
-	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
-	caBytes, err := x509.CreateCertificate(
-		rand.Reader,
-		&x509.Certificate{
-			Subject: pkix.Name{
-				CommonName: "test ca",
-			},
-			SerialNumber:          big.NewInt(1),
-			BasicConstraintsValid: true,
-			IsCA:                  true,
-			KeyUsage:              x509.KeyUsageCertSign,
-			NotBefore:             now,
-			NotAfter:              now.Add(10 * time.Minute),
-		},
-		&x509.Certificate{},
-		caKey.Public(),
-		caKey,
-	)
-	require.NoError(t, err)
-	ca, err := x509.ParseCertificate(caBytes)
-	require.NoError(t, err)
-
-	serverKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
-	serverCertBytes, err := x509.CreateCertificate(
-		rand.Reader,
-		&x509.Certificate{
-			Subject: pkix.Name{
-				CommonName: "server",
-			},
-			NotAfter:     now.Add(serverValidity),
-			SerialNumber: big.NewInt(2),
-			IPAddresses:  []net.IP{net.ParseIP("127.0.0.1")},
-			KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyAgreement,
-		},
-		ca,
-		serverKey.Public(),
-		caKey,
-	)
-	require.NoError(t, err)
-	serverCert, err := x509.ParseCertificate(serverCertBytes)
-	require.NoError(t, err)
-
-	clientKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
-	clientCertBytes, err := x509.CreateCertificate(
-		rand.Reader,
-		&x509.Certificate{
-			Subject: pkix.Name{
-				CommonName: "client",
-			},
-			NotAfter:     now.Add(clientValidity),
-			SerialNumber: big.NewInt(3),
-			KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyAgreement,
-		},
-		ca,
-		clientKey.Public(),
-		caKey,
-	)
-	require.NoError(t, err)
-	clientCert, err := x509.ParseCertificate(clientCertBytes)
-	require.NoError(t, err)
-
-	pool := x509.NewCertPool()
-	pool.AddCert(ca)
-
-	return tlsScenario{
-		CAs:        pool,
-		ServerCert: serverCert,
-		ServerKey:  serverKey,
-		ClientCert: clientCert,
-		ClientKey:  clientKey,
-	}
 }
 
 func TestYARPCErrorsConverted(t *testing.T) {
