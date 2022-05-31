@@ -54,14 +54,11 @@ func (l *listener) Accept() (net.Conn, error) {
 
 func (l *listener) handle(conn net.Conn) (net.Conn, error) {
 	cs := &connSniffer{Conn: conn}
-	// TODO(jronak): set temporary connection read and write timeout.
-
-	isTLS, err := isTLSClientHelloRecord(cs)
+	isTLS, err := matchTLSConnection(cs)
 	if err != nil {
 		return nil, err
 	}
 
-	cs.stopSniffing()
 	if isTLS {
 		// TODO(jronak): initiate tls handshake to catch tls errors and
 		// version metrics.
@@ -69,4 +66,15 @@ func (l *listener) handle(conn net.Conn) (net.Conn, error) {
 	}
 
 	return cs, nil
+}
+
+func matchTLSConnection(cs *connSniffer) (bool, error) {
+	// TODO(jronak): set temporary connection read and write timeout.
+	isTLS, err := isTLSClientHelloRecord(cs)
+	if err != nil {
+		return false, err
+	}
+
+	cs.stopSniffing()
+	return isTLS, nil
 }
