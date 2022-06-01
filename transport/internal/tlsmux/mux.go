@@ -61,6 +61,7 @@ func (m *mux) handle(conn net.Conn) (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
+	cs.SetReadDeadline(time.Time{})
 
 	cs.stopSniffing()
 	if isTLS {
