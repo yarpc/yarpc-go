@@ -23,6 +23,7 @@ package tlsmux
 import (
 	"crypto/tls"
 	"net"
+	"time"
 )
 
 // mux provides a listener which accepts both TLS and non-TLS connections.
@@ -55,7 +56,7 @@ func (m *mux) Accept() (net.Conn, error) {
 func (m *mux) handle(conn net.Conn) (net.Conn, error) {
 	cs := &connSniffer{Conn: conn}
 	// TODO(jronak): set temporary connection read and write timeout.
-
+	cs.SetReadDeadline(time.Now().Add(time.Second * 2))
 	isTLS, err := isTLSClientHelloRecord(cs)
 	if err != nil {
 		return nil, err
