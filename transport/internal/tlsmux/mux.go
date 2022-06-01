@@ -70,10 +70,6 @@ func (m *mux) handle(conn net.Conn) (net.Conn, error) {
 
 	cs.stopSniffing()
 
-	if true {
-		return cs, nil
-	}
-
 	if isTLS {
 		// TODO(jronak): initiate tls handshake to catch tls errors and
 		// version metrics.
