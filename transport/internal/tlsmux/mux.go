@@ -49,8 +49,8 @@ func (m *mux) Accept() (net.Conn, error) {
 
 	// TODO(jronak): avoid slow connections causing head of the line blocking by spawning
 	// connection processing in separate routine.
-	return conn, nil
-	// return m.handle(conn)
+	// return conn, nil
+	return m.handle(conn)
 }
 
 func (m *mux) handle(conn net.Conn) (net.Conn, error) {
@@ -64,6 +64,11 @@ func (m *mux) handle(conn net.Conn) (net.Conn, error) {
 	cs.SetReadDeadline(time.Time{})
 
 	cs.stopSniffing()
+
+	if true {
+		return cs, nil
+	}
+
 	if isTLS {
 		// TODO(jronak): initiate tls handshake to catch tls errors and
 		// version metrics.
