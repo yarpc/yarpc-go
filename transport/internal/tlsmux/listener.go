@@ -23,19 +23,38 @@ package tlsmux
 import (
 	"crypto/tls"
 	"net"
+
+	"go.uber.org/net/metrics"
+	"go.uber.org/zap"
 )
+
+// Config describes how listener should be configured.
+type Config struct {
+	Listener  net.Listener
+	TLSConfig *tls.Config
+
+	ServiceName   string
+	TransportName string
+	Meter         *metrics.Scope
+	Logger        *zap.Logger
+}
 
 // listener wraps original net listener and it accepts both TLS and non-TLS connections.
 type listener struct {
 	net.Listener
+
 	tlsConfig *tls.Config
+	observer  *observer
+	logger    *zap.Logger
 }
 
 // NewListener returns a multiplexed listener which accepts both TLS and non-TLS connections.
-func NewListener(lis net.Listener, tlsConfig *tls.Config) net.Listener {
+func NewListener(c Config) net.Listener {
 	return &listener{
-		Listener:  lis,
-		tlsConfig: tlsConfig,
+		Listener:  c.Listener,
+		tlsConfig: c.TLSConfig,
+		observer:  newObserver(c.Meter, c.Logger, c.ServiceName, c.TransportName),
+		logger:    c.Logger,
 	}
 }
 
@@ -56,6 +75,7 @@ func (l *listener) handle(conn net.Conn) (net.Conn, error) {
 	cs := &connSniffer{Conn: conn}
 	isTLS, err := matchTLSConnection(cs)
 	if err != nil {
+		l.logger.Error("TLS connection matcher failed", zap.Error(err))
 		return nil, err
 	}
 
@@ -63,17 +83,24 @@ func (l *listener) handle(conn net.Conn) (net.Conn, error) {
 		return l.handleTLSConn(cs)
 	}
 
-	return cs, nil
+	return l.handlePlaintextConn(cs), nil
 }
 
 func (l *listener) handleTLSConn(conn net.Conn) (net.Conn, error) {
 	tlsConn := tls.Server(conn, l.tlsConfig)
 	if err := tlsConn.Handshake(); err != nil {
-		// TODO(jronak): emit tls handshake failure metric.
+		l.observer.incTLSHandshakeFailures()
+		l.logger.Error("TLS handshake failed", zap.Error(err))
 		return nil, err
 	}
 
+	l.observer.incTLSConnections(tlsConn.ConnectionState().Version)
 	return tlsConn, nil
+}
+
+func (l *listener) handlePlaintextConn(conn net.Conn) net.Conn {
+	l.observer.incPlaintextConnections()
+	return conn
 }
 
 func matchTLSConnection(cs *connSniffer) (bool, error) {
