@@ -42,15 +42,20 @@ func NewListener(listener net.Listener, tlsConfig *tls.Config) net.Listener {
 
 // Accept returns the multiplexed connetions.
 func (m *mux) Accept() (net.Conn, error) {
-	conn, err := m.Listener.Accept()
-	if err != nil {
-		return nil, err
-	}
+	for {
+		conn, err := m.Listener.Accept()
+		if err != nil {
+			return nil, err
+		}
 
-	// TODO(jronak): avoid slow connections causing head of the line blocking by spawning
-	// connection processing in separate routine.
-	// return conn, nil
-	return m.handle(conn)
+		// TODO(jronak): avoid slow connections causing head of the line blocking by spawning
+		// connection processing in separate routine.
+		// return conn, nil
+		conn, err = m.handle(conn)
+		if err == nil {
+			return conn, nil
+		}
+	}
 }
 
 func (m *mux) handle(conn net.Conn) (net.Conn, error) {
