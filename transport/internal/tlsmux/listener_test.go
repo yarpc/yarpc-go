@@ -79,7 +79,7 @@ func TestMux(t *testing.T) {
 			body: []byte("tls_body"),
 		},
 		{
-			desc: "tls_client",
+			desc: "tls_handshake_failure",
 			clientTlsConfig: &tls.Config{
 				GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
 					return &tls.Certificate{
