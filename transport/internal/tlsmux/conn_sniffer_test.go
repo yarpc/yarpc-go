@@ -45,10 +45,9 @@ func (m *mockConn) Read(b []byte) (int, error) {
 func TestConnSniffer(t *testing.T) {
 	t.Run("must_read_directly_when_not_sniffing", func(t *testing.T) {
 		data := []byte("test")
-		sniffer := &connSniffer{
-			Conn:            newMockConn(data),
-			disableSniffing: true,
-		}
+		sniffer := newConnectionSniffer(newMockConn(data))
+		sniffer.disableSniffing = true
+
 		buf := make([]byte, 4)
 		n, err := sniffer.Read(buf)
 		require.NoError(t, err, "unexpected error")
@@ -59,9 +58,7 @@ func TestConnSniffer(t *testing.T) {
 
 	t.Run("must_store_data_when_sniffing", func(t *testing.T) {
 		data := []byte("test")
-		sniffer := &connSniffer{
-			Conn: newMockConn(data),
-		}
+		sniffer := newConnectionSniffer(newMockConn(data))
 		require.False(t, sniffer.disableSniffing, "unexpected sniffing value")
 
 		buf := make([]byte, 2)
@@ -80,9 +77,7 @@ func TestConnSniffer(t *testing.T) {
 
 	t.Run("must_empty_buffer_after_sniffing", func(t *testing.T) {
 		data := []byte("test")
-		sniffer := &connSniffer{
-			Conn: newMockConn(data),
-		}
+		sniffer := newConnectionSniffer(newMockConn(data))
 
 		buf := make([]byte, 2)
 		n, err := sniffer.Read(buf)
