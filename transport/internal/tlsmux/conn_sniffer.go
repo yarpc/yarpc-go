@@ -37,6 +37,10 @@ type connSniffer struct {
 	buf bytes.Buffer
 }
 
+func newConnectionSniffer(conn net.Conn) *connSniffer {
+	return &connSniffer{Conn: conn}
+}
+
 // Read returns bytes read from the underlying connection. When sniffing is
 // true, data read from the connection is stored in the buffer. When sniffing
 // mode is disabled, data is first read from the buffer and once the buffer is
