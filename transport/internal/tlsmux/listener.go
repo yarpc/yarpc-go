@@ -39,33 +39,47 @@ func NewListener(lis net.Listener, tlsConfig *tls.Config) net.Listener {
 	}
 }
 
-// Accept returns the multiplexed connetions.
+// Accept returns multiplexed plaintext connetion.
 func (l *listener) Accept() (net.Conn, error) {
-	conn, err := l.Listener.Accept()
-	if err != nil {
-		return nil, err
+	for {
+		conn, err := l.Listener.Accept()
+		if err != nil {
+			return conn, err
+		}
+
+		// TODO(jronak): avoid slow connections causing head of the line blocking by spawning
+		// connection processing in separate routine.
+
+		c, err := l.mux(conn)
+		if err != nil {
+			// Don't return the mux error as caller will shutdown the server on
+			// listener error. Instead, we close the connection and loop around to
+			// acccept the next connection.
+			conn.Close()
+			continue
+		}
+		return c, err
 	}
-
-	// TODO(jronak): avoid slow connections causing head of the line blocking by spawning
-	// connection processing in separate routine.
-
-	return l.handle(conn)
 }
 
-func (l *listener) handle(conn net.Conn) (net.Conn, error) {
-	cs := &connSniffer{Conn: conn}
-	isTLS, err := matchTLSConnection(cs)
+// mux accepts both plaintext and tls connection, and returns a plaintext
+// connection.
+func (l *listener) mux(conn net.Conn) (net.Conn, error) {
+	c := newConnectionSniffer(conn)
+	isTLS, err := matchTLSConnection(c)
 	if err != nil {
 		return nil, err
 	}
 
 	if isTLS {
-		return l.handleTLSConn(cs)
+		return l.handleTLSConn(c)
 	}
 
-	return cs, nil
+	return c, nil
 }
 
+// handleTLSConn completes the TLS handshake for the given connection and
+// returns a TLS server wrapped plaintext connection.
 func (l *listener) handleTLSConn(conn net.Conn) (net.Conn, error) {
 	tlsConn := tls.Server(conn, l.tlsConfig)
 	if err := tlsConn.Handshake(); err != nil {
