@@ -22,10 +22,16 @@ package tlsmux
 
 import (
 	"crypto/tls"
+	"errors"
 	"net"
+	"sync"
 
 	"go.uber.org/net/metrics"
 	"go.uber.org/zap"
+)
+
+var (
+	errListenerClosed = errors.New("listener closed")
 )
 
 // Config describes how listener should be configured.
@@ -46,29 +52,85 @@ type listener struct {
 	tlsConfig *tls.Config
 	observer  *observer
 	logger    *zap.Logger
+
+	serveOnce   sync.Once
+	connChan    chan net.Conn
+	stopChan    chan struct{}
+	stoppedChan chan struct{}
 }
 
 // NewListener returns a multiplexed listener which accepts both TLS and non-TLS connections.
 func NewListener(c Config) net.Listener {
 	return &listener{
-		Listener:  c.Listener,
-		tlsConfig: c.TLSConfig,
-		observer:  newObserver(c.Meter, c.Logger, c.ServiceName, c.TransportName),
-		logger:    c.Logger,
+		Listener:    c.Listener,
+		tlsConfig:   c.TLSConfig,
+		observer:    newObserver(c.Meter, c.Logger, c.ServiceName, c.TransportName),
+		logger:      c.Logger,
+		connChan:    make(chan net.Conn),
+		stoppedChan: make(chan struct{}),
+		stopChan:    make(chan struct{}),
 	}
 }
 
 // Accept returns the multiplexed connetions.
 func (l *listener) Accept() (net.Conn, error) {
-	conn, err := l.Listener.Accept()
+	l.serveOnce.Do(func() { go l.serve() })
+
+	select {
+	case conn, ok := <-l.connChan:
+		if !ok {
+			return nil, errListenerClosed
+		}
+
+		return conn, nil
+	case <-l.stopChan:
+		return nil, errListenerClosed
+	}
+}
+
+func (l *listener) Close() error {
+	err := l.Listener.Close()
+	close(l.stopChan)
+	<-l.stoppedChan
+	return err
+}
+
+func (l *listener) serve() {
+	var wg sync.WaitGroup
+
+	defer func() {
+		wg.Wait()
+		close(l.stoppedChan)
+		close(l.connChan)
+	}()
+
+	for {
+		conn, err := l.Listener.Accept()
+		if err != nil {
+			if ne, ok := err.(net.Error); ok && !ne.Temporary() {
+				return
+			}
+		}
+
+		wg.Add(1)
+		go l.serveConnection(conn, &wg)
+	}
+}
+
+func (l *listener) serveConnection(conn net.Conn, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	c, err := l.handle(conn)
 	if err != nil {
-		return nil, err
+		conn.Close()
+		return
 	}
 
-	// TODO(jronak): avoid slow connections causing head of the line blocking by spawning
-	// connection processing in separate routine.
-
-	return l.handle(conn)
+	select {
+	case l.connChan <- c:
+	case <-l.stopChan:
+		conn.Close()
+	}
 }
 
 func (l *listener) handle(conn net.Conn) (net.Conn, error) {

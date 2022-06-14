@@ -143,15 +143,13 @@ func TestMux(t *testing.T) {
 			wg := sync.WaitGroup{}
 			wg.Add(1)
 			defer wg.Wait()
+			defer muxLis.Close()
 			go func() {
 				defer wg.Done()
 				conn, err := muxLis.Accept()
-				if tt.expectError {
-					require.EqualError(t, err, tt.serverErrorMsg)
+				if err != nil {
 					return
 				}
-
-				require.NoError(t, err)
 				defer conn.Close()
 
 				request := make([]byte, len(tt.body))
@@ -161,7 +159,6 @@ func TestMux(t *testing.T) {
 
 				_, err = conn.Write(request)
 				assert.NoError(t, err, "unexpected error")
-
 			}()
 
 			var conn net.Conn
