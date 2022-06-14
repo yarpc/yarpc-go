@@ -39,21 +39,29 @@ func NewListener(lis net.Listener, tlsConfig *tls.Config) net.Listener {
 	}
 }
 
-// Accept returns the multiplexed connetions.
+// Accept returns multiplexed plaintext connetion.
 func (l *listener) Accept() (net.Conn, error) {
-	conn, err := l.Listener.Accept()
-	if err != nil {
-		return nil, err
+	for {
+		conn, err := l.Listener.Accept()
+		if err != nil {
+			return conn, err
+		}
+
+		// TODO(jronak): avoid slow connections causing head of the line blocking by spawning
+		// connection processing in separate routine.
+
+		c, err := l.handle(conn)
+		if err != nil {
+			conn.Close()
+			continue
+		}
+
+		return c, err
 	}
-
-	// TODO(jronak): avoid slow connections causing head of the line blocking by spawning
-	// connection processing in separate routine.
-
-	return l.handle(conn)
 }
 
 func (l *listener) handle(conn net.Conn) (net.Conn, error) {
-	cs := &connSniffer{Conn: conn}
+	cs := newConnectionSniffer(conn)
 	isTLS, err := matchTLSConnection(cs)
 	if err != nil {
 		return nil, err
