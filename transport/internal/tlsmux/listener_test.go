@@ -77,11 +77,14 @@ func TestMux(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
+			wg := sync.WaitGroup{}
+			defer wg.Wait()
+
 			lis, err := net.Listen("tcp", "127.0.0.1:0")
 			require.NoError(t, err, "unexpected error on listening")
 
 			muxLis := tlsmux.NewListener(lis, serverTlsConfig)
-			wg := sync.WaitGroup{}
+			defer muxLis.Close()
 			wg.Add(1)
 			go func() {
 				conn, err := muxLis.Accept()
@@ -114,8 +117,6 @@ func TestMux(t *testing.T) {
 			n, err := conn.Read(response)
 			assert.NoError(t, err, "unexpected error")
 			assert.Equal(t, tt.body, response[:n], "unexpected response")
-
-			wg.Wait()
 		})
 	}
 }

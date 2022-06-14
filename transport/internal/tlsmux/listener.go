@@ -31,7 +31,8 @@ type listener struct {
 	tlsConfig *tls.Config
 }
 
-// NewListener returns a multiplexed listener which accepts both TLS and non-TLS connections.
+// NewListener returns a multiplexed listener which accepts both TLS and
+// plaintext connections.
 func NewListener(lis net.Listener, tlsConfig *tls.Config) net.Listener {
 	return &listener{
 		Listener:  lis,
