@@ -72,8 +72,10 @@ func NewListener(c Config) net.Listener {
 	}
 }
 
-// Accept returns the multiplexed connetions.
+// Accept returns multiplexed plaintext connetion.
+// After close, returned error is errListenerClosed.
 func (l *listener) Accept() (net.Conn, error) {
+	// Starts the connection server only once.
 	l.serveOnce.Do(func() { go l.serve() })
 
 	select {
@@ -81,13 +83,13 @@ func (l *listener) Accept() (net.Conn, error) {
 		if !ok {
 			return nil, errListenerClosed
 		}
-
 		return conn, nil
 	case <-l.stopChan:
 		return nil, errListenerClosed
 	}
 }
 
+// Close closes the listener and waits until the connection server stops.
 func (l *listener) Close() error {
 	err := l.Listener.Close()
 	close(l.stopChan)
@@ -95,6 +97,8 @@ func (l *listener) Close() error {
 	return err
 }
 
+// server accepts the connection from the underlying listener and creates a new
+// go routine for each connection for muxing.
 func (l *listener) serve() {
 	var wg sync.WaitGroup
 
@@ -107,9 +111,7 @@ func (l *listener) serve() {
 	for {
 		conn, err := l.Listener.Accept()
 		if err != nil {
-			if ne, ok := err.(net.Error); ok && !ne.Temporary() {
-				return
-			}
+			return
 		}
 
 		wg.Add(1)
@@ -117,10 +119,12 @@ func (l *listener) serve() {
 	}
 }
 
+// serveConnection muxes the given connection and sends muxed connection to the
+// connection channel.
 func (l *listener) serveConnection(conn net.Conn, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	c, err := l.handle(conn)
+	c, err := l.mux(conn)
 	if err != nil {
 		conn.Close()
 		return
@@ -133,21 +137,25 @@ func (l *listener) serveConnection(conn net.Conn, wg *sync.WaitGroup) {
 	}
 }
 
-func (l *listener) handle(conn net.Conn) (net.Conn, error) {
-	cs := &connSniffer{Conn: conn}
-	isTLS, err := matchTLSConnection(cs)
+// mux accepts both plaintext and tls connection, and returns a plaintext
+// connection.
+func (l *listener) mux(conn net.Conn) (net.Conn, error) {
+	c := newConnectionSniffer(conn)
+	isTLS, err := matchTLSConnection(c)
 	if err != nil {
 		l.logger.Error("TLS connection matcher failed", zap.Error(err))
 		return nil, err
 	}
 
 	if isTLS {
-		return l.handleTLSConn(cs)
+		return l.handleTLSConn(c)
 	}
 
-	return l.handlePlaintextConn(cs), nil
+	return l.handlePlaintextConn(c), nil
 }
 
+// handleTLSConn completes the TLS handshake for the given connection and
+// returns a TLS server wrapped plaintext connection.
 func (l *listener) handleTLSConn(conn net.Conn) (net.Conn, error) {
 	tlsConn := tls.Server(conn, l.tlsConfig)
 	if err := tlsConn.Handshake(); err != nil {
