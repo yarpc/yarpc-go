@@ -58,7 +58,6 @@ func TestMux(t *testing.T) {
 
 		expectedCounter metrics.Snapshot
 		expectError     bool
-		serverErrorMsg  string
 		clientErrorMsg  string
 	}{
 		{
@@ -122,12 +121,14 @@ func TestMux(t *testing.T) {
 			},
 			expectError:    true,
 			clientErrorMsg: "remote error: tls: protocol version not supported",
-			serverErrorMsg: "tls: client offered only unsupported versions: [302 301]",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
+			wg := sync.WaitGroup{}
+			defer wg.Wait()
+
 			lis, err := net.Listen("tcp", "127.0.0.1:0")
 			require.NoError(t, err, "unexpected error on listening")
 
@@ -140,14 +141,14 @@ func TestMux(t *testing.T) {
 				ServiceName:   "test-svc",
 				TransportName: "test-transport",
 			})
-			wg := sync.WaitGroup{}
+			defer muxLis.Close()
+
 			wg.Add(1)
-			defer wg.Wait()
 			go func() {
 				defer wg.Done()
 				conn, err := muxLis.Accept()
 				if tt.expectError {
-					require.EqualError(t, err, tt.serverErrorMsg)
+					require.Error(t, err, "unexpected empty error")
 					return
 				}
 
@@ -161,7 +162,6 @@ func TestMux(t *testing.T) {
 
 				_, err = conn.Write(request)
 				assert.NoError(t, err, "unexpected error")
-
 			}()
 
 			var conn net.Conn

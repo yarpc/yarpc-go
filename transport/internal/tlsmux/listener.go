@@ -48,7 +48,8 @@ type listener struct {
 	logger    *zap.Logger
 }
 
-// NewListener returns a multiplexed listener which accepts both TLS and non-TLS connections.
+// NewListener returns a multiplexed listener which accepts both TLS and
+// plaintext connections.
 func NewListener(c Config) net.Listener {
 	return &listener{
 		Listener:  c.Listener,
