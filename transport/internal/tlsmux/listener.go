@@ -39,7 +39,7 @@ func NewListener(lis net.Listener, tlsConfig *tls.Config) net.Listener {
 	}
 }
 
-// Accept returns multiplexed plaintext connetion.
+// Accept returns multiplexed plaintext connection.
 func (l *listener) Accept() (net.Conn, error) {
 	for {
 		conn, err := l.Listener.Accept()
