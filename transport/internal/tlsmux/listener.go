@@ -59,7 +59,8 @@ type listener struct {
 	stoppedChan chan struct{}
 }
 
-// NewListener returns a multiplexed listener which accepts both TLS and non-TLS connections.
+// NewListener returns a multiplexed listener which accepts both TLS and
+// plaintext connections.
 func NewListener(c Config) net.Listener {
 	return &listener{
 		Listener:    c.Listener,
@@ -89,7 +90,8 @@ func (l *listener) Accept() (net.Conn, error) {
 	}
 }
 
-// Close closes the listener and waits until the connection server stops.
+// Close closes the listener and waits until the connection server drains
+// accepted connections and stops the server.
 func (l *listener) Close() error {
 	err := l.Listener.Close()
 	close(l.stopChan)
@@ -98,7 +100,7 @@ func (l *listener) Close() error {
 }
 
 // server accepts the connection from the underlying listener and creates a new
-// go routine for each connection for muxing.
+// go routine for each connection for async muxing.
 func (l *listener) serve() {
 	var wg sync.WaitGroup
 
