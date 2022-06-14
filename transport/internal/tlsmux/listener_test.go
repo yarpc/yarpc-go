@@ -55,7 +55,6 @@ func TestMux(t *testing.T) {
 		body            []byte
 
 		expectError    bool
-		serverErrorMsg string
 		clientErrorMsg string
 	}{
 		{
@@ -94,7 +93,6 @@ func TestMux(t *testing.T) {
 			},
 			expectError:    true,
 			clientErrorMsg: "remote error: tls: protocol version not supported",
-			serverErrorMsg: "tls: client offered only unsupported versions: [302 301]",
 		},
 	}
 
@@ -108,13 +106,13 @@ func TestMux(t *testing.T) {
 
 			muxLis := tlsmux.NewListener(lis, serverTlsConfig)
 			defer muxLis.Close()
+
 			wg.Add(1)
-			defer wg.Wait()
 			go func() {
 				defer wg.Done()
 				conn, err := muxLis.Accept()
 				if tt.expectError {
-					require.EqualError(t, err, tt.serverErrorMsg)
+					require.Error(t, err, "unexpected empty error")
 					return
 				}
 
@@ -128,7 +126,6 @@ func TestMux(t *testing.T) {
 
 				_, err = conn.Write(request)
 				assert.NoError(t, err, "unexpected error")
-
 			}()
 
 			var conn net.Conn
