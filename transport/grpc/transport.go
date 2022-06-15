@@ -39,6 +39,7 @@ type Transport struct {
 	once          *lifecycle.Once
 	options       *transportOptions
 	addressToPeer map[string]*grpcPeer
+	serviceName   string
 }
 
 // NewTransport returns a new Transport.

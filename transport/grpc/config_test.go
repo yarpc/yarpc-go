@@ -459,6 +459,7 @@ func TestTransportSpec(t *testing.T) {
 				inbound, ok := cfg.Inbounds[0].(*Inbound)
 				require.True(t, ok, "expected *Inbound, got %T", cfg.Inbounds[0])
 				assert.Contains(t, inbound.listener.Addr().String(), tt.wantInbound.Address)
+				assert.Equal(t, "foo", inbound.t.serviceName)
 
 				if tt.wantInbound.ServerMaxRecvMsgSize > 0 {
 					assert.Equal(t, tt.wantInbound.ServerMaxRecvMsgSize, inbound.t.options.serverMaxRecvMsgSize)

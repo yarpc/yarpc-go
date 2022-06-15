@@ -27,6 +27,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/yarpc/transport/internal/tlsmux"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -118,8 +119,19 @@ func (i *Inbound) start() error {
 		grpc.MaxSendMsgSize(i.t.options.serverMaxSendMsgSize),
 	}
 
+	listener := i.listener
+
 	if i.options.creds != nil {
 		serverOptions = append(serverOptions, grpc.Creds(i.options.creds))
+	} else if i.options.muxTlsConfig != nil {
+		listener = tlsmux.NewListener(tlsmux.Config{
+			Listener:      listener,
+			TLSConfig:     i.options.muxTlsConfig.Clone(),
+			Logger:        i.t.options.logger,
+			Meter:         i.t.options.meter,
+			ServiceName:   i.t.serviceName,
+			TransportName: TransportName,
+		})
 	}
 
 	server := grpc.NewServer(serverOptions...)
@@ -139,7 +151,7 @@ func (i *Inbound) start() error {
 		//
 		// TODO Server always returns a non-nil error but should
 		// we do something with some or all errors?
-		_ = server.Serve(i.listener)
+		_ = server.Serve(listener)
 	}()
 	i.server = server
 	return nil

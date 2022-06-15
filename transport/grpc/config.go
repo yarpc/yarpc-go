@@ -266,7 +266,7 @@ func newTransportSpec(opts ...Option) (*transportSpec, error) {
 	return transportSpec, nil
 }
 
-func (t *transportSpec) buildTransport(transportConfig *TransportConfig, _ *yarpcconfig.Kit) (transport.Transport, error) {
+func (t *transportSpec) buildTransport(transportConfig *TransportConfig, kit *yarpcconfig.Kit) (transport.Transport, error) {
 	options := t.TransportOptions
 	if transportConfig.ServerMaxRecvMsgSize > 0 {
 		options = append(options, ServerMaxRecvMsgSize(transportConfig.ServerMaxRecvMsgSize))
@@ -285,7 +285,9 @@ func (t *transportSpec) buildTransport(transportConfig *TransportConfig, _ *yarp
 		return nil, err
 	}
 	options = append(options, BackoffStrategy(backoffStrategy))
-	return newTransport(newTransportOptions(options)), nil
+	tr := newTransport(newTransportOptions(options))
+	tr.serviceName = kit.ServiceName()
+	return tr, nil
 }
 
 func (t *transportSpec) buildInbound(inboundConfig *InboundConfig, tr transport.Transport, _ *yarpcconfig.Kit) (transport.Inbound, error) {

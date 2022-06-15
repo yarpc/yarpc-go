@@ -22,10 +22,12 @@ package grpc
 
 import (
 	"context"
+	"crypto/tls"
 	"math"
 	"net"
 
 	opentracing "github.com/opentracing/opentracing-go"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/transport"
 	intbackoff "go.uber.org/yarpc/internal/backoff"
@@ -90,6 +92,15 @@ func Logger(logger *zap.Logger) TransportOption {
 	}
 }
 
+// Meter sets a meter to use for transport metrics.
+//
+// The default is to not emit any metrics.
+func Meter(meter *metrics.Scope) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.meter = meter
+	}
+}
+
 // ServerMaxRecvMsgSize is the maximum message size the server can receive.
 //
 // The default is 4MB.
@@ -136,6 +147,14 @@ func (InboundOption) grpcOption() {}
 func InboundCredentials(creds credentials.TransportCredentials) InboundOption {
 	return func(inboundOptions *inboundOptions) {
 		inboundOptions.creds = creds
+	}
+}
+
+// InboundMuxTLS returns an InboundOption that creates muxed listener which
+// accepts inbound plaintext and TLS connections with the given TLS config.
+func InboundMuxTLS(tlsConfig *tls.Config) InboundOption {
+	return func(inboundOptions *inboundOptions) {
+		inboundOptions.muxTlsConfig = tlsConfig
 	}
 }
 
@@ -193,6 +212,7 @@ type transportOptions struct {
 	backoffStrategy      backoff.Strategy
 	tracer               opentracing.Tracer
 	logger               *zap.Logger
+	meter                *metrics.Scope
 	serverMaxRecvMsgSize int
 	serverMaxSendMsgSize int
 	clientMaxRecvMsgSize int
@@ -220,7 +240,8 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 }
 
 type inboundOptions struct {
-	creds credentials.TransportCredentials
+	creds        credentials.TransportCredentials
+	muxTlsConfig *tls.Config
 }
 
 func newInboundOptions(options []InboundOption) *inboundOptions {
