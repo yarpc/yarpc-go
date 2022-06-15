@@ -22,6 +22,7 @@ package http
 
 import (
 	"context"
+	"crypto/tls"
 	"net"
 	"net/http"
 	"strings"
@@ -32,6 +33,7 @@ import (
 	"go.uber.org/yarpc/api/x/introspection"
 	intnet "go.uber.org/yarpc/internal/net"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/yarpc/transport/internal/tlsmux"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 )
@@ -103,6 +105,14 @@ func ShutdownTimeout(timeout time.Duration) InboundOption {
 	}
 }
 
+// InboundMuxTLS returns an InboundOption that creates muxed listener which
+// accepts inbound plaintext and TLS connections with the given TLS config.
+func InboundMuxTLS(tlsConfig *tls.Config) InboundOption {
+	return func(i *Inbound) {
+		i.muxTLSConfig = tlsConfig
+	}
+}
+
 // NewInbound builds a new HTTP inbound that listens on the given address and
 // sharing this transport.
 func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
@@ -141,6 +151,8 @@ type Inbound struct {
 
 	// should only be false in testing
 	bothResponseError bool
+
+	muxTLSConfig *tls.Config
 }
 
 // Tracer configures a tracer on this inbound.
@@ -201,7 +213,29 @@ func (i *Inbound) start() error {
 		Addr:    i.addr,
 		Handler: httpHandler,
 	})
-	if err := i.server.ListenAndServe(); err != nil {
+
+	addr := i.addr
+	if addr == "" {
+		addr = ":http"
+	}
+
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+
+	if i.muxTLSConfig != nil {
+		listener = tlsmux.NewListener(tlsmux.Config{
+			Listener:      listener,
+			TLSConfig:     i.muxTLSConfig,
+			ServiceName:   i.transport.serverName,
+			TransportName: TransportName,
+			Meter:         i.transport.meter,
+			Logger:        i.logger,
+		})
+	}
+
+	if err := i.server.Serve(listener); err != nil {
 		return err
 	}
 

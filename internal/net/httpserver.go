@@ -40,10 +40,11 @@ var (
 type HTTPServer struct {
 	*http.Server
 
-	lock     sync.RWMutex
-	listener net.Listener
-	done     chan error
-	stopped  atomic.Bool
+	lock      sync.RWMutex
+	listener  net.Listener
+	done      chan error
+	stopped   atomic.Bool
+	listening atomic.Bool
 }
 
 // NewHTTPServer wraps the given http.Server into an HTTPServer.
@@ -77,13 +78,13 @@ func (h *HTTPServer) ListenAndServe() error {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
+	if h.listening.Swap(true) {
+		return errAlreadyListening
+	}
+
 	addr := h.Server.Addr
 	if addr == "" {
 		addr = ":http"
-	}
-
-	if h.listener != nil {
-		return errAlreadyListening
 	}
 
 	var err error
@@ -91,6 +92,29 @@ func (h *HTTPServer) ListenAndServe() error {
 	if err != nil {
 		return err
 	}
+
+	go h.serve(h.listener)
+	return nil
+}
+
+// Serve starts the given HTTP server up in the background on the given
+// listener and returns immediately.
+//
+// An error is returned if the server was already listening, or if the server
+// was stopped with Stop().
+func (h *HTTPServer) Serve(listener net.Listener) error {
+	if h.stopped.Load() {
+		return errServerStopped
+	}
+
+	h.lock.Lock()
+	defer h.lock.Unlock()
+
+	if h.listening.Swap(true) {
+		return errAlreadyListening
+	}
+
+	h.listener = listener
 
 	go h.serve(h.listener)
 	return nil

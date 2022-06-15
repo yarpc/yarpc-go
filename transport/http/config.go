@@ -147,7 +147,9 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 	}
 	options.connBackoffStrategy = strategy
 
-	return options.newTransport(), nil
+	tr := options.newTransport()
+	tr.serverName = k.ServiceName()
+	return tr, nil
 }
 
 // InboundConfig configures an HTTP inbound.

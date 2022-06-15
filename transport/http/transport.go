@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
+	"go.uber.org/net/metrics"
 	backoffapi "go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -53,6 +54,7 @@ type transportOptions struct {
 	tracer                opentracing.Tracer
 	buildClient           func(*transportOptions) *http.Client
 	logger                *zap.Logger
+	meter                 *metrics.Scope
 }
 
 var defaultTransportOptions = transportOptions{
@@ -216,6 +218,15 @@ func Logger(logger *zap.Logger) TransportOption {
 	}
 }
 
+// Meter sets a meter to use for internal transport metrics.
+//
+// The default is to not emit any metrics.
+func Meter(meter *metrics.Scope) TransportOption {
+	return func(options *transportOptions) {
+		options.meter = meter
+	}
+}
+
 // Hidden option to override the buildHTTPClient function. This is used only
 // for testing.
 func buildClient(f func(*transportOptions) *http.Client) TransportOption {
@@ -248,6 +259,7 @@ func (o *transportOptions) newTransport() *Transport {
 		peers:               make(map[string]*httpPeer),
 		tracer:              o.tracer,
 		logger:              logger,
+		meter:               o.meter,
 	}
 }
 
@@ -295,6 +307,9 @@ type Transport struct {
 
 	tracer opentracing.Tracer
 	logger *zap.Logger
+	meter  *metrics.Scope
+
+	serverName string
 }
 
 var _ transport.Transport = (*Transport)(nil)

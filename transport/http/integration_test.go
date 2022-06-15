@@ -22,6 +22,7 @@ package http
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"testing"
@@ -34,7 +35,51 @@ import (
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/internal/clientconfig"
 	pkgerrors "go.uber.org/yarpc/pkg/errors"
+	"go.uber.org/yarpc/transport/internal/tlsscenario"
 )
+
+func TestMuxTLS(t *testing.T) {
+	scenario := tlsscenario.Create(t, time.Minute, time.Minute)
+
+	serverTLSConfig := &tls.Config{
+		GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
+			return &tls.Certificate{
+				Certificate: [][]byte{scenario.ServerCert.Raw},
+				Leaf:        scenario.ServerCert,
+				PrivateKey:  scenario.ServerKey,
+			}, nil
+		},
+		ClientAuth: tls.RequireAndVerifyClientCert,
+		ClientCAs:  scenario.CAs,
+	}
+	tests := []struct {
+		desc           string
+		inboundOptions []InboundOption
+	}{
+		{
+			desc: "plaintext_client_mux_tls_server",
+			inboundOptions: []InboundOption{
+				InboundMuxTLS(serverTLSConfig),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			doWithTestEnv(t, testEnvOptions{
+				Procedures:     json.Procedure("testFoo", testFooHandler),
+				InboundOptions: tt.inboundOptions,
+			}, func(t *testing.T, testEnv *testEnv) {
+				client := json.New(testEnv.ClientConfig)
+				var response testFooResponse
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+				defer cancel()
+
+				err := client.Call(ctx, "testFoo", &testFooRequest{One: "one"}, &response)
+				assert.Nil(t, err)
+			})
+		})
+	}
+}
 
 func TestBothResponseError(t *testing.T) {
 	tests := []struct {
