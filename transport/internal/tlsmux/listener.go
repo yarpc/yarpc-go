@@ -21,10 +21,12 @@
 package tlsmux
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"net"
 	"sync"
+	"time"
 
 	"go.uber.org/net/metrics"
 	"go.uber.org/zap"
@@ -32,6 +34,9 @@ import (
 
 var (
 	errListenerClosed = errors.New("listener closed")
+
+	_sniffReadTimeout    = time.Second * 10
+	_tlsHandshakeTimeout = time.Second * 10
 )
 
 // Config describes how listener should be configured.
@@ -159,8 +164,11 @@ func (l *listener) mux(conn net.Conn) (net.Conn, error) {
 // handleTLSConn completes the TLS handshake for the given connection and
 // returns a TLS server wrapped plaintext connection.
 func (l *listener) handleTLSConn(conn net.Conn) (net.Conn, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), _tlsHandshakeTimeout)
+	defer cancel()
+
 	tlsConn := tls.Server(conn, l.tlsConfig)
-	if err := tlsConn.Handshake(); err != nil {
+	if err := tlsConn.HandshakeContext(ctx); err != nil {
 		l.observer.incTLSHandshakeFailures()
 		l.logger.Error("TLS handshake failed", zap.Error(err))
 		return nil, err
@@ -176,7 +184,10 @@ func (l *listener) handlePlaintextConn(conn net.Conn) net.Conn {
 }
 
 func matchTLSConnection(cs *connSniffer) (bool, error) {
-	// TODO(jronak): set temporary connection read and write timeout.
+	cs.SetReadDeadline(time.Now().Add(_sniffReadTimeout))
+	// Reset read deadline after sniffing.
+	defer cs.SetReadDeadline(time.Time{})
+
 	isTLS, err := isTLSClientHelloRecord(cs)
 	if err != nil {
 		return false, err
