@@ -28,8 +28,11 @@ import (
 	"testing"
 	"time"
 
+	"net/http"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/json"
@@ -39,8 +42,9 @@ import (
 )
 
 func TestMuxTLS(t *testing.T) {
-	scenario := tlsscenario.Create(t, time.Minute, time.Minute)
+	defer goleak.VerifyNone(t)
 
+	scenario := tlsscenario.Create(t, time.Minute, time.Minute)
 	serverTLSConfig := &tls.Config{
 		GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
 			return &tls.Certificate{
@@ -55,12 +59,20 @@ func TestMuxTLS(t *testing.T) {
 	tests := []struct {
 		desc           string
 		inboundOptions []InboundOption
+		isTLSClient    bool
 	}{
 		{
 			desc: "plaintext_client_mux_tls_server",
 			inboundOptions: []InboundOption{
 				InboundMuxTLS(serverTLSConfig),
 			},
+		},
+		{
+			desc: "tls_client_mux_tls_server",
+			inboundOptions: []InboundOption{
+				InboundMuxTLS(serverTLSConfig),
+			},
+			isTLSClient: true,
 		},
 	}
 	for _, tt := range tests {
@@ -69,13 +81,49 @@ func TestMuxTLS(t *testing.T) {
 				Procedures:     json.Procedure("testFoo", testFooHandler),
 				InboundOptions: tt.inboundOptions,
 			}, func(t *testing.T, testEnv *testEnv) {
-				client := json.New(testEnv.ClientConfig)
+				cc := testEnv.ClientConfig
+				if tt.isTLSClient {
+					tr := NewTransport(buildClient(func(t *transportOptions) *http.Client {
+						return &http.Client{
+							Transport: &http.Transport{
+								TLSClientConfig: &tls.Config{
+									GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+										return &tls.Certificate{
+											Certificate: [][]byte{scenario.ClientCert.Raw},
+											Leaf:        scenario.ClientCert,
+											PrivateKey:  scenario.ClientKey,
+										}, nil
+									},
+									RootCAs: scenario.CAs,
+								},
+							},
+						}
+					}))
+					require.NoError(t, tr.Start())
+					defer tr.Stop()
+
+					outbound := tr.NewSingleOutbound(fmt.Sprintf("http://%s", testEnv.Inbound.Addr().String()))
+					require.NoError(t, outbound.Start())
+					defer outbound.Stop()
+
+					cc = clientconfig.MultiOutbound(
+						"example-client",
+						"example",
+						transport.Outbounds{
+							ServiceName: "example-client",
+							Unary:       outbound,
+						},
+					)
+				}
+
+				client := json.New(cc)
 				var response testFooResponse
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				defer cancel()
 
 				err := client.Call(ctx, "testFoo", &testFooRequest{One: "one"}, &response)
 				assert.Nil(t, err)
+				assert.Equal(t, testFooResponse{One: "one"}, response)
 			})
 		})
 	}
