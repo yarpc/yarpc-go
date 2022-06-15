@@ -54,6 +54,7 @@ type listener struct {
 	logger    *zap.Logger
 
 	serveOnce   sync.Once
+	closeOnce   sync.Once
 	connChan    chan net.Conn
 	stopChan    chan struct{}
 	stoppedChan chan struct{}
@@ -93,9 +94,12 @@ func (l *listener) Accept() (net.Conn, error) {
 // Close closes the listener and waits until the connection server drains
 // accepted connections and stops the server.
 func (l *listener) Close() error {
-	err := l.Listener.Close()
-	close(l.stopChan)
-	<-l.stoppedChan
+	var err error
+	l.closeOnce.Do(func() {
+		err = l.Listener.Close()
+		close(l.stopChan)
+		<-l.stoppedChan
+	})
 	return err
 }
 
