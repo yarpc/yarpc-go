@@ -44,6 +44,7 @@ func TestMux(t *testing.T) {
 				PrivateKey:  scenario.ServerKey,
 			}, nil
 		},
+		MinVersion: tls.VersionTLS13,
 		ClientAuth: tls.RequireAndVerifyClientCert,
 		ClientCAs:  scenario.CAs,
 	}
@@ -52,6 +53,9 @@ func TestMux(t *testing.T) {
 		desc            string
 		clientTlsConfig *tls.Config
 		body            []byte
+
+		expectError    bool
+		clientErrorMsg string
 	}{
 		{
 			desc: "plaintext_client",
@@ -73,6 +77,23 @@ func TestMux(t *testing.T) {
 			},
 			body: []byte("tls_body"),
 		},
+		{
+			desc: "tls_handshake_failure",
+			clientTlsConfig: &tls.Config{
+				GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+					return &tls.Certificate{
+						Certificate: [][]byte{scenario.ClientCert.Raw},
+						Leaf:        scenario.ClientCert,
+						PrivateKey:  scenario.ClientKey,
+					}, nil
+				},
+				MinVersion: tls.VersionTLS10,
+				MaxVersion: tls.VersionTLS11,
+				RootCAs:    scenario.CAs,
+			},
+			expectError:    true,
+			clientErrorMsg: "remote error: tls: protocol version not supported",
+		},
 	}
 
 	for _, tt := range tests {
@@ -85,11 +106,17 @@ func TestMux(t *testing.T) {
 
 			muxLis := tlsmux.NewListener(lis, serverTlsConfig)
 			defer muxLis.Close()
+
 			wg.Add(1)
 			go func() {
+				defer wg.Done()
 				conn, err := muxLis.Accept()
-				require.NoError(t, err)
+				if tt.expectError {
+					require.Error(t, err, "unexpected empty error")
+					return
+				}
 
+				require.NoError(t, err)
 				defer conn.Close()
 
 				request := make([]byte, len(tt.body))
@@ -99,7 +126,6 @@ func TestMux(t *testing.T) {
 
 				_, err = conn.Write(request)
 				assert.NoError(t, err, "unexpected error")
-				wg.Done()
 			}()
 
 			var conn net.Conn
@@ -107,6 +133,11 @@ func TestMux(t *testing.T) {
 				conn, err = tls.Dial(lis.Addr().Network(), lis.Addr().String(), tt.clientTlsConfig)
 			} else {
 				conn, err = net.Dial(lis.Addr().Network(), lis.Addr().String())
+			}
+
+			if tt.expectError {
+				require.EqualError(t, err, tt.clientErrorMsg)
+				return
 			}
 			require.NoError(t, err)
 

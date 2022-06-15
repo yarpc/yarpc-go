@@ -73,15 +73,22 @@ func (l *listener) mux(conn net.Conn) (net.Conn, error) {
 	}
 
 	if isTLS {
-		// TODO(jronak): initiate tls handshake to catch tls errors and
-		// version metrics.
-
-		// Return a plaintext connection by wrapping TLS server around the
-		// connection
-		return tls.Server(c, l.tlsConfig), nil
+		return l.handleTLSConn(c)
 	}
 
 	return c, nil
+}
+
+// handleTLSConn completes the TLS handshake for the given connection and
+// returns a TLS server wrapped plaintext connection.
+func (l *listener) handleTLSConn(conn net.Conn) (net.Conn, error) {
+	tlsConn := tls.Server(conn, l.tlsConfig)
+	if err := tlsConn.Handshake(); err != nil {
+		// TODO(jronak): emit tls handshake failure metric.
+		return nil, err
+	}
+
+	return tlsConn, nil
 }
 
 func matchTLSConnection(cs *connSniffer) (bool, error) {
