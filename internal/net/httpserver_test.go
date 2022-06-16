@@ -51,6 +51,26 @@ func TestStartAndShutdown(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestServeAndShutdown(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	server := NewHTTPServer(&http.Server{Addr: "127.0.0.1:0"})
+	require.NoError(t, server.Serve(listener))
+	assert.True(t, server.listening.Load())
+
+	require.NotNil(t, server.Listener())
+	addr := yarpctest.ZeroAddrToHostPort(server.Listener().Addr())
+
+	conn, err := net.Dial("tcp", addr)
+	require.NoError(t, err)
+	require.NoError(t, conn.Close())
+
+	require.NoError(t, server.Shutdown(context.Background()))
+	_, err = net.Dial("tcp", addr)
+	require.Error(t, err)
+}
+
 func TestStartAddrInUse(t *testing.T) {
 	s1 := NewHTTPServer(&http.Server{Addr: "127.0.0.1:0"})
 	require.NoError(t, s1.ListenAndServe())
