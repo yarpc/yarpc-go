@@ -123,10 +123,10 @@ func (i *Inbound) start() error {
 
 	if i.options.creds != nil {
 		serverOptions = append(serverOptions, grpc.Creds(i.options.creds))
-	} else if i.options.muxTlsConfig != nil {
+	} else if i.options.muxTLSConfig != nil {
 		listener = tlsmux.NewListener(tlsmux.Config{
 			Listener:      listener,
-			TLSConfig:     i.options.muxTlsConfig.Clone(),
+			TLSConfig:     i.options.muxTLSConfig.Clone(),
 			Logger:        i.t.options.logger,
 			Meter:         i.t.options.meter,
 			ServiceName:   i.t.serviceName,

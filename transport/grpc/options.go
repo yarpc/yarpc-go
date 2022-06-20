@@ -154,7 +154,7 @@ func InboundCredentials(creds credentials.TransportCredentials) InboundOption {
 // accepts inbound plaintext and TLS connections with the given TLS config.
 func InboundMuxTLS(tlsConfig *tls.Config) InboundOption {
 	return func(inboundOptions *inboundOptions) {
-		inboundOptions.muxTlsConfig = tlsConfig
+		inboundOptions.muxTLSConfig = tlsConfig
 	}
 }
 
@@ -241,7 +241,7 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 
 type inboundOptions struct {
 	creds        credentials.TransportCredentials
-	muxTlsConfig *tls.Config
+	muxTLSConfig *tls.Config
 }
 
 func newInboundOptions(options []InboundOption) *inboundOptions {
