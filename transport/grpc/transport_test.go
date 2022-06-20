@@ -26,7 +26,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/goleak"
 	"go.uber.org/yarpc/api/peer"
 	"google.golang.org/grpc"
 )
@@ -90,8 +89,4 @@ type testIdentifier struct {
 
 func (i testIdentifier) Identifier() string {
 	return i.id
-}
-
-func TestMain(m *testing.M) {
-	goleak.VerifyTestMain(m)
 }
