@@ -260,6 +260,7 @@ func TestConcurrentConnections(t *testing.T) {
 		go func(id int) {
 			defer wg.Done()
 			var conn net.Conn
+			var err error
 			if id%2 == 0 {
 				conn, err = tls.Dial(lis.Addr().Network(), lis.Addr().String(), clientTlsConfig)
 			} else {
@@ -278,7 +279,6 @@ func TestConcurrentConnections(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, len(msg), n)
 			assert.Equal(t, msg, string(buf))
-
 		}(i)
 	}
 
