@@ -27,6 +27,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/uber/tchannel-go"
+	"go.uber.org/goleak"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/yarpcerrors"
 )
@@ -101,4 +102,8 @@ func TestGetResponseErrorMeta(t *testing.T) {
 			assert.Equal(t, tt.want, GetResponseErrorMeta(tt.give), "unexpected")
 		})
 	}
+}
+
+func TestMain(m *testing.M) {
+	goleak.VerifyTestMain(m)
 }
