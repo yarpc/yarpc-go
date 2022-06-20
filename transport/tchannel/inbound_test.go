@@ -141,6 +141,7 @@ func TestInboundSubServices(t *testing.T) {
 	require.NoError(t, i.Stop())
 	require.NoError(t, it.Stop())
 	require.NoError(t, o.Stop())
+	require.NoError(t, ot.Stop())
 }
 
 type nopNativehandler struct{}
@@ -250,6 +251,7 @@ func TestInboundWithNativeHandlers(t *testing.T) {
 	require.NoError(t, i.Stop())
 	require.NoError(t, it.Stop())
 	require.NoError(t, o.Stop())
+	require.NoError(t, ot.Stop())
 }
 
 func TestArbitraryInboundServiceOutboundCallerName(t *testing.T) {
@@ -302,4 +304,5 @@ func TestArbitraryInboundServiceOutboundCallerName(t *testing.T) {
 	require.NoError(t, it.Stop())
 	require.NoError(t, i.Stop())
 	require.NoError(t, o.Stop())
+	require.NoError(t, ot.Stop())
 }
