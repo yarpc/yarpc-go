@@ -43,6 +43,7 @@ func newObserver(meter *metrics.Scope, logger *zap.Logger, serviceName, transpor
 	tags := metrics.Tags{
 		"service":   serviceName,
 		"transport": transportName,
+		"component": "yarpc",
 	}
 
 	plaintextConns, err := meter.Counter(metrics.Spec{

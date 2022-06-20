@@ -57,6 +57,7 @@ func TestObserver(t *testing.T) {
 			Tags: metrics.Tags{
 				"service":   "test-svc",
 				"transport": "test-transport",
+				"component": "yarpc",
 			},
 		},
 		{
@@ -66,6 +67,7 @@ func TestObserver(t *testing.T) {
 				"service":   "test-svc",
 				"transport": "test-transport",
 				"version":   "1.1",
+				"component": "yarpc",
 			},
 		},
 		{
@@ -74,6 +76,7 @@ func TestObserver(t *testing.T) {
 			Tags: metrics.Tags{
 				"service":   "test-svc",
 				"transport": "test-transport",
+				"component": "yarpc",
 			},
 		},
 	}

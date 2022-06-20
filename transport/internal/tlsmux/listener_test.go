@@ -68,6 +68,7 @@ func TestMux(t *testing.T) {
 				Tags: metrics.Tags{
 					"service":   "test-svc",
 					"transport": "test-transport",
+					"component": "yarpc",
 				},
 				Value: 1,
 			},
@@ -93,6 +94,7 @@ func TestMux(t *testing.T) {
 					"service":   "test-svc",
 					"transport": "test-transport",
 					"version":   "1.3",
+					"component": "yarpc",
 				},
 				Value: 1,
 			},
@@ -116,6 +118,7 @@ func TestMux(t *testing.T) {
 				Tags: metrics.Tags{
 					"service":   "test-svc",
 					"transport": "test-transport",
+					"component": "yarpc",
 				},
 				Value: 1,
 			},
