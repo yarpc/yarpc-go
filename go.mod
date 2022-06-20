@@ -44,10 +44,10 @@ require (
 	go.uber.org/tools v0.0.0-20190618225709-2cfd321de3ee
 	go.uber.org/zap v1.13.0
 	golang.org/x/lint v0.0.0-20200130185559-910be7a94367
-	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
-	golang.org/x/tools v0.1.5
+	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f
+	golang.org/x/tools v0.1.11-0.20220513221640-090b14e8501f
 	google.golang.org/genproto v0.0.0-20200212174721-66ed5ce911ce // indirect
 	google.golang.org/grpc v1.28.0
 	gopkg.in/yaml.v2 v2.2.8
-	honnef.co/go/tools v0.0.1-2019.2.3
+	honnef.co/go/tools v0.3.2
 )

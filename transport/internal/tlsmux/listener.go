@@ -108,7 +108,7 @@ func (l *listener) Close() error {
 	return err
 }
 
-// server accepts the connection from the underlying listener and creates a new
+// serve starts accepting the connection from the underlying listener and creates a new
 // go routine for each connection for async muxing.
 func (l *listener) serve() {
 	var wg sync.WaitGroup
@@ -188,9 +188,14 @@ func (l *listener) handlePlaintextConn(conn net.Conn) net.Conn {
 }
 
 func matchTLSConnection(cs *connSniffer) (bool, error) {
-	cs.SetReadDeadline(time.Now().Add(_sniffReadTimeout))
+	if err := cs.SetReadDeadline(time.Now().Add(_sniffReadTimeout)); err != nil {
+		return false, err
+	}
+
 	// Reset read deadline after sniffing.
-	defer cs.SetReadDeadline(time.Time{})
+	defer func() {
+		_ = cs.SetReadDeadline(time.Time{})
+	}()
 
 	isTLS, err := isTLSClientHelloRecord(cs)
 	if err != nil {

@@ -69,6 +69,7 @@ func TestMux(t *testing.T) {
 				Tags: metrics.Tags{
 					"service":   "test-svc",
 					"transport": "test-transport",
+					"component": "yarpc",
 				},
 				Value: 1,
 			},
@@ -94,6 +95,7 @@ func TestMux(t *testing.T) {
 					"service":   "test-svc",
 					"transport": "test-transport",
 					"version":   "1.3",
+					"component": "yarpc",
 				},
 				Value: 1,
 			},
@@ -117,8 +119,26 @@ func TestMux(t *testing.T) {
 				Tags: metrics.Tags{
 					"service":   "test-svc",
 					"transport": "test-transport",
+					"component": "yarpc",
 				},
 				Value: 1,
+			},
+			expectError:    true,
+			clientErrorMsg: "remote error: tls: protocol version not supported",
+		},
+		{
+			desc: "tls_handshake_failure",
+			clientTlsConfig: &tls.Config{
+				GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+					return &tls.Certificate{
+						Certificate: [][]byte{scenario.ClientCert.Raw},
+						Leaf:        scenario.ClientCert,
+						PrivateKey:  scenario.ClientKey,
+					}, nil
+				},
+				MinVersion: tls.VersionTLS10,
+				MaxVersion: tls.VersionTLS11,
+				RootCAs:    scenario.CAs,
 			},
 			expectError:    true,
 			clientErrorMsg: "remote error: tls: protocol version not supported",
@@ -240,7 +260,8 @@ func TestConcurrentConnections(t *testing.T) {
 		go func(id int) {
 			defer wg.Done()
 			var conn net.Conn
-			if i%2 == 0 {
+			var err error
+			if id%2 == 0 {
 				conn, err = tls.Dial(lis.Addr().Network(), lis.Addr().String(), clientTlsConfig)
 			} else {
 				conn, err = net.Dial(lis.Addr().Network(), lis.Addr().String())
@@ -258,7 +279,6 @@ func TestConcurrentConnections(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, len(msg), n)
 			assert.Equal(t, msg, string(buf))
-
 		}(i)
 	}
 

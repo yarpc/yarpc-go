@@ -494,6 +494,7 @@ func TestTransportSpec(t *testing.T) {
 					single, ok := outbound.peerChooser.(*peer.Single)
 					require.True(t, ok, "expected *peer.Single, got %T", outbound.peerChooser)
 					require.NoError(t, single.Start())
+					defer single.Stop()
 					ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 					defer cancel()
 					peer, _, err := single.Choose(ctx, &transport.Request{})
