@@ -111,6 +111,7 @@ func TestOutboundHeaders(t *testing.T) {
 			trans, err := NewTransport(opts...)
 			require.NoError(t, err)
 			require.NoError(t, trans.Start(), "failed to start transport")
+			defer trans.Stop()
 
 			out := trans.NewSingleOutbound(serverHostPort)
 			require.NoError(t, out.Start(), "failed to start outbound")
@@ -168,9 +169,10 @@ func TestCallSuccess(t *testing.T) {
 			assert.NoError(t, err, "failed to write response")
 		}))
 
-	out := newSingleOutbound(t, serverHostPort)
-	require.NoError(t, out.Start(), "failed to start outbound")
+	out, trans := newSingleOutbound(t, serverHostPort)
 	defer out.Stop()
+	defer trans.Stop()
+	require.NoError(t, out.Start(), "failed to start outbound")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
 	defer cancel()
@@ -220,9 +222,10 @@ func TestCallWithModifiedCallerName(t *testing.T) {
 			assert.NoError(t, err, "failed to write response")
 		}))
 
-	out := newSingleOutbound(t, server.PeerInfo().HostPort)
+	out, trans := newSingleOutbound(t, server.PeerInfo().HostPort)
 	require.NoError(t, out.Start(), "failed to start outbound")
 	defer out.Stop()
+	defer trans.Stop()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -300,9 +303,10 @@ func TestCallFailures(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
 
-			out := newSingleOutbound(t, serverHostPort)
+			out, trans := newSingleOutbound(t, serverHostPort)
 			require.NoError(t, out.Start(), "failed to start outbound")
 			defer out.Stop()
+			defer trans.Stop()
 
 			ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
 			defer cancel()
@@ -351,9 +355,10 @@ func TestApplicationError(t *testing.T) {
 			assert.NoError(t, err, "failed to write response")
 		}))
 
-	out := newSingleOutbound(t, serverHostPort)
-	require.NoError(t, out.Start(), "failed to start outbound")
+	out, trans := newSingleOutbound(t, serverHostPort)
 	defer out.Stop()
+	defer trans.Stop()
+	require.NoError(t, out.Start(), "failed to start outbound")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
 	defer cancel()
@@ -387,7 +392,9 @@ func TestApplicationError(t *testing.T) {
 }
 
 func TestStartMultiple(t *testing.T) {
-	out := newSingleOutbound(t, "localhost:4040")
+	out, trans := newSingleOutbound(t, "localhost:4040")
+	defer out.Stop()
+	defer trans.Stop()
 	var wg sync.WaitGroup
 	signal := make(chan struct{})
 
@@ -406,7 +413,9 @@ func TestStartMultiple(t *testing.T) {
 }
 
 func TestStopMultiple(t *testing.T) {
-	out := newSingleOutbound(t, "localhost:4040")
+	out, trans := newSingleOutbound(t, "localhost:4040")
+	defer out.Stop()
+	defer trans.Stop()
 	require.NoError(t, out.Start())
 
 	var wg sync.WaitGroup
@@ -427,7 +436,9 @@ func TestStopMultiple(t *testing.T) {
 }
 
 func TestCallWithoutStarting(t *testing.T) {
-	out := newSingleOutbound(t, "localhost:4040")
+	out, trans := newSingleOutbound(t, "localhost:4040")
+	defer out.Stop()
+	defer trans.Stop()
 	ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
 	defer cancel()
 	_, err := out.Call(
@@ -447,15 +458,17 @@ func TestCallWithoutStarting(t *testing.T) {
 }
 
 func TestOutboundNoRequest(t *testing.T) {
-	out := newSingleOutbound(t, "localhost:4040")
+	out, trans := newSingleOutbound(t, "localhost:4040")
+	defer out.Stop()
+	defer trans.Stop()
 	_, err := out.Call(context.Background(), nil)
 	wantErr := yarpcerrors.InvalidArgumentErrorf("request for tchannel outbound was nil")
 	assert.EqualError(t, err, wantErr.Error())
 }
 
-func newSingleOutbound(t *testing.T, serverAddr string) transport.UnaryOutbound {
+func newSingleOutbound(t *testing.T, serverAddr string) (transport.UnaryOutbound, transport.Transport) {
 	trans, err := NewTransport(ServiceName("caller"))
 	require.NoError(t, err)
 	require.NoError(t, trans.Start())
-	return trans.NewSingleOutbound(serverAddr)
+	return trans.NewSingleOutbound(serverAddr), trans
 }
