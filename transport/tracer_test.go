@@ -126,6 +126,7 @@ func createHTTPDispatcher(tracer opentracing.Tracer) *yarpc.Dispatcher {
 	return dispatcher
 }
 
+//lint:ignore U1000 Ignore "method not used" lint as this is invoked by skipped tests.
 func createTChannelDispatcher(t *testing.T, tracer opentracing.Tracer) *yarpc.Dispatcher {
 	hp := "127.0.0.1:4040"
 

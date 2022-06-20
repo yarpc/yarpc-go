@@ -1,11 +1,4 @@
 steps:
-  - name: ":docker: :package: 1.16"
-    plugins:
-      docker-compose#v2.0.0:
-        build: yarpc-go-1.16
-        image-repository: 027047743804.dkr.ecr.us-east-2.amazonaws.com/uber
-    agents:
-      queue: builders
   - name: ":docker: :package: 1.17"
     plugins:
       docker-compose#v2.0.0:
@@ -13,39 +6,17 @@ steps:
         image-repository: 027047743804.dkr.ecr.us-east-2.amazonaws.com/uber
     agents:
       queue: builders
+  - name: ":docker: :package: 1.18"
+    plugins:
+      docker-compose#v2.0.0:
+        build: yarpc-go-1.18
+        image-repository: 027047743804.dkr.ecr.us-east-2.amazonaws.com/uber
+    agents:
+      queue: builders
   - wait
-  - name: ":go: 1.16 test - %n"
+  - name: ":go: 1.17 test - %n"
     command: "make test"
     parallelism: 2
-    plugins:
-      docker-compose#v2.0.0:
-        run: yarpc-go-1.16
-    agents:
-      queue: workers
-  - name: ":go: 1.16 examples"
-    command: "make examples"
-    plugins:
-      docker-compose#v2.0.0:
-        run: yarpc-go-1.16
-    agents:
-      queue: workers
-  - name: ":go: 1.17 test - %n"
-    command: "make codecov"
-    parallelism: 6
-    plugins:
-      docker-compose#v2.0.0:
-        run: yarpc-go-1.17
-    agents:
-      queue: workers
-  - name: ":go: 1.17 crossdock"
-    command: "make crossdock-codecov"
-    plugins:
-      docker-compose#v2.0.0:
-        run: yarpc-go-1.17
-    agents:
-      queue: workers
-  - name: ":go: 1.17 lint"
-    command: "make lint"
     plugins:
       docker-compose#v2.0.0:
         run: yarpc-go-1.17
@@ -56,5 +27,34 @@ steps:
     plugins:
       docker-compose#v2.0.0:
         run: yarpc-go-1.17
+    agents:
+      queue: workers
+  - name: ":go: 1.18 test - %n"
+    command: "make codecov"
+    parallelism: 6
+    plugins:
+      docker-compose#v2.0.0:
+        run: yarpc-go-1.18
+    agents:
+      queue: workers
+  - name: ":go: 1.18 crossdock"
+    command: "make crossdock-codecov"
+    plugins:
+      docker-compose#v2.0.0:
+        run: yarpc-go-1.18
+    agents:
+      queue: workers
+  - name: ":go: 1.18 lint"
+    command: "make lint"
+    plugins:
+      docker-compose#v2.0.0:
+        run: yarpc-go-1.18
+    agents:
+      queue: workers
+  - name: ":go: 1.18 examples"
+    command: "make examples"
+    plugins:
+      docker-compose#v2.0.0:
+        run: yarpc-go-1.18
     agents:
       queue: workers
