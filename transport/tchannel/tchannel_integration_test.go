@@ -21,8 +21,11 @@
 package tchannel_test
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
 	"errors"
+	"io"
 	"net"
 	"testing"
 	"time"
@@ -32,6 +35,7 @@ import (
 	"go.uber.org/yarpc/api/peer/peertest"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/transport/internal/tlsscenario"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/x/yarpctest"
 	"go.uber.org/yarpc/x/yarpctest/api"
@@ -97,4 +101,103 @@ func TestDialerOption(t *testing.T) {
 	_, err = out.Call(ctx, &transport.Request{Service: "bar-service"})
 	require.Error(t, err, "expected dialer error")
 	assert.Contains(t, err.Error(), customDialerErr.Error())
+}
+
+func TestMuxTLS(t *testing.T) {
+	scenario := tlsscenario.Create(t, time.Minute, time.Minute)
+	serverCreds := &tls.Config{
+		GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
+			return &tls.Certificate{
+				Certificate: [][]byte{scenario.ServerCert.Raw},
+				Leaf:        scenario.ServerCert,
+				PrivateKey:  scenario.ServerKey,
+			}, nil
+		},
+		ClientAuth: tls.RequireAndVerifyClientCert,
+		ClientCAs:  scenario.CAs,
+	}
+	clientCreds := &tls.Config{
+		GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+			return &tls.Certificate{
+				Certificate: [][]byte{scenario.ClientCert.Raw},
+				Leaf:        scenario.ClientCert,
+				PrivateKey:  scenario.ClientKey,
+			}, nil
+		},
+		RootCAs: scenario.CAs,
+	}
+
+	tests := []struct {
+		desc        string
+		isClientTLS bool
+	}{
+		{
+			desc: "mux_tls_server_plaintext_client",
+		},
+		{
+			desc:        "mux_tls_server_tls_client",
+			isClientTLS: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			options := []tchannel.TransportOption{tchannel.InboundMuxTLS(serverCreds), tchannel.ServiceName("test-svc")}
+			if tt.isClientTLS {
+				tchannel.Dialer(func(ctx context.Context, network, hostPort string) (net.Conn, error) {
+					return tls.Dial(network, hostPort, clientCreds)
+				})
+			}
+			tr, err := tchannel.NewTransport(options...)
+			require.NoError(t, err)
+			inbound := tr.NewInbound()
+			inbound.SetRouter(testRouter{proc: transport.Procedure{HandlerSpec: transport.NewUnaryHandlerSpec(testServer{})}})
+
+			require.NoError(t, tr.Start())
+			defer tr.Stop()
+			require.NoError(t, inbound.Start())
+			defer inbound.Stop()
+
+			outbound := tr.NewSingleOutbound(tr.ListenAddr())
+			require.NoError(t, outbound.Start())
+			defer outbound.Stop()
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			defer cancel()
+
+			res, err := outbound.Call(ctx, &transport.Request{
+				Service:   "test-svc-1",
+				Procedure: "test-proc",
+				Body:      bytes.NewReader([]byte("hello")),
+			})
+			require.NoError(t, err)
+
+			resBody, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			assert.Equal(t, "hello", string(resBody))
+		})
+	}
+}
+
+type testRouter struct {
+	proc transport.Procedure
+}
+
+func (t testRouter) Procedures() []transport.Procedure {
+	return []transport.Procedure{t.proc}
+}
+
+func (t testRouter) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
+	return t.proc.HandlerSpec, nil
+}
+
+type testServer struct{}
+
+func (testServer) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
+	data, err := io.ReadAll(req.Body)
+	if err != nil {
+		return err
+	}
+	resw.Write(data)
+	return nil
 }

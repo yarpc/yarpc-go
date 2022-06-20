@@ -22,11 +22,13 @@ package tchannel
 
 import (
 	"context"
+	"crypto/tls"
 	"net"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
+	"go.uber.org/net/metrics"
 	backoffapi "go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/zap"
@@ -53,6 +55,7 @@ type transportOptions struct {
 	ch                             Channel
 	tracer                         opentracing.Tracer
 	logger                         *zap.Logger
+	meter                          *metrics.Scope
 	addr                           string
 	listener                       net.Listener
 	dialer                         func(ctx context.Context, network, hostPort string) (net.Conn, error)
@@ -62,6 +65,7 @@ type transportOptions struct {
 	originalHeaders                bool
 	nativeTChannelMethods          NativeTChannelMethods
 	excludeServiceHeaderInResponse bool
+	muxTLSConfig                   *tls.Config
 }
 
 // newTransportOptions constructs the default transport options struct
@@ -94,6 +98,15 @@ func Tracer(tracer opentracing.Tracer) TransportOption {
 func Logger(logger *zap.Logger) TransportOption {
 	return func(t *transportOptions) {
 		t.logger = logger
+	}
+}
+
+// Meter sets a meter to use for transport metrics.
+//
+// The default is to not emit any transport metrics.
+func Meter(meter *metrics.Scope) TransportOption {
+	return func(t *transportOptions) {
+		t.meter = meter
 	}
 }
 
@@ -226,5 +239,13 @@ func WithNativeTChannelMethods(nativeMethods NativeTChannelMethods) TransportOpt
 func ExcludeServiceHeaderInResponse() TransportOption {
 	return func(option *transportOptions) {
 		option.excludeServiceHeaderInResponse = true
+	}
+}
+
+// InboundMuxTLS returns a TransportOption that creates muxed listener which
+// accepts inbound plaintext and TLS connections with the given TLS config.
+func InboundMuxTLS(tlsConfig *tls.Config) TransportOption {
+	return func(option *transportOptions) {
+		option.muxTLSConfig = tlsConfig
 	}
 }

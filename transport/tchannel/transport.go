@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
 	"sync"
@@ -29,10 +30,12 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
+	"go.uber.org/net/metrics"
 	backoffapi "go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/yarpc/transport/internal/tlsmux"
 	"go.uber.org/zap"
 )
 
@@ -57,6 +60,7 @@ type Transport struct {
 	router            transport.Router
 	tracer            opentracing.Tracer
 	logger            *zap.Logger
+	meter             *metrics.Scope
 	name              string
 	addr              string
 	listener          net.Listener
@@ -72,6 +76,8 @@ type Transport struct {
 
 	nativeTChannelMethods          NativeTChannelMethods
 	excludeServiceHeaderInResponse bool
+
+	muxTLSConfig *tls.Config
 }
 
 // NewTransport is a YARPC transport that facilitates sending and receiving
@@ -115,10 +121,12 @@ func (o transportOptions) newTransport() *Transport {
 		peers:                          make(map[string]*tchannelPeer),
 		tracer:                         o.tracer,
 		logger:                         logger,
+		meter:                          o.meter,
 		headerCase:                     headerCase,
 		newResponseWriter:              newHandlerWriter,
 		nativeTChannelMethods:          o.nativeTChannelMethods,
 		excludeServiceHeaderInResponse: o.excludeServiceHeaderInResponse,
+		muxTLSConfig:                   o.muxTLSConfig,
 	}
 }
 
@@ -234,11 +242,9 @@ func (t *Transport) start() error {
 		}
 	}
 
-	if t.listener != nil {
-		if err := t.ch.Serve(t.listener); err != nil {
-			return err
-		}
-	} else {
+	listener := t.listener
+
+	if t.listener == nil {
 		// Default to ListenIP if addr wasn't given.
 		addr := t.addr
 		if addr == "" {
@@ -253,9 +259,25 @@ func (t *Transport) start() error {
 
 		// TODO(abg): If addr was just the port (":4040"), we want to use
 		// ListenIP() + ":4040" rather than just ":4040".
-		if err := t.ch.ListenAndServe(addr); err != nil {
+		listener, err = net.Listen("tcp", addr)
+		if err != nil {
 			return err
 		}
+	}
+
+	if t.muxTLSConfig != nil {
+		listener = tlsmux.NewListener(tlsmux.Config{
+			Listener:      listener,
+			TLSConfig:     t.muxTLSConfig,
+			ServiceName:   t.name,
+			TransportName: TransportName,
+			Meter:         t.meter,
+			Logger:        t.logger,
+		})
+	}
+
+	if err := t.ch.Serve(listener); err != nil {
+		return err
 	}
 
 	t.addr = t.ch.PeerInfo().HostPort
