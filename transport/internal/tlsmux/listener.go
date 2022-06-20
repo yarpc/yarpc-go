@@ -108,7 +108,7 @@ func (l *listener) Close() error {
 	return err
 }
 
-// server accepts the connection from the underlying listener and creates a new
+// serve starts accepting the connection from the underlying listener and creates a new
 // go routine for each connection for async muxing.
 func (l *listener) serve() {
 	var wg sync.WaitGroup

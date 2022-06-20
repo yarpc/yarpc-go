@@ -16,7 +16,7 @@ require (
 	go.uber.org/thriftrw v1.29.2
 	go.uber.org/yarpc v1.42.1
 	go.uber.org/zap v1.13.0
-	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
+	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f
 	google.golang.org/grpc v1.28.0
 )
 
