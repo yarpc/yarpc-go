@@ -22,10 +22,16 @@ package tlsmux
 
 import (
 	"crypto/tls"
+	"errors"
 	"net"
+	"sync"
 
 	"go.uber.org/net/metrics"
 	"go.uber.org/zap"
+)
+
+var (
+	errListenerClosed = errors.New("listener closed")
 )
 
 // Config describes how listener should be configured.
@@ -46,39 +52,95 @@ type listener struct {
 	tlsConfig *tls.Config
 	observer  *observer
 	logger    *zap.Logger
+
+	closeOnce   sync.Once
+	connChan    chan net.Conn
+	stopChan    chan struct{}
+	stoppedChan chan struct{}
 }
 
 // NewListener returns a multiplexed listener which accepts both TLS and
 // plaintext connections.
 func NewListener(c Config) net.Listener {
-	return &listener{
-		Listener:  c.Listener,
-		tlsConfig: c.TLSConfig,
-		observer:  newObserver(c.Meter, c.Logger, c.ServiceName, c.TransportName),
-		logger:    c.Logger,
+	lis := &listener{
+		Listener:    c.Listener,
+		tlsConfig:   c.TLSConfig,
+		observer:    newObserver(c.Meter, c.Logger, c.ServiceName, c.TransportName),
+		logger:      c.Logger,
+		connChan:    make(chan net.Conn),
+		stoppedChan: make(chan struct{}),
+		stopChan:    make(chan struct{}),
+	}
+
+	// Starts go routine for the connection server
+	go lis.serve()
+
+	return lis
+}
+
+// Accept returns multiplexed plaintext connetion.
+// After close, returned error is errListenerClosed.
+func (l *listener) Accept() (net.Conn, error) {
+	select {
+	case conn, ok := <-l.connChan:
+		if !ok {
+			return nil, errListenerClosed
+		}
+		return conn, nil
+	case <-l.stopChan:
+		return nil, errListenerClosed
 	}
 }
 
-// Accept returns multiplexed plaintext connection.
-func (l *listener) Accept() (net.Conn, error) {
+// Close closes the listener and waits until the connection server drains
+// accepted connections and stops the server.
+func (l *listener) Close() error {
+	var err error
+	l.closeOnce.Do(func() {
+		err = l.Listener.Close()
+		close(l.stopChan)
+		<-l.stoppedChan
+	})
+	return err
+}
+
+// serve starts accepting the connection from the underlying listener and creates a new
+// go routine for each connection for async muxing.
+func (l *listener) serve() {
+	var wg sync.WaitGroup
+
+	defer func() {
+		wg.Wait()
+		close(l.stoppedChan)
+		close(l.connChan)
+	}()
+
 	for {
 		conn, err := l.Listener.Accept()
 		if err != nil {
-			return conn, err
+			return
 		}
 
-		// TODO(jronak): avoid slow connections causing head of the line blocking by spawning
-		// connection processing in separate routine.
+		wg.Add(1)
+		go l.serveConnection(conn, &wg)
+	}
+}
 
-		c, err := l.mux(conn)
-		if err != nil {
-			// Don't return the mux error as caller will shutdown the server on
-			// listener error. Instead, we close the connection and loop around to
-			// acccept the next connection.
-			conn.Close()
-			continue
-		}
-		return c, err
+// serveConnection muxes the given connection and sends muxed connection to the
+// connection channel.
+func (l *listener) serveConnection(conn net.Conn, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	c, err := l.mux(conn)
+	if err != nil {
+		conn.Close()
+		return
+	}
+
+	select {
+	case l.connChan <- c:
+	case <-l.stopChan:
+		conn.Close()
 	}
 }
 
