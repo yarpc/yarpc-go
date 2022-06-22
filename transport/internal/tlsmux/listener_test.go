@@ -30,8 +30,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/transport/internal/tlsmux"
 	"go.uber.org/yarpc/transport/internal/tlsscenario"
+	"go.uber.org/zap"
 )
 
 func TestMux(t *testing.T) {
@@ -54,12 +56,22 @@ func TestMux(t *testing.T) {
 		clientTlsConfig *tls.Config
 		body            []byte
 
-		expectError    bool
-		clientErrorMsg string
+		expectedCounter metrics.Snapshot
+		expectError     bool
+		clientErrorMsg  string
 	}{
 		{
-			desc: "plaintext_client",
+			desc: "plaintext_connections",
 			body: []byte("plaintext_body"),
+			expectedCounter: metrics.Snapshot{
+				Name: "plaintext_connections",
+				Tags: metrics.Tags{
+					"service":   "test-svc",
+					"transport": "test-transport",
+					"component": "yarpc",
+				},
+				Value: 1,
+			},
 		},
 		{
 			desc: "tls_client",
@@ -76,6 +88,42 @@ func TestMux(t *testing.T) {
 				RootCAs:    scenario.CAs,
 			},
 			body: []byte("tls_body"),
+			expectedCounter: metrics.Snapshot{
+				Name: "tls_connections",
+				Tags: metrics.Tags{
+					"service":   "test-svc",
+					"transport": "test-transport",
+					"version":   "1.3",
+					"component": "yarpc",
+				},
+				Value: 1,
+			},
+		},
+		{
+			desc: "tls_handshake_failure",
+			clientTlsConfig: &tls.Config{
+				GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+					return &tls.Certificate{
+						Certificate: [][]byte{scenario.ClientCert.Raw},
+						Leaf:        scenario.ClientCert,
+						PrivateKey:  scenario.ClientKey,
+					}, nil
+				},
+				MinVersion: tls.VersionTLS10,
+				MaxVersion: tls.VersionTLS11,
+				RootCAs:    scenario.CAs,
+			},
+			expectedCounter: metrics.Snapshot{
+				Name: "tls_handshake_failures",
+				Tags: metrics.Tags{
+					"service":   "test-svc",
+					"transport": "test-transport",
+					"component": "yarpc",
+				},
+				Value: 1,
+			},
+			expectError:    true,
+			clientErrorMsg: "remote error: tls: protocol version not supported",
 		},
 		{
 			desc: "tls_handshake_failure",
@@ -104,7 +152,15 @@ func TestMux(t *testing.T) {
 			lis, err := net.Listen("tcp", "127.0.0.1:0")
 			require.NoError(t, err, "unexpected error on listening")
 
-			muxLis := tlsmux.NewListener(lis, serverTlsConfig)
+			root := metrics.New()
+			muxLis := tlsmux.NewListener(tlsmux.Config{
+				Listener:      lis,
+				TLSConfig:     serverTlsConfig,
+				Meter:         root.Scope(),
+				Logger:        zap.NewNop(),
+				ServiceName:   "test-svc",
+				TransportName: "test-transport",
+			})
 			defer muxLis.Close()
 
 			wg.Add(1)
@@ -148,6 +204,7 @@ func TestMux(t *testing.T) {
 			n, err := conn.Read(response)
 			assert.NoError(t, err, "unexpected error")
 			assert.Equal(t, tt.body, response[:n], "unexpected response")
+			assert.Contains(t, root.Snapshot().Counters, tt.expectedCounter, "unexpected counters")
 		})
 	}
 }
