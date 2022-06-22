@@ -35,6 +35,7 @@ import (
 var (
 	errListenerClosed = errors.New("listener closed")
 
+	// TODO(jronak): below timeouts are experimental, will be tuned after testing.
 	_sniffReadTimeout    = time.Second * 10
 	_tlsHandshakeTimeout = time.Second * 10
 )
@@ -193,7 +194,8 @@ func matchTLSConnection(cs *connSniffer) (bool, error) {
 		return false, err
 	}
 
-	// Reset read deadline after sniffing.
+	// Reset read deadline after sniffing. See below:
+	// https://github.com/golang/go/blob/be0b2a393a5a7297a3c8f42ca7d5ad3e4b15dcbe/src/net/http/server.go#L1887
 	defer func() {
 		_ = cs.SetReadDeadline(time.Time{})
 	}()
