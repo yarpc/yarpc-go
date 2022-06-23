@@ -21,10 +21,12 @@
 package tlsmux
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"net"
 	"sync"
+	"time"
 
 	"go.uber.org/net/metrics"
 	"go.uber.org/zap"
@@ -32,6 +34,10 @@ import (
 
 var (
 	errListenerClosed = errors.New("listener closed")
+
+	// TODO(jronak): below timeouts are experimental, will be tuned after testing.
+	_sniffReadTimeout    = time.Second * 10
+	_tlsHandshakeTimeout = time.Second * 10
 )
 
 // Config describes how listener should be configured.
@@ -164,8 +170,11 @@ func (l *listener) mux(conn net.Conn) (net.Conn, error) {
 // handleTLSConn completes the TLS handshake for the given connection and
 // returns a TLS server wrapped plaintext connection.
 func (l *listener) handleTLSConn(conn net.Conn) (net.Conn, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), _tlsHandshakeTimeout)
+	defer cancel()
+
 	tlsConn := tls.Server(conn, l.tlsConfig)
-	if err := tlsConn.Handshake(); err != nil {
+	if err := tlsConn.HandshakeContext(ctx); err != nil {
 		l.observer.incTLSHandshakeFailures()
 		l.logger.Error("TLS handshake failed", zap.Error(err))
 		return nil, err
@@ -181,7 +190,16 @@ func (l *listener) handlePlaintextConn(conn net.Conn) net.Conn {
 }
 
 func matchTLSConnection(cs *connSniffer) (bool, error) {
-	// TODO(jronak): set temporary connection read and write timeout.
+	if err := cs.SetReadDeadline(time.Now().Add(_sniffReadTimeout)); err != nil {
+		return false, err
+	}
+
+	// Reset read deadline after sniffing. See below:
+	// https://github.com/golang/go/blob/be0b2a393a5a7297a3c8f42ca7d5ad3e4b15dcbe/src/net/http/server.go#L1887
+	defer func() {
+		_ = cs.SetReadDeadline(time.Time{})
+	}()
+
 	isTLS, err := isTLSClientHelloRecord(cs)
 	if err != nil {
 		return false, err
