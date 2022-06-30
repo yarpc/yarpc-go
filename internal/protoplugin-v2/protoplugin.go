@@ -188,7 +188,7 @@ func (m *Message) FQMN() string {
 func (m *Message) GoType(currentPackage string) string {
 	var components []string
 	components = append(components, m.Outers...)
-	components = append(components, GoCamelCase(m.GetName()))
+	components = append(components, goCamelCase(m.GetName()))
 
 	name := strings.Join(components, "_")
 	if m.File.GoPackage.Path == currentPackage {
