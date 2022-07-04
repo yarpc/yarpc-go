@@ -52,7 +52,7 @@ func newObserver(meter *metrics.Scope, logger *zap.Logger, serviceName, transpor
 		ConstTags: tags,
 	})
 	if err != nil {
-		logger.Error("Failed to create plaintext connections counter", zap.Error(err))
+		logger.Error("failed to create plaintext connections counter", zap.Error(err))
 	}
 
 	tlsConns, err := meter.CounterVector(metrics.Spec{
@@ -62,7 +62,7 @@ func newObserver(meter *metrics.Scope, logger *zap.Logger, serviceName, transpor
 		VarTags:   []string{_versionTag},
 	})
 	if err != nil {
-		logger.Error("Failed to create plaintext connections counter", zap.Error(err))
+		logger.Error("failed to create tls connections counter", zap.Error(err))
 	}
 
 	tlsHandshakeFailures, err := meter.Counter(metrics.Spec{
@@ -71,7 +71,7 @@ func newObserver(meter *metrics.Scope, logger *zap.Logger, serviceName, transpor
 		ConstTags: tags,
 	})
 	if err != nil {
-		logger.Error("Failed to create plaintext connections counter", zap.Error(err))
+		logger.Error("failed to create tls handshake failures counter", zap.Error(err))
 	}
 
 	return &observer{

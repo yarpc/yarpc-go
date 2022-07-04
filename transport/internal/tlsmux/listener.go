@@ -35,6 +35,7 @@ import (
 var (
 	errListenerClosed = errors.New("listener closed")
 
+	// TODO(jronak): below timeouts are experimental, will be tuned after testing.
 	_sniffReadTimeout    = time.Second * 10
 	_tlsHandshakeTimeout = time.Second * 10
 )
@@ -58,7 +59,6 @@ type listener struct {
 	observer  *observer
 	logger    *zap.Logger
 
-	serveOnce   sync.Once
 	closeOnce   sync.Once
 	connChan    chan net.Conn
 	stopChan    chan struct{}
@@ -68,7 +68,7 @@ type listener struct {
 // NewListener returns a multiplexed listener which accepts both TLS and
 // plaintext connections.
 func NewListener(c Config) net.Listener {
-	return &listener{
+	lis := &listener{
 		Listener:    c.Listener,
 		tlsConfig:   c.TLSConfig,
 		observer:    newObserver(c.Meter, c.Logger, c.ServiceName, c.TransportName),
@@ -77,14 +77,16 @@ func NewListener(c Config) net.Listener {
 		stoppedChan: make(chan struct{}),
 		stopChan:    make(chan struct{}),
 	}
+
+	// Starts go routine for the connection server
+	go lis.serve()
+
+	return lis
 }
 
 // Accept returns multiplexed plaintext connetion.
 // After close, returned error is errListenerClosed.
 func (l *listener) Accept() (net.Conn, error) {
-	// Starts the connection server only once.
-	l.serveOnce.Do(func() { go l.serve() })
-
 	select {
 	case conn, ok := <-l.connChan:
 		if !ok {
@@ -192,7 +194,8 @@ func matchTLSConnection(cs *connSniffer) (bool, error) {
 		return false, err
 	}
 
-	// Reset read deadline after sniffing.
+	// Reset read deadline after sniffing. See below:
+	// https://github.com/golang/go/blob/be0b2a393a5a7297a3c8f42ca7d5ad3e4b15dcbe/src/net/http/server.go#L1887
 	defer func() {
 		_ = cs.SetReadDeadline(time.Time{})
 	}()
