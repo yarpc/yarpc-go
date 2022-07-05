@@ -24,6 +24,7 @@ import (
 	"crypto/tls"
 
 	"go.uber.org/net/metrics"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/zap"
 )
 
@@ -37,13 +38,15 @@ type observer struct {
 	plaintextConnectionsCounter *metrics.Counter
 	tlsConnectionsCounter       *metrics.CounterVector
 	tlsFailuresCounter          *metrics.Counter
+	rejectsCounter              *metrics.Counter
 }
 
-func newObserver(meter *metrics.Scope, logger *zap.Logger, serviceName, transportName string) *observer {
+func newObserver(meter *metrics.Scope, logger *zap.Logger, serviceName, transportName string, mode transport.InboundTLSMode) *observer {
 	tags := metrics.Tags{
 		"service":   serviceName,
 		"transport": transportName,
 		"component": "yarpc",
+		"mode":      mode.String(),
 	}
 
 	plaintextConns, err := meter.Counter(metrics.Spec{
@@ -74,10 +77,20 @@ func newObserver(meter *metrics.Scope, logger *zap.Logger, serviceName, transpor
 		logger.Error("failed to create tls handshake failures counter", zap.Error(err))
 	}
 
+	plaintextConnRejects, err := meter.Counter(metrics.Spec{
+		Name:      "plaintext_connection_rejects",
+		Help:      "Total number of plaintext connection rejects.",
+		ConstTags: tags,
+	})
+	if err != nil {
+		logger.Error("failed to create plaintext connection rejects counter", zap.Error(err))
+	}
+
 	return &observer{
 		tlsConnectionsCounter:       tlsConns,
 		tlsFailuresCounter:          tlsHandshakeFailures,
 		plaintextConnectionsCounter: plaintextConns,
+		rejectsCounter:              plaintextConnRejects,
 	}
 }
 
@@ -91,6 +104,10 @@ func (o *observer) incTLSConnections(version uint16) {
 
 func (o *observer) incTLSHandshakeFailures() {
 	o.tlsFailuresCounter.Inc()
+}
+
+func (o *observer) incPlaintextConnectionRejects() {
+	o.rejectsCounter.Inc()
 }
 
 func tlsVersionString(version uint16) string {

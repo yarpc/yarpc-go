@@ -32,6 +32,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 	"go.uber.org/net/metrics"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/internal/tlsmux"
 	"go.uber.org/yarpc/transport/internal/tlsscenario"
 	"go.uber.org/zap"
@@ -56,10 +57,13 @@ func TestMux(t *testing.T) {
 		desc            string
 		clientTlsConfig *tls.Config
 		body            []byte
+		mode            transport.InboundTLSMode
 
 		expectedCounter metrics.Snapshot
-		expectError     bool
-		clientErrorMsg  string
+
+		clientErrorMsgOnDial   string
+		clientErrorMsgOnRead   string
+		serverErrorMsgOnAccept string
 	}{
 		{
 			desc: "plaintext_connections",
@@ -70,9 +74,28 @@ func TestMux(t *testing.T) {
 					"service":   "test-svc",
 					"transport": "test-transport",
 					"component": "yarpc",
+					"mode":      "permissive",
 				},
 				Value: 1,
 			},
+			mode: transport.Permissive,
+		},
+		{
+			desc: "plaintext_connection_rejection_on_enforced",
+			body: []byte("plaintext_body"),
+			expectedCounter: metrics.Snapshot{
+				Name: "plaintext_connection_rejects",
+				Tags: metrics.Tags{
+					"service":   "test-svc",
+					"transport": "test-transport",
+					"component": "yarpc",
+					"mode":      "enforced",
+				},
+				Value: 1,
+			},
+			mode:                   transport.Enforced,
+			clientErrorMsgOnRead:   "connection reset by peer",
+			serverErrorMsgOnAccept: "listener closed",
 		},
 		{
 			desc: "tls_client",
@@ -96,9 +119,11 @@ func TestMux(t *testing.T) {
 					"transport": "test-transport",
 					"version":   "1.3",
 					"component": "yarpc",
+					"mode":      "permissive",
 				},
 				Value: 1,
 			},
+			mode: transport.Permissive,
 		},
 		{
 			desc: "tls_handshake_failure",
@@ -120,28 +145,13 @@ func TestMux(t *testing.T) {
 					"service":   "test-svc",
 					"transport": "test-transport",
 					"component": "yarpc",
+					"mode":      "permissive",
 				},
 				Value: 1,
 			},
-			expectError:    true,
-			clientErrorMsg: "remote error: tls: protocol version not supported",
-		},
-		{
-			desc: "tls_handshake_failure",
-			clientTlsConfig: &tls.Config{
-				GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
-					return &tls.Certificate{
-						Certificate: [][]byte{scenario.ClientCert.Raw},
-						Leaf:        scenario.ClientCert,
-						PrivateKey:  scenario.ClientKey,
-					}, nil
-				},
-				MinVersion: tls.VersionTLS10,
-				MaxVersion: tls.VersionTLS11,
-				RootCAs:    scenario.CAs,
-			},
-			expectError:    true,
-			clientErrorMsg: "remote error: tls: protocol version not supported",
+			clientErrorMsgOnDial:   "remote error: tls: protocol version not supported",
+			serverErrorMsgOnAccept: "listener closed",
+			mode:                   transport.Permissive,
 		},
 	}
 
@@ -161,6 +171,7 @@ func TestMux(t *testing.T) {
 				Logger:        zap.NewNop(),
 				ServiceName:   "test-svc",
 				TransportName: "test-transport",
+				Mode:          tt.mode,
 			})
 			defer muxLis.Close()
 
@@ -168,10 +179,11 @@ func TestMux(t *testing.T) {
 			go func() {
 				defer wg.Done()
 				conn, err := muxLis.Accept()
-				if tt.expectError {
-					require.Error(t, err, "unexpected empty error")
+				if tt.serverErrorMsgOnAccept != "" {
+					assert.EqualError(t, err, tt.serverErrorMsgOnAccept)
 					return
 				}
+				require.NoError(t, err)
 				defer conn.Close()
 
 				request := make([]byte, len(tt.body))
@@ -190,8 +202,8 @@ func TestMux(t *testing.T) {
 				conn, err = net.Dial(lis.Addr().Network(), lis.Addr().String())
 			}
 
-			if tt.expectError {
-				require.EqualError(t, err, tt.clientErrorMsg)
+			if tt.clientErrorMsgOnDial != "" {
+				assert.EqualError(t, err, tt.clientErrorMsgOnDial)
 				return
 			}
 			require.NoError(t, err)
@@ -201,6 +213,12 @@ func TestMux(t *testing.T) {
 
 			response := make([]byte, len(tt.body))
 			n, err := conn.Read(response)
+			if tt.clientErrorMsgOnRead != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.clientErrorMsgOnRead)
+				return
+			}
+
 			assert.NoError(t, err, "unexpected error")
 			assert.Equal(t, tt.body, response[:n], "unexpected response")
 			assert.Contains(t, root.Snapshot().Counters, tt.expectedCounter, "unexpected counters")
@@ -247,6 +265,7 @@ func TestConcurrentConnections(t *testing.T) {
 		Logger:        zap.NewNop(),
 		ServiceName:   "test-svc",
 		TransportName: "test-transport",
+		Mode:          transport.Permissive,
 	})
 	defer muxLis.Close()
 
