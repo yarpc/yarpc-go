@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"go.uber.org/net/metrics"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/zap"
 )
 
@@ -49,6 +50,7 @@ type Config struct {
 	TransportName string
 	Meter         *metrics.Scope
 	Logger        *zap.Logger
+	Mode          transport.InboundTLSMode
 }
 
 // listener wraps original net listener and it accepts both TLS and non-TLS connections.
@@ -58,6 +60,7 @@ type listener struct {
 	tlsConfig *tls.Config
 	observer  *observer
 	logger    *zap.Logger
+	mode      transport.InboundTLSMode
 
 	closeOnce   sync.Once
 	connChan    chan net.Conn
@@ -68,14 +71,19 @@ type listener struct {
 // NewListener returns a multiplexed listener which accepts both TLS and
 // plaintext connections.
 func NewListener(c Config) net.Listener {
+	if c.Mode == transport.Disabled {
+		return c.Listener
+	}
+
 	lis := &listener{
 		Listener:    c.Listener,
 		tlsConfig:   c.TLSConfig,
-		observer:    newObserver(c.Meter, c.Logger, c.ServiceName, c.TransportName),
+		observer:    newObserver(c.Meter, c.Logger, c.ServiceName, c.TransportName, c.Mode),
 		logger:      c.Logger,
 		connChan:    make(chan net.Conn),
 		stoppedChan: make(chan struct{}),
 		stopChan:    make(chan struct{}),
+		mode:        c.Mode,
 	}
 
 	// Starts go routine for the connection server
@@ -164,7 +172,7 @@ func (l *listener) mux(conn net.Conn) (net.Conn, error) {
 		return l.handleTLSConn(c)
 	}
 
-	return l.handlePlaintextConn(c), nil
+	return l.handlePlaintextConn(c)
 }
 
 // handleTLSConn completes the TLS handshake for the given connection and
@@ -184,9 +192,14 @@ func (l *listener) handleTLSConn(conn net.Conn) (net.Conn, error) {
 	return tlsConn, nil
 }
 
-func (l *listener) handlePlaintextConn(conn net.Conn) net.Conn {
+func (l *listener) handlePlaintextConn(conn net.Conn) (net.Conn, error) {
+	if l.mode == transport.Enforced {
+		l.logger.Error("plaintext connection not allowed in enforced TLS mode: rejecting connection")
+		l.observer.incPlaintextConnectionRejects()
+		return nil, errors.New("plaintext connection not allowed in enforced TLS mode")
+	}
 	l.observer.incPlaintextConnections()
-	return conn
+	return conn, nil
 }
 
 func matchTLSConnection(cs *connSniffer) (bool, error) {
