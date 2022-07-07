@@ -50,19 +50,8 @@ func TestObserver(t *testing.T) {
 	observer.incPlaintextConnections()
 	observer.incTLSConnections(tls.VersionTLS11)
 	observer.incTLSHandshakeFailures()
-	observer.incPlaintextConnectionRejects()
 
 	expectedCounters := []metrics.Snapshot{
-		{
-			Name:  "plaintext_connection_rejects",
-			Value: 1,
-			Tags: metrics.Tags{
-				"service":   "test-svc",
-				"transport": "test-transport",
-				"component": "yarpc",
-				"mode":      "enforced",
-			},
-		},
 		{
 			Name:  "plaintext_connections",
 			Value: 1,

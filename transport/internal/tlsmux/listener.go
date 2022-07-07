@@ -161,6 +161,10 @@ func (l *listener) serveConnection(conn net.Conn, wg *sync.WaitGroup) {
 // mux accepts both plaintext and tls connection, and returns a plaintext
 // connection.
 func (l *listener) mux(conn net.Conn) (net.Conn, error) {
+	if l.mode == transport.Enforced {
+		return l.handleTLSConn(conn)
+	}
+
 	c := newConnectionSniffer(conn)
 	isTLS, err := matchTLSConnection(c)
 	if err != nil {
@@ -193,11 +197,6 @@ func (l *listener) handleTLSConn(conn net.Conn) (net.Conn, error) {
 }
 
 func (l *listener) handlePlaintextConn(conn net.Conn) (net.Conn, error) {
-	if l.mode == transport.Enforced {
-		l.logger.Error("plaintext connection not allowed in enforced TLS mode: rejecting connection")
-		l.observer.incPlaintextConnectionRejects()
-		return nil, errors.New("plaintext connection not allowed in enforced TLS mode")
-	}
 	l.observer.incPlaintextConnections()
 	return conn, nil
 }

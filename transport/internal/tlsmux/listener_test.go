@@ -81,10 +81,10 @@ func TestMux(t *testing.T) {
 			mode: transport.Permissive,
 		},
 		{
-			desc: "plaintext_connection_rejection_on_enforced",
+			desc: "plaintext_connection_failure_on_enforced",
 			body: []byte("plaintext_body"),
 			expectedCounter: metrics.Snapshot{
-				Name: "plaintext_connection_rejects",
+				Name: "tls_handshake_failures",
 				Tags: metrics.Tags{
 					"service":   "test-svc",
 					"transport": "test-transport",
@@ -94,7 +94,7 @@ func TestMux(t *testing.T) {
 				Value: 1,
 			},
 			mode:                   transport.Enforced,
-			clientErrorMsgOnRead:   "connection reset by peer",
+			clientErrorMsgOnRead:   "EOF",
 			serverErrorMsgOnAccept: "listener closed",
 		},
 		{
