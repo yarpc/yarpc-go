@@ -38,6 +38,15 @@ import (
 	"go.uber.org/zap"
 )
 
+func TestNewListenerOnDisabled(t *testing.T) {
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer lis.Close()
+
+	gotLis := tlsmux.NewListener(tlsmux.Config{Listener: lis, Mode: yarpctls.Disabled})
+	assert.Equal(t, lis, gotLis)
+}
+
 func TestMux(t *testing.T) {
 	scenario := tlsscenario.Create(t, time.Minute, time.Minute)
 	serverTlsConfig := &tls.Config{
