@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 - No changes yet.
+### Added
+- grpc - option to set custom maximum header list size.
 
 
 ## [1.60.0] - 2022-02-03
