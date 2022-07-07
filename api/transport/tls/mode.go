@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package tls
 
 import (
 	"encoding"
@@ -26,26 +26,26 @@ import (
 )
 
 const (
-	// Disabled TLS mode accepts plaintext connections only.
-	Disabled InboundTLSMode = iota
+	// Disabled TLS mode allows plaintext connections only.
+	Disabled Mode = iota
 
-	// Permissive TLS mode inbound accepts both TLS and plaintext connections.
+	// Permissive TLS mode allows both TLS and plaintext connections.
 	Permissive
 
-	// Enforced TLS mode inbound accepts TLS connections only.
+	// Enforced TLS mode allows accepts TLS connections only.
 	Enforced
 )
 
 var (
-	_ fmt.Stringer             = (*InboundTLSMode)(nil)
-	_ encoding.TextUnmarshaler = (*InboundTLSMode)(nil)
+	_ fmt.Stringer             = (*Mode)(nil)
+	_ encoding.TextUnmarshaler = (*Mode)(nil)
 )
 
-// InboundTLSMode represents the TLS mode of the inbound.
-type InboundTLSMode uint16
+// Mode represents the TLS mode of the transport.
+type Mode uint16
 
 // String returns a lower-case ASCII representation of TLS mode.
-func (t InboundTLSMode) String() string {
+func (t Mode) String() string {
 	switch t {
 	case Disabled:
 		return "disabled"
@@ -59,7 +59,7 @@ func (t InboundTLSMode) String() string {
 }
 
 // UnmarshalText implements encoding.TextUnmarshaler.
-func (t *InboundTLSMode) UnmarshalText(text []byte) error {
+func (t *Mode) UnmarshalText(text []byte) error {
 	switch s := string(text); s {
 	case "disabled":
 		*t = Disabled

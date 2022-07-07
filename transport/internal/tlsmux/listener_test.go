@@ -32,7 +32,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 	"go.uber.org/net/metrics"
-	"go.uber.org/yarpc/api/transport"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/transport/internal/tlsmux"
 	"go.uber.org/yarpc/transport/internal/tlsscenario"
 	"go.uber.org/zap"
@@ -57,7 +57,7 @@ func TestMux(t *testing.T) {
 		desc            string
 		clientTlsConfig *tls.Config
 		body            []byte
-		mode            transport.InboundTLSMode
+		mode            yarpctls.Mode
 
 		expectedCounter metrics.Snapshot
 
@@ -78,7 +78,7 @@ func TestMux(t *testing.T) {
 				},
 				Value: 1,
 			},
-			mode: transport.Permissive,
+			mode: yarpctls.Permissive,
 		},
 		{
 			desc: "plaintext_connection_failure_on_enforced",
@@ -93,7 +93,7 @@ func TestMux(t *testing.T) {
 				},
 				Value: 1,
 			},
-			mode:                   transport.Enforced,
+			mode:                   yarpctls.Enforced,
 			clientErrorMsgOnRead:   "EOF",
 			serverErrorMsgOnAccept: "listener closed",
 		},
@@ -123,7 +123,7 @@ func TestMux(t *testing.T) {
 				},
 				Value: 1,
 			},
-			mode: transport.Permissive,
+			mode: yarpctls.Permissive,
 		},
 		{
 			desc: "tls_handshake_failure",
@@ -151,7 +151,7 @@ func TestMux(t *testing.T) {
 			},
 			clientErrorMsgOnDial:   "remote error: tls: protocol version not supported",
 			serverErrorMsgOnAccept: "listener closed",
-			mode:                   transport.Permissive,
+			mode:                   yarpctls.Permissive,
 		},
 	}
 
@@ -265,7 +265,7 @@ func TestConcurrentConnections(t *testing.T) {
 		Logger:        zap.NewNop(),
 		ServiceName:   "test-svc",
 		TransportName: "test-transport",
-		Mode:          transport.Permissive,
+		Mode:          yarpctls.Permissive,
 	})
 	defer muxLis.Close()
 

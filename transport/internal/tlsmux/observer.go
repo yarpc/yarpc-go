@@ -24,7 +24,7 @@ import (
 	"crypto/tls"
 
 	"go.uber.org/net/metrics"
-	"go.uber.org/yarpc/api/transport"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/zap"
 )
 
@@ -40,7 +40,7 @@ type observer struct {
 	tlsFailuresCounter          *metrics.Counter
 }
 
-func newObserver(meter *metrics.Scope, logger *zap.Logger, serviceName, transportName string, mode transport.InboundTLSMode) *observer {
+func newObserver(meter *metrics.Scope, logger *zap.Logger, serviceName, transportName string, mode yarpctls.Mode) *observer {
 	tags := metrics.Tags{
 		"service":   serviceName,
 		"transport": transportName,
