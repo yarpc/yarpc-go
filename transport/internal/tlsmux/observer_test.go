@@ -59,7 +59,7 @@ func TestObserver(t *testing.T) {
 				"service":   "test-svc",
 				"transport": "test-transport",
 				"component": "yarpc",
-				"mode":      "enforced",
+				"mode":      "Enforced",
 			},
 		},
 		{
@@ -70,7 +70,7 @@ func TestObserver(t *testing.T) {
 				"transport": "test-transport",
 				"version":   "1.1",
 				"component": "yarpc",
-				"mode":      "enforced",
+				"mode":      "Enforced",
 			},
 		},
 		{
@@ -80,7 +80,7 @@ func TestObserver(t *testing.T) {
 				"service":   "test-svc",
 				"transport": "test-transport",
 				"component": "yarpc",
-				"mode":      "enforced",
+				"mode":      "Enforced",
 			},
 		},
 	}

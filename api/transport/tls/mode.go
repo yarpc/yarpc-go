@@ -41,22 +41,9 @@ var (
 	_ encoding.TextUnmarshaler = (*Mode)(nil)
 )
 
+//go:generate stringer -type=Mode
 // Mode represents the TLS mode of the transport.
 type Mode uint16
-
-// String returns a lower-case ASCII representation of TLS mode.
-func (t Mode) String() string {
-	switch t {
-	case Disabled:
-		return "disabled"
-	case Permissive:
-		return "permissive"
-	case Enforced:
-		return "enforced"
-	default:
-		return "unknown"
-	}
-}
 
 // UnmarshalText implements encoding.TextUnmarshaler.
 func (t *Mode) UnmarshalText(text []byte) error {
