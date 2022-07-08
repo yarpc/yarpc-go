@@ -93,10 +93,10 @@ func TestTransportSpec(t *testing.T) {
 		Address                 string
 		ServerMaxRecvMsgSize    int
 		ServerMaxSendMsgSize    int
-		ServerMaxHeaderListSize int
+		ServerMaxHeaderListSize uint32
 		ClientMaxRecvMsgSize    int
 		ClientMaxSendMsgSize    int
-		ClientMaxHeaderListSize int
+		ClientMaxHeaderListSize uint32
 		TLS                     bool
 	}
 
