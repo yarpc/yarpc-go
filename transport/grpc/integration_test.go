@@ -492,8 +492,8 @@ func TestGRPCHeaderListSize(t *testing.T) {
 		},
 		{
 			desc:       "allow_large_header_size",
-			headerSize: 1024 * 1024, // 1MB
-			options:    []TransportOption{ServerMaxHeaderListSize(1024 * 1024), ClientMaxHeaderListSize(1024 * 1024)},
+			headerSize: 1024 * 1024 * 18, // 18MB
+			options:    []TransportOption{ServerMaxHeaderListSize(1024 * 1024 * 19), ClientMaxHeaderListSize(1024 * 1024 * 19)},
 		},
 	}
 
@@ -509,7 +509,11 @@ func TestGRPCHeaderListSize(t *testing.T) {
 			}
 			te.do(t, func(t *testing.T, e *testEnv) {
 				var resHeaders map[string]string
-				err := e.SetValueYARPC(context.Background(), "foo", "bar", yarpc.ResponseHeaders(&resHeaders), yarpc.WithHeader("test-header", string(headerVal)))
+				// Setting longer timeout as CI timesout on large payloads.
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+				defer cancel()
+
+				err := e.SetValueYARPC(ctx, "foo", "bar", yarpc.ResponseHeaders(&resHeaders), yarpc.WithHeader("test-header", string(headerVal)))
 				if tt.errorMsg != "" {
 					require.Error(t, err)
 					assert.Contains(t, err.Error(), tt.errorMsg)
@@ -829,8 +833,11 @@ func (e *testEnv) GetValueYARPC(ctx context.Context, key string, options ...yarp
 }
 
 func (e *testEnv) SetValueYARPC(ctx context.Context, key string, value string, options ...yarpc.CallOption) error {
-	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
-	defer cancel()
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel func()
+		ctx, cancel = context.WithTimeout(ctx, testtime.Second)
+		defer cancel()
+	}
 	_, err := e.KeyValueYARPCClient.SetValue(ctx, &examplepb.SetValueRequest{Key: key, Value: value}, options...)
 	return err
 }
