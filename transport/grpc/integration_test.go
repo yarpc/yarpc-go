@@ -510,7 +510,7 @@ func TestGRPCHeaderListSize(t *testing.T) {
 			te.do(t, func(t *testing.T, e *testEnv) {
 				var resHeaders map[string]string
 				// Setting longer timeout as CI timesout on large payloads.
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 				defer cancel()
 
 				err := e.SetValueYARPC(ctx, "foo", "bar", yarpc.ResponseHeaders(&resHeaders), yarpc.WithHeader("test-header", string(headerVal)))
