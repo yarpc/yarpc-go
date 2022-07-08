@@ -86,7 +86,7 @@ func (k *KeyValueYARPCServer) GetValue(ctx context.Context, request *examplepb.G
 func (k *KeyValueYARPCServer) SetValue(ctx context.Context, request *examplepb.SetValueRequest) (*examplepb.SetValueResponse, error) {
 	call := yarpc.CallFromContext(ctx)
 	if val := call.Header("test-header"); val != "" {
-		call.WriteResponseHeader("test-header", val)
+		_ = call.WriteResponseHeader("test-header", val)
 	}
 	if request == nil {
 		return nil, errRequestNil
