@@ -492,8 +492,8 @@ func TestGRPCHeaderListSize(t *testing.T) {
 		},
 		{
 			desc:       "allow_large_header_size",
-			headerSize: 1024 * 1024 * 18, // 18MB
-			options:    []TransportOption{ServerMaxHeaderListSize(1024 * 1024 * 19), ClientMaxHeaderListSize(1024 * 1024 * 19)},
+			headerSize: 1024 * 1024 * 1, // 1MB
+			options:    []TransportOption{ServerMaxHeaderListSize(1024 * 1024 * 2), ClientMaxHeaderListSize(1024 * 1024 * 2)},
 		},
 	}
 
