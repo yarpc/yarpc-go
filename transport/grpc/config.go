@@ -66,15 +66,21 @@ func TransportSpec(opts ...Option) yarpcconfig.TransportSpec {
 //        exponential:
 //          first: 10ms
 //          max: 30s
+//      clientMaxHeaderListSize: 1024
+//      serverMaxHeaderListSize: 2048
 //
 // All parameters of TransportConfig are optional. This section
 // may be omitted in the transports section.
 type TransportConfig struct {
-	ServerMaxRecvMsgSize int                 `config:"serverMaxRecvMsgSize"`
-	ServerMaxSendMsgSize int                 `config:"serverMaxSendMsgSize"`
-	ClientMaxRecvMsgSize int                 `config:"clientMaxRecvMsgSize"`
-	ClientMaxSendMsgSize int                 `config:"clientMaxSendMsgSize"`
-	Backoff              yarpcconfig.Backoff `config:"backoff"`
+	ServerMaxRecvMsgSize int `config:"serverMaxRecvMsgSize"`
+	ServerMaxSendMsgSize int `config:"serverMaxSendMsgSize"`
+	ClientMaxRecvMsgSize int `config:"clientMaxRecvMsgSize"`
+	ClientMaxSendMsgSize int `config:"clientMaxSendMsgSize"`
+	// GRPC header lise size options accept uint32 param.
+	// see: https://pkg.go.dev/google.golang.org/grpc#WithMaxHeaderListSize
+	ServerMaxHeaderListSize uint32              `config:"serverMaxHeaderListSize"`
+	ClientMaxHeaderListSize uint32              `config:"clientMaxHeaderListSize"`
+	Backoff                 yarpcconfig.Backoff `config:"backoff"`
 }
 
 // InboundConfig configures a gRPC Inbound.
@@ -279,6 +285,12 @@ func (t *transportSpec) buildTransport(transportConfig *TransportConfig, _ *yarp
 	}
 	if transportConfig.ClientMaxSendMsgSize > 0 {
 		options = append(options, ClientMaxSendMsgSize(transportConfig.ClientMaxSendMsgSize))
+	}
+	if transportConfig.ServerMaxHeaderListSize > 0 {
+		options = append(options, ServerMaxHeaderListSize(transportConfig.ServerMaxHeaderListSize))
+	}
+	if transportConfig.ClientMaxHeaderListSize > 0 {
+		options = append(options, ClientMaxHeaderListSize(transportConfig.ClientMaxHeaderListSize))
 	}
 	backoffStrategy, err := transportConfig.Backoff.Strategy()
 	if err != nil {
