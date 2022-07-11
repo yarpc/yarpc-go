@@ -25,6 +25,7 @@ import (
 	"sync"
 
 	"go.uber.org/yarpc/api/transport"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/api/x/introspection"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/transport/internal/tlsmux"
@@ -123,14 +124,15 @@ func (i *Inbound) start() error {
 
 	if i.options.creds != nil {
 		serverOptions = append(serverOptions, grpc.Creds(i.options.creds))
-	} else if i.options.muxTLSConfig != nil {
+	} else if i.options.tlsMode != yarpctls.Disabled {
 		listener = tlsmux.NewListener(tlsmux.Config{
 			Listener:      listener,
-			TLSConfig:     i.options.muxTLSConfig.Clone(),
+			TLSConfig:     i.options.tlsConfig.Clone(),
 			Logger:        i.t.options.logger,
 			Meter:         i.t.options.meter,
-			ServiceName:   i.t.serviceName,
+			ServiceName:   i.t.options.serviceName,
 			TransportName: TransportName,
+			Mode:          i.options.tlsMode,
 		})
 	}
 

@@ -27,6 +27,7 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/yarpcconfig"
@@ -113,9 +114,18 @@ type InboundTLSConfig struct {
 	Enabled  bool   `config:"enabled"` // disabled by default
 	CertFile string `config:"certFile,interpolate"`
 	KeyFile  string `config:"keyFile,interpolate"`
+
+	// Mode when set to Permissive or Enforced enables TLS inbound and
+	// TLS configuration must be passed as a inbound option.
+	// Note: enable, cert and key fields are ignored when mode is set.
+	Mode yarpctls.Mode `config:"mode,interpolate"`
 }
 
 func (c InboundTLSConfig) inboundOptions() ([]InboundOption, error) {
+	if c.Mode != yarpctls.Disabled {
+		return []InboundOption{InboundTLSMode(c.Mode)}, nil
+	}
+
 	if !c.Enabled {
 		return nil, nil
 	}
@@ -296,9 +306,8 @@ func (t *transportSpec) buildTransport(transportConfig *TransportConfig, kit *ya
 	if err != nil {
 		return nil, err
 	}
-	options = append(options, BackoffStrategy(backoffStrategy))
+	options = append(options, BackoffStrategy(backoffStrategy), ServiceName(kit.ServiceName()))
 	tr := newTransport(newTransportOptions(options))
-	tr.serviceName = kit.ServiceName()
 	return tr, nil
 }
 

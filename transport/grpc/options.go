@@ -30,6 +30,7 @@ import (
 	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/transport"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	intbackoff "go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -62,6 +63,14 @@ var _ Option = (DialOption)(nil)
 type TransportOption func(*transportOptions)
 
 func (TransportOption) grpcOption() {}
+
+// ServiceName specifices the name of the service used in transport logging
+// and metrics.
+func ServiceName(name string) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.serviceName = name
+	}
+}
 
 // BackoffStrategy specifies the backoff strategy for delays between
 // connection attempts for each peer.
@@ -170,11 +179,20 @@ func InboundCredentials(creds credentials.TransportCredentials) InboundOption {
 	}
 }
 
-// InboundMuxTLS returns an InboundOption that creates muxed listener which
-// accepts inbound plaintext and TLS connections with the given TLS config.
-func InboundMuxTLS(tlsConfig *tls.Config) InboundOption {
+// InboundTLSConfiguration returns an InboundOption that provides the TLS confiugration
+// used for setting up TLS inbound.
+func InboundTLSConfiguration(config *tls.Config) InboundOption {
 	return func(inboundOptions *inboundOptions) {
-		inboundOptions.muxTLSConfig = tlsConfig
+		inboundOptions.tlsConfig = config
+	}
+}
+
+// InboundTLSMode returns an InboundOption that sets inbound TLS mode.
+// It must be noted that TLS configuration must be passed separately using inbound
+// option InboundTLSConfiguration.
+func InboundTLSMode(mode yarpctls.Mode) InboundOption {
+	return func(inboundOptions *inboundOptions) {
+		inboundOptions.tlsMode = mode
 	}
 }
 
@@ -233,6 +251,7 @@ type transportOptions struct {
 	tracer                  opentracing.Tracer
 	logger                  *zap.Logger
 	meter                   *metrics.Scope
+	serviceName             string
 	serverMaxRecvMsgSize    int
 	serverMaxSendMsgSize    int
 	clientMaxRecvMsgSize    int
@@ -262,8 +281,10 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 }
 
 type inboundOptions struct {
-	creds        credentials.TransportCredentials
-	muxTLSConfig *tls.Config
+	creds credentials.TransportCredentials
+
+	tlsConfig *tls.Config
+	tlsMode   yarpctls.Mode
 }
 
 func newInboundOptions(options []InboundOption) *inboundOptions {

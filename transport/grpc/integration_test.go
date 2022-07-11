@@ -42,6 +42,7 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/grpcctx"
@@ -574,7 +575,7 @@ func TestMuxTLS(t *testing.T) {
 			}
 
 			te := testEnvOptions{
-				InboundOptions: []InboundOption{InboundMuxTLS(serverCreds)},
+				InboundOptions: []InboundOption{InboundTLSConfiguration(serverCreds), InboundTLSMode(yarpctls.Permissive)},
 				DialOptions:    dialOptions,
 			}
 			te.do(t, func(t *testing.T, e *testEnv) {

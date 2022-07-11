@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/yarpcconfig"
 	"google.golang.org/grpc"
@@ -98,6 +99,7 @@ func TestTransportSpec(t *testing.T) {
 		ClientMaxSendMsgSize    int
 		ClientMaxHeaderListSize uint32
 		TLS                     bool
+		TLSMode                 yarpctls.Mode
 	}
 
 	type wantOutbound struct {
@@ -124,8 +126,8 @@ func TestTransportSpec(t *testing.T) {
 	tests := []test{
 		{
 			desc:        "simple inbound",
-			inboundCfg:  attrs{"address": ":54567"},
-			wantInbound: &wantInbound{Address: ":54567"},
+			inboundCfg:  attrs{"address": ":54567", "tls": attrs{"mode": "enforced"}},
+			wantInbound: &wantInbound{Address: ":54567", TLSMode: yarpctls.Enforced},
 		},
 		{
 			desc:        "inbound interpolation",
@@ -465,7 +467,7 @@ func TestTransportSpec(t *testing.T) {
 				inbound, ok := cfg.Inbounds[0].(*Inbound)
 				require.True(t, ok, "expected *Inbound, got %T", cfg.Inbounds[0])
 				assert.Contains(t, inbound.listener.Addr().String(), tt.wantInbound.Address)
-				assert.Equal(t, "foo", inbound.t.serviceName)
+				assert.Equal(t, "foo", inbound.t.options.serviceName)
 
 				if tt.wantInbound.ServerMaxRecvMsgSize > 0 {
 					assert.Equal(t, tt.wantInbound.ServerMaxRecvMsgSize, inbound.t.options.serverMaxRecvMsgSize)
@@ -500,6 +502,7 @@ func TestTransportSpec(t *testing.T) {
 					assert.Nil(t, inbound.t.options.serverMaxHeaderListSize)
 				}
 				assert.Equal(t, tt.wantInbound.TLS, inbound.options.creds != nil)
+				assert.Equal(t, tt.wantInbound.TLSMode, inbound.options.tlsMode)
 			} else {
 				assert.Len(t, cfg.Inbounds, 0)
 			}
