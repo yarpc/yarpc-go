@@ -72,11 +72,13 @@ func TransportSpec(opts ...Option) yarpcconfig.TransportSpec {
 // All parameters of TransportConfig are optional. This section
 // may be omitted in the transports section.
 type TransportConfig struct {
-	ServerMaxRecvMsgSize    int                 `config:"serverMaxRecvMsgSize"`
-	ServerMaxSendMsgSize    int                 `config:"serverMaxSendMsgSize"`
+	ServerMaxRecvMsgSize int `config:"serverMaxRecvMsgSize"`
+	ServerMaxSendMsgSize int `config:"serverMaxSendMsgSize"`
+	ClientMaxRecvMsgSize int `config:"clientMaxRecvMsgSize"`
+	ClientMaxSendMsgSize int `config:"clientMaxSendMsgSize"`
+	// GRPC header lise size options accept uint32 param.
+	// see: https://pkg.go.dev/google.golang.org/grpc#WithMaxHeaderListSize
 	ServerMaxHeaderListSize uint32              `config:"serverMaxHeaderListSize"`
-	ClientMaxRecvMsgSize    int                 `config:"clientMaxRecvMsgSize"`
-	ClientMaxSendMsgSize    int                 `config:"clientMaxSendMsgSize"`
 	ClientMaxHeaderListSize uint32              `config:"clientMaxHeaderListSize"`
 	Backoff                 yarpcconfig.Backoff `config:"backoff"`
 }
