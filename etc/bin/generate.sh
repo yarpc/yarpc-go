@@ -87,6 +87,7 @@ mockgen -destination=api/transport/transporttest/transport.go -package=transport
 generate_stringer ConnectionStatus ./api/peer
 generate_stringer State ./pkg/lifecycle
 generate_stringer Type ./api/transport
+generate_stringer Mode ./api/transport/tls
 
 thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/crossdock/thrift --out=internal/crossdock/thrift internal/crossdock/thrift/echo.thrift
 thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/crossdock/thrift --out=internal/crossdock/thrift internal/crossdock/thrift/oneway.thrift

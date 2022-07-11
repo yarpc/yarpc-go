@@ -41,7 +41,6 @@ var (
 	_ encoding.TextUnmarshaler = (*Mode)(nil)
 )
 
-//go:generate stringer -type=Mode
 // Mode represents the TLS mode of the transport.
 type Mode uint16
 
