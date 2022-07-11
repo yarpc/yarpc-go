@@ -116,7 +116,7 @@ type InboundTLSConfig struct {
 	KeyFile  string `config:"keyFile,interpolate"`
 
 	// Mode when set to Permissive or Enforced enables TLS inbound and
-	// TLS configuration must be passed as a inbound option.
+	// TLS configuration must be passed as an inbound option.
 	// Note: enable, cert and key fields are ignored when mode is set.
 	Mode yarpctls.Mode `config:"mode,interpolate"`
 }
@@ -307,8 +307,7 @@ func (t *transportSpec) buildTransport(transportConfig *TransportConfig, kit *ya
 		return nil, err
 	}
 	options = append(options, BackoffStrategy(backoffStrategy), ServiceName(kit.ServiceName()))
-	tr := newTransport(newTransportOptions(options))
-	return tr, nil
+	return newTransport(newTransportOptions(options)), nil
 }
 
 func (t *transportSpec) buildInbound(inboundConfig *InboundConfig, tr transport.Transport, _ *yarpcconfig.Kit) (transport.Inbound, error) {
