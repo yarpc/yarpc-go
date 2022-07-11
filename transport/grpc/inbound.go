@@ -134,6 +134,10 @@ func (i *Inbound) start() error {
 		})
 	}
 
+	if i.t.options.serverMaxHeaderListSize != nil {
+		serverOptions = append(serverOptions, grpc.MaxHeaderListSize(*i.t.options.serverMaxHeaderListSize))
+	}
+
 	server := grpc.NewServer(serverOptions...)
 
 	go func() {

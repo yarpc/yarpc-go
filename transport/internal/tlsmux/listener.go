@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"go.uber.org/net/metrics"
-	"go.uber.org/yarpc/api/transport"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/zap"
 )
 
@@ -50,7 +50,7 @@ type Config struct {
 	TransportName string
 	Meter         *metrics.Scope
 	Logger        *zap.Logger
-	Mode          transport.InboundTLSMode
+	Mode          yarpctls.Mode
 }
 
 // listener wraps original net listener and it accepts both TLS and non-TLS connections.
@@ -60,7 +60,7 @@ type listener struct {
 	tlsConfig *tls.Config
 	observer  *observer
 	logger    *zap.Logger
-	mode      transport.InboundTLSMode
+	mode      yarpctls.Mode
 
 	closeOnce   sync.Once
 	connChan    chan net.Conn
@@ -71,7 +71,7 @@ type listener struct {
 // NewListener returns a multiplexed listener which accepts both TLS and
 // plaintext connections.
 func NewListener(c Config) net.Listener {
-	if c.Mode == transport.Disabled {
+	if c.Mode == yarpctls.Disabled {
 		return c.Listener
 	}
 
@@ -161,6 +161,10 @@ func (l *listener) serveConnection(conn net.Conn, wg *sync.WaitGroup) {
 // mux accepts both plaintext and tls connection, and returns a plaintext
 // connection.
 func (l *listener) mux(conn net.Conn) (net.Conn, error) {
+	if l.mode == yarpctls.Enforced {
+		return l.handleTLSConn(conn)
+	}
+
 	c := newConnectionSniffer(conn)
 	isTLS, err := matchTLSConnection(c)
 	if err != nil {
@@ -193,11 +197,6 @@ func (l *listener) handleTLSConn(conn net.Conn) (net.Conn, error) {
 }
 
 func (l *listener) handlePlaintextConn(conn net.Conn) (net.Conn, error) {
-	if l.mode == transport.Enforced {
-		l.logger.Error("plaintext connection not allowed in enforced TLS mode: rejecting connection")
-		l.observer.incPlaintextConnectionRejects()
-		return nil, errors.New("plaintext connection not allowed in enforced TLS mode")
-	}
 	l.observer.incPlaintextConnections()
 	return conn, nil
 }

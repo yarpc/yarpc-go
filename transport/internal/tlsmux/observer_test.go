@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/net/metrics"
-	"go.uber.org/yarpc/api/transport"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/zap"
 )
 
@@ -41,7 +41,7 @@ func TestTlsVersionString(t *testing.T) {
 
 func TestObserver(t *testing.T) {
 	root := metrics.New()
-	observer := newObserver(root.Scope(), zap.NewNop(), "test-svc", "test-transport", transport.Enforced)
+	observer := newObserver(root.Scope(), zap.NewNop(), "test-svc", "test-transport", yarpctls.Enforced)
 	require.NotNil(t, observer, "unexpected nil observer")
 	assert.NotNil(t, observer.plaintextConnectionsCounter, "unexpected nil counter")
 	assert.NotNil(t, observer.tlsConnectionsCounter, "unexpected nil counter")
@@ -50,19 +50,8 @@ func TestObserver(t *testing.T) {
 	observer.incPlaintextConnections()
 	observer.incTLSConnections(tls.VersionTLS11)
 	observer.incTLSHandshakeFailures()
-	observer.incPlaintextConnectionRejects()
 
 	expectedCounters := []metrics.Snapshot{
-		{
-			Name:  "plaintext_connection_rejects",
-			Value: 1,
-			Tags: metrics.Tags{
-				"service":   "test-svc",
-				"transport": "test-transport",
-				"component": "yarpc",
-				"mode":      "enforced",
-			},
-		},
 		{
 			Name:  "plaintext_connections",
 			Value: 1,
@@ -70,7 +59,7 @@ func TestObserver(t *testing.T) {
 				"service":   "test-svc",
 				"transport": "test-transport",
 				"component": "yarpc",
-				"mode":      "enforced",
+				"mode":      "Enforced",
 			},
 		},
 		{
@@ -81,7 +70,7 @@ func TestObserver(t *testing.T) {
 				"transport": "test-transport",
 				"version":   "1.1",
 				"component": "yarpc",
-				"mode":      "enforced",
+				"mode":      "Enforced",
 			},
 		},
 		{
@@ -91,7 +80,7 @@ func TestObserver(t *testing.T) {
 				"service":   "test-svc",
 				"transport": "test-transport",
 				"component": "yarpc",
-				"mode":      "enforced",
+				"mode":      "Enforced",
 			},
 		},
 	}

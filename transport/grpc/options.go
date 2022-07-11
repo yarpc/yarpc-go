@@ -119,6 +119,16 @@ func ServerMaxSendMsgSize(serverMaxSendMsgSize int) TransportOption {
 	}
 }
 
+// ServerMaxHeaderListSize returns a transport option for configuring maximum
+// header list size the server must accept.
+//
+// The default is 16MB (gRPC default).
+func ServerMaxHeaderListSize(serverMaxHeaderListSize uint32) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.serverMaxHeaderListSize = &serverMaxHeaderListSize
+	}
+}
+
 // ClientMaxRecvMsgSize is the maximum message size the client can receive.
 //
 // The default is 4MB.
@@ -134,6 +144,16 @@ func ClientMaxRecvMsgSize(clientMaxRecvMsgSize int) TransportOption {
 func ClientMaxSendMsgSize(clientMaxSendMsgSize int) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.clientMaxSendMsgSize = clientMaxSendMsgSize
+	}
+}
+
+// ClientMaxHeaderListSize returns a transport option for configuring maximum
+// header list size the client must accept.
+//
+// The default is 16MB (gRPC default).
+func ClientMaxHeaderListSize(clientMaxHeaderListSize uint32) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.clientMaxHeaderListSize = &clientMaxHeaderListSize
 	}
 }
 
@@ -209,14 +229,16 @@ func KeepaliveParams(params keepalive.ClientParameters) DialOption {
 }
 
 type transportOptions struct {
-	backoffStrategy      backoff.Strategy
-	tracer               opentracing.Tracer
-	logger               *zap.Logger
-	meter                *metrics.Scope
-	serverMaxRecvMsgSize int
-	serverMaxSendMsgSize int
-	clientMaxRecvMsgSize int
-	clientMaxSendMsgSize int
+	backoffStrategy         backoff.Strategy
+	tracer                  opentracing.Tracer
+	logger                  *zap.Logger
+	meter                   *metrics.Scope
+	serverMaxRecvMsgSize    int
+	serverMaxSendMsgSize    int
+	clientMaxRecvMsgSize    int
+	clientMaxSendMsgSize    int
+	serverMaxHeaderListSize *uint32
+	clientMaxHeaderListSize *uint32
 }
 
 func newTransportOptions(options []TransportOption) *transportOptions {

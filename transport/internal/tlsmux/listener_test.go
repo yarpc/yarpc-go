@@ -32,11 +32,20 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 	"go.uber.org/net/metrics"
-	"go.uber.org/yarpc/api/transport"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/transport/internal/tlsmux"
 	"go.uber.org/yarpc/transport/internal/tlsscenario"
 	"go.uber.org/zap"
 )
+
+func TestNewListenerOnDisabled(t *testing.T) {
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer lis.Close()
+
+	gotLis := tlsmux.NewListener(tlsmux.Config{Listener: lis, Mode: yarpctls.Disabled})
+	assert.Equal(t, lis, gotLis)
+}
 
 func TestMux(t *testing.T) {
 	scenario := tlsscenario.Create(t, time.Minute, time.Minute)
@@ -57,7 +66,7 @@ func TestMux(t *testing.T) {
 		desc            string
 		clientTlsConfig *tls.Config
 		body            []byte
-		mode            transport.InboundTLSMode
+		mode            yarpctls.Mode
 
 		expectedCounter metrics.Snapshot
 
@@ -74,27 +83,27 @@ func TestMux(t *testing.T) {
 					"service":   "test-svc",
 					"transport": "test-transport",
 					"component": "yarpc",
-					"mode":      "permissive",
+					"mode":      "Permissive",
 				},
 				Value: 1,
 			},
-			mode: transport.Permissive,
+			mode: yarpctls.Permissive,
 		},
 		{
-			desc: "plaintext_connection_rejection_on_enforced",
+			desc: "plaintext_connection_failure_on_enforced",
 			body: []byte("plaintext_body"),
 			expectedCounter: metrics.Snapshot{
-				Name: "plaintext_connection_rejects",
+				Name: "tls_handshake_failures",
 				Tags: metrics.Tags{
 					"service":   "test-svc",
 					"transport": "test-transport",
 					"component": "yarpc",
-					"mode":      "enforced",
+					"mode":      "Enforced",
 				},
 				Value: 1,
 			},
-			mode:                   transport.Enforced,
-			clientErrorMsgOnRead:   "connection reset by peer",
+			mode:                   yarpctls.Enforced,
+			clientErrorMsgOnRead:   "EOF",
 			serverErrorMsgOnAccept: "listener closed",
 		},
 		{
@@ -119,11 +128,11 @@ func TestMux(t *testing.T) {
 					"transport": "test-transport",
 					"version":   "1.3",
 					"component": "yarpc",
-					"mode":      "permissive",
+					"mode":      "Permissive",
 				},
 				Value: 1,
 			},
-			mode: transport.Permissive,
+			mode: yarpctls.Permissive,
 		},
 		{
 			desc: "tls_handshake_failure",
@@ -145,13 +154,13 @@ func TestMux(t *testing.T) {
 					"service":   "test-svc",
 					"transport": "test-transport",
 					"component": "yarpc",
-					"mode":      "permissive",
+					"mode":      "Permissive",
 				},
 				Value: 1,
 			},
 			clientErrorMsgOnDial:   "remote error: tls: protocol version not supported",
 			serverErrorMsgOnAccept: "listener closed",
-			mode:                   transport.Permissive,
+			mode:                   yarpctls.Permissive,
 		},
 	}
 
@@ -265,7 +274,7 @@ func TestConcurrentConnections(t *testing.T) {
 		Logger:        zap.NewNop(),
 		ServiceName:   "test-svc",
 		TransportName: "test-transport",
-		Mode:          transport.Permissive,
+		Mode:          yarpctls.Permissive,
 	})
 	defer muxLis.Close()
 

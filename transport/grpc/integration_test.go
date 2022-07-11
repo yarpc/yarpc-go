@@ -40,6 +40,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 	"go.uber.org/multierr"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/internal/clientconfig"
@@ -467,6 +468,65 @@ func TestTLSWithYARPCAndGRPC(t *testing.T) {
 	}
 }
 
+func TestGRPCHeaderListSize(t *testing.T) {
+	tests := []struct {
+		desc       string
+		options    []TransportOption
+		headerSize int
+		errorMsg   string
+	}{
+		{
+			desc:       "default_setting",
+			headerSize: 1024,
+		},
+		{
+			desc:       "limit_server_header_size",
+			headerSize: 1024,
+			options:    []TransportOption{ServerMaxHeaderListSize(1000)},
+			errorMsg:   "header list size to send violates the maximum size (1000 bytes) set by server",
+		},
+		{
+			desc:       "limit_client_header_size",
+			headerSize: 1024,
+			options:    []TransportOption{ClientMaxHeaderListSize(1000)},
+			errorMsg:   "stream terminated",
+		},
+		{
+			desc:       "allow_large_header_size",
+			headerSize: 1024 * 1024 * 1, // 1MB
+			options:    []TransportOption{ServerMaxHeaderListSize(1024 * 1024 * 2), ClientMaxHeaderListSize(1024 * 1024 * 2)},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			headerVal := make([]byte, tt.headerSize)
+			// Set valid ASCII as grpc header cannot be a 0 byte slice.
+			for i := 0; i < tt.headerSize; i++ {
+				headerVal[i] = 'a'
+			}
+			te := testEnvOptions{
+				TransportOptions: tt.options,
+			}
+			te.do(t, func(t *testing.T, e *testEnv) {
+				var resHeaders map[string]string
+				// Setting longer timeout as CI timesout on large payloads.
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
+				defer cancel()
+
+				err := e.SetValueYARPC(ctx, "foo", "bar", yarpc.ResponseHeaders(&resHeaders), yarpc.WithHeader("test-header", string(headerVal)))
+				if tt.errorMsg != "" {
+					require.Error(t, err)
+					assert.Contains(t, err.Error(), tt.errorMsg)
+					return
+				}
+				assert.NoError(t, err)
+				assert.Equal(t, resHeaders["test-header"], string(headerVal))
+			})
+		})
+	}
+}
+
 func TestMuxTLS(t *testing.T) {
 	defer goleak.VerifyNone(t)
 	tests := []struct {
@@ -482,7 +542,6 @@ func TestMuxTLS(t *testing.T) {
 			isClientTLS: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			scenario := tlsscenario.Create(t, time.Minute, time.Minute)
@@ -825,20 +884,23 @@ func (e *testEnv) Call(
 	)
 }
 
-func (e *testEnv) GetValueYARPC(ctx context.Context, key string) (string, error) {
+func (e *testEnv) GetValueYARPC(ctx context.Context, key string, options ...yarpc.CallOption) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 	defer cancel()
-	response, err := e.KeyValueYARPCClient.GetValue(ctx, &examplepb.GetValueRequest{Key: key})
+	response, err := e.KeyValueYARPCClient.GetValue(ctx, &examplepb.GetValueRequest{Key: key}, options...)
 	if response != nil {
 		return response.Value, err
 	}
 	return "", err
 }
 
-func (e *testEnv) SetValueYARPC(ctx context.Context, key string, value string) error {
-	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
-	defer cancel()
-	_, err := e.KeyValueYARPCClient.SetValue(ctx, &examplepb.SetValueRequest{Key: key, Value: value})
+func (e *testEnv) SetValueYARPC(ctx context.Context, key string, value string, options ...yarpc.CallOption) error {
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel func()
+		ctx, cancel = context.WithTimeout(ctx, testtime.Second)
+		defer cancel()
+	}
+	_, err := e.KeyValueYARPCClient.SetValue(ctx, &examplepb.SetValueRequest{Key: key, Value: value}, options...)
 	return err
 }
 
