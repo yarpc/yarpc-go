@@ -14,6 +14,7 @@ coverage:
 # This list is generated using scripts/generate-cover-ignore.sh
 # All packages with .nocover files in them MUST be listed here
 ignore:
+ - /api/transport/tls/
  - /encoding/protobuf/internal/testpb/
  - /encoding/thrift/internal/
  - /encoding/thrift/internal/observabilitytest/test/
