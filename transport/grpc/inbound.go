@@ -21,6 +21,7 @@
 package grpc
 
 import (
+	"errors"
 	"net"
 	"sync"
 
@@ -125,6 +126,10 @@ func (i *Inbound) start() error {
 	if i.options.creds != nil {
 		serverOptions = append(serverOptions, grpc.Creds(i.options.creds))
 	} else if i.options.tlsMode != yarpctls.Disabled {
+		if i.options.tlsConfig == nil {
+			return errors.New("grpc TLS configuration not provided")
+		}
+
 		listener = tlsmux.NewListener(tlsmux.Config{
 			Listener:      listener,
 			TLSConfig:     i.options.tlsConfig.Clone(),
