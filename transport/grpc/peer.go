@@ -50,6 +50,10 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 		),
 	}, options.grpcOptions()...)
 
+	if t.options.clientMaxHeaderListSize != nil {
+		dialOptions = append(dialOptions, grpc.WithMaxHeaderListSize(*t.options.clientMaxHeaderListSize))
+	}
+
 	clientConn, err := grpc.Dial(address, dialOptions...)
 	if err != nil {
 		return nil, err

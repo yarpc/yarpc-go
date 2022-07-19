@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.61.0] - 2022-07-19
+### Added
+- grpc - option to set custom maximum header list size.
+
+
 ## [1.60.0] - 2022-02-03
 ### Added
 - tchannel - option to disable RPC-Service in response header.
@@ -1412,6 +1417,7 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 
+[1.61.0]: https://github.com/yarpc/yarpc-go/compare/v1.60.0...v1.61.0
 [1.60.0]: https://github.com/yarpc/yarpc-go/compare/v1.59.0...v1.60.0
 [1.59.0]: https://github.com/yarpc/yarpc-go/compare/v1.58.0...v1.59.0
 [1.58.0]: https://github.com/yarpc/yarpc-go/compare/v1.57.1...v1.58.0

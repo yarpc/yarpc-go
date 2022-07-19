@@ -24,16 +24,10 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"crypto/tls"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	"errors"
 	"io"
 	"math"
-	"math/big"
 	"net"
 	"strings"
 	"testing"
@@ -45,6 +39,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/multierr"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/internal/clientconfig"
@@ -56,6 +51,7 @@ import (
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/procedure"
+	"go.uber.org/yarpc/transport/internal/tlsscenario"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap/zaptest"
 	"google.golang.org/grpc"
@@ -423,7 +419,7 @@ func TestTLSWithYARPCAndGRPC(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			scenario := createTLSScenario(t, tt.clientValidity, tt.serverValidity)
+			scenario := tlsscenario.Create(t, tt.clientValidity, tt.serverValidity)
 
 			serverCreds := credentials.NewTLS(&tls.Config{
 				GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
@@ -466,6 +462,65 @@ func TestTLSWithYARPCAndGRPC(t *testing.T) {
 				} else {
 					assert.NoError(t, err)
 				}
+			})
+		})
+	}
+}
+
+func TestGRPCHeaderListSize(t *testing.T) {
+	tests := []struct {
+		desc       string
+		options    []TransportOption
+		headerSize int
+		errorMsg   string
+	}{
+		{
+			desc:       "default_setting",
+			headerSize: 1024,
+		},
+		{
+			desc:       "limit_server_header_size",
+			headerSize: 1024,
+			options:    []TransportOption{ServerMaxHeaderListSize(1000)},
+			errorMsg:   "header list size to send violates the maximum size (1000 bytes) set by server",
+		},
+		{
+			desc:       "limit_client_header_size",
+			headerSize: 1024,
+			options:    []TransportOption{ClientMaxHeaderListSize(1000)},
+			errorMsg:   "stream terminated",
+		},
+		{
+			desc:       "allow_large_header_size",
+			headerSize: 1024 * 1024 * 1, // 1MB
+			options:    []TransportOption{ServerMaxHeaderListSize(1024 * 1024 * 2), ClientMaxHeaderListSize(1024 * 1024 * 2)},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			headerVal := make([]byte, tt.headerSize)
+			// Set valid ASCII as grpc header cannot be a 0 byte slice.
+			for i := 0; i < tt.headerSize; i++ {
+				headerVal[i] = 'a'
+			}
+			te := testEnvOptions{
+				TransportOptions: tt.options,
+			}
+			te.do(t, func(t *testing.T, e *testEnv) {
+				var resHeaders map[string]string
+				// Setting longer timeout as CI timesout on large payloads.
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
+				defer cancel()
+
+				err := e.SetValueYARPC(ctx, "foo", "bar", yarpc.ResponseHeaders(&resHeaders), yarpc.WithHeader("test-header", string(headerVal)))
+				if tt.errorMsg != "" {
+					require.Error(t, err)
+					assert.Contains(t, err.Error(), tt.errorMsg)
+					return
+				}
+				assert.NoError(t, err)
+				assert.Equal(t, resHeaders["test-header"], string(headerVal))
 			})
 		})
 	}
@@ -767,20 +822,23 @@ func (e *testEnv) Call(
 	)
 }
 
-func (e *testEnv) GetValueYARPC(ctx context.Context, key string) (string, error) {
+func (e *testEnv) GetValueYARPC(ctx context.Context, key string, options ...yarpc.CallOption) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 	defer cancel()
-	response, err := e.KeyValueYARPCClient.GetValue(ctx, &examplepb.GetValueRequest{Key: key})
+	response, err := e.KeyValueYARPCClient.GetValue(ctx, &examplepb.GetValueRequest{Key: key}, options...)
 	if response != nil {
 		return response.Value, err
 	}
 	return "", err
 }
 
-func (e *testEnv) SetValueYARPC(ctx context.Context, key string, value string) error {
-	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
-	defer cancel()
-	_, err := e.KeyValueYARPCClient.SetValue(ctx, &examplepb.SetValueRequest{Key: key, Value: value})
+func (e *testEnv) SetValueYARPC(ctx context.Context, key string, value string, options ...yarpc.CallOption) error {
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel func()
+		ctx, cancel = context.WithTimeout(ctx, testtime.Second)
+		defer cancel()
+	}
+	_, err := e.KeyValueYARPCClient.SetValue(ctx, &examplepb.SetValueRequest{Key: key, Value: value}, options...)
 	return err
 }
 
@@ -829,93 +887,6 @@ func (r *testRouter) Choose(_ context.Context, request *transport.Request) (tran
 		}
 	}
 	return transport.HandlerSpec{}, yarpcerrors.UnimplementedErrorf("no procedure for name %s", request.Procedure)
-}
-
-type tlsScenario struct {
-	CAs        *x509.CertPool
-	ServerCert *x509.Certificate
-	ServerKey  *ecdsa.PrivateKey
-	ClientCert *x509.Certificate
-	ClientKey  *ecdsa.PrivateKey
-}
-
-func createTLSScenario(t *testing.T, clientValidity time.Duration, serverValidity time.Duration) tlsScenario {
-	now := time.Now()
-
-	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
-	caBytes, err := x509.CreateCertificate(
-		rand.Reader,
-		&x509.Certificate{
-			Subject: pkix.Name{
-				CommonName: "test ca",
-			},
-			SerialNumber:          big.NewInt(1),
-			BasicConstraintsValid: true,
-			IsCA:                  true,
-			KeyUsage:              x509.KeyUsageCertSign,
-			NotBefore:             now,
-			NotAfter:              now.Add(10 * time.Minute),
-		},
-		&x509.Certificate{},
-		caKey.Public(),
-		caKey,
-	)
-	require.NoError(t, err)
-	ca, err := x509.ParseCertificate(caBytes)
-	require.NoError(t, err)
-
-	serverKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
-	serverCertBytes, err := x509.CreateCertificate(
-		rand.Reader,
-		&x509.Certificate{
-			Subject: pkix.Name{
-				CommonName: "server",
-			},
-			NotAfter:     now.Add(serverValidity),
-			SerialNumber: big.NewInt(2),
-			IPAddresses:  []net.IP{net.ParseIP("127.0.0.1")},
-			KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyAgreement,
-		},
-		ca,
-		serverKey.Public(),
-		caKey,
-	)
-	require.NoError(t, err)
-	serverCert, err := x509.ParseCertificate(serverCertBytes)
-	require.NoError(t, err)
-
-	clientKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
-	clientCertBytes, err := x509.CreateCertificate(
-		rand.Reader,
-		&x509.Certificate{
-			Subject: pkix.Name{
-				CommonName: "client",
-			},
-			NotAfter:     now.Add(clientValidity),
-			SerialNumber: big.NewInt(3),
-			KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyAgreement,
-		},
-		ca,
-		clientKey.Public(),
-		caKey,
-	)
-	require.NoError(t, err)
-	clientCert, err := x509.ParseCertificate(clientCertBytes)
-	require.NoError(t, err)
-
-	pool := x509.NewCertPool()
-	pool.AddCert(ca)
-
-	return tlsScenario{
-		CAs:        pool,
-		ServerCert: serverCert,
-		ServerKey:  serverKey,
-		ClientCert: clientCert,
-		ClientKey:  clientKey,
-	}
 }
 
 func TestYARPCErrorsConverted(t *testing.T) {

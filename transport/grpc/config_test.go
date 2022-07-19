@@ -90,12 +90,14 @@ func TestTransportSpec(t *testing.T) {
 	type attrs map[string]interface{}
 
 	type wantInbound struct {
-		Address              string
-		ServerMaxRecvMsgSize int
-		ServerMaxSendMsgSize int
-		ClientMaxRecvMsgSize int
-		ClientMaxSendMsgSize int
-		TLS                  bool
+		Address                 string
+		ServerMaxRecvMsgSize    int
+		ServerMaxSendMsgSize    int
+		ServerMaxHeaderListSize uint32
+		ClientMaxRecvMsgSize    int
+		ClientMaxSendMsgSize    int
+		ClientMaxHeaderListSize uint32
+		TLS                     bool
 	}
 
 	type wantOutbound struct {
@@ -221,18 +223,22 @@ func TestTransportSpec(t *testing.T) {
 		{
 			desc: "inbound and transport with message size options",
 			transportCfg: attrs{
-				"serverMaxRecvMsgSize": "1024",
-				"serverMaxSendMsgSize": "2048",
-				"clientMaxRecvMsgSize": "4096",
-				"clientMaxSendMsgSize": "8192",
+				"serverMaxRecvMsgSize":    "1024",
+				"serverMaxSendMsgSize":    "2048",
+				"serverMaxHeaderListSize": "32768",
+				"clientMaxRecvMsgSize":    "4096",
+				"clientMaxSendMsgSize":    "8192",
+				"clientMaxHeaderListSize": "16384",
 			},
 			inboundCfg: attrs{"address": ":54571"},
 			wantInbound: &wantInbound{
-				Address:              ":54571",
-				ServerMaxRecvMsgSize: 1024,
-				ServerMaxSendMsgSize: 2048,
-				ClientMaxRecvMsgSize: 4096,
-				ClientMaxSendMsgSize: 8192,
+				Address:                 ":54571",
+				ServerMaxRecvMsgSize:    1024,
+				ServerMaxSendMsgSize:    2048,
+				ServerMaxHeaderListSize: 32768,
+				ClientMaxRecvMsgSize:    4096,
+				ClientMaxSendMsgSize:    8192,
+				ClientMaxHeaderListSize: 16384,
 			},
 		},
 		{
@@ -480,6 +486,18 @@ func TestTransportSpec(t *testing.T) {
 				} else {
 					assert.Equal(t, defaultClientMaxSendMsgSize, inbound.t.options.clientMaxSendMsgSize)
 				}
+				if tt.wantInbound.ClientMaxHeaderListSize > 0 {
+					require.NotNil(t, inbound.t.options.clientMaxHeaderListSize)
+					assert.Equal(t, tt.wantInbound.ClientMaxHeaderListSize, *inbound.t.options.clientMaxHeaderListSize)
+				} else {
+					assert.Nil(t, inbound.t.options.clientMaxHeaderListSize)
+				}
+				if tt.wantInbound.ServerMaxHeaderListSize > 0 {
+					require.NotNil(t, inbound.t.options.serverMaxHeaderListSize)
+					assert.Equal(t, tt.wantInbound.ServerMaxHeaderListSize, *inbound.t.options.serverMaxHeaderListSize)
+				} else {
+					assert.Nil(t, inbound.t.options.serverMaxHeaderListSize)
+				}
 				assert.Equal(t, tt.wantInbound.TLS, inbound.options.creds != nil)
 			} else {
 				assert.Len(t, cfg.Inbounds, 0)
@@ -493,6 +511,7 @@ func TestTransportSpec(t *testing.T) {
 					single, ok := outbound.peerChooser.(*peer.Single)
 					require.True(t, ok, "expected *peer.Single, got %T", outbound.peerChooser)
 					require.NoError(t, single.Start())
+					defer single.Stop()
 					ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 					defer cancel()
 					peer, _, err := single.Choose(ctx, &transport.Request{})
