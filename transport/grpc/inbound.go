@@ -127,7 +127,7 @@ func (i *Inbound) start() error {
 		serverOptions = append(serverOptions, grpc.Creds(i.options.creds))
 	} else if i.options.tlsMode != yarpctls.Disabled {
 		if i.options.tlsConfig == nil {
-			return errors.New("grpc TLS configuration not provided")
+			return errors.New("gRPC TLS enabled but configuration not provided")
 		}
 
 		listener = tlsmux.NewListener(tlsmux.Config{
