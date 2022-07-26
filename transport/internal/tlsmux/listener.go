@@ -64,8 +64,6 @@ type listener struct {
 	logger    *zap.Logger
 	mode      yarpctls.Mode
 
-	ctx         context.Context
-	ctxCancelFn context.CancelFunc
 	closeOnce   sync.Once
 	connChan    chan net.Conn
 	stopChan    chan struct{}
@@ -79,7 +77,6 @@ func NewListener(c Config) net.Listener {
 		return c.Listener
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
 	lis := &listener{
 		Listener:    c.Listener,
 		tlsConfig:   c.TLSConfig,
@@ -89,8 +86,6 @@ func NewListener(c Config) net.Listener {
 		stoppedChan: make(chan struct{}),
 		stopChan:    make(chan struct{}),
 		mode:        c.Mode,
-		ctx:         ctx,
-		ctxCancelFn: cancel,
 	}
 
 	// Starts go routine for the connection server
@@ -118,7 +113,6 @@ func (l *listener) Accept() (net.Conn, error) {
 func (l *listener) Close() error {
 	var err error
 	l.closeOnce.Do(func() {
-		l.ctxCancelFn()
 		err = l.Listener.Close()
 		close(l.stopChan)
 		<-l.stoppedChan
@@ -130,8 +124,9 @@ func (l *listener) Close() error {
 // go routine for each connection for async muxing.
 func (l *listener) serve() {
 	var wg sync.WaitGroup
-
+	ctx, cancel := context.WithCancel(context.Background())
 	defer func() {
+		cancel()
 		wg.Wait()
 		close(l.stoppedChan)
 		close(l.connChan)
@@ -144,16 +139,16 @@ func (l *listener) serve() {
 		}
 
 		wg.Add(1)
-		go l.serveConnection(conn, &wg)
+		go l.serveConnection(ctx, conn, &wg)
 	}
 }
 
 // serveConnection muxes the given connection and sends muxed connection to the
 // connection channel.
-func (l *listener) serveConnection(conn net.Conn, wg *sync.WaitGroup) {
+func (l *listener) serveConnection(ctx context.Context, conn net.Conn, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	c, err := l.mux(conn)
+	c, err := l.mux(ctx, conn)
 	if err != nil {
 		conn.Close()
 		return
@@ -168,9 +163,9 @@ func (l *listener) serveConnection(conn net.Conn, wg *sync.WaitGroup) {
 
 // mux accepts both plaintext and tls connection, and returns a plaintext
 // connection.
-func (l *listener) mux(conn net.Conn) (net.Conn, error) {
+func (l *listener) mux(ctx context.Context, conn net.Conn) (net.Conn, error) {
 	if l.mode == yarpctls.Enforced {
-		return l.handleTLSConn(conn)
+		return l.handleTLSConn(ctx, conn)
 	}
 
 	c := newConnectionSniffer(conn)
@@ -181,7 +176,7 @@ func (l *listener) mux(conn net.Conn) (net.Conn, error) {
 	}
 
 	if isTLS {
-		return l.handleTLSConn(c)
+		return l.handleTLSConn(ctx, c)
 	}
 
 	return l.handlePlaintextConn(c)
@@ -189,8 +184,8 @@ func (l *listener) mux(conn net.Conn) (net.Conn, error) {
 
 // handleTLSConn completes the TLS handshake for the given connection and
 // returns a TLS server wrapped plaintext connection.
-func (l *listener) handleTLSConn(conn net.Conn) (net.Conn, error) {
-	ctx, cancel := context.WithTimeout(l.ctx, _tlsHandshakeTimeout)
+func (l *listener) handleTLSConn(ctx context.Context, conn net.Conn) (net.Conn, error) {
+	ctx, cancel := context.WithTimeout(ctx, _tlsHandshakeTimeout)
 	defer cancel()
 
 	tlsConn := tls.Server(conn, l.tlsConfig)
