@@ -36,9 +36,11 @@ import (
 var (
 	errListenerClosed = errors.New("listener closed")
 
-	// TODO(jronak): below timeouts are experimental, will be tuned after testing.
-	_sniffReadTimeout    = time.Second * 10
-	_tlsHandshakeTimeout = time.Second * 10
+	// Connection has 15s to transmit first 5 bytes for sniffing.
+	_sniffReadTimeout = time.Second * 15
+	// Handshake timeout set to 120s, see gRPC-go:
+	// https://github.com/grpc/grpc-go/blob/fdc5d2f3da856f3cdd3483280ae33da5bee17a93/server.go#L467
+	_tlsHandshakeTimeout = time.Second * 120
 )
 
 // Config describes how listener should be configured.
@@ -62,6 +64,8 @@ type listener struct {
 	logger    *zap.Logger
 	mode      yarpctls.Mode
 
+	ctx         context.Context
+	ctxCancelFn context.CancelFunc
 	closeOnce   sync.Once
 	connChan    chan net.Conn
 	stopChan    chan struct{}
@@ -75,6 +79,7 @@ func NewListener(c Config) net.Listener {
 		return c.Listener
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
 	lis := &listener{
 		Listener:    c.Listener,
 		tlsConfig:   c.TLSConfig,
@@ -84,6 +89,8 @@ func NewListener(c Config) net.Listener {
 		stoppedChan: make(chan struct{}),
 		stopChan:    make(chan struct{}),
 		mode:        c.Mode,
+		ctx:         ctx,
+		ctxCancelFn: cancel,
 	}
 
 	// Starts go routine for the connection server
@@ -111,6 +118,7 @@ func (l *listener) Accept() (net.Conn, error) {
 func (l *listener) Close() error {
 	var err error
 	l.closeOnce.Do(func() {
+		l.ctxCancelFn()
 		err = l.Listener.Close()
 		close(l.stopChan)
 		<-l.stoppedChan
@@ -182,7 +190,7 @@ func (l *listener) mux(conn net.Conn) (net.Conn, error) {
 // handleTLSConn completes the TLS handshake for the given connection and
 // returns a TLS server wrapped plaintext connection.
 func (l *listener) handleTLSConn(conn net.Conn) (net.Conn, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), _tlsHandshakeTimeout)
+	ctx, cancel := context.WithTimeout(l.ctx, _tlsHandshakeTimeout)
 	defer cancel()
 
 	tlsConn := tls.Server(conn, l.tlsConfig)
