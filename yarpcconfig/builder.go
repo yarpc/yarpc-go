@@ -22,10 +22,13 @@ package yarpcconfig
 
 import (
 	"fmt"
+	"reflect"
 
+	"github.com/uber-go/mapdecode"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/internal/config"
 )
 
@@ -209,7 +212,7 @@ func (b *builder) AddInboundConfig(spec *compiledTransportSpec, attrs config.Att
 	}
 
 	b.needTransport(spec)
-	cv, err := spec.Inbound.Decode(attrs, config.InterpolateWith(b.kit.resolver))
+	cv, err := spec.Inbound.Decode(attrs, config.InterpolateWith(b.kit.resolver), mapdecode.DecodeHook(tlsModeDecodeHook))
 	if err != nil {
 		return fmt.Errorf("failed to decode inbound configuration: %v", err)
 	}
@@ -325,4 +328,14 @@ func (b *builder) AddStreamOutbound(
 
 func (b *builder) needTransport(spec *compiledTransportSpec) {
 	b.needTransports[spec.Name] = spec
+}
+
+func tlsModeDecodeHook(from, to reflect.Type, data reflect.Value) (reflect.Value, error) {
+	var mode yarpctls.Mode
+	if from.Kind() != reflect.String || to != reflect.TypeOf(mode) {
+		return data, nil
+	}
+
+	err := mode.UnmarshalText([]byte(data.String()))
+	return reflect.ValueOf(mode), err
 }

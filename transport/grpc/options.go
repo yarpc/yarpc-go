@@ -22,12 +22,15 @@ package grpc
 
 import (
 	"context"
+	"crypto/tls"
 	"math"
 	"net"
 
 	opentracing "github.com/opentracing/opentracing-go"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/transport"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	intbackoff "go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -61,6 +64,14 @@ type TransportOption func(*transportOptions)
 
 func (TransportOption) grpcOption() {}
 
+// ServiceName specifices the name of the service used in transport logging
+// and metrics.
+func ServiceName(name string) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.serviceName = name
+	}
+}
+
 // BackoffStrategy specifies the backoff strategy for delays between
 // connection attempts for each peer.
 //
@@ -87,6 +98,15 @@ func Tracer(tracer opentracing.Tracer) TransportOption {
 func Logger(logger *zap.Logger) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.logger = logger
+	}
+}
+
+// Meter sets a meter to use for transport metrics.
+//
+// The default is to not emit any metrics.
+func Meter(meter *metrics.Scope) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.meter = meter
 	}
 }
 
@@ -159,6 +179,23 @@ func InboundCredentials(creds credentials.TransportCredentials) InboundOption {
 	}
 }
 
+// InboundTLSConfiguration returns an InboundOption that provides the TLS confiugration
+// used for setting up TLS inbound.
+func InboundTLSConfiguration(config *tls.Config) InboundOption {
+	return func(inboundOptions *inboundOptions) {
+		inboundOptions.tlsConfig = config
+	}
+}
+
+// InboundTLSMode returns an InboundOption that sets inbound TLS mode.
+// It must be noted that TLS configuration must be passed separately using inbound
+// option InboundTLSConfiguration.
+func InboundTLSMode(mode yarpctls.Mode) InboundOption {
+	return func(inboundOptions *inboundOptions) {
+		inboundOptions.tlsMode = mode
+	}
+}
+
 // OutboundOption is an option for an outbound.
 type OutboundOption func(*outboundOptions)
 
@@ -213,6 +250,8 @@ type transportOptions struct {
 	backoffStrategy         backoff.Strategy
 	tracer                  opentracing.Tracer
 	logger                  *zap.Logger
+	meter                   *metrics.Scope
+	serviceName             string
 	serverMaxRecvMsgSize    int
 	serverMaxSendMsgSize    int
 	clientMaxRecvMsgSize    int
@@ -243,6 +282,9 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 
 type inboundOptions struct {
 	creds credentials.TransportCredentials
+
+	tlsConfig *tls.Config
+	tlsMode   yarpctls.Mode
 }
 
 func newInboundOptions(options []InboundOption) *inboundOptions {
