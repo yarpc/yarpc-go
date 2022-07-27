@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/net/metrics"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/zap"
 )
 
@@ -40,7 +41,7 @@ func TestTlsVersionString(t *testing.T) {
 
 func TestObserver(t *testing.T) {
 	root := metrics.New()
-	observer := newObserver(root.Scope(), zap.NewNop(), "test-svc", "test-transport")
+	observer := newObserver(root.Scope(), zap.NewNop(), "test-svc", "test-transport", yarpctls.Enforced)
 	require.NotNil(t, observer, "unexpected nil observer")
 	assert.NotNil(t, observer.plaintextConnectionsCounter, "unexpected nil counter")
 	assert.NotNil(t, observer.tlsConnectionsCounter, "unexpected nil counter")
@@ -58,6 +59,7 @@ func TestObserver(t *testing.T) {
 				"service":   "test-svc",
 				"transport": "test-transport",
 				"component": "yarpc",
+				"mode":      "Enforced",
 			},
 		},
 		{
@@ -68,6 +70,7 @@ func TestObserver(t *testing.T) {
 				"transport": "test-transport",
 				"version":   "1.1",
 				"component": "yarpc",
+				"mode":      "Enforced",
 			},
 		},
 		{
@@ -77,6 +80,7 @@ func TestObserver(t *testing.T) {
 				"service":   "test-svc",
 				"transport": "test-transport",
 				"component": "yarpc",
+				"mode":      "Enforced",
 			},
 		},
 	}

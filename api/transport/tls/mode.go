@@ -18,7 +18,44 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
+package tls
 
-// Version is the current version of YARPC.
-const Version = "1.62.0"
+import (
+	"encoding"
+	"fmt"
+)
+
+const (
+	// Disabled TLS mode allows plaintext connections only.
+	Disabled Mode = iota
+
+	// Permissive TLS mode allows both TLS and plaintext connections.
+	Permissive
+
+	// Enforced TLS mode allows accepts TLS connections only.
+	Enforced
+)
+
+var (
+	_ fmt.Stringer             = (*Mode)(nil)
+	_ encoding.TextUnmarshaler = (*Mode)(nil)
+)
+
+// Mode represents the TLS mode of the transport.
+type Mode uint16
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (t *Mode) UnmarshalText(text []byte) error {
+	switch s := string(text); s {
+	case "disabled":
+		*t = Disabled
+	case "permissive":
+		*t = Permissive
+	case "enforced":
+		*t = Enforced
+	default:
+		return fmt.Errorf("unknown tls mode string: %s", string(text))
+	}
+
+	return nil
+}

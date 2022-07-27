@@ -21,12 +21,15 @@
 package grpc
 
 import (
+	"errors"
 	"net"
 	"sync"
 
 	"go.uber.org/yarpc/api/transport"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/api/x/introspection"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/yarpc/transport/internal/tlsmux"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -118,8 +121,24 @@ func (i *Inbound) start() error {
 		grpc.MaxSendMsgSize(i.t.options.serverMaxSendMsgSize),
 	}
 
+	listener := i.listener
+
 	if i.options.creds != nil {
 		serverOptions = append(serverOptions, grpc.Creds(i.options.creds))
+	} else if i.options.tlsMode != yarpctls.Disabled {
+		if i.options.tlsConfig == nil {
+			return errors.New("gRPC TLS enabled but configuration not provided")
+		}
+
+		listener = tlsmux.NewListener(tlsmux.Config{
+			Listener:      listener,
+			TLSConfig:     i.options.tlsConfig.Clone(),
+			Logger:        i.t.options.logger,
+			Meter:         i.t.options.meter,
+			ServiceName:   i.t.options.serviceName,
+			TransportName: TransportName,
+			Mode:          i.options.tlsMode,
+		})
 	}
 
 	if i.t.options.serverMaxHeaderListSize != nil {
@@ -143,7 +162,7 @@ func (i *Inbound) start() error {
 		//
 		// TODO Server always returns a non-nil error but should
 		// we do something with some or all errors?
-		_ = server.Serve(i.listener)
+		_ = server.Serve(listener)
 	}()
 	i.server = server
 	return nil

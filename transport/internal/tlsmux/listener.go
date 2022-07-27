@@ -29,15 +29,18 @@ import (
 	"time"
 
 	"go.uber.org/net/metrics"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/zap"
 )
 
 var (
 	errListenerClosed = errors.New("listener closed")
 
-	// TODO(jronak): below timeouts are experimental, will be tuned after testing.
-	_sniffReadTimeout    = time.Second * 10
-	_tlsHandshakeTimeout = time.Second * 10
+	// Connection has 15s to transmit first 5 bytes for sniffing.
+	_sniffReadTimeout = time.Second * 15
+	// Handshake timeout set to 120s, see gRPC-go:
+	// https://github.com/grpc/grpc-go/blob/fdc5d2f3da856f3cdd3483280ae33da5bee17a93/server.go#L467
+	_tlsHandshakeTimeout = time.Second * 120
 )
 
 // Config describes how listener should be configured.
@@ -49,6 +52,7 @@ type Config struct {
 	TransportName string
 	Meter         *metrics.Scope
 	Logger        *zap.Logger
+	Mode          yarpctls.Mode
 }
 
 // listener wraps original net listener and it accepts both TLS and non-TLS connections.
@@ -58,6 +62,7 @@ type listener struct {
 	tlsConfig *tls.Config
 	observer  *observer
 	logger    *zap.Logger
+	mode      yarpctls.Mode
 
 	closeOnce   sync.Once
 	connChan    chan net.Conn
@@ -68,14 +73,19 @@ type listener struct {
 // NewListener returns a multiplexed listener which accepts both TLS and
 // plaintext connections.
 func NewListener(c Config) net.Listener {
+	if c.Mode == yarpctls.Disabled {
+		return c.Listener
+	}
+
 	lis := &listener{
 		Listener:    c.Listener,
 		tlsConfig:   c.TLSConfig,
-		observer:    newObserver(c.Meter, c.Logger, c.ServiceName, c.TransportName),
+		observer:    newObserver(c.Meter, c.Logger, c.ServiceName, c.TransportName, c.Mode),
 		logger:      c.Logger,
 		connChan:    make(chan net.Conn),
 		stoppedChan: make(chan struct{}),
 		stopChan:    make(chan struct{}),
+		mode:        c.Mode,
 	}
 
 	// Starts go routine for the connection server
@@ -114,8 +124,9 @@ func (l *listener) Close() error {
 // go routine for each connection for async muxing.
 func (l *listener) serve() {
 	var wg sync.WaitGroup
-
+	ctx, cancel := context.WithCancel(context.Background())
 	defer func() {
+		cancel()
 		wg.Wait()
 		close(l.stoppedChan)
 		close(l.connChan)
@@ -128,16 +139,16 @@ func (l *listener) serve() {
 		}
 
 		wg.Add(1)
-		go l.serveConnection(conn, &wg)
+		go l.serveConnection(ctx, conn, &wg)
 	}
 }
 
 // serveConnection muxes the given connection and sends muxed connection to the
 // connection channel.
-func (l *listener) serveConnection(conn net.Conn, wg *sync.WaitGroup) {
+func (l *listener) serveConnection(ctx context.Context, conn net.Conn, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	c, err := l.mux(conn)
+	c, err := l.mux(ctx, conn)
 	if err != nil {
 		conn.Close()
 		return
@@ -152,7 +163,11 @@ func (l *listener) serveConnection(conn net.Conn, wg *sync.WaitGroup) {
 
 // mux accepts both plaintext and tls connection, and returns a plaintext
 // connection.
-func (l *listener) mux(conn net.Conn) (net.Conn, error) {
+func (l *listener) mux(ctx context.Context, conn net.Conn) (net.Conn, error) {
+	if l.mode == yarpctls.Enforced {
+		return l.handleTLSConn(ctx, conn)
+	}
+
 	c := newConnectionSniffer(conn)
 	isTLS, err := matchTLSConnection(c)
 	if err != nil {
@@ -161,16 +176,16 @@ func (l *listener) mux(conn net.Conn) (net.Conn, error) {
 	}
 
 	if isTLS {
-		return l.handleTLSConn(c)
+		return l.handleTLSConn(ctx, c)
 	}
 
-	return l.handlePlaintextConn(c), nil
+	return l.handlePlaintextConn(c)
 }
 
 // handleTLSConn completes the TLS handshake for the given connection and
 // returns a TLS server wrapped plaintext connection.
-func (l *listener) handleTLSConn(conn net.Conn) (net.Conn, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), _tlsHandshakeTimeout)
+func (l *listener) handleTLSConn(ctx context.Context, conn net.Conn) (net.Conn, error) {
+	ctx, cancel := context.WithTimeout(ctx, _tlsHandshakeTimeout)
 	defer cancel()
 
 	tlsConn := tls.Server(conn, l.tlsConfig)
@@ -184,9 +199,9 @@ func (l *listener) handleTLSConn(conn net.Conn) (net.Conn, error) {
 	return tlsConn, nil
 }
 
-func (l *listener) handlePlaintextConn(conn net.Conn) net.Conn {
+func (l *listener) handlePlaintextConn(conn net.Conn) (net.Conn, error) {
 	l.observer.incPlaintextConnections()
-	return conn
+	return conn, nil
 }
 
 func matchTLSConnection(cs *connSniffer) (bool, error) {

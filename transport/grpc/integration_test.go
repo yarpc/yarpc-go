@@ -38,9 +38,11 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/grpcctx"
@@ -521,6 +523,67 @@ func TestGRPCHeaderListSize(t *testing.T) {
 				}
 				assert.NoError(t, err)
 				assert.Equal(t, resHeaders["test-header"], string(headerVal))
+			})
+		})
+	}
+}
+
+func TestMuxTLS(t *testing.T) {
+	defer goleak.VerifyNone(t)
+	tests := []struct {
+		name        string
+		isClientTLS bool
+	}{
+		{
+			name:        "plaintext_client",
+			isClientTLS: false,
+		},
+		{
+			name:        "tls_client",
+			isClientTLS: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scenario := tlsscenario.Create(t, time.Minute, time.Minute)
+
+			serverCreds := &tls.Config{
+				GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
+					return &tls.Certificate{
+						Certificate: [][]byte{scenario.ServerCert.Raw},
+						Leaf:        scenario.ServerCert,
+						PrivateKey:  scenario.ServerKey,
+					}, nil
+				},
+				ClientAuth: tls.RequireAndVerifyClientCert,
+				ClientCAs:  scenario.CAs,
+			}
+
+			var dialOptions []DialOption
+			if tt.isClientTLS {
+				clientCreds := credentials.NewTLS(&tls.Config{
+					GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+						return &tls.Certificate{
+							Certificate: [][]byte{scenario.ClientCert.Raw},
+							Leaf:        scenario.ClientCert,
+							PrivateKey:  scenario.ClientKey,
+						}, nil
+					},
+					RootCAs: scenario.CAs,
+				})
+				dialOptions = append(dialOptions, DialerCredentials(clientCreds))
+			}
+
+			te := testEnvOptions{
+				InboundOptions: []InboundOption{InboundTLSConfiguration(serverCreds), InboundTLSMode(yarpctls.Permissive)},
+				DialOptions:    dialOptions,
+			}
+			te.do(t, func(t *testing.T, e *testEnv) {
+				err := e.SetValueYARPC(context.Background(), "foo", "bar")
+				assert.NoError(t, err)
+
+				err = e.SetValueGRPC(context.Background(), "foo", "bar")
+				assert.NoError(t, err)
 			})
 		})
 	}
