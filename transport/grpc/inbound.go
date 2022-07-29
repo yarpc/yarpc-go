@@ -33,6 +33,7 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	channelz "google.golang.org/grpc/channelz/service"
 )
 
 var (
@@ -146,6 +147,7 @@ func (i *Inbound) start() error {
 	}
 
 	server := grpc.NewServer(serverOptions...)
+	channelz.RegisterChannelzServiceToServer(server)
 
 	go func() {
 		i.t.options.logger.Info("started GRPC inbound", zap.Stringer("address", i.listener.Addr()))
