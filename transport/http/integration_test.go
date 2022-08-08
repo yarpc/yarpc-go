@@ -22,19 +22,97 @@ package http
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"net"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/internal/clientconfig"
 	pkgerrors "go.uber.org/yarpc/pkg/errors"
+	"go.uber.org/yarpc/transport/internal/tlsscenario"
 )
+
+func TestInboundTLS(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
+	scenario := tlsscenario.Create(t, time.Minute, time.Minute)
+	serverTLSConfig := &tls.Config{
+		GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
+			return &tls.Certificate{
+				Certificate: [][]byte{scenario.ServerCert.Raw},
+				Leaf:        scenario.ServerCert,
+				PrivateKey:  scenario.ServerKey,
+			}, nil
+		},
+		ClientAuth: tls.RequireAndVerifyClientCert,
+		ClientCAs:  scenario.CAs,
+	}
+	clientTLSConfig := &tls.Config{
+		GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+			return &tls.Certificate{
+				Certificate: [][]byte{scenario.ClientCert.Raw},
+				Leaf:        scenario.ClientCert,
+				PrivateKey:  scenario.ClientKey,
+			}, nil
+		},
+		RootCAs: scenario.CAs,
+	}
+
+	tests := []struct {
+		desc             string
+		inboundOptions   []InboundOption
+		transportOptions []TransportOption
+		isTLSClient      bool
+	}{
+		{
+			desc: "plaintext_client_permissive_tls_server",
+			inboundOptions: []InboundOption{
+				InboundTLSConfiguration(serverTLSConfig),
+				InboundTLSMode(yarpctls.Permissive),
+			},
+		},
+		{
+			desc: "tls_client_enforced_tls_server",
+			inboundOptions: []InboundOption{
+				InboundTLSConfiguration(serverTLSConfig),
+				InboundTLSMode(yarpctls.Enforced),
+			},
+			transportOptions: []TransportOption{
+				DialContext(func(ctx context.Context, network, addr string) (net.Conn, error) {
+					return tls.Dial(network, addr, clientTLSConfig)
+				}),
+			},
+			isTLSClient: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			doWithTestEnv(t, testEnvOptions{
+				Procedures:       json.Procedure("testFoo", testFooHandler),
+				InboundOptions:   tt.inboundOptions,
+				TransportOptions: tt.transportOptions,
+			}, func(t *testing.T, testEnv *testEnv) {
+				client := json.New(testEnv.ClientConfig)
+				var response testFooResponse
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+				defer cancel()
+
+				err := client.Call(ctx, "testFoo", &testFooRequest{One: "one"}, &response)
+				require.Nil(t, err)
+				assert.Equal(t, testFooResponse{One: "one"}, response)
+			})
+		})
+	}
+}
 
 func TestBothResponseError(t *testing.T) {
 	tests := []struct {

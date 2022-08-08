@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/yarpcconfig"
 )
@@ -116,6 +117,9 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 		opt(&options)
 	}
 
+	if options.serviceName == "" {
+		options.serviceName = k.ServiceName()
+	}
 	if tc.KeepAlive > 0 {
 		options.keepAlive = tc.KeepAlive
 	}
@@ -167,13 +171,25 @@ type InboundConfig struct {
 	GrabHeaders []string `config:"grabHeaders"`
 	// The maximum amount of time to wait for the inbound to shutdown.
 	ShutdownTimeout *time.Duration `config:"shutdownTimeout"`
+	// TLS configuration of the inbound.
+	TLSConfig TLSConfig `config:"tls"`
+}
+
+// TLSConfig specifies the TLS configuration of the HTTP inbound.
+type TLSConfig struct {
+	// Mode when set to Permissive or Enforced enables TLS inbound and
+	// TLS configuration must be passed as an inbound option.
+	Mode yarpctls.Mode `config:"mode,interpolate"`
 }
 
 func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, k *yarpcconfig.Kit) (transport.Inbound, error) {
 	if ic.Address == "" {
 		return nil, fmt.Errorf("inbound address is required")
 	}
-	inboundOptions := ts.InboundOptions
+
+	// TLS mode provided in the inbound options takes higher precedence than
+	// the TLS mode passed in YAML config.
+	inboundOptions := append([]InboundOption{InboundTLSMode(ic.TLSConfig.Mode)}, ts.InboundOptions...)
 	if len(ic.GrabHeaders) > 0 {
 		inboundOptions = append(inboundOptions, GrabHeaders(ic.GrabHeaders...))
 	}
