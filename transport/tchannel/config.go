@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/yarpcconfig"
 )
@@ -49,12 +50,23 @@ type TransportConfig struct {
 // 	inbounds:
 // 	  tchannel:
 // 	    address: :4040
+//      tls:
+//        mode: permissive
 //
 // At most one TChannel inbound may be defined in a single YARPC service.
 type InboundConfig struct {
 	// Address to listen on. Defaults to ":0" (all network interfaces and a
 	// random OS-assigned port).
 	Address string `config:"address,interpolate"`
+	// TLS configuration of the inbound.
+	TLS InboundTLSConfig `config:"tls"`
+}
+
+// InboundTLSConfig specifies the TLS configuration of the tchannel inbound.
+type InboundTLSConfig struct {
+	// Mode when set to Permissive or Enforced enables TLS inbound and
+	// TLS configuration must be passed as an inbound option.
+	Mode yarpctls.Mode `config:"mode,interpolate"`
 }
 
 // OutboundConfig configures a TChannel outbound.
@@ -145,6 +157,10 @@ func (ts *transportSpec) buildInbound(c *InboundConfig, t transport.Transport, k
 	}
 
 	trans.addr = c.Address
+	// Override inbound TLS mode when not set by an option.
+	if trans.inboundTLSMode == nil {
+		trans.inboundTLSMode = &c.TLS.Mode
+	}
 	return trans.NewInbound(), nil
 }
 
