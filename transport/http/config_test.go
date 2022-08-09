@@ -453,6 +453,7 @@ func TestTransportSpec(t *testing.T) {
 					assert.Empty(t, ib.grabHeaders)
 				}
 				assert.Equal(t, want.ShutdownTimeout, ib.shutdownTimeout, "shutdownTimeout should match")
+				assert.Equal(t, "foo", ib.transport.serviceName, "service name must match")
 				assert.Equal(t, want.TLSMode, ib.tlsMode, "tlsMode should match")
 			}
 		}
