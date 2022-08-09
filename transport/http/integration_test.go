@@ -46,7 +46,7 @@ func TestInboundTLS(t *testing.T) {
 
 	scenario := tlsscenario.Create(t, time.Minute, time.Minute)
 	serverTLSConfig := &tls.Config{
-		GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
+		GetCertificate: func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
 			return &tls.Certificate{
 				Certificate: [][]byte{scenario.ServerCert.Raw},
 				Leaf:        scenario.ServerCert,
@@ -57,7 +57,7 @@ func TestInboundTLS(t *testing.T) {
 		ClientCAs:  scenario.CAs,
 	}
 	clientTLSConfig := &tls.Config{
-		GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+		GetClientCertificate: func(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
 			return &tls.Certificate{
 				Certificate: [][]byte{scenario.ClientCert.Raw},
 				Leaf:        scenario.ClientCert,

@@ -269,6 +269,7 @@ func (o *transportOptions) newTransport() *Transport {
 		tracer:              o.tracer,
 		logger:              logger,
 		meter:               o.meter,
+		serviceName:         o.serviceName,
 	}
 }
 
