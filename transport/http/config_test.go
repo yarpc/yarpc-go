@@ -28,6 +28,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/yarpcconfig"
 )
 
@@ -61,6 +62,7 @@ func TestTransportSpec(t *testing.T) {
 		MuxPattern      string
 		GrabHeaders     map[string]struct{}
 		ShutdownTimeout time.Duration
+		TLSMode         yarpctls.Mode
 	}
 
 	type inboundTest struct {
@@ -153,6 +155,27 @@ func TestTransportSpec(t *testing.T) {
 			desc:        "simple inbound",
 			cfg:         attrs{"address": ":8080"},
 			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout},
+		},
+		{
+			desc: "inbound tls",
+			cfg: attrs{
+				"address": ":8080",
+				"tls": attrs{
+					"mode": "permissive",
+				},
+			},
+			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, TLSMode: yarpctls.Permissive},
+		},
+		{
+			desc: "inbound tls mode overridden by inbound option",
+			cfg: attrs{
+				"address": ":8080",
+				"tls": attrs{
+					"mode": "enforced",
+				},
+			},
+			opts:        []Option{InboundTLSMode(yarpctls.Permissive)},
+			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, TLSMode: yarpctls.Permissive},
 		},
 		{
 			desc: "simple inbound with grab headers",
@@ -430,6 +453,8 @@ func TestTransportSpec(t *testing.T) {
 					assert.Empty(t, ib.grabHeaders)
 				}
 				assert.Equal(t, want.ShutdownTimeout, ib.shutdownTimeout, "shutdownTimeout should match")
+				assert.Equal(t, "foo", ib.transport.serviceName, "service name must match")
+				assert.Equal(t, want.TLSMode, ib.tlsMode, "tlsMode should match")
 			}
 		}
 

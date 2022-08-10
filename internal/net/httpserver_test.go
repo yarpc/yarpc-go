@@ -35,6 +35,27 @@ import (
 	"go.uber.org/yarpc/internal/yarpctest"
 )
 
+func TestServeAndShutdown(t *testing.T) {
+	address := "127.0.0.1:0"
+	lis, err := net.Listen("tcp", address)
+	require.NoError(t, err)
+
+	server := NewHTTPServer(&http.Server{Addr: address})
+	require.NoError(t, server.Serve(lis))
+	require.NotNil(t, server.Listener())
+
+	require.Error(t, server.Serve(lis)) // must fail on second serve
+
+	addr := yarpctest.ZeroAddrToHostPort(server.Listener().Addr())
+	conn, err := net.Dial("tcp", addr)
+	require.NoError(t, err)
+	require.NoError(t, conn.Close())
+
+	require.NoError(t, server.Shutdown(context.Background()))
+	_, err = net.Dial("tcp", addr)
+	require.Error(t, err)
+}
+
 func TestStartAndShutdown(t *testing.T) {
 	server := NewHTTPServer(&http.Server{Addr: "127.0.0.1:0"})
 	require.NoError(t, server.ListenAndServe())

@@ -96,6 +96,28 @@ func (h *HTTPServer) ListenAndServe() error {
 	return nil
 }
 
+// Serve starts the HTTP server up in the background on the given
+// listener and returns immediately.
+//
+// An error is returned if the server failed to start up, if the server was
+// already listening, or if the server was stopped with Stop().
+func (h *HTTPServer) Serve(lis net.Listener) error {
+	if h.stopped.Load() {
+		return errServerStopped
+	}
+
+	h.lock.Lock()
+	defer h.lock.Unlock()
+
+	if h.listener != nil {
+		return errAlreadyListening
+	}
+
+	h.listener = lis
+	go h.serve(h.listener)
+	return nil
+}
+
 func (h *HTTPServer) serve(listener net.Listener) {
 	// Serve always returns a non-nil error. For us, it's an error only if
 	// we didn't call Stop().
