@@ -472,7 +472,7 @@ func TestTransportSpec(t *testing.T) {
 				if tt.wantInbound.ServerMaxRecvMsgSize > 0 {
 					assert.Equal(t, tt.wantInbound.ServerMaxRecvMsgSize, inbound.t.options.serverMaxRecvMsgSize)
 				} else {
-					assert.Equal(t, defaultServerMaxRecvMsgSize, inbound.t.options.serverMaxRecvMsgSize)
+					assert.Equal(t, 1024*1024*64, inbound.t.options.serverMaxRecvMsgSize)
 				}
 				if tt.wantInbound.ServerMaxSendMsgSize > 0 {
 					assert.Equal(t, tt.wantInbound.ServerMaxSendMsgSize, inbound.t.options.serverMaxSendMsgSize)
@@ -482,7 +482,7 @@ func TestTransportSpec(t *testing.T) {
 				if tt.wantInbound.ClientMaxRecvMsgSize > 0 {
 					assert.Equal(t, tt.wantInbound.ClientMaxRecvMsgSize, inbound.t.options.clientMaxRecvMsgSize)
 				} else {
-					assert.Equal(t, defaultClientMaxRecvMsgSize, inbound.t.options.clientMaxRecvMsgSize)
+					assert.Equal(t, 1024*1024*64, inbound.t.options.clientMaxRecvMsgSize)
 				}
 				if tt.wantInbound.ClientMaxSendMsgSize > 0 {
 					assert.Equal(t, tt.wantInbound.ClientMaxSendMsgSize, inbound.t.options.clientMaxSendMsgSize)
