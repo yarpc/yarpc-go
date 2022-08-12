@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - http - add TLS support for the inbound. Supports accepting
   TLS and plaintext connections on the same port.
+### Changed
+- grpc - set default client and server maximum receive message
+  sizes to 64MB from earlier 4MB.
 
 ## [1.62.0] - 2022-07-27
 ### Added
