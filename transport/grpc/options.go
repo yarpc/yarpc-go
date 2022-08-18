@@ -42,10 +42,12 @@ const (
 	// defensive programming
 	// these are copied from grpc-go but we set them explicitly here
 	// in case these change in grpc-go so that yarpc stays consistent
-	defaultServerMaxRecvMsgSize = 1024 * 1024 * 4
 	defaultServerMaxSendMsgSize = math.MaxInt32
-	defaultClientMaxRecvMsgSize = 1024 * 1024 * 4
 	defaultClientMaxSendMsgSize = math.MaxInt32
+	// Overriding default server and client maximum request and response
+	// receive sizes to 64MB.
+	defaultServerMaxRecvMsgSize = 1024 * 1024 * 64
+	defaultClientMaxRecvMsgSize = 1024 * 1024 * 64
 )
 
 // Option is an interface shared by TransportOption, InboundOption, and OutboundOption

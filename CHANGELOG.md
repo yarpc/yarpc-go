@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.63.0] - 2022-08-17
+### Added
+- http - add TLS support for the inbound. Supports accepting
+  TLS and plaintext connections on the same port.
+### Changed
+- grpc - set default client and server maximum receive message
+  sizes to 64MB from earlier 4MB.
+
 ## [1.62.0] - 2022-07-27
 ### Added
 - grpc - option to enable multiplexed inbound which accepts TLS and
@@ -1421,7 +1429,7 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
-
+[1.63.0]: https://github.com/yarpc/yarpc-go/compare/v1.62.0...v1.63.0
 [1.62.0]: https://github.com/yarpc/yarpc-go/compare/v1.61.0...v1.62.0
 [1.61.0]: https://github.com/yarpc/yarpc-go/compare/v1.60.0...v1.61.0
 [1.60.0]: https://github.com/yarpc/yarpc-go/compare/v1.59.0...v1.60.0

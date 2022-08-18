@@ -22,6 +22,8 @@ package http
 
 import (
 	"context"
+	"crypto/tls"
+	"errors"
 	"net"
 	"net/http"
 	"strings"
@@ -29,9 +31,11 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/transport"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/api/x/introspection"
 	intnet "go.uber.org/yarpc/internal/net"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/yarpc/transport/internal/tlsmux"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 )
@@ -103,6 +107,23 @@ func ShutdownTimeout(timeout time.Duration) InboundOption {
 	}
 }
 
+// InboundTLSConfiguration returns an InboundOption that provides the TLS
+// confiugration used for setting up TLS inbound.
+func InboundTLSConfiguration(tlsConfig *tls.Config) InboundOption {
+	return func(i *Inbound) {
+		i.tlsConfig = tlsConfig
+	}
+}
+
+// InboundTLSMode returns an InboundOption that sets inbound TLS mode.
+// It must be noted that TLS configuration must be passed separately using inbound
+// option InboundTLSConfiguration.
+func InboundTLSMode(mode yarpctls.Mode) InboundOption {
+	return func(i *Inbound) {
+		i.tlsMode = mode
+	}
+}
+
 // NewInbound builds a new HTTP inbound that listens on the given address and
 // sharing this transport.
 func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
@@ -141,6 +162,9 @@ type Inbound struct {
 
 	// should only be false in testing
 	bothResponseError bool
+
+	tlsConfig *tls.Config
+	tlsMode   yarpctls.Mode
 }
 
 // Tracer configures a tracer on this inbound.
@@ -201,7 +225,34 @@ func (i *Inbound) start() error {
 		Addr:    i.addr,
 		Handler: httpHandler,
 	})
-	if err := i.server.ListenAndServe(); err != nil {
+
+	addr := i.addr
+	if addr == "" {
+		addr = ":http"
+	}
+
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+
+	if i.tlsMode != yarpctls.Disabled {
+		if i.tlsConfig == nil {
+			return errors.New("HTTP TLS enabled but configuration not provided")
+		}
+
+		listener = tlsmux.NewListener(tlsmux.Config{
+			Listener:      listener,
+			TLSConfig:     i.tlsConfig,
+			ServiceName:   i.transport.serviceName,
+			TransportName: TransportName,
+			Meter:         i.transport.meter,
+			Logger:        i.logger,
+			Mode:          i.tlsMode,
+		})
+	}
+
+	if err := i.server.Serve(listener); err != nil {
 		return err
 	}
 
