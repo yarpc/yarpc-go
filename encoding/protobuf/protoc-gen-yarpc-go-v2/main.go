@@ -28,24 +28,6 @@ To use:
 */
 package main
 
-// Note there is some crazy bug with protobuf that if you declare:
-//
-//   func bar() (kv.GetValueResponse, error) {
-//     return nil, errors.New("nil response and non-nil error")
-//   }
-//
-//   func foo() (proto.Message, error) {
-//     return bar()
-//   }
-//
-//   response, err := foo()
-//   fmt.Printf("%v %v\n", response, response == nil)
-//
-// This will print "<nil>, false". If you try to do something with response (ie call a function on it),
-// if will panic because response is nil. Something similar happens in golang/protobuf
-// too, so this is insane. If in bar(), you do response == nil, it will be true.
-// The generated code handles this.
-
 import (
 	"log"
 	"os"
