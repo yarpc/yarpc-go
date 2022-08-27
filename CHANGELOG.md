@@ -5,7 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- No changes yet.
+### Added
+- tchannel: add TLS support for the inbound. Supports accepting
+  TLS and plaintext connections on the same port.
 
 ## [1.63.0] - 2022-08-17
 ### Added

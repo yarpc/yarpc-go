@@ -21,6 +21,7 @@
 package tchannel
 
 import (
+	"crypto/tls"
 	"fmt"
 	"testing"
 
@@ -28,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 	tchanneltest "github.com/uber/tchannel-go/testutils"
 	"go.uber.org/yarpc"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/yarpcconfig"
 )
 
@@ -49,6 +51,7 @@ func TestTransportSpec(t *testing.T) {
 
 	type wantTransport struct {
 		Address string
+		TLSMode yarpctls.Mode
 	}
 
 	type inboundTest struct {
@@ -84,6 +87,24 @@ func TestTransportSpec(t *testing.T) {
 			desc:          "simple inbound",
 			cfg:           attrs{"tchannel": attrs{"address": ":4040"}},
 			wantTransport: &wantTransport{Address: ":4040"},
+		},
+		{
+			desc: "inbound tls",
+			cfg: attrs{"tchannel": attrs{
+				"address": ":4040",
+				"tls":     attrs{"mode": "permissive"},
+			}},
+			opts:          []Option{InboundTLSConfiguration(&tls.Config{})},
+			wantTransport: &wantTransport{Address: ":4040", TLSMode: yarpctls.Permissive},
+		},
+		{
+			desc: "inbound tls mode override with option",
+			cfg: attrs{"tchannel": attrs{
+				"address": ":4040",
+				"tls":     attrs{"mode": "permissive"},
+			}},
+			opts:          []Option{InboundTLSMode(yarpctls.Disabled)},
+			wantTransport: &wantTransport{Address: ":4040", TLSMode: yarpctls.Disabled},
 		},
 		{
 			desc:          "inbound interpolation",
@@ -216,6 +237,8 @@ func TestTransportSpec(t *testing.T) {
 				trans := ib.transport
 				assert.Equal(t, "foo", trans.name, "service name must match")
 				assert.Equal(t, want.Address, trans.addr, "transport address must match")
+				require.NotNil(t, trans.inboundTLSMode, "tls mode is nil")
+				assert.Equal(t, want.TLSMode, *trans.inboundTLSMode, "tls mode must match")
 			}
 		}
 
