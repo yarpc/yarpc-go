@@ -15,7 +15,7 @@ coverage:
 # All packages with .nocover files in them MUST be listed here
 ignore:
  - /encoding/protobuf/internal/testpb/
- - /encoding/protobuf/internal/testpb/v2
+ - /encoding/protobuf/internal/testpb/v2/
  - /encoding/thrift/internal/
  - /encoding/thrift/internal/observabilitytest/test/
  - /encoding/thrift/internal/observabilitytest/test/testserviceclient/
