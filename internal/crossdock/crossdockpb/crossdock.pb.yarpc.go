@@ -187,12 +187,18 @@ func NewFxEchoYARPCProcedures() interface{} {
 				Server:      params.Server,
 				AnyResolver: params.AnyResolver,
 			}),
-			ReflectionMeta: reflection.ServerMeta{
-				ServiceName:     "uber.yarpc.internal.crossdock.Echo",
-				FileDescriptors: yarpcFileDescriptorClosure6acfd671bab786d8,
-			},
+			ReflectionMeta: EchoReflectionMeta,
 		}
 	}
+}
+
+// EchoReflectionMeta is the reflection server metadata
+// required for using the gRPC reflection protocol with YARPC.
+//
+// See https://github.com/grpc/grpc/blob/master/doc/server-reflection.md.
+var EchoReflectionMeta = reflection.ServerMeta{
+	ServiceName:     "uber.yarpc.internal.crossdock.Echo",
+	FileDescriptors: yarpcFileDescriptorClosure6acfd671bab786d8,
 }
 
 type _EchoYARPCCaller struct {

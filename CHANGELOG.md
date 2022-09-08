@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - tchannel: add TLS support for the inbound. Supports accepting
   TLS and plaintext connections on the same port.
+### Changed
+- protoc-gen-yarpc-go: expose service reflection metadata.
 
 ## [1.63.0] - 2022-08-17
 ### Added
