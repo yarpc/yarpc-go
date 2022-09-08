@@ -261,12 +261,18 @@ func NewFxHelloYARPCProcedures() interface{} {
 				Server:      params.Server,
 				AnyResolver: params.AnyResolver,
 			}),
-			ReflectionMeta: reflection.ServerMeta{
-				ServiceName:     "uber.yarpc.internal.examples.streaming.Hello",
-				FileDescriptors: yarpcFileDescriptorClosure45d12c3ddf34baf8,
-			},
+			ReflectionMeta: HelloReflectionMeta,
 		}
 	}
+}
+
+// HelloReflectionMeta is the reflection server metadata
+// required for using the gRPC reflection protocol with YARPC.
+//
+// See https://github.com/grpc/grpc/blob/master/doc/server-reflection.md.
+var HelloReflectionMeta = reflection.ServerMeta{
+	ServiceName:     "uber.yarpc.internal.examples.streaming.Hello",
+	FileDescriptors: yarpcFileDescriptorClosure45d12c3ddf34baf8,
 }
 
 type _HelloYARPCCaller struct {

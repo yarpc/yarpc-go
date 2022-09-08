@@ -199,12 +199,18 @@ func NewFxKeyValueYARPCProcedures() interface{} {
 				Server:      params.Server,
 				AnyResolver: params.AnyResolver,
 			}),
-			ReflectionMeta: reflection.ServerMeta{
-				ServiceName:     "uber.yarpc.internal.examples.protobuf.example.KeyValue",
-				FileDescriptors: yarpcFileDescriptorClosure43929dec9f67b739,
-			},
+			ReflectionMeta: KeyValueReflectionMeta,
 		}
 	}
+}
+
+// KeyValueReflectionMeta is the reflection server metadata
+// required for using the gRPC reflection protocol with YARPC.
+//
+// See https://github.com/grpc/grpc/blob/master/doc/server-reflection.md.
+var KeyValueReflectionMeta = reflection.ServerMeta{
+	ServiceName:     "uber.yarpc.internal.examples.protobuf.example.KeyValue",
+	FileDescriptors: yarpcFileDescriptorClosure43929dec9f67b739,
 }
 
 type _KeyValueYARPCCaller struct {
@@ -502,12 +508,18 @@ func NewFxFooYARPCProcedures() interface{} {
 				Server:      params.Server,
 				AnyResolver: params.AnyResolver,
 			}),
-			ReflectionMeta: reflection.ServerMeta{
-				ServiceName:     "uber.yarpc.internal.examples.protobuf.example.Foo",
-				FileDescriptors: yarpcFileDescriptorClosure43929dec9f67b739,
-			},
+			ReflectionMeta: FooReflectionMeta,
 		}
 	}
+}
+
+// FooReflectionMeta is the reflection server metadata
+// required for using the gRPC reflection protocol with YARPC.
+//
+// See https://github.com/grpc/grpc/blob/master/doc/server-reflection.md.
+var FooReflectionMeta = reflection.ServerMeta{
+	ServiceName:     "uber.yarpc.internal.examples.protobuf.example.Foo",
+	FileDescriptors: yarpcFileDescriptorClosure43929dec9f67b739,
 }
 
 type _FooYARPCCaller struct {
