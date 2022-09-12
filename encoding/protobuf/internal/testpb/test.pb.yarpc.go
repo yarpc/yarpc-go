@@ -213,12 +213,18 @@ func NewFxTestYARPCProcedures() interface{} {
 				Server:      params.Server,
 				AnyResolver: params.AnyResolver,
 			}),
-			ReflectionMeta: reflection.ServerMeta{
-				ServiceName:     "uber.yarpc.encoding.protobuf.Test",
-				FileDescriptors: yarpcFileDescriptorClosurefc320162ebaf2b25,
-			},
+			ReflectionMeta: TestReflectionMeta,
 		}
 	}
+}
+
+// TestReflectionMeta is the reflection server metadata
+// required for using the gRPC reflection protocol with YARPC.
+//
+// See https://github.com/grpc/grpc/blob/master/doc/server-reflection.md.
+var TestReflectionMeta = reflection.ServerMeta{
+	ServiceName:     "uber.yarpc.encoding.protobuf.Test",
+	FileDescriptors: yarpcFileDescriptorClosurefc320162ebaf2b25,
 }
 
 type _TestYARPCCaller struct {

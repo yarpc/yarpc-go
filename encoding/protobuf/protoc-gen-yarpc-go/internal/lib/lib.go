@@ -300,12 +300,18 @@ func NewFx{{$service.GetName}}YARPCProcedures() interface{} {
 				Server:      params.Server,
 				AnyResolver: params.AnyResolver,
 			}),
-			ReflectionMeta: reflection.ServerMeta{
-				ServiceName: "{{trimPrefixPeriod $service.FQSN}}",
-				FileDescriptors: {{ fileDescriptorClosureVarName .File }},
-			},
+			ReflectionMeta: {{$service.GetName}}ReflectionMeta,
 		}
 	}
+}
+
+// {{$service.GetName}}ReflectionMeta is the reflection server metadata
+// required for using the gRPC reflection protocol with YARPC.
+//
+// See https://github.com/grpc/grpc/blob/master/doc/server-reflection.md.
+var {{$service.GetName}}ReflectionMeta = reflection.ServerMeta{
+	ServiceName: "{{trimPrefixPeriod $service.FQSN}}",
+	FileDescriptors: {{ fileDescriptorClosureVarName .File }},
 }
 
 type _{{$service.GetName}}YARPCCaller struct {

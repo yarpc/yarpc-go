@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.64.0] - 2022-09-12
+### Added
+- tchannel: add TLS support for the inbound. Supports accepting
+  TLS and plaintext connections on the same port.
+### Changed
+- protoc-gen-yarpc-go: expose service reflection metadata.
+
 ## [1.63.0] - 2022-08-17
 ### Added
 - http - add TLS support for the inbound. Supports accepting
@@ -1429,6 +1436,7 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
+[1.64.0]: https://github.com/yarpc/yarpc-go/compare/v1.63.0...v1.64.0
 [1.63.0]: https://github.com/yarpc/yarpc-go/compare/v1.62.0...v1.63.0
 [1.62.0]: https://github.com/yarpc/yarpc-go/compare/v1.61.0...v1.62.0
 [1.61.0]: https://github.com/yarpc/yarpc-go/compare/v1.60.0...v1.61.0

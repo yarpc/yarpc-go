@@ -18,7 +18,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
+package testpb
 
-// Version is the current version of YARPC.
-const Version = "1.64.0"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestServerReflectionMeta(t *testing.T) {
+	assert.Equal(t, "uber.yarpc.encoding.protobuf.Test", TestReflectionMeta.ServiceName)
+	assert.NotNil(t, TestReflectionMeta.FileDescriptors)
+}
