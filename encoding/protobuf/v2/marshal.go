@@ -64,7 +64,7 @@ type codec struct {
 func newCodec(anyResolver AnyResolver) *codec {
 	return &codec{
 		jsonMarshaler:   &protojson.MarshalOptions{Resolver: anyResolver},
-		jsonUnmarshaler: &protojson.UnmarshalOptions{Resolver: anyResolver},
+		jsonUnmarshaler: &protojson.UnmarshalOptions{Resolver: anyResolver, DiscardUnknown: true},
 	}
 }
 
