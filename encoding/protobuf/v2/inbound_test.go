@@ -25,7 +25,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
@@ -37,7 +36,7 @@ import (
 
 func TestInboundAnyResolver(t *testing.T) {
 	newReq := func() proto.Message { return &testpb.TestMessage{} }
-	customAnyResolver := &anyResolver{NewMessage: &testpb.TestMessage{}}
+	customAnyResolver := &testAnyResolver{NewMessage: &testpb.TestMessage{}}
 	tests := []struct {
 		name     string
 		anyURL   string
@@ -65,7 +64,7 @@ func TestInboundAnyResolver(t *testing.T) {
 				Handle: func(context.Context, proto.Message) (proto.Message, error) {
 					testMessage := &testpb.TestMessage{Value: "foo-bar-baz"}
 					any, err := anypb.New(testMessage)
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					any.TypeUrl = tt.anyURL // update to custom URL
 					return any, nil
 				},

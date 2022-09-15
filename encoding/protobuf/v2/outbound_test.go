@@ -38,10 +38,10 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
-func TestOutboundAnyResolver(t *testing.T) {
+func TestOutboundWithAnyResolver(t *testing.T) {
 	const testValue = "foo-bar-baz"
 	newReq := func() proto.Message { return &testpb.TestMessage{} }
-	customAnyResolver := &anyResolver{NewMessage: &testpb.TestMessage{}}
+	customAnyResolver := &testAnyResolver{NewMessage: &testpb.TestMessage{}}
 	tests := []struct {
 		name     string
 		anyURL   string
@@ -107,25 +107,89 @@ func TestOutboundAnyResolver(t *testing.T) {
 	}
 }
 
-type anyResolver struct {
+func TestOutboundWithKnownProtoMsg(t *testing.T) {
+	t.Run("known proto message", func(t *testing.T) {
+		newReq := func() proto.Message { return &testpb.TestMessage{} }
+		trans := yarpctest.NewFakeTransport()
+		// outbound that echos the body back
+		out := trans.NewOutbound(nil, yarpctest.OutboundCallOverride(
+			yarpctest.OutboundCallable(func(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+				return &transport.Response{Body: ioutil.NopCloser(req.Body)}, nil
+			}),
+		))
+
+		client := v2.NewClient(v2.ClientParams{
+			ClientConfig: &transport.OutboundConfig{
+				Outbounds: transport.Outbounds{
+					Unary: out,
+				},
+			},
+			Options: []v2.ClientOption{},
+		})
+
+		testMessage := &testpb.TestMessage{Value: "foo-bar-baz"}
+		gotMessage, err := client.Call(context.Background(), "", testMessage, newReq)
+		require.NoError(t, err)
+		assert.True(t, proto.Equal(testMessage, gotMessage))
+
+	})
+}
+
+func TestOutboundWithAnyProtobufMsg(t *testing.T) {
+	t.Run("any message without resolver", func(t *testing.T) {
+		newReq := func() proto.Message { return &anypb.Any{} }
+		trans := yarpctest.NewFakeTransport()
+		// outbound that echos the body back
+		out := trans.NewOutbound(nil, yarpctest.OutboundCallOverride(
+			yarpctest.OutboundCallable(func(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+				return &transport.Response{Body: ioutil.NopCloser(req.Body)}, nil
+			}),
+		))
+
+		client := v2.NewClient(v2.ClientParams{
+			ClientConfig: &transport.OutboundConfig{
+				Outbounds: transport.Outbounds{
+					Unary: out,
+				},
+			},
+			Options: []v2.ClientOption{},
+		})
+
+		testMessage := &testpb.TestMessage{Value: "foo-bar-baz"}
+		anyMsg, err := anypb.New(testMessage)
+		require.NoError(t, err)
+
+		gotMessage, err := client.Call(context.Background(), "", anyMsg, newReq)
+		require.NoError(t, err)
+		returnMsg := &testpb.TestMessage{}
+		anypb.UnmarshalTo(gotMessage.(*anypb.Any), returnMsg, proto.UnmarshalOptions{})
+		assert.True(t, proto.Equal(testMessage, returnMsg))
+
+	})
+}
+
+type testAnyResolver struct {
 	NewMessage proto.Message
 }
 
-func (r anyResolver) FindMessageByName(message protoreflect.FullName) (protoreflect.MessageType, error) {
+func (r testAnyResolver) FindMessageByName(message protoreflect.FullName) (protoreflect.MessageType, error) {
 	return r.FindMessageByURL(string(message))
 }
 
-func (r anyResolver) FindMessageByURL(url string) (protoreflect.MessageType, error) {
-	if r.NewMessage == nil {
-		return nil, errors.New("test resolver is not initialized")
+func (r testAnyResolver) FindMessageByURL(url string) (protoreflect.MessageType, error) {
+	// Custom resolver for TestMessage resolve with both global registered or custom URL
+	if r.NewMessage != nil {
+		if url == "uber.yarpc.encoding.protobuf.TestMessage" || url == "foo.bar.baz" {
+			return protoimpl.X.MessageTypeOf(r.NewMessage), nil
+		}
 	}
-	return protoimpl.X.MessageTypeOf(r.NewMessage), nil
+	return nil, errors.New("test resolver is not initialized")
 }
 
-func (r anyResolver) FindExtensionByName(field protoreflect.FullName) (protoreflect.ExtensionType, error) {
+func (r testAnyResolver) FindExtensionByName(field protoreflect.FullName) (protoreflect.ExtensionType, error) {
 	return nil, nil
 }
 
-func (r anyResolver) FindExtensionByNumber(message protoreflect.FullName, field protoreflect.FieldNumber) (protoreflect.ExtensionType, error) {
+func (r testAnyResolver) FindExtensionByNumber(message protoreflect.FullName, field protoreflect.FieldNumber) (protoreflect.ExtensionType, error) {
 	return nil, nil
 }
