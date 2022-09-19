@@ -18,14 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tlsmux
+package muxlistener
 
 import (
 	"bytes"
 	"net"
 )
 
-// connSniffer wraps the connection and enables tlsmux to sniff inital bytes from the
+// connSniffer wraps the connection and enables muxlistener to sniff inital bytes from the
 // connection efficiently.
 type connSniffer struct {
 	net.Conn
