@@ -53,7 +53,7 @@ import (
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/procedure"
-	"go.uber.org/yarpc/transport/internal/tlsscenario"
+	"go.uber.org/yarpc/transport/internal/tls/testscenario"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap/zaptest"
 	"google.golang.org/grpc"
@@ -421,7 +421,7 @@ func TestTLSWithYARPCAndGRPC(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			scenario := tlsscenario.Create(t, tt.clientValidity, tt.serverValidity)
+			scenario := testscenario.Create(t, tt.clientValidity, tt.serverValidity)
 
 			serverCreds := credentials.NewTLS(&tls.Config{
 				GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
@@ -545,7 +545,7 @@ func TestMuxTLS(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			scenario := tlsscenario.Create(t, time.Minute, time.Minute)
+			scenario := testscenario.Create(t, time.Minute, time.Minute)
 
 			serverCreds := &tls.Config{
 				GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
