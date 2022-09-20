@@ -37,7 +37,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/pkg/lifecycle"
-	"go.uber.org/yarpc/transport/internal/tlsmux"
+	"go.uber.org/yarpc/transport/internal/tls/muxlistener"
 	"go.uber.org/zap"
 )
 
@@ -273,7 +273,7 @@ func (t *Transport) start() error {
 			return errors.New("tchannel TLS enabled but configuration not provided")
 		}
 
-		listener = tlsmux.NewListener(tlsmux.Config{
+		listener = muxlistener.NewListener(muxlistener.Config{
 			Listener:      listener,
 			TLSConfig:     t.inboundTLSConfig,
 			ServiceName:   t.name,

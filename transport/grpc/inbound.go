@@ -29,7 +29,7 @@ import (
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/api/x/introspection"
 	"go.uber.org/yarpc/pkg/lifecycle"
-	"go.uber.org/yarpc/transport/internal/tlsmux"
+	"go.uber.org/yarpc/transport/internal/tls/muxlistener"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -130,7 +130,7 @@ func (i *Inbound) start() error {
 			return errors.New("gRPC TLS enabled but configuration not provided")
 		}
 
-		listener = tlsmux.NewListener(tlsmux.Config{
+		listener = muxlistener.NewListener(muxlistener.Config{
 			Listener:      listener,
 			TLSConfig:     i.options.tlsConfig.Clone(),
 			Logger:        i.t.options.logger,

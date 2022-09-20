@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tlsmux_test
+package muxlistener_test
 
 import (
 	"crypto/tls"
@@ -33,7 +33,7 @@ import (
 	"go.uber.org/goleak"
 	"go.uber.org/net/metrics"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
-	"go.uber.org/yarpc/transport/internal/tlsmux"
+	"go.uber.org/yarpc/transport/internal/tls/muxlistener"
 	"go.uber.org/yarpc/transport/internal/tlsscenario"
 	"go.uber.org/zap"
 )
@@ -43,7 +43,7 @@ func TestNewListenerOnDisabled(t *testing.T) {
 	require.NoError(t, err)
 	defer lis.Close()
 
-	gotLis := tlsmux.NewListener(tlsmux.Config{Listener: lis, Mode: yarpctls.Disabled})
+	gotLis := muxlistener.NewListener(muxlistener.Config{Listener: lis, Mode: yarpctls.Disabled})
 	assert.Equal(t, lis, gotLis)
 }
 
@@ -173,7 +173,7 @@ func TestMux(t *testing.T) {
 			require.NoError(t, err, "unexpected error on listening")
 
 			root := metrics.New()
-			muxLis := tlsmux.NewListener(tlsmux.Config{
+			muxLis := muxlistener.NewListener(muxlistener.Config{
 				Listener:      lis,
 				TLSConfig:     serverTlsConfig,
 				Meter:         root.Scope(),
@@ -267,7 +267,7 @@ func TestConcurrentConnections(t *testing.T) {
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err, "unexpected error on listening")
 
-	muxLis := tlsmux.NewListener(tlsmux.Config{
+	muxLis := muxlistener.NewListener(muxlistener.Config{
 		Listener:      lis,
 		TLSConfig:     serverTlsConfig,
 		Meter:         metrics.New().Scope(),
