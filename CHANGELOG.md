@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
-- protoc-gen-yarpc-go-v2: Added new yarpc proto plugin `protoc-gen-yarpc-go-v2`. `protoc-gen-yarpc-go-v2` 
+- protoc-gen-yarpc-go-v2: Added new yarpc proto plugin `protoc-gen-yarpc-go-v2`. `protoc-gen-yarpc-go-v2`
   is compatible with golang protobuf v2 apis.
 
 ## [1.64.0] - 2022-09-12
@@ -862,7 +862,7 @@ Experimental:
   building `yarpc.Config` and `yarpc.Dispatcher` objects from YAML and
   arbitrary `map[string]interface{}` objects. Check the package documentation
   for more information.
--	tchannel: mask existing procedures with provided procedures.
+- tchannel: mask existing procedures with provided procedures.
 - Adds a peer.Bind function that takes a peer.ChooserList and a binder
   (anything that binds a peer list to a peer provider and returns the
   Lifecycle of the binding), and returns a peer.Chooser that combines
@@ -1441,119 +1441,119 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
-  [Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.64.0...HEAD
-  [1.64.0]: https://github.com/yarpc/yarpc-go/compare/v1.63.0...v1.64.0
-  [1.63.0]: https://github.com/yarpc/yarpc-go/compare/v1.62.0...v1.63.0
-  [1.62.0]: https://github.com/yarpc/yarpc-go/compare/v1.61.0...v1.62.0
-  [1.61.0]: https://github.com/yarpc/yarpc-go/compare/v1.60.0...v1.61.0
-  [1.60.0]: https://github.com/yarpc/yarpc-go/compare/v1.59.0...v1.60.0
-  [1.59.0]: https://github.com/yarpc/yarpc-go/compare/v1.58.0...v1.59.0
-  [1.58.0]: https://github.com/yarpc/yarpc-go/compare/v1.57.1...v1.58.0
-  [1.57.1]: https://github.com/yarpc/yarpc-go/compare/v1.57.0...v1.57.1
-  [1.57.0]: https://github.com/yarpc/yarpc-go/compare/v1.56.1...v1.57.0
-  [1.56.1]: https://github.com/yarpc/yarpc-go/compare/v1.56.0...v1.56.1
-  [1.56.0]: https://github.com/yarpc/yarpc-go/compare/v1.55.1...v1.56.0
-  [1.55.1]: https://github.com/yarpc/yarpc-go/compare/v1.55.0...v1.55.1
-  [1.55.0]: https://github.com/yarpc/yarpc-go/compare/v1.54.2...v1.55.0
-  [1.54.2]: https://github.com/yarpc/yarpc-go/compare/v1.54.1...v1.54.2
-  [1.54.1]: https://github.com/yarpc/yarpc-go/compare/v1.54.0...v1.54.1
-  [1.54.0]: https://github.com/yarpc/yarpc-go/compare/v1.53.2...v1.54.0
-  [1.53.2]: https://github.com/yarpc/yarpc-go/compare/v1.53.1...v1.53.2
-  [1.53.1]: https://github.com/yarpc/yarpc-go/compare/v1.51.0...v1.52.0
-  [1.53.0]: https://github.com/yarpc/yarpc-go/compare/v1.52.0...v1.53.0
-  [1.52.0]: https://github.com/yarpc/yarpc-go/compare/v1.51.0...v1.52.0
-  [1.51.0]: https://github.com/yarpc/yarpc-go/compare/v1.50.0...v1.51.0
-  [1.50.0]: https://github.com/yarpc/yarpc-go/compare/v1.49.1...v1.50.0
-  [1.49.1]: https://github.com/yarpc/yarpc-go/compare/v1.49.0...v1.49.1
-  [1.49.0]: https://github.com/yarpc/yarpc-go/compare/v1.48.0...v1.49.0
-  [1.48.0]: https://github.com/yarpc/yarpc-go/compare/v1.47.2...v1.48.0
-  [1.47.2]: https://github.com/yarpc/yarpc-go/compare/v1.47.1...v1.47.2
-  [1.47.1]: https://github.com/yarpc/yarpc-go/compare/v1.47.0...v1.47.1
-  [1.47.0]: https://github.com/yarpc/yarpc-go/compare/v1.46.0...v1.47.0
-  [1.46.0]: https://github.com/yarpc/yarpc-go/compare/v1.45.0...v1.46.0
-  [1.45.0]: https://github.com/yarpc/yarpc-go/compare/v1.44.0...v1.45.0
-  [1.44.0]: https://github.com/yarpc/yarpc-go/compare/v1.43.0...v1.44.0
-  [1.43.0]: https://github.com/yarpc/yarpc-go/compare/v1.42.1...v1.43.0
-  [1.42.1]: https://github.com/yarpc/yarpc-go/compare/v1.42.0...v1.42.1
-  [1.42.0]: https://github.com/yarpc/yarpc-go/compare/v1.41.0...v1.42.0
-  [1.41.0]: https://github.com/yarpc/yarpc-go/compare/v1.40.0...v1.41.0
-  [1.40.0]: https://github.com/yarpc/yarpc-go/compare/v1.39.0...v1.40.0
-  [1.39.0]: https://github.com/yarpc/yarpc-go/compare/v1.38.0...v1.39.0
-  [1.38.0]: https://github.com/yarpc/yarpc-go/compare/v1.37.4...v1.38.0
-  [1.37.4]: https://github.com/yarpc/yarpc-go/compare/v1.37.3...v1.37.4
-  [1.37.3]: https://github.com/yarpc/yarpc-go/compare/v1.37.2...v1.37.3
-  [1.37.2]: https://github.com/yarpc/yarpc-go/compare/v1.37.1...v1.37.2
-  [1.37.1]: https://github.com/yarpc/yarpc-go/compare/v1.37.0...v1.37.1
-  [1.37.0]: https://github.com/yarpc/yarpc-go/compare/v1.36.2...v1.37.0
-  [1.36.2]: https://github.com/yarpc/yarpc-go/compare/v1.36.1...v1.36.2
-  [1.36.1]: https://github.com/yarpc/yarpc-go/compare/v1.36.0...v1.36.1
-  [1.36.0]: https://github.com/yarpc/yarpc-go/compare/v1.35.2...v1.36.0
-  [1.35.2]: https://github.com/yarpc/yarpc-go/compare/v1.35.1...v1.35.2
-  [1.35.1]: https://github.com/yarpc/yarpc-go/compare/v1.35.0...v1.35.1
-  [1.35.0]: https://github.com/yarpc/yarpc-go/compare/v1.34.0...v1.35.0
-  [1.34.0]: https://github.com/yarpc/yarpc-go/compare/v1.33.0...v1.34.0
-  [1.33.0]: https://github.com/yarpc/yarpc-go/compare/v1.32.4...v1.33.0
-  [1.32.4]: https://github.com/yarpc/yarpc-go/compare/v1.32.3...v1.32.4
-  [1.32.3]: https://github.com/yarpc/yarpc-go/compare/v1.32.2...v1.32.3
-  [1.32.2]: https://github.com/yarpc/yarpc-go/compare/v1.32.1...v1.32.2
-  [1.32.1]: https://github.com/yarpc/yarpc-go/compare/v1.32.0...v1.32.1
-  [1.32.0]: https://github.com/yarpc/yarpc-go/compare/v1.31.0...v1.32.0
-  [1.31.0]: https://github.com/yarpc/yarpc-go/compare/v1.30.0...v1.31.0
-  [1.30.0]: https://github.com/yarpc/yarpc-go/compare/v1.29.1...v1.30.0
-  [1.29.1]: https://github.com/yarpc/yarpc-go/compare/v1.29.0...v1.29.1
-  [1.29.0]: https://github.com/yarpc/yarpc-go/compare/v1.28.0...v1.29.0
-  [1.28.0]: https://github.com/yarpc/yarpc-go/compare/v1.27.2...v1.28.0
-  [1.27.2]: https://github.com/yarpc/yarpc-go/compare/v1.27.1...v1.27.2
-  [1.27.1]: https://github.com/yarpc/yarpc-go/compare/v1.27.0...v1.27.1
-  [1.27.0]: https://github.com/yarpc/yarpc-go/compare/v1.26.2...v1.27.0
-  [1.26.2]: https://github.com/yarpc/yarpc-go/compare/v1.26.1...v1.26.2
-  [1.26.1]: https://github.com/yarpc/yarpc-go/compare/v1.26.0...v1.26.1
-  [1.26.0]: https://github.com/yarpc/yarpc-go/compare/v1.25.1...v1.26.0
-  [1.25.1]: https://github.com/yarpc/yarpc-go/compare/v1.25.0...v1.25.1
-  [1.25.0]: https://github.com/yarpc/yarpc-go/compare/v1.24.1...v1.25.0
-  [1.24.1]: https://github.com/yarpc/yarpc-go/compare/v1.24.0...v1.24.1
-  [1.24.0]: https://github.com/yarpc/yarpc-go/compare/v1.22.0...v1.24.0
-  [1.22.0]: https://github.com/yarpc/yarpc-go/compare/v1.21.1...v1.22.0
-  [1.21.1]: https://github.com/yarpc/yarpc-go/compare/v1.21.0...v1.21.1
-  [1.21.0]: https://github.com/yarpc/yarpc-go/compare/v1.20.1...v1.21.0
-  [1.20.1]: https://github.com/yarpc/yarpc-go/compare/v1.20.0...v1.20.1
-  [1.20.0]: https://github.com/yarpc/yarpc-go/compare/v1.19.2...v1.20.0
-  [1.19.2]: https://github.com/yarpc/yarpc-go/compare/v1.19.1...v1.19.2
-  [1.19.1]: https://github.com/yarpc/yarpc-go/compare/v1.19.0...v1.19.1
-  [1.19.0]: https://github.com/yarpc/yarpc-go/compare/v1.18.1...v1.19.0
-  [1.18.1]: https://github.com/yarpc/yarpc-go/compare/v1.18.0...v1.18.1
-  [1.18.0]: https://github.com/yarpc/yarpc-go/compare/v1.17.0...v1.18.0
-  [1.17.0]: https://github.com/yarpc/yarpc-go/compare/v1.16.0...v1.17.0
-  [1.16.0]: https://github.com/yarpc/yarpc-go/compare/v1.15.0...v1.16.0
-  [1.15.0]: https://github.com/yarpc/yarpc-go/compare/v1.14.0...v1.15.0
-  [1.14.0]: https://github.com/yarpc/yarpc-go/compare/v1.13.1...v1.14.0
-  [1.13.1]: https://github.com/yarpc/yarpc-go/compare/v1.13.0...v1.13.1
-  [1.13.0]: https://github.com/yarpc/yarpc-go/compare/v1.12.1...v1.13.0
-  [1.12.1]: https://github.com/yarpc/yarpc-go/compare/v1.12.0...v1.12.1
-  [1.12.0]: https://github.com/yarpc/yarpc-go/compare/v1.11.0...v1.12.0
-  [1.11.0]: https://github.com/yarpc/yarpc-go/compare/v1.10.0...v1.11.0
-  [1.10.0]: https://github.com/yarpc/yarpc-go/compare/v1.9.0...v1.10.0
-  [1.9.0]: https://github.com/yarpc/yarpc-go/compare/v1.8.0...v1.9.0
-  [1.8.0]: https://github.com/yarpc/yarpc-go/compare/v1.7.1...v1.8.0
-  [1.7.1]: https://github.com/yarpc/yarpc-go/compare/v1.7.0...v1.7.1
-  [1.7.0]: https://github.com/yarpc/yarpc-go/compare/v1.6.0...v1.7.0
-  [1.6.0]: https://github.com/yarpc/yarpc-go/compare/v1.5.0...v1.6.0
-  [1.5.0]: https://github.com/yarpc/yarpc-go/compare/v1.4.0...v1.5.0
-  [1.4.0]: https://github.com/yarpc/yarpc-go/compare/v1.3.0...v1.4.0
-  [1.3.0]: https://github.com/yarpc/yarpc-go/compare/v1.2.0...v1.3.0
-  [1.2.0]: https://github.com/yarpc/yarpc-go/compare/v1.1.0...v1.2.0
-  [1.1.0]: https://github.com/yarpc/yarpc-go/compare/v1.0.1...v1.1.0
-  [1.0.1]: https://github.com/yarpc/yarpc-go/compare/v1.0.0...v1.0.1
-  [1.0.0]: https://github.com/yarpc/yarpc-go/compare/v1.0.0-rc5...v1.0.0
-  [1.0.0-rc5]: https://github.com/yarpc/yarpc-go/compare/v1.0.0-rc4...v1.0.0-rc5
-  [1.0.0-rc4]: https://github.com/yarpc/yarpc-go/compare/v1.0.0-rc3...v1.0.0-rc4
-  [1.0.0-rc3]: https://github.com/yarpc/yarpc-go/compare/v1.0.0-rc2...v1.0.0-rc3
-  [1.0.0-rc2]: https://github.com/yarpc/yarpc-go/compare/v1.0.0-rc1...v1.0.0-rc2
-  [1.0.0-rc1]: https://github.com/yarpc/yarpc-go/compare/v0.5.0...v1.0.0-rc1
-  [0.5.0]: https://github.com/yarpc/yarpc-go/compare/v0.4.0...v0.5.0
-  [0.4.0]: https://github.com/yarpc/yarpc-go/compare/v0.3.1...v0.4.0
-  [0.3.1]: https://github.com/yarpc/yarpc-go/compare/v0.3.0...v0.3.1
-  [0.3.0]: https://github.com/yarpc/yarpc-go/compare/v0.2.1...v0.3.0
-  [0.2.1]: https://github.com/yarpc/yarpc-go/compare/v0.2.0...v0.2.1
-  [0.2.0]: https://github.com/yarpc/yarpc-go/compare/v0.1.1...v0.2.0
-  [0.1.1]: https://github.com/yarpc/yarpc-go/compare/v0.1.0...v0.1.1
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.64.0...HEAD
+[1.64.0]: https://github.com/yarpc/yarpc-go/compare/v1.63.0...v1.64.0
+[1.63.0]: https://github.com/yarpc/yarpc-go/compare/v1.62.0...v1.63.0
+[1.62.0]: https://github.com/yarpc/yarpc-go/compare/v1.61.0...v1.62.0
+[1.61.0]: https://github.com/yarpc/yarpc-go/compare/v1.60.0...v1.61.0
+[1.60.0]: https://github.com/yarpc/yarpc-go/compare/v1.59.0...v1.60.0
+[1.59.0]: https://github.com/yarpc/yarpc-go/compare/v1.58.0...v1.59.0
+[1.58.0]: https://github.com/yarpc/yarpc-go/compare/v1.57.1...v1.58.0
+[1.57.1]: https://github.com/yarpc/yarpc-go/compare/v1.57.0...v1.57.1
+[1.57.0]: https://github.com/yarpc/yarpc-go/compare/v1.56.1...v1.57.0
+[1.56.1]: https://github.com/yarpc/yarpc-go/compare/v1.56.0...v1.56.1
+[1.56.0]: https://github.com/yarpc/yarpc-go/compare/v1.55.1...v1.56.0
+[1.55.1]: https://github.com/yarpc/yarpc-go/compare/v1.55.0...v1.55.1
+[1.55.0]: https://github.com/yarpc/yarpc-go/compare/v1.54.2...v1.55.0
+[1.54.2]: https://github.com/yarpc/yarpc-go/compare/v1.54.1...v1.54.2
+[1.54.1]: https://github.com/yarpc/yarpc-go/compare/v1.54.0...v1.54.1
+[1.54.0]: https://github.com/yarpc/yarpc-go/compare/v1.53.2...v1.54.0
+[1.53.2]: https://github.com/yarpc/yarpc-go/compare/v1.53.1...v1.53.2
+[1.53.1]: https://github.com/yarpc/yarpc-go/compare/v1.51.0...v1.52.0
+[1.53.0]: https://github.com/yarpc/yarpc-go/compare/v1.52.0...v1.53.0
+[1.52.0]: https://github.com/yarpc/yarpc-go/compare/v1.51.0...v1.52.0
+[1.51.0]: https://github.com/yarpc/yarpc-go/compare/v1.50.0...v1.51.0
+[1.50.0]: https://github.com/yarpc/yarpc-go/compare/v1.49.1...v1.50.0
+[1.49.1]: https://github.com/yarpc/yarpc-go/compare/v1.49.0...v1.49.1
+[1.49.0]: https://github.com/yarpc/yarpc-go/compare/v1.48.0...v1.49.0
+[1.48.0]: https://github.com/yarpc/yarpc-go/compare/v1.47.2...v1.48.0
+[1.47.2]: https://github.com/yarpc/yarpc-go/compare/v1.47.1...v1.47.2
+[1.47.1]: https://github.com/yarpc/yarpc-go/compare/v1.47.0...v1.47.1
+[1.47.0]: https://github.com/yarpc/yarpc-go/compare/v1.46.0...v1.47.0
+[1.46.0]: https://github.com/yarpc/yarpc-go/compare/v1.45.0...v1.46.0
+[1.45.0]: https://github.com/yarpc/yarpc-go/compare/v1.44.0...v1.45.0
+[1.44.0]: https://github.com/yarpc/yarpc-go/compare/v1.43.0...v1.44.0
+[1.43.0]: https://github.com/yarpc/yarpc-go/compare/v1.42.1...v1.43.0
+[1.42.1]: https://github.com/yarpc/yarpc-go/compare/v1.42.0...v1.42.1
+[1.42.0]: https://github.com/yarpc/yarpc-go/compare/v1.41.0...v1.42.0
+[1.41.0]: https://github.com/yarpc/yarpc-go/compare/v1.40.0...v1.41.0
+[1.40.0]: https://github.com/yarpc/yarpc-go/compare/v1.39.0...v1.40.0
+[1.39.0]: https://github.com/yarpc/yarpc-go/compare/v1.38.0...v1.39.0
+[1.38.0]: https://github.com/yarpc/yarpc-go/compare/v1.37.4...v1.38.0
+[1.37.4]: https://github.com/yarpc/yarpc-go/compare/v1.37.3...v1.37.4
+[1.37.3]: https://github.com/yarpc/yarpc-go/compare/v1.37.2...v1.37.3
+[1.37.2]: https://github.com/yarpc/yarpc-go/compare/v1.37.1...v1.37.2
+[1.37.1]: https://github.com/yarpc/yarpc-go/compare/v1.37.0...v1.37.1
+[1.37.0]: https://github.com/yarpc/yarpc-go/compare/v1.36.2...v1.37.0
+[1.36.2]: https://github.com/yarpc/yarpc-go/compare/v1.36.1...v1.36.2
+[1.36.1]: https://github.com/yarpc/yarpc-go/compare/v1.36.0...v1.36.1
+[1.36.0]: https://github.com/yarpc/yarpc-go/compare/v1.35.2...v1.36.0
+[1.35.2]: https://github.com/yarpc/yarpc-go/compare/v1.35.1...v1.35.2
+[1.35.1]: https://github.com/yarpc/yarpc-go/compare/v1.35.0...v1.35.1
+[1.35.0]: https://github.com/yarpc/yarpc-go/compare/v1.34.0...v1.35.0
+[1.34.0]: https://github.com/yarpc/yarpc-go/compare/v1.33.0...v1.34.0
+[1.33.0]: https://github.com/yarpc/yarpc-go/compare/v1.32.4...v1.33.0
+[1.32.4]: https://github.com/yarpc/yarpc-go/compare/v1.32.3...v1.32.4
+[1.32.3]: https://github.com/yarpc/yarpc-go/compare/v1.32.2...v1.32.3
+[1.32.2]: https://github.com/yarpc/yarpc-go/compare/v1.32.1...v1.32.2
+[1.32.1]: https://github.com/yarpc/yarpc-go/compare/v1.32.0...v1.32.1
+[1.32.0]: https://github.com/yarpc/yarpc-go/compare/v1.31.0...v1.32.0
+[1.31.0]: https://github.com/yarpc/yarpc-go/compare/v1.30.0...v1.31.0
+[1.30.0]: https://github.com/yarpc/yarpc-go/compare/v1.29.1...v1.30.0
+[1.29.1]: https://github.com/yarpc/yarpc-go/compare/v1.29.0...v1.29.1
+[1.29.0]: https://github.com/yarpc/yarpc-go/compare/v1.28.0...v1.29.0
+[1.28.0]: https://github.com/yarpc/yarpc-go/compare/v1.27.2...v1.28.0
+[1.27.2]: https://github.com/yarpc/yarpc-go/compare/v1.27.1...v1.27.2
+[1.27.1]: https://github.com/yarpc/yarpc-go/compare/v1.27.0...v1.27.1
+[1.27.0]: https://github.com/yarpc/yarpc-go/compare/v1.26.2...v1.27.0
+[1.26.2]: https://github.com/yarpc/yarpc-go/compare/v1.26.1...v1.26.2
+[1.26.1]: https://github.com/yarpc/yarpc-go/compare/v1.26.0...v1.26.1
+[1.26.0]: https://github.com/yarpc/yarpc-go/compare/v1.25.1...v1.26.0
+[1.25.1]: https://github.com/yarpc/yarpc-go/compare/v1.25.0...v1.25.1
+[1.25.0]: https://github.com/yarpc/yarpc-go/compare/v1.24.1...v1.25.0
+[1.24.1]: https://github.com/yarpc/yarpc-go/compare/v1.24.0...v1.24.1
+[1.24.0]: https://github.com/yarpc/yarpc-go/compare/v1.22.0...v1.24.0
+[1.22.0]: https://github.com/yarpc/yarpc-go/compare/v1.21.1...v1.22.0
+[1.21.1]: https://github.com/yarpc/yarpc-go/compare/v1.21.0...v1.21.1
+[1.21.0]: https://github.com/yarpc/yarpc-go/compare/v1.20.1...v1.21.0
+[1.20.1]: https://github.com/yarpc/yarpc-go/compare/v1.20.0...v1.20.1
+[1.20.0]: https://github.com/yarpc/yarpc-go/compare/v1.19.2...v1.20.0
+[1.19.2]: https://github.com/yarpc/yarpc-go/compare/v1.19.1...v1.19.2
+[1.19.1]: https://github.com/yarpc/yarpc-go/compare/v1.19.0...v1.19.1
+[1.19.0]: https://github.com/yarpc/yarpc-go/compare/v1.18.1...v1.19.0
+[1.18.1]: https://github.com/yarpc/yarpc-go/compare/v1.18.0...v1.18.1
+[1.18.0]: https://github.com/yarpc/yarpc-go/compare/v1.17.0...v1.18.0
+[1.17.0]: https://github.com/yarpc/yarpc-go/compare/v1.16.0...v1.17.0
+[1.16.0]: https://github.com/yarpc/yarpc-go/compare/v1.15.0...v1.16.0
+[1.15.0]: https://github.com/yarpc/yarpc-go/compare/v1.14.0...v1.15.0
+[1.14.0]: https://github.com/yarpc/yarpc-go/compare/v1.13.1...v1.14.0
+[1.13.1]: https://github.com/yarpc/yarpc-go/compare/v1.13.0...v1.13.1
+[1.13.0]: https://github.com/yarpc/yarpc-go/compare/v1.12.1...v1.13.0
+[1.12.1]: https://github.com/yarpc/yarpc-go/compare/v1.12.0...v1.12.1
+[1.12.0]: https://github.com/yarpc/yarpc-go/compare/v1.11.0...v1.12.0
+[1.11.0]: https://github.com/yarpc/yarpc-go/compare/v1.10.0...v1.11.0
+[1.10.0]: https://github.com/yarpc/yarpc-go/compare/v1.9.0...v1.10.0
+[1.9.0]: https://github.com/yarpc/yarpc-go/compare/v1.8.0...v1.9.0
+[1.8.0]: https://github.com/yarpc/yarpc-go/compare/v1.7.1...v1.8.0
+[1.7.1]: https://github.com/yarpc/yarpc-go/compare/v1.7.0...v1.7.1
+[1.7.0]: https://github.com/yarpc/yarpc-go/compare/v1.6.0...v1.7.0
+[1.6.0]: https://github.com/yarpc/yarpc-go/compare/v1.5.0...v1.6.0
+[1.5.0]: https://github.com/yarpc/yarpc-go/compare/v1.4.0...v1.5.0
+[1.4.0]: https://github.com/yarpc/yarpc-go/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/yarpc/yarpc-go/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/yarpc/yarpc-go/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/yarpc/yarpc-go/compare/v1.0.1...v1.1.0
+[1.0.1]: https://github.com/yarpc/yarpc-go/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/yarpc/yarpc-go/compare/v1.0.0-rc5...v1.0.0
+[1.0.0-rc5]: https://github.com/yarpc/yarpc-go/compare/v1.0.0-rc4...v1.0.0-rc5
+[1.0.0-rc4]: https://github.com/yarpc/yarpc-go/compare/v1.0.0-rc3...v1.0.0-rc4
+[1.0.0-rc3]: https://github.com/yarpc/yarpc-go/compare/v1.0.0-rc2...v1.0.0-rc3
+[1.0.0-rc2]: https://github.com/yarpc/yarpc-go/compare/v1.0.0-rc1...v1.0.0-rc2
+[1.0.0-rc1]: https://github.com/yarpc/yarpc-go/compare/v0.5.0...v1.0.0-rc1
+[0.5.0]: https://github.com/yarpc/yarpc-go/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/yarpc/yarpc-go/compare/v0.3.1...v0.4.0
+[0.3.1]: https://github.com/yarpc/yarpc-go/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/yarpc/yarpc-go/compare/v0.2.1...v0.3.0
+[0.2.1]: https://github.com/yarpc/yarpc-go/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/yarpc/yarpc-go/compare/v0.1.1...v0.2.0
+[0.1.1]: https://github.com/yarpc/yarpc-go/compare/v0.1.0...v0.1.1
