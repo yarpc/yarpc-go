@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - protoc-gen-yarpc-go-v2: Added new yarpc proto plugin `protoc-gen-yarpc-go-v2`. `protoc-gen-yarpc-go-v2`
-  is compatible with golang protobuf v2 apis.
+  generated yarpc protobuf code is compatible with golang protobuf v2 apis.
 
 ## [1.64.0] - 2022-09-12
 ### Added
