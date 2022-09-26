@@ -34,7 +34,7 @@ import (
 	"go.uber.org/net/metrics"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/transport/internal/tls/muxlistener"
-	"go.uber.org/yarpc/transport/internal/tlsscenario"
+	"go.uber.org/yarpc/transport/internal/tls/testscenario"
 	"go.uber.org/zap"
 )
 
@@ -48,7 +48,7 @@ func TestNewListenerOnDisabled(t *testing.T) {
 }
 
 func TestMux(t *testing.T) {
-	scenario := tlsscenario.Create(t, time.Minute, time.Minute)
+	scenario := testscenario.Create(t, time.Minute, time.Minute)
 	serverTlsConfig := &tls.Config{
 		GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
 			return &tls.Certificate{
@@ -238,7 +238,7 @@ func TestMux(t *testing.T) {
 func TestConcurrentConnections(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	scenario := tlsscenario.Create(t, time.Minute, time.Minute)
+	scenario := testscenario.Create(t, time.Minute, time.Minute)
 	serverTlsConfig := &tls.Config{
 		GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
 			return &tls.Certificate{
