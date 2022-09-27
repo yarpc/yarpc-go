@@ -30,24 +30,34 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/transport/internal/tls/testscenario"
+	"go.uber.org/zap"
 )
 
 func TestDialer(t *testing.T) {
 	tests := []struct {
-		desc             string
-		withCustomDialer bool
-		data             string
+		desc                string
+		withCustomDialer    bool
+		shouldFailHandshake bool
+		data                string
 	}{
 		{desc: "without_custom_dialer", data: "test_no_dialer"},
 		{desc: "with_custom_dialer", data: "test_with_dialer", withCustomDialer: true},
+		{desc: "with_handshake_failure", shouldFailHandshake: true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
+			root := metrics.New()
 			serverTLSConfig, clientTLSConfig := tlsConfigs(t)
 			params := Params{
-				Config: clientTLSConfig,
+				Config:        clientTLSConfig,
+				Meter:         root.Scope(),
+				Logger:        zap.NewNop(),
+				ServiceName:   "test-svc",
+				TransportName: "test-transport",
+				Dest:          "test-dest",
 			}
 			calledCustomDialer := false
 			if tt.withCustomDialer {
@@ -67,6 +77,11 @@ func TestDialer(t *testing.T) {
 				defer wg.Done()
 				conn, err := lis.Accept()
 				require.NoError(t, err)
+				if tt.shouldFailHandshake {
+					conn.Close()
+					return
+				}
+
 				defer conn.Close()
 				tlsConn := tls.Server(conn, serverTLSConfig)
 
@@ -78,8 +93,13 @@ func TestDialer(t *testing.T) {
 			}()
 
 			conn, err := dialer.DialContext(context.Background(), "tcp", lis.Addr().String())
-			require.NoError(t, err)
+			if tt.shouldFailHandshake {
+				require.Error(t, err)
+				assertMetrics(t, root, true)
+				return
+			}
 
+			require.NoError(t, err)
 			_, ok := conn.(*tls.Conn)
 			assert.True(t, ok)
 
@@ -91,12 +111,40 @@ func TestDialer(t *testing.T) {
 			_, err = conn.Read(buf)
 			require.NoError(t, err)
 			assert.Equal(t, tt.data, string(buf))
-
+			assertMetrics(t, root, false)
 			if tt.withCustomDialer {
 				assert.True(t, calledCustomDialer)
 			}
 		})
 	}
+}
+
+func assertMetrics(t *testing.T, root *metrics.Root, handshakeFailure bool) {
+	var expectedCounter metrics.Snapshot
+	expectedTags := metrics.Tags{
+		"service":   "test-svc",
+		"transport": "test-transport",
+		"component": "yarpc",
+		"mode":      "Enforced",
+		"direction": "outbound",
+		"dest":      "test-dest",
+	}
+	if handshakeFailure {
+		expectedCounter = metrics.Snapshot{
+			Name:  "tls_handshake_failures",
+			Tags:  expectedTags,
+			Value: 1,
+		}
+	} else {
+		expectedTags["version"] = "1.3"
+		expectedCounter = metrics.Snapshot{
+			Name:  "tls_connections",
+			Tags:  expectedTags,
+			Value: 1,
+		}
+	}
+
+	assert.Contains(t, root.Snapshot().Counters, expectedCounter)
 }
 
 func tlsConfigs(t *testing.T) (serverConfig *tls.Config, clientConfig *tls.Config) {

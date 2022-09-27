@@ -25,6 +25,11 @@ import (
 	"crypto/tls"
 	"net"
 	"time"
+
+	"go.uber.org/net/metrics"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
+	tlsmetrics "go.uber.org/yarpc/transport/internal/tls/metrics"
+	"go.uber.org/zap"
 )
 
 const (
@@ -39,28 +44,46 @@ const (
 
 // Params holds parameters needed for creating new TLSDialer.
 type Params struct {
-	Config *tls.Config
-	Dialer func(ctx context.Context, network, address string) (net.Conn, error)
+	Config        *tls.Config
+	Dialer        func(ctx context.Context, network, address string) (net.Conn, error)
+	Meter         *metrics.Scope
+	Logger        *zap.Logger
+	ServiceName   string
+	TransportName string
+	Dest          string
 }
 
 // TLSDialer implements context dialer.
 type TLSDialer struct {
-	config *tls.Config
-	dialer func(ctx context.Context, network, address string) (net.Conn, error)
+	config   *tls.Config
+	dialer   func(ctx context.Context, network, address string) (net.Conn, error)
+	observer *tlsmetrics.Observer
+	logger   *zap.Logger
 }
 
 // NewTLSDialer returns dialer which creates TLS client connection based on
 // the given TLS configuration.
-func NewTLSDialer(params Params) *TLSDialer {
-	dialer := params.Dialer
+func NewTLSDialer(p Params) *TLSDialer {
+	dialer := p.Dialer
 	if dialer == nil {
 		dialer = (&net.Dialer{
 			Timeout: defaultDialTimeout,
 		}).DialContext
 	}
+	observer := tlsmetrics.NewObserver(tlsmetrics.Params{
+		Meter:         p.Meter,
+		Logger:        p.Logger,
+		ServiceName:   p.ServiceName,
+		TransportName: p.TransportName,
+		Dest:          p.Dest,
+		Direction:     "outbound",
+		Mode:          yarpctls.Enforced,
+	})
 	return &TLSDialer{
-		config: params.Config,
-		dialer: dialer,
+		config:   p.Config,
+		dialer:   dialer,
+		observer: observer,
+		logger:   p.Logger,
 	}
 }
 
@@ -68,6 +91,7 @@ func NewTLSDialer(params Params) *TLSDialer {
 func (t *TLSDialer) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
 	conn, err := t.dialer(ctx, network, addr)
 	if err != nil {
+		t.logger.Error("failed to dial connection", zap.Error(err))
 		return nil, err
 	}
 
@@ -75,10 +99,11 @@ func (t *TLSDialer) DialContext(ctx context.Context, network, addr string) (net.
 	ctx, cancel := context.WithTimeout(ctx, defaultHandshakeTimeout)
 	defer cancel()
 	if err := tlsConn.HandshakeContext(ctx); err != nil {
-		// TODO: emit metric to track handshake error.
+		t.logger.Error("failed to complete TLS handshake", zap.Error(err))
+		t.observer.IncTLSHandshakeFailures()
 		return nil, err
 	}
 
-	// TODO: emit metric to track successful handshake and TLS version.
+	t.observer.IncTLSConnections(tlsConn.ConnectionState().Version)
 	return tlsConn, nil
 }
