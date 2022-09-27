@@ -18,7 +18,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
+/*
+Package main provides a protoc plugin that generates code for the protobuf encoding for YARPC.
+To use:
+	go get github.com/golang/protobuf/protoc-gen-go
+	go get go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go-v2
+	protoc --go_out=plugins=grpc:. foo.proto
+	protoc --yarpc-go-v2_out=. foo.proto
+*/
+package main
 
-// Version is the current version of YARPC.
-const Version = "1.65.0"
+import (
+	"log"
+	"os"
+
+	"go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go-v2/internal/lib"
+	"go.uber.org/yarpc/internal/protoplugin"
+)
+
+func main() {
+	if err := protoplugin.Do(lib.Runner, os.Stdin, os.Stdout); err != nil {
+		log.Fatal(err)
+	}
+}

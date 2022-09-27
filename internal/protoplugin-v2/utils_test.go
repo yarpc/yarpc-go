@@ -18,7 +18,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
+package protopluginv2
 
-// Version is the current version of YARPC.
-const Version = "1.65.0"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestGoCamelCase(t *testing.T) {
+	tests := []struct {
+		Arg        string
+		WantOutput string
+	}{
+		{"", ""},
+		{"one", "One"},
+		{"one_two", "OneTwo"},
+		{"One_Two", "One_Two"},
+		{"my_Name", "My_Name"},
+		{"OneTwo", "OneTwo"},
+		{"one.two", "OneTwo"},
+		{"one.Two", "One_Two"},
+		{"one_two.three_four", "OneTwoThreeFour"},
+		{"one_two.Three_four", "OneTwo_ThreeFour"},
+		{"ONE_TWO", "ONE_TWO"},
+		{"one__two", "One_Two"},
+		{"camelCase", "CamelCase"},
+		{"go2proto", "Go2Proto"},
+	}
+
+	for _, test := range tests {
+		camelCase := goCamelCase(test.Arg)
+		assert.Equal(t, camelCase, test.WantOutput)
+	}
+}

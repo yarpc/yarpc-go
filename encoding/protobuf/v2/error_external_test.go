@@ -18,7 +18,32 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
+package v2_test
 
-// Version is the current version of YARPC.
-const Version = "1.65.0"
+import (
+	"fmt"
+	"testing"
+
+	"github.com/golang/protobuf/ptypes/wrappers"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/encoding/protobuf/v2"
+	"go.uber.org/yarpc/yarpcerrors"
+	"google.golang.org/protobuf/proto"
+)
+
+func TestGetDetailsFromWrappedError(t *testing.T) {
+	errDetail := &wrappers.BytesValue{Value: []byte("err detail bytes")}
+
+	pbErr := v2.NewError(
+		yarpcerrors.CodeAborted,
+		"aborted",
+		v2.WithErrorDetails(errDetail))
+
+	wrappedErr := fmt.Errorf("wrapped err 2: %w", fmt.Errorf("wrapped err 1: %w", pbErr))
+
+	details := v2.GetErrorDetails(wrappedErr)
+	require.Len(t, details, 1, "expected exactly one detail")
+	errDet := details[0].(proto.Message)
+	assert.True(t, proto.Equal(errDetail, errDet), "unexpected detail")
+}

@@ -4,8 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-- No changes yet.
+## [1.65.0] - 2022-09-26
+### Added
+- protoc-gen-yarpc-go-v2: Added new yarpc proto plugin `protoc-gen-yarpc-go-v2`. `protoc-gen-yarpc-go-v2`
+  generated yarpc protobuf code is compatible with golang protobuf v2 apis.
 
 ## [1.64.0] - 2022-09-12
 ### Added
@@ -420,14 +422,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 - Using a `http.Outbound` previously leaked implementation details that it was using a
-    `*http.Client` underneath, when attempting to cast a `http.Outbound` into a `http.RoundTripper`
+  `*http.Client` underneath, when attempting to cast a `http.Outbound` into a `http.RoundTripper`
 
 ## [1.34.0] - 2018-10-03
 ### Added
 - Adds `thrift.Named` option for appropriately labelling procedures inherited
   from other thrift services.
 - The HTTP protocol now marks peers as unavailable immediately when the remote
-side closes the connection.
+  side closes the connection.
 
 ### Fixed
 - Calling extended Thrift service procedures previously called the base service's
@@ -860,7 +862,7 @@ Experimental:
   building `yarpc.Config` and `yarpc.Dispatcher` objects from YAML and
   arbitrary `map[string]interface{}` objects. Check the package documentation
   for more information.
--	tchannel: mask existing procedures with provided procedures.
+- tchannel: mask existing procedures with provided procedures.
 - Adds a peer.Bind function that takes a peer.ChooserList and a binder
   (anything that binds a peer list to a peer provider and returns the
   Lifecycle of the binding), and returns a peer.Chooser that combines
@@ -902,7 +904,7 @@ Experimental:
 - Relaxed version constraint for `jaeger-client-go` to `>= 1, < 3`.
 - TChannel transport now supports procedures with a different service name
   than the default taken from the dispatcher. This brings the TChannel
-	transport up to par with HTTP.
+  transport up to par with HTTP.
 
 
 ## [1.3.0] - 2017-02-06
@@ -1439,7 +1441,7 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.64.0...HEAD
+[1.65.0]: https://github.com/yarpc/yarpc-go/compare/v1.64.0...v1.65.0
 [1.64.0]: https://github.com/yarpc/yarpc-go/compare/v1.63.0...v1.64.0
 [1.63.0]: https://github.com/yarpc/yarpc-go/compare/v1.62.0...v1.63.0
 [1.62.0]: https://github.com/yarpc/yarpc-go/compare/v1.61.0...v1.62.0
