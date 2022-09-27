@@ -16,6 +16,7 @@ coverage:
 ignore:
  - /api/transport/tls/
  - /encoding/protobuf/internal/testpb/
+ - /encoding/protobuf/internal/testpb/v2/
  - /encoding/thrift/internal/
  - /encoding/thrift/internal/observabilitytest/test/
  - /encoding/thrift/internal/observabilitytest/test/testserviceclient/

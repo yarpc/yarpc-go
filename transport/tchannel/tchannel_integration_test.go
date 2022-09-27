@@ -36,7 +36,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/peer"
-	"go.uber.org/yarpc/transport/internal/tlsscenario"
+	"go.uber.org/yarpc/transport/internal/tls/testscenario"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/x/yarpctest"
 	"go.uber.org/yarpc/x/yarpctest/api"
@@ -105,7 +105,7 @@ func TestDialerOption(t *testing.T) {
 }
 
 func TestInboundTLS(t *testing.T) {
-	scenario := tlsscenario.Create(t, time.Minute, time.Minute)
+	scenario := testscenario.Create(t, time.Minute, time.Minute)
 	serverCreds := &tls.Config{
 		GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
 			return &tls.Certificate{

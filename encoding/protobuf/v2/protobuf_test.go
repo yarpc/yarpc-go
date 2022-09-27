@@ -18,7 +18,48 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
+package v2
 
-// Version is the current version of YARPC.
-const Version = "1.65.0"
+import (
+	"reflect"
+	"sort"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc/yarpcerrors"
+)
+
+func TestCastError(t *testing.T) {
+	assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.FromError(CastError(nil, nil)).Code())
+}
+
+func TestClientBuilderOptions(t *testing.T) {
+	assert.Nil(t, ClientBuilderOptions(nil, reflect.StructField{Tag: `service:"keyvalue"`}))
+	assert.Equal(t, []ClientOption{UseJSON}, ClientBuilderOptions(nil, reflect.StructField{Tag: `service:"keyvalue" proto:"json"`}))
+}
+
+func TestUniqueLowercaseStrings(t *testing.T) {
+	tests := []struct {
+		give []string
+		want []string
+	}{
+		{
+			give: []string{"foo", "bar", "baz"},
+			want: []string{"foo", "bar", "baz"},
+		},
+		{
+			give: []string{"foo", "BAR", "bAz"},
+			want: []string{"foo", "bar", "baz"},
+		},
+		{
+			give: []string{"foo", "BAR", "bAz", "bar"},
+			want: []string{"foo", "bar", "baz"},
+		},
+	}
+	for _, tt := range tests {
+		got := uniqueLowercaseStrings(tt.give)
+		sort.Strings(tt.want)
+		sort.Strings(got)
+		assert.Equal(t, tt.want, got)
+	}
+}

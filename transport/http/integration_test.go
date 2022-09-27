@@ -38,13 +38,13 @@ import (
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/internal/clientconfig"
 	pkgerrors "go.uber.org/yarpc/pkg/errors"
-	"go.uber.org/yarpc/transport/internal/tlsscenario"
+	"go.uber.org/yarpc/transport/internal/tls/testscenario"
 )
 
 func TestInboundTLS(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	scenario := tlsscenario.Create(t, time.Minute, time.Minute)
+	scenario := testscenario.Create(t, time.Minute, time.Minute)
 	serverTLSConfig := &tls.Config{
 		GetCertificate: func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
 			return &tls.Certificate{

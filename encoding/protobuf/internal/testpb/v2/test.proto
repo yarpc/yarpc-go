@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package uber.yarpc.encoding.protobuf;
+
+option go_package = "encoding/protobuf/internal/testpb/v2;testpb";
+
+message TestMessage {
+  string value = 1;
+}
+
+service Test {
+  rpc Unary(TestMessage) returns (TestMessage);
+  rpc Duplex(stream TestMessage) returns (stream TestMessage);
+}
