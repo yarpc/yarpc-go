@@ -51,22 +51,6 @@ func TestDialer(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			root := metrics.New()
 			serverTLSConfig, clientTLSConfig := tlsConfigs(t)
-			params := Params{
-				Config:        clientTLSConfig,
-				Meter:         root.Scope(),
-				Logger:        zap.NewNop(),
-				ServiceName:   "test-svc",
-				TransportName: "test-transport",
-				Dest:          "test-dest",
-			}
-			calledCustomDialer := false
-			if tt.withCustomDialer {
-				params.Dialer = func(ctx context.Context, network, address string) (net.Conn, error) {
-					calledCustomDialer = true
-					return (&net.Dialer{}).DialContext(ctx, network, address)
-				}
-			}
-			dialer := NewTLSDialer(params)
 			lis, err := net.Listen("tcp", "localhost:0")
 			require.NoError(t, err)
 			var wg sync.WaitGroup
@@ -92,6 +76,23 @@ func TestDialer(t *testing.T) {
 				assert.NoError(t, err)
 			}()
 
+			params := Params{
+				Config:        clientTLSConfig,
+				Meter:         root.Scope(),
+				Logger:        zap.NewNop(),
+				ServiceName:   "test-svc",
+				TransportName: "test-transport",
+				Dest:          "test-dest",
+			}
+			// used for assertion whether passed custom dialer is used.
+			var customDialerInvoked bool
+			if tt.withCustomDialer {
+				params.Dialer = func(ctx context.Context, network, address string) (net.Conn, error) {
+					customDialerInvoked = true
+					return (&net.Dialer{}).DialContext(ctx, network, address)
+				}
+			}
+			dialer := NewTLSDialer(params)
 			conn, err := dialer.DialContext(context.Background(), "tcp", lis.Addr().String())
 			if tt.shouldFailHandshake {
 				require.Error(t, err)
@@ -105,7 +106,7 @@ func TestDialer(t *testing.T) {
 
 			n, err := conn.Write([]byte(tt.data))
 			require.NoError(t, err)
-			assert.Equal(t, len(tt.data), n)
+			assert.Len(t, tt.data, n)
 
 			buf := make([]byte, len(tt.data))
 			_, err = conn.Read(buf)
@@ -113,7 +114,7 @@ func TestDialer(t *testing.T) {
 			assert.Equal(t, tt.data, string(buf))
 			assertMetrics(t, root, false)
 			if tt.withCustomDialer {
-				assert.True(t, calledCustomDialer)
+				assert.True(t, customDialerInvoked)
 			}
 		})
 	}
