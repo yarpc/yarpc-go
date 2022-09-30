@@ -43,7 +43,9 @@ type Params struct {
 	Dialer func(ctx context.Context, network, address string) (net.Conn, error)
 }
 
-// TLSDialer implements context dialer.
+// TLSDialer implements context dialer which creates TLS client connection
+// and completes handshake using the connection created from underlying
+// dialer.
 type TLSDialer struct {
 	config *tls.Config
 	dialer func(ctx context.Context, network, address string) (net.Conn, error)
