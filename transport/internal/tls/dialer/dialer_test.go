@@ -121,30 +121,23 @@ func TestDialer(t *testing.T) {
 }
 
 func assertMetrics(t *testing.T, root *metrics.Root, handshakeFailure bool) {
-	var expectedCounter metrics.Snapshot
-	expectedTags := metrics.Tags{
-		"service":   "test-svc",
-		"transport": "test-transport",
-		"component": "yarpc",
-		"mode":      "Enforced",
-		"direction": "outbound",
-		"dest":      "test-dest",
+	expectedCounter := metrics.Snapshot{
+		Tags: metrics.Tags{
+			"service":   "test-svc",
+			"transport": "test-transport",
+			"component": "yarpc",
+			"mode":      "Enforced",
+			"direction": "outbound",
+			"dest":      "test-dest",
+		},
+		Value: 1,
 	}
 	if handshakeFailure {
-		expectedCounter = metrics.Snapshot{
-			Name:  "tls_handshake_failures",
-			Tags:  expectedTags,
-			Value: 1,
-		}
+		expectedCounter.Name = "tls_handshake_failures"
 	} else {
-		expectedTags["version"] = "1.3"
-		expectedCounter = metrics.Snapshot{
-			Name:  "tls_connections",
-			Tags:  expectedTags,
-			Value: 1,
-		}
+		expectedCounter.Tags["version"] = "1.3"
+		expectedCounter.Name = "tls_connections"
 	}
-
 	assert.Contains(t, root.Snapshot().Counters, expectedCounter)
 }
 

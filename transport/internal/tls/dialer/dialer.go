@@ -40,6 +40,7 @@ const (
 	// HTTP transport uses default handshake timeout of 10s.
 	// Ref: https://github.com/golang/go/blob/f78efc0178d51c02beff8a8203910dc0a9c6e953/src/net/http/transport.go#L52
 	defaultHandshakeTimeout = time.Second * 10
+	directionName           = "outbound"
 )
 
 // Params holds parameters needed for creating new TLSDialer.
@@ -78,7 +79,7 @@ func NewTLSDialer(p Params) *TLSDialer {
 		ServiceName:   p.ServiceName,
 		TransportName: p.TransportName,
 		Dest:          p.Dest,
-		Direction:     "outbound",
+		Direction:     directionName,
 		Mode:          yarpctls.Enforced,
 	})
 	return &TLSDialer{
