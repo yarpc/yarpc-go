@@ -376,7 +376,7 @@ func (t *transportSpec) buildOutbound(outboundConfig *OutboundConfig, tr transpo
 	}
 
 	opts := append(dialOpts, t.DialOptions...)
-	dialer := trans.NewDialer(append([]DialOption{DialerDestinationServiceName(kit.ServiceName())}, opts...)...)
+	dialer := trans.NewDialer(append([]DialOption{DialerDestinationServiceName(kit.OutboundServiceName())}, opts...)...)
 	var chooser peer.Chooser
 	if outboundConfig.Empty() {
 		if outboundConfig.Address == "" {

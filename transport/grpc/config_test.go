@@ -628,6 +628,7 @@ func TestTransportSpec(t *testing.T) {
 					require.True(t, ok, "expected *Dialer, got %T", single.Transport())
 					assert.Equal(t, wantOutbound.TLS, dialer.options.creds != nil)
 					assert.Equal(t, wantOutbound.TLSConfig, dialer.options.tlsConfig != nil)
+					assert.Equal(t, svc, dialer.options.destServiceName)
 					if wantOutbound.WantCustomContextDialer {
 						assert.NotNil(t, dialer.options.contextDialer, "expected custom context dialer")
 					}
