@@ -225,12 +225,16 @@ func DialerCredentials(creds credentials.TransportCredentials) DialOption {
 	}
 }
 
+// DialerTLSConfig return a DialOption which configures the TLS config for the
+// outbound.
 func DialerTLSConfig(config *tls.Config) DialOption {
 	return func(dialOptions *dialOptions) {
 		dialOptions.tlsConfig = config
 	}
 }
 
+// DialerDestinationServiceName returns a DialOption which configures the
+// destination service name of the dialer. This is used in TLS dialer metrics.
 func DialerDestinationServiceName(service string) DialOption {
 	return func(dialOptions *dialOptions) {
 		dialOptions.destServiceName = service
