@@ -111,13 +111,11 @@ func (b *builder) Build() (yarpc.Config, error) {
 		var err error
 
 		var ob transport.Outbounds
-		outboundServiceName := ccname
 		if c.Service != ccname {
 			ob.ServiceName = c.Service
-			outboundServiceName = c.Service
 		}
 
-		kit := b.kit.withOutboundName(outboundServiceName)
+		kit := b.kit.withOutboundName(c.Service)
 		if o := c.Unary; o != nil {
 			ob.Unary, err = buildUnaryOutbound(o, transports[o.TransportSpec.Name], kit)
 			if err != nil {
