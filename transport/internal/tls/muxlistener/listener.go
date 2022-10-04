@@ -30,6 +30,7 @@ import (
 
 	"go.uber.org/net/metrics"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
+	tlsmetrics "go.uber.org/yarpc/transport/internal/tls/metrics"
 	"go.uber.org/zap"
 )
 
@@ -60,7 +61,7 @@ type listener struct {
 	net.Listener
 
 	tlsConfig *tls.Config
-	observer  *observer
+	observer  *tlsmetrics.Observer
 	logger    *zap.Logger
 	mode      yarpctls.Mode
 
@@ -77,10 +78,19 @@ func NewListener(c Config) net.Listener {
 		return c.Listener
 	}
 
+	observer := tlsmetrics.NewObserver(tlsmetrics.Params{
+		Meter:         c.Meter,
+		Logger:        c.Logger,
+		ServiceName:   c.ServiceName,
+		TransportName: c.TransportName,
+		Mode:          c.Mode,
+		Direction:     "inbound",
+	})
+
 	lis := &listener{
 		Listener:    c.Listener,
 		tlsConfig:   c.TLSConfig,
-		observer:    newObserver(c.Meter, c.Logger, c.ServiceName, c.TransportName, c.Mode),
+		observer:    observer,
 		logger:      c.Logger,
 		connChan:    make(chan net.Conn),
 		stoppedChan: make(chan struct{}),
@@ -190,17 +200,17 @@ func (l *listener) handleTLSConn(ctx context.Context, conn net.Conn) (net.Conn, 
 
 	tlsConn := tls.Server(conn, l.tlsConfig)
 	if err := tlsConn.HandshakeContext(ctx); err != nil {
-		l.observer.incTLSHandshakeFailures()
+		l.observer.IncTLSHandshakeFailures()
 		l.logger.Error("TLS handshake failed", zap.Error(err))
 		return nil, err
 	}
 
-	l.observer.incTLSConnections(tlsConn.ConnectionState().Version)
+	l.observer.IncTLSConnections(tlsConn.ConnectionState().Version)
 	return tlsConn, nil
 }
 
 func (l *listener) handlePlaintextConn(conn net.Conn) (net.Conn, error) {
-	l.observer.incPlaintextConnections()
+	l.observer.IncPlaintextConnections()
 	return conn, nil
 }
 
