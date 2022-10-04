@@ -146,7 +146,8 @@ func (r *_transportSpecRecorder) BuildStreamOutbound(cfg interface{}, t transpor
 
 // kitMatcher matches attributes of a kit
 type kitMatcher struct {
-	ServiceName string
+	ServiceName         string
+	OutboundServiceName string
 }
 
 func (m kitMatcher) Matches(x interface{}) bool {
@@ -155,9 +156,9 @@ func (m kitMatcher) Matches(x interface{}) bool {
 		return false
 	}
 
-	return k.ServiceName() == m.ServiceName
+	return k.ServiceName() == m.ServiceName && k.OutboundServiceName() == m.OutboundServiceName
 }
 
 func (m kitMatcher) String() string {
-	return fmt.Sprintf("kit{name: %q}", m.ServiceName)
+	return fmt.Sprintf("kit{name: %q, outboundName: %q}", m.ServiceName, m.OutboundServiceName)
 }
