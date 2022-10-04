@@ -589,6 +589,44 @@ func TestMuxTLS(t *testing.T) {
 	}
 }
 
+func TestOutboundTLS(t *testing.T) {
+	defer goleak.VerifyNone(t)
+	scenario := testscenario.Create(t, time.Minute, time.Minute)
+	serverCreds := &tls.Config{
+		GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
+			return &tls.Certificate{
+				Certificate: [][]byte{scenario.ServerCert.Raw},
+				Leaf:        scenario.ServerCert,
+				PrivateKey:  scenario.ServerKey,
+			}, nil
+		},
+		ClientAuth: tls.RequireAndVerifyClientCert,
+		ClientCAs:  scenario.CAs,
+	}
+	clientCreds := &tls.Config{
+		GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+			return &tls.Certificate{
+				Certificate: [][]byte{scenario.ClientCert.Raw},
+				Leaf:        scenario.ClientCert,
+				PrivateKey:  scenario.ClientKey,
+			}, nil
+		},
+		ServerName: "127.0.0.1",
+		RootCAs:    scenario.CAs,
+	}
+	te := testEnvOptions{
+		InboundOptions: []InboundOption{InboundTLSConfiguration(serverCreds), InboundTLSMode(yarpctls.Permissive)},
+		DialOptions:    []DialOption{DialerTLSConfig(clientCreds)},
+	}
+	te.do(t, func(t *testing.T, e *testEnv) {
+		err := e.SetValueYARPC(context.Background(), "foo", "bar")
+		assert.NoError(t, err)
+
+		err = e.SetValueGRPC(context.Background(), "foo", "bar")
+		assert.NoError(t, err)
+	})
+}
+
 type metricCollection struct {
 	metrics []metric
 }
@@ -817,7 +855,7 @@ func newTestEnv(
 
 	var clientConn *grpc.ClientConn
 
-	clientConn, err = grpc.Dial(listener.Addr().String(), newDialOptions(dialOptions).grpcOptions()...)
+	clientConn, err = grpc.Dial(listener.Addr().String(), newDialOptions(dialOptions).grpcOptions(trans)...)
 	if err != nil {
 		return nil, err
 	}

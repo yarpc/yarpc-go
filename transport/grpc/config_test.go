@@ -22,7 +22,10 @@ package grpc
 
 import (
 	"context"
+	"crypto/tls"
+	"errors"
 	"net"
+	"reflect"
 	"testing"
 	"time"
 
@@ -87,6 +90,21 @@ func TestTransportSpecUnknownOption(t *testing.T) {
 	assert.Panics(t, func() { TransportSpec(testOption{}) })
 }
 
+type fakeOutboundTLSConfigProvider struct {
+	returnErr         error
+	expectedSpiffeIDs []string
+}
+
+func (f fakeOutboundTLSConfigProvider) ClientTLSConfig(spiffeIDs ...string) (*tls.Config, error) {
+	if f.returnErr != nil {
+		return nil, f.returnErr
+	}
+	if !reflect.DeepEqual(f.expectedSpiffeIDs, spiffeIDs) {
+		return nil, errors.New("spiffe IDs do not match")
+	}
+	return &tls.Config{}, nil
+}
+
 func TestTransportSpec(t *testing.T) {
 	type attrs map[string]interface{}
 
@@ -108,6 +126,7 @@ func TestTransportSpec(t *testing.T) {
 		Compressor              string
 		WantCustomContextDialer bool
 		Keepalive               *keepalive.ClientParameters
+		TLSConfig               bool
 	}
 
 	type test struct {
@@ -429,6 +448,90 @@ func TestTransportSpec(t *testing.T) {
 				},
 			},
 		},
+		{
+			desc: "simple TLS outbound",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54569",
+						"tls": attrs{
+							"mode":       yarpctls.Enforced,
+							"spiffe-ids": []string{"spiffe-test-1"},
+						},
+					},
+				},
+			},
+			opts: []Option{OutboundTLSConfigProvider(&fakeOutboundTLSConfigProvider{
+				expectedSpiffeIDs: []string{"spiffe-test-1"},
+			})},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {
+					Address:   "localhost:54569",
+					TLSConfig: true,
+				},
+			},
+		},
+		{
+			desc: "fail TLS outbound without spiffe id",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54569",
+						"tls": attrs{
+							"mode": yarpctls.Enforced,
+						},
+					},
+				},
+			},
+			opts:       []Option{OutboundTLSConfigProvider(&fakeOutboundTLSConfigProvider{})},
+			wantErrors: []string{"outbound TLS enforced but no spiffe id is provided"},
+		},
+		{
+			desc: "fail TLS outbound with invalid tls mode",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54569",
+						"tls": attrs{
+							"mode": yarpctls.Permissive,
+						},
+					},
+				},
+			},
+			opts:       []Option{OutboundTLSConfigProvider(&fakeOutboundTLSConfigProvider{})},
+			wantErrors: []string{"outbound does not support permissive TLS mode"},
+		},
+		{
+			desc: "fail TLS outbound when tls config provider returns error",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54569",
+						"tls": attrs{
+							"mode":       yarpctls.Enforced,
+							"spiffe-ids": []string{"test-spiffe"},
+						},
+					},
+				},
+			},
+			opts:       []Option{OutboundTLSConfigProvider(&fakeOutboundTLSConfigProvider{returnErr: errors.New("test error")})},
+			wantErrors: []string{"test error"},
+		},
+		{
+			desc: "fail TLS outbound without outbound tls config provider",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"address": "localhost:54569",
+						"tls": attrs{
+							"mode":       yarpctls.Enforced,
+							"spiffe-ids": []string{"test-spiffe"},
+						},
+					},
+				},
+			},
+			wantErrors: []string{"outbound TLS enforced but outbound TLS config provider is nil"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -524,6 +627,7 @@ func TestTransportSpec(t *testing.T) {
 					dialer, ok := single.Transport().(*Dialer)
 					require.True(t, ok, "expected *Dialer, got %T", single.Transport())
 					assert.Equal(t, wantOutbound.TLS, dialer.options.creds != nil)
+					assert.Equal(t, wantOutbound.TLSConfig, dialer.options.tlsConfig != nil)
 					if wantOutbound.WantCustomContextDialer {
 						assert.NotNil(t, dialer.options.contextDialer, "expected custom context dialer")
 					}

@@ -265,7 +265,7 @@ func (b *builder) AddUnaryOutbound(
 	}
 
 	b.needTransport(spec)
-	cv, err := spec.UnaryOutbound.Decode(attrs, config.InterpolateWith(b.kit.resolver))
+	cv, err := spec.UnaryOutbound.Decode(attrs, config.InterpolateWith(b.kit.resolver), mapdecode.DecodeHook(tlsModeDecodeHook))
 	if err != nil {
 		return fmt.Errorf("failed to decode unary outbound configuration: %v", err)
 	}
@@ -311,7 +311,7 @@ func (b *builder) AddStreamOutbound(
 	}
 
 	b.needTransport(spec)
-	cv, err := spec.StreamOutbound.Decode(attrs, config.InterpolateWith(b.kit.resolver))
+	cv, err := spec.StreamOutbound.Decode(attrs, config.InterpolateWith(b.kit.resolver), mapdecode.DecodeHook(tlsModeDecodeHook))
 	if err != nil {
 		return fmt.Errorf("failed to decode stream outbound configuration: %v", err)
 	}

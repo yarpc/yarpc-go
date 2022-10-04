@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	intbackoff "go.uber.org/yarpc/internal/backoff"
+	"go.uber.org/yarpc/transport/internal/tls/dialer"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -203,6 +204,14 @@ type OutboundOption func(*outboundOptions)
 
 func (OutboundOption) grpcOption() {}
 
+// OutboundTLSConfigProvider returns an OutboundOption that provides the
+// outbound TLS config provider.
+func OutboundTLSConfigProvider(provider yarpctls.OutboundTLSConfigProvider) OutboundOption {
+	return func(outboundOptions *outboundOptions) {
+		outboundOptions.tlsConfigProvider = provider
+	}
+}
+
 // DialOption is an option that influences grpc.Dial.
 type DialOption func(*dialOptions)
 
@@ -213,6 +222,18 @@ func (DialOption) grpcOption() {}
 func DialerCredentials(creds credentials.TransportCredentials) DialOption {
 	return func(dialOptions *dialOptions) {
 		dialOptions.creds = creds
+	}
+}
+
+func DialerTLSConfig(config *tls.Config) DialOption {
+	return func(dialOptions *dialOptions) {
+		dialOptions.tlsConfig = config
+	}
+}
+
+func DialerDestinationServiceName(service string) DialOption {
+	return func(dialOptions *dialOptions) {
+		dialOptions.destServiceName = service
 	}
 }
 
@@ -297,7 +318,9 @@ func newInboundOptions(options []InboundOption) *inboundOptions {
 	return inboundOptions
 }
 
-type outboundOptions struct{}
+type outboundOptions struct {
+	tlsConfigProvider yarpctls.OutboundTLSConfigProvider
+}
 
 func newOutboundOptions(options []OutboundOption) *outboundOptions {
 	outboundOptions := &outboundOptions{}
@@ -312,9 +335,11 @@ type dialOptions struct {
 	contextDialer     func(context.Context, string) (net.Conn, error)
 	defaultCompressor string
 	keepaliveParams   *keepalive.ClientParameters
+	tlsConfig         *tls.Config
+	destServiceName   string
 }
 
-func (d *dialOptions) grpcOptions() []grpc.DialOption {
+func (d *dialOptions) grpcOptions(t *Transport) []grpc.DialOption {
 	credsOption := grpc.WithInsecure()
 	if d.creds != nil {
 		credsOption = grpc.WithTransportCredentials(d.creds)
@@ -322,7 +347,6 @@ func (d *dialOptions) grpcOptions() []grpc.DialOption {
 
 	opts := []grpc.DialOption{
 		credsOption,
-		grpc.WithContextDialer(d.contextDialer),
 	}
 
 	if d.defaultCompressor != "" {
@@ -331,6 +355,29 @@ func (d *dialOptions) grpcOptions() []grpc.DialOption {
 
 	if d.keepaliveParams != nil {
 		opts = append(opts, grpc.WithKeepaliveParams(*d.keepaliveParams))
+	}
+
+	if d.tlsConfig != nil {
+		params := dialer.Params{
+			Config:        d.tlsConfig,
+			Meter:         t.options.meter,
+			Logger:        t.options.logger,
+			ServiceName:   t.options.serviceName,
+			TransportName: TransportName,
+			Dest:          d.destServiceName,
+		}
+
+		if d.contextDialer != nil {
+			params.Dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
+				return d.contextDialer(ctx, addr)
+			}
+		}
+		tlsDialer := dialer.NewTLSDialer(params)
+		opts = append(opts, grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+			return tlsDialer.DialContext(ctx, "tcp", addr)
+		}))
+	} else if d.contextDialer != nil {
+		opts = append(opts, grpc.WithContextDialer(d.contextDialer))
 	}
 
 	return opts
