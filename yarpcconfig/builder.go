@@ -111,26 +111,29 @@ func (b *builder) Build() (yarpc.Config, error) {
 		var err error
 
 		var ob transport.Outbounds
+		outboundServiceName := ccname
 		if c.Service != ccname {
 			ob.ServiceName = c.Service
+			outboundServiceName = c.Service
 		}
 
+		kit := b.kit.withOutboundName(outboundServiceName)
 		if o := c.Unary; o != nil {
-			ob.Unary, err = buildUnaryOutbound(o, transports[o.TransportSpec.Name], b.kit)
+			ob.Unary, err = buildUnaryOutbound(o, transports[o.TransportSpec.Name], kit)
 			if err != nil {
 				errs = multierr.Append(errs, fmt.Errorf(`failed to configure unary outbound for %q: %v`, ccname, err))
 				continue
 			}
 		}
 		if o := c.Oneway; o != nil {
-			ob.Oneway, err = buildOnewayOutbound(o, transports[o.TransportSpec.Name], b.kit)
+			ob.Oneway, err = buildOnewayOutbound(o, transports[o.TransportSpec.Name], kit)
 			if err != nil {
 				errs = multierr.Append(errs, fmt.Errorf(`failed to configure oneway outbound for %q: %v`, ccname, err))
 				continue
 			}
 		}
 		if o := c.Stream; o != nil {
-			ob.Stream, err = buildStreamOutbound(o, transports[o.TransportSpec.Name], b.kit)
+			ob.Stream, err = buildStreamOutbound(o, transports[o.TransportSpec.Name], kit)
 			if err != nil {
 				errs = multierr.Append(errs, fmt.Errorf(`failed to configure stream outbound for %q: %v`, ccname, err))
 				continue
