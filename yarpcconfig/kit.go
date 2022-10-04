@@ -38,6 +38,10 @@ type Kit struct {
 
 	name string
 
+	// outboundName is the name of the outbound. It is set in the Kit used for
+	// building outbound.
+	outboundName string
+
 	// Used to resolve interpolated variables.
 	resolver interpolate.VariableResolver
 
@@ -52,9 +56,20 @@ func (k *Kit) withTransportSpec(spec *compiledTransportSpec) *Kit {
 	return &newK
 }
 
+// Returns a shallow copy of this Kit with outbound name set to given value.
+func (k *Kit) withOutboundName(name string) *Kit {
+	newK := *k
+	newK.outboundName = name
+	return &newK
+}
+
 // ServiceName returns the name of the service for which components are being
 // built.
 func (k *Kit) ServiceName() string { return k.name }
+
+// OutboundServiceName returns the name of the service for which outbound is
+// being built.
+func (k *Kit) OutboundServiceName() string { return k.outboundName }
 
 var _typeOfKit = reflect.TypeOf((*Kit)(nil))
 
