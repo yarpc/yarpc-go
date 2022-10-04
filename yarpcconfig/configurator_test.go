@@ -1053,7 +1053,7 @@ func TestConfigurator(t *testing.T) {
 					BuildUnaryOutbound(
 						&outboundConfig{Address: "localhost:4040"},
 						transport,
-						kitMatcher{ServiceName: "foo"}).
+						kitMatcher{ServiceName: "foo", OutboundServiceName: "bar"}).
 					Return(outbound, nil)
 
 				tt.specs = []TransportSpec{tchan.Spec()}
@@ -1103,7 +1103,7 @@ func TestConfigurator(t *testing.T) {
 					BuildOnewayOutbound(
 						&outboundConfig{Queue: "requests"},
 						transport,
-						kitMatcher{ServiceName: "foo"}).
+						kitMatcher{ServiceName: "foo", OutboundServiceName: "bar"}).
 					Return(outbound, nil)
 
 				tt.specs = []TransportSpec{redis.Spec()}
@@ -1153,7 +1153,7 @@ func TestConfigurator(t *testing.T) {
 					BuildStreamOutbound(
 						&outboundConfig{Queue: "requests"},
 						transport,
-						kitMatcher{ServiceName: "foo"}).
+						kitMatcher{ServiceName: "foo", OutboundServiceName: "bar"}).
 					Return(outbound, nil)
 
 				tt.specs = []TransportSpec{redis.Spec()}
@@ -1206,13 +1206,13 @@ func TestConfigurator(t *testing.T) {
 
 				outcfg := outboundConfig{URL: "http://localhost:8080/yarpc"}
 				http.EXPECT().
-					BuildUnaryOutbound(&outcfg, transport, kitMatcher{ServiceName: "foo"}).
+					BuildUnaryOutbound(&outcfg, transport, kitMatcher{ServiceName: "foo", OutboundServiceName: "baz"}).
 					Return(unary, nil)
 				http.EXPECT().
-					BuildOnewayOutbound(&outcfg, transport, kitMatcher{ServiceName: "foo"}).
+					BuildOnewayOutbound(&outcfg, transport, kitMatcher{ServiceName: "foo", OutboundServiceName: "baz"}).
 					Return(oneway, nil)
 				http.EXPECT().
-					BuildStreamOutbound(&outcfg, transport, kitMatcher{ServiceName: "foo"}).
+					BuildStreamOutbound(&outcfg, transport, kitMatcher{ServiceName: "foo", OutboundServiceName: "baz"}).
 					Return(stream, nil)
 
 				tt.specs = []TransportSpec{http.Spec()}
@@ -1331,26 +1331,26 @@ func TestConfigurator(t *testing.T) {
 					BuildUnaryOutbound(
 						httpOutboundConfig{URL: "http://localhost:8080/yarpc/v1"},
 						httpTransport,
-						kitMatcher{ServiceName: "myservice"}).
+						kitMatcher{ServiceName: "myservice", OutboundServiceName: "foo"}).
 					Return(httpUnary, nil)
 				http.EXPECT().
 					BuildOnewayOutbound(
 						httpOutboundConfig{URL: "http://localhost:8081/yarpc/v2"},
 						httpTransport,
-						kitMatcher{ServiceName: "myservice"}).
+						kitMatcher{ServiceName: "myservice", OutboundServiceName: "foo"}).
 					Return(httpOneway, nil)
 				http.EXPECT().
 					BuildStreamOutbound(
 						httpOutboundConfig{URL: "http://localhost:8081/yarpc/v3"},
 						httpTransport,
-						kitMatcher{ServiceName: "myservice"}).
+						kitMatcher{ServiceName: "myservice", OutboundServiceName: "foo"}).
 					Return(httpStream, nil)
 
 				redis.EXPECT().
 					BuildOnewayOutbound(
 						redisOutboundConfig{Queue: "requests"},
 						redisTransport,
-						kitMatcher{ServiceName: "myservice"}).
+						kitMatcher{ServiceName: "myservice", OutboundServiceName: "bar"}).
 					Return(redisOneway, nil)
 
 				tt.specs = []TransportSpec{http.Spec(), redis.Spec()}
@@ -1567,26 +1567,26 @@ func TestConfigurator(t *testing.T) {
 					BuildUnaryOutbound(
 						outboundConfig{URL: "http://localhost:8080/bar"},
 						transport,
-						kitMatcher{ServiceName: "foo"}).
+						kitMatcher{ServiceName: "foo", OutboundServiceName: "bar"}).
 					Return(unary, nil)
 				http.EXPECT().
 					BuildOnewayOutbound(
 						outboundConfig{URL: "http://localhost:8080/bar"},
 						transport,
-						kitMatcher{ServiceName: "foo"}).
+						kitMatcher{ServiceName: "foo", OutboundServiceName: "bar"}).
 					Return(oneway, nil)
 
 				http.EXPECT().
 					BuildUnaryOutbound(
 						outboundConfig{URL: "http://localhost:8081/bar"},
 						transport,
-						kitMatcher{ServiceName: "foo"}).
+						kitMatcher{ServiceName: "foo", OutboundServiceName: "bar"}).
 					Return(unaryStaging, nil)
 				http.EXPECT().
 					BuildOnewayOutbound(
 						outboundConfig{URL: "http://localhost:8081/bar"},
 						transport,
-						kitMatcher{ServiceName: "foo"}).
+						kitMatcher{ServiceName: "foo", OutboundServiceName: "bar"}).
 					Return(onewayStaging, nil)
 
 				tt.specs = []TransportSpec{http.Spec()}
@@ -1646,7 +1646,8 @@ func TestConfigurator(t *testing.T) {
 					BuildTransport(transportConfig{ServerAddress: "127.0.0.1:6379"}, kit).
 					Return(transport, nil)
 				redis.EXPECT().
-					BuildOnewayOutbound(outboundConfig{QueueName: "/myservice/inbound"}, transport, kit).
+					BuildOnewayOutbound(outboundConfig{QueueName: "/myservice/inbound"}, transport,
+						kitMatcher{ServiceName: "foo", OutboundServiceName: "myservice"}).
 					Return(oneway, nil)
 
 				tt.specs = []TransportSpec{redis.Spec()}
