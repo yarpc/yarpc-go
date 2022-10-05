@@ -95,7 +95,7 @@ type fakeOutboundTLSConfigProvider struct {
 	expectedSpiffeIDs []string
 }
 
-func (f fakeOutboundTLSConfigProvider) ClientTLSConfig(spiffeIDs ...string) (*tls.Config, error) {
+func (f fakeOutboundTLSConfigProvider) ClientTLSConfig(spiffeIDs []string) (*tls.Config, error) {
 	if f.returnErr != nil {
 		return nil, f.returnErr
 	}

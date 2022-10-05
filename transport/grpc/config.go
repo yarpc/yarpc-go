@@ -205,6 +205,7 @@ func (c OutboundConfig) dialOptions(kit *yarpcconfig.Kit, tlsConfigProvider yarp
 
 // OutboundTLSConfig configures TLS for a gRPC outbound.
 type OutboundTLSConfig struct {
+	// Enabled field is deprecated, use Mode and SpiffeIDs fields instead.
 	Enabled bool `config:"enabled"`
 	// Mode when set to Enforced enables TLS outbound and
 	// outbound TLS configuration providered option will be used for fetching
@@ -229,7 +230,7 @@ func (c OutboundTLSConfig) dialOptions(tlsConfigProvider yarpctls.OutboundTLSCon
 			return nil, errors.New("outbound TLS enforced but no spiffe id is provided")
 		}
 
-		config, err := tlsConfigProvider.ClientTLSConfig(c.SpiffeIDs...)
+		config, err := tlsConfigProvider.ClientTLSConfig(c.SpiffeIDs)
 		if err != nil {
 			return nil, err
 		}

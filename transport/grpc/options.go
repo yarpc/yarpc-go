@@ -361,6 +361,7 @@ func (d *dialOptions) grpcOptions(t *Transport) []grpc.DialOption {
 		opts = append(opts, grpc.WithKeepaliveParams(*d.keepaliveParams))
 	}
 
+	contextDialer := d.contextDialer
 	if d.tlsConfig != nil {
 		params := dialer.Params{
 			Config:        d.tlsConfig,
@@ -377,12 +378,11 @@ func (d *dialOptions) grpcOptions(t *Transport) []grpc.DialOption {
 			}
 		}
 		tlsDialer := dialer.NewTLSDialer(params)
-		opts = append(opts, grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+		contextDialer = func(ctx context.Context, addr string) (net.Conn, error) {
 			return tlsDialer.DialContext(ctx, "tcp", addr)
-		}))
-	} else if d.contextDialer != nil {
-		opts = append(opts, grpc.WithContextDialer(d.contextDialer))
+		}
 	}
+	opts = append(opts, grpc.WithContextDialer(contextDialer))
 
 	return opts
 }

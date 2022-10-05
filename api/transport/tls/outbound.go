@@ -27,5 +27,5 @@ import "crypto/tls"
 type OutboundTLSConfigProvider interface {
 	// ClientTLSConfig returns client TLS config which accepts the provided
 	// server Spiffe IDs.
-	ClientTLSConfig(spiffeIDs ...string) (*tls.Config, error)
+	ClientTLSConfig(spiffeIDs []string) (*tls.Config, error)
 }
