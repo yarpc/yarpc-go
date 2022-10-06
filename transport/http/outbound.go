@@ -207,7 +207,6 @@ type Outbound struct {
 	tracer      opentracing.Tracer
 	transport   *Transport
 	sender      sender
-	client      *http.Client
 
 	// Headers to add to all outgoing requests.
 	headers http.Header
@@ -216,6 +215,7 @@ type Outbound struct {
 
 	// should only be false in testing
 	bothResponseError bool
+	client            *http.Client
 	tlsConfig         *tls.Config
 	destServiceName   string
 }

@@ -467,6 +467,7 @@ func TestTransportSpec(t *testing.T) {
 
 				assert.Equal(t, want.URLTemplate, ob.urlTemplate.String(), "outbound URLTemplate should match")
 				assert.Equal(t, want.Headers, ob.headers, "outbound headers should match")
+				assert.Equal(t, svc, ob.destServiceName, "outbound destination service name must match")
 			}
 
 		}
