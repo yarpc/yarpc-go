@@ -30,6 +30,7 @@ import (
 	"math"
 	"net"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -589,6 +590,72 @@ func TestMuxTLS(t *testing.T) {
 	}
 }
 
+func TestOutboundTLS(t *testing.T) {
+	defer goleak.VerifyNone(t)
+	scenario := testscenario.Create(t, time.Minute, time.Minute)
+	serverCreds := &tls.Config{
+		GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
+			return &tls.Certificate{
+				Certificate: [][]byte{scenario.ServerCert.Raw},
+				Leaf:        scenario.ServerCert,
+				PrivateKey:  scenario.ServerKey,
+			}, nil
+		},
+		ClientAuth: tls.RequireAndVerifyClientCert,
+		ClientCAs:  scenario.CAs,
+	}
+	clientCreds := &tls.Config{
+		GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+			return &tls.Certificate{
+				Certificate: [][]byte{scenario.ClientCert.Raw},
+				Leaf:        scenario.ClientCert,
+				PrivateKey:  scenario.ClientKey,
+			}, nil
+		},
+		ServerName: "127.0.0.1",
+		RootCAs:    scenario.CAs,
+	}
+
+	tests := []struct {
+		desc             string
+		withCustomDialer bool
+	}{
+		{desc: "without_custom_dialer", withCustomDialer: false},
+		{desc: "with_custom_dialer", withCustomDialer: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			dialOpts := []DialOption{
+				DialerTLSConfig(clientCreds),
+			}
+			// This is used for asserting if custom dialer is invoked.
+			var invokedCustomDialer int32
+			if tt.withCustomDialer {
+				dialOpts = append(dialOpts, ContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
+					// Avoid write race warning as concurrent dialers will be
+					// invoked as two gRPC clients are created below.
+					atomic.AddInt32(&invokedCustomDialer, 1)
+					return (&net.Dialer{}).DialContext(ctx, "tcp", s)
+				}))
+			}
+			te := testEnvOptions{
+				InboundOptions: []InboundOption{InboundTLSConfiguration(serverCreds), InboundTLSMode(yarpctls.Permissive)},
+				DialOptions:    dialOpts,
+			}
+			te.do(t, func(t *testing.T, e *testEnv) {
+				err := e.SetValueYARPC(context.Background(), "foo", "bar")
+				assert.NoError(t, err)
+
+				err = e.SetValueGRPC(context.Background(), "foo", "bar")
+				assert.NoError(t, err)
+			})
+			if tt.withCustomDialer {
+				assert.True(t, invokedCustomDialer > 0)
+			}
+		})
+	}
+}
+
 type metricCollection struct {
 	metrics []metric
 }
@@ -817,7 +884,7 @@ func newTestEnv(
 
 	var clientConn *grpc.ClientConn
 
-	clientConn, err = grpc.Dial(listener.Addr().String(), newDialOptions(dialOptions).grpcOptions()...)
+	clientConn, err = grpc.Dial(listener.Addr().String(), newDialOptions(dialOptions).grpcOptions(trans)...)
 	if err != nil {
 		return nil, err
 	}

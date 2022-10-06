@@ -21,6 +21,7 @@
 package grpc
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -186,8 +187,11 @@ type OutboundConfig struct {
 	Keepalive  OutboundKeepaliveConfig `config:"grpc-keepalive"`
 }
 
-func (c OutboundConfig) dialOptions(kit *yarpcconfig.Kit) ([]DialOption, error) {
-	opts := c.TLS.dialOptions()
+func (c OutboundConfig) dialOptions(kit *yarpcconfig.Kit, tlsConfigProvider yarpctls.OutboundTLSConfigProvider) ([]DialOption, error) {
+	opts, err := c.TLS.dialOptions(tlsConfigProvider)
+	if err != nil {
+		return nil, err
+	}
 	opts = append(opts, Compressor(kit.Compressor(c.Compressor)))
 
 	keepaliveOpts, err := c.Keepalive.dialOptions()
@@ -201,16 +205,44 @@ func (c OutboundConfig) dialOptions(kit *yarpcconfig.Kit) ([]DialOption, error) 
 
 // OutboundTLSConfig configures TLS for a gRPC outbound.
 type OutboundTLSConfig struct {
+	// Enabled field is deprecated, use Mode and SpiffeIDs fields instead.
 	Enabled bool `config:"enabled"`
+	// Mode when set to Enforced enables TLS outbound and
+	// outbound TLS configuration providered option will be used for fetching
+	// outbound tls.Config.
+	// Note: enable field is ignored when mode is set.
+	Mode yarpctls.Mode `config:"mode,interpolate"`
+	// SpiffeIDs is a list of the accepted server spiffe IDs.
+	SpiffeIDs []string `config:"spiffe-ids"`
 }
 
-func (c OutboundTLSConfig) dialOptions() []DialOption {
+func (c OutboundTLSConfig) dialOptions(tlsConfigProvider yarpctls.OutboundTLSConfigProvider) ([]DialOption, error) {
+	if c.Mode != yarpctls.Disabled {
+		if c.Mode == yarpctls.Permissive {
+			return nil, errors.New("outbound does not support permissive TLS mode")
+		}
+
+		if tlsConfigProvider == nil {
+			return nil, errors.New("outbound TLS enforced but outbound TLS config provider is nil")
+		}
+
+		if len(c.SpiffeIDs) == 0 {
+			return nil, errors.New("outbound TLS enforced but no spiffe id is provided")
+		}
+
+		config, err := tlsConfigProvider.ClientTLSConfig(c.SpiffeIDs)
+		if err != nil {
+			return nil, err
+		}
+		return []DialOption{DialerTLSConfig(config)}, nil
+	}
+
 	if !c.Enabled {
-		return nil
+		return nil, nil
 	}
 	creds := credentials.NewClientTLSFromCert(nil, "")
 	option := DialerCredentials(creds)
-	return []DialOption{option}
+	return []DialOption{option}, nil
 }
 
 // OutboundKeepaliveConfig configures gRPC keepalive for a gRPC outbound.
@@ -343,12 +375,14 @@ func (t *transportSpec) buildOutbound(outboundConfig *OutboundConfig, tr transpo
 		return nil, newTransportCastError(tr)
 	}
 
-	dialOpts, err := outboundConfig.dialOptions(kit)
+	outboundOpts := newOutboundOptions(t.OutboundOptions)
+	dialOpts, err := outboundConfig.dialOptions(kit, outboundOpts.tlsConfigProvider)
 	if err != nil {
 		return nil, err
 	}
 
-	dialer := trans.NewDialer(append(dialOpts, t.DialOptions...)...)
+	opts := append(dialOpts, t.DialOptions...)
+	dialer := trans.NewDialer(append([]DialOption{DialerDestinationServiceName(kit.OutboundServiceName())}, opts...)...)
 	var chooser peer.Chooser
 	if outboundConfig.Empty() {
 		if outboundConfig.Address == "" {
