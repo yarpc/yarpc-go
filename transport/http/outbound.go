@@ -121,6 +121,7 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 	for _, opt := range opts {
 		opt(o)
 	}
+	o.client = t.client
 	o.sender = &transportSender{Client: t.client}
 	return o
 }
@@ -177,6 +178,7 @@ type Outbound struct {
 	// should only be false in testing
 	bothResponseError bool
 	destServiceName   string
+	client            *http.Client
 }
 
 // TransportName is the transport name that will be set on `transport.Request` struct.
@@ -270,7 +272,7 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	hreq = o.withCoreHeaders(hreq, treq, ttl)
 	hreq = hreq.WithContext(ctx)
 
-	response, err := o.roundTrip(hreq, treq, start, o.transport.client)
+	response, err := o.roundTrip(hreq, treq, start, o.client)
 	if err != nil {
 		span.SetTag("error", true)
 		span.LogFields(opentracinglog.String("event", err.Error()))
