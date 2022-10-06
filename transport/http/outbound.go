@@ -92,6 +92,14 @@ func AddHeader(key, value string) OutboundOption {
 	}
 }
 
+// OutboundDestinationServiceName returns a OutboundOption which provides the
+// name of the destination service. Mostly used in outbound TLS dialer metrics.
+func OutboundDestinationServiceName(name string) OutboundOption {
+	return func(o *Outbound) {
+		o.destServiceName = name
+	}
+}
+
 // NewOutbound builds an HTTP outbound that sends requests to peers supplied
 // by the given peer.Chooser. The URL template for used for the different
 // peers may be customized using the URLTemplate option.
@@ -168,6 +176,7 @@ type Outbound struct {
 
 	// should only be false in testing
 	bothResponseError bool
+	destServiceName   string
 }
 
 // TransportName is the transport name that will be set on `transport.Request` struct.
