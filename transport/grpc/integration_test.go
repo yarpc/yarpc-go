@@ -30,6 +30,7 @@ import (
 	"math"
 	"net"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -628,10 +629,12 @@ func TestOutboundTLS(t *testing.T) {
 				DialerTLSConfig(clientCreds),
 			}
 			// This is used for asserting if custom dialer is invoked.
-			var invokedCustomDialer bool
+			var invokedCustomDialer int32
 			if tt.withCustomDialer {
 				dialOpts = append(dialOpts, ContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
-					invokedCustomDialer = true
+					// Avoid write race warning as concurrent dialers will be
+					// invoked as two gRPC clients are created below.
+					atomic.AddInt32(&invokedCustomDialer, 1)
 					return (&net.Dialer{}).DialContext(ctx, "tcp", s)
 				}))
 			}
@@ -647,7 +650,7 @@ func TestOutboundTLS(t *testing.T) {
 				assert.NoError(t, err)
 			})
 			if tt.withCustomDialer {
-				assert.True(t, invokedCustomDialer)
+				assert.True(t, invokedCustomDialer > 0)
 			}
 		})
 	}
