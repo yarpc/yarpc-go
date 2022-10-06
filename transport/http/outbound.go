@@ -150,12 +150,8 @@ func (t *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbo
 	}
 
 	chooser := peerchooser.NewSingle(hostport.PeerIdentifier(parsedURL.Host), t)
-	o := t.NewOutbound(chooser)
-	for _, opt := range opts {
-		opt(o)
-	}
-	o.setURLTemplate(uri)
-	return o
+	opts = append(opts, URLTemplate(uri))
+	return t.NewOutbound(chooser, opts...)
 }
 
 // Outbound sends YARPC requests over HTTP. It may be constructed using the
