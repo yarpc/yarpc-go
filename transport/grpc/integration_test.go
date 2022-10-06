@@ -614,17 +614,43 @@ func TestOutboundTLS(t *testing.T) {
 		ServerName: "127.0.0.1",
 		RootCAs:    scenario.CAs,
 	}
-	te := testEnvOptions{
-		InboundOptions: []InboundOption{InboundTLSConfiguration(serverCreds), InboundTLSMode(yarpctls.Permissive)},
-		DialOptions:    []DialOption{DialerTLSConfig(clientCreds)},
-	}
-	te.do(t, func(t *testing.T, e *testEnv) {
-		err := e.SetValueYARPC(context.Background(), "foo", "bar")
-		assert.NoError(t, err)
 
-		err = e.SetValueGRPC(context.Background(), "foo", "bar")
-		assert.NoError(t, err)
-	})
+	tests := []struct {
+		desc             string
+		withCustomDialer bool
+	}{
+		{desc: "without_custom_dialer", withCustomDialer: false},
+		{desc: "with_custom_dialer", withCustomDialer: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			dialOpts := []DialOption{
+				DialerTLSConfig(clientCreds),
+			}
+			// This is used for asserting if custom dialer is invoked.
+			var invokedCustomDialer bool
+			if tt.withCustomDialer {
+				dialOpts = append(dialOpts, ContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
+					invokedCustomDialer = true
+					return (&net.Dialer{}).DialContext(ctx, "tcp", s)
+				}))
+			}
+			te := testEnvOptions{
+				InboundOptions: []InboundOption{InboundTLSConfiguration(serverCreds), InboundTLSMode(yarpctls.Permissive)},
+				DialOptions:    dialOpts,
+			}
+			te.do(t, func(t *testing.T, e *testEnv) {
+				err := e.SetValueYARPC(context.Background(), "foo", "bar")
+				assert.NoError(t, err)
+
+				err = e.SetValueGRPC(context.Background(), "foo", "bar")
+				assert.NoError(t, err)
+			})
+			if tt.withCustomDialer {
+				assert.True(t, invokedCustomDialer)
+			}
+		})
+	}
 }
 
 type metricCollection struct {
