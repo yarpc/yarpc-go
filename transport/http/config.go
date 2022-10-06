@@ -21,6 +21,7 @@
 package http
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -241,7 +242,6 @@ type OutboundConfig struct {
 	// URL to which requests will be sent for this outbound. This field is
 	// required.
 	URL string `config:"url,interpolate"`
-
 	// HTTP headers that will be added to all requests made through this
 	// outbound.
 	//
@@ -251,16 +251,66 @@ type OutboundConfig struct {
 	//      X-Caller: myserice
 	//      X-Token: foo
 	AddHeaders map[string]string `config:"addHeaders"`
+	// TLS config enables TLS outbound.
+	//
+	//  http:
+	//    url: "http://localhost:8080/yarpc"
+	//    tls:
+	//      mode: enforced
+	//      spiffe-ids:
+	//		  - destination-id
+	TLS OutboundTLSConfig `config:"tls"`
+}
+
+// OutboundTLSConfig configures TLS for a HTTP outbound.
+type OutboundTLSConfig struct {
+	// Mode when set to Enforced enables TLS outbound and
+	// outbound TLS configuration providered option will be used for fetching
+	// outbound tls.Config.
+	Mode yarpctls.Mode `config:"mode,interpolate"`
+	// SpiffeIDs is a list of the accepted server spiffe IDs.
+	SpiffeIDs []string `config:"spiffe-ids"`
+}
+
+func (o OutboundTLSConfig) options(provider yarpctls.OutboundTLSConfigProvider) (OutboundOption, error) {
+	if o.Mode == yarpctls.Disabled {
+		return nil, nil
+	}
+
+	if o.Mode == yarpctls.Permissive {
+		return nil, errors.New("outbound does not support permissive TLS mode")
+	}
+
+	if provider == nil {
+		return nil, errors.New("outbound TLS enforced but outbound TLS config provider is nil")
+	}
+
+	config, err := provider.ClientTLSConfig(o.SpiffeIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	return OutboundTLSConfiguration(config), nil
 }
 
 func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport, k *yarpcconfig.Kit) (*Outbound, error) {
 	x := t.(*Transport)
 
-	opts := ts.OutboundOptions
+	opts := []OutboundOption{OutboundDestinationServiceName(k.OutboundServiceName())}
+	opts = append(opts, ts.OutboundOptions...)
 	if len(oc.AddHeaders) > 0 {
 		for k, v := range oc.AddHeaders {
 			opts = append(opts, AddHeader(k, v))
 		}
+	}
+
+	option, err := oc.TLS.options(x.ouboundTLSConfigProvider)
+	if err != nil {
+		return nil, err
+	}
+
+	if option != nil {
+		opts = append([]OutboundOption{option}, opts...)
 	}
 
 	// Special case where the URL implies the single peer.

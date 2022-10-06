@@ -33,29 +33,31 @@ import (
 	backoffapi "go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/zap"
 )
 
 type transportOptions struct {
-	keepAlive             time.Duration
-	maxIdleConns          int
-	maxIdleConnsPerHost   int
-	idleConnTimeout       time.Duration
-	disableKeepAlives     bool
-	disableCompression    bool
-	responseHeaderTimeout time.Duration
-	connTimeout           time.Duration
-	connBackoffStrategy   backoffapi.Strategy
-	innocenceWindow       time.Duration
-	dialContext           func(ctx context.Context, network, addr string) (net.Conn, error)
-	jitter                func(int64) int64
-	tracer                opentracing.Tracer
-	buildClient           func(*transportOptions) *http.Client
-	logger                *zap.Logger
-	meter                 *metrics.Scope
-	serviceName           string
+	keepAlive                 time.Duration
+	maxIdleConns              int
+	maxIdleConnsPerHost       int
+	idleConnTimeout           time.Duration
+	disableKeepAlives         bool
+	disableCompression        bool
+	responseHeaderTimeout     time.Duration
+	connTimeout               time.Duration
+	connBackoffStrategy       backoffapi.Strategy
+	innocenceWindow           time.Duration
+	dialContext               func(ctx context.Context, network, addr string) (net.Conn, error)
+	jitter                    func(int64) int64
+	tracer                    opentracing.Tracer
+	buildClient               func(*transportOptions) *http.Client
+	logger                    *zap.Logger
+	meter                     *metrics.Scope
+	serviceName               string
+	outboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
 }
 
 var defaultTransportOptions = transportOptions{
@@ -236,6 +238,14 @@ func ServiceName(name string) TransportOption {
 	}
 }
 
+// OutboundTLSConfigProvider returns an TransportOption that provides the
+// outbound TLS config provider.
+func OutboundTLSConfigProvider(provider yarpctls.OutboundTLSConfigProvider) TransportOption {
+	return func(options *transportOptions) {
+		options.outboundTLSConfigProvider = provider
+	}
+}
+
 // Hidden option to override the buildHTTPClient function. This is used only
 // for testing.
 func buildClient(f func(*transportOptions) *http.Client) TransportOption {
@@ -259,17 +269,18 @@ func (o *transportOptions) newTransport() *Transport {
 		logger = zap.NewNop()
 	}
 	return &Transport{
-		once:                lifecycle.NewOnce(),
-		client:              o.buildClient(o),
-		connTimeout:         o.connTimeout,
-		connBackoffStrategy: o.connBackoffStrategy,
-		innocenceWindow:     o.innocenceWindow,
-		jitter:              o.jitter,
-		peers:               make(map[string]*httpPeer),
-		tracer:              o.tracer,
-		logger:              logger,
-		meter:               o.meter,
-		serviceName:         o.serviceName,
+		once:                     lifecycle.NewOnce(),
+		client:                   o.buildClient(o),
+		connTimeout:              o.connTimeout,
+		connBackoffStrategy:      o.connBackoffStrategy,
+		innocenceWindow:          o.innocenceWindow,
+		jitter:                   o.jitter,
+		peers:                    make(map[string]*httpPeer),
+		tracer:                   o.tracer,
+		logger:                   logger,
+		meter:                    o.meter,
+		serviceName:              o.serviceName,
+		ouboundTLSConfigProvider: o.outboundTLSConfigProvider,
 	}
 }
 
@@ -315,10 +326,11 @@ type Transport struct {
 	innocenceWindow     time.Duration
 	jitter              func(int64) int64
 
-	tracer      opentracing.Tracer
-	logger      *zap.Logger
-	meter       *metrics.Scope
-	serviceName string
+	tracer                   opentracing.Tracer
+	logger                   *zap.Logger
+	meter                    *metrics.Scope
+	serviceName              string
+	ouboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
 }
 
 var _ transport.Transport = (*Transport)(nil)

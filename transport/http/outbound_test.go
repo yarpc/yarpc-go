@@ -787,6 +787,7 @@ func TestCallResponseCloseError(t *testing.T) {
 		tracer:            httpTransport.tracer,
 		transport:         &httpTransport,
 		bothResponseError: true,
+		client:            httpTransport.client,
 	}
 	err := o.Start()
 	require.NoError(t, err)
@@ -825,6 +826,7 @@ func TestCallOneWayResponseCloseError(t *testing.T) {
 		tracer:            httpTransport.tracer,
 		transport:         &httpTransport,
 		bothResponseError: true,
+		client:            httpTransport.client,
 	}
 	err := o.Start()
 	require.NoError(t, err)
