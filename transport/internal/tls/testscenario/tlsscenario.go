@@ -24,6 +24,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"math/big"
@@ -41,6 +42,36 @@ type TLSScenario struct {
 	ServerKey  *ecdsa.PrivateKey
 	ClientCert *x509.Certificate
 	ClientKey  *ecdsa.PrivateKey
+}
+
+// ServerTLSConfig returns server TLS config.
+func (t TLSScenario) ServerTLSConfig() *tls.Config {
+	return &tls.Config{
+		GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
+			return &tls.Certificate{
+				Certificate: [][]byte{t.ServerCert.Raw},
+				Leaf:        t.ServerCert,
+				PrivateKey:  t.ServerKey,
+			}, nil
+		},
+		ClientAuth: tls.RequireAndVerifyClientCert,
+		ClientCAs:  t.CAs,
+	}
+}
+
+// ClientTLSConfig returns client TLS config.
+func (t TLSScenario) ClientTLSConfig() *tls.Config {
+	return &tls.Config{
+		GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+			return &tls.Certificate{
+				Certificate: [][]byte{t.ClientCert.Raw},
+				Leaf:        t.ClientCert,
+				PrivateKey:  t.ClientKey,
+			}, nil
+		},
+		ServerName: "127.0.0.1",
+		RootCAs:    t.CAs,
+	}
 }
 
 // Create returns client and server TLS credentials generated during
