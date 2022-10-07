@@ -106,27 +106,6 @@ func TestDialerOption(t *testing.T) {
 
 func TestInboundTLS(t *testing.T) {
 	scenario := testscenario.Create(t, time.Minute, time.Minute)
-	serverCreds := &tls.Config{
-		GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
-			return &tls.Certificate{
-				Certificate: [][]byte{scenario.ServerCert.Raw},
-				Leaf:        scenario.ServerCert,
-				PrivateKey:  scenario.ServerKey,
-			}, nil
-		},
-		ClientAuth: tls.RequireAndVerifyClientCert,
-		ClientCAs:  scenario.CAs,
-	}
-	clientCreds := &tls.Config{
-		GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
-			return &tls.Certificate{
-				Certificate: [][]byte{scenario.ClientCert.Raw},
-				Leaf:        scenario.ClientCert,
-				PrivateKey:  scenario.ClientKey,
-			}, nil
-		},
-		RootCAs: scenario.CAs,
-	}
 
 	tests := []struct {
 		desc        string
@@ -138,13 +117,13 @@ func TestInboundTLS(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
 			options := []tchannel.TransportOption{
-				tchannel.InboundTLSConfiguration(serverCreds),
+				tchannel.InboundTLSConfiguration(scenario.ServerTLSConfig()),
 				tchannel.InboundTLSMode(yarpctls.Permissive),
 				tchannel.ServiceName("test-svc"),
 			}
 			if tt.isClientTLS {
 				tchannel.Dialer(func(ctx context.Context, network, hostPort string) (net.Conn, error) {
-					return tls.Dial(network, hostPort, clientCreds)
+					return tls.Dial(network, hostPort, scenario.ClientTLSConfig())
 				})
 			}
 			tr, err := tchannel.NewTransport(options...)

@@ -50,7 +50,7 @@ func TestDialer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
 			root := metrics.New()
-			serverTLSConfig, clientTLSConfig := tlsConfigs(t)
+			scenario := testscenario.Create(t, time.Minute, time.Minute)
 			lis, err := net.Listen("tcp", "localhost:0")
 			require.NoError(t, err)
 			var wg sync.WaitGroup
@@ -67,7 +67,7 @@ func TestDialer(t *testing.T) {
 				}
 
 				defer conn.Close()
-				tlsConn := tls.Server(conn, serverTLSConfig)
+				tlsConn := tls.Server(conn, scenario.ServerTLSConfig())
 
 				buf := make([]byte, len(tt.data))
 				n, err := tlsConn.Read(buf)
@@ -77,7 +77,7 @@ func TestDialer(t *testing.T) {
 			}()
 
 			params := Params{
-				Config:        clientTLSConfig,
+				Config:        scenario.ClientTLSConfig(),
 				Meter:         root.Scope(),
 				Logger:        zap.NewNop(),
 				ServiceName:   "test-svc",
@@ -139,32 +139,4 @@ func assertMetrics(t *testing.T, root *metrics.Root, handshakeFailure bool) {
 		expectedCounter.Name = "tls_connections"
 	}
 	assert.Contains(t, root.Snapshot().Counters, expectedCounter)
-}
-
-func tlsConfigs(t *testing.T) (serverConfig *tls.Config, clientConfig *tls.Config) {
-	scenario := testscenario.Create(t, time.Minute, time.Minute)
-	serverConfig = &tls.Config{
-		GetCertificate: func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
-			return &tls.Certificate{
-				Certificate: [][]byte{scenario.ServerCert.Raw},
-				Leaf:        scenario.ServerCert,
-				PrivateKey:  scenario.ServerKey,
-			}, nil
-		},
-		ServerName: "127.0.0.1",
-		ClientAuth: tls.RequireAndVerifyClientCert,
-		ClientCAs:  scenario.CAs,
-	}
-	clientConfig = &tls.Config{
-		GetClientCertificate: func(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
-			return &tls.Certificate{
-				Certificate: [][]byte{scenario.ClientCert.Raw},
-				Leaf:        scenario.ClientCert,
-				PrivateKey:  scenario.ClientKey,
-			}, nil
-		},
-		ServerName: "127.0.0.1",
-		RootCAs:    scenario.CAs,
-	}
-	return serverConfig, clientConfig
 }
