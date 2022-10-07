@@ -49,18 +49,8 @@ func TestNewListenerOnDisabled(t *testing.T) {
 
 func TestMux(t *testing.T) {
 	scenario := testscenario.Create(t, time.Minute, time.Minute)
-	serverTlsConfig := &tls.Config{
-		GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
-			return &tls.Certificate{
-				Certificate: [][]byte{scenario.ServerCert.Raw},
-				Leaf:        scenario.ServerCert,
-				PrivateKey:  scenario.ServerKey,
-			}, nil
-		},
-		MinVersion: tls.VersionTLS13,
-		ClientAuth: tls.RequireAndVerifyClientCert,
-		ClientCAs:  scenario.CAs,
-	}
+	serverTlsConfig := scenario.ServerTLSConfig()
+	serverTlsConfig.MinVersion = tls.VersionTLS13
 
 	tests := []struct {
 		desc            string

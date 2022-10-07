@@ -45,28 +45,6 @@ func TestInboundTLS(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
 	scenario := testscenario.Create(t, time.Minute, time.Minute)
-	serverTLSConfig := &tls.Config{
-		GetCertificate: func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
-			return &tls.Certificate{
-				Certificate: [][]byte{scenario.ServerCert.Raw},
-				Leaf:        scenario.ServerCert,
-				PrivateKey:  scenario.ServerKey,
-			}, nil
-		},
-		ClientAuth: tls.RequireAndVerifyClientCert,
-		ClientCAs:  scenario.CAs,
-	}
-	clientTLSConfig := &tls.Config{
-		GetClientCertificate: func(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
-			return &tls.Certificate{
-				Certificate: [][]byte{scenario.ClientCert.Raw},
-				Leaf:        scenario.ClientCert,
-				PrivateKey:  scenario.ClientKey,
-			}, nil
-		},
-		RootCAs: scenario.CAs,
-	}
-
 	tests := []struct {
 		desc             string
 		inboundOptions   []InboundOption
@@ -76,19 +54,19 @@ func TestInboundTLS(t *testing.T) {
 		{
 			desc: "plaintext_client_permissive_tls_server",
 			inboundOptions: []InboundOption{
-				InboundTLSConfiguration(serverTLSConfig),
+				InboundTLSConfiguration(scenario.ServerTLSConfig()),
 				InboundTLSMode(yarpctls.Permissive),
 			},
 		},
 		{
 			desc: "tls_client_enforced_tls_server",
 			inboundOptions: []InboundOption{
-				InboundTLSConfiguration(serverTLSConfig),
+				InboundTLSConfiguration(scenario.ServerTLSConfig()),
 				InboundTLSMode(yarpctls.Enforced),
 			},
 			transportOptions: []TransportOption{
 				DialContext(func(ctx context.Context, network, addr string) (net.Conn, error) {
-					return tls.Dial(network, addr, clientTLSConfig)
+					return tls.Dial(network, addr, scenario.ClientTLSConfig())
 				}),
 			},
 			isTLSClient: true,
@@ -118,29 +96,6 @@ func TestOutboundTLS(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
 	scenario := testscenario.Create(t, time.Minute, time.Minute)
-	serverTLSConfig := &tls.Config{
-		GetCertificate: func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
-			return &tls.Certificate{
-				Certificate: [][]byte{scenario.ServerCert.Raw},
-				Leaf:        scenario.ServerCert,
-				PrivateKey:  scenario.ServerKey,
-			}, nil
-		},
-		ClientAuth: tls.RequireAndVerifyClientCert,
-		ClientCAs:  scenario.CAs,
-	}
-	clientTLSConfig := &tls.Config{
-		GetClientCertificate: func(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
-			return &tls.Certificate{
-				Certificate: [][]byte{scenario.ClientCert.Raw},
-				Leaf:        scenario.ClientCert,
-				PrivateKey:  scenario.ClientKey,
-			}, nil
-		},
-		ServerName: "127.0.0.1",
-		RootCAs:    scenario.CAs,
-	}
-
 	tests := []struct {
 		desc             string
 		withCustomDialer bool
@@ -164,10 +119,10 @@ func TestOutboundTLS(t *testing.T) {
 			doWithTestEnv(t, testEnvOptions{
 				Procedures: json.Procedure("testFoo", testFooHandler),
 				InboundOptions: []InboundOption{
-					InboundTLSConfiguration(serverTLSConfig),
+					InboundTLSConfiguration(scenario.ServerTLSConfig()),
 					InboundTLSMode(yarpctls.Enforced),
 				},
-				OutboundOptions:  []OutboundOption{OutboundTLSConfiguration(clientTLSConfig)},
+				OutboundOptions:  []OutboundOption{OutboundTLSConfiguration(scenario.ClientTLSConfig())},
 				TransportOptions: opts,
 			}, func(t *testing.T, testEnv *testEnv) {
 				client := json.New(testEnv.ClientConfig)
