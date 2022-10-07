@@ -264,9 +264,9 @@ type OutboundConfig struct {
 
 // OutboundTLSConfig configures TLS for a HTTP outbound.
 type OutboundTLSConfig struct {
-	// Mode when set to Enforced enables TLS outbound and
-	// outbound TLS configuration providered option will be used for fetching
-	// outbound tls.Config.
+	// Mode when set to Enforced enables outbound TLS.
+	// Note: outbound TLS configuration provider must be provided as an option
+	// which is used for fetching outbound tls.Config.
 	Mode yarpctls.Mode `config:"mode,interpolate"`
 	// SpiffeIDs is a list of the accepted server spiffe IDs.
 	SpiffeIDs []string `config:"spiffe-ids"`
@@ -283,6 +283,10 @@ func (o OutboundTLSConfig) options(provider yarpctls.OutboundTLSConfigProvider) 
 
 	if provider == nil {
 		return nil, errors.New("outbound TLS enforced but outbound TLS config provider is nil")
+	}
+
+	if len(o.SpiffeIDs) == 0 {
+		return nil, errors.New("outbound TLS enforced but no spiffe id is provided")
 	}
 
 	config, err := provider.ClientTLSConfig(o.SpiffeIDs)

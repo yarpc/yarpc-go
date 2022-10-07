@@ -114,6 +114,76 @@ func TestInboundTLS(t *testing.T) {
 	}
 }
 
+func TestOutboundTLS(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
+	scenario := testscenario.Create(t, time.Minute, time.Minute)
+	serverTLSConfig := &tls.Config{
+		GetCertificate: func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
+			return &tls.Certificate{
+				Certificate: [][]byte{scenario.ServerCert.Raw},
+				Leaf:        scenario.ServerCert,
+				PrivateKey:  scenario.ServerKey,
+			}, nil
+		},
+		ClientAuth: tls.RequireAndVerifyClientCert,
+		ClientCAs:  scenario.CAs,
+	}
+	clientTLSConfig := &tls.Config{
+		GetClientCertificate: func(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
+			return &tls.Certificate{
+				Certificate: [][]byte{scenario.ClientCert.Raw},
+				Leaf:        scenario.ClientCert,
+				PrivateKey:  scenario.ClientKey,
+			}, nil
+		},
+		ServerName: "127.0.0.1",
+		RootCAs:    scenario.CAs,
+	}
+
+	tests := []struct {
+		desc             string
+		withCustomDialer bool
+	}{
+		{desc: "without_custom_dialer", withCustomDialer: false},
+		{desc: "tls_client_enforced_tls_server", withCustomDialer: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			var opts []TransportOption
+			// This is used for asserting if custom dialer is invoked.
+			var invokedCustomDialer bool
+			if tt.withCustomDialer {
+				opts = []TransportOption{
+					DialContext(func(ctx context.Context, network, addr string) (net.Conn, error) {
+						invokedCustomDialer = true
+						return (&net.Dialer{}).DialContext(ctx, network, addr)
+					}),
+				}
+			}
+			doWithTestEnv(t, testEnvOptions{
+				Procedures: json.Procedure("testFoo", testFooHandler),
+				InboundOptions: []InboundOption{
+					InboundTLSConfiguration(serverTLSConfig),
+					InboundTLSMode(yarpctls.Enforced),
+				},
+				OutboundOptions:  []OutboundOption{OutboundTLSConfiguration(clientTLSConfig)},
+				TransportOptions: opts,
+			}, func(t *testing.T, testEnv *testEnv) {
+				client := json.New(testEnv.ClientConfig)
+				var response testFooResponse
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+				defer cancel()
+
+				err := client.Call(ctx, "testFoo", &testFooRequest{One: "one"}, &response)
+				require.Nil(t, err)
+				assert.Equal(t, testFooResponse{One: "one"}, response)
+				assert.Equal(t, tt.withCustomDialer, invokedCustomDialer)
+			})
+		})
+	}
+}
+
 func TestBothResponseError(t *testing.T) {
 	tests := []struct {
 		inboundBothResponseError  bool
