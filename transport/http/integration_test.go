@@ -101,7 +101,7 @@ func TestOutboundTLS(t *testing.T) {
 		withCustomDialer bool
 	}{
 		{desc: "without_custom_dialer", withCustomDialer: false},
-		{desc: "tls_client_enforced_tls_server", withCustomDialer: true},
+		{desc: "with_custom_dialer", withCustomDialer: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {

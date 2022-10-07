@@ -211,9 +211,9 @@ type Outbound struct {
 
 	// should only be false in testing
 	bothResponseError bool
+	destServiceName   string
 	client            *http.Client
 	tlsConfig         *tls.Config
-	destServiceName   string
 }
 
 // TransportName is the transport name that will be set on `transport.Request` struct.

@@ -262,13 +262,14 @@ type OutboundConfig struct {
 	TLS OutboundTLSConfig `config:"tls"`
 }
 
-// OutboundTLSConfig configures TLS for a HTTP outbound.
+// OutboundTLSConfig configures TLS for the HTTP outbound.
 type OutboundTLSConfig struct {
 	// Mode when set to Enforced enables outbound TLS.
-	// Note: outbound TLS configuration provider must be provided as an option
-	// which is used for fetching outbound tls.Config.
+	// Note: outbound TLS configuration provider must be given as an option
+	// which is used for fetching client tls.Config.
 	Mode yarpctls.Mode `config:"mode,interpolate"`
-	// SpiffeIDs is a list of the accepted server spiffe IDs.
+	// SpiffeIDs is list of accepted server spiffe IDs. This cannot be empty
+	// list.
 	SpiffeIDs []string `config:"spiffe-ids"`
 }
 
