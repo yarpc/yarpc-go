@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package muxlistener
+package metrics
 
 import (
 	"crypto/tls"
@@ -32,66 +32,88 @@ const (
 	_serviceTag   = "service"
 	_transportTag = "transport"
 	_versionTag   = "version"
+	_destTag      = "dest"
+	_directionTag = "direction"
+	_modeTag      = "mode"
+	_componentTag = "component"
 )
 
-type observer struct {
+// Params holds parameters needed for creating new observer.
+type Params struct {
+	Meter         *metrics.Scope
+	Logger        *zap.Logger
+	ServiceName   string // Name of the service.
+	TransportName string // Name of the transport.
+	Direction     string // Inbound or Outbound.
+	Dest          string // Name of the dest, only for outbound.
+	Mode          yarpctls.Mode
+}
+
+// Observer holds connection metrics.
+type Observer struct {
 	plaintextConnectionsCounter *metrics.Counter
 	tlsConnectionsCounter       *metrics.CounterVector
 	tlsFailuresCounter          *metrics.Counter
 }
 
-func newObserver(meter *metrics.Scope, logger *zap.Logger, serviceName, transportName string, mode yarpctls.Mode) *observer {
+// NewObserver returns observer for emitting connection metrics.
+func NewObserver(p Params) *Observer {
 	tags := metrics.Tags{
-		"service":   serviceName,
-		"transport": transportName,
-		"component": "yarpc",
-		"mode":      mode.String(),
+		_componentTag: "yarpc",
+		_serviceTag:   p.ServiceName,
+		_transportTag: p.TransportName,
+		_modeTag:      p.Mode.String(),
+		_directionTag: p.Direction,
+		_destTag:      p.Dest,
 	}
 
-	plaintextConns, err := meter.Counter(metrics.Spec{
+	plaintextConns, err := p.Meter.Counter(metrics.Spec{
 		Name:      "plaintext_connections",
 		Help:      "Total number of plaintext connections established.",
 		ConstTags: tags,
 	})
 	if err != nil {
-		logger.Error("failed to create plaintext connections counter", zap.Error(err))
+		p.Logger.Error("failed to create plaintext connections counter", zap.Error(err))
 	}
 
-	tlsConns, err := meter.CounterVector(metrics.Spec{
+	tlsConns, err := p.Meter.CounterVector(metrics.Spec{
 		Name:      "tls_connections",
 		Help:      "Total number of TLS connections established.",
 		ConstTags: tags,
 		VarTags:   []string{_versionTag},
 	})
 	if err != nil {
-		logger.Error("failed to create tls connections counter", zap.Error(err))
+		p.Logger.Error("failed to create tls connections counter", zap.Error(err))
 	}
 
-	tlsHandshakeFailures, err := meter.Counter(metrics.Spec{
+	tlsHandshakeFailures, err := p.Meter.Counter(metrics.Spec{
 		Name:      "tls_handshake_failures",
 		Help:      "Total number of TLS handshake failures.",
 		ConstTags: tags,
 	})
 	if err != nil {
-		logger.Error("failed to create tls handshake failures counter", zap.Error(err))
+		p.Logger.Error("failed to create tls handshake failures counter", zap.Error(err))
 	}
 
-	return &observer{
+	return &Observer{
 		tlsConnectionsCounter:       tlsConns,
 		tlsFailuresCounter:          tlsHandshakeFailures,
 		plaintextConnectionsCounter: plaintextConns,
 	}
 }
 
-func (o *observer) incPlaintextConnections() {
+// IncPlaintextConnections increments plaintext connections metric.
+func (o *Observer) IncPlaintextConnections() {
 	o.plaintextConnectionsCounter.Inc()
 }
 
-func (o *observer) incTLSConnections(version uint16) {
+// IncTLSConnections increments TLS connections metric.
+func (o *Observer) IncTLSConnections(version uint16) {
 	o.tlsConnectionsCounter.MustGet(_versionTag, tlsVersionString(version)).Inc()
 }
 
-func (o *observer) incTLSHandshakeFailures() {
+// IncTLSHandshakeFailures increments TLS handshake failures metric.
+func (o *Observer) IncTLSHandshakeFailures() {
 	o.tlsFailuresCounter.Inc()
 }
 

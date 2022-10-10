@@ -24,12 +24,12 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"crypto/tls"
 	"errors"
 	"io"
 	"math"
 	"net"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -422,33 +422,9 @@ func TestTLSWithYARPCAndGRPC(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			scenario := testscenario.Create(t, tt.clientValidity, tt.serverValidity)
-
-			serverCreds := credentials.NewTLS(&tls.Config{
-				GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
-					return &tls.Certificate{
-						Certificate: [][]byte{scenario.ServerCert.Raw},
-						Leaf:        scenario.ServerCert,
-						PrivateKey:  scenario.ServerKey,
-					}, nil
-				},
-				ClientAuth: tls.RequireAndVerifyClientCert,
-				ClientCAs:  scenario.CAs,
-			})
-
-			clientCreds := credentials.NewTLS(&tls.Config{
-				GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
-					return &tls.Certificate{
-						Certificate: [][]byte{scenario.ClientCert.Raw},
-						Leaf:        scenario.ClientCert,
-						PrivateKey:  scenario.ClientKey,
-					}, nil
-				},
-				RootCAs: scenario.CAs,
-			})
-
 			te := testEnvOptions{
-				InboundOptions: []InboundOption{InboundCredentials(serverCreds)},
-				DialOptions:    []DialOption{DialerCredentials(clientCreds)},
+				InboundOptions: []InboundOption{InboundCredentials(credentials.NewTLS(scenario.ServerTLSConfig()))},
+				DialOptions:    []DialOption{DialerCredentials(credentials.NewTLS(scenario.ClientTLSConfig()))},
 			}
 			te.do(t, func(t *testing.T, e *testEnv) {
 				err := e.SetValueYARPC(context.Background(), "foo", "bar")
@@ -546,36 +522,13 @@ func TestMuxTLS(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			scenario := testscenario.Create(t, time.Minute, time.Minute)
-
-			serverCreds := &tls.Config{
-				GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
-					return &tls.Certificate{
-						Certificate: [][]byte{scenario.ServerCert.Raw},
-						Leaf:        scenario.ServerCert,
-						PrivateKey:  scenario.ServerKey,
-					}, nil
-				},
-				ClientAuth: tls.RequireAndVerifyClientCert,
-				ClientCAs:  scenario.CAs,
-			}
-
 			var dialOptions []DialOption
 			if tt.isClientTLS {
-				clientCreds := credentials.NewTLS(&tls.Config{
-					GetClientCertificate: func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
-						return &tls.Certificate{
-							Certificate: [][]byte{scenario.ClientCert.Raw},
-							Leaf:        scenario.ClientCert,
-							PrivateKey:  scenario.ClientKey,
-						}, nil
-					},
-					RootCAs: scenario.CAs,
-				})
-				dialOptions = append(dialOptions, DialerCredentials(clientCreds))
+				dialOptions = append(dialOptions, DialerCredentials(credentials.NewTLS(scenario.ClientTLSConfig())))
 			}
 
 			te := testEnvOptions{
-				InboundOptions: []InboundOption{InboundTLSConfiguration(serverCreds), InboundTLSMode(yarpctls.Permissive)},
+				InboundOptions: []InboundOption{InboundTLSConfiguration(scenario.ServerTLSConfig()), InboundTLSMode(yarpctls.Permissive)},
 				DialOptions:    dialOptions,
 			}
 			te.do(t, func(t *testing.T, e *testEnv) {
@@ -585,6 +538,50 @@ func TestMuxTLS(t *testing.T) {
 				err = e.SetValueGRPC(context.Background(), "foo", "bar")
 				assert.NoError(t, err)
 			})
+		})
+	}
+}
+
+func TestOutboundTLS(t *testing.T) {
+	defer goleak.VerifyNone(t)
+	scenario := testscenario.Create(t, time.Minute, time.Minute)
+
+	tests := []struct {
+		desc             string
+		withCustomDialer bool
+	}{
+		{desc: "without_custom_dialer", withCustomDialer: false},
+		{desc: "with_custom_dialer", withCustomDialer: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			dialOpts := []DialOption{
+				DialerTLSConfig(scenario.ClientTLSConfig()),
+			}
+			// This is used for asserting if custom dialer is invoked.
+			var invokedCustomDialer int32
+			if tt.withCustomDialer {
+				dialOpts = append(dialOpts, ContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
+					// Avoid write race warning as concurrent dialers will be
+					// invoked as two gRPC clients are created below.
+					atomic.AddInt32(&invokedCustomDialer, 1)
+					return (&net.Dialer{}).DialContext(ctx, "tcp", s)
+				}))
+			}
+			te := testEnvOptions{
+				InboundOptions: []InboundOption{InboundTLSConfiguration(scenario.ServerTLSConfig()), InboundTLSMode(yarpctls.Permissive)},
+				DialOptions:    dialOpts,
+			}
+			te.do(t, func(t *testing.T, e *testEnv) {
+				err := e.SetValueYARPC(context.Background(), "foo", "bar")
+				assert.NoError(t, err)
+
+				err = e.SetValueGRPC(context.Background(), "foo", "bar")
+				assert.NoError(t, err)
+			})
+			if tt.withCustomDialer {
+				assert.True(t, invokedCustomDialer > 0)
+			}
 		})
 	}
 }
@@ -817,7 +814,7 @@ func newTestEnv(
 
 	var clientConn *grpc.ClientConn
 
-	clientConn, err = grpc.Dial(listener.Addr().String(), newDialOptions(dialOptions).grpcOptions()...)
+	clientConn, err = grpc.Dial(listener.Addr().String(), newDialOptions(dialOptions).grpcOptions(trans)...)
 	if err != nil {
 		return nil, err
 	}

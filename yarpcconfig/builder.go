@@ -115,22 +115,23 @@ func (b *builder) Build() (yarpc.Config, error) {
 			ob.ServiceName = c.Service
 		}
 
+		kit := b.kit.withOutboundName(c.Service)
 		if o := c.Unary; o != nil {
-			ob.Unary, err = buildUnaryOutbound(o, transports[o.TransportSpec.Name], b.kit)
+			ob.Unary, err = buildUnaryOutbound(o, transports[o.TransportSpec.Name], kit)
 			if err != nil {
 				errs = multierr.Append(errs, fmt.Errorf(`failed to configure unary outbound for %q: %v`, ccname, err))
 				continue
 			}
 		}
 		if o := c.Oneway; o != nil {
-			ob.Oneway, err = buildOnewayOutbound(o, transports[o.TransportSpec.Name], b.kit)
+			ob.Oneway, err = buildOnewayOutbound(o, transports[o.TransportSpec.Name], kit)
 			if err != nil {
 				errs = multierr.Append(errs, fmt.Errorf(`failed to configure oneway outbound for %q: %v`, ccname, err))
 				continue
 			}
 		}
 		if o := c.Stream; o != nil {
-			ob.Stream, err = buildStreamOutbound(o, transports[o.TransportSpec.Name], b.kit)
+			ob.Stream, err = buildStreamOutbound(o, transports[o.TransportSpec.Name], kit)
 			if err != nil {
 				errs = multierr.Append(errs, fmt.Errorf(`failed to configure stream outbound for %q: %v`, ccname, err))
 				continue
@@ -265,7 +266,7 @@ func (b *builder) AddUnaryOutbound(
 	}
 
 	b.needTransport(spec)
-	cv, err := spec.UnaryOutbound.Decode(attrs, config.InterpolateWith(b.kit.resolver))
+	cv, err := spec.UnaryOutbound.Decode(attrs, config.InterpolateWith(b.kit.resolver), mapdecode.DecodeHook(tlsModeDecodeHook))
 	if err != nil {
 		return fmt.Errorf("failed to decode unary outbound configuration: %v", err)
 	}
@@ -311,7 +312,7 @@ func (b *builder) AddStreamOutbound(
 	}
 
 	b.needTransport(spec)
-	cv, err := spec.StreamOutbound.Decode(attrs, config.InterpolateWith(b.kit.resolver))
+	cv, err := spec.StreamOutbound.Decode(attrs, config.InterpolateWith(b.kit.resolver), mapdecode.DecodeHook(tlsModeDecodeHook))
 	if err != nil {
 		return fmt.Errorf("failed to decode stream outbound configuration: %v", err)
 	}
