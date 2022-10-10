@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package muxlistener
+package metrics
 
 import (
 	"crypto/tls"
@@ -31,25 +31,26 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestTlsVersionString(t *testing.T) {
-	assert.Equal(t, "1.0", tlsVersionString(tls.VersionTLS10), "unexpected version for TLS 1.0")
-	assert.Equal(t, "1.1", tlsVersionString(tls.VersionTLS11), "unexpected version for TLS 1.1")
-	assert.Equal(t, "1.2", tlsVersionString(tls.VersionTLS12), "unexpected version for TLS 1.2")
-	assert.Equal(t, "1.3", tlsVersionString(tls.VersionTLS13), "unexpected version for TLS 1.3")
-	assert.Equal(t, "unknown", tlsVersionString(20), "unexpected unknown version")
-}
-
 func TestObserver(t *testing.T) {
 	root := metrics.New()
-	observer := newObserver(root.Scope(), zap.NewNop(), "test-svc", "test-transport", yarpctls.Enforced)
+	params := Params{
+		Meter:         root.Scope(),
+		Logger:        zap.NewNop(),
+		ServiceName:   "test-svc",
+		TransportName: "test-transport",
+		Direction:     "outbound",
+		Dest:          "test-svc-1",
+		Mode:          yarpctls.Enforced,
+	}
+	observer := NewObserver(params)
 	require.NotNil(t, observer, "unexpected nil observer")
 	assert.NotNil(t, observer.plaintextConnectionsCounter, "unexpected nil counter")
 	assert.NotNil(t, observer.tlsConnectionsCounter, "unexpected nil counter")
 	assert.NotNil(t, observer.tlsFailuresCounter, "unexpected nil counter")
 
-	observer.incPlaintextConnections()
-	observer.incTLSConnections(tls.VersionTLS11)
-	observer.incTLSHandshakeFailures()
+	observer.IncPlaintextConnections()
+	observer.IncTLSConnections(tls.VersionTLS11)
+	observer.IncTLSHandshakeFailures()
 
 	expectedCounters := []metrics.Snapshot{
 		{
@@ -60,6 +61,8 @@ func TestObserver(t *testing.T) {
 				"transport": "test-transport",
 				"component": "yarpc",
 				"mode":      "Enforced",
+				"direction": "outbound",
+				"dest":      "test-svc-1",
 			},
 		},
 		{
@@ -71,6 +74,8 @@ func TestObserver(t *testing.T) {
 				"version":   "1.1",
 				"component": "yarpc",
 				"mode":      "Enforced",
+				"direction": "outbound",
+				"dest":      "test-svc-1",
 			},
 		},
 		{
@@ -81,6 +86,8 @@ func TestObserver(t *testing.T) {
 				"transport": "test-transport",
 				"component": "yarpc",
 				"mode":      "Enforced",
+				"direction": "outbound",
+				"dest":      "test-svc-1",
 			},
 		},
 	}

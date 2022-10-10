@@ -18,7 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
+package tls
 
-// Version is the current version of YARPC.
-const Version = "1.66.0"
+import "crypto/tls"
+
+// OutboundTLSConfigProvider interface exposes method for fetching client TLS
+// certificate.
+type OutboundTLSConfigProvider interface {
+	// ClientTLSConfig returns client TLS config which accepts the provided
+	// server Spiffe IDs.
+	ClientTLSConfig(spiffeIDs []string) (*tls.Config, error)
+}
