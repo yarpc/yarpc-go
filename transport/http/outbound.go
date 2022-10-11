@@ -147,7 +147,7 @@ func createTLSClient(o *Outbound) *http.Client {
 	if !ok {
 		// This should not happen as default yarpc http.Client uses
 		// http.Transport and it's not configurable by the user.
-		panic("failed to create http tls client, provided http.Client does not use http.Transport")
+		panic(fmt.Sprintf("failed to create http tls client, provided http.Client transport type %T is not *http.Transport", o.transport.client.Transport))
 	}
 
 	tlsDialer := dialer.NewTLSDialer(dialer.Params{

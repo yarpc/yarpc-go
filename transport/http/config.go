@@ -258,7 +258,7 @@ type OutboundConfig struct {
 	//    tls:
 	//      mode: enforced
 	//      spiffe-ids:
-	//		  - destination-id
+	//        - destination-id
 	TLS OutboundTLSConfig `config:"tls"`
 }
 
@@ -273,7 +273,7 @@ type OutboundTLSConfig struct {
 	SpiffeIDs []string `config:"spiffe-ids"`
 }
 
-func (o OutboundTLSConfig) options(provider yarpctls.OutboundTLSConfigProvider) (OutboundOption, error) {
+func (o OutboundTLSConfig) options(provider yarpctls.OutboundTLSConfigProvider) ([]OutboundOption, error) {
 	if o.Mode == yarpctls.Disabled {
 		return nil, nil
 	}
@@ -295,7 +295,7 @@ func (o OutboundTLSConfig) options(provider yarpctls.OutboundTLSConfigProvider) 
 		return nil, err
 	}
 
-	return OutboundTLSConfiguration(config), nil
+	return []OutboundOption{OutboundTLSConfiguration(config)}, nil
 }
 
 func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport, k *yarpcconfig.Kit) (*Outbound, error) {
@@ -313,10 +313,7 @@ func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport
 	if err != nil {
 		return nil, err
 	}
-
-	if option != nil {
-		opts = append([]OutboundOption{option}, opts...)
-	}
+	opts = append(option, opts...)
 
 	// Special case where the URL implies the single peer.
 	if oc.Empty() {
