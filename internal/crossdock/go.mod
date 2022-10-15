@@ -10,14 +10,14 @@ require (
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/stretchr/testify v1.5.1
 	github.com/uber/jaeger-client-go v2.22.1+incompatible
-	github.com/uber/tchannel-go v1.22.2
+	github.com/uber/tchannel-go v1.32.1
 	go.uber.org/fx v1.10.0
 	go.uber.org/multierr v1.4.0
 	go.uber.org/thriftrw v1.29.2
 	go.uber.org/yarpc v1.42.1
 	go.uber.org/zap v1.13.0
-	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f
-	google.golang.org/grpc v1.28.0
+	golang.org/x/net v0.0.0-20220121210141-e204ce36a2ba
+	google.golang.org/grpc v1.40.1
 )
 
 replace go.uber.org/yarpc => ../..
