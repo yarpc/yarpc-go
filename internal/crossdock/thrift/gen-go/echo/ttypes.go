@@ -26,7 +26,7 @@ package echo
 import (
 	"bytes"
 	"fmt"
-	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/uber/tchannel-go/thirdparty/github.com/apache/thrift/lib/go/thrift"
 )
 
 // (needed to ensure safety because of naive import list construction.)
@@ -37,7 +37,7 @@ var _ = bytes.Equal
 var GoUnusedProtection__ int
 
 // Attributes:
-//  - Beep
+//   - Beep
 type Ping struct {
 	Beep string `thrift:"beep,1,required" db:"beep" json:"beep"`
 }
@@ -134,7 +134,7 @@ func (p *Ping) String() string {
 }
 
 // Attributes:
-//  - Boop
+//   - Boop
 type Pong struct {
 	Boop string `thrift:"boop,1,required" db:"boop" json:"boop"`
 }

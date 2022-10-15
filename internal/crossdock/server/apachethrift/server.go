@@ -26,7 +26,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/uber/tchannel-go/thirdparty/github.com/apache/thrift/lib/go/thrift"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gen-go/gauntlet_apache"
 	"go.uber.org/yarpc/internal/net"
 )
