@@ -199,17 +199,6 @@ func (t *Transport) ReleasePeer(pid peer.Identifier, sub peer.Subscriber) error 
 	return nil
 }
 
-func (t *Transport) peerList() *tchannel.RootPeerList {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-
-	if t.ch == nil {
-		return nil
-	}
-
-	return t.ch.RootPeers()
-}
-
 // Start starts the TChannel transport. This starts making connections and
 // accepting inbound requests. All inbounds must have been assigned a router
 // to accept inbound requests before this is called.
@@ -336,10 +325,14 @@ func (t *Transport) onPeerStatusChanged(tp *tchannel.Peer) {
 	p.notifyConnectionStatusChanged()
 }
 
-func (t *Transport) createOutboundChannel(dialer dialerFunc) *outboundChannel {
+func (t *Transport) createOutboundChannel(dialerFunc dialerFunc) (peer.Transport, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	outboundChannel := newOutboundChannel(t, dialer)
+
+	if t.once.State() != lifecycle.Idle {
+		return nil, errors.New("tchannel outbound channel cannot be created after starting transport")
+	}
+	outboundChannel := newOutboundChannel(t, dialerFunc)
 	t.outboundChannels = append(t.outboundChannels, outboundChannel)
-	return outboundChannel
+	return outboundChannel, nil
 }

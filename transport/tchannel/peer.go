@@ -169,8 +169,7 @@ func (p *tchannelPeer) sleep(delay time.Duration) (completed bool) {
 }
 
 func (p *tchannelPeer) getPeer() *tchannel.Peer {
-	root := p.getRootPeers()
-	return root.GetOrAdd(p.HostPort())
+	return p.getRootPeers().GetOrAdd(p.HostPort())
 }
 
 func (p *tchannelPeer) getRootPeers() *tchannel.RootPeerList {
