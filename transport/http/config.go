@@ -256,7 +256,8 @@ type OutboundConfig struct {
 func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport, k *yarpcconfig.Kit) (*Outbound, error) {
 	x := t.(*Transport)
 
-	opts := ts.OutboundOptions
+	opts := []OutboundOption{OutboundDestinationServiceName(k.OutboundServiceName())}
+	opts = append(opts, ts.OutboundOptions...)
 	if len(oc.AddHeaders) > 0 {
 		for k, v := range oc.AddHeaders {
 			opts = append(opts, AddHeader(k, v))
