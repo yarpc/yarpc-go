@@ -66,7 +66,8 @@ func TestOutboundChannel(t *testing.T) {
 		dialerInvoked = true
 		return (&net.Dialer{}).DialContext(ctx, network, hostPort)
 	}
-	outboundChannel := trans.createOutboundChannel(dialerFunc)
+	outboundChannel, err := trans.createOutboundChannel(dialerFunc)
+	require.NoError(t, err)
 
 	require.NoError(t, trans.Start(), "failed to start transport")
 	defer trans.Stop()

@@ -37,6 +37,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/yarpc/transport/internal/tls/dialer"
 	"go.uber.org/yarpc/transport/internal/tls/muxlistener"
 	"go.uber.org/zap"
 )
@@ -82,7 +83,8 @@ type Transport struct {
 	inboundTLSConfig *tls.Config
 	inboundTLSMode   *yarpctls.Mode
 
-	outboundChannels []*outboundChannel
+	outboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
+	outboundChannels          []*outboundChannel
 }
 
 // NewTransport is a YARPC transport that facilitates sending and receiving
@@ -133,6 +135,7 @@ func (o transportOptions) newTransport() *Transport {
 		excludeServiceHeaderInResponse: o.excludeServiceHeaderInResponse,
 		inboundTLSConfig:               o.inboundTLSConfig,
 		inboundTLSMode:                 o.inboundTLSMode,
+		outboundTLSConfigProvider:      o.outboundTLSConfigProvider,
 	}
 }
 
@@ -197,17 +200,6 @@ func (t *Transport) ReleasePeer(pid peer.Identifier, sub peer.Subscriber) error 
 	}
 
 	return nil
-}
-
-func (t *Transport) peerList() *tchannel.RootPeerList {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-
-	if t.ch == nil {
-		return nil
-	}
-
-	return t.ch.RootPeers()
 }
 
 // Start starts the TChannel transport. This starts making connections and
@@ -336,10 +328,27 @@ func (t *Transport) onPeerStatusChanged(tp *tchannel.Peer) {
 	p.notifyConnectionStatusChanged()
 }
 
-func (t *Transport) createOutboundChannel(dialer dialerFunc) *outboundChannel {
+func (t *Transport) CreateTLSOutboundChannel(tlsConfig *tls.Config, destinationName string) (peer.Transport, error) {
+	params := dialer.Params{
+		Config:        tlsConfig,
+		Meter:         t.meter,
+		Logger:        t.logger,
+		ServiceName:   t.name,
+		TransportName: TransportName,
+		Dest:          destinationName,
+		Dialer:        t.dialer,
+	}
+	return t.createOutboundChannel(dialer.NewTLSDialer(params).DialContext)
+}
+
+func (t *Transport) createOutboundChannel(dialerFunc dialerFunc) (peer.Transport, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	outboundChannel := newOutboundChannel(t, dialer)
+
+	if t.once.State() != lifecycle.Idle {
+		return nil, errors.New("tchannel outbound channel can be created before starting transport")
+	}
+	outboundChannel := newOutboundChannel(t, dialerFunc)
 	t.outboundChannels = append(t.outboundChannels, outboundChannel)
-	return outboundChannel
+	return outboundChannel, nil
 }
