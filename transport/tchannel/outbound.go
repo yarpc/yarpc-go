@@ -104,9 +104,7 @@ func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport
 
 // Call sends an RPC to this specific peer.
 func (p *tchannelPeer) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	root := p.transport.ch.RootPeers()
-	tp := root.GetOrAdd(p.HostPort())
-	return callWithPeer(ctx, req, tp, p.transport.headerCase)
+	return callWithPeer(ctx, req, p.getPeer(), p.transport.headerCase)
 }
 
 // callWithPeer sends a request with the chosen peer.

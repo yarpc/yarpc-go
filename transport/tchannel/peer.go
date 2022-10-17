@@ -24,6 +24,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/abstractpeer"
 	"go.uber.org/zap"
@@ -163,6 +164,11 @@ func (p *tchannelPeer) sleep(delay time.Duration) (completed bool) {
 		<-p.timer.C
 	}
 	return false
+}
+
+func (p *tchannelPeer) getPeer() *tchannel.Peer {
+	root := p.transport.ch.RootPeers()
+	return root.GetOrAdd(p.HostPort())
 }
 
 // StartRequest and EndRequest are no-ops now.
