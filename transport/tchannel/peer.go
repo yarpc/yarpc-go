@@ -34,13 +34,14 @@ type tchannelPeer struct {
 	*abstractpeer.Peer
 
 	transport *Transport
+	ch        *tchannel.Channel
 	addr      string
 	changed   chan struct{}
 	released  chan struct{}
 	timer     *time.Timer
 }
 
-func newPeer(addr string, t *Transport) *tchannelPeer {
+func newPeer(addr string, t *Transport, ch *tchannel.Channel) *tchannelPeer {
 	// Create a defused timer for later use.
 	timer := time.NewTimer(0)
 	if !timer.Stop() {
@@ -49,6 +50,7 @@ func newPeer(addr string, t *Transport) *tchannelPeer {
 
 	return &tchannelPeer{
 		addr:      addr,
+		ch:        ch,
 		Peer:      abstractpeer.NewPeer(abstractpeer.PeerIdentifier(addr), t),
 		transport: t,
 		changed:   make(chan struct{}, 1),
@@ -65,7 +67,7 @@ func (p *tchannelPeer) maintainConnection() {
 
 	// Wait for start (so we can be certain that we have a channel).
 	<-p.transport.once.Started()
-	pl := p.transport.peerList()
+	pl := p.getRootPeers()
 	if pl == nil {
 		return
 	}
@@ -167,8 +169,20 @@ func (p *tchannelPeer) sleep(delay time.Duration) (completed bool) {
 }
 
 func (p *tchannelPeer) getPeer() *tchannel.Peer {
-	root := p.transport.ch.RootPeers()
+	root := p.getRootPeers()
 	return root.GetOrAdd(p.HostPort())
+}
+
+func (p *tchannelPeer) getRootPeers() *tchannel.RootPeerList {
+	ch := p.ch
+	if ch == nil {
+		ch = p.transport.ch
+	}
+
+	if ch == nil {
+		return nil
+	}
+	return ch.RootPeers()
 }
 
 // StartRequest and EndRequest are no-ops now.

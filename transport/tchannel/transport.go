@@ -81,6 +81,8 @@ type Transport struct {
 
 	inboundTLSConfig *tls.Config
 	inboundTLSMode   *yarpctls.Mode
+
+	outboundChannels []*outboundChannel
 }
 
 // NewTransport is a YARPC transport that facilitates sending and receiving
@@ -142,22 +144,26 @@ func (t *Transport) ListenAddr() string {
 // RetainPeer adds a peer subscriber (typically a peer chooser) and causes the
 // transport to maintain persistent connections with that peer.
 func (t *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.Peer, error) {
+	return t.retainPeer(pid, sub, t.ch)
+}
+
+func (t *Transport) retainPeer(pid peer.Identifier, sub peer.Subscriber, ch *tchannel.Channel) (peer.Peer, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	p := t.getOrCreatePeer(pid)
+	p := t.getOrCreatePeer(pid, ch)
 	p.Subscribe(sub)
 	return p, nil
 }
 
 // **NOTE** should only be called while the lock write mutex is acquired
-func (t *Transport) getOrCreatePeer(pid peer.Identifier) *tchannelPeer {
+func (t *Transport) getOrCreatePeer(pid peer.Identifier, ch *tchannel.Channel) *tchannelPeer {
 	addr := pid.Identifier()
 	if p, ok := t.peers[addr]; ok {
 		return p
 	}
 
-	p := newPeer(addr, t)
+	p := newPeer(addr, t, ch)
 	t.peers[addr] = p
 	// Start a peer connection loop
 	t.connectorsGroup.Add(1)
@@ -289,6 +295,9 @@ func (t *Transport) start() error {
 	}
 	t.addr = t.ch.PeerInfo().HostPort
 
+	for _, outboundChannel := range t.outboundChannels {
+		outboundChannel.start()
+	}
 	return nil
 }
 
@@ -302,6 +311,9 @@ func (t *Transport) Stop() error {
 
 func (t *Transport) stop() error {
 	t.ch.Close()
+	for _, outboundChannel := range t.outboundChannels {
+		outboundChannel.stop()
+	}
 	t.connectorsGroup.Wait()
 	return nil
 }
@@ -322,4 +334,12 @@ func (t *Transport) onPeerStatusChanged(tp *tchannel.Peer) {
 		return
 	}
 	p.notifyConnectionStatusChanged()
+}
+
+func (t *Transport) createOutboundChannel(dialer dialerFunc) *outboundChannel {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	outboundChannel := newOutboundChannel(t, dialer)
+	t.outboundChannels = append(t.outboundChannels, outboundChannel)
+	return outboundChannel
 }
