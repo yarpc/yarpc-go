@@ -23,6 +23,7 @@ package tchannel
 import (
 	"bytes"
 	"net"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
