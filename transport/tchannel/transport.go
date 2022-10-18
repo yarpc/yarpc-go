@@ -346,7 +346,7 @@ func (t *Transport) createOutboundChannel(dialerFunc dialerFunc) (peer.Transport
 	defer t.lock.Unlock()
 
 	if t.once.State() != lifecycle.Idle {
-		return nil, errors.New("tchannel outbound channel can be created before starting transport")
+		return nil, errors.New("tchannel outbound channel cannot be created after starting transport")
 	}
 	outboundChannel := newOutboundChannel(t, dialerFunc)
 	t.outboundChannels = append(t.outboundChannels, outboundChannel)

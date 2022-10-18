@@ -92,3 +92,13 @@ func TestOutboundChannel(t *testing.T) {
 	assert.True(t, handlerInvoked, "handler was never called by client")
 	assert.True(t, dialerInvoked, "dialer was not called")
 }
+
+func TestOutboundChannelFailure(t *testing.T) {
+	transport, err := NewTransport(ServiceName("svc"))
+	require.NoError(t, err)
+	require.NoError(t, transport.Start())
+	defer transport.Stop()
+
+	_, err = transport.createOutboundChannel(nil)
+	assert.EqualError(t, err, "tchannel outbound channel cannot be created after starting transport")
+}
