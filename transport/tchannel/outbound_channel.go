@@ -28,6 +28,8 @@ import (
 	"golang.org/x/net/context"
 )
 
+var _ peer.Transport = (*outboundChannel)(nil)
+
 type dialerFunc = func(ctx context.Context, network, hostPort string) (net.Conn, error)
 
 // outboundChannel holds a TChannel channel for outbound use only with custom
