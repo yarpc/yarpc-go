@@ -113,7 +113,7 @@ func Meter(meter *metrics.Scope) TransportOption {
 	}
 }
 
-// OutboundTLSConfigProvider returns an TransportOption that provides the
+// OutboundTLSConfigProvider returns a TransportOption that provides the
 // outbound TLS config provider.
 func OutboundTLSConfigProvider(provider yarpctls.OutboundTLSConfigProvider) TransportOption {
 	return func(transportOptions *transportOptions) {

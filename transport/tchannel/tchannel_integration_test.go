@@ -160,18 +160,15 @@ func TestInboundTLS(t *testing.T) {
 
 func TestTLSOutbound(t *testing.T) {
 	scenario := testscenario.Create(t, time.Minute, time.Minute)
-
-	options := []tchannel.TransportOption{
+	serverTransport, err := tchannel.NewTransport(
 		tchannel.InboundTLSConfiguration(scenario.ServerTLSConfig()),
-		tchannel.InboundTLSMode(yarpctls.Enforced),
+		tchannel.InboundTLSMode(yarpctls.Enforced), // reject plaintext connections.
 		tchannel.ServiceName("test-svc"),
-	}
-
-	serverTransport, err := tchannel.NewTransport(options...)
+	)
 	require.NoError(t, err)
+
 	inbound := serverTransport.NewInbound()
 	inbound.SetRouter(testRouter{proc: transport.Procedure{HandlerSpec: transport.NewUnaryHandlerSpec(testServer{})}})
-
 	require.NoError(t, serverTransport.Start())
 	defer serverTransport.Stop()
 	require.NoError(t, inbound.Start())
@@ -179,7 +176,7 @@ func TestTLSOutbound(t *testing.T) {
 
 	clientTransport, err := tchannel.NewTransport(tchannel.ServiceName("test-client-svc"))
 	require.NoError(t, err)
-
+	// Create outbound tchannel with client tls config.
 	peerTransport, err := clientTransport.CreateTLSOutboundChannel(scenario.ClientTLSConfig(), "test-svc")
 	require.NoError(t, err)
 	outbound := serverTransport.NewOutbound(peer.NewSingle(hostport.Identify(serverTransport.ListenAddr()), peerTransport))

@@ -94,13 +94,13 @@ type OutboundConfig struct {
 // OutboundTLSConfig configures TLS for a TChannel outbound.
 type OutboundTLSConfig struct {
 	// Mode when set to Enforced enables TLS outbound and
-	// outbound TLS configuration provider will be used for fetching
-	// outbound tls.Config.
+	// outbound TLS configuration provider will be used for fetching tls.Config.
 	Mode yarpctls.Mode `config:"mode,interpolate"`
 	// SpiffeIDs is a list of the accepted server spiffe IDs.
 	SpiffeIDs []string `config:"spiffe-ids"`
 }
 
+// getPeerTransport returns peer transport to be used in peer chooser creation.
 func (c OutboundConfig) getPeerTransport(transport *Transport, destName string) (peer.Transport, error) {
 	if c.TLS.Mode == yarpctls.Disabled {
 		return transport, nil
