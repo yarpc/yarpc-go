@@ -23,6 +23,7 @@ package tchannel
 import (
 	"bytes"
 	"net"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -61,9 +62,9 @@ func TestOutboundChannel(t *testing.T) {
 	trans, err := NewTransport(opts...)
 	require.NoError(t, err)
 
-	var dialerInvoked bool
+	var dialerInvoked int32
 	dialerFunc := func(ctx context.Context, network, hostPort string) (net.Conn, error) {
-		dialerInvoked = true
+		atomic.AddInt32(&dialerInvoked, 1)
 		return (&net.Dialer{}).DialContext(ctx, network, hostPort)
 	}
 	outboundChannel, err := trans.createOutboundChannel(dialerFunc)
@@ -90,7 +91,7 @@ func TestOutboundChannel(t *testing.T) {
 	)
 	require.NoError(t, err, "failed to make call")
 	assert.True(t, handlerInvoked, "handler was never called by client")
-	assert.True(t, dialerInvoked, "dialer was not called")
+	assert.True(t, dialerInvoked > 1, "dialer was not called")
 }
 
 func TestOutboundChannelFailure(t *testing.T) {
