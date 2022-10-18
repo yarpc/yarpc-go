@@ -41,6 +41,7 @@ type outboundChannel struct {
 	ch     *tchannel.Channel
 }
 
+// newOutboundChannel returns outbound channel with given transport and dialer.
 func newOutboundChannel(t *Transport, dialer dialerFunc) *outboundChannel {
 	return &outboundChannel{
 		t:      t,
@@ -58,6 +59,8 @@ func (o *outboundChannel) ReleasePeer(pid peer.Identifier, sub peer.Subscriber) 
 	return o.t.ReleasePeer(pid, sub)
 }
 
+// start creates channel used for managing outbound peers.
+// This is invoked by the transport when it is started.
 func (o *outboundChannel) start() (err error) {
 	o.ch, err = tchannel.NewChannel(o.t.name, &tchannel.ChannelOptions{
 		Dialer:              o.dialer,
@@ -67,6 +70,8 @@ func (o *outboundChannel) start() (err error) {
 	return err
 }
 
+// stop closes the outbound channel stopping outbound connections.
+// This is invoked by the transport when it is stopping.
 func (o *outboundChannel) stop() {
 	o.ch.Close()
 }
