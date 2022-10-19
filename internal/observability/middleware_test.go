@@ -268,7 +268,12 @@ func TestNewMiddlewareLogLevels(t *testing.T) {
 }
 
 func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
-	defer stubTime()()
+	timeVal := time.Now()
+	defer stubTimeWithTimeVal(timeVal)()
+	ttl := time.Millisecond * 1000
+	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(ttl))
+	defer cancel()
+
 	req := &transport.Request{
 		Caller:          "caller",
 		Service:         "service",
@@ -323,6 +328,7 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 				zap.Duration("latency", 0),
 				zap.Bool("successful", true),
 				zap.Skip(), // ContextExtractor
+				zap.Duration("deadline", ttl),
 			},
 		},
 		{
@@ -335,6 +341,7 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
 				zap.Skip(),
+				zap.Duration("deadline", ttl),
 				zap.Error(rawErr),
 				zap.String(_errorCodeLogKey, "unknown"),
 			},
@@ -350,6 +357,7 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
 				zap.Skip(),
+				zap.Duration("deadline", ttl),
 				zap.String("error", "application_error"),
 				zap.String("errorDetails", appErrDetails),
 			},
@@ -367,6 +375,7 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
 				zap.Skip(),
+				zap.Duration("deadline", ttl),
 				zap.String("error", "application_error"),
 				zap.String("errorCode", "resource-exhausted"),
 				zap.String("errorName", "FunkyThriftError"),
@@ -385,6 +394,7 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
 				zap.Skip(),
+				zap.Duration("deadline", ttl),
 				zap.Error(rawErr),
 				zap.String(_errorCodeLogKey, "unknown"),
 			},
@@ -401,6 +411,7 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
 				zap.Skip(),
+				zap.Duration("deadline", ttl),
 				zap.Error(yErrNoDetails),
 				zap.String(_errorCodeLogKey, "aborted"),
 			},
@@ -419,6 +430,7 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
 				zap.Skip(), // ContextExtractor
+				zap.Duration("deadline", ttl),
 				zap.Error(yErrNoDetails),
 				zap.String(_errorCodeLogKey, "aborted"),
 				zap.String(_errorNameLogKey, "MyErrMessageName"),
@@ -437,6 +449,7 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
 				zap.Skip(),
+				zap.Duration("deadline", ttl),
 				zap.Error(yErrWithDetails),
 				zap.String(_errorCodeLogKey, "aborted"),
 			},
@@ -499,7 +512,7 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 
 		t.Run(tt.desc+", unary inbound", func(t *testing.T) {
 			err := mw.Handle(
-				context.Background(),
+				ctx,
 				req,
 				&transporttest.FakeResponseWriter{},
 				newHandler(tt),
@@ -521,7 +534,7 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 			assert.Equal(t, expected, getLog(t), "Unexpected log entry written.")
 		})
 		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
-			res, err := mw.Call(context.Background(), req, newOutbound(tt))
+			res, err := mw.Call(ctx, req, newOutbound(tt))
 			checkErr(err)
 			if tt.err == nil {
 				assert.NotNil(t, res, "Expected non-nil response if call is successful.")
@@ -548,7 +561,7 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 		}
 
 		t.Run(tt.desc+", oneway inbound", func(t *testing.T) {
-			err := mw.HandleOneway(context.Background(), req, newHandler(tt))
+			err := mw.HandleOneway(ctx, req, newHandler(tt))
 			checkErr(err)
 			logContext := append(
 				baseFields(),
@@ -566,7 +579,7 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 			assert.Equal(t, expected, getLog(t), "Unexpected log entry written.")
 		})
 		t.Run(tt.desc+", oneway outbound", func(t *testing.T) {
-			ack, err := mw.CallOneway(context.Background(), req, newOutbound(tt))
+			ack, err := mw.CallOneway(ctx, req, newOutbound(tt))
 			checkErr(err)
 			logContext := append(
 				baseFields(),
@@ -590,7 +603,12 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 }
 
 func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
-	defer stubTime()()
+	timeVal := time.Now()
+	defer stubTimeWithTimeVal(timeVal)()
+	ttl := time.Millisecond * 1000
+	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(ttl))
+	defer cancel()
+
 	req := &transport.Request{
 		Caller:          "caller",
 		Service:         "service",
@@ -647,6 +665,7 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 				zap.Duration("latency", 0),
 				zap.Bool("successful", true),
 				zap.Skip(), // ContextExtractor
+				zap.Duration("deadline", ttl),
 			},
 		},
 		{
@@ -659,6 +678,7 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
 				zap.Skip(),
+				zap.Duration("deadline", ttl),
 				zap.Error(rawErr),
 				zap.String(_errorCodeLogKey, "unknown"),
 			},
@@ -674,6 +694,7 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
 				zap.Skip(),
+				zap.Duration("deadline", ttl),
 				zap.String("error", "application_error"),
 				zap.String("errorDetails", appErrDetails),
 			},
@@ -691,6 +712,7 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
 				zap.Skip(),
+				zap.Duration("deadline", ttl),
 				zap.String("error", "application_error"),
 				zap.String("errorCode", "resource-exhausted"),
 				zap.String("errorName", "FunkyThriftError"),
@@ -710,6 +732,7 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
 				zap.Skip(),
+				zap.Duration("deadline", ttl),
 				zap.String("error", "application_error"),
 				zap.String("errorCode", "internal"),
 				zap.String("errorName", "FunkyThriftError"),
@@ -728,6 +751,7 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
 				zap.Skip(),
+				zap.Duration("deadline", ttl),
 				zap.Error(rawErr),
 				zap.String(_errorCodeLogKey, "unknown"),
 			},
@@ -744,6 +768,7 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
 				zap.Skip(),
+				zap.Duration("deadline", ttl),
 				zap.Error(yErrNoDetails),
 				zap.String(_errorCodeLogKey, "aborted"),
 			},
@@ -762,6 +787,7 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
 				zap.Skip(), // ContextExtractor
+				zap.Duration("deadline", ttl),
 				zap.Error(yErrNoDetails),
 				zap.String(_errorCodeLogKey, "aborted"),
 				zap.String(_errorNameLogKey, "MyErrMessageName"),
@@ -780,6 +806,7 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
 				zap.Skip(),
+				zap.Duration("deadline", ttl),
 				zap.Error(yErrWithDetails),
 				zap.String(_errorCodeLogKey, "aborted"),
 			},
@@ -796,6 +823,7 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
 				zap.Skip(),
+				zap.Duration("deadline", ttl),
 				zap.Error(yServerErrInternal),
 				zap.String(_errorCodeLogKey, "internal"),
 			},
@@ -858,7 +886,7 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 
 		t.Run(tt.desc+", unary inbound", func(t *testing.T) {
 			err := mw.Handle(
-				context.Background(),
+				ctx,
 				req,
 				&transporttest.FakeResponseWriter{},
 				newHandler(tt),
@@ -880,7 +908,7 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 			assert.Equal(t, expected, getLog(t), "Unexpected log entry written.")
 		})
 		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
-			res, err := mw.Call(context.Background(), req, newOutbound(tt))
+			res, err := mw.Call(ctx, req, newOutbound(tt))
 			checkErr(err)
 			if tt.err == nil {
 				assert.NotNil(t, res, "Expected non-nil response if call is successful.")
@@ -907,7 +935,7 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 		}
 
 		t.Run(tt.desc+", oneway inbound", func(t *testing.T) {
-			err := mw.HandleOneway(context.Background(), req, newHandler(tt))
+			err := mw.HandleOneway(ctx, req, newHandler(tt))
 			checkErr(err)
 			logContext := append(
 				baseFields(),
@@ -925,7 +953,7 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 			assert.Equal(t, expected, getLog(t), "Unexpected log entry written.")
 		})
 		t.Run(tt.desc+", oneway outbound", func(t *testing.T) {
-			ack, err := mw.CallOneway(context.Background(), req, newOutbound(tt))
+			ack, err := mw.CallOneway(ctx, req, newOutbound(tt))
 			checkErr(err)
 			logContext := append(
 				baseFields(),
@@ -1850,7 +1878,11 @@ func getKey(req *transport.Request, direction string, rpcType transport.Type) (k
 }
 
 func TestUnaryInboundApplicationErrors(t *testing.T) {
-	defer stubTime()()
+	timeVal := time.Now()
+	defer stubTimeWithTimeVal(timeVal)()
+	ttl := time.Millisecond * 1000
+	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(ttl))
+	defer cancel()
 
 	yErrAlreadyExists := yarpcerrors.CodeAlreadyExists
 
@@ -1879,6 +1911,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		zap.Duration("latency", 0),
 		zap.Bool("successful", false),
 		zap.Skip(),
+		zap.Duration("deadline", ttl),
 		zap.String("error", "application_error"),
 		zap.String("errorCode", "already-exists"),
 		zap.String("errorName", "SomeFakeError"),
@@ -1892,7 +1925,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 	})
 
 	assert.NoError(t, mw.Handle(
-		context.Background(),
+		ctx,
 		req,
 		&transporttest.FakeResponseWriter{},
 		fakeHandler{
@@ -1921,6 +1954,7 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 	timeVal := time.Now()
 	defer stubTimeWithTimeVal(timeVal)()
 	ttlMs := int64(1000)
+	ttl := time.Millisecond * time.Duration(1000)
 	root := metrics.New()
 	meter := root.Scope()
 	mw := NewMiddleware(Config{
@@ -1934,7 +1968,7 @@ func TestMiddlewareSuccessSnapshot(t *testing.T) {
 
 	buf.Write([]byte("body"))
 
-	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(time.Millisecond*time.Duration(ttlMs)))
+	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(ttl))
 	defer cancel()
 	err := mw.Handle(
 		ctx,
@@ -2024,6 +2058,7 @@ func TestMiddlewareSuccessSnapshotWithTagsFiltered(t *testing.T) {
 	timeVal := time.Now()
 	defer stubTimeWithTimeVal(timeVal)()
 	ttlMs := int64(1000)
+	ttl := time.Millisecond * time.Duration(1000)
 	root := metrics.New()
 	meter := root.Scope()
 	mw := NewMiddleware(Config{
@@ -2040,7 +2075,7 @@ func TestMiddlewareSuccessSnapshotWithTagsFiltered(t *testing.T) {
 
 	buf.Write([]byte("body"))
 
-	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(time.Millisecond*time.Duration(ttlMs)))
+	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(ttl))
 	defer cancel()
 	err := mw.Handle(
 		ctx,
@@ -2128,6 +2163,7 @@ func TestMiddlewareSuccessSnapshotForCall(t *testing.T) {
 	timeVal := time.Now()
 	defer stubTimeWithTimeVal(timeVal)()
 	ttlMs := int64(1000)
+	ttl := time.Millisecond * time.Duration(1000)
 	root := metrics.New()
 	meter := root.Scope()
 	mw := NewMiddleware(Config{
@@ -2141,7 +2177,7 @@ func TestMiddlewareSuccessSnapshotForCall(t *testing.T) {
 
 	buf.Write([]byte("body"))
 
-	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(time.Millisecond*time.Duration(ttlMs)))
+	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(ttl))
 	defer cancel()
 	_, err := mw.Call(
 		ctx,
@@ -2228,6 +2264,7 @@ func TestMiddlewareSuccessSnapshotForCallOnWay(t *testing.T) {
 	timeVal := time.Now()
 	defer stubTimeWithTimeVal(timeVal)()
 	ttlMs := int64(1000)
+	ttl := time.Millisecond * time.Duration(1000)
 	root := metrics.New()
 	meter := root.Scope()
 	mw := NewMiddleware(Config{
@@ -2241,7 +2278,7 @@ func TestMiddlewareSuccessSnapshotForCallOnWay(t *testing.T) {
 
 	buf.Write([]byte("body"))
 
-	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(time.Millisecond*time.Duration(ttlMs)))
+	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(ttl))
 	defer cancel()
 	_, err := mw.CallOneway(
 		ctx,
@@ -2327,6 +2364,7 @@ func TestMiddlewareSuccessSnapshotForOneWay(t *testing.T) {
 	timeVal := time.Now()
 	defer stubTimeWithTimeVal(timeVal)()
 	ttlMs := int64(1000)
+	ttl := time.Millisecond * time.Duration(1000)
 	root := metrics.New()
 	meter := root.Scope()
 	mw := NewMiddleware(Config{
@@ -2340,7 +2378,7 @@ func TestMiddlewareSuccessSnapshotForOneWay(t *testing.T) {
 
 	buf.Write([]byte("body"))
 
-	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(time.Millisecond*time.Duration(ttlMs)))
+	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(ttl))
 	defer cancel()
 	err := mw.HandleOneway(
 		ctx,
@@ -2536,6 +2574,7 @@ func TestMiddlewareFailureWithDeadlineExceededSnapshot(t *testing.T) {
 	defer stubTimeWithTimeVal(timeVal)()
 
 	ttlMs := int64(1000)
+	ttl := time.Millisecond * time.Duration(ttlMs)
 	root := metrics.New()
 	meter := root.Scope()
 	mw := NewMiddleware(Config{
@@ -2549,7 +2588,7 @@ func TestMiddlewareFailureWithDeadlineExceededSnapshot(t *testing.T) {
 
 	buf.Write([]byte("test body"))
 
-	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(time.Millisecond*time.Duration(ttlMs)))
+	ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(ttl))
 	defer cancel()
 	err := mw.Handle(
 		ctx,
@@ -2689,13 +2728,14 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 			defer stubTimeWithTimeVal(timeVal)()
 
 			ttlMs := int64(1000)
+			ttl := time.Millisecond * time.Duration(1000)
 			root := metrics.New()
 			meter := root.Scope()
 			mw := NewMiddleware(Config{
 				Logger: zap.NewNop(),
 				Scope:  meter,
 			})
-			ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(time.Millisecond*time.Duration(ttlMs)))
+			ctx, cancel := context.WithDeadline(context.Background(), timeVal.Add(ttl))
 			defer cancel()
 			err := mw.Handle(
 				ctx,

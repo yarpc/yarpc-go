@@ -5,7 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- No changes yet.
+### Added
+- logging: Original context deadline if available is logged under `deadline` field.
 
 ## [1.66.0] - 2022-10-10
 ### Added
