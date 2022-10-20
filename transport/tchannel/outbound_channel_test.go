@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/testutils"
+	"go.uber.org/atomic"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/testtime"
@@ -61,9 +62,11 @@ func TestOutboundChannel(t *testing.T) {
 	trans, err := NewTransport(opts...)
 	require.NoError(t, err)
 
-	var dialerInvoked bool
+	// Atomic bool to avoid data race as dialer can be invoked twice
+	// due to race between tchannel outbound and tchannel peer.
+	var dialerInvoked atomic.Bool
 	dialerFunc := func(ctx context.Context, network, hostPort string) (net.Conn, error) {
-		dialerInvoked = true
+		dialerInvoked.Store(true)
 		return (&net.Dialer{}).DialContext(ctx, network, hostPort)
 	}
 	outboundChannel, err := trans.createOutboundChannel(dialerFunc)
@@ -90,7 +93,7 @@ func TestOutboundChannel(t *testing.T) {
 	)
 	require.NoError(t, err, "failed to make call")
 	assert.True(t, handlerInvoked, "handler was never called by client")
-	assert.True(t, dialerInvoked, "dialer was not called")
+	assert.True(t, dialerInvoked.Load(), "dialer was not called")
 }
 
 func TestOutboundChannelFailure(t *testing.T) {
