@@ -285,7 +285,9 @@ func (t *Transport) start() error {
 	t.addr = t.ch.PeerInfo().HostPort
 
 	for _, outboundChannel := range t.outboundChannels {
-		outboundChannel.start()
+		if err := outboundChannel.start(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
