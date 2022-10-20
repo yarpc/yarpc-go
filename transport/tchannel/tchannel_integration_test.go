@@ -27,6 +27,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -191,7 +192,7 @@ func TestTLSOutbound(t *testing.T) {
 	res, err := outbound.Call(ctx, &transport.Request{
 		Service:   "test-svc-1",
 		Procedure: "test-proc",
-		Body:      bytes.NewReader([]byte("hello")),
+		Body:      strings.NewReader("hello"),
 	})
 	require.NoError(t, err)
 
