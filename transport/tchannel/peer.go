@@ -175,12 +175,12 @@ func (p *tchannelPeer) getPeer() *tchannel.Peer {
 func (p *tchannelPeer) getRootPeers() *tchannel.RootPeerList {
 	ch := p.ch
 	if ch == nil {
+		if p.transport.ch == nil {
+			return nil
+		}
 		ch = p.transport.ch
 	}
 
-	if ch == nil {
-		return nil
-	}
 	return ch.RootPeers()
 }
 
