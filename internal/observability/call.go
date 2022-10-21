@@ -228,7 +228,7 @@ func (c call) endLogs(
 	fields = append(fields, zap.Bool("successful", err == nil && !isApplicationError))
 	fields = append(fields, c.extract(c.ctx))
 	if deadlineTime, ok := c.ctx.Deadline(); ok {
-		fields = append(fields, zap.Duration("deadline", deadlineTime.Sub(c.started)))
+		fields = append(fields, zap.Duration("timeout", deadlineTime.Sub(c.started)))
 	}
 
 	if appErrBitWithNoError { // Thrift exception

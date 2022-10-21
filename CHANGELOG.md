@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
-- logging: Original context deadline if available is logged under `deadline` field.
+-- logging: Original context deadline if available is logged under `timeout` field.
 
 ## [1.66.0] - 2022-10-10
 ### Added
