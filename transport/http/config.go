@@ -21,6 +21,7 @@
 package http
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -241,7 +242,6 @@ type OutboundConfig struct {
 	// URL to which requests will be sent for this outbound. This field is
 	// required.
 	URL string `config:"url,interpolate"`
-
 	// HTTP headers that will be added to all requests made through this
 	// outbound.
 	//
@@ -251,17 +251,69 @@ type OutboundConfig struct {
 	//      X-Caller: myserice
 	//      X-Token: foo
 	AddHeaders map[string]string `config:"addHeaders"`
+	// TLS config enables TLS outbound.
+	//
+	//  http:
+	//    url: "http://localhost:8080/yarpc"
+	//    tls:
+	//      mode: enforced
+	//      spiffe-ids:
+	//        - destination-id
+	TLS OutboundTLSConfig `config:"tls"`
+}
+
+// OutboundTLSConfig configures TLS for the HTTP outbound.
+type OutboundTLSConfig struct {
+	// Mode when set to Enforced enables outbound TLS.
+	// Note: outbound TLS configuration provider must be given as an option
+	// which is used for fetching client tls.Config.
+	Mode yarpctls.Mode `config:"mode,interpolate"`
+	// SpiffeIDs is list of accepted server spiffe IDs. This cannot be empty
+	// list.
+	SpiffeIDs []string `config:"spiffe-ids"`
+}
+
+func (o OutboundTLSConfig) options(provider yarpctls.OutboundTLSConfigProvider) ([]OutboundOption, error) {
+	if o.Mode == yarpctls.Disabled {
+		return nil, nil
+	}
+
+	if o.Mode == yarpctls.Permissive {
+		return nil, errors.New("outbound does not support permissive TLS mode")
+	}
+
+	if provider == nil {
+		return nil, errors.New("outbound TLS enforced but outbound TLS config provider is nil")
+	}
+
+	if len(o.SpiffeIDs) == 0 {
+		return nil, errors.New("outbound TLS enforced but no spiffe id is provided")
+	}
+
+	config, err := provider.ClientTLSConfig(o.SpiffeIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	return []OutboundOption{OutboundTLSConfiguration(config)}, nil
 }
 
 func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport, k *yarpcconfig.Kit) (*Outbound, error) {
 	x := t.(*Transport)
 
-	opts := ts.OutboundOptions
+	opts := []OutboundOption{OutboundDestinationServiceName(k.OutboundServiceName())}
+	opts = append(opts, ts.OutboundOptions...)
 	if len(oc.AddHeaders) > 0 {
 		for k, v := range oc.AddHeaders {
 			opts = append(opts, AddHeader(k, v))
 		}
 	}
+
+	option, err := oc.TLS.options(x.ouboundTLSConfigProvider)
+	if err != nil {
+		return nil, err
+	}
+	opts = append(option, opts...)
 
 	// Special case where the URL implies the single peer.
 	if oc.Empty() {

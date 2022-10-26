@@ -21,8 +21,11 @@
 package http
 
 import (
+	"crypto/tls"
+	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"testing"
 	"time"
 
@@ -31,6 +34,21 @@ import (
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/yarpcconfig"
 )
+
+type fakeOutboundTLSConfigProvider struct {
+	returnErr         error
+	expectedSpiffeIDs []string
+}
+
+func (f fakeOutboundTLSConfigProvider) ClientTLSConfig(spiffeIDs []string) (*tls.Config, error) {
+	if f.returnErr != nil {
+		return nil, f.returnErr
+	}
+	if !reflect.DeepEqual(f.expectedSpiffeIDs, spiffeIDs) {
+		return nil, errors.New("spiffe IDs do not match")
+	}
+	return &tls.Config{}, nil
+}
 
 func TestTransportSpec(t *testing.T) {
 	// This test is a cross-product of the transport, inbound and outbound
@@ -80,6 +98,7 @@ func TestTransportSpec(t *testing.T) {
 	type wantOutbound struct {
 		URLTemplate string
 		Headers     http.Header
+		TLSConfig   bool
 	}
 
 	type outboundTest struct {
@@ -385,6 +404,90 @@ func TestTransportSpec(t *testing.T) {
 				`no recognized peer chooser preset "derp"`,
 			},
 		},
+		{
+			desc: "simple TLS outbound",
+			cfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"url": "http://localhost/yarpc",
+						"tls": attrs{
+							"mode":       yarpctls.Enforced,
+							"spiffe-ids": []string{"spiffe-test-1"},
+						},
+					},
+				},
+			},
+			opts: []Option{OutboundTLSConfigProvider(&fakeOutboundTLSConfigProvider{
+				expectedSpiffeIDs: []string{"spiffe-test-1"},
+			})},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {
+					URLTemplate: "https://localhost/yarpc",
+					TLSConfig:   true,
+				},
+			},
+		},
+		{
+			desc: "fail TLS outbound without spiffe id",
+			cfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"url": "http://localhost/yarpc",
+						"tls": attrs{
+							"mode": yarpctls.Enforced,
+						},
+					},
+				},
+			},
+			opts:       []Option{OutboundTLSConfigProvider(&fakeOutboundTLSConfigProvider{})},
+			wantErrors: []string{"outbound TLS enforced but no spiffe id is provided"},
+		},
+		{
+			desc: "fail TLS outbound with invalid tls mode",
+			cfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"url": "http://localhost/yarpc",
+						"tls": attrs{
+							"mode": yarpctls.Permissive,
+						},
+					},
+				},
+			},
+			opts:       []Option{OutboundTLSConfigProvider(&fakeOutboundTLSConfigProvider{})},
+			wantErrors: []string{"outbound does not support permissive TLS mode"},
+		},
+		{
+			desc: "fail TLS outbound when tls config provider returns error",
+			cfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"url": "http://localhost/yarpc",
+						"tls": attrs{
+							"mode":       yarpctls.Enforced,
+							"spiffe-ids": []string{"test-spiffe"},
+						},
+					},
+				},
+			},
+			opts:       []Option{OutboundTLSConfigProvider(&fakeOutboundTLSConfigProvider{returnErr: errors.New("test error")})},
+			wantErrors: []string{"test error"},
+		},
+		{
+			desc: "fail TLS outbound without outbound tls config provider",
+			cfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{
+						"url": "http://localhost/yarpc",
+						"tls": attrs{
+							"mode":       yarpctls.Enforced,
+							"spiffe-ids": []string{"test-spiffe"},
+						},
+					},
+				},
+			},
+			wantErrors: []string{"outbound TLS enforced but outbound TLS config provider is nil"},
+		},
 	}
 
 	runTest := func(t *testing.T, trans transportTest, inbound inboundTest, outbound outboundTest) {
@@ -467,6 +570,8 @@ func TestTransportSpec(t *testing.T) {
 
 				assert.Equal(t, want.URLTemplate, ob.urlTemplate.String(), "outbound URLTemplate should match")
 				assert.Equal(t, want.Headers, ob.headers, "outbound headers should match")
+				assert.Equal(t, svc, ob.destServiceName, "outbound destination service name must match")
+				assert.Equal(t, want.TLSConfig, ob.tlsConfig != nil, "unexpected outbound tls config")
 			}
 
 		}

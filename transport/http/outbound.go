@@ -22,6 +22,7 @@ package http
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -42,6 +43,7 @@ import (
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/yarpc/transport/internal/tls/dialer"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -92,6 +94,22 @@ func AddHeader(key, value string) OutboundOption {
 	}
 }
 
+// OutboundTLSConfiguration return a OutboundOption which provides tls config
+// for the outbound.
+func OutboundTLSConfiguration(config *tls.Config) OutboundOption {
+	return func(o *Outbound) {
+		o.tlsConfig = config
+	}
+}
+
+// OutboundDestinationServiceName returns a OutboundOption which provides the
+// name of the destination service. Mostly used in outbound TLS dialer metrics.
+func OutboundDestinationServiceName(name string) OutboundOption {
+	return func(o *Outbound) {
+		o.destServiceName = name
+	}
+}
+
 // NewOutbound builds an HTTP outbound that sends requests to peers supplied
 // by the given peer.Chooser. The URL template for used for the different
 // peers may be customized using the URLTemplate option.
@@ -113,8 +131,37 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 	for _, opt := range opts {
 		opt(o)
 	}
-	o.sender = &transportSender{Client: t.client}
+
+	client := t.client
+	if o.tlsConfig != nil {
+		client = createTLSClient(o)
+		o.urlTemplate.Scheme = "https"
+	}
+	o.client = client
+	o.sender = &transportSender{Client: client}
 	return o
+}
+
+func createTLSClient(o *Outbound) *http.Client {
+	transport, ok := o.transport.client.Transport.(*http.Transport)
+	if !ok {
+		// This should not happen as default yarpc http.Client uses
+		// http.Transport and it's not configurable by the user.
+		panic(fmt.Sprintf("failed to create http tls client, provided http.Client transport type %T is not *http.Transport", o.transport.client.Transport))
+	}
+
+	tlsDialer := dialer.NewTLSDialer(dialer.Params{
+		Config:        o.tlsConfig,
+		Meter:         o.transport.meter,
+		Logger:        o.transport.logger,
+		ServiceName:   o.transport.serviceName,
+		TransportName: TransportName,
+		Dest:          o.destServiceName,
+		Dialer:        transport.DialContext,
+	})
+	transport = transport.Clone()
+	transport.DialTLSContext = tlsDialer.DialContext
+	return &http.Client{Transport: transport}
 }
 
 // NewOutbound builds an HTTP outbound that sends requests to peers supplied
@@ -141,12 +188,8 @@ func (t *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbo
 	}
 
 	chooser := peerchooser.NewSingle(hostport.PeerIdentifier(parsedURL.Host), t)
-	o := t.NewOutbound(chooser)
-	for _, opt := range opts {
-		opt(o)
-	}
-	o.setURLTemplate(uri)
-	return o
+	opts = append(opts, URLTemplate(uri))
+	return t.NewOutbound(chooser, opts...)
 }
 
 // Outbound sends YARPC requests over HTTP. It may be constructed using the
@@ -168,6 +211,9 @@ type Outbound struct {
 
 	// should only be false in testing
 	bothResponseError bool
+	destServiceName   string
+	client            *http.Client
+	tlsConfig         *tls.Config
 }
 
 // TransportName is the transport name that will be set on `transport.Request` struct.
@@ -261,7 +307,7 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	hreq = o.withCoreHeaders(hreq, treq, ttl)
 	hreq = hreq.WithContext(ctx)
 
-	response, err := o.roundTrip(hreq, treq, start, o.transport.client)
+	response, err := o.roundTrip(hreq, treq, start, o.client)
 	if err != nil {
 		span.SetTag("error", true)
 		span.LogFields(opentracinglog.String("event", err.Error()))
