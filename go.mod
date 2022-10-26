@@ -10,12 +10,12 @@ require (
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13
 	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/gogo/googleapis v1.3.2
-	github.com/gogo/protobuf v1.3.1
+	github.com/gogo/protobuf v1.3.2
 	github.com/gogo/status v1.1.0
 	github.com/golang/mock v1.4.0
 	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.1
-	github.com/kisielk/errcheck v1.2.0
+	github.com/kisielk/errcheck v1.5.0
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
