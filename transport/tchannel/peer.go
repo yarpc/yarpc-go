@@ -34,13 +34,14 @@ type tchannelPeer struct {
 	*abstractpeer.Peer
 
 	transport *Transport
+	ch        *tchannel.Channel
 	addr      string
 	changed   chan struct{}
 	released  chan struct{}
 	timer     *time.Timer
 }
 
-func newPeer(addr string, t *Transport) *tchannelPeer {
+func newPeer(addr string, t *Transport, ch *tchannel.Channel) *tchannelPeer {
 	// Create a defused timer for later use.
 	timer := time.NewTimer(0)
 	if !timer.Stop() {
@@ -49,6 +50,7 @@ func newPeer(addr string, t *Transport) *tchannelPeer {
 
 	return &tchannelPeer{
 		addr:      addr,
+		ch:        ch,
 		Peer:      abstractpeer.NewPeer(abstractpeer.PeerIdentifier(addr), t),
 		transport: t,
 		changed:   make(chan struct{}, 1),
@@ -171,10 +173,15 @@ func (p *tchannelPeer) getPeer() *tchannel.Peer {
 }
 
 func (p *tchannelPeer) getRootPeers() *tchannel.RootPeerList {
-	if p.transport.ch == nil {
-		return nil
+	ch := p.ch
+	if ch == nil {
+		if p.transport.ch == nil {
+			return nil
+		}
+		ch = p.transport.ch
 	}
-	return p.transport.ch.RootPeers()
+
+	return ch.RootPeers()
 }
 
 // StartRequest and EndRequest are no-ops now.
