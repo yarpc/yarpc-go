@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - tchannel: add TLS support for the outbound through yaml config and transport option.
 
+## [1.68.0] - 2022-10-20
+### Added
+-- logging: Original context deadline if available is logged under `timeout` field.
+### Changed
+- Bump version of google.golang.org/grpc to v1.40.1.
+
+## [1.67.0] - 2022-10-20
+- http: add TLS support for the oubound through yaml config and outbound option.
+
 ## [1.66.0] - 2022-10-10
 ### Added
 - grpc: add TLS support for the outbound through yaml config or dial option.
@@ -1449,7 +1458,9 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.66.0...HEAD
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.68.0...HEAD
+[1.68.0]: https://github.com/yarpc/yarpc-go/compare/v1.67.0...v1.68.0
+[1.67.0]: https://github.com/yarpc/yarpc-go/compare/v1.66.0...v1.67.0
 [1.66.0]: https://github.com/yarpc/yarpc-go/compare/v1.65.0...v1.66.0
 [1.65.0]: https://github.com/yarpc/yarpc-go/compare/v1.64.0...v1.65.0
 [1.64.0]: https://github.com/yarpc/yarpc-go/compare/v1.63.0...v1.64.0
