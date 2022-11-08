@@ -68,6 +68,7 @@ type transportOptions struct {
 	excludeServiceHeaderInResponse bool
 	inboundTLSConfig               *tls.Config
 	inboundTLSMode                 *yarpctls.Mode
+	outboundTLSConfigProvider      yarpctls.OutboundTLSConfigProvider
 }
 
 // newTransportOptions constructs the default transport options struct
@@ -109,6 +110,14 @@ func Logger(logger *zap.Logger) TransportOption {
 func Meter(meter *metrics.Scope) TransportOption {
 	return func(t *transportOptions) {
 		t.meter = meter
+	}
+}
+
+// OutboundTLSConfigProvider returns a TransportOption that provides the
+// outbound TLS config provider.
+func OutboundTLSConfigProvider(provider yarpctls.OutboundTLSConfigProvider) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.outboundTLSConfigProvider = provider
 	}
 }
 

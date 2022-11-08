@@ -27,6 +27,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -36,6 +37,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/transport/internal/tls/testscenario"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/x/yarpctest"
@@ -155,6 +157,48 @@ func TestInboundTLS(t *testing.T) {
 			assert.Equal(t, "hello", string(resBody))
 		})
 	}
+}
+
+func TestTLSOutbound(t *testing.T) {
+	scenario := testscenario.Create(t, time.Minute, time.Minute)
+	serverTransport, err := tchannel.NewTransport(
+		tchannel.InboundTLSConfiguration(scenario.ServerTLSConfig()),
+		tchannel.InboundTLSMode(yarpctls.Enforced), // reject plaintext connections.
+		tchannel.ServiceName("test-svc"),
+	)
+	require.NoError(t, err)
+
+	inbound := serverTransport.NewInbound()
+	inbound.SetRouter(testRouter{proc: transport.Procedure{HandlerSpec: transport.NewUnaryHandlerSpec(testServer{})}})
+	require.NoError(t, serverTransport.Start())
+	defer serverTransport.Stop()
+	require.NoError(t, inbound.Start())
+	defer inbound.Stop()
+
+	clientTransport, err := tchannel.NewTransport(tchannel.ServiceName("test-client-svc"))
+	require.NoError(t, err)
+	// Create outbound tchannel with client tls config.
+	peerTransport, err := clientTransport.CreateTLSOutboundChannel(scenario.ClientTLSConfig(), "test-svc")
+	require.NoError(t, err)
+	outbound := serverTransport.NewOutbound(peer.NewSingle(hostport.Identify(serverTransport.ListenAddr()), peerTransport))
+	require.NoError(t, clientTransport.Start())
+	defer clientTransport.Stop()
+	require.NoError(t, outbound.Start())
+	defer outbound.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	res, err := outbound.Call(ctx, &transport.Request{
+		Service:   "test-svc-1",
+		Procedure: "test-proc",
+		Body:      strings.NewReader("hello"),
+	})
+	require.NoError(t, err)
+
+	resBody, err := io.ReadAll(res.Body)
+	require.NoError(t, err)
+	assert.Equal(t, "hello", string(resBody))
 }
 
 type testRouter struct {

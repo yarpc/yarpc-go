@@ -22,7 +22,9 @@ package tchannel
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -41,6 +43,21 @@ func TestTransportSpecInvalidOption(t *testing.T) {
 	assert.Panics(t, func() {
 		TransportSpec(badOption{})
 	})
+}
+
+type fakeOutboundTLSConfigProvider struct {
+	returnErr         error
+	expectedSpiffeIDs []string
+}
+
+func (f fakeOutboundTLSConfigProvider) ClientTLSConfig(spiffeIDs []string) (*tls.Config, error) {
+	if f.returnErr != nil {
+		return nil, f.returnErr
+	}
+	if !reflect.DeepEqual(f.expectedSpiffeIDs, spiffeIDs) {
+		return nil, errors.New("spiffe IDs do not match")
+	}
+	return &tls.Config{}, nil
 }
 
 func TestTransportSpec(t *testing.T) {
@@ -184,6 +201,86 @@ func TestTransportSpec(t *testing.T) {
 				`failed to configure unary outbound for "myservice"`,
 				`failed to read attribute "least-pending": wat`,
 			},
+		},
+		{
+			desc: "fail TLS outbound with invalid tls mode",
+			cfg: attrs{
+				"myservice": attrs{
+					"tchannel": attrs{
+						"peer": "127.0.0.1:4040",
+						"tls": attrs{
+							"mode": "permissive",
+						},
+					},
+				},
+			},
+			wantErrors: []string{"outbound does not support permissive TLS mode"},
+		},
+		{
+			desc: "fail TLS outbound without outbound tls config provider",
+			cfg: attrs{
+				"myservice": attrs{
+					"tchannel": attrs{
+						"peer": "127.0.0.1:4040",
+						"tls": attrs{
+							"mode":       "enforced",
+							"spiffe-ids": []string{"test-spiffe"},
+						},
+					},
+				},
+			},
+			wantErrors: []string{"outbound TLS enforced but outbound TLS config provider is nil"},
+		},
+		{
+			desc: "fail TLS outbound without spiffe id",
+			cfg: attrs{
+				"myservice": attrs{
+					"tchannel": attrs{
+						"peer": "127.0.0.1:4040",
+						"tls": attrs{
+							"mode": "enforced",
+						},
+					},
+				},
+			},
+			opts:       []Option{OutboundTLSConfigProvider(&fakeOutboundTLSConfigProvider{})},
+			wantErrors: []string{"outbound TLS enforced but no spiffe id is provided"},
+		},
+		{
+			desc: "fail TLS outbound when tls config provider returns error",
+			cfg: attrs{
+				"myservice": attrs{
+					"tchannel": attrs{
+						"peer": "127.0.0.1:4040",
+						"tls": attrs{
+							"mode":       "enforced",
+							"spiffe-ids": []string{"test-spiffe"},
+						},
+					},
+				},
+			},
+			opts:       []Option{OutboundTLSConfigProvider(&fakeOutboundTLSConfigProvider{returnErr: errors.New("test error")})},
+			wantErrors: []string{"test error"},
+		},
+		{
+			desc: "simple TLS outbound",
+			cfg: attrs{
+				"myservice": attrs{
+					"tchannel": attrs{
+						"peer": "127.0.0.1:4040",
+						"tls": attrs{
+							"mode":       "enforced",
+							"spiffe-ids": []string{"test-spiffe"},
+						},
+					},
+				},
+			},
+			opts: []Option{OutboundTLSConfigProvider(
+				&fakeOutboundTLSConfigProvider{
+					expectedSpiffeIDs: []string{"test-spiffe"},
+				},
+			)},
+			wantOutbounds: []string{"myservice"},
 		},
 	}
 

@@ -21,9 +21,11 @@
 package tchannel
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
+	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/peer/hostport"
@@ -75,8 +77,53 @@ type InboundTLSConfig struct {
 // 	  myservice:
 // 	    tchannel:
 // 	      peer: 127.0.0.1:4040
+//
 type OutboundConfig struct {
 	yarpcconfig.PeerChooser
+	// TLS config enables TLS outbound.
+	//
+	//  tchannel:
+	//    peer: 127.0.0.1:4040
+	//    tls:
+	//      mode: enforced
+	//      spiffe-ids:
+	//        - destination-id
+	TLS OutboundTLSConfig `config:"tls"`
+}
+
+// OutboundTLSConfig configures TLS for a TChannel outbound.
+type OutboundTLSConfig struct {
+	// Mode when set to Enforced enables TLS outbound and
+	// outbound TLS configuration provider will be used for fetching tls.Config.
+	Mode yarpctls.Mode `config:"mode,interpolate"`
+	// SpiffeIDs is a list of the accepted server spiffe IDs.
+	SpiffeIDs []string `config:"spiffe-ids"`
+}
+
+// getPeerTransport returns peer transport to be used in peer chooser creation.
+func (c OutboundConfig) getPeerTransport(transport *Transport, destName string) (peer.Transport, error) {
+	if c.TLS.Mode == yarpctls.Disabled {
+		return transport, nil
+	}
+
+	if c.TLS.Mode == yarpctls.Permissive {
+		return nil, errors.New("outbound does not support permissive TLS mode")
+	}
+
+	if transport.outboundTLSConfigProvider == nil {
+		return nil, errors.New("outbound TLS enforced but outbound TLS config provider is nil")
+	}
+
+	if len(c.TLS.SpiffeIDs) == 0 {
+		return nil, errors.New("outbound TLS enforced but no spiffe id is provided")
+	}
+
+	config, err := transport.outboundTLSConfigProvider.ClientTLSConfig(c.TLS.SpiffeIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	return transport.CreateTLSOutboundChannel(config, destName)
 }
 
 // TransportSpec returns a TransportSpec for the TChannel unary transport.
@@ -166,7 +213,11 @@ func (ts *transportSpec) buildInbound(c *InboundConfig, t transport.Transport, k
 
 func (ts *transportSpec) buildUnaryOutbound(oc *OutboundConfig, t transport.Transport, k *yarpcconfig.Kit) (transport.UnaryOutbound, error) {
 	x := t.(*Transport)
-	chooser, err := oc.BuildPeerChooser(x, hostport.Identify, k)
+	pt, err := oc.getPeerTransport(x, k.OutboundServiceName())
+	if err != nil {
+		return nil, err
+	}
+	chooser, err := oc.BuildPeerChooser(pt, hostport.Identify, k)
 	if err != nil {
 		return nil, err
 	}

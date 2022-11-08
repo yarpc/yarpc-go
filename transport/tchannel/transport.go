@@ -37,6 +37,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/yarpc/transport/internal/tls/dialer"
 	"go.uber.org/yarpc/transport/internal/tls/muxlistener"
 	"go.uber.org/zap"
 )
@@ -82,7 +83,8 @@ type Transport struct {
 	inboundTLSConfig *tls.Config
 	inboundTLSMode   *yarpctls.Mode
 
-	outboundChannels []*outboundChannel
+	outboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
+	outboundChannels          []*outboundChannel
 }
 
 // NewTransport is a YARPC transport that facilitates sending and receiving
@@ -133,6 +135,7 @@ func (o transportOptions) newTransport() *Transport {
 		excludeServiceHeaderInResponse: o.excludeServiceHeaderInResponse,
 		inboundTLSConfig:               o.inboundTLSConfig,
 		inboundTLSMode:                 o.inboundTLSMode,
+		outboundTLSConfigProvider:      o.outboundTLSConfigProvider,
 	}
 }
 
@@ -325,6 +328,26 @@ func (t *Transport) onPeerStatusChanged(tp *tchannel.Peer) {
 		return
 	}
 	p.notifyConnectionStatusChanged()
+}
+
+
+// CreateTLSOutboundChannel creates a outbound channel for managing tls
+// connections with the given tls config and destination name.
+// Usage:
+// 	tr, _ := tchannel.NewTransport(...)
+//  outboundCh, _ := tr.CreateTLSOutboundChannel(tls-config, "dest-name")
+//  outbound := tr.NewOutbound(peer.NewSingle(id, outboundCh))
+func (t *Transport) CreateTLSOutboundChannel(tlsConfig *tls.Config, destinationName string) (peer.Transport, error) {
+	params := dialer.Params{
+		Config:        tlsConfig,
+		Meter:         t.meter,
+		Logger:        t.logger,
+		ServiceName:   t.name,
+		TransportName: TransportName,
+		Dest:          destinationName,
+		Dialer:        t.dialer,
+	}
+	return t.createOutboundChannel(dialer.NewTLSDialer(params).DialContext)
 }
 
 func (t *Transport) createOutboundChannel(dialerFunc dialerFunc) (peer.Transport, error) {
