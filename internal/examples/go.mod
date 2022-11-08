@@ -11,7 +11,7 @@ require (
 	go.uber.org/thriftrw v1.29.2
 	go.uber.org/yarpc v1.42.1
 	go.uber.org/zap v1.13.0
-	google.golang.org/grpc v1.34.0
+	google.golang.org/grpc v1.40.1
 )
 
 replace go.uber.org/yarpc => ../..

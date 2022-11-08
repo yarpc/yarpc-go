@@ -115,6 +115,7 @@ func (i *Inbound) start() error {
 	handler := newHandler(i, i.t.options.logger)
 
 	serverOptions := []grpc.ServerOption{
+		//lint:ignore SA1019 explicit use of customCodec, CustomCodec API is available throughout 1.x of grpc-go
 		grpc.CustomCodec(customCodec{}),
 		grpc.UnknownServiceHandler(handler.handle),
 		grpc.MaxRecvMsgSize(i.t.options.serverMaxRecvMsgSize),
