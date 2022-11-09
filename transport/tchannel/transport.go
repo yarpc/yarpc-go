@@ -330,7 +330,6 @@ func (t *Transport) onPeerStatusChanged(tp *tchannel.Peer) {
 	p.notifyConnectionStatusChanged()
 }
 
-
 // CreateTLSOutboundChannel creates a outbound channel for managing tls
 // connections with the given tls config and destination name.
 // Usage:
