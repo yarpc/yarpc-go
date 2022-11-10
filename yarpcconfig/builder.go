@@ -289,7 +289,7 @@ func (b *builder) AddOnewayOutbound(
 	}
 
 	b.needTransport(spec)
-	cv, err := spec.OnewayOutbound.Decode(attrs, config.InterpolateWith(b.kit.resolver))
+	cv, err := spec.OnewayOutbound.Decode(attrs, config.InterpolateWith(b.kit.resolver), mapdecode.DecodeHook(tlsModeDecodeHook))
 	if err != nil {
 		return fmt.Errorf("failed to decode oneway outbound configuration: %v", err)
 	}

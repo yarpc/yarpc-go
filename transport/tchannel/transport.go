@@ -37,6 +37,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/yarpc/transport/internal/tls/dialer"
 	"go.uber.org/yarpc/transport/internal/tls/muxlistener"
 	"go.uber.org/zap"
 )
@@ -81,6 +82,9 @@ type Transport struct {
 
 	inboundTLSConfig *tls.Config
 	inboundTLSMode   *yarpctls.Mode
+
+	outboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
+	outboundChannels          []*outboundChannel
 }
 
 // NewTransport is a YARPC transport that facilitates sending and receiving
@@ -131,6 +135,7 @@ func (o transportOptions) newTransport() *Transport {
 		excludeServiceHeaderInResponse: o.excludeServiceHeaderInResponse,
 		inboundTLSConfig:               o.inboundTLSConfig,
 		inboundTLSMode:                 o.inboundTLSMode,
+		outboundTLSConfigProvider:      o.outboundTLSConfigProvider,
 	}
 }
 
@@ -142,22 +147,26 @@ func (t *Transport) ListenAddr() string {
 // RetainPeer adds a peer subscriber (typically a peer chooser) and causes the
 // transport to maintain persistent connections with that peer.
 func (t *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.Peer, error) {
+	return t.retainPeer(pid, sub, t.ch)
+}
+
+func (t *Transport) retainPeer(pid peer.Identifier, sub peer.Subscriber, ch *tchannel.Channel) (peer.Peer, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	p := t.getOrCreatePeer(pid)
+	p := t.getOrCreatePeer(pid, ch)
 	p.Subscribe(sub)
 	return p, nil
 }
 
 // **NOTE** should only be called while the lock write mutex is acquired
-func (t *Transport) getOrCreatePeer(pid peer.Identifier) *tchannelPeer {
+func (t *Transport) getOrCreatePeer(pid peer.Identifier, ch *tchannel.Channel) *tchannelPeer {
 	addr := pid.Identifier()
 	if p, ok := t.peers[addr]; ok {
 		return p
 	}
 
-	p := newPeer(addr, t)
+	p := newPeer(addr, t, ch)
 	t.peers[addr] = p
 	// Start a peer connection loop
 	t.connectorsGroup.Add(1)
@@ -191,17 +200,6 @@ func (t *Transport) ReleasePeer(pid peer.Identifier, sub peer.Subscriber) error 
 	}
 
 	return nil
-}
-
-func (t *Transport) peerList() *tchannel.RootPeerList {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-
-	if t.ch == nil {
-		return nil
-	}
-
-	return t.ch.RootPeers()
 }
 
 // Start starts the TChannel transport. This starts making connections and
@@ -289,6 +287,11 @@ func (t *Transport) start() error {
 	}
 	t.addr = t.ch.PeerInfo().HostPort
 
+	for _, outboundChannel := range t.outboundChannels {
+		if err := outboundChannel.start(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -302,6 +305,9 @@ func (t *Transport) Stop() error {
 
 func (t *Transport) stop() error {
 	t.ch.Close()
+	for _, outboundChannel := range t.outboundChannels {
+		outboundChannel.stop()
+	}
 	t.connectorsGroup.Wait()
 	return nil
 }
@@ -322,4 +328,35 @@ func (t *Transport) onPeerStatusChanged(tp *tchannel.Peer) {
 		return
 	}
 	p.notifyConnectionStatusChanged()
+}
+
+// CreateTLSOutboundChannel creates a outbound channel for managing tls
+// connections with the given tls config and destination name.
+// Usage:
+// 	tr, _ := tchannel.NewTransport(...)
+//  outboundCh, _ := tr.CreateTLSOutboundChannel(tls-config, "dest-name")
+//  outbound := tr.NewOutbound(peer.NewSingle(id, outboundCh))
+func (t *Transport) CreateTLSOutboundChannel(tlsConfig *tls.Config, destinationName string) (peer.Transport, error) {
+	params := dialer.Params{
+		Config:        tlsConfig,
+		Meter:         t.meter,
+		Logger:        t.logger,
+		ServiceName:   t.name,
+		TransportName: TransportName,
+		Dest:          destinationName,
+		Dialer:        t.dialer,
+	}
+	return t.createOutboundChannel(dialer.NewTLSDialer(params).DialContext)
+}
+
+func (t *Transport) createOutboundChannel(dialerFunc dialerFunc) (peer.Transport, error) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	if t.once.State() != lifecycle.Idle {
+		return nil, errors.New("tchannel outbound channel cannot be created after starting transport")
+	}
+	outboundChannel := newOutboundChannel(t, dialerFunc)
+	t.outboundChannels = append(t.outboundChannels, outboundChannel)
+	return outboundChannel, nil
 }
