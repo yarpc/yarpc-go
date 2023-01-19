@@ -209,7 +209,7 @@ func (c call) endLogs(
 			}
 
 			if code != nil {
-				if fault := faultFromCode(*code); fault == clientFault {
+				if fault := yarpcerrors.GetFaultTypeFromCode(*code); fault == yarpcerrors.ClientFault {
 					lvl = c.levels.clientError
 				}
 			}
@@ -332,8 +332,8 @@ func (c call) endStats(
 
 // Emits stats based on a caller or server failure, inferred by a YARPC Code.
 func (c call) endStatsFromFault(elapsed time.Duration, code yarpcerrors.Code, applicationErrorName string) {
-	switch faultFromCode(code) {
-	case clientFault:
+	switch yarpcerrors.GetFaultTypeFromCode(code) {
+	case yarpcerrors.ClientFault:
 		c.edge.callerErrLatencies.Observe(elapsed)
 		if counter, err := c.edge.callerFailures.Get(
 			_error, code.String(),
@@ -342,7 +342,7 @@ func (c call) endStatsFromFault(elapsed time.Duration, code yarpcerrors.Code, ap
 			counter.Inc()
 		}
 
-	case serverFault:
+	case yarpcerrors.ServerFault:
 		c.edge.serverErrLatencies.Observe(elapsed)
 		if counter, err := c.edge.serverFailures.Get(
 			_error, code.String(),
@@ -427,8 +427,8 @@ func (c call) emitStreamError(err error) {
 	// Emit finer grained metrics since the error is a yarpcerrors.Status.
 	errCode := yarpcerrors.FromError(err).Code()
 
-	switch faultFromCode(yarpcerrors.FromError(err).Code()) {
-	case clientFault:
+	switch yarpcerrors.GetFaultTypeFromCode(yarpcerrors.FromError(err).Code()) {
+	case yarpcerrors.ClientFault:
 		if counter, err2 := c.edge.callerFailures.Get(
 			_error, errCode.String(),
 			_errorNameMetricsKey, _notSet,
@@ -438,7 +438,7 @@ func (c call) emitStreamError(err error) {
 			counter.Inc()
 		}
 
-	case serverFault:
+	case yarpcerrors.ServerFault:
 		if counter, err2 := c.edge.serverFailures.Get(
 			_error, errCode.String(),
 			_errorNameMetricsKey, _notSet,
@@ -478,7 +478,7 @@ func (c call) logStreamEvent(err error, success bool, succMsg, errMsg string, ex
 		} else {
 			lvl = c.levels.serverError
 			code := yarpcerrors.FromError(err).Code()
-			if fault := faultFromCode(code); fault == clientFault {
+			if fault := yarpcerrors.GetFaultTypeFromCode(code); fault == yarpcerrors.ClientFault {
 				lvl = c.levels.clientError
 			}
 		}
