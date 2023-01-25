@@ -178,6 +178,9 @@ func (o *Outbound) invoke(
 	if responseMD != nil {
 		callOptions = []grpc.CallOption{grpc.Trailer(responseMD)}
 	}
+	if o.options.compressor != "" {
+		callOptions = append(callOptions, grpc.UseCompressor(o.options.compressor))
+	}
 	apiPeer, onFinish, err := o.peerChooser.Choose(ctx, request)
 	if err != nil {
 		return err

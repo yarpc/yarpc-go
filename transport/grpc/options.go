@@ -212,6 +212,16 @@ func OutboundTLSConfigProvider(provider yarpctls.OutboundTLSConfigProvider) Outb
 	}
 }
 
+// OutboundCompressor returns an OutboundOption that applies compressorion
+// for requests in the outbound.
+func OutboundCompressor(compressor transport.Compressor) OutboundOption {
+	return func(outboundOptions *outboundOptions) {
+		if compressor != nil {
+			outboundOptions.compressor = compressor.Name()
+		}
+	}
+}
+
 // DialOption is an option that influences grpc.Dial.
 type DialOption func(*dialOptions)
 
@@ -323,6 +333,7 @@ func newInboundOptions(options []InboundOption) *inboundOptions {
 }
 
 type outboundOptions struct {
+	compressor        string
 	tlsConfigProvider yarpctls.OutboundTLSConfigProvider
 }
 
