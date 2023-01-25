@@ -3565,7 +3565,7 @@ func TestStreamingMetrics(t *testing.T) {
 				// so we don't have create a sorting implementation, manually place the
 				// first two expected counter snapshots, based on the error fault.
 				counters := make([]metrics.Snapshot, 0, 10)
-				if faultFromCode(yarpcerrors.FromError(tt.err).Code()) == clientFault {
+				if yarpcerrors.GetFaultTypeFromCode(yarpcerrors.FromError(tt.err).Code()) == yarpcerrors.ClientFault {
 					counters = append(counters,
 						metrics.Snapshot{Name: "caller_failures", Tags: errTags, Value: 1},
 						metrics.Snapshot{Name: "calls", Tags: successTags, Value: 1},
