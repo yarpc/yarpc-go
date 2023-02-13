@@ -192,7 +192,6 @@ func (c OutboundConfig) dialOptions(kit *yarpcconfig.Kit, tlsConfigProvider yarp
 	if err != nil {
 		return nil, err
 	}
-	opts = append(opts, Compressor(kit.Compressor(c.Compressor)))
 
 	keepaliveOpts, err := c.Keepalive.dialOptions()
 	if err != nil {
@@ -375,8 +374,7 @@ func (t *transportSpec) buildOutbound(outboundConfig *OutboundConfig, tr transpo
 		return nil, newTransportCastError(tr)
 	}
 
-	outboundOpts := newOutboundOptions(t.OutboundOptions)
-	dialOpts, err := outboundConfig.dialOptions(kit, outboundOpts.tlsConfigProvider)
+	dialOpts, err := outboundConfig.dialOptions(kit, newOutboundOptions(t.OutboundOptions).tlsConfigProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -397,7 +395,9 @@ func (t *transportSpec) buildOutbound(outboundConfig *OutboundConfig, tr transpo
 		}
 	}
 
-	return trans.NewOutbound(chooser, t.OutboundOptions...), nil
+	outboundOpts := []OutboundOption{OutboundCompressor(kit.Compressor(outboundConfig.Compressor))}
+	outboundOpts = append(outboundOpts, t.OutboundOptions...)
+	return trans.NewOutbound(chooser, outboundOpts...), nil
 }
 
 func newTransportCastError(tr transport.Transport) error {
