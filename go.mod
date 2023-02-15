@@ -16,15 +16,12 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.1
 	github.com/kisielk/errcheck v1.2.0
-	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-shellwords v1.0.10
 	github.com/opentracing/opentracing-go v1.1.0
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prashantv/protectmem v0.0.0-20171002184600-e20412882b3a // indirect
-	github.com/prometheus/client_golang v1.4.1 // indirect
-	github.com/prometheus/procfs v0.0.9 // indirect
+	github.com/prometheus/client_golang v1.11.1 // indirect
 	github.com/samuel/go-thrift v0.0.0-20191111193933-5165175b40af // indirect
 	github.com/streadway/quantile v0.0.0-20150917103942-b0c588724d25 // indirect
 	github.com/stretchr/objx v0.2.0 // indirect
@@ -50,6 +47,6 @@ require (
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
 	google.golang.org/grpc v1.40.1
 	google.golang.org/protobuf v1.26.0
-	gopkg.in/yaml.v2 v2.2.8
+	gopkg.in/yaml.v2 v2.3.0
 	honnef.co/go/tools v0.3.2
 )
