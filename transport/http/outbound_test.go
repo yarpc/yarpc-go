@@ -23,6 +23,7 @@ package http
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"errors"
 	"io/ioutil"
 	"net/http"
@@ -836,4 +837,13 @@ func TestCallOneWayResponseCloseError(t *testing.T) {
 		Service: "Service",
 	})
 	require.Errorf(t, err, "Received unexpected error:code:internal message:test error")
+}
+
+func TestIsolatedSchemaChange(t *testing.T) {
+	tr := &Transport{client: &http.Client{Transport: http.DefaultTransport}}
+	plainOutbound := tr.NewOutbound(nil)
+	tlsOutbound := tr.NewOutbound(nil, OutboundTLSConfiguration(&tls.Config{}))
+	assert.NotEqual(t, plainOutbound.urlTemplate, tlsOutbound.urlTemplate)
+	assert.Equal(t, "http", plainOutbound.urlTemplate.Scheme)
+	assert.Equal(t, "https", tlsOutbound.urlTemplate.Scheme)
 }
