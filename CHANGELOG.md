@@ -4,12 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-- No changes yet.
+## [1.70.0] - 2023-02-16
+### Fixed
+- grpc: apply compression only on the outbounds with compression enabled.
 
 ## [1.69.1] - 2023-1-24
 ### Changed
-- yarpcerrors: export logic to get server and client fault type
+-- yarpcerrors: export logic to get server and client fault type
 
 ## [1.69.0] - 2022-11-10
 ### Added
@@ -1465,7 +1466,7 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.69.1...HEAD
+[1.70.0]: https://github.com/yarpc/yarpc-go/compare/v1.69.1...v1.70.0
 [1.69.1]: https://github.com/yarpc/yarpc-go/compare/v1.69.0...v1.69.1
 [1.69.0]: https://github.com/yarpc/yarpc-go/compare/v1.68.0...v1.69.0
 [1.68.0]: https://github.com/yarpc/yarpc-go/compare/v1.67.0...v1.68.0
