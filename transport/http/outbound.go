@@ -75,7 +75,7 @@ func URLTemplate(template string) OutboundOption {
 // AddHeader specifies that an HTTP outbound should always include the given
 // header in outgoung requests.
 //
-// 	httpTransport.NewOutbound(chooser, http.AddHeader("X-Token", "TOKEN"))
+//	httpTransport.NewOutbound(chooser, http.AddHeader("X-Token", "TOKEN"))
 //
 // Note that headers starting with "Rpc-" are reserved by YARPC. This function
 // will panic if the header starts with "Rpc-".
@@ -135,7 +135,12 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 	client := t.client
 	if o.tlsConfig != nil {
 		client = createTLSClient(o)
-		o.urlTemplate.Scheme = "https"
+		// Create a copy of the url template to avoid scheme changes impacting
+		// other outbounds as the base url template is shared across http
+		// outbounds.
+		ut := *o.urlTemplate
+		ut.Scheme = "https"
+		o.urlTemplate = &ut
 	}
 	o.client = client
 	o.sender = &transportSender{Client: client}
@@ -537,15 +542,15 @@ func checkServiceMatch(reqSvcName string, resHeaders http.Header) (bool, string)
 //
 // Sample usage:
 //
-//  client := http.Client{Transport: outbound}
+//	client := http.Client{Transport: outbound}
 //
 // Thereafter use the Golang standard library HTTP to send requests with this client.
 //
-//  ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-//  defer cancel()
-//  req, err := http.NewRequest("GET", "http://example.com/", nil /* body */)
-//  req = req.WithContext(ctx)
-//  res, err := client.Do(req)
+//	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+//	defer cancel()
+//	req, err := http.NewRequest("GET", "http://example.com/", nil /* body */)
+//	req = req.WithContext(ctx)
+//	res, err := client.Do(req)
 //
 // All requests must have a deadline on the context.
 // The peer chooser for raw HTTP requests will receive a YARPC transport.Request with no body.

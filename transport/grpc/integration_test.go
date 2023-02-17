@@ -445,6 +445,56 @@ func TestTLSWithYARPCAndGRPC(t *testing.T) {
 	}
 }
 
+// TestCompressionWithMultipleOutbounds creates multiple outbound for the
+// same hostport where one outbound has compression enabled.
+// Validates compression is applied for the outbound with compression enabled
+// and rest of the outbounds are still uncompressed.
+func TestCompressionWithMultipleOutbounds(t *testing.T) {
+	env, err := newTestEnv(t, nil, nil, nil, nil)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, env.Close()) }()
+
+	chooser := peer.NewSingle(hostport.Identify(env.Inbound.Addr().String()), env.Transport.NewDialer())
+	compressedOutbound := env.Transport.NewOutbound(chooser, OutboundCompressor(_goodCompressor))
+	require.NoError(t, compressedOutbound.Start())
+	defer compressedOutbound.Stop()
+
+	caller := "example-client"
+	service := "example"
+	clientConfig := clientconfig.MultiOutbound(
+		caller,
+		service,
+		transport.Outbounds{
+			ServiceName: caller,
+			Unary:       compressedOutbound,
+		},
+	)
+	compressedClient := examplepb.NewKeyValueYARPCClient(clientConfig)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second*5)
+	defer cancel()
+
+	// Send request over uncompressed outbound and assert compression metric
+	// is empty.
+	_metrics.reset()
+	require.NoError(t, env.SetValueYARPC(ctx, "foo", strings.Repeat("a", 32*1024)))
+	assert.Equal(t, &metricCollection{metrics: []metric{}}, _metrics)
+
+	// Send request over compressed outbound and assert compression metric
+	// is seen.
+	_metrics.reset()
+	_, err = compressedClient.SetValue(ctx, &examplepb.SetValueRequest{Key: "foo", Value: strings.Repeat("a", 32*1024)})
+	require.NoError(t, err)
+	wantMetric := []metric{
+		{32777, map[string]string{"stage": "compress"}},
+		{32777, map[string]string{"stage": "decompress"}},
+		{0, map[string]string{"stage": "compress"}},
+	}
+	assert.Equal(t, newMetrics(wantMetric, map[string]string{
+		"compressor": _goodCompressor.name,
+	}), _metrics)
+}
+
 func TestGRPCHeaderListSize(t *testing.T) {
 	tests := []struct {
 		desc       string
