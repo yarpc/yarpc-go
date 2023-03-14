@@ -77,9 +77,15 @@ var (
 //
 // If one Code maps to the given HTTP status code, that Code is returned.
 // If more than one Code maps to the given HTTP status Code, one Code is returned.
+// If the Code is >=300 and < 400, yarpcerrors.CodeInvalidArgument is returned.
 // If the Code is >=400 and < 500, yarpcerrors.CodeInvalidArgument is returned.
 // Else, yarpcerrors.CodeUnknown is returned.
 func statusCodeToBestCode(statusCode int) yarpcerrors.Code {
+	// The class of 3XX status code indicates the client must take additional action to complete the request.
+	// In this sense, it is client's fault to have requested the resources in the first place.
+	if statusCode >= 300 && statusCode < 400 {
+		return yarpcerrors.CodeInvalidArgument
+	}
 	codes, ok := _statusCodeToCodes[statusCode]
 	if !ok || len(codes) == 0 {
 		if statusCode >= 400 && statusCode < 500 {
