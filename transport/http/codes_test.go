@@ -49,8 +49,13 @@ func TestUnspecifiedCodes(t *testing.T) {
 		want yarpcerrors.Code
 	}{
 		{
+			name: "code not modified",
+			give: 304,
+			want: yarpcerrors.CodeOK,
+		},
+		{
 			name: "code temporary redirection",
-			give: 307, // test for an x in range: [400, 500)
+			give: 307, // test for an x in range: [300, 400)
 			want: yarpcerrors.CodeInvalidArgument,
 		},
 		{
