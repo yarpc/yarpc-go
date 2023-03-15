@@ -47,6 +47,7 @@ var (
 	// _statusCodeToCodes maps HTTP status codes to a slice of their corresponding Codes.
 	_statusCodeToCodes = map[int][]yarpcerrors.Code{
 		200: {yarpcerrors.CodeOK},
+		304: {yarpcerrors.CodeOK},
 		400: {
 			yarpcerrors.CodeInvalidArgument,
 			yarpcerrors.CodeFailedPrecondition,
@@ -77,11 +78,17 @@ var (
 //
 // If one Code maps to the given HTTP status code, that Code is returned.
 // If more than one Code maps to the given HTTP status Code, one Code is returned.
+// If the Code is >=300 and < 400, yarpcerrors.CodeInvalidArgument is returned.
 // If the Code is >=400 and < 500, yarpcerrors.CodeInvalidArgument is returned.
 // Else, yarpcerrors.CodeUnknown is returned.
 func statusCodeToBestCode(statusCode int) yarpcerrors.Code {
 	codes, ok := _statusCodeToCodes[statusCode]
 	if !ok || len(codes) == 0 {
+		// The class of 3XX status code indicates the client must take additional action to complete the request.
+		// In this sense, it is client's fault to have requested the resources in the first place.
+		if statusCode >= 300 && statusCode < 400 {
+			return yarpcerrors.CodeInvalidArgument
+		}
 		if statusCode >= 400 && statusCode < 500 {
 			return yarpcerrors.CodeInvalidArgument
 		}
