@@ -36,6 +36,7 @@ import (
 	"go.uber.org/yarpc/transport/internal/tls/muxlistener"
 	"go.uber.org/yarpc/transport/internal/tls/testscenario"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestNewListenerOnDisabled(t *testing.T) {
@@ -175,7 +176,7 @@ func TestMux(t *testing.T) {
 				Listener:      lis,
 				TLSConfig:     serverTlsConfig,
 				Meter:         root.Scope(),
-				Logger:        zap.NewNop(),
+				Logger:        zaptest.NewLogger(t),
 				ServiceName:   "test-svc",
 				TransportName: "test-transport",
 				Mode:          tt.mode,
