@@ -138,8 +138,8 @@ func (l *listener) serve() {
 	defer func() {
 		cancel()
 		wg.Wait()
-		close(l.stoppedChan)
 		close(l.connChan)
+		close(l.stoppedChan)
 	}()
 
 	for {
@@ -167,7 +167,7 @@ func (l *listener) serveConnection(ctx context.Context, conn net.Conn, wg *sync.
 	select {
 	case l.connChan <- c:
 	case <-l.stopChan:
-		conn.Close()
+		c.Close()
 	}
 }
 
