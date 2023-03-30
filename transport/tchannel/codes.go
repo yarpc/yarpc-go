@@ -21,7 +21,6 @@
 package tchannel
 
 import (
-	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -46,7 +45,7 @@ var (
 	_tchannelCodeToCode = map[tchannel.SystemErrCode]yarpcerrors.Code{
 		tchannel.ErrCodeTimeout:    yarpcerrors.CodeDeadlineExceeded,
 		tchannel.ErrCodeCancelled:  yarpcerrors.CodeCancelled,
-		tchannel.ErrCodeBusy:       yarpcerrors.CodeUnavailable,
+		tchannel.ErrCodeBusy:       yarpcerrors.CodeResourceExhausted,
 		tchannel.ErrCodeDeclined:   yarpcerrors.CodeUnavailable,
 		tchannel.ErrCodeUnexpected: yarpcerrors.CodeInternal,
 		tchannel.ErrCodeBadRequest: yarpcerrors.CodeInvalidArgument,
