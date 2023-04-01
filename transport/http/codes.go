@@ -60,6 +60,7 @@ var (
 			yarpcerrors.CodeAborted,
 			yarpcerrors.CodeAlreadyExists,
 		},
+		422: {yarpcerrors.CodeInvalidArgument},
 		429: {yarpcerrors.CodeResourceExhausted},
 		499: {yarpcerrors.CodeCancelled},
 		500: {
