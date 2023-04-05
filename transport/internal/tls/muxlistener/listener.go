@@ -24,8 +24,11 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
+	"io"
 	"net"
 	"sync"
+	"syscall"
 	"time"
 
 	"go.uber.org/net/metrics"
@@ -78,9 +81,11 @@ func NewListener(c Config) net.Listener {
 		return c.Listener
 	}
 
+	logger := c.Logger.With(zap.String("transportName", c.TransportName))
+
 	observer := tlsmetrics.NewObserver(tlsmetrics.Params{
 		Meter:         c.Meter,
-		Logger:        c.Logger,
+		Logger:        logger,
 		ServiceName:   c.ServiceName,
 		TransportName: c.TransportName,
 		Mode:          c.Mode,
@@ -91,7 +96,7 @@ func NewListener(c Config) net.Listener {
 		Listener:    c.Listener,
 		tlsConfig:   c.TLSConfig,
 		observer:    observer,
-		logger:      c.Logger,
+		logger:      logger,
 		connChan:    make(chan net.Conn),
 		stoppedChan: make(chan struct{}),
 		stopChan:    make(chan struct{}),
@@ -138,8 +143,8 @@ func (l *listener) serve() {
 	defer func() {
 		cancel()
 		wg.Wait()
-		close(l.stoppedChan)
 		close(l.connChan)
+		close(l.stoppedChan)
 	}()
 
 	for {
@@ -161,13 +166,26 @@ func (l *listener) serveConnection(ctx context.Context, conn net.Conn, wg *sync.
 	c, err := l.mux(ctx, conn)
 	if err != nil {
 		conn.Close()
+
+		logLevel := zap.ErrorLevel
+		if errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET) {
+			// Log EOF and Connection Reset error at warn level as they mean that
+			// client has already closed connection and likely nothing is wrong with the server itself.
+			logLevel = zap.WarnLevel
+		}
+
+		// TODO: Replace with logger.Log once we upgrade to zap >=1.22
+		if ce := l.logger.Check(logLevel, "failed to serve connection"); ce != nil {
+			ce.Write(zap.Error(err))
+		}
+
 		return
 	}
 
 	select {
 	case l.connChan <- c:
 	case <-l.stopChan:
-		conn.Close()
+		c.Close()
 	}
 }
 
@@ -181,8 +199,7 @@ func (l *listener) mux(ctx context.Context, conn net.Conn) (net.Conn, error) {
 	c := newConnectionSniffer(conn)
 	isTLS, err := matchTLSConnection(c)
 	if err != nil {
-		l.logger.Error("TLS connection matcher failed", zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("tls connection matcher failed: %w", err)
 	}
 
 	if isTLS {
@@ -201,8 +218,7 @@ func (l *listener) handleTLSConn(ctx context.Context, conn net.Conn) (net.Conn, 
 	tlsConn := tls.Server(conn, l.tlsConfig)
 	if err := tlsConn.HandshakeContext(ctx); err != nil {
 		l.observer.IncTLSHandshakeFailures()
-		l.logger.Error("TLS handshake failed", zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("tls handshake failed: %w", err)
 	}
 
 	l.observer.IncTLSConnections(tlsConn.ConnectionState().Version)
