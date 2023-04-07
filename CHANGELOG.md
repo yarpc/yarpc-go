@@ -6,13 +6,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
-- No changes yet.
+- yarpcerrors: classify http 422 as InvalidArgument.
 
 ## [1.70.1] - 2023-03-31
 ### Fixed
 - yarpcerrors: classify http 304 as StatusOk and other 3XX statusCode as InvalidArgument.
 - yarpcerrors: classify tchannel BusyError to yarpc ResourceExchausted error
-- yarpcerrors: classify http 422 as InvalidArgument.
 
 ## [1.70.0] - 2023-02-16
 ### Fixed
