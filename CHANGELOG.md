@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
-- No changes yet.
+- yarpcerrors: classify http 422 as InvalidArgument.
 
 ## [1.70.1] - 2023-03-31
 ### Fixed
