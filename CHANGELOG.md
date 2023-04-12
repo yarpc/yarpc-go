@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 =======
+## [Unreleased]
+- No changes yet.
+
 ## [1.70.2] - 2023-04-11
 - yarpcerrors: classify http 422 as InvalidArgument.
 
@@ -1475,6 +1478,7 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.70.2...HEAD
 [1.70.2]: https://github.com/yarpc/yarpc-go/compare/v1.70.1...v1.70.2
 [1.70.1]: https://github.com/yarpc/yarpc-go/compare/v1.70.0...v1.70.1
 [1.70.0]: https://github.com/yarpc/yarpc-go/compare/v1.69.1...v1.70.0
