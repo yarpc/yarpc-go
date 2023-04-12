@@ -59,6 +59,11 @@ func TestUnspecifiedCodes(t *testing.T) {
 			want: yarpcerrors.CodeInvalidArgument,
 		},
 		{
+			name: "code unprocessable context",
+			give: 422,
+			want: yarpcerrors.CodeInvalidArgument,
+		},
+		{
 			name: "code invalid argument",
 			give: 450, // test for an x in range: [400, 500)
 			want: yarpcerrors.CodeInvalidArgument,
