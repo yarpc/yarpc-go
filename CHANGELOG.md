@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
-- No changes yet.
+- tls-outbounds: spiffe ids field has been made optional field.
 
 ## [1.70.2] - 2023-04-11
 - yarpcerrors: classify http 422 as InvalidArgument.

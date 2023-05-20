@@ -225,10 +225,6 @@ func (c OutboundTLSConfig) dialOptions(tlsConfigProvider yarpctls.OutboundTLSCon
 			return nil, errors.New("outbound TLS enforced but outbound TLS config provider is nil")
 		}
 
-		if len(c.SpiffeIDs) == 0 {
-			return nil, errors.New("outbound TLS enforced but no spiffe id is provided")
-		}
-
 		config, err := tlsConfigProvider.ClientTLSConfig(c.SpiffeIDs)
 		if err != nil {
 			return nil, err
