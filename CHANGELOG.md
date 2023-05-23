@@ -6,7 +6,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
-- tls-outbounds: spiffe ids field has been made optional field.
+- tls-outbounds: spiffe ids field has been made optional field. Outbounds
+  will accept any server certificate issued by the internal CA with any spiffe id
+  if no spiffe id config is provided.
 
 ## [1.70.2] - 2023-04-11
 - yarpcerrors: classify http 422 as InvalidArgument.
