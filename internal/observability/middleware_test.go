@@ -405,8 +405,8 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 			err:             yErrNoDetails,
 			applicationErr:  true, // always true for Protobuf handler errors
 			wantErrLevel:    zapcore.ErrorLevel,
-			wantInboundMsg:  "Error handling inbound request.",
-			wantOutboundMsg: "Error making outbound call.",
+			wantInboundMsg:  "Error handling inbound request. Error: fail",
+			wantOutboundMsg: "Error making outbound call. Error: fail",
 			wantFields: []zapcore.Field{
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
@@ -424,8 +424,8 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 			wantErrLevel:          zapcore.ErrorLevel,
 			applicationErrDetails: appErrDetails,
 			applicationErrName:    "MyErrMessageName",
-			wantInboundMsg:        "Error handling inbound request.",
-			wantOutboundMsg:       "Error making outbound call.",
+			wantInboundMsg:        "Error handling inbound request. Error: fail",
+			wantOutboundMsg:       "Error making outbound call. Error: fail",
 			wantFields: []zapcore.Field{
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
@@ -443,8 +443,8 @@ func TestMiddlewareLoggingWithApplicationErrorConfiguration(t *testing.T) {
 			err:             yErrWithDetails,
 			applicationErr:  true, // always true for Protobuf handler errors
 			wantErrLevel:    zapcore.WarnLevel,
-			wantInboundMsg:  "Error handling inbound request.",
-			wantOutboundMsg: "Error making outbound call.",
+			wantInboundMsg:  "Error handling inbound request. Error: fail",
+			wantOutboundMsg: "Error making outbound call. Error: fail",
 			wantFields: []zapcore.Field{
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
@@ -762,8 +762,8 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 			err:             yErrNoDetails,
 			applicationErr:  true, // always true for Protobuf handler errors
 			wantErrLevel:    zapcore.WarnLevel,
-			wantInboundMsg:  "Error handling inbound request.",
-			wantOutboundMsg: "Error making outbound call.",
+			wantInboundMsg:  "Error handling inbound request. Error: fail",
+			wantOutboundMsg: "Error making outbound call. Error: fail",
 			wantFields: []zapcore.Field{
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
@@ -781,8 +781,8 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 			wantErrLevel:          zapcore.WarnLevel,
 			applicationErrDetails: appErrDetails,
 			applicationErrName:    "MyErrMessageName",
-			wantInboundMsg:        "Error handling inbound request.",
-			wantOutboundMsg:       "Error making outbound call.",
+			wantInboundMsg:        "Error handling inbound request. Error: fail",
+			wantOutboundMsg:       "Error making outbound call. Error: fail",
 			wantFields: []zapcore.Field{
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
@@ -800,8 +800,8 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 			err:             yErrWithDetails,
 			applicationErr:  true, // always true for Protobuf handler errors
 			wantErrLevel:    zapcore.WarnLevel,
-			wantInboundMsg:  "Error handling inbound request.",
-			wantOutboundMsg: "Error making outbound call.",
+			wantInboundMsg:  "Error handling inbound request. Error: fail",
+			wantOutboundMsg: "Error making outbound call. Error: fail",
 			wantFields: []zapcore.Field{
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
@@ -817,8 +817,8 @@ func TestMiddlewareLoggingWithServerErrorConfiguration(t *testing.T) {
 			err:             yServerErrInternal,
 			applicationErr:  true, // always true for Protobuf handler errors
 			wantErrLevel:    zapcore.ErrorLevel,
-			wantInboundMsg:  "Error handling inbound request.",
-			wantOutboundMsg: "Error making outbound call.",
+			wantInboundMsg:  "Error handling inbound request. Error: internal",
+			wantOutboundMsg: "Error making outbound call. Error: internal",
 			wantFields: []zapcore.Field{
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),

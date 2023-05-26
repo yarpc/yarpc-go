@@ -41,10 +41,11 @@ const (
 	_errorCodeLogKey    = "errorCode"
 	_errorDetailsLogKey = "errorDetails"
 
-	_successfulInbound  = "Handled inbound request."
-	_successfulOutbound = "Made outbound call."
-	_errorInbound       = "Error handling inbound request."
-	_errorOutbound      = "Error making outbound call."
+	_successfulInbound        = "Handled inbound request."
+	_successfulOutbound       = "Made outbound call."
+	_errorInbound             = "Error handling inbound request."
+	_errorOutbound            = "Error making outbound call."
+	_errorWithOriginalMessage = "%s Error: %s"
 
 	_successStreamOpen  = "Successfully created stream"
 	_successStreamClose = "Successfully closed stream"
@@ -162,9 +163,15 @@ func (c call) endLogs(
 		}
 		ce = c.edge.logger.Check(c.levels.success, msg)
 	} else {
+
 		msg := _errorInbound
 		if c.direction != _directionInbound {
 			msg = _errorOutbound
+		}
+
+		// expose error message if the error is yarpcerror and has its own message
+		if status, ok := err.(*yarpcerrors.Status); ok && status.Message() != "" {
+			msg = fmt.Sprintf(_errorWithOriginalMessage, msg, status.Message())
 		}
 
 		var lvl zapcore.Level
