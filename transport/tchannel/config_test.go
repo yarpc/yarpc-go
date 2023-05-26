@@ -232,7 +232,7 @@ func TestTransportSpec(t *testing.T) {
 			wantErrors: []string{"outbound TLS enforced but outbound TLS config provider is nil"},
 		},
 		{
-			desc: "fail TLS outbound without spiffe id",
+			desc: "TLS outbound without spiffe id",
 			cfg: attrs{
 				"myservice": attrs{
 					"tchannel": attrs{
@@ -243,8 +243,8 @@ func TestTransportSpec(t *testing.T) {
 					},
 				},
 			},
-			opts:       []Option{OutboundTLSConfigProvider(&fakeOutboundTLSConfigProvider{})},
-			wantErrors: []string{"outbound TLS enforced but no spiffe id is provided"},
+			opts:          []Option{OutboundTLSConfigProvider(&fakeOutboundTLSConfigProvider{})},
+			wantOutbounds: []string{"myservice"},
 		},
 		{
 			desc: "fail TLS outbound when tls config provider returns error",
