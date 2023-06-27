@@ -472,7 +472,7 @@ func TestTransportSpec(t *testing.T) {
 			},
 		},
 		{
-			desc: "fail TLS outbound without spiffe id",
+			desc: "TLS outbound without spiffe id",
 			outboundCfg: attrs{
 				"myservice": attrs{
 					TransportName: attrs{
@@ -483,8 +483,13 @@ func TestTransportSpec(t *testing.T) {
 					},
 				},
 			},
-			opts:       []Option{OutboundTLSConfigProvider(&fakeOutboundTLSConfigProvider{})},
-			wantErrors: []string{"outbound TLS enforced but no spiffe id is provided"},
+			opts: []Option{OutboundTLSConfigProvider(&fakeOutboundTLSConfigProvider{})},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {
+					Address:   "localhost:54569",
+					TLSConfig: true,
+				},
+			},
 		},
 		{
 			desc: "fail TLS outbound with invalid tls mode",

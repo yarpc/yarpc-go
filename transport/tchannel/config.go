@@ -114,10 +114,6 @@ func (c OutboundConfig) getPeerTransport(transport *Transport, destName string) 
 		return nil, errors.New("outbound TLS enforced but outbound TLS config provider is nil")
 	}
 
-	if len(c.TLS.SpiffeIDs) == 0 {
-		return nil, errors.New("outbound TLS enforced but no spiffe id is provided")
-	}
-
 	config, err := transport.outboundTLSConfigProvider.ClientTLSConfig(c.TLS.SpiffeIDs)
 	if err != nil {
 		return nil, err
