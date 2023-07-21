@@ -6,7 +6,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
-- No changes yet.
+- middleware stack usage: remove ~2KB of stack usage from the rpc handler function, 
+  so that it decreases the chance of needing more stack. It can improve the
+  performance of the application.
 
 ## [1.70.3] - 2023-06-27
 - tls-outbounds: spiffe ids field has been made optional field. Outbounds
