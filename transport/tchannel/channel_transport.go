@@ -64,6 +64,9 @@ func NewChannelTransport(opts ...TransportOption) (*ChannelTransport, error) {
 			err = errChannelOrServiceNameIsRequired
 		} else {
 			opts := tchannel.ChannelOptions{Tracer: options.tracer}
+			if options.enableMPTCP {
+				opts = tchannel.ChannelOptions{Tracer: options.tracer, EnableMPTCP: true}
+			}
 			ch, err = tchannel.NewChannel(options.name, &opts)
 			options.ch = ch
 		}

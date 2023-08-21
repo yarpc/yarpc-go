@@ -85,6 +85,8 @@ type Transport struct {
 
 	outboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
 	outboundChannels          []*outboundChannel
+
+	enableMPTCP bool
 }
 
 // NewTransport is a YARPC transport that facilitates sending and receiving
@@ -136,6 +138,7 @@ func (o transportOptions) newTransport() *Transport {
 		inboundTLSConfig:               o.inboundTLSConfig,
 		inboundTLSMode:                 o.inboundTLSMode,
 		outboundTLSConfigProvider:      o.outboundTLSConfigProvider,
+		enableMPTCP:                    o.enableMPTCP,
 	}
 }
 
@@ -231,6 +234,7 @@ func (t *Transport) start() error {
 		OnPeerStatusChanged: t.onPeerStatusChanged,
 		Dialer:              t.dialer,
 		SkipHandlerMethods:  skipHandlerMethods,
+		EnableMPTCP:         t.enableMPTCP,
 	}
 	ch, err := tchannel.NewChannel(t.name, &chopts)
 	if err != nil {
@@ -260,7 +264,9 @@ func (t *Transport) start() error {
 
 		// TODO(abg): If addr was just the port (":4040"), we want to use
 		// ListenIP() + ":4040" rather than just ":4040".
-		listener, err = net.Listen("tcp", addr)
+		lc := net.ListenConfig{}
+		lc.SetMultipathTCP(t.enableMPTCP)
+		listener, err = lc.Listen(context.Background(), "tcp", addr)
 		if err != nil {
 			return err
 		}
@@ -333,9 +339,10 @@ func (t *Transport) onPeerStatusChanged(tp *tchannel.Peer) {
 // CreateTLSOutboundChannel creates a outbound channel for managing tls
 // connections with the given tls config and destination name.
 // Usage:
-// 	tr, _ := tchannel.NewTransport(...)
-//  outboundCh, _ := tr.CreateTLSOutboundChannel(tls-config, "dest-name")
-//  outbound := tr.NewOutbound(peer.NewSingle(id, outboundCh))
+//
+//		tr, _ := tchannel.NewTransport(...)
+//	 outboundCh, _ := tr.CreateTLSOutboundChannel(tls-config, "dest-name")
+//	 outbound := tr.NewOutbound(peer.NewSingle(id, outboundCh))
 func (t *Transport) CreateTLSOutboundChannel(tlsConfig *tls.Config, destinationName string) (peer.Transport, error) {
 	params := dialer.Params{
 		Config:        tlsConfig,

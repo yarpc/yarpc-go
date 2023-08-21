@@ -40,46 +40,50 @@ import (
 )
 
 func TestChannelInboundStartNew(t *testing.T) {
-	ch, err := tchannel.NewChannel("foo", nil)
-	require.NoError(t, err)
+	for _, enableMPTCP := range []bool{true, false} {
+		ch, err := tchannel.NewChannel("foo", &tchannel.ChannelOptions{EnableMPTCP: enableMPTCP})
+		require.NoError(t, err)
 
-	x, err := NewChannelTransport(WithChannel(ch))
-	require.NoError(t, err)
+		x, err := NewChannelTransport(WithChannel(ch), SetMPTCP(enableMPTCP))
+		require.NoError(t, err)
 
-	i := x.NewInbound()
-	i.SetRouter(yarpc.NewMapRouter("foo"))
-	// Can't do Equal because we want to match the pointer, not a
-	// DeepEqual.
-	assert.True(t, ch == i.Channel(), "channel does not match")
-	require.NoError(t, i.Start())
-	require.NoError(t, x.Start())
+		i := x.NewInbound()
+		i.SetRouter(yarpc.NewMapRouter("foo"))
+		// Can't do Equal because we want to match the pointer, not a
+		// DeepEqual.
+		assert.True(t, ch == i.Channel(), "channel does not match")
+		require.NoError(t, i.Start())
+		require.NoError(t, x.Start())
 
-	assert.Equal(t, tchannel.ChannelListening, ch.State())
-	assert.NoError(t, i.Stop())
-	assert.NoError(t, x.Stop())
-	assert.Equal(t, tchannel.ChannelClosed, ch.State())
+		assert.Equal(t, tchannel.ChannelListening, ch.State())
+		assert.NoError(t, i.Stop())
+		assert.NoError(t, x.Stop())
+		assert.Equal(t, tchannel.ChannelClosed, ch.State())
+	}
 }
 
 func TestChannelInboundStartAlreadyListening(t *testing.T) {
-	ch, err := tchannel.NewChannel("foo", nil)
-	require.NoError(t, err)
+	for _, enableMPTCP := range []bool{true, false} {
+		ch, err := tchannel.NewChannel("foo", &tchannel.ChannelOptions{EnableMPTCP: enableMPTCP})
+		require.NoError(t, err)
 
-	require.NoError(t, ch.ListenAndServe("127.0.0.1:0"))
-	assert.Equal(t, tchannel.ChannelListening, ch.State())
+		require.NoError(t, ch.ListenAndServe("127.0.0.1:0"))
+		assert.Equal(t, tchannel.ChannelListening, ch.State())
 
-	x, err := NewChannelTransport(WithChannel(ch))
-	require.NoError(t, err)
+		x, err := NewChannelTransport(WithChannel(ch))
+		require.NoError(t, err)
 
-	i := x.NewInbound()
+		i := x.NewInbound()
 
-	i.SetRouter(yarpc.NewMapRouter("foo"))
-	require.NoError(t, i.Start())
-	require.NoError(t, x.Start())
-	assert.Equal(t, tchannel.ChannelListening, ch.State())
+		i.SetRouter(yarpc.NewMapRouter("foo"))
+		require.NoError(t, i.Start())
+		require.NoError(t, x.Start())
+		assert.Equal(t, tchannel.ChannelListening, ch.State())
 
-	assert.NoError(t, i.Stop())
-	assert.NoError(t, x.Stop())
-	assert.Equal(t, tchannel.ChannelClosed, ch.State())
+		assert.NoError(t, i.Stop())
+		assert.NoError(t, x.Stop())
+		assert.Equal(t, tchannel.ChannelClosed, ch.State())
+	}
 }
 
 func TestChannelInboundStopWithoutStarting(t *testing.T) {
