@@ -104,6 +104,7 @@ func NewTransport(opts ...TransportOption) (*Transport, error) {
 	return options.newTransport(), nil
 }
 
+// add comment
 func (o transportOptions) newTransport() *Transport {
 	logger := o.logger
 	if logger == nil {
