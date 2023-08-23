@@ -37,6 +37,7 @@ require (
 	honnef.co/go/tools v0.3.2
 )
 
+// `require` is splited into two blocks automatically after running `go mod tidy`
 require (
 	github.com/BurntSushi/toml v0.4.1 // indirect
 	github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239 // indirect
