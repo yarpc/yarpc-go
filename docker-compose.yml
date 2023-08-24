@@ -1,10 +1,10 @@
 version: '3'
 services:
 
-  yarpc-go-1.17:
+  yarpc-go-1.19:
     build:
       context: .
-      dockerfile: Dockerfile.1.17
+      dockerfile: Dockerfile.1.19
     environment:
       - TEST_TIME_SCALE=5
       - THIS_CHUNK=${BUILDKITE_PARALLEL_JOB}
@@ -27,10 +27,10 @@ services:
     # and tell the container where to find it so that the container can
     # actually push commits.
 
-  yarpc-go-1.18:
+  yarpc-go-1.20:
     build:
       context: .
-      dockerfile: Dockerfile.1.18
+      dockerfile: Dockerfile.1.20
     environment:
       - TEST_TIME_SCALE=5
       - THIS_CHUNK=${BUILDKITE_PARALLEL_JOB}
