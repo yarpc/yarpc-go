@@ -6,10 +6,10 @@ steps:
         image-repository: 027047743804.dkr.ecr.us-east-2.amazonaws.com/uber
     agents:
       queue: builders
-  - name: ":docker: :package: 1.18"
+  - name: ":docker: :package: 1.19"
     plugins:
       docker-compose#v2.0.0:
-        build: yarpc-go-1.18
+        build: yarpc-go-1.19
         image-repository: 027047743804.dkr.ecr.us-east-2.amazonaws.com/uber
     agents:
       queue: builders
@@ -29,32 +29,32 @@ steps:
         run: yarpc-go-1.17
     agents:
       queue: workers
-  - name: ":go: 1.18 test - %n"
+  - name: ":go: 1.19 test - %n"
     command: "make codecov"
     parallelism: 6
     plugins:
       docker-compose#v2.0.0:
-        run: yarpc-go-1.18
+        run: yarpc-go-1.19
     agents:
       queue: workers
-  - name: ":go: 1.18 crossdock"
+  - name: ":go: 1.19 crossdock"
     command: "make crossdock-codecov"
     plugins:
       docker-compose#v2.0.0:
-        run: yarpc-go-1.18
+        run: yarpc-go-1.19
     agents:
       queue: workers
-  - name: ":go: 1.18 lint"
+  - name: ":go: 1.19 lint"
     command: "make lint"
     plugins:
       docker-compose#v2.0.0:
-        run: yarpc-go-1.18
+        run: yarpc-go-1.19
     agents:
       queue: workers
-  - name: ":go: 1.18 examples"
+  - name: ":go: 1.19 examples"
     command: "make examples"
     plugins:
       docker-compose#v2.0.0:
-        run: yarpc-go-1.18
+        run: yarpc-go-1.19
     agents:
       queue: workers
