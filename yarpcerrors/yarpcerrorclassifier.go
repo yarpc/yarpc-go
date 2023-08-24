@@ -23,6 +23,7 @@ package yarpcerrors
 type fault int
 
 const (
+	// UnknownFault is an indeterminate fault.
 	UnknownFault fault = iota
 	ClientFault
 	ServerFault
