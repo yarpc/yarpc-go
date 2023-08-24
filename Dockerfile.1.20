@@ -2,6 +2,7 @@ FROM golang:1.20
 
 ENV SUPPRESS_DOCKER 1
 WORKDIR /yarpc
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 RUN apt-get update -yq && apt-get install -yq jq unzip netcat
 ADD dockerdeps.mk /yarpc/
 ADD etc/make/base.mk etc/make/deps.mk /yarpc/etc/make/

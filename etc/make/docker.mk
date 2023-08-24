@@ -18,7 +18,7 @@ DOCKER_VOLUME_FLAGS=-v $(shell pwd):/go/src/go.uber.org/yarpc
 
 .PHONY: deps
 deps: $(DOCKER) __check_docker ## install all dependencies
-	PATH=$$PATH:$(BIN) docker build $(DOCKER_BUILD_FLAGS) -t $(DOCKER_IMAGE) -f $(DOCKERFILE) .
+	PATH=$$PATH:$(BIN)  $(DOCKER_BUILD_FLAGS) -t $(DOCKER_IMAGE) -f $(DOCKERFILE) .
 
 .PHONY: build
 build: deps ## go build all packages
