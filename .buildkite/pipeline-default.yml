@@ -1,8 +1,8 @@
 steps:
-  - name: ":docker: :package: 1.19"
+  - name: ":docker: :package: 1.18"
     plugins:
       docker-compose#v2.0.0:
-        build: yarpc-go-1.19
+        build: yarpc-go-1.18
         image-repository: 027047743804.dkr.ecr.us-east-2.amazonaws.com/uber
     agents:
       queue: builders
@@ -14,19 +14,19 @@ steps:
     agents:
       queue: builders
   - wait
-  - name: ":go: 1.19 test - %n"
+  - name: ":go: 1.18 test - %n"
     command: "make test"
     parallelism: 2
     plugins:
       docker-compose#v2.0.0:
-        run: yarpc-go-1.19
+        run: yarpc-go-1.18
     agents:
       queue: workers
-  - name: ":go: 1.19 examples"
+  - name: ":go: 1.18 examples"
     command: "make examples"
     plugins:
       docker-compose#v2.0.0:
-        run: yarpc-go-1.19
+        run: yarpc-go-1.18
     agents:
       queue: workers
   - name: ":go: 1.20 test - %n"

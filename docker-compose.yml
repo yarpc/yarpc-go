@@ -1,10 +1,10 @@
 version: '3'
 services:
 
-  yarpc-go-1.19:
+  yarpc-go-1.18:
     build:
       context: .
-      dockerfile: Dockerfile.1.19
+      dockerfile: Dockerfile.1.18
     environment:
       - TEST_TIME_SCALE=5
       - THIS_CHUNK=${BUILDKITE_PARALLEL_JOB}
