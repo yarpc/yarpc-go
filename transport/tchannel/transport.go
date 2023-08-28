@@ -85,6 +85,8 @@ type Transport struct {
 
 	outboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
 	outboundChannels          []*outboundChannel
+
+	enableMPTCP bool
 }
 
 // NewTransport is a YARPC transport that facilitates sending and receiving
@@ -136,6 +138,7 @@ func (o transportOptions) newTransport() *Transport {
 		inboundTLSConfig:               o.inboundTLSConfig,
 		inboundTLSMode:                 o.inboundTLSMode,
 		outboundTLSConfigProvider:      o.outboundTLSConfigProvider,
+		enableMPTCP:                    o.enableMPTCP,
 	}
 }
 
@@ -218,6 +221,11 @@ func (t *Transport) start() error {
 		skipHandlerMethods = t.nativeTChannelMethods.SkipMethodNames()
 	}
 
+	dialer := t.dialer
+	if dialer == nil && t.enableMPTCP {
+		dialer = dialMPTCPContext
+	}
+
 	chopts := tchannel.ChannelOptions{
 		Tracer: t.tracer,
 		Handler: handler{
@@ -229,7 +237,7 @@ func (t *Transport) start() error {
 			excludeServiceHeaderInResponse: t.excludeServiceHeaderInResponse,
 		},
 		OnPeerStatusChanged: t.onPeerStatusChanged,
-		Dialer:              t.dialer,
+		Dialer:              dialer,
 		SkipHandlerMethods:  skipHandlerMethods,
 	}
 	ch, err := tchannel.NewChannel(t.name, &chopts)
@@ -260,7 +268,9 @@ func (t *Transport) start() error {
 
 		// TODO(abg): If addr was just the port (":4040"), we want to use
 		// ListenIP() + ":4040" rather than just ":4040".
-		listener, err = net.Listen("tcp", addr)
+		lc := net.ListenConfig{}
+		lc.SetMultipathTCP(t.enableMPTCP)
+		listener, err = lc.Listen(context.Background(), "tcp", addr)
 		if err != nil {
 			return err
 		}
@@ -293,6 +303,12 @@ func (t *Transport) start() error {
 		}
 	}
 	return nil
+}
+
+func dialMPTCPContext(ctx context.Context, network, hostPort string) (net.Conn, error) {
+	d := net.Dialer{}
+	d.SetMultipathTCP(true)
+	return d.DialContext(ctx, network, hostPort)
 }
 
 // Stop stops the TChannel transport. It starts rejecting incoming requests
@@ -333,9 +349,10 @@ func (t *Transport) onPeerStatusChanged(tp *tchannel.Peer) {
 // CreateTLSOutboundChannel creates a outbound channel for managing tls
 // connections with the given tls config and destination name.
 // Usage:
-// 	tr, _ := tchannel.NewTransport(...)
-//  outboundCh, _ := tr.CreateTLSOutboundChannel(tls-config, "dest-name")
-//  outbound := tr.NewOutbound(peer.NewSingle(id, outboundCh))
+//
+//		tr, _ := tchannel.NewTransport(...)
+//	 outboundCh, _ := tr.CreateTLSOutboundChannel(tls-config, "dest-name")
+//	 outbound := tr.NewOutbound(peer.NewSingle(id, outboundCh))
 func (t *Transport) CreateTLSOutboundChannel(tlsConfig *tls.Config, destinationName string) (peer.Transport, error) {
 	params := dialer.Params{
 		Config:        tlsConfig,

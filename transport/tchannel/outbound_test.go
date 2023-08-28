@@ -81,59 +81,61 @@ func TestOutboundHeaders(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var handlerInvoked bool
-			server := testutils.NewServer(t, nil)
-			defer server.Close()
-			serverHostPort := server.PeerInfo().HostPort
+		for _, enableMPTCP := range []bool{true, false} {
+			t.Run(tt.name, func(t *testing.T) {
+				var handlerInvoked bool
+				server := testutils.NewServer(t, nil)
+				defer server.Close()
+				serverHostPort := server.PeerInfo().HostPort
 
-			server.GetSubChannel("service").SetHandler(tchannel.HandlerFunc(
-				func(ctx context.Context, call *tchannel.InboundCall) {
-					handlerInvoked = true
-					headers, err := readHeaders(tchannel.Raw, call.Arg2Reader)
-					if !assert.NoError(t, err, "failed to read request") {
-						return
-					}
+				server.GetSubChannel("service").SetHandler(tchannel.HandlerFunc(
+					func(ctx context.Context, call *tchannel.InboundCall) {
+						handlerInvoked = true
+						headers, err := readHeaders(tchannel.Raw, call.Arg2Reader)
+						if !assert.NoError(t, err, "failed to read request") {
+							return
+						}
 
-					deleteReservedHeaders(headers)
-					assert.Equal(t, tt.wantHeaders, headers.OriginalItems(), "headers did not match")
+						deleteReservedHeaders(headers)
+						assert.Equal(t, tt.wantHeaders, headers.OriginalItems(), "headers did not match")
 
-					// write a response
-					err = writeArgs(call.Response(), []byte{0x00, 0x00}, []byte(""))
-					assert.NoError(t, err, "failed to write response")
-				}))
+						// write a response
+						err = writeArgs(call.Response(), []byte{0x00, 0x00}, []byte(""))
+						assert.NoError(t, err, "failed to write response")
+					}))
 
-			opts := []TransportOption{ServiceName("caller")}
-			if tt.originalHeaders {
-				opts = append(opts, OriginalHeaders())
-			}
+				opts := []TransportOption{ServiceName("caller"), SetMPTCP(enableMPTCP)}
+				if tt.originalHeaders {
+					opts = append(opts, OriginalHeaders())
+				}
 
-			trans, err := NewTransport(opts...)
-			require.NoError(t, err)
-			require.NoError(t, trans.Start(), "failed to start transport")
-			defer trans.Stop()
+				trans, err := NewTransport(opts...)
+				require.NoError(t, err)
+				require.NoError(t, trans.Start(), "failed to start transport")
+				defer trans.Stop()
 
-			out := trans.NewSingleOutbound(serverHostPort)
-			require.NoError(t, out.Start(), "failed to start outbound")
-			defer out.Stop()
+				out := trans.NewSingleOutbound(serverHostPort)
+				require.NoError(t, out.Start(), "failed to start outbound")
+				defer out.Stop()
 
-			ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
-			defer cancel()
-			_, err = out.Call(
-				ctx,
-				&transport.Request{
-					Caller:    "caller",
-					Service:   "service",
-					Encoding:  raw.Encoding,
-					Procedure: "hello",
-					Headers:   transport.HeadersFromMap(tt.giveHeaders),
-					Body:      bytes.NewBufferString("body"),
-				},
-			)
+				ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
+				defer cancel()
+				_, err = out.Call(
+					ctx,
+					&transport.Request{
+						Caller:    "caller",
+						Service:   "service",
+						Encoding:  raw.Encoding,
+						Procedure: "hello",
+						Headers:   transport.HeadersFromMap(tt.giveHeaders),
+						Body:      bytes.NewBufferString("body"),
+					},
+				)
 
-			require.NoError(t, err, "failed to make call")
-			assert.True(t, handlerInvoked, "handler was never called by client")
-		})
+				require.NoError(t, err, "failed to make call")
+				assert.True(t, handlerInvoked, "handler was never called by client")
+			})
+		}
 	}
 }
 
