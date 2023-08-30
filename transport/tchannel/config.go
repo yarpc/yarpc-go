@@ -42,7 +42,7 @@ import (
 //	      exponential:
 //	        first: 10ms
 //	        max: 30s
-//		enableMPTCP: true
+//	  enableMPTCP: true
 type TransportConfig struct {
 	ConnTimeout time.Duration       `config:"connTimeout"`
 	ConnBackoff yarpcconfig.Backoff `config:"connBackoff"`

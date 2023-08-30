@@ -359,6 +359,13 @@ func (t *Transport) CreateTLSOutboundChannel(tlsConfig *tls.Config, destinationN
 	return t.createOutboundChannel(dialer.NewTLSDialer(params).DialContext)
 }
 
+// CreateMPTCPOutboundChannel creates a outbound channel for MPTCP
+// connections
+// Usage:
+//
+//		tr, _ := tchannel.NewTransport(...)
+//	 outboundCh, _ := tr.CreateMPTCPOutboundChannel()
+//	 outbound := tr.NewOutbound(peer.NewSingle(id, outboundCh))
 func (t *Transport) CreateMPTCPOutboundChannel() (peer.Transport, error) {
 	return t.createOutboundChannel(dialMPTCPContext)
 }

@@ -201,6 +201,42 @@ func TestTLSOutbound(t *testing.T) {
 	assert.Equal(t, "hello", string(resBody))
 }
 
+func TestMPTCPOutbound(t *testing.T) {
+	serverTransport, err := tchannel.NewTransport(tchannel.ServiceName("test-svc"), tchannel.SetMPTCP(true))
+	require.NoError(t, err)
+
+	inbound := serverTransport.NewInbound()
+	inbound.SetRouter(testRouter{proc: transport.Procedure{HandlerSpec: transport.NewUnaryHandlerSpec(testServer{})}})
+	require.NoError(t, serverTransport.Start())
+	defer serverTransport.Stop()
+	require.NoError(t, inbound.Start())
+	defer inbound.Stop()
+
+	clientTransport, err := tchannel.NewTransport(tchannel.ServiceName("test-client-svc"))
+	require.NoError(t, err)
+	peerTransport, err := clientTransport.CreateMPTCPOutboundChannel()
+	require.NoError(t, err)
+	outbound := serverTransport.NewOutbound(peer.NewSingle(hostport.Identify(serverTransport.ListenAddr()), peerTransport))
+	require.NoError(t, clientTransport.Start())
+	defer clientTransport.Stop()
+	require.NoError(t, outbound.Start())
+	defer outbound.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	res, err := outbound.Call(ctx, &transport.Request{
+		Service:   "test-svc-1",
+		Procedure: "test-proc",
+		Body:      strings.NewReader("hello"),
+	})
+	require.NoError(t, err)
+
+	resBody, err := io.ReadAll(res.Body)
+	require.NoError(t, err)
+	assert.Equal(t, "hello", string(resBody))
+}
+
 type testRouter struct {
 	proc transport.Procedure
 }
