@@ -66,6 +66,15 @@ func TestTransportSpec(t *testing.T) {
 
 	type attrs map[string]interface{}
 
+	type transportTest struct {
+		desc string            // description
+		cfg  attrs             // transport section of the config
+		env  map[string]string // environment variables
+		opts []Option          // transport spec options
+
+		wantErrors []string
+	}
+
 	type wantTransport struct {
 		Address string
 		TLSMode yarpctls.Mode
@@ -96,6 +105,13 @@ func TestTransportSpec(t *testing.T) {
 
 		wantErrors    []string
 		wantOutbounds []string
+	}
+
+	transportTests := []transportTest{
+		{
+			desc: "explicit transport config",
+			cfg:  attrs{"tchannel": attrs{"enableMPTCP": true}},
+		},
 	}
 
 	inboundTests := []inboundTest{
@@ -284,8 +300,11 @@ func TestTransportSpec(t *testing.T) {
 		},
 	}
 
-	runTest := func(t *testing.T, inbound inboundTest, outbound outboundTest) {
+	runTest := func(t *testing.T, trans transportTest, inbound inboundTest, outbound outboundTest) {
 		env := make(map[string]string)
+		for k, v := range trans.env {
+			env[k] = v
+		}
 		for k, v := range inbound.env {
 			env[k] = v
 		}
@@ -297,11 +316,15 @@ func TestTransportSpec(t *testing.T) {
 		}
 		configurator := yarpcconfig.New(yarpcconfig.InterpolationResolver(mapResolver(env)))
 
-		opts := append(inbound.opts, outbound.opts...)
+		//opts := append(inbound.opts, outbound.opts...)
+		opts := append(append(trans.opts, inbound.opts...), outbound.opts...)
 		err := configurator.RegisterTransport(TransportSpec(opts...))
 		require.NoError(t, err, "failed to register transport spec")
 
 		cfgData := make(attrs)
+		if trans.cfg != nil {
+			cfgData["transports"] = trans.cfg
+		}
 		if inbound.cfg != nil {
 			cfgData["inbounds"] = inbound.cfg
 		}
@@ -309,6 +332,14 @@ func TestTransportSpec(t *testing.T) {
 			cfgData["outbounds"] = outbound.cfg
 		}
 		cfg, err := configurator.LoadConfig("foo", cfgData)
+
+		if len(trans.wantErrors) > 0 {
+			require.Error(t, err, "expected failure while loading config %+v", cfgData)
+			for _, msg := range trans.wantErrors {
+				assert.Contains(t, err.Error(), msg)
+			}
+			return
+		}
 
 		if len(inbound.wantErrors) > 0 {
 			require.Error(t, err, "expected failure while loading config %+v", cfgData)
@@ -349,18 +380,20 @@ func TestTransportSpec(t *testing.T) {
 		require.NoError(t, d.Stop(), "failed to stop dispatcher")
 	}
 
-	for _, inboundTT := range inboundTests {
-		for _, outboundTT := range outboundTests {
-			// Special case: No inbounds or outbounds so we have nothing to
-			// test.
-			if inboundTT.empty && outboundTT.empty {
-				continue
-			}
+	for _, transTT := range transportTests {
+		for _, inboundTT := range inboundTests {
+			for _, outboundTT := range outboundTests {
+				// Special case: No inbounds or outbounds so we have nothing to
+				// test.
+				if inboundTT.empty && outboundTT.empty {
+					continue
+				}
 
-			desc := fmt.Sprintf("%v/%v", inboundTT.desc, outboundTT.desc)
-			t.Run(desc, func(t *testing.T) {
-				runTest(t, inboundTT, outboundTT)
-			})
+				desc := fmt.Sprintf("%v/%v", inboundTT.desc, outboundTT.desc)
+				t.Run(desc, func(t *testing.T) {
+					runTest(t, transTT, inboundTT, outboundTT)
+				})
+			}
 		}
 	}
 }
