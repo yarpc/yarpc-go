@@ -35,25 +35,27 @@ import (
 // TransportConfig configures a shared TChannel transport. This is shared
 // between all TChannel outbounds and inbounds of a Dispatcher.
 //
-//  transports:
-//    tchannel:
-//      connTimeout: 500ms
-//      connBackoff:
-//        exponential:
-//          first: 10ms
-//          max: 30s
+//	transports:
+//	  tchannel:
+//	    connTimeout: 500ms
+//	    connBackoff:
+//	      exponential:
+//	        first: 10ms
+//	        max: 30s
+//		enableMPTCP: true
 type TransportConfig struct {
 	ConnTimeout time.Duration       `config:"connTimeout"`
 	ConnBackoff yarpcconfig.Backoff `config:"connBackoff"`
+	EnableMPTCP bool                `config:"enableMPTCP"`
 }
 
 // InboundConfig configures a TChannel inbound.
 //
-// 	inbounds:
-// 	  tchannel:
-// 	    address: :4040
-//      tls:
-//        mode: permissive
+//		inbounds:
+//		  tchannel:
+//		    address: :4040
+//	     tls:
+//	       mode: permissive
 //
 // At most one TChannel inbound may be defined in a single YARPC service.
 type InboundConfig struct {
@@ -73,11 +75,10 @@ type InboundTLSConfig struct {
 
 // OutboundConfig configures a TChannel outbound.
 //
-// 	outbounds:
-// 	  myservice:
-// 	    tchannel:
-// 	      peer: 127.0.0.1:4040
-//
+//	outbounds:
+//	  myservice:
+//	    tchannel:
+//	      peer: 127.0.0.1:4040
 type OutboundConfig struct {
 	yarpcconfig.PeerChooser
 	// TLS config enables TLS outbound.
@@ -103,6 +104,9 @@ type OutboundTLSConfig struct {
 // getPeerTransport returns peer transport to be used in peer chooser creation.
 func (c OutboundConfig) getPeerTransport(transport *Transport, destName string) (peer.Transport, error) {
 	if c.TLS.Mode == yarpctls.Disabled {
+		if transport.enableMPTCP {
+			return transport.CreateMPTCPOutboundChannel()
+		}
 		return transport, nil
 	}
 
@@ -163,6 +167,8 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 	if tc.ConnTimeout != 0 {
 		options.connTimeout = tc.ConnTimeout
 	}
+
+	options.enableMPTCP = tc.EnableMPTCP
 
 	strategy, err := tc.ConnBackoff.Strategy()
 	if err != nil {

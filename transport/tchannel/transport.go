@@ -221,11 +221,6 @@ func (t *Transport) start() error {
 		skipHandlerMethods = t.nativeTChannelMethods.SkipMethodNames()
 	}
 
-	dialer := t.dialer
-	if dialer == nil && t.enableMPTCP {
-		dialer = dialMPTCPContext
-	}
-
 	chopts := tchannel.ChannelOptions{
 		Tracer: t.tracer,
 		Handler: handler{
@@ -237,7 +232,7 @@ func (t *Transport) start() error {
 			excludeServiceHeaderInResponse: t.excludeServiceHeaderInResponse,
 		},
 		OnPeerStatusChanged: t.onPeerStatusChanged,
-		Dialer:              dialer,
+		Dialer:              t.dialer,
 		SkipHandlerMethods:  skipHandlerMethods,
 	}
 	ch, err := tchannel.NewChannel(t.name, &chopts)
@@ -305,12 +300,6 @@ func (t *Transport) start() error {
 	return nil
 }
 
-func dialMPTCPContext(ctx context.Context, network, hostPort string) (net.Conn, error) {
-	d := net.Dialer{}
-	d.SetMultipathTCP(true)
-	return d.DialContext(ctx, network, hostPort)
-}
-
 // Stop stops the TChannel transport. It starts rejecting incoming requests
 // and draining connections before closing them.
 // In a future version of YARPC, Stop will block until the underlying channel
@@ -354,6 +343,10 @@ func (t *Transport) onPeerStatusChanged(tp *tchannel.Peer) {
 //	 outboundCh, _ := tr.CreateTLSOutboundChannel(tls-config, "dest-name")
 //	 outbound := tr.NewOutbound(peer.NewSingle(id, outboundCh))
 func (t *Transport) CreateTLSOutboundChannel(tlsConfig *tls.Config, destinationName string) (peer.Transport, error) {
+	dialerFunc := t.dialer
+	if t.enableMPTCP {
+		dialerFunc = dialMPTCPContext
+	}
 	params := dialer.Params{
 		Config:        tlsConfig,
 		Meter:         t.meter,
@@ -361,9 +354,19 @@ func (t *Transport) CreateTLSOutboundChannel(tlsConfig *tls.Config, destinationN
 		ServiceName:   t.name,
 		TransportName: TransportName,
 		Dest:          destinationName,
-		Dialer:        t.dialer,
+		Dialer:        dialerFunc,
 	}
 	return t.createOutboundChannel(dialer.NewTLSDialer(params).DialContext)
+}
+
+func (t *Transport) CreateMPTCPOutboundChannel() (peer.Transport, error) {
+	return t.createOutboundChannel(dialMPTCPContext)
+}
+
+func dialMPTCPContext(ctx context.Context, network, hostPort string) (net.Conn, error) {
+	d := net.Dialer{}
+	d.SetMultipathTCP(true)
+	return d.DialContext(ctx, network, hostPort)
 }
 
 func (t *Transport) createOutboundChannel(dialerFunc dialerFunc) (peer.Transport, error) {
