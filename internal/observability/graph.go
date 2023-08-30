@@ -53,15 +53,25 @@ const (
 	// _droppedTagValue represents the value of a metric tag when the tag
 	// is being blocked.
 	_droppedTagValue = "__dropped__"
+
+	_source          = "source"
+	_dest            = "dest"
+	_transport       = "transport"
+	_procedure       = "procedure"
+	_encoding        = "encoding"
+	_routingKey      = "routing_key"
+	_routingDelegate = "routing_delegate"
+	_direction       = "direction"
+	_rpcType         = "rpc_type"
 )
 
 // A graph represents a collection of services: each service is a node, and we
 // collect stats for each caller-callee-transport-encoding-procedure-rk-sk-rd edge.
 type graph struct {
-	meter               *metrics.Scope
-	logger              *zap.Logger
-	extract             ContextExtractor
-	metricTagsBlocklist []string
+	meter              *metrics.Scope
+	logger             *zap.Logger
+	extract            ContextExtractor
+	metricTagsBlockMap map[string]struct{}
 
 	edgesMu sync.RWMutex
 	edges   map[string]*edge
@@ -70,12 +80,16 @@ type graph struct {
 }
 
 func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor, metricTagsBlocklist []string) graph {
+	metricTagsBlockMap := make(map[string]struct{}, len(metricTagsBlocklist))
+	for _, m := range metricTagsBlocklist {
+		metricTagsBlockMap[m] = struct{}{}
+	}
 	return graph{
-		edges:               make(map[string]*edge, _defaultGraphSize),
-		meter:               meter,
-		logger:              logger,
-		extract:             extract,
-		metricTagsBlocklist: metricTagsBlocklist,
+		edges:              make(map[string]*edge, _defaultGraphSize),
+		meter:              meter,
+		logger:             logger,
+		extract:            extract,
+		metricTagsBlockMap: metricTagsBlockMap,
 		inboundLevels: levels{
 			success:          zapcore.DebugLevel,
 			failure:          zapcore.ErrorLevel,
@@ -98,15 +112,33 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction dir
 	now := _timeNow()
 
 	d := digester.New()
-	d.Add(req.Caller)
-	d.Add(req.Service)
-	d.Add(req.Transport)
-	d.Add(string(req.Encoding))
-	d.Add(req.Procedure)
-	d.Add(req.RoutingKey)
-	d.Add(req.RoutingDelegate)
-	d.Add(string(direction))
-	d.Add(rpcType.String())
+	if _, ok := g.metricTagsBlockMap[_source]; !ok {
+		d.Add(req.Caller)
+	}
+	if _, ok := g.metricTagsBlockMap[_dest]; !ok {
+		d.Add(req.Service)
+	}
+	if _, ok := g.metricTagsBlockMap[_transport]; !ok {
+		d.Add(req.Transport)
+	}
+	if _, ok := g.metricTagsBlockMap[_encoding]; !ok {
+		d.Add(string(req.Encoding))
+	}
+	if _, ok := g.metricTagsBlockMap[_procedure]; !ok {
+		d.Add(req.Procedure)
+	}
+	if _, ok := g.metricTagsBlockMap[_routingKey]; !ok {
+		d.Add(req.RoutingKey)
+	}
+	if _, ok := g.metricTagsBlockMap[_routingDelegate]; !ok {
+		d.Add(req.RoutingDelegate)
+	}
+	if _, ok := g.metricTagsBlockMap[_direction]; !ok {
+		d.Add(string(direction))
+	}
+	if _, ok := g.metricTagsBlockMap[_rpcType]; !ok {
+		d.Add(rpcType.String())
+	}
 	e := g.getOrCreateEdge(d.Digest(), req, string(direction), rpcType)
 	d.Free()
 
@@ -151,7 +183,7 @@ func (g *graph) createEdge(key []byte, req *transport.Request, direction string,
 		return e
 	}
 
-	e := newEdge(g.logger, g.meter, g.metricTagsBlocklist, req, direction, rpcType)
+	e := newEdge(g.logger, g.meter, g.metricTagsBlockMap, req, direction, rpcType)
 	g.edges[string(key)] = e
 	return e
 }
@@ -196,20 +228,20 @@ type streamEdge struct {
 
 // newEdge constructs a new edge. Since Registries enforce metric uniqueness,
 // edges should be cached and re-used for each RPC.
-func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist []string, req *transport.Request, direction string, rpcType transport.Type) *edge {
+func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlockMap map[string]struct{}, req *transport.Request, direction string, rpcType transport.Type) *edge {
 	tags := metrics.Tags{
-		"source":           req.Caller,
-		"dest":             req.Service,
-		"transport":        unknownIfEmpty(req.Transport),
-		"procedure":        req.Procedure,
-		"encoding":         string(req.Encoding),
-		"routing_key":      req.RoutingKey,
-		"routing_delegate": req.RoutingDelegate,
-		"direction":        direction,
-		"rpc_type":         rpcType.String(),
+		_source:          req.Caller,
+		_dest:            req.Service,
+		_transport:       unknownIfEmpty(req.Transport),
+		_procedure:       req.Procedure,
+		_encoding:        string(req.Encoding),
+		_routingKey:      req.RoutingKey,
+		_routingDelegate: req.RoutingDelegate,
+		_direction:       direction,
+		_rpcType:         rpcType.String(),
 	}
 
-	for _, tagName := range metricTagsBlocklist {
+	for tagName := range metricTagsBlockMap {
 		tags[tagName] = _droppedTagValue
 	}
 

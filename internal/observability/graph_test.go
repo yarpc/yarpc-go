@@ -21,13 +21,43 @@
 package observability
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 )
+
+func TestHandleWithReservedField(t *testing.T) {
+	root := metrics.New()
+	meter := root.Scope()
+
+	loggerCore, loggerObs := observer.New(zap.ErrorLevel)
+	logger := zap.New(loggerCore)
+
+	mw := NewMiddleware(Config{Scope: meter, Logger: logger, MetricTagsBlocklist: []string{"routing_delegate"}})
+
+	for _, rd := range []string{"rd1", "rd2"} {
+		req := &transport.Request{
+			Caller:          "caller",
+			Service:         "service",
+			Transport:       "",
+			Encoding:        "raw",
+			Procedure:       "procedure",
+			ShardKey:        "sk",
+			RoutingDelegate: rd,
+		}
+		// if "routing_delegate" is part of metricTagsBlockMap
+		// two requests with all other same field value but RoutingDelegate
+		// should successfully create a single metrics edge, without any error logging.
+		assert.NoError(t, mw.Handle(context.Background(), req, &transporttest.FakeResponseWriter{}, &fakeHandler{}))
+		assert.Len(t, loggerObs.All(), 0)
+	}
+}
 
 func TestEdgeNopFallbacks(t *testing.T) {
 	// If we fail to create any of the metrics required for the edge, we should
@@ -46,7 +76,7 @@ func TestEdgeNopFallbacks(t *testing.T) {
 		RoutingDelegate: "rd",
 	}
 
-	var tagsBlocklist []string
+	var tagsBlocklist map[string]struct{}
 
 	// Should succeed, covered by middleware tests.
 	_ = newEdge(zap.NewNop(), meter, tagsBlocklist, req, string(_directionOutbound), transport.Unary)
