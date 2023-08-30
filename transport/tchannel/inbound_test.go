@@ -37,17 +37,15 @@ import (
 )
 
 func TestInboundStartNew(t *testing.T) {
-	for _, enableMPTCP := range []bool{true, false} {
-		x, err := NewTransport(ServiceName("foo"), SetMPTCP(enableMPTCP))
-		require.NoError(t, err)
+	x, err := NewTransport(ServiceName("foo"))
+	require.NoError(t, err)
 
-		i := x.NewInbound()
-		i.SetRouter(yarpc.NewMapRouter("foo"))
-		require.NoError(t, i.Start())
-		require.NoError(t, x.Start())
-		require.NoError(t, i.Stop())
-		require.NoError(t, x.Stop())
-	}
+	i := x.NewInbound()
+	i.SetRouter(yarpc.NewMapRouter("foo"))
+	require.NoError(t, i.Start())
+	require.NoError(t, x.Start())
+	require.NoError(t, i.Stop())
+	require.NoError(t, x.Stop())
 }
 
 func TestInboundStopWithoutStarting(t *testing.T) {
