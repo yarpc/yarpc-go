@@ -52,7 +52,7 @@ func TestHandleWithReservedField(t *testing.T) {
 			RoutingDelegate: rd,
 		}
 		// if "routing_delegate" is part of metricTagsBlockMap
-		// two requests with all other same field value but RoutingDelegate
+		// multiple requests with all other same field value but RoutingDelegate
 		// should successfully create a single metrics edge, without any error logging.
 		assert.NoError(t, mw.Handle(context.Background(), req, &transporttest.FakeResponseWriter{}, &fakeHandler{}))
 		assert.Len(t, loggerObs.All(), 0)
@@ -93,21 +93,27 @@ func TestMetricsTagIgnore(t *testing.T) {
 		},
 		{
 			desc:            "only reserved fields in ignore list",
-			metricsToIgnore: []string{_source, _transport, _rpcType},
+			metricsToIgnore: []string{_source, _dest, _transport, _procedure, _encoding, _routingKey, _routingDelegate, _direction, _rpcType},
 			expected: &metricsTagIgnore{
-				source:    true,
-				transport: true,
-				rpcType:   true,
+				source:          true,
+				dest:            true,
+				transport:       true,
+				procedure:       true,
+				encoding:        true,
+				routingKey:      true,
+				routingDelegate: true,
+				direction:       true,
+				rpcType:         true,
 			},
 			expectedTags: metrics.Tags{
 				_source:          "__dropped__",
-				_dest:            "service",
+				_dest:            "__dropped__",
 				_transport:       "__dropped__",
-				_procedure:       "procedure",
-				_encoding:        "proto",
-				_routingKey:      "rk",
-				_routingDelegate: "rd",
-				_direction:       "inbound",
+				_procedure:       "__dropped__",
+				_encoding:        "__dropped__",
+				_routingKey:      "__dropped__",
+				_routingDelegate: "__dropped__",
+				_direction:       "__dropped__",
 				_rpcType:         "__dropped__",
 			},
 		},
