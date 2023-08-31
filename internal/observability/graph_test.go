@@ -59,6 +59,89 @@ func TestHandleWithReservedField(t *testing.T) {
 	}
 }
 
+func TestMetricsTagIgnore(t *testing.T) {
+	req := &transport.Request{
+		Caller:          "caller",
+		Service:         "service",
+		Transport:       "",
+		Encoding:        "proto",
+		Procedure:       "procedure",
+		RoutingKey:      "rk",
+		RoutingDelegate: "rd",
+	}
+
+	tests := []struct {
+		desc            string
+		metricsToIgnore []string
+		expected        *metricsTagIgnore
+		expectedTags    metrics.Tags
+	}{
+		{
+			desc:     "empty ignore list",
+			expected: &metricsTagIgnore{}, // all fields default to false
+			expectedTags: metrics.Tags{
+				_source:          "caller",
+				_dest:            "service",
+				_transport:       "unknown",
+				_procedure:       "procedure",
+				_encoding:        "proto",
+				_routingKey:      "rk",
+				_routingDelegate: "rd",
+				_direction:       "inbound",
+				_rpcType:         "Unary",
+			},
+		},
+		{
+			desc:            "only reserved fields in ignore list",
+			metricsToIgnore: []string{_source, _transport, _rpcType},
+			expected: &metricsTagIgnore{
+				source:    true,
+				transport: true,
+				rpcType:   true,
+			},
+			expectedTags: metrics.Tags{
+				_source:          "__dropped__",
+				_dest:            "service",
+				_transport:       "__dropped__",
+				_procedure:       "procedure",
+				_encoding:        "proto",
+				_routingKey:      "rk",
+				_routingDelegate: "rd",
+				_direction:       "inbound",
+				_rpcType:         "__dropped__",
+			},
+		},
+		{
+			desc:            "reserved fields and other fields in ignore list",
+			metricsToIgnore: []string{_source, _transport, _rpcType, "user_defined1", "user_defined2"},
+			expected: &metricsTagIgnore{
+				source:    true,
+				transport: true,
+				rpcType:   true,
+			},
+			expectedTags: metrics.Tags{
+				_source:          "__dropped__",
+				_dest:            "service",
+				_transport:       "__dropped__",
+				_procedure:       "procedure",
+				_encoding:        "proto",
+				_routingKey:      "rk",
+				_routingDelegate: "rd",
+				_direction:       "inbound",
+				_rpcType:         "__dropped__",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			actual := newMetricsTagIgnore(tt.metricsToIgnore)
+			assert.Equal(t, tt.expected, actual, "wrong metricsToIgnore")
+			actualTags := actual.tags(req, "inbound", transport.Unary)
+			assert.Equal(t, tt.expectedTags, actualTags, "tags mismatch")
+		})
+	}
+}
+
 func TestEdgeNopFallbacks(t *testing.T) {
 	// If we fail to create any of the metrics required for the edge, we should
 	// fall back to no-op implementations. The easiest way to trigger failures
@@ -76,14 +159,12 @@ func TestEdgeNopFallbacks(t *testing.T) {
 		RoutingDelegate: "rd",
 	}
 
-	var tagsBlocklist map[string]struct{}
-
 	// Should succeed, covered by middleware tests.
-	_ = newEdge(zap.NewNop(), meter, tagsBlocklist, req, string(_directionOutbound), transport.Unary)
+	_ = newEdge(zap.NewNop(), meter, &metricsTagIgnore{}, req, string(_directionOutbound), transport.Unary)
 
 	// Should fall back to no-op metrics.
 	// Usage of nil metrics should not panic, should not observe changes.
-	e := newEdge(zap.NewNop(), meter, tagsBlocklist, req, string(_directionOutbound), transport.Unary)
+	e := newEdge(zap.NewNop(), meter, &metricsTagIgnore{}, req, string(_directionOutbound), transport.Unary)
 
 	e.calls.Inc()
 	assert.Equal(t, int64(0), e.calls.Load(), "Expected to fall back to no-op metrics.")

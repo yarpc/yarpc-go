@@ -68,10 +68,10 @@ const (
 // A graph represents a collection of services: each service is a node, and we
 // collect stats for each caller-callee-transport-encoding-procedure-rk-sk-rd edge.
 type graph struct {
-	meter              *metrics.Scope
-	logger             *zap.Logger
-	extract            ContextExtractor
-	metricTagsBlockMap *metricsTagIgnore
+	meter            *metrics.Scope
+	logger           *zap.Logger
+	extract          ContextExtractor
+	ignoreMetricsTag *metricsTagIgnore
 
 	edgesMu sync.RWMutex
 	edges   map[string]*edge
@@ -93,9 +93,9 @@ type metricsTagIgnore struct {
 	rpcType         bool
 }
 
-func newMetricsTagIgnore(metricTagsBlocklist []string) *metricsTagIgnore {
+func newMetricsTagIgnore(metricTagsIgnore []string) *metricsTagIgnore {
 	r := new(metricsTagIgnore)
-	for _, m := range metricTagsBlocklist {
+	for _, m := range metricTagsIgnore {
 		switch m {
 		case _source:
 			r.source = true
@@ -133,44 +133,44 @@ func (m *metricsTagIgnore) tags(req *transport.Request, direction string, rpcTyp
 		_rpcType:         rpcType.String(),
 	}
 
-	if !m.source {
+	if m.source {
 		tags[_source] = _droppedTagValue
 	}
-	if !m.dest {
+	if m.dest {
 		tags[_dest] = _droppedTagValue
 	}
-	if !m.transport {
+	if m.transport {
 		tags[_transport] = _droppedTagValue
 	}
-	if !m.encoding {
+	if m.encoding {
 		tags[_encoding] = _droppedTagValue
 	}
-	if !m.procedure {
+	if m.procedure {
 		tags[_procedure] = _droppedTagValue
 	}
-	if !m.routingKey {
+	if m.routingKey {
 		tags[_routingKey] = _droppedTagValue
 	}
-	if !m.routingDelegate {
+	if m.routingDelegate {
 		tags[_routingDelegate] = _droppedTagValue
 	}
-	if !m.direction {
+	if m.direction {
 		tags[_direction] = _droppedTagValue
 	}
-	if !m.rpcType {
+	if m.rpcType {
 		tags[_rpcType] = _droppedTagValue
 	}
 
 	return tags
 }
 
-func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor, metricTagsBlocklist []string) graph {
+func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor, metricTagsIgnore []string) graph {
 	return graph{
-		edges:              make(map[string]*edge, _defaultGraphSize),
-		meter:              meter,
-		logger:             logger,
-		extract:            extract,
-		metricTagsBlockMap: newMetricsTagIgnore(metricTagsBlocklist),
+		edges:            make(map[string]*edge, _defaultGraphSize),
+		meter:            meter,
+		logger:           logger,
+		extract:          extract,
+		ignoreMetricsTag: newMetricsTagIgnore(metricTagsIgnore),
 		inboundLevels: levels{
 			success:          zapcore.DebugLevel,
 			failure:          zapcore.ErrorLevel,
@@ -193,31 +193,31 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction dir
 	now := _timeNow()
 
 	d := digester.New()
-	if !g.metricTagsBlockMap.source {
+	if !g.ignoreMetricsTag.source {
 		d.Add(req.Caller)
 	}
-	if !g.metricTagsBlockMap.dest {
+	if !g.ignoreMetricsTag.dest {
 		d.Add(req.Service)
 	}
-	if !g.metricTagsBlockMap.transport {
+	if !g.ignoreMetricsTag.transport {
 		d.Add(req.Transport)
 	}
-	if !g.metricTagsBlockMap.encoding {
+	if !g.ignoreMetricsTag.encoding {
 		d.Add(string(req.Encoding))
 	}
-	if !g.metricTagsBlockMap.procedure {
+	if !g.ignoreMetricsTag.procedure {
 		d.Add(req.Procedure)
 	}
-	if !g.metricTagsBlockMap.routingKey {
+	if !g.ignoreMetricsTag.routingKey {
 		d.Add(req.RoutingKey)
 	}
-	if !g.metricTagsBlockMap.routingDelegate {
+	if !g.ignoreMetricsTag.routingDelegate {
 		d.Add(req.RoutingDelegate)
 	}
-	if !g.metricTagsBlockMap.direction {
+	if !g.ignoreMetricsTag.direction {
 		d.Add(string(direction))
 	}
-	if !g.metricTagsBlockMap.rpcType {
+	if !g.ignoreMetricsTag.rpcType {
 		d.Add(rpcType.String())
 	}
 	e := g.getOrCreateEdge(d.Digest(), req, string(direction), rpcType)
@@ -264,7 +264,7 @@ func (g *graph) createEdge(key []byte, req *transport.Request, direction string,
 		return e
 	}
 
-	e := newEdge(g.logger, g.meter, g.metricTagsBlockMap, req, direction, rpcType)
+	e := newEdge(g.logger, g.meter, g.ignoreMetricsTag, req, direction, rpcType)
 	g.edges[string(key)] = e
 	return e
 }
