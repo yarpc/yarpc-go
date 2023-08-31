@@ -71,7 +71,7 @@ type graph struct {
 	meter              *metrics.Scope
 	logger             *zap.Logger
 	extract            ContextExtractor
-	metricTagsBlockMap map[string]struct{}
+	metricTagsBlockMap *metricsTagIgnore
 
 	edgesMu sync.RWMutex
 	edges   map[string]*edge
@@ -79,17 +79,98 @@ type graph struct {
 	inboundLevels, outboundLevels levels
 }
 
-func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor, metricTagsBlocklist []string) graph {
-	metricTagsBlockMap := make(map[string]struct{}, len(metricTagsBlocklist))
+// if the field is set to true, the metrics tag won't be emitted
+// it is a more performant way than have a map (field lookup versus map lookup)
+type metricsTagIgnore struct {
+	source          bool
+	dest            bool
+	transport       bool
+	procedure       bool
+	encoding        bool
+	routingKey      bool
+	routingDelegate bool
+	direction       bool
+	rpcType         bool
+}
+
+func newMetricsTagIgnore(metricTagsBlocklist []string) *metricsTagIgnore {
+	r := new(metricsTagIgnore)
 	for _, m := range metricTagsBlocklist {
-		metricTagsBlockMap[m] = struct{}{}
+		switch m {
+		case _source:
+			r.source = true
+		case _dest:
+			r.dest = true
+		case _transport:
+			r.transport = true
+		case _procedure:
+			r.procedure = true
+		case _encoding:
+			r.encoding = true
+		case _routingKey:
+			r.routingKey = true
+		case _routingDelegate:
+			r.routingDelegate = true
+		case _direction:
+			r.direction = true
+		case _rpcType:
+			r.rpcType = true
+		}
 	}
+	return r
+}
+
+func (m *metricsTagIgnore) tags(req *transport.Request, direction string, rpcType transport.Type) metrics.Tags {
+	tags := metrics.Tags{
+		_source:          req.Caller,
+		_dest:            req.Service,
+		_transport:       unknownIfEmpty(req.Transport),
+		_procedure:       req.Procedure,
+		_encoding:        string(req.Encoding),
+		_routingKey:      req.RoutingKey,
+		_routingDelegate: req.RoutingDelegate,
+		_direction:       direction,
+		_rpcType:         rpcType.String(),
+	}
+
+	if !m.source {
+		tags[_source] = _droppedTagValue
+	}
+	if !m.dest {
+		tags[_dest] = _droppedTagValue
+	}
+	if !m.transport {
+		tags[_transport] = _droppedTagValue
+	}
+	if !m.encoding {
+		tags[_encoding] = _droppedTagValue
+	}
+	if !m.procedure {
+		tags[_procedure] = _droppedTagValue
+	}
+	if !m.routingKey {
+		tags[_routingKey] = _droppedTagValue
+	}
+	if !m.routingDelegate {
+		tags[_routingDelegate] = _droppedTagValue
+	}
+	if !m.direction {
+		tags[_direction] = _droppedTagValue
+	}
+	if !m.rpcType {
+		tags[_rpcType] = _droppedTagValue
+	}
+
+	return tags
+}
+
+func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor, metricTagsBlocklist []string) graph {
 	return graph{
 		edges:              make(map[string]*edge, _defaultGraphSize),
 		meter:              meter,
 		logger:             logger,
 		extract:            extract,
-		metricTagsBlockMap: metricTagsBlockMap,
+		metricTagsBlockMap: newMetricsTagIgnore(metricTagsBlocklist),
 		inboundLevels: levels{
 			success:          zapcore.DebugLevel,
 			failure:          zapcore.ErrorLevel,
@@ -112,31 +193,31 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction dir
 	now := _timeNow()
 
 	d := digester.New()
-	if _, ok := g.metricTagsBlockMap[_source]; !ok {
+	if !g.metricTagsBlockMap.source {
 		d.Add(req.Caller)
 	}
-	if _, ok := g.metricTagsBlockMap[_dest]; !ok {
+	if !g.metricTagsBlockMap.dest {
 		d.Add(req.Service)
 	}
-	if _, ok := g.metricTagsBlockMap[_transport]; !ok {
+	if !g.metricTagsBlockMap.transport {
 		d.Add(req.Transport)
 	}
-	if _, ok := g.metricTagsBlockMap[_encoding]; !ok {
+	if !g.metricTagsBlockMap.encoding {
 		d.Add(string(req.Encoding))
 	}
-	if _, ok := g.metricTagsBlockMap[_procedure]; !ok {
+	if !g.metricTagsBlockMap.procedure {
 		d.Add(req.Procedure)
 	}
-	if _, ok := g.metricTagsBlockMap[_routingKey]; !ok {
+	if !g.metricTagsBlockMap.routingKey {
 		d.Add(req.RoutingKey)
 	}
-	if _, ok := g.metricTagsBlockMap[_routingDelegate]; !ok {
+	if !g.metricTagsBlockMap.routingDelegate {
 		d.Add(req.RoutingDelegate)
 	}
-	if _, ok := g.metricTagsBlockMap[_direction]; !ok {
+	if !g.metricTagsBlockMap.direction {
 		d.Add(string(direction))
 	}
-	if _, ok := g.metricTagsBlockMap[_rpcType]; !ok {
+	if !g.metricTagsBlockMap.rpcType {
 		d.Add(rpcType.String())
 	}
 	e := g.getOrCreateEdge(d.Digest(), req, string(direction), rpcType)
@@ -228,22 +309,8 @@ type streamEdge struct {
 
 // newEdge constructs a new edge. Since Registries enforce metric uniqueness,
 // edges should be cached and re-used for each RPC.
-func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlockMap map[string]struct{}, req *transport.Request, direction string, rpcType transport.Type) *edge {
-	tags := metrics.Tags{
-		_source:          req.Caller,
-		_dest:            req.Service,
-		_transport:       unknownIfEmpty(req.Transport),
-		_procedure:       req.Procedure,
-		_encoding:        string(req.Encoding),
-		_routingKey:      req.RoutingKey,
-		_routingDelegate: req.RoutingDelegate,
-		_direction:       direction,
-		_rpcType:         rpcType.String(),
-	}
-
-	for tagName := range metricTagsBlockMap {
-		tags[tagName] = _droppedTagValue
-	}
+func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIgnore, req *transport.Request, direction string, rpcType transport.Type) *edge {
+	tags := tagToIgnore.tags(req, direction, rpcType)
 
 	// metrics for all RPCs
 	calls, err := meter.Counter(metrics.Spec{
