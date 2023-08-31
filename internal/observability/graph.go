@@ -53,15 +53,25 @@ const (
 	// _droppedTagValue represents the value of a metric tag when the tag
 	// is being blocked.
 	_droppedTagValue = "__dropped__"
+
+	_source          = "source"
+	_dest            = "dest"
+	_transport       = "transport"
+	_procedure       = "procedure"
+	_encoding        = "encoding"
+	_routingKey      = "routing_key"
+	_routingDelegate = "routing_delegate"
+	_direction       = "direction"
+	_rpcType         = "rpc_type"
 )
 
 // A graph represents a collection of services: each service is a node, and we
 // collect stats for each caller-callee-transport-encoding-procedure-rk-sk-rd edge.
 type graph struct {
-	meter               *metrics.Scope
-	logger              *zap.Logger
-	extract             ContextExtractor
-	metricTagsBlocklist []string
+	meter            *metrics.Scope
+	logger           *zap.Logger
+	extract          ContextExtractor
+	ignoreMetricsTag *metricsTagIgnore
 
 	edgesMu sync.RWMutex
 	edges   map[string]*edge
@@ -69,13 +79,98 @@ type graph struct {
 	inboundLevels, outboundLevels levels
 }
 
-func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor, metricTagsBlocklist []string) graph {
+// if the field is set to true, the metrics tag won't be emitted
+// it is a more performant way than have a map (field lookup versus map lookup)
+type metricsTagIgnore struct {
+	source          bool
+	dest            bool
+	transport       bool
+	procedure       bool
+	encoding        bool
+	routingKey      bool
+	routingDelegate bool
+	direction       bool
+	rpcType         bool
+}
+
+func newMetricsTagIgnore(metricTagsIgnore []string) *metricsTagIgnore {
+	r := new(metricsTagIgnore)
+	for _, m := range metricTagsIgnore {
+		switch m {
+		case _source:
+			r.source = true
+		case _dest:
+			r.dest = true
+		case _transport:
+			r.transport = true
+		case _procedure:
+			r.procedure = true
+		case _encoding:
+			r.encoding = true
+		case _routingKey:
+			r.routingKey = true
+		case _routingDelegate:
+			r.routingDelegate = true
+		case _direction:
+			r.direction = true
+		case _rpcType:
+			r.rpcType = true
+		}
+	}
+	return r
+}
+
+func (m *metricsTagIgnore) tags(req *transport.Request, direction string, rpcType transport.Type) metrics.Tags {
+	tags := metrics.Tags{
+		_source:          req.Caller,
+		_dest:            req.Service,
+		_transport:       unknownIfEmpty(req.Transport),
+		_procedure:       req.Procedure,
+		_encoding:        string(req.Encoding),
+		_routingKey:      req.RoutingKey,
+		_routingDelegate: req.RoutingDelegate,
+		_direction:       direction,
+		_rpcType:         rpcType.String(),
+	}
+
+	if m.source {
+		tags[_source] = _droppedTagValue
+	}
+	if m.dest {
+		tags[_dest] = _droppedTagValue
+	}
+	if m.transport {
+		tags[_transport] = _droppedTagValue
+	}
+	if m.encoding {
+		tags[_encoding] = _droppedTagValue
+	}
+	if m.procedure {
+		tags[_procedure] = _droppedTagValue
+	}
+	if m.routingKey {
+		tags[_routingKey] = _droppedTagValue
+	}
+	if m.routingDelegate {
+		tags[_routingDelegate] = _droppedTagValue
+	}
+	if m.direction {
+		tags[_direction] = _droppedTagValue
+	}
+	if m.rpcType {
+		tags[_rpcType] = _droppedTagValue
+	}
+
+	return tags
+}
+
+func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor, metricTagsIgnore []string) graph {
 	return graph{
-		edges:               make(map[string]*edge, _defaultGraphSize),
-		meter:               meter,
-		logger:              logger,
-		extract:             extract,
-		metricTagsBlocklist: metricTagsBlocklist,
+		edges:            make(map[string]*edge, _defaultGraphSize),
+		meter:            meter,
+		logger:           logger,
+		extract:          extract,
+		ignoreMetricsTag: newMetricsTagIgnore(metricTagsIgnore),
 		inboundLevels: levels{
 			success:          zapcore.DebugLevel,
 			failure:          zapcore.ErrorLevel,
@@ -98,15 +193,33 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, direction dir
 	now := _timeNow()
 
 	d := digester.New()
-	d.Add(req.Caller)
-	d.Add(req.Service)
-	d.Add(req.Transport)
-	d.Add(string(req.Encoding))
-	d.Add(req.Procedure)
-	d.Add(req.RoutingKey)
-	d.Add(req.RoutingDelegate)
-	d.Add(string(direction))
-	d.Add(rpcType.String())
+	if !g.ignoreMetricsTag.source {
+		d.Add(req.Caller)
+	}
+	if !g.ignoreMetricsTag.dest {
+		d.Add(req.Service)
+	}
+	if !g.ignoreMetricsTag.transport {
+		d.Add(req.Transport)
+	}
+	if !g.ignoreMetricsTag.encoding {
+		d.Add(string(req.Encoding))
+	}
+	if !g.ignoreMetricsTag.procedure {
+		d.Add(req.Procedure)
+	}
+	if !g.ignoreMetricsTag.routingKey {
+		d.Add(req.RoutingKey)
+	}
+	if !g.ignoreMetricsTag.routingDelegate {
+		d.Add(req.RoutingDelegate)
+	}
+	if !g.ignoreMetricsTag.direction {
+		d.Add(string(direction))
+	}
+	if !g.ignoreMetricsTag.rpcType {
+		d.Add(rpcType.String())
+	}
 	e := g.getOrCreateEdge(d.Digest(), req, string(direction), rpcType)
 	d.Free()
 
@@ -151,7 +264,7 @@ func (g *graph) createEdge(key []byte, req *transport.Request, direction string,
 		return e
 	}
 
-	e := newEdge(g.logger, g.meter, g.metricTagsBlocklist, req, direction, rpcType)
+	e := newEdge(g.logger, g.meter, g.ignoreMetricsTag, req, direction, rpcType)
 	g.edges[string(key)] = e
 	return e
 }
@@ -196,22 +309,8 @@ type streamEdge struct {
 
 // newEdge constructs a new edge. Since Registries enforce metric uniqueness,
 // edges should be cached and re-used for each RPC.
-func newEdge(logger *zap.Logger, meter *metrics.Scope, metricTagsBlocklist []string, req *transport.Request, direction string, rpcType transport.Type) *edge {
-	tags := metrics.Tags{
-		"source":           req.Caller,
-		"dest":             req.Service,
-		"transport":        unknownIfEmpty(req.Transport),
-		"procedure":        req.Procedure,
-		"encoding":         string(req.Encoding),
-		"routing_key":      req.RoutingKey,
-		"routing_delegate": req.RoutingDelegate,
-		"direction":        direction,
-		"rpc_type":         rpcType.String(),
-	}
-
-	for _, tagName := range metricTagsBlocklist {
-		tags[tagName] = _droppedTagValue
-	}
+func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIgnore, req *transport.Request, direction string, rpcType transport.Type) *edge {
+	tags := tagToIgnore.tags(req, direction, rpcType)
 
 	// metrics for all RPCs
 	calls, err := meter.Counter(metrics.Spec{

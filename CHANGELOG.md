@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 =======
+## [1.70.4] - 2023-08-31
+- logging: fix logged error in observability middleware when fields of transport.Request is in the tagsBlocklist
+- `go.mod`: update minimum requirements to go1.21 instead of go1.14 and update `golang.org/x/net v0.7.0` to v0.14.0
+- middleware stack usage: remove ~2KB of stack usage from the rpc handler function, 
+  so that it decreases the chance of needing more stack. It can improve the
+  performance of the application.
+
 ## [1.70.3] - 2023-06-27
 - tls-outbounds: spiffe ids field has been made optional field. Outbounds
   will accept any server certificate issued by the internal CA with any spiffe id
@@ -1480,6 +1487,7 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
+[1.70.4]: https://github.com/yarpc/yarpc-go/compare/v1.70.3...v1.70.4
 [1.70.3]: https://github.com/yarpc/yarpc-go/compare/v1.70.2...v1.70.3
 [1.70.2]: https://github.com/yarpc/yarpc-go/compare/v1.70.1...v1.70.2
 [1.70.1]: https://github.com/yarpc/yarpc-go/compare/v1.70.0...v1.70.1

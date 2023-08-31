@@ -3828,3 +3828,29 @@ type readCloser struct {
 func (r readCloser) Close() error {
 	return nil
 }
+
+func BenchmarkMiddlewareHandle(b *testing.B) {
+	m := NewMiddleware(Config{
+		Logger: zap.NewNop(),
+	})
+
+	req := &transport.Request{
+		Caller:          "caller",
+		Service:         "service",
+		Transport:       "",
+		Encoding:        "raw",
+		Procedure:       "procedure",
+		Headers:         transport.NewHeaders().With("password", "super-secret"),
+		ShardKey:        "shard01",
+		RoutingKey:      "routing-key",
+		RoutingDelegate: "routing-delegate",
+		Body:            strings.NewReader("body"),
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		err := m.Handle(context.Background(), req, &transporttest.FakeResponseWriter{}, &fakeHandler{})
+		assert.NoError(b, err)
+	}
+}

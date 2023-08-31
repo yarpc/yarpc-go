@@ -64,7 +64,6 @@ const (
 type call struct {
 	edge    *edge
 	extract ContextExtractor
-	fields  [10]zapcore.Field
 
 	started   time.Time
 	ctx       context.Context
@@ -222,7 +221,7 @@ func (c call) endLogs(
 		return
 	}
 
-	fields := c.fields[:0]
+	fields := make([]zapcore.Field, 0, 9+len(extraLogFields))
 	fields = append(fields, zap.String("rpcType", c.rpcType.String()))
 	fields = append(fields, zap.Duration("latency", elapsed))
 	fields = append(fields, zap.Bool("successful", err == nil && !isApplicationError))
