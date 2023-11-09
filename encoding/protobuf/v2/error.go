@@ -167,24 +167,29 @@ func createStatusWithDetail(pberr *pberror, encoding transport.Encoding, codec *
 }
 
 func setApplicationErrorMeta(pberr *pberror, resw transport.ResponseWriter) {
-	applicationErroMetaSetter, ok := resw.(transport.ApplicationErrorMetaSetter)
+	applicationErrorMetaSetter, ok := resw.(transport.ApplicationErrorMetaSetter)
 	if !ok {
 		return
 	}
 
-	decodedDetails := GetErrorDetails(pberr)
-	var appErrName string
-	if len(decodedDetails) > 0 { // only grab the first name since this will be emitted with metrics
-		decodedMsg := decodedDetails[0].(proto.Message)
-		appErrName = messageNameWithoutPackage(string(proto.MessageName(decodedMsg)))
-	}
+	var (
+		decodedDetails = GetErrorDetails(pberr)
 
-	details := make([]string, 0, len(decodedDetails))
+		appErrName string
+		details    = make([]string, 0, len(decodedDetails))
+	)
+
 	for _, detail := range decodedDetails {
-		details = append(details, protobufMessageToString(detail.(proto.Message)))
+		if m, ok := detail.(proto.Message); ok {
+			if appErrName == "" {
+				// only grab the first name since this will be emitted with metrics
+				appErrName = messageNameWithoutPackage(string(proto.MessageName(m)))
+			}
+			details = append(details, protobufMessageToString(detail.(proto.Message)))
+		}
 	}
 
-	applicationErroMetaSetter.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
+	applicationErrorMetaSetter.SetApplicationErrorMeta(&transport.ApplicationErrorMeta{
 		Name:    appErrName,
 		Details: fmt.Sprintf(_errDetailsFmt, strings.Join(details, " , ")),
 	})
@@ -194,7 +199,8 @@ func setApplicationErrorMeta(pberr *pberror, resw transport.ResponseWriter) {
 // name.
 //
 // For example:
-//  uber.foo.bar.TypeName -> TypeName
+//
+//	uber.foo.bar.TypeName -> TypeName
 func messageNameWithoutPackage(messageName string) string {
 	if i := strings.LastIndex(messageName, "."); i >= 0 {
 		return messageName[i+1:]

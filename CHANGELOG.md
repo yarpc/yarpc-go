@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 =======
 ## [Unreleased]
 - grpc: returned outbound response body is no longer writable.
+- Fixed panic when error details list contains message that cannot be unmarshalled.
 
 ## [1.70.4] - 2023-08-31
 - logging: fix logged error in observability middleware when fields of transport.Request is in the tagsBlocklist

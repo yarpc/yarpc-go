@@ -268,3 +268,23 @@ func TestErrorHandling(t *testing.T) {
 		assert.Equal(t, err, fmt.Errorf("proto: Marshal called with nil"))
 	})
 }
+
+func TestSetApplicationErrorMeta(t *testing.T) {
+	respErr := NewError(
+		yarpcerrors.CodeAborted,
+		"aborted",
+	)
+
+	anyString, err := types.MarshalAny(&types.StringValue{Value: "baz"})
+	require.NoError(t, err)
+
+	pbErr := respErr.(*pberror)
+	pbErr.details = append(pbErr.details, &types.Any{TypeUrl: "foo", Value: []byte("bar")})
+	pbErr.details = append(pbErr.details, anyString)
+
+	resw := &transporttest.FakeResponseWriter{}
+	setApplicationErrorMeta(pbErr, resw)
+
+	assert.Equal(t, "StringValue", resw.ApplicationErrorMeta.Name)
+	assert.Equal(t, `[]{ StringValue{value:"baz" } }`, resw.ApplicationErrorMeta.Details)
+}
