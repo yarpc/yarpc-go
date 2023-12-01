@@ -33,7 +33,7 @@ const gomockTemplate = `
 <$pkgname := printf "%stest" (lower .Name)>
 package <$pkgname>
 
-<$gomock := import "github.com/golang/mock/gomock">
+<$gomock := import .MockLibrary>
 
 // MockClient implements a gomock-compatible mock client for service
 // <.Name>.

@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
+### Added
+- thriftrw-plugin-yarpc: Add option for configuring the mock library.
 ### Fixed
 - Columns in the HTML Outbounds table on the debug page now properly line up
   with header rows.
