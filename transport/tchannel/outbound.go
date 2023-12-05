@@ -30,6 +30,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
+	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/internal/iopool"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
@@ -50,26 +51,42 @@ var (
 // It may be constructed using the NewOutbound or NewSingleOutbound methods on
 // the TChannel Transport.
 type Outbound struct {
-	transport *Transport
-	chooser   peer.Chooser
-	once      *lifecycle.Once
+	transport   *Transport
+	chooser     peer.Chooser
+	once        *lifecycle.Once
+	reuseBuffer bool
+}
+
+// OutboundOption customizes the behavior of a TChannel Outbound.
+type OutboundOption func(o *Outbound)
+
+// WithReuseBuffer configures the Outbound to
+// use a buffer pool to read the response bytes.
+func WithReuseBuffer(enable bool) OutboundOption {
+	return func(o *Outbound) {
+		o.reuseBuffer = enable
+	}
 }
 
 // NewOutbound builds a new TChannel outbound that selects a peer for each
 // request using the given peer chooser.
-func (t *Transport) NewOutbound(chooser peer.Chooser) *Outbound {
-	return &Outbound{
+func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *Outbound {
+	o := &Outbound{
 		once:      lifecycle.NewOnce(),
 		transport: t,
 		chooser:   chooser,
 	}
+	for _, opt := range opts {
+		opt(o)
+	}
+	return o
 }
 
 // NewSingleOutbound builds a new TChannel outbound always using the peer with
 // the given address.
-func (t *Transport) NewSingleOutbound(addr string) *Outbound {
+func (t *Transport) NewSingleOutbound(addr string, opts ...OutboundOption) *Outbound {
 	chooser := peerchooser.NewSingle(hostport.PeerIdentifier(addr), t)
-	return t.NewOutbound(chooser)
+	return t.NewOutbound(chooser, opts...)
 }
 
 // TransportName is the transport name that will be set on `transport.Request` struct.
@@ -97,18 +114,18 @@ func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport
 	if err != nil {
 		return nil, toYARPCError(req, err)
 	}
-	res, err := p.Call(ctx, req)
+	res, err := p.Call(ctx, req, o.reuseBuffer)
 	onFinish(err)
 	return res, toYARPCError(req, err)
 }
 
 // Call sends an RPC to this specific peer.
-func (p *tchannelPeer) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	return callWithPeer(ctx, req, p.getPeer(), p.transport.headerCase)
+func (p *tchannelPeer) Call(ctx context.Context, req *transport.Request, reuseBuffer bool) (*transport.Response, error) {
+	return callWithPeer(ctx, req, p.getPeer(), p.transport.headerCase, reuseBuffer)
 }
 
 // callWithPeer sends a request with the chosen peer.
-func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Peer, headerCase headerCase) (*transport.Response, error) {
+func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Peer, headerCase headerCase, reuseBuffer bool) (*transport.Response, error) {
 	// NB(abg): Under the current API, the local service's name is required
 	// twice: once when constructing the TChannel and then again when
 	// constructing the RPC.
@@ -176,8 +193,8 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		return nil, err
 	}
 
-	buf := bytes.NewBuffer(make([]byte, 0, _defaultBufferSize))
-	if _, err = buf.ReadFrom(resBody); err != nil {
+	body, bodySize, err := getResponseBody(resBody, reuseBuffer)
+	if err != nil {
 		return nil, err
 	}
 
@@ -199,8 +216,8 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 
 	resp := &transport.Response{
 		Headers:          headers,
-		Body:             readCloser{bytes.NewReader(buf.Bytes())},
-		BodySize:         buf.Len(),
+		Body:             body,
+		BodySize:         bodySize,
 		ApplicationError: res.ApplicationError(),
 		ApplicationErrorMeta: &transport.ApplicationErrorMeta{
 			Details: applicationErrorDetails,
@@ -209,6 +226,31 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		},
 	}
 	return resp, err
+}
+
+func getResponseBody(resBody tchannel.ArgReader, reuseBuffer bool) (body io.ReadCloser, bodySize int, err error) {
+	if reuseBuffer {
+		buffer := bufferpool.NewAutoReleaseBuffer()
+		if _, err = buffer.ReadFrom(resBody); err != nil {
+			return nil, 0, err
+		}
+		body = readerCloser{
+			Reader: bytes.NewReader(buffer.Bytes()),
+			Closer: buffer,
+		}
+		bodySize = buffer.Len()
+	} else {
+		buffer := bytes.NewBuffer(make([]byte, 0, _defaultBufferSize))
+		if _, err = buffer.ReadFrom(resBody); err != nil {
+			return nil, 0, err
+		}
+		body = readerCloser{
+			Reader: bytes.NewReader(buffer.Bytes()),
+			Closer: nopCloser{},
+		}
+		bodySize = buffer.Len()
+	}
+	return body, bodySize, err
 }
 
 func writeBody(body io.Reader, call *tchannel.OutboundCall) error {
@@ -314,8 +356,11 @@ func (o *Outbound) Introspect() introspection.OutboundStatus {
 	}
 }
 
-type readCloser struct {
-	*bytes.Reader
-}
+type nopCloser struct{}
 
-func (r readCloser) Close() error { return nil }
+func (r nopCloser) Close() error { return nil }
+
+type readerCloser struct {
+	*bytes.Reader
+	io.Closer
+}

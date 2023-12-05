@@ -89,6 +89,10 @@ type OutboundConfig struct {
 	//      spiffe-ids:
 	//        - destination-id
 	TLS OutboundTLSConfig `config:"tls"`
+
+	// EnableBufferReuse config controls usage of a buffer pool
+	// to read the response body.
+	EnableBufferReuse bool `config:"enable-buffer-reuse"`
 }
 
 // OutboundTLSConfig configures TLS for a TChannel outbound.
@@ -217,5 +221,5 @@ func (ts *transportSpec) buildUnaryOutbound(oc *OutboundConfig, t transport.Tran
 	if err != nil {
 		return nil, err
 	}
-	return x.NewOutbound(chooser), nil
+	return x.NewOutbound(chooser, WithReuseBuffer(oc.EnableBufferReuse)), nil
 }

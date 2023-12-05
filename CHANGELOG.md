@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
+- tchannel: optional transport-level config to allow reusing a buffer for reading a tchannel response body.
 - grpc: returned outbound response body is no longer writable.
 
 ## [1.70.4] - 2023-08-31

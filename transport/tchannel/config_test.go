@@ -71,6 +71,10 @@ func TestTransportSpec(t *testing.T) {
 		TLSMode yarpctls.Mode
 	}
 
+	type wantOutbound struct {
+		reuseBuffer bool
+	}
+
 	type inboundTest struct {
 		desc string            // description
 		cfg  attrs             // inbounds section of the config
@@ -95,7 +99,7 @@ func TestTransportSpec(t *testing.T) {
 		empty bool // whether this test case is empty
 
 		wantErrors    []string
-		wantOutbounds []string
+		wantOutbounds map[string]wantOutbound
 	}
 
 	inboundTests := []inboundTest{
@@ -178,6 +182,7 @@ func TestTransportSpec(t *testing.T) {
 					},
 				},
 			},
+			wantOutbounds: map[string]wantOutbound{"myservice": {}},
 		},
 		{
 			desc: "outbound interpolation",
@@ -244,7 +249,7 @@ func TestTransportSpec(t *testing.T) {
 				},
 			},
 			opts:          []Option{OutboundTLSConfigProvider(&fakeOutboundTLSConfigProvider{})},
-			wantOutbounds: []string{"myservice"},
+			wantOutbounds: map[string]wantOutbound{"myservice": {}},
 		},
 		{
 			desc: "fail TLS outbound when tls config provider returns error",
@@ -280,7 +285,19 @@ func TestTransportSpec(t *testing.T) {
 					expectedSpiffeIDs: []string{"test-spiffe"},
 				},
 			)},
-			wantOutbounds: []string{"myservice"},
+			wantOutbounds: map[string]wantOutbound{"myservice": {}},
+		},
+		{
+			desc: "outbound with buffer reuse",
+			cfg: attrs{
+				"myservice": attrs{
+					"tchannel": attrs{
+						"peer":                "127.0.0.1:4040",
+						"enable-buffer-reuse": true,
+					},
+				},
+			},
+			wantOutbounds: map[string]wantOutbound{"myservice": {reuseBuffer: true}},
 		},
 	}
 
@@ -339,9 +356,10 @@ func TestTransportSpec(t *testing.T) {
 			}
 		}
 
-		for _, svc := range outbound.wantOutbounds {
-			_, ok := cfg.Outbounds[svc].Unary.(*Outbound)
+		for svc, want := range outbound.wantOutbounds {
+			ob, ok := cfg.Outbounds[svc].Unary.(*Outbound)
 			assert.True(t, ok, "expected *Outbound for %q, got %T", svc, cfg.Outbounds[svc].Unary)
+			assert.Equal(t, want.reuseBuffer, ob.reuseBuffer)
 		}
 
 		d := yarpc.NewDispatcher(cfg)
