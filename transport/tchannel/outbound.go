@@ -238,19 +238,17 @@ func getResponseBody(resBody tchannel.ArgReader, reuseBuffer bool) (body io.Read
 			Reader: bytes.NewReader(buffer.Bytes()),
 			Closer: buffer,
 		}
-		bodySize = buffer.Len()
-	} else {
-		buffer := bytes.NewBuffer(make([]byte, 0, _defaultBufferSize))
-		if _, err = buffer.ReadFrom(resBody); err != nil {
-			return nil, 0, err
-		}
-		body = readerCloser{
-			Reader: bytes.NewReader(buffer.Bytes()),
-			Closer: nopCloser{},
-		}
-		bodySize = buffer.Len()
+		return body, buffer.Len(), nil
 	}
-	return body, bodySize, err
+	buffer := bytes.NewBuffer(make([]byte, 0, _defaultBufferSize))
+	if _, err = buffer.ReadFrom(resBody); err != nil {
+		return nil, 0, err
+	}
+	body = readerCloser{
+		Reader: bytes.NewReader(buffer.Bytes()),
+		Closer: nopCloser{},
+	}
+	return body, buffer.Len(), nil
 }
 
 func writeBody(body io.Reader, call *tchannel.OutboundCall) error {
