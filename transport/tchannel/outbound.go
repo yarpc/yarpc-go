@@ -244,10 +244,8 @@ func getResponseBody(resBody tchannel.ArgReader, reuseBuffer bool) (body io.Read
 	if _, err = buffer.ReadFrom(resBody); err != nil {
 		return nil, 0, err
 	}
-	body = readerCloser{
-		Reader: bytes.NewReader(buffer.Bytes()),
-		Closer: nopCloser{},
-	}
+
+	body = io.NopCloser(bytes.NewReader(buffer.Bytes()))
 	return body, buffer.Len(), nil
 }
 
@@ -353,10 +351,6 @@ func (o *Outbound) Introspect() introspection.OutboundStatus {
 		Chooser:   chooser,
 	}
 }
-
-type nopCloser struct{}
-
-func (r nopCloser) Close() error { return nil }
 
 type readerCloser struct {
 	*bytes.Reader
