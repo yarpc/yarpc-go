@@ -26,6 +26,7 @@ import (
 
 	"github.com/golang/protobuf/protoc-gen-go/plugin"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/pluginpb"
 )
 
 type runner struct {
@@ -104,7 +105,10 @@ func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGen
 }
 
 func newResponseFiles(files []*plugin_go.CodeGeneratorResponse_File) *plugin_go.CodeGeneratorResponse {
-	return &plugin_go.CodeGeneratorResponse{File: files}
+	return &plugin_go.CodeGeneratorResponse{
+		File:              files,
+		SupportedFeatures: proto.Uint64(uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL)),
+	}
 }
 
 func newResponseError(err error) *plugin_go.CodeGeneratorResponse {

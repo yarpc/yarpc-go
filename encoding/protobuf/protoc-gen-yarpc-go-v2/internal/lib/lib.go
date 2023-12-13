@@ -32,7 +32,7 @@ import (
 	"strings"
 	"text/template"
 
-	"go.uber.org/yarpc/internal/protoplugin"
+	protoplugin "go.uber.org/yarpc/internal/protoplugin-v2"
 )
 
 const tmpl = `{{$packagePath := .GoPackage.Path}}{{$packageName := .GoPackage.Name}}

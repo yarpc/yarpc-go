@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - tchannel: optional transport-level config to allow reusing a buffer for reading a tchannel response body.
 - grpc: returned outbound response body is no longer writable.
 - Fixed panic when error details list contains message that cannot be unmarshalled.
+- Plugin v2: use v2 of internal libraries; indicate "optional" field support in the plugin response.
 
 ## [1.70.4] - 2023-08-31
 - logging: fix logged error in observability middleware when fields of transport.Request is in the tagsBlocklist
