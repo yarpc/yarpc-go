@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 =======
+## [Unreleased]
+- No changes yet.
+
 ## [1.71.0] - 2023-12-14
 - tchannel: optional transport-level config to allow reusing a buffer for reading a tchannel response body.
 - grpc: returned outbound response body is no longer writable.
@@ -1493,6 +1496,7 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.71.0...HEAD
 [1.71.0]: https://github.com/yarpc/yarpc-go/compare/v1.70.4...v1.71.0
 [1.70.4]: https://github.com/yarpc/yarpc-go/compare/v1.70.3...v1.70.4
 [1.70.3]: https://github.com/yarpc/yarpc-go/compare/v1.70.2...v1.70.3
