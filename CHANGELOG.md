@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 =======
+## [1.71.0] - 2023-12-14
+- tchannel: optional transport-level config to allow reusing a buffer for reading a tchannel response body.
+- grpc: returned outbound response body is no longer writable.
+- Fixed panic when error details list contains message that cannot be unmarshalled.
+- Plugin v2: use v2 of internal libraries; indicate "optional" field support in the plugin response.
+
 ## [1.70.4] - 2023-08-31
 - logging: fix logged error in observability middleware when fields of transport.Request is in the tagsBlocklist
 - `go.mod`: update minimum requirements to go1.21 instead of go1.14 and update `golang.org/x/net v0.7.0` to v0.14.0
@@ -1487,6 +1493,7 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
+[1.71.0]: https://github.com/yarpc/yarpc-go/compare/v1.70.4...v1.71.0
 [1.70.4]: https://github.com/yarpc/yarpc-go/compare/v1.70.3...v1.70.4
 [1.70.3]: https://github.com/yarpc/yarpc-go/compare/v1.70.2...v1.70.3
 [1.70.2]: https://github.com/yarpc/yarpc-go/compare/v1.70.1...v1.70.2

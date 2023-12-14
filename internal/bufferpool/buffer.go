@@ -164,3 +164,22 @@ func overwriteData(bs []byte) {
 		bs[i] = byte(i)
 	}
 }
+
+// AutoReleaseBuffer wraps a Buffer in a io.ReadCloser implementation
+// that returns the underlying Buffer to the pool on Close().
+type AutoReleaseBuffer struct {
+	*Buffer
+}
+
+// NewAutoReleaseBuffer creates a AutoReleaseBuffer
+func NewAutoReleaseBuffer() AutoReleaseBuffer {
+	buf := Get()
+	return AutoReleaseBuffer{
+		Buffer: buf,
+	}
+}
+
+func (arb AutoReleaseBuffer) Close() error {
+	Put(arb.Buffer)
+	return nil
+}

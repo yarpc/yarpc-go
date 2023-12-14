@@ -36,6 +36,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
+	anypb "google.golang.org/protobuf/types/known/anypb"
 )
 
 func TestNewOK(t *testing.T) {
@@ -271,4 +272,24 @@ func TestErrorHandling(t *testing.T) {
 		assert.Equal(t, strings.ReplaceAll(err.Error(), "\u00a0", " "),
 			fmt.Errorf("proto: invalid nil source message").Error())
 	})
+}
+
+func TestSetApplicationErrorMeta(t *testing.T) {
+	respErr := NewError(
+		yarpcerrors.CodeAborted,
+		"aborted",
+	)
+
+	anyString, err := anypb.New(&wrappers.StringValue{Value: "baz"})
+	require.NoError(t, err)
+
+	pbErr := respErr.(*pberror)
+	pbErr.details = append(pbErr.details, &any.Any{TypeUrl: "foo", Value: []byte("bar")})
+	pbErr.details = append(pbErr.details, anyString)
+
+	resw := &transporttest.FakeResponseWriter{}
+	setApplicationErrorMeta(pbErr, resw)
+
+	assert.Equal(t, "StringValue", resw.ApplicationErrorMeta.Name)
+	assert.Equal(t, `[]{ StringValue{value:"baz"} }`, resw.ApplicationErrorMeta.Details)
 }

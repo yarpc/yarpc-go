@@ -33,7 +33,7 @@ import (
 	"os"
 
 	"go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go-v2/internal/lib"
-	"go.uber.org/yarpc/internal/protoplugin"
+	protoplugin "go.uber.org/yarpc/internal/protoplugin-v2"
 )
 
 func main() {
