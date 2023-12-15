@@ -23,7 +23,7 @@ package v2_test
 import (
 	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -75,7 +75,7 @@ func TestOutboundWithAnyResolver(t *testing.T) {
 			// outbound that echos the body back
 			out := trans.NewOutbound(nil, yarpctest.OutboundCallOverride(
 				yarpctest.OutboundCallable(func(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-					return &transport.Response{Body: ioutil.NopCloser(req.Body)}, nil
+					return &transport.Response{Body: io.NopCloser(req.Body)}, nil
 				}),
 			))
 
@@ -114,7 +114,7 @@ func TestOutboundWithKnownProtoMsg(t *testing.T) {
 		// outbound that echos the body back
 		out := trans.NewOutbound(nil, yarpctest.OutboundCallOverride(
 			yarpctest.OutboundCallable(func(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-				return &transport.Response{Body: ioutil.NopCloser(req.Body)}, nil
+				return &transport.Response{Body: io.NopCloser(req.Body)}, nil
 			}),
 		))
 
@@ -142,7 +142,7 @@ func TestOutboundWithAnyProtobufMsg(t *testing.T) {
 		// outbound that echos the body back
 		out := trans.NewOutbound(nil, yarpctest.OutboundCallOverride(
 			yarpctest.OutboundCallable(func(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-				return &transport.Response{Body: ioutil.NopCloser(req.Body)}, nil
+				return &transport.Response{Body: io.NopCloser(req.Body)}, nil
 			}),
 		))
 

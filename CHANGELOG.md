@@ -6,7 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
-- No changes yet.
+- protoc-gen-yarpc-go & protoc-gen-yarpc-go-v2: remove references to
+  deprecated ioutil package from code generator.
 
 ## [1.71.0] - 2023-12-14
 - tchannel: optional transport-level config to allow reusing a buffer for reading a tchannel response body.
