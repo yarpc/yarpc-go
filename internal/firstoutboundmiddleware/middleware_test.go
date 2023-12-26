@@ -54,7 +54,7 @@ func TestFirstOutboundMidleware(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, "fake", string(req.Transport))
-		assert.Equal(t, "", string(req.CallerProcedure))
+		assert.Equal(t, "ABC", string(req.CallerProcedure))
 	})
 
 	t.Run("oneway", func(t *testing.T) {
@@ -66,7 +66,7 @@ func TestFirstOutboundMidleware(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, "fake", string(req.Transport))
-		assert.Equal(t, "", string(req.CallerProcedure))
+		assert.Equal(t, "ABC", string(req.CallerProcedure))
 	})
 
 	t.Run("stream", func(t *testing.T) {
@@ -78,6 +78,6 @@ func TestFirstOutboundMidleware(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, "fake", string(streamReq.Meta.Transport))
-		assert.Equal(t, "", string(streamReq.Meta.CallerProcedure))
+		assert.Equal(t, "ABC", string(streamReq.Meta.CallerProcedure))
 	})
 }
