@@ -18,30 +18,12 @@ import (
 	"go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv/keyvalueclient"
 	"go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv/keyvalueserver"
 	"go.uber.org/yarpc/transport/tchannel"
-	"gonum.org/v1/gonum/stat/distuv"
 )
 
 const (
 	_kvServer = "callee"
 	_kvClient = "caller"
 )
-
-type generator struct {
-	norm distuv.Normal
-	min  int
-	max  int
-}
-
-func (g generator) next() int {
-	out := int(g.norm.Rand())
-	if out < g.min {
-		out = 0
-	}
-	if out > g.max {
-		out = g.max
-	}
-	return out
-}
 
 func BenchmarkThriftClientCallNormalDist(b *testing.B) {
 	handler := &keyValueHandler{}
@@ -51,20 +33,14 @@ func BenchmarkThriftClientCallNormalDist(b *testing.B) {
 	clientWithReuse := newKeyValueClient(b, serverAddr, true)
 
 	// Create a normal distribution
-	g := generator{
-		norm: distuv.Normal{
-			Mu:    3 * 1024, // 3KB
-			Sigma: 10000,
-		},
-		min: 0,
-		max: 2 * 1024 * 1024, // 2MB
-	}
+	// deviation 10k, mean 3KB, minimum 0, maximum 2MB
+	g := createNormalDistribution(3*1024, 10_000, 0, 2*1024*1024)
 
 	var samples []string
 	for i := 0; i < 10000; i++ {
 		key := "foo" + strconv.FormatInt(int64(i), 10)
-		len := g.next()
-		value := generateRandomString(len)
+		length := g()
+		value := generateRandomString(length)
 		samples = append(samples, value)
 		handler.SetValue(context.Background(), &key, &value)
 	}
@@ -171,4 +147,17 @@ func newKeyValueClient(t testing.TB, serverAddr string, enableBufferReuse bool) 
 
 	t.Cleanup(func() { assert.NoError(t, dispatcher.Stop(), "could not stop dispatcher") })
 	return client
+}
+
+func createNormalDistribution(mean, deviation float64, minimum, maximum int) func() int {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	return func() int {
+		n := int(r.NormFloat64()*mean + deviation)
+
+		// 0 <= n <= 2MB
+		n = max(n, minimum)
+		n = min(n, maximum)
+
+		return n
+	}
 }
