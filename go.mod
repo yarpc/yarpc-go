@@ -31,7 +31,6 @@ require (
 	golang.org/x/lint v0.0.0-20200130185559-910be7a94367
 	golang.org/x/net v0.14.0
 	golang.org/x/tools v0.7.0
-	gonum.org/v1/gonum v0.14.0
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
 	google.golang.org/grpc v1.40.1
 	google.golang.org/protobuf v1.26.0
@@ -47,6 +46,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/structtag v1.2.0 // indirect
+	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/jessevdk/go-flags v1.4.0 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
@@ -62,7 +62,6 @@ require (
 	github.com/uber-common/bark v1.2.1 // indirect
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
 	go.uber.org/dig v1.8.0 // indirect
-	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20220218215828-6cf2b201936e // indirect
 	golang.org/x/mod v0.9.0 // indirect
 	golang.org/x/sys v0.11.0 // indirect

@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
-- No changes yet.
+- Removed gonum.org/v1/gonum dependency.
 
 ## [1.71.0] - 2023-12-14
 - tchannel: optional transport-level config to allow reusing a buffer for reading a tchannel response body.
