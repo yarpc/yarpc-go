@@ -76,7 +76,7 @@ type BuildProceduresStreamHandlerParams struct {
 
 // BuildProcedures builds the transport.Procedures.
 func BuildProcedures(params BuildProceduresParams) []transport.Procedure {
-	procedures := make([]transport.Procedure, 0, 2*(len(params.UnaryHandlerParams)+len(params.OnewayHandlerParams)))
+	procedures := make([]transport.Procedure, 0, 2*(len(params.UnaryHandlerParams)+len(params.OnewayHandlerParams)+len(params.StreamHandlerParams)))
 	for _, unaryHandlerParams := range params.UnaryHandlerParams {
 		procedures = append(
 			procedures,
