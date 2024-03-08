@@ -38,9 +38,15 @@ import (
 	"go.uber.org/yarpc/internal/testtime"
 	peerbind "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/roundrobin"
+	"go.uber.org/zap/zaptest"
 )
 
 const (
+	// ServiceName is the name of fake service in dispatcher.
+	ServiceName = "service"
+	// ClientName is the name of fake client in dispatcher.
+	ClientName = "client"
+
 	_maxAttempts        = 1000
 	_concurrentAttempts = 100
 	_unconnectableAddr  = "0.0.0.1:1"
@@ -76,17 +82,8 @@ func (s TransportSpec) NewClient(t *testing.T, addrs []string) (*yarpc.Dispatche
 	pl := roundrobin.New(xport)
 	pc := peerbind.Bind(pl, peerbind.BindPeers(ids))
 	ob := s.NewUnaryOutbound(xport, pc)
-	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name: "client",
-		Outbounds: yarpc.Outbounds{
-			"service": transport.Outbounds{
-				ServiceName: "service",
-				Unary:       ob,
-			},
-		},
-	})
-	require.NoError(t, dispatcher.Start(), "start client dispatcher")
-	rawClient := raw.New(dispatcher.ClientConfig("service"))
+	dispatcher := CreateAndStartClientDispatcher(t, ob)
+	rawClient := raw.New(dispatcher.ClientConfig(ServiceName))
 	return dispatcher, rawClient
 }
 
@@ -96,7 +93,7 @@ func (s TransportSpec) NewServer(t *testing.T, addr string) (*yarpc.Dispatcher, 
 	inbound := s.NewInbound(xport, addr)
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name:     "service",
+		Name:     ServiceName,
 		Inbounds: yarpc.Inbounds{inbound},
 	})
 	Register(dispatcher)
@@ -186,6 +183,32 @@ func (s TransportSpec) TestBackoffConnRoundRobin(t *testing.T) {
 	defer server.Stop()
 
 	<-done
+}
+
+// CreateClientDispatcher creates a dispatcher with a single outbound for the "echo" method
+func CreateClientDispatcher(t *testing.T, ob transport.UnaryOutbound) *yarpc.Dispatcher {
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name: ClientName,
+		Outbounds: yarpc.Outbounds{
+			ServiceName: transport.Outbounds{
+				ServiceName: ServiceName,
+				Unary:       ob,
+			},
+		},
+		Logging: yarpc.LoggingConfig{
+			Zap: zaptest.NewLogger(t),
+		},
+	})
+
+	return dispatcher
+}
+
+// CreateAndStartClientDispatcher creates and starts a dispatcher with a single outbound for the "echo" method
+func CreateAndStartClientDispatcher(t *testing.T, ob transport.UnaryOutbound) *yarpc.Dispatcher {
+	dispatcher := CreateClientDispatcher(t, ob)
+	require.NoError(t, dispatcher.Start(), "start client dispatcher")
+
+	return dispatcher
 }
 
 // Blast sends a blast of calls to the client and verifies that they do not

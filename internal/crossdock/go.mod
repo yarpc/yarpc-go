@@ -19,7 +19,7 @@ require (
 	go.uber.org/yarpc v1.42.1
 	go.uber.org/zap v1.13.0
 	golang.org/x/net v0.14.0
-	google.golang.org/grpc v1.40.1
+	google.golang.org/grpc v1.41.1
 )
 
 require (

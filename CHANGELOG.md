@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 - Upgraded go version to 1.21, set toolchain version.
 - Reverted rpc-caller-procedure value setting.
+- Upgraded grpc-go to v1.41.1
+- Fixed grpc status mapper, IDLE connections are now considered as available.
 
 ## [1.72.1] - 2024-03-14
 - tchannel: Renamed caller-procedure header from `$rpc$-caller-procedure` to `rpc-caller-procedure`.
