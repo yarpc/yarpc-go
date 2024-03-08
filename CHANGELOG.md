@@ -6,7 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
-- No changes yet.
+- Upgraded grpc-go to v1.41.1
+- Fixed grpc status mapper, IDLE connections are now considered as available.
 
 ## [1.72.0] - 2024-02-21
 - Removed gonum.org/v1/gonum dependency.
