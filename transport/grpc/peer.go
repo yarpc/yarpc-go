@@ -83,6 +83,16 @@ func (p *grpcPeer) monitorConnectionStatus() {
 		yarpcStatus := grpcStatusToYARPCStatus(grpcStatus)
 		p.setConnectionStatus(yarpcStatus)
 
+		// When active connection falling back to IDLE state, no automatic reconnection is happening.
+		// There two options:
+		// - Either try to make a call using this connection, which will trigger reconnection, but may lead
+		// to a failed request (host is unreachable or context deadline happened).
+		// - Or we may try to reconnect manually, and use connection only when it's established and explicitly available.
+		// We choose second option.
+		if grpcStatus == connectivity.Idle {
+			p.clientConn.Connect()
+		}
+
 		if !p.clientConn.WaitForStateChange(p.ctx, grpcStatus) {
 			break
 		}
