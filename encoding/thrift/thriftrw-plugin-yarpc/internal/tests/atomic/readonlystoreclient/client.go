@@ -27,7 +27,7 @@ type Interface interface {
 
 // New builds a new client for the ReadOnlyStore service.
 //
-// 	client := readonlystoreclient.New(dispatcher.ClientConfig("readonlystore"))
+//	client := readonlystoreclient.New(dispatcher.ClientConfig("readonlystore"))
 func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 	return client{
 		c: thrift.New(thrift.Config{

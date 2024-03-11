@@ -17,8 +17,8 @@ type Interface interface {
 // New prepares an implementation of the Bar service for
 // registration.
 //
-// 	handler := BarHandler{}
-// 	dispatcher.Register(barserver.New(handler))
+//	handler := BarHandler{}
+//	dispatcher.Register(barserver.New(handler))
 func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 	service := thrift.Service{

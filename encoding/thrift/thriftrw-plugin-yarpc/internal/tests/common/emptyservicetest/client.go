@@ -23,8 +23,8 @@ type _MockClientRecorder struct {
 
 // Build a new mock client for service EmptyService.
 //
-// 	mockCtrl := gomock.NewController(t)
-// 	client := emptyservicetest.NewMockClient(mockCtrl)
+//	mockCtrl := gomock.NewController(t)
+//	client := emptyservicetest.NewMockClient(mockCtrl)
 //
 // Use EXPECT() to set expectations on the mock.
 func NewMockClient(ctrl *gomock.Controller) *MockClient {

@@ -31,12 +31,12 @@ type ServerResult struct {
 // Server provides procedures for Weather to an Fx application. It expects a
 // weatherfx.Interface to be present in the container.
 //
-// 	fx.Provide(
-// 		func(h *MyWeatherHandler) weatherserver.Interface {
-// 			return h
-// 		},
-// 		weatherfx.Server(),
-// 	)
+//	fx.Provide(
+//		func(h *MyWeatherHandler) weatherserver.Interface {
+//			return h
+//		},
+//		weatherfx.Server(),
+//	)
 func Server(opts ...thrift.RegisterOption) interface{} {
 	return func(p ServerParams) ServerResult {
 		procedures := weatherserver.New(p.Handler, opts...)

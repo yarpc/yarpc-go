@@ -4,27 +4,27 @@
 // Package namefx provides better integration for Fx for services
 // implementing or calling Name.
 //
-// Clients
+// # Clients
 //
 // If you are making requests to Name, use the Client function to inject a
 // Name client into your container.
 //
-// 	fx.Provide(namefx.Client("..."))
+//	fx.Provide(namefx.Client("..."))
 //
-// Servers
+// # Servers
 //
 // If you are implementing Name, provide a nameserver.Interface into
 // the container and use the Server function.
 //
 // Given,
 //
-// 	func NewNameHandler() nameserver.Interface
+//	func NewNameHandler() nameserver.Interface
 //
 // You can do the following to have the procedures of Name made available
 // to an Fx application.
 //
-// 	fx.Provide(
-// 		NewNameHandler,
-// 		namefx.Server(),
-// 	)
+//	fx.Provide(
+//		NewNameHandler,
+//		namefx.Server(),
+//	)
 package namefx

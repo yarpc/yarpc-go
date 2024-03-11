@@ -158,7 +158,13 @@ func TestCodeIsUpToDate(t *testing.T) {
 
 	outputDir, err := ioutil.TempDir("", "golden-test")
 	require.NoError(t, err, "failed to create temporary directory")
-	defer os.RemoveAll(outputDir)
+	defer func() {
+		if !t.Failed() {
+			os.RemoveAll(outputDir)
+		}
+	}()
+
+	t.Logf("Created temporary output directory: %s", outputDir)
 
 	for _, thriftFile := range thriftFiles {
 		packageName := strings.TrimSuffix(filepath.Base(thriftFile), ".thrift")
@@ -210,7 +216,12 @@ nc %v %v
 }
 
 func thriftrw(args ...string) error {
-	cmd := exec.Command("thriftrw", args...)
+	root, err := filepath.Abs("../../..")
+	if err != nil {
+		return fmt.Errorf("failed to resolve absolute path to project root: %v", err)
+	}
+
+	cmd := exec.Command("go", append([]string{"run", "-mod=vendor", root + "/vendor/go.uber.org/thriftrw"}, args...)...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

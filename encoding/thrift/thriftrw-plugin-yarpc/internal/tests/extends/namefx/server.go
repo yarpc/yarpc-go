@@ -31,12 +31,12 @@ type ServerResult struct {
 // Server provides procedures for Name to an Fx application. It expects a
 // namefx.Interface to be present in the container.
 //
-// 	fx.Provide(
-// 		func(h *MyNameHandler) nameserver.Interface {
-// 			return h
-// 		},
-// 		namefx.Server(),
-// 	)
+//	fx.Provide(
+//		func(h *MyNameHandler) nameserver.Interface {
+//			return h
+//		},
+//		namefx.Server(),
+//	)
 func Server(opts ...thrift.RegisterOption) interface{} {
 	return func(p ServerParams) ServerResult {
 		procedures := nameserver.New(p.Handler, opts...)

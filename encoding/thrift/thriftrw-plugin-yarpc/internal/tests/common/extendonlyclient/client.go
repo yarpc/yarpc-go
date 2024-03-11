@@ -18,7 +18,7 @@ type Interface interface {
 
 // New builds a new client for the ExtendOnly service.
 //
-// 	client := extendonlyclient.New(dispatcher.ClientConfig("extendonly"))
+//	client := extendonlyclient.New(dispatcher.ClientConfig("extendonly"))
 func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 	return client{
 		c: thrift.New(thrift.Config{

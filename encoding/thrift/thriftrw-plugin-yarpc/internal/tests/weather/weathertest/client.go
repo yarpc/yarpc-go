@@ -25,8 +25,8 @@ type _MockClientRecorder struct {
 
 // Build a new mock client for service Weather.
 //
-// 	mockCtrl := gomock.NewController(t)
-// 	client := weathertest.NewMockClient(mockCtrl)
+//	mockCtrl := gomock.NewController(t)
+//	client := weathertest.NewMockClient(mockCtrl)
 //
 // Use EXPECT() to set expectations on the mock.
 func NewMockClient(ctrl *gomock.Controller) *MockClient {
@@ -45,8 +45,8 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().Check(gomock.Any(), ...).Return(...)
-// 	... := client.Check(...)
+//	client.EXPECT().Check(gomock.Any(), ...).Return(...)
+//	... := client.Check(...)
 func (m *MockClient) Check(
 	ctx context.Context,
 	opts ...yarpc.CallOption,

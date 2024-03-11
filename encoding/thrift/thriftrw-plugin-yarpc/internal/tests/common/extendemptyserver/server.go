@@ -26,8 +26,8 @@ type Interface interface {
 // New prepares an implementation of the ExtendEmpty service for
 // registration.
 //
-// 	handler := ExtendEmptyHandler{}
-// 	dispatcher.Register(extendemptyserver.New(handler))
+//	handler := ExtendEmptyHandler{}
+//	dispatcher.Register(extendemptyserver.New(handler))
 func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	h := handler{impl}
 	service := thrift.Service{
