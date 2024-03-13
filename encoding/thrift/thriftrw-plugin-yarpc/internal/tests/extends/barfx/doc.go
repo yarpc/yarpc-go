@@ -4,27 +4,27 @@
 // Package barfx provides better integration for Fx for services
 // implementing or calling Bar.
 //
-// Clients
+// # Clients
 //
 // If you are making requests to Bar, use the Client function to inject a
 // Bar client into your container.
 //
-// 	fx.Provide(barfx.Client("..."))
+//	fx.Provide(barfx.Client("..."))
 //
-// Servers
+// # Servers
 //
 // If you are implementing Bar, provide a barserver.Interface into
 // the container and use the Server function.
 //
 // Given,
 //
-// 	func NewBarHandler() barserver.Interface
+//	func NewBarHandler() barserver.Interface
 //
 // You can do the following to have the procedures of Bar made available
 // to an Fx application.
 //
-// 	fx.Provide(
-// 		NewBarHandler,
-// 		barfx.Server(),
-// 	)
+//	fx.Provide(
+//		NewBarHandler,
+//		barfx.Server(),
+//	)
 package barfx

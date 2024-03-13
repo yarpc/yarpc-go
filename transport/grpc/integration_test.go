@@ -211,7 +211,12 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 	t.Run("too big", func(t *testing.T) {
 		te := testEnvOptions{}
 		te.do(t, func(t *testing.T, e *testEnv) {
-			assert.Equal(t, yarpcerrors.CodeResourceExhausted, yarpcerrors.FromError(e.SetValueYARPC(context.Background(), "foo", value)).Code())
+			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second*5)
+			defer cancel()
+
+			err := e.SetValueYARPC(ctx, "foo", value)
+
+			assert.Equal(t, yarpcerrors.CodeResourceExhausted.String(), yarpcerrors.FromError(err).Code().String())
 		})
 	})
 	t.Run("just right", func(t *testing.T) {
@@ -224,8 +229,11 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 			},
 		}
 		te.do(t, func(t *testing.T, e *testEnv) {
-			if assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", value)) {
-				getValue, err := e.GetValueYARPC(context.Background(), "foo")
+			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second*5)
+			defer cancel()
+
+			if assert.NoError(t, e.SetValueYARPC(ctx, "foo", value)) {
+				getValue, err := e.GetValueYARPC(ctx, "foo")
 				assert.NoError(t, err)
 				assert.Equal(t, value, getValue)
 			}

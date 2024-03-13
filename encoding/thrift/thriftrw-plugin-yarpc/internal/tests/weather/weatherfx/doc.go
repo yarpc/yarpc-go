@@ -4,27 +4,27 @@
 // Package weatherfx provides better integration for Fx for services
 // implementing or calling Weather.
 //
-// Clients
+// # Clients
 //
 // If you are making requests to Weather, use the Client function to inject a
 // Weather client into your container.
 //
-// 	fx.Provide(weatherfx.Client("..."))
+//	fx.Provide(weatherfx.Client("..."))
 //
-// Servers
+// # Servers
 //
 // If you are implementing Weather, provide a weatherserver.Interface into
 // the container and use the Server function.
 //
 // Given,
 //
-// 	func NewWeatherHandler() weatherserver.Interface
+//	func NewWeatherHandler() weatherserver.Interface
 //
 // You can do the following to have the procedures of Weather made available
 // to an Fx application.
 //
-// 	fx.Provide(
-// 		NewWeatherHandler,
-// 		weatherfx.Server(),
-// 	)
+//	fx.Provide(
+//		NewWeatherHandler,
+//		weatherfx.Server(),
+//	)
 package weatherfx

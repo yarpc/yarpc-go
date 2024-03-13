@@ -4,27 +4,27 @@
 // Package foofx provides better integration for Fx for services
 // implementing or calling Foo.
 //
-// Clients
+// # Clients
 //
 // If you are making requests to Foo, use the Client function to inject a
 // Foo client into your container.
 //
-// 	fx.Provide(foofx.Client("..."))
+//	fx.Provide(foofx.Client("..."))
 //
-// Servers
+// # Servers
 //
 // If you are implementing Foo, provide a fooserver.Interface into
 // the container and use the Server function.
 //
 // Given,
 //
-// 	func NewFooHandler() fooserver.Interface
+//	func NewFooHandler() fooserver.Interface
 //
 // You can do the following to have the procedures of Foo made available
 // to an Fx application.
 //
-// 	fx.Provide(
-// 		NewFooHandler,
-// 		foofx.Server(),
-// 	)
+//	fx.Provide(
+//		NewFooHandler,
+//		foofx.Server(),
+//	)
 package foofx

@@ -23,8 +23,8 @@ type Interface interface {
 // New prepares an implementation of the Name service for
 // registration.
 //
-// 	handler := NameHandler{}
-// 	dispatcher.Register(nameserver.New(handler))
+//	handler := NameHandler{}
+//	dispatcher.Register(nameserver.New(handler))
 func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	h := handler{impl}
 	service := thrift.Service{

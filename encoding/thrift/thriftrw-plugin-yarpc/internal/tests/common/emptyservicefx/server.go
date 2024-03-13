@@ -31,12 +31,12 @@ type ServerResult struct {
 // Server provides procedures for EmptyService to an Fx application. It expects a
 // emptyservicefx.Interface to be present in the container.
 //
-// 	fx.Provide(
-// 		func(h *MyEmptyServiceHandler) emptyserviceserver.Interface {
-// 			return h
-// 		},
-// 		emptyservicefx.Server(),
-// 	)
+//	fx.Provide(
+//		func(h *MyEmptyServiceHandler) emptyserviceserver.Interface {
+//			return h
+//		},
+//		emptyservicefx.Server(),
+//	)
 func Server(opts ...thrift.RegisterOption) interface{} {
 	return func(p ServerParams) ServerResult {
 		procedures := emptyserviceserver.New(p.Handler, opts...)

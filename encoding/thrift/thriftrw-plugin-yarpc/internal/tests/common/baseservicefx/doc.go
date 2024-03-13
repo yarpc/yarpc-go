@@ -4,27 +4,27 @@
 // Package baseservicefx provides better integration for Fx for services
 // implementing or calling BaseService.
 //
-// Clients
+// # Clients
 //
 // If you are making requests to BaseService, use the Client function to inject a
 // BaseService client into your container.
 //
-// 	fx.Provide(baseservicefx.Client("..."))
+//	fx.Provide(baseservicefx.Client("..."))
 //
-// Servers
+// # Servers
 //
 // If you are implementing BaseService, provide a baseserviceserver.Interface into
 // the container and use the Server function.
 //
 // Given,
 //
-// 	func NewBaseServiceHandler() baseserviceserver.Interface
+//	func NewBaseServiceHandler() baseserviceserver.Interface
 //
 // You can do the following to have the procedures of BaseService made available
 // to an Fx application.
 //
-// 	fx.Provide(
-// 		NewBaseServiceHandler,
-// 		baseservicefx.Server(),
-// 	)
+//	fx.Provide(
+//		NewBaseServiceHandler,
+//		baseservicefx.Server(),
+//	)
 package baseservicefx

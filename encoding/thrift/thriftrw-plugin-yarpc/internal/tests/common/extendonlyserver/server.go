@@ -17,8 +17,8 @@ type Interface interface {
 // New prepares an implementation of the ExtendOnly service for
 // registration.
 //
-// 	handler := ExtendOnlyHandler{}
-// 	dispatcher.Register(extendonlyserver.New(handler))
+//	handler := ExtendOnlyHandler{}
+//	dispatcher.Register(extendonlyserver.New(handler))
 func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 	service := thrift.Service{

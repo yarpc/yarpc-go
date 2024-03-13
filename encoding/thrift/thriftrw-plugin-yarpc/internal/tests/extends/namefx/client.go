@@ -35,10 +35,10 @@ type Result struct {
 // Client provides a Name client to an Fx application using the given name
 // for routing.
 //
-// 	fx.Provide(
-// 		namefx.Client("..."),
-// 		newHandler,
-// 	)
+//	fx.Provide(
+//		namefx.Client("..."),
+//		newHandler,
+//	)
 func Client(name string, opts ...thrift.ClientOption) interface{} {
 	return func(p Params) Result {
 		cc := p.Provider.ClientConfig(name)

@@ -26,7 +26,7 @@ type Interface interface {
 
 // New builds a new client for the ExtendEmpty service.
 //
-// 	client := extendemptyclient.New(dispatcher.ClientConfig("extendempty"))
+//	client := extendemptyclient.New(dispatcher.ClientConfig("extendempty"))
 func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 	return client{
 		c: thrift.New(thrift.Config{

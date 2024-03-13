@@ -4,27 +4,27 @@
 // Package storefx provides better integration for Fx for services
 // implementing or calling Store.
 //
-// Clients
+// # Clients
 //
 // If you are making requests to Store, use the Client function to inject a
 // Store client into your container.
 //
-// 	fx.Provide(storefx.Client("..."))
+//	fx.Provide(storefx.Client("..."))
 //
-// Servers
+// # Servers
 //
 // If you are implementing Store, provide a storeserver.Interface into
 // the container and use the Server function.
 //
 // Given,
 //
-// 	func NewStoreHandler() storeserver.Interface
+//	func NewStoreHandler() storeserver.Interface
 //
 // You can do the following to have the procedures of Store made available
 // to an Fx application.
 //
-// 	fx.Provide(
-// 		NewStoreHandler,
-// 		storefx.Server(),
-// 	)
+//	fx.Provide(
+//		NewStoreHandler,
+//		storefx.Server(),
+//	)
 package storefx

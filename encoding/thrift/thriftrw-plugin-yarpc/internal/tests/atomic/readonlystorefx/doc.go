@@ -4,27 +4,27 @@
 // Package readonlystorefx provides better integration for Fx for services
 // implementing or calling ReadOnlyStore.
 //
-// Clients
+// # Clients
 //
 // If you are making requests to ReadOnlyStore, use the Client function to inject a
 // ReadOnlyStore client into your container.
 //
-// 	fx.Provide(readonlystorefx.Client("..."))
+//	fx.Provide(readonlystorefx.Client("..."))
 //
-// Servers
+// # Servers
 //
 // If you are implementing ReadOnlyStore, provide a readonlystoreserver.Interface into
 // the container and use the Server function.
 //
 // Given,
 //
-// 	func NewReadOnlyStoreHandler() readonlystoreserver.Interface
+//	func NewReadOnlyStoreHandler() readonlystoreserver.Interface
 //
 // You can do the following to have the procedures of ReadOnlyStore made available
 // to an Fx application.
 //
-// 	fx.Provide(
-// 		NewReadOnlyStoreHandler,
-// 		readonlystorefx.Server(),
-// 	)
+//	fx.Provide(
+//		NewReadOnlyStoreHandler,
+//		readonlystorefx.Server(),
+//	)
 package readonlystorefx

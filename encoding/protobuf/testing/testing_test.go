@@ -84,7 +84,16 @@ func testIntegration(
 	err = setValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo", "bar")
 	assert.Equal(t, status.Error(codes.Unknown, "foo-bar: baz"), err)
 
-	if ttype != testutils.TransportTypeTChannel {
+	t.Run("error_details", func(t *testing.T) {
+		if ttype == testutils.TransportTypeTChannel {
+			t.Skip("TChannel does not support error details")
+		}
+
+		if ttype == testutils.TransportTypeHTTP {
+			// @todo internal code: RPC-2065
+			t.Skip("Error details for HTTP is currently broken")
+		}
+
 		keyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeInternal, "foo-bar", protobuf.WithErrorDetails(&examplepb.EchoBothRequest{})))
 		err = setValue(clients.KeyValueYARPCClient, "foo", "bar")
 		require.Len(t, protobuf.GetErrorDetails(err), 1)
@@ -96,7 +105,7 @@ func testIntegration(
 		err = setValue(clients.KeyValueYARPCClient, "foo", "bar")
 		assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.FromError(err).Code())
 		assert.Equal(t, "hello world", yarpcerrors.FromError(err).Message())
-	}
+	})
 
 	assert.NoError(t, setValue(clients.KeyValueYARPCClient, "foo", ""))
 

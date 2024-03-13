@@ -4,27 +4,27 @@
 // Package extendemptyfx provides better integration for Fx for services
 // implementing or calling ExtendEmpty.
 //
-// Clients
+// # Clients
 //
 // If you are making requests to ExtendEmpty, use the Client function to inject a
 // ExtendEmpty client into your container.
 //
-// 	fx.Provide(extendemptyfx.Client("..."))
+//	fx.Provide(extendemptyfx.Client("..."))
 //
-// Servers
+// # Servers
 //
 // If you are implementing ExtendEmpty, provide a extendemptyserver.Interface into
 // the container and use the Server function.
 //
 // Given,
 //
-// 	func NewExtendEmptyHandler() extendemptyserver.Interface
+//	func NewExtendEmptyHandler() extendemptyserver.Interface
 //
 // You can do the following to have the procedures of ExtendEmpty made available
 // to an Fx application.
 //
-// 	fx.Provide(
-// 		NewExtendEmptyHandler,
-// 		extendemptyfx.Server(),
-// 	)
+//	fx.Provide(
+//		NewExtendEmptyHandler,
+//		extendemptyfx.Server(),
+//	)
 package extendemptyfx

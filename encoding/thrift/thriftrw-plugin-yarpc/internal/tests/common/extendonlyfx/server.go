@@ -31,12 +31,12 @@ type ServerResult struct {
 // Server provides procedures for ExtendOnly to an Fx application. It expects a
 // extendonlyfx.Interface to be present in the container.
 //
-// 	fx.Provide(
-// 		func(h *MyExtendOnlyHandler) extendonlyserver.Interface {
-// 			return h
-// 		},
-// 		extendonlyfx.Server(),
-// 	)
+//	fx.Provide(
+//		func(h *MyExtendOnlyHandler) extendonlyserver.Interface {
+//			return h
+//		},
+//		extendonlyfx.Server(),
+//	)
 func Server(opts ...thrift.RegisterOption) interface{} {
 	return func(p ServerParams) ServerResult {
 		procedures := extendonlyserver.New(p.Handler, opts...)
