@@ -6,7 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
-- No changes yet.
+- protoc-gen-yarpc-go & protoc-gen-yarpc-go-v2: remove references to
+  deprecated ioutil package from code generator.
 
 ## [1.72.0] - 2024-02-21
 - Removed gonum.org/v1/gonum dependency.

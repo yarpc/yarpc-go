@@ -47,7 +47,7 @@ import (
 	{{range $i := .Imports}}{{if not $i.Standard}}{{$i | printf "%s\n"}}{{end}}{{end}}
 ){{end}}
 
-{{if ne (len .Services) 0}}var _ = ioutil.NopCloser{{end}}
+{{if ne (len .Services) 0}}var _ = io.NopCloser{{end}}
 
 {{range $service := .Services}}
 // {{$service.GetName}}YARPCClient is the YARPC client-side interface for the {{$service.GetName}} service.
@@ -619,7 +619,7 @@ var Runner = protoplugin.NewRunner(
 	checkTemplateInfo,
 	[]string{
 		"context",
-		"io/ioutil",
+		"io",
 		"reflect",
 		"go.uber.org/yarpc/encoding/protobuf/v2",
 		"google.golang.org/protobuf/proto",

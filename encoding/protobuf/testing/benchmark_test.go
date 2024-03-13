@@ -21,7 +21,7 @@
 package testing
 
 import (
-	"io/ioutil"
+	"io"
 	"net"
 	"testing"
 
@@ -36,7 +36,7 @@ import (
 )
 
 func init() {
-	grpclog.SetLoggerV2(grpclog.NewLoggerV2(ioutil.Discard, ioutil.Discard, ioutil.Discard))
+	grpclog.SetLoggerV2(grpclog.NewLoggerV2(io.Discard, io.Discard, io.Discard))
 }
 
 func BenchmarkIntegrationYARPC(b *testing.B) {
