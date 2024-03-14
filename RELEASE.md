@@ -36,6 +36,7 @@ Releasing
     it.
 
     ```
+    git fetch origin dev
     git fetch origin master
     git checkout origin/master
     git checkout -B $(whoami)/release
@@ -68,7 +69,7 @@ Releasing
 
     ```
     sed -i '' -e "s/^const Version =.*/const Version = \"$VERSION\"/" version.go
-    make verifyversion SUPPRESS_DOCKER=1
+    SUPPRESS_DOCKER=1 make verifyversion
     ```
 
 6.  Create a commit for the release.
