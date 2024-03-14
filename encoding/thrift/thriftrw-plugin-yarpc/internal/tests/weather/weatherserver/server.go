@@ -23,8 +23,8 @@ type Interface interface {
 // New prepares an implementation of the Weather service for
 // registration.
 //
-// 	handler := WeatherHandler{}
-// 	dispatcher.Register(weatherserver.New(handler))
+//	handler := WeatherHandler{}
+//	dispatcher.Register(weatherserver.New(handler))
 func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	h := handler{impl}
 	service := thrift.Service{

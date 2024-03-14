@@ -31,12 +31,12 @@ type ServerResult struct {
 // Server provides procedures for ReadOnlyStore to an Fx application. It expects a
 // readonlystorefx.Interface to be present in the container.
 //
-// 	fx.Provide(
-// 		func(h *MyReadOnlyStoreHandler) readonlystoreserver.Interface {
-// 			return h
-// 		},
-// 		readonlystorefx.Server(),
-// 	)
+//	fx.Provide(
+//		func(h *MyReadOnlyStoreHandler) readonlystoreserver.Interface {
+//			return h
+//		},
+//		readonlystorefx.Server(),
+//	)
 func Server(opts ...thrift.RegisterOption) interface{} {
 	return func(p ServerParams) ServerResult {
 		procedures := readonlystoreserver.New(p.Handler, opts...)

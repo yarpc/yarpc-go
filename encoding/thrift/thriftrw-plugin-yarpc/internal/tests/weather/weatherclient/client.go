@@ -24,7 +24,7 @@ type Interface interface {
 
 // New builds a new client for the Weather service.
 //
-// 	client := weatherclient.New(dispatcher.ClientConfig("weather"))
+//	client := weatherclient.New(dispatcher.ClientConfig("weather"))
 func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 	return client{
 		c: thrift.New(thrift.Config{

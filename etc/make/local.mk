@@ -138,6 +138,7 @@ lint: basiclint generatenodiff nogogenerate verifyversion verifycodecovignores #
 
 .PHONY: test
 test: $(THRIFTRW) __eval_chunked_packages ## run chunked tests
+	go mod vendor
 	PATH=$(BIN):$$PATH go test -race $(CHUNKED_PACKAGES)
 
 .PHONY: cover

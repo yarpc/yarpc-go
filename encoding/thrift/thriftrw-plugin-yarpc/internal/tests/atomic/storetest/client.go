@@ -26,8 +26,8 @@ type _MockClientRecorder struct {
 
 // Build a new mock client for service Store.
 //
-// 	mockCtrl := gomock.NewController(t)
-// 	client := storetest.NewMockClient(mockCtrl)
+//	mockCtrl := gomock.NewController(t)
+//	client := storetest.NewMockClient(mockCtrl)
 //
 // Use EXPECT() to set expectations on the mock.
 func NewMockClient(ctrl *gomock.Controller) *MockClient {
@@ -46,8 +46,8 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().CompareAndSwap(gomock.Any(), ...).Return(...)
-// 	... := client.CompareAndSwap(...)
+//	client.EXPECT().CompareAndSwap(gomock.Any(), ...).Return(...)
+//	... := client.CompareAndSwap(...)
 func (m *MockClient) CompareAndSwap(
 	ctx context.Context,
 	_Request *atomic.CompareAndSwap,
@@ -77,8 +77,8 @@ func (mr *_MockClientRecorder) CompareAndSwap(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().Forget(gomock.Any(), ...).Return(...)
-// 	... := client.Forget(...)
+//	client.EXPECT().Forget(gomock.Any(), ...).Return(...)
+//	... := client.Forget(...)
 func (m *MockClient) Forget(
 	ctx context.Context,
 	_Key *string,
@@ -110,8 +110,8 @@ func (mr *_MockClientRecorder) Forget(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().Increment(gomock.Any(), ...).Return(...)
-// 	... := client.Increment(...)
+//	client.EXPECT().Increment(gomock.Any(), ...).Return(...)
+//	... := client.Increment(...)
 func (m *MockClient) Increment(
 	ctx context.Context,
 	_Key *string,
@@ -143,8 +143,8 @@ func (mr *_MockClientRecorder) Increment(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().Integer(gomock.Any(), ...).Return(...)
-// 	... := client.Integer(...)
+//	client.EXPECT().Integer(gomock.Any(), ...).Return(...)
+//	... := client.Integer(...)
 func (m *MockClient) Integer(
 	ctx context.Context,
 	_Key *string,
@@ -176,8 +176,8 @@ func (mr *_MockClientRecorder) Integer(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().Healthy(gomock.Any(), ...).Return(...)
-// 	... := client.Healthy(...)
+//	client.EXPECT().Healthy(gomock.Any(), ...).Return(...)
+//	... := client.Healthy(...)
 func (m *MockClient) Healthy(
 	ctx context.Context,
 	opts ...yarpc.CallOption,

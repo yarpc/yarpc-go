@@ -4,27 +4,27 @@
 // Package extendonlyfx provides better integration for Fx for services
 // implementing or calling ExtendOnly.
 //
-// Clients
+// # Clients
 //
 // If you are making requests to ExtendOnly, use the Client function to inject a
 // ExtendOnly client into your container.
 //
-// 	fx.Provide(extendonlyfx.Client("..."))
+//	fx.Provide(extendonlyfx.Client("..."))
 //
-// Servers
+// # Servers
 //
 // If you are implementing ExtendOnly, provide a extendonlyserver.Interface into
 // the container and use the Server function.
 //
 // Given,
 //
-// 	func NewExtendOnlyHandler() extendonlyserver.Interface
+//	func NewExtendOnlyHandler() extendonlyserver.Interface
 //
 // You can do the following to have the procedures of ExtendOnly made available
 // to an Fx application.
 //
-// 	fx.Provide(
-// 		NewExtendOnlyHandler,
-// 		extendonlyfx.Server(),
-// 	)
+//	fx.Provide(
+//		NewExtendOnlyHandler,
+//		extendonlyfx.Server(),
+//	)
 package extendonlyfx
