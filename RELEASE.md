@@ -68,7 +68,7 @@ Releasing
 
     ```
     sed -i '' -e "s/^const Version =.*/const Version = \"$VERSION\"/" version.go
-    make verifyversion SUPPRESS_DOCKER=1
+    SUPPRESS_DOCKER=1 make verifyversion
     ```
 
 6.  Create a commit for the release.
@@ -81,7 +81,7 @@ Releasing
 7.  Make a pull request with these changes against `master`.
 
     ```
-    hub pull-request -b master --push
+    git push && hub pull-request --push --browse -b master
     ```
 
 8.  Land the pull request after approval as a **merge commit**. To do this,
