@@ -144,7 +144,7 @@ Releasing
 16. Verify the version number matches.
 
     ```
-    make verifyversion SUPPRESS_DOCKER=1
+    SUPPRESS_DOCKER=1 make verifyversion
     ```
 
 17. Commit and push your changes.
