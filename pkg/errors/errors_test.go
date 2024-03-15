@@ -32,6 +32,7 @@ import (
 func TestWrapHandlerError(t *testing.T) {
 	assert.Nil(t, WrapHandlerError(nil, "foo", "bar"))
 	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.FromError(WrapHandlerError(yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, ""), "foo", "bar")).Code())
+	assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.FromError(WrapHandlerError(yarpcerrors.Newf(yarpcerrors.CodeInternal, ""), "foo", "bar")).Code())
 	assert.Equal(t, yarpcerrors.CodeUnknown, yarpcerrors.FromError(WrapHandlerError(errors.New(""), "foo", "bar")).Code())
 }
 
@@ -51,42 +52,42 @@ func TestEncodeErrors(t *testing.T) {
 	}{
 		{
 			errorFunc:     RequestBodyEncodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerrors.CodeInternal,
 			expectedWords: []string{"request", "body", "encode"},
 		},
 		{
 			errorFunc:     RequestHeadersEncodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerrors.CodeInternal,
 			expectedWords: []string{"request", "headers", "encode"},
 		},
 		{
 			errorFunc:     RequestBodyDecodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerrors.CodeInternal,
 			expectedWords: []string{"request", "body", "decode"},
 		},
 		{
 			errorFunc:     RequestHeadersDecodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerrors.CodeInternal,
 			expectedWords: []string{"request", "headers", "decode"},
 		},
 		{
 			errorFunc:     ResponseBodyEncodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerrors.CodeInternal,
 			expectedWords: []string{"response", "body", "encode"},
 		},
 		{
 			errorFunc:     ResponseHeadersEncodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerrors.CodeInternal,
 			expectedWords: []string{"response", "headers", "encode"},
 		},
 		{
 			errorFunc:     ResponseBodyDecodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerrors.CodeInternal,
 			expectedWords: []string{"response", "body", "decode"},
 		},
 		{
 			errorFunc:     ResponseHeadersDecodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerrors.CodeInternal,
 			expectedWords: []string{"response", "headers", "decode"},
 		},
 	}

@@ -285,7 +285,7 @@ func TestApplicationErrorPropagation(t *testing.T) {
 			"bad_encoding",
 			transport.Headers{},
 		)
-		require.True(t, yarpcerrors.IsInvalidArgument(err))
+		require.True(t, yarpcerrors.IsInternal(err))
 		require.False(t, response.ApplicationError)
 	})
 }
