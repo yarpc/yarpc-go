@@ -29,28 +29,28 @@ import (
 )
 
 // RequestBodyDecodeError builds a YARPC error with code
-// yarpcerrors.CodeInvalidArgument that represents a failure to decode
+// yarpcerrors.CodeInternal that represents a failure to decode
 // the request body.
 func RequestBodyDecodeError(req *transport.Request, err error) error {
 	return newServerEncodingError(req, nil, false /*isResponse*/, false /*isHeader*/, err)
 }
 
 // ResponseBodyEncodeError builds a YARPC error with code
-// yarpcerrors.CodeInvalidArgument that represents a failure to encode
+// yarpcerrors.CodeInternal that represents a failure to encode
 // the response body.
 func ResponseBodyEncodeError(req *transport.Request, err error) error {
 	return newServerEncodingError(req, nil, true /*isResponse*/, false /*isHeader*/, err)
 }
 
 // RequestHeadersDecodeError builds a YARPC error with code
-// yarpcerrors.CodeInvalidArgument that represents a failure to
+// yarpcerrors.CodeInternal that represents a failure to
 // decode the request headers.
 func RequestHeadersDecodeError(req *transport.Request, err error) error {
 	return newServerEncodingError(req, nil, false /*isResponse*/, true /*isHeader*/, err)
 }
 
 // ResponseHeadersEncodeError builds a YARPC error with code
-// yarpcerrors.CodeInvalidArgument that represents a failure to
+// yarpcerrors.CodeInternal that represents a failure to
 // encode the response headers.
 func ResponseHeadersEncodeError(req *transport.Request, err error) error {
 	return newServerEncodingError(req, nil, true /*isResponse*/, true /*isHeader*/, err)
@@ -58,7 +58,7 @@ func ResponseHeadersEncodeError(req *transport.Request, err error) error {
 
 // ExpectEncodings verifies that the given request has one of the given
 // encodings, otherwise it returns a YARPC error with code
-// yarpcerrors.CodeInvalidArgument.
+// yarpcerrors.CodeInternal.
 func ExpectEncodings(req *transport.Request, want ...transport.Encoding) error {
 	got := req.Encoding
 	for _, w := range want {
@@ -74,6 +74,7 @@ func newServerEncodingError(req *transport.Request, encodings []transport.Encodi
 	if len(encodings) == 0 {
 		encodings = []transport.Encoding{req.Encoding}
 	}
+	errCode := yarpcerrors.CodeInternal
 	parts := []string{"failed to"}
 	if isResponse {
 		switch len(encodings) {
@@ -83,6 +84,7 @@ func newServerEncodingError(req *transport.Request, encodings []transport.Encodi
 			parts = append(parts, fmt.Sprintf("encode %v response", encodings))
 		}
 	} else {
+		errCode = yarpcerrors.CodeInvalidArgument
 		switch len(encodings) {
 		case 1:
 			parts = append(parts, fmt.Sprintf("decode %q request", string(encodings[0])))
@@ -98,7 +100,7 @@ func newServerEncodingError(req *transport.Request, encodings []transport.Encodi
 	parts = append(parts,
 		fmt.Sprintf("for procedure %q of service %q from caller %q: %v",
 			req.Procedure, req.Service, req.Caller, err))
-	return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, strings.Join(parts, " "))
+	return yarpcerrors.Newf(errCode, strings.Join(parts, " "))
 }
 
 func newEncodingMismatchError(want []transport.Encoding, got transport.Encoding) error {
