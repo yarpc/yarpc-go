@@ -22,6 +22,7 @@ package inboundcall
 
 import (
 	"context"
+	"net/netip"
 
 	"go.uber.org/yarpc/api/transport"
 )
@@ -42,6 +43,7 @@ type Metadata interface {
 	RoutingKey() string
 	RoutingDelegate() string
 	CallerProcedure() string
+	CallerPeerAddrPort() netip.AddrPort
 }
 
 type metadataKey struct{} // context key for Metadata

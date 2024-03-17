@@ -22,6 +22,7 @@ package encoding
 
 import (
 	"context"
+	"net/netip"
 	"sort"
 	"testing"
 
@@ -43,10 +44,11 @@ func TestInboundCallReadFromRequest(t *testing.T) {
 			"Foo":     "bar",
 			"success": "true",
 		}),
-		ShardKey:        "shardKey",
-		RoutingKey:      "routingKey",
-		RoutingDelegate: "routingDelegate",
-		CallerProcedure: "callerProcedure",
+		ShardKey:           "shardKey",
+		RoutingKey:         "routingKey",
+		RoutingDelegate:    "routingDelegate",
+		CallerProcedure:    "callerProcedure",
+		CallerPeerAddrPort: netip.MustParseAddrPort("1.2.3.4:1234"),
 	})
 	require.NoError(t, err)
 
@@ -59,6 +61,7 @@ func TestInboundCallReadFromRequest(t *testing.T) {
 	assert.Equal(t, "routingKey", call.RoutingKey())
 	assert.Equal(t, "routingDelegate", call.RoutingDelegate())
 	assert.Equal(t, "callerProcedure", call.CallerProcedure())
+	assert.Zero(t, netip.MustParseAddrPort("1.2.3.4:1234").Compare(call.CallerPeerAddrPort()))
 	assert.Equal(t, "World", call.Header("Hello"))
 	assert.Equal(t, "bar", call.Header("FOO"))
 	assert.Equal(t, "true", call.Header("success"))

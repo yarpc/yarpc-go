@@ -22,6 +22,7 @@ package yarpctest
 
 import (
 	"context"
+	"net/netip"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/inboundcall"
@@ -29,16 +30,17 @@ import (
 
 // Call specifies metadata for ContextWithCall.
 type Call struct {
-	Caller          string
-	Service         string
-	Transport       string
-	Procedure       string
-	Encoding        transport.Encoding
-	Headers         map[string]string
-	ShardKey        string
-	RoutingKey      string
-	RoutingDelegate string
-	CallerProcedure string
+	Caller             string
+	Service            string
+	Transport          string
+	Procedure          string
+	Encoding           transport.Encoding
+	Headers            map[string]string
+	ShardKey           string
+	RoutingKey         string
+	RoutingDelegate    string
+	CallerProcedure    string
+	CallerPeerAddrPort netip.AddrPort
 
 	// If set, this map will be filled with response headers written to
 	// yarpc.Call.
@@ -48,9 +50,8 @@ type Call struct {
 // ContextWithCall builds a Context which will yield the provided request
 // metadata when used with yarpc.CallFromContext.
 //
-//  ctx := yarpctest.ContextWithCall(ctx, &Call{..})
-//  handler.GetValue(ctx, &Request{...})
-//
+//	ctx := yarpctest.ContextWithCall(ctx, &Call{..})
+//	handler.GetValue(ctx, &Request{...})
 func ContextWithCall(ctx context.Context, call *Call) context.Context {
 	if call == nil {
 		return ctx // no-op
@@ -68,12 +69,13 @@ func (c callMetadata) WriteResponseHeader(k string, v string) error {
 	return nil
 }
 
-func (c callMetadata) Caller() string               { return c.c.Caller }
-func (c callMetadata) Service() string              { return c.c.Service }
-func (c callMetadata) Transport() string            { return c.c.Transport }
-func (c callMetadata) Procedure() string            { return c.c.Procedure }
-func (c callMetadata) Encoding() transport.Encoding { return c.c.Encoding }
-func (c callMetadata) CallerProcedure() string      { return c.c.CallerProcedure }
+func (c callMetadata) Caller() string                     { return c.c.Caller }
+func (c callMetadata) Service() string                    { return c.c.Service }
+func (c callMetadata) Transport() string                  { return c.c.Transport }
+func (c callMetadata) Procedure() string                  { return c.c.Procedure }
+func (c callMetadata) Encoding() transport.Encoding       { return c.c.Encoding }
+func (c callMetadata) CallerProcedure() string            { return c.c.CallerProcedure }
+func (c callMetadata) CallerPeerAddrPort() netip.AddrPort { return c.c.CallerPeerAddrPort }
 
 func (c callMetadata) Headers() transport.Headers {
 	return transport.HeadersFromMap(c.c.Headers)

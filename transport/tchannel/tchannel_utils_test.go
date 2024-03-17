@@ -71,6 +71,7 @@ type fakeInboundCall struct {
 	shardkey        string
 	routingkey      string
 	routingdelegate string
+	remotePeerInfo  tchannel.PeerInfo
 	format          tchannel.Format
 	arg2, arg3      []byte
 	resp            inboundCallResponse
@@ -82,6 +83,7 @@ func (i *fakeInboundCall) MethodString() string          { return i.method }
 func (i *fakeInboundCall) ShardKey() string              { return i.shardkey }
 func (i *fakeInboundCall) RoutingKey() string            { return i.routingkey }
 func (i *fakeInboundCall) RoutingDelegate() string       { return i.routingdelegate }
+func (i *fakeInboundCall) RemotePeer() tchannel.PeerInfo { return i.remotePeerInfo }
 func (i *fakeInboundCall) Format() tchannel.Format       { return i.format }
 func (i *fakeInboundCall) Response() inboundCallResponse { return i.resp }
 

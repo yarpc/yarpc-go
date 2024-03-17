@@ -25,6 +25,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/netip"
 	"strconv"
 	"time"
 
@@ -116,6 +117,12 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}),
 		Body:            req.Body,
 		BodySize:        int(req.ContentLength),
+	}
+	var err error
+	treq.CallerPeerAddrPort, err = netip.ParseAddrPort(req.RemoteAddr)
+	if err != nil {
+		h.logger.Error("failed to parse address port",
+			zap.String("addrPort", req.RemoteAddr), zap.Error(err))
 	}
 	for header := range h.grabHeaders {
 		if value := req.Header.Get(header); value != "" {
