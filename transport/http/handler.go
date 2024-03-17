@@ -25,6 +25,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/netip"
 	"strconv"
 	"time"
 
@@ -117,6 +118,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		Body:            req.Body,
 		BodySize:        int(req.ContentLength),
 	}
+	treq.CallerPeerAddrPort, _ = netip.ParseAddrPort(req.RemoteAddr)
 	for header := range h.grabHeaders {
 		if value := req.Header.Get(header); value != "" {
 			treq.Headers = treq.Headers.With(header, value)

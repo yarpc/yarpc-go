@@ -21,6 +21,7 @@
 package grpc
 
 import (
+	"net/netip"
 	"strings"
 	"time"
 
@@ -35,6 +36,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 )
 
@@ -102,6 +104,9 @@ func (h *handler) getBasicTransportRequest(ctx context.Context, streamMethod str
 	transportRequest.Procedure = procedure
 	if err := transport.ValidateRequest(transportRequest); err != nil {
 		return nil, err
+	}
+	if p, ok := peer.FromContext(ctx); ok {
+		transportRequest.CallerPeerAddrPort, _ = netip.ParseAddrPort(p.Addr.String())
 	}
 	return transportRequest, nil
 }
