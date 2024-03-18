@@ -69,6 +69,15 @@ type transportOptions struct {
 	inboundTLSConfig               *tls.Config
 	inboundTLSMode                 *yarpctls.Mode
 	outboundTLSConfigProvider      yarpctls.OutboundTLSConfigProvider
+
+	// enableMPTCP enables MPTCP for TCP network connection to increase reliability.
+	// It requires underlying operating system support MPTCP.
+	// If EnableMPTCP is false or no MPTCP support, the connection will use normal TCP.
+	// If Channel is passed as option, the network connection type is the same as the passed Channel,
+	// else:
+	//		If listener is passed as option, the listen type is the same as the passed listener.
+	//		If dialer is passed as option, the dialer type is the same as the passed dialer.
+	enableMPTCP bool
 }
 
 // newTransportOptions constructs the default transport options struct
@@ -140,7 +149,7 @@ func WithChannel(ch Channel) TransportOption {
 // ListenAddr specifies the port the TChannel should listen on.  This defaults
 // to ":0" (all interfaces, OS-assigned port).
 //
-// 	transport := NewChannelTransport(ServiceName("myservice"), ListenAddr(":4040"))
+//	transport := NewChannelTransport(ServiceName("myservice"), ListenAddr(":4040"))
 //
 // This option has no effect if WithChannel was used and the TChannel was
 // already listening, and it is disallowed for transports constructed with the
@@ -267,5 +276,13 @@ func InboundTLSMode(mode yarpctls.Mode) TransportOption {
 func InboundTLSConfiguration(tlsConfig *tls.Config) TransportOption {
 	return func(option *transportOptions) {
 		option.inboundTLSConfig = tlsConfig
+	}
+}
+
+// SetMPTCP returns TransportOption that specifies whether to
+// enable MPTCP for network connection
+func SetMPTCP(enableMPTCP bool) TransportOption {
+	return func(option *transportOptions) {
+		option.enableMPTCP = enableMPTCP
 	}
 }

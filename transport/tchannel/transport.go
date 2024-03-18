@@ -85,6 +85,8 @@ type Transport struct {
 
 	outboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
 	outboundChannels          []*outboundChannel
+
+	enableMPTCP bool
 }
 
 // NewTransport is a YARPC transport that facilitates sending and receiving
@@ -136,6 +138,7 @@ func (o transportOptions) newTransport() *Transport {
 		inboundTLSConfig:               o.inboundTLSConfig,
 		inboundTLSMode:                 o.inboundTLSMode,
 		outboundTLSConfigProvider:      o.outboundTLSConfigProvider,
+		enableMPTCP:                    o.enableMPTCP,
 	}
 }
 
@@ -260,7 +263,9 @@ func (t *Transport) start() error {
 
 		// TODO(abg): If addr was just the port (":4040"), we want to use
 		// ListenIP() + ":4040" rather than just ":4040".
-		listener, err = net.Listen("tcp", addr)
+		lc := net.ListenConfig{}
+		lc.SetMultipathTCP(t.enableMPTCP)
+		listener, err = lc.Listen(context.Background(), "tcp", addr)
 		if err != nil {
 			return err
 		}
@@ -333,10 +338,15 @@ func (t *Transport) onPeerStatusChanged(tp *tchannel.Peer) {
 // CreateTLSOutboundChannel creates a outbound channel for managing tls
 // connections with the given tls config and destination name.
 // Usage:
-// 	tr, _ := tchannel.NewTransport(...)
-//  outboundCh, _ := tr.CreateTLSOutboundChannel(tls-config, "dest-name")
-//  outbound := tr.NewOutbound(peer.NewSingle(id, outboundCh))
+//
+//		tr, _ := tchannel.NewTransport(...)
+//	 outboundCh, _ := tr.CreateTLSOutboundChannel(tls-config, "dest-name")
+//	 outbound := tr.NewOutbound(peer.NewSingle(id, outboundCh))
 func (t *Transport) CreateTLSOutboundChannel(tlsConfig *tls.Config, destinationName string) (peer.Transport, error) {
+	dialerFunc := t.dialer
+	if t.enableMPTCP {
+		dialerFunc = dialMPTCPContext
+	}
 	params := dialer.Params{
 		Config:        tlsConfig,
 		Meter:         t.meter,
@@ -344,9 +354,26 @@ func (t *Transport) CreateTLSOutboundChannel(tlsConfig *tls.Config, destinationN
 		ServiceName:   t.name,
 		TransportName: TransportName,
 		Dest:          destinationName,
-		Dialer:        t.dialer,
+		Dialer:        dialerFunc,
 	}
 	return t.createOutboundChannel(dialer.NewTLSDialer(params).DialContext)
+}
+
+// CreateMPTCPOutboundChannel creates a outbound channel for MPTCP
+// connections
+// Usage:
+//
+//		tr, _ := tchannel.NewTransport(...)
+//	 outboundCh, _ := tr.CreateMPTCPOutboundChannel()
+//	 outbound := tr.NewOutbound(peer.NewSingle(id, outboundCh))
+func (t *Transport) CreateMPTCPOutboundChannel() (peer.Transport, error) {
+	return t.createOutboundChannel(dialMPTCPContext)
+}
+
+func dialMPTCPContext(ctx context.Context, network, hostPort string) (net.Conn, error) {
+	d := net.Dialer{}
+	d.SetMultipathTCP(true)
+	return d.DialContext(ctx, network, hostPort)
 }
 
 func (t *Transport) createOutboundChannel(dialerFunc dialerFunc) (peer.Transport, error) {
