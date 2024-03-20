@@ -3,7 +3,7 @@ module go.uber.org/yarpc/internal/examples
 go 1.13
 
 require (
-	github.com/gogo/protobuf v1.3.1
+	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.4.0
 	github.com/stretchr/testify v1.5.1
 	go.uber.org/fx v1.10.0
