@@ -22,6 +22,7 @@ package encoding
 
 import (
 	"context"
+	"net/netip"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,6 +43,7 @@ func TestNilCall(t *testing.T) {
 	assert.Equal(t, "", call.RoutingKey())
 	assert.Equal(t, "", call.RoutingDelegate())
 	assert.Equal(t, "", call.CallerProcedure())
+	assert.Zero(t, call.CallerPeerAddrPort().Compare(netip.AddrPort{}))
 	assert.Equal(t, "", call.Header("foo"))
 	assert.Empty(t, call.HeaderNames())
 	assert.Nil(t, call.OriginalHeaders())
@@ -52,15 +54,16 @@ func TestNilCall(t *testing.T) {
 func TestReadFromRequest(t *testing.T) {
 	ctx, icall := NewInboundCall(context.Background())
 	icall.ReadFromRequest(&transport.Request{
-		Service:         "service",
-		Transport:       "transport",
-		Caller:          "caller",
-		Encoding:        transport.Encoding("raw"),
-		Procedure:       "proc",
-		ShardKey:        "sk",
-		RoutingKey:      "rk",
-		RoutingDelegate: "rd",
-		CallerProcedure: "cp",
+		Service:            "service",
+		Transport:          "transport",
+		Caller:             "caller",
+		Encoding:           transport.Encoding("raw"),
+		Procedure:          "proc",
+		ShardKey:           "sk",
+		RoutingKey:         "rk",
+		RoutingDelegate:    "rd",
+		CallerProcedure:    "cp",
+		CallerPeerAddrPort: netip.MustParseAddrPort("1.2.3.4:1234"),
 		// later header's key/value takes precedence
 		Headers: transport.NewHeaders().With("Foo", "Bar").With("foo", "bar"),
 	})
@@ -78,6 +81,7 @@ func TestReadFromRequest(t *testing.T) {
 	assert.Equal(t, "bar", call.Header("foo"))
 	assert.Equal(t, map[string]string{"Foo": "Bar", "foo": "bar"}, call.OriginalHeaders())
 	assert.Equal(t, "cp", call.CallerProcedure())
+	assert.Zero(t, netip.MustParseAddrPort("1.2.3.4:1234").Compare(call.CallerPeerAddrPort()))
 	assert.Len(t, call.HeaderNames(), 1)
 
 	assert.NoError(t, call.WriteResponseHeader("foo2", "bar2"))
@@ -88,15 +92,16 @@ func TestReadFromRequest(t *testing.T) {
 func TestReadFromRequestMeta(t *testing.T) {
 	ctx, icall := NewInboundCall(context.Background())
 	icall.ReadFromRequestMeta(&transport.RequestMeta{
-		Service:         "service",
-		Caller:          "caller",
-		Transport:       "transport",
-		Encoding:        transport.Encoding("raw"),
-		Procedure:       "proc",
-		ShardKey:        "sk",
-		RoutingKey:      "rk",
-		RoutingDelegate: "rd",
-		CallerProcedure: "cp",
+		Service:            "service",
+		Caller:             "caller",
+		Transport:          "transport",
+		Encoding:           transport.Encoding("raw"),
+		Procedure:          "proc",
+		ShardKey:           "sk",
+		RoutingKey:         "rk",
+		RoutingDelegate:    "rd",
+		CallerProcedure:    "cp",
+		CallerPeerAddrPort: netip.MustParseAddrPort("1.2.3.4:1234"),
 		// later header's key/value takes precedence
 		Headers: transport.NewHeaders().With("Foo", "Bar").With("foo", "bar"),
 	})
@@ -112,6 +117,7 @@ func TestReadFromRequestMeta(t *testing.T) {
 	assert.Equal(t, "rk", call.RoutingKey())
 	assert.Equal(t, "rd", call.RoutingDelegate())
 	assert.Equal(t, "cp", call.CallerProcedure())
+	assert.Zero(t, netip.MustParseAddrPort("1.2.3.4:1234").Compare(call.CallerPeerAddrPort()))
 	assert.Equal(t, "bar", call.Header("foo"))
 	assert.Equal(t, map[string]string{"Foo": "Bar", "foo": "bar"}, call.OriginalHeaders())
 	assert.Len(t, call.HeaderNames(), 1)
@@ -124,16 +130,17 @@ func TestReadFromRequestMeta(t *testing.T) {
 func TestDisabledResponseHeaders(t *testing.T) {
 	ctx, icall := NewInboundCallWithOptions(context.Background(), DisableResponseHeaders())
 	icall.ReadFromRequest(&transport.Request{
-		Service:         "service",
-		Transport:       "transport",
-		Caller:          "caller",
-		Encoding:        transport.Encoding("raw"),
-		Procedure:       "proc",
-		ShardKey:        "sk",
-		RoutingKey:      "rk",
-		RoutingDelegate: "rd",
-		CallerProcedure: "cp",
-		Headers:         transport.NewHeaders().With("foo", "bar"),
+		Service:            "service",
+		Transport:          "transport",
+		Caller:             "caller",
+		Encoding:           transport.Encoding("raw"),
+		Procedure:          "proc",
+		ShardKey:           "sk",
+		RoutingKey:         "rk",
+		RoutingDelegate:    "rd",
+		CallerProcedure:    "cp",
+		CallerPeerAddrPort: netip.MustParseAddrPort("1.2.3.4:1234"),
+		Headers:            transport.NewHeaders().With("foo", "bar"),
 	})
 	call := CallFromContext(ctx)
 	require.NotNil(t, call)
@@ -147,6 +154,7 @@ func TestDisabledResponseHeaders(t *testing.T) {
 	assert.Equal(t, "rk", call.RoutingKey())
 	assert.Equal(t, "rd", call.RoutingDelegate())
 	assert.Equal(t, "cp", call.CallerProcedure())
+	assert.Zero(t, netip.MustParseAddrPort("1.2.3.4:1234").Compare(call.CallerPeerAddrPort()))
 	assert.Equal(t, "bar", call.Header("foo"))
 	assert.Len(t, call.HeaderNames(), 1)
 

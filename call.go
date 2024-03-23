@@ -22,6 +22,7 @@ package yarpc
 
 import (
 	"context"
+	"net/netip"
 
 	"go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
@@ -175,6 +176,13 @@ func (c *Call) RoutingDelegate() string {
 // CallerProcedure returns the name of the procedure from the service making this request.
 func (c *Call) CallerProcedure() string {
 	return (*encoding.Call)(c).CallerProcedure()
+}
+
+// CallerPeerAddrPort returns the network address of the remote peer making this request.
+// There is no guarantee that this information will be available. Consumers should check 
+// the result of calling IsValid() before taking any action.
+func (c *Call) CallerPeerAddrPort() netip.AddrPort {
+	return (*encoding.Call)(c).CallerPeerAddrPort()
 }
 
 // StreamOption defines options that may be passed in at streaming function

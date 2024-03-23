@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net/netip"
 	"strconv"
 	"time"
 
@@ -49,6 +50,7 @@ type inboundCall interface {
 	ShardKey() string
 	RoutingKey() string
 	RoutingDelegate() string
+	RemotePeer() tchannel.PeerInfo
 
 	Format() tchannel.Format
 
@@ -180,6 +182,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 		RoutingKey:      call.RoutingKey(),
 		RoutingDelegate: call.RoutingDelegate(),
 	}
+	treq.CallerPeerAddrPort, _ = netip.ParseAddrPort(call.RemotePeer().HostPort)
 
 	ctx, headers, err := readRequestHeaders(ctx, call.Format(), call.Arg2Reader)
 	if err != nil {

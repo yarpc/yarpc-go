@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"net/netip"
 	"testing"
 	"time"
 
@@ -50,6 +51,10 @@ const (
 
 	testProcedure       = "hello"
 	testProcedureOneway = "hello-oneway"
+)
+
+var (
+	testValidAddrPort = netip.MustParseAddrPort("1.2.3.4:1234")
 )
 
 // roundTripTransport provides a function that sets up and tears down an
@@ -248,13 +253,14 @@ func TestSimpleRoundTrip(t *testing.T) {
 		for _, trans := range transports {
 			t.Run(tt.name+"/"+trans.Name(), func(t *testing.T) {
 				requestMatcher := transporttest.NewRequestMatcher(t, &transport.Request{
-					Caller:    testCaller,
-					Service:   testService,
-					Transport: trans.Name(),
-					Procedure: testProcedure,
-					Encoding:  raw.Encoding,
-					Headers:   tt.requestHeaders,
-					Body:      bytes.NewBufferString(tt.requestBody),
+					Caller:             testCaller,
+					Service:            testService,
+					Transport:          trans.Name(),
+					Procedure:          testProcedure,
+					Encoding:           raw.Encoding,
+					Headers:            tt.requestHeaders,
+					CallerPeerAddrPort: testValidAddrPort,
+					Body:               bytes.NewBufferString(tt.requestBody),
 				})
 
 				handler := unaryHandlerFunc(func(_ context.Context, r *transport.Request, w transport.ResponseWriter) error {
@@ -336,13 +342,14 @@ func TestSimpleRoundTripOneway(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			requestMatcher := transporttest.NewRequestMatcher(t, &transport.Request{
-				Caller:    testCaller,
-				Service:   testService,
-				Transport: trans.Name(),
-				Procedure: testProcedureOneway,
-				Encoding:  raw.Encoding,
-				Headers:   tt.requestHeaders,
-				Body:      bytes.NewReader([]byte(tt.requestBody)),
+				Caller:             testCaller,
+				Service:            testService,
+				Transport:          trans.Name(),
+				Procedure:          testProcedureOneway,
+				Encoding:           raw.Encoding,
+				Headers:            tt.requestHeaders,
+				CallerPeerAddrPort: testValidAddrPort,
+				Body:               bytes.NewReader([]byte(tt.requestBody)),
 			})
 
 			handlerDone := make(chan struct{})

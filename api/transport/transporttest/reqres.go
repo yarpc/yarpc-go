@@ -23,6 +23,7 @@ package transporttest
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"reflect"
 	"strings"
@@ -123,7 +124,13 @@ func (m RequestMatcher) Matches(got interface{}) bool {
 		}
 	}
 
-	rbody, err := ioutil.ReadAll(r.Body)
+	// due to non determinism in some of the integration tests we check
+	// only if both addrports are valid
+	if l.CallerPeerAddrPort.IsValid() != r.CallerPeerAddrPort.IsValid() {
+		m.t.Logf("AddressPort mismatch: %s.IsValid() != %s.IsValid()", l.CallerPeerAddrPort.String(), r.CallerPeerAddrPort.String())
+		return false
+	}
+	rbody, err := io.ReadAll(r.Body)
 	if err != nil {
 		m.t.Fatalf("failed to read body: %v", err)
 	}
