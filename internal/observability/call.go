@@ -131,11 +131,12 @@ func (c call) EndHandleWithAppError(res callResult) {
 	)
 }
 
-func (c call) endWithAppError(
-	res callResult,
-	extraLogFields ...zap.Field) {
+func (c call) endWithAppError(res callResult, extraLogFields ...zap.Field) {
 	elapsed := _timeNow().Sub(c.started)
-	c.endLogs(elapsed, res.err, res.isApplicationError, res.applicationErrorMeta, extraLogFields...)
+	entry, fields := c.endLogs(elapsed, res.err, res.isApplicationError, res.applicationErrorMeta, extraLogFields...)
+	if entry != nil {
+		entry.Write(fields...)
+	}
 	c.endStats(elapsed, res)
 }
 
@@ -150,7 +151,7 @@ func (c call) endLogs(
 	err error,
 	isApplicationError bool,
 	applicationErrorMeta *transport.ApplicationErrorMeta,
-	extraLogFields ...zap.Field) {
+	extraLogFields ...zap.Field) (*zapcore.CheckedEntry, []zap.Field) {
 	appErrBitWithNoError := isApplicationError && err == nil // ie Thrift exception
 
 	var ce *zapcore.CheckedEntry
@@ -218,7 +219,7 @@ func (c call) endLogs(
 	}
 
 	if ce == nil {
-		return
+		return nil, nil
 	}
 
 	fields := make([]zapcore.Field, 0, 9+len(extraLogFields))
@@ -263,8 +264,7 @@ func (c call) endLogs(
 		fields = append(fields, zap.String(_errorCodeLogKey, yarpcerrors.FromError(err).Code().String()))
 	}
 
-	fields = append(fields, extraLogFields...)
-	ce.Write(fields...)
+	return ce, append(fields, extraLogFields...)
 }
 
 func (c call) endStats(
