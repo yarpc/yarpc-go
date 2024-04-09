@@ -1,6 +1,8 @@
 module go.uber.org/yarpc/internal/crossdock
 
-go 1.13
+go 1.22
+
+toolchain go1.22.2
 
 require (
 	github.com/apache/thrift v0.13.0
@@ -10,13 +12,13 @@ require (
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/stretchr/testify v1.5.1
 	github.com/uber/jaeger-client-go v2.22.1+incompatible
-	github.com/uber/tchannel-go v1.22.2
+	github.com/uber/tchannel-go v1.33.0
 	go.uber.org/fx v1.10.0
 	go.uber.org/multierr v1.4.0
 	go.uber.org/thriftrw v1.29.2
 	go.uber.org/yarpc v1.42.1
 	go.uber.org/zap v1.13.0
-	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f
+	golang.org/x/net v0.14.0
 	google.golang.org/grpc v1.40.1
 )
 
