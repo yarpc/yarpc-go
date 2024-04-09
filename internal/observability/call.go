@@ -221,6 +221,11 @@ func (c call) endLogs(
 		return
 	}
 
+	// If request was cancelled by the client, don't log the error on its side.
+	if c.direction == _directionOutbound && yarpcerrors.IsCancelled(err) {
+		return
+	}
+
 	fields := make([]zapcore.Field, 0, 9+len(extraLogFields))
 	fields = append(fields, zap.String("rpcType", c.rpcType.String()))
 	fields = append(fields, zap.Duration("latency", elapsed))
