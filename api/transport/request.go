@@ -23,6 +23,7 @@ package transport
 import (
 	"context"
 	"io"
+	"net/netip"
 	"strings"
 
 	"go.uber.org/yarpc/yarpcerrors"
@@ -75,21 +76,27 @@ type Request struct {
 	// content-length. It should be noted that this value is set manually and
 	// will not be updated automatically if the body is being modified
 	BodySize int
+
+	// The network address of the remote peer. There is no guarantee that this
+	// information will be available. Consumers should check the result of
+	// calling IsValid() before taking any action.
+	CallerPeerAddrPort netip.AddrPort
 }
 
 // ToRequestMeta converts a Request into a RequestMeta.
 func (r *Request) ToRequestMeta() *RequestMeta {
 	return &RequestMeta{
-		Caller:          r.Caller,
-		Service:         r.Service,
-		Transport:       r.Transport,
-		Encoding:        r.Encoding,
-		Procedure:       r.Procedure,
-		Headers:         r.Headers,
-		ShardKey:        r.ShardKey,
-		RoutingKey:      r.RoutingKey,
-		RoutingDelegate: r.RoutingDelegate,
-		CallerProcedure: r.CallerProcedure,
+		Caller:             r.Caller,
+		Service:            r.Service,
+		Transport:          r.Transport,
+		Encoding:           r.Encoding,
+		Procedure:          r.Procedure,
+		Headers:            r.Headers,
+		ShardKey:           r.ShardKey,
+		RoutingKey:         r.RoutingKey,
+		RoutingDelegate:    r.RoutingDelegate,
+		CallerProcedure:    r.CallerProcedure,
+		CallerPeerAddrPort: r.CallerPeerAddrPort,
 	}
 }
 
@@ -105,6 +112,8 @@ func (r *Request) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddString("routingKey", r.RoutingKey)
 	enc.AddString("routingDelegate", r.RoutingDelegate)
 	enc.AddString("callerProcedure", r.CallerProcedure)
+	enc.AddString("callerPeerAddrPort", r.CallerPeerAddrPort.String())
+
 	return nil
 }
 
@@ -198,6 +207,11 @@ type RequestMeta struct {
 
 	// CallerProcedure refers to the name of the rpc procedure of the service making this request.
 	CallerProcedure string
+
+	// CalerPeerAddrPort refers to network address of the remote peer.
+	// There is no guarantee that this information will be available.
+	// Consumers should check the result of calling IsValid() before taking any action.
+	CallerPeerAddrPort netip.AddrPort
 }
 
 // ToRequest converts a RequestMeta into a Request.
@@ -206,15 +220,16 @@ func (r *RequestMeta) ToRequest() *Request {
 		return &Request{}
 	}
 	return &Request{
-		Caller:          r.Caller,
-		Service:         r.Service,
-		Transport:       r.Transport,
-		Encoding:        r.Encoding,
-		Procedure:       r.Procedure,
-		Headers:         r.Headers,
-		ShardKey:        r.ShardKey,
-		RoutingKey:      r.RoutingKey,
-		RoutingDelegate: r.RoutingDelegate,
-		CallerProcedure: r.CallerProcedure,
+		Caller:             r.Caller,
+		Service:            r.Service,
+		Transport:          r.Transport,
+		Encoding:           r.Encoding,
+		Procedure:          r.Procedure,
+		Headers:            r.Headers,
+		ShardKey:           r.ShardKey,
+		RoutingKey:         r.RoutingKey,
+		RoutingDelegate:    r.RoutingDelegate,
+		CallerProcedure:    r.CallerProcedure,
+		CallerPeerAddrPort: r.CallerPeerAddrPort,
 	}
 }

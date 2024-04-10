@@ -22,6 +22,7 @@ package transport_test
 
 import (
 	"context"
+	"net/netip"
 	"strings"
 	"testing"
 	"time"
@@ -127,45 +128,48 @@ func TestValidator(t *testing.T) {
 
 func TestRequestLogMarshaling(t *testing.T) {
 	r := &transport.Request{
-		Caller:          "caller",
-		Service:         "service",
-		Transport:       "transport",
-		Encoding:        "raw",
-		Procedure:       "procedure",
-		Headers:         transport.NewHeaders().With("password", "super-secret"),
-		ShardKey:        "shard01",
-		RoutingKey:      "routing-key",
-		RoutingDelegate: "routing-delegate",
-		CallerProcedure: "caller-procedure",
-		Body:            strings.NewReader("body"),
+		Caller:             "caller",
+		Service:            "service",
+		Transport:          "transport",
+		Encoding:           "raw",
+		Procedure:          "procedure",
+		Headers:            transport.NewHeaders().With("password", "super-secret"),
+		ShardKey:           "shard01",
+		RoutingKey:         "routing-key",
+		RoutingDelegate:    "routing-delegate",
+		CallerProcedure:    "caller-procedure",
+		Body:               strings.NewReader("body"),
+		CallerPeerAddrPort: netip.MustParseAddrPort("1.2.3.4:1234"),
 	}
 	enc := zapcore.NewMapObjectEncoder()
 	assert.NoError(t, r.MarshalLogObject(enc), "Unexpected error marshaling request.")
 	assert.Equal(t, map[string]interface{}{
-		"caller":          "caller",
-		"service":         "service",
-		"transport":       "transport",
-		"encoding":        "raw",
-		"procedure":       "procedure",
-		"shardKey":        "shard01",
-		"routingKey":      "routing-key",
-		"routingDelegate": "routing-delegate",
-		"callerProcedure": "caller-procedure",
+		"caller":             "caller",
+		"service":            "service",
+		"transport":          "transport",
+		"encoding":           "raw",
+		"procedure":          "procedure",
+		"shardKey":           "shard01",
+		"routingKey":         "routing-key",
+		"routingDelegate":    "routing-delegate",
+		"callerProcedure":    "caller-procedure",
+		"callerPeerAddrPort": "1.2.3.4:1234",
 	}, enc.Fields, "Unexpected output after marshaling request.")
 }
 
 func TestRequestMetaToRequestConversionAndBack(t *testing.T) {
 	reqMeta := &transport.RequestMeta{
-		Caller:          "caller",
-		Service:         "service",
-		Transport:       "transport",
-		Encoding:        "raw",
-		Procedure:       "hello",
-		Headers:         transport.NewHeaders().With("key", "val"),
-		ShardKey:        "shard",
-		RoutingKey:      "rk",
-		RoutingDelegate: "rd",
-		CallerProcedure: "cp",
+		Caller:             "caller",
+		Service:            "service",
+		Transport:          "transport",
+		Encoding:           "raw",
+		Procedure:          "hello",
+		Headers:            transport.NewHeaders().With("key", "val"),
+		ShardKey:           "shard",
+		RoutingKey:         "rk",
+		RoutingDelegate:    "rd",
+		CallerProcedure:    "cp",
+		CallerPeerAddrPort: netip.MustParseAddrPort("1.2.3.4:1234"),
 	}
 
 	req := reqMeta.ToRequest()

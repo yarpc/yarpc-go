@@ -28,8 +28,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 )
 
@@ -98,6 +102,34 @@ func TestInvalidStreamEmptyHeader(t *testing.T) {
 
 	require.Contains(t, err.Error(), "code:invalid-argument")
 	require.Contains(t, err.Error(), "missing caller name")
+}
+
+func TestLogsUnparseableRemoteAddress(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	tran := NewTransport()
+	i := tran.NewInbound(listener)
+	zapCore, observedLogs := observer.New(zapcore.ErrorLevel)
+	h := handler{i: i, logger: zap.New(zapCore)}
+	md := metadata.MD{
+		CallerHeader:   []string{"caller"},
+		ServiceHeader:  []string{"test"},
+		EncodingHeader: []string{"raw"},
+	}
+	baseCtx := metadata.NewIncomingContext(context.Background(), md)
+
+	ctx := peer.NewContext(baseCtx, &peer.Peer{})
+	_, err = h.getBasicTransportRequest(ctx, "service/proc")
+	assert.NoError(t, err)
+	assert.Empty(t, observedLogs.TakeAll())
+
+	ctx = peer.NewContext(baseCtx, &peer.Peer{Addr: &net.TCPAddr{Port: 1_000_000}})
+	_, err = h.getBasicTransportRequest(ctx, "service/proc")
+	assert.NoError(t, err)
+	if logs := observedLogs.TakeAll(); assert.Len(t, logs, 1) {
+		assert.Equal(t, "failed to parse address port", logs[0].Message)
+	}
 }
 
 func TestInvalidStreamMultipleHeaders(t *testing.T) {

@@ -22,6 +22,7 @@ package encoding
 
 import (
 	"context"
+	"net/netip"
 	"sort"
 
 	"go.uber.org/yarpc/api/transport"
@@ -171,4 +172,12 @@ func (c *Call) CallerProcedure() string {
 		return ""
 	}
 	return c.md.CallerProcedure()
+}
+
+// CallerProcedure returns the remote network address making the request
+func (c *Call) CallerPeerAddrPort() netip.AddrPort {
+	if c == nil {
+		return netip.AddrPort{}
+	}
+	return c.md.CallerPeerAddrPort()
 }

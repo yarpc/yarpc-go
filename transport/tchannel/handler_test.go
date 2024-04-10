@@ -25,6 +25,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/netip"
 	"strconv"
 	"strings"
 	"testing"
@@ -51,16 +52,21 @@ func TestHandlerErrors(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
+	type wantLog struct {
+		wantLogLevel   zapcore.Level
+		wantLogMessage string
+		wantErrMessage string
+	}
 	tests := []struct {
-		desc              string
-		format            tchannel.Format
-		headers           []byte
-		wantHeaders       map[string]string
-		newResponseWriter func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
-		recorder          recorder
-		wantLogLevel      zapcore.Level
-		wantLogMessage    string
-		wantErrMessage    string
+		desc               string
+		format             tchannel.Format
+		headers            []byte
+		wantHeaders        map[string]string
+		newResponseWriter  func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
+		recorder           recorder
+		unparsableHostPort bool
+		noError            bool
+		wantLogs           []wantLog
 	}{
 		{
 			desc:              "test tchannel json handler",
@@ -89,9 +95,13 @@ func TestHandlerErrors(t *testing.T) {
 			wantHeaders:       map[string]string{"rpc-header-foo": "bar"},
 			newResponseWriter: newFaultyHandlerWriter,
 			recorder:          newResponseRecorder(),
-			wantLogLevel:      zapcore.ErrorLevel,
-			wantLogMessage:    "responseWriter failed to close",
-			wantErrMessage:    "faultyHandlerWriter failed to close",
+			wantLogs: []wantLog{
+				{
+					wantLogLevel:   zapcore.ErrorLevel,
+					wantLogMessage: "responseWriter failed to close",
+					wantErrMessage: "faultyHandlerWriter failed to close",
+				},
+			},
 		},
 		{
 			desc:              "test SendSystemError() failure logging",
@@ -100,75 +110,139 @@ func TestHandlerErrors(t *testing.T) {
 			wantHeaders:       map[string]string{"rpc-header-foo": "bar"},
 			newResponseWriter: newFaultyHandlerWriter,
 			recorder:          newFaultyResponseRecorder(),
-			wantLogLevel:      zapcore.ErrorLevel,
-			wantLogMessage:    "SendSystemError failed",
-			wantErrMessage:    "SendSystemError failure",
+			wantLogs: []wantLog{
+				{
+					wantLogLevel:   zapcore.ErrorLevel,
+					wantLogMessage: "SendSystemError failed",
+					wantErrMessage: "SendSystemError failure",
+				},
+				{
+					wantLogLevel:   zapcore.ErrorLevel,
+					wantLogMessage: "responseWriter failed to close",
+					wantErrMessage: "faultyHandlerWriter failed to close",
+				},
+			},
+		},
+		{
+			desc:               "test unparsable host port",
+			format:             tchannel.JSON,
+			headers:            []byte(`{"Rpc-Header-Foo": "bar"}`),
+			wantHeaders:        map[string]string{"rpc-header-foo": "bar"},
+			unparsableHostPort: true,
+			newResponseWriter:  newHandlerWriter,
+			recorder:           newResponseRecorder(),
+			noError:            true,
+			wantLogs: []wantLog{{
+				wantLogLevel:   zapcore.ErrorLevel,
+				wantLogMessage: "failed to parse address port",
+				wantErrMessage: "not an ip:port",
+			}},
+		},
+		{
+			desc:               "test responseWriter.Close() failure logging with unparseable host port",
+			format:             tchannel.JSON,
+			headers:            []byte(`{"Rpc-Header-Foo": "bar"}`),
+			wantHeaders:        map[string]string{"rpc-header-foo": "bar"},
+			newResponseWriter:  newFaultyHandlerWriter,
+			recorder:           newResponseRecorder(),
+			unparsableHostPort: true,
+			wantLogs: []wantLog{
+				{
+					wantLogLevel:   zapcore.ErrorLevel,
+					wantLogMessage: "failed to parse address port",
+					wantErrMessage: "not an ip:port",
+				},
+				{
+					wantLogLevel:   zapcore.ErrorLevel,
+					wantLogMessage: "responseWriter failed to close",
+					wantErrMessage: "faultyHandlerWriter failed to close",
+				},
+			},
 		},
 	}
 
 	for _, tt := range tests {
-		core, logs := observer.New(zapcore.ErrorLevel)
-		rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
-		router := transporttest.NewMockRouter(mockCtrl)
+		t.Run(tt.desc, func(t *testing.T) {
+			core, logs := observer.New(zapcore.ErrorLevel)
+			rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+			router := transporttest.NewMockRouter(mockCtrl)
 
-		spec := transport.NewUnaryHandlerSpec(rpcHandler)
+			spec := transport.NewUnaryHandlerSpec(rpcHandler)
 
-		tchHandler := handler{router: router, logger: zap.New(core).Named("tchannel"), newResponseWriter: tt.newResponseWriter}
+			tchHandler := handler{router: router, logger: zap.New(core).Named("tchannel"), newResponseWriter: tt.newResponseWriter}
 
-		router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
-			WithService("service").
-			WithProcedure("hello"),
-		).Return(spec, nil)
+			router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
+				WithService("service").
+				WithProcedure("hello"),
+			).Return(spec, nil)
 
-		rpcHandler.EXPECT().Handle(
-			transporttest.NewContextMatcher(t),
-			transporttest.NewRequestMatcher(t,
-				&transport.Request{
-					Caller:          "caller",
-					Service:         "service",
-					Transport:       "tchannel",
-					Headers:         transport.HeadersFromMap(tt.wantHeaders),
-					Encoding:        transport.Encoding(tt.format),
-					Procedure:       "hello",
-					ShardKey:        "shard",
-					RoutingKey:      "routekey",
-					RoutingDelegate: "routedelegate",
-					Body:            bytes.NewReader([]byte("world")),
-				}),
-			gomock.Any(),
-		).Return(nil)
+			rpcHandler.EXPECT().Handle(
+				transporttest.NewContextMatcher(t),
+				transporttest.NewRequestMatcher(t,
+					&transport.Request{
+						Caller:          "caller",
+						Service:         "service",
+						Transport:       "tchannel",
+						Headers:         transport.HeadersFromMap(tt.wantHeaders),
+						Encoding:        transport.Encoding(tt.format),
+						Procedure:       "hello",
+						ShardKey:        "shard",
+						RoutingKey:      "routekey",
+						RoutingDelegate: "routedelegate",
+						Body:            bytes.NewReader([]byte("world")),
+						CallerPeerAddrPort: func() netip.AddrPort {
+							if !tt.unparsableHostPort {
+								return netip.MustParseAddrPort("127.0.0.1:1234")
+							}
+							return netip.AddrPort{}
+						}(),
+					}),
+				gomock.Any(),
+			).Return(nil)
 
-		respRecorder := tt.recorder
+			respRecorder := tt.recorder
 
-		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-		defer cancel()
-		tchHandler.handle(ctx, &fakeInboundCall{
-			service:         "service",
-			caller:          "caller",
-			format:          tt.format,
-			method:          "hello",
-			shardkey:        "shard",
-			routingkey:      "routekey",
-			routingdelegate: "routedelegate",
-			arg2:            tt.headers,
-			arg3:            []byte("world"),
-			resp:            respRecorder,
-		})
+			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+			defer cancel()
+			call := &fakeInboundCall{
+				service:         "service",
+				caller:          "caller",
+				format:          tt.format,
+				method:          "hello",
+				shardkey:        "shard",
+				routingkey:      "routekey",
+				routingdelegate: "routedelegate",
+				remotePeerInfo: tchannel.PeerInfo{
+					HostPort: "127.0.0.1:1234",
+				},
+				arg2: tt.headers,
+				arg3: []byte("world"),
+				resp: respRecorder,
+			}
+			if tt.unparsableHostPort {
+				call.remotePeerInfo.HostPort = ""
+			}
+			tchHandler.handle(ctx, call)
 
-		getLog := func() observer.LoggedEntry {
 			entries := logs.TakeAll()
-			return entries[0]
-		}
-
-		if tt.wantLogMessage != "" {
-			log := getLog()
-			logContext := log.ContextMap()
-			assert.Equal(t, tt.wantLogLevel, log.Entry.Level, "Unexpected log level")
-			assert.Equal(t, tt.wantLogMessage, log.Entry.Message, "Unexpected log message written")
-			assert.Equal(t, tt.wantErrMessage, logContext["error"], "Unexpected error message")
-			assert.Equal(t, "tchannel", log.LoggerName, "Unexpected logger name")
-			assert.Error(t, respRecorder.SystemError(), "Error expected with logging")
-		}
+			if nLogs := len(tt.wantLogs); nLogs > 0 {
+				if assert.Len(t, entries, nLogs) {
+					for i, wantLog := range tt.wantLogs {
+						log := entries[i]
+						logContext := log.ContextMap()
+						assert.Equal(t, wantLog.wantLogLevel, log.Entry.Level, "Unexpected log level")
+						assert.Equal(t, wantLog.wantLogMessage, log.Entry.Message, "Unexpected log message written")
+						assert.Equal(t, wantLog.wantErrMessage, logContext["error"], "Unexpected error message")
+						assert.Equal(t, "tchannel", log.LoggerName, "Unexpected logger name")
+						if !tt.noError {
+							assert.Error(t, respRecorder.SystemError(), "Error expected with logging")
+						}
+					}
+				}
+			} else {
+				assert.Empty(t, entries, "expected no logs")
+			}
+		})
 
 	}
 }
@@ -191,12 +265,13 @@ func TestHandlerFailures(t *testing.T) {
 			desc: "no timeout on context",
 			ctx:  context.Background(),
 			sendCall: &fakeInboundCall{
-				service: "foo",
-				caller:  "bar",
-				method:  "hello",
-				format:  tchannel.Raw,
-				arg2:    []byte{0x00, 0x00},
-				arg3:    []byte{0x00},
+				service:        "foo",
+				caller:         "bar",
+				method:         "hello",
+				format:         tchannel.Raw,
+				remotePeerInfo: tchannel.PeerInfo{HostPort: "127.0.0.1:1234"},
+				arg2:           []byte{0x00, 0x00},
+				arg3:           []byte{0x00},
 			},
 			wantStatus:        tchannel.ErrCodeBadRequest,
 			newResponseWriter: newHandlerWriter,
@@ -206,12 +281,13 @@ func TestHandlerFailures(t *testing.T) {
 		{
 			desc: "arg2 reader error",
 			sendCall: &fakeInboundCall{
-				service: "foo",
-				caller:  "bar",
-				method:  "hello",
-				format:  tchannel.Raw,
-				arg2:    nil,
-				arg3:    []byte{0x00},
+				service:        "foo",
+				caller:         "bar",
+				method:         "hello",
+				format:         tchannel.Raw,
+				remotePeerInfo: tchannel.PeerInfo{HostPort: "127.0.0.1:1234"},
+				arg2:           nil,
+				arg3:           []byte{0x00},
 			},
 			wantStatus:        tchannel.ErrCodeBadRequest,
 			newResponseWriter: newHandlerWriter,
@@ -221,12 +297,13 @@ func TestHandlerFailures(t *testing.T) {
 		{
 			desc: "arg2 parse error",
 			sendCall: &fakeInboundCall{
-				service: "foo",
-				caller:  "bar",
-				method:  "hello",
-				format:  tchannel.JSON,
-				arg2:    []byte("{not valid JSON}"),
-				arg3:    []byte{0x00},
+				service:        "foo",
+				caller:         "bar",
+				method:         "hello",
+				format:         tchannel.JSON,
+				remotePeerInfo: tchannel.PeerInfo{HostPort: "127.0.0.1:1234"},
+				arg2:           []byte("{not valid JSON}"),
+				arg3:           []byte{0x00},
 			},
 			wantStatus:        tchannel.ErrCodeBadRequest,
 			newResponseWriter: newHandlerWriter,
@@ -236,12 +313,13 @@ func TestHandlerFailures(t *testing.T) {
 		{
 			desc: "arg3 reader error",
 			sendCall: &fakeInboundCall{
-				service: "foo",
-				caller:  "bar",
-				method:  "hello",
-				format:  tchannel.Raw,
-				arg2:    []byte{0x00, 0x00},
-				arg3:    nil,
+				service:        "foo",
+				caller:         "bar",
+				method:         "hello",
+				format:         tchannel.Raw,
+				remotePeerInfo: tchannel.PeerInfo{HostPort: "127.0.0.1:1234"},
+				arg2:           []byte{0x00, 0x00},
+				arg3:           nil,
 			},
 			wantStatus:        tchannel.ErrCodeUnexpected,
 			newResponseWriter: newHandlerWriter,
@@ -251,24 +329,26 @@ func TestHandlerFailures(t *testing.T) {
 		{
 			desc: "internal error",
 			sendCall: &fakeInboundCall{
-				service: "foo",
-				caller:  "bar",
-				method:  "hello",
-				format:  tchannel.Raw,
-				arg2:    []byte{0x00, 0x00},
-				arg3:    []byte{0x00},
+				service:        "foo",
+				caller:         "bar",
+				method:         "hello",
+				format:         tchannel.Raw,
+				remotePeerInfo: tchannel.PeerInfo{HostPort: "127.0.0.1:1234"},
+				arg2:           []byte{0x00, 0x00},
+				arg3:           []byte{0x00},
 			},
 			expectCall: func(h *transporttest.MockUnaryHandler) {
 				h.EXPECT().Handle(
 					transporttest.NewContextMatcher(t, transporttest.ContextTTL(testtime.Second)),
 					transporttest.NewRequestMatcher(
 						t, &transport.Request{
-							Caller:    "bar",
-							Service:   "foo",
-							Transport: "tchannel",
-							Encoding:  raw.Encoding,
-							Procedure: "hello",
-							Body:      bytes.NewReader([]byte{0x00}),
+							Caller:             "bar",
+							Service:            "foo",
+							Transport:          "tchannel",
+							Encoding:           raw.Encoding,
+							Procedure:          "hello",
+							Body:               bytes.NewReader([]byte{0x00}),
+							CallerPeerAddrPort: netip.MustParseAddrPort("127.0.0.1:1234"),
 						},
 					), gomock.Any(),
 				).Return(fmt.Errorf("great sadness"))
@@ -281,21 +361,23 @@ func TestHandlerFailures(t *testing.T) {
 		{
 			desc: "arg3 encode error",
 			sendCall: &fakeInboundCall{
-				service: "foo",
-				caller:  "bar",
-				method:  "hello",
-				format:  tchannel.JSON,
-				arg2:    []byte("{}"),
-				arg3:    []byte("{}"),
+				service:        "foo",
+				caller:         "bar",
+				method:         "hello",
+				format:         tchannel.JSON,
+				remotePeerInfo: tchannel.PeerInfo{HostPort: "127.0.0.1:1234"},
+				arg2:           []byte("{}"),
+				arg3:           []byte("{}"),
 			},
 			expectCall: func(h *transporttest.MockUnaryHandler) {
 				req := &transport.Request{
-					Caller:    "bar",
-					Service:   "foo",
-					Transport: "tchannel",
-					Encoding:  json.Encoding,
-					Procedure: "hello",
-					Body:      bytes.NewReader([]byte("{}")),
+					Caller:             "bar",
+					Service:            "foo",
+					Transport:          "tchannel",
+					Encoding:           json.Encoding,
+					Procedure:          "hello",
+					Body:               bytes.NewReader([]byte("{}")),
+					CallerPeerAddrPort: netip.MustParseAddrPort("127.0.0.1:1234"),
 				}
 				h.EXPECT().Handle(
 					transporttest.NewContextMatcher(t, transporttest.ContextTTL(testtime.Second)),
@@ -317,21 +399,23 @@ func TestHandlerFailures(t *testing.T) {
 				return context.WithTimeout(context.Background(), testtime.Millisecond)
 			},
 			sendCall: &fakeInboundCall{
-				service: "foo",
-				caller:  "bar",
-				method:  "waituntiltimeout",
-				format:  tchannel.Raw,
-				arg2:    []byte{0x00, 0x00},
-				arg3:    []byte{0x00},
+				service:        "foo",
+				caller:         "bar",
+				method:         "waituntiltimeout",
+				format:         tchannel.Raw,
+				remotePeerInfo: tchannel.PeerInfo{HostPort: "127.0.0.1:1234"},
+				arg2:           []byte{0x00, 0x00},
+				arg3:           []byte{0x00},
 			},
 			expectCall: func(h *transporttest.MockUnaryHandler) {
 				req := &transport.Request{
-					Caller:    "bar",
-					Service:   "foo",
-					Transport: "tchannel",
-					Encoding:  raw.Encoding,
-					Procedure: "waituntiltimeout",
-					Body:      bytes.NewReader([]byte{0x00}),
+					Caller:             "bar",
+					Service:            "foo",
+					Transport:          "tchannel",
+					Encoding:           raw.Encoding,
+					Procedure:          "waituntiltimeout",
+					Body:               bytes.NewReader([]byte{0x00}),
+					CallerPeerAddrPort: netip.MustParseAddrPort("127.0.0.1:1234"),
 				}
 				h.EXPECT().Handle(
 					transporttest.NewContextMatcher(
@@ -350,21 +434,23 @@ func TestHandlerFailures(t *testing.T) {
 		{
 			desc: "handler panic",
 			sendCall: &fakeInboundCall{
-				service: "foo",
-				caller:  "bar",
-				method:  "panic",
-				format:  tchannel.Raw,
-				arg2:    []byte{0x00, 0x00},
-				arg3:    []byte{0x00},
+				service:        "foo",
+				caller:         "bar",
+				method:         "panic",
+				format:         tchannel.Raw,
+				remotePeerInfo: tchannel.PeerInfo{HostPort: "127.0.0.1:1234"},
+				arg2:           []byte{0x00, 0x00},
+				arg3:           []byte{0x00},
 			},
 			expectCall: func(h *transporttest.MockUnaryHandler) {
 				req := &transport.Request{
-					Caller:    "bar",
-					Service:   "foo",
-					Transport: "tchannel",
-					Encoding:  raw.Encoding,
-					Procedure: "panic",
-					Body:      bytes.NewReader([]byte{0x00}),
+					Caller:             "bar",
+					Service:            "foo",
+					Transport:          "tchannel",
+					Encoding:           raw.Encoding,
+					Procedure:          "panic",
+					Body:               bytes.NewReader([]byte{0x00}),
+					CallerPeerAddrPort: netip.MustParseAddrPort("127.0.0.1:1234"),
 				}
 				h.EXPECT().Handle(
 					transporttest.NewContextMatcher(
@@ -384,12 +470,13 @@ func TestHandlerFailures(t *testing.T) {
 		{
 			desc: "test SendSystemError() error logging",
 			sendCall: &fakeInboundCall{
-				service: "foo",
-				caller:  "bar",
-				method:  "hello",
-				format:  tchannel.Raw,
-				arg2:    nil,
-				arg3:    []byte{0x00},
+				service:        "foo",
+				caller:         "bar",
+				method:         "hello",
+				format:         tchannel.Raw,
+				remotePeerInfo: tchannel.PeerInfo{HostPort: "127.0.0.1:1234"},
+				arg2:           nil,
+				arg3:           []byte{0x00},
 			},
 			wantStatus:        tchannel.ErrCodeBadRequest,
 			newResponseWriter: newHandlerWriter,
@@ -699,16 +786,17 @@ func TestHandlerSystemErrorLogs(t *testing.T) {
 		newResponseWriter: newHandlerWriter,
 	}
 
-	router.EXPECT().Choose(gomock.Any(), gomock.Any()).Return(spec, nil).Times(4)
+	router.EXPECT().Choose(gomock.Any(), gomock.Any()).Return(spec, nil).Times(5)
 
 	inboundCall := &fakeInboundCall{
-		service: "foo-service",
-		caller:  "foo-caller",
-		method:  "foo-method",
-		format:  tchannel.JSON,
-		arg2:    []byte{},
-		arg3:    []byte{},
-		resp:    newFaultyResponseRecorder(),
+		service:        "foo-service",
+		caller:         "foo-caller",
+		method:         "foo-method",
+		format:         tchannel.JSON,
+		remotePeerInfo: tchannel.PeerInfo{HostPort: "127.0.0.1:1234"},
+		arg2:           []byte{},
+		arg3:           []byte{},
+		resp:           newFaultyResponseRecorder(),
 	}
 
 	t.Run("client awaiting response", func(t *testing.T) {
@@ -724,6 +812,22 @@ func TestHandlerSystemErrorLogs(t *testing.T) {
 
 			assert.Equal(t, logs[0].Message, "SendSystemError failed", "unexpected log message")
 			assert.Equal(t, logs[1].Message, "responseWriter failed to close", "unexpected log message")
+		})
+
+		t.Run("handler success with unparsable remote peer", func(t *testing.T) {
+			transportHandler.reset()
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			inboundCall := *inboundCall
+			inboundCall.remotePeerInfo.HostPort = ""
+			tchannelHandler.handle(ctx, &inboundCall)
+			logs := observedLogs.TakeAll()
+			require.Len(t, logs, 3, "unexpected number of logs")
+
+			assert.Equal(t, logs[0].Message, "failed to parse address port", "unexpected log message")
+			assert.Equal(t, logs[1].Message, "SendSystemError failed", "unexpected log message")
+			assert.Equal(t, logs[2].Message, "responseWriter failed to close", "unexpected log message")
 		})
 
 		t.Run("handler error", func(t *testing.T) {
@@ -816,8 +920,9 @@ func TestRpcServiceHeader(t *testing.T) {
 	resp := newResponseRecorder()
 	expectedServiceHeader := "foo"
 	call := &fakeInboundCall{
-		service: expectedServiceHeader,
-		resp:    resp,
+		service:        expectedServiceHeader,
+		remotePeerInfo: tchannel.PeerInfo{HostPort: "127.0.0.1:1234"},
+		resp:           resp,
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()

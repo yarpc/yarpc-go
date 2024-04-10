@@ -6,7 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
-- No changes yet.
+- api: expose `CallerPeerAddrPort` field in the transport request. Middleware and the server handler 
+  can then utilise this to implement audit/logging/debugging.
 
 ## [1.72.1] - 2024-03-14
 - tchannel: Renamed caller-procedure header from `$rpc$-caller-procedure` to `rpc-caller-procedure`.

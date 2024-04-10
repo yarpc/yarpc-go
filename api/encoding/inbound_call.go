@@ -22,6 +22,7 @@ package encoding
 
 import (
 	"context"
+	"net/netip"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/inboundcall"
@@ -155,6 +156,10 @@ func (ic *inboundCallMetadata) RoutingDelegate() string {
 
 func (ic *inboundCallMetadata) CallerProcedure() string {
 	return ic.req.CallerProcedure
+}
+
+func (ic *inboundCallMetadata) CallerPeerAddrPort() netip.AddrPort {
+	return ic.req.CallerPeerAddrPort
 }
 
 func (ic *inboundCallMetadata) WriteResponseHeader(k, v string) error {

@@ -24,9 +24,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"strconv"
 	"strings"
 	"testing"
@@ -42,6 +44,9 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/routertest"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 func TestHandlerSuccess(t *testing.T) {
@@ -74,16 +79,17 @@ func TestHandlerSuccess(t *testing.T) {
 		),
 		transporttest.NewRequestMatcher(
 			t, &transport.Request{
-				Caller:          "moe",
-				Service:         "curly",
-				Transport:       "http",
-				Encoding:        raw.Encoding,
-				Procedure:       "nyuck",
-				ShardKey:        "shard",
-				RoutingKey:      "routekey",
-				RoutingDelegate: "routedelegate",
-				CallerProcedure: "callerprocedure",
-				Body:            bytes.NewReader([]byte("Nyuck Nyuck")),
+				Caller:             "moe",
+				Service:            "curly",
+				Transport:          "http",
+				Encoding:           raw.Encoding,
+				Procedure:          "nyuck",
+				ShardKey:           "shard",
+				RoutingKey:         "routekey",
+				RoutingDelegate:    "routedelegate",
+				CallerProcedure:    "callerprocedure",
+				Body:               bytes.NewReader([]byte("Nyuck Nyuck")),
+				CallerPeerAddrPort: netip.MustParseAddrPort("127.0.0.1:1234"),
 			},
 		),
 		gomock.Any(),
@@ -91,9 +97,10 @@ func TestHandlerSuccess(t *testing.T) {
 
 	httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}, bothResponseError: true}
 	req := &http.Request{
-		Method: "POST",
-		Header: headers,
-		Body:   ioutil.NopCloser(bytes.NewReader([]byte("Nyuck Nyuck"))),
+		Method:     "POST",
+		Header:     headers,
+		Body:       io.NopCloser(bytes.NewReader([]byte("Nyuck Nyuck"))),
+		RemoteAddr: "127.0.0.1:1234",
 	}
 	rw := httptest.NewRecorder()
 	httpHandler.ServeHTTP(rw, req)
@@ -173,13 +180,14 @@ func TestHandlerHeaders(t *testing.T) {
 			),
 			transporttest.NewRequestMatcher(t,
 				&transport.Request{
-					Caller:    "caller",
-					Service:   "service",
-					Transport: "http",
-					Encoding:  transport.Encoding(tt.giveEncoding),
-					Procedure: "hello",
-					Headers:   transport.HeadersFromMap(tt.wantHeaders),
-					Body:      bytes.NewReader([]byte("world")),
+					Caller:             "caller",
+					Service:            "service",
+					Transport:          "http",
+					Encoding:           transport.Encoding(tt.giveEncoding),
+					Procedure:          "hello",
+					Headers:            transport.HeadersFromMap(tt.wantHeaders),
+					Body:               bytes.NewReader([]byte("world")),
+					CallerPeerAddrPort: netip.MustParseAddrPort("127.0.0.1:1234"),
 				}),
 			gomock.Any(),
 		).Return(nil)
@@ -196,9 +204,10 @@ func TestHandlerHeaders(t *testing.T) {
 		headers.Set(ProcedureHeader, "hello")
 
 		req := &http.Request{
-			Method: "POST",
-			Header: headers,
-			Body:   ioutil.NopCloser(bytes.NewReader([]byte("world"))),
+			Method:     "POST",
+			Header:     headers,
+			Body:       io.NopCloser(bytes.NewReader([]byte("world"))),
+			RemoteAddr: "127.0.0.1:1234",
 		}
 		rw := httptest.NewRecorder()
 		httpHandler.ServeHTTP(rw, req)
@@ -231,48 +240,54 @@ func TestHandlerFailures(t *testing.T) {
 		wantCode yarpcerrors.Code
 	}{
 		{
-			req:      &http.Request{Method: "GET"},
+			req:      &http.Request{Method: "GET", RemoteAddr: "127.0.0.1:1234"},
 			wantCode: yarpcerrors.CodeNotFound,
 		},
 		{
 			req: &http.Request{
-				Method: "POST",
-				Header: headerCopyWithout(baseHeaders, CallerHeader),
+				Method:     "POST",
+				Header:     headerCopyWithout(baseHeaders, CallerHeader),
+				RemoteAddr: "127.0.0.1:1234",
 			},
 			wantCode: yarpcerrors.CodeInvalidArgument,
 		},
 		{
 			req: &http.Request{
-				Method: "POST",
-				Header: headerCopyWithout(baseHeaders, ServiceHeader),
+				Method:     "POST",
+				Header:     headerCopyWithout(baseHeaders, ServiceHeader),
+				RemoteAddr: "127.0.0.1:1234",
 			},
 			wantCode: yarpcerrors.CodeInvalidArgument,
 		},
 		{
 			req: &http.Request{
-				Method: "POST",
-				Header: headerCopyWithout(baseHeaders, ProcedureHeader),
+				Method:     "POST",
+				Header:     headerCopyWithout(baseHeaders, ProcedureHeader),
+				RemoteAddr: "127.0.0.1:1234",
 			},
 			wantCode: yarpcerrors.CodeInvalidArgument,
 		},
 		{
 			req: &http.Request{
-				Method: "POST",
-				Header: headerCopyWithout(baseHeaders, TTLMSHeader),
+				Method:     "POST",
+				Header:     headerCopyWithout(baseHeaders, TTLMSHeader),
+				RemoteAddr: "127.0.0.1:1234",
 			},
 			wantCode: yarpcerrors.CodeInvalidArgument,
 			errTTL:   true,
 		},
 		{
 			req: &http.Request{
-				Method: "POST",
+				Method:     "POST",
+				RemoteAddr: "127.0.0.1:1234",
 			},
 			wantCode: yarpcerrors.CodeInvalidArgument,
 		},
 		{
 			req: &http.Request{
-				Method: "POST",
-				Header: headersWithBadTTL,
+				Method:     "POST",
+				Header:     headersWithBadTTL,
+				RemoteAddr: "127.0.0.1:1234",
 			},
 			wantCode: yarpcerrors.CodeInvalidArgument,
 			errTTL:   true,
@@ -322,9 +337,10 @@ func TestHandlerInternalFailure(t *testing.T) {
 	headers.Set(ServiceHeader, "fake")
 
 	request := http.Request{
-		Method: "POST",
-		Header: headers,
-		Body:   ioutil.NopCloser(bytes.NewReader([]byte{})),
+		Method:     "POST",
+		Header:     headers,
+		Body:       io.NopCloser(bytes.NewReader([]byte{})),
+		RemoteAddr: "127.0.0.1:1234",
 	}
 
 	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
@@ -332,12 +348,13 @@ func TestHandlerInternalFailure(t *testing.T) {
 		transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
 		transporttest.NewRequestMatcher(
 			t, &transport.Request{
-				Caller:    "somecaller",
-				Service:   "fake",
-				Transport: "http",
-				Encoding:  raw.Encoding,
-				Procedure: "hello",
-				Body:      bytes.NewReader([]byte{}),
+				Caller:             "somecaller",
+				Service:            "fake",
+				Transport:          "http",
+				Encoding:           raw.Encoding,
+				Procedure:          "hello",
+				Body:               bytes.NewReader([]byte{}),
+				CallerPeerAddrPort: netip.MustParseAddrPort("127.0.0.1:1234"),
 			},
 		),
 		gomock.Any(),
@@ -360,6 +377,62 @@ func TestHandlerInternalFailure(t *testing.T) {
 	assert.Equal(t,
 		`error for service "fake" and procedure "hello": great sadness`+"\n",
 		httpResponse.Body.String())
+}
+
+func TestHandlerLogsUnparseableRemoteAddress(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	headers := make(http.Header)
+	headers.Set(CallerHeader, "somecaller")
+	headers.Set(EncodingHeader, "raw")
+	headers.Set(TTLMSHeader, "1000")
+	headers.Set(ProcedureHeader, "hello")
+	headers.Set(ServiceHeader, "fake")
+
+	request := http.Request{
+		Method:     "POST",
+		Header:     headers,
+		Body:       io.NopCloser(bytes.NewReader([]byte{})),
+		RemoteAddr: "127.0.0.1___1234",
+	}
+
+	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+	rpcHandler.EXPECT().Handle(
+		transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
+		transporttest.NewRequestMatcher(
+			t, &transport.Request{
+				Caller:    "somecaller",
+				Service:   "fake",
+				Transport: "http",
+				Encoding:  raw.Encoding,
+				Procedure: "hello",
+				Body:      bytes.NewReader([]byte{}),
+			},
+		),
+		gomock.Any(),
+	).Return(nil)
+
+	router := transporttest.NewMockRouter(mockCtrl)
+	spec := transport.NewUnaryHandlerSpec(rpcHandler)
+
+	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
+		WithService("fake").
+		WithProcedure("hello"),
+	).Return(spec, nil)
+
+	zapCore, observedLogs := observer.New(zapcore.ErrorLevel)
+
+	httpHandler := handler{router: router, logger: zap.New(zapCore), tracer: &opentracing.NoopTracer{}, bothResponseError: true}
+	httpResponse := httptest.NewRecorder()
+	httpHandler.ServeHTTP(httpResponse, &request)
+
+	code := httpResponse.Code
+	assert.Equal(t, 200, code, "expected 200 level response")
+	logs := observedLogs.TakeAll()
+	if assert.Len(t, logs, 1) {
+		assert.Equal(t, "failed to parse address port", logs[0].Message)
+	}
 }
 
 type panickedHandler struct{}
