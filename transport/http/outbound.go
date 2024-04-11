@@ -39,6 +39,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
+	"go.uber.org/yarpc/internal/observability"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -331,8 +332,13 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 				"does not match the service name received in the response, sent %q, got: %q", treq.Service, resSvcName))
 	}
 
+	parsedAppHeaders, reportHeader := applicationHeaders.FromHTTPHeaders(response.Header, transport.NewHeaders())
+	if reportHeader {
+		observability.IncReservedHeaderError(o.transport.meter, treq.Caller, treq.Service)
+	}
+
 	tres := &transport.Response{
-		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, transport.NewHeaders()),
+		Headers:          parsedAppHeaders,
 		Body:             response.Body,
 		BodySize:         int(response.ContentLength),
 		ApplicationError: response.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus,
@@ -393,13 +399,23 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 	if err != nil {
 		return nil, err
 	}
+
 	// YARPC needs to remove all the HTTP/2 pseudo headers when a HTTP/2 request (gRPC)
 	// was propagated from a YARPC transport middleware to a HTTP/1 service.
 	// It should be noted that net/http will return an error if a pseudo
 	// header is given along a HTTP/1 request.
 	// see: https://cs.opensource.google/go/x/net/+/c6fcb2db:http/httpguts/httplex.go;l=203
 	headers := applicationHeaders.deleteHTTP2PseudoHeadersIfNeeded(treq.Headers)
-	hreq.Header = applicationHeaders.ToHTTPHeaders(headers, nil)
+
+	httpHeader, reportHeader, err := applicationHeaders.ToHTTPHeaders(headers, nil)
+	if reportHeader {
+		observability.IncReservedHeaderError(o.transport.meter, treq.Caller, treq.Service)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	hreq.Header = httpHeader
 	return hreq, nil
 }
 
@@ -578,6 +594,11 @@ func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start 
 	// using the go stdlib HTTP client is to use headers as the YAPRC HTTP
 	// transport header conventions.
 	if treq == nil {
+		parsedAppHeaders, reportHeaders := applicationHeaders.FromHTTPHeaders(hreq.Header, transport.Headers{})
+		if reportHeaders {
+			observability.IncReservedHeaderError(o.transport.meter, hreq.Header.Get(CallerHeader), hreq.Header.Get(ServiceHeader))
+		}
+
 		treq = &transport.Request{
 			Caller:          hreq.Header.Get(CallerHeader),
 			Service:         hreq.Header.Get(ServiceHeader),
@@ -587,7 +608,7 @@ func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start 
 			RoutingKey:      hreq.Header.Get(RoutingKeyHeader),
 			RoutingDelegate: hreq.Header.Get(RoutingDelegateHeader),
 			CallerProcedure: hreq.Header.Get(CallerProcedureHeader),
-			Headers:         applicationHeaders.FromHTTPHeaders(hreq.Header, transport.Headers{}),
+			Headers:         parsedAppHeaders,
 		}
 	}
 

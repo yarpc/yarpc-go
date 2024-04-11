@@ -34,9 +34,10 @@ var (
 )
 
 type responseWriter struct {
-	buffer    *bytes.Buffer
-	md        metadata.MD
-	headerErr error
+	buffer       *bytes.Buffer
+	md           metadata.MD
+	headerErr    error
+	reportHeader bool
 }
 
 func newResponseWriter() *responseWriter {
@@ -58,7 +59,14 @@ func (r *responseWriter) AddHeaders(headers transport.Headers) {
 	if r.md == nil {
 		r.md = metadata.New(nil)
 	}
-	r.headerErr = multierr.Combine(r.headerErr, addApplicationHeaders(r.md, headers))
+
+	reportHeader, err := addApplicationHeaders(r.md, headers)
+	if err != nil {
+		r.headerErr = multierr.Combine(r.headerErr, err)
+	}
+	if reportHeader {
+		r.reportHeader = true
+	}
 }
 
 func (r *responseWriter) SetApplicationError() {

@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/api/x/introspection"
@@ -133,6 +134,7 @@ func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 		shutdownTimeout:   defaultShutdownTimeout,
 		tracer:            t.tracer,
 		logger:            t.logger,
+		meter:             t.meter,
 		transport:         t,
 		grabHeaders:       make(map[string]struct{}),
 		bothResponseError: true,
@@ -154,6 +156,7 @@ type Inbound struct {
 	router          transport.Router
 	tracer          opentracing.Tracer
 	logger          *zap.Logger
+	meter           *metrics.Scope
 	transport       *Transport
 	grabHeaders     map[string]struct{}
 	interceptors    []func(http.Handler) http.Handler
@@ -207,6 +210,7 @@ func (i *Inbound) start() error {
 		grabHeaders:       i.grabHeaders,
 		bothResponseError: i.bothResponseError,
 		logger:            i.logger,
+		meter:             i.meter,
 	}
 
 	// reverse iterating because we want the last from options to wrap the
