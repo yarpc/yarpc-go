@@ -115,8 +115,8 @@ func TestDisableEnveloperNoWireWrite(t *testing.T) {
 
 // generate generates a random value into the given pointer.
 //
-// 	var i int
-// 	generate(&i, rand)
+//	var i int
+//	generate(&i, rand)
 //
 // If the type implements the quick.Generator interface, that is used.
 func generate(v interface{}, r *rand.Rand) {

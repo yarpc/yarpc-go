@@ -21,6 +21,7 @@
 /*
 Package main provides a protoc plugin that generates code for the protobuf encoding for YARPC.
 To use:
+
 	go get github.com/golang/protobuf/protoc-gen-go
 	go get go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go-v2
 	protoc --go_out=plugins=grpc:. foo.proto

@@ -35,7 +35,7 @@ import (
 //
 // The wrapped function must already be in the correct format:
 //
-// 	f(ctx context.Context, body $reqBody) ($resBody, error)
+//	f(ctx context.Context, body $reqBody) ($resBody, error)
 type jsonHandler struct {
 	reader  requestReader
 	handler reflect.Value

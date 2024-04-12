@@ -30,13 +30,13 @@ import (
 
 // Builds mockTransportSpec objects.
 //
-// 	mockSpec := mockTransportSpecBuilder{
-// 		Name: "...",
-// 		TransportConfig: reflect.TypeOf(myConfig{}),
-// 	}.Build()
+//	mockSpec := mockTransportSpecBuilder{
+//		Name: "...",
+//		TransportConfig: reflect.TypeOf(myConfig{}),
+//	}.Build()
 //
-// 	mockSpec.EXPECT().BuildTransport(myConfig{...}).Return(...)
-// 	mockSpec.Spec()
+//	mockSpec.EXPECT().BuildTransport(myConfig{...}).Return(...)
+//	mockSpec.Spec()
 type mockTransportSpecBuilder struct {
 	Name            string
 	TransportConfig reflect.Type

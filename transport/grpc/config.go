@@ -62,14 +62,14 @@ func TransportSpec(opts ...Option) yarpcconfig.TransportSpec {
 // TransportConfig configures a gRPC Transport. This is shared
 // between all gRPC inbounds and outbounds of a Dispatcher.
 //
-//  transports:
-//    grpc:
-//      backoff:
-//        exponential:
-//          first: 10ms
-//          max: 30s
-//      clientMaxHeaderListSize: 1024
-//      serverMaxHeaderListSize: 2048
+//	transports:
+//	  grpc:
+//	    backoff:
+//	      exponential:
+//	        first: 10ms
+//	        max: 30s
+//	    clientMaxHeaderListSize: 1024
+//	    serverMaxHeaderListSize: 2048
 //
 // All parameters of TransportConfig are optional. This section
 // may be omitted in the transports section.
@@ -88,18 +88,20 @@ type TransportConfig struct {
 // InboundConfig configures a gRPC Inbound.
 //
 // inbounds:
-//   grpc:
-//     address: ":80"
+//
+//	grpc:
+//	  address: ":80"
 //
 // A gRPC inbound can also enable TLS from key and cert files.
 //
 // inbounds:
-//   grpc:
-//     address: ":443"
-//     tls:
-//       enabled: true
-//       keyFile: "/path/to/key"
-//       certFile: "/path/to/cert"
+//
+//	grpc:
+//	  address: ":443"
+//	  tls:
+//	    enabled: true
+//	    keyFile: "/path/to/key"
+//	    certFile: "/path/to/cert"
 type InboundConfig struct {
 	// Address to listen on. This field is required.
 	Address string           `config:"address,interpolate"`
@@ -147,35 +149,35 @@ func (c InboundTLSConfig) newInboundCredentials() (credentials.TransportCredenti
 // OutboundConfig configures a gRPC Outbound.
 //
 // outbounds:
-//   myservice:
-//     grpc:
-//       address: ":80"
+//
+//	myservice:
+//	  grpc:
+//	    address: ":80"
 //
 // A gRPC outbound can also configure a peer list.
 //
-//  outbounds:
-//    myservice:
-//      grpc:
-//        round-robin:
-//          peers:
-//            - 127.0.0.1:8080
-//            - 127.0.0.1:8081
+//	outbounds:
+//	  myservice:
+//	    grpc:
+//	      round-robin:
+//	        peers:
+//	          - 127.0.0.1:8080
+//	          - 127.0.0.1:8081
 //
 // A gRPC outbound can enable TLS using the system cert.Pool.
 //
-//  outbounds:
-//    theirsecureservice:
-//      grpc:
-//        address: ":443"
-//        tls:
-//          enabled: true
-//        compressor: gzip
-//        grpc-keepalive:
-//          enabled: true
-//          time:    10s
-//          timeout: 30s
-//          permit-without-stream: true
-//
+//	outbounds:
+//	  theirsecureservice:
+//	    grpc:
+//	      address: ":443"
+//	      tls:
+//	        enabled: true
+//	      compressor: gzip
+//	      grpc-keepalive:
+//	        enabled: true
+//	        time:    10s
+//	        timeout: 30s
+//	        permit-without-stream: true
 type OutboundConfig struct {
 	yarpcconfig.PeerChooser
 

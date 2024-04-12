@@ -33,15 +33,15 @@ type Configuration struct{}
 // Spec returns a configuration specification for the direct peer chooser. The
 // chooser uses transport.Request#ShardKey as the peer dentifier.
 //
-//  cfg := yarpcconfig.New()
-//  cfg.MustRegisterPeerChooser(direct.Spec())
+//	cfg := yarpcconfig.New()
+//	cfg.MustRegisterPeerChooser(direct.Spec())
 //
 // This enables the direct chooser:
 //
-//  outbounds:
-//    destination-service:
-//      grpc:
-//        direct: {}
+//	outbounds:
+//	  destination-service:
+//	    grpc:
+//	      direct: {}
 func Spec(opts ...ChooserOption) yarpcconfig.PeerChooserSpec {
 	return yarpcconfig.PeerChooserSpec{
 		Name: name,

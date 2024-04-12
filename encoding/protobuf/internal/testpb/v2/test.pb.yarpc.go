@@ -152,10 +152,10 @@ type FxTestYARPCClientResult struct {
 // NewFxTestYARPCClient provides a TestYARPCClient
 // to an Fx application using the given name for routing.
 //
-//  fx.Provide(
-//    testpb.NewFxTestYARPCClient("service-name"),
-//    ...
-//  )
+//	fx.Provide(
+//	  testpb.NewFxTestYARPCClient("service-name"),
+//	  ...
+//	)
 func NewFxTestYARPCClient(name string, options ...v2.ClientOption) interface{} {
 	return func(params FxTestYARPCClientParams) FxTestYARPCClientResult {
 		cc := params.Provider.ClientConfig(name)
@@ -201,10 +201,10 @@ type FxTestYARPCProceduresResult struct {
 // NewFxTestYARPCProcedures provides TestYARPCServer procedures to an Fx application.
 // It expects a TestYARPCServer to be present in the container.
 //
-//  fx.Provide(
-//    testpb.NewFxTestYARPCProcedures(),
-//    ...
-//  )
+//	fx.Provide(
+//	  testpb.NewFxTestYARPCProcedures(),
+//	  ...
+//	)
 func NewFxTestYARPCProcedures() interface{} {
 	return func(params FxTestYARPCProceduresParams) FxTestYARPCProceduresResult {
 		return FxTestYARPCProceduresResult{

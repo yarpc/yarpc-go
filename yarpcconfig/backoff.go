@@ -32,9 +32,9 @@ import (
 // jitter. This structure may be extended in the future to support registering
 // alternate backoff strategies.
 //
-//  exponential:
-//    first: 100ms
-//    max: 30s
+//	exponential:
+//	  first: 100ms
+//	  max: 30s
 type Backoff struct {
 	Exponential ExponentialBackoff `config:"exponential"`
 }
@@ -52,8 +52,8 @@ func (c Backoff) Strategy() (backoffapi.Strategy, error) {
 // duration.
 // The range of possible values will not exceed "max", inclusive.
 //
-//   first: 100ms
-//   max: 30s
+//	first: 100ms
+//	max: 30s
 type ExponentialBackoff struct {
 	First time.Duration `config:"first"`
 	Max   time.Duration `config:"max"`

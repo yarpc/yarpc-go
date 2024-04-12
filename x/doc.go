@@ -24,7 +24,7 @@
 // If you import subpackages of x/, ensure that you lock to the minor version.
 // In Glide, this is,
 //
-// 	version: ~X.Y
+//	version: ~X.Y
 //
 // Where X.Y is the version of YARPC you are using.
 package x

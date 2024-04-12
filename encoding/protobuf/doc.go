@@ -24,15 +24,15 @@
 // Golang protoc plugin from either github.com/golang/protobuf or
 // github.com/gogo/protobuf. We recommend github.com/gogo/protobuf.
 //
-//   go get github.com/gogo/protobuf/protoc-gen-gogoslick
+//	go get github.com/gogo/protobuf/protoc-gen-gogoslick
 //
 // You must also install the Protobuf plugin for YARPC:
 //
-//   go get go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go
+//	go get go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go
 //
 // To generate YARPC compatible code from a Protobuf file, use the command:
 //
-//   protoc --gogoslick_out=. --yarpc-go_out=. foo.proto
+//	protoc --gogoslick_out=. --yarpc-go_out=. foo.proto
 //
 // The Golang protoc plugin will generate the Golang types in foo.pb.go,
 // while the YARPC plugin will generate the YARPC types in foo.pb.yarpc.go.
@@ -41,14 +41,14 @@
 // the name BarYARPCClient, and can be instantiated with a
 // transport.ClientConfig.
 //
-//   barClient := foo.NewBarYARPCClient(dispatcher.ClientConfig("myservice"))
+//	barClient := foo.NewBarYARPCClient(dispatcher.ClientConfig("myservice"))
 //
 // The server interface will be generated with the name BarYARPCServer. This
 // is the interface that should be implemented on the server-side. Procedures
 // can be constructed from an implementation of BarYARPCServer using the
 // BuildBarYARPCProcedures method.
 //
-//   dispatcher.Register(foo.BuildBarYARPCProcedures(barServer))
+//	dispatcher.Register(foo.BuildBarYARPCProcedures(barServer))
 //
 // Proto3 defines a mapping to JSON, so for every RPC method, two Procedures
 // are created for every RPC method: one that will handle the standard Protobuf
@@ -57,41 +57,41 @@
 // If coupled with an HTTP Inbound, Protobuf procedures can be called using
 // curl. Given the following Protobuf definition:
 //
-//   syntax = "proto3;
+//	syntax = "proto3;
 //
-//   package foo.bar;
+//	package foo.bar;
 //
-//   message EchoRequest {
-//     string value = 1;
-//   }
+//	message EchoRequest {
+//	  string value = 1;
+//	}
 //
-//   message EchoResponse {
-//     string value = 1;
-//   }
+//	message EchoResponse {
+//	  string value = 1;
+//	}
 //
-//   service Baz {
-//     rpc Echo(EchoRequest) returns (EchoResponse) {}
-//   }
+//	service Baz {
+//	  rpc Echo(EchoRequest) returns (EchoResponse) {}
+//	}
 //
 // And the following configuration:
 //
-//   service:
-//     name: hello
-//   yarpc:
-//     inbounds:
-//       http:
-//          address: ":8080"
+//	service:
+//	  name: hello
+//	yarpc:
+//	  inbounds:
+//	    http:
+//	       address: ":8080"
 //
 // If running locally, one could make the following call:
 //
-//   curl \
-//     http://0.0.0.0:8080 \
-//     -H 'context-ttl-ms: 2000' \
-//     -H "rpc-caller: curl-$(whoami)" \
-//     -H 'rpc-service: hello' \
-//     -H 'rpc-encoding: json' \
-//     -H 'rpc-procedure: foo.bar.Baz::Echo' \
-//     -d '{"value":"sample"}'
+//	curl \
+//	  http://0.0.0.0:8080 \
+//	  -H 'context-ttl-ms: 2000' \
+//	  -H "rpc-caller: curl-$(whoami)" \
+//	  -H 'rpc-service: hello' \
+//	  -H 'rpc-encoding: json' \
+//	  -H 'rpc-procedure: foo.bar.Baz::Echo' \
+//	  -d '{"value":"sample"}'
 //
 // Where context-ttl-ms is the timeout in milliseconds, rpc-caller is the name of the entity making the request,
 // rpc-service is the name of the configured service, rpc-encoding is json, rpc-procedure is the name of the
@@ -100,7 +100,7 @@
 //
 // If using Yab, one can also use:
 //
-//   yab -p http://0.0.0.0:8080 -e json -s hello -p foo.bar.Baz::Echo -r '{"value":"sample"}'
+//	yab -p http://0.0.0.0:8080 -e json -s hello -p foo.bar.Baz::Echo -r '{"value":"sample"}'
 //
 // See https://github.com/yarpc/yab for more details.
 //

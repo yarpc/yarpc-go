@@ -31,7 +31,6 @@ const interpolate_error int = 0
 
 const interpolate_en_main int = 8
 
-
 // Parse parses a string for interpolation.
 //
 // Variables may be specified anywhere in the string in the format ${foo} or
@@ -324,7 +323,6 @@ func Parse(data string) (out String, _ error) {
 		{
 		}
 	}
-
 
 	if cs < 8 {
 		return out, fmt.Errorf("cannot parse string %q", data)

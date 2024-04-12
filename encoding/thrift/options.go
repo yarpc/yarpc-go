@@ -59,11 +59,11 @@ type Option interface {
 //
 // It may be specified on the client side when the client is constructed.
 //
-// 	client := myserviceclient.New(clientConfig, thrift.Enveloped)
+//	client := myserviceclient.New(clientConfig, thrift.Enveloped)
 //
 // It may be specified on the server side when the handler is registered.
 //
-// 	dispatcher.Register(myserviceserver.New(handler, thrift.Enveloped))
+//	dispatcher.Register(myserviceserver.New(handler, thrift.Enveloped))
 //
 // Note that you will need to enable enveloping to communicate with Apache
 // Thrift HTTP servers.
@@ -86,7 +86,7 @@ func (e envelopedOption) applyRegisterOption(c *registerConfig) {
 //
 // Specify this option when constructing the Thrift client.
 //
-// 	client := myserviceclient.New(clientConfig, thrift.Multiplexed)
+//	client := myserviceclient.New(clientConfig, thrift.Multiplexed)
 //
 // This option has no effect if enveloping is disabled.
 var Multiplexed ClientOption = multiplexedOption{}
@@ -120,11 +120,11 @@ func (n namedOption) applyRegisterOption(c *registerConfig) {
 //
 // Specify this option when constructing the Thrift client.
 //
-//  client := myserviceclient.New(clientConfig, thrift.Named("foo"))
+//	client := myserviceclient.New(clientConfig, thrift.Named("foo"))
 //
 // It may be specified on the server side when the handler is registered.
 //
-// 	dispatcher.Register(myserviceserver.New(handler, thrift.Named("foo")))
+//	dispatcher.Register(myserviceserver.New(handler, thrift.Named("foo")))
 //
 // If not specified, the client or server's inherited procedures will
 // be labelled with the service name from which they are inherited.
@@ -146,11 +146,11 @@ func (p protocolOption) applyRegisterOption(c *registerConfig) {
 // clients should use. It may be specified on the client side when the client
 // is constructed,
 //
-// 	client := myserviceclient.New(clientConfig, thrift.Protocol(protocol.Binary))
+//	client := myserviceclient.New(clientConfig, thrift.Protocol(protocol.Binary))
 //
 // It may be specified on the server side when the handler is registered.
 //
-// 	dispatcher.Register(myserviceserver.New(handler, thrift.Protocol(protocol.Binary)))
+//	dispatcher.Register(myserviceserver.New(handler, thrift.Protocol(protocol.Binary)))
 //
 // It defaults to the Binary protocol.
 func Protocol(p protocol.Protocol) Option {

@@ -51,12 +51,12 @@ type ServerResult struct {
 // Server provides procedures for TestService to an Fx application. It expects a
 // testservicefx.Interface to be present in the container.
 //
-// 	fx.Provide(
-// 		func(h *MyTestServiceHandler) testserviceserver.Interface {
-// 			return h
-// 		},
-// 		testservicefx.Server(),
-// 	)
+//	fx.Provide(
+//		func(h *MyTestServiceHandler) testserviceserver.Interface {
+//			return h
+//		},
+//		testservicefx.Server(),
+//	)
 func Server(opts ...thrift.RegisterOption) interface{} {
 	return func(p ServerParams) ServerResult {
 		procedures := testserviceserver.New(p.Handler, opts...)

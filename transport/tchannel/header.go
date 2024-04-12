@@ -158,7 +158,7 @@ func mergeHeaders(m1, m2 map[string]string) map[string]string {
 
 // decodeHeaders decodes headers using the format:
 //
-// 	nh:2 (k~2 v~2){nh}
+//	nh:2 (k~2 v~2){nh}
 func decodeHeaders(r io.Reader) (transport.Headers, error) {
 	reader := internal.NewReader(r)
 
@@ -203,7 +203,7 @@ func requestCallerProcedureToHeader(req *transport.Request, reqHeaders map[strin
 
 // encodeHeaders encodes headers using the format:
 //
-// 	nh:2 (k~2 v~2){nh}
+//	nh:2 (k~2 v~2){nh}
 func encodeHeaders(hs map[string]string) []byte {
 	if len(hs) == 0 {
 		return []byte{0, 0} // nh = 2

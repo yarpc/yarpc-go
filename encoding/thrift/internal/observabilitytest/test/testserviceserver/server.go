@@ -44,8 +44,8 @@ type Interface interface {
 // New prepares an implementation of the TestService service for
 // registration.
 //
-// 	handler := TestServiceHandler{}
-// 	dispatcher.Register(testserviceserver.New(handler))
+//	handler := TestServiceHandler{}
+//	dispatcher.Register(testserviceserver.New(handler))
 func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	h := handler{impl}
 	service := thrift.Service{

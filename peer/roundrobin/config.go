@@ -43,20 +43,20 @@ type Configuration struct {
 // implementation, making it possible to select the least recently chosen peer
 // with transports that use outbound peer list configuration (like HTTP).
 //
-//  cfg := yarpcconfig.New()
-//  cfg.MustRegisterPeerList(roundrobin.Spec())
+//	cfg := yarpcconfig.New()
+//	cfg.MustRegisterPeerList(roundrobin.Spec())
 //
 // This enables the round-robin peer list:
 //
-//  outbounds:
-//    otherservice:
-//      unary:
-//        http:
-//          url: https://host:port/rpc
-//          round-robin:
-//            peers:
-//              - 127.0.0.1:8080
-//              - 127.0.0.1:8081
+//	outbounds:
+//	  otherservice:
+//	    unary:
+//	      http:
+//	        url: https://host:port/rpc
+//	        round-robin:
+//	          peers:
+//	            - 127.0.0.1:8080
+//	            - 127.0.0.1:8081
 //
 // Other than a specific peer or peers list, use any peer list updater
 // registered with a yarpc Configurator.
@@ -67,12 +67,12 @@ type Configuration struct {
 // The default choose timeout enables calls without deadlines, ie streaming, to
 // choose peers without waiting indefinitely.
 //
-//  round-robin:
-//    peers:
-//      - 127.0.0.1:8080
-//    capacity: 1
-//    failFast: true
-//    defaultChooseTimeout: 1s
+//	round-robin:
+//	  peers:
+//	    - 127.0.0.1:8080
+//	  capacity: 1
+//	  failFast: true
+//	  defaultChooseTimeout: 1s
 func Spec() yarpcconfig.PeerListSpec {
 	return SpecWithOptions()
 }

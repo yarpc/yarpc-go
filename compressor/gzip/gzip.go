@@ -61,47 +61,46 @@ func (o levelOption) apply(opts *Compressor) {
 // will implicitly trigger Close, a behavior gRPC-go relies upon to reuse
 // readers.
 //
-//  import (
-//      "compress/gzip"
+//	import (
+//	    "compress/gzip"
 //
-//      "google.golang.org/grpc/encoding"
-//      "go.uber.org/yarpc/compressor/grpc"
-//      "go.uber.org/yarpc/compressor/gzip"
-//  )
+//	    "google.golang.org/grpc/encoding"
+//	    "go.uber.org/yarpc/compressor/grpc"
+//	    "go.uber.org/yarpc/compressor/gzip"
+//	)
 //
-//  var GZIPCompressor = yarpcgzip.New(yarpcgzip.Level(gzip.BestCompression))
+//	var GZIPCompressor = yarpcgzip.New(yarpcgzip.Level(gzip.BestCompression))
 //
-//  func init()
-//      gz := yarpcgrpccompressor.New(GZIPCompressor)
-//      encoding.RegisterCompressor(gz)
-//  }
+//	func init()
+//	    gz := yarpcgrpccompressor.New(GZIPCompressor)
+//	    encoding.RegisterCompressor(gz)
+//	}
 //
 // If you are constructing your YARPC clients directly through the API,
 // create a gRPC dialer with the Compressor option.
 //
-//  trans := grpc.NewTransport()
-//  dialer := trans.NewDialer(GZIPCompressor)
-//  peers := roundrobin.New(dialer)
-//  outbound := trans.NewOutbound(peers)
+//	trans := grpc.NewTransport()
+//	dialer := trans.NewDialer(GZIPCompressor)
+//	peers := roundrobin.New(dialer)
+//	outbound := trans.NewOutbound(peers)
 //
 // If you are using the YARPC configurator to create YARPC objects
 // using config files, you will also need to register the compressor
 // with your configurator.
 //
-//  configurator := yarpcconfig.New()
-//  configurator.MustRegisterCompressor(GZIPCompressor)
+//	configurator := yarpcconfig.New()
+//	configurator.MustRegisterCompressor(GZIPCompressor)
 //
 // Then, using the compression strategy for outbound requests
 // on a particular client, just set the compressor to gzip.
 //
-//  outbounds:
-//    theirsecureservice:
-//      grpc:
-//        address: ":443"
-//        tls:
-//          enabled: true
-//        compressor: gzip
-//
+//	outbounds:
+//	  theirsecureservice:
+//	    grpc:
+//	      address: ":443"
+//	      tls:
+//	        enabled: true
+//	      compressor: gzip
 func New(opts ...Option) *Compressor {
 	c := &Compressor{
 		level: gzip.DefaultCompression,

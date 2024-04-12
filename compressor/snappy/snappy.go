@@ -42,45 +42,44 @@ type Option interface {
 // you must arrange for the compressor to be registered in your
 // application initialization.
 //
-//  import (
-//      "google.golang.org/grpc/encoding"
-//      "go.uber.org/yarpc/compressor/grpc"
-//      "go.uber.org/yarpc/compressor/snappy"
-//  )
+//	import (
+//	    "google.golang.org/grpc/encoding"
+//	    "go.uber.org/yarpc/compressor/grpc"
+//	    "go.uber.org/yarpc/compressor/snappy"
+//	)
 //
-//  var SnappyCompressor = yarpcsnappy.New()
+//	var SnappyCompressor = yarpcsnappy.New()
 //
-//  func init()
-//      sc := yarpcgrpccompressor.New(SnappyCompressor)
-//      encoding.RegisterCompressor(sc)
-//  }
+//	func init()
+//	    sc := yarpcgrpccompressor.New(SnappyCompressor)
+//	    encoding.RegisterCompressor(sc)
+//	}
 //
 // If you are constructing your YARPC clients directly through the API,
 // create a gRPC dialer with the Compressor option.
 //
-//  trans := grpc.NewTransport()
-//  dialer := trans.NewDialer(grpc.Compressor(SnappyCompressor))
-//  peers := roundrobin.New(dialer)
-//  outbound := trans.NewOutbound(peers)
+//	trans := grpc.NewTransport()
+//	dialer := trans.NewDialer(grpc.Compressor(SnappyCompressor))
+//	peers := roundrobin.New(dialer)
+//	outbound := trans.NewOutbound(peers)
 //
 // If you are using the YARPC configurator to create YARPC objects
 // using config files, you will also need to register the compressor
 // with your configurator.
 //
-//  configurator := yarpcconfig.New()
-//  configurator.MustRegisterCompressor(SnappyCompressor)
+//	configurator := yarpcconfig.New()
+//	configurator.MustRegisterCompressor(SnappyCompressor)
 //
 // Then, using the compression strategy for outbound requests
 // on a particular client, just set the compressor to snappy.
 //
-//  outbounds:
-//    theirsecureservice:
-//      grpc:
-//        address: ":443"
-//        tls:
-//          enabled: true
-//        compressor: snappy
-//
+//	outbounds:
+//	  theirsecureservice:
+//	    grpc:
+//	      address: ":443"
+//	      tls:
+//	        enabled: true
+//	      compressor: snappy
 func New(...Option) *Compressor {
 	return &Compressor{}
 }

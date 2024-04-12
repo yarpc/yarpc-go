@@ -36,62 +36,62 @@ import (
 // allowing transports to rely on these two pieces for peer selection and load
 // balancing.
 //
-// Format
+// # Format
 //
 // Peer chooser configuration may define only one of the following keys:
 // `peer`, `with`, or the name of any registered PeerListSpec.
 //
 // `peer` indicates that requests must be sent to a single peer.
 //
-// 	http:
-// 	  peer: 127.0.0.1:8080
+//	http:
+//	  peer: 127.0.0.1:8080
 //
 // Note that how this string is interpreted is transport-dependent.
 //
 // `with` specifies that a named peer chooser preset defined by the transport
 // should be used rather than defining one by hand in the configuration.
 //
-// 	# Given a dev-proxy preset on your TransportSpec,
-// 	http:
-// 	  with: dev-proxy
+//	# Given a dev-proxy preset on your TransportSpec,
+//	http:
+//	  with: dev-proxy
 //
 // If the name of a registered PeerListSpec is the key, an object specifying
 // the configuration parameters for the PeerListSpec is expected along with
 // the name of a known peer list updater and its configuration.
 //
-// 	# cfg.RegisterPeerList(roundrobin.Spec())
-// 	round-robin:
-// 	  peers:
-// 	    - 127.0.0.1:8080
-// 	    - 127.0.0.1:8081
+//	# cfg.RegisterPeerList(roundrobin.Spec())
+//	round-robin:
+//	  peers:
+//	    - 127.0.0.1:8080
+//	    - 127.0.0.1:8081
 //
 // In the example above, there are no configuration parameters for the round
 // robin peer list. The only remaining key is the name of the peer list
 // updater: `peers` which is just a static list of peers.
 //
-// Integration
+// # Integration
 //
 // To integrate peer choosers with your transport, embed this struct into your
 // outbound configuration.
 //
-// 	type myOutboundConfig struct {
-// 		config.PeerChooser
+//	type myOutboundConfig struct {
+//		config.PeerChooser
 //
-// 		Address string
-// 	}
+//		Address string
+//	}
 //
 // Then in your Build*Outbound function, use the PeerChooser.BuildPeerChooser
 // method to retrieve a peer chooser for your outbound. The following example
 // only works if your transport implements the peer.Transport interface.
 //
-// 	func buildOutbound(cfg *myOutboundConfig, t transport.Transport, k *config.Kit) (transport.UnaryOutbound, error) {
-// 		myTransport := t.(*MyTransport)
-// 		peerChooser, err := cfg.BuildPeerChooser(myTransport, hostport.Identify, k)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		return myTransport.NewOutbound(peerChooser), nil
-// 	}
+//	func buildOutbound(cfg *myOutboundConfig, t transport.Transport, k *config.Kit) (transport.UnaryOutbound, error) {
+//		myTransport := t.(*MyTransport)
+//		peerChooser, err := cfg.BuildPeerChooser(myTransport, hostport.Identify, k)
+//		if err != nil {
+//			return nil, err
+//		}
+//		return myTransport.NewOutbound(peerChooser), nil
+//	}
 //
 // The *config.Kit received by the Build*Outbound function MUST be passed to
 // the BuildPeerChooser function as-is.
@@ -221,16 +221,16 @@ func (pc PeerChooser) buildPeerChooser(transport peer.Transport, identify func(s
 //
 // For example, in
 //
-//   myoutbound:
-//     outboundopt1: ...
-//     outboundopt2: ...
-//     my-peer-list:
-//       ...
+//	myoutbound:
+//	  outboundopt1: ...
+//	  outboundopt2: ...
+//	  my-peer-list:
+//	    ...
 //
 // By the time getPeerListInfo is called, the map must only be,
 //
-//   my-peer-list:
-//     ...
+//	my-peer-list:
+//	  ...
 //
 // The name of the peer list (my-peer-list) is returned with the attributes
 // specified under that entry.
@@ -251,11 +251,11 @@ func getPeerListInfo(etc config.AttributeMap, kit *Kit) (name string, config con
 // buildPeerListUpdater builds the peer list updater given the peer list
 // configuration map. For example, we might get,
 //
-//   least-pending:
-//     failurePenalty: 5s
-//     dns:
-//       name: myservice.example.com
-//       record: A
+//	least-pending:
+//	  failurePenalty: 5s
+//	  dns:
+//	    name: myservice.example.com
+//	    record: A
 func buildPeerListUpdater(c config.AttributeMap, identify func(string) peer.Identifier, kit *Kit) (peer.Binder, error) {
 	// Special case for explicit list of peers.
 	var peers []string

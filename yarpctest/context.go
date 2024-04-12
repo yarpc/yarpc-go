@@ -48,9 +48,8 @@ type Call struct {
 // ContextWithCall builds a Context which will yield the provided request
 // metadata when used with yarpc.CallFromContext.
 //
-//  ctx := yarpctest.ContextWithCall(ctx, &Call{..})
-//  handler.GetValue(ctx, &Request{...})
-//
+//	ctx := yarpctest.ContextWithCall(ctx, &Call{..})
+//	handler.GetValue(ctx, &Request{...})
 func ContextWithCall(ctx context.Context, call *Call) context.Context {
 	if call == nil {
 		return ctx // no-op

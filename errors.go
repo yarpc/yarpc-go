@@ -25,10 +25,10 @@ import "go.uber.org/yarpc/yarpcerrors"
 // IsBadRequestError returns true on an error returned by RPC clients if the
 // request was rejected by YARPC because it was invalid.
 //
-// 	res, err := client.Call(...)
-// 	if yarpc.IsBadRequestError(err) {
-// 		fmt.Println("invalid request:", err)
-// 	}
+//	res, err := client.Call(...)
+//	if yarpc.IsBadRequestError(err) {
+//		fmt.Println("invalid request:", err)
+//	}
 //
 // Deprecated: use yarpcerrors.FromError(err).Code() == yarpcerrors.CodeInvalidArgument instead.
 func IsBadRequestError(err error) bool {
@@ -38,10 +38,10 @@ func IsBadRequestError(err error) bool {
 // IsUnexpectedError returns true on an error returned by RPC clients if the
 // server panicked or failed with an unhandled error.
 //
-// 	res, err := client.Call(...)
-// 	if yarpc.IsUnexpectedError(err) {
-// 		fmt.Println("internal server error:", err)
-// 	}
+//	res, err := client.Call(...)
+//	if yarpc.IsUnexpectedError(err) {
+//		fmt.Println("internal server error:", err)
+//	}
 //
 // Deprecated: use yarpcerrors.FromError(err).Code() == yarpcerrors.CodeInternal instead.
 func IsUnexpectedError(err error) bool {
@@ -51,10 +51,10 @@ func IsUnexpectedError(err error) bool {
 // IsTimeoutError returns true on an error returned by RPC clients if the given
 // error is a TimeoutError.
 //
-// 	res, err := client.Call(...)
-// 	if yarpc.IsTimeoutError(err) {
-// 		fmt.Println("request timed out:", err)
-// 	}
+//	res, err := client.Call(...)
+//	if yarpc.IsTimeoutError(err) {
+//		fmt.Println("request timed out:", err)
+//	}
 //
 // Deprecated: use yarpcerrors.FromError(err).Code() == yarpcerrors.CodeDeadlineExceeded instead.
 func IsTimeoutError(err error) bool {
