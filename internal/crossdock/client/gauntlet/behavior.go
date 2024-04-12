@@ -462,7 +462,6 @@ func RunGauntlet(t crossdock.T, c Config) {
 // $Function: $description: $message
 // $Service: $function: $message
 // $Service: $function: $description: $message
-//
 func BuildDesc(tt TT) string {
 	desc := tt.Function
 	if tt.Details != "" {
