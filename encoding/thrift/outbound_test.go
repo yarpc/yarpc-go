@@ -25,7 +25,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"io/ioutil"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -137,7 +136,7 @@ func TestClient(t *testing.T) {
 			},
 			wantError: `failed to decode "thrift" response body for procedure ` +
 				`"MyService::someMethod" of service "service": unexpected envelope type: Call`,
-			responseBody: ioutil.NopCloser(bytes.NewReader([]byte("irrelevant"))),
+			responseBody: io.NopCloser(bytes.NewReader([]byte("irrelevant"))),
 		},
 	}
 

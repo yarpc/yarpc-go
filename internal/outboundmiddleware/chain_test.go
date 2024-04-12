@@ -24,7 +24,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -93,7 +93,7 @@ func TestUnaryChain(t *testing.T) {
 				Body:      bytes.NewReader([]byte{1, 2, 3}),
 			}
 			res := &transport.Response{
-				Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6})),
+				Body: io.NopCloser(bytes.NewReader([]byte{4, 5, 6})),
 			}
 			o := transporttest.NewMockUnaryOutbound(mockCtrl)
 			o.EXPECT().Call(ctx, req).After(

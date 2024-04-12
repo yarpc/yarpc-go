@@ -23,7 +23,6 @@ package yarpctest
 import (
 	"context"
 	"io"
-	"io/ioutil"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/x/yarpctest/api"
@@ -81,7 +80,7 @@ func EchoHandlerWithPrefix(prefix string, mw ...api.UnaryInboundMiddleware) *typ
 func newEchoHandlerWithPrefix(prefix string) api.UnaryHandler {
 	return api.UnaryHandlerFunc(
 		func(_ context.Context, req *transport.Request, resw transport.ResponseWriter) error {
-			body, err := ioutil.ReadAll(req.Body)
+			body, err := io.ReadAll(req.Body)
 			if err != nil {
 				return err
 			}

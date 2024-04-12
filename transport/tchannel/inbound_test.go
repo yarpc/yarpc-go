@@ -23,7 +23,7 @@ package tchannel
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -131,7 +131,7 @@ func TestInboundSubServices(t *testing.T) {
 		if !assert.Equal(t, false, res.ApplicationError, "not application error") {
 			continue
 		}
-		body, err := ioutil.ReadAll(res.Body)
+		body, err := io.ReadAll(res.Body)
 		if !assert.NoError(t, err) {
 			continue
 		}
@@ -151,14 +151,14 @@ func (nopNativehandler) Handle(ctx context.Context, call *tchannel.InboundCall) 
 	if err != nil {
 		panic(err)
 	}
-	ioutil.ReadAll(reader)
+	io.ReadAll(reader)
 	reader.Close()
 
 	reader, err = call.Arg3Reader()
 	if err != nil {
 		panic(err)
 	}
-	ioutil.ReadAll(reader)
+	io.ReadAll(reader)
 	reader.Close()
 
 	writer, err := call.Response().Arg2Writer()
@@ -243,7 +243,7 @@ func TestInboundWithNativeHandlers(t *testing.T) {
 		)
 		require.NoError(t, err, "failed to make call")
 		require.False(t, res.ApplicationError, "not application error")
-		body, err := ioutil.ReadAll(res.Body)
+		body, err := io.ReadAll(res.Body)
 		require.NoError(t, err)
 		assert.Equal(t, string(body), tt.expectedResponse)
 	}
@@ -295,7 +295,7 @@ func TestArbitraryInboundServiceOutboundCallerName(t *testing.T) {
 			if !assert.NoError(t, err, "call success") {
 				return
 			}
-			resb, err := ioutil.ReadAll(res.Body)
+			resb, err := io.ReadAll(res.Body)
 			assert.NoError(t, err, "read response body")
 			assert.Equal(t, string(resb), tt.msg, "response echoed")
 		})

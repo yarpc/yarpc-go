@@ -38,7 +38,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -106,7 +105,7 @@ func run(args []string) error {
 		return fmt.Errorf("%q is not a subpackage of %q", importPath, rootImportPath)
 	}
 
-	covFile, err := ioutil.TempFile("" /* dir */, "coverage")
+	covFile, err := os.CreateTemp("" /* dir */, "coverage")
 	if err != nil {
 		return fmt.Errorf("failed to create temporary file: %v", err)
 	}

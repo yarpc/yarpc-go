@@ -25,7 +25,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"testing"
 	"time"
 
@@ -159,13 +159,13 @@ func matchResponse(actualResp *transport.Response, expectedResp *transport.Respo
 	var expectedBody []byte
 	var err error
 	if actualResp.Body != nil {
-		actualBody, err = ioutil.ReadAll(actualResp.Body)
+		actualBody, err = io.ReadAll(actualResp.Body)
 		if err != nil {
 			return fmt.Errorf("failed to read response body")
 		}
 	}
 	if expectedResp.Body != nil {
-		expectedBody, err = ioutil.ReadAll(expectedResp.Body)
+		expectedBody, err = io.ReadAll(expectedResp.Body)
 		if err != nil {
 			return fmt.Errorf("failed to read response body")
 		}
@@ -224,7 +224,7 @@ func WantError(errMsg string) api.RequestOption {
 // request.
 func WantRespBody(body string) api.RequestOption {
 	return api.RequestOptionFunc(func(opts *api.RequestOpts) {
-		opts.WantResponse.Body = ioutil.NopCloser(bytes.NewBufferString(body))
+		opts.WantResponse.Body = io.NopCloser(bytes.NewBufferString(body))
 	})
 }
 
@@ -234,7 +234,7 @@ func GiveAndWantLargeBodyIsEchoed(numOfBytes int) api.RequestOption {
 	return api.RequestOptionFunc(func(opts *api.RequestOpts) {
 		body := bytes.Repeat([]byte("t"), numOfBytes)
 		opts.GiveRequest.Body = bytes.NewReader(body)
-		opts.WantResponse.Body = ioutil.NopCloser(bytes.NewReader(body))
+		opts.WantResponse.Body = io.NopCloser(bytes.NewReader(body))
 	})
 }
 

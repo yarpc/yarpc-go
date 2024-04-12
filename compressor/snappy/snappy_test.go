@@ -22,7 +22,7 @@ package yarpcsnappy_test
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,7 +46,7 @@ func TestSnappy(t *testing.T) {
 	str, err := yarpcsnappy.New().Decompress(buf)
 	require.NoError(t, err)
 
-	output, err := ioutil.ReadAll(str)
+	output, err := io.ReadAll(str)
 	require.NoError(t, err)
 	require.NoError(t, str.Close())
 
@@ -67,7 +67,7 @@ func TestCompressionPooling(t *testing.T) {
 		str, err := compressor.Decompress(buf)
 		require.NoError(t, err)
 
-		output, err := ioutil.ReadAll(str)
+		output, err := io.ReadAll(str)
 		require.NoError(t, err)
 		require.NoError(t, str.Close())
 

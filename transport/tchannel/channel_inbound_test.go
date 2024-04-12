@@ -24,7 +24,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -241,7 +241,7 @@ func TestChannelInboundSubServices(t *testing.T) {
 		if !assert.Equal(t, false, res.ApplicationError, "not application error") {
 			continue
 		}
-		body, err := ioutil.ReadAll(res.Body)
+		body, err := io.ReadAll(res.Body)
 		if !assert.NoError(t, err) {
 			continue
 		}

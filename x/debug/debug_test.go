@@ -23,7 +23,7 @@ package debug
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -63,7 +63,7 @@ func TestHandler(t *testing.T) {
 	NewHandler(dispatcher, tmpl(_jsonTestTmpl))(responseRecorder, nil)
 
 	require.Equal(t, http.StatusOK, responseRecorder.Code)
-	data, err := ioutil.ReadAll(responseRecorder.Body)
+	data, err := io.ReadAll(responseRecorder.Body)
 	require.NoError(t, err)
 	require.Equal(t, string(expectedData), string(data))
 }

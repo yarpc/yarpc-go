@@ -23,7 +23,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"gopkg.in/yaml.v2"
@@ -47,7 +46,7 @@ type cmdConfig struct {
 }
 
 func newConfig(configFilePath string) (*config, error) {
-	data, err := ioutil.ReadFile(configFilePath)
+	data, err := os.ReadFile(configFilePath)
 	if err != nil {
 		return nil, err
 	}

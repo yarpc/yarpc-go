@@ -10,7 +10,8 @@ FILTER_GOVET := grep -v \
 
 # Regexes for 'staticcheck' rules to ignore
 FILTER_STATICCHECK := grep -v \
-	-e 'grpc.CallCustomCodec is deprecated: use ForceCodec instead'
+	-e 'grpc.CallCustomCodec is deprecated: use ForceCodec instead' \
+	-e '"io/ioutil" has been deprecated since Go 1.19'
 
 ERRCHECK_FLAGS := -ignoretests
 ERRCHECK_EXCLUDES := \.Close\(\) \.Stop\(\) fmt\.Fprint
@@ -85,9 +86,7 @@ govet: __eval_packages __eval_go_files ## check go vet
 .PHONY: golint
 golint: $(GOLINT) __eval_packages __eval_go_files ## check golint
 	$(eval LINT_LOG := $(shell mktemp -t golint.XXXXX))
-	@for pkg in $(PACKAGES); do \
-		PATH=$(BIN):$$PATH golint $$pkg | $(FILTER_LINT) >> $(LINT_LOG) || true; \
-	done
+	PATH=$(BIN):$$PATH golint $(PACKAGES) | $(FILTER_LINT) >> $(LINT_LOG) || true
 	@[ ! -s "$(LINT_LOG)" ] || (echo "golint failed:" | cat - $(LINT_LOG) && false)
 
 .PHONY: staticcheck
