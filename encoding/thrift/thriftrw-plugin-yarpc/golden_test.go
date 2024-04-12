@@ -216,12 +216,7 @@ nc %v %v
 }
 
 func thriftrw(args ...string) error {
-	root, err := filepath.Abs("../../..")
-	if err != nil {
-		return fmt.Errorf("failed to resolve absolute path to project root: %v", err)
-	}
-
-	cmd := exec.Command("go", append([]string{"run", "-mod=vendor", root + "/vendor/go.uber.org/thriftrw"}, args...)...)
+	cmd := exec.Command("thriftrw", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
