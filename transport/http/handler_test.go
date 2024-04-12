@@ -24,7 +24,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -93,7 +93,7 @@ func TestHandlerSuccess(t *testing.T) {
 	req := &http.Request{
 		Method: "POST",
 		Header: headers,
-		Body:   ioutil.NopCloser(bytes.NewReader([]byte("Nyuck Nyuck"))),
+		Body:   io.NopCloser(bytes.NewReader([]byte("Nyuck Nyuck"))),
 	}
 	rw := httptest.NewRecorder()
 	httpHandler.ServeHTTP(rw, req)
@@ -198,7 +198,7 @@ func TestHandlerHeaders(t *testing.T) {
 		req := &http.Request{
 			Method: "POST",
 			Header: headers,
-			Body:   ioutil.NopCloser(bytes.NewReader([]byte("world"))),
+			Body:   io.NopCloser(bytes.NewReader([]byte("world"))),
 		}
 		rw := httptest.NewRecorder()
 		httpHandler.ServeHTTP(rw, req)
@@ -282,7 +282,7 @@ func TestHandlerFailures(t *testing.T) {
 	for _, tt := range tests {
 		req := tt.req
 		if req.Body == nil {
-			req.Body = ioutil.NopCloser(bytes.NewReader([]byte{}))
+			req.Body = io.NopCloser(bytes.NewReader([]byte{}))
 		}
 
 		reg := transporttest.NewMockRouter(mockCtrl)
@@ -324,7 +324,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 	request := http.Request{
 		Method: "POST",
 		Header: headers,
-		Body:   ioutil.NopCloser(bytes.NewReader([]byte{})),
+		Body:   io.NopCloser(bytes.NewReader([]byte{})),
 	}
 
 	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)

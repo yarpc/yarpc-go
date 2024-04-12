@@ -23,7 +23,7 @@ package observability
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"io"
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
@@ -111,7 +111,7 @@ func (o fakeOutbound) Call(context.Context, *transport.Request) (*transport.Resp
 			Name:    o.applicationErrName,
 			Code:    o.applicationErrCode,
 		},
-		Body:     ioutil.NopCloser(bytes.NewReader(o.body)),
+		Body:     io.NopCloser(bytes.NewReader(o.body)),
 		BodySize: len(o.body)}, o.err
 }
 

@@ -24,7 +24,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -111,7 +111,7 @@ func TestCall(t *testing.T) {
 				}),
 		).Return(
 			&transport.Response{
-				Body:    ioutil.NopCloser(responseBody),
+				Body:    io.NopCloser(responseBody),
 				Headers: transport.HeadersFromMap(tt.wantHeaders),
 			}, tt.responseErr)
 

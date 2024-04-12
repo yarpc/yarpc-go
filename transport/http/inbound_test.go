@@ -25,7 +25,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -139,7 +138,7 @@ func TestInboundMux(t *testing.T) {
 	resp, err := http.Get(addr + "health")
 	if assert.NoError(t, err, "/health failed") {
 		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if assert.NoError(t, err, "/health body read error") {
 			assert.Equal(t, "healthy", string(body), "/health body mismatch")
 		}
@@ -187,7 +186,7 @@ func TestInboundMux(t *testing.T) {
 
 	if assert.NoError(t, err, "expected rpc request to succeed") {
 		defer res.Body.Close()
-		s, err := ioutil.ReadAll(res.Body)
+		s, err := io.ReadAll(res.Body)
 		if assert.NoError(t, err) {
 			assert.Empty(t, s)
 		}
@@ -386,7 +385,7 @@ func httpGet(t *testing.T, url string) (*http.Response, string, error) {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, "", fmt.Errorf("Failed to read reponse from %v: %v", url, err)
 	}

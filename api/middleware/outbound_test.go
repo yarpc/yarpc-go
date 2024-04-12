@@ -23,7 +23,7 @@ package middleware_test
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"go.uber.org/yarpc/api/middleware"
@@ -55,7 +55,7 @@ func TestUnaryNopOutboundMiddleware(t *testing.T) {
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}
 
-	res := &transport.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6}))}
+	res := &transport.Response{Body: io.NopCloser(bytes.NewReader([]byte{4, 5, 6}))}
 	o.EXPECT().Call(ctx, req).Return(res, nil)
 
 	got, err := wrappedO.Call(ctx, req)

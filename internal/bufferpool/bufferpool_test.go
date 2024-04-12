@@ -23,7 +23,6 @@ package bufferpool
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"strings"
 	"sync"
@@ -54,7 +53,7 @@ func TestBufferRead(t *testing.T) {
 	runTestWithBuffer(t, func(t *testing.T, buf *Buffer) {
 		io.WriteString(buf, "hello world")
 
-		got, err := ioutil.ReadAll(buf)
+		got, err := io.ReadAll(buf)
 		require.NoError(t, err, "Read failed")
 		assert.Equal(t, "hello world", string(got), "Unexpected read bytes")
 	})

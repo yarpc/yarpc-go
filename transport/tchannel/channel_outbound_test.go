@@ -22,7 +22,7 @@ package tchannel
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"sync"
 	"testing"
 	"time"
@@ -245,7 +245,7 @@ func TestChannelCallSuccess(t *testing.T) {
 					assert.True(t, ok, "value for foo expected")
 					assert.Equal(t, "bar", foo, "foo value mismatch")
 
-					body, err := ioutil.ReadAll(res.Body)
+					body, err := io.ReadAll(res.Body)
 					if assert.NoError(t, err, "failed to read response body") {
 						assert.Equal(t, []byte("great success"), body)
 					}
@@ -403,7 +403,7 @@ func TestChannelCallError(t *testing.T) {
 
 			assert.Equal(t, true, res.ApplicationError, "application error")
 
-			body, err := ioutil.ReadAll(res.Body)
+			body, err := io.ReadAll(res.Body)
 			if assert.NoError(t, err, "failed to read response body") {
 				assert.Equal(t, []byte("such fail"), body)
 			}

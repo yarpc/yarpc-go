@@ -23,7 +23,7 @@ package protobuf
 import (
 	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -44,7 +44,7 @@ func TestReadFromStreamDecodeError(t *testing.T) {
 
 	stream := transporttest.NewMockStreamCloser(mockCtrl)
 	stream.EXPECT().ReceiveMessage(ctx).Return(&transport.StreamMessage{
-		Body: ioutil.NopCloser(readErr{err: wantErr}),
+		Body: io.NopCloser(readErr{err: wantErr}),
 	}, nil)
 	stream.EXPECT().Request().Return(
 		&transport.StreamRequest{
