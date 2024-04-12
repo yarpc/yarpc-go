@@ -179,6 +179,7 @@ func NewAutoReleaseBuffer() AutoReleaseBuffer {
 	}
 }
 
+// Close returns the buffer to the pool.
 func (arb AutoReleaseBuffer) Close() error {
 	Put(arb.Buffer)
 	return nil
