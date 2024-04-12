@@ -1,8 +1,8 @@
-FROM golang:1.17
+FROM golang:1.21
 
 ENV SUPPRESS_DOCKER 1
 WORKDIR /yarpc
-RUN apt-get update -yq && apt-get install -yq jq unzip netcat
+RUN apt-get update -yq && apt-get install -yq jq unzip netcat-openbsd
 ADD dockerdeps.mk /yarpc/
 ADD etc/make/base.mk etc/make/deps.mk /yarpc/etc/make/
 RUN make -f dockerdeps.mk predeps
