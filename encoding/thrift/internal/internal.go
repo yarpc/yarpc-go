@@ -73,8 +73,8 @@ func ExceptionType_Values() []ExceptionType {
 // UnmarshalText tries to decode ExceptionType from a byte slice
 // containing its name.
 //
-//   var v ExceptionType
-//   err := v.UnmarshalText([]byte("UNKNOWN"))
+//	var v ExceptionType
+//	err := v.UnmarshalText([]byte("UNKNOWN"))
 func (v *ExceptionType) UnmarshalText(value []byte) error {
 	switch s := string(value); s {
 	case "UNKNOWN":
@@ -194,10 +194,10 @@ func (v ExceptionType) Ptr() *ExceptionType {
 
 // Encode encodes ExceptionType directly to bytes.
 //
-//   sWriter := BinaryStreamer.Writer(writer)
+//	sWriter := BinaryStreamer.Writer(writer)
 //
-//   var v ExceptionType
-//   return v.Encode(sWriter)
+//	var v ExceptionType
+//	return v.Encode(sWriter)
 func (v ExceptionType) Encode(sw stream.Writer) error {
 	return sw.WriteInt32(int32(v))
 }
@@ -214,16 +214,16 @@ func (v ExceptionType) ToWire() (wire.Value, error) {
 // FromWire deserializes ExceptionType from its Thrift-level
 // representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TI32)
-//   if err != nil {
-//     return ExceptionType(0), err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TI32)
+//	if err != nil {
+//	  return ExceptionType(0), err
+//	}
 //
-//   var v ExceptionType
-//   if err := v.FromWire(x); err != nil {
-//     return ExceptionType(0), err
-//   }
-//   return v, nil
+//	var v ExceptionType
+//	if err := v.FromWire(x); err != nil {
+//	  return ExceptionType(0), err
+//	}
+//	return v, nil
 func (v *ExceptionType) FromWire(w wire.Value) error {
 	*v = (ExceptionType)(w.GetI32())
 	return nil
@@ -231,13 +231,13 @@ func (v *ExceptionType) FromWire(w wire.Value) error {
 
 // Decode reads off the encoded ExceptionType directly off of the wire.
 //
-//   sReader := BinaryStreamer.Reader(reader)
+//	sReader := BinaryStreamer.Reader(reader)
 //
-//   var v ExceptionType
-//   if err := v.Decode(sReader); err != nil {
-//     return ExceptionType(0), err
-//   }
-//   return v, nil
+//	var v ExceptionType
+//	if err := v.Decode(sReader); err != nil {
+//	  return ExceptionType(0), err
+//	}
+//	return v, nil
 func (v *ExceptionType) Decode(sr stream.Reader) error {
 	i, err := sr.ReadInt32()
 	if err != nil {
@@ -369,14 +369,14 @@ type TApplicationException struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *TApplicationException) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -418,16 +418,16 @@ func _ExceptionType_Read(w wire.Value) (ExceptionType, error) {
 // An error is returned if we were unable to build a TApplicationException struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v TApplicationException
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v TApplicationException
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *TApplicationException) FromWire(w wire.Value) error {
 	var err error
 

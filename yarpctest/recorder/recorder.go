@@ -35,20 +35,22 @@
 // `testing.T` or compatible as argument.
 //
 // Example:
-//  func MyTest(t *testing.T) {
-//    dispatcher := yarpc.NewDispatcher(yarpc.Config{
-//    	Name: "...",
-//    	Outbounds: transport.Outbounds{
-//    		...
-//    	},
-//      OutboundMiddleware: yarpc.OutboundMiddleware {
-//    	  Unary: recorder.NewRecorder(t),
-//      },
-//    })
-//  }
+//
+//	func MyTest(t *testing.T) {
+//	  dispatcher := yarpc.NewDispatcher(yarpc.Config{
+//	  	Name: "...",
+//	  	Outbounds: transport.Outbounds{
+//	  		...
+//	  	},
+//	    OutboundMiddleware: yarpc.OutboundMiddleware {
+//	  	  Unary: recorder.NewRecorder(t),
+//	    },
+//	  })
+//	}
 //
 // Running the tests in append mode:
-//  $ go test -v ./... --recorder=append
+//
+//	$ go test -v ./... --recorder=append
 //
 // The recorded messages will be stored in
 // `./testdata/recordings/*.yaml`.

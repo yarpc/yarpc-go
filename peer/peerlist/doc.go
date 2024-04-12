@@ -33,19 +33,19 @@
 // strategy, returned by newRandomListImplementation(), implementing
 // peer.ListImplementation.
 //
-//   type List struct {
-//   	*peerlist.List
-//   }
+//	type List struct {
+//		*peerlist.List
+//	}
 //
-//   func New(transport peer.Transport) *List {
-//   	return &List{
-//   		List: peerlist.New(
-//   			"random",
-//   			transport,
-//   			newRandomListImplementation(),
-//   		),
-//   	}
-//   }
+//	func New(transport peer.Transport) *List {
+//		return &List{
+//			List: peerlist.New(
+//				"random",
+//				transport,
+//				newRandomListImplementation(),
+//			),
+//		}
+//	}
 //
 // The abstract peer list is designed to take responsibility for concurrently
 // communicating with three parties: the outbound (which sees it as a

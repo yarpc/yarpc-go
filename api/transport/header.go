@@ -32,9 +32,9 @@ func CanonicalizeHeaderKey(k string) string {
 
 // Headers is the transport-level representation of application headers.
 //
-// 	var headers transport.Headers
-// 	headers = headers.With("foo", "bar")
-// 	headers = headers.With("baz", "qux")
+//	var headers transport.Headers
+//	headers = headers.With("foo", "bar")
+//	headers = headers.With("baz", "qux")
 type Headers struct {
 	// This representation allows us to make zero-value valid
 	items map[string]string
@@ -65,7 +65,7 @@ func NewHeadersWithCapacity(capacity int) Headers {
 // as the original Headers so the returned Headers MUST always be used instead
 // of the original object.
 //
-// 	headers = headers.With("foo", "bar").With("baz", "qux")
+//	headers = headers.With("foo", "bar").With("baz", "qux")
 func (h Headers) With(k, v string) Headers {
 	if h.items == nil {
 		h.items = make(map[string]string)

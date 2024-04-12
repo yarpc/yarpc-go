@@ -52,9 +52,10 @@ type yarpcError interface{ YARPCError() *Status }
 // FromError returns the Status for the provided error.
 //
 // If the error:
-//  - is nil, return nil
-//  - is a 'Status', return the 'Status'
-//  - has a 'YARPCError() *Status' method, returns the 'Status'
+//   - is nil, return nil
+//   - is a 'Status', return the 'Status'
+//   - has a 'YARPCError() *Status' method, returns the 'Status'
+//
 // Otherwise, return a wrapped error with code 'CodeUnknown'.
 func FromError(err error) *Status {
 	if err == nil {

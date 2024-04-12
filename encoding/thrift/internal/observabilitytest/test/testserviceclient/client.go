@@ -44,7 +44,7 @@ type Interface interface {
 
 // New builds a new client for the TestService service.
 //
-// 	client := testserviceclient.New(dispatcher.ClientConfig("testservice"))
+//	client := testserviceclient.New(dispatcher.ClientConfig("testservice"))
 func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 	return client{
 		c: thrift.New(thrift.Config{

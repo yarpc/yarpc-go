@@ -23,12 +23,12 @@
 // files. The coverage is written to a coverage.txt file in the current
 // directory.
 //
-// Usage
+// # Usage
 //
 // Call cover with a list of one or more import paths of packages being
 // tested.
 //
-//   cover PKG ...
+//	cover PKG ...
 //
 // This must be run from the root of the project.
 package main

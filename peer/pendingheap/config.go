@@ -38,20 +38,20 @@ type Configuration struct {
 // implementation, making it possible to select the least recently chosen peer
 // with transports that use outbound peer list configuration (like HTTP).
 //
-//  cfg := yarpcconfig.New()
-//  cfg.MustRegisterPeerList(pendingheap.Spec())
+//	cfg := yarpcconfig.New()
+//	cfg.MustRegisterPeerList(pendingheap.Spec())
 //
 // This enables the pending heap peer list:
 //
-//  outbounds:
-//    otherservice:
-//      unary:
-//        http:
-//          url: https://host:port/rpc
-//          fewest-pending-requests:
-//            peers:
-//              - 127.0.0.1:8080
-//              - 127.0.0.1:8081
+//	outbounds:
+//	  otherservice:
+//	    unary:
+//	      http:
+//	        url: https://host:port/rpc
+//	        fewest-pending-requests:
+//	          peers:
+//	            - 127.0.0.1:8080
+//	            - 127.0.0.1:8081
 //
 // Other than a specific peer or peers list, use any peer list updater
 // registered with a yarpc Configurator.
@@ -60,11 +60,11 @@ type Configuration struct {
 // With fail-fast enabled, the peer list will return an error immediately if no
 // peers are available (connected) at the time the request is sent.
 //
-//  fewest-pending-requests:
-//    peers:
-//      - 127.0.0.1:8080
-//    capacity: 1
-//    failFast: true
+//	fewest-pending-requests:
+//	  peers:
+//	    - 127.0.0.1:8080
+//	  capacity: 1
+//	  failFast: true
 func Spec() yarpcconfig.PeerListSpec {
 	return SpecWithOptions()
 }

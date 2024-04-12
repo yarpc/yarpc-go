@@ -140,7 +140,7 @@ func WithChannel(ch Channel) TransportOption {
 // ListenAddr specifies the port the TChannel should listen on.  This defaults
 // to ":0" (all interfaces, OS-assigned port).
 //
-// 	transport := NewChannelTransport(ServiceName("myservice"), ListenAddr(":4040"))
+//	transport := NewChannelTransport(ServiceName("myservice"), ListenAddr(":4040"))
 //
 // This option has no effect if WithChannel was used and the TChannel was
 // already listening, and it is disallowed for transports constructed with the

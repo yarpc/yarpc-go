@@ -22,24 +22,24 @@
 //
 // To make outbound requests,
 //
-// 	client := raw.New(clientConfig)
-// 	resBody, err := client.Call(ctx, "submit", []byte{1, 2, 3})
+//	client := raw.New(clientConfig)
+//	resBody, err := client.Call(ctx, "submit", []byte{1, 2, 3})
 //
 // Use the Procedure function to build procedures to register against a
 // Router.
 //
-// 	func Submit(ctx context.Context, reqBody []byte) ([]byte, error) {
-// 		// ...
-// 	}
+//	func Submit(ctx context.Context, reqBody []byte) ([]byte, error) {
+//		// ...
+//	}
 //
-// 	dispatcher.Register(raw.Procedure("submit", Submit))
+//	dispatcher.Register(raw.Procedure("submit", Submit))
 //
 // Similarly, use the OnewayProcedure function to build procedures to register
 // against a Router.
 //
-// 	func RunTask(ctx context.Context, reqBody []byte) error {
-// 		// ...
-// 	}
+//	func RunTask(ctx context.Context, reqBody []byte) error {
+//		// ...
+//	}
 //
-// 	dispatcher.Register(raw.OnewayProcedure("RunTask", RunTask))
+//	dispatcher.Register(raw.OnewayProcedure("RunTask", RunTask))
 package raw

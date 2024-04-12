@@ -39,11 +39,11 @@ import (
 
 // Do is a helper function for protobuf plugins.
 //
-//   func main() {
-//     if err := protoplugin.Do(runner, os.Stdin, os.Stdout); err != nil {
-//       log.Fatal(err)
-//     }
-//   }
+//	func main() {
+//	  if err := protoplugin.Do(runner, os.Stdin, os.Stdout); err != nil {
+//	    log.Fatal(err)
+//	  }
+//	}
 func Do(runner Runner, reader io.Reader, writer io.Writer) error {
 	request, err := ReadRequest(reader)
 	if err != nil {

@@ -29,20 +29,20 @@ import (
 // peer chooser implementation, making it possible to select the least pending
 // peer with transports that use outbound peer list configuration (like HTTP).
 //
-//  cfg := yarpcconfig.New()
-//  cfg.MustRegisterPeerList(peerheap.Spec())
+//	cfg := yarpcconfig.New()
+//	cfg.MustRegisterPeerList(peerheap.Spec())
 //
 // This enables the least-pending peer list:
 //
-//  outbounds:
-//    otherservice:
-//      unary:
-//        http:
-//          url: https://host:port/rpc
-//          least-pending:
-//            peers:
-//              - 127.0.0.1:8080
-//              - 127.0.0.1:8081
+//	outbounds:
+//	  otherservice:
+//	    unary:
+//	      http:
+//	        url: https://host:port/rpc
+//	        least-pending:
+//	          peers:
+//	            - 127.0.0.1:8080
+//	            - 127.0.0.1:8081
 func Spec() yarpcconfig.PeerListSpec {
 	return yarpcconfig.PeerListSpec{
 		Name: "least-pending",

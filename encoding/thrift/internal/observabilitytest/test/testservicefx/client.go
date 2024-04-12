@@ -55,10 +55,10 @@ type Result struct {
 // Client provides a TestService client to an Fx application using the given name
 // for routing.
 //
-// 	fx.Provide(
-// 		testservicefx.Client("..."),
-// 		newHandler,
-// 	)
+//	fx.Provide(
+//		testservicefx.Client("..."),
+//		newHandler,
+//	)
 func Client(name string, opts ...thrift.ClientOption) interface{} {
 	return func(p Params) Result {
 		cc := p.Provider.ClientConfig(name)
