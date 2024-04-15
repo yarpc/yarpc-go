@@ -22,6 +22,7 @@ package bufferpool
 
 import (
 	"bytes"
+	cryptorand "crypto/rand"
 	"io"
 	"math/rand"
 	"strings"
@@ -124,8 +125,8 @@ func TestBuffers(t *testing.T) {
 		buf := Get()
 		assert.Zero(t, buf.Len(), "Expected truncated buffer")
 
-		bs := randBytes(rand.Intn(5000))
-		_, err := rand.Read(bs)
+		bs := make([]byte, rand.Intn(5000))
+		_, err := cryptorand.Read(bs)
 		assert.NoError(t, err, "Unexpected error from rand.Read")
 		_, err = buf.Write(bs)
 		assert.NoError(t, err, "Unexpected error from buffer.Write")
@@ -180,10 +181,4 @@ func runConcurrently(t *testing.T, f func()) {
 	}
 
 	wg.Wait()
-}
-
-func randBytes(n int) []byte {
-	buf := make([]byte, n)
-	rand.Read(buf)
-	return buf
 }
