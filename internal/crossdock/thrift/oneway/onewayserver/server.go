@@ -43,8 +43,8 @@ type Interface interface {
 // New prepares an implementation of the Oneway service for
 // registration.
 //
-// 	handler := OnewayHandler{}
-// 	dispatcher.Register(onewayserver.New(handler))
+//	handler := OnewayHandler{}
+//	dispatcher.Register(onewayserver.New(handler))
 func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	h := handler{impl}
 	service := thrift.Service{

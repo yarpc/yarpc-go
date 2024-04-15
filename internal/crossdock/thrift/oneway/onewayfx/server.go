@@ -51,12 +51,12 @@ type ServerResult struct {
 // Server provides procedures for Oneway to an Fx application. It expects a
 // onewayfx.Interface to be present in the container.
 //
-// 	fx.Provide(
-// 		func(h *MyOnewayHandler) onewayserver.Interface {
-// 			return h
-// 		},
-// 		onewayfx.Server(),
-// 	)
+//	fx.Provide(
+//		func(h *MyOnewayHandler) onewayserver.Interface {
+//			return h
+//		},
+//		onewayfx.Server(),
+//	)
 func Server(opts ...thrift.RegisterOption) interface{} {
 	return func(p ServerParams) ServerResult {
 		procedures := onewayserver.New(p.Handler, opts...)

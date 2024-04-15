@@ -51,7 +51,7 @@ type Interface interface {
 
 // New builds a new client for the KeyValue service.
 //
-// 	client := keyvalueclient.New(dispatcher.ClientConfig("keyvalue"))
+//	client := keyvalueclient.New(dispatcher.ClientConfig("keyvalue"))
 func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 	return client{
 		c: thrift.New(thrift.Config{

@@ -50,8 +50,8 @@ type Interface interface {
 // New prepares an implementation of the KeyValue service for
 // registration.
 //
-// 	handler := KeyValueHandler{}
-// 	dispatcher.Register(keyvalueserver.New(handler))
+//	handler := KeyValueHandler{}
+//	dispatcher.Register(keyvalueserver.New(handler))
 func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	h := handler{impl}
 	service := thrift.Service{

@@ -46,8 +46,8 @@ type _MockClientRecorder struct {
 
 // Build a new mock client for service ThriftTest.
 //
-// 	mockCtrl := gomock.NewController(t)
-// 	client := thrifttesttest.NewMockClient(mockCtrl)
+//	mockCtrl := gomock.NewController(t)
+//	client := thrifttesttest.NewMockClient(mockCtrl)
 //
 // Use EXPECT() to set expectations on the mock.
 func NewMockClient(ctrl *gomock.Controller) *MockClient {
@@ -66,8 +66,8 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().TestBinary(gomock.Any(), ...).Return(...)
-// 	... := client.TestBinary(...)
+//	client.EXPECT().TestBinary(gomock.Any(), ...).Return(...)
+//	... := client.TestBinary(...)
 func (m *MockClient) TestBinary(
 	ctx context.Context,
 	_Thing []byte,
@@ -99,8 +99,8 @@ func (mr *_MockClientRecorder) TestBinary(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().TestByte(gomock.Any(), ...).Return(...)
-// 	... := client.TestByte(...)
+//	client.EXPECT().TestByte(gomock.Any(), ...).Return(...)
+//	... := client.TestByte(...)
 func (m *MockClient) TestByte(
 	ctx context.Context,
 	_Thing *int8,
@@ -132,8 +132,8 @@ func (mr *_MockClientRecorder) TestByte(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().TestDouble(gomock.Any(), ...).Return(...)
-// 	... := client.TestDouble(...)
+//	client.EXPECT().TestDouble(gomock.Any(), ...).Return(...)
+//	... := client.TestDouble(...)
 func (m *MockClient) TestDouble(
 	ctx context.Context,
 	_Thing *float64,
@@ -165,8 +165,8 @@ func (mr *_MockClientRecorder) TestDouble(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().TestEnum(gomock.Any(), ...).Return(...)
-// 	... := client.TestEnum(...)
+//	client.EXPECT().TestEnum(gomock.Any(), ...).Return(...)
+//	... := client.TestEnum(...)
 func (m *MockClient) TestEnum(
 	ctx context.Context,
 	_Thing *gauntlet.Numberz,
@@ -198,8 +198,8 @@ func (mr *_MockClientRecorder) TestEnum(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().TestException(gomock.Any(), ...).Return(...)
-// 	... := client.TestException(...)
+//	client.EXPECT().TestException(gomock.Any(), ...).Return(...)
+//	... := client.TestException(...)
 func (m *MockClient) TestException(
 	ctx context.Context,
 	_Arg *string,
@@ -229,8 +229,8 @@ func (mr *_MockClientRecorder) TestException(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().TestI32(gomock.Any(), ...).Return(...)
-// 	... := client.TestI32(...)
+//	client.EXPECT().TestI32(gomock.Any(), ...).Return(...)
+//	... := client.TestI32(...)
 func (m *MockClient) TestI32(
 	ctx context.Context,
 	_Thing *int32,
@@ -262,8 +262,8 @@ func (mr *_MockClientRecorder) TestI32(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().TestI64(gomock.Any(), ...).Return(...)
-// 	... := client.TestI64(...)
+//	client.EXPECT().TestI64(gomock.Any(), ...).Return(...)
+//	... := client.TestI64(...)
 func (m *MockClient) TestI64(
 	ctx context.Context,
 	_Thing *int64,
@@ -295,8 +295,8 @@ func (mr *_MockClientRecorder) TestI64(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().TestInsanity(gomock.Any(), ...).Return(...)
-// 	... := client.TestInsanity(...)
+//	client.EXPECT().TestInsanity(gomock.Any(), ...).Return(...)
+//	... := client.TestInsanity(...)
 func (m *MockClient) TestInsanity(
 	ctx context.Context,
 	_Argument *gauntlet.Insanity,
@@ -328,8 +328,8 @@ func (mr *_MockClientRecorder) TestInsanity(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().TestList(gomock.Any(), ...).Return(...)
-// 	... := client.TestList(...)
+//	client.EXPECT().TestList(gomock.Any(), ...).Return(...)
+//	... := client.TestList(...)
 func (m *MockClient) TestList(
 	ctx context.Context,
 	_Thing []int32,
@@ -361,8 +361,8 @@ func (mr *_MockClientRecorder) TestList(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().TestMap(gomock.Any(), ...).Return(...)
-// 	... := client.TestMap(...)
+//	client.EXPECT().TestMap(gomock.Any(), ...).Return(...)
+//	... := client.TestMap(...)
 func (m *MockClient) TestMap(
 	ctx context.Context,
 	_Thing map[int32]int32,
@@ -394,8 +394,8 @@ func (mr *_MockClientRecorder) TestMap(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().TestMapMap(gomock.Any(), ...).Return(...)
-// 	... := client.TestMapMap(...)
+//	client.EXPECT().TestMapMap(gomock.Any(), ...).Return(...)
+//	... := client.TestMapMap(...)
 func (m *MockClient) TestMapMap(
 	ctx context.Context,
 	_Hello *int32,
@@ -427,8 +427,8 @@ func (mr *_MockClientRecorder) TestMapMap(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().TestMulti(gomock.Any(), ...).Return(...)
-// 	... := client.TestMulti(...)
+//	client.EXPECT().TestMulti(gomock.Any(), ...).Return(...)
+//	... := client.TestMulti(...)
 func (m *MockClient) TestMulti(
 	ctx context.Context,
 	_Arg0 *int8,
@@ -470,8 +470,8 @@ func (mr *_MockClientRecorder) TestMulti(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().TestMultiException(gomock.Any(), ...).Return(...)
-// 	... := client.TestMultiException(...)
+//	client.EXPECT().TestMultiException(gomock.Any(), ...).Return(...)
+//	... := client.TestMultiException(...)
 func (m *MockClient) TestMultiException(
 	ctx context.Context,
 	_Arg0 *string,
@@ -505,8 +505,8 @@ func (mr *_MockClientRecorder) TestMultiException(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().TestNest(gomock.Any(), ...).Return(...)
-// 	... := client.TestNest(...)
+//	client.EXPECT().TestNest(gomock.Any(), ...).Return(...)
+//	... := client.TestNest(...)
 func (m *MockClient) TestNest(
 	ctx context.Context,
 	_Thing *gauntlet.Xtruct2,
@@ -538,8 +538,8 @@ func (mr *_MockClientRecorder) TestNest(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().TestOneway(gomock.Any(), ...).Return(...)
-// 	... := client.TestOneway(...)
+//	client.EXPECT().TestOneway(gomock.Any(), ...).Return(...)
+//	... := client.TestOneway(...)
 func (m *MockClient) TestOneway(
 	ctx context.Context,
 	_SecondsToSleep *int32,
@@ -571,8 +571,8 @@ func (mr *_MockClientRecorder) TestOneway(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().TestSet(gomock.Any(), ...).Return(...)
-// 	... := client.TestSet(...)
+//	client.EXPECT().TestSet(gomock.Any(), ...).Return(...)
+//	... := client.TestSet(...)
 func (m *MockClient) TestSet(
 	ctx context.Context,
 	_Thing map[int32]struct{},
@@ -604,8 +604,8 @@ func (mr *_MockClientRecorder) TestSet(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().TestString(gomock.Any(), ...).Return(...)
-// 	... := client.TestString(...)
+//	client.EXPECT().TestString(gomock.Any(), ...).Return(...)
+//	... := client.TestString(...)
 func (m *MockClient) TestString(
 	ctx context.Context,
 	_Thing *string,
@@ -637,8 +637,8 @@ func (mr *_MockClientRecorder) TestString(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().TestStringMap(gomock.Any(), ...).Return(...)
-// 	... := client.TestStringMap(...)
+//	client.EXPECT().TestStringMap(gomock.Any(), ...).Return(...)
+//	... := client.TestStringMap(...)
 func (m *MockClient) TestStringMap(
 	ctx context.Context,
 	_Thing map[string]string,
@@ -670,8 +670,8 @@ func (mr *_MockClientRecorder) TestStringMap(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().TestStruct(gomock.Any(), ...).Return(...)
-// 	... := client.TestStruct(...)
+//	client.EXPECT().TestStruct(gomock.Any(), ...).Return(...)
+//	... := client.TestStruct(...)
 func (m *MockClient) TestStruct(
 	ctx context.Context,
 	_Thing *gauntlet.Xtruct,
@@ -703,8 +703,8 @@ func (mr *_MockClientRecorder) TestStruct(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().TestTypedef(gomock.Any(), ...).Return(...)
-// 	... := client.TestTypedef(...)
+//	client.EXPECT().TestTypedef(gomock.Any(), ...).Return(...)
+//	... := client.TestTypedef(...)
 func (m *MockClient) TestTypedef(
 	ctx context.Context,
 	_Thing *gauntlet.UserId,
@@ -736,8 +736,8 @@ func (mr *_MockClientRecorder) TestTypedef(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().TestVoid(gomock.Any(), ...).Return(...)
-// 	... := client.TestVoid(...)
+//	client.EXPECT().TestVoid(gomock.Any(), ...).Return(...)
+//	... := client.TestVoid(...)
 func (m *MockClient) TestVoid(
 	ctx context.Context,
 	opts ...yarpc.CallOption,

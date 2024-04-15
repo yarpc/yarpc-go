@@ -44,7 +44,7 @@ type Interface interface {
 
 // New builds a new client for the Echo service.
 //
-// 	client := echoclient.New(dispatcher.ClientConfig("echo"))
+//	client := echoclient.New(dispatcher.ClientConfig("echo"))
 func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 	return client{
 		c: thrift.New(thrift.Config{

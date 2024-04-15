@@ -46,8 +46,8 @@ type _MockClientRecorder struct {
 
 // Build a new mock client for service Echo.
 //
-// 	mockCtrl := gomock.NewController(t)
-// 	client := echotest.NewMockClient(mockCtrl)
+//	mockCtrl := gomock.NewController(t)
+//	client := echotest.NewMockClient(mockCtrl)
 //
 // Use EXPECT() to set expectations on the mock.
 func NewMockClient(ctrl *gomock.Controller) *MockClient {
@@ -66,8 +66,8 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().Echo(gomock.Any(), ...).Return(...)
-// 	... := client.Echo(...)
+//	client.EXPECT().Echo(gomock.Any(), ...).Return(...)
+//	... := client.Echo(...)
 func (m *MockClient) Echo(
 	ctx context.Context,
 	_Ping *echo.Ping,

@@ -51,12 +51,12 @@ type ServerResult struct {
 // Server provides procedures for Hello to an Fx application. It expects a
 // hellofx.Interface to be present in the container.
 //
-// 	fx.Provide(
-// 		func(h *MyHelloHandler) helloserver.Interface {
-// 			return h
-// 		},
-// 		hellofx.Server(),
-// 	)
+//	fx.Provide(
+//		func(h *MyHelloHandler) helloserver.Interface {
+//			return h
+//		},
+//		hellofx.Server(),
+//	)
 func Server(opts ...thrift.RegisterOption) interface{} {
 	return func(p ServerParams) ServerResult {
 		procedures := helloserver.New(p.Handler, opts...)
