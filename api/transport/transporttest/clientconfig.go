@@ -25,35 +25,36 @@
 package transporttest
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	transport "go.uber.org/yarpc/api/transport"
-	reflect "reflect"
 )
 
-// MockClientConfig is a mock of ClientConfig interface
+// MockClientConfig is a mock of ClientConfig interface.
 type MockClientConfig struct {
 	ctrl     *gomock.Controller
 	recorder *MockClientConfigMockRecorder
 }
 
-// MockClientConfigMockRecorder is the mock recorder for MockClientConfig
+// MockClientConfigMockRecorder is the mock recorder for MockClientConfig.
 type MockClientConfigMockRecorder struct {
 	mock *MockClientConfig
 }
 
-// NewMockClientConfig creates a new mock instance
+// NewMockClientConfig creates a new mock instance.
 func NewMockClientConfig(ctrl *gomock.Controller) *MockClientConfig {
 	mock := &MockClientConfig{ctrl: ctrl}
 	mock.recorder = &MockClientConfigMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockClientConfig) EXPECT() *MockClientConfigMockRecorder {
 	return m.recorder
 }
 
-// Caller mocks base method
+// Caller mocks base method.
 func (m *MockClientConfig) Caller() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Caller")
@@ -61,13 +62,13 @@ func (m *MockClientConfig) Caller() string {
 	return ret0
 }
 
-// Caller indicates an expected call of Caller
+// Caller indicates an expected call of Caller.
 func (mr *MockClientConfigMockRecorder) Caller() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Caller", reflect.TypeOf((*MockClientConfig)(nil).Caller))
 }
 
-// GetOnewayOutbound mocks base method
+// GetOnewayOutbound mocks base method.
 func (m *MockClientConfig) GetOnewayOutbound() transport.OnewayOutbound {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetOnewayOutbound")
@@ -75,13 +76,13 @@ func (m *MockClientConfig) GetOnewayOutbound() transport.OnewayOutbound {
 	return ret0
 }
 
-// GetOnewayOutbound indicates an expected call of GetOnewayOutbound
+// GetOnewayOutbound indicates an expected call of GetOnewayOutbound.
 func (mr *MockClientConfigMockRecorder) GetOnewayOutbound() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOnewayOutbound", reflect.TypeOf((*MockClientConfig)(nil).GetOnewayOutbound))
 }
 
-// GetUnaryOutbound mocks base method
+// GetUnaryOutbound mocks base method.
 func (m *MockClientConfig) GetUnaryOutbound() transport.UnaryOutbound {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetUnaryOutbound")
@@ -89,13 +90,13 @@ func (m *MockClientConfig) GetUnaryOutbound() transport.UnaryOutbound {
 	return ret0
 }
 
-// GetUnaryOutbound indicates an expected call of GetUnaryOutbound
+// GetUnaryOutbound indicates an expected call of GetUnaryOutbound.
 func (mr *MockClientConfigMockRecorder) GetUnaryOutbound() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnaryOutbound", reflect.TypeOf((*MockClientConfig)(nil).GetUnaryOutbound))
 }
 
-// Service mocks base method
+// Service mocks base method.
 func (m *MockClientConfig) Service() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Service")
@@ -103,36 +104,36 @@ func (m *MockClientConfig) Service() string {
 	return ret0
 }
 
-// Service indicates an expected call of Service
+// Service indicates an expected call of Service.
 func (mr *MockClientConfigMockRecorder) Service() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockClientConfig)(nil).Service))
 }
 
-// MockClientConfigProvider is a mock of ClientConfigProvider interface
+// MockClientConfigProvider is a mock of ClientConfigProvider interface.
 type MockClientConfigProvider struct {
 	ctrl     *gomock.Controller
 	recorder *MockClientConfigProviderMockRecorder
 }
 
-// MockClientConfigProviderMockRecorder is the mock recorder for MockClientConfigProvider
+// MockClientConfigProviderMockRecorder is the mock recorder for MockClientConfigProvider.
 type MockClientConfigProviderMockRecorder struct {
 	mock *MockClientConfigProvider
 }
 
-// NewMockClientConfigProvider creates a new mock instance
+// NewMockClientConfigProvider creates a new mock instance.
 func NewMockClientConfigProvider(ctrl *gomock.Controller) *MockClientConfigProvider {
 	mock := &MockClientConfigProvider{ctrl: ctrl}
 	mock.recorder = &MockClientConfigProviderMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockClientConfigProvider) EXPECT() *MockClientConfigProviderMockRecorder {
 	return m.recorder
 }
 
-// ClientConfig mocks base method
+// ClientConfig mocks base method.
 func (m *MockClientConfigProvider) ClientConfig(arg0 string) transport.ClientConfig {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ClientConfig", arg0)
@@ -140,7 +141,7 @@ func (m *MockClientConfigProvider) ClientConfig(arg0 string) transport.ClientCon
 	return ret0
 }
 
-// ClientConfig indicates an expected call of ClientConfig
+// ClientConfig indicates an expected call of ClientConfig.
 func (mr *MockClientConfigProviderMockRecorder) ClientConfig(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClientConfig", reflect.TypeOf((*MockClientConfigProvider)(nil).ClientConfig), arg0)
