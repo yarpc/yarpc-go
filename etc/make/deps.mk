@@ -11,13 +11,13 @@ GEN_GO_BIN_DEPS = \
 # List of vendored go executables needed for linting. These are not installed
 # automatically and must be requested by $(BIN)/$(basename importPath).
 LINT_DEPS = \
-	github.com/kisielk/errcheck \
 	golang.org/x/lint/golint \
 	honnef.co/go/tools/cmd/staticcheck
 
 THRIFT_VERSION := 1.0.0-dev
 PROTOC_VERSION := 3.5.1
 RAGEL_VERSION := 6.10
+ERRCHECK_VERSION := 1.7.0
 
 THRIFT_OS := $(UNAME_OS)
 PROTOC_OS := $(UNAME_OS)
@@ -71,6 +71,10 @@ $(PROTOC): $(PROTOC_ZIP)
 	@mkdir -p $(BIN)
 	cd $(PROTOC_LIB); unzip $(PROTOC_ZIP)
 	cp $(PROTOC_LIB)/bin/protoc $(PROTOC)
+
+$(BIN)/errcheck:
+	@mkdir -p $(BIN)
+	@GOBIN=$(BIN) go install "github.com/kisielk/errcheck@v$(ERRCHECK_VERSION)"
 
 define generatedeprule
 GEN_BINS += $(BIN)/$(shell basename $1)
