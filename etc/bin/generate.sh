@@ -92,65 +92,97 @@ strip_thrift_warnings() {
   grep -v '^\[WARNING:.*emphasize the signedness' | sed '/^\s*$/d'
 }
 
-mockgen -destination=api/middleware/middlewaretest/router.go -package=middlewaretest go.uber.org/yarpc/api/middleware Router,UnaryInbound,UnaryOutbound,OnewayInbound,OnewayOutbound,StreamInbound,StreamOutbound
-mockgen -destination=api/peer/peertest/list.go -package=peertest go.uber.org/yarpc/api/peer Chooser,List,ChooserList
-mockgen -destination=api/peer/peertest/peer.go -package=peertest go.uber.org/yarpc/api/peer Identifier,Peer
-mockgen -destination=api/peer/peertest/transport.go -package=peertest go.uber.org/yarpc/api/peer Transport,Subscriber
-mockgen -destination=api/transport/transporttest/clientconfig.go -package=transporttest go.uber.org/yarpc/api/transport ClientConfig,ClientConfigProvider
-mockgen -destination=api/transport/transporttest/handler.go -package=transporttest go.uber.org/yarpc/api/transport UnaryHandler,OnewayHandler,StreamHandler
-mockgen -destination=api/transport/transporttest/inbound.go -package=transporttest go.uber.org/yarpc/api/transport Inbound
-mockgen -destination=api/transport/transporttest/outbound.go -package=transporttest go.uber.org/yarpc/api/transport UnaryOutbound,OnewayOutbound,StreamOutbound
-mockgen -destination=api/transport/transporttest/router.go -package=transporttest go.uber.org/yarpc/api/transport Router,RouteTable
-mockgen -destination=api/transport/transporttest/stream.go -package=transporttest go.uber.org/yarpc/api/transport Stream,StreamCloser
-mockgen -destination=api/transport/transporttest/transport.go -package=transporttest go.uber.org/yarpc/api/transport Transport
+generate_with_mockgen() {
+  mockgen -destination=api/middleware/middlewaretest/router.go -package=middlewaretest go.uber.org/yarpc/api/middleware Router,UnaryInbound,UnaryOutbound,OnewayInbound,OnewayOutbound,StreamInbound,StreamOutbound
+  mockgen -destination=api/peer/peertest/list.go -package=peertest go.uber.org/yarpc/api/peer Chooser,List,ChooserList
+  mockgen -destination=api/peer/peertest/peer.go -package=peertest go.uber.org/yarpc/api/peer Identifier,Peer
+  mockgen -destination=api/peer/peertest/transport.go -package=peertest go.uber.org/yarpc/api/peer Transport,Subscriber
+  mockgen -destination=api/transport/transporttest/clientconfig.go -package=transporttest go.uber.org/yarpc/api/transport ClientConfig,ClientConfigProvider
+  mockgen -destination=api/transport/transporttest/handler.go -package=transporttest go.uber.org/yarpc/api/transport UnaryHandler,OnewayHandler,StreamHandler
+  mockgen -destination=api/transport/transporttest/inbound.go -package=transporttest go.uber.org/yarpc/api/transport Inbound
+  mockgen -destination=api/transport/transporttest/outbound.go -package=transporttest go.uber.org/yarpc/api/transport UnaryOutbound,OnewayOutbound,StreamOutbound
+  mockgen -destination=api/transport/transporttest/router.go -package=transporttest go.uber.org/yarpc/api/transport Router,RouteTable
+  mockgen -destination=api/transport/transporttest/stream.go -package=transporttest go.uber.org/yarpc/api/transport Stream,StreamCloser
+  mockgen -destination=api/transport/transporttest/transport.go -package=transporttest go.uber.org/yarpc/api/transport Transport
+}
 
-generate_stringer ConnectionStatus ./api/peer
-generate_stringer State ./pkg/lifecycle
-generate_stringer Type ./api/transport
-generate_stringer Mode ./api/transport/tls
+generate_with_stringer() {
+  generate_stringer ConnectionStatus ./api/peer
+  generate_stringer State ./pkg/lifecycle
+  generate_stringer Type ./api/transport
+  generate_stringer Mode ./api/transport/tls
+}
 
-thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/crossdock/thrift --out=internal/crossdock/thrift internal/crossdock/thrift/echo.thrift
-thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/crossdock/thrift --out=internal/crossdock/thrift internal/crossdock/thrift/oneway.thrift
-thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/crossdock/thrift --out=internal/crossdock/thrift internal/crossdock/thrift/gauntlet.thrift
-thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/examples/thrift-oneway --out=internal/examples/thrift-oneway internal/examples/thrift-oneway/sink.thrift
-thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/examples/thrift-hello/hello --out=internal/examples/thrift-hello/hello internal/examples/thrift-hello/hello/echo.thrift
-thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue --out=internal/examples/thrift-keyvalue/keyvalue internal/examples/thrift-keyvalue/keyvalue/kv.thrift
-thriftrw --pkg-prefix=go.uber.org/yarpc/encoding/thrift --out=encoding/thrift encoding/thrift/internal.thrift
-thriftrw --pkg-prefix=go.uber.org/yarpc/serialize --out=serialize serialize/internal.thrift
+generate_with_thriftrw() {
+  thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/crossdock/thrift --out=internal/crossdock/thrift internal/crossdock/thrift/echo.thrift
+  thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/crossdock/thrift --out=internal/crossdock/thrift internal/crossdock/thrift/oneway.thrift
+  thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/crossdock/thrift --out=internal/crossdock/thrift internal/crossdock/thrift/gauntlet.thrift
+  thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/examples/thrift-oneway --out=internal/examples/thrift-oneway internal/examples/thrift-oneway/sink.thrift
+  thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/examples/thrift-hello/hello --out=internal/examples/thrift-hello/hello internal/examples/thrift-hello/hello/echo.thrift
+  thriftrw --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue --out=internal/examples/thrift-keyvalue/keyvalue internal/examples/thrift-keyvalue/keyvalue/kv.thrift
+  thriftrw --pkg-prefix=go.uber.org/yarpc/encoding/thrift --out=encoding/thrift encoding/thrift/internal.thrift
+  thriftrw --pkg-prefix=go.uber.org/yarpc/serialize --out=serialize serialize/internal.thrift
 
-thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends.thrift
-thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common.thrift
-thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic.thrift
-thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/NOSERVICES.thrift
-thriftrw --no-recurse --plugin="yarpc --sanitize-tchannel" --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather.thrift
-thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/internal/observabilitytest --out=encoding/thrift/internal/observabilitytest encoding/thrift/internal/observabilitytest/test.thrift
+  thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends.thrift
+  thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common.thrift
+  thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic.thrift
+  thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/NOSERVICES.thrift
+  thriftrw --no-recurse --plugin="yarpc --sanitize-tchannel" --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather.thrift
+  thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/internal/observabilitytest --out=encoding/thrift/internal/observabilitytest encoding/thrift/internal/observabilitytest/test.thrift
+}
 
-thrift-gen --generateThrift --outputDir internal/crossdock/thrift/gen-go --inputFile internal/crossdock/thrift/echo.thrift
-thrift-gen --generateThrift --outputDir internal/crossdock/thrift/gen-go --inputFile internal/crossdock/thrift/gauntlet_tchannel.thrift | strip_thrift_warnings
+generate_with_thriftrw_gen() {
+  thrift-gen --generateThrift --outputDir internal/crossdock/thrift/gen-go --inputFile internal/crossdock/thrift/echo.thrift
+  thrift-gen --generateThrift --outputDir internal/crossdock/thrift/gen-go --inputFile internal/crossdock/thrift/gauntlet_tchannel.thrift | strip_thrift_warnings
+}
 
-thrift --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift --out internal/crossdock/thrift/gen-go internal/crossdock/thrift/gauntlet_apache.thrift | strip_thrift_warnings
+generate_with_thrift() {
+  thrift --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift --out internal/crossdock/thrift/gen-go internal/crossdock/thrift/gauntlet_apache.thrift | strip_thrift_warnings
+}
 
-protoc_all encoding/protobuf/internal/testpb/test.proto
-protoc_all internal/examples/protobuf/examplepb/example.proto
-protoc_all internal/crossdock/crossdockpb/crossdock.proto
-protoc_all internal/examples/streaming/stream.proto
-protoc_all internal/prototest/examplepb/example.proto
+generate_with_protoc_all() {
+  protoc_all encoding/protobuf/internal/testpb/test.proto
+  protoc_all internal/examples/protobuf/examplepb/example.proto
+  protoc_all internal/crossdock/crossdockpb/crossdock.proto
+  protoc_all internal/examples/streaming/stream.proto
+  protoc_all internal/prototest/examplepb/example.proto
+}
 
-protoc_all_v2 encoding/protobuf/internal/testpb/v2/test.proto
+generate_with_protoc_all_v2() {
+  protoc_all_v2 encoding/protobuf/internal/testpb/v2/test.proto
+}
 
-ragel -Z -G2 -o internal/interpolate/parse.go internal/interpolate/parse.rl
-gofmt -s -w internal/interpolate/parse.go
-generated_by_ragel internal/interpolate/parse.go
+generate_with_ragel() {
+  ragel -Z -G2 -o internal/interpolate/parse.go internal/interpolate/parse.rl
+  gofmt -s -w internal/interpolate/parse.go
+  generated_by_ragel internal/interpolate/parse.go
+}
 
-touch internal/crossdock/thrift/gen-go/echo/.nocover
-touch internal/crossdock/thrift/gen-go/gauntlet_apache/.nocover
-touch internal/crossdock/thrift/gen-go/gauntlet_tchannel/.nocover
+final_cleanup() {
+  touch internal/crossdock/thrift/gen-go/echo/.nocover
+  touch internal/crossdock/thrift/gen-go/gauntlet_apache/.nocover
+  touch internal/crossdock/thrift/gen-go/gauntlet_tchannel/.nocover
 
-rm -rf internal/crossdock/thrift/gen-go/gauntlet_apache/second_service-remote # generated and not needed
-rm -rf internal/crossdock/thrift/gen-go/gauntlet_apache/thrift_test-remote # generated and not needed
+  rm -rf internal/crossdock/thrift/gen-go/gauntlet_apache/second_service-remote # generated and not needed
+  rm -rf internal/crossdock/thrift/gen-go/gauntlet_apache/thrift_test-remote # generated and not needed
 
-etc/bin/update-licenses.sh
-etc/bin/generate-cover-ignore.sh
+  etc/bin/update-licenses.sh
+  etc/bin/generate-cover-ignore.sh
 
-rm -f .dockerignore
-cat .gitignore | sed 's/^\///' > .dockerignore
+  rm -f .dockerignore
+  cat .gitignore | sed 's/^\///' > .dockerignore
+}
+
+main() {
+  generate_with_mockgen
+  generate_with_stringer
+  generate_with_thriftrw
+  generate_with_thriftrw_gen
+  generate_with_thrift
+  generate_with_protoc_all
+  generate_with_protoc_all_v2
+  generate_with_ragel
+  final_cleanup
+}
+
+main "$@"
