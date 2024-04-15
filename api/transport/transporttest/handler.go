@@ -26,35 +26,36 @@ package transporttest
 
 import (
 	context "context"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	transport "go.uber.org/yarpc/api/transport"
-	reflect "reflect"
 )
 
-// MockUnaryHandler is a mock of UnaryHandler interface
+// MockUnaryHandler is a mock of UnaryHandler interface.
 type MockUnaryHandler struct {
 	ctrl     *gomock.Controller
 	recorder *MockUnaryHandlerMockRecorder
 }
 
-// MockUnaryHandlerMockRecorder is the mock recorder for MockUnaryHandler
+// MockUnaryHandlerMockRecorder is the mock recorder for MockUnaryHandler.
 type MockUnaryHandlerMockRecorder struct {
 	mock *MockUnaryHandler
 }
 
-// NewMockUnaryHandler creates a new mock instance
+// NewMockUnaryHandler creates a new mock instance.
 func NewMockUnaryHandler(ctrl *gomock.Controller) *MockUnaryHandler {
 	mock := &MockUnaryHandler{ctrl: ctrl}
 	mock.recorder = &MockUnaryHandlerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockUnaryHandler) EXPECT() *MockUnaryHandlerMockRecorder {
 	return m.recorder
 }
 
-// Handle mocks base method
+// Handle mocks base method.
 func (m *MockUnaryHandler) Handle(arg0 context.Context, arg1 *transport.Request, arg2 transport.ResponseWriter) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Handle", arg0, arg1, arg2)
@@ -62,36 +63,36 @@ func (m *MockUnaryHandler) Handle(arg0 context.Context, arg1 *transport.Request,
 	return ret0
 }
 
-// Handle indicates an expected call of Handle
+// Handle indicates an expected call of Handle.
 func (mr *MockUnaryHandlerMockRecorder) Handle(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Handle", reflect.TypeOf((*MockUnaryHandler)(nil).Handle), arg0, arg1, arg2)
 }
 
-// MockOnewayHandler is a mock of OnewayHandler interface
+// MockOnewayHandler is a mock of OnewayHandler interface.
 type MockOnewayHandler struct {
 	ctrl     *gomock.Controller
 	recorder *MockOnewayHandlerMockRecorder
 }
 
-// MockOnewayHandlerMockRecorder is the mock recorder for MockOnewayHandler
+// MockOnewayHandlerMockRecorder is the mock recorder for MockOnewayHandler.
 type MockOnewayHandlerMockRecorder struct {
 	mock *MockOnewayHandler
 }
 
-// NewMockOnewayHandler creates a new mock instance
+// NewMockOnewayHandler creates a new mock instance.
 func NewMockOnewayHandler(ctrl *gomock.Controller) *MockOnewayHandler {
 	mock := &MockOnewayHandler{ctrl: ctrl}
 	mock.recorder = &MockOnewayHandlerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockOnewayHandler) EXPECT() *MockOnewayHandlerMockRecorder {
 	return m.recorder
 }
 
-// HandleOneway mocks base method
+// HandleOneway mocks base method.
 func (m *MockOnewayHandler) HandleOneway(arg0 context.Context, arg1 *transport.Request) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "HandleOneway", arg0, arg1)
@@ -99,36 +100,36 @@ func (m *MockOnewayHandler) HandleOneway(arg0 context.Context, arg1 *transport.R
 	return ret0
 }
 
-// HandleOneway indicates an expected call of HandleOneway
+// HandleOneway indicates an expected call of HandleOneway.
 func (mr *MockOnewayHandlerMockRecorder) HandleOneway(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleOneway", reflect.TypeOf((*MockOnewayHandler)(nil).HandleOneway), arg0, arg1)
 }
 
-// MockStreamHandler is a mock of StreamHandler interface
+// MockStreamHandler is a mock of StreamHandler interface.
 type MockStreamHandler struct {
 	ctrl     *gomock.Controller
 	recorder *MockStreamHandlerMockRecorder
 }
 
-// MockStreamHandlerMockRecorder is the mock recorder for MockStreamHandler
+// MockStreamHandlerMockRecorder is the mock recorder for MockStreamHandler.
 type MockStreamHandlerMockRecorder struct {
 	mock *MockStreamHandler
 }
 
-// NewMockStreamHandler creates a new mock instance
+// NewMockStreamHandler creates a new mock instance.
 func NewMockStreamHandler(ctrl *gomock.Controller) *MockStreamHandler {
 	mock := &MockStreamHandler{ctrl: ctrl}
 	mock.recorder = &MockStreamHandlerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockStreamHandler) EXPECT() *MockStreamHandlerMockRecorder {
 	return m.recorder
 }
 
-// HandleStream mocks base method
+// HandleStream mocks base method.
 func (m *MockStreamHandler) HandleStream(arg0 *transport.ServerStream) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "HandleStream", arg0)
@@ -136,7 +137,7 @@ func (m *MockStreamHandler) HandleStream(arg0 *transport.ServerStream) error {
 	return ret0
 }
 
-// HandleStream indicates an expected call of HandleStream
+// HandleStream indicates an expected call of HandleStream.
 func (mr *MockStreamHandlerMockRecorder) HandleStream(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleStream", reflect.TypeOf((*MockStreamHandler)(nil).HandleStream), arg0)

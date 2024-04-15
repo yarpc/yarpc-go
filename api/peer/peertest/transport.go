@@ -25,35 +25,36 @@
 package peertest
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	peer "go.uber.org/yarpc/api/peer"
-	reflect "reflect"
 )
 
-// MockTransport is a mock of Transport interface
+// MockTransport is a mock of Transport interface.
 type MockTransport struct {
 	ctrl     *gomock.Controller
 	recorder *MockTransportMockRecorder
 }
 
-// MockTransportMockRecorder is the mock recorder for MockTransport
+// MockTransportMockRecorder is the mock recorder for MockTransport.
 type MockTransportMockRecorder struct {
 	mock *MockTransport
 }
 
-// NewMockTransport creates a new mock instance
+// NewMockTransport creates a new mock instance.
 func NewMockTransport(ctrl *gomock.Controller) *MockTransport {
 	mock := &MockTransport{ctrl: ctrl}
 	mock.recorder = &MockTransportMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTransport) EXPECT() *MockTransportMockRecorder {
 	return m.recorder
 }
 
-// ReleasePeer mocks base method
+// ReleasePeer mocks base method.
 func (m *MockTransport) ReleasePeer(arg0 peer.Identifier, arg1 peer.Subscriber) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReleasePeer", arg0, arg1)
@@ -61,13 +62,13 @@ func (m *MockTransport) ReleasePeer(arg0 peer.Identifier, arg1 peer.Subscriber) 
 	return ret0
 }
 
-// ReleasePeer indicates an expected call of ReleasePeer
+// ReleasePeer indicates an expected call of ReleasePeer.
 func (mr *MockTransportMockRecorder) ReleasePeer(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleasePeer", reflect.TypeOf((*MockTransport)(nil).ReleasePeer), arg0, arg1)
 }
 
-// RetainPeer mocks base method
+// RetainPeer mocks base method.
 func (m *MockTransport) RetainPeer(arg0 peer.Identifier, arg1 peer.Subscriber) (peer.Peer, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RetainPeer", arg0, arg1)
@@ -76,42 +77,42 @@ func (m *MockTransport) RetainPeer(arg0 peer.Identifier, arg1 peer.Subscriber) (
 	return ret0, ret1
 }
 
-// RetainPeer indicates an expected call of RetainPeer
+// RetainPeer indicates an expected call of RetainPeer.
 func (mr *MockTransportMockRecorder) RetainPeer(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetainPeer", reflect.TypeOf((*MockTransport)(nil).RetainPeer), arg0, arg1)
 }
 
-// MockSubscriber is a mock of Subscriber interface
+// MockSubscriber is a mock of Subscriber interface.
 type MockSubscriber struct {
 	ctrl     *gomock.Controller
 	recorder *MockSubscriberMockRecorder
 }
 
-// MockSubscriberMockRecorder is the mock recorder for MockSubscriber
+// MockSubscriberMockRecorder is the mock recorder for MockSubscriber.
 type MockSubscriberMockRecorder struct {
 	mock *MockSubscriber
 }
 
-// NewMockSubscriber creates a new mock instance
+// NewMockSubscriber creates a new mock instance.
 func NewMockSubscriber(ctrl *gomock.Controller) *MockSubscriber {
 	mock := &MockSubscriber{ctrl: ctrl}
 	mock.recorder = &MockSubscriberMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockSubscriber) EXPECT() *MockSubscriberMockRecorder {
 	return m.recorder
 }
 
-// NotifyStatusChanged mocks base method
+// NotifyStatusChanged mocks base method.
 func (m *MockSubscriber) NotifyStatusChanged(arg0 peer.Identifier) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "NotifyStatusChanged", arg0)
 }
 
-// NotifyStatusChanged indicates an expected call of NotifyStatusChanged
+// NotifyStatusChanged indicates an expected call of NotifyStatusChanged.
 func (mr *MockSubscriberMockRecorder) NotifyStatusChanged(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyStatusChanged", reflect.TypeOf((*MockSubscriber)(nil).NotifyStatusChanged), arg0)

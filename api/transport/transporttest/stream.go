@@ -26,35 +26,36 @@ package transporttest
 
 import (
 	context "context"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	transport "go.uber.org/yarpc/api/transport"
-	reflect "reflect"
 )
 
-// MockStream is a mock of Stream interface
+// MockStream is a mock of Stream interface.
 type MockStream struct {
 	ctrl     *gomock.Controller
 	recorder *MockStreamMockRecorder
 }
 
-// MockStreamMockRecorder is the mock recorder for MockStream
+// MockStreamMockRecorder is the mock recorder for MockStream.
 type MockStreamMockRecorder struct {
 	mock *MockStream
 }
 
-// NewMockStream creates a new mock instance
+// NewMockStream creates a new mock instance.
 func NewMockStream(ctrl *gomock.Controller) *MockStream {
 	mock := &MockStream{ctrl: ctrl}
 	mock.recorder = &MockStreamMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockStream) EXPECT() *MockStreamMockRecorder {
 	return m.recorder
 }
 
-// Context mocks base method
+// Context mocks base method.
 func (m *MockStream) Context() context.Context {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Context")
@@ -62,13 +63,13 @@ func (m *MockStream) Context() context.Context {
 	return ret0
 }
 
-// Context indicates an expected call of Context
+// Context indicates an expected call of Context.
 func (mr *MockStreamMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockStream)(nil).Context))
 }
 
-// ReceiveMessage mocks base method
+// ReceiveMessage mocks base method.
 func (m *MockStream) ReceiveMessage(arg0 context.Context) (*transport.StreamMessage, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReceiveMessage", arg0)
@@ -77,13 +78,13 @@ func (m *MockStream) ReceiveMessage(arg0 context.Context) (*transport.StreamMess
 	return ret0, ret1
 }
 
-// ReceiveMessage indicates an expected call of ReceiveMessage
+// ReceiveMessage indicates an expected call of ReceiveMessage.
 func (mr *MockStreamMockRecorder) ReceiveMessage(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReceiveMessage", reflect.TypeOf((*MockStream)(nil).ReceiveMessage), arg0)
 }
 
-// Request mocks base method
+// Request mocks base method.
 func (m *MockStream) Request() *transport.StreamRequest {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Request")
@@ -91,13 +92,13 @@ func (m *MockStream) Request() *transport.StreamRequest {
 	return ret0
 }
 
-// Request indicates an expected call of Request
+// Request indicates an expected call of Request.
 func (mr *MockStreamMockRecorder) Request() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Request", reflect.TypeOf((*MockStream)(nil).Request))
 }
 
-// SendMessage mocks base method
+// SendMessage mocks base method.
 func (m *MockStream) SendMessage(arg0 context.Context, arg1 *transport.StreamMessage) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendMessage", arg0, arg1)
@@ -105,36 +106,36 @@ func (m *MockStream) SendMessage(arg0 context.Context, arg1 *transport.StreamMes
 	return ret0
 }
 
-// SendMessage indicates an expected call of SendMessage
+// SendMessage indicates an expected call of SendMessage.
 func (mr *MockStreamMockRecorder) SendMessage(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMessage", reflect.TypeOf((*MockStream)(nil).SendMessage), arg0, arg1)
 }
 
-// MockStreamCloser is a mock of StreamCloser interface
+// MockStreamCloser is a mock of StreamCloser interface.
 type MockStreamCloser struct {
 	ctrl     *gomock.Controller
 	recorder *MockStreamCloserMockRecorder
 }
 
-// MockStreamCloserMockRecorder is the mock recorder for MockStreamCloser
+// MockStreamCloserMockRecorder is the mock recorder for MockStreamCloser.
 type MockStreamCloserMockRecorder struct {
 	mock *MockStreamCloser
 }
 
-// NewMockStreamCloser creates a new mock instance
+// NewMockStreamCloser creates a new mock instance.
 func NewMockStreamCloser(ctrl *gomock.Controller) *MockStreamCloser {
 	mock := &MockStreamCloser{ctrl: ctrl}
 	mock.recorder = &MockStreamCloserMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockStreamCloser) EXPECT() *MockStreamCloserMockRecorder {
 	return m.recorder
 }
 
-// Close mocks base method
+// Close mocks base method.
 func (m *MockStreamCloser) Close(arg0 context.Context) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Close", arg0)
@@ -142,13 +143,13 @@ func (m *MockStreamCloser) Close(arg0 context.Context) error {
 	return ret0
 }
 
-// Close indicates an expected call of Close
+// Close indicates an expected call of Close.
 func (mr *MockStreamCloserMockRecorder) Close(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockStreamCloser)(nil).Close), arg0)
 }
 
-// Context mocks base method
+// Context mocks base method.
 func (m *MockStreamCloser) Context() context.Context {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Context")
@@ -156,13 +157,13 @@ func (m *MockStreamCloser) Context() context.Context {
 	return ret0
 }
 
-// Context indicates an expected call of Context
+// Context indicates an expected call of Context.
 func (mr *MockStreamCloserMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockStreamCloser)(nil).Context))
 }
 
-// ReceiveMessage mocks base method
+// ReceiveMessage mocks base method.
 func (m *MockStreamCloser) ReceiveMessage(arg0 context.Context) (*transport.StreamMessage, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReceiveMessage", arg0)
@@ -171,13 +172,13 @@ func (m *MockStreamCloser) ReceiveMessage(arg0 context.Context) (*transport.Stre
 	return ret0, ret1
 }
 
-// ReceiveMessage indicates an expected call of ReceiveMessage
+// ReceiveMessage indicates an expected call of ReceiveMessage.
 func (mr *MockStreamCloserMockRecorder) ReceiveMessage(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReceiveMessage", reflect.TypeOf((*MockStreamCloser)(nil).ReceiveMessage), arg0)
 }
 
-// Request mocks base method
+// Request mocks base method.
 func (m *MockStreamCloser) Request() *transport.StreamRequest {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Request")
@@ -185,13 +186,13 @@ func (m *MockStreamCloser) Request() *transport.StreamRequest {
 	return ret0
 }
 
-// Request indicates an expected call of Request
+// Request indicates an expected call of Request.
 func (mr *MockStreamCloserMockRecorder) Request() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Request", reflect.TypeOf((*MockStreamCloser)(nil).Request))
 }
 
-// SendMessage mocks base method
+// SendMessage mocks base method.
 func (m *MockStreamCloser) SendMessage(arg0 context.Context, arg1 *transport.StreamMessage) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendMessage", arg0, arg1)
@@ -199,7 +200,7 @@ func (m *MockStreamCloser) SendMessage(arg0 context.Context, arg1 *transport.Str
 	return ret0
 }
 
-// SendMessage indicates an expected call of SendMessage
+// SendMessage indicates an expected call of SendMessage.
 func (mr *MockStreamCloserMockRecorder) SendMessage(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMessage", reflect.TypeOf((*MockStreamCloser)(nil).SendMessage), arg0, arg1)
