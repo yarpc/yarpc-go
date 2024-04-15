@@ -24,27 +24,27 @@
 // Package echofx provides better integration for Fx for services
 // implementing or calling Echo.
 //
-// Clients
+// # Clients
 //
 // If you are making requests to Echo, use the Client function to inject a
 // Echo client into your container.
 //
-// 	fx.Provide(echofx.Client("..."))
+//	fx.Provide(echofx.Client("..."))
 //
-// Servers
+// # Servers
 //
 // If you are implementing Echo, provide a echoserver.Interface into
 // the container and use the Server function.
 //
 // Given,
 //
-// 	func NewEchoHandler() echoserver.Interface
+//	func NewEchoHandler() echoserver.Interface
 //
 // You can do the following to have the procedures of Echo made available
 // to an Fx application.
 //
-// 	fx.Provide(
-// 		NewEchoHandler,
-// 		echofx.Server(),
-// 	)
+//	fx.Provide(
+//		NewEchoHandler,
+//		echofx.Server(),
+//	)
 package echofx

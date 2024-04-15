@@ -24,27 +24,27 @@
 // Package keyvaluefx provides better integration for Fx for services
 // implementing or calling KeyValue.
 //
-// Clients
+// # Clients
 //
 // If you are making requests to KeyValue, use the Client function to inject a
 // KeyValue client into your container.
 //
-// 	fx.Provide(keyvaluefx.Client("..."))
+//	fx.Provide(keyvaluefx.Client("..."))
 //
-// Servers
+// # Servers
 //
 // If you are implementing KeyValue, provide a keyvalueserver.Interface into
 // the container and use the Server function.
 //
 // Given,
 //
-// 	func NewKeyValueHandler() keyvalueserver.Interface
+//	func NewKeyValueHandler() keyvalueserver.Interface
 //
 // You can do the following to have the procedures of KeyValue made available
 // to an Fx application.
 //
-// 	fx.Provide(
-// 		NewKeyValueHandler,
-// 		keyvaluefx.Server(),
-// 	)
+//	fx.Provide(
+//		NewKeyValueHandler,
+//		keyvaluefx.Server(),
+//	)
 package keyvaluefx

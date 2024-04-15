@@ -43,7 +43,7 @@ type Interface interface {
 
 // New builds a new client for the Hello service.
 //
-// 	client := helloclient.New(dispatcher.ClientConfig("hello"))
+//	client := helloclient.New(dispatcher.ClientConfig("hello"))
 func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 	return client{
 		c: thrift.New(thrift.Config{

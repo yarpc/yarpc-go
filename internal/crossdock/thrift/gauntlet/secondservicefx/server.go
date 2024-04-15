@@ -51,12 +51,12 @@ type ServerResult struct {
 // Server provides procedures for SecondService to an Fx application. It expects a
 // secondservicefx.Interface to be present in the container.
 //
-// 	fx.Provide(
-// 		func(h *MySecondServiceHandler) secondserviceserver.Interface {
-// 			return h
-// 		},
-// 		secondservicefx.Server(),
-// 	)
+//	fx.Provide(
+//		func(h *MySecondServiceHandler) secondserviceserver.Interface {
+//			return h
+//		},
+//		secondservicefx.Server(),
+//	)
 func Server(opts ...thrift.RegisterOption) interface{} {
 	return func(p ServerParams) ServerResult {
 		procedures := secondserviceserver.New(p.Handler, opts...)

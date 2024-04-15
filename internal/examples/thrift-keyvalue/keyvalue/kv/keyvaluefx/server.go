@@ -51,12 +51,12 @@ type ServerResult struct {
 // Server provides procedures for KeyValue to an Fx application. It expects a
 // keyvaluefx.Interface to be present in the container.
 //
-// 	fx.Provide(
-// 		func(h *MyKeyValueHandler) keyvalueserver.Interface {
-// 			return h
-// 		},
-// 		keyvaluefx.Server(),
-// 	)
+//	fx.Provide(
+//		func(h *MyKeyValueHandler) keyvalueserver.Interface {
+//			return h
+//		},
+//		keyvaluefx.Server(),
+//	)
 func Server(opts ...thrift.RegisterOption) interface{} {
 	return func(p ServerParams) ServerResult {
 		procedures := keyvalueserver.New(p.Handler, opts...)

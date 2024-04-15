@@ -44,8 +44,8 @@ type Interface interface {
 // New prepares an implementation of the Echo service for
 // registration.
 //
-// 	handler := EchoHandler{}
-// 	dispatcher.Register(echoserver.New(handler))
+//	handler := EchoHandler{}
+//	dispatcher.Register(echoserver.New(handler))
 func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	h := handler{impl}
 	service := thrift.Service{

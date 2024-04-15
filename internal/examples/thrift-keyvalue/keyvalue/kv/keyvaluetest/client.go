@@ -45,8 +45,8 @@ type _MockClientRecorder struct {
 
 // Build a new mock client for service KeyValue.
 //
-// 	mockCtrl := gomock.NewController(t)
-// 	client := keyvaluetest.NewMockClient(mockCtrl)
+//	mockCtrl := gomock.NewController(t)
+//	client := keyvaluetest.NewMockClient(mockCtrl)
 //
 // Use EXPECT() to set expectations on the mock.
 func NewMockClient(ctrl *gomock.Controller) *MockClient {
@@ -65,8 +65,8 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().GetValue(gomock.Any(), ...).Return(...)
-// 	... := client.GetValue(...)
+//	client.EXPECT().GetValue(gomock.Any(), ...).Return(...)
+//	... := client.GetValue(...)
 func (m *MockClient) GetValue(
 	ctx context.Context,
 	_Key *string,
@@ -98,8 +98,8 @@ func (mr *_MockClientRecorder) GetValue(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().SetValue(gomock.Any(), ...).Return(...)
-// 	... := client.SetValue(...)
+//	client.EXPECT().SetValue(gomock.Any(), ...).Return(...)
+//	... := client.SetValue(...)
 func (m *MockClient) SetValue(
 	ctx context.Context,
 	_Key *string,

@@ -24,27 +24,27 @@
 // Package onewayfx provides better integration for Fx for services
 // implementing or calling Oneway.
 //
-// Clients
+// # Clients
 //
 // If you are making requests to Oneway, use the Client function to inject a
 // Oneway client into your container.
 //
-// 	fx.Provide(onewayfx.Client("..."))
+//	fx.Provide(onewayfx.Client("..."))
 //
-// Servers
+// # Servers
 //
 // If you are implementing Oneway, provide a onewayserver.Interface into
 // the container and use the Server function.
 //
 // Given,
 //
-// 	func NewOnewayHandler() onewayserver.Interface
+//	func NewOnewayHandler() onewayserver.Interface
 //
 // You can do the following to have the procedures of Oneway made available
 // to an Fx application.
 //
-// 	fx.Provide(
-// 		NewOnewayHandler,
-// 		onewayfx.Server(),
-// 	)
+//	fx.Provide(
+//		NewOnewayHandler,
+//		onewayfx.Server(),
+//	)
 package onewayfx

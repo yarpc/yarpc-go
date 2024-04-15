@@ -51,12 +51,12 @@ type ServerResult struct {
 // Server provides procedures for ThriftTest to an Fx application. It expects a
 // thrifttestfx.Interface to be present in the container.
 //
-// 	fx.Provide(
-// 		func(h *MyThriftTestHandler) thrifttestserver.Interface {
-// 			return h
-// 		},
-// 		thrifttestfx.Server(),
-// 	)
+//	fx.Provide(
+//		func(h *MyThriftTestHandler) thrifttestserver.Interface {
+//			return h
+//		},
+//		thrifttestfx.Server(),
+//	)
 func Server(opts ...thrift.RegisterOption) interface{} {
 	return func(p ServerParams) ServerResult {
 		procedures := thrifttestserver.New(p.Handler, opts...)
