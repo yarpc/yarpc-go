@@ -13,4 +13,5 @@ go install go.uber.org/tools/update-license
 # running updateLicenses on it.
 $GOBIN/update-license $(find . -name '*.go' \
 	| grep -v '^\./vendor' \
-	| grep -v '/thriftrw-plugin-yarpc/internal/tests/')
+	| grep -v '/thriftrw-plugin-yarpc/internal/tests/' \
+	| grep -v -e '.pb.go$' -e '.pb.yarpc.go$')
