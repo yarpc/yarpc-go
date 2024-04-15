@@ -44,7 +44,7 @@ type ServerStreamOption interface {
 // supports stream headers.
 func NewServerStream(s Stream, options ...ServerStreamOption) (*ServerStream, error) {
 	if s == nil {
-		return nil, yarpcerrors.InvalidArgumentErrorf("non-nil stream is required")
+		return nil, yarpcerrors.InternalErrorf("non-nil stream is required")
 	}
 	return &ServerStream{stream: s}, nil
 }
@@ -107,7 +107,7 @@ type ClientStreamOption interface {
 // supports stream headers.
 func NewClientStream(s StreamCloser, options ...ClientStreamOption) (*ClientStream, error) {
 	if s == nil {
-		return nil, yarpcerrors.InvalidArgumentErrorf("non-nil stream with close is required")
+		return nil, yarpcerrors.InternalErrorf("non-nil stream with close is required")
 	}
 	return &ClientStream{stream: s}, nil
 }

@@ -651,10 +651,10 @@ func TestNoRequest(t *testing.T) {
 	out := tran.NewSingleOutbound("localhost:0")
 
 	_, err := out.Call(context.Background(), nil)
-	assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil"), err)
+	assert.Equal(t, yarpcerrors.InternalErrorf("request for http unary outbound was nil"), err)
 
 	_, err = out.CallOneway(context.Background(), nil)
-	assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil"), err)
+	assert.Equal(t, yarpcerrors.InternalErrorf("request for http oneway outbound was nil"), err)
 }
 
 func TestOutboundNoDeadline(t *testing.T) {

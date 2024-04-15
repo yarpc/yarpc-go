@@ -102,7 +102,7 @@ func (o *Outbound) Chooser() peer.Chooser {
 // Call sends an RPC over this TChannel outbound.
 func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if req == nil {
-		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel outbound was nil")
+		return nil, yarpcerrors.InternalErrorf("request for tchannel outbound was nil")
 	}
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "error waiting for tchannel outbound to start for service: %s", req.Service)

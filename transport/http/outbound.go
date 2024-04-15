@@ -265,7 +265,7 @@ func (o *Outbound) IsRunning() bool {
 // Call makes a HTTP request
 func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
 	if treq == nil {
-		return nil, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil")
+		return nil, yarpcerrors.InternalErrorf("request for http unary outbound was nil")
 	}
 
 	return o.call(ctx, treq)
@@ -274,7 +274,7 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 // CallOneway makes a oneway request
 func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
 	if treq == nil {
-		return nil, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil")
+		return nil, yarpcerrors.InternalErrorf("request for http oneway outbound was nil")
 	}
 
 	// res is used to close the response body to avoid memory/connection leak
