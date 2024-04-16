@@ -148,8 +148,8 @@ generate_with_protoc_all_v2() {
 
 generate_with_ragel() {
   ragel -Z -G2 -o internal/interpolate/parse.go internal/interpolate/parse.rl
-  gofmt -s -w internal/interpolate/parse.go
   generated_by_ragel internal/interpolate/parse.go
+  gofmt -w internal/interpolate/parse.go
 }
 
 final_cleanup() {
