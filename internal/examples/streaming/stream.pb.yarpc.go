@@ -181,10 +181,10 @@ type FxHelloYARPCClientResult struct {
 // NewFxHelloYARPCClient provides a HelloYARPCClient
 // to an Fx application using the given name for routing.
 //
-//  fx.Provide(
-//    streaming.NewFxHelloYARPCClient("service-name"),
-//    ...
-//  )
+//	fx.Provide(
+//	  streaming.NewFxHelloYARPCClient("service-name"),
+//	  ...
+//	)
 func NewFxHelloYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
 	return func(params FxHelloYARPCClientParams) FxHelloYARPCClientResult {
 		cc := params.Provider.ClientConfig(name)
@@ -230,10 +230,10 @@ type FxHelloYARPCProceduresResult struct {
 // NewFxHelloYARPCProcedures provides HelloYARPCServer procedures to an Fx application.
 // It expects a HelloYARPCServer to be present in the container.
 //
-//  fx.Provide(
-//    streaming.NewFxHelloYARPCProcedures(),
-//    ...
-//  )
+//	fx.Provide(
+//	  streaming.NewFxHelloYARPCProcedures(),
+//	  ...
+//	)
 func NewFxHelloYARPCProcedures() interface{} {
 	return func(params FxHelloYARPCProceduresParams) FxHelloYARPCProceduresResult {
 		return FxHelloYARPCProceduresResult{

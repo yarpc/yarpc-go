@@ -53,15 +53,9 @@ protoc_all() {
   protoc_yarpc_go $@
 }
 
-protoc_with_imports_v2() {
-  protoc \
-    -I . \
-    "--${1}_out=${2}Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor,Mgoogle/protobuf/duration.proto=github.com/golang/protobuf/ptypes/duration,Mgoogle/protobuf/any.proto=github.com/golang/protobuf/ptypes/any:." \
-  "${@:3}"
-}
-
 protoc_go_grpc_v2() {
-  protoc_with_imports_v2 "go" "plugins=grpc," $@
+  protoc_with_imports "go" "" $@
+  protoc_with_imports "go-grpc" "" $@
 }
 
 protoc_yarpc_go_v2() {
