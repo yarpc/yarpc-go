@@ -45,6 +45,7 @@ build: __eval_packages ## go build all packages
 .PHONY: generate
 generate: $(GEN_BINS) $(GEN_BINS_INTERNAL) ## call generation script
 	@GOBIN=$(BIN) go install github.com/golang/mock/mockgen
+	@GOBIN=$(BIN) go install golang.org/x/tools/cmd/stringer@v0.20.0
 	@PATH=$(BIN):$$PATH ./etc/bin/generate.sh
 ifdef WITHIN_DOCKER
 	@chown -R --reference . .
