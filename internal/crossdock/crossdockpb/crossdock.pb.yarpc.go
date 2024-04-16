@@ -107,10 +107,10 @@ type FxEchoYARPCClientResult struct {
 // NewFxEchoYARPCClient provides a EchoYARPCClient
 // to an Fx application using the given name for routing.
 //
-//  fx.Provide(
-//    crossdockpb.NewFxEchoYARPCClient("service-name"),
-//    ...
-//  )
+//	fx.Provide(
+//	  crossdockpb.NewFxEchoYARPCClient("service-name"),
+//	  ...
+//	)
 func NewFxEchoYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
 	return func(params FxEchoYARPCClientParams) FxEchoYARPCClientResult {
 		cc := params.Provider.ClientConfig(name)
@@ -156,10 +156,10 @@ type FxEchoYARPCProceduresResult struct {
 // NewFxEchoYARPCProcedures provides EchoYARPCServer procedures to an Fx application.
 // It expects a EchoYARPCServer to be present in the container.
 //
-//  fx.Provide(
-//    crossdockpb.NewFxEchoYARPCProcedures(),
-//    ...
-//  )
+//	fx.Provide(
+//	  crossdockpb.NewFxEchoYARPCProcedures(),
+//	  ...
+//	)
 func NewFxEchoYARPCProcedures() interface{} {
 	return func(params FxEchoYARPCProceduresParams) FxEchoYARPCProceduresResult {
 		return FxEchoYARPCProceduresResult{

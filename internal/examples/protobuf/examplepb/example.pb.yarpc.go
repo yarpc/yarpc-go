@@ -119,10 +119,10 @@ type FxKeyValueYARPCClientResult struct {
 // NewFxKeyValueYARPCClient provides a KeyValueYARPCClient
 // to an Fx application using the given name for routing.
 //
-//  fx.Provide(
-//    examplepb.NewFxKeyValueYARPCClient("service-name"),
-//    ...
-//  )
+//	fx.Provide(
+//	  examplepb.NewFxKeyValueYARPCClient("service-name"),
+//	  ...
+//	)
 func NewFxKeyValueYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
 	return func(params FxKeyValueYARPCClientParams) FxKeyValueYARPCClientResult {
 		cc := params.Provider.ClientConfig(name)
@@ -168,10 +168,10 @@ type FxKeyValueYARPCProceduresResult struct {
 // NewFxKeyValueYARPCProcedures provides KeyValueYARPCServer procedures to an Fx application.
 // It expects a KeyValueYARPCServer to be present in the container.
 //
-//  fx.Provide(
-//    examplepb.NewFxKeyValueYARPCProcedures(),
-//    ...
-//  )
+//	fx.Provide(
+//	  examplepb.NewFxKeyValueYARPCProcedures(),
+//	  ...
+//	)
 func NewFxKeyValueYARPCProcedures() interface{} {
 	return func(params FxKeyValueYARPCProceduresParams) FxKeyValueYARPCProceduresResult {
 		return FxKeyValueYARPCProceduresResult{
@@ -428,10 +428,10 @@ type FxFooYARPCClientResult struct {
 // NewFxFooYARPCClient provides a FooYARPCClient
 // to an Fx application using the given name for routing.
 //
-//  fx.Provide(
-//    examplepb.NewFxFooYARPCClient("service-name"),
-//    ...
-//  )
+//	fx.Provide(
+//	  examplepb.NewFxFooYARPCClient("service-name"),
+//	  ...
+//	)
 func NewFxFooYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
 	return func(params FxFooYARPCClientParams) FxFooYARPCClientResult {
 		cc := params.Provider.ClientConfig(name)
@@ -477,10 +477,10 @@ type FxFooYARPCProceduresResult struct {
 // NewFxFooYARPCProcedures provides FooYARPCServer procedures to an Fx application.
 // It expects a FooYARPCServer to be present in the container.
 //
-//  fx.Provide(
-//    examplepb.NewFxFooYARPCProcedures(),
-//    ...
-//  )
+//	fx.Provide(
+//	  examplepb.NewFxFooYARPCProcedures(),
+//	  ...
+//	)
 func NewFxFooYARPCProcedures() interface{} {
 	return func(params FxFooYARPCProceduresParams) FxFooYARPCProceduresResult {
 		return FxFooYARPCProceduresResult{

@@ -16,6 +16,7 @@ LINT_DEPS = \
 
 THRIFT_VERSION := 1.0.0-dev
 PROTOC_VERSION := 3.5.1
+PROGO_GRPC_VERSION := 1.2.0
 RAGEL_VERSION := 6.10
 ERRCHECK_VERSION := 1.7.0
 
@@ -39,11 +40,12 @@ THRIFT = $(BIN)/thrift
 PROTOC_LIB = $(LIB)/protoc-$(PROTOC_VERSION)
 PROTOC_ZIP = $(PROTOC_LIB)/protoc.zip
 PROTOC = $(BIN)/protoc
+PROTOC_GRPC = $(BIN)/protoc-gen-go-grpc
 RAGEL_LIB = $(LIB)/ragel-$(RAGEL_VERSION)
 RAGEL_BIN = $(RAGEL_LIB)/ragel
 RAGEL = $(BIN)/ragel
 
-GEN_BINS = $(THRIFT) $(PROTOC) $(RAGEL)
+GEN_BINS = $(THRIFT) $(PROTOC) $(PROTOC_GRPC) $(RAGEL)
 
 $(RAGEL_BIN):
 	@mkdir -p $(RAGEL_LIB)
@@ -71,6 +73,10 @@ $(PROTOC): $(PROTOC_ZIP)
 	@mkdir -p $(BIN)
 	cd $(PROTOC_LIB); unzip $(PROTOC_ZIP)
 	cp $(PROTOC_LIB)/bin/protoc $(PROTOC)
+
+$(PROTOC_GRPC):
+	@mkdir -p $(BIN)
+	@GOBIN=$(BIN) go install "google.golang.org/grpc/cmd/protoc-gen-go-grpc@v$(PROGO_GRPC_VERSION)"
 
 $(BIN)/errcheck:
 	@mkdir -p $(BIN)
