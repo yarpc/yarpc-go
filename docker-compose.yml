@@ -12,6 +12,7 @@ services:
       - CODECOV_TOKEN
       - CI=true
       - BUILDKITE
+      - BUILDKITE_AGENT_ID
       - BUILDKITE_BRANCH
       - BUILDKITE_BUILD_NUMBER
       - BUILDKITE_BUILD_URL
@@ -22,7 +23,7 @@ services:
       - GO111MODULE=on
       - SSH_AUTH_SOCK=/ssh-agent
     volumes:
-      - $SSH_AUTH_SOCK:/ssh-agent
+      - /ssh-agent:/ssh-agent
     # We mount the host's SSH Agent unix socket at /ssh-agent in the container
     # and tell the container where to find it so that the container can
     # actually push commits.
@@ -38,6 +39,7 @@ services:
       - CODECOV_TOKEN
       - CI=true
       - BUILDKITE
+      - BUILDKITE_AGENT_ID
       - BUILDKITE_BRANCH
       - BUILDKITE_BUILD_NUMBER
       - BUILDKITE_BUILD_URL

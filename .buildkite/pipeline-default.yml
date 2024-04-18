@@ -1,60 +1,122 @@
+container:
+  kubernetes: &kubernetes
+    gitEnvFrom:
+      - secretRef:
+          name: oss-github-ssh-credentials
+    sidecars:
+    - image: us-west1-docker.pkg.dev/ci-compute/buildkite-images/buildkite-dind:v1
+      volumeMounts:
+        - mountPath: /var/run/
+          name: docker-sock
+      securityContext:
+        privileged: true
+        allowPrivilegeEscalation: true
+    mirrorVolumeMounts: true # CRITICAL: this must be at the same indentation level as sidecars
+    podSpec: &podSpec
+      containers:
+        - &commandContainer
+          image: us-west1-docker.pkg.dev/ci-compute/buildkite-images/buildkite-command-container:v2
+          command:
+          - |-
+            echo "Command step was not overridden."
+            exit 1
+          volumeMounts:
+            - mountPath: /var/run/
+              name: docker-sock
+          resources:
+            requests:
+              cpu: 7500m
+              memory: 30G
+      volumes:
+      - name: docker-sock
+        emptyDir: {}
+
+agents:
+  queue: buildkite-gcp
+
 steps:
-  - name: ":docker: :package: 1.21"
-    plugins:
-      docker-compose#v5.2.0:
-        build: yarpc-go-1.21
-        push: yarpc-go-1.21:027047743804.dkr.ecr.us-east-2.amazonaws.com/uber:latest
-    agents:
-      queue: builders
-  - name: ":docker: :package: 1.22"
-    plugins:
-      docker-compose#v5.2.0:
-        build: yarpc-go-1.22
-        push: yarpc-go-1.22:027047743804.dkr.ecr.us-east-2.amazonaws.com/uber:latest
-    agents:
-      queue: builders
-  - wait
   - name: ":go: 1.21 test - %n"
-    command: "make test"
     parallelism: 2
     plugins:
-      docker-compose#v5.2.0:
-        run: yarpc-go-1.21
-    agents:
-      queue: workers
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                - |-
+                  make test
+      - docker-compose#v3.13.0:
+          run: yarpc-go-1.21
+
   - name: ":go: 1.21 examples"
-    command: "make examples"
     plugins:
-      docker-compose#v5.2.0:
-        run: yarpc-go-1.21
-    agents:
-      queue: workers
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                - |-
+                  make examples
+      - docker-compose#v3.13.0:
+          run: yarpc-go-1.21
+
   - name: ":go: 1.22 test - %n"
-    command: "make codecov"
     parallelism: 6
     plugins:
-      docker-compose#v5.2.0:
-        run: yarpc-go-1.22
-    agents:
-      queue: workers
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                - |-
+                  make codecov
+      - docker-compose#v3.13.0:
+          run: yarpc-go-1.22
+
   - name: ":go: 1.22 crossdock"
-    command: "make crossdock-codecov"
     plugins:
-      docker-compose#v5.2.0:
-        run: yarpc-go-1.22
-    agents:
-      queue: workers
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                - |-
+                  make crossdock-codecov
+      - docker-compose#v3.13.0:
+          run: yarpc-go-1.22
+
   - name: ":go: 1.22 lint"
-    command: "make lint"
     plugins:
-      docker-compose#v5.2.0:
-        run: yarpc-go-1.22
-    agents:
-      queue: workers
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                - |-
+                  make lint
+      - docker-compose#v3.13.0:
+          run: yarpc-go-1.22
+
   - name: ":go: 1.22 examples"
-    command: "make examples"
     plugins:
-      docker-compose#v5.2.0:
-        run: yarpc-go-1.22
-    agents:
-      queue: workers
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                - |-
+                  make examples
+      - docker-compose#v3.13.0:
+          run: yarpc-go-1.22
