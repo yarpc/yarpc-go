@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 - Upgraded go version to 1.21, set toolchain version.
 - Reverted rpc-caller-procedure value setting.
+- Preparation for the new header handling behavior.
+
+Starting from one of the next releases, following behaviour changes will be applied:
+- Any inbound header with the prefix `rpc-` will be treated as a reserved header and will be ignored
+(i.e. not forwarded to an application code) in both tchannel and grpc.
+Currently, unknown headers with the prefix `rpc-` are forwarded to the application code in both transports.
+- Any attempt to set request/response header with the prefix `rpc-` will result in an error in tchannel.
+Currently, the same behavior is applied only to the grpc transport, while tchannel allows setting such headers.
+
+As an intermediate step, the `reserved_headers_stripped` and `reserved_headers_error` metrics
+with `"component": "yarpc-header-migration"` constant tag and with `source` and `dest` variable tags
+will be emitted to help to identify the edges that are affected by the changes.
 
 ## [1.72.1] - 2024-03-14
 - tchannel: Renamed caller-procedure header from `$rpc$-caller-procedure` to `rpc-caller-procedure`.
