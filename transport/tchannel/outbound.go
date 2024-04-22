@@ -27,11 +27,13 @@ import (
 	"strconv"
 
 	"github.com/uber/tchannel-go"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/internal/iopool"
+	"go.uber.org/yarpc/internal/observability"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -121,11 +123,11 @@ func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport
 
 // Call sends an RPC to this specific peer.
 func (p *tchannelPeer) Call(ctx context.Context, req *transport.Request, reuseBuffer bool) (*transport.Response, error) {
-	return callWithPeer(ctx, req, p.getPeer(), p.transport.headerCase, reuseBuffer)
+	return callWithPeer(ctx, req, p.getPeer(), p.transport.headerCase, reuseBuffer, p.transport.meter)
 }
 
 // callWithPeer sends a request with the chosen peer.
-func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Peer, headerCase headerCase, reuseBuffer bool) (*transport.Response, error) {
+func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Peer, headerCase headerCase, reuseBuffer bool, meter *metrics.Scope) (*transport.Response, error) {
 	// NB(abg): Under the current API, the local service's name is required
 	// twice: once when constructing the TChannel and then again when
 	// constructing the RPC.
@@ -153,14 +155,20 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		req.Procedure,
 		&callOptions,
 	)
-
 	if err != nil {
 		return nil, err
 	}
-	reqHeaders := headerMap(req.Headers, headerCase)
 
-	// for tchannel, callerProcedure is added to application headers.
-	reqHeaders = requestCallerProcedureToHeader(req, reqHeaders)
+	reqHeaders := getHeaderMap(req.Headers, headerCase)
+
+	if err := validateApplicationHeaders(reqHeaders); err != nil {
+		observability.IncReservedHeaderError(meter, req.Caller, req.Service)
+		if enforceHeaderRules {
+			return nil, err
+		}
+	}
+
+	reqHeaders = requestToTransportHeaders(req, reqHeaders)
 
 	// baggage headers are transport implementation details that are stripped out (and stored in the context). Users don't interact with it
 	tracingBaggage := tchannel.InjectOutboundSpan(call.Response(), nil)
@@ -212,7 +220,9 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 	applicationErrorDetails, _ := headers.Get(ApplicationErrorDetailsHeaderKey)
 
 	err = getResponseError(headers)
-	deleteReservedHeaders(headers)
+	if deleteReservedHeaders(headers) {
+		observability.IncReservedHeaderStripped(meter, req.Caller, req.Service)
+	}
 
 	resp := &transport.Response{
 		Headers:          headers,

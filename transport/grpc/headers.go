@@ -88,6 +88,12 @@ const (
 	contentTypeHeader = "content-type"
 )
 
+var (
+	// enforceHeaderRules is a feature flag for a more strict error handling rules.
+	// See https://github.com/yarpc/yarpc-go/issues/2265 for more details.
+	enforceHeaderRules = false
+)
+
 // TODO: there are way too many repeat calls to strings.ToLower
 // Note that these calls are done indirectly, primarily through
 // transport.CanonicalizeHeaderKey
@@ -96,11 +102,15 @@ func isReserved(header string) bool {
 	return strings.HasPrefix(strings.ToLower(header), "rpc-")
 }
 
-// transportRequestToMetadata will populate all reserved and application headers
+func isReservedWithDollarSign(header string) bool {
+	return strings.HasPrefix(strings.ToLower(header), "$rpc$-")
+}
+
+// outboundRequestToMetadata populates all reserved and application headers
 // from the Request into a new MD.
-func transportRequestToMetadata(request *transport.Request) (metadata.MD, error) {
-	md := metadata.New(nil)
-	if err := multierr.Combine(
+func outboundRequestToMetadata(request *transport.Request) (md metadata.MD, reportHeader bool, err error) {
+	md = metadata.New(nil)
+	err = multierr.Combine(
 		addToMetadata(md, CallerHeader, request.Caller),
 		addToMetadata(md, ServiceHeader, request.Service),
 		addToMetadata(md, ShardKeyHeader, request.ShardKey),
@@ -108,18 +118,23 @@ func transportRequestToMetadata(request *transport.Request) (metadata.MD, error)
 		addToMetadata(md, RoutingDelegateHeader, request.RoutingDelegate),
 		addToMetadata(md, EncodingHeader, string(request.Encoding)),
 		addToMetadata(md, CallerProcedureHeader, request.CallerProcedure),
-	); err != nil {
-		return md, err
+	)
+	if err != nil {
+		return
 	}
-	return md, addApplicationHeaders(md, request.Headers)
+
+	reportHeader, err = addApplicationHeaders(md, request.Headers)
+	return
 }
 
-// metadataToTransportRequest will populate the Request with all reserved and application
+// metadataToInboundRequest populates the Request with all reserved and application
 // headers into a new Request, only not setting the Body field.
-func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
+func metadataToInboundRequest(md metadata.MD) (*transport.Request, bool, error) {
 	request := &transport.Request{
 		Headers: transport.NewHeadersWithCapacity(md.Len()),
 	}
+	reportStrippedHeader := false
+
 	for header, values := range md {
 		var value string
 		switch len(values) {
@@ -128,7 +143,7 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 		case 1:
 			value = values[0]
 		default:
-			return nil, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
+			return nil, reportStrippedHeader, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
 		}
 		header = transport.CanonicalizeHeaderKey(header)
 		switch header {
@@ -153,10 +168,17 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 				request.Encoding = transport.Encoding(getContentSubtype(value))
 			}
 		default:
+			if isReserved(header) || isReservedWithDollarSign(header) {
+				reportStrippedHeader = true
+				if enforceHeaderRules {
+					continue
+				}
+			}
 			request.Headers = request.Headers.With(header, value)
 		}
 	}
-	return request, nil
+
+	return request, reportStrippedHeader, nil
 }
 
 func metadataToApplicationErrorMeta(responseMD metadata.MD) *transport.ApplicationErrorMeta {
@@ -182,29 +204,50 @@ func metadataToApplicationErrorMeta(responseMD metadata.MD) *transport.Applicati
 }
 
 // addApplicationHeaders adds the headers to md.
-func addApplicationHeaders(md metadata.MD, headers transport.Headers) error {
+func addApplicationHeaders(md metadata.MD, headers transport.Headers) (reportHeader bool, err error) {
 	for header, value := range headers.Items() {
 		header = transport.CanonicalizeHeaderKey(header)
+
 		if isReserved(header) {
-			return yarpcerrors.InvalidArgumentErrorf("cannot use reserved header in application headers: %s", header)
+			err = yarpcerrors.InvalidArgumentErrorf("cannot use reserved header in application headers: %s", header)
+			return
 		}
-		if err := addToMetadata(md, header, value); err != nil {
-			return err
+
+		if isReservedWithDollarSign(header) {
+			reportHeader = true
+			if enforceHeaderRules {
+				err = yarpcerrors.InternalErrorf("cannot use reserved header in application headers: %s", header)
+				return
+			}
+		}
+
+		if err = addToMetadata(md, header, value); err != nil {
+			return
 		}
 	}
-	return nil
+
+	return
 }
 
-// getApplicationHeaders returns the headers from md without any reserved headers.
-func getApplicationHeaders(md metadata.MD) (transport.Headers, error) {
+// getOutboundResponseApplicationHeaders returns the headers from md without any reserved headers.
+func getOutboundResponseApplicationHeaders(md metadata.MD) (transport.Headers, bool, error) {
 	if len(md) == 0 {
-		return transport.Headers{}, nil
+		return transport.Headers{}, false, nil
 	}
+
 	headers := transport.NewHeadersWithCapacity(md.Len())
+	reportHeader := false
+
 	for header, values := range md {
 		header = transport.CanonicalizeHeaderKey(header)
 		if isReserved(header) {
 			continue
+		}
+		if isReservedWithDollarSign(header) {
+			reportHeader = true
+			if enforceHeaderRules {
+				continue
+			}
 		}
 		var value string
 		switch len(values) {
@@ -213,16 +256,19 @@ func getApplicationHeaders(md metadata.MD) (transport.Headers, error) {
 		case 1:
 			value = values[0]
 		default:
-			return headers, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
+			return transport.Headers{}, reportHeader, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
 		}
 		headers = headers.With(header, value)
 	}
-	return headers, nil
+	return headers, reportHeader, nil
 }
 
 // add to md
 // return error if key already in md
 func addToMetadata(md metadata.MD, key string, value string) error {
+	if md == nil {
+		return nil
+	}
 	if value == "" {
 		return nil
 	}

@@ -26,6 +26,7 @@ import (
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
+	"go.uber.org/yarpc/internal/observability"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/pkg/lifecycle"
@@ -195,7 +196,9 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 	}
 
 	err = getResponseError(headers)
-	deleteReservedHeaders(headers)
+	if deleteReservedHeaders(headers) {
+		observability.IncReservedHeaderStripped(o.transport.meter, req.Caller, req.Service)
+	}
 
 	resp := &transport.Response{
 		Headers:          headers,

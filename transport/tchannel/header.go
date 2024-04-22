@@ -68,9 +68,21 @@ var _reservedHeaderKeys = map[string]struct{}{
 	CallerProcedureHeader:            {},
 }
 
+var (
+	// enforceHeaderRules is a feature flag for a more strict error handling rules.
+	// See https://github.com/yarpc/yarpc-go/issues/2265 for more details.
+	enforceHeaderRules = false
+)
+
+// isReservedHeaderKey checks header name by exact match.
 func isReservedHeaderKey(key string) bool {
 	_, ok := _reservedHeaderKeys[strings.ToLower(key)]
 	return ok
+}
+
+// isReservedHeaderPrefix checks header name by prefix match.
+func isReservedHeaderPrefix(header string) bool {
+	return strings.HasPrefix(strings.ToLower(header), "rpc-") || strings.HasPrefix(strings.ToLower(header), "$rpc$-")
 }
 
 // readRequestHeaders reads headers and baggage from an incoming request.
@@ -177,19 +189,17 @@ func decodeHeaders(r io.Reader) (transport.Headers, error) {
 	return headers, reader.Err()
 }
 
-// headerCallerProcedureToRequest copies callerProcedure from headers to req.CallerProcedure
-// and then deletes it from headers.
-func headerCallerProcedureToRequest(req *transport.Request, headers *transport.Headers) *transport.Request {
+// transportHeadersToRequest copies custom (which are not part of tchannel protocol) transport header values to request
+// and then deletes them from headers list.
+func transportHeadersToRequest(req *transport.Request, headers transport.Headers) {
 	if callerProcedure, ok := headers.Get(CallerProcedureHeader); ok {
 		req.CallerProcedure = callerProcedure
 		headers.Del(CallerProcedureHeader)
-		return req
 	}
-	return req
 }
 
-// requestCallerProcedureToHeader add callerProcedure header as an application header.
-func requestCallerProcedureToHeader(req *transport.Request, reqHeaders map[string]string) map[string]string {
+// requestToTransportHeaders adds custom (which are not part of tchannel protocol) transport headers from request.
+func requestToTransportHeaders(req *transport.Request, reqHeaders map[string]string) map[string]string {
 	if req.CallerProcedure == "" {
 		return reqHeaders
 	}
@@ -197,7 +207,9 @@ func requestCallerProcedureToHeader(req *transport.Request, reqHeaders map[strin
 	if reqHeaders == nil {
 		reqHeaders = make(map[string]string)
 	}
+
 	reqHeaders[CallerProcedureHeader] = req.CallerProcedure
+
 	return reqHeaders
 }
 
@@ -227,7 +239,7 @@ func encodeHeaders(hs map[string]string) []byte {
 	return out
 }
 
-func headerMap(hs transport.Headers, headerCase headerCase) map[string]string {
+func getHeaderMap(hs transport.Headers, headerCase headerCase) map[string]string {
 	switch headerCase {
 	case originalHeaderCase:
 		return hs.OriginalItems()
@@ -236,10 +248,30 @@ func headerMap(hs transport.Headers, headerCase headerCase) map[string]string {
 	}
 }
 
-func deleteReservedHeaders(headers transport.Headers) {
+func validateApplicationHeaders(headers map[string]string) error {
+	for key := range headers {
+		if isReservedHeaderPrefix(key) {
+			return yarpcerrors.InternalErrorf("header with rpc prefix is not allowed in request application headers (%s was passed)", key)
+		}
+	}
+	return nil
+}
+
+func deleteReservedHeaders(headers transport.Headers) (reportHeader bool) {
 	for headerKey := range _reservedHeaderKeys {
 		headers.Del(headerKey)
 	}
+
+	for key := range headers.Items() {
+		if isReservedHeaderPrefix(key) {
+			reportHeader = true
+			if enforceHeaderRules {
+				headers.Del(key)
+			}
+		}
+	}
+
+	return
 }
 
 // this check ensures that the service we're issuing a request to is the one

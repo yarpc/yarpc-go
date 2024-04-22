@@ -100,7 +100,7 @@ func TestAddCallerProcedureHeader(t *testing.T) {
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
-			headers := requestCallerProcedureToHeader(&tt.treq, tt.headers)
+			headers := requestToTransportHeaders(&tt.treq, tt.headers)
 			assert.Equal(t, tt.expectedHeaders, headers)
 		})
 	}
@@ -134,8 +134,8 @@ func TestMoveCallerProcedureToRequest(t *testing.T) {
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
 			headers := transport.HeadersFromMap(tt.headers)
-			treq := headerCallerProcedureToRequest(&tt.treq, &headers)
-			assert.Equal(t, tt.expectedTreq, *treq)
+			transportHeadersToRequest(&tt.treq, headers)
+			assert.Equal(t, tt.expectedTreq, tt.treq)
 			assert.Equal(t, transport.HeadersFromMap(tt.expectedHeaders), headers)
 		})
 	}
@@ -359,4 +359,122 @@ func TestValidateServiceHeaders(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDeleteReservedHeaders(t *testing.T) {
+	tests := map[string]struct {
+		headers           map[string]string
+		enforceHeaderRule bool
+		expHeaders        map[string]string
+		expReportHeader   bool
+	}{
+		"nil-headers": {},
+		"no-reserved-headers": {
+			headers: map[string]string{
+				"any-header": "any-value",
+			},
+			expHeaders: map[string]string{
+				"any-header": "any-value",
+			},
+		},
+		"reserved-known-headers": {
+			headers: map[string]string{
+				ServiceHeaderKey: "any-value",
+				"any-header":     "any-value",
+			},
+			expHeaders: map[string]string{
+				"any-header": "any-value",
+			},
+		},
+		"reserved-rpc-headers": {
+			headers: map[string]string{
+				"rpc-any":    "any-value",
+				"any-header": "any-value",
+			},
+			expHeaders: map[string]string{
+				"rpc-any":    "any-value",
+				"any-header": "any-value",
+			},
+			expReportHeader: true,
+		},
+		"reserved-dollar-rpc-headers": {
+			headers: map[string]string{
+				"$rpc$-any":  "any-value",
+				"any-header": "any-value",
+			},
+			expHeaders: map[string]string{
+				"$rpc$-any":  "any-value",
+				"any-header": "any-value",
+			},
+			expReportHeader: true,
+		},
+		"enforce-header-rules": {
+			headers: map[string]string{
+				"rpc-any":    "any-value",
+				"$rpc$-any":  "any-value",
+				"any-header": "any-value",
+			},
+			enforceHeaderRule: true,
+			expHeaders: map[string]string{
+				"any-header": "any-value",
+			},
+			expReportHeader: true,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			switchEnforceHeaderRules(t, tt.enforceHeaderRule)
+
+			headers := transport.HeadersFromMap(tt.headers)
+			reportHeader := deleteReservedHeaders(headers)
+			assert.Equal(t, tt.expReportHeader, reportHeader)
+			assert.Equal(t, transport.HeadersFromMap(tt.expHeaders), headers)
+		})
+
+	}
+}
+
+func TestValidateApplicationHeaders(t *testing.T) {
+	tests := map[string]struct {
+		headers map[string]string
+		expErr  error
+	}{
+		"no-headers-no-error": {},
+		"valid-headers-no-error": {
+			headers: map[string]string{
+				"valid-key": "valid-value",
+			},
+		},
+		"reserved-rpc-header-error": {
+			headers: map[string]string{
+				"rpc-any": "any-value",
+			},
+			expErr: yarpcerrors.InternalErrorf("header with rpc prefix is not allowed in request application headers (rpc-any was passed)"),
+		},
+		"reserved-dollad-rpc-header-error": {
+			headers: map[string]string{
+				"$rpc$-any": "any-value",
+			},
+			expErr: yarpcerrors.InternalErrorf("header with rpc prefix is not allowed in request application headers ($rpc$-any was passed)"),
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := validateApplicationHeaders(tt.headers)
+			assert.Equal(t, tt.expErr, err)
+		})
+	}
+}
+
+func switchEnforceHeaderRules(t *testing.T, cond bool) {
+	if !cond {
+		return
+	}
+
+	enforceHeaderRules = true
+	t.Cleanup(func() {
+		enforceHeaderRules = false
+	})
 }
