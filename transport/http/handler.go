@@ -31,20 +31,16 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	opentracinglog "github.com/opentracing/opentracing-go/log"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/internal/iopool"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 )
-
-func popHeader(h http.Header, n string) string {
-	v := h.Get(n)
-	h.Del(n)
-	return v
-}
 
 // handler adapts a transport.Handler into a handler for net/http.
 type handler struct {
@@ -53,6 +49,7 @@ type handler struct {
 	grabHeaders       map[string]struct{}
 	bothResponseError bool
 	logger            *zap.Logger
+	meter             *metrics.Scope
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -60,9 +57,18 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	service := popHeader(req.Header, ServiceHeader)
 	procedure := popHeader(req.Header, ProcedureHeader)
 	bothResponseError := popHeader(req.Header, AcceptsBothResponseErrorHeader) == AcceptTrue
+
 	// add response header to echo accepted rpc-service
 	responseWriter.AddSystemHeader(ServiceHeader, service)
-	status := yarpcerrors.FromError(errors.WrapHandlerError(h.callHandler(responseWriter, req, service, procedure), service, procedure))
+
+	err := h.callHandler(responseWriter, req, service, procedure)
+	if responseWriter.reportHeader {
+		observability.IncReservedHeaderError(h.meter, req.Header.Get(CallerHeader), service)
+	}
+	if err == nil && responseWriter.err != nil {
+		err = responseWriter.err
+	}
+	status := yarpcerrors.FromError(errors.WrapHandlerError(err, service, procedure))
 	if status == nil {
 		responseWriter.Close(http.StatusOK)
 		return
@@ -113,10 +119,16 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		RoutingKey:      popHeader(req.Header, RoutingKeyHeader),
 		RoutingDelegate: popHeader(req.Header, RoutingDelegateHeader),
 		CallerProcedure: popHeader(req.Header, CallerProcedureHeader),
-		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}),
 		Body:            req.Body,
 		BodySize:        int(req.ContentLength),
 	}
+
+	reportHeader := false
+	treq.Headers, reportHeader = applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{})
+	if reportHeader {
+		observability.IncReservedHeaderStripped(h.meter, treq.Caller, treq.Service)
+	}
+
 	for header := range h.grabHeaders {
 		if value := req.Header.Get(header); value != "" {
 			treq.Headers = treq.Headers.With(header, value)
@@ -250,8 +262,10 @@ var (
 
 // responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.
 type responseWriter struct {
-	w      http.ResponseWriter
-	buffer *bufferpool.Buffer
+	w            http.ResponseWriter
+	buffer       *bufferpool.Buffer
+	reportHeader bool
+	err          error
 }
 
 func newResponseWriter(w http.ResponseWriter) *responseWriter {
@@ -267,7 +281,7 @@ func (rw *responseWriter) Write(s []byte) (int, error) {
 }
 
 func (rw *responseWriter) AddHeaders(h transport.Headers) {
-	applicationHeaders.ToHTTPHeaders(h, rw.w.Header())
+	_, rw.reportHeader, rw.err = applicationHeaders.ToHTTPHeaders(h, rw.w.Header())
 }
 
 func (rw *responseWriter) SetApplicationError() {
@@ -329,4 +343,10 @@ func getContentType(encoding transport.Encoding) string {
 	default:
 		return ""
 	}
+}
+
+func popHeader(h http.Header, n string) string {
+	v := h.Get(n)
+	h.Del(n)
+	return v
 }
