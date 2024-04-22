@@ -34,6 +34,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
+	"go.uber.org/yarpc/internal/observability"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -122,7 +123,10 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 	var responseMD metadata.MD
 	invokeErr := o.invoke(ctx, request, &responseBody, &responseMD, start)
 
-	responseHeaders, err := getApplicationHeaders(responseMD)
+	responseHeaders, reportHeader, err := getOutboundResponseApplicationHeaders(responseMD)
+	if reportHeader {
+		observability.IncReservedHeaderStripped(o.t.options.meter, request.Caller, request.Service)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +165,10 @@ func (o *Outbound) invoke(
 	responseMD *metadata.MD,
 	start time.Time,
 ) (retErr error) {
-	md, err := transportRequestToMetadata(request)
+	md, reportHeader, err := outboundRequestToMetadata(request)
+	if reportHeader {
+		observability.IncReservedHeaderError(o.t.options.meter, request.Caller, request.Service)
+	}
 	if err != nil {
 		return err
 	}
@@ -301,7 +308,10 @@ func (o *Outbound) stream(
 		return nil, err
 	}
 
-	md, err := transportRequestToMetadata(treq)
+	md, reportHeader, err := outboundRequestToMetadata(treq)
+	if reportHeader {
+		observability.IncReservedHeaderError(o.t.options.meter, treq.Caller, treq.Service)
+	}
 	if err != nil {
 		return nil, err
 	}

@@ -29,6 +29,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"golang.org/x/net/context"
@@ -88,7 +89,10 @@ func (h *handler) getBasicTransportRequest(ctx context.Context, streamMethod str
 	if md == nil || !ok {
 		return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "cannot get metadata from ctx: %v", ctx)
 	}
-	transportRequest, err := metadataToTransportRequest(md)
+	transportRequest, reportHeader, err := metadataToInboundRequest(md)
+	if reportHeader {
+		observability.IncReservedHeaderStripped(h.i.t.options.meter, transportRequest.Caller, transportRequest.Service)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -189,6 +193,10 @@ func (h *handler) handleUnary(
 
 	err := h.handleUnaryBeforeErrorConversion(ctx, transportRequest, responseWriter, start, handler)
 	err = handlerErrorToGRPCError(err, responseWriter)
+
+	if responseWriter.reportHeader {
+		observability.IncReservedHeaderError(h.i.t.options.meter, transportRequest.Caller, transportRequest.Service)
+	}
 
 	// Send the response attributes back and end the stream.
 	//
