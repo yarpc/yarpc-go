@@ -25,6 +25,7 @@ import (
 
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc/metadata"
 )
@@ -88,17 +89,28 @@ const (
 	contentTypeHeader = "content-type"
 )
 
+var (
+	// enforceHeaderRules is a feature flag for a more strict error handling rules.
+	// See https://github.com/yarpc/yarpc-go/issues/2265 for more details.
+	enforceHeaderRules = false
+)
+
 // TODO: there are way too many repeat calls to strings.ToLower
 // Note that these calls are done indirectly, primarily through
 // transport.CanonicalizeHeaderKey
 
-func isReserved(header string) bool {
+// deprecated: use isReservedHeaderPrefixV2
+func isReservedHeaderPrefixV1(header string) bool {
 	return strings.HasPrefix(strings.ToLower(header), "rpc-")
 }
 
-// transportRequestToMetadata will populate all reserved and application headers
+func isReservedHeaderPrefixV2(header string) bool {
+	return strings.HasPrefix(strings.ToLower(header), "rpc-") || strings.HasPrefix(strings.ToLower(header), "$rpc$-")
+}
+
+// outboundRequestToMetadata populates all reserved and application headers
 // from the Request into a new MD.
-func transportRequestToMetadata(request *transport.Request) (metadata.MD, error) {
+func outboundRequestToMetadata(request *transport.Request, edgeMetrics observability.ReservedHeaderEdgeMetrics) (metadata.MD, error) {
 	md := metadata.New(nil)
 	if err := multierr.Combine(
 		addToMetadata(md, CallerHeader, request.Caller),
@@ -111,15 +123,18 @@ func transportRequestToMetadata(request *transport.Request) (metadata.MD, error)
 	); err != nil {
 		return md, err
 	}
-	return md, addApplicationHeaders(md, request.Headers)
+
+	return md, addApplicationHeaders(md, request.Headers, edgeMetrics)
 }
 
-// metadataToTransportRequest will populate the Request with all reserved and application
+// metadataToInboundRequest populates the Request with all reserved and application
 // headers into a new Request, only not setting the Body field.
-func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
+func metadataToInboundRequest(md metadata.MD, metrics *observability.ReservedHeaderMetrics) (*transport.Request, error) {
 	request := &transport.Request{
 		Headers: transport.NewHeadersWithCapacity(md.Len()),
 	}
+	reportStrippedHeader := false
+
 	for header, values := range md {
 		var value string
 		switch len(values) {
@@ -153,9 +168,21 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 				request.Encoding = transport.Encoding(getContentSubtype(value))
 			}
 		default:
+			if isReservedHeaderPrefixV2(header) {
+				reportStrippedHeader = true
+				// Skip headers only if feature flag is enabled
+				if enforceHeaderRules {
+					continue
+				}
+			}
 			request.Headers = request.Headers.With(header, value)
 		}
 	}
+
+	if reportStrippedHeader {
+		metrics.IncStripped(request.Caller, request.Service)
+	}
+
 	return request, nil
 }
 
@@ -182,29 +209,57 @@ func metadataToApplicationErrorMeta(responseMD metadata.MD) *transport.Applicati
 }
 
 // addApplicationHeaders adds the headers to md.
-func addApplicationHeaders(md metadata.MD, headers transport.Headers) error {
+func addApplicationHeaders(md metadata.MD, headers transport.Headers, edgeMetrics observability.ReservedHeaderEdgeMetrics) error {
+	reportHeader := false
+	defer func() {
+		if reportHeader {
+			edgeMetrics.IncError()
+		}
+	}()
+
 	for header, value := range headers.Items() {
 		header = transport.CanonicalizeHeaderKey(header)
-		if isReserved(header) {
+
+		if isReservedHeaderPrefixV1(header) {
 			return yarpcerrors.InvalidArgumentErrorf("cannot use reserved header in application headers: %s", header)
 		}
+
+		if isReservedHeaderPrefixV2(header) {
+			reportHeader = true
+			// Return error only if feature flag is enabled
+			if enforceHeaderRules {
+				return yarpcerrors.InternalErrorf("cannot use reserved header in application headers: %s", header)
+			}
+		}
+
 		if err := addToMetadata(md, header, value); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
-// getApplicationHeaders returns the headers from md without any reserved headers.
-func getApplicationHeaders(md metadata.MD) (transport.Headers, error) {
+// getOutboundResponseApplicationHeaders returns the headers from md without any reserved headers.
+func getOutboundResponseApplicationHeaders(md metadata.MD, edgeMetrics observability.ReservedHeaderEdgeMetrics) (transport.Headers, error) {
 	if len(md) == 0 {
 		return transport.Headers{}, nil
 	}
+
 	headers := transport.NewHeadersWithCapacity(md.Len())
+	reportHeader := false
+
 	for header, values := range md {
 		header = transport.CanonicalizeHeaderKey(header)
-		if isReserved(header) {
+		if isReservedHeaderPrefixV1(header) {
 			continue
+		}
+		if isReservedHeaderPrefixV2(header) {
+			reportHeader = true
+			// Return error only if feature flag is enabled
+			if enforceHeaderRules {
+				continue
+			}
 		}
 		var value string
 		switch len(values) {
@@ -213,16 +268,24 @@ func getApplicationHeaders(md metadata.MD) (transport.Headers, error) {
 		case 1:
 			value = values[0]
 		default:
-			return headers, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
+			return transport.Headers{}, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
 		}
 		headers = headers.With(header, value)
 	}
+
+	if reportHeader {
+		edgeMetrics.IncStripped()
+	}
+
 	return headers, nil
 }
 
 // add to md
 // return error if key already in md
 func addToMetadata(md metadata.MD, key string, value string) error {
+	if md == nil {
+		return nil
+	}
 	if value == "" {
 		return nil
 	}

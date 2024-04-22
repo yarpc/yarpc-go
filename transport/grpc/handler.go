@@ -88,7 +88,7 @@ func (h *handler) getBasicTransportRequest(ctx context.Context, streamMethod str
 	if md == nil || !ok {
 		return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "cannot get metadata from ctx: %v", ctx)
 	}
-	transportRequest, err := metadataToTransportRequest(md)
+	transportRequest, err := metadataToInboundRequest(md, h.i.t.reservedHeaderMetric)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +181,7 @@ func (h *handler) handleUnary(
 	transportRequest.Body = requestBuffer
 	transportRequest.BodySize = len(requestData)
 
-	responseWriter := newResponseWriter()
+	responseWriter := newResponseWriter(h.i.t.reservedHeaderMetric.With(transportRequest.Caller, transportRequest.Service))
 	defer responseWriter.Close()
 
 	// Echo accepted rpc-service in response header

@@ -25,6 +25,7 @@ import (
 	"sync"
 
 	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
@@ -35,10 +36,11 @@ var emptyDialOpts = &dialOptions{}
 // This currently does not have any additional functionality over creating
 // an Inbound or Outbound separately, but may in the future.
 type Transport struct {
-	lock          sync.Mutex
-	once          *lifecycle.Once
-	options       *transportOptions
-	addressToPeer map[string]*grpcPeer
+	lock                 sync.Mutex
+	once                 *lifecycle.Once
+	options              *transportOptions
+	addressToPeer        map[string]*grpcPeer
+	reservedHeaderMetric *observability.ReservedHeaderMetrics
 }
 
 // NewTransport returns a new Transport.
@@ -48,9 +50,10 @@ func NewTransport(options ...TransportOption) *Transport {
 
 func newTransport(transportOptions *transportOptions) *Transport {
 	return &Transport{
-		once:          lifecycle.NewOnce(),
-		options:       transportOptions,
-		addressToPeer: make(map[string]*grpcPeer),
+		once:                 lifecycle.NewOnce(),
+		options:              transportOptions,
+		addressToPeer:        make(map[string]*grpcPeer),
+		reservedHeaderMetric: observability.NewReserveHeaderMetrics(transportOptions.meter, TransportName),
 	}
 }
 

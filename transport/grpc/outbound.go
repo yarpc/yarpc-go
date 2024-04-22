@@ -122,7 +122,7 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 	var responseMD metadata.MD
 	invokeErr := o.invoke(ctx, request, &responseBody, &responseMD, start)
 
-	responseHeaders, err := getApplicationHeaders(responseMD)
+	responseHeaders, err := getOutboundResponseApplicationHeaders(responseMD, o.t.reservedHeaderMetric.With(request.Caller, request.Service))
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +161,7 @@ func (o *Outbound) invoke(
 	responseMD *metadata.MD,
 	start time.Time,
 ) (retErr error) {
-	md, err := transportRequestToMetadata(request)
+	md, err := outboundRequestToMetadata(request, o.t.reservedHeaderMetric.With(request.Caller, request.Service))
 	if err != nil {
 		return err
 	}
@@ -301,7 +301,7 @@ func (o *Outbound) stream(
 		return nil, err
 	}
 
-	md, err := transportRequestToMetadata(treq)
+	md, err := outboundRequestToMetadata(treq, o.t.reservedHeaderMetric.With(treq.Caller, treq.Service))
 	if err != nil {
 		return nil, err
 	}

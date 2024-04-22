@@ -31,9 +31,11 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/peer/peertest"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
 )
@@ -296,7 +298,8 @@ func TestCallServiceMatch(t *testing.T) {
 		t.Run(tt.msg, func(t *testing.T) {
 			server := grpc.NewServer(
 				grpc.UnknownServiceHandler(func(srv interface{}, stream grpc.ServerStream) error {
-					responseWriter := newResponseWriter()
+					reporter := observability.NewReserveHeaderMetrics(metrics.New().Scope(), TransportName).With("any-source", "any-dest")
+					responseWriter := newResponseWriter(reporter)
 					defer responseWriter.Close()
 
 					if tt.headerKey != "" {
