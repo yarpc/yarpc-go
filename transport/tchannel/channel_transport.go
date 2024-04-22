@@ -25,6 +25,7 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/zap"
@@ -87,8 +88,9 @@ func (options transportOptions) newChannelTransport() *ChannelTransport {
 		addr:              options.addr,
 		tracer:            options.tracer,
 		logger:            logger.Named("tchannel"),
+		meter:             options.meter,
 		originalHeaders:   options.originalHeaders,
-		newResponseWriter: newHandlerWriter,
+		newResponseWriter: newResponseWriter,
 	}
 }
 
@@ -102,6 +104,7 @@ type ChannelTransport struct {
 	addr              string
 	tracer            opentracing.Tracer
 	logger            *zap.Logger
+	meter             *metrics.Scope
 	router            transport.Router
 	originalHeaders   bool
 	newResponseWriter func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
