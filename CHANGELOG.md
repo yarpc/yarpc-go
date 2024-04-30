@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 - Upgraded go version to 1.21, set toolchain version.
 - Reverted rpc-caller-procedure value setting.
+- errors: encoding/decoding (marshalling/unmarshalling) errors are now returned as CodeInternal (13) instead of CodeInvalidArgument (3).
 
 ## [1.72.1] - 2024-03-14
 - tchannel: Renamed caller-procedure header from `$rpc$-caller-procedure` to `rpc-caller-procedure`.
