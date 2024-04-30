@@ -57,7 +57,7 @@ func New(cfg Configuration, transport peer.Transport, opts ...ChooserOption) (*C
 	}
 
 	if transport == nil {
-		return nil, yarpcerrors.InvalidArgumentErrorf("%q chooser requires non-nil transport", name)
+		return nil, yarpcerrors.InternalErrorf("%q chooser requires non-nil transport", name)
 	}
 	return &Chooser{
 		transport: transport,

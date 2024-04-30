@@ -462,7 +462,7 @@ func TestOutboundNoRequest(t *testing.T) {
 	defer out.Stop()
 	defer trans.Stop()
 	_, err := out.Call(context.Background(), nil)
-	wantErr := yarpcerrors.InvalidArgumentErrorf("request for tchannel outbound was nil")
+	wantErr := yarpcerrors.InternalErrorf("request for tchannel outbound was nil")
 	assert.EqualError(t, err, wantErr.Error())
 }
 

@@ -54,7 +54,7 @@ func TestNoRequest(t *testing.T) {
 	out := tran.NewSingleOutbound("localhost:0")
 
 	_, err := out.Call(context.Background(), nil)
-	assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for grpc outbound was nil"), err)
+	assert.Equal(t, yarpcerrors.InternalErrorf("request for grpc outbound was nil"), err)
 }
 
 func TestCallWithInvalidHeaderValue(t *testing.T) {

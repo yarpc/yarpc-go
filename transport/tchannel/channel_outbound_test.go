@@ -510,7 +510,7 @@ func TestChannelOutboundNoRequest(t *testing.T) {
 			require.NoError(t, err)
 
 			_, err = out.Call(context.Background(), nil)
-			assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for tchannel channel outbound was nil"), err)
+			assert.Equal(t, yarpcerrors.InternalErrorf("request for tchannel channel outbound was nil"), err)
 		})
 	}
 }

@@ -49,7 +49,7 @@ func CallFromContext(ctx context.Context) *Call {
 // WriteResponseHeader writes headers to the response of this call.
 func (c *Call) WriteResponseHeader(k, v string) error {
 	if c == nil {
-		return yarpcerrors.InvalidArgumentErrorf(
+		return yarpcerrors.InternalErrorf(
 			"failed to write response header: " +
 				"Call was nil, make sure CallFromContext was called with a request context")
 	}
