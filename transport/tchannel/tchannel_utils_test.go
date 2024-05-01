@@ -26,6 +26,7 @@ import (
 	"io"
 
 	"github.com/uber/tchannel-go"
+	"go.uber.org/yarpc/internal/observability"
 )
 
 func readArgs(r tchannel.ArgReadable) (arg2, arg3 []byte, err error) {
@@ -173,7 +174,7 @@ func (fr *faultyResponseRecorder) SendSystemError(err error) error {
 // inside tchannel.Handle.
 type faultyHandlerWriter struct{ responseWriterImpl }
 
-func newFaultyHandlerWriter(inboundCallResponse, tchannel.Format, headerCase) responseWriter {
+func newFaultyHandlerWriter(inboundCallResponse, tchannel.Format, headerCase, observability.ReservedHeaderEdgeMetrics) responseWriter {
 	return &faultyHandlerWriter{}
 }
 

@@ -38,6 +38,7 @@ import (
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/internal/routertest"
 	"go.uber.org/yarpc/internal/testtime"
 	pkgerrors "go.uber.org/yarpc/pkg/errors"
@@ -580,7 +581,7 @@ func TestResponseWriter(t *testing.T) {
 			resp := newResponseRecorder()
 			call.resp = resp
 
-			w := newHandlerWriter(call.Response(), call.Format(), tt.headerCase)
+			w := newHandlerWriter(call.Response(), call.Format(), tt.headerCase, observability.ReservedHeaderEdgeMetrics{})
 			tt.apply(w)
 			assert.NoError(t, w.Close())
 
@@ -623,7 +624,7 @@ func TestResponseWriterFailure(t *testing.T) {
 		resp := newResponseRecorder()
 		tt.setupResp(resp)
 
-		w := newHandlerWriter(resp, tchannel.Raw, canonicalizedHeaderCase)
+		w := newHandlerWriter(resp, tchannel.Raw, canonicalizedHeaderCase, observability.ReservedHeaderEdgeMetrics{})
 		_, err := w.Write([]byte("foo"))
 		assert.NoError(t, err)
 		_, err = w.Write([]byte("bar"))
@@ -638,7 +639,7 @@ func TestResponseWriterFailure(t *testing.T) {
 
 func TestResponseWriterEmptyBodyHeaders(t *testing.T) {
 	res := newResponseRecorder()
-	w := newHandlerWriter(res, tchannel.Raw, canonicalizedHeaderCase)
+	w := newHandlerWriter(res, tchannel.Raw, canonicalizedHeaderCase, observability.ReservedHeaderEdgeMetrics{})
 
 	w.AddHeaders(transport.NewHeaders().With("foo", "bar"))
 	require.NoError(t, w.Close())
@@ -809,7 +810,7 @@ func TestRpcServiceHeader(t *testing.T) {
 	hw := &responseWriterImpl{}
 	h := handler{
 		headerCase: canonicalizedHeaderCase,
-		newResponseWriter: func(inboundCallResponse, tchannel.Format, headerCase) responseWriter {
+		newResponseWriter: func(inboundCallResponse, tchannel.Format, headerCase, observability.ReservedHeaderEdgeMetrics) responseWriter {
 			return hw
 		},
 	}

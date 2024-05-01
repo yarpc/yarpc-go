@@ -30,6 +30,7 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
@@ -99,6 +100,7 @@ type handler struct {
 	tracer                         opentracing.Tracer
 	headerCase                     headerCase
 	logger                         *zap.Logger
+	reservedHeaderMetrics          *observability.ReservedHeaderMetrics
 	newResponseWriter              responseWriterConstructor
 	excludeServiceHeaderInResponse bool
 }
@@ -109,7 +111,7 @@ func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
 
 func (h handler) handle(ctx context.Context, call inboundCall) {
 	// you MUST close the responseWriter no matter what unless you have a tchannel.SystemError
-	responseWriter := h.newResponseWriter(call.Response(), call.Format(), h.headerCase)
+	responseWriter := h.newResponseWriter(call.Response(), call.Format(), h.headerCase, h.reservedHeaderMetrics.With(call.CallerName(), call.ServiceName()))
 	defer responseWriter.ReleaseBuffer()
 
 	if !h.excludeServiceHeaderInResponse {
@@ -183,6 +185,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 	}
 
 	transportHeadersToRequest(treq, headers)
+	deleteReservedPrefixHeaders(headers, h.reservedHeaderMetrics.With(call.CallerName(), call.ServiceName()))
 	treq.Headers = headers
 
 	if tcall, ok := call.(tchannelCall); ok {
