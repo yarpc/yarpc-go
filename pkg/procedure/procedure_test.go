@@ -51,3 +51,12 @@ func TestProcedureNameAndSplit(t *testing.T) {
 		assert.Equal(t, tt.Method, m)
 	}
 }
+
+func BenchmarkToName(b *testing.B) {
+	alphabet := "abcdefghijklmnopqrstuvwxyz"
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ToName(alphabet, alphabet)
+	}
+}
