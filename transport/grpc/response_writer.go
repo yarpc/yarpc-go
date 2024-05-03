@@ -25,6 +25,7 @@ import (
 
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/observability"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -34,13 +35,16 @@ var (
 )
 
 type responseWriter struct {
-	buffer    *bytes.Buffer
-	md        metadata.MD
-	headerErr error
+	buffer         *bytes.Buffer
+	md             metadata.MD
+	headerErr      error
+	headerReporter observability.ReservedHeaderEdgeMetrics
 }
 
-func newResponseWriter() *responseWriter {
-	return &responseWriter{}
+func newResponseWriter(reporter observability.ReservedHeaderEdgeMetrics) *responseWriter {
+	return &responseWriter{
+		headerReporter: reporter,
+	}
 }
 
 func (r *responseWriter) Write(p []byte) (int, error) {
@@ -58,7 +62,11 @@ func (r *responseWriter) AddHeaders(headers transport.Headers) {
 	if r.md == nil {
 		r.md = metadata.New(nil)
 	}
-	r.headerErr = multierr.Combine(r.headerErr, addApplicationHeaders(r.md, headers))
+
+	err := addApplicationHeaders(r.md, headers, r.headerReporter)
+	if err != nil {
+		r.headerErr = multierr.Combine(r.headerErr, err)
+	}
 }
 
 func (r *responseWriter) SetApplicationError() {

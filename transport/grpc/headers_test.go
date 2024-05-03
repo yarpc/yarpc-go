@@ -24,23 +24,23 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc/metadata"
 )
 
 func TestMetadataToTransportRequest(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		Name             string
-		MD               metadata.MD
-		TransportRequest *transport.Request
-		Error            error
+	tests := map[string]struct {
+		md                 metadata.MD
+		req                *transport.Request
+		enforceHeaderRules bool
+		expErr             error
+		expReportHeader    bool
 	}{
-		{
-			Name: "Basic",
-			MD: metadata.Pairs(
+		"basic": {
+			md: metadata.Pairs(
 				CallerHeader, "example-caller",
 				ServiceHeader, "example-service",
 				ShardKeyHeader, "example-shard-key",
@@ -51,7 +51,7 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				"foo", "bar",
 				"baz", "bat",
 			),
-			TransportRequest: &transport.Request{
+			req: &transport.Request{
 				Caller:          "example-caller",
 				Service:         "example-service",
 				ShardKey:        "example-shard-key",
@@ -65,9 +65,8 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				}),
 			},
 		},
-		{
-			Name: "Content-type",
-			MD: metadata.Pairs(
+		"content-type": {
+			md: metadata.Pairs(
 				CallerHeader, "example-caller",
 				ServiceHeader, "example-service",
 				ShardKeyHeader, "example-shard-key",
@@ -77,7 +76,7 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				"foo", "bar",
 				"baz", "bat",
 			),
-			TransportRequest: &transport.Request{
+			req: &transport.Request{
 				Caller:          "example-caller",
 				Service:         "example-service",
 				ShardKey:        "example-shard-key",
@@ -90,9 +89,8 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				}),
 			},
 		},
-		{
-			Name: "Content-type overridden",
-			MD: metadata.Pairs(
+		"content-type-overridden": {
+			md: metadata.Pairs(
 				CallerHeader, "example-caller",
 				ServiceHeader, "example-service",
 				ShardKeyHeader, "example-shard-key",
@@ -103,7 +101,7 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				"foo", "bar",
 				"baz", "bat",
 			),
-			TransportRequest: &transport.Request{
+			req: &transport.Request{
 				Caller:          "example-caller",
 				Service:         "example-service",
 				ShardKey:        "example-shard-key",
@@ -116,27 +114,83 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				}),
 			},
 		},
+		"Reserved header key with rpc prefix in application headers": {
+			md: metadata.Pairs(
+				CallerHeader, "example-caller",
+				ServiceHeader, "example-service",
+				"rpc-any", "any-value",
+			),
+			req: &transport.Request{
+				Caller:  "example-caller",
+				Service: "example-service",
+				Headers: transport.HeadersFromMap(map[string]string{"rpc-any": "any-value"}),
+			},
+			expReportHeader: true,
+		},
+		"Reserved header key with $rpc$ prefix in application headers": {
+			md: metadata.Pairs(
+				CallerHeader, "example-caller",
+				ServiceHeader, "example-service",
+				"$rpc$-any", "any-value",
+			),
+			req: &transport.Request{
+				Caller:  "example-caller",
+				Service: "example-service",
+				Headers: transport.HeadersFromMap(map[string]string{"$rpc$-any": "any-value"}),
+			},
+			expReportHeader: true,
+		},
+		"Reserved headers rules are enforced": {
+			md: metadata.Pairs(
+				CallerHeader, "example-caller",
+				ServiceHeader, "example-service",
+				"rpc-any", "any-value",
+				"$rpc$-any", "any-value",
+				"foo", "bar",
+				"baz", "bat",
+			),
+			req: &transport.Request{
+				Caller:  "example-caller",
+				Service: "example-service",
+				Headers: transport.HeadersFromMap(map[string]string{
+					"foo": "bar",
+					"baz": "bat",
+				}),
+			},
+			enforceHeaderRules: true,
+			expReportHeader:    true,
+		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.Name, func(t *testing.T) {
-			transportRequest, err := metadataToTransportRequest(tt.MD)
-			require.Equal(t, tt.Error, err)
-			require.Equal(t, tt.TransportRequest, transportRequest)
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			switchEnforceHeaderRules(t, tt.enforceHeaderRules)
+
+			root := metrics.New()
+			m := observability.NewReserveHeaderMetrics(root.Scope(), "grpc")
+
+			transportRequest, err := metadataToInboundRequest(tt.md, m)
+			assert.Equal(t, tt.expErr, err)
+			assert.Equal(t, tt.req, transportRequest)
+
+			if tt.expReportHeader {
+				assertTuple(t, root.Snapshot().Counters, tuple{"grpc_reserved_headers_stripped", "example-caller", "example-service", 1})
+			} else {
+				assertEmptyMetrics(t, root.Snapshot())
+			}
 		})
 	}
 }
 
 func TestTransportRequestToMetadata(t *testing.T) {
-	t.Parallel()
-	for _, tt := range []struct {
-		Name             string
-		MD               metadata.MD
-		TransportRequest *transport.Request
-		Error            error
+	for name, tt := range map[string]struct {
+		md                 metadata.MD
+		req                *transport.Request
+		enforceHeaderRules bool
+		expErr             error
+		expReportHeader    bool
 	}{
-		{
-			Name: "Basic",
-			MD: metadata.Pairs(
+		"basic": {
+			md: metadata.Pairs(
 				CallerHeader, "example-caller",
 				ServiceHeader, "example-service",
 				ShardKeyHeader, "example-shard-key",
@@ -147,7 +201,7 @@ func TestTransportRequestToMetadata(t *testing.T) {
 				"foo", "bar",
 				"baz", "bat",
 			),
-			TransportRequest: &transport.Request{
+			req: &transport.Request{
 				Caller:          "example-caller",
 				Service:         "example-service",
 				ShardKey:        "example-shard-key",
@@ -161,21 +215,51 @@ func TestTransportRequestToMetadata(t *testing.T) {
 				}),
 			},
 		},
-		{
-			Name: "Reserved header key in application headers",
-			MD:   metadata.Pairs(),
-			TransportRequest: &transport.Request{
+		"Reserved header key in application headers": {
+			md: metadata.Pairs(),
+			req: &transport.Request{
 				Headers: transport.HeadersFromMap(map[string]string{
 					CallerHeader: "example-caller",
 				}),
 			},
-			Error: yarpcerrors.InvalidArgumentErrorf("cannot use reserved header in application headers: %s", CallerHeader),
+			expErr: yarpcerrors.InvalidArgumentErrorf("cannot use reserved header in application headers: %s", CallerHeader),
+		},
+		"Reserved header key with $rpc$ prefix in application headers": {
+			md: metadata.Pairs("$rpc$-any", "example-caller"),
+			req: &transport.Request{
+				Headers: transport.HeadersFromMap(map[string]string{
+					"$rpc$-any": "example-caller",
+				}),
+			},
+			expErr:          nil,
+			expReportHeader: true,
+		},
+		"Reserved header key with $rpc$ prefix in application headers with enforced rules": {
+			md: metadata.Pairs(),
+			req: &transport.Request{
+				Headers: transport.HeadersFromMap(map[string]string{
+					"$rpc$-any": "example-caller",
+				}),
+			},
+			enforceHeaderRules: true,
+			expErr:             yarpcerrors.InternalErrorf("cannot use reserved header in application headers: $rpc$-any"),
+			expReportHeader:    true,
 		},
 	} {
-		t.Run(tt.Name, func(t *testing.T) {
-			md, err := transportRequestToMetadata(tt.TransportRequest)
-			require.Equal(t, tt.Error, err)
-			require.Equal(t, tt.MD, md)
+		t.Run(name, func(t *testing.T) {
+			switchEnforceHeaderRules(t, tt.enforceHeaderRules)
+			root := metrics.New()
+			edgeMetrics := observability.NewReserveHeaderMetrics(root.Scope(), "grpc").With("any-source", "any-dest")
+
+			md, err := outboundRequestToMetadata(tt.req, edgeMetrics)
+			assert.Equal(t, tt.expErr, err)
+			assert.Equal(t, tt.md, md)
+
+			if tt.expReportHeader {
+				assertTuple(t, root.Snapshot().Counters, tuple{"grpc_reserved_headers_error", "any-source", "any-dest", 1})
+			} else {
+				assertEmptyMetrics(t, root.Snapshot())
+			}
 		})
 	}
 }
@@ -195,14 +279,20 @@ func TestGetContentSubtype(t *testing.T) {
 	}
 }
 
-func TestIsReserved(t *testing.T) {
-	assert.True(t, isReserved(CallerHeader))
-	assert.True(t, isReserved(ServiceHeader))
-	assert.True(t, isReserved(ShardKeyHeader))
-	assert.True(t, isReserved(RoutingKeyHeader))
-	assert.True(t, isReserved(RoutingDelegateHeader))
-	assert.True(t, isReserved(EncodingHeader))
-	assert.True(t, isReserved("rpc-foo"))
+func TestIsReservedHeaderPrefixV1(t *testing.T) {
+	assert.True(t, isReservedHeaderPrefixV1(CallerHeader))
+	assert.True(t, isReservedHeaderPrefixV1(ServiceHeader))
+	assert.True(t, isReservedHeaderPrefixV1(ShardKeyHeader))
+	assert.True(t, isReservedHeaderPrefixV1(RoutingKeyHeader))
+	assert.True(t, isReservedHeaderPrefixV1(RoutingDelegateHeader))
+	assert.True(t, isReservedHeaderPrefixV1(EncodingHeader))
+	assert.True(t, isReservedHeaderPrefixV1("rpc-foo"))
+	assert.False(t, isReservedHeaderPrefixV1("$rpc$-foo"))
+}
+
+func TestIsReservedHeaderPrefixV2(t *testing.T) {
+	assert.True(t, isReservedHeaderPrefixV2("rpc-foo"))
+	assert.True(t, isReservedHeaderPrefixV2("$rpc$-foo"))
 }
 
 func TestMDReadWriterDuplicateKey(t *testing.T) {
@@ -216,55 +306,221 @@ func TestMDReadWriterDuplicateKey(t *testing.T) {
 }
 
 func TestGetApplicationHeaders(t *testing.T) {
-	tests := []struct {
-		msg         string
-		meta        metadata.MD
-		wantHeaders map[string]string
-		wantErr     string
+	tests := map[string]struct {
+		md                 metadata.MD
+		enforceHeaderRules bool
+		expHeaders         map[string]string
+		expErr             error
+		expReportHeader    bool
 	}{
-		{
-			msg:         "nil",
-			meta:        nil,
-			wantHeaders: nil,
+		"nil": {
+			md:         nil,
+			expHeaders: nil,
 		},
-		{
-			msg:         "empty",
-			meta:        metadata.MD{},
-			wantHeaders: nil,
+		"empty": {
+			md:         metadata.MD{},
+			expHeaders: nil,
 		},
-		{
-			msg: "success",
-			meta: metadata.MD{
+		"success": {
+			md: metadata.MD{
 				"rpc-service":         []string{"foo"}, // reserved header
 				"test-header-empty":   []string{},      // no value
 				"test-header-valid-1": []string{"test-value-1"},
 				"test-Header-Valid-2": []string{"test-value-2"},
 			},
-			wantHeaders: map[string]string{
+			expHeaders: map[string]string{
 				"test-header-valid-1": "test-value-1",
 				"test-header-valid-2": "test-value-2",
 			},
 		},
-		{
-			msg: "error: multiple values for one header",
-			meta: metadata.MD{
+		"error: multiple values for one header": {
+			md: metadata.MD{
 				"test-header-valid": []string{"test-value"},
 				"test-header-dup":   []string{"test-value-1", "test-value-2"},
 			},
-			wantErr: "header has more than one value: test-header-dup:[test-value-1 test-value-2]",
+			expErr: yarpcerrors.InvalidArgumentErrorf("header has more than one value: test-header-dup:[test-value-1 test-value-2]"),
+		},
+		"reserved header": {
+			md: metadata.MD{
+				"$rpc$-any": []string{"test-value"},
+			},
+			expHeaders:      map[string]string{"$rpc$-any": "test-value"},
+			expReportHeader: true,
+		},
+		"reserved header with enforced header rules": {
+			md: metadata.MD{
+				"rpc-any":   []string{"test-value"},
+				"$rpc$-any": []string{"test-value"},
+				"foo":       []string{"bar"},
+			},
+			enforceHeaderRules: true,
+			expHeaders:         map[string]string{"foo": "bar"},
+			expReportHeader:    true,
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.msg, func(t *testing.T) {
-			got, err := getApplicationHeaders(tt.meta)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.wantErr, "unexpecte error message")
-				return
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			switchEnforceHeaderRules(t, tt.enforceHeaderRules)
+			switchEnforceHeaderRules(t, tt.enforceHeaderRules)
+			root := metrics.New()
+			edgeMetrics := observability.NewReserveHeaderMetrics(root.Scope(), "grpc").With("any-source", "any-dest")
+
+			headers, err := getOutboundResponseApplicationHeaders(tt.md, edgeMetrics)
+			assert.Equal(t, tt.expErr, err)
+			assert.Equal(t, tt.expHeaders, headers.Items())
+
+			if tt.expReportHeader {
+				assertTuple(t, root.Snapshot().Counters, tuple{"grpc_reserved_headers_stripped", "any-source", "any-dest", 1})
+			} else {
+				assertEmptyMetrics(t, root.Snapshot())
 			}
-			require.NoError(t, err, "failed to extract application headers")
-			assert.Equal(t, tt.wantHeaders, got.Items(), "unexpected headers")
 		})
 	}
+}
+
+func TestAddApplicationHeaders(t *testing.T) {
+	tests := map[string]struct {
+		md                 metadata.MD
+		h                  transport.Headers
+		enforceHeaderRules bool
+		expMD              metadata.MD
+		expErr             error
+		expReportHeader    bool
+	}{
+		"success": {
+			md: metadata.Pairs("foo", "bar"),
+			h: transport.HeadersFromMap(map[string]string{
+				"baz": "qux",
+			}),
+			expMD: metadata.Pairs("foo", "bar", "baz", "qux"),
+		},
+		"reserved-rpc-prefix": {
+			md: metadata.Pairs("foo", "bar"),
+			h: transport.HeadersFromMap(map[string]string{
+				"rpc-baz": "qux",
+			}),
+			expMD:           metadata.Pairs("foo", "bar"),
+			expErr:          yarpcerrors.InvalidArgumentErrorf("cannot use reserved header in application headers: rpc-baz"),
+			expReportHeader: false, // it's not a new behaviour
+		},
+		"reserved-dollar-rpc-prefix": {
+			md: metadata.Pairs("foo", "bar"),
+			h: transport.HeadersFromMap(map[string]string{
+				"$rpc$-baz": "qux",
+			}),
+			expMD:           metadata.Pairs("foo", "bar", "$rpc$-baz", "qux"),
+			expErr:          nil,
+			expReportHeader: true,
+		},
+		"reserved-dollar-rpc-prefix-enforced-rule": {
+			md: metadata.Pairs("foo", "bar"),
+			h: transport.HeadersFromMap(map[string]string{
+				"$rpc$-baz": "qux",
+			}),
+			enforceHeaderRules: true,
+			expMD:              metadata.Pairs("foo", "bar"),
+			expErr:             yarpcerrors.InternalErrorf("cannot use reserved header in application headers: $rpc$-baz"),
+			expReportHeader:    true,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			switchEnforceHeaderRules(t, tt.enforceHeaderRules)
+			root := metrics.New()
+			edgeMetrics := observability.NewReserveHeaderMetrics(root.Scope(), "grpc").With("any-source", "any-dest")
+
+			err := addApplicationHeaders(tt.md, tt.h, edgeMetrics)
+			assert.Equal(t, err, tt.expErr)
+			assert.Equal(t, tt.expMD, tt.md)
+
+			if tt.expReportHeader {
+				assertTuple(t, root.Snapshot().Counters, tuple{"grpc_reserved_headers_error", "any-source", "any-dest", 1})
+			} else {
+				assertEmptyMetrics(t, root.Snapshot())
+			}
+		})
+
+	}
+}
+
+func TestAddToMetadata(t *testing.T) {
+	tests := map[string]struct {
+		md     metadata.MD
+		key    string
+		value  string
+		expErr error
+		expMD  metadata.MD
+	}{
+		"nil-md": {
+			md:    nil,
+			key:   "foo",
+			value: "bar",
+			expMD: nil,
+		},
+		"empty-value-ignored": {
+			md:    metadata.Pairs(),
+			key:   "foo",
+			value: "",
+			expMD: metadata.Pairs(),
+		},
+		"duplicate-key": {
+			md:     metadata.Pairs("foo", "bar"),
+			key:    "foo",
+			value:  "baz",
+			expErr: yarpcerrors.InvalidArgumentErrorf("duplicate key: foo"),
+			expMD:  metadata.Pairs("foo", "bar"),
+		},
+		"success": {
+			md:    metadata.Pairs("foo", "bar"),
+			key:   "baz",
+			value: "qux",
+			expMD: metadata.Pairs("foo", "bar", "baz", "qux"),
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := addToMetadata(tt.md, tt.key, tt.value)
+			assert.Equal(t, err, tt.expErr)
+			assert.Equal(t, tt.expMD, tt.md)
+		})
+	}
+}
+
+func switchEnforceHeaderRules(t *testing.T, cond bool) {
+	if !cond {
+		return
+	}
+
+	enforceHeaderRules = true
+	t.Cleanup(func() {
+		enforceHeaderRules = false
+	})
+}
+
+type tuple struct {
+	name, tag1, tag2 string
+	value            int64
+}
+
+func assertTuple(t *testing.T, snapshots []metrics.Snapshot, expected tuple) {
+	assertTuples(t, snapshots, []tuple{expected})
+}
+
+func assertTuples(t *testing.T, snapshots []metrics.Snapshot, expected []tuple) {
+	actual := make([]tuple, 0, len(snapshots))
+
+	for _, c := range snapshots {
+		actual = append(actual, tuple{c.Name, c.Tags["source"], c.Tags["dest"], c.Value})
+	}
+
+	assert.ElementsMatch(t, expected, actual)
+}
+
+func assertEmptyMetrics(t *testing.T, snapshot *metrics.RootSnapshot) {
+	assert.Empty(t, snapshot.Counters)
+	assert.Empty(t, snapshot.Gauges)
+	assert.Empty(t, snapshot.Histograms)
 }
