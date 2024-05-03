@@ -177,19 +177,17 @@ func decodeHeaders(r io.Reader) (transport.Headers, error) {
 	return headers, reader.Err()
 }
 
-// headerCallerProcedureToRequest copies callerProcedure from headers to req.CallerProcedure
-// and then deletes it from headers.
-func headerCallerProcedureToRequest(req *transport.Request, headers *transport.Headers) *transport.Request {
+// transportHeadersToRequest copies custom (which are not part of tchannel protocol) transport header values to request
+// and then deletes them from headers list.
+func transportHeadersToRequest(req *transport.Request, headers transport.Headers) {
 	if callerProcedure, ok := headers.Get(CallerProcedureHeader); ok {
 		req.CallerProcedure = callerProcedure
 		headers.Del(CallerProcedureHeader)
-		return req
 	}
-	return req
 }
 
-// requestCallerProcedureToHeader add callerProcedure header as an application header.
-func requestCallerProcedureToHeader(req *transport.Request, reqHeaders map[string]string) map[string]string {
+// requestToTransportHeaders adds custom (which are not part of tchannel protocol) transport headers from request.
+func requestToTransportHeaders(req *transport.Request, reqHeaders map[string]string) map[string]string {
 	if req.CallerProcedure == "" {
 		return reqHeaders
 	}
@@ -197,7 +195,9 @@ func requestCallerProcedureToHeader(req *transport.Request, reqHeaders map[strin
 	if reqHeaders == nil {
 		reqHeaders = make(map[string]string)
 	}
+
 	reqHeaders[CallerProcedureHeader] = req.CallerProcedure
+
 	return reqHeaders
 }
 
@@ -227,7 +227,7 @@ func encodeHeaders(hs map[string]string) []byte {
 	return out
 }
 
-func headerMap(hs transport.Headers, headerCase headerCase) map[string]string {
+func getHeaderMap(hs transport.Headers, headerCase headerCase) map[string]string {
 	switch headerCase {
 	case originalHeaderCase:
 		return hs.OriginalItems()

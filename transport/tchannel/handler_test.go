@@ -56,7 +56,7 @@ func TestHandlerErrors(t *testing.T) {
 		format            tchannel.Format
 		headers           []byte
 		wantHeaders       map[string]string
-		newResponseWriter func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
+		newResponseWriter responseWriterConstructor
 		recorder          recorder
 		wantLogLevel      zapcore.Level
 		wantLogMessage    string
@@ -181,7 +181,7 @@ func TestHandlerFailures(t *testing.T) {
 		sendCall          *fakeInboundCall
 		expectCall        func(*transporttest.MockUnaryHandler)
 		wantStatus        tchannel.SystemErrCode // expected status
-		newResponseWriter func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
+		newResponseWriter responseWriterConstructor
 		recorder          recorder
 		wantLogLevel      zapcore.Level
 		wantLogMessage    string
@@ -582,7 +582,7 @@ func TestResponseWriter(t *testing.T) {
 
 			w := newHandlerWriter(call.Response(), call.Format(), tt.headerCase)
 			tt.apply(w)
-			assert.NoError(t, w.Close())
+			assert.NoError(t, w.Send())
 
 			assert.Nil(t, resp.systemErr)
 
@@ -628,7 +628,7 @@ func TestResponseWriterFailure(t *testing.T) {
 		assert.NoError(t, err)
 		_, err = w.Write([]byte("bar"))
 		assert.NoError(t, err)
-		err = w.Close()
+		err = w.Send()
 		assert.Error(t, err)
 		for _, msg := range tt.messages {
 			assert.Contains(t, err.Error(), msg)
@@ -641,7 +641,7 @@ func TestResponseWriterEmptyBodyHeaders(t *testing.T) {
 	w := newHandlerWriter(res, tchannel.Raw, canonicalizedHeaderCase)
 
 	w.AddHeaders(transport.NewHeaders().With("foo", "bar"))
-	require.NoError(t, w.Close())
+	require.NoError(t, w.Send())
 
 	assert.NotEmpty(t, res.arg2.Bytes(), "headers must not be empty")
 	assert.Empty(t, res.arg3.Bytes(), "body must be empty but was %#v", res.arg3.Bytes())
@@ -806,7 +806,7 @@ func TestTruncatedHeader(t *testing.T) {
 }
 
 func TestRpcServiceHeader(t *testing.T) {
-	hw := &handlerWriter{}
+	hw := &responseWriterImpl{}
 	h := handler{
 		headerCase: canonicalizedHeaderCase,
 		newResponseWriter: func(inboundCallResponse, tchannel.Format, headerCase) responseWriter {

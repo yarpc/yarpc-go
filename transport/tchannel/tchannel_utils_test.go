@@ -171,12 +171,12 @@ func (fr *faultyResponseRecorder) SendSystemError(err error) error {
 
 // faultyHandlerWriter mocks a responseWriter.Close() error to test logging behaviour
 // inside tchannel.Handle.
-type faultyHandlerWriter struct{ handlerWriter }
+type faultyHandlerWriter struct{ responseWriterImpl }
 
-func newFaultyHandlerWriter(response inboundCallResponse, format tchannel.Format, headerCase headerCase) responseWriter {
+func newFaultyHandlerWriter(inboundCallResponse, tchannel.Format, headerCase) responseWriter {
 	return &faultyHandlerWriter{}
 }
 
-func (frw *faultyHandlerWriter) Close() error {
+func (frw *faultyHandlerWriter) Send() error {
 	return errors.New("faultyHandlerWriter failed to close")
 }
