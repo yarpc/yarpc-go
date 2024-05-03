@@ -21,7 +21,6 @@
 package procedure
 
 import (
-	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -54,34 +53,10 @@ func TestProcedureNameAndSplit(t *testing.T) {
 }
 
 func BenchmarkToName(b *testing.B) {
-	benchmarks := []struct {
-		desc         string
-		stringLength int
-	}{
-		{"StringsLength-10", 10},
-		{"StringsLength-100", 100},
-		{"StringsLength-1000", 1000},
+	alphabet := "abcdefghijklmnopqrstuvwxyz"
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ToName(alphabet, alphabet)
 	}
-
-	for _, benchmark := range benchmarks {
-		b.Run(benchmark.desc, func(b *testing.B) {
-			serviceName := randomString(benchmark.stringLength)
-			methodName := randomString(benchmark.stringLength)
-			b.ReportAllocs()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				ToName(serviceName, methodName)
-			}
-		})
-	}
-}
-
-var _letterRunes = []rune("abcdefghijklmnopqrstuvwxyz")
-
-func randomString(length int) string {
-	b := make([]rune, length)
-	for i := range b {
-		b[i] = _letterRunes[rand.Intn(len(_letterRunes))]
-	}
-	return string(b)
 }
