@@ -153,10 +153,10 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 		req.Procedure,
 		&callOptions,
 	)
-
 	if err != nil {
 		return nil, err
 	}
+
 	reqHeaders := getHeaderMap(req.Headers, headerCase)
 
 	reqHeaders = requestToTransportHeaders(req, reqHeaders)
