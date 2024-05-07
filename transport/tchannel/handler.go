@@ -23,8 +23,6 @@ package tchannel
 import (
 	"bytes"
 	"context"
-	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -72,18 +70,16 @@ type inboundCallResponse interface {
 	SetApplicationError() error
 }
 
-// responseWriter provides an interface similar to handlerWriter.
-//
-// It allows us to control handlerWriter during testing.
+// responseWriter enhances transport.ResponseWriter interface with transport specific
+// methods.
 type responseWriter interface {
-	AddHeaders(h transport.Headers)
-	AddHeader(key string, value string)
+	transport.ResponseWriter
+
+	AddSystemHeader(key string, value string)
 	Close() error
 	ReleaseBuffer()
 	IsApplicationError() bool
-	SetApplicationError()
 	SetApplicationErrorMeta(meta *transport.ApplicationErrorMeta)
-	Write(s []byte) (int, error)
 }
 
 // tchannelCall wraps a TChannel InboundCall into an inboundCall.
@@ -103,7 +99,7 @@ type handler struct {
 	tracer                         opentracing.Tracer
 	headerCase                     headerCase
 	logger                         *zap.Logger
-	newResponseWriter              func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
+	newResponseWriter              responseWriterConstructor
 	excludeServiceHeaderInResponse bool
 }
 
@@ -118,7 +114,7 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 
 	if !h.excludeServiceHeaderInResponse {
 		// echo accepted rpc-service in response header
-		responseWriter.AddHeader(ServiceHeaderKey, call.ServiceName())
+		responseWriter.AddSystemHeader(ServiceHeaderKey, call.ServiceName())
 	}
 
 	err := h.callHandler(ctx, call, responseWriter)
@@ -147,12 +143,12 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 		// TODO: what to do with error? we could have a whole complicated scheme to
 		// return a SystemError here, might want to do that
 		text, _ := status.Code().MarshalText()
-		responseWriter.AddHeader(ErrorCodeHeaderKey, string(text))
+		responseWriter.AddSystemHeader(ErrorCodeHeaderKey, string(text))
 		if status.Name() != "" {
-			responseWriter.AddHeader(ErrorNameHeaderKey, status.Name())
+			responseWriter.AddSystemHeader(ErrorNameHeaderKey, status.Name())
 		}
 		if status.Message() != "" {
-			responseWriter.AddHeader(ErrorMessageHeaderKey, status.Message())
+			responseWriter.AddSystemHeader(ErrorMessageHeaderKey, status.Message())
 		}
 	}
 	if reswErr := responseWriter.Close(); reswErr != nil && !clientTimedOut {
@@ -248,119 +244,6 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 
 	default:
 		return yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport tchannel does not handle %s handlers", spec.Type().String())
-	}
-}
-
-type handlerWriter struct {
-	failedWith       error
-	format           tchannel.Format
-	headers          transport.Headers
-	buffer           *bufferpool.Buffer
-	response         inboundCallResponse
-	applicationError bool
-	headerCase       headerCase
-}
-
-func newHandlerWriter(response inboundCallResponse, format tchannel.Format, headerCase headerCase) responseWriter {
-	return &handlerWriter{
-		response:   response,
-		format:     format,
-		headerCase: headerCase,
-	}
-}
-
-func (hw *handlerWriter) AddHeaders(h transport.Headers) {
-	for k, v := range h.OriginalItems() {
-		if isReservedHeaderKey(k) {
-			hw.failedWith = appendError(hw.failedWith, fmt.Errorf("cannot use reserved header key: %s", k))
-			return
-		}
-		hw.AddHeader(k, v)
-	}
-}
-
-func (hw *handlerWriter) AddHeader(key string, value string) {
-	hw.headers = hw.headers.With(key, value)
-}
-
-func (hw *handlerWriter) SetApplicationError() {
-	hw.applicationError = true
-}
-
-func (hw *handlerWriter) SetApplicationErrorMeta(applicationErrorMeta *transport.ApplicationErrorMeta) {
-	if applicationErrorMeta == nil {
-		return
-	}
-	if applicationErrorMeta.Code != nil {
-		hw.AddHeader(ApplicationErrorCodeHeaderKey, strconv.Itoa(int(*applicationErrorMeta.Code)))
-	}
-	if applicationErrorMeta.Name != "" {
-		hw.AddHeader(ApplicationErrorNameHeaderKey, applicationErrorMeta.Name)
-	}
-	if applicationErrorMeta.Details != "" {
-		hw.AddHeader(ApplicationErrorDetailsHeaderKey, truncateAppErrDetails(applicationErrorMeta.Details))
-	}
-}
-
-func truncateAppErrDetails(val string) string {
-	if len(val) <= _maxAppErrDetailsHeaderLen {
-		return val
-	}
-	stripIndex := _maxAppErrDetailsHeaderLen - len(_truncatedHeaderMessage)
-	return val[:stripIndex] + _truncatedHeaderMessage
-}
-
-func (hw *handlerWriter) IsApplicationError() bool {
-	return hw.applicationError
-}
-
-func (hw *handlerWriter) Write(s []byte) (int, error) {
-	if hw.failedWith != nil {
-		return 0, hw.failedWith
-	}
-
-	if hw.buffer == nil {
-		hw.buffer = bufferpool.Get()
-	}
-
-	n, err := hw.buffer.Write(s)
-	if err != nil {
-		hw.failedWith = appendError(hw.failedWith, err)
-	}
-	return n, err
-}
-
-func (hw *handlerWriter) Close() error {
-	retErr := hw.failedWith
-	if hw.IsApplicationError() {
-		if err := hw.response.SetApplicationError(); err != nil {
-			retErr = appendError(retErr, fmt.Errorf("SetApplicationError() failed: %v", err))
-		}
-	}
-
-	headers := headerMap(hw.headers, hw.headerCase)
-	retErr = appendError(retErr, writeHeaders(hw.format, headers, nil, hw.response.Arg2Writer))
-
-	// Arg3Writer must be opened and closed regardless of if there is data
-	// However, if there is a system error, we do not want to do this
-	bodyWriter, err := hw.response.Arg3Writer()
-	if err != nil {
-		return appendError(retErr, err)
-	}
-	defer func() { retErr = appendError(retErr, bodyWriter.Close()) }()
-	if hw.buffer != nil {
-		if _, err := hw.buffer.WriteTo(bodyWriter); err != nil {
-			return appendError(retErr, err)
-		}
-	}
-
-	return retErr
-}
-
-func (hw *handlerWriter) ReleaseBuffer() {
-	if hw.buffer != nil {
-		bufferpool.Put(hw.buffer)
-		hw.buffer = nil
 	}
 }
 

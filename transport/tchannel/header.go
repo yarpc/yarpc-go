@@ -188,8 +188,8 @@ func headerCallerProcedureToRequest(req *transport.Request, headers *transport.H
 	return req
 }
 
-// requestCallerProcedureToHeader add callerProcedure header as an application header.
-func requestCallerProcedureToHeader(req *transport.Request, reqHeaders map[string]string) map[string]string {
+// requestToTransportHeaders adds custom (which are not part of tchannel protocol) transport headers from request.
+func requestToTransportHeaders(req *transport.Request, reqHeaders map[string]string) map[string]string {
 	if req.CallerProcedure == "" {
 		return reqHeaders
 	}
@@ -227,7 +227,7 @@ func encodeHeaders(hs map[string]string) []byte {
 	return out
 }
 
-func headerMap(hs transport.Headers, headerCase headerCase) map[string]string {
+func getHeaderMap(hs transport.Headers, headerCase headerCase) map[string]string {
 	switch headerCase {
 	case originalHeaderCase:
 		return hs.OriginalItems()

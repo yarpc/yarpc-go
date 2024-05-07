@@ -68,7 +68,7 @@ type Transport struct {
 	addr              string
 	listener          net.Listener
 	dialer            func(ctx context.Context, network, hostPort string) (net.Conn, error)
-	newResponseWriter func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
+	newResponseWriter responseWriterConstructor
 
 	connTimeout         time.Duration
 	connectorsGroup     sync.WaitGroup
