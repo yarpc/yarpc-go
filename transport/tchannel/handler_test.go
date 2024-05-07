@@ -56,7 +56,7 @@ func TestHandlerErrors(t *testing.T) {
 		format            tchannel.Format
 		headers           []byte
 		wantHeaders       map[string]string
-		newResponseWriter func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
+		newResponseWriter responseWriterConstructor
 		recorder          recorder
 		wantLogLevel      zapcore.Level
 		wantLogMessage    string
@@ -181,7 +181,7 @@ func TestHandlerFailures(t *testing.T) {
 		sendCall          *fakeInboundCall
 		expectCall        func(*transporttest.MockUnaryHandler)
 		wantStatus        tchannel.SystemErrCode // expected status
-		newResponseWriter func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
+		newResponseWriter responseWriterConstructor
 		recorder          recorder
 		wantLogLevel      zapcore.Level
 		wantLogMessage    string
@@ -806,7 +806,7 @@ func TestTruncatedHeader(t *testing.T) {
 }
 
 func TestRpcServiceHeader(t *testing.T) {
-	hw := &handlerWriter{}
+	hw := &responseWriterImpl{}
 	h := handler{
 		headerCase: canonicalizedHeaderCase,
 		newResponseWriter: func(inboundCallResponse, tchannel.Format, headerCase) responseWriter {
