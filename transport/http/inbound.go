@@ -202,11 +202,12 @@ func (i *Inbound) start() error {
 	}
 
 	var httpHandler http.Handler = handler{
-		router:            i.router,
-		tracer:            i.tracer,
-		grabHeaders:       i.grabHeaders,
-		bothResponseError: i.bothResponseError,
-		logger:            i.logger,
+		router:               i.router,
+		tracer:               i.tracer,
+		grabHeaders:          i.grabHeaders,
+		bothResponseError:    i.bothResponseError,
+		logger:               i.logger,
+		reservedHeaderMetric: i.transport.reservedHeaderMetric,
 	}
 
 	// reverse iterating because we want the last from options to wrap the

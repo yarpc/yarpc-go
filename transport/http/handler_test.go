@@ -40,6 +40,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/internal/routertest"
 	"go.uber.org/yarpc/yarpcerrors"
 )
@@ -427,7 +428,7 @@ func TestResponseWriter(t *testing.T) {
 	appErrCode := yarpcerrors.CodeAborted
 
 	recorder := httptest.NewRecorder()
-	writer := newResponseWriter(recorder)
+	writer := newResponseWriter(recorder, observability.ReservedHeaderEdgeMetrics{})
 
 	headers := transport.HeadersFromMap(map[string]string{
 		"foo":       "bar",
