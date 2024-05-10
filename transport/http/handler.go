@@ -35,6 +35,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/internal/iopool"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
@@ -48,21 +49,29 @@ func popHeader(h http.Header, n string) string {
 
 // handler adapts a transport.Handler into a handler for net/http.
 type handler struct {
-	router            transport.Router
-	tracer            opentracing.Tracer
-	grabHeaders       map[string]struct{}
-	bothResponseError bool
-	logger            *zap.Logger
+	router               transport.Router
+	tracer               opentracing.Tracer
+	grabHeaders          map[string]struct{}
+	bothResponseError    bool
+	logger               *zap.Logger
+	reservedHeaderMetric *observability.ReservedHeaderMetrics
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	responseWriter := newResponseWriter(w)
+	responseWriter := newResponseWriter(w, h.reservedHeaderMetric.With(req.Header.Get(CallerHeader), req.Header.Get(ServiceHeader)))
+
 	service := popHeader(req.Header, ServiceHeader)
 	procedure := popHeader(req.Header, ProcedureHeader)
 	bothResponseError := popHeader(req.Header, AcceptsBothResponseErrorHeader) == AcceptTrue
+
 	// add response header to echo accepted rpc-service
 	responseWriter.AddSystemHeader(ServiceHeader, service)
-	status := yarpcerrors.FromError(errors.WrapHandlerError(h.callHandler(responseWriter, req, service, procedure), service, procedure))
+
+	err := h.callHandler(responseWriter, req, service, procedure)
+	if err == nil && responseWriter.err != nil {
+		err = responseWriter.err
+	}
+	status := yarpcerrors.FromError(errors.WrapHandlerError(err, service, procedure))
 	if status == nil {
 		responseWriter.Close(http.StatusOK)
 		return
@@ -103,8 +112,10 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		return yarpcerrors.Newf(yarpcerrors.CodeNotFound, "request method was %s but only %s is allowed", req.Method, http.MethodPost)
 	}
 
+	caller := popHeader(req.Header, CallerHeader)
+
 	treq := &transport.Request{
-		Caller:          popHeader(req.Header, CallerHeader),
+		Caller:          caller,
 		Service:         service,
 		Procedure:       procedure,
 		Encoding:        transport.Encoding(popHeader(req.Header, EncodingHeader)),
@@ -113,7 +124,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		RoutingKey:      popHeader(req.Header, RoutingKeyHeader),
 		RoutingDelegate: popHeader(req.Header, RoutingDelegateHeader),
 		CallerProcedure: popHeader(req.Header, CallerProcedureHeader),
-		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}),
+		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}, h.reservedHeaderMetric.With(caller, service)),
 		Body:            req.Body,
 		BodySize:        int(req.ContentLength),
 	}
@@ -250,13 +261,18 @@ var (
 
 // responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.
 type responseWriter struct {
-	w      http.ResponseWriter
-	buffer *bufferpool.Buffer
+	w           http.ResponseWriter
+	buffer      *bufferpool.Buffer
+	err         error
+	edgeMetrics observability.ReservedHeaderEdgeMetrics
 }
 
-func newResponseWriter(w http.ResponseWriter) *responseWriter {
+func newResponseWriter(w http.ResponseWriter, edgeMetrics observability.ReservedHeaderEdgeMetrics) *responseWriter {
 	w.Header().Set(ApplicationStatusHeader, ApplicationSuccessStatus)
-	return &responseWriter{w: w}
+	return &responseWriter{
+		w:           w,
+		edgeMetrics: edgeMetrics,
+	}
 }
 
 func (rw *responseWriter) Write(s []byte) (int, error) {
@@ -267,7 +283,7 @@ func (rw *responseWriter) Write(s []byte) (int, error) {
 }
 
 func (rw *responseWriter) AddHeaders(h transport.Headers) {
-	applicationHeaders.ToHTTPHeaders(h, rw.w.Header())
+	_, rw.err = applicationHeaders.ToHTTPHeaders(h, rw.w.Header(), rw.edgeMetrics)
 }
 
 func (rw *responseWriter) SetApplicationError() {
