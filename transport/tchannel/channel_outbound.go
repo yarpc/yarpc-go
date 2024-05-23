@@ -195,7 +195,9 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 	}
 
 	err = getResponseError(headers)
-	deleteReservedHeaders(headers)
+	// no check: err will be returned as is
+
+	deleteReservedHeaders(headers, o.transport.reservedHeaderMetric.With(req.Caller, req.Service))
 
 	resp := &transport.Response{
 		Headers:          headers,

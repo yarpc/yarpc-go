@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc/api/x/introspection"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/internal/iopool"
+	"go.uber.org/yarpc/internal/observability"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -121,11 +122,11 @@ func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport
 
 // Call sends an RPC to this specific peer.
 func (p *tchannelPeer) Call(ctx context.Context, req *transport.Request, reuseBuffer bool) (*transport.Response, error) {
-	return callWithPeer(ctx, req, p.getPeer(), p.transport.headerCase, reuseBuffer)
+	return callWithPeer(ctx, req, p.getPeer(), p.transport.headerCase, reuseBuffer, p.transport.reservedHeaderMetric)
 }
 
 // callWithPeer sends a request with the chosen peer.
-func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Peer, headerCase headerCase, reuseBuffer bool) (*transport.Response, error) {
+func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Peer, headerCase headerCase, reuseBuffer bool, headerMetrics *observability.ReservedHeaderMetrics) (*transport.Response, error) {
 	// NB(abg): Under the current API, the local service's name is required
 	// twice: once when constructing the TChannel and then again when
 	// constructing the RPC.
@@ -158,6 +159,11 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 	}
 
 	reqHeaders := getHeaderMap(req.Headers, headerCase)
+	edgeMetrics := headerMetrics.With(req.Caller, req.Service)
+
+	if err := validateApplicationHeaders(reqHeaders, edgeMetrics); err != nil {
+		return nil, err
+	}
 
 	reqHeaders = requestToTransportHeaders(req, reqHeaders)
 
@@ -211,7 +217,7 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 	applicationErrorDetails, _ := headers.Get(ApplicationErrorDetailsHeaderKey)
 
 	err = getResponseError(headers)
-	deleteReservedHeaders(headers)
+	deleteReservedHeaders(headers, edgeMetrics)
 
 	resp := &transport.Response{
 		Headers:          headers,

@@ -36,6 +36,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/transport/internal/tls/dialer"
 	"go.uber.org/yarpc/transport/internal/tls/muxlistener"
@@ -85,6 +86,8 @@ type Transport struct {
 
 	outboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
 	outboundChannels          []*outboundChannel
+
+	reservedHeaderMetric *observability.ReservedHeaderMetrics
 }
 
 // NewTransport is a YARPC transport that facilitates sending and receiving
@@ -136,6 +139,7 @@ func (o transportOptions) newTransport() *Transport {
 		inboundTLSConfig:               o.inboundTLSConfig,
 		inboundTLSMode:                 o.inboundTLSMode,
 		outboundTLSConfigProvider:      o.outboundTLSConfigProvider,
+		reservedHeaderMetric:           observability.NewReserveHeaderMetrics(o.meter, TransportName),
 	}
 }
 
@@ -225,6 +229,7 @@ func (t *Transport) start() error {
 			tracer:                         t.tracer,
 			headerCase:                     t.headerCase,
 			logger:                         t.logger,
+			reservedHeaderMetrics:          t.reservedHeaderMetric,
 			newResponseWriter:              t.newResponseWriter,
 			excludeServiceHeaderInResponse: t.excludeServiceHeaderInResponse,
 		},

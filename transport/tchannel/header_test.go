@@ -29,7 +29,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -359,4 +361,244 @@ func TestValidateServiceHeaders(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFindReservedHeaderPrefix(t *testing.T) {
+	tests := map[string]struct {
+		headers  map[string]string
+		expKeys  []string
+		expFound bool
+	}{
+		"nil-headers": {},
+		"no-reserved-headers": {
+			headers: map[string]string{
+				"any-header-1": "any-value-1",
+				"any-header-2": "any-value-2",
+			},
+		},
+		"reserved-known-headers": {
+			headers: map[string]string{
+				ServiceHeaderKey: "any-value",
+			},
+			expKeys:  []string{ServiceHeaderKey},
+			expFound: true,
+		},
+		"reserved-prefix": {
+			headers: map[string]string{
+				"rpc-any":    "any-value",
+				"any-header": "any-value",
+			},
+			expKeys:  []string{"rpc-any"},
+			expFound: true,
+		},
+		"reserved-dollar-prefix": {
+			headers: map[string]string{
+				"$rpc$-any":  "any-value",
+				"any-header": "any-value",
+			},
+			expKeys:  []string{"$rpc$-any"},
+			expFound: true,
+		},
+		"multiple-reserved-prefix": {
+			headers: map[string]string{
+				"rpc-any":    "any-value",
+				"$rpc$-any":  "any-value",
+				"any-header": "any-value",
+			},
+			expKeys:  []string{"rpc-any", "$rpc$-any"},
+			expFound: true,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			key, found := findReservedHeaderPrefix(tt.headers)
+			if len(tt.expKeys) > 0 {
+				assert.Contains(t, tt.expKeys, key)
+			} else {
+				assert.Empty(t, key)
+			}
+			assert.Equal(t, tt.expFound, found)
+		})
+	}
+}
+
+func TestValidateApplicationHeaders(t *testing.T) {
+	tests := map[string]struct {
+		headers           map[string]string
+		enforceHeaderRule bool
+		expErr            error
+		expReportHeader   bool
+	}{
+		"no-headers-no-error": {},
+		"valid-headers-no-error": {
+			headers: map[string]string{
+				"valid-key": "valid-value",
+			},
+		},
+		"reserved-rpc-header-error": {
+			headers: map[string]string{
+				"rpc-any": "any-value",
+			},
+			expReportHeader: true,
+		},
+		"reserved-rpc-header-error-enforced-rule": {
+			headers: map[string]string{
+				"rpc-any": "any-value",
+			},
+			enforceHeaderRule: true,
+			expReportHeader:   true,
+			expErr:            yarpcerrors.InternalErrorf("header with rpc prefix is not allowed in request application headers (rpc-any was passed)"),
+		},
+		"reserved-dollad-rpc-header-error": {
+			headers: map[string]string{
+				"$rpc$-any": "any-value",
+			},
+			expReportHeader: true,
+		},
+		"reserved-dollad-rpc-header-error-enforced-rule": {
+			headers: map[string]string{
+				"$rpc$-any": "any-value",
+			},
+			enforceHeaderRule: true,
+			expReportHeader:   true,
+			expErr:            yarpcerrors.InternalErrorf("header with rpc prefix is not allowed in request application headers ($rpc$-any was passed)"),
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			switchEnforceHeaderRules(t, tt.enforceHeaderRule)
+
+			root := metrics.New()
+			m := observability.NewReserveHeaderMetrics(root.Scope(), "tchannel")
+
+			err := validateApplicationHeaders(tt.headers, m.With("any-source", "any-dest"))
+			assert.Equal(t, tt.expErr, err)
+
+			if tt.expReportHeader {
+				assertTuple(t, root.Snapshot().Counters, tuple{"tchannel_reserved_headers_error", "any-source", "any-dest", 1})
+			} else {
+				assertEmptyMetrics(t, root.Snapshot())
+			}
+		})
+	}
+}
+
+func TestDeleteReservedHeaders(t *testing.T) {
+	tests := map[string]struct {
+		headers                  map[string]string
+		enforceHeaderRule        bool
+		expHeaders               map[string]string
+		expReservedHeadersMetric int64
+	}{
+		"nil-headers": {},
+		"no-reserved-headers": {
+			headers: map[string]string{
+				"any-header": "any-value",
+			},
+			expHeaders: map[string]string{
+				"any-header": "any-value",
+			},
+		},
+		"reserved-known-headers": {
+			headers: map[string]string{
+				ServiceHeaderKey: "any-value",
+				"any-header":     "any-value",
+			},
+			expHeaders: map[string]string{
+				"any-header": "any-value",
+			},
+		},
+		"reserved-rpc-headers": {
+			headers: map[string]string{
+				"rpc-any":    "any-value",
+				"any-header": "any-value",
+			},
+			expHeaders: map[string]string{
+				"rpc-any":    "any-value",
+				"any-header": "any-value",
+			},
+			expReservedHeadersMetric: 1,
+		},
+		"reserved-dollar-rpc-headers": {
+			headers: map[string]string{
+				"$rpc$-any":  "any-value",
+				"any-header": "any-value",
+			},
+			expHeaders: map[string]string{
+				"$rpc$-any":  "any-value",
+				"any-header": "any-value",
+			},
+			expReservedHeadersMetric: 1,
+		},
+		"enforce-header-rules": {
+			headers: map[string]string{
+				"rpc-any":    "any-value",
+				"$rpc$-any":  "any-value",
+				"any-header": "any-value",
+			},
+			enforceHeaderRule: true,
+			expHeaders: map[string]string{
+				"any-header": "any-value",
+			},
+			expReservedHeadersMetric: 2,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			switchEnforceHeaderRules(t, tt.enforceHeaderRule)
+
+			root := metrics.New()
+			m := observability.NewReserveHeaderMetrics(root.Scope(), "tchannel")
+
+			headers := transport.HeadersFromMap(tt.headers)
+			deleteReservedHeaders(headers, m.With("any-source", "any-dest"))
+			assert.Equal(t, transport.HeadersFromMap(tt.expHeaders), headers)
+
+			if tt.expReservedHeadersMetric > 0 {
+				assertTuple(t, root.Snapshot().Counters, tuple{"tchannel_reserved_headers_stripped", "any-source", "any-dest", tt.expReservedHeadersMetric})
+			} else {
+				assertEmptyMetrics(t, root.Snapshot())
+			}
+		})
+
+	}
+}
+
+func switchEnforceHeaderRules(t *testing.T, cond bool) {
+	if !cond {
+		return
+	}
+
+	enforceHeaderRules = true
+	t.Cleanup(func() {
+		enforceHeaderRules = false
+	})
+}
+
+type tuple struct {
+	name, tag1, tag2 string
+	value            int64
+}
+
+func assertTuple(t *testing.T, snapshots []metrics.Snapshot, expected tuple) {
+	assertTuples(t, snapshots, []tuple{expected})
+}
+
+func assertTuples(t *testing.T, snapshots []metrics.Snapshot, expected []tuple) {
+	actual := make([]tuple, 0, len(snapshots))
+
+	for _, c := range snapshots {
+		actual = append(actual, tuple{c.Name, c.Tags["source"], c.Tags["dest"], c.Value})
+	}
+
+	assert.ElementsMatch(t, expected, actual)
+}
+
+func assertEmptyMetrics(t *testing.T, snapshot *metrics.RootSnapshot) {
+	assert.Empty(t, snapshot.Counters)
+	assert.Empty(t, snapshot.Gauges)
+	assert.Empty(t, snapshot.Histograms)
 }

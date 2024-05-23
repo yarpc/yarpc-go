@@ -27,9 +27,10 @@ import (
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
+	"go.uber.org/yarpc/internal/observability"
 )
 
-type responseWriterConstructor func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
+type responseWriterConstructor func(inboundCallResponse, tchannel.Format, headerCase, observability.ReservedHeaderEdgeMetrics) responseWriter
 
 type responseWriterImpl struct {
 	failedWith       error
@@ -39,22 +40,42 @@ type responseWriterImpl struct {
 	response         inboundCallResponse
 	applicationError bool
 	headerCase       headerCase
+	edgeMetrics      observability.ReservedHeaderEdgeMetrics
 }
 
-func newHandlerWriter(response inboundCallResponse, format tchannel.Format, headerCase headerCase) responseWriter {
+func newHandlerWriter(response inboundCallResponse, format tchannel.Format, headerCase headerCase, edgeMetrics observability.ReservedHeaderEdgeMetrics) responseWriter {
 	return &responseWriterImpl{
-		response:   response,
-		format:     format,
-		headerCase: headerCase,
+		response:    response,
+		format:      format,
+		headerCase:  headerCase,
+		edgeMetrics: edgeMetrics,
 	}
 }
 
 func (w *responseWriterImpl) AddHeaders(h transport.Headers) {
 	for k, v := range h.OriginalItems() {
+		if !isReservedHeaderPrefix(k) {
+			w.addHeader(k, v)
+			continue
+		}
+
+		w.edgeMetrics.IncError()
+
+		// Return error for prefix if new rules are enforced already
+		if enforceHeaderRules {
+			w.failedWith = appendError(w.failedWith, fmt.Errorf("header with rpc prefix is not allowed in response application headers (%s was passed)", k))
+			return
+		}
+
+		// If the header is a reserved header, return error regardless of the new rules feature flag,
+		// because it's an enforced by default rule.
 		if isReservedHeaderKey(k) {
 			w.failedWith = appendError(w.failedWith, fmt.Errorf("cannot use reserved header key: %s", k))
 			return
 		}
+
+		// Header with reserved prefix is used, but it's not a reserved key,
+		// and new rule is not enforced yet, so we just report it.
 		w.addHeader(k, v)
 	}
 }

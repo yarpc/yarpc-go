@@ -33,6 +33,7 @@ import (
 	"github.com/uber/tchannel-go/testutils"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/net/context"
@@ -95,7 +96,7 @@ func TestOutboundHeaders(t *testing.T) {
 						return
 					}
 
-					deleteReservedHeaders(headers)
+					deleteReservedHeaders(headers, observability.ReservedHeaderEdgeMetrics{})
 					assert.Equal(t, tt.wantHeaders, headers.OriginalItems(), "headers did not match")
 
 					// write a response

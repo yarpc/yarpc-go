@@ -28,6 +28,7 @@ import (
 
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/transport/tchannel/internal"
 	"go.uber.org/yarpc/yarpcerrors"
 )
@@ -68,9 +69,23 @@ var _reservedHeaderKeys = map[string]struct{}{
 	CallerProcedureHeader:            {},
 }
 
+var (
+	// enforceHeaderRules is a feature flag for a more strict header handling rules.
+	// If true and isReservedHeaderPrefix also true, an error will be returned for
+	// attempt to set such header; header will be stripped for incoming requests and receiving responses.
+	// See https://github.com/yarpc/yarpc-go/issues/2265 for more details.
+	enforceHeaderRules = false
+)
+
+// isReservedHeaderKey checks header name by exact match.
 func isReservedHeaderKey(key string) bool {
 	_, ok := _reservedHeaderKeys[strings.ToLower(key)]
 	return ok
+}
+
+// isReservedHeaderPrefix checks header name by prefix match.
+func isReservedHeaderPrefix(header string) bool {
+	return strings.HasPrefix(strings.ToLower(header), "rpc-") || strings.HasPrefix(strings.ToLower(header), "$rpc$-")
 }
 
 // readRequestHeaders reads headers and baggage from an incoming request.
@@ -236,9 +251,47 @@ func getHeaderMap(hs transport.Headers, headerCase headerCase) map[string]string
 	}
 }
 
-func deleteReservedHeaders(headers transport.Headers) {
+func findReservedHeaderPrefix(headers map[string]string) (string, bool) {
+	for key := range headers {
+		if isReservedHeaderPrefix(key) {
+			return key, true
+		}
+	}
+	return "", false
+}
+
+func validateApplicationHeaders(headers map[string]string, edgeMetrics observability.ReservedHeaderEdgeMetrics) error {
+	key, found := findReservedHeaderPrefix(headers)
+	if !found {
+		return nil
+	}
+
+	edgeMetrics.IncError()
+
+	if enforceHeaderRules {
+		return yarpcerrors.InternalErrorf("header with rpc prefix is not allowed in request application headers (%s was passed)", key)
+	}
+	return nil
+}
+
+func deleteReservedHeaders(headers transport.Headers, edgeMetrics observability.ReservedHeaderEdgeMetrics) {
 	for headerKey := range _reservedHeaderKeys {
 		headers.Del(headerKey)
+	}
+
+	deleteReservedPrefixHeaders(headers, edgeMetrics)
+}
+
+func deleteReservedPrefixHeaders(headers transport.Headers, edgeMetrics observability.ReservedHeaderEdgeMetrics) {
+	for key := range headers.Items() {
+		if !isReservedHeaderPrefix(key) {
+			continue
+		}
+
+		edgeMetrics.IncStripped()
+		if enforceHeaderRules {
+			headers.Del(key)
+		}
 	}
 }
 

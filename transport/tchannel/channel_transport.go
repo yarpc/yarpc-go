@@ -26,6 +26,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/zap"
 )
@@ -82,13 +83,14 @@ func (options transportOptions) newChannelTransport() *ChannelTransport {
 		logger = zap.NewNop()
 	}
 	return &ChannelTransport{
-		once:              lifecycle.NewOnce(),
-		ch:                options.ch,
-		addr:              options.addr,
-		tracer:            options.tracer,
-		logger:            logger.Named("tchannel"),
-		originalHeaders:   options.originalHeaders,
-		newResponseWriter: newHandlerWriter,
+		once:                 lifecycle.NewOnce(),
+		ch:                   options.ch,
+		addr:                 options.addr,
+		tracer:               options.tracer,
+		logger:               logger.Named("tchannel"),
+		originalHeaders:      options.originalHeaders,
+		newResponseWriter:    newHandlerWriter,
+		reservedHeaderMetric: observability.NewReserveHeaderMetrics(options.meter, TransportName+"_channel"),
 	}
 }
 
@@ -97,14 +99,15 @@ func (options transportOptions) newChannelTransport() *ChannelTransport {
 // If you have a YARPC peer.Chooser, use the unqualified tchannel.Transport
 // instead.
 type ChannelTransport struct {
-	once              *lifecycle.Once
-	ch                Channel
-	addr              string
-	tracer            opentracing.Tracer
-	logger            *zap.Logger
-	router            transport.Router
-	originalHeaders   bool
-	newResponseWriter func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
+	once                 *lifecycle.Once
+	ch                   Channel
+	addr                 string
+	tracer               opentracing.Tracer
+	logger               *zap.Logger
+	router               transport.Router
+	originalHeaders      bool
+	newResponseWriter    responseWriterConstructor
+	reservedHeaderMetric *observability.ReservedHeaderMetrics
 }
 
 // Channel returns the underlying TChannel "Channel" instance.
@@ -140,11 +143,12 @@ func (t *ChannelTransport) start() error {
 			sc := t.ch.GetSubChannel(s)
 			existing := sc.GetHandlers()
 			sc.SetHandler(handler{
-				existing:          existing,
-				router:            t.router,
-				tracer:            t.tracer,
-				logger:            t.logger,
-				newResponseWriter: t.newResponseWriter,
+				existing:              existing,
+				router:                t.router,
+				tracer:                t.tracer,
+				logger:                t.logger,
+				reservedHeaderMetrics: t.reservedHeaderMetric,
+				newResponseWriter:     t.newResponseWriter,
 			})
 		}
 	}
