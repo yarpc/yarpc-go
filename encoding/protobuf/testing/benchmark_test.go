@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +21,7 @@
 package testing
 
 import (
-	"io/ioutil"
+	"io"
 	"net"
 	"testing"
 
@@ -32,11 +32,12 @@ import (
 	"go.uber.org/yarpc/internal/prototest/exampleutil"
 	"go.uber.org/yarpc/internal/testutils"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/grpclog"
 )
 
 func init() {
-	grpclog.SetLoggerV2(grpclog.NewLoggerV2(ioutil.Discard, ioutil.Discard, ioutil.Discard))
+	grpclog.SetLoggerV2(grpclog.NewLoggerV2(io.Discard, io.Discard, io.Discard))
 }
 
 func BenchmarkIntegrationYARPC(b *testing.B) {
@@ -66,7 +67,7 @@ func BenchmarkIntegrationGRPCAll(b *testing.B) {
 	}
 	go func() { _ = server.Serve(listener) }()
 	defer server.Stop()
-	grpcClientConn, err := grpc.Dial("0.0.0.0:1234", grpc.WithInsecure())
+	grpcClientConn, err := grpc.Dial("0.0.0.0:1234", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		b.Fatal(err.Error())
 	}

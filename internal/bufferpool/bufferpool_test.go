@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,8 +22,8 @@ package bufferpool
 
 import (
 	"bytes"
+	cryptorand "crypto/rand"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"strings"
 	"sync"
@@ -54,7 +54,7 @@ func TestBufferRead(t *testing.T) {
 	runTestWithBuffer(t, func(t *testing.T, buf *Buffer) {
 		io.WriteString(buf, "hello world")
 
-		got, err := ioutil.ReadAll(buf)
+		got, err := io.ReadAll(buf)
 		require.NoError(t, err, "Read failed")
 		assert.Equal(t, "hello world", string(got), "Unexpected read bytes")
 	})
@@ -125,8 +125,8 @@ func TestBuffers(t *testing.T) {
 		buf := Get()
 		assert.Zero(t, buf.Len(), "Expected truncated buffer")
 
-		bs := randBytes(rand.Intn(5000))
-		_, err := rand.Read(bs)
+		bs := make([]byte, rand.Intn(5000))
+		_, err := cryptorand.Read(bs)
 		assert.NoError(t, err, "Unexpected error from rand.Read")
 		_, err = buf.Write(bs)
 		assert.NoError(t, err, "Unexpected error from buffer.Write")
@@ -181,10 +181,4 @@ func runConcurrently(t *testing.T, f func()) {
 	}
 
 	wg.Wait()
-}
-
-func randBytes(n int) []byte {
-	buf := make([]byte, n)
-	rand.Read(buf)
-	return buf
 }

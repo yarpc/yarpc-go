@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
@@ -59,17 +59,17 @@ func (c *cacheOutboundMiddleware) Call(ctx context.Context, request *transport.R
 	data := *c
 
 	// Read the entire request body to match against the cache
-	body, err := ioutil.ReadAll(request.Body)
+	body, err := io.ReadAll(request.Body)
 	if err != nil {
 		return nil, err
 	}
-	request.Body = ioutil.NopCloser(bytes.NewReader(body))
+	request.Body = io.NopCloser(bytes.NewReader(body))
 
 	if v, ok := data[string(body)]; ok {
 		fmt.Println("cache hit")
 		return &transport.Response{
 			Headers: v.Headers,
-			Body:    ioutil.NopCloser(bytes.NewReader(v.Body)),
+			Body:    io.NopCloser(bytes.NewReader(v.Body)),
 		}, nil
 	}
 
@@ -80,12 +80,12 @@ func (c *cacheOutboundMiddleware) Call(ctx context.Context, request *transport.R
 	}
 	defer res.Body.Close()
 
-	resBody, err := ioutil.ReadAll(res.Body)
+	resBody, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
 
 	data[string(body)] = entry{Headers: res.Headers, Body: resBody}
-	res.Body = ioutil.NopCloser(bytes.NewReader(resBody))
+	res.Body = io.NopCloser(bytes.NewReader(resBody))
 	return res, nil
 }

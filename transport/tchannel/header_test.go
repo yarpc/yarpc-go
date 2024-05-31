@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@ package tchannel
 import (
 	"bytes"
 	"errors"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -218,7 +218,7 @@ func TestReadAndWriteHeaders(t *testing.T) {
 		}
 
 		result, err := readHeaders(tt.format, func() (tchannel.ArgReader, error) {
-			reader := ioutil.NopCloser(bytes.NewReader(buffer.Bytes()))
+			reader := io.NopCloser(bytes.NewReader(buffer.Bytes()))
 			return tchannel.ArgReader(reader), nil
 		})
 		require.NoError(t, err)

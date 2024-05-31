@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,7 @@ package protobuf_test
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/gogo/protobuf/jsonpb"
@@ -76,7 +76,7 @@ func TestOutboundAnyResolver(t *testing.T) {
 			// outbound that echos the body back
 			out := trans.NewOutbound(nil, yarpctest.OutboundCallOverride(
 				yarpctest.OutboundCallable(func(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-					return &transport.Response{Body: ioutil.NopCloser(req.Body)}, nil
+					return &transport.Response{Body: io.NopCloser(req.Body)}, nil
 				}),
 			))
 

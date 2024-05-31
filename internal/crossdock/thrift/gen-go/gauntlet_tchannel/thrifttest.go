@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@ package gauntlet_tchannel
 import (
 	"bytes"
 	"fmt"
-	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/uber/tchannel-go/thirdparty/github.com/apache/thrift/lib/go/thrift"
 )
 
 // (needed to ensure safety because of naive import list construction.)
@@ -304,7 +304,7 @@ func (p *ThriftTestClient) recvTestVoid() (err error) {
 // @return string - returns the string 'thing'
 //
 // Parameters:
-//  - Thing
+//   - Thing
 func (p *ThriftTestClient) TestString(thing string) (r string, err error) {
 	if err = p.sendTestString(thing); err != nil {
 		return
@@ -385,7 +385,7 @@ func (p *ThriftTestClient) recvTestString() (value string, err error) {
 // @return byte - returns the byte 'thing'
 //
 // Parameters:
-//  - Thing
+//   - Thing
 func (p *ThriftTestClient) TestByte(thing int8) (r int8, err error) {
 	if err = p.sendTestByte(thing); err != nil {
 		return
@@ -466,7 +466,7 @@ func (p *ThriftTestClient) recvTestByte() (value int8, err error) {
 // @return i32 - returns the i32 'thing'
 //
 // Parameters:
-//  - Thing
+//   - Thing
 func (p *ThriftTestClient) TestI32(thing int32) (r int32, err error) {
 	if err = p.sendTestI32(thing); err != nil {
 		return
@@ -547,7 +547,7 @@ func (p *ThriftTestClient) recvTestI32() (value int32, err error) {
 // @return i64 - returns the i64 'thing'
 //
 // Parameters:
-//  - Thing
+//   - Thing
 func (p *ThriftTestClient) TestI64(thing int64) (r int64, err error) {
 	if err = p.sendTestI64(thing); err != nil {
 		return
@@ -628,7 +628,7 @@ func (p *ThriftTestClient) recvTestI64() (value int64, err error) {
 // @return double - returns the double 'thing'
 //
 // Parameters:
-//  - Thing
+//   - Thing
 func (p *ThriftTestClient) TestDouble(thing float64) (r float64, err error) {
 	if err = p.sendTestDouble(thing); err != nil {
 		return
@@ -709,7 +709,7 @@ func (p *ThriftTestClient) recvTestDouble() (value float64, err error) {
 // @return binary  - returns the binary 'thing'
 //
 // Parameters:
-//  - Thing
+//   - Thing
 func (p *ThriftTestClient) TestBinary(thing []byte) (r []byte, err error) {
 	if err = p.sendTestBinary(thing); err != nil {
 		return
@@ -790,7 +790,7 @@ func (p *ThriftTestClient) recvTestBinary() (value []byte, err error) {
 // @return Xtruct - returns the Xtruct 'thing'
 //
 // Parameters:
-//  - Thing
+//   - Thing
 func (p *ThriftTestClient) TestStruct(thing *Xtruct) (r *Xtruct, err error) {
 	if err = p.sendTestStruct(thing); err != nil {
 		return
@@ -871,7 +871,7 @@ func (p *ThriftTestClient) recvTestStruct() (value *Xtruct, err error) {
 // @return Xtruct2 - returns the Xtruct2 'thing'
 //
 // Parameters:
-//  - Thing
+//   - Thing
 func (p *ThriftTestClient) TestNest(thing *Xtruct2) (r *Xtruct2, err error) {
 	if err = p.sendTestNest(thing); err != nil {
 		return
@@ -948,12 +948,14 @@ func (p *ThriftTestClient) recvTestNest() (value *Xtruct2, err error) {
 }
 
 // Prints 'testMap("{%s")' where thing has been formatted into a string of  'key => value' pairs
-//  separated by commas and new lines
+//
+//	separated by commas and new lines
+//
 // @param map<i32,i32> thing - the map<i32,i32> to print
 // @return map<i32,i32> - returns the map<i32,i32> 'thing'
 //
 // Parameters:
-//  - Thing
+//   - Thing
 func (p *ThriftTestClient) TestMap(thing map[int32]int32) (r map[int32]int32, err error) {
 	if err = p.sendTestMap(thing); err != nil {
 		return
@@ -1030,12 +1032,14 @@ func (p *ThriftTestClient) recvTestMap() (value map[int32]int32, err error) {
 }
 
 // Prints 'testStringMap("{%s}")' where thing has been formatted into a string of  'key => value' pairs
-//  separated by commas and new lines
+//
+//	separated by commas and new lines
+//
 // @param map<string,string> thing - the map<string,string> to print
 // @return map<string,string> - returns the map<string,string> 'thing'
 //
 // Parameters:
-//  - Thing
+//   - Thing
 func (p *ThriftTestClient) TestStringMap(thing map[string]string) (r map[string]string, err error) {
 	if err = p.sendTestStringMap(thing); err != nil {
 		return
@@ -1112,12 +1116,14 @@ func (p *ThriftTestClient) recvTestStringMap() (value map[string]string, err err
 }
 
 // Prints 'testSet("{%s}")' where thing has been formatted into a string of  values
-//  separated by commas and new lines
+//
+//	separated by commas and new lines
+//
 // @param set<i32> thing - the set<i32> to print
 // @return set<i32> - returns the set<i32> 'thing'
 //
 // Parameters:
-//  - Thing
+//   - Thing
 func (p *ThriftTestClient) TestSet(thing map[int32]bool) (r map[int32]bool, err error) {
 	if err = p.sendTestSet(thing); err != nil {
 		return
@@ -1194,12 +1200,14 @@ func (p *ThriftTestClient) recvTestSet() (value map[int32]bool, err error) {
 }
 
 // Prints 'testList("{%s}")' where thing has been formatted into a string of  values
-//  separated by commas and new lines
+//
+//	separated by commas and new lines
+//
 // @param list<i32> thing - the list<i32> to print
 // @return list<i32> - returns the list<i32> 'thing'
 //
 // Parameters:
-//  - Thing
+//   - Thing
 func (p *ThriftTestClient) TestList(thing []int32) (r []int32, err error) {
 	if err = p.sendTestList(thing); err != nil {
 		return
@@ -1280,7 +1288,7 @@ func (p *ThriftTestClient) recvTestList() (value []int32, err error) {
 // @return Numberz - returns the Numberz 'thing'
 //
 // Parameters:
-//  - Thing
+//   - Thing
 func (p *ThriftTestClient) TestEnum(thing Numberz) (r Numberz, err error) {
 	if err = p.sendTestEnum(thing); err != nil {
 		return
@@ -1361,7 +1369,7 @@ func (p *ThriftTestClient) recvTestEnum() (value Numberz, err error) {
 // @return UserId - returns the UserId 'thing'
 //
 // Parameters:
-//  - Thing
+//   - Thing
 func (p *ThriftTestClient) TestTypedef(thing UserId) (r UserId, err error) {
 	if err = p.sendTestTypedef(thing); err != nil {
 		return
@@ -1440,10 +1448,11 @@ func (p *ThriftTestClient) recvTestTypedef() (value UserId, err error) {
 // Prints 'testMapMap("%d")' with hello as '%d'
 // @param i32 hello - the i32 to print
 // @return map<i32,map<i32,i32>> - returns a dictionary with these values:
-//   {-4 => {-4 => -4, -3 => -3, -2 => -2, -1 => -1, }, 4 => {1 => 1, 2 => 2, 3 => 3, 4 => 4, }, }
+//
+//	{-4 => {-4 => -4, -3 => -3, -2 => -2, -1 => -1, }, 4 => {1 => 1, 2 => 2, 3 => 3, 4 => 4, }, }
 //
 // Parameters:
-//  - Hello
+//   - Hello
 func (p *ThriftTestClient) TestMapMap(hello int32) (r map[int32]map[int32]int32, err error) {
 	if err = p.sendTestMapMap(hello); err != nil {
 		return
@@ -1522,15 +1531,17 @@ func (p *ThriftTestClient) recvTestMapMap() (value map[int32]map[int32]int32, er
 // So you think you've got this all worked, out eh?
 //
 // Creates a the returned map with these values and prints it out:
-//   { 1 => { 2 => argument,
-//            3 => argument,
-//          },
-//     2 => { 6 => <empty Insanity struct>, },
-//   }
+//
+//	{ 1 => { 2 => argument,
+//	         3 => argument,
+//	       },
+//	  2 => { 6 => <empty Insanity struct>, },
+//	}
+//
 // @return map<UserId, map<Numberz,Insanity>> - a map with the above values
 //
 // Parameters:
-//  - Argument
+//   - Argument
 func (p *ThriftTestClient) TestInsanity(argument *Insanity) (r map[UserId]map[Numberz]*Insanity, err error) {
 	if err = p.sendTestInsanity(argument); err != nil {
 		return
@@ -1614,15 +1625,16 @@ func (p *ThriftTestClient) recvTestInsanity() (value map[UserId]map[Numberz]*Ins
 // @param Numberz arg4 -
 // @param UserId arg5 -
 // @return Xtruct - returns an Xtruct with string_thing = "Hello2, byte_thing = arg0, i32_thing = arg1
-//    and i64_thing = arg2
+//
+//	and i64_thing = arg2
 //
 // Parameters:
-//  - Arg0
-//  - Arg1
-//  - Arg2
-//  - Arg3
-//  - Arg4
-//  - Arg5
+//   - Arg0
+//   - Arg1
+//   - Arg2
+//   - Arg3
+//   - Arg4
+//   - Arg5
 func (p *ThriftTestClient) TestMulti(arg0 int8, arg1 int32, arg2 int64, arg3 map[int16]string, arg4 Numberz, arg5 UserId) (r *Xtruct, err error) {
 	if err = p.sendTestMulti(arg0, arg1, arg2, arg3, arg4, arg5); err != nil {
 		return
@@ -1710,7 +1722,7 @@ func (p *ThriftTestClient) recvTestMulti() (value *Xtruct, err error) {
 // else do not throw anything
 //
 // Parameters:
-//  - Arg
+//   - Arg
 func (p *ThriftTestClient) TestException(arg string) (err error) {
 	if err = p.sendTestException(arg); err != nil {
 		return
@@ -1797,8 +1809,8 @@ func (p *ThriftTestClient) recvTestException() (err error) {
 // @return Xtruct - an Xtruct with string_thing = arg1
 //
 // Parameters:
-//  - Arg0
-//  - Arg1
+//   - Arg0
+//   - Arg1
 func (p *ThriftTestClient) TestMultiException(arg0 string, arg1 string) (r *Xtruct, err error) {
 	if err = p.sendTestMultiException(arg0, arg1); err != nil {
 		return
@@ -3020,7 +3032,7 @@ func (p *ThriftTestTestVoidResult) String() string {
 }
 
 // Attributes:
-//  - Thing
+//   - Thing
 type ThriftTestTestStringArgs struct {
 	Thing string `thrift:"thing,1" db:"thing" json:"thing"`
 }
@@ -3111,7 +3123,7 @@ func (p *ThriftTestTestStringArgs) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type ThriftTestTestStringResult struct {
 	Success *string `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -3213,7 +3225,7 @@ func (p *ThriftTestTestStringResult) String() string {
 }
 
 // Attributes:
-//  - Thing
+//   - Thing
 type ThriftTestTestByteArgs struct {
 	Thing int8 `thrift:"thing,1" db:"thing" json:"thing"`
 }
@@ -3305,7 +3317,7 @@ func (p *ThriftTestTestByteArgs) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type ThriftTestTestByteResult struct {
 	Success *int8 `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -3408,7 +3420,7 @@ func (p *ThriftTestTestByteResult) String() string {
 }
 
 // Attributes:
-//  - Thing
+//   - Thing
 type ThriftTestTestI32Args struct {
 	Thing int32 `thrift:"thing,1" db:"thing" json:"thing"`
 }
@@ -3499,7 +3511,7 @@ func (p *ThriftTestTestI32Args) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type ThriftTestTestI32Result struct {
 	Success *int32 `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -3601,7 +3613,7 @@ func (p *ThriftTestTestI32Result) String() string {
 }
 
 // Attributes:
-//  - Thing
+//   - Thing
 type ThriftTestTestI64Args struct {
 	Thing int64 `thrift:"thing,1" db:"thing" json:"thing"`
 }
@@ -3692,7 +3704,7 @@ func (p *ThriftTestTestI64Args) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type ThriftTestTestI64Result struct {
 	Success *int64 `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -3794,7 +3806,7 @@ func (p *ThriftTestTestI64Result) String() string {
 }
 
 // Attributes:
-//  - Thing
+//   - Thing
 type ThriftTestTestDoubleArgs struct {
 	Thing float64 `thrift:"thing,1" db:"thing" json:"thing"`
 }
@@ -3885,7 +3897,7 @@ func (p *ThriftTestTestDoubleArgs) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type ThriftTestTestDoubleResult struct {
 	Success *float64 `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -3987,7 +3999,7 @@ func (p *ThriftTestTestDoubleResult) String() string {
 }
 
 // Attributes:
-//  - Thing
+//   - Thing
 type ThriftTestTestBinaryArgs struct {
 	Thing []byte `thrift:"thing,1" db:"thing" json:"thing"`
 }
@@ -4078,7 +4090,7 @@ func (p *ThriftTestTestBinaryArgs) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type ThriftTestTestBinaryResult struct {
 	Success []byte `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -4177,7 +4189,7 @@ func (p *ThriftTestTestBinaryResult) String() string {
 }
 
 // Attributes:
-//  - Thing
+//   - Thing
 type ThriftTestTestStructArgs struct {
 	Thing *Xtruct `thrift:"thing,1" db:"thing" json:"thing"`
 }
@@ -4276,7 +4288,7 @@ func (p *ThriftTestTestStructArgs) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type ThriftTestTestStructResult struct {
 	Success *Xtruct `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -4377,7 +4389,7 @@ func (p *ThriftTestTestStructResult) String() string {
 }
 
 // Attributes:
-//  - Thing
+//   - Thing
 type ThriftTestTestNestArgs struct {
 	Thing *Xtruct2 `thrift:"thing,1" db:"thing" json:"thing"`
 }
@@ -4476,7 +4488,7 @@ func (p *ThriftTestTestNestArgs) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type ThriftTestTestNestResult struct {
 	Success *Xtruct2 `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -4577,7 +4589,7 @@ func (p *ThriftTestTestNestResult) String() string {
 }
 
 // Attributes:
-//  - Thing
+//   - Thing
 type ThriftTestTestMapArgs struct {
 	Thing map[int32]int32 `thrift:"thing,1" db:"thing" json:"thing"`
 }
@@ -4698,7 +4710,7 @@ func (p *ThriftTestTestMapArgs) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type ThriftTestTestMapResult struct {
 	Success map[int32]int32 `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -4827,7 +4839,7 @@ func (p *ThriftTestTestMapResult) String() string {
 }
 
 // Attributes:
-//  - Thing
+//   - Thing
 type ThriftTestTestStringMapArgs struct {
 	Thing map[string]string `thrift:"thing,1" db:"thing" json:"thing"`
 }
@@ -4948,7 +4960,7 @@ func (p *ThriftTestTestStringMapArgs) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type ThriftTestTestStringMapResult struct {
 	Success map[string]string `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -5077,7 +5089,7 @@ func (p *ThriftTestTestStringMapResult) String() string {
 }
 
 // Attributes:
-//  - Thing
+//   - Thing
 type ThriftTestTestSetArgs struct {
 	Thing map[int32]bool `thrift:"thing,1" db:"thing" json:"thing"`
 }
@@ -5189,7 +5201,7 @@ func (p *ThriftTestTestSetArgs) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type ThriftTestTestSetResult struct {
 	Success map[int32]bool `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -5309,7 +5321,7 @@ func (p *ThriftTestTestSetResult) String() string {
 }
 
 // Attributes:
-//  - Thing
+//   - Thing
 type ThriftTestTestListArgs struct {
 	Thing []int32 `thrift:"thing,1" db:"thing" json:"thing"`
 }
@@ -5421,7 +5433,7 @@ func (p *ThriftTestTestListArgs) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type ThriftTestTestListResult struct {
 	Success []int32 `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -5541,7 +5553,7 @@ func (p *ThriftTestTestListResult) String() string {
 }
 
 // Attributes:
-//  - Thing
+//   - Thing
 type ThriftTestTestEnumArgs struct {
 	Thing Numberz `thrift:"thing,1" db:"thing" json:"thing"`
 }
@@ -5633,7 +5645,7 @@ func (p *ThriftTestTestEnumArgs) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type ThriftTestTestEnumResult struct {
 	Success *Numberz `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -5736,7 +5748,7 @@ func (p *ThriftTestTestEnumResult) String() string {
 }
 
 // Attributes:
-//  - Thing
+//   - Thing
 type ThriftTestTestTypedefArgs struct {
 	Thing UserId `thrift:"thing,1" db:"thing" json:"thing"`
 }
@@ -5828,7 +5840,7 @@ func (p *ThriftTestTestTypedefArgs) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type ThriftTestTestTypedefResult struct {
 	Success *UserId `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -5931,7 +5943,7 @@ func (p *ThriftTestTestTypedefResult) String() string {
 }
 
 // Attributes:
-//  - Hello
+//   - Hello
 type ThriftTestTestMapMapArgs struct {
 	Hello int32 `thrift:"hello,1" db:"hello" json:"hello"`
 }
@@ -6022,7 +6034,7 @@ func (p *ThriftTestTestMapMapArgs) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type ThriftTestTestMapMapResult struct {
 	Success map[int32]map[int32]int32 `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -6180,7 +6192,7 @@ func (p *ThriftTestTestMapMapResult) String() string {
 }
 
 // Attributes:
-//  - Argument
+//   - Argument
 type ThriftTestTestInsanityArgs struct {
 	Argument *Insanity `thrift:"argument,1" db:"argument" json:"argument"`
 }
@@ -6279,7 +6291,7 @@ func (p *ThriftTestTestInsanityArgs) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type ThriftTestTestInsanityResult struct {
 	Success map[UserId]map[Numberz]*Insanity `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -6437,12 +6449,12 @@ func (p *ThriftTestTestInsanityResult) String() string {
 }
 
 // Attributes:
-//  - Arg0
-//  - Arg1
-//  - Arg2
-//  - Arg3
-//  - Arg4
-//  - Arg5
+//   - Arg0
+//   - Arg1
+//   - Arg2
+//   - Arg3
+//   - Arg4
+//   - Arg5
 type ThriftTestTestMultiArgs struct {
 	Arg0 int8             `thrift:"arg0,1" db:"arg0" json:"arg0"`
 	Arg1 int32            `thrift:"arg1,2" db:"arg1" json:"arg1"`
@@ -6736,7 +6748,7 @@ func (p *ThriftTestTestMultiArgs) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type ThriftTestTestMultiResult struct {
 	Success *Xtruct `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -6837,7 +6849,7 @@ func (p *ThriftTestTestMultiResult) String() string {
 }
 
 // Attributes:
-//  - Arg
+//   - Arg
 type ThriftTestTestExceptionArgs struct {
 	Arg string `thrift:"arg,1" db:"arg" json:"arg"`
 }
@@ -6928,7 +6940,7 @@ func (p *ThriftTestTestExceptionArgs) String() string {
 }
 
 // Attributes:
-//  - Err1
+//   - Err1
 type ThriftTestTestExceptionResult struct {
 	Err1 *Xception `thrift:"err1,1" db:"err1" json:"err1,omitempty"`
 }
@@ -7029,8 +7041,8 @@ func (p *ThriftTestTestExceptionResult) String() string {
 }
 
 // Attributes:
-//  - Arg0
-//  - Arg1
+//   - Arg0
+//   - Arg1
 type ThriftTestTestMultiExceptionArgs struct {
 	Arg0 string `thrift:"arg0,1" db:"arg0" json:"arg0"`
 	Arg1 string `thrift:"arg1,2" db:"arg1" json:"arg1"`
@@ -7155,9 +7167,9 @@ func (p *ThriftTestTestMultiExceptionArgs) String() string {
 }
 
 // Attributes:
-//  - Success
-//  - Err1
-//  - Err2
+//   - Success
+//   - Err1
+//   - Err2
 type ThriftTestTestMultiExceptionResult struct {
 	Success *Xtruct    `thrift:"success,0" db:"success" json:"success,omitempty"`
 	Err1    *Xception  `thrift:"err1,1" db:"err1" json:"err1,omitempty"`

@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -80,20 +80,20 @@ func (ts *transportSpec) Spec() yarpcconfig.TransportSpec {
 // TransportConfig configures the shared HTTP Transport. This is shared
 // between all HTTP outbounds and inbounds of a Dispatcher.
 //
-//  transports:
-//    http:
-//      keepAlive: 30s
-//      maxIdleConns: 2
-//      maxIdleConnsPerHost: 2
-//      idleConnTimeout: 90s
-//      disableKeepAlives: false
-//      disableCompression: false
-//      responseHeaderTimeout: 0s
-//      connTimeout: 500ms
-//      connBackoff:
-//        exponential:
-//          first: 10ms
-//          max: 30s
+//	transports:
+//	  http:
+//	    keepAlive: 30s
+//	    maxIdleConns: 2
+//	    maxIdleConnsPerHost: 2
+//	    idleConnTimeout: 90s
+//	    disableKeepAlives: false
+//	    disableCompression: false
+//	    responseHeaderTimeout: 0s
+//	    connTimeout: 500ms
+//	    connBackoff:
+//	      exponential:
+//	        first: 10ms
+//	        max: 30s
 //
 // All parameters of TransportConfig are optional. This section may be omitted
 // in the transports section.
@@ -157,13 +157,13 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 
 // InboundConfig configures an HTTP inbound.
 //
-//  inbounds:
-//    http:
-//      address: ":80"
-//      grabHeaders:
-//        - x-foo
-//        - x-bar
-//      shutdownTimeout: 5s
+//	inbounds:
+//	  http:
+//	    address: ":80"
+//	    grabHeaders:
+//	      - x-foo
+//	      - x-bar
+//	    shutdownTimeout: 5s
 type InboundConfig struct {
 	// Address to listen on. This field is required.
 	Address string `config:"address,interpolate"`
@@ -207,35 +207,35 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 
 // OutboundConfig configures an HTTP outbound.
 //
-//  outbounds:
-//    keyvalueservice:
-//      http:
-//        url: "http://127.0.0.1:80/"
+//	outbounds:
+//	  keyvalueservice:
+//	    http:
+//	      url: "http://127.0.0.1:80/"
 //
 // The HTTP outbound supports both, Unary and Oneway transport types. To use
 // it for only one of these, nest the section inside a "unary" or "onewy"
 // section.
 //
-//  outbounds:
-//    keyvalueservice:
-//      unary:
-//        http:
-//          url: "http://127.0.0.1:80/"
+//	outbounds:
+//	  keyvalueservice:
+//	    unary:
+//	      http:
+//	        url: "http://127.0.0.1:80/"
 //
 // An HTTP outbound can also configure a peer list.
 // In this case, there can still be a "url" and it serves as a template for the
 // HTTP client, expressing whether to use "http:" or "https:" and what path to
 // use. The address gets replaced with peers from the peer list.
 //
-//  outbounds:
-//    keyvalueservice:
-//      unary:
-//        http:
-//          url: "https://address/rpc"
-//          round-robin:
-//            peers:
-//              - 127.0.0.1:8080
-//              - 127.0.0.1:8081
+//	outbounds:
+//	  keyvalueservice:
+//	    unary:
+//	      http:
+//	        url: "https://address/rpc"
+//	        round-robin:
+//	          peers:
+//	            - 127.0.0.1:8080
+//	            - 127.0.0.1:8081
 type OutboundConfig struct {
 	yarpcconfig.PeerChooser
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
 // If you import subpackages of x/, ensure that you lock to the minor version.
 // In Glide, this is,
 //
-// 	version: ~X.Y
+//	version: ~X.Y
 //
 // Where X.Y is the version of YARPC you are using.
 package x

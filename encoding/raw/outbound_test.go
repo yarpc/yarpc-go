@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -111,7 +111,7 @@ func TestCall(t *testing.T) {
 				}),
 		).Return(
 			&transport.Response{
-				Body:    ioutil.NopCloser(responseBody),
+				Body:    io.NopCloser(responseBody),
 				Headers: transport.HeadersFromMap(tt.wantHeaders),
 			}, tt.responseErr)
 

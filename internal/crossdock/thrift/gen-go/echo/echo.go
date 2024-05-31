@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@ package echo
 import (
 	"bytes"
 	"fmt"
-	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/uber/tchannel-go/thirdparty/github.com/apache/thrift/lib/go/thrift"
 )
 
 // (needed to ensure safety because of naive import list construction.)
@@ -67,7 +67,7 @@ func NewEchoClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot th
 }
 
 // Parameters:
-//  - Ping
+//   - Ping
 func (p *EchoClient) Echo(ping *Ping) (r *Pong, err error) {
 	if err = p.sendEcho(ping); err != nil {
 		return
@@ -238,7 +238,7 @@ func (p *echoProcessorEcho) Process(seqId int32, iprot, oprot thrift.TProtocol) 
 // HELPER FUNCTIONS AND STRUCTURES
 
 // Attributes:
-//  - Ping
+//   - Ping
 type EchoEchoArgs struct {
 	Ping *Ping `thrift:"ping,1" db:"ping" json:"ping"`
 }
@@ -337,7 +337,7 @@ func (p *EchoEchoArgs) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type EchoEchoResult struct {
 	Success *Pong `thrift:"success,0" db:"success" json:"success,omitempty"`
 }

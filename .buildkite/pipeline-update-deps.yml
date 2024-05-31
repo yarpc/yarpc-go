@@ -1,23 +1,57 @@
+container:
+  kubernetes: &kubernetes
+    gitEnvFrom:
+      - secretRef:
+          name: oss-github-ssh-credentials
+    sidecars:
+    - image: us-west1-docker.pkg.dev/ci-compute/buildkite-images/buildkite-dind:v1
+      volumeMounts:
+        - mountPath: /var/run/
+          name: docker-sock
+      securityContext:
+        privileged: true
+        allowPrivilegeEscalation: true
+    mirrorVolumeMounts: true # CRITICAL: this must be at the same indentation level as sidecars
+    podSpec: &podSpec
+      containers:
+        - &commandContainer
+          image: us-west1-docker.pkg.dev/ci-compute/buildkite-images/buildkite-command-container:v2
+          command:
+          - |-
+            echo "Command step was not overridden."
+            exit 1
+          volumeMounts:
+            - mountPath: /var/run/
+              name: docker-sock
+          resources:
+            requests:
+              cpu: 7500m
+              memory: 30G
+      volumes:
+      - name: docker-sock
+        emptyDir: {}
+
+agents:
+  queue: buildkite-gcp
+
 steps:
-  - name: ":docker: :package: 1.18"
+  - name: ":go: 1.22 update-deps"
     plugins:
-      docker-compose#v2.0.0:
-        build: yarpc-go-1.18
-        image-repository: 027047743804.dkr.ecr.us-east-2.amazonaws.com/uber
-    agents:
-      queue: builders
-  - wait
-  - name: ":go: 1.18 update-deps"
-    command: "etc/bin/update-deps.sh"
-    plugins:
-      docker-compose#v2.0.0:
-        run: yarpc-go-1.18
-        env:
-          # The script needs the following environment variables in addition
-          # to those provided by the docker-compose.
-          - GITHUB_USER
-          - GITHUB_EMAIL
-          - GITHUB_TOKEN
-          - GITHUB_REPO
-    agents:
-      queue: workers
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                - |-
+                  etc/bin/update-deps.sh
+      - docker-compose#v3.0.0:
+          run: yarpc-go-1.22
+          env:
+            # The script needs the following environment variables in addition
+            # to those provided by the docker-compose.
+            - GITHUB_USER
+            - GITHUB_EMAIL
+            - GITHUB_TOKEN
+            - GITHUB_REPO

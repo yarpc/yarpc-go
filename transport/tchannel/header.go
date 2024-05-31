@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -33,8 +33,6 @@ import (
 )
 
 const (
-	/** Response headers **/
-
 	// ErrorCodeHeaderKey is the response header key for the error code.
 	ErrorCodeHeaderKey = "$rpc$-error-code"
 	// ErrorNameHeaderKey is the response header key for the error name.
@@ -50,11 +48,8 @@ const (
 	ApplicationErrorDetailsHeaderKey = "$rpc$-application-error-details"
 	// ApplicationErrorCodeHeaderKey is the response header key for the application error code.
 	ApplicationErrorCodeHeaderKey = "$rpc$-application-error-code"
-
-	/** Request headers **/
-
 	// CallerProcedureHeader is the header key for the procedure of the caller making the request.
-	CallerProcedureHeader = "rpc-caller-procedure"
+	CallerProcedureHeader = "$rpc$-caller-procedure"
 )
 
 var _reservedHeaderKeys = map[string]struct{}{
@@ -65,7 +60,6 @@ var _reservedHeaderKeys = map[string]struct{}{
 	ApplicationErrorNameHeaderKey:    {},
 	ApplicationErrorDetailsHeaderKey: {},
 	ApplicationErrorCodeHeaderKey:    {},
-	CallerProcedureHeader:            {},
 }
 
 func isReservedHeaderKey(key string) bool {
@@ -158,7 +152,7 @@ func mergeHeaders(m1, m2 map[string]string) map[string]string {
 
 // decodeHeaders decodes headers using the format:
 //
-// 	nh:2 (k~2 v~2){nh}
+//	nh:2 (k~2 v~2){nh}
 func decodeHeaders(r io.Reader) (transport.Headers, error) {
 	reader := internal.NewReader(r)
 
@@ -203,7 +197,7 @@ func requestCallerProcedureToHeader(req *transport.Request, reqHeaders map[strin
 
 // encodeHeaders encodes headers using the format:
 //
-// 	nh:2 (k~2 v~2){nh}
+//	nh:2 (k~2 v~2){nh}
 func encodeHeaders(hs map[string]string) []byte {
 	if len(hs) == 0 {
 		return []byte{0, 0} // nh = 2

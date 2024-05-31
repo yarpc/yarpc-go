@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -45,7 +45,7 @@ import (
 //
 // The signature of BuildTransport must have the shape:
 //
-//  func(C, *config.Kit) (transport.Transport, error)
+//	func(C, *config.Kit) (transport.Transport, error)
 //
 // Where C is a struct defining the configuration parameters for the transport,
 // the kit carries information and tools from the configurator to this and
@@ -54,14 +54,14 @@ import (
 // The remaining Build* functions must have a similar signature, but also
 // receive the transport instance.
 //
-// 	func(C, transport.Transport, *config.Kit) (X, error)
+//	func(C, transport.Transport, *config.Kit) (X, error)
 //
 // Where X is one of, transport.Inbound, transport.UnaryOutbound, or
 // transport.OnewayOutbound.
 //
 // For example,
 //
-// 	func(*OutboundConfig, transport.Transport) (transport.UnaryOutbound, error)
+//	func(*OutboundConfig, transport.Transport) (transport.UnaryOutbound, error)
 //
 // Is a function to build a unary outbound from its outbound configuration and
 // the corresponding transport.
@@ -135,8 +135,8 @@ type TransportSpec struct {
 // presets may be used by specifying a `with` key in the outbound
 // configuration.
 //
-// 	http:
-// 	  with: mypreset
+//	http:
+//	  with: mypreset
 type PeerChooserPreset struct {
 	Name string
 
@@ -161,11 +161,11 @@ type PeerChooserPreset struct {
 // For example, we could implement and register a peer chooser spec that selects
 // peers based on advanced configuration or sharding information.
 //
-// 	myoutbound:
-// 	  tchannel:
-// 	    mysharder:
-//        shard1: 1.1.1.1:1234
-//        ...
+//		myoutbound:
+//		  tchannel:
+//		    mysharder:
+//	       shard1: 1.1.1.1:1234
+//	       ...
 type PeerChooserSpec struct {
 	Name string
 
@@ -190,10 +190,10 @@ type PeerChooserSpec struct {
 // peers at random and a peer list updater which pushes updates to it by
 // polling a specific DNS A record.
 //
-// 	myoutbound:
-// 	  random:
-// 	    dns:
-// 	      name: myservice.example.com
+//	myoutbound:
+//	  random:
+//	    dns:
+//	      name: myservice.example.com
 type PeerListSpec struct {
 	Name string
 
@@ -220,11 +220,11 @@ type PeerListSpec struct {
 // specific file on the system for a list of peers and pushes updates to any
 // peer list.
 //
-// 	myoutbound:
-// 	  round-robin:
-// 	    peers-file:
-// 	      format: json
-// 	      path: /etc/hosts.json
+//	myoutbound:
+//	  round-robin:
+//	    peers-file:
+//	      format: json
+//	      path: /etc/hosts.json
 type PeerListUpdaterSpec struct {
 	// Name of the peer selection strategy.
 	Name string

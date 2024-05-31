@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -35,13 +35,13 @@ import (
 // TransportConfig configures a shared TChannel transport. This is shared
 // between all TChannel outbounds and inbounds of a Dispatcher.
 //
-//  transports:
-//    tchannel:
-//      connTimeout: 500ms
-//      connBackoff:
-//        exponential:
-//          first: 10ms
-//          max: 30s
+//	transports:
+//	  tchannel:
+//	    connTimeout: 500ms
+//	    connBackoff:
+//	      exponential:
+//	        first: 10ms
+//	        max: 30s
 type TransportConfig struct {
 	ConnTimeout time.Duration       `config:"connTimeout"`
 	ConnBackoff yarpcconfig.Backoff `config:"connBackoff"`
@@ -49,11 +49,11 @@ type TransportConfig struct {
 
 // InboundConfig configures a TChannel inbound.
 //
-// 	inbounds:
-// 	  tchannel:
-// 	    address: :4040
-//      tls:
-//        mode: permissive
+//		inbounds:
+//		  tchannel:
+//		    address: :4040
+//	     tls:
+//	       mode: permissive
 //
 // At most one TChannel inbound may be defined in a single YARPC service.
 type InboundConfig struct {
@@ -73,11 +73,10 @@ type InboundTLSConfig struct {
 
 // OutboundConfig configures a TChannel outbound.
 //
-// 	outbounds:
-// 	  myservice:
-// 	    tchannel:
-// 	      peer: 127.0.0.1:4040
-//
+//	outbounds:
+//	  myservice:
+//	    tchannel:
+//	      peer: 127.0.0.1:4040
 type OutboundConfig struct {
 	yarpcconfig.PeerChooser
 	// TLS config enables TLS outbound.

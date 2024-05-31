@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -38,7 +38,7 @@ var _ = bytes.Equal
 
 var GoUnusedProtection__ int
 
-//Docstring!
+// Docstring!
 type Numberz int64
 
 const (
@@ -126,8 +126,8 @@ type MapType map[string]*Bonk
 func MapTypePtr(v MapType) *MapType { return &v }
 
 // Attributes:
-//  - Message
-//  - Type
+//   - Message
+//   - Type
 type Bonk struct {
 	Message *string `thrift:"message,1" db:"message" json:"message,omitempty"`
 	Type    *int32  `thrift:"type,2" db:"type" json:"type,omitempty"`
@@ -274,8 +274,8 @@ func (p *Bonk) String() string {
 }
 
 // Attributes:
-//  - ImTrue
-//  - ImFalse
+//   - ImTrue
+//   - ImFalse
 type Bools struct {
 	ImTrue  *bool `thrift:"im_true,1" db:"im_true" json:"im_true,omitempty"`
 	ImFalse *bool `thrift:"im_false,2" db:"im_false" json:"im_false,omitempty"`
@@ -422,10 +422,10 @@ func (p *Bools) String() string {
 }
 
 // Attributes:
-//  - StringThing
-//  - ByteThing
-//  - I32Thing
-//  - I64Thing
+//   - StringThing
+//   - ByteThing
+//   - I32Thing
+//   - I64Thing
 type Xtruct struct {
 	StringThing *string `thrift:"string_thing,1" db:"string_thing" json:"string_thing,omitempty"`
 	// unused fields # 2 to 3
@@ -666,9 +666,9 @@ func (p *Xtruct) String() string {
 }
 
 // Attributes:
-//  - ByteThing
-//  - StructThing
-//  - I32Thing
+//   - ByteThing
+//   - StructThing
+//   - I32Thing
 type Xtruct2 struct {
 	ByteThing   *int8   `thrift:"byte_thing,1" db:"byte_thing" json:"byte_thing,omitempty"`
 	StructThing *Xtruct `thrift:"struct_thing,2" db:"struct_thing" json:"struct_thing,omitempty"`
@@ -860,10 +860,10 @@ func (p *Xtruct2) String() string {
 }
 
 // Attributes:
-//  - StringThing
-//  - Changed
-//  - I32Thing
-//  - I64Thing
+//   - StringThing
+//   - Changed
+//   - I32Thing
+//   - I64Thing
 type Xtruct3 struct {
 	StringThing *string `thrift:"string_thing,1" db:"string_thing" json:"string_thing,omitempty"`
 	// unused fields # 2 to 3
@@ -1103,8 +1103,8 @@ func (p *Xtruct3) String() string {
 }
 
 // Attributes:
-//  - UserMap
-//  - Xtructs
+//   - UserMap
+//   - Xtructs
 type Insanity struct {
 	UserMap map[Numberz]UserId `thrift:"userMap,1" db:"userMap" json:"userMap,omitempty"`
 	Xtructs []*Xtruct          `thrift:"xtructs,2" db:"xtructs" json:"xtructs,omitempty"`
@@ -1296,9 +1296,9 @@ func (p *Insanity) String() string {
 }
 
 // Attributes:
-//  - StringField
-//  - SetField
-//  - BinaryField
+//   - StringField
+//   - SetField
+//   - BinaryField
 type CrazyNesting struct {
 	StringField *string            `thrift:"string_field,1" db:"string_field" json:"string_field,omitempty"`
 	SetField    map[*Insanity]bool `thrift:"set_field,2" db:"set_field" json:"set_field,omitempty"`
@@ -1504,8 +1504,8 @@ func (p *CrazyNesting) String() string {
 }
 
 // Attributes:
-//  - ErrorCode
-//  - Message
+//   - ErrorCode
+//   - Message
 type Xception struct {
 	ErrorCode *int32  `thrift:"errorCode,1" db:"errorCode" json:"errorCode,omitempty"`
 	Message   *string `thrift:"message,2" db:"message" json:"message,omitempty"`
@@ -1656,8 +1656,8 @@ func (p *Xception) Error() string {
 }
 
 // Attributes:
-//  - ErrorCode
-//  - StructThing
+//   - ErrorCode
+//   - StructThing
 type Xception2 struct {
 	ErrorCode   *int32  `thrift:"errorCode,1" db:"errorCode" json:"errorCode,omitempty"`
 	StructThing *Xtruct `thrift:"struct_thing,2" db:"struct_thing" json:"struct_thing,omitempty"`
@@ -1860,7 +1860,7 @@ func (p *EmptyStruct) String() string {
 }
 
 // Attributes:
-//  - Field
+//   - Field
 type OneField struct {
 	Field *EmptyStruct `thrift:"field,1" db:"field" json:"field,omitempty"`
 }
@@ -1961,9 +1961,9 @@ func (p *OneField) String() string {
 }
 
 // Attributes:
-//  - BeginInBoth
-//  - OldString
-//  - EndInBoth
+//   - BeginInBoth
+//   - OldString
+//   - EndInBoth
 type VersioningTestV1 struct {
 	BeginInBoth *int32 `thrift:"begin_in_both,1" db:"begin_in_both" json:"begin_in_both,omitempty"`
 	// unused field # 2
@@ -2157,18 +2157,18 @@ func (p *VersioningTestV1) String() string {
 }
 
 // Attributes:
-//  - BeginInBoth
-//  - Newint_
-//  - Newbyte_
-//  - Newshort_
-//  - Newlong_
-//  - Newdouble_
-//  - Newstruct_
-//  - Newlist_
-//  - Newset_
-//  - Newmap_
-//  - Newstring_
-//  - EndInBoth
+//   - BeginInBoth
+//   - Newint_
+//   - Newbyte_
+//   - Newshort_
+//   - Newlong_
+//   - Newdouble_
+//   - Newstruct_
+//   - Newlist_
+//   - Newset_
+//   - Newmap_
+//   - Newstring_
+//   - EndInBoth
 type VersioningTestV2 struct {
 	BeginInBoth *int32          `thrift:"begin_in_both,1" db:"begin_in_both" json:"begin_in_both,omitempty"`
 	Newint_     *int32          `thrift:"newint,2" db:"newint" json:"newint,omitempty"`
@@ -2828,8 +2828,8 @@ func (p *VersioningTestV2) String() string {
 }
 
 // Attributes:
-//  - Myints
-//  - Hello
+//   - Myints
+//   - Hello
 type ListTypeVersioningV1 struct {
 	Myints []int32 `thrift:"myints,1" db:"myints" json:"myints,omitempty"`
 	Hello  *string `thrift:"hello,2" db:"hello" json:"hello,omitempty"`
@@ -2994,8 +2994,8 @@ func (p *ListTypeVersioningV1) String() string {
 }
 
 // Attributes:
-//  - Strings
-//  - Hello
+//   - Strings
+//   - Hello
 type ListTypeVersioningV2 struct {
 	Strings []string `thrift:"strings,1" db:"strings" json:"strings,omitempty"`
 	Hello   *string  `thrift:"hello,2" db:"hello" json:"hello,omitempty"`
@@ -3160,7 +3160,7 @@ func (p *ListTypeVersioningV2) String() string {
 }
 
 // Attributes:
-//  - MapField
+//   - MapField
 type GuessProtocolStruct struct {
 	// unused fields # 1 to 6
 	MapField map[string]string `thrift:"map_field,7" db:"map_field" json:"map_field,omitempty"`
@@ -3290,16 +3290,16 @@ func (p *GuessProtocolStruct) String() string {
 }
 
 // Attributes:
-//  - B1
-//  - B10
-//  - B100
-//  - CheckTrue
-//  - B1000
-//  - CheckFalse
-//  - Vertwo2000
-//  - ASet2500
-//  - Vertwo3000
-//  - BigNumbers
+//   - B1
+//   - B10
+//   - B100
+//   - CheckTrue
+//   - B1000
+//   - CheckFalse
+//   - Vertwo2000
+//   - ASet2500
+//   - Vertwo3000
+//   - BigNumbers
 type LargeDeltas struct {
 	B1 *Bools `thrift:"b1,1" db:"b1" json:"b1,omitempty"`
 	// unused fields # 2 to 9
@@ -3845,7 +3845,7 @@ func (p *LargeDeltas) String() string {
 }
 
 // Attributes:
-//  - Integerlist
+//   - Integerlist
 type NestedListsI32x2 struct {
 	Integerlist [][]int32 `thrift:"integerlist,1" db:"integerlist" json:"integerlist,omitempty"`
 }
@@ -3985,7 +3985,7 @@ func (p *NestedListsI32x2) String() string {
 }
 
 // Attributes:
-//  - Integerlist
+//   - Integerlist
 type NestedListsI32x3 struct {
 	Integerlist [][][]int32 `thrift:"integerlist,1" db:"integerlist" json:"integerlist,omitempty"`
 }
@@ -4145,9 +4145,9 @@ func (p *NestedListsI32x3) String() string {
 }
 
 // Attributes:
-//  - IntSetList
-//  - MapIntStrset
-//  - MapIntStrsetList
+//   - IntSetList
+//   - MapIntStrset
+//   - MapIntStrsetList
 type NestedMixedx2 struct {
 	IntSetList       []map[int32]bool            `thrift:"int_set_list,1" db:"int_set_list" json:"int_set_list,omitempty"`
 	MapIntStrset     map[int32]map[string]bool   `thrift:"map_int_strset,2" db:"map_int_strset" json:"map_int_strset,omitempty"`
@@ -4491,7 +4491,7 @@ func (p *NestedMixedx2) String() string {
 }
 
 // Attributes:
-//  - Bonk
+//   - Bonk
 type ListBonks struct {
 	Bonk []*Bonk `thrift:"bonk,1" db:"bonk" json:"bonk,omitempty"`
 }
@@ -4609,7 +4609,7 @@ func (p *ListBonks) String() string {
 }
 
 // Attributes:
-//  - Bonk
+//   - Bonk
 type NestedListsBonk struct {
 	Bonk [][][]*Bonk `thrift:"bonk,1" db:"bonk" json:"bonk,omitempty"`
 }
@@ -4767,8 +4767,8 @@ func (p *NestedListsBonk) String() string {
 }
 
 // Attributes:
-//  - B
-//  - S
+//   - B
+//   - S
 type BoolTest struct {
 	B bool   `thrift:"b,1" db:"b" json:"b,omitempty"`
 	S string `thrift:"s,2" db:"s" json:"s,omitempty"`
@@ -4913,7 +4913,7 @@ func (p *BoolTest) String() string {
 }
 
 // Attributes:
-//  - S
+//   - S
 type StructA struct {
 	S string `thrift:"s,1,required" db:"s" json:"s"`
 }
@@ -5010,8 +5010,8 @@ func (p *StructA) String() string {
 }
 
 // Attributes:
-//  - Aa
-//  - Ab
+//   - Aa
+//   - Ab
 type StructB struct {
 	Aa *StructA `thrift:"aa,1" db:"aa" json:"aa,omitempty"`
 	Ab *StructA `thrift:"ab,2,required" db:"ab" json:"ab"`

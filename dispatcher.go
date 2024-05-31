@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -285,7 +285,7 @@ func (d *Dispatcher) Outbounds() Outbounds {
 // service through an outboundKey. This configuration may be directly
 // passed into encoding-specific RPC clients.
 //
-// 	keyvalueClient := json.New(dispatcher.ClientConfig("keyvalue"))
+//	keyvalueClient := json.New(dispatcher.ClientConfig("keyvalue"))
 //
 // This function panics if the outboundKey is not known.
 func (d *Dispatcher) ClientConfig(outboundKey string) transport.ClientConfig {
@@ -296,7 +296,7 @@ func (d *Dispatcher) ClientConfig(outboundKey string) transport.ClientConfig {
 // service through an outboundKey. This configuration may be directly
 // passed into encoding-specific RPC clients.
 //
-// 	keyvalueClient := json.New(dispatcher.MustOutboundConfig("keyvalue"))
+//	keyvalueClient := json.New(dispatcher.MustOutboundConfig("keyvalue"))
 //
 // This function panics if the outboundKey is not known.
 func (d *Dispatcher) MustOutboundConfig(outboundKey string) *transport.OutboundConfig {
@@ -310,11 +310,11 @@ func (d *Dispatcher) MustOutboundConfig(outboundKey string) *transport.OutboundC
 // service through an outboundKey. This configuration may be directly
 // passed into encoding-specific RPC clients.
 //
-//  outboundConfig, ok := dispatcher.OutboundConfig("keyvalue")
-//  if !ok {
-//    // do something
-//  }
-// 	keyvalueClient := json.New(outboundConfig)
+//	 outboundConfig, ok := dispatcher.OutboundConfig("keyvalue")
+//	 if !ok {
+//	   // do something
+//	 }
+//		keyvalueClient := json.New(outboundConfig)
 func (d *Dispatcher) OutboundConfig(outboundKey string) (oc *transport.OutboundConfig, ok bool) {
 	if out, ok := d.outbounds[outboundKey]; ok {
 		return &transport.OutboundConfig{
@@ -371,12 +371,12 @@ func (d *Dispatcher) Register(rs []transport.Procedure) {
 // This function returns immediately after everything has been started.
 // Servers should add a `select {}` to block to process all incoming requests.
 //
-// 	if err := dispatcher.Start(); err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	defer dispatcher.Stop()
+//	if err := dispatcher.Start(); err != nil {
+//		log.Fatal(err)
+//	}
+//	defer dispatcher.Stop()
 //
-// 	select {}
+//	select {}
 //
 // Start and PhasedStart are mutually exclusive. See the PhasedStart
 // documentation for details.

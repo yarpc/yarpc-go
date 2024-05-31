@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -209,7 +209,7 @@ func TestUnaryOutboundMiddleware(t *testing.T) {
 				Body:      bytes.NewReader([]byte{1, 2, 3}),
 			}
 			res := &transport.Response{
-				Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6})),
+				Body: io.NopCloser(bytes.NewReader([]byte{4, 5, 6})),
 			}
 			o := transporttest.NewMockUnaryOutbound(mockCtrl)
 			o.EXPECT().Call(ctx, req).After(

@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -333,9 +333,10 @@ func (t *Transport) onPeerStatusChanged(tp *tchannel.Peer) {
 // CreateTLSOutboundChannel creates a outbound channel for managing tls
 // connections with the given tls config and destination name.
 // Usage:
-// 	tr, _ := tchannel.NewTransport(...)
-//  outboundCh, _ := tr.CreateTLSOutboundChannel(tls-config, "dest-name")
-//  outbound := tr.NewOutbound(peer.NewSingle(id, outboundCh))
+//
+//		tr, _ := tchannel.NewTransport(...)
+//	 outboundCh, _ := tr.CreateTLSOutboundChannel(tls-config, "dest-name")
+//	 outbound := tr.NewOutbound(peer.NewSingle(id, outboundCh))
 func (t *Transport) CreateTLSOutboundChannel(tlsConfig *tls.Config, destinationName string) (peer.Transport, error) {
 	params := dialer.Params{
 		Config:        tlsConfig,

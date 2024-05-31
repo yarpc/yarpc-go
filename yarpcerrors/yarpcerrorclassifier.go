@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,21 +20,25 @@
 
 package yarpcerrors
 
-type fault int
+// Fault is a type of error.
+type Fault int
 
 const (
-	UnknownFault fault = iota
+	// UnknownFault indicates that the fault type is unknown.
+	UnknownFault Fault = iota
+	// ClientFault indicates that the fault is a client fault.
 	ClientFault
+	// ServerFault indicates that the fault is a server fault.
 	ServerFault
 )
 
 // GetFaultTypeFromError determines whether the error is a client, server or indeterminate fault based on a YARPC Code.
-func GetFaultTypeFromError(err error) fault {
+func GetFaultTypeFromError(err error) Fault {
 	return GetFaultTypeFromCode(FromError(err).Code())
 }
 
 // GetFaultTypeFromCode determines whether the status code is a client, server or indeterminate fault based on a YARPC Code.
-func GetFaultTypeFromCode(code Code) fault {
+func GetFaultTypeFromCode(code Code) Fault {
 	switch code {
 	case CodeCancelled,
 		CodeInvalidArgument,

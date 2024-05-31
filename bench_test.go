@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"testing"
@@ -137,7 +136,7 @@ func runHTTPClient(b *testing.B, c *http.Client, url string) {
 			b.Errorf("request %d failed: %v", i+1, err)
 		}
 
-		if _, err := ioutil.ReadAll(res.Body); err != nil {
+		if _, err := io.ReadAll(res.Body); err != nil {
 			b.Errorf("failed to read response %d: %v", i+1, err)
 		}
 		if err := res.Body.Close(); err != nil {

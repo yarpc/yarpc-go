@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@ package http
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -49,7 +49,7 @@ func TestRoundTripSuccess(t *testing.T) {
 			w.Header().Set(headerKey, header)
 
 			// copy body
-			body, err := ioutil.ReadAll(req.Body)
+			body, err := io.ReadAll(req.Body)
 			if err != nil {
 				t.Error("error reading body")
 			}
@@ -90,7 +90,7 @@ func TestRoundTripSuccess(t *testing.T) {
 	assert.Equal(t, headerVal, gotHeaderVal, "header did not match")
 
 	// validate body
-	gotBody, err := ioutil.ReadAll(res.Body)
+	gotBody, err := io.ReadAll(res.Body)
 	require.NoError(t, err)
 	assert.Equal(t, giveBody, string(gotBody), "body did not match")
 }

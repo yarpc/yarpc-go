@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -35,20 +35,22 @@
 // `testing.T` or compatible as argument.
 //
 // Example:
-//  func MyTest(t *testing.T) {
-//    dispatcher := yarpc.NewDispatcher(yarpc.Config{
-//    	Name: "...",
-//    	Outbounds: transport.Outbounds{
-//    		...
-//    	},
-//      OutboundMiddleware: yarpc.OutboundMiddleware {
-//    	  Unary: recorder.NewRecorder(t),
-//      },
-//    })
-//  }
+//
+//	func MyTest(t *testing.T) {
+//	  dispatcher := yarpc.NewDispatcher(yarpc.Config{
+//	  	Name: "...",
+//	  	Outbounds: transport.Outbounds{
+//	  		...
+//	  	},
+//	    OutboundMiddleware: yarpc.OutboundMiddleware {
+//	  	  Unary: recorder.NewRecorder(t),
+//	    },
+//	  })
+//	}
 //
 // Running the tests in append mode:
-//  $ go test -v ./... --recorder=append
+//
+//	$ go test -v ./... --recorder=append
 //
 // The recorded messages will be stored in
 // `./testdata/recordings/*.yaml`.
@@ -61,7 +63,7 @@ import (
 	"flag"
 	"fmt"
 	"hash/fnv"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -329,17 +331,17 @@ func (r *Recorder) Call(
 func (r *Recorder) recordToResponse(cachedRecord *record) transport.Response {
 	response := transport.Response{
 		Headers: transport.HeadersFromMap(cachedRecord.Response.Headers),
-		Body:    ioutil.NopCloser(bytes.NewReader(cachedRecord.Response.Body)),
+		Body:    io.NopCloser(bytes.NewReader(cachedRecord.Response.Body)),
 	}
 	return response
 }
 
 func (r *Recorder) requestToRequestRecord(request *transport.Request) requestRecord {
-	requestBody, err := ioutil.ReadAll(request.Body)
+	requestBody, err := io.ReadAll(request.Body)
 	if err != nil {
 		r.logger.Fatal(err)
 	}
-	request.Body = ioutil.NopCloser(bytes.NewReader(requestBody))
+	request.Body = io.NopCloser(bytes.NewReader(requestBody))
 	return requestRecord{
 		Caller:          request.Caller,
 		Service:         request.Service,
@@ -354,11 +356,11 @@ func (r *Recorder) requestToRequestRecord(request *transport.Request) requestRec
 }
 
 func (r *Recorder) responseToResponseRecord(response *transport.Response) responseRecord {
-	responseBody, err := ioutil.ReadAll(response.Body)
+	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
 		r.logger.Fatal(err)
 	}
-	response.Body = ioutil.NopCloser(bytes.NewReader(responseBody))
+	response.Body = io.NopCloser(bytes.NewReader(responseBody))
 	return responseRecord{
 		Headers: response.Headers.Items(),
 		Body:    responseBody,
@@ -369,7 +371,7 @@ func (r *Recorder) responseToResponseRecord(response *transport.Response) respon
 // cannot be found the errRecordNotFound is returned. Any other error will
 // abort the current test.
 func (r *Recorder) loadRecord(filepath string) (*record, error) {
-	rawRecord, err := ioutil.ReadFile(filepath)
+	rawRecord, err := os.ReadFile(filepath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, newErrRecordNotFound(err)

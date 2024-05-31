@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,7 @@ import (
 //
 // The generated function has the signature,
 //
-// 	func $name($args[0], $args[1], ..., $args[N]) ($output, error)
+//	func $name($args[0], $args[1], ..., $args[N]) ($output, error)
 //
 // This function may be fed as an argument to BuildTransport, BuildInbound,
 // etc. and it will be interpreted correctly.

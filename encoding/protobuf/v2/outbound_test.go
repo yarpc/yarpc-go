@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@ package v2_test
 import (
 	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -75,7 +75,7 @@ func TestOutboundWithAnyResolver(t *testing.T) {
 			// outbound that echos the body back
 			out := trans.NewOutbound(nil, yarpctest.OutboundCallOverride(
 				yarpctest.OutboundCallable(func(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-					return &transport.Response{Body: ioutil.NopCloser(req.Body)}, nil
+					return &transport.Response{Body: io.NopCloser(req.Body)}, nil
 				}),
 			))
 
@@ -114,7 +114,7 @@ func TestOutboundWithKnownProtoMsg(t *testing.T) {
 		// outbound that echos the body back
 		out := trans.NewOutbound(nil, yarpctest.OutboundCallOverride(
 			yarpctest.OutboundCallable(func(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-				return &transport.Response{Body: ioutil.NopCloser(req.Body)}, nil
+				return &transport.Response{Body: io.NopCloser(req.Body)}, nil
 			}),
 		))
 
@@ -142,7 +142,7 @@ func TestOutboundWithAnyProtobufMsg(t *testing.T) {
 		// outbound that echos the body back
 		out := trans.NewOutbound(nil, yarpctest.OutboundCallOverride(
 			yarpctest.OutboundCallable(func(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-				return &transport.Response{Body: ioutil.NopCloser(req.Body)}, nil
+				return &transport.Response{Body: io.NopCloser(req.Body)}, nil
 			}),
 		))
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -127,7 +127,7 @@ func TestCallSuccess(t *testing.T) {
 			assert.Equal(t, "raw", req.Header.Get(EncodingHeader))
 			assert.Equal(t, "hello", req.Header.Get(ProcedureHeader))
 
-			body, err := ioutil.ReadAll(req.Body)
+			body, err := io.ReadAll(req.Body)
 			if assert.NoError(t, err) {
 				assert.Equal(t, []byte("world"), body)
 			}
@@ -161,7 +161,7 @@ func TestCallSuccess(t *testing.T) {
 	assert.True(t, ok, "value for foo expected")
 	assert.Equal(t, "bar", foo, "foo value mismatch")
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if assert.NoError(t, err) {
 		assert.Equal(t, []byte("great success"), body)
 	}
@@ -182,7 +182,7 @@ func TestCallOneWaySuccessWithBody(t *testing.T) {
 			assert.Equal(t, "raw", req.Header.Get(EncodingHeader))
 			assert.Equal(t, "hello", req.Header.Get(ProcedureHeader))
 
-			body, err := ioutil.ReadAll(req.Body)
+			body, err := io.ReadAll(req.Body)
 			if assert.NoError(t, err) {
 				assert.Equal(t, []byte("world"), body)
 			}
@@ -228,7 +228,7 @@ func TestCallOneWaySuccess(t *testing.T) {
 			assert.Equal(t, "raw", req.Header.Get(EncodingHeader))
 			assert.Equal(t, "hello", req.Header.Get(ProcedureHeader))
 
-			body, err := ioutil.ReadAll(req.Body)
+			body, err := io.ReadAll(req.Body)
 			if assert.NoError(t, err) {
 				assert.Equal(t, []byte("world"), body)
 			}

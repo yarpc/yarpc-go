@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -30,13 +30,13 @@ import (
 
 // Builds mockTransportSpec objects.
 //
-// 	mockSpec := mockTransportSpecBuilder{
-// 		Name: "...",
-// 		TransportConfig: reflect.TypeOf(myConfig{}),
-// 	}.Build()
+//	mockSpec := mockTransportSpecBuilder{
+//		Name: "...",
+//		TransportConfig: reflect.TypeOf(myConfig{}),
+//	}.Build()
 //
-// 	mockSpec.EXPECT().BuildTransport(myConfig{...}).Return(...)
-// 	mockSpec.Spec()
+//	mockSpec.EXPECT().BuildTransport(myConfig{...}).Return(...)
+//	mockSpec.Spec()
 type mockTransportSpecBuilder struct {
 	Name            string
 	TransportConfig reflect.Type

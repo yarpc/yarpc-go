@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -51,11 +51,11 @@ import (
 
 // Do is a helper function for protobuf plugins.
 //
-//   func main() {
-//     if err := protoplugin.Do(runner, os.Stdin, os.Stdout); err != nil {
-//       log.Fatal(err)
-//     }
-//   }
+//	func main() {
+//	  if err := protoplugin.Do(runner, os.Stdin, os.Stdout); err != nil {
+//	    log.Fatal(err)
+//	  }
+//	}
 func Do(runner Runner, reader io.Reader, writer io.Writer) error {
 	request, err := ReadRequest(reader)
 	if err != nil {

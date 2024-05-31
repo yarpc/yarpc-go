@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +35,7 @@ import (
 //
 // The wrapped function must already be in the correct format:
 //
-// 	f(ctx context.Context, body $reqBody) ($resBody, error)
+//	f(ctx context.Context, body $reqBody) ($resBody, error)
 type jsonHandler struct {
 	reader  requestReader
 	handler reflect.Value

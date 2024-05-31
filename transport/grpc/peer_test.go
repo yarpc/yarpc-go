@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -26,12 +26,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/integrationtest"
 	"go.uber.org/yarpc/internal/yarpctest"
 	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/peer/roundrobin"
+	"go.uber.org/zap/zaptest"
 )
 
 var spec = integrationtest.TransportSpec{
@@ -81,7 +85,8 @@ func TestPeerWithRoundRobin(t *testing.T) {
 	integrationtest.Blast(ctx, t, c)
 
 	// Shut down one task in the peer list.
-	temporary.Stop()
+	require.NoError(t, temporary.Stop())
+
 	// One of these requests may fail since one of the peers has gone down but
 	// the gRPC transport will not know until a request is attempted.
 	integrationtest.Call(ctx, c)
@@ -99,4 +104,80 @@ func TestPeerWithRoundRobin(t *testing.T) {
 func TestPeerIntegration(t *testing.T) {
 	t.Skip("Skipping due to test flakiness")
 	spec.Test(t)
+}
+
+func TestReconnectionCalledForIDLE(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+
+	grpcTransport := NewTransport(Logger(logger))
+	require.NoError(t, grpcTransport.Start())
+
+	chooser := roundrobin.New(grpcTransport, roundrobin.Logger(logger))
+	outbound := grpcTransport.NewOutbound(chooser)
+	require.NoError(t, outbound.Start())
+
+	permanent, permanentAddr := spec.NewServer(t, "127.0.0.1:0")
+	defer permanent.Stop()
+
+	temporary, temporaryAddr := spec.NewServer(t, "127.0.0.1:0")
+	defer temporary.Stop()
+
+	require.NoError(t, chooser.Update(peer.ListUpdates{
+		Additions: []peer.Identifier{
+			hostport.Identify(permanentAddr),
+			hostport.Identify(temporaryAddr),
+		},
+	}))
+
+	dispatcher := integrationtest.CreateAndStartClientDispatcher(t, outbound)
+	defer dispatcher.Stop()
+
+	rawClient := raw.New(dispatcher.ClientConfig(integrationtest.ServiceName))
+
+	makeBlastCall(t, rawClient, 1*time.Second)
+
+	// Shut down one service.
+	require.NoError(t, temporary.Stop())
+
+	waitForPeerStatus(t, chooser, temporaryAddr, peer.Unavailable, 2*time.Second)
+	makeBlastCall(t, rawClient, 1*time.Second)
+
+	// Restore the server on the temporary port.
+	restored, _ := spec.NewServer(t, temporaryAddr)
+	defer restored.Stop()
+
+	waitForPeerStatus(t, chooser, temporaryAddr, peer.Available, 2*time.Second)
+	makeBlastCall(t, rawClient, 1*time.Second)
+}
+
+func waitForPeerStatus(t *testing.T, peerList *roundrobin.List, peerAddr string, status peer.ConnectionStatus, wait time.Duration) {
+	peerAvailable := make(chan struct{})
+	go func() {
+		for {
+			for _, p := range peerList.Peers() {
+				if p.Identifier() == peerAddr {
+					if p.Status().ConnectionStatus == status {
+						close(peerAvailable)
+						return
+					}
+				}
+			}
+
+			time.Sleep(10 * time.Millisecond)
+		}
+	}()
+
+	select {
+	case <-time.After(wait):
+		t.Fatal("failed waiting to connect to peer")
+	case <-peerAvailable:
+		return
+	}
+}
+
+func makeBlastCall(t *testing.T, rawClient raw.Client, timeout time.Duration) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	integrationtest.Blast(ctx, t, rawClient)
 }

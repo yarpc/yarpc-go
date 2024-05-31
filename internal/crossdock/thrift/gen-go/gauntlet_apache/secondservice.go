@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -148,7 +148,7 @@ func (p *SecondServiceClient) recvBlahBlah() (err error) {
 // @return string - returns the string 'thing'
 //
 // Parameters:
-//  - Thing
+//   - Thing
 func (p *SecondServiceClient) SecondtestString(thing string) (r string, err error) {
 	if err = p.sendSecondtestString(thing); err != nil {
 		return
@@ -471,7 +471,7 @@ func (p *SecondServiceBlahBlahResult) String() string {
 }
 
 // Attributes:
-//  - Thing
+//   - Thing
 type SecondServiceSecondtestStringArgs struct {
 	Thing string `thrift:"thing,1" db:"thing" json:"thing"`
 }
@@ -562,7 +562,7 @@ func (p *SecondServiceSecondtestStringArgs) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type SecondServiceSecondtestStringResult struct {
 	Success *string `thrift:"success,0" db:"success" json:"success,omitempty"`
 }

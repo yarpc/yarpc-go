@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,7 @@ package errorshttpclient
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -48,7 +48,7 @@ func (h httpClient) Call(t crossdock.T, hs map[string]string, body string) httpR
 		Method:        "POST",
 		URL:           h.url,
 		ContentLength: int64(len(body)),
-		Body:          ioutil.NopCloser(strings.NewReader(body)),
+		Body:          io.NopCloser(strings.NewReader(body)),
 		Close:         true, // don't reuse connections
 		Header:        make(http.Header),
 	}
@@ -61,7 +61,7 @@ func (h httpClient) Call(t crossdock.T, hs map[string]string, body string) httpR
 		"failed to make request(headers=%v, body=%q)", hs, body)
 
 	defer res.Body.Close()
-	resBody, err := ioutil.ReadAll(res.Body)
+	resBody, err := io.ReadAll(res.Body)
 	fatals.NoError(err,
 		"failed to read response for request(headers=%v, body=%q)", hs, body)
 

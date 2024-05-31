@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,42 +22,42 @@
 // The HTTP transport provides first class support for Unary RPCs and
 // experimental support for Oneway RPCs.
 //
-// Usage
+// # Usage
 //
 // An HTTP Transport must be constructed to use this transport.
 //
-// 	httpTransport := http.NewTransport()
+//	httpTransport := http.NewTransport()
 //
 // To serve your YARPC application over HTTP, pass an HTTP inbound in your
 // yarpc.Config.
 //
-// 	myInbound := httpTransport.NewInbound(":8080")
-// 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-// 		Name: "myservice",
-// 		Inbounds: yarpc.Inbounds{myInbound},
-// 	})
+//	myInbound := httpTransport.NewInbound(":8080")
+//	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+//		Name: "myservice",
+//		Inbounds: yarpc.Inbounds{myInbound},
+//	})
 //
 // To make requests to a YARPC application that supports HTTP, pass an HTTP
 // outbound in your yarpc.Config.
 //
-// 	myserviceOutbound := httpTransport.NewSingleOutbound("http://127.0.0.1:8080")
-// 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-// 		Name: "myclient",
-// 		Outbounds: yarpc.Outbounds{
-// 			"myservice": {Unary: myserviceOutbound},
-// 		},
-// 	})
+//	myserviceOutbound := httpTransport.NewSingleOutbound("http://127.0.0.1:8080")
+//	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+//		Name: "myclient",
+//		Outbounds: yarpc.Outbounds{
+//			"myservice": {Unary: myserviceOutbound},
+//		},
+//	})
 //
 // Note that stopping an HTTP transport does NOT immediately terminate ongoing
 // requests. Connections will remain open until all clients have disconnected.
 //
-// Configuration
+// # Configuration
 //
 // An HTTP Transport may be configured using YARPC's configuration system. See
 // TransportConfig, InboundConfig, and OutboundConfig for details on the
 // different configuration parameters supported by this transport.
 //
-// Wire Representation
+// # Wire Representation
 //
 // YARPC requests and responses are sent as plain HTTP requests and responses.
 // YARPC metadata is sent inside reserved HTTP headers. Application headers
@@ -66,7 +66,7 @@
 // the names of these headers. The request and response bodies are sent as-is
 // in the HTTP request or response body.
 //
-// See Also
+// # See Also
 //
 // YARPC Properties: https://github.com/yarpc/yarpc/blob/master/properties.md
 package http

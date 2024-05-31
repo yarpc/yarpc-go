@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@ package tchannel
 import (
 	"bytes"
 	"errors"
-	"io/ioutil"
+	"io"
 
 	"github.com/uber/tchannel-go"
 )
@@ -89,14 +89,14 @@ func (i *fakeInboundCall) Arg2Reader() (tchannel.ArgReader, error) {
 	if i.arg2 == nil {
 		return nil, errors.New("no arg2 provided")
 	}
-	return ioutil.NopCloser(bytes.NewReader(i.arg2)), nil
+	return io.NopCloser(bytes.NewReader(i.arg2)), nil
 }
 
 func (i *fakeInboundCall) Arg3Reader() (tchannel.ArgReader, error) {
 	if i.arg3 == nil {
 		return nil, errors.New("no arg3 provided")
 	}
-	return ioutil.NopCloser(bytes.NewReader(i.arg3)), nil
+	return io.NopCloser(bytes.NewReader(i.arg3)), nil
 }
 
 // recorder wraps the inboundCallResponse interface to mock errors from responseRecorder's

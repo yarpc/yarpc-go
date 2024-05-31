@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@ package yarpcgzip_test
 import (
 	"bytes"
 	"compress/gzip"
-	"io/ioutil"
+	"io"
 	"strconv"
 	"testing"
 
@@ -48,7 +48,7 @@ func TestGzip(t *testing.T) {
 	str, err := yarpcgzip.New().Decompress(buf)
 	require.NoError(t, err)
 
-	output, err := ioutil.ReadAll(str)
+	output, err := io.ReadAll(str)
 	require.NoError(t, err)
 	require.NoError(t, str.Close())
 
@@ -69,7 +69,7 @@ func TestCompressionPooling(t *testing.T) {
 		str, err := compressor.Decompress(buf)
 		require.NoError(t, err)
 
-		output, err := ioutil.ReadAll(str)
+		output, err := io.ReadAll(str)
 		require.NoError(t, err)
 		require.NoError(t, str.Close())
 
@@ -101,7 +101,7 @@ func TestEveryCompressionLevel(t *testing.T) {
 			str, err := compressor.Decompress(buf)
 			require.NoError(t, err)
 
-			output, err := ioutil.ReadAll(str)
+			output, err := io.ReadAll(str)
 			require.NoError(t, err)
 			require.NoError(t, str.Close())
 

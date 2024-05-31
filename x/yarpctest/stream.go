@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,6 @@ package yarpctest
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 
 	"go.uber.org/yarpc/x/yarpctest/types"
 )
@@ -32,7 +31,7 @@ import (
 func SendStreamMsg(sendMsg string) *types.SendStreamMsg {
 	return &types.SendStreamMsg{
 		BodyFunc: func() io.ReadCloser {
-			return ioutil.NopCloser(bytes.NewBufferString(sendMsg))
+			return io.NopCloser(bytes.NewBufferString(sendMsg))
 		},
 	}
 }
@@ -42,7 +41,7 @@ func SendStreamMsg(sendMsg string) *types.SendStreamMsg {
 func SendStreamMsgAndExpectError(sendMsg string, wantErrMsgs ...string) *types.SendStreamMsg {
 	return &types.SendStreamMsg{
 		BodyFunc: func() io.ReadCloser {
-			return ioutil.NopCloser(bytes.NewBufferString(sendMsg))
+			return io.NopCloser(bytes.NewBufferString(sendMsg))
 		},
 		WantErrMsgs: wantErrMsgs,
 	}
@@ -53,7 +52,7 @@ func SendStreamMsgAndExpectError(sendMsg string, wantErrMsgs ...string) *types.S
 func SendStreamDecodeErrorAndExpectError(decodeErr error, wantErrMsgs ...string) *types.SendStreamMsg {
 	return &types.SendStreamMsg{
 		BodyFunc: func() io.ReadCloser {
-			return ioutil.NopCloser(readErr{decodeErr})
+			return io.NopCloser(readErr{decodeErr})
 		},
 		WantErrMsgs: wantErrMsgs,
 	}

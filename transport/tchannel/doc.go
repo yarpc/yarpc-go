@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +21,7 @@
 // Package tchannel implements a YARPC transport based on the TChannel
 // protocol. The TChannel transport provides support for Unary RPCs only.
 //
-// Usage
+// # Usage
 //
 // To use TChannel with YARPC load balancers, use the NewTransport constructor.
 // To use TChannel with a channel shared with other systems like Ringpop, use
@@ -31,37 +31,37 @@
 // the service name. Note that this is the name of the local service, not the
 // name of the service you will be sending requests to.
 //
-// 	tchannelTransport, err := tchannel.NewTransport(tchannel.ServiceName("myservice"))
+//	tchannelTransport, err := tchannel.NewTransport(tchannel.ServiceName("myservice"))
 //
 // Alternatively, and only when necessary to share an underlying channel,
 // ChannelTransport must be constructed to use this transport. You can provide
 // an existing TChannel Channel to construct the ChannelTransport.
 // In this configuration, the transport cannot use YARPC load balancers.
 //
-// 	ch := getTChannelChannel()
-// 	tchannelTransport, err := tchannel.NewChannelTransport(tchannel.WithChannel(ch))
+//	ch := getTChannelChannel()
+//	tchannelTransport, err := tchannel.NewChannelTransport(tchannel.WithChannel(ch))
 //
 // To serve a YARPC application over TChannel, pass a TChannel inbound in your
 // yarpc.Config.
 //
-// 	myInbound := tchannelTransport.NewInbound()
-// 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-// 		Name: "myservice",
-// 		Inbounds: yarpc.Inbounds{myInbound},
-// 	})
+//	myInbound := tchannelTransport.NewInbound()
+//	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+//		Name: "myservice",
+//		Inbounds: yarpc.Inbounds{myInbound},
+//	})
 //
 // To make requests to a YARPC application that supports TChannel, pass a
 // TChannel outbound in your yarpc.Config.
 //
-// 	myserviceOutbound := tchannelTransport.NewOutbound()
-// 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-// 		Name: "myservice",
-// 		Outbounds: yarpc.Outbounds{
-// 			"outboundservice": {Unary: myserviceOutbound},
-// 		},
-// 	})
+//	myserviceOutbound := tchannelTransport.NewOutbound()
+//	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+//		Name: "myservice",
+//		Outbounds: yarpc.Outbounds{
+//			"outboundservice": {Unary: myserviceOutbound},
+//		},
+//	})
 //
-// Configuration
+// # Configuration
 //
 // A TChannel transport may be configured using YARPC's configuration system.
 // See TransportConfig, InboundConfig, and OutboundConfig for details on the

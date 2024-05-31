@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -45,8 +45,7 @@ type messageResult struct {
 // the end of stream error, if not nil.
 // Calling the finish function with nil is valid.
 //
-//   finish(streamHandler.HandleStream(serverStream))
-//
+//	finish(streamHandler.HandleStream(serverStream))
 func MessagePipe(ctx context.Context, req *transport.StreamRequest, _ ...MessagePipeOption) (*transport.ClientStream, *transport.ServerStream, func(error), error) {
 	c2s := make(chan messageResult)
 	s2c := make(chan messageResult)

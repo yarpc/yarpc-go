@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -179,6 +179,7 @@ func NewAutoReleaseBuffer() AutoReleaseBuffer {
 	}
 }
 
+// Close returns the buffer to the pool.
 func (arb AutoReleaseBuffer) Close() error {
 	Put(arb.Buffer)
 	return nil

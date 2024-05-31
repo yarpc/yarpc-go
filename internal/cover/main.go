@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,12 +23,12 @@
 // files. The coverage is written to a coverage.txt file in the current
 // directory.
 //
-// Usage
+// # Usage
 //
 // Call cover with a list of one or more import paths of packages being
 // tested.
 //
-//   cover PKG ...
+//	cover PKG ...
 //
 // This must be run from the root of the project.
 package main
@@ -38,7 +38,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -106,7 +105,7 @@ func run(args []string) error {
 		return fmt.Errorf("%q is not a subpackage of %q", importPath, rootImportPath)
 	}
 
-	covFile, err := ioutil.TempFile("" /* dir */, "coverage")
+	covFile, err := os.CreateTemp("" /* dir */, "coverage")
 	if err != nil {
 		return fmt.Errorf("failed to create temporary file: %v", err)
 	}

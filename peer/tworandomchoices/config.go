@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -39,20 +39,20 @@ type Configuration struct {
 // of two random peer with transports that use outbound peer list configuration
 // (like HTTP).
 //
-//  cfg := yarpcconfig.New()
-//  cfg.MustRegisterPeerList(tworandomchoices.Spec())
+//	cfg := yarpcconfig.New()
+//	cfg.MustRegisterPeerList(tworandomchoices.Spec())
 //
 // This enables the random peer list:
 //
-//  outbounds:
-//    otherservice:
-//      unary:
-//        http:
-//          url: https://host:port/rpc
-//          two-random-choices:
-//            peers:
-//              - 127.0.0.1:8080
-//              - 127.0.0.1:8081
+//	outbounds:
+//	  otherservice:
+//	    unary:
+//	      http:
+//	        url: https://host:port/rpc
+//	        two-random-choices:
+//	          peers:
+//	            - 127.0.0.1:8080
+//	            - 127.0.0.1:8081
 func Spec() yarpcconfig.PeerListSpec {
 	return SpecWithOptions()
 }

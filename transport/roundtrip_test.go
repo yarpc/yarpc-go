@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"testing"
 	"time"
@@ -297,7 +297,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 					} else {
 						responseMatcher := transporttest.NewResponseMatcher(t, &transport.Response{
 							Headers: tt.responseHeaders,
-							Body:    ioutil.NopCloser(bytes.NewReader([]byte(tt.responseBody))),
+							Body:    io.NopCloser(bytes.NewReader([]byte(tt.responseBody))),
 						})
 
 						if assert.NoError(t, err, "%T: call failed", trans) {

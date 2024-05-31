@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -97,12 +97,12 @@ type Once struct {
 
 // NewOnce returns a lifecycle controller.
 //
-//   0. The observable lifecycle state must only go forward from birth to death.
-//   1. Start() must block until the state is >= Running
-//   2. Stop() must block until the state is >= Stopped
-//   3. Stop() must pre-empt Start() if it occurs first
-//   4. Start() and Stop() may be backed by a do-actual-work function, and that
-//      function must be called at-most-once.
+//  0. The observable lifecycle state must only go forward from birth to death.
+//  1. Start() must block until the state is >= Running
+//  2. Stop() must block until the state is >= Stopped
+//  3. Stop() must pre-empt Start() if it occurs first
+//  4. Start() and Stop() may be backed by a do-actual-work function, and that
+//     function must be called at-most-once.
 func NewOnce() *Once {
 	return &Once{
 		startCh:    make(chan struct{}),

@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,6 @@ package types
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -109,7 +108,7 @@ func (s *RecvStreamMsg) applyStream(t testing.TB, c transport.Stream) {
 	}
 	require.NoError(t, err)
 
-	actualMsg, err := ioutil.ReadAll(msg.Body)
+	actualMsg, err := io.ReadAll(msg.Body)
 	if len(s.WantDecodeErrMsgs) > 0 {
 		require.Error(t, err)
 		for _, wantErrMsg := range s.WantDecodeErrMsgs {

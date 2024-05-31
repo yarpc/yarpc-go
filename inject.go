@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -77,8 +77,8 @@ func validateClientBuilder(f interface{}) reflect.Value {
 //
 // Functions must have one of the following signatures:
 //
-// 	func(transport.ClientConfig) T
-// 	func(transport.ClientConfig, reflect.StructField) T
+//	func(transport.ClientConfig) T
+//	func(transport.ClientConfig, reflect.StructField) T
 //
 // Where T is the type of the client. T MUST be an interface. In the second
 // form, the function receives type information about the field being filled.
@@ -114,22 +114,22 @@ func RegisterClientBuilder(f interface{}) (forget func()) {
 //
 // Given,
 //
-// 	type Handler struct {
-// 		KeyValueClient keyvalueclient.Interface `service:"keyvalue"`
-// 		UserClient json.Client `service:"users"`
-// 		TagClient tagclient.Interface  // no tag; will be left unchanged
-// 	}
+//	type Handler struct {
+//		KeyValueClient keyvalueclient.Interface `service:"keyvalue"`
+//		UserClient json.Client `service:"users"`
+//		TagClient tagclient.Interface  // no tag; will be left unchanged
+//	}
 //
 // The call,
 //
-// 	var h Handler
-// 	yarpc.InjectClients(dispatcher, &h)
+//	var h Handler
+//	yarpc.InjectClients(dispatcher, &h)
 //
 // Is equivalent to,
 //
-// 	var h Handler
-// 	h.KeyValueClient = keyvalueclient.New(dispatcher.ClientConfig("keyvalue"))
-// 	h.UserClient = json.New(dispatcher.ClientConfig("users"))
+//	var h Handler
+//	h.KeyValueClient = keyvalueclient.New(dispatcher.ClientConfig("keyvalue"))
+//	h.UserClient = json.New(dispatcher.ClientConfig("users"))
 //
 // Builder functions for different client types may be registered using the
 // RegisterClientBuilder function.

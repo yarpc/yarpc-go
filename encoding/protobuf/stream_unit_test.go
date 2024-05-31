@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@ package protobuf
 import (
 	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -44,7 +44,7 @@ func TestReadFromStreamDecodeError(t *testing.T) {
 
 	stream := transporttest.NewMockStreamCloser(mockCtrl)
 	stream.EXPECT().ReceiveMessage(ctx).Return(&transport.StreamMessage{
-		Body: ioutil.NopCloser(readErr{err: wantErr}),
+		Body: io.NopCloser(readErr{err: wantErr}),
 	}, nil)
 	stream.EXPECT().Request().Return(
 		&transport.StreamRequest{

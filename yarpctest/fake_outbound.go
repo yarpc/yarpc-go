@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -207,7 +207,7 @@ func (o *FakeOutbound) Call(ctx context.Context, req *transport.Request) (*trans
 	return &transport.Response{
 		ApplicationError: resWriter.IsApplicationError,
 		Headers:          resWriter.Headers,
-		Body:             ioutil.NopCloser(&resWriter.Body),
+		Body:             io.NopCloser(&resWriter.Body),
 	}, nil
 }
 

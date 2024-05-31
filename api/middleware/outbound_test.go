@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@ package middleware_test
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"go.uber.org/yarpc/api/middleware"
@@ -55,7 +55,7 @@ func TestUnaryNopOutboundMiddleware(t *testing.T) {
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}
 
-	res := &transport.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6}))}
+	res := &transport.Response{Body: io.NopCloser(bytes.NewReader([]byte{4, 5, 6}))}
 	o.EXPECT().Call(ctx, req).Return(res, nil)
 
 	got, err := wrappedO.Call(ctx, req)

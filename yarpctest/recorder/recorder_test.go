@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/rand"
 	"os"
 	"path"
@@ -96,7 +96,7 @@ func (r *randomGenerator) Request() transport.Request {
 		ShardKey:        r.Atom(),
 		RoutingKey:      r.Atom(),
 		RoutingDelegate: r.Atom(),
-		Body:            ioutil.NopCloser(bytes.NewReader(bodyData)),
+		Body:            io.NopCloser(bytes.NewReader(bodyData)),
 	}
 }
 
@@ -160,7 +160,7 @@ func TestHash(t *testing.T) {
 
 	// Body
 	r = request
-	request.Body = ioutil.NopCloser(bytes.NewReader([]byte(rgen.Atom())))
+	request.Body = io.NopCloser(bytes.NewReader([]byte(rgen.Atom())))
 	requestRecord = recorder.requestToRequestRecord(&r)
 	assert.NotEqual(t, recorder.hashRequestRecord(&requestRecord), referenceHash)
 }
@@ -237,7 +237,7 @@ func withConnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 func TestEndToEnd(t *testing.T) {
 	tMock := testingTMock{t, 0}
 
-	dir, err := ioutil.TempDir("", "yarpcgorecorder")
+	dir, err := os.MkdirTemp("", "yarpcgorecorder")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -284,7 +284,7 @@ func TestEndToEnd(t *testing.T) {
 func TestEmptyReplay(t *testing.T) {
 	tMock := testingTMock{t, 0}
 
-	dir, err := ioutil.TempDir("", "yarpcgorecorder")
+	dir, err := os.MkdirTemp("", "yarpcgorecorder")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -324,7 +324,7 @@ response:
 func TestRecording(t *testing.T) {
 	tMock := testingTMock{t, 0}
 
-	dir, err := ioutil.TempDir("", "yarpcgorecorder")
+	dir, err := os.MkdirTemp("", "yarpcgorecorder")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -345,7 +345,7 @@ func TestRecording(t *testing.T) {
 	_, err = os.Stat(recordPath)
 	require.NoError(t, err)
 
-	recordContent, err := ioutil.ReadFile(recordPath)
+	recordContent, err := os.ReadFile(recordPath)
 	require.NoError(t, err)
 	assert.Equal(t, refRecordContent, string(recordContent))
 }
@@ -353,7 +353,7 @@ func TestRecording(t *testing.T) {
 func TestReplaying(t *testing.T) {
 	tMock := testingTMock{t, 0}
 
-	dir, err := ioutil.TempDir("", "yarpcgorecorder")
+	dir, err := os.MkdirTemp("", "yarpcgorecorder")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -362,7 +362,7 @@ func TestReplaying(t *testing.T) {
 	recorder := NewRecorder(&tMock, RecordMode(Replay), RecordsPath(dir))
 
 	recordPath := path.Join(dir, refRecordFilename)
-	err = ioutil.WriteFile(recordPath, []byte(refRecordContent), 0444)
+	err = os.WriteFile(recordPath, []byte(refRecordContent), 0444)
 	require.NoError(t, err)
 
 	withDisconnectedClient(t, recorder, func(client raw.Client) {

@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +35,8 @@ import (
 
 // version indicates which underlying serialization method will be used
 // '0' indicates:
-// 		thrift serialization (request) + jaeger.binary format (ctx/tracing)
+//
+//	thrift serialization (request) + jaeger.binary format (ctx/tracing)
 const version = byte(0)
 
 // ToBytes encodes an opentracing.SpanContext and transport.Request into bytes

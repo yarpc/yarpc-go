@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -47,7 +47,7 @@ func Register(r transport.RouteTable, rs []transport.Procedure) {
 // Procedure builds a Procedure from the given JSON handler. handler must be
 // a function with a signature similar to,
 //
-// 	f(ctx context.Context, body $reqBody) ($resBody, error)
+//	f(ctx context.Context, body $reqBody) ($resBody, error)
 //
 // Where $reqBody and $resBody are a map[string]interface{} or pointers to
 // structs.
@@ -66,7 +66,7 @@ func Procedure(name string, handler interface{}) []transport.Procedure {
 // OnewayProcedure builds a Procedure from the given JSON handler. handler must be
 // a function with a signature similar to,
 //
-// 	f(ctx context.Context, body $reqBody) error
+//	f(ctx context.Context, body $reqBody) error
 //
 // Where $reqBody is a map[string]interface{} or pointer to a struct.
 func OnewayProcedure(name string, handler interface{}) []transport.Procedure {

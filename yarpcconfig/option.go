@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -34,11 +34,11 @@ type Option func(*Configurator)
 // Only primitive types (numbers, strings, and time.Duration) are
 // interpolated.
 //
-// 	type myConfig struct {
-// 		Host string `config:"host,interpolate"`
-// 		Port int `config:",interpolate"`
-// 		Timeout time.Duration `config:",interpolate"`
-// 	}
+//	type myConfig struct {
+//		Host string `config:"host,interpolate"`
+//		Port int `config:",interpolate"`
+//		Timeout time.Duration `config:",interpolate"`
+//	}
 func InterpolationResolver(f func(k string) (v string, ok bool)) Option {
 	return func(c *Configurator) {
 		c.resolver = f

@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,6 @@ package http
 
 import (
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -98,7 +97,7 @@ func TestSender(t *testing.T) {
 				return
 			}
 			assert.Equal(t, tt.wantStatusCode, resp.StatusCode, "status code does not match")
-			body, _ := ioutil.ReadAll(resp.Body)
+			body, _ := io.ReadAll(resp.Body)
 			defer resp.Body.Close()
 			assert.Equal(t, tt.wantBody, string(body), "response body does not match")
 		})

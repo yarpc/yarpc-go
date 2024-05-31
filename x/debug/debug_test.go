@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@ package debug
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -63,7 +63,7 @@ func TestHandler(t *testing.T) {
 	NewHandler(dispatcher, tmpl(_jsonTestTmpl))(responseRecorder, nil)
 
 	require.Equal(t, http.StatusOK, responseRecorder.Code)
-	data, err := ioutil.ReadAll(responseRecorder.Body)
+	data, err := io.ReadAll(responseRecorder.Body)
 	require.NoError(t, err)
 	require.Equal(t, string(expectedData), string(data))
 }

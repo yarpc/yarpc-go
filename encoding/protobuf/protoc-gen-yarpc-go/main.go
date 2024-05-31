@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,7 @@
 Package main provides a protoc plugin that generates code for the protobuf encoding for YARPC.
 
 To use:
+
 	go get github.com/gogo/protobuf/protoc-gen-gogoslick
 	go get go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go
 	protoc --gogoslick_out=. foo.proto

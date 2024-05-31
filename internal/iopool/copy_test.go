@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,7 @@ package iopool
 
 import (
 	"bytes"
+	cryptorand "crypto/rand"
 	"math/rand"
 	"sync"
 	"testing"
@@ -36,7 +37,7 @@ func TestBuffers(t *testing.T) {
 		go func() {
 			for i := 0; i < 100; i++ {
 				inputBytes := make([]byte, rand.Intn(5000)+20)
-				_, err := rand.Read(inputBytes)
+				_, err := cryptorand.Read(inputBytes)
 				assert.NoError(t, err, "Unexpected error from rand.Read")
 				reader := bytes.NewReader(inputBytes)
 

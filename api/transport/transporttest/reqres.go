@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@ package transporttest
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"reflect"
 	"strings"
 	"testing"
@@ -49,7 +49,7 @@ type RequestMatcher struct {
 // The request's contents are read in their entirety and replaced with a
 // bytes.Reader.
 func NewRequestMatcher(t *testing.T, r *transport.Request) RequestMatcher {
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		t.Fatalf("failed to read request body: %v", err)
 	}
@@ -123,7 +123,7 @@ func (m RequestMatcher) Matches(got interface{}) bool {
 		}
 	}
 
-	rbody, err := ioutil.ReadAll(r.Body)
+	rbody, err := io.ReadAll(r.Body)
 	if err != nil {
 		m.t.Fatalf("failed to read body: %v", err)
 	}
@@ -167,7 +167,7 @@ type ResponseMatcher struct {
 // NewResponseMatcher builds a new ResponseMatcher that verifies that
 // responses match the given Response.
 func NewResponseMatcher(t *testing.T, r *transport.Response) ResponseMatcher {
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
 		t.Fatalf("failed to read response body: %v", err)
@@ -175,7 +175,7 @@ func NewResponseMatcher(t *testing.T, r *transport.Response) ResponseMatcher {
 
 	// restore a copy of the body so that the caller can still use the
 	// response object
-	r.Body = ioutil.NopCloser(bytes.NewReader(body))
+	r.Body = io.NopCloser(bytes.NewReader(body))
 	return ResponseMatcher{t: t, res: r, body: body}
 }
 
@@ -193,11 +193,11 @@ func (m ResponseMatcher) Matches(got interface{}) bool {
 		return false
 	}
 
-	rbody, err := ioutil.ReadAll(r.Body)
+	rbody, err := io.ReadAll(r.Body)
 	if err != nil {
 		m.t.Fatalf("failed to read body: %v", err)
 	}
-	r.Body = ioutil.NopCloser(bytes.NewReader(rbody)) // in case it is reused
+	r.Body = io.NopCloser(bytes.NewReader(rbody)) // in case it is reused
 
 	if !bytes.Equal(m.body, rbody) {
 		m.t.Logf("Body mismatch: %v != %v", m.body, rbody)

@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,36 +24,36 @@
 // thriftrw-plugin-yarpc supports "rpc.code" annotations on Thrift exceptions.
 // For example:
 //
-//  exception ExceptionWithCode {
-//    1: required string val
-//  } (
-//    rpc.code = "INVALID_ARGUMENT"
-//  )
+//	exception ExceptionWithCode {
+//	  1: required string val
+//	} (
+//	  rpc.code = "INVALID_ARGUMENT"
+//	)
 //
 // The "rpc.code" annotation can be any code matching the string name of gRPC
 // status enum codes. YARPC error codes match 1-1 with these codes, however gRPC
 // uses a different string name representation. We choose to use the raw gRPC
 // enum code names instead to ensure cross-language compatibility with other
 // languages, such as Java.
-//  - https://github.com/googleapis/googleapis/blob/master/google/rpc/code.proto
+//   - https://github.com/googleapis/googleapis/blob/master/google/rpc/code.proto
 //
 // Available string names method:
-//  - "CANCELLED"
-//  - "UNKNOWN"
-//  - "INVALID_ARGUMENT"
-//  - "DEADLINE_EXCEEDED"
-//  - "NOT_FOUND"
-//  - "ALREADY_EXISTS"
-//  - "PERMISSION_DENIED"
-//  - "RESOURCE_EXHAUSTED"
-//  - "FAILED_PRECONDITION"
-//  - "ABORTED"
-//  - "OUT_OF_RANGE"
-//  - "UNIMPLEMENTED"
-//  - "INTERNAL"
-//  - "UNAVAILABLE"
-//  - "DATA_LOSS"
-//  - "UNAUTHENTICATED"
+//   - "CANCELLED"
+//   - "UNKNOWN"
+//   - "INVALID_ARGUMENT"
+//   - "DEADLINE_EXCEEDED"
+//   - "NOT_FOUND"
+//   - "ALREADY_EXISTS"
+//   - "PERMISSION_DENIED"
+//   - "RESOURCE_EXHAUSTED"
+//   - "FAILED_PRECONDITION"
+//   - "ABORTED"
+//   - "OUT_OF_RANGE"
+//   - "UNIMPLEMENTED"
+//   - "INTERNAL"
+//   - "UNAVAILABLE"
+//   - "DATA_LOSS"
+//   - "UNAUTHENTICATED"
 //
 // Adding codes will affect YARPC's observability middleware classification of
 // client and server errors for Thrift exceptions.

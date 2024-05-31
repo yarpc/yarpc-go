@@ -10,14 +10,14 @@ GEN_GO_BIN_DEPS = \
 
 # List of vendored go executables needed for linting. These are not installed
 # automatically and must be requested by $(BIN)/$(basename importPath).
-LINT_DEPS = \
-	github.com/kisielk/errcheck \
-	golang.org/x/lint/golint \
-	honnef.co/go/tools/cmd/staticcheck
 
 THRIFT_VERSION := 1.0.0-dev
 PROTOC_VERSION := 3.5.1
+PROGO_GRPC_VERSION := 1.2.0
 RAGEL_VERSION := 6.10
+ERRCHECK_VERSION := 1.7.0
+GOLINT_VERSION := 0.0.0-20210508222113-6edffad5e616
+STATICHCHECK_VERSION := 0.4.7
 
 THRIFT_OS := $(UNAME_OS)
 PROTOC_OS := $(UNAME_OS)
@@ -39,11 +39,12 @@ THRIFT = $(BIN)/thrift
 PROTOC_LIB = $(LIB)/protoc-$(PROTOC_VERSION)
 PROTOC_ZIP = $(PROTOC_LIB)/protoc.zip
 PROTOC = $(BIN)/protoc
+PROTOC_GRPC = $(BIN)/protoc-gen-go-grpc
 RAGEL_LIB = $(LIB)/ragel-$(RAGEL_VERSION)
 RAGEL_BIN = $(RAGEL_LIB)/ragel
 RAGEL = $(BIN)/ragel
 
-GEN_BINS = $(THRIFT) $(PROTOC) $(RAGEL)
+GEN_BINS = $(THRIFT) $(PROTOC) $(PROTOC_GRPC) $(RAGEL)
 
 $(RAGEL_BIN):
 	@mkdir -p $(RAGEL_LIB)
@@ -72,6 +73,22 @@ $(PROTOC): $(PROTOC_ZIP)
 	cd $(PROTOC_LIB); unzip $(PROTOC_ZIP)
 	cp $(PROTOC_LIB)/bin/protoc $(PROTOC)
 
+$(PROTOC_GRPC):
+	@mkdir -p $(BIN)
+	GOBIN=$(BIN) go install "google.golang.org/grpc/cmd/protoc-gen-go-grpc@v$(PROGO_GRPC_VERSION)"
+
+$(BIN)/errcheck:
+	@mkdir -p $(BIN)
+	GOBIN=$(BIN) go install "github.com/kisielk/errcheck@v$(ERRCHECK_VERSION)"
+
+$(BIN)/golint:
+	@mkdir -p $(BIN)
+	GOBIN=$(BIN) go install "golang.org/x/lint/golint@v$(GOLINT_VERSION)"
+
+$(BIN)/staticcheck:
+	@mkdir -p $(BIN)
+	GOBIN=$(BIN) go install "honnef.co/go/tools/cmd/staticcheck@v$(STATICHCHECK_VERSION)"
+
 define generatedeprule
 GEN_BINS += $(BIN)/$(shell basename $1)
 endef
@@ -90,8 +107,6 @@ endef
 
 $(foreach i,$(GEN_GO_BIN_DEPS),$(eval $(call generatedeprule,$(i))))
 $(foreach i,$(GEN_GO_BIN_DEPS),$(eval $(call deprule,$(i))))
-
-$(foreach i,$(LINT_DEPS),$(eval $(call deprule,$(i))))
 
 THRIFTRW = $(BIN)/thriftrw
 GOLINT = $(BIN)/golint

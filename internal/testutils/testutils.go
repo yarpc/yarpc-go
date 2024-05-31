@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -35,6 +35,7 @@ import (
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/zap"
 	ggrpc "google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
@@ -130,7 +131,7 @@ func WithClientInfo(serviceName string, procedures []transport.Procedure, transp
 	if err != nil {
 		return err
 	}
-	grpcClientConn, err := ggrpc.Dial(fmt.Sprintf("127.0.0.1:%d", grpcPort), ggrpc.WithInsecure())
+	grpcClientConn, err := ggrpc.Dial(fmt.Sprintf("127.0.0.1:%d", grpcPort), ggrpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
 	}

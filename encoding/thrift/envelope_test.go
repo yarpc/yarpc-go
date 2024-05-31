@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -115,8 +115,8 @@ func TestDisableEnveloperNoWireWrite(t *testing.T) {
 
 // generate generates a random value into the given pointer.
 //
-// 	var i int
-// 	generate(&i, rand)
+//	var i int
+//	generate(&i, rand)
 //
 // If the type implements the quick.Generator interface, that is used.
 func generate(v interface{}, r *rand.Rand) {

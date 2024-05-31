@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,6 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -118,7 +117,7 @@ func (s *fakePluginServer) handle(conn net.Conn) {
 		ServiceGenerator: g{
 			SanitizeTChannel: s.sanitizeTChannelNext.Swap(false),
 		},
-		Reader: ioutil.NopCloser(conn),
+		Reader: io.NopCloser(conn),
 		Writer: conn,
 	})
 }
@@ -134,7 +133,7 @@ func TestCodeIsUpToDate(t *testing.T) {
 	fakePlugin := newFakePluginServer(t)
 	defer fakePlugin.Stop(t)
 	{
-		tempDir, err := ioutil.TempDir("", "current-thriftrw-plugin-yarpc")
+		tempDir, err := os.MkdirTemp("", "current-thriftrw-plugin-yarpc")
 		require.NoError(t, err, "failed to create temporary directory: %v", err)
 		defer os.RemoveAll(tempDir)
 
@@ -146,7 +145,7 @@ func TestCodeIsUpToDate(t *testing.T) {
 
 		fakePluginPath := filepath.Join(tempDir, "thriftrw-plugin-yarpc")
 		require.NoError(t,
-			ioutil.WriteFile(fakePluginPath, callback(fakePlugin.Addr()), 0777),
+			os.WriteFile(fakePluginPath, callback(fakePlugin.Addr()), 0777),
 			"failed to create thriftrw plugin script")
 	}
 
@@ -156,7 +155,7 @@ func TestCodeIsUpToDate(t *testing.T) {
 	thriftFiles, err := filepath.Glob(thriftRoot + "/*.thrift")
 	require.NoError(t, err)
 
-	outputDir, err := ioutil.TempDir("", "golden-test")
+	outputDir, err := os.MkdirTemp("", "golden-test")
 	require.NoError(t, err, "failed to create temporary directory")
 	defer func() {
 		if !t.Failed() {
@@ -216,12 +215,7 @@ nc %v %v
 }
 
 func thriftrw(args ...string) error {
-	root, err := filepath.Abs("../../..")
-	if err != nil {
-		return fmt.Errorf("failed to resolve absolute path to project root: %v", err)
-	}
-
-	cmd := exec.Command("go", append([]string{"run", "-mod=vendor", root + "/vendor/go.uber.org/thriftrw"}, args...)...)
+	cmd := exec.Command("thriftrw", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

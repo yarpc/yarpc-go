@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -39,17 +39,17 @@ type CallOption encoding.CallOption
 // Header keys in the map are normalized using the CanonicalizeHeaderKey
 // function.
 //
-// 	var resHeaders map[string]string
-// 	resBody, err := client.SetValue(ctx, key, value, yarpc.ResponseHeaders(&resHeaders))
-// 	value, ok := resHeaders[yarpc.CanonicalizeHeaderKey("foo")]
+//	var resHeaders map[string]string
+//	resBody, err := client.SetValue(ctx, key, value, yarpc.ResponseHeaders(&resHeaders))
+//	value, ok := resHeaders[yarpc.CanonicalizeHeaderKey("foo")]
 //
 // Note that the map is replaced completely. Entries it had before making the
 // call will not be available afterwards.
 //
-// 	headers := map[string]string{"hello": "world"}
-// 	resBody, err := client.SetValue(ctx, key, value, yarpc.ResponseHeaders(&headers))
-// 	_, ok := headers["hello"]
-// 	fmt.Println(ok)  // false
+//	headers := map[string]string{"hello": "world"}
+//	resBody, err := client.SetValue(ctx, key, value, yarpc.ResponseHeaders(&headers))
+//	_, ok := headers["hello"]
+//	fmt.Println(ok)  // false
 func ResponseHeaders(h *map[string]string) CallOption {
 	return CallOption(encoding.ResponseHeaders(h))
 }
@@ -57,8 +57,8 @@ func ResponseHeaders(h *map[string]string) CallOption {
 // WithHeader adds a new header to the request. Header keys are case
 // insensitive.
 //
-// 	_, err := client.GetValue(ctx, reqBody, yarpc.WithHeader("Token", "10"))
-// 	// ==> {"token": "10"}
+//	_, err := client.GetValue(ctx, reqBody, yarpc.WithHeader("Token", "10"))
+//	// ==> {"token": "10"}
 //
 // If multiple entries have the same normalized header name, newer entries
 // override older ones.
@@ -85,14 +85,14 @@ func WithRoutingDelegate(rd string) CallOption {
 // instance of Call for the current request can be obtained by calling
 // CallFromContext on the request context.
 //
-// 	func Get(ctx context.Context, req *GetRequest) (*GetResponse, error) {
-// 		call := yarpc.CallFromContext(ctx)
-// 		fmt.Println("Received request from", call.Caller())
-// 		if err := call.WriteResponseHeader("hello", "world"); err != nil {
-// 			return nil, err
-// 		}
-// 		return response, nil
-// 	}
+//	func Get(ctx context.Context, req *GetRequest) (*GetResponse, error) {
+//		call := yarpc.CallFromContext(ctx)
+//		fmt.Println("Received request from", call.Caller())
+//		if err := call.WriteResponseHeader("hello", "world"); err != nil {
+//			return nil, err
+//		}
+//		return response, nil
+//	}
 type Call encoding.Call
 
 // CallFromContext retrieves information about the current incoming request
@@ -101,7 +101,7 @@ type Call encoding.Call
 //
 // The object is valid only as long as the request is ongoing.
 //
-// Testing
+// # Testing
 //
 // To test functions which use CallFromContext, use yarpctest.ContextWithCall
 // to build contexts compatible with this function.
