@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 =======
-## [Unreleased]
+## [1.73.0] - 2024-05-31
 - Upgraded go version to 1.21, set toolchain version.
 - Reverted rpc-caller-procedure value setting.
 - Reverted header renaming for tchannel: caller-procedure header changed back from `rpc-caller-procedure` to `$rpc$-caller-procedure`.
@@ -1507,7 +1507,7 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.72.1...HEAD
+[1.73.0]: https://github.com/yarpc/yarpc-go/compare/v1.72.1...1.73.0
 [1.72.1]: https://github.com/yarpc/yarpc-go/compare/v1.72.0...1.72.1
 [1.72.0]: https://github.com/yarpc/yarpc-go/compare/v1.71.0...v1.72.0
 [1.71.0]: https://github.com/yarpc/yarpc-go/compare/v1.70.4...v1.71.0
