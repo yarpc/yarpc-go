@@ -5,7 +5,7 @@ package testpb
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"reflect"
 
 	"go.uber.org/fx"
@@ -17,7 +17,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var _ = ioutil.NopCloser
+var _ = io.NopCloser
 
 // TestYARPCClient is the YARPC client-side interface for the Test service.
 type TestYARPCClient interface {

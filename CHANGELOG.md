@@ -6,7 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
-- No changes yet.
+- protoc-gen-yarpc-go & protoc-gen-yarpc-go-v2: remove references to
+  deprecated ioutil package from code generator.
 
 ## [1.73.0] - 2024-05-31
 - Upgraded go version to 1.21, set toolchain version.
