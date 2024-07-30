@@ -332,7 +332,7 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	}
 
 	tres := &transport.Response{
-		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, transport.NewHeaders()),
+		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, transport.NewHeaders(), o.transport.reservedHeaderMetric.With(treq.Caller, treq.Service)),
 		Body:             response.Body,
 		BodySize:         int(response.ContentLength),
 		ApplicationError: response.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus,
@@ -393,13 +393,20 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 	if err != nil {
 		return nil, err
 	}
+
 	// YARPC needs to remove all the HTTP/2 pseudo headers when a HTTP/2 request (gRPC)
 	// was propagated from a YARPC transport middleware to a HTTP/1 service.
 	// It should be noted that net/http will return an error if a pseudo
 	// header is given along a HTTP/1 request.
 	// see: https://cs.opensource.google/go/x/net/+/c6fcb2db:http/httpguts/httplex.go;l=203
 	headers := applicationHeaders.deleteHTTP2PseudoHeadersIfNeeded(treq.Headers)
-	hreq.Header = applicationHeaders.ToHTTPHeaders(headers, nil)
+
+	httpHeader, err := applicationHeaders.ToHTTPHeaders(headers, nil, o.transport.reservedHeaderMetric.With(treq.Caller, treq.Service))
+	if err != nil {
+		return nil, err
+	}
+
+	hreq.Header = httpHeader
 	return hreq, nil
 }
 
@@ -578,16 +585,19 @@ func (o *Outbound) roundTrip(hreq *http.Request, treq *transport.Request, start 
 	// using the go stdlib HTTP client is to use headers as the YAPRC HTTP
 	// transport header conventions.
 	if treq == nil {
+		caller := hreq.Header.Get(CallerHeader)
+		service := hreq.Header.Get(ServiceHeader)
+
 		treq = &transport.Request{
-			Caller:          hreq.Header.Get(CallerHeader),
-			Service:         hreq.Header.Get(ServiceHeader),
+			Caller:          caller,
+			Service:         service,
 			Encoding:        transport.Encoding(hreq.Header.Get(EncodingHeader)),
 			Procedure:       hreq.Header.Get(ProcedureHeader),
 			ShardKey:        hreq.Header.Get(ShardKeyHeader),
 			RoutingKey:      hreq.Header.Get(RoutingKeyHeader),
 			RoutingDelegate: hreq.Header.Get(RoutingDelegateHeader),
 			CallerProcedure: hreq.Header.Get(CallerProcedureHeader),
-			Headers:         applicationHeaders.FromHTTPHeaders(hreq.Header, transport.Headers{}),
+			Headers:         applicationHeaders.FromHTTPHeaders(hreq.Header, transport.Headers{}, o.transport.reservedHeaderMetric.With(caller, service)),
 		}
 	}
 

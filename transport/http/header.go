@@ -25,6 +25,8 @@ import (
 	"strings"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/observability"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 // headerConverter converts HTTP headers to and from transport headers.
@@ -32,37 +34,66 @@ type headerMapper struct{ Prefix string }
 
 var (
 	applicationHeaders = headerMapper{ApplicationHeaderPrefix}
+
+	// enforceHeaderRules is a feature flag for a more strict header handling rules.
+	// If true and isReservedHeaderPrefix also true, an error will be returned for
+	// attempt to set such header; header will be stripped for incoming requests and receiving responses.
+	// See https://github.com/yarpc/yarpc-go/issues/2265 for more details.
+	enforceHeaderRules = false
 )
 
-// toHTTPHeaders converts application headers into transport headers.
+// isReservedHeaderPrefix checks header name by prefix match.
+func isReservedHeaderPrefix(header string) bool {
+	return strings.HasPrefix(strings.ToLower(header), "rpc-") || strings.HasPrefix(strings.ToLower(header), "$rpc$-")
+}
+
+// ToHTTPHeaders converts application headers into transport headers.
 //
 // Headers are read from 'from' and written to 'to'. The final header collection
 // is returned.
 //
 // If 'to' is nil, a new map will be assigned.
-func (hm headerMapper) ToHTTPHeaders(from transport.Headers, to http.Header) http.Header {
+func (hm headerMapper) ToHTTPHeaders(from transport.Headers, to http.Header, edgeMetrics observability.ReservedHeaderEdgeMetrics) (http.Header, error) {
 	if to == nil {
 		to = make(http.Header, from.Len())
 	}
+
 	for k, v := range from.Items() {
+		if isReservedHeaderPrefix(k) {
+			edgeMetrics.IncError()
+			if enforceHeaderRules {
+				return nil, yarpcerrors.InternalErrorf("cannot use reserved header in application headers: %s", k)
+			}
+		}
+
 		to.Add(hm.Prefix+k, v)
 	}
-	return to
+
+	return to, nil
 }
 
-// fromHTTPHeaders converts HTTP headers to application headers.
+// FromHTTPHeaders converts HTTP headers to application headers.
 //
 // Headers are read from 'from' and written to 'to'. The final header collection
 // is returned.
-//
-// If 'to' is nil, a new map will be assigned.
-func (hm headerMapper) FromHTTPHeaders(from http.Header, to transport.Headers) transport.Headers {
+func (hm headerMapper) FromHTTPHeaders(from http.Header, to transport.Headers, edgeMetrics observability.ReservedHeaderEdgeMetrics) transport.Headers {
 	prefixLen := len(hm.Prefix)
+
 	for k := range from {
-		if strings.HasPrefix(k, hm.Prefix) {
-			key := k[prefixLen:]
-			to = to.With(key, from.Get(k))
+		if !strings.HasPrefix(k, hm.Prefix) {
+			continue
 		}
+
+		key := k[prefixLen:]
+
+		if isReservedHeaderPrefix(key) {
+			edgeMetrics.IncStripped()
+			if enforceHeaderRules {
+				continue
+			}
+		}
+
+		to = to.With(key, from.Get(k))
 		// Note: undefined behavior for multiple occurrences of the same header
 	}
 	return to

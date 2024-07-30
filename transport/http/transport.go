@@ -35,6 +35,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/internal/backoff"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/zap"
 )
@@ -281,6 +282,7 @@ func (o *transportOptions) newTransport() *Transport {
 		meter:                    o.meter,
 		serviceName:              o.serviceName,
 		ouboundTLSConfigProvider: o.outboundTLSConfigProvider,
+		reservedHeaderMetric:     observability.NewReserveHeaderMetrics(o.meter, TransportName),
 	}
 }
 
@@ -331,6 +333,7 @@ type Transport struct {
 	meter                    *metrics.Scope
 	serviceName              string
 	ouboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
+	reservedHeaderMetric     *observability.ReservedHeaderMetrics
 }
 
 var _ transport.Transport = (*Transport)(nil)

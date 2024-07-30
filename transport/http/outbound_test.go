@@ -95,7 +95,7 @@ func TestCreateRequest(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			o := &Outbound{urlTemplate: defaultURLTemplate}
+			o := &Outbound{urlTemplate: defaultURLTemplate, transport: &Transport{}}
 			if tt.urlTemplate != nil {
 				o.urlTemplate = tt.urlTemplate
 			}
