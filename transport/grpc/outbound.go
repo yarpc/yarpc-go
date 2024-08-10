@@ -161,18 +161,27 @@ func (o *Outbound) invoke(
 	responseMD *metadata.MD,
 	start time.Time,
 ) (retErr error) {
+	tracer := o.t.options.tracer
+	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
+		Tracer:        tracer,
+		TransportName: TransportName,
+		StartTime:     start,
+		ExtraTags:     yarpc.OpentracingTags,
+	}
+	ctx, span := createOpenTracingSpan.Do(ctx, request)
+	defer span.Finish()
 	md, err := transportRequestToMetadata(request)
 	if err != nil {
-		return err
+		return transport.UpdateSpanWithErr(span, err, 1)
 	}
 
 	bytes, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		return err
+		return transport.UpdateSpanWithErr(span, err, 1)
 	}
 	fullMethod, err := procedureNameToFullMethod(request.Procedure)
 	if err != nil {
-		return err
+		return transport.UpdateSpanWithErr(span, err, 1)
 	}
 	var callOptions []grpc.CallOption
 	if responseMD != nil {
@@ -183,7 +192,7 @@ func (o *Outbound) invoke(
 	}
 	apiPeer, onFinish, err := o.peerChooser.Choose(ctx, request)
 	if err != nil {
-		return err
+		return transport.UpdateSpanWithErr(span, err, 1)
 	}
 	defer func() { onFinish(retErr) }()
 	grpcPeer, ok := apiPeer.(*grpcPeer)
@@ -193,16 +202,6 @@ func (o *Outbound) invoke(
 			ExpectedType: "*grpcPeer",
 		}
 	}
-
-	tracer := o.t.options.tracer
-	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
-		Tracer:        tracer,
-		TransportName: TransportName,
-		StartTime:     start,
-		ExtraTags:     yarpc.OpentracingTags,
-	}
-	ctx, span := createOpenTracingSpan.Do(ctx, request)
-	defer span.Finish()
 
 	if err := tracer.Inject(span.Context(), opentracing.HTTPHeaders, mdReadWriter(md)); err != nil {
 		return err
@@ -217,7 +216,7 @@ func (o *Outbound) invoke(
 			responseBody,
 			callOptions...,
 		),
-	)
+		1)
 	if err != nil {
 		return invokeErrorToYARPCError(err, *responseMD)
 	}
@@ -225,7 +224,7 @@ func (o *Outbound) invoke(
 	if match, resSvcName := checkServiceMatch(request.Service, *responseMD); !match {
 		// If service doesn't match => we got response => span must not be nil
 		return transport.UpdateSpanWithErr(span, yarpcerrors.InternalErrorf("service name sent from the request "+
-			"does not match the service name received in the response: sent %q, got: %q", request.Service, resSvcName))
+			"does not match the service name received in the response: sent %q, got: %q", request.Service, resSvcName), 1)
 	}
 	return nil
 }

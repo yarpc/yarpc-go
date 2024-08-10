@@ -149,7 +149,7 @@ func (h *handler) handleStream(
 	stream := newServerStream(ctx, &transport.StreamRequest{Meta: transportRequest.ToRequestMeta()}, serverStream)
 	tServerStream, err := transport.NewServerStream(stream)
 	if err != nil {
-		return err
+		return transport.UpdateSpanWithErr(span, err, 2)
 	}
 	apperr := transport.InvokeStreamHandler(transport.StreamInvokeRequest{
 		Stream:  tServerStream,
@@ -157,7 +157,7 @@ func (h *handler) handleStream(
 		Logger:  h.logger,
 	})
 	apperr = handlerErrorToGRPCError(apperr, nil)
-	return transport.UpdateSpanWithErr(span, apperr)
+	return transport.UpdateSpanWithErr(span, apperr, 2)
 }
 
 func (h *handler) handleUnary(
@@ -230,7 +230,7 @@ func (h *handler) handleUnaryBeforeErrorConversion(
 	defer span.Finish()
 
 	err := h.callUnary(ctx, transportRequest, handler, responseWriter)
-	return transport.UpdateSpanWithErr(span, err)
+	return transport.UpdateSpanWithErr(span, err, 2)
 }
 
 func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Request, unaryHandler transport.UnaryHandler, responseWriter *responseWriter) error {
