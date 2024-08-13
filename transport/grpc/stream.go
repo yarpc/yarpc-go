@@ -174,7 +174,7 @@ func (cs *clientStream) Headers() (transport.Headers, error) {
 
 func (cs *clientStream) closeWithErr(err error) error {
 	if !cs.closed.Swap(true) {
-		err = transport.UpdateSpanWithErr(cs.span, err, 2)
+		err = transport.UpdateSpanWithErr(cs.span, err, yarpcerrors.FromError(err).Code())
 		cs.span.Finish()
 		cs.release(err)
 	}

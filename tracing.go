@@ -26,6 +26,12 @@ import (
 	opentracing "github.com/opentracing/opentracing-go"
 )
 
+const (
+	RpcYarpcStatusCode = "rpc.yarpc.status_code"
+	RpcYarpcComponent  = "component"
+	Yarpc              = "yarpc"
+)
+
 // OpentracingTags are tags with YARPC metadata.
 var OpentracingTags = opentracing.Tags{
 	"yarpc.version": Version,

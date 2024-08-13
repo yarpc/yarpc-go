@@ -22,11 +22,13 @@ package transport
 
 import (
 	"context"
+	opentracinglog "github.com/opentracing/opentracing-go/log"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	opentracinglog "github.com/opentracing/opentracing-go/log"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 // CreateOpenTracingSpan creates a new context with a started span
@@ -36,12 +38,6 @@ type CreateOpenTracingSpan struct {
 	StartTime     time.Time
 	ExtraTags     opentracing.Tags
 }
-
-const (
-	_rpcYarpcStatusCode = "rpc.yarpc.status_code"
-	_rpcYarpcComponent  = "component"
-	_yarpc              = "yarpc"
-)
 
 // Do creates a new context that has a reference to the started span.
 // This should be called before a Outbound makes a call
@@ -120,12 +116,12 @@ func (e *ExtractOpenTracingSpan) Do(
 // Returns the given error
 // Please refer here for the numeric status code of the yarpc reques
 // https://github.com/yarpc/yarpc-go/blob/dev/yarpcerrors/codes.go#L29
-func UpdateSpanWithErr(span opentracing.Span, err error, errCode int) error {
+func UpdateSpanWithErr(span opentracing.Span, err error, errCode yarpcerrors.Code) error {
 	if err != nil {
 		span.SetTag("error", true)
 		span.LogFields(opentracinglog.String("event", err.Error()))
-		span.SetTag(_rpcYarpcStatusCode, errCode)
-		span.SetTag(_rpcYarpcComponent, _yarpc)
+		span.SetTag(yarpc.RpcYarpcStatusCode, errCode)
+		span.SetTag(yarpc.RpcYarpcComponent, yarpc.Yarpc)
 	}
 	return err
 }

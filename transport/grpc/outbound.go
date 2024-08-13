@@ -170,18 +170,19 @@ func (o *Outbound) invoke(
 	}
 	ctx, span := createOpenTracingSpan.Do(ctx, request)
 	defer span.Finish()
+	span.SetTag(yarpc.RpcYarpcComponent, yarpc.Yarpc)
 	md, err := transportRequestToMetadata(request)
 	if err != nil {
-		return transport.UpdateSpanWithErr(span, err, 1)
+		return transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 	}
 
 	bytes, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		return transport.UpdateSpanWithErr(span, err, 1)
+		return transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 	}
 	fullMethod, err := procedureNameToFullMethod(request.Procedure)
 	if err != nil {
-		return transport.UpdateSpanWithErr(span, err, 1)
+		return transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 	}
 	var callOptions []grpc.CallOption
 	if responseMD != nil {
@@ -192,7 +193,7 @@ func (o *Outbound) invoke(
 	}
 	apiPeer, onFinish, err := o.peerChooser.Choose(ctx, request)
 	if err != nil {
-		return transport.UpdateSpanWithErr(span, err, 1)
+		return transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 	}
 	defer func() { onFinish(retErr) }()
 	grpcPeer, ok := apiPeer.(*grpcPeer)
@@ -216,7 +217,7 @@ func (o *Outbound) invoke(
 			responseBody,
 			callOptions...,
 		),
-		1)
+		yarpcerrors.FromError(err).Code())
 	if err != nil {
 		return invokeErrorToYARPCError(err, *responseMD)
 	}
@@ -224,7 +225,7 @@ func (o *Outbound) invoke(
 	if match, resSvcName := checkServiceMatch(request.Service, *responseMD); !match {
 		// If service doesn't match => we got response => span must not be nil
 		return transport.UpdateSpanWithErr(span, yarpcerrors.InternalErrorf("service name sent from the request "+
-			"does not match the service name received in the response: sent %q, got: %q", request.Service, resSvcName), 1)
+			"does not match the service name received in the response: sent %q, got: %q", request.Service, resSvcName), yarpcerrors.FromError(err).Code())
 	}
 	return nil
 }
@@ -296,23 +297,33 @@ func (o *Outbound) stream(
 		return nil, yarpcerrors.InvalidArgumentErrorf("stream request requires a request metadata")
 	}
 	treq := req.Meta.ToRequest()
+	tracer := o.t.options.tracer
+	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
+		Tracer:        tracer,
+		TransportName: TransportName,
+		StartTime:     start,
+		ExtraTags:     yarpc.OpentracingTags,
+	}
+	_, span := createOpenTracingSpan.Do(ctx, treq)
+	defer span.Finish()
+	span.SetTag(yarpc.RpcYarpcComponent, yarpc.Yarpc)
 	if err := validateRequest(treq); err != nil {
-		return nil, err
+		return nil, transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 	}
 
 	md, err := transportRequestToMetadata(treq)
 	if err != nil {
-		return nil, err
+		return nil, transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 	}
 
 	fullMethod, err := procedureNameToFullMethod(req.Meta.Procedure)
 	if err != nil {
-		return nil, err
+		return nil, transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 	}
 
 	apiPeer, onFinish, err := o.peerChooser.Choose(ctx, treq)
 	if err != nil {
-		return nil, err
+		return nil, transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 	}
 
 	grpcPeer, ok := apiPeer.(*grpcPeer)
@@ -322,22 +333,13 @@ func (o *Outbound) stream(
 			ExpectedType: "*grpcPeer",
 		}
 		onFinish(err)
-		return nil, err
+		return nil, transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 	}
-
-	tracer := o.t.options.tracer
-	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
-		Tracer:        tracer,
-		TransportName: TransportName,
-		StartTime:     start,
-		ExtraTags:     yarpc.OpentracingTags,
-	}
-	_, span := createOpenTracingSpan.Do(ctx, treq)
 
 	if err := tracer.Inject(span.Context(), opentracing.HTTPHeaders, mdReadWriter(md)); err != nil {
 		span.Finish()
 		onFinish(err)
-		return nil, err
+		return nil, transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 	}
 
 	streamCtx := metadata.NewOutgoingContext(ctx, md)
