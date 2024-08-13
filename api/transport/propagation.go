@@ -121,7 +121,6 @@ func UpdateSpanWithErr(span opentracing.Span, err error, errCode yarpcerrors.Cod
 		span.SetTag("error", true)
 		span.LogFields(opentracinglog.String("event", err.Error()))
 		span.SetTag(yarpc.RpcYarpcStatusCode, errCode)
-		span.SetTag(yarpc.RpcYarpcComponent, yarpc.Yarpc)
 	}
 	return err
 }
