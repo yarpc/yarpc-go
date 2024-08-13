@@ -23,6 +23,7 @@ package grpc
 import (
 	"bytes"
 	"context"
+	"github.com/opentracing/opentracing-go/ext"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -170,7 +171,7 @@ func (o *Outbound) invoke(
 	}
 	ctx, span := createOpenTracingSpan.Do(ctx, request)
 	defer span.Finish()
-	span.SetTag(yarpc.RpcYarpcComponent, yarpc.Yarpc)
+	ext.Component.Set(span, yarpc.Yarpc)
 	md, err := transportRequestToMetadata(request)
 	if err != nil {
 		return transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
@@ -306,7 +307,7 @@ func (o *Outbound) stream(
 	}
 	_, span := createOpenTracingSpan.Do(ctx, treq)
 	defer span.Finish()
-	span.SetTag(yarpc.RpcYarpcComponent, yarpc.Yarpc)
+	ext.Component.Set(span, yarpc.Yarpc)
 	if err := validateRequest(treq); err != nil {
 		return nil, transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 	}

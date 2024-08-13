@@ -28,7 +28,6 @@ import (
 
 const (
 	RpcYarpcStatusCode = "rpc.yarpc.status_code"
-	RpcYarpcComponent  = "component"
 	Yarpc              = "yarpc"
 )
 

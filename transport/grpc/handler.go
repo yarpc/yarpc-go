@@ -21,6 +21,7 @@
 package grpc
 
 import (
+	"github.com/opentracing/opentracing-go/ext"
 	"strings"
 	"time"
 
@@ -145,10 +146,10 @@ func (h *handler) handleStream(
 	}
 	ctx, span := extractOpenTracingSpan.Do(ctx, transportRequest)
 	defer span.Finish()
+	ext.Component.Set(span, yarpc.Yarpc)
 
 	stream := newServerStream(ctx, &transport.StreamRequest{Meta: transportRequest.ToRequestMeta()}, serverStream)
 	tServerStream, err := transport.NewServerStream(stream)
-	span.SetTag(yarpc.RpcYarpcComponent, yarpc.Yarpc)
 	if err != nil {
 		return transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 	}
