@@ -27,12 +27,15 @@ import (
 )
 
 const (
-	RpcYarpcStatusCode = "rpc.yarpc.status_code"
-	Yarpc              = "yarpc"
+	//TracingTagStatusCode is the span tag key for the YAPRC status code.
+	TracingTagStatusCode = "rpc.yarpc.status_code"
+	//TracingComponentName helps determine the attribution of a span.
+	TracingComponentName = "yarpc"
 )
 
 // OpentracingTags are tags with YARPC metadata.
 var OpentracingTags = opentracing.Tags{
 	"yarpc.version": Version,
 	"go.version":    runtime.Version(),
+	"component":     TracingComponentName,
 }

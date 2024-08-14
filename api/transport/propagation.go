@@ -22,11 +22,11 @@ package transport
 
 import (
 	"context"
-	opentracinglog "github.com/opentracing/opentracing-go/log"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
+	opentracinglog "github.com/opentracing/opentracing-go/log"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/yarpcerrors"
 )
@@ -120,7 +120,7 @@ func UpdateSpanWithErr(span opentracing.Span, err error, errCode yarpcerrors.Cod
 	if err != nil {
 		span.SetTag("error", true)
 		span.LogFields(opentracinglog.String("event", err.Error()))
-		span.SetTag(yarpc.RpcYarpcStatusCode, errCode)
+		span.SetTag(yarpc.TracingTagStatusCode, errCode)
 	}
 	return err
 }

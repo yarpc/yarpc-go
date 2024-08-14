@@ -328,7 +328,7 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 		}
 		return nil, transport.UpdateSpanWithErr(span,
 			yarpcerrors.InternalErrorf("service name sent from the request "+
-				"does not match the service name received in the response, sent %q, got: %q", treq.Service, resSvcName), yarpcerrors.FromError(err).Code())
+				"does not match the service name received in the response, sent %q, got: %q", treq.Service, resSvcName), yarpcerrors.CodeInternal)
 	}
 
 	tres := &transport.Response{

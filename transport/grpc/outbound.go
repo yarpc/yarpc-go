@@ -23,7 +23,6 @@ package grpc
 import (
 	"bytes"
 	"context"
-	"github.com/opentracing/opentracing-go/ext"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -171,7 +170,6 @@ func (o *Outbound) invoke(
 	}
 	ctx, span := createOpenTracingSpan.Do(ctx, request)
 	defer span.Finish()
-	ext.Component.Set(span, yarpc.Yarpc)
 	md, err := transportRequestToMetadata(request)
 	if err != nil {
 		return transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
@@ -209,16 +207,16 @@ func (o *Outbound) invoke(
 		return err
 	}
 
-	err = transport.UpdateSpanWithErr(
-		span,
-		grpcPeer.clientConn.Invoke(
-			metadata.NewOutgoingContext(ctx, md),
-			fullMethod,
-			bytes,
-			responseBody,
-			callOptions...,
-		),
-		yarpcerrors.FromError(err).Code())
+	if err := grpcPeer.clientConn.Invoke(
+		metadata.NewOutgoingContext(ctx, md),
+		fullMethod,
+		bytes,
+		responseBody,
+		callOptions...,
+	); err != nil {
+		return transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+	}
+
 	if err != nil {
 		return invokeErrorToYARPCError(err, *responseMD)
 	}
@@ -226,7 +224,7 @@ func (o *Outbound) invoke(
 	if match, resSvcName := checkServiceMatch(request.Service, *responseMD); !match {
 		// If service doesn't match => we got response => span must not be nil
 		return transport.UpdateSpanWithErr(span, yarpcerrors.InternalErrorf("service name sent from the request "+
-			"does not match the service name received in the response: sent %q, got: %q", request.Service, resSvcName), yarpcerrors.FromError(err).Code())
+			"does not match the service name received in the response: sent %q, got: %q", request.Service, resSvcName), yarpcerrors.CodeInternal)
 	}
 	return nil
 }
@@ -307,7 +305,6 @@ func (o *Outbound) stream(
 	}
 	_, span := createOpenTracingSpan.Do(ctx, treq)
 	defer span.Finish()
-	ext.Component.Set(span, yarpc.Yarpc)
 	if err := validateRequest(treq); err != nil {
 		return nil, transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 	}
