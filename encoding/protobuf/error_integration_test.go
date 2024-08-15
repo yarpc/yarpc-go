@@ -113,9 +113,12 @@ func TestProtoGrpcServerErrorDetails(t *testing.T) {
 	_, err = client.Unary(ctx, &testpb.TestMessage{Value: errorMsg})
 	assert.NotNil(t, err, "unexpected nil error")
 	st := yarpcerrors.FromError(err)
-	assert.Equal(t, yarpcerrors.CodeUnknown, st.Code(), "unexpected error code")
-	assert.Equal(t, "rpc error: code = InvalidArgument desc = error msg", st.Message(), "unexpected error message")
-	expectedDetails := []interface{}(nil)
+	assert.Equal(t, yarpcerrors.CodeInvalidArgument, st.Code(), "unexpected error code")
+	assert.Equal(t, errorMsg, st.Message(), "unexpected error message")
+	expectedDetails := []interface{}{
+		&types.StringValue{Value: "string value"},
+		&types.Int32Value{Value: 100},
+	}
 	actualDetails := protobuf.GetErrorDetails(err)
 	assert.Equal(t, expectedDetails, actualDetails, "unexpected error details")
 }
@@ -244,13 +247,16 @@ func TestRawGrpcServerErrorDetails(t *testing.T) {
 	_, err = client.Call(ctx, "test::unary", nil)
 	assert.NotNil(t, err, "unexpected nil error")
 	yarpcStatus := yarpcerrors.FromError(err)
-	assert.Equal(t, yarpcerrors.CodeUnknown, yarpcStatus.Code(), "unexpected error code")
-	assert.Equal(t, "rpc error: code = InvalidArgument desc = error message", yarpcStatus.Message(), "unexpected error message")
+	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcStatus.Code(), "unexpected error code")
+	assert.Equal(t, "error message", yarpcStatus.Message(), "unexpected error message")
 
 	var rpcStatus rpc.Status
 	proto.Unmarshal(yarpcStatus.Details(), &rpcStatus)
 	status := status.FromProto(&rpcStatus)
-	expectedDetails := []interface{}{}
+	expectedDetails := []interface{}{
+		&types.StringValue{Value: "string value"},
+		&types.Int32Value{Value: 100},
+	}
 	assert.Equal(t, expectedDetails, status.Details(), "unexpected error details")
 }
 
@@ -305,13 +311,16 @@ func TestJSONGrpcServerErrorDetails(t *testing.T) {
 	err = client.Call(ctx, "test", nil, nil)
 	assert.NotNil(t, err, "unexpected nil error")
 	yarpcStatus := yarpcerrors.FromError(err)
-	assert.Equal(t, yarpcerrors.CodeUnknown, yarpcStatus.Code(), "unexpected error code")
-	assert.Equal(t, "rpc error: code = InvalidArgument desc = error message", yarpcStatus.Message(), "unexpected error message")
+	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcStatus.Code(), "unexpected error code")
+	assert.Equal(t, "error message", yarpcStatus.Message(), "unexpected error message")
 
 	var rpcStatus rpc.Status
 	proto.Unmarshal(yarpcStatus.Details(), &rpcStatus)
 	status := status.FromProto(&rpcStatus)
-	expectedDetails := []interface{}{}
+	expectedDetails := []interface{}{
+		&types.StringValue{Value: "string value"},
+		&types.Int32Value{Value: 100},
+	}
 	assert.Equal(t, expectedDetails, status.Details(), "unexpected error details")
 
 }

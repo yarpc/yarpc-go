@@ -214,12 +214,10 @@ func (o *Outbound) invoke(
 		responseBody,
 		callOptions...,
 	); err != nil {
-		return transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
-	}
-
-	if err != nil {
+		err := transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 		return invokeErrorToYARPCError(err, *responseMD)
 	}
+
 	// Service name match validation, return yarpcerrors.CodeInternal error if not match
 	if match, resSvcName := checkServiceMatch(request.Service, *responseMD); !match {
 		// If service doesn't match => we got response => span must not be nil
