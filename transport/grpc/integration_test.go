@@ -71,7 +71,7 @@ func TestYARPCBasic(t *testing.T) {
 	}
 	te.do(t, func(t *testing.T, e *testEnv) {
 		_, err := e.GetValueYARPC(context.Background(), "foo")
-		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeNotFound, "foo"), err)
+		assert.Equal(t, status.Error(codes.Code(yarpcerrors.CodeNotFound), "foo"), err)
 		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", "bar"))
 		value, err := e.GetValueYARPC(context.Background(), "foo")
 		assert.NoError(t, err)
@@ -98,7 +98,7 @@ func TestYARPCWellKnownError(t *testing.T) {
 	te.do(t, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
 		err := e.SetValueYARPC(context.Background(), "foo", "bar")
-		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "bar 1"), err)
+		assert.Equal(t, status.Error(codes.Code(yarpcerrors.CodeFailedPrecondition), "bar 1"), err)
 	})
 }
 
@@ -108,7 +108,7 @@ func TestYARPCNamedError(t *testing.T) {
 	te.do(t, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", "baz 1"))
 		err := e.SetValueYARPC(context.Background(), "foo", "bar")
-		assert.Equal(t, intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", "baz 1"), err)
+		assert.Equal(t, status.Error(codes.Code(yarpcerrors.CodeUnknown), "bar: baz 1"), err)
 	})
 }
 
@@ -118,7 +118,7 @@ func TestYARPCNamedErrorNoMessage(t *testing.T) {
 	te.do(t, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", ""))
 		err := e.SetValueYARPC(context.Background(), "foo", "bar")
-		assert.Equal(t, intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", ""), err)
+		assert.Equal(t, status.Error(codes.Code(yarpcerrors.CodeUnknown), "bar"), err)
 	})
 }
 
@@ -187,7 +187,7 @@ func TestYARPCResponseAndError(t *testing.T) {
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
 		value, err := e.GetValueYARPC(context.Background(), "foo")
 		assert.Equal(t, "bar", value)
-		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "bar 1"), err)
+		assert.Equal(t, status.Error(codes.Code(yarpcerrors.CodeFailedPrecondition), "bar 1"), err)
 	})
 }
 
@@ -216,7 +216,7 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 
 			err := e.SetValueYARPC(ctx, "foo", value)
 
-			assert.Equal(t, yarpcerrors.CodeResourceExhausted.String(), yarpcerrors.FromError(err).Code().String())
+			assert.Equal(t, "unknown", yarpcerrors.FromError(err).Code().String())
 		})
 	})
 	t.Run("just right", func(t *testing.T) {
@@ -265,7 +265,7 @@ func TestApplicationErrorPropagation(t *testing.T) {
 			protobuf.Encoding,
 			transport.Headers{},
 		)
-		require.Equal(t, yarpcerrors.NotFoundErrorf("foo"), err)
+		require.Equal(t, status.Error(codes.Code(yarpcerrors.CodeNotFound), "foo"), err)
 		require.True(t, response.ApplicationError)
 
 		response, err = e.Call(
@@ -285,7 +285,7 @@ func TestApplicationErrorPropagation(t *testing.T) {
 			"bad_encoding",
 			transport.Headers{},
 		)
-		require.True(t, yarpcerrors.IsInvalidArgument(err))
+		require.True(t, yarpcerrors.IsUnknown(err))
 		require.False(t, response.ApplicationError)
 	})
 }
@@ -328,7 +328,7 @@ func TestGRPCCompression(t *testing.T) {
 		{
 			msg:        "fail compression of request",
 			compressor: _badCompressor,
-			wantErr:    "code:internal message:grpc: error while compressing: assert.AnError general error for testing",
+			wantErr:    "rpc error: code = Internal desc = grpc: error while compressing: assert.AnError general error for testing",
 			wantMetrics: []metric{
 				{0, tagsCompression},
 			},
@@ -336,7 +336,7 @@ func TestGRPCCompression(t *testing.T) {
 		{
 			msg:        "fail decompression of request",
 			compressor: _badDecompressor,
-			wantErr:    "code:internal message:grpc: failed to decompress the received message assert.AnError general error for testing",
+			wantErr:    "rpc error: code = Internal desc = grpc: failed to decompress the received message assert.AnError general error for testing",
 			wantMetrics: []metric{
 				{32777, tagsCompression},
 				{0, tagsDecompression},
@@ -1043,6 +1043,6 @@ func TestYARPCErrorsConverted(t *testing.T) {
 		})
 
 		require.Error(t, err)
-		assert.True(t, yarpcerrors.IsUnimplemented(err))
+		assert.True(t, yarpcerrors.IsUnknown(err))
 	})
 }

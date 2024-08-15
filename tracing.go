@@ -27,8 +27,6 @@ import (
 )
 
 const (
-	//TracingTagStatusCode is the span tag key for the YAPRC status code.
-	TracingTagStatusCode = "rpc.yarpc.status_code"
 	//TracingComponentName helps determine the attribution of a span.
 	TracingComponentName = "yarpc"
 )
