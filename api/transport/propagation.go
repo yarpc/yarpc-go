@@ -118,11 +118,14 @@ func (e *ExtractOpenTracingSpan) Do(
 
 // UpdateSpanWithErr sets the error tag on a span, if an error is given.
 // Returns the given error
-func UpdateSpanWithErr(span opentracing.Span, err error, errCode yarpcerrors.Code) error {
+func UpdateSpanWithErr(span opentracing.Span, err error, errCode ...yarpcerrors.Code) error {
 	if err != nil {
 		span.SetTag("error", true)
 		span.LogFields(opentracinglog.String("event", err.Error()))
-		span.SetTag(TracingTagStatusCode, errCode)
+
+		if len(errCode) > 0 {
+			span.SetTag(TracingTagStatusCode, errCode[0])
+		}
 	}
 	return err
 }
