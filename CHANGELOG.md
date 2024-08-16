@@ -6,7 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
-- No changes yet.
+### Changed
+- Updated most of the dependencies in go.mod to a newer versions.
 
 ## [1.73.0] - 2024-05-31
 - Upgraded go version to 1.21, set toolchain version.
