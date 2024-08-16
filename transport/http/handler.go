@@ -55,6 +55,11 @@ type handler struct {
 	logger            *zap.Logger
 }
 
+const (
+	//TracingTagStatusCode is the span tag key for the YAPRC status code.
+	TracingTagStatusCode = "rpc.yarpc.status_code"
+)
+
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	responseWriter := newResponseWriter(w)
 	service := popHeader(req.Header, ServiceHeader)
@@ -117,12 +122,20 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		Body:            req.Body,
 		BodySize:        int(req.ContentLength),
 	}
+
+	ctx := req.Context()
+	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
+	// parseTTLErr != nil is a problem only if the request is unary.
+	defer cancel()
+	ctx, span := h.createSpan(ctx, req, treq, start)
+
 	for header := range h.grabHeaders {
 		if value := req.Header.Get(header); value != "" {
 			treq.Headers = treq.Headers.With(header, value)
 		}
 	}
 	if err := transport.ValidateRequest(treq); err != nil {
+		updateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 		return err
 	}
 	defer func() {
@@ -133,22 +146,18 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		}
 	}()
 
-	ctx := req.Context()
-	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
-	// parseTTLErr != nil is a problem only if the request is unary.
-	defer cancel()
-	ctx, span := h.createSpan(ctx, req, treq, start)
-
 	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
-		updateSpanWithErr(span, err)
+		updateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 		return err
 	}
 
 	if parseTTLErr != nil {
+		updateSpanWithErr(span, parseTTLErr, yarpcerrors.FromError(parseTTLErr).Code())
 		return parseTTLErr
 	}
 	if err := transport.ValidateRequestContext(ctx); err != nil {
+		updateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 		return err
 	}
 	switch spec.Type() {
@@ -171,7 +180,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		err = yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport http does not handle %s handlers", spec.Type().String())
 	}
 
-	updateSpanWithErr(span, err)
+	updateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 	return err
 }
 
@@ -185,6 +194,7 @@ func handleOnewayRequest(
 	// returning from the request
 	var buff bytes.Buffer
 	if _, err := iopool.Copy(&buff, treq.Body); err != nil {
+		updateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 		return err
 	}
 	treq.Body = &buff
@@ -203,15 +213,16 @@ func handleOnewayRequest(
 			Handler: onewayHandler,
 			Logger:  logger,
 		})
-		updateSpanWithErr(span, err)
+		updateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 	}()
 	return nil
 }
 
-func updateSpanWithErr(span opentracing.Span, err error) {
+func updateSpanWithErr(span opentracing.Span, err error, errCode yarpcerrors.Code) {
 	if err != nil {
 		span.SetTag("error", true)
 		span.LogFields(opentracinglog.String("event", err.Error()))
+		span.SetTag(TracingTagStatusCode, errCode)
 	}
 }
 

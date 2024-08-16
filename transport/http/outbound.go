@@ -34,7 +34,6 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	opentracinglog "github.com/opentracing/opentracing-go/log"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -300,26 +299,25 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	ttl := deadline.Sub(start)
 
 	hreq, err := o.createRequest(treq)
-	if err != nil {
-		return nil, err
-	}
 	ctx, hreq, span, err := o.withOpentracingSpan(ctx, hreq, treq, start)
 	if err != nil {
+		updateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 		return nil, err
 	}
 	defer span.Finish()
+	if err != nil {
+		updateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+		return nil, err
+	}
 
 	hreq = o.withCoreHeaders(hreq, treq, ttl)
 	hreq = hreq.WithContext(ctx)
 
 	response, err := o.roundTrip(hreq, treq, start, o.client)
 	if err != nil {
-		span.SetTag("error", true)
-		span.LogFields(opentracinglog.String("event", err.Error()))
+		updateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 		return nil, err
 	}
-
-	span.SetTag("http.status_code", response.StatusCode)
 
 	// Service name match validation, return yarpcerrors.CodeInternal error if not match
 	if match, resSvcName := checkServiceMatch(treq.Service, response.Header); !match {
