@@ -116,9 +116,9 @@ func (e *ExtractOpenTracingSpan) Do(
 	return ctx, span
 }
 
-// Deprecated: Use UpdateSpanWithErrAndCode instead.
 // UpdateSpanWithErr logs an error to the span. Prefer UpdateSpanWithErrAndCode
 // for including an error code in addition to the error message.
+// Deprecated: Use UpdateSpanWithErrAndCode instead.
 func UpdateSpanWithErr(span opentracing.Span, err error) error {
 	if err != nil {
 		span.SetTag("error", true)
