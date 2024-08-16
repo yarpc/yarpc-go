@@ -33,6 +33,8 @@ import (
 )
 
 const (
+	/** Response headers **/
+
 	// ErrorCodeHeaderKey is the response header key for the error code.
 	ErrorCodeHeaderKey = "$rpc$-error-code"
 	// ErrorNameHeaderKey is the response header key for the error name.
@@ -48,8 +50,11 @@ const (
 	ApplicationErrorDetailsHeaderKey = "$rpc$-application-error-details"
 	// ApplicationErrorCodeHeaderKey is the response header key for the application error code.
 	ApplicationErrorCodeHeaderKey = "$rpc$-application-error-code"
+
+	/** Request headers **/
+
 	// CallerProcedureHeader is the header key for the procedure of the caller making the request.
-	CallerProcedureHeader = "$rpc$-caller-procedure"
+	CallerProcedureHeader = "rpc-caller-procedure"
 )
 
 var _reservedHeaderKeys = map[string]struct{}{
@@ -60,6 +65,7 @@ var _reservedHeaderKeys = map[string]struct{}{
 	ApplicationErrorNameHeaderKey:    {},
 	ApplicationErrorDetailsHeaderKey: {},
 	ApplicationErrorCodeHeaderKey:    {},
+	CallerProcedureHeader:            {},
 }
 
 func isReservedHeaderKey(key string) bool {
