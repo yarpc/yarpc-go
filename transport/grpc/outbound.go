@@ -172,16 +172,16 @@ func (o *Outbound) invoke(
 	defer span.Finish()
 	md, err := transportRequestToMetadata(request)
 	if err != nil {
-		return transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+		return transport.UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 	}
 
 	bytes, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		return transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+		return transport.UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 	}
 	fullMethod, err := procedureNameToFullMethod(request.Procedure)
 	if err != nil {
-		return transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+		return transport.UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 	}
 	var callOptions []grpc.CallOption
 	if responseMD != nil {
@@ -192,7 +192,7 @@ func (o *Outbound) invoke(
 	}
 	apiPeer, onFinish, err := o.peerChooser.Choose(ctx, request)
 	if err != nil {
-		return transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+		return transport.UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 	}
 	defer func() { onFinish(retErr) }()
 	grpcPeer, ok := apiPeer.(*grpcPeer)
@@ -214,14 +214,14 @@ func (o *Outbound) invoke(
 		responseBody,
 		callOptions...,
 	); err != nil {
-		err := transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+		err := transport.UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 		return invokeErrorToYARPCError(err, *responseMD)
 	}
 
 	// Service name match validation, return yarpcerrors.CodeInternal error if not match
 	if match, resSvcName := checkServiceMatch(request.Service, *responseMD); !match {
 		// If service doesn't match => we got response => span must not be nil
-		return transport.UpdateSpanWithErr(span, yarpcerrors.InternalErrorf("service name sent from the request "+
+		return transport.UpdateSpanWithErrAndCode(span, yarpcerrors.InternalErrorf("service name sent from the request "+
 			"does not match the service name received in the response: sent %q, got: %q", request.Service, resSvcName), yarpcerrors.CodeInternal)
 	}
 	return nil
@@ -304,22 +304,22 @@ func (o *Outbound) stream(
 	_, span := createOpenTracingSpan.Do(ctx, treq)
 	defer span.Finish()
 	if err := validateRequest(treq); err != nil {
-		return nil, transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+		return nil, transport.UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 	}
 
 	md, err := transportRequestToMetadata(treq)
 	if err != nil {
-		return nil, transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+		return nil, transport.UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 	}
 
 	fullMethod, err := procedureNameToFullMethod(req.Meta.Procedure)
 	if err != nil {
-		return nil, transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+		return nil, transport.UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 	}
 
 	apiPeer, onFinish, err := o.peerChooser.Choose(ctx, treq)
 	if err != nil {
-		return nil, transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+		return nil, transport.UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 	}
 
 	grpcPeer, ok := apiPeer.(*grpcPeer)
@@ -329,13 +329,13 @@ func (o *Outbound) stream(
 			ExpectedType: "*grpcPeer",
 		}
 		onFinish(err)
-		return nil, transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+		return nil, transport.UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 	}
 
 	if err := tracer.Inject(span.Context(), opentracing.HTTPHeaders, mdReadWriter(md)); err != nil {
 		span.Finish()
 		onFinish(err)
-		return nil, transport.UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+		return nil, transport.UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 	}
 
 	streamCtx := metadata.NewOutgoingContext(ctx, md)
