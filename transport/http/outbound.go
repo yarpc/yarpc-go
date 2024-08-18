@@ -299,6 +299,10 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	ttl := deadline.Sub(start)
 
 	hreq, err := o.createRequest(treq)
+	if err != nil {
+		// TODO: Find a way to emit this error to span tag
+		return nil, err
+	}
 	ctx, hreq, span, err := o.withOpentracingSpan(ctx, hreq, treq, start)
 	if err != nil {
 		updateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
