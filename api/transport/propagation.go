@@ -130,9 +130,8 @@ func UpdateSpanWithErr(span opentracing.Span, err error) error {
 // UpdateSpanWithErrAndCode sets the error tag with errcode on a span, if an error is given.
 // Returns the given error
 func UpdateSpanWithErrAndCode(span opentracing.Span, err error, errCode yarpcerrors.Code) error {
-	err = UpdateSpanWithErr(span, err)
 	if err != nil {
 		span.SetTag(TracingTagStatusCode, errCode)
 	}
-	return err
+	return UpdateSpanWithErr(span, err)
 }
