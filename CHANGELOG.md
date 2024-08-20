@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 =======
 ## [Unreleased]
 ### Changed
+- Updated most of the dependencies in go.mod to a newer versions.
 - Performance improvement in the tchannel transport by reducing the number of allocations.
 
 ## [1.73.0] - 2024-05-31
