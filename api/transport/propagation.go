@@ -122,7 +122,10 @@ func (e *ExtractOpenTracingSpan) Do(
 func UpdateSpanWithErr(span opentracing.Span, err error) error {
 	if err != nil {
 		span.SetTag("error", true)
-		span.LogFields(opentracinglog.String("event", err.Error()))
+		span.LogFields(
+			opentracinglog.String("event", "error"),
+			opentracinglog.String("message", err.Error()),
+		)
 	}
 	return err
 }
