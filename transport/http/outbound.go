@@ -300,17 +300,16 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 
 	hreq, err := o.createRequest(treq)
 	if err != nil {
-		// TODO: Find a way to emit this error to span tag
 		return nil, err
 	}
 	ctx, hreq, span, err := o.withOpentracingSpan(ctx, hreq, treq, start)
 	if err != nil {
-		updateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+		UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 		return nil, err
 	}
 	defer span.Finish()
 	if err != nil {
-		updateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+		UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 		return nil, err
 	}
 
@@ -319,9 +318,11 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 
 	response, err := o.roundTrip(hreq, treq, start, o.client)
 	if err != nil {
-		updateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+		UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 		return nil, err
 	}
+
+	span.SetTag("http.response.status_code", response.StatusCode)
 
 	// Service name match validation, return yarpcerrors.CodeInternal error if not match
 	if match, resSvcName := checkServiceMatch(treq.Service, response.Header); !match {
