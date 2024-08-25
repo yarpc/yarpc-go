@@ -221,7 +221,10 @@ func handleOnewayRequest(
 func updateSpanWithErr(span opentracing.Span, err error) {
 	if err != nil {
 		span.SetTag("error", true)
-		span.LogFields(opentracinglog.String("event", err.Error()))
+		span.LogFields(
+			opentracinglog.String("event", "error"),
+			opentracinglog.String("message", err.Error()),
+		)
 	}
 }
 

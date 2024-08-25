@@ -303,10 +303,6 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 		return nil, err
 	}
 	ctx, hreq, span, err := o.withOpentracingSpan(ctx, hreq, treq, start)
-	if err != nil {
-		UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
-		return nil, err
-	}
 	defer span.Finish()
 	if err != nil {
 		UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
@@ -349,14 +345,14 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	bothResponseError := response.Header.Get(BothResponseErrorHeader) == AcceptTrue
 	if bothResponseError && o.bothResponseError {
 		if response.StatusCode >= 300 {
-			return getYARPCErrorFromResponse(tres, response, true)
+			return getYARPCErrorFromResponse(span, tres, response, true)
 		}
 		return tres, nil
 	}
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 		return tres, nil
 	}
-	return getYARPCErrorFromResponse(tres, response, false)
+	return getYARPCErrorFromResponse(span, tres, response, false)
 }
 
 func getYARPCApplicationErrorCode(code string) *yarpcerrors.Code {
@@ -481,7 +477,7 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 	return req
 }
 
-func getYARPCErrorFromResponse(tres *transport.Response, response *http.Response, bothResponseError bool) (*transport.Response, error) {
+func getYARPCErrorFromResponse(span opentracing.Span, tres *transport.Response, response *http.Response, bothResponseError bool) (*transport.Response, error) {
 	var contents string
 	var details []byte
 	if bothResponseError {
@@ -527,6 +523,9 @@ func getYARPCErrorFromResponse(tres *transport.Response, response *http.Response
 	).WithDetails(details)
 
 	if bothResponseError {
+		if response.StatusCode >= 400 {
+			UpdateSpanWithErrAndCode(span, yarpcErr, yarpcerrors.FromError(yarpcErr).Code())
+		}
 		return tres, yarpcErr
 	}
 	return nil, yarpcErr
