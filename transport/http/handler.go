@@ -55,11 +55,6 @@ type handler struct {
 	logger            *zap.Logger
 }
 
-//const (
-//	//TracingTagStatusCode is the span tag key for the YAPRC status code.
-//	TracingTagStatusCode = "rpc.yarpc.status_code"
-//)
-
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	responseWriter := newResponseWriter(w)
 	service := popHeader(req.Header, ServiceHeader)
