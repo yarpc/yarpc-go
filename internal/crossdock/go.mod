@@ -19,7 +19,7 @@ require (
 	go.uber.org/yarpc v1.42.1
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.27.0
-	google.golang.org/grpc v1.50.0
+	google.golang.org/grpc v1.50.1
 )
 
 require (
@@ -50,7 +50,7 @@ require (
 	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect
-	google.golang.org/genproto v0.0.0-20221014173430-6e2ab493f96b // indirect
+	google.golang.org/genproto v0.0.0-20221118155620-16455021b5e6 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -66,4 +66,7 @@ replace go.uber.org/yarpc => ../..
 // modules.
 replace github.com/apache/thrift => github.com/apache/thrift v0.0.0-20161221203622-b2a4d4ae21c7
 
-replace google.golang.org/grpc => google.golang.org/grpc v1.44.0
+// google.golang.org/genproto upgrade leads to grpc upgrade, which we're not ready for yet.
+replace google.golang.org/grpc => google.golang.org/grpc v1.52.3
+
+replace google.golang.org/genproto => google.golang.org/genproto v0.0.0-20221014173430-6e2ab493f96b
