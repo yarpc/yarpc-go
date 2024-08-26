@@ -23,6 +23,7 @@ package observability
 import (
 	"context"
 	"fmt"
+	"github.com/opentracing/opentracing-go"
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
@@ -135,6 +136,8 @@ func (c call) endWithAppError(
 	res callResult,
 	extraLogFields ...zap.Field) {
 	elapsed := _timeNow().Sub(c.started)
+	// Emit application error to span tag if applicable
+	c.emitSpanErrorTags(res)
 	c.endLogs(elapsed, res.err, res.isApplicationError, res.applicationErrorMeta, extraLogFields...)
 	c.endStats(elapsed, res)
 }
@@ -503,4 +506,11 @@ func errToMetricString(err error) string {
 		return yarpcerrors.FromError(err).Code().String()
 	}
 	return "unknown_internal_yarpc"
+}
+
+// emitSpanErrorTags sets the error information as tags on the current span
+func (c call) emitSpanErrorTags(res callResult) {
+	if span := opentracing.SpanFromContext(c.ctx); span != nil {
+		transport.UpdateSpanWithoutErrMsg(span, res.err, yarpcerrors.FromError(res.err).Code())
+	}
 }

@@ -22,6 +22,7 @@ package transport
 
 import (
 	"context"
+	"go.uber.org/yarpc/yarpcerrors"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -36,6 +37,11 @@ type CreateOpenTracingSpan struct {
 	StartTime     time.Time
 	ExtraTags     opentracing.Tags
 }
+
+const (
+	//TracingTagStatusCode is the span tag key for the YAPRC status code.
+	TracingTagStatusCode = "rpc.yarpc.status_code"
+)
 
 // Do creates a new context that has a reference to the started span.
 // This should be called before a Outbound makes a call
@@ -116,6 +122,21 @@ func UpdateSpanWithErr(span opentracing.Span, err error) error {
 	if err != nil {
 		span.SetTag("error", true)
 		span.LogFields(opentracinglog.String("event", err.Error()))
+	}
+	return err
+}
+
+// UpdateSpanWithoutErrMsg sets the error tag and status code on a span.
+// The error message is intentionally omitted to prevent exposing
+// personally identifiable information (PII) in tracing systems.
+// Returns the given error
+func UpdateSpanWithoutErrMsg(span opentracing.Span, err error, errCode yarpcerrors.Code) error {
+	if err != nil {
+		span.SetTag("error", true)
+		span.SetTag(TracingTagStatusCode, errCode)
+		span.LogFields(
+			opentracinglog.String("event", "error"),
+		)
 	}
 	return err
 }
