@@ -504,7 +504,8 @@ func (c call) emitSpanErrorTag(res callResult) {
 	if span := opentracing.SpanFromContext(c.ctx); span != nil {
 		// emit application error to span tag if applicable
 		if res.isApplicationError {
-			transport.UpdateSpanWithoutErrMsg(span, res.err, yarpcerrors.FromError(res.err).Code())
+			transport.UpdateSpanWithoutErrMsg(span,
+				res.err, yarpcerrors.FromError(res.err).Code())
 		}
 	}
 }
