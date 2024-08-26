@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 =======
+## [1.73.1] - 2024-08-26
+### Changed
+- Updated most of the dependencies in go.mod to a newer versions.
+- Performance improvement in the tchannel transport by reducing the number of allocations.
+
 ## [1.73.0] - 2024-05-31
 - Upgraded go version to 1.21, set toolchain version.
 - Reverted rpc-caller-procedure value setting.
@@ -1507,6 +1512,7 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
+[1.73.1]: https://github.com/yarpc/yarpc-go/compare/v1.73.0...1.73.1
 [1.73.0]: https://github.com/yarpc/yarpc-go/compare/v1.72.1...1.73.0
 [1.72.1]: https://github.com/yarpc/yarpc-go/compare/v1.72.0...1.72.1
 [1.72.0]: https://github.com/yarpc/yarpc-go/compare/v1.71.0...v1.72.0
