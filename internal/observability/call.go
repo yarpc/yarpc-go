@@ -499,6 +499,15 @@ func (c call) logStreamEvent(err error, success bool, succMsg, errMsg string, ex
 	ce.Write(fields...)
 }
 
+// emitSpanErrorTag sets the error information as tags on the current span
+func (c call) emitSpanErrorTag(res callResult) {
+	if span := opentracing.SpanFromContext(c.ctx); span != nil {
+		if res.isApplicationError {
+			transport.UpdateSpanWithoutErrMsg(span, res.err, yarpcerrors.FromError(res.err).Code())
+		}
+	}
+}
+
 // inteded for metric tags, this returns the yarpcerrors.Status error code name
 // or "unknown_internal_yarpc"
 func errToMetricString(err error) string {
@@ -506,11 +515,4 @@ func errToMetricString(err error) string {
 		return yarpcerrors.FromError(err).Code().String()
 	}
 	return "unknown_internal_yarpc"
-}
-
-// emitSpanErrorTag sets the error information as tags on the current span
-func (c call) emitSpanErrorTag(res callResult) {
-	if span := opentracing.SpanFromContext(c.ctx); span != nil {
-		transport.UpdateSpanWithoutErrMsg(span, res.err, yarpcerrors.FromError(res.err).Code())
-	}
 }
