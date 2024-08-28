@@ -117,18 +117,16 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		Body:            req.Body,
 		BodySize:        int(req.ContentLength),
 	}
-
-	ctx := req.Context()
-	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
-	// parseTTLErr != nil is a problem only if the request is unary.
-	defer cancel()
-	ctx, span := h.createSpan(ctx, req, treq, start)
-
 	for header := range h.grabHeaders {
 		if value := req.Header.Get(header); value != "" {
 			treq.Headers = treq.Headers.With(header, value)
 		}
 	}
+	ctx := req.Context()
+	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
+	// parseTTLErr != nil is a problem only if the request is unary.
+	defer cancel()
+	ctx, span := h.createSpan(ctx, req, treq, start)
 	if err := transport.ValidateRequest(treq); err != nil {
 		UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 		return err
