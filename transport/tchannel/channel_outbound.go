@@ -22,6 +22,8 @@ package tchannel
 
 import (
 	"context"
+	"github.com/opentracing/opentracing-go"
+	opentracinglog "github.com/opentracing/opentracing-go/log"
 
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
@@ -35,6 +37,11 @@ import (
 var (
 	_ transport.UnaryOutbound              = (*ChannelOutbound)(nil)
 	_ introspection.IntrospectableOutbound = (*ChannelOutbound)(nil)
+)
+
+const (
+	//TracingTagStatusCode is the span tag key for the YAPRC status code.
+	TracingTagStatusCode = "rpc.yarpc.status_code"
 )
 
 // NewOutbound builds a new TChannel outbound using the transport's shared
@@ -103,10 +110,15 @@ func (o *ChannelOutbound) IsRunning() bool {
 
 // Call sends an RPC over this TChannel outbound.
 func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+	span := opentracing.SpanFromContext(ctx)
+	if span != nil {
+		defer span.Finish()
+	}
 	if req == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel channel outbound was nil")
 	}
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
+		UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 		return nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "error waiting for tchannel channel outbound to start for service: %s", req.Service)
 	}
 	if _, ok := ctx.(tchannel.ContextWithHeaders); ok {
@@ -151,6 +163,7 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 	}
 
 	if err != nil {
+		UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 		return nil, toYARPCError(req, err)
 	}
 
@@ -163,16 +176,19 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 	if err := writeHeaders(format, reqHeaders, tracingBaggage, call.Arg2Writer); err != nil {
 		// TODO(abg): This will wrap IO errors while writing headers as encode
 		// errors. We should fix that.
+		UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 		return nil, errors.RequestHeadersEncodeError(req, err)
 	}
 
 	if err := writeBody(req.Body, call); err != nil {
+		UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 		return nil, toYARPCError(req, err)
 	}
 
 	res := call.Response()
 	headers, err := readHeaders(format, res.Arg2Reader)
 	if err != nil {
+		UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 		if err, ok := err.(tchannel.SystemError); ok {
 			return nil, fromSystemError(err)
 		}
@@ -183,6 +199,7 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 
 	resBody, err := res.Arg3Reader()
 	if err != nil {
+		UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 		if err, ok := err.(tchannel.SystemError); ok {
 			return nil, fromSystemError(err)
 		}
@@ -191,6 +208,7 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 
 	respService, _ := headers.Get(ServiceHeaderKey) // validateServiceName handles empty strings
 	if err := validateServiceName(req.Service, respService); err != nil {
+		UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 		return nil, err
 	}
 
@@ -202,6 +220,7 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 		Body:             resBody,
 		ApplicationError: res.ApplicationError(),
 	}
+	UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 	return resp, err
 }
 
@@ -215,5 +234,17 @@ func (o *ChannelOutbound) Introspect() introspection.OutboundStatus {
 		Transport: "tchannel",
 		Endpoint:  o.addr,
 		State:     state,
+	}
+}
+
+// UpdateSpanWithErr sets the error tag and status code on a span.
+func UpdateSpanWithErr(span opentracing.Span, err error, errCode yarpcerrors.Code) {
+	if span != nil {
+		span.SetTag("error", true)
+		span.SetTag(TracingTagStatusCode, errCode)
+		span.LogFields(
+			opentracinglog.String("event", "error"),
+			opentracinglog.String("message", err.Error()),
+		)
 	}
 }
