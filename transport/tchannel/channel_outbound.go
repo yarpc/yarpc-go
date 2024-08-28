@@ -237,7 +237,7 @@ func (o *ChannelOutbound) Introspect() introspection.OutboundStatus {
 	}
 }
 
-// UpdateSpanWithErr sets the error tag and status code on a span.
+// UpdateSpanWithErr sets the error tag, error log and status code on a span.
 func UpdateSpanWithErr(span opentracing.Span, err error, errCode yarpcerrors.Code) {
 	if span != nil {
 		span.SetTag("error", true)
