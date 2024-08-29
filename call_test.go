@@ -74,6 +74,7 @@ func TestCallFromContext(t *testing.T) {
 	assert.Equal(t, transport.Encoding("baz"), call.Encoding())
 	assert.Equal(t, "hello", call.Procedure())
 	assert.Equal(t, "bar", call.Header("foo"))
+	assert.Equal(t, "Bar", call.OriginalHeader("Foo"))
 	assert.Equal(t, map[string]string{"Foo": "Bar", "foo": "bar"}, call.OriginalHeaders())
 	assert.Equal(t, []string{"foo"}, call.HeaderNames())
 	assert.Equal(t, "one", call.ShardKey())
