@@ -193,16 +193,18 @@ func Run(t crossdock.T) {
 			defer cancel()
 
 			var resp js.RawMessage
-			err := jsonClient.Call(
-				ctx,
-				"phone",
-				&server.PhoneRequest{
-					Service:   "ctxclient",
-					Procedure: procedure,
-					Transport: tconfig,
-					Body:      &js.RawMessage{'{', '}'},
-				}, &resp)
-
+			var err error
+			if resp != nil {
+				err = jsonClient.Call(
+					ctx,
+					"phone",
+					&server.PhoneRequest{
+						Service:   "ctxclient",
+						Procedure: procedure,
+						Transport: tconfig,
+						Body:      &js.RawMessage{'{', '}'},
+					}, &resp)
+			}
 			checks.NoError(err, "%v: request failed", tt.desc)
 		}()
 	}
