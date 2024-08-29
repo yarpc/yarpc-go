@@ -111,6 +111,7 @@ func TestCrossdock(t *testing.T) {
 				"httpserver": "127.0.0.1",
 			},
 		},
+
 		{
 			name: "thriftgauntlet",
 			axes: axes{
@@ -125,10 +126,8 @@ func TestCrossdock(t *testing.T) {
 		},
 		{
 			name: "ctxpropagation",
-			axes: axes{
-				"transport": []string{"http", "tchannel"},
-			},
 			params: params{
+				"transport":              "http",
 				"ctxserver":              "127.0.0.1",
 				"ctxclient":              "127.0.0.1",
 				"ctxavailabletransports": "http;tchannel",

@@ -193,9 +193,6 @@ func Run(t crossdock.T) {
 			defer cancel()
 
 			var resp js.RawMessage
-			if resp == nil {
-				return // no response to check
-			}
 			err := jsonClient.Call(
 				ctx,
 				"phone",
