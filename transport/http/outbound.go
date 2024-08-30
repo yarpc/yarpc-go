@@ -307,7 +307,7 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 		defer span.Finish()
 	}
 	if err != nil {
-		transport.UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
+		UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 		return nil, err
 	}
 
@@ -317,7 +317,7 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	response, err := o.roundTrip(hreq, treq, start, o.client)
 	if err != nil || (response.StatusCode >= 400 && response.StatusCode < 600) {
 		// If there's an error or the status code indicates an error, update the span
-		transport.UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
+		UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 		if err != nil {
 			return nil, err
 		}
