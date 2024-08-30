@@ -22,6 +22,7 @@ package transport
 
 import (
 	"context"
+	"go.uber.org/yarpc/yarpcerrors"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -115,12 +116,25 @@ func (e *ExtractOpenTracingSpan) Do(
 	return ctx, span
 }
 
-// UpdateSpanWithErr sets the error tag on a span, if an error is given.
-// Returns the given error
+// UpdateSpanWithErr logs an error to the span. Prefer UpdateSpanWithErrAndCode
+// for including an error code in addition to the error message.
+// Deprecated: Use UpdateSpanWithErrAndCode instead.
 func UpdateSpanWithErr(span opentracing.Span, err error) error {
 	if err != nil {
 		span.SetTag("error", true)
-		span.LogFields(opentracinglog.String("event", err.Error()))
+		span.LogFields(
+			opentracinglog.String("event", "error"),
+			opentracinglog.String("message", err.Error()),
+		)
 	}
 	return err
+}
+
+// UpdateSpanWithErrAndCode sets the error tag with errcode on a span, if an error is given.
+// Returns the given error
+func UpdateSpanWithErrAndCode(span opentracing.Span, err error, errCode yarpcerrors.Code) error {
+	if err != nil {
+		span.SetTag(TracingTagStatusCode, errCode)
+	}
+	return UpdateSpanWithErr(span, err)
 }

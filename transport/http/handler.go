@@ -30,7 +30,6 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	opentracinglog "github.com/opentracing/opentracing-go/log"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
@@ -128,7 +127,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	defer cancel()
 	ctx, span := h.createSpan(ctx, req, treq, start)
 	if err := transport.ValidateRequest(treq); err != nil {
-		UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
+		transport.UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 		return err
 	}
 	defer func() {
@@ -141,16 +140,16 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 
 	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
-		UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
+		transport.UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 		return err
 	}
 
 	if parseTTLErr != nil {
-		UpdateSpanWithErrAndCode(span, parseTTLErr, yarpcerrors.FromError(parseTTLErr).Code())
+		transport.UpdateSpanWithErrAndCode(span, parseTTLErr, yarpcerrors.FromError(parseTTLErr).Code())
 		return parseTTLErr
 	}
 	if err := transport.ValidateRequestContext(ctx); err != nil {
-		UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
+		transport.UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 		return err
 	}
 	switch spec.Type() {
@@ -173,7 +172,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		err = yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport http does not handle %s handlers", spec.Type().String())
 	}
 
-	UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
+	transport.UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 	return err
 }
 
@@ -187,7 +186,7 @@ func handleOnewayRequest(
 	// returning from the request
 	var buff bytes.Buffer
 	if _, err := iopool.Copy(&buff, treq.Body); err != nil {
-		UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
+		transport.UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 		return err
 	}
 	treq.Body = &buff
@@ -206,28 +205,9 @@ func handleOnewayRequest(
 			Handler: onewayHandler,
 			Logger:  logger,
 		})
-		UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
+		transport.UpdateSpanWithErrAndCode(span, err, yarpcerrors.FromError(err).Code())
 	}()
 	return nil
-}
-
-func updateSpanWithErr(span opentracing.Span, err error) {
-	if err != nil {
-		span.SetTag("error", true)
-		span.LogFields(
-			opentracinglog.String("event", "error"),
-			opentracinglog.String("message", err.Error()),
-		)
-	}
-}
-
-// UpdateSpanWithErrAndCode sets the error tag with errcode on a span, if an error is given.
-// Returns the given error
-func UpdateSpanWithErrAndCode(span opentracing.Span, err error, errCode yarpcerrors.Code) {
-	if err != nil {
-		span.SetTag(transport.TracingTagStatusCode, errCode)
-	}
-	updateSpanWithErr(span, err)
 }
 
 func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, opentracing.Span) {
