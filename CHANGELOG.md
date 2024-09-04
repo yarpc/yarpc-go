@@ -6,7 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
-- No changes yet.
+### Added
+- `OriginalHeader` accessor in `encoding.Call` to get an original header value for a request from context object with zero-copy, as opposed to accessing it via `OriginalHeaders()`
 
 ## [1.73.1] - 2024-08-26
 ### Changed
