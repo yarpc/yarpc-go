@@ -130,7 +130,7 @@ func UpdateSpanWithErr(span opentracing.Span, err error) error {
 // The error message is intentionally omitted to prevent exposing
 // personally identifiable information (PII) in tracing systems.
 // Returns the given error
-func UpdateSpanWithApplicationErr(span opentracing.Span, err error, errCode yarpcerrors.Code) error {
+func UpdateSpanWithApplicationErr(span opentracing.Span, err error, errCode yarpcerrors.Code) {
 	if err != nil {
 		span.SetTag("error", true)
 		span.SetTag(TracingTagStatusCode, errCode)
