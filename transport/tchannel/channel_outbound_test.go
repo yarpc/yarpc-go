@@ -524,12 +524,12 @@ func TestUpdateSpanWithErr(t *testing.T) {
 		errCode = yarpcerrors.FromError(err).Code()
 	)
 	t.Run("nil span", func(t *testing.T) {
-		UpdateSpanWithErr(nil, err, errCode)
+		transport.UpdateSpanWithErrNoReturn(nil, err, errCode)
 	})
 
 	t.Run("error tag and error log", func(t *testing.T) {
 		span := tracer.StartSpan("test")
-		UpdateSpanWithErr(span, err, errCode)
+		transport.UpdateSpanWithErrNoReturn(span, err, errCode)
 
 		mSpan, ok := span.(*mocktracer.MockSpan)
 		require.True(t, ok)

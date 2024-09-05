@@ -116,16 +116,12 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	responseWriter := h.newResponseWriter(call.Response(), call.Format(), h.headerCase)
 	defer responseWriter.ReleaseBuffer()
 
-	span := opentracing.SpanFromContext(ctx)
-	if span != nil {
-		defer span.Finish()
-	}
 	if !h.excludeServiceHeaderInResponse {
 		// echo accepted rpc-service in response header
 		responseWriter.AddHeader(ServiceHeaderKey, call.ServiceName())
 	}
 
-	err := h.callHandler(ctx, call, responseWriter, span)
+	err := h.callHandler(ctx, call, responseWriter)
 
 	// black-hole requests on resource exhausted errors
 	if yarpcerrors.FromError(err).Code() == yarpcerrors.CodeResourceExhausted {
@@ -137,7 +133,6 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	clientTimedOut := ctx.Err() == context.DeadlineExceeded
 
 	if err != nil && !responseWriter.IsApplicationError() {
-		UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 		sendSysErr := call.Response().SendSystemError(getSystemError(err))
 		if sendSysErr != nil && !clientTimedOut {
 			// only log errors if client is still waiting for our response
@@ -146,7 +141,6 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 		return
 	}
 	if err != nil && responseWriter.IsApplicationError() {
-		UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 		// we have an error, so we're going to propagate it as a yarpc error,
 		// regardless of whether or not it is a system error.
 		status := yarpcerrors.FromError(errors.WrapHandlerError(err, call.ServiceName(), call.MethodString()))
@@ -162,7 +156,6 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 		}
 	}
 	if reswErr := responseWriter.Close(); reswErr != nil && !clientTimedOut {
-		UpdateSpanWithErr(span, reswErr, yarpcerrors.FromError(reswErr).Code())
 		if sendSysErr := call.Response().SendSystemError(getSystemError(reswErr)); sendSysErr != nil {
 			h.logger.Error("SendSystemError failed", zap.Error(sendSysErr))
 		}
@@ -170,7 +163,7 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	}
 }
 
-func (h handler) callHandler(ctx context.Context, call inboundCall, responseWriter responseWriter, span opentracing.Span) error {
+func (h handler) callHandler(ctx context.Context, call inboundCall, responseWriter responseWriter) error {
 	start := time.Now()
 	_, ok := ctx.Deadline()
 	if !ok {
@@ -190,7 +183,6 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 
 	ctx, headers, err := readRequestHeaders(ctx, call.Format(), call.Arg2Reader)
 	if err != nil {
-		UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
 		return errors.RequestHeadersDecodeError(treq, err)
 	}
 
@@ -203,22 +195,22 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 		tracer := h.tracer
 		ctx = tchannel.ExtractInboundSpan(ctx, tcall.InboundCall, headers.Items(), tracer)
 	}
-
+	span := opentracing.SpanFromContext(ctx)
 	buf := bufferpool.Get()
 	defer bufferpool.Put(buf)
 
 	body, err := call.Arg3Reader()
 	if err != nil {
-		UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+		transport.UpdateSpanWithErrNoReturn(span, err, yarpcerrors.FromError(err).Code())
 		return err
 	}
 
 	if _, err = buf.ReadFrom(body); err != nil {
-		UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+		transport.UpdateSpanWithErrNoReturn(span, err, yarpcerrors.FromError(err).Code())
 		return err
 	}
 	if err = body.Close(); err != nil {
-		UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+		transport.UpdateSpanWithErrNoReturn(span, err, yarpcerrors.FromError(err).Code())
 		return err
 	}
 
@@ -226,13 +218,13 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 	treq.BodySize = buf.Len()
 
 	if err := transport.ValidateRequest(treq); err != nil {
-		UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+		transport.UpdateSpanWithErrNoReturn(span, err, yarpcerrors.FromError(err).Code())
 		return err
 	}
 
 	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
-		UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+		transport.UpdateSpanWithErrNoReturn(span, err, yarpcerrors.FromError(err).Code())
 		if yarpcerrors.FromError(err).Code() != yarpcerrors.CodeUnimplemented {
 			return err
 		}
@@ -246,7 +238,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 	}
 
 	if err := transport.ValidateRequestContext(ctx); err != nil {
-		UpdateSpanWithErr(span, err, yarpcerrors.FromError(err).Code())
+		transport.UpdateSpanWithErrNoReturn(span, err, yarpcerrors.FromError(err).Code())
 		return err
 	}
 	switch spec.Type() {
