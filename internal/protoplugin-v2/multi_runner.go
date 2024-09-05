@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/golang/protobuf/protoc-gen-go/plugin"
+	plugin_go "github.com/golang/protobuf/protoc-gen-go/plugin"
 	"go.uber.org/multierr"
 )
 

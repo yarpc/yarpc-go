@@ -29,7 +29,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/compressor/gzip"
+	yarpcgzip "go.uber.org/yarpc/compressor/gzip"
 )
 
 // This should be compressible:
