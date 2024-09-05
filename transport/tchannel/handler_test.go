@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/opentracing/opentracing-go/mocktracer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
@@ -829,6 +830,27 @@ func TestRpcServiceHeader(t *testing.T) {
 	hw.headers.Del(ServiceHeaderKey)
 	h.handle(ctx, call)
 	assert.Equal(t, "", hw.headers.OriginalItems()[ServiceHeaderKey])
+}
+
+func TestUpdateSpanWithErrNoReturn(t *testing.T) {
+	var (
+		tracer  = mocktracer.New()
+		err     = errors.New("test error")
+		errCode = yarpcerrors.FromError(err).Code()
+	)
+	t.Run("nil span", func(t *testing.T) {
+		transport.UpdateSpanWithErrNoReturn(nil, err, errCode)
+	})
+
+	t.Run("error tag and error log", func(t *testing.T) {
+		span := tracer.StartSpan("test")
+		transport.UpdateSpanWithErrNoReturn(span, err, errCode)
+
+		mSpan, ok := span.(*mocktracer.MockSpan)
+		require.True(t, ok)
+		assert.Equal(t, true, mSpan.Tag("error"))
+		assert.Equal(t, 1, len(mSpan.Logs()))
+	})
 }
 
 type testUnaryHandler struct {

@@ -22,8 +22,6 @@ package tchannel
 
 import (
 	"bytes"
-	"errors"
-	"github.com/opentracing/opentracing-go/mocktracer"
 	"io"
 	"sync"
 	"testing"
@@ -515,25 +513,4 @@ func TestChannelOutboundNoRequest(t *testing.T) {
 			assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for tchannel channel outbound was nil"), err)
 		})
 	}
-}
-
-func TestUpdateSpanWithErr(t *testing.T) {
-	var (
-		tracer  = mocktracer.New()
-		err     = errors.New("test error")
-		errCode = yarpcerrors.FromError(err).Code()
-	)
-	t.Run("nil span", func(t *testing.T) {
-		transport.UpdateSpanWithErrNoReturn(nil, err, errCode)
-	})
-
-	t.Run("error tag and error log", func(t *testing.T) {
-		span := tracer.StartSpan("test")
-		transport.UpdateSpanWithErrNoReturn(span, err, errCode)
-
-		mSpan, ok := span.(*mocktracer.MockSpan)
-		require.True(t, ok)
-		assert.Equal(t, true, mSpan.Tag("error"))
-		assert.Equal(t, 1, len(mSpan.Logs()))
-	})
 }
