@@ -138,5 +138,4 @@ func UpdateSpanWithApplicationErr(span opentracing.Span, err error, errCode yarp
 			opentracinglog.String("event", "error"),
 		)
 	}
-	return err
 }
