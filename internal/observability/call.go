@@ -137,7 +137,7 @@ func (c call) endWithAppError(
 	extraLogFields ...zap.Field) {
 	elapsed := _timeNow().Sub(c.started)
 	// Emit application error to span tag if applicable
-	c.emitSpanErrorTag(res)
+	c.emitSpanApplicationErrTag(res)
 	c.endLogs(elapsed, res.err, res.isApplicationError, res.applicationErrorMeta, extraLogFields...)
 	c.endStats(elapsed, res)
 }
@@ -499,14 +499,16 @@ func (c call) logStreamEvent(err error, success bool, succMsg, errMsg string, ex
 	ce.Write(fields...)
 }
 
-// emitSpanErrorTag sets the error information as tags on the current span
-func (c call) emitSpanErrorTag(res callResult) {
+// emitSpanApplicationErrTag sets the application error information as tags on the current span
+func (c call) emitSpanApplicationErrTag(res callResult) {
+	// Check if application error is applicable first
+	if !res.isApplicationError {
+		return
+	}
 	if span := opentracing.SpanFromContext(c.ctx); span != nil {
-		// emit application error to span tag if applicable
-		if res.isApplicationError {
-			transport.UpdateSpanWithoutErrMsg(span,
-				res.err, yarpcerrors.FromError(res.err).Code())
-		}
+		// Emit application error to span tag if applicable
+		transport.UpdateSpanWithApplicationErr(span,
+			res.err, yarpcerrors.FromError(res.err).Code())
 	}
 }
 

@@ -22,12 +22,12 @@ package transport
 
 import (
 	"context"
-	"go.uber.org/yarpc/yarpcerrors"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	opentracinglog "github.com/opentracing/opentracing-go/log"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 // CreateOpenTracingSpan creates a new context with a started span
@@ -39,7 +39,7 @@ type CreateOpenTracingSpan struct {
 }
 
 const (
-	//TracingTagStatusCode is the span tag key for the YAPRC status code.
+	// TracingTagStatusCode is the span tag key for the YAPRC status code.
 	TracingTagStatusCode = "rpc.yarpc.status_code"
 )
 
@@ -126,11 +126,11 @@ func UpdateSpanWithErr(span opentracing.Span, err error) error {
 	return err
 }
 
-// UpdateSpanWithoutErrMsg sets the error tag and status code on a span.
+// UpdateSpanWithApplicationErr sets the error tag and status code on a span for application error.
 // The error message is intentionally omitted to prevent exposing
 // personally identifiable information (PII) in tracing systems.
 // Returns the given error
-func UpdateSpanWithoutErrMsg(span opentracing.Span, err error, errCode yarpcerrors.Code) {
+func UpdateSpanWithApplicationErr(span opentracing.Span, err error, errCode yarpcerrors.Code) error {
 	if err != nil {
 		span.SetTag("error", true)
 		span.SetTag(TracingTagStatusCode, errCode)
@@ -138,4 +138,5 @@ func UpdateSpanWithoutErrMsg(span opentracing.Span, err error, errCode yarpcerro
 			opentracinglog.String("event", "error"),
 		)
 	}
+	return err
 }
