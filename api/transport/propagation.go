@@ -22,12 +22,12 @@ package transport
 
 import (
 	"context"
-	"go.uber.org/yarpc/yarpcerrors"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	opentracinglog "github.com/opentracing/opentracing-go/log"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 // CreateOpenTracingSpan creates a new context with a started span

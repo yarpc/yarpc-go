@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"context"
+
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
