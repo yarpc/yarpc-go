@@ -27,7 +27,7 @@ import (
 	"strings"
 
 	"github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
-	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
+	plugin_go "github.com/gogo/protobuf/protoc-gen-gogo/plugin"
 )
 
 type registry struct {

@@ -21,7 +21,7 @@
 package grpc
 
 import (
-	"go.uber.org/yarpc/compressor/grpc"
+	yarpcgrpccompressor "go.uber.org/yarpc/compressor/grpc"
 	"go.uber.org/yarpc/yarpcconfig"
 	"google.golang.org/grpc/encoding"
 )

@@ -18,6 +18,7 @@ RAGEL_VERSION := 6.10
 ERRCHECK_VERSION := 1.7.0
 GOLINT_VERSION := 0.0.0-20210508222113-6edffad5e616
 STATICHCHECK_VERSION := 0.4.7
+GOIMPORTS_VERSION := 0.24.0
 
 THRIFT_OS := $(UNAME_OS)
 PROTOC_OS := $(UNAME_OS)
@@ -89,6 +90,10 @@ $(BIN)/staticcheck:
 	@mkdir -p $(BIN)
 	GOBIN=$(BIN) go install "honnef.co/go/tools/cmd/staticcheck@v$(STATICHCHECK_VERSION)"
 
+$(BIN)/goimports:
+	@mkdir -p $(BIN)
+	GOBIN=$(BIN) go install "golang.org/x/tools/cmd/goimports@v$(GOIMPORTS_VERSION)"
+
 define generatedeprule
 GEN_BINS += $(BIN)/$(shell basename $1)
 endef
@@ -112,6 +117,7 @@ THRIFTRW = $(BIN)/thriftrw
 GOLINT = $(BIN)/golint
 ERRCHECK = $(BIN)/errcheck
 STATICCHECK = $(BIN)/staticcheck
+GOIMPORTS = $(BIN)/goimports
 
 .PHONY: predeps
 predeps: $(THRIFT) $(PROTOC) $(RAGEL)

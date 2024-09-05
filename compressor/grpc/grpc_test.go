@@ -23,8 +23,8 @@ package yarpcgrpccompressor_test
 import (
 	"testing"
 
-	"go.uber.org/yarpc/compressor/grpc"
-	"go.uber.org/yarpc/compressor/gzip"
+	yarpcgrpccompressor "go.uber.org/yarpc/compressor/grpc"
+	yarpcgzip "go.uber.org/yarpc/compressor/gzip"
 	"google.golang.org/grpc/encoding"
 )
 

@@ -29,7 +29,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/protobuf/internal/testpb/v2"
-	"go.uber.org/yarpc/encoding/protobuf/v2"
+	v2 "go.uber.org/yarpc/encoding/protobuf/v2"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )
