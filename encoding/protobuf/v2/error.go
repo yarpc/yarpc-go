@@ -23,7 +23,6 @@ package v2
 import (
 	"errors"
 	"fmt"
-	"google.golang.org/protobuf/encoding/prototext"
 	"strings"
 
 	"github.com/golang/protobuf/ptypes/any"
@@ -32,6 +31,7 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )

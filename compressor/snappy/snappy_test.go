@@ -27,7 +27,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/compressor/snappy"
+	yarpcsnappy "go.uber.org/yarpc/compressor/snappy"
 )
 
 // This should be compressible:

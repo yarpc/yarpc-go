@@ -110,6 +110,21 @@ func (c *Call) Header(k string) string {
 	return ""
 }
 
+// OriginalHeader returns the value of the given request header provided with the
+// request. The getter is suitable for transport like TChannel that hides
+// certain headers by default eg: the ones starting with $
+func (c *Call) OriginalHeader(k string) string {
+	if c == nil {
+		return ""
+	}
+
+	if v, ok := c.md.Headers().OriginalItems()[k]; ok {
+		return v
+	}
+
+	return ""
+}
+
 // OriginalHeaders returns a copy of the given request headers provided with the request.
 // The header key are not canonicalized and suitable for case-sensitive transport like TChannel.
 func (c *Call) OriginalHeaders() map[string]string {
