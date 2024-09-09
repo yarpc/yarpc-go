@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 =======
+## [Unreleased]
+- No changes yet.
+
 ## [1.73.2] - 2024-09-09
 ### Added
 - `OriginalHeader` accessor in `encoding.Call` to get an original header value for a request from context object with zero-copy, as opposed to accessing it via `OriginalHeaders()`
@@ -1516,6 +1519,7 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.73.2...HEAD
 [1.73.2]: https://github.com/yarpc/yarpc-go/compare/v1.73.1...1.73.2
 [1.73.1]: https://github.com/yarpc/yarpc-go/compare/v1.73.0...1.73.1
 [1.73.0]: https://github.com/yarpc/yarpc-go/compare/v1.72.1...1.73.0
