@@ -35,6 +35,10 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/internal/backoff"
+	"go.uber.org/yarpc/internal/inboundmiddleware"
+	"go.uber.org/yarpc/internal/outboundmiddleware"
+	"go.uber.org/yarpc/internal/tracinginterceptor"
+	"go.uber.org/yarpc/internal/transportinterceptor"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/zap"
 )
@@ -53,6 +57,7 @@ type transportOptions struct {
 	dialContext               func(ctx context.Context, network, addr string) (net.Conn, error)
 	jitter                    func(int64) int64
 	tracer                    opentracing.Tracer
+	tracingInterceptorEnabled bool
 	buildClient               func(*transportOptions) *http.Client
 	logger                    *zap.Logger
 	meter                     *metrics.Scope
@@ -212,6 +217,13 @@ func Tracer(tracer opentracing.Tracer) TransportOption {
 	}
 }
 
+// TracingInterceptorEnabled specifies whether to use the new tracing interceptor or the legacy implementation
+func TracingInterceptorEnabled(enabled bool) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.tracingInterceptorEnabled = enabled
+	}
+}
+
 // Logger sets a logger to use for internal logging.
 //
 // The default is to not write any logs.
@@ -268,19 +280,43 @@ func (o *transportOptions) newTransport() *Transport {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
+	var (
+		unaryInbounds   []transportinterceptor.UnaryInbound
+		unaryOutbounds  []transportinterceptor.UnaryOutbound
+		onewayInbounds  []transportinterceptor.OnewayInbound
+		onewayOutbounds []transportinterceptor.OnewayOutbound
+	)
+	tracer := o.tracer
+	if o.tracingInterceptorEnabled {
+		ti := tracinginterceptor.New(tracinginterceptor.Params{
+			Tracer:    tracer,
+			Transport: TransportName,
+		})
+		unaryInbounds = append(unaryInbounds, ti)
+		unaryOutbounds = append(unaryOutbounds, ti)
+		onewayInbounds = append(onewayInbounds, ti)
+		onewayOutbounds = append(onewayOutbounds, ti)
+
+		tracer = opentracing.NoopTracer{}
+	}
+
 	return &Transport{
-		once:                     lifecycle.NewOnce(),
-		client:                   o.buildClient(o),
-		connTimeout:              o.connTimeout,
-		connBackoffStrategy:      o.connBackoffStrategy,
-		innocenceWindow:          o.innocenceWindow,
-		jitter:                   o.jitter,
-		peers:                    make(map[string]*httpPeer),
-		tracer:                   o.tracer,
-		logger:                   logger,
-		meter:                    o.meter,
-		serviceName:              o.serviceName,
-		ouboundTLSConfigProvider: o.outboundTLSConfigProvider,
+		once:                      lifecycle.NewOnce(),
+		client:                    o.buildClient(o),
+		connTimeout:               o.connTimeout,
+		connBackoffStrategy:       o.connBackoffStrategy,
+		innocenceWindow:           o.innocenceWindow,
+		jitter:                    o.jitter,
+		peers:                     make(map[string]*httpPeer),
+		tracer:                    tracer,
+		logger:                    logger,
+		meter:                     o.meter,
+		serviceName:               o.serviceName,
+		ouboundTLSConfigProvider:  o.outboundTLSConfigProvider,
+		unaryInboundInterceptor:   inboundmiddleware.UnaryChain(unaryInbounds...),
+		unaryOutboundInterceptor:  outboundmiddleware.UnaryChain(unaryOutbounds...),
+		onewayInboundInterceptor:  inboundmiddleware.OnewayChain(onewayInbounds...),
+		onewayOutboundInterceptor: outboundmiddleware.OnewayChain(onewayOutbounds...),
 	}
 }
 
@@ -331,6 +367,11 @@ type Transport struct {
 	meter                    *metrics.Scope
 	serviceName              string
 	ouboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
+
+	unaryInboundInterceptor   transportinterceptor.UnaryInbound
+	unaryOutboundInterceptor  transportinterceptor.UnaryOutbound
+	onewayInboundInterceptor  transportinterceptor.OnewayInbound
+	onewayOutboundInterceptor transportinterceptor.OnewayOutbound
 }
 
 var _ transport.Transport = (*Transport)(nil)

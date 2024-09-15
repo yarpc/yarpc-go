@@ -32,6 +32,7 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 	opentracinglog "github.com/opentracing/opentracing-go/log"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/internal/iopool"
@@ -53,6 +54,7 @@ type handler struct {
 	grabHeaders       map[string]struct{}
 	bothResponseError bool
 	logger            *zap.Logger
+	transport         *Transport
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -137,6 +139,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
 	// parseTTLErr != nil is a problem only if the request is unary.
 	defer cancel()
+	// TODO: remove tracing instrumentation at transport layer completely
 	ctx, span := h.createSpan(ctx, req, treq, start)
 
 	spec, err := h.router.Choose(ctx, treq)
@@ -159,13 +162,13 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 			Context:        ctx,
 			StartTime:      start,
 			Request:        treq,
-			Handler:        spec.Unary(),
+			Handler:        middleware.ApplyUnaryInbound(spec.Unary(), h.transport.unaryInboundInterceptor),
 			ResponseWriter: responseWriter,
 			Logger:         h.logger,
 		})
 
 	case transport.Oneway:
-		err = handleOnewayRequest(span, treq, spec.Oneway(), h.logger)
+		err = handleOnewayRequest(span, treq, middleware.ApplyOnewayInbound(spec.Oneway(), h.transport.onewayInboundInterceptor), h.logger)
 
 	default:
 		err = yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport http does not handle %s handlers", spec.Type().String())
@@ -189,6 +192,7 @@ func handleOnewayRequest(
 	}
 	treq.Body = &buff
 
+	// TODO: remove tracing instrumentation at transport layer completely
 	// create a new context for oneway requests since the HTTP handler cancels
 	// http.Request's context when ServeHTTP returns
 	ctx := opentracing.ContextWithSpan(context.Background(), span)

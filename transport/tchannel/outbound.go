@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc/api/x/introspection"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/internal/iopool"
+	"go.uber.org/yarpc/internal/transportinterceptor"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -104,6 +105,11 @@ func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport
 	if req == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel outbound was nil")
 	}
+
+	return o.transport.unaryOutboundInterceptor.Call(ctx, req, transportinterceptor.UnaryOutboundFunc(o.call))
+}
+
+func (o *Outbound) call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "error waiting for tchannel outbound to start for service: %s", req.Service)
 	}
