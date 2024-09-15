@@ -194,6 +194,7 @@ func (o *Outbound) invoke(
 		}
 	}
 
+	// TODO: remove tracing instrumentation at transport layer completely
 	tracer := o.t.options.tracer
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        tracer,
@@ -326,6 +327,7 @@ func (o *Outbound) stream(
 		return nil, err
 	}
 
+	// TODO: remove tracing instrumentation at transport layer completely
 	tracer := o.t.options.tracer
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        tracer,

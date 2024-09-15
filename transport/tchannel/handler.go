@@ -191,9 +191,14 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 	treq = headerCallerProcedureToRequest(treq, &headers)
 	treq.Headers = headers
 
+	// TODO: remove tracing instrumentation at transport layer completely
 	if tcall, ok := call.(tchannelCall); ok {
 		tracer := h.tracer
-		ctx = tchannel.ExtractInboundSpan(ctx, tcall.InboundCall, headers.Items(), tracer)
+		// skip extract if the tracer here is noop and let tracing middleware do the extraction job.
+		// tchannel.ExtractInboundSpan will remove tracing headers to break tracing middleware
+		if _, ok := tracer.(opentracing.NoopTracer); !ok {
+			ctx = tchannel.ExtractInboundSpan(ctx, tcall.InboundCall, headers.Items(), tracer)
+		}
 	}
 
 	buf := bufferpool.Get()

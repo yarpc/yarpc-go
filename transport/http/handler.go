@@ -137,6 +137,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
 	// parseTTLErr != nil is a problem only if the request is unary.
 	defer cancel()
+	// TODO: remove tracing instrumentation at transport layer completely
 	ctx, span := h.createSpan(ctx, req, treq, start)
 
 	spec, err := h.router.Choose(ctx, treq)
@@ -189,6 +190,7 @@ func handleOnewayRequest(
 	}
 	treq.Body = &buff
 
+	// TODO: remove tracing instrumentation at transport layer completely
 	// create a new context for oneway requests since the HTTP handler cancels
 	// http.Request's context when ServeHTTP returns
 	ctx := opentracing.ContextWithSpan(context.Background(), span)

@@ -230,10 +230,12 @@ type Config struct {
 	OutboundMiddleware OutboundMiddleware
 
 	// Tracer is meant to add/record tracing information to a request.
-	//
-	// Deprecated: The dispatcher does nothing with this property.  Set the
-	// tracer directly on the transports used to build inbounds and outbounds.
 	Tracer opentracing.Tracer
+
+	// EnableTracingMiddleware is a boolean flag to control whether the tracing middleware should be enabled.
+	// We are re-designing the tracing instrumentation in YARPC, and will eventually moving the tracing instrumentation
+	// from each individual transport layer to a middleware based implementation.
+	EnableTracingMiddleware bool
 
 	// RouterMiddleware is middleware to control how requests are routed.
 	RouterMiddleware middleware.Router

@@ -35,6 +35,7 @@ import (
 	"go.uber.org/yarpc/internal/outboundmiddleware"
 	"go.uber.org/yarpc/internal/request"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/yarpc/pkg/tracingmiddleware"
 	"go.uber.org/zap"
 )
 
@@ -81,6 +82,7 @@ func NewDispatcher(cfg Config) *Dispatcher {
 
 	meter, stopMeter := cfg.Metrics.scope(cfg.Name, logger)
 	cfg = addObservingMiddleware(cfg, meter, logger, extractor)
+	cfg = addTracingMiddleware(cfg)
 	cfg = addFirstOutboundMiddleware(cfg)
 
 	return &Dispatcher{
@@ -140,6 +142,27 @@ func addObservingMiddleware(cfg Config, meter *metrics.Scope, logger *zap.Logger
 	cfg.OutboundMiddleware.Oneway = outboundmiddleware.OnewayChain(cfg.OutboundMiddleware.Oneway, observer)
 	cfg.OutboundMiddleware.Stream = outboundmiddleware.StreamChain(cfg.OutboundMiddleware.Stream, observer)
 
+	return cfg
+}
+
+func addTracingMiddleware(cfg Config) Config {
+	if !cfg.EnableTracingMiddleware {
+		return cfg
+	}
+
+	tracingMiddleware := tracingmiddleware.NewMiddleware(tracingmiddleware.Params{Tracer: cfg.Tracer})
+
+	// Tracing middleware has to be the first among inbound middlewares
+	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(tracingMiddleware, cfg.InboundMiddleware.Unary)
+	// NOT Implemented
+	//cfg.InboundMiddleware.Oneway = inboundmiddleware.OnewayChain(tracingMiddleware, cfg.InboundMiddleware.Oneway)
+	//cfg.InboundMiddleware.Stream = inboundmiddleware.StreamChain(tracingMiddleware, cfg.InboundMiddleware.Stream)
+
+	// Tracing middleware has to be the last among outbound middlewares
+	cfg.OutboundMiddleware.Unary = outboundmiddleware.UnaryChain(cfg.OutboundMiddleware.Unary, tracingMiddleware)
+	// NOT Implemented
+	//cfg.OutboundMiddleware.Oneway = outboundmiddleware.OnewayChain(cfg.OutboundMiddleware.Oneway, tracingMiddleware)
+	//cfg.OutboundMiddleware.Stream = outboundmiddleware.StreamChain(cfg.OutboundMiddleware.Stream, tracingMiddleware)
 	return cfg
 }
 

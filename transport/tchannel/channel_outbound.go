@@ -74,6 +74,12 @@ type ChannelOutbound struct {
 	once *lifecycle.Once
 }
 
+// TransportName is the transport name that will be set on `transport.Request`
+// struct.
+func (o *ChannelOutbound) TransportName() string {
+	return TransportName
+}
+
 // Transports returns the underlying TChannel Transport for this outbound.
 func (o *ChannelOutbound) Transports() []transport.Transport {
 	return []transport.Transport{o.transport}
@@ -158,6 +164,7 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 	if o.transport.originalHeaders {
 		reqHeaders = req.Headers.OriginalItems()
 	}
+	// TODO: remove tracing instrumentation at transport layer completely
 	// baggage headers are transport implementation details that are stripped out (and stored in the context). Users don't interact with it
 	tracingBaggage := tchannel.InjectOutboundSpan(call.Response(), nil)
 	if err := writeHeaders(format, reqHeaders, tracingBaggage, call.Arg2Writer); err != nil {
