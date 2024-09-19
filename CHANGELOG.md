@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Fixed
 - Return correct error code for ctx Cancelled error in http outbound.
+- Make tchannel outbound satisfy Namer interface
 
 ## [1.73.2] - 2024-09-09
 ### Added

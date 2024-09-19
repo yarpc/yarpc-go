@@ -514,3 +514,9 @@ func TestChannelOutboundNoRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestChannelOutboundTransportName(t *testing.T) {
+	ct, err := NewChannelTransport(ServiceName("myclient"))
+	require.NoError(t, err)
+	assert.Equal(t, TransportName, ct.NewOutbound().TransportName())
+}
