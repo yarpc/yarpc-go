@@ -6,7 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
-- No changes yet.
+### Fixed
+- Return correct error code for ctx Cancelled error in http outbound.
 
 ## [1.73.2] - 2024-09-09
 ### Added
