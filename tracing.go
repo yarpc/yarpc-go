@@ -26,8 +26,14 @@ import (
 	opentracing "github.com/opentracing/opentracing-go"
 )
 
+const (
+	//TracingComponentName helps determine the attribution of a span.
+	TracingComponentName = "yarpc"
+)
+
 // OpentracingTags are tags with YARPC metadata.
 var OpentracingTags = opentracing.Tags{
 	"yarpc.version": Version,
 	"go.version":    runtime.Version(),
+	"component":     TracingComponentName,
 }

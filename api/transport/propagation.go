@@ -37,6 +37,11 @@ type CreateOpenTracingSpan struct {
 	ExtraTags     opentracing.Tags
 }
 
+const (
+	//TracingTagStatusCode is the span tag key for the YAPRC status code.
+	TracingTagStatusCode = "rpc.yarpc.status_code"
+)
+
 // Do creates a new context that has a reference to the started span.
 // This should be called before a Outbound makes a call
 func (c *CreateOpenTracingSpan) Do(
