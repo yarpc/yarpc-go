@@ -74,7 +74,7 @@ func (*multiaddrPassthroughResolver) ResolveNow(resolver.ResolveNowOptions) {}
 func (*multiaddrPassthroughResolver) Close() {}
 
 func parseTarget(target resolver.Target) ([]resolver.Address, error) {
-	endpoints := strings.Split(target.URL.Path, "/")
+	endpoints := strings.Split(target.Endpoint(), "/")
 	addresses := make([]resolver.Address, 0, len(endpoints))
 
 	for _, endpoint := range endpoints {
