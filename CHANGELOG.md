@@ -8,7 +8,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Fixed
 - Return correct error code for ctx Cancelled error in http outbound.
+### Added
 - Make tchannel outbound satisfy Namer interface
+### Changed
+- errors: encoding/decoding (marshalling/unmarshalling) errors are now returned as CodeInternal (13) instead of CodeInvalidArgument (3).
 
 ## [1.73.2] - 2024-09-09
 ### Added
@@ -22,9 +25,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [1.73.0] - 2024-05-31
 - Upgraded go version to 1.21, set toolchain version.
 - Reverted rpc-caller-procedure value setting.
-- Reverted header renaming for tchannel: caller-procedure header changed back from `rpc-caller-procedure` to `$rpc$-caller-procedure`.
-- Upgraded grpc-go to v1.44.0
-- Fixed grpc status mapper, IDLE connections are now considered as available.
 
 ## [1.72.1] - 2024-03-14
 - tchannel: Renamed caller-procedure header from `$rpc$-caller-procedure` to `rpc-caller-procedure`.
