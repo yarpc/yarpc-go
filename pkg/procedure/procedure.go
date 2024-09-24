@@ -22,19 +22,20 @@
 package procedure
 
 import (
-	"fmt"
 	"strings"
 )
+
+const _separator = "::"
 
 // ToName gets the procedure name we should use for a method
 // with the given service name and method name.
 func ToName(serviceName string, methodName string) string {
-	return fmt.Sprintf("%s::%s", serviceName, methodName)
+	return serviceName + _separator + methodName
 }
 
 // FromName gets the service name and method name from a procdure name.
 func FromName(name string) (serviceName string, methodName string) {
-	parts := strings.SplitN(name, "::", 2)
+	parts := strings.SplitN(name, _separator, 2)
 	if len(parts) == 1 {
 		return parts[0], ""
 	}

@@ -6,9 +6,25 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
+### Fixed
+- Return correct error code for ctx Cancelled error in http outbound.
+### Added
+- Make tchannel outbound satisfy Namer interface
+### Changed
+- errors: encoding/decoding (marshalling/unmarshalling) errors are now returned as CodeInternal (13) instead of CodeInvalidArgument (3).
+
+## [1.73.2] - 2024-09-09
+### Added
+- `OriginalHeader` accessor in `encoding.Call` to get an original header value for a request from context object with zero-copy, as opposed to accessing it via `OriginalHeaders()`
+
+## [1.73.1] - 2024-08-26
+### Changed
+- Updated most of the dependencies in go.mod to a newer versions.
+- Performance improvement in the tchannel transport by reducing the number of allocations.
+
+## [1.73.0] - 2024-05-31
 - Upgraded go version to 1.21, set toolchain version.
 - Reverted rpc-caller-procedure value setting.
-- errors: encoding/decoding (marshalling/unmarshalling) errors are now returned as CodeInternal (13) instead of CodeInvalidArgument (3).
 
 ## [1.72.1] - 2024-03-14
 - tchannel: Renamed caller-procedure header from `$rpc$-caller-procedure` to `rpc-caller-procedure`.
@@ -1505,7 +1521,10 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.72.1...HEAD
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.73.2...HEAD
+[1.73.2]: https://github.com/yarpc/yarpc-go/compare/v1.73.1...1.73.2
+[1.73.1]: https://github.com/yarpc/yarpc-go/compare/v1.73.0...1.73.1
+[1.73.0]: https://github.com/yarpc/yarpc-go/compare/v1.72.1...1.73.0
 [1.72.1]: https://github.com/yarpc/yarpc-go/compare/v1.72.0...1.72.1
 [1.72.0]: https://github.com/yarpc/yarpc-go/compare/v1.71.0...v1.72.0
 [1.71.0]: https://github.com/yarpc/yarpc-go/compare/v1.70.4...v1.71.0

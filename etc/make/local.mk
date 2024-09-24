@@ -109,6 +109,19 @@ errcheck: $(ERRCHECK) __eval_packages __eval_go_files ## check errcheck
 	@PATH=$(BIN):$$PATH errcheck $(ERRCHECK_FLAGS) $(PACKAGES) 2>&1 | $(FILTER_LINT) | $(FILTER_ERRCHECK) > $(ERRCHECK_LOG) || true
 	@[ ! -s "$(ERRCHECK_LOG)" ] || (echo "errcheck failed:" | cat - $(ERRCHECK_LOG) && false)
 
+.PHONY: goimports
+goimports: $(GOIMPORTS) __eval_packages __eval_go_files
+	@echo "goimports"
+	$(eval GOIMPORTS_LOG := $(shell mktemp -t goimports.XXXXX))
+	@PATH=$(BIN):$$PATH goimports -l $(GO_FILES) | $(FILTER_LINT) >> $(GOIMPORTS_LOG) || true
+	@[ ! -s "$(GOIMPORTS_LOG)" ] || (echo "goimports failed (run 'make goimports-fix'):" | cat - $(GOIMPORTS_LOG) && false)
+
+.PHONY: goimports-fix
+goimports-fix: $(GOIMPORTS) __eval_packages __eval_go_files
+	@echo "goimports-fix"
+	$(eval TARGET_FILES := $(shell PATH=$(BIN):$$PATH goimports -l $(GO_FILES) | $(FILTER_LINT)))
+	@PATH=$(BIN):$$PATH goimports -w $(TARGET_FILES)
+
 .PHONY: verifyversion
 verifyversion: ## verify the version in the changelog is the same as in version.go
 	@echo "verifyversion"
@@ -138,7 +151,7 @@ verifycodecovignores: ## verify that .codecov.yml contains all .nocover packages
 		done
 
 .PHONY: basiclint
-basiclint: gofmt govet golint staticcheck errcheck # run gofmt govet golint staticcheck errcheck
+basiclint: gofmt govet golint staticcheck errcheck goimports # run gofmt govet golint staticcheck errcheck
 
 .PHONY: lint
 lint: basiclint generatenodiff nogogenerate verifyversion verifycodecovignores ## run all linters

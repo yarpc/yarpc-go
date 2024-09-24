@@ -21,14 +21,15 @@
 package v2
 
 import (
+	"io"
+	"sync"
+
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoregistry"
-	"io"
-	"sync"
 )
 
 var (

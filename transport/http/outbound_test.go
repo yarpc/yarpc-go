@@ -279,6 +279,30 @@ func TestCallOneWayFailWithoutDeadline(t *testing.T) {
 	require.Nil(t, ack)
 }
 
+func TestCallOneWayFailWithCtxCancelled(t *testing.T) {
+	successServer := httptest.NewServer(nil)
+	defer successServer.Close()
+
+	httpTransport := NewTransport()
+	defer httpTransport.Stop()
+	out := httpTransport.NewSingleOutbound(successServer.URL)
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	cancel() // Cancel the context immediately
+	ack, err := out.CallOneway(ctx, &transport.Request{
+		Caller:    "caller",
+		Service:   "service",
+		Encoding:  raw.Encoding,
+		Procedure: "hello",
+		Body:      bytes.NewReader([]byte("world")),
+	})
+	require.Error(t, err)
+	assert.Equal(t, yarpcerrors.CodeCancelled, yarpcerrors.FromError(err).Code())
+	require.Nil(t, ack)
+}
+
 func TestAddReservedHeader(t *testing.T) {
 	tests := []string{
 		"Rpc-Foo",

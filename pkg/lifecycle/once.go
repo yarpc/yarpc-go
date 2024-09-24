@@ -115,7 +115,7 @@ func NewOnce() *Once {
 // If Start is called multiple times it will return the error
 // from the first time it was called.
 func (o *Once) Start(f func() error) error {
-	if o.state.CAS(int32(Idle), int32(Starting)) {
+	if o.state.CompareAndSwap(int32(Idle), int32(Starting)) {
 		var err error
 		if f != nil {
 			err = f()
@@ -170,7 +170,7 @@ func (o *Once) WaitUntilRunning(ctx context.Context) error {
 // If Stop is called multiple times it will return the error
 // from the first time it was called.
 func (o *Once) Stop(f func() error) error {
-	if o.state.CAS(int32(Idle), int32(Stopped)) {
+	if o.state.CompareAndSwap(int32(Idle), int32(Stopped)) {
 		close(o.startCh)
 		close(o.stoppingCh)
 		close(o.stopCh)
@@ -179,7 +179,7 @@ func (o *Once) Stop(f func() error) error {
 
 	<-o.startCh
 
-	if o.state.CAS(int32(Running), int32(Stopping)) {
+	if o.state.CompareAndSwap(int32(Running), int32(Stopping)) {
 		close(o.stoppingCh)
 
 		var err error

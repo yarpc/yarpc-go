@@ -33,7 +33,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/protobuf/internal/testpb/v2"
-	"go.uber.org/yarpc/encoding/protobuf/v2"
+	v2 "go.uber.org/yarpc/encoding/protobuf/v2"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/yarpcerrors"

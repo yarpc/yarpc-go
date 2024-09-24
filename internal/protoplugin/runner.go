@@ -25,7 +25,7 @@ import (
 	"text/template"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
+	plugin_go "github.com/gogo/protobuf/protoc-gen-gogo/plugin"
 )
 
 type runner struct {

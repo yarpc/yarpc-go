@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc/internal/prototest/exampleutil"
 	"go.uber.org/yarpc/internal/testutils"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/grpclog"
 )
 
@@ -66,7 +67,7 @@ func BenchmarkIntegrationGRPCAll(b *testing.B) {
 	}
 	go func() { _ = server.Serve(listener) }()
 	defer server.Stop()
-	grpcClientConn, err := grpc.Dial("0.0.0.0:1234", grpc.WithInsecure())
+	grpcClientConn, err := grpc.Dial("0.0.0.0:1234", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		b.Fatal(err.Error())
 	}

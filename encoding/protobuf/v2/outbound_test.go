@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/protobuf/internal/testpb/v2"
-	"go.uber.org/yarpc/encoding/protobuf/v2"
+	v2 "go.uber.org/yarpc/encoding/protobuf/v2"
 	"go.uber.org/yarpc/yarpctest"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
