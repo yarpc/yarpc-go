@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 - Return correct error code for ctx Cancelled error in http outbound.
 - Make tchannel outbound satisfy Namer interface
+- Bump staticcheck version to v0.5.1 which support full support for iterators / range-over-func in go@1.23
 
 ## [1.73.2] - 2024-09-09
 ### Added
