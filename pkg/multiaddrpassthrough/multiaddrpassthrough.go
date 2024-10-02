@@ -18,9 +18,13 @@ var errMissingAddr = errors.New("missing address")
 
 type multiaddrPassthroughBuilder struct{}
 
+func NewBuilder() resolver.Builder {
+	return &multiaddrPassthroughBuilder{}
+}
+
 // Build creates and starts a multi address passthrough resolver.
 // It expects the target to be a list of addresses on the format:
-// multi-addr-passthrough:///192.168.0.1:2345/127.0.0.1:5678
+// 192.168.0.1:2345/127.0.0.1:5678
 func (*multiaddrPassthroughBuilder) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
 	addresses, err := parseTarget(target)
 	if err != nil {
