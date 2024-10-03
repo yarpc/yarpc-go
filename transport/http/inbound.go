@@ -204,6 +204,7 @@ func (i *Inbound) start() error {
 	var httpHandler http.Handler = handler{
 		router:            i.router,
 		tracer:            i.tracer,
+		transport:         i.transport,
 		grabHeaders:       i.grabHeaders,
 		bothResponseError: i.bothResponseError,
 		logger:            i.logger,
