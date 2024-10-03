@@ -14,47 +14,37 @@ func init() {
 
 const _scheme = "multi-addr-passthrough"
 
-var errMissingAddr = errors.New("missing address")
+var (
+	errMissingAddr     = errors.New("missing address")
+	errInvaildEndpoint = errors.New("specified endpoint is invalid")
+)
 
 type multiaddrPassthroughBuilder struct{}
+type multiaddrPassthroughResolver struct{}
 
 func NewBuilder() resolver.Builder {
 	return &multiaddrPassthroughBuilder{}
 }
 
 // Build creates and starts a multi address passthrough resolver.
-// It expects the target to be a list of addresses on the format:
-// 192.168.0.1:2345/127.0.0.1:5678
-func (*multiaddrPassthroughBuilder) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
+// It expects the target to be a list of addresses separated by a slash:
+// multi-addr-passthrough:///192.168.0.1:2345/127.0.0.1:5678
+func (*multiaddrPassthroughBuilder) Build(target resolver.Target, cc resolver.ClientConn, _ resolver.BuildOptions) (resolver.Resolver, error) {
 	addresses, err := parseTarget(target)
 	if err != nil {
 		return nil, err
 	}
 
-	r := &multiaddrPassthroughResolver{
-		addresses: addresses,
-		cc:        cc,
-	}
-
-	err = r.start()
+	err = cc.UpdateState(resolver.State{Addresses: addresses})
 	if err != nil {
 		return nil, err
 	}
 
-	return r, nil
+	return &multiaddrPassthroughResolver{}, nil
 }
 
 func (*multiaddrPassthroughBuilder) Scheme() string {
 	return _scheme
-}
-
-type multiaddrPassthroughResolver struct {
-	addresses []resolver.Address
-	cc        resolver.ClientConn
-}
-
-func (r *multiaddrPassthroughResolver) start() error {
-	return r.cc.UpdateState(resolver.State{Addresses: r.addresses})
 }
 
 func (*multiaddrPassthroughResolver) ResolveNow(resolver.ResolveNowOptions) {}
@@ -62,21 +52,22 @@ func (*multiaddrPassthroughResolver) ResolveNow(resolver.ResolveNowOptions) {}
 func (*multiaddrPassthroughResolver) Close() {}
 
 func parseTarget(target resolver.Target) ([]resolver.Address, error) {
-	addresses := []resolver.Address{}
-	endpoints := strings.Split(target.URL.Host, "/")
+	endpoints := strings.Split(target.URL.Path, "/")
+	addresses := make([]resolver.Address, 0, len(endpoints))
 
 	for _, endpoint := range endpoints {
-		if endpoint == "" {
-			return nil, errMissingAddr
-		}
+		if len(endpoint) > 0 {
+			_, _, err := net.SplitHostPort(endpoint)
+			if err != nil {
+				return nil, errInvaildEndpoint
+			}
 
-		host, port, err := net.SplitHostPort(endpoint)
-		if err != nil {
-			return nil, err
+			addresses = append(addresses, resolver.Address{Addr: endpoint})
 		}
-
-		addresses = append(addresses, resolver.Address{Addr: net.JoinHostPort(host, port), Type: resolver.Backend})
 	}
 
+	if len(addresses) == 0 {
+		return nil, errMissingAddr
+	}
 	return addresses, nil
 }

@@ -1,56 +1,22 @@
 package multiaddrpassthrough
 
 import (
+	"context" // "net"
 	"net/url"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata" // "google.golang.org/grpc/reflection"
+	rpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 	"google.golang.org/grpc/resolver"
 	"google.golang.org/grpc/serviceconfig"
 )
 
 var _ resolver.ClientConn = (*testClientConn)(nil)
-
-type testClientConn struct {
-	target  string
-	State   resolver.State
-	mu      sync.Mutex
-	addrs   []resolver.Address // protected by mu
-	updates int                // protected by mu
-	t       *testing.T
-}
-
-func (t *testClientConn) ParseServiceConfig(string) *serviceconfig.ParseResult {
-	return nil
-}
-
-func (t *testClientConn) ReportError(error) {
-}
-
-func (t *testClientConn) UpdateState(state resolver.State) error {
-	t.State = state
-	return nil
-}
-
-func (t *testClientConn) NewAddress(addrs []resolver.Address) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	t.addrs = addrs
-	t.updates++
-}
-
-func (t *testClientConn) getAddress() ([]resolver.Address, int) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	return t.addrs, t.updates
-}
-
-// This shouldn't be called by our code since we don't support this.
-func (t *testClientConn) NewServiceConfig(serviceConfig string) {
-	assert.Fail(t.t, "unexpected call to NewServiceConfig")
-	return
-}
 
 func TestParseTarget(t *testing.T) {
 
@@ -58,21 +24,25 @@ func TestParseTarget(t *testing.T) {
 		msg       string
 		target    resolver.Target
 		addrsWant []resolver.Address
-		errWant   error
+		errWant   string
 	}{
 		{
 			msg:       "Single IPv4",
-			target:    resolver.Target{URL: url.URL{Host: "1.2.3.4:1234"}},
+			target:    resolver.Target{URL: url.URL{Path: "1.2.3.4:1234"}},
+			addrsWant: []resolver.Address{{Addr: "1.2.3.4:1234"}},
+		}, {
+			msg:       "Single IPv4, leading slash",
+			target:    resolver.Target{URL: url.URL{Path: "/1.2.3.4:1234"}},
 			addrsWant: []resolver.Address{{Addr: "1.2.3.4:1234"}},
 		},
 		{
 			msg:       "Single IPv6",
-			target:    resolver.Target{URL: url.URL{Host: "[2607:f8b0:400a:801::1001]:9000"}},
+			target:    resolver.Target{URL: url.URL{Path: "[2607:f8b0:400a:801::1001]:9000"}},
 			addrsWant: []resolver.Address{{Addr: "[2607:f8b0:400a:801::1001]:9000"}},
 		},
 		{
 			msg:    "Testing multiple IPv4s",
-			target: resolver.Target{URL: url.URL{Host: "1.2.3.4:1234/5.6.7.8:1234"}},
+			target: resolver.Target{URL: url.URL{Path: "1.2.3.4:1234/5.6.7.8:1234"}},
 			addrsWant: []resolver.Address{
 				{Addr: "1.2.3.4:1234"},
 				{Addr: "5.6.7.8:1234"},
@@ -80,7 +50,7 @@ func TestParseTarget(t *testing.T) {
 		},
 		{
 			msg:    "Mixed IPv6 and IPv4",
-			target: resolver.Target{URL: url.URL{Host: "[2607:f8b0:400a:801::1001]:9000/[2607:f8b0:400a:801::1002]:2345/127.0.0.1:4567"}},
+			target: resolver.Target{URL: url.URL{Path: "[2607:f8b0:400a:801::1001]:9000/[2607:f8b0:400a:801::1002]:2345/127.0.0.1:4567"}},
 			addrsWant: []resolver.Address{
 				{Addr: "[2607:f8b0:400a:801::1001]:9000"},
 				{Addr: "[2607:f8b0:400a:801::1002]:2345"},
@@ -89,19 +59,20 @@ func TestParseTarget(t *testing.T) {
 		},
 		{
 			msg:     "Empty target",
-			target:  resolver.Target{URL: url.URL{Host: ""}},
-			errWant: errMissingAddr,
+			target:  resolver.Target{URL: url.URL{Path: ""}},
+			errWant: errMissingAddr.Error(),
 		},
 		{
 			msg:    "Localhost",
-			target: resolver.Target{URL: url.URL{Host: "localhost:1000"}},
+			target: resolver.Target{URL: url.URL{Path: "localhost:1000"}},
 			addrsWant: []resolver.Address{
 				{Addr: "localhost:1000"},
 			},
 		},
 		{
-			msg:    "IPv4 missing port",
-			target: resolver.Target{URL: url.URL{Host: "999.1.1.1"}},
+			msg:     "Invalid IPv4",
+			target:  resolver.Target{URL: url.URL{Path: "999.1.1.1"}},
+			errWant: errInvaildEndpoint.Error(),
 		},
 	}
 
@@ -109,10 +80,10 @@ func TestParseTarget(t *testing.T) {
 		t.Run(tt.msg, func(t *testing.T) {
 			gotAddr, gotErr := parseTarget(tt.target)
 
-			if tt.errWant != nil {
-				assert.EqualError(t, gotErr, tt.errWant.Error())
+			if gotErr != nil {
+				assert.EqualError(t, gotErr, tt.errWant)
 			}
-			assert.ElementsMatch(t, tt.addrsWant, gotAddr)
+			assert.ElementsMatch(t, gotAddr, tt.addrsWant)
 		})
 	}
 }
@@ -126,17 +97,17 @@ func TestBuild(t *testing.T) {
 	}{
 		{
 			msg:        "IPv6",
-			target:     resolver.Target{URL: url.URL{Host: "[2001:db8::1]:http"}},
+			target:     resolver.Target{URL: url.URL{Path: "[2001:db8::1]:http"}},
 			watAddress: []resolver.Address{{Addr: "[2001:db8::1]:http"}},
 		},
 		{
-			msg:     "Empty address",
-			target:  resolver.Target{URL: url.URL{Host: "127.0.0.1:12345/"}},
-			wantErr: errMissingAddr.Error(),
+			msg:     "Invalid target",
+			target:  resolver.Target{URL: url.URL{Path: "127.0.0.1"}},
+			wantErr: errInvaildEndpoint.Error(),
 		},
 		{
 			msg:     "Empty target",
-			target:  resolver.Target{URL: url.URL{Host: ""}},
+			target:  resolver.Target{URL: url.URL{Path: ""}},
 			wantErr: errMissingAddr.Error(),
 		},
 	}
@@ -155,4 +126,85 @@ func TestBuild(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestClientConnectionIntegration(t *testing.T) {
+	dest := "127.0.0.1:3456"
+	wantAddr := []resolver.Address{{Addr: dest}}
+
+	b := NewBuilder()
+
+	cc := &testClientConn{}
+	_, err := b.Build(resolver.Target{URL: url.URL{Path: dest}}, cc, resolver.BuildOptions{})
+	assert.ElementsMatch(t, cc.State.Addresses, wantAddr, "Client connection received the wrong list of addresses")
+	require.NoError(t, err, "unexpected error building the resolver")
+}
+
+func TestGRPCIntegration(t *testing.T) {
+	dest := "127.0.0.1:3456"
+
+	b := NewBuilder()
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	_, err := grpc.DialContext(ctx, b.Scheme()+":///"+dest, grpc.WithInsecure())
+	assert.NoError(t, err)
+}
+
+type testClientConn struct {
+	target string
+	State  resolver.State
+	mu     sync.Mutex
+	addrs  []resolver.Address // protected by mu
+	t      *testing.T
+}
+
+func (t *testClientConn) ParseServiceConfig(string) *serviceconfig.ParseResult {
+	return nil
+}
+
+func (t *testClientConn) ReportError(error) {
+}
+
+func (t *testClientConn) UpdateState(state resolver.State) error {
+	t.State = state
+	return nil
+}
+
+func (t *testClientConn) NewAddress(addrs []resolver.Address) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.addrs = addrs
+}
+
+func (t *testClientConn) getAddress() []resolver.Address {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.addrs
+}
+
+// This shouldn't be called by our code since we don't support this.
+func (t *testClientConn) NewServiceConfig(serviceConfig string) {
+	assert.Fail(t.t, "unexpected call to NewServiceConfig")
+	return
+}
+
+type dummyReflectionServer struct {
+	md        metadata.MD
+	returnErr error
+}
+
+func (s *dummyReflectionServer) Reset() {
+	s.md = nil
+}
+
+func (s *dummyReflectionServer) ServerReflectionInfo(r rpb.ServerReflection_ServerReflectionInfoServer) error {
+	if s.returnErr != nil {
+		return s.returnErr
+	}
+
+	if md, ok := metadata.FromIncomingContext(r.Context()); ok {
+		s.md = md
+	}
+	return assert.AnError
 }
