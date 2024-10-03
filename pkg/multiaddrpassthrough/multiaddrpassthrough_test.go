@@ -10,10 +10,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
-	rpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 	"google.golang.org/grpc/resolver"
 	"google.golang.org/grpc/serviceconfig"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var _ resolver.ClientConn = (*testClientConn)(nil)
@@ -147,7 +146,7 @@ func TestGRPCIntegration(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	_, err := grpc.DialContext(ctx, b.Scheme()+":///"+dest, grpc.WithInsecure())
+	_, err := grpc.DialContext(ctx, b.Scheme()+":///"+dest, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	assert.NoError(t, err)
 }
 
@@ -177,34 +176,7 @@ func (t *testClientConn) NewAddress(addrs []resolver.Address) {
 	t.addrs = addrs
 }
 
-func (t *testClientConn) getAddress() []resolver.Address {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	return t.addrs
-}
-
 // This shouldn't be called by our code since we don't support this.
 func (t *testClientConn) NewServiceConfig(serviceConfig string) {
 	assert.Fail(t.t, "unexpected call to NewServiceConfig")
-	return
-}
-
-type dummyReflectionServer struct {
-	md        metadata.MD
-	returnErr error
-}
-
-func (s *dummyReflectionServer) Reset() {
-	s.md = nil
-}
-
-func (s *dummyReflectionServer) ServerReflectionInfo(r rpb.ServerReflection_ServerReflectionInfoServer) error {
-	if s.returnErr != nil {
-		return s.returnErr
-	}
-
-	if md, ok := metadata.FromIncomingContext(r.Context()); ok {
-		s.md = md
-	}
-	return assert.AnError
 }
