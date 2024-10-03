@@ -1,7 +1,7 @@
 package multiaddrpassthrough
 
 import (
-	"context" // "net"
+	"context"
 	"net/url"
 	"sync"
 	"testing"
@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata" // "google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/metadata"
 	rpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 	"google.golang.org/grpc/resolver"
 	"google.golang.org/grpc/serviceconfig"
@@ -141,7 +141,7 @@ func TestClientConnectionIntegration(t *testing.T) {
 }
 
 func TestGRPCIntegration(t *testing.T) {
-	dest := "127.0.0.1:3456"
+	dest := "127.0.0.1:3456/192.168.1.1:6789"
 
 	b := NewBuilder()
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
