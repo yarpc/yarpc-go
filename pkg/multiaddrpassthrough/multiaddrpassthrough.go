@@ -22,6 +22,7 @@ var (
 type multiaddrPassthroughBuilder struct{}
 type multiaddrPassthroughResolver struct{}
 
+// NewBuilder creates a new multi address passthrough resolver builder.
 func NewBuilder() resolver.Builder {
 	return &multiaddrPassthroughBuilder{}
 }
@@ -46,9 +47,9 @@ func (*multiaddrPassthroughBuilder) Build(target resolver.Target, cc resolver.Cl
 func (*multiaddrPassthroughBuilder) Scheme() string {
 	return _scheme
 }
-
+// ResolveNow is a noop for multi address passthrough resolver.
 func (*multiaddrPassthroughResolver) ResolveNow(resolver.ResolveNowOptions) {}
-
+// Close is a noop for multi address passthrough resolver.
 func (*multiaddrPassthroughResolver) Close() {}
 
 func parseTarget(target resolver.Target) ([]resolver.Address, error) {
