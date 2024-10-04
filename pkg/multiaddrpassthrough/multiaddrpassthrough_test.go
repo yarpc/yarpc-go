@@ -22,6 +22,7 @@ package multiaddrpassthrough
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"sync"
 	"testing"
@@ -157,6 +158,11 @@ func TestClientConnectionIntegration(t *testing.T) {
 	_, err := b.Build(resolver.Target{URL: url.URL{Path: dest}}, cc, resolver.BuildOptions{})
 	assert.ElementsMatch(t, cc.State.Addresses, wantAddr, "Client connection received the wrong list of addresses")
 	require.NoError(t, err, "unexpected error building the resolver")
+
+	cc.failUpdate = true
+	_, err = b.Build(resolver.Target{URL: url.URL{Path: dest}}, cc, resolver.BuildOptions{})
+	require.Error(t, err)
+
 }
 
 func TestGRPCIntegration(t *testing.T) {
@@ -171,11 +177,12 @@ func TestGRPCIntegration(t *testing.T) {
 }
 
 type testClientConn struct {
-	target string
-	State  resolver.State
-	mu     sync.Mutex
-	addrs  []resolver.Address // protected by mu
-	t      *testing.T
+	target     string
+	failUpdate bool
+	State      resolver.State
+	mu         sync.Mutex
+	addrs      []resolver.Address // protected by mu
+	t          *testing.T
 }
 
 func (t *testClientConn) ParseServiceConfig(string) *serviceconfig.ParseResult {
@@ -187,6 +194,9 @@ func (t *testClientConn) ReportError(error) {
 
 func (t *testClientConn) UpdateState(state resolver.State) error {
 	t.State = state
+	if t.failUpdate {
+		return errors.New("failed to update state")
+	}
 	return nil
 }
 
