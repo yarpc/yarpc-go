@@ -31,12 +31,10 @@ func init() {
 	resolver.Register(&multiaddrPassthroughBuilder{})
 }
 
-// Scheme is the scheme for the multi address passthrough resolver.
 const Scheme = "multi-addr-passthrough"
 
 var (
-	errMissingAddr     = errors.New("missing address")
-	errInvaildEndpoint = errors.New("specified endpoint is invalid")
+	errMissingAddr = errors.New("missing address")
 )
 
 type multiaddrPassthroughBuilder struct{}
@@ -75,7 +73,7 @@ func (*multiaddrPassthroughResolver) ResolveNow(resolver.ResolveNowOptions) {}
 func (*multiaddrPassthroughResolver) Close() {}
 
 func parseTarget(target resolver.Target) ([]resolver.Address, error) {
-	endpoints := strings.Split(target.Endpoint, "/")
+	endpoints := strings.Split(target.URL.Path, "/")
 	addresses := make([]resolver.Address, 0, len(endpoints))
 
 	for _, endpoint := range endpoints {
