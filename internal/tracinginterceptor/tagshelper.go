@@ -27,8 +27,10 @@ import (
 )
 
 const (
+	// TracingComponentName represents the name of the tracing component for YARPC.
 	TracingComponentName = "yarpc"
-	Version              = "1.74.0-dev"
+	// Version indicates the current version of YARPC being used.
+	Version = "1.74.0-dev"
 )
 
 // ExtractTracingTags extracts common tracing tags from a transport request.

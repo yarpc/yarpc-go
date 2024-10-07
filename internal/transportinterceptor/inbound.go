@@ -105,12 +105,16 @@ func (nopOnewayInbound) HandleOneway(ctx context.Context, req *transport.Request
 	return handler.HandleOneway(ctx, req)
 }
 
+// StreamInbound defines transport-level middleware for `StreamHandler`s.
 type StreamInbound interface {
 	HandleStream(s *transport.ServerStream, h transport.StreamHandler) error
 }
 
+// NopStreamInbound is an inbound middleware that does nothing special.
+// It simply calls the underlying StreamHandler.
 var NopStreamInbound StreamInbound = nopStreamInbound{}
 
+// ApplyStreamInbound applies the given StreamInbound middleware to the given StreamHandler.
 func ApplyStreamInbound(h transport.StreamHandler, i StreamInbound) transport.StreamHandler {
 	if i == nil {
 		return h
@@ -131,12 +135,14 @@ type streamHandlerWithMiddleware struct {
 	i StreamInbound
 }
 
+// HandleStream applies the middleware's HandleStream logic to the underlying stream handler.
 func (h streamHandlerWithMiddleware) HandleStream(s *transport.ServerStream) error {
 	return h.i.HandleStream(s, h.h)
 }
 
 type nopStreamInbound struct{}
 
+// HandleStream for nopStreamInbound simply calls the underlying handler.
 func (nopStreamInbound) HandleStream(s *transport.ServerStream, handler transport.StreamHandler) error {
 	return handler.HandleStream(s)
 }

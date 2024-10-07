@@ -160,6 +160,8 @@ type TChannelHeadersCarrier map[string]string
 
 var _ PropagationCarrier = TChannelHeadersCarrier{}
 
+// ForeachKey iterates over all tracing headers in the carrier, applying the provided
+// handler function to each header after stripping the $tracing$ prefix from the keys.
 func (c TChannelHeadersCarrier) ForeachKey(handler func(string, string) error) error {
 	for k, v := range c {
 		if !strings.HasPrefix(k, tchannelTracingKeyPrefix) {
@@ -173,6 +175,7 @@ func (c TChannelHeadersCarrier) ForeachKey(handler func(string, string) error) e
 	return nil
 }
 
+// Set adds a tracing header to the carrier, prefixing the key with $tracing$ before storing it.
 func (c TChannelHeadersCarrier) Set(key, value string) {
 	prefixedKey := tchannelTracingKeyEncoding.mapAndCache(key)
 	c[prefixedKey] = value

@@ -68,6 +68,8 @@ func New(p Params) *Interceptor {
 	return m
 }
 
+// Handle is the tracing handler for Unary Inbound requests.
+// It creates a new span, applies tracing tags, and propagates the span context to the downstream handler.
 func (m *Interceptor) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	parentSpanCtx, _ := m.tracer.Extract(m.propagationFormat, transport.GetPropagationCarrier(req.Headers.Items(), req.Transport))
 	tags := ExtractTracingTags(req)
@@ -86,6 +88,8 @@ func (m *Interceptor) Handle(ctx context.Context, req *transport.Request, resw t
 	return updateSpanWithError(span, err)
 }
 
+// Call is the tracing handler for Unary Outbound requests.
+// It creates a new span for the outbound request, applies tracing tags, and propagates the span context to the downstream outbound handler.
 func (m *Interceptor) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	tags := ExtractTracingTags(req)
 
@@ -113,6 +117,8 @@ func (m *Interceptor) Call(ctx context.Context, req *transport.Request, out tran
 	return res, updateSpanWithOutboundError(span, res, err)
 }
 
+// HandleOneway is the tracing handler for Oneway Inbound requests.
+// It creates a new span for the inbound request, applies tracing tags, and propagates the span context to the downstream handler.
 func (m *Interceptor) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
 	parentSpanCtx, _ := m.tracer.Extract(m.propagationFormat, transport.GetPropagationCarrier(req.Headers.Items(), req.Transport))
 	tags := ExtractTracingTags(req)
@@ -131,6 +137,8 @@ func (m *Interceptor) HandleOneway(ctx context.Context, req *transport.Request, 
 	return updateSpanWithError(span, err)
 }
 
+// CallOneway is the tracing handler for Oneway Outbound requests.
+// It creates a new span for the outbound request, applies tracing tags, and propagates the span context to the downstream outbound handler.
 func (m *Interceptor) CallOneway(ctx context.Context, req *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
 	tags := ExtractTracingTags(req)
 
@@ -158,6 +166,8 @@ func (m *Interceptor) CallOneway(ctx context.Context, req *transport.Request, ou
 	return ack, updateSpanWithError(span, err)
 }
 
+// HandleStream is the tracing handler for Stream Inbound requests.
+// It creates a new span for the inbound stream request, applies tracing tags, and propagates the span context to the downstream handler.
 func (m *Interceptor) HandleStream(s *transport.ServerStream, h transport.StreamHandler) error {
 	meta := s.Request().Meta
 	parentSpanCtx, _ := m.tracer.Extract(m.propagationFormat, transport.GetPropagationCarrier(meta.Headers.Items(), meta.Transport))
@@ -178,6 +188,8 @@ func (m *Interceptor) HandleStream(s *transport.ServerStream, h transport.Stream
 	return updateSpanWithError(span, err)
 }
 
+// CallStream is the tracing handler for Stream Outbound requests.
+// It creates a new span for the outbound stream request, applies tracing tags, and propagates the span context to the downstream outbound handler.
 func (m *Interceptor) CallStream(ctx context.Context, req *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
 	tags := ExtractTracingTags(req.Meta.ToRequest())
 
