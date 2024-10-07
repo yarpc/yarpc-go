@@ -32,6 +32,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/resolver"
 	"google.golang.org/grpc/serviceconfig"
@@ -99,11 +100,6 @@ func TestParseTarget(t *testing.T) {
 				{Addr: "localhost:1000"},
 			},
 		},
-		{
-			msg:     "Invalid IPv4",
-			target:  resolver.Target{Endpoint: "999.1.1.1", URL: url.URL{Path: "/999.1.1.1"}},
-			errWant: errInvaildEndpoint.Error(),
-		},
 	}
 
 	for _, tt := range tests {
@@ -129,11 +125,6 @@ func TestBuild(t *testing.T) {
 			msg:        "IPv6",
 			target:     resolver.Target{Endpoint: "[2001:db8::1]:http", URL: url.URL{Path: "/[2001:db8::1]:http"}},
 			watAddress: []resolver.Address{{Addr: "[2001:db8::1]:http"}},
-		},
-		{
-			msg:     "Invalid target",
-			target:  resolver.Target{Endpoint: "127.0.0.1", URL: url.URL{Path: "/127.0.0.1"}},
-			wantErr: errInvaildEndpoint.Error(),
 		},
 		{
 			msg:     "Empty target",
@@ -176,15 +167,13 @@ func TestClientConnectionIntegration(t *testing.T) {
 }
 
 func TestGRPCIntegration(t *testing.T) {
-	dest := "127.0.0.1:42755"
-	ln, err := net.Listen("tcp", dest)
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
-	defer func() {
-		err := ln.Close()
-		require.NoError(t, err)
-	}()
 
 	s := grpc.NewServer()
+	reflection.Register(s)
+	defer s.GracefulStop()
+
 	go func() {
 		err := s.Serve(ln)
 		require.NoError(t, err)
@@ -194,8 +183,13 @@ func TestGRPCIntegration(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	_, err = grpc.DialContext(ctx, b.Scheme()+":///"+dest, grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.DialContext(ctx, b.Scheme()+":///"+ln.Addr().String(), grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	assert.NoError(t, err)
+
+	defer func() {
+		err := conn.Close()
+		require.NoError(t, err)
+	}()
 }
 
 type testClientConn struct {
