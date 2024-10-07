@@ -1,3 +1,10 @@
+// Copyright (c) 2024 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
 // The above copyright notice and this permission notice shall be included in
@@ -21,15 +28,33 @@ import (
 	"go.uber.org/yarpc/api/transport"
 )
 
+type UnaryHandlerFunc func(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error
+
+func (f UnaryHandlerFunc) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
+	return f(ctx, req, resw)
+}
+
+type OnewayHandlerFunc func(ctx context.Context, req *transport.Request) error
+
+func (f OnewayHandlerFunc) HandleOneway(ctx context.Context, req *transport.Request) error {
+	return f(ctx, req)
+}
+
+type StreamHandlerFunc func(s *transport.ServerStream) error
+
+func (f StreamHandlerFunc) HandleStream(s *transport.ServerStream) error {
+	return f(s)
+}
+
 // TestNopUnaryInbound ensures NopUnaryInbound calls the underlying handler without modification.
 func TestNopUnaryInbound(t *testing.T) {
 	var called bool
-	handler := transport.UnaryHandlerFunc(func(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
+	handler := UnaryHandlerFunc(func(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
 		called = true
 		return nil
 	})
 
-	err := transportinterceptor.NopUnaryInbound.Handle(context.Background(), &transport.Request{}, nil, handler)
+	err := NopUnaryInbound.Handle(context.Background(), &transport.Request{}, nil, handler)
 	assert.NoError(t, err)
 	assert.True(t, called)
 }
@@ -37,17 +62,17 @@ func TestNopUnaryInbound(t *testing.T) {
 // TestApplyUnaryInbound ensures that UnaryInbound middleware wraps correctly.
 func TestApplyUnaryInbound(t *testing.T) {
 	var called bool
-	handler := transport.UnaryHandlerFunc(func(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
+	handler := UnaryHandlerFunc(func(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
 		called = true
 		return nil
 	})
 
-	middleware := transportinterceptor.UnaryInboundFunc(func(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
+	middleware := UnaryInboundFunc(func(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 		assert.False(t, called)
 		return h.Handle(ctx, req, resw)
 	})
 
-	wrappedHandler := transportinterceptor.ApplyUnaryInbound(handler, middleware)
+	wrappedHandler := ApplyUnaryInbound(handler, middleware)
 	err := wrappedHandler.Handle(context.Background(), &transport.Request{}, nil)
 	assert.NoError(t, err)
 	assert.True(t, called)
@@ -56,12 +81,12 @@ func TestApplyUnaryInbound(t *testing.T) {
 // TestNopOnewayInbound ensures NopOnewayInbound calls the underlying handler without modification.
 func TestNopOnewayInbound(t *testing.T) {
 	var called bool
-	handler := transport.OnewayHandlerFunc(func(ctx context.Context, req *transport.Request) error {
+	handler := OnewayHandlerFunc(func(ctx context.Context, req *transport.Request) error {
 		called = true
 		return nil
 	})
 
-	err := transportinterceptor.NopOnewayInbound.HandleOneway(context.Background(), &transport.Request{}, handler)
+	err := NopOnewayInbound.HandleOneway(context.Background(), &transport.Request{}, handler)
 	assert.NoError(t, err)
 	assert.True(t, called)
 }
@@ -69,17 +94,17 @@ func TestNopOnewayInbound(t *testing.T) {
 // TestApplyOnewayInbound ensures that OnewayInbound middleware wraps correctly.
 func TestApplyOnewayInbound(t *testing.T) {
 	var called bool
-	handler := transport.OnewayHandlerFunc(func(ctx context.Context, req *transport.Request) error {
+	handler := OnewayHandlerFunc(func(ctx context.Context, req *transport.Request) error {
 		called = true
 		return nil
 	})
 
-	middleware := transportinterceptor.OnewayInboundFunc(func(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
+	middleware := OnewayInboundFunc(func(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
 		assert.False(t, called)
 		return h.HandleOneway(ctx, req)
 	})
 
-	wrappedHandler := transportinterceptor.ApplyOnewayInbound(handler, middleware)
+	wrappedHandler := ApplyOnewayInbound(handler, middleware)
 	err := wrappedHandler.HandleOneway(context.Background(), &transport.Request{})
 	assert.NoError(t, err)
 	assert.True(t, called)
@@ -88,12 +113,12 @@ func TestApplyOnewayInbound(t *testing.T) {
 // TestNopStreamInbound ensures NopStreamInbound calls the underlying handler without modification.
 func TestNopStreamInbound(t *testing.T) {
 	var called bool
-	handler := transport.StreamHandlerFunc(func(s *transport.ServerStream) error {
+	handler := StreamHandlerFunc(func(s *transport.ServerStream) error {
 		called = true
 		return nil
 	})
 
-	err := transportinterceptor.NopStreamInbound.HandleStream(&transport.ServerStream{}, handler)
+	err := NopStreamInbound.HandleStream(&transport.ServerStream{}, handler)
 	assert.NoError(t, err)
 	assert.True(t, called)
 }
@@ -101,17 +126,17 @@ func TestNopStreamInbound(t *testing.T) {
 // TestApplyStreamInbound ensures that StreamInbound middleware wraps correctly.
 func TestApplyStreamInbound(t *testing.T) {
 	var called bool
-	handler := transport.StreamHandlerFunc(func(s *transport.ServerStream) error {
+	handler := StreamHandlerFunc(func(s *transport.ServerStream) error {
 		called = true
 		return nil
 	})
 
-	middleware := transportinterceptor.StreamInboundFunc(func(s *transport.ServerStream, h transport.StreamHandler) error {
+	middleware := StreamInboundFunc(func(s *transport.ServerStream, h transport.StreamHandler) error {
 		assert.False(t, called)
 		return h.HandleStream(s)
 	})
 
-	wrappedHandler := transportinterceptor.ApplyStreamInbound(handler, middleware)
+	wrappedHandler := ApplyStreamInbound(handler, middleware)
 	err := wrappedHandler.HandleStream(&transport.ServerStream{})
 	assert.NoError(t, err)
 	assert.True(t, called)

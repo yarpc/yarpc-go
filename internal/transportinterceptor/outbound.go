@@ -33,21 +33,11 @@ type (
 )
 
 var (
-	// NopUnaryOutbound is a unary outbound middleware that does nothing special.
-	NopUnaryOutbound transport.UnaryOutbound = nopUnaryOutbound{}
-
-	// NopOnewayOutbound is a oneway outbound middleware that does nothing special.
+	NopUnaryOutbound  transport.UnaryOutbound  = nopUnaryOutbound{}
 	NopOnewayOutbound transport.OnewayOutbound = nopOnewayOutbound{}
-
-	// NopStreamOutbound is a stream outbound middleware that does nothing special.
 	NopStreamOutbound transport.StreamOutbound = nopStreamOutbound{}
 )
 
-// -----------------------
-// Definitions for nop*Outbound structures
-// -----------------------
-
-// NopUnaryOutbound definition
 type nopUnaryOutbound struct{}
 
 func (nopUnaryOutbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
@@ -70,7 +60,6 @@ func (nopUnaryOutbound) Transports() []transport.Transport {
 	return nil
 }
 
-// NopOnewayOutbound definition
 type nopOnewayOutbound struct{}
 
 func (nopOnewayOutbound) CallOneway(ctx context.Context, req *transport.Request) (transport.Ack, error) {
@@ -93,7 +82,6 @@ func (nopOnewayOutbound) Transports() []transport.Transport {
 	return nil
 }
 
-// NopStreamOutbound definition
 type nopStreamOutbound struct{}
 
 func (nopStreamOutbound) CallStream(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error) {
