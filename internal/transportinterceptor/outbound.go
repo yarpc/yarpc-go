@@ -104,10 +104,6 @@ func (nopStreamOutbound) Transports() []transport.Transport {
 	return nil
 }
 
-// -----------------------
-// Middleware wrapper implementations
-// -----------------------
-
 // UnaryOutboundFunc adapts a function into an UnaryOutbound middleware.
 type UnaryOutboundFunc func(ctx context.Context, req *transport.Request) (*transport.Response, error)
 
