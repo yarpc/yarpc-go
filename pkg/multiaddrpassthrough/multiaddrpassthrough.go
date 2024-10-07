@@ -22,7 +22,6 @@ package multiaddrpassthrough
 
 import (
 	"errors"
-	"net"
 	"strings"
 
 	"google.golang.org/grpc/resolver"
@@ -32,7 +31,7 @@ func init() {
 	resolver.Register(&multiaddrPassthroughBuilder{})
 }
 
-const _scheme = "multi-addr-passthrough"
+const Scheme = "multi-addr-passthrough"
 
 var (
 	errMissingAddr     = errors.New("missing address")
@@ -65,7 +64,7 @@ func (*multiaddrPassthroughBuilder) Build(target resolver.Target, cc resolver.Cl
 }
 
 func (*multiaddrPassthroughBuilder) Scheme() string {
-	return _scheme
+	return Scheme
 }
 
 // ResolveNow is a noop for the multi address passthrough resolver.
@@ -75,16 +74,11 @@ func (*multiaddrPassthroughResolver) ResolveNow(resolver.ResolveNowOptions) {}
 func (*multiaddrPassthroughResolver) Close() {}
 
 func parseTarget(target resolver.Target) ([]resolver.Address, error) {
-	endpoints := strings.Split(target.URL.Path, "/")
+	endpoints := strings.Split(target.Endpoint, "/")
 	addresses := make([]resolver.Address, 0, len(endpoints))
 
 	for _, endpoint := range endpoints {
 		if len(endpoint) > 0 {
-			_, _, err := net.SplitHostPort(endpoint)
-			if err != nil {
-				return nil, errInvaildEndpoint
-			}
-
 			addresses = append(addresses, resolver.Address{Addr: endpoint})
 		}
 	}

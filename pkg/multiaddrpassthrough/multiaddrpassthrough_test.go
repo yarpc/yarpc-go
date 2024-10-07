@@ -23,6 +23,7 @@ package multiaddrpassthrough
 import (
 	"context"
 	"errors"
+	"net"
 	"net/url"
 	"sync"
 	"testing"
@@ -48,21 +49,30 @@ func TestParseTarget(t *testing.T) {
 	}{
 		{
 			msg:       "Single IPv4",
-			target:    resolver.Target{URL: url.URL{Path: "1.2.3.4:1234"}},
+			target:    resolver.Target{Endpoint: "1.2.3.4:1234", URL: url.URL{Path: "/1.2.3.4:1234"}},
 			addrsWant: []resolver.Address{{Addr: "1.2.3.4:1234"}},
-		}, {
+		},
+		{
 			msg:       "Single IPv4, leading slash",
-			target:    resolver.Target{URL: url.URL{Path: "/1.2.3.4:1234"}},
+			target:    resolver.Target{Endpoint: "1.2.3.4:1234", URL: url.URL{Path: "/1.2.3.4:1234"}},
 			addrsWant: []resolver.Address{{Addr: "1.2.3.4:1234"}},
 		},
 		{
 			msg:       "Single IPv6",
-			target:    resolver.Target{URL: url.URL{Path: "[2607:f8b0:400a:801::1001]:9000"}},
+			target:    resolver.Target{Endpoint: "[2607:f8b0:400a:801::1001]:9000", URL: url.URL{Path: "/[2607:f8b0:400a:801::1001]:9000"}},
 			addrsWant: []resolver.Address{{Addr: "[2607:f8b0:400a:801::1001]:9000"}},
 		},
 		{
-			msg:    "Testing multiple IPv4s",
-			target: resolver.Target{URL: url.URL{Path: "1.2.3.4:1234/5.6.7.8:1234"}},
+			msg:    "Multiple IPv4s",
+			target: resolver.Target{Endpoint: "1.2.3.4:1234/5.6.7.8:1234", URL: url.URL{Path: "/1.2.3.4:1234/5.6.7.8:1234"}},
+			addrsWant: []resolver.Address{
+				{Addr: "1.2.3.4:1234"},
+				{Addr: "5.6.7.8:1234"},
+			},
+		},
+		{
+			msg:    "Multiple IPv4s, double slash",
+			target: resolver.Target{Endpoint: "1.2.3.4:1234//5.6.7.8:1234", URL: url.URL{Path: "/1.2.3.4:1234/5.6.7.8:1234"}},
 			addrsWant: []resolver.Address{
 				{Addr: "1.2.3.4:1234"},
 				{Addr: "5.6.7.8:1234"},
@@ -70,7 +80,7 @@ func TestParseTarget(t *testing.T) {
 		},
 		{
 			msg:    "Mixed IPv6 and IPv4",
-			target: resolver.Target{URL: url.URL{Path: "[2607:f8b0:400a:801::1001]:9000/[2607:f8b0:400a:801::1002]:2345/127.0.0.1:4567"}},
+			target: resolver.Target{Endpoint: "[2607:f8b0:400a:801::1001]:9000/[2607:f8b0:400a:801::1002]:2345/127.0.0.1:4567", URL: url.URL{Path: "/[2607:f8b0:400a:801::1001]:9000/[2607:f8b0:400a:801::1002]:2345/127.0.0.1:4567"}},
 			addrsWant: []resolver.Address{
 				{Addr: "[2607:f8b0:400a:801::1001]:9000"},
 				{Addr: "[2607:f8b0:400a:801::1002]:2345"},
@@ -79,19 +89,19 @@ func TestParseTarget(t *testing.T) {
 		},
 		{
 			msg:     "Empty target",
-			target:  resolver.Target{URL: url.URL{Path: ""}},
+			target:  resolver.Target{Endpoint: "", URL: url.URL{Path: "/"}},
 			errWant: errMissingAddr.Error(),
 		},
 		{
 			msg:    "Localhost",
-			target: resolver.Target{URL: url.URL{Path: "localhost:1000"}},
+			target: resolver.Target{Endpoint: "localhost:1000", URL: url.URL{Path: "/localhost:1000"}},
 			addrsWant: []resolver.Address{
 				{Addr: "localhost:1000"},
 			},
 		},
 		{
 			msg:     "Invalid IPv4",
-			target:  resolver.Target{URL: url.URL{Path: "999.1.1.1"}},
+			target:  resolver.Target{Endpoint: "999.1.1.1", URL: url.URL{Path: "/999.1.1.1"}},
 			errWant: errInvaildEndpoint.Error(),
 		},
 	}
@@ -117,17 +127,17 @@ func TestBuild(t *testing.T) {
 	}{
 		{
 			msg:        "IPv6",
-			target:     resolver.Target{URL: url.URL{Path: "[2001:db8::1]:http"}},
+			target:     resolver.Target{Endpoint: "[2001:db8::1]:http", URL: url.URL{Path: "/[2001:db8::1]:http"}},
 			watAddress: []resolver.Address{{Addr: "[2001:db8::1]:http"}},
 		},
 		{
 			msg:     "Invalid target",
-			target:  resolver.Target{URL: url.URL{Path: "127.0.0.1"}},
+			target:  resolver.Target{Endpoint: "127.0.0.1", URL: url.URL{Path: "/127.0.0.1"}},
 			wantErr: errInvaildEndpoint.Error(),
 		},
 		{
 			msg:     "Empty target",
-			target:  resolver.Target{URL: url.URL{Path: ""}},
+			target:  resolver.Target{Endpoint: "", URL: url.URL{Path: "/"}},
 			wantErr: errMissingAddr.Error(),
 		},
 	}
@@ -155,24 +165,36 @@ func TestClientConnectionIntegration(t *testing.T) {
 	b := NewBuilder()
 
 	cc := &testClientConn{}
-	_, err := b.Build(resolver.Target{URL: url.URL{Path: dest}}, cc, resolver.BuildOptions{})
+	_, err := b.Build(resolver.Target{Endpoint: dest, URL: url.URL{Path: dest}}, cc, resolver.BuildOptions{})
 	assert.ElementsMatch(t, cc.State.Addresses, wantAddr, "Client connection received the wrong list of addresses")
 	require.NoError(t, err, "unexpected error building the resolver")
 
 	cc.failUpdate = true
-	_, err = b.Build(resolver.Target{URL: url.URL{Path: dest}}, cc, resolver.BuildOptions{})
+	_, err = b.Build(resolver.Target{Endpoint: dest, URL: url.URL{Path: dest}}, cc, resolver.BuildOptions{})
 	require.Error(t, err)
 
 }
 
 func TestGRPCIntegration(t *testing.T) {
-	dest := "127.0.0.1:3456/192.168.1.1:6789"
+	dest := "127.0.0.1:42755"
+	ln, err := net.Listen("tcp", dest)
+	require.NoError(t, err)
+	defer func() {
+		err := ln.Close()
+		require.NoError(t, err)
+	}()
+
+	s := grpc.NewServer()
+	go func() {
+		err := s.Serve(ln)
+		require.NoError(t, err)
+	}()
 
 	b := NewBuilder()
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	_, err := grpc.DialContext(ctx, b.Scheme()+":///"+dest, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	_, err = grpc.DialContext(ctx, b.Scheme()+":///"+dest, grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	assert.NoError(t, err)
 }
 
