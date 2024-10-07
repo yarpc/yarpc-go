@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transportinterceptor
+package interceptor
 
 import (
 	"context"
@@ -43,36 +43,6 @@ func TestNopUnaryOutbound(t *testing.T) {
 	assert.NoError(t, outbound.Stop())
 }
 
-// TestNopOnewayOutbound ensures NopOnewayOutbound calls return nil acks and no error.
-func TestNopOnewayOutbound(t *testing.T) {
-	outbound := NopOnewayOutbound
-
-	ack, err := outbound.CallOneway(context.Background(), &transport.Request{})
-	assert.NoError(t, err)
-	assert.Nil(t, ack)
-
-	assert.False(t, outbound.IsRunning())
-	assert.Nil(t, outbound.Transports())
-
-	assert.NoError(t, outbound.Start())
-	assert.NoError(t, outbound.Stop())
-}
-
-// TestNopStreamOutbound ensures NopStreamOutbound calls return nil responses and no error.
-func TestNopStreamOutbound(t *testing.T) {
-	outbound := NopStreamOutbound
-
-	stream, err := outbound.CallStream(context.Background(), &transport.StreamRequest{})
-	assert.NoError(t, err)
-	assert.Nil(t, stream)
-
-	assert.False(t, outbound.IsRunning())
-	assert.Nil(t, outbound.Transports())
-
-	assert.NoError(t, outbound.Start())
-	assert.NoError(t, outbound.Stop())
-}
-
 // TestUnaryOutboundFunc tests if the function gets called correctly.
 func TestUnaryOutboundFunc(t *testing.T) {
 	called := false
@@ -84,44 +54,6 @@ func TestUnaryOutboundFunc(t *testing.T) {
 	resp, err := outbound.Call(context.Background(), &transport.Request{})
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
-	assert.True(t, called)
-
-	assert.NoError(t, outbound.Start())
-	assert.NoError(t, outbound.Stop())
-	assert.False(t, outbound.IsRunning())
-	assert.Nil(t, outbound.Transports())
-}
-
-// TestOnewayOutboundFunc tests if the oneway function gets called correctly.
-func TestOnewayOutboundFunc(t *testing.T) {
-	called := false
-	outbound := OnewayOutboundFunc(func(ctx context.Context, req *transport.Request) (transport.Ack, error) {
-		called = true
-		return nil, nil // Return nil since Ack is an interface
-	})
-
-	ack, err := outbound.CallOneway(context.Background(), &transport.Request{})
-	assert.NoError(t, err)
-	assert.Nil(t, ack)
-	assert.True(t, called)
-
-	assert.NoError(t, outbound.Start())
-	assert.NoError(t, outbound.Stop())
-	assert.False(t, outbound.IsRunning())
-	assert.Nil(t, outbound.Transports())
-}
-
-// TestStreamOutboundFunc tests if the stream function gets called correctly.
-func TestStreamOutboundFunc(t *testing.T) {
-	called := false
-	outbound := StreamOutboundFunc(func(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error) {
-		called = true
-		return &transport.ClientStream{}, nil
-	})
-
-	stream, err := outbound.CallStream(context.Background(), &transport.StreamRequest{})
-	assert.NoError(t, err)
-	assert.NotNil(t, stream)
 	assert.True(t, called)
 
 	assert.NoError(t, outbound.Start())

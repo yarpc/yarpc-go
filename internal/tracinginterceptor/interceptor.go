@@ -28,17 +28,13 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/opentracing/opentracing-go/log"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/transportinterceptor"
+	"go.uber.org/yarpc/internal/interceptor"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
 var (
-	_ transportinterceptor.UnaryInbound   = (*Interceptor)(nil)
-	_ transportinterceptor.UnaryOutbound  = (*Interceptor)(nil)
-	_ transportinterceptor.OnewayInbound  = (*Interceptor)(nil)
-	_ transportinterceptor.OnewayOutbound = (*Interceptor)(nil)
-	_ transportinterceptor.StreamInbound  = (*Interceptor)(nil)
-	_ transportinterceptor.StreamOutbound = (*Interceptor)(nil)
+	_ interceptor.UnaryInbound  = (*Interceptor)(nil)
+	_ interceptor.UnaryOutbound = (*Interceptor)(nil)
 )
 
 // Params defines the parameters for creating the Middleware
@@ -47,7 +43,7 @@ type Params struct {
 	Transport string
 }
 
-// Interceptor is the tracing interceptor for all RPC types.
+// Interceptor is the tracing interceptor for Unary RPC types.
 // It handles both observability and inter-process context propagation.
 type Interceptor struct {
 	tracer            opentracing.Tracer
@@ -69,7 +65,6 @@ func New(p Params) *Interceptor {
 }
 
 // Handle is the tracing handler for Unary Inbound requests.
-// It creates a new span, applies tracing tags, and propagates the span context to the downstream handler.
 func (m *Interceptor) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	parentSpanCtx, _ := m.tracer.Extract(m.propagationFormat, transport.GetPropagationCarrier(req.Headers.Items(), req.Transport))
 	tags := ExtractTracingTags(req)
@@ -89,7 +84,6 @@ func (m *Interceptor) Handle(ctx context.Context, req *transport.Request, resw t
 }
 
 // Call is the tracing handler for Unary Outbound requests.
-// It creates a new span for the outbound request, applies tracing tags, and propagates the span context to the downstream outbound handler.
 func (m *Interceptor) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	tags := ExtractTracingTags(req)
 
@@ -115,106 +109,6 @@ func (m *Interceptor) Call(ctx context.Context, req *transport.Request, out tran
 
 	res, err := out.Call(ctx, req)
 	return res, updateSpanWithOutboundError(span, res, err)
-}
-
-// HandleOneway is the tracing handler for Oneway Inbound requests.
-// It creates a new span for the inbound request, applies tracing tags, and propagates the span context to the downstream handler.
-func (m *Interceptor) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
-	parentSpanCtx, _ := m.tracer.Extract(m.propagationFormat, transport.GetPropagationCarrier(req.Headers.Items(), req.Transport))
-	tags := ExtractTracingTags(req)
-
-	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
-		ParentSpanContext: parentSpanCtx,
-		Tracer:            m.tracer,
-		TransportName:     req.Transport,
-		StartTime:         time.Now(),
-		ExtraTags:         tags,
-	}
-	ctx, span := extractOpenTracingSpan.Do(ctx, req)
-	defer span.Finish()
-
-	err := h.HandleOneway(ctx, req)
-	return updateSpanWithError(span, err)
-}
-
-// CallOneway is the tracing handler for Oneway Outbound requests.
-// It creates a new span for the outbound request, applies tracing tags, and propagates the span context to the downstream outbound handler.
-func (m *Interceptor) CallOneway(ctx context.Context, req *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
-	tags := ExtractTracingTags(req)
-
-	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
-		Tracer:        m.tracer,
-		TransportName: m.transport,
-		StartTime:     time.Now(),
-		ExtraTags:     tags,
-	}
-	ctx, span := createOpenTracingSpan.Do(ctx, req)
-	defer span.Finish()
-
-	tracingHeaders := make(map[string]string)
-	if err := m.tracer.Inject(span.Context(), m.propagationFormat, transport.GetPropagationCarrier(tracingHeaders, m.transport)); err != nil {
-		ext.Error.Set(span, true)
-		span.LogFields(log.String("event", "error"), log.String("message", err.Error()))
-		return nil, err
-	}
-
-	for k, v := range tracingHeaders {
-		req.Headers = req.Headers.With(k, v)
-	}
-
-	ack, err := out.CallOneway(ctx, req)
-	return ack, updateSpanWithError(span, err)
-}
-
-// HandleStream is the tracing handler for Stream Inbound requests.
-// It creates a new span for the inbound stream request, applies tracing tags, and propagates the span context to the downstream handler.
-func (m *Interceptor) HandleStream(s *transport.ServerStream, h transport.StreamHandler) error {
-	meta := s.Request().Meta
-	parentSpanCtx, _ := m.tracer.Extract(m.propagationFormat, transport.GetPropagationCarrier(meta.Headers.Items(), meta.Transport))
-
-	tags := ExtractTracingTags(meta.ToRequest())
-
-	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
-		ParentSpanContext: parentSpanCtx,
-		Tracer:            m.tracer,
-		TransportName:     meta.Transport,
-		StartTime:         time.Now(),
-		ExtraTags:         tags,
-	}
-	_, span := extractOpenTracingSpan.Do(s.Context(), meta.ToRequest())
-	defer span.Finish()
-
-	err := h.HandleStream(s)
-	return updateSpanWithError(span, err)
-}
-
-// CallStream is the tracing handler for Stream Outbound requests.
-// It creates a new span for the outbound stream request, applies tracing tags, and propagates the span context to the downstream outbound handler.
-func (m *Interceptor) CallStream(ctx context.Context, req *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
-	tags := ExtractTracingTags(req.Meta.ToRequest())
-
-	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
-		Tracer:        m.tracer,
-		TransportName: m.transport,
-		StartTime:     time.Now(),
-		ExtraTags:     tags,
-	}
-	ctx, span := createOpenTracingSpan.Do(ctx, req.Meta.ToRequest())
-	defer span.Finish()
-
-	tracingHeaders := make(map[string]string)
-	if err := m.tracer.Inject(span.Context(), m.propagationFormat, transport.GetPropagationCarrier(tracingHeaders, m.transport)); err != nil {
-		ext.Error.Set(span, true)
-		span.LogFields(log.String("event", "error"), log.String("message", err.Error()))
-		return nil, err
-	}
-
-	for k, v := range tracingHeaders {
-		req.Meta.Headers = req.Meta.Headers.With(k, v)
-	}
-	clientStream, err := out.CallStream(ctx, req)
-
-	return clientStream, updateSpanWithError(span, err)
 }
 
 func updateSpanWithError(span opentracing.Span, err error) error {
