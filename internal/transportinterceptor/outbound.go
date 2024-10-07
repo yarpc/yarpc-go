@@ -157,43 +157,6 @@ func (f UnaryOutboundFunc) Transports() []transport.Transport {
 	return nil
 }
 
-// unaryOutboundWithMiddleware wraps UnaryOutbound with middleware.
-type unaryOutboundWithMiddleware struct {
-	name string
-	o    transport.UnaryOutbound
-	f    UnaryOutbound
-}
-
-// TransportName returns the name of the transport associated with this middleware.
-func (fo unaryOutboundWithMiddleware) TransportName() string {
-	return fo.name
-}
-
-// Transports returns the transports associated with the underlying outbound.
-func (fo unaryOutboundWithMiddleware) Transports() []transport.Transport {
-	return fo.o.Transports()
-}
-
-// Start starts the underlying outbound.
-func (fo unaryOutboundWithMiddleware) Start() error {
-	return fo.o.Start()
-}
-
-// Stop stops the underlying outbound.
-func (fo unaryOutboundWithMiddleware) Stop() error {
-	return fo.o.Stop()
-}
-
-// IsRunning checks if the underlying outbound is running.
-func (fo unaryOutboundWithMiddleware) IsRunning() bool {
-	return fo.o.IsRunning()
-}
-
-// Call executes the function as a UnaryOutbound call with the provided middleware.
-func (fo unaryOutboundWithMiddleware) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
-	return fo.f.Call(ctx, request, fo.o)
-}
-
 // OnewayOutboundFunc adapts a function into a OnewayOutbound middleware.
 type OnewayOutboundFunc func(ctx context.Context, req *transport.Request) (transport.Ack, error)
 
@@ -222,43 +185,6 @@ func (f OnewayOutboundFunc) Transports() []transport.Transport {
 	return nil
 }
 
-// onewayOutboundWithMiddleware wraps OnewayOutbound with middleware.
-type onewayOutboundWithMiddleware struct {
-	name string
-	o    transport.OnewayOutbound
-	f    OnewayOutbound
-}
-
-// TransportName returns the name of the transport associated with this middleware.
-func (fo onewayOutboundWithMiddleware) TransportName() string {
-	return fo.name
-}
-
-// Transports returns the transports associated with the underlying outbound.
-func (fo onewayOutboundWithMiddleware) Transports() []transport.Transport {
-	return fo.o.Transports()
-}
-
-// Start starts the underlying outbound.
-func (fo onewayOutboundWithMiddleware) Start() error {
-	return fo.o.Start()
-}
-
-// Stop stops the underlying outbound.
-func (fo onewayOutboundWithMiddleware) Stop() error {
-	return fo.o.Stop()
-}
-
-// IsRunning checks if the underlying outbound is running.
-func (fo onewayOutboundWithMiddleware) IsRunning() bool {
-	return fo.o.IsRunning()
-}
-
-// CallOneway executes the function as a OnewayOutbound call with the provided middleware.
-func (fo onewayOutboundWithMiddleware) CallOneway(ctx context.Context, req *transport.Request) (transport.Ack, error) {
-	return fo.f.CallOneway(ctx, req, fo.o)
-}
-
 // StreamOutboundFunc adapts a function into a StreamOutbound middleware.
 type StreamOutboundFunc func(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error)
 
@@ -285,41 +211,4 @@ func (f StreamOutboundFunc) IsRunning() bool {
 // Transports returns the transports associated with this middleware. Always returns nil.
 func (f StreamOutboundFunc) Transports() []transport.Transport {
 	return nil
-}
-
-// streamOutboundWithMiddleware wraps StreamOutbound with middleware.
-type streamOutboundWithMiddleware struct {
-	name string
-	o    transport.StreamOutbound
-	f    StreamOutbound
-}
-
-// TransportName returns the name of the transport associated with this middleware.
-func (fo streamOutboundWithMiddleware) TransportName() string {
-	return fo.name
-}
-
-// Transports returns the transports associated with the underlying outbound.
-func (fo streamOutboundWithMiddleware) Transports() []transport.Transport {
-	return fo.o.Transports()
-}
-
-// Start starts the underlying outbound.
-func (fo streamOutboundWithMiddleware) Start() error {
-	return fo.o.Start()
-}
-
-// Stop stops the underlying outbound.
-func (fo streamOutboundWithMiddleware) Stop() error {
-	return fo.o.Stop()
-}
-
-// IsRunning checks if the underlying outbound is running.
-func (fo streamOutboundWithMiddleware) IsRunning() bool {
-	return fo.o.IsRunning()
-}
-
-// CallStream executes the function as a StreamOutbound call with the provided middleware.
-func (fo streamOutboundWithMiddleware) CallStream(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error) {
-	return fo.f.CallStream(ctx, req, fo.o)
 }
