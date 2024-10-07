@@ -31,6 +31,7 @@ func init() {
 	resolver.Register(&multiaddrPassthroughBuilder{})
 }
 
+// Scheme is the scheme for the multi address passthrough resolver.
 const Scheme = "multi-addr-passthrough"
 
 var (
