@@ -683,7 +683,7 @@ func TestEnableObservabilityMiddleware(t *testing.T) {
 	}
 	out := transporttest.NewMockUnaryOutbound(mockCtrl)
 	out.EXPECT().Transports().AnyTimes()
-	out.EXPECT().Call(ctx, req).Times(1).Return(nil, nil)
+	out.EXPECT().Call(gomock.Any(), req).Times(1).Return(nil, nil)
 
 	core, logs := observer.New(zapcore.DebugLevel)
 	dispatcher := NewDispatcher(Config{
@@ -722,7 +722,7 @@ func TestObservabilityMiddlewareApplicationErrorLevel(t *testing.T) {
 	}
 	out := transporttest.NewMockUnaryOutbound(mockCtrl)
 	out.EXPECT().Transports().AnyTimes()
-	out.EXPECT().Call(ctx, req).Return(&transport.Response{ApplicationError: true}, nil)
+	out.EXPECT().Call(gomock.Any(), req).Return(&transport.Response{ApplicationError: true}, nil)
 
 	core, logs := observer.New(zapcore.DebugLevel)
 
@@ -768,7 +768,7 @@ func TestDisableObservabilityMiddleware(t *testing.T) {
 	}
 	out := transporttest.NewMockUnaryOutbound(mockCtrl)
 	out.EXPECT().Transports().AnyTimes()
-	out.EXPECT().Call(ctx, req).Times(1).Return(nil, nil)
+	out.EXPECT().Call(gomock.Any(), req).Times(1).Return(nil, nil)
 
 	core, logs := observer.New(zapcore.DebugLevel)
 	dispatcher := NewDispatcher(Config{

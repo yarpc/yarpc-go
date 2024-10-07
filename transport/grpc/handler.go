@@ -130,6 +130,7 @@ func (h *handler) handleStream(
 	start time.Time,
 	streamHandler transport.StreamHandler,
 ) error {
+	// TODO: remove tracing instrumentation at transport layer completely
 	tracer := h.i.t.options.tracer
 	var parentSpanCtx opentracing.SpanContext
 	md, ok := metadata.FromIncomingContext(ctx)
@@ -213,6 +214,7 @@ func (h *handler) handleUnaryBeforeErrorConversion(
 	start time.Time,
 	handler transport.UnaryHandler,
 ) error {
+	// TODO: remove tracing instrumentation at transport layer completely
 	tracer := h.i.t.options.tracer
 	var parentSpanCtx opentracing.SpanContext
 	md, ok := metadata.FromIncomingContext(ctx)
