@@ -42,21 +42,21 @@ var (
 	_ interceptor.StreamOutbound = (*Interceptor)(nil)
 )
 
-// Params defines the parameters for creating the Middleware
+// Params defines the parameters for creating the Interceptor
 type Params struct {
 	Tracer    opentracing.Tracer
 	Transport string
 }
 
-// Interceptor is the tracing interceptor for Unary RPC types.
-// It handles both observability and inter-process context propagation.
+// Interceptor is the tracing interceptor for all RPC types.
+// It handles both tracing observability and context propagation using OpenTracing APIs.
 type Interceptor struct {
 	tracer            opentracing.Tracer
 	transport         string
 	propagationFormat opentracing.BuiltinFormat
 }
 
-// New constructs a tracing interceptor with the provided configuration.
+// New constructs a tracing interceptor with the provided parameter.
 func New(p Params) *Interceptor {
 	m := &Interceptor{
 		tracer:            p.Tracer,
@@ -69,7 +69,7 @@ func New(p Params) *Interceptor {
 	return m
 }
 
-// Handle is the tracing handler for Unary Inbound requests.
+// Handle implements interceptor.UnaryInbound
 func (m *Interceptor) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	parentSpanCtx, _ := m.tracer.Extract(m.propagationFormat, tchannel.GetPropagationCarrier(req.Headers.Items(), req.Transport))
 	tags := ExtractTracingTags()
@@ -88,7 +88,7 @@ func (m *Interceptor) Handle(ctx context.Context, req *transport.Request, resw t
 	return updateSpanWithError(span, err)
 }
 
-// Call is the tracing handler for Unary Outbound requests.
+// Call implements interceptor.UnaryOutbound
 func (m *Interceptor) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	tags := ExtractTracingTags()
 
@@ -118,8 +118,8 @@ func (m *Interceptor) Call(ctx context.Context, req *transport.Request, out tran
 
 // HandleOneway implements interceptor.OnewayInbound
 func (m *Interceptor) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
-	// Unimplemented block.
-	panic("HandleOneway is not implemented yet")
+	// TODO: implement
+	panic("implement me")
 }
 
 // CallOneway implements interceptor.OnewayOutbound
