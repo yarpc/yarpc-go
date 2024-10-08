@@ -116,30 +116,28 @@ func (m *Interceptor) Call(ctx context.Context, req *transport.Request, out tran
 	return res, updateSpanWithOutboundError(span, res, err)
 }
 
-// Leave Oneway and Stream interceptors unimplemented for now, as requested.
-
-// HandleOneway is the tracing handler for Oneway Inbound requests (currently unimplemented).
+// HandleOneway implements interceptor.OnewayInbound
 func (m *Interceptor) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
 	// Unimplemented block.
 	panic("HandleOneway is not implemented yet")
 }
 
-// CallOneway is the tracing handler for Oneway Outbound requests (currently unimplemented).
+// CallOneway implements interceptor.OnewayOutbound
 func (m *Interceptor) CallOneway(ctx context.Context, req *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
-	// Unimplemented block.
-	panic("CallOneway is not implemented yet")
+	// TODO: implement
+	panic("implement me")
 }
 
-// HandleStream is the tracing handler for Stream Inbound requests (currently unimplemented).
+// HandleStream implements interceptor.StreamInbound
 func (m *Interceptor) HandleStream(s *transport.ServerStream, h transport.StreamHandler) error {
-	// Unimplemented block.
-	panic("HandleStream is not implemented yet")
+	// TODO: implement
+	panic("implement me")
 }
 
-// CallStream is the tracing handler for Stream Outbound requests (currently unimplemented).
+// CallStream implements interceptor.StreamOutbound
 func (m *Interceptor) CallStream(ctx context.Context, req *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
-	// Unimplemented block.
-	panic("CallStream is not implemented yet")
+	// TODO: implement
+	panic("implement me")
 }
 
 func updateSpanWithError(span opentracing.Span, err error) error {
