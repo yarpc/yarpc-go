@@ -24,7 +24,9 @@
 package interceptor
 
 import (
+	"context"
 	"go.uber.org/yarpc/api/middleware"
+	"go.uber.org/yarpc/api/transport"
 )
 
 type (
@@ -64,3 +66,40 @@ type (
 	// multiple times for the same request.
 	StreamInbound = middleware.StreamInbound
 )
+
+// NopUnaryInbound is an inbound middleware that does not do anything special.
+// It simply calls the underlying UnaryHandler.
+var NopUnaryInbound UnaryInbound = nopUnaryInbound{}
+
+// ApplyUnaryInbound applies the given UnaryInbound middleware to the given UnaryHandler.
+func ApplyUnaryInbound(h transport.UnaryHandler, i UnaryInbound) transport.UnaryHandler {
+	if i == nil {
+		return h
+	}
+	return unaryHandlerWithMiddleware{h: h, i: i}
+}
+
+// UnaryInboundFunc adapts a function into a UnaryInbound middleware.
+type UnaryInboundFunc func(context.Context, *transport.Request, transport.ResponseWriter, transport.UnaryHandler) error
+
+// Handle for UnaryInboundFunc.
+func (f UnaryInboundFunc) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
+	return f(ctx, req, resw, h)
+}
+
+type unaryHandlerWithMiddleware struct {
+	h transport.UnaryHandler
+	i UnaryInbound
+}
+
+// Handle applies the UnaryInbound middleware to the handler's Handle method.
+func (h unaryHandlerWithMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
+	return h.i.Handle(ctx, req, resw, h.h)
+}
+
+type nopUnaryInbound struct{}
+
+// Handle simply calls the underlying UnaryHandler without any modifications.
+func (nopUnaryInbound) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, handler transport.UnaryHandler) error {
+	return handler.Handle(ctx, req, resw)
+}

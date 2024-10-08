@@ -22,12 +22,19 @@ package tchannel
 
 import (
 	"errors"
+	"strings"
+	"sync"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/zap"
+)
+
+const (
+	tchannelTracingKeyPrefix      = "$tracing$"
+	tchannelTracingKeyMappingSize = 100
 )
 
 var errChannelOrServiceNameIsRequired = errors.New(
@@ -189,4 +196,99 @@ func (t *ChannelTransport) stop() error {
 // IsRunning returns whether the ChannelTransport is running.
 func (t *ChannelTransport) IsRunning() bool {
 	return t.once.IsRunning()
+}
+
+// GetPropagationFormat returns the opentracing propagation depends on transport.
+// For TChannel, the format is opentracing.TextMap
+// For HTTP and gRPC, the format is opentracing.HTTPHeaders
+func GetPropagationFormat(transport string) opentracing.BuiltinFormat {
+	if transport == "tchannel" {
+		return opentracing.TextMap
+	}
+	return opentracing.HTTPHeaders
+}
+
+// PropagationCarrier is an interface to combine both reader and writer interface
+type PropagationCarrier interface {
+	opentracing.TextMapReader
+	opentracing.TextMapWriter
+}
+
+// GetPropagationCarrier get the propagation carrier depends on the transport.
+// The carrier is used for accessing the transport headers.
+// For TChannel, a special carrier is used. For details, see comments of TChannelHeadersCarrier
+func GetPropagationCarrier(headers map[string]string, transport string) PropagationCarrier {
+	if transport == "tchannel" {
+		return TChannelHeadersCarrier(headers)
+	}
+	return opentracing.TextMapCarrier(headers)
+}
+
+// TChannelHeadersCarrier is a dedicated carrier for TChannel.
+// When writing the tracing headers into headers, the $tracing$ prefix is added to each tracing header key.
+// When reading the tracing headers from headers, the $tracing$ prefix is removed from each tracing header key.
+type TChannelHeadersCarrier map[string]string
+
+var _ PropagationCarrier = TChannelHeadersCarrier{}
+
+// ForeachKey iterates over all tracing headers in the carrier, applying the provided
+// handler function to each header after stripping the $tracing$ prefix from the keys.
+func (c TChannelHeadersCarrier) ForeachKey(handler func(string, string) error) error {
+	for k, v := range c {
+		if !strings.HasPrefix(k, tchannelTracingKeyPrefix) {
+			continue
+		}
+		noPrefixKey := tchannelTracingKeyDecoding.mapAndCache(k)
+		if err := handler(noPrefixKey, v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Set adds a tracing header to the carrier, prefixing the key with $tracing$ before storing it.
+func (c TChannelHeadersCarrier) Set(key, value string) {
+	prefixedKey := tchannelTracingKeyEncoding.mapAndCache(key)
+	c[prefixedKey] = value
+}
+
+// tchannelTracingKeysMapping is to optimize the efficiency of tracing header key manipulations.
+// The implementation is forked from tchannel-go: https://github.com/uber/tchannel-go/blob/dev/tracing_keys.go#L36
+type tchannelTracingKeysMapping struct {
+	sync.RWMutex
+	mapping map[string]string
+	mapper  func(key string) string
+}
+
+var tchannelTracingKeyEncoding = &tchannelTracingKeysMapping{
+	mapping: make(map[string]string),
+	mapper: func(key string) string {
+		return tchannelTracingKeyPrefix + key
+	},
+}
+
+var tchannelTracingKeyDecoding = &tchannelTracingKeysMapping{
+	mapping: make(map[string]string),
+	mapper: func(key string) string {
+		return key[len(tchannelTracingKeyPrefix):]
+	},
+}
+
+func (m *tchannelTracingKeysMapping) mapAndCache(key string) string {
+	m.RLock()
+	v, ok := m.mapping[key]
+	m.RUnlock()
+	if ok {
+		return v
+	}
+	m.Lock()
+	defer m.Unlock()
+	if v, ok := m.mapping[key]; ok {
+		return v
+	}
+	mappedKey := m.mapper(key)
+	if len(m.mapping) < tchannelTracingKeyMappingSize {
+		m.mapping[key] = mappedKey
+	}
+	return mappedKey
 }

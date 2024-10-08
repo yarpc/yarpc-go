@@ -1,0 +1,42 @@
+// Copyright (c) 2024 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+package tracinginterceptor
+
+import (
+	"github.com/opentracing/opentracing-go"
+	"runtime"
+)
+
+const (
+	// TracingComponentName represents the name of the tracing component for YARPC.
+	TracingComponentName = "yarpc"
+	// Version indicates the current version of YARPC being used.
+	Version = "1.74.0-dev"
+)
+
+// ExtractTracingTags extracts common tracing tags from a transport request.
+func ExtractTracingTags() opentracing.Tags {
+	return opentracing.Tags{
+		"yarpc.version": Version,
+		"go.version":    runtime.Version(),
+		"component":     TracingComponentName,
+	}
+}

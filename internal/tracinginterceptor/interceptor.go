@@ -22,10 +22,15 @@ package tracinginterceptor
 
 import (
 	"context"
+	"time"
 
 	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
+	"github.com/opentracing/opentracing-go/log"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 var (
@@ -37,56 +42,147 @@ var (
 	_ interceptor.StreamOutbound = (*Interceptor)(nil)
 )
 
-// Params defines the parameters for creating the Interceptor
+// Params defines the parameters for creating the Middleware
 type Params struct {
-	// Tracer is used to propagate context and to generate spans
-	Tracer opentracing.Tracer
-	// Transport is the name of the transport, it decides the propagation format and propagation carrier
+	Tracer    opentracing.Tracer
 	Transport string
 }
 
-// Interceptor is the tracing interceptor for all RPC types.
-// It handles both tracing observability and context propagation using OpenTracing APIs.
+// Interceptor is the tracing interceptor for Unary RPC types.
+// It handles both observability and inter-process context propagation.
 type Interceptor struct {
+	tracer            opentracing.Tracer
+	transport         string
+	propagationFormat opentracing.BuiltinFormat
 }
 
-// New constructs a tracing interceptor with the provided parameter.
+// New constructs a tracing interceptor with the provided configuration.
 func New(p Params) *Interceptor {
-	return &Interceptor{}
+	m := &Interceptor{
+		tracer:            p.Tracer,
+		transport:         p.Transport,
+		propagationFormat: tchannel.GetPropagationFormat(p.Transport),
+	}
+	if m.tracer == nil {
+		m.tracer = opentracing.GlobalTracer()
+	}
+	return m
 }
 
-// Handle implements interceptor.UnaryInbound
+// Handle is the tracing handler for Unary Inbound requests.
 func (m *Interceptor) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
-	// TODO: implement
-	panic("implement me")
+	parentSpanCtx, _ := m.tracer.Extract(m.propagationFormat, tchannel.GetPropagationCarrier(req.Headers.Items(), req.Transport))
+	tags := ExtractTracingTags()
+
+	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
+		ParentSpanContext: parentSpanCtx,
+		Tracer:            m.tracer,
+		TransportName:     req.Transport,
+		StartTime:         time.Now(),
+		ExtraTags:         tags,
+	}
+	ctx, span := extractOpenTracingSpan.Do(ctx, req)
+	defer span.Finish()
+
+	err := h.Handle(ctx, req, resw)
+	return updateSpanWithError(span, err)
 }
 
-// Call implements interceptor.UnaryOutbound
+// Call is the tracing handler for Unary Outbound requests.
 func (m *Interceptor) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
-	// TODO: implement
-	panic("implement me")
+	tags := ExtractTracingTags()
+
+	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
+		Tracer:        m.tracer,
+		TransportName: m.transport,
+		StartTime:     time.Now(),
+		ExtraTags:     tags,
+	}
+	ctx, span := createOpenTracingSpan.Do(ctx, req)
+	defer span.Finish()
+
+	tracingHeaders := make(map[string]string)
+	if err := m.tracer.Inject(span.Context(), m.propagationFormat, tchannel.GetPropagationCarrier(tracingHeaders, m.transport)); err != nil {
+		ext.Error.Set(span, true)
+		span.LogFields(log.String("event", "error"), log.String("message", err.Error()))
+		return nil, err
+	}
+
+	for k, v := range tracingHeaders {
+		req.Headers = req.Headers.With(k, v)
+	}
+
+	res, err := out.Call(ctx, req)
+	return res, updateSpanWithOutboundError(span, res, err)
 }
 
-// HandleOneway implements interceptor.OnewayInbound
+// Leave Oneway and Stream interceptors unimplemented for now, as requested.
+
+// HandleOneway is the tracing handler for Oneway Inbound requests (currently unimplemented).
 func (m *Interceptor) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
-	// TODO: implement
-	panic("implement me")
+	// Unimplemented block.
+	panic("HandleOneway is not implemented yet")
 }
 
-// CallOneway implements interceptor.OnewayOutbound
-func (m *Interceptor) CallOneway(ctx context.Context, request *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
-	// TODO: implement
-	panic("implement me")
+// CallOneway is the tracing handler for Oneway Outbound requests (currently unimplemented).
+func (m *Interceptor) CallOneway(ctx context.Context, req *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
+	// Unimplemented block.
+	panic("CallOneway is not implemented yet")
 }
 
-// HandleStream implements interceptor.StreamInbound
+// HandleStream is the tracing handler for Stream Inbound requests (currently unimplemented).
 func (m *Interceptor) HandleStream(s *transport.ServerStream, h transport.StreamHandler) error {
-	// TODO: implement
-	panic("implement me")
+	// Unimplemented block.
+	panic("HandleStream is not implemented yet")
 }
 
-// CallStream implements interceptor.StreamOutbound
+// CallStream is the tracing handler for Stream Outbound requests (currently unimplemented).
 func (m *Interceptor) CallStream(ctx context.Context, req *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
-	// TODO: implement
-	panic("implement me")
+	// Unimplemented block.
+	panic("CallStream is not implemented yet")
+}
+
+func updateSpanWithError(span opentracing.Span, err error) error {
+	if err == nil {
+		return err
+	}
+
+	ext.Error.Set(span, true)
+	if yarpcerrors.IsStatus(err) {
+		status := yarpcerrors.FromError(err)
+		errCode := status.Code()
+		span.SetTag("rpc.yarpc.status_code", errCode.String())
+		span.SetTag("error.type", errCode.String())
+		return err
+	}
+
+	span.SetTag("error.type", "unknown_internal_yarpc")
+	return err
+}
+
+func updateSpanWithOutboundError(span opentracing.Span, res *transport.Response, err error) error {
+	isApplicationError := false
+	if res != nil {
+		isApplicationError = res.ApplicationError
+	}
+	if err == nil && !isApplicationError {
+		return err
+	}
+
+	ext.Error.Set(span, true)
+	if yarpcerrors.IsStatus(err) {
+		status := yarpcerrors.FromError(err)
+		errCode := status.Code()
+		span.SetTag("rpc.yarpc.status_code", errCode.String())
+		span.SetTag("error.type", errCode.String())
+		return err
+	}
+
+	if isApplicationError {
+		span.SetTag("error.type", "application_error")
+		return err
+	}
+
+	span.SetTag("error.type", "unknown_internal_yarpc")
+	return err
 }
