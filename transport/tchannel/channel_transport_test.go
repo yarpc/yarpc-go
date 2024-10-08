@@ -73,7 +73,7 @@ func TestGetPropagationCarrier(t *testing.T) {
 		{
 			name:         "TChannel carrier",
 			transport:    "tchannel",
-			expectedType: TChannelHeadersCarrier(headers),
+			expectedType: HeadersCarrier(headers),
 		},
 		{
 			name:         "HTTP carrier",
@@ -96,7 +96,7 @@ func TestTChannelHeadersCarrier(t *testing.T) {
 		"$tracing$trace-id": "1234",
 		"$tracing$span-id":  "5678",
 	}
-	carrier := TChannelHeadersCarrier(headers)
+	carrier := HeadersCarrier(headers)
 
 	// Test ForeachKey
 	t.Run("ForeachKey", func(t *testing.T) {
@@ -123,7 +123,7 @@ func TestTChannelHeadersCarrierNoPrefix(t *testing.T) {
 	headers := map[string]string{
 		"no-prefix-key": "no-prefix-value",
 	}
-	carrier := TChannelHeadersCarrier(headers)
+	carrier := HeadersCarrier(headers)
 
 	// Test ForeachKey should not return headers without tracing prefix.
 	t.Run("ForeachKey No Prefix", func(t *testing.T) {

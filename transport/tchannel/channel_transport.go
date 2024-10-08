@@ -219,21 +219,21 @@ type PropagationCarrier interface {
 // For TChannel, a special carrier is used. For details, see comments of TChannelHeadersCarrier
 func GetPropagationCarrier(headers map[string]string, transport string) PropagationCarrier {
 	if transport == "tchannel" {
-		return TChannelHeadersCarrier(headers)
+		return HeadersCarrier(headers)
 	}
 	return opentracing.TextMapCarrier(headers)
 }
 
-// TChannelHeadersCarrier is a dedicated carrier for TChannel.
+// HeadersCarrier is a dedicated carrier for TChannel.
 // When writing the tracing headers into headers, the $tracing$ prefix is added to each tracing header key.
 // When reading the tracing headers from headers, the $tracing$ prefix is removed from each tracing header key.
-type TChannelHeadersCarrier map[string]string
+type HeadersCarrier map[string]string
 
-var _ PropagationCarrier = TChannelHeadersCarrier{}
+var _ PropagationCarrier = HeadersCarrier{}
 
 // ForeachKey iterates over all tracing headers in the carrier, applying the provided
 // handler function to each header after stripping the $tracing$ prefix from the keys.
-func (c TChannelHeadersCarrier) ForeachKey(handler func(string, string) error) error {
+func (c HeadersCarrier) ForeachKey(handler func(string, string) error) error {
 	for k, v := range c {
 		if !strings.HasPrefix(k, tchannelTracingKeyPrefix) {
 			continue
@@ -247,7 +247,7 @@ func (c TChannelHeadersCarrier) ForeachKey(handler func(string, string) error) e
 }
 
 // Set adds a tracing header to the carrier, prefixing the key with $tracing$ before storing it.
-func (c TChannelHeadersCarrier) Set(key, value string) {
+func (c HeadersCarrier) Set(key, value string) {
 	prefixedKey := tchannelTracingKeyEncoding.mapAndCache(key)
 	c[prefixedKey] = value
 }
