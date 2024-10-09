@@ -24,10 +24,13 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
 	"time"
+
+	"golang.org/x/net/http2"
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/transport"
@@ -40,13 +43,25 @@ import (
 	"go.uber.org/zap"
 )
 
-// We want a value that's around 5 seconds, but slightly higher than how
-// long a successful HTTP shutdown can take.
-// There's a specific path in the HTTP shutdown path that can take 5 seconds:
-// https://golang.org/src/net/http/server.go?s=83923:83977#L2710
-// This avoids timeouts in shutdown caused by new idle connections, without
-// making the timeout too large.
-const defaultShutdownTimeout = 6 * time.Second
+type httpVersion int
+
+const (
+	version1 httpVersion = iota
+	version2
+)
+
+const (
+	// We want a value that's around 5 seconds, but slightly higher than how
+	// long a successful HTTP shutdown can take.
+	// There's a specific path in the HTTP shutdown path that can take 5 seconds:
+	// https://golang.org/src/net/http/server.go?s=83923:83977#L2710
+	// This avoids timeouts in shutdown caused by new idle connections, without
+	// making the timeout too large.
+	defaultShutdownTimeout = 6 * time.Second
+
+	// defaultHTTPVersion is the default HTTP version used by the inbound.
+	defaultHTTPVersion = version2
+)
 
 // InboundOption customizes the behavior of an HTTP Inbound constructed with
 // NewInbound.
@@ -136,6 +151,7 @@ func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 		transport:         t,
 		grabHeaders:       make(map[string]struct{}),
 		bothResponseError: true,
+		httpVersion:       defaultHTTPVersion,
 	}
 	for _, opt := range opts {
 		opt(i)
@@ -165,6 +181,9 @@ type Inbound struct {
 
 	tlsConfig *tls.Config
 	tlsMode   yarpctls.Mode
+
+	// http version
+	httpVersion httpVersion
 }
 
 // Tracer configures a tracer on this inbound.
@@ -221,10 +240,18 @@ func (i *Inbound) start() error {
 		httpHandler = i.mux
 	}
 
-	i.server = intnet.NewHTTPServer(&http.Server{
+	server := &http.Server{
 		Addr:    i.addr,
 		Handler: httpHandler,
-	})
+	}
+	if i.httpVersion == version2 {
+		h2s := &http2.Server{}
+		err := http2.ConfigureServer(server, h2s)
+		if err != nil {
+			return fmt.Errorf("failed to configure HTTP/2 server: %w", err)
+		}
+	}
+	i.server = intnet.NewHTTPServer(server)
 
 	addr := i.addr
 	if addr == "" {
