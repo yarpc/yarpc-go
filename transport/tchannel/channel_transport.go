@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"errors"
+
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
