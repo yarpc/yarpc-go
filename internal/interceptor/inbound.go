@@ -84,10 +84,3 @@ type unaryHandlerWithMiddleware struct {
 func (h unaryHandlerWithMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
 	return h.i.Handle(ctx, req, resw, h.h)
 }
-
-type nopUnaryInbound struct{}
-
-// Handle simply calls the underlying UnaryHandler without any modifications.
-func (nopUnaryInbound) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, handler transport.UnaryHandler) error {
-	return handler.Handle(ctx, req, resw)
-}
