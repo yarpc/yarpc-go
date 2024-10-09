@@ -119,3 +119,13 @@ func UpdateSpanWithErr(span opentracing.Span, err error) error {
 	}
 	return err
 }
+
+// GetPropagationFormat returns the opentracing propagation depends on transport.
+// For TChannel, the format is opentracing.TextMap
+// For HTTP and gRPC, the format is opentracing.HTTPHeaders
+func GetPropagationFormat(transport string) opentracing.BuiltinFormat {
+	if transport == "tchannel" {
+		return opentracing.TextMap
+	}
+	return opentracing.HTTPHeaders
+}

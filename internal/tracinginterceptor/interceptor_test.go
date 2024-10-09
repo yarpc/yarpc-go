@@ -97,7 +97,8 @@ func TestUnaryInboundHandle(t *testing.T) {
 		Headers:   transport.Headers{},
 	}
 
-	err := interceptor.Handle(ctx, req, nil, handler)
+	wrappedWriter := newWriter(nil)
+	err := interceptor.Handle(ctx, req, wrappedWriter, handler)
 	assert.NoError(t, err)
 	assert.True(t, handlerCalled)
 
@@ -115,6 +116,13 @@ func TestUnaryInboundHandle(t *testing.T) {
 	}
 
 	assert.Equal(t, "procedure", span.OperationName)
+
+	// Ensure application error tag is correctly set if applicable
+	if wrappedWriter.isApplicationError {
+		tag, ok := span.Tag("error.type").(string)
+		assert.True(t, ok)
+		assert.Equal(t, "application_error", tag)
+	}
 }
 
 // TestUnaryOutboundCall tests the Call method for Unary Outbound

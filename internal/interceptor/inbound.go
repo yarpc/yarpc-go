@@ -67,18 +67,6 @@ type (
 	StreamInbound = middleware.StreamInbound
 )
 
-// NopUnaryInbound is an inbound middleware that does not do anything special.
-// It simply calls the underlying UnaryHandler.
-var NopUnaryInbound UnaryInbound = nopUnaryInbound{}
-
-// ApplyUnaryInbound applies the given UnaryInbound middleware to the given UnaryHandler.
-func ApplyUnaryInbound(h transport.UnaryHandler, i UnaryInbound) transport.UnaryHandler {
-	if i == nil {
-		return h
-	}
-	return unaryHandlerWithMiddleware{h: h, i: i}
-}
-
 // UnaryInboundFunc adapts a function into a UnaryInbound middleware.
 type UnaryInboundFunc func(context.Context, *transport.Request, transport.ResponseWriter, transport.UnaryHandler) error
 

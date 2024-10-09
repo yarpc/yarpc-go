@@ -22,6 +22,7 @@ package tracinginterceptor
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -61,7 +62,7 @@ func New(p Params) *Interceptor {
 	m := &Interceptor{
 		tracer:            p.Tracer,
 		transport:         p.Transport,
-		propagationFormat: tchannel.GetPropagationFormat(p.Transport),
+		propagationFormat: transport.GetPropagationFormat(p.Transport),
 	}
 	if m.tracer == nil {
 		m.tracer = opentracing.GlobalTracer()
@@ -69,34 +70,80 @@ func New(p Params) *Interceptor {
 	return m
 }
 
+// writer wraps a transport.ResponseWriter to capture additional information for tracing.
+type writer struct {
+	transport.ResponseWriter
+
+	isApplicationError   bool
+	applicationErrorMeta *transport.ApplicationErrorMeta
+	responseSize         int
+}
+
+var _writerPool = sync.Pool{New: func() interface{} {
+	return &writer{}
+}}
+
+func newWriter(rw transport.ResponseWriter) *writer {
+	w := _writerPool.Get().(*writer)
+	*w = writer{ResponseWriter: rw} // reset
+	return w
+}
+
+func (w *writer) SetApplicationError() {
+	w.isApplicationError = true
+	w.ResponseWriter.SetApplicationError()
+}
+
+func (w *writer) SetApplicationErrorMeta(applicationErrorMeta *transport.ApplicationErrorMeta) {
+	if applicationErrorMeta == nil {
+		return
+	}
+
+	w.applicationErrorMeta = applicationErrorMeta
+	if appErrMetaSetter, ok := w.ResponseWriter.(transport.ApplicationErrorMetaSetter); ok {
+		appErrMetaSetter.SetApplicationErrorMeta(applicationErrorMeta)
+	}
+}
+
+func (w *writer) Write(p []byte) (n int, err error) {
+	w.responseSize += len(p)
+	return w.ResponseWriter.Write(p)
+}
+
+func (w *writer) free() {
+	_writerPool.Put(w)
+}
+
 // Handle implements interceptor.UnaryInbound
 func (m *Interceptor) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	parentSpanCtx, _ := m.tracer.Extract(m.propagationFormat, tchannel.GetPropagationCarrier(req.Headers.Items(), req.Transport))
-	tags := ExtractTracingTags()
-
 	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
 		ParentSpanContext: parentSpanCtx,
 		Tracer:            m.tracer,
 		TransportName:     req.Transport,
 		StartTime:         time.Now(),
-		ExtraTags:         tags,
+		ExtraTags:         CommonTracingTags,
 	}
 	ctx, span := extractOpenTracingSpan.Do(ctx, req)
 	defer span.Finish()
 
-	err := h.Handle(ctx, req, resw)
+	wrappedWriter := newWriter(resw)
+	err := h.Handle(ctx, req, wrappedWriter)
+	if wrappedWriter.isApplicationError {
+		span.SetTag("error.type", "application_error")
+	}
+	wrappedWriter.free()
+
 	return updateSpanWithError(span, err)
 }
 
 // Call implements interceptor.UnaryOutbound
 func (m *Interceptor) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
-	tags := ExtractTracingTags()
-
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        m.tracer,
 		TransportName: m.transport,
 		StartTime:     time.Now(),
-		ExtraTags:     tags,
+		ExtraTags:     CommonTracingTags,
 	}
 	ctx, span := createOpenTracingSpan.Do(ctx, req)
 	defer span.Finish()

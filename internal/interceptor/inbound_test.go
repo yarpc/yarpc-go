@@ -36,21 +36,8 @@ func (f UnaryHandlerFunc) Handle(ctx context.Context, req *transport.Request, re
 	return f(ctx, req, resw)
 }
 
-// TestNopUnaryInbound ensures NopUnaryInbound calls the underlying handler without modification.
-func TestNopUnaryInbound(t *testing.T) {
-	var called bool
-	handler := UnaryHandlerFunc(func(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
-		called = true
-		return nil
-	})
-
-	err := NopUnaryInbound.Handle(context.Background(), &transport.Request{}, nil, handler)
-	assert.NoError(t, err)
-	assert.True(t, called)
-}
-
-// TestApplyUnaryInbound ensures that UnaryInbound middleware wraps correctly.
-func TestApplyUnaryInbound(t *testing.T) {
+// TestUnaryInboundFunc ensures that UnaryInboundFunc works correctly.
+func TestUnaryInboundFunc(t *testing.T) {
 	var called bool
 	handler := UnaryHandlerFunc(func(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
 		called = true
@@ -58,11 +45,29 @@ func TestApplyUnaryInbound(t *testing.T) {
 	})
 
 	middleware := UnaryInboundFunc(func(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
-		assert.False(t, called)
+		assert.False(t, called) // Ensure that the middleware is called before the handler.
 		return h.Handle(ctx, req, resw)
 	})
 
-	wrappedHandler := ApplyUnaryInbound(handler, middleware)
+	err := middleware.Handle(context.Background(), &transport.Request{}, nil, handler)
+	assert.NoError(t, err)
+	assert.True(t, called)
+}
+
+// TestUnaryHandlerWithMiddleware ensures that the unaryHandlerWithMiddleware applies the middleware correctly.
+func TestUnaryHandlerWithMiddleware(t *testing.T) {
+	var called bool
+	handler := UnaryHandlerFunc(func(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
+		called = true
+		return nil
+	})
+
+	middleware := UnaryInboundFunc(func(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
+		assert.False(t, called) // Ensure middleware is called before the handler.
+		return h.Handle(ctx, req, resw)
+	})
+
+	wrappedHandler := unaryHandlerWithMiddleware{h: handler, i: middleware}
 	err := wrappedHandler.Handle(context.Background(), &transport.Request{}, nil)
 	assert.NoError(t, err)
 	assert.True(t, called)
