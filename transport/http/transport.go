@@ -22,6 +22,8 @@ package http
 
 import (
 	"context"
+	"crypto/tls"
+	"golang.org/x/net/http2"
 	"math/rand"
 	"net"
 	"net/http"
@@ -294,18 +296,13 @@ func buildHTTPClient(options *transportOptions) *http.Client {
 	}
 
 	return &http.Client{
-		Transport: &http.Transport{
-			// options lifted from https://golang.org/src/net/http/transport.go
-			Proxy:                 http.ProxyFromEnvironment,
-			DialContext:           dialContext,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-			MaxIdleConns:          options.maxIdleConns,
-			MaxIdleConnsPerHost:   options.maxIdleConnsPerHost,
-			IdleConnTimeout:       options.idleConnTimeout,
-			DisableKeepAlives:     options.disableKeepAlives,
-			DisableCompression:    options.disableCompression,
-			ResponseHeaderTimeout: options.responseHeaderTimeout,
+		Transport: &http2.Transport{
+			IdleConnTimeout:    options.idleConnTimeout,
+			DisableCompression: options.disableCompression,
+			DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
+				return dialContext(ctx, network, addr)
+			},
+			AllowHTTP: true,
 		},
 	}
 }

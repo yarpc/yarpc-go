@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/transport"
@@ -246,6 +247,7 @@ func (i *Inbound) start() error {
 	}
 	if i.httpVersion == version2 {
 		h2s := &http2.Server{}
+		server.Handler = h2c.NewHandler(server.Handler, h2s)
 		err := http2.ConfigureServer(server, h2s)
 		if err != nil {
 			return fmt.Errorf("failed to configure HTTP/2 server: %w", err)
