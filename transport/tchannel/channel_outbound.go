@@ -26,6 +26,7 @@ import (
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
+	"go.uber.org/yarpc/internal/transportinterceptor"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/pkg/lifecycle"
@@ -113,6 +114,14 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 	if req == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel channel outbound was nil")
 	}
+
+	return o.transport.unaryOutboundInterceptor.Call(ctx, req, transportinterceptor.UnaryOutboundFunc(o.call))
+}
+
+func (o *ChannelOutbound) call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+	if req == nil {
+		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel channel outbound was nil")
+	}
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "error waiting for tchannel channel outbound to start for service: %s", req.Service)
 	}
@@ -165,6 +174,7 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 	if o.transport.originalHeaders {
 		reqHeaders = req.Headers.OriginalItems()
 	}
+	// TODO: remove tracing instrumentation at transport layer completely
 	// baggage headers are transport implementation details that are stripped out (and stored in the context). Users don't interact with it
 	tracingBaggage := tchannel.InjectOutboundSpan(call.Response(), nil)
 	if err := writeHeaders(format, reqHeaders, tracingBaggage, call.Arg2Writer); err != nil {
