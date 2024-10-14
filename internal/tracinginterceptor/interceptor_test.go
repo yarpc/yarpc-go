@@ -208,6 +208,110 @@ func TestInterceptorCall(t *testing.T) {
 	}
 }
 
+func TestUpdateSpanWithError(t *testing.T) {
+	tests := []struct {
+		name              string
+		err               error
+		expectedErrorType string
+	}{
+		{
+			name:              "known YARPC error",
+			err:               yarpcerrors.Newf(yarpcerrors.CodeInternal, "known error"),
+			expectedErrorType: yarpcerrors.CodeInternal.String(),
+		},
+		{
+			name:              "unknown internal YARPC error",
+			err:               fmt.Errorf("random unknown error"),
+			expectedErrorType: "unknown", // Expect exact string here
+		},
+		{
+			name:              "nil error",
+			err:               nil,
+			expectedErrorType: "",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt // capture range variable
+		t.Run(tt.name, func(t *testing.T) {
+			tracer := mocktracer.New()
+			span := tracer.StartSpan("test")
+
+			err := updateSpanWithError(span, tt.err)
+			span.Finish()
+
+			finishedSpans := tracer.FinishedSpans()
+			require.Len(t, finishedSpans, 1)
+
+			spanTags := finishedSpans[0].Tags()
+
+			if tt.expectedErrorType != "" {
+				assert.Equal(t, tt.err, err, "Expected error to be returned")
+				assert.Equal(t, tt.expectedErrorType, spanTags["error.type"], "Expected error.type to be set correctly")
+			} else {
+				assert.Nil(t, spanTags["error.type"], "Expected no error.type tag to be set")
+			}
+		})
+	}
+}
+
+func TestUpdateSpanWithResponseError(t *testing.T) {
+	tests := []struct {
+		name              string
+		err               error
+		res               *transport.Response
+		expectedErrorType string
+	}{
+		{
+			name:              "known YARPC error",
+			err:               yarpcerrors.Newf(yarpcerrors.CodeInternal, "known error"),
+			res:               &transport.Response{},
+			expectedErrorType: yarpcerrors.CodeInternal.String(),
+		},
+		{
+			name:              "unknown internal YARPC error",
+			err:               fmt.Errorf("random unknown error"),
+			res:               &transport.Response{},
+			expectedErrorType: "unknown",
+		},
+		{
+			name:              "application error response",
+			err:               nil,
+			res:               &transport.Response{ApplicationError: true},
+			expectedErrorType: "application_error",
+		},
+		{
+			name:              "no error",
+			err:               nil,
+			res:               &transport.Response{},
+			expectedErrorType: "",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt // capture range variable
+		t.Run(tt.name, func(t *testing.T) {
+			tracer := mocktracer.New()
+			span := tracer.StartSpan("test")
+
+			err := updateSpanWithResponseError(span, tt.res, tt.err)
+			span.Finish()
+
+			finishedSpans := tracer.FinishedSpans()
+			require.Len(t, finishedSpans, 1)
+
+			spanTags := finishedSpans[0].Tags()
+
+			if tt.expectedErrorType != "" {
+				assert.Equal(t, tt.err, err, "Expected error to be returned")
+				assert.Equal(t, tt.expectedErrorType, spanTags["error.type"], "Expected error.type to be set correctly")
+			} else {
+				assert.Nil(t, spanTags["error.type"], "Expected no error.type tag to be set")
+			}
+		})
+	}
+}
+
 // Override the SetApplicationError method to track the application error state
 func (rw *testResponseWriter) SetApplicationError() {
 	rw.isAppError = true
