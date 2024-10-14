@@ -641,13 +641,6 @@ func (o *Outbound) doWithPeer(
 				"client timeout for procedure %q of service %q after %v",
 				treq.Procedure, treq.Service, end.Sub(start))
 		}
-		if err == context.Canceled {
-			end := time.Now()
-			return nil, yarpcerrors.Newf(
-				yarpcerrors.CodeCancelled,
-				"client canceled request for procedure %q of service %q after %v",
-				treq.Procedure, treq.Service, end.Sub(start))
-		}
 
 		// Note that the connection may have been lost so the peer connection
 		// maintenance loop resumes probing for availability.
