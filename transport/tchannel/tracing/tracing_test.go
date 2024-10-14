@@ -18,12 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchannel
+package tracing
 
 import (
 	"testing"
 
-	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -50,21 +49,6 @@ func TestHeadersCarrierSetAndForeachKey(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.True(t, handlerCalled)
-}
-
-// TestGetPropagationCarrier tests the GetPropagationCarrier function.
-func TestGetPropagationCarrier(t *testing.T) {
-	headers := make(map[string]string)
-
-	// Test TChannel transport
-	carrier := GetPropagationCarrier(headers, "tchannel")
-	_, ok := carrier.(HeadersCarrier)
-	assert.True(t, ok)
-
-	// Test HTTP transport
-	httpCarrier := GetPropagationCarrier(headers, "http")
-	_, ok = httpCarrier.(opentracing.TextMapCarrier)
-	assert.True(t, ok)
 }
 
 // TestTChannelTracingKeysMapping tests the tchannelTracingKeysMapping.

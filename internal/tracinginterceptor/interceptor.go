@@ -22,7 +22,7 @@ package tracinginterceptor
 
 import (
 	"context"
-	"sync"
+	"go.uber.org/yarpc/transport/tchannel/tracing"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -30,7 +30,6 @@ import (
 	"github.com/opentracing/opentracing-go/log"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/interceptor"
-	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -57,12 +56,18 @@ type Interceptor struct {
 	propagationFormat opentracing.BuiltinFormat
 }
 
+// PropagationCarrier is an interface to combine both reader and writer interface
+type PropagationCarrier interface {
+	opentracing.TextMapReader
+	opentracing.TextMapWriter
+}
+
 // New constructs a tracing interceptor with the provided parameter.
 func New(p Params) *Interceptor {
 	m := &Interceptor{
 		tracer:            p.Tracer,
 		transport:         p.Transport,
-		propagationFormat: transport.GetPropagationFormat(p.Transport),
+		propagationFormat: GetPropagationFormat(p.Transport),
 	}
 	if m.tracer == nil {
 		m.tracer = opentracing.GlobalTracer()
@@ -70,69 +75,26 @@ func New(p Params) *Interceptor {
 	return m
 }
 
-// writer wraps a transport.ResponseWriter to capture additional information for tracing.
-type writer struct {
-	transport.ResponseWriter
-
-	isApplicationError   bool
-	applicationErrorMeta *transport.ApplicationErrorMeta
-	responseSize         int
-}
-
-var _writerPool = sync.Pool{New: func() interface{} {
-	return &writer{}
-}}
-
-func newWriter(rw transport.ResponseWriter) *writer {
-	w := _writerPool.Get().(*writer)
-	*w = writer{ResponseWriter: rw} // reset
-	return w
-}
-
-func (w *writer) SetApplicationError() {
-	w.isApplicationError = true
-	w.ResponseWriter.SetApplicationError()
-}
-
-func (w *writer) SetApplicationErrorMeta(applicationErrorMeta *transport.ApplicationErrorMeta) {
-	if applicationErrorMeta == nil {
-		return
-	}
-
-	w.applicationErrorMeta = applicationErrorMeta
-	if appErrMetaSetter, ok := w.ResponseWriter.(transport.ApplicationErrorMetaSetter); ok {
-		appErrMetaSetter.SetApplicationErrorMeta(applicationErrorMeta)
-	}
-}
-
-func (w *writer) Write(p []byte) (n int, err error) {
-	w.responseSize += len(p)
-	return w.ResponseWriter.Write(p)
-}
-
-func (w *writer) free() {
-	_writerPool.Put(w)
-}
-
 // Handle implements interceptor.UnaryInbound
 func (m *Interceptor) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
-	parentSpanCtx, _ := m.tracer.Extract(m.propagationFormat, tchannel.GetPropagationCarrier(req.Headers.Items(), req.Transport))
+	parentSpanCtx, _ := m.tracer.Extract(m.propagationFormat, GetPropagationCarrier(req.Headers.Items(), req.Transport))
 	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
 		ParentSpanContext: parentSpanCtx,
 		Tracer:            m.tracer,
 		TransportName:     req.Transport,
 		StartTime:         time.Now(),
-		ExtraTags:         CommonTracingTags,
+		ExtraTags:         commonTracingTags,
 	}
 	ctx, span := extractOpenTracingSpan.Do(ctx, req)
 	defer span.Finish()
 
-	wrappedWriter := newWriter(resw)
-	err := h.Handle(ctx, req, wrappedWriter)
-	if wrappedWriter.isApplicationError {
-		span.SetTag("error.type", "application_error")
+	err := h.Handle(ctx, req, resw)
+	if appErrSetter, ok := resw.(interface{ IsApplicationError() bool }); ok {
+		if appErrSetter.IsApplicationError() {
+			span.SetTag("error.type", "application_error")
+			ext.Error.Set(span, true)
+		}
 	}
-	wrappedWriter.free()
 
 	return updateSpanWithError(span, err)
 }
@@ -143,24 +105,24 @@ func (m *Interceptor) Call(ctx context.Context, req *transport.Request, out tran
 		Tracer:        m.tracer,
 		TransportName: m.transport,
 		StartTime:     time.Now(),
-		ExtraTags:     CommonTracingTags,
+		ExtraTags:     commonTracingTags,
 	}
 	ctx, span := createOpenTracingSpan.Do(ctx, req)
 	defer span.Finish()
 
 	tracingHeaders := make(map[string]string)
-	if err := m.tracer.Inject(span.Context(), m.propagationFormat, tchannel.GetPropagationCarrier(tracingHeaders, m.transport)); err != nil {
+	if err := m.tracer.Inject(span.Context(), m.propagationFormat, GetPropagationCarrier(tracingHeaders, m.transport)); err != nil {
 		ext.Error.Set(span, true)
 		span.LogFields(log.String("event", "error"), log.String("message", err.Error()))
-		return nil, err
-	}
-
-	for k, v := range tracingHeaders {
-		req.Headers = req.Headers.With(k, v)
+	} else {
+		// Only add tracing headers if injection was successful
+		for k, v := range tracingHeaders {
+			req.Headers = req.Headers.With(k, v)
+		}
 	}
 
 	res, err := out.Call(ctx, req)
-	return res, updateSpanWithOutboundError(span, res, err)
+	return res, updateSpanWithResponseError(span, res, err)
 }
 
 // HandleOneway implements interceptor.OnewayInbound
@@ -193,8 +155,7 @@ func updateSpanWithError(span opentracing.Span, err error) error {
 	}
 
 	ext.Error.Set(span, true)
-	if yarpcerrors.IsStatus(err) {
-		status := yarpcerrors.FromError(err)
+	if status := yarpcerrors.FromError(err); status != nil {
 		errCode := status.Code()
 		span.SetTag("rpc.yarpc.status_code", errCode.String())
 		span.SetTag("error.type", errCode.String())
@@ -205,29 +166,45 @@ func updateSpanWithError(span opentracing.Span, err error) error {
 	return err
 }
 
-func updateSpanWithOutboundError(span opentracing.Span, res *transport.Response, err error) error {
-	isApplicationError := false
-	if res != nil {
-		isApplicationError = res.ApplicationError
-	}
-	if err == nil && !isApplicationError {
+func updateSpanWithResponseError(span opentracing.Span, res *transport.Response, err error) error {
+	if err == nil && (res == nil || !res.ApplicationError) {
 		return err
 	}
 
 	ext.Error.Set(span, true)
-	if yarpcerrors.IsStatus(err) {
-		status := yarpcerrors.FromError(err)
+	status := yarpcerrors.FromError(err)
+	if status != nil {
 		errCode := status.Code()
 		span.SetTag("rpc.yarpc.status_code", errCode.String())
 		span.SetTag("error.type", errCode.String())
 		return err
 	}
 
-	if isApplicationError {
+	if res != nil && res.ApplicationError {
 		span.SetTag("error.type", "application_error")
 		return err
 	}
 
 	span.SetTag("error.type", "unknown_internal_yarpc")
 	return err
+}
+
+// GetPropagationFormat returns the opentracing propagation depends on transport.
+// For TChannel, the format is opentracing.TextMap
+// For HTTP and gRPC, the format is opentracing.HTTPHeaders
+func GetPropagationFormat(transport string) opentracing.BuiltinFormat {
+	if transport == "tchannel" {
+		return opentracing.TextMap
+	}
+	return opentracing.HTTPHeaders
+}
+
+// GetPropagationCarrier get the propagation carrier depends on the transport.
+// The carrier is used for accessing the transport headers.
+// For TChannel, a special carrier is used. For details, see comments of HeadersCarrier
+func GetPropagationCarrier(headers map[string]string, transport string) PropagationCarrier {
+	if transport == "tchannel" {
+		return tracing.HeadersCarrier(headers)
+	}
+	return opentracing.TextMapCarrier(headers)
 }

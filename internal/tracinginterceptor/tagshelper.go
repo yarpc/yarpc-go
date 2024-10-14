@@ -34,6 +34,3 @@ var commonTracingTags = opentracing.Tags{
 	"go.version": runtime.Version(),
 	"component":  tracingComponentName,
 }
-
-// CommonTracingTags is the exported variable containing static tracing tags.
-var CommonTracingTags = commonTracingTags

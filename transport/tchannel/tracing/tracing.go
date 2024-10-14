@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchannel
+package tracing
 
 import (
 	"github.com/opentracing/opentracing-go"
@@ -35,16 +35,6 @@ const (
 type PropagationCarrier interface {
 	opentracing.TextMapReader
 	opentracing.TextMapWriter
-}
-
-// GetPropagationCarrier get the propagation carrier depends on the transport.
-// The carrier is used for accessing the transport headers.
-// For TChannel, a special carrier is used. For details, see comments of HeadersCarrier
-func GetPropagationCarrier(headers map[string]string, transport string) PropagationCarrier {
-	if transport == "tchannel" {
-		return HeadersCarrier(headers)
-	}
-	return opentracing.TextMapCarrier(headers)
 }
 
 // HeadersCarrier is a dedicated carrier for TChannel.

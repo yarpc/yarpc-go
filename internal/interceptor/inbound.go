@@ -24,9 +24,7 @@
 package interceptor
 
 import (
-	"context"
 	"go.uber.org/yarpc/api/middleware"
-	"go.uber.org/yarpc/api/transport"
 )
 
 type (
@@ -66,21 +64,3 @@ type (
 	// multiple times for the same request.
 	StreamInbound = middleware.StreamInbound
 )
-
-// UnaryInboundFunc adapts a function into a UnaryInbound middleware.
-type UnaryInboundFunc func(context.Context, *transport.Request, transport.ResponseWriter, transport.UnaryHandler) error
-
-// Handle for UnaryInboundFunc.
-func (f UnaryInboundFunc) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
-	return f(ctx, req, resw, h)
-}
-
-type unaryHandlerWithMiddleware struct {
-	h transport.UnaryHandler
-	i UnaryInbound
-}
-
-// Handle applies the UnaryInbound middleware to the handler's Handle method.
-func (h unaryHandlerWithMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
-	return h.i.Handle(ctx, req, resw, h.h)
-}

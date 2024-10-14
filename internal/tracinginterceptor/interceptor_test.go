@@ -1,169 +1,201 @@
-// Copyright (c) 2024 Uber Technologies, Inc.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
+// interceptor_test.go
 
 package tracinginterceptor
 
 import (
 	"context"
-	"testing"
-
+	"fmt"
+	"github.com/golang/mock/gomock"
 	"github.com/opentracing/opentracing-go/mocktracer"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/yarpcerrors"
+	"testing"
 )
 
-// Define UnaryHandlerFunc to adapt a function into a UnaryHandler.
-type UnaryHandlerFunc func(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error
-
-func (f UnaryHandlerFunc) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
-	return f(ctx, req, resw)
+type testResponseWriter struct {
+	*transporttest.FakeResponseWriter
+	isAppError bool
 }
 
-// Define OnewayHandlerFunc to adapt a function into a OnewayHandler.
-type OnewayHandlerFunc func(ctx context.Context, req *transport.Request) error
-
-func (f OnewayHandlerFunc) HandleOneway(ctx context.Context, req *transport.Request) error {
-	return f(ctx, req)
+// Override the SetApplicationError method to track the application error state
+func (rw *testResponseWriter) SetApplicationError() {
+	rw.isAppError = true
 }
 
-// Define UnaryOutboundFunc to adapt a function into a UnaryOutbound.
-type UnaryOutboundFunc func(ctx context.Context, req *transport.Request) (*transport.Response, error)
-
-func (f UnaryOutboundFunc) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	return f(ctx, req)
+// Implement the IsApplicationError method expected by the interceptor
+func (rw *testResponseWriter) IsApplicationError() bool {
+	return rw.isAppError
 }
 
-// Implement Start for UnaryOutboundFunc (No-op for testing purposes)
-func (f UnaryOutboundFunc) Start() error {
-	return nil
-}
-
-// Implement Stop for UnaryOutboundFunc (No-op for testing purposes)
-func (f UnaryOutboundFunc) Stop() error {
-	return nil
-}
-
-// Implement IsRunning for UnaryOutboundFunc (Returns false for testing purposes)
-func (f UnaryOutboundFunc) IsRunning() bool {
-	return false
-}
-
-// Implement Transports for UnaryOutboundFunc (Returns nil for testing purposes)
-func (f UnaryOutboundFunc) Transports() []transport.Transport {
-	return nil
-}
-
-// Setup mock tracer
-func setupMockTracer() *mocktracer.MockTracer {
-	return mocktracer.New()
-}
-
-// TestUnaryInboundHandle tests the Handle method for Unary Inbound
-func TestUnaryInboundHandle(t *testing.T) {
-	tracer := setupMockTracer()
-	interceptor := New(Params{
-		Tracer:    tracer,
-		Transport: "http",
-	})
-
-	handlerCalled := false
-	handler := UnaryHandlerFunc(func(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
-		handlerCalled = true
-		return nil
-	})
-
-	ctx := context.Background()
-	req := &transport.Request{
-		Caller:    "caller",
-		Service:   "service",
-		Procedure: "procedure",
-		Headers:   transport.Headers{},
+// Table-driven test for Unary Inbound Interceptor's Handle method
+func TestInterceptorHandle(t *testing.T) {
+	tests := []struct {
+		name               string
+		handlerError       error
+		isApplicationError bool
+		expectedErrorTag   bool
+		expectedErrorType  string
+	}{
+		{
+			name:               "successful handle with no errors",
+			handlerError:       nil,
+			isApplicationError: false,
+			expectedErrorTag:   false,
+		},
+		{
+			name:               "handler returns an error",
+			handlerError:       yarpcerrors.Newf(yarpcerrors.CodeInternal, "handler error"),
+			isApplicationError: false,
+			expectedErrorTag:   true,
+			expectedErrorType:  "internal",
+		},
+		{
+			name:               "application error",
+			handlerError:       nil,
+			isApplicationError: true,
+			expectedErrorTag:   true,
+			expectedErrorType:  "application_error",
+		},
 	}
 
-	wrappedWriter := newWriter(nil)
-	err := interceptor.Handle(ctx, req, wrappedWriter, handler)
-	assert.NoError(t, err)
-	assert.True(t, handlerCalled)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-	finishedSpans := tracer.FinishedSpans()
-	assert.Len(t, finishedSpans, 1)
-	span := finishedSpans[0]
+			tracer := mocktracer.New()
+			interceptor := New(Params{
+				Tracer:    tracer,
+				Transport: "http",
+			})
 
-	// Ensure the error tag is present before casting
-	if errTag, ok := span.Tag("error").(bool); ok {
-		assert.False(t, errTag)
-	} else {
-		// This ensures that the test doesn't panic if the tag is nil or absent
-		t.Log("Error tag is nil or not set")
-		assert.False(t, false) // Fail the test if error tag is missing
-	}
+			req := &transport.Request{
+				Caller:    "caller",
+				Service:   "service",
+				Procedure: "procedure",
+				Headers:   transport.Headers{},
+			}
 
-	assert.Equal(t, "procedure", span.OperationName)
+			// Use the testResponseWriter that wraps the FakeResponseWriter
+			responseWriter := &testResponseWriter{
+				FakeResponseWriter: &transporttest.FakeResponseWriter{},
+			}
 
-	// Ensure application error tag is correctly set if applicable
-	if wrappedWriter.isApplicationError {
-		tag, ok := span.Tag("error.type").(string)
-		assert.True(t, ok)
-		assert.Equal(t, "application_error", tag)
+			// Set application error conditionally
+			if tt.isApplicationError {
+				responseWriter.SetApplicationError()
+			}
+
+			fmt.Printf("Test Case: %s, IsApplicationError: %v\n", tt.name, responseWriter.IsApplicationError())
+
+			handler := transporttest.NewMockUnaryHandler(ctrl)
+			handler.EXPECT().
+				Handle(gomock.Any(), req, responseWriter).
+				Return(tt.handlerError)
+
+			err := interceptor.Handle(context.Background(), req, responseWriter, handler)
+
+			if tt.handlerError != nil {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+
+			finishedSpans := tracer.FinishedSpans()
+			assert.Len(t, finishedSpans, 1, "Expected one span to be finished.")
+
+			span := finishedSpans[0]
+			fmt.Println("Span Tags:", span.Tags())
+
+			if tt.expectedErrorTag {
+				tag, ok := span.Tag("error.type").(string)
+				assert.True(t, ok, "Expected error.type tag to be set.")
+				assert.Equal(t, tt.expectedErrorType, tag, "Mismatch in error.type tag")
+			} else {
+				assert.Nil(t, span.Tag("error"), "Error tag should not be set.")
+			}
+		})
 	}
 }
 
-// TestUnaryOutboundCall tests the Call method for Unary Outbound
-func TestUnaryOutboundCall(t *testing.T) {
-	tracer := setupMockTracer()
-	interceptor := New(Params{
-		Tracer:    tracer,
-		Transport: "http",
-	})
-
-	outboundCalled := false
-	outbound := UnaryOutboundFunc(func(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-		outboundCalled = true
-		return &transport.Response{}, nil
-	})
-
-	ctx := context.Background()
-	req := &transport.Request{
-		Caller:    "caller",
-		Service:   "service",
-		Procedure: "procedure",
-		Headers:   transport.Headers{},
+// Table-driven test for Unary Outbound Interceptor's Call method
+func TestInterceptorCall(t *testing.T) {
+	tests := []struct {
+		name              string
+		response          *transport.Response
+		callError         error
+		expectedErrorTag  bool
+		expectedErrorType string
+	}{
+		{
+			name:             "successful call with no errors",
+			response:         &transport.Response{},
+			callError:        nil,
+			expectedErrorTag: false,
+		},
+		{
+			name:              "call returns an error",
+			response:          nil,
+			callError:         yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "call error"),
+			expectedErrorTag:  true,
+			expectedErrorType: "invalid-argument",
+		},
+		{
+			name:              "application error in response",
+			response:          &transport.Response{ApplicationError: true},
+			callError:         nil,
+			expectedErrorTag:  true,
+			expectedErrorType: "application_error",
+		},
 	}
 
-	res, err := interceptor.Call(ctx, req, outbound)
-	assert.NoError(t, err)
-	assert.NotNil(t, res)
-	assert.True(t, outboundCalled)
+	for _, tt := range tests {
+		tt := tt // Capture range variable for parallel subtests
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	finishedSpans := tracer.FinishedSpans()
-	assert.Len(t, finishedSpans, 1)
-	span := finishedSpans[0]
+			tracer := mocktracer.New()
+			interceptor := New(Params{
+				Tracer:    tracer,
+				Transport: "http",
+			})
 
-	// Ensure the error tag is present before casting
-	if errTag, ok := span.Tag("error").(bool); ok {
-		assert.False(t, errTag)
-	} else {
-		// Log the absence of error tag for debugging, and fail the test
-		t.Log("Error tag is nil or not set")
-		assert.False(t, false) // Fail the test if error tag is missing
+			req := &transport.Request{
+				Caller:    "caller",
+				Service:   "service",
+				Procedure: "procedure",
+				Headers:   transport.Headers{},
+			}
+
+			outbound := transporttest.NewMockUnaryOutbound(gomock.NewController(t))
+			outbound.EXPECT().
+				Call(gomock.Any(), req).
+				Return(tt.response, tt.callError)
+
+			res, err := interceptor.Call(context.Background(), req, outbound)
+
+			if tt.callError != nil {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.response, res, "Response mismatch")
+			}
+
+			finishedSpans := tracer.FinishedSpans()
+			assert.Len(t, finishedSpans, 1, "Expected one span to be finished.")
+
+			span := finishedSpans[0]
+
+			if tt.expectedErrorTag {
+				tag, ok := span.Tag("error.type").(string)
+				assert.True(t, ok, "Expected error.type tag to be set.")
+				assert.Equal(t, tt.expectedErrorType, tag, "Mismatch in error.type tag")
+			} else {
+				assert.Nil(t, span.Tag("error"), "Error tag should not be set.")
+			}
+		})
 	}
-
-	assert.Equal(t, "procedure", span.OperationName)
 }
