@@ -45,8 +45,8 @@ import (
 
 const (
 	// from observability middleware
-	_errorInbound  = "Error handling inbound request."
-	_errorOutbound = "Error making outbound call."
+	_errorInbound  = "Error handling inbound request. Error: my message"
+	_errorOutbound = "Error making outbound call. Error: my message"
 )
 
 func TestProtobufErrorDetailObservability(t *testing.T) {
