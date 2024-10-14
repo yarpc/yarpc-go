@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
+- No changes yet.
+
+## [1.74.0] - 2024-10-14
 ### Added
 - Added multiaddress passthrough resolver
 ### Fixed
@@ -1524,7 +1527,8 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.73.2...HEAD
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.74.0...HEAD
+[1.74.0]: https://github.com/yarpc/yarpc-go/compare/v1.73.2...1.74.0
 [1.73.2]: https://github.com/yarpc/yarpc-go/compare/v1.73.1...1.73.2
 [1.73.1]: https://github.com/yarpc/yarpc-go/compare/v1.73.0...1.73.1
 [1.73.0]: https://github.com/yarpc/yarpc-go/compare/v1.72.1...1.73.0
