@@ -33,7 +33,6 @@ import (
 )
 
 var (
-	_ transport.Namer                      = (*ChannelOutbound)(nil)
 	_ transport.UnaryOutbound              = (*ChannelOutbound)(nil)
 	_ introspection.IntrospectableOutbound = (*ChannelOutbound)(nil)
 )
@@ -73,12 +72,6 @@ type ChannelOutbound struct {
 	addr string
 
 	once *lifecycle.Once
-}
-
-// TransportName is the transport name that will be set on `transport.Request`
-// struct.
-func (o *ChannelOutbound) TransportName() string {
-	return TransportName
 }
 
 // Transports returns the underlying TChannel Transport for this outbound.

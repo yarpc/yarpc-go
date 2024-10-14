@@ -252,7 +252,7 @@ func assertErrorsMatch(t *testing.T, wantErrorsLike, errors []string) {
 		for _, m := range wantErrorsLike {
 			msg += "\n -  " + indentTail(4, m)
 		}
-		t.Error(msg)
+		t.Errorf(msg)
 	}
 
 	if len(unexpectedErrors) > 0 {
