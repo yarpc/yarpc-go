@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 =======
+## [Unreleased]
+- No changes yet.
+
 ## [1.75.0] - 2024-10-15
 ### Added
 - Added multiaddress passthrough resolver
@@ -1524,6 +1527,7 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.75.0...HEAD
 [1.75.0]: https://github.com/yarpc/yarpc-go/compare/v1.73.2...1.75.0
 [1.73.2]: https://github.com/yarpc/yarpc-go/compare/v1.73.1...1.73.2
 [1.73.1]: https://github.com/yarpc/yarpc-go/compare/v1.73.0...1.73.1
