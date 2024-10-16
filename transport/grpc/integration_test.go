@@ -336,7 +336,7 @@ func TestGRPCCompression(t *testing.T) {
 		{
 			msg:        "fail decompression of request",
 			compressor: _badDecompressor,
-			wantErr:    "code:internal message:grpc: failed to decompress the received message assert.AnError general error for testing",
+			wantErr:    "code:internal message:grpc: failed to decompress the received message: assert.AnError general error for testing",
 			wantMetrics: []metric{
 				{32777, tagsCompression},
 				{0, tagsDecompression},
