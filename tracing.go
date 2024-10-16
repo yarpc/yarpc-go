@@ -30,4 +30,5 @@ import (
 var OpentracingTags = opentracing.Tags{
 	"yarpc.version": Version,
 	"go.version":    runtime.Version(),
+	"component":     "yarpc-go",
 }
