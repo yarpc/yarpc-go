@@ -23,12 +23,13 @@ package http
 import (
 	"context"
 	"crypto/tls"
-	"golang.org/x/net/http2"
 	"math/rand"
 	"net"
 	"net/http"
 	"sync"
 	"time"
+
+	"golang.org/x/net/http2"
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/net/metrics"
