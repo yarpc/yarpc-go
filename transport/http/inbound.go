@@ -30,8 +30,6 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/http2"
-
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
@@ -41,6 +39,8 @@ import (
 	"go.uber.org/yarpc/transport/internal/tls/muxlistener"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
 
 type httpVersion int
@@ -246,6 +246,7 @@ func (i *Inbound) start() error {
 	}
 	if i.httpVersion == version2 {
 		h2s := &http2.Server{}
+		server.Handler = h2c.NewHandler(server.Handler, h2s)
 		err := http2.ConfigureServer(server, h2s)
 		if err != nil {
 			return fmt.Errorf("failed to configure HTTP/2 server: %w", err)
