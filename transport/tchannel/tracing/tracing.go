@@ -31,18 +31,14 @@ const (
 	tchannelTracingKeyMappingSize = 100
 )
 
-// PropagationCarrier is an interface to combine both reader and writer interface
-type PropagationCarrier interface {
-	opentracing.TextMapReader
-	opentracing.TextMapWriter
-}
+// Ensure HeadersCarrier implements both opentracing.TextMapReader and opentracing.TextMapWriter
+var _ opentracing.TextMapReader = HeadersCarrier{}
+var _ opentracing.TextMapWriter = HeadersCarrier{}
 
 // HeadersCarrier is a dedicated carrier for TChannel.
 // When writing the tracing headers into headers, the $tracing$ prefix is added to each tracing header key.
 // When reading the tracing headers from headers, the $tracing$ prefix is removed from each tracing header key.
 type HeadersCarrier map[string]string
-
-var _ PropagationCarrier = HeadersCarrier{}
 
 // ForeachKey iterates over all tracing headers in the carrier, applying the provided
 // handler function to each header after stripping the $tracing$ prefix from the keys.
