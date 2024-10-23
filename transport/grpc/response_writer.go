@@ -22,21 +22,23 @@ package grpc
 
 import (
 	"bytes"
-
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
 	"google.golang.org/grpc/metadata"
 )
 
 var (
-	_ transport.ResponseWriter             = (*responseWriter)(nil)
+	_ transport.ExtendedResponseWriter     = (*responseWriter)(nil)
 	_ transport.ApplicationErrorMetaSetter = (*responseWriter)(nil)
 )
 
 type responseWriter struct {
-	buffer    *bytes.Buffer
-	md        metadata.MD
-	headerErr error
+	buffer             *bytes.Buffer
+	md                 metadata.MD
+	headerErr          error
+	isApplicationError bool
+	appErrorMeta       *transport.ApplicationErrorMeta
+	responseSize       int
 }
 
 func newResponseWriter() *responseWriter {
@@ -45,13 +47,15 @@ func newResponseWriter() *responseWriter {
 
 func (r *responseWriter) Write(p []byte) (int, error) {
 	if r.buffer == nil {
-		// Response writer bytes must not be pooled since calls to SendMsg hold on
-		// to the bytes after the the function returns.
-		//
-		// See https://github.com/yarpc/yarpc-go/pull/1738 for details.
 		r.buffer = bytes.NewBuffer(make([]byte, 0, len(p)))
 	}
-	return r.buffer.Write(p)
+	n, err := r.buffer.Write(p)
+	r.responseSize += n
+	return n, err
+}
+
+func (r *responseWriter) ResponseSize() int {
+	return r.responseSize
 }
 
 func (r *responseWriter) AddHeaders(headers transport.Headers) {
@@ -62,19 +66,29 @@ func (r *responseWriter) AddHeaders(headers transport.Headers) {
 }
 
 func (r *responseWriter) SetApplicationError() {
+	r.isApplicationError = true
 	r.AddSystemHeader(ApplicationErrorHeader, ApplicationErrorHeaderValue)
 }
+
 func (r *responseWriter) SetApplicationErrorMeta(meta *transport.ApplicationErrorMeta) {
 	if meta == nil {
 		return
 	}
-
+	r.appErrorMeta = meta
 	if meta.Name != "" {
 		r.AddSystemHeader(_applicationErrorNameHeader, meta.Name)
 	}
 	if meta.Details != "" {
 		r.AddSystemHeader(_applicationErrorDetailsHeader, meta.Details)
 	}
+}
+
+func (r *responseWriter) GetApplicationError() bool {
+	return r.isApplicationError
+}
+
+func (r *responseWriter) GetApplicationErrorMeta() *transport.ApplicationErrorMeta {
+	return r.appErrorMeta
 }
 
 func (r *responseWriter) AddSystemHeader(key string, value string) {

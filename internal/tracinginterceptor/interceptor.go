@@ -23,7 +23,6 @@ package tracinginterceptor
 import (
 	"context"
 	"go.uber.org/yarpc/transport/tchannel/tracing"
-	"sync"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -50,7 +49,6 @@ type Params struct {
 }
 
 // Interceptor is the tracing interceptor for all RPC types.
-// It handles both tracing observability and context propagation using OpenTracing APIs.
 type Interceptor struct {
 	tracer            opentracing.Tracer
 	transport         string
@@ -61,44 +59,6 @@ type Interceptor struct {
 type PropagationCarrier interface {
 	opentracing.TextMapReader
 	opentracing.TextMapWriter
-}
-
-// writer wraps a transport.ResponseWriter to capture additional information for tracing.
-type writer struct {
-	transport.ResponseWriter
-
-	isApplicationError   bool
-	applicationErrorMeta *transport.ApplicationErrorMeta
-}
-
-var _writerPool = sync.Pool{New: func() interface{} {
-	return &writer{}
-}}
-
-func newWriter(rw transport.ResponseWriter) *writer {
-	w := _writerPool.Get().(*writer)
-	*w = writer{ResponseWriter: rw} // reset
-	return w
-}
-
-func (w *writer) SetApplicationError() {
-	w.isApplicationError = true
-	w.ResponseWriter.SetApplicationError()
-}
-
-func (w *writer) SetApplicationErrorMeta(applicationErrorMeta *transport.ApplicationErrorMeta) {
-	if applicationErrorMeta == nil {
-		return
-	}
-
-	w.applicationErrorMeta = applicationErrorMeta
-	if appErrMetaSetter, ok := w.ResponseWriter.(transport.ApplicationErrorMetaSetter); ok {
-		appErrMetaSetter.SetApplicationErrorMeta(applicationErrorMeta)
-	}
-}
-
-func (w *writer) free() {
-	_writerPool.Put(w)
 }
 
 // New constructs a tracing interceptor with the provided parameter.
@@ -116,8 +76,10 @@ func New(p Params) *Interceptor {
 
 // Handle implements interceptor.UnaryInbound
 func (m *Interceptor) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
-	wrappedWriter := newWriter(resw)
-	defer wrappedWriter.free()
+	extendedWriter, ok := resw.(transport.ExtendedResponseWriter)
+	if !ok {
+		return yarpcerrors.InternalErrorf("ResponseWriter does not implement ExtendedResponseWriter")
+	}
 
 	parentSpanCtx, _ := m.tracer.Extract(m.propagationFormat, GetPropagationCarrier(req.Headers.Items(), req.Transport))
 	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
@@ -130,8 +92,8 @@ func (m *Interceptor) Handle(ctx context.Context, req *transport.Request, resw t
 	ctx, span := extractOpenTracingSpan.Do(ctx, req)
 	defer span.Finish()
 
-	err := h.Handle(ctx, req, wrappedWriter)
-	return updateSpanWithErrorDetails(span, nil, wrappedWriter.isApplicationError, wrappedWriter.applicationErrorMeta, err)
+	err := h.Handle(ctx, req, extendedWriter)
+	return updateSpanWithErrorDetails(span, nil, extendedWriter.GetApplicationError(), extendedWriter.GetApplicationErrorMeta(), err)
 }
 
 // Call implements interceptor.UnaryOutbound
@@ -161,25 +123,21 @@ func (m *Interceptor) Call(ctx context.Context, req *transport.Request, out tran
 
 // HandleOneway implements interceptor.OnewayInbound
 func (m *Interceptor) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
-	// TODO: implement
 	panic("implement me")
 }
 
 // CallOneway implements interceptor.OnewayOutbound
 func (m *Interceptor) CallOneway(ctx context.Context, req *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
-	// TODO: implement
 	panic("implement me")
 }
 
 // HandleStream implements interceptor.StreamInbound
 func (m *Interceptor) HandleStream(s *transport.ServerStream, h transport.StreamHandler) error {
-	// TODO: implement
 	panic("implement me")
 }
 
 // CallStream implements interceptor.StreamOutbound
 func (m *Interceptor) CallStream(ctx context.Context, req *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
-	// TODO: implement
 	panic("implement me")
 }
 
@@ -232,9 +190,6 @@ func updateSpanWithErrorDetails(
 	return err
 }
 
-// getPropagationFormat returns the opentracing propagation depends on transport.
-// For TChannel, the format is opentracing.TextMap
-// For HTTP and gRPC, the format is opentracing.HTTPHeaders
 func getPropagationFormat(transport string) opentracing.BuiltinFormat {
 	if transport == "tchannel" {
 		return opentracing.TextMap
@@ -242,9 +197,6 @@ func getPropagationFormat(transport string) opentracing.BuiltinFormat {
 	return opentracing.HTTPHeaders
 }
 
-// GetPropagationCarrier get the propagation carrier depends on the transport.
-// The carrier is used for accessing the transport headers.
-// For TChannel, a special carrier is used. For details, see comments of HeadersCarrier
 func GetPropagationCarrier(headers map[string]string, transport string) PropagationCarrier {
 	if transport == "tchannel" {
 		return tracing.HeadersCarrier(headers)
