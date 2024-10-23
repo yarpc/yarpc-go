@@ -348,6 +348,140 @@ func TestUpdateSpanWithErrorDetails(t *testing.T) {
 	}
 }
 
+// Table-driven test for Oneway Inbound Interceptor's HandleOneway method
+func TestInterceptorHandleOneway(t *testing.T) {
+	tests := []struct {
+		name              string
+		handlerError      error
+		expectedErrorTag  bool
+		expectedErrorType string
+	}{
+		{
+			name:             "successful handle oneway with no errors",
+			handlerError:     nil,
+			expectedErrorTag: false,
+		},
+		{
+			name:              "handle oneway returns an error",
+			handlerError:      yarpcerrors.Newf(yarpcerrors.CodeInternal, "handler error"),
+			expectedErrorTag:  true,
+			expectedErrorType: "internal",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			tracer := mocktracer.New()
+			interceptor := New(Params{
+				Tracer:    tracer,
+				Transport: "http",
+			})
+
+			req := &transport.Request{
+				Caller:    "caller",
+				Service:   "service",
+				Procedure: "procedure",
+				Headers:   transport.Headers{},
+			}
+
+			handler := transporttest.NewMockOnewayHandler(ctrl)
+			handler.EXPECT().
+				HandleOneway(gomock.Any(), req).
+				Return(tt.handlerError)
+
+			err := interceptor.HandleOneway(context.Background(), req, handler)
+
+			if tt.handlerError != nil {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+
+			finishedSpans := tracer.FinishedSpans()
+			require.Len(t, finishedSpans, 1, "Expected one span to be finished.")
+			spanTags := finishedSpans[0].Tags()
+
+			// Check error tags
+			if tt.expectedErrorTag {
+				assert.Equal(t, tt.expectedErrorType, spanTags["error.type"], "Expected error.type to be set correctly")
+			} else {
+				assert.Nil(t, spanTags["error.type"], "Expected no error.type tag to be set")
+			}
+		})
+	}
+}
+
+// Table-driven test for Oneway Outbound Interceptor's CallOneway method
+func TestInterceptorCallOneway(t *testing.T) {
+	tests := []struct {
+		name              string
+		callError         error
+		expectedErrorTag  bool
+		expectedErrorType string
+	}{
+		{
+			name:             "successful call oneway with no errors",
+			callError:        nil,
+			expectedErrorTag: false,
+		},
+		{
+			name:              "call oneway returns an error",
+			callError:         yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "call error"),
+			expectedErrorTag:  true,
+			expectedErrorType: yarpcerrors.CodeInvalidArgument.String(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			tracer := mocktracer.New()
+			interceptor := New(Params{
+				Tracer:    tracer,
+				Transport: "http",
+			})
+
+			req := &transport.Request{
+				Caller:    "caller",
+				Service:   "service",
+				Procedure: "procedure",
+				Headers:   transport.Headers{},
+			}
+
+			outbound := transporttest.NewMockOnewayOutbound(ctrl)
+			outbound.EXPECT().
+				CallOneway(gomock.Any(), req).
+				Return(nil, tt.callError) // Return nil for Ack
+
+			_, err := interceptor.CallOneway(context.Background(), req, outbound)
+
+			// Assert errors
+			if tt.callError != nil {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+
+			// Check finished spans
+			finishedSpans := tracer.FinishedSpans()
+			assert.Len(t, finishedSpans, 1, "Expected one span to be finished.")
+			spanTags := finishedSpans[0].Tags()
+
+			// Check error tags
+			if tt.expectedErrorTag {
+				assert.Equal(t, tt.expectedErrorType, spanTags["error.type"], "Expected error.type to be set correctly")
+			} else {
+				assert.Nil(t, spanTags["error.type"], "Expected no error.type tag to be set")
+			}
+		})
+	}
+}
+
 // Helper function to create pointers to int values
 func intPtr(i int) *int {
 	return &i

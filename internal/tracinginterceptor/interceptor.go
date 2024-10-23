@@ -130,12 +130,44 @@ func (m *Interceptor) Call(ctx context.Context, req *transport.Request, out tran
 
 // HandleOneway implements interceptor.OnewayInbound
 func (m *Interceptor) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
-	panic("implement me")
+	parentSpanCtx, _ := m.tracer.Extract(m.propagationFormat, getPropagationCarrier(req.Headers.Items(), req.Transport))
+	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
+		ParentSpanContext: parentSpanCtx,
+		Tracer:            m.tracer,
+		TransportName:     req.Transport,
+		StartTime:         time.Now(),
+		ExtraTags:         commonTracingTags,
+	}
+	ctx, span := extractOpenTracingSpan.Do(ctx, req)
+	defer span.Finish()
+
+	err := h.HandleOneway(ctx, req)
+	return updateSpanWithErrorDetails(span, false, nil, err)
 }
 
 // CallOneway implements interceptor.OnewayOutbound
 func (m *Interceptor) CallOneway(ctx context.Context, req *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
-	panic("implement me")
+	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
+		Tracer:        m.tracer,
+		TransportName: m.transport,
+		StartTime:     time.Now(),
+		ExtraTags:     commonTracingTags,
+	}
+	ctx, span := createOpenTracingSpan.Do(ctx, req)
+	defer span.Finish()
+
+	tracingHeaders := make(map[string]string)
+	if err := m.tracer.Inject(span.Context(), m.propagationFormat, getPropagationCarrier(tracingHeaders, m.transport)); err != nil {
+		ext.Error.Set(span, true)
+		span.LogFields(log.String("event", "error"), log.String("message", err.Error()))
+	} else {
+		for k, v := range tracingHeaders {
+			req.Headers = req.Headers.With(k, v)
+		}
+	}
+
+	ack, err := out.CallOneway(ctx, req)
+	return ack, updateSpanWithErrorDetails(span, false, nil, err)
 }
 
 // HandleStream implements interceptor.StreamInbound
