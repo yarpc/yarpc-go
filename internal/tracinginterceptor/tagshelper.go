@@ -21,8 +21,9 @@
 package tracinginterceptor
 
 import (
-	"github.com/opentracing/opentracing-go"
 	"runtime"
+
+	"github.com/opentracing/opentracing-go"
 )
 
 const (

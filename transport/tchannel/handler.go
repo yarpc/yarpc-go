@@ -24,6 +24,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strconv"
+	"time"
+
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
 	"go.uber.org/multierr"
@@ -33,8 +36,6 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	ncontext "golang.org/x/net/context"
-	"strconv"
-	"time"
 )
 
 // inboundCall provides an interface similar tchannel.InboundCall.

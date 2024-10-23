@@ -21,9 +21,10 @@
 package tracing
 
 import (
-	"github.com/opentracing/opentracing-go"
 	"strings"
 	"sync"
+
+	"github.com/opentracing/opentracing-go"
 )
 
 const (
