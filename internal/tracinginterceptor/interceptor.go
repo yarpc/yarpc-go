@@ -85,6 +85,7 @@ func (m *Interceptor) Handle(ctx context.Context, req *transport.Request, resw t
 		m.log.Debug("ResponseWriter does not implement ExtendedResponseWriter, proceeding without additional tracing")
 		return h.Handle(ctx, req, resw)
 	}
+
 	parentSpanCtx, _ := m.tracer.Extract(m.propagationFormat, getPropagationCarrier(req.Headers.Items(), req.Transport))
 	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
 		ParentSpanContext: parentSpanCtx,
@@ -96,11 +97,7 @@ func (m *Interceptor) Handle(ctx context.Context, req *transport.Request, resw t
 	ctx, span := extractOpenTracingSpan.Do(ctx, req)
 	defer span.Finish()
 	err := h.Handle(ctx, req, resw)
-	extendedWriter, ok = resw.(transport.ExtendedResponseWriter)
-	if ok {
-		return updateSpanWithErrorDetails(span, extendedWriter.IsApplicationError(), extendedWriter.ApplicationErrorMeta(), err)
-	}
-	return err
+	return updateSpanWithErrorDetails(span, extendedWriter.IsApplicationError(), extendedWriter.ApplicationErrorMeta(), err)
 }
 
 // Call implements interceptor.UnaryOutbound
