@@ -81,7 +81,7 @@ func (m *Interceptor) Handle(ctx context.Context, req *transport.Request, resw t
 		return yarpcerrors.InternalErrorf("ResponseWriter does not implement ExtendedResponseWriter")
 	}
 
-	parentSpanCtx, _ := m.tracer.Extract(m.propagationFormat, GetPropagationCarrier(req.Headers.Items(), req.Transport))
+	parentSpanCtx, _ := m.tracer.Extract(m.propagationFormat, getPropagationCarrier(req.Headers.Items(), req.Transport))
 	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
 		ParentSpanContext: parentSpanCtx,
 		Tracer:            m.tracer,
@@ -108,7 +108,7 @@ func (m *Interceptor) Call(ctx context.Context, req *transport.Request, out tran
 	defer span.Finish()
 
 	tracingHeaders := make(map[string]string)
-	if err := m.tracer.Inject(span.Context(), m.propagationFormat, GetPropagationCarrier(tracingHeaders, m.transport)); err != nil {
+	if err := m.tracer.Inject(span.Context(), m.propagationFormat, getPropagationCarrier(tracingHeaders, m.transport)); err != nil {
 		ext.Error.Set(span, true)
 		span.LogFields(log.String("event", "error"), log.String("message", err.Error()))
 	} else {
@@ -197,7 +197,7 @@ func getPropagationFormat(transport string) opentracing.BuiltinFormat {
 	return opentracing.HTTPHeaders
 }
 
-func GetPropagationCarrier(headers map[string]string, transport string) PropagationCarrier {
+func getPropagationCarrier(headers map[string]string, transport string) PropagationCarrier {
 	if transport == "tchannel" {
 		return tracing.HeadersCarrier(headers)
 	}
