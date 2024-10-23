@@ -80,15 +80,15 @@ type ExtendedResponseWriter interface {
 	// or details that provide more context about the error.
 	SetApplicationErrorMeta(applicationErrorMeta *ApplicationErrorMeta)
 
-	// GetApplicationError returns a boolean indicating whether the response
+	// IsApplicationError returns a boolean indicating whether the response
 	// contains an application error. This helps consumers of the response to know
 	// if the response was flagged as an application error.
-	GetApplicationError() bool
+	IsApplicationError() bool
 
-	// GetApplicationErrorMeta returns the application error metadata that was set
+	// ApplicationErrorMeta returns the application error metadata that was set
 	// by the SetApplicationErrorMeta method. If no metadata was set, this returns nil.
 	// This can provide further details about the nature of the application error.
-	GetApplicationErrorMeta() *ApplicationErrorMeta
+	ApplicationErrorMeta() *ApplicationErrorMeta
 
 	// ResponseSize returns the number of bytes written to the response. This method
 	// allows tracking of the size of the response, which can be useful for monitoring,

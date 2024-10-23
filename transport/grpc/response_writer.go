@@ -47,6 +47,10 @@ func newResponseWriter() *responseWriter {
 
 func (r *responseWriter) Write(p []byte) (int, error) {
 	if r.buffer == nil {
+		// Response writer bytes must not be pooled since calls to SendMsg hold on
+		// to the bytes after the the function returns.
+		//
+		// See https://github.com/yarpc/yarpc-go/pull/1738 for details.
 		r.buffer = bytes.NewBuffer(make([]byte, 0, len(p)))
 	}
 	n, err := r.buffer.Write(p)
@@ -83,11 +87,11 @@ func (r *responseWriter) SetApplicationErrorMeta(meta *transport.ApplicationErro
 	}
 }
 
-func (r *responseWriter) GetApplicationError() bool {
+func (r *responseWriter) IsApplicationError() bool {
 	return r.isApplicationError
 }
 
-func (r *responseWriter) GetApplicationErrorMeta() *transport.ApplicationErrorMeta {
+func (r *responseWriter) ApplicationErrorMeta() *transport.ApplicationErrorMeta {
 	return r.appErrorMeta
 }
 

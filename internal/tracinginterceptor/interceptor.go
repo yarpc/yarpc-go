@@ -22,7 +22,6 @@ package tracinginterceptor
 
 import (
 	"context"
-	"go.uber.org/yarpc/transport/tchannel/tracing"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -30,7 +29,9 @@ import (
 	"github.com/opentracing/opentracing-go/log"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/transport/tchannel/tracing"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
 )
 
 var (
@@ -46,6 +47,7 @@ var (
 type Params struct {
 	Tracer    opentracing.Tracer
 	Transport string
+	Logger    *zap.Logger
 }
 
 // Interceptor is the tracing interceptor for all RPC types.
@@ -53,6 +55,7 @@ type Interceptor struct {
 	tracer            opentracing.Tracer
 	transport         string
 	propagationFormat opentracing.BuiltinFormat
+	log               *zap.Logger
 }
 
 // PropagationCarrier is an interface to combine both reader and writer interface
@@ -67,6 +70,7 @@ func New(p Params) *Interceptor {
 		tracer:            p.Tracer,
 		transport:         p.Transport,
 		propagationFormat: getPropagationFormat(p.Transport),
+		log:               p.Logger,
 	}
 	if m.tracer == nil {
 		m.tracer = opentracing.GlobalTracer()
@@ -78,9 +82,9 @@ func New(p Params) *Interceptor {
 func (m *Interceptor) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	extendedWriter, ok := resw.(transport.ExtendedResponseWriter)
 	if !ok {
-		return yarpcerrors.InternalErrorf("ResponseWriter does not implement ExtendedResponseWriter")
+		m.log.Debug("ResponseWriter does not implement ExtendedResponseWriter, proceeding without additional tracing")
+		return h.Handle(ctx, req, resw)
 	}
-
 	parentSpanCtx, _ := m.tracer.Extract(m.propagationFormat, getPropagationCarrier(req.Headers.Items(), req.Transport))
 	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
 		ParentSpanContext: parentSpanCtx,
@@ -91,9 +95,12 @@ func (m *Interceptor) Handle(ctx context.Context, req *transport.Request, resw t
 	}
 	ctx, span := extractOpenTracingSpan.Do(ctx, req)
 	defer span.Finish()
-
-	err := h.Handle(ctx, req, extendedWriter)
-	return updateSpanWithErrorDetails(span, nil, extendedWriter.GetApplicationError(), extendedWriter.GetApplicationErrorMeta(), err)
+	err := h.Handle(ctx, req, resw)
+	extendedWriter, ok = resw.(transport.ExtendedResponseWriter)
+	if ok {
+		return updateSpanWithErrorDetails(span, extendedWriter.IsApplicationError(), extendedWriter.ApplicationErrorMeta(), err)
+	}
+	return err
 }
 
 // Call implements interceptor.UnaryOutbound
@@ -118,7 +125,10 @@ func (m *Interceptor) Call(ctx context.Context, req *transport.Request, out tran
 	}
 
 	res, err := out.Call(ctx, req)
-	return res, updateSpanWithErrorDetails(span, res, false, nil, err)
+	if res != nil {
+		return res, updateSpanWithErrorDetails(span, res.ApplicationError, res.ApplicationErrorMeta, err)
+	}
+	return nil, updateSpanWithErrorDetails(span, false, nil, err)
 }
 
 // HandleOneway implements interceptor.OnewayInbound
@@ -143,33 +153,18 @@ func (m *Interceptor) CallStream(ctx context.Context, req *transport.StreamReque
 
 func updateSpanWithErrorDetails(
 	span opentracing.Span,
-	res *transport.Response,
 	isApplicationError bool,
 	appErrorMeta *transport.ApplicationErrorMeta,
 	err error,
 ) error {
-	if err == nil && (res == nil || !isApplicationError) {
-		return err
+	if err == nil && !isApplicationError {
+		return nil
 	}
 	ext.Error.Set(span, true)
 	if status := yarpcerrors.FromError(err); status != nil {
 		errCode := status.Code()
 		span.SetTag("rpc.yarpc.status_code", int(errCode))
 		span.SetTag("error.type", errCode.String())
-		return err
-	}
-	if res != nil && res.ApplicationError {
-		span.SetTag("error.type", "application_error")
-
-		if res.ApplicationErrorMeta != nil {
-			meta := res.ApplicationErrorMeta
-			if meta.Code != nil {
-				span.SetTag("application_error_code", int(*meta.Code))
-			}
-			if meta.Details != "" {
-				span.SetTag("application_error_name", meta.Name)
-			}
-		}
 		return err
 	}
 	if isApplicationError {
@@ -179,13 +174,12 @@ func updateSpanWithErrorDetails(
 			if appErrorMeta.Code != nil {
 				span.SetTag("application_error_code", int(*appErrorMeta.Code))
 			}
-			if appErrorMeta.Details != "" {
+			if appErrorMeta.Name != "" {
 				span.SetTag("application_error_name", appErrorMeta.Name)
 			}
 		}
 		return err
 	}
-
 	span.SetTag("error.type", "unknown_internal_yarpc")
 	return err
 }

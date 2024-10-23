@@ -60,7 +60,7 @@ func (rw *testResponseWriter) SetApplicationErrorMeta(meta *transport.Applicatio
 }
 
 // Implement GetApplicationErrorMeta for the interceptor
-func (rw *testResponseWriter) GetApplicationErrorMeta() *transport.ApplicationErrorMeta {
+func (rw *testResponseWriter) ApplicationErrorMeta() *transport.ApplicationErrorMeta {
 	return rw.appErrorMeta
 }
 
@@ -165,6 +165,8 @@ func TestInterceptorCall(t *testing.T) {
 		callError         error
 		expectedErrorTag  bool
 		expectedErrorType string
+		expectedAppCode   *int
+		expectedAppName   string
 	}{
 		{
 			name:             "successful call with no errors",
@@ -177,7 +179,7 @@ func TestInterceptorCall(t *testing.T) {
 			response:          nil,
 			callError:         yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "call error"),
 			expectedErrorTag:  true,
-			expectedErrorType: "invalid-argument",
+			expectedErrorType: yarpcerrors.CodeInvalidArgument.String(),
 		},
 		{
 			name:              "application error in response",
@@ -185,6 +187,21 @@ func TestInterceptorCall(t *testing.T) {
 			callError:         nil,
 			expectedErrorTag:  true,
 			expectedErrorType: "application_error",
+		},
+		{
+			name: "application error with metadata",
+			response: &transport.Response{
+				ApplicationError: true,
+				ApplicationErrorMeta: &transport.ApplicationErrorMeta{
+					Code: (*yarpcerrors.Code)(intPtr(500)),
+					Name: "InternalError",
+				},
+			},
+			callError:         nil,
+			expectedErrorTag:  true,
+			expectedErrorType: "application_error",
+			expectedAppCode:   intPtr(500),
+			expectedAppName:   "InternalError",
 		},
 	}
 
@@ -210,6 +227,7 @@ func TestInterceptorCall(t *testing.T) {
 
 			res, err := interceptor.Call(context.Background(), req, outbound)
 
+			// Assert errors
 			if tt.callError != nil {
 				require.Error(t, err)
 			} else {
@@ -217,32 +235,80 @@ func TestInterceptorCall(t *testing.T) {
 				assert.Equal(t, tt.response, res, "Response mismatch")
 			}
 
+			// Check finished spans
 			finishedSpans := tracer.FinishedSpans()
 			assert.Len(t, finishedSpans, 1, "Expected one span to be finished.")
+			spanTags := finishedSpans[0].Tags()
+
+			// Check error tags and application error meta
+			if tt.expectedErrorTag {
+				assert.Equal(t, tt.expectedErrorType, spanTags["error.type"], "Expected error.type to be set correctly")
+
+				// Check application error metadata if provided
+				if tt.response != nil && tt.response.ApplicationError && tt.response.ApplicationErrorMeta != nil {
+					if tt.expectedAppCode != nil {
+						assert.Equal(t, *tt.expectedAppCode, spanTags["application_error_code"], "Expected application_error_code to be set")
+					}
+					if tt.expectedAppName != "" {
+						assert.Equal(t, tt.expectedAppName, spanTags["application_error_name"], "Expected application_error_name to be set")
+					}
+				}
+			} else {
+				assert.Nil(t, spanTags["error.type"], "Expected no error.type tag to be set")
+			}
 		})
 	}
 }
 
-func TestUpdateSpanWithError(t *testing.T) {
+func TestUpdateSpanWithErrorDetails(t *testing.T) {
 	tests := []struct {
-		name              string
-		err               error
-		expectedErrorType string
+		name               string
+		err                error
+		isApplicationError bool
+		appErrorMeta       *transport.ApplicationErrorMeta
+		expectedErrorType  string
+		expectedAppCode    *int
+		expectedAppName    string
 	}{
 		{
-			name:              "known YARPC error",
-			err:               yarpcerrors.Newf(yarpcerrors.CodeInternal, "known error"),
-			expectedErrorType: yarpcerrors.CodeInternal.String(),
+			name:               "known YARPC error",
+			err:                yarpcerrors.Newf(yarpcerrors.CodeInternal, "known error"),
+			isApplicationError: false,
+			appErrorMeta:       nil,
+			expectedErrorType:  yarpcerrors.CodeInternal.String(),
 		},
 		{
-			name:              "unknown internal YARPC error",
-			err:               fmt.Errorf("random unknown error"),
-			expectedErrorType: "unknown",
+			name:               "random unknown error",
+			err:                fmt.Errorf("random unknown error"),
+			isApplicationError: false,
+			appErrorMeta:       nil,
+			expectedErrorType:  "unknown",
 		},
 		{
-			name:              "nil error",
-			err:               nil,
-			expectedErrorType: "",
+			name:               "application error with metadata",
+			err:                nil,
+			isApplicationError: true,
+			appErrorMeta: &transport.ApplicationErrorMeta{
+				Code: (*yarpcerrors.Code)(intPtr(500)),
+				Name: "InternalError",
+			},
+			expectedErrorType: "application_error",
+			expectedAppCode:   intPtr(500),
+			expectedAppName:   "InternalError",
+		},
+		{
+			name:               "application error without metadata",
+			err:                nil,
+			isApplicationError: true,
+			appErrorMeta:       nil,
+			expectedErrorType:  "application_error",
+		},
+		{
+			name:               "nil error and no application error",
+			err:                nil,
+			isApplicationError: false,
+			appErrorMeta:       nil,
+			expectedErrorType:  "",
 		},
 	}
 
@@ -252,7 +318,7 @@ func TestUpdateSpanWithError(t *testing.T) {
 			tracer := mocktracer.New()
 			span := tracer.StartSpan("test")
 
-			err := updateSpanWithErrorDetails(span, nil, false, nil, tt.err)
+			err := updateSpanWithErrorDetails(span, tt.isApplicationError, tt.appErrorMeta, tt.err)
 			span.Finish()
 
 			finishedSpans := tracer.FinishedSpans()
@@ -260,12 +326,29 @@ func TestUpdateSpanWithError(t *testing.T) {
 
 			spanTags := finishedSpans[0].Tags()
 
+			// Check if error is returned and error.type tag is set correctly
 			if tt.expectedErrorType != "" {
 				assert.Equal(t, tt.err, err, "Expected error to be returned")
 				assert.Equal(t, tt.expectedErrorType, spanTags["error.type"], "Expected error.type to be set correctly")
+
+				if tt.expectedErrorType == "application_error" && tt.appErrorMeta != nil {
+					// Check application error code and name tags
+					if tt.expectedAppCode != nil {
+						assert.Equal(t, *tt.expectedAppCode, spanTags["application_error_code"], "Expected application_error_code to be set")
+					}
+					if tt.expectedAppName != "" {
+						assert.Equal(t, tt.expectedAppName, spanTags["application_error_name"], "Expected application_error_name to be set")
+					}
+				}
 			} else {
+				// No error.type tag should be set
 				assert.Nil(t, spanTags["error.type"], "Expected no error.type tag to be set")
 			}
 		})
 	}
+}
+
+// Helper function to create pointers to int values
+func intPtr(i int) *int {
+	return &i
 }

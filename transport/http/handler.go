@@ -299,11 +299,11 @@ func (rw *responseWriter) SetApplicationErrorMeta(meta *transport.ApplicationErr
 	}
 }
 
-func (rw *responseWriter) GetApplicationError() bool {
+func (rw *responseWriter) IsApplicationError() bool {
 	return rw.isApplicationError
 }
 
-func (rw *responseWriter) GetApplicationErrorMeta() *transport.ApplicationErrorMeta {
+func (rw *responseWriter) ApplicationErrorMeta() *transport.ApplicationErrorMeta {
 	return rw.appErrorMeta
 }
 
@@ -328,6 +328,7 @@ func (rw *responseWriter) ResetBuffer() {
 func (rw *responseWriter) Close(httpStatusCode int) {
 	rw.w.WriteHeader(httpStatusCode)
 	if rw.buffer != nil {
+		// TODO: what to do with error?
 		_, _ = rw.buffer.WriteTo(rw.w)
 		bufferpool.Put(rw.buffer)
 	}
