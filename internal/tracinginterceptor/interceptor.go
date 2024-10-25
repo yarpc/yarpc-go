@@ -82,11 +82,11 @@ func New(p Params) *Interceptor {
 }
 
 // Handle implements interceptor.UnaryInbound
-func (m *Interceptor) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
-	parentSpanCtx, _ := m.tracer.Extract(m.propagationFormat, getPropagationCarrier(req.Headers.Items(), req.Transport))
+func (i *Interceptor) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
+	parentSpanCtx, _ := i.tracer.Extract(i.propagationFormat, getPropagationCarrier(req.Headers.Items(), req.Transport))
 	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
 		ParentSpanContext: parentSpanCtx,
-		Tracer:            m.tracer,
+		Tracer:            i.tracer,
 		TransportName:     req.Transport,
 		StartTime:         time.Now(),
 		ExtraTags:         commonTracingTags,
@@ -97,7 +97,7 @@ func (m *Interceptor) Handle(ctx context.Context, req *transport.Request, resw t
 
 	extendedWriter, ok := resw.(transport.ExtendedResponseWriter)
 	if !ok {
-		m.log.Debug("ResponseWriter does not implement ExtendedResponseWriter, passing false and nil for app error meta")
+		i.log.Debug("ResponseWriter does not implement ExtendedResponseWriter, passing false and nil for app error meta")
 		return updateSpanWithErrorDetails(span, false, nil, err)
 	}
 
@@ -135,11 +135,11 @@ func (i *Interceptor) Call(ctx context.Context, req *transport.Request, out tran
 }
 
 // HandleOneway implements interceptor.OnewayInbound
-func (m *Interceptor) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
-	parentSpanCtx, _ := m.tracer.Extract(m.propagationFormat, getPropagationCarrier(req.Headers.Items(), req.Transport))
+func (i *Interceptor) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
+	parentSpanCtx, _ := i.tracer.Extract(i.propagationFormat, getPropagationCarrier(req.Headers.Items(), req.Transport))
 	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
 		ParentSpanContext: parentSpanCtx,
-		Tracer:            m.tracer,
+		Tracer:            i.tracer,
 		TransportName:     req.Transport,
 		StartTime:         time.Now(),
 		ExtraTags:         commonTracingTags,
@@ -152,10 +152,10 @@ func (m *Interceptor) HandleOneway(ctx context.Context, req *transport.Request, 
 }
 
 // CallOneway implements interceptor.OnewayOutbound
-func (m *Interceptor) CallOneway(ctx context.Context, req *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
+func (i *Interceptor) CallOneway(ctx context.Context, req *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
-		Tracer:        m.tracer,
-		TransportName: m.transport,
+		Tracer:        i.tracer,
+		TransportName: i.transport,
 		StartTime:     time.Now(),
 		ExtraTags:     commonTracingTags,
 	}
@@ -163,7 +163,7 @@ func (m *Interceptor) CallOneway(ctx context.Context, req *transport.Request, ou
 	defer span.Finish()
 
 	tracingHeaders := make(map[string]string)
-	if err := m.tracer.Inject(span.Context(), m.propagationFormat, getPropagationCarrier(tracingHeaders, m.transport)); err != nil {
+	if err := i.tracer.Inject(span.Context(), i.propagationFormat, getPropagationCarrier(tracingHeaders, i.transport)); err != nil {
 		ext.Error.Set(span, true)
 		span.LogFields(log.String("event", "error"), log.String("message", err.Error()))
 	} else {
@@ -177,12 +177,12 @@ func (m *Interceptor) CallOneway(ctx context.Context, req *transport.Request, ou
 }
 
 // HandleStream implements interceptor.StreamInbound
-func (m *Interceptor) HandleStream(s *transport.ServerStream, h transport.StreamHandler) error {
+func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.StreamHandler) error {
 	panic("implement me")
 }
 
 // CallStream implements interceptor.StreamOutbound
-func (m *Interceptor) CallStream(ctx context.Context, req *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
+func (i *Interceptor) CallStream(ctx context.Context, req *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
 	panic("implement me")
 }
 
