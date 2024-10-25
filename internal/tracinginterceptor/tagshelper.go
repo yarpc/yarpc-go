@@ -28,12 +28,10 @@ import (
 )
 
 const (
-	applicationErrorTag       = "application_error"
-	errorCodeTag              = "error.code"
-	errorNameTag              = "error.name"
-	rpcStatusCodeTag          = "rpc.yarpc.status_code"
-	tracingComponentName      = "yarpc-go"
-	unknownInternalYarpcError = "unknown_internal_yarpc"
+	applicationError     = "application_error"
+	errorNameTag         = "error.name"
+	rpcStatusCodeTag     = "rpc.yarpc.status_code"
+	tracingComponentName = "yarpc-go"
 )
 
 // Static tracing tags to be used across spans

@@ -66,9 +66,6 @@ type PropagationCarrier interface {
 
 // New constructs a tracing interceptor with the provided parameter.
 func New(p Params) *Interceptor {
-	if p.Logger == nil {
-		p.Logger = zap.NewNop()
-	}
 	i := &Interceptor{
 		tracer:            p.Tracer,
 		transport:         p.Transport,
@@ -77,6 +74,9 @@ func New(p Params) *Interceptor {
 	}
 	if i.tracer == nil {
 		i.tracer = opentracing.GlobalTracer()
+	}
+	if i.log == nil {
+		i.log = zap.NewNop()
 	}
 	return i
 }
@@ -198,11 +198,10 @@ func updateSpanWithErrorDetails(
 	if status := yarpcerrors.FromError(err); status != nil {
 		errCode := status.Code()
 		span.SetTag(rpcStatusCodeTag, int(errCode))
-		span.SetTag(errorCodeTag, errCode.String())
 		return err
 	}
 	if isApplicationError {
-		span.SetTag(errorCodeTag, applicationErrorTag)
+		span.SetTag(rpcStatusCodeTag, applicationError)
 
 		if appErrorMeta != nil {
 			if appErrorMeta.Code != nil {
@@ -214,7 +213,7 @@ func updateSpanWithErrorDetails(
 		}
 		return err
 	}
-	span.SetTag(errorCodeTag, unknownInternalYarpcError)
+	span.SetTag(rpcStatusCodeTag, int(yarpcerrors.CodeUnknown))
 	return err
 }
 

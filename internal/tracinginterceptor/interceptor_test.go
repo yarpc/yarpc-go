@@ -178,10 +178,11 @@ func TestInterceptorCall(t *testing.T) {
 		response          *transport.Response
 		callError         error
 		expectedErrorTag  bool
+		expectedErrorCode *int
 		expectedErrorType string
 		expectedAppCode   *int
 		expectedAppName   string
-		injectError       bool // Add flag to simulate Inject error
+		injectError       bool
 	}{
 		{
 			name:             "successful call with no errors",
@@ -190,11 +191,14 @@ func TestInterceptorCall(t *testing.T) {
 			expectedErrorTag: false,
 		},
 		{
-			name:              "call returns an error",
-			response:          nil,
-			callError:         yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "call error"),
-			expectedErrorTag:  true,
-			expectedErrorType: yarpcerrors.CodeInvalidArgument.String(),
+			name:             "call returns an error",
+			response:         nil,
+			callError:        yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "call error"),
+			expectedErrorTag: true,
+			expectedErrorCode: func() *int {
+				code := int(yarpcerrors.CodeInvalidArgument)
+				return &code
+			}(),
 		},
 		{
 			name:              "application error in response",
@@ -208,7 +212,7 @@ func TestInterceptorCall(t *testing.T) {
 			response:         &transport.Response{},
 			callError:        nil,
 			expectedErrorTag: false,
-			injectError:      true, // This case simulates an Inject error
+			injectError:      true,
 		},
 	}
 
@@ -260,8 +264,9 @@ func TestInterceptorCall(t *testing.T) {
 
 			// Check error tags and application error meta
 			if tt.expectedErrorTag {
-				assert.Equal(t, tt.expectedErrorType, spanTags[errorCodeTag], "Expected error.code to be set correctly")
-
+				if tt.expectedErrorCode != nil {
+					assert.Equal(t, *tt.expectedErrorCode, spanTags[rpcStatusCodeTag], "Expected rpc.yarpc.status_code to be set correctly")
+				}
 				if tt.response != nil && tt.response.ApplicationError && tt.response.ApplicationErrorMeta != nil {
 					if tt.expectedAppCode != nil {
 						assert.Equal(t, *tt.expectedAppCode, spanTags[rpcStatusCodeTag], "Expected rpc.yarpc.status_code to be set")
@@ -271,7 +276,7 @@ func TestInterceptorCall(t *testing.T) {
 					}
 				}
 			} else {
-				assert.Nil(t, spanTags[errorCodeTag], "Expected no error.code tag to be set")
+				assert.Nil(t, spanTags[rpcStatusCodeTag], "Expected no rpc.yarpc.status_code tag to be set")
 			}
 		})
 	}
@@ -283,7 +288,7 @@ func TestUpdateSpanWithErrorDetails(t *testing.T) {
 		err                error
 		isApplicationError bool
 		appErrorMeta       *transport.ApplicationErrorMeta
-		expectedErrorType  string
+		expectedErrorCode  interface{} // Allows flexibility for int and string cases
 		expectedAppCode    *int
 		expectedAppName    string
 	}{
@@ -292,45 +297,51 @@ func TestUpdateSpanWithErrorDetails(t *testing.T) {
 			err:                yarpcerrors.Newf(yarpcerrors.CodeInternal, "known error"),
 			isApplicationError: false,
 			appErrorMeta:       nil,
-			expectedErrorType:  yarpcerrors.CodeInternal.String(),
+			expectedErrorCode: func() int {
+				return int(yarpcerrors.CodeInternal)
+			}(),
 		},
 		{
 			name:               "random unknown error",
 			err:                fmt.Errorf("random unknown error"),
 			isApplicationError: false,
 			appErrorMeta:       nil,
-			expectedErrorType:  "unknown",
+			expectedErrorCode: func() int {
+				return int(yarpcerrors.CodeUnknown)
+			}(),
 		},
 		{
 			name:               "application error with metadata",
 			err:                nil,
 			isApplicationError: true,
 			appErrorMeta: &transport.ApplicationErrorMeta{
-				Code: (*yarpcerrors.Code)(intPtr(500)),
+				Code: (*yarpcerrors.Code)(func() *int { code := 500; return &code }()),
 				Name: "InternalError",
 			},
-			expectedErrorType: "application_error",
-			expectedAppCode:   intPtr(500),
-			expectedAppName:   "InternalError",
+			expectedErrorCode: func() int { return 500 }(),
+			expectedAppCode: func() *int {
+				code := 500
+				return &code
+			}(),
+			expectedAppName: "InternalError",
 		},
 		{
 			name:               "application error without metadata",
 			err:                nil,
 			isApplicationError: true,
 			appErrorMeta:       nil,
-			expectedErrorType:  "application_error",
+			expectedErrorCode:  "application_error", // As set in the function without appErrorMeta
 		},
 		{
 			name:               "nil error and no application error",
 			err:                nil,
 			isApplicationError: false,
 			appErrorMeta:       nil,
-			expectedErrorType:  "",
+			expectedErrorCode:  nil,
 		},
 	}
 
 	for _, tt := range tests {
-		tt := tt // capture range variable
 		t.Run(tt.name, func(t *testing.T) {
 			tracer := mocktracer.New()
 			span := tracer.StartSpan("test")
@@ -343,12 +354,19 @@ func TestUpdateSpanWithErrorDetails(t *testing.T) {
 
 			spanTags := finishedSpans[0].Tags()
 
-			// Check if error is returned and error.type tag is set correctly
-			if tt.expectedErrorType != "" {
+			// Check if error is returned and error code tag is set correctly
+			if tt.expectedErrorCode != nil {
 				assert.Equal(t, tt.err, err, "Expected error to be returned")
-				assert.Equal(t, tt.expectedErrorType, spanTags[errorCodeTag], "Expected error.code to be set correctly")
 
-				if tt.expectedErrorType == "application_error" && tt.appErrorMeta != nil {
+				// Use type assertion to handle different types of expectedErrorCode
+				switch v := tt.expectedErrorCode.(type) {
+				case int:
+					assert.Equal(t, v, spanTags[rpcStatusCodeTag], "Expected rpc.yarpc.status_code to be set correctly")
+				case string:
+					assert.Equal(t, v, spanTags[rpcStatusCodeTag], "Expected rpc.yarpc.status_code to be set correctly")
+				}
+
+				if tt.isApplicationError && tt.appErrorMeta != nil {
 					// Check application error code and name tags
 					if tt.expectedAppCode != nil {
 						assert.Equal(t, *tt.expectedAppCode, spanTags[rpcStatusCodeTag], "Expected rpc.yarpc.status_code to be set")
@@ -358,8 +376,8 @@ func TestUpdateSpanWithErrorDetails(t *testing.T) {
 					}
 				}
 			} else {
-				// No error.type tag should be set
-				assert.Nil(t, spanTags[errorCodeTag], "Expected no error.code tag to be set")
+				// No error code tag should be set
+				assert.Nil(t, spanTags[rpcStatusCodeTag], "Expected no rpc.yarpc.status_code tag to be set")
 			}
 		})
 	}
@@ -371,7 +389,7 @@ func TestInterceptorHandleOneway(t *testing.T) {
 		name              string
 		handlerError      error
 		expectedErrorTag  bool
-		expectedErrorType string
+		expectedErrorCode *int
 	}{
 		{
 			name:             "successful handle oneway with no errors",
@@ -379,10 +397,13 @@ func TestInterceptorHandleOneway(t *testing.T) {
 			expectedErrorTag: false,
 		},
 		{
-			name:              "handle oneway returns an error",
-			handlerError:      yarpcerrors.Newf(yarpcerrors.CodeInternal, "handler error"),
-			expectedErrorTag:  true,
-			expectedErrorType: "internal",
+			name:             "handle oneway returns an error",
+			handlerError:     yarpcerrors.Newf(yarpcerrors.CodeInternal, "handler error"),
+			expectedErrorTag: true,
+			expectedErrorCode: func() *int {
+				code := int(yarpcerrors.CodeInternal)
+				return &code
+			}(),
 		},
 	}
 
@@ -423,9 +444,11 @@ func TestInterceptorHandleOneway(t *testing.T) {
 
 			// Check error tags
 			if tt.expectedErrorTag {
-				assert.Equal(t, tt.expectedErrorType, spanTags[errorCodeTag], "Expected error.code to be set correctly")
+				if tt.expectedErrorCode != nil {
+					assert.Equal(t, *tt.expectedErrorCode, spanTags[rpcStatusCodeTag], "Expected rpc.yarpc.status_code to be set correctly")
+				}
 			} else {
-				assert.Nil(t, spanTags[errorCodeTag], "Expected no error.code tag to be set")
+				assert.Nil(t, spanTags[rpcStatusCodeTag], "Expected no rpc.yarpc.status_code tag to be set")
 			}
 		})
 	}
@@ -437,7 +460,7 @@ func TestInterceptorCallOneway(t *testing.T) {
 		name              string
 		callError         error
 		expectedErrorTag  bool
-		expectedErrorType string
+		expectedErrorCode *int
 	}{
 		{
 			name:             "successful call oneway with no errors",
@@ -445,10 +468,13 @@ func TestInterceptorCallOneway(t *testing.T) {
 			expectedErrorTag: false,
 		},
 		{
-			name:              "call oneway returns an error",
-			callError:         yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "call error"),
-			expectedErrorTag:  true,
-			expectedErrorType: yarpcerrors.CodeInvalidArgument.String(),
+			name:             "call oneway returns an error",
+			callError:        yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "call error"),
+			expectedErrorTag: true,
+			expectedErrorCode: func() *int {
+				code := int(yarpcerrors.CodeInvalidArgument)
+				return &code
+			}(),
 		},
 	}
 
@@ -491,9 +517,11 @@ func TestInterceptorCallOneway(t *testing.T) {
 
 			// Check error tags
 			if tt.expectedErrorTag {
-				assert.Equal(t, tt.expectedErrorType, spanTags[errorCodeTag], "Expected error.code to be set correctly")
+				if tt.expectedErrorCode != nil {
+					assert.Equal(t, *tt.expectedErrorCode, spanTags[rpcStatusCodeTag], "Expected rpc.yarpc.status_code to be set correctly")
+				}
 			} else {
-				assert.Nil(t, spanTags[errorCodeTag], "Expected no error.code tag to be set")
+				assert.Nil(t, spanTags[rpcStatusCodeTag], "Expected no rpc.yarpc.status_code tag to be set")
 			}
 		})
 	}
