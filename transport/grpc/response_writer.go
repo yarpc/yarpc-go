@@ -78,6 +78,7 @@ func (r *responseWriter) SetApplicationErrorMeta(meta *transport.ApplicationErro
 	if meta == nil {
 		return
 	}
+
 	r.appErrorMeta = meta
 	if meta.Name != "" {
 		r.AddSystemHeader(_applicationErrorNameHeader, meta.Name)

@@ -49,9 +49,12 @@ type inboundCall interface {
 	ShardKey() string
 	RoutingKey() string
 	RoutingDelegate() string
+
 	Format() tchannel.Format
+
 	Arg2Reader() (tchannel.ArgReader, error)
 	Arg3Reader() (tchannel.ArgReader, error)
+
 	Response() inboundCallResponse
 }
 
@@ -107,22 +110,28 @@ type handler struct {
 func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
 	h.handle(ctx, tchannelCall{call})
 }
+
 func (h handler) handle(ctx context.Context, call inboundCall) {
 	// you MUST close the responseWriter no matter what unless you have a tchannel.SystemError
 	responseWriter := h.newResponseWriter(call.Response(), call.Format(), h.headerCase)
 	defer responseWriter.ReleaseBuffer()
+
 	if !h.excludeServiceHeaderInResponse {
 		// echo accepted rpc-service in response header
 		responseWriter.AddHeader(ServiceHeaderKey, call.ServiceName())
 	}
+
 	err := h.callHandler(ctx, call, responseWriter)
+
 	// black-hole requests on resource exhausted errors
 	if yarpcerrors.FromError(err).Code() == yarpcerrors.CodeResourceExhausted {
 		// all TChannel clients will time out instead of receiving an error
 		call.Response().Blackhole()
 		return
 	}
+
 	clientTimedOut := ctx.Err() == context.DeadlineExceeded
+
 	if err != nil && !responseWriter.IsApplicationError() {
 		sendSysErr := call.Response().SendSystemError(getSystemError(err))
 		if sendSysErr != nil && !clientTimedOut {
@@ -153,12 +162,14 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 		h.logger.Error("responseWriter failed to close", zap.Error(reswErr))
 	}
 }
+
 func (h handler) callHandler(ctx context.Context, call inboundCall, responseWriter responseWriter) error {
 	start := time.Now()
 	_, ok := ctx.Deadline()
 	if !ok {
 		return tchannel.ErrTimeoutRequired
 	}
+
 	treq := &transport.Request{
 		Caller:          call.CallerName(),
 		Service:         call.ServiceName(),
@@ -169,35 +180,44 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 		RoutingKey:      call.RoutingKey(),
 		RoutingDelegate: call.RoutingDelegate(),
 	}
+
 	ctx, headers, err := readRequestHeaders(ctx, call.Format(), call.Arg2Reader)
 	if err != nil {
 		return errors.RequestHeadersDecodeError(treq, err)
 	}
+
 	// callerProcedure is a rpc header but recevied in application headers, so moving this header to transprotRequest
 	// by updating treq.CallerProcedure.
 	treq = headerCallerProcedureToRequest(treq, &headers)
 	treq.Headers = headers
+
 	if tcall, ok := call.(tchannelCall); ok {
 		tracer := h.tracer
 		ctx = tchannel.ExtractInboundSpan(ctx, tcall.InboundCall, headers.Items(), tracer)
 	}
+
 	buf := bufferpool.Get()
 	defer bufferpool.Put(buf)
+
 	body, err := call.Arg3Reader()
 	if err != nil {
 		return err
 	}
+
 	if _, err = buf.ReadFrom(body); err != nil {
 		return err
 	}
 	if err = body.Close(); err != nil {
 		return err
 	}
+
 	treq.Body = bytes.NewReader(buf.Bytes())
 	treq.BodySize = buf.Len()
+
 	if err := transport.ValidateRequest(treq); err != nil {
 		return err
 	}
+
 	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
 		if yarpcerrors.FromError(err).Code() != yarpcerrors.CodeUnimplemented {
@@ -211,6 +231,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 		}
 		return err
 	}
+
 	if err := transport.ValidateRequestContext(ctx); err != nil {
 		return err
 	}
@@ -224,6 +245,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 			Handler:        spec.Unary(),
 			Logger:         h.logger,
 		})
+
 	default:
 		return yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport tchannel does not handle %s handlers", spec.Type().String())
 	}
@@ -253,6 +275,7 @@ func newHandlerWriter(response inboundCallResponse, format tchannel.Format, head
 		headerCase: headerCase,
 	}
 }
+
 func (hw *handlerWriter) AddHeaders(h transport.Headers) {
 	for k, v := range h.OriginalItems() {
 		if isReservedHeaderKey(k) {
@@ -262,12 +285,15 @@ func (hw *handlerWriter) AddHeaders(h transport.Headers) {
 		hw.AddHeader(k, v)
 	}
 }
+
 func (hw *handlerWriter) AddHeader(key string, value string) {
 	hw.headers = hw.headers.With(key, value)
 }
+
 func (hw *handlerWriter) SetApplicationError() {
 	hw.applicationError = true
 }
+
 func (hw *handlerWriter) SetApplicationErrorMeta(applicationErrorMeta *transport.ApplicationErrorMeta) {
 	if applicationErrorMeta == nil {
 		return
@@ -299,9 +325,11 @@ func truncateAppErrDetails(val string) string {
 	stripIndex := _maxAppErrDetailsHeaderLen - len(_truncatedHeaderMessage)
 	return val[:stripIndex] + _truncatedHeaderMessage
 }
+
 func (hw *handlerWriter) IsApplicationError() bool {
 	return hw.applicationError
 }
+
 func (hw *handlerWriter) Write(s []byte) (int, error) {
 	if hw.failedWith != nil {
 		return 0, hw.failedWith
@@ -356,6 +384,7 @@ func (hw *handlerWriter) ReleaseBuffer() {
 		hw.buffer = nil
 	}
 }
+
 func getSystemError(err error) error {
 	if _, ok := err.(tchannel.SystemError); ok {
 		return err
@@ -370,6 +399,7 @@ func getSystemError(err error) error {
 	}
 	return tchannel.NewSystemError(tchannelCode, status.Message())
 }
+
 func appendError(left error, right error) error {
 	if _, ok := left.(tchannel.SystemError); ok {
 		return left

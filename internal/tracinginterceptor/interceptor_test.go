@@ -242,19 +242,19 @@ func TestInterceptorCall(t *testing.T) {
 
 			// Check error tags and application error meta
 			if tt.expectedErrorTag {
-				assert.Equal(t, tt.expectedErrorType, spanTags["error.type"], "Expected error.type to be set correctly")
+				assert.Equal(t, tt.expectedErrorType, spanTags[errorCodeTag], "Expected error.code to be set correctly")
 
 				// Check application error metadata if provided
 				if tt.response != nil && tt.response.ApplicationError && tt.response.ApplicationErrorMeta != nil {
 					if tt.expectedAppCode != nil {
-						assert.Equal(t, *tt.expectedAppCode, spanTags["application_error_code"], "Expected application_error_code to be set")
+						assert.Equal(t, *tt.expectedAppCode, spanTags[rpcStatusCodeTag], "Expected rpc.yarpc.status_code to be set")
 					}
 					if tt.expectedAppName != "" {
-						assert.Equal(t, tt.expectedAppName, spanTags["application_error_name"], "Expected application_error_name to be set")
+						assert.Equal(t, tt.expectedAppName, spanTags["error.name"], "Expected error.name to be set")
 					}
 				}
 			} else {
-				assert.Nil(t, spanTags["error.type"], "Expected no error.type tag to be set")
+				assert.Nil(t, spanTags[errorCodeTag], "Expected no error.code tag to be set")
 			}
 		})
 	}
@@ -329,20 +329,20 @@ func TestUpdateSpanWithErrorDetails(t *testing.T) {
 			// Check if error is returned and error.type tag is set correctly
 			if tt.expectedErrorType != "" {
 				assert.Equal(t, tt.err, err, "Expected error to be returned")
-				assert.Equal(t, tt.expectedErrorType, spanTags["error.type"], "Expected error.type to be set correctly")
+				assert.Equal(t, tt.expectedErrorType, spanTags[errorCodeTag], "Expected error.code to be set correctly")
 
 				if tt.expectedErrorType == "application_error" && tt.appErrorMeta != nil {
 					// Check application error code and name tags
 					if tt.expectedAppCode != nil {
-						assert.Equal(t, *tt.expectedAppCode, spanTags["application_error_code"], "Expected application_error_code to be set")
+						assert.Equal(t, *tt.expectedAppCode, spanTags[rpcStatusCodeTag], "Expected rpc.yarpc.status_code to be set")
 					}
 					if tt.expectedAppName != "" {
-						assert.Equal(t, tt.expectedAppName, spanTags["application_error_name"], "Expected application_error_name to be set")
+						assert.Equal(t, tt.expectedAppName, spanTags["error.name"], "Expected error.name to be set")
 					}
 				}
 			} else {
 				// No error.type tag should be set
-				assert.Nil(t, spanTags["error.type"], "Expected no error.type tag to be set")
+				assert.Nil(t, spanTags[errorCodeTag], "Expected no error.code tag to be set")
 			}
 		})
 	}
@@ -406,9 +406,9 @@ func TestInterceptorHandleOneway(t *testing.T) {
 
 			// Check error tags
 			if tt.expectedErrorTag {
-				assert.Equal(t, tt.expectedErrorType, spanTags["error.type"], "Expected error.type to be set correctly")
+				assert.Equal(t, tt.expectedErrorType, spanTags[errorCodeTag], "Expected error.code to be set correctly")
 			} else {
-				assert.Nil(t, spanTags["error.type"], "Expected no error.type tag to be set")
+				assert.Nil(t, spanTags[errorCodeTag], "Expected no error.code tag to be set")
 			}
 		})
 	}
@@ -474,9 +474,9 @@ func TestInterceptorCallOneway(t *testing.T) {
 
 			// Check error tags
 			if tt.expectedErrorTag {
-				assert.Equal(t, tt.expectedErrorType, spanTags["error.type"], "Expected error.type to be set correctly")
+				assert.Equal(t, tt.expectedErrorType, spanTags[errorCodeTag], "Expected error.code to be set correctly")
 			} else {
-				assert.Nil(t, spanTags["error.type"], "Expected no error.type tag to be set")
+				assert.Nil(t, spanTags[errorCodeTag], "Expected no error.code tag to be set")
 			}
 		})
 	}

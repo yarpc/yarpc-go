@@ -66,6 +66,9 @@ type PropagationCarrier interface {
 
 // New constructs a tracing interceptor with the provided parameter.
 func New(p Params) *Interceptor {
+	if p.Logger == nil {
+		p.Logger = zap.NewNop()
+	}
 	m := &Interceptor{
 		tracer:            p.Tracer,
 		transport:         p.Transport,
@@ -80,12 +83,6 @@ func New(p Params) *Interceptor {
 
 // Handle implements interceptor.UnaryInbound
 func (m *Interceptor) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
-	extendedWriter, ok := resw.(transport.ExtendedResponseWriter)
-	if !ok {
-		m.log.Debug("ResponseWriter does not implement ExtendedResponseWriter, proceeding without additional tracing")
-		return h.Handle(ctx, req, resw)
-	}
-
 	parentSpanCtx, _ := m.tracer.Extract(m.propagationFormat, getPropagationCarrier(req.Headers.Items(), req.Transport))
 	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
 		ParentSpanContext: parentSpanCtx,
@@ -97,14 +94,21 @@ func (m *Interceptor) Handle(ctx context.Context, req *transport.Request, resw t
 	ctx, span := extractOpenTracingSpan.Do(ctx, req)
 	defer span.Finish()
 	err := h.Handle(ctx, req, resw)
+
+	extendedWriter, ok := resw.(transport.ExtendedResponseWriter)
+	if !ok {
+		m.log.Debug("ResponseWriter does not implement ExtendedResponseWriter, passing false and nil for app error meta")
+		return updateSpanWithErrorDetails(span, false, nil, err)
+	}
+
 	return updateSpanWithErrorDetails(span, extendedWriter.IsApplicationError(), extendedWriter.ApplicationErrorMeta(), err)
 }
 
 // Call implements interceptor.UnaryOutbound
-func (m *Interceptor) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+func (i *Interceptor) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
-		Tracer:        m.tracer,
-		TransportName: m.transport,
+		Tracer:        i.tracer,
+		TransportName: i.transport,
 		StartTime:     time.Now(),
 		ExtraTags:     commonTracingTags,
 	}
@@ -112,9 +116,11 @@ func (m *Interceptor) Call(ctx context.Context, req *transport.Request, out tran
 	defer span.Finish()
 
 	tracingHeaders := make(map[string]string)
-	if err := m.tracer.Inject(span.Context(), m.propagationFormat, getPropagationCarrier(tracingHeaders, m.transport)); err != nil {
-		ext.Error.Set(span, true)
-		span.LogFields(log.String("event", "error"), log.String("message", err.Error()))
+
+	// We use i.transport here because this is an outbound call made by the interceptor.
+	// In inbound handlers (e.g., Handle function), req.Transport is used because it's the transport from the incoming request.
+	if err := i.tracer.Inject(span.Context(), i.propagationFormat, getPropagationCarrier(tracingHeaders, i.transport)); err != nil {
+		span.LogFields(logFieldEventError, log.String("message", err.Error()))
 	} else {
 		for k, v := range tracingHeaders {
 			req.Headers = req.Headers.With(k, v)
@@ -192,24 +198,24 @@ func updateSpanWithErrorDetails(
 	ext.Error.Set(span, true)
 	if status := yarpcerrors.FromError(err); status != nil {
 		errCode := status.Code()
-		span.SetTag("rpc.yarpc.status_code", int(errCode))
-		span.SetTag("error.type", errCode.String())
+		span.SetTag(rpcStatusCodeTag, int(errCode))
+		span.SetTag(errorCodeTag, errCode.String())
 		return err
 	}
 	if isApplicationError {
-		span.SetTag("error.type", "application_error")
+		span.SetTag(errorCodeTag, applicationErrorTag)
 
 		if appErrorMeta != nil {
 			if appErrorMeta.Code != nil {
-				span.SetTag("application_error_code", int(*appErrorMeta.Code))
+				span.SetTag(rpcStatusCodeTag, int(*appErrorMeta.Code))
 			}
 			if appErrorMeta.Name != "" {
-				span.SetTag("application_error_name", appErrorMeta.Name)
+				span.SetTag(errorNameTag, appErrorMeta.Name)
 			}
 		}
 		return err
 	}
-	span.SetTag("error.type", "unknown_internal_yarpc")
+	span.SetTag(errorCodeTag, unknownInternalYarpcError)
 	return err
 }
 

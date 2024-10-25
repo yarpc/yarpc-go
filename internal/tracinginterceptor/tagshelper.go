@@ -24,10 +24,16 @@ import (
 	"runtime"
 
 	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/log"
 )
 
 const (
-	tracingComponentName = "yarpc-go"
+	applicationErrorTag       = "application_error"
+	errorCodeTag              = "error.code"
+	errorNameTag              = "error.name"
+	rpcStatusCodeTag          = "rpc.yarpc.status_code"
+	tracingComponentName      = "yarpc-go"
+	unknownInternalYarpcError = "unknown_internal_yarpc"
 )
 
 // Static tracing tags to be used across spans
@@ -35,3 +41,5 @@ var commonTracingTags = opentracing.Tags{
 	"go.version": runtime.Version(),
 	"component":  tracingComponentName,
 }
+
+var logFieldEventError = log.String("event", "error")

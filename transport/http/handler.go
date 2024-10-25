@@ -248,6 +248,7 @@ var (
 	_ transport.ApplicationErrorMetaSetter = (*responseWriter)(nil)
 )
 
+// responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.
 type responseWriter struct {
 	w                  http.ResponseWriter
 	buffer             *bufferpool.Buffer
