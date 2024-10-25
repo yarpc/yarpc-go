@@ -23,16 +23,16 @@ package tracinginterceptor
 import (
 	"context"
 	"fmt"
-	"github.com/opentracing/opentracing-go"
-	"go.uber.org/yarpc/transport/tchannel/tracing"
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/mocktracer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/transport/tchannel/tracing"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 

@@ -69,16 +69,16 @@ func New(p Params) *Interceptor {
 	if p.Logger == nil {
 		p.Logger = zap.NewNop()
 	}
-	m := &Interceptor{
+	i := &Interceptor{
 		tracer:            p.Tracer,
 		transport:         p.Transport,
 		propagationFormat: getPropagationFormat(p.Transport),
 		log:               p.Logger,
 	}
-	if m.tracer == nil {
-		m.tracer = opentracing.GlobalTracer()
+	if i.tracer == nil {
+		i.tracer = opentracing.GlobalTracer()
 	}
-	return m
+	return i
 }
 
 // Handle implements interceptor.UnaryInbound
