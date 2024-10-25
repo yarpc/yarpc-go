@@ -164,8 +164,7 @@ func (i *Interceptor) CallOneway(ctx context.Context, req *transport.Request, ou
 
 	tracingHeaders := make(map[string]string)
 	if err := i.tracer.Inject(span.Context(), i.propagationFormat, getPropagationCarrier(tracingHeaders, i.transport)); err != nil {
-		ext.Error.Set(span, true)
-		span.LogFields(log.String("event", "error"), log.String("message", err.Error()))
+		span.LogFields(logFieldEventError, log.String("message", err.Error()))
 	} else {
 		for k, v := range tracingHeaders {
 			req.Headers = req.Headers.With(k, v)

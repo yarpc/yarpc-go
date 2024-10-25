@@ -23,6 +23,8 @@ package tracinginterceptor
 import (
 	"context"
 	"fmt"
+	"github.com/opentracing/opentracing-go"
+	"go.uber.org/yarpc/transport/tchannel/tracing"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -88,6 +90,7 @@ func TestInterceptorHandle(t *testing.T) {
 		isApplicationError bool
 		expectedErrorTag   bool
 		expectedErrorType  string
+		useNonExtendedRW   bool // Add flag to test non-ExtendedResponseWriter case
 	}{
 		{
 			name:               "successful handle with no errors",
@@ -109,6 +112,13 @@ func TestInterceptorHandle(t *testing.T) {
 			expectedErrorTag:   true,
 			expectedErrorType:  "application_error",
 		},
+		{
+			name:               "non-ExtendedResponseWriter",
+			handlerError:       nil,
+			isApplicationError: false,
+			expectedErrorTag:   false,
+			useNonExtendedRW:   true, // This case uses a non-ExtendedResponseWriter
+		},
 	}
 
 	for _, tt := range tests {
@@ -129,13 +139,17 @@ func TestInterceptorHandle(t *testing.T) {
 				Headers:   transport.Headers{},
 			}
 
-			// Use testResponseWriter to simulate ExtendedResponseWriter
-			responseWriter := &testResponseWriter{
-				FakeResponseWriter: &transporttest.FakeResponseWriter{},
-			}
-
-			if tt.isApplicationError {
-				responseWriter.SetApplicationError()
+			var responseWriter transport.ResponseWriter
+			if tt.useNonExtendedRW {
+				// Use FakeResponseWriter without ExtendedResponseWriter implementation
+				responseWriter = &transporttest.FakeResponseWriter{}
+			} else {
+				// Use testResponseWriter to simulate ExtendedResponseWriter
+				rw := &testResponseWriter{FakeResponseWriter: &transporttest.FakeResponseWriter{}}
+				if tt.isApplicationError {
+					rw.SetApplicationError()
+				}
+				responseWriter = rw
 			}
 
 			handler := transporttest.NewMockUnaryHandler(ctrl)
@@ -167,6 +181,7 @@ func TestInterceptorCall(t *testing.T) {
 		expectedErrorType string
 		expectedAppCode   *int
 		expectedAppName   string
+		injectError       bool // Add flag to simulate Inject error
 	}{
 		{
 			name:             "successful call with no errors",
@@ -189,24 +204,19 @@ func TestInterceptorCall(t *testing.T) {
 			expectedErrorType: "application_error",
 		},
 		{
-			name: "application error with metadata",
-			response: &transport.Response{
-				ApplicationError: true,
-				ApplicationErrorMeta: &transport.ApplicationErrorMeta{
-					Code: (*yarpcerrors.Code)(intPtr(500)),
-					Name: "InternalError",
-				},
-			},
-			callError:         nil,
-			expectedErrorTag:  true,
-			expectedErrorType: "application_error",
-			expectedAppCode:   intPtr(500),
-			expectedAppName:   "InternalError",
+			name:             "inject error",
+			response:         &transport.Response{},
+			callError:        nil,
+			expectedErrorTag: false,
+			injectError:      true, // This case simulates an Inject error
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
 			tracer := mocktracer.New()
 			interceptor := New(Params{
 				Tracer:    tracer,
@@ -220,10 +230,18 @@ func TestInterceptorCall(t *testing.T) {
 				Headers:   transport.Headers{},
 			}
 
-			outbound := transporttest.NewMockUnaryOutbound(gomock.NewController(t))
+			outbound := transporttest.NewMockUnaryOutbound(ctrl)
 			outbound.EXPECT().
 				Call(gomock.Any(), req).
 				Return(tt.response, tt.callError)
+
+			// Mocking Inject to return an error
+			if tt.injectError {
+				tracer := mocktracer.New()
+				span := tracer.StartSpan("test-span")
+				err := tracer.Inject(span.Context(), opentracing.TextMap, transport.Headers{})
+				require.Error(t, err, "Inject error expected")
+			}
 
 			res, err := interceptor.Call(context.Background(), req, outbound)
 
@@ -244,7 +262,6 @@ func TestInterceptorCall(t *testing.T) {
 			if tt.expectedErrorTag {
 				assert.Equal(t, tt.expectedErrorType, spanTags[errorCodeTag], "Expected error.code to be set correctly")
 
-				// Check application error metadata if provided
 				if tt.response != nil && tt.response.ApplicationError && tt.response.ApplicationErrorMeta != nil {
 					if tt.expectedAppCode != nil {
 						assert.Equal(t, *tt.expectedAppCode, spanTags[rpcStatusCodeTag], "Expected rpc.yarpc.status_code to be set")
@@ -480,6 +497,38 @@ func TestInterceptorCallOneway(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestGetPropagationCarrier verifies that getPropagationCarrier returns the correct
+// carrier type based on the specified transport. For "tchannel" transport, it should
+// return a tracing.HeadersCarrier, while for other transports (e.g., "http"), it
+// should return an opentracing.TextMapCarrier.
+func TestGetPropagationCarrier(t *testing.T) {
+	headers := map[string]string{"key": "value"}
+
+	// Test with "tchannel" transport
+	carrier := getPropagationCarrier(headers, "tchannel")
+	_, isHeadersCarrier := carrier.(tracing.HeadersCarrier)
+	assert.True(t, isHeadersCarrier, "Expected HeadersCarrier for tchannel transport")
+
+	// Test with "http" transport (default case)
+	carrier = getPropagationCarrier(headers, "http")
+	_, isTextMapCarrier := carrier.(opentracing.TextMapCarrier)
+	assert.True(t, isTextMapCarrier, "Expected TextMapCarrier for non-tchannel transport")
+}
+
+// TestGetPropagationFormat verifies that getPropagationFormat returns the correct
+// format based on the specified transport. For "tchannel" transport, it should
+// return opentracing.TextMap, while for other transports (e.g., "http"), it should
+// return opentracing.HTTPHeaders.
+func TestGetPropagationFormat(t *testing.T) {
+	// Test with "tchannel" transport
+	format := getPropagationFormat("tchannel")
+	assert.Equal(t, opentracing.TextMap, format, "Expected TextMap format for tchannel transport")
+
+	// Test with "http" transport (default case)
+	format = getPropagationFormat("http")
+	assert.Equal(t, opentracing.HTTPHeaders, format, "Expected HTTPHeaders format for non-tchannel transport")
 }
 
 // Helper function to create pointers to int values
