@@ -558,8 +558,3 @@ func TestGetPropagationFormat(t *testing.T) {
 	format = getPropagationFormat("http")
 	assert.Equal(t, opentracing.HTTPHeaders, format, "Expected HTTPHeaders format for non-tchannel transport")
 }
-
-// Helper function to create pointers to int values
-func intPtr(i int) *int {
-	return &i
-}
