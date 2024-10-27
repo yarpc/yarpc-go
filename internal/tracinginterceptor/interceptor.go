@@ -190,7 +190,7 @@ func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.Stream
 
 	// Wrap the ServerStream in a tracedServerStream
 	err := h.HandleStream(s)
-	tracedStream := newTracedServerStream(*s, span)
+	tracedStream := newTracedServerStream(*s, span, i.log)
 
 	return updateSpanWithErrorDetails(span, tracedStream.IsApplicationError(), tracedStream.ApplicationErrorMeta(), err)
 }
@@ -216,11 +216,13 @@ func (i *Interceptor) CallStream(ctx context.Context, req *transport.StreamReque
 
 	clientStream, err := out.CallStream(ctx, req)
 	if err != nil {
-		updateSpanWithErrorDetails(span, false, nil, err)
+		if updateErr := updateSpanWithErrorDetails(span, false, nil, err); updateErr != nil {
+			i.log.Error("Failed to update span with error details", zap.Error(updateErr))
+		}
 		return nil, err
 	}
 
-	tracedStream := newTracedClientStream(clientStream, span)
+	tracedStream := newTracedClientStream(clientStream, span, i.log)
 	return &tracedStream.ClientStream, nil
 }
 
