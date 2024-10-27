@@ -6,13 +6,6 @@ import (
 	"go.uber.org/yarpc/api/transport"
 )
 
-// serverStreamWrapper is an interface that includes all methods of ServerStream.
-type serverStreamWrapper interface {
-	transport.ServerStream
-	IsApplicationError() bool
-	ApplicationErrorMeta() *transport.ApplicationErrorMeta
-}
-
 // tracedServerStream implements transport.ServerStream and additional tracing capabilities.
 type tracedServerStream struct {
 	transport.ServerStream
