@@ -527,6 +527,146 @@ func TestInterceptorCallOneway(t *testing.T) {
 	}
 }
 
+func TestInterceptorHandleStream(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tracer := mocktracer.New()
+	interceptor := New(Params{
+		Tracer:    tracer,
+		Transport: "http",
+	})
+
+	// Mock the server stream and stream handler
+	mockStream := transporttest.NewMockStream(ctrl)
+	mockStream.EXPECT().Context().Return(context.Background()).AnyTimes()
+	mockStream.EXPECT().Request().Return(&transport.StreamRequest{Meta: &transport.RequestMeta{Procedure: "test-procedure"}}).AnyTimes()
+
+	serverStream, err := transport.NewServerStream(mockStream)
+	require.NoError(t, err)
+
+	handler := transporttest.NewMockStreamHandler(ctrl)
+	handler.EXPECT().HandleStream(serverStream).Return(nil)
+
+	// Call HandleStream and validate behavior
+	err = interceptor.HandleStream(serverStream, handler)
+	require.NoError(t, err)
+
+	// Check that exactly one span has finished and its tags
+	finishedSpans := tracer.FinishedSpans()
+	require.Len(t, finishedSpans, 1, "Expected one span to be finished.")
+	spanTags := finishedSpans[0].Tags()
+
+	// Verify error.tag is absent for success cases
+	assert.Nil(t, spanTags["error.type"], "Expected no error.type tag to be set")
+}
+
+func TestInterceptorHandleStream_Error(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tracer := mocktracer.New()
+	interceptor := New(Params{
+		Tracer:    tracer,
+		Transport: "http",
+	})
+
+	// Mock the server stream and stream handler
+	mockStream := transporttest.NewMockStream(ctrl)
+	mockStream.EXPECT().Context().Return(context.Background()).AnyTimes()
+	mockStream.EXPECT().Request().Return(&transport.StreamRequest{Meta: &transport.RequestMeta{Procedure: "test-procedure"}}).AnyTimes()
+
+	serverStream, err := transport.NewServerStream(mockStream)
+	require.NoError(t, err)
+
+	handler := transporttest.NewMockStreamHandler(ctrl)
+	handler.EXPECT().HandleStream(serverStream).Return(yarpcerrors.Newf(yarpcerrors.CodeInternal, "handler error"))
+
+	// Call HandleStream and capture any error
+	err = interceptor.HandleStream(serverStream, handler)
+	require.Error(t, err)
+
+	// Check that one span has finished and contains error details
+	finishedSpans := tracer.FinishedSpans()
+	require.Len(t, finishedSpans, 1, "Expected one span to be finished.")
+	spanTags := finishedSpans[0].Tags()
+
+	// Verify the rpcStatusCodeTag is set correctly for the internal error
+	assert.Equal(t, int(yarpcerrors.CodeInternal), spanTags[rpcStatusCodeTag], "Expected rpcStatusCodeTag to be set to 'internal'")
+}
+
+func TestInterceptorCallStream(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tracer := mocktracer.New()
+	interceptor := New(Params{
+		Tracer:    tracer,
+		Transport: "http",
+	})
+
+	// Mock the client stream and outbound
+	mockStream := transporttest.NewMockStreamCloser(ctrl)
+	mockStream.EXPECT().Context().Return(context.Background()).AnyTimes()
+	mockStream.EXPECT().Request().Return(&transport.StreamRequest{Meta: &transport.RequestMeta{Procedure: "test-procedure"}}).AnyTimes()
+
+	clientStream, err := transport.NewClientStream(mockStream)
+	require.NoError(t, err)
+
+	outbound := transporttest.NewMockStreamOutbound(ctrl)
+	outbound.EXPECT().CallStream(gomock.Any(), gomock.Any()).Return(clientStream, nil)
+
+	req := &transport.StreamRequest{
+		Meta: &transport.RequestMeta{Procedure: "test-procedure"},
+	}
+
+	// Call CallStream and validate behavior
+	stream, err := interceptor.CallStream(context.Background(), req, outbound)
+	require.NoError(t, err)
+	require.NotNil(t, stream)
+
+	// Check that exactly one span has finished and contains correct tags
+	finishedSpans := tracer.FinishedSpans()
+	require.Len(t, finishedSpans, 1, "Expected one span to be finished.")
+}
+
+func TestInterceptorCallStream_Error(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tracer := mocktracer.New()
+	interceptor := New(Params{
+		Tracer:    tracer,
+		Transport: "http",
+	})
+
+	// Mock the client stream and outbound stream
+	mockStreamCloser := transporttest.NewMockStreamCloser(ctrl)
+	clientStream, err := transport.NewClientStream(mockStreamCloser)
+	require.NoError(t, err)
+
+	outbound := transporttest.NewMockStreamOutbound(ctrl)
+	outbound.EXPECT().
+		CallStream(gomock.Any(), gomock.Any()).
+		Return(clientStream, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "call error"))
+
+	// Set up the request
+	ctx := context.Background()
+	req := &transport.StreamRequest{Meta: &transport.RequestMeta{Procedure: "test-procedure"}}
+
+	// Call CallStream and expect an error
+	_, err = interceptor.CallStream(ctx, req, outbound)
+	require.Error(t, err)
+
+	// Check that one span has finished and contains error details
+	finishedSpans := tracer.FinishedSpans()
+	require.Len(t, finishedSpans, 1, "Expected one span to be finished.")
+	spanTags := finishedSpans[0].Tags()
+
+	// Verify the rpcStatusCodeTag is set correctly for the invalid-argument error
+	assert.Equal(t, int(yarpcerrors.CodeInvalidArgument), spanTags[rpcStatusCodeTag], "Expected rpcStatusCodeTag to be set to invalid-argument")
+}
+
 // TestGetPropagationCarrier verifies that getPropagationCarrier returns the correct
 // carrier type based on the specified transport. For "tchannel" transport, it should
 // return a tracing.HeadersCarrier, while for other transports (e.g., "http"), it
