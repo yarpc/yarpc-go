@@ -168,16 +168,20 @@ func (r *ring) sameMembers() {
 }
 
 func (r *ring) lookup(key string) {
-	res, ok := r.hashring.Lookup(key)
-	r.m.RLock()
-	defer r.m.RUnlock()
+	// Hashring32 may have hash collisions, though it doesn't sort values, while ringpop sorts them, it makes test flaky.
+	// To overcome it, we just take many (10+1) first values from the hashring32 and make sure that ringpop returns one of them.
+	// If you want to reproduce collision problem use this list of servers, lookup key is in the first line: https://code.uberinternal.com/P690325
 
+	res, ok := r.hashring.Lookup(key)
+
+	r.m.RLock()
 	resSArr, errS := r.shadowScheduler.Choose(Shard{
 		Key: key,
+		N:   10,
 	})
-	resS := resSArr[0]
+	r.m.RUnlock()
 
-	assert.Equal(r.t, res, resS, "Load balancer should returns the same result.")
+	assert.Contains(r.t, resSArr, res, "Load balancer should returns the same result.")
 	if ok {
 		assert.NoError(r.t, errS, "Load balancer should returns no error.")
 	} else {
