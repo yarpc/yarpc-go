@@ -527,7 +527,7 @@ func TestInterceptorCallOneway(t *testing.T) {
 	}
 }
 
-// TestGetPropagationCarrier verifies that getPropagationCarrier returns the correct
+// TestGetPropagationCarrier verifies the getPropagationCarrier returns the correct
 // carrier type based on the specified transport. For "tchannel" transport, it should
 // return a tracing.HeadersCarrier, while for other transports (e.g., "http"), it
 // should return an opentracing.TextMapCarrier.
