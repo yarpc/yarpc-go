@@ -177,53 +177,12 @@ func (i *Interceptor) CallOneway(ctx context.Context, req *transport.Request, ou
 
 // HandleStream implements interceptor.StreamInbound
 func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.StreamHandler) error {
-	parentSpanCtx, _ := i.tracer.Extract(i.propagationFormat, getPropagationCarrier(s.Request().Meta.Headers.Items(), i.transport))
-
-	// Start the server-side span
-	span := i.tracer.StartSpan(
-		s.Request().Meta.Procedure,
-		opentracing.ChildOf(parentSpanCtx),
-		ext.SpanKindRPCServer,
-		opentracing.StartTime(time.Now()),
-	)
-	defer span.Finish()
-
-	// Wrap the ServerStream in a tracedServerStream
-	err := h.HandleStream(s)
-	tracedStream := newTracedServerStream(*s, span, i.log)
-
-	return updateSpanWithErrorDetails(span, tracedStream.IsApplicationError(), tracedStream.ApplicationErrorMeta(), err)
+	panic("implement me")
 }
 
 // CallStream implements interceptor.StreamOutbound
 func (i *Interceptor) CallStream(ctx context.Context, req *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
-	span := i.tracer.StartSpan(
-		req.Meta.Procedure,
-		ext.SpanKindRPCClient,
-		opentracing.StartTime(time.Now()),
-	)
-	defer span.Finish()
-
-	// Inject span context into headers for tracing propagation
-	tracingHeaders := make(map[string]string)
-	if err := i.tracer.Inject(span.Context(), i.propagationFormat, getPropagationCarrier(tracingHeaders, i.transport)); err != nil {
-		span.LogFields(logFieldEventError, log.String("message", err.Error()))
-	} else {
-		for k, v := range tracingHeaders {
-			req.Meta.Headers = req.Meta.Headers.With(k, v)
-		}
-	}
-
-	clientStream, err := out.CallStream(ctx, req)
-	if err != nil {
-		if updateErr := updateSpanWithErrorDetails(span, false, nil, err); updateErr != nil {
-			i.log.Error("Failed to update span with error details", zap.Error(updateErr))
-		}
-		return nil, err
-	}
-
-	tracedStream := newTracedClientStream(clientStream, span, i.log)
-	return &tracedStream.ClientStream, nil
+	panic("implement me")
 }
 
 func updateSpanWithErrorDetails(
