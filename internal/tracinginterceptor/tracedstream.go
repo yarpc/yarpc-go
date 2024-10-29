@@ -22,24 +22,26 @@ package tracinginterceptor
 
 import (
 	"context"
+
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 )
 
 // tracedServerStream implements the transport.ServerStream and additional tracing capabilities.
 type tracedServerStream struct {
-	transport.ServerStream
+	*transport.ServerStream
 	span             opentracing.Span
 	isApplicationErr bool
 	appErrorMeta     *transport.ApplicationErrorMeta
-	log              *zap.Logger // Adding logger for error handling
+	log              *zap.Logger
 }
 
 // newTracedServerStream creates a new tracedServerStream with embedded ServerStream.
 func newTracedServerStream(s transport.ServerStream, span opentracing.Span, logger *zap.Logger) *tracedServerStream {
 	return &tracedServerStream{
-		ServerStream: s,
+		ServerStream: &s,
 		span:         span,
 		log:          logger,
 	}
@@ -53,8 +55,17 @@ func (t *tracedServerStream) ApplicationErrorMeta() *transport.ApplicationErrorM
 	return t.appErrorMeta
 }
 
+func (t *tracedServerStream) SetApplicationError() {
+	t.isApplicationErr = true
+}
+
+func (t *tracedServerStream) SetApplicationErrorMeta(appErrorMeta *transport.ApplicationErrorMeta) {
+	t.appErrorMeta = appErrorMeta
+}
+
 func (t *tracedServerStream) SendMessage(ctx context.Context, msg *transport.StreamMessage) error {
 	err := t.ServerStream.SendMessage(ctx, msg)
+	t.isApplicationErr, t.appErrorMeta = setApplicationErrorDetails(t.span, err)
 	if updateErr := updateSpanWithErrorDetails(t.span, t.isApplicationErr, t.appErrorMeta, err); updateErr != nil {
 		t.log.Error("Failed to update span with error details", zap.Error(updateErr))
 	}
@@ -63,6 +74,7 @@ func (t *tracedServerStream) SendMessage(ctx context.Context, msg *transport.Str
 
 func (t *tracedServerStream) ReceiveMessage(ctx context.Context) (*transport.StreamMessage, error) {
 	msg, err := t.ServerStream.ReceiveMessage(ctx)
+	t.isApplicationErr, t.appErrorMeta = setApplicationErrorDetails(t.span, err)
 	if updateErr := updateSpanWithErrorDetails(t.span, t.isApplicationErr, t.appErrorMeta, err); updateErr != nil {
 		t.log.Error("Failed to update span with error details", zap.Error(updateErr))
 	}
@@ -71,16 +83,16 @@ func (t *tracedServerStream) ReceiveMessage(ctx context.Context) (*transport.Str
 
 // tracedClientStream wraps ClientStream with tracing and error metadata.
 type tracedClientStream struct {
-	transport.ClientStream
+	*transport.ClientStream
 	span             opentracing.Span
 	isApplicationErr bool
 	appErrorMeta     *transport.ApplicationErrorMeta
-	log              *zap.Logger // Adding logger for error handling
+	log              *zap.Logger
 }
 
 func newTracedClientStream(cs *transport.ClientStream, span opentracing.Span, logger *zap.Logger) *tracedClientStream {
 	return &tracedClientStream{
-		ClientStream: *cs,
+		ClientStream: cs,
 		span:         span,
 		log:          logger,
 	}
@@ -94,8 +106,17 @@ func (t *tracedClientStream) ApplicationErrorMeta() *transport.ApplicationErrorM
 	return t.appErrorMeta
 }
 
+func (t *tracedClientStream) SetApplicationError() {
+	t.isApplicationErr = true
+}
+
+func (t *tracedClientStream) SetApplicationErrorMeta(appErrorMeta *transport.ApplicationErrorMeta) {
+	t.appErrorMeta = appErrorMeta
+}
+
 func (t *tracedClientStream) SendMessage(ctx context.Context, msg *transport.StreamMessage) error {
 	err := t.ClientStream.SendMessage(ctx, msg)
+	t.isApplicationErr, t.appErrorMeta = setApplicationErrorDetails(t.span, err)
 	if updateErr := updateSpanWithErrorDetails(t.span, t.isApplicationErr, t.appErrorMeta, err); updateErr != nil {
 		t.log.Error("Failed to update span with error details", zap.Error(updateErr))
 	}
@@ -104,6 +125,7 @@ func (t *tracedClientStream) SendMessage(ctx context.Context, msg *transport.Str
 
 func (t *tracedClientStream) ReceiveMessage(ctx context.Context) (*transport.StreamMessage, error) {
 	msg, err := t.ClientStream.ReceiveMessage(ctx)
+	t.isApplicationErr, t.appErrorMeta = setApplicationErrorDetails(t.span, err)
 	if updateErr := updateSpanWithErrorDetails(t.span, t.isApplicationErr, t.appErrorMeta, err); updateErr != nil {
 		t.log.Error("Failed to update span with error details", zap.Error(updateErr))
 	}
@@ -112,9 +134,45 @@ func (t *tracedClientStream) ReceiveMessage(ctx context.Context) (*transport.Str
 
 func (t *tracedClientStream) Close(ctx context.Context) error {
 	err := t.ClientStream.Close(ctx)
+	t.isApplicationErr, t.appErrorMeta = setApplicationErrorDetails(t.span, err)
 	if updateErr := updateSpanWithErrorDetails(t.span, t.isApplicationErr, t.appErrorMeta, err); updateErr != nil {
 		t.log.Error("Failed to update span with error details", zap.Error(updateErr))
 	}
 	t.span.Finish()
 	return err
+}
+
+func isApplicationLevelError(err error) bool {
+	if status := yarpcerrors.FromError(err); status != nil {
+		switch status.Code() {
+		// These codes often indicate issues on the application side
+		case yarpcerrors.CodeInvalidArgument,
+			yarpcerrors.CodeFailedPrecondition,
+			yarpcerrors.CodeOutOfRange,
+			yarpcerrors.CodeNotFound,
+			yarpcerrors.CodeAlreadyExists:
+			return true
+		default:
+			// Other error codes are likely transport or system-level errors
+			return false
+		}
+	}
+	// If err is not a YARPC error, assume it's not application-level
+	return false
+}
+
+func setApplicationErrorDetails(
+	span opentracing.Span,
+	err error,
+) (isApplicationError bool, appErrorMeta *transport.ApplicationErrorMeta) {
+	if err != nil && isApplicationLevelError(err) {
+		isApplicationError = true
+		code := yarpcerrors.FromError(err).Code()
+		appErrorMeta = &transport.ApplicationErrorMeta{
+			Code:    &code,
+			Name:    span.BaggageItem("procedure"),
+			Details: err.Error(),
+		}
+	}
+	return isApplicationError, appErrorMeta
 }

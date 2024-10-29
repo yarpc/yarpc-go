@@ -190,9 +190,19 @@ func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.Stream
 
 	// Wrap the ServerStream in a tracedServerStream
 	err := h.HandleStream(s)
-	tracedStream := newTracedServerStream(*s, span, i.log)
 
-	return updateSpanWithErrorDetails(span, tracedStream.IsApplicationError(), tracedStream.ApplicationErrorMeta(), err)
+	isApplicationError := err != nil && isApplicationLevelError(err)
+	var appErrorMeta *transport.ApplicationErrorMeta
+	if isApplicationError {
+		code := yarpcerrors.FromError(err).Code()
+		appErrorMeta = &transport.ApplicationErrorMeta{
+			Code:    &code,
+			Name:    s.Request().Meta.Procedure,
+			Details: err.Error(),
+		}
+	}
+
+	return updateSpanWithErrorDetails(span, isApplicationError, appErrorMeta, err)
 }
 
 // CallStream implements interceptor.StreamOutbound
@@ -223,7 +233,7 @@ func (i *Interceptor) CallStream(ctx context.Context, req *transport.StreamReque
 	}
 
 	tracedStream := newTracedClientStream(clientStream, span, i.log)
-	return &tracedStream.ClientStream, nil
+	return tracedStream.ClientStream, nil
 }
 
 func updateSpanWithErrorDetails(
