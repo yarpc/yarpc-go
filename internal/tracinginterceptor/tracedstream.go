@@ -38,8 +38,29 @@ type tracedServerStream struct {
 	log              *zap.Logger
 }
 
+// newTracedServerStream creates a new tracedServerStream with embedded ServerStream.
+func newTracedServerStream(s transport.ServerStream, span opentracing.Span, logger *zap.Logger) *tracedServerStream {
+	return &tracedServerStream{
+		ServerStream: &s,
+		span:         span,
+		log:          logger,
+	}
+}
+
+func (t *tracedServerStream) IsApplicationError() bool {
+	return t.isApplicationErr
+}
+
 func (t *tracedServerStream) ApplicationErrorMeta() *transport.ApplicationErrorMeta {
 	return t.appErrorMeta
+}
+
+func (t *tracedServerStream) SetApplicationError() {
+	t.isApplicationErr = true
+}
+
+func (t *tracedServerStream) SetApplicationErrorMeta(appErrorMeta *transport.ApplicationErrorMeta) {
+	t.appErrorMeta = appErrorMeta
 }
 
 func (t *tracedServerStream) SendMessage(ctx context.Context, msg *transport.StreamMessage) error {
@@ -83,6 +104,14 @@ func (t *tracedClientStream) IsApplicationError() bool {
 
 func (t *tracedClientStream) ApplicationErrorMeta() *transport.ApplicationErrorMeta {
 	return t.appErrorMeta
+}
+
+func (t *tracedClientStream) SetApplicationError() {
+	t.isApplicationErr = true
+}
+
+func (t *tracedClientStream) SetApplicationErrorMeta(appErrorMeta *transport.ApplicationErrorMeta) {
+	t.appErrorMeta = appErrorMeta
 }
 
 func (t *tracedClientStream) SendMessage(ctx context.Context, msg *transport.StreamMessage) error {

@@ -189,7 +189,8 @@ func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.Stream
 	defer span.Finish()
 
 	// Wrap the ServerStream in a tracedServerStream
-	err := h.HandleStream(s)
+	tracedStream := newTracedServerStream(*s, span, i.log)
+	err := h.HandleStream(tracedStream.ServerStream)
 
 	isApplicationError := err != nil && isApplicationLevelError(err)
 	var appErrorMeta *transport.ApplicationErrorMeta
