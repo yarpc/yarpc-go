@@ -178,8 +178,6 @@ func (i *Interceptor) CallOneway(ctx context.Context, req *transport.Request, ou
 // HandleStream implements interceptor.StreamInbound
 func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.StreamHandler) error {
 	parentSpanCtx, _ := i.tracer.Extract(i.propagationFormat, getPropagationCarrier(s.Request().Meta.Headers.Items(), i.transport))
-
-	// Start the server-side span
 	span := i.tracer.StartSpan(
 		s.Request().Meta.Procedure,
 		opentracing.ChildOf(parentSpanCtx),
@@ -214,8 +212,6 @@ func (i *Interceptor) CallStream(ctx context.Context, req *transport.StreamReque
 		opentracing.StartTime(time.Now()),
 	)
 	defer span.Finish()
-
-	// Inject span context into headers for tracing propagation
 	tracingHeaders := make(map[string]string)
 	if err := i.tracer.Inject(span.Context(), i.propagationFormat, getPropagationCarrier(tracingHeaders, i.transport)); err != nil {
 		span.LogFields(logFieldEventError, log.String("message", err.Error()))
