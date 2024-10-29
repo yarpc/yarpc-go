@@ -27,7 +27,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// tracedServerStream implements transport.ServerStream and additional tracing capabilities.
+// tracedServerStream implements the transport.ServerStream and additional tracing capabilities.
 type tracedServerStream struct {
 	transport.ServerStream
 	span             opentracing.Span
