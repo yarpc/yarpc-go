@@ -185,12 +185,9 @@ func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.Stream
 		opentracing.StartTime(time.Now()),
 	)
 	defer span.Finish()
+	err := h.HandleStream(s)
 
-	// Wrap the ServerStream in a tracedServerStream
-	tracedStream := newTracedServerStream(*s, span, i.log)
-	err := h.HandleStream(tracedStream.ServerStream)
-
-	isApplicationError := err != nil && isApplicationLevelError(err)
+	isApplicationError := err != nil
 	var appErrorMeta *transport.ApplicationErrorMeta
 	if isApplicationError {
 		code := yarpcerrors.FromError(err).Code()
@@ -228,9 +225,7 @@ func (i *Interceptor) CallStream(ctx context.Context, req *transport.StreamReque
 		}
 		return nil, err
 	}
-
-	tracedStream := newTracedClientStream(clientStream, span, i.log)
-	return tracedStream.ClientStream, nil
+	return clientStream, nil
 }
 
 func updateSpanWithErrorDetails(
