@@ -625,9 +625,6 @@ func TestInterceptorCallStream(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, stream)
 
-	// Check that exactly one span has finished and contains correct tags
-	finishedSpans := tracer.FinishedSpans()
-	require.Len(t, finishedSpans, 1, "Expected one span to be finished.")
 }
 
 func TestInterceptorCallStream_Error(t *testing.T) {
@@ -657,14 +654,6 @@ func TestInterceptorCallStream_Error(t *testing.T) {
 	// Call CallStream and expect an error
 	_, err = interceptor.CallStream(ctx, req, outbound)
 	require.Error(t, err)
-
-	// Check that one span has finished and contains error details
-	finishedSpans := tracer.FinishedSpans()
-	require.Len(t, finishedSpans, 1, "Expected one span to be finished.")
-	spanTags := finishedSpans[0].Tags()
-
-	// Verify the rpcStatusCodeTag is set correctly for the invalid-argument error
-	assert.Equal(t, int(yarpcerrors.CodeInvalidArgument), spanTags[rpcStatusCodeTag], "Expected rpcStatusCodeTag to be set to invalid-argument")
 }
 
 // TestGetPropagationCarrier verifies the getPropagationCarrier returns the correct

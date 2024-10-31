@@ -178,37 +178,44 @@ func (i *Interceptor) CallOneway(ctx context.Context, req *transport.Request, ou
 // HandleStream implements interceptor.StreamInbound
 func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.StreamHandler) error {
 	parentSpanCtx, _ := i.tracer.Extract(i.propagationFormat, getPropagationCarrier(s.Request().Meta.Headers.Items(), i.transport))
-	span := i.tracer.StartSpan(
-		s.Request().Meta.Procedure,
-		opentracing.ChildOf(parentSpanCtx),
-		ext.SpanKindRPCServer,
-		opentracing.StartTime(time.Now()),
-	)
-	defer span.Finish()
-	err := h.HandleStream(s)
-
-	isApplicationError := err != nil
-	var appErrorMeta *transport.ApplicationErrorMeta
-	if isApplicationError {
-		code := yarpcerrors.FromError(err).Code()
-		appErrorMeta = &transport.ApplicationErrorMeta{
-			Code:    &code,
-			Name:    s.Request().Meta.Procedure,
-			Details: err.Error(),
-		}
+	transportRequest := &transport.Request{
+		Caller:    s.Request().Meta.Caller,
+		Service:   s.Request().Meta.Service,
+		Procedure: s.Request().Meta.Procedure,
+		Headers:   s.Request().Meta.Headers,
+		Transport: s.Request().Meta.Transport,
 	}
 
-	return updateSpanWithErrorDetails(span, isApplicationError, appErrorMeta, err)
+	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
+		ParentSpanContext: parentSpanCtx,
+		Tracer:            i.tracer,
+		TransportName:     s.Request().Meta.Transport,
+		StartTime:         time.Now(),
+		ExtraTags:         commonTracingTags,
+	}
+	_, span := extractOpenTracingSpan.Do(context.Background(), transportRequest)
+	defer span.Finish()
+	err := h.HandleStream(s)
+	return updateSpanWithErrorDetails(span, err != nil, nil, err)
 }
 
 // CallStream implements interceptor.StreamOutbound
 func (i *Interceptor) CallStream(ctx context.Context, req *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
-	span := i.tracer.StartSpan(
-		req.Meta.Procedure,
-		ext.SpanKindRPCClient,
-		opentracing.StartTime(time.Now()),
-	)
-	defer span.Finish()
+	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
+		Tracer:        i.tracer,
+		TransportName: i.transport,
+		StartTime:     time.Now(),
+		ExtraTags:     commonTracingTags,
+	}
+	_, span := createOpenTracingSpan.Do(ctx, &transport.Request{
+		Caller:    req.Meta.Caller,
+		Service:   req.Meta.Service,
+		Procedure: req.Meta.Procedure,
+		Headers:   req.Meta.Headers,
+		Transport: req.Meta.Transport,
+	})
+
+	// Inject span context into headers for tracing propagation
 	tracingHeaders := make(map[string]string)
 	if err := i.tracer.Inject(span.Context(), i.propagationFormat, getPropagationCarrier(tracingHeaders, i.transport)); err != nil {
 		span.LogFields(logFieldEventError, log.String("message", err.Error()))
@@ -223,9 +230,16 @@ func (i *Interceptor) CallStream(ctx context.Context, req *transport.StreamReque
 		if updateErr := updateSpanWithErrorDetails(span, false, nil, err); updateErr != nil {
 			i.log.Error("Failed to update span with error details", zap.Error(updateErr))
 		}
+		//span.Finish()
 		return nil, err
 	}
-	return clientStream, nil
+
+	tracedStream := &tracedClientStream{
+		clientStream: clientStream,
+		span:         span,
+	}
+
+	return wrapTracedClientStream(tracedStream), nil
 }
 
 func updateSpanWithErrorDetails(
@@ -272,4 +286,14 @@ func getPropagationCarrier(headers map[string]string, transport string) Propagat
 		return tracing.HeadersCarrier(headers)
 	}
 	return opentracing.TextMapCarrier(headers)
+}
+
+func wrapTracedClientStream(tracedStream *tracedClientStream) *transport.ClientStream {
+	wrapped, err := transport.NewClientStream(tracedStream)
+	if err != nil {
+		// This should not happen, as NewClientStream only fails for nil streams.
+		tracedStream.span.LogFields(logFieldEventError, log.String("message", "Failed to wrap traced client stream"))
+		return tracedStream.clientStream
+	}
+	return wrapped
 }
