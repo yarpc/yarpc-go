@@ -64,12 +64,12 @@ func (t *tracedClientStream) ReceiveMessage(ctx context.Context) (*transport.Str
 	msg, err := t.clientStream.ReceiveMessage(ctx)
 	if err != nil {
 		if err == io.EOF {
-			t.closeWithErr(nil)
+			return msg, t.closeWithErr(nil)
 		} else {
-			t.closeWithErr(err)
+			return msg, t.closeWithErr(err)
 		}
 	}
-	return msg, err
+	return msg, nil
 }
 
 // Close closes the stream and updates the span with any final error details.
@@ -80,8 +80,8 @@ func (t *tracedClientStream) Close(ctx context.Context) error {
 // closeWithErr closes the span with error details, ensuring it is only closed once.
 func (t *tracedClientStream) closeWithErr(err error) error {
 	if !t.closed.Swap(true) {
-		updateSpanWithErrorDetails(t.span, err != nil, nil, err)
 		t.span.Finish()
+		return updateSpanWithErrorDetails(t.span, err != nil, nil, err)
 	}
 	return err
 }
