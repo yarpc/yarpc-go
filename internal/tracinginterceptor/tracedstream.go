@@ -65,9 +65,8 @@ func (t *tracedClientStream) ReceiveMessage(ctx context.Context) (*transport.Str
 	if err != nil {
 		if err == io.EOF {
 			return msg, t.closeWithErr(nil)
-		} else {
-			return msg, t.closeWithErr(err)
 		}
+		return msg, t.closeWithErr(err)
 	}
 	return msg, nil
 }
