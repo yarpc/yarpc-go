@@ -230,7 +230,7 @@ func (i *Interceptor) CallStream(ctx context.Context, req *transport.StreamReque
 		if updateErr := updateSpanWithErrorDetails(span, false, nil, err); updateErr != nil {
 			i.log.Error("Failed to update span with error details", zap.Error(updateErr))
 		}
-		//span.Finish()
+		span.Finish()
 		return nil, err
 	}
 
