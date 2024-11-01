@@ -177,13 +177,14 @@ func (i *Interceptor) CallOneway(ctx context.Context, req *transport.Request, ou
 
 // HandleStream implements interceptor.StreamInbound
 func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.StreamHandler) error {
-	parentSpanCtx, _ := i.tracer.Extract(i.propagationFormat, getPropagationCarrier(s.Request().Meta.Headers.Items(), i.transport))
+	req := s.Request()
+	parentSpanCtx, _ := i.tracer.Extract(i.propagationFormat, getPropagationCarrier(req.Meta.Headers.Items(), i.transport))
 	transportRequest := &transport.Request{
-		Caller:    s.Request().Meta.Caller,
-		Service:   s.Request().Meta.Service,
-		Procedure: s.Request().Meta.Procedure,
-		Headers:   s.Request().Meta.Headers,
-		Transport: s.Request().Meta.Transport,
+		Caller:    req.Meta.Caller,
+		Service:   req.Meta.Service,
+		Procedure: req.Meta.Procedure,
+		Headers:   req.Meta.Headers,
+		Transport: req.Meta.Transport,
 	}
 
 	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
@@ -193,7 +194,7 @@ func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.Stream
 		StartTime:         time.Now(),
 		ExtraTags:         commonTracingTags,
 	}
-	_, span := extractOpenTracingSpan.Do(context.Background(), transportRequest)
+	_, span := extractOpenTracingSpan.Do(s.Context(), transportRequest)
 	defer span.Finish()
 	err := h.HandleStream(s)
 	return updateSpanWithErrorDetails(span, err != nil, nil, err)
