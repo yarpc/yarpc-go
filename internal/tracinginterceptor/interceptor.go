@@ -228,9 +228,7 @@ func (i *Interceptor) CallStream(ctx context.Context, req *transport.StreamReque
 
 	clientStream, err := out.CallStream(ctx, req)
 	if err != nil {
-		if updateErr := updateSpanWithErrorDetails(span, false, nil, err); updateErr != nil {
-			i.log.Error("Failed to update span with error details", zap.Error(updateErr))
-		}
+		_ = updateSpanWithErrorDetails(span, false, nil, err)
 		span.Finish()
 		return nil, err
 	}
@@ -294,6 +292,7 @@ func wrapTracedClientStream(tracedStream *tracedClientStream) *transport.ClientS
 	if err != nil {
 		// This should not happen, as NewClientStream only fails for the nil streams.
 		tracedStream.span.LogFields(logFieldEventError, log.String("message", "Failed to wrap traced client stream"))
+		tracedStream.span.Finish()
 		return tracedStream.clientStream
 	}
 	return wrapped
