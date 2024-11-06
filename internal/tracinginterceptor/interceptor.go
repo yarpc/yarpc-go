@@ -290,7 +290,7 @@ func getPropagationCarrier(headers map[string]string, transport string) Propagat
 func wrapTracedClientStream(tracedStream *tracedClientStream) *transport.ClientStream {
 	wrapped, err := transport.NewClientStream(tracedStream)
 	if err != nil {
-		// This should not happen, as NewClientStream only fails for the nil streams.
+		// This should not happen, since NewClientStream only fails for the nil streams.
 		tracedStream.span.LogFields(logFieldEventError, log.String("message", "Failed to wrap traced client stream"))
 		tracedStream.span.Finish()
 		return tracedStream.clientStream
