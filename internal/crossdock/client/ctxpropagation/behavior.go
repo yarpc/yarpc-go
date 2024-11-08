@@ -122,7 +122,7 @@ func Run(t crossdock.T) {
 				}
 			}
 
-			dispatcher, tconfig := buildDispatcher(t)
+			dispatcher, tconfig := buildDispatcherWithInterceptors(t)
 
 			jsonClient := json.New(dispatcher.ClientConfig("yarpc-test"))
 			for name, handler := range tt.handlers {
@@ -248,7 +248,7 @@ func (h *multiHopHandler) Handle(ctx context.Context, body interface{}) (interfa
 	return map[string]interface{}{}, err
 }
 
-func buildDispatcher(t crossdock.T) (dispatcher *yarpc.Dispatcher, tconfig server.TransportConfig) {
+func buildDispatcherWithInterceptors(t crossdock.T) (dispatcher *yarpc.Dispatcher, tconfig server.TransportConfig) {
 	fatals := crossdock.Fatals(t)
 
 	self := t.Param("ctxclient")
@@ -256,15 +256,22 @@ func buildDispatcher(t crossdock.T) (dispatcher *yarpc.Dispatcher, tconfig serve
 
 	fatals.NotEmpty(self, "ctxclient is required")
 	fatals.NotEmpty(subject, "ctxserver is required")
-	nextHop := nextHopTransport(t)
 
-	httpTransport := http.NewTransport()
-	tchannelTransport, err := tch.NewChannelTransport(tch.ListenAddr("127.0.0.1:8087"), tch.ServiceName("ctxclient"))
+	// HTTP Transport with Interceptors
+	httpTransport := http.NewTransport(
+		http.TracingInterceptorEnabled(true),
+	)
+
+	// TChannel Transport with Interceptors
+	tchannelTransport, err := tch.NewChannelTransport(
+		tch.ListenAddr("127.0.0.1:8087"),
+		tch.ServiceName("ctxclient"),
+		tch.TracingInterceptorEnabled(true),
+	)
 	fatals.NoError(err, "Failed to build ChannelTransport")
 
-	// Outbound to use for this hop.
+	// Outbound setup with the transport and interceptors configured
 	var outbound transport.UnaryOutbound
-
 	trans := t.Param(params.Transport)
 	switch trans {
 	case "http":
@@ -273,19 +280,6 @@ func buildDispatcher(t crossdock.T) (dispatcher *yarpc.Dispatcher, tconfig serve
 		outbound = tchannelTransport.NewSingleOutbound(fmt.Sprintf("%s:8082", subject))
 	default:
 		fatals.Fail("", "unknown transport %q", trans)
-	}
-
-	nextTrans, ok := nextHop[trans]
-	fatals.True(ok, "no transport specified after %q", trans)
-
-	t.Tag("nextTransport", nextTrans)
-	switch nextTrans {
-	case "http":
-		tconfig.HTTP = &server.HTTPTransport{Host: self, Port: 8086}
-	case "tchannel":
-		tconfig.TChannel = &server.TChannelTransport{Host: self, Port: 8087}
-	default:
-		fatals.Fail("", "unknown transport %q after transport %q", nextTrans, trans)
 	}
 
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
