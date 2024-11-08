@@ -34,8 +34,6 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/ext"
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
@@ -271,10 +269,6 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	return o.transport.unaryOutboundInterceptor.Call(ctx, treq, interceptor.UnaryOutboundFunc(o.call))
 }
 
-func (o *Outbound) callOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
-	return o.transport.onewayOutboundInterceptor.CallOneway(ctx, treq, interceptor.OnewayOutboundFunc(o.callOneway))
-}
-
 // CallOneway makes a oneway request
 func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
 	if treq == nil {
@@ -395,42 +389,6 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 	headers := applicationHeaders.deleteHTTP2PseudoHeadersIfNeeded(treq.Headers)
 	hreq.Header = applicationHeaders.ToHTTPHeaders(headers, nil)
 	return hreq, nil
-}
-
-func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, *http.Request, opentracing.Span, error) {
-	// Apply HTTP Context headers for tracing and baggage carried by tracing.
-	tracer := o.tracer
-	var parent opentracing.SpanContext // ok to be nil
-	if parentSpan := opentracing.SpanFromContext(ctx); parentSpan != nil {
-		parent = parentSpan.Context()
-	}
-	tags := opentracing.Tags{
-		"rpc.caller":    treq.Caller,
-		"rpc.service":   treq.Service,
-		"rpc.encoding":  treq.Encoding,
-		"rpc.transport": "http",
-	}
-	for k, v := range yarpc.OpentracingTags {
-		tags[k] = v
-	}
-	span := tracer.StartSpan(
-		treq.Procedure,
-		opentracing.StartTime(start),
-		opentracing.ChildOf(parent),
-		tags,
-	)
-	ext.PeerService.Set(span, treq.Service)
-	ext.SpanKindRPCClient.Set(span)
-	ext.HTTPUrl.Set(span, req.URL.String())
-	ctx = opentracing.ContextWithSpan(ctx, span)
-
-	err := tracer.Inject(
-		span.Context(),
-		opentracing.HTTPHeaders,
-		opentracing.HTTPHeadersCarrier(req.Header),
-	)
-
-	return ctx, req, span, err
 }
 
 func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, ttl time.Duration) *http.Request {

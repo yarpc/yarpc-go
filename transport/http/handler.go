@@ -30,9 +30,6 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/ext"
-	opentracinglog "github.com/opentracing/opentracing-go/log"
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/internal/iopool"
@@ -199,41 +196,6 @@ func handleOnewayRequest(
 		})
 	}()
 	return nil
-}
-
-func updateSpanWithErr(span opentracing.Span, err error) {
-	if err != nil {
-		span.SetTag("error", true)
-		span.LogFields(opentracinglog.String("event", err.Error()))
-	}
-}
-
-func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, opentracing.Span) {
-	// Extract opentracing etc baggage from headers
-	// Annotate the inbound context with a trace span
-	tracer := h.tracer
-	carrier := opentracing.HTTPHeadersCarrier(req.Header)
-	parentSpanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, carrier)
-	// parentSpanCtx may be nil, ext.RPCServerOption handles a nil parent
-	// gracefully.
-	tags := opentracing.Tags{
-		"rpc.caller":    treq.Caller,
-		"rpc.service":   treq.Service,
-		"rpc.encoding":  treq.Encoding,
-		"rpc.transport": "http",
-	}
-	for k, v := range yarpc.OpentracingTags {
-		tags[k] = v
-	}
-	span := tracer.StartSpan(
-		treq.Procedure,
-		opentracing.StartTime(start),
-		ext.RPCServerOption(parentSpanCtx), // implies ChildOf
-		tags,
-	)
-	ext.PeerService.Set(span, treq.Caller)
-	ctx = opentracing.ContextWithSpan(ctx, span)
-	return ctx, span
 }
 
 var (

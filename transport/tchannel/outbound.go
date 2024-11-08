@@ -23,7 +23,6 @@ package tchannel
 import (
 	"bytes"
 	"context"
-	"go.uber.org/yarpc/internal/interceptor"
 	"io"
 	"strconv"
 
@@ -98,10 +97,6 @@ func (o *Outbound) TransportName() string {
 // Chooser returns the outbound's peer chooser.
 func (o *Outbound) Chooser() peer.Chooser {
 	return o.chooser
-}
-
-func (o *Outbound) call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	return o.transport.unaryOutboundInterceptor.Call(ctx, req, interceptor.UnaryOutboundFunc(o.call))
 }
 
 // Call sends an RPC over this TChannel outbound.

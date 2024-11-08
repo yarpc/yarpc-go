@@ -35,7 +35,7 @@ type (
 	// returned error, call the given outbound zero or more times.
 	//
 	// UnaryOutbound interceptor MUST always return a non-nil Response or error,
-	// and they MUST be thread-safe.
+	// and they MUST be thread-safe
 	//
 	// UnaryOutbound interceptor is re-used across requests and MAY be called
 	// multiple times on the same request.
@@ -61,9 +61,9 @@ type (
 	// returned error, call the given outbound zero or more times.
 	//
 	// StreamOutbound interceptor MUST always return a non-nil Stream or error,
-	// and they MUST be thread-safe.
+	// and they MUST be thread-safe
 	//
-	// StreamOutbound interceptors are re-used across requests and MAY be called
+	// StreamOutbound interceptors is re-used across requests and MAY be called
 	// multiple times on the same request.
 	StreamOutbound = middleware.StreamOutbound
 )
