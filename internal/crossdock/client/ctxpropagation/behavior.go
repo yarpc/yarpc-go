@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/crossdock/crossdock-go"
-	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/json"
@@ -77,9 +76,7 @@ func Run(t crossdock.T) {
 		{
 			desc: "existing baggage",
 			initCtx: func() context.Context {
-				span := opentracing.GlobalTracer().StartSpan("existing baggage")
-				span.SetBaggageItem("token", "42")
-				return opentracing.ContextWithSpan(context.Background(), span)
+				return context.WithValue(context.Background(), "baggage", map[string]string{"token": "42"})
 			}(),
 			handlers: map[string]handler{
 				"hello": &singleHopHandler{
@@ -107,54 +104,6 @@ func Run(t crossdock.T) {
 				"three": &singleHopHandler{
 					t:           t,
 					wantBaggage: map[string]string{"x": "1", "y": "2"},
-				},
-			},
-		},
-		{
-			desc: "add baggage: existing baggage",
-			initCtx: func() context.Context {
-				span := opentracing.GlobalTracer().StartSpan("existing baggage")
-				span.SetBaggageItem("token", "123")
-				return opentracing.ContextWithSpan(context.Background(), span)
-			}(),
-			procedure: "one",
-			handlers: map[string]handler{
-				"one": &multiHopHandler{
-					t:           t,
-					phoneCallTo: "two",
-					addBaggage:  map[string]string{"hello": "world"},
-					wantBaggage: map[string]string{"token": "123"},
-				},
-				"two": &singleHopHandler{
-					t:           t,
-					wantBaggage: map[string]string{"token": "123", "hello": "world"},
-				},
-			},
-		},
-		{
-			desc: "overwrite baggage",
-			initCtx: func() context.Context {
-				span := opentracing.GlobalTracer().StartSpan("existing baggage")
-				span.SetBaggageItem("x", "1")
-				return opentracing.ContextWithSpan(context.Background(), span)
-			}(),
-			procedure: "one",
-			handlers: map[string]handler{
-				"one": &multiHopHandler{
-					t:           t,
-					phoneCallTo: "two",
-					addBaggage:  map[string]string{"x": "2", "y": "3"},
-					wantBaggage: map[string]string{"x": "1"},
-				},
-				"two": &multiHopHandler{
-					t:           t,
-					phoneCallTo: "three",
-					addBaggage:  map[string]string{"y": "4"},
-					wantBaggage: map[string]string{"x": "2", "y": "3"},
-				},
-				"three": &singleHopHandler{
-					t:           t,
-					wantBaggage: map[string]string{"x": "2", "y": "4"},
 				},
 			},
 		},
@@ -216,7 +165,7 @@ type handler interface {
 
 func assertBaggageMatches(ctx context.Context, t crossdock.T, want map[string]string) bool {
 	assert := crossdock.Assert(t)
-	got := getOpenTracingBaggage(ctx)
+	got := ctx.Value("baggage").(map[string]string)
 
 	if len(want) == 0 {
 		// len check to handle nil vs empty cases gracefully.
@@ -224,27 +173,6 @@ func assertBaggageMatches(ctx context.Context, t crossdock.T, want map[string]st
 	}
 
 	return assert.Equal(want, got, "baggage must match")
-}
-
-func getOpenTracingBaggage(ctx context.Context) map[string]string {
-	headers := make(map[string]string)
-
-	span := opentracing.SpanFromContext(ctx)
-	if span == nil {
-		return headers
-	}
-
-	spanContext := span.Context()
-	if spanContext == nil {
-		return headers
-	}
-
-	spanContext.ForeachBaggageItem(func(k, v string) bool {
-		headers[k] = v
-		return true
-	})
-
-	return headers
 }
 
 // singleHopHandler provides a JSON handler which verifies that it receives the
@@ -259,12 +187,6 @@ func (*singleHopHandler) SetTransport(server.TransportConfig) {}
 
 func (h *singleHopHandler) Handle(ctx context.Context, body interface{}) (interface{}, error) {
 	assertBaggageMatches(ctx, h.t, h.wantBaggage)
-	call := yarpc.CallFromContext(ctx)
-	for _, k := range call.HeaderNames() {
-		if err := call.WriteResponseHeader(k, call.Header(k)); err != nil {
-			return nil, err
-		}
-	}
 	return map[string]interface{}{}, nil
 }
 
@@ -291,29 +213,18 @@ func (h *multiHopHandler) SetTransport(tc server.TransportConfig) {
 }
 
 func (h *multiHopHandler) Handle(ctx context.Context, body interface{}) (interface{}, error) {
-	if h.phoneClient == nil {
-		panic("call SetClient() and SetTransport() first")
+	if h.phoneClient == nil || h.phoneCallTransport.HTTP == nil && h.phoneCallTransport.TChannel == nil {
+		return nil, fmt.Errorf("multiHopHandler requires a client and transport to proceed")
 	}
 
 	assertBaggageMatches(ctx, h.t, h.wantBaggage)
 
-	span := opentracing.SpanFromContext(ctx)
+	// Manually propagate baggage by adding to the context
+	newBaggage := ctx.Value("baggage").(map[string]string)
 	for key, value := range h.addBaggage {
-		span.SetBaggageItem(key, value)
+		newBaggage[key] = value
 	}
-	ctx = opentracing.ContextWithSpan(ctx, span)
-
-	var (
-		opts            []yarpc.CallOption
-		phoneResHeaders map[string]string
-	)
-
-	call := yarpc.CallFromContext(ctx)
-
-	for _, k := range call.HeaderNames() {
-		opts = append(opts, yarpc.WithHeader(k, call.Header(k)))
-	}
-	opts = append(opts, yarpc.ResponseHeaders(&phoneResHeaders))
+	ctx = context.WithValue(ctx, "baggage", newBaggage)
 
 	var resp js.RawMessage
 	err := h.phoneClient.Call(
@@ -324,13 +235,7 @@ func (h *multiHopHandler) Handle(ctx context.Context, body interface{}) (interfa
 			Procedure: h.phoneCallTo,
 			Transport: h.phoneCallTransport,
 			Body:      &js.RawMessage{'{', '}'},
-		}, &resp, opts...)
-
-	for k, v := range phoneResHeaders {
-		if err := call.WriteResponseHeader(k, v); err != nil {
-			return nil, err
-		}
-	}
+		}, &resp)
 
 	return map[string]interface{}{}, err
 }
