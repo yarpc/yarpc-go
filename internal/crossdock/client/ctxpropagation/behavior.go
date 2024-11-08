@@ -121,7 +121,7 @@ func Run(t crossdock.T) {
 				"one": &multiHopHandler{
 					t:           t,
 					phoneCallTo: "two",
-					addBaggage:  map[string]string{},
+					addBaggage:  map[string]string{"hello": "world"},
 					wantBaggage: map[string]string{},
 				},
 				"two": &singleHopHandler{
