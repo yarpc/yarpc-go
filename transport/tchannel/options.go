@@ -55,6 +55,7 @@ var _ Option = (TransportOption)(nil)
 type transportOptions struct {
 	ch                             Channel
 	tracer                         opentracing.Tracer
+	tracingInterceptorEnabled      bool
 	logger                         *zap.Logger
 	meter                          *metrics.Scope
 	addr                           string
@@ -92,6 +93,13 @@ func (TransportOption) tchannelOption() {}
 func Tracer(tracer opentracing.Tracer) TransportOption {
 	return func(t *transportOptions) {
 		t.tracer = tracer
+	}
+}
+
+// TracingInterceptorEnabled specifies whether to use the new tracing interceptor or the legacy implementation
+func TracingInterceptorEnabled(enabled bool) TransportOption {
+	return func(t *transportOptions) {
+		t.tracingInterceptorEnabled = enabled
 	}
 }
 

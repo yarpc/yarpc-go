@@ -24,6 +24,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"go.uber.org/yarpc/internal/interceptor"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -34,7 +35,6 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	opentracinglog "github.com/opentracing/opentracing-go/log"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -268,7 +268,11 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil")
 	}
 
-	return o.call(ctx, treq)
+	return o.transport.unaryOutboundInterceptor.Call(ctx, treq, interceptor.UnaryOutboundFunc(o.call))
+}
+
+func (o *Outbound) callOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
+	return o.transport.onewayOutboundInterceptor.CallOneway(ctx, treq, interceptor.OnewayOutboundFunc(o.callOneway))
 }
 
 // CallOneway makes a oneway request
@@ -303,32 +307,22 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	if err != nil {
 		return nil, err
 	}
-	ctx, hreq, span, err := o.withOpentracingSpan(ctx, hreq, treq, start)
-	if err != nil {
-		return nil, err
-	}
-	defer span.Finish()
 
 	hreq = o.withCoreHeaders(hreq, treq, ttl)
 	hreq = hreq.WithContext(ctx)
 
 	response, err := o.roundTrip(hreq, treq, start, o.client)
 	if err != nil {
-		span.SetTag("error", true)
-		span.LogFields(opentracinglog.String("event", err.Error()))
 		return nil, err
 	}
-
-	span.SetTag("http.status_code", response.StatusCode)
 
 	// Service name match validation, return yarpcerrors.CodeInternal error if not match
 	if match, resSvcName := checkServiceMatch(treq.Service, response.Header); !match {
 		if err = response.Body.Close(); err != nil {
 			return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 		}
-		return nil, transport.UpdateSpanWithErr(span,
-			yarpcerrors.InternalErrorf("service name sent from the request "+
-				"does not match the service name received in the response, sent %q, got: %q", treq.Service, resSvcName))
+		return nil, yarpcerrors.InternalErrorf("service name sent from the request "+
+			"does not match the service name received in the response, sent %q, got: %q", treq.Service, resSvcName)
 	}
 
 	tres := &transport.Response{

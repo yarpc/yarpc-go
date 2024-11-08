@@ -21,7 +21,10 @@
 package interceptor
 
 import (
+	"context"
+
 	"go.uber.org/yarpc/api/middleware"
+	"go.uber.org/yarpc/api/transport"
 )
 
 type (
@@ -64,3 +67,75 @@ type (
 	// multiple times on the same request.
 	StreamOutbound = middleware.StreamOutbound
 )
+
+var (
+	_ transport.UnaryOutbound  = UnaryOutboundFunc(nil)
+	_ transport.OnewayOutbound = OnewayOutboundFunc(nil)
+	_ transport.StreamOutbound = StreamOutboundFunc(nil)
+)
+
+type UnaryOutboundFunc func(context.Context, *transport.Request) (*transport.Response, error)
+
+func (f UnaryOutboundFunc) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+	return f(ctx, req)
+}
+
+func (f UnaryOutboundFunc) Start() error {
+	return nil
+}
+
+func (f UnaryOutboundFunc) Stop() error {
+	return nil
+}
+
+func (f UnaryOutboundFunc) IsRunning() bool {
+	return false
+}
+
+func (f UnaryOutboundFunc) Transports() []transport.Transport {
+	return nil
+}
+
+type OnewayOutboundFunc func(context.Context, *transport.Request) (transport.Ack, error)
+
+func (f OnewayOutboundFunc) CallOneway(ctx context.Context, req *transport.Request) (transport.Ack, error) {
+	return f(ctx, req)
+}
+
+func (f OnewayOutboundFunc) Start() error {
+	return nil
+}
+
+func (f OnewayOutboundFunc) Stop() error {
+	return nil
+}
+
+func (f OnewayOutboundFunc) IsRunning() bool {
+	return false
+}
+
+func (f OnewayOutboundFunc) Transports() []transport.Transport {
+	return nil
+}
+
+type StreamOutboundFunc func(context.Context, *transport.StreamRequest) (*transport.ClientStream, error)
+
+func (f StreamOutboundFunc) CallStream(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error) {
+	return f(ctx, req)
+}
+
+func (f StreamOutboundFunc) Start() error {
+	return nil
+}
+
+func (f StreamOutboundFunc) Stop() error {
+	return nil
+}
+
+func (f StreamOutboundFunc) IsRunning() bool {
+	return false
+}
+
+func (f StreamOutboundFunc) Transports() []transport.Transport {
+	return nil
+}

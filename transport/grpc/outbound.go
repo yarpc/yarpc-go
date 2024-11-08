@@ -23,6 +23,7 @@ package grpc
 import (
 	"bytes"
 	"context"
+	"go.uber.org/yarpc/internal/interceptor"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -103,6 +104,10 @@ func (o *Outbound) Transports() []transport.Transport {
 // Chooser returns the peer.Chooser associated with this Outbound.
 func (o *Outbound) Chooser() peer.Chooser {
 	return o.peerChooser
+}
+
+func (o *Outbound) call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+	return o.t.options.unaryOutboundInterceptor.Call(ctx, request, interceptor.UnaryOutboundFunc(o.call))
 }
 
 // Call implements transport.UnaryOutbound#Call.
@@ -278,6 +283,10 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 		yarpcErr = yarpcErr.WithDetails(details)
 	}
 	return yarpcErr
+}
+
+func (o *Outbound) callStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
+	return o.t.options.streamOutboundInterceptor.CallStream(ctx, request, interceptor.StreamOutboundFunc(o.callStream))
 }
 
 // CallStream implements transport.StreamOutbound#CallStream.

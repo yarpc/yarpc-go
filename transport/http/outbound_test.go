@@ -25,6 +25,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"go.uber.org/yarpc/api/middleware"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -772,7 +773,11 @@ func TestCallResponseCloseError(t *testing.T) {
 				}
 			}),
 		},
-		tracer: opentracing.GlobalTracer(),
+		tracer:                    opentracing.GlobalTracer(),
+		unaryInboundInterceptor:   middleware.NopUnaryInbound,
+		unaryOutboundInterceptor:  middleware.NopUnaryOutbound,
+		onewayInboundInterceptor:  middleware.NopOnewayInbound,
+		onewayOutboundInterceptor: middleware.NopOnewayOutbound,
 	}
 	ctrl := gomock.NewController(t)
 	chooser := peertest.NewMockChooser(ctrl)
@@ -811,7 +816,11 @@ func TestCallOneWayResponseCloseError(t *testing.T) {
 				}
 			}),
 		},
-		tracer: opentracing.GlobalTracer(),
+		tracer:                    opentracing.GlobalTracer(),
+		unaryInboundInterceptor:   middleware.NopUnaryInbound,
+		unaryOutboundInterceptor:  middleware.NopUnaryOutbound,
+		onewayInboundInterceptor:  middleware.NopOnewayInbound,
+		onewayOutboundInterceptor: middleware.NopOnewayOutbound,
 	}
 	ctrl := gomock.NewController(t)
 	chooser := peertest.NewMockChooser(ctrl)

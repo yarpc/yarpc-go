@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"go.uber.org/yarpc/api/middleware"
 	"net/http"
 	"strconv"
 	"time"
@@ -53,6 +54,7 @@ type handler struct {
 	grabHeaders       map[string]struct{}
 	bothResponseError bool
 	logger            *zap.Logger
+	transport         *Transport
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -137,11 +139,9 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
 	// parseTTLErr != nil is a problem only if the request is unary.
 	defer cancel()
-	ctx, span := h.createSpan(ctx, req, treq, start)
 
 	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
-		updateSpanWithErr(span, err)
 		return err
 	}
 
@@ -153,25 +153,22 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	}
 	switch spec.Type() {
 	case transport.Unary:
-		defer span.Finish()
-
 		err = transport.InvokeUnaryHandler(transport.UnaryInvokeRequest{
 			Context:        ctx,
 			StartTime:      start,
 			Request:        treq,
-			Handler:        spec.Unary(),
+			Handler:        middleware.ApplyUnaryInbound(spec.Unary(), h.transport.unaryInboundInterceptor),
 			ResponseWriter: responseWriter,
 			Logger:         h.logger,
 		})
 
 	case transport.Oneway:
-		err = handleOnewayRequest(span, treq, spec.Oneway(), h.logger)
+		err = handleOnewayRequest(nil, treq, middleware.ApplyOnewayInbound(spec.Oneway(), h.transport.onewayInboundInterceptor), h.logger)
 
 	default:
 		err = yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport http does not handle %s handlers", spec.Type().String())
 	}
 
-	updateSpanWithErr(span, err)
 	return err
 }
 
@@ -191,19 +188,15 @@ func handleOnewayRequest(
 
 	// create a new context for oneway requests since the HTTP handler cancels
 	// http.Request's context when ServeHTTP returns
-	ctx := opentracing.ContextWithSpan(context.Background(), span)
+	ctx := context.Background()
 
 	go func() {
-		// ensure the span lasts for length of the handler in case of errors
-		defer span.Finish()
-
-		err := transport.InvokeOnewayHandler(transport.OnewayInvokeRequest{
+		_ = transport.InvokeOnewayHandler(transport.OnewayInvokeRequest{
 			Context: ctx,
 			Request: treq,
 			Handler: onewayHandler,
 			Logger:  logger,
 		})
-		updateSpanWithErr(span, err)
 	}()
 	return nil
 }
