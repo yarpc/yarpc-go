@@ -76,7 +76,7 @@ func Run(t crossdock.T) {
 		{
 			desc: "existing baggage",
 			initCtx: func() context.Context {
-				return context.WithValue(context.Background(), "baggage", map[string]string{"token": "42"})
+				return context.WithValue(context.Background(), contextKeyBaggage, map[string]string{"token": "42"})
 			}(),
 			handlers: map[string]handler{
 				"hello": &singleHopHandler{
@@ -157,6 +157,10 @@ func Run(t crossdock.T) {
 	}
 }
 
+type contextKey string
+
+const contextKeyBaggage = contextKey("baggage")
+
 type handler interface {
 	SetClient(json.Client)
 	SetTransport(server.TransportConfig)
@@ -165,7 +169,7 @@ type handler interface {
 
 func assertBaggageMatches(ctx context.Context, t crossdock.T, want map[string]string) bool {
 	assert := crossdock.Assert(t)
-	got := ctx.Value("baggage").(map[string]string)
+	got, _ := ctx.Value(contextKeyBaggage).(map[string]string)
 
 	if len(want) == 0 {
 		// len check to handle nil vs empty cases gracefully.
@@ -220,11 +224,15 @@ func (h *multiHopHandler) Handle(ctx context.Context, body interface{}) (interfa
 	assertBaggageMatches(ctx, h.t, h.wantBaggage)
 
 	// Manually propagate baggage by adding to the context
-	newBaggage := ctx.Value("baggage").(map[string]string)
+
+	newBaggage, _ := ctx.Value(contextKeyBaggage).(map[string]string)
+	if newBaggage == nil {
+		newBaggage = make(map[string]string)
+	}
 	for key, value := range h.addBaggage {
 		newBaggage[key] = value
 	}
-	ctx = context.WithValue(ctx, "baggage", newBaggage)
+	ctx = context.WithValue(ctx, contextKeyBaggage, newBaggage)
 
 	var resp js.RawMessage
 	err := h.phoneClient.Call(
