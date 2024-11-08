@@ -24,14 +24,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"go.uber.org/yarpc/api/middleware"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/ext"
-	opentracinglog "github.com/opentracing/opentracing-go/log"
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/internal/iopool"
@@ -53,6 +51,7 @@ type handler struct {
 	grabHeaders       map[string]struct{}
 	bothResponseError bool
 	logger            *zap.Logger
+	transport         *Transport
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -137,11 +136,9 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
 	// parseTTLErr != nil is a problem only if the request is unary.
 	defer cancel()
-	ctx, span := h.createSpan(ctx, req, treq, start)
 
 	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
-		updateSpanWithErr(span, err)
 		return err
 	}
 
@@ -153,25 +150,22 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	}
 	switch spec.Type() {
 	case transport.Unary:
-		defer span.Finish()
-
 		err = transport.InvokeUnaryHandler(transport.UnaryInvokeRequest{
 			Context:        ctx,
 			StartTime:      start,
 			Request:        treq,
-			Handler:        spec.Unary(),
+			Handler:        middleware.ApplyUnaryInbound(spec.Unary(), h.transport.unaryInboundInterceptor),
 			ResponseWriter: responseWriter,
 			Logger:         h.logger,
 		})
 
 	case transport.Oneway:
-		err = handleOnewayRequest(span, treq, spec.Oneway(), h.logger)
+		err = handleOnewayRequest(nil, treq, middleware.ApplyOnewayInbound(spec.Oneway(), h.transport.onewayInboundInterceptor), h.logger)
 
 	default:
 		err = yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport http does not handle %s handlers", spec.Type().String())
 	}
 
-	updateSpanWithErr(span, err)
 	return err
 }
 
@@ -191,56 +185,17 @@ func handleOnewayRequest(
 
 	// create a new context for oneway requests since the HTTP handler cancels
 	// http.Request's context when ServeHTTP returns
-	ctx := opentracing.ContextWithSpan(context.Background(), span)
+	ctx := context.Background()
 
 	go func() {
-		// ensure the span lasts for length of the handler in case of errors
-		defer span.Finish()
-
-		err := transport.InvokeOnewayHandler(transport.OnewayInvokeRequest{
+		_ = transport.InvokeOnewayHandler(transport.OnewayInvokeRequest{
 			Context: ctx,
 			Request: treq,
 			Handler: onewayHandler,
 			Logger:  logger,
 		})
-		updateSpanWithErr(span, err)
 	}()
 	return nil
-}
-
-func updateSpanWithErr(span opentracing.Span, err error) {
-	if err != nil {
-		span.SetTag("error", true)
-		span.LogFields(opentracinglog.String("event", err.Error()))
-	}
-}
-
-func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, opentracing.Span) {
-	// Extract opentracing etc baggage from headers
-	// Annotate the inbound context with a trace span
-	tracer := h.tracer
-	carrier := opentracing.HTTPHeadersCarrier(req.Header)
-	parentSpanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, carrier)
-	// parentSpanCtx may be nil, ext.RPCServerOption handles a nil parent
-	// gracefully.
-	tags := opentracing.Tags{
-		"rpc.caller":    treq.Caller,
-		"rpc.service":   treq.Service,
-		"rpc.encoding":  treq.Encoding,
-		"rpc.transport": "http",
-	}
-	for k, v := range yarpc.OpentracingTags {
-		tags[k] = v
-	}
-	span := tracer.StartSpan(
-		treq.Procedure,
-		opentracing.StartTime(start),
-		ext.RPCServerOption(parentSpanCtx), // implies ChildOf
-		tags,
-	)
-	ext.PeerService.Set(span, treq.Caller)
-	ctx = opentracing.ContextWithSpan(ctx, span)
-	return ctx, span
 }
 
 var (

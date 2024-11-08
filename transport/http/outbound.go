@@ -24,6 +24,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"go.uber.org/yarpc/internal/interceptor"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -33,9 +34,6 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/ext"
-	opentracinglog "github.com/opentracing/opentracing-go/log"
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
@@ -268,7 +266,7 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil")
 	}
 
-	return o.call(ctx, treq)
+	return o.transport.unaryOutboundInterceptor.Call(ctx, treq, interceptor.UnaryOutboundFunc(o.call))
 }
 
 // CallOneway makes a oneway request
@@ -303,32 +301,22 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	if err != nil {
 		return nil, err
 	}
-	ctx, hreq, span, err := o.withOpentracingSpan(ctx, hreq, treq, start)
-	if err != nil {
-		return nil, err
-	}
-	defer span.Finish()
 
 	hreq = o.withCoreHeaders(hreq, treq, ttl)
 	hreq = hreq.WithContext(ctx)
 
 	response, err := o.roundTrip(hreq, treq, start, o.client)
 	if err != nil {
-		span.SetTag("error", true)
-		span.LogFields(opentracinglog.String("event", err.Error()))
 		return nil, err
 	}
-
-	span.SetTag("http.status_code", response.StatusCode)
 
 	// Service name match validation, return yarpcerrors.CodeInternal error if not match
 	if match, resSvcName := checkServiceMatch(treq.Service, response.Header); !match {
 		if err = response.Body.Close(); err != nil {
 			return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 		}
-		return nil, transport.UpdateSpanWithErr(span,
-			yarpcerrors.InternalErrorf("service name sent from the request "+
-				"does not match the service name received in the response, sent %q, got: %q", treq.Service, resSvcName))
+		return nil, yarpcerrors.InternalErrorf("service name sent from the request "+
+			"does not match the service name received in the response, sent %q, got: %q", treq.Service, resSvcName)
 	}
 
 	tres := &transport.Response{
@@ -401,42 +389,6 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 	headers := applicationHeaders.deleteHTTP2PseudoHeadersIfNeeded(treq.Headers)
 	hreq.Header = applicationHeaders.ToHTTPHeaders(headers, nil)
 	return hreq, nil
-}
-
-func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, *http.Request, opentracing.Span, error) {
-	// Apply HTTP Context headers for tracing and baggage carried by tracing.
-	tracer := o.tracer
-	var parent opentracing.SpanContext // ok to be nil
-	if parentSpan := opentracing.SpanFromContext(ctx); parentSpan != nil {
-		parent = parentSpan.Context()
-	}
-	tags := opentracing.Tags{
-		"rpc.caller":    treq.Caller,
-		"rpc.service":   treq.Service,
-		"rpc.encoding":  treq.Encoding,
-		"rpc.transport": "http",
-	}
-	for k, v := range yarpc.OpentracingTags {
-		tags[k] = v
-	}
-	span := tracer.StartSpan(
-		treq.Procedure,
-		opentracing.StartTime(start),
-		opentracing.ChildOf(parent),
-		tags,
-	)
-	ext.PeerService.Set(span, treq.Service)
-	ext.SpanKindRPCClient.Set(span)
-	ext.HTTPUrl.Set(span, req.URL.String())
-	ctx = opentracing.ContextWithSpan(ctx, span)
-
-	err := tracer.Inject(
-		span.Context(),
-		opentracing.HTTPHeaders,
-		opentracing.HTTPHeadersCarrier(req.Header),
-	)
-
-	return ctx, req, span, err
 }
 
 func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, ttl time.Duration) *http.Request {

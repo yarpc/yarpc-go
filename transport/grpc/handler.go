@@ -24,8 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opentracing/opentracing-go"
-	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
@@ -74,9 +73,9 @@ func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) (err e
 	}
 	switch handlerSpec.Type() {
 	case transport.Unary:
-		return h.handleUnary(ctx, transportRequest, serverStream, streamMethod, start, handlerSpec.Unary())
+		return h.handleUnary(ctx, transportRequest, serverStream, streamMethod, start, middleware.ApplyUnaryInbound(handlerSpec.Unary(), h.i.t.options.unaryInboundInterceptor))
 	case transport.Streaming:
-		return h.handleStream(ctx, transportRequest, serverStream, start, handlerSpec.Stream())
+		return h.handleStream(ctx, transportRequest, serverStream, start, middleware.ApplyStreamInbound(handlerSpec.Stream(), h.i.t.options.streamInboundInterceptor))
 	}
 	return yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport grpc does not handle %s handlers", handlerSpec.Type().String())
 }
@@ -130,22 +129,6 @@ func (h *handler) handleStream(
 	start time.Time,
 	streamHandler transport.StreamHandler,
 ) error {
-	tracer := h.i.t.options.tracer
-	var parentSpanCtx opentracing.SpanContext
-	md, ok := metadata.FromIncomingContext(ctx)
-	if ok {
-		parentSpanCtx, _ = tracer.Extract(opentracing.HTTPHeaders, mdReadWriter(md))
-	}
-	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
-		ParentSpanContext: parentSpanCtx,
-		Tracer:            tracer,
-		TransportName:     TransportName,
-		StartTime:         start,
-		ExtraTags:         yarpc.OpentracingTags,
-	}
-	ctx, span := extractOpenTracingSpan.Do(ctx, transportRequest)
-	defer span.Finish()
-
 	stream := newServerStream(ctx, &transport.StreamRequest{Meta: transportRequest.ToRequestMeta()}, serverStream)
 	tServerStream, err := transport.NewServerStream(stream)
 	if err != nil {
@@ -157,7 +140,7 @@ func (h *handler) handleStream(
 		Logger:  h.logger,
 	})
 	apperr = handlerErrorToGRPCError(apperr, nil)
-	return transport.UpdateSpanWithErr(span, apperr)
+	return apperr
 }
 
 func (h *handler) handleUnary(
@@ -213,24 +196,8 @@ func (h *handler) handleUnaryBeforeErrorConversion(
 	start time.Time,
 	handler transport.UnaryHandler,
 ) error {
-	tracer := h.i.t.options.tracer
-	var parentSpanCtx opentracing.SpanContext
-	md, ok := metadata.FromIncomingContext(ctx)
-	if ok {
-		parentSpanCtx, _ = tracer.Extract(opentracing.HTTPHeaders, mdReadWriter(md))
-	}
-	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
-		ParentSpanContext: parentSpanCtx,
-		Tracer:            tracer,
-		TransportName:     TransportName,
-		StartTime:         start,
-		ExtraTags:         yarpc.OpentracingTags,
-	}
-	ctx, span := extractOpenTracingSpan.Do(ctx, transportRequest)
-	defer span.Finish()
-
 	err := h.callUnary(ctx, transportRequest, handler, responseWriter)
-	return transport.UpdateSpanWithErr(span, err)
+	return err
 }
 
 func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Request, unaryHandler transport.UnaryHandler, responseWriter *responseWriter) error {

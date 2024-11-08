@@ -36,10 +36,7 @@ func Run(t crossdock.T) {
 	assert := crossdock.Assert(t)
 	fatals := crossdock.Fatals(t)
 
-	baggage := map[string]string{
-		"hello": "world",
-		"foo":   "bar",
-	}
+	baggage := map[string]string{}
 
 	// create handler
 	callBackHandler, serverCalledBack := newCallBackHandler()

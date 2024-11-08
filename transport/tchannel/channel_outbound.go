@@ -22,7 +22,6 @@ package tchannel
 
 import (
 	"context"
-
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
@@ -72,6 +71,12 @@ type ChannelOutbound struct {
 	addr string
 
 	once *lifecycle.Once
+}
+
+// TransportName is the transport name that will be set on `transport.Request`
+// struct.
+func (o *ChannelOutbound) TransportName() string {
+	return TransportName
 }
 
 // Transports returns the underlying TChannel Transport for this outbound.
@@ -158,9 +163,8 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 	if o.transport.originalHeaders {
 		reqHeaders = req.Headers.OriginalItems()
 	}
-	// baggage headers are transport implementation details that are stripped out (and stored in the context). Users don't interact with it
-	tracingBaggage := tchannel.InjectOutboundSpan(call.Response(), nil)
-	if err := writeHeaders(format, reqHeaders, tracingBaggage, call.Arg2Writer); err != nil {
+
+	if err := writeHeaders(format, reqHeaders, nil, call.Arg2Writer); err != nil {
 		// TODO(abg): This will wrap IO errors while writing headers as encode
 		// errors. We should fix that.
 		return nil, errors.RequestHeadersEncodeError(req, err)
