@@ -174,6 +174,8 @@ type InboundConfig struct {
 	ShutdownTimeout *time.Duration `config:"shutdownTimeout"`
 	// TLS configuration of the inbound.
 	TLSConfig TLSConfig `config:"tls"`
+	// HttpVersion specifies the HTTP version that the inbound should accept.
+	HttpVersion *httpVersion `config:"httpVersion"`
 }
 
 // TLSConfig specifies the TLS configuration of the HTTP inbound.
@@ -200,6 +202,10 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 			return nil, fmt.Errorf("shutdownTimeout must not be negative, got: %q", ic.ShutdownTimeout)
 		}
 		inboundOptions = append(inboundOptions, ShutdownTimeout(*ic.ShutdownTimeout))
+	}
+
+	if ic.HttpVersion != nil {
+		inboundOptions = append(inboundOptions, InboundHttpVersion(*ic.HttpVersion))
 	}
 
 	return t.(*Transport).NewInbound(ic.Address, inboundOptions...), nil
