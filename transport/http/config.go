@@ -175,7 +175,7 @@ type InboundConfig struct {
 	// TLS configuration of the inbound.
 	TLSConfig TLSConfig `config:"tls"`
 	// HttpVersion specifies the HTTP version that the inbound should accept.
-	HttpVersion *httpVersion `config:"httpVersion"`
+	HTTPVersion *httpVersion `config:"httpVersion"`
 }
 
 // TLSConfig specifies the TLS configuration of the HTTP inbound.
@@ -204,8 +204,8 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 		inboundOptions = append(inboundOptions, ShutdownTimeout(*ic.ShutdownTimeout))
 	}
 
-	if ic.HttpVersion != nil {
-		inboundOptions = append(inboundOptions, InboundHttpVersion(*ic.HttpVersion))
+	if ic.HTTPVersion != nil {
+		inboundOptions = append(inboundOptions, InboundHTTPVersion(*ic.HTTPVersion))
 	}
 
 	return t.(*Transport).NewInbound(ic.Address, inboundOptions...), nil

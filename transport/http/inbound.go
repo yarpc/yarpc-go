@@ -47,7 +47,7 @@ type httpVersion int
 
 const (
 	// it only accepts http1 request
-	version1 httpVersion = iota
+	_ httpVersion = iota
 	// it accepts both http1 & http2 request
 	version2
 )
@@ -141,8 +141,8 @@ func InboundTLSMode(mode yarpctls.Mode) InboundOption {
 	}
 }
 
-// InboundHttpVersion specifies the HTTP version that the inbound should accept.
-func InboundHttpVersion(version httpVersion) InboundOption {
+// InboundHTTPVersion specifies the HTTP version that the inbound should accept.
+func InboundHTTPVersion(version httpVersion) InboundOption {
 	return func(i *Inbound) {
 		i.httpVersion = version
 	}
