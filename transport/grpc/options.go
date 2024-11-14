@@ -354,7 +354,6 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 	transportOptions.unaryOutboundInterceptor = outboundmiddleware.UnaryChain(unaryOutbounds...)
 	transportOptions.streamInboundInterceptor = inboundmiddleware.StreamChain(streamInbounds...)
 	transportOptions.streamOutboundInterceptor = outboundmiddleware.StreamChain(streamOutbounds...)
-
 	return transportOptions
 }
 
