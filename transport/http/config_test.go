@@ -81,7 +81,7 @@ func TestTransportSpec(t *testing.T) {
 		GrabHeaders     map[string]struct{}
 		ShutdownTimeout time.Duration
 		TLSMode         yarpctls.Mode
-		UseHTTP2        *bool
+		DisableHTTP2    bool
 	}
 
 	type inboundTest struct {
@@ -163,8 +163,7 @@ func TestTransportSpec(t *testing.T) {
 	}
 
 	serveMux := http.NewServeMux()
-	defaultUseHTTP2 := true
-	useHTTP2False := false
+
 	inboundTests := []inboundTest{
 		{desc: "no inbound", empty: true},
 		{
@@ -175,7 +174,7 @@ func TestTransportSpec(t *testing.T) {
 		{
 			desc:        "simple inbound",
 			cfg:         attrs{"address": ":8080"},
-			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, UseHTTP2: &defaultUseHTTP2},
+			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout},
 		},
 		{
 			desc: "inbound tls",
@@ -185,7 +184,7 @@ func TestTransportSpec(t *testing.T) {
 					"mode": "permissive",
 				},
 			},
-			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, TLSMode: yarpctls.Permissive, UseHTTP2: &defaultUseHTTP2},
+			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, TLSMode: yarpctls.Permissive},
 		},
 		{
 			desc: "inbound tls mode overridden by inbound option",
@@ -196,7 +195,7 @@ func TestTransportSpec(t *testing.T) {
 				},
 			},
 			opts:        []Option{InboundTLSMode(yarpctls.Permissive)},
-			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, TLSMode: yarpctls.Permissive, UseHTTP2: &defaultUseHTTP2},
+			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, TLSMode: yarpctls.Permissive},
 		},
 		{
 			desc: "simple inbound with grab headers",
@@ -205,14 +204,13 @@ func TestTransportSpec(t *testing.T) {
 				Address:         ":8080",
 				GrabHeaders:     map[string]struct{}{"x-foo": {}, "x-bar": {}},
 				ShutdownTimeout: defaultShutdownTimeout,
-				UseHTTP2:        &defaultUseHTTP2,
 			},
 		},
 		{
 			desc:        "inbound interpolation",
 			cfg:         attrs{"address": "${HOST:}:${PORT}"},
 			env:         map[string]string{"HOST": "127.0.0.1", "PORT": "80"},
-			wantInbound: &wantInbound{Address: "127.0.0.1:80", ShutdownTimeout: defaultShutdownTimeout, UseHTTP2: &defaultUseHTTP2},
+			wantInbound: &wantInbound{Address: "127.0.0.1:80", ShutdownTimeout: defaultShutdownTimeout},
 		},
 		{
 			desc: "serve mux",
@@ -225,18 +223,17 @@ func TestTransportSpec(t *testing.T) {
 				Mux:             serveMux,
 				MuxPattern:      "/yarpc",
 				ShutdownTimeout: defaultShutdownTimeout,
-				UseHTTP2:        &defaultUseHTTP2,
 			},
 		},
 		{
 			desc:        "shutdown timeout",
 			cfg:         attrs{"address": ":8080", "shutdownTimeout": "1s"},
-			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: time.Second, UseHTTP2: &defaultUseHTTP2},
+			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: time.Second},
 		},
 		{
 			desc:        "shutdown timeout 0",
 			cfg:         attrs{"address": ":8080", "shutdownTimeout": "0s"},
-			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: 0, UseHTTP2: &defaultUseHTTP2},
+			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: 0},
 		},
 		{
 			desc:       "shutdown timeout err",
@@ -244,16 +241,22 @@ func TestTransportSpec(t *testing.T) {
 			wantErrors: []string{`shutdownTimeout must not be negative, got: "-1s"`},
 		},
 		{
-			desc:        "useHTTP2 false as cfg",
-			cfg:         attrs{"address": ":8080", "useHTTP2": false},
+			desc:        "disableHTTP2 - true",
+			cfg:         attrs{"address": ":8080", "disableHTTP2": true},
 			opts:        []Option{},
-			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, UseHTTP2: &useHTTP2False},
+			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, DisableHTTP2: true},
 		},
 		{
-			desc:        "useHTTP2 false as option",
+			desc:        "disableHTTP2 - false",
+			cfg:         attrs{"address": ":8080", "disableHTTP2": false},
+			opts:        []Option{},
+			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, DisableHTTP2: false},
+		},
+		{
+			desc:        "disableHTTP2 - default (false)",
 			cfg:         attrs{"address": ":8080"},
-			opts:        []Option{InboundUseHTTP2(false)},
-			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, UseHTTP2: &useHTTP2False},
+			opts:        []Option{},
+			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, DisableHTTP2: false},
 		},
 	}
 
@@ -579,7 +582,7 @@ func TestTransportSpec(t *testing.T) {
 				assert.Equal(t, want.ShutdownTimeout, ib.shutdownTimeout, "shutdownTimeout should match")
 				assert.Equal(t, "foo", ib.transport.serviceName, "service name must match")
 				assert.Equal(t, want.TLSMode, ib.tlsMode, "tlsMode should match")
-				assert.Equal(t, *want.UseHTTP2, ib.useHTTP2, "useHTTP2 should match")
+				assert.Equal(t, want.DisableHTTP2, ib.disableHTTP2, "disableHTTP2 should match")
 			}
 		}
 

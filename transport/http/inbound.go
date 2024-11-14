@@ -129,11 +129,10 @@ func InboundTLSMode(mode yarpctls.Mode) InboundOption {
 	}
 }
 
-// InboundUseHTTP2 returns an InboundOption that sets whether the inbound should
-// accept HTTP/2 requests. If set to false, the inbound will only accept HTTP/1
-func InboundUseHTTP2(useHTTP2 bool) InboundOption {
+// DisableHTTP2 returns an InboundOption that disables HTTP/2 support.
+func DisableHTTP2(flag bool) InboundOption {
 	return func(i *Inbound) {
-		i.useHTTP2 = useHTTP2
+		i.disableHTTP2 = flag
 	}
 }
 
@@ -149,7 +148,7 @@ func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 		transport:         t,
 		grabHeaders:       make(map[string]struct{}),
 		bothResponseError: true,
-		useHTTP2:          true,
+		disableHTTP2:      false,
 	}
 	for _, opt := range opts {
 		opt(i)
@@ -180,8 +179,7 @@ type Inbound struct {
 	tlsConfig *tls.Config
 	tlsMode   yarpctls.Mode
 
-	// default is true
-	useHTTP2 bool
+	disableHTTP2 bool
 }
 
 // Tracer configures a tracer on this inbound.
@@ -242,7 +240,7 @@ func (i *Inbound) start() error {
 		Addr:    i.addr,
 		Handler: httpHandler,
 	}
-	if i.useHTTP2 {
+	if !i.disableHTTP2 {
 		h2s := &http2.Server{}
 		server.Handler = h2c.NewHandler(server.Handler, h2s)
 		err := http2.ConfigureServer(server, h2s)
