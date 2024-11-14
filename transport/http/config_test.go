@@ -244,10 +244,16 @@ func TestTransportSpec(t *testing.T) {
 			wantErrors: []string{`shutdownTimeout must not be negative, got: "-1s"`},
 		},
 		{
-			desc:        "useHTTP2 false",
-			cfg:         attrs{"address": ":8080", "shutdownTimeout": "0s"},
+			desc:        "useHTTP2 false as cfg",
+			cfg:         attrs{"address": ":8080", "useHTTP2": false},
+			opts:        []Option{},
+			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, UseHTTP2: &useHTTP2False},
+		},
+		{
+			desc:        "useHTTP2 false as option",
+			cfg:         attrs{"address": ":8080"},
 			opts:        []Option{InboundUseHTTP2(false)},
-			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: 0, UseHTTP2: &useHTTP2False},
+			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, UseHTTP2: &useHTTP2False},
 		},
 	}
 
