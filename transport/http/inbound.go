@@ -43,15 +43,6 @@ import (
 	"golang.org/x/net/http2/h2c"
 )
 
-type httpVersion int
-
-const (
-	// it only accepts http1 request
-	_ httpVersion = iota
-	// it accepts both http1 & http2 request
-	version2
-)
-
 const (
 	// We want a value that's around 5 seconds, but slightly higher than how
 	// long a successful HTTP shutdown can take.
