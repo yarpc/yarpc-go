@@ -60,9 +60,6 @@ const (
 	// This avoids timeouts in shutdown caused by new idle connections, without
 	// making the timeout too large.
 	defaultShutdownTimeout = 6 * time.Second
-
-	// defaultHTTPVersion is the default HTTP version used by the inbound.
-	defaultHTTPVersion = version2
 )
 
 // InboundOption customizes the behavior of an HTTP Inbound constructed with
@@ -141,10 +138,11 @@ func InboundTLSMode(mode yarpctls.Mode) InboundOption {
 	}
 }
 
-// InboundHTTPVersion specifies the HTTP version that the inbound should accept.
-func InboundHTTPVersion(version httpVersion) InboundOption {
+// InboundUseHTTP2 returns an InboundOption that sets whether the inbound should
+// accept HTTP/2 requests. If set to false, the inbound will only accept HTTP/1
+func InboundUseHTTP2(useHTTP2 bool) InboundOption {
 	return func(i *Inbound) {
-		i.httpVersion = version
+		i.useHTTP2 = useHTTP2
 	}
 }
 
@@ -160,7 +158,7 @@ func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 		transport:         t,
 		grabHeaders:       make(map[string]struct{}),
 		bothResponseError: true,
-		httpVersion:       defaultHTTPVersion,
+		useHTTP2:          true,
 	}
 	for _, opt := range opts {
 		opt(i)
@@ -191,8 +189,8 @@ type Inbound struct {
 	tlsConfig *tls.Config
 	tlsMode   yarpctls.Mode
 
-	// http version
-	httpVersion httpVersion
+	// default is true
+	useHTTP2 bool
 }
 
 // Tracer configures a tracer on this inbound.
@@ -253,7 +251,7 @@ func (i *Inbound) start() error {
 		Addr:    i.addr,
 		Handler: httpHandler,
 	}
-	if i.httpVersion == version2 {
+	if i.useHTTP2 {
 		h2s := &http2.Server{}
 		server.Handler = h2c.NewHandler(server.Handler, h2s)
 		err := http2.ConfigureServer(server, h2s)
