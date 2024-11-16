@@ -24,6 +24,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"go.uber.org/yarpc/api/middleware"
+	"go.uber.org/yarpc/internal/interceptor"
 	"strconv"
 	"time"
 
@@ -105,6 +107,8 @@ type handler struct {
 	logger                         *zap.Logger
 	newResponseWriter              func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
 	excludeServiceHeaderInResponse bool
+	unaryInboundInterceptor        interceptor.UnaryInbound
+	unaryOutboundInterceptor       interceptor.UnaryOutbound
 }
 
 func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
@@ -193,7 +197,9 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 
 	if tcall, ok := call.(tchannelCall); ok {
 		tracer := h.tracer
-		ctx = tchannel.ExtractInboundSpan(ctx, tcall.InboundCall, headers.Items(), tracer)
+		if _, isNoop := tracer.(opentracing.NoopTracer); !isNoop {
+			ctx = tchannel.ExtractInboundSpan(ctx, tcall.InboundCall, headers.Items(), tracer)
+		}
 	}
 
 	buf := bufferpool.Get()
@@ -242,7 +248,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 			StartTime:      start,
 			Request:        treq,
 			ResponseWriter: responseWriter,
-			Handler:        spec.Unary(),
+			Handler:        middleware.ApplyUnaryInbound(spec.Unary(), h.unaryInboundInterceptor),
 			Logger:         h.logger,
 		})
 
