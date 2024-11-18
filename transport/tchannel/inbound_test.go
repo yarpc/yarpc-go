@@ -255,7 +255,7 @@ func TestInboundWithNativeHandlers(t *testing.T) {
 }
 
 func TestArbitraryInboundServiceOutboundCallerName(t *testing.T) {
-	it, err := NewTransport(ServiceName("service"))
+	it, err := NewTransport(ServiceName("service"), ListenAddr("127.0.0.1:0"))
 	require.NoError(t, err)
 	i := it.NewInbound()
 	i.SetRouter(transporttest.EchoRouter{})
