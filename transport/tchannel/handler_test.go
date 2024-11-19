@@ -25,6 +25,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go.uber.org/yarpc/api/middleware"
 	"strconv"
 	"strings"
 	"testing"
@@ -113,7 +114,8 @@ func TestHandlerErrors(t *testing.T) {
 
 		spec := transport.NewUnaryHandlerSpec(rpcHandler)
 
-		tchHandler := handler{router: router, logger: zap.New(core).Named("tchannel"), newResponseWriter: tt.newResponseWriter}
+		tchHandler := handler{router: router, logger: zap.New(core).Named("tchannel"), newResponseWriter: tt.newResponseWriter, unaryInboundInterceptor: middleware.NopUnaryInbound,
+			unaryOutboundInterceptor: middleware.NopUnaryOutbound}
 
 		router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
 			WithService("service").
@@ -431,7 +433,8 @@ func TestHandlerFailures(t *testing.T) {
 				WithProcedure(tt.sendCall.method),
 			).Return(spec, nil).AnyTimes()
 
-			handler{router: router, logger: zap.New(core).Named("tchannel"), newResponseWriter: tt.newResponseWriter}.handle(ctx, tt.sendCall)
+			handler{router: router, logger: zap.New(core).Named("tchannel"), newResponseWriter: tt.newResponseWriter, unaryInboundInterceptor: middleware.NopUnaryInbound,
+				unaryOutboundInterceptor: middleware.NopUnaryOutbound}.handle(ctx, tt.sendCall)
 			err := resp.SystemError()
 			require.Error(t, err, "expected error for %q", tt.desc)
 
@@ -694,9 +697,11 @@ func TestHandlerSystemErrorLogs(t *testing.T) {
 	spec := transport.NewUnaryHandlerSpec(transportHandler)
 
 	tchannelHandler := handler{
-		router:            router,
-		logger:            zap.New(zapCore),
-		newResponseWriter: newHandlerWriter,
+		router:                   router,
+		logger:                   zap.New(zapCore),
+		newResponseWriter:        newHandlerWriter,
+		unaryInboundInterceptor:  middleware.NopUnaryInbound,
+		unaryOutboundInterceptor: middleware.NopUnaryOutbound,
 	}
 
 	router.EXPECT().Choose(gomock.Any(), gomock.Any()).Return(spec, nil).Times(4)
@@ -812,6 +817,8 @@ func TestRpcServiceHeader(t *testing.T) {
 		newResponseWriter: func(inboundCallResponse, tchannel.Format, headerCase) responseWriter {
 			return hw
 		},
+		unaryInboundInterceptor:  middleware.NopUnaryInbound,
+		unaryOutboundInterceptor: middleware.NopUnaryOutbound,
 	}
 	resp := newResponseRecorder()
 	expectedServiceHeader := "foo"
