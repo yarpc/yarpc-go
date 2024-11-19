@@ -114,8 +114,13 @@ func TestHandlerErrors(t *testing.T) {
 
 		spec := transport.NewUnaryHandlerSpec(rpcHandler)
 
-		tchHandler := handler{router: router, logger: zap.New(core).Named("tchannel"), newResponseWriter: tt.newResponseWriter, unaryInboundInterceptor: middleware.NopUnaryInbound,
-			unaryOutboundInterceptor: middleware.NopUnaryOutbound}
+		tchHandler := handler{
+			router:                   router,
+			logger:                   zap.New(core).Named("tchannel"),
+			newResponseWriter:        tt.newResponseWriter,
+			unaryInboundInterceptor:  middleware.NopUnaryInbound,
+			unaryOutboundInterceptor: middleware.NopUnaryOutbound,
+		}
 
 		router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
 			WithService("service").
@@ -433,8 +438,16 @@ func TestHandlerFailures(t *testing.T) {
 				WithProcedure(tt.sendCall.method),
 			).Return(spec, nil).AnyTimes()
 
-			handler{router: router, logger: zap.New(core).Named("tchannel"), newResponseWriter: tt.newResponseWriter, unaryInboundInterceptor: middleware.NopUnaryInbound,
-				unaryOutboundInterceptor: middleware.NopUnaryOutbound}.handle(ctx, tt.sendCall)
+			handler{
+				router:                   router,
+				logger:                   zap.New(core).Named("tchannel"),
+				newResponseWriter:        tt.newResponseWriter,
+				unaryInboundInterceptor:  middleware.NopUnaryInbound,
+				unaryOutboundInterceptor: middleware.NopUnaryOutbound,
+			}.handle(
+				ctx,
+				tt.sendCall,
+			)
 			err := resp.SystemError()
 			require.Error(t, err, "expected error for %q", tt.desc)
 
