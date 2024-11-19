@@ -39,6 +39,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
+	"go.uber.org/yarpc/internal/interceptor"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -268,7 +269,7 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil")
 	}
 
-	return o.call(ctx, treq)
+	return o.transport.unaryOutboundInterceptor.Call(ctx, treq, interceptor.UnaryOutboundFunc(o.call))
 }
 
 // CallOneway makes a oneway request
@@ -277,6 +278,10 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil")
 	}
 
+	return o.transport.onewayOutboundInterceptor.CallOneway(ctx, treq, interceptor.OnewayOutboundFunc(o.callOneway))
+}
+
+func (o *Outbound) callOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
 	// res is used to close the response body to avoid memory/connection leak
 	// even when the response body is empty
 	res, err := o.call(ctx, treq)
@@ -303,6 +308,7 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	if err != nil {
 		return nil, err
 	}
+	// TODO: remove tracing instrumentation at transport layer completely
 	ctx, hreq, span, err := o.withOpentracingSpan(ctx, hreq, treq, start)
 	if err != nil {
 		return nil, err

@@ -21,7 +21,10 @@
 package interceptor
 
 import (
+	"context"
+
 	"go.uber.org/yarpc/api/middleware"
+	"go.uber.org/yarpc/api/transport"
 )
 
 type (
@@ -64,3 +67,93 @@ type (
 	// multiple times on the same request.
 	StreamOutbound = middleware.StreamOutbound
 )
+
+var (
+	_ transport.UnaryOutbound  = UnaryOutboundFunc(nil)
+	_ transport.OnewayOutbound = OnewayOutboundFunc(nil)
+	_ transport.StreamOutbound = StreamOutboundFunc(nil)
+)
+
+// UnaryOutboundFunc defines a function type that implements the UnaryOutbound interface.
+type UnaryOutboundFunc func(context.Context, *transport.Request) (*transport.Response, error)
+
+// Call calls the UnaryOutbound function.
+func (f UnaryOutboundFunc) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+	return f(ctx, req)
+}
+
+// Start starts the UnaryOutbound function. This is a no-op in this implementation.
+func (f UnaryOutboundFunc) Start() error {
+	return nil
+}
+
+// Stop stops the UnaryOutbound function. This is a no-op in this implementation.
+func (f UnaryOutboundFunc) Stop() error {
+	return nil
+}
+
+// IsRunning returns whether the UnaryOutbound function is running. This is a no-op in this implementation.
+func (f UnaryOutboundFunc) IsRunning() bool {
+	return false
+}
+
+// Transports returns the transports used by the UnaryOutbound function. This is a no-op in this implementation.
+func (f UnaryOutboundFunc) Transports() []transport.Transport {
+	return nil
+}
+
+// OnewayOutboundFunc defines a function type that implements the OnewayOutbound interface.
+type OnewayOutboundFunc func(context.Context, *transport.Request) (transport.Ack, error)
+
+// CallOneway calls the OnewayOutbound function.
+func (f OnewayOutboundFunc) CallOneway(ctx context.Context, req *transport.Request) (transport.Ack, error) {
+	return f(ctx, req)
+}
+
+// Start starts the OnewayOutbound function. This is a no-op in this implementation.
+func (f OnewayOutboundFunc) Start() error {
+	return nil
+}
+
+// Stop stops the OnewayOutbound function. This is a no-op in this implementation.
+func (f OnewayOutboundFunc) Stop() error {
+	return nil
+}
+
+// IsRunning returns whether the OnewayOutbound function is running. This is a no-op in this implementation.
+func (f OnewayOutboundFunc) IsRunning() bool {
+	return false
+}
+
+// Transports returns the transports used by the OnewayOutbound function. This is a no-op in this implementation.
+func (f OnewayOutboundFunc) Transports() []transport.Transport {
+	return nil
+}
+
+// StreamOutboundFunc defines a function type that implements the StreamOutbound interface.
+type StreamOutboundFunc func(context.Context, *transport.StreamRequest) (*transport.ClientStream, error)
+
+// CallStream calls the StreamOutbound function.
+func (f StreamOutboundFunc) CallStream(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error) {
+	return f(ctx, req)
+}
+
+// Start starts the StreamOutbound function. This is a no-op in this implementation.
+func (f StreamOutboundFunc) Start() error {
+	return nil
+}
+
+// Stop stops the StreamOutbound function. This is a no-op in this implementation.
+func (f StreamOutboundFunc) Stop() error {
+	return nil
+}
+
+// IsRunning returns whether the StreamOutbound function is running. This is a no-op in this implementation.
+func (f StreamOutboundFunc) IsRunning() bool {
+	return false
+}
+
+// Transports returns the transports used by the StreamOutbound function. This is a no-op in this implementation.
+func (f StreamOutboundFunc) Transports() []transport.Transport {
+	return nil
+}
