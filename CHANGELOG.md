@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 =======
-## [Unreleased]
+## [1.75.2] - 2024-11-19
 ### Added
 - HTTP2 server support for the HTTP inbound.
   - The HTTP inbound now supports HTTP2 connections as well by default.
