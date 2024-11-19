@@ -1535,6 +1535,7 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
+[1.75.2]: https://github.com/yarpc/yarpc-go/compare/v1.75.1...1.75.2
 [1.75.1]: https://github.com/yarpc/yarpc-go/compare/v1.75.0...1.75.1
 [1.75.0]: https://github.com/yarpc/yarpc-go/compare/v1.73.2...1.75.0
 [1.73.2]: https://github.com/yarpc/yarpc-go/compare/v1.73.1...1.73.2
