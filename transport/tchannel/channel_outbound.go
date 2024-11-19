@@ -74,6 +74,12 @@ type ChannelOutbound struct {
 	once *lifecycle.Once
 }
 
+// TransportName is the transport name that will be set on `transport.Request`
+// struct.
+func (o *ChannelOutbound) TransportName() string {
+	return TransportName
+}
+
 // Transports returns the underlying TChannel Transport for this outbound.
 func (o *ChannelOutbound) Transports() []transport.Transport {
 	return []transport.Transport{o.transport}
