@@ -122,6 +122,7 @@ func TestInboundTLS(t *testing.T) {
 				tchannel.InboundTLSConfiguration(scenario.ServerTLSConfig()),
 				tchannel.InboundTLSMode(yarpctls.Permissive),
 				tchannel.ServiceName("test-svc"),
+				tchannel.ListenAddr("127.0.0.1:0"),
 			}
 			if tt.isClientTLS {
 				tchannel.Dialer(func(ctx context.Context, network, hostPort string) (net.Conn, error) {
@@ -165,6 +166,7 @@ func TestTLSOutbound(t *testing.T) {
 		tchannel.InboundTLSConfiguration(scenario.ServerTLSConfig()),
 		tchannel.InboundTLSMode(yarpctls.Enforced), // reject plaintext connections.
 		tchannel.ServiceName("test-svc"),
+		tchannel.ListenAddr("127.0.0.1:0"),
 	)
 	require.NoError(t, err)
 

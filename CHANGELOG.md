@@ -5,9 +5,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 =======
+## [1.75.1] - 2024-11-19
+### Changed
+- Updated grpc-go to v1.59.0
+
 ## [1.75.0] - 2024-10-15
 ### Added
 - Added multiaddress passthrough resolver
+- Added component tag to tracing spans
 ### Fixed
 - Return correct error code for ctx Cancelled error in http outbound.
 - Make tchannel outbound satisfy Namer interface
@@ -1524,6 +1529,7 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
+[1.75.1]: https://github.com/yarpc/yarpc-go/compare/v1.75.0...1.75.1
 [1.75.0]: https://github.com/yarpc/yarpc-go/compare/v1.73.2...1.75.0
 [1.73.2]: https://github.com/yarpc/yarpc-go/compare/v1.73.1...1.73.2
 [1.73.1]: https://github.com/yarpc/yarpc-go/compare/v1.73.0...1.73.1
