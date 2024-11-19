@@ -159,16 +159,27 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		defer span.Finish()
 
 		err = transport.InvokeUnaryHandler(transport.UnaryInvokeRequest{
-			Context:        ctx,
-			StartTime:      start,
-			Request:        treq,
-			Handler:        middleware.ApplyUnaryInbound(spec.Unary(), h.transport.unaryInboundInterceptor),
+			Context:   ctx,
+			StartTime: start,
+			Request:   treq,
+			Handler: middleware.ApplyUnaryInbound(
+				spec.Unary(),
+				h.transport.unaryInboundInterceptor,
+			),
 			ResponseWriter: responseWriter,
 			Logger:         h.logger,
 		})
 
 	case transport.Oneway:
-		err = handleOnewayRequest(span, treq, middleware.ApplyOnewayInbound(spec.Oneway(), h.transport.onewayInboundInterceptor), h.logger)
+		err = handleOnewayRequest(
+			span,
+			treq,
+			middleware.ApplyOnewayInbound(
+				spec.Oneway(),
+				h.transport.onewayInboundInterceptor,
+			),
+			h.logger,
+		)
 
 	default:
 		err = yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport http does not handle %s handlers", spec.Type().String())

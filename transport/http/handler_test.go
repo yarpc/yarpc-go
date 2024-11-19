@@ -89,7 +89,12 @@ func TestHandlerSuccess(t *testing.T) {
 		gomock.Any(),
 	).Return(nil)
 
-	httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}, bothResponseError: true, transport: NewTransport()}
+	httpHandler := handler{
+		router:            router,
+		tracer:            &opentracing.NoopTracer{},
+		bothResponseError: true,
+		transport:         NewTransport(),
+	}
 	req := &http.Request{
 		Method: "POST",
 		Header: headers,
@@ -165,7 +170,13 @@ func TestHandlerHeaders(t *testing.T) {
 			WithProcedure("hello"),
 		).Return(spec, nil)
 
-		httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}, grabHeaders: tt.grabHeaders, bothResponseError: true, transport: NewTransport()}
+		httpHandler := handler{
+			router:            router,
+			tracer:            &opentracing.NoopTracer{},
+			grabHeaders:       tt.grabHeaders,
+			bothResponseError: true,
+			transport:         NewTransport(),
+		}
 
 		rpcHandler.EXPECT().Handle(
 			transporttest.NewContextMatcher(t,
@@ -351,7 +362,12 @@ func TestHandlerInternalFailure(t *testing.T) {
 		WithProcedure("hello"),
 	).Return(spec, nil)
 
-	httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}, bothResponseError: true, transport: NewTransport()}
+	httpHandler := handler{
+		router:            router,
+		tracer:            &opentracing.NoopTracer{},
+		bothResponseError: true,
+		transport:         NewTransport(),
+	}
 	httpResponse := httptest.NewRecorder()
 	httpHandler.ServeHTTP(httpResponse, &request)
 
