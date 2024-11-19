@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - HTTP2 server support for the HTTP inbound.
   - The HTTP inbound now supports HTTP2 connections as well by default.
   - Inbound config option to disable HTTP2 server support (this will only allow HTTP1.1 connections).
+
+## [1.75.1] - 2024-11-19
 ### Changed
 - Updated grpc-go to v1.59.0
 
@@ -1533,7 +1535,7 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.75.0...HEAD
+[1.75.1]: https://github.com/yarpc/yarpc-go/compare/v1.75.0...1.75.1
 [1.75.0]: https://github.com/yarpc/yarpc-go/compare/v1.73.2...1.75.0
 [1.73.2]: https://github.com/yarpc/yarpc-go/compare/v1.73.1...1.73.2
 [1.73.1]: https://github.com/yarpc/yarpc-go/compare/v1.73.0...1.73.1
