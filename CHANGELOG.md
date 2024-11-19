@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
+### Added
+- HTTP2 server support for the HTTP inbound.
+  - The HTTP inbound now supports HTTP2 connections as well by default.
+  - Inbound config option to disable HTTP2 server support (this will only allow HTTP1.1 connections).
 ### Changed
 - Updated grpc-go to v1.59.0
 

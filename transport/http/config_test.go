@@ -81,6 +81,7 @@ func TestTransportSpec(t *testing.T) {
 		GrabHeaders     map[string]struct{}
 		ShutdownTimeout time.Duration
 		TLSMode         yarpctls.Mode
+		DisableHTTP2    bool
 	}
 
 	type inboundTest struct {
@@ -238,6 +239,24 @@ func TestTransportSpec(t *testing.T) {
 			desc:       "shutdown timeout err",
 			cfg:        attrs{"address": ":8080", "shutdownTimeout": "-1s"},
 			wantErrors: []string{`shutdownTimeout must not be negative, got: "-1s"`},
+		},
+		{
+			desc:        "disableHTTP2 - true",
+			cfg:         attrs{"address": ":8080", "disableHTTP2": true},
+			opts:        []Option{},
+			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, DisableHTTP2: true},
+		},
+		{
+			desc:        "disableHTTP2 - false",
+			cfg:         attrs{"address": ":8080", "disableHTTP2": false},
+			opts:        []Option{},
+			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, DisableHTTP2: false},
+		},
+		{
+			desc:        "disableHTTP2 - default (false)",
+			cfg:         attrs{"address": ":8080"},
+			opts:        []Option{},
+			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, DisableHTTP2: false},
 		},
 	}
 
@@ -563,6 +582,7 @@ func TestTransportSpec(t *testing.T) {
 				assert.Equal(t, want.ShutdownTimeout, ib.shutdownTimeout, "shutdownTimeout should match")
 				assert.Equal(t, "foo", ib.transport.serviceName, "service name must match")
 				assert.Equal(t, want.TLSMode, ib.tlsMode, "tlsMode should match")
+				assert.Equal(t, want.DisableHTTP2, ib.disableHTTP2, "disableHTTP2 should match")
 			}
 		}
 
