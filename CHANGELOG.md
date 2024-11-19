@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [1.75.0] - 2024-10-15
 ### Added
 - Added multiaddress passthrough resolver
+- Added component tag to tracing spans
 ### Fixed
 - Return correct error code for ctx Cancelled error in http outbound.
 - Make tchannel outbound satisfy Namer interface
