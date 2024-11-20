@@ -347,7 +347,7 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 		unaryOutbounds = append(unaryOutbounds, ti)
 		streamInbounds = append(streamInbounds, ti)
 		streamOutbounds = append(streamOutbounds, ti)
-		transportOptions.tracer = opentracing.NoopTracer{}
+		//transportOptions.tracer = opentracing.NoopTracer{}
 	}
 
 	transportOptions.unaryInboundInterceptor = inboundmiddleware.UnaryChain(unaryInbounds...)

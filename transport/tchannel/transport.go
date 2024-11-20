@@ -139,7 +139,7 @@ func (o transportOptions) newTransport() *Transport {
 		unaryInbounds = append(unaryInbounds, ti)
 		unaryOutbounds = append(unaryOutbounds, ti)
 
-		tracer = opentracing.NoopTracer{}
+		//tracer = opentracing.NoopTracer{}
 	}
 	return &Transport{
 		once:                           lifecycle.NewOnce(),

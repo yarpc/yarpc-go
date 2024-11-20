@@ -297,7 +297,7 @@ func (o *transportOptions) newTransport() *Transport {
 		onewayInbounds = append(onewayInbounds, ti)
 		onewayOutbounds = append(onewayOutbounds, ti)
 
-		tracer = opentracing.NoopTracer{}
+		//tracer = opentracing.NoopTracer{}
 	}
 	return &Transport{
 		once:                      lifecycle.NewOnce(),

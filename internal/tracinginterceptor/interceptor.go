@@ -83,6 +83,9 @@ func New(p Params) *Interceptor {
 
 // Handle implements interceptor.UnaryInbound
 func (i *Interceptor) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
+	if existingSpan := opentracing.SpanFromContext(ctx); existingSpan != nil {
+		return h.Handle(ctx, req, resw)
+	}
 	parentSpanCtx, _ := i.tracer.Extract(i.propagationFormat, getPropagationCarrier(req.Headers.Items(), req.Transport))
 	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
 		ParentSpanContext: parentSpanCtx,
@@ -136,6 +139,9 @@ func (i *Interceptor) Call(ctx context.Context, req *transport.Request, out tran
 
 // HandleOneway implements interceptor.OnewayInbound
 func (i *Interceptor) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
+	//if existingSpan := opentracing.SpanFromContext(ctx); existingSpan != nil {
+	//	return h.HandleOneway(ctx, req)
+	//}
 	parentSpanCtx, _ := i.tracer.Extract(i.propagationFormat, getPropagationCarrier(req.Headers.Items(), req.Transport))
 	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
 		ParentSpanContext: parentSpanCtx,
