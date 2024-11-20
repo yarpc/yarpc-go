@@ -109,6 +109,23 @@ func (i *Interceptor) Handle(ctx context.Context, req *transport.Request, resw t
 
 // Call implements interceptor.UnaryOutbound
 func (i *Interceptor) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+	existingSpan := opentracing.SpanFromContext(ctx)
+	if existingSpan != nil {
+		tracingHeaders := make(map[string]string)
+		if err := i.tracer.Inject(existingSpan.Context(), i.propagationFormat, getPropagationCarrier(tracingHeaders, i.transport)); err != nil {
+			existingSpan.LogFields(logFieldEventError, log.String("message", err.Error()))
+		} else {
+			for k, v := range tracingHeaders {
+				req.Headers = req.Headers.With(k, v)
+			}
+		}
+
+		res, err := out.Call(ctx, req)
+		if res != nil {
+			return res, updateSpanWithErrorDetails(existingSpan, res.ApplicationError, res.ApplicationErrorMeta, err)
+		}
+		return nil, updateSpanWithErrorDetails(existingSpan, false, nil, err)
+	}
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        i.tracer,
 		TransportName: i.transport,
@@ -139,9 +156,6 @@ func (i *Interceptor) Call(ctx context.Context, req *transport.Request, out tran
 
 // HandleOneway implements interceptor.OnewayInbound
 func (i *Interceptor) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
-	//if existingSpan := opentracing.SpanFromContext(ctx); existingSpan != nil {
-	//	return h.HandleOneway(ctx, req)
-	//}
 	parentSpanCtx, _ := i.tracer.Extract(i.propagationFormat, getPropagationCarrier(req.Headers.Items(), req.Transport))
 	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
 		ParentSpanContext: parentSpanCtx,
