@@ -68,9 +68,9 @@ func NewChannelTransport(opts ...TransportOption) (*ChannelTransport, error) {
 			err = errChannelOrServiceNameIsRequired
 		} else {
 			tracer := options.tracer
-			if options.tracingInterceptorEnabled {
-				tracer = opentracing.NoopTracer{}
-			}
+			//if options.tracingInterceptorEnabled {
+			//	tracer = opentracing.NoopTracer{}
+			//}
 			opts := tchannel.ChannelOptions{Tracer: tracer}
 			ch, err = tchannel.NewChannel(options.name, &opts)
 			options.ch = ch
@@ -103,7 +103,7 @@ func (options transportOptions) newChannelTransport() *ChannelTransport {
 		unaryInbounds = append(unaryInbounds, ti)
 		unaryOutbounds = append(unaryOutbounds, ti)
 
-		tracer = opentracing.NoopTracer{}
+		//tracer = opentracing.NoopTracer{}
 	}
 	return &ChannelTransport{
 		once:                     lifecycle.NewOnce(),
