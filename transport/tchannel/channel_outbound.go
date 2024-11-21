@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"context"
+	"go.uber.org/yarpc/internal/interceptor"
 
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
@@ -209,6 +210,13 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 		ApplicationError: res.ApplicationError(),
 	}
 	return resp, err
+}
+
+func (o *ChannelOutbound) call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+	if req == nil {
+		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel channel outbound was nil")
+	}
+	return o.transport.unaryOutboundInterceptor.Call(ctx, req, interceptor.UnaryOutboundFunc(o.call))
 }
 
 // Introspect returns basic status about this outbound.

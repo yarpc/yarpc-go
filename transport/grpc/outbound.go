@@ -23,6 +23,7 @@ package grpc
 import (
 	"bytes"
 	"context"
+	"go.uber.org/yarpc/internal/interceptor"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -133,6 +134,10 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 		ApplicationError:     metadataToIsApplicationError(responseMD),
 		ApplicationErrorMeta: metadataToApplicationErrorMeta(responseMD),
 	}, invokeErr
+}
+
+func (o *Outbound) call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+	return o.t.options.unaryOutboundInterceptor.Call(ctx, request, interceptor.UnaryOutboundFunc(o.call))
 }
 
 func validateRequest(req *transport.Request) error {
@@ -286,6 +291,10 @@ func (o *Outbound) CallStream(ctx context.Context, request *transport.StreamRequ
 		return nil, err
 	}
 	return o.stream(ctx, request, time.Now())
+}
+
+func (o *Outbound) callStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
+	return o.t.options.streamOutboundInterceptor.CallStream(ctx, request, interceptor.StreamOutboundFunc(o.callStream))
 }
 
 func (o *Outbound) stream(

@@ -24,6 +24,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"go.uber.org/yarpc/internal/interceptor"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -268,7 +269,7 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil")
 	}
 
-	return o.call(ctx, treq)
+	return o.transport.unaryOutboundInterceptor.Call(ctx, treq, interceptor.UnaryOutboundFunc(o.call))
 }
 
 // CallOneway makes a oneway request
@@ -277,6 +278,10 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil")
 	}
 
+	return o.transport.onewayOutboundInterceptor.CallOneway(ctx, treq, interceptor.OnewayOutboundFunc(o.callOneway))
+}
+
+func (o *Outbound) callOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
 	// res is used to close the response body to avoid memory/connection leak
 	// even when the response body is empty
 	res, err := o.call(ctx, treq)

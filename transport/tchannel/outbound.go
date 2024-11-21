@@ -23,6 +23,7 @@ package tchannel
 import (
 	"bytes"
 	"context"
+	"go.uber.org/yarpc/internal/interceptor"
 	"io"
 	"strconv"
 
@@ -117,6 +118,10 @@ func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport
 	res, err := p.Call(ctx, req, o.reuseBuffer)
 	onFinish(err)
 	return res, toYARPCError(req, err)
+}
+
+func (o *Outbound) call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+	return o.transport.unaryOutboundInterceptor.Call(ctx, req, interceptor.UnaryOutboundFunc(o.call))
 }
 
 // Call sends an RPC to this specific peer.
