@@ -105,6 +105,11 @@ func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport
 	if req == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel outbound was nil")
 	}
+
+	return o.transport.unaryOutboundInterceptor.Call(ctx, req, interceptor.UnaryOutboundFunc(o.call))
+}
+
+func (o *Outbound) call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "error waiting for tchannel outbound to start for service: %s", req.Service)
 	}
@@ -118,10 +123,6 @@ func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport
 	res, err := p.Call(ctx, req, o.reuseBuffer)
 	onFinish(err)
 	return res, toYARPCError(req, err)
-}
-
-func (o *Outbound) call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	return o.transport.unaryOutboundInterceptor.Call(ctx, req, interceptor.UnaryOutboundFunc(o.call))
 }
 
 // Call sends an RPC to this specific peer.
