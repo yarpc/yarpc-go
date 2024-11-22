@@ -23,7 +23,6 @@ package tchannel
 import (
 	"bytes"
 	"context"
-	"go.uber.org/yarpc/internal/interceptor"
 	"io"
 	"strconv"
 
@@ -32,6 +31,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
 	"go.uber.org/yarpc/internal/bufferpool"
+	"go.uber.org/yarpc/internal/interceptor"
 	"go.uber.org/yarpc/internal/iopool"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"

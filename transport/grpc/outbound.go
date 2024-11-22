@@ -23,7 +23,6 @@ package grpc
 import (
 	"bytes"
 	"context"
-	"go.uber.org/yarpc/internal/interceptor"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -35,6 +34,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
+	"go.uber.org/yarpc/internal/interceptor"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
