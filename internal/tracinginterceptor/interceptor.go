@@ -105,7 +105,7 @@ func (i *Interceptor) Handle(ctx context.Context, req *transport.Request, resw t
 }
 
 // Call implements interceptor.UnaryOutbound
-func (i *Interceptor) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+func (i *Interceptor) Call(ctx context.Context, req *transport.Request, out transport.UnchainedUnaryOutbound) (*transport.Response, error) {
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        i.tracer,
 		TransportName: i.transport,
@@ -127,7 +127,7 @@ func (i *Interceptor) Call(ctx context.Context, req *transport.Request, out tran
 		}
 	}
 
-	res, err := out.Call(ctx, req)
+	res, err := out.UnchainedCall(ctx, req)
 	if res != nil {
 		return res, updateSpanWithErrorDetails(span, res.ApplicationError, res.ApplicationErrorMeta, err)
 	}

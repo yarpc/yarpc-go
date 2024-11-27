@@ -62,6 +62,12 @@ type UnaryOutbound interface {
 	Call(ctx context.Context, request *Request) (*Response, error)
 }
 
+type UnchainedUnaryOutbound interface {
+
+	// UnchainedCall is called without interceptor.
+	UnchainedCall(ctx context.Context, request *Request) (*Response, error)
+}
+
 // OnewayOutbound is a transport that knows how to send oneway requests for
 // procedure calls.
 type OnewayOutbound interface {
