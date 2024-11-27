@@ -109,6 +109,7 @@ type TransportConfig struct {
 	ResponseHeaderTimeout time.Duration       `config:"responseHeaderTimeout"`
 	ConnTimeout           time.Duration       `config:"connTimeout"`
 	ConnBackoff           yarpcconfig.Backoff `config:"connBackoff"`
+	EnableHTTP2           bool                `config:"enableHTTP2"`
 }
 
 func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit) (transport.Transport, error) {
@@ -144,6 +145,9 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 	}
 	if tc.ConnTimeout > 0 {
 		options.connTimeout = tc.ConnTimeout
+	}
+	if tc.EnableHTTP2 {
+		options.enableHTTP2 = true
 	}
 
 	strategy, err := tc.ConnBackoff.Strategy()
@@ -264,6 +268,12 @@ type OutboundConfig struct {
 	//      spiffe-ids:
 	//        - destination-id
 	TLS OutboundTLSConfig `config:"tls"`
+	// EnableHTTP2 configure to enable http2 requests.
+	//
+	// http:
+	// 		url: "http://localhost:8080/yarpc"
+	// 		enableHTTP2: true
+	EnableHTTP2 bool `config:"enableHTTP2"`
 }
 
 // OutboundTLSConfig configures TLS for the HTTP outbound.
@@ -314,6 +324,10 @@ func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport
 		return nil, err
 	}
 	opts = append(option, opts...)
+
+	if oc.EnableHTTP2 {
+		opts = append(opts, EnableHTTP2())
+	}
 
 	// Special case where the URL implies the single peer.
 	if oc.Empty() {

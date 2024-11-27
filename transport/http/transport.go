@@ -28,6 +28,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/net/http2"
+
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/net/metrics"
 	backoffapi "go.uber.org/yarpc/api/backoff"
@@ -58,6 +60,7 @@ type transportOptions struct {
 	meter                     *metrics.Scope
 	serviceName               string
 	outboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
+	enableHTTP2               bool
 }
 
 var defaultTransportOptions = transportOptions{
@@ -293,20 +296,32 @@ func buildHTTPClient(options *transportOptions) *http.Client {
 		}).DialContext
 	}
 
+	h1Transport := http.Transport{
+		// options lifted from https://golang.org/src/net/http/transport.go
+		Proxy:                 http.ProxyFromEnvironment,
+		DialContext:           dialContext,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		MaxIdleConns:          options.maxIdleConns,
+		MaxIdleConnsPerHost:   options.maxIdleConnsPerHost,
+		IdleConnTimeout:       options.idleConnTimeout,
+		DisableKeepAlives:     options.disableKeepAlives,
+		DisableCompression:    options.disableCompression,
+		ResponseHeaderTimeout: options.responseHeaderTimeout,
+	}
+
+	if options.enableHTTP2 {
+		http2Transport, err := http2.ConfigureTransports(&h1Transport)
+		if err != nil {
+			// TODO: log this error instead of panicking (for now just testing)
+			panic(err)
+		}
+		return &http.Client{
+			Transport: http2Transport,
+		}
+	}
 	return &http.Client{
-		Transport: &http.Transport{
-			// options lifted from https://golang.org/src/net/http/transport.go
-			Proxy:                 http.ProxyFromEnvironment,
-			DialContext:           dialContext,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-			MaxIdleConns:          options.maxIdleConns,
-			MaxIdleConnsPerHost:   options.maxIdleConnsPerHost,
-			IdleConnTimeout:       options.idleConnTimeout,
-			DisableKeepAlives:     options.disableKeepAlives,
-			DisableCompression:    options.disableCompression,
-			ResponseHeaderTimeout: options.responseHeaderTimeout,
-		},
+		Transport: &h1Transport,
 	}
 }
 
