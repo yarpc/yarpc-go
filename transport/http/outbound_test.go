@@ -112,6 +112,61 @@ func TestCreateRequest(t *testing.T) {
 	}
 }
 
+func TestCallSuccessWithHTTP2(t *testing.T) {
+	successServer := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, req *http.Request) {
+			defer req.Body.Close()
+
+			ttl := req.Header.Get(TTLMSHeader)
+			ttlms, err := strconv.Atoi(ttl)
+			assert.NoError(t, err, "can parse TTL header")
+			assert.InDelta(t, ttlms, testtime.X*1000.0, testtime.X*5.0, "ttl header within tolerance")
+
+			assert.Equal(t, "caller", req.Header.Get(CallerHeader))
+			assert.Equal(t, "service", req.Header.Get(ServiceHeader))
+			assert.Equal(t, "raw", req.Header.Get(EncodingHeader))
+			assert.Equal(t, "hello", req.Header.Get(ProcedureHeader))
+
+			body, err := io.ReadAll(req.Body)
+			if assert.NoError(t, err) {
+				assert.Equal(t, []byte("world"), body)
+			}
+
+			w.Header().Set("rpc-header-foo", "bar")
+			_, err = w.Write([]byte("great success"))
+			assert.NoError(t, err)
+		},
+	))
+	defer successServer.Close()
+
+	httpTransport := NewTransport()
+	defer httpTransport.Stop()
+	out := httpTransport.NewSingleOutbound(successServer.URL, EnableHTTP2())
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+	res, err := out.Call(ctx, &transport.Request{
+		Caller:    "caller",
+		Service:   "service",
+		Encoding:  raw.Encoding,
+		Procedure: "hello",
+		Body:      bytes.NewReader([]byte("world")),
+	})
+	require.NoError(t, err)
+	defer res.Body.Close()
+
+	foo, ok := res.Headers.Get("foo")
+	assert.True(t, ok, "value for foo expected")
+	assert.Equal(t, "bar", foo, "foo value mismatch")
+
+	body, err := io.ReadAll(res.Body)
+	if assert.NoError(t, err) {
+		assert.Equal(t, []byte("great success"), body)
+	}
+}
+
 func TestCallSuccess(t *testing.T) {
 	successServer := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, req *http.Request) {
