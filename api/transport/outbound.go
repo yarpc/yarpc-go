@@ -20,7 +20,9 @@
 
 package transport
 
-import "context"
+import (
+	"context"
+)
 
 // Outbound is the common interface for all outbounds.
 //
@@ -60,6 +62,26 @@ type UnaryOutbound interface {
 	// MAY panic if called without calling Start(). This MUST be safe to call
 	// concurrently.
 	Call(ctx context.Context, request *Request) (*Response, error)
+}
+
+type UnchainedUnaryOutbound interface {
+
+	// UnchainedCall is called without interceptor.
+	UnchainedCall(ctx context.Context, request *Request) (*Response, error)
+}
+
+// UnchainedOnewayOutbound defines a transport outbound for oneway requests
+// that does not involve any interceptors.
+type UnchainedOnewayOutbound interface {
+	// UnchainedOnewayCall is called without interceptor.
+	UnchainedOnewayCall(ctx context.Context, request *Request) (Ack, error)
+}
+
+// UnchainedStreamOutbound defines a transport outbound for streaming requests
+// that does not involve any interceptors.
+type UnchainedStreamOutbound interface {
+	// UnchainedStreamCall is called without interceptor.
+	UnchainedStreamCall(ctx context.Context, req *StreamRequest) (*ClientStream, error)
 }
 
 // OnewayOutbound is a transport that knows how to send oneway requests for

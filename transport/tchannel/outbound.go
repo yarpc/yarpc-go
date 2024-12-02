@@ -31,7 +31,6 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
 	"go.uber.org/yarpc/internal/bufferpool"
-	"go.uber.org/yarpc/internal/interceptor"
 	"go.uber.org/yarpc/internal/iopool"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
@@ -52,10 +51,11 @@ var (
 // It may be constructed using the NewOutbound or NewSingleOutbound methods on
 // the TChannel Transport.
 type Outbound struct {
-	transport   *Transport
-	chooser     peer.Chooser
-	once        *lifecycle.Once
-	reuseBuffer bool
+	transport                *Transport
+	chooser                  peer.Chooser
+	once                     *lifecycle.Once
+	reuseBuffer              bool
+	unaryCallWithInterceptor transport.UnchainedUnaryOutbound
 }
 
 // OutboundOption customizes the behavior of a TChannel Outbound.
@@ -106,7 +106,7 @@ func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel outbound was nil")
 	}
 
-	return o.transport.unaryOutboundInterceptor.Call(ctx, req, interceptor.UnaryOutboundFunc(o.call))
+	return o.unaryCallWithInterceptor.UnchainedCall(ctx, req)
 }
 
 func (o *Outbound) call(ctx context.Context, req *transport.Request) (*transport.Response, error) {

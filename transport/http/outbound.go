@@ -24,7 +24,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"go.uber.org/yarpc/internal/interceptor"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -220,6 +219,9 @@ type Outbound struct {
 	destServiceName   string
 	client            *http.Client
 	tlsConfig         *tls.Config
+
+	unaryCallWithInterceptor  transport.UnchainedUnaryOutbound
+	onewayCallWithInterceptor transport.UnchainedOnewayOutbound
 }
 
 // TransportName is the transport name that will be set on `transport.Request` struct.
@@ -268,8 +270,7 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	if treq == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil")
 	}
-
-	return o.transport.unaryOutboundInterceptor.Call(ctx, treq, interceptor.UnaryOutboundFunc(o.call))
+	return o.unaryCallWithInterceptor.UnchainedCall(ctx, treq)
 }
 
 // CallOneway makes a oneway request
@@ -277,8 +278,7 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 	if treq == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil")
 	}
-
-	return o.transport.onewayOutboundInterceptor.CallOneway(ctx, treq, interceptor.OnewayOutboundFunc(o.callOneway))
+	return o.onewayCallWithInterceptor.UnchainedOnewayCall(ctx, treq)
 }
 
 func (o *Outbound) callOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {

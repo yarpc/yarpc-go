@@ -35,6 +35,7 @@ import (
 	"go.uber.org/yarpc/api/x/introspection"
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
 	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/interceptor/outboundinterceptor"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -60,19 +61,36 @@ type Outbound struct {
 	t           *Transport
 	peerChooser peer.Chooser
 	options     *outboundOptions
+
+	unaryCallWithInterceptor  transport.UnchainedUnaryOutbound
+	streamCallWithInterceptor transport.UnchainedStreamOutbound
 }
 
 func newSingleOutbound(t *Transport, address string, options ...OutboundOption) *Outbound {
-	return newOutbound(t, peerchooser.NewSingle(hostport.PeerIdentifier(address), t), options...)
+	o := newOutbound(t, peerchooser.NewSingle(hostport.PeerIdentifier(address), t), options...)
+	o.unaryCallWithInterceptor = interceptor.ApplyUnaryOutbound(
+		o,
+		outboundinterceptor.UnaryChain(),
+	)
+	return o
 }
 
 func newOutbound(t *Transport, peerChooser peer.Chooser, options ...OutboundOption) *Outbound {
-	return &Outbound{
+	o := &Outbound{
 		once:        lifecycle.NewOnce(),
 		t:           t,
 		peerChooser: peerChooser,
 		options:     newOutboundOptions(options),
 	}
+	o.unaryCallWithInterceptor = interceptor.ApplyUnaryOutbound(
+		o,
+		outboundinterceptor.UnaryChain(),
+	)
+	//o.streamCallWithInterceptor = interceptor.ApplyStreamOutbound(
+	//	o,
+	//	outboundinterceptor.StreamChain(),
+	//)
+	return o
 }
 
 // TransportName is the transport name that will be set on `transport.Request`
@@ -108,10 +126,11 @@ func (o *Outbound) Chooser() peer.Chooser {
 
 // Call implements transport.UnaryOutbound#Call.
 func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
-	return o.t.options.unaryOutboundInterceptor.Call(ctx, request, interceptor.UnaryOutboundFunc(o.call))
+	return o.unaryCallWithInterceptor.UnchainedCall(ctx, request)
 }
 
-func (o *Outbound) call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+// UnchainedCall implements XXX.
+func (o *Outbound) UnchainedCall(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	if request == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for grpc outbound was nil")
 	}
@@ -199,7 +218,6 @@ func (o *Outbound) invoke(
 		}
 	}
 
-	// TODO: remove tracing instrumentation at transport layer completely
 	tracer := o.t.options.tracer
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        tracer,
@@ -288,10 +306,11 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 
 // CallStream implements transport.StreamOutbound#CallStream.
 func (o *Outbound) CallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
-	return o.t.options.streamOutboundInterceptor.CallStream(ctx, request, interceptor.StreamOutboundFunc(o.callStream))
+	return o.streamCallWithInterceptor.UnchainedStreamCall(ctx, request)
 }
 
-func (o *Outbound) callStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
+// UnchainedCallStream implements XXX.
+func (o *Outbound) UnchainedCallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, err
 	}
@@ -336,7 +355,6 @@ func (o *Outbound) stream(
 		return nil, err
 	}
 
-	// TODO: remove tracing instrumentation at transport layer completely
 	tracer := o.t.options.tracer
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        tracer,

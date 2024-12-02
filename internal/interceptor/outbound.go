@@ -23,7 +23,6 @@ package interceptor
 import (
 	"context"
 
-	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 )
 
@@ -35,11 +34,13 @@ type (
 	// returned error, call the given outbound zero or more times.
 	//
 	// UnaryOutbound interceptor MUST always return a non-nil Response or error,
-	// and they MUST be thread-safe
+	// and they MUST be thread-safe.
 	//
 	// UnaryOutbound interceptor is re-used across requests and MAY be called
 	// multiple times on the same request.
-	UnaryOutbound = middleware.UnaryOutbound
+	UnaryOutbound interface {
+		Call(ctx context.Context, request *transport.Request, out transport.UnchainedUnaryOutbound) (*transport.Response, error)
+	}
 
 	// OnewayOutbound defines transport interceptor for `OnewayOutbound`s.
 	//
@@ -52,7 +53,9 @@ type (
 	//
 	// OnewayOutbound interceptor is re-used across requests and MAY be called
 	// multiple times on the same request.
-	OnewayOutbound = middleware.OnewayOutbound
+	OnewayOutbound interface {
+		CallOneway(ctx context.Context, request *transport.Request, out transport.UnchainedOnewayOutbound) (transport.Ack, error)
+	}
 
 	// StreamOutbound defines transport interceptor for `StreamOutbound`s.
 	//
@@ -61,99 +64,83 @@ type (
 	// returned error, call the given outbound zero or more times.
 	//
 	// StreamOutbound interceptor MUST always return a non-nil Stream or error,
-	// and they MUST be thread-safe
+	// and they MUST be thread-safe.
 	//
 	// StreamOutbound interceptors is re-used across requests and MAY be called
 	// multiple times on the same request.
-	StreamOutbound = middleware.StreamOutbound
+	StreamOutbound interface {
+		CallStream(ctx context.Context, req *transport.StreamRequest, out transport.UnchainedStreamOutbound) (*transport.ClientStream, error)
+	}
 )
 
-var (
-	_ transport.UnaryOutbound  = UnaryOutboundFunc(nil)
-	_ transport.OnewayOutbound = OnewayOutboundFunc(nil)
-	_ transport.StreamOutbound = StreamOutboundFunc(nil)
-)
+type nopUnaryOutbound struct{}
 
-// UnaryOutboundFunc defines a function type that implements the UnaryOutbound interface.
-type UnaryOutboundFunc func(context.Context, *transport.Request) (*transport.Response, error)
-
-// Call calls the UnaryOutbound function.
-func (f UnaryOutboundFunc) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	return f(ctx, req)
+func (nopUnaryOutbound) Call(ctx context.Context, request *transport.Request, out transport.UnchainedUnaryOutbound) (*transport.Response, error) {
+	return out.UnchainedCall(ctx, request)
 }
 
-// Start starts the UnaryOutbound function. This is a no-op in this implementation.
-func (f UnaryOutboundFunc) Start() error {
-	return nil
+// NopUnaryOutbound is a unary outbound middleware that does not do
+// anything special. It simply calls the underlying UnaryOutbound.
+var NopUnaryOutbound UnaryOutbound = nopUnaryOutbound{}
+
+type nopOnewayOutbound struct{}
+
+func (nopOnewayOutbound) CallOneway(ctx context.Context, request *transport.Request, out transport.UnchainedOnewayOutbound) (transport.Ack, error) {
+	return out.UnchainedOnewayCall(ctx, request)
 }
 
-// Stop stops the UnaryOutbound function. This is a no-op in this implementation.
-func (f UnaryOutboundFunc) Stop() error {
-	return nil
+// NopOnewayOutbound is an oneway outbound middleware that does not do
+// anything special. It simply calls the underlying OnewayOutbound.
+var NopOnewayOutbound OnewayOutbound = nopOnewayOutbound{}
+
+type nopStreamOutbound struct{}
+
+func (nopStreamOutbound) CallStream(ctx context.Context, requestMeta *transport.StreamRequest, out transport.UnchainedStreamOutbound) (*transport.ClientStream, error) {
+	return out.UnchainedStreamCall(ctx, requestMeta)
 }
 
-// IsRunning returns whether the UnaryOutbound function is running. This is a no-op in this implementation.
-func (f UnaryOutboundFunc) IsRunning() bool {
-	return false
+// NopStreamOutbound is a stream outbound middleware that does not do
+// anything special. It simply calls the underlying StreamOutbound.
+var NopStreamOutbound StreamOutbound = nopStreamOutbound{}
+
+// ApplyUnaryOutbound applies the given UnaryOutbound interceptor to the given UnchainedUnaryOutbound transport.
+func ApplyUnaryOutbound(uo transport.UnchainedUnaryOutbound, i UnaryOutbound) transport.UnchainedUnaryOutbound {
+	return unchainedUnaryOutboundWithInterceptor{uo: uo, i: i}
 }
 
-// Transports returns the transports used by the UnaryOutbound function. This is a no-op in this implementation.
-func (f UnaryOutboundFunc) Transports() []transport.Transport {
-	return nil
+// ApplyOnewayOutbound applies the given OnewayOutbound interceptor to the given UnchainedOnewayOutbound transport.
+func ApplyOnewayOutbound(oo transport.UnchainedOnewayOutbound, i OnewayOutbound) transport.UnchainedOnewayOutbound {
+	return unchainedOnewayOutboundWithInterceptor{oo: oo, i: i}
 }
 
-// OnewayOutboundFunc defines a function type that implements the OnewayOutbound interface.
-type OnewayOutboundFunc func(context.Context, *transport.Request) (transport.Ack, error)
-
-// CallOneway calls the OnewayOutbound function.
-func (f OnewayOutboundFunc) CallOneway(ctx context.Context, req *transport.Request) (transport.Ack, error) {
-	return f(ctx, req)
+// ApplyStreamOutbound applies the given StreamOutbound interceptor to the given UnchainedStreamOutbound transport.
+func ApplyStreamOutbound(so transport.UnchainedStreamOutbound, i StreamOutbound) transport.UnchainedStreamOutbound {
+	return unchainedStreamOutboundWithInterceptor{so: so, i: i}
 }
 
-// Start starts the OnewayOutbound function. This is a no-op in this implementation.
-func (f OnewayOutboundFunc) Start() error {
-	return nil
+type unchainedUnaryOutboundWithInterceptor struct {
+	uo transport.UnchainedUnaryOutbound
+	i  UnaryOutbound
 }
 
-// Stop stops the OnewayOutbound function. This is a no-op in this implementation.
-func (f OnewayOutboundFunc) Stop() error {
-	return nil
+func (uoc unchainedUnaryOutboundWithInterceptor) UnchainedCall(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+	return uoc.i.Call(ctx, request, uoc.uo)
 }
 
-// IsRunning returns whether the OnewayOutbound function is running. This is a no-op in this implementation.
-func (f OnewayOutboundFunc) IsRunning() bool {
-	return false
+type unchainedOnewayOutboundWithInterceptor struct {
+	oo transport.UnchainedOnewayOutbound
+	i  OnewayOutbound
 }
 
-// Transports returns the transports used by the OnewayOutbound function. This is a no-op in this implementation.
-func (f OnewayOutboundFunc) Transports() []transport.Transport {
-	return nil
+func (ooc unchainedOnewayOutboundWithInterceptor) UnchainedOnewayCall(ctx context.Context, request *transport.Request) (transport.Ack, error) {
+	return ooc.i.CallOneway(ctx, request, ooc.oo)
 }
 
-// StreamOutboundFunc defines a function type that implements the StreamOutbound interface.
-type StreamOutboundFunc func(context.Context, *transport.StreamRequest) (*transport.ClientStream, error)
-
-// CallStream calls the StreamOutbound function.
-func (f StreamOutboundFunc) CallStream(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error) {
-	return f(ctx, req)
+type unchainedStreamOutboundWithInterceptor struct {
+	so transport.UnchainedStreamOutbound
+	i  StreamOutbound
 }
 
-// Start starts the StreamOutbound function. This is a no-op in this implementation.
-func (f StreamOutboundFunc) Start() error {
-	return nil
-}
-
-// Stop stops the StreamOutbound function. This is a no-op in this implementation.
-func (f StreamOutboundFunc) Stop() error {
-	return nil
-}
-
-// IsRunning returns whether the StreamOutbound function is running. This is a no-op in this implementation.
-func (f StreamOutboundFunc) IsRunning() bool {
-	return false
-}
-
-// Transports returns the transports used by the StreamOutbound function. This is a no-op in this implementation.
-func (f StreamOutboundFunc) Transports() []transport.Transport {
-	return nil
+func (soc unchainedStreamOutboundWithInterceptor) UnchainedStreamCall(ctx context.Context, requestMeta *transport.StreamRequest) (*transport.ClientStream, error) {
+	return soc.i.CallStream(ctx, requestMeta, soc.so)
 }

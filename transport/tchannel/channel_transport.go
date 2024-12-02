@@ -22,13 +22,13 @@ package tchannel
 
 import (
 	"errors"
+	"go.uber.org/yarpc/internal/interceptor/outboundinterceptor"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/inboundmiddleware"
 	"go.uber.org/yarpc/internal/interceptor"
-	"go.uber.org/yarpc/internal/outboundmiddleware"
 	"go.uber.org/yarpc/internal/tracinginterceptor"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/zap"
@@ -114,7 +114,7 @@ func (options transportOptions) newChannelTransport() *ChannelTransport {
 		originalHeaders:          options.originalHeaders,
 		newResponseWriter:        newHandlerWriter,
 		unaryInboundInterceptor:  inboundmiddleware.UnaryChain(unaryInbounds...),
-		unaryOutboundInterceptor: outboundmiddleware.UnaryChain(unaryOutbounds...),
+		unaryOutboundInterceptor: outboundinterceptor.UnaryChain(unaryOutbounds...),
 	}
 }
 

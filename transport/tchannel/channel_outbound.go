@@ -26,7 +26,6 @@ import (
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
-	"go.uber.org/yarpc/internal/interceptor"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/pkg/lifecycle"
@@ -72,7 +71,8 @@ type ChannelOutbound struct {
 	// Otherwise, the global peer list of the Channel will be used.
 	addr string
 
-	once *lifecycle.Once
+	once                     *lifecycle.Once
+	unaryCallWithInterceptor transport.UnchainedUnaryOutbound
 }
 
 // TransportName is the transport name that will be set on `transport.Request`
@@ -114,7 +114,7 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel channel outbound was nil")
 	}
 
-	return o.transport.unaryOutboundInterceptor.Call(ctx, req, interceptor.UnaryOutboundFunc(o.call))
+	return o.unaryCallWithInterceptor.UnchainedCall(ctx, req)
 }
 
 func (o *ChannelOutbound) call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
