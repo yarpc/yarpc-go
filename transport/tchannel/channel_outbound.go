@@ -22,6 +22,8 @@ package tchannel
 
 import (
 	"context"
+	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/interceptor/outboundinterceptor"
 
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
@@ -40,22 +42,32 @@ var (
 // NewOutbound builds a new TChannel outbound using the transport's shared
 // channel to make requests to any connected peer.
 func (t *ChannelTransport) NewOutbound() *ChannelOutbound {
-	return &ChannelOutbound{
+	o := &ChannelOutbound{
 		once:      lifecycle.NewOnce(),
 		channel:   t.ch,
 		transport: t,
 	}
+	o.unaryCallWithInterceptor = interceptor.ApplyUnaryOutbound(
+		o,
+		outboundinterceptor.UnaryChain(),
+	)
+	return o
 }
 
 // NewSingleOutbound builds a new TChannel outbound using the transport's shared
 // channel to a specific peer.
 func (t *ChannelTransport) NewSingleOutbound(addr string) *ChannelOutbound {
-	return &ChannelOutbound{
+	o := &ChannelOutbound{
 		once:      lifecycle.NewOnce(),
 		channel:   t.ch,
 		transport: t,
 		addr:      addr,
 	}
+	o.unaryCallWithInterceptor = interceptor.ApplyUnaryOutbound(
+		o,
+		outboundinterceptor.UnaryChain(),
+	)
+	return o
 }
 
 // ChannelOutbound sends YARPC requests over TChannel. It may be constructed
@@ -117,7 +129,7 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 	return o.unaryCallWithInterceptor.UnchainedCall(ctx, req)
 }
 
-func (o *ChannelOutbound) call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+func (o *ChannelOutbound) UnchainedCall(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if req == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel channel outbound was nil")
 	}

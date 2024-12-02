@@ -65,6 +65,7 @@ type UnaryOutbound interface {
 }
 
 type UnchainedUnaryOutbound interface {
+	Outbound
 
 	// UnchainedCall is called without interceptor.
 	UnchainedCall(ctx context.Context, request *Request) (*Response, error)
@@ -73,6 +74,8 @@ type UnchainedUnaryOutbound interface {
 // UnchainedOnewayOutbound defines a transport outbound for oneway requests
 // that does not involve any interceptors.
 type UnchainedOnewayOutbound interface {
+	Outbound
+
 	// UnchainedOnewayCall is called without interceptor.
 	UnchainedOnewayCall(ctx context.Context, request *Request) (Ack, error)
 }
@@ -80,6 +83,8 @@ type UnchainedOnewayOutbound interface {
 // UnchainedStreamOutbound defines a transport outbound for streaming requests
 // that does not involve any interceptors.
 type UnchainedStreamOutbound interface {
+	Outbound
+
 	// UnchainedStreamCall is called without interceptor.
 	UnchainedStreamCall(ctx context.Context, req *StreamRequest) (*ClientStream, error)
 }

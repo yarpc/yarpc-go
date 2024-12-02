@@ -72,6 +72,10 @@ func newSingleOutbound(t *Transport, address string, options ...OutboundOption) 
 		o,
 		outboundinterceptor.UnaryChain(),
 	)
+	o.streamCallWithInterceptor = interceptor.ApplyStreamOutbound(
+		o,
+		outboundinterceptor.StreamChain(),
+	)
 	return o
 }
 
@@ -86,10 +90,10 @@ func newOutbound(t *Transport, peerChooser peer.Chooser, options ...OutboundOpti
 		o,
 		outboundinterceptor.UnaryChain(),
 	)
-	//o.streamCallWithInterceptor = interceptor.ApplyStreamOutbound(
-	//	o,
-	//	outboundinterceptor.StreamChain(),
-	//)
+	o.streamCallWithInterceptor = interceptor.ApplyStreamOutbound(
+		o,
+		outboundinterceptor.StreamChain(),
+	)
 	return o
 }
 
@@ -310,7 +314,7 @@ func (o *Outbound) CallStream(ctx context.Context, request *transport.StreamRequ
 }
 
 // UnchainedCallStream implements XXX.
-func (o *Outbound) UnchainedCallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
+func (o *Outbound) UnchainedStreamCall(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, err
 	}

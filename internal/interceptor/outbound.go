@@ -119,6 +119,7 @@ func ApplyStreamOutbound(so transport.UnchainedStreamOutbound, i StreamOutbound)
 }
 
 type unchainedUnaryOutboundWithInterceptor struct {
+	transport.Outbound
 	uo transport.UnchainedUnaryOutbound
 	i  UnaryOutbound
 }
@@ -128,6 +129,7 @@ func (uoc unchainedUnaryOutboundWithInterceptor) UnchainedCall(ctx context.Conte
 }
 
 type unchainedOnewayOutboundWithInterceptor struct {
+	transport.Outbound
 	oo transport.UnchainedOnewayOutbound
 	i  OnewayOutbound
 }
@@ -137,6 +139,7 @@ func (ooc unchainedOnewayOutboundWithInterceptor) UnchainedOnewayCall(ctx contex
 }
 
 type unchainedStreamOutboundWithInterceptor struct {
+	transport.Outbound
 	so transport.UnchainedStreamOutbound
 	i  StreamOutbound
 }

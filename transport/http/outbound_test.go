@@ -25,6 +25,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"go.uber.org/yarpc/internal/interceptor"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -663,7 +664,7 @@ func TestOutboundNoDeadline(t *testing.T) {
 	defer tran.Stop()
 	out := tran.NewSingleOutbound("http://foo-host:8080")
 
-	_, err := out.call(context.Background(), &transport.Request{})
+	_, err := out.UnchainedCall(context.Background(), &transport.Request{})
 	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing context deadline"), err)
 }
 
@@ -775,9 +776,9 @@ func TestCallResponseCloseError(t *testing.T) {
 		},
 		tracer:                    opentracing.GlobalTracer(),
 		unaryInboundInterceptor:   middleware.NopUnaryInbound,
-		unaryOutboundInterceptor:  middleware.NopUnaryOutbound,
+		unaryOutboundInterceptor:  interceptor.NopUnaryOutbound,
 		onewayInboundInterceptor:  middleware.NopOnewayInbound,
-		onewayOutboundInterceptor: middleware.NopOnewayOutbound,
+		onewayOutboundInterceptor: interceptor.NopOnewayOutbound,
 	}
 	ctrl := gomock.NewController(t)
 	chooser := peertest.NewMockChooser(ctrl)
@@ -818,9 +819,9 @@ func TestCallOneWayResponseCloseError(t *testing.T) {
 		},
 		tracer:                    opentracing.GlobalTracer(),
 		unaryInboundInterceptor:   middleware.NopUnaryInbound,
-		unaryOutboundInterceptor:  middleware.NopUnaryOutbound,
+		unaryOutboundInterceptor:  interceptor.NopUnaryOutbound,
 		onewayInboundInterceptor:  middleware.NopOnewayInbound,
-		onewayOutboundInterceptor: middleware.NopOnewayOutbound,
+		onewayOutboundInterceptor: interceptor.NopOnewayOutbound,
 	}
 	ctrl := gomock.NewController(t)
 	chooser := peertest.NewMockChooser(ctrl)

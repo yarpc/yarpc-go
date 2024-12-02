@@ -15,7 +15,7 @@ require (
 	github.com/kisielk/errcheck v1.7.0
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/opentracing/opentracing-go v1.2.0
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/uber-go/mapdecode v1.0.0
 	github.com/uber-go/tally v3.5.8+incompatible
 	github.com/uber/jaeger-client-go v2.30.0+incompatible
@@ -60,6 +60,7 @@ require (
 	github.com/prometheus/procfs v0.0.9 // indirect
 	github.com/samuel/go-thrift v0.0.0-20191111193933-5165175b40af // indirect
 	github.com/sirupsen/logrus v1.4.2 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/twmb/murmur3 v1.1.8 // indirect
 	github.com/uber-common/bark v1.2.1 // indirect
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
