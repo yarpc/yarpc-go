@@ -141,7 +141,7 @@ func TestCallSuccessWithHTTP2(t *testing.T) {
 
 	httpTransport := NewTransport()
 	defer httpTransport.Stop()
-	out := httpTransport.NewSingleOutbound(successServer.URL, EnableHTTP2())
+	out := httpTransport.NewSingleOutbound(successServer.URL, UseHTTP2())
 	require.NoError(t, out.Start(), "failed to start outbound")
 	defer out.Stop()
 
