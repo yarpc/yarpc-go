@@ -100,7 +100,7 @@ func TestTransportSpec(t *testing.T) {
 		URLTemplate string
 		Headers     http.Header
 		TLSConfig   bool
-		EnableHTTP2 bool
+		UseHTTP2    bool
 	}
 
 	type outboundTest struct {
@@ -518,15 +518,15 @@ func TestTransportSpec(t *testing.T) {
 			cfg: attrs{
 				"myservice": attrs{
 					TransportName: attrs{
-						"url":         "http://localhost/yarpc",
-						"enableHTTP2": true,
+						"url":      "http://localhost/yarpc",
+						"useHTTP2": true,
 					},
 				},
 			},
 			wantOutbounds: map[string]wantOutbound{
 				"myservice": {
 					URLTemplate: "http://localhost/yarpc",
-					EnableHTTP2: true,
+					UseHTTP2:    true,
 				},
 			},
 		},
@@ -539,11 +539,11 @@ func TestTransportSpec(t *testing.T) {
 					},
 				},
 			},
-			opts: []Option{EnableHTTP2()},
+			opts: []Option{UseHTTP2()},
 			wantOutbounds: map[string]wantOutbound{
 				"myservice": {
 					URLTemplate: "http://localhost/yarpc",
-					EnableHTTP2: true,
+					UseHTTP2:    true,
 				},
 			},
 		},
@@ -632,7 +632,7 @@ func TestTransportSpec(t *testing.T) {
 				assert.Equal(t, want.Headers, ob.headers, "outbound headers should match")
 				assert.Equal(t, svc, ob.destServiceName, "outbound destination service name must match")
 				assert.Equal(t, want.TLSConfig, ob.tlsConfig != nil, "unexpected outbound tls config")
-				assert.Equal(t, want.EnableHTTP2, ob.enableHTTP2, "enableHTTP2 should match")
+				assert.Equal(t, want.UseHTTP2, ob.useHTTP2, "useHTTP2 should match")
 			}
 
 		}
