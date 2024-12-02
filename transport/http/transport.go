@@ -60,7 +60,7 @@ type transportOptions struct {
 	meter                     *metrics.Scope
 	serviceName               string
 	outboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
-	enableHTTP2               bool
+	useHTTP2                  bool
 }
 
 var defaultTransportOptions = transportOptions{
@@ -310,7 +310,7 @@ func buildHTTPClient(options *transportOptions) *http.Client {
 		ResponseHeaderTimeout: options.responseHeaderTimeout,
 	}
 
-	if options.enableHTTP2 {
+	if options.useHTTP2 {
 		http2Transport, err := http2.ConfigureTransports(&h1Transport)
 		if err != nil {
 			// TODO: log this error instead of panicking (for now just testing)

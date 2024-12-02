@@ -72,19 +72,19 @@ func URLTemplate(template string) OutboundOption {
 	}
 }
 
-// EnableHTTP2 returns an OutboundOption that enables HTTP/2 support for the outbound.
+// UseHTTP2 returns an OutboundOption that enables HTTP/2 support for the outbound.
 // This option configures the outbound to use HTTP/2 for all outbound requests.
 //
 // Example usage:
 //
-//	outbound := http.NewOutbound(chooser, http.EnableHTTP2())
+//	outbound := http.NewOutbound(chooser, http.UseHTTP2())
 //
 // Returns:
 //
-//	OutboundOption: A function that sets the enableHTTP2 field to true in the Outbound struct.
-func EnableHTTP2() OutboundOption {
+//	OutboundOption: A function that sets the useHTTP2 field to true in the Outbound struct.
+func UseHTTP2() OutboundOption {
 	return func(o *Outbound) {
-		o.enableHTTP2 = true
+		o.useHTTP2 = true
 	}
 }
 
@@ -150,7 +150,7 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 
 	client := t.client
 	if o.tlsConfig != nil {
-		if o.enableHTTP2 {
+		if o.useHTTP2 {
 			client = createHTTP2TLSClient(o)
 		} else {
 			client = createTLSClient(o)
@@ -244,7 +244,7 @@ type Outbound struct {
 	client            *http.Client
 	tlsConfig         *tls.Config
 
-	enableHTTP2 bool
+	useHTTP2 bool
 }
 
 // TransportName is the transport name that will be set on `transport.Request` struct.
