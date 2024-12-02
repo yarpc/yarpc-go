@@ -25,6 +25,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"go.uber.org/yarpc/internal/interceptor"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -38,6 +39,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/peer/peertest"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
@@ -662,7 +664,7 @@ func TestOutboundNoDeadline(t *testing.T) {
 	defer tran.Stop()
 	out := tran.NewSingleOutbound("http://foo-host:8080")
 
-	_, err := out.call(context.Background(), &transport.Request{})
+	_, err := out.UnchainedCall(context.Background(), &transport.Request{})
 	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing context deadline"), err)
 }
 
@@ -772,7 +774,11 @@ func TestCallResponseCloseError(t *testing.T) {
 				}
 			}),
 		},
-		tracer: opentracing.GlobalTracer(),
+		tracer:                    opentracing.GlobalTracer(),
+		unaryInboundInterceptor:   middleware.NopUnaryInbound,
+		unaryOutboundInterceptor:  interceptor.NopUnaryOutbound,
+		onewayInboundInterceptor:  middleware.NopOnewayInbound,
+		onewayOutboundInterceptor: interceptor.NopOnewayOutbound,
 	}
 	ctrl := gomock.NewController(t)
 	chooser := peertest.NewMockChooser(ctrl)
@@ -811,7 +817,11 @@ func TestCallOneWayResponseCloseError(t *testing.T) {
 				}
 			}),
 		},
-		tracer: opentracing.GlobalTracer(),
+		tracer:                    opentracing.GlobalTracer(),
+		unaryInboundInterceptor:   middleware.NopUnaryInbound,
+		unaryOutboundInterceptor:  interceptor.NopUnaryOutbound,
+		onewayInboundInterceptor:  middleware.NopOnewayInbound,
+		onewayOutboundInterceptor: interceptor.NopOnewayOutbound,
 	}
 	ctrl := gomock.NewController(t)
 	chooser := peertest.NewMockChooser(ctrl)

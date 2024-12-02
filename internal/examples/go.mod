@@ -7,7 +7,7 @@ toolchain go1.22.2
 require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.7.0-rc.1
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	go.uber.org/fx v1.22.0
 	go.uber.org/multierr v1.11.0
 	go.uber.org/thriftrw v1.32.0

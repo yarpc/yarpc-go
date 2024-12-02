@@ -24,6 +24,8 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/interceptor/outboundinterceptor"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -128,6 +130,14 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 		transport:         t,
 		bothResponseError: true,
 	}
+	o.unaryCallWithInterceptor = interceptor.ApplyUnaryOutbound(
+		o,
+		outboundinterceptor.UnaryChain(),
+	)
+	o.onewayCallWithInterceptor = interceptor.ApplyOnewayOutbound(
+		o,
+		outboundinterceptor.OnewayChain(),
+	)
 	for _, opt := range opts {
 		opt(o)
 	}
@@ -194,7 +204,16 @@ func (t *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbo
 
 	chooser := peerchooser.NewSingle(hostport.PeerIdentifier(parsedURL.Host), t)
 	opts = append(opts, URLTemplate(uri))
-	return t.NewOutbound(chooser, opts...)
+	o := t.NewOutbound(chooser, opts...)
+	o.unaryCallWithInterceptor = interceptor.ApplyUnaryOutbound(
+		o,
+		outboundinterceptor.UnaryChain(),
+	)
+	o.onewayCallWithInterceptor = interceptor.ApplyOnewayOutbound(
+		o,
+		outboundinterceptor.OnewayChain(),
+	)
+	return o
 }
 
 // Outbound sends YARPC requests over HTTP. It may be constructed using the
@@ -219,6 +238,9 @@ type Outbound struct {
 	destServiceName   string
 	client            *http.Client
 	tlsConfig         *tls.Config
+
+	unaryCallWithInterceptor  transport.UnchainedUnaryOutbound
+	onewayCallWithInterceptor transport.UnchainedOnewayOutbound
 }
 
 // TransportName is the transport name that will be set on `transport.Request` struct.
@@ -267,8 +289,7 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	if treq == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil")
 	}
-
-	return o.call(ctx, treq)
+	return o.unaryCallWithInterceptor.UnchainedCall(ctx, treq)
 }
 
 // CallOneway makes a oneway request
@@ -276,10 +297,13 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 	if treq == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil")
 	}
+	return o.onewayCallWithInterceptor.UnchainedOnewayCall(ctx, treq)
+}
 
+func (o *Outbound) UnchainedOnewayCall(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
 	// res is used to close the response body to avoid memory/connection leak
 	// even when the response body is empty
-	res, err := o.call(ctx, treq)
+	res, err := o.UnchainedCall(ctx, treq)
 	if err != nil {
 		return nil, err
 	}
@@ -291,7 +315,7 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 	return time.Now(), nil
 }
 
-func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
+func (o *Outbound) UnchainedCall(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
 	start := time.Now()
 	deadline, ok := ctx.Deadline()
 	if !ok {

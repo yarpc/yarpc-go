@@ -105,7 +105,7 @@ func (i *Interceptor) Handle(ctx context.Context, req *transport.Request, resw t
 }
 
 // Call implements interceptor.UnaryOutbound
-func (i *Interceptor) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+func (i *Interceptor) Call(ctx context.Context, req *transport.Request, out transport.UnchainedUnaryOutbound) (*transport.Response, error) {
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        i.tracer,
 		TransportName: i.transport,
@@ -127,7 +127,7 @@ func (i *Interceptor) Call(ctx context.Context, req *transport.Request, out tran
 		}
 	}
 
-	res, err := out.Call(ctx, req)
+	res, err := out.UnchainedCall(ctx, req)
 	if res != nil {
 		return res, updateSpanWithErrorDetails(span, res.ApplicationError, res.ApplicationErrorMeta, err)
 	}
@@ -152,7 +152,7 @@ func (i *Interceptor) HandleOneway(ctx context.Context, req *transport.Request, 
 }
 
 // CallOneway implements interceptor.OnewayOutbound
-func (i *Interceptor) CallOneway(ctx context.Context, req *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
+func (i *Interceptor) CallOneway(ctx context.Context, req *transport.Request, out transport.UnchainedOnewayOutbound) (transport.Ack, error) {
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        i.tracer,
 		TransportName: i.transport,
@@ -171,7 +171,7 @@ func (i *Interceptor) CallOneway(ctx context.Context, req *transport.Request, ou
 		}
 	}
 
-	ack, err := out.CallOneway(ctx, req)
+	ack, err := out.UnchainedOnewayCall(ctx, req)
 	return ack, updateSpanWithErrorDetails(span, false, nil, err)
 }
 
@@ -201,7 +201,7 @@ func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.Stream
 }
 
 // CallStream implements interceptor.StreamOutbound
-func (i *Interceptor) CallStream(ctx context.Context, req *transport.StreamRequest, out transport.StreamOutbound) (*transport.ClientStream, error) {
+func (i *Interceptor) CallStream(ctx context.Context, req *transport.StreamRequest, out transport.UnchainedStreamOutbound) (*transport.ClientStream, error) {
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        i.tracer,
 		TransportName: i.transport,
@@ -226,7 +226,7 @@ func (i *Interceptor) CallStream(ctx context.Context, req *transport.StreamReque
 		}
 	}
 
-	clientStream, err := out.CallStream(ctx, req)
+	clientStream, err := out.UnchainedStreamCall(ctx, req)
 	if err != nil {
 		_ = updateSpanWithErrorDetails(span, false, nil, err)
 		span.Finish()

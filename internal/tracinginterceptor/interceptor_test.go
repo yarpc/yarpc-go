@@ -23,6 +23,7 @@ package tracinginterceptor
 import (
 	"context"
 	"fmt"
+	"github.com/stretchr/testify/mock"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -41,6 +42,39 @@ type testResponseWriter struct {
 	isAppError   bool
 	appErrorMeta *transport.ApplicationErrorMeta
 	responseSize int
+}
+
+// MockUnchainedUnaryOutbound mocks transport.UnchainedUnaryOutbound.
+type MockUnchainedUnaryOutbound struct {
+	mock.Mock
+}
+
+// UnchainedCall mocks the UnchainedCall method.
+func (m *MockUnchainedUnaryOutbound) UnchainedCall(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+	args := m.Called(ctx, req)
+	return args.Get(0).(*transport.Response), args.Error(1)
+}
+
+// MockUnchainedOnewayOutbound mocks transport.UnchainedOnewayOutbound.
+type MockUnchainedOnewayOutbound struct {
+	mock.Mock
+}
+
+// UnchainedOnewayCall mocks the UnchainedOnewayCall method.
+func (m *MockUnchainedOnewayOutbound) UnchainedOnewayCall(ctx context.Context, req *transport.Request) (transport.Ack, error) {
+	args := m.Called(ctx, req)
+	return args.Get(0).(transport.Ack), args.Error(1)
+}
+
+// MockUnchainedStreamOutbound mocks transport.UnchainedStreamOutbound.
+type MockUnchainedStreamOutbound struct {
+	mock.Mock
+}
+
+// UnchainedStreamCall mocks the UnchainedStreamCall method.
+func (m *MockUnchainedStreamOutbound) UnchainedStreamCall(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error) {
+	args := m.Called(ctx, req)
+	return args.Get(0).(*transport.ClientStream), args.Error(1)
 }
 
 // Ensure testResponseWriter implements ExtendedResponseWriter
@@ -234,10 +268,8 @@ func TestInterceptorCall(t *testing.T) {
 				Headers:   transport.Headers{},
 			}
 
-			outbound := transporttest.NewMockUnaryOutbound(ctrl)
-			outbound.EXPECT().
-				Call(gomock.Any(), req).
-				Return(tt.response, tt.callError)
+			outbound := &MockUnchainedUnaryOutbound{}
+			outbound.On("UnchainedCall", mock.Anything, req).Return(tt.response, tt.callError)
 
 			// Mocking Inject to return an error
 			if tt.injectError {
@@ -496,10 +528,8 @@ func TestInterceptorCallOneway(t *testing.T) {
 				Headers:   transport.Headers{},
 			}
 
-			outbound := transporttest.NewMockOnewayOutbound(ctrl)
-			outbound.EXPECT().
-				CallOneway(gomock.Any(), req).
-				Return(nil, tt.callError) // Return nil for Ack
+			outbound := &MockUnchainedOnewayOutbound{}
+			outbound.On("UnchainedCall", mock.Anything, req).Return(nil, tt.callError)
 
 			_, err := interceptor.CallOneway(context.Background(), req, outbound)
 
@@ -613,8 +643,8 @@ func TestInterceptorCallStream(t *testing.T) {
 	clientStream, err := transport.NewClientStream(mockStream)
 	require.NoError(t, err)
 
-	outbound := transporttest.NewMockStreamOutbound(ctrl)
-	outbound.EXPECT().CallStream(gomock.Any(), gomock.Any()).Return(clientStream, nil)
+	outbound := &MockUnchainedStreamOutbound{} // Use the new or extended mock
+	outbound.On("UnchainedStreamCall", mock.Anything, mock.Anything).Return(clientStream, nil)
 
 	req := &transport.StreamRequest{
 		Meta: &transport.RequestMeta{Procedure: "test-procedure"},
@@ -624,7 +654,6 @@ func TestInterceptorCallStream(t *testing.T) {
 	stream, err := interceptor.CallStream(context.Background(), req, outbound)
 	require.NoError(t, err)
 	require.NotNil(t, stream)
-
 }
 
 func TestInterceptorCallStream_Error(t *testing.T) {
@@ -642,10 +671,8 @@ func TestInterceptorCallStream_Error(t *testing.T) {
 	clientStream, err := transport.NewClientStream(mockStreamCloser)
 	require.NoError(t, err)
 
-	outbound := transporttest.NewMockStreamOutbound(ctrl)
-	outbound.EXPECT().
-		CallStream(gomock.Any(), gomock.Any()).
-		Return(clientStream, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "call error"))
+	outbound := &MockUnchainedStreamOutbound{} // Use the new or extended mock
+	outbound.On("UnchainedStreamCall", mock.Anything, mock.Anything).Return(clientStream, nil)
 
 	// Set up the request
 	ctx := context.Background()

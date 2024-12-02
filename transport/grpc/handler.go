@@ -21,12 +21,12 @@
 package grpc
 
 import (
-	"go.uber.org/yarpc/api/middleware"
 	"strings"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
@@ -150,6 +150,7 @@ func (h *handler) handleStream(
 	start time.Time,
 	streamHandler transport.StreamHandler,
 ) error {
+	// TODO: remove tracing instrumentation at transport layer completely
 	tracer := h.i.t.options.tracer
 	var parentSpanCtx opentracing.SpanContext
 	md, ok := metadata.FromIncomingContext(ctx)
@@ -233,6 +234,7 @@ func (h *handler) handleUnaryBeforeErrorConversion(
 	start time.Time,
 	handler transport.UnaryHandler,
 ) error {
+	// TODO: remove tracing instrumentation at transport layer completely
 	tracer := h.i.t.options.tracer
 	var parentSpanCtx opentracing.SpanContext
 	md, ok := metadata.FromIncomingContext(ctx)
