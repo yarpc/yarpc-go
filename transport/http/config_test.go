@@ -674,6 +674,7 @@ type wantHTTPClient struct {
 	DisableCompression    bool
 	ResponseHeaderTimeout time.Duration
 	ConnTimeout           time.Duration
+	UseHTTP2              bool
 }
 
 // useFakeBuildClient verifies the configuration we use to build an HTTP
@@ -688,6 +689,7 @@ func useFakeBuildClient(t *testing.T, want *wantHTTPClient) TransportOption {
 		assert.Equal(t, want.DisableCompression, options.disableCompression, "http.Client: DisableCompression should match")
 		assert.Equal(t, want.ResponseHeaderTimeout, options.responseHeaderTimeout, "http.Client: ResponseHeaderTimeout should match")
 		assert.Equal(t, want.ConnTimeout, options.connTimeout, "http.Client: ConnTimeout should match")
+		assert.Equal(t, want.UseHTTP2, options.useHTTP2, "http.Client: UseHTTP2 should match")
 		return buildHTTPClient(options)
 	})
 }
