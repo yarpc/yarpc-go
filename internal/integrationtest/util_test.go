@@ -64,7 +64,7 @@ var http2spec = integrationtest.TransportSpec{
 		return http.NewTransport()
 	},
 	NewUnaryOutbound: func(x peer.Transport, pc peer.Chooser) transport.UnaryOutbound {
-		return x.(*http.Transport).NewOutbound(pc)
+		return x.(*http.Transport).NewOutbound(pc, http.UseHTTP2())
 	},
 	NewInbound: func(x peer.Transport, addr string) transport.Inbound {
 		// we don't disable http2
