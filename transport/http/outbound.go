@@ -26,11 +26,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/net/http2"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
@@ -81,7 +84,7 @@ func URLTemplate(template string) OutboundOption {
 //
 // Returns:
 //
-//	OutboundOption: A function that sets the useHTTP2 field to true in the Outbound struct.
+//	OutboundOption: A function that sets the UseHTTP2 field to true in the Outbound struct.
 func UseHTTP2() OutboundOption {
 	return func(o *Outbound) {
 		o.useHTTP2 = true
@@ -148,23 +151,53 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 		opt(o)
 	}
 
-	client := t.client
-	if o.tlsConfig != nil {
-		if o.useHTTP2 {
-			client = createHTTP2TLSClient(o)
-		} else {
+	var client *http.Client
+	if o.useHTTP2 {
+		client = createHTTP2Client(o)
+	} else {
+		client = t.client
+		if o.tlsConfig != nil {
 			client = createTLSClient(o)
+			// Create a copy of the url template to avoid scheme changes impacting
+			// other outbounds as the base url template is shared across http
+			// outbounds.
+			ut := *o.urlTemplate
+			ut.Scheme = "https"
+			o.urlTemplate = &ut
 		}
-		// Create a copy of the url template to avoid scheme changes impacting
-		// other outbounds as the base url template is shared across http
-		// outbounds.
-		ut := *o.urlTemplate
-		ut.Scheme = "https"
-		o.urlTemplate = &ut
 	}
 	o.client = client
 	o.sender = &transportSender{Client: client}
 	return o
+}
+
+func createHTTP2Client(o *Outbound) *http.Client {
+	if o.tlsConfig != nil {
+		return createHTTP2TLSClient(o)
+	}
+
+	http1Transport, ok := o.transport.client.Transport.(*http.Transport)
+	if !ok {
+		// This should not happen as default yarpc http.Client uses
+		// http.Transport and it's not configurable by the user.
+		panic(fmt.Sprintf("failed to create http tls client, provided http.Client transport type %T is not *http.Transport", o.transport.client.Transport))
+	}
+	http1Transport = http1Transport.Clone()
+	http2Transport, err := http2.ConfigureTransports(http1Transport)
+	if err != nil {
+		// TODO: log and default to http1 for now using it for testing
+		panic(fmt.Sprintf("failed to configure http2 transport: %v", err))
+	}
+	// add http2 specific settings
+	http2Transport.AllowHTTP = true
+	http2Transport.DialTLSContext = func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
+		var d net.Dialer
+		return d.DialContext(ctx, network, addr)
+	}
+
+	return &http.Client{
+		Transport: http2Transport,
+	}
 }
 
 func createHTTP2TLSClient(o *Outbound) *http.Client {

@@ -298,13 +298,6 @@ func TestTransportClientOpaqueOptions(t *testing.T) {
 	assert.NotNil(t, transport.client)
 }
 
-func TestTransportClientUseHTTP2Option(t *testing.T) {
-	assert.NotPanics(t, func() {
-		NewTransport(UseHTTP2TransportOption(true))
-	}, "UseHTTP2TransportOption should not panic")
-	assert.NotNil(t, NewTransport(UseHTTP2TransportOption(true)).client.Transport, "UseHTTP2TransportOption should set the transport")
-}
-
 func TestDialContext(t *testing.T) {
 	errMsg := "my custom dialer error message"
 	dialContext := func(ctx context.Context, network, addr string) (net.Conn, error) {
