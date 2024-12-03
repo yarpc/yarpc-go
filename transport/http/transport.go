@@ -249,6 +249,14 @@ func OutboundTLSConfigProvider(provider yarpctls.OutboundTLSConfigProvider) Tran
 	}
 }
 
+// UseHTTP2TransportOption returns an option that configures the transport to
+// use HTTP/2.
+func UseHTTP2TransportOption(flag bool) TransportOption {
+	return func(options *transportOptions) {
+		options.useHTTP2 = flag
+	}
+}
+
 // Hidden option to override the buildHTTPClient function. This is used only
 // for testing.
 func buildClient(f func(*transportOptions) *http.Client) TransportOption {
