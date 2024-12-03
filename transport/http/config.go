@@ -94,6 +94,7 @@ func (ts *transportSpec) Spec() yarpcconfig.TransportSpec {
 //	      exponential:
 //	        first: 10ms
 //	        max: 30s
+//	    useHTTP2: true
 //
 // All parameters of TransportConfig are optional. This section may be omitted
 // in the transports section.
@@ -109,7 +110,6 @@ type TransportConfig struct {
 	ResponseHeaderTimeout time.Duration       `config:"responseHeaderTimeout"`
 	ConnTimeout           time.Duration       `config:"connTimeout"`
 	ConnBackoff           yarpcconfig.Backoff `config:"connBackoff"`
-	useHTTP2              bool                `config:"useHTTP2"`
 }
 
 func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit) (transport.Transport, error) {
@@ -145,9 +145,6 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 	}
 	if tc.ConnTimeout > 0 {
 		options.connTimeout = tc.ConnTimeout
-	}
-	if tc.useHTTP2 {
-		options.useHTTP2 = true
 	}
 
 	strategy, err := tc.ConnBackoff.Strategy()

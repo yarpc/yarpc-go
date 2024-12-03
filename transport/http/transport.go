@@ -28,8 +28,6 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/net/http2"
-
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/net/metrics"
 	backoffapi "go.uber.org/yarpc/api/backoff"
@@ -60,7 +58,6 @@ type transportOptions struct {
 	meter                     *metrics.Scope
 	serviceName               string
 	outboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
-	useHTTP2                  bool
 }
 
 var defaultTransportOptions = transportOptions{
@@ -249,14 +246,6 @@ func OutboundTLSConfigProvider(provider yarpctls.OutboundTLSConfigProvider) Tran
 	}
 }
 
-// UseHTTP2TransportOption returns an option that configures the transport to
-// use HTTP/2.
-func UseHTTP2TransportOption(flag bool) TransportOption {
-	return func(options *transportOptions) {
-		options.useHTTP2 = flag
-	}
-}
-
 // Hidden option to override the buildHTTPClient function. This is used only
 // for testing.
 func buildClient(f func(*transportOptions) *http.Client) TransportOption {
@@ -304,32 +293,20 @@ func buildHTTPClient(options *transportOptions) *http.Client {
 		}).DialContext
 	}
 
-	h1Transport := http.Transport{
-		// options lifted from https://golang.org/src/net/http/transport.go
-		Proxy:                 http.ProxyFromEnvironment,
-		DialContext:           dialContext,
-		TLSHandshakeTimeout:   10 * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-		MaxIdleConns:          options.maxIdleConns,
-		MaxIdleConnsPerHost:   options.maxIdleConnsPerHost,
-		IdleConnTimeout:       options.idleConnTimeout,
-		DisableKeepAlives:     options.disableKeepAlives,
-		DisableCompression:    options.disableCompression,
-		ResponseHeaderTimeout: options.responseHeaderTimeout,
-	}
-
-	if options.useHTTP2 {
-		http2Transport, err := http2.ConfigureTransports(&h1Transport)
-		if err != nil {
-			// TODO: log this error instead of panicking (for now just testing)
-			panic(err)
-		}
-		return &http.Client{
-			Transport: http2Transport,
-		}
-	}
 	return &http.Client{
-		Transport: &h1Transport,
+		Transport: &http.Transport{
+			// options lifted from https://golang.org/src/net/http/transport.go
+			Proxy:                 http.ProxyFromEnvironment,
+			DialContext:           dialContext,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			MaxIdleConns:          options.maxIdleConns,
+			MaxIdleConnsPerHost:   options.maxIdleConnsPerHost,
+			IdleConnTimeout:       options.idleConnTimeout,
+			DisableKeepAlives:     options.disableKeepAlives,
+			DisableCompression:    options.disableCompression,
+			ResponseHeaderTimeout: options.responseHeaderTimeout,
+		},
 	}
 }
 
