@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
+
+## [1.75.3] - 2024-12-03
 ### Added
 - Noop resolver to use in clients with custom load balancing.
 
@@ -1540,7 +1542,8 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.75.2...HEAD
+  [Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.75.3...HEAD
+[1.75.3]: https://github.com/yarpc/yarpc-go/compare/v1.75.2...1.75.3
 [1.75.2]: https://github.com/yarpc/yarpc-go/compare/v1.75.1...1.75.2
 [1.75.1]: https://github.com/yarpc/yarpc-go/compare/v1.75.0...1.75.1
 [1.75.0]: https://github.com/yarpc/yarpc-go/compare/v1.73.2...1.75.0
