@@ -36,6 +36,10 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
+	"go.uber.org/yarpc/internal/inboundmiddleware"
+	"go.uber.org/yarpc/internal/outboundmiddleware"
+	"go.uber.org/yarpc/internal/tracinginterceptor"
+	"go.uber.org/yarpc/internal/transportinterceptor"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/transport/internal/tls/dialer"
 	"go.uber.org/yarpc/transport/internal/tls/muxlistener"
@@ -85,6 +89,9 @@ type Transport struct {
 
 	outboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
 	outboundChannels          []*outboundChannel
+
+	unaryInboundInterceptor  transportinterceptor.UnaryInbound
+	unaryOutboundInterceptor transportinterceptor.UnaryOutbound
 }
 
 // NewTransport is a YARPC transport that facilitates sending and receiving
@@ -109,6 +116,11 @@ func NewTransport(opts ...TransportOption) (*Transport, error) {
 }
 
 func (o transportOptions) newTransport() *Transport {
+	var (
+		unaryInbounds  []transportinterceptor.UnaryInbound
+		unaryOutbounds []transportinterceptor.UnaryOutbound
+	)
+
 	logger := o.logger
 	if logger == nil {
 		logger = zap.NewNop()
@@ -116,6 +128,18 @@ func (o transportOptions) newTransport() *Transport {
 	headerCase := canonicalizedHeaderCase
 	if o.originalHeaders {
 		headerCase = originalHeaderCase
+	}
+
+	tracer := o.tracer
+	if o.tracingInterceptorEnabled {
+		ti := tracinginterceptor.New(tracinginterceptor.Params{
+			Tracer:    tracer,
+			Transport: TransportName,
+		})
+		unaryInbounds = append(unaryInbounds, ti)
+		unaryOutbounds = append(unaryOutbounds, ti)
+
+		tracer = opentracing.NoopTracer{}
 	}
 	return &Transport{
 		once:                           lifecycle.NewOnce(),
@@ -126,7 +150,7 @@ func (o transportOptions) newTransport() *Transport {
 		connTimeout:                    o.connTimeout,
 		connBackoffStrategy:            o.connBackoffStrategy,
 		peers:                          make(map[string]*tchannelPeer),
-		tracer:                         o.tracer,
+		tracer:                         tracer,
 		logger:                         logger,
 		meter:                          o.meter,
 		headerCase:                     headerCase,
@@ -136,6 +160,8 @@ func (o transportOptions) newTransport() *Transport {
 		inboundTLSConfig:               o.inboundTLSConfig,
 		inboundTLSMode:                 o.inboundTLSMode,
 		outboundTLSConfigProvider:      o.outboundTLSConfigProvider,
+		unaryInboundInterceptor:        inboundmiddleware.UnaryChain(unaryInbounds...),
+		unaryOutboundInterceptor:       outboundmiddleware.UnaryChain(unaryOutbounds...),
 	}
 }
 
@@ -227,6 +253,8 @@ func (t *Transport) start() error {
 			logger:                         t.logger,
 			newResponseWriter:              t.newResponseWriter,
 			excludeServiceHeaderInResponse: t.excludeServiceHeaderInResponse,
+			unaryInboundInterceptor:        t.unaryInboundInterceptor,
+			unaryOutboundInterceptor:       t.unaryOutboundInterceptor,
 		},
 		OnPeerStatusChanged: t.onPeerStatusChanged,
 		Dialer:              t.dialer,
