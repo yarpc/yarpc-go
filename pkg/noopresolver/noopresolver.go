@@ -18,7 +18,44 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
+package noopresolver
 
-// Version is the current version of YARPC.
-const Version = "1.75.3"
+import (
+	"errors"
+
+	"google.golang.org/grpc/resolver"
+)
+
+// Scheme is the scheme for the noop resolver.
+const Scheme = "noop"
+
+var errInvalidTarget = errors.New("noop resolver doesn't accept a target")
+
+type noopBuilder struct{}
+
+// NewBuilder creates a new noop resolver builder. This resolver won't resolve any address, so it expects the target to be empty.
+// It is intended to be used by clients with custom resolution logic.
+func NewBuilder() resolver.Builder {
+	return &noopBuilder{}
+}
+
+func (*noopBuilder) Build(target resolver.Target, _ resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
+	if target.Endpoint() != "" || opts.Dialer != nil {
+		return nil, errInvalidTarget
+	}
+	return &noopResolver{}, nil
+}
+
+func (*noopBuilder) Scheme() string {
+	return Scheme
+}
+
+type noopResolver struct{}
+
+func (*noopResolver) ResolveNow(_ resolver.ResolveNowOptions) {}
+
+func (*noopResolver) Close() {}
+
+func init() {
+	resolver.Register(&noopBuilder{})
+}
