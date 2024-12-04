@@ -195,19 +195,22 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 		tracer := h.tracer
 		ctx = tchannel.ExtractInboundSpan(ctx, tcall.InboundCall, headers.Items(), tracer)
 	}
-
+	span := opentracing.SpanFromContext(ctx)
 	buf := bufferpool.Get()
 	defer bufferpool.Put(buf)
 
 	body, err := call.Arg3Reader()
 	if err != nil {
+		transport.UpdateSpanWithErrNoReturn(span, err, yarpcerrors.FromError(err).Code())
 		return err
 	}
 
 	if _, err = buf.ReadFrom(body); err != nil {
+		transport.UpdateSpanWithErrNoReturn(span, err, yarpcerrors.FromError(err).Code())
 		return err
 	}
 	if err = body.Close(); err != nil {
+		transport.UpdateSpanWithErrNoReturn(span, err, yarpcerrors.FromError(err).Code())
 		return err
 	}
 
@@ -215,11 +218,13 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 	treq.BodySize = buf.Len()
 
 	if err := transport.ValidateRequest(treq); err != nil {
+		transport.UpdateSpanWithErrNoReturn(span, err, yarpcerrors.FromError(err).Code())
 		return err
 	}
 
 	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
+		transport.UpdateSpanWithErrNoReturn(span, err, yarpcerrors.FromError(err).Code())
 		if yarpcerrors.FromError(err).Code() != yarpcerrors.CodeUnimplemented {
 			return err
 		}
@@ -233,6 +238,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 	}
 
 	if err := transport.ValidateRequestContext(ctx); err != nil {
+		transport.UpdateSpanWithErrNoReturn(span, err, yarpcerrors.FromError(err).Code())
 		return err
 	}
 	switch spec.Type() {
