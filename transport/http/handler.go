@@ -139,7 +139,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
 	// parseTTLErr != nil is a problem only if the request is unary.
 	defer cancel()
-	// TODO: remove tracing instrumentation at transport layer completely
+	// TODO: remove tracing instrumentation at transport layer completely.
 	ctx, span := h.createSpan(ctx, req, treq, start)
 
 	spec, err := h.router.Choose(ctx, treq)
