@@ -646,7 +646,6 @@ func TestInterceptorCallStream_Error(t *testing.T) {
 	outbound.EXPECT().
 		UnchainedStreamCall(gomock.Any(), gomock.Any()).
 		Return(clientStream, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "call error"))
-
 	// Set up the request
 	ctx := context.Background()
 	req := &transport.StreamRequest{Meta: &transport.RequestMeta{Procedure: "test-procedure"}}
