@@ -21,7 +21,10 @@
 package interceptor
 
 import (
+	"context"
+
 	"go.uber.org/yarpc/api/middleware"
+	"go.uber.org/yarpc/api/transport"
 )
 
 type (
@@ -36,7 +39,9 @@ type (
 	//
 	// UnaryOutbound interceptor is re-used across requests and MAY be called
 	// multiple times on the same request.
-	UnaryOutbound = middleware.UnaryOutbound
+	UnaryOutbound interface {
+		Call(ctx context.Context, request *transport.Request, out transport.UnchainedUnaryOutbound) (*transport.Response, error)
+	}
 
 	// OnewayOutbound defines transport interceptor for `OnewayOutbound`s.
 	//
@@ -64,3 +69,28 @@ type (
 	// multiple times on the same request.
 	StreamOutbound = middleware.StreamOutbound
 )
+
+type nopUnaryOutbound struct{}
+
+func (nopUnaryOutbound) Call(ctx context.Context, request *transport.Request, out transport.UnchainedUnaryOutbound) (*transport.Response, error) {
+	return out.UnchainedCall(ctx, request)
+}
+
+// NopUnaryOutbound is a unary outbound middleware that does not do
+// anything special. It simply calls the underlying UnaryOutbound.
+var NopUnaryOutbound UnaryOutbound = nopUnaryOutbound{}
+
+// ApplyUnaryOutbound applies the given UnaryOutbound interceptor to the given UnchainedUnaryOutbound transport.
+func ApplyUnaryOutbound(uo transport.UnchainedUnaryOutbound, i UnaryOutbound) transport.UnchainedUnaryOutbound {
+	return unchainedUnaryOutboundWithInterceptor{uo: uo, i: i}
+}
+
+type unchainedUnaryOutboundWithInterceptor struct {
+	name string
+	uo   transport.UnchainedUnaryOutbound
+	i    UnaryOutbound
+}
+
+func (uoc unchainedUnaryOutboundWithInterceptor) UnchainedCall(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+	return uoc.i.Call(ctx, request, uoc.uo)
+}
