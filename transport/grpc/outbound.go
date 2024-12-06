@@ -128,12 +128,12 @@ func (o *Outbound) Chooser() peer.Chooser {
 	return o.peerChooser
 }
 
-// Call implements transport.UnaryOutbound#Call.
+// Call wraps the UnchainedCall.
 func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	return o.unaryCallWithInterceptor.UnchainedCall(ctx, request)
 }
 
-// UnchainedCall implements XXX.
+// UnchainedCall implements transport.UnaryOutbound#Call.
 func (o *Outbound) UnchainedCall(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	if request == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for grpc outbound was nil")
@@ -308,12 +308,12 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	return yarpcErr
 }
 
-// CallStream implements transport.StreamOutbound#CallStream.
+// CallStream wraps the UnchainedStreamCall.
 func (o *Outbound) CallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
 	return o.streamCallWithInterceptor.UnchainedStreamCall(ctx, request)
 }
 
-// UnchainedCallStream implements XXX.
+// UnchainedStreamCall implements transport.StreamOutbound#CallStream.
 func (o *Outbound) UnchainedStreamCall(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, err

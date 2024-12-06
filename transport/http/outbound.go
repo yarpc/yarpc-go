@@ -130,14 +130,6 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 		transport:         t,
 		bothResponseError: true,
 	}
-	o.unaryCallWithInterceptor = interceptor.ApplyUnaryOutbound(
-		o,
-		outboundinterceptor.UnaryChain(),
-	)
-	o.onewayCallWithInterceptor = interceptor.ApplyOnewayOutbound(
-		o,
-		outboundinterceptor.OnewayChain(),
-	)
 	for _, opt := range opts {
 		opt(o)
 	}
@@ -154,6 +146,14 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 	}
 	o.client = client
 	o.sender = &transportSender{Client: client}
+	o.unaryCallWithInterceptor = interceptor.ApplyUnaryOutbound(
+		o,
+		outboundinterceptor.UnaryChain(),
+	)
+	o.onewayCallWithInterceptor = interceptor.ApplyOnewayOutbound(
+		o,
+		outboundinterceptor.OnewayChain(),
+	)
 	return o
 }
 

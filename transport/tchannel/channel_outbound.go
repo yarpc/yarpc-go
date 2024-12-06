@@ -120,7 +120,7 @@ func (o *ChannelOutbound) IsRunning() bool {
 	return o.once.IsRunning()
 }
 
-// Call sends an RPC over this TChannel outbound.
+// Call wraps the UnchainedCall.
 func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if req == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel channel outbound was nil")
@@ -129,6 +129,7 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 	return o.unaryCallWithInterceptor.UnchainedCall(ctx, req)
 }
 
+// UnchainedCall sends an RPC over this TChannel outbound.
 func (o *ChannelOutbound) UnchainedCall(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if req == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel channel outbound was nil")

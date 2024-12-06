@@ -106,11 +106,12 @@ func (o *Outbound) Chooser() peer.Chooser {
 	return o.chooser
 }
 
-// Call sends an RPC over this TChannel outbound.
+// Call wraps the UnchainedCall.
 func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	return o.unaryCallWithInterceptor.UnchainedCall(ctx, req)
 }
 
+// UnchainedCall sends an RPC over this TChannel outbound.
 func (o *Outbound) UnchainedCall(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if req == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel outbound was nil")

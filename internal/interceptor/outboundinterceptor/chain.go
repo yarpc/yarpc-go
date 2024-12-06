@@ -27,6 +27,7 @@ import (
 	"go.uber.org/yarpc/internal/interceptor"
 )
 
+// UnaryChain combines a series of `UnaryInbound`s into a single `InboundMiddleware`.
 func UnaryChain(mw ...interceptor.UnaryOutbound) interceptor.UnaryOutbound {
 	unchained := make([]interceptor.UnaryOutbound, 0, len(mw))
 	for _, m := range mw {
