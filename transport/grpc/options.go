@@ -23,10 +23,7 @@ package grpc
 import (
 	"context"
 	"crypto/tls"
-	"go.uber.org/yarpc/internal/inboundmiddleware"
-	"go.uber.org/yarpc/internal/interceptor"
-	"go.uber.org/yarpc/internal/outboundmiddleware"
-	"go.uber.org/yarpc/internal/tracinginterceptor"
+	"go.uber.org/yarpc/internal/interceptor/outboundinterceptor"
 	"math"
 	"net"
 
@@ -36,6 +33,9 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	intbackoff "go.uber.org/yarpc/internal/backoff"
+	"go.uber.org/yarpc/internal/inboundmiddleware"
+	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/tracinginterceptor"
 	"go.uber.org/yarpc/transport/internal/tls/dialer"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -351,9 +351,9 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 	}
 
 	transportOptions.unaryInboundInterceptor = inboundmiddleware.UnaryChain(unaryInbounds...)
-	transportOptions.unaryOutboundInterceptor = outboundmiddleware.UnaryChain(unaryOutbounds...)
+	transportOptions.unaryOutboundInterceptor = outboundinterceptor.UnaryChain(unaryOutbounds...)
 	transportOptions.streamInboundInterceptor = inboundmiddleware.StreamChain(streamInbounds...)
-	transportOptions.streamOutboundInterceptor = outboundmiddleware.StreamChain(streamOutbounds...)
+	transportOptions.streamOutboundInterceptor = outboundinterceptor.StreamChain(streamOutbounds...)
 	return transportOptions
 }
 
