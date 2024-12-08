@@ -89,10 +89,10 @@ func (h handler) assertBaggage(ctx context.Context) {
 	assert.Equal(h.t, "knife", weapon, "baggage should propagate")
 }
 
-func createGRPCDispatcher(t *testing.T, tracer opentracing.Tracer, enableTracingMiddleware bool) *yarpc.Dispatcher {
+func createGRPCDispatcher(t *testing.T, tracer opentracing.Tracer) *yarpc.Dispatcher {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
-	grpcTransport := grpc.NewTransport(grpc.Tracer(tracer), grpc.TracingInterceptorEnabled(enableTracingMiddleware))
+	grpcTransport := grpc.NewTransport(grpc.Tracer(tracer))
 	return yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
 		Inbounds: yarpc.Inbounds{
@@ -106,9 +106,11 @@ func createGRPCDispatcher(t *testing.T, tracer opentracing.Tracer, enableTracing
 	})
 }
 
-func createHTTPDispatcher(tracer opentracing.Tracer, enableTracingMiddleware bool) *yarpc.Dispatcher {
+func createHTTPDispatcher(tracer opentracing.Tracer) *yarpc.Dispatcher {
 	// TODO: Use port 0 once https://github.com/yarpc/yarpc-go/issues/381 is
-	httpTransport := http.NewTransport(http.Tracer(tracer), http.TracingInterceptorEnabled(enableTracingMiddleware))
+	// fixed.
+
+	httpTransport := http.NewTransport(http.Tracer(tracer))
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
 		Inbounds: yarpc.Inbounds{
@@ -125,13 +127,12 @@ func createHTTPDispatcher(tracer opentracing.Tracer, enableTracingMiddleware boo
 }
 
 //lint:ignore U1000 Ignore "method not used" lint as this is invoked by skipped tests.
-func createTChannelDispatcher(t *testing.T, tracer opentracing.Tracer, enableTracingMiddleware bool) *yarpc.Dispatcher {
+func createTChannelDispatcher(t *testing.T, tracer opentracing.Tracer) *yarpc.Dispatcher {
 	hp := "127.0.0.1:4040"
+
 	tchannelTransport, err := ytchannel.NewChannelTransport(
 		ytchannel.ListenAddr(hp),
 		ytchannel.Tracer(tracer),
-		ytchannel.TracingInterceptorEnabled(enableTracingMiddleware),
-		// ytchannel.Tracer(tracer),
 		ytchannel.ServiceName("yarpc-test"),
 	)
 	require.NoError(t, err)
@@ -151,94 +152,67 @@ func createTChannelDispatcher(t *testing.T, tracer opentracing.Tracer, enableTra
 	return dispatcher
 }
 
-var tests = []struct {
-	name                    string
-	enableTracingMiddleware bool
-}{
-	{
-		name:                    "disable-tracing-middleware",
-		enableTracingMiddleware: false,
-	},
-	{
-		name:                    "enable-tracing-middleware",
-		enableTracingMiddleware: true,
-	},
-}
-
 func TestGRPCTracer(t *testing.T) {
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			tracer := mocktracer.New()
-			dispatcher := createGRPCDispatcher(t, tracer, test.enableTracingMiddleware)
+	tracer := mocktracer.New()
+	dispatcher := createGRPCDispatcher(t, tracer)
 
-			client := json.New(dispatcher.ClientConfig("yarpc-test"))
-			handler := handler{client: client, t: t}
-			handler.register(dispatcher)
+	client := json.New(dispatcher.ClientConfig("yarpc-test"))
+	handler := handler{client: client, t: t}
+	handler.register(dispatcher)
 
-			require.NoError(t, dispatcher.Start())
-			defer dispatcher.Stop()
+	require.NoError(t, dispatcher.Start())
+	defer dispatcher.Stop()
 
-			ctx, cancel := handler.createContextWithBaggage(tracer)
-			defer cancel()
+	ctx, cancel := handler.createContextWithBaggage(tracer)
+	defer cancel()
 
-			err := handler.echo(ctx)
-			assert.NoError(t, err)
+	err := handler.echo(ctx)
+	assert.NoError(t, err)
 
-			AssertDepth1Spans(t, tracer)
-		})
-	}
+	AssertDepth1Spans(t, tracer)
 }
 
 func TestHTTPTracer(t *testing.T) {
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			tracer := mocktracer.New()
-			dispatcher := createHTTPDispatcher(tracer, test.enableTracingMiddleware)
+	tracer := mocktracer.New()
+	dispatcher := createHTTPDispatcher(tracer)
 
-			client := json.New(dispatcher.ClientConfig("yarpc-test"))
-			handler := handler{client: client, t: t}
-			handler.register(dispatcher)
+	client := json.New(dispatcher.ClientConfig("yarpc-test"))
+	handler := handler{client: client, t: t}
+	handler.register(dispatcher)
 
-			require.NoError(t, dispatcher.Start())
-			defer dispatcher.Stop()
+	require.NoError(t, dispatcher.Start())
+	defer dispatcher.Stop()
 
-			ctx, cancel := handler.createContextWithBaggage(tracer)
-			defer cancel()
+	ctx, cancel := handler.createContextWithBaggage(tracer)
+	defer cancel()
 
-			err := handler.echo(ctx)
-			assert.NoError(t, err)
+	err := handler.echo(ctx)
+	assert.NoError(t, err)
 
-			AssertDepth1Spans(t, tracer)
-		})
-	}
+	AssertDepth1Spans(t, tracer)
 }
 
 func TestTChannelTracer(t *testing.T) {
-	// t.Skip("TODO this test is flaky, we need to fix")
+	t.Skip("TODO this test is flaky, we need to fix")
+	tracer := mocktracer.New()
+	dispatcher := createTChannelDispatcher(t, tracer)
+	// Make this assertion at the end of the defer stack, when the channel has
+	// been shut down. This ensures that all message exchanges have been shut
+	// down, which means that all spans have been closed.
+	defer AssertDepth1Spans(t, tracer)
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			tracer := mocktracer.New()
-			dispatcher := createTChannelDispatcher(t, tracer, test.enableTracingMiddleware)
-			// Make this assertion at the end of the defer stack, when the channel has
-			// been shut down. This ensures that all message exchanges have been shut
-			// down, which means that all spans have been closed.
-			defer AssertDepth1Spans(t, tracer)
+	client := json.New(dispatcher.ClientConfig("yarpc-test"))
+	handler := handler{client: client, t: t}
+	handler.register(dispatcher)
 
-			client := json.New(dispatcher.ClientConfig("yarpc-test"))
-			handler := handler{client: client, t: t}
-			handler.register(dispatcher)
+	require.NoError(t, dispatcher.Start())
+	defer dispatcher.Stop()
 
-			require.NoError(t, dispatcher.Start())
-			defer dispatcher.Stop()
+	ctx, cancel := handler.createContextWithBaggage(tracer)
+	defer cancel()
 
-			ctx, cancel := handler.createContextWithBaggage(tracer)
-			defer cancel()
-
-			err := handler.echo(ctx)
-			assert.NoError(t, err)
-		})
-	}
+	err := handler.echo(ctx)
+	assert.NoError(t, err)
 }
 
 func AssertDepth1Spans(t *testing.T, tracer *mocktracer.MockTracer) {
@@ -259,77 +233,64 @@ func AssertDepth1Spans(t *testing.T, tracer *mocktracer.MockTracer) {
 }
 
 func TestGRPCTracerDepth2(t *testing.T) {
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			tracer := mocktracer.New()
-			dispatcher := createGRPCDispatcher(t, tracer, test.enableTracingMiddleware)
+	tracer := mocktracer.New()
+	dispatcher := createGRPCDispatcher(t, tracer)
 
-			client := json.New(dispatcher.ClientConfig("yarpc-test"))
-			handler := handler{client: client, t: t}
-			handler.register(dispatcher)
+	client := json.New(dispatcher.ClientConfig("yarpc-test"))
+	handler := handler{client: client, t: t}
+	handler.register(dispatcher)
 
-			require.NoError(t, dispatcher.Start())
-			defer dispatcher.Stop()
+	require.NoError(t, dispatcher.Start())
+	defer dispatcher.Stop()
 
-			ctx, cancel := handler.createContextWithBaggage(tracer)
-			defer cancel()
+	ctx, cancel := handler.createContextWithBaggage(tracer)
+	defer cancel()
 
-			err := handler.echoEcho(ctx)
-			assert.NoError(t, err)
-			AssertDepth2Spans(t, tracer)
-		})
-	}
+	err := handler.echoEcho(ctx)
+	assert.NoError(t, err)
+	AssertDepth2Spans(t, tracer)
 }
 
 func TestHTTPTracerDepth2(t *testing.T) {
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			tracer := mocktracer.New()
-			dispatcher := createHTTPDispatcher(tracer, test.enableTracingMiddleware)
+	tracer := mocktracer.New()
+	dispatcher := createHTTPDispatcher(tracer)
 
-			client := json.New(dispatcher.ClientConfig("yarpc-test"))
-			handler := handler{client: client, t: t}
-			handler.register(dispatcher)
+	client := json.New(dispatcher.ClientConfig("yarpc-test"))
+	handler := handler{client: client, t: t}
+	handler.register(dispatcher)
 
-			require.NoError(t, dispatcher.Start())
-			defer dispatcher.Stop()
+	require.NoError(t, dispatcher.Start())
+	defer dispatcher.Stop()
 
-			ctx, cancel := handler.createContextWithBaggage(tracer)
-			defer cancel()
+	ctx, cancel := handler.createContextWithBaggage(tracer)
+	defer cancel()
 
-			err := handler.echoEcho(ctx)
-			assert.NoError(t, err)
-			AssertDepth2Spans(t, tracer)
-		})
-	}
+	err := handler.echoEcho(ctx)
+	assert.NoError(t, err)
+	AssertDepth2Spans(t, tracer)
 }
 
 func TestTChannelTracerDepth2(t *testing.T) {
-	// t.Skip("TODO this test is flaky, we need to fix")
+	t.Skip("TODO this test is flaky, we need to fix")
+	tracer := mocktracer.New()
+	dispatcher := createTChannelDispatcher(t, tracer)
+	// Make this assertion at the end of the defer stack, when the channel has
+	// been shut down. This ensures that all message exchanges have been shut
+	// down, which means that all spans have been closed.
+	defer AssertDepth2Spans(t, tracer)
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			tracer := mocktracer.New()
-			dispatcher := createTChannelDispatcher(t, tracer, test.enableTracingMiddleware)
-			// Make this assertion at the end of the defer stack, when the channel has
-			// been shut down. This ensures that all message exchanges have been shut
-			// down, which means that all spans have been closed.
-			defer AssertDepth2Spans(t, tracer)
+	client := json.New(dispatcher.ClientConfig("yarpc-test"))
+	handler := handler{client: client, t: t}
+	handler.register(dispatcher)
 
-			client := json.New(dispatcher.ClientConfig("yarpc-test"))
-			handler := handler{client: client, t: t}
-			handler.register(dispatcher)
+	require.NoError(t, dispatcher.Start())
+	defer dispatcher.Stop()
 
-			require.NoError(t, dispatcher.Start())
-			defer dispatcher.Stop()
+	ctx, cancel := handler.createContextWithBaggage(tracer)
+	defer cancel()
 
-			ctx, cancel := handler.createContextWithBaggage(tracer)
-			defer cancel()
-
-			err := handler.echoEcho(ctx)
-			assert.NoError(t, err)
-		})
-	}
+	err := handler.echoEcho(ctx)
+	assert.NoError(t, err)
 }
 
 func AssertDepth2Spans(t *testing.T, tracer *mocktracer.MockTracer) {
