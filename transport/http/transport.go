@@ -282,9 +282,9 @@ func (o *transportOptions) newTransport() *Transport {
 	}
 	var (
 		unaryInbounds   []interceptor.UnaryInbound
-		unaryOutbounds  []interceptor.UnaryOutbound
+		unaryOutbounds  []interceptor.DirectUnaryOutbound
 		onewayInbounds  []interceptor.OnewayInbound
-		onewayOutbounds []interceptor.OnewayOutbound
+		onewayOutbounds []interceptor.DirectOnewayOutbound
 	)
 	tracer := o.tracer
 	if o.tracingInterceptorEnabled {
@@ -369,9 +369,9 @@ type Transport struct {
 	ouboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
 
 	unaryInboundInterceptor   interceptor.UnaryInbound
-	unaryOutboundInterceptor  interceptor.UnaryOutbound
+	unaryOutboundInterceptor  interceptor.DirectUnaryOutbound
 	onewayInboundInterceptor  interceptor.OnewayInbound
-	onewayOutboundInterceptor interceptor.OnewayOutbound
+	onewayOutboundInterceptor interceptor.DirectOnewayOutbound
 }
 
 var _ transport.Transport = (*Transport)(nil)

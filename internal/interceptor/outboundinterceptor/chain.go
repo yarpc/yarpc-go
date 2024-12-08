@@ -28,8 +28,8 @@ import (
 )
 
 // UnaryChain combines a series of `UnaryInbound`s into a single `InboundMiddleware`.
-func UnaryChain(mw ...interceptor.UnaryOutbound) interceptor.UnaryOutbound {
-	unchained := make([]interceptor.UnaryOutbound, 0, len(mw))
+func UnaryChain(mw ...interceptor.DirectUnaryOutbound) interceptor.DirectUnaryOutbound {
+	unchained := make([]interceptor.DirectUnaryOutbound, 0, len(mw))
 	for _, m := range mw {
 		if m == nil {
 			continue
@@ -51,7 +51,7 @@ func UnaryChain(mw ...interceptor.UnaryOutbound) interceptor.UnaryOutbound {
 	}
 }
 
-type unaryChain []interceptor.UnaryOutbound
+type unaryChain []interceptor.DirectUnaryOutbound
 
 func (x unaryChainExec) TransportName() string {
 	var name string
@@ -96,13 +96,13 @@ func (x unaryChainExec) UnchainedCall(ctx context.Context, request *transport.Re
 // unaryChainExec adapts a series of `UnaryOutbound`s into a `UnaryOutbound`. It
 // is scoped to a single call of a UnaryOutbound and is not thread-safe.
 type unaryChainExec struct {
-	Chain []interceptor.UnaryOutbound
+	Chain []interceptor.DirectUnaryOutbound
 	Final interceptor.UnchainedUnaryOutbound
 }
 
 // OnewayChain combines a series of `OnewayOutbound`s into a single `OnewayOutbound`.
-func OnewayChain(mw ...interceptor.OnewayOutbound) interceptor.OnewayOutbound {
-	unchained := make([]interceptor.OnewayOutbound, 0, len(mw))
+func OnewayChain(mw ...interceptor.DirectOnewayOutbound) interceptor.DirectOnewayOutbound {
+	unchained := make([]interceptor.DirectOnewayOutbound, 0, len(mw))
 	for _, m := range mw {
 		if m == nil {
 			continue
@@ -124,7 +124,7 @@ func OnewayChain(mw ...interceptor.OnewayOutbound) interceptor.OnewayOutbound {
 	}
 }
 
-type onewayChain []interceptor.OnewayOutbound
+type onewayChain []interceptor.DirectOnewayOutbound
 
 func (c onewayChain) CallOneway(ctx context.Context, request *transport.Request, out interceptor.UnchainedOnewayOutbound) (transport.Ack, error) {
 	return onewayChainExec{
@@ -136,7 +136,7 @@ func (c onewayChain) CallOneway(ctx context.Context, request *transport.Request,
 // onewayChainExec adapts a series of `OnewayOutbound`s into a `OnewayOutbound`. It
 // is scoped to a single call of a OnewayOutbound and is not thread-safe.
 type onewayChainExec struct {
-	Chain []interceptor.OnewayOutbound
+	Chain []interceptor.DirectOnewayOutbound
 	Final interceptor.UnchainedOnewayOutbound
 }
 
@@ -174,8 +174,8 @@ func (x onewayChainExec) UnchainedCallOneway(ctx context.Context, request *trans
 }
 
 // StreamChain combines a series of `StreamOutbound`s into a single `StreamOutbound`.
-func StreamChain(mw ...interceptor.StreamOutbound) interceptor.StreamOutbound {
-	unchained := make([]interceptor.StreamOutbound, 0, len(mw))
+func StreamChain(mw ...interceptor.DirectStreamOutbound) interceptor.DirectStreamOutbound {
+	unchained := make([]interceptor.DirectStreamOutbound, 0, len(mw))
 	for _, m := range mw {
 		if m == nil {
 			continue
@@ -197,7 +197,7 @@ func StreamChain(mw ...interceptor.StreamOutbound) interceptor.StreamOutbound {
 	}
 }
 
-type streamChain []interceptor.StreamOutbound
+type streamChain []interceptor.DirectStreamOutbound
 
 func (c streamChain) CallStream(ctx context.Context, request *transport.StreamRequest, out interceptor.UnchainedStreamOutbound) (*transport.ClientStream, error) {
 	return streamChainExec{
@@ -209,7 +209,7 @@ func (c streamChain) CallStream(ctx context.Context, request *transport.StreamRe
 // streamChainExec adapts a series of `StreamOutbound`s into a `StreamOutbound`. It
 // is scoped to a single call of a StreamOutbound and is not thread-safe.
 type streamChainExec struct {
-	Chain []interceptor.StreamOutbound
+	Chain []interceptor.DirectStreamOutbound
 	Final interceptor.UnchainedStreamOutbound
 }
 

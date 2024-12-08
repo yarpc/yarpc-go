@@ -87,7 +87,7 @@ func NewChannelTransport(opts ...TransportOption) (*ChannelTransport, error) {
 func (options transportOptions) newChannelTransport() *ChannelTransport {
 	var (
 		unaryInbounds  []interceptor.UnaryInbound
-		unaryOutbounds []interceptor.UnaryOutbound
+		unaryOutbounds []interceptor.DirectUnaryOutbound
 	)
 	logger := options.logger
 	if logger == nil {
@@ -132,7 +132,7 @@ type ChannelTransport struct {
 	originalHeaders          bool
 	newResponseWriter        func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
 	unaryInboundInterceptor  interceptor.UnaryInbound
-	unaryOutboundInterceptor interceptor.UnaryOutbound
+	unaryOutboundInterceptor interceptor.DirectUnaryOutbound
 }
 
 // Channel returns the underlying TChannel "Channel" instance.

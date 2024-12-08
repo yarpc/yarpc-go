@@ -35,12 +35,12 @@ import (
 )
 
 var (
-	_ interceptor.UnaryInbound   = (*Interceptor)(nil)
-	_ interceptor.UnaryOutbound  = (*Interceptor)(nil)
-	_ interceptor.OnewayInbound  = (*Interceptor)(nil)
-	_ interceptor.OnewayOutbound = (*Interceptor)(nil)
-	_ interceptor.StreamInbound  = (*Interceptor)(nil)
-	_ interceptor.StreamOutbound = (*Interceptor)(nil)
+	_ interceptor.UnaryInbound         = (*Interceptor)(nil)
+	_ interceptor.DirectUnaryOutbound  = (*Interceptor)(nil)
+	_ interceptor.OnewayInbound        = (*Interceptor)(nil)
+	_ interceptor.DirectOnewayOutbound = (*Interceptor)(nil)
+	_ interceptor.StreamInbound        = (*Interceptor)(nil)
+	_ interceptor.DirectStreamOutbound = (*Interceptor)(nil)
 )
 
 // Params defines the parameters for creating the Interceptor

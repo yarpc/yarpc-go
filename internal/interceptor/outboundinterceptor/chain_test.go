@@ -43,7 +43,7 @@ func TestUnaryChain(t *testing.T) {
 
 	tests := []struct {
 		desc string
-		mw   interceptor.UnaryOutbound
+		mw   interceptor.DirectUnaryOutbound
 	}{
 		{"flat chain", UnaryChain(before, nil, after)},
 		{"nested chain", UnaryChain(before, UnaryChain(after, nil))},
@@ -82,7 +82,7 @@ func TestOnewayChain(t *testing.T) {
 
 	tests := []struct {
 		desc string
-		mw   interceptor.OnewayOutbound
+		mw   interceptor.DirectOnewayOutbound
 	}{
 		{"flat chain", OnewayChain(before, nil, after)},
 		{"nested chain", OnewayChain(before, OnewayChain(after, nil))},
@@ -120,7 +120,7 @@ func TestStreamChain(t *testing.T) {
 
 	tests := []struct {
 		desc string
-		mw   interceptor.StreamOutbound
+		mw   interceptor.DirectStreamOutbound
 	}{
 		{"flat chain", StreamChain(before, nil, after)},
 		{"nested chain", StreamChain(before, StreamChain(after, nil))},
