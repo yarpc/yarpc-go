@@ -104,8 +104,8 @@ type UnchainedUnaryOutbound interface {
 type UnchainedOnewayOutbound interface {
 	Outbound
 
-	// UnchainedOnewayCall is called without interceptor.
-	UnchainedOnewayCall(ctx context.Context, request *transport.Request) (transport.Ack, error)
+	// UnchainedCallOneway is called without interceptor.
+	UnchainedCallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error)
 }
 
 // UnchainedStreamOutbound defines a transport outbound for streaming requests
@@ -113,8 +113,8 @@ type UnchainedOnewayOutbound interface {
 type UnchainedStreamOutbound interface {
 	Outbound
 
-	// UnchainedStreamCall is called without interceptor.
-	UnchainedStreamCall(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error)
+	// UnchainedCallStream is called without interceptor.
+	UnchainedCallStream(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error)
 }
 
 type nopUnaryOutbound struct{}
@@ -130,7 +130,7 @@ var NopUnaryOutbound UnaryOutbound = nopUnaryOutbound{}
 type nopOnewayOutbound struct{}
 
 func (nopOnewayOutbound) CallOneway(ctx context.Context, request *transport.Request, out UnchainedOnewayOutbound) (transport.Ack, error) {
-	return out.UnchainedOnewayCall(ctx, request)
+	return out.UnchainedCallOneway(ctx, request)
 }
 
 // NopOnewayOutbound is an oneway outbound middleware that does not do
@@ -140,7 +140,7 @@ var NopOnewayOutbound OnewayOutbound = nopOnewayOutbound{}
 type nopStreamOutbound struct{}
 
 func (nopStreamOutbound) CallStream(ctx context.Context, requestMeta *transport.StreamRequest, out UnchainedStreamOutbound) (*transport.ClientStream, error) {
-	return out.UnchainedStreamCall(ctx, requestMeta)
+	return out.UnchainedCallStream(ctx, requestMeta)
 }
 
 // NopStreamOutbound is a stream outbound middleware that does not do
@@ -178,7 +178,7 @@ type unchainedOnewayOutboundWithInterceptor struct {
 	i  OnewayOutbound
 }
 
-func (ooc unchainedOnewayOutboundWithInterceptor) UnchainedOnewayCall(ctx context.Context, request *transport.Request) (transport.Ack, error) {
+func (ooc unchainedOnewayOutboundWithInterceptor) UnchainedCallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
 	return ooc.i.CallOneway(ctx, request, ooc.oo)
 }
 
@@ -188,6 +188,6 @@ type unchainedStreamOutboundWithInterceptor struct {
 	i  StreamOutbound
 }
 
-func (soc unchainedStreamOutboundWithInterceptor) UnchainedStreamCall(ctx context.Context, requestMeta *transport.StreamRequest) (*transport.ClientStream, error) {
+func (soc unchainedStreamOutboundWithInterceptor) UnchainedCallStream(ctx context.Context, requestMeta *transport.StreamRequest) (*transport.ClientStream, error) {
 	return soc.i.CallStream(ctx, requestMeta, soc.so)
 }

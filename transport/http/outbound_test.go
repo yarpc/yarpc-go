@@ -833,7 +833,7 @@ func TestCallOneWayResponseCloseError(t *testing.T) {
 	require.NoError(t, err)
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err = o.UnchainedOnewayCall(ctx, &transport.Request{
+	_, err = o.UnchainedCallOneway(ctx, &transport.Request{
 		Service: "Service",
 	})
 	require.Errorf(t, err, "Received unexpected error:code:internal message:test error")

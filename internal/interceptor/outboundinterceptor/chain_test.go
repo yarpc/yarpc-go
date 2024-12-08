@@ -29,12 +29,12 @@ func (c *countOutboundMiddleware) Call(ctx context.Context, req *transport.Reque
 
 func (c *countOutboundMiddleware) CallOneway(ctx context.Context, req *transport.Request, next interceptor.UnchainedOnewayOutbound) (transport.Ack, error) {
 	c.Count++
-	return next.UnchainedOnewayCall(ctx, req)
+	return next.UnchainedCallOneway(ctx, req)
 }
 
 func (c *countOutboundMiddleware) CallStream(ctx context.Context, req *transport.StreamRequest, next interceptor.UnchainedStreamOutbound) (*transport.ClientStream, error) {
 	c.Count++
-	return next.UnchainedStreamCall(ctx, req)
+	return next.UnchainedCallStream(ctx, req)
 }
 
 func TestUnaryChain(t *testing.T) {
@@ -102,7 +102,7 @@ func TestOnewayChain(t *testing.T) {
 				Procedure: "procedure",
 			}
 			mockOutbound := interceptortest.NewMockUnchainedOnewayOutbound(mockCtrl)
-			mockOutbound.EXPECT().UnchainedOnewayCall(ctx, req).Return(&mockAck{}, nil)
+			mockOutbound.EXPECT().UnchainedCallOneway(ctx, req).Return(&mockAck{}, nil)
 
 			gotAck, err := tt.mw.CallOneway(ctx, req, mockOutbound)
 
@@ -142,7 +142,7 @@ func TestStreamChain(t *testing.T) {
 				},
 			}
 			mockOutbound := interceptortest.NewMockUnchainedStreamOutbound(mockCtrl)
-			mockOutbound.EXPECT().UnchainedStreamCall(ctx, req).Return(&transport.ClientStream{}, nil)
+			mockOutbound.EXPECT().UnchainedCallStream(ctx, req).Return(&transport.ClientStream{}, nil)
 
 			gotStream, err := tt.mw.CallStream(ctx, req, mockOutbound)
 

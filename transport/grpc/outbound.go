@@ -308,13 +308,13 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	return yarpcErr
 }
 
-// CallStream wraps the UnchainedStreamCall.
+// CallStream wraps the UnchainedCallStream.
 func (o *Outbound) CallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
-	return o.streamCallWithInterceptor.UnchainedStreamCall(ctx, request)
+	return o.streamCallWithInterceptor.UnchainedCallStream(ctx, request)
 }
 
-// UnchainedStreamCall implements transport.StreamOutbound#CallStream.
-func (o *Outbound) UnchainedStreamCall(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
+// UnchainedCallStream implements transport.StreamOutbound#CallStream.
+func (o *Outbound) UnchainedCallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, err
 	}

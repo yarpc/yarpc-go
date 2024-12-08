@@ -171,7 +171,7 @@ func (i *Interceptor) CallOneway(ctx context.Context, req *transport.Request, ou
 		}
 	}
 
-	ack, err := out.UnchainedOnewayCall(ctx, req)
+	ack, err := out.UnchainedCallOneway(ctx, req)
 	return ack, updateSpanWithErrorDetails(span, false, nil, err)
 }
 
@@ -226,7 +226,7 @@ func (i *Interceptor) CallStream(ctx context.Context, req *transport.StreamReque
 		}
 	}
 
-	clientStream, err := out.UnchainedStreamCall(ctx, req)
+	clientStream, err := out.UnchainedCallStream(ctx, req)
 	if err != nil {
 		_ = updateSpanWithErrorDetails(span, false, nil, err)
 		span.Finish()

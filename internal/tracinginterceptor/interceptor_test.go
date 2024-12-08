@@ -498,7 +498,7 @@ func TestInterceptorCallOneway(t *testing.T) {
 
 			outbound := interceptortest.NewMockUnchainedOnewayOutbound(ctrl)
 			outbound.EXPECT().
-				UnchainedOnewayCall(gomock.Any(), req).
+				UnchainedCallOneway(gomock.Any(), req).
 				Return(nil, tt.callError) // Return nil for Ack
 
 			_, err := interceptor.CallOneway(context.Background(), req, outbound)
@@ -614,7 +614,7 @@ func TestInterceptorCallStream(t *testing.T) {
 	require.NoError(t, err)
 
 	outbound := interceptortest.NewMockUnchainedStreamOutbound(ctrl)
-	outbound.EXPECT().UnchainedStreamCall(gomock.Any(), gomock.Any()).Return(clientStream, nil)
+	outbound.EXPECT().UnchainedCallStream(gomock.Any(), gomock.Any()).Return(clientStream, nil)
 
 	req := &transport.StreamRequest{
 		Meta: &transport.RequestMeta{Procedure: "test-procedure"},
@@ -644,7 +644,7 @@ func TestInterceptorCallStream_Error(t *testing.T) {
 
 	outbound := interceptortest.NewMockUnchainedStreamOutbound(ctrl)
 	outbound.EXPECT().
-		UnchainedStreamCall(gomock.Any(), gomock.Any()).
+		UnchainedCallStream(gomock.Any(), gomock.Any()).
 		Return(clientStream, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "call error"))
 	// Set up the request
 	ctx := context.Background()

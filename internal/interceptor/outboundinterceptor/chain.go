@@ -130,7 +130,7 @@ func (c onewayChain) CallOneway(ctx context.Context, request *transport.Request,
 	return onewayChainExec{
 		Chain: c,
 		Final: out,
-	}.UnchainedOnewayCall(ctx, request)
+	}.UnchainedCallOneway(ctx, request)
 }
 
 // onewayChainExec adapts a series of `OnewayOutbound`s into a `OnewayOutbound`. It
@@ -164,9 +164,9 @@ func (x onewayChainExec) IsRunning() bool {
 	return x.Final.IsRunning()
 }
 
-func (x onewayChainExec) UnchainedOnewayCall(ctx context.Context, request *transport.Request) (transport.Ack, error) {
+func (x onewayChainExec) UnchainedCallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
 	if len(x.Chain) == 0 {
-		return x.Final.UnchainedOnewayCall(ctx, request)
+		return x.Final.UnchainedCallOneway(ctx, request)
 	}
 	next := x.Chain[0]
 	x.Chain = x.Chain[1:]
@@ -203,7 +203,7 @@ func (c streamChain) CallStream(ctx context.Context, request *transport.StreamRe
 	return streamChainExec{
 		Chain: c,
 		Final: out,
-	}.UnchainedStreamCall(ctx, request)
+	}.UnchainedCallStream(ctx, request)
 }
 
 // streamChainExec adapts a series of `StreamOutbound`s into a `StreamOutbound`. It
@@ -237,9 +237,9 @@ func (x streamChainExec) IsRunning() bool {
 	return x.Final.IsRunning()
 }
 
-func (x streamChainExec) UnchainedStreamCall(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
+func (x streamChainExec) UnchainedCallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
 	if len(x.Chain) == 0 {
-		return x.Final.UnchainedStreamCall(ctx, request)
+		return x.Final.UnchainedCallStream(ctx, request)
 	}
 	next := x.Chain[0]
 	x.Chain = x.Chain[1:]

@@ -379,19 +379,19 @@ func (mr *MockUnchainedOnewayOutboundMockRecorder) Transports() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Transports", reflect.TypeOf((*MockUnchainedOnewayOutbound)(nil).Transports))
 }
 
-// UnchainedOnewayCall mocks base method.
-func (m *MockUnchainedOnewayOutbound) UnchainedOnewayCall(ctx context.Context, request *transport.Request) (transport.Ack, error) {
+// UnchainedCallOneway mocks base method.
+func (m *MockUnchainedOnewayOutbound) UnchainedCallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UnchainedOnewayCall", ctx, request)
+	ret := m.ctrl.Call(m, "UnchainedCallOneway", ctx, request)
 	ret0, _ := ret[0].(transport.Ack)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// UnchainedOnewayCall indicates an expected call of UnchainedOnewayCall.
-func (mr *MockUnchainedOnewayOutboundMockRecorder) UnchainedOnewayCall(ctx, request interface{}) *gomock.Call {
+// UnchainedCallOneway indicates an expected call of UnchainedCallOneway.
+func (mr *MockUnchainedOnewayOutboundMockRecorder) UnchainedCallOneway(ctx, request interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnchainedOnewayCall", reflect.TypeOf((*MockUnchainedOnewayOutbound)(nil).UnchainedOnewayCall), ctx, request)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnchainedCallOneway", reflect.TypeOf((*MockUnchainedOnewayOutbound)(nil).UnchainedCallOneway), ctx, request)
 }
 
 // MockUnchainedStreamOutbound is a mock of UnchainedStreamOutbound interface.
@@ -473,17 +473,17 @@ func (mr *MockUnchainedStreamOutboundMockRecorder) Transports() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Transports", reflect.TypeOf((*MockUnchainedStreamOutbound)(nil).Transports))
 }
 
-// UnchainedStreamCall mocks base method.
-func (m *MockUnchainedStreamOutbound) UnchainedStreamCall(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error) {
+// UnchainedCallStream mocks base method.
+func (m *MockUnchainedStreamOutbound) UnchainedCallStream(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UnchainedStreamCall", ctx, req)
+	ret := m.ctrl.Call(m, "UnchainedCallStream", ctx, req)
 	ret0, _ := ret[0].(*transport.ClientStream)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// UnchainedStreamCall indicates an expected call of UnchainedStreamCall.
-func (mr *MockUnchainedStreamOutboundMockRecorder) UnchainedStreamCall(ctx, req interface{}) *gomock.Call {
+// UnchainedCallStream indicates an expected call of UnchainedCallStream.
+func (mr *MockUnchainedStreamOutboundMockRecorder) UnchainedCallStream(ctx, req interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnchainedStreamCall", reflect.TypeOf((*MockUnchainedStreamOutbound)(nil).UnchainedStreamCall), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnchainedCallStream", reflect.TypeOf((*MockUnchainedStreamOutbound)(nil).UnchainedCallStream), ctx, req)
 }

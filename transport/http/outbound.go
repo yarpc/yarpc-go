@@ -300,11 +300,11 @@ func (o *Outbound) UnchainedCall(ctx context.Context, treq *transport.Request) (
 
 // CallOneway implements UnaryOnewayOutbound
 func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
-	return o.onewayCallWithInterceptor.UnchainedOnewayCall(ctx, treq)
+	return o.onewayCallWithInterceptor.UnchainedCallOneway(ctx, treq)
 }
 
-// UnchainedOnewayCall makes a oneway request
-func (o *Outbound) UnchainedOnewayCall(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
+// UnchainedCallOneway makes a oneway request
+func (o *Outbound) UnchainedCallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
 	if treq == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil")
 	}
