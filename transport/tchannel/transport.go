@@ -25,10 +25,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"go.uber.org/yarpc/internal/inboundmiddleware"
-	"go.uber.org/yarpc/internal/interceptor"
-	"go.uber.org/yarpc/internal/outboundmiddleware"
-	"go.uber.org/yarpc/internal/tracinginterceptor"
+	"go.uber.org/yarpc/internal/interceptor/outboundinterceptor"
 	"net"
 	"sync"
 	"time"
@@ -40,6 +37,9 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
+	"go.uber.org/yarpc/internal/inboundmiddleware"
+	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/tracinginterceptor"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/transport/internal/tls/dialer"
 	"go.uber.org/yarpc/transport/internal/tls/muxlistener"
@@ -91,7 +91,7 @@ type Transport struct {
 	outboundChannels          []*outboundChannel
 
 	unaryInboundInterceptor  interceptor.UnaryInbound
-	unaryOutboundInterceptor interceptor.UnaryOutbound
+	unaryOutboundInterceptor interceptor.DirectUnaryOutbound
 }
 
 // NewTransport is a YARPC transport that facilitates sending and receiving
@@ -118,7 +118,7 @@ func NewTransport(opts ...TransportOption) (*Transport, error) {
 func (o transportOptions) newTransport() *Transport {
 	var (
 		unaryInbounds  []interceptor.UnaryInbound
-		unaryOutbounds []interceptor.UnaryOutbound
+		unaryOutbounds []interceptor.DirectUnaryOutbound
 	)
 
 	logger := o.logger
@@ -161,7 +161,7 @@ func (o transportOptions) newTransport() *Transport {
 		inboundTLSMode:                 o.inboundTLSMode,
 		outboundTLSConfigProvider:      o.outboundTLSConfigProvider,
 		unaryInboundInterceptor:        inboundmiddleware.UnaryChain(unaryInbounds...),
-		unaryOutboundInterceptor:       outboundmiddleware.UnaryChain(unaryOutbounds...),
+		unaryOutboundInterceptor:       outboundinterceptor.UnaryChain(unaryOutbounds...),
 	}
 }
 

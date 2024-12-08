@@ -22,6 +22,7 @@ package http
 
 import (
 	"context"
+	"go.uber.org/yarpc/internal/interceptor/outboundinterceptor"
 	"math/rand"
 	"net"
 	"net/http"
@@ -37,7 +38,6 @@ import (
 	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/yarpc/internal/inboundmiddleware"
 	"go.uber.org/yarpc/internal/interceptor"
-	"go.uber.org/yarpc/internal/outboundmiddleware"
 	"go.uber.org/yarpc/internal/tracinginterceptor"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/zap"
@@ -282,9 +282,9 @@ func (o *transportOptions) newTransport() *Transport {
 	}
 	var (
 		unaryInbounds   []interceptor.UnaryInbound
-		unaryOutbounds  []interceptor.UnaryOutbound
+		unaryOutbounds  []interceptor.DirectUnaryOutbound
 		onewayInbounds  []interceptor.OnewayInbound
-		onewayOutbounds []interceptor.OnewayOutbound
+		onewayOutbounds []interceptor.DirectOnewayOutbound
 	)
 	tracer := o.tracer
 	if o.tracingInterceptorEnabled {
@@ -299,6 +299,7 @@ func (o *transportOptions) newTransport() *Transport {
 
 		tracer = opentracing.NoopTracer{}
 	}
+
 	return &Transport{
 		once:                      lifecycle.NewOnce(),
 		client:                    o.buildClient(o),
@@ -313,9 +314,9 @@ func (o *transportOptions) newTransport() *Transport {
 		serviceName:               o.serviceName,
 		ouboundTLSConfigProvider:  o.outboundTLSConfigProvider,
 		unaryInboundInterceptor:   inboundmiddleware.UnaryChain(unaryInbounds...),
-		unaryOutboundInterceptor:  outboundmiddleware.UnaryChain(unaryOutbounds...),
+		unaryOutboundInterceptor:  outboundinterceptor.UnaryChain(unaryOutbounds...),
 		onewayInboundInterceptor:  inboundmiddleware.OnewayChain(onewayInbounds...),
-		onewayOutboundInterceptor: outboundmiddleware.OnewayChain(onewayOutbounds...),
+		onewayOutboundInterceptor: outboundinterceptor.OnewayChain(onewayOutbounds...),
 	}
 }
 
@@ -368,9 +369,9 @@ type Transport struct {
 	ouboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
 
 	unaryInboundInterceptor   interceptor.UnaryInbound
-	unaryOutboundInterceptor  interceptor.UnaryOutbound
+	unaryOutboundInterceptor  interceptor.DirectUnaryOutbound
 	onewayInboundInterceptor  interceptor.OnewayInbound
-	onewayOutboundInterceptor interceptor.OnewayOutbound
+	onewayOutboundInterceptor interceptor.DirectOnewayOutbound
 }
 
 var _ transport.Transport = (*Transport)(nil)

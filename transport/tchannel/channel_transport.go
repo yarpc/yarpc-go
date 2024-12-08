@@ -22,14 +22,14 @@ package tchannel
 
 import (
 	"errors"
-	"go.uber.org/yarpc/internal/inboundmiddleware"
-	"go.uber.org/yarpc/internal/interceptor"
-	"go.uber.org/yarpc/internal/outboundmiddleware"
-	"go.uber.org/yarpc/internal/tracinginterceptor"
+	"go.uber.org/yarpc/internal/interceptor/outboundinterceptor"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/inboundmiddleware"
+	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/tracinginterceptor"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/zap"
 )
@@ -87,7 +87,7 @@ func NewChannelTransport(opts ...TransportOption) (*ChannelTransport, error) {
 func (options transportOptions) newChannelTransport() *ChannelTransport {
 	var (
 		unaryInbounds  []interceptor.UnaryInbound
-		unaryOutbounds []interceptor.UnaryOutbound
+		unaryOutbounds []interceptor.DirectUnaryOutbound
 	)
 	logger := options.logger
 	if logger == nil {
@@ -114,7 +114,7 @@ func (options transportOptions) newChannelTransport() *ChannelTransport {
 		originalHeaders:          options.originalHeaders,
 		newResponseWriter:        newHandlerWriter,
 		unaryInboundInterceptor:  inboundmiddleware.UnaryChain(unaryInbounds...),
-		unaryOutboundInterceptor: outboundmiddleware.UnaryChain(unaryOutbounds...),
+		unaryOutboundInterceptor: outboundinterceptor.UnaryChain(unaryOutbounds...),
 	}
 }
 
@@ -132,7 +132,7 @@ type ChannelTransport struct {
 	originalHeaders          bool
 	newResponseWriter        func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
 	unaryInboundInterceptor  interceptor.UnaryInbound
-	unaryOutboundInterceptor interceptor.UnaryOutbound
+	unaryOutboundInterceptor interceptor.DirectUnaryOutbound
 }
 
 // Channel returns the underlying TChannel "Channel" instance.

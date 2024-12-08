@@ -108,7 +108,7 @@ type handler struct {
 	newResponseWriter              func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
 	excludeServiceHeaderInResponse bool
 	unaryInboundInterceptor        interceptor.UnaryInbound
-	unaryOutboundInterceptor       interceptor.UnaryOutbound
+	unaryOutboundInterceptor       interceptor.DirectUnaryOutbound
 }
 
 func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
