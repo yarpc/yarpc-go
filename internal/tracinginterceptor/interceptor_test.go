@@ -23,6 +23,7 @@ package tracinginterceptor
 import (
 	"context"
 	"fmt"
+	"go.uber.org/yarpc/internal/interceptor/interceptortest"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -234,9 +235,8 @@ func TestInterceptorCall(t *testing.T) {
 				Headers:   transport.Headers{},
 			}
 
-			outbound := transporttest.NewMockUnaryOutbound(ctrl)
-			outbound.EXPECT().
-				Call(gomock.Any(), req).
+			outbound := interceptortest.NewMockDirectUnaryOutbound(ctrl)
+			outbound.EXPECT().DirectCall(gomock.Any(), req).
 				Return(tt.response, tt.callError)
 
 			// Mocking Inject to return an error
@@ -496,9 +496,9 @@ func TestInterceptorCallOneway(t *testing.T) {
 				Headers:   transport.Headers{},
 			}
 
-			outbound := transporttest.NewMockOnewayOutbound(ctrl)
+			outbound := interceptortest.NewMockDirectOnewayOutbound(ctrl)
 			outbound.EXPECT().
-				CallOneway(gomock.Any(), req).
+				DirectCallOneway(gomock.Any(), req).
 				Return(nil, tt.callError) // Return nil for Ack
 
 			_, err := interceptor.CallOneway(context.Background(), req, outbound)
@@ -613,8 +613,8 @@ func TestInterceptorCallStream(t *testing.T) {
 	clientStream, err := transport.NewClientStream(mockStream)
 	require.NoError(t, err)
 
-	outbound := transporttest.NewMockStreamOutbound(ctrl)
-	outbound.EXPECT().CallStream(gomock.Any(), gomock.Any()).Return(clientStream, nil)
+	outbound := interceptortest.NewMockDirectStreamOutbound(ctrl)
+	outbound.EXPECT().DirectCallStream(gomock.Any(), gomock.Any()).Return(clientStream, nil)
 
 	req := &transport.StreamRequest{
 		Meta: &transport.RequestMeta{Procedure: "test-procedure"},
@@ -642,11 +642,10 @@ func TestInterceptorCallStream_Error(t *testing.T) {
 	clientStream, err := transport.NewClientStream(mockStreamCloser)
 	require.NoError(t, err)
 
-	outbound := transporttest.NewMockStreamOutbound(ctrl)
+	outbound := interceptortest.NewMockDirectStreamOutbound(ctrl)
 	outbound.EXPECT().
-		CallStream(gomock.Any(), gomock.Any()).
+		DirectCallStream(gomock.Any(), gomock.Any()).
 		Return(clientStream, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "call error"))
-
 	// Set up the request
 	ctx := context.Background()
 	req := &transport.StreamRequest{Meta: &transport.RequestMeta{Procedure: "test-procedure"}}
