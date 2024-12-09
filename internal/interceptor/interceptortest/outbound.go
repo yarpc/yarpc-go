@@ -37,7 +37,7 @@ func (m *MockUnaryOutbound) EXPECT() *MockUnaryOutboundMockRecorder {
 }
 
 // Call mocks base method.
-func (m *MockUnaryOutbound) Call(ctx context.Context, request *transport.Request, out interceptor.UnchainedUnaryOutbound) (*transport.Response, error) {
+func (m *MockUnaryOutbound) Call(ctx context.Context, request *transport.Request, out interceptor.DirectUnaryOutbound) (*transport.Response, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Call", ctx, request, out)
 	ret0, _ := ret[0].(*transport.Response)
@@ -75,7 +75,7 @@ func (m *MockOnewayOutbound) EXPECT() *MockOnewayOutboundMockRecorder {
 }
 
 // CallOneway mocks base method.
-func (m *MockOnewayOutbound) CallOneway(ctx context.Context, request *transport.Request, out interceptor.UnchainedOnewayOutbound) (transport.Ack, error) {
+func (m *MockOnewayOutbound) CallOneway(ctx context.Context, request *transport.Request, out interceptor.DirectOnewayOutbound) (transport.Ack, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CallOneway", ctx, request, out)
 	ret0, _ := ret[0].(transport.Ack)
@@ -113,7 +113,7 @@ func (m *MockStreamOutbound) EXPECT() *MockStreamOutboundMockRecorder {
 }
 
 // CallStream mocks base method.
-func (m *MockStreamOutbound) CallStream(ctx context.Context, req *transport.StreamRequest, out interceptor.UnchainedStreamOutbound) (*transport.ClientStream, error) {
+func (m *MockStreamOutbound) CallStream(ctx context.Context, req *transport.StreamRequest, out interceptor.DirectStreamOutbound) (*transport.ClientStream, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CallStream", ctx, req, out)
 	ret0, _ := ret[0].(*transport.ClientStream)
@@ -206,125 +206,46 @@ func (mr *MockOutboundMockRecorder) Transports() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Transports", reflect.TypeOf((*MockOutbound)(nil).Transports))
 }
 
-// MockUnchainedUnaryOutbound is a mock of UnchainedUnaryOutbound interface.
-type MockUnchainedUnaryOutbound struct {
+// MockDirectUnaryOutbound is a mock of DirectUnaryOutbound interface.
+type MockDirectUnaryOutbound struct {
 	ctrl     *gomock.Controller
-	recorder *MockUnchainedUnaryOutboundMockRecorder
+	recorder *MockDirectUnaryOutboundMockRecorder
 }
 
-// MockUnchainedUnaryOutboundMockRecorder is the mock recorder for MockUnchainedUnaryOutbound.
-type MockUnchainedUnaryOutboundMockRecorder struct {
-	mock *MockUnchainedUnaryOutbound
+// MockDirectUnaryOutboundMockRecorder is the mock recorder for MockDirectUnaryOutbound.
+type MockDirectUnaryOutboundMockRecorder struct {
+	mock *MockDirectUnaryOutbound
 }
 
-// NewMockUnchainedUnaryOutbound creates a new mock instance.
-func NewMockUnchainedUnaryOutbound(ctrl *gomock.Controller) *MockUnchainedUnaryOutbound {
-	mock := &MockUnchainedUnaryOutbound{ctrl: ctrl}
-	mock.recorder = &MockUnchainedUnaryOutboundMockRecorder{mock}
+// NewMockDirectUnaryOutbound creates a new mock instance.
+func NewMockDirectUnaryOutbound(ctrl *gomock.Controller) *MockDirectUnaryOutbound {
+	mock := &MockDirectUnaryOutbound{ctrl: ctrl}
+	mock.recorder = &MockDirectUnaryOutboundMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockUnchainedUnaryOutbound) EXPECT() *MockUnchainedUnaryOutboundMockRecorder {
+func (m *MockDirectUnaryOutbound) EXPECT() *MockDirectUnaryOutboundMockRecorder {
 	return m.recorder
 }
 
-// IsRunning mocks base method.
-func (m *MockUnchainedUnaryOutbound) IsRunning() bool {
+// DirectCall mocks base method.
+func (m *MockDirectUnaryOutbound) DirectCall(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsRunning")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// IsRunning indicates an expected call of IsRunning.
-func (mr *MockUnchainedUnaryOutboundMockRecorder) IsRunning() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRunning", reflect.TypeOf((*MockUnchainedUnaryOutbound)(nil).IsRunning))
-}
-
-// Start mocks base method.
-func (m *MockUnchainedUnaryOutbound) Start() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Start")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Start indicates an expected call of Start.
-func (mr *MockUnchainedUnaryOutboundMockRecorder) Start() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockUnchainedUnaryOutbound)(nil).Start))
-}
-
-// Stop mocks base method.
-func (m *MockUnchainedUnaryOutbound) Stop() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Stop")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Stop indicates an expected call of Stop.
-func (mr *MockUnchainedUnaryOutboundMockRecorder) Stop() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockUnchainedUnaryOutbound)(nil).Stop))
-}
-
-// Transports mocks base method.
-func (m *MockUnchainedUnaryOutbound) Transports() []transport.Transport {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Transports")
-	ret0, _ := ret[0].([]transport.Transport)
-	return ret0
-}
-
-// Transports indicates an expected call of Transports.
-func (mr *MockUnchainedUnaryOutboundMockRecorder) Transports() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Transports", reflect.TypeOf((*MockUnchainedUnaryOutbound)(nil).Transports))
-}
-
-// UnchainedCall mocks base method.
-func (m *MockUnchainedUnaryOutbound) UnchainedCall(ctx context.Context, request *transport.Request) (*transport.Response, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UnchainedCall", ctx, request)
+	ret := m.ctrl.Call(m, "DirectCall", ctx, request)
 	ret0, _ := ret[0].(*transport.Response)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// UnchainedCall indicates an expected call of UnchainedCall.
-func (mr *MockUnchainedUnaryOutboundMockRecorder) UnchainedCall(ctx, request interface{}) *gomock.Call {
+// DirectCall indicates an expected call of DirectCall.
+func (mr *MockDirectUnaryOutboundMockRecorder) DirectCall(ctx, request interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnchainedCall", reflect.TypeOf((*MockUnchainedUnaryOutbound)(nil).UnchainedCall), ctx, request)
-}
-
-// MockUnchainedOnewayOutbound is a mock of UnchainedOnewayOutbound interface.
-type MockUnchainedOnewayOutbound struct {
-	ctrl     *gomock.Controller
-	recorder *MockUnchainedOnewayOutboundMockRecorder
-}
-
-// MockUnchainedOnewayOutboundMockRecorder is the mock recorder for MockUnchainedOnewayOutbound.
-type MockUnchainedOnewayOutboundMockRecorder struct {
-	mock *MockUnchainedOnewayOutbound
-}
-
-// NewMockUnchainedOnewayOutbound creates a new mock instance.
-func NewMockUnchainedOnewayOutbound(ctrl *gomock.Controller) *MockUnchainedOnewayOutbound {
-	mock := &MockUnchainedOnewayOutbound{ctrl: ctrl}
-	mock.recorder = &MockUnchainedOnewayOutboundMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockUnchainedOnewayOutbound) EXPECT() *MockUnchainedOnewayOutboundMockRecorder {
-	return m.recorder
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DirectCall", reflect.TypeOf((*MockDirectUnaryOutbound)(nil).DirectCall), ctx, request)
 }
 
 // IsRunning mocks base method.
-func (m *MockUnchainedOnewayOutbound) IsRunning() bool {
+func (m *MockDirectUnaryOutbound) IsRunning() bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsRunning")
 	ret0, _ := ret[0].(bool)
@@ -332,13 +253,13 @@ func (m *MockUnchainedOnewayOutbound) IsRunning() bool {
 }
 
 // IsRunning indicates an expected call of IsRunning.
-func (mr *MockUnchainedOnewayOutboundMockRecorder) IsRunning() *gomock.Call {
+func (mr *MockDirectUnaryOutboundMockRecorder) IsRunning() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRunning", reflect.TypeOf((*MockUnchainedOnewayOutbound)(nil).IsRunning))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRunning", reflect.TypeOf((*MockDirectUnaryOutbound)(nil).IsRunning))
 }
 
 // Start mocks base method.
-func (m *MockUnchainedOnewayOutbound) Start() error {
+func (m *MockDirectUnaryOutbound) Start() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Start")
 	ret0, _ := ret[0].(error)
@@ -346,13 +267,13 @@ func (m *MockUnchainedOnewayOutbound) Start() error {
 }
 
 // Start indicates an expected call of Start.
-func (mr *MockUnchainedOnewayOutboundMockRecorder) Start() *gomock.Call {
+func (mr *MockDirectUnaryOutboundMockRecorder) Start() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockUnchainedOnewayOutbound)(nil).Start))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockDirectUnaryOutbound)(nil).Start))
 }
 
 // Stop mocks base method.
-func (m *MockUnchainedOnewayOutbound) Stop() error {
+func (m *MockDirectUnaryOutbound) Stop() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Stop")
 	ret0, _ := ret[0].(error)
@@ -360,13 +281,13 @@ func (m *MockUnchainedOnewayOutbound) Stop() error {
 }
 
 // Stop indicates an expected call of Stop.
-func (mr *MockUnchainedOnewayOutboundMockRecorder) Stop() *gomock.Call {
+func (mr *MockDirectUnaryOutboundMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockUnchainedOnewayOutbound)(nil).Stop))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockDirectUnaryOutbound)(nil).Stop))
 }
 
 // Transports mocks base method.
-func (m *MockUnchainedOnewayOutbound) Transports() []transport.Transport {
+func (m *MockDirectUnaryOutbound) Transports() []transport.Transport {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Transports")
 	ret0, _ := ret[0].([]transport.Transport)
@@ -374,51 +295,51 @@ func (m *MockUnchainedOnewayOutbound) Transports() []transport.Transport {
 }
 
 // Transports indicates an expected call of Transports.
-func (mr *MockUnchainedOnewayOutboundMockRecorder) Transports() *gomock.Call {
+func (mr *MockDirectUnaryOutboundMockRecorder) Transports() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Transports", reflect.TypeOf((*MockUnchainedOnewayOutbound)(nil).Transports))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Transports", reflect.TypeOf((*MockDirectUnaryOutbound)(nil).Transports))
 }
 
-// UnchainedCallOneway mocks base method.
-func (m *MockUnchainedOnewayOutbound) UnchainedCallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
+// MockDirectOnewayOutbound is a mock of DirectOnewayOutbound interface.
+type MockDirectOnewayOutbound struct {
+	ctrl     *gomock.Controller
+	recorder *MockDirectOnewayOutboundMockRecorder
+}
+
+// MockDirectOnewayOutboundMockRecorder is the mock recorder for MockDirectOnewayOutbound.
+type MockDirectOnewayOutboundMockRecorder struct {
+	mock *MockDirectOnewayOutbound
+}
+
+// NewMockDirectOnewayOutbound creates a new mock instance.
+func NewMockDirectOnewayOutbound(ctrl *gomock.Controller) *MockDirectOnewayOutbound {
+	mock := &MockDirectOnewayOutbound{ctrl: ctrl}
+	mock.recorder = &MockDirectOnewayOutboundMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockDirectOnewayOutbound) EXPECT() *MockDirectOnewayOutboundMockRecorder {
+	return m.recorder
+}
+
+// DirectCallOneway mocks base method.
+func (m *MockDirectOnewayOutbound) DirectCallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UnchainedCallOneway", ctx, request)
+	ret := m.ctrl.Call(m, "DirectCallOneway", ctx, request)
 	ret0, _ := ret[0].(transport.Ack)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// UnchainedCallOneway indicates an expected call of UnchainedCallOneway.
-func (mr *MockUnchainedOnewayOutboundMockRecorder) UnchainedCallOneway(ctx, request interface{}) *gomock.Call {
+// DirectCallOneway indicates an expected call of DirectCallOneway.
+func (mr *MockDirectOnewayOutboundMockRecorder) DirectCallOneway(ctx, request interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnchainedCallOneway", reflect.TypeOf((*MockUnchainedOnewayOutbound)(nil).UnchainedCallOneway), ctx, request)
-}
-
-// MockUnchainedStreamOutbound is a mock of UnchainedStreamOutbound interface.
-type MockUnchainedStreamOutbound struct {
-	ctrl     *gomock.Controller
-	recorder *MockUnchainedStreamOutboundMockRecorder
-}
-
-// MockUnchainedStreamOutboundMockRecorder is the mock recorder for MockUnchainedStreamOutbound.
-type MockUnchainedStreamOutboundMockRecorder struct {
-	mock *MockUnchainedStreamOutbound
-}
-
-// NewMockUnchainedStreamOutbound creates a new mock instance.
-func NewMockUnchainedStreamOutbound(ctrl *gomock.Controller) *MockUnchainedStreamOutbound {
-	mock := &MockUnchainedStreamOutbound{ctrl: ctrl}
-	mock.recorder = &MockUnchainedStreamOutboundMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockUnchainedStreamOutbound) EXPECT() *MockUnchainedStreamOutboundMockRecorder {
-	return m.recorder
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DirectCallOneway", reflect.TypeOf((*MockDirectOnewayOutbound)(nil).DirectCallOneway), ctx, request)
 }
 
 // IsRunning mocks base method.
-func (m *MockUnchainedStreamOutbound) IsRunning() bool {
+func (m *MockDirectOnewayOutbound) IsRunning() bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsRunning")
 	ret0, _ := ret[0].(bool)
@@ -426,13 +347,13 @@ func (m *MockUnchainedStreamOutbound) IsRunning() bool {
 }
 
 // IsRunning indicates an expected call of IsRunning.
-func (mr *MockUnchainedStreamOutboundMockRecorder) IsRunning() *gomock.Call {
+func (mr *MockDirectOnewayOutboundMockRecorder) IsRunning() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRunning", reflect.TypeOf((*MockUnchainedStreamOutbound)(nil).IsRunning))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRunning", reflect.TypeOf((*MockDirectOnewayOutbound)(nil).IsRunning))
 }
 
 // Start mocks base method.
-func (m *MockUnchainedStreamOutbound) Start() error {
+func (m *MockDirectOnewayOutbound) Start() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Start")
 	ret0, _ := ret[0].(error)
@@ -440,13 +361,13 @@ func (m *MockUnchainedStreamOutbound) Start() error {
 }
 
 // Start indicates an expected call of Start.
-func (mr *MockUnchainedStreamOutboundMockRecorder) Start() *gomock.Call {
+func (mr *MockDirectOnewayOutboundMockRecorder) Start() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockUnchainedStreamOutbound)(nil).Start))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockDirectOnewayOutbound)(nil).Start))
 }
 
 // Stop mocks base method.
-func (m *MockUnchainedStreamOutbound) Stop() error {
+func (m *MockDirectOnewayOutbound) Stop() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Stop")
 	ret0, _ := ret[0].(error)
@@ -454,13 +375,13 @@ func (m *MockUnchainedStreamOutbound) Stop() error {
 }
 
 // Stop indicates an expected call of Stop.
-func (mr *MockUnchainedStreamOutboundMockRecorder) Stop() *gomock.Call {
+func (mr *MockDirectOnewayOutboundMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockUnchainedStreamOutbound)(nil).Stop))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockDirectOnewayOutbound)(nil).Stop))
 }
 
 // Transports mocks base method.
-func (m *MockUnchainedStreamOutbound) Transports() []transport.Transport {
+func (m *MockDirectOnewayOutbound) Transports() []transport.Transport {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Transports")
 	ret0, _ := ret[0].([]transport.Transport)
@@ -468,22 +389,101 @@ func (m *MockUnchainedStreamOutbound) Transports() []transport.Transport {
 }
 
 // Transports indicates an expected call of Transports.
-func (mr *MockUnchainedStreamOutboundMockRecorder) Transports() *gomock.Call {
+func (mr *MockDirectOnewayOutboundMockRecorder) Transports() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Transports", reflect.TypeOf((*MockUnchainedStreamOutbound)(nil).Transports))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Transports", reflect.TypeOf((*MockDirectOnewayOutbound)(nil).Transports))
 }
 
-// UnchainedCallStream mocks base method.
-func (m *MockUnchainedStreamOutbound) UnchainedCallStream(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error) {
+// MockDirectStreamOutbound is a mock of DirectStreamOutbound interface.
+type MockDirectStreamOutbound struct {
+	ctrl     *gomock.Controller
+	recorder *MockDirectStreamOutboundMockRecorder
+}
+
+// MockDirectStreamOutboundMockRecorder is the mock recorder for MockDirectStreamOutbound.
+type MockDirectStreamOutboundMockRecorder struct {
+	mock *MockDirectStreamOutbound
+}
+
+// NewMockDirectStreamOutbound creates a new mock instance.
+func NewMockDirectStreamOutbound(ctrl *gomock.Controller) *MockDirectStreamOutbound {
+	mock := &MockDirectStreamOutbound{ctrl: ctrl}
+	mock.recorder = &MockDirectStreamOutboundMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockDirectStreamOutbound) EXPECT() *MockDirectStreamOutboundMockRecorder {
+	return m.recorder
+}
+
+// DirectCallStream mocks base method.
+func (m *MockDirectStreamOutbound) DirectCallStream(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UnchainedCallStream", ctx, req)
+	ret := m.ctrl.Call(m, "DirectCallStream", ctx, req)
 	ret0, _ := ret[0].(*transport.ClientStream)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// UnchainedCallStream indicates an expected call of UnchainedCallStream.
-func (mr *MockUnchainedStreamOutboundMockRecorder) UnchainedCallStream(ctx, req interface{}) *gomock.Call {
+// DirectCallStream indicates an expected call of DirectCallStream.
+func (mr *MockDirectStreamOutboundMockRecorder) DirectCallStream(ctx, req interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnchainedCallStream", reflect.TypeOf((*MockUnchainedStreamOutbound)(nil).UnchainedCallStream), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DirectCallStream", reflect.TypeOf((*MockDirectStreamOutbound)(nil).DirectCallStream), ctx, req)
+}
+
+// IsRunning mocks base method.
+func (m *MockDirectStreamOutbound) IsRunning() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsRunning")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsRunning indicates an expected call of IsRunning.
+func (mr *MockDirectStreamOutboundMockRecorder) IsRunning() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRunning", reflect.TypeOf((*MockDirectStreamOutbound)(nil).IsRunning))
+}
+
+// Start mocks base method.
+func (m *MockDirectStreamOutbound) Start() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Start")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Start indicates an expected call of Start.
+func (mr *MockDirectStreamOutboundMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockDirectStreamOutbound)(nil).Start))
+}
+
+// Stop mocks base method.
+func (m *MockDirectStreamOutbound) Stop() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Stop")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Stop indicates an expected call of Stop.
+func (mr *MockDirectStreamOutboundMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockDirectStreamOutbound)(nil).Stop))
+}
+
+// Transports mocks base method.
+func (m *MockDirectStreamOutbound) Transports() []transport.Transport {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Transports")
+	ret0, _ := ret[0].([]transport.Transport)
+	return ret0
+}
+
+// Transports indicates an expected call of Transports.
+func (mr *MockDirectStreamOutboundMockRecorder) Transports() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Transports", reflect.TypeOf((*MockDirectStreamOutbound)(nil).Transports))
 }

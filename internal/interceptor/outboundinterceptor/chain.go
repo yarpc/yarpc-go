@@ -28,8 +28,8 @@ import (
 )
 
 // UnaryChain combines a series of `UnaryInbound`s into a single `InboundMiddleware`.
-func UnaryChain(mw ...interceptor.DirectUnaryOutbound) interceptor.DirectUnaryOutbound {
-	unchained := make([]interceptor.DirectUnaryOutbound, 0, len(mw))
+func UnaryChain(mw ...interceptor.UnaryOutbound) interceptor.UnaryOutbound {
+	unchained := make([]interceptor.UnaryOutbound, 0, len(mw))
 	for _, m := range mw {
 		if m == nil {
 			continue
@@ -51,7 +51,7 @@ func UnaryChain(mw ...interceptor.DirectUnaryOutbound) interceptor.DirectUnaryOu
 	}
 }
 
-type unaryChain []interceptor.DirectUnaryOutbound
+type unaryChain []interceptor.UnaryOutbound
 
 func (x unaryChainExec) TransportName() string {
 	var name string
@@ -77,16 +77,16 @@ func (x unaryChainExec) IsRunning() bool {
 	return x.Final.IsRunning()
 }
 
-func (c unaryChain) Call(ctx context.Context, request *transport.Request, out interceptor.UnchainedUnaryOutbound) (*transport.Response, error) {
+func (c unaryChain) Call(ctx context.Context, request *transport.Request, out interceptor.DirectUnaryOutbound) (*transport.Response, error) {
 	return unaryChainExec{
 		Chain: c,
 		Final: out,
-	}.UnchainedCall(ctx, request)
+	}.DirectCall(ctx, request)
 }
 
-func (x unaryChainExec) UnchainedCall(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+func (x unaryChainExec) DirectCall(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	if len(x.Chain) == 0 {
-		return x.Final.UnchainedCall(ctx, request)
+		return x.Final.DirectCall(ctx, request)
 	}
 	next := x.Chain[0]
 	x.Chain = x.Chain[1:]
@@ -96,13 +96,13 @@ func (x unaryChainExec) UnchainedCall(ctx context.Context, request *transport.Re
 // unaryChainExec adapts a series of `UnaryOutbound`s into a `UnaryOutbound`. It
 // is scoped to a single call of a UnaryOutbound and is not thread-safe.
 type unaryChainExec struct {
-	Chain []interceptor.DirectUnaryOutbound
-	Final interceptor.UnchainedUnaryOutbound
+	Chain []interceptor.UnaryOutbound
+	Final interceptor.DirectUnaryOutbound
 }
 
 // OnewayChain combines a series of `OnewayOutbound`s into a single `OnewayOutbound`.
-func OnewayChain(mw ...interceptor.DirectOnewayOutbound) interceptor.DirectOnewayOutbound {
-	unchained := make([]interceptor.DirectOnewayOutbound, 0, len(mw))
+func OnewayChain(mw ...interceptor.OnewayOutbound) interceptor.OnewayOutbound {
+	unchained := make([]interceptor.OnewayOutbound, 0, len(mw))
 	for _, m := range mw {
 		if m == nil {
 			continue
@@ -124,20 +124,20 @@ func OnewayChain(mw ...interceptor.DirectOnewayOutbound) interceptor.DirectOnewa
 	}
 }
 
-type onewayChain []interceptor.DirectOnewayOutbound
+type onewayChain []interceptor.OnewayOutbound
 
-func (c onewayChain) CallOneway(ctx context.Context, request *transport.Request, out interceptor.UnchainedOnewayOutbound) (transport.Ack, error) {
+func (c onewayChain) CallOneway(ctx context.Context, request *transport.Request, out interceptor.DirectOnewayOutbound) (transport.Ack, error) {
 	return onewayChainExec{
 		Chain: c,
 		Final: out,
-	}.UnchainedCallOneway(ctx, request)
+	}.DirectCallOneway(ctx, request)
 }
 
 // onewayChainExec adapts a series of `OnewayOutbound`s into a `OnewayOutbound`. It
 // is scoped to a single call of a OnewayOutbound and is not thread-safe.
 type onewayChainExec struct {
-	Chain []interceptor.DirectOnewayOutbound
-	Final interceptor.UnchainedOnewayOutbound
+	Chain []interceptor.OnewayOutbound
+	Final interceptor.DirectOnewayOutbound
 }
 
 func (x onewayChainExec) TransportName() string {
@@ -164,9 +164,9 @@ func (x onewayChainExec) IsRunning() bool {
 	return x.Final.IsRunning()
 }
 
-func (x onewayChainExec) UnchainedCallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
+func (x onewayChainExec) DirectCallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
 	if len(x.Chain) == 0 {
-		return x.Final.UnchainedCallOneway(ctx, request)
+		return x.Final.DirectCallOneway(ctx, request)
 	}
 	next := x.Chain[0]
 	x.Chain = x.Chain[1:]
@@ -174,8 +174,8 @@ func (x onewayChainExec) UnchainedCallOneway(ctx context.Context, request *trans
 }
 
 // StreamChain combines a series of `StreamOutbound`s into a single `StreamOutbound`.
-func StreamChain(mw ...interceptor.DirectStreamOutbound) interceptor.DirectStreamOutbound {
-	unchained := make([]interceptor.DirectStreamOutbound, 0, len(mw))
+func StreamChain(mw ...interceptor.StreamOutbound) interceptor.StreamOutbound {
+	unchained := make([]interceptor.StreamOutbound, 0, len(mw))
 	for _, m := range mw {
 		if m == nil {
 			continue
@@ -197,20 +197,20 @@ func StreamChain(mw ...interceptor.DirectStreamOutbound) interceptor.DirectStrea
 	}
 }
 
-type streamChain []interceptor.DirectStreamOutbound
+type streamChain []interceptor.StreamOutbound
 
-func (c streamChain) CallStream(ctx context.Context, request *transport.StreamRequest, out interceptor.UnchainedStreamOutbound) (*transport.ClientStream, error) {
+func (c streamChain) CallStream(ctx context.Context, request *transport.StreamRequest, out interceptor.DirectStreamOutbound) (*transport.ClientStream, error) {
 	return streamChainExec{
 		Chain: c,
 		Final: out,
-	}.UnchainedCallStream(ctx, request)
+	}.DirectCallStream(ctx, request)
 }
 
 // streamChainExec adapts a series of `StreamOutbound`s into a `StreamOutbound`. It
 // is scoped to a single call of a StreamOutbound and is not thread-safe.
 type streamChainExec struct {
-	Chain []interceptor.DirectStreamOutbound
-	Final interceptor.UnchainedStreamOutbound
+	Chain []interceptor.StreamOutbound
+	Final interceptor.DirectStreamOutbound
 }
 
 func (x streamChainExec) TransportName() string {
@@ -237,9 +237,9 @@ func (x streamChainExec) IsRunning() bool {
 	return x.Final.IsRunning()
 }
 
-func (x streamChainExec) UnchainedCallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
+func (x streamChainExec) DirectCallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
 	if len(x.Chain) == 0 {
-		return x.Final.UnchainedCallStream(ctx, request)
+		return x.Final.DirectCallStream(ctx, request)
 	}
 	next := x.Chain[0]
 	x.Chain = x.Chain[1:]

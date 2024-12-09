@@ -62,8 +62,8 @@ type Outbound struct {
 	peerChooser peer.Chooser
 	options     *outboundOptions
 
-	unaryCallWithInterceptor  interceptor.UnchainedUnaryOutbound
-	streamCallWithInterceptor interceptor.UnchainedStreamOutbound
+	unaryCallWithInterceptor  interceptor.DirectUnaryOutbound
+	streamCallWithInterceptor interceptor.DirectStreamOutbound
 }
 
 func newSingleOutbound(t *Transport, address string, options ...OutboundOption) *Outbound {
@@ -128,13 +128,13 @@ func (o *Outbound) Chooser() peer.Chooser {
 	return o.peerChooser
 }
 
-// Call wraps the UnchainedCall.
+// Call wraps the DirectCall.
 func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
-	return o.unaryCallWithInterceptor.UnchainedCall(ctx, request)
+	return o.unaryCallWithInterceptor.DirectCall(ctx, request)
 }
 
-// UnchainedCall implements transport.UnaryOutbound#Call.
-func (o *Outbound) UnchainedCall(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+// DirectCall implements transport.UnaryOutbound#Call.
+func (o *Outbound) DirectCall(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	if request == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for grpc outbound was nil")
 	}
@@ -308,13 +308,13 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	return yarpcErr
 }
 
-// CallStream wraps the UnchainedCallStream.
+// CallStream wraps the DirectCallStream.
 func (o *Outbound) CallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
-	return o.streamCallWithInterceptor.UnchainedCallStream(ctx, request)
+	return o.streamCallWithInterceptor.DirectCallStream(ctx, request)
 }
 
-// UnchainedCallStream implements transport.StreamOutbound#CallStream.
-func (o *Outbound) UnchainedCallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
+// DirectCallStream implements transport.StreamOutbound#CallStream.
+func (o *Outbound) DirectCallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, err
 	}

@@ -309,9 +309,9 @@ type transportOptions struct {
 	serverMaxHeaderListSize   *uint32
 	clientMaxHeaderListSize   *uint32
 	unaryInboundInterceptor   interceptor.UnaryInbound
-	unaryOutboundInterceptor  interceptor.DirectUnaryOutbound
+	unaryOutboundInterceptor  interceptor.UnaryOutbound
 	streamInboundInterceptor  interceptor.StreamInbound
-	streamOutboundInterceptor interceptor.DirectStreamOutbound
+	streamOutboundInterceptor interceptor.StreamOutbound
 }
 
 func newTransportOptions(options []TransportOption) *transportOptions {
@@ -334,9 +334,9 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 
 	var (
 		unaryInbounds   []interceptor.UnaryInbound
-		unaryOutbounds  []interceptor.DirectUnaryOutbound
+		unaryOutbounds  []interceptor.UnaryOutbound
 		streamInbounds  []interceptor.StreamInbound
-		streamOutbounds []interceptor.DirectStreamOutbound
+		streamOutbounds []interceptor.StreamOutbound
 	)
 	if transportOptions.tracingInterceptorEnabled {
 		ti := tracinginterceptor.New(tracinginterceptor.Params{

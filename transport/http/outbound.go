@@ -239,8 +239,8 @@ type Outbound struct {
 	client            *http.Client
 	tlsConfig         *tls.Config
 
-	unaryCallWithInterceptor  interceptor.UnchainedUnaryOutbound
-	onewayCallWithInterceptor interceptor.UnchainedOnewayOutbound
+	unaryCallWithInterceptor  interceptor.DirectUnaryOutbound
+	onewayCallWithInterceptor interceptor.DirectOnewayOutbound
 }
 
 // TransportName is the transport name that will be set on `transport.Request` struct.
@@ -286,11 +286,11 @@ func (o *Outbound) IsRunning() bool {
 
 // Call implements UnaryOutbound
 func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
-	return o.unaryCallWithInterceptor.UnchainedCall(ctx, treq)
+	return o.unaryCallWithInterceptor.DirectCall(ctx, treq)
 }
 
-// UnchainedCall makes a HTTP request
-func (o *Outbound) UnchainedCall(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
+// DirectCall makes a HTTP request
+func (o *Outbound) DirectCall(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
 	if treq == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil")
 	}
@@ -300,11 +300,11 @@ func (o *Outbound) UnchainedCall(ctx context.Context, treq *transport.Request) (
 
 // CallOneway implements UnaryOnewayOutbound
 func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
-	return o.onewayCallWithInterceptor.UnchainedCallOneway(ctx, treq)
+	return o.onewayCallWithInterceptor.DirectCallOneway(ctx, treq)
 }
 
-// UnchainedCallOneway makes a oneway request
-func (o *Outbound) UnchainedCallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
+// DirectCallOneway makes a oneway request
+func (o *Outbound) DirectCallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
 	if treq == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil")
 	}

@@ -22,19 +22,19 @@ func (m *mockAck) String() string {
 	return "mockAck"
 }
 
-func (c *countOutboundMiddleware) Call(ctx context.Context, req *transport.Request, next interceptor.UnchainedUnaryOutbound) (*transport.Response, error) {
+func (c *countOutboundMiddleware) Call(ctx context.Context, req *transport.Request, next interceptor.DirectUnaryOutbound) (*transport.Response, error) {
 	c.Count++
-	return next.UnchainedCall(ctx, req)
+	return next.DirectCall(ctx, req)
 }
 
-func (c *countOutboundMiddleware) CallOneway(ctx context.Context, req *transport.Request, next interceptor.UnchainedOnewayOutbound) (transport.Ack, error) {
+func (c *countOutboundMiddleware) CallOneway(ctx context.Context, req *transport.Request, next interceptor.DirectOnewayOutbound) (transport.Ack, error) {
 	c.Count++
-	return next.UnchainedCallOneway(ctx, req)
+	return next.DirectCallOneway(ctx, req)
 }
 
-func (c *countOutboundMiddleware) CallStream(ctx context.Context, req *transport.StreamRequest, next interceptor.UnchainedStreamOutbound) (*transport.ClientStream, error) {
+func (c *countOutboundMiddleware) CallStream(ctx context.Context, req *transport.StreamRequest, next interceptor.DirectStreamOutbound) (*transport.ClientStream, error) {
 	c.Count++
-	return next.UnchainedCallStream(ctx, req)
+	return next.DirectCallStream(ctx, req)
 }
 
 func TestUnaryChain(t *testing.T) {
@@ -43,7 +43,7 @@ func TestUnaryChain(t *testing.T) {
 
 	tests := []struct {
 		desc string
-		mw   interceptor.DirectUnaryOutbound
+		mw   interceptor.UnaryOutbound
 	}{
 		{"flat chain", UnaryChain(before, nil, after)},
 		{"nested chain", UnaryChain(before, UnaryChain(after, nil))},
@@ -63,8 +63,8 @@ func TestUnaryChain(t *testing.T) {
 				Procedure: "procedure",
 			}
 			res := &transport.Response{}
-			mockOutbound := interceptortest.NewMockUnchainedUnaryOutbound(mockCtrl)
-			mockOutbound.EXPECT().UnchainedCall(ctx, req).Return(res, nil)
+			mockOutbound := interceptortest.NewMockDirectUnaryOutbound(mockCtrl)
+			mockOutbound.EXPECT().DirectCall(ctx, req).Return(res, nil)
 
 			gotRes, err := tt.mw.Call(ctx, req, mockOutbound)
 
@@ -82,7 +82,7 @@ func TestOnewayChain(t *testing.T) {
 
 	tests := []struct {
 		desc string
-		mw   interceptor.DirectOnewayOutbound
+		mw   interceptor.OnewayOutbound
 	}{
 		{"flat chain", OnewayChain(before, nil, after)},
 		{"nested chain", OnewayChain(before, OnewayChain(after, nil))},
@@ -101,8 +101,8 @@ func TestOnewayChain(t *testing.T) {
 				Service:   "service",
 				Procedure: "procedure",
 			}
-			mockOutbound := interceptortest.NewMockUnchainedOnewayOutbound(mockCtrl)
-			mockOutbound.EXPECT().UnchainedCallOneway(ctx, req).Return(&mockAck{}, nil)
+			mockOutbound := interceptortest.NewMockDirectOnewayOutbound(mockCtrl)
+			mockOutbound.EXPECT().DirectCallOneway(ctx, req).Return(&mockAck{}, nil)
 
 			gotAck, err := tt.mw.CallOneway(ctx, req, mockOutbound)
 
@@ -120,7 +120,7 @@ func TestStreamChain(t *testing.T) {
 
 	tests := []struct {
 		desc string
-		mw   interceptor.DirectStreamOutbound
+		mw   interceptor.StreamOutbound
 	}{
 		{"flat chain", StreamChain(before, nil, after)},
 		{"nested chain", StreamChain(before, StreamChain(after, nil))},
@@ -141,8 +141,8 @@ func TestStreamChain(t *testing.T) {
 					Procedure: "procedure",
 				},
 			}
-			mockOutbound := interceptortest.NewMockUnchainedStreamOutbound(mockCtrl)
-			mockOutbound.EXPECT().UnchainedCallStream(ctx, req).Return(&transport.ClientStream{}, nil)
+			mockOutbound := interceptortest.NewMockDirectStreamOutbound(mockCtrl)
+			mockOutbound.EXPECT().DirectCallStream(ctx, req).Return(&transport.ClientStream{}, nil)
 
 			gotStream, err := tt.mw.CallStream(ctx, req, mockOutbound)
 

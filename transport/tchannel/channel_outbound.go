@@ -84,7 +84,7 @@ type ChannelOutbound struct {
 	addr string
 
 	once                     *lifecycle.Once
-	unaryCallWithInterceptor interceptor.UnchainedUnaryOutbound
+	unaryCallWithInterceptor interceptor.DirectUnaryOutbound
 }
 
 // TransportName is the transport name that will be set on `transport.Request`
@@ -120,17 +120,17 @@ func (o *ChannelOutbound) IsRunning() bool {
 	return o.once.IsRunning()
 }
 
-// Call wraps the UnchainedCall.
+// Call wraps the DirectCall.
 func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if req == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel channel outbound was nil")
 	}
 
-	return o.unaryCallWithInterceptor.UnchainedCall(ctx, req)
+	return o.unaryCallWithInterceptor.DirectCall(ctx, req)
 }
 
-// UnchainedCall sends an RPC over this TChannel outbound.
-func (o *ChannelOutbound) UnchainedCall(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+// DirectCall sends an RPC over this TChannel outbound.
+func (o *ChannelOutbound) DirectCall(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if req == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel channel outbound was nil")
 	}

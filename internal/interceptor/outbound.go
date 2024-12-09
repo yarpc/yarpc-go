@@ -27,49 +27,49 @@ import (
 )
 
 type (
-	// DirectUnaryOutbound defines transport interceptor for `UnaryOutbound`s.
+	// UnaryOutbound defines transport interceptor for `UnaryOutbound`s.
 	//
-	// DirectUnaryOutbound interceptor MAY do zero or more of the following: change the
+	// UnaryOutbound interceptor MAY do zero or more of the following: change the
 	// context, change the request, change the returned response, handle the
 	// returned error, call the given outbound zero or more times.
 	//
-	// DirectUnaryOutbound interceptor MUST always return a non-nil Response or error,
+	// UnaryOutbound interceptor MUST always return a non-nil Response or error,
 	// and they MUST be thread-safe.
 	//
-	// DirectUnaryOutbound interceptor is re-used across requests and MAY be called
+	// UnaryOutbound interceptor is re-used across requests and MAY be called
 	// multiple times on the same request.
-	DirectUnaryOutbound interface {
-		Call(ctx context.Context, request *transport.Request, out UnchainedUnaryOutbound) (*transport.Response, error)
+	UnaryOutbound interface {
+		Call(ctx context.Context, request *transport.Request, out DirectUnaryOutbound) (*transport.Response, error)
 	}
 
-	// DirectOnewayOutbound defines transport interceptor for `OnewayOutbound`s.
+	// OnewayOutbound defines transport interceptor for `OnewayOutbound`s.
 	//
-	// DirectOnewayOutbound interceptor MAY do zero or more of the following: change the
+	// OnewayOutbound interceptor MAY do zero or more of the following: change the
 	// context, change the request, change the returned ack, handle the returned
 	// error, call the given outbound zero or more times.
 	//
-	// DirectOnewayOutbound interceptor MUST always return an Ack (nil or not) or an
+	// OnewayOutbound interceptor MUST always return an Ack (nil or not) or an
 	// error, and they MUST be thread-safe.
 	//
-	// DirectOnewayOutbound interceptor is re-used across requests and MAY be called
+	// OnewayOutbound interceptor is re-used across requests and MAY be called
 	// multiple times on the same request.
-	DirectOnewayOutbound interface {
-		CallOneway(ctx context.Context, request *transport.Request, out UnchainedOnewayOutbound) (transport.Ack, error)
+	OnewayOutbound interface {
+		CallOneway(ctx context.Context, request *transport.Request, out DirectOnewayOutbound) (transport.Ack, error)
 	}
 
-	// DirectStreamOutbound defines transport interceptor for `StreamOutbound`s.
+	// StreamOutbound defines transport interceptor for `StreamOutbound`s.
 	//
-	// DirectStreamOutbound interceptor MAY do zero or more of the following: change the
+	// StreamOutbound interceptor MAY do zero or more of the following: change the
 	// context, change the requestMeta, change the returned Stream, handle the
 	// returned error, call the given outbound zero or more times.
 	//
-	// DirectStreamOutbound interceptor MUST always return a non-nil Stream or error,
+	// StreamOutbound interceptor MUST always return a non-nil Stream or error,
 	// and they MUST be thread-safe.
 	//
-	// DirectStreamOutbound interceptors is re-used across requests and MAY be called
+	// StreamOutbound interceptors is re-used across requests and MAY be called
 	// multiple times on the same request.
-	DirectStreamOutbound interface {
-		CallStream(ctx context.Context, req *transport.StreamRequest, out UnchainedStreamOutbound) (*transport.ClientStream, error)
+	StreamOutbound interface {
+		CallStream(ctx context.Context, req *transport.StreamRequest, out DirectStreamOutbound) (*transport.ClientStream, error)
 	}
 )
 
@@ -90,104 +90,104 @@ type Outbound interface {
 	Transports() []transport.Transport
 }
 
-// UnchainedUnaryOutbound is a transport that knows how to send unary requests for procedure
+// DirectUnaryOutbound is a transport that knows how to send unary requests for procedure
 // calls.
-type UnchainedUnaryOutbound interface {
+type DirectUnaryOutbound interface {
 	Outbound
 
-	// UnchainedCall is called without interceptor.
-	UnchainedCall(ctx context.Context, request *transport.Request) (*transport.Response, error)
+	// DirectCall is called without interceptor.
+	DirectCall(ctx context.Context, request *transport.Request) (*transport.Response, error)
 }
 
-// UnchainedOnewayOutbound defines a transport outbound for oneway requests
+// DirectOnewayOutbound defines a transport outbound for oneway requests
 // that does not involve any interceptors.
-type UnchainedOnewayOutbound interface {
+type DirectOnewayOutbound interface {
 	Outbound
 
-	// UnchainedCallOneway is called without interceptor.
-	UnchainedCallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error)
+	// DirectCallOneway is called without interceptor.
+	DirectCallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error)
 }
 
-// UnchainedStreamOutbound defines a transport outbound for streaming requests
+// DirectStreamOutbound defines a transport outbound for streaming requests
 // that does not involve any interceptors.
-type UnchainedStreamOutbound interface {
+type DirectStreamOutbound interface {
 	Outbound
 
-	// UnchainedCallStream is called without interceptor.
-	UnchainedCallStream(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error)
+	// DirectCallStream is called without interceptor.
+	DirectCallStream(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error)
 }
 
 type nopUnaryOutbound struct{}
 
-func (nopUnaryOutbound) Call(ctx context.Context, request *transport.Request, out UnchainedUnaryOutbound) (*transport.Response, error) {
-	return out.UnchainedCall(ctx, request)
+func (nopUnaryOutbound) Call(ctx context.Context, request *transport.Request, out DirectUnaryOutbound) (*transport.Response, error) {
+	return out.DirectCall(ctx, request)
 }
 
 // NopUnaryOutbound is a unary outbound middleware that does not do
 // anything special. It simply calls the underlying UnaryOutbound.
-var NopUnaryOutbound DirectUnaryOutbound = nopUnaryOutbound{}
+var NopUnaryOutbound UnaryOutbound = nopUnaryOutbound{}
 
 type nopOnewayOutbound struct{}
 
-func (nopOnewayOutbound) CallOneway(ctx context.Context, request *transport.Request, out UnchainedOnewayOutbound) (transport.Ack, error) {
-	return out.UnchainedCallOneway(ctx, request)
+func (nopOnewayOutbound) CallOneway(ctx context.Context, request *transport.Request, out DirectOnewayOutbound) (transport.Ack, error) {
+	return out.DirectCallOneway(ctx, request)
 }
 
 // NopOnewayOutbound is an oneway outbound middleware that does not do
 // anything special. It simply calls the underlying OnewayOutbound.
-var NopOnewayOutbound DirectOnewayOutbound = nopOnewayOutbound{}
+var NopOnewayOutbound OnewayOutbound = nopOnewayOutbound{}
 
 type nopStreamOutbound struct{}
 
-func (nopStreamOutbound) CallStream(ctx context.Context, requestMeta *transport.StreamRequest, out UnchainedStreamOutbound) (*transport.ClientStream, error) {
-	return out.UnchainedCallStream(ctx, requestMeta)
+func (nopStreamOutbound) CallStream(ctx context.Context, requestMeta *transport.StreamRequest, out DirectStreamOutbound) (*transport.ClientStream, error) {
+	return out.DirectCallStream(ctx, requestMeta)
 }
 
 // NopStreamOutbound is a stream outbound middleware that does not do
 // anything special. It simply calls the underlying StreamOutbound.
-var NopStreamOutbound DirectStreamOutbound = nopStreamOutbound{}
+var NopStreamOutbound StreamOutbound = nopStreamOutbound{}
 
-// ApplyUnaryOutbound applies the given UnaryOutbound interceptor to the given UnchainedUnaryOutbound transport.
-func ApplyUnaryOutbound(uo UnchainedUnaryOutbound, i DirectUnaryOutbound) UnchainedUnaryOutbound {
-	return unchainedUnaryOutboundWithInterceptor{uo: uo, i: i}
+// ApplyUnaryOutbound applies the given UnaryOutbound interceptor to the given DirectUnaryOutbound transport.
+func ApplyUnaryOutbound(uo DirectUnaryOutbound, i UnaryOutbound) DirectUnaryOutbound {
+	return directUnaryOutboundWithInterceptor{uo: uo, i: i}
 }
 
-// ApplyOnewayOutbound applies the given OnewayOutbound interceptor to the given UnchainedOnewayOutbound transport.
-func ApplyOnewayOutbound(oo UnchainedOnewayOutbound, i DirectOnewayOutbound) UnchainedOnewayOutbound {
-	return unchainedOnewayOutboundWithInterceptor{oo: oo, i: i}
+// ApplyOnewayOutbound applies the given OnewayOutbound interceptor to the given DirectOnewayOutbound transport.
+func ApplyOnewayOutbound(oo DirectOnewayOutbound, i OnewayOutbound) DirectOnewayOutbound {
+	return directOnewayOutboundWithInterceptor{oo: oo, i: i}
 }
 
-// ApplyStreamOutbound applies the given StreamOutbound interceptor to the given UnchainedStreamOutbound transport.
-func ApplyStreamOutbound(so UnchainedStreamOutbound, i DirectStreamOutbound) UnchainedStreamOutbound {
-	return unchainedStreamOutboundWithInterceptor{so: so, i: i}
+// ApplyStreamOutbound applies the given StreamOutbound interceptor to the given DirectStreamOutbound transport.
+func ApplyStreamOutbound(so DirectStreamOutbound, i StreamOutbound) DirectStreamOutbound {
+	return directStreamOutboundWithInterceptor{so: so, i: i}
 }
 
-type unchainedUnaryOutboundWithInterceptor struct {
+type directUnaryOutboundWithInterceptor struct {
 	transport.Outbound
-	uo UnchainedUnaryOutbound
-	i  DirectUnaryOutbound
+	uo DirectUnaryOutbound
+	i  UnaryOutbound
 }
 
-func (uoc unchainedUnaryOutboundWithInterceptor) UnchainedCall(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+func (uoc directUnaryOutboundWithInterceptor) DirectCall(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	return uoc.i.Call(ctx, request, uoc.uo)
 }
 
-type unchainedOnewayOutboundWithInterceptor struct {
+type directOnewayOutboundWithInterceptor struct {
 	transport.Outbound
-	oo UnchainedOnewayOutbound
-	i  DirectOnewayOutbound
+	oo DirectOnewayOutbound
+	i  OnewayOutbound
 }
 
-func (ooc unchainedOnewayOutboundWithInterceptor) UnchainedCallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
+func (ooc directOnewayOutboundWithInterceptor) DirectCallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
 	return ooc.i.CallOneway(ctx, request, ooc.oo)
 }
 
-type unchainedStreamOutboundWithInterceptor struct {
+type directStreamOutboundWithInterceptor struct {
 	transport.Outbound
-	so UnchainedStreamOutbound
-	i  DirectStreamOutbound
+	so DirectStreamOutbound
+	i  StreamOutbound
 }
 
-func (soc unchainedStreamOutboundWithInterceptor) UnchainedCallStream(ctx context.Context, requestMeta *transport.StreamRequest) (*transport.ClientStream, error) {
+func (soc directStreamOutboundWithInterceptor) DirectCallStream(ctx context.Context, requestMeta *transport.StreamRequest) (*transport.ClientStream, error) {
 	return soc.i.CallStream(ctx, requestMeta, soc.so)
 }

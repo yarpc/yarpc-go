@@ -35,12 +35,12 @@ import (
 )
 
 var (
-	_ interceptor.UnaryInbound         = (*Interceptor)(nil)
-	_ interceptor.DirectUnaryOutbound  = (*Interceptor)(nil)
-	_ interceptor.OnewayInbound        = (*Interceptor)(nil)
-	_ interceptor.DirectOnewayOutbound = (*Interceptor)(nil)
-	_ interceptor.StreamInbound        = (*Interceptor)(nil)
-	_ interceptor.DirectStreamOutbound = (*Interceptor)(nil)
+	_ interceptor.UnaryInbound   = (*Interceptor)(nil)
+	_ interceptor.UnaryOutbound  = (*Interceptor)(nil)
+	_ interceptor.OnewayInbound  = (*Interceptor)(nil)
+	_ interceptor.OnewayOutbound = (*Interceptor)(nil)
+	_ interceptor.StreamInbound  = (*Interceptor)(nil)
+	_ interceptor.StreamOutbound = (*Interceptor)(nil)
 )
 
 // Params defines the parameters for creating the Interceptor
@@ -105,7 +105,7 @@ func (i *Interceptor) Handle(ctx context.Context, req *transport.Request, resw t
 }
 
 // Call implements interceptor.UnaryOutbound
-func (i *Interceptor) Call(ctx context.Context, req *transport.Request, out interceptor.UnchainedUnaryOutbound) (*transport.Response, error) {
+func (i *Interceptor) Call(ctx context.Context, req *transport.Request, out interceptor.DirectUnaryOutbound) (*transport.Response, error) {
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        i.tracer,
 		TransportName: i.transport,
@@ -127,7 +127,7 @@ func (i *Interceptor) Call(ctx context.Context, req *transport.Request, out inte
 		}
 	}
 
-	res, err := out.UnchainedCall(ctx, req)
+	res, err := out.DirectCall(ctx, req)
 	if res != nil {
 		return res, updateSpanWithErrorDetails(span, res.ApplicationError, res.ApplicationErrorMeta, err)
 	}
@@ -152,7 +152,7 @@ func (i *Interceptor) HandleOneway(ctx context.Context, req *transport.Request, 
 }
 
 // CallOneway implements interceptor.OnewayOutbound
-func (i *Interceptor) CallOneway(ctx context.Context, req *transport.Request, out interceptor.UnchainedOnewayOutbound) (transport.Ack, error) {
+func (i *Interceptor) CallOneway(ctx context.Context, req *transport.Request, out interceptor.DirectOnewayOutbound) (transport.Ack, error) {
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        i.tracer,
 		TransportName: i.transport,
@@ -171,7 +171,7 @@ func (i *Interceptor) CallOneway(ctx context.Context, req *transport.Request, ou
 		}
 	}
 
-	ack, err := out.UnchainedCallOneway(ctx, req)
+	ack, err := out.DirectCallOneway(ctx, req)
 	return ack, updateSpanWithErrorDetails(span, false, nil, err)
 }
 
@@ -201,7 +201,7 @@ func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.Stream
 }
 
 // CallStream implements interceptor.StreamOutbound
-func (i *Interceptor) CallStream(ctx context.Context, req *transport.StreamRequest, out interceptor.UnchainedStreamOutbound) (*transport.ClientStream, error) {
+func (i *Interceptor) CallStream(ctx context.Context, req *transport.StreamRequest, out interceptor.DirectStreamOutbound) (*transport.ClientStream, error) {
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        i.tracer,
 		TransportName: i.transport,
@@ -226,7 +226,7 @@ func (i *Interceptor) CallStream(ctx context.Context, req *transport.StreamReque
 		}
 	}
 
-	clientStream, err := out.UnchainedCallStream(ctx, req)
+	clientStream, err := out.DirectCallStream(ctx, req)
 	if err != nil {
 		_ = updateSpanWithErrorDetails(span, false, nil, err)
 		span.Finish()

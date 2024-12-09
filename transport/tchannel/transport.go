@@ -91,7 +91,7 @@ type Transport struct {
 	outboundChannels          []*outboundChannel
 
 	unaryInboundInterceptor  interceptor.UnaryInbound
-	unaryOutboundInterceptor interceptor.DirectUnaryOutbound
+	unaryOutboundInterceptor interceptor.UnaryOutbound
 }
 
 // NewTransport is a YARPC transport that facilitates sending and receiving
@@ -118,7 +118,7 @@ func NewTransport(opts ...TransportOption) (*Transport, error) {
 func (o transportOptions) newTransport() *Transport {
 	var (
 		unaryInbounds  []interceptor.UnaryInbound
-		unaryOutbounds []interceptor.DirectUnaryOutbound
+		unaryOutbounds []interceptor.UnaryOutbound
 	)
 
 	logger := o.logger
