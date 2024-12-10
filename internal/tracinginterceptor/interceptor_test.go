@@ -235,8 +235,8 @@ func TestInterceptorCall(t *testing.T) {
 				Headers:   transport.Headers{},
 			}
 
-			outbound := interceptortest.NewMockDirectUnaryOutbound(ctrl)
-			outbound.EXPECT().DirectCall(gomock.Any(), req).
+			outbound := interceptortest.NewMockUnaryOutboundChain(ctrl)
+			outbound.EXPECT().Next(gomock.Any(), req).
 				Return(tt.response, tt.callError)
 
 			// Mocking Inject to return an error

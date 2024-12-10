@@ -124,8 +124,8 @@ type DirectStreamOutbound interface {
 
 type nopUnaryOutbound struct{}
 
-func (nopUnaryOutbound) Call(ctx context.Context, request *transport.Request, out DirectUnaryOutbound) (*transport.Response, error) {
-	return out.DirectCall(ctx, request)
+func (nopUnaryOutbound) Call(ctx context.Context, request *transport.Request, out UnaryOutboundChain) (*transport.Response, error) {
+	return out.Next(ctx, request)
 }
 
 // NopUnaryOutbound is a unary outbound middleware that does not do
@@ -153,7 +153,7 @@ func (nopStreamOutbound) CallStream(ctx context.Context, requestMeta *transport.
 var NopStreamOutbound StreamOutbound = nopStreamOutbound{}
 
 // ApplyUnaryOutbound applies the given UnaryOutbound interceptor to the given DirectUnaryOutbound transport.
-func ApplyUnaryOutbound(uo DirectUnaryOutbound, i UnaryOutbound) transport.UnaryOutbound {
+func ApplyUnaryOutbound(uo UnaryOutboundChain, i UnaryOutbound) transport.UnaryOutbound {
 	return unaryOutboundWithInterceptor{uo: uo, i: i}
 }
 
@@ -169,7 +169,7 @@ func ApplyStreamOutbound(so DirectStreamOutbound, i StreamOutbound) DirectStream
 
 type unaryOutboundWithInterceptor struct {
 	transport.Outbound
-	uo DirectUnaryOutbound
+	uo UnaryOutboundChain
 	i  UnaryOutbound
 }
 

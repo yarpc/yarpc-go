@@ -13,6 +13,58 @@ import (
 	interceptor "go.uber.org/yarpc/internal/interceptor"
 )
 
+// MockUnaryOutboundChain is a mock of UnaryOutboundChain interface.
+type MockUnaryOutboundChain struct {
+	ctrl     *gomock.Controller
+	recorder *MockUnaryOutboundChainMockRecorder
+}
+
+// MockUnaryOutboundChainMockRecorder is the mock recorder for MockUnaryOutboundChain.
+type MockUnaryOutboundChainMockRecorder struct {
+	mock *MockUnaryOutboundChain
+}
+
+// NewMockUnaryOutboundChain creates a new mock instance.
+func NewMockUnaryOutboundChain(ctrl *gomock.Controller) *MockUnaryOutboundChain {
+	mock := &MockUnaryOutboundChain{ctrl: ctrl}
+	mock.recorder = &MockUnaryOutboundChainMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockUnaryOutboundChain) EXPECT() *MockUnaryOutboundChainMockRecorder {
+	return m.recorder
+}
+
+// Next mocks base method.
+func (m *MockUnaryOutboundChain) Next(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Next", ctx, request)
+	ret0, _ := ret[0].(*transport.Response)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Next indicates an expected call of Next.
+func (mr *MockUnaryOutboundChainMockRecorder) Next(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Next", reflect.TypeOf((*MockUnaryOutboundChain)(nil).Next), ctx, request)
+}
+
+// Outbound mocks base method.
+func (m *MockUnaryOutboundChain) Outbound() interceptor.Outbound {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Outbound")
+	ret0, _ := ret[0].(interceptor.Outbound)
+	return ret0
+}
+
+// Outbound indicates an expected call of Outbound.
+func (mr *MockUnaryOutboundChainMockRecorder) Outbound() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Outbound", reflect.TypeOf((*MockUnaryOutboundChain)(nil).Outbound))
+}
+
 // MockUnaryOutbound is a mock of UnaryOutbound interface.
 type MockUnaryOutbound struct {
 	ctrl     *gomock.Controller
@@ -37,7 +89,7 @@ func (m *MockUnaryOutbound) EXPECT() *MockUnaryOutboundMockRecorder {
 }
 
 // Call mocks base method.
-func (m *MockUnaryOutbound) Call(ctx context.Context, request *transport.Request, out interceptor.DirectUnaryOutbound) (*transport.Response, error) {
+func (m *MockUnaryOutbound) Call(ctx context.Context, request *transport.Request, out interceptor.UnaryOutboundChain) (*transport.Response, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Call", ctx, request, out)
 	ret0, _ := ret[0].(*transport.Response)
