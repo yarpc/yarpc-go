@@ -56,9 +56,11 @@ var (
 	_ transport.UnaryOutbound              = (*Outbound)(nil)
 	_ transport.OnewayOutbound             = (*Outbound)(nil)
 	_ introspection.IntrospectableOutbound = (*Outbound)(nil)
-)
 
-var defaultURLTemplate, _ = url.Parse("http://localhost")
+	defaultURLTemplate, _       = url.Parse("http://localhost")
+	defaultHTTP2PingTimeout     = 10 * time.Second
+	defaultHTTP2ReadIdleTimeout = 15 * time.Second
+)
 
 // OutboundOption customizes an HTTP Outbound.
 type OutboundOption func(*Outbound)
@@ -176,27 +178,32 @@ func createHTTP2Client(o *Outbound) *http.Client {
 		return createHTTP2TLSClient(o)
 	}
 
+	// check if transport is already http2 transport
+	if _, ok := o.transport.client.Transport.(*http2.Transport); ok {
+		return o.transport.client
+	}
+
+	// get default http1 transport from the client and use it to create http2 transport
 	http1Transport, ok := o.transport.client.Transport.(*http.Transport)
 	if !ok {
 		// This should not happen as default yarpc http.Client uses
 		// http.Transport and it's not configurable by the user.
 		panic(fmt.Sprintf("failed to create http tls client, provided http.Client transport type %T is not *http.Transport", o.transport.client.Transport))
 	}
-	http1Transport = http1Transport.Clone()
-	http2Transport, err := http2.ConfigureTransports(http1Transport)
-	if err != nil {
-		// TODO: log and default to http1 for now using it for testing
-		panic(fmt.Sprintf("failed to configure http2 transport: %v", err))
+	http2Transport := http2.Transport{
+		AllowHTTP: true,
+		DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
+			return http1Transport.DialContext(ctx, network, addr)
+		},
+		DisableCompression: http1Transport.DisableCompression,
+		IdleConnTimeout:    defaultIdleConnTimeout,
+		PingTimeout:        defaultHTTP2PingTimeout,
+		ReadIdleTimeout:    defaultHTTP2ReadIdleTimeout,
 	}
-	// add http2 specific settings
-	http2Transport.AllowHTTP = true
-	http2Transport.DialTLSContext = func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
-		var d net.Dialer
-		return d.DialContext(ctx, network, addr)
-	}
-
+	// peer uses this client to make request
+	o.transport.client.Transport = &http2Transport
 	return &http.Client{
-		Transport: http2Transport,
+		Transport: &http2Transport,
 	}
 }
 

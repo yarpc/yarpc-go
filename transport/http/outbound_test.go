@@ -34,6 +34,9 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+
 	"github.com/golang/mock/gomock"
 	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
@@ -113,7 +116,7 @@ func TestCreateRequest(t *testing.T) {
 }
 
 func TestCallSuccessWithHTTP2(t *testing.T) {
-	successServer := httptest.NewServer(http.HandlerFunc(
+	handler := http.HandlerFunc(
 		func(w http.ResponseWriter, req *http.Request) {
 			defer req.Body.Close()
 
@@ -136,17 +139,29 @@ func TestCallSuccessWithHTTP2(t *testing.T) {
 			_, err = w.Write([]byte("great success"))
 			assert.NoError(t, err)
 		},
-	))
-	defer successServer.Close()
+	)
+	h2s := &http2.Server{
+		NewWriteScheduler: func() http2.WriteScheduler {
+			return http2.NewPriorityWriteScheduler(nil)
+		},
+		IdleTimeout: defaultIdleConnTimeout,
+	}
+	h1s := httptest.NewServer(h2c.NewHandler(handler, h2s))
+	t.Cleanup(h1s.Close)
 
 	httpTransport := NewTransport()
-	defer httpTransport.Stop()
-	out := httpTransport.NewSingleOutbound(successServer.URL, UseHTTP2())
+	t.Cleanup(func() {
+		_ = httpTransport.Stop()
+	})
+
+	out := httpTransport.NewSingleOutbound(h1s.URL, UseHTTP2())
 	require.NoError(t, out.Start(), "failed to start outbound")
-	defer out.Stop()
+	t.Cleanup(func() {
+		_ = out.Stop()
+	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-	defer cancel()
+	t.Cleanup(cancel)
 	res, err := out.Call(ctx, &transport.Request{
 		Caller:    "caller",
 		Service:   "service",
@@ -155,7 +170,9 @@ func TestCallSuccessWithHTTP2(t *testing.T) {
 		Body:      bytes.NewReader([]byte("world")),
 	})
 	require.NoError(t, err)
-	defer res.Body.Close()
+	t.Cleanup(func() {
+		_ = res.Body.Close()
+	})
 
 	foo, ok := res.Headers.Get("foo")
 	assert.True(t, ok, "value for foo expected")
