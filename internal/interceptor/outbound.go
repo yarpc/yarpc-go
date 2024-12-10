@@ -27,6 +27,11 @@ import (
 )
 
 type (
+	UnaryOutboundChain interface {
+		Next(ctx context.Context, request *transport.Request) (*transport.Response, error)
+		Outbound() Outbound
+	}
+
 	// UnaryOutbound defines transport interceptor for `UnaryOutbound`s.
 	//
 	// UnaryOutbound interceptor MAY do zero or more of the following: change the
@@ -39,7 +44,7 @@ type (
 	// UnaryOutbound interceptor is re-used across requests and MAY be called
 	// multiple times on the same request.
 	UnaryOutbound interface {
-		Call(ctx context.Context, request *transport.Request, out DirectUnaryOutbound) (*transport.Response, error)
+		Call(ctx context.Context, request *transport.Request, out UnaryOutboundChain) (*transport.Response, error)
 	}
 
 	// OnewayOutbound defines transport interceptor for `OnewayOutbound`s.
@@ -148,8 +153,8 @@ func (nopStreamOutbound) CallStream(ctx context.Context, requestMeta *transport.
 var NopStreamOutbound StreamOutbound = nopStreamOutbound{}
 
 // ApplyUnaryOutbound applies the given UnaryOutbound interceptor to the given DirectUnaryOutbound transport.
-func ApplyUnaryOutbound(uo DirectUnaryOutbound, i UnaryOutbound) DirectUnaryOutbound {
-	return directUnaryOutboundWithInterceptor{uo: uo, i: i}
+func ApplyUnaryOutbound(uo DirectUnaryOutbound, i UnaryOutbound) transport.UnaryOutbound {
+	return unaryOutboundWithInterceptor{uo: uo, i: i}
 }
 
 // ApplyOnewayOutbound applies the given OnewayOutbound interceptor to the given DirectOnewayOutbound transport.
@@ -162,13 +167,13 @@ func ApplyStreamOutbound(so DirectStreamOutbound, i StreamOutbound) DirectStream
 	return directStreamOutboundWithInterceptor{so: so, i: i}
 }
 
-type directUnaryOutboundWithInterceptor struct {
+type unaryOutboundWithInterceptor struct {
 	transport.Outbound
 	uo DirectUnaryOutbound
 	i  UnaryOutbound
 }
 
-func (uoc directUnaryOutboundWithInterceptor) DirectCall(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+func (uoc unaryOutboundWithInterceptor) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	return uoc.i.Call(ctx, request, uoc.uo)
 }
 

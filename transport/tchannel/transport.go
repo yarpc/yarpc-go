@@ -25,7 +25,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"go.uber.org/yarpc/internal/interceptor/outboundinterceptor"
 	"net"
 	"sync"
 	"time"
@@ -91,7 +90,7 @@ type Transport struct {
 	outboundChannels          []*outboundChannel
 
 	unaryInboundInterceptor  interceptor.UnaryInbound
-	unaryOutboundInterceptor interceptor.UnaryOutbound
+	unaryOutboundInterceptor []interceptor.UnaryOutbound
 }
 
 // NewTransport is a YARPC transport that facilitates sending and receiving
@@ -161,7 +160,7 @@ func (o transportOptions) newTransport() *Transport {
 		inboundTLSMode:                 o.inboundTLSMode,
 		outboundTLSConfigProvider:      o.outboundTLSConfigProvider,
 		unaryInboundInterceptor:        inboundmiddleware.UnaryChain(unaryInbounds...),
-		unaryOutboundInterceptor:       outboundinterceptor.UnaryChain(unaryOutbounds...),
+		unaryOutboundInterceptor:       unaryOutbounds,
 	}
 }
 

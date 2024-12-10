@@ -146,10 +146,7 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 	}
 	o.client = client
 	o.sender = &transportSender{Client: client}
-	o.unaryCallWithInterceptor = interceptor.ApplyUnaryOutbound(
-		o,
-		outboundinterceptor.UnaryChain(),
-	)
+	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
 	o.onewayCallWithInterceptor = interceptor.ApplyOnewayOutbound(
 		o,
 		outboundinterceptor.OnewayChain(),
@@ -205,10 +202,7 @@ func (t *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbo
 	chooser := peerchooser.NewSingle(hostport.PeerIdentifier(parsedURL.Host), t)
 	opts = append(opts, URLTemplate(uri))
 	o := t.NewOutbound(chooser, opts...)
-	o.unaryCallWithInterceptor = interceptor.ApplyUnaryOutbound(
-		o,
-		outboundinterceptor.UnaryChain(),
-	)
+	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
 	o.onewayCallWithInterceptor = interceptor.ApplyOnewayOutbound(
 		o,
 		outboundinterceptor.OnewayChain(),
@@ -239,7 +233,7 @@ type Outbound struct {
 	client            *http.Client
 	tlsConfig         *tls.Config
 
-	unaryCallWithInterceptor  interceptor.DirectUnaryOutbound
+	unaryCallWithInterceptor  interceptor.UnaryOutboundChain
 	onewayCallWithInterceptor interceptor.DirectOnewayOutbound
 }
 
@@ -286,7 +280,7 @@ func (o *Outbound) IsRunning() bool {
 
 // Call implements UnaryOutbound
 func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
-	return o.unaryCallWithInterceptor.DirectCall(ctx, treq)
+	return o.unaryCallWithInterceptor.Next(ctx, treq)
 }
 
 // DirectCall makes a HTTP request

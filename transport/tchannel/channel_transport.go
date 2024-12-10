@@ -22,7 +22,6 @@ package tchannel
 
 import (
 	"errors"
-	"go.uber.org/yarpc/internal/interceptor/outboundinterceptor"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
@@ -114,7 +113,7 @@ func (options transportOptions) newChannelTransport() *ChannelTransport {
 		originalHeaders:          options.originalHeaders,
 		newResponseWriter:        newHandlerWriter,
 		unaryInboundInterceptor:  inboundmiddleware.UnaryChain(unaryInbounds...),
-		unaryOutboundInterceptor: outboundinterceptor.UnaryChain(unaryOutbounds...),
+		unaryOutboundInterceptor: unaryOutbounds,
 	}
 }
 
@@ -132,7 +131,7 @@ type ChannelTransport struct {
 	originalHeaders          bool
 	newResponseWriter        func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
 	unaryInboundInterceptor  interceptor.UnaryInbound
-	unaryOutboundInterceptor interceptor.UnaryOutbound
+	unaryOutboundInterceptor []interceptor.UnaryOutbound
 }
 
 // Channel returns the underlying TChannel "Channel" instance.
@@ -173,7 +172,6 @@ func (t *ChannelTransport) start() error {
 				tracer:                   t.tracer,
 				logger:                   t.logger,
 				newResponseWriter:        t.newResponseWriter,
-				unaryOutboundInterceptor: t.unaryOutboundInterceptor,
 				unaryInboundInterceptor:  t.unaryInboundInterceptor},
 			)
 		}

@@ -309,7 +309,7 @@ type transportOptions struct {
 	serverMaxHeaderListSize   *uint32
 	clientMaxHeaderListSize   *uint32
 	unaryInboundInterceptor   interceptor.UnaryInbound
-	unaryOutboundInterceptor  interceptor.UnaryOutbound
+	unaryOutboundInterceptor  []interceptor.UnaryOutbound
 	streamInboundInterceptor  interceptor.StreamInbound
 	streamOutboundInterceptor interceptor.StreamOutbound
 }
@@ -334,7 +334,6 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 
 	var (
 		unaryInbounds   []interceptor.UnaryInbound
-		unaryOutbounds  []interceptor.UnaryOutbound
 		streamInbounds  []interceptor.StreamInbound
 		streamOutbounds []interceptor.StreamOutbound
 	)
@@ -344,14 +343,14 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 			Transport: TransportName,
 		})
 		unaryInbounds = append(unaryInbounds, ti)
-		unaryOutbounds = append(unaryOutbounds, ti)
 		streamInbounds = append(streamInbounds, ti)
 		streamOutbounds = append(streamOutbounds, ti)
+
+		transportOptions.unaryOutboundInterceptor = []interceptor.UnaryOutbound{ti}
 		transportOptions.tracer = opentracing.NoopTracer{}
 	}
 
 	transportOptions.unaryInboundInterceptor = inboundmiddleware.UnaryChain(unaryInbounds...)
-	transportOptions.unaryOutboundInterceptor = outboundinterceptor.UnaryChain(unaryOutbounds...)
 	transportOptions.streamInboundInterceptor = inboundmiddleware.StreamChain(streamInbounds...)
 	transportOptions.streamOutboundInterceptor = outboundinterceptor.StreamChain(streamOutbounds...)
 	return transportOptions

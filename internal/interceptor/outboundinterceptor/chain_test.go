@@ -45,8 +45,8 @@ func TestUnaryChain(t *testing.T) {
 		desc string
 		mw   interceptor.UnaryOutbound
 	}{
-		{"flat chain", UnaryChain(before, nil, after)},
-		{"nested chain", UnaryChain(before, UnaryChain(after, nil))},
+		{"flat chain", NewUnaryChain(before, nil, after)},
+		{"nested chain", NewUnaryChain(before, NewUnaryChain(after, nil))},
 	}
 
 	for _, tt := range tests {
@@ -155,7 +155,7 @@ func TestStreamChain(t *testing.T) {
 }
 
 func TestEmptyChains(t *testing.T) {
-	assert.Equal(t, interceptor.NopUnaryOutbound, UnaryChain())
+	assert.Equal(t, interceptor.NopUnaryOutbound, NewUnaryChain())
 	assert.Equal(t, interceptor.NopOnewayOutbound, OnewayChain())
 	assert.Equal(t, interceptor.NopStreamOutbound, StreamChain())
 }

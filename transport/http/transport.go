@@ -314,7 +314,7 @@ func (o *transportOptions) newTransport() *Transport {
 		serviceName:               o.serviceName,
 		ouboundTLSConfigProvider:  o.outboundTLSConfigProvider,
 		unaryInboundInterceptor:   inboundmiddleware.UnaryChain(unaryInbounds...),
-		unaryOutboundInterceptor:  outboundinterceptor.UnaryChain(unaryOutbounds...),
+		unaryOutboundInterceptor:  unaryOutbounds,
 		onewayInboundInterceptor:  inboundmiddleware.OnewayChain(onewayInbounds...),
 		onewayOutboundInterceptor: outboundinterceptor.OnewayChain(onewayOutbounds...),
 	}
@@ -369,7 +369,7 @@ type Transport struct {
 	ouboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
 
 	unaryInboundInterceptor   interceptor.UnaryInbound
-	unaryOutboundInterceptor  interceptor.UnaryOutbound
+	unaryOutboundInterceptor  []interceptor.UnaryOutbound
 	onewayInboundInterceptor  interceptor.OnewayInbound
 	onewayOutboundInterceptor interceptor.OnewayOutbound
 }

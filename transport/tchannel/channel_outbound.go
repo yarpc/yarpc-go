@@ -47,10 +47,7 @@ func (t *ChannelTransport) NewOutbound() *ChannelOutbound {
 		channel:   t.ch,
 		transport: t,
 	}
-	o.unaryCallWithInterceptor = interceptor.ApplyUnaryOutbound(
-		o,
-		outboundinterceptor.UnaryChain(),
-	)
+	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
 	return o
 }
 
@@ -63,10 +60,7 @@ func (t *ChannelTransport) NewSingleOutbound(addr string) *ChannelOutbound {
 		transport: t,
 		addr:      addr,
 	}
-	o.unaryCallWithInterceptor = interceptor.ApplyUnaryOutbound(
-		o,
-		outboundinterceptor.UnaryChain(),
-	)
+	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
 	return o
 }
 
@@ -84,7 +78,7 @@ type ChannelOutbound struct {
 	addr string
 
 	once                     *lifecycle.Once
-	unaryCallWithInterceptor interceptor.DirectUnaryOutbound
+	unaryCallWithInterceptor interceptor.UnaryOutboundChain
 }
 
 // TransportName is the transport name that will be set on `transport.Request`
@@ -126,7 +120,7 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel channel outbound was nil")
 	}
 
-	return o.unaryCallWithInterceptor.DirectCall(ctx, req)
+	return o.unaryCallWithInterceptor.Next(ctx, req)
 }
 
 // DirectCall sends an RPC over this TChannel outbound.

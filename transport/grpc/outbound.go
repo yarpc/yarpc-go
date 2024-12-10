@@ -62,21 +62,12 @@ type Outbound struct {
 	peerChooser peer.Chooser
 	options     *outboundOptions
 
-	unaryCallWithInterceptor  interceptor.DirectUnaryOutbound
+	unaryCallWithInterceptor  interceptor.UnaryOutboundChain
 	streamCallWithInterceptor interceptor.DirectStreamOutbound
 }
 
 func newSingleOutbound(t *Transport, address string, options ...OutboundOption) *Outbound {
-	o := newOutbound(t, peerchooser.NewSingle(hostport.PeerIdentifier(address), t), options...)
-	o.unaryCallWithInterceptor = interceptor.ApplyUnaryOutbound(
-		o,
-		outboundinterceptor.UnaryChain(),
-	)
-	o.streamCallWithInterceptor = interceptor.ApplyStreamOutbound(
-		o,
-		outboundinterceptor.StreamChain(),
-	)
-	return o
+	return newOutbound(t, peerchooser.NewSingle(hostport.PeerIdentifier(address), t), options...)
 }
 
 func newOutbound(t *Transport, peerChooser peer.Chooser, options ...OutboundOption) *Outbound {
@@ -86,10 +77,7 @@ func newOutbound(t *Transport, peerChooser peer.Chooser, options ...OutboundOpti
 		peerChooser: peerChooser,
 		options:     newOutboundOptions(options),
 	}
-	o.unaryCallWithInterceptor = interceptor.ApplyUnaryOutbound(
-		o,
-		outboundinterceptor.UnaryChain(),
-	)
+	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.options.unaryOutboundInterceptor)
 	o.streamCallWithInterceptor = interceptor.ApplyStreamOutbound(
 		o,
 		outboundinterceptor.StreamChain(),
@@ -130,7 +118,7 @@ func (o *Outbound) Chooser() peer.Chooser {
 
 // Call wraps the DirectCall.
 func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
-	return o.unaryCallWithInterceptor.DirectCall(ctx, request)
+	return o.unaryCallWithInterceptor.Next(ctx, request)
 }
 
 // DirectCall implements transport.UnaryOutbound#Call.

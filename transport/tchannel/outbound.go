@@ -57,7 +57,7 @@ type Outbound struct {
 	chooser                  peer.Chooser
 	once                     *lifecycle.Once
 	reuseBuffer              bool
-	unaryCallWithInterceptor interceptor.DirectUnaryOutbound
+	unaryCallWithInterceptor interceptor.UnaryOutboundChain
 }
 
 // OutboundOption customizes the behavior of a TChannel Outbound.
@@ -79,10 +79,7 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 		transport: t,
 		chooser:   chooser,
 	}
-	o.unaryCallWithInterceptor = interceptor.ApplyUnaryOutbound(
-		o,
-		outboundinterceptor.UnaryChain(),
-	)
+	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
 	for _, opt := range opts {
 		opt(o)
 	}
@@ -108,7 +105,7 @@ func (o *Outbound) Chooser() peer.Chooser {
 
 // Call wraps the DirectCall.
 func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	return o.unaryCallWithInterceptor.DirectCall(ctx, req)
+	return o.unaryCallWithInterceptor.Next(ctx, req)
 }
 
 // DirectCall sends an RPC over this TChannel outbound.

@@ -27,70 +27,25 @@ import (
 	"go.uber.org/yarpc/internal/interceptor"
 )
 
-// UnaryChain combines a series of `UnaryInbound`s into a single `InboundMiddleware`.
-func UnaryChain(mw ...interceptor.UnaryOutbound) interceptor.UnaryOutbound {
-	unchained := make([]interceptor.UnaryOutbound, 0, len(mw))
-	for _, m := range mw {
-		if m == nil {
-			continue
-		}
-		if c, ok := m.(unaryChain); ok {
-			unchained = append(unchained, c...)
-			continue
-		}
-		unchained = append(unchained, m)
-	}
-
-	switch len(unchained) {
-	case 0:
-		return interceptor.NopUnaryOutbound
-	case 1:
-		return unchained[0]
-	default:
-		return unaryChain(unchained)
-	}
-}
-
-type unaryChain []interceptor.UnaryOutbound
-
-func (x unaryChainExec) TransportName() string {
-	var name string
-	if namer, ok := x.Final.(transport.Namer); ok {
-		name = namer.TransportName()
-	}
-	return name
-}
-
-func (x unaryChainExec) Transports() []transport.Transport {
-	return x.Final.Transports()
-}
-
-func (x unaryChainExec) Start() error {
-	return x.Final.Start()
-}
-
-func (x unaryChainExec) Stop() error {
-	return x.Final.Stop()
-}
-
-func (x unaryChainExec) IsRunning() bool {
-	return x.Final.IsRunning()
-}
-
-func (c unaryChain) Call(ctx context.Context, request *transport.Request, out interceptor.DirectUnaryOutbound) (*transport.Response, error) {
+// NewUnaryChain combines a series of `UnaryInbound`s into a single `InboundMiddleware`.
+func NewUnaryChain(out interceptor.DirectUnaryOutbound, list []interceptor.UnaryOutbound) interceptor.UnaryOutboundChain {
 	return unaryChainExec{
-		Chain: c,
+		Chain: list,
 		Final: out,
-	}.DirectCall(ctx, request)
+	}
 }
 
-func (x unaryChainExec) DirectCall(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+func (x unaryChainExec) Next(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	if len(x.Chain) == 0 {
 		return x.Final.DirectCall(ctx, request)
 	}
 	next := x.Chain[0]
 	x.Chain = x.Chain[1:]
 	return next.Call(ctx, request, x)
+}
+
+func (x unaryChainExec) Outbound() interceptor.Outbound {
+	return x.Final
 }
 
 // unaryChainExec adapts a series of `UnaryOutbound`s into a `UnaryOutbound`. It
