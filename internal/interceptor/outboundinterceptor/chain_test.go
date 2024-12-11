@@ -228,17 +228,3 @@ func TestStreamChain(t *testing.T) {
 		})
 	}
 }
-
-type streamOutboundAdapter struct {
-	chain interceptor.StreamOutboundChain
-}
-
-func (u streamOutboundAdapter) CallStream(ctx context.Context, req *transport.StreamRequest, out interceptor.StreamOutboundChain) (*transport.ClientStream, error) {
-	return u.chain.Next(ctx, req)
-}
-
-//func TestEmptyChains(t *testing.T) {
-//	assert.Equal(t, outboundinterceptor.unaryChainExec(DirectUnaryOutbound(nil)}), NewUnaryChain(nil, nil))
-//	assert.Equal(t, interceptor.NopOnewayOutbound, OnewayChain())
-//	assert.Equal(t, interceptor.NopStreamOutbound, StreamChain())
-//}
