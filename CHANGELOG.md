@@ -6,7 +6,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
-- No changes yet.
+### Fixed
+- Columns in the HTML Outbounds table on the debug page now properly line up
+  with header rows.
 
 ## [1.75.3] - 2024-12-04
 ### Added
