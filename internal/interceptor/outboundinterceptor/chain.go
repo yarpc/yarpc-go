@@ -55,37 +55,25 @@ type unaryChainExec struct {
 	Final interceptor.DirectUnaryOutbound
 }
 
-// OnewayChain combines a series of `OnewayOutbound`s into a single `OnewayOutbound`.
-func OnewayChain(mw ...interceptor.OnewayOutbound) interceptor.OnewayOutbound {
-	unchained := make([]interceptor.OnewayOutbound, 0, len(mw))
-	for _, m := range mw {
-		if m == nil {
-			continue
-		}
-		if c, ok := m.(onewayChain); ok {
-			unchained = append(unchained, c...)
-			continue
-		}
-		unchained = append(unchained, m)
-	}
-
-	switch len(unchained) {
-	case 0:
-		return interceptor.NopOnewayOutbound
-	case 1:
-		return unchained[0]
-	default:
-		return onewayChain(unchained)
+// NewOnewayChain combines a series of `OnewayInbound`s into a single `InboundMiddleware`.
+func NewOnewayChain(out interceptor.DirectOnewayOutbound, list []interceptor.OnewayOutbound) interceptor.OnewayOutboundChain {
+	return onewayChainExec{
+		Chain: list,
+		Final: out,
 	}
 }
 
-type onewayChain []interceptor.OnewayOutbound
+func (x onewayChainExec) Next(ctx context.Context, request *transport.Request) (transport.Ack, error) {
+	if len(x.Chain) == 0 {
+		return x.Final.DirectCallOneway(ctx, request)
+	}
+	next := x.Chain[0]
+	x.Chain = x.Chain[1:]
+	return next.CallOneway(ctx, request, x)
+}
 
-func (c onewayChain) CallOneway(ctx context.Context, request *transport.Request, out interceptor.DirectOnewayOutbound) (transport.Ack, error) {
-	return onewayChainExec{
-		Chain: c,
-		Final: out,
-	}.DirectCallOneway(ctx, request)
+func (x onewayChainExec) Outbound() interceptor.Outbound {
+	return x.Final
 }
 
 // onewayChainExec adapts a series of `OnewayOutbound`s into a `OnewayOutbound`. It
@@ -93,30 +81,6 @@ func (c onewayChain) CallOneway(ctx context.Context, request *transport.Request,
 type onewayChainExec struct {
 	Chain []interceptor.OnewayOutbound
 	Final interceptor.DirectOnewayOutbound
-}
-
-func (x onewayChainExec) TransportName() string {
-	var name string
-	if namer, ok := x.Final.(transport.Namer); ok {
-		name = namer.TransportName()
-	}
-	return name
-}
-
-func (x onewayChainExec) Transports() []transport.Transport {
-	return x.Final.Transports()
-}
-
-func (x onewayChainExec) Start() error {
-	return x.Final.Start()
-}
-
-func (x onewayChainExec) Stop() error {
-	return x.Final.Stop()
-}
-
-func (x onewayChainExec) IsRunning() bool {
-	return x.Final.IsRunning()
 }
 
 func (x onewayChainExec) DirectCallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {

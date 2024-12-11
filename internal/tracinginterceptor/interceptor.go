@@ -152,7 +152,7 @@ func (i *Interceptor) HandleOneway(ctx context.Context, req *transport.Request, 
 }
 
 // CallOneway implements interceptor.OnewayOutbound
-func (i *Interceptor) CallOneway(ctx context.Context, req *transport.Request, out interceptor.DirectOnewayOutbound) (transport.Ack, error) {
+func (i *Interceptor) CallOneway(ctx context.Context, req *transport.Request, out interceptor.OnewayOutboundChain) (transport.Ack, error) {
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        i.tracer,
 		TransportName: i.transport,
@@ -171,7 +171,7 @@ func (i *Interceptor) CallOneway(ctx context.Context, req *transport.Request, ou
 		}
 	}
 
-	ack, err := out.DirectCallOneway(ctx, req)
+	ack, err := out.Next(ctx, req)
 	return ack, updateSpanWithErrorDetails(span, false, nil, err)
 }
 

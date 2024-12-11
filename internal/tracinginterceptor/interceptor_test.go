@@ -496,9 +496,9 @@ func TestInterceptorCallOneway(t *testing.T) {
 				Headers:   transport.Headers{},
 			}
 
-			outbound := interceptortest.NewMockDirectOnewayOutbound(ctrl)
+			outbound := interceptortest.NewMockOnewayOutboundChain(ctrl)
 			outbound.EXPECT().
-				DirectCallOneway(gomock.Any(), req).
+				Next(gomock.Any(), req).
 				Return(nil, tt.callError) // Return nil for Ack
 
 			_, err := interceptor.CallOneway(context.Background(), req, outbound)

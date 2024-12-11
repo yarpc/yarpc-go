@@ -65,6 +65,58 @@ func (mr *MockUnaryOutboundChainMockRecorder) Outbound() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Outbound", reflect.TypeOf((*MockUnaryOutboundChain)(nil).Outbound))
 }
 
+// MockOnewayOutboundChain is a mock of OnewayOutboundChain interface.
+type MockOnewayOutboundChain struct {
+	ctrl     *gomock.Controller
+	recorder *MockOnewayOutboundChainMockRecorder
+}
+
+// MockOnewayOutboundChainMockRecorder is the mock recorder for MockOnewayOutboundChain.
+type MockOnewayOutboundChainMockRecorder struct {
+	mock *MockOnewayOutboundChain
+}
+
+// NewMockOnewayOutboundChain creates a new mock instance.
+func NewMockOnewayOutboundChain(ctrl *gomock.Controller) *MockOnewayOutboundChain {
+	mock := &MockOnewayOutboundChain{ctrl: ctrl}
+	mock.recorder = &MockOnewayOutboundChainMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockOnewayOutboundChain) EXPECT() *MockOnewayOutboundChainMockRecorder {
+	return m.recorder
+}
+
+// Next mocks base method.
+func (m *MockOnewayOutboundChain) Next(ctx context.Context, request *transport.Request) (transport.Ack, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Next", ctx, request)
+	ret0, _ := ret[0].(transport.Ack)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Next indicates an expected call of Next.
+func (mr *MockOnewayOutboundChainMockRecorder) Next(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Next", reflect.TypeOf((*MockOnewayOutboundChain)(nil).Next), ctx, request)
+}
+
+// Outbound mocks base method.
+func (m *MockOnewayOutboundChain) Outbound() interceptor.Outbound {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Outbound")
+	ret0, _ := ret[0].(interceptor.Outbound)
+	return ret0
+}
+
+// Outbound indicates an expected call of Outbound.
+func (mr *MockOnewayOutboundChainMockRecorder) Outbound() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Outbound", reflect.TypeOf((*MockOnewayOutboundChain)(nil).Outbound))
+}
+
 // MockUnaryOutbound is a mock of UnaryOutbound interface.
 type MockUnaryOutbound struct {
 	ctrl     *gomock.Controller
@@ -127,7 +179,7 @@ func (m *MockOnewayOutbound) EXPECT() *MockOnewayOutboundMockRecorder {
 }
 
 // CallOneway mocks base method.
-func (m *MockOnewayOutbound) CallOneway(ctx context.Context, request *transport.Request, out interceptor.DirectOnewayOutbound) (transport.Ack, error) {
+func (m *MockOnewayOutbound) CallOneway(ctx context.Context, request *transport.Request, out interceptor.OnewayOutboundChain) (transport.Ack, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CallOneway", ctx, request, out)
 	ret0, _ := ret[0].(transport.Ack)

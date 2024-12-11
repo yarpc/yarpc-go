@@ -22,7 +22,6 @@ package http
 
 import (
 	"context"
-	"go.uber.org/yarpc/internal/interceptor/outboundinterceptor"
 	"math/rand"
 	"net"
 	"net/http"
@@ -316,7 +315,7 @@ func (o *transportOptions) newTransport() *Transport {
 		unaryInboundInterceptor:   inboundmiddleware.UnaryChain(unaryInbounds...),
 		unaryOutboundInterceptor:  unaryOutbounds,
 		onewayInboundInterceptor:  inboundmiddleware.OnewayChain(onewayInbounds...),
-		onewayOutboundInterceptor: outboundinterceptor.OnewayChain(onewayOutbounds...),
+		onewayOutboundInterceptor: onewayOutbounds,
 	}
 }
 
@@ -371,7 +370,7 @@ type Transport struct {
 	unaryInboundInterceptor   interceptor.UnaryInbound
 	unaryOutboundInterceptor  []interceptor.UnaryOutbound
 	onewayInboundInterceptor  interceptor.OnewayInbound
-	onewayOutboundInterceptor interceptor.OnewayOutbound
+	onewayOutboundInterceptor []interceptor.OnewayOutbound
 }
 
 var _ transport.Transport = (*Transport)(nil)

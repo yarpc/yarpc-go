@@ -147,10 +147,7 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 	o.client = client
 	o.sender = &transportSender{Client: client}
 	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
-	o.onewayCallWithInterceptor = interceptor.ApplyOnewayOutbound(
-		o,
-		outboundinterceptor.OnewayChain(),
-	)
+	o.onewayCallWithInterceptor = outboundinterceptor.NewOnewayChain(o, t.onewayOutboundInterceptor)
 	return o
 }
 
@@ -203,10 +200,7 @@ func (t *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbo
 	opts = append(opts, URLTemplate(uri))
 	o := t.NewOutbound(chooser, opts...)
 	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
-	o.onewayCallWithInterceptor = interceptor.ApplyOnewayOutbound(
-		o,
-		outboundinterceptor.OnewayChain(),
-	)
+	o.onewayCallWithInterceptor = outboundinterceptor.NewOnewayChain(o, t.onewayOutboundInterceptor)
 	return o
 }
 
@@ -234,7 +228,7 @@ type Outbound struct {
 	tlsConfig         *tls.Config
 
 	unaryCallWithInterceptor  interceptor.UnaryOutboundChain
-	onewayCallWithInterceptor interceptor.DirectOnewayOutbound
+	onewayCallWithInterceptor interceptor.OnewayOutboundChain
 }
 
 // TransportName is the transport name that will be set on `transport.Request` struct.
@@ -294,7 +288,7 @@ func (o *Outbound) DirectCall(ctx context.Context, treq *transport.Request) (*tr
 
 // CallOneway implements UnaryOnewayOutbound
 func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
-	return o.onewayCallWithInterceptor.DirectCallOneway(ctx, treq)
+	return o.onewayCallWithInterceptor.Next(ctx, treq)
 }
 
 // DirectCallOneway makes a oneway request

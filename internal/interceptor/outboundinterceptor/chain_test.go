@@ -27,9 +27,9 @@ func (m *mockAck) String() string {
 	return "mockAck"
 }
 
-func (c *countOutboundMiddleware) CallOneway(ctx context.Context, req *transport.Request, next interceptor.DirectOnewayOutbound) (transport.Ack, error) {
+func (c *countOutboundMiddleware) CallOneway(ctx context.Context, req *transport.Request, next interceptor.OnewayOutboundChain) (transport.Ack, error) {
 	c.Count++
-	return next.DirectCallOneway(ctx, req)
+	return next.Next(ctx, req)
 }
 
 func (c *countOutboundMiddleware) CallStream(ctx context.Context, req *transport.StreamRequest, next interceptor.DirectStreamOutbound) (*transport.ClientStream, error) {
@@ -107,13 +107,31 @@ func (u unaryOutboundAdapter) Call(ctx context.Context, req *transport.Request, 
 func TestOnewayChain(t *testing.T) {
 	before := &countOutboundMiddleware{}
 	after := &countOutboundMiddleware{}
+	nopOutbound := interceptortest.NewMockDirectOnewayOutbound(gomock.NewController(t))
+
+	nopOutbound.EXPECT().DirectCallOneway(gomock.Any(), gomock.Any()).AnyTimes().Return(&mockAck{}, nil)
 
 	tests := []struct {
 		desc string
 		mw   interceptor.OnewayOutbound
 	}{
-		{"flat chain", OnewayChain(before, nil, after)},
-		{"nested chain", OnewayChain(before, OnewayChain(after, nil))},
+		{
+			desc: "flat chain",
+			mw: onewayOutboundAdapter{
+				chain: NewOnewayChain(nopOutbound, []interceptor.OnewayOutbound{before, after}),
+			},
+		},
+		{
+			desc: "nested chain",
+			mw: onewayOutboundAdapter{
+				chain: NewOnewayChain(nopOutbound, []interceptor.OnewayOutbound{
+					before,
+					onewayOutboundAdapter{
+						chain: NewOnewayChain(nopOutbound, []interceptor.OnewayOutbound{after}),
+					},
+				}),
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -121,6 +139,7 @@ func TestOnewayChain(t *testing.T) {
 			before.Count, after.Count = 0, 0
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
+
 			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 			defer cancel()
 
@@ -128,9 +147,10 @@ func TestOnewayChain(t *testing.T) {
 				Caller:    "caller",
 				Service:   "service",
 				Procedure: "procedure",
+				Headers:   transport.Headers{},
 			}
-			mockOutbound := interceptortest.NewMockDirectOnewayOutbound(mockCtrl)
-			mockOutbound.EXPECT().DirectCallOneway(ctx, req).Return(&mockAck{}, nil)
+
+			mockOutbound := interceptortest.NewMockOnewayOutboundChain(mockCtrl)
 
 			gotAck, err := tt.mw.CallOneway(ctx, req, mockOutbound)
 
@@ -141,6 +161,52 @@ func TestOnewayChain(t *testing.T) {
 		})
 	}
 }
+
+type onewayOutboundAdapter struct {
+	chain interceptor.OnewayOutboundChain
+}
+
+func (u onewayOutboundAdapter) CallOneway(ctx context.Context, req *transport.Request, out interceptor.OnewayOutboundChain) (transport.Ack, error) {
+	return u.chain.Next(ctx, req)
+}
+
+//func TestOnewayChain(t *testing.T) {
+//	before := &countOutboundMiddleware{}
+//	after := &countOutboundMiddleware{}
+//
+//	tests := []struct {
+//		desc string
+//		mw   interceptor.OnewayOutbound
+//	}{
+//		{"flat chain", NewOnewayChain(before, nil, after)},
+//		{"nested chain", NewOnewayChain(before, NewOnewayChain(after, nil))},
+//	}
+//
+//	for _, tt := range tests {
+//		t.Run(tt.desc, func(t *testing.T) {
+//			before.Count, after.Count = 0, 0
+//			mockCtrl := gomock.NewController(t)
+//			defer mockCtrl.Finish()
+//			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+//			defer cancel()
+//
+//			req := &transport.Request{
+//				Caller:    "caller",
+//				Service:   "service",
+//				Procedure: "procedure",
+//			}
+//			mockOutbound := interceptortest.NewMockDirectOnewayOutbound(mockCtrl)
+//			mockOutbound.EXPECT().DirectCallOneway(ctx, req).Return(&mockAck{}, nil)
+//
+//			gotAck, err := tt.mw.CallOneway(ctx, req, mockOutbound)
+//
+//			assert.NoError(t, err)
+//			assert.Equal(t, 1, before.Count)
+//			assert.Equal(t, 1, after.Count)
+//			assert.NotNil(t, gotAck)
+//		})
+//	}
+//}
 
 func TestStreamChain(t *testing.T) {
 	before := &countOutboundMiddleware{}
