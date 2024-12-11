@@ -253,7 +253,6 @@ func (t *Transport) start() error {
 			newResponseWriter:              t.newResponseWriter,
 			excludeServiceHeaderInResponse: t.excludeServiceHeaderInResponse,
 			unaryInboundInterceptor:        t.unaryInboundInterceptor,
-			unaryOutboundInterceptor:       t.unaryOutboundInterceptor,
 		},
 		OnPeerStatusChanged: t.onPeerStatusChanged,
 		Dialer:              t.dialer,
