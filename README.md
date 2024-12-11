@@ -1,4 +1,10 @@
-# yarpc [![GoDoc][doc-img]][doc] [![GitHub release][release-img]][release] [![Mit License][mit-img]][mit] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov]
+# yarpc
+
+[![GoDoc][doc-img]][doc]
+[![GitHub release][release-img]][release]
+[![Mit License][mit-img]][mit]
+[![Build Status][ci-img]][ci]
+[![Coverage Status][cov-img]][cov]
 
 A message passing platform for Go that lets you:
 
@@ -8,11 +14,19 @@ A message passing platform for Go that lets you:
 
 ## Installation
 
-We recommend locking to [SemVer](http://semver.org/) range `^1` using [Glide](https://github.com/Masterminds/glide):
+Add dependency to your `go.mod` file:
 
 ```
-glide get 'go.uber.org/yarpc#^1'
+go get go.uber.org/yarpc@latest
 ```
+
+Use the following import path in the code:
+
+```go
+import "go.uber.org/yarpc"
+```
+
+Please see [reference][doc] and [examples][examples-link] for more details.
 
 ## Stability
 
@@ -26,20 +40,6 @@ APIs can break at any time. The intention here is to validate these APIs and ite
 by working closely with internal customers. Once stable, their contents will be moved out of
 the containing `x` package and their APIs will be locked.
 
-[doc-img]: http://img.shields.io/badge/GoDoc-Reference-blue.svg
-[doc]: https://godoc.org/go.uber.org/yarpc
-
-[release-img]: https://img.shields.io/github/release/yarpc/yarpc-go.svg
-[release]: https://github.com/yarpc/yarpc-go/releases
-
-[mit-img]: http://img.shields.io/badge/License-MIT-blue.svg
-[mit]: https://github.com/yarpc/yarpc-go/blob/master/LICENSE
-
-[ci-img]: https://badge.buildkite.com/f7d8e675c4d5ee4f5c4e4c2e33ca03c5be9bde22b186750538.svg?branch=master      
-[ci]: https://buildkite.com/uberopensource/yarpc-go
-
-[cov-img]: https://codecov.io/gh/yarpc/yarpc-go/branch/master/graph/badge.svg
-[cov]: https://codecov.io/gh/yarpc/yarpc-go/branch/master
 
 ## Development
 
@@ -48,9 +48,7 @@ the containing `x` package and their APIs will be locked.
 To start developing with yarpc-go, run the following command to setup your environment:
 
 ```
-cd $GOPATH/src
 git clone https://github.com/yarpc/yarpc-go.git go.uber.org/yarpc
-make
 ```
 
 ### Running Tests
@@ -66,3 +64,20 @@ SUPPRESS_DOCKER=1 make test
 ```
 
 Happy development!
+
+[doc-img]: https://pkg.go.dev/badge/go.uber.org/yarpc.svg
+[doc]: https://pkg.go.dev/go.uber.org/yarpc
+
+[release-img]: https://img.shields.io/github/release/yarpc/yarpc-go.svg
+[release]: https://github.com/yarpc/yarpc-go/releases
+
+[mit-img]: http://img.shields.io/badge/License-MIT-blue.svg
+[mit]: https://github.com/yarpc/yarpc-go/blob/master/LICENSE
+
+[ci-img]: https://badge.buildkite.com/f7d8e675c4d5ee4f5c4e4c2e33ca03c5be9bde22b186750538.svg?branch=master
+[ci]: https://buildkite.com/uberopensource/yarpc-go
+
+[cov-img]: https://codecov.io/gh/yarpc/yarpc-go/branch/master/graph/badge.svg
+[cov]: https://codecov.io/gh/yarpc/yarpc-go/branch/master
+
+[examples-link]: https://github.com/yarpc/yarpc-go/tree/dev/internal/examples
