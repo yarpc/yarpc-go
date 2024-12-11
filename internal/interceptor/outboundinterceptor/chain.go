@@ -92,37 +92,25 @@ func (x onewayChainExec) DirectCallOneway(ctx context.Context, request *transpor
 	return next.CallOneway(ctx, request, x)
 }
 
-// StreamChain combines a series of `StreamOutbound`s into a single `StreamOutbound`.
-func StreamChain(mw ...interceptor.StreamOutbound) interceptor.StreamOutbound {
-	unchained := make([]interceptor.StreamOutbound, 0, len(mw))
-	for _, m := range mw {
-		if m == nil {
-			continue
-		}
-		if c, ok := m.(streamChain); ok {
-			unchained = append(unchained, c...)
-			continue
-		}
-		unchained = append(unchained, m)
-	}
-
-	switch len(unchained) {
-	case 0:
-		return interceptor.NopStreamOutbound
-	case 1:
-		return unchained[0]
-	default:
-		return streamChain(unchained)
+// NewStreamChain combines a series of `OnewayInbound`s into a single `InboundMiddleware`.
+func NewStreamChain(out interceptor.DirectStreamOutbound, list []interceptor.StreamOutbound) interceptor.StreamOutboundChain {
+	return streamChainExec{
+		Chain: list,
+		Final: out,
 	}
 }
 
-type streamChain []interceptor.StreamOutbound
+func (x streamChainExec) Next(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
+	if len(x.Chain) == 0 {
+		return x.Final.DirectCallStream(ctx, request)
+	}
+	next := x.Chain[0]
+	x.Chain = x.Chain[1:]
+	return next.CallStream(ctx, request, x)
+}
 
-func (c streamChain) CallStream(ctx context.Context, request *transport.StreamRequest, out interceptor.DirectStreamOutbound) (*transport.ClientStream, error) {
-	return streamChainExec{
-		Chain: c,
-		Final: out,
-	}.DirectCallStream(ctx, request)
+func (x streamChainExec) Outbound() interceptor.Outbound {
+	return x.Final
 }
 
 // streamChainExec adapts a series of `StreamOutbound`s into a `StreamOutbound`. It
@@ -130,30 +118,6 @@ func (c streamChain) CallStream(ctx context.Context, request *transport.StreamRe
 type streamChainExec struct {
 	Chain []interceptor.StreamOutbound
 	Final interceptor.DirectStreamOutbound
-}
-
-func (x streamChainExec) TransportName() string {
-	var name string
-	if namer, ok := x.Final.(transport.Namer); ok {
-		name = namer.TransportName()
-	}
-	return name
-}
-
-func (x streamChainExec) Transports() []transport.Transport {
-	return x.Final.Transports()
-}
-
-func (x streamChainExec) Start() error {
-	return x.Final.Start()
-}
-
-func (x streamChainExec) Stop() error {
-	return x.Final.Stop()
-}
-
-func (x streamChainExec) IsRunning() bool {
-	return x.Final.IsRunning()
 }
 
 func (x streamChainExec) DirectCallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {

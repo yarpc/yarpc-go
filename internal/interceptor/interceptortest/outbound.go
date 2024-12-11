@@ -117,6 +117,58 @@ func (mr *MockOnewayOutboundChainMockRecorder) Outbound() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Outbound", reflect.TypeOf((*MockOnewayOutboundChain)(nil).Outbound))
 }
 
+// MockStreamOutboundChain is a mock of StreamOutboundChain interface.
+type MockStreamOutboundChain struct {
+	ctrl     *gomock.Controller
+	recorder *MockStreamOutboundChainMockRecorder
+}
+
+// MockStreamOutboundChainMockRecorder is the mock recorder for MockStreamOutboundChain.
+type MockStreamOutboundChainMockRecorder struct {
+	mock *MockStreamOutboundChain
+}
+
+// NewMockStreamOutboundChain creates a new mock instance.
+func NewMockStreamOutboundChain(ctrl *gomock.Controller) *MockStreamOutboundChain {
+	mock := &MockStreamOutboundChain{ctrl: ctrl}
+	mock.recorder = &MockStreamOutboundChainMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockStreamOutboundChain) EXPECT() *MockStreamOutboundChainMockRecorder {
+	return m.recorder
+}
+
+// Next mocks base method.
+func (m *MockStreamOutboundChain) Next(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Next", ctx, request)
+	ret0, _ := ret[0].(*transport.ClientStream)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Next indicates an expected call of Next.
+func (mr *MockStreamOutboundChainMockRecorder) Next(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Next", reflect.TypeOf((*MockStreamOutboundChain)(nil).Next), ctx, request)
+}
+
+// Outbound mocks base method.
+func (m *MockStreamOutboundChain) Outbound() interceptor.Outbound {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Outbound")
+	ret0, _ := ret[0].(interceptor.Outbound)
+	return ret0
+}
+
+// Outbound indicates an expected call of Outbound.
+func (mr *MockStreamOutboundChainMockRecorder) Outbound() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Outbound", reflect.TypeOf((*MockStreamOutboundChain)(nil).Outbound))
+}
+
 // MockUnaryOutbound is a mock of UnaryOutbound interface.
 type MockUnaryOutbound struct {
 	ctrl     *gomock.Controller
@@ -217,7 +269,7 @@ func (m *MockStreamOutbound) EXPECT() *MockStreamOutboundMockRecorder {
 }
 
 // CallStream mocks base method.
-func (m *MockStreamOutbound) CallStream(ctx context.Context, req *transport.StreamRequest, out interceptor.DirectStreamOutbound) (*transport.ClientStream, error) {
+func (m *MockStreamOutbound) CallStream(ctx context.Context, req *transport.StreamRequest, out interceptor.StreamOutboundChain) (*transport.ClientStream, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CallStream", ctx, req, out)
 	ret0, _ := ret[0].(*transport.ClientStream)

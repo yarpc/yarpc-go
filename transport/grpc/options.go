@@ -23,7 +23,6 @@ package grpc
 import (
 	"context"
 	"crypto/tls"
-	"go.uber.org/yarpc/internal/interceptor/outboundinterceptor"
 	"math"
 	"net"
 
@@ -311,7 +310,7 @@ type transportOptions struct {
 	unaryInboundInterceptor   interceptor.UnaryInbound
 	unaryOutboundInterceptor  []interceptor.UnaryOutbound
 	streamInboundInterceptor  interceptor.StreamInbound
-	streamOutboundInterceptor interceptor.StreamOutbound
+	streamOutboundInterceptor []interceptor.StreamOutbound
 }
 
 func newTransportOptions(options []TransportOption) *transportOptions {
@@ -333,9 +332,8 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 	}
 
 	var (
-		unaryInbounds   []interceptor.UnaryInbound
-		streamInbounds  []interceptor.StreamInbound
-		streamOutbounds []interceptor.StreamOutbound
+		unaryInbounds  []interceptor.UnaryInbound
+		streamInbounds []interceptor.StreamInbound
 	)
 	if transportOptions.tracingInterceptorEnabled {
 		ti := tracinginterceptor.New(tracinginterceptor.Params{
@@ -344,15 +342,14 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 		})
 		unaryInbounds = append(unaryInbounds, ti)
 		streamInbounds = append(streamInbounds, ti)
-		streamOutbounds = append(streamOutbounds, ti)
 
 		transportOptions.unaryOutboundInterceptor = []interceptor.UnaryOutbound{ti}
+		transportOptions.streamOutboundInterceptor = []interceptor.StreamOutbound{ti}
 		transportOptions.tracer = opentracing.NoopTracer{}
 	}
 
 	transportOptions.unaryInboundInterceptor = inboundmiddleware.UnaryChain(unaryInbounds...)
 	transportOptions.streamInboundInterceptor = inboundmiddleware.StreamChain(streamInbounds...)
-	transportOptions.streamOutboundInterceptor = outboundinterceptor.StreamChain(streamOutbounds...)
 	return transportOptions
 }
 

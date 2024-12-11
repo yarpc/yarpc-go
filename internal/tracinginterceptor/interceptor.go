@@ -201,7 +201,7 @@ func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.Stream
 }
 
 // CallStream implements interceptor.StreamOutbound
-func (i *Interceptor) CallStream(ctx context.Context, req *transport.StreamRequest, out interceptor.DirectStreamOutbound) (*transport.ClientStream, error) {
+func (i *Interceptor) CallStream(ctx context.Context, req *transport.StreamRequest, out interceptor.StreamOutboundChain) (*transport.ClientStream, error) {
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        i.tracer,
 		TransportName: i.transport,
@@ -226,7 +226,7 @@ func (i *Interceptor) CallStream(ctx context.Context, req *transport.StreamReque
 		}
 	}
 
-	clientStream, err := out.DirectCallStream(ctx, req)
+	clientStream, err := out.Next(ctx, req)
 	if err != nil {
 		_ = updateSpanWithErrorDetails(span, false, nil, err)
 		span.Finish()

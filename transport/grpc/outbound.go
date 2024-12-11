@@ -63,7 +63,7 @@ type Outbound struct {
 	options     *outboundOptions
 
 	unaryCallWithInterceptor  interceptor.UnaryOutboundChain
-	streamCallWithInterceptor interceptor.DirectStreamOutbound
+	streamCallWithInterceptor interceptor.StreamOutboundChain
 }
 
 func newSingleOutbound(t *Transport, address string, options ...OutboundOption) *Outbound {
@@ -78,10 +78,7 @@ func newOutbound(t *Transport, peerChooser peer.Chooser, options ...OutboundOpti
 		options:     newOutboundOptions(options),
 	}
 	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.options.unaryOutboundInterceptor)
-	o.streamCallWithInterceptor = interceptor.ApplyStreamOutbound(
-		o,
-		outboundinterceptor.StreamChain(),
-	)
+	o.streamCallWithInterceptor = outboundinterceptor.NewStreamChain(o, t.options.streamOutboundInterceptor)
 	return o
 }
 
@@ -298,7 +295,7 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 
 // CallStream wraps the DirectCallStream.
 func (o *Outbound) CallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
-	return o.streamCallWithInterceptor.DirectCallStream(ctx, request)
+	return o.streamCallWithInterceptor.Next(ctx, request)
 }
 
 // DirectCallStream implements transport.StreamOutbound#CallStream.

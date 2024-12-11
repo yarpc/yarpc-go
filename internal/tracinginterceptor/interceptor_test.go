@@ -613,8 +613,8 @@ func TestInterceptorCallStream(t *testing.T) {
 	clientStream, err := transport.NewClientStream(mockStream)
 	require.NoError(t, err)
 
-	outbound := interceptortest.NewMockDirectStreamOutbound(ctrl)
-	outbound.EXPECT().DirectCallStream(gomock.Any(), gomock.Any()).Return(clientStream, nil)
+	outbound := interceptortest.NewMockStreamOutboundChain(ctrl)
+	outbound.EXPECT().Next(gomock.Any(), gomock.Any()).Return(clientStream, nil)
 
 	req := &transport.StreamRequest{
 		Meta: &transport.RequestMeta{Procedure: "test-procedure"},
@@ -642,10 +642,11 @@ func TestInterceptorCallStream_Error(t *testing.T) {
 	clientStream, err := transport.NewClientStream(mockStreamCloser)
 	require.NoError(t, err)
 
-	outbound := interceptortest.NewMockDirectStreamOutbound(ctrl)
+	outbound := interceptortest.NewMockStreamOutboundChain(ctrl)
 	outbound.EXPECT().
-		DirectCallStream(gomock.Any(), gomock.Any()).
+		Next(gomock.Any(), gomock.Any()).
 		Return(clientStream, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "call error"))
+
 	// Set up the request
 	ctx := context.Background()
 	req := &transport.StreamRequest{Meta: &transport.RequestMeta{Procedure: "test-procedure"}}

@@ -51,6 +51,18 @@ type (
 		Outbound() Outbound
 	}
 
+	// StreamOutboundChain defines the interface for a chain of streaming outbound requests.
+	// It provides methods to invoke the next outbound in the chain with the given context
+	// and request, and to retrieve the outbound component of the chain.
+	//
+	// Next: Executes the next streaming outbound request in the chain with the provided context and request,
+	//       returning a client stream and any error encountered during the process.
+	// Outbound: Retrieves the outbound component of the chain, allowing for further inspection or manipulation.
+	StreamOutboundChain interface {
+		Next(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error)
+		Outbound() Outbound
+	}
+
 	// UnaryOutbound defines transport interceptor for `UnaryOutbound`s.
 	//
 	// UnaryOutbound interceptor MAY do zero or more of the following: change the
@@ -93,7 +105,7 @@ type (
 	// StreamOutbound interceptors is re-used across requests and MAY be called
 	// multiple times on the same request.
 	StreamOutbound interface {
-		CallStream(ctx context.Context, req *transport.StreamRequest, out DirectStreamOutbound) (*transport.ClientStream, error)
+		CallStream(ctx context.Context, req *transport.StreamRequest, out StreamOutboundChain) (*transport.ClientStream, error)
 	}
 )
 
@@ -163,8 +175,8 @@ var NopOnewayOutbound OnewayOutbound = nopOnewayOutbound{}
 
 type nopStreamOutbound struct{}
 
-func (nopStreamOutbound) CallStream(ctx context.Context, requestMeta *transport.StreamRequest, out DirectStreamOutbound) (*transport.ClientStream, error) {
-	return out.DirectCallStream(ctx, requestMeta)
+func (nopStreamOutbound) CallStream(ctx context.Context, requestMeta *transport.StreamRequest, out StreamOutboundChain) (*transport.ClientStream, error) {
+	return out.Next(ctx, requestMeta)
 }
 
 // NopStreamOutbound is a stream outbound middleware that does not do
@@ -182,8 +194,8 @@ func ApplyOnewayOutbound(oo OnewayOutboundChain, i OnewayOutbound) transport.One
 }
 
 // ApplyStreamOutbound applies the given StreamOutbound interceptor to the given DirectStreamOutbound transport.
-func ApplyStreamOutbound(so DirectStreamOutbound, i StreamOutbound) DirectStreamOutbound {
-	return directStreamOutboundWithInterceptor{so: so, i: i}
+func ApplyStreamOutbound(so StreamOutboundChain, i StreamOutbound) transport.StreamOutbound {
+	return streamOutboundWithInterceptor{so: so, i: i}
 }
 
 type unaryOutboundWithInterceptor struct {
@@ -206,12 +218,12 @@ func (ooc onewayOutboundWithInterceptor) CallOneway(ctx context.Context, request
 	return ooc.i.CallOneway(ctx, request, ooc.oo)
 }
 
-type directStreamOutboundWithInterceptor struct {
+type streamOutboundWithInterceptor struct {
 	transport.Outbound
-	so DirectStreamOutbound
+	so StreamOutboundChain
 	i  StreamOutbound
 }
 
-func (soc directStreamOutboundWithInterceptor) DirectCallStream(ctx context.Context, requestMeta *transport.StreamRequest) (*transport.ClientStream, error) {
+func (soc streamOutboundWithInterceptor) CallStream(ctx context.Context, requestMeta *transport.StreamRequest) (*transport.ClientStream, error) {
 	return soc.i.CallStream(ctx, requestMeta, soc.so)
 }

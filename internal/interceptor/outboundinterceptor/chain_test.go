@@ -170,54 +170,34 @@ func (u onewayOutboundAdapter) CallOneway(ctx context.Context, req *transport.Re
 	return u.chain.Next(ctx, req)
 }
 
-//func TestOnewayChain(t *testing.T) {
-//	before := &countOutboundMiddleware{}
-//	after := &countOutboundMiddleware{}
-//
-//	tests := []struct {
-//		desc string
-//		mw   interceptor.OnewayOutbound
-//	}{
-//		{"flat chain", NewOnewayChain(before, nil, after)},
-//		{"nested chain", NewOnewayChain(before, NewOnewayChain(after, nil))},
-//	}
-//
-//	for _, tt := range tests {
-//		t.Run(tt.desc, func(t *testing.T) {
-//			before.Count, after.Count = 0, 0
-//			mockCtrl := gomock.NewController(t)
-//			defer mockCtrl.Finish()
-//			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-//			defer cancel()
-//
-//			req := &transport.Request{
-//				Caller:    "caller",
-//				Service:   "service",
-//				Procedure: "procedure",
-//			}
-//			mockOutbound := interceptortest.NewMockDirectOnewayOutbound(mockCtrl)
-//			mockOutbound.EXPECT().DirectCallOneway(ctx, req).Return(&mockAck{}, nil)
-//
-//			gotAck, err := tt.mw.CallOneway(ctx, req, mockOutbound)
-//
-//			assert.NoError(t, err)
-//			assert.Equal(t, 1, before.Count)
-//			assert.Equal(t, 1, after.Count)
-//			assert.NotNil(t, gotAck)
-//		})
-//	}
-//}
-
 func TestStreamChain(t *testing.T) {
 	before := &countOutboundMiddleware{}
 	after := &countOutboundMiddleware{}
+	nopOutbound := interceptortest.NewMockDirectUnaryOutbound(gomock.NewController(t))
+
+	nopOutbound.EXPECT().DirectCall(gomock.Any(), gomock.Any()).AnyTimes().Return(&transport.Response{}, nil)
 
 	tests := []struct {
 		desc string
-		mw   interceptor.StreamOutbound
+		mw   interceptor.UnaryOutbound
 	}{
-		{"flat chain", StreamChain(before, nil, after)},
-		{"nested chain", StreamChain(before, StreamChain(after, nil))},
+		{
+			desc: "flat chain",
+			mw: unaryOutboundAdapter{
+				chain: NewUnaryChain(nopOutbound, []interceptor.UnaryOutbound{before, after}),
+			},
+		},
+		{
+			desc: "nested chain",
+			mw: unaryOutboundAdapter{
+				chain: NewUnaryChain(nopOutbound, []interceptor.UnaryOutbound{
+					before,
+					unaryOutboundAdapter{
+						chain: NewUnaryChain(nopOutbound, []interceptor.UnaryOutbound{after}),
+					},
+				}),
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -225,27 +205,36 @@ func TestStreamChain(t *testing.T) {
 			before.Count, after.Count = 0, 0
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
+
 			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 			defer cancel()
 
-			req := &transport.StreamRequest{
-				Meta: &transport.RequestMeta{
-					Caller:    "caller",
-					Service:   "service",
-					Procedure: "procedure",
-				},
+			req := &transport.Request{
+				Caller:    "caller",
+				Service:   "service",
+				Procedure: "procedure",
+				Headers:   transport.Headers{}, // Ensure exact match
 			}
-			mockOutbound := interceptortest.NewMockDirectStreamOutbound(mockCtrl)
-			mockOutbound.EXPECT().DirectCallStream(ctx, req).Return(&transport.ClientStream{}, nil)
+			res := &transport.Response{}
 
-			gotStream, err := tt.mw.CallStream(ctx, req, mockOutbound)
+			mockOutbound := interceptortest.NewMockUnaryOutboundChain(mockCtrl)
+
+			gotRes, err := tt.mw.Call(ctx, req, mockOutbound)
 
 			assert.NoError(t, err)
 			assert.Equal(t, 1, before.Count)
 			assert.Equal(t, 1, after.Count)
-			assert.NotNil(t, gotStream)
+			assert.Equal(t, res, gotRes)
 		})
 	}
+}
+
+type streamOutboundAdapter struct {
+	chain interceptor.StreamOutboundChain
+}
+
+func (u streamOutboundAdapter) CallStream(ctx context.Context, req *transport.StreamRequest, out interceptor.StreamOutboundChain) (*transport.ClientStream, error) {
+	return u.chain.Next(ctx, req)
 }
 
 //func TestEmptyChains(t *testing.T) {
