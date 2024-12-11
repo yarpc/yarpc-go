@@ -37,7 +37,6 @@ import (
 	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/yarpc/internal/inboundmiddleware"
 	"go.uber.org/yarpc/internal/interceptor"
-	"go.uber.org/yarpc/internal/outboundmiddleware"
 	"go.uber.org/yarpc/internal/tracinginterceptor"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/zap"
@@ -299,6 +298,7 @@ func (o *transportOptions) newTransport() *Transport {
 
 		tracer = opentracing.NoopTracer{}
 	}
+
 	return &Transport{
 		once:                      lifecycle.NewOnce(),
 		client:                    o.buildClient(o),
@@ -313,9 +313,9 @@ func (o *transportOptions) newTransport() *Transport {
 		serviceName:               o.serviceName,
 		ouboundTLSConfigProvider:  o.outboundTLSConfigProvider,
 		unaryInboundInterceptor:   inboundmiddleware.UnaryChain(unaryInbounds...),
-		unaryOutboundInterceptor:  outboundmiddleware.UnaryChain(unaryOutbounds...),
+		unaryOutboundInterceptor:  unaryOutbounds,
 		onewayInboundInterceptor:  inboundmiddleware.OnewayChain(onewayInbounds...),
-		onewayOutboundInterceptor: outboundmiddleware.OnewayChain(onewayOutbounds...),
+		onewayOutboundInterceptor: onewayOutbounds,
 	}
 }
 
@@ -368,9 +368,9 @@ type Transport struct {
 	ouboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
 
 	unaryInboundInterceptor   interceptor.UnaryInbound
-	unaryOutboundInterceptor  interceptor.UnaryOutbound
+	unaryOutboundInterceptor  []interceptor.UnaryOutbound
 	onewayInboundInterceptor  interceptor.OnewayInbound
-	onewayOutboundInterceptor interceptor.OnewayOutbound
+	onewayOutboundInterceptor []interceptor.OnewayOutbound
 }
 
 var _ transport.Transport = (*Transport)(nil)
