@@ -6,7 +6,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
-- No changes yet.
+### Changed
+- Hide grpc-accept-encoding header from an application code and don't allow to set it
+  Since the [grpc-go v1.45](https://github.com/grpc/grpc-go/pull/5180) header is always set,
+  and available for the application code, which can lead to unexpected behavior.
+  This is part of the [#2265](https://github.com/yarpc/yarpc-go/issues/2265), we just hide it while it's chip to do.
 
 ## [1.75.3] - 2024-12-04
 ### Added

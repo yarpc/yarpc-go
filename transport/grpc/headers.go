@@ -86,6 +86,9 @@ const (
 
 	baseContentType   = "application/grpc"
 	contentTypeHeader = "content-type"
+
+	// Other headers
+	grpcAcceptEncoding = "grpc-accept-encoding"
 )
 
 // TODO: there are way too many repeat calls to strings.ToLower
@@ -93,7 +96,9 @@ const (
 // transport.CanonicalizeHeaderKey
 
 func isReserved(header string) bool {
-	return strings.HasPrefix(strings.ToLower(header), "rpc-")
+	header = strings.ToLower(header)
+
+	return strings.HasPrefix(header, "rpc-") || header == grpcAcceptEncoding
 }
 
 // transportRequestToMetadata will populate all reserved and application headers
@@ -114,7 +119,7 @@ func transportRequestToMetadata(request *transport.Request) (metadata.MD, error)
 	return md, addApplicationHeaders(md, request.Headers)
 }
 
-// metadataToTransportRequest will populate the Request with all reserved and application
+// metadataToTransportRequest will populate the Request with all reserved (excluding grpc-accept-encoding) and application
 // headers into a new Request, only not setting the Body field.
 func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 	request := &transport.Request{
@@ -152,6 +157,8 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 			if request.Encoding == "" {
 				request.Encoding = transport.Encoding(getContentSubtype(value))
 			}
+		case grpcAcceptEncoding:
+			continue
 		default:
 			request.Headers = request.Headers.With(header, value)
 		}

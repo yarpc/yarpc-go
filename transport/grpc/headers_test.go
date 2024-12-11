@@ -48,6 +48,7 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				RoutingDelegateHeader, "example-routing-delegate",
 				EncodingHeader, "example-encoding",
 				CallerProcedureHeader, "example-caller-procedure",
+				grpcAcceptEncoding, "example-grpc-accept-encoding",
 				"foo", "bar",
 				"baz", "bat",
 			),
@@ -203,6 +204,7 @@ func TestIsReserved(t *testing.T) {
 	assert.True(t, isReserved(RoutingDelegateHeader))
 	assert.True(t, isReserved(EncodingHeader))
 	assert.True(t, isReserved("rpc-foo"))
+	assert.True(t, isReserved(grpcAcceptEncoding))
 }
 
 func TestMDReadWriterDuplicateKey(t *testing.T) {
