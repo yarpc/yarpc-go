@@ -151,17 +151,23 @@ func TestCallSuccessWithHTTP2(t *testing.T) {
 
 	httpTransport := NewTransport()
 	t.Cleanup(func() {
-		_ = httpTransport.Stop()
+		if err := httpTransport.Stop(); err != nil {
+			t.Logf("failed to stop transport: %v", err)
+		}
 	})
 
 	out := httpTransport.NewSingleOutbound(h1s.URL, UseHTTP2())
 	require.NoError(t, out.Start(), "failed to start outbound")
 	t.Cleanup(func() {
-		_ = out.Stop()
+		if err := out.Stop(); err != nil {
+			t.Logf("failed to stop outbound: %v", err)
+		}
+		out.client.CloseIdleConnections()
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	t.Cleanup(cancel)
+
 	res, err := out.Call(ctx, &transport.Request{
 		Caller:    "caller",
 		Service:   "service",
@@ -171,7 +177,9 @@ func TestCallSuccessWithHTTP2(t *testing.T) {
 	})
 	require.NoError(t, err)
 	t.Cleanup(func() {
-		_ = res.Body.Close()
+		if err := res.Body.Close(); err != nil {
+			t.Logf("failed to close response body: %v", err)
+		}
 	})
 
 	foo, ok := res.Headers.Get("foo")
