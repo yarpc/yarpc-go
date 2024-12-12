@@ -11,7 +11,9 @@ FILTER_GOVET := grep -v \
 # Regexes for 'staticcheck' rules to ignore
 FILTER_STATICCHECK := grep -v \
 	-e 'grpc.CallCustomCodec is deprecated: use ForceCodec instead' \
-	-e '"io/ioutil" has been deprecated since Go 1.19'
+	-e '"io/ioutil" has been deprecated since Go 1.19' \
+	-e 'yarpcStatus.Name is deprecated' \
+	-e 'status.Name is deprecated'
 
 ERRCHECK_FLAGS := -ignoretests
 ERRCHECK_EXCLUDES := \.Close\(\) \.Stop\(\) fmt\.Fprint

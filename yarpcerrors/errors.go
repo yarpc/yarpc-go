@@ -163,8 +163,9 @@ func (s *Status) Code() Code {
 
 // Name returns the name of the error for this Status.
 //
-// This is an empty string for all built-in YARPC errors. It may be customized
-// by using WithName.
+// This is an empty string for all built-in YARPC errors.
+//
+// Deprecated: Use only error codes to represent the type of the error.
 func (s *Status) Name() string {
 	if s == nil {
 		return ""
@@ -421,7 +422,7 @@ func ErrorCode(err error) Code {
 // ErrorName returns the name for the given error, or "" if the given
 // error is not a YARPC error created with NamedErrorf that has a non-empty name.
 //
-// Deprecated: Use FromError and Name instead.
+// Deprecated: Use only error codes to represent the type of the error.
 func ErrorName(err error) string {
 	return FromError(err).Name()
 }
@@ -443,7 +444,7 @@ func ErrorMessage(err error) string {
 // cannot start or end in a dash. If the name is something else, an error with
 // code CodeInternal will be returned.
 //
-// Deprecated: Use Newf and WithName instead.
+// Deprecated: Use only error codes to represent the type of the error.
 func NamedErrorf(name string, format string, args ...interface{}) error {
 	return Newf(CodeUnknown, format, args...).WithName(name)
 }
@@ -459,7 +460,7 @@ func NamedErrorf(name string, format string, args ...interface{}) error {
 // This function should not be used by server implementations, use the individual
 // error constructors instead. This should only be used by transport implementations.
 //
-// Deprecated: Use Newf and WithName instead.
+// Deprecated: Use only error codes to represent the type of the error.
 func FromHeaders(code Code, name string, message string) error {
 	return Newf(code, message).WithName(name)
 }
