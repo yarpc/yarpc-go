@@ -22,7 +22,6 @@ package tchannel
 
 import (
 	"bytes"
-	"go.uber.org/yarpc/internal/interceptor"
 	"io"
 	"sync"
 	"testing"
@@ -177,7 +176,7 @@ func TestCallSuccess(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
 	defer cancel()
-	res, err := out.DirectCall(
+	res, err := out.Call(
 		ctx,
 		&transport.Request{
 			Caller:    "caller",
@@ -230,7 +229,7 @@ func TestCallWithModifiedCallerName(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	res, err := out.DirectCall(
+	res, err := out.Call(
 		ctx,
 		&transport.Request{
 			Caller:    alternateCallerName, // newSingleOutbound uses "caller", this should override it
@@ -311,7 +310,7 @@ func TestCallFailures(t *testing.T) {
 
 			ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
 			defer cancel()
-			_, err := out.DirectCall(
+			_, err := out.Call(
 				ctx,
 				&transport.Request{
 					Caller:    "caller",
@@ -363,7 +362,7 @@ func TestApplicationError(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
 	defer cancel()
-	res, err := out.DirectCall(
+	res, err := out.Call(
 		ctx,
 		&transport.Request{
 			Caller:    "caller",
@@ -442,7 +441,7 @@ func TestCallWithoutStarting(t *testing.T) {
 	defer trans.Stop()
 	ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
 	defer cancel()
-	_, err := out.DirectCall(
+	_, err := out.Call(
 		ctx,
 		&transport.Request{
 			Caller:    "caller",
@@ -462,12 +461,12 @@ func TestOutboundNoRequest(t *testing.T) {
 	out, trans := newSingleOutbound(t, "localhost:4040")
 	defer out.Stop()
 	defer trans.Stop()
-	_, err := out.DirectCall(context.Background(), nil)
+	_, err := out.Call(context.Background(), nil)
 	wantErr := yarpcerrors.InvalidArgumentErrorf("request for tchannel outbound was nil")
 	assert.EqualError(t, err, wantErr.Error())
 }
 
-func newSingleOutbound(t *testing.T, serverAddr string) (interceptor.DirectUnaryOutbound, transport.Transport) {
+func newSingleOutbound(t *testing.T, serverAddr string) (transport.UnaryOutbound, transport.Transport) {
 	trans, err := NewTransport(ServiceName("caller"))
 	require.NoError(t, err)
 	require.NoError(t, trans.Start())
