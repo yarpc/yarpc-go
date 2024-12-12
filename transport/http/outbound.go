@@ -24,6 +24,9 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	opentracinglog "github.com/opentracing/opentracing-go/log"
+	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/interceptor/outboundinterceptor"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -34,7 +37,6 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	opentracinglog "github.com/opentracing/opentracing-go/log"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -144,6 +146,8 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 	}
 	o.client = client
 	o.sender = &transportSender{Client: client}
+	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
+	o.onewayCallWithInterceptor = outboundinterceptor.NewOnewayChain(o, t.onewayOutboundInterceptor)
 	return o
 }
 
@@ -194,7 +198,10 @@ func (t *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbo
 
 	chooser := peerchooser.NewSingle(hostport.PeerIdentifier(parsedURL.Host), t)
 	opts = append(opts, URLTemplate(uri))
-	return t.NewOutbound(chooser, opts...)
+	o := t.NewOutbound(chooser, opts...)
+	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
+	o.onewayCallWithInterceptor = outboundinterceptor.NewOnewayChain(o, t.onewayOutboundInterceptor)
+	return o
 }
 
 // Outbound sends YARPC requests over HTTP. It may be constructed using the
@@ -219,6 +226,9 @@ type Outbound struct {
 	destServiceName   string
 	client            *http.Client
 	tlsConfig         *tls.Config
+
+	unaryCallWithInterceptor  interceptor.UnaryOutboundChain
+	onewayCallWithInterceptor interceptor.OnewayOutboundChain
 }
 
 // TransportName is the transport name that will be set on `transport.Request` struct.
@@ -262,8 +272,13 @@ func (o *Outbound) IsRunning() bool {
 	return o.once.IsRunning()
 }
 
-// Call makes a HTTP request
+// Call implements UnaryOutbound
 func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
+	return o.unaryCallWithInterceptor.Next(ctx, treq)
+}
+
+// DirectCall makes a HTTP request
+func (o *Outbound) DirectCall(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
 	if treq == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil")
 	}
@@ -271,8 +286,13 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	return o.call(ctx, treq)
 }
 
-// CallOneway makes a oneway request
+// CallOneway implements UnaryOnewayOutbound
 func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
+	return o.onewayCallWithInterceptor.Next(ctx, treq)
+}
+
+// DirectCallOneway makes a oneway request
+func (o *Outbound) DirectCallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
 	if treq == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil")
 	}
