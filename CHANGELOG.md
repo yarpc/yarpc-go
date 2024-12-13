@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Columns in the HTML Outbounds table on the debug page now properly line up
   with header rows.
 
+### Changed
+- Allow multiple values for the header `grpc-accept-encoding`. Only one (random) value will be used anyway,
+  but no error will be returned.
+
 ## [1.75.3] - 2024-12-04
 ### Added
 - Noop resolver to use in clients with custom load balancing.
