@@ -26,11 +26,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/net/http2"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
@@ -53,9 +56,11 @@ var (
 	_ transport.UnaryOutbound              = (*Outbound)(nil)
 	_ transport.OnewayOutbound             = (*Outbound)(nil)
 	_ introspection.IntrospectableOutbound = (*Outbound)(nil)
-)
 
-var defaultURLTemplate, _ = url.Parse("http://localhost")
+	defaultURLTemplate, _       = url.Parse("http://localhost")
+	defaultHTTP2PingTimeout     = 10 * time.Second
+	defaultHTTP2ReadIdleTimeout = 15 * time.Second
+)
 
 // OutboundOption customizes an HTTP Outbound.
 type OutboundOption func(*Outbound)
@@ -69,6 +74,22 @@ func (OutboundOption) httpOption() {}
 func URLTemplate(template string) OutboundOption {
 	return func(o *Outbound) {
 		o.setURLTemplate(template)
+	}
+}
+
+// UseHTTP2 returns an OutboundOption that enables HTTP/2 support for the outbound.
+// This option configures the outbound to use HTTP/2 for all outbound requests.
+//
+// Example usage:
+//
+//	outbound := http.NewOutbound(chooser, http.UseHTTP2())
+//
+// Returns:
+//
+//	OutboundOption: A function that sets the UseHTTP2 field to true in the Outbound struct.
+func UseHTTP2() OutboundOption {
+	return func(o *Outbound) {
+		o.useHTTP2 = true
 	}
 }
 
@@ -132,19 +153,55 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 		opt(o)
 	}
 
-	client := t.client
-	if o.tlsConfig != nil {
-		client = createTLSClient(o)
-		// Create a copy of the url template to avoid scheme changes impacting
-		// other outbounds as the base url template is shared across http
-		// outbounds.
-		ut := *o.urlTemplate
-		ut.Scheme = "https"
-		o.urlTemplate = &ut
+	var client *http.Client
+	if o.useHTTP2 {
+		client = createHTTP2Client(o)
+	} else {
+		client = t.client
+		if o.tlsConfig != nil {
+			client = createTLSClient(o)
+			// Create a copy of the url template to avoid scheme changes impacting
+			// other outbounds as the base url template is shared across http
+			// outbounds.
+			ut := *o.urlTemplate
+			ut.Scheme = "https"
+			o.urlTemplate = &ut
+		}
 	}
 	o.client = client
 	o.sender = &transportSender{Client: client}
 	return o
+}
+
+func createHTTP2Client(o *Outbound) *http.Client {
+	if o.tlsConfig != nil {
+		return createHTTP2TLSClient(o)
+	}
+
+	// get default http1 transport from the client and use it to create http2 transport
+	http1Transport, ok := o.transport.client.Transport.(*http.Transport)
+	if !ok {
+		// This should not happen as default yarpc http.Client uses
+		// http.Transport and it's not configurable by the user.
+		panic(fmt.Sprintf("failed to create http2 client, provided http.Client transport type %T is not *http.Transport", o.transport.client.Transport))
+	}
+
+	return &http.Client{
+		Transport: &http2.Transport{
+			AllowHTTP: true,
+			DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
+				return http1Transport.DialContext(ctx, network, addr)
+			},
+			DisableCompression: http1Transport.DisableCompression,
+			IdleConnTimeout:    defaultIdleConnTimeout,
+			PingTimeout:        defaultHTTP2PingTimeout,
+			ReadIdleTimeout:    defaultHTTP2ReadIdleTimeout,
+		},
+	}
+}
+
+func createHTTP2TLSClient(o *Outbound) *http.Client {
+	panic("not implemented")
 }
 
 func createTLSClient(o *Outbound) *http.Client {
@@ -219,6 +276,8 @@ type Outbound struct {
 	destServiceName   string
 	client            *http.Client
 	tlsConfig         *tls.Config
+
+	useHTTP2 bool
 }
 
 // TransportName is the transport name that will be set on `transport.Request` struct.
