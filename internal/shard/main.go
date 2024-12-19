@@ -21,6 +21,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -40,7 +41,7 @@ func main() {
 
 func do(args []string, writer io.Writer) error {
 	if len(args) < 2 {
-		return fmt.Errorf(usage)
+		return errors.New(usage)
 	}
 	shardNum, err := strconv.Atoi(args[0])
 	if err != nil {

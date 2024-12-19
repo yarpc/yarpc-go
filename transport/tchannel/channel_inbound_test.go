@@ -115,7 +115,7 @@ func TestChannelInboundExistingMethods(t *testing.T) {
 		},
 	}, nil)
 
-	x, err := NewChannelTransport(WithChannel(ch))
+	x, err := NewChannelTransport(WithChannel(ch), ListenAddr("127.0.0.1:0"))
 	require.NoError(t, err)
 
 	i := x.NewInbound()
@@ -150,7 +150,7 @@ func TestChannelInboundMaskedMethods(t *testing.T) {
 		},
 	}, nil)
 
-	x, err := NewChannelTransport(WithChannel(ch))
+	x, err := NewChannelTransport(WithChannel(ch), ListenAddr("127.0.0.1:0"))
 	require.NoError(t, err)
 
 	// Override TChannel version of echo

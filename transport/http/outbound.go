@@ -41,6 +41,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
+	"go.uber.org/yarpc/internal/interceptor"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -283,7 +284,7 @@ func (o *Outbound) DirectCall(ctx context.Context, treq *transport.Request) (*tr
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil")
 	}
 
-	return o.call(ctx, treq)
+	return o.transport.unaryOutboundInterceptor.Call(ctx, treq, interceptor.UnaryOutboundFunc(o.call))
 }
 
 // CallOneway implements UnaryOnewayOutbound
@@ -297,6 +298,10 @@ func (o *Outbound) DirectCallOneway(ctx context.Context, treq *transport.Request
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil")
 	}
 
+	return o.transport.onewayOutboundInterceptor.CallOneway(ctx, treq, interceptor.OnewayOutboundFunc(o.callOneway))
+}
+
+func (o *Outbound) callOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
 	// res is used to close the response body to avoid memory/connection leak
 	// even when the response body is empty
 	res, err := o.call(ctx, treq)
@@ -323,6 +328,7 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	if err != nil {
 		return nil, err
 	}
+	// TODO: remove tracing instrumentation at transport layer completely
 	ctx, hreq, span, err := o.withOpentracingSpan(ctx, hreq, treq, start)
 	if err != nil {
 		return nil, err
@@ -659,6 +665,13 @@ func (o *Outbound) doWithPeer(
 			return nil, yarpcerrors.Newf(
 				yarpcerrors.CodeDeadlineExceeded,
 				"client timeout for procedure %q of service %q after %v",
+				treq.Procedure, treq.Service, end.Sub(start))
+		}
+		if err == context.Canceled {
+			end := time.Now()
+			return nil, yarpcerrors.Newf(
+				yarpcerrors.CodeCancelled,
+				"client canceled request for procedure %q of service %q after %v",
 				treq.Procedure, treq.Service, end.Sub(start))
 		}
 

@@ -43,6 +43,7 @@ func TestNilCall(t *testing.T) {
 	assert.Equal(t, "", call.RoutingDelegate())
 	assert.Equal(t, "", call.CallerProcedure())
 	assert.Equal(t, "", call.Header("foo"))
+	assert.Equal(t, "", call.OriginalHeader("foo"))
 	assert.Empty(t, call.HeaderNames())
 	assert.Nil(t, call.OriginalHeaders())
 
@@ -76,6 +77,8 @@ func TestReadFromRequest(t *testing.T) {
 	assert.Equal(t, "rk", call.RoutingKey())
 	assert.Equal(t, "rd", call.RoutingDelegate())
 	assert.Equal(t, "bar", call.Header("foo"))
+	assert.Equal(t, "bar", call.OriginalHeader("foo"))
+	assert.Equal(t, "Bar", call.OriginalHeader("Foo"))
 	assert.Equal(t, map[string]string{"Foo": "Bar", "foo": "bar"}, call.OriginalHeaders())
 	assert.Equal(t, "cp", call.CallerProcedure())
 	assert.Len(t, call.HeaderNames(), 1)
@@ -113,6 +116,8 @@ func TestReadFromRequestMeta(t *testing.T) {
 	assert.Equal(t, "rd", call.RoutingDelegate())
 	assert.Equal(t, "cp", call.CallerProcedure())
 	assert.Equal(t, "bar", call.Header("foo"))
+	assert.Equal(t, "bar", call.OriginalHeader("foo"))
+	assert.Equal(t, "Bar", call.OriginalHeader("Foo"))
 	assert.Equal(t, map[string]string{"Foo": "Bar", "foo": "bar"}, call.OriginalHeaders())
 	assert.Len(t, call.HeaderNames(), 1)
 

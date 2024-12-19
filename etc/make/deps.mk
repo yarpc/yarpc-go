@@ -12,12 +12,13 @@ GEN_GO_BIN_DEPS = \
 # automatically and must be requested by $(BIN)/$(basename importPath).
 
 THRIFT_VERSION := 1.0.0-dev
-PROTOC_VERSION := 3.5.1
+PROTOC_VERSION := 3.15.0
 PROGO_GRPC_VERSION := 1.2.0
 RAGEL_VERSION := 6.10
 ERRCHECK_VERSION := 1.7.0
 GOLINT_VERSION := 0.0.0-20210508222113-6edffad5e616
-STATICHCHECK_VERSION := 0.4.7
+STATICHCHECK_VERSION := 0.5.1
+GOIMPORTS_VERSION := 0.24.0
 
 THRIFT_OS := $(UNAME_OS)
 PROTOC_OS := $(UNAME_OS)
@@ -27,10 +28,18 @@ THRIFT_ARCH := $(UNAME_ARCH)
 PROTOC_ARCH := $(UNAME_ARCH)
 RAGEL_ARCH := $(UNAME_ARCH)
 
+# Use the x86_64 version on arm64 macs.
+ifeq ($(UNAME_OS),Darwin)
+ifeq ($(UNAME_ARCH),arm64)
+THRIFT_ARCH := x86_64
+RAGEL_ARCH := x86_64
+PROTOC_ARCH := x86_64
+endif
+endif
+
+# Protoc: use "osx" link for macos
 ifeq ($(UNAME_OS),Darwin)
 PROTOC_OS := osx
-else
-PROTOC_OS = linux
 endif
 
 THRIFT_LIB = $(LIB)/thrift-$(THRIFT_VERSION)
@@ -66,7 +75,7 @@ $(THRIFT): $(THRIFT_TAR)
 
 $(PROTOC_ZIP):
 	@mkdir -p $(PROTOC_LIB)
-	curl -L "https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(PROTOC_OS)-$(PROTOC_ARCH).zip" > $(PROTOC_ZIP)
+	curl -L "https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(PROTOC_OS)-$(PROTOC_ARCH).zip" > $(PROTOC_ZIP)
 
 $(PROTOC): $(PROTOC_ZIP)
 	@mkdir -p $(BIN)
@@ -88,6 +97,10 @@ $(BIN)/golint:
 $(BIN)/staticcheck:
 	@mkdir -p $(BIN)
 	GOBIN=$(BIN) go install "honnef.co/go/tools/cmd/staticcheck@v$(STATICHCHECK_VERSION)"
+
+$(BIN)/goimports:
+	@mkdir -p $(BIN)
+	GOBIN=$(BIN) go install "golang.org/x/tools/cmd/goimports@v$(GOIMPORTS_VERSION)"
 
 define generatedeprule
 GEN_BINS += $(BIN)/$(shell basename $1)
@@ -112,6 +125,7 @@ THRIFTRW = $(BIN)/thriftrw
 GOLINT = $(BIN)/golint
 ERRCHECK = $(BIN)/errcheck
 STATICCHECK = $(BIN)/staticcheck
+GOIMPORTS = $(BIN)/goimports
 
 .PHONY: predeps
 predeps: $(THRIFT) $(PROTOC) $(RAGEL)

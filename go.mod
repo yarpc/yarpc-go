@@ -33,8 +33,8 @@ require (
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616
 	golang.org/x/net v0.27.0
 	golang.org/x/tools v0.22.0
-	google.golang.org/genproto v0.0.0-20221014173430-6e2ab493f96b
-	google.golang.org/grpc v1.50.0
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d
+	google.golang.org/grpc v1.59.0
 	google.golang.org/protobuf v1.34.1
 	gopkg.in/yaml.v2 v2.4.0
 	honnef.co/go/tools v0.4.3
@@ -45,14 +45,12 @@ require (
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cactus/go-statsd-client/statsd v0.0.0-20191106001114-12b4e2b38748 // indirect
-	github.com/cespare/xxhash/v2 v2.1.1 // indirect
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/structtag v1.2.0 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/jessevdk/go-flags v1.5.0 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.4.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
@@ -71,6 +69,3 @@ require (
 	golang.org/x/text v0.16.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-// google.golang.org/genproto upgrade leads to grpc upgrade, which we're not ready for yet.
-replace google.golang.org/grpc => google.golang.org/grpc v1.44.0

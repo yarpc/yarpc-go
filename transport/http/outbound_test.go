@@ -40,6 +40,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/peer/peertest"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
@@ -276,6 +277,30 @@ func TestCallOneWayFailWithoutDeadline(t *testing.T) {
 		Body:      bytes.NewReader([]byte("world")),
 	})
 	require.Error(t, err)
+	require.Nil(t, ack)
+}
+
+func TestCallOneWayFailWithCtxCancelled(t *testing.T) {
+	successServer := httptest.NewServer(nil)
+	defer successServer.Close()
+
+	httpTransport := NewTransport()
+	defer httpTransport.Stop()
+	out := httpTransport.NewSingleOutbound(successServer.URL)
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	cancel() // Cancel the context immediately
+	ack, err := out.CallOneway(ctx, &transport.Request{
+		Caller:    "caller",
+		Service:   "service",
+		Encoding:  raw.Encoding,
+		Procedure: "hello",
+		Body:      bytes.NewReader([]byte("world")),
+	})
+	require.Error(t, err)
+	assert.Equal(t, yarpcerrors.CodeCancelled, yarpcerrors.FromError(err).Code())
 	require.Nil(t, ack)
 }
 
@@ -772,7 +797,11 @@ func TestCallResponseCloseError(t *testing.T) {
 				}
 			}),
 		},
-		tracer: opentracing.GlobalTracer(),
+		tracer:                    opentracing.GlobalTracer(),
+		unaryInboundInterceptor:   middleware.NopUnaryInbound,
+		unaryOutboundInterceptor:  middleware.NopUnaryOutbound,
+		onewayInboundInterceptor:  middleware.NopOnewayInbound,
+		onewayOutboundInterceptor: middleware.NopOnewayOutbound,
 	}
 	ctrl := gomock.NewController(t)
 	chooser := peertest.NewMockChooser(ctrl)
@@ -811,7 +840,11 @@ func TestCallOneWayResponseCloseError(t *testing.T) {
 				}
 			}),
 		},
-		tracer: opentracing.GlobalTracer(),
+		tracer:                    opentracing.GlobalTracer(),
+		unaryInboundInterceptor:   middleware.NopUnaryInbound,
+		unaryOutboundInterceptor:  middleware.NopUnaryOutbound,
+		onewayInboundInterceptor:  middleware.NopOnewayInbound,
+		onewayOutboundInterceptor: middleware.NopOnewayOutbound,
 	}
 	ctrl := gomock.NewController(t)
 	chooser := peertest.NewMockChooser(ctrl)
