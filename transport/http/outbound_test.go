@@ -25,6 +25,9 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"github.com/opentracing/opentracing-go"
+	"go.uber.org/yarpc/peer/abstractpeer"
+	"go.uber.org/yarpc/pkg/lifecycle"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -35,7 +38,6 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/middleware"
@@ -43,8 +45,6 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/testtime"
-	"go.uber.org/yarpc/peer/abstractpeer"
-	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -823,7 +823,7 @@ func TestCallResponseCloseError(t *testing.T) {
 	require.NoError(t, err)
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err = o.Call(ctx, &transport.Request{
+	_, err = o.DirectCall(ctx, &transport.Request{
 		Service: "Service",
 	})
 	require.Errorf(t, err, "Received unexpected error:code:internal message:test error")
@@ -866,7 +866,7 @@ func TestCallOneWayResponseCloseError(t *testing.T) {
 	require.NoError(t, err)
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err = o.CallOneway(ctx, &transport.Request{
+	_, err = o.DirectCallOneway(ctx, &transport.Request{
 		Service: "Service",
 	})
 	require.Errorf(t, err, "Received unexpected error:code:internal message:test error")
