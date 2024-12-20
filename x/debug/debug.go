@@ -142,6 +142,7 @@ var (
 			<th></th>
 			<th></th>
 			<th></th>
+			<th></th>
 			<th>Name</th>
 			<th>State</th>
 			<th>Peers</th>

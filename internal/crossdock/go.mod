@@ -19,13 +19,13 @@ require (
 	go.uber.org/yarpc v1.42.1
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.27.0
-	google.golang.org/grpc v1.50.0
+	google.golang.org/grpc v1.59.0
 )
 
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/cespare/xxhash/v2 v2.1.1 // indirect
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gogo/googleapis v1.4.1 // indirect
 	github.com/gogo/status v1.1.0 // indirect
@@ -50,7 +50,7 @@ require (
 	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect
-	google.golang.org/genproto v0.0.0-20221014173430-6e2ab493f96b // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -65,5 +65,3 @@ replace go.uber.org/yarpc => ../..
 // 'v' prefix for their SemVer releases, which is incompatible with Go
 // modules.
 replace github.com/apache/thrift => github.com/apache/thrift v0.0.0-20161221203622-b2a4d4ae21c7
-
-replace google.golang.org/grpc => google.golang.org/grpc v1.44.0

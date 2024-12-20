@@ -30,7 +30,7 @@ import (
 	"go.uber.org/yarpc/transport/http"
 )
 
-var spec = integrationtest.TransportSpec{
+var http1spec = integrationtest.TransportSpec{
 	Identify: hostport.Identify,
 	NewServerTransport: func(t *testing.T, addr string) peer.Transport {
 		return http.NewTransport()
@@ -42,7 +42,8 @@ var spec = integrationtest.TransportSpec{
 		return x.(*http.Transport).NewOutbound(pc)
 	},
 	NewInbound: func(x peer.Transport, addr string) transport.Inbound {
-		return x.(*http.Transport).NewInbound(addr)
+		// disable http2
+		return x.(*http.Transport).NewInbound(addr, http.DisableHTTP2(true))
 	},
 	Addr: func(x peer.Transport, ib transport.Inbound) string {
 		return ib.(*http.Inbound).Addr().String()
@@ -50,5 +51,30 @@ var spec = integrationtest.TransportSpec{
 }
 
 func TestIntegrationWithHTTP(t *testing.T) {
-	spec.Test(t)
+	http1spec.Test(t)
+}
+
+var http2spec = integrationtest.TransportSpec{
+	Identify: hostport.Identify,
+	NewServerTransport: func(t *testing.T, addr string) peer.Transport {
+		return http.NewTransport()
+	},
+	NewClientTransport: func(t *testing.T) peer.Transport {
+		// TODO: will update this once we add client support
+		return http.NewTransport()
+	},
+	NewUnaryOutbound: func(x peer.Transport, pc peer.Chooser) transport.UnaryOutbound {
+		return x.(*http.Transport).NewOutbound(pc)
+	},
+	NewInbound: func(x peer.Transport, addr string) transport.Inbound {
+		// we don't disable http2
+		return x.(*http.Transport).NewInbound(addr)
+	},
+	Addr: func(x peer.Transport, ib transport.Inbound) string {
+		return ib.(*http.Inbound).Addr().String()
+	},
+}
+
+func TestIntegrationWithHTTP2(t *testing.T) {
+	http2spec.Test(t)
 }

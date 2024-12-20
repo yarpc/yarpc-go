@@ -35,6 +35,7 @@ import (
 )
 
 var (
+	_ transport.Namer                      = (*ChannelOutbound)(nil)
 	_ transport.UnaryOutbound              = (*ChannelOutbound)(nil)
 	_ introspection.IntrospectableOutbound = (*ChannelOutbound)(nil)
 )

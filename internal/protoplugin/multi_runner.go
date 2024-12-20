@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
+	plugin_go "github.com/gogo/protobuf/protoc-gen-gogo/plugin"
 	"go.uber.org/multierr"
 )
 

@@ -31,7 +31,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/protobuf/internal/testpb/v2"
-	"go.uber.org/yarpc/encoding/protobuf/v2"
+	v2 "go.uber.org/yarpc/encoding/protobuf/v2"
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"

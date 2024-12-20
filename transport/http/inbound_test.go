@@ -23,6 +23,7 @@ package http
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net"
@@ -30,6 +31,8 @@ import (
 	"os"
 	"syscall"
 	"testing"
+
+	"golang.org/x/net/http2"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -376,6 +379,83 @@ func TestRequestAfterStop(t *testing.T) {
 
 	_, _, err = httpGet(t, url)
 	assert.Error(t, err, "requests should fail once inbound is stopped")
+}
+
+func TestInboundWithHTTPVersion(t *testing.T) {
+	t.Run("HTTP1", func(t *testing.T) {
+		// Create a new transport that supports both HTTP/1.1 and HTTP/2
+		testTransport := NewTransport()
+		inbound := testTransport.NewInbound("127.0.0.1:8888")
+
+		dispatcher := yarpc.NewDispatcher(yarpc.Config{
+			Name:     "myservice",
+			Inbounds: yarpc.Inbounds{inbound},
+		})
+		require.NoError(t, dispatcher.Start(), "failed to start dispatcher")
+		t.Cleanup(func() { _ = dispatcher.Stop() })
+
+		// Make a request to the /health endpoint.
+		res, err := http.Get("http://127.0.0.1:8888/health")
+		require.Nil(t, err, "got error making request: %v", err)
+		t.Cleanup(func() { _ = res.Body.Close() })
+	})
+
+	t.Run("HTTP2", func(t *testing.T) {
+		// Create a new transport that supports both HTTP/1.1 and HTTP/2
+		testTransport := NewTransport()
+		inbound := testTransport.NewInbound("127.0.0.1:8888")
+
+		dispatcher := yarpc.NewDispatcher(yarpc.Config{
+			Name:     "myservice",
+			Inbounds: yarpc.Inbounds{inbound},
+		})
+		require.NoError(t, dispatcher.Start(), "failed to start dispatcher")
+		t.Cleanup(func() { _ = dispatcher.Stop() })
+
+		client := http.Client{
+			Transport: &http2.Transport{
+				AllowHTTP: true,
+				DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
+					var d net.Dialer
+					return d.DialContext(ctx, network, addr)
+				},
+			},
+		}
+		t.Cleanup(client.CloseIdleConnections)
+		// Make a request to the /health endpoint.
+		res, err := client.Get("http://127.0.0.1:8888/health")
+		require.Nil(t, err, "got error making request: %v", err)
+		t.Cleanup(func() { _ = res.Body.Close() })
+	})
+
+	t.Run("HTTP2 should fail when disabledHTTP2 flag is set", func(t *testing.T) {
+		// Create a new transport that only supports HTTP/1.1
+		testTransport := NewTransport()
+		// Disable HTTP/2
+		inbound := testTransport.NewInbound("127.0.0.1:8888", DisableHTTP2(true))
+
+		dispatcher := yarpc.NewDispatcher(yarpc.Config{
+			Name:     "myservice",
+			Inbounds: yarpc.Inbounds{inbound},
+		})
+		require.NoError(t, dispatcher.Start(), "failed to start dispatcher")
+		t.Cleanup(func() { _ = dispatcher.Stop() })
+
+		client := http.Client{
+			Transport: &http2.Transport{
+				AllowHTTP: true,
+				DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
+					var d net.Dialer
+					return d.DialContext(ctx, network, addr)
+				},
+			},
+		}
+		t.Cleanup(client.CloseIdleConnections)
+		// Make a request to the /health endpoint.
+		res, err := client.Get("http://127.0.0.1:8888/health")
+		require.Error(t, err, "expected error making request")
+		require.Nil(t, res, "expected response to be nil")
+	})
 }
 
 func httpGet(t *testing.T, url string) (*http.Response, string, error) {

@@ -174,6 +174,8 @@ type InboundConfig struct {
 	ShutdownTimeout *time.Duration `config:"shutdownTimeout"`
 	// TLS configuration of the inbound.
 	TLSConfig TLSConfig `config:"tls"`
+	// DisableHTTP2 configure to reject http2 requests.
+	DisableHTTP2 bool `config:"disableHTTP2"`
 }
 
 // TLSConfig specifies the TLS configuration of the HTTP inbound.
@@ -201,6 +203,8 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 		}
 		inboundOptions = append(inboundOptions, ShutdownTimeout(*ic.ShutdownTimeout))
 	}
+
+	inboundOptions = append(inboundOptions, DisableHTTP2(ic.DisableHTTP2))
 
 	return t.(*Transport).NewInbound(ic.Address, inboundOptions...), nil
 }

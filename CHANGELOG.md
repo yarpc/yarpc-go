@@ -6,7 +6,37 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
-- No changes yet.
+### Fixed
+- Columns in the HTML Outbounds table on the debug page now properly line up
+  with header rows.
+
+## [1.75.3] - 2024-12-04
+### Added
+- Noop resolver to use in clients with custom load balancing.
+
+
+## [1.75.2] - 2024-11-19
+### Added
+- HTTP2 server support for the HTTP inbound.
+  - The HTTP inbound now supports HTTP2 connections as well by default.
+  - Inbound config option to disable HTTP2 server support (this will only allow HTTP1.1 connections).
+
+## [1.75.1] - 2024-11-19
+### Changed
+- Updated grpc-go to v1.59.0
+
+## [1.75.0] - 2024-10-15
+### Added
+- Added multiaddress passthrough resolver
+- Added component tag to tracing spans
+### Fixed
+- Return correct error code for ctx Cancelled error in http outbound.
+- Make tchannel outbound satisfy Namer interface
+- Bump staticcheck version to v0.5.1 which support full support for iterators / range-over-func in go@1.23
+
+## [1.73.2] - 2024-09-09
+### Added
+- `OriginalHeader` accessor in `encoding.Call` to get an original header value for a request from context object with zero-copy, as opposed to accessing it via `OriginalHeaders()`
 
 ## [1.73.1] - 2024-08-26
 ### Changed
@@ -1515,7 +1545,12 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.73.1...HEAD
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.75.3...HEAD
+[1.75.3]: https://github.com/yarpc/yarpc-go/compare/v1.75.2...1.75.3
+[1.75.2]: https://github.com/yarpc/yarpc-go/compare/v1.75.1...1.75.2
+[1.75.1]: https://github.com/yarpc/yarpc-go/compare/v1.75.0...1.75.1
+[1.75.0]: https://github.com/yarpc/yarpc-go/compare/v1.73.2...1.75.0
+[1.73.2]: https://github.com/yarpc/yarpc-go/compare/v1.73.1...1.73.2
 [1.73.1]: https://github.com/yarpc/yarpc-go/compare/v1.73.0...1.73.1
 [1.73.0]: https://github.com/yarpc/yarpc-go/compare/v1.72.1...1.73.0
 [1.72.1]: https://github.com/yarpc/yarpc-go/compare/v1.72.0...1.72.1
