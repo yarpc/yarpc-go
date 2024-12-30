@@ -23,10 +23,6 @@ package grpc
 import (
 	"context"
 	"crypto/tls"
-	"go.uber.org/yarpc/internal/inboundmiddleware"
-	"go.uber.org/yarpc/internal/interceptor"
-	"go.uber.org/yarpc/internal/outboundmiddleware"
-	"go.uber.org/yarpc/internal/tracinginterceptor"
 	"math"
 	"net"
 
@@ -36,6 +32,9 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	intbackoff "go.uber.org/yarpc/internal/backoff"
+	"go.uber.org/yarpc/internal/inboundmiddleware"
+	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/tracinginterceptor"
 	"go.uber.org/yarpc/transport/internal/tls/dialer"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -309,9 +308,9 @@ type transportOptions struct {
 	serverMaxHeaderListSize   *uint32
 	clientMaxHeaderListSize   *uint32
 	unaryInboundInterceptor   interceptor.UnaryInbound
-	unaryOutboundInterceptor  interceptor.UnaryOutbound
+	unaryOutboundInterceptor  []interceptor.UnaryOutbound
 	streamInboundInterceptor  interceptor.StreamInbound
-	streamOutboundInterceptor interceptor.StreamOutbound
+	streamOutboundInterceptor []interceptor.StreamOutbound
 }
 
 func newTransportOptions(options []TransportOption) *transportOptions {
@@ -333,10 +332,8 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 	}
 
 	var (
-		unaryInbounds   []interceptor.UnaryInbound
-		unaryOutbounds  []interceptor.UnaryOutbound
-		streamInbounds  []interceptor.StreamInbound
-		streamOutbounds []interceptor.StreamOutbound
+		unaryInbounds  []interceptor.UnaryInbound
+		streamInbounds []interceptor.StreamInbound
 	)
 	if transportOptions.tracingInterceptorEnabled {
 		ti := tracinginterceptor.New(tracinginterceptor.Params{
@@ -344,16 +341,15 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 			Transport: TransportName,
 		})
 		unaryInbounds = append(unaryInbounds, ti)
-		unaryOutbounds = append(unaryOutbounds, ti)
 		streamInbounds = append(streamInbounds, ti)
-		streamOutbounds = append(streamOutbounds, ti)
+
+		transportOptions.unaryOutboundInterceptor = []interceptor.UnaryOutbound{ti}
+		transportOptions.streamOutboundInterceptor = []interceptor.StreamOutbound{ti}
 		transportOptions.tracer = opentracing.NoopTracer{}
 	}
 
 	transportOptions.unaryInboundInterceptor = inboundmiddleware.UnaryChain(unaryInbounds...)
-	transportOptions.unaryOutboundInterceptor = outboundmiddleware.UnaryChain(unaryOutbounds...)
 	transportOptions.streamInboundInterceptor = inboundmiddleware.StreamChain(streamInbounds...)
-	transportOptions.streamOutboundInterceptor = outboundmiddleware.StreamChain(streamOutbounds...)
 	return transportOptions
 }
 

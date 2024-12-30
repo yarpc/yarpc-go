@@ -23,11 +23,46 @@ package interceptor
 import (
 	"context"
 
-	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 )
 
 type (
+	// UnaryOutboundChain defines the interface for a chain of unary outbound requests.
+	// It provides methods to invoke the next outbound in the chain with the given context
+	// and request, and to retrieve the outbound component of the chain.
+	//
+	// Next: Executes the next outbound request in the chain with the provided context and request,
+	//       returning the response and any error encountered during the process.
+	// Outbound: Retrieves the outbound component of the chain, allowing for further inspection or manipulation.
+	UnaryOutboundChain interface {
+		Next(ctx context.Context, request *transport.Request) (*transport.Response, error)
+		Outbound() Outbound
+	}
+
+	// OnewayOutboundChain defines the interface for a chain of one-way outbound requests.
+	// It provides methods to invoke the next outbound in the chain with the given context
+	// and request, and to retrieve the outbound component of the chain.
+	//
+	// Next: Executes the next one-way outbound request in the chain with the provided context and request,
+	//       returning an acknowledgment and any error encountered during the process.
+	// Outbound: Retrieves the outbound component of the chain, allowing for further inspection or manipulation.
+	OnewayOutboundChain interface {
+		Next(ctx context.Context, request *transport.Request) (transport.Ack, error)
+		Outbound() Outbound
+	}
+
+	// StreamOutboundChain defines the interface for a chain of streaming outbound requests.
+	// It provides methods to invoke the next outbound in the chain with the given context
+	// and request, and to retrieve the outbound component of the chain.
+	//
+	// Next: Executes the next streaming outbound request in the chain with the provided context and request,
+	//       returning a client stream and any error encountered during the process.
+	// Outbound: Retrieves the outbound component of the chain, allowing for further inspection or manipulation.
+	StreamOutboundChain interface {
+		Next(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error)
+		Outbound() Outbound
+	}
+
 	// UnaryOutbound defines transport interceptor for `UnaryOutbound`s.
 	//
 	// UnaryOutbound interceptor MAY do zero or more of the following: change the
@@ -35,11 +70,13 @@ type (
 	// returned error, call the given outbound zero or more times.
 	//
 	// UnaryOutbound interceptor MUST always return a non-nil Response or error,
-	// and they MUST be thread-safe
+	// and they MUST be thread-safe.
 	//
 	// UnaryOutbound interceptor is re-used across requests and MAY be called
 	// multiple times on the same request.
-	UnaryOutbound = middleware.UnaryOutbound
+	UnaryOutbound interface {
+		Call(ctx context.Context, request *transport.Request, out UnaryOutboundChain) (*transport.Response, error)
+	}
 
 	// OnewayOutbound defines transport interceptor for `OnewayOutbound`s.
 	//
@@ -52,7 +89,9 @@ type (
 	//
 	// OnewayOutbound interceptor is re-used across requests and MAY be called
 	// multiple times on the same request.
-	OnewayOutbound = middleware.OnewayOutbound
+	OnewayOutbound interface {
+		CallOneway(ctx context.Context, request *transport.Request, out OnewayOutboundChain) (transport.Ack, error)
+	}
 
 	// StreamOutbound defines transport interceptor for `StreamOutbound`s.
 	//
@@ -61,99 +100,130 @@ type (
 	// returned error, call the given outbound zero or more times.
 	//
 	// StreamOutbound interceptor MUST always return a non-nil Stream or error,
-	// and they MUST be thread-safe
+	// and they MUST be thread-safe.
 	//
 	// StreamOutbound interceptors is re-used across requests and MAY be called
 	// multiple times on the same request.
-	StreamOutbound = middleware.StreamOutbound
+	StreamOutbound interface {
+		CallStream(ctx context.Context, req *transport.StreamRequest, out StreamOutboundChain) (*transport.ClientStream, error)
+	}
 )
 
-var (
-	_ transport.UnaryOutbound  = UnaryOutboundFunc(nil)
-	_ transport.OnewayOutbound = OnewayOutboundFunc(nil)
-	_ transport.StreamOutbound = StreamOutboundFunc(nil)
-)
+// Outbound is the common interface for all outbounds.
+//
+// Outbounds should also implement the Namer interface so that YARPC can
+// properly update the Request.Transport field.
+type Outbound interface {
+	transport.Lifecycle
 
-// UnaryOutboundFunc defines a function type that implements the UnaryOutbound interface.
-type UnaryOutboundFunc func(context.Context, *transport.Request) (*transport.Response, error)
-
-// Call calls the UnaryOutbound function.
-func (f UnaryOutboundFunc) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	return f(ctx, req)
+	// Transports returns the transports that used by this outbound, so they
+	// can be collected for lifecycle management, typically by a Dispatcher.
+	//
+	// Though most outbounds only use a single transport, composite outbounds
+	// may use multiple transport protocols, particularly for shadowing traffic
+	// across multiple transport protocols during a transport protocol
+	// migration.
+	Transports() []transport.Transport
 }
 
-// Start starts the UnaryOutbound function. This is a no-op in this implementation.
-func (f UnaryOutboundFunc) Start() error {
-	return nil
+// DirectUnaryOutbound is a transport that knows how to send unary requests for procedure
+// calls.
+type DirectUnaryOutbound interface {
+	Outbound
+
+	// DirectCall is called without interceptor.
+	DirectCall(ctx context.Context, request *transport.Request) (*transport.Response, error)
 }
 
-// Stop stops the UnaryOutbound function. This is a no-op in this implementation.
-func (f UnaryOutboundFunc) Stop() error {
-	return nil
+// DirectOnewayOutbound defines a transport outbound for oneway requests
+// that does not involve any interceptors.
+type DirectOnewayOutbound interface {
+	Outbound
+
+	// DirectCallOneway is called without interceptor.
+	DirectCallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error)
 }
 
-// IsRunning returns whether the UnaryOutbound function is running. This is a no-op in this implementation.
-func (f UnaryOutboundFunc) IsRunning() bool {
-	return false
+// DirectStreamOutbound defines a transport outbound for streaming requests
+// that does not involve any interceptors.
+type DirectStreamOutbound interface {
+	Outbound
+
+	// DirectCallStream is called without interceptor.
+	DirectCallStream(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error)
 }
 
-// Transports returns the transports used by the UnaryOutbound function. This is a no-op in this implementation.
-func (f UnaryOutboundFunc) Transports() []transport.Transport {
-	return nil
+type nopUnaryOutbound struct{}
+
+func (nopUnaryOutbound) Call(ctx context.Context, request *transport.Request, out UnaryOutboundChain) (*transport.Response, error) {
+	return out.Next(ctx, request)
 }
 
-// OnewayOutboundFunc defines a function type that implements the OnewayOutbound interface.
-type OnewayOutboundFunc func(context.Context, *transport.Request) (transport.Ack, error)
+// NopUnaryOutbound is a unary outbound middleware that does not do
+// anything special. It simply calls the underlying UnaryOutbound.
+var NopUnaryOutbound UnaryOutbound = nopUnaryOutbound{}
 
-// CallOneway calls the OnewayOutbound function.
-func (f OnewayOutboundFunc) CallOneway(ctx context.Context, req *transport.Request) (transport.Ack, error) {
-	return f(ctx, req)
+type nopOnewayOutbound struct{}
+
+func (nopOnewayOutbound) CallOneway(ctx context.Context, request *transport.Request, out OnewayOutboundChain) (transport.Ack, error) {
+	return out.Next(ctx, request)
 }
 
-// Start starts the OnewayOutbound function. This is a no-op in this implementation.
-func (f OnewayOutboundFunc) Start() error {
-	return nil
+// NopOnewayOutbound is an oneway outbound middleware that does not do
+// anything special. It simply calls the underlying OnewayOutbound.
+var NopOnewayOutbound OnewayOutbound = nopOnewayOutbound{}
+
+type nopStreamOutbound struct{}
+
+func (nopStreamOutbound) CallStream(ctx context.Context, requestMeta *transport.StreamRequest, out StreamOutboundChain) (*transport.ClientStream, error) {
+	return out.Next(ctx, requestMeta)
 }
 
-// Stop stops the OnewayOutbound function. This is a no-op in this implementation.
-func (f OnewayOutboundFunc) Stop() error {
-	return nil
+// NopStreamOutbound is a stream outbound middleware that does not do
+// anything special. It simply calls the underlying StreamOutbound.
+var NopStreamOutbound StreamOutbound = nopStreamOutbound{}
+
+// ApplyUnaryOutbound applies the given UnaryOutbound interceptor to the given DirectUnaryOutbound transport.
+func ApplyUnaryOutbound(uo UnaryOutboundChain, i UnaryOutbound) transport.UnaryOutbound {
+	return unaryOutboundWithInterceptor{uo: uo, i: i}
 }
 
-// IsRunning returns whether the OnewayOutbound function is running. This is a no-op in this implementation.
-func (f OnewayOutboundFunc) IsRunning() bool {
-	return false
+// ApplyOnewayOutbound applies the given OnewayOutbound interceptor to the given DirectOnewayOutbound transport.
+func ApplyOnewayOutbound(oo OnewayOutboundChain, i OnewayOutbound) transport.OnewayOutbound {
+	return onewayOutboundWithInterceptor{oo: oo, i: i}
 }
 
-// Transports returns the transports used by the OnewayOutbound function. This is a no-op in this implementation.
-func (f OnewayOutboundFunc) Transports() []transport.Transport {
-	return nil
+// ApplyStreamOutbound applies the given StreamOutbound interceptor to the given DirectStreamOutbound transport.
+func ApplyStreamOutbound(so StreamOutboundChain, i StreamOutbound) transport.StreamOutbound {
+	return streamOutboundWithInterceptor{so: so, i: i}
 }
 
-// StreamOutboundFunc defines a function type that implements the StreamOutbound interface.
-type StreamOutboundFunc func(context.Context, *transport.StreamRequest) (*transport.ClientStream, error)
-
-// CallStream calls the StreamOutbound function.
-func (f StreamOutboundFunc) CallStream(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error) {
-	return f(ctx, req)
+type unaryOutboundWithInterceptor struct {
+	transport.Outbound
+	uo UnaryOutboundChain
+	i  UnaryOutbound
 }
 
-// Start starts the StreamOutbound function. This is a no-op in this implementation.
-func (f StreamOutboundFunc) Start() error {
-	return nil
+func (uoc unaryOutboundWithInterceptor) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+	return uoc.i.Call(ctx, request, uoc.uo)
 }
 
-// Stop stops the StreamOutbound function. This is a no-op in this implementation.
-func (f StreamOutboundFunc) Stop() error {
-	return nil
+type onewayOutboundWithInterceptor struct {
+	transport.Outbound
+	oo OnewayOutboundChain
+	i  OnewayOutbound
 }
 
-// IsRunning returns whether the StreamOutbound function is running. This is a no-op in this implementation.
-func (f StreamOutboundFunc) IsRunning() bool {
-	return false
+func (ooc onewayOutboundWithInterceptor) CallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
+	return ooc.i.CallOneway(ctx, request, ooc.oo)
 }
 
-// Transports returns the transports used by the StreamOutbound function. This is a no-op in this implementation.
-func (f StreamOutboundFunc) Transports() []transport.Transport {
-	return nil
+type streamOutboundWithInterceptor struct {
+	transport.Outbound
+	so StreamOutboundChain
+	i  StreamOutbound
+}
+
+func (soc streamOutboundWithInterceptor) CallStream(ctx context.Context, requestMeta *transport.StreamRequest) (*transport.ClientStream, error) {
+	return soc.i.CallStream(ctx, requestMeta, soc.so)
 }
