@@ -157,20 +157,41 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 	if o.useHTTP2 {
 		client = createHTTP2Client(o)
 	} else {
-		client = t.client
-		if o.tlsConfig != nil {
-			client = createTLSClient(o)
-			// Create a copy of the url template to avoid scheme changes impacting
-			// other outbounds as the base url template is shared across http
-			// outbounds.
-			ut := *o.urlTemplate
-			ut.Scheme = "https"
-			o.urlTemplate = &ut
-		}
+		client = createHTTP1Client(o)
 	}
 	o.client = client
 	o.sender = &transportSender{Client: client}
 	return o
+}
+
+func createHTTP1Client(o *Outbound) *http.Client {
+	if o.tlsConfig != nil {
+		return createHTTP1TLSClient(o)
+	}
+
+	dialContext := o.transport.dialContext
+	if dialContext == nil {
+		dialContext = (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: o.transport.keepAlive,
+		}).DialContext
+	}
+
+	return &http.Client{
+		Transport: &http.Transport{
+			// options lifted from https://golang.org/src/net/http/transport.go
+			Proxy:                 http.ProxyFromEnvironment,
+			DialContext:           dialContext,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			MaxIdleConns:          o.transport.maxIdleConns,
+			MaxIdleConnsPerHost:   o.transport.maxIdleConnsPerHost,
+			IdleConnTimeout:       o.transport.idleConnTimeout,
+			DisableKeepAlives:     o.transport.disableKeepAlives,
+			DisableCompression:    o.transport.disableCompression,
+			ResponseHeaderTimeout: o.transport.responseHeaderTimeout,
+		},
+	}
 }
 
 func createHTTP2Client(o *Outbound) *http.Client {
@@ -178,21 +199,14 @@ func createHTTP2Client(o *Outbound) *http.Client {
 		return createHTTP2TLSClient(o)
 	}
 
-	// get default http1 transport from the client and use it to create http2 transport
-	http1Transport, ok := o.transport.client.Transport.(*http.Transport)
-	if !ok {
-		// This should not happen as default yarpc http.Client uses
-		// http.Transport and it's not configurable by the user.
-		panic(fmt.Sprintf("failed to create http2 client, provided http.Client transport type %T is not *http.Transport", o.transport.client.Transport))
-	}
-
 	return &http.Client{
 		Transport: &http2.Transport{
 			AllowHTTP: true,
 			DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
-				return http1Transport.DialContext(ctx, network, addr)
+				var d net.Dialer
+				return d.DialContext(ctx, network, addr)
 			},
-			DisableCompression: http1Transport.DisableCompression,
+			DisableCompression: o.transport.disableCompression,
 			IdleConnTimeout:    defaultIdleConnTimeout,
 			PingTimeout:        defaultHTTP2PingTimeout,
 			ReadIdleTimeout:    defaultHTTP2ReadIdleTimeout,
@@ -204,13 +218,13 @@ func createHTTP2TLSClient(o *Outbound) *http.Client {
 	panic("not implemented")
 }
 
-func createTLSClient(o *Outbound) *http.Client {
-	transport, ok := o.transport.client.Transport.(*http.Transport)
-	if !ok {
-		// This should not happen as default yarpc http.Client uses
-		// http.Transport and it's not configurable by the user.
-		panic(fmt.Sprintf("failed to create http tls client, provided http.Client transport type %T is not *http.Transport", o.transport.client.Transport))
-	}
+func createHTTP1TLSClient(o *Outbound) *http.Client {
+	//transport, ok := o.client.Transport.(*http.Transport)
+	//if !ok {
+	//	// This should not happen as default yarpc http.Client uses
+	//	// http.Transport and it's not configurable by the user.
+	//	panic(fmt.Sprintf("failed to create http tls client, provided http.Client transport type %T is not *http.Transport", o.transport.client.Transport))
+	//}
 
 	tlsDialer := dialer.NewTLSDialer(dialer.Params{
 		Config:        o.tlsConfig,
@@ -219,11 +233,30 @@ func createTLSClient(o *Outbound) *http.Client {
 		ServiceName:   o.transport.serviceName,
 		TransportName: TransportName,
 		Dest:          o.destServiceName,
-		Dialer:        transport.DialContext,
+		Dialer:        o.transport.dialContext,
 	})
-	transport = transport.Clone()
-	transport.DialTLSContext = tlsDialer.DialContext
-	return &http.Client{Transport: transport}
+
+	client := &http.Client{Transport: &http.Transport{
+		// options lifted from https://golang.org/src/net/http/transport.go
+		Proxy:                 http.ProxyFromEnvironment,
+		DialTLSContext:        tlsDialer.DialContext,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		MaxIdleConns:          o.transport.maxIdleConns,
+		MaxIdleConnsPerHost:   o.transport.maxIdleConnsPerHost,
+		IdleConnTimeout:       o.transport.idleConnTimeout,
+		DisableKeepAlives:     o.transport.disableKeepAlives,
+		DisableCompression:    o.transport.disableCompression,
+		ResponseHeaderTimeout: o.transport.responseHeaderTimeout,
+	}}
+
+	// Create a copy of the url template to avoid scheme changes impacting
+	// other outbounds as the base url template is shared across http
+	// outbounds.
+	ut := *o.urlTemplate
+	ut.Scheme = "https"
+	o.urlTemplate = &ut
+	return client
 }
 
 // NewOutbound builds an HTTP outbound that sends requests to peers supplied

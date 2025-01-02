@@ -985,17 +985,6 @@ func (e errorReadCloser) Close() error {
 
 func TestCallResponseCloseError(t *testing.T) {
 	httpTransport := Transport{
-		client: &http.Client{
-			Transport: RoundTripFunc(func(req *http.Request) *http.Response {
-				return &http.Response{
-					StatusCode: 200,
-					Body:       errorReadCloser{closeErr: errors.New("test error")},
-					Header: http.Header{
-						"Rpc-Service": []string{"wrong-service"},
-					},
-				}
-			}),
-		},
 		tracer: opentracing.GlobalTracer(),
 	}
 	ctrl := gomock.NewController(t)
@@ -1012,8 +1001,19 @@ func TestCallResponseCloseError(t *testing.T) {
 		tracer:            httpTransport.tracer,
 		transport:         &httpTransport,
 		bothResponseError: true,
-		client:            httpTransport.client,
+		client: &http.Client{
+			Transport: RoundTripFunc(func(req *http.Request) *http.Response {
+				return &http.Response{
+					StatusCode: 200,
+					Body:       errorReadCloser{closeErr: errors.New("test error")},
+					Header: http.Header{
+						"Rpc-Service": []string{"wrong-service"},
+					},
+				}
+			}),
+		},
 	}
+
 	err := o.Start()
 	require.NoError(t, err)
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
@@ -1026,15 +1026,6 @@ func TestCallResponseCloseError(t *testing.T) {
 
 func TestCallOneWayResponseCloseError(t *testing.T) {
 	httpTransport := Transport{
-		client: &http.Client{
-			Transport: RoundTripFunc(func(req *http.Request) *http.Response {
-				return &http.Response{
-					StatusCode: 200,
-					Body:       errorReadCloser{closeErr: errors.New("test error")},
-					Header:     http.Header{},
-				}
-			}),
-		},
 		tracer: opentracing.GlobalTracer(),
 	}
 	ctrl := gomock.NewController(t)
@@ -1051,7 +1042,15 @@ func TestCallOneWayResponseCloseError(t *testing.T) {
 		tracer:            httpTransport.tracer,
 		transport:         &httpTransport,
 		bothResponseError: true,
-		client:            httpTransport.client,
+		client: &http.Client{
+			Transport: RoundTripFunc(func(req *http.Request) *http.Response {
+				return &http.Response{
+					StatusCode: 200,
+					Body:       errorReadCloser{closeErr: errors.New("test error")},
+					Header:     http.Header{},
+				}
+			}),
+		},
 	}
 	err := o.Start()
 	require.NoError(t, err)
@@ -1064,7 +1063,7 @@ func TestCallOneWayResponseCloseError(t *testing.T) {
 }
 
 func TestIsolatedSchemaChange(t *testing.T) {
-	tr := &Transport{client: &http.Client{Transport: http.DefaultTransport}}
+	tr := &Transport{}
 	plainOutbound := tr.NewOutbound(nil)
 	tlsOutbound := tr.NewOutbound(nil, OutboundTLSConfiguration(&tls.Config{}))
 	assert.NotEqual(t, plainOutbound.urlTemplate, tlsOutbound.urlTemplate)
