@@ -65,7 +65,6 @@ var defaultTransportOptions = transportOptions{
 	maxIdleConnsPerHost: 2,
 	connTimeout:         defaultConnTimeout,
 	connBackoffStrategy: backoff.DefaultExponential,
-	buildClient:         buildHTTPClient,
 	innocenceWindow:     defaultInnocenceWindow,
 	idleConnTimeout:     defaultIdleConnTimeout,
 	jitter:              rand.Int63n,
@@ -270,7 +269,14 @@ func (o *transportOptions) newTransport() *Transport {
 	}
 	return &Transport{
 		once:                     lifecycle.NewOnce(),
-		client:                   o.buildClient(o),
+		dialContext:              o.dialContext,
+		keepAlive:                o.keepAlive,
+		maxIdleConns:             o.maxIdleConns,
+		maxIdleConnsPerHost:      o.maxIdleConnsPerHost,
+		idleConnTimeout:          o.idleConnTimeout,
+		disableKeepAlives:        o.disableKeepAlives,
+		disableCompression:       o.disableCompression,
+		responseHeaderTimeout:    o.responseHeaderTimeout,
 		connTimeout:              o.connTimeout,
 		connBackoffStrategy:      o.connBackoffStrategy,
 		innocenceWindow:          o.innocenceWindow,
@@ -317,14 +323,21 @@ type Transport struct {
 	lock sync.Mutex
 	once *lifecycle.Once
 
-	client *http.Client
-	peers  map[string]*httpPeer
+	peers map[string]*httpPeer
 
-	connTimeout         time.Duration
-	connBackoffStrategy backoffapi.Strategy
-	connectorsGroup     sync.WaitGroup
-	innocenceWindow     time.Duration
-	jitter              func(int64) int64
+	dialContext           func(ctx context.Context, network, addr string) (net.Conn, error)
+	keepAlive             time.Duration
+	maxIdleConns          int
+	maxIdleConnsPerHost   int
+	idleConnTimeout       time.Duration
+	disableKeepAlives     bool
+	disableCompression    bool
+	responseHeaderTimeout time.Duration
+	connTimeout           time.Duration
+	connBackoffStrategy   backoffapi.Strategy
+	connectorsGroup       sync.WaitGroup
+	innocenceWindow       time.Duration
+	jitter                func(int64) int64
 
 	tracer                   opentracing.Tracer
 	logger                   *zap.Logger
@@ -345,7 +358,6 @@ func (a *Transport) Start() error {
 // Stop stops the HTTP transport.
 func (a *Transport) Stop() error {
 	return a.once.Stop(func() error {
-		a.client.CloseIdleConnections()
 		a.connectorsGroup.Wait()
 		return nil
 	})

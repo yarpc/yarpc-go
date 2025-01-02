@@ -26,11 +26,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/net/http2"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
@@ -53,9 +56,11 @@ var (
 	_ transport.UnaryOutbound              = (*Outbound)(nil)
 	_ transport.OnewayOutbound             = (*Outbound)(nil)
 	_ introspection.IntrospectableOutbound = (*Outbound)(nil)
-)
 
-var defaultURLTemplate, _ = url.Parse("http://localhost")
+	defaultURLTemplate, _       = url.Parse("http://localhost")
+	defaultHTTP2PingTimeout     = 10 * time.Second
+	defaultHTTP2ReadIdleTimeout = 15 * time.Second
+)
 
 // OutboundOption customizes an HTTP Outbound.
 type OutboundOption func(*Outbound)
@@ -69,6 +74,22 @@ func (OutboundOption) httpOption() {}
 func URLTemplate(template string) OutboundOption {
 	return func(o *Outbound) {
 		o.setURLTemplate(template)
+	}
+}
+
+// UseHTTP2 returns an OutboundOption that enables HTTP/2 support for the outbound.
+// This option configures the outbound to use HTTP/2 for all outbound requests.
+//
+// Example usage:
+//
+//	outbound := http.NewOutbound(chooser, http.UseHTTP2())
+//
+// Returns:
+//
+//	OutboundOption: A function that sets the UseHTTP2 field to true in the Outbound struct.
+func UseHTTP2() OutboundOption {
+	return func(o *Outbound) {
+		o.useHTTP2 = true
 	}
 }
 
@@ -132,28 +153,78 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 		opt(o)
 	}
 
-	client := t.client
-	if o.tlsConfig != nil {
-		client = createTLSClient(o)
-		// Create a copy of the url template to avoid scheme changes impacting
-		// other outbounds as the base url template is shared across http
-		// outbounds.
-		ut := *o.urlTemplate
-		ut.Scheme = "https"
-		o.urlTemplate = &ut
+	var client *http.Client
+	if o.useHTTP2 {
+		client = createHTTP2Client(o)
+	} else {
+		client = createHTTP1Client(o)
 	}
 	o.client = client
 	o.sender = &transportSender{Client: client}
 	return o
 }
 
-func createTLSClient(o *Outbound) *http.Client {
-	transport, ok := o.transport.client.Transport.(*http.Transport)
-	if !ok {
-		// This should not happen as default yarpc http.Client uses
-		// http.Transport and it's not configurable by the user.
-		panic(fmt.Sprintf("failed to create http tls client, provided http.Client transport type %T is not *http.Transport", o.transport.client.Transport))
+func createHTTP1Client(o *Outbound) *http.Client {
+	if o.tlsConfig != nil {
+		return createHTTP1TLSClient(o)
 	}
+
+	dialContext := o.transport.dialContext
+	if dialContext == nil {
+		dialContext = (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: o.transport.keepAlive,
+		}).DialContext
+	}
+
+	return &http.Client{
+		Transport: &http.Transport{
+			// options lifted from https://golang.org/src/net/http/transport.go
+			Proxy:                 http.ProxyFromEnvironment,
+			DialContext:           dialContext,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			MaxIdleConns:          o.transport.maxIdleConns,
+			MaxIdleConnsPerHost:   o.transport.maxIdleConnsPerHost,
+			IdleConnTimeout:       o.transport.idleConnTimeout,
+			DisableKeepAlives:     o.transport.disableKeepAlives,
+			DisableCompression:    o.transport.disableCompression,
+			ResponseHeaderTimeout: o.transport.responseHeaderTimeout,
+		},
+	}
+}
+
+func createHTTP2Client(o *Outbound) *http.Client {
+	if o.tlsConfig != nil {
+		return createHTTP2TLSClient(o)
+	}
+
+	return &http.Client{
+		Transport: &http2.Transport{
+			AllowHTTP: true,
+			DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
+				var d net.Dialer
+				return d.DialContext(ctx, network, addr)
+			},
+			DisableCompression: o.transport.disableCompression,
+			IdleConnTimeout:    defaultIdleConnTimeout,
+			PingTimeout:        defaultHTTP2PingTimeout,
+			ReadIdleTimeout:    defaultHTTP2ReadIdleTimeout,
+		},
+	}
+}
+
+func createHTTP2TLSClient(o *Outbound) *http.Client {
+	panic("not implemented")
+}
+
+func createHTTP1TLSClient(o *Outbound) *http.Client {
+	//transport, ok := o.client.Transport.(*http.Transport)
+	//if !ok {
+	//	// This should not happen as default yarpc http.Client uses
+	//	// http.Transport and it's not configurable by the user.
+	//	panic(fmt.Sprintf("failed to create http tls client, provided http.Client transport type %T is not *http.Transport", o.transport.client.Transport))
+	//}
 
 	tlsDialer := dialer.NewTLSDialer(dialer.Params{
 		Config:        o.tlsConfig,
@@ -162,11 +233,30 @@ func createTLSClient(o *Outbound) *http.Client {
 		ServiceName:   o.transport.serviceName,
 		TransportName: TransportName,
 		Dest:          o.destServiceName,
-		Dialer:        transport.DialContext,
+		Dialer:        o.transport.dialContext,
 	})
-	transport = transport.Clone()
-	transport.DialTLSContext = tlsDialer.DialContext
-	return &http.Client{Transport: transport}
+
+	client := &http.Client{Transport: &http.Transport{
+		// options lifted from https://golang.org/src/net/http/transport.go
+		Proxy:                 http.ProxyFromEnvironment,
+		DialTLSContext:        tlsDialer.DialContext,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		MaxIdleConns:          o.transport.maxIdleConns,
+		MaxIdleConnsPerHost:   o.transport.maxIdleConnsPerHost,
+		IdleConnTimeout:       o.transport.idleConnTimeout,
+		DisableKeepAlives:     o.transport.disableKeepAlives,
+		DisableCompression:    o.transport.disableCompression,
+		ResponseHeaderTimeout: o.transport.responseHeaderTimeout,
+	}}
+
+	// Create a copy of the url template to avoid scheme changes impacting
+	// other outbounds as the base url template is shared across http
+	// outbounds.
+	ut := *o.urlTemplate
+	ut.Scheme = "https"
+	o.urlTemplate = &ut
+	return client
 }
 
 // NewOutbound builds an HTTP outbound that sends requests to peers supplied
@@ -219,6 +309,8 @@ type Outbound struct {
 	destServiceName   string
 	client            *http.Client
 	tlsConfig         *tls.Config
+
+	useHTTP2 bool
 }
 
 // TransportName is the transport name that will be set on `transport.Request` struct.

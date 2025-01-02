@@ -33,7 +33,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
-	"go.uber.org/yarpc/internal/testtime"
 	ypeer "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
 )
@@ -274,28 +273,6 @@ func TestTransport(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestTransportClient(t *testing.T) {
-	transport := NewTransport()
-
-	assert.NotNil(t, transport.client)
-}
-
-func TestTransportClientOpaqueOptions(t *testing.T) {
-	// Unfortunately the KeepAlive is obfuscated in the client, so we can't really
-	// assert this worked.
-	transport := NewTransport(
-		KeepAlive(testtime.Second),
-		MaxIdleConns(100),
-		MaxIdleConnsPerHost(10),
-		IdleConnTimeout(1*time.Second),
-		DisableCompression(),
-		DisableKeepAlives(),
-		ResponseHeaderTimeout(1*time.Second),
-	)
-
-	assert.NotNil(t, transport.client)
 }
 
 func TestDialContext(t *testing.T) {
