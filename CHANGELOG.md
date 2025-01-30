@@ -1551,15 +1551,15 @@ This release requires regeneration of ThriftRW code.
 
 - Initial release.
 [Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.75.4...HEAD
-[1.75.4]: https://github.com/yarpc/yarpc-go/compare/v1.75.3...1.75.4
-[1.75.3]: https://github.com/yarpc/yarpc-go/compare/v1.75.2...1.75.3
-[1.75.2]: https://github.com/yarpc/yarpc-go/compare/v1.75.1...1.75.2
-[1.75.1]: https://github.com/yarpc/yarpc-go/compare/v1.75.0...1.75.1
-[1.75.0]: https://github.com/yarpc/yarpc-go/compare/v1.73.2...1.75.0
-[1.73.2]: https://github.com/yarpc/yarpc-go/compare/v1.73.1...1.73.2
-[1.73.1]: https://github.com/yarpc/yarpc-go/compare/v1.73.0...1.73.1
-[1.73.0]: https://github.com/yarpc/yarpc-go/compare/v1.72.1...1.73.0
-[1.72.1]: https://github.com/yarpc/yarpc-go/compare/v1.72.0...1.72.1
+[1.75.4]: https://github.com/yarpc/yarpc-go/compare/v1.75.3...v1.75.4
+[1.75.3]: https://github.com/yarpc/yarpc-go/compare/v1.75.2...v1.75.3
+[1.75.2]: https://github.com/yarpc/yarpc-go/compare/v1.75.1...v1.75.2
+[1.75.1]: https://github.com/yarpc/yarpc-go/compare/v1.75.0...v1.75.1
+[1.75.0]: https://github.com/yarpc/yarpc-go/compare/v1.73.2...v1.75.0
+[1.73.2]: https://github.com/yarpc/yarpc-go/compare/v1.73.1...v1.73.2
+[1.73.1]: https://github.com/yarpc/yarpc-go/compare/v1.73.0...v1.73.1
+[1.73.0]: https://github.com/yarpc/yarpc-go/compare/v1.72.1...v1.73.0
+[1.72.1]: https://github.com/yarpc/yarpc-go/compare/v1.72.0...v1.72.1
 [1.72.0]: https://github.com/yarpc/yarpc-go/compare/v1.71.0...v1.72.0
 [1.71.0]: https://github.com/yarpc/yarpc-go/compare/v1.70.4...v1.71.0
 [1.70.4]: https://github.com/yarpc/yarpc-go/compare/v1.70.3...v1.70.4
