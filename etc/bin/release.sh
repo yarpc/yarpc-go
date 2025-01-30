@@ -34,7 +34,7 @@ set_release_to_changelog() {
 
   # Replace link to compare changes
   local replace_line="^\[Unreleased\]: https:\/\/github.com\/yarpc\/yarpc-go\/compare\/v(.+)...HEAD$"
-  local replace_with="\[${new_version}\]: https:\/\/github.com\/yarpc\/yarpc-go\/compare\/v\1...${new_version}"
+  local replace_with="\[${new_version}\]: https:\/\/github.com\/yarpc\/yarpc-go\/compare\/v\1...v${new_version}"
 
   sed -i '' -E "s/${replace_line}/${replace_with}/" CHANGELOG.md
 }
