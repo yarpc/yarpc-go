@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 =======
+## [1.75.4] - 2025-01-30
+### Added
+- thriftrw-plugin-yarpc: Add option for configuring the mock library.
+### Fixed
+- Columns in the HTML Outbounds table on the debug page now properly line up
+  with header rows.
+
 ## [1.75.3] - 2024-12-04
 ### Added
 - Noop resolver to use in clients with custom load balancing.
@@ -1540,6 +1547,7 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
+[1.75.4]: https://github.com/yarpc/yarpc-go/compare/v1.75.3...1.75.4
 [1.75.3]: https://github.com/yarpc/yarpc-go/compare/v1.75.2...1.75.3
 [1.75.2]: https://github.com/yarpc/yarpc-go/compare/v1.75.1...1.75.2
 [1.75.1]: https://github.com/yarpc/yarpc-go/compare/v1.75.0...1.75.1

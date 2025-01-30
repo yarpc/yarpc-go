@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Uber Technologies, Inc.
+// Copyright (c) 2025 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -64,10 +64,17 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"strings"
 
 	"go.uber.org/thriftrw/plugin"
 	"go.uber.org/thriftrw/plugin/api"
+)
+
+// mock libraries
+const (
+	_golangMock = "github.com/golang/mock/gomock"
+	_uberMock   = "go.uber.org/mock/gomock"
 )
 
 // Command line flags
@@ -82,7 +89,9 @@ var (
 		"go.uber.org/yarpc/encoding/thrift.OnewayHandler",
 		"Function used to wrap generic Thrift oneway function handlers into YARPC handlers")
 	_noGomock = flag.Bool("no-gomock", false,
-		"Don't generate gomock mocks for service clients")
+		"Don't generate mocks for service clients")
+	_mockLibrary = flag.String("mock-library", _golangMock,
+		fmt.Sprintf("Mock library service clients are generated with. Supported options: %q %q", _golangMock, _uberMock))
 	_noFx             = flag.Bool("no-fx", false, "Don't generate Fx module")
 	_sanitizeTChannel = flag.Bool("sanitize-tchannel", false, "Enable tchannel context sanitization")
 )
@@ -106,6 +115,10 @@ func (g g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceRespon
 		serviceGenerators = append(serviceGenerators, gomockGenerator)
 	}
 
+	if !(*_mockLibrary == _golangMock || *_mockLibrary == _uberMock) {
+		return nil, fmt.Errorf("%q specified as mock-library. expected %q or %q", *_mockLibrary, _golangMock, _uberMock)
+	}
+
 	unaryWrapperImport, unaryWrapperFunc := splitFunctionPath(*_unaryHandlerWrapper)
 	onewayWrapperImport, onewayWrapperFunc := splitFunctionPath(*_onewayHandlerWrapper)
 
@@ -115,6 +128,7 @@ func (g g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceRespon
 		data := serviceTemplateData{
 			Svc:                 buildSvc(serviceID, req),
 			ContextImportPath:   *_context,
+			MockLibrary:         *_mockLibrary,
 			UnaryWrapperImport:  unaryWrapperImport,
 			UnaryWrapperFunc:    unaryWrapperFunc,
 			OnewayWrapperImport: onewayWrapperImport,
