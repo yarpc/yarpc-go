@@ -32,7 +32,7 @@ Releasing
 
     ```
     # This is the version being released.
-    VERSION=1.21.0
+    VERSION=1.0.0
 
     # This is the branch from which $VERSION will be released.
     # This is almost always dev.
@@ -45,73 +45,115 @@ Releasing
 2. Call release preparation helper.
 
    ```
-   ./etc/bin/release.sh $VERSION $BRANCH
+   ./etc/bin/release-step-1.sh $VERSION $BRANCH
    ```
+   
+    This script will:
+    * Create a release branch from the specified branch.
+    * Update CHANGELOG.md with the new version and date.
+    * Update version.go with the new version.
+    * Commit the changes and push the branch to GitHub.
+    * Open a pull request for the release.
 
-3. Check for the diff in the CHANGELOG.md and version.go and make sure it looks good.
-
-    ```
-    git diff CHANGELOG.md version.go
-    ```
-
-4.  Create a commit for the release.
-
-    ```
-    git add version.go CHANGELOG.md
-    git commit -m "Preparing release v$VERSION"
-    ```
-
-5.  Make a pull request with these changes against `master`.
-
-    ```
-    gh pr create --base master --title "Preparing release v$VERSION" --web
-    ```
-
-6.  Land the pull request after approval as a **merge commit**. To do this,
+3.  Land the pull request after approval as a **merge commit**. To do this,
     select **Create a merge commit** from the pull-down next to the merge
     button and click **Merge pull request**. Make sure you delete that branch
     after it has been merged with **Delete Branch**.
 
-7.  Once the change has been landed, pull it locally.
+4.  Once the change has been landed, run second script.
+
+   ```
+   ./etc/bin/release-step-2.sh $VERSION $BRANCH
+   ```
+
+   This script will:
+   * Tag the release.
+   * Push the tag to GitHub.
+   * Create a release on GitHub.
+      * (This will open a browser window with the release page. Copy the changelog entries into the release description.)
+   * Switch version and CHANGELOG.md back to development mode.
+   * Commit the changes and push them to GitHub.
+   * Open a pull request for the development changes.
+
+5. Send pull request to a peer review.
+
+# Manual release
+
+If the above steps fail, you can manually release yarpc-go by following the
+steps below.
+
+(For the sake of simplicity, we will assume that changes are merged to branch `dev`,
+release should be done to branch `master`, and new version is 1.0.0.)
+
+1.  Create a release branch from `dev`.
+
+    ```
+    git checkout dev
+    git pull
+    git checkout -B prepare-release
+    ```
+    
+2.  Update `CHANGELOG.md` with the new version and date.
+
+    ```
+    - ## [Unreleased]
+    + ## [1.0.0] - 2025-01-01
+    
+    - [Unreleased]: https://github.com/yarpc/yarpc-go/compare/v0.0.9...HEAD
+    + [1.75.4]: https://github.com/yarpc/yarpc-go/compare/v0.0.9...v1.0.0
+    ```
+    
+3.  Update `version.go` with the new version.
+
+    ```
+    - const Version = "0.0.9"
+    + const Version = "1.0.0"
+    ```
+    
+4.  Commit the changes and push the branch to GitHub.
+
+    ```
+    git add CHANGELOG.md version.go
+    git commit -m "Preparing release v1.0.0"
+    gh pr create --base master --title "Preparing release v1.0.0" --web
+    ```
+
+5.  Land the pull request after approval as a **merge commit**.
+
+6.  After the change has been landed, pull the changes locally and tag the release.
 
     ```
     git checkout master
     git pull
-    ```
-
-8. Tag a release.
-
-    ```
-    gh release create v$VERSION --latest --target master --title "v$VERSION"
-    ```
-
-9. Copy the changelog entries for this release into the release description in
-    the newly opened browser window.
-
-10. Switch back to development.
-
-    ```
-    git checkout $BRANCH
-    git merge master
+    gh release create "v1.0.0" --latest --target master --title "v1.0.0"
     ```
     
-11. Run helper script to update dev branch, CHANGELOG.md and version.go.
+Use the changelog entries as the release description.
+
+7. Merging release back to dev branch via pull request.
 
     ```
-    ./etc/bin/back-to-development.sh $VERSION $BRANCH
+    git checkout dev
+    git pull
+    git checkout -B return-to-development
+    git merge origin/master
     ```
 
-12. Verify git log and changes.
+8.  Switch version and `CHANGELOG.md` back to development mode in a new branch.
 
     ```
-    git log --oneline -n 5
-    git diff CHANGELOG.md version.go
+    + ## [Unreleased]
+    + - No changes yet.
+    
+    + [Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.0.0...HEAD
     ```
-
-13. Commit and push your changes.
+    
+9. Commit the changes and push the branch to GitHub.
 
     ```
     git add CHANGELOG.md version.go
-    git commit -m 'Back to development'
-    git push origin $BRANCH
+    git commit -m "Return to development"
+    gh pr create --base dev --title "Return to development" --web
     ```
+
+10. Land the pull request after approval **without** merge commit.
