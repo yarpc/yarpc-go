@@ -132,29 +132,24 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 		opt(o)
 	}
 
-	client := t.client
-	if o.tlsConfig != nil {
-		client = createTLSClient(o)
-		// Create a copy of the url template to avoid scheme changes impacting
-		// other outbounds as the base url template is shared across http
-		// outbounds.
-		ut := *o.urlTemplate
-		ut.Scheme = "https"
-		o.urlTemplate = &ut
-	}
+	client := createHTTP1Client(o)
 	o.client = client
 	o.sender = &transportSender{Client: client}
 	return o
 }
 
-func createTLSClient(o *Outbound) *http.Client {
-	transport, ok := o.transport.client.Transport.(*http.Transport)
-	if !ok {
-		// This should not happen as default yarpc http.Client uses
-		// http.Transport and it's not configurable by the user.
-		panic(fmt.Sprintf("failed to create http tls client, provided http.Client transport type %T is not *http.Transport", o.transport.client.Transport))
+func createHTTP1Client(o *Outbound) *http.Client {
+	if o.tlsConfig != nil {
+		return createHTTP1TLSClient(o)
 	}
 
+	return &http.Client{
+		Transport: o.transport.h1Transport,
+	}
+}
+
+func createHTTP1TLSClient(o *Outbound) *http.Client {
+	h1transport := o.transport.h1Transport.Clone()
 	tlsDialer := dialer.NewTLSDialer(dialer.Params{
 		Config:        o.tlsConfig,
 		Meter:         o.transport.meter,
@@ -162,11 +157,20 @@ func createTLSClient(o *Outbound) *http.Client {
 		ServiceName:   o.transport.serviceName,
 		TransportName: TransportName,
 		Dest:          o.destServiceName,
-		Dialer:        transport.DialContext,
+		Dialer:        h1transport.DialContext,
 	})
-	transport = transport.Clone()
-	transport.DialTLSContext = tlsDialer.DialContext
-	return &http.Client{Transport: transport}
+
+	h1transport.DialTLSContext = tlsDialer.DialContext
+	// Create a copy of the url template to avoid scheme changes impacting
+	// other outbounds as the base url template is shared across http
+	// outbounds.
+	ut := *o.urlTemplate
+	ut.Scheme = "https"
+	o.urlTemplate = &ut
+
+	return &http.Client{
+		Transport: h1transport,
+	}
 }
 
 // NewOutbound builds an HTTP outbound that sends requests to peers supplied

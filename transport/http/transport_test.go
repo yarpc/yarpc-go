@@ -276,10 +276,10 @@ func TestTransport(t *testing.T) {
 	}
 }
 
-func TestTransportClient(t *testing.T) {
+func TestH1Transport(t *testing.T) {
 	transport := NewTransport()
 
-	assert.NotNil(t, transport.client)
+	assert.NotNil(t, transport.h1Transport)
 }
 
 func TestTransportClientOpaqueOptions(t *testing.T) {
@@ -295,7 +295,7 @@ func TestTransportClientOpaqueOptions(t *testing.T) {
 		ResponseHeaderTimeout(1*time.Second),
 	)
 
-	assert.NotNil(t, transport.client)
+	assert.NotNil(t, transport.h1Transport)
 }
 
 func TestDialContext(t *testing.T) {
