@@ -270,7 +270,6 @@ func (o *transportOptions) newTransport() *Transport {
 	}
 	return &Transport{
 		once:                     lifecycle.NewOnce(),
-		client:                   o.buildClient(o),
 		connTimeout:              o.connTimeout,
 		connBackoffStrategy:      o.connBackoffStrategy,
 		innocenceWindow:          o.innocenceWindow,
@@ -281,10 +280,11 @@ func (o *transportOptions) newTransport() *Transport {
 		meter:                    o.meter,
 		serviceName:              o.serviceName,
 		ouboundTLSConfigProvider: o.outboundTLSConfigProvider,
+		h1Transport:              defaultH1Transport(o),
 	}
 }
 
-func buildHTTPClient(options *transportOptions) *http.Client {
+func defaultH1Transport(options *transportOptions) *http.Transport {
 	dialContext := options.dialContext
 	if dialContext == nil {
 		dialContext = (&net.Dialer{
@@ -293,20 +293,24 @@ func buildHTTPClient(options *transportOptions) *http.Client {
 		}).DialContext
 	}
 
+	return &http.Transport{
+		// options lifted from https://golang.org/src/net/http/transport.go
+		Proxy:                 http.ProxyFromEnvironment,
+		DialContext:           dialContext,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		MaxIdleConns:          options.maxIdleConns,
+		MaxIdleConnsPerHost:   options.maxIdleConnsPerHost,
+		IdleConnTimeout:       options.idleConnTimeout,
+		DisableKeepAlives:     options.disableKeepAlives,
+		DisableCompression:    options.disableCompression,
+		ResponseHeaderTimeout: options.responseHeaderTimeout,
+	}
+}
+
+func buildHTTPClient(options *transportOptions) *http.Client {
 	return &http.Client{
-		Transport: &http.Transport{
-			// options lifted from https://golang.org/src/net/http/transport.go
-			Proxy:                 http.ProxyFromEnvironment,
-			DialContext:           dialContext,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-			MaxIdleConns:          options.maxIdleConns,
-			MaxIdleConnsPerHost:   options.maxIdleConnsPerHost,
-			IdleConnTimeout:       options.idleConnTimeout,
-			DisableKeepAlives:     options.disableKeepAlives,
-			DisableCompression:    options.disableCompression,
-			ResponseHeaderTimeout: options.responseHeaderTimeout,
-		},
+		Transport: defaultH1Transport(options),
 	}
 }
 
@@ -317,8 +321,7 @@ type Transport struct {
 	lock sync.Mutex
 	once *lifecycle.Once
 
-	client *http.Client
-	peers  map[string]*httpPeer
+	peers map[string]*httpPeer
 
 	connTimeout         time.Duration
 	connBackoffStrategy backoffapi.Strategy
@@ -331,6 +334,8 @@ type Transport struct {
 	meter                    *metrics.Scope
 	serviceName              string
 	ouboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
+
+	h1Transport *http.Transport
 }
 
 var _ transport.Transport = (*Transport)(nil)
@@ -345,7 +350,7 @@ func (a *Transport) Start() error {
 // Stop stops the HTTP transport.
 func (a *Transport) Stop() error {
 	return a.once.Stop(func() error {
-		a.client.CloseIdleConnections()
+		a.h1Transport.CloseIdleConnections()
 		a.connectorsGroup.Wait()
 		return nil
 	})

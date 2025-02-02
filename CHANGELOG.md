@@ -6,7 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 =======
 ## [Unreleased]
-- No changes yet.
+### Added
+- Create client per outbound (previously it was per transport) for http
 
 ## [1.75.4] - 2025-01-30
 ### Added
