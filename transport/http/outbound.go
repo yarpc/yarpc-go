@@ -110,6 +110,22 @@ func OutboundDestinationServiceName(name string) OutboundOption {
 	}
 }
 
+// UseHTTP2 returns an OutboundOption that enables HTTP/2 support for the outbound.
+// This option configures the outbound to use HTTP/2 for all outbound requests.
+//
+// Example usage:
+//
+//	outbound := http.NewOutbound(chooser, http.UseHTTP2())
+//
+// Returns:
+//
+//	OutboundOption: A function that sets the UseHTTP2 field to true in the Outbound struct.
+func UseHTTP2() OutboundOption {
+	return func(o *Outbound) {
+		o.useHTTP2 = true
+	}
+}
+
 // NewOutbound builds an HTTP outbound that sends requests to peers supplied
 // by the given peer.Chooser. The URL template for used for the different
 // peers may be customized using the URLTemplate option.
@@ -132,7 +148,12 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 		opt(o)
 	}
 
-	client := createHTTP1Client(o)
+	var client *http.Client
+	if o.useHTTP2 {
+		client = createHTTP2Client(o)
+	} else {
+		client = createHTTP1Client(o)
+	}
 	o.client = client
 	o.sender = &transportSender{Client: client}
 	return o
@@ -170,6 +191,20 @@ func createHTTP1TLSClient(o *Outbound) *http.Client {
 	return &http.Client{
 		Transport: h1transport,
 	}
+}
+
+func createHTTP2Client(o *Outbound) *http.Client {
+	if o.tlsConfig != nil {
+		return createHTTP2TLSClient(o)
+	}
+
+	return &http.Client{
+		Transport: o.transport.h2Transport,
+	}
+}
+
+func createHTTP2TLSClient(o *Outbound) *http.Client {
+	panic("http2 with tls is not supported")
 }
 
 // NewOutbound builds an HTTP outbound that sends requests to peers supplied
@@ -222,6 +257,8 @@ type Outbound struct {
 	destServiceName   string
 	client            *http.Client
 	tlsConfig         *tls.Config
+
+	useHTTP2 bool
 }
 
 // TransportName is the transport name that will be set on `transport.Request` struct.

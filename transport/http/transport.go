@@ -22,11 +22,14 @@ package http
 
 import (
 	"context"
+	"crypto/tls"
 	"math/rand"
 	"net"
 	"net/http"
 	"sync"
 	"time"
+
+	"golang.org/x/net/http2"
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/net/metrics"
@@ -281,6 +284,7 @@ func (o *transportOptions) newTransport() *Transport {
 		serviceName:              o.serviceName,
 		ouboundTLSConfigProvider: o.outboundTLSConfigProvider,
 		h1Transport:              buildH1Transport(o),
+		h2Transport:              buildH2Transport(o),
 	}
 }
 
@@ -288,7 +292,7 @@ func buildH1Transport(options *transportOptions) *http.Transport {
 	dialContext := options.dialContext
 	if dialContext == nil {
 		dialContext = (&net.Dialer{
-			Timeout:   30 * time.Second,
+			Timeout:   defaultDialerTimeout,
 			KeepAlive: options.keepAlive,
 		}).DialContext
 	}
@@ -305,6 +309,27 @@ func buildH1Transport(options *transportOptions) *http.Transport {
 		DisableKeepAlives:     options.disableKeepAlives,
 		DisableCompression:    options.disableCompression,
 		ResponseHeaderTimeout: options.responseHeaderTimeout,
+	}
+}
+
+func buildH2Transport(options *transportOptions) *http2.Transport {
+	dialContext := options.dialContext
+	if dialContext == nil {
+		dialContext = (&net.Dialer{
+			Timeout:   defaultDialerTimeout,
+			KeepAlive: options.keepAlive,
+		}).DialContext
+	}
+
+	return &http2.Transport{
+		AllowHTTP: true,
+		DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
+			return dialContext(ctx, network, addr)
+		},
+		DisableCompression: options.disableCompression,
+		IdleConnTimeout:    options.idleConnTimeout,
+		PingTimeout:        defaultHTTP2PingTimeout,
+		ReadIdleTimeout:    defaultHTTP2ReadIdleTimeout,
 	}
 }
 
@@ -336,6 +361,7 @@ type Transport struct {
 	ouboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
 
 	h1Transport *http.Transport
+	h2Transport *http2.Transport
 }
 
 var _ transport.Transport = (*Transport)(nil)
@@ -351,6 +377,7 @@ func (a *Transport) Start() error {
 func (a *Transport) Stop() error {
 	return a.once.Stop(func() error {
 		a.h1Transport.CloseIdleConnections()
+		a.h2Transport.CloseIdleConnections()
 		a.connectorsGroup.Wait()
 		return nil
 	})

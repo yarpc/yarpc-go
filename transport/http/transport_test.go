@@ -276,10 +276,11 @@ func TestTransport(t *testing.T) {
 	}
 }
 
-func TestH1Transport(t *testing.T) {
+func TestDefaultTransportInitialisation(t *testing.T) {
 	transport := NewTransport()
 
 	assert.NotNil(t, transport.h1Transport)
+	assert.NotNil(t, transport.h2Transport)
 }
 
 func TestTransportClientOpaqueOptions(t *testing.T) {
@@ -296,6 +297,7 @@ func TestTransportClientOpaqueOptions(t *testing.T) {
 	)
 
 	assert.NotNil(t, transport.h1Transport)
+	assert.NotNil(t, transport.h2Transport)
 }
 
 func TestDialContext(t *testing.T) {
