@@ -280,11 +280,11 @@ func (o *transportOptions) newTransport() *Transport {
 		meter:                    o.meter,
 		serviceName:              o.serviceName,
 		ouboundTLSConfigProvider: o.outboundTLSConfigProvider,
-		h1Transport:              defaultH1Transport(o),
+		h1Transport:              buildH1Transport(o),
 	}
 }
 
-func defaultH1Transport(options *transportOptions) *http.Transport {
+func buildH1Transport(options *transportOptions) *http.Transport {
 	dialContext := options.dialContext
 	if dialContext == nil {
 		dialContext = (&net.Dialer{
@@ -310,7 +310,7 @@ func defaultH1Transport(options *transportOptions) *http.Transport {
 
 func buildHTTPClient(options *transportOptions) *http.Client {
 	return &http.Client{
-		Transport: defaultH1Transport(options),
+		Transport: buildH1Transport(options),
 	}
 }
 
