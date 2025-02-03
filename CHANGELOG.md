@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 =======
 ## [Unreleased]
 ### Added
+- HTTP2 client support for the HTTP outbound.
+  - Client/Peer will use http2.Transport based on the outbound configuration.
+  - Added `useHTTP2` option to the HTTP outbound configuration to enable HTTP2 client support.
 - Create client per outbound (previously it was per transport) for http
 
 ## [1.75.4] - 2025-01-30

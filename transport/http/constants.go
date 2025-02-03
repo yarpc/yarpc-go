@@ -29,9 +29,12 @@ import "time"
 const TransportName = "http"
 
 var (
-	defaultConnTimeout     = 500 * time.Millisecond
-	defaultInnocenceWindow = 5 * time.Second
-	defaultIdleConnTimeout = 15 * time.Minute
+	defaultConnTimeout          = 500 * time.Millisecond
+	defaultInnocenceWindow      = 5 * time.Second
+	defaultIdleConnTimeout      = 15 * time.Minute
+	defaultDialerTimeout        = 30 * time.Second
+	defaultHTTP2PingTimeout     = 10 * time.Second
+	defaultHTTP2ReadIdleTimeout = 15 * time.Second
 )
 
 // HTTP headers used in requests and responses to send YARPC metadata.
