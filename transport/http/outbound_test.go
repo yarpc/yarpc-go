@@ -865,7 +865,7 @@ func TestCallOneWayResponseCloseError(t *testing.T) {
 
 func TestIsolatedSchemaChange(t *testing.T) {
 	tr := &Transport{
-		h1Transport: defaultH1Transport(&defaultTransportOptions),
+		h1Transport: buildH1Transport(&defaultTransportOptions),
 	}
 	plainOutbound := tr.NewOutbound(nil)
 	tlsOutbound := tr.NewOutbound(nil, OutboundTLSConfiguration(&tls.Config{}))
