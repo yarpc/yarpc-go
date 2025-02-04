@@ -116,6 +116,22 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				}),
 			},
 		},
+		{
+			Name: "Double grpc-accept-encoding value",
+			MD: metadata.Pairs(
+				grpcAcceptEncodingHeader, "gzip",
+				grpcAcceptEncodingHeader, "zlib",
+				"foo", "bar",
+				"baz", "bat",
+			),
+			TransportRequest: &transport.Request{
+				Headers: transport.HeadersFromMap(map[string]string{
+					"foo":                  "bar",
+					"baz":                  "bat",
+					"grpc-accept-encoding": "gzip",
+				}),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
@@ -252,6 +268,19 @@ func TestGetApplicationHeaders(t *testing.T) {
 				"test-header-dup":   []string{"test-value-1", "test-value-2"},
 			},
 			wantErr: "header has more than one value: test-header-dup:[test-value-1 test-value-2]",
+		},
+		{
+			msg: "Multiple value for grpc-accept-encoding header",
+			meta: metadata.MD{
+				"test-header-valid-1":  []string{"test-value-1"},
+				"test-Header-Valid-2":  []string{"test-value-2"},
+				"grpc-accept-encoding": []string{"gzip", "zlib"},
+			},
+			wantHeaders: map[string]string{
+				"test-header-valid-1":  "test-value-1",
+				"test-header-valid-2":  "test-value-2",
+				"grpc-accept-encoding": "gzip",
+			},
 		},
 	}
 
