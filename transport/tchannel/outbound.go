@@ -23,6 +23,8 @@ package tchannel
 import (
 	"bytes"
 	"context"
+	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/interceptor/outboundinterceptor"
 	"io"
 	"strconv"
 
@@ -51,10 +53,11 @@ var (
 // It may be constructed using the NewOutbound or NewSingleOutbound methods on
 // the TChannel Transport.
 type Outbound struct {
-	transport   *Transport
-	chooser     peer.Chooser
-	once        *lifecycle.Once
-	reuseBuffer bool
+	transport                *Transport
+	chooser                  peer.Chooser
+	once                     *lifecycle.Once
+	reuseBuffer              bool
+	unaryCallWithInterceptor interceptor.UnaryOutboundChain
 }
 
 // OutboundOption customizes the behavior of a TChannel Outbound.
@@ -76,6 +79,7 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 		transport: t,
 		chooser:   chooser,
 	}
+	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
 	for _, opt := range opts {
 		opt(o)
 	}
@@ -99,8 +103,13 @@ func (o *Outbound) Chooser() peer.Chooser {
 	return o.chooser
 }
 
-// Call sends an RPC over this TChannel outbound.
+// Call wraps the DirectCall.
 func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+	return o.unaryCallWithInterceptor.Next(ctx, req)
+}
+
+// DirectCall sends an RPC over this TChannel outbound.
+func (o *Outbound) DirectCall(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if req == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel outbound was nil")
 	}

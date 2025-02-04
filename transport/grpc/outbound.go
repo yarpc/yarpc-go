@@ -34,6 +34,8 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
+	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/interceptor/outboundinterceptor"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -59,6 +61,9 @@ type Outbound struct {
 	t           *Transport
 	peerChooser peer.Chooser
 	options     *outboundOptions
+
+	unaryCallWithInterceptor  interceptor.UnaryOutboundChain
+	streamCallWithInterceptor interceptor.StreamOutboundChain
 }
 
 func newSingleOutbound(t *Transport, address string, options ...OutboundOption) *Outbound {
@@ -66,12 +71,15 @@ func newSingleOutbound(t *Transport, address string, options ...OutboundOption) 
 }
 
 func newOutbound(t *Transport, peerChooser peer.Chooser, options ...OutboundOption) *Outbound {
-	return &Outbound{
+	o := &Outbound{
 		once:        lifecycle.NewOnce(),
 		t:           t,
 		peerChooser: peerChooser,
 		options:     newOutboundOptions(options),
 	}
+	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.options.unaryOutboundInterceptor)
+	o.streamCallWithInterceptor = outboundinterceptor.NewStreamChain(o, t.options.streamOutboundInterceptor)
+	return o
 }
 
 // TransportName is the transport name that will be set on `transport.Request`
@@ -105,8 +113,13 @@ func (o *Outbound) Chooser() peer.Chooser {
 	return o.peerChooser
 }
 
-// Call implements transport.UnaryOutbound#Call.
+// Call wraps the DirectCall.
 func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+	return o.unaryCallWithInterceptor.Next(ctx, request)
+}
+
+// DirectCall implements transport.UnaryOutbound#Call.
+func (o *Outbound) DirectCall(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	if request == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for grpc outbound was nil")
 	}
@@ -280,8 +293,13 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	return yarpcErr
 }
 
-// CallStream implements transport.StreamOutbound#CallStream.
+// CallStream wraps the DirectCallStream.
 func (o *Outbound) CallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
+	return o.streamCallWithInterceptor.Next(ctx, request)
+}
+
+// DirectCallStream implements transport.StreamOutbound#CallStream.
+func (o *Outbound) DirectCallStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, err
 	}
