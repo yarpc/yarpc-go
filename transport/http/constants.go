@@ -55,6 +55,9 @@ const (
 	// to finish.
 	TTLMSHeader = "Context-TTL-MS"
 
+	// Content Type for http request
+	CONTENTType = "Content-Type"
+
 	// Name of the procedure being called. This corresponds to the
 	// Request.Procedure attribute.
 	ProcedureHeader = "Rpc-Procedure"

@@ -488,6 +488,11 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 		}
 	}
 
+	// thrift over h2. TODO: productionise it
+	if req.ProtoMajor == 2 && strings.Contains(string(treq.Encoding), "thrift") {
+		req.Header.Set(CONTENTType, "application/yarpc+tbinary")
+	}
+
 	req.Header.Set(CallerHeader, treq.Caller)
 	req.Header.Set(ServiceHeader, treq.Service)
 	req.Header.Set(ProcedureHeader, treq.Procedure)
