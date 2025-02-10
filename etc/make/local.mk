@@ -124,22 +124,6 @@ goimports-fix: $(GOIMPORTS) __eval_packages __eval_go_files
 	$(eval TARGET_FILES := $(shell PATH=$(BIN):$$PATH goimports -l $(GO_FILES) | $(FILTER_LINT)))
 	@PATH=$(BIN):$$PATH goimports -w $(TARGET_FILES)
 
-.PHONY: verifyversion
-verifyversion: ## verify the version in the changelog is the same as in version.go
-	@echo "verifyversion"
-	$(eval CHANGELOG_VERSION := $(shell perl -ne '/^## \[(\S+?)\]/ && print "v$$1\n"' CHANGELOG.md | head -n1))
-	$(eval INTHECODE_VERSION := $(shell perl -ne '/^const Version.*"([^"]+)".*$$/ && print "v$$1\n"' version.go))
-	@if [ "$(INTHECODE_VERSION)" = "$(CHANGELOG_VERSION)" ]; then \
-		echo "yarpc-go: $(CHANGELOG_VERSION)"; \
-	elif [ "$(CHANGELOG_VERSION)" = "vUnreleased" ]; then \
-		echo "yarpc-go (development): $(INTHECODE_VERSION)"; \
-	else \
-		echo "Version number in version.go does not match CHANGELOG.md"; \
-		echo "version.go: $(INTHECODE_VERSION)"; \
-		echo "CHANGELOG : $(CHANGELOG_VERSION)"; \
-		exit 1; \
-	fi
-
 .PHONY: verifycodecovignores
 verifycodecovignores: ## verify that .codecov.yml contains all .nocover packages
 	@echo "verifycodecovignores"
@@ -156,7 +140,7 @@ verifycodecovignores: ## verify that .codecov.yml contains all .nocover packages
 basiclint: gofmt govet golint staticcheck errcheck goimports # run gofmt govet golint staticcheck errcheck
 
 .PHONY: lint
-lint: basiclint generatenodiff nogogenerate verifyversion verifycodecovignores ## run all linters
+lint: basiclint generatenodiff nogogenerate verifycodecovignores ## run all linters
 
 .PHONY: test
 test: $(THRIFTRW) __eval_chunked_packages ## run chunked tests

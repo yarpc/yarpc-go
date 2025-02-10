@@ -1,12 +1,18 @@
 # Changelog
+
+Version 1.75.4 was the last one that used git-flow release management and the last one
+that required manually complied list of changes in a changelog.
+
+Changelog is archived, please don't update it anymore.
+
+To specify changes for the next release, please use `RELEASE NOTES:` in a PR summary.
+
+# Archive
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
-
-=======
-## [Unreleased]
-- No changes yet.
 
 ## [1.75.4] - 2025-01-30
 ### Added
