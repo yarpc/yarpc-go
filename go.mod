@@ -31,7 +31,7 @@ require (
 	go.uber.org/yarpc/internal/examples v0.0.0-20230831212929-ccef8c01afa8
 	go.uber.org/zap v1.27.0
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616
-	golang.org/x/net v0.27.0
+	golang.org/x/net v0.33.0
 	golang.org/x/tools v0.22.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d
 	google.golang.org/grpc v1.59.0
@@ -64,8 +64,8 @@ require (
 	go.uber.org/dig v1.17.1 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20221208152030-732eee02a75a // indirect
 	golang.org/x/mod v0.18.0 // indirect
-	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.22.0 // indirect
-	golang.org/x/text v0.16.0 // indirect
+	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
