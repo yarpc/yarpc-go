@@ -149,7 +149,6 @@ func createHTTP1Client(o *Outbound) *http.Client {
 }
 
 func createHTTP1TLSClient(o *Outbound) *http.Client {
-	h1transport := o.transport.h1Transport.Clone()
 	tlsDialer := dialer.NewTLSDialer(dialer.Params{
 		Config:        o.tlsConfig,
 		Meter:         o.transport.meter,
@@ -157,9 +156,9 @@ func createHTTP1TLSClient(o *Outbound) *http.Client {
 		ServiceName:   o.transport.serviceName,
 		TransportName: TransportName,
 		Dest:          o.destServiceName,
-		Dialer:        h1transport.DialContext,
+		Dialer:        o.transport.h1Transport.DialContext,
 	})
-
+	h1transport := o.transport.h1Transport.Clone()
 	h1transport.DialTLSContext = tlsDialer.DialContext
 	// Create a copy of the url template to avoid scheme changes impacting
 	// other outbounds as the base url template is shared across http
