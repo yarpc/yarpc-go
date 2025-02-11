@@ -60,7 +60,13 @@ func TestNewOutbound(t *testing.T) {
 }
 
 func TestTransportNamer(t *testing.T) {
-	assert.Equal(t, TransportName, NewOutbound(nil).TransportName())
+	t.Run("default is http", func(t *testing.T) {
+		assert.Equal(t, TransportName, NewOutbound(nil).TransportName())
+	})
+
+	t.Run("outbound is http2", func(t *testing.T) {
+		assert.Equal(t, TransportHTTP2Name, NewOutbound(nil, UseHTTP2()).TransportName())
+	})
 }
 
 func TestNewSingleOutboundPanic(t *testing.T) {

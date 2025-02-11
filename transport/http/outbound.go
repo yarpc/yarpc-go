@@ -263,6 +263,9 @@ type Outbound struct {
 
 // TransportName is the transport name that will be set on `transport.Request` struct.
 func (o *Outbound) TransportName() string {
+	if o.useHTTP2 {
+		return TransportHTTP2Name
+	}
 	return TransportName
 }
 
