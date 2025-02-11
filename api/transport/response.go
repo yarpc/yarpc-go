@@ -61,6 +61,36 @@ type ResponseWriter interface {
 	SetApplicationError()
 }
 
+// ExtendedResponseWriter extends the ResponseWriter interface to allow setting
+// and retrieving additional metadata related to application errors, and to track
+// the size of the response.
+//
+// Functions on ExtendedResponseWriter are not thread-safe.
+type ExtendedResponseWriter interface {
+	ResponseWriter
+	// SetApplicationError specifies that this response contains an application error.
+	// If called, this MUST be called before any invocation of Write().
+	// This signals that the response is an application-level error, rather than
+	// a system or transport error.
+	SetApplicationError()
+	// SetApplicationErrorMeta allows setting additional metadata related to the
+	// application error. The metadata can contain fields such as error code, name,
+	// or details that provide more context about the error.
+	SetApplicationErrorMeta(applicationErrorMeta *ApplicationErrorMeta)
+	// IsApplicationError returns a boolean indicating whether the response
+	// contains an application error. This helps consumers of the response to know
+	// if the response was flagged as an application error.
+	IsApplicationError() bool
+	// ApplicationErrorMeta returns the application error metadata that was set
+	// by the SetApplicationErrorMeta method. If no metadata was set, this returns nil.
+	// This can provide further details about the nature of the application error.
+	ApplicationErrorMeta() *ApplicationErrorMeta
+	// ResponseSize returns the number of bytes written to the response. This method
+	// allows tracking of the size of the response, which can be useful for monitoring,
+	// logging, or debugging purposes.
+	ResponseSize() int
+}
+
 // ApplicationErrorMeta contains additional information to describe the
 // application error, using an error name, code and details string.
 //
