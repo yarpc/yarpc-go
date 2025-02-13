@@ -57,7 +57,7 @@ type (
 	// context, change the requestMeta, change the returned Stream, handle the
 	// returned error, call the given outbound zero or more times.
 	//
-	// StreamOutbound interceptor MUST always return a non-nil Stream or an error,
+	// StreamOutbound interceptor MUST always return a non-nil Stream or error,
 	// and they MUST be thread-safe
 	//
 	// StreamOutbound interceptors is re-used across requests and MAY be called
