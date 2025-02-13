@@ -105,6 +105,7 @@ type serviceTemplateData struct {
 	OnewayWrapperImport string
 	OnewayWrapperFunc   string
 	SanitizeTChannel    bool
+	MockLibrary         string
 }
 
 // moduleTemplateData contains the data for code gen templates. This should be

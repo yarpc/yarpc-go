@@ -1,3 +1,4 @@
 - [ ] Description and context for reviewers: one partner, one stranger
 - [ ] Docs (package doc)
-- [ ] Entry in CHANGELOG.md
+
+RELEASE NOTES:

@@ -1,11 +1,22 @@
 # Changelog
+
+Version 1.75.4 was the last one that used git-flow release management and the last one
+that required manually complied list of changes in a changelog.
+
+Changelog is archived, please don't update it anymore.
+
+To specify changes for the next release, please use `RELEASE NOTES:` in a PR summary.
+
+# Archive
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-=======
-## [Unreleased]
+## [1.75.4] - 2025-01-30
+### Added
+- thriftrw-plugin-yarpc: Add option for configuring the mock library.
 ### Fixed
 - Columns in the HTML Outbounds table on the debug page now properly line up
   with header rows.
@@ -1545,15 +1556,16 @@ This release requires regeneration of ThriftRW code.
 ## 0.1.0 - 2016-08-31
 
 - Initial release.
-[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.75.3...HEAD
-[1.75.3]: https://github.com/yarpc/yarpc-go/compare/v1.75.2...1.75.3
-[1.75.2]: https://github.com/yarpc/yarpc-go/compare/v1.75.1...1.75.2
-[1.75.1]: https://github.com/yarpc/yarpc-go/compare/v1.75.0...1.75.1
-[1.75.0]: https://github.com/yarpc/yarpc-go/compare/v1.73.2...1.75.0
-[1.73.2]: https://github.com/yarpc/yarpc-go/compare/v1.73.1...1.73.2
-[1.73.1]: https://github.com/yarpc/yarpc-go/compare/v1.73.0...1.73.1
-[1.73.0]: https://github.com/yarpc/yarpc-go/compare/v1.72.1...1.73.0
-[1.72.1]: https://github.com/yarpc/yarpc-go/compare/v1.72.0...1.72.1
+[Unreleased]: https://github.com/yarpc/yarpc-go/compare/v1.75.4...HEAD
+[1.75.4]: https://github.com/yarpc/yarpc-go/compare/v1.75.3...v1.75.4
+[1.75.3]: https://github.com/yarpc/yarpc-go/compare/v1.75.2...v1.75.3
+[1.75.2]: https://github.com/yarpc/yarpc-go/compare/v1.75.1...v1.75.2
+[1.75.1]: https://github.com/yarpc/yarpc-go/compare/v1.75.0...v1.75.1
+[1.75.0]: https://github.com/yarpc/yarpc-go/compare/v1.73.2...v1.75.0
+[1.73.2]: https://github.com/yarpc/yarpc-go/compare/v1.73.1...v1.73.2
+[1.73.1]: https://github.com/yarpc/yarpc-go/compare/v1.73.0...v1.73.1
+[1.73.0]: https://github.com/yarpc/yarpc-go/compare/v1.72.1...v1.73.0
+[1.72.1]: https://github.com/yarpc/yarpc-go/compare/v1.72.0...v1.72.1
 [1.72.0]: https://github.com/yarpc/yarpc-go/compare/v1.71.0...v1.72.0
 [1.71.0]: https://github.com/yarpc/yarpc-go/compare/v1.70.4...v1.71.0
 [1.70.4]: https://github.com/yarpc/yarpc-go/compare/v1.70.3...v1.70.4

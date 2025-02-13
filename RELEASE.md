@@ -1,4 +1,4 @@
-Release process
+# Release process
 ===============
 
 > **NOTE**: Don't do any of this before validating with a test service. Check
@@ -6,7 +6,17 @@ Release process
 
 This document outlines how to create a release of yarpc-go.
 
-Prerequisites
+## Process description
+
+We're using trunk-based development model. It means, all the development is done in feature branches,
+and changes are merged to `main` branch via pull requests.
+
+When it's time to cut a new release, we create a release branch from `main`, update `version.go`,
+and tag the release.
+
+We don't use tags on `main` branch, and we never merge release branches back to `main`.
+
+## Prerequisites
 -------------
 
 Make sure you have `gh` installed.
@@ -25,93 +35,70 @@ gh auth login
 ? How would you like to authenticate GitHub CLI? Login with a web browser
 ```
 
-Releasing
----------
+## Releasing
 
-1.  Set up some environment variables for use later.
+- Decide what's the next version number. It should be a semver-compatible string.
+Usually, we increase minor version number for new features, and patch version number for bug fixes.
 
-    ```
-    # This is the version being released.
-    VERSION=1.21.0
+I.e. 1.2.0 -> 1.3.0 for new features, and 1.2.0 -> 1.2.1 for bug fixes.
 
-    # This is the branch from which $VERSION will be released.
-    # This is almost always dev.
-    BRANCH=dev
-    ```
+You may get last release version by running:
 
-    **If you are copying/pasting commands, make sure you actually set the right
-    value for VERSION above.**
+  ```
+    gh release list --exclude-drafts --exclude-pre-releases --json "tagName" | jq -r '.[0].tagName'
+  ```
 
-2. Call release preparation helper.
+- Set environment variable with the version you want to release.
 
-   ```
-   ./etc/bin/release.sh $VERSION $BRANCH
-   ```
+  ```
+  VERSION=1.0.0
+  ```
 
-3. Check for the diff in the CHANGELOG.md and version.go and make sure it looks good.
+- Compile release notes.
 
-    ```
-    git diff CHANGELOG.md version.go
-    ```
+  ```
+  ./etc/bin/release/cmd-format-release-notes.sh \
+        $(git log --pretty=format:"%H" \
+              $(git merge-base main \
+                  $(gh release list --exclude-drafts --exclude-pre-releases --json "isLatest,tagName" | \
+                       jq -r '.[] | select( .isLatest ) | .tagName') \
+               )..HEAD) | tee /tmp/yarpc-release-notes.txt
+  ```
 
-4.  Create a commit for the release.
-
-    ```
-    git add version.go CHANGELOG.md
-    git commit -m "Preparing release v$VERSION"
-    ```
-
-5.  Make a pull request with these changes against `master`.
+- Please format release notes:
 
     ```
-    gh pr create --base master --title "Preparing release v$VERSION" --web
+      nano /tmp/yarpc-release-notes.txt
+      
+      # for vim users
+      vim /tmp/yarpc-release-notes.txt
     ```
 
-6.  Land the pull request after approval as a **merge commit**. To do this,
-    select **Create a merge commit** from the pull-down next to the merge
-    button and click **Merge pull request**. Make sure you delete that branch
-    after it has been merged with **Delete Branch**.
 
-7.  Once the change has been landed, pull it locally.
+- Create a release branch from the specified branch.
 
     ```
-    git checkout master
-    git pull
+    git checkout -b release/v$VERSION
     ```
 
-8. Tag a release.
+- Update version.go with the new version.
 
     ```
-    gh release create v$VERSION --latest --target master --title "v$VERSION"
+    ./etc/bin/release/cmd-update-version.sh $VERSION
     ```
 
-9. Copy the changelog entries for this release into the release description in
-    the newly opened browser window.
-
-10. Switch back to development.
+- Commit this change and push the branch to GitHub.
 
     ```
-    git checkout $BRANCH
-    git merge master
-    ```
-    
-11. Run helper script to update dev branch, CHANGELOG.md and version.go.
-
-    ```
-    ./etc/bin/back-to-development.sh $VERSION $BRANCH
+    git add version.go
+    git commit -s -m "Prepare release v$VERSION"
     ```
 
-12. Verify git log and changes.
+- Cut a new release, using the release notes from the previous step.
 
     ```
-    git log --oneline -n 5
-    git diff CHANGELOG.md version.go
+    git push origin release/v$VERSION
+    gh release create v$VERSION --latest --target release/v$VERSION --title v$VERSION --notes-file /tmp/yarpc-release-notes.txt
     ```
 
-13. Commit and push your changes.
-
-    ```
-    git add CHANGELOG.md version.go
-    git commit -m 'Back to development'
-    git push origin $BRANCH
-    ```
+- Done, no need to merge the release branch back to main.
