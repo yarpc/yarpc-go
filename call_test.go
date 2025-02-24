@@ -83,3 +83,12 @@ func TestCallFromContext(t *testing.T) {
 	assert.Equal(t, "three", call.RoutingDelegate())
 	assert.Equal(t, "four", call.CallerProcedure())
 }
+
+func TestRealCallTheadSafety(t *testing.T) {
+	ctx, _ := encoding.NewInboundCall(context.Background())
+	call := yarpc.CallFromContext(ctx)
+	go func() {
+		_ = call.WriteResponseHeader("test", "test")
+	}()
+	_ = call.WriteResponseHeader("test", "test")
+}
