@@ -18,7 +18,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
+package tracinginterceptor
 
-// Version is the current version of YARPC.
-const Version = "1.0.0-dev"
+import (
+	"runtime"
+
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/log"
+)
+
+const (
+	applicationError     = "application_error"
+	errorNameTag         = "error.name"
+	rpcStatusCodeTag     = "rpc.yarpc.status_code"
+	tracingComponentName = "yarpc-go"
+)
+
+// Static tracing tags to be used across spans
+var commonTracingTags = opentracing.Tags{
+	"go.version": runtime.Version(),
+	"component":  tracingComponentName,
+}
+
+var logFieldEventError = log.String("event", "error")

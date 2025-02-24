@@ -251,6 +251,11 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 	}
 }
 
+var (
+	_ transport.ExtendedResponseWriter     = (*handlerWriter)(nil)
+	_ transport.ApplicationErrorMetaSetter = (*handlerWriter)(nil)
+)
+
 type handlerWriter struct {
 	failedWith       error
 	format           tchannel.Format
@@ -258,7 +263,9 @@ type handlerWriter struct {
 	buffer           *bufferpool.Buffer
 	response         inboundCallResponse
 	applicationError bool
+	appErrorMeta     *transport.ApplicationErrorMeta
 	headerCase       headerCase
+	responseSize     int
 }
 
 func newHandlerWriter(response inboundCallResponse, format tchannel.Format, headerCase headerCase) responseWriter {
@@ -291,6 +298,7 @@ func (hw *handlerWriter) SetApplicationErrorMeta(applicationErrorMeta *transport
 	if applicationErrorMeta == nil {
 		return
 	}
+	hw.appErrorMeta = applicationErrorMeta
 	if applicationErrorMeta.Code != nil {
 		hw.AddHeader(ApplicationErrorCodeHeaderKey, strconv.Itoa(int(*applicationErrorMeta.Code)))
 	}
@@ -300,6 +308,14 @@ func (hw *handlerWriter) SetApplicationErrorMeta(applicationErrorMeta *transport
 	if applicationErrorMeta.Details != "" {
 		hw.AddHeader(ApplicationErrorDetailsHeaderKey, truncateAppErrDetails(applicationErrorMeta.Details))
 	}
+}
+
+func (hw *handlerWriter) GetApplicationError() bool {
+	return hw.applicationError
+}
+
+func (hw *handlerWriter) ApplicationErrorMeta() *transport.ApplicationErrorMeta {
+	return hw.appErrorMeta
 }
 
 func truncateAppErrDetails(val string) string {
@@ -327,7 +343,12 @@ func (hw *handlerWriter) Write(s []byte) (int, error) {
 	if err != nil {
 		hw.failedWith = appendError(hw.failedWith, err)
 	}
+	hw.responseSize += n
 	return n, err
+}
+
+func (hw *handlerWriter) ResponseSize() int {
+	return hw.responseSize
 }
 
 func (hw *handlerWriter) Close() error {

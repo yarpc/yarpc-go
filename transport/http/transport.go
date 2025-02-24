@@ -22,11 +22,14 @@ package http
 
 import (
 	"context"
+	"crypto/tls"
 	"math/rand"
 	"net"
 	"net/http"
 	"sync"
 	"time"
+
+	"golang.org/x/net/http2"
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/net/metrics"
@@ -270,7 +273,6 @@ func (o *transportOptions) newTransport() *Transport {
 	}
 	return &Transport{
 		once:                     lifecycle.NewOnce(),
-		client:                   o.buildClient(o),
 		connTimeout:              o.connTimeout,
 		connBackoffStrategy:      o.connBackoffStrategy,
 		innocenceWindow:          o.innocenceWindow,
@@ -281,32 +283,59 @@ func (o *transportOptions) newTransport() *Transport {
 		meter:                    o.meter,
 		serviceName:              o.serviceName,
 		ouboundTLSConfigProvider: o.outboundTLSConfigProvider,
+		h1Transport:              buildH1Transport(o),
+		h2Transport:              buildH2Transport(o),
 	}
 }
 
-func buildHTTPClient(options *transportOptions) *http.Client {
+func buildH1Transport(options *transportOptions) *http.Transport {
 	dialContext := options.dialContext
 	if dialContext == nil {
 		dialContext = (&net.Dialer{
-			Timeout:   30 * time.Second,
+			Timeout:   defaultDialerTimeout,
 			KeepAlive: options.keepAlive,
 		}).DialContext
 	}
 
-	return &http.Client{
-		Transport: &http.Transport{
-			// options lifted from https://golang.org/src/net/http/transport.go
-			Proxy:                 http.ProxyFromEnvironment,
-			DialContext:           dialContext,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-			MaxIdleConns:          options.maxIdleConns,
-			MaxIdleConnsPerHost:   options.maxIdleConnsPerHost,
-			IdleConnTimeout:       options.idleConnTimeout,
-			DisableKeepAlives:     options.disableKeepAlives,
-			DisableCompression:    options.disableCompression,
-			ResponseHeaderTimeout: options.responseHeaderTimeout,
+	return &http.Transport{
+		// options lifted from https://golang.org/src/net/http/transport.go
+		Proxy:                 http.ProxyFromEnvironment,
+		DialContext:           dialContext,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		MaxIdleConns:          options.maxIdleConns,
+		MaxIdleConnsPerHost:   options.maxIdleConnsPerHost,
+		IdleConnTimeout:       options.idleConnTimeout,
+		DisableKeepAlives:     options.disableKeepAlives,
+		DisableCompression:    options.disableCompression,
+		ResponseHeaderTimeout: options.responseHeaderTimeout,
+	}
+}
+
+func buildH2Transport(options *transportOptions) *http2.Transport {
+	dialContext := options.dialContext
+	if dialContext == nil {
+		dialContext = (&net.Dialer{
+			Timeout:   defaultDialerTimeout,
+			KeepAlive: options.keepAlive,
+		}).DialContext
+	}
+
+	return &http2.Transport{
+		AllowHTTP: true,
+		DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
+			return dialContext(ctx, network, addr)
 		},
+		DisableCompression: options.disableCompression,
+		IdleConnTimeout:    options.idleConnTimeout,
+		PingTimeout:        defaultHTTP2PingTimeout,
+		ReadIdleTimeout:    defaultHTTP2ReadIdleTimeout,
+	}
+}
+
+func buildHTTPClient(options *transportOptions) *http.Client {
+	return &http.Client{
+		Transport: buildH1Transport(options),
 	}
 }
 
@@ -317,8 +346,7 @@ type Transport struct {
 	lock sync.Mutex
 	once *lifecycle.Once
 
-	client *http.Client
-	peers  map[string]*httpPeer
+	peers map[string]*httpPeer
 
 	connTimeout         time.Duration
 	connBackoffStrategy backoffapi.Strategy
@@ -331,6 +359,9 @@ type Transport struct {
 	meter                    *metrics.Scope
 	serviceName              string
 	ouboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
+
+	h1Transport *http.Transport
+	h2Transport *http2.Transport
 }
 
 var _ transport.Transport = (*Transport)(nil)
@@ -345,7 +376,8 @@ func (a *Transport) Start() error {
 // Stop stops the HTTP transport.
 func (a *Transport) Stop() error {
 	return a.once.Stop(func() error {
-		a.client.CloseIdleConnections()
+		a.h1Transport.CloseIdleConnections()
+		a.h2Transport.CloseIdleConnections()
 		a.connectorsGroup.Wait()
 		return nil
 	})
