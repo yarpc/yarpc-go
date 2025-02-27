@@ -32,6 +32,10 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	intbackoff "go.uber.org/yarpc/internal/backoff"
+	"go.uber.org/yarpc/internal/inboundmiddleware"
+	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/outboundmiddleware"
+	"go.uber.org/yarpc/internal/tracinginterceptor"
 	"go.uber.org/yarpc/transport/internal/tls/dialer"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -93,6 +97,13 @@ func BackoffStrategy(backoffStrategy backoff.Strategy) TransportOption {
 func Tracer(tracer opentracing.Tracer) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.tracer = tracer
+	}
+}
+
+// TracingInterceptorEnabled specifies whether to use the new tracing interceptor or the legacy implementation
+func TracingInterceptorEnabled(enabled bool) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.tracingInterceptorEnabled = enabled
 	}
 }
 
@@ -285,17 +296,22 @@ func KeepaliveParams(params keepalive.ClientParameters) DialOption {
 }
 
 type transportOptions struct {
-	backoffStrategy         backoff.Strategy
-	tracer                  opentracing.Tracer
-	logger                  *zap.Logger
-	meter                   *metrics.Scope
-	serviceName             string
-	serverMaxRecvMsgSize    int
-	serverMaxSendMsgSize    int
-	clientMaxRecvMsgSize    int
-	clientMaxSendMsgSize    int
-	serverMaxHeaderListSize *uint32
-	clientMaxHeaderListSize *uint32
+	backoffStrategy           backoff.Strategy
+	tracer                    opentracing.Tracer
+	tracingInterceptorEnabled bool
+	logger                    *zap.Logger
+	meter                     *metrics.Scope
+	serviceName               string
+	serverMaxRecvMsgSize      int
+	serverMaxSendMsgSize      int
+	clientMaxRecvMsgSize      int
+	clientMaxSendMsgSize      int
+	serverMaxHeaderListSize   *uint32
+	clientMaxHeaderListSize   *uint32
+	unaryInboundInterceptor   interceptor.UnaryInbound
+	unaryOutboundInterceptor  interceptor.UnaryOutbound
+	streamInboundInterceptor  interceptor.StreamInbound
+	streamOutboundInterceptor interceptor.StreamOutbound
 }
 
 func newTransportOptions(options []TransportOption) *transportOptions {
@@ -315,6 +331,28 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 	if transportOptions.tracer == nil {
 		transportOptions.tracer = opentracing.GlobalTracer()
 	}
+	var (
+		unaryInbounds   []interceptor.UnaryInbound
+		unaryOutbounds  []interceptor.UnaryOutbound
+		streamInbounds  []interceptor.StreamInbound
+		streamOutbounds []interceptor.StreamOutbound
+	)
+	if transportOptions.tracingInterceptorEnabled {
+		ti := tracinginterceptor.New(tracinginterceptor.Params{
+			Tracer:    transportOptions.tracer,
+			Transport: TransportName,
+		})
+		unaryInbounds = append(unaryInbounds, ti)
+		unaryOutbounds = append(unaryOutbounds, ti)
+		streamInbounds = append(streamInbounds, ti)
+		streamOutbounds = append(streamOutbounds, ti)
+		transportOptions.tracer = opentracing.NoopTracer{}
+	}
+
+	transportOptions.unaryInboundInterceptor = inboundmiddleware.UnaryChain(unaryInbounds...)
+	transportOptions.unaryOutboundInterceptor = outboundmiddleware.UnaryChain(unaryOutbounds...)
+	transportOptions.streamInboundInterceptor = inboundmiddleware.StreamChain(streamInbounds...)
+	transportOptions.streamOutboundInterceptor = outboundmiddleware.StreamChain(streamOutbounds...)
 	return transportOptions
 }
 
