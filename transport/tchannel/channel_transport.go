@@ -28,7 +28,6 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/inboundmiddleware"
 	"go.uber.org/yarpc/internal/interceptor"
-	"go.uber.org/yarpc/internal/outboundmiddleware"
 	"go.uber.org/yarpc/internal/tracinginterceptor"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/zap"
@@ -114,7 +113,7 @@ func (options transportOptions) newChannelTransport() *ChannelTransport {
 		originalHeaders:          options.originalHeaders,
 		newResponseWriter:        newHandlerWriter,
 		unaryInboundInterceptor:  inboundmiddleware.UnaryChain(unaryInbounds...),
-		unaryOutboundInterceptor: outboundmiddleware.UnaryChain(unaryOutbounds...),
+		unaryOutboundInterceptor: unaryOutbounds,
 	}
 }
 
@@ -132,7 +131,7 @@ type ChannelTransport struct {
 	originalHeaders          bool
 	newResponseWriter        func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
 	unaryInboundInterceptor  interceptor.UnaryInbound
-	unaryOutboundInterceptor interceptor.UnaryOutbound
+	unaryOutboundInterceptor []interceptor.UnaryOutbound
 }
 
 // Channel returns the underlying TChannel "Channel" instance.
@@ -168,13 +167,12 @@ func (t *ChannelTransport) start() error {
 			sc := t.ch.GetSubChannel(s)
 			existing := sc.GetHandlers()
 			sc.SetHandler(handler{
-				existing:                 existing,
-				router:                   t.router,
-				tracer:                   t.tracer,
-				logger:                   t.logger,
-				newResponseWriter:        t.newResponseWriter,
-				unaryOutboundInterceptor: t.unaryOutboundInterceptor,
-				unaryInboundInterceptor:  t.unaryInboundInterceptor},
+				existing:                existing,
+				router:                  t.router,
+				tracer:                  t.tracer,
+				logger:                  t.logger,
+				newResponseWriter:       t.newResponseWriter,
+				unaryInboundInterceptor: t.unaryInboundInterceptor},
 			)
 		}
 	}

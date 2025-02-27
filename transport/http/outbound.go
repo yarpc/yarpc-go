@@ -39,6 +39,8 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
+	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/interceptor/outboundinterceptor"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -156,6 +158,8 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 	}
 	o.client = client
 	o.sender = &transportSender{Client: client}
+	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
+	o.onewayCallWithInterceptor = outboundinterceptor.NewOnewayChain(o, t.onewayOutboundInterceptor)
 	return o
 }
 
@@ -232,7 +236,10 @@ func (t *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbo
 
 	chooser := peerchooser.NewSingle(hostport.PeerIdentifier(parsedURL.Host), t)
 	opts = append(opts, URLTemplate(uri))
-	return t.NewOutbound(chooser, opts...)
+	o := t.NewOutbound(chooser, opts...)
+	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
+	o.onewayCallWithInterceptor = outboundinterceptor.NewOnewayChain(o, t.onewayOutboundInterceptor)
+	return o
 }
 
 // Outbound sends YARPC requests over HTTP. It may be constructed using the
@@ -253,12 +260,13 @@ type Outbound struct {
 	once *lifecycle.Once
 
 	// should only be false in testing
-	bothResponseError bool
-	destServiceName   string
-	client            *http.Client
-	tlsConfig         *tls.Config
-
-	useHTTP2 bool
+	bothResponseError         bool
+	destServiceName           string
+	client                    *http.Client
+	tlsConfig                 *tls.Config
+	unaryCallWithInterceptor  interceptor.UnaryOutboundChain
+	onewayCallWithInterceptor interceptor.OnewayOutboundChain
+	useHTTP2                  bool
 }
 
 // TransportName is the transport name that will be set on `transport.Request` struct.
@@ -305,8 +313,13 @@ func (o *Outbound) IsRunning() bool {
 	return o.once.IsRunning()
 }
 
-// Call makes a HTTP request
+// Call implements UnaryOutbound
 func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
+	return o.unaryCallWithInterceptor.Next(ctx, treq)
+}
+
+// DirectCall makes a HTTP request
+func (o *Outbound) DirectCall(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
 	if treq == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil")
 	}
@@ -314,23 +327,25 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	return o.call(ctx, treq)
 }
 
-// CallOneway makes a oneway request
+// CallOneway implements UnaryOnewayOutbound
 func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
+	return o.onewayCallWithInterceptor.Next(ctx, treq)
+}
+
+// DirectCallOneway makes a oneway request
+func (o *Outbound) DirectCallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
 	if treq == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil")
 	}
-
 	// res is used to close the response body to avoid memory/connection leak
 	// even when the response body is empty
 	res, err := o.call(ctx, treq)
 	if err != nil {
 		return nil, err
 	}
-
 	if err = res.Body.Close(); err != nil {
 		return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 	}
-
 	return time.Now(), nil
 }
 

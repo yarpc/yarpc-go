@@ -1023,7 +1023,7 @@ func TestCallResponseCloseError(t *testing.T) {
 	require.NoError(t, err)
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err = o.Call(ctx, &transport.Request{
+	_, err = o.DirectCall(ctx, &transport.Request{
 		Service: "Service",
 	})
 	require.Errorf(t, err, "Received unexpected error:code:internal message:test error")
@@ -1063,7 +1063,7 @@ func TestCallOneWayResponseCloseError(t *testing.T) {
 	require.NoError(t, err)
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err = o.CallOneway(ctx, &transport.Request{
+	_, err = o.DirectCallOneway(ctx, &transport.Request{
 		Service: "Service",
 	})
 	require.Errorf(t, err, "Received unexpected error:code:internal message:test error")

@@ -40,7 +40,6 @@ import (
 	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/yarpc/internal/inboundmiddleware"
 	"go.uber.org/yarpc/internal/interceptor"
-	"go.uber.org/yarpc/internal/outboundmiddleware"
 	"go.uber.org/yarpc/internal/tracinginterceptor"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/zap"
@@ -315,9 +314,9 @@ func (o *transportOptions) newTransport() *Transport {
 		serviceName:               o.serviceName,
 		ouboundTLSConfigProvider:  o.outboundTLSConfigProvider,
 		unaryInboundInterceptor:   inboundmiddleware.UnaryChain(unaryInbounds...),
-		unaryOutboundInterceptor:  outboundmiddleware.UnaryChain(unaryOutbounds...),
+		unaryOutboundInterceptor:  unaryOutbounds,
 		onewayInboundInterceptor:  inboundmiddleware.OnewayChain(onewayInbounds...),
-		onewayOutboundInterceptor: outboundmiddleware.OnewayChain(onewayOutbounds...),
+		onewayOutboundInterceptor: onewayOutbounds,
 		h1Transport:               buildH1Transport(o),
 		h2Transport:               buildH2Transport(o),
 	}
@@ -395,9 +394,9 @@ type Transport struct {
 	serviceName               string
 	ouboundTLSConfigProvider  yarpctls.OutboundTLSConfigProvider
 	unaryInboundInterceptor   interceptor.UnaryInbound
-	unaryOutboundInterceptor  interceptor.UnaryOutbound
+	unaryOutboundInterceptor  []interceptor.UnaryOutbound
 	onewayInboundInterceptor  interceptor.OnewayInbound
-	onewayOutboundInterceptor interceptor.OnewayOutbound
+	onewayOutboundInterceptor []interceptor.OnewayOutbound
 
 	h1Transport *http.Transport
 	h2Transport *http2.Transport
