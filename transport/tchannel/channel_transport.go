@@ -26,6 +26,10 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/inboundmiddleware"
+	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/outboundmiddleware"
+	"go.uber.org/yarpc/internal/tracinginterceptor"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/zap"
 )
@@ -63,7 +67,11 @@ func NewChannelTransport(opts ...TransportOption) (*ChannelTransport, error) {
 		if options.name == "" {
 			err = errChannelOrServiceNameIsRequired
 		} else {
-			opts := tchannel.ChannelOptions{Tracer: options.tracer}
+			tracer := options.tracer
+			if options.tracingInterceptorEnabled {
+				tracer = opentracing.NoopTracer{}
+			}
+			opts := tchannel.ChannelOptions{Tracer: tracer}
 			ch, err = tchannel.NewChannel(options.name, &opts)
 			options.ch = ch
 		}
@@ -77,18 +85,36 @@ func NewChannelTransport(opts ...TransportOption) (*ChannelTransport, error) {
 }
 
 func (options transportOptions) newChannelTransport() *ChannelTransport {
+	var (
+		unaryInbounds  []interceptor.UnaryInbound
+		unaryOutbounds []interceptor.UnaryOutbound
+	)
 	logger := options.logger
 	if logger == nil {
 		logger = zap.NewNop()
 	}
+	tracer := options.tracer
+
+	if options.tracingInterceptorEnabled {
+		ti := tracinginterceptor.New(tracinginterceptor.Params{
+			Tracer:    tracer,
+			Transport: TransportName,
+		})
+		unaryInbounds = append(unaryInbounds, ti)
+		unaryOutbounds = append(unaryOutbounds, ti)
+
+		tracer = opentracing.NoopTracer{}
+	}
 	return &ChannelTransport{
-		once:              lifecycle.NewOnce(),
-		ch:                options.ch,
-		addr:              options.addr,
-		tracer:            options.tracer,
-		logger:            logger.Named("tchannel"),
-		originalHeaders:   options.originalHeaders,
-		newResponseWriter: newHandlerWriter,
+		once:                     lifecycle.NewOnce(),
+		ch:                       options.ch,
+		addr:                     options.addr,
+		tracer:                   tracer,
+		logger:                   logger.Named("tchannel"),
+		originalHeaders:          options.originalHeaders,
+		newResponseWriter:        newHandlerWriter,
+		unaryInboundInterceptor:  inboundmiddleware.UnaryChain(unaryInbounds...),
+		unaryOutboundInterceptor: outboundmiddleware.UnaryChain(unaryOutbounds...),
 	}
 }
 
@@ -97,14 +123,16 @@ func (options transportOptions) newChannelTransport() *ChannelTransport {
 // If you have a YARPC peer.Chooser, use the unqualified tchannel.Transport
 // instead.
 type ChannelTransport struct {
-	once              *lifecycle.Once
-	ch                Channel
-	addr              string
-	tracer            opentracing.Tracer
-	logger            *zap.Logger
-	router            transport.Router
-	originalHeaders   bool
-	newResponseWriter func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
+	once                     *lifecycle.Once
+	ch                       Channel
+	addr                     string
+	tracer                   opentracing.Tracer
+	logger                   *zap.Logger
+	router                   transport.Router
+	originalHeaders          bool
+	newResponseWriter        func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
+	unaryInboundInterceptor  interceptor.UnaryInbound
+	unaryOutboundInterceptor interceptor.UnaryOutbound
 }
 
 // Channel returns the underlying TChannel "Channel" instance.
@@ -139,7 +167,15 @@ func (t *ChannelTransport) start() error {
 		for s := range services {
 			sc := t.ch.GetSubChannel(s)
 			existing := sc.GetHandlers()
-			sc.SetHandler(handler{existing: existing, router: t.router, tracer: t.tracer, logger: t.logger, newResponseWriter: t.newResponseWriter})
+			sc.SetHandler(handler{
+				existing:                 existing,
+				router:                   t.router,
+				tracer:                   t.tracer,
+				logger:                   t.logger,
+				newResponseWriter:        t.newResponseWriter,
+				unaryOutboundInterceptor: t.unaryOutboundInterceptor,
+				unaryInboundInterceptor:  t.unaryInboundInterceptor},
+			)
 		}
 	}
 
