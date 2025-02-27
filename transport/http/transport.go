@@ -38,6 +38,10 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/internal/backoff"
+	"go.uber.org/yarpc/internal/inboundmiddleware"
+	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/outboundmiddleware"
+	"go.uber.org/yarpc/internal/tracinginterceptor"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/zap"
 )
@@ -56,6 +60,7 @@ type transportOptions struct {
 	dialContext               func(ctx context.Context, network, addr string) (net.Conn, error)
 	jitter                    func(int64) int64
 	tracer                    opentracing.Tracer
+	tracingInterceptorEnabled bool
 	buildClient               func(*transportOptions) *http.Client
 	logger                    *zap.Logger
 	meter                     *metrics.Scope
@@ -215,6 +220,13 @@ func Tracer(tracer opentracing.Tracer) TransportOption {
 	}
 }
 
+// TracingInterceptorEnabled specifies whether to use the new tracing interceptor or the legacy implementation
+func TracingInterceptorEnabled(enabled bool) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.tracingInterceptorEnabled = enabled
+	}
+}
+
 // Logger sets a logger to use for internal logging.
 //
 // The default is to not write any logs.
@@ -271,20 +283,43 @@ func (o *transportOptions) newTransport() *Transport {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
+	var (
+		unaryInbounds   []interceptor.UnaryInbound
+		unaryOutbounds  []interceptor.UnaryOutbound
+		onewayInbounds  []interceptor.OnewayInbound
+		onewayOutbounds []interceptor.OnewayOutbound
+	)
+	tracer := o.tracer
+	if o.tracingInterceptorEnabled {
+		ti := tracinginterceptor.New(tracinginterceptor.Params{
+			Tracer:    tracer,
+			Transport: TransportName,
+		})
+		unaryInbounds = append(unaryInbounds, ti)
+		unaryOutbounds = append(unaryOutbounds, ti)
+		onewayInbounds = append(onewayInbounds, ti)
+		onewayOutbounds = append(onewayOutbounds, ti)
+
+		tracer = opentracing.NoopTracer{}
+	}
 	return &Transport{
-		once:                     lifecycle.NewOnce(),
-		connTimeout:              o.connTimeout,
-		connBackoffStrategy:      o.connBackoffStrategy,
-		innocenceWindow:          o.innocenceWindow,
-		jitter:                   o.jitter,
-		peers:                    make(map[string]*httpPeer),
-		tracer:                   o.tracer,
-		logger:                   logger,
-		meter:                    o.meter,
-		serviceName:              o.serviceName,
-		ouboundTLSConfigProvider: o.outboundTLSConfigProvider,
-		h1Transport:              buildH1Transport(o),
-		h2Transport:              buildH2Transport(o),
+		once:                      lifecycle.NewOnce(),
+		connTimeout:               o.connTimeout,
+		connBackoffStrategy:       o.connBackoffStrategy,
+		innocenceWindow:           o.innocenceWindow,
+		jitter:                    o.jitter,
+		peers:                     make(map[string]*httpPeer),
+		tracer:                    tracer,
+		logger:                    logger,
+		meter:                     o.meter,
+		serviceName:               o.serviceName,
+		ouboundTLSConfigProvider:  o.outboundTLSConfigProvider,
+		unaryInboundInterceptor:   inboundmiddleware.UnaryChain(unaryInbounds...),
+		unaryOutboundInterceptor:  outboundmiddleware.UnaryChain(unaryOutbounds...),
+		onewayInboundInterceptor:  inboundmiddleware.OnewayChain(onewayInbounds...),
+		onewayOutboundInterceptor: outboundmiddleware.OnewayChain(onewayOutbounds...),
+		h1Transport:               buildH1Transport(o),
+		h2Transport:               buildH2Transport(o),
 	}
 }
 
@@ -354,11 +389,15 @@ type Transport struct {
 	innocenceWindow     time.Duration
 	jitter              func(int64) int64
 
-	tracer                   opentracing.Tracer
-	logger                   *zap.Logger
-	meter                    *metrics.Scope
-	serviceName              string
-	ouboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
+	tracer                    opentracing.Tracer
+	logger                    *zap.Logger
+	meter                     *metrics.Scope
+	serviceName               string
+	ouboundTLSConfigProvider  yarpctls.OutboundTLSConfigProvider
+	unaryInboundInterceptor   interceptor.UnaryInbound
+	unaryOutboundInterceptor  interceptor.UnaryOutbound
+	onewayInboundInterceptor  interceptor.OnewayInbound
+	onewayOutboundInterceptor interceptor.OnewayOutbound
 
 	h1Transport *http.Transport
 	h2Transport *http2.Transport
