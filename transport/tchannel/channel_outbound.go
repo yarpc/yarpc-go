@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,8 @@ package tchannel
 
 import (
 	"context"
+	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/interceptor/outboundinterceptor"
 
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
@@ -33,7 +35,6 @@ import (
 )
 
 var (
-	_ transport.Namer                      = (*ChannelOutbound)(nil)
 	_ transport.UnaryOutbound              = (*ChannelOutbound)(nil)
 	_ introspection.IntrospectableOutbound = (*ChannelOutbound)(nil)
 )
@@ -41,22 +42,26 @@ var (
 // NewOutbound builds a new TChannel outbound using the transport's shared
 // channel to make requests to any connected peer.
 func (t *ChannelTransport) NewOutbound() *ChannelOutbound {
-	return &ChannelOutbound{
+	o := &ChannelOutbound{
 		once:      lifecycle.NewOnce(),
 		channel:   t.ch,
 		transport: t,
 	}
+	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
+	return o
 }
 
 // NewSingleOutbound builds a new TChannel outbound using the transport's shared
 // channel to a specific peer.
 func (t *ChannelTransport) NewSingleOutbound(addr string) *ChannelOutbound {
-	return &ChannelOutbound{
+	o := &ChannelOutbound{
 		once:      lifecycle.NewOnce(),
 		channel:   t.ch,
 		transport: t,
 		addr:      addr,
 	}
+	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
+	return o
 }
 
 // ChannelOutbound sends YARPC requests over TChannel. It may be constructed
@@ -72,7 +77,8 @@ type ChannelOutbound struct {
 	// Otherwise, the global peer list of the Channel will be used.
 	addr string
 
-	once *lifecycle.Once
+	once                     *lifecycle.Once
+	unaryCallWithInterceptor interceptor.UnaryOutboundChain
 }
 
 // TransportName is the transport name that will be set on `transport.Request`
@@ -108,8 +114,17 @@ func (o *ChannelOutbound) IsRunning() bool {
 	return o.once.IsRunning()
 }
 
-// Call sends an RPC over this TChannel outbound.
+// Call wraps the DirectCall.
 func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+	if req == nil {
+		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel channel outbound was nil")
+	}
+
+	return o.unaryCallWithInterceptor.Next(ctx, req)
+}
+
+// DirectCall sends an RPC over this TChannel outbound.
+func (o *ChannelOutbound) DirectCall(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if req == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel channel outbound was nil")
 	}
@@ -165,6 +180,7 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 	if o.transport.originalHeaders {
 		reqHeaders = req.Headers.OriginalItems()
 	}
+	// TODO: remove tracing instrumentation at transport layer completely
 	// baggage headers are transport implementation details that are stripped out (and stored in the context). Users don't interact with it
 	tracingBaggage := tchannel.InjectOutboundSpan(call.Response(), nil)
 	if err := writeHeaders(format, reqHeaders, tracingBaggage, call.Arg2Writer); err != nil {

@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,14 +22,11 @@ package http
 
 import (
 	"context"
-	"crypto/tls"
 	"math/rand"
 	"net"
 	"net/http"
 	"sync"
 	"time"
-
-	"golang.org/x/net/http2"
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/net/metrics"
@@ -38,6 +35,9 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/internal/backoff"
+	"go.uber.org/yarpc/internal/inboundmiddleware"
+	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/tracinginterceptor"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/zap"
 )
@@ -56,6 +56,7 @@ type transportOptions struct {
 	dialContext               func(ctx context.Context, network, addr string) (net.Conn, error)
 	jitter                    func(int64) int64
 	tracer                    opentracing.Tracer
+	tracingInterceptorEnabled bool
 	buildClient               func(*transportOptions) *http.Client
 	logger                    *zap.Logger
 	meter                     *metrics.Scope
@@ -215,6 +216,13 @@ func Tracer(tracer opentracing.Tracer) TransportOption {
 	}
 }
 
+// TracingInterceptorEnabled specifies whether to use the new tracing interceptor or the legacy implementation
+func TracingInterceptorEnabled(enabled bool) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.tracingInterceptorEnabled = enabled
+	}
+}
+
 // Logger sets a logger to use for internal logging.
 //
 // The default is to not write any logs.
@@ -271,71 +279,69 @@ func (o *transportOptions) newTransport() *Transport {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
+	var (
+		unaryInbounds   []interceptor.UnaryInbound
+		unaryOutbounds  []interceptor.UnaryOutbound
+		onewayInbounds  []interceptor.OnewayInbound
+		onewayOutbounds []interceptor.OnewayOutbound
+	)
+	tracer := o.tracer
+	if o.tracingInterceptorEnabled {
+		ti := tracinginterceptor.New(tracinginterceptor.Params{
+			Tracer:    tracer,
+			Transport: TransportName,
+		})
+		unaryInbounds = append(unaryInbounds, ti)
+		unaryOutbounds = append(unaryOutbounds, ti)
+		onewayInbounds = append(onewayInbounds, ti)
+		onewayOutbounds = append(onewayOutbounds, ti)
+
+		tracer = opentracing.NoopTracer{}
+	}
+
 	return &Transport{
-		once:                     lifecycle.NewOnce(),
-		connTimeout:              o.connTimeout,
-		connBackoffStrategy:      o.connBackoffStrategy,
-		innocenceWindow:          o.innocenceWindow,
-		jitter:                   o.jitter,
-		peers:                    make(map[string]*httpPeer),
-		tracer:                   o.tracer,
-		logger:                   logger,
-		meter:                    o.meter,
-		serviceName:              o.serviceName,
-		ouboundTLSConfigProvider: o.outboundTLSConfigProvider,
-		h1Transport:              buildH1Transport(o),
-		h2Transport:              buildH2Transport(o),
-	}
-}
-
-func buildH1Transport(options *transportOptions) *http.Transport {
-	dialContext := options.dialContext
-	if dialContext == nil {
-		dialContext = (&net.Dialer{
-			Timeout:   defaultDialerTimeout,
-			KeepAlive: options.keepAlive,
-		}).DialContext
-	}
-
-	return &http.Transport{
-		// options lifted from https://golang.org/src/net/http/transport.go
-		Proxy:                 http.ProxyFromEnvironment,
-		DialContext:           dialContext,
-		TLSHandshakeTimeout:   10 * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-		MaxIdleConns:          options.maxIdleConns,
-		MaxIdleConnsPerHost:   options.maxIdleConnsPerHost,
-		IdleConnTimeout:       options.idleConnTimeout,
-		DisableKeepAlives:     options.disableKeepAlives,
-		DisableCompression:    options.disableCompression,
-		ResponseHeaderTimeout: options.responseHeaderTimeout,
-	}
-}
-
-func buildH2Transport(options *transportOptions) *http2.Transport {
-	dialContext := options.dialContext
-	if dialContext == nil {
-		dialContext = (&net.Dialer{
-			Timeout:   defaultDialerTimeout,
-			KeepAlive: options.keepAlive,
-		}).DialContext
-	}
-
-	return &http2.Transport{
-		AllowHTTP: true,
-		DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
-			return dialContext(ctx, network, addr)
-		},
-		DisableCompression: options.disableCompression,
-		IdleConnTimeout:    options.idleConnTimeout,
-		PingTimeout:        defaultHTTP2PingTimeout,
-		ReadIdleTimeout:    defaultHTTP2ReadIdleTimeout,
+		once:                      lifecycle.NewOnce(),
+		client:                    o.buildClient(o),
+		connTimeout:               o.connTimeout,
+		connBackoffStrategy:       o.connBackoffStrategy,
+		innocenceWindow:           o.innocenceWindow,
+		jitter:                    o.jitter,
+		peers:                     make(map[string]*httpPeer),
+		tracer:                    tracer,
+		logger:                    logger,
+		meter:                     o.meter,
+		serviceName:               o.serviceName,
+		ouboundTLSConfigProvider:  o.outboundTLSConfigProvider,
+		unaryInboundInterceptor:   inboundmiddleware.UnaryChain(unaryInbounds...),
+		unaryOutboundInterceptor:  unaryOutbounds,
+		onewayInboundInterceptor:  inboundmiddleware.OnewayChain(onewayInbounds...),
+		onewayOutboundInterceptor: onewayOutbounds,
 	}
 }
 
 func buildHTTPClient(options *transportOptions) *http.Client {
+	dialContext := options.dialContext
+	if dialContext == nil {
+		dialContext = (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: options.keepAlive,
+		}).DialContext
+	}
+
 	return &http.Client{
-		Transport: buildH1Transport(options),
+		Transport: &http.Transport{
+			// options lifted from https://golang.org/src/net/http/transport.go
+			Proxy:                 http.ProxyFromEnvironment,
+			DialContext:           dialContext,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			MaxIdleConns:          options.maxIdleConns,
+			MaxIdleConnsPerHost:   options.maxIdleConnsPerHost,
+			IdleConnTimeout:       options.idleConnTimeout,
+			DisableKeepAlives:     options.disableKeepAlives,
+			DisableCompression:    options.disableCompression,
+			ResponseHeaderTimeout: options.responseHeaderTimeout,
+		},
 	}
 }
 
@@ -346,7 +352,8 @@ type Transport struct {
 	lock sync.Mutex
 	once *lifecycle.Once
 
-	peers map[string]*httpPeer
+	client *http.Client
+	peers  map[string]*httpPeer
 
 	connTimeout         time.Duration
 	connBackoffStrategy backoffapi.Strategy
@@ -360,8 +367,10 @@ type Transport struct {
 	serviceName              string
 	ouboundTLSConfigProvider yarpctls.OutboundTLSConfigProvider
 
-	h1Transport *http.Transport
-	h2Transport *http2.Transport
+	unaryInboundInterceptor   interceptor.UnaryInbound
+	unaryOutboundInterceptor  []interceptor.UnaryOutbound
+	onewayInboundInterceptor  interceptor.OnewayInbound
+	onewayOutboundInterceptor []interceptor.OnewayOutbound
 }
 
 var _ transport.Transport = (*Transport)(nil)
@@ -376,8 +385,7 @@ func (a *Transport) Start() error {
 // Stop stops the HTTP transport.
 func (a *Transport) Stop() error {
 	return a.once.Stop(func() error {
-		a.h1Transport.CloseIdleConnections()
-		a.h2Transport.CloseIdleConnections()
+		closeIdleConnections(a.client)
 		a.connectorsGroup.Wait()
 		return nil
 	})

@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,6 +21,7 @@
 package grpc
 
 import (
+	"go.uber.org/yarpc/api/middleware"
 	"strings"
 	"time"
 
@@ -74,9 +75,28 @@ func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) (err e
 	}
 	switch handlerSpec.Type() {
 	case transport.Unary:
-		return h.handleUnary(ctx, transportRequest, serverStream, streamMethod, start, handlerSpec.Unary())
+		return h.handleUnary(
+			ctx,
+			transportRequest,
+			serverStream,
+			streamMethod,
+			start,
+			middleware.ApplyUnaryInbound(
+				handlerSpec.Unary(),
+				h.i.t.options.unaryInboundInterceptor,
+			),
+		)
 	case transport.Streaming:
-		return h.handleStream(ctx, transportRequest, serverStream, start, handlerSpec.Stream())
+		return h.handleStream(
+			ctx,
+			transportRequest,
+			serverStream,
+			start,
+			middleware.ApplyStreamInbound(
+				handlerSpec.Stream(),
+				h.i.t.options.streamInboundInterceptor,
+			),
+		)
 	}
 	return yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport grpc does not handle %s handlers", handlerSpec.Type().String())
 }

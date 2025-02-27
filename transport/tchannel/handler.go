@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"go.uber.org/yarpc/api/middleware"
+	"go.uber.org/yarpc/internal/interceptor"
 	"strconv"
 	"time"
 
@@ -105,6 +107,7 @@ type handler struct {
 	logger                         *zap.Logger
 	newResponseWriter              func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
 	excludeServiceHeaderInResponse bool
+	unaryInboundInterceptor        interceptor.UnaryInbound
 }
 
 func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
@@ -193,7 +196,11 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 
 	if tcall, ok := call.(tchannelCall); ok {
 		tracer := h.tracer
-		ctx = tchannel.ExtractInboundSpan(ctx, tcall.InboundCall, headers.Items(), tracer)
+		// skip extract if the tracer here is noop and let tracing middleware do the extraction job.
+		// tchannel.ExtractInboundSpan will remove tracing headers to break tracing middleware
+		if _, isNoop := tracer.(opentracing.NoopTracer); !isNoop {
+			ctx = tchannel.ExtractInboundSpan(ctx, tcall.InboundCall, headers.Items(), tracer)
+		}
 	}
 
 	buf := bufferpool.Get()
@@ -242,7 +249,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 			StartTime:      start,
 			Request:        treq,
 			ResponseWriter: responseWriter,
-			Handler:        spec.Unary(),
+			Handler:        middleware.ApplyUnaryInbound(spec.Unary(), h.unaryInboundInterceptor),
 			Logger:         h.logger,
 		})
 

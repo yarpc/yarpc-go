@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,6 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -39,19 +38,15 @@ import (
 	"go.uber.org/yarpc/transport/internal/tls/muxlistener"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 )
 
-const (
-	// We want a value that's around 5 seconds, but slightly higher than how
-	// long a successful HTTP shutdown can take.
-	// There's a specific path in the HTTP shutdown path that can take 5 seconds:
-	// https://golang.org/src/net/http/server.go?s=83923:83977#L2710
-	// This avoids timeouts in shutdown caused by new idle connections, without
-	// making the timeout too large.
-	defaultShutdownTimeout = 6 * time.Second
-)
+// We want a value that's around 5 seconds, but slightly higher than how
+// long a successful HTTP shutdown can take.
+// There's a specific path in the HTTP shutdown path that can take 5 seconds:
+// https://golang.org/src/net/http/server.go?s=83923:83977#L2710
+// This avoids timeouts in shutdown caused by new idle connections, without
+// making the timeout too large.
+const defaultShutdownTimeout = 6 * time.Second
 
 // InboundOption customizes the behavior of an HTTP Inbound constructed with
 // NewInbound.
@@ -129,13 +124,6 @@ func InboundTLSMode(mode yarpctls.Mode) InboundOption {
 	}
 }
 
-// DisableHTTP2 returns an InboundOption that disables HTTP/2 support.
-func DisableHTTP2(flag bool) InboundOption {
-	return func(i *Inbound) {
-		i.disableHTTP2 = flag
-	}
-}
-
 // NewInbound builds a new HTTP inbound that listens on the given address and
 // sharing this transport.
 func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
@@ -148,7 +136,6 @@ func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 		transport:         t,
 		grabHeaders:       make(map[string]struct{}),
 		bothResponseError: true,
-		disableHTTP2:      false,
 	}
 	for _, opt := range opts {
 		opt(i)
@@ -178,8 +165,6 @@ type Inbound struct {
 
 	tlsConfig *tls.Config
 	tlsMode   yarpctls.Mode
-
-	disableHTTP2 bool
 }
 
 // Tracer configures a tracer on this inbound.
@@ -219,6 +204,7 @@ func (i *Inbound) start() error {
 	var httpHandler http.Handler = handler{
 		router:            i.router,
 		tracer:            i.tracer,
+		transport:         i.transport,
 		grabHeaders:       i.grabHeaders,
 		bothResponseError: i.bothResponseError,
 		logger:            i.logger,
@@ -236,19 +222,10 @@ func (i *Inbound) start() error {
 		httpHandler = i.mux
 	}
 
-	server := &http.Server{
+	i.server = intnet.NewHTTPServer(&http.Server{
 		Addr:    i.addr,
 		Handler: httpHandler,
-	}
-	if !i.disableHTTP2 {
-		h2s := &http2.Server{}
-		server.Handler = h2c.NewHandler(server.Handler, h2s)
-		err := http2.ConfigureServer(server, h2s)
-		if err != nil {
-			return fmt.Errorf("failed to configure HTTP/2 server: %w", err)
-		}
-	}
-	i.server = intnet.NewHTTPServer(server)
+	})
 
 	addr := i.addr
 	if addr == "" {

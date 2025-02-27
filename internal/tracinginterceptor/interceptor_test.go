@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +23,7 @@ package tracinginterceptor
 import (
 	"context"
 	"fmt"
+	"go.uber.org/yarpc/internal/interceptor/interceptortest"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -234,9 +235,8 @@ func TestInterceptorCall(t *testing.T) {
 				Headers:   transport.Headers{},
 			}
 
-			outbound := transporttest.NewMockUnaryOutbound(ctrl)
-			outbound.EXPECT().
-				Call(gomock.Any(), req).
+			outbound := interceptortest.NewMockUnaryOutboundChain(ctrl)
+			outbound.EXPECT().Next(gomock.Any(), req).
 				Return(tt.response, tt.callError)
 
 			// Mocking Inject to return an error
@@ -496,9 +496,9 @@ func TestInterceptorCallOneway(t *testing.T) {
 				Headers:   transport.Headers{},
 			}
 
-			outbound := transporttest.NewMockOnewayOutbound(ctrl)
+			outbound := interceptortest.NewMockOnewayOutboundChain(ctrl)
 			outbound.EXPECT().
-				CallOneway(gomock.Any(), req).
+				Next(gomock.Any(), req).
 				Return(nil, tt.callError) // Return nil for Ack
 
 			_, err := interceptor.CallOneway(context.Background(), req, outbound)
@@ -613,8 +613,8 @@ func TestInterceptorCallStream(t *testing.T) {
 	clientStream, err := transport.NewClientStream(mockStream)
 	require.NoError(t, err)
 
-	outbound := transporttest.NewMockStreamOutbound(ctrl)
-	outbound.EXPECT().CallStream(gomock.Any(), gomock.Any()).Return(clientStream, nil)
+	outbound := interceptortest.NewMockStreamOutboundChain(ctrl)
+	outbound.EXPECT().Next(gomock.Any(), gomock.Any()).Return(clientStream, nil)
 
 	req := &transport.StreamRequest{
 		Meta: &transport.RequestMeta{Procedure: "test-procedure"},
@@ -642,9 +642,9 @@ func TestInterceptorCallStream_Error(t *testing.T) {
 	clientStream, err := transport.NewClientStream(mockStreamCloser)
 	require.NoError(t, err)
 
-	outbound := transporttest.NewMockStreamOutbound(ctrl)
+	outbound := interceptortest.NewMockStreamOutboundChain(ctrl)
 	outbound.EXPECT().
-		CallStream(gomock.Any(), gomock.Any()).
+		Next(gomock.Any(), gomock.Any()).
 		Return(clientStream, yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "call error"))
 
 	// Set up the request

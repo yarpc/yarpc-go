@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Uber Technologies, Inc.
+// Copyright (c) 2024 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -32,6 +32,7 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 	opentracinglog "github.com/opentracing/opentracing-go/log"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/internal/iopool"
@@ -53,6 +54,7 @@ type handler struct {
 	grabHeaders       map[string]struct{}
 	bothResponseError bool
 	logger            *zap.Logger
+	transport         *Transport
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -156,16 +158,27 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		defer span.Finish()
 
 		err = transport.InvokeUnaryHandler(transport.UnaryInvokeRequest{
-			Context:        ctx,
-			StartTime:      start,
-			Request:        treq,
-			Handler:        spec.Unary(),
+			Context:   ctx,
+			StartTime: start,
+			Request:   treq,
+			Handler: middleware.ApplyUnaryInbound(
+				spec.Unary(),
+				h.transport.unaryInboundInterceptor,
+			),
 			ResponseWriter: responseWriter,
 			Logger:         h.logger,
 		})
 
 	case transport.Oneway:
-		err = handleOnewayRequest(span, treq, spec.Oneway(), h.logger)
+		err = handleOnewayRequest(
+			span,
+			treq,
+			middleware.ApplyOnewayInbound(
+				spec.Oneway(),
+				h.transport.onewayInboundInterceptor,
+			),
+			h.logger,
+		)
 
 	default:
 		err = yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport http does not handle %s handlers", spec.Type().String())
