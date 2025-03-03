@@ -82,6 +82,24 @@ func TestCallFromContext(t *testing.T) {
 	assert.Equal(t, "two", call.RoutingKey())
 	assert.Equal(t, "three", call.RoutingDelegate())
 	assert.Equal(t, "four", call.CallerProcedure())
+
+	clone := call.Clone()
+	assert.NotNil(t, clone)
+	assert.Equal(t, "foo", clone.Caller())
+	assert.Equal(t, "bar", clone.Service())
+	assert.Equal(t, "trans", clone.Transport())
+	assert.Equal(t, transport.Encoding("baz"), clone.Encoding())
+	assert.Equal(t, "hello", clone.Procedure())
+	assert.Equal(t, "bar", clone.Header("foo"))
+	assert.Equal(t, "bar", clone.OriginalHeader("foo"))
+	assert.Equal(t, "Bar", clone.OriginalHeader("Foo"))
+	assert.Equal(t, map[string]string{"Foo": "Bar", "foo": "bar"}, clone.OriginalHeaders())
+	assert.Equal(t, []string{"foo"}, clone.HeaderNames())
+	assert.Equal(t, "one", clone.ShardKey())
+	assert.Equal(t, "two", clone.RoutingKey())
+	assert.Equal(t, "three", clone.RoutingDelegate())
+	assert.Equal(t, "four", clone.CallerProcedure())
+
 }
 
 func TestRealCallTheadSafety(t *testing.T) {
