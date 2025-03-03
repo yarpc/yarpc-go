@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Uber Technologies, Inc.
+// Copyright (c) 2025 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -44,7 +44,7 @@ func (x unaryChainExec) Next(ctx context.Context, request *transport.Request) (*
 	return next.Call(ctx, request, x)
 }
 
-func (x unaryChainExec) Outbound() interceptor.Outbound {
+func (x unaryChainExec) Outbound() transport.Outbound {
 	return x.Final
 }
 
@@ -72,7 +72,7 @@ func (x onewayChainExec) Next(ctx context.Context, request *transport.Request) (
 	return next.CallOneway(ctx, request, x)
 }
 
-func (x onewayChainExec) Outbound() interceptor.Outbound {
+func (x onewayChainExec) Outbound() transport.Outbound {
 	return x.Final
 }
 
@@ -109,7 +109,7 @@ func (x streamChainExec) Next(ctx context.Context, request *transport.StreamRequ
 	return next.CallStream(ctx, request, x)
 }
 
-func (x streamChainExec) Outbound() interceptor.Outbound {
+func (x streamChainExec) Outbound() transport.Outbound {
 	return x.Final
 }
 
