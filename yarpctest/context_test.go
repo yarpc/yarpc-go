@@ -55,7 +55,7 @@ func TestContextWithCall(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			ctx := yarpctest.ContextWithCall(context.Background(), &yarpctest.Call{
+			testCall := &yarpctest.Call{
 				Caller:          "caller",
 				Service:         "service",
 				Transport:       "transport",
@@ -67,7 +67,8 @@ func TestContextWithCall(t *testing.T) {
 				RoutingDelegate: "routingdelegate",
 				ResponseHeaders: tt.resHeaders,
 				CallerProcedure: "callerProcedure",
-			})
+			}
+			ctx := yarpctest.ContextWithCall(context.Background(), testCall)
 			call := yarpc.CallFromContext(ctx)
 
 			assert.Equal(t, "caller", call.Caller())
@@ -83,7 +84,7 @@ func TestContextWithCall(t *testing.T) {
 			assert.Equal(t, "callerProcedure", call.CallerProcedure())
 
 			assert.NoError(t, call.WriteResponseHeader("baz", "qux"))
-			assert.Equal(t, tt.wantResHeaders, tt.resHeaders)
+			assert.Equal(t, tt.wantResHeaders, testCall.ResponseHeaders)
 		})
 	}
 
