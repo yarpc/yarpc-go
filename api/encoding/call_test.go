@@ -56,7 +56,7 @@ func TestReadFromRequest(t *testing.T) {
 		Service:         "service",
 		Transport:       "transport",
 		Caller:          "caller",
-		Encoding:        transport.Encoding("raw"),
+		Encoding:        "raw",
 		Procedure:       "proc",
 		ShardKey:        "sk",
 		RoutingKey:      "rk",
@@ -94,7 +94,7 @@ func TestReadFromRequestMeta(t *testing.T) {
 		Service:         "service",
 		Caller:          "caller",
 		Transport:       "transport",
-		Encoding:        transport.Encoding("raw"),
+		Encoding:        "raw",
 		Procedure:       "proc",
 		ShardKey:        "sk",
 		RoutingKey:      "rk",
@@ -132,7 +132,7 @@ func TestDisabledResponseHeaders(t *testing.T) {
 		Service:         "service",
 		Transport:       "transport",
 		Caller:          "caller",
-		Encoding:        transport.Encoding("raw"),
+		Encoding:        "raw",
 		Procedure:       "proc",
 		ShardKey:        "sk",
 		RoutingKey:      "rk",
@@ -156,4 +156,5 @@ func TestDisabledResponseHeaders(t *testing.T) {
 	assert.Len(t, call.HeaderNames(), 1)
 
 	assert.Error(t, call.WriteResponseHeader("foo", "bar"))
+	assert.Nil(t, icall.resHeaders)
 }
