@@ -36,7 +36,7 @@ type (
 	// Outbound: Retrieves the outbound component of the chain, allowing for further inspection or manipulation.
 	UnaryOutboundChain interface {
 		Next(ctx context.Context, request *transport.Request) (*transport.Response, error)
-		Outbound() Outbound
+		Outbound() transport.Outbound
 	}
 
 	// OnewayOutboundChain defines the interface for a chain of one-way outbound requests.
@@ -48,7 +48,7 @@ type (
 	// Outbound: Retrieves the outbound component of the chain, allowing for further inspection or manipulation.
 	OnewayOutboundChain interface {
 		Next(ctx context.Context, request *transport.Request) (transport.Ack, error)
-		Outbound() Outbound
+		Outbound() transport.Outbound
 	}
 
 	// StreamOutboundChain defines the interface for a chain of streaming outbound requests.
@@ -60,7 +60,7 @@ type (
 	// Outbound: Retrieves the outbound component of the chain, allowing for further inspection or manipulation.
 	StreamOutboundChain interface {
 		Next(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error)
-		Outbound() Outbound
+		Outbound() transport.Outbound
 	}
 
 	// UnaryOutbound defines transport interceptor for `UnaryOutbound`s.
@@ -109,27 +109,10 @@ type (
 	}
 )
 
-// Outbound is the common interface for all outbounds.
-//
-// Outbounds should also implement the Namer interface so that YARPC can
-// properly update the Request.Transport field.
-type Outbound interface {
-	transport.Lifecycle
-
-	// Transports returns the transports that used by this outbound, so they
-	// can be collected for lifecycle management, typically by a Dispatcher.
-	//
-	// Though most outbounds only use a single transport, composite outbounds
-	// may use multiple transport protocols, particularly for shadowing traffic
-	// across multiple transport protocols during a transport protocol
-	// migration.
-	Transports() []transport.Transport
-}
-
 // DirectUnaryOutbound is a transport that knows how to send unary requests for procedure
 // calls.
 type DirectUnaryOutbound interface {
-	Outbound
+	transport.Outbound
 
 	// DirectCall is called without interceptor.
 	DirectCall(ctx context.Context, request *transport.Request) (*transport.Response, error)
@@ -138,7 +121,7 @@ type DirectUnaryOutbound interface {
 // DirectOnewayOutbound defines a transport outbound for oneway requests
 // that does not involve any interceptors.
 type DirectOnewayOutbound interface {
-	Outbound
+	transport.Outbound
 
 	// DirectCallOneway is called without interceptor.
 	DirectCallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error)
@@ -147,7 +130,7 @@ type DirectOnewayOutbound interface {
 // DirectStreamOutbound defines a transport outbound for streaming requests
 // that does not involve any interceptors.
 type DirectStreamOutbound interface {
-	Outbound
+	transport.Outbound
 
 	// DirectCallStream is called without interceptor.
 	DirectCallStream(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error)
