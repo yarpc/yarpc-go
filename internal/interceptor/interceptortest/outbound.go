@@ -52,10 +52,10 @@ func (mr *MockUnaryOutboundChainMockRecorder) Next(ctx, request interface{}) *go
 }
 
 // Outbound mocks base method.
-func (m *MockUnaryOutboundChain) Outbound() interceptor.Outbound {
+func (m *MockUnaryOutboundChain) Outbound() transport.Outbound {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Outbound")
-	ret0, _ := ret[0].(interceptor.Outbound)
+	ret0, _ := ret[0].(transport.Outbound)
 	return ret0
 }
 
@@ -104,10 +104,10 @@ func (mr *MockOnewayOutboundChainMockRecorder) Next(ctx, request interface{}) *g
 }
 
 // Outbound mocks base method.
-func (m *MockOnewayOutboundChain) Outbound() interceptor.Outbound {
+func (m *MockOnewayOutboundChain) Outbound() transport.Outbound {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Outbound")
-	ret0, _ := ret[0].(interceptor.Outbound)
+	ret0, _ := ret[0].(transport.Outbound)
 	return ret0
 }
 
@@ -156,10 +156,10 @@ func (mr *MockStreamOutboundChainMockRecorder) Next(ctx, request interface{}) *g
 }
 
 // Outbound mocks base method.
-func (m *MockStreamOutboundChain) Outbound() interceptor.Outbound {
+func (m *MockStreamOutboundChain) Outbound() transport.Outbound {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Outbound")
-	ret0, _ := ret[0].(interceptor.Outbound)
+	ret0, _ := ret[0].(transport.Outbound)
 	return ret0
 }
 
