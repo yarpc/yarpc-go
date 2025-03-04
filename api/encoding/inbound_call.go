@@ -22,6 +22,7 @@ package encoding
 
 import (
 	"context"
+	"sync"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/inboundcall"
@@ -34,6 +35,8 @@ import (
 // incoming request on the Context and send response headers through
 // WriteResponseHeader.
 type InboundCall struct {
+	// guards resHeaders so InboundCall should not be passed by copying, only by pointer!
+	lock                   sync.Mutex
 	resHeaders             []keyValuePair
 	req                    *transport.Request
 	disableResponseHeaders bool
@@ -101,9 +104,11 @@ func (ic *InboundCall) ReadFromRequestMeta(reqMeta *transport.RequestMeta) error
 // ResponseWriter.
 func (ic *InboundCall) WriteToResponse(resw transport.ResponseWriter) error {
 	var headers transport.Headers
+	ic.lock.Lock()
 	for _, h := range ic.resHeaders {
 		headers = headers.With(h.k, h.v)
 	}
+	ic.lock.Unlock()
 
 	if headers.Len() > 0 {
 		resw.AddHeaders(headers)
@@ -161,6 +166,30 @@ func (ic *inboundCallMetadata) WriteResponseHeader(k, v string) error {
 	if ic.disableResponseHeaders {
 		return yarpcerrors.InvalidArgumentErrorf("call does not support setting response headers")
 	}
+	ic.lock.Lock()
 	ic.resHeaders = append(ic.resHeaders, keyValuePair{k: k, v: v})
+	ic.lock.Unlock()
 	return nil
+}
+
+// Clone copies current call and returns is. The two instances share nothing
+// and can be used completely concurrently. Changes in one do not reflect in the other.
+// The clone is intended to be woven back in call chain by producing a new context to
+// propagate via:
+// ctx, _ = encoding.NewInboundCall(ctx)
+func (ic *inboundCallMetadata) Clone() inboundcall.Metadata {
+	newCall := &InboundCall{
+		req:                    ic.req,
+		disableResponseHeaders: ic.disableResponseHeaders,
+	}
+	ic.lock.Lock()
+	// lock precedes nil check to force happens before
+	// This is the fastest slice clone preserving nil, rely on runtime to optimize:
+	// https://github.com/golang/go/commit/6ed4661807b219781d1aa452b7f210e21ad1974b
+	if ic.resHeaders != nil {
+		newCall.resHeaders = make([]keyValuePair, len(ic.resHeaders))
+		copy(newCall.resHeaders, ic.resHeaders)
+	}
+	ic.lock.Unlock()
+	return (*inboundCallMetadata)(newCall)
 }

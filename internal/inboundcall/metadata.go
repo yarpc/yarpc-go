@@ -42,6 +42,7 @@ type Metadata interface {
 	RoutingKey() string
 	RoutingDelegate() string
 	CallerProcedure() string
+	Clone() Metadata
 }
 
 type metadataKey struct{} // context key for Metadata
