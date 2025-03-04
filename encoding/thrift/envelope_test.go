@@ -26,6 +26,7 @@ import (
 	"io"
 	"math/rand"
 	"reflect"
+	"strings"
 	"testing"
 	"testing/quick"
 	"time"
@@ -85,7 +86,7 @@ func TestDisableEnveloperEncode(t *testing.T) {
 
 func TestDisableEnveloperNoWireRead(t *testing.T) {
 	cont := "some buffered contents"
-	buf := bytes.NewBuffer([]byte(cont))
+	buf := strings.NewReader(cont)
 	evnw := disableEnvelopingNoWireProtocol{Protocol: binary.Default, Type: wire.Call}
 	sr := evnw.Reader(buf)
 	evh, err := sr.ReadEnvelopeBegin()

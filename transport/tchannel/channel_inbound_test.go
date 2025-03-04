@@ -232,7 +232,7 @@ func TestChannelInboundSubServices(t *testing.T) {
 				Service:   tt.service,
 				Procedure: tt.procedure,
 				Encoding:  raw.Encoding,
-				Body:      bytes.NewReader([]byte{}),
+				Body:      bytes.NewReader(nil),
 			},
 		)
 		if !assert.NoError(t, err, "failed to make call") {

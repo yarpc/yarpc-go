@@ -49,7 +49,7 @@ func NewRequestOpts() RequestOpts {
 			Caller:   "unknown",
 			Encoding: transport.Encoding("raw"),
 			Headers:  transport.NewHeaders(),
-			Body:     bytes.NewBufferString(""),
+			Body:     bytes.NewReader(nil),
 		},
 		WantResponse: &transport.Response{
 			Headers: transport.NewHeaders(),

@@ -25,6 +25,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -74,7 +75,7 @@ func TestClient(t *testing.T) {
 				Type:  wire.Reply,
 				Value: wire.NewValueStruct(wire.Struct{}),
 			},
-			responseBody: readCloser{bytes.NewReader([]byte("irrelevant"))},
+			responseBody: io.NopCloser(strings.NewReader("irrelevant")),
 		},
 		{
 			desc:             "happy case without enveloping",
@@ -82,7 +83,7 @@ func TestClient(t *testing.T) {
 			wantRequestBody:  valueptr(wire.NewValueStruct(wire.Struct{})),
 			expectCall:       true,
 			giveResponseBody: valueptr(wire.NewValueStruct(wire.Struct{})),
-			responseBody:     readCloser{bytes.NewReader([]byte("irrelevant"))},
+			responseBody:     io.NopCloser(strings.NewReader("irrelevant")),
 		},
 		{
 			desc:            "wrong envelope type for request",
@@ -90,7 +91,7 @@ func TestClient(t *testing.T) {
 			giveRequestBody: fakeEnveloper(wire.Reply),
 			wantError: `failed to encode "thrift" request body for procedure ` +
 				`"MyService::someMethod" of service "service": unexpected envelope type: Reply`,
-			responseBody: readCloser{bytes.NewReader([]byte("irrelevant"))},
+			responseBody: io.NopCloser(strings.NewReader("irrelevant")),
 		},
 		{
 			desc:            "TApplicationException",
@@ -115,7 +116,7 @@ func TestClient(t *testing.T) {
 			wantError: `thrift request to procedure "MyService::someMethod" of ` +
 				`service "service" encountered an internal failure: ` +
 				"TApplicationException{Message: great sadness, Type: PROTOCOL_ERROR}",
-			responseBody: readCloser{bytes.NewReader([]byte("irrelevant"))},
+			responseBody: io.NopCloser(strings.NewReader("irrelevant")),
 		},
 		{
 			desc:            "wrong envelope type for response",
@@ -136,7 +137,7 @@ func TestClient(t *testing.T) {
 			},
 			wantError: `failed to decode "thrift" response body for procedure ` +
 				`"MyService::someMethod" of service "service": unexpected envelope type: Call`,
-			responseBody: io.NopCloser(bytes.NewReader([]byte("irrelevant"))),
+			responseBody: io.NopCloser(strings.NewReader("irrelevant")),
 		},
 	}
 
@@ -173,7 +174,7 @@ func TestClient(t *testing.T) {
 					Service:   "service",
 					Encoding:  Encoding,
 					Procedure: "MyService::someMethod",
-					Body:      bytes.NewReader([]byte("irrelevant")),
+					Body:      strings.NewReader("irrelevant"),
 				}),
 			).Return(&transport.Response{
 				Body: tt.responseBody,
@@ -328,9 +329,3 @@ func TestClientOneway(t *testing.T) {
 		}
 	}
 }
-
-type readCloser struct {
-	*bytes.Reader
-}
-
-func (r readCloser) Close() error { return nil }

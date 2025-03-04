@@ -21,11 +21,11 @@
 package transport_test
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -254,7 +254,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 					Procedure: testProcedure,
 					Encoding:  raw.Encoding,
 					Headers:   tt.requestHeaders,
-					Body:      bytes.NewBufferString(tt.requestBody),
+					Body:      strings.NewReader(tt.requestBody),
 				})
 
 				handler := unaryHandlerFunc(func(_ context.Context, r *transport.Request, w transport.ResponseWriter) error {
@@ -286,7 +286,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 						Procedure: testProcedure,
 						Encoding:  raw.Encoding,
 						Headers:   tt.requestHeaders,
-						Body:      bytes.NewBufferString(tt.requestBody),
+						Body:      strings.NewReader(tt.requestBody),
 					})
 
 					if tt.wantError != nil {
@@ -297,7 +297,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 					} else {
 						responseMatcher := transporttest.NewResponseMatcher(t, &transport.Response{
 							Headers: tt.responseHeaders,
-							Body:    io.NopCloser(bytes.NewReader([]byte(tt.responseBody))),
+							Body:    io.NopCloser(strings.NewReader(tt.responseBody)),
 						})
 
 						if assert.NoError(t, err, "%T: call failed", trans) {
@@ -342,7 +342,7 @@ func TestSimpleRoundTripOneway(t *testing.T) {
 				Procedure: testProcedureOneway,
 				Encoding:  raw.Encoding,
 				Headers:   tt.requestHeaders,
-				Body:      bytes.NewReader([]byte(tt.requestBody)),
+				Body:      strings.NewReader(tt.requestBody),
 			})
 
 			handlerDone := make(chan struct{})
@@ -372,7 +372,7 @@ func TestSimpleRoundTripOneway(t *testing.T) {
 					Procedure: testProcedureOneway,
 					Encoding:  raw.Encoding,
 					Headers:   tt.requestHeaders,
-					Body:      bytes.NewReader([]byte(tt.requestBody)),
+					Body:      strings.NewReader(tt.requestBody),
 				})
 
 				select {

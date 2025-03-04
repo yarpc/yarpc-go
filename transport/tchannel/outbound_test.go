@@ -23,6 +23,7 @@ package tchannel
 import (
 	"bytes"
 	"io"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -127,7 +128,7 @@ func TestOutboundHeaders(t *testing.T) {
 					Encoding:  raw.Encoding,
 					Procedure: "hello",
 					Headers:   transport.HeadersFromMap(tt.giveHeaders),
-					Body:      bytes.NewBufferString("body"),
+					Body:      strings.NewReader("body"),
 				},
 			)
 
@@ -183,7 +184,7 @@ func TestCallSuccess(t *testing.T) {
 			Service:   "service",
 			Encoding:  raw.Encoding,
 			Procedure: "hello",
-			Body:      bytes.NewBufferString("world"),
+			Body:      strings.NewReader("world"),
 		},
 	)
 
@@ -317,7 +318,7 @@ func TestCallFailures(t *testing.T) {
 					Service:   "service",
 					Encoding:  raw.Encoding,
 					Procedure: tt.procedure,
-					Body:      bytes.NewReader([]byte("sup")),
+					Body:      strings.NewReader("sup"),
 				},
 			)
 
@@ -448,7 +449,7 @@ func TestCallWithoutStarting(t *testing.T) {
 			Service:   "service",
 			Encoding:  raw.Encoding,
 			Procedure: "foo",
-			Body:      bytes.NewReader([]byte("sup")),
+			Body:      strings.NewReader("sup"),
 		},
 	)
 

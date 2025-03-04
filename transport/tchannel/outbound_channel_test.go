@@ -21,8 +21,8 @@
 package tchannel
 
 import (
-	"bytes"
 	"net"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -88,7 +88,7 @@ func TestOutboundChannel(t *testing.T) {
 			Service:   "service",
 			Encoding:  raw.Encoding,
 			Procedure: "hello",
-			Body:      bytes.NewBufferString("body"),
+			Body:      strings.NewReader("body"),
 		},
 	)
 	require.NoError(t, err, "failed to make call")

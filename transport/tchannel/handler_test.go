@@ -134,7 +134,7 @@ func TestHandlerErrors(t *testing.T) {
 					ShardKey:        "shard",
 					RoutingKey:      "routekey",
 					RoutingDelegate: "routedelegate",
-					Body:            bytes.NewReader([]byte("world")),
+					Body:            strings.NewReader("world"),
 				}),
 			gomock.Any(),
 		).Return(nil)

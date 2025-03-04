@@ -21,11 +21,11 @@
 package json
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"io"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -123,12 +123,11 @@ func TestCall(t *testing.T) {
 						Procedure: tt.procedure,
 						Encoding:  Encoding,
 						Headers:   transport.HeadersFromMap(tt.headers),
-						Body:      bytes.NewReader([]byte(tt.encodedRequest)),
+						Body:      strings.NewReader(tt.encodedRequest),
 					}),
 			).Return(
 				&transport.Response{
-					Body: io.NopCloser(
-						bytes.NewReader([]byte(tt.encodedResponse))),
+					Body:    io.NopCloser(strings.NewReader(tt.encodedResponse)),
 					Headers: transport.HeadersFromMap(tt.wantHeaders),
 				}, tt.responseErr)
 		}
@@ -229,7 +228,7 @@ func TestCallOneway(t *testing.T) {
 					Procedure: tt.procedure,
 					Encoding:  Encoding,
 					Headers:   transport.HeadersFromMap(tt.headers),
-					Body:      bytes.NewReader([]byte(tt.encodedRequest)),
+					Body:      strings.NewReader(tt.encodedRequest),
 				})
 
 			if tt.wantErr != "" {

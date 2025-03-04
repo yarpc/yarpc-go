@@ -1039,7 +1039,7 @@ func TestYARPCErrorsConverted(t *testing.T) {
 			Service:   "service",
 			Encoding:  "encoding",
 			Procedure: "no procedure",
-			Body:      bytes.NewBufferString("foo-body"),
+			Body:      strings.NewReader("foo-body"),
 		})
 
 		require.Error(t, err)

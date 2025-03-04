@@ -21,7 +21,6 @@
 package tchannel_test
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
@@ -149,7 +148,7 @@ func TestInboundTLS(t *testing.T) {
 			res, err := outbound.Call(ctx, &transport.Request{
 				Service:   "test-svc-1",
 				Procedure: "test-proc",
-				Body:      bytes.NewReader([]byte("hello")),
+				Body:      strings.NewReader("hello"),
 			})
 			require.NoError(t, err)
 

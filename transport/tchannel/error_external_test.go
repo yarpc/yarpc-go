@@ -21,10 +21,10 @@
 package tchannel_test
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -69,7 +69,7 @@ func TestResponseErrorMetaIntegration(t *testing.T) {
 	defer cancel()
 	_, err = client.Call(ctx, &transport.Request{
 		Service: "foo",
-		Body:    bytes.NewBufferString("bar"),
+		Body:    strings.NewReader("bar"),
 	})
 	require.Error(t, err, "expected call failure")
 
