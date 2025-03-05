@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -122,7 +123,7 @@ func TestInboundSubServices(t *testing.T) {
 				Service:   tt.service,
 				Procedure: tt.procedure,
 				Encoding:  raw.Encoding,
-				Body:      bytes.NewReader([]byte{}),
+				Body:      bytes.NewReader(nil),
 			},
 		)
 		if !assert.NoError(t, err, "failed to make call") {
@@ -238,7 +239,7 @@ func TestInboundWithNativeHandlers(t *testing.T) {
 				Service:   tt.service,
 				Procedure: tt.procedure,
 				Encoding:  raw.Encoding,
-				Body:      bytes.NewReader([]byte{}),
+				Body:      bytes.NewReader(nil),
 			},
 		)
 		require.NoError(t, err, "failed to make call")
@@ -289,7 +290,7 @@ func TestArbitraryInboundServiceOutboundCallerName(t *testing.T) {
 					Service:   tt.service,
 					Encoding:  raw.Encoding,
 					Procedure: "procedure",
-					Body:      bytes.NewReader([]byte(tt.msg)),
+					Body:      strings.NewReader(tt.msg),
 				},
 			)
 			if !assert.NoError(t, err, "call success") {

@@ -21,11 +21,11 @@
 package http
 
 import (
-	"bytes"
 	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -69,7 +69,7 @@ func TestRoundTripSuccess(t *testing.T) {
 	defer out.Stop()
 
 	// create request
-	hreq := httptest.NewRequest("GET", echoServer.URL, bytes.NewReader([]byte(giveBody)))
+	hreq := httptest.NewRequest("GET", echoServer.URL, strings.NewReader(giveBody))
 	hreq.Header.Add(headerKey, headerVal)
 
 	// add deadline

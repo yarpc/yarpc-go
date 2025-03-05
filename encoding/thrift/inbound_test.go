@@ -22,11 +22,11 @@
 package thrift
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -440,7 +440,7 @@ func request() *transport.Request {
 		Service:   "service",
 		Encoding:  "thrift",
 		Procedure: "MyService::someMethod",
-		Body:      bytes.NewReader([]byte("irrelevant")),
+		Body:      strings.NewReader("irrelevant"),
 	}
 }
 

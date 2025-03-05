@@ -83,7 +83,7 @@ func TestHandlerSuccess(t *testing.T) {
 				RoutingKey:      "routekey",
 				RoutingDelegate: "routedelegate",
 				CallerProcedure: "callerprocedure",
-				Body:            bytes.NewReader([]byte("Nyuck Nyuck")),
+				Body:            strings.NewReader("Nyuck Nyuck"),
 			},
 		),
 		gomock.Any(),
@@ -98,7 +98,7 @@ func TestHandlerSuccess(t *testing.T) {
 	req := &http.Request{
 		Method: "POST",
 		Header: headers,
-		Body:   io.NopCloser(bytes.NewReader([]byte("Nyuck Nyuck"))),
+		Body:   io.NopCloser(strings.NewReader("Nyuck Nyuck")),
 	}
 	rw := httptest.NewRecorder()
 	httpHandler.ServeHTTP(rw, req)
@@ -190,7 +190,7 @@ func TestHandlerHeaders(t *testing.T) {
 					Encoding:  transport.Encoding(tt.giveEncoding),
 					Procedure: "hello",
 					Headers:   transport.HeadersFromMap(tt.wantHeaders),
-					Body:      bytes.NewReader([]byte("world")),
+					Body:      strings.NewReader("world"),
 				}),
 			gomock.Any(),
 		).Return(nil)
@@ -209,7 +209,7 @@ func TestHandlerHeaders(t *testing.T) {
 		req := &http.Request{
 			Method: "POST",
 			Header: headers,
-			Body:   io.NopCloser(bytes.NewReader([]byte("world"))),
+			Body:   io.NopCloser(strings.NewReader("world")),
 		}
 		rw := httptest.NewRecorder()
 		httpHandler.ServeHTTP(rw, req)
@@ -293,7 +293,7 @@ func TestHandlerFailures(t *testing.T) {
 	for _, tt := range tests {
 		req := tt.req
 		if req.Body == nil {
-			req.Body = io.NopCloser(bytes.NewReader([]byte{}))
+			req.Body = io.NopCloser(bytes.NewReader(nil))
 		}
 
 		reg := transporttest.NewMockRouter(mockCtrl)
@@ -335,7 +335,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 	request := http.Request{
 		Method: "POST",
 		Header: headers,
-		Body:   io.NopCloser(bytes.NewReader([]byte{})),
+		Body:   io.NopCloser(bytes.NewReader(nil)),
 	}
 
 	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
@@ -348,7 +348,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 				Transport: "http",
 				Encoding:  raw.Encoding,
 				Procedure: "hello",
-				Body:      bytes.NewReader([]byte{}),
+				Body:      bytes.NewReader(nil),
 			},
 		),
 		gomock.Any(),

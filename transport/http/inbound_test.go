@@ -21,7 +21,6 @@
 package http
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -29,6 +28,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"syscall"
 	"testing"
 
@@ -159,7 +159,7 @@ func TestInboundMux(t *testing.T) {
 		Service:   "bar",
 		Procedure: "hello",
 		Encoding:  raw.Encoding,
-		Body:      bytes.NewReader([]byte("derp")),
+		Body:      strings.NewReader("derp"),
 	})
 
 	if assert.Error(t, err, "RPC call to / should have failed") {
@@ -184,7 +184,7 @@ func TestInboundMux(t *testing.T) {
 		Service:   "bar",
 		Procedure: "hello",
 		Encoding:  raw.Encoding,
-		Body:      bytes.NewReader([]byte("derp")),
+		Body:      strings.NewReader("derp"),
 	})
 
 	if assert.NoError(t, err, "expected rpc request to succeed") {

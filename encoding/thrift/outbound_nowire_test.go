@@ -21,11 +21,11 @@
 package thrift
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
 	"errors"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -173,10 +173,10 @@ func TestNoWireClientCall(t *testing.T) {
 						Service:   "service",
 						Encoding:  Encoding,
 						Procedure: "MyService::someMethod",
-						Body:      bytes.NewReader([]byte(tt.wantRequestBody)),
+						Body:      strings.NewReader(tt.wantRequestBody),
 					}),
 				).Return(&transport.Response{
-					Body: readCloser{bytes.NewReader([]byte(tt.giveResponseBody))},
+					Body: io.NopCloser(strings.NewReader(tt.giveResponseBody)),
 				}, nil)
 			}
 
@@ -281,7 +281,7 @@ func TestNoWireClientOneway(t *testing.T) {
 							Service:   "service",
 							Encoding:  Encoding,
 							Procedure: "MyService::someMethod",
-							Body:      bytes.NewReader([]byte(tt.wantRequestBody)),
+							Body:      strings.NewReader(tt.wantRequestBody),
 						}),
 					).Return(nil, errors.New("oneway outbound error"))
 				} else {
@@ -291,7 +291,7 @@ func TestNoWireClientOneway(t *testing.T) {
 							Service:   "service",
 							Encoding:  Encoding,
 							Procedure: "MyService::someMethod",
-							Body:      bytes.NewReader([]byte(tt.wantRequestBody)),
+							Body:      strings.NewReader(tt.wantRequestBody),
 						}),
 					).Return(&successAck{}, nil)
 				}

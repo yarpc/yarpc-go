@@ -21,9 +21,9 @@
 package grpc
 
 import (
-	"bytes"
 	"context"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -334,7 +334,7 @@ func TestCallServiceMatch(t *testing.T) {
 			req := &transport.Request{
 				Service:   "Service",
 				Procedure: "Hello",
-				Body:      bytes.NewReader([]byte("world")),
+				Body:      strings.NewReader("world"),
 			}
 			_, err = out.Call(ctx, req)
 			if tt.wantErr {

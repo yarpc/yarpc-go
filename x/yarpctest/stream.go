@@ -21,8 +21,8 @@
 package yarpctest
 
 import (
-	"bytes"
 	"io"
+	"strings"
 
 	"go.uber.org/yarpc/x/yarpctest/types"
 )
@@ -31,7 +31,7 @@ import (
 func SendStreamMsg(sendMsg string) *types.SendStreamMsg {
 	return &types.SendStreamMsg{
 		BodyFunc: func() io.ReadCloser {
-			return io.NopCloser(bytes.NewBufferString(sendMsg))
+			return io.NopCloser(strings.NewReader(sendMsg))
 		},
 	}
 }
@@ -41,7 +41,7 @@ func SendStreamMsg(sendMsg string) *types.SendStreamMsg {
 func SendStreamMsgAndExpectError(sendMsg string, wantErrMsgs ...string) *types.SendStreamMsg {
 	return &types.SendStreamMsg{
 		BodyFunc: func() io.ReadCloser {
-			return io.NopCloser(bytes.NewBufferString(sendMsg))
+			return io.NopCloser(strings.NewReader(sendMsg))
 		},
 		WantErrMsgs: wantErrMsgs,
 	}
@@ -68,7 +68,7 @@ func (r readErr) Read(p []byte) (n int, err error) {
 
 // RecvStreamMsg waits to receive a message on a client stream.
 func RecvStreamMsg(wantMsg string) *types.RecvStreamMsg {
-	return &types.RecvStreamMsg{WantBody: bytes.NewBufferString(wantMsg).Bytes()}
+	return &types.RecvStreamMsg{WantBody: []byte(wantMsg)}
 }
 
 // RecvStreamErr waits to receive a message on a client stream.  It expects

@@ -21,7 +21,6 @@
 package http
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
@@ -30,6 +29,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -180,7 +180,7 @@ func TestCallWithHTTP2(t *testing.T) {
 			Service:   "service",
 			Encoding:  raw.Encoding,
 			Procedure: "hello",
-			Body:      bytes.NewReader([]byte("world")),
+			Body:      strings.NewReader("world"),
 		})
 		require.NoError(t, err)
 		t.Cleanup(func() {
@@ -257,7 +257,7 @@ func TestCallWithHTTP2(t *testing.T) {
 			Service:   "service",
 			Encoding:  raw.Encoding,
 			Procedure: "hello",
-			Body:      bytes.NewReader([]byte("world")),
+			Body:      strings.NewReader("world"),
 		})
 		require.NoError(t, err)
 		t.Cleanup(func() {
@@ -311,7 +311,7 @@ func TestCallWithHTTP2(t *testing.T) {
 			Service:   "service",
 			Encoding:  raw.Encoding,
 			Procedure: "hello",
-			Body:      bytes.NewReader([]byte("world")),
+			Body:      strings.NewReader("world"),
 		})
 		require.Error(t, err, "expected failure")
 		require.Nil(t, res, "expected no response")
@@ -358,7 +358,7 @@ func TestCallSuccess(t *testing.T) {
 		Service:   "service",
 		Encoding:  raw.Encoding,
 		Procedure: "hello",
-		Body:      bytes.NewReader([]byte("world")),
+		Body:      strings.NewReader("world"),
 	})
 	require.NoError(t, err)
 	defer res.Body.Close()
@@ -413,7 +413,7 @@ func TestCallOneWaySuccessWithBody(t *testing.T) {
 		Service:   "service",
 		Encoding:  raw.Encoding,
 		Procedure: "hello",
-		Body:      bytes.NewReader([]byte("world")),
+		Body:      strings.NewReader("world"),
 	})
 	require.NoError(t, err)
 	require.NotNil(t, ack)
@@ -458,7 +458,7 @@ func TestCallOneWaySuccess(t *testing.T) {
 		Service:   "service",
 		Encoding:  raw.Encoding,
 		Procedure: "hello",
-		Body:      bytes.NewReader([]byte("world")),
+		Body:      strings.NewReader("world"),
 	})
 	require.NoError(t, err)
 	require.NotNil(t, ack)
@@ -479,7 +479,7 @@ func TestCallOneWayFailWithoutDeadline(t *testing.T) {
 		Service:   "service",
 		Encoding:  raw.Encoding,
 		Procedure: "hello",
-		Body:      bytes.NewReader([]byte("world")),
+		Body:      strings.NewReader("world"),
 	})
 	require.Error(t, err)
 	require.Nil(t, ack)
@@ -502,7 +502,7 @@ func TestCallOneWayFailWithCtxCancelled(t *testing.T) {
 		Service:   "service",
 		Encoding:  raw.Encoding,
 		Procedure: "hello",
-		Body:      bytes.NewReader([]byte("world")),
+		Body:      strings.NewReader("world"),
 	})
 	require.Error(t, err)
 	assert.Equal(t, yarpcerrors.CodeCancelled, yarpcerrors.FromError(err).Code())
@@ -597,7 +597,7 @@ func TestOutboundHeaders(t *testing.T) {
 			Encoding:  raw.Encoding,
 			Headers:   tt.headers,
 			Procedure: "hello",
-			Body:      bytes.NewReader([]byte("world")),
+			Body:      strings.NewReader("world"),
 		})
 
 		if !assert.NoError(t, err, "%v: call failed", tt.desc) {
@@ -677,7 +677,7 @@ func TestOutboundApplicationError(t *testing.T) {
 			Service:   "service",
 			Encoding:  raw.Encoding,
 			Procedure: "hello",
-			Body:      bytes.NewReader([]byte("world")),
+			Body:      strings.NewReader("world"),
 		})
 
 		assert.Equal(t, res.ApplicationError, tt.appError, "%v: application status", tt.desc)
@@ -732,7 +732,7 @@ func TestCallFailures(t *testing.T) {
 			Service:   "service",
 			Encoding:  raw.Encoding,
 			Procedure: "wat",
-			Body:      bytes.NewReader([]byte("huh")),
+			Body:      strings.NewReader("huh"),
 		})
 		assert.Error(t, err, "expected failure")
 		for _, msg := range tt.messages {
@@ -802,7 +802,7 @@ func TestCallWithoutStarting(t *testing.T) {
 			Service:   "service",
 			Encoding:  raw.Encoding,
 			Procedure: "foo",
-			Body:      bytes.NewReader([]byte("sup")),
+			Body:      strings.NewReader("sup"),
 		},
 	)
 

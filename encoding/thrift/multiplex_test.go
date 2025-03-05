@@ -140,7 +140,7 @@ func TestMultiplexedDecode(t *testing.T) {
 					SeqID: 42,
 				}, nil)
 
-			gotEnvelope, err := proto.DecodeEnveloped(bytes.NewReader([]byte{}))
+			gotEnvelope, err := proto.DecodeEnveloped(bytes.NewReader(nil))
 			if assert.NoError(t, err) {
 				assert.Equal(t, tt.wantName, gotEnvelope.Name)
 			}

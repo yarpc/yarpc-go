@@ -63,7 +63,7 @@ func (c *cacheOutboundMiddleware) Call(ctx context.Context, request *transport.R
 	if err != nil {
 		return nil, err
 	}
-	request.Body = io.NopCloser(bytes.NewReader(body))
+	request.Body = bytes.NewReader(body)
 
 	if v, ok := data[string(body)]; ok {
 		fmt.Println("cache hit")

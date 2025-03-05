@@ -21,12 +21,11 @@
 package json
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -63,7 +62,7 @@ func TestHandleStructSuccess(t *testing.T) {
 	err := handler.Handle(context.Background(), &transport.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",
-		Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),
+		Body:      strings.NewReader(`{"name": "foo", "attributes": {"bar": 42}}`),
 	}, resw)
 	require.NoError(t, err)
 
@@ -90,7 +89,7 @@ func TestHandleMapSuccess(t *testing.T) {
 	err := handler.Handle(context.Background(), &transport.Request{
 		Procedure: "foo",
 		Encoding:  "json",
-		Body:      jsonBody(`{"foo": 42, "bar": ["a", "b", "c"]}`),
+		Body:      strings.NewReader(`{"foo": 42, "bar": ["a", "b", "c"]}`),
 	}, resw)
 	require.NoError(t, err)
 
@@ -110,7 +109,7 @@ func TestHandleInterfaceEmptySuccess(t *testing.T) {
 	err := handler.Handle(context.Background(), &transport.Request{
 		Procedure: "foo",
 		Encoding:  "json",
-		Body:      jsonBody(`["a", "b", "c"]`),
+		Body:      strings.NewReader(`["a", "b", "c"]`),
 	}, resw)
 	require.NoError(t, err)
 
@@ -132,7 +131,7 @@ func TestHandleSuccessWithResponseHeaders(t *testing.T) {
 	err := handler.Handle(context.Background(), &transport.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",
-		Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),
+		Body:      strings.NewReader(`{"name": "foo", "attributes": {"bar": 42}}`),
 	}, resw)
 	require.NoError(t, err)
 
@@ -157,7 +156,7 @@ func TestHandleBothResponseError(t *testing.T) {
 	err := handler.Handle(context.Background(), &transport.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",
-		Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),
+		Body:      strings.NewReader(`{"name": "foo", "attributes": {"bar": 42}}`),
 	}, resw)
 	require.Equal(t, errors.New("bar"), err)
 
@@ -165,8 +164,4 @@ func TestHandleBothResponseError(t *testing.T) {
 	require.NoError(t, json.Unmarshal(resw.Body.Bytes(), &response))
 
 	assert.Equal(t, simpleResponse{Success: true}, response)
-}
-
-func jsonBody(s string) io.Reader {
-	return bytes.NewReader([]byte(s))
 }
