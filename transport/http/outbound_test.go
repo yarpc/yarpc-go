@@ -34,6 +34,10 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc/encoding/json"
+	"go.uber.org/yarpc/encoding/protobuf"
+	"go.uber.org/yarpc/encoding/thrift"
+
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
@@ -847,11 +851,15 @@ func TestGetPeerForRequestErr(t *testing.T) {
 }
 
 func TestWithCoreHeaders(t *testing.T) {
-	endpoint := "http://127.0.0.1:9999"
+	endpoint := "http://127.0.0.1:0"
 	httpTransport := NewTransport()
-	defer httpTransport.Stop()
+	t.Cleanup(func() {
+		require.NoError(t, httpTransport.Stop())
+	})
 	out := httpTransport.NewSingleOutbound(endpoint)
-	defer out.Stop()
+	t.Cleanup(func() {
+		require.NoError(t, out.Stop())
+	})
 	require.NoError(t, out.Start())
 
 	httpReq := httptest.NewRequest("", endpoint, nil)
@@ -860,12 +868,14 @@ func TestWithCoreHeaders(t *testing.T) {
 	routingKey := "routing"
 	routingDelegate := "delegate"
 	callerProcedure := "callerprocedure"
+	encoding := thrift.Encoding
 
 	treq := &transport.Request{
 		ShardKey:        shardKey,
 		RoutingKey:      routingKey,
 		RoutingDelegate: routingDelegate,
 		CallerProcedure: callerProcedure,
+		Encoding:        encoding,
 	}
 	result := out.withCoreHeaders(httpReq, treq, time.Second)
 
@@ -873,6 +883,60 @@ func TestWithCoreHeaders(t *testing.T) {
 	assert.Equal(t, routingKey, result.Header.Get(RoutingKeyHeader))
 	assert.Equal(t, routingDelegate, result.Header.Get(RoutingDelegateHeader))
 	assert.Equal(t, callerProcedure, result.Header.Get(CallerProcedureHeader))
+	assert.Equal(t, _contentTypeThriftHeaderValue, result.Header.Get(CONTENTType))
+}
+
+func TestGetYARPCContentType(t *testing.T) {
+	tests := []struct {
+		encoding    transport.Encoding
+		contentType string
+		found       bool
+	}{
+		{
+			encoding:    raw.Encoding,
+			contentType: _contentTypeRawHeaderValue,
+			found:       true,
+		},
+		{
+			encoding:    thrift.Encoding,
+			contentType: _contentTypeThriftHeaderValue,
+			found:       true,
+		},
+		{
+			encoding:    json.Encoding,
+			contentType: _contentTypeJSONHeaderValue,
+			found:       true,
+		},
+		{
+			encoding:    protobuf.Encoding,
+			contentType: _contentTypeProtoHeaderValue,
+			found:       true,
+		},
+		{
+			encoding:    "foo",
+			contentType: "",
+			found:       false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.encoding), func(t *testing.T) {
+			endpoint := "http://127.0.0.1:0"
+			httpTransport := NewTransport()
+			t.Cleanup(func() {
+				require.NoError(t, httpTransport.Stop())
+			})
+			out := httpTransport.NewSingleOutbound(endpoint)
+			t.Cleanup(func() {
+				require.NoError(t, out.Stop())
+			})
+			require.NoError(t, out.Start())
+
+			contentType, found := out.getYARPCContentType(tt.encoding)
+			assert.Equal(t, tt.found, found, "content type found")
+			assert.Equal(t, tt.contentType, contentType, "content type")
+		})
+	}
 }
 
 func TestNoRequest(t *testing.T) {
