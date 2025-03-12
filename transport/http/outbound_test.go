@@ -883,7 +883,7 @@ func TestWithCoreHeaders(t *testing.T) {
 	assert.Equal(t, routingKey, result.Header.Get(RoutingKeyHeader))
 	assert.Equal(t, routingDelegate, result.Header.Get(RoutingDelegateHeader))
 	assert.Equal(t, callerProcedure, result.Header.Get(CallerProcedureHeader))
-	assert.Equal(t, _contentTypeThriftHeaderValue, result.Header.Get(CONTENTType))
+	assert.Equal(t, _contentTypeThriftHeaderValue, result.Header.Get(ContentTypeHeader))
 }
 
 func TestGetYARPCContentType(t *testing.T) {

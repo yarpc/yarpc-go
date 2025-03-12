@@ -530,7 +530,7 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 	}
 
 	if contentType, found := o.getYARPCContentType(treq.Encoding); found {
-		req.Header.Set(CONTENTType, contentType)
+		req.Header.Set(ContentTypeHeader, contentType)
 	}
 
 	encoding := string(treq.Encoding)

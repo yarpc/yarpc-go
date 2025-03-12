@@ -60,8 +60,8 @@ const (
 	// to finish.
 	TTLMSHeader = "Context-TTL-MS"
 
-	// Content Type of the request
-	CONTENTType = "Content-Type"
+	// ContentTypeHeader is header key for content-type of the request
+	ContentTypeHeader = "Content-Type"
 
 	// Name of the procedure being called. This corresponds to the
 	// Request.Procedure attribute.
