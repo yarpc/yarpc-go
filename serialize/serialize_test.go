@@ -23,6 +23,7 @@ package serialize
 import (
 	"bytes"
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -79,7 +80,7 @@ func TestDeserializationFailure(t *testing.T) {
 		Caller:    "Caller",
 		Service:   "ServiceName",
 		Procedure: "Procedure",
-		Body:      bytes.NewReader([]byte("someBODY")),
+		Body:      strings.NewReader("someBODY"),
 	}
 
 	marshalledReq, err := ToBytes(tracer, spanContext, req)

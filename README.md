@@ -40,31 +40,6 @@ APIs can break at any time. The intention here is to validate these APIs and ite
 by working closely with internal customers. Once stable, their contents will be moved out of
 the containing `x` package and their APIs will be locked.
 
-
-## Development
-
-### Setup
-
-To start developing with yarpc-go, run the following command to setup your environment:
-
-```
-git clone https://github.com/yarpc/yarpc-go.git go.uber.org/yarpc
-```
-
-### Running Tests
-
-To run tests into a pre-configured docker container, run the following command:
-```
-make test
-```
-
-To run tests locally, run the following command:
-```
-SUPPRESS_DOCKER=1 make test
-```
-
-Happy development!
-
 [doc-img]: https://pkg.go.dev/badge/go.uber.org/yarpc.svg
 [doc]: https://pkg.go.dev/go.uber.org/yarpc
 

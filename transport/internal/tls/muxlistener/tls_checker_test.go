@@ -25,6 +25,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,7 +34,7 @@ import (
 
 func TestIsTLSClientHelloRecord(t *testing.T) {
 	t.Run("non_tls", func(t *testing.T) {
-		isTLS, err := isTLSClientHelloRecord(bytes.NewBuffer([]byte("testtls")))
+		isTLS, err := isTLSClientHelloRecord(strings.NewReader("testtls"))
 		assert.NoError(t, err, "unexpected error")
 		assert.False(t, isTLS, "unexpected tls")
 	})

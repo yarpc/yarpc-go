@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"testing"
 	"time"
 
@@ -192,7 +193,7 @@ func matchResponse(actualResp *transport.Response, expectedResp *transport.Respo
 // Body sets the body on a request to the raw representation of the msg field.
 func Body(msg string) api.RequestOption {
 	return api.RequestOptionFunc(func(opts *api.RequestOpts) {
-		opts.GiveRequest.Body = bytes.NewBufferString(msg)
+		opts.GiveRequest.Body = strings.NewReader(msg)
 	})
 }
 
@@ -224,7 +225,7 @@ func WantError(errMsg string) api.RequestOption {
 // request.
 func WantRespBody(body string) api.RequestOption {
 	return api.RequestOptionFunc(func(opts *api.RequestOpts) {
-		opts.WantResponse.Body = io.NopCloser(bytes.NewBufferString(body))
+		opts.WantResponse.Body = io.NopCloser(strings.NewReader(body))
 	})
 }
 

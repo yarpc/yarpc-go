@@ -21,8 +21,8 @@
 package tchannel
 
 import (
-	"bytes"
 	"io"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -136,7 +136,7 @@ func TestChannelOutboundHeaders(t *testing.T) {
 							Encoding:  raw.Encoding,
 							Procedure: "hello",
 							Headers:   tt.headers,
-							Body:      bytes.NewReader([]byte("world")),
+							Body:      strings.NewReader("world"),
 						},
 					)
 					if tt.wantError != "" {
@@ -231,7 +231,7 @@ func TestChannelCallSuccess(t *testing.T) {
 							Service:   "service",
 							Encoding:  raw.Encoding,
 							Procedure: "hello",
-							Body:      bytes.NewReader([]byte("world")),
+							Body:      strings.NewReader("world"),
 						},
 					)
 
@@ -331,7 +331,7 @@ func TestChannelCallFailures(t *testing.T) {
 							Service:   "service",
 							Encoding:  raw.Encoding,
 							Procedure: tt.procedure,
-							Body:      bytes.NewReader([]byte("sup")),
+							Body:      strings.NewReader("sup"),
 						},
 					)
 
@@ -393,7 +393,7 @@ func TestChannelCallError(t *testing.T) {
 					Service:   "service",
 					Encoding:  raw.Encoding,
 					Procedure: "hello",
-					Body:      bytes.NewReader([]byte("world")),
+					Body:      strings.NewReader("world"),
 				},
 			)
 
@@ -492,7 +492,7 @@ func TestChannelCallWithoutStarting(t *testing.T) {
 					Service:   "service",
 					Encoding:  raw.Encoding,
 					Procedure: "foo",
-					Body:      bytes.NewReader([]byte("sup")),
+					Body:      strings.NewReader("sup"),
 				},
 			)
 

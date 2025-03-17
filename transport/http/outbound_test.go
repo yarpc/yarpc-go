@@ -21,7 +21,6 @@
 package http
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
@@ -30,9 +29,13 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 
 	"github.com/golang/mock/gomock"
 	"github.com/opentracing/opentracing-go"
@@ -57,7 +60,13 @@ func TestNewOutbound(t *testing.T) {
 }
 
 func TestTransportNamer(t *testing.T) {
-	assert.Equal(t, TransportName, NewOutbound(nil).TransportName())
+	t.Run("default is http", func(t *testing.T) {
+		assert.Equal(t, TransportName, NewOutbound(nil).TransportName())
+	})
+
+	t.Run("outbound is http2", func(t *testing.T) {
+		assert.Equal(t, TransportHTTP2Name, NewOutbound(nil, UseHTTP2()).TransportName())
+	})
 }
 
 func TestNewSingleOutboundPanic(t *testing.T) {
@@ -112,6 +121,203 @@ func TestCreateRequest(t *testing.T) {
 	}
 }
 
+func TestCallWithHTTP2(t *testing.T) {
+	t.Run("success - http2 client with http2 server", func(t *testing.T) {
+		handler := http.HandlerFunc(
+			func(w http.ResponseWriter, req *http.Request) {
+				defer req.Body.Close()
+
+				ttl := req.Header.Get(TTLMSHeader)
+				ttlms, err := strconv.Atoi(ttl)
+				assert.NoError(t, err, "can parse TTL header")
+				assert.InDelta(t, ttlms, testtime.X*1000.0, testtime.X*5.0, "ttl header within tolerance")
+
+				assert.Equal(t, "caller", req.Header.Get(CallerHeader))
+				assert.Equal(t, "service", req.Header.Get(ServiceHeader))
+				assert.Equal(t, "raw", req.Header.Get(EncodingHeader))
+				assert.Equal(t, "hello", req.Header.Get(ProcedureHeader))
+
+				body, err := io.ReadAll(req.Body)
+				if assert.NoError(t, err) {
+					assert.Equal(t, []byte("world"), body)
+				}
+
+				w.Header().Set("rpc-header-foo", "bar")
+				_, err = w.Write([]byte("great success"))
+				assert.NoError(t, err)
+			},
+		)
+		h2s := &http2.Server{
+			NewWriteScheduler: func() http2.WriteScheduler {
+				return http2.NewPriorityWriteScheduler(nil)
+			},
+			IdleTimeout: defaultIdleConnTimeout,
+		}
+		h1s := httptest.NewServer(h2c.NewHandler(handler, h2s))
+		t.Cleanup(h1s.Close)
+
+		httpTransport := NewTransport()
+		t.Cleanup(func() {
+			if err := httpTransport.Stop(); err != nil {
+				t.Logf("failed to stop transport: %v", err)
+			}
+		})
+
+		out := httpTransport.NewSingleOutbound(h1s.URL, UseHTTP2())
+		require.NoError(t, out.Start(), "failed to start outbound")
+		t.Cleanup(func() {
+			if err := out.Stop(); err != nil {
+				t.Logf("failed to stop outbound: %v", err)
+			}
+			out.client.CloseIdleConnections()
+		})
+
+		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+		t.Cleanup(cancel)
+
+		res, err := out.Call(ctx, &transport.Request{
+			Caller:    "caller",
+			Service:   "service",
+			Encoding:  raw.Encoding,
+			Procedure: "hello",
+			Body:      strings.NewReader("world"),
+		})
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			if err := res.Body.Close(); err != nil {
+				t.Logf("failed to close response body: %v", err)
+			}
+		})
+
+		foo, ok := res.Headers.Get("foo")
+		assert.True(t, ok, "value for foo expected")
+		assert.Equal(t, "bar", foo, "foo value mismatch")
+
+		body, err := io.ReadAll(res.Body)
+		if assert.NoError(t, err) {
+			assert.Equal(t, []byte("great success"), body)
+		}
+	})
+
+	t.Run("success - http2 disabled client with http2 server", func(t *testing.T) {
+		handler := http.HandlerFunc(
+			func(w http.ResponseWriter, req *http.Request) {
+				defer req.Body.Close()
+
+				ttl := req.Header.Get(TTLMSHeader)
+				ttlms, err := strconv.Atoi(ttl)
+				assert.NoError(t, err, "can parse TTL header")
+				assert.InDelta(t, ttlms, testtime.X*1000.0, testtime.X*5.0, "ttl header within tolerance")
+
+				assert.Equal(t, "caller", req.Header.Get(CallerHeader))
+				assert.Equal(t, "service", req.Header.Get(ServiceHeader))
+				assert.Equal(t, "raw", req.Header.Get(EncodingHeader))
+				assert.Equal(t, "hello", req.Header.Get(ProcedureHeader))
+
+				body, err := io.ReadAll(req.Body)
+				if assert.NoError(t, err) {
+					assert.Equal(t, []byte("world"), body)
+				}
+
+				w.Header().Set("rpc-header-foo", "bar")
+				_, err = w.Write([]byte("great success"))
+				assert.NoError(t, err)
+			},
+		)
+		h2s := &http2.Server{
+			NewWriteScheduler: func() http2.WriteScheduler {
+				return http2.NewPriorityWriteScheduler(nil)
+			},
+			IdleTimeout: defaultIdleConnTimeout,
+		}
+		h1s := httptest.NewServer(h2c.NewHandler(handler, h2s))
+		t.Cleanup(h1s.Close)
+
+		httpTransport := NewTransport()
+		t.Cleanup(func() {
+			if err := httpTransport.Stop(); err != nil {
+				t.Logf("failed to stop transport: %v", err)
+			}
+		})
+
+		out := httpTransport.NewSingleOutbound(h1s.URL)
+		require.NoError(t, out.Start(), "failed to start outbound")
+		t.Cleanup(func() {
+			if err := out.Stop(); err != nil {
+				t.Logf("failed to stop outbound: %v", err)
+			}
+			out.client.CloseIdleConnections()
+		})
+
+		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+		t.Cleanup(cancel)
+
+		res, err := out.Call(ctx, &transport.Request{
+			Caller:    "caller",
+			Service:   "service",
+			Encoding:  raw.Encoding,
+			Procedure: "hello",
+			Body:      strings.NewReader("world"),
+		})
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			if err := res.Body.Close(); err != nil {
+				t.Logf("failed to close response body: %v", err)
+			}
+		})
+
+		foo, ok := res.Headers.Get("foo")
+		assert.True(t, ok, "value for foo expected")
+		assert.Equal(t, "bar", foo, "foo value mismatch")
+
+		body, err := io.ReadAll(res.Body)
+		if assert.NoError(t, err) {
+			assert.Equal(t, []byte("great success"), body)
+		}
+	})
+
+	t.Run("transport failure - http2 client with http1 server", func(t *testing.T) {
+		handler := http.HandlerFunc(
+			func(w http.ResponseWriter, req *http.Request) {
+				defer req.Body.Close()
+				_, err := w.Write([]byte("great success"))
+				assert.NoError(t, err)
+			},
+		)
+		h1s := httptest.NewServer(handler)
+		t.Cleanup(h1s.Close)
+
+		httpTransport := NewTransport()
+		t.Cleanup(func() {
+			if err := httpTransport.Stop(); err != nil {
+				t.Logf("failed to stop transport: %v", err)
+			}
+		})
+
+		out := httpTransport.NewSingleOutbound(h1s.URL, UseHTTP2())
+		require.NoError(t, out.Start(), "failed to start outbound")
+		t.Cleanup(func() {
+			if err := out.Stop(); err != nil {
+				t.Logf("failed to stop outbound: %v", err)
+			}
+			out.client.CloseIdleConnections()
+		})
+
+		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+		t.Cleanup(cancel)
+
+		res, err := out.Call(ctx, &transport.Request{
+			Caller:    "caller",
+			Service:   "service",
+			Encoding:  raw.Encoding,
+			Procedure: "hello",
+			Body:      strings.NewReader("world"),
+		})
+		require.Error(t, err, "expected failure")
+		require.Nil(t, res, "expected no response")
+	})
+}
+
 func TestCallSuccess(t *testing.T) {
 	successServer := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, req *http.Request) {
@@ -152,7 +358,7 @@ func TestCallSuccess(t *testing.T) {
 		Service:   "service",
 		Encoding:  raw.Encoding,
 		Procedure: "hello",
-		Body:      bytes.NewReader([]byte("world")),
+		Body:      strings.NewReader("world"),
 	})
 	require.NoError(t, err)
 	defer res.Body.Close()
@@ -207,7 +413,7 @@ func TestCallOneWaySuccessWithBody(t *testing.T) {
 		Service:   "service",
 		Encoding:  raw.Encoding,
 		Procedure: "hello",
-		Body:      bytes.NewReader([]byte("world")),
+		Body:      strings.NewReader("world"),
 	})
 	require.NoError(t, err)
 	require.NotNil(t, ack)
@@ -252,7 +458,7 @@ func TestCallOneWaySuccess(t *testing.T) {
 		Service:   "service",
 		Encoding:  raw.Encoding,
 		Procedure: "hello",
-		Body:      bytes.NewReader([]byte("world")),
+		Body:      strings.NewReader("world"),
 	})
 	require.NoError(t, err)
 	require.NotNil(t, ack)
@@ -273,7 +479,7 @@ func TestCallOneWayFailWithoutDeadline(t *testing.T) {
 		Service:   "service",
 		Encoding:  raw.Encoding,
 		Procedure: "hello",
-		Body:      bytes.NewReader([]byte("world")),
+		Body:      strings.NewReader("world"),
 	})
 	require.Error(t, err)
 	require.Nil(t, ack)
@@ -296,7 +502,7 @@ func TestCallOneWayFailWithCtxCancelled(t *testing.T) {
 		Service:   "service",
 		Encoding:  raw.Encoding,
 		Procedure: "hello",
-		Body:      bytes.NewReader([]byte("world")),
+		Body:      strings.NewReader("world"),
 	})
 	require.Error(t, err)
 	assert.Equal(t, yarpcerrors.CodeCancelled, yarpcerrors.FromError(err).Code())
@@ -391,7 +597,7 @@ func TestOutboundHeaders(t *testing.T) {
 			Encoding:  raw.Encoding,
 			Headers:   tt.headers,
 			Procedure: "hello",
-			Body:      bytes.NewReader([]byte("world")),
+			Body:      strings.NewReader("world"),
 		})
 
 		if !assert.NoError(t, err, "%v: call failed", tt.desc) {
@@ -471,7 +677,7 @@ func TestOutboundApplicationError(t *testing.T) {
 			Service:   "service",
 			Encoding:  raw.Encoding,
 			Procedure: "hello",
-			Body:      bytes.NewReader([]byte("world")),
+			Body:      strings.NewReader("world"),
 		})
 
 		assert.Equal(t, res.ApplicationError, tt.appError, "%v: application status", tt.desc)
@@ -526,7 +732,7 @@ func TestCallFailures(t *testing.T) {
 			Service:   "service",
 			Encoding:  raw.Encoding,
 			Procedure: "wat",
-			Body:      bytes.NewReader([]byte("huh")),
+			Body:      strings.NewReader("huh"),
 		})
 		assert.Error(t, err, "expected failure")
 		for _, msg := range tt.messages {
@@ -596,7 +802,7 @@ func TestCallWithoutStarting(t *testing.T) {
 			Service:   "service",
 			Encoding:  raw.Encoding,
 			Procedure: "foo",
-			Body:      bytes.NewReader([]byte("sup")),
+			Body:      strings.NewReader("sup"),
 		},
 	)
 
@@ -785,6 +991,22 @@ func (e errorReadCloser) Close() error {
 
 func TestCallResponseCloseError(t *testing.T) {
 	httpTransport := Transport{
+		tracer: opentracing.GlobalTracer(),
+	}
+	ctrl := gomock.NewController(t)
+	chooser := peertest.NewMockChooser(ctrl)
+	chooser.EXPECT().Start().Return(nil)
+	peer := &httpPeer{
+		Peer: &abstractpeer.Peer{},
+	}
+	chooser.EXPECT().Choose(gomock.Any(), gomock.Any()).Return(peer, func(error) {}, nil)
+	o := &Outbound{
+		once:              lifecycle.NewOnce(),
+		chooser:           chooser,
+		urlTemplate:       defaultURLTemplate,
+		tracer:            httpTransport.tracer,
+		transport:         &httpTransport,
+		bothResponseError: true,
 		client: &http.Client{
 			Transport: RoundTripFunc(func(req *http.Request) *http.Response {
 				return &http.Response{
@@ -796,29 +1018,12 @@ func TestCallResponseCloseError(t *testing.T) {
 				}
 			}),
 		},
-		tracer: opentracing.GlobalTracer(),
-	}
-	ctrl := gomock.NewController(t)
-	chooser := peertest.NewMockChooser(ctrl)
-	chooser.EXPECT().Start().Return(nil)
-	peer := &httpPeer{
-		Peer: &abstractpeer.Peer{},
-	}
-	chooser.EXPECT().Choose(gomock.Any(), gomock.Any()).Return(peer, func(error) {}, nil)
-	o := &Outbound{
-		once:              lifecycle.NewOnce(),
-		chooser:           chooser,
-		urlTemplate:       defaultURLTemplate,
-		tracer:            httpTransport.tracer,
-		transport:         &httpTransport,
-		bothResponseError: true,
-		client:            httpTransport.client,
 	}
 	err := o.Start()
 	require.NoError(t, err)
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err = o.Call(ctx, &transport.Request{
+	_, err = o.DirectCall(ctx, &transport.Request{
 		Service: "Service",
 	})
 	require.Errorf(t, err, "Received unexpected error:code:internal message:test error")
@@ -826,15 +1031,6 @@ func TestCallResponseCloseError(t *testing.T) {
 
 func TestCallOneWayResponseCloseError(t *testing.T) {
 	httpTransport := Transport{
-		client: &http.Client{
-			Transport: RoundTripFunc(func(req *http.Request) *http.Response {
-				return &http.Response{
-					StatusCode: 200,
-					Body:       errorReadCloser{closeErr: errors.New("test error")},
-					Header:     http.Header{},
-				}
-			}),
-		},
 		tracer: opentracing.GlobalTracer(),
 	}
 	ctrl := gomock.NewController(t)
@@ -851,20 +1047,32 @@ func TestCallOneWayResponseCloseError(t *testing.T) {
 		tracer:            httpTransport.tracer,
 		transport:         &httpTransport,
 		bothResponseError: true,
-		client:            httpTransport.client,
+		client: &http.Client{
+			Transport: RoundTripFunc(func(req *http.Request) *http.Response {
+				return &http.Response{
+					StatusCode: 200,
+					Body:       errorReadCloser{closeErr: errors.New("test error")},
+					Header: http.Header{
+						"Rpc-Service": []string{"wrong-service"},
+					},
+				}
+			}),
+		},
 	}
 	err := o.Start()
 	require.NoError(t, err)
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err = o.CallOneway(ctx, &transport.Request{
+	_, err = o.DirectCallOneway(ctx, &transport.Request{
 		Service: "Service",
 	})
 	require.Errorf(t, err, "Received unexpected error:code:internal message:test error")
 }
 
 func TestIsolatedSchemaChange(t *testing.T) {
-	tr := &Transport{client: &http.Client{Transport: http.DefaultTransport}}
+	tr := &Transport{
+		h1Transport: buildH1Transport(&defaultTransportOptions),
+	}
 	plainOutbound := tr.NewOutbound(nil)
 	tlsOutbound := tr.NewOutbound(nil, OutboundTLSConfiguration(&tls.Config{}))
 	assert.NotEqual(t, plainOutbound.urlTemplate, tlsOutbound.urlTemplate)

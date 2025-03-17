@@ -21,7 +21,6 @@
 package observability
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -3469,7 +3468,7 @@ func TestStreamingMetrics(t *testing.T) {
 			&fakeStream{
 				request: req,
 				receiveMsg: &transport.StreamMessage{
-					Body:     readCloser{bytes.NewReader([]byte("Foobar"))},
+					Body:     io.NopCloser(strings.NewReader("Foobar")),
 					BodySize: 6,
 				},
 			},
@@ -3480,7 +3479,7 @@ func TestStreamingMetrics(t *testing.T) {
 				err := stream.SendMessage(
 					context.Background(),
 					&transport.StreamMessage{
-						Body:     readCloser{bytes.NewReader([]byte("test"))},
+						Body:     io.NopCloser(strings.NewReader("test")),
 						BodySize: 4,
 					},
 				)
@@ -3819,14 +3818,6 @@ func TestNewWriterIsEmpty(t *testing.T) {
 	require.NotNil(t, w, "writer must not be nil")
 	assert.Equal(t, writer{}, *w,
 		"expected empty writer, fields were likely not cleared in the pool")
-}
-
-type readCloser struct {
-	*bytes.Reader
-}
-
-func (r readCloser) Close() error {
-	return nil
 }
 
 func BenchmarkMiddlewareHandle(b *testing.B) {

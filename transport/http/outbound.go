@@ -39,6 +39,8 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
+	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/interceptor/outboundinterceptor"
 	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -110,6 +112,22 @@ func OutboundDestinationServiceName(name string) OutboundOption {
 	}
 }
 
+// UseHTTP2 returns an OutboundOption that enables HTTP/2 support for the outbound.
+// This option configures the outbound to use HTTP/2 for all outbound requests.
+//
+// Example usage:
+//
+//	outbound := http.NewOutbound(chooser, http.UseHTTP2())
+//
+// Returns:
+//
+//	OutboundOption: A function that sets the UseHTTP2 field to true in the Outbound struct.
+func UseHTTP2() OutboundOption {
+	return func(o *Outbound) {
+		o.useHTTP2 = true
+	}
+}
+
 // NewOutbound builds an HTTP outbound that sends requests to peers supplied
 // by the given peer.Chooser. The URL template for used for the different
 // peers may be customized using the URLTemplate option.
@@ -132,29 +150,30 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 		opt(o)
 	}
 
-	client := t.client
-	if o.tlsConfig != nil {
-		client = createTLSClient(o)
-		// Create a copy of the url template to avoid scheme changes impacting
-		// other outbounds as the base url template is shared across http
-		// outbounds.
-		ut := *o.urlTemplate
-		ut.Scheme = "https"
-		o.urlTemplate = &ut
+	var client *http.Client
+	if o.useHTTP2 {
+		client = createHTTP2Client(o)
+	} else {
+		client = createHTTP1Client(o)
 	}
 	o.client = client
 	o.sender = &transportSender{Client: client}
+	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
+	o.onewayCallWithInterceptor = outboundinterceptor.NewOnewayChain(o, t.onewayOutboundInterceptor)
 	return o
 }
 
-func createTLSClient(o *Outbound) *http.Client {
-	transport, ok := o.transport.client.Transport.(*http.Transport)
-	if !ok {
-		// This should not happen as default yarpc http.Client uses
-		// http.Transport and it's not configurable by the user.
-		panic(fmt.Sprintf("failed to create http tls client, provided http.Client transport type %T is not *http.Transport", o.transport.client.Transport))
+func createHTTP1Client(o *Outbound) *http.Client {
+	if o.tlsConfig != nil {
+		return createHTTP1TLSClient(o)
 	}
 
+	return &http.Client{
+		Transport: o.transport.h1Transport,
+	}
+}
+
+func createHTTP1TLSClient(o *Outbound) *http.Client {
 	tlsDialer := dialer.NewTLSDialer(dialer.Params{
 		Config:        o.tlsConfig,
 		Meter:         o.transport.meter,
@@ -162,11 +181,34 @@ func createTLSClient(o *Outbound) *http.Client {
 		ServiceName:   o.transport.serviceName,
 		TransportName: TransportName,
 		Dest:          o.destServiceName,
-		Dialer:        transport.DialContext,
+		Dialer:        o.transport.h1Transport.DialContext,
 	})
-	transport = transport.Clone()
-	transport.DialTLSContext = tlsDialer.DialContext
-	return &http.Client{Transport: transport}
+	h1transport := o.transport.h1Transport.Clone()
+	h1transport.DialTLSContext = tlsDialer.DialContext
+	// Create a copy of the url template to avoid scheme changes impacting
+	// other outbounds as the base url template is shared across http
+	// outbounds.
+	ut := *o.urlTemplate
+	ut.Scheme = "https"
+	o.urlTemplate = &ut
+
+	return &http.Client{
+		Transport: h1transport,
+	}
+}
+
+func createHTTP2Client(o *Outbound) *http.Client {
+	if o.tlsConfig != nil {
+		return createHTTP2TLSClient(o)
+	}
+
+	return &http.Client{
+		Transport: o.transport.h2Transport,
+	}
+}
+
+func createHTTP2TLSClient(o *Outbound) *http.Client {
+	panic("http2 with tls is not supported")
 }
 
 // NewOutbound builds an HTTP outbound that sends requests to peers supplied
@@ -194,7 +236,10 @@ func (t *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbo
 
 	chooser := peerchooser.NewSingle(hostport.PeerIdentifier(parsedURL.Host), t)
 	opts = append(opts, URLTemplate(uri))
-	return t.NewOutbound(chooser, opts...)
+	o := t.NewOutbound(chooser, opts...)
+	o.unaryCallWithInterceptor = outboundinterceptor.NewUnaryChain(o, t.unaryOutboundInterceptor)
+	o.onewayCallWithInterceptor = outboundinterceptor.NewOnewayChain(o, t.onewayOutboundInterceptor)
+	return o
 }
 
 // Outbound sends YARPC requests over HTTP. It may be constructed using the
@@ -215,14 +260,20 @@ type Outbound struct {
 	once *lifecycle.Once
 
 	// should only be false in testing
-	bothResponseError bool
-	destServiceName   string
-	client            *http.Client
-	tlsConfig         *tls.Config
+	bothResponseError         bool
+	destServiceName           string
+	client                    *http.Client
+	tlsConfig                 *tls.Config
+	unaryCallWithInterceptor  interceptor.UnaryOutboundChain
+	onewayCallWithInterceptor interceptor.OnewayOutboundChain
+	useHTTP2                  bool
 }
 
 // TransportName is the transport name that will be set on `transport.Request` struct.
 func (o *Outbound) TransportName() string {
+	if o.useHTTP2 {
+		return TransportHTTP2Name
+	}
 	return TransportName
 }
 
@@ -262,8 +313,13 @@ func (o *Outbound) IsRunning() bool {
 	return o.once.IsRunning()
 }
 
-// Call makes a HTTP request
+// Call implements UnaryOutbound
 func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
+	return o.unaryCallWithInterceptor.Next(ctx, treq)
+}
+
+// DirectCall makes a HTTP request
+func (o *Outbound) DirectCall(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
 	if treq == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil")
 	}
@@ -271,23 +327,25 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	return o.call(ctx, treq)
 }
 
-// CallOneway makes a oneway request
+// CallOneway implements UnaryOnewayOutbound
 func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
+	return o.onewayCallWithInterceptor.Next(ctx, treq)
+}
+
+// DirectCallOneway makes a oneway request
+func (o *Outbound) DirectCallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
 	if treq == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil")
 	}
-
 	// res is used to close the response body to avoid memory/connection leak
 	// even when the response body is empty
 	res, err := o.call(ctx, treq)
 	if err != nil {
 		return nil, err
 	}
-
 	if err = res.Body.Close(); err != nil {
 		return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 	}
-
 	return time.Now(), nil
 }
 
