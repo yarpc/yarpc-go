@@ -43,8 +43,9 @@ import (
 //	        first: 10ms
 //	        max: 30s
 type TransportConfig struct {
-	ConnTimeout time.Duration       `config:"connTimeout"`
-	ConnBackoff yarpcconfig.Backoff `config:"connBackoff"`
+	ConnTimeout               time.Duration       `config:"connTimeout"`
+	ConnBackoff               yarpcconfig.Backoff `config:"connBackoff"`
+	TracingInterceptorEnabled bool                `config:"tracingInterceptorEnabled"`
 }
 
 // InboundConfig configures a TChannel inbound.
@@ -165,6 +166,10 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 
 	if tc.ConnTimeout != 0 {
 		options.connTimeout = tc.ConnTimeout
+	}
+
+	if tc.TracingInterceptorEnabled {
+		options.tracingInterceptorEnabled = tc.TracingInterceptorEnabled
 	}
 
 	strategy, err := tc.ConnBackoff.Strategy()
