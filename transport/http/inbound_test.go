@@ -31,6 +31,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	"golang.org/x/net/http2"
 
@@ -455,6 +456,22 @@ func TestInboundWithHTTPVersion(t *testing.T) {
 		res, err := client.Get("http://127.0.0.1:8888/health")
 		require.Error(t, err, "expected error making request")
 		require.Nil(t, res, "expected response to be nil")
+	})
+}
+
+func TestInboundWithTimeouts(t *testing.T) {
+	t.Run("WriteTimeout", func(t *testing.T) {
+		testTransport := NewTransport()
+		inbound := testTransport.NewInbound("127.0.0.1:8888", WriteTimeout(5*time.Second))
+
+		require.Equal(t, 5*time.Second, inbound.server.WriteTimeout)
+	})
+
+	t.Run("ReadTimeout", func(t *testing.T) {
+		testTransport := NewTransport()
+		inbound := testTransport.NewInbound("127.0.0.1:8888", ReadTimeout(5*time.Second))
+
+		require.Equal(t, 5*time.Second, inbound.server.ReadTimeout)
 	})
 }
 

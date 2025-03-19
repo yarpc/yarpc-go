@@ -136,6 +136,18 @@ func DisableHTTP2(flag bool) InboundOption {
 	}
 }
 
+func ReadTimeout(timeout time.Duration) InboundOption {
+	return func(i *Inbound) {
+		i.server.ReadTimeout = timeout
+	}
+}
+
+func WriteTimeout(timeout time.Duration) InboundOption {
+	return func(i *Inbound) {
+		i.server.WriteTimeout = timeout
+	}
+}
+
 // NewInbound builds a new HTTP inbound that listens on the given address and
 // sharing this transport.
 func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
@@ -150,6 +162,11 @@ func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 		bothResponseError: true,
 		disableHTTP2:      false,
 	}
+	server := &http.Server{
+		Addr: i.addr,
+	}
+	i.server = intnet.NewHTTPServer(server)
+
 	for _, opt := range opts {
 		opt(i)
 	}
@@ -237,19 +254,15 @@ func (i *Inbound) start() error {
 		httpHandler = i.mux
 	}
 
-	server := &http.Server{
-		Addr:    i.addr,
-		Handler: httpHandler,
-	}
+	i.server.Handler = httpHandler
 	if !i.disableHTTP2 {
 		h2s := &http2.Server{}
-		server.Handler = h2c.NewHandler(server.Handler, h2s)
-		err := http2.ConfigureServer(server, h2s)
+		i.server.Handler = h2c.NewHandler(i.server.Handler, h2s)
+		err := http2.ConfigureServer(i.server.Server, h2s)
 		if err != nil {
 			return fmt.Errorf("failed to configure HTTP/2 server: %w", err)
 		}
 	}
-	i.server = intnet.NewHTTPServer(server)
 
 	addr := i.addr
 	if addr == "" {
