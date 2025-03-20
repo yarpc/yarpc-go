@@ -157,19 +157,25 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 
 // InboundConfig configures an HTTP inbound.
 //
-//	inbounds:
-//	  http:
-//	    address: ":80"
-//	    grabHeaders:
-//	      - x-foo
-//	      - x-bar
-//	    shutdownTimeout: 5s
+//	   inbounds:
+//	     http:
+//	       address: ":80"
+//	       grabHeaders:
+//	         - x-foo
+//	         - x-bar
+//		      shutdownTimeout: 5s
+//	       readTimeout: 10s
+//	       writeTimeout: 10s
 type InboundConfig struct {
 	// Address to listen on. This field is required.
 	Address string `config:"address,interpolate"`
 	// The additional headers, starting with x, that should be
 	// propagated to handlers. This field is optional.
 	GrabHeaders []string `config:"grabHeaders"`
+	// ReadTimeout value set on the http.Server
+	ReadTimeout *time.Duration `config:"readTimeout"`
+	// WriteTimeout value set on the http.Server
+	WriteTimeout *time.Duration `config:"writeTimeout"`
 	// The maximum amount of time to wait for the inbound to shutdown.
 	ShutdownTimeout *time.Duration `config:"shutdownTimeout"`
 	// TLS configuration of the inbound.
@@ -202,6 +208,20 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 			return nil, fmt.Errorf("shutdownTimeout must not be negative, got: %q", ic.ShutdownTimeout)
 		}
 		inboundOptions = append(inboundOptions, ShutdownTimeout(*ic.ShutdownTimeout))
+	}
+
+	if ic.ReadTimeout != nil {
+		if *ic.ReadTimeout < 0 {
+			return nil, fmt.Errorf("readTimeout must not be negative, got: %q", ic.ReadTimeout)
+		}
+		inboundOptions = append(inboundOptions, ReadTimeout(*ic.ReadTimeout))
+	}
+
+	if ic.WriteTimeout != nil {
+		if *ic.WriteTimeout < 0 {
+			return nil, fmt.Errorf("writeTimeout must not be negative, got: %q", ic.WriteTimeout)
+		}
+		inboundOptions = append(inboundOptions, WriteTimeout(*ic.WriteTimeout))
 	}
 
 	inboundOptions = append(inboundOptions, DisableHTTP2(ic.DisableHTTP2))
