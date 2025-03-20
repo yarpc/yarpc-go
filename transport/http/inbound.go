@@ -136,12 +136,14 @@ func DisableHTTP2(flag bool) InboundOption {
 	}
 }
 
+// ReadTimeout returns an InboundOption that sets the http.Server ReadTimeout
 func ReadTimeout(timeout time.Duration) InboundOption {
 	return func(i *Inbound) {
 		i.server.ReadTimeout = timeout
 	}
 }
 
+// WriteTimeout returns an InboundOption that sets the http.Server WriteTimeout
 func WriteTimeout(timeout time.Duration) InboundOption {
 	return func(i *Inbound) {
 		i.server.WriteTimeout = timeout
