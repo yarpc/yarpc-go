@@ -82,6 +82,8 @@ func TestTransportSpec(t *testing.T) {
 		ShutdownTimeout time.Duration
 		TLSMode         yarpctls.Mode
 		DisableHTTP2    bool
+		ReadTimeout     time.Duration
+		WriteTimeout    time.Duration
 	}
 
 	type inboundTest struct {
@@ -258,6 +260,12 @@ func TestTransportSpec(t *testing.T) {
 			cfg:         attrs{"address": ":8080"},
 			opts:        []Option{},
 			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, DisableHTTP2: false},
+		},
+		{
+			desc:        "ReadTimeout/WriteTimeout",
+			cfg:         attrs{"address": ":8080", "readTimeout": "1s", "writeTimeout": "10s"},
+			opts:        []Option{},
+			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, ReadTimeout: time.Second, WriteTimeout: 10 * time.Second},
 		},
 	}
 
@@ -618,6 +626,8 @@ func TestTransportSpec(t *testing.T) {
 				assert.Equal(t, "foo", ib.transport.serviceName, "service name must match")
 				assert.Equal(t, want.TLSMode, ib.tlsMode, "tlsMode should match")
 				assert.Equal(t, want.DisableHTTP2, ib.disableHTTP2, "disableHTTP2 should match")
+				assert.Equal(t, want.WriteTimeout, ib.server.WriteTimeout, "WriteTimeout should match")
+				assert.Equal(t, want.ReadTimeout, ib.server.ReadTimeout, "ReadTimeout should match")
 			}
 		}
 
