@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+import "google/protobuf/descriptor.proto";
+
+message Foo {
+    message NestedFoo {
+        string s = 1;
+    }
+    string bar = 1;
+    option (attribute) = true;
+    extend google.protobuf.MessageOptions {
+        NestedFoo isAFoo = 424242;
+    }
+    option (Foo.isAFoo).s = "false";
+}
+
+extend google.protobuf.MessageOptions {
+    bool attribute = 808080;
+}
+
+service Bar {
+    rpc Baz(Foo) returns (Foo) {}
+}
