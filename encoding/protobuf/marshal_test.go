@@ -35,3 +35,14 @@ func TestUnhandledEncoding(t *testing.T) {
 	_, _, err := marshal(transport.Encoding("foo"), nil, newCodec(nil))
 	assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.FromError(err).Code())
 }
+
+
+func BenchmarksUnmarshal(b *testing.B) {
+
+
+	unmarshal("proto", strings.NewReader("foo"), nil, nil)
+	assert.Equal(b, yarpcerrors.CodeInternal,
+		yarpcerrors.FromError(unmarshal(transport.Encoding("foo"), strings.NewReader("foo"), nil, newCodec(nil))).Code())
+	_, _, err := marshal(transport.Encoding("foo"), nil, newCodec(nil))
+	assert.Equal(b, yarpcerrors.CodeInternal, yarpcerrors.FromError(err).Code())
+}

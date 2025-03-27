@@ -22,6 +22,7 @@ package protobuf
 
 import (
 	"bytes"
+	//"fmt"
 	"io"
 	"sync"
 
@@ -65,6 +66,26 @@ func unmarshal(encoding transport.Encoding, reader io.Reader, message proto.Mess
 	}
 	return unmarshalBytes(encoding, body, message, codec)
 }
+
+func unmarshal2(encoding transport.Encoding, reader io.Reader, message proto.Message, codec *codec) error {
+	buf, ok := reader.(*bufferpool.Buffer)
+	//fmt.Printf("DEADBEEF, %T :: %T\n", buf, reader)
+
+	if !ok {
+		buf = bufferpool.Get()
+		defer bufferpool.Put(buf)
+		if _, err := buf.ReadFrom(reader); err != nil {
+			return err
+		}
+	}
+
+	body := buf.Bytes()
+	if len(body) == 0 {
+		return nil
+	}
+	return unmarshalBytes(encoding, body, message, codec)
+}
+
 
 func unmarshalBytes(encoding transport.Encoding, body []byte, message proto.Message, codec *codec) error {
 	switch encoding {

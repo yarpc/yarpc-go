@@ -69,7 +69,7 @@ func TestYARPCBasic(t *testing.T) {
 			Tracer(opentracing.NoopTracer{}),
 		},
 	}
-	te.do(t, func(t *testing.T, e *testEnv) {
+	te.do(t, func(t testing.TB, e *testEnv) {
 		_, err := e.GetValueYARPC(context.Background(), "foo")
 		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeNotFound, "foo"), err)
 		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", "bar"))
@@ -82,7 +82,7 @@ func TestYARPCBasic(t *testing.T) {
 func TestGRPCBasic(t *testing.T) {
 	t.Parallel()
 	te := testEnvOptions{}
-	te.do(t, func(t *testing.T, e *testEnv) {
+	te.do(t, func(t testing.TB, e *testEnv) {
 		_, err := e.GetValueGRPC(context.Background(), "foo")
 		assert.Equal(t, status.Error(codes.NotFound, "foo"), err)
 		assert.NoError(t, e.SetValueGRPC(context.Background(), "foo", "bar"))
@@ -95,7 +95,7 @@ func TestGRPCBasic(t *testing.T) {
 func TestYARPCWellKnownError(t *testing.T) {
 	t.Parallel()
 	te := testEnvOptions{}
-	te.do(t, func(t *testing.T, e *testEnv) {
+	te.do(t, func(t testing.TB, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
 		err := e.SetValueYARPC(context.Background(), "foo", "bar")
 		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "bar 1"), err)
@@ -105,7 +105,7 @@ func TestYARPCWellKnownError(t *testing.T) {
 func TestYARPCNamedError(t *testing.T) {
 	t.Parallel()
 	te := testEnvOptions{}
-	te.do(t, func(t *testing.T, e *testEnv) {
+	te.do(t, func(t testing.TB, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", "baz 1"))
 		err := e.SetValueYARPC(context.Background(), "foo", "bar")
 		assert.Equal(t, intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", "baz 1"), err)
@@ -115,7 +115,7 @@ func TestYARPCNamedError(t *testing.T) {
 func TestYARPCNamedErrorNoMessage(t *testing.T) {
 	t.Parallel()
 	te := testEnvOptions{}
-	te.do(t, func(t *testing.T, e *testEnv) {
+	te.do(t, func(t testing.TB, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", ""))
 		err := e.SetValueYARPC(context.Background(), "foo", "bar")
 		assert.Equal(t, intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", ""), err)
@@ -125,7 +125,7 @@ func TestYARPCNamedErrorNoMessage(t *testing.T) {
 func TestYARPCErrorWithDetails(t *testing.T) {
 	t.Parallel()
 	te := testEnvOptions{}
-	te.do(t, func(t *testing.T, e *testEnv) {
+	te.do(t, func(t testing.TB, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeNotFound, "hello world", protobuf.WithErrorDetails(&examplepb.SetValueResponse{})))
 		err := e.SetValueYARPC(context.Background(), "foo", "bar")
 		require.Len(t, protobuf.GetErrorDetails(err), 1)
@@ -138,7 +138,7 @@ func TestYARPCErrorWithDetails(t *testing.T) {
 func TestGRPCWellKnownError(t *testing.T) {
 	t.Parallel()
 	te := testEnvOptions{}
-	te.do(t, func(t *testing.T, e *testEnv) {
+	te.do(t, func(t testing.TB, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
 		err := e.SetValueGRPC(context.Background(), "foo", "bar")
 		assert.Equal(t, status.Error(codes.FailedPrecondition, "bar 1"), err)
@@ -148,7 +148,7 @@ func TestGRPCWellKnownError(t *testing.T) {
 func TestGRPCNamedError(t *testing.T) {
 	t.Parallel()
 	te := testEnvOptions{}
-	te.do(t, func(t *testing.T, e *testEnv) {
+	te.do(t, func(t testing.TB, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", "baz 1"))
 		err := e.SetValueGRPC(context.Background(), "foo", "bar")
 		assert.Equal(t, status.Error(codes.Unknown, "bar: baz 1"), err)
@@ -158,7 +158,7 @@ func TestGRPCNamedError(t *testing.T) {
 func TestGRPCNamedErrorNoMessage(t *testing.T) {
 	t.Parallel()
 	te := testEnvOptions{}
-	te.do(t, func(t *testing.T, e *testEnv) {
+	te.do(t, func(t testing.TB, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "bar", ""))
 		err := e.SetValueGRPC(context.Background(), "foo", "bar")
 		assert.Equal(t, status.Error(codes.Unknown, "bar"), err)
@@ -168,7 +168,7 @@ func TestGRPCNamedErrorNoMessage(t *testing.T) {
 func TestGRPCErrorWithDetails(t *testing.T) {
 	t.Parallel()
 	te := testEnvOptions{}
-	te.do(t, func(t *testing.T, e *testEnv) {
+	te.do(t, func(t testing.TB, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(protobuf.NewError(yarpcerrors.CodeNotFound, "hello world", protobuf.WithErrorDetails(&examplepb.SetValueResponse{})))
 		err := e.SetValueGRPC(context.Background(), "foo", "bar")
 		st := gogostatus.Convert(err)
@@ -181,7 +181,7 @@ func TestGRPCErrorWithDetails(t *testing.T) {
 func TestYARPCResponseAndError(t *testing.T) {
 	t.Parallel()
 	te := testEnvOptions{}
-	te.do(t, func(t *testing.T, e *testEnv) {
+	te.do(t, func(t testing.TB, e *testEnv) {
 		err := e.SetValueYARPC(context.Background(), "foo", "bar")
 		assert.NoError(t, err)
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
@@ -195,7 +195,7 @@ func TestGRPCResponseAndError(t *testing.T) {
 	t.Skip("grpc-go clients do not support returning both a response and error as of now")
 	t.Parallel()
 	te := testEnvOptions{}
-	te.do(t, func(t *testing.T, e *testEnv) {
+	te.do(t, func(t testing.TB, e *testEnv) {
 		err := e.SetValueGRPC(context.Background(), "foo", "bar")
 		assert.NoError(t, err)
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
@@ -210,7 +210,7 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 	value := strings.Repeat("a", defaultServerMaxRecvMsgSize+1)
 	t.Run("too big", func(t *testing.T) {
 		te := testEnvOptions{}
-		te.do(t, func(t *testing.T, e *testEnv) {
+		te.do(t, func(t testing.TB, e *testEnv) {
 			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second*5)
 			defer cancel()
 
@@ -228,7 +228,7 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 				ServerMaxSendMsgSize(math.MaxInt32),
 			},
 		}
-		te.do(t, func(t *testing.T, e *testEnv) {
+		te.do(t, func(t testing.TB, e *testEnv) {
 			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second*5)
 			defer cancel()
 
@@ -245,7 +245,7 @@ func TestLargeEcho(t *testing.T) {
 	t.Parallel()
 	value := strings.Repeat("a", 32768)
 	te := testEnvOptions{}
-	te.do(t, func(t *testing.T, e *testEnv) {
+	te.do(t, func(t testing.TB, e *testEnv) {
 		if assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", value)) {
 			getValue, err := e.GetValueYARPC(context.Background(), "foo")
 			assert.NoError(t, err)
@@ -257,7 +257,7 @@ func TestLargeEcho(t *testing.T) {
 func TestApplicationErrorPropagation(t *testing.T) {
 	t.Parallel()
 	te := testEnvOptions{}
-	te.do(t, func(t *testing.T, e *testEnv) {
+	te.do(t, func(t testing.TB, e *testEnv) {
 		response, err := e.Call(
 			context.Background(),
 			"GetValue",
@@ -300,7 +300,7 @@ func TestCustomContextDial(t *testing.T) {
 	te := testEnvOptions{
 		DialOptions: []DialOption{ContextDialer(contextDial)},
 	}
-	te.do(t, func(t *testing.T, e *testEnv) {
+	te.do(t, func(t testing.TB, e *testEnv) {
 		err := e.SetValueYARPC(context.Background(), "foo", "bar")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), errMsg)
@@ -377,7 +377,7 @@ func TestGRPCCompression(t *testing.T) {
 			_metrics.reset()
 
 			tt.testEnvOptions.DialOptions = []DialOption{Compressor(tt.compressor)}
-			tt.do(t, func(t *testing.T, e *testEnv) {
+			tt.do(t, func(t testing.TB, e *testEnv) {
 				value := strings.Repeat("a", 32*1024)
 				err := e.SetValueYARPC(context.Background(), "foo", value)
 				if tt.wantErr != "" {
@@ -434,7 +434,7 @@ func TestTLSWithYARPCAndGRPC(t *testing.T) {
 				InboundOptions: []InboundOption{InboundCredentials(credentials.NewTLS(scenario.ServerTLSConfig()))},
 				DialOptions:    []DialOption{DialerCredentials(credentials.NewTLS(scenario.ClientTLSConfig()))},
 			}
-			te.do(t, func(t *testing.T, e *testEnv) {
+			te.do(t, func(t testing.TB, e *testEnv) {
 				err := e.SetValueYARPC(context.Background(), "foo", "bar")
 				if tt.wantErr {
 					assert.Error(t, err)
@@ -543,7 +543,7 @@ func TestGRPCHeaderListSize(t *testing.T) {
 			te := testEnvOptions{
 				TransportOptions: tt.options,
 			}
-			te.do(t, func(t *testing.T, e *testEnv) {
+			te.do(t, func(t testing.TB, e *testEnv) {
 				var resHeaders map[string]string
 				// Setting longer timeout as CI timesout on large payloads.
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
@@ -589,7 +589,7 @@ func TestMuxTLS(t *testing.T) {
 				InboundOptions: []InboundOption{InboundTLSConfiguration(scenario.ServerTLSConfig()), InboundTLSMode(yarpctls.Permissive)},
 				DialOptions:    dialOptions,
 			}
-			te.do(t, func(t *testing.T, e *testEnv) {
+			te.do(t, func(t testing.TB, e *testEnv) {
 				err := e.SetValueYARPC(context.Background(), "foo", "bar")
 				assert.NoError(t, err)
 
@@ -630,7 +630,7 @@ func TestOutboundTLS(t *testing.T) {
 				InboundOptions: []InboundOption{InboundTLSConfiguration(scenario.ServerTLSConfig()), InboundTLSMode(yarpctls.Permissive)},
 				DialOptions:    dialOpts,
 			}
-			te.do(t, func(t *testing.T, e *testEnv) {
+			te.do(t, func(t testing.TB, e *testEnv) {
 				err := e.SetValueYARPC(context.Background(), "foo", "bar")
 				assert.NoError(t, err)
 
@@ -804,7 +804,7 @@ type testEnvOptions struct {
 	DialOptions      []DialOption
 }
 
-func (te *testEnvOptions) do(t *testing.T, f func(*testing.T, *testEnv)) {
+func (te *testEnvOptions) do(t testing.TB, f func(testing.TB, *testEnv)) {
 	testEnv, err := newTestEnv(
 		t,
 		te.TransportOptions,
@@ -820,7 +820,7 @@ func (te *testEnvOptions) do(t *testing.T, f func(*testing.T, *testEnv)) {
 }
 
 func newTestEnv(
-	t *testing.T,
+	t testing.TB,
 	transportOptions []TransportOption,
 	inboundOptions []InboundOption,
 	outboundOptions []OutboundOption,

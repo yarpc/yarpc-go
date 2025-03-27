@@ -21,6 +21,7 @@
 package grpc
 
 import (
+	//"io"
 	"strings"
 	"time"
 
@@ -179,6 +180,16 @@ func (h *handler) handleStream(
 	apperr = handlerErrorToGRPCError(apperr, nil)
 	return transport.UpdateSpanWithErr(span, apperr)
 }
+
+//type srvStreamWrapper struct {
+//	stream grpc.ServerStream
+//}
+//
+//func (w *srvStreamWrapper) Read(p [] byte) (n int, err error) {
+//	return w.stream.RecvMsg(p)
+//}
+
+//var _ io.Reader = (*srvStreamWrapper)(nil)
 
 func (h *handler) handleUnary(
 	ctx context.Context,

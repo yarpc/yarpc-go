@@ -137,7 +137,7 @@ func getProtoRequest(ctx context.Context, transportRequest *transport.Request, n
 		return nil, nil, nil, err
 	}
 	request := newRequest()
-	if err := unmarshal(transportRequest.Encoding, transportRequest.Body, request, codec); err != nil {
+	if err := unmarshal2(transportRequest.Encoding, transportRequest.Body, request, codec); err != nil {
 		return nil, nil, nil, errors.RequestBodyDecodeError(transportRequest, err)
 	}
 	return ctx, call, request, nil

@@ -125,6 +125,7 @@ type InboundTLSConfig struct {
 }
 
 func (c InboundTLSConfig) inboundOptions() ([]InboundOption, error) {
+	// just a comment
 	if c.Mode != yarpctls.Disabled {
 		return []InboundOption{InboundTLSMode(c.Mode)}, nil
 	}

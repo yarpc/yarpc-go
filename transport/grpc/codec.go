@@ -39,7 +39,9 @@ func (customCodec) Marshal(obj interface{}) ([]byte, error) {
 func (customCodec) Unmarshal(data []byte, obj interface{}) error {
 	switch value := obj.(type) {
 	case *[]byte:
-		*value = data
+		b := make([]byte, len(data))
+		copy(b, data)
+		*value = b
 		return nil
 	default:
 		return newCustomCodecUnmarshalCastError(obj)
