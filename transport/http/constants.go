@@ -44,6 +44,10 @@ var (
 
 // HTTP headers used in requests and responses to send YARPC metadata.
 const (
+	// Name of the application framework sending the request. This corresponds
+	// to the yarpc content type
+	AppFrameworkHeader = "Rpc-App-Framework"
+
 	// Name of the service sending the request. This corresponds to the
 	// Request.Caller attribute.
 	CallerHeader = "Rpc-Caller"
@@ -109,6 +113,13 @@ const (
 	// feature is supported on the server. If any non-empty value is set,
 	// this indicates true.
 	BothResponseErrorHeader = "Rpc-Both-Response-Error"
+)
+
+const (
+	_appFrameworkThriftHeaderValue = "application/yarpc+tbinary"
+	_appFrameworkProtoHeaderValue  = "application/yarpc+proto"
+	_appFrameworkJSONHeaderValue   = "application/yarpc+json"
+	_appFrameworkRawHeaderValue    = "application/yarpc+octet-stream"
 )
 
 const (
