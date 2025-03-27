@@ -60,9 +60,6 @@ const (
 	// to finish.
 	TTLMSHeader = "Context-TTL-MS"
 
-	// ContentTypeHeader is header key for content-type of the request
-	ContentTypeHeader = "Content-Type"
-
 	// Name of the procedure being called. This corresponds to the
 	// Request.Procedure attribute.
 	ProcedureHeader = "Rpc-Procedure"
@@ -112,13 +109,6 @@ const (
 	// feature is supported on the server. If any non-empty value is set,
 	// this indicates true.
 	BothResponseErrorHeader = "Rpc-Both-Response-Error"
-)
-
-const (
-	_contentTypeThriftHeaderValue = "application/yarpc+tbinary"
-	_contentTypeProtoHeaderValue  = "application/yarpc+proto"
-	_contentTypeJSONHeaderValue   = "application/yarpc+json"
-	_contentTypeRawHeaderValue    = "application/yarpc+octet-stream"
 )
 
 const (
