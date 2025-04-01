@@ -56,6 +56,9 @@ const (
 	// Request.Encoding attribute.
 	EncodingHeader = "Rpc-Encoding"
 
+	// Name of the framework to use for the request.
+	FrameworkHeader = "Rpc-Framework"
+
 	// Amount of time (in milliseconds) within which the request is expected
 	// to finish.
 	TTLMSHeader = "Context-TTL-MS"
@@ -110,6 +113,7 @@ const (
 	// this indicates true.
 	BothResponseErrorHeader = "Rpc-Both-Response-Error"
 )
+const _framework = "yarpc"
 
 const (
 	// Headers for propagating transport.ApplicationErrorMeta.

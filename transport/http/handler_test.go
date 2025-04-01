@@ -112,51 +112,79 @@ func TestHandlerHeaders(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	tests := []struct {
-		giveEncoding string
-		giveHeaders  http.Header
-		grabHeaders  map[string]struct{}
+		giveEncoding          string
+		giveRequestProtoMajor int
+		giveHeaders           http.Header
+		grabHeaders           map[string]struct{}
 
-		wantTTL     time.Duration
-		wantHeaders map[string]string
+		wantTTL       time.Duration
+		wantTransport string
+		wantHeaders   map[string]string
 	}{
 		{
-			giveEncoding: "json",
+			giveEncoding:          "json",
+			giveRequestProtoMajor: 1,
 			giveHeaders: http.Header{
+				FrameworkHeader:  {_framework},
 				TTLMSHeader:      {"1000"},
 				"Rpc-Header-Foo": {"bar"},
 				"X-Baz":          {"bat"},
 			},
-			grabHeaders: map[string]struct{}{"x-baz": {}},
-			wantTTL:     time.Second,
+			grabHeaders:   map[string]struct{}{"x-baz": {}},
+			wantTTL:       time.Second,
+			wantTransport: TransportName,
 			wantHeaders: map[string]string{
 				"foo":   "bar",
 				"x-baz": "bat",
 			},
 		},
 		{
-			giveEncoding: "raw",
+			giveEncoding:          "json",
+			giveRequestProtoMajor: 2,
+			giveHeaders: http.Header{
+				FrameworkHeader:  {_framework},
+				TTLMSHeader:      {"1000"},
+				"Rpc-Header-Foo": {"bar"},
+				"X-Baz":          {"bat"},
+			},
+			grabHeaders:   map[string]struct{}{"x-baz": {}},
+			wantTTL:       time.Second,
+			wantTransport: TransportHTTP2Name,
+			wantHeaders: map[string]string{
+				"foo":   "bar",
+				"x-baz": "bat",
+			},
+		},
+		{
+			giveEncoding:          "raw",
+			giveRequestProtoMajor: 1,
 			giveHeaders: http.Header{
 				TTLMSHeader: {"100"},
 				"Rpc-Foo":   {"ignored"},
 			},
-			wantTTL:     100 * time.Millisecond,
-			wantHeaders: map[string]string{},
+			wantTTL:       100 * time.Millisecond,
+			wantTransport: TransportName,
+			wantHeaders:   map[string]string{},
 		},
 		{
-			giveEncoding: "thrift",
+			giveEncoding:          "thrift",
+			giveRequestProtoMajor: 1,
 			giveHeaders: http.Header{
 				TTLMSHeader: {"1000"},
 			},
-			wantTTL:     time.Second,
-			wantHeaders: map[string]string{},
+			wantTTL:       time.Second,
+			wantTransport: TransportName,
+			wantHeaders:   map[string]string{},
 		},
 		{
-			giveEncoding: "proto",
+			giveEncoding:          "proto",
+			giveRequestProtoMajor: 1,
 			giveHeaders: http.Header{
 				TTLMSHeader: {"1000"},
 			},
-			wantTTL:     time.Second,
-			wantHeaders: map[string]string{},
+			wantTTL:       time.Second,
+			wantTransport: TransportName,
+			wantHeaders:   map[string]string{},
 		},
 	}
 
@@ -186,9 +214,9 @@ func TestHandlerHeaders(t *testing.T) {
 				&transport.Request{
 					Caller:    "caller",
 					Service:   "service",
-					Transport: "http",
 					Encoding:  transport.Encoding(tt.giveEncoding),
 					Procedure: "hello",
+					Transport: tt.wantTransport,
 					Headers:   transport.HeadersFromMap(tt.wantHeaders),
 					Body:      strings.NewReader("world"),
 				}),
@@ -207,9 +235,10 @@ func TestHandlerHeaders(t *testing.T) {
 		headers.Set(ProcedureHeader, "hello")
 
 		req := &http.Request{
-			Method: "POST",
-			Header: headers,
-			Body:   io.NopCloser(strings.NewReader("world")),
+			Method:     "POST",
+			Header:     headers,
+			Body:       io.NopCloser(strings.NewReader("world")),
+			ProtoMajor: tt.giveRequestProtoMajor,
 		}
 		rw := httptest.NewRecorder()
 		httpHandler.ServeHTTP(rw, req)

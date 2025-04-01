@@ -387,6 +387,7 @@ func TestCallOneWaySuccessWithBody(t *testing.T) {
 			assert.Equal(t, "service", req.Header.Get(ServiceHeader))
 			assert.Equal(t, "raw", req.Header.Get(EncodingHeader))
 			assert.Equal(t, "hello", req.Header.Get(ProcedureHeader))
+			assert.Equal(t, _framework, req.Header.Get(FrameworkHeader))
 
 			body, err := io.ReadAll(req.Body)
 			if assert.NoError(t, err) {
