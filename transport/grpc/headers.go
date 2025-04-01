@@ -66,6 +66,8 @@ const (
 	EncodingHeader = "rpc-encoding"
 	// ErrorNameHeader is the header key for the error name.
 	ErrorNameHeader = "rpc-error-name"
+	// FrameworkHeader is name of the framework to use for the request.
+	FrameworkHeader = "rpc-framework"
 	// ApplicationErrorHeader is the header key that will contain a non-empty value
 	// if there was an application error.
 	ApplicationErrorHeader = "rpc-application-error"
@@ -152,6 +154,8 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 			if request.Encoding == "" {
 				request.Encoding = transport.Encoding(getContentSubtype(value))
 			}
+		case FrameworkHeader:
+			continue
 		default:
 			request.Headers = request.Headers.With(header, value)
 		}

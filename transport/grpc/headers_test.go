@@ -48,6 +48,7 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				RoutingDelegateHeader, "example-routing-delegate",
 				EncodingHeader, "example-encoding",
 				CallerProcedureHeader, "example-caller-procedure",
+				FrameworkHeader, "example-framework",
 				"foo", "bar",
 				"baz", "bat",
 			),

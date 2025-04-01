@@ -119,6 +119,28 @@ func TestInvalidStreamMultipleHeaders(t *testing.T) {
 	require.Contains(t, err.Error(), "header has more than one value: rpc-caller:[caller1 caller2]")
 }
 
+func TestFrameworkHeaders(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	tran := NewTransport()
+	i := tran.NewInbound(listener)
+
+	h := handler{i: i}
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{
+		FrameworkHeader: []string{"example-framework"},
+		CallerHeader:    []string{"caller"},
+		ServiceHeader:   []string{"test"},
+		EncodingHeader:  []string{"raw"},
+	})
+
+	req, err := h.getBasicTransportRequest(ctx, "service/proc")
+	require.NoError(t, err, "expected no error")
+	framework, found := req.Headers.Get(FrameworkHeader)
+	require.False(t, found, "not expected framework header")
+	require.Equal(t, "", framework, "expected empty framework header")
+}
+
 func TestToGRPCError(t *testing.T) {
 	t.Run("nil", func(t *testing.T) {
 		assert.Nil(t, toGRPCError(nil))
