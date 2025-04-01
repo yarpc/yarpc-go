@@ -105,9 +105,6 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		return yarpcerrors.Newf(yarpcerrors.CodeNotFound, "request method was %s but only %s is allowed", req.Method, http.MethodPost)
 	}
 
-	// consume FrameworkHeader so that it's not leaked for multi-hop request
-	popHeader(req.Header, FrameworkHeader)
-
 	transportName := TransportName
 	if req.ProtoMajor == 2 {
 		transportName = TransportHTTP2Name
