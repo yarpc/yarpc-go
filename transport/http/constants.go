@@ -56,6 +56,9 @@ const (
 	// Request.Encoding attribute.
 	EncodingHeader = "Rpc-Encoding"
 
+	// Name of the transport to use for the request.
+	TransportHeader = "Rpc-Transport"
+
 	// Amount of time (in milliseconds) within which the request is expected
 	// to finish.
 	TTLMSHeader = "Context-TTL-MS"

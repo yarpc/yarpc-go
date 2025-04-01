@@ -508,6 +508,7 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 	req.Header.Set(CallerHeader, treq.Caller)
 	req.Header.Set(ServiceHeader, treq.Service)
 	req.Header.Set(ProcedureHeader, treq.Procedure)
+	req.Header.Set(TransportHeader, treq.Transport)
 	if ttl != 0 {
 		req.Header.Set(TTLMSHeader, fmt.Sprintf("%d", ttl/time.Millisecond))
 	}

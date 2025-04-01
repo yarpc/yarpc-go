@@ -105,12 +105,17 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		return yarpcerrors.Newf(yarpcerrors.CodeNotFound, "request method was %s but only %s is allowed", req.Method, http.MethodPost)
 	}
 
+	transportName := popHeader(req.Header, TransportHeader)
+	if transportName == "" {
+		transportName = TransportName
+	}
+
 	treq := &transport.Request{
 		Caller:          popHeader(req.Header, CallerHeader),
 		Service:         service,
 		Procedure:       procedure,
 		Encoding:        transport.Encoding(popHeader(req.Header, EncodingHeader)),
-		Transport:       TransportName,
+		Transport:       transportName,
 		ShardKey:        popHeader(req.Header, ShardKeyHeader),
 		RoutingKey:      popHeader(req.Header, RoutingKeyHeader),
 		RoutingDelegate: popHeader(req.Header, RoutingDelegateHeader),
