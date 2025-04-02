@@ -113,7 +113,7 @@ const (
 	// this indicates true.
 	BothResponseErrorHeader = "Rpc-Both-Response-Error"
 )
-const _framework = "yarpc"
+const _framework = "yarpc+go"
 
 const (
 	// Headers for propagating transport.ApplicationErrorMeta.
