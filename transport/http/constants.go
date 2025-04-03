@@ -56,8 +56,8 @@ const (
 	// Request.Encoding attribute.
 	EncodingHeader = "Rpc-Encoding"
 
-	// Name of the framework to use for the request.
-	FrameworkHeader = "Rpc-Framework"
+	// Name of the yarpc transport to use for the request.
+	TransportHeader = "Rpc-Transport"
 
 	// Amount of time (in milliseconds) within which the request is expected
 	// to finish.
@@ -113,7 +113,8 @@ const (
 	// this indicates true.
 	BothResponseErrorHeader = "Rpc-Both-Response-Error"
 )
-const _framework = "yarpc+go"
+
+const _transportName = "yarpc-http"
 
 const (
 	// Headers for propagating transport.ApplicationErrorMeta.

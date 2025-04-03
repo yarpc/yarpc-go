@@ -125,7 +125,7 @@ func TestHandlerHeaders(t *testing.T) {
 			giveEncoding:          "json",
 			giveRequestProtoMajor: 1,
 			giveHeaders: http.Header{
-				FrameworkHeader:  {_framework},
+				TransportHeader:  {_transportName},
 				TTLMSHeader:      {"1000"},
 				"Rpc-Header-Foo": {"bar"},
 				"X-Baz":          {"bat"},
@@ -142,7 +142,7 @@ func TestHandlerHeaders(t *testing.T) {
 			giveEncoding:          "json",
 			giveRequestProtoMajor: 2,
 			giveHeaders: http.Header{
-				FrameworkHeader:  {_framework},
+				TransportHeader:  {_transportName},
 				TTLMSHeader:      {"1000"},
 				"Rpc-Header-Foo": {"bar"},
 				"X-Baz":          {"bat"},

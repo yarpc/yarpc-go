@@ -128,7 +128,7 @@ func TestFrameworkHeaders(t *testing.T) {
 
 	h := handler{i: i}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{
-		FrameworkHeader: []string{"example-framework"},
+		TransportHeader: []string{"example-transport"},
 		CallerHeader:    []string{"caller"},
 		ServiceHeader:   []string{"test"},
 		EncodingHeader:  []string{"raw"},
@@ -136,9 +136,9 @@ func TestFrameworkHeaders(t *testing.T) {
 
 	req, err := h.getBasicTransportRequest(ctx, "service/proc")
 	require.NoError(t, err, "expected no error")
-	framework, found := req.Headers.Get(FrameworkHeader)
-	require.False(t, found, "not expected framework header")
-	require.Equal(t, "", framework, "expected empty framework header")
+	_transport, found := req.Headers.Get(TransportHeader)
+	require.False(t, found, "not expected transport header")
+	require.Equal(t, "", _transport, "expected empty transport header")
 }
 
 func TestToGRPCError(t *testing.T) {
