@@ -343,10 +343,27 @@ func (c *Configurator) loadOutboundInto(b *builder, name string, cfg outbounds) 
 	type adder func(*compiledTransportSpec, string, string, config.AttributeMap) error
 
 	loadUsing := func(o *outbound, adder adder) error {
-		spec, err := c.spec(o.Type)
-		if err != nil {
-			return fmt.Errorf("failed to load configuration for outbound %q: %v", name, err)
+		var useHTTP2 bool
+		o.Attributes.Get("useHTTP2", &useHTTP2)
+
+		var spec *compiledTransportSpec
+		var err error
+		if useHTTP2 {
+			spec, err = c.spec("http2")
+			if err != nil {
+				return fmt.Errorf("failed to load configuration for outbound %q: %v", name, err)
+			}
+		} else {
+			spec, err = c.spec(o.Type)
+			if err != nil {
+				return fmt.Errorf("failed to load configuration for outbound %q: %v", name, err)
+			}
 		}
+
+		// spec, err := c.spec(o.Type)
+		// if err != nil {
+		// 	return fmt.Errorf("failed to load configuration for outbound %q: %v", name, err)
+		// }
 
 		if err := adder(spec, name, cfg.Service, o.Attributes); err != nil {
 			return fmt.Errorf("failed to add outbound %q: %v", name, err)
