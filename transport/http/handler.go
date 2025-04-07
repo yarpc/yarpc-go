@@ -137,6 +137,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 
 	ctx := req.Context()
 	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
+	// parseTTLErr != nil is a problem only if the request is unary.
 	defer cancel()
 
 	// Capture parent baggage before interceptor might replace span
