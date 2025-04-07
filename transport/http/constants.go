@@ -56,8 +56,8 @@ const (
 	// Request.Encoding attribute.
 	EncodingHeader = "Rpc-Encoding"
 
-	// Name of the yarpc transport to use for the request.
-	TransportHeader = "Rpc-Transport"
+	// Name of the yarpc transport that potentially can be use for request routing.
+	RoutingTransportHeader = "Rpc-Routing-Transport"
 
 	// Amount of time (in milliseconds) within which the request is expected
 	// to finish.
@@ -114,7 +114,7 @@ const (
 	BothResponseErrorHeader = "Rpc-Both-Response-Error"
 )
 
-const _transportName = "yarpc-http"
+const _routingTransportName = "yarpc-http"
 
 const (
 	// Headers for propagating transport.ApplicationErrorMeta.

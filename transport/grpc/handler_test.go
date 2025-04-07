@@ -128,16 +128,16 @@ func TestFrameworkHeaders(t *testing.T) {
 
 	h := handler{i: i}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{
-		TransportHeader: []string{"example-transport"},
-		CallerHeader:    []string{"caller"},
-		ServiceHeader:   []string{"test"},
-		EncodingHeader:  []string{"raw"},
+		RoutingTransportHeader: []string{"example-transport"},
+		CallerHeader:           []string{"caller"},
+		ServiceHeader:          []string{"test"},
+		EncodingHeader:         []string{"raw"},
 	})
 
 	req, err := h.getBasicTransportRequest(ctx, "service/proc")
 	require.NoError(t, err, "expected no error")
-	_transport, found := req.Headers.Get(TransportHeader)
-	require.False(t, found, "not expected transport header")
+	_transport, found := req.Headers.Get(RoutingTransportHeader)
+	require.False(t, found, "not expected routing transport header")
 	require.Equal(t, "", _transport, "expected empty transport header")
 }
 
