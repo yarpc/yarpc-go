@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"go.uber.org/yarpc/api/middleware"
 	"net/http"
 	"strconv"
 	"time"
@@ -32,7 +33,6 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 	opentracinglog "github.com/opentracing/opentracing-go/log"
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/internal/iopool"
@@ -137,14 +137,23 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 
 	ctx := req.Context()
 	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
-	// parseTTLErr != nil is a problem only if the request is unary.
 	defer cancel()
+
+	// Capture parent baggage before interceptor might replace span
+	parentBaggage := extractBaggageFromContext(ctx)
 	ctx, span := h.createSpan(ctx, req, treq, start)
 
 	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
 		updateSpanWithErr(span, err)
 		return err
+	}
+
+	// Reapply baggage from parent span if missing in current span
+	for k, v := range parentBaggage {
+		if span.BaggageItem(k) == "" {
+			span.SetBaggageItem(k, v)
+		}
 	}
 
 	if parseTTLErr != nil {
@@ -361,4 +370,17 @@ func getContentType(encoding transport.Encoding) string {
 	default:
 		return ""
 	}
+}
+
+func extractBaggageFromContext(ctx context.Context) map[string]string {
+	baggage := make(map[string]string)
+	span := opentracing.SpanFromContext(ctx)
+	if span == nil {
+		return baggage
+	}
+	span.Context().ForeachBaggageItem(func(k, v string) bool {
+		baggage[k] = v
+		return true
+	})
+	return baggage
 }
