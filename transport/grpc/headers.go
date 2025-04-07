@@ -66,6 +66,8 @@ const (
 	EncodingHeader = "rpc-encoding"
 	// ErrorNameHeader is the header key for the error name.
 	ErrorNameHeader = "rpc-error-name"
+	// RoutingTransportHeader is name of the yarpc transport that potentially can be use for request routing.
+	RoutingTransportHeader = "rpc-routing-transport"
 	// ApplicationErrorHeader is the header key that will contain a non-empty value
 	// if there was an application error.
 	ApplicationErrorHeader = "rpc-application-error"
@@ -152,6 +154,8 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 			if request.Encoding == "" {
 				request.Encoding = transport.Encoding(getContentSubtype(value))
 			}
+		case RoutingTransportHeader:
+			continue
 		default:
 			request.Headers = request.Headers.With(header, value)
 		}
