@@ -187,3 +187,15 @@ func (c *Call) CallerProcedure() string {
 	}
 	return c.md.CallerProcedure()
 }
+
+// Clone copies current call. The two instances share nothing and can be used completely concurrently.
+// Changes in one do not reflect in the other. The clone is intended to be woven back in call chain by
+// producing a new context to propagate via:
+//
+//	ctx, _ = encoding.NewInboundCall(ctx)
+func (c *Call) Clone() *Call {
+	if c == nil {
+		return nil
+	}
+	return &Call{c.md.Clone()}
+}

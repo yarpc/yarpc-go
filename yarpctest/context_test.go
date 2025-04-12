@@ -55,7 +55,7 @@ func TestContextWithCall(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			ctx := yarpctest.ContextWithCall(context.Background(), &yarpctest.Call{
+			testCall := &yarpctest.Call{
 				Caller:          "caller",
 				Service:         "service",
 				Transport:       "transport",
@@ -67,8 +67,11 @@ func TestContextWithCall(t *testing.T) {
 				RoutingDelegate: "routingdelegate",
 				ResponseHeaders: tt.resHeaders,
 				CallerProcedure: "callerProcedure",
-			})
+			}
+			ctx := yarpctest.ContextWithCall(context.Background(), testCall)
 			call := yarpc.CallFromContext(ctx)
+			clone := call.Clone()
+			assert.NotNil(t, clone)
 
 			assert.Equal(t, "caller", call.Caller())
 			assert.Equal(t, "service", call.Service())
@@ -82,8 +85,23 @@ func TestContextWithCall(t *testing.T) {
 			assert.Equal(t, "routingdelegate", call.RoutingDelegate())
 			assert.Equal(t, "callerProcedure", call.CallerProcedure())
 
+			assert.Equal(t, "caller", clone.Caller())
+			assert.Equal(t, "service", clone.Service())
+			assert.Equal(t, "transport", clone.Transport())
+			assert.Equal(t, "procedure", clone.Procedure())
+			assert.Equal(t, transport.Encoding("encoding"), clone.Encoding())
+			assert.Equal(t, []string{"foo"}, clone.HeaderNames())
+			assert.Equal(t, "bar", clone.Header("foo"))
+			assert.Equal(t, "shardkey", clone.ShardKey())
+			assert.Equal(t, "routingkey", clone.RoutingKey())
+			assert.Equal(t, "routingdelegate", clone.RoutingDelegate())
+			assert.Equal(t, "callerProcedure", clone.CallerProcedure())
+
 			assert.NoError(t, call.WriteResponseHeader("baz", "qux"))
-			assert.Equal(t, tt.wantResHeaders, tt.resHeaders)
+			assert.Equal(t, tt.wantResHeaders, testCall.ResponseHeaders)
+
+			assert.NoError(t, clone.WriteResponseHeader("baz", "qux"))
+			// no way to get to response headers of the clone without breaking encapsulation
 		})
 	}
 

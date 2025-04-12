@@ -94,3 +94,13 @@ func TestInboundCallWriteToResponse(t *testing.T) {
 		})
 	}
 }
+
+func TestCallTheadSafety(t *testing.T) {
+	call := &InboundCall{}
+	icm := (*inboundCallMetadata)(call)
+
+	go func() {
+		_ = icm.WriteResponseHeader("a-header", "a-value")
+	}()
+	_ = icm.WriteResponseHeader("a-header", "a-value")
+}

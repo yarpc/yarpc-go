@@ -56,7 +56,7 @@ func TestReadFromRequest(t *testing.T) {
 		Service:         "service",
 		Transport:       "transport",
 		Caller:          "caller",
-		Encoding:        transport.Encoding("raw"),
+		Encoding:        "raw",
 		Procedure:       "proc",
 		ShardKey:        "sk",
 		RoutingKey:      "rk",
@@ -67,6 +67,9 @@ func TestReadFromRequest(t *testing.T) {
 	})
 	call := CallFromContext(ctx)
 	require.NotNil(t, call)
+	clone := call.Clone()
+	assert.NotNil(t, clone)
+	assert.NotNil(t, clone.md)
 
 	assert.Equal(t, "caller", call.Caller())
 	assert.Equal(t, "service", call.Service())
@@ -83,9 +86,32 @@ func TestReadFromRequest(t *testing.T) {
 	assert.Equal(t, "cp", call.CallerProcedure())
 	assert.Len(t, call.HeaderNames(), 1)
 
+	assert.Equal(t, "caller", clone.Caller())
+	assert.Equal(t, "service", clone.Service())
+	assert.Equal(t, "transport", clone.Transport())
+	assert.Equal(t, "raw", string(clone.Encoding()))
+	assert.Equal(t, "proc", clone.Procedure())
+	assert.Equal(t, "sk", clone.ShardKey())
+	assert.Equal(t, "rk", clone.RoutingKey())
+	assert.Equal(t, "rd", clone.RoutingDelegate())
+	assert.Equal(t, "bar", clone.Header("foo"))
+	assert.Equal(t, "bar", clone.OriginalHeader("foo"))
+	assert.Equal(t, "Bar", clone.OriginalHeader("Foo"))
+	assert.Equal(t, map[string]string{"Foo": "Bar", "foo": "bar"}, clone.OriginalHeaders())
+	assert.Equal(t, "cp", clone.CallerProcedure())
+	assert.Len(t, clone.HeaderNames(), 1)
+
 	assert.NoError(t, call.WriteResponseHeader("foo2", "bar2"))
+	assert.Equal(t, len(icall.resHeaders), 1)
 	assert.Equal(t, icall.resHeaders[0].k, "foo2")
 	assert.Equal(t, icall.resHeaders[0].v, "bar2")
+
+	assert.NoError(t, clone.WriteResponseHeader("foo3", "bar3"))
+	md, ok := clone.md.(*inboundCallMetadata)
+	assert.True(t, ok)
+	assert.Equal(t, len(md.resHeaders), 1)
+	assert.Equal(t, md.resHeaders[0].k, "foo3")
+	assert.Equal(t, md.resHeaders[0].v, "bar3")
 }
 
 func TestReadFromRequestMeta(t *testing.T) {
@@ -94,7 +120,7 @@ func TestReadFromRequestMeta(t *testing.T) {
 		Service:         "service",
 		Caller:          "caller",
 		Transport:       "transport",
-		Encoding:        transport.Encoding("raw"),
+		Encoding:        "raw",
 		Procedure:       "proc",
 		ShardKey:        "sk",
 		RoutingKey:      "rk",
@@ -132,7 +158,7 @@ func TestDisabledResponseHeaders(t *testing.T) {
 		Service:         "service",
 		Transport:       "transport",
 		Caller:          "caller",
-		Encoding:        transport.Encoding("raw"),
+		Encoding:        "raw",
 		Procedure:       "proc",
 		ShardKey:        "sk",
 		RoutingKey:      "rk",
@@ -142,6 +168,9 @@ func TestDisabledResponseHeaders(t *testing.T) {
 	})
 	call := CallFromContext(ctx)
 	require.NotNil(t, call)
+	clone := call.Clone()
+	assert.NotNil(t, clone)
+	assert.NotNil(t, clone.md)
 
 	assert.Equal(t, "caller", call.Caller())
 	assert.Equal(t, "service", call.Service())
@@ -155,5 +184,23 @@ func TestDisabledResponseHeaders(t *testing.T) {
 	assert.Equal(t, "bar", call.Header("foo"))
 	assert.Len(t, call.HeaderNames(), 1)
 
+	assert.Equal(t, "caller", clone.Caller())
+	assert.Equal(t, "service", clone.Service())
+	assert.Equal(t, "transport", clone.Transport())
+	assert.Equal(t, "raw", string(clone.Encoding()))
+	assert.Equal(t, "proc", clone.Procedure())
+	assert.Equal(t, "sk", clone.ShardKey())
+	assert.Equal(t, "rk", clone.RoutingKey())
+	assert.Equal(t, "rd", clone.RoutingDelegate())
+	assert.Equal(t, "cp", clone.CallerProcedure())
+	assert.Equal(t, "bar", clone.Header("foo"))
+	assert.Len(t, clone.HeaderNames(), 1)
+
 	assert.Error(t, call.WriteResponseHeader("foo", "bar"))
+	assert.Nil(t, icall.resHeaders)
+
+	assert.Error(t, clone.WriteResponseHeader("foo3", "bar3"))
+	md, ok := clone.md.(*inboundCallMetadata)
+	assert.True(t, ok)
+	assert.Nil(t, md.resHeaders)
 }

@@ -22,6 +22,7 @@ package yarpctest
 
 import (
 	"context"
+	"maps"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/inboundcall"
@@ -81,3 +82,21 @@ func (c callMetadata) Headers() transport.Headers {
 func (c callMetadata) ShardKey() string        { return c.c.ShardKey }
 func (c callMetadata) RoutingKey() string      { return c.c.RoutingKey }
 func (c callMetadata) RoutingDelegate() string { return c.c.RoutingDelegate }
+func (c callMetadata) Clone() inboundcall.Metadata {
+	// map.Clone preserves nils
+	return callMetadata{
+		c: &Call{
+			Caller:          c.c.Caller,
+			Service:         c.c.Service,
+			Transport:       c.c.Transport,
+			Procedure:       c.c.Procedure,
+			Encoding:        c.c.Encoding,
+			Headers:         maps.Clone(c.c.Headers),
+			ShardKey:        c.c.ShardKey,
+			RoutingKey:      c.c.RoutingKey,
+			RoutingDelegate: c.c.RoutingDelegate,
+			CallerProcedure: c.c.CallerProcedure,
+			ResponseHeaders: maps.Clone(c.c.ResponseHeaders),
+		},
+	}
+}
