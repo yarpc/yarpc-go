@@ -38,23 +38,33 @@ func TestHTTPHeaders(t *testing.T) {
 		{
 			ApplicationHeaderPrefix,
 			transport.HeadersFromMap(map[string]string{
-				"foo":     "bar",
-				"foo-bar": "hello",
+				"foo":            "bar",
+				"foo-bar":        "hello",
+				"uber-trace-id":  "trace-id-value",
+				"uberctx-custom": "baggage-value",
 			}),
 			transport.HeadersFromMap(map[string]string{
-				"Foo":     "bar",
-				"Foo-Bar": "hello",
+				"Foo":            "bar",
+				"Foo-Bar":        "hello",
+				"Uber-Trace-Id":  "trace-id-value",
+				"Uberctx-Custom": "baggage-value",
 			}),
 			http.Header{
-				"Rpc-Header-Foo":     []string{"bar"},
-				"Rpc-Header-Foo-Bar": []string{"hello"},
+				"Rpc-Header-Foo":            []string{"bar"},
+				"Rpc-Header-Foo-Bar":        []string{"hello"},
+				"Rpc-Header-Uber-Trace-Id":  []string{"trace-id-value"},
+				"Rpc-Header-Uberctx-Custom": []string{"baggage-value"},
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		m := headerMapper{tt.prefix}
-		assert.Equal(t, tt.fromTransport, m.FromHTTPHeaders(tt.http, transport.Headers{}))
+		gotHeaders := m.FromHTTPHeaders(tt.http, transport.Headers{})
+		for k, v := range tt.fromTransport.Items() {
+			got, _ := gotHeaders.Get(k)
+			assert.Equal(t, v, got, "expected header %q to be %q", k, v)
+		}
 		assert.Equal(t, tt.http, m.ToHTTPHeaders(tt.toTransport, nil))
 	}
 }
