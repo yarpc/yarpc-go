@@ -70,6 +70,7 @@ func (hm headerMapper) FromHTTPHeaders(from http.Header, to transport.Headers) t
 		if kLower == strings.ToLower(UberTraceIDHeader) || strings.HasPrefix(kLower, strings.ToLower(UberCtxHeader)) {
 			to = to.With(k, from.Get(k))
 		}
+		// Note: undefined behavior for multiple occurrences of the same header
 	}
 	return to
 }
