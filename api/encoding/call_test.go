@@ -156,4 +156,5 @@ func TestDisabledResponseHeaders(t *testing.T) {
 	assert.Len(t, call.HeaderNames(), 1)
 
 	assert.Error(t, call.WriteResponseHeader("foo", "bar"))
+	assert.Nil(t, icall.resHeaders)
 }
