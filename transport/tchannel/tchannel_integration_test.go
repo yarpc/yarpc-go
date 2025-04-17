@@ -71,9 +71,8 @@ func TestHandleResourceExhausted(t *testing.T) {
 			yarpctest.Procedure(procedureName),
 			yarpctest.GiveTimeout(time.Millisecond*100),
 
-			// all TChannel requests should timeout and never actually receive
-			// the resource exhausted error
-			yarpctest.WantError("timeout"),
+			// resource exhausted error should be returned
+			yarpctest.WantError("resource exhausted: rate limit exceeded"),
 		),
 		10,
 	)
