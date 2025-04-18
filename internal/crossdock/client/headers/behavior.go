@@ -122,6 +122,8 @@ func Run(t crossdock.T) {
 		gotHeaders, err := caller.Call(tt.give)
 		if checks.NoError(err, "%v: call failed", tt.desc) {
 			internal.RemoveVariableMapKeys(gotHeaders)
+			// 💡 Remove trace headers before asserting
+			delete(gotHeaders, "uber-trace-id")
 
 			// assert.Equal doesn't work with nil maps
 			if len(tt.want) == 0 {
