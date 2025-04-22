@@ -59,16 +59,9 @@ func (hm headerMapper) ToHTTPHeaders(from transport.Headers, to http.Header) htt
 func (hm headerMapper) FromHTTPHeaders(from http.Header, to transport.Headers) transport.Headers {
 	prefixLen := len(hm.Prefix)
 	for k := range from {
-		// Convert headers with Rpc-Header- prefix
 		if strings.HasPrefix(k, hm.Prefix) {
 			key := k[prefixLen:]
 			to = to.With(key, from.Get(k))
-			continue
-		}
-		// Preserve tracing headers
-		kLower := strings.ToLower(k)
-		if kLower == strings.ToLower(UberTraceIDHeader) || strings.HasPrefix(kLower, strings.ToLower(UberCtxHeader)) {
-			to = to.With(k, from.Get(k))
 		}
 		// Note: undefined behavior for multiple occurrences of the same header
 	}

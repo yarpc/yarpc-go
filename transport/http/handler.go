@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -62,13 +63,48 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	service := popHeader(req.Header, ServiceHeader)
 	procedure := popHeader(req.Header, ProcedureHeader)
 	bothResponseError := popHeader(req.Header, AcceptsBothResponseErrorHeader) == AcceptTrue
-	// add response header to echo accepted rpc-service
+
+	// Extract tracing context and remove tracing headers before they reach handlers
+	carrier := opentracing.HTTPHeadersCarrier(req.Header)
+	parentSpanCtx, _ := h.tracer.Extract(opentracing.HTTPHeaders, carrier)
+
+	// Remove tracing headers so application handlers don't see them
+	for k := range req.Header {
+		kLower := strings.ToLower(k)
+		if kLower == strings.ToLower(UberTraceIDHeader) || strings.HasPrefix(kLower, strings.ToLower(UberCtxHeader)) {
+			req.Header.Del(k)
+		}
+	}
+
+	// Start span
+	start := time.Now()
+	tags := opentracing.Tags{
+		"rpc.service":   service,
+		"rpc.transport": "http",
+	}
+	for k, v := range yarpc.OpentracingTags {
+		tags[k] = v
+	}
+	span := h.tracer.StartSpan(
+		procedure,
+		opentracing.StartTime(start),
+		ext.RPCServerOption(parentSpanCtx),
+		tags,
+	)
+	ext.PeerService.Set(span, service)
+	ctx := opentracing.ContextWithSpan(req.Context(), span)
+
+	// Add service name to response headers
 	responseWriter.AddSystemHeader(ServiceHeader, service)
-	status := yarpcerrors.FromError(errors.WrapHandlerError(h.callHandler(responseWriter, req, service, procedure), service, procedure))
+
+	status := yarpcerrors.FromError(errors.WrapHandlerError(h.callHandler(ctx, responseWriter, req, service, procedure, start, span), service, procedure))
+	span.Finish()
+
 	if status == nil {
 		responseWriter.Close(http.StatusOK)
 		return
 	}
+
 	if statusCodeText, marshalErr := status.Code().MarshalText(); marshalErr != nil {
 		status = yarpcerrors.Newf(yarpcerrors.CodeInternal, "error %s had code %v which is unknown", status.Error(), status.Code())
 		responseWriter.AddSystemHeader(ErrorCodeHeader, "internal")
@@ -98,9 +134,17 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	responseWriter.Close(httpStatusCode)
 }
 
-func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, service string, procedure string) (retErr error) {
-	start := time.Now()
+func (h handler) callHandler(
+	ctx context.Context,
+	responseWriter *responseWriter,
+	req *http.Request,
+	service string,
+	procedure string,
+	start time.Time,
+	span opentracing.Span,
+) (retErr error) {
 	defer req.Body.Close()
+
 	if req.Method != http.MethodPost {
 		return yarpcerrors.Newf(yarpcerrors.CodeNotFound, "request method was %s but only %s is allowed", req.Method, http.MethodPost)
 	}
@@ -119,14 +163,17 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		Body:            req.Body,
 		BodySize:        int(req.ContentLength),
 	}
+
 	for header := range h.grabHeaders {
 		if value := req.Header.Get(header); value != "" {
 			treq.Headers = treq.Headers.With(header, value)
 		}
 	}
+
 	if err := transport.ValidateRequest(treq); err != nil {
 		return err
 	}
+
 	defer func() {
 		if retErr == nil {
 			if contentType := getContentType(treq.Encoding); contentType != "" {
@@ -135,11 +182,8 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		}
 	}()
 
-	ctx := req.Context()
 	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
-	// parseTTLErr != nil is a problem only if the request is unary.
 	defer cancel()
-	ctx, span := h.createSpan(ctx, req, treq, start)
 
 	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
@@ -150,25 +194,24 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	if parseTTLErr != nil {
 		return parseTTLErr
 	}
+
 	if err := transport.ValidateRequestContext(ctx); err != nil {
 		return err
 	}
+
 	switch spec.Type() {
 	case transport.Unary:
-		defer span.Finish()
-
 		err = transport.InvokeUnaryHandler(transport.UnaryInvokeRequest{
-			Context:   ctx,
-			StartTime: start,
-			Request:   treq,
+			Context:        ctx,
+			StartTime:      start,
+			Request:        treq,
+			ResponseWriter: responseWriter,
 			Handler: middleware.ApplyUnaryInbound(
 				spec.Unary(),
 				h.transport.unaryInboundInterceptor,
 			),
-			ResponseWriter: responseWriter,
-			Logger:         h.logger,
+			Logger: h.logger,
 		})
-
 	case transport.Oneway:
 		err = handleOnewayRequest(
 			span,
@@ -179,7 +222,6 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 			),
 			h.logger,
 		)
-
 	default:
 		err = yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport http does not handle %s handlers", spec.Type().String())
 	}
