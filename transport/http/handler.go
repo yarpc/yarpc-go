@@ -65,23 +65,19 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	bothResponseError := popHeader(req.Header, AcceptsBothResponseErrorHeader) == AcceptTrue
 
 	// Extract tracing context and remove tracing headers before they reach handlers
-	carrier := opentracing.HTTPHeadersCarrier(req.Header)
-	parentSpanCtx, _ := h.tracer.Extract(opentracing.HTTPHeaders, carrier)
-
-	// Remove tracing headers so application handlers don't see them
-	for k := range req.Header {
-		kLower := strings.ToLower(k)
-		if kLower == strings.ToLower(UberTraceIDHeader) || strings.HasPrefix(kLower, strings.ToLower(UberCtxHeader)) {
-			req.Header.Del(k)
-		}
-	}
+	parentSpanCtx := extractTracingContextAndCleanHeaders(h.tracer, req)
 
 	// Start span
 	start := time.Now()
+	transportName := TransportName
+	if req.ProtoMajor == 2 {
+		transportName = TransportHTTP2Name
+	}
 	tags := opentracing.Tags{
 		"rpc.service":   service,
-		"rpc.transport": "http",
+		"rpc.transport": transportName,
 	}
+
 	for k, v := range yarpc.OpentracingTags {
 		tags[k] = v
 	}
@@ -92,12 +88,15 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		tags,
 	)
 	ext.PeerService.Set(span, service)
-	ctx := opentracing.ContextWithSpan(req.Context(), span)
+	req = req.WithContext(opentracing.ContextWithSpan(req.Context(), span))
 
 	// Add service name to response headers
 	responseWriter.AddSystemHeader(ServiceHeader, service)
 
-	status := yarpcerrors.FromError(errors.WrapHandlerError(h.callHandler(ctx, responseWriter, req, service, procedure, start, span), service, procedure))
+	status := yarpcerrors.FromError(errors.WrapHandlerError(
+		h.callHandler(req.Context(), responseWriter, req, service, procedure, start, span),
+		service, procedure,
+	))
 	span.Finish()
 
 	if status == nil {
@@ -403,4 +402,19 @@ func getContentType(encoding transport.Encoding) string {
 	default:
 		return ""
 	}
+}
+
+func extractTracingContextAndCleanHeaders(tracer opentracing.Tracer, req *http.Request) opentracing.SpanContext {
+	carrier := opentracing.HTTPHeadersCarrier(req.Header)
+	spanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, carrier)
+
+	for k := range req.Header {
+		switch {
+		case k == UberTraceIDHeader:
+			req.Header.Del(k)
+		case strings.HasPrefix(k, UberCtxHeader):
+			req.Header.Del(k)
+		}
+	}
+	return spanCtx
 }
