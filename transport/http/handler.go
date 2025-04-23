@@ -379,7 +379,6 @@ func getContentType(encoding transport.Encoding) string {
 func extractTracingContextAndCleanHeaders(tracer opentracing.Tracer, req *http.Request) opentracing.SpanContext {
 	carrier := opentracing.HTTPHeadersCarrier(req.Header)
 	spanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, carrier)
-
 	for k := range req.Header {
 		switch {
 		case k == UberTraceIDHeader:
