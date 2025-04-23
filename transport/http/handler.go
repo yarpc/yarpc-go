@@ -269,34 +269,6 @@ func updateSpanWithErr(span opentracing.Span, err error) {
 	}
 }
 
-func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, opentracing.Span) {
-	// Extract opentracing etc baggage from headers
-	// Annotate the inbound context with a trace span
-	tracer := h.tracer
-	carrier := opentracing.HTTPHeadersCarrier(req.Header)
-	parentSpanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, carrier)
-	// parentSpanCtx may be nil, ext.RPCServerOption handles a nil parent
-	// gracefully.
-	tags := opentracing.Tags{
-		"rpc.caller":    treq.Caller,
-		"rpc.service":   treq.Service,
-		"rpc.encoding":  treq.Encoding,
-		"rpc.transport": "http",
-	}
-	for k, v := range yarpc.OpentracingTags {
-		tags[k] = v
-	}
-	span := tracer.StartSpan(
-		treq.Procedure,
-		opentracing.StartTime(start),
-		ext.RPCServerOption(parentSpanCtx), // implies ChildOf
-		tags,
-	)
-	ext.PeerService.Set(span, treq.Caller)
-	ctx = opentracing.ContextWithSpan(ctx, span)
-	return ctx, span
-}
-
 var (
 	_ transport.ExtendedResponseWriter     = (*responseWriter)(nil)
 	_ transport.ApplicationErrorMetaSetter = (*responseWriter)(nil)
