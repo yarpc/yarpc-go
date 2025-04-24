@@ -64,36 +64,12 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	procedure := popHeader(req.Header, ProcedureHeader)
 	bothResponseError := popHeader(req.Header, AcceptsBothResponseErrorHeader) == AcceptTrue
 
-	// Extract tracing context and remove tracing headers before they reach handlers
-	parentSpanCtx := extractTracingContext(h.tracer, req.Header)
-	cleanTracingHeaders(req.Header)
-
-	// Start span
+	// Start tracing span and mutate request context
 	start := time.Now()
-	transportName := TransportName
-	if req.ProtoMajor == 2 {
-		transportName = TransportHTTP2Name
-	}
-	tags := opentracing.Tags{
-		"rpc.service":   service,
-		"rpc.transport": transportName,
-	}
-	for k, v := range yarpc.OpentracingTags {
-		tags[k] = v
-	}
-	span := h.tracer.StartSpan(
-		procedure,
-		opentracing.StartTime(start),
-		ext.RPCServerOption(parentSpanCtx),
-		tags,
-	)
-	ext.PeerService.Set(span, service)
-	req = req.WithContext(opentracing.ContextWithSpan(req.Context(), span))
-
-	// Add service name to response headers
+	req, span := h.startSpanFromRequest(req, service, procedure, start)
 	responseWriter.AddSystemHeader(ServiceHeader, service)
 
-	retErr, encoding := h.callHandler(responseWriter, req, service, procedure, start, span)
+	encoding, retErr := h.callHandler(responseWriter, req, service, procedure, start, span)
 
 	if retErr == nil {
 		if contentType := getContentType(encoding); contentType != "" {
@@ -144,11 +120,11 @@ func (h handler) callHandler(
 	service, procedure string,
 	start time.Time,
 	span opentracing.Span,
-) (retErr error, encoding transport.Encoding) {
+) (transport.Encoding, error) {
 	defer req.Body.Close()
 
 	if req.Method != http.MethodPost {
-		return yarpcerrors.Newf(yarpcerrors.CodeNotFound, "request method was %s but only %s is allowed", req.Method, http.MethodPost), ""
+		return "", yarpcerrors.Newf(yarpcerrors.CodeNotFound, "request method was %s but only %s is allowed", req.Method, http.MethodPost)
 	}
 
 	treq := &transport.Request{
@@ -173,7 +149,7 @@ func (h handler) callHandler(
 	}
 
 	if err := transport.ValidateRequest(treq); err != nil {
-		return err, treq.Encoding
+		return treq.Encoding, err
 	}
 
 	ctx := req.Context()
@@ -183,17 +159,17 @@ func (h handler) callHandler(
 	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
 		updateSpanWithErr(span, err)
-		return err, treq.Encoding
+		return treq.Encoding, err
 	}
 
 	if parseTTLErr != nil {
 		updateSpanWithErr(span, parseTTLErr)
-		return parseTTLErr, treq.Encoding
+		return treq.Encoding, parseTTLErr
 	}
 
 	if err := transport.ValidateRequestContext(ctx); err != nil {
 		updateSpanWithErr(span, err)
-		return err, treq.Encoding
+		return treq.Encoding, err
 	}
 
 	switch spec.Type() {
@@ -224,7 +200,7 @@ func (h handler) callHandler(
 	}
 
 	updateSpanWithErr(span, err)
-	return err, treq.Encoding
+	return treq.Encoding, err
 }
 
 func handleOnewayRequest(
@@ -386,4 +362,32 @@ func cleanTracingHeaders(header http.Header) {
 			header.Del(k)
 		}
 	}
+}
+
+func (h handler) startSpanFromRequest(req *http.Request, service, procedure string, start time.Time) (*http.Request, opentracing.Span) {
+	parentSpanCtx := extractTracingContext(h.tracer, req.Header)
+	cleanTracingHeaders(req.Header)
+
+	transportName := TransportName
+	if req.ProtoMajor == 2 {
+		transportName = TransportHTTP2Name
+	}
+
+	tags := opentracing.Tags{
+		"rpc.service":   service,
+		"rpc.transport": transportName,
+	}
+	for k, v := range yarpc.OpentracingTags {
+		tags[k] = v
+	}
+
+	span := h.tracer.StartSpan(
+		procedure,
+		opentracing.StartTime(start),
+		ext.RPCServerOption(parentSpanCtx),
+		tags,
+	)
+	ext.PeerService.Set(span, service)
+	ctx := opentracing.ContextWithSpan(req.Context(), span)
+	return req.WithContext(ctx), span
 }
