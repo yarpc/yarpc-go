@@ -112,7 +112,7 @@ func (h handler) callHandler(
 	service, procedure string,
 	start time.Time,
 	span opentracing.Span,
-) (encoding transport.Encoding, err error) {
+) (encoding transport.Encoding, retErr error) {
 	defer req.Body.Close()
 
 	if req.Method != http.MethodPost {
@@ -145,7 +145,7 @@ func (h handler) callHandler(
 	}
 
 	defer func() {
-		if err == nil {
+		if retErr == nil {
 			if contentType := getContentType(treq.Encoding); contentType != "" {
 				responseWriter.AddSystemHeader("Content-Type", contentType)
 			}
