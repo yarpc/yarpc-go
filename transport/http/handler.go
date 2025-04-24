@@ -65,7 +65,8 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	bothResponseError := popHeader(req.Header, AcceptsBothResponseErrorHeader) == AcceptTrue
 
 	// Extract tracing context and remove tracing headers before they reach handlers
-	parentSpanCtx := extractTracingContextAndCleanHeaders(h.tracer, req)
+	parentSpanCtx := extractTracingContext(h.tracer, req.Header)
+	cleanTracingHeaders(req.Header)
 
 	// Start span
 	start := time.Now()
@@ -77,7 +78,6 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		"rpc.service":   service,
 		"rpc.transport": transportName,
 	}
-
 	for k, v := range yarpc.OpentracingTags {
 		tags[k] = v
 	}
@@ -93,10 +93,15 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Add service name to response headers
 	responseWriter.AddSystemHeader(ServiceHeader, service)
 
-	status := yarpcerrors.FromError(errors.WrapHandlerError(
-		h.callHandler(req.Context(), responseWriter, req, service, procedure, start, span),
-		service, procedure,
-	))
+	retErr, encoding := h.callHandler(responseWriter, req, service, procedure, start, span)
+
+	if retErr == nil {
+		if contentType := getContentType(encoding); contentType != "" {
+			responseWriter.AddSystemHeader("Content-Type", contentType)
+		}
+	}
+
+	status := yarpcerrors.FromError(errors.WrapHandlerError(retErr, service, procedure))
 	span.Finish()
 
 	if status == nil {
@@ -134,18 +139,16 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h handler) callHandler(
-	ctx context.Context,
-	responseWriter *responseWriter,
+	w *responseWriter,
 	req *http.Request,
-	service string,
-	procedure string,
+	service, procedure string,
 	start time.Time,
 	span opentracing.Span,
-) (retErr error) {
+) (retErr error, encoding transport.Encoding) {
 	defer req.Body.Close()
 
 	if req.Method != http.MethodPost {
-		return yarpcerrors.Newf(yarpcerrors.CodeNotFound, "request method was %s but only %s is allowed", req.Method, http.MethodPost)
+		return yarpcerrors.Newf(yarpcerrors.CodeNotFound, "request method was %s but only %s is allowed", req.Method, http.MethodPost), ""
 	}
 
 	treq := &transport.Request{
@@ -170,46 +173,41 @@ func (h handler) callHandler(
 	}
 
 	if err := transport.ValidateRequest(treq); err != nil {
-		return err
+		return err, treq.Encoding
 	}
 
-	defer func() {
-		if retErr == nil {
-			if contentType := getContentType(treq.Encoding); contentType != "" {
-				responseWriter.AddSystemHeader("Content-Type", contentType)
-			}
-		}
-	}()
-
+	ctx := req.Context()
 	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
 	defer cancel()
 
 	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
 		updateSpanWithErr(span, err)
-		return err
+		return err, treq.Encoding
 	}
 
 	if parseTTLErr != nil {
-		return parseTTLErr
+		updateSpanWithErr(span, parseTTLErr)
+		return parseTTLErr, treq.Encoding
 	}
 
 	if err := transport.ValidateRequestContext(ctx); err != nil {
-		return err
+		updateSpanWithErr(span, err)
+		return err, treq.Encoding
 	}
 
 	switch spec.Type() {
 	case transport.Unary:
 		err = transport.InvokeUnaryHandler(transport.UnaryInvokeRequest{
-			Context:        ctx,
-			StartTime:      start,
-			Request:        treq,
-			ResponseWriter: responseWriter,
+			Context:   ctx,
+			StartTime: start,
+			Request:   treq,
 			Handler: middleware.ApplyUnaryInbound(
 				spec.Unary(),
 				h.transport.unaryInboundInterceptor,
 			),
-			Logger: h.logger,
+			ResponseWriter: w,
+			Logger:         h.logger,
 		})
 	case transport.Oneway:
 		err = handleOnewayRequest(
@@ -226,7 +224,7 @@ func (h handler) callHandler(
 	}
 
 	updateSpanWithErr(span, err)
-	return err
+	return err, treq.Encoding
 }
 
 func handleOnewayRequest(
@@ -376,16 +374,16 @@ func getContentType(encoding transport.Encoding) string {
 	}
 }
 
-func extractTracingContextAndCleanHeaders(tracer opentracing.Tracer, req *http.Request) opentracing.SpanContext {
-	carrier := opentracing.HTTPHeadersCarrier(req.Header)
+func extractTracingContext(tracer opentracing.Tracer, header http.Header) opentracing.SpanContext {
+	carrier := opentracing.HTTPHeadersCarrier(header)
 	spanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, carrier)
-	for k := range req.Header {
-		switch {
-		case k == UberTraceIDHeader:
-			req.Header.Del(k)
-		case strings.HasPrefix(k, UberCtxHeader):
-			req.Header.Del(k)
+	return spanCtx
+}
+
+func cleanTracingHeaders(header http.Header) {
+	for k := range header {
+		if k == UberTraceIDHeader || strings.HasPrefix(k, UberCtxHeader) {
+			header.Del(k)
 		}
 	}
-	return spanCtx
 }
