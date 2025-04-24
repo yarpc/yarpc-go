@@ -68,15 +68,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	start := time.Now()
 	req, span := h.startSpanFromRequest(req, service, procedure, start)
 	responseWriter.AddSystemHeader(ServiceHeader, service)
-
-	encoding, retErr := h.callHandler(responseWriter, req, service, procedure, start, span)
-
-	if retErr == nil {
-		if contentType := getContentType(encoding); contentType != "" {
-			responseWriter.AddSystemHeader("Content-Type", contentType)
-		}
-	}
-
+	_, retErr := h.callHandler(responseWriter, req, service, procedure, start, span)
 	status := yarpcerrors.FromError(errors.WrapHandlerError(retErr, service, procedure))
 	span.Finish()
 
@@ -115,12 +107,12 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h handler) callHandler(
-	w *responseWriter,
+	responseWriter *responseWriter,
 	req *http.Request,
 	service, procedure string,
 	start time.Time,
 	span opentracing.Span,
-) (transport.Encoding, error) {
+) (encoding transport.Encoding, err error) {
 	defer req.Body.Close()
 
 	if req.Method != http.MethodPost {
@@ -152,8 +144,17 @@ func (h handler) callHandler(
 		return treq.Encoding, err
 	}
 
+	defer func() {
+		if err == nil {
+			if contentType := getContentType(treq.Encoding); contentType != "" {
+				responseWriter.AddSystemHeader("Content-Type", contentType)
+			}
+		}
+	}()
+
 	ctx := req.Context()
 	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
+	// parseTTLErr != nil is a problem only if the request is unary.
 	defer cancel()
 
 	spec, err := h.router.Choose(ctx, treq)
@@ -163,12 +164,10 @@ func (h handler) callHandler(
 	}
 
 	if parseTTLErr != nil {
-		updateSpanWithErr(span, parseTTLErr)
 		return treq.Encoding, parseTTLErr
 	}
 
 	if err := transport.ValidateRequestContext(ctx); err != nil {
-		updateSpanWithErr(span, err)
 		return treq.Encoding, err
 	}
 
@@ -182,7 +181,7 @@ func (h handler) callHandler(
 				spec.Unary(),
 				h.transport.unaryInboundInterceptor,
 			),
-			ResponseWriter: w,
+			ResponseWriter: responseWriter,
 			Logger:         h.logger,
 		})
 	case transport.Oneway:
