@@ -67,8 +67,9 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Start tracing span and mutate request context
 	start := time.Now()
 	req, span := h.startSpanFromRequest(req, service, procedure, start)
+	// add response header to echo accepted rpc-service
 	responseWriter.AddSystemHeader(ServiceHeader, service)
-	_, retErr := h.callHandler(responseWriter, req, service, procedure, start, span)
+	retErr := h.callHandler(responseWriter, req, service, procedure, start, span)
 	status := yarpcerrors.FromError(errors.WrapHandlerError(retErr, service, procedure))
 	span.Finish()
 
@@ -112,11 +113,11 @@ func (h handler) callHandler(
 	service, procedure string,
 	start time.Time,
 	span opentracing.Span,
-) (encoding transport.Encoding, retErr error) {
+) (retErr error) {
 	defer req.Body.Close()
 
 	if req.Method != http.MethodPost {
-		return "", yarpcerrors.Newf(yarpcerrors.CodeNotFound, "request method was %s but only %s is allowed", req.Method, http.MethodPost)
+		return yarpcerrors.Newf(yarpcerrors.CodeNotFound, "request method was %s but only %s is allowed", req.Method, http.MethodPost)
 	}
 
 	treq := &transport.Request{
@@ -141,7 +142,7 @@ func (h handler) callHandler(
 	}
 
 	if err := transport.ValidateRequest(treq); err != nil {
-		return treq.Encoding, err
+		return err
 	}
 
 	defer func() {
@@ -160,15 +161,15 @@ func (h handler) callHandler(
 	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
 		updateSpanWithErr(span, err)
-		return treq.Encoding, err
+		return err
 	}
 
 	if parseTTLErr != nil {
-		return treq.Encoding, parseTTLErr
+		return parseTTLErr
 	}
 
 	if err := transport.ValidateRequestContext(ctx); err != nil {
-		return treq.Encoding, err
+		return err
 	}
 
 	switch spec.Type() {
@@ -199,7 +200,7 @@ func (h handler) callHandler(
 	}
 
 	updateSpanWithErr(span, err)
-	return treq.Encoding, err
+	return err
 }
 
 func handleOnewayRequest(
