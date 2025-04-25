@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -62,13 +63,21 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	service := popHeader(req.Header, ServiceHeader)
 	procedure := popHeader(req.Header, ProcedureHeader)
 	bothResponseError := popHeader(req.Header, AcceptsBothResponseErrorHeader) == AcceptTrue
+
+	// Start tracing span and mutate request context
+	start := time.Now()
+	req, span := h.startSpanFromRequest(req, service, procedure, start)
 	// add response header to echo accepted rpc-service
 	responseWriter.AddSystemHeader(ServiceHeader, service)
-	status := yarpcerrors.FromError(errors.WrapHandlerError(h.callHandler(responseWriter, req, service, procedure), service, procedure))
+	retErr := h.callHandler(responseWriter, req, service, procedure, start, span)
+	status := yarpcerrors.FromError(errors.WrapHandlerError(retErr, service, procedure))
+	span.Finish()
+
 	if status == nil {
 		responseWriter.Close(http.StatusOK)
 		return
 	}
+
 	if statusCodeText, marshalErr := status.Code().MarshalText(); marshalErr != nil {
 		status = yarpcerrors.Newf(yarpcerrors.CodeInternal, "error %s had code %v which is unknown", status.Error(), status.Code())
 		responseWriter.AddSystemHeader(ErrorCodeHeader, "internal")
@@ -98,9 +107,15 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	responseWriter.Close(httpStatusCode)
 }
 
-func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, service string, procedure string) (retErr error) {
-	start := time.Now()
+func (h handler) callHandler(
+	responseWriter *responseWriter,
+	req *http.Request,
+	service, procedure string,
+	start time.Time,
+	span opentracing.Span,
+) (retErr error) {
 	defer req.Body.Close()
+
 	if req.Method != http.MethodPost {
 		return yarpcerrors.Newf(yarpcerrors.CodeNotFound, "request method was %s but only %s is allowed", req.Method, http.MethodPost)
 	}
@@ -124,14 +139,17 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		Body:            req.Body,
 		BodySize:        int(req.ContentLength),
 	}
+
 	for header := range h.grabHeaders {
 		if value := req.Header.Get(header); value != "" {
 			treq.Headers = treq.Headers.With(header, value)
 		}
 	}
+
 	if err := transport.ValidateRequest(treq); err != nil {
 		return err
 	}
+
 	defer func() {
 		if retErr == nil {
 			if contentType := getContentType(treq.Encoding); contentType != "" {
@@ -144,7 +162,6 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
 	// parseTTLErr != nil is a problem only if the request is unary.
 	defer cancel()
-	ctx, span := h.createSpan(ctx, req, treq, start)
 
 	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
@@ -155,13 +172,13 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	if parseTTLErr != nil {
 		return parseTTLErr
 	}
+
 	if err := transport.ValidateRequestContext(ctx); err != nil {
 		return err
 	}
+
 	switch spec.Type() {
 	case transport.Unary:
-		defer span.Finish()
-
 		err = transport.InvokeUnaryHandler(transport.UnaryInvokeRequest{
 			Context:   ctx,
 			StartTime: start,
@@ -173,7 +190,6 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 			ResponseWriter: responseWriter,
 			Logger:         h.logger,
 		})
-
 	case transport.Oneway:
 		err = handleOnewayRequest(
 			span,
@@ -184,7 +200,6 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 			),
 			h.logger,
 		)
-
 	default:
 		err = yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport http does not handle %s handlers", spec.Type().String())
 	}
@@ -231,34 +246,6 @@ func updateSpanWithErr(span opentracing.Span, err error) {
 		span.SetTag("error", true)
 		span.LogFields(opentracinglog.String("event", err.Error()))
 	}
-}
-
-func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, opentracing.Span) {
-	// Extract opentracing etc baggage from headers
-	// Annotate the inbound context with a trace span
-	tracer := h.tracer
-	carrier := opentracing.HTTPHeadersCarrier(req.Header)
-	parentSpanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, carrier)
-	// parentSpanCtx may be nil, ext.RPCServerOption handles a nil parent
-	// gracefully.
-	tags := opentracing.Tags{
-		"rpc.caller":    treq.Caller,
-		"rpc.service":   treq.Service,
-		"rpc.encoding":  treq.Encoding,
-		"rpc.transport": "http",
-	}
-	for k, v := range yarpc.OpentracingTags {
-		tags[k] = v
-	}
-	span := tracer.StartSpan(
-		treq.Procedure,
-		opentracing.StartTime(start),
-		ext.RPCServerOption(parentSpanCtx), // implies ChildOf
-		tags,
-	)
-	ext.PeerService.Set(span, treq.Caller)
-	ctx = opentracing.ContextWithSpan(ctx, span)
-	return ctx, span
 }
 
 var (
@@ -366,4 +353,46 @@ func getContentType(encoding transport.Encoding) string {
 	default:
 		return ""
 	}
+}
+
+func extractTracingContext(tracer opentracing.Tracer, header http.Header) opentracing.SpanContext {
+	carrier := opentracing.HTTPHeadersCarrier(header)
+	spanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, carrier)
+	return spanCtx
+}
+
+func cleanTracingHeaders(header http.Header) {
+	for k := range header {
+		if k == UberTraceIDHeader || strings.HasPrefix(k, UberCtxHeader) {
+			header.Del(k)
+		}
+	}
+}
+
+func (h handler) startSpanFromRequest(req *http.Request, service, procedure string, start time.Time) (*http.Request, opentracing.Span) {
+	parentSpanCtx := extractTracingContext(h.tracer, req.Header)
+	cleanTracingHeaders(req.Header)
+
+	transportName := TransportName
+	if req.ProtoMajor == 2 {
+		transportName = TransportHTTP2Name
+	}
+
+	tags := opentracing.Tags{
+		"rpc.service":   service,
+		"rpc.transport": transportName,
+	}
+	for k, v := range yarpc.OpentracingTags {
+		tags[k] = v
+	}
+
+	span := h.tracer.StartSpan(
+		procedure,
+		opentracing.StartTime(start),
+		ext.RPCServerOption(parentSpanCtx),
+		tags,
+	)
+	ext.PeerService.Set(span, service)
+	ctx := opentracing.ContextWithSpan(req.Context(), span)
+	return req.WithContext(ctx), span
 }

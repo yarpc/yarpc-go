@@ -155,3 +155,9 @@ var (
 		_http2SchemePseudoHeader,
 	}
 )
+
+// Tracing header keys that must be preserved in HTTP headers.
+const (
+	UberTraceIDHeader = "uber-trace-id"
+	UberCtxHeader     = "uberctx-"
+)
