@@ -44,8 +44,12 @@ func (hm headerMapper) ToHTTPHeaders(from transport.Headers, to http.Header) htt
 	if to == nil {
 		to = make(http.Header, from.Len())
 	}
-	for k, v := range from.Items() {
-		to.Add(hm.Prefix+k, v)
+	for key, val := range from.Items() {
+		if isTracingHeader(strings.ToLower(key)) {
+			to.Add(key, val)
+		} else {
+			to.Add(hm.Prefix+key, val)
+		}
 	}
 	return to
 }
@@ -57,13 +61,20 @@ func (hm headerMapper) ToHTTPHeaders(from transport.Headers, to http.Header) htt
 //
 // If 'to' is nil, a new map will be assigned.
 func (hm headerMapper) FromHTTPHeaders(from http.Header, to transport.Headers) transport.Headers {
-	prefixLen := len(hm.Prefix)
-	for k := range from {
-		if strings.HasPrefix(k, hm.Prefix) {
-			key := k[prefixLen:]
-			to = to.With(key, from.Get(k))
+	prefixLower := strings.ToLower(hm.Prefix)
+	for origKey, vals := range from {
+		lowerKey := strings.ToLower(origKey)
+		switch {
+		case strings.HasPrefix(lowerKey, prefixLower):
+			suffix := lowerKey[len(prefixLower):]
+			for _, v := range vals {
+				to = to.With(suffix, v)
+			}
+		case isTracingHeader(lowerKey):
+			for _, v := range vals {
+				to = to.With(lowerKey, v)
+			}
 		}
-		// Note: undefined behavior for multiple occurrences of the same header
 	}
 	return to
 }
@@ -82,4 +93,16 @@ func (hm headerMapper) deleteHTTP2PseudoHeadersIfNeeded(from transport.Headers) 
 		}
 	}
 	return from
+}
+
+// isTracingHeader returns true for the handful of YARPC/OpenTracing headers
+// that must go over the wire unprefixed.
+func isTracingHeader(k string) bool {
+	if k == strings.ToLower(UberTraceIDHeader) {
+		return true
+	}
+	if strings.HasPrefix(k, strings.ToLower(UberCtxHeader)) {
+		return true
+	}
+	return false
 }
