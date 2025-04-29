@@ -75,6 +75,7 @@ func (hm headerMapper) FromHTTPHeaders(from http.Header, to transport.Headers) t
 				to = to.With(lowerKey, v)
 			}
 		}
+		// Note: undefined behavior for multiple occurrences of the same header
 	}
 	return to
 }
