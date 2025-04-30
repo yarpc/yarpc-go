@@ -96,13 +96,22 @@ func (hm headerMapper) deleteHTTP2PseudoHeadersIfNeeded(from transport.Headers) 
 	return from
 }
 
+// hasPrefixFold reports whether s begins with prefix, performing an
+// ASCII case‐insensitive comparison without allocating.
+func hasPrefixFold(s, prefix string) bool {
+	if len(s) < len(prefix) {
+		return false
+	}
+	return strings.EqualFold(s[:len(prefix)], prefix)
+}
+
 // isTracingHeader returns true for the handful of YARPC/OpenTracing headers
 // that must go over the wire unprefixed.
 func isTracingHeader(k string) bool {
-	if k == strings.ToLower(UberTraceIDHeader) {
+	if strings.EqualFold(k, UberTraceContextHeaderKey) {
 		return true
 	}
-	if strings.HasPrefix(k, strings.ToLower(UberCtxHeader)) {
+	if hasPrefixFold(k, UberBaggageHeaderKeyPrefix) {
 		return true
 	}
 	return false
