@@ -158,6 +158,6 @@ var (
 
 // Tracing header keys that must be preserved in HTTP headers.
 const (
-	UberTraceIDHeader = "uber-trace-id"
-	UberCtxHeader     = "uberctx-"
+	UberTraceContextHeaderKey  = "uber-trace-id"
+	UberBaggageHeaderKeyPrefix = "uberctx-"
 )
