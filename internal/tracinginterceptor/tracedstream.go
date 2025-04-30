@@ -35,7 +35,7 @@ var (
 	_ transport.StreamHeadersSender = (*TracedServerStream)(nil)
 )
 
-// TracedClientStream wraps a transport.ClientStream to add tracing.
+// TracedClientStream wraps the transport.ClientStream to add tracing.
 type TracedClientStream struct {
 	clientStream *transport.ClientStream
 	span         opentracing.Span
