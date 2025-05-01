@@ -45,7 +45,7 @@ func (hm headerMapper) ToHTTPHeaders(from transport.Headers, to http.Header) htt
 		to = make(http.Header, from.Len())
 	}
 	for key, val := range from.Items() {
-		if isTracingHeader(strings.ToLower(key)) {
+		if isTracingHeader(key) {
 			to.Add(key, val)
 		} else {
 			to.Add(hm.Prefix+key, val)
@@ -70,7 +70,7 @@ func (hm headerMapper) FromHTTPHeaders(from http.Header, to transport.Headers) t
 			for _, v := range vals {
 				to = to.With(suffix, v)
 			}
-		case isTracingHeader(lowerKey):
+		case isTracingHeader(origKey):
 			for _, v := range vals {
 				to = to.With(lowerKey, v)
 			}
