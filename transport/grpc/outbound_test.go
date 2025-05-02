@@ -27,7 +27,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -304,7 +303,7 @@ func TestCallServiceMatch(t *testing.T) {
 					}
 
 					// Send the response attributes back and end the stream.
-					if sendErr := stream.SendMsg(&types.Empty{}); sendErr != nil {
+					if sendErr := stream.SendMsg([]byte{}); sendErr != nil {
 						// We couldn't send the response.
 						return sendErr
 					}

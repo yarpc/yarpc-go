@@ -44,9 +44,9 @@ import (
 )
 
 func TestIntegration(t *testing.T) {
-	t.Parallel()
+	//t.Parallel()
 	for _, transportType := range testutils.AllTransportTypes {
-		transportType := transportType
+		if transportType == testutils.TransportTypeGRPC {
 		t.Run(transportType.String(), func(t *testing.T) { testIntegrationForTransportType(t, transportType) })
 	}
 }

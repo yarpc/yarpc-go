@@ -42,9 +42,9 @@ func (customCodec) Marshal(v any) (mem.BufferSlice, error) {
 	var bytes []byte
 	var err error
 
-	switch v.(type) {
+	switch value := v.(type) {
 	case []byte:
-		bytes, err = v.([]byte), nil
+		bytes, err = value, nil
 	default:
 		return nil, newCustomCodecMarshalCastError(v)
 	}
@@ -59,7 +59,7 @@ func (customCodec) Unmarshal(data mem.BufferSlice, v any) error {
 		*value = data.Materialize()
 		return nil
 	default:
-		return newCustomCodecUnmarshalCastError(data)
+		return newCustomCodecUnmarshalCastError(v)
 	}
 }
 
