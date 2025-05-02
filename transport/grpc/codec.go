@@ -37,7 +37,7 @@ func init() {
 	encoding.RegisterCodecV2(customCodec{})
 }
 
-// Marshal takes a []byte and passes it through as a []byte.
+// Marshal takes a []byte and passes it through as a mem.BufferSlice
 func (customCodec) Marshal(v any) (mem.BufferSlice, error) {
 	var bytes []byte
 	var err error
@@ -52,7 +52,7 @@ func (customCodec) Marshal(v any) (mem.BufferSlice, error) {
 	return mem.BufferSlice{mem.SliceBuffer(bytes)}, err
 }
 
-// Unmarshal takes a []byte pointer as obj and points it to data.
+// Unmarshal takes a mem.BufferSlice and copies the bytes to a []byte
 func (customCodec) Unmarshal(data mem.BufferSlice, v any) error {
 	switch value := v.(type) {
 	case *[]byte:
@@ -64,10 +64,6 @@ func (customCodec) Unmarshal(data mem.BufferSlice, v any) error {
 }
 
 func (customCodec) Name() string {
-	// Setting this to what amounts to a nonsense value.
-	// The encoding should always be inferred from the headers.
-	// Setting this to a name that is not an encoding will assure
-	// we get an error if this is used as the encoding value.
 	return Name
 }
 
