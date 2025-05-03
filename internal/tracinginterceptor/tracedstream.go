@@ -4,7 +4,7 @@
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
+// copies of the Software, and to permit persons to whom the Software are
 // furnished to do so, subject to the following conditions:
 //
 // The above copyright notice and this permission notice shall be included in
@@ -14,9 +14,8 @@
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
+// LIABILITY, WHETHER IN AN ACTION OF TORT, TORT OR OTHERWISE, ARISING FROM,
+// THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 package tracinginterceptor
 
@@ -35,17 +34,11 @@ var (
 	_ transport.StreamHeadersSender = (*TracedServerStream)(nil)
 )
 
-// TracedClientStream wraps the transport.ClientStream to add tracing.
+// tracedClientStream wraps the transport.ClientStream to add tracing.
 type tracedClientStream struct {
 	clientStream *transport.ClientStream
 	span         opentracing.Span
 	closed       atomic.Bool
-}
-
-// newTracedClientStream wraps the provided ClientStream with tracing.
-// It returns a TracedClientStream that records message send/receive and header operations.
-func newTracedClientStream(s *transport.ClientStream, span opentracing.Span) *tracedClientStream {
-	return &tracedClientStream{clientStream: s, span: span}
 }
 
 // Context returns the context associated with the client stream.
@@ -93,6 +86,7 @@ func (t *tracedClientStream) Headers() (transport.Headers, error) {
 	return headers, nil
 }
 
+// closeWithErr finishes the span once and tags it if there was an error.
 func (t *tracedClientStream) closeWithErr(err error) error {
 	if !t.closed.Swap(true) {
 		t.span.Finish()
@@ -154,6 +148,7 @@ func (t *TracedServerStream) SendHeaders(h transport.Headers) error {
 	return nil
 }
 
+// closeWithErr finishes the span once and tags it if there was an error.
 func (t *TracedServerStream) closeWithErr(err error) error {
 	if !t.closed.Swap(true) {
 		t.span.Finish()
