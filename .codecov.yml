@@ -23,7 +23,6 @@ ignore:
  - /encoding/thrift/internal/observabilitytest/test/testservicefx/
  - /encoding/thrift/internal/observabilitytest/test/testserviceserver/
  - /encoding/thrift/internal/observabilitytest/test/testservicetest/
- - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/NOSERVICES/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreclient/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystorefx/
@@ -63,6 +62,7 @@ ignore:
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/namefx/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/nameserver/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends/nametest/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/NOSERVICES/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/weatherclient/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/weatherfx/
@@ -127,3 +127,4 @@ ignore:
  - /internal/service-test/
  - /internal/testutils/
  - /serialize/internal/
+ - /x/reflection/grpcreflectionv1alpha/
