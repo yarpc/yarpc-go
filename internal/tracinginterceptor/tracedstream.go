@@ -42,9 +42,9 @@ type tracedClientStream struct {
 	closed       atomic.Bool
 }
 
-// NewTracedClientStream wraps the provided ClientStream with tracing.
+// newTracedClientStream wraps the provided ClientStream with tracing.
 // It returns a TracedClientStream that records message send/receive and header operations.
-func NewTracedClientStream(s *transport.ClientStream, span opentracing.Span) *tracedClientStream {
+func newTracedClientStream(s *transport.ClientStream, span opentracing.Span) *tracedClientStream {
 	return &tracedClientStream{clientStream: s, span: span}
 }
 
