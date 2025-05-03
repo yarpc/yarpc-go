@@ -233,7 +233,7 @@ func (i *Interceptor) CallStream(ctx context.Context, req *transport.StreamReque
 		return nil, err
 	}
 
-	tracedStream := &TracedClientStream{
+	tracedStream := &tracedClientStream{
 		clientStream: clientStream,
 		span:         span,
 	}
@@ -287,7 +287,7 @@ func getPropagationCarrier(headers map[string]string, transport string) Propagat
 	return opentracing.TextMapCarrier(headers)
 }
 
-func wrapTracedClientStream(tracedStream *TracedClientStream) *transport.ClientStream {
+func wrapTracedClientStream(tracedStream *tracedClientStream) *transport.ClientStream {
 	wrapped, err := transport.NewClientStream(tracedStream)
 	if err != nil {
 		// This should not happen, since NewClientStream only fails for the nil streams.
