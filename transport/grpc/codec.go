@@ -23,7 +23,6 @@ package grpc
 import (
 	"fmt"
 
-	"google.golang.org/grpc/encoding"
 	"google.golang.org/grpc/mem"
 )
 
@@ -32,10 +31,6 @@ const Name = "yarpc"
 
 // CustomCodec pass bytes to/from the wire without modification.
 type CustomCodec struct{}
-
-func init() {
-	encoding.RegisterCodecV2(CustomCodec{})
-}
 
 // Marshal takes a []byte and passes it through as a mem.BufferSlice
 func (CustomCodec) Marshal(v any) (mem.BufferSlice, error) {

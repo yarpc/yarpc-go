@@ -24,8 +24,6 @@ import (
 	"log"
 	"net"
 
-	ygrpc "go.uber.org/yarpc/transport/grpc"
-
 	"go.uber.org/yarpc/internal/crossdock/crossdockpb"
 	"google.golang.org/grpc"
 )
@@ -51,9 +49,7 @@ func start() error {
 	if err != nil {
 		return err
 	}
-	grpcServer = grpc.NewServer(
-		grpc.ForceServerCodecV2(ygrpc.CustomCodec{}),
-	)
+	grpcServer = grpc.NewServer()
 	crossdockpb.RegisterEchoServer(grpcServer, newEchoServer())
 	go func() {
 		if err := grpcServer.Serve(listener); err != nil {
