@@ -63,6 +63,7 @@ func (CustomCodec) Unmarshal(data mem.BufferSlice, v any) error {
 	}
 }
 
+// Name returns the name of the codec.
 func (CustomCodec) Name() string {
 	return Name
 }
