@@ -115,7 +115,7 @@ func (i *Inbound) start() error {
 	handler := newHandler(i, i.t.options.logger)
 
 	serverOptions := []grpc.ServerOption{
-		grpc.ForceServerCodecV2(customCodec{}),
+		grpc.ForceServerCodecV2(CustomCodec{}),
 		grpc.UnknownServiceHandler(handler.handle),
 		grpc.MaxRecvMsgSize(i.t.options.serverMaxRecvMsgSize),
 		grpc.MaxSendMsgSize(i.t.options.serverMaxSendMsgSize),

@@ -21,6 +21,7 @@
 package googlegrpc
 
 import (
+	ygrpc "go.uber.org/yarpc/transport/grpc"
 	"log"
 	"net"
 
@@ -49,7 +50,8 @@ func start() error {
 	if err != nil {
 		return err
 	}
-	grpcServer = grpc.NewServer()
+	grpcServer = grpc.NewServer([]grpc.ServerOption{
+		grpc.ForceServerCodecV2(ygrpc.CustomCodec{})}...)
 	crossdockpb.RegisterEchoServer(grpcServer, newEchoServer())
 	go func() {
 		if err := grpcServer.Serve(listener); err != nil {

@@ -27,18 +27,18 @@ import (
 	"google.golang.org/grpc/mem"
 )
 
-// Name is the name registered for the customCodec.
+// Name is the name registered for the CustomCodec.
 const Name = "yarpc"
 
-// customCodec pass bytes to/from the wire without modification.
-type customCodec struct{}
+// CustomCodec pass bytes to/from the wire without modification.
+type CustomCodec struct{}
 
 func init() {
-	encoding.RegisterCodecV2(customCodec{})
+	encoding.RegisterCodecV2(CustomCodec{})
 }
 
 // Marshal takes a []byte and passes it through as a mem.BufferSlice
-func (customCodec) Marshal(v any) (mem.BufferSlice, error) {
+func (CustomCodec) Marshal(v any) (mem.BufferSlice, error) {
 	var bytes []byte
 	var err error
 
@@ -53,7 +53,7 @@ func (customCodec) Marshal(v any) (mem.BufferSlice, error) {
 }
 
 // Unmarshal takes a mem.BufferSlice and copies the bytes to a []byte
-func (customCodec) Unmarshal(data mem.BufferSlice, v any) error {
+func (CustomCodec) Unmarshal(data mem.BufferSlice, v any) error {
 	switch value := v.(type) {
 	case *[]byte:
 		*value = data.Materialize()
@@ -63,7 +63,7 @@ func (customCodec) Unmarshal(data mem.BufferSlice, v any) error {
 	}
 }
 
-func (customCodec) Name() string {
+func (CustomCodec) Name() string {
 	return Name
 }
 

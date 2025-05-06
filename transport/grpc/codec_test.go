@@ -29,14 +29,14 @@ import (
 
 func TestCustomCodecMarshalBytes(t *testing.T) {
 	value := []byte("test")
-	data, err := customCodec{}.Marshal(value)
+	data, err := CustomCodec{}.Marshal(value)
 	assert.Equal(t, value, data.Materialize())
 	assert.NoError(t, err)
 }
 
 func TestCustomCodecMarshalCastError(t *testing.T) {
 	value := "test"
-	data, err := customCodec{}.Marshal(&value)
+	data, err := CustomCodec{}.Marshal(&value)
 	assert.Equal(t, mem.BufferSlice(mem.BufferSlice(nil)), data)
 	assert.Equal(t, newCustomCodecMarshalCastError(&value), err)
 }
@@ -44,17 +44,17 @@ func TestCustomCodecMarshalCastError(t *testing.T) {
 func TestCustomCodecUnmarshalBytes(t *testing.T) {
 	data := mem.BufferSlice{mem.SliceBuffer("test")}
 	var value []byte
-	assert.NoError(t, customCodec{}.Unmarshal(data, &value))
+	assert.NoError(t, CustomCodec{}.Unmarshal(data, &value))
 	assert.Equal(t, data.Materialize(), value)
 }
 
 func TestCustomCodecUnmarshalCastError(t *testing.T) {
 	var value string
-	err := customCodec{}.Unmarshal(mem.BufferSlice{mem.SliceBuffer("test")}, &value)
+	err := CustomCodec{}.Unmarshal(mem.BufferSlice{mem.SliceBuffer("test")}, &value)
 	assert.Equal(t, "", value)
 	assert.Equal(t, newCustomCodecUnmarshalCastError(&value), err)
 }
 
 func TestCustomCodecName(t *testing.T) {
-	assert.Equal(t, "yarpc", customCodec{}.Name())
+	assert.Equal(t, "yarpc", CustomCodec{}.Name())
 }
