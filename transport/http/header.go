@@ -61,18 +61,16 @@ func (hm headerMapper) ToHTTPHeaders(from transport.Headers, to http.Header) htt
 //
 // If 'to' is nil, a new map will be assigned.
 func (hm headerMapper) FromHTTPHeaders(from http.Header, to transport.Headers) transport.Headers {
-	prefixLower := strings.ToLower(hm.Prefix)
 	for origKey, vals := range from {
-		lowerKey := strings.ToLower(origKey)
 		switch {
-		case strings.HasPrefix(lowerKey, prefixLower):
-			suffix := lowerKey[len(prefixLower):]
+		case hasPrefixFold(origKey, hm.Prefix):
+			suffix := origKey[len(hm.Prefix):]
 			for _, v := range vals {
 				to = to.With(suffix, v)
 			}
 		case isTracingHeader(origKey):
 			for _, v := range vals {
-				to = to.With(lowerKey, v)
+				to = to.With(origKey, v)
 			}
 		}
 		// Note: undefined behavior for multiple occurrences of the same header
