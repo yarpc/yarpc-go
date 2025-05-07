@@ -293,7 +293,7 @@ func TestCallServiceMatch(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			server := grpc.NewServer(
+			server := grpc.NewServer(grpc.ForceServerCodecV2(CustomCodec{}),
 				grpc.UnknownServiceHandler(func(srv interface{}, stream grpc.ServerStream) error {
 					responseWriter := newResponseWriter()
 					defer responseWriter.Close()
