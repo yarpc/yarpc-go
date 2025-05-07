@@ -867,7 +867,7 @@ func newTestEnv(
 	}()
 
 	var clientConn *grpc.ClientConn
-
+	//lint:ignore SA1019 grpc.Dial is deprecated
 	clientConn, err = grpc.Dial(listener.Addr().String(), newDialOptions(dialOptions).grpcOptions(trans)...)
 	if err != nil {
 		return nil, err

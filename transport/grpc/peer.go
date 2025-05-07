@@ -53,7 +53,7 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 	if t.options.clientMaxHeaderListSize != nil {
 		dialOptions = append(dialOptions, grpc.WithMaxHeaderListSize(*t.options.clientMaxHeaderListSize))
 	}
-
+	//lint:ignore SA1019 grpc.Dial is deprecated
 	clientConn, err := grpc.Dial(address, dialOptions...)
 	if err != nil {
 		return nil, err
