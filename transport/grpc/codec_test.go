@@ -21,8 +21,9 @@
 package grpc
 
 import (
-	"google.golang.org/grpc/mem"
 	"testing"
+
+	"google.golang.org/grpc/mem"
 
 	"github.com/stretchr/testify/assert"
 )
