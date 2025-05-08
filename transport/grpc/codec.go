@@ -20,38 +20,47 @@
 
 package grpc
 
-import "fmt"
+import (
+	"fmt"
+
+	"google.golang.org/grpc/mem"
+)
+
+// Name is the name registered for the customCodec.
+const Name = "yarpc"
 
 // customCodec pass bytes to/from the wire without modification.
 type customCodec struct{}
 
-// Marshal takes a []byte and passes it through as a []byte.
-func (customCodec) Marshal(obj interface{}) ([]byte, error) {
-	switch value := obj.(type) {
+// Marshal takes a []byte and passes it through as a mem.BufferSlice
+func (customCodec) Marshal(v any) (mem.BufferSlice, error) {
+	var bytes []byte
+	var err error
+
+	switch value := v.(type) {
 	case []byte:
-		return value, nil
+		bytes, err = value, nil
 	default:
-		return nil, newCustomCodecMarshalCastError(obj)
+		return nil, newCustomCodecMarshalCastError(v)
 	}
+
+	return mem.BufferSlice{mem.SliceBuffer(bytes)}, err
 }
 
-// Unmarshal takes a []byte pointer as obj and points it to data.
-func (customCodec) Unmarshal(data []byte, obj interface{}) error {
-	switch value := obj.(type) {
+// Unmarshal takes a mem.BufferSlice and copies the bytes to a []byte
+func (customCodec) Unmarshal(data mem.BufferSlice, v any) error {
+	switch value := v.(type) {
 	case *[]byte:
-		*value = data
+		*value = data.Materialize()
 		return nil
 	default:
-		return newCustomCodecUnmarshalCastError(obj)
+		return newCustomCodecUnmarshalCastError(v)
 	}
 }
 
-func (customCodec) String() string {
-	// Setting this to what amounts to a nonsense value.
-	// The encoding should always be inferred from the headers.
-	// Setting this to a name that is not an encoding will assure
-	// we get an error if this is used as the encoding value.
-	return "yarpc"
+// Name returns the name of the codec.
+func (customCodec) Name() string {
+	return Name
 }
 
 func newCustomCodecMarshalCastError(actualObject interface{}) error {
