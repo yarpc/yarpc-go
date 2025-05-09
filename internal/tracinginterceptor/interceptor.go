@@ -186,18 +186,21 @@ func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.Stream
 		Headers:   req.Meta.Headers,
 		Transport: req.Meta.Transport,
 	}
-
 	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
 		ParentSpanContext: parentSpanCtx,
 		Tracer:            i.tracer,
-		TransportName:     s.Request().Meta.Transport,
+		TransportName:     req.Meta.Transport,
 		StartTime:         time.Now(),
 		ExtraTags:         commonTracingTags,
 	}
 	_, span := extractOpenTracingSpan.Do(s.Context(), transportRequest)
 	defer span.Finish()
-	err := h.HandleStream(s)
+
+	tracedRaw := NewTracedServerStream(s, span)
+	wrapped, _ := transport.NewServerStream(tracedRaw)
+	err := h.HandleStream(wrapped)
 	return updateSpanWithErrorDetails(span, err != nil, nil, err)
+
 }
 
 // CallStream implements interceptor.StreamOutbound

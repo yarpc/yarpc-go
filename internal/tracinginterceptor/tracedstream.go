@@ -103,6 +103,12 @@ type TracedServerStream struct {
 	closed       atomic.Bool
 }
 
+// NewTracedServerStream wraps the provided ServerStream with tracing.
+// It returns a TracedServerStream that records message send/receive and header send operations.
+func NewTracedServerStream(s *transport.ServerStream, span opentracing.Span) *TracedServerStream {
+	return &TracedServerStream{serverStream: s, span: span}
+}
+
 // Context returns the context associated with the server stream.
 func (t *TracedServerStream) Context() context.Context {
 	return t.serverStream.Context()
