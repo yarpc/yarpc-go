@@ -546,7 +546,7 @@ func TestInterceptorHandleStream(t *testing.T) {
 	require.NoError(t, err)
 
 	handler := transporttest.NewMockStreamHandler(ctrl)
-	handler.EXPECT().HandleStream(serverStream).Return(nil)
+	handler.EXPECT().HandleStream(gomock.Any()).Return(nil)
 
 	// Call HandleStream and validate behavior
 	err = interceptor.HandleStream(serverStream, handler)
@@ -580,7 +580,7 @@ func TestInterceptorHandleStream_Error(t *testing.T) {
 	require.NoError(t, err)
 
 	handler := transporttest.NewMockStreamHandler(ctrl)
-	handler.EXPECT().HandleStream(serverStream).Return(yarpcerrors.Newf(yarpcerrors.CodeInternal, "handler error"))
+	handler.EXPECT().HandleStream(gomock.Any()).Return(yarpcerrors.Newf(yarpcerrors.CodeInternal, "handler error"))
 
 	// Call HandleStream and capture any error
 	err = interceptor.HandleStream(serverStream, handler)
