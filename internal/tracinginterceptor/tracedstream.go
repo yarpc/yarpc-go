@@ -31,7 +31,7 @@ import (
 var (
 	_ transport.StreamCloser        = (*tracedClientStream)(nil)
 	_ transport.StreamHeadersReader = (*tracedClientStream)(nil)
-	_ transport.StreamHeadersSender = (*TracedServerStream)(nil)
+	_ transport.StreamHeadersSender = (*tracedServerStream)(nil)
 )
 
 // tracedClientStream wraps the transport.ClientStream to add tracing.
@@ -96,31 +96,25 @@ func (t *tracedClientStream) closeWithErr(err error) error {
 	return err
 }
 
-// TracedServerStream wraps a transport.ServerStream to add tracing.
-type TracedServerStream struct {
+// tracedServerStream wraps a transport.ServerStream to add tracing.
+type tracedServerStream struct {
 	serverStream *transport.ServerStream
 	span         opentracing.Span
 	closed       atomic.Bool
 }
 
-// NewTracedServerStream wraps the provided ServerStream with tracing.
-// It returns a TracedServerStream that records message send/receive and header send operations.
-func NewTracedServerStream(s *transport.ServerStream, span opentracing.Span) *TracedServerStream {
-	return &TracedServerStream{serverStream: s, span: span}
-}
-
 // Context returns the context associated with the server stream.
-func (t *TracedServerStream) Context() context.Context {
+func (t *tracedServerStream) Context() context.Context {
 	return t.serverStream.Context()
 }
 
 // Request returns the initial StreamRequest metadata for the server stream.
-func (t *TracedServerStream) Request() *transport.StreamRequest {
+func (t *tracedServerStream) Request() *transport.StreamRequest {
 	return t.serverStream.Request()
 }
 
 // SendMessage delegates to the underlying stream's SendMessage and updates the span on error.
-func (t *TracedServerStream) SendMessage(ctx context.Context, msg *transport.StreamMessage) error {
+func (t *tracedServerStream) SendMessage(ctx context.Context, msg *transport.StreamMessage) error {
 	if err := t.serverStream.SendMessage(ctx, msg); err != nil {
 		return t.closeWithErr(err)
 	}
@@ -128,7 +122,7 @@ func (t *TracedServerStream) SendMessage(ctx context.Context, msg *transport.Str
 }
 
 // ReceiveMessage delegates to the underlying stream's ReceiveMessage and updates the span on error or EOF.
-func (t *TracedServerStream) ReceiveMessage(ctx context.Context) (*transport.StreamMessage, error) {
+func (t *tracedServerStream) ReceiveMessage(ctx context.Context) (*transport.StreamMessage, error) {
 	msg, err := t.serverStream.ReceiveMessage(ctx)
 	if err != nil {
 		if err == io.EOF {
@@ -141,7 +135,7 @@ func (t *TracedServerStream) ReceiveMessage(ctx context.Context) (*transport.Str
 
 // SendHeaders implements transport.StreamHeadersSender.
 // It sends initial stream headers and updates the span on error.
-func (t *TracedServerStream) SendHeaders(h transport.Headers) error {
+func (t *tracedServerStream) SendHeaders(h transport.Headers) error {
 	if err := t.serverStream.SendHeaders(h); err != nil {
 		return t.closeWithErr(err)
 	}
@@ -149,7 +143,7 @@ func (t *TracedServerStream) SendHeaders(h transport.Headers) error {
 }
 
 // closeWithErr finishes the span once and tags it if there was an error.
-func (t *TracedServerStream) closeWithErr(err error) error {
+func (t *tracedServerStream) closeWithErr(err error) error {
 	if !t.closed.Swap(true) {
 		t.span.Finish()
 		return updateSpanWithErrorDetails(t.span, err != nil, nil, err)
