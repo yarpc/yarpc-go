@@ -196,11 +196,13 @@ func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.Stream
 	_, span := extractOpenTracingSpan.Do(s.Context(), transportRequest)
 	defer span.Finish()
 
-	tracedRaw := NewTracedServerStream(s, span)
+	tracedRaw := &tracedServerStream{
+		serverStream: s,
+		span:         span,
+	}
 	wrapped, _ := transport.NewServerStream(tracedRaw)
 	err := h.HandleStream(wrapped)
 	return updateSpanWithErrorDetails(span, err != nil, nil, err)
-
 }
 
 // CallStream implements interceptor.StreamOutbound

@@ -62,7 +62,10 @@ func TestTracedServerStream_SendHeaders(t *testing.T) {
 	raw, err := transport.NewServerStream(stub)
 	require.NoError(t, err)
 
-	tracedRaw := NewTracedServerStream(raw, span)
+	tracedRaw := &tracedServerStream{
+		serverStream: raw,
+		span:         span,
+	}
 	wrapped, err := transport.NewServerStream(tracedRaw)
 	require.NoError(t, err)
 
