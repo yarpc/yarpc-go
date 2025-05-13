@@ -200,8 +200,13 @@ func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.Stream
 		serverStream: s,
 		span:         span,
 	}
-	wrapped, _ := transport.NewServerStream(tracedRaw)
-	err := h.HandleStream(wrapped)
+	wrapped, err := transport.NewServerStream(tracedRaw)
+	if err != nil {
+		span.LogFields(logFieldEventError, log.String("message", "Failed to wrap traced server stream"))
+		span.Finish()
+		return err
+	}
+	err = h.HandleStream(wrapped)
 	return updateSpanWithErrorDetails(span, err != nil, nil, err)
 }
 
