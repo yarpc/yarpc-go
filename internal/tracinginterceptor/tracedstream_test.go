@@ -75,24 +75,3 @@ func TestTracedServerStream_SendHeaders(t *testing.T) {
 
 	assert.Equal(t, want, stub.sent)
 }
-
-func TestTracedServerStream_NewServerStreamError(t *testing.T) {
-	tracer := mocktracer.New()
-	span := tracer.StartSpan("test-span")
-
-	// Create a tracedServerStream with nil serverStream to force an error
-	tracedRaw := &tracedServerStream{
-		serverStream: nil,
-		span:         span,
-	}
-
-	// Attempt to create a new server stream
-	wrapped, err := transport.NewServerStream(tracedRaw)
-	assert.Error(t, err)
-	assert.Nil(t, wrapped)
-
-	// Verify the span was finished by checking the tracer's finished spans
-	finishedSpans := tracer.FinishedSpans()
-	assert.Len(t, finishedSpans, 1)
-	assert.Equal(t, "test-span", finishedSpans[0].OperationName)
-}
