@@ -89,9 +89,11 @@ func (t *tracedClientStream) Headers() (transport.Headers, error) {
 // closeWithErr finishes the span once and tags it if there was an error.
 func (t *tracedClientStream) closeWithErr(err error) error {
 	if !t.closed.Swap(true) {
-		t.span.Finish()
-		// updateSpanWithErrorDetails will tag the span and return the original error
-		return updateSpanWithErrorDetails(t.span, err != nil, nil, err)
+		if t.span != nil {
+			t.span.Finish()
+			// updateSpanWithErrorDetails will tag the span and return the original error
+			return updateSpanWithErrorDetails(t.span, err != nil, nil, err)
+		}
 	}
 	return err
 }
@@ -145,8 +147,11 @@ func (t *tracedServerStream) SendHeaders(h transport.Headers) error {
 // closeWithErr finishes the span once and tags it if there was an error.
 func (t *tracedServerStream) closeWithErr(err error) error {
 	if !t.closed.Swap(true) {
-		t.span.Finish()
-		return updateSpanWithErrorDetails(t.span, err != nil, nil, err)
+		if t.span != nil {
+			t.span.Finish()
+			// updateSpanWithErrorDetails will tag the span and return the original error
+			return updateSpanWithErrorDetails(t.span, err != nil, nil, err)
+		}
 	}
 	return err
 }
