@@ -23,7 +23,11 @@ package testing
 import (
 	"io"
 	"net"
+	"runtime"
+	"strings"
 	"testing"
+
+	"runtime/debug"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/grpcctx"
@@ -38,6 +42,8 @@ import (
 
 func init() {
 	grpclog.SetLoggerV2(grpclog.NewLoggerV2(io.Discard, io.Discard, io.Discard))
+	// Disable GC for benchmarks
+	debug.SetGCPercent(-1)
 }
 
 func BenchmarkIntegrationYARPC(b *testing.B) {
@@ -73,6 +79,123 @@ func BenchmarkIntegrationGRPCAll(b *testing.B) {
 		b.Fatal(err.Error())
 	}
 	benchmarkIntegrationGRPC(b, examplepb.NewKeyValueClient(grpcClientConn), grpcctx.NewContextWrapper())
+}
+
+func BenchmarkIntegrationGRPCMemorypool(b *testing.B) {
+	server := grpc.NewServer()
+	examplepb.RegisterKeyValueServer(server, example.NewKeyValueYARPCServer())
+	listener, err := net.Listen("tcp", "0.0.0.0:1236")
+	if err != nil {
+		b.Fatal(err.Error())
+	}
+	go func() { _ = server.Serve(listener) }()
+	defer server.Stop()
+
+	grpcClientConn, err := grpc.Dial("0.0.0.0:1236", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		b.Fatal(err.Error())
+	}
+	client := examplepb.NewKeyValueClient(grpcClientConn)
+	contextWrapper := grpcctx.NewContextWrapper()
+
+	// Test payloads
+	payloads := []struct {
+		name  string
+		value string
+	}{
+		{"Small", strings.Repeat("a", 350)},
+		{"Large", strings.Repeat("a", 1024*1024)}, // 1MB
+	}
+
+	// Force GC before starting
+	runtime.GC()
+
+	// Scenario 1: Small payloads only
+	b.Run("SmallOnly", func(b *testing.B) {
+		key := "key_small"
+		if err := setValueGRPC(client, contextWrapper, key, payloads[0].value); err != nil {
+			b.Fatal(err)
+		}
+
+		var stats runtime.MemStats
+		runtime.ReadMemStats(&stats)
+		beforeAlloc := stats.TotalAlloc
+		beforeSys := stats.Sys
+
+		b.ResetTimer()
+		b.N = 20000 // 20k requests
+		for i := 0; i < b.N; i++ {
+			if _, err := getValueGRPC(client, contextWrapper, key); err != nil {
+				b.Fatal(err)
+			}
+		}
+
+		runtime.ReadMemStats(&stats)
+		b.ReportMetric(float64(stats.TotalAlloc-beforeAlloc)/float64(b.N), "B/op_total")
+		b.ReportMetric(float64(stats.Sys-beforeSys)/float64(b.N), "B/op_sys")
+	})
+	runtime.GC()
+
+	// Scenario 2: Large payloads only
+	b.Run("LargeOnly", func(b *testing.B) {
+		key := "key_large"
+		if err := setValueGRPC(client, contextWrapper, key, payloads[1].value); err != nil {
+			b.Fatal(err)
+		}
+
+		var stats runtime.MemStats
+		runtime.ReadMemStats(&stats)
+		beforeAlloc := stats.TotalAlloc
+		beforeSys := stats.Sys
+
+		b.ResetTimer()
+		b.N = 20000 // 20k requests
+		for i := 0; i < b.N; i++ {
+			if _, err := getValueGRPC(client, contextWrapper, key); err != nil {
+				b.Fatal(err)
+			}
+		}
+
+		runtime.ReadMemStats(&stats)
+		b.ReportMetric(float64(stats.TotalAlloc-beforeAlloc)/float64(b.N), "B/op_total")
+		b.ReportMetric(float64(stats.Sys-beforeSys)/float64(b.N), "B/op_sys")
+	})
+	runtime.GC()
+
+	// Scenario 3: 95% small, 5% large
+	b.Run("Mixed95_5", func(b *testing.B) {
+		// Set up both values
+		if err := setValueGRPC(client, contextWrapper, "mixed_small", payloads[0].value); err != nil {
+			b.Fatal(err)
+		}
+		if err := setValueGRPC(client, contextWrapper, "mixed_large", payloads[1].value); err != nil {
+			b.Fatal(err)
+		}
+
+		var stats runtime.MemStats
+		runtime.ReadMemStats(&stats)
+		beforeAlloc := stats.TotalAlloc
+		beforeSys := stats.Sys
+
+		b.ResetTimer()
+		b.N = 20000 // 20k requests
+		for i := 0; i < b.N; i++ {
+			// 95% small, 5% large
+			if i%20 < 19 { // 19 out of 20 requests are small (95%)
+				if _, err := getValueGRPC(client, contextWrapper, "mixed_small"); err != nil {
+					b.Fatal(err)
+				}
+			} else {
+				if _, err := getValueGRPC(client, contextWrapper, "mixed_large"); err != nil {
+					b.Fatal(err)
+				}
+			}
+		}
+
+		runtime.ReadMemStats(&stats)
+		b.ReportMetric(float64(stats.TotalAlloc-beforeAlloc)/float64(b.N), "B/op_total")
+		b.ReportMetric(float64(stats.Sys-beforeSys)/float64(b.N), "B/op_sys")
+	})
 }
 
 func benchmarkForTransportType(b *testing.B, transportType testutils.TransportType, f func(*exampleutil.Clients) error) {
