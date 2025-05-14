@@ -107,10 +107,11 @@ func TestGRPCIntegration(t *testing.T) {
 	b := NewBuilder()
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
-
+	//lint:ignore SA1019 grpc.DialContext is deprecated
 	_, err = grpc.DialContext(ctx, b.Scheme()+":///"+ln.Addr().String(), grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.Error(t, err)
 
+	//lint:ignore SA1019 grpc.DialContext is deprecated
 	_, err = grpc.DialContext(ctx, b.Scheme()+":///", grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.Error(t, err, "expected to fail with deadline exceeded")
 }

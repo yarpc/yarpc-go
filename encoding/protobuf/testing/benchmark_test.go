@@ -67,6 +67,7 @@ func BenchmarkIntegrationGRPCAll(b *testing.B) {
 	}
 	go func() { _ = server.Serve(listener) }()
 	defer server.Stop()
+	//lint:ignore SA1019 grpc.Dial is deprecated
 	grpcClientConn, err := grpc.Dial("0.0.0.0:1234", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		b.Fatal(err.Error())

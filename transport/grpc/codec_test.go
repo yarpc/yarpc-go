@@ -23,37 +23,39 @@ package grpc
 import (
 	"testing"
 
+	"google.golang.org/grpc/mem"
+
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCustomCodecMarshalBytes(t *testing.T) {
 	value := []byte("test")
 	data, err := customCodec{}.Marshal(value)
-	assert.Equal(t, value, data)
+	assert.Equal(t, value, data.Materialize())
 	assert.NoError(t, err)
 }
 
 func TestCustomCodecMarshalCastError(t *testing.T) {
 	value := "test"
 	data, err := customCodec{}.Marshal(&value)
-	assert.Equal(t, []byte(nil), data)
+	assert.Equal(t, mem.BufferSlice(mem.BufferSlice(nil)), data)
 	assert.Equal(t, newCustomCodecMarshalCastError(&value), err)
 }
 
 func TestCustomCodecUnmarshalBytes(t *testing.T) {
-	data := []byte("test")
+	data := mem.BufferSlice{mem.SliceBuffer("test")}
 	var value []byte
 	assert.NoError(t, customCodec{}.Unmarshal(data, &value))
-	assert.Equal(t, data, value)
+	assert.Equal(t, data.Materialize(), value)
 }
 
 func TestCustomCodecUnmarshalCastError(t *testing.T) {
 	var value string
-	err := customCodec{}.Unmarshal([]byte("test"), &value)
+	err := customCodec{}.Unmarshal(mem.BufferSlice{mem.SliceBuffer("test")}, &value)
 	assert.Equal(t, "", value)
 	assert.Equal(t, newCustomCodecUnmarshalCastError(&value), err)
 }
 
-func TestCustomCodecString(t *testing.T) {
-	assert.Equal(t, "yarpc", customCodec{}.String())
+func TestCustomCodecName(t *testing.T) {
+	assert.Equal(t, "yarpc", customCodec{}.Name())
 }
