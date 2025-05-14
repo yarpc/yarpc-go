@@ -194,7 +194,11 @@ func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.Stream
 		ExtraTags:         commonTracingTags,
 	}
 	_, span := extractOpenTracingSpan.Do(s.Context(), transportRequest)
-	defer span.Finish()
+	defer func() {
+		if span != nil {
+			span.Finish()
+		}
+	}()
 
 	tracedRaw := &tracedServerStream{
 		serverStream: s,
@@ -202,12 +206,17 @@ func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.Stream
 	}
 	wrapped, err := transport.NewServerStream(tracedRaw)
 	if err != nil {
-		span.LogFields(logFieldEventError, log.String("message", "Failed to wrap traced server stream"))
-		span.Finish()
+		if span != nil {
+			span.LogFields(logFieldEventError, log.String("message", "Failed to wrap traced server stream"))
+			span.Finish()
+		}
 		return err
 	}
 	err = h.HandleStream(wrapped)
-	return updateSpanWithErrorDetails(span, err != nil, nil, err)
+	if span != nil {
+		return updateSpanWithErrorDetails(span, err != nil, nil, err)
+	}
+	return err
 }
 
 // CallStream implements interceptor.StreamOutbound
