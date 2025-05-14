@@ -90,7 +90,7 @@ func BenchmarkIntegrationGRPCMemorypool(b *testing.B) {
 	}
 	go func() { _ = server.Serve(listener) }()
 	defer server.Stop()
-
+	//lint:ignore SA1019 grpc.Dial is deprecated
 	grpcClientConn, err := grpc.Dial("0.0.0.0:1236", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		b.Fatal(err.Error())
@@ -123,7 +123,6 @@ func BenchmarkIntegrationGRPCMemorypool(b *testing.B) {
 		beforeSys := stats.Sys
 
 		b.ResetTimer()
-		b.N = 20000 // 20k requests
 		for i := 0; i < b.N; i++ {
 			if _, err := getValueGRPC(client, contextWrapper, key); err != nil {
 				b.Fatal(err)
@@ -149,7 +148,6 @@ func BenchmarkIntegrationGRPCMemorypool(b *testing.B) {
 		beforeSys := stats.Sys
 
 		b.ResetTimer()
-		b.N = 20000 // 20k requests
 		for i := 0; i < b.N; i++ {
 			if _, err := getValueGRPC(client, contextWrapper, key); err != nil {
 				b.Fatal(err)
@@ -178,7 +176,6 @@ func BenchmarkIntegrationGRPCMemorypool(b *testing.B) {
 		beforeSys := stats.Sys
 
 		b.ResetTimer()
-		b.N = 20000 // 20k requests
 		for i := 0; i < b.N; i++ {
 			// 95% small, 5% large
 			if i%20 < 19 { // 19 out of 20 requests are small (95%)
