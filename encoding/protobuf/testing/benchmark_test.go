@@ -155,7 +155,6 @@ func runMixedBurst(b *testing.B, client examplepb.KeyValueClient, contextWrapper
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		// 95% small, 5% large
 		if i%100 < smallPayloadPercent {
 			if _, err := getValueGRPC(client, contextWrapper, smallPayloadKey); err != nil {
 				b.Fatal(err)
