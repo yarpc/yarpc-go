@@ -21,6 +21,7 @@
 package grpc
 
 import (
+	"bytes"
 	"strings"
 	"time"
 
@@ -28,7 +29,6 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
@@ -192,13 +192,8 @@ func (h *handler) handleUnary(
 	if err := serverStream.RecvMsg(&requestData); err != nil {
 		return err
 	}
-	// TODO: avoid redundant buffer copy
-	requestBuffer := bufferpool.Get()
-	defer bufferpool.Put(requestBuffer)
 
-	// Buffers are documented to always return a nil error.
-	_, _ = requestBuffer.Write(requestData)
-	transportRequest.Body = requestBuffer
+	transportRequest.Body = bytes.NewReader(requestData)
 	transportRequest.BodySize = len(requestData)
 
 	responseWriter := newResponseWriter()

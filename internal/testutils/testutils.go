@@ -131,6 +131,7 @@ func WithClientInfo(serviceName string, procedures []transport.Procedure, transp
 	if err != nil {
 		return err
 	}
+	//lint:ignore SA1019 grpc.Dial is deprecated
 	grpcClientConn, err := ggrpc.Dial(fmt.Sprintf("127.0.0.1:%d", grpcPort), ggrpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err

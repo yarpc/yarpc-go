@@ -56,6 +56,7 @@ func (t TLSScenario) ServerTLSConfig() *tls.Config {
 		},
 		ClientAuth: tls.RequireAndVerifyClientCert,
 		ClientCAs:  t.CAs,
+		NextProtos: []string{"http/1.1", "h2"},
 	}
 }
 
@@ -71,6 +72,7 @@ func (t TLSScenario) ClientTLSConfig() *tls.Config {
 		},
 		ServerName: "127.0.0.1",
 		RootCAs:    t.CAs,
+		NextProtos: []string{"http/1.1", "h2"},
 	}
 }
 
