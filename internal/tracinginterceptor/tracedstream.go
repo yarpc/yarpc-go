@@ -131,13 +131,16 @@ func (t *tracedServerStream) SendMessage(ctx context.Context, msg *transport.Str
 
 // ReceiveMessage delegates to the underlying stream's ReceiveMessage and updates the span on error or EOF.
 func (t *tracedServerStream) ReceiveMessage(ctx context.Context) (*transport.StreamMessage, error) {
+	// 1) Delegate straight to the underlying stream
 	msg, err := t.serverStream.ReceiveMessage(ctx)
+
+	// 2) If there was an error (including EOF), finish & tag the span ...
 	if err != nil {
-		if err == io.EOF {
-			return msg, t.closeWithErr(nil)
-		}
-		return msg, t.closeWithErr(err)
+		_ = t.closeWithErr(err) // finish & tag
+		return nil, err         // then propagate the real error
 	}
+
+	// 3) No error → just return the message
 	return msg, nil
 }
 
