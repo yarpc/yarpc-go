@@ -109,90 +109,70 @@ func BenchmarkIntegrationGRPCMemorypool(b *testing.B) {
 
 	// Force GC before starting
 	runtime.GC()
-
 	// Scenario 1: Small payloads only
 	b.Run("SmallOnly", func(b *testing.B) {
-		key := "key_small"
-		if err := setValueGRPC(client, contextWrapper, key, payloads[0].value); err != nil {
-			b.Fatal(err)
-		}
-
-		var stats runtime.MemStats
-		runtime.ReadMemStats(&stats)
-		beforeAlloc := stats.TotalAlloc
-		beforeSys := stats.Sys
-
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			if _, err := getValueGRPC(client, contextWrapper, key); err != nil {
-				b.Fatal(err)
-			}
-		}
-
-		runtime.ReadMemStats(&stats)
-		b.ReportMetric(float64(stats.TotalAlloc-beforeAlloc)/float64(b.N), "B/op_total")
-		b.ReportMetric(float64(stats.Sys-beforeSys)/float64(b.N), "B/op_sys")
+		runMixedBurst(b, client, contextWrapper, 100, "small_only", "small_only", payloads)
 	})
-	runtime.GC()
 
+	runtime.GC()
 	// Scenario 2: Large payloads only
 	b.Run("LargeOnly", func(b *testing.B) {
-		key := "key_large"
-		if err := setValueGRPC(client, contextWrapper, key, payloads[1].value); err != nil {
-			b.Fatal(err)
-		}
+		runMixedBurst(b, client, contextWrapper, 0, "large_only", "large_only", payloads)
+	})
 
-		var stats runtime.MemStats
-		runtime.ReadMemStats(&stats)
-		beforeAlloc := stats.TotalAlloc
-		beforeSys := stats.Sys
+	runtime.GC()
+	// Scenario 3: 90% small, 10% large
+	b.Run("Mixed90_10", func(b *testing.B) {
+		runMixedBurst(b, client, contextWrapper, 90, "90_10_small", "90_10_large", payloads)
+	})
 
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			if _, err := getValueGRPC(client, contextWrapper, key); err != nil {
+	runtime.GC()
+	// Scenario 4: 99% small, 1% large
+	b.Run("Mixed99_1", func(b *testing.B) {
+		runMixedBurst(b, client, contextWrapper, 99, "99_1_small", "99_1_large", payloads)
+	})
+
+}
+
+func runMixedBurst(b *testing.B, client examplepb.KeyValueClient, contextWrapper *grpcctx.ContextWrapper, smallPayloadPercent int, smallPayloadKey, largePayloadKey string, payloads []struct {
+	name  string
+	value string
+}) {
+	// Set up both values
+	if err := setValueGRPC(client, contextWrapper, smallPayloadKey, payloads[0].value); err != nil {
+		b.Fatal(err)
+	}
+	if err := setValueGRPC(client, contextWrapper, largePayloadKey, payloads[1].value); err != nil {
+		b.Fatal(err)
+	}
+
+	var stats runtime.MemStats
+	runtime.ReadMemStats(&stats)
+	beforeAlloc := stats.TotalAlloc
+	beforeSys := stats.Sys
+	beforeMallocs := stats.Mallocs
+	beforeFrees := stats.Frees
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		// 95% small, 5% large
+		if i%100 < smallPayloadPercent {
+			if _, err := getValueGRPC(client, contextWrapper, smallPayloadKey); err != nil {
+				b.Fatal(err)
+			}
+		} else {
+			if _, err := getValueGRPC(client, contextWrapper, largePayloadKey); err != nil {
 				b.Fatal(err)
 			}
 		}
+	}
 
-		runtime.ReadMemStats(&stats)
-		b.ReportMetric(float64(stats.TotalAlloc-beforeAlloc)/float64(b.N), "B/op_total")
-		b.ReportMetric(float64(stats.Sys-beforeSys)/float64(b.N), "B/op_sys")
-	})
-	runtime.GC()
+	runtime.ReadMemStats(&stats)
+	b.ReportMetric(float64(stats.TotalAlloc-beforeAlloc)/float64(b.N), "B/op_total")
+	b.ReportMetric(float64(stats.Sys-beforeSys)/float64(b.N), "B/op_sys")
+	b.ReportMetric(float64(stats.Mallocs-beforeMallocs)/float64(b.N), "mallocs/op")
+	b.ReportMetric(float64(stats.Frees-beforeFrees)/float64(b.N), "frees/op")
 
-	// Scenario 3: 95% small, 5% large
-	b.Run("Mixed95_5", func(b *testing.B) {
-		// Set up both values
-		if err := setValueGRPC(client, contextWrapper, "mixed_small", payloads[0].value); err != nil {
-			b.Fatal(err)
-		}
-		if err := setValueGRPC(client, contextWrapper, "mixed_large", payloads[1].value); err != nil {
-			b.Fatal(err)
-		}
-
-		var stats runtime.MemStats
-		runtime.ReadMemStats(&stats)
-		beforeAlloc := stats.TotalAlloc
-		beforeSys := stats.Sys
-
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			// 95% small, 5% large
-			if i%20 < 19 { // 19 out of 20 requests are small (95%)
-				if _, err := getValueGRPC(client, contextWrapper, "mixed_small"); err != nil {
-					b.Fatal(err)
-				}
-			} else {
-				if _, err := getValueGRPC(client, contextWrapper, "mixed_large"); err != nil {
-					b.Fatal(err)
-				}
-			}
-		}
-
-		runtime.ReadMemStats(&stats)
-		b.ReportMetric(float64(stats.TotalAlloc-beforeAlloc)/float64(b.N), "B/op_total")
-		b.ReportMetric(float64(stats.Sys-beforeSys)/float64(b.N), "B/op_sys")
-	})
 }
 
 func benchmarkForTransportType(b *testing.B, transportType testutils.TransportType, f func(*exampleutil.Clients) error) {
