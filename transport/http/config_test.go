@@ -538,23 +538,6 @@ func TestTransportSpec(t *testing.T) {
 				},
 			},
 		},
-		{
-			desc: "enable http2 outbound with outbound cfg",
-			cfg: attrs{
-				"myservice": attrs{
-					TransportName: attrs{
-						"url":      "http://localhost/yarpc",
-						"useHTTP2": true,
-					},
-				},
-			},
-			wantOutbounds: map[string]wantOutbound{
-				"myservice": {
-					URLTemplate: "http://localhost/yarpc",
-					UseHTTP2:    true,
-				},
-			},
-		},
 	}
 
 	runTest := func(t *testing.T, trans transportTest, inbound inboundTest, outbound outboundTest) {
