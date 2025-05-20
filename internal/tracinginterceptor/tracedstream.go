@@ -65,9 +65,10 @@ func (t *tracedClientStream) ReceiveMessage(ctx context.Context) (*transport.Str
 	msg, err := t.clientStream.ReceiveMessage(ctx)
 	if err != nil {
 		if err == io.EOF {
-			return msg, t.closeWithErr(nil)
+			_ = t.closeWithErr(nil)
+			return nil, io.EOF
 		}
-		return msg, t.closeWithErr(err)
+		return nil, t.closeWithErr(err)
 	}
 	return msg, nil
 }
@@ -128,6 +129,10 @@ func (t *tracedServerStream) SendMessage(ctx context.Context, msg *transport.Str
 func (t *tracedServerStream) ReceiveMessage(ctx context.Context) (*transport.StreamMessage, error) {
 	msg, err := t.serverStream.ReceiveMessage(ctx)
 	if err != nil {
+		if err == io.EOF {
+			_ = t.closeWithErr(nil)
+			return nil, io.EOF
+		}
 		_ = t.closeWithErr(err)
 		return nil, err
 	}
