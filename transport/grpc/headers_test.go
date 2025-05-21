@@ -50,6 +50,8 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				CallerProcedureHeader, "example-caller-procedure",
 				"foo", "bar",
 				"baz", "bat",
+				_routingRegionHeader, "phx",
+				_routingZoneHeader, "phx98",
 			),
 			TransportRequest: &transport.Request{
 				Caller:          "example-caller",
@@ -162,7 +164,7 @@ func TestTransportRequestToMetadata(t *testing.T) {
 			},
 		},
 		{
-			Name: "Reserved header key in application headers",
+			Name: "Reserved header key in application headers - caller headers",
 			MD:   metadata.Pairs(),
 			TransportRequest: &transport.Request{
 				Headers: transport.HeadersFromMap(map[string]string{
@@ -170,6 +172,16 @@ func TestTransportRequestToMetadata(t *testing.T) {
 				}),
 			},
 			Error: yarpcerrors.InvalidArgumentErrorf("cannot use reserved header in application headers: %s", CallerHeader),
+		},
+		{
+			Name: "Routing headers exempted",
+			MD: metadata.Pairs(
+				_routingZoneHeader, "example-zone"),
+			TransportRequest: &transport.Request{
+				Headers: transport.HeadersFromMap(map[string]string{
+					_routingZoneHeader: "example-zone",
+				}),
+			},
 		},
 	} {
 		t.Run(tt.Name, func(t *testing.T) {
@@ -203,6 +215,9 @@ func TestIsReserved(t *testing.T) {
 	assert.True(t, isReserved(RoutingDelegateHeader))
 	assert.True(t, isReserved(EncodingHeader))
 	assert.True(t, isReserved("rpc-foo"))
+	for header := range routingHeaders {
+		assert.False(t, isReserved(header))
+	}
 }
 
 func TestMDReadWriterDuplicateKey(t *testing.T) {
