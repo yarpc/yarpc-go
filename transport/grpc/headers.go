@@ -76,6 +76,10 @@ const (
 	// _applicationErrorDetailsHeader is the header for the the application error
 	// meta details string.
 	_applicationErrorDetailsHeader = "rpc-application-error-details"
+	// _routingRegionHeader is one of the cross-zone header for the region of the routing key.
+	_routingRegionHeader = "rpc-routing-region"
+	// _routingZoneHeader is one of the cross-zone header for the zone of the routing key.
+	_routingZoneHeader = "rpc-routing-zone"
 
 	// ApplicationErrorHeaderValue is the value that will be set for
 	// ApplicationErrorHeader is there was an application error.
@@ -88,12 +92,24 @@ const (
 	contentTypeHeader = "content-type"
 )
 
+var (
+	routingHeaders = map[string]bool{
+		_routingZoneHeader:   true,
+		_routingRegionHeader: true,
+	}
+)
+
 // TODO: there are way too many repeat calls to strings.ToLower
 // Note that these calls are done indirectly, primarily through
 // transport.CanonicalizeHeaderKey
 
 func isReserved(header string) bool {
-	return strings.HasPrefix(strings.ToLower(header), "rpc-")
+	header = transport.CanonicalizeHeaderKey(header)
+	// exempt routing headers from isReserved check
+	if routingHeaders[header] {
+		return false
+	}
+	return strings.HasPrefix(header, "rpc-")
 }
 
 // transportRequestToMetadata will populate all reserved and application headers
@@ -131,6 +147,10 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 			return nil, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
 		}
 		header = transport.CanonicalizeHeaderKey(header)
+		// skip routing header
+		if routingHeaders[header] {
+			continue
+		}
 		switch header {
 		case CallerHeader:
 			request.Caller = value
