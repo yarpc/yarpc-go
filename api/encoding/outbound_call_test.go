@@ -119,6 +119,28 @@ func TestOutboundCallWriteToRequestAndRequestMeta(t *testing.T) {
 				RoutingDelegate: "zzz",
 			},
 		},
+		{
+			desc: "routing zone",
+			giveOptions: []CallOption{
+				WithRoutingZone("abc"),
+			},
+			wantRequest: transport.Request{
+				Headers: transport.HeadersFromMap(map[string]string{
+					RoutingZoneHeaderKey: "abc",
+				}),
+			},
+		},
+		{
+			desc: "routing region",
+			giveOptions: []CallOption{
+				WithRoutingRegion("abc"),
+			},
+			wantRequest: transport.Request{
+				Headers: transport.HeadersFromMap(map[string]string{
+					RoutingRegionHeaderKey: "abc",
+				}),
+			},
+		},
 	}
 
 	for _, tt := range tests {

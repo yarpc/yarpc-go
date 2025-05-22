@@ -38,6 +38,8 @@ func TestCallOptionsWriteToRequest(t *testing.T) {
 				yarpc.WithShardKey("foo"),
 				yarpc.WithRoutingKey("bar"),
 				yarpc.WithRoutingDelegate("baz"),
+				yarpc.WithRoutingZone("qux"),
+				yarpc.WithRoutingRegion("rrr"),
 			},
 		)...,
 	)
@@ -47,6 +49,12 @@ func TestCallOptionsWriteToRequest(t *testing.T) {
 	assert.Equal(t, "foo", request.ShardKey)
 	assert.Equal(t, "bar", request.RoutingKey)
 	assert.Equal(t, "baz", request.RoutingDelegate)
+	routingZone, found := request.Headers.Get(encoding.RoutingZoneHeaderKey)
+	assert.True(t, found)
+	assert.Equal(t, "qux", routingZone)
+	routingRegion, found := request.Headers.Get(encoding.RoutingRegionHeaderKey)
+	assert.True(t, found)
+	assert.Equal(t, "rrr", routingRegion)
 }
 
 func TestCallFromContext(t *testing.T) {
