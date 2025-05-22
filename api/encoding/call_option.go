@@ -20,6 +20,13 @@
 
 package encoding
 
+const (
+	// RoutingZoneHeaderKey is one of the cross-zone header for the zone of the routing key.
+	RoutingZoneHeaderKey = "rpc-routing-zone"
+	// RoutingRegionHeaderKey is one of the cross-region header for the region of the routing key.
+	RoutingRegionHeaderKey = "rpc-routing-region"
+)
+
 // CallOption defines options that may be passed in at call sites to other
 // services.
 //
@@ -91,4 +98,32 @@ func (r routingDelegateOption) apply(call *OutboundCall) {
 // WithRoutingDelegate sets the routing delegate for the request.
 func WithRoutingDelegate(rd string) CallOption {
 	return CallOption{routingDelegateOption(rd)}
+}
+
+type routingZoneOption string
+
+func (r routingZoneOption) apply(call *OutboundCall) {
+	call.headers = append(call.headers, keyValuePair{
+		k: RoutingZoneHeaderKey,
+		v: string(r),
+	})
+}
+
+// WithRoutingZone sets the routing zone for the request.
+func WithRoutingZone(rz string) CallOption {
+	return CallOption{routingZoneOption(rz)}
+}
+
+type routingRegionOption string
+
+func (r routingRegionOption) apply(call *OutboundCall) {
+	call.headers = append(call.headers, keyValuePair{
+		k: RoutingRegionHeaderKey,
+		v: string(r),
+	})
+}
+
+// WithRoutingRegion sets the routing region for the request.
+func WithRoutingRegion(rr string) CallOption {
+	return CallOption{routingRegionOption(rr)}
 }

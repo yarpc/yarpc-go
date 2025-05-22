@@ -81,6 +81,16 @@ func WithRoutingDelegate(rd string) CallOption {
 	return CallOption(encoding.WithRoutingDelegate(rd))
 }
 
+// WithRoutingZone sets the routing zone for the request
+func WithRoutingZone(rz string) CallOption {
+	return CallOption(encoding.WithRoutingZone(rz))
+}
+
+// WithRoutingRegion sets the routing region for the request
+func WithRoutingRegion(rr string) CallOption {
+	return CallOption(encoding.WithRoutingRegion(rr))
+}
+
 // Call provides information about the current request inside handlers. An
 // instance of Call for the current request can be obtained by calling
 // CallFromContext on the request context.
