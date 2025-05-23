@@ -140,7 +140,6 @@ func (t *tracedServerStream) ReceiveMessage(ctx context.Context) (*transport.Str
 }
 
 // SendHeaders implements transport.StreamHeadersSender.
-// It sends initial stream headers and updates the span on error.
 func (t *tracedServerStream) SendHeaders(h transport.Headers) error {
 	if err := t.serverStream.SendHeaders(h); err != nil {
 		return t.closeWithErr(err)
