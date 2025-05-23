@@ -22,11 +22,13 @@ package tracinginterceptor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/log"
 	"github.com/opentracing/opentracing-go/mocktracer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -546,7 +548,7 @@ func TestInterceptorHandleStream(t *testing.T) {
 	require.NoError(t, err)
 
 	handler := transporttest.NewMockStreamHandler(ctrl)
-	handler.EXPECT().HandleStream(serverStream).Return(nil)
+	handler.EXPECT().HandleStream(gomock.Any()).Return(nil)
 
 	// Call HandleStream and validate behavior
 	err = interceptor.HandleStream(serverStream, handler)
@@ -580,7 +582,7 @@ func TestInterceptorHandleStream_Error(t *testing.T) {
 	require.NoError(t, err)
 
 	handler := transporttest.NewMockStreamHandler(ctrl)
-	handler.EXPECT().HandleStream(serverStream).Return(yarpcerrors.Newf(yarpcerrors.CodeInternal, "handler error"))
+	handler.EXPECT().HandleStream(gomock.Any()).Return(yarpcerrors.Newf(yarpcerrors.CodeInternal, "handler error"))
 
 	// Call HandleStream and capture any error
 	err = interceptor.HandleStream(serverStream, handler)
@@ -686,4 +688,124 @@ func TestGetPropagationFormat(t *testing.T) {
 	// Test with "http" transport (default case)
 	format = getPropagationFormat("http")
 	assert.Equal(t, opentracing.HTTPHeaders, format, "Expected HTTPHeaders format for non-tchannel transport")
+}
+
+func TestInterceptor_HandleStream_Error(t *testing.T) {
+	tracer := &mockTracer{}
+	interceptor := New(Params{
+		Tracer:    tracer,
+		Transport: "test",
+	})
+
+	// Create a mock handler that will fail
+	mockHandler := &mockHandler{
+		handleStreamErr: errors.New("handler error"),
+	}
+
+	// Create a mock stream with all required methods
+	mockStream := &mockStream{
+		err: errors.New("stream error"),
+	}
+
+	// Create a real server stream
+	stream, err := transport.NewServerStream(mockStream)
+	require.NoError(t, err)
+
+	// Call HandleStream
+	err = interceptor.HandleStream(stream, mockHandler)
+	assert.Error(t, err)
+	assert.Equal(t, "handler error", err.Error())
+}
+
+type mockTracer struct{}
+
+func (m *mockTracer) StartSpan(operationName string, opts ...opentracing.StartSpanOption) opentracing.Span {
+	return &mockSpan{}
+}
+
+func (m *mockTracer) Inject(sm opentracing.SpanContext, format interface{}, carrier interface{}) error {
+	return nil
+}
+
+func (m *mockTracer) Extract(format interface{}, carrier interface{}) (opentracing.SpanContext, error) {
+	return nil, nil
+}
+
+type mockSpan struct{}
+
+func (m *mockSpan) SetTag(key string, value interface{}) opentracing.Span {
+	return m
+}
+
+func (m *mockSpan) SetBaggageItem(key, val string) opentracing.Span {
+	return m
+}
+
+func (m *mockSpan) BaggageItem(key string) string {
+	return ""
+}
+
+func (m *mockSpan) Finish() {}
+
+func (m *mockSpan) FinishWithOptions(opts opentracing.FinishOptions) {}
+
+func (m *mockSpan) Context() opentracing.SpanContext {
+	return nil
+}
+
+func (m *mockSpan) LogFields(fields ...log.Field) {}
+
+func (m *mockSpan) LogKV(keyVals ...interface{}) {}
+
+func (m *mockSpan) Log(ld opentracing.LogData) {}
+
+func (m *mockSpan) LogEvent(event string) {}
+
+func (m *mockSpan) LogEventWithPayload(event string, payload interface{}) {}
+
+func (m *mockSpan) LogEventWithOptions(event string, opts opentracing.LogData) {}
+
+func (m *mockSpan) SetOperationName(operationName string) opentracing.Span {
+	return m
+}
+
+func (m *mockSpan) Tracer() opentracing.Tracer {
+	return nil
+}
+
+type mockStream struct {
+	transport.ServerStream
+	err error
+}
+
+func (m *mockStream) ReadMessage(ctx context.Context, msg *transport.StreamMessage) error {
+	return m.err
+}
+
+func (m *mockStream) WriteMessage(ctx context.Context, msg *transport.StreamMessage) error {
+	return m.err
+}
+
+func (m *mockStream) Close(ctx context.Context) error {
+	return m.err
+}
+
+func (m *mockStream) Context() context.Context {
+	return context.Background()
+}
+
+func (m *mockStream) Request() *transport.StreamRequest {
+	return &transport.StreamRequest{
+		Meta: &transport.RequestMeta{
+			Procedure: "test-procedure",
+		},
+	}
+}
+
+type mockHandler struct {
+	handleStreamErr error
+}
+
+func (m *mockHandler) HandleStream(stream *transport.ServerStream) error {
+	return m.handleStreamErr
 }
