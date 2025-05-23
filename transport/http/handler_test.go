@@ -529,3 +529,43 @@ func TestTruncatedHeader(t *testing.T) {
 		})
 	}
 }
+
+func TestServeHTTP_RemovesTracingHeaders(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	// Setup mock handler
+	mockHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+	mockHandler.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+	headers := http.Header{}
+	headers.Set(CallerHeader, "caller")
+	headers.Set(ServiceHeader, "svc")
+	headers.Set(ProcedureHeader, "hello")
+	headers.Set(EncodingHeader, "raw")
+	headers.Set(TTLMSHeader, "1000")
+	headers.Set("Uber-Trace-Id", "should-be-stripped")
+	headers.Set("Uberctx-Foo", "value")
+
+	router := transporttest.NewMockRouter(mockCtrl)
+	router.EXPECT().Choose(gomock.Any(), gomock.Any()).Return(transport.NewUnaryHandlerSpec(mockHandler), nil)
+
+	h := handler{
+		router:            router,
+		tracer:            &opentracing.NoopTracer{},
+		bothResponseError: true,
+		transport:         NewTransport(),
+	}
+
+	req := &http.Request{
+		Method: "POST",
+		Header: headers,
+		Body:   io.NopCloser(strings.NewReader("payload")),
+	}
+
+	rw := httptest.NewRecorder()
+	h.ServeHTTP(rw, req)
+
+	assert.Equal(t, http.StatusOK, rw.Code)
+	assert.Equal(t, "svc", rw.Header().Get(ServiceHeader))
+}
