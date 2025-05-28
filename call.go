@@ -191,3 +191,7 @@ func (c *Call) CallerProcedure() string {
 //
 // These may be used to add or alter individual stream calls.
 type StreamOption encoding.StreamOption
+
+func MyNewFunc(a, b int) int {
+	return a + b
+}
