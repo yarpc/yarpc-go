@@ -188,7 +188,7 @@ func (c *Call) CallerProcedure() string {
 	return c.md.CallerProcedure()
 }
 
-// Test function a
+// Test function
 func Test(a, b int) int {
 	return a + b
 }
