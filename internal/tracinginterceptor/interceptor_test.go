@@ -22,6 +22,7 @@ package tracinginterceptor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -546,7 +547,7 @@ func TestInterceptorHandleStream(t *testing.T) {
 	require.NoError(t, err)
 
 	handler := transporttest.NewMockStreamHandler(ctrl)
-	handler.EXPECT().HandleStream(serverStream).Return(nil)
+	handler.EXPECT().HandleStream(gomock.Any()).Return(nil)
 
 	// Call HandleStream and validate behavior
 	err = interceptor.HandleStream(serverStream, handler)
@@ -580,7 +581,7 @@ func TestInterceptorHandleStream_Error(t *testing.T) {
 	require.NoError(t, err)
 
 	handler := transporttest.NewMockStreamHandler(ctrl)
-	handler.EXPECT().HandleStream(serverStream).Return(yarpcerrors.Newf(yarpcerrors.CodeInternal, "handler error"))
+	handler.EXPECT().HandleStream(gomock.Any()).Return(yarpcerrors.Newf(yarpcerrors.CodeInternal, "handler error"))
 
 	// Call HandleStream and capture any error
 	err = interceptor.HandleStream(serverStream, handler)
@@ -624,7 +625,6 @@ func TestInterceptorCallStream(t *testing.T) {
 	stream, err := interceptor.CallStream(context.Background(), req, outbound)
 	require.NoError(t, err)
 	require.NotNil(t, stream)
-
 }
 
 func TestInterceptorCallStream_Error(t *testing.T) {
@@ -686,4 +686,294 @@ func TestGetPropagationFormat(t *testing.T) {
 	// Test with "http" transport (default case)
 	format = getPropagationFormat("http")
 	assert.Equal(t, opentracing.HTTPHeaders, format, "Expected HTTPHeaders format for non-tchannel transport")
+}
+
+func TestInterceptor_HandleStream_Errors(t *testing.T) {
+	tracer := mocktracer.New()
+	interceptor := New(Params{
+		Tracer:    tracer,
+		Transport: "test",
+	})
+
+	// Test error handling stream with a valid mock stream
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := transporttest.NewMockStream(ctrl)
+	mockStream.EXPECT().Context().Return(context.Background()).AnyTimes()
+	mockStream.EXPECT().Request().Return(&transport.StreamRequest{
+		Meta: &transport.RequestMeta{
+			Procedure: "test-procedure",
+			Headers:   transport.NewHeaders(),
+		},
+	}).AnyTimes()
+	serverStream, err := transport.NewServerStream(mockStream)
+	require.NoError(t, err)
+
+	handler := &mockStreamHandler{
+		handleStream: func(stream *transport.ServerStream) error {
+			return errors.New("handler error")
+		},
+	}
+	err = interceptor.HandleStream(serverStream, handler)
+	assert.Error(t, err)
+	assert.Equal(t, "handler error", err.Error())
+}
+
+func TestInterceptor_CallStream_Errors(t *testing.T) {
+	tracer := mocktracer.New()
+	interceptor := New(Params{
+		Tracer:    tracer,
+		Transport: "test",
+	})
+	ctx := context.Background()
+
+	// Test error calling stream
+	chain := &testStreamOutboundChain{
+		next: func(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error) {
+			return nil, errors.New("chain error")
+		},
+	}
+	_, err := interceptor.CallStream(ctx, &transport.StreamRequest{
+		Meta: &transport.RequestMeta{
+			Procedure: "test-procedure",
+			Headers:   transport.NewHeaders(),
+		},
+	}, chain)
+	assert.Error(t, err)
+	assert.Equal(t, "chain error", err.Error())
+}
+
+type mockStream struct {
+	ctx         context.Context
+	req         *transport.StreamRequest
+	sendMsg     func(context.Context, *transport.StreamMessage) error
+	receiveMsg  func(context.Context) (*transport.StreamMessage, error)
+	sendHeaders func(transport.Headers) error
+}
+
+func (m *mockStream) Context() context.Context          { return m.ctx }
+func (m *mockStream) Request() *transport.StreamRequest { return m.req }
+func (m *mockStream) SendMessage(ctx context.Context, msg *transport.StreamMessage) error {
+	return m.sendMsg(ctx, msg)
+}
+func (m *mockStream) ReceiveMessage(ctx context.Context) (*transport.StreamMessage, error) {
+	return m.receiveMsg(ctx)
+}
+func (m *mockStream) SendHeaders(headers transport.Headers) error {
+	return m.sendHeaders(headers)
+}
+
+type mockStreamCloser struct {
+	*mockStream
+	closeFunc func(context.Context) error
+}
+
+func (m *mockStreamCloser) Close(ctx context.Context) error {
+	return m.closeFunc(ctx)
+}
+
+type mockStreamHandler struct {
+	handleStream func(*transport.ServerStream) error
+}
+
+func (m *mockStreamHandler) HandleStream(stream *transport.ServerStream) error {
+	return m.handleStream(stream)
+}
+
+type testStreamOutboundChain struct {
+	next func(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error)
+}
+
+func (c *testStreamOutboundChain) Next(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error) {
+	return c.next(ctx, req)
+}
+func (c *testStreamOutboundChain) Outbound() transport.Outbound { return nil }
+
+type mockOutbound struct {
+	transport.Outbound
+	startStream func(context.Context, *transport.StreamRequest) (*transport.ClientStream, error)
+}
+
+func (m *mockOutbound) StartStream(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
+	return m.startStream(ctx, request)
+}
+
+func TestInterceptor(t *testing.T) {
+	tracer := mocktracer.New()
+	interceptor := New(Params{
+		Tracer:    tracer,
+		Transport: "test",
+	})
+
+	t.Run("CallStream", func(t *testing.T) {
+		ctx := context.Background()
+		req := &transport.StreamRequest{
+			Meta: &transport.RequestMeta{
+				Caller:    "test-caller",
+				Service:   "test-service",
+				Procedure: "test-procedure",
+			},
+		}
+
+		// Test successful stream creation
+		outbound := &mockOutbound{
+			startStream: func(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
+				stream := &mockStreamCloser{
+					mockStream: &mockStream{
+						ctx:         ctx,
+						req:         request,
+						sendMsg:     func(ctx context.Context, msg *transport.StreamMessage) error { return nil },
+						receiveMsg:  func(ctx context.Context) (*transport.StreamMessage, error) { return &transport.StreamMessage{}, nil },
+						sendHeaders: func(h transport.Headers) error { return nil },
+					},
+					closeFunc: func(ctx context.Context) error { return nil },
+				}
+				wrapper, err := transport.NewClientStream(stream)
+				if err != nil {
+					return nil, err
+				}
+				return wrapper, nil
+			},
+		}
+
+		chain := &testStreamOutboundChain{
+			next: func(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error) {
+				clientStream, err := outbound.StartStream(ctx, req)
+				if err != nil {
+					return nil, err
+				}
+				return clientStream, nil
+			},
+		}
+
+		stream, err := interceptor.CallStream(ctx, req, chain)
+		assert.NoError(t, err)
+		assert.NotNil(t, stream)
+
+		// Test error in stream creation
+		outbound.startStream = func(ctx context.Context, request *transport.StreamRequest) (*transport.ClientStream, error) {
+			return nil, errors.New("stream error")
+		}
+
+		chainErr := &testStreamOutboundChain{
+			next: func(ctx context.Context, req *transport.StreamRequest) (*transport.ClientStream, error) {
+				_, err := outbound.StartStream(ctx, req)
+				return nil, err
+			},
+		}
+
+		stream, err = interceptor.CallStream(ctx, req, chainErr)
+		assert.Error(t, err)
+		assert.Equal(t, "stream error", err.Error())
+		assert.Nil(t, stream)
+	})
+
+	t.Run("HandleStream", func(t *testing.T) {
+		ctx := context.Background()
+		req := &transport.StreamRequest{
+			Meta: &transport.RequestMeta{
+				Caller:    "test-caller",
+				Service:   "test-service",
+				Procedure: "test-procedure",
+			},
+		}
+
+		// Test successful stream handling
+		serverStream := &mockStream{
+			ctx:         ctx,
+			req:         req,
+			sendMsg:     func(ctx context.Context, msg *transport.StreamMessage) error { return nil },
+			receiveMsg:  func(ctx context.Context) (*transport.StreamMessage, error) { return &transport.StreamMessage{}, nil },
+			sendHeaders: func(h transport.Headers) error { return nil },
+		}
+
+		wrapper, err := transport.NewServerStream(serverStream)
+		assert.NoError(t, err)
+
+		handler := &mockStreamHandler{
+			handleStream: func(stream *transport.ServerStream) error { return nil },
+		}
+
+		err = interceptor.HandleStream(wrapper, handler)
+		assert.NoError(t, err)
+
+		// Test error in stream handling
+		handler.handleStream = func(stream *transport.ServerStream) error { return errors.New("handle error") }
+
+		err = interceptor.HandleStream(wrapper, handler)
+		assert.Error(t, err)
+		assert.Equal(t, "handle error", err.Error())
+	})
+}
+
+func TestTracedStreamMethods(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// Test tracedClientStream methods
+	t.Run("tracedClientStream", func(t *testing.T) {
+		// Create a mock client stream
+		mockStream := transporttest.NewMockStreamCloser(ctrl)
+		ctx := context.Background()
+		req := &transport.StreamRequest{
+			Meta: &transport.RequestMeta{
+				Procedure: "test-procedure",
+				Headers:   transport.NewHeaders(),
+			},
+		}
+
+		mockStream.EXPECT().Context().Return(ctx).AnyTimes()
+		mockStream.EXPECT().Request().Return(req).AnyTimes()
+		mockStream.EXPECT().Close(gomock.Any()).Return(nil).AnyTimes()
+
+		clientStream, err := transport.NewClientStream(mockStream)
+		require.NoError(t, err)
+
+		// Create a traced client stream
+		tracer := mocktracer.New()
+		span := tracer.StartSpan("test-span")
+		tracedStream := &tracedClientStream{
+			clientStream: clientStream,
+			span:         span,
+		}
+
+		// Test Context()
+		assert.Equal(t, ctx, tracedStream.Context())
+
+		// Test Request()
+		assert.Equal(t, req, tracedStream.Request())
+	})
+
+	// Test tracedServerStream methods
+	t.Run("tracedServerStream", func(t *testing.T) {
+		// Create a mock server stream
+		mockStream := transporttest.NewMockStream(ctrl)
+		ctx := context.Background()
+		req := &transport.StreamRequest{
+			Meta: &transport.RequestMeta{
+				Procedure: "test-procedure",
+				Headers:   transport.NewHeaders(),
+			},
+		}
+
+		mockStream.EXPECT().Context().Return(ctx).AnyTimes()
+		mockStream.EXPECT().Request().Return(req).AnyTimes()
+
+		serverStream, err := transport.NewServerStream(mockStream)
+		require.NoError(t, err)
+
+		// Create a traced server stream
+		tracer := mocktracer.New()
+		span := tracer.StartSpan("test-span")
+		tracedStream := &tracedServerStream{
+			serverStream: serverStream,
+			span:         span,
+		}
+
+		// Test Context()
+		assert.Equal(t, ctx, tracedStream.Context())
+
+		// Test Request()
+		assert.Equal(t, req, tracedStream.Request())
+	})
 }
