@@ -456,7 +456,10 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 	// It should be noted that net/http will return an error if a pseudo
 	// header is given along a HTTP/1 request.
 	// see: https://cs.opensource.google/go/x/net/+/c6fcb2db:http/httpguts/httplex.go;l=203
-	headers := applicationHeaders.deleteHTTP2PseudoHeadersIfNeeded(treq.Headers)
+	headers := treq.Headers
+	if !o.useHTTP2 {
+		headers = applicationHeaders.deleteHTTP2PseudoHeadersIfNeeded(treq.Headers)
+	}
 	hreq.Header = applicationHeaders.ToHTTPHeaders(headers, nil)
 	return hreq, nil
 }
