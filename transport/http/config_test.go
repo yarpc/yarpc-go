@@ -75,15 +75,16 @@ func TestTransportSpec(t *testing.T) {
 	}
 
 	type wantInbound struct {
-		Address         string
-		Mux             *http.ServeMux
-		MuxPattern      string
-		GrabHeaders     map[string]struct{}
-		ShutdownTimeout time.Duration
-		TLSMode         yarpctls.Mode
-		DisableHTTP2    bool
-		ReadTimeout     time.Duration
-		WriteTimeout    time.Duration
+		Address           string
+		Mux               *http.ServeMux
+		MuxPattern        string
+		GrabHeaders       map[string]struct{}
+		ShutdownTimeout   time.Duration
+		TLSMode           yarpctls.Mode
+		DisableHTTP2      bool
+		ReadHeaderTimeout time.Duration
+		ReadTimeout       time.Duration
+		WriteTimeout      time.Duration
 	}
 
 	type inboundTest struct {
@@ -260,6 +261,17 @@ func TestTransportSpec(t *testing.T) {
 			cfg:         attrs{"address": ":8080"},
 			opts:        []Option{},
 			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, DisableHTTP2: false},
+		},
+		{
+			desc:        "readHeaderTimeout",
+			cfg:         attrs{"address": ":8080", "readHeaderTimeout": "5s"},
+			opts:        []Option{},
+			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, ReadHeaderTimeout: 5 * time.Second},
+		},
+		{
+			desc:       "readHeaderTimeout err",
+			cfg:        attrs{"address": ":8080", "readHeaderTimeout": "-1s"},
+			wantErrors: []string{`readHeaderTimeout must not be negative, got: "-1s"`},
 		},
 		{
 			desc:        "ReadTimeout/WriteTimeout",
@@ -609,6 +621,7 @@ func TestTransportSpec(t *testing.T) {
 				assert.Equal(t, "foo", ib.transport.serviceName, "service name must match")
 				assert.Equal(t, want.TLSMode, ib.tlsMode, "tlsMode should match")
 				assert.Equal(t, want.DisableHTTP2, ib.disableHTTP2, "disableHTTP2 should match")
+				assert.Equal(t, want.ReadHeaderTimeout, ib.server.ReadHeaderTimeout, "ReadHeaderTimeout should match")
 				assert.Equal(t, want.WriteTimeout, ib.server.WriteTimeout, "WriteTimeout should match")
 				assert.Equal(t, want.ReadTimeout, ib.server.ReadTimeout, "ReadTimeout should match")
 			}
