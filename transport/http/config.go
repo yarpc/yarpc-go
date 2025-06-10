@@ -164,6 +164,7 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 //	         - x-foo
 //	         - x-bar
 //		      shutdownTimeout: 5s
+//	       readHeaderTimeout: 5s
 //	       readTimeout: 10s
 //	       writeTimeout: 10s
 type InboundConfig struct {
@@ -172,6 +173,8 @@ type InboundConfig struct {
 	// The additional headers, starting with x, that should be
 	// propagated to handlers. This field is optional.
 	GrabHeaders []string `config:"grabHeaders"`
+	// ReadHeaderTimeout value set on the http.Server
+	ReadHeaderTimeout *time.Duration `config:"readHeaderTimeout"`
 	// ReadTimeout value set on the http.Server
 	ReadTimeout *time.Duration `config:"readTimeout"`
 	// WriteTimeout value set on the http.Server
@@ -208,6 +211,13 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 			return nil, fmt.Errorf("shutdownTimeout must not be negative, got: %q", ic.ShutdownTimeout)
 		}
 		inboundOptions = append(inboundOptions, ShutdownTimeout(*ic.ShutdownTimeout))
+	}
+
+	if ic.ReadHeaderTimeout != nil {
+		if *ic.ReadHeaderTimeout < 0 {
+			return nil, fmt.Errorf("readHeaderTimeout must not be negative, got: %q", ic.ReadHeaderTimeout)
+		}
+		inboundOptions = append(inboundOptions, ReadHeaderTimeout(*ic.ReadHeaderTimeout))
 	}
 
 	if ic.ReadTimeout != nil {
