@@ -348,7 +348,6 @@ func TestGRPCCompression(t *testing.T) {
 			wantMetrics: []metric{
 				{32777, tagsCompression},
 				{32777, tagsDecompression},
-				{0, tagsCompression},
 				{5, tagsCompression},
 				{5, tagsDecompression},
 				{32772, tagsCompression},
@@ -361,8 +360,6 @@ func TestGRPCCompression(t *testing.T) {
 			wantMetrics: []metric{
 				{82, tagsCompression},
 				{82, tagsDecompression},
-				{23, tagsCompression},
-				{23, tagsDecompression},
 				{29, tagsCompression},
 				{29, tagsDecompression},
 				{75, tagsCompression},
@@ -496,7 +493,6 @@ func TestCompressionWithMultipleOutbounds(t *testing.T) {
 	wantMetric := []metric{
 		{32777, map[string]string{"stage": "compress"}},
 		{32777, map[string]string{"stage": "decompress"}},
-		{0, map[string]string{"stage": "compress"}},
 	}
 	assert.Equal(t, newMetrics(wantMetric, map[string]string{
 		"compressor": _goodCompressor.name,
@@ -871,7 +867,7 @@ func newTestEnv(
 	}()
 
 	var clientConn *grpc.ClientConn
-
+	//lint:ignore SA1019 grpc.Dial is deprecated
 	clientConn, err = grpc.Dial(listener.Addr().String(), newDialOptions(dialOptions).grpcOptions(trans)...)
 	if err != nil {
 		return nil, err

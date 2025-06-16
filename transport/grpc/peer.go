@@ -44,7 +44,7 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 	dialOptions := append([]grpc.DialOption{
 		grpc.WithUserAgent(UserAgent),
 		grpc.WithDefaultCallOptions(
-			grpc.CallCustomCodec(customCodec{}),
+			grpc.ForceCodecV2(customCodec{}),
 			grpc.MaxCallRecvMsgSize(t.options.clientMaxRecvMsgSize),
 			grpc.MaxCallSendMsgSize(t.options.clientMaxSendMsgSize),
 		),
@@ -53,7 +53,7 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 	if t.options.clientMaxHeaderListSize != nil {
 		dialOptions = append(dialOptions, grpc.WithMaxHeaderListSize(*t.options.clientMaxHeaderListSize))
 	}
-
+	//lint:ignore SA1019 grpc.Dial is deprecated
 	clientConn, err := grpc.Dial(address, dialOptions...)
 	if err != nil {
 		return nil, err

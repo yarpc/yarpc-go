@@ -110,6 +110,8 @@ func CallFromContext(ctx context.Context) *Call {
 }
 
 // WriteResponseHeader writes headers to the response of this call.
+// Calling this method may mutate the underlying struct.
+// The current implementation is not safe for concurrent use by multiple goroutines.
 func (c *Call) WriteResponseHeader(k, v string) error {
 	return (*encoding.Call)(c).WriteResponseHeader(k, v)
 }

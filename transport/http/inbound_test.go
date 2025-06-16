@@ -460,6 +460,13 @@ func TestInboundWithHTTPVersion(t *testing.T) {
 }
 
 func TestInboundWithTimeouts(t *testing.T) {
+	t.Run("ReadHeaderTimeout", func(t *testing.T) {
+		testTransport := NewTransport()
+		inbound := testTransport.NewInbound("127.0.0.1:8888", ReadHeaderTimeout(5*time.Second))
+
+		require.Equal(t, 5*time.Second, inbound.server.ReadHeaderTimeout)
+	})
+
 	t.Run("WriteTimeout", func(t *testing.T) {
 		testTransport := NewTransport()
 		inbound := testTransport.NewInbound("127.0.0.1:8888", WriteTimeout(5*time.Second))

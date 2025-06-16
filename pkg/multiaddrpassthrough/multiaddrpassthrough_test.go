@@ -183,6 +183,7 @@ func TestGRPCIntegration(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
+	//lint:ignore SA1019 grpc.DialContext is deprecated
 	conn, err := grpc.DialContext(ctx, b.Scheme()+":///"+ln.Addr().String(), grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	assert.NoError(t, err)
 

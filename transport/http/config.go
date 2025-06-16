@@ -164,6 +164,7 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 //	         - x-foo
 //	         - x-bar
 //		      shutdownTimeout: 5s
+//	       readHeaderTimeout: 5s
 //	       readTimeout: 10s
 //	       writeTimeout: 10s
 type InboundConfig struct {
@@ -172,6 +173,8 @@ type InboundConfig struct {
 	// The additional headers, starting with x, that should be
 	// propagated to handlers. This field is optional.
 	GrabHeaders []string `config:"grabHeaders"`
+	// ReadHeaderTimeout value set on the http.Server
+	ReadHeaderTimeout *time.Duration `config:"readHeaderTimeout"`
 	// ReadTimeout value set on the http.Server
 	ReadTimeout *time.Duration `config:"readTimeout"`
 	// WriteTimeout value set on the http.Server
@@ -208,6 +211,13 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 			return nil, fmt.Errorf("shutdownTimeout must not be negative, got: %q", ic.ShutdownTimeout)
 		}
 		inboundOptions = append(inboundOptions, ShutdownTimeout(*ic.ShutdownTimeout))
+	}
+
+	if ic.ReadHeaderTimeout != nil {
+		if *ic.ReadHeaderTimeout < 0 {
+			return nil, fmt.Errorf("readHeaderTimeout must not be negative, got: %q", ic.ReadHeaderTimeout)
+		}
+		inboundOptions = append(inboundOptions, ReadHeaderTimeout(*ic.ReadHeaderTimeout))
 	}
 
 	if ic.ReadTimeout != nil {
@@ -284,12 +294,6 @@ type OutboundConfig struct {
 	//      spiffe-ids:
 	//        - destination-id
 	TLS OutboundTLSConfig `config:"tls"`
-	// UseHTTP2 configure to send http2 requests.
-	//
-	// http:
-	// 		url: "http://localhost:8080/yarpc"
-	// 		useHTTP2: true
-	UseHTTP2 bool `config:"useHTTP2"`
 }
 
 // OutboundTLSConfig configures TLS for the HTTP outbound.
@@ -340,10 +344,6 @@ func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport
 		return nil, err
 	}
 	opts = append(option, opts...)
-
-	if oc.UseHTTP2 {
-		opts = append(opts, UseHTTP2())
-	}
 
 	// Special case where the URL implies the single peer.
 	if oc.Empty() {

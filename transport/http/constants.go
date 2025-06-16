@@ -60,9 +60,6 @@ const (
 	// to finish.
 	TTLMSHeader = "Context-TTL-MS"
 
-	// ContentTypeHeader is header key for content-type of the request
-	ContentTypeHeader = "Content-Type"
-
 	// Name of the procedure being called. This corresponds to the
 	// Request.Procedure attribute.
 	ProcedureHeader = "Rpc-Procedure"
@@ -115,13 +112,6 @@ const (
 )
 
 const (
-	_contentTypeThriftHeaderValue = "application/yarpc+tbinary"
-	_contentTypeProtoHeaderValue  = "application/yarpc+proto"
-	_contentTypeJSONHeaderValue   = "application/yarpc+json"
-	_contentTypeRawHeaderValue    = "application/yarpc+octet-stream"
-)
-
-const (
 	// Headers for propagating transport.ApplicationErrorMeta.
 	_applicationErrorNameHeader    = "Rpc-Application-Error-Name"
 	_applicationErrorCodeHeader    = "Rpc-Application-Error-Code"
@@ -164,4 +154,10 @@ var (
 		_http2PathPseudoHeader,
 		_http2SchemePseudoHeader,
 	}
+)
+
+// Tracing header keys that must be preserved in HTTP headers.
+const (
+	UberTraceContextHeaderKey  = "uber-trace-id"
+	UberBaggageHeaderKeyPrefix = "uberctx-"
 )

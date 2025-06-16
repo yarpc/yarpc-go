@@ -27,7 +27,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -294,7 +293,7 @@ func TestCallServiceMatch(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			server := grpc.NewServer(
+			server := grpc.NewServer(grpc.ForceServerCodecV2(customCodec{}),
 				grpc.UnknownServiceHandler(func(srv interface{}, stream grpc.ServerStream) error {
 					responseWriter := newResponseWriter()
 					defer responseWriter.Close()
@@ -304,7 +303,7 @@ func TestCallServiceMatch(t *testing.T) {
 					}
 
 					// Send the response attributes back and end the stream.
-					if sendErr := stream.SendMsg(&types.Empty{}); sendErr != nil {
+					if sendErr := stream.SendMsg([]byte{}); sendErr != nil {
 						// We couldn't send the response.
 						return sendErr
 					}

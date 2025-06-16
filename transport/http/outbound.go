@@ -32,11 +32,6 @@ import (
 	"strings"
 	"time"
 
-	"go.uber.org/yarpc/encoding/json"
-	"go.uber.org/yarpc/encoding/protobuf"
-	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/encoding/thrift"
-
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	opentracinglog "github.com/opentracing/opentracing-go/log"
@@ -529,10 +524,6 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 		req.Header.Set(CallerProcedureHeader, treq.CallerProcedure)
 	}
 
-	if contentType, found := o.getYARPCContentType(treq.Encoding); found {
-		req.Header.Set(ContentTypeHeader, contentType)
-	}
-
 	encoding := string(treq.Encoding)
 	if encoding != "" {
 		req.Header.Set(EncodingHeader, encoding)
@@ -543,21 +534,6 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 	}
 
 	return req
-}
-
-func (o *Outbound) getYARPCContentType(encoding transport.Encoding) (string, bool) {
-	switch encoding {
-	case thrift.Encoding:
-		return _contentTypeThriftHeaderValue, true
-	case protobuf.Encoding:
-		return _contentTypeProtoHeaderValue, true
-	case json.Encoding:
-		return _contentTypeJSONHeaderValue, true
-	case raw.Encoding:
-		return _contentTypeRawHeaderValue, true
-	default:
-		return "", false
-	}
 }
 
 func getYARPCErrorFromResponse(tres *transport.Response, response *http.Response, bothResponseError bool) (*transport.Response, error) {
