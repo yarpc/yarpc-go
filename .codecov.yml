@@ -127,3 +127,4 @@ ignore:
  - /internal/service-test/
  - /internal/testutils/
  - /serialize/internal/
+ - /x/reflection/grpcreflectionv1alpha/
