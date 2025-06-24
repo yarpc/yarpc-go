@@ -126,13 +126,6 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 
 	err := h.callHandler(ctx, call, responseWriter)
 
-	// black-hole requests on resource exhausted errors
-	if yarpcerrors.FromError(err).Code() == yarpcerrors.CodeResourceExhausted {
-		// all TChannel clients will time out instead of receiving an error
-		call.Response().Blackhole()
-		return
-	}
-
 	clientTimedOut := ctx.Err() == context.DeadlineExceeded
 
 	if err != nil && !responseWriter.IsApplicationError() {
