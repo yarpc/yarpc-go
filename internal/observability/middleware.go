@@ -26,6 +26,7 @@ import (
 
 	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/metricstagdecorator"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -99,6 +100,9 @@ type Config struct {
 
 	// Levels specify log levels for various classes of requests.
 	Levels LevelsConfig
+
+	// MetricsTagDecorator decorator yarpc metrics scope with custom tags.
+	MetricTagsDecorator []metricstagdecorator.MetricsTagsDecorator
 }
 
 // LevelsConfig specifies log level overrides for inbound traffic, outbound
@@ -147,7 +151,7 @@ type DirectionalLevelsConfig struct {
 // NewMiddleware constructs an observability middleware with the provided
 // configuration.
 func NewMiddleware(cfg Config) *Middleware {
-	m := &Middleware{newGraph(cfg.Scope, cfg.Logger, cfg.ContextExtractor, cfg.MetricTagsBlocklist)}
+	m := &Middleware{newGraph(cfg.Scope, cfg.Logger, cfg.ContextExtractor, cfg.MetricTagsBlocklist, cfg.MetricTagsDecorator)}
 
 	// Apply the default levels
 	applyLogLevelsConfig(&m.graph.inboundLevels, &cfg.Levels.Default)
