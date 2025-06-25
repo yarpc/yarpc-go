@@ -165,7 +165,7 @@ func TestMetricsTagIgnore(t *testing.T) {
 	}
 }
 
-func TestPopulatingMetricsTagsDecorator(t *testing.T) {
+func TestPopulatingMetricsTagsDecorators(t *testing.T) {
 	root := metrics.New()
 	meter := root.Scope()
 	req := &transport.Request{
