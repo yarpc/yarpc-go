@@ -28,7 +28,7 @@ import (
 	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/internal/metricstagdecorator"
+	"go.uber.org/yarpc/internal/metricstagdecorators"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
 )
@@ -40,7 +40,7 @@ const (
 
 type TestMetricsTagsDecorator struct{}
 
-func (d *TestMetricsTagsDecorator) ProvideTags(request metricstagdecorator.DecoratorProperties) map[string]string {
+func (d *TestMetricsTagsDecorator) ProvideTags(request metricstagdecorators.DecoratorProperties) map[string]string {
 	return map[string]string{
 		testMetricsTagsDecoratorKey: testMetricsTagsDecoratorValue,
 	}
@@ -103,7 +103,6 @@ func TestMetricsTagIgnore(t *testing.T) {
 				_routingDelegate: "rd",
 				_direction:       "inbound",
 				_rpcType:         "Unary",
-				_tenany:          "__dropped__",
 			},
 		},
 		{
@@ -130,7 +129,6 @@ func TestMetricsTagIgnore(t *testing.T) {
 				_routingDelegate: "__dropped__",
 				_direction:       "__dropped__",
 				_rpcType:         "__dropped__",
-				_tenany:          "__dropped__",
 			},
 		},
 		{
@@ -151,7 +149,6 @@ func TestMetricsTagIgnore(t *testing.T) {
 				_routingDelegate: "rd",
 				_direction:       "inbound",
 				_rpcType:         "__dropped__",
-				_tenany:          "__dropped__",
 			},
 		},
 	}
@@ -178,7 +175,7 @@ func TestPopulatingMetricsTagsDecorators(t *testing.T) {
 		RoutingDelegate: "rd",
 	}
 
-	decorators := []metricstagdecorator.MetricsTagsDecorator{&TestMetricsTagsDecorator{}}
+	decorators := []metricstagdecorators.MetricsTagsDecorators{&TestMetricsTagsDecorator{}}
 
 	_ = newEdge(zap.NewNop(), meter, &metricsTagIgnore{}, decorators, req, string(_directionOutbound), transport.Unary)
 
@@ -216,11 +213,11 @@ func TestEdgeNopFallbacks(t *testing.T) {
 	}
 
 	// Should succeed, covered by middleware tests.
-	_ = newEdge(zap.NewNop(), meter, &metricsTagIgnore{}, req, string(_directionOutbound), transport.Unary)
+	_ = newEdge(zap.NewNop(), meter, &metricsTagIgnore{}, nil, req, string(_directionOutbound), transport.Unary)
 
 	// Should fall back to no-op metrics.
 	// Usage of nil metrics should not panic, should not observe changes.
-	e := newEdge(zap.NewNop(), meter, &metricsTagIgnore{}, req, string(_directionOutbound), transport.Unary)
+	e := newEdge(zap.NewNop(), meter, &metricsTagIgnore{}, nil, req, string(_directionOutbound), transport.Unary)
 
 	e.calls.Inc()
 	assert.Equal(t, int64(0), e.calls.Load(), "Expected to fall back to no-op metrics.")

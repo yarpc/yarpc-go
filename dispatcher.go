@@ -103,11 +103,11 @@ func addObservingMiddleware(cfg Config, meter *metrics.Scope, logger *zap.Logger
 	}
 
 	observer := observability.NewMiddleware(observability.Config{
-		Logger:              logger,
-		Scope:               meter,
-		ContextExtractor:    extractor,
-		MetricTagsBlocklist: cfg.Metrics.TagsBlocklist,
-		MetricTagsDecorator: cfg.Metrics.MetricTagsDecorator,
+		Logger:               logger,
+		Scope:                meter,
+		ContextExtractor:     extractor,
+		MetricTagsBlocklist:  cfg.Metrics.TagsBlocklist,
+		MetricTagsDecorators: cfg.Metrics.MetricTagsDecorators,
 		Levels: observability.LevelsConfig{
 			Default: observability.DirectionalLevelsConfig{
 				Success:          cfg.Logging.Levels.Success,
