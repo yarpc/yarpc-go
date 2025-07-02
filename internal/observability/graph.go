@@ -315,13 +315,17 @@ type streamEdge struct {
 func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIgnore, metricTagsDecorators []metricstagdecorators.MetricsTagsDecorators, req *transport.Request, direction string, rpcType transport.Type) *edge {
 	tags := tagToIgnore.tags(req, direction, rpcType)
 
-	for _, decorator := range metricTagsDecorators {
-		decoratorTags := decorator.ProvideTags(metricstagdecorators.DecoratorProperties{})
-		for key, value := range decoratorTags {
-			if _, exists := tags[key]; exists {
-				logger.Warn("MetricsTagsDecorators is overwriting metric tag", zap.String("key", key), zap.String("old", tags[key]), zap.String("new", value))
+	if len(metricTagsDecorators) > 0 {
+		decoratorProperties := metricstagdecorators.DecoratorProperties{}
+
+		for _, decorator := range metricTagsDecorators {
+			decoratorTags := decorator.ProvideTags(decoratorProperties)
+			for key, value := range decoratorTags {
+				if _, exists := tags[key]; exists {
+					logger.Warn("MetricsTagsDecorators is overwriting metric tag", zap.String("key", key), zap.String("old", tags[key]), zap.String("new", value))
+				}
+				tags[key] = value
 			}
-			tags[key] = value
 		}
 	}
 
