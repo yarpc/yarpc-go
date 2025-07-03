@@ -29,6 +29,7 @@ import (
 	"go.uber.org/net/metrics/bucket"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/digester"
+	"go.uber.org/yarpc/internal/metricstagdecorators"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -68,10 +69,11 @@ const (
 // A graph represents a collection of services: each service is a node, and we
 // collect stats for each caller-callee-transport-encoding-procedure-rk-sk-rd edge.
 type graph struct {
-	meter            *metrics.Scope
-	logger           *zap.Logger
-	extract          ContextExtractor
-	ignoreMetricsTag *metricsTagIgnore
+	meter                *metrics.Scope
+	logger               *zap.Logger
+	extract              ContextExtractor
+	ignoreMetricsTag     *metricsTagIgnore
+	metricTagsDecorators []metricstagdecorators.MetricsTagsDecorators
 
 	edgesMu sync.RWMutex
 	edges   map[string]*edge
@@ -164,13 +166,14 @@ func (m *metricsTagIgnore) tags(req *transport.Request, direction string, rpcTyp
 	return tags
 }
 
-func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor, metricTagsIgnore []string) graph {
+func newGraph(meter *metrics.Scope, logger *zap.Logger, extract ContextExtractor, metricTagsIgnore []string, metricTagsDecorators []metricstagdecorators.MetricsTagsDecorators) graph {
 	return graph{
-		edges:            make(map[string]*edge, _defaultGraphSize),
-		meter:            meter,
-		logger:           logger,
-		extract:          extract,
-		ignoreMetricsTag: newMetricsTagIgnore(metricTagsIgnore),
+		edges:                make(map[string]*edge, _defaultGraphSize),
+		meter:                meter,
+		logger:               logger,
+		extract:              extract,
+		ignoreMetricsTag:     newMetricsTagIgnore(metricTagsIgnore),
+		metricTagsDecorators: metricTagsDecorators,
 		inboundLevels: levels{
 			success:          zapcore.DebugLevel,
 			failure:          zapcore.ErrorLevel,
@@ -264,7 +267,7 @@ func (g *graph) createEdge(key []byte, req *transport.Request, direction string,
 		return e
 	}
 
-	e := newEdge(g.logger, g.meter, g.ignoreMetricsTag, req, direction, rpcType)
+	e := newEdge(g.logger, g.meter, g.ignoreMetricsTag, g.metricTagsDecorators, req, direction, rpcType)
 	g.edges[string(key)] = e
 	return e
 }
@@ -309,8 +312,22 @@ type streamEdge struct {
 
 // newEdge constructs a new edge. Since Registries enforce metric uniqueness,
 // edges should be cached and re-used for each RPC.
-func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIgnore, req *transport.Request, direction string, rpcType transport.Type) *edge {
+func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIgnore, metricTagsDecorators []metricstagdecorators.MetricsTagsDecorators, req *transport.Request, direction string, rpcType transport.Type) *edge {
 	tags := tagToIgnore.tags(req, direction, rpcType)
+
+	if len(metricTagsDecorators) > 0 {
+		decoratorProperties := metricstagdecorators.DecoratorProperties{}
+
+		for _, decorator := range metricTagsDecorators {
+			decoratorTags := decorator.ProvideTags(decoratorProperties)
+			for key, value := range decoratorTags {
+				if _, exists := tags[key]; exists {
+					logger.Warn("MetricsTagsDecorators is overwriting metric tag", zap.String("key", key), zap.String("old", tags[key]), zap.String("new", value))
+				}
+				tags[key] = value
+			}
+		}
+	}
 
 	// metrics for all RPCs
 	calls, err := meter.Counter(metrics.Spec{
