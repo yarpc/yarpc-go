@@ -140,7 +140,7 @@ type DirectionalLevelsConfig struct {
 	// All Thrift exceptions are considered application errors if
 	// there are not annotated with the option rpc.code.
 	//
-	// Defaults to ErrorLevel.
+	// Defaults to WarnLevel for inbound requests, ErrorLevel for outbound requests.
 	ClientError *zapcore.Level
 }
 

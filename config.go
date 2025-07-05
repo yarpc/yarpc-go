@@ -61,7 +61,7 @@ type DirectionalLogLevelConfig struct {
 	// Level at which client errors are logged.
 	// All Thrift exceptions are considered application errors if
 	// they are not annotated with the option rpc.code.
-	// Defaults to ErrorLevel.
+	// Defaults to WarnLevel for inbound requests, ErrorLevel for outbound requests.
 	ClientError *zapcore.Level
 	// Level at which server errors are logged.
 	// Defaults to ErrorLevel.
@@ -92,7 +92,7 @@ type LogLevelConfig struct {
 	// Level at which client errors are logged.
 	// All Thrift exceptions are considered application errors if
 	// they are not annotated with the option rpc.code.
-	// Defaults to ErrorLevel.
+	// Defaults to WarnLevel for inbound requests, ErrorLevel for outbound requests.
 	// Can be overridden by Inbound.ApplicationError or
 	// Outbound.ApplicationError for inbound or outbound requests.
 	ClientError *zapcore.Level
