@@ -124,7 +124,7 @@ func TestNewMiddlewareLogLevels(t *testing.T) {
 		t.Run("ClientError", func(t *testing.T) {
 			t.Run("default", func(t *testing.T) {
 				m := NewMiddleware(Config{})
-				assert.Equal(t, zapcore.ErrorLevel, m.graph.inboundLevels.clientError)
+				assert.Equal(t, zapcore.WarnLevel, m.graph.inboundLevels.clientError)
 				assert.False(t, m.graph.inboundLevels.useApplicationErrorFailureLevels)
 			})
 
@@ -1937,7 +1937,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 
 	expected := observer.LoggedEntry{
 		Entry: zapcore.Entry{
-			Level:   zapcore.ErrorLevel,
+			Level:   zapcore.WarnLevel,
 			Message: "Error handling inbound request.",
 		},
 		Context: expectedFields,
