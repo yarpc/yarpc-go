@@ -45,6 +45,7 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 		grpc.WithUserAgent(UserAgent),
 		grpc.WithDefaultCallOptions(
 			grpc.ForceCodecV2(customCodec{}),
+			grpc.CallContentSubtype(""),
 			grpc.MaxCallRecvMsgSize(t.options.clientMaxRecvMsgSize),
 			grpc.MaxCallSendMsgSize(t.options.clientMaxSendMsgSize),
 		),
