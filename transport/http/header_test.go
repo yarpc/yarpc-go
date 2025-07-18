@@ -30,51 +30,32 @@ import (
 
 func TestHTTPHeaders(t *testing.T) {
 	tests := []struct {
-		name         string
-		transHeaders transport.Headers
-		expectedHTTP http.Header
+		prefix        string
+		toTransport   transport.Headers
+		fromTransport transport.Headers
+		http          http.Header
 	}{
 		{
-			name: "application only",
-			transHeaders: transport.HeadersFromMap(map[string]string{
+			ApplicationHeaderPrefix,
+			transport.HeadersFromMap(map[string]string{
 				"foo":     "bar",
 				"foo-bar": "hello",
 			}),
-			expectedHTTP: http.Header{
+			transport.HeadersFromMap(map[string]string{
+				"Foo":     "bar",
+				"Foo-Bar": "hello",
+			}),
+			http.Header{
 				"Rpc-Header-Foo":     []string{"bar"},
 				"Rpc-Header-Foo-Bar": []string{"hello"},
-			},
-		},
-		{
-			name: "tracing only",
-			transHeaders: transport.HeadersFromMap(map[string]string{
-				"uber-trace-id": "tid",
-				"uberctx-foo":   "ctxval",
-			}),
-			expectedHTTP: http.Header{
-				"Uber-Trace-Id": []string{"tid"},
-				"Uberctx-Foo":   []string{"ctxval"},
-			},
-		},
-		{
-			name: "mixed headers",
-			transHeaders: transport.HeadersFromMap(map[string]string{
-				"foo":           "bar",
-				"uber-trace-id": "tid",
-			}),
-			expectedHTTP: http.Header{
-				"Rpc-Header-Foo": []string{"bar"},
-				"Uber-Trace-Id":  []string{"tid"},
 			},
 		},
 	}
 
 	for _, tt := range tests {
-		hm := headerMapper{ApplicationHeaderPrefix}
-		gotHTTP := hm.ToHTTPHeaders(tt.transHeaders, nil)
-		assert.Equal(t, tt.expectedHTTP, gotHTTP, "%s: ToHTTPHeaders", tt.name)
-		gotTrans := hm.FromHTTPHeaders(gotHTTP, transport.Headers{})
-		assert.Equal(t, tt.transHeaders.Items(), gotTrans.Items(), "%s: FromHTTPHeaders", tt.name)
+		m := headerMapper{tt.prefix}
+		assert.Equal(t, tt.fromTransport, m.FromHTTPHeaders(tt.http, transport.Headers{}))
+		assert.Equal(t, tt.http, m.ToHTTPHeaders(tt.toTransport, nil))
 	}
 }
 

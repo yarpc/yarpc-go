@@ -44,12 +44,8 @@ func (hm headerMapper) ToHTTPHeaders(from transport.Headers, to http.Header) htt
 	if to == nil {
 		to = make(http.Header, from.Len())
 	}
-	for key, val := range from.Items() {
-		if isTracingHeader(key) {
-			to.Add(key, val)
-		} else {
-			to.Add(hm.Prefix+key, val)
-		}
+	for k, v := range from.Items() {
+		to.Add(hm.Prefix+k, v)
 	}
 	return to
 }
@@ -61,17 +57,11 @@ func (hm headerMapper) ToHTTPHeaders(from transport.Headers, to http.Header) htt
 //
 // If 'to' is nil, a new map will be assigned.
 func (hm headerMapper) FromHTTPHeaders(from http.Header, to transport.Headers) transport.Headers {
-	for origKey, vals := range from {
-		switch {
-		case hasPrefixFold(origKey, hm.Prefix):
-			suffix := origKey[len(hm.Prefix):]
-			for _, v := range vals {
-				to = to.With(suffix, v)
-			}
-		case isTracingHeader(origKey):
-			for _, v := range vals {
-				to = to.With(origKey, v)
-			}
+	prefixLen := len(hm.Prefix)
+	for k := range from {
+		if strings.HasPrefix(k, hm.Prefix) {
+			key := k[prefixLen:]
+			to = to.With(key, from.Get(k))
 		}
 		// Note: undefined behavior for multiple occurrences of the same header
 	}
@@ -92,25 +82,4 @@ func (hm headerMapper) deleteHTTP2PseudoHeadersIfNeeded(from transport.Headers) 
 		}
 	}
 	return from
-}
-
-// hasPrefixFold reports whether s begins with prefix, performing an
-// ASCII case‐insensitive comparison without allocating.
-func hasPrefixFold(s, prefix string) bool {
-	if len(s) < len(prefix) {
-		return false
-	}
-	return strings.EqualFold(s[:len(prefix)], prefix)
-}
-
-// isTracingHeader returns true for the handful of YARPC/OpenTracing headers
-// that must go over the wire unprefixed.
-func isTracingHeader(k string) bool {
-	if strings.EqualFold(k, UberTraceContextHeaderKey) {
-		return true
-	}
-	if hasPrefixFold(k, UberBaggageHeaderKeyPrefix) {
-		return true
-	}
-	return false
 }
