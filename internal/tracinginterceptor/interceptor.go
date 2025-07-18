@@ -186,29 +186,17 @@ func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.Stream
 		Headers:   req.Meta.Headers,
 		Transport: req.Meta.Transport,
 	}
+
 	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
 		ParentSpanContext: parentSpanCtx,
 		Tracer:            i.tracer,
-		TransportName:     req.Meta.Transport,
+		TransportName:     s.Request().Meta.Transport,
 		StartTime:         time.Now(),
 		ExtraTags:         commonTracingTags,
 	}
 	_, span := extractOpenTracingSpan.Do(s.Context(), transportRequest)
-	if span == nil {
-		return h.HandleStream(s)
-	}
 	defer span.Finish()
-
-	tracedRaw := &tracedServerStream{
-		serverStream: s,
-		span:         span,
-	}
-	wrapped, err := transport.NewServerStream(tracedRaw)
-	if err != nil {
-		span.LogFields(logFieldEventError, log.String("message", "Failed to wrap the traced server stream"))
-		return err
-	}
-	err = h.HandleStream(wrapped)
+	err := h.HandleStream(s)
 	return updateSpanWithErrorDetails(span, err != nil, nil, err)
 }
 
