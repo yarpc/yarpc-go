@@ -12,6 +12,7 @@ require (
 	github.com/golang/mock v1.7.0-rc.1
 	github.com/golang/protobuf v1.5.4
 	github.com/golang/snappy v0.0.4
+	github.com/google/uuid v1.6.0
 	github.com/kisielk/errcheck v1.7.0
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/opentracing/opentracing-go v1.2.0

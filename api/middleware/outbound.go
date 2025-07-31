@@ -22,6 +22,9 @@ package middleware
 
 import (
 	"context"
+	"fmt"
+
+	"github.com/google/uuid"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
@@ -110,7 +113,17 @@ func (fo unaryOutboundWithMiddleware) Introspect() introspection.OutboundStatus 
 }
 
 func (fo unaryOutboundWithMiddleware) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
-	return fo.f.Call(ctx, request, fo.o)
+	uniqueID := uuid.NewString()
+	if uuid, ok := request.Headers.Get("unique-id"); ok {
+		fmt.Printf("apimiddleware yarpc - using existing unique-id from request: %s\n", uuid)
+		uniqueID = uuid
+	}
+
+	res, err := fo.f.Call(ctx, request, fo.o)
+
+	fmt.Printf("apimiddleware yarpc - call completed with unique-id: %s, res: %v, err: %v", uniqueID, res, err)
+
+	return res, err
 }
 
 type nopUnaryOutbound struct{}

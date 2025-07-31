@@ -25,7 +25,9 @@ package firstoutboundmiddleware
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/google/uuid"
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 )
@@ -47,8 +49,18 @@ func New() *Middleware {
 
 // Call implements middleware.UnaryOutbound.
 func (m *Middleware) Call(ctx context.Context, req *transport.Request, next transport.UnaryOutbound) (*transport.Response, error) {
+	uniqueID := uuid.NewString()
+	if uuid, ok := req.Headers.Get("unique-id"); ok {
+		fmt.Printf("firstoutboundmiddleware yarpc - using existing unique-id from request: %s\n", uuid)
+		uniqueID = uuid
+	}
+
 	update(ctx, req, next)
-	return next.Call(ctx, req)
+	res, err := next.Call(ctx, req)
+
+	fmt.Printf("firstoutboundmiddleware yarpc - call completed with unique-id: %s, res: %v, err: %v", uniqueID, res, err)
+
+	return res, err
 }
 
 // CallOneway implements middleware.OnewayOutbound.

@@ -22,6 +22,9 @@ package request
 
 import (
 	"context"
+	"fmt"
+
+	"github.com/google/uuid"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/x/introspection"
@@ -43,7 +46,17 @@ func (o UnaryValidatorOutbound) Call(ctx context.Context, request *transport.Req
 		return nil, err
 	}
 
-	return o.UnaryOutbound.Call(ctx, request)
+	uniqueID := uuid.NewString()
+	if uuid, ok := request.Headers.Get("unique-id"); ok {
+		fmt.Printf("validator yarpc - using existing unique-id from request: %s\n", uuid)
+		uniqueID = uuid
+	}
+
+	res, err := o.UnaryOutbound.Call(ctx, request)
+
+	fmt.Printf("validator yarpc - call completed with unique-id: %s, res: %v, err: %v", uniqueID, res, err)
+
+	return res, err
 }
 
 // Introspect returns the introspection status of the underlying outbound.
