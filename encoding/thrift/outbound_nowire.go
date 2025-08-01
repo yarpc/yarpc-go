@@ -166,7 +166,7 @@ func (c noWireThriftClient) Call(ctx context.Context, reqBody stream.Enveloper, 
 	defer tres.Body.Close()
 
 	if _, err := call.ReadFromResponse(ctx, tres); err != nil {
-		fmt.Printf("thrift outbound nowire yarpc (%s) - error reading response: %v, ctx: %v, ctx err:%v\n", uniqueID, err, ctx, ctx.Err())
+		fmt.Printf("thrift outbound nowire yarpc - error reading response with unique-id: %s, err: %v, ctx: %v, ctx err:%v\n", uniqueID, err, ctx, ctx.Err())
 		return err
 	}
 
@@ -175,27 +175,27 @@ func (c noWireThriftClient) Call(ctx context.Context, reqBody stream.Enveloper, 
 
 	envelope, err := sr.ReadEnvelopeBegin()
 	if err != nil {
-		fmt.Printf("thrift outbound nowire yarpc (%s) - error reading envelope begin: %v, ctx: %v, ctx err:%v\n", uniqueID, err, ctx, ctx.Err())
+		fmt.Printf("thrift outbound nowire yarpc - error reading envelope begin with unique-id: %s, err: %v, ctx: %v, ctx err:%v\n", uniqueID, err, ctx, ctx.Err())
 		return errors.ResponseBodyDecodeError(treq, err)
 	}
 
-	fmt.Printf("thrift outbound nowire yarpc (%s) - envelope: %v, ctx: %v, ctx err:%v\n", uniqueID, envelope, ctx, ctx.Err())
+	fmt.Printf("thrift outbound nowire yarpc - got envelope with unique-id: %s, envelop: %v, ctx: %v, ctx err:%v\n", uniqueID, envelope, ctx, ctx.Err())
 
 	switch envelope.Type {
 	case wire.Reply:
 		if err := resBody.Decode(sr); err != nil {
-			fmt.Printf("thrift outbound nowire yarpc (%s) - error decoding response body: %v, ctx: %v, ctx err:%v\n", uniqueID, err, ctx, ctx.Err())
+			fmt.Printf("thrift outbound nowire yarpc - error decoding response body with unique-id: %s, err: %v, ctx: %v, ctx err:%v\n", uniqueID, err, ctx, ctx.Err())
 			return err
 		}
 		return sr.ReadEnvelopeEnd()
 	case wire.Exception:
 		var exc internal.TApplicationException
 		if err := exc.Decode(sr); err != nil {
-			fmt.Printf("thrift outbound nowire yarpc (%s) - error decoding exception: %v, ctx: %v, ctx err:%v\n", uniqueID, err, ctx, ctx.Err())
+			fmt.Printf("thrift outbound nowire yarpc - error decoding exception with unique-id: %s, err: %v, ctx: %v, ctx err:%v\n", uniqueID, err, ctx, ctx.Err())
 			return errors.ResponseBodyDecodeError(treq, err)
 		}
 		defer func() {
-			fmt.Printf("thrift outbound nowire yarpc (%s) - reading envelope end after exception: %v, ReadEnvelopeEndErr: %v, ctx: %v, ctx err:%v\n", uniqueID, envelope, sr.ReadEnvelopeEnd(), ctx, ctx.Err())
+			fmt.Printf("thrift outbound nowire yarpc - reading envelope end after exception with unique-id: %s, envelop: %v, ReadEnvelopeEndErr: %v, ctx: %v, ctx err:%v\n", uniqueID, envelope, sr.ReadEnvelopeEnd(), ctx, ctx.Err())
 		}()
 
 		thriftException := thriftException{
@@ -204,10 +204,10 @@ func (c noWireThriftClient) Call(ctx context.Context, reqBody stream.Enveloper, 
 			Reason:    &exc,
 		}
 
-		fmt.Printf("thrift outbound nowire yarpc (%s) - returning exception: %v, ctx: %v, ctx err:%v\n", uniqueID, thriftException, ctx, ctx.Err())
+		fmt.Printf("thrift outbound nowire yarpc - returning exception with unique-id: %s, exception: %v, ctx: %v, ctx err:%v\n", uniqueID, thriftException, ctx, ctx.Err())
 		return thriftException
 	default:
-		fmt.Printf("thrift outbound nowire yarpc (%s) - unexpected envelope type: %v, err: %v, ctx: %v, ctx err:%v\n", uniqueID, envelope.Type, errUnexpectedEnvelopeType(envelope.Type), ctx, ctx.Err())
+		fmt.Printf("thrift outbound nowire yarpc - unexpected envelope type with unique-id: %s, envelop type: %v, err: %v, ctx: %v, ctx err:%v\n", uniqueID, envelope.Type, errUnexpectedEnvelopeType(envelope.Type), ctx, ctx.Err())
 		return errors.ResponseBodyDecodeError(
 			treq, errUnexpectedEnvelopeType(envelope.Type))
 	}
