@@ -121,7 +121,7 @@ func (fo unaryOutboundWithMiddleware) Call(ctx context.Context, request *transpo
 
 	res, err := fo.f.Call(ctx, request, fo.o)
 
-	fmt.Printf("apimiddleware yarpc - call completed with unique-id: %s, res: %v, err: %v", uniqueID, res, err)
+	fmt.Printf("apimiddleware yarpc - call completed with unique-id: %s, res: %v, err: %v\n", uniqueID, res, err)
 
 	return res, err
 }

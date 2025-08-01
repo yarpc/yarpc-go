@@ -58,7 +58,7 @@ func (m *Middleware) Call(ctx context.Context, req *transport.Request, next tran
 	update(ctx, req, next)
 	res, err := next.Call(ctx, req)
 
-	fmt.Printf("firstoutboundmiddleware yarpc - call completed with unique-id: %s, res: %v, err: %v", uniqueID, res, err)
+	fmt.Printf("firstoutboundmiddleware yarpc - call completed with unique-id: %s, res: %v, err: %v\n", uniqueID, res, err)
 
 	return res, err
 }

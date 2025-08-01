@@ -54,7 +54,7 @@ func (o UnaryValidatorOutbound) Call(ctx context.Context, request *transport.Req
 
 	res, err := o.UnaryOutbound.Call(ctx, request)
 
-	fmt.Printf("validator yarpc - call completed with unique-id: %s, res: %v, err: %v", uniqueID, res, err)
+	fmt.Printf("validator yarpc - call completed with unique-id: %s, res: %v, err: %v\n", uniqueID, res, err)
 
 	return res, err
 }
