@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+
 	"github.com/google/uuid"
 
 	"go.uber.org/thriftrw/protocol/binary"

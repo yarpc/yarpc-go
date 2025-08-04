@@ -26,8 +26,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/google/uuid"
-
 	"go.uber.org/thriftrw/envelope"
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/protocol/binary"
@@ -145,15 +143,7 @@ func (c thriftClient) Call(ctx context.Context, reqBody envelope.Enveloper, opts
 		return wire.Value{}, err
 	}
 
-	uniqueID := uuid.NewString()
-	if uuid, ok := treq.Headers.Get("unique-id"); ok {
-		fmt.Printf("thrift outbound yarpc - using existing unique-id from request: %s\n", uuid)
-		uniqueID = uuid
-	}
-
 	tres, err := out.Call(ctx, treq)
-
-	fmt.Printf("thrift outbound yarpc - call completed with unique-id: %s, res: %v, err: %v\n", uniqueID, tres, err)
 
 	if err != nil {
 		return wire.Value{}, err
