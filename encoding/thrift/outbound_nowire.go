@@ -159,7 +159,7 @@ func (c noWireThriftClient) Call(ctx context.Context, reqBody stream.Enveloper, 
 
 	tres, err := out.Call(ctx, treq)
 
-	fmt.Printf("thrift outbound nowire yarpc - call completed with unique-id: %s, res: %v, err: %v, ctx: %v, ctx err: %v\n", uniqueID, tres, err, ctx, ctx.Err())
+	fmt.Printf("thrift outbound nowire yarpc - call completed with unique-id: %s, res: %+v, err: %v, ctx: %v, ctx err: %v\n", uniqueID, tres, err, ctx, ctx.Err())
 
 	if err != nil {
 		return err
