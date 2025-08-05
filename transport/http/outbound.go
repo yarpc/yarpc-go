@@ -32,6 +32,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	opentracinglog "github.com/opentracing/opentracing-go/log"
@@ -357,6 +359,13 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	}
 	ttl := deadline.Sub(start)
 
+	// extract uuid
+	uniqueID := uuid.NewString()
+	if uuid, ok := treq.Headers.Get("unique-id"); ok {
+		fmt.Printf("firstoutboundmiddleware yarpc - using existing unique-id from request: %s\n", uuid)
+		uniqueID = uuid
+	}
+
 	hreq, err := o.createRequest(treq)
 	if err != nil {
 		return nil, err
@@ -376,6 +385,16 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 		span.LogFields(opentracinglog.String("event", err.Error()))
 		return nil, err
 	}
+
+	fmt.Printf("http outbound yarpc - call completed with unique-id: %s, response: %+v\n", uniqueID, response)
+
+	bodyBytes, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		fmt.Printf("http outbound yarpc - error reading response body with unique-id: %s , err: %v\n", uniqueID, err)
+		return nil, err
+	}
+	// Log the response body for debugging purposes
+	fmt.Printf("http outbound yarpc - got response body with unique-id: %s , body: %s\n", uniqueID, string(bodyBytes))
 
 	span.SetTag("http.status_code", response.StatusCode)
 
