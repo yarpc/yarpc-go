@@ -164,7 +164,10 @@ func (c noWireThriftClient) Call(ctx context.Context, reqBody stream.Enveloper, 
 	if err != nil {
 		return err
 	}
-	defer tres.Body.Close()
+	defer func() {
+		err = tres.Body.Close()
+		fmt.Printf("thrift outbound nowire yarpc - closing response body with unique-id: %s, err: %v, ctx: %v, ctx err: %v\n", uniqueID, err, ctx, ctx.Err())
+	}()
 
 	if _, err := call.ReadFromResponse(ctx, tres); err != nil {
 		fmt.Printf("thrift outbound nowire yarpc - error reading response with unique-id: %s, err: %v, ctx: %v, ctx err:%v\n", uniqueID, err, ctx, ctx.Err())
@@ -172,7 +175,10 @@ func (c noWireThriftClient) Call(ctx context.Context, reqBody stream.Enveloper, 
 	}
 
 	sr := proto.Reader(tres.Body)
-	defer sr.Close()
+	defer func() {
+		err = sr.Close()
+		fmt.Printf("thrift outbound nowire yarpc - closing response reader with unique-id: %s, err: %v, ctx: %v, ctx err: %v\n", uniqueID, err, ctx, ctx.Err())
+	}()
 
 	envelope, err := sr.ReadEnvelopeBegin()
 	if err != nil {
