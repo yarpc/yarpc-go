@@ -221,11 +221,19 @@ func (c call) endLogs(
 		return
 	}
 
-	fields := make([]zapcore.Field, 0, 9+len(extraLogFields))
+	fields := make([]zapcore.Field, 0, 10+len(extraLogFields))
 	fields = append(fields, zap.String("rpcType", c.rpcType.String()))
 	fields = append(fields, zap.Duration("latency", elapsed))
 	fields = append(fields, zap.Bool("successful", err == nil && !isApplicationError))
 	fields = append(fields, c.extract(c.ctx))
+
+	// It would be nice for metricProcedure() to return zap.Skip(), but there
+	// are a bunch of unit tests that fail with the included empty field.
+	metricProcedureField := metricProcedure(c.req.Procedure, string(c.req.Encoding))
+	if metricProcedureField != "" {
+		fields = append(fields, zap.String("metricProcedure", metricProcedureField))
+	}
+
 	if deadlineTime, ok := c.ctx.Deadline(); ok {
 		fields = append(fields, zap.Duration("timeout", deadlineTime.Sub(c.started)))
 	}
@@ -265,6 +273,53 @@ func (c call) endLogs(
 
 	fields = append(fields, extraLogFields...)
 	ce.Write(fields...)
+}
+
+// https://docs.google.com/document/d/1B45wjZDQL0olCoENh3XYMyvCPI2A3hw8OeU2IhrtBtA
+func metricProcedure(procedure, encoding string) string {
+	if procedure == "" {
+		return "__no_procedure__"
+	}
+
+	if encoding != "proto" && encoding != "json" && encoding != "thrift" {
+		return ""
+	}
+
+	return encodeMetricProcedure(procedure, encoding == "thrift")
+}
+
+func encodeMetricProcedure(procedure string, thrift bool) string {
+	var (
+		b = []byte(procedure)
+		w = 0
+	)
+
+	for i := 0; i < len(b); i++ {
+		if b[i] == '.' {
+			w = 0
+			continue
+		}
+
+		if b[i] == ':' {
+			if thrift {
+				b[w] = '-'
+				w++
+				b[w] = '-'
+			} else {
+				b[w] = '/'
+			}
+
+			i++
+		} else if 'A' <= b[i] && b[i] <= 'Z' {
+			b[w] = b[i] + 32
+		} else {
+			b[w] = b[i]
+		}
+
+		w++
+	}
+
+	return string(b[:w])
 }
 
 func (c call) endStats(

@@ -3801,6 +3801,84 @@ func TestStreamingMetrics(t *testing.T) {
 	})
 }
 
+func TestMiddlewareLoggingWithMetricProcedure(t *testing.T) {
+	ctx := context.Background()
+	core, logs := observer.New(zapcore.DebugLevel)
+	mw := NewMiddleware(Config{
+		Logger:           zap.New(core),
+		Scope:            metrics.New().Scope(),
+		ContextExtractor: NewNopContextExtractor(),
+	})
+
+	for testName, tt := range map[string]struct {
+		encoding  string
+		procedure string
+		expected  string
+	}{
+		"EmptyProcedure": {
+			"proto", "",
+			"__no_procedure__",
+		},
+		"Raw": {
+			"raw", "hello",
+			"",
+		},
+		"EmptyRawProcedure": {
+			"raw", "",
+			"__no_procedure__",
+		},
+		"Proto1": {
+			"proto", "synoptic.SignalCatalog::ExecuteQuery",
+			"signalcatalog/executequery",
+		},
+		"Proto2": {
+			"proto", "uber.infra.net.rpc.probe.Probe::Echo",
+			"probe/echo",
+		},
+		"Thrift1": {
+			"thrift", "Umonitor::deleteAlert",
+			"umonitor--deletealert",
+		},
+		"Thrift2": {
+			"thrift", "Probe::echo",
+			"probe--echo",
+		},
+		"JSON1": {
+			"json", "uber.infra.umonitor.Umonitor::UpsertAlertThresholds",
+			"umonitor/upsertalertthresholds",
+		},
+	} {
+		t.Run(testName, func(t *testing.T) {
+			req := &transport.Request{
+				Encoding:  transport.Encoding(tt.encoding),
+				Procedure: tt.procedure,
+			}
+
+			err := mw.Handle(
+				ctx,
+				req,
+				&transporttest.FakeResponseWriter{},
+				fakeHandler{
+					err:            yarpcerrors.DeadlineExceededErrorf("test deadline"),
+					applicationErr: false,
+					responseData:   []byte("deadline response"),
+				},
+			)
+			require.Error(t, err)
+
+			entries := logs.TakeAll()
+			require.Equal(t, 1, len(entries), "Unexpected number of logs written.")
+			if tt.expected == "" {
+				for _, f := range entries[0].Context {
+					assert.NotEqual(t, f.Key, "metricProcedure")
+				}
+			} else {
+				assert.Contains(t, entries[0].Context, zap.String("metricProcedure", tt.expected))
+			}
+		})
+	}
+}
+
 func TestNewWriterIsEmpty(t *testing.T) {
 	code := yarpcerrors.CodeDataLoss
 
