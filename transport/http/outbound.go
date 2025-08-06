@@ -388,13 +388,13 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 
 	fmt.Printf("http outbound yarpc - call completed with unique-id: %s, response: %+v\n", uniqueID, response)
 
-	bodyBytes, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		fmt.Printf("http outbound yarpc - error reading response body with unique-id: %s , err: %v\n", uniqueID, err)
-		return nil, err
-	}
-	// Log the response body for debugging purposes
-	fmt.Printf("http outbound yarpc - got response body with unique-id: %s , body: %s\n", uniqueID, string(bodyBytes))
+	//bodyBytes, err := ioutil.ReadAll(response.Body)
+	//if err != nil {
+	//	fmt.Printf("http outbound yarpc - error reading response body with unique-id: %s , err: %v\n", uniqueID, err)
+	//	return nil, err
+	//}
+	//// Log the response body for debugging purposes
+	//fmt.Printf("http outbound yarpc - got response body with unique-id: %s , body: %s\n", uniqueID, string(bodyBytes))
 
 	span.SetTag("http.status_code", response.StatusCode)
 
