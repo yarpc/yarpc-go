@@ -34,7 +34,7 @@ const (
 )
 
 var (
-	defaultConnTimeout          = 500 * time.Millisecond
+	defaultConnTimeout          = 5 * time.Second
 	defaultInnocenceWindow      = 5 * time.Second
 	defaultIdleConnTimeout      = 15 * time.Minute
 	defaultDialerTimeout        = 30 * time.Second
