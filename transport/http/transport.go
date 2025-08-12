@@ -361,7 +361,7 @@ func buildH2Transport(options *transportOptions) *http2.Transport {
 			return dialContext(ctx, network, addr)
 		},
 		DisableCompression: options.disableCompression,
-		IdleConnTimeout:    options.idleConnTimeout,
+		IdleConnTimeout:    defaultIdleConnTimeout,
 		PingTimeout:        defaultHTTP2PingTimeout,
 		ReadIdleTimeout:    defaultHTTP2ReadIdleTimeout,
 	}
