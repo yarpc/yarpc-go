@@ -27,7 +27,14 @@ import (
 )
 
 // Name is the name registered for the customCodec.
-const Name = "yarpc"
+//
+// YARPC installs this codec to support arbitrary combinations of transports and encodings.
+// The gRPC transport will use this codec to transmit the raw message bytes without interpretation,
+// allowing YARPC to later apply the user-specified codec.
+//
+// Although this codec bypasses gRPC’s default behavior, we register it under the name "proto"
+// to maintain compatibility with external (non-YARPC) services that expect "proto" as the encoding name.
+const Name = "proto"
 
 // customCodec pass bytes to/from the wire without modification.
 type customCodec struct{}
