@@ -188,6 +188,10 @@ func addApplicationHeaders(md metadata.MD, headers transport.Headers) error {
 		if isReserved(header) {
 			return yarpcerrors.InvalidArgumentErrorf("cannot use reserved header in application headers: %s", header)
 		}
+		// Prevents leaking protocol/private keys (e.g., "$tracing$...") or grpc-reserved prefixes.
+		if strings.Contains(header, "$") || strings.HasPrefix(header, "grpc-") {
+			continue
+		}
 		if err := addToMetadata(md, header, value); err != nil {
 			return err
 		}
@@ -203,7 +207,7 @@ func getApplicationHeaders(md metadata.MD) (transport.Headers, error) {
 	headers := transport.NewHeadersWithCapacity(md.Len())
 	for header, values := range md {
 		header = transport.CanonicalizeHeaderKey(header)
-		if isReserved(header) {
+		if isReserved(header) || strings.HasPrefix(header, "grpc-") || strings.Contains(header, "$") {
 			continue
 		}
 		var value string
