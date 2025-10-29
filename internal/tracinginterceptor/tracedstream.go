@@ -102,10 +102,15 @@ type tracedServerStream struct {
 	serverStream *transport.ServerStream
 	span         opentracing.Span
 	closed       atomic.Bool
+	ctx          context.Context // enriched context with tracing/baggage
 }
 
 // Context returns the context associated with the server stream.
 func (t *tracedServerStream) Context() context.Context {
+	// Return the enriched context if available, otherwise fall back to the server stream's context
+	if t.ctx != nil {
+		return t.ctx
+	}
 	return t.serverStream.Context()
 }
 
