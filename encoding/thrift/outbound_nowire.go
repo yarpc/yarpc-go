@@ -253,17 +253,17 @@ func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (*tr
 		SeqID: 1, // don't care
 	}); err != nil {
 		cleanup()
-		return nil, nil, nil, errors.RequestBodyEncodeError(&treq, err)
+		return nil, nil, func() {}, errors.RequestBodyEncodeError(&treq, err)
 	}
 
 	if err := reqBody.Encode(sw); err != nil {
 		cleanup()
-		return nil, nil, nil, errors.RequestBodyEncodeError(&treq, err)
+		return nil, nil, func() {}, errors.RequestBodyEncodeError(&treq, err)
 	}
 
 	if err := sw.WriteEnvelopeEnd(); err != nil {
 		cleanup()
-		return nil, nil, nil, errors.RequestBodyEncodeError(&treq, err)
+		return nil, nil, func() {}, errors.RequestBodyEncodeError(&treq, err)
 	}
 
 	treq.Body = bytes.NewReader(buffer.Bytes())
