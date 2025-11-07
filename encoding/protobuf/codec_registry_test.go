@@ -15,24 +15,24 @@ func TestCodecRegistry(t *testing.T) {
 		mockCodec := &MockYARPCCodec{name: "test-codec"}
 
 		// Register codec
-		RegisterCodecForEncoding(mockCodec)
+		RegisterCodec(mockCodec)
 
 		// Test retrieval by codec name
-		retrieved := getCodecForEncoding("test-codec")
+		retrieved := getCodecForEncoding("test-codec", nil)
 		assert.Equal(t, mockCodec, retrieved, "Should return registered codec")
 
 		// Test fallback for unknown encoding
-		unknown := getCodecForEncoding("unknown-encoding")
+		unknown := getCodecForEncoding("unknown-encoding", nil)
 		assert.Nil(t, unknown, "Should return nil for unknown encoding")
 	})
 
 	// Test public API
 	t.Run("publicAPI", func(t *testing.T) {
 		mockCodec := &MockYARPCCodec{name: "public-test"}
-		
+
 		// Register codec
-		RegisterCodecForEncoding(mockCodec)
-		
+		RegisterCodec(mockCodec)
+
 		// Test public GetCodecForEncoding function
 		retrieved := GetCodecForEncoding("public-test")
 		assert.Equal(t, mockCodec, retrieved, "Public API should return registered codec")
@@ -47,12 +47,12 @@ func TestCodecRegistry(t *testing.T) {
 		done := make(chan bool, 2)
 
 		go func() {
-			RegisterCodecForEncoding(codec1)
+			RegisterCodec(codec1)
 			done <- true
 		}()
 
 		go func() {
-			RegisterCodecForEncoding(codec2)
+			RegisterCodec(codec2)
 			done <- true
 		}()
 
@@ -61,32 +61,32 @@ func TestCodecRegistry(t *testing.T) {
 		<-done
 
 		// Verify both are registered correctly
-		assert.Equal(t, codec1, getCodecForEncoding("concurrent-1"))
-		assert.Equal(t, codec2, getCodecForEncoding("concurrent-2"))
+		assert.Equal(t, codec1, getCodecForEncoding("concurrent-1", nil))
+		assert.Equal(t, codec2, getCodecForEncoding("concurrent-2", nil))
 	})
 
 	// Test codec interface compliance
 	t.Run("codecInterface", func(t *testing.T) {
 		mockCodec := &MockYARPCCodec{name: "interface-test"}
-		
+
 		// Test Marshal
 		data, err := mockCodec.Marshal([]byte("test-data"))
 		assert.NoError(t, err)
 		assert.NotNil(t, data)
-		
+
 		// Test Unmarshal
 		var result []byte
 		bufSlice := mem.BufferSlice{mem.SliceBuffer([]byte("unmarshal-test"))}
 		err = mockCodec.Unmarshal(bufSlice, &result)
 		assert.NoError(t, err)
 		assert.Equal(t, []byte("unmarshal-test"), result)
-		
+
 		// Test Name
 		assert.Equal(t, "interface-test", mockCodec.Name())
 	})
 }
 
-// MockYARPCCodec implements the Codec interface for testing
+// MockYARPCCodec implements encoding.CodecV2 for testing
 type MockYARPCCodec struct {
 	name string
 }

@@ -21,7 +21,6 @@
 package protobuf
 
 import (
-	"bytes"
 	"context"
 
 	"github.com/gogo/protobuf/proto"
@@ -52,28 +51,15 @@ func readFromStream(
 
 // writeToStream writes a proto.Message to a stream.
 func writeToStream(ctx context.Context, stream transport.Stream, message proto.Message, codec *codec) error {
-	messageData, cleanup, err := marshal(stream.Request().Meta.Encoding, message, codec)
+	messageData, err := marshal(stream.Request().Meta.Encoding, message, codec)
 	if err != nil {
 		return err
 	}
 	return stream.SendMessage(
 		ctx,
 		&transport.StreamMessage{
-			Body: readCloser{
-				Reader: bytes.NewReader(messageData),
-				closer: cleanup,
-			},
-			BodySize: len(messageData),
+			Body:     messageData.Reader(),
+			BodySize: messageData.Len(),
 		},
 	)
-}
-
-type readCloser struct {
-	*bytes.Reader
-	closer func()
-}
-
-func (r readCloser) Close() error {
-	r.closer()
-	return nil
 }

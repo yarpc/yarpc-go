@@ -58,20 +58,16 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 	if err := call.WriteToResponse(responseWriter); err != nil {
 		return err
 	}
-	var responseData []byte
-	var responseCleanup func()
 	if response != nil {
-		responseData, responseCleanup, err = marshal(transportRequest.Encoding, response, u.codec)
-		if responseCleanup != nil {
-			defer responseCleanup()
-		}
+		responseData, err := marshal(transportRequest.Encoding, response, u.codec)
 		if err != nil {
 			return errors.ResponseBodyEncodeError(transportRequest, err)
 		}
-	}
-	_, err = responseWriter.Write(responseData)
-	if err != nil {
-		return err
+		// Materialize BufferSlice to []byte for ResponseWriter.Write()
+		_, err = responseWriter.Write(responseData.Materialize())
+		if err != nil {
+			return err
+		}
 	}
 	if appErr != nil {
 		responseWriter.SetApplicationError()
