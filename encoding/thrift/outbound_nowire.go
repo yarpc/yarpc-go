@@ -140,10 +140,10 @@ func (c noWireThriftClient) Call(ctx context.Context, reqBody stream.Enveloper, 
 	out := c.cc.GetUnaryOutbound()
 
 	treq, proto, cleanup, err := c.buildTransportRequest(reqBody)
+	defer cleanup()
 	if err != nil {
 		return err
 	}
-	defer cleanup()
 
 	call := encodingapi.NewOutboundCall(encoding.FromOptions(opts)...)
 	ctx, err = call.WriteToRequest(ctx, treq)
@@ -199,10 +199,10 @@ func (c noWireThriftClient) CallOneway(ctx context.Context, reqBody stream.Envel
 	out := c.cc.GetOnewayOutbound()
 
 	treq, _, cleanup, err := c.buildTransportRequest(reqBody)
+	defer cleanup()
 	if err != nil {
 		return nil, err
 	}
-	defer cleanup()
 
 	call := encodingapi.NewOutboundCall(encoding.FromOptions(opts)...)
 	ctx, err = call.WriteToRequest(ctx, treq)
@@ -235,7 +235,7 @@ func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (*tr
 
 	envType := reqBody.EnvelopeType()
 	if envType != wire.Call && envType != wire.OneWay {
-		return nil, nil, nil, errors.RequestBodyEncodeError(
+		return nil, nil, func() {}, errors.RequestBodyEncodeError(
 			&treq, errUnexpectedEnvelopeType(envType),
 		)
 	}
@@ -252,18 +252,15 @@ func (c noWireThriftClient) buildTransportRequest(reqBody stream.Enveloper) (*tr
 		Type:  envType,
 		SeqID: 1, // don't care
 	}); err != nil {
-		cleanup()
-		return nil, nil, func() {}, errors.RequestBodyEncodeError(&treq, err)
+		return nil, nil, cleanup, errors.RequestBodyEncodeError(&treq, err)
 	}
 
 	if err := reqBody.Encode(sw); err != nil {
-		cleanup()
-		return nil, nil, func() {}, errors.RequestBodyEncodeError(&treq, err)
+		return nil, nil, cleanup, errors.RequestBodyEncodeError(&treq, err)
 	}
 
 	if err := sw.WriteEnvelopeEnd(); err != nil {
-		cleanup()
-		return nil, nil, func() {}, errors.RequestBodyEncodeError(&treq, err)
+		return nil, nil, cleanup, errors.RequestBodyEncodeError(&treq, err)
 	}
 
 	treq.Body = bytes.NewReader(buffer.Bytes())
