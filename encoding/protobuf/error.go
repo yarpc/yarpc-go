@@ -159,11 +159,12 @@ func createStatusWithDetail(pberr *pberror, encoding transport.Encoding, codec *
 	pst := st.Proto()
 	pst.Details = pberr.details
 
-	detailsBytes, cleanup, marshalErr := marshal(encoding, pst, codec)
+	detailsBufferSlice, marshalErr := marshal(encoding, pst, codec)
 	if marshalErr != nil {
 		return nil, marshalErr
 	}
-	defer cleanup()
+	// Materialize and copy for YARPC error details
+	detailsBytes := detailsBufferSlice.Materialize()
 	yarpcDet := make([]byte, len(detailsBytes))
 	copy(yarpcDet, detailsBytes)
 	return yarpcerrors.Newf(pberr.code, pberr.message).WithDetails(yarpcDet), nil

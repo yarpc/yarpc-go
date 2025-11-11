@@ -58,20 +58,16 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 	if err := call.WriteToResponse(responseWriter); err != nil {
 		return err
 	}
-	var responseData []byte
-	var responseCleanup func()
 	if response != nil {
-		responseData, responseCleanup, err = marshal(transportRequest.Encoding, response, u.codec)
-		if responseCleanup != nil {
-			defer responseCleanup()
-		}
+		responseData, err := marshal(transportRequest.Encoding, response, u.codec)
 		if err != nil {
 			return errors.ResponseBodyEncodeError(transportRequest, err)
 		}
-	}
-	_, err = responseWriter.Write(responseData)
-	if err != nil {
-		return err
+		// Materialize BufferSlice to []byte for ResponseWriter.Write()
+		_, err = responseWriter.Write(responseData.Materialize())
+		if err != nil {
+			return err
+		}
 	}
 	if appErr != nil {
 		responseWriter.SetApplicationError()
@@ -129,7 +125,7 @@ func (s *streamHandler) HandleStream(stream *transport.ServerStream) error {
 }
 
 func getProtoRequest(ctx context.Context, transportRequest *transport.Request, newRequest func() proto.Message, codec *codec) (context.Context, *apiencoding.InboundCall, proto.Message, error) {
-	if err := errors.ExpectEncodings(transportRequest, Encoding, JSONEncoding); err != nil {
+	if err := errors.ExpectEncodings(transportRequest, GetCodecNames()...); err != nil {
 		return nil, nil, nil, err
 	}
 	ctx, call := apiencoding.NewInboundCall(ctx)

@@ -21,7 +21,6 @@
 package protobuf
 
 import (
-	"bytes"
 	"context"
 
 	"github.com/gogo/protobuf/jsonpb"
@@ -151,15 +150,14 @@ func (c *client) buildTransportRequest(ctx context.Context, requestMethodName st
 		return nil, nil, nil, nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "can only use encodings %q or %q, but %q was specified", Encoding, JSONEncoding, transportRequest.Encoding)
 	}
 	if request != nil {
-		requestData, cleanup, err := marshal(transportRequest.Encoding, request, c.codec)
+		requestData, err := marshal(transportRequest.Encoding, request, c.codec)
 		if err != nil {
-			return nil, nil, nil, cleanup, errors.RequestBodyEncodeError(transportRequest, err)
+			return nil, nil, nil, nil, errors.RequestBodyEncodeError(transportRequest, err)
 		}
-		if requestData != nil {
-			transportRequest.Body = bytes.NewReader(requestData)
-			transportRequest.BodySize = len(requestData)
-		}
-		return ctx, call, transportRequest, cleanup, nil
+		// Use BufferSlice reader for zero-copy when possible
+		transportRequest.Body = requestData.Reader()
+		transportRequest.BodySize = requestData.Len()
+		return ctx, call, transportRequest, nil, nil
 	}
 	return ctx, call, transportRequest, nil, nil
 }
