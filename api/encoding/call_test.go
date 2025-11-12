@@ -23,6 +23,7 @@ package encoding
 import (
 	"context"
 	"testing"
+	"strconv"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -46,7 +47,13 @@ func TestNilCall(t *testing.T) {
 	assert.Equal(t, "", call.OriginalHeader("foo"))
 	assert.Empty(t, call.HeaderNames())
 	assert.Nil(t, call.OriginalHeaders())
+	assert.Equal(t, 0, call.LenHeaderNames())
 
+	var count int
+	for range call.HeaderNamesIter() {
+		count++
+	}
+	assert.Equal(t, 0, count, "nil call should yield no headers")
 	assert.Error(t, call.WriteResponseHeader("foo", "bar"))
 }
 
@@ -63,7 +70,7 @@ func TestReadFromRequest(t *testing.T) {
 		RoutingDelegate: "rd",
 		CallerProcedure: "cp",
 		// later header's key/value takes precedence
-		Headers: transport.NewHeaders().With("Foo", "Bar").With("foo", "bar"),
+		Headers: transport.NewHeaders().With("Foo", "Bar").With("foo", "bar").With("baz", "qux"),
 	})
 	call := CallFromContext(ctx)
 	require.NotNil(t, call)
@@ -81,7 +88,25 @@ func TestReadFromRequest(t *testing.T) {
 	assert.Equal(t, "Bar", call.OriginalHeader("Foo"))
 	assert.Equal(t, map[string]string{"Foo": "Bar", "foo": "bar"}, call.OriginalHeaders())
 	assert.Equal(t, "cp", call.CallerProcedure())
-	assert.Len(t, call.HeaderNames(), 1)
+	assert.Len(t, call.HeaderNames(), 2)
+	assert.Equal(t, 2, call.LenHeaderNames())
+
+	// Test HeaderNamesIter.
+	var names []string
+	for name := range call.HeaderNamesIter() {
+		names = append(names, name)
+	}
+	assert.Len(t, names, 2)
+	assert.Contains(t, names, "foo")
+	assert.Contains(t, names, "baz")
+
+	// Test HeaderNamesIter with early break.
+	var firstHeader string
+	for name := range call.HeaderNamesIter() {
+		firstHeader = name
+		break
+	}
+	assert.NotEmpty(t, firstHeader, "should have gotten at least one header before breaking")
 
 	assert.NoError(t, call.WriteResponseHeader("foo2", "bar2"))
 	assert.Equal(t, icall.resHeaders[0].k, "foo2")
@@ -157,4 +182,49 @@ func TestDisabledResponseHeaders(t *testing.T) {
 
 	assert.Error(t, call.WriteResponseHeader("foo", "bar"))
 	assert.Nil(t, icall.resHeaders)
+}
+
+
+func BenchmarkCallHeaderNames(b *testing.B) {
+	benchmarkSizes := []int{1, 5, 10, 25, 50, 100}
+
+	testCalls := make(map[int]*Call)
+	for _, size := range benchmarkSizes {
+		headers := transport.NewHeadersWithCapacity(size)
+		for i := 0; i < size; i++ {
+			headers = headers.With("header-"+strconv.Itoa(i), "value-"+strconv.Itoa(i))
+		}
+		ctx, icall := NewInboundCall(context.Background())
+		icall.ReadFromRequest(&transport.Request{Headers: headers})
+		testCalls[size] = CallFromContext(ctx)
+	}
+
+	// Benchmark HeaderNames (with sorting).
+	b.Run("HeaderNames", func(b *testing.B) {
+		for _, size := range benchmarkSizes {
+			call := testCalls[size]
+			b.Run("size="+strconv.Itoa(size), func(b *testing.B) {
+				b.ResetTimer()
+				for b.Loop() {
+					call.HeaderNames()
+				}
+			})
+		}
+	})
+
+	// Benchmark HeaderNamesIter (no sorting).
+	b.Run("HeaderNamesIter", func(b *testing.B) {
+		for _, size := range benchmarkSizes {
+			call := testCalls[size]
+			b.Run("size="+strconv.Itoa(size), func(b *testing.B) {
+				b.ResetTimer()
+				for b.Loop() {
+					// Consume the iterator.
+					for name := range call.HeaderNamesIter() {
+						_ = name
+					}
+				}
+			})
+		}
+	})
 }

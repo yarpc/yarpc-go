@@ -20,7 +20,10 @@
 
 package transport
 
-import "strings"
+import (
+	"iter"
+	"strings"
+)
 
 // CanonicalizeHeaderKey canonicalizes the given header key for storage into
 // Headers.
@@ -101,6 +104,18 @@ func (h Headers) Len() int {
 // Keys in the map are normalized using CanonicalizeHeaderKey.
 func (h Headers) Items() map[string]string {
 	return h.items
+}
+
+// All returns an iterator over the header key-value pairs.
+// Keys are normalized using CanonicalizeHeaderKey.
+func (h Headers) All() iter.Seq2[string, string] {
+	return func(yield func(string, string) bool) {
+		for k, v := range h.items {
+			if !yield(k, v) {
+				return
+			}
+		}
+	}
 }
 
 // OriginalItems returns the non-canonicalized version of the underlying map
