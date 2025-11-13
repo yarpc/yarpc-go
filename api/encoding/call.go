@@ -158,9 +158,9 @@ func (c *Call) HeaderNames() []string {
 }
 
 
-// HeaderNamesIter returns an iterator over the names of user defined headers
+// HeaderNamesAll returns an iterator over the names of user defined headers
 // provided with this request.
-func (c *Call) HeaderNamesIter() iter.Seq[string] {
+func (c *Call) HeaderNamesAll() iter.Seq[string] {
 	return func(yield func(string) bool) {
 		if c == nil {
 			return
@@ -173,8 +173,9 @@ func (c *Call) HeaderNamesIter() iter.Seq[string] {
 	}
 }
 
-// LenHeaderNames returns the number of user defined headers provided with this request.
-func (c *Call) LenHeaderNames() int {
+// HeaderNamesLen returns the number of user defined headers provided with this request.
+// Useful for pre-allocating slices.
+func (c *Call) HeaderNamesLen() int {
 	if c == nil {
 		return 0
 	}

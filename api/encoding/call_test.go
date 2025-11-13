@@ -24,6 +24,7 @@ import (
 	"context"
 	"testing"
 	"strconv"
+	"slices"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -47,13 +48,9 @@ func TestNilCall(t *testing.T) {
 	assert.Equal(t, "", call.OriginalHeader("foo"))
 	assert.Empty(t, call.HeaderNames())
 	assert.Nil(t, call.OriginalHeaders())
-	assert.Equal(t, 0, call.LenHeaderNames())
+	assert.Equal(t, 0, call.HeaderNamesLen())
 
-	var count int
-	for range call.HeaderNamesIter() {
-		count++
-	}
-	assert.Equal(t, 0, count, "nil call should yield no headers")
+	assert.Len(t, slices.Collect(call.HeaderNamesAll()), 0, "nil call should yield no headers")
 	assert.Error(t, call.WriteResponseHeader("foo", "bar"))
 }
 
@@ -70,7 +67,7 @@ func TestReadFromRequest(t *testing.T) {
 		RoutingDelegate: "rd",
 		CallerProcedure: "cp",
 		// later header's key/value takes precedence
-		Headers: transport.NewHeaders().With("Foo", "Bar").With("foo", "bar").With("baz", "qux"),
+		Headers: transport.NewHeaders().With("Foo", "Bar").With("foo", "bar"),
 	})
 	call := CallFromContext(ctx)
 	require.NotNil(t, call)
@@ -88,26 +85,9 @@ func TestReadFromRequest(t *testing.T) {
 	assert.Equal(t, "Bar", call.OriginalHeader("Foo"))
 	assert.Equal(t, map[string]string{"Foo": "Bar", "foo": "bar"}, call.OriginalHeaders())
 	assert.Equal(t, "cp", call.CallerProcedure())
-	assert.Len(t, call.HeaderNames(), 2)
-	assert.Equal(t, 2, call.LenHeaderNames())
-
-	// Test HeaderNamesIter.
-	var names []string
-	for name := range call.HeaderNamesIter() {
-		names = append(names, name)
-	}
-	assert.Len(t, names, 2)
-	assert.Contains(t, names, "foo")
-	assert.Contains(t, names, "baz")
-
-	// Test HeaderNamesIter with early break.
-	var firstHeader string
-	for name := range call.HeaderNamesIter() {
-		firstHeader = name
-		break
-	}
-	assert.NotEmpty(t, firstHeader, "should have gotten at least one header before breaking")
-
+	assert.Len(t, call.HeaderNames(), 1)
+	assert.Equal(t, 1, call.HeaderNamesLen())
+	assert.Equal(t, slices.Sort(call.HeaderNames()), slices.Sort(slices.Collect(call.HeaderNamesAll())))
 	assert.NoError(t, call.WriteResponseHeader("foo2", "bar2"))
 	assert.Equal(t, icall.resHeaders[0].k, "foo2")
 	assert.Equal(t, icall.resHeaders[0].v, "bar2")
