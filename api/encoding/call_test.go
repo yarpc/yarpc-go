@@ -192,15 +192,15 @@ func BenchmarkCallHeaderNames(b *testing.B) {
 		}
 	})
 
-	// Benchmark HeaderNamesIter (no sorting).
-	b.Run("HeaderNamesIter", func(b *testing.B) {
+	// Benchmark HeaderNamesAll (no sorting).
+	b.Run("HeaderNamesAll", func(b *testing.B) {
 		for _, size := range benchmarkSizes {
 			call := testCalls[size]
 			b.Run("size="+strconv.Itoa(size), func(b *testing.B) {
 				b.ResetTimer()
 				for b.Loop() {
 					// Consume the iterator.
-					for name := range call.HeaderNamesIter() {
+					for name := range call.HeaderNamesAll() {
 						_ = name
 					}
 				}
