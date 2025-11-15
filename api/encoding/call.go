@@ -173,9 +173,9 @@ func (c *Call) HeaderNamesAll() iter.Seq[string] {
 	}
 }
 
-// HeaderNamesLen returns the number of user defined headers provided with this request.
+// HeadersLen returns the number of user defined headers provided with this request.
 // Useful for pre-allocating slices.
-func (c *Call) HeaderNamesLen() int {
+func (c *Call) HeadersLen() int {
 	if c == nil {
 		return 0
 	}

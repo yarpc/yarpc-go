@@ -48,7 +48,7 @@ func TestNilCall(t *testing.T) {
 	assert.Equal(t, "", call.OriginalHeader("foo"))
 	assert.Empty(t, call.HeaderNames())
 	assert.Nil(t, call.OriginalHeaders())
-	assert.Equal(t, 0, call.HeaderNamesLen())
+	assert.Equal(t, 0, call.HeadersLen())
 
 	assert.Len(t, slices.Collect(call.HeaderNamesAll()), 0, "nil call should yield no headers")
 	assert.Error(t, call.WriteResponseHeader("foo", "bar"))
@@ -86,7 +86,7 @@ func TestReadFromRequest(t *testing.T) {
 	assert.Equal(t, map[string]string{"Foo": "Bar", "foo": "bar"}, call.OriginalHeaders())
 	assert.Equal(t, "cp", call.CallerProcedure())
 	assert.Len(t, call.HeaderNames(), 1)
-	assert.Equal(t, 1, call.HeaderNamesLen())
+	assert.Equal(t, 1, call.HeadersLen())
 	assert.Equal(t, slices.Sort(call.HeaderNames()), slices.Sort(slices.Collect(call.HeaderNamesAll())))
 	assert.NoError(t, call.WriteResponseHeader("foo2", "bar2"))
 	assert.Equal(t, icall.resHeaders[0].k, "foo2")
@@ -166,7 +166,7 @@ func TestDisabledResponseHeaders(t *testing.T) {
 
 
 func BenchmarkCallHeaderNames(b *testing.B) {
-	benchmarkSizes := []int{1, 5, 10, 25, 50, 100}
+	benchmarkSizes := []int{1, 2, 3, 4, 5, 10, 25, 50, 100}
 
 	testCalls := make(map[int]*Call)
 	for _, size := range benchmarkSizes {
