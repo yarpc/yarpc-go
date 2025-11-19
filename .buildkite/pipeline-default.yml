@@ -64,7 +64,7 @@ steps:
       - docker-compose#v3.13.0:
           run: yarpc-go-1.21
 
-  - name: ":go: 1.22 test - %n"
+  - name: ":go: 1.25 test - %n"
     parallelism: 6
     plugins:
       - kubernetes:
@@ -77,9 +77,9 @@ steps:
                 - |-
                   make codecov
       - docker-compose#v3.13.0:
-          run: yarpc-go-1.22
+          run: yarpc-go-1.25
 
-  - name: ":go: 1.22 crossdock"
+  - name: ":go: 1.25 crossdock"
     plugins:
       - kubernetes:
           <<: *kubernetes
@@ -91,9 +91,9 @@ steps:
                 - |-
                   make crossdock-codecov
       - docker-compose#v3.13.0:
-          run: yarpc-go-1.22
+          run: yarpc-go-1.25
 
-  - name: ":go: 1.22 lint"
+  - name: ":go: 1.25 lint"
     plugins:
       - kubernetes:
           <<: *kubernetes
@@ -105,9 +105,9 @@ steps:
                 - |-
                   make lint
       - docker-compose#v3.13.0:
-          run: yarpc-go-1.22
+          run: yarpc-go-1.25
 
-  - name: ":go: 1.22 examples"
+  - name: ":go: 1.25 examples"
     plugins:
       - kubernetes:
           <<: *kubernetes
@@ -119,4 +119,4 @@ steps:
                 - |-
                   make examples
       - docker-compose#v3.13.0:
-          run: yarpc-go-1.22
+          run: yarpc-go-1.25

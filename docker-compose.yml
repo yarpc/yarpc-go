@@ -48,3 +48,27 @@ services:
       - BUILDKITE_PROJECT_SLUG
       - BUILDKITE_REPO
       - GO111MODULE=on
+
+  yarpc-go-1.25:
+    build:
+      context: .
+      dockerfile: Dockerfile.1.25
+    environment:
+      - TEST_TIME_SCALE=5
+      - THIS_CHUNK=${BUILDKITE_PARALLEL_JOB}
+      - TOTAL_CHUNKS=${BUILDKITE_PARALLEL_JOB_COUNT}
+      - CODECOV_TOKEN
+      - CI=true
+      - BUILDKITE
+      - BUILDKITE_AGENT_ID
+      - BUILDKITE_BRANCH
+      - BUILDKITE_BUILD_NUMBER
+      - BUILDKITE_BUILD_URL
+      - BUILDKITE_COMMIT
+      - BUILDKITE_JOB_ID
+      - BUILDKITE_PROJECT_SLUG
+      - BUILDKITE_REPO
+      - GO111MODULE=on
+      - SSH_AUTH_SOCK=/ssh-agent
+    volumes:
+      - /ssh-agent:/ssh-agent
