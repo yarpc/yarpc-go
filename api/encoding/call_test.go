@@ -22,6 +22,9 @@ package encoding
 
 import (
 	"context"
+	"maps"
+	"slices"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,6 +49,11 @@ func TestNilCall(t *testing.T) {
 	assert.Equal(t, "", call.OriginalHeader("foo"))
 	assert.Empty(t, call.HeaderNames())
 	assert.Nil(t, call.OriginalHeaders())
+	assert.Equal(t, 0, call.HeadersLen())
+	assert.Equal(t, 0, call.OriginalHeadersLen())
+	assert.Len(t, slices.Collect(call.HeaderNamesAll()), 0, "nil call should yield no headers")
+	assert.Empty(t, maps.Collect(call.HeadersAll()), "nil call should yield no header key-value pairs")
+	assert.Empty(t, maps.Collect(call.OriginalHeadersAll()), "nil call should yield no original header key-value pairs")
 
 	assert.Error(t, call.WriteResponseHeader("foo", "bar"))
 }
@@ -80,8 +88,30 @@ func TestReadFromRequest(t *testing.T) {
 	assert.Equal(t, "bar", call.OriginalHeader("foo"))
 	assert.Equal(t, "Bar", call.OriginalHeader("Foo"))
 	assert.Equal(t, map[string]string{"Foo": "Bar", "foo": "bar"}, call.OriginalHeaders())
+	assert.Equal(t, call.OriginalHeaders(), maps.Collect(call.OriginalHeadersAll()), "OriginalHeadersAll should match OriginalHeaders")
+
 	assert.Equal(t, "cp", call.CallerProcedure())
 	assert.Len(t, call.HeaderNames(), 1)
+	assert.Equal(t, 1, call.HeadersLen())
+	assert.Equal(t, 2, call.OriginalHeadersLen())
+
+	headerNames := call.HeaderNames()
+	headerNamesFromIterator := slices.Collect(call.HeaderNamesAll())
+	slices.Sort(headerNames)
+	slices.Sort(headerNamesFromIterator)
+	assert.Equal(t, headerNames, headerNamesFromIterator)
+	assert.Equal(t, map[string]string{"foo": "bar"}, maps.Collect(call.HeadersAll()), "HeadersAll should return canonicalized headers")
+
+	// Verify early break from iterators.
+	for range call.HeaderNamesAll() {
+		break
+	}
+	for range call.HeadersAll() {
+		break
+	}
+	for range call.OriginalHeadersAll() {
+		break
+	}
 
 	assert.NoError(t, call.WriteResponseHeader("foo2", "bar2"))
 	assert.Equal(t, icall.resHeaders[0].k, "foo2")
@@ -119,6 +149,7 @@ func TestReadFromRequestMeta(t *testing.T) {
 	assert.Equal(t, "bar", call.OriginalHeader("foo"))
 	assert.Equal(t, "Bar", call.OriginalHeader("Foo"))
 	assert.Equal(t, map[string]string{"Foo": "Bar", "foo": "bar"}, call.OriginalHeaders())
+	assert.Equal(t, call.OriginalHeaders(), maps.Collect(call.OriginalHeadersAll()), "OriginalHeadersAll should match OriginalHeaders")
 	assert.Len(t, call.HeaderNames(), 1)
 
 	assert.NoError(t, call.WriteResponseHeader("foo2", "bar2"))
@@ -157,4 +188,109 @@ func TestDisabledResponseHeaders(t *testing.T) {
 
 	assert.Error(t, call.WriteResponseHeader("foo", "bar"))
 	assert.Nil(t, icall.resHeaders)
+}
+
+func BenchmarkCallHeaderNames(b *testing.B) {
+	benchmarkSizes := []int{1, 2, 3, 4, 5, 6, 8, 10, 25, 50, 100}
+
+	testCalls := make(map[int]*Call)
+	for _, size := range benchmarkSizes {
+		headers := transport.NewHeadersWithCapacity(size)
+		for i := 0; i < size; i++ {
+			headers = headers.With("header-"+strconv.Itoa(i), "value-"+strconv.Itoa(i))
+		}
+		ctx, icall := NewInboundCall(context.Background())
+		icall.ReadFromRequest(&transport.Request{Headers: headers})
+		testCalls[size] = CallFromContext(ctx)
+	}
+
+	// Benchmark HeaderNames (with sorting).
+	b.Run("HeaderNames", func(b *testing.B) {
+		for _, size := range benchmarkSizes {
+			call := testCalls[size]
+			b.Run("size="+strconv.Itoa(size), func(b *testing.B) {
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					call.HeaderNames()
+				}
+			})
+		}
+	})
+
+	// Benchmark HeaderNamesAll (no sorting).
+	b.Run("HeaderNamesAll", func(b *testing.B) {
+		for _, size := range benchmarkSizes {
+			call := testCalls[size]
+			b.Run("size="+strconv.Itoa(size), func(b *testing.B) {
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					// Consume the iterator.
+					for name := range call.HeaderNamesAll() {
+						_ = name
+					}
+				}
+			})
+		}
+	})
+
+	// Benchmark OriginalHeaders (creates map copy).
+	b.Run("OriginalHeaders", func(b *testing.B) {
+		for _, size := range benchmarkSizes {
+			call := testCalls[size]
+			b.Run("size="+strconv.Itoa(size), func(b *testing.B) {
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					call.OriginalHeaders()
+				}
+			})
+		}
+	})
+
+	// Benchmark OriginalHeadersAll (no copy).
+	b.Run("OriginalHeadersAll", func(b *testing.B) {
+		for _, size := range benchmarkSizes {
+			call := testCalls[size]
+			b.Run("size="+strconv.Itoa(size), func(b *testing.B) {
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					// Consume the iterator.
+					for k, v := range call.OriginalHeadersAll() {
+						_ = k
+						_ = v
+					}
+				}
+			})
+		}
+	})
+
+	// Benchmark HeaderNames + Header.
+	b.Run("HeaderNames + Header", func(b *testing.B) {
+		for _, size := range benchmarkSizes {
+			call := testCalls[size]
+			b.Run("size="+strconv.Itoa(size), func(b *testing.B) {
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					for _, name := range call.HeaderNames() {
+						_ = call.Header(name)
+					}
+				}
+			})
+		}
+	})
+
+	// Benchmark HeadersAll.
+	b.Run("HeaderNamesAll", func(b *testing.B) {
+		for _, size := range benchmarkSizes {
+			call := testCalls[size]
+			b.Run("size="+strconv.Itoa(size), func(b *testing.B) {
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					// Consume the iterator.
+					for k, v := range call.HeadersAll() {
+						_, _ = k, v
+					}
+				}
+			})
+		}
+	})
 }

@@ -1,8 +1,8 @@
 module go.uber.org/yarpc
 
-go 1.21
+go 1.23
 
-toolchain go1.22.2
+toolchain go1.23.0
 
 require (
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13
