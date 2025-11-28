@@ -21,6 +21,7 @@
 package protobuf
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -33,6 +34,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/yarpcerrors"
+	"google.golang.org/grpc/mem"
 )
 
 func TestReadFromStreamDecodeError(t *testing.T) {
@@ -91,4 +93,96 @@ func TestWriteToStreamInvalidEncoding(t *testing.T) {
 	err = writeToStream(ctx, clientStream, nil, newCodec(nil /*AnyResolver*/))
 
 	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInternal, "encoding.Expect should have handled encoding \"raw\" but did not"), err)
+}
+
+func TestPoolWrapperCallsCleanup(t *testing.T) {
+	t.Run("Get returns nil", func(t *testing.T) {
+		wrapper := &poolWrapper{cleanup: func() {}}
+		result := wrapper.Get(100)
+		assert.Nil(t, result, "poolWrapper.Get() should always return nil")
+	})
+
+	t.Run("Put calls cleanup function", func(t *testing.T) {
+		var cleanupCalled bool
+		cleanup := func() { cleanupCalled = true }
+
+		wrapper := &poolWrapper{cleanup: cleanup}
+		wrapper.Put(nil)
+
+		assert.True(t, cleanupCalled, "Cleanup function should be called on Put()")
+	})
+}
+
+func TestBufferReadCloserImplementsReadCloser(t *testing.T) {
+	t.Run("Read delegates to bytes.Reader", func(t *testing.T) {
+		data := []byte("test data")
+		buffer := mem.NewBuffer(&data, &poolWrapper{cleanup: func() {}})
+
+		brc := &bufferReadCloser{
+			buffer: buffer,
+			Reader: bytes.NewReader(data),
+		}
+
+		readData, err := io.ReadAll(brc)
+		assert.NoError(t, err)
+		assert.Equal(t, data, readData, "Should read data from embedded Reader")
+	})
+
+	t.Run("cleanup not called for small buffers below pooling threshold", func(t *testing.T) {
+		smallData := make([]byte, 512)
+		for i := range smallData {
+			smallData[i] = byte(i % 256)
+		}
+
+		var cleanupCalled bool
+		cleanup := func() { cleanupCalled = true }
+		pool := &poolWrapper{cleanup: cleanup}
+		buffer := mem.NewBuffer(&smallData, pool)
+
+		brc := &bufferReadCloser{
+			buffer: buffer,
+			Reader: bytes.NewReader(smallData),
+		}
+
+		err := brc.Close()
+		assert.NoError(t, err, "Close() should complete without error")
+		assert.False(t, cleanupCalled, "Cleanup should NOT be called for small buffers (below 1024 byte threshold)")
+	})
+
+	t.Run("cleanup called for large buffer via pooling", func(t *testing.T) {
+		largeData := make([]byte, 64*1024)
+		for i := range largeData {
+			largeData[i] = byte(i % 256)
+		}
+
+		var cleanupCalled bool
+		cleanup := func() { cleanupCalled = true }
+		pool := &poolWrapper{cleanup: cleanup}
+		buffer := mem.NewBuffer(&largeData, pool)
+
+		buffer.Ref()
+
+		brc := &bufferReadCloser{
+			buffer: buffer,
+			Reader: bytes.NewReader(largeData),
+		}
+
+		err := brc.Close()
+		assert.NoError(t, err)
+		assert.False(t, cleanupCalled, "Cleanup should not be called yet (gRPC still holds reference)")
+
+		buffer.Free()
+		assert.True(t, cleanupCalled, "Cleanup should be called after gRPC releases reference via pooling")
+	})
+}
+
+type testBufferPool struct {
+	cleanup func()
+}
+
+func (p *testBufferPool) Get(length int) *[]byte { return nil }
+func (p *testBufferPool) Put(buf *[]byte) {
+	if p.cleanup != nil {
+		p.cleanup()
+	}
 }
