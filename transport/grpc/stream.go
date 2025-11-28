@@ -42,6 +42,13 @@ var (
 	_ transport.StreamHeadersReader = (*clientStream)(nil)
 )
 
+// BufferProvider is an optional interface that io.ReadCloser implementations
+// can implement to provide direct access to a mem.Buffer for zero-copy transmission.
+type BufferProvider interface {
+	io.ReadCloser
+	Buffer() mem.Buffer
+}
+
 type serverStream struct {
 	ctx    context.Context
 	req    *transport.StreamRequest
@@ -65,7 +72,8 @@ func (ss *serverStream) Request() *transport.StreamRequest {
 }
 
 func (ss *serverStream) SendMessage(_ context.Context, m *transport.StreamMessage) error {
-	if buffer, ok := m.Body.(mem.Buffer); ok {
+	if bufferProvider, ok := m.Body.(BufferProvider); ok {
+		buffer := bufferProvider.Buffer()
 		err := ss.stream.SendMsg(buffer)
 		_ = m.Body.Close()
 		return toYARPCStreamError(err)
@@ -138,7 +146,8 @@ func (cs *clientStream) SendMessage(_ context.Context, m *transport.StreamMessag
 		return io.EOF
 	}
 
-	if buffer, ok := m.Body.(mem.Buffer); ok {
+	if bufferProvider, ok := m.Body.(BufferProvider); ok {
+		buffer := bufferProvider.Buffer()
 		err := cs.stream.SendMsg(buffer)
 		_ = m.Body.Close()
 		if err != nil {

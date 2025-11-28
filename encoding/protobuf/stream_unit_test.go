@@ -119,7 +119,7 @@ func TestBufferReadCloserImplementsReadCloser(t *testing.T) {
 		buffer := mem.NewBuffer(&data, &poolWrapper{cleanup: func() {}})
 
 		brc := &bufferReadCloser{
-			Buffer: buffer,
+			buffer: buffer,
 			Reader: bytes.NewReader(data),
 		}
 
@@ -140,7 +140,7 @@ func TestBufferReadCloserImplementsReadCloser(t *testing.T) {
 		buffer := mem.NewBuffer(&smallData, pool)
 
 		brc := &bufferReadCloser{
-			Buffer: buffer,
+			buffer: buffer,
 			Reader: bytes.NewReader(smallData),
 		}
 
@@ -163,7 +163,7 @@ func TestBufferReadCloserImplementsReadCloser(t *testing.T) {
 		buffer.Ref()
 
 		brc := &bufferReadCloser{
-			Buffer: buffer,
+			buffer: buffer,
 			Reader: bytes.NewReader(largeData),
 		}
 

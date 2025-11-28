@@ -76,7 +76,7 @@ func writeToStream(ctx context.Context, stream transport.Stream, message proto.M
 		ctx,
 		&transport.StreamMessage{
 			Body: &bufferReadCloser{
-				Buffer: buffer,
+				buffer: buffer,
 				Reader: bytes.NewReader(messageData),
 			},
 			BodySize: len(messageData),
@@ -85,11 +85,15 @@ func writeToStream(ctx context.Context, stream transport.Stream, message proto.M
 }
 
 type bufferReadCloser struct {
-	mem.Buffer
+	buffer mem.Buffer
 	*bytes.Reader
 }
 
+func (b *bufferReadCloser) Buffer() mem.Buffer {
+	return b.buffer
+}
+
 func (b *bufferReadCloser) Close() error {
-	b.Buffer.Free()
+	b.buffer.Free()
 	return nil
 }

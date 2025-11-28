@@ -230,12 +230,16 @@ func (m *mockGRPCClientStream) SendMsg(msg any) error {
 
 func newTestMemBuffer(data *[]byte, onClose func()) *testMemBuffer {
 	buffer := mem.NewBuffer(data, &testMemBufferPool{cleanup: func() {}})
-	return &testMemBuffer{Buffer: buffer, onClose: onClose}
+	return &testMemBuffer{buffer: buffer, onClose: onClose}
 }
 
 type testMemBuffer struct {
-	mem.Buffer
+	buffer  mem.Buffer
 	onClose func()
+}
+
+func (t *testMemBuffer) Buffer() mem.Buffer {
+	return t.buffer
 }
 
 func (t *testMemBuffer) Read(p []byte) (n int, err error) {
@@ -246,7 +250,7 @@ func (t *testMemBuffer) Close() error {
 	if t.onClose != nil {
 		t.onClose()
 	}
-	t.Buffer.Free()
+	t.buffer.Free()
 	return nil
 }
 
