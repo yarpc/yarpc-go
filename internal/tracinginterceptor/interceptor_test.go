@@ -977,7 +977,8 @@ func TestTracedStreamMethods(t *testing.T) {
 		assert.Equal(t, req, tracedStream.Request())
 
 		// Test Context() with enriched context
-		enrichedCtx := context.WithValue(ctx, "test-key", "test-value")
+		type contextKey string
+		enrichedCtx := context.WithValue(ctx, contextKey("test-key"), "test-value")
 		tracedStreamWithCtx := &tracedServerStream{
 			serverStream: serverStream,
 			span:         span,
