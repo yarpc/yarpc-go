@@ -1,0 +1,24 @@
+FROM golang:1.23
+
+ENV SUPPRESS_DOCKER 1
+WORKDIR /yarpc
+RUN apt-get update -yq && apt-get install -yq jq unzip netcat-openbsd
+ADD dockerdeps.mk /yarpc/
+ADD etc/make/base.mk etc/make/deps.mk /yarpc/etc/make/
+RUN make -f dockerdeps.mk predeps
+ADD etc/bin/vendor-build.sh /yarpc/etc/bin/
+
+# Download and cache dependencies in the image so that we're not constantly
+# re-downloading them locally.
+
+ADD tools_test.go go.mod go.sum /yarpc/
+RUN go mod download
+
+ADD internal/examples/go.mod /yarpc/internal/examples/
+RUN cd /yarpc/internal/examples && go mod download
+
+ADD internal/crossdock/go.mod /yarpc/internal/crossdock/
+RUN cd /yarpc/internal/crossdock && go mod download
+
+RUN make -f dockerdeps.mk deps
+ADD . /yarpc/

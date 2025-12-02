@@ -116,7 +116,7 @@ func TestCompileTransportSpec(t *testing.T) {
 				BuildTransport:     func(**struct{}, *Kit) (transport.Transport, error) { panic("kthxbye") },
 				BuildUnaryOutbound: func(debt, transport.Transport, *Kit) (transport.UnaryOutbound, error) { panic("kthxbye") },
 			},
-			transportInput:     reflect.PtrTo(reflect.TypeOf(&struct{}{})),
+			transportInput:     reflect.PointerTo(reflect.TypeOf(&struct{}{})),
 			supportsUnary:      true,
 			unaryOutboundInput: reflect.TypeOf(debt{}),
 		},
@@ -461,7 +461,7 @@ func TestCompileTransportConfig(t *testing.T) {
 		{
 			desc:          "valid: *struct{}",
 			build:         func(*struct{}, *Kit) (transport.Transport, error) { panic("kthxbye") },
-			wantInputType: reflect.PtrTo(_typeOfEmptyStruct),
+			wantInputType: reflect.PointerTo(_typeOfEmptyStruct),
 		},
 	}
 
@@ -1180,10 +1180,10 @@ func TestIsDecodable(t *testing.T) {
 		want bool
 	}{
 		{give: _typeOfError, want: false},
-		{give: reflect.PtrTo(_typeOfError), want: false},
+		{give: reflect.PointerTo(_typeOfError), want: false},
 		{give: _typeOfEmptyStruct, want: true},
-		{give: reflect.PtrTo(_typeOfEmptyStruct), want: true},
-		{give: reflect.PtrTo(reflect.PtrTo(_typeOfEmptyStruct)), want: true},
+		{give: reflect.PointerTo(_typeOfEmptyStruct), want: true},
+		{give: reflect.PointerTo(reflect.PointerTo(_typeOfEmptyStruct)), want: true},
 	}
 
 	for _, tt := range tests {

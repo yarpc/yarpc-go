@@ -22,6 +22,7 @@ package encoding
 
 import (
 	"context"
+	"iter"
 	"sort"
 
 	"go.uber.org/yarpc/api/transport"
@@ -127,6 +128,7 @@ func (c *Call) OriginalHeader(k string) string {
 
 // OriginalHeaders returns a copy of the given request headers provided with the request.
 // The header key are not canonicalized and suitable for case-sensitive transport like TChannel.
+// Deprecated: Use [HeadersAll] / [HeaderNamesAll] instead.
 func (c *Call) OriginalHeaders() map[string]string {
 	if c == nil {
 		return nil
@@ -140,8 +142,26 @@ func (c *Call) OriginalHeaders() map[string]string {
 	return h
 }
 
+// OriginalHeadersAll returns an iterator over the original (non-canonicalized)
+// header key-value pairs provided with the request.
+// The header keys are not canonicalized and suitable for case-sensitive transport like TChannel.
+// Deprecated: Use [HeadersAll] / [HeaderNamesAll] instead.
+func (c *Call) OriginalHeadersAll() iter.Seq2[string, string] {
+	return func(yield func(string, string) bool) {
+		if c == nil {
+			return
+		}
+		for k, v := range c.md.Headers().OriginalItemsAll() {
+			if !yield(k, v) {
+				return
+			}
+		}
+	}
+}
+
 // HeaderNames returns a sorted list of the names of user defined headers
 // provided with this request.
+// Use [HeadersAll] or [HeaderNamesAll] for better performance.
 func (c *Call) HeaderNames() []string {
 	if c == nil {
 		return nil
@@ -154,6 +174,57 @@ func (c *Call) HeaderNames() []string {
 	}
 	sort.Strings(names)
 	return names
+}
+
+// HeaderNamesAll returns an iterator over the names of user defined headers
+// provided with this request.
+// Use this instead of [HeaderNames]for better performance.
+// Use [HeadersAll] if you need both header names and values.
+func (c *Call) HeaderNamesAll() iter.Seq[string] {
+	return func(yield func(string) bool) {
+		if c == nil {
+			return
+		}
+		for k := range c.md.Headers().All() {
+			if !yield(k) {
+				return
+			}
+		}
+	}
+}
+
+// HeadersAll returns an iterator over all header key-value pairs.
+// Keys are normalized using CanonicalizeHeaderKey.
+// Use this instead of [HeaderNames] + [Header] when you need both keys and values.
+func (c *Call) HeadersAll() iter.Seq2[string, string] {
+	return func(yield func(string, string) bool) {
+		if c == nil {
+			return
+		}
+		for k, v := range c.md.Headers().All() {
+			if !yield(k, v) {
+				return
+			}
+		}
+	}
+}
+
+// HeadersLen returns the number of user defined headers provided with this request.
+// Useful for pre-allocating slices.
+func (c *Call) HeadersLen() int {
+	if c == nil {
+		return 0
+	}
+	return c.md.Headers().Len()
+}
+
+// OriginalHeadersLen returns the number of original (non-canonicalized) headers provided with this request.
+// Useful for pre-allocating slices.
+func (c *Call) OriginalHeadersLen() int {
+	if c == nil {
+		return 0
+	}
+	return c.md.Headers().OriginalItemsLen()
 }
 
 // ShardKey returns the shard key for this request.
