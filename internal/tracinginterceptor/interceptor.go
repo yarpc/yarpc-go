@@ -193,7 +193,7 @@ func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.Stream
 		StartTime:         time.Now(),
 		ExtraTags:         commonTracingTags,
 	}
-	_, span := extractOpenTracingSpan.Do(s.Context(), transportRequest)
+	ctx, span := extractOpenTracingSpan.Do(s.Context(), transportRequest)
 	if span == nil {
 		return h.HandleStream(s)
 	}
@@ -202,6 +202,7 @@ func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.Stream
 	tracedRaw := &tracedServerStream{
 		serverStream: s,
 		span:         span,
+		ctx:          ctx, // Pass the enriched context with tracing/baggage
 	}
 	wrapped, err := transport.NewServerStream(tracedRaw)
 	if err != nil {

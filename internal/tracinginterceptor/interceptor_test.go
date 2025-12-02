@@ -962,7 +962,7 @@ func TestTracedStreamMethods(t *testing.T) {
 		serverStream, err := transport.NewServerStream(mockStream)
 		require.NoError(t, err)
 
-		// Create a traced server stream
+		// Create a traced server stream without enriched context
 		tracer := mocktracer.New()
 		span := tracer.StartSpan("test-span")
 		tracedStream := &tracedServerStream{
@@ -970,10 +970,71 @@ func TestTracedStreamMethods(t *testing.T) {
 			span:         span,
 		}
 
-		// Test Context()
+		// Test Context() - should return server stream's context when ctx is nil
 		assert.Equal(t, ctx, tracedStream.Context())
 
 		// Test Request()
 		assert.Equal(t, req, tracedStream.Request())
+
+		// Test Context() with enriched context
+		type contextKey string
+		enrichedCtx := context.WithValue(ctx, contextKey("test-key"), "test-value")
+		tracedStreamWithCtx := &tracedServerStream{
+			serverStream: serverStream,
+			span:         span,
+			ctx:          enrichedCtx,
+		}
+
+		// Should return the enriched context
+		assert.Equal(t, enrichedCtx, tracedStreamWithCtx.Context())
 	})
+}
+
+func TestInterceptorHandleStream_ContextPropagation(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tracer := mocktracer.New()
+	interceptor := New(Params{
+		Tracer:    tracer,
+		Transport: "http",
+	})
+
+	// Mock the server stream with minimal headers
+	baseCtx := context.Background()
+	mockStream := transporttest.NewMockStream(ctrl)
+	mockStream.EXPECT().Context().Return(baseCtx).AnyTimes()
+	mockStream.EXPECT().Request().Return(&transport.StreamRequest{
+		Meta: &transport.RequestMeta{
+			Procedure: "test-procedure",
+			Headers:   transport.NewHeaders(),
+			Caller:    "test-caller",
+			Service:   "test-service",
+		},
+	}).AnyTimes()
+
+	serverStream, err := transport.NewServerStream(mockStream)
+	require.NoError(t, err)
+
+	// Create a handler that captures the context
+	var capturedCtx context.Context
+	handler := transporttest.NewMockStreamHandler(ctrl)
+	handler.EXPECT().HandleStream(gomock.Any()).DoAndReturn(func(s *transport.ServerStream) error {
+		capturedCtx = s.Context()
+		return nil
+	})
+
+	// Call HandleStream
+	err = interceptor.HandleStream(serverStream, handler)
+	require.NoError(t, err)
+
+	// Verify the context was enriched with tracing span
+	require.NotNil(t, capturedCtx, "Expected context to be captured")
+
+	// The key assertion: verify that the context contains the span
+	span := opentracing.SpanFromContext(capturedCtx)
+	require.NotNil(t, span, "Expected span to be present in the context - this is critical for baggage propagation")
+
+	// Verify the context is different from the base context (it was enriched)
+	assert.NotEqual(t, baseCtx, capturedCtx, "Expected context to be enriched with span, not the original base context")
 }
