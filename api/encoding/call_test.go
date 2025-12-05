@@ -89,6 +89,8 @@ func TestReadFromRequest(t *testing.T) {
 	assert.Equal(t, "Bar", call.OriginalHeader("Foo"))
 	assert.Equal(t, map[string]string{"Foo": "Bar", "foo": "bar"}, call.OriginalHeaders())
 	assert.Equal(t, call.OriginalHeaders(), maps.Collect(call.OriginalHeadersAll()), "OriginalHeadersAll should match OriginalHeaders")
+	assert.Equal(t, map[string]string{"foo": "bar"}, call.Headers())
+	assert.Equal(t, call.Headers(), maps.Collect(call.HeadersAll()), "HeadersAll should match Headers")
 
 	assert.Equal(t, "cp", call.CallerProcedure())
 	assert.Len(t, call.HeaderNames(), 1)

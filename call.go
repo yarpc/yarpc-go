@@ -186,6 +186,9 @@ func (c *Call) CallerProcedure() string {
 	return (*encoding.Call)(c).CallerProcedure()
 }
 
+// Headers returns a copy of the canonicalized request headers provided with the request.
+func (c *Call) Headers() map[string]string { return (*encoding.Call)(c).Headers() }
+
 // StreamOption defines options that may be passed in at streaming function
 // call sites.
 //
