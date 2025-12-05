@@ -26,7 +26,20 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc/api/transport"
+	"google.golang.org/grpc/mem"
 )
+
+type poolWrapper struct {
+	cleanup func()
+}
+
+func (p *poolWrapper) Get(length int) *[]byte { return nil }
+
+func (p *poolWrapper) Put(buf *[]byte) {
+	if p.cleanup != nil {
+		p.cleanup()
+	}
+}
 
 // readFromStream reads a proto.Message from a stream.
 func readFromStream(
@@ -56,24 +69,31 @@ func writeToStream(ctx context.Context, stream transport.Stream, message proto.M
 	if err != nil {
 		return err
 	}
+
+	buffer := mem.NewBuffer(&messageData, &poolWrapper{cleanup: cleanup})
+
 	return stream.SendMessage(
 		ctx,
 		&transport.StreamMessage{
-			Body: readCloser{
+			Body: &bufferReadCloser{
+				buffer: buffer,
 				Reader: bytes.NewReader(messageData),
-				closer: cleanup,
 			},
 			BodySize: len(messageData),
 		},
 	)
 }
 
-type readCloser struct {
+type bufferReadCloser struct {
+	buffer mem.Buffer
 	*bytes.Reader
-	closer func()
 }
 
-func (r readCloser) Close() error {
-	r.closer()
+func (b *bufferReadCloser) Buffer() mem.Buffer {
+	return b.buffer
+}
+
+func (b *bufferReadCloser) Close() error {
+	b.buffer.Free()
 	return nil
 }
