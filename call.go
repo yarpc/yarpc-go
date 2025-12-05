@@ -22,6 +22,7 @@ package yarpc
 
 import (
 	"context"
+	"iter"
 
 	"go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
@@ -164,6 +165,41 @@ func (c *Call) OriginalHeaders() map[string]string {
 // provided with this request.
 func (c *Call) HeaderNames() []string {
 	return (*encoding.Call)(c).HeaderNames()
+}
+
+// OriginalHeadersAll returns an iterator over the original (non-canonicalized)
+// header key-value pairs provided with the request.
+// The header keys are not canonicalized and suitable for case-sensitive transport like TChannel.
+// Deprecated: Use [HeadersAll] / [HeaderNamesAll] instead.
+func (c *Call) OriginalHeadersAll() iter.Seq2[string, string] {
+	return (*encoding.Call)(c).OriginalHeadersAll()
+}
+
+// HeaderNamesAll returns an iterator over the names of user defined headers
+// provided with this request.
+// Use this instead of [HeaderNames] for better performance.
+// Use [HeadersAll] if you need both header names and values.
+func (c *Call) HeaderNamesAll() iter.Seq[string] {
+	return (*encoding.Call)(c).HeaderNamesAll()
+}
+
+// HeadersAll returns an iterator over all header key-value pairs.
+// Keys are normalized using CanonicalizeHeaderKey.
+// Use this instead of [HeaderNames] + [Header] when you need both keys and values.
+func (c *Call) HeadersAll() iter.Seq2[string, string] {
+	return (*encoding.Call)(c).HeadersAll()
+}
+
+// HeadersLen returns the number of user defined headers provided with this request.
+// Useful for pre-allocating slices.
+func (c *Call) HeadersLen() int {
+	return (*encoding.Call)(c).HeadersLen()
+}
+
+// OriginalHeadersLen returns the number of original (non-canonicalized) headers provided with this request.
+// Useful for pre-allocating slices.
+func (c *Call) OriginalHeadersLen() int {
+	return (*encoding.Call)(c).OriginalHeadersLen()
 }
 
 // ShardKey returns the shard key for this request.
