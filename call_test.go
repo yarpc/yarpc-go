@@ -79,6 +79,7 @@ func TestCallFromContext(t *testing.T) {
 	assert.Equal(t, "bar", call.OriginalHeader("foo"))
 	assert.Equal(t, "Bar", call.OriginalHeader("Foo"))
 	assert.Equal(t, map[string]string{"Foo": "Bar", "foo": "bar"}, call.OriginalHeaders())
+	assert.Equal(t, map[string]string{"foo": "bar"}, call.Headers()) // Headers are case insensitive
 	assert.Equal(t, []string{"foo"}, call.HeaderNames())
 	assert.Equal(t, []string{"foo"}, slices.Collect(call.HeaderNamesAll()))
 	assert.Equal(t, map[string]string{"foo": "bar"}, maps.Collect(call.HeadersAll()))
