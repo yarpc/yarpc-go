@@ -111,6 +111,21 @@ func (c *Call) Header(k string) string {
 	return ""
 }
 
+// Headers returns a copy of the canonicalized request headers provided with the request.
+// Deprecated: Use [HeadersAll] instead.
+func (c *Call) Headers() map[string]string {
+	if c == nil {
+		return nil
+	}
+
+	items := c.md.Headers().Items()
+	h := make(map[string]string, len(items))
+	for k, v := range items {
+		h[k] = v
+	}
+	return h
+}
+
 // OriginalHeader returns the value of the given request header provided with the
 // request. The getter is suitable for transport like TChannel that hides
 // certain headers by default eg: the ones starting with $
