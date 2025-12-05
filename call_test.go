@@ -22,6 +22,8 @@ package yarpc_test
 
 import (
 	"context"
+	"maps"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -78,6 +80,11 @@ func TestCallFromContext(t *testing.T) {
 	assert.Equal(t, "Bar", call.OriginalHeader("Foo"))
 	assert.Equal(t, map[string]string{"Foo": "Bar", "foo": "bar"}, call.OriginalHeaders())
 	assert.Equal(t, []string{"foo"}, call.HeaderNames())
+	assert.Equal(t, []string{"foo"}, slices.Collect(call.HeaderNamesAll()))
+	assert.Equal(t, map[string]string{"foo": "bar"}, maps.Collect(call.HeadersAll()))
+	assert.Equal(t, map[string]string{"Foo": "Bar", "foo": "bar"}, maps.Collect(call.OriginalHeadersAll()))
+	assert.Equal(t, 1, call.HeadersLen())
+	assert.Equal(t, 2, call.OriginalHeadersLen())
 	assert.Equal(t, "one", call.ShardKey())
 	assert.Equal(t, "two", call.RoutingKey())
 	assert.Equal(t, "three", call.RoutingDelegate())
