@@ -480,6 +480,13 @@ func TestInboundWithTimeouts(t *testing.T) {
 
 		require.Equal(t, 5*time.Second, inbound.server.ReadTimeout)
 	})
+
+	t.Run("IdleTimeout", func(t *testing.T) {
+		testTransport := NewTransport()
+		inbound := testTransport.NewInbound("127.0.0.1:8888", IdleTimeout(60*time.Second))
+
+		require.Equal(t, 60*time.Second, inbound.server.IdleTimeout)
+	})
 }
 
 func httpGet(t *testing.T, url string) (*http.Response, string, error) {

@@ -157,6 +157,13 @@ func WriteTimeout(timeout time.Duration) InboundOption {
 	}
 }
 
+// IdleTimeout returns an InboundOption that sets the http.Server IdleTimeout
+func IdleTimeout(timeout time.Duration) InboundOption {
+	return func(i *Inbound) {
+		i.server.IdleTimeout = timeout
+	}
+}
+
 // NewInbound builds a new HTTP inbound that listens on the given address and
 // sharing this transport.
 func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
