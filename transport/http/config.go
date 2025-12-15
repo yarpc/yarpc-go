@@ -167,6 +167,7 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 //	       readHeaderTimeout: 5s
 //	       readTimeout: 10s
 //	       writeTimeout: 10s
+//	       idleTimeout: 60s
 type InboundConfig struct {
 	// Address to listen on. This field is required.
 	Address string `config:"address,interpolate"`
@@ -179,6 +180,8 @@ type InboundConfig struct {
 	ReadTimeout *time.Duration `config:"readTimeout"`
 	// WriteTimeout value set on the http.Server
 	WriteTimeout *time.Duration `config:"writeTimeout"`
+	// IdleTimeout value set on the http.Server
+	IdleTimeout *time.Duration `config:"idleTimeout"`
 	// The maximum amount of time to wait for the inbound to shutdown.
 	ShutdownTimeout *time.Duration `config:"shutdownTimeout"`
 	// TLS configuration of the inbound.
@@ -232,6 +235,13 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 			return nil, fmt.Errorf("writeTimeout must not be negative, got: %q", ic.WriteTimeout)
 		}
 		inboundOptions = append(inboundOptions, WriteTimeout(*ic.WriteTimeout))
+	}
+
+	if ic.IdleTimeout != nil {
+		if *ic.IdleTimeout < 0 {
+			return nil, fmt.Errorf("idleTimeout must not be negative, got: %q", ic.IdleTimeout)
+		}
+		inboundOptions = append(inboundOptions, IdleTimeout(*ic.IdleTimeout))
 	}
 
 	inboundOptions = append(inboundOptions, DisableHTTP2(ic.DisableHTTP2))

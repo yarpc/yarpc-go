@@ -85,6 +85,7 @@ func TestTransportSpec(t *testing.T) {
 		ReadHeaderTimeout time.Duration
 		ReadTimeout       time.Duration
 		WriteTimeout      time.Duration
+		IdleTimeout       time.Duration
 	}
 
 	type inboundTest struct {
@@ -278,6 +279,17 @@ func TestTransportSpec(t *testing.T) {
 			cfg:         attrs{"address": ":8080", "readTimeout": "1s", "writeTimeout": "10s"},
 			opts:        []Option{},
 			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, ReadTimeout: time.Second, WriteTimeout: 10 * time.Second},
+		},
+		{
+			desc:        "idleTimeout",
+			cfg:         attrs{"address": ":8080", "idleTimeout": "60s"},
+			opts:        []Option{},
+			wantInbound: &wantInbound{Address: ":8080", ShutdownTimeout: defaultShutdownTimeout, IdleTimeout: 60 * time.Second},
+		},
+		{
+			desc:       "idleTimeout err",
+			cfg:        attrs{"address": ":8080", "idleTimeout": "-1s"},
+			wantErrors: []string{`idleTimeout must not be negative, got: "-1s"`},
 		},
 	}
 
@@ -624,6 +636,7 @@ func TestTransportSpec(t *testing.T) {
 				assert.Equal(t, want.ReadHeaderTimeout, ib.server.ReadHeaderTimeout, "ReadHeaderTimeout should match")
 				assert.Equal(t, want.WriteTimeout, ib.server.WriteTimeout, "WriteTimeout should match")
 				assert.Equal(t, want.ReadTimeout, ib.server.ReadTimeout, "ReadTimeout should match")
+				assert.Equal(t, want.IdleTimeout, ib.server.IdleTimeout, "IdleTimeout should match")
 			}
 		}
 
