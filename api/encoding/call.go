@@ -25,6 +25,7 @@ import (
 	"iter"
 	"sort"
 
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/inboundcall"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -33,7 +34,10 @@ import (
 type keyValuePair struct{ k, v string }
 
 // Call provides information about the current request inside handlers.
-type Call struct{ md inboundcall.Metadata }
+type Call struct {
+	md        inboundcall.Metadata
+	callMeter *metrics.Scope
+}
 
 // CallFromContext retrieves information about the current incoming request
 // from the given context. Returns nil if the context is not a valid request
@@ -41,8 +45,23 @@ type Call struct{ md inboundcall.Metadata }
 //
 // The object is valid only as long as the request is ongoing.
 func CallFromContext(ctx context.Context) *Call {
-	if md, ok := inboundcall.GetMetadata(ctx); ok {
-		return &Call{md}
+	if md, ok := inboundcall.GetMetadata(ctx); ok || md != nil {
+		meter := metrics.New().Scope().Tagged(
+			metrics.Tags{
+				"component":        "yarpc",
+				"service":          md.Service(),
+				"source":           md.Caller(),
+				"dest":             md.Service(),
+				"transport":        md.Transport(),
+				"encoding":         string(md.Encoding()),
+				"procedure":        md.Procedure(),
+				"caller_procedure": md.CallerProcedure(),
+			})
+
+		return &Call{
+			md:        md,
+			callMeter: meter,
+		}
 	}
 	return nil
 }
@@ -135,6 +154,12 @@ func (c *Call) OriginalHeader(k string) string {
 	}
 
 	if v, ok := c.md.Headers().OriginalItems()[k]; ok {
+		c.bumpCounter(metrics.Spec{
+			Name: "original_header_usage",
+			ConstTags: map[string]string{
+				"key": k,
+			},
+		})
 		return v
 	}
 
@@ -152,6 +177,12 @@ func (c *Call) OriginalHeaders() map[string]string {
 	items := c.md.Headers().OriginalItems()
 	h := make(map[string]string, len(items))
 	for k, v := range items {
+		c.bumpCounter(metrics.Spec{
+			Name: "original_headers_usage",
+			ConstTags: map[string]string{
+				"key": k,
+			},
+		})
 		h[k] = v
 	}
 	return h
@@ -272,4 +303,10 @@ func (c *Call) CallerProcedure() string {
 		return ""
 	}
 	return c.md.CallerProcedure()
+}
+
+func (c *Call) bumpCounter(spec metrics.Spec) {
+	if counter, err := c.callMeter.Counter(spec); err == nil {
+		counter.Inc()
+	}
 }
