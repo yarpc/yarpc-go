@@ -156,6 +156,7 @@ func (c *Call) OriginalHeader(k string) string {
 	if v, ok := c.md.Headers().OriginalItems()[k]; ok {
 		c.bumpCounter(metrics.Spec{
 			Name: "original_header_usage",
+			Help: "Counts number of times OriginalHeader is used",
 			ConstTags: map[string]string{
 				"key": k,
 			},
@@ -179,6 +180,7 @@ func (c *Call) OriginalHeaders() map[string]string {
 	for k, v := range items {
 		c.bumpCounter(metrics.Spec{
 			Name: "original_headers_usage",
+			Help: "Counts number of times OriginalHeaders is used",
 			ConstTags: map[string]string{
 				"key": k,
 			},
