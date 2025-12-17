@@ -136,6 +136,13 @@ func DisableHTTP2(flag bool) InboundOption {
 	}
 }
 
+// EnableOverrideOriginalItemWithCanonicalizedKey returns an InboundOption that enables overrideOriginalItemWithCanonicalizedKey
+func EnableOverrideOriginalItemWithCanonicalizedKey() InboundOption {
+	return func(i *Inbound) {
+		i.overrideOriginalItemWithCanonicalizedKey = true
+	}
+}
+
 // ReadHeaderTimeout returns an InboundOption that sets the http.Server ReadHeaderTimeout
 func ReadHeaderTimeout(timeout time.Duration) InboundOption {
 	return func(i *Inbound) {
@@ -212,7 +219,8 @@ type Inbound struct {
 	tlsConfig *tls.Config
 	tlsMode   yarpctls.Mode
 
-	disableHTTP2 bool
+	disableHTTP2                             bool
+	overrideOriginalItemWithCanonicalizedKey bool
 }
 
 // Tracer configures a tracer on this inbound.
@@ -250,12 +258,13 @@ func (i *Inbound) start() error {
 	}
 
 	var httpHandler http.Handler = handler{
-		router:            i.router,
-		tracer:            i.tracer,
-		transport:         i.transport,
-		grabHeaders:       i.grabHeaders,
-		bothResponseError: i.bothResponseError,
-		logger:            i.logger,
+		router:                                   i.router,
+		tracer:                                   i.tracer,
+		transport:                                i.transport,
+		grabHeaders:                              i.grabHeaders,
+		bothResponseError:                        i.bothResponseError,
+		logger:                                   i.logger,
+		overrideOriginalItemWithCanonicalizedKey: i.overrideOriginalItemWithCanonicalizedKey,
 	}
 
 	// reverse iterating because we want the last from options to wrap the

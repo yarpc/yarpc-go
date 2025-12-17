@@ -43,6 +43,8 @@ type Headers struct {
 	items map[string]string
 	// original non-canonical headers, foo-bar will be treated as different value than Foo-bar
 	originalItems map[string]string
+	// overrideOriginalItemWithCanonicalizedKey indicates whether to override
+	overrideOriginalItemWithCanonicalizedKey bool
 }
 
 // NewHeaders builds a new Headers object.
@@ -74,8 +76,13 @@ func (h Headers) With(k, v string) Headers {
 		h.items = make(map[string]string)
 		h.originalItems = make(map[string]string)
 	}
-	h.items[CanonicalizeHeaderKey(k)] = v
-	h.originalItems[k] = v
+	canonicalizedKey := CanonicalizeHeaderKey(k)
+	h.items[canonicalizedKey] = v
+	if h.overrideOriginalItemWithCanonicalizedKey {
+		h.originalItems[canonicalizedKey] = v
+	} else {
+		h.originalItems[k] = v
+	}
 	return h
 }
 
@@ -141,6 +148,11 @@ func (h Headers) OriginalItemsAll() iter.Seq2[string, string] {
 // This may differ from Len() if headers with different casing were added.
 func (h Headers) OriginalItemsLen() int {
 	return len(h.originalItems)
+}
+
+func (h Headers) EnableOverrideOriginalItemsWithCanonicalizedKeys() Headers {
+	h.overrideOriginalItemWithCanonicalizedKey = true
+	return h
 }
 
 // HeadersFromMap builds a new Headers object from the given map of header
