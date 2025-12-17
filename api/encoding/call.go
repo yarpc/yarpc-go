@@ -306,7 +306,10 @@ func (c *Call) CallerProcedure() string {
 }
 
 func (c *Call) bumpCounter(spec metrics.Spec) {
-	if counter, err := c.callMeter.Counter(spec); err == nil {
+	counter, err := c.callMeter.Counter(spec)
+	if err != nil {
+		println("error creating counter:", err.Error())
+	} else {
 		counter.Inc()
 	}
 }
