@@ -49,12 +49,13 @@ func popHeader(h http.Header, n string) string {
 
 // handler adapts a transport.Handler into a handler for net/http.
 type handler struct {
-	router            transport.Router
-	tracer            opentracing.Tracer
-	grabHeaders       map[string]struct{}
-	bothResponseError bool
-	logger            *zap.Logger
-	transport         *Transport
+	router                                   transport.Router
+	tracer                                   opentracing.Tracer
+	grabHeaders                              map[string]struct{}
+	bothResponseError                        bool
+	logger                                   *zap.Logger
+	transport                                *Transport
+	overrideOriginalItemWithCanonicalizedKey bool
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -110,6 +111,10 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		transportName = TransportHTTP2Name
 	}
 
+	transportHeader := transport.NewHeaders()
+	if h.overrideOriginalItemWithCanonicalizedKey {
+		transportHeader = transportHeader.EnableOverrideOriginalItemsWithCanonicalizedKeys()
+	}
 	treq := &transport.Request{
 		Caller:          popHeader(req.Header, CallerHeader),
 		Service:         service,
@@ -120,7 +125,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		RoutingKey:      popHeader(req.Header, RoutingKeyHeader),
 		RoutingDelegate: popHeader(req.Header, RoutingDelegateHeader),
 		CallerProcedure: popHeader(req.Header, CallerProcedureHeader),
-		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}),
+		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, transportHeader),
 		Body:            req.Body,
 		BodySize:        int(req.ContentLength),
 	}
