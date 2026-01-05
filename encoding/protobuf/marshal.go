@@ -85,15 +85,21 @@ func marshal(encoding transport.Encoding, message proto.Message, c *codec) ([]by
 	}
 	// For JSON encoding with custom AnyResolver, use the provided codec
 	if encoding == JSONEncoding && c != nil {
-		buf := bufferpool.Get()
-		cleanup := func() { bufferpool.Put(buf) }
-		if err := c.jsonMarshaler.Marshal(buf, message); err != nil {
-			cleanup()
-			return nil, func() {}, err
-		}
-		return buf.Bytes(), cleanup, nil
+		return marshalJSON(message, c)
 	}
 	return customCodec.Marshal(message)
+}
+
+// marshalJSON handles JSON encoding with a custom jsonpb.AnyResolver to properly
+// serialize google.protobuf.Any fields by resolving type URLs to concrete Go types.
+func marshalJSON(message proto.Message, c *codec) ([]byte, func(), error) {
+	buf := bufferpool.Get()
+	cleanup := func() { bufferpool.Put(buf) }
+	if err := c.jsonMarshaler.Marshal(buf, message); err != nil {
+		cleanup()
+		return nil, func() {}, err
+	}
+	return buf.Bytes(), cleanup, nil
 }
 
 func getBuffer() *proto.Buffer {
