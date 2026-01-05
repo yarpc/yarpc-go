@@ -221,15 +221,6 @@ func encodeHeaders(hs map[string]string) []byte {
 	return out
 }
 
-func headerMap(hs transport.Headers, headerCase headerCase) map[string]string {
-	switch headerCase {
-	case originalHeaderCase:
-		return hs.OriginalItems()
-	default:
-		return hs.Items()
-	}
-}
-
 func deleteReservedHeaders(headers transport.Headers) {
 	for headerKey := range _reservedHeaderKeys {
 		headers.Del(headerKey)

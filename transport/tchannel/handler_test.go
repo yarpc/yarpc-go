@@ -57,7 +57,7 @@ func TestHandlerErrors(t *testing.T) {
 		format            tchannel.Format
 		headers           []byte
 		wantHeaders       map[string]string
-		newResponseWriter func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
+		newResponseWriter func(inboundCallResponse, tchannel.Format) responseWriter
 		recorder          recorder
 		wantLogLevel      zapcore.Level
 		wantLogMessage    string
@@ -182,7 +182,7 @@ func TestHandlerFailures(t *testing.T) {
 		sendCall          *fakeInboundCall
 		expectCall        func(*transporttest.MockUnaryHandler)
 		wantStatus        tchannel.SystemErrCode // expected status
-		newResponseWriter func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
+		newResponseWriter func(inboundCallResponse, tchannel.Format) responseWriter
 		recorder          recorder
 		wantLogLevel      zapcore.Level
 		wantLogMessage    string
@@ -469,7 +469,6 @@ func TestResponseWriter(t *testing.T) {
 		arg2             map[string]string // use map since ordering isn't guaranteed
 		arg3             []byte
 		applicationError bool
-		headerCase       headerCase
 	}{
 		{
 			name:   "raw lowercase headers",
@@ -484,21 +483,6 @@ func TestResponseWriter(t *testing.T) {
 			},
 			arg2: map[string]string{"foo": "bar"},
 			arg3: []byte("hello world"),
-		},
-		{
-			name:   "raw mixed-case headers",
-			format: tchannel.Raw,
-			apply: func(w responseWriter) {
-				headers := transport.HeadersFromMap(map[string]string{"FoO": "bAr"})
-				w.AddHeaders(headers)
-				_, err := w.Write([]byte("hello "))
-				require.NoError(t, err)
-				_, err = w.Write([]byte("world"))
-				require.NoError(t, err)
-			},
-			arg2:       map[string]string{"FoO": "bAr"},
-			arg3:       []byte("hello world"),
-			headerCase: originalHeaderCase,
 		},
 		{
 			name:   "raw multiple writes",
@@ -524,20 +508,6 @@ func TestResponseWriter(t *testing.T) {
 			},
 			arg2: map[string]string{"foo": "bar"},
 			arg3: []byte("{}"),
-		},
-		{
-			name:   "json mixed-case headers",
-			format: tchannel.JSON,
-			apply: func(w responseWriter) {
-				headers := transport.HeadersFromMap(map[string]string{"FoO": "bAr"})
-				w.AddHeaders(headers)
-
-				_, err := w.Write([]byte("{}"))
-				require.NoError(t, err)
-			},
-			arg2:       map[string]string{"FoO": "bAr"},
-			arg3:       []byte("{}"),
-			headerCase: originalHeaderCase,
 		},
 		{
 			name:   "json empty",
@@ -581,7 +551,7 @@ func TestResponseWriter(t *testing.T) {
 			resp := newResponseRecorder()
 			call.resp = resp
 
-			w := newHandlerWriter(call.Response(), call.Format(), tt.headerCase)
+			w := newHandlerWriter(call.Response(), call.Format())
 			tt.apply(w)
 			assert.NoError(t, w.Close())
 
@@ -624,7 +594,7 @@ func TestResponseWriterFailure(t *testing.T) {
 		resp := newResponseRecorder()
 		tt.setupResp(resp)
 
-		w := newHandlerWriter(resp, tchannel.Raw, canonicalizedHeaderCase)
+		w := newHandlerWriter(resp, tchannel.Raw)
 		_, err := w.Write([]byte("foo"))
 		assert.NoError(t, err)
 		_, err = w.Write([]byte("bar"))
@@ -639,7 +609,7 @@ func TestResponseWriterFailure(t *testing.T) {
 
 func TestResponseWriterEmptyBodyHeaders(t *testing.T) {
 	res := newResponseRecorder()
-	w := newHandlerWriter(res, tchannel.Raw, canonicalizedHeaderCase)
+	w := newHandlerWriter(res, tchannel.Raw)
 
 	w.AddHeaders(transport.NewHeaders().With("foo", "bar"))
 	require.NoError(t, w.Close())
@@ -810,8 +780,7 @@ func TestTruncatedHeader(t *testing.T) {
 func TestRpcServiceHeader(t *testing.T) {
 	hw := &handlerWriter{}
 	h := handler{
-		headerCase: canonicalizedHeaderCase,
-		newResponseWriter: func(inboundCallResponse, tchannel.Format, headerCase) responseWriter {
+		newResponseWriter: func(inboundCallResponse, tchannel.Format) responseWriter {
 			return hw
 		},
 		unaryInboundInterceptor: middleware.NopUnaryInbound,
