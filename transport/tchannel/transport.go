@@ -45,13 +45,6 @@ import (
 	"go.uber.org/zap"
 )
 
-type headerCase int
-
-const (
-	canonicalizedHeaderCase headerCase = iota
-	originalHeaderCase
-)
-
 // Transport is a TChannel transport suitable for use with YARPC's peer
 // selection system.
 // The transport implements peer.Transport so multiple peer.List
@@ -71,12 +64,11 @@ type Transport struct {
 	addr              string
 	listener          net.Listener
 	dialer            func(ctx context.Context, network, hostPort string) (net.Conn, error)
-	newResponseWriter func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
+	newResponseWriter func(inboundCallResponse, tchannel.Format) responseWriter
 
 	connTimeout         time.Duration
 	connectorsGroup     sync.WaitGroup
 	connBackoffStrategy backoffapi.Strategy
-	headerCase          headerCase
 
 	peers map[string]*tchannelPeer
 
@@ -124,10 +116,6 @@ func (o transportOptions) newTransport() *Transport {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
-	headerCase := canonicalizedHeaderCase
-	if o.originalHeaders {
-		headerCase = originalHeaderCase
-	}
 
 	tracer := o.tracer
 	if o.tracingInterceptorEnabled {
@@ -152,7 +140,6 @@ func (o transportOptions) newTransport() *Transport {
 		tracer:                         tracer,
 		logger:                         logger,
 		meter:                          o.meter,
-		headerCase:                     headerCase,
 		newResponseWriter:              newHandlerWriter,
 		nativeTChannelMethods:          o.nativeTChannelMethods,
 		excludeServiceHeaderInResponse: o.excludeServiceHeaderInResponse,
@@ -248,7 +235,6 @@ func (t *Transport) start() error {
 		Handler: handler{
 			router:                         t.router,
 			tracer:                         t.tracer,
-			headerCase:                     t.headerCase,
 			logger:                         t.logger,
 			newResponseWriter:              t.newResponseWriter,
 			excludeServiceHeaderInResponse: t.excludeServiceHeaderInResponse,

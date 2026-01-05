@@ -129,7 +129,7 @@ type ChannelTransport struct {
 	logger                   *zap.Logger
 	router                   transport.Router
 	originalHeaders          bool
-	newResponseWriter        func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
+	newResponseWriter        func(inboundCallResponse, tchannel.Format) responseWriter
 	unaryInboundInterceptor  interceptor.UnaryInbound
 	unaryOutboundInterceptor []interceptor.UnaryOutbound
 }

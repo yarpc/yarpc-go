@@ -173,7 +173,7 @@ func (fr *faultyResponseRecorder) SendSystemError(err error) error {
 // inside tchannel.Handle.
 type faultyHandlerWriter struct{ handlerWriter }
 
-func newFaultyHandlerWriter(response inboundCallResponse, format tchannel.Format, headerCase headerCase) responseWriter {
+func newFaultyHandlerWriter(response inboundCallResponse, format tchannel.Format) responseWriter {
 	return &faultyHandlerWriter{}
 }
 

@@ -130,11 +130,11 @@ func (o *Outbound) DirectCall(ctx context.Context, req *transport.Request) (*tra
 
 // Call sends an RPC to this specific peer.
 func (p *tchannelPeer) Call(ctx context.Context, req *transport.Request, reuseBuffer bool) (*transport.Response, error) {
-	return callWithPeer(ctx, req, p.getPeer(), p.transport.headerCase, reuseBuffer)
+	return callWithPeer(ctx, req, p.getPeer(), reuseBuffer)
 }
 
 // callWithPeer sends a request with the chosen peer.
-func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Peer, headerCase headerCase, reuseBuffer bool) (*transport.Response, error) {
+func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Peer, reuseBuffer bool) (*transport.Response, error) {
 	// NB(abg): Under the current API, the local service's name is required
 	// twice: once when constructing the TChannel and then again when
 	// constructing the RPC.
@@ -166,7 +166,7 @@ func callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Pe
 	if err != nil {
 		return nil, err
 	}
-	reqHeaders := headerMap(req.Headers, headerCase)
+	reqHeaders := req.Headers.Items()
 
 	// for tchannel, callerProcedure is added to application headers.
 	reqHeaders = requestCallerProcedureToHeader(req, reqHeaders)

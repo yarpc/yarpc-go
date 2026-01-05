@@ -103,9 +103,8 @@ type handler struct {
 	existing                       map[string]tchannel.Handler
 	router                         transport.Router
 	tracer                         opentracing.Tracer
-	headerCase                     headerCase
 	logger                         *zap.Logger
-	newResponseWriter              func(inboundCallResponse, tchannel.Format, headerCase) responseWriter
+	newResponseWriter              func(inboundCallResponse, tchannel.Format) responseWriter
 	excludeServiceHeaderInResponse bool
 	unaryInboundInterceptor        interceptor.UnaryInbound
 }
@@ -116,7 +115,7 @@ func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
 
 func (h handler) handle(ctx context.Context, call inboundCall) {
 	// you MUST close the responseWriter no matter what unless you have a tchannel.SystemError
-	responseWriter := h.newResponseWriter(call.Response(), call.Format(), h.headerCase)
+	responseWriter := h.newResponseWriter(call.Response(), call.Format())
 	defer responseWriter.ReleaseBuffer()
 
 	if !h.excludeServiceHeaderInResponse {
@@ -264,15 +263,13 @@ type handlerWriter struct {
 	response         inboundCallResponse
 	applicationError bool
 	appErrorMeta     *transport.ApplicationErrorMeta
-	headerCase       headerCase
 	responseSize     int
 }
 
-func newHandlerWriter(response inboundCallResponse, format tchannel.Format, headerCase headerCase) responseWriter {
+func newHandlerWriter(response inboundCallResponse, format tchannel.Format) responseWriter {
 	return &handlerWriter{
-		response:   response,
-		format:     format,
-		headerCase: headerCase,
+		response: response,
+		format:   format,
 	}
 }
 
@@ -359,7 +356,7 @@ func (hw *handlerWriter) Close() error {
 		}
 	}
 
-	headers := headerMap(hw.headers, hw.headerCase)
+	headers := hw.headers.Items()
 	retErr = appendError(retErr, writeHeaders(hw.format, headers, nil, hw.response.Arg2Writer))
 
 	// Arg3Writer must be opened and closed regardless of if there is data
