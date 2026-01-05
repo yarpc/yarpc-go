@@ -32,6 +32,9 @@ import (
 func TestUnhandledEncoding(t *testing.T) {
 	assert.Equal(t, yarpcerrors.CodeInternal,
 		yarpcerrors.FromError(unmarshal(transport.Encoding("foo"), strings.NewReader("foo"), nil, newCodec(nil))).Code())
-	_, _, err := marshal(transport.Encoding("foo"), nil, newCodec(nil))
+	_, cleanup, err := marshal(transport.Encoding("foo"), nil, newCodec(nil))
 	assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.FromError(err).Code())
+	// Ensure cleanup is never nil to avoid nil pointer dereference
+	assert.NotNil(t, cleanup, "cleanup function should never be nil")
+	assert.NotPanics(t, func() { cleanup() }, "cleanup should be safe to call even on error")
 }
