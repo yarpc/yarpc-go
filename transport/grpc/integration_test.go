@@ -22,7 +22,6 @@ package grpc
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"errors"
 	"io"
@@ -32,6 +31,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/klauspost/compress/gzip"
 
 	"github.com/gogo/protobuf/proto"
 	gogostatus "github.com/gogo/status"
@@ -358,12 +359,12 @@ func TestGRPCCompression(t *testing.T) {
 			msg:        "ok, gzip compression",
 			compressor: _gzipCompressor,
 			wantMetrics: []metric{
-				{82, tagsCompression},
-				{82, tagsDecompression},
-				{29, tagsCompression},
-				{29, tagsDecompression},
-				{75, tagsCompression},
-				{75, tagsDecompression},
+				{81, tagsCompression},
+				{81, tagsDecompression},
+				{30, tagsCompression},
+				{30, tagsDecompression},
+				{74, tagsCompression},
+				{74, tagsDecompression},
 			},
 		},
 	}

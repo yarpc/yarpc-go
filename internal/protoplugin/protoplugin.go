@@ -36,12 +36,13 @@ package protoplugin
 
 import (
 	"bytes"
-	"compress/gzip"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"strings"
 	"text/template"
+
+	"github.com/klauspost/compress/gzip"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/protoc-gen-gogo/descriptor"

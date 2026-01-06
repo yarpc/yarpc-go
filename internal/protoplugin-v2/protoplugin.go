@@ -25,12 +25,13 @@ package protopluginv2
 
 import (
 	"bytes"
-	"compress/gzip"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"strings"
 	"text/template"
+
+	"github.com/klauspost/compress/gzip"
 
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	plugin_go "github.com/golang/protobuf/protoc-gen-go/plugin"

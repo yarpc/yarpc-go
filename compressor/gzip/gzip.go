@@ -22,10 +22,11 @@
 package yarpcgzip
 
 import (
-	"compress/gzip"
 	"encoding/binary"
 	"io"
 	"sync"
+
+	"github.com/klauspost/compress/gzip"
 
 	"go.uber.org/yarpc/api/transport"
 )
