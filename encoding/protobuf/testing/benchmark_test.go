@@ -21,11 +21,13 @@
 package testing
 
 import (
+	"context"
 	"io"
 	"net"
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"runtime/debug"
 
@@ -197,5 +199,134 @@ func benchmarkIntegrationGRPC(b *testing.B, keyValueClient examplepb.KeyValueCli
 		for i := 0; i < b.N; i++ {
 			getValueGRPC(keyValueClient, contextWrapper, "foo")
 		}
+	})
+}
+
+// BenchmarkStreaming benchmarks the streaming path
+func BenchmarkStreaming(b *testing.B) {
+	keyValueYARPCServer := example.NewKeyValueYARPCServer()
+	fooYARPCServer := example.NewFooYARPCServer(transport.NewHeaders())
+
+	exampleutil.WithClients(testutils.TransportTypeGRPC, keyValueYARPCServer, fooYARPCServer, nil, func(clients *exampleutil.Clients) error {
+		const numMessages = 10
+		messageSizes := []struct {
+			name string
+			size int
+		}{
+			{"1KB", 1024},
+			{"64KB", 64 * 1024},
+			{"1MB", 1024 * 1024},
+		}
+
+		for _, msgSize := range messageSizes {
+			msg := strings.Repeat("x", msgSize.size)
+			b.Run(msgSize.name, func(b *testing.B) {
+				b.Run("ServerStream", func(b *testing.B) {
+					for i := 0; i < b.N; i++ {
+						ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+						stream, err := clients.FooYARPCClient.EchoIn(ctx, &examplepb.EchoInRequest{
+							Message:      msg,
+							NumResponses: numMessages,
+						})
+						if err != nil {
+							cancel()
+							b.Fatal(err)
+						}
+						for {
+							if _, err := stream.Recv(); err != nil {
+								if err == io.EOF {
+									break
+								}
+								cancel()
+								b.Fatal(err)
+							}
+						}
+						cancel()
+					}
+				})
+
+				b.Run("ClientStream", func(b *testing.B) {
+					for i := 0; i < b.N; i++ {
+						ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+						stream, err := clients.FooYARPCClient.EchoOut(ctx)
+						if err != nil {
+							cancel()
+							b.Fatal(err)
+						}
+						for j := 0; j < numMessages; j++ {
+							if err := stream.Send(&examplepb.EchoOutRequest{Message: msg}); err != nil {
+								cancel()
+								b.Fatal(err)
+							}
+						}
+						if _, err := stream.CloseAndRecv(); err != nil {
+							cancel()
+							b.Fatal(err)
+						}
+						cancel()
+					}
+				})
+
+				b.Run("BidiStream", func(b *testing.B) {
+					for i := 0; i < b.N; i++ {
+						ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+						stream, err := clients.FooYARPCClient.EchoBoth(ctx)
+						if err != nil {
+							cancel()
+							b.Fatal(err)
+						}
+						for j := 0; j < numMessages; j++ {
+							if err := stream.Send(&examplepb.EchoBothRequest{Message: msg, NumResponses: 1}); err != nil {
+								cancel()
+								b.Fatal(err)
+							}
+							if _, err := stream.Recv(); err != nil {
+								cancel()
+								b.Fatal(err)
+							}
+						}
+						stream.CloseSend()
+						cancel()
+					}
+				})
+
+				b.Run("BidiStreamConcurrent", func(b *testing.B) {
+					for i := 0; i < b.N; i++ {
+						ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+						stream, err := clients.FooYARPCClient.EchoBoth(ctx)
+						if err != nil {
+							cancel()
+							b.Fatal(err)
+						}
+
+						done := make(chan error, 1)
+						go func() {
+							for j := 0; j < numMessages; j++ {
+								if _, err := stream.Recv(); err != nil {
+									done <- err
+									return
+								}
+							}
+							done <- nil
+						}()
+
+						for j := 0; j < numMessages; j++ {
+							if err := stream.Send(&examplepb.EchoBothRequest{Message: msg, NumResponses: 1}); err != nil {
+								cancel()
+								b.Fatal(err)
+							}
+						}
+						stream.CloseSend()
+
+						if err := <-done; err != nil {
+							cancel()
+							b.Fatal(err)
+						}
+						cancel()
+					}
+				})
+			})
+		}
+		return nil
 	})
 }
