@@ -117,6 +117,7 @@ func TestBufferReadCloserImplementsReadCloser(t *testing.T) {
 	t.Run("Read delegates to bytes.Reader", func(t *testing.T) {
 		data := []byte("test data")
 		buffer := mem.NewBuffer(&data, &poolWrapper{cleanup: func() {}})
+		t.Cleanup(buffer.Free)
 
 		brc := &bufferReadCloser{
 			buffer: buffer,
@@ -138,6 +139,7 @@ func TestBufferReadCloserImplementsReadCloser(t *testing.T) {
 		cleanup := func() { cleanupCalled = true }
 		pool := &poolWrapper{cleanup: cleanup}
 		buffer := mem.NewBuffer(&smallData, pool)
+		t.Cleanup(buffer.Free)
 
 		brc := &bufferReadCloser{
 			buffer: buffer,
@@ -174,15 +176,4 @@ func TestBufferReadCloserImplementsReadCloser(t *testing.T) {
 		buffer.Free()
 		assert.True(t, cleanupCalled, "Cleanup should be called after gRPC releases reference via pooling")
 	})
-}
-
-type testBufferPool struct {
-	cleanup func()
-}
-
-func (p *testBufferPool) Get(length int) *[]byte { return nil }
-func (p *testBufferPool) Put(buf *[]byte) {
-	if p.cleanup != nil {
-		p.cleanup()
-	}
 }
