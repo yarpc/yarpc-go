@@ -29,7 +29,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
-	"go.uber.org/yarpc/yarpcerrors"
 )
 
 var (
@@ -40,7 +39,8 @@ var (
 	}
 )
 
-// codec is a private helper struct used to hold custom marshling behavior.
+// codec is a private helper struct used to hold custom marshaling behavior
+// for JSON encoding (specifically, the AnyResolver).
 type codec struct {
 	jsonMarshaler   *jsonpb.Marshaler
 	jsonUnmarshaler *jsonpb.Unmarshaler
@@ -53,7 +53,7 @@ func newCodec(anyResolver jsonpb.AnyResolver) *codec {
 	}
 }
 
-func unmarshal(encoding transport.Encoding, reader io.Reader, message proto.Message, codec *codec) error {
+func unmarshal(encoding transport.Encoding, reader io.Reader, message proto.Message, c *codec) error {
 	buf := bufferpool.Get()
 	defer bufferpool.Put(buf)
 	if _, err := buf.ReadFrom(reader); err != nil {
@@ -63,55 +63,41 @@ func unmarshal(encoding transport.Encoding, reader io.Reader, message proto.Mess
 	if len(body) == 0 {
 		return nil
 	}
-	return unmarshalBytes(encoding, body, message, codec)
+	return unmarshalBytes(encoding, body, message, c)
 }
 
-func unmarshalBytes(encoding transport.Encoding, body []byte, message proto.Message, codec *codec) error {
-	switch encoding {
-	case Encoding:
-		return unmarshalProto(body, message, codec)
-	case JSONEncoding:
-		return unmarshalJSON(body, message, codec)
-	default:
-		return yarpcerrors.Newf(yarpcerrors.CodeInternal, "encoding.Expect should have handled encoding %q but did not", encoding)
+func unmarshalBytes(encoding transport.Encoding, body []byte, message proto.Message, c *codec) error {
+	customCodec := getCodec(encoding)
+	if customCodec == nil {
+		return newUnrecognizedEncodingError(encoding)
 	}
-}
-
-func unmarshalProto(body []byte, message proto.Message, _ *codec) error {
-	return proto.Unmarshal(body, message)
-}
-
-func unmarshalJSON(body []byte, message proto.Message, codec *codec) error {
-	return codec.jsonUnmarshaler.Unmarshal(bytes.NewReader(body), message)
-}
-
-func marshal(encoding transport.Encoding, message proto.Message, codec *codec) ([]byte, func(), error) {
-	switch encoding {
-	case Encoding:
-		return marshalProto(message, codec)
-	case JSONEncoding:
-		return marshalJSON(message, codec)
-	default:
-		return nil, nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "encoding.Expect should have handled encoding %q but did not", encoding)
+	// For JSON encoding with custom AnyResolver, use the provided codec
+	if encoding == JSONEncoding && c != nil {
+		return c.jsonUnmarshaler.Unmarshal(bytes.NewReader(body), message)
 	}
+	return customCodec.Unmarshal(body, message)
 }
 
-func marshalProto(message proto.Message, _ *codec) ([]byte, func(), error) {
-	protoBuffer := getBuffer()
-	cleanup := func() { putBuffer(protoBuffer) }
-	if err := protoBuffer.Marshal(message); err != nil {
-		cleanup()
-		return nil, nil, err
+func marshal(encoding transport.Encoding, message proto.Message, c *codec) ([]byte, func(), error) {
+	customCodec := getCodec(encoding)
+	if customCodec == nil {
+		return nil, func() {}, newUnrecognizedEncodingError(encoding)
 	}
-	return protoBuffer.Bytes(), cleanup, nil
+	// For JSON encoding with custom AnyResolver, use the provided codec
+	if encoding == JSONEncoding && c != nil {
+		return marshalJSON(message, c)
+	}
+	return customCodec.Marshal(message)
 }
 
-func marshalJSON(message proto.Message, codec *codec) ([]byte, func(), error) {
+// marshalJSON handles JSON encoding with a custom jsonpb.AnyResolver to properly
+// serialize google.protobuf.Any fields by resolving type URLs to concrete Go types.
+func marshalJSON(message proto.Message, c *codec) ([]byte, func(), error) {
 	buf := bufferpool.Get()
 	cleanup := func() { bufferpool.Put(buf) }
-	if err := codec.jsonMarshaler.Marshal(buf, message); err != nil {
+	if err := c.jsonMarshaler.Marshal(buf, message); err != nil {
 		cleanup()
-		return nil, nil, err
+		return nil, func() {}, err
 	}
 	return buf.Bytes(), cleanup, nil
 }
