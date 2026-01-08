@@ -77,6 +77,14 @@ const (
 	// corresponds to the Request.RoutingKey attribute.
 	RoutingKeyHeader = "Rpc-Routing-Key"
 
+	// RoutingRegionHeader is required for crosszone routing to specify
+	// the region of the routing key.
+	RoutingRegionHeader = "rpc-routing-region"
+
+	// RoutingZoneHeader is required for crosszone routing to specify
+	// the zone of the routing key.
+	RoutingZoneHeader = "rpc-routing-zone"
+
 	// A service that can proxy the destined service. This corresponds to the
 	// Request.RoutingDelegate attribute.
 	RoutingDelegateHeader = "Rpc-Routing-Delegate"
