@@ -59,3 +59,108 @@ func TestCustomCodecUnmarshalCastError(t *testing.T) {
 func TestCustomCodecName(t *testing.T) {
 	assert.Equal(t, "proto", customCodec{}.Name())
 }
+
+func TestCustomCodecMarshalMemBuffer(t *testing.T) {
+	t.Run("returns BufferSlice with single buffer", func(t *testing.T) {
+		data := []byte("test data")
+		pool := &testBufferPool{putFunc: func(buf *[]byte) {}}
+
+		buffer := mem.NewBuffer(&data, pool)
+		t.Cleanup(buffer.Free)
+
+		result, err := customCodec{}.Marshal(buffer)
+		t.Cleanup(result.Free)
+
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(result), "Should return BufferSlice with 1 buffer")
+		assert.IsType(t, mem.BufferSlice{}, result, "Should return mem.BufferSlice type")
+	})
+
+	t.Run("preserves buffer content", func(t *testing.T) {
+		data := []byte("test content")
+		pool := &testBufferPool{putFunc: func(buf *[]byte) {}}
+		buffer := mem.NewBuffer(&data, pool)
+		t.Cleanup(buffer.Free)
+
+		result, err := customCodec{}.Marshal(buffer)
+		t.Cleanup(result.Free)
+
+		assert.NoError(t, err)
+
+		materialized := result.Materialize()
+		assert.Equal(t, data, materialized, "Buffer content should be preserved")
+	})
+}
+
+func TestCustomCodecMarshalMemBufferSlice(t *testing.T) {
+	t.Run("returns BufferSlice with all buffers", func(t *testing.T) {
+		data1 := []byte("test1")
+		data2 := []byte("test2")
+		pool := &testBufferPool{putFunc: func(buf *[]byte) {}}
+
+		buf1 := mem.NewBuffer(&data1, pool)
+		t.Cleanup(buf1.Free)
+
+		buf2 := mem.NewBuffer(&data2, pool)
+		t.Cleanup(buf2.Free)
+
+		bufferSlice := mem.BufferSlice{buf1, buf2}
+
+		result, err := customCodec{}.Marshal(bufferSlice)
+		t.Cleanup(result.Free)
+
+		assert.NoError(t, err)
+		assert.Equal(t, 2, len(result), "Should return BufferSlice with 2 buffers")
+	})
+
+	t.Run("preserves buffer order and content", func(t *testing.T) {
+		data1 := []byte("first")
+		data2 := []byte("second")
+		pool := &testBufferPool{putFunc: func(buf *[]byte) {}}
+
+		buf1 := mem.NewBuffer(&data1, pool)
+		t.Cleanup(buf1.Free)
+
+		buf2 := mem.NewBuffer(&data2, pool)
+		t.Cleanup(buf2.Free)
+
+		bufferSlice := mem.BufferSlice{buf1, buf2}
+
+		result, err := customCodec{}.Marshal(bufferSlice)
+		t.Cleanup(result.Free)
+
+		assert.NoError(t, err)
+
+		materialized := result.Materialize()
+		expected := append(data1, data2...)
+		assert.Equal(t, expected, materialized, "Buffer order and content should be preserved")
+	})
+}
+
+func TestCustomCodecMarshalEmptyBuffer(t *testing.T) {
+	t.Run("handles zero-length buffer", func(t *testing.T) {
+		emptyData := []byte{}
+		pool := &testBufferPool{putFunc: func(buf *[]byte) {}}
+
+		buffer := mem.NewBuffer(&emptyData, pool)
+		t.Cleanup(buffer.Free)
+
+		result, err := customCodec{}.Marshal(buffer)
+		t.Cleanup(result.Free)
+
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(result), "Should return BufferSlice with 1 buffer")
+		assert.Equal(t, 0, result.Len(), "Empty buffer should have zero length")
+	})
+}
+
+type testBufferPool struct {
+	putFunc func(buf *[]byte)
+}
+
+func (m *testBufferPool) Get(length int) *[]byte { return nil }
+func (m *testBufferPool) Put(buf *[]byte) {
+	if m.putFunc != nil {
+		m.putFunc(buf)
+	}
+}

@@ -33,6 +33,7 @@ import (
 	"go.uber.org/yarpc/internal/grpcerrorcodes"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/mem"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -40,6 +41,13 @@ var (
 	_ transport.StreamHeadersSender = (*serverStream)(nil)
 	_ transport.StreamHeadersReader = (*clientStream)(nil)
 )
+
+// BufferProvider is an optional interface that io.ReadCloser implementations
+// can implement to provide direct access to a mem.Buffer for zero-copy transmission.
+type BufferProvider interface {
+	io.ReadCloser
+	Buffer() mem.Buffer
+}
 
 type serverStream struct {
 	ctx    context.Context
@@ -64,7 +72,13 @@ func (ss *serverStream) Request() *transport.StreamRequest {
 }
 
 func (ss *serverStream) SendMessage(_ context.Context, m *transport.StreamMessage) error {
-	// TODO pool buffers for performance.
+	if bufferProvider, ok := m.Body.(BufferProvider); ok {
+		buffer := bufferProvider.Buffer()
+		err := ss.stream.SendMsg(buffer)
+		_ = m.Body.Close()
+		return toYARPCStreamError(err)
+	}
+
 	msg, err := ioutil.ReadAll(m.Body)
 	_ = m.Body.Close()
 	if err != nil {
@@ -131,8 +145,17 @@ func (cs *clientStream) SendMessage(_ context.Context, m *transport.StreamMessag
 	if cs.closed.Load() { // If the stream is closed, we should not be sending messages on it.
 		return io.EOF
 	}
-	// TODO can we make a "Bytes" interface to get direct access to the bytes
-	// (instead of resorting to ReadAll (which is not necessarily performant))
+
+	if bufferProvider, ok := m.Body.(BufferProvider); ok {
+		buffer := bufferProvider.Buffer()
+		err := cs.stream.SendMsg(buffer)
+		_ = m.Body.Close()
+		if err != nil {
+			return toYARPCStreamError(cs.closeWithErr(err))
+		}
+		return nil
+	}
+
 	msg, err := ioutil.ReadAll(m.Body)
 	_ = m.Body.Close()
 	if err != nil {

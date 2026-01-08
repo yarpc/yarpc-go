@@ -45,6 +45,12 @@ func (customCodec) Marshal(v any) (mem.BufferSlice, error) {
 	var err error
 
 	switch value := v.(type) {
+	case mem.Buffer:
+		value.Ref()
+		return mem.BufferSlice{value}, nil
+	case mem.BufferSlice:
+		value.Ref()
+		return value, nil
 	case []byte:
 		bytes, err = value, nil
 	default:
