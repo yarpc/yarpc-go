@@ -163,7 +163,7 @@ func (w *writer) Close() error {
 func (c *Compressor) Decompress(r io.Reader) (io.ReadCloser, error) {
 	if dr, got := c.decompressors.Get().(*reader); got {
 		if err := dr.reader.Reset(r); err != nil {
-			c.decompressors.Put(r)
+			c.decompressors.Put(dr)
 			return nil, err
 		}
 

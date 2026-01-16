@@ -36,6 +36,18 @@ import (
 var quote = "Now is the time for all good men to come to the aid of their country"
 var input = []byte(quote + quote + quote)
 
+// compressData compresses data using the given compressor and returns the compressed bytes.
+func compressData(tb testing.TB, compressor *yarpcgzip.Compressor, data []byte) []byte {
+	tb.Helper()
+	buf := bytes.NewBuffer(nil)
+	writer, err := compressor.Compress(buf)
+	require.NoError(tb, err)
+	_, err = writer.Write(data)
+	require.NoError(tb, err)
+	require.NoError(tb, writer.Close())
+	return buf.Bytes()
+}
+
 func TestGzip(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
 	writer, err := yarpcgzip.New().Compress(buf)
@@ -136,4 +148,44 @@ func TestDecompressedSize(t *testing.T) {
 func TestDecompressedSizeError(t *testing.T) {
 	compressor := yarpcgzip.New(yarpcgzip.Level(gzip.BestCompression))
 	assert.Equal(t, -1, compressor.DecompressedSize([]byte{}))
+}
+
+func BenchmarkDecompressPooling(b *testing.B) {
+	compressor := yarpcgzip.New()
+
+	// Pre-compress data for decompression.
+	compressedData := compressData(b, compressor, input)
+
+	// Invalid gzip data that will cause Reset to fail.
+	invalidData := []byte("this is not valid gzip data")
+
+	tests := []struct {
+		name string
+		data []byte
+	}{
+		{"HappyPath", compressedData},
+		{"ErrorPath", invalidData},
+	}
+
+	for _, tt := range tests {
+		b.Run(tt.name, func(b *testing.B) {
+			// Warm up pool with valid data.
+			r, _ := compressor.Decompress(bytes.NewReader(compressedData))
+			if r != nil {
+				io.Copy(io.Discard, r)
+				r.Close()
+			}
+
+			b.ResetTimer()
+			b.ReportAllocs()
+
+			for i := 0; i < b.N; i++ {
+				reader, err := compressor.Decompress(bytes.NewReader(tt.data))
+				if err == nil {
+					io.Copy(io.Discard, reader)
+					reader.Close()
+				}
+			}
+		})
+	}
 }
