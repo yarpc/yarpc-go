@@ -123,5 +123,6 @@ func isRoutingHeader(k string) bool {
 
 // isCrossZoneHeader returns true for headers that are used for cross-zone routing.
 func isCrossZoneHeader(k string) bool {
-	return strings.EqualFold(k, RoutingRegionHeader) || strings.EqualFold(k, RoutingZoneHeader)
+	// k comes from http.Header.Items() and is always in lowercase
+	return k == RoutingRegionHeader || k == RoutingZoneHeader
 }
