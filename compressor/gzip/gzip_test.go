@@ -22,10 +22,11 @@ package yarpcgzip_test
 
 import (
 	"bytes"
-	"compress/gzip"
 	"io"
 	"strconv"
 	"testing"
+
+	"github.com/klauspost/compress/gzip"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
