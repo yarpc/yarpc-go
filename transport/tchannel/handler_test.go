@@ -307,7 +307,7 @@ func TestHandlerFailures(t *testing.T) {
 						"serialization derp",
 					)))
 			},
-			wantStatus:        tchannel.ErrCodeBadRequest,
+			wantStatus:        tchannel.ErrCodeUnexpected,
 			newResponseWriter: newHandlerWriter,
 			recorder:          newResponseRecorder(),
 			wantLogLevel:      zapcore.ErrorLevel,
@@ -392,7 +392,7 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    nil,
 				arg3:    []byte{0x00},
 			},
-			wantStatus:        tchannel.ErrCodeBadRequest,
+			wantStatus:        tchannel.ErrCodeBadRequest, // This is an actual error for request, but we're testing problem with response writing
 			newResponseWriter: newHandlerWriter,
 			recorder:          newFaultyResponseRecorder(),
 			wantLogLevel:      zapcore.ErrorLevel,

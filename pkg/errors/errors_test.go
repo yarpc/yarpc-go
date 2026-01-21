@@ -32,15 +32,16 @@ import (
 func TestWrapHandlerError(t *testing.T) {
 	assert.Nil(t, WrapHandlerError(nil, "foo", "bar"))
 	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.FromError(WrapHandlerError(yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, ""), "foo", "bar")).Code())
+	assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.FromError(WrapHandlerError(yarpcerrors.Newf(yarpcerrors.CodeInternal, ""), "foo", "bar")).Code())
 	assert.Equal(t, yarpcerrors.CodeUnknown, yarpcerrors.FromError(WrapHandlerError(errors.New(""), "foo", "bar")).Code())
 }
 
 func TestExpectEncodings(t *testing.T) {
-	assert.Error(t, ExpectEncodings(&transport.Request{}, "foo"))
+	assertError(t, ExpectEncodings(&transport.Request{}, "foo"), yarpcerrors.CodeInvalidArgument, "request", "encoding")
 	assert.NoError(t, ExpectEncodings(&transport.Request{Encoding: "foo"}, "foo"))
 	assert.NoError(t, ExpectEncodings(&transport.Request{Encoding: "foo"}, "foo", "bar"))
-	assert.Error(t, ExpectEncodings(&transport.Request{Encoding: "foo"}, "bar"))
-	assert.Error(t, ExpectEncodings(&transport.Request{Encoding: "foo"}, "bar", "baz"))
+	assertError(t, ExpectEncodings(&transport.Request{Encoding: "foo"}, "bar"), yarpcerrors.CodeInvalidArgument, "request", "encoding")
+	assertError(t, ExpectEncodings(&transport.Request{Encoding: "foo"}, "bar", "baz"), yarpcerrors.CodeInvalidArgument, "request", "encoding")
 }
 
 func TestEncodeErrors(t *testing.T) {
@@ -51,12 +52,12 @@ func TestEncodeErrors(t *testing.T) {
 	}{
 		{
 			errorFunc:     RequestBodyEncodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerrors.CodeInternal,
 			expectedWords: []string{"request", "body", "encode"},
 		},
 		{
 			errorFunc:     RequestHeadersEncodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerrors.CodeInternal,
 			expectedWords: []string{"request", "headers", "encode"},
 		},
 		{
@@ -71,22 +72,22 @@ func TestEncodeErrors(t *testing.T) {
 		},
 		{
 			errorFunc:     ResponseBodyEncodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerrors.CodeInternal,
 			expectedWords: []string{"response", "body", "encode"},
 		},
 		{
 			errorFunc:     ResponseHeadersEncodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerrors.CodeInternal,
 			expectedWords: []string{"response", "headers", "encode"},
 		},
 		{
 			errorFunc:     ResponseBodyDecodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerrors.CodeInternal,
 			expectedWords: []string{"response", "body", "decode"},
 		},
 		{
 			errorFunc:     ResponseHeadersDecodeError,
-			expectedCode:  yarpcerrors.CodeInvalidArgument,
+			expectedCode:  yarpcerrors.CodeInternal,
 			expectedWords: []string{"response", "headers", "decode"},
 		},
 	}
