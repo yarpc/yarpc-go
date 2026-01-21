@@ -235,10 +235,12 @@ func TestGetApplicationHeaders(t *testing.T) {
 		{
 			msg: "success",
 			meta: metadata.MD{
-				"rpc-service":         []string{"foo"}, // reserved header
-				"test-header-empty":   []string{},      // no value
-				"test-header-valid-1": []string{"test-value-1"},
-				"test-Header-Valid-2": []string{"test-value-2"},
+				"rpc-service":            []string{"foo"},     // reserved header
+				"grpc-timeout":           []string{"1S"},      // grpc-reserved should be skipped
+				"$tracing$uber-trace-id": []string{"1:2:3:1"}, // invalid symbol should be skipped
+				"test-header-empty":      []string{},          // no value
+				"test-header-valid-1":    []string{"test-value-1"},
+				"test-Header-Valid-2":    []string{"test-value-2"},
 			},
 			wantHeaders: map[string]string{
 				"test-header-valid-1": "test-value-1",
