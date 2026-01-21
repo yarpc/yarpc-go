@@ -45,7 +45,7 @@ func (hm headerMapper) ToHTTPHeaders(from transport.Headers, to http.Header) htt
 		to = make(http.Header, from.Len())
 	}
 	for key, val := range from.Items() {
-		if isTracingHeader(key) {
+		if isTracingHeader(key) || isRoutingHeader(key) {
 			to.Add(key, val)
 		} else {
 			to.Add(hm.Prefix+key, val)
@@ -113,4 +113,16 @@ func isTracingHeader(k string) bool {
 		return true
 	}
 	return false
+}
+
+// isRoutingHeader returns true for headers that are used for routing.
+func isRoutingHeader(k string) bool {
+	// for now we are introducing this for crosszone headers and will be extened for other routing headers
+	return isCrossZoneHeader(k)
+}
+
+// isCrossZoneHeader returns true for headers that are used for cross-zone routing.
+func isCrossZoneHeader(k string) bool {
+	// k comes from http.Header.Items() and is always in lowercase
+	return k == RoutingRegionHeader || k == RoutingZoneHeader
 }
