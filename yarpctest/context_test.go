@@ -88,3 +88,12 @@ func TestContextWithCall(t *testing.T) {
 	}
 
 }
+
+func TestMockCallTheadSafety(t *testing.T) {
+	ctx := yarpctest.ContextWithCall(context.Background(), &yarpctest.Call{ResponseHeaders: make(map[string]string)})
+	call := yarpc.CallFromContext(ctx)
+	go func() {
+		_ = call.WriteResponseHeader("test", "test")
+	}()
+	_ = call.WriteResponseHeader("test", "test")
+}
