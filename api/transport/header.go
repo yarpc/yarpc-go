@@ -150,6 +150,8 @@ func (h Headers) OriginalItemsLen() int {
 	return len(h.originalItems)
 }
 
+// EnableOverrideOriginalItemsWithCanonicalizedKeys enables overriding original
+// items with canonicalized keys when adding headers.
 func (h Headers) EnableOverrideOriginalItemsWithCanonicalizedKeys() Headers {
 	h.overrideOriginalItemWithCanonicalizedKey = true
 	return h
