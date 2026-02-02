@@ -487,6 +487,13 @@ func TestInboundWithTimeouts(t *testing.T) {
 
 		require.Equal(t, 60*time.Second, inbound.server.IdleTimeout)
 	})
+
+	t.Run("EnableOverrideOriginalItemWithCanonicalizedKey", func(t *testing.T) {
+		testTransport := NewTransport()
+		inbound := testTransport.NewInbound("127.0.0.1:8888", EnableOverrideOriginalItemWithCanonicalizedKey())
+
+		require.True(t, inbound.overrideOriginalItemWithCanonicalizedKey)
+	})
 }
 
 func httpGet(t *testing.T, url string) (*http.Response, string, error) {

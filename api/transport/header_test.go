@@ -188,3 +188,75 @@ func TestItemsAndOriginalItems(t *testing.T) {
 		})
 	}
 }
+
+func TestEnableOverrideOriginalItemsWithCanonicalizedKeys(t *testing.T) {
+	tests := []struct {
+		msg                   string
+		enableOverride        bool
+		headers               []struct{ key, val string }
+		expectedItems         map[string]string
+		expectedOriginalItems map[string]string
+	}{
+		{
+			msg:            "without override, original keys are preserved",
+			enableOverride: false,
+			headers: []struct{ key, val string }{
+				{"Foo-Bar", "value1"},
+				{"X-Custom-Header", "value2"},
+			},
+			expectedItems: map[string]string{
+				"foo-bar":         "value1",
+				"x-custom-header": "value2",
+			},
+			expectedOriginalItems: map[string]string{
+				"Foo-Bar":         "value1",
+				"X-Custom-Header": "value2",
+			},
+		},
+		{
+			msg:            "with override, original keys are canonicalized",
+			enableOverride: true,
+			headers: []struct{ key, val string }{
+				{"Foo-Bar", "value1"},
+				{"X-Custom-Header", "value2"},
+			},
+			expectedItems: map[string]string{
+				"foo-bar":         "value1",
+				"x-custom-header": "value2",
+			},
+			expectedOriginalItems: map[string]string{
+				"foo-bar":         "value1",
+				"x-custom-header": "value2",
+			},
+		},
+		{
+			msg:            "with override, duplicate keys with different casing are merged",
+			enableOverride: true,
+			headers: []struct{ key, val string }{
+				{"Foo-Bar", "value1"},
+				{"foo-bar", "value2"},
+			},
+			expectedItems: map[string]string{
+				"foo-bar": "value2",
+			},
+			expectedOriginalItems: map[string]string{
+				"foo-bar": "value2",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			header := NewHeaders()
+			if tt.enableOverride {
+				header = header.EnableOverrideOriginalItemsWithCanonicalizedKeys()
+			}
+			for _, h := range tt.headers {
+				header = header.With(h.key, h.val)
+			}
+
+			assert.Equal(t, tt.expectedItems, header.Items())
+			assert.Equal(t, tt.expectedOriginalItems, header.OriginalItems())
+		})
+	}
+}
