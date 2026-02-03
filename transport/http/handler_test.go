@@ -529,3 +529,87 @@ func TestTruncatedHeader(t *testing.T) {
 		})
 	}
 }
+
+func TestHandlerOverrideOriginalItemWithCanonicalizedKey(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	tests := []struct {
+		name                                     string
+		overrideOriginalItemWithCanonicalizedKey bool
+		giveHeaders                              http.Header
+		wantOriginalItems                        map[string]string
+	}{
+		{
+			name:                                     "without override, original keys are preserved",
+			overrideOriginalItemWithCanonicalizedKey: false,
+			giveHeaders: http.Header{
+				"Rpc-Header-Foo-Bar": {"baz"},
+			},
+			wantOriginalItems: map[string]string{
+				"Foo-Bar": "baz",
+			},
+		},
+		{
+			name:                                     "with override, keys are canonicalized",
+			overrideOriginalItemWithCanonicalizedKey: true,
+			giveHeaders: http.Header{
+				"Rpc-Header-Foo-Bar": {"baz"},
+			},
+			wantOriginalItems: map[string]string{
+				"foo-bar": "baz",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			router := transporttest.NewMockRouter(mockCtrl)
+			rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+			spec := transport.NewUnaryHandlerSpec(rpcHandler)
+
+			router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
+				WithService("service").
+				WithProcedure("hello"),
+			).Return(spec, nil)
+
+			httpHandler := handler{
+				router:                                   router,
+				tracer:                                   &opentracing.NoopTracer{},
+				bothResponseError:                        true,
+				transport:                                NewTransport(),
+				overrideOriginalItemWithCanonicalizedKey: tt.overrideOriginalItemWithCanonicalizedKey,
+			}
+
+			rpcHandler.EXPECT().Handle(
+				gomock.Any(),
+				gomock.Any(),
+				gomock.Any(),
+			).DoAndReturn(func(_ context.Context, req *transport.Request, _ transport.ResponseWriter) error {
+				assert.Equal(t, tt.wantOriginalItems, req.Headers.OriginalItems())
+				return nil
+			})
+
+			headers := http.Header{}
+			for k, vs := range tt.giveHeaders {
+				for _, v := range vs {
+					headers.Add(k, v)
+				}
+			}
+			headers.Set(CallerHeader, "caller")
+			headers.Set(ServiceHeader, "service")
+			headers.Set(EncodingHeader, "json")
+			headers.Set(ProcedureHeader, "hello")
+			headers.Set(TTLMSHeader, "1000")
+
+			req := &http.Request{
+				Method: "POST",
+				Header: headers,
+				Body:   io.NopCloser(strings.NewReader("world")),
+			}
+			rw := httptest.NewRecorder()
+			httpHandler.ServeHTTP(rw, req)
+			assert.Equal(t, 200, rw.Code, "expected 200 status code")
+		})
+	}
+}
