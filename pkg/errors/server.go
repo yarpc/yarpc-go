@@ -101,6 +101,13 @@ func newServerEncodingError(req *transport.Request, encodings []transport.Encodi
 	return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, strings.Join(parts, " "))
 }
 
+// UnexpectedEncodingError returns a YARPC error with code
+// yarpcerrors.CodeInvalidArgument indicating that the request
+// encoding did not match any of the expected encodings.
+func UnexpectedEncodingError(req *transport.Request, want ...transport.Encoding) error {
+	return newServerEncodingError(req, want, false /*isResponse*/, false /*isHeader*/, newEncodingMismatchError(want, req.Encoding))
+}
+
 func newEncodingMismatchError(want []transport.Encoding, got transport.Encoding) error {
 	switch len(want) {
 	case 1:
