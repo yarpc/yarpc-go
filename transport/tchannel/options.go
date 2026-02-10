@@ -224,13 +224,6 @@ func ConnBackoff(s backoffapi.Strategy) TransportOption {
 	}
 }
 
-// OriginalHeaders specifies whether to forward headers without canonicalizing them
-func OriginalHeaders() TransportOption {
-	return func(options *transportOptions) {
-		options.originalHeaders = true
-	}
-}
-
 // NativeTChannelMethods interface exposes methods which returns all
 // the native TChannel methods and list of method names whose requests must
 // be handled by the provided TChannel handlers.
