@@ -33,7 +33,7 @@ import (
 // Codec is the interface for custom serialization formats.
 type Codec interface {
 	// Name returns the name of the codec (e.g., "proto", "json").
-	Name() string
+	Name() transport.Encoding
 	// Marshal serializes v into bytes. The cleanup function, if non-nil,
 	// should be called when the returned bytes are no longer needed.
 	Marshal(v any) (data []byte, cleanup func(), err error)
@@ -42,11 +42,11 @@ type Codec interface {
 }
 
 // Global codec registry - map lookup only, no locks on hot path.
-var _codecs = make(map[string]Codec)
+var _codecs = make(map[transport.Encoding]Codec)
 
 func init() {
-	_codecs[string(Encoding)] = &protoCodec{}
-	_codecs[string(JSONEncoding)] = &jsonCodec{}
+	_codecs[Encoding] = &protoCodec{}
+	_codecs[JSONEncoding] = &jsonCodec{}
 }
 
 // RegisterCodec registers a custom codec for use with YARPC.
@@ -63,8 +63,9 @@ func RegisterCodec(codec Codec) {
 
 // GetCodecForEncoding returns the codec registered for an encoding.
 // Returns nil if no codec is registered.
-func GetCodecForEncoding(enc transport.Encoding) Codec {
-	return _codecs[string(enc)]
+func GetCodecForEncoding(enc transport.Encoding) (Codec, bool) {
+	codec, ok := _codecs[enc]
+	return codec, ok
 }
 
 // GetCodecNames returns the names of all registered codecs.
@@ -78,14 +79,14 @@ func GetCodecNames() []transport.Encoding {
 
 // getCodec returns the codec for the given encoding.
 func getCodec(enc transport.Encoding) Codec {
-	return _codecs[string(enc)]
+	return _codecs[enc]
 }
 
 // protoCodec implements Codec for protobuf encoding.
 type protoCodec struct{}
 
-func (c *protoCodec) Name() string {
-	return string(Encoding)
+func (c *protoCodec) Name() transport.Encoding {
+	return Encoding
 }
 
 func (c *protoCodec) Marshal(v any) ([]byte, func(), error) {
@@ -112,8 +113,8 @@ func (c *protoCodec) Unmarshal(data []byte, v any) error {
 // jsonCodec implements Codec for JSON encoding of protobuf messages.
 type jsonCodec struct{}
 
-func (c *jsonCodec) Name() string {
-	return string(JSONEncoding)
+func (c *jsonCodec) Name() transport.Encoding {
+	return JSONEncoding
 }
 
 func (c *jsonCodec) Marshal(v any) ([]byte, func(), error) {

@@ -26,6 +26,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/transport"
 )
 
 func TestCodecRegistry(t *testing.T) {
@@ -39,11 +40,13 @@ func TestCodecRegistry(t *testing.T) {
 		RegisterCodec(mockCodec)
 
 		// Test retrieval by codec name
-		retrieved := GetCodecForEncoding("test-codec")
+		retrieved, ok := GetCodecForEncoding("test-codec")
+		assert.True(t, ok, "Should find registered codec")
 		assert.Equal(t, mockCodec, retrieved, "Should return registered codec")
 
 		// Test fallback for unknown encoding
-		unknown := GetCodecForEncoding("unknown-encoding")
+		unknown, ok := GetCodecForEncoding("unknown-encoding")
+		assert.False(t, ok, "Should return false for unknown encoding")
 		assert.Nil(t, unknown, "Should return nil for unknown encoding")
 	})
 
@@ -55,7 +58,8 @@ func TestCodecRegistry(t *testing.T) {
 		RegisterCodec(mockCodec)
 
 		// Test public GetCodecForEncoding function
-		retrieved := GetCodecForEncoding("public-test")
+		retrieved, ok := GetCodecForEncoding("public-test")
+		assert.True(t, ok, "Public API should find registered codec")
 		assert.Equal(t, mockCodec, retrieved, "Public API should return registered codec")
 	})
 
@@ -79,7 +83,7 @@ func TestCodecRegistry(t *testing.T) {
 		assert.Equal(t, []byte("unmarshal-test"), result)
 
 		// Test Name
-		assert.Equal(t, "interface-test", mockCodec.Name())
+		assert.Equal(t, transport.Encoding("interface-test"), mockCodec.Name())
 	})
 
 	// Test built-in codecs are registered
@@ -104,14 +108,15 @@ func TestCodecRegistry(t *testing.T) {
 	// Test custom codec overrides built-in
 	t.Run("customCodecOverride", func(t *testing.T) {
 		// Save original
-		originalProto := GetCodecForEncoding(Encoding)
+		originalProto, _ := GetCodecForEncoding(Encoding)
 
 		// Register a custom proto codec
 		customProto := &MockCodec{name: string(Encoding)}
 		RegisterCodec(customProto)
 
 		// GetCodecForEncoding should return the custom one
-		retrieved := GetCodecForEncoding(Encoding)
+		retrieved, ok := GetCodecForEncoding(Encoding)
+		assert.True(t, ok, "Should find custom codec")
 		assert.Equal(t, customProto, retrieved, "Custom codec should override built-in")
 
 		// Reset by registering back the original
@@ -122,7 +127,8 @@ func TestCodecRegistry(t *testing.T) {
 func TestBuiltInCodecs(t *testing.T) {
 	// Test proto codec error handling
 	t.Run("proto_marshal_invalid_type", func(t *testing.T) {
-		codec := GetCodecForEncoding(Encoding)
+		codec, ok := GetCodecForEncoding(Encoding)
+		require.True(t, ok)
 		require.NotNil(t, codec)
 
 		_, _, err := codec.Marshal("not a proto message")
@@ -131,7 +137,8 @@ func TestBuiltInCodecs(t *testing.T) {
 	})
 
 	t.Run("proto_unmarshal_invalid_type", func(t *testing.T) {
-		codec := GetCodecForEncoding(Encoding)
+		codec, ok := GetCodecForEncoding(Encoding)
+		require.True(t, ok)
 		require.NotNil(t, codec)
 
 		var notProto string
@@ -142,15 +149,17 @@ func TestBuiltInCodecs(t *testing.T) {
 
 	// Test JSON codec error handling
 	t.Run("json_codec_name", func(t *testing.T) {
-		codec := GetCodecForEncoding(JSONEncoding)
+		codec, ok := GetCodecForEncoding(JSONEncoding)
+		require.True(t, ok)
 		require.NotNil(t, codec)
 
 		// Test codec name
-		assert.Equal(t, string(JSONEncoding), codec.Name())
+		assert.Equal(t, JSONEncoding, codec.Name())
 	})
 
 	t.Run("json_marshal_invalid_type", func(t *testing.T) {
-		codec := GetCodecForEncoding(JSONEncoding)
+		codec, ok := GetCodecForEncoding(JSONEncoding)
+		require.True(t, ok)
 		require.NotNil(t, codec)
 
 		_, _, err := codec.Marshal("not a proto message")
@@ -159,7 +168,8 @@ func TestBuiltInCodecs(t *testing.T) {
 	})
 
 	t.Run("json_unmarshal_invalid_type", func(t *testing.T) {
-		codec := GetCodecForEncoding(JSONEncoding)
+		codec, ok := GetCodecForEncoding(JSONEncoding)
+		require.True(t, ok)
 		require.NotNil(t, codec)
 
 		var notProto string
@@ -193,6 +203,6 @@ func (m *MockCodec) Unmarshal(data []byte, v any) error {
 	}
 }
 
-func (m *MockCodec) Name() string {
-	return m.name
+func (m *MockCodec) Name() transport.Encoding {
+	return transport.Encoding(m.name)
 }
