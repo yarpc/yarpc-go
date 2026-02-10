@@ -129,7 +129,7 @@ func (s *streamHandler) HandleStream(stream *transport.ServerStream) error {
 }
 
 func getProtoRequest(ctx context.Context, transportRequest *transport.Request, newRequest func() proto.Message, codec *codec) (context.Context, *apiencoding.InboundCall, proto.Message, error) {
-	if GetCodecForEncoding(transportRequest.Encoding) == nil {
+	if _, ok := GetCodecForEncoding(transportRequest.Encoding); !ok {
 		return nil, nil, nil, errors.ExpectEncodings(transportRequest, GetCodecNames()...)
 	}
 	ctx, call := apiencoding.NewInboundCall(ctx)
