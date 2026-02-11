@@ -22,6 +22,7 @@ package tracinginterceptor
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -83,7 +84,8 @@ func New(p Params) *Interceptor {
 
 // Handle implements interceptor.UnaryInbound
 func (i *Interceptor) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
-	parentSpanCtx, _ := i.tracer.Extract(i.propagationFormat, getPropagationCarrier(req.Headers.Items(), req.Transport))
+	inboundFormat := getPropagationFormat(req.Transport)
+	parentSpanCtx, _ := i.tracer.Extract(inboundFormat, getPropagationCarrier(req.Headers.Items(), req.Transport))
 	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
 		ParentSpanContext: parentSpanCtx,
 		Tracer:            i.tracer,
@@ -136,7 +138,8 @@ func (i *Interceptor) Call(ctx context.Context, req *transport.Request, out inte
 
 // HandleOneway implements interceptor.OnewayInbound
 func (i *Interceptor) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
-	parentSpanCtx, _ := i.tracer.Extract(i.propagationFormat, getPropagationCarrier(req.Headers.Items(), req.Transport))
+	inboundFormat := getPropagationFormat(req.Transport)
+	parentSpanCtx, _ := i.tracer.Extract(inboundFormat, getPropagationCarrier(req.Headers.Items(), req.Transport))
 	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
 		ParentSpanContext: parentSpanCtx,
 		Tracer:            i.tracer,
@@ -178,7 +181,8 @@ func (i *Interceptor) CallOneway(ctx context.Context, req *transport.Request, ou
 // HandleStream implements interceptor.StreamInbound
 func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.StreamHandler) error {
 	req := s.Request()
-	parentSpanCtx, _ := i.tracer.Extract(i.propagationFormat, getPropagationCarrier(req.Meta.Headers.Items(), i.transport))
+	inboundFormat := getPropagationFormat(req.Meta.Transport)
+	parentSpanCtx, _ := i.tracer.Extract(inboundFormat, getPropagationCarrier(req.Meta.Headers.Items(), req.Meta.Transport))
 	transportRequest := &transport.Request{
 		Caller:    req.Meta.Caller,
 		Service:   req.Meta.Service,
@@ -211,6 +215,19 @@ func (i *Interceptor) HandleStream(s *transport.ServerStream, h transport.Stream
 	}
 	err = h.HandleStream(wrapped)
 	return updateSpanWithErrorDetails(span, err != nil, nil, err)
+}
+
+// stripTChannelTracingHeaders removes headers that use the tchannel tracing prefix ("$tracing$")
+// so they don't leak into other transports (e.g., gRPC metadata) as application headers.
+func stripTChannelTracingHeaders(headers *transport.Headers) {
+	if headers == nil {
+		return
+	}
+	for k := range headers.Items() {
+		if strings.HasPrefix(k, "$tracing$") {
+			headers.Del(k)
+		}
+	}
 }
 
 // CallStream implements interceptor.StreamOutbound

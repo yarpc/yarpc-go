@@ -226,6 +226,26 @@ func TestReadAndWriteHeaders(t *testing.T) {
 	}
 }
 
+func TestReadHeaders_StripsTracingKeys(t *testing.T) {
+	// Build a header frame containing a tchannel tracing header and a normal app header
+	headers := map[string]string{
+		"$tracing$uber-trace-id": "1:2:3:4",
+		"x-app":                  "v",
+	}
+	buf := newBufferArgWriter()
+	require.NoError(t, writeHeaders(tchannel.Raw, headers, nil, func() (tchannel.ArgWriter, error) { return buf, nil }))
+
+	// Read back through readHeaders which now strips $tracing$ keys
+	got, err := readHeaders(tchannel.Raw, func() (tchannel.ArgReader, error) {
+		return tchannel.ArgReader(io.NopCloser(bytes.NewReader(buf.Bytes()))), nil
+	})
+	require.NoError(t, err)
+
+	// Only application header should remain
+	want := transport.HeadersFromMap(map[string]string{"x-app": "v"})
+	assert.Equal(t, want, got)
+}
+
 func TestReadHeadersFailure(t *testing.T) {
 	_, err := readHeaders(tchannel.Raw, func() (tchannel.ArgReader, error) {
 		return nil, errors.New("great sadness")
