@@ -36,6 +36,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/net/metrics"
 	yarpc "go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
@@ -611,5 +612,342 @@ func TestHandlerOverrideOriginalItemWithCanonicalizedKey(t *testing.T) {
 			httpHandler.ServeHTTP(rw, req)
 			assert.Equal(t, 200, rw.Code, "expected 200 status code")
 		})
+	}
+}
+
+func TestHandlerDuplicateHeadersNilCounterVec(t *testing.T) {
+	// When duplicateHeaderCounterVec is nil, requests with duplicate headers
+	// (prefixed + non-prefixed with different values) should succeed without panic.
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	router := transporttest.NewMockRouter(mockCtrl)
+	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+	spec := transport.NewUnaryHandlerSpec(rpcHandler)
+
+	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
+		WithService("service").
+		WithProcedure("hello"),
+	).Return(spec, nil)
+
+	httpHandler := handler{
+		router:                    router,
+		tracer:                    &opentracing.NoopTracer{},
+		grabHeaders:               map[string]struct{}{"x-baz": {}},
+		bothResponseError:         true,
+		transport:                 NewTransport(),
+		duplicateHeaderCounterVec: nil, // explicitly nil
+	}
+
+	// Both Rpc-Header-X-Baz and X-Baz present with different values = duplicate.
+	rpcHandler.EXPECT().Handle(
+		gomock.Any(),
+		transporttest.NewRequestMatcher(t,
+			&transport.Request{
+				Caller:    "caller",
+				Service:   "service",
+				Transport: TransportName,
+				Encoding:  "json",
+				Procedure: "hello",
+				// Non-prefixed value wins (grabHeaders overwrites).
+				Headers: transport.HeadersFromMap(map[string]string{"foo": "bar", "x-baz": "non-prefixed-val"}),
+				Body:    strings.NewReader("world"),
+			}),
+		gomock.Any(),
+	).Return(nil)
+
+	headers := http.Header{}
+	headers.Set(CallerHeader, "caller")
+	headers.Set(ServiceHeader, "service")
+	headers.Set(EncodingHeader, "json")
+	headers.Set(ProcedureHeader, "hello")
+	headers.Set(TTLMSHeader, "1000")
+	headers.Set("Rpc-Header-Foo", "bar")
+	headers.Set("Rpc-Header-X-Baz", "prefixed-val")
+	headers.Set("X-Baz", "non-prefixed-val")
+
+	req := &http.Request{
+		Method: "POST",
+		Header: headers,
+		Body:   io.NopCloser(strings.NewReader("world")),
+	}
+	rw := httptest.NewRecorder()
+	httpHandler.ServeHTTP(rw, req)
+	assert.Equal(t, 200, rw.Code, "expected 200 status code")
+}
+
+func TestHandlerDuplicateHeadersIncrementsCounter(t *testing.T) {
+	// When duplicateHeaderCounterVec is set and request has duplicate headers
+	// (prefixed + non-prefixed with different values), counter is incremented.
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	root := metrics.New()
+	meter := root.Scope()
+	counterVec, err := meter.CounterVector(metrics.Spec{
+		Name:    "yarpc_duplicate_headers",
+		Help:    "Total number of requests with duplicate headers (one with rpc-header- prefix, one without)",
+		VarTags: []string{"header_name", "source", "dest", "service"},
+	})
+	require.NoError(t, err)
+
+	router := transporttest.NewMockRouter(mockCtrl)
+	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+	spec := transport.NewUnaryHandlerSpec(rpcHandler)
+
+	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
+		WithService("service").
+		WithProcedure("hello"),
+	).Return(spec, nil)
+
+	httpHandler := handler{
+		router:                    router,
+		tracer:                    &opentracing.NoopTracer{},
+		grabHeaders:               map[string]struct{}{"x-baz": {}},
+		bothResponseError:         true,
+		transport:                 NewTransport(),
+		duplicateHeaderCounterVec: counterVec,
+	}
+
+	rpcHandler.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+	headers := http.Header{}
+	headers.Set(CallerHeader, "caller")
+	headers.Set(ServiceHeader, "service")
+	headers.Set(EncodingHeader, "json")
+	headers.Set(ProcedureHeader, "hello")
+	headers.Set(TTLMSHeader, "1000")
+	headers.Set("Rpc-Header-X-Baz", "prefixed-val")
+	headers.Set("X-Baz", "non-prefixed-val")
+
+	req := &http.Request{
+		Method: "POST",
+		Header: headers,
+		Body:   io.NopCloser(strings.NewReader("world")),
+	}
+	rw := httptest.NewRecorder()
+	httpHandler.ServeHTTP(rw, req)
+	assert.Equal(t, 200, rw.Code)
+
+	snap := root.Snapshot()
+	expected := metrics.Snapshot{
+		Name:  "yarpc_duplicate_headers",
+		Value: 1,
+		Tags: metrics.Tags{
+			"header_name": "x-baz",
+			"source":      "caller",
+			"dest":        "service",
+			"service":     "yarpc",
+		},
+	}
+	assert.Contains(t, snap.Counters, expected, "expected duplicate_headers counter to be incremented")
+}
+
+func TestHandlerDuplicateHeadersSameValueNoIncrement(t *testing.T) {
+	// When prefixed and non-prefixed have the same value, duplicate is not counted.
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	root := metrics.New()
+	meter := root.Scope()
+	counterVec, err := meter.CounterVector(metrics.Spec{
+		Name:    "yarpc_duplicate_headers",
+		Help:    "Total number of requests with duplicate headers",
+		VarTags: []string{"header_name", "source", "dest", "service"},
+	})
+	require.NoError(t, err)
+
+	router := transporttest.NewMockRouter(mockCtrl)
+	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+	spec := transport.NewUnaryHandlerSpec(rpcHandler)
+
+	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
+		WithService("service").
+		WithProcedure("hello"),
+	).Return(spec, nil)
+
+	httpHandler := handler{
+		router:                    router,
+		tracer:                    &opentracing.NoopTracer{},
+		grabHeaders:               map[string]struct{}{"x-baz": {}},
+		bothResponseError:         true,
+		transport:                 NewTransport(),
+		duplicateHeaderCounterVec: counterVec,
+	}
+
+	rpcHandler.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+	headers := http.Header{}
+	headers.Set(CallerHeader, "caller")
+	headers.Set(ServiceHeader, "service")
+	headers.Set(EncodingHeader, "json")
+	headers.Set(ProcedureHeader, "hello")
+	headers.Set(TTLMSHeader, "1000")
+	headers.Set("Rpc-Header-X-Baz", "same-val")
+	headers.Set("X-Baz", "same-val")
+
+	req := &http.Request{
+		Method: "POST",
+		Header: headers,
+		Body:   io.NopCloser(strings.NewReader("world")),
+	}
+	rw := httptest.NewRecorder()
+	httpHandler.ServeHTTP(rw, req)
+	assert.Equal(t, 200, rw.Code)
+
+	// Counter should not be incremented (same value = not a conflict).
+	snap := root.Snapshot()
+	for _, c := range snap.Counters {
+		if c.Name == "yarpc_duplicate_headers" {
+			assert.Equal(t, int64(0), c.Value, "duplicate counter should not be incremented when values match")
+			return
+		}
+	}
+	// Counter may not exist at all if Inc() was never called.
+}
+
+func TestHandlerDuplicateHeadersOnlyPrefixedNoIncrement(t *testing.T) {
+	// Only prefixed header (no non-prefixed in grabHeaders range with value) = no duplicate.
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	root := metrics.New()
+	meter := root.Scope()
+	counterVec, err := meter.CounterVector(metrics.Spec{
+		Name:    "yarpc_duplicate_headers",
+		Help:    "Total number of requests with duplicate headers",
+		VarTags: []string{"header_name", "source", "dest", "service"},
+	})
+	require.NoError(t, err)
+
+	router := transporttest.NewMockRouter(mockCtrl)
+	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+	spec := transport.NewUnaryHandlerSpec(rpcHandler)
+
+	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
+		WithService("service").
+		WithProcedure("hello"),
+	).Return(spec, nil)
+
+	httpHandler := handler{
+		router:                    router,
+		tracer:                    &opentracing.NoopTracer{},
+		grabHeaders:               map[string]struct{}{"x-baz": {}},
+		bothResponseError:         true,
+		transport:                 NewTransport(),
+		duplicateHeaderCounterVec: counterVec,
+	}
+
+	// Only Rpc-Header-X-Baz; no X-Baz, so req.Header.Get("x-baz") is empty for grabHeaders.
+	rpcHandler.EXPECT().Handle(
+		gomock.Any(),
+		transporttest.NewRequestMatcher(t,
+			&transport.Request{
+				Caller:    "caller",
+				Service:   "service",
+				Transport: TransportName,
+				Encoding:  "json",
+				Procedure: "hello",
+				Headers:   transport.HeadersFromMap(map[string]string{"x-baz": "prefixed-only"}),
+				Body:      strings.NewReader("world"),
+			}),
+		gomock.Any(),
+	).Return(nil)
+
+	headers := http.Header{}
+	headers.Set(CallerHeader, "caller")
+	headers.Set(ServiceHeader, "service")
+	headers.Set(EncodingHeader, "json")
+	headers.Set(ProcedureHeader, "hello")
+	headers.Set(TTLMSHeader, "1000")
+	headers.Set("Rpc-Header-X-Baz", "prefixed-only")
+
+	req := &http.Request{
+		Method: "POST",
+		Header: headers,
+		Body:   io.NopCloser(strings.NewReader("world")),
+	}
+	rw := httptest.NewRecorder()
+	httpHandler.ServeHTTP(rw, req)
+	assert.Equal(t, 200, rw.Code)
+
+	snap := root.Snapshot()
+	for _, c := range snap.Counters {
+		if c.Name == "yarpc_duplicate_headers" {
+			t.Fatal("duplicate counter should not be incremented when only prefixed header is present")
+		}
+	}
+}
+
+func TestHandlerDuplicateHeadersOnlyGrabHeaderNoIncrement(t *testing.T) {
+	// Only non-prefixed header (not in FromHTTPHeaders) = no duplicate.
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	root := metrics.New()
+	meter := root.Scope()
+	counterVec, err := meter.CounterVector(metrics.Spec{
+		Name:    "yarpc_duplicate_headers",
+		Help:    "Total number of requests with duplicate headers",
+		VarTags: []string{"header_name", "source", "dest", "service"},
+	})
+	require.NoError(t, err)
+
+	router := transporttest.NewMockRouter(mockCtrl)
+	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+	spec := transport.NewUnaryHandlerSpec(rpcHandler)
+
+	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
+		WithService("service").
+		WithProcedure("hello"),
+	).Return(spec, nil)
+
+	httpHandler := handler{
+		router:                    router,
+		tracer:                    &opentracing.NoopTracer{},
+		grabHeaders:               map[string]struct{}{"x-baz": {}},
+		bothResponseError:         true,
+		transport:                 NewTransport(),
+		duplicateHeaderCounterVec: counterVec,
+	}
+
+	// Only X-Baz; no Rpc-Header-X-Baz, so treq.Headers does not have x-baz from FromHTTPHeaders.
+	rpcHandler.EXPECT().Handle(
+		gomock.Any(),
+		transporttest.NewRequestMatcher(t,
+			&transport.Request{
+				Caller:    "caller",
+				Service:   "service",
+				Transport: TransportName,
+				Encoding:  "json",
+				Procedure: "hello",
+				Headers:   transport.HeadersFromMap(map[string]string{"x-baz": "grab-only"}),
+				Body:      strings.NewReader("world"),
+			}),
+		gomock.Any(),
+	).Return(nil)
+
+	headers := http.Header{}
+	headers.Set(CallerHeader, "caller")
+	headers.Set(ServiceHeader, "service")
+	headers.Set(EncodingHeader, "json")
+	headers.Set(ProcedureHeader, "hello")
+	headers.Set(TTLMSHeader, "1000")
+	headers.Set("X-Baz", "grab-only")
+
+	req := &http.Request{
+		Method: "POST",
+		Header: headers,
+		Body:   io.NopCloser(strings.NewReader("world")),
+	}
+	rw := httptest.NewRecorder()
+	httpHandler.ServeHTTP(rw, req)
+	assert.Equal(t, 200, rw.Code)
+
+	snap := root.Snapshot()
+	for _, c := range snap.Counters {
+		if c.Name == "yarpc_duplicate_headers" {
+			t.Fatal("duplicate counter should not be incremented when only non-prefixed grab header is present")
+		}
 	}
 }
