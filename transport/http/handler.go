@@ -57,7 +57,7 @@ type handler struct {
 	logger                                   *zap.Logger
 	transport                                *Transport
 	overrideOriginalItemWithCanonicalizedKey bool
-	// duplicate header counter vector
+	// duplicate header counter vector (// TODO: after moving all services to safe state, this will be removed and we will return error in this case)
 	duplicateHeaderCounterVec *metrics.CounterVector
 }
 
@@ -137,7 +137,8 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	}
 	for header := range h.grabHeaders {
 		if value := req.Header.Get(header); value != "" {
-			// If treq.Headers already has this header, that means the header has both prefixed and non-prefixed versions.
+			// TODO: after moving all services to safe state, this will be removed and we will return error in this case
+			//If treq.Headers already has this header, that means the header has both prefixed and non-prefixed versions.
 			if existingValue, ok := treq.Headers.Get(header); ok && existingValue != value {
 				if h.duplicateHeaderCounterVec != nil {
 					h.duplicateHeaderCounterVec.MustGet(
