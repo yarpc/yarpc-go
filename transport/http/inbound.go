@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/api/x/introspection"
@@ -257,6 +258,23 @@ func (i *Inbound) start() error {
 		}
 	}
 
+	var duplicateHeaderCounterVec *metrics.CounterVector
+	if i.transport.meter != nil {
+		counterVec, err := i.transport.meter.CounterVector(metrics.Spec{
+			Name: "yarpc_duplicate_headers",
+			Help: "Total number of requests with duplicate headers (one with rpc-header- prefix, one without)",
+			VarTags: []string{
+				"header_name",
+				"source",
+				"dest",
+				"service",
+			},
+		})
+		if err == nil {
+			duplicateHeaderCounterVec = counterVec
+		}
+	}
+
 	var httpHandler http.Handler = handler{
 		router:                                   i.router,
 		tracer:                                   i.tracer,
@@ -265,6 +283,7 @@ func (i *Inbound) start() error {
 		bothResponseError:                        i.bothResponseError,
 		logger:                                   i.logger,
 		overrideOriginalItemWithCanonicalizedKey: i.overrideOriginalItemWithCanonicalizedKey,
+		duplicateHeaderCounterVec:                duplicateHeaderCounterVec,
 	}
 
 	// reverse iterating because we want the last from options to wrap the

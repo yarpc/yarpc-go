@@ -38,6 +38,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
@@ -494,6 +495,159 @@ func TestInboundWithTimeouts(t *testing.T) {
 
 		require.True(t, inbound.overrideOriginalItemWithCanonicalizedKey)
 	})
+}
+
+func TestInboundDuplicateHeaderCounterVecWithMeter(t *testing.T) {
+	// Verify that the inbound creates the duplicateHeaderCounterVec when
+	// a meter is provided, and increments it on duplicate headers.
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	root := metrics.New()
+	meter := root.Scope()
+
+	httpTransport := NewTransport(Meter(meter))
+	i := httpTransport.NewInbound("127.0.0.1:0", GrabHeaders("x-custom"))
+
+	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+	router := transporttest.NewMockRouter(mockCtrl)
+	router.EXPECT().Procedures().AnyTimes()
+	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
+		WithService("svc").
+		WithProcedure("proc"),
+	).Return(transport.NewUnaryHandlerSpec(rpcHandler), nil)
+
+	rpcHandler.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+	i.SetRouter(router)
+	require.NoError(t, i.Start())
+	defer i.Stop()
+
+	addr := fmt.Sprintf("http://%v", yarpctest.ZeroAddrToHostPort(i.Addr()))
+	reqBody := strings.NewReader("")
+	httpReq, err := http.NewRequest("POST", addr, reqBody)
+	require.NoError(t, err)
+
+	httpReq.Header.Set(CallerHeader, "caller")
+	httpReq.Header.Set(ServiceHeader, "svc")
+	httpReq.Header.Set(EncodingHeader, "raw")
+	httpReq.Header.Set(ProcedureHeader, "proc")
+	httpReq.Header.Set(TTLMSHeader, "1000")
+	// Duplicate: prefixed and non-prefixed with different values.
+	httpReq.Header.Set("Rpc-Header-X-Custom", "prefixed-val")
+	httpReq.Header.Set("X-Custom", "non-prefixed-val")
+
+	resp, err := http.DefaultClient.Do(httpReq)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, 200, resp.StatusCode)
+
+	snap := root.Snapshot()
+	expected := metrics.Snapshot{
+		Name:  "yarpc_duplicate_headers",
+		Value: 1,
+		Tags: metrics.Tags{
+			"header_name": "x-custom",
+			"source":      "caller",
+			"dest":        "svc",
+			"service":     "yarpc",
+		},
+	}
+	assert.Contains(t, snap.Counters, expected, "expected duplicate_headers counter to be incremented")
+}
+
+func TestInboundDuplicateHeaderCounterVecWithoutMeter(t *testing.T) {
+	// Verify that the inbound starts successfully without a meter and
+	// handles duplicate headers without panic.
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	httpTransport := NewTransport() // no meter
+	i := httpTransport.NewInbound("127.0.0.1:0", GrabHeaders("x-custom"))
+
+	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+	router := transporttest.NewMockRouter(mockCtrl)
+	router.EXPECT().Procedures().AnyTimes()
+	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
+		WithService("svc").
+		WithProcedure("proc"),
+	).Return(transport.NewUnaryHandlerSpec(rpcHandler), nil)
+
+	rpcHandler.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+	i.SetRouter(router)
+	require.NoError(t, i.Start())
+	defer i.Stop()
+
+	addr := fmt.Sprintf("http://%v", yarpctest.ZeroAddrToHostPort(i.Addr()))
+	reqBody := strings.NewReader("")
+	httpReq, err := http.NewRequest("POST", addr, reqBody)
+	require.NoError(t, err)
+
+	httpReq.Header.Set(CallerHeader, "caller")
+	httpReq.Header.Set(ServiceHeader, "svc")
+	httpReq.Header.Set(EncodingHeader, "raw")
+	httpReq.Header.Set(ProcedureHeader, "proc")
+	httpReq.Header.Set(TTLMSHeader, "1000")
+	// Duplicate headers — should not panic even without meter.
+	httpReq.Header.Set("Rpc-Header-X-Custom", "prefixed-val")
+	httpReq.Header.Set("X-Custom", "non-prefixed-val")
+
+	resp, err := http.DefaultClient.Do(httpReq)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, 200, resp.StatusCode)
+}
+
+func TestInboundDuplicateHeaderCounterVecNoDuplicates(t *testing.T) {
+	// With a meter, but no duplicate headers: counter should not be incremented.
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	root := metrics.New()
+	meter := root.Scope()
+
+	httpTransport := NewTransport(Meter(meter))
+	i := httpTransport.NewInbound("127.0.0.1:0", GrabHeaders("x-custom"))
+
+	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+	router := transporttest.NewMockRouter(mockCtrl)
+	router.EXPECT().Procedures().AnyTimes()
+	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
+		WithService("svc").
+		WithProcedure("proc"),
+	).Return(transport.NewUnaryHandlerSpec(rpcHandler), nil)
+
+	rpcHandler.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+	i.SetRouter(router)
+	require.NoError(t, i.Start())
+	defer i.Stop()
+
+	addr := fmt.Sprintf("http://%v", yarpctest.ZeroAddrToHostPort(i.Addr()))
+	reqBody := strings.NewReader("")
+	httpReq, err := http.NewRequest("POST", addr, reqBody)
+	require.NoError(t, err)
+
+	httpReq.Header.Set(CallerHeader, "caller")
+	httpReq.Header.Set(ServiceHeader, "svc")
+	httpReq.Header.Set(EncodingHeader, "raw")
+	httpReq.Header.Set(ProcedureHeader, "proc")
+	httpReq.Header.Set(TTLMSHeader, "1000")
+	// Only non-prefixed header, no duplicate.
+	httpReq.Header.Set("X-Custom", "only-val")
+
+	resp, err := http.DefaultClient.Do(httpReq)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, 200, resp.StatusCode)
+
+	snap := root.Snapshot()
+	for _, c := range snap.Counters {
+		if c.Name == "yarpc_duplicate_headers" {
+			t.Fatal("duplicate counter should not exist when there are no duplicate headers")
+		}
+	}
 }
 
 func httpGet(t *testing.T, url string) (*http.Response, string, error) {

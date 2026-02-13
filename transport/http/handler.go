@@ -31,6 +31,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	opentracinglog "github.com/opentracing/opentracing-go/log"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
@@ -56,6 +57,8 @@ type handler struct {
 	logger                                   *zap.Logger
 	transport                                *Transport
 	overrideOriginalItemWithCanonicalizedKey bool
+	// duplicate header counter vector
+	duplicateHeaderCounterVec *metrics.CounterVector
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -115,8 +118,11 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	if h.overrideOriginalItemWithCanonicalizedKey {
 		transportHeader = transportHeader.EnableOverrideOriginalItemsWithCanonicalizedKeys()
 	}
+
+	caller := popHeader(req.Header, CallerHeader)
+
 	treq := &transport.Request{
-		Caller:          popHeader(req.Header, CallerHeader),
+		Caller:          caller,
 		Service:         service,
 		Procedure:       procedure,
 		Encoding:        transport.Encoding(popHeader(req.Header, EncodingHeader)),
@@ -131,6 +137,17 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	}
 	for header := range h.grabHeaders {
 		if value := req.Header.Get(header); value != "" {
+			// If treq.Headers already has this header, that means the header has both prefixed and non-prefixed versions.
+			if existingValue, ok := treq.Headers.Get(header); ok && existingValue != value {
+				if h.duplicateHeaderCounterVec != nil {
+					h.duplicateHeaderCounterVec.MustGet(
+						"header_name", header,
+						"source", caller,
+						"dest", service,
+						"service", "yarpc",
+					).Inc()
+				}
+			}
 			treq.Headers = treq.Headers.With(header, value)
 		}
 	}
