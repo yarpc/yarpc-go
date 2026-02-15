@@ -84,23 +84,41 @@ func TestThriftExceptionObservability(t *testing.T) {
 			})
 
 			t.Run("metrics", func(t *testing.T) {
-				wantCounters := []testutils.CounterAssertion{
-					{Name: "calls", Value: 1},
-					{Name: "panics"},
-					// Thrift exceptions without annotations are always classified as
-					// client_failures, so this metric check below is important
-					{
-						Name: "server_failures",
-						Tags: map[string]string{
-							"error":      "data-loss",
-							"error_name": "ExceptionWithCode",
+				t.Run("inbound", func(t *testing.T) {
+					wantCounters := []testutils.CounterAssertion{
+						{Name: "calls", Value: 1},
+						{Name: "panics"},
+						// Thrift exceptions without annotations are always classified as
+						// client_failures, so this metric check below is important
+						{
+							Name: "server_failures",
+							Tags: map[string]string{
+								"error":      "data-loss",
+								"error_name": "ExceptionWithCode",
+							},
+							Value: 1,
 						},
-						Value: 1,
-					},
-					{Name: "successes"},
-				}
-
-				testutils.AssertClientAndServerCounters(t, wantCounters, clientMetricsRoot, serverMetricsRoot)
+						{Name: "successes"},
+						{Name: "unsafe_headers", Value: 1},
+					}
+					testutils.AssertCounters(t, wantCounters, serverMetricsRoot.Snapshot().Counters)
+				})
+				t.Run("outbound", func(t *testing.T) {
+					wantCounters := []testutils.CounterAssertion{
+						{Name: "calls", Value: 1},
+						{Name: "panics"},
+						{
+							Name: "server_failures",
+							Tags: map[string]string{
+								"error":      "data-loss",
+								"error_name": "ExceptionWithCode",
+							},
+							Value: 1,
+						},
+						{Name: "successes"},
+					}
+					testutils.AssertCounters(t, wantCounters, clientMetricsRoot.Snapshot().Counters)
+				})
 			})
 		})
 
@@ -128,21 +146,39 @@ func TestThriftExceptionObservability(t *testing.T) {
 			})
 
 			t.Run("metrics", func(t *testing.T) {
-				wantCounters := []testutils.CounterAssertion{
-					{
-						Name: "caller_failures",
-						Tags: map[string]string{
-							"error":      "application_error",
-							"error_name": "ExceptionWithoutCode",
+				t.Run("inbound", func(t *testing.T) {
+					wantCounters := []testutils.CounterAssertion{
+						{
+							Name: "caller_failures",
+							Tags: map[string]string{
+								"error":      "application_error",
+								"error_name": "ExceptionWithoutCode",
+							},
+							Value: 1,
 						},
-						Value: 1,
-					},
-					{Name: "calls", Value: 1},
-					{Name: "panics"},
-					{Name: "successes"},
-				}
-
-				testutils.AssertClientAndServerCounters(t, wantCounters, clientMetricsRoot, serverMetricsRoot)
+						{Name: "calls", Value: 1},
+						{Name: "panics"},
+						{Name: "successes"},
+						{Name: "unsafe_headers", Value: 1},
+					}
+					testutils.AssertCounters(t, wantCounters, serverMetricsRoot.Snapshot().Counters)
+				})
+				t.Run("outbound", func(t *testing.T) {
+					wantCounters := []testutils.CounterAssertion{
+						{
+							Name: "caller_failures",
+							Tags: map[string]string{
+								"error":      "application_error",
+								"error_name": "ExceptionWithoutCode",
+							},
+							Value: 1,
+						},
+						{Name: "calls", Value: 1},
+						{Name: "panics"},
+						{Name: "successes"},
+					}
+					testutils.AssertCounters(t, wantCounters, clientMetricsRoot.Snapshot().Counters)
+				})
 			})
 		})
 	}
@@ -163,12 +199,23 @@ func TestThriftMetrics(t *testing.T) {
 			require.NoError(t, err, "unexpected error")
 
 			t.Run("counters", func(t *testing.T) {
-				wantCounters := []testutils.CounterAssertion{
-					{Name: "calls", Value: 1},
-					{Name: "panics"},
-					{Name: "successes", Value: 1},
-				}
-				testutils.AssertClientAndServerCounters(t, wantCounters, clientMetricsRoot, serverMetricsRoot)
+				t.Run("inbound", func(t *testing.T) {
+					wantCounters := []testutils.CounterAssertion{
+						{Name: "calls", Value: 1},
+						{Name: "panics"},
+						{Name: "successes", Value: 1},
+						{Name: "unsafe_headers", Value: 1},
+					}
+					testutils.AssertCounters(t, wantCounters, serverMetricsRoot.Snapshot().Counters)
+				})
+				t.Run("outbound", func(t *testing.T) {
+					wantCounters := []testutils.CounterAssertion{
+						{Name: "calls", Value: 1},
+						{Name: "panics"},
+						{Name: "successes", Value: 1},
+					}
+					testutils.AssertCounters(t, wantCounters, clientMetricsRoot.Snapshot().Counters)
+				})
 			})
 			t.Run("inbound histograms", func(t *testing.T) {
 				wantHistograms := []testutils.HistogramAssertion{
