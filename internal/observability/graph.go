@@ -279,6 +279,7 @@ type edge struct {
 	panics         *metrics.Counter
 	callerFailures *metrics.CounterVector
 	serverFailures *metrics.CounterVector
+	UnsafeHeaders  *metrics.CounterVector
 
 	latencies            *metrics.Histogram
 	callerErrLatencies   *metrics.Histogram
@@ -354,6 +355,15 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIg
 	})
 	if err != nil {
 		logger.Error("Failed to create server failures vector.", zap.Error(err))
+	}
+	unsafeHeaders, err := meter.CounterVector(metrics.Spec{
+		Name:      "unsafe_headers",
+		Help:      "Count of unsafe headers by type",
+		ConstTags: tags,
+		VarTags:   []string{_unsafeHeaderIssueType},
+	})
+	if err != nil {
+		logger.Error("Failed to create unsafe headers counter vector.", zap.Error(err))
 	}
 
 	// metrics for only unary and oneway
@@ -585,6 +595,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIg
 		panics:               panics,
 		callerFailures:       callerFailures,
 		serverFailures:       serverFailures,
+		UnsafeHeaders:        unsafeHeaders,
 		requestPayloadSizes:  requestPayloadSizes,
 		responsePayloadSizes: responsePayloadSizes,
 		latencies:            latencies,

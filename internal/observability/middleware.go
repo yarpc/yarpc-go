@@ -236,6 +236,9 @@ func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h
 	call := m.graph.begin(ctx, transport.Oneway, _directionInbound, req)
 	defer m.handlePanicForCall(call, transport.Oneway)
 
+	// Add meter info to context so it can be accessed in deeper layers (e.g., decoding)
+	ctx = WithMeterInfo(ctx, &MeterInfo{Edge: call.edge})
+
 	err := h.HandleOneway(ctx, req)
 	call.End(callResult{err: err, requestSize: req.BodySize})
 	return err
