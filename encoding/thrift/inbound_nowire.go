@@ -22,6 +22,7 @@ package thrift
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	"go.uber.org/yarpc/transport/tchannel"
@@ -147,11 +148,8 @@ func (t thriftNoWireHandler) decodeAndHandle(
 		return _emptyResponse, err
 	}
 
-	meterInfo := observability.GetMeterInfo(ctx)
-	if meterInfo != nil {
-		// emit unsafe headers metric
-		t.checkAndEmitUnsafeHeaders(meterInfo, treq)
-	}
+	// emit unsafe headers metric
+	t.checkAndEmitUnsafeHeaders(observability.GetMeterInfo(ctx), treq)
 
 	nwc := NoWireCall{
 		Reader:        treq.Body,
@@ -164,6 +162,7 @@ func (t thriftNoWireHandler) decodeAndHandle(
 
 func (t thriftNoWireHandler) checkAndEmitUnsafeHeaders(meter *observability.MeterInfo, treq *transport.Request) {
 	if meter == nil || meter.Edge == nil || treq == nil {
+		fmt.Printf("Unable to emit unsafe headers metric due to missing meter info or request: meter=%v, treq=%v\n", meter, treq)
 		return
 	}
 
