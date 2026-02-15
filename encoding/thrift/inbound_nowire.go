@@ -76,6 +76,7 @@ var (
 	_missingFromItems                              = "missing_from_items"
 	_keyCollisionWithItems                         = "key_collision_with_items"
 	_extraKeysInItems                              = "extra_keys_in_items"
+	_noIssuesFound                                 = "no_issues_found"
 )
 
 func (t thriftNoWireHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) (err error) {
@@ -171,13 +172,15 @@ func (t thriftNoWireHandler) checkAndEmitUnsafeHeaders(meter *observability.Mete
 	// - Key collisions between OriginalItems and Items
 	// - Missing keys from Items
 	// - length of Items > length of OriginalItems
-
+	// - if no issue found, we can emit a metric for "no issues found" as well to get a sense of the proportion of requests that have unsafe headers.
+	foundIssue := false
 	for origKey, origValue := range treq.Headers.OriginalItems() {
 		// Check for uppercase characters in header keys (for tChannel)
 		if treq.Transport == tchannel.TransportName && headerKeyContainsUppercase(origKey) {
 			if meter.Edge.UnsafeHeaders != nil {
 				meter.Edge.UnsafeHeaders.MustGet(_unsafeHeaderIssueType, _tchannelUppercaseKey).Inc()
 			}
+			foundIssue = true
 		}
 
 		// Check for collision: original key (when normalized) exists in Items with different value,
@@ -188,10 +191,12 @@ func (t thriftNoWireHandler) checkAndEmitUnsafeHeaders(meter *observability.Mete
 			if meter.Edge.UnsafeHeaders != nil {
 				meter.Edge.UnsafeHeaders.MustGet(_unsafeHeaderIssueType, _missingFromItems).Inc()
 			}
+			foundIssue = true
 		} else if normalizedValue != origValue {
 			if meter.Edge.UnsafeHeaders != nil {
 				meter.Edge.UnsafeHeaders.MustGet(_unsafeHeaderIssueType, _keyCollisionWithItems).Inc()
 			}
+			foundIssue = true
 		}
 	}
 
@@ -200,9 +205,14 @@ func (t thriftNoWireHandler) checkAndEmitUnsafeHeaders(meter *observability.Mete
 		if meter.Edge.UnsafeHeaders != nil {
 			meter.Edge.UnsafeHeaders.MustGet(_unsafeHeaderIssueType, _extraKeysInItems).Inc()
 		}
+		foundIssue = true
 	}
 
-	// TODO: if everything looks fine, we can emit a metric for "no issues found" as well, to get a sense of the proportion of requests that have unsafe headers.
+	if !foundIssue {
+		if meter.Edge.UnsafeHeaders != nil {
+			meter.Edge.UnsafeHeaders.MustGet(_unsafeHeaderIssueType, _noIssuesFound).Inc()
+		}
+	}
 }
 
 func headerKeyContainsUppercase(s string) bool {
