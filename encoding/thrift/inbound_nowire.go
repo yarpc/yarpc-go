@@ -202,11 +202,6 @@ func (t thriftNoWireHandler) checkAndEmitUnsafeHeaders(meter *observability.Mete
 			meter.Edge.UnsafeHeaders.MustGet(_unsafeHeaderIssueType, _extraKeysInItems).Inc()
 		}
 	}
-
-	// TODO: remove this
-	if meter.Edge.UnsafeHeaders != nil {
-		meter.Edge.UnsafeHeaders.MustGet(_unsafeHeaderIssueType, "test_issue").Inc()
-	}
 }
 
 func headerKeyContainsUppercase(s string) bool {
