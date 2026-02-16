@@ -199,7 +199,8 @@ func (t thriftNoWireHandler) checkAndEmitUnsafeHeaders(meter *observability.Mete
 	// Check for length of Items > length of OriginalItems
 	if len(treq.Headers.Items()) > len(treq.Headers.OriginalItems()) {
 		if meter.Edge.UnsafeHeaders != nil {
-			meter.Edge.UnsafeHeaders.MustGet(_unsafeHeaderIssueType, _extraKeysInItems).Inc()
+			meter.Edge.UnsafeHeaders.MustGet(_unsafeHeaderIssueType, _extraKeysInItems,
+				_unsafeHeaderIssueHeaderKey, "").Inc()
 		}
 	}
 }

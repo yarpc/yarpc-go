@@ -32,7 +32,9 @@ import (
 	"go.uber.org/thriftrw/protocol/stream"
 	"go.uber.org/thriftrw/thrifttest/streamtest"
 	"go.uber.org/thriftrw/wire"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/internal/testtime"
 )
 
@@ -245,4 +247,150 @@ func TestDecodeNoWireAppliationError(t *testing.T) {
 	rw := new(transporttest.FakeResponseWriter)
 	require.NoError(t, h.Handle(ctx, req, rw))
 	assert.True(t, rw.IsApplicationError)
+}
+
+func TestHeaderKeyContainsUppercase(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{
+			name:     "all lowercase",
+			input:    "lowercase",
+			expected: false,
+		},
+		{
+			name:     "all uppercase",
+			input:    "UPPERCASE",
+			expected: true,
+		},
+		{
+			name:     "mixed case",
+			input:    "MixedCase",
+			expected: true,
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: false,
+		},
+		{
+			name:     "numbers and lowercase",
+			input:    "header123",
+			expected: false,
+		},
+		{
+			name:     "numbers and uppercase",
+			input:    "HEADER123",
+			expected: true,
+		},
+		{
+			name:     "special characters only",
+			input:    "-_-",
+			expected: false,
+		},
+		{
+			name:     "special characters with uppercase",
+			input:    "X-Request-ID",
+			expected: true,
+		},
+		{
+			name:     "special characters with lowercase",
+			input:    "x-request-id",
+			expected: false,
+		},
+		{
+			name:     "single uppercase letter",
+			input:    "A",
+			expected: true,
+		},
+		{
+			name:     "single lowercase letter",
+			input:    "a",
+			expected: false,
+		},
+		{
+			name:     "uppercase at end",
+			input:    "headerX",
+			expected: true,
+		},
+		{
+			name:     "uppercase at start",
+			input:    "Xheader",
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := headerKeyContainsUppercase(tt.input)
+			assert.Equal(t, tt.expected, result, "headerKeyContainsUppercase(%q) = %v, want %v", tt.input, result, tt.expected)
+		})
+	}
+}
+
+func TestCheckAndEmitUnsafeHeaders(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupRequest  func() *transport.Request
+		setupMeter    func() *observability.MeterInfo
+		expectMetrics func(t *testing.T, meter *observability.MeterInfo)
+	}{
+		{
+			name: "nil meter info",
+			setupRequest: func() *transport.Request {
+				return request()
+			},
+			setupMeter: func() *observability.MeterInfo {
+				return nil
+			},
+			expectMetrics: func(t *testing.T, meter *observability.MeterInfo) {
+				// Should not panic, just return early
+			},
+		},
+		{
+			name: "nil edge in meter info",
+			setupRequest: func() *transport.Request {
+				return request()
+			},
+			setupMeter: func() *observability.MeterInfo {
+				return &observability.MeterInfo{
+					Edge: nil,
+				}
+			},
+			expectMetrics: func(t *testing.T, meter *observability.MeterInfo) {
+				// Should not panic, just return early
+			},
+		},
+		{
+			name: "nil request",
+			setupRequest: func() *transport.Request {
+				return nil
+			},
+			setupMeter: func() *observability.MeterInfo {
+				return &observability.MeterInfo{}
+			},
+			expectMetrics: func(t *testing.T, meter *observability.MeterInfo) {
+				// Should not panic, just return early
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := thriftNoWireHandler{}
+			req := tt.setupRequest()
+			meter := tt.setupMeter()
+
+			// Should not panic
+			require.NotPanics(t, func() {
+				h.checkAndEmitUnsafeHeaders(meter, req)
+			})
+
+			if tt.expectMetrics != nil {
+				tt.expectMetrics(t, meter)
+			}
+		})
+	}
 }
