@@ -99,7 +99,6 @@ func TestThriftExceptionObservability(t *testing.T) {
 							Value: 1,
 						},
 						{Name: "successes"},
-						{Name: "unsafe_headers", Value: 1},
 					}
 					testutils.AssertCounters(t, wantCounters, serverMetricsRoot.Snapshot().Counters)
 				})
@@ -159,7 +158,6 @@ func TestThriftExceptionObservability(t *testing.T) {
 						{Name: "calls", Value: 1},
 						{Name: "panics"},
 						{Name: "successes"},
-						{Name: "unsafe_headers", Value: 1},
 					}
 					testutils.AssertCounters(t, wantCounters, serverMetricsRoot.Snapshot().Counters)
 				})
@@ -204,7 +202,6 @@ func TestThriftMetrics(t *testing.T) {
 						{Name: "calls", Value: 1},
 						{Name: "panics"},
 						{Name: "successes", Value: 1},
-						{Name: "unsafe_headers", Value: 1},
 					}
 					testutils.AssertCounters(t, wantCounters, serverMetricsRoot.Snapshot().Counters)
 				})
