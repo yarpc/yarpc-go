@@ -69,13 +69,14 @@ type thriftNoWireHandler struct {
 }
 
 var (
-	_                      transport.OnewayHandler = (*thriftNoWireHandler)(nil)
-	_                      transport.UnaryHandler  = (*thriftNoWireHandler)(nil)
-	_unsafeHeaderIssueType                         = "unsafe_header_issue_type"
-	_tchannelUppercaseKey                          = "tchannel_uppercase_key"
-	_missingFromItems                              = "missing_from_items"
-	_keyCollisionWithItems                         = "key_collision_with_items"
-	_extraKeysInItems                              = "extra_keys_in_items"
+	_                           transport.OnewayHandler = (*thriftNoWireHandler)(nil)
+	_                           transport.UnaryHandler  = (*thriftNoWireHandler)(nil)
+	_unsafeHeaderIssueType                              = "unsafe_header_issue_type"
+	_unsafeHeaderIssueHeaderKey                         = "unsafe_header_issue_header_key"
+	_tchannelUppercaseKey                               = "tchannel_uppercase_key"
+	_missingFromItems                                   = "missing_from_items"
+	_keyCollisionWithItems                              = "key_collision_with_items"
+	_extraKeysInItems                                   = "extra_keys_in_items"
 )
 
 func (t thriftNoWireHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) (err error) {
@@ -172,7 +173,9 @@ func (t thriftNoWireHandler) checkAndEmitUnsafeHeaders(meter *observability.Mete
 		// Check for uppercase characters in header keys (for tChannel)
 		if treq.Transport == tchannel.TransportName && headerKeyContainsUppercase(origKey) {
 			if meter.Edge.UnsafeHeaders != nil {
-				meter.Edge.UnsafeHeaders.MustGet(_unsafeHeaderIssueType, _tchannelUppercaseKey).Inc()
+				meter.Edge.UnsafeHeaders.MustGet(
+					_unsafeHeaderIssueType, _tchannelUppercaseKey,
+					_unsafeHeaderIssueHeaderKey, origKey).Inc()
 			}
 		}
 
@@ -182,11 +185,13 @@ func (t thriftNoWireHandler) checkAndEmitUnsafeHeaders(meter *observability.Mete
 		normalizedValue, exists := treq.Headers.Get(origKey)
 		if !exists {
 			if meter.Edge.UnsafeHeaders != nil {
-				meter.Edge.UnsafeHeaders.MustGet(_unsafeHeaderIssueType, _missingFromItems).Inc()
+				meter.Edge.UnsafeHeaders.MustGet(_unsafeHeaderIssueType, _missingFromItems,
+					_unsafeHeaderIssueHeaderKey, origKey).Inc()
 			}
 		} else if normalizedValue != origValue {
 			if meter.Edge.UnsafeHeaders != nil {
-				meter.Edge.UnsafeHeaders.MustGet(_unsafeHeaderIssueType, _keyCollisionWithItems).Inc()
+				meter.Edge.UnsafeHeaders.MustGet(_unsafeHeaderIssueType, _keyCollisionWithItems,
+					_unsafeHeaderIssueHeaderKey, origKey).Inc()
 			}
 		}
 	}
@@ -196,6 +201,11 @@ func (t thriftNoWireHandler) checkAndEmitUnsafeHeaders(meter *observability.Mete
 		if meter.Edge.UnsafeHeaders != nil {
 			meter.Edge.UnsafeHeaders.MustGet(_unsafeHeaderIssueType, _extraKeysInItems).Inc()
 		}
+	}
+
+	// TODO: remove this
+	if meter.Edge.UnsafeHeaders != nil {
+		meter.Edge.UnsafeHeaders.MustGet(_unsafeHeaderIssueType, "test_issue").Inc()
 	}
 }
 

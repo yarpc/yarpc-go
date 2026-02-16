@@ -360,7 +360,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIg
 		Name:      "unsafe_headers",
 		Help:      "Count of unsafe headers by type",
 		ConstTags: tags,
-		VarTags:   []string{_unsafeHeaderIssueType},
+		VarTags:   []string{_unsafeHeaderIssueType, _unsafeHeaderIssueHeaderKey},
 	})
 	if err != nil {
 		logger.Error("Failed to create unsafe headers counter vector.", zap.Error(err))
