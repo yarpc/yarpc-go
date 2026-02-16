@@ -620,7 +620,7 @@ func TestCheckAndEmitUnsafeHeadersWithMetrics(t *testing.T) {
 				foundUnsafeHeaders = true
 				assert.Greater(t, counter.Value, int64(0), "Expected unsafe_headers counter to be incremented")
 				// Verify the tag indicates uppercase issue
-				if issueType, ok := counter.Tags[_unsafeHeaderIssueType]; ok {
+				if issueType, ok := counter.Tags[observability.UnsafeHeaderIssueType]; ok {
 					assert.Equal(t, _tchannelUppercaseKey, issueType, "Expected tchannel_uppercase_key issue type")
 				}
 			}
@@ -673,7 +673,7 @@ func TestCheckAndEmitUnsafeHeadersWithMetrics(t *testing.T) {
 		uppercaseMetricCount := 0
 		for _, counter := range snapshot.Counters {
 			if counter.Name == "unsafe_headers" {
-				if issueType, ok := counter.Tags[_unsafeHeaderIssueType]; ok {
+				if issueType, ok := counter.Tags[observability.UnsafeHeaderIssueType]; ok {
 					if issueType == _tchannelUppercaseKey {
 						uppercaseMetricCount++
 						assert.Greater(t, counter.Value, int64(0))
@@ -727,7 +727,7 @@ func TestCheckAndEmitUnsafeHeadersWithMetrics(t *testing.T) {
 		snapshot := metricsRoot.Snapshot()
 		for _, counter := range snapshot.Counters {
 			if counter.Name == "unsafe_headers" {
-				if issueType, ok := counter.Tags[_unsafeHeaderIssueType]; ok {
+				if issueType, ok := counter.Tags[observability.UnsafeHeaderIssueType]; ok {
 					assert.NotEqual(t, _tchannelUppercaseKey, issueType,
 						"HTTP transport should not emit uppercase metrics")
 				}
@@ -778,7 +778,7 @@ func TestCheckAndEmitUnsafeHeadersWithMetrics(t *testing.T) {
 		snapshot := metricsRoot.Snapshot()
 		for _, counter := range snapshot.Counters {
 			if counter.Name == "unsafe_headers" {
-				if issueType, ok := counter.Tags[_unsafeHeaderIssueType]; ok {
+				if issueType, ok := counter.Tags[observability.UnsafeHeaderIssueType]; ok {
 					assert.NotEqual(t, _tchannelUppercaseKey, issueType,
 						"Lowercase headers should not emit uppercase metrics")
 				}
@@ -874,7 +874,7 @@ func TestCheckAndEmitUnsafeHeadersWithMetrics(t *testing.T) {
 		uppercaseCount := 0
 		for _, counter := range snapshot.Counters {
 			if counter.Name == "unsafe_headers" {
-				if issueType, ok := counter.Tags[_unsafeHeaderIssueType]; ok {
+				if issueType, ok := counter.Tags[observability.UnsafeHeaderIssueType]; ok {
 					if issueType == _tchannelUppercaseKey {
 						uppercaseCount++
 					}
@@ -928,7 +928,7 @@ func TestCheckAndEmitUnsafeHeadersWithMetrics(t *testing.T) {
 		snapshot := metricsRoot.Snapshot()
 		for _, counter := range snapshot.Counters {
 			if counter.Name == "unsafe_headers" {
-				if issueType, ok := counter.Tags[_unsafeHeaderIssueType]; ok {
+				if issueType, ok := counter.Tags[observability.UnsafeHeaderIssueType]; ok {
 					assert.NotEqual(t, _tchannelUppercaseKey, issueType,
 						"Special characters with lowercase should not emit uppercase metrics")
 				}
@@ -1209,7 +1209,7 @@ func TestCheckAndEmitUnsafeHeadersEdgeCasesWithRealMetrics(t *testing.T) {
 		foundMissing := false
 		for _, counter := range snapshot.Counters {
 			if counter.Name == "unsafe_headers" {
-				if issueType, ok := counter.Tags[_unsafeHeaderIssueType]; ok {
+				if issueType, ok := counter.Tags[observability.UnsafeHeaderIssueType]; ok {
 					if issueType == _missingFromItems {
 						foundMissing = true
 						assert.Greater(t, counter.Value, int64(0))
@@ -1268,7 +1268,7 @@ func TestCheckAndEmitUnsafeHeadersEdgeCasesWithRealMetrics(t *testing.T) {
 		foundCollision := false
 		for _, counter := range snapshot.Counters {
 			if counter.Name == "unsafe_headers" {
-				if issueType, ok := counter.Tags[_unsafeHeaderIssueType]; ok {
+				if issueType, ok := counter.Tags[observability.UnsafeHeaderIssueType]; ok {
 					if issueType == _keyCollisionWithItems {
 						foundCollision = true
 						assert.Greater(t, counter.Value, int64(0))
@@ -1329,7 +1329,7 @@ func TestCheckAndEmitUnsafeHeadersEdgeCasesWithRealMetrics(t *testing.T) {
 		foundExtra := false
 		for _, counter := range snapshot.Counters {
 			if counter.Name == "unsafe_headers" {
-				if issueType, ok := counter.Tags[_unsafeHeaderIssueType]; ok {
+				if issueType, ok := counter.Tags[observability.UnsafeHeaderIssueType]; ok {
 					if issueType == _extraKeysInItems {
 						foundExtra = true
 						assert.Greater(t, counter.Value, int64(0))
@@ -1392,7 +1392,7 @@ func TestCheckAndEmitUnsafeHeadersEdgeCasesWithRealMetrics(t *testing.T) {
 		foundIssues := make(map[string]bool)
 		for _, counter := range snapshot.Counters {
 			if counter.Name == "unsafe_headers" {
-				if issueType, ok := counter.Tags[_unsafeHeaderIssueType]; ok {
+				if issueType, ok := counter.Tags[observability.UnsafeHeaderIssueType]; ok {
 					foundIssues[issueType] = true
 				}
 			}

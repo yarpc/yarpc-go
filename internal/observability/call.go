@@ -32,12 +32,9 @@ import (
 )
 
 const (
-	_error = "error"
-
-	_unsafeHeaderIssueType      = "unsafe_header_issue_type"
-	_unsafeHeaderIssueHeaderKey = "unsafe_header_issue_header_key"
-	_errorNameMetricsKey        = "error_name"
-	_notSet                     = "__not_set__"
+	_error               = "error"
+	_errorNameMetricsKey = "error_name"
+	_notSet              = "__not_set__"
 
 	_errorNameLogKey    = "errorName"
 	_errorCodeLogKey    = "errorCode"

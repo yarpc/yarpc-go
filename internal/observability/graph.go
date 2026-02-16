@@ -63,6 +63,11 @@ const (
 	_routingDelegate = "routing_delegate"
 	_direction       = "direction"
 	_rpcType         = "rpc_type"
+
+	// UnsafeHeaderIssueType is the tag key for type of unsafe header issue
+	UnsafeHeaderIssueType = "unsafe_header_issue_type"
+	// UnsafeHeaderIssueHeaderKey is the tag key for the header key of the unsafe header issue
+	UnsafeHeaderIssueHeaderKey = "unsafe_header_issue_header_key"
 )
 
 // A graph represents a collection of services: each service is a node, and we
@@ -360,7 +365,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIg
 		Name:      "unsafe_headers",
 		Help:      "Count of unsafe headers by type",
 		ConstTags: tags,
-		VarTags:   []string{_unsafeHeaderIssueType, _unsafeHeaderIssueHeaderKey},
+		VarTags:   []string{UnsafeHeaderIssueType, UnsafeHeaderIssueHeaderKey},
 	})
 	if err != nil {
 		logger.Error("Failed to create unsafe headers counter vector.", zap.Error(err))
