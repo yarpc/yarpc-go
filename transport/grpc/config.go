@@ -80,9 +80,10 @@ type TransportConfig struct {
 	ClientMaxSendMsgSize int `config:"clientMaxSendMsgSize"`
 	// GRPC header lise size options accept uint32 param.
 	// see: https://pkg.go.dev/google.golang.org/grpc#WithMaxHeaderListSize
-	ServerMaxHeaderListSize uint32              `config:"serverMaxHeaderListSize"`
-	ClientMaxHeaderListSize uint32              `config:"clientMaxHeaderListSize"`
-	Backoff                 yarpcconfig.Backoff `config:"backoff"`
+	ServerMaxHeaderListSize   uint32              `config:"serverMaxHeaderListSize"`
+	ClientMaxHeaderListSize   uint32              `config:"clientMaxHeaderListSize"`
+	Backoff                   yarpcconfig.Backoff `config:"backoff"`
+	TracingInterceptorEnabled bool                `config:"tracingInterceptorEnabled"`
 }
 
 // InboundConfig configures a gRPC Inbound.
@@ -321,6 +322,9 @@ func (t *transportSpec) buildTransport(transportConfig *TransportConfig, kit *ya
 	}
 	if transportConfig.ClientMaxRecvMsgSize > 0 {
 		options = append(options, ClientMaxRecvMsgSize(transportConfig.ClientMaxRecvMsgSize))
+	}
+	if transportConfig.TracingInterceptorEnabled {
+		options = append(options, TracingInterceptorEnabled(transportConfig.TracingInterceptorEnabled))
 	}
 	if transportConfig.ClientMaxSendMsgSize > 0 {
 		options = append(options, ClientMaxSendMsgSize(transportConfig.ClientMaxSendMsgSize))

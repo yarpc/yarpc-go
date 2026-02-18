@@ -100,15 +100,16 @@ func (ts *transportSpec) Spec() yarpcconfig.TransportSpec {
 type TransportConfig struct {
 	// Specifies the keep-alive period for all HTTP clients. This field is
 	// optional.
-	KeepAlive             time.Duration       `config:"keepAlive"`
-	MaxIdleConns          int                 `config:"maxIdleConns"`
-	MaxIdleConnsPerHost   int                 `config:"maxIdleConnsPerHost"`
-	IdleConnTimeout       time.Duration       `config:"idleConnTimeout"`
-	DisableKeepAlives     bool                `config:"disableKeepAlives"`
-	DisableCompression    bool                `config:"disableCompression"`
-	ResponseHeaderTimeout time.Duration       `config:"responseHeaderTimeout"`
-	ConnTimeout           time.Duration       `config:"connTimeout"`
-	ConnBackoff           yarpcconfig.Backoff `config:"connBackoff"`
+	KeepAlive                 time.Duration       `config:"keepAlive"`
+	MaxIdleConns              int                 `config:"maxIdleConns"`
+	MaxIdleConnsPerHost       int                 `config:"maxIdleConnsPerHost"`
+	IdleConnTimeout           time.Duration       `config:"idleConnTimeout"`
+	DisableKeepAlives         bool                `config:"disableKeepAlives"`
+	DisableCompression        bool                `config:"disableCompression"`
+	ResponseHeaderTimeout     time.Duration       `config:"responseHeaderTimeout"`
+	ConnTimeout               time.Duration       `config:"connTimeout"`
+	ConnBackoff               yarpcconfig.Backoff `config:"connBackoff"`
+	TracingInterceptorEnabled bool                `config:"tracingInterceptorEnabled"`
 }
 
 func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit) (transport.Transport, error) {
@@ -144,6 +145,9 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 	}
 	if tc.ConnTimeout > 0 {
 		options.connTimeout = tc.ConnTimeout
+	}
+	if tc.TracingInterceptorEnabled {
+		options.tracingInterceptorEnabled = tc.TracingInterceptorEnabled
 	}
 
 	strategy, err := tc.ConnBackoff.Strategy()
