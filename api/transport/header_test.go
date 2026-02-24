@@ -260,3 +260,103 @@ func TestEnableOverrideOriginalItemsWithCanonicalizedKeys(t *testing.T) {
 		})
 	}
 }
+
+func TestWithHeaderCaseMapping(t *testing.T) {
+	tests := []struct {
+		msg                   string
+		mapping               map[string]string
+		headers               []struct{ key, val string }
+		expectedOriginalItems map[string]string
+		expectedItems         map[string]string
+	}{
+		{
+			msg: "mapped headers get original casing",
+			mapping: map[string]string{
+				"Key-One": "keY-one",
+				"Key-Two": "keY-two",
+			},
+			headers: []struct{ key, val string }{
+				{"Key-One", "v1"},
+				{"Key-Two", "v2"},
+			},
+			expectedOriginalItems: map[string]string{
+				"keY-one": "v1",
+				"keY-two": "v2",
+			},
+			expectedItems: map[string]string{
+				"key-one": "v1",
+				"key-two": "v2",
+			},
+		},
+		{
+			msg: "unmapped headers get canonicalized key",
+			mapping: map[string]string{
+				"Key-One": "keY-one",
+			},
+			headers: []struct{ key, val string }{
+				{"Key-One", "v1"},
+				{"Key-Three", "v3"},
+			},
+			expectedOriginalItems: map[string]string{
+				"keY-one":   "v1",
+				"key-three": "v3",
+			},
+			expectedItems: map[string]string{
+				"key-one":   "v1",
+				"key-three": "v3",
+			},
+		},
+		{
+			msg:     "nil mapping preserves original keys",
+			mapping: nil,
+			headers: []struct{ key, val string }{
+				{"Key-One", "v1"},
+			},
+			expectedOriginalItems: map[string]string{
+				"Key-One": "v1",
+			},
+			expectedItems: map[string]string{
+				"key-one": "v1",
+			},
+		},
+		{
+			msg:     "empty mapping preserves original keys",
+			mapping: map[string]string{},
+			headers: []struct{ key, val string }{
+				{"Key-One", "v1"},
+			},
+			expectedOriginalItems: map[string]string{
+				"Key-One": "v1",
+			},
+			expectedItems: map[string]string{
+				"key-one": "v1",
+			},
+		},
+		{
+			msg: "mapping keys are case-insensitive",
+			mapping: map[string]string{
+				"key-one": "keY-one",
+			},
+			headers: []struct{ key, val string }{
+				{"Key-One", "v1"},
+			},
+			expectedOriginalItems: map[string]string{
+				"keY-one": "v1",
+			},
+			expectedItems: map[string]string{
+				"key-one": "v1",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			header := NewHeaders().WithHeaderCaseMapping(tt.mapping)
+			for _, h := range tt.headers {
+				header = header.With(h.key, h.val)
+			}
+			assert.Equal(t, tt.expectedOriginalItems, header.OriginalItems())
+			assert.Equal(t, tt.expectedItems, header.Items())
+		})
+	}
+}

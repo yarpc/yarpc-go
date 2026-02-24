@@ -45,6 +45,10 @@ type Headers struct {
 	originalItems map[string]string
 	// overrideOriginalItemWithCanonicalizedKey indicates whether to override
 	overrideOriginalItemWithCanonicalizedKey bool
+	// headerMapping maps canonicalized (lowercase) header keys to their
+	// desired original casing. When set, With() uses the mapped key for
+	// originalItems, and canonicalized key for unmapped headers.
+	headerMapping map[string]string
 }
 
 // NewHeaders builds a new Headers object.
@@ -78,9 +82,18 @@ func (h Headers) With(k, v string) Headers {
 	}
 	canonicalizedKey := CanonicalizeHeaderKey(k)
 	h.items[canonicalizedKey] = v
-	if h.overrideOriginalItemWithCanonicalizedKey {
+
+	switch {
+	case h.headerMapping != nil:
+		// Header case mapping takes precedence: use mapped key or fall back to canonicalized.
+		if mappedKey, ok := h.headerMapping[canonicalizedKey]; ok {
+			h.originalItems[mappedKey] = v
+		} else {
+			h.originalItems[canonicalizedKey] = v
+		}
+	case h.overrideOriginalItemWithCanonicalizedKey:
 		h.originalItems[canonicalizedKey] = v
-	} else {
+	default:
 		h.originalItems[k] = v
 	}
 	return h
@@ -90,7 +103,14 @@ func (h Headers) With(k, v string) Headers {
 //
 // This is a no-op if the key does not exist.
 func (h Headers) Del(k string) {
-	delete(h.items, CanonicalizeHeaderKey(k))
+	canonicalizedKey := CanonicalizeHeaderKey(k)
+	delete(h.items, canonicalizedKey)
+	if h.headerMapping != nil {
+		if mappedKey, ok := h.headerMapping[canonicalizedKey]; ok {
+			delete(h.originalItems, mappedKey)
+			return
+		}
+	}
 	delete(h.originalItems, k)
 }
 
@@ -154,6 +174,20 @@ func (h Headers) OriginalItemsLen() int {
 // items with canonicalized keys when adding headers.
 func (h Headers) EnableOverrideOriginalItemsWithCanonicalizedKeys() Headers {
 	h.overrideOriginalItemWithCanonicalizedKey = true
+	return h
+}
+
+// WithHeaderCaseMapping returns a Headers with the given mapping set. The
+// mapping maps canonicalized (lowercase) header keys to their desired original
+// casing (e.g. TChannel casing).
+//
+// When a mapping is set, With() uses the mapped value as the originalItems
+// key for matched headers, and the canonicalized key for unmatched headers.
+func (h Headers) WithHeaderCaseMapping(mapping map[string]string) Headers {
+	if len(mapping) == 0 {
+		return h
+	}
+	h.headerMapping = mapping
 	return h
 }
 
