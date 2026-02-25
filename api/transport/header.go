@@ -105,13 +105,20 @@ func (h Headers) With(k, v string) Headers {
 func (h Headers) Del(k string) {
 	canonicalizedKey := CanonicalizeHeaderKey(k)
 	delete(h.items, canonicalizedKey)
-	if h.headerMapping != nil {
+
+	switch {
+	case h.headerMapping != nil:
 		if mappedKey, ok := h.headerMapping[canonicalizedKey]; ok {
 			delete(h.originalItems, mappedKey)
-			return
+		} else {
+			// Unmapped keys are stored with canonicalized key when mapping is set.
+			delete(h.originalItems, canonicalizedKey)
 		}
+	case h.overrideOriginalItemWithCanonicalizedKey:
+		delete(h.originalItems, canonicalizedKey)
+	default:
+		delete(h.originalItems, k)
 	}
-	delete(h.originalItems, k)
 }
 
 // Get retrieves the value associated with the given header name.
@@ -184,7 +191,7 @@ func (h Headers) EnableOverrideOriginalItemsWithCanonicalizedKeys() Headers {
 // When a mapping is set, With() uses the mapped value as the originalItems
 // key for matched headers, and the canonicalized key for unmatched headers.
 func (h Headers) WithHeaderCaseMapping(mapping map[string]string) Headers {
-	if len(mapping) == 0 {
+	if mapping == nil {
 		return h
 	}
 	h.headerMapping = mapping

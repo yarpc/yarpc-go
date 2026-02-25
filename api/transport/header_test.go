@@ -360,3 +360,95 @@ func TestWithHeaderCaseMapping(t *testing.T) {
 		})
 	}
 }
+
+func TestDelWithHeaderCaseMapping(t *testing.T) {
+	tests := []struct {
+		msg                   string
+		mapping               map[string]string
+		headers               []struct{ key, val string }
+		deleteKey             string
+		expectedItems         map[string]string
+		expectedOriginalItems map[string]string
+	}{
+		{
+			msg: "del mapped key removes from originalItems using mapped casing",
+			mapping: map[string]string{
+				"key-one": "keY-one",
+				"key-two": "keY-two",
+			},
+			headers: []struct{ key, val string }{
+				{"Key-One", "val1"},
+				{"Key-Two", "val2"},
+			},
+			deleteKey: "key-one",
+			expectedItems: map[string]string{
+				"key-two": "val2",
+			},
+			expectedOriginalItems: map[string]string{
+				"keY-two": "val2",
+			},
+		},
+		{
+			msg: "del unmapped key removes using canonicalized key",
+			mapping: map[string]string{
+				"key-one": "keY-one",
+			},
+			headers: []struct{ key, val string }{
+				{"Key-One", "val1"},
+				{"Key-Two", "val2"},
+			},
+			deleteKey: "Key-Two",
+			expectedItems: map[string]string{
+				"key-one": "val1",
+			},
+			expectedOriginalItems: map[string]string{
+				"keY-one": "val1",
+			},
+		},
+		{
+			msg: "del nonexistent key is no-op",
+			mapping: map[string]string{
+				"key-one": "keY-one",
+			},
+			headers: []struct{ key, val string }{
+				{"Key-One", "val1"},
+			},
+			deleteKey: "key-unknown",
+			expectedItems: map[string]string{
+				"key-one": "val1",
+			},
+			expectedOriginalItems: map[string]string{
+				"keY-one": "val1",
+			},
+		},
+		{
+			msg:     "del without mapping removes using original key",
+			mapping: nil,
+			headers: []struct{ key, val string }{
+				{"Key-One", "val1"},
+				{"Key-Two", "val2"},
+			},
+			deleteKey: "Key-One",
+			expectedItems: map[string]string{
+				"key-two": "val2",
+			},
+			expectedOriginalItems: map[string]string{
+				"Key-Two": "val2",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			header := NewHeaders().WithHeaderCaseMapping(tt.mapping)
+			for _, h := range tt.headers {
+				header = header.With(h.key, h.val)
+			}
+
+			header.Del(tt.deleteKey)
+
+			assert.Equal(t, tt.expectedItems, header.Items())
+			assert.Equal(t, tt.expectedOriginalItems, header.OriginalItems())
+		})
+	}
+}
