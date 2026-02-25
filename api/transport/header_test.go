@@ -272,8 +272,8 @@ func TestWithHeaderCaseMapping(t *testing.T) {
 		{
 			msg: "mapped headers get original casing",
 			mapping: map[string]string{
-				"Key-One": "keY-one",
-				"Key-Two": "keY-two",
+				"key-one": "keY-one",
+				"key-two": "keY-two",
 			},
 			headers: []struct{ key, val string }{
 				{"Key-One", "v1"},
@@ -291,7 +291,7 @@ func TestWithHeaderCaseMapping(t *testing.T) {
 		{
 			msg: "unmapped headers get canonicalized key",
 			mapping: map[string]string{
-				"Key-One": "keY-one",
+				"key-one": "keY-one",
 			},
 			headers: []struct{ key, val string }{
 				{"Key-One", "v1"},
