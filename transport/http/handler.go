@@ -57,7 +57,7 @@ type handler struct {
 	logger                                   *zap.Logger
 	transport                                *Transport
 	overrideOriginalItemWithCanonicalizedKey bool
-	headerCaseMapping                        map[string]string
+	headerCaseMapping                        map[string][]string
 	// duplicate header counter vector
 	duplicateHeaderCounterVec *metrics.CounterVector
 }

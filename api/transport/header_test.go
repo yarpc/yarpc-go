@@ -264,16 +264,16 @@ func TestEnableOverrideOriginalItemsWithCanonicalizedKeys(t *testing.T) {
 func TestWithHeaderCaseMapping(t *testing.T) {
 	tests := []struct {
 		msg                   string
-		mapping               map[string]string
+		mapping               map[string][]string
 		headers               []struct{ key, val string }
 		expectedOriginalItems map[string]string
 		expectedItems         map[string]string
 	}{
 		{
 			msg: "mapped headers get original casing",
-			mapping: map[string]string{
-				"key-one": "keY-one",
-				"key-two": "keY-two",
+			mapping: map[string][]string{
+				"key-one": {"keY-one"},
+				"key-two": {"keY-two"},
 			},
 			headers: []struct{ key, val string }{
 				{"Key-One", "v1"},
@@ -289,9 +289,25 @@ func TestWithHeaderCaseMapping(t *testing.T) {
 			},
 		},
 		{
+			msg: "multiple mapped variants are all inserted",
+			mapping: map[string][]string{
+				"key-one": {"keY-one", "Key-One"},
+			},
+			headers: []struct{ key, val string }{
+				{"KEY-ONE", "v1"},
+			},
+			expectedOriginalItems: map[string]string{
+				"keY-one": "v1",
+				"Key-One": "v1",
+			},
+			expectedItems: map[string]string{
+				"key-one": "v1",
+			},
+		},
+		{
 			msg: "unmapped headers get canonicalized key",
-			mapping: map[string]string{
-				"key-one": "keY-one",
+			mapping: map[string][]string{
+				"key-one": {"keY-one"},
 			},
 			headers: []struct{ key, val string }{
 				{"Key-One", "v1"},
@@ -321,7 +337,7 @@ func TestWithHeaderCaseMapping(t *testing.T) {
 		},
 		{
 			msg:     "empty mapping preserves original keys",
-			mapping: map[string]string{},
+			mapping: map[string][]string{},
 			headers: []struct{ key, val string }{
 				{"Key-One", "v1"},
 			},
@@ -334,8 +350,8 @@ func TestWithHeaderCaseMapping(t *testing.T) {
 		},
 		{
 			msg: "mapping keys are case-insensitive",
-			mapping: map[string]string{
-				"key-one": "keY-one",
+			mapping: map[string][]string{
+				"key-one": {"keY-one"},
 			},
 			headers: []struct{ key, val string }{
 				{"Key-One", "v1"},
@@ -364,7 +380,7 @@ func TestWithHeaderCaseMapping(t *testing.T) {
 func TestDelWithHeaderCaseMapping(t *testing.T) {
 	tests := []struct {
 		msg                   string
-		mapping               map[string]string
+		mapping               map[string][]string
 		headers               []struct{ key, val string }
 		deleteKey             string
 		expectedItems         map[string]string
@@ -372,9 +388,9 @@ func TestDelWithHeaderCaseMapping(t *testing.T) {
 	}{
 		{
 			msg: "del mapped key removes from originalItems using mapped casing",
-			mapping: map[string]string{
-				"key-one": "keY-one",
-				"key-two": "keY-two",
+			mapping: map[string][]string{
+				"key-one": {"keY-one"},
+				"key-two": {"keY-two"},
 			},
 			headers: []struct{ key, val string }{
 				{"Key-One", "val1"},
@@ -389,9 +405,21 @@ func TestDelWithHeaderCaseMapping(t *testing.T) {
 			},
 		},
 		{
+			msg: "del mapped key removes all variants from originalItems",
+			mapping: map[string][]string{
+				"key-one": {"keY-one", "Key-One"},
+			},
+			headers: []struct{ key, val string }{
+				{"KEY-ONE", "val1"},
+			},
+			deleteKey:             "key-one",
+			expectedItems:         map[string]string{},
+			expectedOriginalItems: map[string]string{},
+		},
+		{
 			msg: "del unmapped key removes using canonicalized key",
-			mapping: map[string]string{
-				"key-one": "keY-one",
+			mapping: map[string][]string{
+				"key-one": {"keY-one"},
 			},
 			headers: []struct{ key, val string }{
 				{"Key-One", "val1"},
@@ -407,8 +435,8 @@ func TestDelWithHeaderCaseMapping(t *testing.T) {
 		},
 		{
 			msg: "del nonexistent key is no-op",
-			mapping: map[string]string{
-				"key-one": "keY-one",
+			mapping: map[string][]string{
+				"key-one": {"keY-one"},
 			},
 			headers: []struct{ key, val string }{
 				{"Key-One", "val1"},

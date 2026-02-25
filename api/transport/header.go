@@ -45,10 +45,11 @@ type Headers struct {
 	originalItems map[string]string
 	// overrideOriginalItemWithCanonicalizedKey indicates whether to override
 	overrideOriginalItemWithCanonicalizedKey bool
-	// headerMapping maps canonicalized (lowercase) header keys to their
-	// desired original casing. When set, With() uses the mapped key for
-	// originalItems, and canonicalized key for unmapped headers.
-	headerMapping map[string]string
+	// headerMapping maps canonicalized (lowercase) header keys to one or
+	// more desired original casings. When set, With() inserts the value
+	// into originalItems under every mapped key variant, falling back to
+	// the canonicalized key for unmapped headers.
+	headerMapping map[string][]string
 }
 
 // NewHeaders builds a new Headers object.
@@ -85,9 +86,12 @@ func (h Headers) With(k, v string) Headers {
 
 	switch {
 	case h.headerMapping != nil:
-		// Header case mapping takes precedence: use mapped key or fall back to canonicalized.
-		if mappedKey, ok := h.headerMapping[canonicalizedKey]; ok {
-			h.originalItems[mappedKey] = v
+		// Header case mapping takes precedence: insert every mapped variant,
+		// or fall back to canonicalized key for unmapped headers.
+		if mappedKeys, ok := h.headerMapping[canonicalizedKey]; ok {
+			for _, mk := range mappedKeys {
+				h.originalItems[mk] = v
+			}
 		} else {
 			h.originalItems[canonicalizedKey] = v
 		}
@@ -108,8 +112,10 @@ func (h Headers) Del(k string) {
 
 	switch {
 	case h.headerMapping != nil:
-		if mappedKey, ok := h.headerMapping[canonicalizedKey]; ok {
-			delete(h.originalItems, mappedKey)
+		if mappedKeys, ok := h.headerMapping[canonicalizedKey]; ok {
+			for _, mk := range mappedKeys {
+				delete(h.originalItems, mk)
+			}
 		} else {
 			// Unmapped keys are stored with canonicalized key when mapping is set.
 			delete(h.originalItems, canonicalizedKey)
@@ -185,13 +191,18 @@ func (h Headers) EnableOverrideOriginalItemsWithCanonicalizedKeys() Headers {
 }
 
 // WithHeaderCaseMapping returns a Headers with the given mapping set. The
-// mapping maps canonicalized (lowercase) header keys to their desired original
-// casing (e.g. TChannel casing).
+// mapping maps canonicalized (lowercase) header keys to one or more desired
+// original casings (e.g. TChannel casing variants).
 //
-// When a mapping is set, With() uses the mapped value as the originalItems
-// key for matched headers, and the canonicalized key for unmatched headers.
-func (h Headers) WithHeaderCaseMapping(mapping map[string]string) Headers {
-	if mapping == nil {
+// When a mapping is set, With() inserts the value into originalItems under
+// every mapped key variant for matched headers, and uses the canonicalized
+// key for unmatched headers.
+//
+// Example:
+//
+//	map[string][]string{"key-one": {"keY-one", "Key-One"}}
+func (h Headers) WithHeaderCaseMapping(mapping map[string][]string) Headers {
+	if len(mapping) == 0 {
 		return h
 	}
 	h.headerMapping = mapping
