@@ -86,15 +86,12 @@ func (h Headers) With(k, v string) Headers {
 
 	switch {
 	case h.headerMapping != nil:
-		// Header case mapping takes precedence: insert every mapped variant,
-		// or fall back to canonicalized key for unmapped headers.
-		if mappedKeys, ok := h.headerMapping[canonicalizedKey]; ok {
-			for _, mk := range mappedKeys {
-				h.originalItems[mk] = v
-			}
-		} else {
-			h.originalItems[canonicalizedKey] = v
+		// Header case mapping takes precedence: insert every mapped variant
+		// plus the canonicalized key. Range over nil slice is a no-op.
+		for _, mk := range h.headerMapping[canonicalizedKey] {
+			h.originalItems[mk] = v
 		}
+		h.originalItems[canonicalizedKey] = v
 	case h.overrideOriginalItemWithCanonicalizedKey:
 		h.originalItems[canonicalizedKey] = v
 	default:
@@ -112,14 +109,10 @@ func (h Headers) Del(k string) {
 
 	switch {
 	case h.headerMapping != nil:
-		if mappedKeys, ok := h.headerMapping[canonicalizedKey]; ok {
-			for _, mk := range mappedKeys {
-				delete(h.originalItems, mk)
-			}
-		} else {
-			// Unmapped keys are stored with canonicalized key when mapping is set.
-			delete(h.originalItems, canonicalizedKey)
+		for _, mk := range h.headerMapping[canonicalizedKey] {
+			delete(h.originalItems, mk)
 		}
+		delete(h.originalItems, canonicalizedKey)
 	case h.overrideOriginalItemWithCanonicalizedKey:
 		delete(h.originalItems, canonicalizedKey)
 	default:

@@ -281,7 +281,9 @@ func TestWithHeaderCaseMapping(t *testing.T) {
 			},
 			expectedOriginalItems: map[string]string{
 				"keY-one": "v1",
+				"key-one": "v1",
 				"keY-two": "v2",
+				"key-two": "v2",
 			},
 			expectedItems: map[string]string{
 				"key-one": "v1",
@@ -299,6 +301,7 @@ func TestWithHeaderCaseMapping(t *testing.T) {
 			expectedOriginalItems: map[string]string{
 				"keY-one": "v1",
 				"Key-One": "v1",
+				"key-one": "v1",
 			},
 			expectedItems: map[string]string{
 				"key-one": "v1",
@@ -315,6 +318,7 @@ func TestWithHeaderCaseMapping(t *testing.T) {
 			},
 			expectedOriginalItems: map[string]string{
 				"keY-one":   "v1",
+				"key-one":   "v1",
 				"key-three": "v3",
 			},
 			expectedItems: map[string]string{
@@ -358,6 +362,7 @@ func TestWithHeaderCaseMapping(t *testing.T) {
 			},
 			expectedOriginalItems: map[string]string{
 				"keY-one": "v1",
+				"key-one": "v1",
 			},
 			expectedItems: map[string]string{
 				"key-one": "v1",
@@ -402,6 +407,7 @@ func TestDelWithHeaderCaseMapping(t *testing.T) {
 			},
 			expectedOriginalItems: map[string]string{
 				"keY-two": "val2",
+				"key-two": "val2",
 			},
 		},
 		{
@@ -431,6 +437,7 @@ func TestDelWithHeaderCaseMapping(t *testing.T) {
 			},
 			expectedOriginalItems: map[string]string{
 				"keY-one": "val1",
+				"key-one": "val1",
 			},
 		},
 		{
@@ -447,6 +454,7 @@ func TestDelWithHeaderCaseMapping(t *testing.T) {
 			},
 			expectedOriginalItems: map[string]string{
 				"keY-one": "val1",
+				"key-one": "val1",
 			},
 		},
 		{
