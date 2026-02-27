@@ -166,6 +166,16 @@ func ServerMaxHeaderListSize(serverMaxHeaderListSize uint32) TransportOption {
 	}
 }
 
+// ServerHeaderTableSize returns a transport option for configuring the
+// HPACK dynamic table size for the server.
+//
+// The default is 4KB (HTTP/2 specification default).
+func ServerHeaderTableSize(serverHeaderTableSize uint32) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.serverHeaderTableSize = &serverHeaderTableSize
+	}
+}
+
 // ClientMaxRecvMsgSize is the maximum message size the client can receive.
 //
 // The default is 4MB.
@@ -320,6 +330,7 @@ type transportOptions struct {
 	clientMaxRecvMsgSize      int
 	clientMaxSendMsgSize      int
 	serverMaxHeaderListSize   *uint32
+	serverHeaderTableSize     *uint32
 	clientMaxHeaderListSize   *uint32
 	numStreamWorkers          *uint32
 	unaryInboundInterceptor   interceptor.UnaryInbound
