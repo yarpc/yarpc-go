@@ -77,9 +77,9 @@ const (
 	// meta details string.
 	_applicationErrorDetailsHeader = "rpc-application-error-details"
 	// _routingRegionHeader is one of the cross-zone header for the region of the routing key.
-	_routingRegionHeader = "rpc-routing-region"
+	_routingRegionHeader = "x-uber-rpc-routing-region"
 	// _routingZoneHeader is one of the cross-zone header for the zone of the routing key.
-	_routingZoneHeader = "rpc-routing-zone"
+	_routingZoneHeader = "x-uber-rpc-routing-zone"
 
 	// ApplicationErrorHeaderValue is the value that will be set for
 	// ApplicationErrorHeader is there was an application error.
