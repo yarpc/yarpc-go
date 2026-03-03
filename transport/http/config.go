@@ -157,17 +157,23 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 
 // InboundConfig configures an HTTP inbound.
 //
-//	   inbounds:
-//	     http:
-//	       address: ":80"
-//	       grabHeaders:
-//	         - x-foo
-//	         - x-bar
-//		      shutdownTimeout: 5s
-//	       readHeaderTimeout: 5s
-//	       readTimeout: 10s
-//	       writeTimeout: 10s
-//	       idleTimeout: 60s
+//	inbounds:
+//	  http:
+//	    address: ":80"
+//	    grabHeaders:
+//	      - x-foo
+//	      - x-bar
+//	    headerCaseMapping:
+//	      x-foo:
+//	        - X-Foo
+//	      x-bar:
+//	        - X-Bar
+//	        - X-BAR
+//	    shutdownTimeout: 5s
+//	    readHeaderTimeout: 5s
+//	    readTimeout: 10s
+//	    writeTimeout: 10s
+//	    idleTimeout: 60s
 type InboundConfig struct {
 	// Address to listen on. This field is required.
 	Address string `config:"address,interpolate"`
@@ -188,6 +194,13 @@ type InboundConfig struct {
 	TLSConfig TLSConfig `config:"tls"`
 	// DisableHTTP2 configure to reject http2 requests.
 	DisableHTTP2 bool `config:"disableHTTP2"`
+	// HeaderCaseMapping specifies a mapping from canonicalized (lowercase)
+	// header keys to one or more original casings. This restores key casings
+	// that may be lost during transport migration (e.g., TChannel to HTTP/2).
+	// Keys must be lowercase. Values are the desired original casings.
+	// Must not be empty — use EnableOverrideOriginalItemWithCanonicalizedKey
+	// for canonicalized key behavior instead.
+	HeaderCaseMapping map[string][]string `config:"headerCaseMapping"`
 }
 
 // TLSConfig specifies the TLS configuration of the HTTP inbound.
@@ -242,6 +255,13 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 			return nil, fmt.Errorf("idleTimeout must not be negative, got: %q", ic.IdleTimeout)
 		}
 		inboundOptions = append(inboundOptions, IdleTimeout(*ic.IdleTimeout))
+	}
+
+	if ic.HeaderCaseMapping != nil {
+		if len(ic.HeaderCaseMapping) == 0 {
+			return nil, fmt.Errorf("headerCaseMapping must not be empty, use enableOverrideOriginalItemWithCanonicalizedKey for canonicalized key behavior")
+		}
+		inboundOptions = append(inboundOptions, HeaderCaseMapping(ic.HeaderCaseMapping))
 	}
 
 	inboundOptions = append(inboundOptions, DisableHTTP2(ic.DisableHTTP2))

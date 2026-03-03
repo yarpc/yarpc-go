@@ -86,6 +86,7 @@ func TestTransportSpec(t *testing.T) {
 		ReadTimeout       time.Duration
 		WriteTimeout      time.Duration
 		IdleTimeout       time.Duration
+		HeaderCaseMapping map[string][]string
 	}
 
 	type inboundTest struct {
@@ -290,6 +291,32 @@ func TestTransportSpec(t *testing.T) {
 			desc:       "idleTimeout err",
 			cfg:        attrs{"address": ":8080", "idleTimeout": "-1s"},
 			wantErrors: []string{`idleTimeout must not be negative, got: "-1s"`},
+		},
+		{
+			desc: "headerCaseMapping",
+			cfg: attrs{
+				"address": ":8080",
+				"headerCaseMapping": map[string]interface{}{
+					"x-foo": []string{"X-Foo"},
+					"x-bar": []string{"X-Bar", "X-BAR"},
+				},
+			},
+			wantInbound: &wantInbound{
+				Address:         ":8080",
+				ShutdownTimeout: defaultShutdownTimeout,
+				HeaderCaseMapping: map[string][]string{
+					"x-foo": {"X-Foo"},
+					"x-bar": {"X-Bar", "X-BAR"},
+				},
+			},
+		},
+		{
+			desc: "headerCaseMapping empty error",
+			cfg: attrs{
+				"address":           ":8080",
+				"headerCaseMapping": map[string]interface{}{},
+			},
+			wantErrors: []string{"headerCaseMapping must not be empty"},
 		},
 	}
 
@@ -637,6 +664,11 @@ func TestTransportSpec(t *testing.T) {
 				assert.Equal(t, want.WriteTimeout, ib.server.WriteTimeout, "WriteTimeout should match")
 				assert.Equal(t, want.ReadTimeout, ib.server.ReadTimeout, "ReadTimeout should match")
 				assert.Equal(t, want.IdleTimeout, ib.server.IdleTimeout, "IdleTimeout should match")
+				if len(want.HeaderCaseMapping) > 0 {
+					assert.Equal(t, want.HeaderCaseMapping, ib.headerCaseMapping, "headerCaseMapping should match")
+				} else {
+					assert.Empty(t, ib.headerCaseMapping)
+				}
 			}
 		}
 
