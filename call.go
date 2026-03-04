@@ -82,6 +82,22 @@ func WithRoutingDelegate(rd string) CallOption {
 	return CallOption(encoding.WithRoutingDelegate(rd))
 }
 
+// WithCrossZoneRoutingGRPC sets the cross zone routing gRPC header for the request.
+func WithCrossZoneRoutingGRPC(rz string) []CallOption {
+	return []CallOption{
+		CallOption(encoding.WithRoutingDelegate(encoding.RoutingDelegateCrosszoneHeaderKey)),
+		CallOption(encoding.WithCrossZoneRoutingGRPC(rz)),
+	}
+}
+
+// WithCrossRegionRoutingGRPC sets the cross region routing gRPC header for the request.
+func WithCrossRegionRoutingGRPC(rz string) []CallOption {
+	return []CallOption{
+		CallOption(encoding.WithRoutingDelegate(encoding.RoutingDelegateCrossregionHeaderKey)),
+		CallOption(encoding.WithCrossRegionRoutingGRPC(rz)),
+	}
+}
+
 // Call provides information about the current request inside handlers. An
 // instance of Call for the current request can be obtained by calling
 // CallFromContext on the request context.

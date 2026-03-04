@@ -296,3 +296,35 @@ func BenchmarkCallHeaderNames(b *testing.B) {
 		}
 	})
 }
+
+func TestWithCrossZoneRoutingGRPC(t *testing.T) {
+	outboundCall := NewOutboundCall(WithCrossZoneRoutingGRPC("us-west-1a"))
+	request := &transport.Request{}
+	_, err := outboundCall.WriteToRequest(context.Background(), request)
+	require.NoError(t, err)
+
+	// Verify the routing zone header is set
+	value, ok := request.Headers.Get(RoutingZoneGRPCHeaderKey)
+	assert.True(t, ok)
+	assert.Equal(t, "us-west-1a", value)
+}
+
+func TestWithCrossRegionRoutingGRPC(t *testing.T) {
+	outboundCall := NewOutboundCall(WithCrossRegionRoutingGRPC("us-west-1"))
+	request := &transport.Request{}
+	_, err := outboundCall.WriteToRequest(context.Background(), request)
+	require.NoError(t, err)
+
+	// Verify the routing region header is set
+	value, ok := request.Headers.Get(RoutingRegionGRPCHeaderKey)
+	assert.True(t, ok)
+	assert.Equal(t, "us-west-1", value)
+}
+
+func TestCrossZoneAndRegionHeaderKeys(t *testing.T) {
+	// Test that the constants are set correctly
+	assert.Equal(t, "x-uber-rpc-routing-zone", RoutingZoneGRPCHeaderKey)
+	assert.Equal(t, "x-uber-rpc-routing-region", RoutingRegionGRPCHeaderKey)
+	assert.Equal(t, "crosszone", RoutingDelegateCrosszoneHeaderKey)
+	assert.Equal(t, "crossregion", RoutingDelegateCrossregionHeaderKey)
+}
