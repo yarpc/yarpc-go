@@ -116,6 +116,7 @@ func TestTransportSpec(t *testing.T) {
 		ClientMaxRecvMsgSize    int
 		ClientMaxSendMsgSize    int
 		ClientMaxHeaderListSize uint32
+		NumStreamWorkers        uint32
 		TLS                     bool
 		TLSMode                 yarpctls.Mode
 	}
@@ -260,6 +261,17 @@ func TestTransportSpec(t *testing.T) {
 				ClientMaxRecvMsgSize:    4096,
 				ClientMaxSendMsgSize:    8192,
 				ClientMaxHeaderListSize: 16384,
+			},
+		},
+		{
+			desc: "inbound and transport with num stream workers",
+			transportCfg: attrs{
+				"numStreamWorkers": "100",
+			},
+			inboundCfg: attrs{"address": ":54572"},
+			wantInbound: &wantInbound{
+				Address:          ":54572",
+				NumStreamWorkers: 100,
 			},
 		},
 		{
@@ -608,6 +620,12 @@ func TestTransportSpec(t *testing.T) {
 					assert.Equal(t, tt.wantInbound.ServerMaxHeaderListSize, *inbound.t.options.serverMaxHeaderListSize)
 				} else {
 					assert.Nil(t, inbound.t.options.serverMaxHeaderListSize)
+				}
+				if tt.wantInbound.NumStreamWorkers > 0 {
+					require.NotNil(t, inbound.t.options.numStreamWorkers)
+					assert.Equal(t, tt.wantInbound.NumStreamWorkers, *inbound.t.options.numStreamWorkers)
+				} else {
+					assert.Nil(t, inbound.t.options.numStreamWorkers)
 				}
 				assert.Equal(t, tt.wantInbound.TLS, inbound.options.creds != nil)
 				assert.Equal(t, tt.wantInbound.TLSMode, inbound.options.tlsMode)

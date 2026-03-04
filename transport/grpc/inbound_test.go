@@ -65,3 +65,17 @@ func TestInboundIntrospection(t *testing.T) {
 	assert.Equal(t, "Stopped", inbound.Introspect().State, "expected 'Stopped' state")
 	assert.Empty(t, inbound.Introspect().Endpoint, "unexpected endpoint")
 }
+
+func TestInboundStartWithNumStreamWorkers(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer listener.Close()
+
+	transport := NewTransport(NumStreamWorkers(100))
+	inbound := transport.NewInbound(listener)
+	inbound.SetRouter(newTestRouter(nil))
+
+	require.NoError(t, inbound.Start())
+	assert.True(t, inbound.IsRunning())
+	require.NoError(t, inbound.Stop())
+}
