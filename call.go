@@ -83,18 +83,18 @@ func WithRoutingDelegate(rd string) CallOption {
 }
 
 // WithCrossZoneRoutingGRPC sets the cross zone routing gRPC header for the request.
-func WithCrossZoneRoutingGRPC(rz string) []CallOption {
+func WithCrossZoneRoutingGRPC(routingZone string) []CallOption {
 	return []CallOption{
 		CallOption(encoding.WithRoutingDelegate(encoding.RoutingDelegateCrosszoneHeaderKey)),
-		CallOption(encoding.WithCrossZoneRoutingGRPC(rz)),
+		CallOption(encoding.WithCrossZoneRoutingGRPC(routingZone)),
 	}
 }
 
 // WithCrossRegionRoutingGRPC sets the cross region routing gRPC header for the request.
-func WithCrossRegionRoutingGRPC(rz string) []CallOption {
+func WithCrossRegionRoutingGRPC(routingRegion string) []CallOption {
 	return []CallOption{
 		CallOption(encoding.WithRoutingDelegate(encoding.RoutingDelegateCrossregionHeaderKey)),
-		CallOption(encoding.WithCrossRegionRoutingGRPC(rz)),
+		CallOption(encoding.WithCrossRegionRoutingGRPC(routingRegion)),
 	}
 }
 
