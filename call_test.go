@@ -91,3 +91,58 @@ func TestCallFromContext(t *testing.T) {
 	assert.Equal(t, "three", call.RoutingDelegate())
 	assert.Equal(t, "four", call.CallerProcedure())
 }
+
+func TestWithCrossZoneRoutingGRPC(t *testing.T) {
+	outboundCall := encoding.NewOutboundCall(
+		pkgencoding.FromOptions(
+			yarpc.WithCrossZoneRoutingGRPC("us-west-1a"),
+		)...,
+	)
+	request := &transport.Request{}
+	_, err := outboundCall.WriteToRequest(context.Background(), request)
+	assert.NoError(t, err)
+
+	// Verify both routing delegate and zone header are set
+	assert.Equal(t, "crosszone", request.RoutingDelegate)
+	value, ok := request.Headers.Get(encoding.RoutingZoneGRPCHeaderKey)
+	assert.True(t, ok)
+	assert.Equal(t, "us-west-1a", value)
+}
+
+func TestWithCrossRegionRoutingGRPC(t *testing.T) {
+	outboundCall := encoding.NewOutboundCall(
+		pkgencoding.FromOptions(
+			yarpc.WithCrossRegionRoutingGRPC("us-west-1"),
+		)...,
+	)
+	request := &transport.Request{}
+	_, err := outboundCall.WriteToRequest(context.Background(), request)
+	assert.NoError(t, err)
+
+	// Verify both routing delegate and region header are set
+	assert.Equal(t, "crossregion", request.RoutingDelegate)
+	value, ok := request.Headers.Get(encoding.RoutingRegionGRPCHeaderKey)
+	assert.True(t, ok)
+	assert.Equal(t, "us-west-1", value)
+}
+
+func TestWithCrossZoneRoutingGRPCMultipleOptions(t *testing.T) {
+	// Test that cross-zone routing works with other call options
+	outboundCall := encoding.NewOutboundCall(
+		pkgencoding.FromOptions(
+			append(
+				[]yarpc.CallOption{yarpc.WithShardKey("shard1")},
+				yarpc.WithCrossZoneRoutingGRPC("us-west-1a")...,
+			),
+		)...,
+	)
+	request := &transport.Request{}
+	_, err := outboundCall.WriteToRequest(context.Background(), request)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "shard1", request.ShardKey)
+	assert.Equal(t, "crosszone", request.RoutingDelegate)
+	value, ok := request.Headers.Get(encoding.RoutingZoneGRPCHeaderKey)
+	assert.True(t, ok)
+	assert.Equal(t, "us-west-1a", value)
+}

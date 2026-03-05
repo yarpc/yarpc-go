@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"go.uber.org/multierr"
+	"go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc/metadata"
@@ -77,9 +78,9 @@ const (
 	// meta details string.
 	_applicationErrorDetailsHeader = "rpc-application-error-details"
 	// _routingRegionHeader is one of the cross-zone header for the region of the routing key.
-	_routingRegionHeader = "x-uber-rpc-routing-region"
+	_routingRegionHeader = encoding.RoutingRegionGRPCHeaderKey
 	// _routingZoneHeader is one of the cross-zone header for the zone of the routing key.
-	_routingZoneHeader = "x-uber-rpc-routing-zone"
+	_routingZoneHeader = encoding.RoutingZoneGRPCHeaderKey
 
 	// ApplicationErrorHeaderValue is the value that will be set for
 	// ApplicationErrorHeader is there was an application error.

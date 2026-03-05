@@ -20,6 +20,20 @@
 
 package encoding
 
+const (
+	// RoutingDelegateCrosszoneHeaderKey is one of the cross-zone header for the routing delegate
+	RoutingDelegateCrosszoneHeaderKey = "crosszone"
+
+	// RoutingDelegateCrossregionHeaderKey is one of the cross-region header for the routing delegate
+	RoutingDelegateCrossregionHeaderKey = "crossregion"
+
+	// RoutingZoneGRPCHeaderKey is one of the cross-zone header for the zone of the routing key for gRPC.
+	RoutingZoneGRPCHeaderKey = "x-uber-rpc-routing-zone"
+
+	// RoutingRegionGRPCHeaderKey is one of the cross-region header for the region of the routing key for gRPC.
+	RoutingRegionGRPCHeaderKey = "x-uber-rpc-routing-region"
+)
+
 // CallOption defines options that may be passed in at call sites to other
 // services.
 //
@@ -91,4 +105,14 @@ func (r routingDelegateOption) apply(call *OutboundCall) {
 // WithRoutingDelegate sets the routing delegate for the request.
 func WithRoutingDelegate(rd string) CallOption {
 	return CallOption{routingDelegateOption(rd)}
+}
+
+// WithCrossZoneRoutingGRPC sets the cross zone routing header for the gRPC request.
+func WithCrossZoneRoutingGRPC(rz string) CallOption {
+	return WithHeader(RoutingZoneGRPCHeaderKey, rz)
+}
+
+// WithCrossRegionRoutingGRPC sets the cross region routing header for the gRPC request.
+func WithCrossRegionRoutingGRPC(rz string) CallOption {
+	return WithHeader(RoutingRegionGRPCHeaderKey, rz)
 }
