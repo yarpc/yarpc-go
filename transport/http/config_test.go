@@ -75,18 +75,19 @@ func TestTransportSpec(t *testing.T) {
 	}
 
 	type wantInbound struct {
-		Address           string
-		Mux               *http.ServeMux
-		MuxPattern        string
-		GrabHeaders       map[string]struct{}
-		ShutdownTimeout   time.Duration
-		TLSMode           yarpctls.Mode
-		DisableHTTP2      bool
-		ReadHeaderTimeout time.Duration
-		ReadTimeout       time.Duration
-		WriteTimeout      time.Duration
-		IdleTimeout       time.Duration
-		HeaderCaseMapping map[string][]string
+		Address                string
+		Mux                    *http.ServeMux
+		MuxPattern             string
+		GrabHeaders            map[string]struct{}
+		ShutdownTimeout        time.Duration
+		TLSMode                yarpctls.Mode
+		DisableHTTP2           bool
+		ReadHeaderTimeout      time.Duration
+		ReadTimeout            time.Duration
+		WriteTimeout           time.Duration
+		IdleTimeout            time.Duration
+		CanonicalizeHeaderKeys bool
+		HeaderCaseMapping      map[string][]string
 	}
 
 	type inboundTest struct {
@@ -311,12 +312,42 @@ func TestTransportSpec(t *testing.T) {
 			},
 		},
 		{
-			desc: "headerCaseMapping empty error",
+			desc: "headerCaseMapping empty warning",
 			cfg: attrs{
 				"address":           ":8080",
 				"headerCaseMapping": map[string]interface{}{},
 			},
-			wantErrors: []string{"headerCaseMapping must not be empty"},
+			wantInbound: &wantInbound{
+				Address:         ":8080",
+				ShutdownTimeout: defaultShutdownTimeout,
+			},
+		},
+		{
+			desc: "canonicalizeHeaderKeys only",
+			cfg: attrs{
+				"address":                ":8080",
+				"canonicalizeHeaderKeys": true,
+			},
+			wantInbound: &wantInbound{
+				Address:                ":8080",
+				ShutdownTimeout:        defaultShutdownTimeout,
+				CanonicalizeHeaderKeys: true,
+			},
+		},
+		{
+			desc: "canonicalizeHeaderKeys overrides headerCaseMapping",
+			cfg: attrs{
+				"address":                ":8080",
+				"canonicalizeHeaderKeys": true,
+				"headerCaseMapping": map[string]interface{}{
+					"x-foo": []string{"X-Foo"},
+				},
+			},
+			wantInbound: &wantInbound{
+				Address:                ":8080",
+				ShutdownTimeout:        defaultShutdownTimeout,
+				CanonicalizeHeaderKeys: true,
+			},
 		},
 	}
 
@@ -664,6 +695,7 @@ func TestTransportSpec(t *testing.T) {
 				assert.Equal(t, want.WriteTimeout, ib.server.WriteTimeout, "WriteTimeout should match")
 				assert.Equal(t, want.ReadTimeout, ib.server.ReadTimeout, "ReadTimeout should match")
 				assert.Equal(t, want.IdleTimeout, ib.server.IdleTimeout, "IdleTimeout should match")
+				assert.Equal(t, want.CanonicalizeHeaderKeys, ib.overrideOriginalItemWithCanonicalizedKey, "canonicalizeHeaderKeys should match")
 				if len(want.HeaderCaseMapping) > 0 {
 					assert.Equal(t, want.HeaderCaseMapping, ib.headerCaseMapping, "headerCaseMapping should match")
 				} else {

@@ -85,14 +85,14 @@ func (h Headers) With(k, v string) Headers {
 	h.items[canonicalizedKey] = v
 
 	switch {
+	case h.overrideOriginalItemWithCanonicalizedKey:
+		h.originalItems[canonicalizedKey] = v
 	case h.headerMapping != nil:
-		// Header case mapping takes precedence: insert every mapped variant
+		// Header case mapping: insert every mapped variant
 		// plus the canonicalized key. Range over nil slice is a no-op.
 		for _, mk := range h.headerMapping[canonicalizedKey] {
 			h.originalItems[mk] = v
 		}
-		h.originalItems[canonicalizedKey] = v
-	case h.overrideOriginalItemWithCanonicalizedKey:
 		h.originalItems[canonicalizedKey] = v
 	default:
 		h.originalItems[k] = v
@@ -108,12 +108,12 @@ func (h Headers) Del(k string) {
 	delete(h.items, canonicalizedKey)
 
 	switch {
+	case h.overrideOriginalItemWithCanonicalizedKey:
+		delete(h.originalItems, canonicalizedKey)
 	case h.headerMapping != nil:
 		for _, mk := range h.headerMapping[canonicalizedKey] {
 			delete(h.originalItems, mk)
 		}
-		delete(h.originalItems, canonicalizedKey)
-	case h.overrideOriginalItemWithCanonicalizedKey:
 		delete(h.originalItems, canonicalizedKey)
 	default:
 		delete(h.originalItems, k)
@@ -191,11 +191,28 @@ func (h Headers) EnableOverrideOriginalItemsWithCanonicalizedKeys() Headers {
 // every mapped key variant for matched headers, and uses the canonicalized
 // key for unmatched headers.
 //
+// This is an internal transport-level function intended for use during inbound
+// setup. It should NOT be called by services at runtime.
+//
+// The mapping is silently ignored in the following cases:
+//   - The provided mapping is nil or empty.
+//   - A mapping has already been set (it cannot be modified once set).
+//   - overrideOriginalItemWithCanonicalizedKey is enabled, as canonicalized
+//     keys take precedence over case mapping.
+//
 // Example:
 //
 //	map[string][]string{"key-one": {"keY-one", "Key-One"}}
+//
+// Experimental: This API is subject to change or removal.
 func (h Headers) WithHeaderCaseMapping(mapping map[string][]string) Headers {
 	if len(mapping) == 0 {
+		return h
+	}
+	if h.headerMapping != nil {
+		return h
+	}
+	if h.overrideOriginalItemWithCanonicalizedKey {
 		return h
 	}
 	h.headerMapping = mapping

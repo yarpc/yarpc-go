@@ -163,6 +163,7 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 //	    grabHeaders:
 //	      - x-foo
 //	      - x-bar
+//	    canonicalizeHeaderKeys: true
 //	    headerCaseMapping:
 //	      x-foo:
 //	        - X-Foo
@@ -194,12 +195,15 @@ type InboundConfig struct {
 	TLSConfig TLSConfig `config:"tls"`
 	// DisableHTTP2 configure to reject http2 requests.
 	DisableHTTP2 bool `config:"disableHTTP2"`
+	// CanonicalizeHeaderKeys enables overriding original header items with
+	// canonicalized (lowercase) keys. When set, this takes precedence over
+	// HeaderCaseMapping and the mapping will not take effect.
+	CanonicalizeHeaderKeys bool `config:"canonicalizeHeaderKeys"`
 	// HeaderCaseMapping specifies a mapping from canonicalized (lowercase)
 	// header keys to one or more original casings. This restores key casings
-	// that may be lost during transport migration (e.g., TChannel to HTTP/2).
+	// that may be lost due to differences in (e.g., TChannel to HTTP/2).
 	// Keys must be lowercase. Values are the desired original casings.
-	// Must not be empty — use EnableOverrideOriginalItemWithCanonicalizedKey
-	// for canonicalized key behavior instead.
+	// Ignored if CanonicalizeHeaderKeys is true.
 	HeaderCaseMapping map[string][]string `config:"headerCaseMapping"`
 }
 
@@ -257,11 +261,18 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 		inboundOptions = append(inboundOptions, IdleTimeout(*ic.IdleTimeout))
 	}
 
-	if ic.HeaderCaseMapping != nil {
-		if len(ic.HeaderCaseMapping) == 0 {
-			return nil, fmt.Errorf("headerCaseMapping must not be empty, use enableOverrideOriginalItemWithCanonicalizedKey for canonicalized key behavior")
+	logger := t.(*Transport).logger
+	if ic.CanonicalizeHeaderKeys {
+		inboundOptions = append(inboundOptions, EnableOverrideOriginalItemWithCanonicalizedKey())
+		if len(ic.HeaderCaseMapping) > 0 {
+			logger.Warn("both canonicalizeHeaderKeys and headerCaseMapping are set; canonicalizeHeaderKeys takes precedence, headerCaseMapping will not take effect")
 		}
-		inboundOptions = append(inboundOptions, HeaderCaseMapping(ic.HeaderCaseMapping))
+	} else if ic.HeaderCaseMapping != nil {
+		if len(ic.HeaderCaseMapping) == 0 {
+			logger.Warn("headerCaseMapping is set but empty, mapping will not take effect")
+		} else {
+			inboundOptions = append(inboundOptions, HeaderCaseMapping(ic.HeaderCaseMapping))
+		}
 	}
 
 	inboundOptions = append(inboundOptions, DisableHTTP2(ic.DisableHTTP2))
