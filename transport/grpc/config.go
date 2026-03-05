@@ -83,6 +83,10 @@ type TransportConfig struct {
 	ServerMaxHeaderListSize uint32              `config:"serverMaxHeaderListSize"`
 	ClientMaxHeaderListSize uint32              `config:"clientMaxHeaderListSize"`
 	Backoff                 yarpcconfig.Backoff `config:"backoff"`
+	// NumStreamWorkers sets the number of worker goroutines used to process
+	// incoming streams.
+	// See: https://pkg.go.dev/google.golang.org/grpc#NumStreamWorkers
+	NumStreamWorkers uint32 `config:"numStreamWorkers"`
 }
 
 // InboundConfig configures a gRPC Inbound.
@@ -330,6 +334,9 @@ func (t *transportSpec) buildTransport(transportConfig *TransportConfig, kit *ya
 	}
 	if transportConfig.ClientMaxHeaderListSize > 0 {
 		options = append(options, ClientMaxHeaderListSize(transportConfig.ClientMaxHeaderListSize))
+	}
+	if transportConfig.NumStreamWorkers > 0 {
+		options = append(options, NumStreamWorkers(transportConfig.NumStreamWorkers))
 	}
 	backoffStrategy, err := transportConfig.Backoff.Strategy()
 	if err != nil {
