@@ -108,11 +108,11 @@ func WithRoutingDelegate(rd string) CallOption {
 }
 
 // WithCrossZoneRoutingGRPC sets the cross zone routing header for the gRPC request.
-func WithCrossZoneRoutingGRPC(rz string) CallOption {
-	return WithHeader(RoutingZoneGRPCHeaderKey, rz)
+func WithCrossZoneRoutingGRPC(routingZone string) CallOption {
+	return WithHeader(RoutingZoneGRPCHeaderKey, routingZone)
 }
 
 // WithCrossRegionRoutingGRPC sets the cross region routing header for the gRPC request.
-func WithCrossRegionRoutingGRPC(rz string) CallOption {
-	return WithHeader(RoutingRegionGRPCHeaderKey, rz)
+func WithCrossRegionRoutingGRPC(routingRegion string) CallOption {
+	return WithHeader(RoutingRegionGRPCHeaderKey, routingRegion)
 }
