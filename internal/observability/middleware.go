@@ -184,6 +184,9 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 	call := m.graph.begin(ctx, transport.Unary, _directionInbound, req)
 	defer m.handlePanicForCall(call, transport.Unary)
 
+	// Add meter info to context so it can be accessed in deeper layers (e.g., decoding)
+	ctx = WithMeterInfo(ctx, &MeterInfo{Edge: call.edge})
+
 	wrappedWriter := newWriter(w)
 	err := h.Handle(ctx, req, wrappedWriter)
 	ctxErr := ctxErrOverride(ctx, req)
@@ -235,6 +238,9 @@ func (m *Middleware) Call(ctx context.Context, req *transport.Request, out trans
 func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
 	call := m.graph.begin(ctx, transport.Oneway, _directionInbound, req)
 	defer m.handlePanicForCall(call, transport.Oneway)
+
+	// Add meter info to context so it can be accessed in deeper layers (e.g., decoding)
+	ctx = WithMeterInfo(ctx, &MeterInfo{Edge: call.edge})
 
 	err := h.HandleOneway(ctx, req)
 	call.End(callResult{err: err, requestSize: req.BodySize})

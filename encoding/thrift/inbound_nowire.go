@@ -24,11 +24,14 @@ import (
 	"context"
 	"io"
 
+	"go.uber.org/yarpc/transport/tchannel"
+
 	"go.uber.org/multierr"
 	"go.uber.org/thriftrw/protocol/stream"
 	"go.uber.org/thriftrw/wire"
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/pkg/errors"
 )
 
@@ -66,8 +69,13 @@ type thriftNoWireHandler struct {
 }
 
 var (
-	_ transport.OnewayHandler = (*thriftNoWireHandler)(nil)
-	_ transport.UnaryHandler  = (*thriftNoWireHandler)(nil)
+	_                      transport.OnewayHandler = (*thriftNoWireHandler)(nil)
+	_                      transport.UnaryHandler  = (*thriftNoWireHandler)(nil)
+	_tchannelUppercaseKey                          = "tchannel_uppercase_key"
+	_missingFromItems                              = "missing_from_items"
+	_keyCollisionWithItems                         = "key_collision_with_items"
+	_extraKeysInItems                              = "extra_keys_in_items"
+	_notset                                        = "__not_set__"
 )
 
 func (t thriftNoWireHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) (err error) {
@@ -138,6 +146,9 @@ func (t thriftNoWireHandler) decodeAndHandle(
 		return _emptyResponse, err
 	}
 
+	// emit unsafe headers metric
+	t.checkAndEmitUnsafeHeaders(observability.GetMeterInfo(ctx), treq)
+
 	nwc := NoWireCall{
 		Reader:        treq.Body,
 		EnvelopeType:  reqEnvelopeType,
@@ -145,4 +156,59 @@ func (t thriftNoWireHandler) decodeAndHandle(
 	}
 
 	return t.Handler.HandleNoWire(ctx, &nwc)
+}
+
+func (t thriftNoWireHandler) checkAndEmitUnsafeHeaders(meter *observability.MeterInfo, treq *transport.Request) {
+	if meter == nil || meter.Edge == nil || treq == nil {
+		return
+	}
+
+	// Monitoring headers for:
+	// - Uppercase characters in header keys (for tChannel)
+	// - Key collisions between OriginalItems and Items
+	// - Missing keys from Items
+	// - length of Items > length of OriginalItems
+	for origKey, origValue := range treq.Headers.OriginalItems() {
+		// Check for uppercase characters in header keys (for tChannel)
+		if treq.Transport == tchannel.TransportName && headerKeyContainsUppercase(origKey) {
+			if meter.Edge.UnsafeHeaders != nil {
+				meter.Edge.UnsafeHeaders.MustGet(
+					observability.UnsafeHeaderIssueType, _tchannelUppercaseKey,
+					observability.UnsafeHeaderIssueHeaderKey, origKey).Inc()
+			}
+		}
+
+		// Check for collision: original key (when normalized) exists in Items with different value,
+		// or doesn't exist in Items at all
+		// header.Get() already normalizes the key internally, so we can pass origKey directly
+		normalizedValue, exists := treq.Headers.Get(origKey)
+		if !exists {
+			if meter.Edge.UnsafeHeaders != nil {
+				meter.Edge.UnsafeHeaders.MustGet(observability.UnsafeHeaderIssueType, _missingFromItems,
+					observability.UnsafeHeaderIssueHeaderKey, origKey).Inc()
+			}
+		} else if normalizedValue != origValue {
+			if meter.Edge.UnsafeHeaders != nil {
+				meter.Edge.UnsafeHeaders.MustGet(observability.UnsafeHeaderIssueType, _keyCollisionWithItems,
+					observability.UnsafeHeaderIssueHeaderKey, origKey).Inc()
+			}
+		}
+	}
+
+	// Check for length of Items > length of OriginalItems
+	if len(treq.Headers.Items()) > len(treq.Headers.OriginalItems()) {
+		if meter.Edge.UnsafeHeaders != nil {
+			meter.Edge.UnsafeHeaders.MustGet(observability.UnsafeHeaderIssueType, _extraKeysInItems,
+				observability.UnsafeHeaderIssueHeaderKey, _notset).Inc()
+		}
+	}
+}
+
+func headerKeyContainsUppercase(s string) bool {
+	for i := range len(s) {
+		if uint8(s[i]-'A') <= 25 {
+			return true
+		}
+	}
+	return false
 }

@@ -63,6 +63,11 @@ const (
 	_routingDelegate = "routing_delegate"
 	_direction       = "direction"
 	_rpcType         = "rpc_type"
+
+	// UnsafeHeaderIssueType is the tag key for type of unsafe header issue
+	UnsafeHeaderIssueType = "unsafe_header_issue_type"
+	// UnsafeHeaderIssueHeaderKey is the tag key for the header key of the unsafe header issue
+	UnsafeHeaderIssueHeaderKey = "unsafe_header_issue_header_key"
 )
 
 // A graph represents a collection of services: each service is a node, and we
@@ -279,6 +284,7 @@ type edge struct {
 	panics         *metrics.Counter
 	callerFailures *metrics.CounterVector
 	serverFailures *metrics.CounterVector
+	UnsafeHeaders  *metrics.CounterVector
 
 	latencies            *metrics.Histogram
 	callerErrLatencies   *metrics.Histogram
@@ -354,6 +360,15 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIg
 	})
 	if err != nil {
 		logger.Error("Failed to create server failures vector.", zap.Error(err))
+	}
+	unsafeHeaders, err := meter.CounterVector(metrics.Spec{
+		Name:      "unsafe_headers",
+		Help:      "Count of unsafe headers by type",
+		ConstTags: tags,
+		VarTags:   []string{UnsafeHeaderIssueType, UnsafeHeaderIssueHeaderKey},
+	})
+	if err != nil {
+		logger.Error("Failed to create unsafe headers counter vector.", zap.Error(err))
 	}
 
 	// metrics for only unary and oneway
@@ -585,6 +600,7 @@ func newEdge(logger *zap.Logger, meter *metrics.Scope, tagToIgnore *metricsTagIg
 		panics:               panics,
 		callerFailures:       callerFailures,
 		serverFailures:       serverFailures,
+		UnsafeHeaders:        unsafeHeaders,
 		requestPayloadSizes:  requestPayloadSizes,
 		responsePayloadSizes: responsePayloadSizes,
 		latencies:            latencies,

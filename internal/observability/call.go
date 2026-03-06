@@ -32,8 +32,7 @@ import (
 )
 
 const (
-	_error = "error"
-
+	_error               = "error"
 	_errorNameMetricsKey = "error_name"
 	_notSet              = "__not_set__"
 
