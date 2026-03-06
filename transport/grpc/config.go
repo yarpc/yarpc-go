@@ -81,6 +81,7 @@ type TransportConfig struct {
 	// GRPC header lise size options accept uint32 param.
 	// see: https://pkg.go.dev/google.golang.org/grpc#WithMaxHeaderListSize
 	ServerMaxHeaderListSize uint32              `config:"serverMaxHeaderListSize"`
+	ServerHeaderTableSize   uint32              `config:"serverHeaderTableSize"`
 	ClientMaxHeaderListSize uint32              `config:"clientMaxHeaderListSize"`
 	Backoff                 yarpcconfig.Backoff `config:"backoff"`
 	// NumStreamWorkers sets the number of worker goroutines used to process
@@ -331,6 +332,9 @@ func (t *transportSpec) buildTransport(transportConfig *TransportConfig, kit *ya
 	}
 	if transportConfig.ServerMaxHeaderListSize > 0 {
 		options = append(options, ServerMaxHeaderListSize(transportConfig.ServerMaxHeaderListSize))
+	}
+	if transportConfig.ServerHeaderTableSize > 0 {
+		options = append(options, ServerHeaderTableSize(transportConfig.ServerHeaderTableSize))
 	}
 	if transportConfig.ClientMaxHeaderListSize > 0 {
 		options = append(options, ClientMaxHeaderListSize(transportConfig.ClientMaxHeaderListSize))

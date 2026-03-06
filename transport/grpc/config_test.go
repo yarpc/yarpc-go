@@ -113,6 +113,7 @@ func TestTransportSpec(t *testing.T) {
 		ServerMaxRecvMsgSize    int
 		ServerMaxSendMsgSize    int
 		ServerMaxHeaderListSize uint32
+		ServerHeaderTableSize   uint32
 		ClientMaxRecvMsgSize    int
 		ClientMaxSendMsgSize    int
 		ClientMaxHeaderListSize uint32
@@ -248,6 +249,7 @@ func TestTransportSpec(t *testing.T) {
 				"serverMaxRecvMsgSize":    "1024",
 				"serverMaxSendMsgSize":    "2048",
 				"serverMaxHeaderListSize": "32768",
+				"serverHeaderTableSize":   "8192",
 				"clientMaxRecvMsgSize":    "4096",
 				"clientMaxSendMsgSize":    "8192",
 				"clientMaxHeaderListSize": "16384",
@@ -258,6 +260,7 @@ func TestTransportSpec(t *testing.T) {
 				ServerMaxRecvMsgSize:    1024,
 				ServerMaxSendMsgSize:    2048,
 				ServerMaxHeaderListSize: 32768,
+				ServerHeaderTableSize:   8192,
 				ClientMaxRecvMsgSize:    4096,
 				ClientMaxSendMsgSize:    8192,
 				ClientMaxHeaderListSize: 16384,
@@ -620,6 +623,12 @@ func TestTransportSpec(t *testing.T) {
 					assert.Equal(t, tt.wantInbound.ServerMaxHeaderListSize, *inbound.t.options.serverMaxHeaderListSize)
 				} else {
 					assert.Nil(t, inbound.t.options.serverMaxHeaderListSize)
+				}
+				if tt.wantInbound.ServerHeaderTableSize > 0 {
+					require.NotNil(t, inbound.t.options.serverHeaderTableSize)
+					assert.Equal(t, tt.wantInbound.ServerHeaderTableSize, *inbound.t.options.serverHeaderTableSize)
+				} else {
+					assert.Nil(t, inbound.t.options.serverHeaderTableSize)
 				}
 				if tt.wantInbound.NumStreamWorkers > 0 {
 					require.NotNil(t, inbound.t.options.numStreamWorkers)

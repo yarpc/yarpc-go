@@ -79,3 +79,17 @@ func TestInboundStartWithNumStreamWorkers(t *testing.T) {
 	assert.True(t, inbound.IsRunning())
 	require.NoError(t, inbound.Stop())
 }
+
+func TestInboundStartWithServerHeaderTableSize(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer listener.Close()
+
+	transport := NewTransport(ServerHeaderTableSize(8192))
+	inbound := transport.NewInbound(listener)
+	inbound.SetRouter(newTestRouter(nil))
+
+	require.NoError(t, inbound.Start())
+	assert.True(t, inbound.IsRunning())
+	require.NoError(t, inbound.Stop())
+}
