@@ -280,8 +280,10 @@ func TestWithHeaderCaseMapping(t *testing.T) {
 				{"Key-Two", "v2"},
 			},
 			expectedOriginalItems: map[string]string{
+				"Key-One": "v1",
 				"keY-one": "v1",
 				"key-one": "v1",
+				"Key-Two": "v2",
 				"keY-two": "v2",
 				"key-two": "v2",
 			},
@@ -299,6 +301,7 @@ func TestWithHeaderCaseMapping(t *testing.T) {
 				{"KEY-ONE", "v1"},
 			},
 			expectedOriginalItems: map[string]string{
+				"KEY-ONE": "v1",
 				"keY-one": "v1",
 				"Key-One": "v1",
 				"key-one": "v1",
@@ -317,8 +320,10 @@ func TestWithHeaderCaseMapping(t *testing.T) {
 				{"Key-Three", "v3"},
 			},
 			expectedOriginalItems: map[string]string{
+				"Key-One":   "v1",
 				"keY-one":   "v1",
 				"key-one":   "v1",
+				"Key-Three": "v3",
 				"key-three": "v3",
 			},
 			expectedItems: map[string]string{
@@ -340,13 +345,14 @@ func TestWithHeaderCaseMapping(t *testing.T) {
 			},
 		},
 		{
-			msg:     "empty mapping preserves original keys",
+			msg:     "empty mapping uses canonicalized keys",
 			mapping: map[string][]string{},
 			headers: []struct{ key, val string }{
 				{"Key-One", "v1"},
 			},
 			expectedOriginalItems: map[string]string{
 				"Key-One": "v1",
+				"key-one": "v1",
 			},
 			expectedItems: map[string]string{
 				"key-one": "v1",
@@ -361,6 +367,7 @@ func TestWithHeaderCaseMapping(t *testing.T) {
 				{"Key-One", "v1"},
 			},
 			expectedOriginalItems: map[string]string{
+				"Key-One": "v1",
 				"keY-one": "v1",
 				"key-one": "v1",
 			},
@@ -406,6 +413,7 @@ func TestDelWithHeaderCaseMapping(t *testing.T) {
 				"key-two": "val2",
 			},
 			expectedOriginalItems: map[string]string{
+				"Key-Two": "val2",
 				"keY-two": "val2",
 				"key-two": "val2",
 			},
@@ -436,6 +444,7 @@ func TestDelWithHeaderCaseMapping(t *testing.T) {
 				"key-one": "val1",
 			},
 			expectedOriginalItems: map[string]string{
+				"Key-One": "val1",
 				"keY-one": "val1",
 				"key-one": "val1",
 			},
@@ -453,6 +462,7 @@ func TestDelWithHeaderCaseMapping(t *testing.T) {
 				"key-one": "val1",
 			},
 			expectedOriginalItems: map[string]string{
+				"Key-One": "val1",
 				"keY-one": "val1",
 				"key-one": "val1",
 			},

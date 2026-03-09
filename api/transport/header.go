@@ -89,11 +89,12 @@ func (h Headers) With(k, v string) Headers {
 		h.originalItems[canonicalizedKey] = v
 	case h.headerMapping != nil:
 		// Header case mapping: insert every mapped variant
-		// plus the canonicalized key. Range over nil slice is a no-op.
+		// plus the canonicalized, and original Train-Case keys.
+		h.originalItems[k] = v
+		h.originalItems[canonicalizedKey] = v
 		for _, mk := range h.headerMapping[canonicalizedKey] {
 			h.originalItems[mk] = v
 		}
-		h.originalItems[canonicalizedKey] = v
 	default:
 		h.originalItems[k] = v
 	}
@@ -111,10 +112,18 @@ func (h Headers) Del(k string) {
 	case h.overrideOriginalItemWithCanonicalizedKey:
 		delete(h.originalItems, canonicalizedKey)
 	case h.headerMapping != nil:
+		// Remove the canonicalized key and originalItems entry whose
+		// canonicalized form matches
+		delete(h.originalItems, canonicalizedKey)
+		delete(h.originalItems, k)
 		for _, mk := range h.headerMapping[canonicalizedKey] {
 			delete(h.originalItems, mk)
 		}
-		delete(h.originalItems, canonicalizedKey)
+		for ok := range h.originalItems {
+			if CanonicalizeHeaderKey(ok) == canonicalizedKey {
+				delete(h.originalItems, ok)
+			}
+		}
 	default:
 		delete(h.originalItems, k)
 	}
@@ -195,10 +204,13 @@ func (h Headers) EnableOverrideOriginalItemsWithCanonicalizedKeys() Headers {
 // setup. It should NOT be called by services at runtime.
 //
 // The mapping is silently ignored in the following cases:
-//   - The provided mapping is nil or empty.
+//   - The provided mapping is nil.
 //   - A mapping has already been set (it cannot be modified once set).
 //   - overrideOriginalItemWithCanonicalizedKey is enabled, as canonicalized
 //     keys take precedence over case mapping.
+//
+// An empty (non-nil) map is accepted and results in default behavior
+// (original key casing is preserved as-is + lowercase version is inserted).
 //
 // Example:
 //
@@ -206,7 +218,7 @@ func (h Headers) EnableOverrideOriginalItemsWithCanonicalizedKeys() Headers {
 //
 // Experimental: This API is subject to change or removal.
 func (h Headers) WithHeaderCaseMapping(mapping map[string][]string) Headers {
-	if len(mapping) == 0 {
+	if mapping == nil {
 		return h
 	}
 	if h.headerMapping != nil {

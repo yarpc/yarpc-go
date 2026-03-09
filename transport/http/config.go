@@ -269,7 +269,7 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 		}
 	} else if ic.HeaderCaseMapping != nil {
 		if len(ic.HeaderCaseMapping) == 0 {
-			logger.Warn("headerCaseMapping is set but empty, mapping will not take effect")
+			logger.Warn("headerCaseMapping is set but empty, mapping will only inject lowercase versions of header keys")
 		} else {
 			inboundOptions = append(inboundOptions, HeaderCaseMapping(ic.HeaderCaseMapping))
 		}
