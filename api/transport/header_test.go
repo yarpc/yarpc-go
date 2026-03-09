@@ -424,7 +424,7 @@ func TestDelWithHeaderCaseMapping(t *testing.T) {
 				"key-one": {"keY-one", "Key-One"},
 			},
 			headers: []struct{ key, val string }{
-				{"KEY-ONE", "val1"},
+				{"Key-One", "val1"},
 			},
 			deleteKey:             "key-one",
 			expectedItems:         map[string]string{},
