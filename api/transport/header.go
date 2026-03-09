@@ -213,15 +213,10 @@ func (h Headers) EnableOverrideOriginalItemsWithCanonicalizedKeys() Headers {
 //
 // Experimental: This API is subject to change or removal.
 func (h Headers) WithHeaderCaseMapping(mapping map[string][]string) Headers {
-	if mapping == nil {
+	if h.overrideOriginalItemWithCanonicalizedKey || h.headerMapping != nil || mapping == nil {
 		return h
 	}
-	if h.headerMapping != nil {
-		return h
-	}
-	if h.overrideOriginalItemWithCanonicalizedKey {
-		return h
-	}
+
 	h.headerMapping = mapping
 	return h
 }
