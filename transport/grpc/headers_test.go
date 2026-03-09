@@ -50,6 +50,8 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				CallerProcedureHeader, "example-caller-procedure",
 				"foo", "bar",
 				"baz", "bat",
+				_routingRegionHeader, "phx",
+				_routingZoneHeader, "phx98",
 			),
 			TransportRequest: &transport.Request{
 				Caller:          "example-caller",
@@ -162,7 +164,7 @@ func TestTransportRequestToMetadata(t *testing.T) {
 			},
 		},
 		{
-			Name: "Reserved header key in application headers",
+			Name: "Reserved header key in application headers - caller headers",
 			MD:   metadata.Pairs(),
 			TransportRequest: &transport.Request{
 				Headers: transport.HeadersFromMap(map[string]string{
@@ -170,6 +172,16 @@ func TestTransportRequestToMetadata(t *testing.T) {
 				}),
 			},
 			Error: yarpcerrors.InvalidArgumentErrorf("cannot use reserved header in application headers: %s", CallerHeader),
+		},
+		{
+			Name: "Routing headers exempted",
+			MD: metadata.Pairs(
+				_routingZoneHeader, "example-zone"),
+			TransportRequest: &transport.Request{
+				Headers: transport.HeadersFromMap(map[string]string{
+					_routingZoneHeader: "example-zone",
+				}),
+			},
 		},
 	} {
 		t.Run(tt.Name, func(t *testing.T) {
@@ -203,6 +215,9 @@ func TestIsReserved(t *testing.T) {
 	assert.True(t, isReserved(RoutingDelegateHeader))
 	assert.True(t, isReserved(EncodingHeader))
 	assert.True(t, isReserved("rpc-foo"))
+	for header := range routingHeaders {
+		assert.False(t, isReserved(header))
+	}
 }
 
 func TestMDReadWriterDuplicateKey(t *testing.T) {
@@ -267,4 +282,111 @@ func TestGetApplicationHeaders(t *testing.T) {
 			assert.Equal(t, tt.wantHeaders, got.Items(), "unexpected headers")
 		})
 	}
+}
+
+func TestRoutingHeadersNotReserved(t *testing.T) {
+	// Verify that routing headers are explicitly not treated as reserved
+	t.Run("routing zone header not reserved", func(t *testing.T) {
+		assert.False(t, isReserved(_routingZoneHeader))
+	})
+
+	t.Run("routing region header not reserved", func(t *testing.T) {
+		assert.False(t, isReserved(_routingRegionHeader))
+	})
+}
+
+func TestRoutingHeadersInApplicationHeaders(t *testing.T) {
+	// Test that routing headers can be used in application headers without error
+	t.Run("routing zone header allowed in application headers", func(t *testing.T) {
+		md := metadata.New(nil)
+		err := addApplicationHeaders(md, transport.HeadersFromMap(map[string]string{
+			_routingZoneHeader: "us-west-1a",
+		}))
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"us-west-1a"}, md[_routingZoneHeader])
+	})
+
+	t.Run("routing region header allowed in application headers", func(t *testing.T) {
+		md := metadata.New(nil)
+		err := addApplicationHeaders(md, transport.HeadersFromMap(map[string]string{
+			_routingRegionHeader: "us-west-1",
+		}))
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"us-west-1"}, md[_routingRegionHeader])
+	})
+
+	t.Run("both routing headers allowed together", func(t *testing.T) {
+		md := metadata.New(nil)
+		err := addApplicationHeaders(md, transport.HeadersFromMap(map[string]string{
+			_routingZoneHeader:   "us-west-1a",
+			_routingRegionHeader: "us-west-1",
+		}))
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"us-west-1a"}, md[_routingZoneHeader])
+		assert.Equal(t, []string{"us-west-1"}, md[_routingRegionHeader])
+	})
+}
+
+func TestMetadataToTransportRequestWithRoutingHeaders(t *testing.T) {
+	// Test that routing headers are properly skipped during metadata to request conversion
+	t.Run("routing headers are skipped in request conversion", func(t *testing.T) {
+		md := metadata.Pairs(
+			CallerHeader, "caller",
+			ServiceHeader, "service",
+			EncodingHeader, "json",
+			_routingZoneHeader, "us-west-1a",
+			_routingRegionHeader, "us-west-1",
+			"custom-header", "custom-value",
+		)
+
+		request, err := metadataToTransportRequest(md)
+		require.NoError(t, err)
+
+		// Verify standard headers are set
+		assert.Equal(t, "caller", request.Caller)
+		assert.Equal(t, "service", request.Service)
+		assert.Equal(t, transport.Encoding("json"), request.Encoding)
+
+		// Verify routing headers are NOT in the request headers (they're skipped)
+		_, ok := request.Headers.Get(_routingZoneHeader)
+		assert.False(t, ok)
+		_, ok = request.Headers.Get(_routingRegionHeader)
+		assert.False(t, ok)
+
+		// Verify custom header is present
+		value, ok := request.Headers.Get("custom-header")
+		assert.True(t, ok)
+		assert.Equal(t, "custom-value", value)
+	})
+}
+
+func TestTransportRequestToMetadataWithRoutingHeaders(t *testing.T) {
+	// Test that routing headers can be sent in transport request and converted to metadata
+	t.Run("routing headers in transport request", func(t *testing.T) {
+		request := &transport.Request{
+			Caller:   "caller",
+			Service:  "service",
+			Encoding: "json",
+			Headers: transport.HeadersFromMap(map[string]string{
+				_routingZoneHeader:   "us-west-1a",
+				_routingRegionHeader: "us-west-1",
+				"custom-header":      "custom-value",
+			}),
+		}
+
+		md, err := transportRequestToMetadata(request)
+		require.NoError(t, err)
+
+		// Verify standard headers
+		assert.Equal(t, []string{"caller"}, md[CallerHeader])
+		assert.Equal(t, []string{"service"}, md[ServiceHeader])
+		assert.Equal(t, []string{"json"}, md[EncodingHeader])
+
+		// Verify routing headers are in metadata
+		assert.Equal(t, []string{"us-west-1a"}, md[_routingZoneHeader])
+		assert.Equal(t, []string{"us-west-1"}, md[_routingRegionHeader])
+
+		// Verify custom header
+		assert.Equal(t, []string{"custom-value"}, md["custom-header"])
+	})
 }

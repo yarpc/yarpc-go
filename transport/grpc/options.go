@@ -142,6 +142,20 @@ func ServerMaxSendMsgSize(serverMaxSendMsgSize int) TransportOption {
 	}
 }
 
+// NumStreamWorkers sets the number of worker goroutines that should be used
+// to process incoming streams on the gRPC server. Workers reuse goroutines
+// with already-grown stacks, avoiding repeated stack allocations per request.
+//
+// If all workers are busy, the server falls back to spawning a new goroutine
+// per stream (the default gRPC behavior), so there is no risk of starvation.
+//
+// A value of 0 (the default) disables the worker pool entirely.
+func NumStreamWorkers(n uint32) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.numStreamWorkers = &n
+	}
+}
+
 // ServerMaxHeaderListSize returns a transport option for configuring maximum
 // header list size the server must accept.
 //
@@ -149,6 +163,16 @@ func ServerMaxSendMsgSize(serverMaxSendMsgSize int) TransportOption {
 func ServerMaxHeaderListSize(serverMaxHeaderListSize uint32) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.serverMaxHeaderListSize = &serverMaxHeaderListSize
+	}
+}
+
+// ServerHeaderTableSize returns a transport option for configuring the
+// HPACK dynamic table size for the server.
+//
+// The default is 4KB (HTTP/2 specification default).
+func ServerHeaderTableSize(serverHeaderTableSize uint32) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.serverHeaderTableSize = &serverHeaderTableSize
 	}
 }
 
@@ -306,7 +330,9 @@ type transportOptions struct {
 	clientMaxRecvMsgSize      int
 	clientMaxSendMsgSize      int
 	serverMaxHeaderListSize   *uint32
+	serverHeaderTableSize     *uint32
 	clientMaxHeaderListSize   *uint32
+	numStreamWorkers          *uint32
 	unaryInboundInterceptor   interceptor.UnaryInbound
 	unaryOutboundInterceptor  []interceptor.UnaryOutbound
 	streamInboundInterceptor  interceptor.StreamInbound
