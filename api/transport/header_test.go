@@ -413,6 +413,7 @@ func TestDelWithHeaderCaseMapping(t *testing.T) {
 				"key-two": "val2",
 			},
 			expectedOriginalItems: map[string]string{
+				"Key-One": "val1",
 				"Key-Two": "val2",
 				"keY-two": "val2",
 				"key-two": "val2",
