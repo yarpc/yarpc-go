@@ -22,7 +22,6 @@ package transport
 
 import (
 	"iter"
-	"net/textproto"
 	"strings"
 )
 
@@ -113,11 +112,10 @@ func (h Headers) Del(k string) {
 	case h.overrideOriginalItemWithCanonicalizedKey:
 		delete(h.originalItems, canonicalizedKey)
 	case h.headerMapping != nil:
-		// Remove the canonicalized key, the caller-provided key, the HTTP
-		// Train-Case form (stored by With when called from the HTTP handler),
+		// Remove the canonicalized key, the caller-provided key,
 		// and all mapped variants.
+		delete(h.originalItems, k)
 		delete(h.originalItems, canonicalizedKey)
-		delete(h.originalItems, textproto.CanonicalMIMEHeaderKey(canonicalizedKey))
 		for _, mk := range h.headerMapping[canonicalizedKey] {
 			delete(h.originalItems, mk)
 		}
