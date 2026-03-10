@@ -49,7 +49,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/jessevdk/go-flags v1.5.0 // indirect
-	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.4.1 // indirect
@@ -57,7 +56,7 @@ require (
 	github.com/prometheus/common v0.9.1 // indirect
 	github.com/prometheus/procfs v0.0.9 // indirect
 	github.com/samuel/go-thrift v0.0.0-20191111193933-5165175b40af // indirect
-	github.com/sirupsen/logrus v1.4.2 // indirect
+	github.com/sirupsen/logrus v1.8.3 // indirect
 	github.com/twmb/murmur3 v1.1.8 // indirect
 	github.com/uber-common/bark v1.2.1 // indirect
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
