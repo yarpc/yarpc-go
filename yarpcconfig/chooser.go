@@ -262,9 +262,6 @@ func buildPeerListUpdater(c config.AttributeMap, identify func(string) peer.Iden
 	if _, err := c.Pop("peers", &peers); err != nil {
 		return nil, err
 	}
-	if len(peers) > 0 {
-		return peerbind.BindPeers(identifyAll(identify, peers)), nil
-	}
 	// TODO: Make peers a separate peer list updater that is registered by
 	// default instead of special casing here.
 
@@ -288,6 +285,10 @@ func buildPeerListUpdater(c config.AttributeMap, identify func(string) peer.Iden
 
 	switch len(foundUpdaters) {
 	case 0:
+		if len(peers) > 0 {
+			return peerbind.BindPeers(identifyAll(identify, peers)), nil
+		}
+
 		updaterSpecNames := kit.peerListUpdaterSpecNames()
 		reason := "no peer list updaters are registered"
 		if len(updaterSpecNames) > 0 {
@@ -299,7 +300,9 @@ func buildPeerListUpdater(c config.AttributeMap, identify func(string) peer.Iden
 			reason,
 		)
 	case 1:
-		// fall through to logic below
+		if len(peers) > 0 {
+			return nil, fmt.Errorf("found peer list updater in config along with explicit list of peers: got %s", foundUpdaters[0])
+		}
 	default:
 		sort.Strings(foundUpdaters) // deterministic error message
 		return nil, fmt.Errorf(
