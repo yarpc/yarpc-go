@@ -157,17 +157,24 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 
 // InboundConfig configures an HTTP inbound.
 //
-//	   inbounds:
-//	     http:
-//	       address: ":80"
-//	       grabHeaders:
-//	         - x-foo
-//	         - x-bar
-//		      shutdownTimeout: 5s
-//	       readHeaderTimeout: 5s
-//	       readTimeout: 10s
-//	       writeTimeout: 10s
-//	       idleTimeout: 60s
+//	inbounds:
+//	  http:
+//	    address: ":80"
+//	    grabHeaders:
+//	      - x-foo
+//	      - x-bar
+//	    canonicalizeHeaderKeys: true
+//	    headerCaseMapping:
+//	      x-foo:
+//	        - X-Foo
+//	      x-bar:
+//	        - X-Bar
+//	        - X-BAR
+//	    shutdownTimeout: 5s
+//	    readHeaderTimeout: 5s
+//	    readTimeout: 10s
+//	    writeTimeout: 10s
+//	    idleTimeout: 60s
 type InboundConfig struct {
 	// Address to listen on. This field is required.
 	Address string `config:"address,interpolate"`
@@ -188,6 +195,16 @@ type InboundConfig struct {
 	TLSConfig TLSConfig `config:"tls"`
 	// DisableHTTP2 configure to reject http2 requests.
 	DisableHTTP2 bool `config:"disableHTTP2"`
+	// CanonicalizeHeaderKeys enables overriding original header items with
+	// canonicalized (lowercase) keys. When set, this takes precedence over
+	// HeaderCaseMapping and the mapping will not take effect.
+	CanonicalizeHeaderKeys bool `config:"canonicalizeHeaderKeys"`
+	// HeaderCaseMapping specifies a mapping from canonicalized (lowercase)
+	// header keys to one or more original casings. This restores key casings
+	// that may be lost due to differences in (e.g., TChannel to HTTP/2).
+	// Keys must be lowercase. Values are the desired original casings.
+	// Ignored if CanonicalizeHeaderKeys is true.
+	HeaderCaseMapping map[string][]string `config:"headerCaseMapping"`
 }
 
 // TLSConfig specifies the TLS configuration of the HTTP inbound.
@@ -242,6 +259,20 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 			return nil, fmt.Errorf("idleTimeout must not be negative, got: %q", ic.IdleTimeout)
 		}
 		inboundOptions = append(inboundOptions, IdleTimeout(*ic.IdleTimeout))
+	}
+
+	logger := t.(*Transport).logger
+	if ic.CanonicalizeHeaderKeys {
+		inboundOptions = append(inboundOptions, EnableOverrideOriginalItemWithCanonicalizedKey())
+		if len(ic.HeaderCaseMapping) > 0 {
+			logger.Warn("both canonicalizeHeaderKeys and headerCaseMapping are set; canonicalizeHeaderKeys takes precedence, headerCaseMapping will not take effect")
+		}
+	} else if ic.HeaderCaseMapping != nil {
+		if len(ic.HeaderCaseMapping) == 0 {
+			logger.Warn("headerCaseMapping is set but empty, mapping will only inject lowercase versions of header keys")
+		} else {
+			inboundOptions = append(inboundOptions, HeaderCaseMapping(ic.HeaderCaseMapping))
+		}
 	}
 
 	inboundOptions = append(inboundOptions, DisableHTTP2(ic.DisableHTTP2))

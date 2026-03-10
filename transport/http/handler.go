@@ -57,6 +57,7 @@ type handler struct {
 	logger                                   *zap.Logger
 	transport                                *Transport
 	overrideOriginalItemWithCanonicalizedKey bool
+	headerCaseMapping                        map[string][]string
 	// duplicate header counter vector
 	duplicateHeaderCounterVec *metrics.CounterVector
 }
@@ -117,6 +118,9 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	transportHeader := transport.NewHeaders()
 	if h.overrideOriginalItemWithCanonicalizedKey {
 		transportHeader = transportHeader.EnableOverrideOriginalItemsWithCanonicalizedKeys()
+	}
+	if h.headerCaseMapping != nil {
+		transportHeader = transportHeader.WithHeaderCaseMapping(h.headerCaseMapping)
 	}
 
 	caller := popHeader(req.Header, CallerHeader)

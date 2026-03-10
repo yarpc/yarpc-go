@@ -45,6 +45,11 @@ type Headers struct {
 	originalItems map[string]string
 	// overrideOriginalItemWithCanonicalizedKey indicates whether to override
 	overrideOriginalItemWithCanonicalizedKey bool
+	// headerMapping maps canonicalized (lowercase) header keys to one or
+	// more desired original casings. When set, With() inserts the value
+	// into originalItems under every mapped key variant, falling back to
+	// the canonicalized key for unmapped headers.
+	headerMapping map[string][]string
 }
 
 // NewHeaders builds a new Headers object.
@@ -78,9 +83,19 @@ func (h Headers) With(k, v string) Headers {
 	}
 	canonicalizedKey := CanonicalizeHeaderKey(k)
 	h.items[canonicalizedKey] = v
-	if h.overrideOriginalItemWithCanonicalizedKey {
+
+	switch {
+	case h.overrideOriginalItemWithCanonicalizedKey:
 		h.originalItems[canonicalizedKey] = v
-	} else {
+	case h.headerMapping != nil:
+		// Header case mapping: insert every mapped variant
+		// plus the canonicalized, and original Train-Case keys.
+		h.originalItems[k] = v
+		h.originalItems[canonicalizedKey] = v
+		for _, mk := range h.headerMapping[canonicalizedKey] {
+			h.originalItems[mk] = v
+		}
+	default:
 		h.originalItems[k] = v
 	}
 	return h
@@ -90,8 +105,23 @@ func (h Headers) With(k, v string) Headers {
 //
 // This is a no-op if the key does not exist.
 func (h Headers) Del(k string) {
-	delete(h.items, CanonicalizeHeaderKey(k))
-	delete(h.originalItems, k)
+	canonicalizedKey := CanonicalizeHeaderKey(k)
+	delete(h.items, canonicalizedKey)
+
+	switch {
+	case h.overrideOriginalItemWithCanonicalizedKey:
+		delete(h.originalItems, canonicalizedKey)
+	case h.headerMapping != nil:
+		// Remove the canonicalized key, the caller-provided key,
+		// and all mapped variants.
+		delete(h.originalItems, k)
+		delete(h.originalItems, canonicalizedKey)
+		for _, mk := range h.headerMapping[canonicalizedKey] {
+			delete(h.originalItems, mk)
+		}
+	default:
+		delete(h.originalItems, k)
+	}
 }
 
 // Get retrieves the value associated with the given header name.
@@ -154,6 +184,40 @@ func (h Headers) OriginalItemsLen() int {
 // items with canonicalized keys when adding headers.
 func (h Headers) EnableOverrideOriginalItemsWithCanonicalizedKeys() Headers {
 	h.overrideOriginalItemWithCanonicalizedKey = true
+	return h
+}
+
+// WithHeaderCaseMapping returns a Headers with the given mapping set. The
+// mapping maps canonicalized (lowercase) header keys to one or more desired
+// original casings (e.g. TChannel casing variants).
+//
+// When a mapping is set, With() inserts the value into originalItems under
+// every mapped key variant for matched headers, and uses the canonicalized
+// key for unmatched headers.
+//
+// This is an internal transport-level function intended for use during inbound
+// setup. It should NOT be called by services at runtime.
+//
+// The mapping is silently ignored in the following cases:
+//   - The provided mapping is nil.
+//   - A mapping has already been set (it cannot be modified once set).
+//   - overrideOriginalItemWithCanonicalizedKey is enabled, as canonicalized
+//     keys take precedence over case mapping.
+//
+// An empty (non-nil) map is accepted and results in default behavior
+// (original key casing is preserved as-is + lowercase version is inserted).
+//
+// Example:
+//
+//	map[string][]string{"key-one": {"keY-one", "Key-One"}}
+//
+// Experimental: This API is subject to change or removal.
+func (h Headers) WithHeaderCaseMapping(mapping map[string][]string) Headers {
+	if h.overrideOriginalItemWithCanonicalizedKey || h.headerMapping != nil || mapping == nil {
+		return h
+	}
+
+	h.headerMapping = mapping
 	return h
 }
 

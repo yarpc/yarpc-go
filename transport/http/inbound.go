@@ -144,6 +144,21 @@ func EnableOverrideOriginalItemWithCanonicalizedKey() InboundOption {
 	}
 }
 
+// HeaderCaseMapping returns an InboundOption that sets a mapping from
+// canonicalized (lowercase) header keys to one or more original casings
+// (e.g. the casings used by TChannel). When set, this mapping is applied to
+// the originalItems of incoming request headers, inserting the value under
+// every mapped key variant to restore original key casings that may be lost
+// during transport migration from TChannel to HTTP/2.
+//
+// Keys must be lowercase. Values are the desired original casings.
+// Example: map[string][]string{"key-one": {"keY-one", "Key-One"}}
+func HeaderCaseMapping(mapping map[string][]string) InboundOption {
+	return func(i *Inbound) {
+		i.headerCaseMapping = mapping
+	}
+}
+
 // ReadHeaderTimeout returns an InboundOption that sets the http.Server ReadHeaderTimeout
 func ReadHeaderTimeout(timeout time.Duration) InboundOption {
 	return func(i *Inbound) {
@@ -222,6 +237,7 @@ type Inbound struct {
 
 	disableHTTP2                             bool
 	overrideOriginalItemWithCanonicalizedKey bool
+	headerCaseMapping                        map[string][]string
 }
 
 // Tracer configures a tracer on this inbound.
@@ -283,6 +299,7 @@ func (i *Inbound) start() error {
 		bothResponseError:                        i.bothResponseError,
 		logger:                                   i.logger,
 		overrideOriginalItemWithCanonicalizedKey: i.overrideOriginalItemWithCanonicalizedKey,
+		headerCaseMapping:                        i.headerCaseMapping,
 		duplicateHeaderCounterVec:                duplicateHeaderCounterVec,
 	}
 
