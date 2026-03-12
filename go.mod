@@ -49,6 +49,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/jessevdk/go-flags v1.5.0 // indirect
+	github.com/klauspost/compress v1.18.2 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
