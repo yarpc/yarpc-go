@@ -21,6 +21,8 @@
 package transport
 
 import (
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -496,6 +498,62 @@ func TestDelWithHeaderCaseMapping(t *testing.T) {
 
 			assert.Equal(t, tt.expectedItems, header.Items())
 			assert.Equal(t, tt.expectedOriginalItems, header.OriginalItems())
+		})
+	}
+}
+
+func BenchmarkHeaderGet(b *testing.B) {
+	var (
+		presentKey = "uberctx-x-uber-can-fail-open"
+		missingKey = "uberctx-x-uber-can-fail-missing"
+		headers    = HeadersFromMap(map[string]string{
+			presentKey: "Bar",
+		})
+	)
+
+	for i := range 50 {
+		headers = headers.With(strconv.Itoa(i), strconv.Itoa(i))
+	}
+
+	tests := []struct {
+		name string
+		give string
+		want string
+		ok   bool
+	}{
+		{
+			name: "canonical",
+			give: presentKey,
+			want: "Bar",
+			ok:   true,
+		},
+		{
+			name: "noncanonical",
+			give: strings.ToUpper(presentKey),
+			want: "Bar",
+			ok:   true,
+		},
+		{
+			name: "missing-canonical",
+			give: missingKey,
+		},
+		{
+			name: "missing-noncanonical",
+			give: strings.ToUpper(missingKey),
+		},
+	}
+
+	for _, tt := range tests {
+		b.Run(tt.name, func(b *testing.B) {
+			var (
+				s  string
+				ok bool
+			)
+			for range b.N {
+				s, ok = headers.Get(tt.give)
+			}
+			assert.Equal(b, tt.want, s)
+			assert.Equal(b, tt.ok, ok)
 		})
 	}
 }
