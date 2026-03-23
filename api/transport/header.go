@@ -126,7 +126,20 @@ func (h Headers) Del(k string) {
 
 // Get retrieves the value associated with the given header name.
 func (h Headers) Get(k string) (string, bool) {
-	v, ok := h.items[CanonicalizeHeaderKey(k)]
+	// Assume the passed in header is already canonical as a happy
+	// path optimization.
+	if v, ok := h.items[k]; ok {
+		return v, ok
+	}
+
+	// If the header is missing, fallback to the expensive path.
+	canonical := CanonicalizeHeaderKey(k)
+	// Avoid map lookup if the header turns out to be canonical.
+	if k == canonical {
+		return "", false
+	}
+	// Passed in header was non-canonical, try again.
+	v, ok := h.items[canonical]
 	return v, ok
 }
 
