@@ -237,3 +237,28 @@ func (fw *FakeResponseWriter) Write(s []byte) (int, error) {
 func (fw *FakeResponseWriter) SetApplicationErrorMeta(applicationErrorMeta *transport.ApplicationErrorMeta) {
 	fw.ApplicationErrorMeta = applicationErrorMeta
 }
+
+// FakeNonApplicationErrorMetaSetter is a ResponseWriter that also
+// implements ApplicationErrorMetaSetter
+type FakeNonApplicationErrorMetaSetter struct {
+	IsApplicationError bool
+	Headers            transport.Headers
+	Body               bytes.Buffer
+}
+
+// AddHeaders for FakeNonApplicationErrorMetaSetter.
+func (fw *FakeNonApplicationErrorMetaSetter) AddHeaders(h transport.Headers) {
+	for k, v := range h.OriginalItems() {
+		fw.Headers = fw.Headers.With(k, v)
+	}
+}
+
+// SetApplicationError for FakeNonApplicationErrorMetaSetter.
+func (fw *FakeNonApplicationErrorMetaSetter) SetApplicationError() {
+	fw.IsApplicationError = true
+}
+
+// Write for FakeNonApplicationErrorMetaSetter.
+func (fw *FakeNonApplicationErrorMetaSetter) Write(s []byte) (int, error) {
+	return fw.Body.Write(s)
+}
