@@ -13,6 +13,7 @@ require (
 	github.com/golang/protobuf v1.5.4
 	github.com/golang/snappy v0.0.4
 	github.com/kisielk/errcheck v1.7.0
+	github.com/klauspost/compress v1.18.4
 	github.com/mattn/go-shellwords v1.0.12
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/stretchr/testify v1.9.0
