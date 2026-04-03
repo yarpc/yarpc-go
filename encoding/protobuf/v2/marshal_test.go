@@ -22,7 +22,6 @@ package v2
 
 import (
 	"bytes"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -105,47 +104,6 @@ func TestUnmarshalFastPath(t *testing.T) {
 		err := unmarshal(Encoding, reader, &wrapperspb.StringValue{}, c)
 		assert.Error(t, err, "Malformed protobuf should return an error on fast path")
 	})
-}
-
-func BenchmarkUnmarshalBytesReader(b *testing.B) {
-	sizes := []struct {
-		name string
-		size int
-	}{
-		{"100B", 100},
-		{"1KB", 1024},
-		{"10KB", 10 * 1024},
-		{"100KB", 100 * 1024},
-	}
-	c := newCodec(nil)
-	for _, sz := range sizes {
-		original := &wrapperspb.StringValue{Value: strings.Repeat("x", sz.size)}
-		data, err := proto.Marshal(original)
-		if err != nil {
-			b.Fatal(err)
-		}
-		b.Run(sz.name, func(b *testing.B) {
-			b.ReportAllocs()
-			runtime.GC()
-			var before runtime.MemStats
-			runtime.ReadMemStats(&before)
-
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				msg := &wrapperspb.StringValue{}
-				if err := unmarshal(Encoding, newTestBytesReader(data), msg, c); err != nil {
-					b.Fatal(err)
-				}
-			}
-			b.StopTimer()
-
-			var after runtime.MemStats
-			runtime.ReadMemStats(&after)
-			b.ReportMetric(float64(after.TotalAlloc-before.TotalAlloc)/float64(b.N), "heap-B/op")
-			b.ReportMetric(float64(after.NumGC-before.NumGC)/float64(b.N), "gc-cycles/op")
-			b.ReportMetric(float64(after.PauseTotalNs-before.PauseTotalNs)/float64(b.N), "gc-pause-ns/op")
-		})
-	}
 }
 
 func TestUnmarshalSlowPath(t *testing.T) {
