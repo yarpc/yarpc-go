@@ -144,6 +144,62 @@ func TestServerStreamSendMessage(t *testing.T) {
 	})
 }
 
+// TestStreamReceiveMessage verifies bytesBody wiring: both server and client
+// receive paths wrap payloads in bytesBody (exposes Bytes() for zero-copy).
+// The actual fast-path dispatch is tested in TestUnmarshalFastPath.
+func TestStreamReceiveMessage(t *testing.T) {
+	t.Run("server stream wraps body in bytesBody", func(t *testing.T) {
+		payload := []byte("server receive test")
+
+		mockStream := &mockGRPCServerStream{
+			recvMsgFunc: func(m any) error {
+				ptr := m.(*[]byte)
+				*ptr = payload
+				return nil
+			},
+		}
+
+		ss := &serverStream{
+			ctx:    context.Background(),
+			stream: mockStream,
+			req:    &transport.StreamRequest{Meta: &transport.RequestMeta{}},
+		}
+
+		msg, err := ss.ReceiveMessage(context.Background())
+		assert.NoError(t, err)
+
+		br, ok := msg.Body.(interface{ Bytes() []byte })
+		assert.True(t, ok, "Body should implement Bytes() []byte")
+		assert.Equal(t, payload, br.Bytes())
+		assert.Equal(t, len(payload), msg.BodySize)
+	})
+
+	t.Run("client stream wraps body in bytesBody", func(t *testing.T) {
+		payload := []byte("client receive test")
+
+		mockStream := &mockGRPCClientStream{
+			recvMsgFunc: func(m any) error {
+				ptr := m.(*[]byte)
+				*ptr = payload
+				return nil
+			},
+		}
+
+		cs := &clientStream{
+			ctx:    context.Background(),
+			stream: mockStream,
+			req:    &transport.StreamRequest{Meta: &transport.RequestMeta{}},
+		}
+
+		msg, err := cs.ReceiveMessage(context.Background())
+		assert.NoError(t, err)
+
+		br, ok := msg.Body.(interface{ Bytes() []byte })
+		assert.True(t, ok, "Body should implement Bytes() []byte")
+		assert.Equal(t, payload, br.Bytes())
+	})
+}
+
 func TestClientStreamSendMessage(t *testing.T) {
 	t.Run("passes mem.Buffer to gRPC without conversion", func(t *testing.T) {
 		data := []byte("client test")
@@ -212,11 +268,19 @@ func TestClientStreamSendMessage(t *testing.T) {
 type mockGRPCServerStream struct {
 	grpc.ServerStream
 	sendMsgFunc func(m any) error
+	recvMsgFunc func(m any) error
 }
 
 func (m *mockGRPCServerStream) SendMsg(msg any) error {
 	if m.sendMsgFunc != nil {
 		return m.sendMsgFunc(msg)
+	}
+	return nil
+}
+
+func (m *mockGRPCServerStream) RecvMsg(msg any) error {
+	if m.recvMsgFunc != nil {
+		return m.recvMsgFunc(msg)
 	}
 	return nil
 }
