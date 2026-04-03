@@ -93,7 +93,7 @@ func (ss *serverStream) ReceiveMessage(_ context.Context) (*transport.StreamMess
 		return nil, toYARPCStreamError(err)
 	}
 	return &transport.StreamMessage{
-		Body:     readCloser{bytes.NewReader(msg)},
+		Body:     newBytesBody(msg),
 		BodySize: len(msg),
 	}, nil
 }
@@ -105,6 +105,21 @@ type readCloser struct {
 func (r readCloser) Close() error {
 	return nil
 }
+
+// bytesBody wraps a []byte and exposes direct access to
+// the underlying bytes via the Bytes method.
+type bytesBody struct {
+	data   []byte
+	reader *bytes.Reader
+}
+
+func newBytesBody(data []byte) *bytesBody {
+	return &bytesBody{data: data, reader: bytes.NewReader(data)}
+}
+
+func (b *bytesBody) Read(p []byte) (int, error) { return b.reader.Read(p) }
+func (b *bytesBody) Bytes() []byte              { return b.data }
+func (b *bytesBody) Close() error               { return nil }
 
 func (ss *serverStream) SendHeaders(headers transport.Headers) error {
 	md := make(metadata.MD, headers.Len())
@@ -173,7 +188,7 @@ func (cs *clientStream) ReceiveMessage(context.Context) (*transport.StreamMessag
 	if err := cs.stream.RecvMsg(&msg); err != nil {
 		return nil, toYARPCStreamError(cs.closeWithErr(err))
 	}
-	return &transport.StreamMessage{Body: ioutil.NopCloser(bytes.NewReader(msg))}, nil
+	return &transport.StreamMessage{Body: newBytesBody(msg)}, nil
 }
 
 func (cs *clientStream) Close(context.Context) error {

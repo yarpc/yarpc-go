@@ -139,6 +139,164 @@ func TestServerStreamSendMessage(t *testing.T) {
 	})
 }
 
+func TestBytesBody(t *testing.T) {
+	t.Run("Read returns full data", func(t *testing.T) {
+		data := []byte("hello world")
+		b := newBytesBody(data)
+
+		out := make([]byte, len(data))
+		n, err := b.Read(out)
+		assert.NoError(t, err)
+		assert.Equal(t, len(data), n)
+		assert.Equal(t, data, out)
+	})
+
+	t.Run("Bytes returns exact backing slice", func(t *testing.T) {
+		data := []byte("zero copy check")
+		b := newBytesBody(data)
+
+		got := b.Bytes()
+		assert.Equal(t, data, got)
+		// Pointer identity: proves zero-copy, not a clone.
+		assert.True(t, &data[0] == &got[0], "Bytes() should return the same underlying array")
+	})
+
+	t.Run("Close returns nil and is idempotent", func(t *testing.T) {
+		b := newBytesBody([]byte("data"))
+
+		assert.NoError(t, b.Close())
+		assert.NoError(t, b.Close())
+	})
+
+	t.Run("empty data", func(t *testing.T) {
+		b := newBytesBody([]byte{})
+
+		assert.Equal(t, []byte{}, b.Bytes())
+
+		out := make([]byte, 1)
+		n, err := b.Read(out)
+		assert.Equal(t, 0, n)
+		assert.Equal(t, io.EOF, err)
+	})
+
+	t.Run("large payload", func(t *testing.T) {
+		data := make([]byte, 1<<20) // 1 MB
+		for i := range data {
+			data[i] = byte(i % 256)
+		}
+		b := newBytesBody(data)
+
+		got := b.Bytes()
+		assert.Equal(t, len(data), len(got))
+		assert.True(t, &data[0] == &got[0], "Bytes() should return the same underlying array for large payloads")
+	})
+
+}
+
+func TestServerStreamReceiveMessage(t *testing.T) {
+	t.Run("body exposes Bytes method", func(t *testing.T) {
+		payload := []byte("server receive test")
+
+		mockStream := &mockGRPCServerStream{
+			recvMsgFunc: func(m any) error {
+				ptr := m.(*[]byte)
+				*ptr = payload
+				return nil
+			},
+		}
+
+		ss := &serverStream{
+			ctx:    context.Background(),
+			stream: mockStream,
+			req:    &transport.StreamRequest{Meta: &transport.RequestMeta{}},
+		}
+
+		msg, err := ss.ReceiveMessage(context.Background())
+		assert.NoError(t, err)
+
+		br, ok := msg.Body.(interface{ Bytes() []byte })
+		assert.True(t, ok, "Body should implement Bytes() []byte")
+		assert.Equal(t, payload, br.Bytes())
+		assert.Equal(t, len(payload), msg.BodySize)
+	})
+
+	t.Run("empty message", func(t *testing.T) {
+		mockStream := &mockGRPCServerStream{
+			recvMsgFunc: func(m any) error {
+				ptr := m.(*[]byte)
+				*ptr = []byte{}
+				return nil
+			},
+		}
+
+		ss := &serverStream{
+			ctx:    context.Background(),
+			stream: mockStream,
+			req:    &transport.StreamRequest{Meta: &transport.RequestMeta{}},
+		}
+
+		msg, err := ss.ReceiveMessage(context.Background())
+		assert.NoError(t, err)
+
+		br, ok := msg.Body.(interface{ Bytes() []byte })
+		assert.True(t, ok)
+		assert.Equal(t, []byte{}, br.Bytes())
+		assert.Equal(t, 0, msg.BodySize)
+	})
+
+}
+
+func TestClientStreamReceiveMessage(t *testing.T) {
+	t.Run("body exposes Bytes method", func(t *testing.T) {
+		payload := []byte("client receive test")
+
+		mockStream := &mockGRPCClientStream{
+			recvMsgFunc: func(m any) error {
+				ptr := m.(*[]byte)
+				*ptr = payload
+				return nil
+			},
+		}
+
+		cs := &clientStream{
+			ctx:    context.Background(),
+			stream: mockStream,
+			req:    &transport.StreamRequest{Meta: &transport.RequestMeta{}},
+		}
+
+		msg, err := cs.ReceiveMessage(context.Background())
+		assert.NoError(t, err)
+
+		br, ok := msg.Body.(interface{ Bytes() []byte })
+		assert.True(t, ok, "Body should implement Bytes() []byte")
+		assert.Equal(t, payload, br.Bytes())
+	})
+
+	t.Run("empty message", func(t *testing.T) {
+		mockStream := &mockGRPCClientStream{
+			recvMsgFunc: func(m any) error {
+				ptr := m.(*[]byte)
+				*ptr = []byte{}
+				return nil
+			},
+		}
+
+		cs := &clientStream{
+			ctx:    context.Background(),
+			stream: mockStream,
+			req:    &transport.StreamRequest{Meta: &transport.RequestMeta{}},
+		}
+
+		msg, err := cs.ReceiveMessage(context.Background())
+		assert.NoError(t, err)
+
+		br, ok := msg.Body.(interface{ Bytes() []byte })
+		assert.True(t, ok)
+		assert.Equal(t, []byte{}, br.Bytes())
+	})
+
+}
+
 func TestClientStreamSendMessage(t *testing.T) {
 	t.Run("passes mem.Buffer to gRPC without conversion", func(t *testing.T) {
 		data := []byte("client test")
@@ -207,6 +365,7 @@ func TestClientStreamSendMessage(t *testing.T) {
 type mockGRPCServerStream struct {
 	grpc.ServerStream
 	sendMsgFunc func(m any) error
+	recvMsgFunc func(m any) error
 }
 
 func (m *mockGRPCServerStream) SendMsg(msg any) error {
@@ -216,14 +375,29 @@ func (m *mockGRPCServerStream) SendMsg(msg any) error {
 	return nil
 }
 
+func (m *mockGRPCServerStream) RecvMsg(msg any) error {
+	if m.recvMsgFunc != nil {
+		return m.recvMsgFunc(msg)
+	}
+	return nil
+}
+
 type mockGRPCClientStream struct {
 	grpc.ClientStream
 	sendMsgFunc func(m any) error
+	recvMsgFunc func(m any) error
 }
 
 func (m *mockGRPCClientStream) SendMsg(msg any) error {
 	if m.sendMsgFunc != nil {
 		return m.sendMsgFunc(msg)
+	}
+	return nil
+}
+
+func (m *mockGRPCClientStream) RecvMsg(msg any) error {
+	if m.recvMsgFunc != nil {
+		return m.recvMsgFunc(msg)
 	}
 	return nil
 }
