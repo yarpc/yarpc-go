@@ -253,7 +253,7 @@ func TestGetApplicationHeaders(t *testing.T) {
 				"rpc-service":         []string{"foo"}, // reserved header
 				"test-header-empty":   []string{},      // no value
 				"test-header-valid-1": []string{"test-value-1"},
-				"test-Header-Valid-2": []string{"test-value-2"},
+				"test-header-valid-2": []string{"test-value-2"},
 			},
 			wantHeaders: map[string]string{
 				"test-header-valid-1": "test-value-1",
@@ -389,4 +389,46 @@ func TestTransportRequestToMetadataWithRoutingHeaders(t *testing.T) {
 		// Verify custom header
 		assert.Equal(t, []string{"custom-value"}, md["custom-header"])
 	})
+}
+
+func BenchmarkMetadataToTransportRequest(b *testing.B) {
+	md := metadata.Pairs(
+		CallerHeader, "example-caller",
+		ServiceHeader, "example-service",
+		ShardKeyHeader, "example-shard-key",
+		RoutingKeyHeader, "example-routing-key",
+		RoutingDelegateHeader, "example-routing-delegate",
+		EncodingHeader, "raw",
+		CallerProcedureHeader, "example-caller-procedure",
+		"x-uber-source", "service-a",
+		"x-request-id", "abc-123",
+		"x-trace-id", "trace-456",
+		"x-custom-1", "val1",
+		"x-custom-2", "val2",
+	)
+
+	b.ResetTimer()
+	for range b.N {
+		_, _ = metadataToTransportRequest(md)
+	}
+}
+
+func BenchmarkGetApplicationHeaders(b *testing.B) {
+	md := metadata.MD{
+		"rpc-caller":    []string{"example-caller"},
+		"rpc-service":   []string{"example-service"},
+		"rpc-encoding":  []string{"raw"},
+		"x-uber-source": []string{"service-a"},
+		"x-request-id":  []string{"abc-123"},
+		"x-trace-id":    []string{"trace-456"},
+		"x-custom-1":    []string{"val1"},
+		"x-custom-2":    []string{"val2"},
+		"x-custom-3":    []string{"val3"},
+		"x-custom-4":    []string{"val4"},
+	}
+
+	b.ResetTimer()
+	for range b.N {
+		_, _ = getApplicationHeaders(md)
+	}
 }

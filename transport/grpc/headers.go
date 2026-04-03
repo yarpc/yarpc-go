@@ -147,8 +147,7 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 		default:
 			return nil, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
 		}
-		header = transport.CanonicalizeHeaderKey(header)
-		// skip routing header
+		// gRPC metadata keys are already lowercase.
 		if routingHeaders[header] {
 			continue
 		}
@@ -223,7 +222,7 @@ func getApplicationHeaders(md metadata.MD) (transport.Headers, error) {
 	}
 	headers := transport.NewHeadersWithCapacity(md.Len())
 	for header, values := range md {
-		header = transport.CanonicalizeHeaderKey(header)
+		// gRPC metadata keys are already lowercase.
 		if isReserved(header) {
 			continue
 		}
