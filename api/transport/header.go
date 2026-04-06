@@ -50,6 +50,10 @@ type Headers struct {
 	// into originalItems under every mapped key variant, falling back to
 	// the canonicalized key for unmapped headers.
 	headerMapping map[string][]string
+	// skipCanonicalizationOfKeys indicates that all keys passed to With()
+	// are already in canonical (lowercase) form, allowing With() to skip
+	// the CanonicalizeHeaderKey call.
+	skipCanonicalizationOfKeys bool
 }
 
 // NewHeaders builds a new Headers object.
@@ -81,7 +85,10 @@ func (h Headers) With(k, v string) Headers {
 		h.items = make(map[string]string)
 		h.originalItems = make(map[string]string)
 	}
-	canonicalizedKey := CanonicalizeHeaderKey(k)
+	canonicalizedKey := k
+	if !h.skipCanonicalizationOfKeys {
+		canonicalizedKey = CanonicalizeHeaderKey(k)
+	}
 	h.items[canonicalizedKey] = v
 
 	switch {
@@ -197,6 +204,15 @@ func (h Headers) OriginalItemsLen() int {
 // items with canonicalized keys when adding headers.
 func (h Headers) EnableOverrideOriginalItemsWithCanonicalizedKeys() Headers {
 	h.overrideOriginalItemWithCanonicalizedKey = true
+	return h
+}
+
+// SkipCanonicalizationOfKeys indicates that all keys passed to With() are
+// already in canonical (lowercase) form, allowing With() to skip the
+// CanonicalizeHeaderKey call. This is a performance optimization for
+// transports where keys are guaranteed lowercase by the protocol.
+func (h Headers) SkipCanonicalizationOfKeys() Headers {
+	h.skipCanonicalizationOfKeys = true
 	return h
 }
 

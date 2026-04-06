@@ -30,6 +30,16 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+// canonicalHeadersFromMap builds Headers with SkipCanonicalizationOfKeys set,
+// matching the behavior of newCanonicalHeaders used in production code.
+func canonicalHeadersFromMap(m map[string]string) transport.Headers {
+	h := newCanonicalHeaders(len(m))
+	for k, v := range m {
+		h = h.With(k, v)
+	}
+	return h
+}
+
 func TestMetadataToTransportRequest(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -61,7 +71,7 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				RoutingDelegate: "example-routing-delegate",
 				Encoding:        "example-encoding",
 				CallerProcedure: "example-caller-procedure",
-				Headers: transport.HeadersFromMap(map[string]string{
+				Headers: canonicalHeadersFromMap(map[string]string{
 					"foo": "bar",
 					"baz": "bat",
 				}),
@@ -86,7 +96,7 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				RoutingKey:      "example-routing-key",
 				RoutingDelegate: "example-routing-delegate",
 				Encoding:        "example-encoding",
-				Headers: transport.HeadersFromMap(map[string]string{
+				Headers: canonicalHeadersFromMap(map[string]string{
 					"foo": "bar",
 					"baz": "bat",
 				}),
@@ -112,7 +122,7 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				RoutingKey:      "example-routing-key",
 				RoutingDelegate: "example-routing-delegate",
 				Encoding:        "example-encoding-override",
-				Headers: transport.HeadersFromMap(map[string]string{
+				Headers: canonicalHeadersFromMap(map[string]string{
 					"foo": "bar",
 					"baz": "bat",
 				}),
@@ -253,7 +263,7 @@ func TestGetApplicationHeaders(t *testing.T) {
 				"rpc-service":         []string{"foo"}, // reserved header
 				"test-header-empty":   []string{},      // no value
 				"test-header-valid-1": []string{"test-value-1"},
-				"test-Header-Valid-2": []string{"test-value-2"},
+				"test-header-valid-2": []string{"test-value-2"}, // gRPC metadata keys are always lowercase
 			},
 			wantHeaders: map[string]string{
 				"test-header-valid-1": "test-value-1",

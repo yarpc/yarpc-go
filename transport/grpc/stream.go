@@ -186,7 +186,7 @@ func (cs *clientStream) Headers() (transport.Headers, error) {
 	if err != nil {
 		return transport.NewHeaders(), err
 	}
-	headers := transport.NewHeadersWithCapacity(len(md))
+	headers := newCanonicalHeaders(len(md))
 	for k, vs := range md {
 		if len(vs) > 0 {
 			headers = headers.With(k, vs[0])

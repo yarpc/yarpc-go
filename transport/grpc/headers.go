@@ -113,6 +113,13 @@ func isReserved(header string) bool {
 	return strings.HasPrefix(header, "rpc-")
 }
 
+// newCanonicalHeaders returns a Headers pre-sized for capacity with
+// canonicalization skipped. Used for headers sourced from gRPC metadata,
+// whose keys are guaranteed lowercase.
+func newCanonicalHeaders(capacity int) transport.Headers {
+	return transport.NewHeadersWithCapacity(capacity).SkipCanonicalizationOfKeys()
+}
+
 // transportRequestToMetadata will populate all reserved and application headers
 // from the Request into a new MD.
 func transportRequestToMetadata(request *transport.Request) (metadata.MD, error) {
@@ -135,7 +142,7 @@ func transportRequestToMetadata(request *transport.Request) (metadata.MD, error)
 // headers into a new Request, only not setting the Body field.
 func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 	request := &transport.Request{
-		Headers: transport.NewHeadersWithCapacity(md.Len()),
+		Headers: newCanonicalHeaders(md.Len()),
 	}
 	for header, values := range md {
 		var value string
@@ -221,9 +228,8 @@ func getApplicationHeaders(md metadata.MD) (transport.Headers, error) {
 	if len(md) == 0 {
 		return transport.Headers{}, nil
 	}
-	headers := transport.NewHeadersWithCapacity(md.Len())
+	headers := newCanonicalHeaders(md.Len())
 	for header, values := range md {
-		header = transport.CanonicalizeHeaderKey(header)
 		if isReserved(header) {
 			continue
 		}

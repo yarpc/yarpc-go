@@ -263,6 +263,77 @@ func TestEnableOverrideOriginalItemsWithCanonicalizedKeys(t *testing.T) {
 	}
 }
 
+func TestSkipCanonicalizationOfKeys(t *testing.T) {
+	tests := []struct {
+		msg                   string
+		skip                  bool
+		headers               []struct{ key, val string }
+		expectedItems         map[string]string
+		expectedOriginalItems map[string]string
+	}{
+		{
+			msg:  "without skip, keys are canonicalized",
+			skip: false,
+			headers: []struct{ key, val string }{
+				{"foo-bar", "value1"},
+				{"x-custom-header", "value2"},
+				{"X-Non-Lowercase", "value3"},
+			},
+			expectedItems: map[string]string{
+				"foo-bar":         "value1",
+				"x-custom-header": "value2",
+				"x-non-lowercase": "value3",
+			},
+			expectedOriginalItems: map[string]string{
+				"foo-bar":         "value1",
+				"x-custom-header": "value2",
+				"X-Non-Lowercase": "value3",
+			},
+		},
+		{
+			msg:  "with skip, keys are used as-is (no canonicalization)",
+			skip: true,
+			headers: []struct{ key, val string }{
+				{"foo-bar", "value1"},
+				{"x-custom-header", "value2"},
+				{"X-Non-Lowercase", "value3"},
+			},
+			expectedItems: map[string]string{
+				"foo-bar":         "value1",
+				"x-custom-header": "value2",
+				"X-Non-Lowercase": "value3",
+			},
+			expectedOriginalItems: map[string]string{
+				"foo-bar":         "value1",
+				"x-custom-header": "value2",
+				"X-Non-Lowercase": "value3",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			header := NewHeaders()
+			if tt.skip {
+				header = header.SkipCanonicalizationOfKeys()
+			}
+			for _, h := range tt.headers {
+				header = header.With(h.key, h.val)
+			}
+
+			assert.Equal(t, tt.expectedItems, header.Items())
+			assert.Equal(t, tt.expectedOriginalItems, header.OriginalItems())
+
+			// Verify Get works for all expected items
+			for k, v := range tt.expectedItems {
+				got, ok := header.Get(k)
+				assert.True(t, ok, "expected key %q to exist", k)
+				assert.Equal(t, v, got, "value mismatch for %q", k)
+			}
+		})
+	}
+}
+
 func TestWithHeaderCaseMapping(t *testing.T) {
 	tests := []struct {
 		msg                   string
