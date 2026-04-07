@@ -552,6 +552,71 @@ func TestTransportSpec(t *testing.T) {
 			},
 			wantErrors: []string{"outbound TLS enforced but outbound TLS config provider is nil"},
 		},
+		{
+			desc: "negative minConnections",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"minConnections": "-1",
+				},
+			},
+			inboundCfg: attrs{"address": ":54580"},
+			wantErrors: []string{"clientConnectionPool.minConnections must be non-negative"},
+		},
+		{
+			desc: "negative maxConnections",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"maxConnections": "-1",
+				},
+			},
+			inboundCfg: attrs{"address": ":54581"},
+			wantErrors: []string{"clientConnectionPool.maxConnections must be non-negative"},
+		},
+		{
+			desc: "maxConnections less than minConnections",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"minConnections": "5",
+					"maxConnections": "2",
+				},
+			},
+			inboundCfg: attrs{"address": ":54582"},
+			wantErrors: []string{"clientConnectionPool.maxConnections (2) must be >= minConnections (5)"},
+		},
+		{
+			desc: "minConnections exceeds default maxConnections",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"minConnections": "10",
+				},
+			},
+			inboundCfg: attrs{"address": ":54583"},
+			wantErrors: []string{"clientConnectionPool.maxConnections (5) must be >= minConnections (10)"},
+		},
+		{
+			desc: "scaleUpThreshold out of range",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"scaleUpThreshold": "1.5",
+				},
+			},
+			inboundCfg: attrs{"address": ":54584"},
+			wantErrors: []string{"clientConnectionPool.scaleUpThreshold must be in [0, 1]"},
+		},
+		{
+			desc: "valid connection pool config",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"minConnections":       "2",
+					"maxConnections":       "8",
+					"scaleUpThreshold":     "0.7",
+					"maxConcurrentStreams": "200",
+					"idleTimeout":          "10m",
+				},
+			},
+			inboundCfg:  attrs{"address": ":54585"},
+			wantInbound: &wantInbound{Address: ":54585"},
+		},
 	}
 
 	for _, tt := range tests {
