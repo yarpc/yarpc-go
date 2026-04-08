@@ -36,15 +36,15 @@ const (
 // Tag values for the connection pool metrics.
 const (
 	_componentTagValueYarpc = "yarpc"
-	_transportTagValueGrpc = "grpc"
+	_transportTagValueGrpc  = "grpc"
 )
 
 // connPoolMetricsParams holds parameters needed for creating connection pool metrics.
 type connPoolMetricsParams struct {
-	Meter         *metrics.Scope
-	Logger        *zap.Logger
-	ServiceName   string
-	Peer          string
+	Meter       *metrics.Scope
+	Logger      *zap.Logger
+	ServiceName string
+	Peer        string
 }
 
 // connPoolMetrics holds metric handles for the gRPC connection pool.
