@@ -21,7 +21,6 @@
 package grpc
 
 import (
-	"bytes"
 	"context"
 	"io/ioutil"
 	"strings"
@@ -139,7 +138,7 @@ func (o *Outbound) DirectCall(ctx context.Context, request *transport.Request) (
 		return nil, err
 	}
 	return &transport.Response{
-		Body:                 ioutil.NopCloser(bytes.NewReader(responseBody)),
+		Body:                 newBytesBody(responseBody),
 		BodySize:             len(responseBody),
 		Headers:              responseHeaders,
 		ApplicationError:     metadataToIsApplicationError(responseMD),
