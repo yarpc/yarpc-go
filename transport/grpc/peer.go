@@ -22,6 +22,7 @@ package grpc
 
 import (
 	"context"
+	"sync"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/abstractpeer"
@@ -38,6 +39,11 @@ type grpcPeer struct {
 	cancel     context.CancelFunc
 	clientConn *grpc.ClientConn
 	stoppedC   chan struct{}
+
+	mu      sync.Mutex
+	conns   []*grpcClientConnWrapper
+	poolCfg connPoolConfig
+	address string
 }
 
 func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, error) {

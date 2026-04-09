@@ -26,17 +26,211 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // newTestPeer returns a minimal grpcPeer sufficient for exercising the scaling
-// monitor.  None of the TODO methods access peer fields, so we only need the
-// context wiring.
+// monitor goroutine lifecycle. Methods that reach p.t will panic, so only use
+// this for tests that exercise early-return paths.
 func newTestPeer(ctx context.Context, cancel context.CancelFunc) *grpcPeer {
 	return &grpcPeer{
 		ctx:    ctx,
 		cancel: cancel,
 	}
 }
+
+// makeConn creates a grpcClientConnWrapper with the given state and stream
+// count. Intended for use in unit tests only.
+func makeConn(state connState, streams int32) *grpcClientConnWrapper {
+	return &grpcClientConnWrapper{
+		state:       state,
+		streamCount: streams,
+	}
+}
+
+// peerForScaleDown builds a grpcPeer suitable for maybeScaleDown tests. It
+// wires up a real Transport (for its nop logger) and a cancellable context.
+func peerForScaleDown(t *testing.T, conns []*grpcClientConnWrapper, cfg connPoolConfig) *grpcPeer {
+	t.Helper()
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	return &grpcPeer{
+		t:       NewTransport(),
+		ctx:     ctx,
+		cancel:  cancel,
+		conns:   conns,
+		poolCfg: cfg,
+		address: "10.0.0.1:9000",
+	}
+}
+
+// defaultCfg is a pool config used across maybeScaleDown tests.
+// threshold = int32(100 * 0.8) = 80.
+var defaultScaleDownCfg = connPoolConfig{
+	minConnections:      1,
+	maxConcurrentStreams: 100,
+	scaleUpThreshold:    0.8,
+}
+
+// TestMaybeScaleDown covers every branch of the maybeScaleDown function.
+func TestMaybeScaleDown(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		desc string
+		// conns is the initial pool state.
+		conns []*grpcClientConnWrapper
+		cfg   connPoolConfig
+		// afterCall maps each conn (by index) to its expected state after the call.
+		wantStates []connState
+	}{
+		{
+			// Empty pool: active slice is empty → len(active)=0 <= minConnections=1 → return.
+			desc:       "empty pool - returns at minConnections guard",
+			conns:      nil,
+			cfg:        defaultScaleDownCfg,
+			wantStates: nil,
+		},
+		{
+			// One active conn, minConnections=1: len(active)=1 <= 1 → return, no drain.
+			desc: "active equals minConnections - no drain",
+			conns: []*grpcClientConnWrapper{
+				makeConn(connStateActive, 10),
+			},
+			cfg:        defaultScaleDownCfg,
+			wantStates: []connState{connStateActive},
+		},
+		{
+			// One active conn, minConnections=2: len(active)=1 <= 2 → return, no drain.
+			desc: "active below minConnections - no drain",
+			conns: []*grpcClientConnWrapper{
+				makeConn(connStateActive, 10),
+			},
+			cfg: connPoolConfig{
+				minConnections:      2,
+				maxConcurrentStreams: 100,
+				scaleUpThreshold:    0.8,
+			},
+			wantStates: []connState{connStateActive},
+		},
+		{
+			// Only draining conns: active slice is empty → returns at minConnections guard.
+			// The existing draining connections are not modified.
+			desc: "only draining conns - active=0, no change",
+			conns: []*grpcClientConnWrapper{
+				makeConn(connStateDraining, 5),
+				makeConn(connStateDraining, 5),
+			},
+			cfg:        defaultScaleDownCfg, // minConnections=1, active=0
+			wantStates: []connState{connStateDraining, connStateDraining},
+		},
+		{
+			// Mix of active and draining. Only active conns count toward the
+			// pool size, but the pool is at minConnections after filtering.
+			desc: "mixed pool at minConnections - no drain",
+			conns: []*grpcClientConnWrapper{
+				makeConn(connStateActive, 10),
+				makeConn(connStateDraining, 20),
+			},
+			cfg:        defaultScaleDownCfg, // minConnections=1, active=1
+			wantStates: []connState{connStateActive, connStateDraining},
+		},
+		{
+			// 3 active conns, load too high: threshold=80, capacityAfterDrain=80*2=160,
+			// totalStreams=180 >= 160 → return without draining.
+			desc: "total streams exceed capacity after drain - no drain",
+			conns: []*grpcClientConnWrapper{
+				makeConn(connStateActive, 60),
+				makeConn(connStateActive, 60),
+				makeConn(connStateActive, 60),
+			},
+			cfg:        defaultScaleDownCfg,
+			wantStates: []connState{connStateActive, connStateActive, connStateActive},
+		},
+		{
+			// 3 active conns, load exactly equal to capacityAfterDrain:
+			// totalStreams=160 >= 160 → return (boundary check).
+			desc: "total streams exactly equal to capacity after drain - no drain",
+			conns: []*grpcClientConnWrapper{
+				makeConn(connStateActive, 54),
+				makeConn(connStateActive, 53),
+				makeConn(connStateActive, 53),
+			},
+			cfg:        defaultScaleDownCfg, // threshold=80, capacity=160, total=160
+			wantStates: []connState{connStateActive, connStateActive, connStateActive},
+		},
+		{
+			// 3 active conns, low load: threshold=80, capacityAfterDrain=160,
+			// totalStreams=60 < 160 → drain the least-loaded (first conn, 10 streams).
+			desc: "low load - drains least-loaded connection",
+			conns: []*grpcClientConnWrapper{
+				makeConn(connStateActive, 10), // least loaded → drained
+				makeConn(connStateActive, 20),
+				makeConn(connStateActive, 30),
+			},
+			cfg:        defaultScaleDownCfg,
+			wantStates: []connState{connStateDraining, connStateActive, connStateActive},
+		},
+		{
+			// Least-loaded is the middle conn. Verifies the comparison loop
+			// picks the globally smallest stream count, not just the first.
+			desc: "least-loaded is not first - correct conn drained",
+			conns: []*grpcClientConnWrapper{
+				makeConn(connStateActive, 30),
+				makeConn(connStateActive, 5), // least loaded → drained
+				makeConn(connStateActive, 25),
+			},
+			cfg:        defaultScaleDownCfg,
+			wantStates: []connState{connStateActive, connStateDraining, connStateActive},
+		},
+		{
+			// All active conns have equal stream counts. The first one is selected
+			// (leastLoaded == nil on first iteration, then no subsequent conn wins
+			// because equal counts don't satisfy <).
+			desc: "equal stream counts - first active conn drained",
+			conns: []*grpcClientConnWrapper{
+				makeConn(connStateActive, 10), // selected (first, tied)
+				makeConn(connStateActive, 10),
+				makeConn(connStateActive, 10),
+			},
+			cfg:        defaultScaleDownCfg,
+			wantStates: []connState{connStateDraining, connStateActive, connStateActive},
+		},
+		{
+			// Draining conn interspersed: draining conn is excluded from active
+			// list and from scale-down candidate selection.
+			desc: "draining conn excluded from candidate selection",
+			conns: []*grpcClientConnWrapper{
+				makeConn(connStateDraining, 1), // excluded from active
+				makeConn(connStateActive, 5),   // least loaded active → drained
+				makeConn(connStateActive, 40),
+				makeConn(connStateActive, 40),
+			},
+			cfg: connPoolConfig{
+				minConnections:      1,
+				maxConcurrentStreams: 100,
+				scaleUpThreshold:    0.8, // threshold=80, capacity=80*2=160, total=85 < 160
+			},
+			wantStates: []connState{connStateDraining, connStateDraining, connStateActive, connStateActive},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+			p := peerForScaleDown(t, tt.conns, tt.cfg)
+			p.maybeScaleDown()
+
+			require.Len(t, p.conns, len(tt.wantStates))
+			for i, want := range tt.wantStates {
+				assert.Equal(t, want, p.conns[i].getState(),
+					"conn[%d] state mismatch", i)
+			}
+		})
+	}
+}
+
+// --- scaling monitor lifecycle tests ---
 
 // TestRunScalingMonitorExitsOnContextCancel verifies that runScalingMonitor
 // returns promptly when the peer's context is cancelled.
@@ -62,9 +256,8 @@ func TestRunScalingMonitorExitsOnContextCancel(t *testing.T) {
 	}
 }
 
-// TestRunScalingMonitorTicksEvaluateScaling verifies that the monitor calls
-// evaluateScaling at least once within a reasonable window.  We use a short
-// context deadline so that the test does not run indefinitely.
+// TestRunScalingMonitorTicksEvaluateScaling verifies that the monitor exits
+// cleanly when its context is cancelled.
 func TestRunScalingMonitorTicksEvaluateScaling(t *testing.T) {
 	t.Parallel()
 
@@ -108,3 +301,4 @@ func TestScalingHelperMethodsDoNotPanic(t *testing.T) {
 	assert.NotPanics(t, p.cleanupIdleConns)
 	assert.NotPanics(t, p.maybeScaleDown)
 }
+
