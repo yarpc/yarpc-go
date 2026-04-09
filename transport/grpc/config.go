@@ -70,6 +70,13 @@ func TransportSpec(opts ...Option) yarpcconfig.TransportSpec {
 //	        max: 30s
 //	    clientMaxHeaderListSize: 1024
 //	    serverMaxHeaderListSize: 2048
+//	    clientConnectionPool:
+//	      dynamicScalingEnabled: true
+//	      maxConcurrentStreams: 250
+//	      scaleUpThreshold: 0.8
+//	      minConnections: 1
+//	      maxConnections: 10
+//	      idleTimeout: 5m
 //
 // All parameters of TransportConfig are optional. This section
 // may be omitted in the transports section.
@@ -88,6 +95,52 @@ type TransportConfig struct {
 	// incoming streams.
 	// See: https://pkg.go.dev/google.golang.org/grpc#NumStreamWorkers
 	NumStreamWorkers uint32 `config:"numStreamWorkers"`
+	// ClientConnectionPool configures the per-peer gRPC connection pool that
+	// enables dynamic scaling beyond the HTTP/2 250-stream-per-connection limit.
+	ClientConnectionPool ClientConnectionPoolConfig `config:"clientConnectionPool"`
+}
+
+// ClientConnectionPoolConfig configures the dynamic gRPC connection pool for all
+// peers on this transport.
+//
+//	transports:
+//	  grpc:
+//	    clientConnectionPool:
+//	      dynamicScalingEnabled: true   # enable background auto-scaling
+//	      maxConcurrentStreams: 250     # assumed server HTTP/2 stream limit
+//	      scaleUpThreshold: 0.8         # open a new conn at 80% utilization
+//	      minConnections: 1             # minimum connections per peer
+//	      maxConnections: 10            # maximum connections per peer
+//	      idleTimeout: 5m               # close idle connections after this duration
+type ClientConnectionPoolConfig struct {
+	// DynamicScalingEnabled enables the background connection scaling monitor.
+	// When true, YARPC automatically opens and drains connections based on
+	// stream utilization.  Disabled by default to allow controlled rollout.
+	DynamicScalingEnabled bool `config:"dynamicScalingEnabled"`
+
+	// MaxConcurrentStreams is the assumed HTTP/2 SETTINGS_MAX_CONCURRENT_STREAMS
+	// value enforced by the server.  YARPC uses this to decide when to open an
+	// additional connection.  Defaults to 250 (Go's net/http2 default).
+	MaxConcurrentStreams int32 `config:"maxConcurrentStreams"`
+
+	// ScaleUpThreshold is the fraction of MaxConcurrentStreams at which a
+	// new connection is opened (e.g. 0.8 → scale up at 200 active streams).
+	// Must be in the range (0, 1].  Defaults to 0.8.
+	ScaleUpThreshold float64 `config:"scaleUpThreshold"`
+
+	// MinConnections is the minimum number of connections kept per peer.
+	// Connections are pre-established up to this count at peer creation time.
+	// Defaults to 1.
+	MinConnections int `config:"minConnections"`
+
+	// MaxConnections is the maximum number of connections allowed per peer.
+	// Defaults to 5.
+	MaxConnections int `config:"maxConnections"`
+
+	// IdleTimeout is how long a fully-drained connection stays idle before
+	// YARPC closes it.
+	// Defaults to 15 minutes.
+	IdleTimeout time.Duration `config:"idleTimeout"`
 }
 
 // InboundConfig configures a gRPC Inbound.
@@ -342,12 +395,57 @@ func (t *transportSpec) buildTransport(transportConfig *TransportConfig, kit *ya
 	if transportConfig.NumStreamWorkers > 0 {
 		options = append(options, NumStreamWorkers(transportConfig.NumStreamWorkers))
 	}
+	// Connection pool options — only apply non-zero values so that
+	// programmatic TransportOption defaults set by the caller are not
+	// silently overridden by the zero value of an omitted YAML field.
+	cp := transportConfig.ClientConnectionPool
+	if cp.MinConnections < 0 {
+		return nil, fmt.Errorf("clientConnectionPool.minConnections must be non-negative, got %d", cp.MinConnections)
+	}
+	if cp.MaxConnections < 0 {
+		return nil, fmt.Errorf("clientConnectionPool.maxConnections must be non-negative, got %d", cp.MaxConnections)
+	}
+	if cp.MaxConcurrentStreams < 0 {
+		return nil, fmt.Errorf("clientConnectionPool.maxConcurrentStreams must be non-negative, got %d", cp.MaxConcurrentStreams)
+	}
+	if cp.ScaleUpThreshold < 0 || cp.ScaleUpThreshold > 1 {
+		return nil, fmt.Errorf("clientConnectionPool.scaleUpThreshold must be in [0, 1], got %v", cp.ScaleUpThreshold)
+	}
+	if cp.IdleTimeout < 0 {
+		return nil, fmt.Errorf("clientConnectionPool.idleTimeout must be non-negative, got %v", cp.IdleTimeout)
+	}
+	options = append(options, WithDynamicConnectionScaling(cp.DynamicScalingEnabled))
+	if cp.MaxConcurrentStreams > 0 {
+		options = append(options, MaxConcurrentStreams(cp.MaxConcurrentStreams))
+	}
+	if cp.ScaleUpThreshold > 0 {
+		options = append(options, ScaleUpThreshold(cp.ScaleUpThreshold))
+	}
+	if cp.MinConnections > 0 {
+		options = append(options, MinConnections(cp.MinConnections))
+	}
+	if cp.MaxConnections > 0 {
+		options = append(options, MaxConnections(cp.MaxConnections))
+	}
+	if cp.IdleTimeout > 0 {
+		options = append(options, ConnIdleTimeout(cp.IdleTimeout))
+	}
 	backoffStrategy, err := transportConfig.Backoff.Strategy()
 	if err != nil {
 		return nil, err
 	}
 	options = append(options, BackoffStrategy(backoffStrategy), ServiceName(kit.ServiceName()))
-	return newTransport(newTransportOptions(options)), nil
+	opts := newTransportOptions(options)
+	if opts.clientConnPoolMaxConnections < opts.clientConnPoolMinConnections {
+		return nil, fmt.Errorf("clientConnectionPool.maxConnections (%d) must be >= minConnections (%d)", opts.clientConnPoolMaxConnections, opts.clientConnPoolMinConnections)
+	}
+	if opts.clientConnPoolScaleUpThreshold <= 0 || opts.clientConnPoolScaleUpThreshold > 1 {
+		return nil, fmt.Errorf("clientConnectionPool.scaleUpThreshold must be in (0, 1], got %v", opts.clientConnPoolScaleUpThreshold)
+	}
+	if opts.clientConnPoolMaxConcurrentStreams < 1 {
+		return nil, fmt.Errorf("clientConnectionPool.maxConcurrentStreams must be at least 1, got %d", opts.clientConnPoolMaxConcurrentStreams)
+	}
+	return newTransport(opts), nil
 }
 
 func (t *transportSpec) buildInbound(inboundConfig *InboundConfig, tr transport.Transport, _ *yarpcconfig.Kit) (transport.Inbound, error) {

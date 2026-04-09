@@ -25,6 +25,7 @@ import (
 	"crypto/tls"
 	"math"
 	"net"
+	"time"
 
 	opentracing "github.com/opentracing/opentracing-go"
 	"go.uber.org/net/metrics"
@@ -53,6 +54,13 @@ const (
 	// receive sizes to 64MB.
 	defaultServerMaxRecvMsgSize = 1024 * 1024 * 64
 	defaultClientMaxRecvMsgSize = 1024 * 1024 * 64
+	// Client connection pool defaults.
+	// defaultClientConnPoolMaxConcurrentStreams matches Go's net/http2 server default (SETTINGS_MAX_CONCURRENT_STREAMS = 250).
+	defaultClientConnPoolMaxConcurrentStreams int32         = 250
+	defaultClientConnPoolScaleUpThreshold     float64       = 0.8
+	defaultClientConnPoolMinConnections       int           = 1
+	defaultClientConnPoolMaxConnections       int           = 5
+	defaultClientConnPoolIdleTimeout          time.Duration = 15 * time.Minute
 )
 
 // Option is an interface shared by TransportOption, InboundOption, and OutboundOption
@@ -204,6 +212,81 @@ func ClientMaxHeaderListSize(clientMaxHeaderListSize uint32) TransportOption {
 	}
 }
 
+// MaxConcurrentStreams sets the assumed HTTP/2 SETTINGS_MAX_CONCURRENT_STREAMS
+// value enforced by the server.  YARPC uses this value to decide when to open
+// an additional connection to a peer.
+//
+// The gRPC client does not expose the server-advertised limit, so this must be
+// configured manually.  The default is 250, which matches Go's net/http2 server
+// default.
+func MaxConcurrentStreams(n int32) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.clientConnPoolMaxConcurrentStreams = n
+	}
+}
+
+// ScaleUpThreshold sets the fraction of MaxConcurrentStreams at which YARPC
+// opens an additional connection to a peer.  For example, a value of 0.8 means
+// a new connection is opened when any existing connection carries more than
+// 80% of its stream budget.
+//
+// The default is 0.8.
+func ScaleUpThreshold(f float64) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.clientConnPoolScaleUpThreshold = f
+	}
+}
+
+// MinConnections sets the minimum number of connections YARPC maintains to
+// each peer.  Connections are pre-established up to this count when the peer
+// is first retained.
+//
+// The default is 1.
+func MinConnections(n int) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.clientConnPoolMinConnections = n
+	}
+}
+
+// MaxConnections sets the maximum number of connections YARPC may open to a
+// single peer.
+//
+// The default is 5.
+func MaxConnections(n int) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.clientConnPoolMaxConnections = n
+	}
+}
+
+// ConnIdleTimeout sets how long a fully-drained connection remains idle before
+// YARPC closes it and removes it from the pool.
+//
+// The default is 15 minutes.
+func ConnIdleTimeout(d time.Duration) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.clientConnPoolIdleTimeout = d
+	}
+}
+
+// WithDynamicConnectionScaling enables or disables automatic gRPC connection
+// pool scaling based on stream utilization.
+//
+// When enabled, YARPC monitors stream usage on each pooled connection and
+// automatically opens new connections when any connection exceeds
+// ScaleUpThreshold, and drains connections when aggregate utilization drops
+// low enough to consolidate load onto fewer connections.
+//
+// Because YARPC is an open-source project, Flipr/ObjectConfig based rollout is handled
+// externally: set this option to true only after validating the change in a
+// controlled environment.
+//
+// The default is false (disabled).
+func WithDynamicConnectionScaling(enabled bool) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.clientConnPoolDynamicScalingEnabled = enabled
+	}
+}
+
 // InboundOption is an option for an inbound.
 type InboundOption func(*inboundOptions)
 
@@ -337,6 +420,13 @@ type transportOptions struct {
 	unaryOutboundInterceptor  []interceptor.UnaryOutbound
 	streamInboundInterceptor  interceptor.StreamInbound
 	streamOutboundInterceptor []interceptor.StreamOutbound
+	// Client connection pool options.
+	clientConnPoolMaxConcurrentStreams  int32
+	clientConnPoolScaleUpThreshold      float64
+	clientConnPoolMinConnections        int
+	clientConnPoolMaxConnections        int
+	clientConnPoolIdleTimeout           time.Duration
+	clientConnPoolDynamicScalingEnabled bool
 }
 
 func newTransportOptions(options []TransportOption) *transportOptions {
@@ -346,6 +436,12 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 		serverMaxSendMsgSize: defaultServerMaxSendMsgSize,
 		clientMaxRecvMsgSize: defaultClientMaxRecvMsgSize,
 		clientMaxSendMsgSize: defaultClientMaxSendMsgSize,
+		// Client connection pool defaults.
+		clientConnPoolMaxConcurrentStreams: defaultClientConnPoolMaxConcurrentStreams,
+		clientConnPoolScaleUpThreshold:     defaultClientConnPoolScaleUpThreshold,
+		clientConnPoolMinConnections:       defaultClientConnPoolMinConnections,
+		clientConnPoolMaxConnections:       defaultClientConnPoolMaxConnections,
+		clientConnPoolIdleTimeout:          defaultClientConnPoolIdleTimeout,
 	}
 	for _, option := range options {
 		option(transportOptions)
