@@ -22,6 +22,8 @@ package grpc
 
 import (
 	"time"
+
+	"go.uber.org/zap"
 )
 
 // _scalingMonitorInterval is how often the scaling monitor evaluates the pool.
@@ -53,7 +55,59 @@ func (p *grpcPeer) evaluateScaling() {
 // can absorb the current aggregate stream load without triggering another
 // scale-up.
 func (p *grpcPeer) maybeScaleDown() {
-	// TODO
+	// Use a read lock for the analysis phase to avoid blocking concurrent
+	// request-path goroutines that also hold RLock when picking a connection.
+	p.mu.RLock()
+	active := make([]*grpcClientConnWrapper, 0, len(p.conns))
+	for _, c := range p.conns {
+		if c.isActive() {
+			active = append(active, c)
+		}
+	}
+
+	// Never drain below minConnections.
+	if len(active) <= p.poolCfg.minConnections {
+		p.mu.RUnlock()
+		return
+	}
+
+	threshold := int32(float64(p.poolCfg.maxConcurrentStreams) * p.poolCfg.scaleUpThreshold)
+
+	var totalStreams int32
+	for _, c := range active {
+		totalStreams += c.getStreamCount()
+	}
+
+	// Only drain if the remaining (n-1) connections can absorb current load
+	// without crossing the scale-up threshold.
+	capacityAfterDrain := threshold * int32(len(active)-1)
+	if totalStreams >= capacityAfterDrain {
+		p.mu.RUnlock()
+		return
+	}
+
+	// Drain the most-loaded active connection: this maximises residual
+	// stream capacity in the surviving connections, improving burst absorption.
+	var mostLoaded *grpcClientConnWrapper
+	for _, c := range active {
+		if mostLoaded == nil || c.getStreamCount() > mostLoaded.getStreamCount() {
+			mostLoaded = c
+		}
+	}
+	p.mu.RUnlock()
+
+	if mostLoaded == nil {
+		return
+	}
+
+	// Acquire the write lock only for the brief state mutation.
+	p.mu.Lock()
+	mostLoaded.setState(connStateDraining)
+	p.mu.Unlock()
+
+	p.t.options.logger.Debug("grpc: marked connection for draining during scale-down",
+		zap.String("peer", p.HostPort()),
+		zap.Int32("stream_count", mostLoaded.getStreamCount()))
 }
 
 // cleanupIdleConns advances draining connections with zero streams to the idle
