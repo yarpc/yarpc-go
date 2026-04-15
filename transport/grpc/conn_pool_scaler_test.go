@@ -74,7 +74,171 @@ var defaultScaleDownCfg = connPoolConfig{
 	scaleUpThreshold:    0.8,
 }
 
-// TestMaybeScaleDown covers every branch of the maybeScaleDown function.
+// makeConnWithCancel creates a grpcClientConnWrapper with a real context so
+// that c.cancel() can be observed in tests.  Returns the wrapper and the
+// context so callers can assert it was cancelled.
+func makeConnWithCancel(state connState, streams int32, idleAt time.Time) (*grpcClientConnWrapper, context.Context) {
+	ctx, cancel := context.WithCancel(context.Background())
+	w := &grpcClientConnWrapper{
+		state:  state,
+		cancel: cancel,
+	}
+	if streams > 0 {
+		w.streamCount = streams
+	}
+	if !idleAt.IsZero() {
+		w.lastIdleAtNano = idleAt.UnixNano()
+	}
+	return w, ctx
+}
+
+// TestCleanupIdleConns covers every line/branch of cleanupIdleConns.
+func TestCleanupIdleConns(t *testing.T) {
+	t.Parallel()
+
+	const shortTimeout = 100 * time.Millisecond
+
+	tests := []struct {
+		desc string
+		// build returns the conns slice and a slice of contexts corresponding
+		// to wrappers whose cancellation should be verified.
+		build      func() ([]*grpcClientConnWrapper, []context.Context)
+		idleTimeout time.Duration
+		// wantStates is the expected state of each conn after the call (index-aligned).
+		wantStates []connState
+		// wantCancelled is the index set of contexts that must be cancelled after the call.
+		wantCancelled []int
+	}{
+		{
+			// Empty pool: lock/unlock + empty loop, nothing happens.
+			desc: "empty pool - no-op",
+			build: func() ([]*grpcClientConnWrapper, []context.Context) {
+				return nil, nil
+			},
+			idleTimeout: time.Minute,
+			wantStates:  nil,
+		},
+		{
+			// Active connection: neither if-branch fires, state unchanged.
+			desc: "active connection - no state change",
+			build: func() ([]*grpcClientConnWrapper, []context.Context) {
+				w, ctx := makeConnWithCancel(connStateActive, 5, time.Time{})
+				return []*grpcClientConnWrapper{w}, []context.Context{ctx}
+			},
+			idleTimeout:   time.Minute,
+			wantStates:    []connState{connStateActive},
+			wantCancelled: nil,
+		},
+		{
+			// Draining with streams > 0: first if is false (streams != 0),
+			// second if is false (state != idle) → stays draining.
+			desc: "draining with active streams - stays draining",
+			build: func() ([]*grpcClientConnWrapper, []context.Context) {
+				w, ctx := makeConnWithCancel(connStateDraining, 3, time.Time{})
+				return []*grpcClientConnWrapper{w}, []context.Context{ctx}
+			},
+			idleTimeout:   time.Minute,
+			wantStates:    []connState{connStateDraining},
+			wantCancelled: nil,
+		},
+		{
+			// Draining with zero streams: first if fires → setState(idle) + setIdleNow().
+			// Second if then checks: state is idle, but idleSince was just set so
+			// duration < idleTimeout → not collected for closing.
+			desc: "draining with zero streams - advances to idle, not yet timed out",
+			build: func() ([]*grpcClientConnWrapper, []context.Context) {
+				w, ctx := makeConnWithCancel(connStateDraining, 0, time.Time{})
+				return []*grpcClientConnWrapper{w}, []context.Context{ctx}
+			},
+			idleTimeout:   time.Hour,
+			wantStates:    []connState{connStateIdle},
+			wantCancelled: nil,
+		},
+		{
+			// Already idle but lastIdleAtNano == 0 (defensive guard):
+			// second if short-circuits on !c.idleSince().IsZero() → not collected.
+			desc: "idle with zero idleSince - not collected",
+			build: func() ([]*grpcClientConnWrapper, []context.Context) {
+				w, ctx := makeConnWithCancel(connStateIdle, 0, time.Time{}) // lastIdleAtNano stays 0
+				return []*grpcClientConnWrapper{w}, []context.Context{ctx}
+			},
+			idleTimeout:   shortTimeout,
+			wantStates:    []connState{connStateIdle},
+			wantCancelled: nil,
+		},
+		{
+			// Idle within timeout: all conditions true except duration < timeout → not collected.
+			desc: "idle within timeout - not collected",
+			build: func() ([]*grpcClientConnWrapper, []context.Context) {
+				w, ctx := makeConnWithCancel(connStateIdle, 0, time.Now()) // idleSince = now
+				return []*grpcClientConnWrapper{w}, []context.Context{ctx}
+			},
+			idleTimeout:   time.Hour,
+			wantStates:    []connState{connStateIdle},
+			wantCancelled: nil,
+		},
+		{
+			// Idle past timeout: all conditions met → appended to toClose,
+			// logger.Debug called, c.cancel() called.
+			desc: "idle past timeout - cancel called",
+			build: func() ([]*grpcClientConnWrapper, []context.Context) {
+				pastTime := time.Now().Add(-10 * time.Minute)
+				w, ctx := makeConnWithCancel(connStateIdle, 0, pastTime)
+				return []*grpcClientConnWrapper{w}, []context.Context{ctx}
+			},
+			idleTimeout:   shortTimeout,
+			wantStates:    []connState{connStateIdle},
+			wantCancelled: []int{0},
+		},
+		{
+			// Mixed pool: one draining→idle transition, one past-timeout cancel,
+			// one active unchanged. Exercises all branches in a single call.
+			desc: "mixed pool - correct per-conn behavior",
+			build: func() ([]*grpcClientConnWrapper, []context.Context) {
+				w0, ctx0 := makeConnWithCancel(connStateActive, 10, time.Time{})
+				w1, ctx1 := makeConnWithCancel(connStateDraining, 0, time.Time{}) // → idle
+				pastTime := time.Now().Add(-5 * time.Minute)
+				w2, ctx2 := makeConnWithCancel(connStateIdle, 0, pastTime) // → cancel
+				return []*grpcClientConnWrapper{w0, w1, w2},
+					[]context.Context{ctx0, ctx1, ctx2}
+			},
+			idleTimeout:   shortTimeout,
+			wantStates:    []connState{connStateActive, connStateIdle, connStateIdle},
+			wantCancelled: []int{2},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
+			conns, ctxs := tt.build()
+			cfg := connPoolConfig{idleTimeout: tt.idleTimeout}
+			p := peerForScaleDown(t, conns, cfg)
+
+			p.cleanupIdleConns()
+
+			require.Len(t, p.conns, len(tt.wantStates))
+			for i, want := range tt.wantStates {
+				assert.Equal(t, want, p.conns[i].getState(), "conn[%d] state", i)
+			}
+
+			cancelledSet := make(map[int]bool)
+			for _, i := range tt.wantCancelled {
+				cancelledSet[i] = true
+			}
+			for i, ctx := range ctxs {
+				if cancelledSet[i] {
+					assert.Error(t, ctx.Err(), "conn[%d] context should be cancelled", i)
+				} else {
+					assert.NoError(t, ctx.Err(), "conn[%d] context should not be cancelled", i)
+				}
+			}
+		})
+	}
+}
+
+
 func TestMaybeScaleDown(t *testing.T) {
 	t.Parallel()
 
@@ -304,4 +468,3 @@ func TestScalingHelperMethodsDoNotPanic(t *testing.T) {
 	assert.NotPanics(t, p.cleanupIdleConns)
 	assert.NotPanics(t, p.maybeScaleDown)
 }
-

@@ -114,5 +114,39 @@ func (p *grpcPeer) maybeScaleDown() {
 // state, and cancels connections that have exceeded the idle timeout so their
 // monitor goroutines can close and remove them.
 func (p *grpcPeer) cleanupIdleConns() {
-	// TODO
+	now := time.Now()
+
+	// Use a read lock for the analysis phase
+	p.mu.RLock()
+	var drained []*grpcClientConnWrapper
+	var toClose []*grpcClientConnWrapper
+	for _, c := range p.conns {
+		if c.getState() == connStateDraining && c.getStreamCount() == 0 {
+			drained = append(drained, c)
+		} else if c.getState() == connStateIdle && !c.idleSince().IsZero() &&
+			now.Sub(c.idleSince()) >= p.poolCfg.idleTimeout {
+			toClose = append(toClose, c)
+		}
+	}
+	p.mu.RUnlock()
+
+	// Advance drained → idle with a brief write lock per connection.
+	for _, c := range drained {
+		p.mu.Lock()
+		if c.getState() == connStateDraining && c.getStreamCount() == 0 {
+			c.setState(connStateIdle)
+			c.setIdleNow()
+		}
+		p.mu.Unlock()
+	}
+
+	for _, c := range toClose {
+		p.t.options.logger.Debug("grpc: closing idle connection after timeout",
+			zap.String("peer", p.HostPort()),
+			zap.Duration("idle_duration", now.Sub(c.idleSince())))
+		// Cancelling the wrapper context causes monitorConnectionStatus to
+		// exit, which closes the underlying clientConn and removes the
+		// wrapper from p.conns.
+		c.cancel()
+	}
 }
