@@ -112,12 +112,12 @@ func TestHTTPHeaders(t *testing.T) {
 			expectedTransHeaders: transport.HeadersFromMap(map[string]string{}),
 		},
 		{
-			name: "proxy header outbound still prefixed",
+			name: "proxy header roundtrip unprefixed",
 			transHeaders: transport.HeadersFromMap(map[string]string{
 				"x-forwarded-for": "203.0.113.42",
 			}),
 			expectedHTTP: http.Header{
-				"Rpc-Header-X-Forwarded-For": []string{"203.0.113.42"},
+				"X-Forwarded-For": []string{"203.0.113.42"},
 			},
 			httpHeaders: http.Header{
 				"X-Forwarded-For": []string{"203.0.113.42"},
@@ -127,14 +127,16 @@ func TestHTTPHeaders(t *testing.T) {
 			}),
 		},
 		{
-			name: "proxy header inbound with mixed headers",
+			name: "mixed application, proxy, and tracing headers",
 			transHeaders: transport.HeadersFromMap(map[string]string{
-				"foo":           "bar",
-				"uber-trace-id": "tid",
+				"foo":             "bar",
+				"x-forwarded-for": "203.0.113.42",
+				"uber-trace-id":   "tid",
 			}),
 			expectedHTTP: http.Header{
-				"Rpc-Header-Foo": []string{"bar"},
-				"Uber-Trace-Id":  []string{"tid"},
+				"Rpc-Header-Foo":  []string{"bar"},
+				"X-Forwarded-For": []string{"203.0.113.42"},
+				"Uber-Trace-Id":   []string{"tid"},
 			},
 			httpHeaders: http.Header{
 				"Rpc-Header-Foo":  []string{"bar"},
