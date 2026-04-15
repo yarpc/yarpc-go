@@ -45,7 +45,7 @@ func (hm headerMapper) ToHTTPHeaders(from transport.Headers, to http.Header) htt
 		to = make(http.Header, from.Len())
 	}
 	for key, val := range from.Items() {
-		if isTracingHeader(key) || isRoutingHeader(key) {
+		if isTracingHeader(key) || isRoutingHeader(key) || isProxyHeader(key) {
 			to.Add(key, val)
 		} else {
 			to.Add(hm.Prefix+key, val)
