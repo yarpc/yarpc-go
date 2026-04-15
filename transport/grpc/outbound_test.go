@@ -35,6 +35,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
+	"go.uber.org/yarpc/peer/abstractpeer"
 )
 
 // shared between Unary and Streaming InvalidHeaderValue tests.
@@ -362,4 +363,81 @@ func TestOutboundIntrospection(t *testing.T) {
 
 	require.NoError(t, o.Stop(), "could not stop outbound")
 	assert.Equal(t, "Stopped", o.Introspect().State)
+}
+
+// emptyGRPCPeer returns a *grpcPeer with no connections in the pool, so that
+// pickConn() returns nil.  Only p.Peer is set; p.t is intentionally left nil
+// because the nil-conn path returns before any transport access.
+func emptyGRPCPeer(t *testing.T) *grpcPeer {
+	t.Helper()
+	tr := NewTransport()
+	return &grpcPeer{
+		Peer: abstractpeer.NewPeer(abstractpeer.PeerIdentifier("127.0.0.1:1"), tr),
+	}
+}
+
+// TestInvokeWithNoActiveConnections verifies that DirectCall returns an
+// UnavailableError when pickConn finds no active connections.
+func TestInvokeWithNoActiveConnections(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	chooser := peertest.NewMockChooser(mockCtrl)
+	chooser.EXPECT().Start()
+	chooser.EXPECT().Stop()
+	chooser.EXPECT().Choose(gomock.Any(), gomock.Any()).Return(emptyGRPCPeer(t), func(error) {}, nil)
+
+	tran := NewTransport()
+	out := tran.NewOutbound(chooser)
+	require.NoError(t, tran.Start())
+	require.NoError(t, out.Start())
+	defer tran.Stop()
+	defer out.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	_, err := out.DirectCall(ctx, &transport.Request{
+		Caller:    "caller",
+		Service:   "service",
+		Encoding:  transport.Encoding("raw"),
+		Procedure: "procedure",
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no available connections")
+}
+
+// TestStreamWithNoActiveConnections verifies that CallStream returns an
+// UnavailableError when pickConn finds no active connections.
+func TestStreamWithNoActiveConnections(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	chooser := peertest.NewMockChooser(mockCtrl)
+	chooser.EXPECT().Start()
+	chooser.EXPECT().Stop()
+	chooser.EXPECT().Choose(gomock.Any(), gomock.Any()).Return(emptyGRPCPeer(t), func(error) {}, nil)
+
+	tran := NewTransport()
+	out := tran.NewOutbound(chooser)
+	require.NoError(t, tran.Start())
+	require.NoError(t, out.Start())
+	defer tran.Stop()
+	defer out.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	_, err := out.CallStream(ctx, &transport.StreamRequest{
+		Meta: &transport.RequestMeta{
+			Caller:    "caller",
+			Service:   "service",
+			Encoding:  transport.Encoding("raw"),
+			Procedure: "procedure",
+		},
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no available connections")
 }

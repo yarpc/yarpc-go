@@ -215,6 +215,14 @@ func (o *Outbound) invoke(
 		}
 	}
 
+	// Pick the pool connection with the fewest active streams.
+	conn := grpcPeer.pickConn()
+	if conn == nil {
+		return yarpcerrors.UnavailableErrorf("no available connections for peer %s", grpcPeer.HostPort())
+	}
+	conn.incStreamCount()
+	defer conn.decStreamCount()
+
 	tracer := o.t.options.tracer
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        tracer,
@@ -231,7 +239,7 @@ func (o *Outbound) invoke(
 
 	err = transport.UpdateSpanWithErr(
 		span,
-		grpcPeer.clientConn.Invoke(
+		conn.clientConn.Invoke(
 			metadata.NewOutgoingContext(ctx, md),
 			fullMethod,
 			msg,
@@ -352,6 +360,20 @@ func (o *Outbound) stream(
 		return nil, err
 	}
 
+	// Pick the pool connection with the fewest active streams.
+	conn := grpcPeer.pickConn()
+	if conn == nil {
+		onFinish(yarpcerrors.UnavailableErrorf("no available connections for peer %s", grpcPeer.HostPort()))
+		return nil, yarpcerrors.UnavailableErrorf("no available connections for peer %s", grpcPeer.HostPort())
+	}
+	conn.incStreamCount()
+	// Wrap the release callback so stream count is decremented when
+	// the stream actually closes, not when stream() returns.
+	release := func(err error) {
+		conn.decStreamCount()
+		onFinish(err)
+	}
+
 	tracer := o.t.options.tracer
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        tracer,
@@ -363,12 +385,12 @@ func (o *Outbound) stream(
 
 	if err := tracer.Inject(span.Context(), opentracing.HTTPHeaders, mdReadWriter(md)); err != nil {
 		span.Finish()
-		onFinish(err)
+		release(err)
 		return nil, err
 	}
 
 	streamCtx := metadata.NewOutgoingContext(ctx, md)
-	clientStream, err := grpcPeer.clientConn.NewStream(
+	clientStream, err := conn.clientConn.NewStream(
 		streamCtx,
 		&grpc.StreamDesc{
 			ClientStreams: true,
@@ -378,13 +400,13 @@ func (o *Outbound) stream(
 	)
 	if err != nil {
 		span.Finish()
-		onFinish(err)
+		release(err)
 		return nil, err
 	}
-	stream := newClientStream(streamCtx, req, clientStream, span, onFinish)
+	stream := newClientStream(streamCtx, req, clientStream, span, release)
 	tClientStream, err := transport.NewClientStream(stream)
 	if err != nil {
-		onFinish(err)
+		release(err)
 		span.Finish()
 		return nil, err
 	}
