@@ -348,6 +348,7 @@ func TestSimpleRoundTripOneway(t *testing.T) {
 			handlerDone := make(chan struct{})
 
 			onewayHandler := onewayHandlerFunc(func(_ context.Context, r *transport.Request) error {
+				r.Headers.Del("user-agent")
 				assert.True(t, requestMatcher.Matches(r), "request mismatch: received %v", r)
 
 				// Pretend to work: this delay should not slow down tests since it is a
