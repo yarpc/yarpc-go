@@ -222,6 +222,7 @@ func (o *Outbound) invoke(
 	}
 	conn.incStreamCount()
 	defer conn.decStreamCount()
+	grpcPeer.tryScaleUp(conn)
 
 	tracer := o.t.options.tracer
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
@@ -373,6 +374,7 @@ func (o *Outbound) stream(
 		conn.decStreamCount()
 		onFinish(err)
 	}
+	grpcPeer.tryScaleUp(conn)
 
 	tracer := o.t.options.tracer
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
