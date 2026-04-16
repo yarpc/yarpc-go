@@ -22,6 +22,7 @@ package grpc
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -467,4 +468,197 @@ func TestScalingHelperMethodsDoNotPanic(t *testing.T) {
 
 	assert.NotPanics(t, p.cleanupIdleConns)
 	assert.NotPanics(t, p.maybeScaleDown)
+}
+
+// TestTryScaleUp covers all branches of tryScaleUp.
+func TestTryScaleUp(t *testing.T) {
+	t.Parallel()
+
+	// threshold = int32(100 * 0.8) = 80
+	overBudget := makeConn(connStateActive, 85)
+	underBudget := makeConn(connStateActive, 50)
+
+	t.Run("flag disabled - no scale-up", func(t *testing.T) {
+		t.Parallel()
+		p := peerForPool(t)
+		p.poolCfg.dynamicScalingEnabled = false
+		p.tryScaleUp(overBudget)
+		assert.Equal(t, int32(0), atomic.LoadInt32(&p.isScaling))
+	})
+
+	t.Run("under threshold - no scale-up", func(t *testing.T) {
+		t.Parallel()
+		p := peerForPool(t)
+		p.tryScaleUp(underBudget)
+		assert.Equal(t, int32(0), atomic.LoadInt32(&p.isScaling))
+	})
+
+	t.Run("at max connections - no scale-up", func(t *testing.T) {
+		t.Parallel()
+		p := peerForPool(t)
+		conns := make([]*grpcClientConnWrapper, p.poolCfg.maxConnections)
+		for i := range conns {
+			conns[i] = makeConn(connStateActive, 0)
+		}
+		p.mu.Lock()
+		p.conns = conns
+		p.mu.Unlock()
+		p.tryScaleUp(overBudget)
+
+		// atMax check now runs inside the goroutine; wait for it to finish.
+		assert.Eventually(t, func() bool {
+			return atomic.LoadInt32(&p.isScaling) == 0
+		}, 2*time.Second, 10*time.Millisecond)
+
+		p.mu.RLock()
+		n := len(p.conns)
+		p.mu.RUnlock()
+		assert.Equal(t, p.poolCfg.maxConnections, n, "pool should not grow beyond max")
+	})
+
+	t.Run("already scaling - no second goroutine launched", func(t *testing.T) {
+		t.Parallel()
+		p := peerForPool(t)
+		atomic.StoreInt32(&p.isScaling, 1)
+		p.tryScaleUp(overBudget)
+		assert.Equal(t, int32(1), atomic.LoadInt32(&p.isScaling))
+	})
+
+	t.Run("triggers goroutine and adds connection", func(t *testing.T) {
+		t.Parallel()
+		p := peerForPool(t)
+		p.tryScaleUp(overBudget)
+
+		// isScaling resets to 0 once the goroutine completes.
+		assert.Eventually(t, func() bool {
+			return atomic.LoadInt32(&p.isScaling) == 0
+		}, 2*time.Second, 10*time.Millisecond, "isScaling should reset to 0 after goroutine completes")
+
+		// One connection was added to the pool.
+		p.mu.RLock()
+		n := len(p.conns)
+		p.mu.RUnlock()
+		assert.Equal(t, 1, n, "one connection should be added to the pool")
+	})
+
+	t.Run("reactivates idle connection instead of dialing", func(t *testing.T) {
+		t.Parallel()
+		p := peerForPool(t)
+
+		// Seed an idle connection with a live context.
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		idleConn := &grpcClientConnWrapper{ctx: ctx, cancel: cancel}
+		idleConn.setState(connStateIdle)
+		idleConn.setIdleNow()
+		p.mu.Lock()
+		p.conns = append(p.conns, idleConn)
+		p.mu.Unlock()
+
+		p.tryScaleUp(overBudget)
+
+		assert.Eventually(t, func() bool {
+			return atomic.LoadInt32(&p.isScaling) == 0
+		}, 2*time.Second, 10*time.Millisecond)
+
+		// Pool size unchanged — reactivation, not a new dial.
+		p.mu.RLock()
+		n := len(p.conns)
+		p.mu.RUnlock()
+		assert.Equal(t, 1, n, "pool size should not grow on reactivation")
+		assert.Equal(t, connStateActive, idleConn.getState(), "idle conn should be active after reactivation")
+		assert.True(t, idleConn.idleSince().IsZero(), "idle timestamp should be cleared")
+	})
+}
+
+// TestReactivateIdleConn covers all branches of reactivateIdleConn.
+func TestReactivateIdleConn(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty pool returns false", func(t *testing.T) {
+		t.Parallel()
+		p := peerForScaleDown(t, nil, connPoolConfig{})
+		assert.False(t, p.reactivateIdleConn())
+	})
+
+	t.Run("no idle connections returns false", func(t *testing.T) {
+		t.Parallel()
+		conns := []*grpcClientConnWrapper{
+			makeConn(connStateActive, 10),
+			makeConn(connStateDraining, 5),
+		}
+		p := peerForScaleDown(t, conns, connPoolConfig{})
+		assert.False(t, p.reactivateIdleConn())
+	})
+
+	t.Run("idle with cancelled context is skipped", func(t *testing.T) {
+		t.Parallel()
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // already cancelled
+		w := &grpcClientConnWrapper{ctx: ctx, cancel: cancel}
+		w.setState(connStateIdle)
+		p := peerForScaleDown(t, []*grpcClientConnWrapper{w}, connPoolConfig{})
+		assert.False(t, p.reactivateIdleConn())
+		assert.Equal(t, connStateIdle, w.getState(), "cancelled idle conn must not be reactivated")
+	})
+
+	t.Run("reactivates idle connection with live context", func(t *testing.T) {
+		t.Parallel()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		w := &grpcClientConnWrapper{ctx: ctx, cancel: cancel}
+		w.setState(connStateIdle)
+		w.setIdleNow()
+		p := peerForScaleDown(t, []*grpcClientConnWrapper{w}, connPoolConfig{})
+
+		assert.True(t, p.reactivateIdleConn())
+		assert.Equal(t, connStateActive, w.getState())
+		assert.True(t, w.idleSince().IsZero(), "idle timestamp should be cleared after reactivation")
+	})
+
+	t.Run("skips cancelled idle picks first live idle", func(t *testing.T) {
+		t.Parallel()
+		cancelledCtx, cancelledCancel := context.WithCancel(context.Background())
+		cancelledCancel()
+		cancelled := &grpcClientConnWrapper{ctx: cancelledCtx, cancel: cancelledCancel}
+		cancelled.setState(connStateIdle)
+
+		liveCtx, liveCancel := context.WithCancel(context.Background())
+		defer liveCancel()
+		live := &grpcClientConnWrapper{ctx: liveCtx, cancel: liveCancel}
+		live.setState(connStateIdle)
+
+		p := peerForScaleDown(t, []*grpcClientConnWrapper{cancelled, live}, connPoolConfig{})
+
+		assert.True(t, p.reactivateIdleConn())
+		assert.Equal(t, connStateIdle, cancelled.getState(), "cancelled conn should remain idle")
+		assert.Equal(t, connStateActive, live.getState(), "live idle conn should be reactivated")
+	})
+}
+
+// TestCleanupIdleConnsSkippedWhileScaling verifies that cleanupIdleConns
+// returns early without closing any connections when a scale-up is in progress,
+// so that idle connections remain available for reactivation by tryScaleUp.
+func TestCleanupIdleConnsSkippedWhileScaling(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Build an idle connection past its timeout that would normally be closed.
+	w := &grpcClientConnWrapper{ctx: ctx, cancel: cancel}
+	w.setState(connStateIdle)
+	atomic.StoreInt64(&w.lastIdleAtNano, time.Now().Add(-10*time.Minute).UnixNano())
+
+	cfg := connPoolConfig{idleTimeout: time.Second}
+	p := peerForScaleDown(t, []*grpcClientConnWrapper{w}, cfg)
+
+	// Simulate a scale-up goroutine running.
+	atomic.StoreInt32(&p.isScaling, 1)
+
+	p.cleanupIdleConns()
+
+	// Connection must not have been cancelled — isScaling caused early return.
+	assert.NoError(t, ctx.Err(), "idle connection must not be cancelled while scaling")
+	assert.Equal(t, connStateIdle, w.getState(), "connection state must be unchanged")
 }
