@@ -21,6 +21,7 @@
 package grpc
 
 import (
+	"sync/atomic"
 	"time"
 
 	"go.uber.org/zap"
@@ -113,7 +114,15 @@ func (p *grpcPeer) maybeScaleDown() {
 // cleanupIdleConns advances draining connections with zero streams to the idle
 // state, and cancels connections that have exceeded the idle timeout so their
 // monitor goroutines can close and remove them.
+// It skips closing idle connections while a scale-up is in progress so that
+// tryScaleUp can reactivate them instead of dialing a new connection.
 func (p *grpcPeer) cleanupIdleConns() {
+	// If a scale-up goroutine is running, hold off — idle connections may be
+	// reactivated by tryScaleUp instead of being closed.
+	if atomic.LoadInt32(&p.isScaling) == 1 {
+		return
+	}
+
 	now := time.Now()
 
 	// Use a read lock for the analysis phase
@@ -149,4 +158,78 @@ func (p *grpcPeer) cleanupIdleConns() {
 		// wrapper from p.conns.
 		c.cancel()
 	}
+}
+
+// tryScaleUp triggers a background goroutine to satisfy the need for more
+// connection capacity.  It receives leastLoadedConn — the connection with the
+// fewest active streams, as selected by pickConn.  If even the least-loaded
+// connection is at or above the scale-up threshold then all connections are
+// over budget and the pool needs to grow.  It first tries to reactivate an
+// existing idle connection (avoiding a new dial); only if none are available
+// does it open a new connection, subject to the maxConnections cap.
+// p.isScaling is atomically set to 1 on entry (via CAS) and reset to 0 when
+// the goroutine finishes — this serves a dual purpose: it ensures at most one
+// scale-up goroutine runs at a time, and it signals cleanupIdleConns to hold
+// off closing idle connections while a reactivation may be in progress.
+func (p *grpcPeer) tryScaleUp(leastLoadedConn *grpcClientConnWrapper) {
+	if !p.poolCfg.dynamicScalingEnabled {
+		return
+	}
+
+	threshold := int32(float64(p.poolCfg.maxConcurrentStreams) * p.poolCfg.scaleUpThreshold)
+	if leastLoadedConn.getStreamCount() < threshold {
+		return
+	}
+
+	// Set isScaling to 1 (from 0) to claim the scale-up slot.
+	// If another goroutine already holds it, bail out.
+	if !atomic.CompareAndSwapInt32(&p.isScaling, 0, 1) {
+		return
+	}
+
+	go func() {
+		defer atomic.StoreInt32(&p.isScaling, 0)
+
+		// Prefer reactivating an idle connection over dialing a new one.
+		if p.reactivateIdleConn() {
+			p.t.options.logger.Debug("grpc: reactivated idle connection during scale-up",
+				zap.String("peer", p.HostPort()))
+			return
+		}
+
+		// No idle connection available; dial a new one if below the cap.
+		p.mu.RLock()
+		atMax := len(p.conns) >= p.poolCfg.maxConnections
+		p.mu.RUnlock()
+		if atMax {
+			return
+		}
+
+		if err := p.addConn(); err != nil {
+			p.t.options.logger.Warn("grpc: failed to scale up connection pool",
+				zap.String("peer", p.HostPort()),
+				zap.Error(err))
+		} else {
+			p.t.options.logger.Debug("grpc: scaled up connection pool",
+				zap.String("peer", p.HostPort()))
+		}
+	}()
+}
+
+// reactivateIdleConn finds the first idle connection whose context has not
+// yet been cancelled and transitions it back to active, avoiding an
+// unnecessary dial.  Returns true if a connection was reactivated.
+func (p *grpcPeer) reactivateIdleConn() bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for _, c := range p.conns {
+		// Only reactivate if the connection context is still live; a cancelled
+		// context means cleanupIdleConns has already scheduled it for closure.
+		if c.getState() == connStateIdle && c.ctx.Err() == nil {
+			c.setState(connStateActive)
+			atomic.StoreInt64(&c.lastIdleAtNano, 0)
+			return true
+		}
+	}
+	return false
 }
