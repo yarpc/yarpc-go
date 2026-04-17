@@ -390,3 +390,17 @@ func TestTransportRequestToMetadataWithRoutingHeaders(t *testing.T) {
 		assert.Equal(t, []string{"custom-value"}, md["custom-header"])
 	})
 }
+
+func BenchmarkIsReserved(b *testing.B) {
+	headers := []string{
+		"rpc-caller", "rpc-service", "rpc-encoding",
+		"x-uber-source", "x-custom-header", "content-type",
+	}
+	for _, h := range headers {
+		b.Run(h, func(b *testing.B) {
+			for range b.N {
+				isReserved(h)
+			}
+		})
+	}
+}

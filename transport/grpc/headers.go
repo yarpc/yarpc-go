@@ -103,10 +103,8 @@ var (
 // TODO: there are way too many repeat calls to strings.ToLower
 // Note that these calls are done indirectly, primarily through
 // transport.CanonicalizeHeaderKey
-
+// NOTE: Callers must pass canonical (lowercase) keys.
 func isReserved(header string) bool {
-	header = transport.CanonicalizeHeaderKey(header)
-	// exempt routing headers from isReserved check
 	if routingHeaders[header] {
 		return false
 	}
