@@ -40,6 +40,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 	"go.uber.org/multierr"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
@@ -1040,5 +1041,161 @@ func TestYARPCErrorsConverted(t *testing.T) {
 
 		require.Error(t, err)
 		assert.True(t, yarpcerrors.IsUnimplemented(err))
+	})
+}
+
+// --- connection pool integration tests ---
+
+// poolMetricSnapshot reads all gauges and counters from a RootSnapshot into
+// convenient maps keyed by metric name.
+func poolMetricSnapshot(root *metrics.Root) (gauges, counters map[string]int64) {
+	snap := root.Snapshot()
+	gauges = make(map[string]int64, len(snap.Gauges))
+	for _, g := range snap.Gauges {
+		gauges[g.Name] = g.Value
+	}
+	counters = make(map[string]int64, len(snap.Counters))
+	for _, c := range snap.Counters {
+		counters[c.Name] = c.Value
+	}
+	return gauges, counters
+}
+
+// TestConnectionPoolScaleDown verifies that evaluateScaling drains a
+// connection when the aggregate stream load is low enough that the pool can
+// be reduced.  We call evaluateScaling() directly to bypass the 30-second
+// monitor interval.
+func TestConnectionPoolScaleDown(t *testing.T) {
+	t.Parallel()
+	root := metrics.New()
+	te := testEnvOptions{
+		TransportOptions: []TransportOption{
+			WithDynamicConnectionScaling(true),
+			MinConnections(1),
+			MaxConnections(5),
+			MaxConcurrentStreams(100),
+			ScaleUpThreshold(0.8), // threshold = 80
+			Meter(root.Scope()),
+		},
+	}
+	te.do(t, func(t *testing.T, e *testEnv) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		apiPeer, onFinish, err := e.Outbound.peerChooser.Choose(ctx, &transport.Request{})
+		require.NoError(t, err)
+		defer onFinish(nil)
+		p := apiPeer.(*grpcPeer)
+
+		// Grow the pool to 3 connections (minConnections=1 so scale-down is allowed).
+		require.NoError(t, p.addConn())
+		require.NoError(t, p.addConn())
+
+		// With 3 active connections, 0 total streams, and
+		// capacityAfterDrain = threshold*(3-1) = 80*2 = 160 > 0,
+		// maybeScaleDown must drain the most-loaded connection.
+		p.evaluateScaling()
+
+		gauges, counters := poolMetricSnapshot(root)
+		assert.Equal(t, int64(1), counters["conn_pool_scale_down_total"],
+			"scale-down counter should increment")
+		assert.Equal(t, int64(2), gauges["conn_pool_active_connections"])
+		assert.Equal(t, int64(1), gauges["conn_pool_draining_connections"])
+	})
+}
+
+// TestConnectionPoolIdleReactivation verifies that tryScaleUp reactivates an
+// idle connection instead of dialling a new one when capacity is needed.
+func TestConnectionPoolIdleReactivation(t *testing.T) {
+	t.Parallel()
+	root := metrics.New()
+	te := testEnvOptions{
+		TransportOptions: []TransportOption{
+			WithDynamicConnectionScaling(true),
+			MinConnections(1),
+			MaxConnections(3),
+			MaxConcurrentStreams(2),
+			ScaleUpThreshold(0.5), // threshold = 1
+			Meter(root.Scope()),
+		},
+	}
+	te.do(t, func(t *testing.T, e *testEnv) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		apiPeer, onFinish, err := e.Outbound.peerChooser.Choose(ctx, &transport.Request{})
+		require.NoError(t, err)
+		defer onFinish(nil)
+		p := apiPeer.(*grpcPeer)
+
+		// Mark the initial connection as idle (live context, so reactivation is allowed).
+		p.mu.Lock()
+		p.conns[0].setState(connStateIdle)
+		p.mu.Unlock()
+
+		// tryScaleUp should reactivate the idle conn instead of dialling.
+		overBudget := makeConn(connStateActive, 85)
+		p.tryScaleUp(overBudget)
+
+		require.Eventually(t, func() bool {
+			return atomic.LoadInt32(&p.isScaling) == 0
+		}, 2*time.Second, 10*time.Millisecond)
+
+		_, counters := poolMetricSnapshot(root)
+		assert.Equal(t, int64(1), counters["conn_pool_idle_reactivation_total"],
+			"idle reactivation counter should increment")
+		assert.Equal(t, int64(0), counters["conn_pool_scale_up_total"],
+			"no new dial should happen when an idle conn is available")
+
+		p.mu.RLock()
+		assert.Equal(t, connStateActive, p.conns[0].getState(),
+			"formerly idle conn should be active after reactivation")
+		p.mu.RUnlock()
+	})
+}
+
+// TestConnectionPoolNoActiveConnectionsReturnsUnavailable verifies that when
+// all pool connections are draining (non-active) and the YARPC peer is still
+// considered Available by the chooser, invoke() returns UnavailableErrorf
+// rather than hanging or panicking.
+//
+// Marking connections as connStateDraining (our internal state) does not
+// cancel their contexts, so monitorConnWrapper stays blocked in
+// WaitForStateChange and does not update the peer's YARPC status.  The
+// chooser therefore still returns the peer, but pickConn() finds no active
+// connections and the outbound returns UnavailableErrorf immediately.
+func TestConnectionPoolNoActiveConnectionsReturnsUnavailable(t *testing.T) {
+	t.Parallel()
+	te := testEnvOptions{
+		TransportOptions: []TransportOption{
+			WithDynamicConnectionScaling(true),
+			MinConnections(1),
+			MaxConnections(3),
+		},
+	}
+	te.do(t, func(t *testing.T, e *testEnv) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		// Obtain the peer reference then immediately release the chooser hold.
+		apiPeer, onFinish, err := e.Outbound.peerChooser.Choose(ctx, &transport.Request{})
+		require.NoError(t, err)
+		onFinish(nil)
+		p := apiPeer.(*grpcPeer)
+
+		// Mark every connection as draining without cancelling contexts.
+		// monitorConnWrapper goroutines remain blocked in WaitForStateChange,
+		// so the YARPC peer status stays Available — Choose will still return
+		// this peer, but pickConn() will find no active connections.
+		p.mu.Lock()
+		for _, c := range p.conns {
+			c.setState(connStateDraining)
+		}
+		p.mu.Unlock()
+
+		err = e.SetValueYARPC(ctx, "foo", "bar")
+		require.Error(t, err)
+		assert.True(t, yarpcerrors.IsUnavailable(err),
+			"expected UnavailableErrorf when all connections are draining, got: %v", err)
 	})
 }
