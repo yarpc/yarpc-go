@@ -30,52 +30,49 @@ import (
 )
 
 func TestGetUUID(t *testing.T) {
-    const exName = "MyException"
+    const exName = "MyType"
 
-    t.Run("success", func(t *testing.T) {
-        spec := &compile.StructSpec{
-            Name: exName,
-            Fields: []*compile.FieldSpec{
-                {
-                    ID:   1,
-                    Name: "NotTheUUID",
-                    Type: &compile.StringSpec{},
-                },
-                {
-                    ID:   2,
-                    Name: "theUUID",
-                    Type: &compile.StringSpec{},
-                    Annotations: map[string]string{
-                        "auth.actor_uuid": "true",
-                    },
-                },
-            },
-        }
-        //assert.NotPanics(t, func() {
-        //    want := ""
-        //    ok, got := getAnnotatedUUID(spec)
-        //    assert.False(t, ok)
-        //    assert.Equal(t, want, got)
-        //}, "unexpected panic")
-
+    t.Run("happyCase", func(t *testing.T) {
         assert.NotPanics(t, func() {
-            want := "theUUID"
-            ok, got := annotatedUUID(spec)
-            assert.True(t, ok)
-            assert.Equal(t, want, got)
-        }, "unexpected panic")
+            spec, err := compile.Compile("internal/uuid_test_thrift/happy.thrift")
+            assert.NoError(t, err)
+            annotatedTypes, err := anyAnnotatedTypes(spec.Types)
+            assert.NoError(t, err)
+            assert.Equal(t, 1, len(annotatedTypes))
+            for k, v := range annotatedTypes {
+                assert.Equal(t, "Struct", k.Name)
+                assert.Equal(t, v, "UserIdentifier")
+            }
+
+        })
+    })
+    t.Run("multipleAnnotatedStructs", func(t *testing.T) {
+        assert.NotPanics(t, func() {
+            spec, err := compile.Compile("internal/uuid_test_thrift/multipleAnnotatedStructs.thrift")
+            assert.NoError(t, err)
+            annotatedTypes, err := anyAnnotatedTypes(spec.Types)
+            assert.NoError(t, err)
+            assert.Equal(t, 2, len(annotatedTypes))
+            uuidFields := map[string]string{
+                "RedStruct":   "UserIdentifier",
+                "GreenStruct": "CatIdentifier",
+            }
+            for k, v := range annotatedTypes {
+                assert.Equal(t, uuidFields[k.Name], v)
+            }
+
+        })
     })
 
-    //t.Run("panic fail", func(t *testing.T) {
-    //	spec := &compile.StructSpec{
-    //		Name:        exName,
-    //		Annotations: map[string]string{_errorCodeAnnotationKey: "foo"},
-    //	}
-    //	assert.PanicsWithValue(t,
-    //		"invalid rpc.code annotation for \"MyException\": \"foo\"\nAvailable codes: CANCELLED,UNKNOWN,INVALID_ARGUMENT,DEADLINE_EXCEEDED,NOT_FOUND,ALREADY_EXISTS,PERMISSION_DENIED,RESOURCE_EXHAUSTED,FAILED_PRECONDITION,ABORTED,OUT_OF_RANGE,UNIMPLEMENTED,INTERNAL,UNAVAILABLE,DATA_LOSS,UNAUTHENTICATED",
-    //		func() { getYARPCErrorCode(spec) },
-    //		"unexpected panic")
-    //})
+    t.Run("errorCase", func(t *testing.T) {
+        assert.NotPanics(t, func() {
+            spec, err := compile.Compile("internal/uuid_test_thrift/broken.thrift")
+            assert.NoError(t, err)
+            _, err = anyAnnotatedTypes(spec.Types)
+            assert.Error(t, err)
+
+        })
+    })
 }
 
 func TestGetGeneratedUUID(t *testing.T) {
@@ -87,21 +84,3 @@ func TestGetGeneratedUUID(t *testing.T) {
         assert.Equal(t, "my-uuid", st.GetUserIdentifier())
     })
 }
-
-//func TestGeneratedUUID(t *testing.T) {
-//	// If we have complier errors within this test, it likely
-//	// means that the generated types file is not being generated.
-//
-//	t.Run("exception without annotation", func(t *testing.T) {
-//		ex := noservices.ExWithoutAnnotation{}
-//		assert.Nil(t, ex.YARPCErrorCode(), "unexpected code")
-//		assert.Equal(t, ex.YARPCErrorName(), "ExWithoutAnnotation")
-//	})
-//
-//	t.Run("exception with annotation", func(t *testing.T) {
-//		ex := noservices.ExWithAnnotation{}
-//		require.NotNil(t, ex.YARPCErrorCode())
-//		assert.Equal(t, yarpcerrors.CodeOutOfRange.String(), ex.YARPCErrorCode().String())
-//		assert.Equal(t, ex.YARPCErrorName(), "ExWithAnnotation")
-//	})
-//}
