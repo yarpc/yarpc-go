@@ -33,7 +33,11 @@ import (
 	"go.uber.org/thriftrw/thrifttest/streamtest"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/internal/observabilitylogger"
 	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 const _body = "decoded"
@@ -220,29 +224,80 @@ func TestDecodeNoWireRequestExpectEncodingsError(t *testing.T) {
 }
 
 func TestDecodeNoWireAppliationError(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
+	t.Run("rw implements ApplicationErrorMetaSetter", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
 
-	env := streamtest.NewMockEnveloper(mockCtrl)
-	env.EXPECT().EnvelopeType().Return(wire.Reply).Times(1)
-	env.EXPECT().Encode(gomock.Any()).Return(nil).Times(1)
+		env := streamtest.NewMockEnveloper(mockCtrl)
+		env.EXPECT().EnvelopeType().Return(wire.Reply).Times(1)
+		env.EXPECT().Encode(gomock.Any()).Return(nil).Times(1)
 
-	br := &bodyReader{}
-	h := thriftNoWireHandler{
-		Handler: &responseHandler{
-			t:        t,
-			reqBody:  br,
-			body:     env,
-			appError: true,
-		},
-		RequestReader: binary.Default,
-	}
+		br := &bodyReader{}
+		h := thriftNoWireHandler{
+			Handler: &responseHandler{
+				t:        t,
+				reqBody:  br,
+				body:     env,
+				appError: true,
+			},
+			RequestReader: binary.Default,
+		}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
-	defer cancel()
+		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+		defer cancel()
 
-	req := request()
-	rw := new(transporttest.FakeResponseWriter)
-	require.NoError(t, h.Handle(ctx, req, rw))
-	assert.True(t, rw.IsApplicationError)
+		req := request()
+		rw := new(transporttest.FakeResponseWriter)
+		require.NoError(t, h.Handle(ctx, req, rw))
+		assert.True(t, rw.IsApplicationError)
+	})
+
+	t.Run("rw does not implement ApplicationErrorMetaSetter", func(t *testing.T) {
+		// Reset the package-level atomic between test runs.
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+
+		env := streamtest.NewMockEnveloper(mockCtrl)
+		env.EXPECT().EnvelopeType().Return(wire.Reply).Times(2)
+		env.EXPECT().Encode(gomock.Any()).Return(nil).Times(2)
+		br := &bodyReader{}
+		h := thriftNoWireHandler{
+			Handler: &responseHandler{
+				t:        t,
+				reqBody:  br,
+				body:     env,
+				appError: true,
+			},
+			RequestReader: binary.Default,
+		}
+
+		_loggedMissingAppErrMetaSetter = false
+		// Set up an observed logger to capture log entries.
+		core, logs := observer.New(zapcore.WarnLevel)
+		logger := zap.New(core)
+		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+		defer cancel()
+
+		ctx = observabilitylogger.WithLogger(ctx, logger)
+		req := request()
+		rw := new(transporttest.FakeNonApplicationErrorMetaSetter)
+		// First call: handler succeeds, warning is logged.
+		require.NoError(t, h.Handle(ctx, req, rw))
+		require.Equal(t, 1, logs.Len())
+		entry := logs.All()[0]
+		assert.Equal(t, zapcore.WarnLevel, entry.Level)
+		assert.Contains(t, entry.Message, "ApplicationErrorMetaSetter")
+		// Check logged fields.
+		fieldMap := make(map[string]string)
+		for _, f := range entry.Context {
+			if f.Type == zapcore.StringType {
+				fieldMap[f.Key] = f.String
+			}
+		}
+		assert.NotEmpty(t, fieldMap["stacktrace"])
+
+		// Second call: no additional log (atomic.Bool already flipped).
+		require.NoError(t, h.Handle(ctx, req, rw))
+		assert.Equal(t, 1, logs.Len(), "should not log a second time")
+	})
 }

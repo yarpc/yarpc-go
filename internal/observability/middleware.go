@@ -26,6 +26,7 @@ import (
 
 	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/observabilitylogger"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -185,6 +186,7 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 	defer m.handlePanicForCall(call, transport.Unary)
 
 	wrappedWriter := newWriter(w)
+	ctx = observabilitylogger.WithLogger(ctx, call.edge.logger)
 	err := h.Handle(ctx, req, wrappedWriter)
 	ctxErr := ctxErrOverride(ctx, req)
 
