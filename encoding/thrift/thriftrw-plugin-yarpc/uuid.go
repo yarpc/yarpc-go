@@ -38,15 +38,13 @@ const yarpcUUIDTemplate = `
 
 package <.Name>
 
-<range $key, $val := .Types>
-    <if (isSetUUIDAnnotation $val)>
-    // CustomerUUID returns the UUID string from the parameter annotated with auth.actor_uuid if present.
-    func (e *<$val.Name>) CustomerUUID() string {
-        if uuid := e.<getAnnotatedField $val>; uuid != nil { return *uuid }
-        return ""
-    }
+<range $tt, $name := getAllAnnotatedTypes >
+// CustomerUUID returns the UUID string from the parameter annotated with auth.actor_uuid if present.
+func (t *<$tt.Name>) CustomerUUID() string {
+    if uuid := t.<$name>; uuid != nil { return *uuid }
+    return ""
+}
 
-    <end>
 <end>
 `
 
@@ -65,45 +63,38 @@ func yarpcUUIDGenerator(data *moduleTemplateData, files map[string][]byte) error
         return fmt.Errorf("error compiling the thrift file: %s", err.Error())
     }
 
-    templateOptions := append(templateOptions,
-        plugin.TemplateFunc("isSetUUIDAnnotation", isSetUUIDAnnotation),
-        plugin.TemplateFunc("getAnnotatedField", getAnnotatedUUID),
-        plugin.TemplateFunc("anyAnnotatedTypes", anyAnnotatedTypes),
-    )
-
-    if !anyAnnotatedTypes(compiledModule.Types) {
+    annotatedTypes, err := anyAnnotatedTypes(compiledModule.Types)
+    if err != nil {
+        return err
+    }
+    if len(annotatedTypes) == 0 {
         return nil
     }
+
+    templateOptions := append(templateOptions,
+        plugin.TemplateFunc("getAllAnnotatedTypes", func() map[*compile.StructSpec]string {
+            return annotatedTypes
+        }),
+    )
+
     files[path], err = plugin.GoFileFromTemplate(path, yarpcUUIDTemplate, compiledModule, templateOptions...)
     return err
 }
 
-func anyAnnotatedTypes(specs map[string]compile.TypeSpec) bool {
+func anyAnnotatedTypes(specs map[string]compile.TypeSpec) (map[*compile.StructSpec]string, error) {
+    annotatedTypes := make(map[*compile.StructSpec]string)
     for _, t := range specs {
-        if isSetUUIDAnnotation(t) {
-            return true
-        }
-    }
-    return false
-}
-
-func isSetUUIDAnnotation(t compile.TypeSpec) bool {
-    isSet, _ := annotatedUUID(t)
-    return isSet
-}
-
-func getAnnotatedUUID(t compile.TypeSpec) string {
-    _, fieldName := annotatedUUID(t)
-    return fieldName
-}
-
-func annotatedUUID(t compile.TypeSpec) (bool, string) {
-    if ss, ok := t.(*compile.StructSpec); ok {
-        for _, field := range ss.Fields {
-            if _, ok := field.Annotations[_UUIDAnnotationKey]; ok {
-                return true, field.Name
+        if ss, ok := t.(*compile.StructSpec); ok {
+            for _, field := range ss.Fields {
+                if _, ok := field.Annotations[_UUIDAnnotationKey]; ok {
+                    if prevValue, pres := annotatedTypes[ss]; pres {
+                        return map[*compile.StructSpec]string{}, fmt.Errorf("multiple fields annotated with %s for type %s.  Prev %s; Duplicate at %s",
+                            _UUIDAnnotationKey, ss.Name, prevValue, field.Name)
+                    }
+                    annotatedTypes[ss] = field.Name
+                }
             }
         }
     }
-    return false, ""
+    return annotatedTypes, nil
 }
