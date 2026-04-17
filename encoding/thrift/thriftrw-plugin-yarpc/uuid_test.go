@@ -21,66 +21,66 @@
 package main
 
 import (
-    "testing"
+	"testing"
 
-    "github.com/stretchr/testify/assert"
-    "go.uber.org/thriftrw/compile"
-    "go.uber.org/thriftrw/ptr"
-    noservices "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/NOSERVICES"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/thriftrw/compile"
+	"go.uber.org/thriftrw/ptr"
+	noservices "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/NOSERVICES"
 )
 
 func TestGetUUID(t *testing.T) {
-    const exName = "MyType"
+	const exName = "MyType"
 
-    t.Run("happyCase", func(t *testing.T) {
-        assert.NotPanics(t, func() {
-            spec, err := compile.Compile("internal/uuid_test_thrift/happy.thrift")
-            assert.NoError(t, err)
-            annotatedTypes, err := anyAnnotatedTypes(spec.Types)
-            assert.NoError(t, err)
-            assert.Equal(t, 1, len(annotatedTypes))
-            for k, v := range annotatedTypes {
-                assert.Equal(t, "Struct", k.Name)
-                assert.Equal(t, v, "UserIdentifier")
-            }
+	t.Run("happyCase", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			spec, err := compile.Compile("internal/uuid_test_thrift/happy.thrift")
+			assert.NoError(t, err)
+			annotatedTypes, err := anyAnnotatedTypes(spec.Types)
+			assert.NoError(t, err)
+			assert.Equal(t, 1, len(annotatedTypes))
+			for k, v := range annotatedTypes {
+				assert.Equal(t, "Struct", k.Name)
+				assert.Equal(t, v, "UserIdentifier")
+			}
 
-        })
-    })
-    t.Run("multipleAnnotatedStructs", func(t *testing.T) {
-        assert.NotPanics(t, func() {
-            spec, err := compile.Compile("internal/uuid_test_thrift/multipleAnnotatedStructs.thrift")
-            assert.NoError(t, err)
-            annotatedTypes, err := anyAnnotatedTypes(spec.Types)
-            assert.NoError(t, err)
-            assert.Equal(t, 2, len(annotatedTypes))
-            uuidFields := map[string]string{
-                "RedStruct":   "UserIdentifier",
-                "GreenStruct": "CatIdentifier",
-            }
-            for k, v := range annotatedTypes {
-                assert.Equal(t, uuidFields[k.Name], v)
-            }
+		})
+	})
+	t.Run("multipleAnnotatedStructs", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			spec, err := compile.Compile("internal/uuid_test_thrift/multipleAnnotatedStructs.thrift")
+			assert.NoError(t, err)
+			annotatedTypes, err := anyAnnotatedTypes(spec.Types)
+			assert.NoError(t, err)
+			assert.Equal(t, 2, len(annotatedTypes))
+			uuidFields := map[string]string{
+				"RedStruct":   "UserIdentifier",
+				"GreenStruct": "CatIdentifier",
+			}
+			for k, v := range annotatedTypes {
+				assert.Equal(t, uuidFields[k.Name], v)
+			}
 
-        })
-    })
+		})
+	})
 
-    t.Run("errorCase", func(t *testing.T) {
-        assert.NotPanics(t, func() {
-            spec, err := compile.Compile("internal/uuid_test_thrift/broken.thrift")
-            assert.NoError(t, err)
-            _, err = anyAnnotatedTypes(spec.Types)
-            assert.Error(t, err)
+	t.Run("errorCase", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			spec, err := compile.Compile("internal/uuid_test_thrift/broken.thrift")
+			assert.NoError(t, err)
+			_, err = anyAnnotatedTypes(spec.Types)
+			assert.Error(t, err)
 
-        })
-    })
+		})
+	})
 }
 
 func TestGetGeneratedUUID(t *testing.T) {
-    t.Run("Found the UUID", func(t *testing.T) {
-        st := noservices.Struct{
-            Baz:            ptr.String("asdf"),
-            UserIdentifier: ptr.String("my-uuid"),
-        }
-        assert.Equal(t, "my-uuid", st.GetUserIdentifier())
-    })
+	t.Run("Found the UUID", func(t *testing.T) {
+		st := noservices.Struct{
+			Baz:            ptr.String("asdf"),
+			UserIdentifier: ptr.String("my-uuid"),
+		}
+		assert.Equal(t, "my-uuid", st.GetUserIdentifier())
+	})
 }
