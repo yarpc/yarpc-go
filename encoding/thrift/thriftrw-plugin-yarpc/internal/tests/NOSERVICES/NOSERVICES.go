@@ -463,8 +463,8 @@ func (v *ExWithoutAnnotation) Error() string {
 }
 
 type Struct struct {
-	Baz  *string `json:"baz,omitempty"`
-	UUID *string `json:"uuid,omitempty"`
+	Baz            *string `json:"baz,omitempty"`
+	UserIdentifier *string `json:"UserIdentifier,omitempty"`
 }
 
 // ToWire translates a Struct struct into a Thrift-level intermediate
@@ -498,8 +498,8 @@ func (v *Struct) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 1, Value: w}
 		i++
 	}
-	if v.UUID != nil {
-		w, err = wire.NewValueString(*(v.UUID)), error(nil)
+	if v.UserIdentifier != nil {
+		w, err = wire.NewValueString(*(v.UserIdentifier)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -546,7 +546,7 @@ func (v *Struct) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TBinary {
 				var x string
 				x, err = field.Value.GetString(), error(nil)
-				v.UUID = &x
+				v.UserIdentifier = &x
 				if err != nil {
 					return err
 				}
@@ -579,11 +579,11 @@ func (v *Struct) Encode(sw stream.Writer) error {
 		}
 	}
 
-	if v.UUID != nil {
+	if v.UserIdentifier != nil {
 		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 2, Type: wire.TBinary}); err != nil {
 			return err
 		}
-		if err := sw.WriteString(*(v.UUID)); err != nil {
+		if err := sw.WriteString(*(v.UserIdentifier)); err != nil {
 			return err
 		}
 		if err := sw.WriteFieldEnd(); err != nil {
@@ -623,7 +623,7 @@ func (v *Struct) Decode(sr stream.Reader) error {
 		case fh.ID == 2 && fh.Type == wire.TBinary:
 			var x string
 			x, err = sr.ReadString()
-			v.UUID = &x
+			v.UserIdentifier = &x
 			if err != nil {
 				return err
 			}
@@ -663,8 +663,8 @@ func (v *Struct) String() string {
 		fields[i] = fmt.Sprintf("Baz: %v", *(v.Baz))
 		i++
 	}
-	if v.UUID != nil {
-		fields[i] = fmt.Sprintf("UUID: %v", *(v.UUID))
+	if v.UserIdentifier != nil {
+		fields[i] = fmt.Sprintf("UserIdentifier: %v", *(v.UserIdentifier))
 		i++
 	}
 
@@ -684,7 +684,7 @@ func (v *Struct) Equals(rhs *Struct) bool {
 	if !_String_EqualsPtr(v.Baz, rhs.Baz) {
 		return false
 	}
-	if !_String_EqualsPtr(v.UUID, rhs.UUID) {
+	if !_String_EqualsPtr(v.UserIdentifier, rhs.UserIdentifier) {
 		return false
 	}
 
@@ -700,8 +700,8 @@ func (v *Struct) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	if v.Baz != nil {
 		enc.AddString("baz", *v.Baz)
 	}
-	if v.UUID != nil {
-		enc.AddString("uuid", *v.UUID)
+	if v.UserIdentifier != nil {
+		enc.AddString("UserIdentifier", *v.UserIdentifier)
 	}
 	return err
 }
@@ -721,19 +721,19 @@ func (v *Struct) IsSetBaz() bool {
 	return v != nil && v.Baz != nil
 }
 
-// GetUUID returns the value of UUID if it is set or its
+// GetUserIdentifier returns the value of UserIdentifier if it is set or its
 // zero value if it is unset.
-func (v *Struct) GetUUID() (o string) {
-	if v != nil && v.UUID != nil {
-		return *v.UUID
+func (v *Struct) GetUserIdentifier() (o string) {
+	if v != nil && v.UserIdentifier != nil {
+		return *v.UserIdentifier
 	}
 
 	return
 }
 
-// IsSetUUID returns true if UUID is not nil.
-func (v *Struct) IsSetUUID() bool {
-	return v != nil && v.UUID != nil
+// IsSetUserIdentifier returns true if UserIdentifier is not nil.
+func (v *Struct) IsSetUserIdentifier() bool {
+	return v != nil && v.UserIdentifier != nil
 }
 
 // ThriftModule represents the IDL file used to generate this package.
@@ -741,8 +741,8 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "NOSERVICES",
 	Package:  "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/NOSERVICES",
 	FilePath: "NOSERVICES.thrift",
-	SHA1:     "509af0d9480406a9f08d2eaa9d48452761ba55cb",
+	SHA1:     "43337ce55e6f5a802769ffc908f3750ef079c49e",
 	Raw:      rawIDL,
 }
 
-const rawIDL = "// Thrift file with no service to ensure that types_yarpc.go is always\n// generated.\n\nexception ExWithAnnotation {\n    1: optional string foo\n} (\n    rpc.code = \"OUT_OF_RANGE\"\n)\n\nexception ExWithoutAnnotation {\n    1: optional string bar\n}\n\nstruct Struct {\n    1: optional string baz\n    2: optional string uuid (auth.actor_uuid = \"true\")\n}\n"
+const rawIDL = "// Thrift file with no service to ensure that types_yarpc.go is always\n// generated.\n\nexception ExWithAnnotation {\n    1: optional string foo\n} (\n    rpc.code = \"OUT_OF_RANGE\"\n)\n\nexception ExWithoutAnnotation {\n    1: optional string bar\n}\n\nstruct Struct {\n    1: optional string baz\n    2: optional string UserIdentifier (auth.actor_uuid = \"true\")\n}\n"

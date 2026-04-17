@@ -81,9 +81,10 @@ func TestGetUUID(t *testing.T) {
 func TestGetGeneratedUUID(t *testing.T) {
     t.Run("Found the UUID", func(t *testing.T) {
         st := noservices.Struct{
-            Baz: ptr.String("asdf"),
+            Baz:            ptr.String("asdf"),
+            UserIdentifier: ptr.String("my-uuid"),
         }
-        assert.NotNil(t, st.Baz)
+        assert.Equal(t, "my-uuid", st.GetUserIdentifier())
     })
 }
 

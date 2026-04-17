@@ -39,13 +39,14 @@ const yarpcUUIDTemplate = `
 package <.Name>
 
 <range $key, $val := .Types>
-	<if (isSetUUIDAnnotation $val)>
-	// CustomerUUID returns the UUID string from the parameter annotated with auth.actor_uuid if present.
-	func (e *<$val.Name>) CustomerUUID() string {
-        return e.<getAnnotatedField $val>
-	}
+    <if (isSetUUIDAnnotation $val)>
+    // CustomerUUID returns the UUID string from the parameter annotated with auth.actor_uuid if present.
+    func (e *<$val.Name>) CustomerUUID() string {
+        if uuid := e.<getAnnotatedField $val>; uuid != nil { return *uuid }
+        return ""
+    }
 
-	<end>
+    <end>
 <end>
 `
 
@@ -67,10 +68,23 @@ func yarpcUUIDGenerator(data *moduleTemplateData, files map[string][]byte) error
     templateOptions := append(templateOptions,
         plugin.TemplateFunc("isSetUUIDAnnotation", isSetUUIDAnnotation),
         plugin.TemplateFunc("getAnnotatedField", getAnnotatedUUID),
+        plugin.TemplateFunc("anyAnnotatedTypes", anyAnnotatedTypes),
     )
 
+    if !anyAnnotatedTypes(compiledModule.Types) {
+        return nil
+    }
     files[path], err = plugin.GoFileFromTemplate(path, yarpcUUIDTemplate, compiledModule, templateOptions...)
     return err
+}
+
+func anyAnnotatedTypes(specs map[string]compile.TypeSpec) bool {
+    for _, t := range specs {
+        if isSetUUIDAnnotation(t) {
+            return true
+        }
+    }
+    return false
 }
 
 func isSetUUIDAnnotation(t compile.TypeSpec) bool {
@@ -87,7 +101,7 @@ func annotatedUUID(t compile.TypeSpec) (bool, string) {
     if ss, ok := t.(*compile.StructSpec); ok {
         for _, field := range ss.Fields {
             if _, ok := field.Annotations[_UUIDAnnotationKey]; ok {
-                return true, field.ThriftName()
+                return true, field.Name
             }
         }
     }

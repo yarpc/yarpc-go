@@ -5,5 +5,8 @@ package NOSERVICES
 
 // CustomerUUID returns the UUID string from the parameter annotated with auth.actor_uuid if present.
 func (e *Struct) CustomerUUID() string {
-	return e.uuid
+	if uuid := e.UserIdentifier; uuid != nil {
+		return *uuid
+	}
+	return ""
 }
