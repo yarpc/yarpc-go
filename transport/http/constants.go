@@ -169,3 +169,9 @@ const (
 	UberTraceContextHeaderKey  = "uber-trace-id"
 	UberBaggageHeaderKeyPrefix = "uberctx-"
 )
+
+// Proxy-managed header keys that must travel over the wire unprefixed
+// so that Muttley/Envoy can read and update them correctly.
+const (
+	XForwardedForHeader = "x-forwarded-for"
+)

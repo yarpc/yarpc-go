@@ -68,7 +68,7 @@ func (hm headerMapper) FromHTTPHeaders(from http.Header, to transport.Headers) t
 			for _, v := range vals {
 				to = to.With(suffix, v)
 			}
-		case isTracingHeader(origKey):
+		case isTracingHeader(origKey), isProxyHeader(origKey):
 			for _, v := range vals {
 				to = to.With(origKey, v)
 			}
@@ -125,4 +125,11 @@ func isRoutingHeader(k string) bool {
 func isCrossZoneHeader(k string) bool {
 	// k comes from http.Header.Items() and is always in lowercase
 	return k == RoutingRegionHeader || k == RoutingZoneHeader
+}
+
+// isProxyHeader returns true for standard forwarding and proxy-managed
+// headers that must travel over the wire unprefixed so that
+// Muttley/Envoy can read and update them correctly.
+func isProxyHeader(k string) bool {
+	return strings.EqualFold(k, XForwardedForHeader)
 }

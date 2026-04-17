@@ -111,6 +111,42 @@ func TestHTTPHeaders(t *testing.T) {
 			},
 			expectedTransHeaders: transport.HeadersFromMap(map[string]string{}),
 		},
+		{
+			name: "proxy header outbound still prefixed",
+			transHeaders: transport.HeadersFromMap(map[string]string{
+				"x-forwarded-for": "203.0.113.42",
+			}),
+			expectedHTTP: http.Header{
+				"Rpc-Header-X-Forwarded-For": []string{"203.0.113.42"},
+			},
+			httpHeaders: http.Header{
+				"X-Forwarded-For": []string{"203.0.113.42"},
+			},
+			expectedTransHeaders: transport.HeadersFromMap(map[string]string{
+				"X-Forwarded-For": "203.0.113.42",
+			}),
+		},
+		{
+			name: "proxy header inbound with mixed headers",
+			transHeaders: transport.HeadersFromMap(map[string]string{
+				"foo":           "bar",
+				"uber-trace-id": "tid",
+			}),
+			expectedHTTP: http.Header{
+				"Rpc-Header-Foo": []string{"bar"},
+				"Uber-Trace-Id":  []string{"tid"},
+			},
+			httpHeaders: http.Header{
+				"Rpc-Header-Foo":  []string{"bar"},
+				"X-Forwarded-For": []string{"203.0.113.42"},
+				"Uber-Trace-Id":   []string{"tid"},
+			},
+			expectedTransHeaders: transport.HeadersFromMap(map[string]string{
+				"foo":             "bar",
+				"X-Forwarded-For": "203.0.113.42",
+				"uber-trace-id":   "tid",
+			}),
+		},
 	}
 
 	for _, tt := range tests {
@@ -132,6 +168,26 @@ func assertHeadersEqualCaseInsensitive(t *testing.T, expected, actual http.Heade
 	}
 
 	assert.Equal(t, normalize(expected), normalize(actual), msg)
+}
+
+func TestIsProxyHeader(t *testing.T) {
+	tests := []struct {
+		key  string
+		want bool
+	}{
+		{"x-forwarded-for", true},
+		{"X-Forwarded-For", true},
+		{"X-FORWARDED-FOR", true},
+		{"x-uber-source", false},
+		{"x-other-header", false},
+		{"x-forwarded-host", false},
+		{"rpc-header-foo", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.key, func(t *testing.T) {
+			assert.Equal(t, tt.want, isProxyHeader(tt.key))
+		})
+	}
 }
 
 // TODO(abg): Test handling of duplicate HTTP headers when
