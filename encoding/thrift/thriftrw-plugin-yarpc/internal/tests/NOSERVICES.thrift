@@ -13,4 +13,5 @@ exception ExWithoutAnnotation {
 
 struct Struct {
     1: optional string baz
+    2: optional string uuid (auth.actor_uuid = "true")
 }

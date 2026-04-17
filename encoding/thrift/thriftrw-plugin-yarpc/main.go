@@ -63,125 +63,125 @@
 package main
 
 import (
-	"flag"
-	"fmt"
-	"strings"
+    "flag"
+    "fmt"
+    "strings"
 
-	"go.uber.org/thriftrw/plugin"
-	"go.uber.org/thriftrw/plugin/api"
+    "go.uber.org/thriftrw/plugin"
+    "go.uber.org/thriftrw/plugin/api"
 )
 
 // mock libraries
 const (
-	_golangMock = "github.com/golang/mock/gomock"
-	_uberMock   = "go.uber.org/mock/gomock"
+    _golangMock = "github.com/golang/mock/gomock"
+    _uberMock   = "go.uber.org/mock/gomock"
 )
 
 // Command line flags
 var (
-	_context = flag.String("context-import-path",
-		"context",
-		"Import path at which Context is available")
-	_unaryHandlerWrapper = flag.String("unary-handler-wrapper",
-		"go.uber.org/yarpc/encoding/thrift.UnaryHandler",
-		"Function used to wrap generic Thrift unary function handlers into YARPC handlers")
-	_onewayHandlerWrapper = flag.String("oneway-handler-wrapper",
-		"go.uber.org/yarpc/encoding/thrift.OnewayHandler",
-		"Function used to wrap generic Thrift oneway function handlers into YARPC handlers")
-	_noGomock = flag.Bool("no-gomock", false,
-		"Don't generate mocks for service clients")
-	_mockLibrary = flag.String("mock-library", _golangMock,
-		fmt.Sprintf("Mock library service clients are generated with. Supported options: %q %q", _golangMock, _uberMock))
-	_noFx             = flag.Bool("no-fx", false, "Don't generate Fx module")
-	_sanitizeTChannel = flag.Bool("sanitize-tchannel", false, "Enable tchannel context sanitization")
+    _context = flag.String("context-import-path",
+        "context",
+        "Import path at which Context is available")
+    _unaryHandlerWrapper = flag.String("unary-handler-wrapper",
+        "go.uber.org/yarpc/encoding/thrift.UnaryHandler",
+        "Function used to wrap generic Thrift unary function handlers into YARPC handlers")
+    _onewayHandlerWrapper = flag.String("oneway-handler-wrapper",
+        "go.uber.org/yarpc/encoding/thrift.OnewayHandler",
+        "Function used to wrap generic Thrift oneway function handlers into YARPC handlers")
+    _noGomock = flag.Bool("no-gomock", false,
+        "Don't generate mocks for service clients")
+    _mockLibrary = flag.String("mock-library", _golangMock,
+        fmt.Sprintf("Mock library service clients are generated with. Supported options: %q %q", _golangMock, _uberMock))
+    _noFx             = flag.Bool("no-fx", false, "Don't generate Fx module")
+    _sanitizeTChannel = flag.Bool("sanitize-tchannel", false, "Enable tchannel context sanitization")
 )
 
 type g struct {
-	SanitizeTChannel bool
+    SanitizeTChannel bool
 }
 
 func (g g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceResponse, error) {
-	// moduleGenerators apply to all Thrift IDL files, even when no service
-	// definition exists
-	moduleGenerators := []moduleGenFunc{yarpcErrorGenerator}
+    // moduleGenerators apply to all Thrift IDL files, even when no service
+    // definition exists
+    moduleGenerators := []moduleGenFunc{yarpcErrorGenerator, yarpcUUIDGenerator}
 
-	// serviceGenerators apply only when one or more services are defined in the
-	// Thrift IDL file.
-	serviceGenerators := []serviceGenFunc{clientGenerator, serverGenerator}
-	if !*_noFx {
-		serviceGenerators = append(serviceGenerators, fxGenerator)
-	}
-	if !*_noGomock {
-		serviceGenerators = append(serviceGenerators, gomockGenerator)
-	}
+    // serviceGenerators apply only when one or more services are defined in the
+    // Thrift IDL file.
+    serviceGenerators := []serviceGenFunc{clientGenerator, serverGenerator}
+    if !*_noFx {
+        serviceGenerators = append(serviceGenerators, fxGenerator)
+    }
+    if !*_noGomock {
+        serviceGenerators = append(serviceGenerators, gomockGenerator)
+    }
 
-	if !(*_mockLibrary == _golangMock || *_mockLibrary == _uberMock) {
-		return nil, fmt.Errorf("%q specified as mock-library. expected %q or %q", *_mockLibrary, _golangMock, _uberMock)
-	}
+    if !(*_mockLibrary == _golangMock || *_mockLibrary == _uberMock) {
+        return nil, fmt.Errorf("%q specified as mock-library. expected %q or %q", *_mockLibrary, _golangMock, _uberMock)
+    }
 
-	unaryWrapperImport, unaryWrapperFunc := splitFunctionPath(*_unaryHandlerWrapper)
-	onewayWrapperImport, onewayWrapperFunc := splitFunctionPath(*_onewayHandlerWrapper)
+    unaryWrapperImport, unaryWrapperFunc := splitFunctionPath(*_unaryHandlerWrapper)
+    onewayWrapperImport, onewayWrapperFunc := splitFunctionPath(*_onewayHandlerWrapper)
 
-	files := make(map[string][]byte)
+    files := make(map[string][]byte)
 
-	for _, serviceID := range req.RootServices {
-		data := serviceTemplateData{
-			Svc:                 buildSvc(serviceID, req),
-			ContextImportPath:   *_context,
-			MockLibrary:         *_mockLibrary,
-			UnaryWrapperImport:  unaryWrapperImport,
-			UnaryWrapperFunc:    unaryWrapperFunc,
-			OnewayWrapperImport: onewayWrapperImport,
-			OnewayWrapperFunc:   onewayWrapperFunc,
-			SanitizeTChannel:    g.SanitizeTChannel,
-		}
-		for _, gen := range serviceGenerators {
-			if err := gen(&data, files); err != nil {
-				return nil, err
-			}
-		}
-	}
+    for _, serviceID := range req.RootServices {
+        data := serviceTemplateData{
+            Svc:                 buildSvc(serviceID, req),
+            ContextImportPath:   *_context,
+            MockLibrary:         *_mockLibrary,
+            UnaryWrapperImport:  unaryWrapperImport,
+            UnaryWrapperFunc:    unaryWrapperFunc,
+            OnewayWrapperImport: onewayWrapperImport,
+            OnewayWrapperFunc:   onewayWrapperFunc,
+            SanitizeTChannel:    g.SanitizeTChannel,
+        }
+        for _, gen := range serviceGenerators {
+            if err := gen(&data, files); err != nil {
+                return nil, err
+            }
+        }
+    }
 
-	for _, moduleID := range req.RootModules {
-		data := moduleTemplateData{
-			Module:            req.Modules[moduleID],
-			ContextImportPath: *_context,
-		}
-		for _, gen := range moduleGenerators {
-			if err := gen(&data, files); err != nil {
-				return nil, err
-			}
-		}
-	}
-	return &api.GenerateServiceResponse{Files: files}, nil
+    for _, moduleID := range req.RootModules {
+        data := moduleTemplateData{
+            Module:            req.Modules[moduleID],
+            ContextImportPath: *_context,
+        }
+        for _, gen := range moduleGenerators {
+            if err := gen(&data, files); err != nil {
+                return nil, err
+            }
+        }
+    }
+    return &api.GenerateServiceResponse{Files: files}, nil
 }
 
 func splitFunctionPath(input string) (string, string) {
-	i := strings.LastIndex(input, ".")
-	return input[:i], input[i+1:]
+    i := strings.LastIndex(input, ".")
+    return input[:i], input[i+1:]
 }
 
 func buildSvc(serviceID api.ServiceID, req *api.GenerateServiceRequest) *Svc {
-	service := req.Services[serviceID]
-	module := req.Modules[service.ModuleID]
+    service := req.Services[serviceID]
+    module := req.Modules[service.ModuleID]
 
-	var parents []*Svc
-	if service.ParentID != nil {
-		parentSvc := buildSvc(*service.ParentID, req)
-		parents = append(parents, parentSvc)
-		parents = append(parents, parentSvc.Parents...)
-	}
+    var parents []*Svc
+    if service.ParentID != nil {
+        parentSvc := buildSvc(*service.ParentID, req)
+        parents = append(parents, parentSvc)
+        parents = append(parents, parentSvc.Parents...)
+    }
 
-	return &Svc{
-		Service: service,
-		Module:  module,
-		Parents: parents,
-	}
+    return &Svc{
+        Service: service,
+        Module:  module,
+        Parents: parents,
+    }
 }
 
 func main() {
-	flag.Parse()
-	plugin.Main(&plugin.Plugin{Name: "yarpc", ServiceGenerator: g{
-		SanitizeTChannel: *_sanitizeTChannel,
-	}})
+    flag.Parse()
+    plugin.Main(&plugin.Plugin{Name: "yarpc", ServiceGenerator: g{
+        SanitizeTChannel: *_sanitizeTChannel,
+    }})
 }
