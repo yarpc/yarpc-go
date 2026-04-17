@@ -85,3 +85,9 @@ func TestProcedureToNameInvalidNames(t *testing.T) {
 	_, err = procedureToName("foo", "%%A")
 	require.Error(t, err)
 }
+
+func BenchmarkToFullMethod(b *testing.B) {
+	for range b.N {
+		_ = toFullMethod("MyService", "MyMethod")
+	}
+}

@@ -21,7 +21,6 @@
 package grpc
 
 import (
-	"fmt"
 	"net/url"
 
 	"go.uber.org/yarpc/pkg/procedure"
@@ -54,7 +53,7 @@ func toFullMethod(serviceName string, methodName string) string {
 	if serviceName == "" {
 		serviceName = defaultServiceName
 	}
-	return fmt.Sprintf("/%s/%s", serviceName, methodName)
+	return "/" + serviceName + "/" + methodName
 }
 
 func procedureToName(serviceName string, methodName string) (string, error) {
