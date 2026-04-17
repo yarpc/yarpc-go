@@ -3,8 +3,8 @@
 
 package NOSERVICES
 
-// CustomerUUID returns the UUID string from the parameter annotated with auth.actor_uuid if present.
-func (t *Struct) CustomerUUID() string {
+// ActorUUID returns the UUID string from the parameter annotated with auth.actor_uuid if present.
+func (t *Struct) ActorUUID() string {
 	if uuid := t.UserIdentifier; uuid != nil {
 		return *uuid
 	}

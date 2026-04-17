@@ -30,8 +30,6 @@ import (
 )
 
 func TestGetUUID(t *testing.T) {
-	const exName = "MyType"
-
 	t.Run("happyCase", func(t *testing.T) {
 		assert.NotPanics(t, func() {
 			spec, err := compile.Compile("internal/uuid_test_thrift/happy.thrift")
@@ -81,6 +79,6 @@ func TestGetGeneratedUUID(t *testing.T) {
 			Baz:            ptr.String("asdf"),
 			UserIdentifier: ptr.String("my-uuid"),
 		}
-		assert.Equal(t, "my-uuid", st.GetUserIdentifier())
+		assert.Equal(t, "my-uuid", st.ActorUUID())
 	})
 }

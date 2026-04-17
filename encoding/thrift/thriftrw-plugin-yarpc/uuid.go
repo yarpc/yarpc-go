@@ -39,8 +39,8 @@ const yarpcUUIDTemplate = `
 package <.Name>
 
 <range $tt, $name := getAllAnnotatedTypes >
-// CustomerUUID returns the UUID string from the parameter annotated with auth.actor_uuid if present.
-func (t *<$tt.Name>) CustomerUUID() string {
+// ActorUUID returns the UUID string from the parameter annotated with auth.actor_uuid if present.
+func (t *<$tt.Name>) ActorUUID() string {
     if uuid := t.<$name>; uuid != nil { return *uuid }
     return ""
 }
