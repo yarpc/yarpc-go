@@ -210,3 +210,17 @@ func TestNewConnPoolMetrics_LogsRegistrationErrors(t *testing.T) {
 
 	assert.NotZero(t, logs.Len(), "expected error logs for duplicate metric registration")
 }
+
+// TestConnPoolMetrics_NilReceiver verifies that calling any method on a nil
+// *connPoolMetrics pointer does not panic.
+func TestConnPoolMetrics_NilReceiver(t *testing.T) {
+	var m *connPoolMetrics
+	assert.NotPanics(t, func() {
+		m.incScaleUp()
+		m.incScaleDown()
+		m.incIdleReactivation()
+		m.setConnectionCount(5)
+		m.setDrainingConnectionCount(3)
+		m.setIdleConnectionCount(1)
+	})
+}
