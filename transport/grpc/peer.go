@@ -51,6 +51,8 @@ type grpcPeer struct {
 	// stoppedC is closed once all goroutines finish after the peer is stopped.
 	connWg sync.WaitGroup
 
+	metrics *connPoolMetrics
+
 	mu      sync.RWMutex
 	conns   []*grpcClientConnWrapper
 	poolCfg connPoolConfig
@@ -79,6 +81,12 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 		cancel:       cancel,
 		stoppedC:     make(chan struct{}),
 		grpcDialOpts: dialOptions,
+		metrics: newConnPoolMetrics(connPoolMetricsParams{
+			Meter:       t.options.meter,
+			Logger:      t.options.logger,
+			ServiceName: t.options.serviceName,
+			Peer:        address,
+		}),
 		poolCfg: connPoolConfig{
 			dynamicScalingEnabled: t.options.clientConnPoolDynamicScalingEnabled,
 			maxConcurrentStreams:   t.options.clientConnPoolMaxConcurrentStreams,
@@ -149,6 +157,7 @@ func (p *grpcPeer) addConn() error {
 	p.mu.Unlock()
 
 	go p.monitorConnWrapper(w)
+	p.refreshPoolMetrics()
 	return nil
 }
 
@@ -164,6 +173,7 @@ func (p *grpcPeer) monitorConnWrapper(w *grpcClientConnWrapper) {
 		p.removeConn(w)
 		// Recompute connection status now that this peer is gone.
 		p.recomputeConnectionStatus()
+		p.refreshPoolMetrics()
 		p.connWg.Done()
 	}()
 

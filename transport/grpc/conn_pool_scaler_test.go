@@ -28,7 +28,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/peer/abstractpeer"
+	"go.uber.org/zap"
 )
 
 // newTestPeer returns a minimal grpcPeer sufficient for exercising the scaling
@@ -661,4 +663,177 @@ func TestCleanupIdleConnsSkippedWhileScaling(t *testing.T) {
 	// Connection must not have been cancelled — isScaling caused early return.
 	assert.NoError(t, ctx.Err(), "idle connection must not be cancelled while scaling")
 	assert.Equal(t, connStateIdle, w.getState(), "connection state must be unchanged")
+}
+
+// --- metrics wiring ---
+
+// peerWithMetrics creates a peerForPool with a real metrics scope attached.
+func peerWithMetrics(t *testing.T) (*grpcPeer, *metrics.Root) {
+	t.Helper()
+	root := metrics.New()
+	p := peerForPool(t)
+	p.metrics = newConnPoolMetrics(connPoolMetricsParams{
+		Meter:       root.Scope(),
+		Logger:      zap.NewNop(),
+		ServiceName: "test-svc",
+		Peer:        p.Peer.Identifier(),
+	})
+	return p, root
+}
+
+func gaugesFromSnapshot(snap *metrics.RootSnapshot) map[string]int64 {
+	m := make(map[string]int64, len(snap.Gauges))
+	for _, g := range snap.Gauges {
+		m[g.Name] = g.Value
+	}
+	return m
+}
+
+func countersFromSnapshot(snap *metrics.RootSnapshot) map[string]int64 {
+	m := make(map[string]int64, len(snap.Counters))
+	for _, c := range snap.Counters {
+		m[c.Name] = c.Value
+	}
+	return m
+}
+
+// TestRefreshPoolMetrics verifies that refreshPoolMetrics correctly derives
+// active/draining/idle counts from the pool and publishes them as gauges.
+func TestRefreshPoolMetrics(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty pool sets all gauges to zero", func(t *testing.T) {
+		t.Parallel()
+		p, root := peerWithMetrics(t)
+		p.refreshPoolMetrics()
+		g := gaugesFromSnapshot(root.Snapshot())
+		assert.Equal(t, int64(0), g["conn_pool_active_connections"])
+		assert.Equal(t, int64(0), g["conn_pool_draining_connections"])
+		assert.Equal(t, int64(0), g["conn_pool_idle_connections"])
+	})
+
+	t.Run("mixed pool reports correct counts", func(t *testing.T) {
+		t.Parallel()
+		p, root := peerWithMetrics(t)
+		p.mu.Lock()
+		p.conns = []*grpcClientConnWrapper{
+			makeConn(connStateActive, 0),
+			makeConn(connStateActive, 0),
+			makeConn(connStateDraining, 0),
+			makeConn(connStateIdle, 0),
+		}
+		p.mu.Unlock()
+
+		p.refreshPoolMetrics()
+
+		g := gaugesFromSnapshot(root.Snapshot())
+		assert.Equal(t, int64(2), g["conn_pool_active_connections"])
+		assert.Equal(t, int64(1), g["conn_pool_draining_connections"])
+		assert.Equal(t, int64(1), g["conn_pool_idle_connections"])
+	})
+}
+
+// TestMaybeScaleDownMetrics verifies that maybeScaleDown increments the
+// scale-down counter and refreshes the pool gauges when draining a connection.
+func TestMaybeScaleDownMetrics(t *testing.T) {
+	t.Parallel()
+
+	p, root := peerWithMetrics(t)
+	p.poolCfg = connPoolConfig{
+		minConnections:      1,
+		maxConcurrentStreams: 100,
+		scaleUpThreshold:    0.8, // threshold = 80
+	}
+	p.mu.Lock()
+	p.conns = []*grpcClientConnWrapper{
+		makeConn(connStateActive, 10),
+		makeConn(connStateActive, 10),
+		makeConn(connStateActive, 10), // total 30 < capacityAfterDrain=160 → drain
+	}
+	p.mu.Unlock()
+
+	p.maybeScaleDown()
+
+	c := countersFromSnapshot(root.Snapshot())
+	assert.Equal(t, int64(1), c["conn_pool_scale_down_total"], "scale-down counter should increment")
+
+	g := gaugesFromSnapshot(root.Snapshot())
+	assert.Equal(t, int64(2), g["conn_pool_active_connections"])
+	assert.Equal(t, int64(1), g["conn_pool_draining_connections"])
+}
+
+// TestTryScaleUpDialMetrics verifies that tryScaleUp increments the scale-up
+// counter when it opens a new connection.
+func TestTryScaleUpDialMetrics(t *testing.T) {
+	t.Parallel()
+
+	p, root := peerWithMetrics(t)
+	overBudget := makeConn(connStateActive, 85) // threshold=80
+
+	p.tryScaleUp(overBudget)
+
+	require.Eventually(t, func() bool {
+		return atomic.LoadInt32(&p.isScaling) == 0
+	}, 2*time.Second, 10*time.Millisecond)
+
+	c := countersFromSnapshot(root.Snapshot())
+	assert.Equal(t, int64(1), c["conn_pool_scale_up_total"])
+
+	// Gauge must reflect the newly added connection.
+	g := gaugesFromSnapshot(root.Snapshot())
+	assert.Equal(t, int64(1), g["conn_pool_active_connections"])
+}
+
+// TestTryScaleUpReactivationMetrics verifies that tryScaleUp increments the
+// idle-reactivation counter and updates gauges when reactivating an idle conn.
+func TestTryScaleUpReactivationMetrics(t *testing.T) {
+	t.Parallel()
+
+	p, root := peerWithMetrics(t)
+
+	// Seed an idle connection with a live context.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	idleConn := &grpcClientConnWrapper{ctx: ctx, cancel: cancel}
+	idleConn.setState(connStateIdle)
+	p.mu.Lock()
+	p.conns = append(p.conns, idleConn)
+	p.mu.Unlock()
+
+	overBudget := makeConn(connStateActive, 85)
+	p.tryScaleUp(overBudget)
+
+	require.Eventually(t, func() bool {
+		return atomic.LoadInt32(&p.isScaling) == 0
+	}, 2*time.Second, 10*time.Millisecond)
+
+	c := countersFromSnapshot(root.Snapshot())
+	assert.Equal(t, int64(1), c["conn_pool_idle_reactivation_total"])
+	assert.Equal(t, int64(0), c["conn_pool_scale_up_total"], "no new dial should happen")
+
+	g := gaugesFromSnapshot(root.Snapshot())
+	assert.Equal(t, int64(1), g["conn_pool_active_connections"])
+	assert.Equal(t, int64(0), g["conn_pool_idle_connections"])
+}
+
+// TestCleanupIdleConnsMetrics verifies that cleanupIdleConns updates gauges
+// after advancing draining connections to idle.
+func TestCleanupIdleConnsMetrics(t *testing.T) {
+	t.Parallel()
+
+	p, root := peerWithMetrics(t)
+	p.poolCfg = connPoolConfig{idleTimeout: time.Hour}
+	p.mu.Lock()
+	p.conns = []*grpcClientConnWrapper{
+		makeConn(connStateActive, 5),
+		makeConn(connStateDraining, 0), // 0 streams → advances to idle
+	}
+	p.mu.Unlock()
+
+	p.cleanupIdleConns()
+
+	g := gaugesFromSnapshot(root.Snapshot())
+	assert.Equal(t, int64(1), g["conn_pool_active_connections"])
+	assert.Equal(t, int64(0), g["conn_pool_draining_connections"])
+	assert.Equal(t, int64(1), g["conn_pool_idle_connections"])
 }
