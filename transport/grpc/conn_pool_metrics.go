@@ -139,25 +139,43 @@ func newConnPoolMetrics(p connPoolMetricsParams) *connPoolMetrics {
 }
 
 func (m *connPoolMetrics) setConnectionCount(n int64) {
+	if m == nil || m.connectionCount == nil {
+		return
+	}
 	m.connectionCount.Store(n)
 }
 
 func (m *connPoolMetrics) setDrainingConnectionCount(n int64) {
+	if m == nil || m.drainingConnectionCount == nil {
+		return
+	}
 	m.drainingConnectionCount.Store(n)
 }
 
 func (m *connPoolMetrics) setIdleConnectionCount(n int64) {
+	if m == nil || m.idleConnectionCount == nil {
+		return
+	}
 	m.idleConnectionCount.Store(n)
 }
 
 func (m *connPoolMetrics) incScaleUp() {
+	if m == nil || m.scaleUpTotal == nil {
+		return
+	}
 	m.scaleUpTotal.Inc()
 }
 
 func (m *connPoolMetrics) incScaleDown() {
+	if m == nil || m.scaleDownTotal == nil {
+		return
+	}
 	m.scaleDownTotal.Inc()
 }
 
 func (m *connPoolMetrics) incIdleReactivation() {
+	if m == nil || m.idleReactivationTotal == nil {
+		return
+	}
 	m.idleReactivationTotal.Inc()
 }

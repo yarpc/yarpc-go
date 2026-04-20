@@ -109,6 +109,8 @@ func (p *grpcPeer) maybeScaleDown() {
 	p.t.options.logger.Debug("grpc: marked connection for draining during scale-down",
 		zap.String("peer", p.HostPort()),
 		zap.Int32("stream_count", mostLoaded.getStreamCount()))
+	p.metrics.incScaleDown()
+	p.refreshPoolMetrics()
 }
 
 // cleanupIdleConns advances draining connections with zero streams to the idle
@@ -158,6 +160,10 @@ func (p *grpcPeer) cleanupIdleConns() {
 		// wrapper from p.conns.
 		c.cancel()
 	}
+
+	if len(drained) > 0 || len(toClose) > 0 {
+		p.refreshPoolMetrics()
+	}
 }
 
 // tryScaleUp triggers a background goroutine to satisfy the need for more
@@ -194,6 +200,8 @@ func (p *grpcPeer) tryScaleUp(leastLoadedConn *grpcClientConnWrapper) {
 		if p.reactivateIdleConn() {
 			p.t.options.logger.Debug("grpc: reactivated idle connection during scale-up",
 				zap.String("peer", p.HostPort()))
+			p.metrics.incIdleReactivation()
+			p.refreshPoolMetrics()
 			return
 		}
 
@@ -212,6 +220,7 @@ func (p *grpcPeer) tryScaleUp(leastLoadedConn *grpcClientConnWrapper) {
 		} else {
 			p.t.options.logger.Debug("grpc: scaled up connection pool",
 				zap.String("peer", p.HostPort()))
+			p.metrics.incScaleUp()
 		}
 	}()
 }
@@ -232,4 +241,25 @@ func (p *grpcPeer) reactivateIdleConn() bool {
 		}
 	}
 	return false
+}
+
+// refreshPoolMetrics scans the pool and updates the active, draining, and idle
+// connection gauges.  It must be called after any pool state transition.
+func (p *grpcPeer) refreshPoolMetrics() {
+	var active, draining, idle int64
+	p.mu.RLock()
+	for _, c := range p.conns {
+		switch c.getState() {
+		case connStateActive:
+			active++
+		case connStateDraining:
+			draining++
+		case connStateIdle:
+			idle++
+		}
+	}
+	p.mu.RUnlock()
+	p.metrics.setConnectionCount(active)
+	p.metrics.setDrainingConnectionCount(draining)
+	p.metrics.setIdleConnectionCount(idle)
 }
