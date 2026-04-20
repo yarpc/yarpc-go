@@ -28,6 +28,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/net/metrics"
+	"go.uber.org/zap"
 	"go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -515,4 +517,44 @@ func TestRecomputeConnectionStatus(t *testing.T) {
 		// the peer to Unavailable.
 		assert.Equal(t, peer.Unavailable, p.Peer.Status().ConnectionStatus)
 	})
+}
+
+// TestMonitorConnWrapperMetrics verifies that the monitorConnWrapper defer
+// calls refreshPoolMetrics so gauges drop to zero after the connection exits.
+func TestMonitorConnWrapperMetrics(t *testing.T) {
+	t.Parallel()
+
+	root := metrics.New()
+	p := peerForPool(t)
+	p.metrics = newConnPoolMetrics(connPoolMetricsParams{
+		Meter:       root.Scope(),
+		Logger:      zap.NewNop(),
+		ServiceName: "test-svc",
+		Peer:        p.Peer.Identifier(),
+	})
+
+	cc := dialTestClientConn(t)
+	w := newConnWrapper(p.ctx, cc)
+	p.connWg.Add(1)
+	p.mu.Lock()
+	p.conns = append(p.conns, w)
+	p.mu.Unlock()
+
+	// Reflect the initial active connection in the gauges.
+	p.refreshPoolMetrics()
+	g := gaugesFromSnapshot(root.Snapshot())
+	assert.Equal(t, int64(1), g["conn_pool_active_connections"])
+
+	go p.monitorConnWrapper(w)
+	p.cancel()
+
+	select {
+	case <-w.stoppedC:
+	case <-time.After(2 * time.Second):
+		t.Fatal("monitorConnWrapper did not exit")
+	}
+
+	// After removal the gauge must drop to zero.
+	g = gaugesFromSnapshot(root.Snapshot())
+	assert.Equal(t, int64(0), g["conn_pool_active_connections"])
 }
