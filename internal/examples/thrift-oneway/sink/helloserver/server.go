@@ -60,6 +60,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: sink_NoWireHandler{impl},
 				},
 				Signature:    "Sink(Snk *sink.SinkRequest)",
+				Exceptions:   map[string]string{},
 				ThriftModule: sink.ThriftModule,
 			},
 		},

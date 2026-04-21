@@ -40,6 +40,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: name_NoWireHandler{impl},
 				},
 				Signature:    "Name() (string)",
+				Exceptions:   map[string]string{},
 				ThriftModule: extends.ThriftModule,
 			},
 		},
