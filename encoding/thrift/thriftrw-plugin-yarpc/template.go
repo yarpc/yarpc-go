@@ -22,6 +22,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"go.uber.org/thriftrw/plugin"
@@ -146,7 +147,68 @@ type moduleGenFunc func(*moduleTemplateData, map[string][]byte) error
 // plugin.
 type serviceGenFunc func(*serviceTemplateData, map[string][]byte) error
 
+const (
+	// exceptionsMapEntryIndent and exceptionsMapCloseIndent align generated
+	// map[string]string literals in server.go with surrounding thrift.Method fields.
+	exceptionsMapEntryIndent = "\t\t\t\t\t"
+	exceptionsMapCloseIndent = "\t\t\t\t"
+)
+
+// exceptionTypeReference follows PointerType wrappers to the underlying
+// TypeReference for a throws clause (Thrift exceptions are pointers in Go).
+func exceptionTypeReference(t *api.Type) *api.TypeReference {
+	for t != nil {
+		if t.ReferenceType != nil {
+			return t.ReferenceType
+		}
+		if t.PointerType != nil {
+			t = t.PointerType
+			continue
+		}
+		break
+	}
+	return nil
+}
+
+// methodExceptionsMapLiteral returns a Go expression for thrift.Method.Exceptions
+// for the given Thrift function (exception type name -> rpc.code or the
+// "__not_set__" sentinel as a string literal).
+func methodExceptionsMapLiteral(f *api.Function) string {
+	if f == nil || len(f.Exceptions) == 0 {
+		return "map[string]string{}"
+	}
+	var parts []string
+	for _, ex := range f.Exceptions {
+		if ex == nil || ex.Type == nil {
+			continue
+		}
+		ref := exceptionTypeReference(ex.Type)
+		if ref == nil {
+			continue
+		}
+		key := strconv.Quote(ref.Name)
+		var val string
+		if code, ok := ref.Annotations[_errorCodeAnnotationKey]; ok && code != "" {
+			val = strconv.Quote(code)
+		} else {
+			val = strconv.Quote("__not_set__")
+		}
+		parts = append(parts, key+": "+val)
+	}
+	if len(parts) == 0 {
+		return "map[string]string{}"
+	}
+	lines := make([]string, 0, len(parts))
+	for _, p := range parts {
+		lines = append(lines, exceptionsMapEntryIndent+p)
+	}
+	return "map[string]string{\n" +
+		strings.Join(lines, ",\n") +
+		",\n" + exceptionsMapCloseIndent + "}"
+}
+
 // Default options for the template
 var templateOptions = []plugin.TemplateOption{
 	plugin.TemplateFunc("lower", strings.ToLower),
+	plugin.TemplateFunc("methodExceptionsMapLiteral", methodExceptionsMapLiteral),
 }

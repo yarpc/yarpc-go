@@ -359,6 +359,35 @@ func (d *Dispatcher) Register(rs []transport.Procedure) {
 
 		procedures = append(procedures, r)
 		d.log.Info("Registration succeeded.", zap.Object("registeredProcedure", r))
+
+		if r.Encoding == "thrift" {
+			for exceptionName, code := range r.Exceptions {
+				if code != "__not_set__" {
+					continue
+				}
+				g, err := d.meter.Tagged(metrics.Tags{
+					"service":   d.name,
+					"procedure": r.Name,
+					"exception": exceptionName,
+				}).Gauge(metrics.Spec{
+					Name: "thrift_unannotated_exceptions",
+					Help: "Registered procedure may throw an unannotated Thrift exception.",
+				})
+				if err != nil {
+					d.log.Warn(
+						"Failed to emit thrift unannotated exception gauge.",
+						zap.Error(err),
+						zap.String("procedure", r.Name),
+						zap.String("exception", exceptionName),
+					)
+					continue
+				}
+				g.Store(1)
+				d.log.Warn("Registered procedure may throw an unannotated Thrift exception.",
+					zap.String("procedure", r.Name),
+					zap.String("exception", exceptionName))
+			}
+		}
 	}
 
 	d.table.Register(procedures)

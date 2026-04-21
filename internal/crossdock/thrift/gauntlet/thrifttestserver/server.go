@@ -166,6 +166,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: testbinary_NoWireHandler{impl},
 				},
 				Signature:    "TestBinary(Thing []byte) ([]byte)",
+				Exceptions:   map[string]string{},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 
@@ -178,6 +179,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: testbyte_NoWireHandler{impl},
 				},
 				Signature:    "TestByte(Thing *int8) (int8)",
+				Exceptions:   map[string]string{},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 
@@ -190,6 +192,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: testdouble_NoWireHandler{impl},
 				},
 				Signature:    "TestDouble(Thing *float64) (float64)",
+				Exceptions:   map[string]string{},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 
@@ -202,6 +205,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: testenum_NoWireHandler{impl},
 				},
 				Signature:    "TestEnum(Thing *gauntlet.Numberz) (gauntlet.Numberz)",
+				Exceptions:   map[string]string{},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 
@@ -213,7 +217,10 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.TestException),
 					NoWire: testexception_NoWireHandler{impl},
 				},
-				Signature:    "TestException(Arg *string)",
+				Signature: "TestException(Arg *string)",
+				Exceptions: map[string]string{
+					"Xception": "__not_set__",
+				},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 
@@ -226,6 +233,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: testi32_NoWireHandler{impl},
 				},
 				Signature:    "TestI32(Thing *int32) (int32)",
+				Exceptions:   map[string]string{},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 
@@ -238,6 +246,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: testi64_NoWireHandler{impl},
 				},
 				Signature:    "TestI64(Thing *int64) (int64)",
+				Exceptions:   map[string]string{},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 
@@ -250,6 +259,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: testinsanity_NoWireHandler{impl},
 				},
 				Signature:    "TestInsanity(Argument *gauntlet.Insanity) (map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity)",
+				Exceptions:   map[string]string{},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 
@@ -262,6 +272,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: testlist_NoWireHandler{impl},
 				},
 				Signature:    "TestList(Thing []int32) ([]int32)",
+				Exceptions:   map[string]string{},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 
@@ -274,6 +285,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: testmap_NoWireHandler{impl},
 				},
 				Signature:    "TestMap(Thing map[int32]int32) (map[int32]int32)",
+				Exceptions:   map[string]string{},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 
@@ -286,6 +298,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: testmapmap_NoWireHandler{impl},
 				},
 				Signature:    "TestMapMap(Hello *int32) (map[int32]map[int32]int32)",
+				Exceptions:   map[string]string{},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 
@@ -298,6 +311,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: testmulti_NoWireHandler{impl},
 				},
 				Signature:    "TestMulti(Arg0 *int8, Arg1 *int32, Arg2 *int64, Arg3 map[int16]string, Arg4 *gauntlet.Numberz, Arg5 *gauntlet.UserId) (*gauntlet.Xtruct)",
+				Exceptions:   map[string]string{},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 
@@ -309,7 +323,11 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.TestMultiException),
 					NoWire: testmultiexception_NoWireHandler{impl},
 				},
-				Signature:    "TestMultiException(Arg0 *string, Arg1 *string) (*gauntlet.Xtruct)",
+				Signature: "TestMultiException(Arg0 *string, Arg1 *string) (*gauntlet.Xtruct)",
+				Exceptions: map[string]string{
+					"Xception":  "__not_set__",
+					"Xception2": "__not_set__",
+				},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 
@@ -322,6 +340,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: testnest_NoWireHandler{impl},
 				},
 				Signature:    "TestNest(Thing *gauntlet.Xtruct2) (*gauntlet.Xtruct2)",
+				Exceptions:   map[string]string{},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 
@@ -334,6 +353,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: testoneway_NoWireHandler{impl},
 				},
 				Signature:    "TestOneway(SecondsToSleep *int32)",
+				Exceptions:   map[string]string{},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 
@@ -346,6 +366,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: testset_NoWireHandler{impl},
 				},
 				Signature:    "TestSet(Thing map[int32]struct{}) (map[int32]struct{})",
+				Exceptions:   map[string]string{},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 
@@ -358,6 +379,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: teststring_NoWireHandler{impl},
 				},
 				Signature:    "TestString(Thing *string) (string)",
+				Exceptions:   map[string]string{},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 
@@ -370,6 +392,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: teststringmap_NoWireHandler{impl},
 				},
 				Signature:    "TestStringMap(Thing map[string]string) (map[string]string)",
+				Exceptions:   map[string]string{},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 
@@ -382,6 +405,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: teststruct_NoWireHandler{impl},
 				},
 				Signature:    "TestStruct(Thing *gauntlet.Xtruct) (*gauntlet.Xtruct)",
+				Exceptions:   map[string]string{},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 
@@ -394,6 +418,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: testtypedef_NoWireHandler{impl},
 				},
 				Signature:    "TestTypedef(Thing *gauntlet.UserId) (gauntlet.UserId)",
+				Exceptions:   map[string]string{},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 
@@ -406,6 +431,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: testvoid_NoWireHandler{impl},
 				},
 				Signature:    "TestVoid()",
+				Exceptions:   map[string]string{},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 		},

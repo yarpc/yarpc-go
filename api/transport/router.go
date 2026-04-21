@@ -22,6 +22,7 @@ package transport
 
 import (
 	"context"
+	"encoding/json"
 
 	"go.uber.org/zap/zapcore"
 )
@@ -47,6 +48,12 @@ type Procedure struct {
 	// Signature of the handler, for introspection. This should be a snippet of
 	// Go code representing the function definition.
 	Signature string
+
+	// Exceptions, when non-empty, maps Thrift exception type names from the
+	// method throws list to rpc.code annotation values (encoding/thrift uses
+	// the "__not_set__" sentinel when an exception has no rpc.code). Other
+	// encodings leave this nil.
+	Exceptions map[string]string
 }
 
 // MarshalLogObject implements zap.ObjectMarshaler.
@@ -57,6 +64,14 @@ func (p Procedure) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddString("service", p.Service)
 	enc.AddString("encoding", string(p.Encoding))
 	enc.AddString("signature", p.Signature)
+	if len(p.Exceptions) > 0 {
+		b, err := json.Marshal(p.Exceptions)
+		if err != nil {
+			enc.AddString("exceptions", "<error>")
+		} else {
+			enc.AddString("exceptions", string(b))
+		}
+	}
 	return enc.AddObject("handler", p.HandlerSpec)
 }
 
