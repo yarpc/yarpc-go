@@ -64,6 +64,8 @@ type Interface interface {
 }
 
 <$module := .Module>
+<$compiledModule := .CompiledModule>
+<$svcThriftName := .ThriftName>
 
 // New prepares an implementation of the <.Name> service for
 // registration.
@@ -89,6 +91,7 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Proced
 					NoWire: <(lower .Name)>_NoWireHandler{impl},
 				},
 				Signature: "<.Name>(<range $i, $v := .Arguments><if ne $i 0>, <end><.Name> <formatType .Type><end>)<if not .OneWay | and .ReturnType> (<formatType .ReturnType>)<end>",
+				Exceptions: <methodExceptionsMapLiteral . $compiledModule $svcThriftName>,
 				ThriftModule: <import $module.ImportPath>.ThriftModule,
 				},
 		<end>},

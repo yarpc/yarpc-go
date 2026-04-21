@@ -67,6 +67,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: getvalue_NoWireHandler{impl},
 				},
 				Signature:    "GetValue(Key *string) (string)",
+				Exceptions:   map[string]string{"ResourceDoesNotExist": "__not_set__"},
 				ThriftModule: kv.ThriftModule,
 			},
 
@@ -79,6 +80,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: setvalue_NoWireHandler{impl},
 				},
 				Signature:    "SetValue(Key *string, Value *string)",
+				Exceptions:   nil,
 				ThriftModule: kv.ThriftModule,
 			},
 		},

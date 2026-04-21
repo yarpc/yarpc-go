@@ -44,6 +44,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: integer_NoWireHandler{impl},
 				},
 				Signature:    "Integer(Key *string) (int64)",
+				Exceptions:   map[string]string{"KeyDoesNotExist": "INVALID_ARGUMENT"},
 				ThriftModule: atomic.ThriftModule,
 			},
 		},

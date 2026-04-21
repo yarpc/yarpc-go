@@ -55,6 +55,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: compareandswap_NoWireHandler{impl},
 				},
 				Signature:    "CompareAndSwap(Request *atomic.CompareAndSwap)",
+				Exceptions:   map[string]string{"IntegerMismatchError": "INVALID_ARGUMENT"},
 				ThriftModule: atomic.ThriftModule,
 			},
 
@@ -67,6 +68,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: forget_NoWireHandler{impl},
 				},
 				Signature:    "Forget(Key *string)",
+				Exceptions:   nil,
 				ThriftModule: atomic.ThriftModule,
 			},
 
@@ -79,6 +81,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: increment_NoWireHandler{impl},
 				},
 				Signature:    "Increment(Key *string, Value *int64)",
+				Exceptions:   nil,
 				ThriftModule: atomic.ThriftModule,
 			},
 		},

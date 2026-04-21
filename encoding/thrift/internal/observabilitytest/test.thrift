@@ -10,7 +10,7 @@ exception ExceptionWithoutCode {
 
 service TestService  {
     string Call(1: required string key) throws (
-      1: ExceptionWithCode exCode,
       2: ExceptionWithoutCode exNoCode,
+      1: ExceptionWithCode exCode,
     )
 }

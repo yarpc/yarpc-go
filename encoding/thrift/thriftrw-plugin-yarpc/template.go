@@ -22,11 +22,15 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 
 	"go.uber.org/thriftrw/compile"
 	"go.uber.org/thriftrw/plugin"
 	"go.uber.org/thriftrw/plugin/api"
+	"go.uber.org/yarpc/api/transport"
 )
 
 // Svc is a Thrift service.
@@ -157,7 +161,121 @@ type moduleGenFunc func(*moduleTemplateData, map[string][]byte) error
 // plugin.
 type serviceGenFunc func(*serviceTemplateData, map[string][]byte) error
 
+// exceptionTypeReference follows PointerType wrappers to the underlying
+// TypeReference for a throws clause (Thrift exceptions are pointers in Go).
+func exceptionTypeReference(t *api.Type) *api.TypeReference {
+	for t != nil {
+		if t.ReferenceType != nil {
+			return t.ReferenceType
+		}
+		if t.PointerType != nil {
+			t = t.PointerType
+			continue
+		}
+		break
+	}
+	return nil
+}
+
+func lookupCompiledFunction(root *compile.Module, serviceThriftName, fnThriftName string) *compile.FunctionSpec {
+	if root == nil || serviceThriftName == "" || fnThriftName == "" {
+		return nil
+	}
+	svc := root.Services[serviceThriftName]
+	if svc == nil {
+		return nil
+	}
+	return svc.Functions[fnThriftName]
+}
+
+// thriftExceptionMapKey returns the map key string for thrift.Method.Exceptions:
+// how the exception type is referenced from the service's Thrift file — either
+// the bare exception name (same file as the service) or includeAlias.TypeName
+// when the exception lives in another included Thrift file (includeAlias is the
+// basename of the included file without .thrift, per ThriftRW compile.Module).
+func thriftExceptionMapKey(serviceModule *compile.Module, exc *compile.StructSpec) string {
+	if serviceModule == nil || exc == nil {
+		return ""
+	}
+	excPath := filepath.Clean(exc.ThriftFile())
+	svcPath := filepath.Clean(serviceModule.ThriftPath)
+	if excPath == svcPath {
+		return exc.Name
+	}
+	for _, inc := range serviceModule.Includes {
+		if inc == nil || inc.Module == nil {
+			continue
+		}
+		if filepath.Clean(inc.Module.ThriftPath) == excPath {
+			return inc.Name + "." + exc.Name
+		}
+	}
+	base := strings.TrimSuffix(filepath.Base(excPath), ".thrift")
+	if base != "" {
+		return base + "." + exc.Name
+	}
+	return exc.Name
+}
+
+// methodExceptionsMapLiteral returns a Go expression for thrift.Method.Exceptions
+// for the given Thrift function (exception type name -> rpc.code or the
+// "__not_set__" sentinel as a string literal).
+// serviceMod is compile.Compile output for the Thrift file that declares this
+// service (from main.go's per-request memo); nil skips compiled metadata and
+// keys fall back to the short type name from the plugin API.
+// serviceThriftName is the Thrift IDL service name.
+func methodExceptionsMapLiteral(f *api.Function, serviceMod *compile.Module, serviceThriftName string) string {
+	if f == nil || len(f.Exceptions) == 0 {
+		return "nil"
+	}
+
+	compileFn := lookupCompiledFunction(serviceMod, serviceThriftName, f.ThriftName)
+
+	// Deduplicate by map key (last wins) so duplicate throws entries do not emit
+	// duplicate composite literal keys.
+	entries := make(map[string]string)
+	for i, ex := range f.Exceptions {
+		if ex == nil || ex.Type == nil {
+			continue
+		}
+		ref := exceptionTypeReference(ex.Type)
+		if ref == nil {
+			continue
+		}
+
+		keyStr := ""
+		if compileFn != nil && compileFn.ResultSpec != nil && i < len(compileFn.ResultSpec.Exceptions) {
+			if ss, ok := compileFn.ResultSpec.Exceptions[i].Type.(*compile.StructSpec); ok {
+				keyStr = thriftExceptionMapKey(serviceMod, ss)
+			}
+		}
+		if keyStr == "" {
+			keyStr = ref.Name
+		}
+
+		if code, ok := ref.Annotations[_errorCodeAnnotationKey]; ok && code != "" {
+			entries[keyStr] = code
+		} else {
+			entries[keyStr] = transport.RPCCodeNotSetLiteral
+		}
+	}
+	if len(entries) == 0 {
+		return "nil"
+	}
+	keys := make([]string, 0, len(entries))
+	for k := range entries {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, k := range keys {
+		parts = append(parts, strconv.Quote(k)+": "+strconv.Quote(entries[k]))
+	}
+	return "map[string]string{" + strings.Join(parts, ", ") + "}"
+}
+
 // Default options for the template
 var templateOptions = []plugin.TemplateOption{
 	plugin.TemplateFunc("lower", strings.ToLower),
+	plugin.TemplateFunc("methodExceptionsMapLiteral", methodExceptionsMapLiteral),
 }

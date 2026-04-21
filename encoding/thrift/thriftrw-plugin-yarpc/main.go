@@ -125,10 +125,9 @@ func (g g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceRespon
 
 	files := make(map[string][]byte)
 
-	// Plugins do not have access to the original Thrift file's compiled
-	// module, so generators that need it must re-compile the file. Compilation
-	// is expensive, so we memoize it per Thrift file path and share the result
-	// across all module- and service-level generators.
+	// Generators share one compile.Module per root Thrift file (memoized below)
+	// across module- and service-level generators - e.g. server templates use it
+	// for exception map keys without compiling again inside template helpers.
 	compiledModules := make(map[string]*compile.Module)
 	getCompiledModule := func(thriftFilePath string) (*compile.Module, error) {
 		if m, ok := compiledModules[thriftFilePath]; ok {

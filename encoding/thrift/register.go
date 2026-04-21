@@ -69,6 +69,11 @@ type Method struct {
 	// This is useful for introspection.
 	Signature string
 
+	// Exceptions maps each Thrift exception type as referenced in the method's throws list
+	// (e.g. InvalidArgumentError or error.InvalidArgumentError for an included file)
+	// to the rpc.code annotation value, or __not_set__ when the exception has no rpc.code annotation.
+	Exceptions map[string]string
+
 	// ThriftModule, if non-nil, refers to the Thrift module from where this
 	// method is coming from.
 	ThriftModule *thriftreflect.ThriftModule
@@ -151,6 +156,7 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 			HandlerSpec: spec,
 			Encoding:    Encoding,
 			Signature:   method.Signature,
+			Exceptions:  method.Exceptions,
 		})
 	}
 	return rs
