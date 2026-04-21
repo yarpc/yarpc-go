@@ -65,6 +65,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: blahblah_NoWireHandler{impl},
 				},
 				Signature:    "BlahBlah()",
+				Exceptions:   map[string]string{},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 
@@ -77,6 +78,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: secondteststring_NoWireHandler{impl},
 				},
 				Signature:    "SecondtestString(Thing *string) (string)",
+				Exceptions:   map[string]string{},
 				ThriftModule: gauntlet.ThriftModule,
 			},
 		},

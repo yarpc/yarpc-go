@@ -60,7 +60,11 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.Call),
 					NoWire: call_NoWireHandler{impl},
 				},
-				Signature:    "Call(Key string) (string)",
+				Signature: "Call(Key string) (string)",
+				Exceptions: map[string]string{
+					"ExceptionWithCode":    "DATA_LOSS",
+					"ExceptionWithoutCode": "__not_set__",
+				},
 				ThriftModule: test.ThriftModule,
 			},
 		},
