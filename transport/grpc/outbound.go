@@ -23,6 +23,7 @@ package grpc
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -173,6 +174,7 @@ func (o *Outbound) invoke(
 	responseMD *metadata.MD,
 	start time.Time,
 ) (retErr error) {
+	fmt.Println("testing log")
 	md, err := transportRequestToMetadata(request)
 	if err != nil {
 		return err
