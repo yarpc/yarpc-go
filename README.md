@@ -5,6 +5,7 @@
 [![Mit License][mit-img]][mit]
 [![Build Status][ci-img]][ci]
 [![Coverage Status][cov-img]][cov]
+[![Go Report Card](https://goreportcard.com/badge/go.uber.org/yarpc)](https://goreportcard.com/report/go.uber.org/yarpc)
 
 A message passing platform for Go that lets you:
 
