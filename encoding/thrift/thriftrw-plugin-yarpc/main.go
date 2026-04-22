@@ -103,7 +103,7 @@ type g struct {
 func (g g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceResponse, error) {
 	// moduleGenerators apply to all Thrift IDL files, even when no service
 	// definition exists
-	moduleGenerators := []moduleGenFunc{yarpcErrorGenerator}
+	moduleGenerators := []moduleGenFunc{yarpcErrorGenerator, yarpcUUIDGenerator}
 
 	// serviceGenerators apply only when one or more services are defined in the
 	// Thrift IDL file.
