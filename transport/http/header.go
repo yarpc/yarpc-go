@@ -61,19 +61,24 @@ func (hm headerMapper) ToHTTPHeaders(from transport.Headers, to http.Header) htt
 //
 // If 'to' is nil, a new map will be assigned.
 func (hm headerMapper) FromHTTPHeaders(from http.Header, to transport.Headers) transport.Headers {
+	// Process tracing/proxy headers first, then prefixed headers, so the
+	// prefixed value wins on conflict (e.g. Rpc-Header-X-Forwarded-For
+	// over X-Forwarded-For).
+	// TODO: Remove two-pass once clients stop sending the prefixed form.
 	for origKey, vals := range from {
-		switch {
-		case hasPrefixFold(origKey, hm.Prefix):
-			suffix := origKey[len(hm.Prefix):]
-			for _, v := range vals {
-				to = to.With(suffix, v)
-			}
-		case isTracingHeader(origKey):
+		if isTracingHeader(origKey) || isProxyHeader(origKey) {
 			for _, v := range vals {
 				to = to.With(origKey, v)
 			}
 		}
-		// Note: undefined behavior for multiple occurrences of the same header
+	}
+	for origKey, vals := range from {
+		if hasPrefixFold(origKey, hm.Prefix) {
+			suffix := origKey[len(hm.Prefix):]
+			for _, v := range vals {
+				to = to.With(suffix, v)
+			}
+		}
 	}
 	return to
 }
@@ -125,4 +130,11 @@ func isRoutingHeader(k string) bool {
 func isCrossZoneHeader(k string) bool {
 	// k comes from http.Header.Items() and is always in lowercase
 	return k == RoutingRegionHeader || k == RoutingZoneHeader
+}
+
+// isProxyHeader returns true for standard forwarding and proxy-managed
+// headers that must travel over the wire unprefixed so that
+// Muttley/Envoy can read and update them correctly.
+func isProxyHeader(k string) bool {
+	return _proxyHeaders[strings.ToLower(k)]
 }
