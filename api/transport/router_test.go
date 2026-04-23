@@ -22,29 +22,57 @@ package transport
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zapcore"
 )
 
 func TestProcedureLogMarshaling(t *testing.T) {
-	p := Procedure{
-		Name:    "name",
-		Service: "service",
-		HandlerSpec: NewUnaryHandlerSpec(UnaryHandlerFunc(func(context.Context, *Request, ResponseWriter) error {
-			return nil
-		})),
-		Encoding:  "raw",
-		Signature: "signature",
-	}
-	enc := zapcore.NewMapObjectEncoder()
-	assert.NoError(t, p.MarshalLogObject(enc), "Unexpected error marshaling procedure.")
-	assert.Equal(t, map[string]interface{}{
-		"name":      "name",
-		"service":   "service",
-		"handler":   map[string]interface{}{"rpcType": "Unary"},
-		"encoding":  "raw",
-		"signature": "signature",
-	}, enc.Fields, "Unexpected output from marshaling procedure.")
+	t.Run("without exceptions", func(t *testing.T) {
+		p := Procedure{
+			Name:    "name",
+			Service: "service",
+			HandlerSpec: NewUnaryHandlerSpec(UnaryHandlerFunc(func(context.Context, *Request, ResponseWriter) error {
+				return nil
+			})),
+			Encoding:  "raw",
+			Signature: "signature",
+		}
+		enc := zapcore.NewMapObjectEncoder()
+		assert.NoError(t, p.MarshalLogObject(enc), "Unexpected error marshaling procedure.")
+		assert.Equal(t, map[string]interface{}{
+			"name":      "name",
+			"service":   "service",
+			"handler":   map[string]interface{}{"rpcType": "Unary"},
+			"encoding":  "raw",
+			"signature": "signature",
+		}, enc.Fields, "Unexpected output from marshaling procedure.")
+	})
+
+	t.Run("with exceptions", func(t *testing.T) {
+		p := Procedure{
+			Name:    "name",
+			Service: "service",
+			HandlerSpec: NewUnaryHandlerSpec(UnaryHandlerFunc(func(context.Context, *Request, ResponseWriter) error {
+				return nil
+			})),
+			Encoding:  "thrift",
+			Signature: "signature",
+			Exceptions: map[string]string{
+				"ExA": "INVALID_ARGUMENT",
+				"ExB": "__not_set__",
+			},
+		}
+		enc := zapcore.NewMapObjectEncoder()
+		require.NoError(t, p.MarshalLogObject(enc))
+
+		raw, ok := enc.Fields["exceptions"].(string)
+		require.True(t, ok, "exceptions should be a JSON string")
+		var decoded map[string]string
+		require.NoError(t, json.Unmarshal([]byte(raw), &decoded))
+		assert.Equal(t, p.Exceptions, decoded)
+	})
 }

@@ -60,6 +60,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: echo_NoWireHandler{impl},
 				},
 				Signature:    "Echo(Token *string)",
+				Exceptions:   map[string]string{},
 				ThriftModule: oneway.ThriftModule,
 			},
 		},
