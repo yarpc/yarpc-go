@@ -204,6 +204,8 @@ func (p *grpcPeer) cleanupIdleConns() {
 // scale-up goroutine runs at a time, and it signals cleanupIdleConns to hold
 // off closing idle connections while a reactivation may be in progress.
 func (p *grpcPeer) tryScaleUp(leastLoadedConn *grpcClientConnWrapper) {
+	p.t.options.logger.Debug("DEBUG: tryScaleUp called")
+	p.t.options.logger.Info("INFO: tryScaleUp called") 
 	if !p.poolCfg.dynamicScalingEnabled {
 		return
 	}
