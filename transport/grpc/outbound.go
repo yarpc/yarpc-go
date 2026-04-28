@@ -122,6 +122,9 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 
 // DirectCall implements transport.UnaryOutbound#Call.
 func (o *Outbound) DirectCall(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+	if 1==1 {
+		return nil,yarpcerrors.InvalidArgumentErrorf("errrroooooorrr")
+	}
 	if request == nil {
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for grpc outbound was nil")
 	}
