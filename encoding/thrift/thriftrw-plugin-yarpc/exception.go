@@ -105,7 +105,6 @@ var (
 func yarpcErrorGenerator(data *moduleTemplateData, files map[string][]byte) error {
 	// kv.thrift => .../kv/types_yarpc.go
 	path := filepath.Join(data.Module.Directory, "types_yarpc.go")
-
 	templateOptions := append(templateOptions,
 		plugin.TemplateFunc("isException", func(t compile.TypeSpec) bool {
 			if t, ok := t.(*compile.StructSpec); ok {
