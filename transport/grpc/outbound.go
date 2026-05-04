@@ -42,7 +42,6 @@ import (
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/mem"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -178,18 +177,9 @@ func (o *Outbound) invoke(
 		return err
 	}
 
-	var msg any
-	if request.Body != nil {
-		if buffer, ok := request.Body.(mem.Buffer); ok {
-			msg = buffer
-		} else {
-			var bytes []byte
-			bytes, err = ioutil.ReadAll(request.Body)
-			if err != nil {
-				return err
-			}
-			msg = bytes
-		}
+	bytes, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		return err
 	}
 	fullMethod, err := procedureNameToFullMethod(request.Procedure)
 	if err != nil {
@@ -234,7 +224,7 @@ func (o *Outbound) invoke(
 		grpcPeer.clientConn.Invoke(
 			metadata.NewOutgoingContext(ctx, md),
 			fullMethod,
-			msg,
+			bytes,
 			responseBody,
 			callOptions...,
 		),
