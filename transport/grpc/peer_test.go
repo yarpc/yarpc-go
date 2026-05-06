@@ -308,9 +308,9 @@ func TestRemoveConn(t *testing.T) {
 		c0, c1, c2 := makeConn(connStateActive, 0), makeConn(connStateActive, 0), makeConn(connStateActive, 0)
 		p := peerForScaleDown(t, []*grpcClientConnWrapper{c0, c1, c2}, connPoolConfig{})
 		p.removeConn(c0)
-		require.Len(t, p.conns, 2)
-		assert.Same(t, c1, p.conns[0])
-		assert.Same(t, c2, p.conns[1])
+		require.Len(t, p.loadConns(), 2)
+		assert.Same(t, c1, p.loadConns()[0])
+		assert.Same(t, c2, p.loadConns()[1])
 	})
 
 	t.Run("removes from middle", func(t *testing.T) {
@@ -318,9 +318,9 @@ func TestRemoveConn(t *testing.T) {
 		c0, c1, c2 := makeConn(connStateActive, 0), makeConn(connStateActive, 0), makeConn(connStateActive, 0)
 		p := peerForScaleDown(t, []*grpcClientConnWrapper{c0, c1, c2}, connPoolConfig{})
 		p.removeConn(c1)
-		require.Len(t, p.conns, 2)
-		assert.Same(t, c0, p.conns[0])
-		assert.Same(t, c2, p.conns[1])
+		require.Len(t, p.loadConns(), 2)
+		assert.Same(t, c0, p.loadConns()[0])
+		assert.Same(t, c2, p.loadConns()[1])
 	})
 
 	t.Run("removes from end", func(t *testing.T) {
@@ -328,9 +328,9 @@ func TestRemoveConn(t *testing.T) {
 		c0, c1, c2 := makeConn(connStateActive, 0), makeConn(connStateActive, 0), makeConn(connStateActive, 0)
 		p := peerForScaleDown(t, []*grpcClientConnWrapper{c0, c1, c2}, connPoolConfig{})
 		p.removeConn(c2)
-		require.Len(t, p.conns, 2)
-		assert.Same(t, c0, p.conns[0])
-		assert.Same(t, c1, p.conns[1])
+		require.Len(t, p.loadConns(), 2)
+		assert.Same(t, c0, p.loadConns()[0])
+		assert.Same(t, c1, p.loadConns()[1])
 	})
 
 	t.Run("no-op when conn not in pool", func(t *testing.T) {
@@ -339,7 +339,7 @@ func TestRemoveConn(t *testing.T) {
 		notInPool := makeConn(connStateActive, 0)
 		p := peerForScaleDown(t, []*grpcClientConnWrapper{c0, c1}, connPoolConfig{})
 		assert.NotPanics(t, func() { p.removeConn(notInPool) })
-		assert.Len(t, p.conns, 2)
+		assert.Len(t, p.loadConns(), 2)
 	})
 }
 
@@ -353,15 +353,15 @@ func TestMonitorConnWrapperCleanup(t *testing.T) {
 	w := newConnWrapper(p.ctx, cc)
 
 	p.connWg.Add(1)
-	p.mu.Lock()
-	p.conns = append(p.conns, w)
-	p.mu.Unlock()
+	p.wmu.Lock()
+	p.storeConns(append(p.loadConns(), w))
+	p.wmu.Unlock()
 
 	go p.monitorConnWrapper(w)
 
-	p.mu.RLock()
-	require.Len(t, p.conns, 1)
-	p.mu.RUnlock()
+	p.wmu.Lock()
+	require.Len(t, p.loadConns(), 1)
+	p.wmu.Unlock()
 
 	p.cancel()
 
@@ -371,9 +371,9 @@ func TestMonitorConnWrapperCleanup(t *testing.T) {
 		t.Fatal("stoppedC not closed after context cancellation")
 	}
 
-	p.mu.RLock()
-	assert.Empty(t, p.conns, "wrapper should be removed from pool on cleanup")
-	p.mu.RUnlock()
+	p.wmu.Lock()
+	assert.Empty(t, p.loadConns(), "wrapper should be removed from pool on cleanup")
+	p.wmu.Unlock()
 
 	wgDone := make(chan struct{})
 	go func() { p.connWg.Wait(); close(wgDone) }()
@@ -393,8 +393,9 @@ func TestStoppedCClosedAfterAllConnsFinish(t *testing.T) {
 
 	go func() {
 		<-p.ctx.Done()
-		p.mu.Lock()
-		p.mu.Unlock() //nolint:staticcheck
+		//lint:ignore SA2001 intentional empty critical section, provides memory barrier for connWg
+		p.wmu.Lock()
+		p.wmu.Unlock()
 		p.connWg.Wait()
 		close(p.stoppedC)
 	}()
@@ -403,9 +404,9 @@ func TestStoppedCClosedAfterAllConnsFinish(t *testing.T) {
 		cc := dialTestClientConn(t)
 		w := newConnWrapper(p.ctx, cc)
 		p.connWg.Add(1)
-		p.mu.Lock()
-		p.conns = append(p.conns, w)
-		p.mu.Unlock()
+		p.wmu.Lock()
+		p.storeConns(append(p.loadConns(), w))
+		p.wmu.Unlock()
 		go p.monitorConnWrapper(w)
 	}
 
@@ -429,7 +430,7 @@ func TestAddConnContextCancelled(t *testing.T) {
 	err := p.addConn()
 
 	require.Error(t, err)
-	assert.Empty(t, p.conns, "cancelled addConn must not add to pool")
+	assert.Empty(t, p.loadConns(), "cancelled addConn must not add to pool")
 }
 
 // --- grpcStatusToYARPCStatus ---
@@ -479,9 +480,9 @@ func TestRecomputeConnectionStatus(t *testing.T) {
 		p := peerForPool(t)
 		cc := dialTestClientConn(t)
 		w := newConnWrapper(p.ctx, cc)
-		p.mu.Lock()
-		p.conns = append(p.conns, w)
-		p.mu.Unlock()
+		p.wmu.Lock()
+		p.storeConns(append(p.loadConns(), w))
+		p.wmu.Unlock()
 
 		p.recomputeConnectionStatus()
 
@@ -499,9 +500,9 @@ func TestRecomputeConnectionStatus(t *testing.T) {
 		cc := dialTestClientConn(t)
 		w := newConnWrapper(p.ctx, cc)
 		p.connWg.Add(1)
-		p.mu.Lock()
-		p.conns = append(p.conns, w)
-		p.mu.Unlock()
+		p.wmu.Lock()
+		p.storeConns(append(p.loadConns(), w))
+		p.wmu.Unlock()
 
 		go p.monitorConnWrapper(w)
 
@@ -536,9 +537,9 @@ func TestMonitorConnWrapperMetrics(t *testing.T) {
 	cc := dialTestClientConn(t)
 	w := newConnWrapper(p.ctx, cc)
 	p.connWg.Add(1)
-	p.mu.Lock()
-	p.conns = append(p.conns, w)
-	p.mu.Unlock()
+	p.wmu.Lock()
+	p.storeConns(append(p.loadConns(), w))
+	p.wmu.Unlock()
 
 	// Reflect the initial active connection in the gauges.
 	p.refreshPoolMetrics()
