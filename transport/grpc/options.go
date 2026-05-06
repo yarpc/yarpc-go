@@ -437,12 +437,12 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 		clientMaxRecvMsgSize: defaultClientMaxRecvMsgSize,
 		clientMaxSendMsgSize: defaultClientMaxSendMsgSize,
 		// Client connection pool defaults.
-		clientConnPoolMaxConcurrentStreams: defaultClientConnPoolMaxConcurrentStreams,
-		clientConnPoolScaleUpThreshold:     defaultClientConnPoolScaleUpThreshold,
-		clientConnPoolMinConnections:       defaultClientConnPoolMinConnections,
-		clientConnPoolMaxConnections:       defaultClientConnPoolMaxConnections,
-		clientConnPoolIdleTimeout:          defaultClientConnPoolIdleTimeout,
-	}
+		clientConnPoolMaxConcurrentStreams:   defaultClientConnPoolMaxConcurrentStreams,
+		clientConnPoolScaleUpThreshold:       defaultClientConnPoolScaleUpThreshold,
+		clientConnPoolMinConnections:         defaultClientConnPoolMinConnections,
+		clientConnPoolMaxConnections:         defaultClientConnPoolMaxConnections,
+		clientConnPoolIdleTimeout:            defaultClientConnPoolIdleTimeout,
+		}
 	for _, option := range options {
 		option(transportOptions)
 	}

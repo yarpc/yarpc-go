@@ -1,0 +1,155 @@
+# gRPC Connection Pool Benchmark Results
+# Date: 2026-05-06 13:01:09 UTC
+# Repo: yarpc-go
+# Branch: feature-grpc-connection-pooling-benchmarking
+# Commit: ef8885b9
+# GOMAXPROCS: 48
+# benchtime: 500ms per benchmark
+# Command: <test-binary> -test.bench=. -test.benchtime=500ms -test.benchmem
+#
+# Columns: name  iterations  ns/op  B/op  allocs/op  description
+#
+BenchmarkIncStreamCount-48                            	225865573	         2.775 ns/op	       0 B/op	       0 allocs/op	Atomic increment of active stream count on a connection (called on RPC start)
+BenchmarkDecStreamCount-48                            	242826298	         2.506 ns/op	       0 B/op	       0 allocs/op	Atomic decrement of active stream count on a connection (called on RPC end)
+BenchmarkGetStreamCount-48                            	1000000000	         0.4051 ns/op	       0 B/op	       0 allocs/op	Atomic read of stream count (called during pickConn to find least-loaded conn)
+BenchmarkIncDecStreamCount-48                         	100000000	         5.117 ns/op	       0 B/op	       0 allocs/op	Paired inc+dec simulating the full stream lifecycle of one RPC (serial)
+BenchmarkIncDecStreamCountParallel-48                 	20436100	        34.01 ns/op	       0 B/op	       0 allocs/op	Concurrent paired inc+dec across 48 goroutines — models high-throughput RPC traffic
+BenchmarkGetState-48                                  	1000000000	         0.3445 ns/op	       0 B/op	       0 allocs/op	Atomic read of connection state (active/draining/idle)
+BenchmarkSetState-48                                  	100000000	         5.201 ns/op	       0 B/op	       0 allocs/op	Atomic write of connection state
+BenchmarkIsActive-48                                  	1000000000	         0.3806 ns/op	       0 B/op	       0 allocs/op	Check whether a connection is in the active state (hot path in pickConn)
+BenchmarkPickConn/conns=1-48                          	54512800	         9.313 ns/op	       0 B/op	       0 allocs/op	Select the least-loaded active connection from the pool (serial, varying pool sizes)
+BenchmarkPickConn/conns=2-48                          	38934368	        13.46 ns/op	       0 B/op	       0 allocs/op	Select the least-loaded active connection from the pool (serial, varying pool sizes)
+BenchmarkPickConn/conns=4-48                          	53325326	        15.56 ns/op	       0 B/op	       0 allocs/op	Select the least-loaded active connection from the pool (serial, varying pool sizes)
+BenchmarkPickConn/conns=8-48                          	34174249	        16.13 ns/op	       0 B/op	       0 allocs/op	Select the least-loaded active connection from the pool (serial, varying pool sizes)
+BenchmarkPickConn/conns=16-48                         	28456885	        19.39 ns/op	       0 B/op	       0 allocs/op	Select the least-loaded active connection from the pool (serial, varying pool sizes)
+BenchmarkPickConn/conns=32-48                         	15965966	        34.52 ns/op	       0 B/op	       0 allocs/op	Select the least-loaded active connection from the pool (serial, varying pool sizes)
+BenchmarkPickConnUniformLoad/conns=1-48               	82076434	         7.358 ns/op	       0 B/op	       0 allocs/op	pickConn when all connections have identical stream counts
+BenchmarkPickConnUniformLoad/conns=2-48               	85852250	         8.173 ns/op	       0 B/op	       0 allocs/op	pickConn when all connections have identical stream counts
+BenchmarkPickConnUniformLoad/conns=4-48               	56789092	        10.50 ns/op	       0 B/op	       0 allocs/op	pickConn when all connections have identical stream counts
+BenchmarkPickConnUniformLoad/conns=8-48               	41538570	        12.73 ns/op	       0 B/op	       0 allocs/op	pickConn when all connections have identical stream counts
+BenchmarkPickConnUniformLoad/conns=16-48              	31454160	        19.72 ns/op	       0 B/op	       0 allocs/op	pickConn when all connections have identical stream counts
+BenchmarkPickConnUniformLoad/conns=32-48              	18375424	        32.63 ns/op	       0 B/op	       0 allocs/op	pickConn when all connections have identical stream counts
+BenchmarkPickConnSkewedLoad/conns=1-48                	97212751	         6.257 ns/op	       0 B/op	       0 allocs/op	pickConn when one connection carries 10x more streams than others
+BenchmarkPickConnSkewedLoad/conns=2-48                	72588614	         7.100 ns/op	       0 B/op	       0 allocs/op	pickConn when one connection carries 10x more streams than others
+BenchmarkPickConnSkewedLoad/conns=4-48                	61695712	         8.307 ns/op	       0 B/op	       0 allocs/op	pickConn when one connection carries 10x more streams than others
+BenchmarkPickConnSkewedLoad/conns=8-48                	45113161	        12.37 ns/op	       0 B/op	       0 allocs/op	pickConn when one connection carries 10x more streams than others
+BenchmarkPickConnSkewedLoad/conns=16-48               	31942131	        17.82 ns/op	       0 B/op	       0 allocs/op	pickConn when one connection carries 10x more streams than others
+BenchmarkPickConnSkewedLoad/conns=32-48               	17359405	        29.86 ns/op	       0 B/op	       0 allocs/op	pickConn when one connection carries 10x more streams than others
+BenchmarkPickConnParallel/conns=1-48                  	15456520	        37.76 ns/op	       0 B/op	       0 allocs/op	pickConn under 48 concurrent goroutines — measures RWMutex contention
+BenchmarkPickConnParallel/conns=2-48                  	14908152	        36.75 ns/op	       0 B/op	       0 allocs/op	pickConn under 48 concurrent goroutines — measures RWMutex contention
+BenchmarkPickConnParallel/conns=4-48                  	15294196	        38.73 ns/op	       0 B/op	       0 allocs/op	pickConn under 48 concurrent goroutines — measures RWMutex contention
+BenchmarkPickConnParallel/conns=8-48                  	15281280	        39.29 ns/op	       0 B/op	       0 allocs/op	pickConn under 48 concurrent goroutines — measures RWMutex contention
+BenchmarkPickConnParallel/conns=16-48                 	14993947	        40.23 ns/op	       0 B/op	       0 allocs/op	pickConn under 48 concurrent goroutines — measures RWMutex contention
+BenchmarkPickConnParallel/conns=32-48                 	14976121	        41.89 ns/op	       0 B/op	       0 allocs/op	pickConn under 48 concurrent goroutines — measures RWMutex contention
+BenchmarkPickConnMixedStates/total_conns=1-48         	89710800	         7.647 ns/op	       0 B/op	       0 allocs/op	pickConn with a mix of active, draining, and idle connections — draining/idle skipped
+BenchmarkPickConnMixedStates/total_conns=2-48         	70197285	         8.853 ns/op	       0 B/op	       0 allocs/op	pickConn with a mix of active, draining, and idle connections — draining/idle skipped
+BenchmarkPickConnMixedStates/total_conns=4-48         	64663680	         8.630 ns/op	       0 B/op	       0 allocs/op	pickConn with a mix of active, draining, and idle connections — draining/idle skipped
+BenchmarkPickConnMixedStates/total_conns=8-48         	52310775	        11.71 ns/op	       0 B/op	       0 allocs/op	pickConn with a mix of active, draining, and idle connections — draining/idle skipped
+BenchmarkPickConnMixedStates/total_conns=16-48        	33606812	        18.89 ns/op	       0 B/op	       0 allocs/op	pickConn with a mix of active, draining, and idle connections — draining/idle skipped
+BenchmarkPickConnMixedStates/total_conns=32-48        	16541436	        31.49 ns/op	       0 B/op	       0 allocs/op	pickConn with a mix of active, draining, and idle connections — draining/idle skipped
+BenchmarkTryScaleUpDisabled-48                        	269061037	         2.273 ns/op	       0 B/op	       0 allocs/op	tryScaleUp early-exit when dynamic scaling is disabled (flag check only)
+BenchmarkTryScaleUpBelowThreshold-48                  	230333983	         2.650 ns/op	       0 B/op	       0 allocs/op	tryScaleUp when load is below the scale-up threshold — no goroutine launched
+BenchmarkTryScaleUpCASContention-48                   	156690048	         3.583 ns/op	       0 B/op	       0 allocs/op	tryScaleUp when isScaling CAS fails because another goroutine is already scaling
+BenchmarkTryScaleUpBelowThresholdParallel-48          	1000000000	         0.09884 ns/op	       0 B/op	       0 allocs/op	Concurrent tryScaleUp all returning early — zero contention below threshold
+BenchmarkFullRequestPath/conns=1-48                   	52913808	        10.45 ns/op	       0 B/op	       0 allocs/op	Complete per-RPC hot path: pickConn + incStreamCount + decStreamCount (serial)
+BenchmarkFullRequestPath/conns=2-48                   	54323424	        10.50 ns/op	       0 B/op	       0 allocs/op	Complete per-RPC hot path: pickConn + incStreamCount + decStreamCount (serial)
+BenchmarkFullRequestPath/conns=4-48                   	51622525	        12.34 ns/op	       0 B/op	       0 allocs/op	Complete per-RPC hot path: pickConn + incStreamCount + decStreamCount (serial)
+BenchmarkFullRequestPath/conns=8-48                   	35726642	        15.76 ns/op	       0 B/op	       0 allocs/op	Complete per-RPC hot path: pickConn + incStreamCount + decStreamCount (serial)
+BenchmarkFullRequestPath/conns=16-48                  	23690266	        36.67 ns/op	       0 B/op	       0 allocs/op	Complete per-RPC hot path: pickConn + incStreamCount + decStreamCount (serial)
+BenchmarkFullRequestPath/conns=32-48                  	13326703	        44.65 ns/op	       0 B/op	       0 allocs/op	Complete per-RPC hot path: pickConn + incStreamCount + decStreamCount (serial)
+BenchmarkFullRequestPathParallel/conns=1-48           	 5586182	       113.9 ns/op	       0 B/op	       0 allocs/op	Complete per-RPC hot path under 48 concurrent goroutines
+BenchmarkFullRequestPathParallel/conns=2-48           	 3885919	       161.5 ns/op	       0 B/op	       0 allocs/op	Complete per-RPC hot path under 48 concurrent goroutines
+BenchmarkFullRequestPathParallel/conns=4-48           	 2602209	       226.7 ns/op	       0 B/op	       0 allocs/op	Complete per-RPC hot path under 48 concurrent goroutines
+BenchmarkFullRequestPathParallel/conns=8-48           	 2350573	       225.7 ns/op	       0 B/op	       0 allocs/op	Complete per-RPC hot path under 48 concurrent goroutines
+BenchmarkFullRequestPathParallel/conns=16-48          	 3066474	       201.3 ns/op	       0 B/op	       0 allocs/op	Complete per-RPC hot path under 48 concurrent goroutines
+BenchmarkFullRequestPathParallel/conns=32-48          	 4598252	       129.7 ns/op	       0 B/op	       0 allocs/op	Complete per-RPC hot path under 48 concurrent goroutines
+BenchmarkFullRequestPathScalingDisabled/conns=1-48    	52332507	        11.00 ns/op	       0 B/op	       0 allocs/op	Full RPC hot path with dynamic scaling disabled — baseline comparison
+BenchmarkFullRequestPathScalingDisabled/conns=2-48    	53831216	        10.58 ns/op	       0 B/op	       0 allocs/op	Full RPC hot path with dynamic scaling disabled — baseline comparison
+BenchmarkFullRequestPathScalingDisabled/conns=4-48    	50384394	        10.86 ns/op	       0 B/op	       0 allocs/op	Full RPC hot path with dynamic scaling disabled — baseline comparison
+BenchmarkFullRequestPathScalingDisabled/conns=8-48    	39967414	        15.94 ns/op	       0 B/op	       0 allocs/op	Full RPC hot path with dynamic scaling disabled — baseline comparison
+BenchmarkFullRequestPathScalingDisabled/conns=16-48   	24925237	        21.58 ns/op	       0 B/op	       0 allocs/op	Full RPC hot path with dynamic scaling disabled — baseline comparison
+BenchmarkFullRequestPathScalingDisabled/conns=32-48   	18107348	        37.33 ns/op	       0 B/op	       0 allocs/op	Full RPC hot path with dynamic scaling disabled — baseline comparison
+BenchmarkFullRequestPathScalingDisabledParallel/conns=1-48         	 5803170	       108.1 ns/op	       0 B/op	       0 allocs/op	Concurrent full RPC path with scaling disabled — baseline comparison
+BenchmarkFullRequestPathScalingDisabledParallel/conns=2-48         	 3900379	       145.4 ns/op	       0 B/op	       0 allocs/op	Concurrent full RPC path with scaling disabled — baseline comparison
+BenchmarkFullRequestPathScalingDisabledParallel/conns=4-48         	 3037851	       197.7 ns/op	       0 B/op	       0 allocs/op	Concurrent full RPC path with scaling disabled — baseline comparison
+BenchmarkFullRequestPathScalingDisabledParallel/conns=8-48         	 2770527	       223.1 ns/op	       0 B/op	       0 allocs/op	Concurrent full RPC path with scaling disabled — baseline comparison
+BenchmarkFullRequestPathScalingDisabledParallel/conns=16-48        	 4319090	       166.3 ns/op	       0 B/op	       0 allocs/op	Concurrent full RPC path with scaling disabled — baseline comparison
+BenchmarkFullRequestPathScalingDisabledParallel/conns=32-48        	 5124489	       106.9 ns/op	       0 B/op	       0 allocs/op	Concurrent full RPC path with scaling disabled — baseline comparison
+BenchmarkMaybeScaleDownAtMinConnections-48                         	102652918	         5.610 ns/op	       0 B/op	       0 allocs/op	maybeScaleDown early-exit when pool is already at minConnections
+BenchmarkMaybeScaleDownHighLoad/conns=1-48                         	110430074	         5.534 ns/op	       0 B/op	       0 allocs/op	maybeScaleDown when aggregate load is too high to safely drain a connection
+BenchmarkMaybeScaleDownHighLoad/conns=2-48                         	62599186	         8.455 ns/op	       0 B/op	       0 allocs/op	maybeScaleDown when aggregate load is too high to safely drain a connection
+BenchmarkMaybeScaleDownHighLoad/conns=4-48                         	49801692	        12.14 ns/op	       0 B/op	       0 allocs/op	maybeScaleDown when aggregate load is too high to safely drain a connection
+BenchmarkMaybeScaleDownHighLoad/conns=8-48                         	 7077280	        93.40 ns/op	      64 B/op	       1 allocs/op	maybeScaleDown when aggregate load is too high to safely drain a connection
+BenchmarkMaybeScaleDownHighLoad/conns=16-48                        	 4097740	       146.7 ns/op	     128 B/op	       1 allocs/op	maybeScaleDown when aggregate load is too high to safely drain a connection
+BenchmarkMaybeScaleDownHighLoad/conns=32-48                        	 2339815	       257.2 ns/op	     256 B/op	       1 allocs/op	maybeScaleDown when aggregate load is too high to safely drain a connection
+BenchmarkMaybeScaleDownTriggered/conns=2-48                        	 2999949	       187.6 ns/op	     144 B/op	       2 allocs/op	maybeScaleDown actually marks the most-loaded connection for draining
+BenchmarkMaybeScaleDownTriggered/conns=4-48                        	 3074146	       199.0 ns/op	     144 B/op	       2 allocs/op	maybeScaleDown actually marks the most-loaded connection for draining
+BenchmarkMaybeScaleDownTriggered/conns=8-48                        	 2209888	       269.8 ns/op	     208 B/op	       3 allocs/op	maybeScaleDown actually marks the most-loaded connection for draining
+BenchmarkMaybeScaleDownTriggered/conns=16-48                       	 1728268	       378.6 ns/op	     272 B/op	       3 allocs/op	maybeScaleDown actually marks the most-loaded connection for draining
+BenchmarkMaybeScaleDownTriggered/conns=32-48                       	 1000000	       518.2 ns/op	     400 B/op	       3 allocs/op	maybeScaleDown actually marks the most-loaded connection for draining
+BenchmarkCleanupIdleConnsEmpty-48                                  	 9593469	        61.83 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns with an empty pool — just an atomic load and return
+BenchmarkCleanupIdleConnsAllActive/conns=1-48                      	 9495376	        63.44 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns when all connections are active — scan only, no transitions
+BenchmarkCleanupIdleConnsAllActive/conns=2-48                      	 9030298	        64.57 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns when all connections are active — scan only, no transitions
+BenchmarkCleanupIdleConnsAllActive/conns=4-48                      	 7990591	        77.54 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns when all connections are active — scan only, no transitions
+BenchmarkCleanupIdleConnsAllActive/conns=8-48                      	 5648511	        89.54 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns when all connections are active — scan only, no transitions
+BenchmarkCleanupIdleConnsAllActive/conns=16-48                     	 5100578	       125.3 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns when all connections are active — scan only, no transitions
+BenchmarkCleanupIdleConnsAllActive/conns=32-48                     	 3069272	       171.7 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns when all connections are active — scan only, no transitions
+BenchmarkCleanupIdleConnsDraining/conns=1-48                       	 3825915	       133.0 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns transitions all draining connections with 0 streams to idle
+BenchmarkCleanupIdleConnsDraining/conns=2-48                       	 2887923	       207.8 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns transitions all draining connections with 0 streams to idle
+BenchmarkCleanupIdleConnsDraining/conns=4-48                       	 1715161	       373.6 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns transitions all draining connections with 0 streams to idle
+BenchmarkCleanupIdleConnsDraining/conns=8-48                       	  840267	       788.7 ns/op	      64 B/op	       1 allocs/op	cleanupIdleConns transitions all draining connections with 0 streams to idle
+BenchmarkCleanupIdleConnsDraining/conns=16-48                      	  414339	      1606 ns/op	     192 B/op	       2 allocs/op	cleanupIdleConns transitions all draining connections with 0 streams to idle
+BenchmarkCleanupIdleConnsDraining/conns=32-48                      	  205994	      3093 ns/op	     448 B/op	       3 allocs/op	cleanupIdleConns transitions all draining connections with 0 streams to idle
+BenchmarkCleanupIdleConnsMixed/total=1-48                          	 8086374	        65.78 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns with a realistic mix: active, draining, idle within/past timeout
+BenchmarkCleanupIdleConnsMixed/total=2-48                          	 8979228	        68.16 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns with a realistic mix: active, draining, idle within/past timeout
+BenchmarkCleanupIdleConnsMixed/total=4-48                          	 1694426	       349.5 ns/op	     144 B/op	       2 allocs/op	cleanupIdleConns with a realistic mix: active, draining, idle within/past timeout
+BenchmarkCleanupIdleConnsMixed/total=8-48                          	  856989	       622.0 ns/op	     288 B/op	       4 allocs/op	cleanupIdleConns with a realistic mix: active, draining, idle within/past timeout
+BenchmarkCleanupIdleConnsMixed/total=16-48                         	  460507	      1307 ns/op	     576 B/op	       8 allocs/op	cleanupIdleConns with a realistic mix: active, draining, idle within/past timeout
+BenchmarkCleanupIdleConnsMixed/total=32-48                         	  203683	      2758 ns/op	    1280 B/op	      18 allocs/op	cleanupIdleConns with a realistic mix: active, draining, idle within/past timeout
+BenchmarkReactivateIdleConnNoIdle/conns=1-48                       	52866104	        11.11 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scans the pool but finds no idle connection (miss path)
+BenchmarkReactivateIdleConnNoIdle/conns=2-48                       	47456118	        11.90 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scans the pool but finds no idle connection (miss path)
+BenchmarkReactivateIdleConnNoIdle/conns=4-48                       	46021660	        12.50 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scans the pool but finds no idle connection (miss path)
+BenchmarkReactivateIdleConnNoIdle/conns=8-48                       	34288930	        16.23 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scans the pool but finds no idle connection (miss path)
+BenchmarkReactivateIdleConnNoIdle/conns=16-48                      	26763838	        22.32 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scans the pool but finds no idle connection (miss path)
+BenchmarkReactivateIdleConnNoIdle/conns=32-48                      	17721542	        34.61 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scans the pool but finds no idle connection (miss path)
+BenchmarkReactivateIdleConnSuccess/conns=1-48                      	33283614	        17.88 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn finds and reactivates idle conn at position 0 (best case)
+BenchmarkReactivateIdleConnSuccess/conns=2-48                      	33664071	        17.83 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn finds and reactivates idle conn at position 0 (best case)
+BenchmarkReactivateIdleConnSuccess/conns=4-48                      	33458245	        18.62 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn finds and reactivates idle conn at position 0 (best case)
+BenchmarkReactivateIdleConnSuccess/conns=8-48                      	32595182	        18.13 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn finds and reactivates idle conn at position 0 (best case)
+BenchmarkReactivateIdleConnSuccess/conns=16-48                     	33358150	        17.94 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn finds and reactivates idle conn at position 0 (best case)
+BenchmarkReactivateIdleConnSuccess/conns=32-48                     	33510793	        17.89 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn finds and reactivates idle conn at position 0 (best case)
+BenchmarkReactivateIdleConnLastPosition/conns=1-48                 	33500298	        17.68 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scans all active conns before finding idle at last position (worst case)
+BenchmarkReactivateIdleConnLastPosition/conns=2-48                 	33700881	        17.70 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scans all active conns before finding idle at last position (worst case)
+BenchmarkReactivateIdleConnLastPosition/conns=4-48                 	33318787	        19.15 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scans all active conns before finding idle at last position (worst case)
+BenchmarkReactivateIdleConnLastPosition/conns=8-48                 	31483995	        19.48 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scans all active conns before finding idle at last position (worst case)
+BenchmarkReactivateIdleConnLastPosition/conns=16-48                	21189877	        27.12 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scans all active conns before finding idle at last position (worst case)
+BenchmarkReactivateIdleConnLastPosition/conns=32-48                	13149864	        44.48 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scans all active conns before finding idle at last position (worst case)
+BenchmarkEvaluateScaling/conns=1-48                                	 8997169	        67.95 ns/op	       0 B/op	       0 allocs/op	Full background monitor tick: cleanupIdleConns + maybeScaleDown (all active, no transitions)
+BenchmarkEvaluateScaling/conns=2-48                                	 8612515	        70.23 ns/op	       0 B/op	       0 allocs/op	Full background monitor tick: cleanupIdleConns + maybeScaleDown (all active, no transitions)
+BenchmarkEvaluateScaling/conns=4-48                                	 7060672	        86.65 ns/op	       0 B/op	       0 allocs/op	Full background monitor tick: cleanupIdleConns + maybeScaleDown (all active, no transitions)
+BenchmarkEvaluateScaling/conns=8-48                                	 3577052	       164.8 ns/op	      64 B/op	       1 allocs/op	Full background monitor tick: cleanupIdleConns + maybeScaleDown (all active, no transitions)
+BenchmarkEvaluateScaling/conns=16-48                               	 2426602	       244.7 ns/op	     128 B/op	       1 allocs/op	Full background monitor tick: cleanupIdleConns + maybeScaleDown (all active, no transitions)
+BenchmarkEvaluateScaling/conns=32-48                               	 1507206	       400.3 ns/op	     256 B/op	       1 allocs/op	Full background monitor tick: cleanupIdleConns + maybeScaleDown (all active, no transitions)
+BenchmarkEvaluateScalingWithDraining/conns=1-48                    	 3085693	       245.5 ns/op	       0 B/op	       0 allocs/op	Monitor tick where half the connections are draining and transition to idle
+BenchmarkEvaluateScalingWithDraining/conns=2-48                    	 1785140	       393.7 ns/op	       0 B/op	       0 allocs/op	Monitor tick where half the connections are draining and transition to idle
+BenchmarkEvaluateScalingWithDraining/conns=4-48                    	 1265235	       522.1 ns/op	       0 B/op	       0 allocs/op	Monitor tick where half the connections are draining and transition to idle
+BenchmarkEvaluateScalingWithDraining/conns=8-48                    	  466380	      1090 ns/op	      64 B/op	       1 allocs/op	Monitor tick where half the connections are draining and transition to idle
+BenchmarkEvaluateScalingWithDraining/conns=16-48                   	  340195	      1781 ns/op	     192 B/op	       2 allocs/op	Monitor tick where half the connections are draining and transition to idle
+BenchmarkEvaluateScalingWithDraining/conns=32-48                   	  229327	      2616 ns/op	     448 B/op	       3 allocs/op	Monitor tick where half the connections are draining and transition to idle
+BenchmarkRefreshPoolMetrics/conns=1-48                             	113773402	         5.163 ns/op	       0 B/op	       0 allocs/op	Update active/draining/idle gauge metrics after any pool state change
+BenchmarkRefreshPoolMetrics/conns=2-48                             	93281275	         5.874 ns/op	       0 B/op	       0 allocs/op	Update active/draining/idle gauge metrics after any pool state change
+BenchmarkRefreshPoolMetrics/conns=4-48                             	83732968	         7.160 ns/op	       0 B/op	       0 allocs/op	Update active/draining/idle gauge metrics after any pool state change
+BenchmarkRefreshPoolMetrics/conns=8-48                             	53307750	         9.903 ns/op	       0 B/op	       0 allocs/op	Update active/draining/idle gauge metrics after any pool state change
+BenchmarkRefreshPoolMetrics/conns=16-48                            	36368907	        15.46 ns/op	       0 B/op	       0 allocs/op	Update active/draining/idle gauge metrics after any pool state change
+BenchmarkRefreshPoolMetrics/conns=32-48                            	20821370	        28.46 ns/op	       0 B/op	       0 allocs/op	Update active/draining/idle gauge metrics after any pool state change
+BenchmarkPickConnWriteContention/conns=1-48                        	 9063385	        64.12 ns/op	       0 B/op	       0 allocs/op	pickConn readers competing with a concurrent pool writer (scale-up simulation)
+BenchmarkPickConnWriteContention/conns=2-48                        	 8680855	        69.67 ns/op	       0 B/op	       0 allocs/op	pickConn readers competing with a concurrent pool writer (scale-up simulation)
+BenchmarkPickConnWriteContention/conns=4-48                        	 7571689	        80.38 ns/op	       0 B/op	       0 allocs/op	pickConn readers competing with a concurrent pool writer (scale-up simulation)
+BenchmarkPickConnWriteContention/conns=8-48                        	 6399208	        91.83 ns/op	       0 B/op	       0 allocs/op	pickConn readers competing with a concurrent pool writer (scale-up simulation)
+BenchmarkPickConnWriteContention/conns=16-48                       	 5493898	       112.2 ns/op	       0 B/op	       0 allocs/op	pickConn readers competing with a concurrent pool writer (scale-up simulation)
+BenchmarkPickConnWriteContention/conns=32-48                       	 4049648	       147.0 ns/op	       0 B/op	       0 allocs/op	pickConn readers competing with a concurrent pool writer (scale-up simulation)
+BenchmarkConnPoolConfigConstruction-48                             	1000000000	         0.3388 ns/op	       0 B/op	       0 allocs/op	Build connPoolConfig struct from transport options — happens once per peer creation
+BenchmarkSetIdleNow-48                                             	 9658578	        61.24 ns/op	       0 B/op	       0 allocs/op	Record the timestamp when a connection transitions to idle
+BenchmarkIdleSince-48                                              	955967743	         0.6355 ns/op	       0 B/op	       0 allocs/op	Read when a connection became idle (used by cleanupIdleConns for timeout check)
+BenchmarkRunScalingMonitorOverhead-48                              	  316660	      1688 ns/op	     672 B/op	       8 allocs/op	Goroutine startup + context cancellation latency of the scaling monitor lifecycle
+BenchmarkThresholdComputation-48                                   	1000000000	         0.3584 ns/op	       0 B/op	       0 allocs/op	Compute scale-up threshold: float64 multiply + int32 cast (runs on every tryScaleUp call)
