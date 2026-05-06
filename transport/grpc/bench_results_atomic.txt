@@ -1,0 +1,152 @@
+# gRPC Connection Pool Benchmark Results — Atomic Implementation
+# Date: 2026-05-06
+# Branch: sanya-sharma/atomic-integers-swap
+# Implementation: atomic.Pointer[[]T] copy-on-write (lock-free reads)
+# GOMAXPROCS: 48  |  benchtime: 500ms
+#
+# Columns: name  iterations  ns/op  B/op  allocs/op  description
+#
+BenchmarkIncStreamCount-48                            	240865375	         2.581 ns/op	       0 B/op	       0 allocs/op	Atomic increment of active stream count on a connection (called on RPC start)
+BenchmarkDecStreamCount-48                            	243075058	         2.548 ns/op	       0 B/op	       0 allocs/op	Atomic decrement of active stream count on a connection (called on RPC end)
+BenchmarkGetStreamCount-48                            	1000000000	         0.3256 ns/op	       0 B/op	       0 allocs/op	Atomic read of stream count (called during pickConn to find least-loaded conn)
+BenchmarkIncDecStreamCount-48                         	100000000	         5.063 ns/op	       0 B/op	       0 allocs/op	Paired inc+dec simulating the full stream lifecycle of one RPC (serial)
+BenchmarkIncDecStreamCountParallel-48                 	20555281	        24.53 ns/op	       0 B/op	       0 allocs/op	Concurrent paired inc+dec across 48 goroutines — models high-throughput RPC traffic
+BenchmarkGetState-48                                  	1000000000	         0.3272 ns/op	       0 B/op	       0 allocs/op	Atomic read of connection state (active/draining/idle)
+BenchmarkSetState-48                                  	120066482	         4.991 ns/op	       0 B/op	       0 allocs/op	Atomic write of connection state
+BenchmarkIsActive-48                                  	1000000000	         0.3274 ns/op	       0 B/op	       0 allocs/op	Check whether a connection is in the active state (hot path in pickConn)
+BenchmarkPickConn/conns=1-48                          	187608150	         3.199 ns/op	       0 B/op	       0 allocs/op	Select the least-loaded active conn from the pool — lock-free atomic.Pointer.Load() (serial)
+BenchmarkPickConn/conns=2-48                          	152499246	         4.309 ns/op	       0 B/op	       0 allocs/op	Select the least-loaded active conn from the pool — lock-free atomic.Pointer.Load() (serial)
+BenchmarkPickConn/conns=4-48                          	109875028	         5.646 ns/op	       0 B/op	       0 allocs/op	Select the least-loaded active conn from the pool — lock-free atomic.Pointer.Load() (serial)
+BenchmarkPickConn/conns=8-48                          	65897286	         8.548 ns/op	       0 B/op	       0 allocs/op	Select the least-loaded active conn from the pool — lock-free atomic.Pointer.Load() (serial)
+BenchmarkPickConn/conns=16-48                         	38082207	        15.32 ns/op	       0 B/op	       0 allocs/op	Select the least-loaded active conn from the pool — lock-free atomic.Pointer.Load() (serial)
+BenchmarkPickConn/conns=32-48                         	20584237	        26.00 ns/op	       0 B/op	       0 allocs/op	Select the least-loaded active conn from the pool — lock-free atomic.Pointer.Load() (serial)
+BenchmarkPickConnUniformLoad/conns=1-48               	188124478	         3.421 ns/op	       0 B/op	       0 allocs/op	pickConn with equal stream counts on all conns — lock-free
+BenchmarkPickConnUniformLoad/conns=2-48               	154984633	         3.973 ns/op	       0 B/op	       0 allocs/op	pickConn with equal stream counts on all conns — lock-free
+BenchmarkPickConnUniformLoad/conns=4-48               	100000000	         5.441 ns/op	       0 B/op	       0 allocs/op	pickConn with equal stream counts on all conns — lock-free
+BenchmarkPickConnUniformLoad/conns=8-48               	57136604	         8.798 ns/op	       0 B/op	       0 allocs/op	pickConn with equal stream counts on all conns — lock-free
+BenchmarkPickConnUniformLoad/conns=16-48              	41263374	        15.24 ns/op	       0 B/op	       0 allocs/op	pickConn with equal stream counts on all conns — lock-free
+BenchmarkPickConnUniformLoad/conns=32-48              	23314408	        28.30 ns/op	       0 B/op	       0 allocs/op	pickConn with equal stream counts on all conns — lock-free
+BenchmarkPickConnSkewedLoad/conns=1-48                	187040838	         3.160 ns/op	       0 B/op	       0 allocs/op	pickConn where one conn has much higher load — lock-free
+BenchmarkPickConnSkewedLoad/conns=2-48                	155921596	         3.901 ns/op	       0 B/op	       0 allocs/op	pickConn where one conn has much higher load — lock-free
+BenchmarkPickConnSkewedLoad/conns=4-48                	99208809	         5.275 ns/op	       0 B/op	       0 allocs/op	pickConn where one conn has much higher load — lock-free
+BenchmarkPickConnSkewedLoad/conns=8-48                	69155901	         8.255 ns/op	       0 B/op	       0 allocs/op	pickConn where one conn has much higher load — lock-free
+BenchmarkPickConnSkewedLoad/conns=16-48               	39412156	        14.77 ns/op	       0 B/op	       0 allocs/op	pickConn where one conn has much higher load — lock-free
+BenchmarkPickConnSkewedLoad/conns=32-48               	20436427	        27.36 ns/op	       0 B/op	       0 allocs/op	pickConn where one conn has much higher load — lock-free
+BenchmarkPickConnParallel/conns=1-48                  	1000000000	         0.08728 ns/op	       0 B/op	       0 allocs/op	pickConn under 48 concurrent goroutines — no RWMutex contention
+BenchmarkPickConnParallel/conns=2-48                  	1000000000	         0.1160 ns/op	       0 B/op	       0 allocs/op	pickConn under 48 concurrent goroutines — no RWMutex contention
+BenchmarkPickConnParallel/conns=4-48                  	1000000000	         0.1785 ns/op	       0 B/op	       0 allocs/op	pickConn under 48 concurrent goroutines — no RWMutex contention
+BenchmarkPickConnParallel/conns=8-48                  	1000000000	         0.2979 ns/op	       0 B/op	       0 allocs/op	pickConn under 48 concurrent goroutines — no RWMutex contention
+BenchmarkPickConnParallel/conns=16-48                 	1000000000	         0.4877 ns/op	       0 B/op	       0 allocs/op	pickConn under 48 concurrent goroutines — no RWMutex contention
+BenchmarkPickConnParallel/conns=32-48                 	691432296	         0.9856 ns/op	       0 B/op	       0 allocs/op	pickConn under 48 concurrent goroutines — no RWMutex contention
+BenchmarkPickConnMixedStates/total_conns=1-48         	188394230	         3.356 ns/op	       0 B/op	       0 allocs/op	pickConn with mix of active/draining/idle conns — draining/idle skipped
+BenchmarkPickConnMixedStates/total_conns=2-48         	154272279	         3.993 ns/op	       0 B/op	       0 allocs/op	pickConn with mix of active/draining/idle conns — draining/idle skipped
+BenchmarkPickConnMixedStates/total_conns=4-48         	100148318	         6.699 ns/op	       0 B/op	       0 allocs/op	pickConn with mix of active/draining/idle conns — draining/idle skipped
+BenchmarkPickConnMixedStates/total_conns=8-48         	58462831	        10.14 ns/op	       0 B/op	       0 allocs/op	pickConn with mix of active/draining/idle conns — draining/idle skipped
+BenchmarkPickConnMixedStates/total_conns=16-48        	32923690	        17.99 ns/op	       0 B/op	       0 allocs/op	pickConn with mix of active/draining/idle conns — draining/idle skipped
+BenchmarkPickConnMixedStates/total_conns=32-48        	21827263	        28.10 ns/op	       0 B/op	       0 allocs/op	pickConn with mix of active/draining/idle conns — draining/idle skipped
+BenchmarkTryScaleUpDisabled-48                        	242237052	         2.260 ns/op	       0 B/op	       0 allocs/op	tryScaleUp early-exit when scaling is disabled
+BenchmarkTryScaleUpBelowThreshold-48                  	270548131	         2.397 ns/op	       0 B/op	       0 allocs/op	tryScaleUp when load is below scale-up threshold — no goroutine launched
+BenchmarkTryScaleUpCASContention-48                   	169989900	         3.575 ns/op	       0 B/op	       0 allocs/op	tryScaleUp CAS when isScaling flag is already set
+BenchmarkTryScaleUpBelowThresholdParallel-48          	1000000000	         0.07720 ns/op	       0 B/op	       0 allocs/op	Concurrent tryScaleUp all returning early — zero contention
+BenchmarkFullRequestPath/conns=1-48                   	100000000	         5.213 ns/op	       0 B/op	       0 allocs/op	Full per-RPC hot path: lock-free pickConn + atomic inc + atomic dec (serial)
+BenchmarkFullRequestPath/conns=2-48                   	94336803	         5.960 ns/op	       0 B/op	       0 allocs/op	Full per-RPC hot path: lock-free pickConn + atomic inc + atomic dec (serial)
+BenchmarkFullRequestPath/conns=4-48                   	67711996	         9.450 ns/op	       0 B/op	       0 allocs/op	Full per-RPC hot path: lock-free pickConn + atomic inc + atomic dec (serial)
+BenchmarkFullRequestPath/conns=8-48                   	48733659	        12.05 ns/op	       0 B/op	       0 allocs/op	Full per-RPC hot path: lock-free pickConn + atomic inc + atomic dec (serial)
+BenchmarkFullRequestPath/conns=16-48                  	34297044	        16.94 ns/op	       0 B/op	       0 allocs/op	Full per-RPC hot path: lock-free pickConn + atomic inc + atomic dec (serial)
+BenchmarkFullRequestPath/conns=32-48                  	20224711	        31.74 ns/op	       0 B/op	       0 allocs/op	Full per-RPC hot path: lock-free pickConn + atomic inc + atomic dec (serial)
+BenchmarkFullRequestPathParallel/conns=1-48           	10759869	        52.23 ns/op	       0 B/op	       0 allocs/op	Full per-RPC hot path under 48 concurrent goroutines — no reader lock
+BenchmarkFullRequestPathParallel/conns=2-48           	 4610530	       130.1 ns/op	       0 B/op	       0 allocs/op	Full per-RPC hot path under 48 concurrent goroutines — no reader lock
+BenchmarkFullRequestPathParallel/conns=4-48           	 2916585	       201.1 ns/op	       0 B/op	       0 allocs/op	Full per-RPC hot path under 48 concurrent goroutines — no reader lock
+BenchmarkFullRequestPathParallel/conns=8-48           	 2340187	       262.2 ns/op	       0 B/op	       0 allocs/op	Full per-RPC hot path under 48 concurrent goroutines — no reader lock
+BenchmarkFullRequestPathParallel/conns=16-48          	 2744914	       220.1 ns/op	       0 B/op	       0 allocs/op	Full per-RPC hot path under 48 concurrent goroutines — no reader lock
+BenchmarkFullRequestPathParallel/conns=32-48          	 4316259	       136.8 ns/op	       0 B/op	       0 allocs/op	Full per-RPC hot path under 48 concurrent goroutines — no reader lock
+BenchmarkFullRequestPathScalingDisabled/conns=1-48    	122601818	         5.005 ns/op	       0 B/op	       0 allocs/op	Full RPC hot path with dynamic scaling off — baseline comparison
+BenchmarkFullRequestPathScalingDisabled/conns=2-48    	104829250	         5.683 ns/op	       0 B/op	       0 allocs/op	Full RPC hot path with dynamic scaling off — baseline comparison
+BenchmarkFullRequestPathScalingDisabled/conns=4-48    	67291814	         8.391 ns/op	       0 B/op	       0 allocs/op	Full RPC hot path with dynamic scaling off — baseline comparison
+BenchmarkFullRequestPathScalingDisabled/conns=8-48    	53486461	        12.03 ns/op	       0 B/op	       0 allocs/op	Full RPC hot path with dynamic scaling off — baseline comparison
+BenchmarkFullRequestPathScalingDisabled/conns=16-48   	32381256	        16.71 ns/op	       0 B/op	       0 allocs/op	Full RPC hot path with dynamic scaling off — baseline comparison
+BenchmarkFullRequestPathScalingDisabled/conns=32-48   	20263788	        27.46 ns/op	       0 B/op	       0 allocs/op	Full RPC hot path with dynamic scaling off — baseline comparison
+BenchmarkFullRequestPathScalingDisabledParallel/conns=1-48         	17373690	        29.43 ns/op	       0 B/op	       0 allocs/op	Concurrent RPC path with scaling off — baseline comparison
+BenchmarkFullRequestPathScalingDisabledParallel/conns=2-48         	 4764682	       124.5 ns/op	       0 B/op	       0 allocs/op	Concurrent RPC path with scaling off — baseline comparison
+BenchmarkFullRequestPathScalingDisabledParallel/conns=4-48         	 3100359	       208.0 ns/op	       0 B/op	       0 allocs/op	Concurrent RPC path with scaling off — baseline comparison
+BenchmarkFullRequestPathScalingDisabledParallel/conns=8-48         	 2396966	       248.8 ns/op	       0 B/op	       0 allocs/op	Concurrent RPC path with scaling off — baseline comparison
+BenchmarkFullRequestPathScalingDisabledParallel/conns=16-48        	 2739934	       231.0 ns/op	       0 B/op	       0 allocs/op	Concurrent RPC path with scaling off — baseline comparison
+BenchmarkFullRequestPathScalingDisabledParallel/conns=32-48        	 4437866	       134.0 ns/op	       0 B/op	       0 allocs/op	Concurrent RPC path with scaling off — baseline comparison
+BenchmarkMaybeScaleDownAtMinConnections-48                         	125757660	         5.045 ns/op	       0 B/op	       0 allocs/op	maybeScaleDown early-exit at minConnections — lock-free snapshot scan
+BenchmarkMaybeScaleDownHighLoad/conns=1-48                         	119375533	         4.755 ns/op	       0 B/op	       0 allocs/op	maybeScaleDown when load too high to drain — lock-free scan
+BenchmarkMaybeScaleDownHighLoad/conns=2-48                         	67900040	         7.748 ns/op	       0 B/op	       0 allocs/op	maybeScaleDown when load too high to drain — lock-free scan
+BenchmarkMaybeScaleDownHighLoad/conns=4-48                         	48015944	        11.55 ns/op	       0 B/op	       0 allocs/op	maybeScaleDown when load too high to drain — lock-free scan
+BenchmarkMaybeScaleDownHighLoad/conns=8-48                         	 7388025	        84.80 ns/op	      64 B/op	       1 allocs/op	maybeScaleDown when load too high to drain — lock-free scan
+BenchmarkMaybeScaleDownHighLoad/conns=16-48                        	 4400336	       137.6 ns/op	     128 B/op	       1 allocs/op	maybeScaleDown when load too high to drain — lock-free scan
+BenchmarkMaybeScaleDownHighLoad/conns=32-48                        	 2542669	       236.4 ns/op	     256 B/op	       1 allocs/op	maybeScaleDown when load too high to drain — lock-free scan
+BenchmarkMaybeScaleDownTriggered/conns=2-48                        	 3694747	       167.5 ns/op	     144 B/op	       2 allocs/op	maybeScaleDown marks a conn for draining — direct atomic setState, no write lock
+BenchmarkMaybeScaleDownTriggered/conns=4-48                        	 3423657	       179.9 ns/op	     144 B/op	       2 allocs/op	maybeScaleDown marks a conn for draining — direct atomic setState, no write lock
+BenchmarkMaybeScaleDownTriggered/conns=8-48                        	 2414682	       252.7 ns/op	     208 B/op	       3 allocs/op	maybeScaleDown marks a conn for draining — direct atomic setState, no write lock
+BenchmarkMaybeScaleDownTriggered/conns=16-48                       	 1771551	       332.1 ns/op	     272 B/op	       3 allocs/op	maybeScaleDown marks a conn for draining — direct atomic setState, no write lock
+BenchmarkMaybeScaleDownTriggered/conns=32-48                       	 1224925	       489.0 ns/op	     400 B/op	       3 allocs/op	maybeScaleDown marks a conn for draining — direct atomic setState, no write lock
+BenchmarkCleanupIdleConnsEmpty-48                                  	10241773	        59.39 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns with empty pool — lock-free fast path
+BenchmarkCleanupIdleConnsAllActive/conns=1-48                      	 9903139	        61.71 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns when all conns are active — lock-free scan only
+BenchmarkCleanupIdleConnsAllActive/conns=2-48                      	 9608991	        68.71 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns when all conns are active — lock-free scan only
+BenchmarkCleanupIdleConnsAllActive/conns=4-48                      	 8686651	        68.97 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns when all conns are active — lock-free scan only
+BenchmarkCleanupIdleConnsAllActive/conns=8-48                      	 7343634	        90.38 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns when all conns are active — lock-free scan only
+BenchmarkCleanupIdleConnsAllActive/conns=16-48                     	 5718798	       104.1 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns when all conns are active — lock-free scan only
+BenchmarkCleanupIdleConnsAllActive/conns=32-48                     	 3851772	       157.3 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns when all conns are active — lock-free scan only
+BenchmarkCleanupIdleConnsDraining/conns=1-48                       	 4579509	       135.9 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns transitions draining→idle — direct atomic setState, no mutex
+BenchmarkCleanupIdleConnsDraining/conns=2-48                       	 3029784	       199.5 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns transitions draining→idle — direct atomic setState, no mutex
+BenchmarkCleanupIdleConnsDraining/conns=4-48                       	 1766409	       331.2 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns transitions draining→idle — direct atomic setState, no mutex
+BenchmarkCleanupIdleConnsDraining/conns=8-48                       	  918336	       654.2 ns/op	      64 B/op	       1 allocs/op	cleanupIdleConns transitions draining→idle — direct atomic setState, no mutex
+BenchmarkCleanupIdleConnsDraining/conns=16-48                      	  456468	      1312 ns/op	     192 B/op	       2 allocs/op	cleanupIdleConns transitions draining→idle — direct atomic setState, no mutex
+BenchmarkCleanupIdleConnsDraining/conns=32-48                      	  216495	      2698 ns/op	     448 B/op	       3 allocs/op	cleanupIdleConns transitions draining→idle — direct atomic setState, no mutex
+BenchmarkCleanupIdleConnsMixed/total=1-48                          	 9705696	        62.43 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns with realistic mix: active, draining, idle within/past timeout
+BenchmarkCleanupIdleConnsMixed/total=2-48                          	 9242726	        62.50 ns/op	       0 B/op	       0 allocs/op	cleanupIdleConns with realistic mix: active, draining, idle within/past timeout
+BenchmarkCleanupIdleConnsMixed/total=4-48                          	 1887399	       331.8 ns/op	     144 B/op	       2 allocs/op	cleanupIdleConns with realistic mix: active, draining, idle within/past timeout
+BenchmarkCleanupIdleConnsMixed/total=8-48                          	 1000000	       596.0 ns/op	     288 B/op	       4 allocs/op	cleanupIdleConns with realistic mix: active, draining, idle within/past timeout
+BenchmarkCleanupIdleConnsMixed/total=16-48                         	  535148	      1178 ns/op	     576 B/op	       8 allocs/op	cleanupIdleConns with realistic mix: active, draining, idle within/past timeout
+BenchmarkCleanupIdleConnsMixed/total=32-48                         	  246012	      2553 ns/op	    1280 B/op	      18 allocs/op	cleanupIdleConns with realistic mix: active, draining, idle within/past timeout
+BenchmarkReactivateIdleConnNoIdle/conns=1-48                       	166913672	         4.195 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scan with no idle conns — lock-free miss path
+BenchmarkReactivateIdleConnNoIdle/conns=2-48                       	149635326	         4.044 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scan with no idle conns — lock-free miss path
+BenchmarkReactivateIdleConnNoIdle/conns=4-48                       	135094761	         4.548 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scan with no idle conns — lock-free miss path
+BenchmarkReactivateIdleConnNoIdle/conns=8-48                       	90469336	         6.742 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scan with no idle conns — lock-free miss path
+BenchmarkReactivateIdleConnNoIdle/conns=16-48                      	55936610	        10.96 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scan with no idle conns — lock-free miss path
+BenchmarkReactivateIdleConnNoIdle/conns=32-48                      	32915203	        16.56 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scan with no idle conns — lock-free miss path
+BenchmarkReactivateIdleConnSuccess/conns=1-48                      	62553828	         9.579 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn finds idle at position 0 — direct atomic setState, no lock
+BenchmarkReactivateIdleConnSuccess/conns=2-48                      	61846054	         9.614 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn finds idle at position 0 — direct atomic setState, no lock
+BenchmarkReactivateIdleConnSuccess/conns=4-48                      	62269027	         9.569 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn finds idle at position 0 — direct atomic setState, no lock
+BenchmarkReactivateIdleConnSuccess/conns=8-48                      	62577517	         9.577 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn finds idle at position 0 — direct atomic setState, no lock
+BenchmarkReactivateIdleConnSuccess/conns=16-48                     	62137150	         9.592 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn finds idle at position 0 — direct atomic setState, no lock
+BenchmarkReactivateIdleConnSuccess/conns=32-48                     	62441271	         9.567 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn finds idle at position 0 — direct atomic setState, no lock
+BenchmarkReactivateIdleConnLastPosition/conns=1-48                 	63717135	         9.584 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scans all before finding idle at last position (worst case)
+BenchmarkReactivateIdleConnLastPosition/conns=2-48                 	64872796	         9.232 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scans all before finding idle at last position (worst case)
+BenchmarkReactivateIdleConnLastPosition/conns=4-48                 	71143918	         8.520 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scans all before finding idle at last position (worst case)
+BenchmarkReactivateIdleConnLastPosition/conns=8-48                 	65401160	         8.218 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scans all before finding idle at last position (worst case)
+BenchmarkReactivateIdleConnLastPosition/conns=16-48                	50765332	        10.99 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scans all before finding idle at last position (worst case)
+BenchmarkReactivateIdleConnLastPosition/conns=32-48                	33362137	        19.97 ns/op	       0 B/op	       0 allocs/op	reactivateIdleConn scans all before finding idle at last position (worst case)
+BenchmarkEvaluateScaling/conns=1-48                                	 7844776	        69.91 ns/op	       0 B/op	       0 allocs/op	Full background monitor tick: cleanupIdleConns + maybeScaleDown (lock-free)
+BenchmarkEvaluateScaling/conns=2-48                                	 8427040	        74.80 ns/op	       0 B/op	       0 allocs/op	Full background monitor tick: cleanupIdleConns + maybeScaleDown (lock-free)
+BenchmarkEvaluateScaling/conns=4-48                                	 6039378	       103.8 ns/op	       0 B/op	       0 allocs/op	Full background monitor tick: cleanupIdleConns + maybeScaleDown (lock-free)
+BenchmarkEvaluateScaling/conns=8-48                                	 2535410	       219.7 ns/op	      64 B/op	       1 allocs/op	Full background monitor tick: cleanupIdleConns + maybeScaleDown (lock-free)
+BenchmarkEvaluateScaling/conns=16-48                               	 1718484	       334.2 ns/op	     128 B/op	       1 allocs/op	Full background monitor tick: cleanupIdleConns + maybeScaleDown (lock-free)
+BenchmarkEvaluateScaling/conns=32-48                               	 1223462	       561.5 ns/op	     256 B/op	       1 allocs/op	Full background monitor tick: cleanupIdleConns + maybeScaleDown (lock-free)
+BenchmarkEvaluateScalingWithDraining/conns=1-48                    	 3390199	       173.3 ns/op	       0 B/op	       0 allocs/op	Monitor tick with draining→idle transitions — direct atomic state changes
+BenchmarkEvaluateScalingWithDraining/conns=2-48                    	 2207432	       279.0 ns/op	       0 B/op	       0 allocs/op	Monitor tick with draining→idle transitions — direct atomic state changes
+BenchmarkEvaluateScalingWithDraining/conns=4-48                    	 1613188	       376.4 ns/op	       0 B/op	       0 allocs/op	Monitor tick with draining→idle transitions — direct atomic state changes
+BenchmarkEvaluateScalingWithDraining/conns=8-48                    	  609978	       845.5 ns/op	      64 B/op	       1 allocs/op	Monitor tick with draining→idle transitions — direct atomic state changes
+BenchmarkEvaluateScalingWithDraining/conns=16-48                   	  424068	      1430 ns/op	     192 B/op	       2 allocs/op	Monitor tick with draining→idle transitions — direct atomic state changes
+BenchmarkEvaluateScalingWithDraining/conns=32-48                   	  248041	      2314 ns/op	     448 B/op	       3 allocs/op	Monitor tick with draining→idle transitions — direct atomic state changes
+BenchmarkRefreshPoolMetrics/conns=1-48                             	135825619	         4.435 ns/op	       0 B/op	       0 allocs/op	Update active/draining/idle gauges — lock-free snapshot scan
+BenchmarkRefreshPoolMetrics/conns=2-48                             	125890917	         4.850 ns/op	       0 B/op	       0 allocs/op	Update active/draining/idle gauges — lock-free snapshot scan
+BenchmarkRefreshPoolMetrics/conns=4-48                             	100000000	         5.404 ns/op	       0 B/op	       0 allocs/op	Update active/draining/idle gauges — lock-free snapshot scan
+BenchmarkRefreshPoolMetrics/conns=8-48                             	73410577	         7.462 ns/op	       0 B/op	       0 allocs/op	Update active/draining/idle gauges — lock-free snapshot scan
+BenchmarkRefreshPoolMetrics/conns=16-48                            	48035553	        11.73 ns/op	       0 B/op	       0 allocs/op	Update active/draining/idle gauges — lock-free snapshot scan
+BenchmarkRefreshPoolMetrics/conns=32-48                            	29536530	        19.34 ns/op	       0 B/op	       0 allocs/op	Update active/draining/idle gauges — lock-free snapshot scan
+BenchmarkPickConnWriteContention/conns=1-48                        	302132176	         2.813 ns/op	       0 B/op	       0 allocs/op	pickConn readers vs concurrent pool writer — writers use wmu, readers are unaffected
+BenchmarkPickConnWriteContention/conns=2-48                        	270898495	         2.514 ns/op	       0 B/op	       0 allocs/op	pickConn readers vs concurrent pool writer — writers use wmu, readers are unaffected
+BenchmarkPickConnWriteContention/conns=4-48                        	162640683	         4.575 ns/op	       0 B/op	       0 allocs/op	pickConn readers vs concurrent pool writer — writers use wmu, readers are unaffected
+BenchmarkPickConnWriteContention/conns=8-48                        	121032426	         4.943 ns/op	       0 B/op	       0 allocs/op	pickConn readers vs concurrent pool writer — writers use wmu, readers are unaffected
+BenchmarkPickConnWriteContention/conns=16-48                       	100000000	         6.744 ns/op	       0 B/op	       0 allocs/op	pickConn readers vs concurrent pool writer — writers use wmu, readers are unaffected
+BenchmarkPickConnWriteContention/conns=32-48                       	53658195	        10.45 ns/op	       0 B/op	       0 allocs/op	pickConn readers vs concurrent pool writer — writers use wmu, readers are unaffected
+BenchmarkConnPoolConfigConstruction-48                             	1000000000	         0.3442 ns/op	       0 B/op	       0 allocs/op	Build connPoolConfig struct from options — happens once per peer creation
+BenchmarkSetIdleNow-48                                             	 9803689	        61.64 ns/op	       0 B/op	       0 allocs/op	Record time when conn became idle — atomic int64 store
+BenchmarkIdleSince-48                                              	908945160	         0.6531 ns/op	       0 B/op	       0 allocs/op	Read when conn became idle — atomic int64 load
+BenchmarkRunScalingMonitorOverhead-48                              	  350294	      1650 ns/op	     656 B/op	       8 allocs/op	Goroutine startup + context cancellation latency of the scaling monitor
+BenchmarkThresholdComputation-48                                   	1000000000	         0.3239 ns/op	       0 B/op	       0 allocs/op	Compute scale-up threshold: float64 multiply + int32 cast (runs on every tryScaleUp)

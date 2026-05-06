@@ -54,7 +54,7 @@ func makeConn(state connState, streams int32) *grpcClientConnWrapper {
 
 // peerForScaleDown builds a grpcPeer suitable for maybeScaleDown tests. It
 // wires up a real Transport (for its nop logger) and a cancellable context.
-func peerForScaleDown(t *testing.T, conns []*grpcClientConnWrapper, cfg connPoolConfig) *grpcPeer {
+func peerForScaleDown(t testing.TB, conns []*grpcClientConnWrapper, cfg connPoolConfig) *grpcPeer {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
@@ -669,7 +669,7 @@ func TestCleanupIdleConnsSkippedWhileScaling(t *testing.T) {
 // --- metrics wiring ---
 
 // peerWithMetrics creates a peerForPool with a real metrics scope attached.
-func peerWithMetrics(t *testing.T) (*grpcPeer, *metrics.Root) {
+func peerWithMetrics(t testing.TB) (*grpcPeer, *metrics.Root) {
 	t.Helper()
 	root := metrics.New()
 	p := peerForPool(t)

@@ -193,7 +193,7 @@ func makeBlastCall(t *testing.T, rawClient raw.Client, timeout time.Duration) {
 
 // peerForPool builds a grpcPeer with all fields needed for pool unit tests.
 // It dials lazily so no real server is required.
-func peerForPool(t *testing.T) *grpcPeer {
+func peerForPool(t testing.TB) *grpcPeer {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
