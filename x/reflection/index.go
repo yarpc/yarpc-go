@@ -22,10 +22,11 @@ package reflection
 
 import (
 	"bytes"
-	"compress/gzip"
 	"fmt"
 	"io"
 	"sort"
+
+	"github.com/klauspost/compress/gzip"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
