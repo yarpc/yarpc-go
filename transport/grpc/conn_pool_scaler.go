@@ -49,6 +49,41 @@ func (p *grpcPeer) runScalingMonitor() {
 func (p *grpcPeer) evaluateScaling() {
 	p.cleanupIdleConns()
 	p.maybeScaleDown()
+	p.logPoolState()
+}
+
+// logPoolState emits a Debug log with a full snapshot of the pool on every
+// monitor tick — useful for staging diagnostics without adding noise at Info.
+func (p *grpcPeer) logPoolState() {
+	var active, draining, idle int32
+	var totalStreams int32
+	p.mu.RLock()
+	for _, c := range p.conns {
+		switch c.getState() {
+		case connStateActive:
+			active++
+			totalStreams += c.getStreamCount()
+		case connStateDraining:
+			draining++
+			totalStreams += c.getStreamCount()
+		case connStateIdle:
+			idle++
+		}
+	}
+	p.mu.RUnlock()
+
+	threshold := int32(float64(p.poolCfg.maxConcurrentStreams) * p.poolCfg.scaleUpThreshold)
+	p.peerLogger().Debug("grpc: connection pool state",
+		zap.String("peer", p.peerAddr()),
+		zap.Int32("active_connections", active),
+		zap.Int32("draining_connections", draining),
+		zap.Int32("idle_connections", idle),
+		zap.Int32("total_streams", totalStreams),
+		zap.Int32("max_concurrent_streams", p.poolCfg.maxConcurrentStreams),
+		zap.Int32("scale_up_threshold_streams", threshold),
+		zap.Int("min_connections", p.poolCfg.minConnections),
+		zap.Int("max_connections", p.poolCfg.maxConnections),
+	)
 }
 
 // maybeScaleDown checks whether the pool can be reduced by one connection.
@@ -106,9 +141,16 @@ func (p *grpcPeer) maybeScaleDown() {
 	mostLoaded.setState(connStateDraining)
 	p.mu.Unlock()
 
-	p.t.options.logger.Debug("grpc: marked connection for draining during scale-down",
-		zap.String("peer", p.HostPort()),
-		zap.Int32("stream_count", mostLoaded.getStreamCount()))
+	p.peerLogger().Info("grpc: scale-down: marked connection for draining",
+		zap.String("peer", p.peerAddr()),
+		zap.Int("active_connections_before", len(active)),
+		zap.Int("active_connections_after", len(active)-1),
+		zap.Int("min_connections", p.poolCfg.minConnections),
+		zap.Int32("total_streams", totalStreams),
+		zap.Int32("draining_conn_stream_count", mostLoaded.getStreamCount()),
+		zap.Int32("capacity_after_drain", capacityAfterDrain),
+		zap.Int32("scale_up_threshold_streams", threshold),
+	)
 	p.metrics.incScaleDown()
 	p.refreshPoolMetrics()
 }
@@ -152,9 +194,13 @@ func (p *grpcPeer) cleanupIdleConns() {
 	}
 
 	for _, c := range toClose {
-		p.t.options.logger.Debug("grpc: closing idle connection after timeout",
-			zap.String("peer", p.HostPort()),
-			zap.Duration("idle_duration", now.Sub(c.idleSince())))
+		idleDuration := now.Sub(c.idleSince())
+		p.peerLogger().Info("grpc: closing idle connection after timeout",
+			zap.String("peer", p.peerAddr()),
+			zap.Duration("idle_duration", idleDuration),
+			zap.Duration("idle_timeout", p.poolCfg.idleTimeout),
+			zap.Time("conn_created_at", c.createdAt),
+		)
 		// Cancelling the wrapper context causes monitorConnectionStatus to
 		// exit, which closes the underlying clientConn and removes the
 		// wrapper from p.conns.
@@ -178,14 +224,13 @@ func (p *grpcPeer) cleanupIdleConns() {
 // scale-up goroutine runs at a time, and it signals cleanupIdleConns to hold
 // off closing idle connections while a reactivation may be in progress.
 func (p *grpcPeer) tryScaleUp(leastLoadedConn *grpcClientConnWrapper) {
-	p.t.options.logger.Debug("DEBUG: tryScaleUp called")
-	p.t.options.logger.Info("INFO: tryScaleUp called") 
 	if !p.poolCfg.dynamicScalingEnabled {
 		return
 	}
 
 	threshold := int32(float64(p.poolCfg.maxConcurrentStreams) * p.poolCfg.scaleUpThreshold)
-	if leastLoadedConn.getStreamCount() < threshold {
+	streamCount := leastLoadedConn.getStreamCount()
+	if streamCount < threshold {
 		return
 	}
 
@@ -200,8 +245,16 @@ func (p *grpcPeer) tryScaleUp(leastLoadedConn *grpcClientConnWrapper) {
 
 		// Prefer reactivating an idle connection over dialing a new one.
 		if p.reactivateIdleConn() {
-			p.t.options.logger.Debug("grpc: reactivated idle connection during scale-up",
-				zap.String("peer", p.HostPort()))
+			p.mu.RLock()
+			totalConns := len(p.conns)
+			p.mu.RUnlock()
+			p.peerLogger().Info("grpc: scale-up: reactivated idle connection",
+				zap.String("peer", p.peerAddr()),
+				zap.Int("total_connections", totalConns),
+				zap.Int("max_connections", p.poolCfg.maxConnections),
+				zap.Int32("trigger_stream_count", streamCount),
+				zap.Int32("scale_up_threshold_streams", threshold),
+			)
 			p.metrics.incIdleReactivation()
 			p.refreshPoolMetrics()
 			return
@@ -209,19 +262,40 @@ func (p *grpcPeer) tryScaleUp(leastLoadedConn *grpcClientConnWrapper) {
 
 		// No idle connection available; dial a new one if below the cap.
 		p.mu.RLock()
-		atMax := len(p.conns) >= p.poolCfg.maxConnections
+		connsBefore := len(p.conns)
+		atMax := connsBefore >= p.poolCfg.maxConnections
 		p.mu.RUnlock()
+
 		if atMax {
+			p.peerLogger().Warn("grpc: scale-up skipped: at maximum connection cap",
+				zap.String("peer", p.peerAddr()),
+				zap.Int("current_connections", connsBefore),
+				zap.Int("max_connections", p.poolCfg.maxConnections),
+				zap.Int32("trigger_stream_count", streamCount),
+				zap.Int32("scale_up_threshold_streams", threshold),
+			)
 			return
 		}
 
 		if err := p.addConn(); err != nil {
-			p.t.options.logger.Warn("grpc: failed to scale up connection pool",
-				zap.String("peer", p.HostPort()),
-				zap.Error(err))
+			p.peerLogger().Warn("grpc: scale-up failed: could not dial new connection",
+				zap.String("peer", p.peerAddr()),
+				zap.Int("connections_before", connsBefore),
+				zap.Int("max_connections", p.poolCfg.maxConnections),
+				zap.Error(err),
+			)
 		} else {
-			p.t.options.logger.Debug("grpc: scaled up connection pool",
-				zap.String("peer", p.HostPort()))
+			p.mu.RLock()
+			connsAfter := len(p.conns)
+			p.mu.RUnlock()
+			p.peerLogger().Info("grpc: scale-up: dialed new connection",
+				zap.String("peer", p.peerAddr()),
+				zap.Int("connections_before", connsBefore),
+				zap.Int("connections_after", connsAfter),
+				zap.Int("max_connections", p.poolCfg.maxConnections),
+				zap.Int32("trigger_stream_count", streamCount),
+				zap.Int32("scale_up_threshold_streams", threshold),
+			)
 			p.metrics.incScaleUp()
 		}
 	}()
@@ -239,6 +313,11 @@ func (p *grpcPeer) reactivateIdleConn() bool {
 		if c.getState() == connStateIdle && c.ctx.Err() == nil {
 			c.setState(connStateActive)
 			atomic.StoreInt64(&c.lastIdleAtNano, 0)
+			p.peerLogger().Info("grpc: idle connection reactivated (idle → active)",
+				zap.String("peer", p.peerAddr()),
+				zap.Time("conn_created_at", c.createdAt),
+				zap.Duration("conn_age", time.Since(c.createdAt)),
+			)
 			return true
 		}
 	}
