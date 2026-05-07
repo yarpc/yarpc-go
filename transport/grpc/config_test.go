@@ -811,13 +811,13 @@ func TestContextDialerOptionUsage(t *testing.T) {
 	require.True(t, ok, "expected a gRPC peer")
 
 	for {
-		state := grpcPeer.conns[0].clientConn.GetState()
+		state := grpcPeer.loadConns()[0].clientConn.GetState()
 		if state == connectivity.Ready {
 			break
 		}
-		grpcPeer.conns[0].clientConn.WaitForStateChange(ctx, state)
+		grpcPeer.loadConns()[0].clientConn.WaitForStateChange(ctx, state)
 	}
-	require.Equal(t, connectivity.Ready, grpcPeer.conns[0].clientConn.GetState(), "expected gRPC connection in Ready state")
+	require.Equal(t, connectivity.Ready, grpcPeer.loadConns()[0].clientConn.GetState(), "expected gRPC connection in Ready state")
 	require.Equal(t, 1, dialContextInvoked, "counter should increment by one from dialer invocation")
 }
 
