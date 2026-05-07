@@ -100,10 +100,11 @@ var (
 	}
 )
 
-// TODO: there are way too many repeat calls to strings.ToLower
-// Note that these calls are done indirectly, primarily through
-// transport.CanonicalizeHeaderKey
-// NOTE: Callers must pass canonical (lowercase) keys.
+// isReserved returns whether the given header is reserved by YARPC.
+// NOTE: Callers must pass canonical (lowercase) keys. All call sites in
+// this package operate on already-lowercase keys: gRPC metadata.MD keys
+// are guaranteed lowercase by the gRPC framework (HTTP/2 + grpc-go API),
+// and transport.Headers stores keys canonicalized via With().
 func isReserved(header string) bool {
 	if routingHeaders[header] {
 		return false
@@ -145,7 +146,7 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 		default:
 			return nil, yarpcerrors.InvalidArgumentErrorf("header has more than one value: %s:%v", header, values)
 		}
-		header = transport.CanonicalizeHeaderKey(header)
+		// gRPC metadata keys are guaranteed to be lowercase (HTTP/2 spec),
 		// skip routing header
 		if routingHeaders[header] {
 			continue
@@ -202,8 +203,9 @@ func metadataToApplicationErrorMeta(responseMD metadata.MD) *transport.Applicati
 
 // addApplicationHeaders adds the headers to md.
 func addApplicationHeaders(md metadata.MD, headers transport.Headers) error {
+	// transport.Headers.Items() returns keys already canonicalized (lowercased)
+	// via With(), so transport.CanonicalizeHeaderKey is redundant here.
 	for header, value := range headers.Items() {
-		header = transport.CanonicalizeHeaderKey(header)
 		if isReserved(header) {
 			return yarpcerrors.InvalidArgumentErrorf("cannot use reserved header in application headers: %s", header)
 		}
@@ -220,8 +222,9 @@ func getApplicationHeaders(md metadata.MD) (transport.Headers, error) {
 		return transport.Headers{}, nil
 	}
 	headers := transport.NewHeadersWithCapacity(md.Len())
+	// gRPC metadata keys are guaranteed to be lowercase (HTTP/2 spec),
+	// so transport.CanonicalizeHeaderKey (strings.ToLower) is a no-op here.
 	for header, values := range md {
-		header = transport.CanonicalizeHeaderKey(header)
 		if isReserved(header) {
 			continue
 		}
