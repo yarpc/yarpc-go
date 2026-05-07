@@ -300,6 +300,24 @@ func (p *grpcPeer) pickConn() *grpcClientConnWrapper {
 	return best
 }
 
+// peerLogger returns the transport logger, or a no-op logger if the transport
+// is not set (e.g. in minimal test peers that exercise early-return paths).
+func (p *grpcPeer) peerLogger() *zap.Logger {
+	if p.t == nil {
+		return zap.NewNop()
+	}
+	return p.t.options.logger
+}
+
+// peerAddr returns the peer host:port string, or "<unknown>" if the peer
+// abstraction is not set (e.g. in minimal test peers).
+func (p *grpcPeer) peerAddr() string {
+	if p.Peer == nil {
+		return "<unknown>"
+	}
+	return p.HostPort()
+}
+
 func (p *grpcPeer) setConnectionStatus(status peer.ConnectionStatus) {
 	p.t.options.logger.Debug(
 		"peer status change",
