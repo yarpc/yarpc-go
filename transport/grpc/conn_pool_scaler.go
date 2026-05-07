@@ -211,9 +211,13 @@ func (p *grpcPeer) cleanupIdleConns() {
 		if !c.transitionState(connStateIdle, connStateClosing) {
 			continue
 		}
-		p.t.options.logger.Debug("grpc: closing idle connection after timeout",
-			zap.String("peer", p.HostPort()),
-			zap.Duration("idle_duration", now.Sub(c.idleSince())))
+		idleDuration := now.Sub(c.idleSince())
+		p.peerLogger().Info("grpc: closing idle connection after timeout",
+			zap.String("peer", p.peerAddr()),
+			zap.Duration("idle_duration", idleDuration),
+			zap.Duration("idle_timeout", p.poolCfg.idleTimeout),
+			zap.Time("conn_created_at", c.createdAt),
+		)
 		// Cancelling the wrapper context causes monitorConnWrapper to
 		// exit, which closes the underlying clientConn and removes the
 		// wrapper from the pool via removeConn.
