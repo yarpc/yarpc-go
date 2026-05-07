@@ -21,44 +21,12 @@
 package http
 
 import (
-	"fmt"
 	"net/http"
-	"strconv"
 	"testing"
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
 )
-
-// BenchmarkTTLFormatting compares three approaches to formatting the TTL header value.
-//
-//	go test -bench=BenchmarkTTLFormatting -benchmem ./transport/http
-func BenchmarkTTLFormatting(b *testing.B) {
-	ttl := 5 * time.Second
-	ttlMS := int64(ttl / time.Millisecond)
-
-	b.Run("fmt.Sprintf", func(b *testing.B) {
-		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			_ = fmt.Sprintf("%d", ttlMS)
-		}
-	})
-
-	b.Run("strconv.FormatInt", func(b *testing.B) {
-		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			_ = strconv.FormatInt(ttlMS, 10)
-		}
-	})
-
-	b.Run("strconv.AppendInt", func(b *testing.B) {
-		b.ReportAllocs()
-		var buf [20]byte
-		for i := 0; i < b.N; i++ {
-			_ = string(strconv.AppendInt(buf[:0], ttlMS, 10))
-		}
-	})
-}
 
 // BenchmarkWithCoreHeaders measures the performance of withCoreHeaders,
 // which is called on every HTTP outbound request.
