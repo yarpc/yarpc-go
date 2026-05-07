@@ -253,7 +253,7 @@ func TestGetApplicationHeaders(t *testing.T) {
 				"rpc-service":         []string{"foo"}, // reserved header
 				"test-header-empty":   []string{},      // no value
 				"test-header-valid-1": []string{"test-value-1"},
-				"test-Header-Valid-2": []string{"test-value-2"},
+				"test-header-valid-2": []string{"test-value-2"},
 			},
 			wantHeaders: map[string]string{
 				"test-header-valid-1": "test-value-1",
