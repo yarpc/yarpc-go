@@ -23,6 +23,7 @@ package grpc
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/abstractpeer"
@@ -53,9 +54,39 @@ type grpcPeer struct {
 
 	metrics *connPoolMetrics
 
-	mu      sync.RWMutex
-	conns   []*grpcClientConnWrapper
+	// connsPtr holds a pointer to the current immutable connection slice.
+	// Readers (pickConn, recomputeConnectionStatus, refreshPoolMetrics, etc.)
+	// do a single atomic.Pointer.Load() — no mutex acquired on the read path.
+	// Writers (addConn, removeConn) hold wmu, copy the slice, mutate, then
+	// atomically publish the new pointer.  Readers never block writers.
+	connsPtr atomic.Pointer[[](*grpcClientConnWrapper)]
+
+	// wmu is a write-only mutex: only writers (addConn, removeConn) acquire it.
+	// Readers never touch wmu.
+	wmu sync.Mutex
+
+	// connCount mirrors len(loadConns()) atomically so tryScaleUp can check the
+	// pool size without acquiring wmu.
+	connCount atomic.Int32
+
 	poolCfg connPoolConfig
+}
+
+// loadConns returns the current immutable connection snapshot.
+// Safe to call from any goroutine without holding any lock.
+func (p *grpcPeer) loadConns() []*grpcClientConnWrapper {
+	ptr := p.connsPtr.Load()
+	if ptr == nil {
+		return nil
+	}
+	return *ptr
+}
+
+// storeConns atomically publishes a new connection slice and updates connCount.
+// Callers must hold wmu.
+func (p *grpcPeer) storeConns(conns []*grpcClientConnWrapper) {
+	p.connsPtr.Store(&conns)
+	p.connCount.Store(int32(len(conns)))
 }
 
 func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, error) {
@@ -96,6 +127,9 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 			idleTimeout:           t.options.clientConnPoolIdleTimeout,
 		},
 	}
+	// Publish an empty slice so loadConns() never returns nil before the first
+	// addConn() call.
+	p.storeConns(nil)
 
 	// All connections are created via addConn — no special primary connection.
 	initialConnCount := 1
@@ -114,17 +148,18 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 	}
 
 	// Close stoppedC once all monitorConnWrapper goroutines have finished.
-	// We acquire mu briefly after ctx is cancelled to ensure any in-flight
+	// We acquire wmu briefly after ctx is cancelled to ensure any in-flight
 	// addConn() that passed its context check has already called connWg.Add(1)
 	// before we call connWg.Wait().
 	go func() {
 		<-p.ctx.Done()
-		// Acquire mu after cancellation to ensure any addConn() call that
+		// Acquire wmu after cancellation to ensure any addConn() call that
 		// passed its ctx.Err() check has already called connWg.Add(1).
-		// The empty critical section is intentional: we need the memory
-		// barrier, not exclusive access to any data.
-		p.mu.Lock()
-		p.mu.Unlock() //nolint:staticcheck
+		// The empty critical section is intentional: we need the barrier,
+		// not exclusive access to any data.
+		//lint:ignore SA2001 intentional empty critical section, provides memory barrier for connWg
+		p.wmu.Lock()
+		p.wmu.Unlock()
 		p.connWg.Wait()
 		close(p.stoppedC)
 	}()
@@ -143,18 +178,22 @@ func (p *grpcPeer) addConn() error {
 	}
 	w := newConnWrapper(p.ctx, clientConn)
 
-	// Hold mu while registering with connWg and appending to conns.  The
-	// lifecycle goroutine in newPeer acquires mu after ctx is cancelled so
-	// that it observes any Add(1) call that raced with cancellation.
-	p.mu.Lock()
+	// Hold wmu while registering with connWg and publishing the new slice.
+	// The lifecycle goroutine acquires wmu after ctx is cancelled to observe
+	// any Add(1) that raced with cancellation.
+	p.wmu.Lock()
 	if p.ctx.Err() != nil {
-		p.mu.Unlock()
+		p.wmu.Unlock()
 		_ = clientConn.Close()
 		return p.ctx.Err()
 	}
 	p.connWg.Add(1)
-	p.conns = append(p.conns, w)
-	p.mu.Unlock()
+	old := p.loadConns()
+	next := make([]*grpcClientConnWrapper, len(old)+1)
+	copy(next, old)
+	next[len(old)] = w
+	p.storeConns(next)
+	p.wmu.Unlock()
 
 	go p.monitorConnWrapper(w)
 	p.refreshPoolMetrics()
@@ -210,9 +249,9 @@ func (p *grpcPeer) monitorConnWrapper(w *grpcClientConnWrapper) {
 // connecting (and none are Ready), and Unavailable if the pool is empty or
 // all connections are in a terminal/unknown state.
 func (p *grpcPeer) recomputeConnectionStatus() {
-	p.mu.RLock()
+	conns := p.loadConns()
 	best := peer.Unavailable
-	for _, c := range p.conns {
+	for _, c := range conns {
 		if !c.isActive() {
 			continue
 		}
@@ -225,17 +264,20 @@ func (p *grpcPeer) recomputeConnectionStatus() {
 			best = peer.Connecting
 		}
 	}
-	p.mu.RUnlock()
 	p.setConnectionStatus(best)
 }
 
 // removeConn removes a wrapper from the peer's connection pool.
 func (p *grpcPeer) removeConn(w *grpcClientConnWrapper) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	for i, c := range p.conns {
+	p.wmu.Lock()
+	defer p.wmu.Unlock()
+	old := p.loadConns()
+	for i, c := range old {
 		if c == w {
-			p.conns = append(p.conns[:i], p.conns[i+1:]...)
+			next := make([]*grpcClientConnWrapper, len(old)-1)
+			copy(next, old[:i])
+			copy(next[i:], old[i+1:])
+			p.storeConns(next)
 			return
 		}
 	}
@@ -243,11 +285,11 @@ func (p *grpcPeer) removeConn(w *grpcClientConnWrapper) {
 
 // pickConn returns the active connection in the pool with the lowest current
 // stream count.  Returns nil if the pool contains no active connections.
+// Lock-free: reads the immutable snapshot via a single atomic.Pointer.Load().
 func (p *grpcPeer) pickConn() *grpcClientConnWrapper {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
+	conns := p.loadConns()
 	var best *grpcClientConnWrapper
-	for _, c := range p.conns {
+	for _, c := range conns {
 		if !c.isActive() {
 			continue
 		}
@@ -297,3 +339,4 @@ func grpcStatusToYARPCStatus(grpcStatus connectivity.State) peer.ConnectionStatu
 		return peer.Unavailable
 	}
 }
+
