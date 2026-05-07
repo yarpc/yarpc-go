@@ -90,12 +90,12 @@ func (p *grpcPeer) logPoolState() {
 // A connection is marked for draining when the remaining active connections
 // can absorb the current aggregate stream load without triggering another
 // scale-up.
+// Lock-free read path: loads an immutable snapshot via atomic.Pointer.Load().
+// The state mutation (setState) is already atomic, so no mutex is needed.
 func (p *grpcPeer) maybeScaleDown() {
-	// Use a read lock for the analysis phase to avoid blocking concurrent
-	// request-path goroutines that also hold RLock when picking a connection.
-	p.mu.RLock()
-	active := make([]*grpcClientConnWrapper, 0, len(p.conns))
-	for _, c := range p.conns {
+	conns := p.loadConns()
+	active := make([]*grpcClientConnWrapper, 0, len(conns))
+	for _, c := range conns {
 		if c.isActive() {
 			active = append(active, c)
 		}
@@ -103,7 +103,6 @@ func (p *grpcPeer) maybeScaleDown() {
 
 	// Never drain below minConnections.
 	if len(active) <= p.poolCfg.minConnections {
-		p.mu.RUnlock()
 		return
 	}
 
@@ -118,7 +117,6 @@ func (p *grpcPeer) maybeScaleDown() {
 	// without crossing the scale-up threshold.
 	capacityAfterDrain := threshold * int32(len(active)-1)
 	if totalStreams >= capacityAfterDrain {
-		p.mu.RUnlock()
 		return
 	}
 
@@ -130,16 +128,13 @@ func (p *grpcPeer) maybeScaleDown() {
 			mostLoaded = c
 		}
 	}
-	p.mu.RUnlock()
 
 	if mostLoaded == nil {
 		return
 	}
 
-	// Acquire the write lock only for the brief state mutation.
-	p.mu.Lock()
+	// setState is an atomic store — no mutex needed.
 	mostLoaded.setState(connStateDraining)
-	p.mu.Unlock()
 
 	p.peerLogger().Info("grpc: scale-down: marked connection for draining",
 		zap.String("peer", p.peerAddr()),
@@ -160,6 +155,8 @@ func (p *grpcPeer) maybeScaleDown() {
 // monitor goroutines can close and remove them.
 // It skips closing idle connections while a scale-up is in progress so that
 // tryScaleUp can reactivate them instead of dialing a new connection.
+// Lock-free read path: uses atomic.Pointer.Load() for the snapshot, and
+// atomic setState/setIdleNow for mutations (no mutex required).
 func (p *grpcPeer) cleanupIdleConns() {
 	// If a scale-up goroutine is running, hold off — idle connections may be
 	// reactivated by tryScaleUp instead of being closed.
@@ -169,11 +166,10 @@ func (p *grpcPeer) cleanupIdleConns() {
 
 	now := time.Now()
 
-	// Use a read lock for the analysis phase
-	p.mu.RLock()
+	conns := p.loadConns()
 	var drained []*grpcClientConnWrapper
 	var toClose []*grpcClientConnWrapper
-	for _, c := range p.conns {
+	for _, c := range conns {
 		if c.getState() == connStateDraining && c.getStreamCount() == 0 {
 			drained = append(drained, c)
 		} else if c.getState() == connStateIdle && !c.idleSince().IsZero() &&
@@ -181,16 +177,14 @@ func (p *grpcPeer) cleanupIdleConns() {
 			toClose = append(toClose, c)
 		}
 	}
-	p.mu.RUnlock()
 
-	// Advance drained → idle with a brief write lock per connection.
+	// setState and setIdleNow are both atomic operations — no mutex needed.
+	// Re-check state before transitioning to handle any concurrent changes.
 	for _, c := range drained {
-		p.mu.Lock()
 		if c.getState() == connStateDraining && c.getStreamCount() == 0 {
 			c.setState(connStateIdle)
 			c.setIdleNow()
 		}
-		p.mu.Unlock()
 	}
 
 	for _, c := range toClose {
@@ -203,7 +197,7 @@ func (p *grpcPeer) cleanupIdleConns() {
 		)
 		// Cancelling the wrapper context causes monitorConnectionStatus to
 		// exit, which closes the underlying clientConn and removes the
-		// wrapper from p.conns.
+		// wrapper from the pool via removeConn.
 		c.cancel()
 	}
 
@@ -304,10 +298,11 @@ func (p *grpcPeer) tryScaleUp(leastLoadedConn *grpcClientConnWrapper) {
 // reactivateIdleConn finds the first idle connection whose context has not
 // yet been cancelled and transitions it back to active, avoiding an
 // unnecessary dial.  Returns true if a connection was reactivated.
+// Lock-free: setState is atomic. Only one reactivateIdleConn call runs at a
+// time (guarded by the isScaling CAS in tryScaleUp).
 func (p *grpcPeer) reactivateIdleConn() bool {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	for _, c := range p.conns {
+	conns := p.loadConns()
+	for _, c := range conns {
 		// Only reactivate if the connection context is still live; a cancelled
 		// context means cleanupIdleConns has already scheduled it for closure.
 		if c.getState() == connStateIdle && c.ctx.Err() == nil {
@@ -325,11 +320,11 @@ func (p *grpcPeer) reactivateIdleConn() bool {
 }
 
 // refreshPoolMetrics scans the pool and updates the active, draining, and idle
-// connection gauges.  It must be called after any pool state transition.
+// connection gauges.  Lock-free: reads an immutable snapshot via loadConns().
 func (p *grpcPeer) refreshPoolMetrics() {
+	conns := p.loadConns()
 	var active, draining, idle int64
-	p.mu.RLock()
-	for _, c := range p.conns {
+	for _, c := range conns {
 		switch c.getState() {
 		case connStateActive:
 			active++
@@ -339,7 +334,6 @@ func (p *grpcPeer) refreshPoolMetrics() {
 			idle++
 		}
 	}
-	p.mu.RUnlock()
 	p.metrics.setConnectionCount(active)
 	p.metrics.setDrainingConnectionCount(draining)
 	p.metrics.setIdleConnectionCount(idle)
