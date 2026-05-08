@@ -120,7 +120,7 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 		}),
 		poolCfg: connPoolConfig{
 			dynamicScalingEnabled: t.options.clientConnPoolDynamicScalingEnabled,
-			maxConcurrentStreams:   t.options.clientConnPoolMaxConcurrentStreams,
+			maxConcurrentStreams:  t.options.clientConnPoolMaxConcurrentStreams,
 			scaleUpThreshold:      t.options.clientConnPoolScaleUpThreshold,
 			minConnections:        t.options.clientConnPoolMinConnections,
 			maxConnections:        t.options.clientConnPoolMaxConnections,
@@ -208,11 +208,11 @@ func (p *grpcPeer) addConn() error {
 func (p *grpcPeer) monitorConnWrapper(w *grpcClientConnWrapper) {
 	defer func() {
 		_ = w.clientConn.Close()
-		close(w.stoppedC)
 		p.removeConn(w)
 		// Recompute connection status now that this peer is gone.
 		p.recomputeConnectionStatus()
 		p.refreshPoolMetrics()
+		close(w.stoppedC)
 		p.connWg.Done()
 	}()
 
@@ -357,4 +357,3 @@ func grpcStatusToYARPCStatus(grpcStatus connectivity.State) peer.ConnectionStatu
 		return peer.Unavailable
 	}
 }
-
