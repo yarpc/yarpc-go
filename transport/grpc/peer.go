@@ -155,10 +155,10 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 		<-p.ctx.Done()
 		// Acquire wmu after cancellation to ensure any addConn() call that
 		// passed its ctx.Err() check has already called connWg.Add(1).
-		// The empty critical section is intentional: we need the barrier,
-		// not exclusive access to any data.
-		//lint:ignore SA2001 intentional empty critical section, provides memory barrier for connWg
+		// Reading ctx.Err() under the lock is intentional: it synchronizes
+		// with addConn's own ctx.Err() check + connWg.Add(1) sequence.
 		p.wmu.Lock()
+		_ = p.ctx.Err()
 		p.wmu.Unlock()
 		p.connWg.Wait()
 		close(p.stoppedC)
