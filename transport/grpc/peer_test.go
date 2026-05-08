@@ -393,8 +393,8 @@ func TestStoppedCClosedAfterAllConnsFinish(t *testing.T) {
 
 	go func() {
 		<-p.ctx.Done()
-		//lint:ignore SA2001 intentional empty critical section, provides memory barrier for connWg
 		p.wmu.Lock()
+		_ = p.ctx.Err()
 		p.wmu.Unlock()
 		p.connWg.Wait()
 		close(p.stoppedC)
