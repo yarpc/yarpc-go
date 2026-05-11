@@ -20,24 +20,6 @@
 
 package http
 
-// Benchmarks for the createRequest hot path — opt #3: URL string caching.
-//
-// createRequest() is called on every outbound HTTP RPC. It does:
-//   newURL := *o.urlTemplate          // copies url.URL struct (4 strings + int64 + ...)
-//   http.NewRequest("POST", newURL.String(), body)  // String() allocates
-//
-// The URL template is immutable after Outbound construction, so we can cache
-// the string and avoid the copy + allocation per call.
-//
-// Run baseline:
-//   go test -bench=BenchmarkCreateRequest -benchmem -count=6 -run='^$' ./transport/http/ > before.txt
-//
-// After caching urlTemplate.String() in Outbound.urlStr:
-//   go test -bench=BenchmarkCreateRequest -benchmem -count=6 -run='^$' ./transport/http/ > after.txt
-//
-// Compare:
-//   benchstat before.txt after.txt
-
 import (
 	"bytes"
 	"io"
@@ -50,40 +32,25 @@ import (
 
 var _benchBody = bytes.Repeat([]byte("x"), 1<<10)
 
-// BenchmarkCreateRequest_Current benchmarks the current createRequest()
-// implementation: copies url.URL and calls String() on every call.
-// This outbound is constructed directly (not via setURLTemplate) to simulate
-// the pre-optimization path — urlStr is empty, so the fallback runs.
-func BenchmarkCreateRequest_Current(b *testing.B) {
-	urlTemplate, _ := url.Parse("http://localhost:8080")
-	out := &Outbound{urlTemplate: urlTemplate}
-
-	b.ResetTimer()
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		hreq, err := out.createRequest(makeReq(), make(http.Header))
-		if err != nil {
-			b.Fatal(err)
-		}
-		// drain so GC doesn't hold body refs
-		_, _ = io.Copy(io.Discard, hreq.Body)
-	}
-}
-
-// BenchmarkCreateRequest_WithCache benchmarks createRequest() when urlStr is
-// pre-populated (the post-optimization path via setURLTemplate/NewOutbound).
-func BenchmarkCreateRequest_WithCache(b *testing.B) {
+// BenchmarkCreateRequest exercises the createRequest hot path as it runs in
+// production: URL string cached in urlStr, header map borrowed from headerPool.
+func BenchmarkCreateRequest(b *testing.B) {
 	tr := NewTransport()
 	out := tr.NewSingleOutbound("http://localhost:8080")
 
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		hreq, err := out.createRequest(makeReq(), make(http.Header))
+		hdr := headerPool.Get().(http.Header)
+		hreq, err := out.createRequest(makeReq(), hdr)
 		if err != nil {
 			b.Fatal(err)
 		}
 		_, _ = io.Copy(io.Discard, hreq.Body)
+		for k := range hdr {
+			delete(hdr, k)
+		}
+		headerPool.Put(hdr)
 	}
 }
 

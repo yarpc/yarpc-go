@@ -267,8 +267,8 @@ type Outbound struct {
 	// urlStr caches urlTemplate.String() to avoid recomputing it on every
 	// outbound call. It is set once during construction via setURLTemplate
 	// and is safe to read concurrently without a lock.
-	urlStr  string
-	tracer  opentracing.Tracer
+	urlStr    string
+	tracer    opentracing.Tracer
 	transport *Transport
 	sender    sender
 
