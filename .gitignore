@@ -25,3 +25,4 @@
 /internal/service-test/service-test
 .idea
 .vscode/
+.bench/
