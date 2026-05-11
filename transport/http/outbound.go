@@ -457,8 +457,24 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 	// header is given along a HTTP/1 request.
 	// see: https://cs.opensource.google/go/x/net/+/c6fcb2db:http/httpguts/httplex.go;l=203
 	headers := applicationHeaders.deleteHTTP2PseudoHeadersIfNeeded(treq.Headers)
-	hreq.Header = applicationHeaders.ToHTTPHeaders(headers, nil)
+	if o.useHTTP2 {
+		// HTTP/2 lowercases header names on the wire, so the cheaper
+		// direct-map writes are safe and equivalent.
+		hreq.Header = applicationHeaders.ToHTTPHeadersPreserveCase(headers, nil)
+	} else {
+		hreq.Header = applicationHeaders.ToHTTPHeaders(headers, nil)
+	}
 	return hreq, nil
+}
+
+// directHTTPHeadersCarrier is an opentracing.TextMapWriter that writes into
+// an http.Header without canonicalizing keys, avoiding the per-Set allocation
+// of textproto.CanonicalMIMEHeaderKey. Used only on the HTTP/2 path, where
+// the wire format mandates lowercase header names regardless of map casing.
+type directHTTPHeadersCarrier http.Header
+
+func (h directHTTPHeadersCarrier) Set(key, val string) {
+	setHeaderDirect(http.Header(h), key, val)
 }
 
 func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, *http.Request, opentracing.Span, error) {
@@ -488,52 +504,92 @@ func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, t
 	ext.HTTPUrl.Set(span, req.URL.String())
 	ctx = opentracing.ContextWithSpan(ctx, span)
 
+	var carrier opentracing.TextMapWriter
+	if o.useHTTP2 {
+		// HTTP/2 lowercases header names on the wire, so we can bypass
+		// textproto.CanonicalMIMEHeaderKey via the direct carrier.
+		carrier = directHTTPHeadersCarrier(req.Header)
+	} else {
+		carrier = opentracing.HTTPHeadersCarrier(req.Header)
+	}
 	err := tracer.Inject(
 		span.Context(),
 		opentracing.HTTPHeaders,
-		opentracing.HTTPHeadersCarrier(req.Header),
+		carrier,
 	)
 
 	return ctx, req, span, err
 }
 
 func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, ttl time.Duration) *http.Request {
+	// On HTTP/2 we bypass textproto.CanonicalMIMEHeaderKey because the wire
+	// format mandates lowercase header names regardless of map casing. On
+	// HTTP/1.1 we keep the historical canonicalization behavior for
+	// compatibility with peers that perform case-sensitive header matching.
+	setHeader := req.Header.Set
+	addHeader := req.Header.Add
+	if o.useHTTP2 {
+		setHeader = func(k, v string) { setHeaderDirect(req.Header, k, v) }
+		addHeader = func(k, v string) { addHeaderDirect(req.Header, k, v) }
+	}
+
 	// Add default headers to all requests.
 	for k, vs := range o.headers {
 		for _, v := range vs {
-			req.Header.Add(k, v)
+			addHeader(k, v)
 		}
 	}
 
-	req.Header.Set(CallerHeader, treq.Caller)
-	req.Header.Set(ServiceHeader, treq.Service)
-	req.Header.Set(ProcedureHeader, treq.Procedure)
+	setHeader(CallerHeader, treq.Caller)
+	setHeader(ServiceHeader, treq.Service)
+	setHeader(ProcedureHeader, treq.Procedure)
 	if ttl != 0 {
-		req.Header.Set(TTLMSHeader, fmt.Sprintf("%d", ttl/time.Millisecond))
+		setHeader(TTLMSHeader, strconv.FormatInt(int64(ttl/time.Millisecond), 10))
 	}
 	if treq.ShardKey != "" {
-		req.Header.Set(ShardKeyHeader, treq.ShardKey)
+		setHeader(ShardKeyHeader, treq.ShardKey)
 	}
 	if treq.RoutingKey != "" {
-		req.Header.Set(RoutingKeyHeader, treq.RoutingKey)
+		setHeader(RoutingKeyHeader, treq.RoutingKey)
 	}
 	if treq.RoutingDelegate != "" {
-		req.Header.Set(RoutingDelegateHeader, treq.RoutingDelegate)
+		setHeader(RoutingDelegateHeader, treq.RoutingDelegate)
 	}
 	if treq.CallerProcedure != "" {
-		req.Header.Set(CallerProcedureHeader, treq.CallerProcedure)
+		setHeader(CallerProcedureHeader, treq.CallerProcedure)
 	}
 
 	encoding := string(treq.Encoding)
 	if encoding != "" {
-		req.Header.Set(EncodingHeader, encoding)
+		setHeader(EncodingHeader, encoding)
 	}
 
 	if o.bothResponseError {
-		req.Header.Set(AcceptsBothResponseErrorHeader, AcceptTrue)
+		setHeader(AcceptsBothResponseErrorHeader, AcceptTrue)
 	}
 
 	return req
+}
+
+// addHeaderDirect appends value to the existing values for key on headers.
+//
+// Unlike http.Header.Add, this intentionally bypasses
+// textproto.CanonicalMIMEHeaderKey, avoiding its per-call allocation in hot
+// paths. Callers MUST pass key in the exact casing they want stored in the
+// map. This is only used on the HTTP/2 path, where the wire format mandates
+// lowercase header names regardless of the map casing.
+func addHeaderDirect(headers http.Header, key, value string) {
+	headers[key] = append(headers[key], value)
+}
+
+// setHeaderDirect overwrites the values for key on headers with a single
+// value.
+//
+// Unlike http.Header.Set, this intentionally bypasses
+// textproto.CanonicalMIMEHeaderKey to avoid its per-call allocation in hot
+// paths. See addHeaderDirect for the casing contract.
+func setHeaderDirect(headers http.Header, key, value string) {
+	headers[key] = []string{value}
 }
 
 func getYARPCErrorFromResponse(tres *transport.Response, response *http.Response, bothResponseError bool) (*transport.Response, error) {
