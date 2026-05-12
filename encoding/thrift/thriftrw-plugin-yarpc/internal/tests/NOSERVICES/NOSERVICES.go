@@ -463,7 +463,8 @@ func (v *ExWithoutAnnotation) Error() string {
 }
 
 type Struct struct {
-	Baz *string `json:"baz,omitempty"`
+	Baz            *string `json:"baz,omitempty"`
+	UserIdentifier *string `json:"UserIdentifier,omitempty"`
 }
 
 // ToWire translates a Struct struct into a Thrift-level intermediate
@@ -483,7 +484,7 @@ type Struct struct {
 //	}
 func (v *Struct) ToWire() (wire.Value, error) {
 	var (
-		fields [1]wire.Field
+		fields [2]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -495,6 +496,14 @@ func (v *Struct) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.UserIdentifier != nil {
+		w, err = wire.NewValueString(*(v.UserIdentifier)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
 		i++
 	}
 
@@ -533,6 +542,16 @@ func (v *Struct) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 2:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.UserIdentifier = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -553,6 +572,18 @@ func (v *Struct) Encode(sw stream.Writer) error {
 			return err
 		}
 		if err := sw.WriteString(*(v.Baz)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.UserIdentifier != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 2, Type: wire.TBinary}); err != nil {
+			return err
+		}
+		if err := sw.WriteString(*(v.UserIdentifier)); err != nil {
 			return err
 		}
 		if err := sw.WriteFieldEnd(); err != nil {
@@ -589,6 +620,14 @@ func (v *Struct) Decode(sr stream.Reader) error {
 				return err
 			}
 
+		case fh.ID == 2 && fh.Type == wire.TBinary:
+			var x string
+			x, err = sr.ReadString()
+			v.UserIdentifier = &x
+			if err != nil {
+				return err
+			}
+
 		default:
 			if err := sr.Skip(fh.Type); err != nil {
 				return err
@@ -618,10 +657,14 @@ func (v *Struct) String() string {
 		return "<nil>"
 	}
 
-	var fields [1]string
+	var fields [2]string
 	i := 0
 	if v.Baz != nil {
 		fields[i] = fmt.Sprintf("Baz: %v", *(v.Baz))
+		i++
+	}
+	if v.UserIdentifier != nil {
+		fields[i] = fmt.Sprintf("UserIdentifier: %v", *(v.UserIdentifier))
 		i++
 	}
 
@@ -641,6 +684,9 @@ func (v *Struct) Equals(rhs *Struct) bool {
 	if !_String_EqualsPtr(v.Baz, rhs.Baz) {
 		return false
 	}
+	if !_String_EqualsPtr(v.UserIdentifier, rhs.UserIdentifier) {
+		return false
+	}
 
 	return true
 }
@@ -653,6 +699,9 @@ func (v *Struct) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	}
 	if v.Baz != nil {
 		enc.AddString("baz", *v.Baz)
+	}
+	if v.UserIdentifier != nil {
+		enc.AddString("UserIdentifier", *v.UserIdentifier)
 	}
 	return err
 }
@@ -672,13 +721,28 @@ func (v *Struct) IsSetBaz() bool {
 	return v != nil && v.Baz != nil
 }
 
+// GetUserIdentifier returns the value of UserIdentifier if it is set or its
+// zero value if it is unset.
+func (v *Struct) GetUserIdentifier() (o string) {
+	if v != nil && v.UserIdentifier != nil {
+		return *v.UserIdentifier
+	}
+
+	return
+}
+
+// IsSetUserIdentifier returns true if UserIdentifier is not nil.
+func (v *Struct) IsSetUserIdentifier() bool {
+	return v != nil && v.UserIdentifier != nil
+}
+
 // ThriftModule represents the IDL file used to generate this package.
 var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "NOSERVICES",
 	Package:  "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/NOSERVICES",
 	FilePath: "NOSERVICES.thrift",
-	SHA1:     "bc28a223c8e87e320722bf77136e0eec1f1d18d6",
+	SHA1:     "43337ce55e6f5a802769ffc908f3750ef079c49e",
 	Raw:      rawIDL,
 }
 
-const rawIDL = "// Thrift file with no service to ensure that types_yarpc.go is always\n// generated.\n\nexception ExWithAnnotation {\n    1: optional string foo\n} (\n    rpc.code = \"OUT_OF_RANGE\"\n)\n\nexception ExWithoutAnnotation {\n    1: optional string bar\n}\n\nstruct Struct {\n    1: optional string baz\n}\n"
+const rawIDL = "// Thrift file with no service to ensure that types_yarpc.go is always\n// generated.\n\nexception ExWithAnnotation {\n    1: optional string foo\n} (\n    rpc.code = \"OUT_OF_RANGE\"\n)\n\nexception ExWithoutAnnotation {\n    1: optional string bar\n}\n\nstruct Struct {\n    1: optional string baz\n    2: optional string UserIdentifier (auth.actor_uuid = \"true\")\n}\n"
