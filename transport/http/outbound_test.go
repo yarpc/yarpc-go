@@ -108,7 +108,7 @@ func TestCreateRequest(t *testing.T) {
 			if tt.urlTemplate != nil {
 				o.urlTemplate = tt.urlTemplate
 			}
-			hreq, err := o.createRequest(tt.treq)
+			hreq, err := o.createRequest(tt.treq, make(http.Header))
 			if tt.wantError {
 				assert.Error(t, err)
 				return

@@ -30,6 +30,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -58,6 +59,17 @@ var (
 )
 
 var defaultURLTemplate, _ = url.Parse("http://localhost")
+
+// _headerPoolInitSize covers the mandatory YARPC core headers (~10) plus
+// a handful of typical application headers without growing the map.
+const _headerPoolInitSize = 16
+
+// headerPool recycles http.Header maps across outbound calls, eliminating
+// one heap allocation (the map bucket array) per request on the hot path.
+// The map is cleared before being returned so callers always get an empty map.
+var headerPool = sync.Pool{
+	New: func() any { return make(http.Header, _headerPoolInitSize) },
+}
 
 // OutboundOption customizes an HTTP Outbound.
 type OutboundOption func(*Outbound)
@@ -142,6 +154,7 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 		once:              lifecycle.NewOnce(),
 		chooser:           chooser,
 		urlTemplate:       defaultURLTemplate,
+		urlStr:            defaultURLTemplate.String(),
 		tracer:            t.tracer,
 		transport:         t,
 		bothResponseError: true,
@@ -191,6 +204,7 @@ func createHTTP1TLSClient(o *Outbound) *http.Client {
 	ut := *o.urlTemplate
 	ut.Scheme = "https"
 	o.urlTemplate = &ut
+	o.urlStr = o.urlTemplate.String()
 
 	return &http.Client{
 		Transport: h1transport,
@@ -250,9 +264,13 @@ func (t *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbo
 type Outbound struct {
 	chooser     peer.Chooser
 	urlTemplate *url.URL
-	tracer      opentracing.Tracer
-	transport   *Transport
-	sender      sender
+	// urlStr caches urlTemplate.String() to avoid recomputing it on every
+	// outbound call. It is set once during construction via setURLTemplate
+	// and is safe to read concurrently without a lock.
+	urlStr    string
+	tracer    opentracing.Tracer
+	transport *Transport
+	sender    sender
 
 	// Headers to add to all outgoing requests.
 	headers http.Header
@@ -286,6 +304,7 @@ func (o *Outbound) setURLTemplate(URL string) {
 		log.Fatalf("failed to configure HTTP outbound: invalid URL template %q: %s", URL, err)
 	}
 	o.urlTemplate = parsedURL
+	o.urlStr = parsedURL.String()
 }
 
 // Transports returns the outbound's HTTP transport.
@@ -357,7 +376,20 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request) (*transpor
 	}
 	ttl := deadline.Sub(start)
 
-	hreq, err := o.createRequest(treq)
+	// Borrow a pre-allocated header map from the pool. It is passed into
+	// createRequest and becomes hreq.Header. net/http serialises the headers
+	// to the wire during roundTrip; after that call returns the map is no
+	// longer read by any code path in this function, so it is safe to clear
+	// and return here via defer.
+	hdr := headerPool.Get().(http.Header)
+	defer func() {
+		for k := range hdr {
+			delete(hdr, k)
+		}
+		headerPool.Put(hdr)
+	}()
+
+	hreq, err := o.createRequest(treq, hdr)
 	if err != nil {
 		return nil, err
 	}
@@ -445,9 +477,13 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Reques
 	return hpPeer, onFinish, nil
 }
 
-func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error) {
-	newURL := *o.urlTemplate
-	hreq, err := http.NewRequest("POST", newURL.String(), treq.Body)
+func (o *Outbound) createRequest(treq *transport.Request, hdr http.Header) (*http.Request, error) {
+	urlStr := o.urlStr
+	if urlStr == "" {
+		// Fallback for outbounds constructed directly (e.g. in tests).
+		urlStr = o.urlTemplate.String()
+	}
+	hreq, err := http.NewRequest("POST", urlStr, treq.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -457,7 +493,7 @@ func (o *Outbound) createRequest(treq *transport.Request) (*http.Request, error)
 	// header is given along a HTTP/1 request.
 	// see: https://cs.opensource.google/go/x/net/+/c6fcb2db:http/httpguts/httplex.go;l=203
 	headers := applicationHeaders.deleteHTTP2PseudoHeadersIfNeeded(treq.Headers)
-	hreq.Header = applicationHeaders.ToHTTPHeaders(headers, nil)
+	hreq.Header = applicationHeaders.ToHTTPHeaders(headers, hdr)
 	return hreq, nil
 }
 
