@@ -160,40 +160,73 @@ func (w *writer) Close() error {
 }
 
 // Decompress obtains a gzip decompressor.
+//
+// The returned io.ReadCloser is a single-use handle that internally references
+// a pooled *gzip.Reader. The handle ensures Close is idempotent for pooling
+// purposes: only the first Close returns the pooled reader to the pool, and
+// any Read after Close returns io.EOF without touching the (now possibly
+// reused) pooled reader. This is required because the gRPC compressor
+// adapter (compressor/grpc/grpc.go) calls Close on io.EOF inside Read, and
+// gRPC itself may perform an additional Read/Close to drain the stream.
+// Without this guard, a lingering Close from the previous caller would
+// double-Put the pooled reader, handing the same instance to two concurrent
+// goroutines.
 func (c *Compressor) Decompress(r io.Reader) (io.ReadCloser, error) {
-	if dr, got := c.decompressors.Get().(*reader); got {
-		if err := dr.reader.Reset(r); err != nil {
-			c.decompressors.Put(dr)
+	var dr *reader
+	if pooled, got := c.decompressors.Get().(*reader); got {
+		if err := pooled.reader.Reset(r); err != nil {
+			c.decompressors.Put(pooled)
 			return nil, err
 		}
-
-		return dr, nil
+		dr = pooled
+	} else {
+		gr, err := gzip.NewReader(r)
+		if err != nil {
+			return nil, err
+		}
+		dr = &reader{
+			reader: gr,
+			pool:   &c.decompressors,
+		}
 	}
-
-	dr, err := gzip.NewReader(r)
-	if err != nil {
-		return nil, err
-	}
-
-	return &reader{
-		reader: dr,
-		pool:   &c.decompressors,
-	}, nil
+	return &readerHandle{r: dr}, nil
 }
 
+// reader is the pooled gzip decompressor. It is never returned to callers
+// directly; callers always receive a *readerHandle that wraps it.
 type reader struct {
 	reader *gzip.Reader
 	pool   *sync.Pool
 }
 
-var _ io.ReadCloser = (*reader)(nil)
-
-func (r *reader) Read(buf []byte) (n int, err error) {
-	return r.reader.Read(buf)
+// readerHandle is the per-call wrapper handed back from Decompress. It owns
+// exclusive use of the underlying pooled *reader for the lifetime of a single
+// request and guarantees that:
+//
+//   - Close is idempotent: subsequent calls are no-ops and do not re-Put the
+//     pooled reader.
+//   - Read after Close returns io.EOF immediately without touching the
+//     pooled reader (which may have been recycled to another goroutine).
+type readerHandle struct {
+	r      *reader
+	closed bool
 }
 
-func (r *reader) Close() error {
-	r.pool.Put(r)
+var _ io.ReadCloser = (*readerHandle)(nil)
+
+func (h *readerHandle) Read(buf []byte) (int, error) {
+	if h.closed {
+		return 0, io.EOF
+	}
+	return h.r.reader.Read(buf)
+}
+
+func (h *readerHandle) Close() error {
+	if h.closed {
+		return nil
+	}
+	h.closed = true
+	h.r.pool.Put(h.r)
 	return nil
 }
 
