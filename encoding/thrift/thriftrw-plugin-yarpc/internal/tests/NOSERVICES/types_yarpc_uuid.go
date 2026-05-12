@@ -15,3 +15,11 @@ func (t *Struct) ActorUUID() string {
 func (t *StructRequiredUUID) ActorUUID() string {
 	return t.UserIdentifier
 }
+
+// ActorUUID returns the UUID string from the field annotated with auth.actor_uuid.
+func (t *TestService_TestMethod_Args) ActorUUID() string {
+	if uuid := t.Interested; uuid != nil {
+		return *uuid
+	}
+	return ""
+}

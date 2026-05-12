@@ -1011,8 +1011,644 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "NOSERVICES",
 	Package:  "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/NOSERVICES",
 	FilePath: "NOSERVICES.thrift",
-	SHA1:     "228a9b9185134861e0f0663785f041fe81135229",
+	SHA1:     "8d8c0e528b55d192978e4f1d768bd8f345690d58",
 	Raw:      rawIDL,
 }
 
-const rawIDL = "// Thrift file with no service to ensure that types_yarpc.go is always\n// generated.\n\nexception ExWithAnnotation {\n    1: optional string foo\n} (\n    rpc.code = \"OUT_OF_RANGE\"\n)\n\nexception ExWithoutAnnotation {\n    1: optional string bar\n}\n\nstruct Struct {\n    1: optional string baz\n    2: optional string UserIdentifier (auth.actor_uuid = \"true\")\n}\n\nstruct StructRequiredUUID {\n    1: optional string baz\n    2: required string UserIdentifier (auth.actor_uuid = \"true\")\n}\n"
+const rawIDL = "// Thrift file with no service to ensure that types_yarpc.go is always\n// generated.\n\nexception ExWithAnnotation {\n    1: optional string foo\n} (\n    rpc.code = \"OUT_OF_RANGE\"\n)\n\nexception ExWithoutAnnotation {\n    1: optional string bar\n}\n\nstruct Struct {\n    1: optional string baz\n    2: optional string UserIdentifier (auth.actor_uuid = \"true\")\n}\n\nstruct StructRequiredUUID {\n    1: optional string baz\n    2: required string UserIdentifier (auth.actor_uuid = \"true\")\n}\n\nservice TestService {\n    string testMethod(\n        1: string notInterested,\n        2: string interested (auth.actor_uuid = \"true\"),\n    )\n}"
+
+// TestService_TestMethod_Args represents the arguments for the TestService.testMethod function.
+//
+// The arguments for testMethod are sent and received over the wire as this struct.
+type TestService_TestMethod_Args struct {
+	NotInterested *string `json:"notInterested,omitempty"`
+	Interested    *string `json:"interested,omitempty"`
+}
+
+// ToWire translates a TestService_TestMethod_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//		return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//		return err
+//	}
+func (v *TestService_TestMethod_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.NotInterested != nil {
+		w, err = wire.NewValueString(*(v.NotInterested)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.Interested != nil {
+		w, err = wire.NewValueString(*(v.Interested)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a TestService_TestMethod_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a TestService_TestMethod_Args struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	var v TestService_TestMethod_Args
+//	if err := v.FromWire(x); err != nil {
+//		return nil, err
+//	}
+//	return &v, nil
+func (v *TestService_TestMethod_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.NotInterested = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 2:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Interested = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a TestService_TestMethod_Args struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a TestService_TestMethod_Args struct could not be encoded.
+func (v *TestService_TestMethod_Args) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.NotInterested != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TBinary}); err != nil {
+			return err
+		}
+		if err := sw.WriteString(*(v.NotInterested)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.Interested != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 2, Type: wire.TBinary}); err != nil {
+			return err
+		}
+		if err := sw.WriteString(*(v.Interested)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a TestService_TestMethod_Args struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a TestService_TestMethod_Args struct could not be generated from the wire
+// representation.
+func (v *TestService_TestMethod_Args) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 1 && fh.Type == wire.TBinary:
+			var x string
+			x, err = sr.ReadString()
+			v.NotInterested = &x
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 2 && fh.Type == wire.TBinary:
+			var x string
+			x, err = sr.ReadString()
+			v.Interested = &x
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a TestService_TestMethod_Args
+// struct.
+func (v *TestService_TestMethod_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.NotInterested != nil {
+		fields[i] = fmt.Sprintf("NotInterested: %v", *(v.NotInterested))
+		i++
+	}
+	if v.Interested != nil {
+		fields[i] = fmt.Sprintf("Interested: %v", *(v.Interested))
+		i++
+	}
+
+	return fmt.Sprintf("TestService_TestMethod_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this TestService_TestMethod_Args match the
+// provided TestService_TestMethod_Args.
+//
+// This function performs a deep comparison.
+func (v *TestService_TestMethod_Args) Equals(rhs *TestService_TestMethod_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.NotInterested, rhs.NotInterested) {
+		return false
+	}
+	if !_String_EqualsPtr(v.Interested, rhs.Interested) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of TestService_TestMethod_Args.
+func (v *TestService_TestMethod_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.NotInterested != nil {
+		enc.AddString("notInterested", *v.NotInterested)
+	}
+	if v.Interested != nil {
+		enc.AddString("interested", *v.Interested)
+	}
+	return err
+}
+
+// GetNotInterested returns the value of NotInterested if it is set or its
+// zero value if it is unset.
+func (v *TestService_TestMethod_Args) GetNotInterested() (o string) {
+	if v != nil && v.NotInterested != nil {
+		return *v.NotInterested
+	}
+
+	return
+}
+
+// IsSetNotInterested returns true if NotInterested is not nil.
+func (v *TestService_TestMethod_Args) IsSetNotInterested() bool {
+	return v != nil && v.NotInterested != nil
+}
+
+// GetInterested returns the value of Interested if it is set or its
+// zero value if it is unset.
+func (v *TestService_TestMethod_Args) GetInterested() (o string) {
+	if v != nil && v.Interested != nil {
+		return *v.Interested
+	}
+
+	return
+}
+
+// IsSetInterested returns true if Interested is not nil.
+func (v *TestService_TestMethod_Args) IsSetInterested() bool {
+	return v != nil && v.Interested != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "testMethod" for this struct.
+func (v *TestService_TestMethod_Args) MethodName() string {
+	return "testMethod"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *TestService_TestMethod_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// TestService_TestMethod_Helper provides functions that aid in handling the
+// parameters and return values of the TestService.testMethod
+// function.
+var TestService_TestMethod_Helper = struct {
+	// Args accepts the parameters of testMethod in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		notInterested *string,
+		interested *string,
+	) *TestService_TestMethod_Args
+
+	// IsException returns true if the given error can be thrown
+	// by testMethod.
+	//
+	// An error can be thrown by testMethod only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for testMethod
+	// given its return value and error.
+	//
+	// This allows mapping values and errors returned by
+	// testMethod into a serializable result struct.
+	// WrapResponse returns a non-nil error if the provided
+	// error cannot be thrown by testMethod
+	//
+	//   value, err := testMethod(args)
+	//   result, err := TestService_TestMethod_Helper.WrapResponse(value, err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from testMethod: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(string, error) (*TestService_TestMethod_Result, error)
+
+	// UnwrapResponse takes the result struct for testMethod
+	// and returns the value or error returned by it.
+	//
+	// The error is non-nil only if testMethod threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   value, err := TestService_TestMethod_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*TestService_TestMethod_Result) (string, error)
+}{}
+
+func init() {
+	TestService_TestMethod_Helper.Args = func(
+		notInterested *string,
+		interested *string,
+	) *TestService_TestMethod_Args {
+		return &TestService_TestMethod_Args{
+			NotInterested: notInterested,
+			Interested:    interested,
+		}
+	}
+
+	TestService_TestMethod_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		default:
+			return false
+		}
+	}
+
+	TestService_TestMethod_Helper.WrapResponse = func(success string, err error) (*TestService_TestMethod_Result, error) {
+		if err == nil {
+			return &TestService_TestMethod_Result{Success: &success}, nil
+		}
+
+		return nil, err
+	}
+	TestService_TestMethod_Helper.UnwrapResponse = func(result *TestService_TestMethod_Result) (success string, err error) {
+
+		if result.Success != nil {
+			success = *result.Success
+			return
+		}
+
+		err = errors.New("expected a non-void result")
+		return
+	}
+
+}
+
+// TestService_TestMethod_Result represents the result of a TestService.testMethod function call.
+//
+// The result of a testMethod execution is sent and received over the wire as this struct.
+//
+// Success is set only if the function did not throw an exception.
+type TestService_TestMethod_Result struct {
+	// Value returned by testMethod after a successful execution.
+	Success *string `json:"success,omitempty"`
+}
+
+// ToWire translates a TestService_TestMethod_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//		return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//		return err
+//	}
+func (v *TestService_TestMethod_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Success != nil {
+		w, err = wire.NewValueString(*(v.Success)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
+		i++
+	}
+
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("TestService_TestMethod_Result should have exactly one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a TestService_TestMethod_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a TestService_TestMethod_Result struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	var v TestService_TestMethod_Result
+//	if err := v.FromWire(x); err != nil {
+//		return nil, err
+//	}
+//	return &v, nil
+func (v *TestService_TestMethod_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 0:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Success = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("TestService_TestMethod_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// Encode serializes a TestService_TestMethod_Result struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a TestService_TestMethod_Result struct could not be encoded.
+func (v *TestService_TestMethod_Result) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Success != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 0, Type: wire.TBinary}); err != nil {
+			return err
+		}
+		if err := sw.WriteString(*(v.Success)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+
+	if count != 1 {
+		return fmt.Errorf("TestService_TestMethod_Result should have exactly one field: got %v fields", count)
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a TestService_TestMethod_Result struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a TestService_TestMethod_Result struct could not be generated from the wire
+// representation.
+func (v *TestService_TestMethod_Result) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 0 && fh.Type == wire.TBinary:
+			var x string
+			x, err = sr.ReadString()
+			v.Success = &x
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("TestService_TestMethod_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a TestService_TestMethod_Result
+// struct.
+func (v *TestService_TestMethod_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Success != nil {
+		fields[i] = fmt.Sprintf("Success: %v", *(v.Success))
+		i++
+	}
+
+	return fmt.Sprintf("TestService_TestMethod_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this TestService_TestMethod_Result match the
+// provided TestService_TestMethod_Result.
+//
+// This function performs a deep comparison.
+func (v *TestService_TestMethod_Result) Equals(rhs *TestService_TestMethod_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.Success, rhs.Success) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of TestService_TestMethod_Result.
+func (v *TestService_TestMethod_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Success != nil {
+		enc.AddString("success", *v.Success)
+	}
+	return err
+}
+
+// GetSuccess returns the value of Success if it is set or its
+// zero value if it is unset.
+func (v *TestService_TestMethod_Result) GetSuccess() (o string) {
+	if v != nil && v.Success != nil {
+		return *v.Success
+	}
+
+	return
+}
+
+// IsSetSuccess returns true if Success is not nil.
+func (v *TestService_TestMethod_Result) IsSetSuccess() bool {
+	return v != nil && v.Success != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "testMethod" for this struct.
+func (v *TestService_TestMethod_Result) MethodName() string {
+	return "testMethod"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *TestService_TestMethod_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}

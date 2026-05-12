@@ -23,6 +23,9 @@ package main
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"go.uber.org/thriftrw/compile"
 	"go.uber.org/thriftrw/plugin"
@@ -32,13 +35,20 @@ const (
 	_UUIDAnnotationKey = "auth.actor_uuid"
 )
 
-// annotatedUUIDField describes a struct field tagged with the
-// auth.actor_uuid annotation. Required controls whether the generated Go
-// field is a value or a pointer (thriftrw renders required primitives as
-// values and optional primitives as pointers), which in turn controls the
-// body of the generated accessor.
+// annotatedUUIDField describes a single field tagged with the auth.actor_uuid
+// annotation, normalised for code generation.
+//
+// TypeName is the Go-side name of the type the accessor should hang off:
+//   - for a top-level Thrift struct/exception, the struct's own Go name; and
+//   - for a service method parameter, the synthetic args struct thriftrw
+//     emits, named "<Service>_<Method>_Args".
+//
+// FieldName is the corresponding Go field name. Required controls whether
+// the accessor returns the field directly (required primitives are emitted as
+// values) or dereferences a pointer (optional primitives are emitted as
+// pointers).
 type annotatedUUIDField struct {
-	Struct    *compile.StructSpec
+	TypeName  string
 	FieldName string
 	Required  bool
 }
@@ -51,7 +61,7 @@ package <.Name>
 
 <range $f := getAllAnnotatedTypes>
 // ActorUUID returns the UUID string from the field annotated with auth.actor_uuid.
-func (t *<$f.Struct.Name>) ActorUUID() string {
+func (t *<$f.TypeName>) ActorUUID() string {
 	<if $f.Required>return t.<$f.FieldName><else>if uuid := t.<$f.FieldName>; uuid != nil {
 		return *uuid
 	}
@@ -70,7 +80,7 @@ func yarpcUUIDGenerator(data *moduleTemplateData, files map[string][]byte) error
 	// methods to types annotated with auth.actor_uuid in that Thrift file.
 	compiledModule := data.CompiledModule
 
-	annotatedTypes, err := anyAnnotatedTypes(compiledModule.Types)
+	annotatedTypes, err := anyAnnotatedTypes(compiledModule)
 	if err != nil {
 		return err
 	}
@@ -88,36 +98,91 @@ func yarpcUUIDGenerator(data *moduleTemplateData, files map[string][]byte) error
 	return err
 }
 
-// anyAnnotatedTypes collects all struct fields in the given type set that are
-// tagged with the auth.actor_uuid annotation. The annotation must be applied
-// at most once per struct; any violation returns an error so that we fail generation early instead
-// of emitting code that does not compile.
-func anyAnnotatedTypes(specs map[string]compile.TypeSpec) ([]annotatedUUIDField, error) {
-	annotatedTypes := make(map[*compile.StructSpec]string)
+// anyAnnotatedTypes collects every field carrying the auth.actor_uuid
+// annotation across two locations:
+//  1. top-level structs/exceptions declared in the Thrift module, and
+//  2. method parameters on services defined in the Thrift module (which
+//     thriftrw renders as synthetic "<Service>_<Method>_Args" structs).
+//
+// The annotation must appear at most once per containing struct/method
+func anyAnnotatedTypes(module *compile.Module) ([]annotatedUUIDField, error) {
 	var out []annotatedUUIDField
 
-	for _, t := range specs {
+	for _, t := range module.Types {
 		ss, ok := t.(*compile.StructSpec)
 		if !ok {
 			continue
 		}
-		for _, field := range ss.Fields {
-			if _, ok := field.Annotations[_UUIDAnnotationKey]; !ok {
-				continue
-			}
-			if prev, dup := annotatedTypes[ss]; dup {
-				return nil, fmt.Errorf(
-					"multiple fields annotated with %s for type %s. Prev %s; duplicate at %s",
-					_UUIDAnnotationKey, ss.Name, prev, field.Name)
-			}
-			annotatedTypes[ss] = field.Name
+		fields, err := annotatedFieldsIn(ss.Fields, ss.Name)
+		if err != nil {
+			return nil, err
+		}
+		for _, f := range fields {
 			out = append(out, annotatedUUIDField{
-				Struct:    ss,
-				FieldName: field.Name,
-				Required:  field.Required,
+				TypeName:  goName(ss.Name),
+				FieldName: goName(f.Name),
+				Required:  f.Required,
 			})
 		}
 	}
 
+	for _, svc := range module.Services {
+		for _, fn := range svc.Functions {
+			ownerLabel := fmt.Sprintf("%s.%s", svc.Name, fn.Name)
+			fields, err := annotatedFieldsIn(fn.ArgsSpec, ownerLabel)
+			if err != nil {
+				return nil, err
+			}
+			for _, f := range fields {
+				out = append(out, annotatedUUIDField{
+					TypeName:  fmt.Sprintf("%s_%s_Args", goName(svc.Name), goName(fn.Name)),
+					FieldName: goName(f.Name),
+					Required:  f.Required,
+				})
+			}
+		}
+	}
+
 	return out, nil
+}
+
+// annotatedFieldsIn returns the auth.actor_uuid-tagged fields within a single
+// field group (a struct's fields or a method's args).
+func annotatedFieldsIn(fields []*compile.FieldSpec, ownerLabel string) ([]*compile.FieldSpec, error) {
+	var found []*compile.FieldSpec
+	for _, field := range fields {
+		if _, ok := field.Annotations[_UUIDAnnotationKey]; !ok {
+			continue
+		}
+		if len(found) > 0 {
+			return nil, fmt.Errorf(
+				"multiple fields annotated with %s for %s. Prev %s; duplicate at %s",
+				_UUIDAnnotationKey, ownerLabel, found[0].Name, field.Name)
+		}
+		found = append(found, field)
+	}
+	return found, nil
+}
+
+// goName converts a Thrift identifier to the Go name thriftrw generates for
+// it. It covers the cases we care about in practice: PascalCase, camelCase
+// (first letter is capitalized), and snake_case (each underscore-separated
+// word is capitalized and joined). Initialism preservation (e.g. URL, UUID)
+// only kicks in for already-uppercase inputs; if you rely on thriftrw's
+// initialism handling for snake_case identifiers, prefer using the
+// `go.name` Thrift annotation on the field or PascalCase the field directly.
+func goName(s string) string {
+	if s == "" {
+		return s
+	}
+	var b strings.Builder
+	for _, part := range strings.Split(s, "_") {
+		if part == "" {
+			continue
+		}
+		r, sz := utf8.DecodeRuneInString(part)
+		b.WriteRune(unicode.ToUpper(r))
+		b.WriteString(part[sz:])
+	}
+	return b.String()
 }

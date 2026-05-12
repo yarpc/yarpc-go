@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/thriftrw/compile"
 	"go.uber.org/thriftrw/ptr"
 	noservices "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/NOSERVICES"
@@ -31,56 +32,77 @@ import (
 
 func TestGetUUID(t *testing.T) {
 	t.Run("happyCase", func(t *testing.T) {
-		assert.NotPanics(t, func() {
-			spec, err := compile.Compile("internal/uuid_test/happy.thrift")
-			assert.NoError(t, err)
-			annotated, err := anyAnnotatedTypes(spec.Types)
-			assert.NoError(t, err)
-			assert.Equal(t, 1, len(annotated))
-			assert.Equal(t, "Struct", annotated[0].Struct.Name)
-			assert.Equal(t, "UserIdentifier", annotated[0].FieldName)
-			assert.False(t, annotated[0].Required, "optional thrift field should not be marked required")
-		})
+		spec, err := compile.Compile("internal/uuid_test/happy.thrift")
+		require.NoError(t, err)
+		annotated, err := anyAnnotatedTypes(spec)
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(annotated))
+		assert.Equal(t, "Struct", annotated[0].TypeName)
+		assert.Equal(t, "UserIdentifier", annotated[0].FieldName)
+		assert.False(t, annotated[0].Required, "optional thrift field should not be marked required")
 	})
+
 	t.Run("requiredField", func(t *testing.T) {
-		assert.NotPanics(t, func() {
-			spec, err := compile.Compile("internal/uuid_test/required.thrift")
-			assert.NoError(t, err)
-			annotated, err := anyAnnotatedTypes(spec.Types)
-			assert.NoError(t, err)
-			assert.Equal(t, 1, len(annotated))
-			assert.Equal(t, "RequiredStruct", annotated[0].Struct.Name)
-			assert.Equal(t, "UserIdentifier", annotated[0].FieldName)
-			assert.True(t, annotated[0].Required, "required thrift field should be marked required")
-		})
+		spec, err := compile.Compile("internal/uuid_test/required.thrift")
+		require.NoError(t, err)
+		annotated, err := anyAnnotatedTypes(spec)
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(annotated))
+		assert.Equal(t, "RequiredStruct", annotated[0].TypeName)
+		assert.Equal(t, "UserIdentifier", annotated[0].FieldName)
+		assert.True(t, annotated[0].Required, "required thrift field should be marked required")
 	})
+
 	t.Run("multipleAnnotatedStructs", func(t *testing.T) {
 		spec, err := compile.Compile("internal/uuid_test/multipleAnnotatedStructs.thrift")
-		assert.NoError(t, err)
-		annotated, err := anyAnnotatedTypes(spec.Types)
+		require.NoError(t, err)
+		annotated, err := anyAnnotatedTypes(spec)
 		assert.NoError(t, err)
 		assert.Equal(t, 2, len(annotated))
-
-		// The plugin does not guarantee iteration order across structs;
-		// just assert that each annotated struct maps to its expected field.
 		want := map[string]string{
 			"RedStruct":   "UserIdentifier",
 			"GreenStruct": "CatIdentifier",
 		}
 		got := make(map[string]string, len(annotated))
 		for _, f := range annotated {
-			got[f.Struct.Name] = f.FieldName
+			got[f.TypeName] = f.FieldName
 		}
 		assert.Equal(t, want, got)
 	})
-	t.Run("errorCase", func(t *testing.T) {
-		assert.NotPanics(t, func() {
-			spec, err := compile.Compile("internal/uuid_test/broken.thrift")
-			assert.NoError(t, err)
-			_, err = anyAnnotatedTypes(spec.Types)
-			assert.Error(t, err)
-		})
+
+	t.Run("serviceMethodArg", func(t *testing.T) {
+		spec, err := compile.Compile("internal/uuid_test/serviceArg.thrift")
+		require.NoError(t, err)
+		annotated, err := anyAnnotatedTypes(spec)
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(annotated))
+		assert.Equal(t, "TestService_TestMethod_Args", annotated[0].TypeName)
+		assert.Equal(t, "Interested", annotated[0].FieldName,
+			"thrift name 'interested' should be PascalCased to match the Go field thriftrw emits")
+		// Thrift method arguments default to optional in thriftrw, so the
+		// generated Go field is a pointer regardless of how the user wrote it.
+		assert.False(t, annotated[0].Required)
 	})
+
+	t.Run("duplicateAnnotationsRejected", func(t *testing.T) {
+		spec, err := compile.Compile("internal/uuid_test/broken.thrift")
+		require.NoError(t, err)
+		_, err = anyAnnotatedTypes(spec)
+		assert.Error(t, err)
+	})
+}
+
+func TestGoName(t *testing.T) {
+	cases := map[string]string{
+		"UserIdentifier":  "UserIdentifier",
+		"userIdentifier":  "UserIdentifier",
+		"user_identifier": "UserIdentifier",
+		"UUID":            "UUID",
+		"interested":      "Interested",
+	}
+	for in, want := range cases {
+		assert.Equal(t, want, goName(in), "goName(%q)", in)
+	}
 }
 
 func TestGetGeneratedUUID(t *testing.T) {
@@ -97,5 +119,11 @@ func TestGetGeneratedUUID(t *testing.T) {
 			UserIdentifier: "my-required-uuid",
 		}
 		assert.Equal(t, "my-required-uuid", st.ActorUUID())
+	})
+	t.Run("arg field UUID", func(t *testing.T) {
+		st := noservices.TestService_TestMethod_Args{
+			Interested: ptr.String("my-arg-uuid"),
+		}
+		assert.Equal(t, "my-arg-uuid", st.ActorUUID())
 	})
 }
