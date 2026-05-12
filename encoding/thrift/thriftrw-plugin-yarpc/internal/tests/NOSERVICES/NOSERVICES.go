@@ -4,6 +4,7 @@
 package NOSERVICES
 
 import (
+	errors "errors"
 	fmt "fmt"
 	stream "go.uber.org/thriftrw/protocol/stream"
 	thriftreflect "go.uber.org/thriftrw/thriftreflect"
@@ -463,7 +464,8 @@ func (v *ExWithoutAnnotation) Error() string {
 }
 
 type Struct struct {
-	Baz *string `json:"baz,omitempty"`
+	Baz            *string `json:"baz,omitempty"`
+	UserIdentifier *string `json:"UserIdentifier,omitempty"`
 }
 
 // ToWire translates a Struct struct into a Thrift-level intermediate
@@ -483,7 +485,7 @@ type Struct struct {
 //	}
 func (v *Struct) ToWire() (wire.Value, error) {
 	var (
-		fields [1]wire.Field
+		fields [2]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -495,6 +497,14 @@ func (v *Struct) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.UserIdentifier != nil {
+		w, err = wire.NewValueString(*(v.UserIdentifier)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
 		i++
 	}
 
@@ -533,6 +543,16 @@ func (v *Struct) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 2:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.UserIdentifier = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -553,6 +573,18 @@ func (v *Struct) Encode(sw stream.Writer) error {
 			return err
 		}
 		if err := sw.WriteString(*(v.Baz)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.UserIdentifier != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 2, Type: wire.TBinary}); err != nil {
+			return err
+		}
+		if err := sw.WriteString(*(v.UserIdentifier)); err != nil {
 			return err
 		}
 		if err := sw.WriteFieldEnd(); err != nil {
@@ -589,6 +621,14 @@ func (v *Struct) Decode(sr stream.Reader) error {
 				return err
 			}
 
+		case fh.ID == 2 && fh.Type == wire.TBinary:
+			var x string
+			x, err = sr.ReadString()
+			v.UserIdentifier = &x
+			if err != nil {
+				return err
+			}
+
 		default:
 			if err := sr.Skip(fh.Type); err != nil {
 				return err
@@ -618,10 +658,14 @@ func (v *Struct) String() string {
 		return "<nil>"
 	}
 
-	var fields [1]string
+	var fields [2]string
 	i := 0
 	if v.Baz != nil {
 		fields[i] = fmt.Sprintf("Baz: %v", *(v.Baz))
+		i++
+	}
+	if v.UserIdentifier != nil {
+		fields[i] = fmt.Sprintf("UserIdentifier: %v", *(v.UserIdentifier))
 		i++
 	}
 
@@ -641,6 +685,9 @@ func (v *Struct) Equals(rhs *Struct) bool {
 	if !_String_EqualsPtr(v.Baz, rhs.Baz) {
 		return false
 	}
+	if !_String_EqualsPtr(v.UserIdentifier, rhs.UserIdentifier) {
+		return false
+	}
 
 	return true
 }
@@ -653,6 +700,9 @@ func (v *Struct) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	}
 	if v.Baz != nil {
 		enc.AddString("baz", *v.Baz)
+	}
+	if v.UserIdentifier != nil {
+		enc.AddString("UserIdentifier", *v.UserIdentifier)
 	}
 	return err
 }
@@ -672,13 +722,297 @@ func (v *Struct) IsSetBaz() bool {
 	return v != nil && v.Baz != nil
 }
 
+// GetUserIdentifier returns the value of UserIdentifier if it is set or its
+// zero value if it is unset.
+func (v *Struct) GetUserIdentifier() (o string) {
+	if v != nil && v.UserIdentifier != nil {
+		return *v.UserIdentifier
+	}
+
+	return
+}
+
+// IsSetUserIdentifier returns true if UserIdentifier is not nil.
+func (v *Struct) IsSetUserIdentifier() bool {
+	return v != nil && v.UserIdentifier != nil
+}
+
+type StructRequiredUUID struct {
+	Baz            *string `json:"baz,omitempty"`
+	UserIdentifier string  `json:"UserIdentifier,required"`
+}
+
+// ToWire translates a StructRequiredUUID struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//		return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//		return err
+//	}
+func (v *StructRequiredUUID) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Baz != nil {
+		w, err = wire.NewValueString(*(v.Baz)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	w, err = wire.NewValueString(v.UserIdentifier), error(nil)
+	if err != nil {
+		return w, err
+	}
+	fields[i] = wire.Field{ID: 2, Value: w}
+	i++
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a StructRequiredUUID struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a StructRequiredUUID struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	var v StructRequiredUUID
+//	if err := v.FromWire(x); err != nil {
+//		return nil, err
+//	}
+//	return &v, nil
+func (v *StructRequiredUUID) FromWire(w wire.Value) error {
+	var err error
+
+	UserIdentifierIsSet := false
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Baz = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 2:
+			if field.Value.Type() == wire.TBinary {
+				v.UserIdentifier, err = field.Value.GetString(), error(nil)
+				if err != nil {
+					return err
+				}
+				UserIdentifierIsSet = true
+			}
+		}
+	}
+
+	if !UserIdentifierIsSet {
+		return errors.New("field UserIdentifier of StructRequiredUUID is required")
+	}
+
+	return nil
+}
+
+// Encode serializes a StructRequiredUUID struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a StructRequiredUUID struct could not be encoded.
+func (v *StructRequiredUUID) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Baz != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TBinary}); err != nil {
+			return err
+		}
+		if err := sw.WriteString(*(v.Baz)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 2, Type: wire.TBinary}); err != nil {
+		return err
+	}
+	if err := sw.WriteString(v.UserIdentifier); err != nil {
+		return err
+	}
+	if err := sw.WriteFieldEnd(); err != nil {
+		return err
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a StructRequiredUUID struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a StructRequiredUUID struct could not be generated from the wire
+// representation.
+func (v *StructRequiredUUID) Decode(sr stream.Reader) error {
+
+	UserIdentifierIsSet := false
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 1 && fh.Type == wire.TBinary:
+			var x string
+			x, err = sr.ReadString()
+			v.Baz = &x
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 2 && fh.Type == wire.TBinary:
+			v.UserIdentifier, err = sr.ReadString()
+			if err != nil {
+				return err
+			}
+			UserIdentifierIsSet = true
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	if !UserIdentifierIsSet {
+		return errors.New("field UserIdentifier of StructRequiredUUID is required")
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a StructRequiredUUID
+// struct.
+func (v *StructRequiredUUID) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.Baz != nil {
+		fields[i] = fmt.Sprintf("Baz: %v", *(v.Baz))
+		i++
+	}
+	fields[i] = fmt.Sprintf("UserIdentifier: %v", v.UserIdentifier)
+	i++
+
+	return fmt.Sprintf("StructRequiredUUID{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this StructRequiredUUID match the
+// provided StructRequiredUUID.
+//
+// This function performs a deep comparison.
+func (v *StructRequiredUUID) Equals(rhs *StructRequiredUUID) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.Baz, rhs.Baz) {
+		return false
+	}
+	if !(v.UserIdentifier == rhs.UserIdentifier) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of StructRequiredUUID.
+func (v *StructRequiredUUID) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Baz != nil {
+		enc.AddString("baz", *v.Baz)
+	}
+	enc.AddString("UserIdentifier", v.UserIdentifier)
+	return err
+}
+
+// GetBaz returns the value of Baz if it is set or its
+// zero value if it is unset.
+func (v *StructRequiredUUID) GetBaz() (o string) {
+	if v != nil && v.Baz != nil {
+		return *v.Baz
+	}
+
+	return
+}
+
+// IsSetBaz returns true if Baz is not nil.
+func (v *StructRequiredUUID) IsSetBaz() bool {
+	return v != nil && v.Baz != nil
+}
+
+// GetUserIdentifier returns the value of UserIdentifier if it is set or its
+// zero value if it is unset.
+func (v *StructRequiredUUID) GetUserIdentifier() (o string) {
+	if v != nil {
+		o = v.UserIdentifier
+	}
+	return
+}
+
 // ThriftModule represents the IDL file used to generate this package.
 var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "NOSERVICES",
 	Package:  "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/NOSERVICES",
 	FilePath: "NOSERVICES.thrift",
-	SHA1:     "bc28a223c8e87e320722bf77136e0eec1f1d18d6",
+	SHA1:     "228a9b9185134861e0f0663785f041fe81135229",
 	Raw:      rawIDL,
 }
 
-const rawIDL = "// Thrift file with no service to ensure that types_yarpc.go is always\n// generated.\n\nexception ExWithAnnotation {\n    1: optional string foo\n} (\n    rpc.code = \"OUT_OF_RANGE\"\n)\n\nexception ExWithoutAnnotation {\n    1: optional string bar\n}\n\nstruct Struct {\n    1: optional string baz\n}\n"
+const rawIDL = "// Thrift file with no service to ensure that types_yarpc.go is always\n// generated.\n\nexception ExWithAnnotation {\n    1: optional string foo\n} (\n    rpc.code = \"OUT_OF_RANGE\"\n)\n\nexception ExWithoutAnnotation {\n    1: optional string bar\n}\n\nstruct Struct {\n    1: optional string baz\n    2: optional string UserIdentifier (auth.actor_uuid = \"true\")\n}\n\nstruct StructRequiredUUID {\n    1: optional string baz\n    2: required string UserIdentifier (auth.actor_uuid = \"true\")\n}\n"
