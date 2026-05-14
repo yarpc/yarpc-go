@@ -54,6 +54,19 @@ func newCodec(anyResolver jsonpb.AnyResolver) *codec {
 }
 
 func unmarshal(encoding transport.Encoding, reader io.Reader, message proto.Message, c *codec) error {
+	// Fast path: if the reader directly exposes raw bytes, skip the redundant
+	// copy through bufferpool. This is the case for gRPC transports where the
+	// bytes have already been materialized from the wire.
+	if br, ok := reader.(interface{ Bytes() []byte }); ok {
+		body := br.Bytes()
+		if len(body) == 0 {
+			return nil
+		}
+		return unmarshalBytes(encoding, body, message, c)
+	}
+
+	// Slow path: drain the reader into a pooled buffer. Used by non-gRPC
+	// transports (HTTP, TChannel) that provide a plain io.Reader.
 	buf := bufferpool.Get()
 	defer bufferpool.Put(buf)
 	if _, err := buf.ReadFrom(reader); err != nil {
