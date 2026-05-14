@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/thriftrw/compile"
 	"go.uber.org/thriftrw/ptr"
-	noservices "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/NOSERVICES"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/uuid_test/generated"
 )
 
 func TestGetUUID(t *testing.T) {
@@ -107,21 +107,21 @@ func TestGoName(t *testing.T) {
 
 func TestGetGeneratedUUID(t *testing.T) {
 	t.Run("optional field UUID", func(t *testing.T) {
-		st := noservices.Struct{
+		st := generated.Struct{
 			Baz:            ptr.String("test"),
 			UserIdentifier: ptr.String("my-uuid"),
 		}
 		assert.Equal(t, "my-uuid", st.ActorUUID())
 	})
 	t.Run("required field UUID", func(t *testing.T) {
-		st := noservices.StructRequiredUUID{
+		st := generated.StructRequiredUUID{
 			Baz:            ptr.String("test"),
 			UserIdentifier: "my-required-uuid",
 		}
 		assert.Equal(t, "my-required-uuid", st.ActorUUID())
 	})
 	t.Run("arg field UUID", func(t *testing.T) {
-		st := noservices.TestService_TestMethod_Args{
+		st := generated.TestService_TestMethod_Args{
 			Interested: ptr.String("my-arg-uuid"),
 		}
 		assert.Equal(t, "my-arg-uuid", st.ActorUUID())
