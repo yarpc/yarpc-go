@@ -76,7 +76,7 @@ func TestGetUUID(t *testing.T) {
 	})
 }
 
-func TestGoName(t *testing.T) {
+func TestGoCase(t *testing.T) {
 	cases := map[string]string{
 		"UserIdentifier":  "UserIdentifier",
 		"userIdentifier":  "UserIdentifier",
@@ -85,7 +85,7 @@ func TestGoName(t *testing.T) {
 		"interested":      "Interested",
 	}
 	for in, want := range cases {
-		assert.Equal(t, want, goName(in), "goName(%q)", in)
+		assert.Equal(t, want, goCase(in), "goCase(%q)", in)
 	}
 }
 
