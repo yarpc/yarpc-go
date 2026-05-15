@@ -7,7 +7,7 @@ import (
 	context "context"
 	gomock "github.com/golang/mock/gomock"
 	yarpc "go.uber.org/yarpc"
-	testserviceclient "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/uuid_test/generated/testserviceclient"
+	testserviceclient "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES/testserviceclient"
 )
 
 // MockClient implements a gomock-compatible mock client for service

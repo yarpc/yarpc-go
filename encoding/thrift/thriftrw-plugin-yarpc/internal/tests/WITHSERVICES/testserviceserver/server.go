@@ -9,7 +9,7 @@ import (
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
-	generated "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/uuid_test/generated"
+	WITHSERVICES "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES"
 	yarpcerrors "go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -42,7 +42,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: testmethod_NoWireHandler{impl},
 				},
 				Signature:    "TestMethod(NotInterested *string, Interested *string) (string)",
-				ThriftModule: generated.ThriftModule,
+				Exceptions:   nil,
+				ThriftModule: WITHSERVICES.ThriftModule,
 			},
 		},
 	}
@@ -59,7 +60,7 @@ type yarpcErrorNamer interface{ YARPCErrorName() string }
 type yarpcErrorCoder interface{ YARPCErrorCode() *yarpcerrors.Code }
 
 func (h handler) TestMethod(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args generated.TestService_TestMethod_Args
+	var args WITHSERVICES.TestService_TestMethod_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode Thrift request for service 'TestService' procedure 'TestMethod': %w", err)
@@ -68,7 +69,7 @@ func (h handler) TestMethod(ctx context.Context, body wire.Value) (thrift.Respon
 	success, appErr := h.impl.TestMethod(ctx, args.NotInterested, args.Interested)
 
 	hadError := appErr != nil
-	result, err := generated.TestService_TestMethod_Helper.WrapResponse(success, appErr)
+	result, err := WITHSERVICES.TestService_TestMethod_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
@@ -92,7 +93,7 @@ type testmethod_NoWireHandler struct{ impl Interface }
 
 func (h testmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
-		args generated.TestService_TestMethod_Args
+		args WITHSERVICES.TestService_TestMethod_Args
 		rw   stream.ResponseWriter
 		err  error
 	)
@@ -106,7 +107,7 @@ func (h testmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.
 	success, appErr := h.impl.TestMethod(ctx, args.NotInterested, args.Interested)
 
 	hadError := appErr != nil
-	result, err := generated.TestService_TestMethod_Helper.WrapResponse(success, appErr)
+	result, err := WITHSERVICES.TestService_TestMethod_Helper.WrapResponse(success, appErr)
 	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError

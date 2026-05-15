@@ -9,7 +9,7 @@ import (
 	transport "go.uber.org/yarpc/api/transport"
 	restriction "go.uber.org/yarpc/api/x/restriction"
 	thrift "go.uber.org/yarpc/encoding/thrift"
-	testserviceclient "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/uuid_test/generated/testserviceclient"
+	testserviceclient "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES/testserviceclient"
 )
 
 // Params defines the dependencies for the TestService client.

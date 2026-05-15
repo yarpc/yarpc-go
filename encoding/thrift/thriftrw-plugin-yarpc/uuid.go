@@ -23,6 +23,7 @@ package main
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -104,7 +105,14 @@ func yarpcUUIDGenerator(data *moduleTemplateData, files map[string][]byte) error
 //  2. method parameters on services defined in the Thrift module (which
 //     thriftrw renders as synthetic "<Service>_<Method>_Args" structs).
 //
-// The annotation must appear at most once per containing struct/method
+// The annotation must appear at most once per containing struct/method.
+//
+// The returned slice is sorted by (TypeName, FieldName). compile.Module
+// surfaces both Types and Services as Go maps, and we also walk each
+// service's Functions map; iteration order across all three is
+// non-deterministic, so an unsorted result would shuffle the order of
+// accessors in the generated types_yarpc_uuid.go between runs and produce
+// spurious diffs in downstream repos that check generated code in.
 func anyAnnotatedTypes(module *compile.Module) ([]annotatedUUIDField, error) {
 	var out []annotatedUUIDField
 
@@ -143,6 +151,12 @@ func anyAnnotatedTypes(module *compile.Module) ([]annotatedUUIDField, error) {
 		}
 	}
 
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].TypeName != out[j].TypeName {
+			return out[i].TypeName < out[j].TypeName
+		}
+		return out[i].FieldName < out[j].FieldName
+	})
 	return out, nil
 }
 

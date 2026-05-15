@@ -9,7 +9,7 @@ import (
 	yarpc "go.uber.org/yarpc"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
-	generated "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/uuid_test/generated"
+	WITHSERVICES "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES"
 	reflect "reflect"
 )
 
@@ -59,8 +59,8 @@ func (c client) TestMethod(
 	opts ...yarpc.CallOption,
 ) (success string, err error) {
 
-	var result generated.TestService_TestMethod_Result
-	args := generated.TestService_TestMethod_Helper.Args(_NotInterested, _Interested)
+	var result WITHSERVICES.TestService_TestMethod_Result
+	args := WITHSERVICES.TestService_TestMethod_Helper.Args(_NotInterested, _Interested)
 
 	if c.nwc != nil && c.nwc.Enabled() {
 		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
@@ -77,6 +77,6 @@ func (c client) TestMethod(
 		}
 	}
 
-	success, err = generated.TestService_TestMethod_Helper.UnwrapResponse(&result)
+	success, err = WITHSERVICES.TestService_TestMethod_Helper.UnwrapResponse(&result)
 	return
 }

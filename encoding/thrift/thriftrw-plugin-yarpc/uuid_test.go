@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/thriftrw/compile"
 	"go.uber.org/thriftrw/ptr"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/uuid_test/generated"
+	withservices "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES"
 )
 
 func TestGetUUID(t *testing.T) {
@@ -58,16 +58,14 @@ func TestGetUUID(t *testing.T) {
 		require.NoError(t, err)
 		annotated, err := anyAnnotatedTypes(spec)
 		assert.NoError(t, err)
-		assert.Equal(t, 2, len(annotated))
-		want := map[string]string{
-			"RedStruct":   "UserIdentifier",
-			"GreenStruct": "CatIdentifier",
+
+		// Results are sorted by (TypeName, FieldName) so the generated
+		// types_yarpc_uuid.go is byte-stable across runs.
+		want := []annotatedUUIDField{
+			{TypeName: "GreenStruct", FieldName: "CatIdentifier"},
+			{TypeName: "RedStruct", FieldName: "UserIdentifier"},
 		}
-		got := make(map[string]string, len(annotated))
-		for _, f := range annotated {
-			got[f.TypeName] = f.FieldName
-		}
-		assert.Equal(t, want, got)
+		assert.Equal(t, want, annotated)
 	})
 
 	t.Run("serviceMethodArg", func(t *testing.T) {
@@ -107,21 +105,21 @@ func TestGoName(t *testing.T) {
 
 func TestGetGeneratedUUID(t *testing.T) {
 	t.Run("optional field UUID", func(t *testing.T) {
-		st := generated.Struct{
+		st := withservices.Struct{
 			Baz:            ptr.String("test"),
 			UserIdentifier: ptr.String("my-uuid"),
 		}
 		assert.Equal(t, "my-uuid", st.ActorUUID())
 	})
 	t.Run("required field UUID", func(t *testing.T) {
-		st := generated.StructRequiredUUID{
+		st := withservices.StructRequiredUUID{
 			Baz:            ptr.String("test"),
 			UserIdentifier: "my-required-uuid",
 		}
 		assert.Equal(t, "my-required-uuid", st.ActorUUID())
 	})
 	t.Run("arg field UUID", func(t *testing.T) {
-		st := generated.TestService_TestMethod_Args{
+		st := withservices.TestService_TestMethod_Args{
 			Interested: ptr.String("my-arg-uuid"),
 		}
 		assert.Equal(t, "my-arg-uuid", st.ActorUUID())

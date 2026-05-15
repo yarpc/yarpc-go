@@ -7,7 +7,7 @@ import (
 	fx "go.uber.org/fx"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
-	testserviceserver "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/uuid_test/generated/testserviceserver"
+	testserviceserver "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES/testserviceserver"
 )
 
 // ServerParams defines the dependencies for the TestService server.
