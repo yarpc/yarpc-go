@@ -44,14 +44,13 @@ const (
 //   - for a service method parameter, the synthetic args struct thriftrw
 //     emits, named "<Service>_<Method>_Args".
 //
-// FieldName is the corresponding Go field name. Required controls whether
-// the accessor returns the field directly (required primitives are emitted as
-// values) or dereferences a pointer (optional primitives are emitted as
-// pointers).
+// FieldName is the corresponding Go field name. thriftrw also emits a
+// Get<FieldName>() string method for every field; the generated ActorUUID
+// accessor delegates to it, so we don't need to track required-vs-optional
+// ourselves (the getter already handles both cases and the nil receiver).
 type annotatedUUIDField struct {
 	TypeName  string
 	FieldName string
-	Required  bool
 }
 
 const yarpcUUIDTemplate = `
@@ -61,12 +60,12 @@ const yarpcUUIDTemplate = `
 package <.Name>
 
 <range $f := getAllAnnotatedTypes>
-// ActorUUID returns the UUID string from the field annotated with auth.actor_uuid.
+// ActorUUID returns the UUID string from the field annotated with
+// auth.actor_uuid, or "" if it is unset. Delegates to the thriftrw-generated
+// Get<$f.FieldName> accessor so optional/required and nil-receiver handling
+// stay in one place.
 func (t *<$f.TypeName>) ActorUUID() string {
-	<if $f.Required>return t.<$f.FieldName><else>if uuid := t.<$f.FieldName>; uuid != nil {
-		return *uuid
-	}
-	return ""<end>
+	return t.Get<$f.FieldName>()
 }
 <end>
 `
@@ -129,7 +128,6 @@ func anyAnnotatedTypes(module *compile.Module) ([]annotatedUUIDField, error) {
 			out = append(out, annotatedUUIDField{
 				TypeName:  goName(ss.Name),
 				FieldName: goName(f.Name),
-				Required:  f.Required,
 			})
 		}
 	}
@@ -145,7 +143,6 @@ func anyAnnotatedTypes(module *compile.Module) ([]annotatedUUIDField, error) {
 				out = append(out, annotatedUUIDField{
 					TypeName:  fmt.Sprintf("%s_%s_Args", goName(svc.Name), goName(fn.Name)),
 					FieldName: goName(f.Name),
-					Required:  f.Required,
 				})
 			}
 		}

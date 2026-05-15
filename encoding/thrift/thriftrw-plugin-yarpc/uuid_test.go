@@ -36,21 +36,9 @@ func TestGetUUID(t *testing.T) {
 		require.NoError(t, err)
 		annotated, err := anyAnnotatedTypes(spec)
 		assert.NoError(t, err)
-		assert.Equal(t, 1, len(annotated))
-		assert.Equal(t, "Struct", annotated[0].TypeName)
-		assert.Equal(t, "UserIdentifier", annotated[0].FieldName)
-		assert.False(t, annotated[0].Required, "optional thrift field should not be marked required")
-	})
-
-	t.Run("requiredField", func(t *testing.T) {
-		spec, err := compile.Compile("internal/uuid_test/required.thrift")
-		require.NoError(t, err)
-		annotated, err := anyAnnotatedTypes(spec)
-		assert.NoError(t, err)
-		assert.Equal(t, 1, len(annotated))
-		assert.Equal(t, "RequiredStruct", annotated[0].TypeName)
-		assert.Equal(t, "UserIdentifier", annotated[0].FieldName)
-		assert.True(t, annotated[0].Required, "required thrift field should be marked required")
+		assert.Equal(t, []annotatedUUIDField{
+			{TypeName: "Struct", FieldName: "UserIdentifier"},
+		}, annotated)
 	})
 
 	t.Run("multipleAnnotatedStructs", func(t *testing.T) {
@@ -73,13 +61,11 @@ func TestGetUUID(t *testing.T) {
 		require.NoError(t, err)
 		annotated, err := anyAnnotatedTypes(spec)
 		assert.NoError(t, err)
-		assert.Equal(t, 1, len(annotated))
-		assert.Equal(t, "TestService_TestMethod_Args", annotated[0].TypeName)
-		assert.Equal(t, "Interested", annotated[0].FieldName,
-			"thrift name 'interested' should be PascalCased to match the Go field thriftrw emits")
-		// Thrift method arguments default to optional in thriftrw, so the
-		// generated Go field is a pointer regardless of how the user wrote it.
-		assert.False(t, annotated[0].Required)
+		// Thrift method arg `interested` should be PascalCased to `Interested`
+		// to match the field thriftrw emits on TestService_TestMethod_Args.
+		assert.Equal(t, []annotatedUUIDField{
+			{TypeName: "TestService_TestMethod_Args", FieldName: "Interested"},
+		}, annotated)
 	})
 
 	t.Run("duplicateAnnotationsRejected", func(t *testing.T) {
