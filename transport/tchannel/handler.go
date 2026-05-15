@@ -390,14 +390,14 @@ func getSystemError(err error) error {
 		return err
 	}
 	if !yarpcerrors.IsStatus(err) {
-		return tchannel.NewSystemError(tchannel.ErrCodeUnexpected, err.Error())
+		return tchannel.NewSystemError(tchannel.ErrCodeUnexpected, "%s", err.Error())
 	}
 	status := yarpcerrors.FromError(err)
 	tchannelCode, ok := _codeToTChannelCode[status.Code()]
 	if !ok {
 		tchannelCode = tchannel.ErrCodeUnexpected
 	}
-	return tchannel.NewSystemError(tchannelCode, status.Message())
+	return tchannel.NewSystemError(tchannelCode, "%s", status.Message())
 }
 
 func appendError(left error, right error) error {
