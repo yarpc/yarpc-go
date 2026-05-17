@@ -22,6 +22,7 @@ package grpc
 
 import (
 	"context"
+	"runtime"
 	"sync"
 	"sync/atomic"
 
@@ -56,17 +57,25 @@ type grpcPeer struct {
 
 	// connsPtr holds a pointer to the current immutable connection slice.
 	// Readers (pickConn, recomputeConnectionStatus, refreshPoolMetrics, etc.)
-	// do a single atomic.Pointer.Load() — no mutex acquired on the read path.
-	// Writers (addConn, removeConn) hold wmu, copy the slice, mutate, then
-	// atomically publish the new pointer.  Readers never block writers.
+	// do a single atomic.Pointer.Load() — no lock acquired on the read path.
+	// Writers (addConn, removeConn) use a CAS loop: load the current pointer,
+	// build the new slice, and CompareAndSwap. connCount is updated after a
+	// successful CAS.
 	connsPtr atomic.Pointer[[](*grpcClientConnWrapper)]
 
-	// wmu is a write-only mutex: only writers (addConn, removeConn) acquire it.
-	// Readers never touch wmu.
-	wmu sync.Mutex
+	// addingCount tracks addConn calls that have passed their entry point but
+	// have not yet called connWg.Add(1) or bailed. The lifecycle goroutine
+	// spins on this counter (after setting shutdownStarted) to guarantee that
+	// connWg.Wait is not called before any racing connWg.Add(1) completes.
+	addingCount atomic.Int32
+
+	// shutdownStarted is set to true when the peer begins shutting down.
+	// addConn checks this after incrementing addingCount to avoid calling
+	// connWg.Add(1) after the lifecycle goroutine has passed its spin.
+	shutdownStarted atomic.Bool
 
 	// connCount mirrors len(loadConns()) atomically so tryScaleUp can check the
-	// pool size without acquiring wmu.
+	// pool size without a full slice load.
 	connCount atomic.Int32
 
 	poolCfg connPoolConfig
@@ -83,7 +92,6 @@ func (p *grpcPeer) loadConns() []*grpcClientConnWrapper {
 }
 
 // storeConns atomically publishes a new connection slice and updates connCount.
-// Callers must hold wmu.
 func (p *grpcPeer) storeConns(conns []*grpcClientConnWrapper) {
 	p.connsPtr.Store(&conns)
 	p.connCount.Store(int32(len(conns)))
@@ -148,18 +156,14 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 	}
 
 	// Close stoppedC once all monitorConnWrapper goroutines have finished.
-	// We acquire wmu briefly after ctx is cancelled to ensure any in-flight
-	// addConn() that passed its context check has already called connWg.Add(1)
-	// before we call connWg.Wait().
+	// shutdownStarted gates new connWg.Add(1) calls; addingCount ensures we
+	// wait for any addConn already past its ctx check before calling Wait.
 	go func() {
 		<-p.ctx.Done()
-		// Acquire wmu after cancellation to ensure any addConn() call that
-		// passed its ctx.Err() check has already called connWg.Add(1).
-		// The empty critical section is intentional: we need the barrier,
-		// not exclusive access to any data.
-		//lint:ignore SA2001 intentional empty critical section, provides memory barrier for connWg
-		p.wmu.Lock()
-		p.wmu.Unlock()
+		p.shutdownStarted.Store(true)
+		for p.addingCount.Load() > 0 {
+			runtime.Gosched()
+		}
 		p.connWg.Wait()
 		close(p.stoppedC)
 	}()
@@ -178,22 +182,32 @@ func (p *grpcPeer) addConn() error {
 	}
 	w := newConnWrapper(p.ctx, clientConn)
 
-	// Hold wmu while registering with connWg and publishing the new slice.
-	// The lifecycle goroutine acquires wmu after ctx is cancelled to observe
-	// any Add(1) that raced with cancellation.
-	p.wmu.Lock()
-	if p.ctx.Err() != nil {
-		p.wmu.Unlock()
+	// Enter the critical window: increment addingCount so the lifecycle
+	// goroutine's spin waits for us to either bail or call connWg.Add(1).
+	p.addingCount.Add(1)
+	if p.ctx.Err() != nil || p.shutdownStarted.Load() {
+		p.addingCount.Add(-1)
 		_ = clientConn.Close()
 		return p.ctx.Err()
 	}
 	p.connWg.Add(1)
-	old := p.loadConns()
-	next := make([]*grpcClientConnWrapper, len(old)+1)
-	copy(next, old)
-	next[len(old)] = w
-	p.storeConns(next)
-	p.wmu.Unlock()
+	p.addingCount.Add(-1)
+
+	// CAS loop: copy the slice, append the new wrapper, publish atomically.
+	for {
+		old := p.connsPtr.Load()
+		var oldSlice []*grpcClientConnWrapper
+		if old != nil {
+			oldSlice = *old
+		}
+		next := make([]*grpcClientConnWrapper, len(oldSlice)+1)
+		copy(next, oldSlice)
+		next[len(oldSlice)] = w
+		if p.connsPtr.CompareAndSwap(old, &next) {
+			p.connCount.Store(int32(len(next)))
+			break
+		}
+	}
 
 	go p.monitorConnWrapper(w)
 	p.refreshPoolMetrics()
@@ -268,16 +282,29 @@ func (p *grpcPeer) recomputeConnectionStatus() {
 }
 
 // removeConn removes a wrapper from the peer's connection pool.
+// Lock-free: uses a CAS loop to atomically publish the new slice.
 func (p *grpcPeer) removeConn(w *grpcClientConnWrapper) {
-	p.wmu.Lock()
-	defer p.wmu.Unlock()
-	old := p.loadConns()
-	for i, c := range old {
-		if c == w {
-			next := make([]*grpcClientConnWrapper, len(old)-1)
-			copy(next, old[:i])
-			copy(next[i:], old[i+1:])
-			p.storeConns(next)
+	for {
+		old := p.connsPtr.Load()
+		if old == nil {
+			return
+		}
+		oldSlice := *old
+		idx := -1
+		for i, c := range oldSlice {
+			if c == w {
+				idx = i
+				break
+			}
+		}
+		if idx < 0 {
+			return
+		}
+		next := make([]*grpcClientConnWrapper, len(oldSlice)-1)
+		copy(next, oldSlice[:idx])
+		copy(next[idx:], oldSlice[idx+1:])
+		if p.connsPtr.CompareAndSwap(old, &next) {
+			p.connCount.Store(int32(len(next)))
 			return
 		}
 	}

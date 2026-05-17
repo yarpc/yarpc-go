@@ -502,9 +502,7 @@ func TestTryScaleUp(t *testing.T) {
 		for i := range conns {
 			conns[i] = makeConn(connStateActive, 0)
 		}
-		p.wmu.Lock()
 		p.storeConns(conns)
-		p.wmu.Unlock()
 		p.tryScaleUp(overBudget)
 
 		// atMax check now runs inside the goroutine; wait for it to finish.
@@ -512,9 +510,7 @@ func TestTryScaleUp(t *testing.T) {
 			return atomic.LoadInt32(&p.isScaling) == 0
 		}, 2*time.Second, 10*time.Millisecond)
 
-		p.wmu.Lock()
 		n := len(p.loadConns())
-		p.wmu.Unlock()
 		assert.Equal(t, p.poolCfg.maxConnections, n, "pool should not grow beyond max")
 	})
 
@@ -537,9 +533,7 @@ func TestTryScaleUp(t *testing.T) {
 		}, 2*time.Second, 10*time.Millisecond, "isScaling should reset to 0 after goroutine completes")
 
 		// One connection was added to the pool.
-		p.wmu.Lock()
 		n := len(p.loadConns())
-		p.wmu.Unlock()
 		assert.Equal(t, 1, n, "one connection should be added to the pool")
 	})
 
@@ -553,9 +547,7 @@ func TestTryScaleUp(t *testing.T) {
 		idleConn := &grpcClientConnWrapper{ctx: ctx, cancel: cancel}
 		idleConn.setState(connStateIdle)
 		idleConn.setIdleNow()
-		p.wmu.Lock()
 		p.storeConns(append(p.loadConns(), idleConn))
-		p.wmu.Unlock()
 
 		p.tryScaleUp(overBudget)
 
@@ -564,9 +556,7 @@ func TestTryScaleUp(t *testing.T) {
 		}, 2*time.Second, 10*time.Millisecond)
 
 		// Pool size unchanged — reactivation, not a new dial.
-		p.wmu.Lock()
 		n := len(p.loadConns())
-		p.wmu.Unlock()
 		assert.Equal(t, 1, n, "pool size should not grow on reactivation")
 		assert.Equal(t, connStateActive, idleConn.getState(), "idle conn should be active after reactivation")
 		assert.True(t, idleConn.idleSince().IsZero(), "idle timestamp should be cleared")
@@ -715,14 +705,12 @@ func TestRefreshPoolMetrics(t *testing.T) {
 	t.Run("mixed pool reports correct counts", func(t *testing.T) {
 		t.Parallel()
 		p, root := peerWithMetrics(t)
-		p.wmu.Lock()
 		p.storeConns([]*grpcClientConnWrapper{
 			makeConn(connStateActive, 0),
 			makeConn(connStateActive, 0),
 			makeConn(connStateDraining, 0),
 			makeConn(connStateIdle, 0),
 		})
-		p.wmu.Unlock()
 
 		p.refreshPoolMetrics()
 
@@ -744,13 +732,11 @@ func TestMaybeScaleDownMetrics(t *testing.T) {
 		maxConcurrentStreams: 100,
 		scaleUpThreshold:     0.8, // threshold = 80
 	}
-	p.wmu.Lock()
 	p.storeConns([]*grpcClientConnWrapper{
 		makeConn(connStateActive, 10),
 		makeConn(connStateActive, 10),
 		makeConn(connStateActive, 10), // total 30 < capacityAfterDrain=160 → drain
 	})
-	p.wmu.Unlock()
 
 	p.maybeScaleDown()
 
@@ -796,9 +782,7 @@ func TestTryScaleUpReactivationMetrics(t *testing.T) {
 	defer cancel()
 	idleConn := &grpcClientConnWrapper{ctx: ctx, cancel: cancel}
 	idleConn.setState(connStateIdle)
-	p.wmu.Lock()
 	p.storeConns(append(p.loadConns(), idleConn))
-	p.wmu.Unlock()
 
 	overBudget := makeConn(connStateActive, 85)
 	p.tryScaleUp(overBudget)
@@ -823,12 +807,10 @@ func TestCleanupIdleConnsMetrics(t *testing.T) {
 
 	p, root := peerWithMetrics(t)
 	p.poolCfg = connPoolConfig{idleTimeout: time.Hour}
-	p.wmu.Lock()
 	p.storeConns([]*grpcClientConnWrapper{
 		makeConn(connStateActive, 5),
 		makeConn(connStateDraining, 0), // 0 streams → advances to idle
 	})
-	p.wmu.Unlock()
 
 	p.cleanupIdleConns()
 

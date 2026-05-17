@@ -23,6 +23,7 @@ package grpc
 import (
 	"context"
 	"net"
+	"runtime"
 	"testing"
 	"time"
 
@@ -353,15 +354,11 @@ func TestMonitorConnWrapperCleanup(t *testing.T) {
 	w := newConnWrapper(p.ctx, cc)
 
 	p.connWg.Add(1)
-	p.wmu.Lock()
 	p.storeConns(append(p.loadConns(), w))
-	p.wmu.Unlock()
 
 	go p.monitorConnWrapper(w)
 
-	p.wmu.Lock()
 	require.Len(t, p.loadConns(), 1)
-	p.wmu.Unlock()
 
 	p.cancel()
 
@@ -371,9 +368,7 @@ func TestMonitorConnWrapperCleanup(t *testing.T) {
 		t.Fatal("stoppedC not closed after context cancellation")
 	}
 
-	p.wmu.Lock()
 	assert.Empty(t, p.loadConns(), "wrapper should be removed from pool on cleanup")
-	p.wmu.Unlock()
 
 	wgDone := make(chan struct{})
 	go func() { p.connWg.Wait(); close(wgDone) }()
@@ -393,9 +388,10 @@ func TestStoppedCClosedAfterAllConnsFinish(t *testing.T) {
 
 	go func() {
 		<-p.ctx.Done()
-		//lint:ignore SA2001 intentional empty critical section, provides memory barrier for connWg
-		p.wmu.Lock()
-		p.wmu.Unlock()
+		p.shutdownStarted.Store(true)
+		for p.addingCount.Load() > 0 {
+			runtime.Gosched()
+		}
 		p.connWg.Wait()
 		close(p.stoppedC)
 	}()
@@ -404,9 +400,7 @@ func TestStoppedCClosedAfterAllConnsFinish(t *testing.T) {
 		cc := dialTestClientConn(t)
 		w := newConnWrapper(p.ctx, cc)
 		p.connWg.Add(1)
-		p.wmu.Lock()
 		p.storeConns(append(p.loadConns(), w))
-		p.wmu.Unlock()
 		go p.monitorConnWrapper(w)
 	}
 
@@ -480,9 +474,7 @@ func TestRecomputeConnectionStatus(t *testing.T) {
 		p := peerForPool(t)
 		cc := dialTestClientConn(t)
 		w := newConnWrapper(p.ctx, cc)
-		p.wmu.Lock()
 		p.storeConns(append(p.loadConns(), w))
-		p.wmu.Unlock()
 
 		p.recomputeConnectionStatus()
 
@@ -500,9 +492,7 @@ func TestRecomputeConnectionStatus(t *testing.T) {
 		cc := dialTestClientConn(t)
 		w := newConnWrapper(p.ctx, cc)
 		p.connWg.Add(1)
-		p.wmu.Lock()
 		p.storeConns(append(p.loadConns(), w))
-		p.wmu.Unlock()
 
 		go p.monitorConnWrapper(w)
 
@@ -537,9 +527,7 @@ func TestMonitorConnWrapperMetrics(t *testing.T) {
 	cc := dialTestClientConn(t)
 	w := newConnWrapper(p.ctx, cc)
 	p.connWg.Add(1)
-	p.wmu.Lock()
 	p.storeConns(append(p.loadConns(), w))
-	p.wmu.Unlock()
 
 	// Reflect the initial active connection in the gauges.
 	p.refreshPoolMetrics()
