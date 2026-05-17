@@ -33,9 +33,9 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/peer/peertest"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/peer/abstractpeer"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
-	"go.uber.org/yarpc/peer/abstractpeer"
 )
 
 // shared between Unary and Streaming InvalidHeaderValue tests.
