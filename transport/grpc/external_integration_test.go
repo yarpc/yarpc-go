@@ -23,24 +23,29 @@ package grpc_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/prototest/example"
 	"go.uber.org/yarpc/internal/prototest/examplepb"
+	yarpcpeer "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/peer/roundrobin"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/x/yarpctest"
 	"go.uber.org/yarpc/x/yarpctest/api"
 	"go.uber.org/yarpc/x/yarpctest/types"
+	"go.uber.org/zap"
 )
 
 func TestStreamingWithNoCtxDeadline(t *testing.T) {
@@ -179,4 +184,195 @@ func TestFoo(t *testing.T) {
 		}),
 	)
 	request.Run(t)
+}
+
+// --- connection pool integration tests (public API only) ---
+
+// withPoolTestEnv starts a gRPC server+client pair with the given transport
+// options using only the public API, runs f, then tears everything down.
+func withPoolTestEnv(t *testing.T, opts []grpc.TransportOption, f func(set, get func(ctx context.Context, key, value string) error)) {
+	t.Helper()
+
+	const svcName = "example"
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	// Use a nop logger so goroutines that outlive the test (e.g. monitorConnWrapper
+	// draining after dispatcher.Stop()) cannot trigger zaptest's after-test panic.
+	opts = append(opts, grpc.Logger(zap.NewNop()))
+	trans := grpc.NewTransport(opts...)
+
+	chooser := yarpcpeer.NewSingle(hostport.PeerIdentifier(listener.Addr().String()), trans.NewDialer())
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name:     svcName,
+		Inbounds: yarpc.Inbounds{trans.NewInbound(listener)},
+		Outbounds: yarpc.Outbounds{
+			svcName: {ServiceName: svcName, Unary: trans.NewOutbound(chooser)},
+		},
+	})
+	dispatcher.Register(examplepb.BuildKeyValueYARPCProcedures(example.NewKeyValueYARPCServer()))
+	require.NoError(t, dispatcher.Start())
+	defer func() { assert.NoError(t, dispatcher.Stop()) }()
+
+	client := examplepb.NewKeyValueYARPCClient(dispatcher.ClientConfig(svcName))
+
+	set := func(ctx context.Context, key, value string) error {
+		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		_, err := client.SetValue(ctx, &examplepb.SetValueRequest{Key: key, Value: value})
+		return err
+	}
+	get := func(ctx context.Context, key, _ string) error {
+		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		_, err := client.GetValue(ctx, &examplepb.GetValueRequest{Key: key})
+		return err
+	}
+	f(set, get)
+}
+
+// extPoolMetricSnapshot reads gauges and counters from a metrics root into maps.
+func extPoolMetricSnapshot(root *metrics.Root) (gauges, counters map[string]int64) {
+	snap := root.Snapshot()
+	gauges = make(map[string]int64, len(snap.Gauges))
+	for _, g := range snap.Gauges {
+		gauges[g.Name] = g.Value
+	}
+	counters = make(map[string]int64, len(snap.Counters))
+	for _, c := range snap.Counters {
+		counters[c.Name] = c.Value
+	}
+	return
+}
+
+func TestConnectionPoolBasicRequest(t *testing.T) {
+	t.Parallel()
+	withPoolTestEnv(t, []grpc.TransportOption{
+		grpc.WithDynamicConnectionScaling(true),
+		grpc.MinConnections(2),
+		grpc.MaxConnections(5),
+	}, func(set, get func(ctx context.Context, key, value string) error) {
+		ctx := context.Background()
+		require.NoError(t, set(ctx, "foo", "bar"))
+		require.NoError(t, get(ctx, "foo", ""))
+	})
+}
+
+func TestConnectionPoolMinConnectionsAtStartup(t *testing.T) {
+	t.Parallel()
+	root := metrics.New()
+	withPoolTestEnv(t, []grpc.TransportOption{
+		grpc.WithDynamicConnectionScaling(true),
+		grpc.MinConnections(2),
+		grpc.MaxConnections(5),
+		grpc.Meter(root.Scope()),
+	}, func(_, _ func(ctx context.Context, key, value string) error) {
+		gauges, _ := extPoolMetricSnapshot(root)
+		assert.Equal(t, int64(2), gauges["conn_pool_active_connections"],
+			"pool should be pre-warmed to minConnections")
+	})
+}
+
+func TestConnectionPoolScaleUpOnLoad(t *testing.T) {
+	t.Parallel()
+	root := metrics.New()
+	withPoolTestEnv(t, []grpc.TransportOption{
+		grpc.WithDynamicConnectionScaling(true),
+		grpc.MinConnections(1),
+		grpc.MaxConnections(5),
+		grpc.MaxConcurrentStreams(2),
+		grpc.ScaleUpThreshold(0.5), // threshold = 1
+		grpc.Meter(root.Scope()),
+	}, func(set, _ func(ctx context.Context, key, value string) error) {
+		require.NoError(t, set(context.Background(), "foo", "bar"))
+
+		assert.Eventually(t, func() bool {
+			_, counters := extPoolMetricSnapshot(root)
+			return counters["conn_pool_scale_up_total"] >= 1
+		}, 3*time.Second, 10*time.Millisecond,
+			"conn_pool_scale_up_total should increment after load exceeds threshold")
+	})
+}
+
+func TestConnectionPoolConcurrentRequests(t *testing.T) {
+	t.Parallel()
+	withPoolTestEnv(t, []grpc.TransportOption{
+		grpc.WithDynamicConnectionScaling(true),
+		grpc.MinConnections(2),
+		grpc.MaxConnections(5),
+	}, func(set, _ func(ctx context.Context, key, value string) error) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		const concurrent = 20
+		errs := make([]error, concurrent)
+		var wg sync.WaitGroup
+		wg.Add(concurrent)
+		for i := range concurrent {
+			go func() {
+				defer wg.Done()
+				errs[i] = set(ctx, fmt.Sprintf("key-%d", i), "value")
+			}()
+		}
+		wg.Wait()
+		for i, err := range errs {
+			assert.NoError(t, err, "request %d should succeed", i)
+		}
+	})
+}
+
+func TestConnectionPoolDisabledFallback(t *testing.T) {
+	t.Parallel()
+	withPoolTestEnv(t, []grpc.TransportOption{
+		grpc.WithDynamicConnectionScaling(false),
+	}, func(set, get func(ctx context.Context, key, value string) error) {
+		ctx := context.Background()
+		require.NoError(t, set(ctx, "foo", "bar"))
+		require.NoError(t, get(ctx, "foo", ""))
+	})
+}
+
+func TestConnectionPoolMinimalSingleConnection(t *testing.T) {
+	t.Parallel()
+	root := metrics.New()
+	withPoolTestEnv(t, []grpc.TransportOption{
+		grpc.WithDynamicConnectionScaling(true),
+		grpc.MinConnections(1),
+		grpc.MaxConnections(3),
+		grpc.Meter(root.Scope()),
+	}, func(set, get func(ctx context.Context, key, value string) error) {
+		ctx := context.Background()
+		require.NoError(t, set(ctx, "foo", "bar"))
+		require.NoError(t, get(ctx, "foo", ""))
+
+		gauges, _ := extPoolMetricSnapshot(root)
+		assert.GreaterOrEqual(t, gauges["conn_pool_active_connections"], int64(1))
+	})
+}
+
+func TestConnectionPoolMaxConnectionsCapRespected(t *testing.T) {
+	t.Parallel()
+	root := metrics.New()
+	withPoolTestEnv(t, []grpc.TransportOption{
+		grpc.WithDynamicConnectionScaling(true),
+		grpc.MinConnections(1),
+		grpc.MaxConnections(1),
+		grpc.MaxConcurrentStreams(2),
+		grpc.ScaleUpThreshold(0.5),
+		grpc.Meter(root.Scope()),
+	}, func(set, get func(ctx context.Context, key, value string) error) {
+		ctx := context.Background()
+		require.NoError(t, set(ctx, "foo", "bar"))
+		require.NoError(t, get(ctx, "foo", ""))
+
+		assert.Eventually(t, func() bool {
+			_, counters := extPoolMetricSnapshot(root)
+			return counters["conn_pool_scale_up_total"] == 0
+		}, 2*time.Second, 10*time.Millisecond,
+			"scale-up must not dial when MaxConnections is already reached")
+
+		gauges, _ := extPoolMetricSnapshot(root)
+		assert.Equal(t, int64(1), gauges["conn_pool_active_connections"])
+	})
 }

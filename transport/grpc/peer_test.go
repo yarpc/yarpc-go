@@ -29,7 +29,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/net/metrics"
-	"go.uber.org/zap"
 	"go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -39,6 +38,7 @@ import (
 	"go.uber.org/yarpc/peer/abstractpeer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/peer/roundrobin"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -209,7 +209,7 @@ func peerForPool(t *testing.T) *grpcPeer {
 		},
 		poolCfg: connPoolConfig{
 			dynamicScalingEnabled: true,
-			maxConcurrentStreams:   100,
+			maxConcurrentStreams:  100,
 			scaleUpThreshold:      0.8, // threshold = 80
 			minConnections:        1,
 			maxConnections:        5,
