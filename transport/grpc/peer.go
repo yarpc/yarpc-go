@@ -120,7 +120,7 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 		}),
 		poolCfg: connPoolConfig{
 			dynamicScalingEnabled: t.options.clientConnPoolDynamicScalingEnabled,
-			maxConcurrentStreams:   t.options.clientConnPoolMaxConcurrentStreams,
+			maxConcurrentStreams:  t.options.clientConnPoolMaxConcurrentStreams,
 			scaleUpThreshold:      t.options.clientConnPoolScaleUpThreshold,
 			minConnections:        t.options.clientConnPoolMinConnections,
 			maxConnections:        t.options.clientConnPoolMaxConnections,
@@ -339,4 +339,3 @@ func grpcStatusToYARPCStatus(grpcStatus connectivity.State) peer.ConnectionStatu
 		return peer.Unavailable
 	}
 }
-
