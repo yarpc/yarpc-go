@@ -73,9 +73,9 @@ func peerForScaleDown(t *testing.T, conns []*grpcClientConnWrapper, cfg connPool
 // defaultCfg is a pool config used across maybeScaleDown tests.
 // threshold = int32(100 * 0.8) = 80.
 var defaultScaleDownCfg = connPoolConfig{
-	minConnections:      1,
+	minConnections:       1,
 	maxConcurrentStreams: 100,
-	scaleUpThreshold:    0.8,
+	scaleUpThreshold:     0.8,
 }
 
 // makeConnWithCancel creates a grpcClientConnWrapper with a real context so
@@ -106,7 +106,7 @@ func TestCleanupIdleConns(t *testing.T) {
 		desc string
 		// build returns the conns slice and a slice of contexts corresponding
 		// to wrappers whose cancellation should be verified.
-		build      func() ([]*grpcClientConnWrapper, []context.Context)
+		build       func() ([]*grpcClientConnWrapper, []context.Context)
 		idleTimeout time.Duration
 		// wantStates is the expected state of each conn after the call (index-aligned).
 		wantStates []connState
@@ -242,7 +242,6 @@ func TestCleanupIdleConns(t *testing.T) {
 	}
 }
 
-
 func TestMaybeScaleDown(t *testing.T) {
 	t.Parallel()
 
@@ -277,9 +276,9 @@ func TestMaybeScaleDown(t *testing.T) {
 				makeConn(connStateActive, 10),
 			},
 			cfg: connPoolConfig{
-				minConnections:      2,
+				minConnections:       2,
 				maxConcurrentStreams: 100,
-				scaleUpThreshold:    0.8,
+				scaleUpThreshold:     0.8,
 			},
 			wantStates: []connState{connStateActive},
 		},
@@ -378,9 +377,9 @@ func TestMaybeScaleDown(t *testing.T) {
 				makeConn(connStateActive, 40),
 			},
 			cfg: connPoolConfig{
-				minConnections:      1,
+				minConnections:       1,
 				maxConcurrentStreams: 100,
-				scaleUpThreshold:    0.8, // threshold=80, capacity=80*2=160, total=85 < 160
+				scaleUpThreshold:     0.8, // threshold=80, capacity=80*2=160, total=85 < 160
 			},
 			wantStates: []connState{connStateDraining, connStateActive, connStateDraining, connStateActive},
 		},
@@ -741,9 +740,9 @@ func TestMaybeScaleDownMetrics(t *testing.T) {
 
 	p, root := peerWithMetrics(t)
 	p.poolCfg = connPoolConfig{
-		minConnections:      1,
+		minConnections:       1,
 		maxConcurrentStreams: 100,
-		scaleUpThreshold:    0.8, // threshold = 80
+		scaleUpThreshold:     0.8, // threshold = 80
 	}
 	p.wmu.Lock()
 	p.storeConns([]*grpcClientConnWrapper{
