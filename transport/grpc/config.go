@@ -71,7 +71,6 @@ func TransportSpec(opts ...Option) yarpcconfig.TransportSpec {
 //	    clientMaxHeaderListSize: 1024
 //	    serverMaxHeaderListSize: 2048
 //	    clientConnectionPool:
-//	      dynamicScalingEnabled: true
 //	      maxConcurrentStreams: 250
 //	      scaleUpThreshold: 0.8
 //	      minConnections: 1
@@ -106,16 +105,15 @@ type TransportConfig struct {
 //	transports:
 //	  grpc:
 //	    clientConnectionPool:
-//	      dynamicScalingEnabled: true   # enable background auto-scaling
 //	      maxConcurrentStreams: 250     # assumed server HTTP/2 stream limit
 //	      scaleUpThreshold: 0.8         # open a new conn at 80% utilization
 //	      minConnections: 1             # minimum connections per peer
 //	      maxConnections: 10            # maximum connections per peer
 //	      idleTimeout: 5m               # close idle connections after this duration
 type ClientConnectionPoolConfig struct {
-	// DynamicScalingEnabled enables the background connection scaling monitor.
-	// When true, YARPC automatically opens and drains connections based on
-	// stream utilization.  Disabled by default to allow controlled rollout.
+	// DynamicScalingEnabled is accepted in YAML for forward-compatibility but
+	// has no effect. Dynamic scaling is controlled centrally via ObjectConfig
+	// (yarpcfx reads control@yarpcfx-config and calls WithDynamicConnectionScaling).
 	DynamicScalingEnabled bool `config:"dynamicScalingEnabled"`
 
 	// MaxConcurrentStreams is the assumed HTTP/2 SETTINGS_MAX_CONCURRENT_STREAMS
@@ -414,7 +412,6 @@ func (t *transportSpec) buildTransport(transportConfig *TransportConfig, kit *ya
 	if cp.IdleTimeout < 0 {
 		return nil, fmt.Errorf("clientConnectionPool.idleTimeout must be non-negative, got %v", cp.IdleTimeout)
 	}
-	options = append(options, WithDynamicConnectionScaling(cp.DynamicScalingEnabled))
 	if cp.MaxConcurrentStreams > 0 {
 		options = append(options, MaxConcurrentStreams(cp.MaxConcurrentStreams))
 	}
