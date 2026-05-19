@@ -2835,8 +2835,7 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 	}
 }
 
-func TestUnaryInboundApplicationPanics(t *testing.T) {
-	var err error
+func TestUnaryInboundApplicationPanics(t *testing.T) {	var err error
 	root := metrics.New()
 	scope := root.Scope()
 	mw := NewMiddleware(Config{
@@ -2886,6 +2885,18 @@ func TestUnaryInboundApplicationPanics(t *testing.T) {
 		})
 		require.NoError(t, err)
 
+		got := root.Snapshot()
+		// Verify server_failure_latency_ms recorded a positive value without
+		// asserting the exact millisecond (timing is environment-dependent).
+		for i, h := range got.Histograms {
+			if h.Name == "server_failure_latency_ms" {
+				assert.NotEmpty(t, h.Values, "expected server_failure_latency_ms to be recorded")
+				assert.Greater(t, h.Values[0], int64(0), "expected positive latency")
+				got.Histograms[i].Values = []int64{1} // normalise for comparison below
+				break
+			}
+		}
+
 		want := &metrics.RootSnapshot{
 			Counters: []metrics.Snapshot{
 				{Name: "calls", Tags: tags, Value: 1},
@@ -2933,7 +2944,7 @@ func TestUnaryInboundApplicationPanics(t *testing.T) {
 				},
 			},
 		}
-		assert.Equal(t, want, root.Snapshot(), "unexpected metrics snapshot")
+		assert.Equal(t, want, got, "unexpected metrics snapshot")
 	})
 }
 
