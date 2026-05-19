@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"context"
+
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/middleware"
