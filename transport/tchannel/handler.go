@@ -37,7 +37,6 @@ import (
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
-	ncontext "context"
 )
 
 // inboundCall provides an interface similar tchannel.InboundCall.
@@ -110,7 +109,7 @@ type handler struct {
 	unaryInboundInterceptor        interceptor.UnaryInbound
 }
 
-func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
+func (h handler) Handle(ctx context.Context, call *tchannel.InboundCall) {
 	h.handle(ctx, tchannelCall{call})
 }
 
