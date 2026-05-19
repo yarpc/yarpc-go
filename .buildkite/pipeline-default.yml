@@ -35,7 +35,7 @@ agents:
   queue: buildkite-gcp
 
 steps:
-  - name: ":go: 1.24 test - %n"
+  - name: ":go: 1.26 test - %n"
     parallelism: 6
     plugins:
       - kubernetes:
@@ -48,9 +48,9 @@ steps:
                 - |-
                   make codecov
       - docker-compose#v3.13.0:
-          run: yarpc-go-1.24
+          run: yarpc-go-1.26
 
-  - name: ":go: 1.24 crossdock"
+  - name: ":go: 1.26 crossdock"
     plugins:
       - kubernetes:
           <<: *kubernetes
@@ -62,9 +62,9 @@ steps:
                 - |-
                   make crossdock-codecov
       - docker-compose#v3.13.0:
-          run: yarpc-go-1.24
+          run: yarpc-go-1.26
 
-  - name: ":go: 1.24 lint"
+  - name: ":go: 1.26 lint"
     plugins:
       - kubernetes:
           <<: *kubernetes
@@ -76,9 +76,9 @@ steps:
                 - |-
                   make lint
       - docker-compose#v3.13.0:
-          run: yarpc-go-1.24
+          run: yarpc-go-1.26
 
-  - name: ":go: 1.24 examples"
+  - name: ":go: 1.26 examples"
     plugins:
       - kubernetes:
           <<: *kubernetes
@@ -90,4 +90,4 @@ steps:
                 - |-
                   make examples
       - docker-compose#v3.13.0:
-          run: yarpc-go-1.24
+          run: yarpc-go-1.26
