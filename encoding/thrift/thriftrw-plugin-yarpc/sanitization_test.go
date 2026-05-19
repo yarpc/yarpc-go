@@ -32,7 +32,7 @@ import (
 	wc "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/weatherclient"
 	ytchannel "go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/yarpcerrors"
-	"golang.org/x/net/context"
+	"context"
 )
 
 func TestSanitization(t *testing.T) {

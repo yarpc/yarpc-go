@@ -37,7 +37,7 @@ import (
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
-	ncontext "golang.org/x/net/context"
+	ncontext "context"
 )
 
 // inboundCall provides an interface similar tchannel.InboundCall.

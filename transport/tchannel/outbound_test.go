@@ -36,7 +36,7 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/yarpcerrors"
-	"golang.org/x/net/context"
+	"context"
 )
 
 func TestTransportNamer(t *testing.T) {
