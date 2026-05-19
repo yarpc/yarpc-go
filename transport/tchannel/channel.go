@@ -21,8 +21,8 @@
 package tchannel
 
 import (
-	"github.com/uber/tchannel-go"
 	"context"
+	"github.com/uber/tchannel-go"
 )
 
 // Channel is the interface exposed by TChannel. The TChannel transport for

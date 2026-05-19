@@ -23,9 +23,9 @@ package tchannel
 import (
 	"net"
 
+	"context"
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/peer"
-	"context"
 )
 
 var _ peer.Transport = (*outboundChannel)(nil)
