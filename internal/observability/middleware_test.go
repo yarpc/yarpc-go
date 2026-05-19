@@ -2835,7 +2835,8 @@ func TestApplicationErrorSnapShot(t *testing.T) {
 	}
 }
 
-func TestUnaryInboundApplicationPanics(t *testing.T) {	var err error
+func TestUnaryInboundApplicationPanics(t *testing.T) {
+	var err error
 	root := metrics.New()
 	scope := root.Scope()
 	mw := NewMiddleware(Config{
