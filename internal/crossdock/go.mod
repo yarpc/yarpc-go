@@ -1,8 +1,8 @@
 module go.uber.org/yarpc/internal/crossdock
 
-go 1.24
+go 1.26
 
-toolchain go1.24.0
+toolchain go1.26.0
 
 require (
 	github.com/apache/thrift v0.13.0
