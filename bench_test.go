@@ -38,7 +38,7 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 	yhttp "go.uber.org/yarpc/transport/http"
 	ytchannel "go.uber.org/yarpc/transport/tchannel"
-	ncontext "golang.org/x/net/context"
+	ncontext "context"
 )
 
 var _reqBody = []byte("hello")
