@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"context"
+
 	"github.com/uber/tchannel-go"
 )
 
