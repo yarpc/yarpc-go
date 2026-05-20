@@ -355,7 +355,7 @@ func TestBuildTransportRequestWriteError(t *testing.T) {
 		sw.EXPECT().Close().Return(nil)
 		sw.EXPECT().WriteEnvelopeBegin(wantEnvHeader).Return(errors.New("writeenvelopebegin error"))
 
-		_, _, _, err := nwc.buildTransportRequest(fakeEnveloper(wire.Call))
+		_, _, err := nwc.buildTransportRequest(fakeEnveloper(wire.Call))
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), `failed to encode "thrift" request body for procedure "::someMethod" of service "service": writeenvelopebegin error`)
 	})
@@ -364,7 +364,7 @@ func TestBuildTransportRequestWriteError(t *testing.T) {
 		sw.EXPECT().Close().Return(nil)
 		sw.EXPECT().WriteEnvelopeBegin(wantEnvHeader).Return(nil)
 
-		_, _, _, err := nwc.buildTransportRequest(errorEnveloper{envelopeType: wire.Call, err: errors.New("encode error")})
+		_, _, err := nwc.buildTransportRequest(errorEnveloper{envelopeType: wire.Call, err: errors.New("encode error")})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), `failed to encode "thrift" request body for procedure "::someMethod" of service "service": encode error`)
 	})
@@ -375,7 +375,7 @@ func TestBuildTransportRequestWriteError(t *testing.T) {
 		sw.EXPECT().WriteString(_irrelevant).Return(nil)
 		sw.EXPECT().WriteEnvelopeEnd().Return(errors.New("writeenvelopeend error"))
 
-		_, _, _, err := nwc.buildTransportRequest(fakeEnveloper(wire.Call))
+		_, _, err := nwc.buildTransportRequest(fakeEnveloper(wire.Call))
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), `failed to encode "thrift" request body for procedure "::someMethod" of service "service": writeenvelopeend error`)
 	})
