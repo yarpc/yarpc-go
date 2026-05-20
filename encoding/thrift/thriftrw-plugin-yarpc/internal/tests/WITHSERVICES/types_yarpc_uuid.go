@@ -4,25 +4,19 @@
 package WITHSERVICES
 
 // ActorUUID returns the UUID string from the field annotated with
-// auth.actor_uuid, or "" if it is unset. Delegates to the thriftrw-generated
-// GetUserIdentifier accessor so optional/required and nil-receiver handling
-// stay in one place.
+// auth.actor_uuid, or "" if it is unset.
 func (t *Struct) ActorUUID() string {
 	return t.GetUserIdentifier()
 }
 
 // ActorUUID returns the UUID string from the field annotated with
-// auth.actor_uuid, or "" if it is unset. Delegates to the thriftrw-generated
-// GetUserIdentifier accessor so optional/required and nil-receiver handling
-// stay in one place.
+// auth.actor_uuid, or "" if it is unset.
 func (t *StructRequiredUUID) ActorUUID() string {
 	return t.GetUserIdentifier()
 }
 
 // ActorUUID returns the UUID string from the field annotated with
-// auth.actor_uuid, or "" if it is unset. Delegates to the thriftrw-generated
-// GetInterested accessor so optional/required and nil-receiver handling
-// stay in one place.
+// auth.actor_uuid, or "" if it is unset.
 func (t *TestService_TestMethod_Args) ActorUUID() string {
 	return t.GetInterested()
 }

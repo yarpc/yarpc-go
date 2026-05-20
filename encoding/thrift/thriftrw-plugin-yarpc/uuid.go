@@ -54,18 +54,14 @@ package <.Name>
 
 <range $name, $t := .Types><with (uuidFieldOf $t)>
 // ActorUUID returns the UUID string from the field annotated with
-// auth.actor_uuid, or "" if it is unset. Delegates to the thriftrw-generated
-// Get<goCase .Name> accessor so optional/required and nil-receiver handling
-// stay in one place.
+// auth.actor_uuid, or "" if it is unset.
 func (t *<goCase $t.Name>) ActorUUID() string {
 	return t.Get<goCase .Name>()
 }
 <end><end>
 <range $svcName, $svc := .Services><range $fnName, $fn := $svc.Functions><with (uuidFieldInArgs $fn)>
 // ActorUUID returns the UUID string from the field annotated with
-// auth.actor_uuid, or "" if it is unset. Delegates to the thriftrw-generated
-// Get<goCase .Name> accessor so optional/required and nil-receiver handling
-// stay in one place.
+// auth.actor_uuid, or "" if it is unset.
 func (t *<goCase $svc.Name>_<goCase $fn.Name>_Args) ActorUUID() string {
 	return t.Get<goCase .Name>()
 }
