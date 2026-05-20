@@ -30,50 +30,94 @@ import (
 	withservices "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES"
 )
 
-func TestGetUUID(t *testing.T) {
+// TestValidateUUIDAnnotations covers the pre-flight pass that rejects
+// multiple annotations per container. The detailed per-type/per-method
+// lookup that the template performs at execution time is covered by
+// TestUUIDFieldOf, TestUUIDFieldInArgs and end-to-end by TestCodeIsUpToDate.
+func TestValidateUUIDAnnotations(t *testing.T) {
 	t.Run("happyCase", func(t *testing.T) {
 		spec, err := compile.Compile("internal/uuid_test/happy.thrift")
 		require.NoError(t, err)
-		annotated, err := anyAnnotatedTypes(spec)
-		assert.NoError(t, err)
-		assert.Equal(t, []annotatedUUIDField{
-			{TypeName: "Struct", FieldName: "UserIdentifier"},
-		}, annotated)
+		assert.NoError(t, validateUUIDAnnotations(spec))
 	})
 
 	t.Run("multipleAnnotatedStructs", func(t *testing.T) {
 		spec, err := compile.Compile("internal/uuid_test/multipleAnnotatedStructs.thrift")
 		require.NoError(t, err)
-		annotated, err := anyAnnotatedTypes(spec)
-		assert.NoError(t, err)
-
-		// Results are sorted by (TypeName, FieldName) so the generated
-		// types_yarpc_uuid.go is byte-stable across runs.
-		want := []annotatedUUIDField{
-			{TypeName: "GreenStruct", FieldName: "CatIdentifier"},
-			{TypeName: "RedStruct", FieldName: "UserIdentifier"},
-		}
-		assert.Equal(t, want, annotated)
+		assert.NoError(t, validateUUIDAnnotations(spec))
 	})
 
 	t.Run("serviceMethodArg", func(t *testing.T) {
 		spec, err := compile.Compile("internal/uuid_test/serviceArg.thrift")
 		require.NoError(t, err)
-		annotated, err := anyAnnotatedTypes(spec)
-		assert.NoError(t, err)
-		// Thrift method arg `interested` should be PascalCased to `Interested`
-		// to match the field thriftrw emits on TestService_TestMethod_Args.
-		assert.Equal(t, []annotatedUUIDField{
-			{TypeName: "TestService_TestMethod_Args", FieldName: "Interested"},
-		}, annotated)
+		assert.NoError(t, validateUUIDAnnotations(spec))
 	})
 
 	t.Run("duplicateAnnotationsRejected", func(t *testing.T) {
 		spec, err := compile.Compile("internal/uuid_test/broken.thrift")
 		require.NoError(t, err)
-		_, err = anyAnnotatedTypes(spec)
-		assert.Error(t, err)
+		assert.Error(t, validateUUIDAnnotations(spec))
 	})
+}
+
+// TestUUIDFieldOf covers the template helper that picks the annotated field
+// on a Thrift struct. It exercises every branch: a struct with no annotated
+// field, a struct with one annotated field, and a non-struct TypeSpec (which
+// must never be claimed as carrying an annotation).
+func TestUUIDFieldOf(t *testing.T) {
+	t.Run("structWithAnnotatedField", func(t *testing.T) {
+		spec, err := compile.Compile("internal/uuid_test/happy.thrift")
+		require.NoError(t, err)
+		ss, ok := spec.Types["Struct"].(*compile.StructSpec)
+		require.True(t, ok)
+
+		got := uuidFieldOf(ss)
+		require.NotNil(t, got)
+		assert.Equal(t, "UserIdentifier", got.Name)
+	})
+
+	t.Run("multipleAnnotatedStructsResolveIndependently", func(t *testing.T) {
+		spec, err := compile.Compile("internal/uuid_test/multipleAnnotatedStructs.thrift")
+		require.NoError(t, err)
+
+		red, ok := spec.Types["RedStruct"].(*compile.StructSpec)
+		require.True(t, ok)
+		gotRed := uuidFieldOf(red)
+		require.NotNil(t, gotRed)
+		assert.Equal(t, "UserIdentifier", gotRed.Name)
+
+		green, ok := spec.Types["GreenStruct"].(*compile.StructSpec)
+		require.True(t, ok)
+		gotGreen := uuidFieldOf(green)
+		require.NotNil(t, gotGreen)
+		assert.Equal(t, "CatIdentifier", gotGreen.Name)
+	})
+
+	t.Run("nonStructTypeSpec", func(t *testing.T) {
+		// A primitive TypeSpec can never carry the annotation; the helper
+		// must return nil so the template's <with> skips emitting an
+		// accessor.
+		assert.Nil(t, uuidFieldOf(&compile.StringSpec{}))
+	})
+}
+
+// TestUUIDFieldInArgs covers the template helper that picks the annotated
+// field within a method's argument list.
+func TestUUIDFieldInArgs(t *testing.T) {
+	spec, err := compile.Compile("internal/uuid_test/serviceArg.thrift")
+	require.NoError(t, err)
+
+	svc, ok := spec.Services["TestService"]
+	require.True(t, ok)
+	fn, ok := svc.Functions["testMethod"]
+	require.True(t, ok)
+
+	got := uuidFieldInArgs(fn)
+	require.NotNil(t, got)
+	// Note: the field name is still the raw Thrift name here. goCase is
+	// applied in the template, which produces the PascalCased "Interested"
+	// that matches the Go field on TestService_TestMethod_Args.
+	assert.Equal(t, "interested", got.Name)
 }
 
 func TestGoCase(t *testing.T) {
