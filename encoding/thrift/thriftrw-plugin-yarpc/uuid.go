@@ -29,6 +29,7 @@ import (
 
 	"go.uber.org/thriftrw/compile"
 	"go.uber.org/thriftrw/plugin"
+	"go.uber.org/thriftrw/plugin/api"
 )
 
 const (
@@ -163,6 +164,45 @@ func uuidFieldInArgs(fn *compile.FunctionSpec) *uuidArg {
 		return hits[0]
 	}
 	return nil
+}
+
+// methodHasActorUUIDArg reports whether the given thriftrw plugin-API
+// function has an argument carrying the auth.actor_uuid annotation. The
+// server template uses it to gate the per-method validator-call block and
+// the per-method NoWire handler's validator field.
+//
+// The plugin API doesn't surface argument annotations, so we look the
+// function up by Thrift name in the compiled module that yarpcUUIDGenerator
+// shares across generators.
+func methodHasActorUUIDArg(fn *api.Function, mod *compile.Module, serviceThriftName string) bool {
+	if fn == nil {
+		return false
+	}
+	compiled := lookupCompiledFunction(mod, serviceThriftName, fn.ThriftName)
+	if compiled == nil {
+		return false
+	}
+	return uuidFieldInArgs(compiled) != nil
+}
+
+// serviceHasActorUUIDMethod reports whether the given thriftrw plugin-API
+// service has at least one method with an auth.actor_uuid-annotated
+// argument. The server template uses it to gate the service-wide handler
+// struct's validator field and its initialisation inside New.
+func serviceHasActorUUIDMethod(svc *api.Service, mod *compile.Module) bool {
+	if svc == nil || mod == nil {
+		return false
+	}
+	compiled := mod.Services[svc.ThriftName]
+	if compiled == nil {
+		return false
+	}
+	for _, fn := range compiled.Functions {
+		if uuidFieldInArgs(fn) != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // validateUUIDAnnotations walks every struct in module.Types and every
