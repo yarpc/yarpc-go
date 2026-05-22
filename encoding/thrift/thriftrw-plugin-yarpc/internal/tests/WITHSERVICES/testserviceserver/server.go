@@ -28,7 +28,7 @@ type Interface interface {
 //	handler := TestServiceHandler{}
 //	dispatcher.Register(testserviceserver.New(handler))
 func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
-	h := handler{impl}
+	h := handler{impl: impl, actorUUIDValidator: thrift.ActorUUIDValidatorFromOptions(opts)}
 	service := thrift.Service{
 		Name: "TestService",
 		Methods: []thrift.Method{
@@ -39,7 +39,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:   transport.Unary,
 					Unary:  thrift.UnaryHandler(h.TestMethod),
-					NoWire: testmethod_NoWireHandler{impl},
+					NoWire: testmethod_NoWireHandler{impl: impl, actorUUIDValidator: thrift.ActorUUIDValidatorFromOptions(opts)},
 				},
 				Signature:    "TestMethod(NotInterested *string, Interested *string) (string)",
 				Exceptions:   nil,
@@ -53,7 +53,10 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	return procedures
 }
 
-type handler struct{ impl Interface }
+type handler struct {
+	impl               Interface
+	actorUUIDValidator thrift.ActorUUIDValidator
+}
 
 type yarpcErrorNamer interface{ YARPCErrorName() string }
 
@@ -64,6 +67,12 @@ func (h handler) TestMethod(ctx context.Context, body wire.Value) (thrift.Respon
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode Thrift request for service 'TestService' procedure 'TestMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.Response{}, err
+		}
 	}
 
 	success, appErr := h.impl.TestMethod(ctx, args.NotInterested, args.Interested)
@@ -89,7 +98,10 @@ func (h handler) TestMethod(ctx context.Context, body wire.Value) (thrift.Respon
 	return response, err
 }
 
-type testmethod_NoWireHandler struct{ impl Interface }
+type testmethod_NoWireHandler struct {
+	impl               Interface
+	actorUUIDValidator thrift.ActorUUIDValidator
+}
 
 func (h testmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
@@ -102,6 +114,12 @@ func (h testmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'TestService' procedure 'TestMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.NoWireResponse{}, err
+		}
 	}
 
 	success, appErr := h.impl.TestMethod(ctx, args.NotInterested, args.Interested)
