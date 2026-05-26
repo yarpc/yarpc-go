@@ -224,8 +224,12 @@ func (p *grpcPeer) monitorConnWrapper(w *grpcClientConnWrapper) {
 		_ = w.clientConn.Close()
 		close(w.stoppedC)
 		p.removeConn(w)
-		// Recompute connection status now that this peer is gone.
-		p.recomputeConnectionStatus()
+		// Skip status notification during peer shutdown: NotifyStatusChanged
+		// acquires list.lock, but the caller (abstractlist.stop) already holds
+		// it while waiting on p.wait() — deadlock. Metrics are safe to update.
+		if p.ctx.Err() == nil {
+			p.recomputeConnectionStatus()
+		}
 		p.refreshPoolMetrics()
 		p.connWg.Done()
 	}()
@@ -249,6 +253,12 @@ func (p *grpcPeer) monitorConnWrapper(w *grpcClientConnWrapper) {
 		// other connections — no need to scan the pool.  For any other state
 		// (Connecting, TransientFailure, etc.) we must check all connections
 		// to derive the correct aggregate status.
+		// Skip when shutting down: NotifyStatusChanged acquires list.lock,
+		// but the caller (abstractlist.stop) may already hold it while
+		// waiting on p.wait().
+		if p.ctx.Err() != nil {
+			break
+		}
 		p.recomputeConnectionStatus()
 
 		if !w.clientConn.WaitForStateChange(w.ctx, grpcStatus) {
