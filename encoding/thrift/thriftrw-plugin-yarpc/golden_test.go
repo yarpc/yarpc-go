@@ -34,6 +34,7 @@ import (
 
 	"go.uber.org/atomic"
 	"go.uber.org/thriftrw/plugin"
+	"go.uber.org/thriftrw/plugin/api"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -265,4 +266,70 @@ func hash(name string) (string, error) {
 	}
 
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
+// TestGenerateCompileErrors covers the error-return paths in Generate that
+// fire when compile.Compile fails on a Thrift file path.
+//
+// Successful compilation is tested by TestCodeIsUpToDate, which
+// drives the plugin via the same ServiceGenerator entry point but using real
+// Thrift files compiled by thriftrw. This test reuses the same
+// ServiceGenerator (g{}) but points it at a non-existent Thrift file so that
+// compile.Compile fails in both the RootServices and RootModules loops.
+func TestGenerateCompileErrors(t *testing.T) {
+	const bogusThriftPath = "/nonexistent/does-not-exist.thrift"
+
+	t.Run("compile error on root service", func(t *testing.T) {
+		// A RootServices entry whose module points at a bogus Thrift file
+		// path makes getCompiledModule -> compile.Compile fail, exercising
+		// the error wrap in getCompiledModule and the error return inside
+		// the RootServices loop.
+		req := &api.GenerateServiceRequest{
+			RootServices: []api.ServiceID{1},
+			Services: map[api.ServiceID]*api.Service{
+				1: {
+					Name:       "Bogus",
+					ThriftName: "Bogus",
+					ModuleID:   1,
+				},
+			},
+			Modules: map[api.ModuleID]*api.Module{
+				1: {
+					ImportPath:     "example.com/bogus",
+					Directory:      "bogus",
+					ThriftFilePath: bogusThriftPath,
+				},
+			},
+		}
+
+		resp, err := g{}.Generate(req)
+		require.Error(t, err, "expected compile error for missing thrift file")
+		assert.Nil(t, resp)
+		assert.Contains(t, err.Error(), "error compiling the thrift file",
+			"error should be wrapped with the getCompiledModule message")
+	})
+
+	t.Run("compile error on root module", func(t *testing.T) {
+		// Without RootServices, the RootServices loop is skipped and the
+		// RootModules loop runs. A bogus Thrift file path on the root
+		// module triggers the same compile error, this time returned from
+		// the RootModules loop.
+		req := &api.GenerateServiceRequest{
+			RootModules: []api.ModuleID{1},
+			Services:    map[api.ServiceID]*api.Service{},
+			Modules: map[api.ModuleID]*api.Module{
+				1: {
+					ImportPath:     "example.com/bogus",
+					Directory:      "bogus",
+					ThriftFilePath: bogusThriftPath,
+				},
+			},
+		}
+
+		resp, err := g{}.Generate(req)
+		require.Error(t, err, "expected compile error for missing thrift file")
+		assert.Nil(t, resp)
+		assert.Contains(t, err.Error(), "error compiling the thrift file",
+			"error should be wrapped with the getCompiledModule message")
+	})
 }

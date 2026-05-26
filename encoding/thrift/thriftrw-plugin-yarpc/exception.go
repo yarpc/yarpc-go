@@ -106,17 +106,6 @@ func yarpcErrorGenerator(data *moduleTemplateData, files map[string][]byte) erro
 	// kv.thrift => .../kv/types_yarpc.go
 	path := filepath.Join(data.Module.Directory, "types_yarpc.go")
 
-	// Get the original thrift file path
-	thriftFilePath := data.Module.GetThriftFilePath()
-	// and re-compile it. Plugins do not actually have access to the original
-	// thrift file's module, and this is how we gain access to it, since this
-	// generator writes extra methods to exception types defined in the Thrift
-	// file.
-	compiledModule, err := compile.Compile(thriftFilePath)
-	if err != nil {
-		return fmt.Errorf("error compiling the thrift file: %s", err.Error())
-	}
-
 	templateOptions := append(templateOptions,
 		plugin.TemplateFunc("isException", func(t compile.TypeSpec) bool {
 			if t, ok := t.(*compile.StructSpec); ok {
@@ -132,7 +121,12 @@ func yarpcErrorGenerator(data *moduleTemplateData, files map[string][]byte) erro
 		plugin.TemplateFunc("getYARPCErrorName", getYARPCErrorName),
 	)
 
-	files[path], err = plugin.GoFileFromTemplate(path, yarpcerrorTemplate, compiledModule, templateOptions...)
+	var err error
+	// data.CompiledModule is the result of compiling the original Thrift file.
+	// Plugins do not have access to it via the API, so it is compiled once in
+	// Generate and shared across generators; this generator writes extra
+	// methods to exception types defined in that Thrift file.
+	files[path], err = plugin.GoFileFromTemplate(path, yarpcerrorTemplate, data.CompiledModule, templateOptions...)
 	return err
 }
 

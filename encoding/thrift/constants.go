@@ -23,6 +23,6 @@ package thrift
 import "go.uber.org/yarpc/api/transport"
 
 // Encoding is the name of this encoding.
-const Encoding transport.Encoding = "thrift"
+const Encoding = transport.ThriftEncoding
 
 const _defaultBufferSize = 1024 // 1k

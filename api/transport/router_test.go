@@ -29,22 +29,53 @@ import (
 )
 
 func TestProcedureLogMarshaling(t *testing.T) {
-	p := Procedure{
-		Name:    "name",
-		Service: "service",
-		HandlerSpec: NewUnaryHandlerSpec(UnaryHandlerFunc(func(context.Context, *Request, ResponseWriter) error {
-			return nil
-		})),
-		Encoding:  "raw",
-		Signature: "signature",
-	}
-	enc := zapcore.NewMapObjectEncoder()
-	assert.NoError(t, p.MarshalLogObject(enc), "Unexpected error marshaling procedure.")
-	assert.Equal(t, map[string]interface{}{
-		"name":      "name",
-		"service":   "service",
-		"handler":   map[string]interface{}{"rpcType": "Unary"},
-		"encoding":  "raw",
-		"signature": "signature",
-	}, enc.Fields, "Unexpected output from marshaling procedure.")
+	t.Run("without exceptions", func(t *testing.T) {
+		p := Procedure{
+			Name:    "name",
+			Service: "service",
+			HandlerSpec: NewUnaryHandlerSpec(UnaryHandlerFunc(func(context.Context, *Request, ResponseWriter) error {
+				return nil
+			})),
+			Encoding:  "raw",
+			Signature: "signature",
+		}
+		enc := zapcore.NewMapObjectEncoder()
+		assert.NoError(t, p.MarshalLogObject(enc), "Unexpected error marshaling procedure.")
+		assert.Equal(t, map[string]interface{}{
+			"name":      "name",
+			"service":   "service",
+			"handler":   map[string]interface{}{"rpcType": "Unary"},
+			"encoding":  "raw",
+			"signature": "signature",
+		}, enc.Fields, "Unexpected output from marshaling procedure.")
+	})
+
+	t.Run("with exceptions", func(t *testing.T) {
+		p := Procedure{
+			Name:    "name",
+			Service: "service",
+			HandlerSpec: NewUnaryHandlerSpec(UnaryHandlerFunc(func(context.Context, *Request, ResponseWriter) error {
+				return nil
+			})),
+			Encoding:  "thrift",
+			Signature: "signature",
+			Exceptions: map[string]string{
+				"ExB": "__not_set__",
+				"ExA": "INVALID_ARGUMENT",
+			},
+		}
+		enc := zapcore.NewMapObjectEncoder()
+		assert.NoError(t, p.MarshalLogObject(enc), "Unexpected error marshaling procedure.")
+		assert.Equal(t, map[string]interface{}{
+			"name":      "name",
+			"service":   "service",
+			"handler":   map[string]interface{}{"rpcType": "Unary"},
+			"encoding":  "thrift",
+			"signature": "signature",
+			"exceptions": map[string]interface{}{
+				"ExA": "INVALID_ARGUMENT",
+				"ExB": "__not_set__",
+			},
+		}, enc.Fields, "Unexpected output from marshaling procedure.")
+	})
 }

@@ -67,6 +67,7 @@ import (
 	"fmt"
 	"strings"
 
+	"go.uber.org/thriftrw/compile"
 	"go.uber.org/thriftrw/plugin"
 	"go.uber.org/thriftrw/plugin/api"
 )
@@ -124,9 +125,30 @@ func (g g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceRespon
 
 	files := make(map[string][]byte)
 
+	// Generators share one compile.Module per root Thrift file (memoized below)
+	// across module- and service-level generators - e.g. server templates use it
+	// for exception map keys without compiling again inside template helpers.
+	compiledModules := make(map[string]*compile.Module)
+	getCompiledModule := func(thriftFilePath string) (*compile.Module, error) {
+		if m, ok := compiledModules[thriftFilePath]; ok {
+			return m, nil
+		}
+		m, err := compile.Compile(thriftFilePath)
+		if err != nil {
+			return nil, fmt.Errorf("error compiling the thrift file: %w", err)
+		}
+		compiledModules[thriftFilePath] = m
+		return m, nil
+	}
+
 	for _, serviceID := range req.RootServices {
+		svc := buildSvc(serviceID, req)
+		compiledModule, err := getCompiledModule(svc.Module.GetThriftFilePath())
+		if err != nil {
+			return nil, err
+		}
 		data := serviceTemplateData{
-			Svc:                 buildSvc(serviceID, req),
+			Svc:                 svc,
 			ContextImportPath:   *_context,
 			MockLibrary:         *_mockLibrary,
 			UnaryWrapperImport:  unaryWrapperImport,
@@ -134,6 +156,7 @@ func (g g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceRespon
 			OnewayWrapperImport: onewayWrapperImport,
 			OnewayWrapperFunc:   onewayWrapperFunc,
 			SanitizeTChannel:    g.SanitizeTChannel,
+			CompiledModule:      compiledModule,
 		}
 		for _, gen := range serviceGenerators {
 			if err := gen(&data, files); err != nil {
@@ -143,9 +166,15 @@ func (g g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceRespon
 	}
 
 	for _, moduleID := range req.RootModules {
+		module := req.Modules[moduleID]
+		compiledModule, err := getCompiledModule(module.GetThriftFilePath())
+		if err != nil {
+			return nil, err
+		}
 		data := moduleTemplateData{
-			Module:            req.Modules[moduleID],
+			Module:            module,
 			ContextImportPath: *_context,
+			CompiledModule:    compiledModule,
 		}
 		for _, gen := range moduleGenerators {
 			if err := gen(&data, files); err != nil {

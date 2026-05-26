@@ -111,6 +111,9 @@ func (r *Request) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 // Encoding represents an encoding format for requests.
 type Encoding string
 
+// ThriftEncoding A constant definition of the thrift encoding
+const ThriftEncoding = Encoding("thrift")
+
 // ValidateRequest validates the given request. An error is returned if the
 // request is invalid.
 //

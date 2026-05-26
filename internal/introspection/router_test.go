@@ -21,10 +21,38 @@
 package introspection
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/transport"
 )
+
+func TestIntrospectProcedures_propagatesExceptions(t *testing.T) {
+	t.Parallel()
+
+	ex := map[string]string{"E": "INVALID_ARGUMENT"}
+	routerProcs := []transport.Procedure{
+		{
+			Name:        "svc::m",
+			Encoding:    "thrift",
+			Signature:   "M()",
+			HandlerSpec: transport.NewUnaryHandlerSpec(noopUnaryHandler{}),
+			Exceptions:  ex,
+		},
+	}
+
+	out := IntrospectProcedures(routerProcs)
+	require.Len(t, out, 1)
+	assert.Equal(t, ex, out[0].Exceptions)
+}
+
+type noopUnaryHandler struct{}
+
+func (noopUnaryHandler) Handle(ctx context.Context, _ *transport.Request, _ transport.ResponseWriter) error {
+	return nil
+}
 
 func TestProcedureName(t *testing.T) {
 	tests := []struct {

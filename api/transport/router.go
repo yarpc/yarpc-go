@@ -26,6 +26,9 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// RPCCodeNotSetLiteral is a placeholder value when the "rpc.code" annotation is absent
+const RPCCodeNotSetLiteral = "__not_set__"
+
 // TODO: Until golang/mock#4 is fixed, imports in the generated code have to
 // be fixed by hand. They use vendor/* import paths rather than direct.
 
@@ -47,6 +50,12 @@ type Procedure struct {
 	// Signature of the handler, for introspection. This should be a snippet of
 	// Go code representing the function definition.
 	Signature string
+
+	// Exceptions, when non-empty, maps Thrift exception type names from the
+	// method throws list to rpc.code annotation values (encoding/thrift uses
+	// the "__not_set__" sentinel when an exception has no rpc.code). Other
+	// encodings leave this nil.
+	Exceptions map[string]string
 }
 
 // MarshalLogObject implements zap.ObjectMarshaler.
@@ -57,7 +66,23 @@ func (p Procedure) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddString("service", p.Service)
 	enc.AddString("encoding", string(p.Encoding))
 	enc.AddString("signature", p.Signature)
+	if len(p.Exceptions) > 0 {
+		_ = enc.AddObject("exceptions", exceptionsMapLogString(p.Exceptions))
+	}
 	return enc.AddObject("handler", p.HandlerSpec)
+}
+
+func exceptionsMapLogString(m map[string]string) zapcore.ObjectMarshalerFunc {
+	return func(enc zapcore.ObjectEncoder) error {
+		keys := make([]string, 0, len(m))
+		for k := range m {
+			keys = append(keys, k)
+		}
+		for _, k := range keys {
+			enc.AddString(k, m[k])
+		}
+		return nil
+	}
 }
 
 // Less orders procedures lexicographically on (Service, Name, Encoding).

@@ -467,11 +467,11 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "test",
 	Package:  "go.uber.org/yarpc/encoding/thrift/internal/observabilitytest/test",
 	FilePath: "test.thrift",
-	SHA1:     "3c501036fe37f678648dd479c821bc57aa17b7d1",
+	SHA1:     "488477fa89cb79327c14a64d70992f754c3de3b3",
 	Raw:      rawIDL,
 }
 
-const rawIDL = "exception ExceptionWithCode {\n    1: required string val\n} (\n    rpc.code = \"DATA_LOSS\" // server error\n)\n\nexception ExceptionWithoutCode {\n    1: required string val\n}\n\nservice TestService  {\n    string Call(1: required string key) throws (\n      1: ExceptionWithCode exCode,\n      2: ExceptionWithoutCode exNoCode,\n    )\n}\n"
+const rawIDL = "exception ExceptionWithCode {\n    1: required string val\n} (\n    rpc.code = \"DATA_LOSS\" // server error\n)\n\nexception ExceptionWithoutCode {\n    1: required string val\n}\n\nservice TestService  {\n    string Call(1: required string key) throws (\n      2: ExceptionWithoutCode exNoCode,\n      1: ExceptionWithCode exCode,\n    )\n}\n"
 
 // TestService_Call_Args represents the arguments for the TestService.Call function.
 //
@@ -751,9 +751,9 @@ func init() {
 
 	TestService_Call_Helper.IsException = func(err error) bool {
 		switch err.(type) {
-		case *ExceptionWithCode:
-			return true
 		case *ExceptionWithoutCode:
+			return true
+		case *ExceptionWithCode:
 			return true
 		default:
 			return false
@@ -766,27 +766,27 @@ func init() {
 		}
 
 		switch e := err.(type) {
-		case *ExceptionWithCode:
-			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for TestService_Call_Result.ExCode")
-			}
-			return &TestService_Call_Result{ExCode: e}, nil
 		case *ExceptionWithoutCode:
 			if e == nil {
 				return nil, errors.New("WrapResponse received non-nil error type with nil value for TestService_Call_Result.ExNoCode")
 			}
 			return &TestService_Call_Result{ExNoCode: e}, nil
+		case *ExceptionWithCode:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for TestService_Call_Result.ExCode")
+			}
+			return &TestService_Call_Result{ExCode: e}, nil
 		}
 
 		return nil, err
 	}
 	TestService_Call_Helper.UnwrapResponse = func(result *TestService_Call_Result) (success string, err error) {
-		if result.ExCode != nil {
-			err = result.ExCode
-			return
-		}
 		if result.ExNoCode != nil {
 			err = result.ExNoCode
+			return
+		}
+		if result.ExCode != nil {
+			err = result.ExCode
 			return
 		}
 
@@ -809,8 +809,8 @@ func init() {
 type TestService_Call_Result struct {
 	// Value returned by Call after a successful execution.
 	Success  *string               `json:"success,omitempty"`
-	ExCode   *ExceptionWithCode    `json:"exCode,omitempty"`
 	ExNoCode *ExceptionWithoutCode `json:"exNoCode,omitempty"`
+	ExCode   *ExceptionWithCode    `json:"exCode,omitempty"`
 }
 
 // ToWire translates a TestService_Call_Result struct into a Thrift-level intermediate
@@ -844,20 +844,20 @@ func (v *TestService_Call_Result) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 0, Value: w}
 		i++
 	}
-	if v.ExCode != nil {
-		w, err = v.ExCode.ToWire()
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 1, Value: w}
-		i++
-	}
 	if v.ExNoCode != nil {
 		w, err = v.ExNoCode.ToWire()
 		if err != nil {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+	if v.ExCode != nil {
+		w, err = v.ExCode.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
 		i++
 	}
 
@@ -868,14 +868,14 @@ func (v *TestService_Call_Result) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _ExceptionWithCode_Read(w wire.Value) (*ExceptionWithCode, error) {
-	var v ExceptionWithCode
+func _ExceptionWithoutCode_Read(w wire.Value) (*ExceptionWithoutCode, error) {
+	var v ExceptionWithoutCode
 	err := v.FromWire(w)
 	return &v, err
 }
 
-func _ExceptionWithoutCode_Read(w wire.Value) (*ExceptionWithoutCode, error) {
-	var v ExceptionWithoutCode
+func _ExceptionWithCode_Read(w wire.Value) (*ExceptionWithCode, error) {
+	var v ExceptionWithCode
 	err := v.FromWire(w)
 	return &v, err
 }
@@ -912,17 +912,17 @@ func (v *TestService_Call_Result) FromWire(w wire.Value) error {
 				}
 
 			}
-		case 1:
+		case 2:
 			if field.Value.Type() == wire.TStruct {
-				v.ExCode, err = _ExceptionWithCode_Read(field.Value)
+				v.ExNoCode, err = _ExceptionWithoutCode_Read(field.Value)
 				if err != nil {
 					return err
 				}
 
 			}
-		case 2:
+		case 1:
 			if field.Value.Type() == wire.TStruct {
-				v.ExNoCode, err = _ExceptionWithoutCode_Read(field.Value)
+				v.ExCode, err = _ExceptionWithCode_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -935,10 +935,10 @@ func (v *TestService_Call_Result) FromWire(w wire.Value) error {
 	if v.Success != nil {
 		count++
 	}
-	if v.ExCode != nil {
+	if v.ExNoCode != nil {
 		count++
 	}
-	if v.ExNoCode != nil {
+	if v.ExCode != nil {
 		count++
 	}
 	if count != 1 {
@@ -969,18 +969,6 @@ func (v *TestService_Call_Result) Encode(sw stream.Writer) error {
 		}
 	}
 
-	if v.ExCode != nil {
-		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
-			return err
-		}
-		if err := v.ExCode.Encode(sw); err != nil {
-			return err
-		}
-		if err := sw.WriteFieldEnd(); err != nil {
-			return err
-		}
-	}
-
 	if v.ExNoCode != nil {
 		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 2, Type: wire.TStruct}); err != nil {
 			return err
@@ -993,14 +981,26 @@ func (v *TestService_Call_Result) Encode(sw stream.Writer) error {
 		}
 	}
 
+	if v.ExCode != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.ExCode.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
 	count := 0
 	if v.Success != nil {
 		count++
 	}
-	if v.ExCode != nil {
+	if v.ExNoCode != nil {
 		count++
 	}
-	if v.ExNoCode != nil {
+	if v.ExCode != nil {
 		count++
 	}
 
@@ -1011,14 +1011,14 @@ func (v *TestService_Call_Result) Encode(sw stream.Writer) error {
 	return sw.WriteStructEnd()
 }
 
-func _ExceptionWithCode_Decode(sr stream.Reader) (*ExceptionWithCode, error) {
-	var v ExceptionWithCode
+func _ExceptionWithoutCode_Decode(sr stream.Reader) (*ExceptionWithoutCode, error) {
+	var v ExceptionWithoutCode
 	err := v.Decode(sr)
 	return &v, err
 }
 
-func _ExceptionWithoutCode_Decode(sr stream.Reader) (*ExceptionWithoutCode, error) {
-	var v ExceptionWithoutCode
+func _ExceptionWithCode_Decode(sr stream.Reader) (*ExceptionWithCode, error) {
+	var v ExceptionWithCode
 	err := v.Decode(sr)
 	return &v, err
 }
@@ -1049,14 +1049,14 @@ func (v *TestService_Call_Result) Decode(sr stream.Reader) error {
 				return err
 			}
 
-		case fh.ID == 1 && fh.Type == wire.TStruct:
-			v.ExCode, err = _ExceptionWithCode_Decode(sr)
+		case fh.ID == 2 && fh.Type == wire.TStruct:
+			v.ExNoCode, err = _ExceptionWithoutCode_Decode(sr)
 			if err != nil {
 				return err
 			}
 
-		case fh.ID == 2 && fh.Type == wire.TStruct:
-			v.ExNoCode, err = _ExceptionWithoutCode_Decode(sr)
+		case fh.ID == 1 && fh.Type == wire.TStruct:
+			v.ExCode, err = _ExceptionWithCode_Decode(sr)
 			if err != nil {
 				return err
 			}
@@ -1084,10 +1084,10 @@ func (v *TestService_Call_Result) Decode(sr stream.Reader) error {
 	if v.Success != nil {
 		count++
 	}
-	if v.ExCode != nil {
+	if v.ExNoCode != nil {
 		count++
 	}
-	if v.ExNoCode != nil {
+	if v.ExCode != nil {
 		count++
 	}
 	if count != 1 {
@@ -1110,12 +1110,12 @@ func (v *TestService_Call_Result) String() string {
 		fields[i] = fmt.Sprintf("Success: %v", *(v.Success))
 		i++
 	}
-	if v.ExCode != nil {
-		fields[i] = fmt.Sprintf("ExCode: %v", v.ExCode)
-		i++
-	}
 	if v.ExNoCode != nil {
 		fields[i] = fmt.Sprintf("ExNoCode: %v", v.ExNoCode)
+		i++
+	}
+	if v.ExCode != nil {
+		fields[i] = fmt.Sprintf("ExCode: %v", v.ExCode)
 		i++
 	}
 
@@ -1145,10 +1145,10 @@ func (v *TestService_Call_Result) Equals(rhs *TestService_Call_Result) bool {
 	if !_String_EqualsPtr(v.Success, rhs.Success) {
 		return false
 	}
-	if !((v.ExCode == nil && rhs.ExCode == nil) || (v.ExCode != nil && rhs.ExCode != nil && v.ExCode.Equals(rhs.ExCode))) {
+	if !((v.ExNoCode == nil && rhs.ExNoCode == nil) || (v.ExNoCode != nil && rhs.ExNoCode != nil && v.ExNoCode.Equals(rhs.ExNoCode))) {
 		return false
 	}
-	if !((v.ExNoCode == nil && rhs.ExNoCode == nil) || (v.ExNoCode != nil && rhs.ExNoCode != nil && v.ExNoCode.Equals(rhs.ExNoCode))) {
+	if !((v.ExCode == nil && rhs.ExCode == nil) || (v.ExCode != nil && rhs.ExCode != nil && v.ExCode.Equals(rhs.ExCode))) {
 		return false
 	}
 
@@ -1164,11 +1164,11 @@ func (v *TestService_Call_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (e
 	if v.Success != nil {
 		enc.AddString("success", *v.Success)
 	}
-	if v.ExCode != nil {
-		err = multierr.Append(err, enc.AddObject("exCode", v.ExCode))
-	}
 	if v.ExNoCode != nil {
 		err = multierr.Append(err, enc.AddObject("exNoCode", v.ExNoCode))
+	}
+	if v.ExCode != nil {
+		err = multierr.Append(err, enc.AddObject("exCode", v.ExCode))
 	}
 	return err
 }
@@ -1188,21 +1188,6 @@ func (v *TestService_Call_Result) IsSetSuccess() bool {
 	return v != nil && v.Success != nil
 }
 
-// GetExCode returns the value of ExCode if it is set or its
-// zero value if it is unset.
-func (v *TestService_Call_Result) GetExCode() (o *ExceptionWithCode) {
-	if v != nil && v.ExCode != nil {
-		return v.ExCode
-	}
-
-	return
-}
-
-// IsSetExCode returns true if ExCode is not nil.
-func (v *TestService_Call_Result) IsSetExCode() bool {
-	return v != nil && v.ExCode != nil
-}
-
 // GetExNoCode returns the value of ExNoCode if it is set or its
 // zero value if it is unset.
 func (v *TestService_Call_Result) GetExNoCode() (o *ExceptionWithoutCode) {
@@ -1216,6 +1201,21 @@ func (v *TestService_Call_Result) GetExNoCode() (o *ExceptionWithoutCode) {
 // IsSetExNoCode returns true if ExNoCode is not nil.
 func (v *TestService_Call_Result) IsSetExNoCode() bool {
 	return v != nil && v.ExNoCode != nil
+}
+
+// GetExCode returns the value of ExCode if it is set or its
+// zero value if it is unset.
+func (v *TestService_Call_Result) GetExCode() (o *ExceptionWithCode) {
+	if v != nil && v.ExCode != nil {
+		return v.ExCode
+	}
+
+	return
+}
+
+// IsSetExCode returns true if ExCode is not nil.
+func (v *TestService_Call_Result) IsSetExCode() bool {
+	return v != nil && v.ExCode != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
