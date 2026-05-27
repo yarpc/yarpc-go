@@ -22,7 +22,9 @@ package grpc
 
 import (
 	"net"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -77,6 +79,90 @@ func TestReleasePeerErrorNoPeer(t *testing.T) {
 		TransportName:  "grpc.Transport",
 		PeerIdentifier: address,
 	}, transport.ReleasePeer(testIdentifier{address}, peerSubscriber))
+}
+
+// TestStopWaitsForReleasedPeerCleanup verifies that Transport.Stop() blocks
+// until the async cleanup goroutine launched by ReleasePeer finishes.
+func TestStopWaitsForReleasedPeerCleanup(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	grpcServer := grpc.NewServer()
+	go grpcServer.Serve(listener)
+	defer grpcServer.Stop()
+
+	transport := NewTransport()
+	require.NoError(t, transport.Start())
+
+	address := listener.Addr().String()
+	sub := testPeerSubscriber{}
+
+	_, err = transport.RetainPeer(testIdentifier{address}, sub)
+	require.NoError(t, err)
+
+	// ReleasePeer with 0 remaining subscribers spawns an async cleanup goroutine.
+	require.NoError(t, transport.ReleasePeer(testIdentifier{address}, sub))
+
+	// Stop must not return until releasedCleanupWg reaches zero.
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		assert.NoError(t, transport.Stop())
+	}()
+
+	select {
+	case <-done:
+		// Stop completed — cleanup goroutine finished first.
+	case <-time.After(5 * time.Second):
+		t.Fatal("Transport.Stop() did not return within 5s; releasedCleanupWg may not be awaited")
+	}
+}
+
+// TestStopReleasesLockBeforeWait verifies that Transport.Stop() does not hold
+// t.lock while calling p.wait(), so concurrent operations that need the lock
+// (e.g. ReleasePeer called from a peer-list shutdown) do not deadlock.
+func TestStopReleasesLockBeforeWait(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	grpcServer := grpc.NewServer()
+	go grpcServer.Serve(listener)
+	defer grpcServer.Stop()
+
+	transport := NewTransport()
+	require.NoError(t, transport.Start())
+
+	address := listener.Addr().String()
+	sub := testPeerSubscriber{}
+
+	_, err = transport.RetainPeer(testIdentifier{address}, sub)
+	require.NoError(t, err)
+
+	// Simulate a concurrent ReleasePeer that runs while Stop is in p.wait().
+	// If Stop held t.lock during p.wait() this would deadlock.
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		// Small delay to let Stop enter p.wait().
+		time.Sleep(10 * time.Millisecond)
+		// This acquires t.lock internally; must not deadlock.
+		_ = transport.ReleasePeer(testIdentifier{address}, sub)
+	}()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		assert.NoError(t, transport.Stop())
+	}()
+
+	wg.Wait()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Transport.Stop() deadlocked while holding t.lock during p.wait()")
+	}
 }
 
 type testPeerSubscriber struct{}
