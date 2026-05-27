@@ -64,6 +64,7 @@ func (hm headerMapper) FromHTTPHeaders(from http.Header, to transport.Headers) t
 	// Process tracing/proxy headers first, then prefixed headers, so the
 	// prefixed value wins on conflict (e.g. Rpc-Header-X-Forwarded-For
 	// over X-Forwarded-For).
+	// Note: undefined behavior for multiple occurrences of the same header.
 	// TODO: Remove two-pass once clients stop sending the prefixed form.
 	for origKey, vals := range from {
 		if isTracingHeader(origKey) || isProxyHeader(origKey) {
