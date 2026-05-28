@@ -106,17 +106,26 @@ type TransportConfig struct {
 //	transports:
 //	  grpc:
 //	    clientConnectionPool:
-//	      dynamicScalingEnabled: true   # enable background auto-scaling
+//	      dynamicScalingEnabled: false  # explicit opt-out (overrides central OC control)
 //	      maxConcurrentStreams: 250     # assumed server HTTP/2 stream limit
 //	      scaleUpThreshold: 0.8         # open a new conn at 80% utilization
+//	      scaleDownGap: 0.1             # hysteresis gap below scaleUpThreshold for drain decisions
 //	      minConnections: 1             # minimum connections per peer
 //	      maxConnections: 10            # maximum connections per peer
 //	      idleTimeout: 5m               # close idle connections after this duration
+//	      scalingMonitorInterval: 30s   # how often to evaluate scale-down and idle cleanup
 type ClientConnectionPoolConfig struct {
-	// DynamicScalingEnabled enables the background connection scaling monitor.
-	// When true, YARPC automatically opens and drains connections based on
-	// stream utilization.  Disabled by default to allow controlled rollout.
-	DynamicScalingEnabled bool `config:"dynamicScalingEnabled"`
+	// DynamicScalingEnabled controls the background connection scaling monitor.
+	// This field uses a pointer so that YAML "not set" and "explicitly false" can
+	// be distinguished:
+	//
+	//   - nil (field omitted from YAML): the central ObjectConfig value is used.
+	//   - false (explicitly set in YAML): always disabled, overrides ObjectConfig.
+	//   - true (explicitly set in YAML): ignored — enabling requires ObjectConfig.
+	//
+	// In practice, services should leave this field unset and rely on ObjectConfig.
+	// Set it to false only to explicitly opt out of dynamic scaling for this service.
+	DynamicScalingEnabled *bool `config:"dynamicScalingEnabled"`
 
 	// MaxConcurrentStreams is the assumed HTTP/2 SETTINGS_MAX_CONCURRENT_STREAMS
 	// value enforced by the server.  YARPC uses this to decide when to open an
@@ -127,6 +136,11 @@ type ClientConnectionPoolConfig struct {
 	// new connection is opened (e.g. 0.8 → scale up at 200 active streams).
 	// Must be in the range (0, 1].  Defaults to 0.8.
 	ScaleUpThreshold float64 `config:"scaleUpThreshold"`
+
+	// ScaleDownGap is the hysteresis gap subtracted from ScaleUpThreshold to
+	// derive the scale-down threshold.  Prevents oscillation when stream counts
+	// hover near the scale-up boundary.  Defaults to 0.1.
+	ScaleDownGap float64 `config:"scaleDownGap"`
 
 	// MinConnections is the minimum number of connections kept per peer.
 	// Connections are pre-established up to this count at peer creation time.
@@ -141,6 +155,11 @@ type ClientConnectionPoolConfig struct {
 	// YARPC closes it.
 	// Defaults to 15 minutes.
 	IdleTimeout time.Duration `config:"idleTimeout"`
+
+	// ScalingMonitorInterval is how often the background monitor evaluates
+	// the pool for scale-down and idle cleanup.
+	// Defaults to 30 seconds.
+	ScalingMonitorInterval time.Duration `config:"scalingMonitorInterval"`
 }
 
 // InboundConfig configures a gRPC Inbound.
@@ -411,15 +430,30 @@ func (t *transportSpec) buildTransport(transportConfig *TransportConfig, kit *ya
 	if cp.ScaleUpThreshold < 0 || cp.ScaleUpThreshold > 1 {
 		return nil, fmt.Errorf("clientConnectionPool.scaleUpThreshold must be in [0, 1], got %v", cp.ScaleUpThreshold)
 	}
+	if cp.ScaleDownGap < 0 || cp.ScaleDownGap >= 1 {
+		return nil, fmt.Errorf("clientConnectionPool.scaleDownGap must be in [0, 1), got %v", cp.ScaleDownGap)
+	}
 	if cp.IdleTimeout < 0 {
 		return nil, fmt.Errorf("clientConnectionPool.idleTimeout must be non-negative, got %v", cp.IdleTimeout)
 	}
-	options = append(options, WithDynamicConnectionScaling(cp.DynamicScalingEnabled))
+	if cp.ScalingMonitorInterval < 0 {
+		return nil, fmt.Errorf("clientConnectionPool.scalingMonitorInterval must be non-negative, got %v", cp.ScalingMonitorInterval)
+	}
+	// DynamicScalingEnabled is only applied when explicitly set to false in YAML,
+	// which acts as a service-level opt-out that overrides the central OC value.
+	// YAML true and YAML unset both leave the OC-provided programmatic option intact.
+	// This means: enabling requires OC to set it; services can only opt out via YAML.
+	if cp.DynamicScalingEnabled != nil && !*cp.DynamicScalingEnabled {
+		options = append(options, WithDynamicConnectionScaling(false))
+	}
 	if cp.MaxConcurrentStreams > 0 {
 		options = append(options, MaxConcurrentStreams(cp.MaxConcurrentStreams))
 	}
 	if cp.ScaleUpThreshold > 0 {
 		options = append(options, ScaleUpThreshold(cp.ScaleUpThreshold))
+	}
+	if cp.ScaleDownGap > 0 {
+		options = append(options, ScaleDownGap(cp.ScaleDownGap))
 	}
 	if cp.MinConnections > 0 {
 		options = append(options, MinConnections(cp.MinConnections))
@@ -429,6 +463,9 @@ func (t *transportSpec) buildTransport(transportConfig *TransportConfig, kit *ya
 	}
 	if cp.IdleTimeout > 0 {
 		options = append(options, ConnIdleTimeout(cp.IdleTimeout))
+	}
+	if cp.ScalingMonitorInterval > 0 {
+		options = append(options, ScalingMonitorInterval(cp.ScalingMonitorInterval))
 	}
 	backoffStrategy, err := transportConfig.Backoff.Strategy()
 	if err != nil {
@@ -441,6 +478,10 @@ func (t *transportSpec) buildTransport(transportConfig *TransportConfig, kit *ya
 	}
 	if opts.clientConnPoolScaleUpThreshold <= 0 || opts.clientConnPoolScaleUpThreshold > 1 {
 		return nil, fmt.Errorf("clientConnectionPool.scaleUpThreshold must be in (0, 1], got %v", opts.clientConnPoolScaleUpThreshold)
+	}
+	if opts.clientConnPoolScaleUpThreshold-opts.clientConnPoolScaleDownGap <= 0 {
+		return nil, fmt.Errorf("clientConnectionPool.scaleUpThreshold (%.2f) minus scaleDownGap (%.2f) must be > 0",
+			opts.clientConnPoolScaleUpThreshold, opts.clientConnPoolScaleDownGap)
 	}
 	if opts.clientConnPoolMaxConcurrentStreams < 1 {
 		return nil, fmt.Errorf("clientConnectionPool.maxConcurrentStreams must be at least 1, got %d", opts.clientConnPoolMaxConcurrentStreams)

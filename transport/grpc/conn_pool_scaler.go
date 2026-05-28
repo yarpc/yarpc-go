@@ -27,14 +27,27 @@ import (
 	"go.uber.org/zap"
 )
 
-// _scalingMonitorInterval is how often the scaling monitor evaluates the pool.
-const _scalingMonitorInterval = 30 * time.Second
+// _defaultScalingMonitorInterval is both the default and the minimum allowed
+// interval for the scaling monitor. Values below this would cause excessive
+// pool churn and are rejected at config validation time.
+const _defaultScalingMonitorInterval = 30 * time.Second
 
 // runScalingMonitor runs as a background goroutine for the lifetime of the
 // peer.  It periodically evaluates whether connections should be removed
 // from the pool.  It exits when the peer's context is cancelled.
 func (p *grpcPeer) runScalingMonitor() {
-	ticker := time.NewTicker(_scalingMonitorInterval)
+	interval := p.poolCfg.scalingMonitorInterval
+	switch {
+	case interval <= 0:
+		interval = _defaultScalingMonitorInterval
+	case interval < _defaultScalingMonitorInterval:
+		p.t.options.logger.Warn("grpc: scalingMonitorInterval is below the minimum; clamping to avoid pool thrashing",
+			zap.Duration("configured", interval),
+			zap.Duration("effective", _defaultScalingMonitorInterval),
+			zap.String("peer", p.HostPort()))
+		interval = _defaultScalingMonitorInterval
+	}
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
 		select {
@@ -54,9 +67,12 @@ func (p *grpcPeer) evaluateScaling() {
 // maybeScaleDown checks whether the pool can be reduced by one connection.
 // A connection is marked for draining when the remaining active connections
 // can absorb the current aggregate stream load without triggering another
-// scale-up.
+// scale-up.  The scale-down threshold applies a hysteresis gap below
+// scaleUpThreshold to prevent oscillation when stream count hovers near
+// the scale-up boundary.
 // Lock-free read path: loads an immutable snapshot via atomic.Pointer.Load().
-// The state mutation (setState) is already atomic, so no mutex is needed.
+// The state mutation uses transitionState so that concurrent reactivation by
+// tryScaleUp is mutually exclusive with the draining transition.
 func (p *grpcPeer) maybeScaleDown() {
 	conns := p.loadConns()
 	active := make([]*grpcClientConnWrapper, 0, len(conns))
@@ -71,7 +87,10 @@ func (p *grpcPeer) maybeScaleDown() {
 		return
 	}
 
-	threshold := int32(float64(p.poolCfg.maxConcurrentStreams) * p.poolCfg.scaleUpThreshold)
+	// scaleDownThreshold introduces a hysteresis band below scaleUpThreshold.
+	// Scale down only when load would fit within the lower threshold on the
+	// reduced pool, preventing oscillation near the scale-up boundary.
+	scaleDownThreshold := int32(float64(p.poolCfg.maxConcurrentStreams) * (p.poolCfg.scaleUpThreshold - p.poolCfg.scaleDownGap))
 
 	var totalStreams int32
 	for _, c := range active {
@@ -79,8 +98,8 @@ func (p *grpcPeer) maybeScaleDown() {
 	}
 
 	// Only drain if the remaining (n-1) connections can absorb current load
-	// without crossing the scale-up threshold.
-	capacityAfterDrain := threshold * int32(len(active)-1)
+	// without crossing the scale-down threshold.
+	capacityAfterDrain := scaleDownThreshold * int32(len(active)-1)
 	if totalStreams >= capacityAfterDrain {
 		return
 	}
@@ -98,8 +117,11 @@ func (p *grpcPeer) maybeScaleDown() {
 		return
 	}
 
-	// setState is an atomic store — no mutex needed.
-	mostLoaded.setState(connStateDraining)
+	// Use CAS so that a concurrent reactivation by tryScaleUp cannot race
+	// with this draining transition on the same connection.
+	if !mostLoaded.transitionState(connStateActive, connStateDraining) {
+		return
+	}
 
 	p.t.options.logger.Debug("grpc: marked connection for draining during scale-down",
 		zap.String("peer", p.HostPort()),
@@ -113,8 +135,13 @@ func (p *grpcPeer) maybeScaleDown() {
 // monitor goroutines can close and remove them.
 // It skips closing idle connections while a scale-up is in progress so that
 // tryScaleUp can reactivate them instead of dialing a new connection.
-// Lock-free read path: uses atomic.Pointer.Load() for the snapshot, and
-// atomic setState/setIdleNow for mutations (no mutex required).
+// Lock-free read path: uses atomic.Pointer.Load() for the snapshot.
+// All state transitions use transitionState so they are mutually exclusive with
+// concurrent reactivation by tryScaleUp, closing the race identified in review:
+//
+//	Time 1 cleanupIdleConns: reads isScaling==0, adds c to toClose
+//	Time 2 tryScaleUp:       CAS isScaling 0→1, reactivates c (idle→active)
+//	Time 3 cleanupIdleConns: transitionState(idle→closing) fails → skips cancel
 func (p *grpcPeer) cleanupIdleConns() {
 	// If a scale-up goroutine is running, hold off — idle connections may be
 	// reactivated by tryScaleUp instead of being closed.
@@ -136,16 +163,21 @@ func (p *grpcPeer) cleanupIdleConns() {
 		}
 	}
 
-	// setState and setIdleNow are both atomic operations — no mutex needed.
-	// Re-check state before transitioning to handle any concurrent changes.
+	// Use CAS for the draining→idle transition so a concurrent reactivation
+	// by tryScaleUp (idle→active) cannot race on the same connection.
 	for _, c := range drained {
-		if c.getState() == connStateDraining && c.getStreamCount() == 0 {
-			c.setState(connStateIdle)
+		if c.transitionState(connStateDraining, connStateIdle) {
 			c.setIdleNow()
 		}
 	}
 
 	for _, c := range toClose {
+		// Claim the connection for closure via CAS before calling cancel.
+		// If tryScaleUp wins the CAS first (idle→active), we skip this
+		// connection — it has been reactivated and must not be cancelled.
+		if !c.transitionState(connStateIdle, connStateClosing) {
+			continue
+		}
 		p.t.options.logger.Debug("grpc: closing idle connection after timeout",
 			zap.String("peer", p.HostPort()),
 			zap.Duration("idle_duration", now.Sub(c.idleSince())))
@@ -217,22 +249,40 @@ func (p *grpcPeer) tryScaleUp(leastLoadedConn *grpcClientConnWrapper) {
 	}()
 }
 
-// reactivateIdleConn finds the first idle connection whose context has not
-// yet been cancelled and transitions it back to active, avoiding an
-// unnecessary dial.  Returns true if a connection was reactivated.
-// Lock-free: setState is atomic. Only one reactivateIdleConn call runs at a
-// time (guarded by the isScaling CAS in tryScaleUp).
+// reactivateIdleConn finds a connection to bring back to active, avoiding an
+// unnecessary dial.  It prefers idle connections (zero in-flight streams) over
+// draining ones (streams still in flight), and uses CAS so that a concurrent
+// cleanupIdleConns cannot cancel a connection that is being reactivated.
+// Only one reactivateIdleConn call runs at a time (guarded by the isScaling
+// CAS in tryScaleUp).
+// Returns true if a connection was reactivated.
 func (p *grpcPeer) reactivateIdleConn() bool {
 	conns := p.loadConns()
+
+	// First pass: prefer idle connections (no in-flight streams, cheapest to reactivate).
 	for _, c := range conns {
 		// Only reactivate if the connection context is still live; a cancelled
 		// context means cleanupIdleConns has already scheduled it for closure.
 		if c.getState() == connStateIdle && c.ctx.Err() == nil {
-			c.setState(connStateActive)
-			atomic.StoreInt64(&c.lastIdleAtNano, 0)
-			return true
+			if c.transitionState(connStateIdle, connStateActive) {
+				atomic.StoreInt64(&c.lastIdleAtNano, 0)
+				return true
+			}
 		}
 	}
+
+	// Second pass: reactivate a draining connection if no idle one is available.
+	// A draining connection still has in-flight streams but can accept new ones
+	// once reactivated, preventing accumulation of stuck draining connections
+	// under sustained load.
+	for _, c := range conns {
+		if c.getState() == connStateDraining && c.ctx != nil && c.ctx.Err() == nil {
+			if c.transitionState(connStateDraining, connStateActive) {
+				return true
+			}
+		}
+	}
+
 	return false
 }
 

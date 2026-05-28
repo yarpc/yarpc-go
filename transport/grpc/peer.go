@@ -127,14 +127,27 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 			Peer:        address,
 		}),
 		poolCfg: connPoolConfig{
-			dynamicScalingEnabled: t.options.clientConnPoolDynamicScalingEnabled,
-			maxConcurrentStreams:  t.options.clientConnPoolMaxConcurrentStreams,
-			scaleUpThreshold:      t.options.clientConnPoolScaleUpThreshold,
-			minConnections:        t.options.clientConnPoolMinConnections,
-			maxConnections:        t.options.clientConnPoolMaxConnections,
-			idleTimeout:           t.options.clientConnPoolIdleTimeout,
+			dynamicScalingEnabled:  t.options.clientConnPoolDynamicScalingEnabled,
+			maxConcurrentStreams:   t.options.clientConnPoolMaxConcurrentStreams,
+			scaleUpThreshold:       t.options.clientConnPoolScaleUpThreshold,
+			scaleDownGap:           t.options.clientConnPoolScaleDownGap,
+			minConnections:         t.options.clientConnPoolMinConnections,
+			maxConnections:         t.options.clientConnPoolMaxConnections,
+			idleTimeout:            t.options.clientConnPoolIdleTimeout,
+			scalingMonitorInterval: t.options.clientConnPoolScalingMonitorInterval,
 		},
 	}
+	t.options.logger.Debug("grpc: connection pool config resolved",
+		zap.String("peer", address),
+		zap.Bool("dynamicScalingEnabled", p.poolCfg.dynamicScalingEnabled),
+		zap.Int("minConnections", p.poolCfg.minConnections),
+		zap.Int("maxConnections", p.poolCfg.maxConnections),
+		zap.Int32("maxConcurrentStreams", p.poolCfg.maxConcurrentStreams),
+		zap.Float64("scaleUpThreshold", p.poolCfg.scaleUpThreshold),
+		zap.Float64("scaleDownGap", p.poolCfg.scaleDownGap),
+		zap.Duration("idleTimeout", p.poolCfg.idleTimeout),
+		zap.Duration("scalingMonitorInterval", p.poolCfg.scalingMonitorInterval),
+	)
 	// Publish an empty slice so loadConns() never returns nil before the first
 	// addConn() call.
 	p.storeConns(nil)

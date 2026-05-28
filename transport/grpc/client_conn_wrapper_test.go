@@ -23,6 +23,7 @@ package grpc
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -65,6 +66,7 @@ func TestConnStateConstants(t *testing.T) {
 	assert.Equal(t, connState(0), connStateActive)
 	assert.Equal(t, connState(1), connStateDraining)
 	assert.Equal(t, connState(2), connStateIdle)
+	assert.Equal(t, connState(3), connStateClosing)
 }
 
 // TestGetSetState verifies that setState and getState round-trip correctly for
@@ -190,4 +192,48 @@ func TestContextInheritsParentCancellation(t *testing.T) {
 	require.NoError(t, w.ctx.Err())
 	cancel()
 	assert.ErrorIs(t, w.ctx.Err(), context.Canceled)
+}
+
+// TestTransitionState verifies transitionState performs atomic compare-and-swap correctly.
+func TestTransitionState(t *testing.T) {
+	t.Parallel()
+
+	t.Run("succeeds when state matches", func(t *testing.T) {
+		t.Parallel()
+		w := newTestConnWrapper(t)
+		assert.Equal(t, connStateActive, w.getState())
+		assert.True(t, w.transitionState(connStateActive, connStateDraining))
+		assert.Equal(t, connStateDraining, w.getState())
+	})
+
+	t.Run("fails when state does not match", func(t *testing.T) {
+		t.Parallel()
+		w := newTestConnWrapper(t)
+		assert.False(t, w.transitionState(connStateDraining, connStateIdle), "transition should fail if current state is not 'from'")
+		assert.Equal(t, connStateActive, w.getState(), "state must be unchanged on transition failure")
+	})
+
+	t.Run("only one of two concurrent transitions succeeds", func(t *testing.T) {
+		t.Parallel()
+		w := newTestConnWrapper(t)
+		w.setState(connStateIdle)
+
+		var wins int32
+		var wg sync.WaitGroup
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			if w.transitionState(connStateIdle, connStateActive) {
+				atomic.AddInt32(&wins, 1)
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			if w.transitionState(connStateIdle, connStateClosing) {
+				atomic.AddInt32(&wins, 1)
+			}
+		}()
+		wg.Wait()
+		assert.Equal(t, int32(1), atomic.LoadInt32(&wins), "exactly one transition must win")
+	})
 }
