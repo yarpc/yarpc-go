@@ -552,6 +552,225 @@ func TestTransportSpec(t *testing.T) {
 			},
 			wantErrors: []string{"outbound TLS enforced but outbound TLS config provider is nil"},
 		},
+		{
+			desc: "negative minConnections",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"minConnections": "-1",
+				},
+			},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{"address": "localhost:54580"},
+				},
+			},
+			wantErrors: []string{"clientConnectionPool.minConnections must be non-negative"},
+		},
+		{
+			desc: "negative maxConnections",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"maxConnections": "-1",
+				},
+			},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{"address": "localhost:54581"},
+				},
+			},
+			wantErrors: []string{"clientConnectionPool.maxConnections must be non-negative"},
+		},
+		{
+			desc: "maxConnections less than minConnections",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"minConnections": "5",
+					"maxConnections": "2",
+				},
+			},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{"address": "localhost:54582"},
+				},
+			},
+			wantErrors: []string{"clientConnectionPool.maxConnections (2) must be >= minConnections (5)"},
+		},
+		{
+			desc: "minConnections exceeds default maxConnections",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"minConnections": "10",
+				},
+			},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{"address": "localhost:54583"},
+				},
+			},
+			wantErrors: []string{"clientConnectionPool.maxConnections (5) must be >= minConnections (10)"},
+		},
+		{
+			desc: "scaleUpThreshold out of range",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"scaleUpThreshold": "1.5",
+				},
+			},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{"address": "localhost:54584"},
+				},
+			},
+			wantErrors: []string{"clientConnectionPool.scaleUpThreshold must be in [0, 1]"},
+		},
+		{
+			desc: "valid connection pool config",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"minConnections":         "2",
+					"maxConnections":         "8",
+					"scaleUpThreshold":       "0.7",
+					"maxConcurrentStreams":   "200",
+					"idleTimeout":            "10m",
+					"scaleDownGap":           "0.1",
+					"scalingMonitorInterval": "60s",
+				},
+			},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{"address": "localhost:54585"},
+				},
+			},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {
+					Address: "localhost:54585",
+				},
+			},
+		},
+		{
+			desc: "negative scaleDownGap rejected",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"scaleDownGap": "-0.1",
+				},
+			},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{"address": "localhost:54586"},
+				},
+			},
+			wantErrors: []string{"clientConnectionPool.scaleDownGap must be in [0, 1)"},
+		},
+		{
+			desc: "scaleDownGap >= 1 rejected",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"scaleDownGap": "1.0",
+				},
+			},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{"address": "localhost:54587"},
+				},
+			},
+			wantErrors: []string{"clientConnectionPool.scaleDownGap must be in [0, 1)"},
+		},
+		{
+			desc: "scaleDownGap eliminates positive scale-down threshold",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"scaleUpThreshold": "0.8",
+					"scaleDownGap":     "0.85",
+				},
+			},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{"address": "localhost:54588"},
+				},
+			},
+			wantErrors: []string{"scaleUpThreshold"},
+		},
+		{
+			desc: "negative scalingMonitorInterval rejected",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"scalingMonitorInterval": "-30s",
+				},
+			},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{"address": "localhost:54589"},
+				},
+			},
+			wantErrors: []string{"clientConnectionPool.scalingMonitorInterval must be non-negative"},
+		},
+		{
+			desc: "scalingMonitorInterval below 30s is clamped with a warning (no error)",
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"scalingMonitorInterval": "10s",
+				},
+			},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{"address": "localhost:54590"},
+				},
+			},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {Address: "localhost:54590"},
+			},
+		},
+		{
+			desc: "YAML dynamicScalingEnabled:true is ignored (OC controls enabling)",
+			// YAML true alone must not enable dynamic scaling — only OC can.
+			// The transport should build successfully; enabling is via programmatic option.
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"dynamicScalingEnabled": true,
+					"maxConnections":        "2",
+				},
+			},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{"address": "localhost:54591"},
+				},
+			},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {Address: "localhost:54591"},
+			},
+		},
+		{
+			desc: "YAML dynamicScalingEnabled:false overrides a programmatic true (explicit opt-out)",
+			// opts sets dynamic scaling true (simulating OC); YAML false must override it.
+			opts: []Option{WithDynamicConnectionScaling(true)},
+			transportCfg: attrs{
+				"clientConnectionPool": attrs{
+					"dynamicScalingEnabled": false,
+				},
+			},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{"address": "localhost:54592"},
+				},
+			},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {Address: "localhost:54592"},
+			},
+		},
+		{
+			desc: "YAML dynamicScalingEnabled unset does not override a programmatic true",
+			// opts sets dynamic scaling true (simulating OC); YAML omits the field.
+			// The programmatic true must survive.
+			opts: []Option{WithDynamicConnectionScaling(true)},
+			outboundCfg: attrs{
+				"myservice": attrs{
+					TransportName: attrs{"address": "localhost:54593"},
+				},
+			},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {Address: "localhost:54593"},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -718,13 +937,13 @@ func TestContextDialerOptionUsage(t *testing.T) {
 	require.True(t, ok, "expected a gRPC peer")
 
 	for {
-		state := grpcPeer.clientConn.GetState()
+		state := grpcPeer.loadConns()[0].clientConn.GetState()
 		if state == connectivity.Ready {
 			break
 		}
-		grpcPeer.clientConn.WaitForStateChange(ctx, state)
+		grpcPeer.loadConns()[0].clientConn.WaitForStateChange(ctx, state)
 	}
-	require.Equal(t, connectivity.Ready, grpcPeer.clientConn.GetState(), "expected gRPC connection in Ready state")
+	require.Equal(t, connectivity.Ready, grpcPeer.loadConns()[0].clientConn.GetState(), "expected gRPC connection in Ready state")
 	require.Equal(t, 1, dialContextInvoked, "counter should increment by one from dialer invocation")
 }
 
