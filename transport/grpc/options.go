@@ -56,11 +56,13 @@ const (
 	defaultClientMaxRecvMsgSize = 1024 * 1024 * 64
 	// Client connection pool defaults.
 	// defaultClientConnPoolMaxConcurrentStreams matches Go's net/http2 server default (SETTINGS_MAX_CONCURRENT_STREAMS = 250).
-	defaultClientConnPoolMaxConcurrentStreams int32         = 250
-	defaultClientConnPoolScaleUpThreshold     float64       = 0.8
-	defaultClientConnPoolMinConnections       int           = 1
-	defaultClientConnPoolMaxConnections       int           = 5
-	defaultClientConnPoolIdleTimeout          time.Duration = 15 * time.Minute
+	defaultClientConnPoolMaxConcurrentStreams   int32         = 250
+	defaultClientConnPoolScaleUpThreshold       float64       = 0.8
+	defaultClientConnPoolScaleDownGap           float64       = 0.1
+	defaultClientConnPoolMinConnections         int           = 1
+	defaultClientConnPoolMaxConnections         int           = 5
+	defaultClientConnPoolIdleTimeout            time.Duration = 15 * time.Minute
+	defaultClientConnPoolScalingMonitorInterval time.Duration = 30 * time.Second
 )
 
 // Option is an interface shared by TransportOption, InboundOption, and OutboundOption
@@ -237,6 +239,19 @@ func ScaleUpThreshold(f float64) TransportOption {
 	}
 }
 
+// ScaleDownGap sets the hysteresis gap subtracted from ScaleUpThreshold to
+// derive the scale-down threshold.  For example, with ScaleUpThreshold=0.8
+// and ScaleDownGap=0.1, connections are drained only when aggregate load would
+// fit within 70% of capacity on the reduced pool.  This prevents oscillation
+// when stream counts hover near the scale-up boundary.
+//
+// The default is 0.1.
+func ScaleDownGap(f float64) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.clientConnPoolScaleDownGap = f
+	}
+}
+
 // MinConnections sets the minimum number of connections YARPC maintains to
 // each peer.  Connections are pre-established up to this count when the peer
 // is first retained.
@@ -265,6 +280,16 @@ func MaxConnections(n int) TransportOption {
 func ConnIdleTimeout(d time.Duration) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.clientConnPoolIdleTimeout = d
+	}
+}
+
+// ScalingMonitorInterval sets how often the background monitor goroutine
+// evaluates the connection pool for scale-down and idle cleanup.
+//
+// The default is 30 seconds.
+func ScalingMonitorInterval(d time.Duration) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.clientConnPoolScalingMonitorInterval = d
 	}
 }
 
@@ -421,12 +446,14 @@ type transportOptions struct {
 	streamInboundInterceptor  interceptor.StreamInbound
 	streamOutboundInterceptor []interceptor.StreamOutbound
 	// Client connection pool options.
-	clientConnPoolMaxConcurrentStreams  int32
-	clientConnPoolScaleUpThreshold      float64
-	clientConnPoolMinConnections        int
-	clientConnPoolMaxConnections        int
-	clientConnPoolIdleTimeout           time.Duration
-	clientConnPoolDynamicScalingEnabled bool
+	clientConnPoolMaxConcurrentStreams   int32
+	clientConnPoolScaleUpThreshold       float64
+	clientConnPoolScaleDownGap           float64
+	clientConnPoolMinConnections         int
+	clientConnPoolMaxConnections         int
+	clientConnPoolIdleTimeout            time.Duration
+	clientConnPoolScalingMonitorInterval time.Duration
+	clientConnPoolDynamicScalingEnabled  bool
 }
 
 func newTransportOptions(options []TransportOption) *transportOptions {
@@ -437,11 +464,13 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 		clientMaxRecvMsgSize: defaultClientMaxRecvMsgSize,
 		clientMaxSendMsgSize: defaultClientMaxSendMsgSize,
 		// Client connection pool defaults.
-		clientConnPoolMaxConcurrentStreams: defaultClientConnPoolMaxConcurrentStreams,
-		clientConnPoolScaleUpThreshold:     defaultClientConnPoolScaleUpThreshold,
-		clientConnPoolMinConnections:       defaultClientConnPoolMinConnections,
-		clientConnPoolMaxConnections:       defaultClientConnPoolMaxConnections,
-		clientConnPoolIdleTimeout:          defaultClientConnPoolIdleTimeout,
+		clientConnPoolMaxConcurrentStreams:   defaultClientConnPoolMaxConcurrentStreams,
+		clientConnPoolScaleUpThreshold:       defaultClientConnPoolScaleUpThreshold,
+		clientConnPoolScaleDownGap:           defaultClientConnPoolScaleDownGap,
+		clientConnPoolMinConnections:         defaultClientConnPoolMinConnections,
+		clientConnPoolMaxConnections:         defaultClientConnPoolMaxConnections,
+		clientConnPoolIdleTimeout:            defaultClientConnPoolIdleTimeout,
+		clientConnPoolScalingMonitorInterval: defaultClientConnPoolScalingMonitorInterval,
 	}
 	for _, option := range options {
 		option(transportOptions)

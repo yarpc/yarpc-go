@@ -40,6 +40,9 @@ const (
 	// connStateIdle means all streams have finished; the connection is
 	// waiting for the idle timeout before being closed.
 	connStateIdle
+	// connStateClosing means cleanupIdleConns has claimed this idle connection
+	// for closure via CAS.  No other goroutine may cancel or reactivate it.
+	connStateClosing
 )
 
 // connPoolConfig holds configuration for the per-peer connection pool.
@@ -54,6 +57,12 @@ type connPoolConfig struct {
 	// scaleUpThreshold is the fraction of maxConcurrentStreams at which a
 	// new connection is opened (e.g. 0.8 → scale up at 200 active streams).
 	scaleUpThreshold float64
+	// scaleDownGap is subtracted from scaleUpThreshold to derive the
+	// scale-down threshold, creating a hysteresis band that prevents
+	// oscillation when stream count hovers near the scale-up boundary.
+	// e.g. scaleUpThreshold=0.8, scaleDownGap=0.1 → drain only when load
+	// would fit within 70% of capacity on the reduced pool.
+	scaleDownGap float64
 	// minConnections is the minimum number of connections kept in the pool.
 	minConnections int
 	// maxConnections is the maximum number of connections allowed in the pool.
@@ -61,6 +70,9 @@ type connPoolConfig struct {
 	// idleTimeout is how long a drained connection stays idle before it is
 	// closed and removed from the pool.
 	idleTimeout time.Duration
+	// scalingMonitorInterval is how often the background monitor evaluates
+	// the pool for scale-down and idle cleanup.
+	scalingMonitorInterval time.Duration
 }
 
 // grpcClientConnWrapper wraps a single *grpc.ClientConn with connection-pool
@@ -121,6 +133,12 @@ func (w *grpcClientConnWrapper) getState() connState {
 // setState atomically updates the connection state.
 func (w *grpcClientConnWrapper) setState(s connState) {
 	atomic.StoreInt32((*int32)(&w.state), int32(s))
+}
+
+// transitionState atomically transitions the connection state from `from` to `to`.
+// Returns true if the transition succeeded, false if the state was not `from`.
+func (w *grpcClientConnWrapper) transitionState(from, to connState) bool {
+	return atomic.CompareAndSwapInt32((*int32)(&w.state), int32(from), int32(to))
 }
 
 // isActive reports whether the connection is currently accepting new streams.
