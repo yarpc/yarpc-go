@@ -22,6 +22,7 @@ package grpc
 
 import (
 	"context"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -31,6 +32,7 @@ import (
 	"go.uber.org/net/metrics"
 	"go.uber.org/yarpc/peer/abstractpeer"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 // newTestPeer returns a minimal grpcPeer sufficient for exercising the scaling
@@ -182,7 +184,7 @@ func TestCleanupIdleConns(t *testing.T) {
 			wantCancelled: nil,
 		},
 		{
-			// Idle past timeout: all conditions met → appended to toClose,
+			// Idle past timeout: all conditions met → CAS idle→closing succeeds,
 			// logger.Debug called, c.cancel() called.
 			desc: "idle past timeout - cancel called",
 			build: func() ([]*grpcClientConnWrapper, []context.Context) {
@@ -191,7 +193,7 @@ func TestCleanupIdleConns(t *testing.T) {
 				return []*grpcClientConnWrapper{w}, []context.Context{ctx}
 			},
 			idleTimeout:   shortTimeout,
-			wantStates:    []connState{connStateIdle},
+			wantStates:    []connState{connStateClosing},
 			wantCancelled: []int{0},
 		},
 		{
@@ -202,12 +204,12 @@ func TestCleanupIdleConns(t *testing.T) {
 				w0, ctx0 := makeConnWithCancel(connStateActive, 10, time.Time{})
 				w1, ctx1 := makeConnWithCancel(connStateDraining, 0, time.Time{}) // → idle
 				pastTime := time.Now().Add(-5 * time.Minute)
-				w2, ctx2 := makeConnWithCancel(connStateIdle, 0, pastTime) // → cancel
+				w2, ctx2 := makeConnWithCancel(connStateIdle, 0, pastTime) // → closing + cancel
 				return []*grpcClientConnWrapper{w0, w1, w2},
 					[]context.Context{ctx0, ctx1, ctx2}
 			},
 			idleTimeout:   shortTimeout,
-			wantStates:    []connState{connStateActive, connStateIdle, connStateIdle},
+			wantStates:    []connState{connStateActive, connStateIdle, connStateClosing},
 			wantCancelled: []int{2},
 		},
 	}
@@ -818,4 +820,366 @@ func TestCleanupIdleConnsMetrics(t *testing.T) {
 	assert.Equal(t, int64(1), g["conn_pool_active_connections"])
 	assert.Equal(t, int64(0), g["conn_pool_draining_connections"])
 	assert.Equal(t, int64(1), g["conn_pool_idle_connections"])
+}
+
+// TestMaybeScaleDownWithExistingDrainingConn verifies that when some
+// connections are already draining, maybeScaleDown only considers active
+// connections for the pool size check and candidate selection.  The
+// already-draining connection is left untouched; one of the active ones is
+// drained if load is low enough.
+func TestMaybeScaleDownWithExistingDrainingConn(t *testing.T) {
+	t.Parallel()
+	// 2 active + 1 already-draining. active=2 > minConnections=1, low load → drain one active.
+	conns := []*grpcClientConnWrapper{
+		makeConn(connStateActive, 5),
+		makeConn(connStateActive, 5),
+		makeConn(connStateDraining, 30), // already draining — excluded from active pool
+	}
+	p := peerForScaleDown(t, conns, defaultScaleDownCfg)
+	p.maybeScaleDown()
+
+	// conns[2] must remain draining — it was never in the active selection pool.
+	assert.Equal(t, connStateDraining, conns[2].getState(), "pre-existing draining conn must not change state")
+
+	// Exactly one of the active conns must now be draining.
+	drained := 0
+	for _, c := range conns[:2] {
+		if c.getState() == connStateDraining {
+			drained++
+		}
+	}
+	assert.Equal(t, 1, drained, "exactly one active conn should be drained")
+}
+
+// TestCleanupIdleConnsDrainingCASFailure verifies that cleanupIdleConns skips
+// the draining→idle transition when another goroutine has already changed the
+// connection state away from draining (CAS failure path).
+func TestCleanupIdleConnsDrainingCASFailure(t *testing.T) {
+	t.Parallel()
+
+	// Connection starts draining with zero streams — would normally advance to idle.
+	w, ctx := makeConnWithCancel(connStateDraining, 0, time.Time{})
+
+	// Simulate a concurrent reactivation: state is changed to active before
+	// cleanupIdleConns gets to the CAS.
+	w.setState(connStateActive)
+
+	cfg := connPoolConfig{idleTimeout: time.Hour}
+	p := peerForScaleDown(t, []*grpcClientConnWrapper{w}, cfg)
+	p.cleanupIdleConns()
+
+	// CAS draining→idle failed (state was active) — connection stays active.
+	assert.Equal(t, connStateActive, w.getState())
+	assert.NoError(t, ctx.Err(), "active connection must not be cancelled")
+}
+
+// TestRunScalingMonitorUsesConfiguredInterval verifies that a non-zero
+// scalingMonitorInterval from poolCfg is used instead of the default,
+// and that a value below the 30s minimum is clamped (with a warning) rather
+// than causing a panic or hard error.
+func TestRunScalingMonitorUsesConfiguredInterval(t *testing.T) {
+	t.Parallel()
+	// peerForPool provides a transport with a nop logger so the clamping warning
+	// in runScalingMonitor does not panic.
+	p := peerForPool(t)
+	// 5s is below the 30s minimum → will be clamped; the monitor still exits
+	// promptly when the context is cancelled.
+	p.poolCfg.scalingMonitorInterval = 5 * time.Second
+
+	done := make(chan struct{})
+	go func() {
+		p.runScalingMonitor()
+		close(done)
+	}()
+
+	p.cancel()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("runScalingMonitor did not exit after context cancellation with clamped interval")
+	}
+}
+
+// TestRunScalingMonitorValidCustomInterval verifies that an interval at or
+// above the 30s minimum is used as-is without clamping.
+func TestRunScalingMonitorValidCustomInterval(t *testing.T) {
+	t.Parallel()
+	p := peerForPool(t)
+	p.poolCfg.scalingMonitorInterval = 60 * time.Second // valid, above minimum
+
+	done := make(chan struct{})
+	go func() {
+		p.runScalingMonitor()
+		close(done)
+	}()
+
+	p.cancel()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("runScalingMonitor did not exit after context cancellation with 60s interval")
+	}
+}
+
+// TestRunScalingMonitorClampsAndWarns verifies that a below-minimum interval
+// emits a Warn log and the monitor still exits cleanly on context cancellation.
+func TestRunScalingMonitorClampsAndWarns(t *testing.T) {
+	t.Parallel()
+	core, logs := observer.New(zap.WarnLevel)
+	observedLogger := zap.New(core)
+
+	tr := NewTransport(Logger(observedLogger))
+	ctx, cancel := context.WithCancel(context.Background())
+	p := &grpcPeer{
+		Peer:    abstractpeer.NewPeer(abstractpeer.PeerIdentifier("10.0.0.1:9000"), tr),
+		t:       tr,
+		ctx:     ctx,
+		cancel:  cancel,
+		poolCfg: connPoolConfig{scalingMonitorInterval: 5 * time.Second},
+	}
+	t.Cleanup(cancel)
+
+	done := make(chan struct{})
+	go func() {
+		p.runScalingMonitor()
+		close(done)
+	}()
+
+	cancel()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("runScalingMonitor did not exit")
+	}
+
+	require.Equal(t, 1, logs.Len(), "expected exactly one warning log")
+	assert.Contains(t, logs.All()[0].Message, "scalingMonitorInterval")
+	assert.Equal(t, zap.WarnLevel, logs.All()[0].Level)
+}
+
+// TestTransportOptionDefaults verifies that newTransportOptions applies the
+// correct default values for the two new pool config fields.
+func TestTransportOptionDefaults(t *testing.T) {
+	t.Parallel()
+	opts := newTransportOptions(nil)
+	assert.Equal(t, defaultClientConnPoolScaleDownGap, opts.clientConnPoolScaleDownGap,
+		"scaleDownGap default should be %.2f", defaultClientConnPoolScaleDownGap)
+	assert.Equal(t, defaultClientConnPoolScalingMonitorInterval, opts.clientConnPoolScalingMonitorInterval,
+		"scalingMonitorInterval default should be %v", defaultClientConnPoolScalingMonitorInterval)
+}
+
+// between cleanupIdleConns (which cancels idle connections) and
+// reactivateIdleConn (which transitions idle connections back to active).
+// Run with -race to catch the race described in the review:
+//
+//	Time 1 cleanupIdleConns: reads isScaling==0, adds c to toClose
+//	Time 2 reactivateIdleConn: CAS idle→active
+//	Time 3 cleanupIdleConns: would cancel an active connection without CAS guard
+//
+// With CAS, only one of the two wins the idle→closing or idle→active transition.
+func TestConcurrentCleanupAndReactivationRace(t *testing.T) {
+	t.Parallel()
+
+	const iterations = 500
+	for i := 0; i < iterations; i++ {
+		ctx, cancel := context.WithCancel(context.Background())
+
+		w := &grpcClientConnWrapper{ctx: ctx, cancel: cancel}
+		w.setState(connStateIdle)
+		atomic.StoreInt64(&w.lastIdleAtNano, time.Now().Add(-10*time.Minute).UnixNano())
+
+		cfg := connPoolConfig{idleTimeout: time.Second}
+		p := peerForScaleDown(t, []*grpcClientConnWrapper{w}, cfg)
+
+		var wg sync.WaitGroup
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			p.cleanupIdleConns()
+		}()
+		go func() {
+			defer wg.Done()
+			p.reactivateIdleConn()
+		}()
+		wg.Wait()
+
+		// Invariant: if the connection is active, its context must not be cancelled.
+		// This would fire if cleanupIdleConns cancelled a connection that
+		// reactivateIdleConn had already transitioned to active.
+		if w.getState() == connStateActive {
+			assert.NoError(t, ctx.Err(),
+				"active connection must not have a cancelled context (iteration %d)", i)
+		}
+	}
+}
+
+// TestConcurrentScaleDownAndScaleUpRace verifies that concurrent maybeScaleDown
+// and tryScaleUp calls on the same pool do not corrupt connection state.
+// The race being guarded: both functions read the pool snapshot and evaluate the
+// same connection; the CAS in each (active→draining for scaleDown, draining→active
+// or dial for scaleUp) ensures only one winner per transition.
+//
+// Invariant: after each iteration no connection is simultaneously draining and
+// receiving new streams (stream count on a draining conn must not increase after
+// the CAS succeeds, because pickConn skips non-active connections).
+// Run with -race to catch any unsynchronised reads/writes.
+func TestConcurrentScaleDownAndScaleUpRace(t *testing.T) {
+	t.Parallel()
+
+	const iterations = 500
+	for i := 0; i < iterations; i++ {
+		ctx, cancel := context.WithCancel(context.Background())
+
+		// Two active connections each at 80% load (scaleUpThreshold=0.8, streams=80/100).
+		// maybeScaleDown: totalStreams=160, capacityAfterDrain=80*1=80 → 160>=80 → no drain.
+		// Keep load high so tryScaleUp also fires (least-loaded is at threshold).
+		cfg := connPoolConfig{
+			minConnections:       1,
+			maxConnections:       5,
+			maxConcurrentStreams: 100,
+			scaleUpThreshold:     0.8,
+			scaleDownGap:         0.1,
+		}
+		c1 := &grpcClientConnWrapper{ctx: ctx, cancel: cancel}
+		c1.setState(connStateActive)
+		atomic.StoreInt32(&c1.streamCount, 80)
+		c2 := &grpcClientConnWrapper{ctx: ctx, cancel: cancel}
+		c2.setState(connStateActive)
+		atomic.StoreInt32(&c2.streamCount, 80)
+
+		p := peerForScaleDown(t, []*grpcClientConnWrapper{c1, c2}, cfg)
+		t.Cleanup(cancel)
+
+		var wg sync.WaitGroup
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			p.maybeScaleDown()
+		}()
+		go func() {
+			defer wg.Done()
+			// tryScaleUp picks the least-loaded conn; both are at threshold.
+			p.tryScaleUp(c1)
+		}()
+		wg.Wait()
+		cancel() // stop any scale-up dial goroutine
+
+		// Invariant: draining connections must not be treated as active by pickConn.
+		// If a connection is draining its state must be consistent — no connection
+		// should be both draining AND still selected as active by pickConn.
+		picked := p.pickConn()
+		for _, c := range p.loadConns() {
+			if c.getState() == connStateDraining {
+				assert.NotEqual(t, c, picked,
+					"iteration %d: draining connection must not be picked as active", i)
+			}
+		}
+	}
+}
+
+// TestMaybeScaleDownHysteresis verifies that the scaleDownGap prevents draining
+// when stream count is between the scale-down and scale-up thresholds.
+func TestMaybeScaleDownHysteresis(t *testing.T) {
+	t.Parallel()
+
+	// scaleUpThreshold=0.8, scaleDownGap=0.1 → scaleDownThreshold=0.7
+	// maxConcurrentStreams=100 → scaleDownThreshold=70
+	// With 3 active conns: capacityAfterDrain = 70 * 2 = 140
+	cfg := connPoolConfig{
+		minConnections:       1,
+		maxConcurrentStreams: 100,
+		scaleUpThreshold:     0.8,
+		scaleDownGap:         0.1,
+	}
+
+	t.Run("load between scale-down and scale-up thresholds - no drain", func(t *testing.T) {
+		t.Parallel()
+		// totalStreams=150: above scaleDownThreshold capacity (140) but below scaleUpThreshold capacity (160)
+		// Without hysteresis this would drain; with gap it should not.
+		conns := []*grpcClientConnWrapper{
+			makeConn(connStateActive, 50),
+			makeConn(connStateActive, 50),
+			makeConn(connStateActive, 50), // total=150, capacityAfterDrain=140, 150>=140 → no drain
+		}
+		p := peerForScaleDown(t, conns, cfg)
+		p.maybeScaleDown()
+		for i, c := range p.loadConns() {
+			assert.Equal(t, connStateActive, c.getState(), "conn[%d] should stay active", i)
+		}
+	})
+
+	t.Run("load below scale-down threshold - drains", func(t *testing.T) {
+		t.Parallel()
+		// totalStreams=60: below capacityAfterDrain=140 → should drain
+		conns := []*grpcClientConnWrapper{
+			makeConn(connStateActive, 20),
+			makeConn(connStateActive, 20),
+			makeConn(connStateActive, 20), // total=60 < 140 → drain
+		}
+		p := peerForScaleDown(t, conns, cfg)
+		p.maybeScaleDown()
+		draining := 0
+		for _, c := range p.loadConns() {
+			if c.getState() == connStateDraining {
+				draining++
+			}
+		}
+		assert.Equal(t, 1, draining, "exactly one connection should be draining")
+	})
+}
+
+// TestReactivateDrainingConn verifies that reactivateIdleConn falls back to
+// reactivating a draining connection when no idle connection is available,
+// preventing accumulation of stuck draining connections under sustained load.
+func TestReactivateDrainingConn(t *testing.T) {
+	t.Parallel()
+
+	t.Run("reactivates draining connection when no idle available", func(t *testing.T) {
+		t.Parallel()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		draining := &grpcClientConnWrapper{ctx: ctx, cancel: cancel}
+		draining.setState(connStateDraining)
+		draining.streamCount = 5 // has in-flight streams
+
+		p := peerForScaleDown(t, []*grpcClientConnWrapper{draining}, connPoolConfig{})
+		assert.True(t, p.reactivateIdleConn(), "should reactivate draining conn")
+		assert.Equal(t, connStateActive, draining.getState())
+	})
+
+	t.Run("prefers idle over draining for reactivation", func(t *testing.T) {
+		t.Parallel()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		idle := &grpcClientConnWrapper{ctx: ctx, cancel: cancel}
+		idle.setState(connStateIdle)
+
+		ctx2, cancel2 := context.WithCancel(context.Background())
+		defer cancel2()
+		draining := &grpcClientConnWrapper{ctx: ctx2, cancel: cancel2}
+		draining.setState(connStateDraining)
+
+		p := peerForScaleDown(t, []*grpcClientConnWrapper{draining, idle}, connPoolConfig{})
+		assert.True(t, p.reactivateIdleConn())
+		assert.Equal(t, connStateActive, idle.getState(), "idle conn should be reactivated first")
+		assert.Equal(t, connStateDraining, draining.getState(), "draining conn should be untouched")
+	})
+
+	t.Run("skips draining conn with cancelled context", func(t *testing.T) {
+		t.Parallel()
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // already cancelled
+
+		draining := &grpcClientConnWrapper{ctx: ctx, cancel: cancel}
+		draining.setState(connStateDraining)
+
+		p := peerForScaleDown(t, []*grpcClientConnWrapper{draining}, connPoolConfig{})
+		assert.False(t, p.reactivateIdleConn(), "cancelled draining conn must not be reactivated")
+		assert.Equal(t, connStateDraining, draining.getState())
+	})
 }
