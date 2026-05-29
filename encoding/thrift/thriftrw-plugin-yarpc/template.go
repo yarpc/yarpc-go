@@ -153,6 +153,14 @@ func (d *serviceTemplateData) ParentClientPackagePath() string {
 	return d.Parents[0].ClientPackagePath()
 }
 
+// HasActorUUIDMethod reports whether the service has at least one method
+// with an auth.actor_uuid-annotated argument. The server template uses it
+// to gate the service-wide handler struct's validator field and the
+// validator extraction in New.
+func (d *serviceTemplateData) HasActorUUIDMethod() bool {
+	return serviceHasActorUUIDMethod(d.Service, d.CompiledModule)
+}
+
 // moduleGenFunc is a function that generates some part of the code needed by the
 // plugin.
 type moduleGenFunc func(*moduleTemplateData, map[string][]byte) error
@@ -278,4 +286,5 @@ func methodExceptionsMapLiteral(f *api.Function, serviceMod *compile.Module, ser
 var templateOptions = []plugin.TemplateOption{
 	plugin.TemplateFunc("lower", strings.ToLower),
 	plugin.TemplateFunc("methodExceptionsMapLiteral", methodExceptionsMapLiteral),
+	plugin.TemplateFunc("methodHasActorUUIDArg", methodHasActorUUIDArg),
 }
