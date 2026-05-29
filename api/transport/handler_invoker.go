@@ -72,7 +72,7 @@ func InvokeUnaryHandler(
 	// The handler stopped work on context deadline.
 	if err == context.DeadlineExceeded && err == i.Context.Err() {
 		deadline, _ := i.Context.Deadline()
-		err = yarpcerrors.Newf(
+		return yarpcerrors.Newf(
 			yarpcerrors.CodeDeadlineExceeded,
 			"call to procedure %q of service %q from caller %q timed out after %v",
 			i.Request.Procedure, i.Request.Service, i.Request.Caller, deadline.Sub(i.StartTime))
@@ -80,7 +80,7 @@ func InvokeUnaryHandler(
 
 	// The handler stopped work because the context was cancelled.
 	if err == context.Canceled && err == i.Context.Err() {
-		err = yarpcerrors.Newf(
+		return yarpcerrors.Newf(
 			yarpcerrors.CodeCancelled,
 			"call to procedure %q of service %q from caller %q was cancelled",
 			i.Request.Procedure, i.Request.Service, i.Request.Caller)
