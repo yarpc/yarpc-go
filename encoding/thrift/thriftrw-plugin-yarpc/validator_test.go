@@ -25,12 +25,15 @@ import (
 	"context"
 	"errors"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/thriftrw/protocol/binary"
+	"go.uber.org/thriftrw/protocol/stream"
 	"go.uber.org/thriftrw/ptr"
+	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/thrift"
@@ -39,14 +42,15 @@ import (
 )
 
 // testServiceImpl is a minimal hand-rolled implementation of
-// testserviceserver.Interface that records whether TestMethod ran.
+// testserviceserver.Interface that records what each method observed.
 // It exists so the validator-gating tests below can prove the user
 // handler was (or wasn't) reached without standing up a real
 // dispatcher.
 type testServiceImpl struct {
-	called bool
-	gotCtx context.Context
-	gotArg string
+	called  bool
+	gotCtx  context.Context
+	gotArg  string
+	gotUUID string
 }
 
 func (s *testServiceImpl) TestMethod(
@@ -62,24 +66,44 @@ func (s *testServiceImpl) TestMethod(
 	return "ok", nil
 }
 
-// encodeArgs marshals a TestMethod args struct into the binary
-// representation a real transport would deliver in transport.Request.Body.
-//
-// useStream selects between the two on-wire forms the generated handler
-// can consume:
-//   - false: a wire.Value-encoded body (the path taken when the server is
-//     constructed with thrift.NoWire(false), routing through
-//     thriftUnaryHandler).
-//   - true: a streaming-binary body (the default NoWire=true path that
-//     routes through thriftNoWireHandler).
-//
-// Both produce non-enveloped output since the tests below never opt in to
-// Enveloped.
-func encodeArgs(
-	t *testing.T,
-	args *withservices.TestService_TestMethod_Args,
-	useStream bool,
-) io.Reader {
+func (s *testServiceImpl) TestStructMethod(
+	ctx context.Context,
+	request *withservices.Struct,
+) (string, error) {
+	s.called = true
+	s.gotCtx = ctx
+	if request != nil && request.UserIdentifier != nil {
+		s.gotUUID = *request.UserIdentifier
+	}
+	return "ok", nil
+}
+
+func (s *testServiceImpl) TestTypedefMethod(
+	ctx context.Context,
+	identifier *withservices.ActorIdentifier,
+) (string, error) {
+	s.called = true
+	s.gotCtx = ctx
+	if identifier != nil {
+		s.gotUUID = string(*identifier)
+	}
+	return "ok", nil
+}
+
+// argsEncoder is the slice of the thriftrw-generated _Args API the
+// drivers below need; both TestService_TestMethod_Args and the
+// struct-/typedef-arg variants satisfy it.
+type argsEncoder interface {
+	Encode(stream.Writer) error
+	ToWire() (wire.Value, error)
+}
+
+// encodeArgs marshals an _Args struct into the binary representation a
+// real transport would deliver in transport.Request.Body. useStream
+// picks between the wire.Value-encoded body (NoWire=false) and the
+// streaming-binary body (default NoWire=true) so the codec matches
+// what the handler the server was built with expects.
+func encodeArgs(t *testing.T, args argsEncoder, useStream bool) io.Reader {
 	t.Helper()
 	var buf bytes.Buffer
 	if useStream {
@@ -107,11 +131,46 @@ func buildRequest(procName string, body io.Reader) *transport.Request {
 	}
 }
 
-// driveTestMethod is the shared core of the validator behaviour tests:
+// findProcedure picks the transport.Procedure for the given Thrift
+// method name out of the slice testserviceserver.New returns. Now that
+// TestService has multiple methods, tests can no longer assume a
+// single-element slice.
+func findProcedure(t *testing.T, procedures []transport.Procedure, methodName string) transport.Procedure {
+	t.Helper()
+	suffix := "::" + methodName
+	for _, p := range procedures {
+		if strings.HasSuffix(p.Name, suffix) {
+			return p
+		}
+	}
+	t.Fatalf("procedure for method %q not found", methodName)
+	return transport.Procedure{}
+}
+
+// driveMethod is the shared core of the validator behaviour tests:
 // build the server, encode args, run the procedure's unary handler, and
-// hand the captured results back to the caller for assertions. The
-// useStream flag mirrors what NoWire variation the server was constructed
-// with, so the body matches the codec the handler expects.
+// hand the captured results back to the caller for assertions.
+func driveMethod(
+	t *testing.T,
+	impl testserviceserver.Interface,
+	methodName string,
+	useStream bool,
+	args argsEncoder,
+	opts ...thrift.RegisterOption,
+) (*transporttest.FakeResponseWriter, error) {
+	t.Helper()
+	procedures := testserviceserver.New(impl, opts...)
+	proc := findProcedure(t, procedures, methodName)
+	require.Equal(t, transport.Unary, proc.HandlerSpec.Type())
+
+	rw := &transporttest.FakeResponseWriter{}
+	req := buildRequest(proc.Name, encodeArgs(t, args, useStream))
+	err := proc.HandlerSpec.Unary().Handle(context.Background(), req, rw)
+	return rw, err
+}
+
+// driveTestMethod is the flat-arg specialisation kept for readability
+// of the original tests, which all exercise testMethod's primitive args.
 func driveTestMethod(
 	t *testing.T,
 	impl testserviceserver.Interface,
@@ -120,16 +179,7 @@ func driveTestMethod(
 	opts ...thrift.RegisterOption,
 ) (*transporttest.FakeResponseWriter, error) {
 	t.Helper()
-	procedures := testserviceserver.New(impl, opts...)
-	require.Len(t, procedures, 1, "TestService has exactly one method")
-
-	proc := procedures[0]
-	require.Equal(t, transport.Unary, proc.HandlerSpec.Type())
-
-	rw := &transporttest.FakeResponseWriter{}
-	req := buildRequest(proc.Name, encodeArgs(t, args, useStream))
-	err := proc.HandlerSpec.Unary().Handle(context.Background(), req, rw)
-	return rw, err
+	return driveMethod(t, impl, "testMethod", useStream, args, opts...)
 }
 
 // TestActorUUIDValidator_NoValidatorBackwardCompat proves that a server
@@ -245,4 +295,53 @@ func TestActorUUIDValidator_EmptyActorUUID(t *testing.T) {
 	assert.Equal(t, 1, calls, "validator should still fire even with empty actorUUID")
 	assert.Equal(t, "", seenUUID, "empty optional arg should surface as the empty string")
 	assert.True(t, impl.called, "validator returning nil should let the handler run")
+}
+
+// TestActorUUIDValidator_StructArg proves the validator fires for a
+// struct-typed arg whose own field is annotated and sees the same
+// UUID the user handler reads from the inner field. This is the
+// regression check for the "annotation lives on a field of a struct
+// passed as a method arg" bug.
+func TestActorUUIDValidator_StructArg(t *testing.T) {
+	var seenUUID string
+	validator := func(_ context.Context, uuid string) error {
+		seenUUID = uuid
+		return nil
+	}
+
+	impl := &testServiceImpl{}
+	args := &withservices.TestService_TestStructMethod_Args{
+		Request: &withservices.Struct{
+			UserIdentifier: ptr.String("expected-struct-uuid"),
+		},
+	}
+	_, err := driveMethod(t, impl, "testStructMethod", true, args,
+		thrift.WithActorUUIDValidator(validator))
+	require.NoError(t, err)
+	assert.True(t, impl.called)
+	assert.Equal(t, "expected-struct-uuid", seenUUID,
+		"validator should receive the UUID chained through the struct arg")
+	assert.Equal(t, "expected-struct-uuid", impl.gotUUID)
+}
+
+// TestActorUUIDValidator_TypedefArg proves the validator fires for an
+// arg whose Thrift type is a typedef of string. The string(...) cast
+// the generator emits is what makes this compile end to end; this
+// test pins the runtime behaviour.
+func TestActorUUIDValidator_TypedefArg(t *testing.T) {
+	var seenUUID string
+	validator := func(_ context.Context, uuid string) error {
+		seenUUID = uuid
+		return nil
+	}
+
+	impl := &testServiceImpl{}
+	id := withservices.ActorIdentifier("expected-typedef-uuid")
+	args := &withservices.TestService_TestTypedefMethod_Args{Identifier: &id}
+	_, err := driveMethod(t, impl, "testTypedefMethod", true, args,
+		thrift.WithActorUUIDValidator(validator))
+	require.NoError(t, err)
+	assert.True(t, impl.called)
+	assert.Equal(t, "expected-typedef-uuid", seenUUID)
+	assert.Equal(t, "expected-typedef-uuid", impl.gotUUID)
 }
