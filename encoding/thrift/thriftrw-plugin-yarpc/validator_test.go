@@ -242,9 +242,11 @@ func TestActorUUIDValidator_Allow(t *testing.T) {
 	}
 }
 
-// TestActorUUIDValidator_Deny proves that when the validator returns an
+// TestActorUUIDValidator_Deny tests the validator returns an
 // error the generated handler short-circuits: the user handler is never
-// called and the validator's error propagates back up.
+// called and the validator's error reaches the caller wrapped in
+// yarpcerrors.InvalidArgumentErrorf, with the original error preserved
+// in the errors.Is chain (the generator wraps via %w).
 func TestActorUUIDValidator_Deny(t *testing.T) {
 	denied := errors.New("validator denied")
 
@@ -269,7 +271,7 @@ func TestActorUUIDValidator_Deny(t *testing.T) {
 
 			_, err := driveTestMethod(t, impl, tc.useStream, args, opts...)
 			require.Error(t, err)
-			assert.ErrorIs(t, err, denied, "validator error should propagate verbatim")
+			assert.ErrorIs(t, err, denied, "validator error should remain in the wrapped errors.Is chain")
 			assert.False(t, impl.called, "user handler must NOT run when validator rejects")
 		})
 	}

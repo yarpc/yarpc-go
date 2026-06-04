@@ -147,9 +147,11 @@ func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) error {
 	}
 
 	<if methodHasActorUUIDArg . $compiledModule $svcThriftName>
+	<$yarpcerrors := import "go.uber.org/yarpc/yarpcerrors">
 	if h.actorUUIDValidator != nil {
 		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
-			return err
+			return <$yarpcerrors>.InvalidArgumentErrorf(
+				"actor UUID validation failed for service '<$service.Name>' procedure '<.Name>': %w", err)
 		}
 	}
 
@@ -168,7 +170,8 @@ func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$thrift>.
 	<if methodHasActorUUIDArg . $compiledModule $svcThriftName>
 	if h.actorUUIDValidator != nil {
 		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
-			return <$thrift>.Response{}, err
+			return <$thrift>.Response{}, <$yarpcerrors>.InvalidArgumentErrorf(
+				"actor UUID validation failed for service '<$service.Name>' procedure '<.Name>': %w", err)
 		}
 	}
 
@@ -232,7 +235,8 @@ func (h <(lower .Name)>_NoWireHandler) HandleNoWire(ctx <$context>.Context, nwc 
 	<if methodHasActorUUIDArg . $compiledModule $svcThriftName>
 	if h.actorUUIDValidator != nil {
 		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
-			return <$thrift>.NoWireResponse{}, err
+			return <$thrift>.NoWireResponse{}, <$yarpcerrors>.InvalidArgumentErrorf(
+				"actor UUID validation failed for service '<$service.Name>' procedure '<.Name>': %w", err)
 		}
 	}
 
@@ -248,7 +252,8 @@ func (h <(lower .Name)>_NoWireHandler) HandleNoWire(ctx <$context>.Context, nwc 
 	<if methodHasActorUUIDArg . $compiledModule $svcThriftName>
 	if h.actorUUIDValidator != nil {
 		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
-			return <$thrift>.NoWireResponse{}, err
+			return <$thrift>.NoWireResponse{}, <$yarpcerrors>.InvalidArgumentErrorf(
+				"actor UUID validation failed for service '<$service.Name>' procedure '<.Name>': %w", err)
 		}
 	}
 

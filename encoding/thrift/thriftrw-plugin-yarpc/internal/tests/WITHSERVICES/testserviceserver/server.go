@@ -107,7 +107,8 @@ func (h handler) TestMethod(ctx context.Context, body wire.Value) (thrift.Respon
 
 	if h.actorUUIDValidator != nil {
 		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
-			return thrift.Response{}, err
+			return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestMethod': %w", err)
 		}
 	}
 
@@ -143,7 +144,8 @@ func (h handler) TestStructMethod(ctx context.Context, body wire.Value) (thrift.
 
 	if h.actorUUIDValidator != nil {
 		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
-			return thrift.Response{}, err
+			return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestStructMethod': %w", err)
 		}
 	}
 
@@ -179,7 +181,8 @@ func (h handler) TestTypedefMethod(ctx context.Context, body wire.Value) (thrift
 
 	if h.actorUUIDValidator != nil {
 		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
-			return thrift.Response{}, err
+			return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestTypedefMethod': %w", err)
 		}
 	}
 
@@ -226,7 +229,8 @@ func (h testmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.
 
 	if h.actorUUIDValidator != nil {
 		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
-			return thrift.NoWireResponse{}, err
+			return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestMethod': %w", err)
 		}
 	}
 
@@ -272,7 +276,8 @@ func (h teststructmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *t
 
 	if h.actorUUIDValidator != nil {
 		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
-			return thrift.NoWireResponse{}, err
+			return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestStructMethod': %w", err)
 		}
 	}
 
@@ -318,7 +323,8 @@ func (h testtypedefmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *
 
 	if h.actorUUIDValidator != nil {
 		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
-			return thrift.NoWireResponse{}, err
+			return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestTypedefMethod': %w", err)
 		}
 	}
 

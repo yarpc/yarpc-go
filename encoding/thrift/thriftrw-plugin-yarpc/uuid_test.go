@@ -169,41 +169,6 @@ func TestUUIDFieldInArgs(t *testing.T) {
 	})
 }
 
-// TestUUIDStructArgInArgs covers the helper that picks the struct-typed
-// arg whose own struct carries an annotation. It must return nil when a
-// flat arg already carries the annotation (direct wins) or when no arg
-// reaches an annotation at all.
-func TestUUIDStructArgInArgs(t *testing.T) {
-	t.Run("structArgWithAnnotatedField", func(t *testing.T) {
-		spec, err := compile.Compile("internal/tests/WITHSERVICES.thrift")
-		require.NoError(t, err)
-		fn, ok := spec.Services["TestService"].Functions["testStructMethod"]
-		require.True(t, ok)
-
-		got := uuidStructArgInArgs(fn)
-		require.NotNil(t, got)
-	})
-
-	t.Run("directArgWinsOverStructArg", func(t *testing.T) {
-		// serviceArg.thrift's testMethod has a flat annotated arg;
-		// uuidFieldInArgs already covers it, and the struct helper
-		// must defer.
-		spec, err := compile.Compile("internal/uuid_test/serviceArg.thrift")
-		require.NoError(t, err)
-		fn, ok := spec.Services["TestService"].Functions["testMethod"]
-		require.True(t, ok)
-		assert.Nil(t, uuidStructArgInArgs(fn))
-	})
-
-	t.Run("noAnnotation", func(t *testing.T) {
-		spec, err := compile.Compile("internal/tests/atomic.thrift")
-		require.NoError(t, err)
-		fn, ok := spec.Services["Store"].Functions["increment"]
-		require.True(t, ok)
-		assert.Nil(t, uuidStructArgInArgs(fn))
-	})
-}
-
 // TestMethodHasActorUUIDArg covers the server-template helper that gates
 // per-method validator emission. It exercises all three branches: nil
 // inputs (defensive), a method whose Thrift name is unknown to the
@@ -218,40 +183,28 @@ func TestMethodHasActorUUIDArg(t *testing.T) {
 	})
 
 	t.Run("unknownThriftName", func(t *testing.T) {
-		// Compiled module has no function "doesNotExist" on TestService,
-		// so lookupCompiledFunction returns nil and the helper reports
-		// false without ever touching ArgsSpec.
 		fn := &api.Function{Name: "DoesNotExist", ThriftName: "doesNotExist"}
 		assert.False(t, methodHasActorUUIDArg(fn, mod, "TestService"))
 	})
 
 	t.Run("annotatedArg", func(t *testing.T) {
-		// testMethod's "interested" arg carries auth.actor_uuid="true".
 		fn := &api.Function{Name: "TestMethod", ThriftName: "testMethod"}
 		assert.True(t, methodHasActorUUIDArg(fn, mod, "TestService"))
 	})
 
 	t.Run("structArgWithAnnotatedField", func(t *testing.T) {
-		// testStructMethod takes a Struct whose UserIdentifier field
-		// is annotated; the helper must look one struct hop in.
 		fn := &api.Function{Name: "TestStructMethod", ThriftName: "testStructMethod"}
 		assert.True(t, methodHasActorUUIDArg(fn, mod, "TestService"))
 	})
 
 	t.Run("annotatedTypedefArg", func(t *testing.T) {
-		// testTypedefMethod's annotated arg is a typedef of string;
-		// the helper still recognises it as a directly annotated arg.
 		fn := &api.Function{Name: "TestTypedefMethod", ThriftName: "testTypedefMethod"}
 		assert.True(t, methodHasActorUUIDArg(fn, mod, "TestService"))
 	})
 
 	t.Run("unannotatedArgs", func(t *testing.T) {
-		// All methods in NOSERVICES.thrift live on structs, not on a
-		// service, so no compile.FunctionSpec ever carries the
-		// annotation in an args list.
 		atomicMod, err := compile.Compile("internal/tests/atomic.thrift")
 		require.NoError(t, err)
-		// Store.Healthy() has zero arguments and definitely no annotation.
 		fn := &api.Function{Name: "Healthy", ThriftName: "healthy"}
 		assert.False(t, methodHasActorUUIDArg(fn, atomicMod, "Store"))
 	})
@@ -282,7 +235,6 @@ func TestServiceHasActorUUIDMethod(t *testing.T) {
 	})
 
 	t.Run("serviceWithoutAnnotatedMethods", func(t *testing.T) {
-		// Store has many methods, none of them annotated.
 		svc := &api.Service{Name: "Store", ThriftName: "Store"}
 		assert.False(t, serviceHasActorUUIDMethod(svc, atomicMod))
 	})

@@ -6,31 +6,19 @@ package WITHSERVICES
 // ActorUUID returns the UUID string from the field annotated with
 // auth.actor_uuid, or "" if it is unset.
 func (t *Struct) ActorUUID() string {
-	return string(t.GetUserIdentifier())
+	return t.GetUserIdentifier()
 }
 
 // ActorUUID returns the UUID string from the field annotated with
 // auth.actor_uuid, or "" if it is unset.
 func (t *StructRequiredUUID) ActorUUID() string {
-	return string(t.GetUserIdentifier())
+	return t.GetUserIdentifier()
 }
 
 // ActorUUID returns the UUID string from the field annotated with
 // auth.actor_uuid, or "" if it is unset.
 func (t *TestService_TestMethod_Args) ActorUUID() string {
-	return string(t.GetInterested())
-}
-
-// ActorUUID returns the UUID string from the field annotated with
-// auth.actor_uuid, or "" if it is unset.
-func (t *TestService_TestStructMethod_Args) ActorUUID() string {
-	return t.GetRequest().ActorUUID()
-}
-
-// ActorUUID returns the UUID string from the field annotated with
-// auth.actor_uuid, or "" if it is unset.
-func (t *TestService_TestTypedefMethod_Args) ActorUUID() string {
-	return string(t.GetIdentifier())
+	return t.GetInterested()
 }
 
 // ActorUUID returns the UUID string from the field annotated with
