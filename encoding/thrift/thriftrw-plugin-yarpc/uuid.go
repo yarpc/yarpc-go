@@ -82,7 +82,6 @@ func yarpcUUIDGenerator(data *moduleTemplateData, files map[string][]byte) error
 	templateOptions := append(templateOptions,
 		plugin.TemplateFunc("uuidFieldOf", uuidFieldOf),
 		plugin.TemplateFunc("uuidFieldInArgs", uuidFieldInArgs),
-		plugin.TemplateFunc("uuidStructArgInArgs", uuidStructArgInArgs),
 		plugin.TemplateFunc("goCase", goCase),
 	)
 
@@ -167,33 +166,11 @@ func uuidFieldInArgs(fn *compile.FunctionSpec) *uuidArg {
 	return nil
 }
 
-// uuidStructArgInArgs returns the first struct-typed argument whose own
-// struct carries an auth.actor_uuid annotation. It returns nil when a
-// flat arg is already directly annotated, so the direct shape always
-// wins; the template uses this helper to emit the chained accessor
-// "t.GetX().ActorUUID()" when the annotation lives one struct hop
-// away from the method args.
-func uuidStructArgInArgs(fn *compile.FunctionSpec) *compile.FieldSpec {
-	if uuidFieldInArgs(fn) != nil {
-		return nil
-	}
-	for _, f := range fn.ArgsSpec {
-		if uuidFieldOf(f.Type) != nil {
-			return f
-		}
-	}
-	return nil
-}
-
 // methodHasActorUUIDArg reports whether the given thriftrw plugin-API
 // function has an argument that reaches an auth.actor_uuid annotation,
 // either directly or through a struct-typed arg. The server template
 // uses it to gate the per-method validator-call block and the
 // per-method NoWire handler's validator field.
-//
-// The plugin API doesn't surface argument annotations, so we look the
-// function up by Thrift name in the compiled module that
-// yarpcUUIDGenerator shares across generators.
 func methodHasActorUUIDArg(fn *api.Function, mod *compile.Module, serviceThriftName string) bool {
 	if fn == nil {
 		return false
@@ -202,7 +179,7 @@ func methodHasActorUUIDArg(fn *api.Function, mod *compile.Module, serviceThriftN
 	if compiled == nil {
 		return false
 	}
-	return uuidFieldInArgs(compiled) != nil || uuidStructArgInArgs(compiled) != nil
+	return uuidFieldInArgs(compiled) != nil
 }
 
 // serviceHasActorUUIDMethod reports whether the given thriftrw plugin-API
@@ -218,7 +195,7 @@ func serviceHasActorUUIDMethod(svc *api.Service, mod *compile.Module) bool {
 		return false
 	}
 	for _, fn := range compiled.Functions {
-		if uuidFieldInArgs(fn) != nil || uuidStructArgInArgs(fn) != nil {
+		if uuidFieldInArgs(fn) != nil {
 			return true
 		}
 	}
