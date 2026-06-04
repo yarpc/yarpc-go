@@ -20,3 +20,15 @@ func (t *StructRequiredUUID) ActorUUID() string {
 func (t *TestService_TestMethod_Args) ActorUUID() string {
 	return t.GetInterested()
 }
+
+// ActorUUID returns the UUID string from the field annotated with
+// auth.actor_uuid, or "" if it is unset.
+func (t *TestService_TestStructMethod_Args) ActorUUID() string {
+	return t.GetRequest().ActorUUID()
+}
+
+// ActorUUID returns the UUID string from the field annotated with
+// auth.actor_uuid, or "" if it is unset.
+func (t *TestService_TestTypedefMethod_Args) ActorUUID() string {
+	return string(t.GetIdentifier())
+}

@@ -21,6 +21,18 @@ type Interface interface {
 		Interested *string,
 		opts ...yarpc.CallOption,
 	) (string, error)
+
+	TestStructMethod(
+		ctx context.Context,
+		Request *WITHSERVICES.Struct,
+		opts ...yarpc.CallOption,
+	) (string, error)
+
+	TestTypedefMethod(
+		ctx context.Context,
+		Identifier *WITHSERVICES.ActorIdentifier,
+		opts ...yarpc.CallOption,
+	) (string, error)
 }
 
 // New builds a new client for the TestService service.
@@ -78,5 +90,61 @@ func (c client) TestMethod(
 	}
 
 	success, err = WITHSERVICES.TestService_TestMethod_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) TestStructMethod(
+	ctx context.Context,
+	_Request *WITHSERVICES.Struct,
+	opts ...yarpc.CallOption,
+) (success string, err error) {
+
+	var result WITHSERVICES.TestService_TestStructMethod_Result
+	args := WITHSERVICES.TestService_TestStructMethod_Helper.Args(_Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = WITHSERVICES.TestService_TestStructMethod_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) TestTypedefMethod(
+	ctx context.Context,
+	_Identifier *WITHSERVICES.ActorIdentifier,
+	opts ...yarpc.CallOption,
+) (success string, err error) {
+
+	var result WITHSERVICES.TestService_TestTypedefMethod_Result
+	args := WITHSERVICES.TestService_TestTypedefMethod_Helper.Args(_Identifier)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = WITHSERVICES.TestService_TestTypedefMethod_Helper.UnwrapResponse(&result)
 	return
 }
