@@ -3812,45 +3812,70 @@ func TestMiddlewareLoggingWithMetricProcedure(t *testing.T) {
 
 	for testName, tt := range map[string]struct {
 		encoding  string
+		transport string
 		procedure string
 		expected  string
 	}{
 		"EmptyProcedure": {
-			"proto", "",
-			"__no_procedure__",
+			encoding: "proto", transport: "http", procedure: "",
+			expected: "__no_procedure__",
 		},
 		"Raw": {
-			"raw", "hello",
-			"",
+			encoding: "raw", transport: "http", procedure: "hello",
+			expected: "",
 		},
 		"EmptyRawProcedure": {
-			"raw", "",
-			"__no_procedure__",
+			encoding: "raw", transport: "http", procedure: "",
+			expected: "__no_procedure__",
 		},
-		"Proto1": {
-			"proto", "synoptic.SignalCatalog::ExecuteQuery",
-			"signalcatalog/executequery",
+		// gRPC and HTTP carry the same YARPC procedure name, but M3 records a
+		// different "procedure" tag for each, so the log field must match the
+		// transport-specific tag (otherwise alerts link to empty log queries).
+		"GRPC_uown": {
+			encoding: "proto", transport: "grpc",
+			procedure: "uber.infra.uown.UOwnService::SearchAssets",
+			expected:  "uownservice/searchassets",
 		},
-		"Proto2": {
-			"proto", "uber.infra.net.rpc.probe.Probe::Echo",
-			"probe/echo",
+		"HTTP_uown": {
+			encoding: "proto", transport: "http",
+			procedure: "uber.infra.uown.UOwnService::SearchAssets",
+			expected:  "uber.infra.uown.uownservice--searchassets",
 		},
-		"Thrift1": {
-			"thrift", "Umonitor::deleteAlert",
-			"umonitor--deletealert",
+		"GRPC_proto1": {
+			encoding: "proto", transport: "grpc",
+			procedure: "synoptic.SignalCatalog::ExecuteQuery",
+			expected:  "signalcatalog/executequery",
 		},
-		"Thrift2": {
-			"thrift", "Probe::echo",
-			"probe--echo",
+		"GRPC_proto2": {
+			encoding: "proto", transport: "grpc",
+			procedure: "uber.infra.net.rpc.probe.Probe::Echo",
+			expected:  "probe/echo",
 		},
-		"JSON1": {
-			"json", "uber.infra.umonitor.Umonitor::UpsertAlertThresholds",
-			"umonitor/upsertalertthresholds",
+		"TChannel_thrift1": {
+			encoding: "thrift", transport: "tchannel",
+			procedure: "Umonitor::deleteAlert",
+			expected:  "umonitor--deletealert",
+		},
+		"TChannel_thrift2": {
+			encoding: "thrift", transport: "tchannel",
+			procedure: "Probe::echo",
+			expected:  "probe--echo",
+		},
+		"GRPC_json": {
+			encoding: "json", transport: "grpc",
+			procedure: "uber.infra.umonitor.Umonitor::UpsertAlertThresholds",
+			expected:  "umonitor/upsertalertthresholds",
+		},
+		"HTTP_json": {
+			encoding: "json", transport: "http",
+			procedure: "uber.infra.umonitor.Umonitor::UpsertAlertThresholds",
+			expected:  "uber.infra.umonitor.umonitor--upsertalertthresholds",
 		},
 	} {
 		t.Run(testName, func(t *testing.T) {
 			req := &transport.Request{
 				Encoding:  transport.Encoding(tt.encoding),
+				Transport: tt.transport,
 				Procedure: tt.procedure,
 			}
 
