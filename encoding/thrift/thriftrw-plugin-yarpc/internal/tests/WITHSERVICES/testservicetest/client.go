@@ -7,6 +7,7 @@ import (
 	context "context"
 	gomock "github.com/golang/mock/gomock"
 	yarpc "go.uber.org/yarpc"
+	WITHSERVICES "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES"
 	testserviceclient "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES/testserviceclient"
 )
 
@@ -74,4 +75,70 @@ func (mr *_MockClientRecorder) TestMethod(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _NotInterested, _Interested}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestMethod", args...)
+}
+
+// TestStructMethod responds to a TestStructMethod call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+//	client.EXPECT().TestStructMethod(gomock.Any(), ...).Return(...)
+//	... := client.TestStructMethod(...)
+func (m *MockClient) TestStructMethod(
+	ctx context.Context,
+	_Request *WITHSERVICES.Struct,
+	opts ...yarpc.CallOption,
+) (success string, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "TestStructMethod", args...)
+	success, _ = ret[i].(string)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) TestStructMethod(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "TestStructMethod", args...)
+}
+
+// TestTypedefMethod responds to a TestTypedefMethod call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+//	client.EXPECT().TestTypedefMethod(gomock.Any(), ...).Return(...)
+//	... := client.TestTypedefMethod(...)
+func (m *MockClient) TestTypedefMethod(
+	ctx context.Context,
+	_Identifier *WITHSERVICES.ActorIdentifier,
+	opts ...yarpc.CallOption,
+) (success string, err error) {
+
+	args := []interface{}{ctx, _Identifier}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "TestTypedefMethod", args...)
+	success, _ = ret[i].(string)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) TestTypedefMethod(
+	ctx interface{},
+	_Identifier interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Identifier}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "TestTypedefMethod", args...)
 }

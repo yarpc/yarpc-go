@@ -20,6 +20,16 @@ type Interface interface {
 		NotInterested *string,
 		Interested *string,
 	) (string, error)
+
+	TestStructMethod(
+		ctx context.Context,
+		Request *WITHSERVICES.Struct,
+	) (string, error)
+
+	TestTypedefMethod(
+		ctx context.Context,
+		Identifier *WITHSERVICES.ActorIdentifier,
+	) (string, error)
 }
 
 // New prepares an implementation of the TestService service for
@@ -45,10 +55,36 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Exceptions:   nil,
 				ThriftModule: WITHSERVICES.ThriftModule,
 			},
+
+			thrift.Method{
+				Name: "testStructMethod",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestStructMethod),
+					NoWire: teststructmethod_NoWireHandler{impl},
+				},
+				Signature:    "TestStructMethod(Request *WITHSERVICES.Struct) (string)",
+				Exceptions:   nil,
+				ThriftModule: WITHSERVICES.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "testTypedefMethod",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestTypedefMethod),
+					NoWire: testtypedefmethod_NoWireHandler{impl},
+				},
+				Signature:    "TestTypedefMethod(Identifier *WITHSERVICES.ActorIdentifier) (string)",
+				Exceptions:   nil,
+				ThriftModule: WITHSERVICES.ThriftModule,
+			},
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 1)
+	procedures := make([]transport.Procedure, 0, 3)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -89,6 +125,66 @@ func (h handler) TestMethod(ctx context.Context, body wire.Value) (thrift.Respon
 	return response, err
 }
 
+func (h handler) TestStructMethod(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args WITHSERVICES.TestService_TestStructMethod_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'TestService' procedure 'TestStructMethod': %w", err)
+	}
+
+	success, appErr := h.impl.TestStructMethod(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestStructMethod_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
+func (h handler) TestTypedefMethod(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args WITHSERVICES.TestService_TestTypedefMethod_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'TestService' procedure 'TestTypedefMethod': %w", err)
+	}
+
+	success, appErr := h.impl.TestTypedefMethod(ctx, args.Identifier)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestTypedefMethod_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
 type testmethod_NoWireHandler struct{ impl Interface }
 
 func (h testmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
@@ -108,6 +204,80 @@ func (h testmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.
 
 	hadError := appErr != nil
 	result, err := WITHSERVICES.TestService_TestMethod_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type teststructmethod_NoWireHandler struct{ impl Interface }
+
+func (h teststructmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args WITHSERVICES.TestService_TestStructMethod_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'TestService' procedure 'TestStructMethod': %w", err)
+	}
+
+	success, appErr := h.impl.TestStructMethod(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestStructMethod_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type testtypedefmethod_NoWireHandler struct{ impl Interface }
+
+func (h testtypedefmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args WITHSERVICES.TestService_TestTypedefMethod_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'TestService' procedure 'TestTypedefMethod': %w", err)
+	}
+
+	success, appErr := h.impl.TestTypedefMethod(ctx, args.Identifier)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestTypedefMethod_Helper.WrapResponse(success, appErr)
 	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
