@@ -121,6 +121,7 @@ generate_with_thriftrw() {
   thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common.thrift
   thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic.thrift
   thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/NOSERVICES.thrift
+  thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES.thrift
   thriftrw --no-recurse --plugin="yarpc --sanitize-tchannel" --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather.thrift
   thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/internal/observabilitytest --out=encoding/thrift/internal/observabilitytest encoding/thrift/internal/observabilitytest/test.thrift
 }
