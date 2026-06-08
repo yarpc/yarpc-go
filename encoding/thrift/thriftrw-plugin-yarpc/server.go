@@ -73,7 +73,7 @@ type Interface interface {
 // 	handler := <.Name>Handler{}
 // 	dispatcher.Register(<$pkgname>.New(handler))
 func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Procedure {
-	<if .Functions>h := handler{impl}<end>
+	<if .Functions><if .HasActorUUIDMethod>h := handler{impl: impl, actorUUIDValidator: <$thrift>.ActorUUIDValidatorFromOptions(opts)}<else>h := handler{impl}<end><end>
 	service := <$thrift>.Service{
 		Name: "<.Name>",
 		Methods: []<$thrift>.Method{
@@ -88,7 +88,7 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Proced
 					Type: <$transport>.Unary,
 					Unary: <import $unaryWrapperImport>.<$unaryWrapperFunc>(h.<.Name>),
 				<end ->
-					NoWire: <(lower .Name)>_NoWireHandler{impl},
+					<if methodHasActorUUIDArg . $compiledModule $svcThriftName>NoWire: <(lower .Name)>_NoWireHandler{impl: impl, actorUUIDValidator: <$thrift>.ActorUUIDValidatorFromOptions(opts)},<else>NoWire: <(lower .Name)>_NoWireHandler{impl},<end>
 				},
 				Signature: "<.Name>(<range $i, $v := .Arguments><if ne $i 0>, <end><.Name> <formatType .Type><end>)<if not .OneWay | and .ReturnType> (<formatType .ReturnType>)<end>",
 				Exceptions: <methodExceptionsMapLiteral . $compiledModule $svcThriftName>,
@@ -115,7 +115,14 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Proced
 }
 
 <if .Functions>
+<if .HasActorUUIDMethod>
+type handler struct {
+	impl               Interface
+	actorUUIDValidator <$thrift>.ActorUUIDValidator
+}
+<else>
 type handler struct{ impl Interface }
+<end>
 
 <$yarpcerrors := import "go.uber.org/yarpc/yarpcerrors">
 
@@ -139,6 +146,16 @@ func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) error {
 		return err
 	}
 
+	<if methodHasActorUUIDArg . $compiledModule $svcThriftName>
+	<$yarpcerrors := import "go.uber.org/yarpc/yarpcerrors">
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return <$yarpcerrors>.InvalidArgumentErrorf(
+				"actor UUID validation failed for service '<$service.Name>' procedure '<.Name>': %w", err)
+		}
+	}
+
+	<end>
 	return h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
 }
 <else>
@@ -150,6 +167,15 @@ func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$thrift>.
 			"could not decode Thrift request for service '<$service.Name>' procedure '<.Name>': %w", err)
 	}
 
+	<if methodHasActorUUIDArg . $compiledModule $svcThriftName>
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return <$thrift>.Response{}, <$yarpcerrors>.InvalidArgumentErrorf(
+				"actor UUID validation failed for service '<$service.Name>' procedure '<.Name>': %w", err)
+		}
+	}
+
+	<end>
 	<if .ReturnType>
 		success, appErr := h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
 	<else>
@@ -184,7 +210,14 @@ func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$thrift>.
 <$yarpcerrors := import "go.uber.org/yarpc/yarpcerrors">
 <$prefix := printf "%s.%s_%s_" (import $module.ImportPath) $service.Name .Name>
 
+<if methodHasActorUUIDArg . $compiledModule $svcThriftName>
+type <(lower .Name)>_NoWireHandler struct {
+	impl               Interface
+	actorUUIDValidator <$thrift>.ActorUUIDValidator
+}
+<else>
 type <(lower .Name)>_NoWireHandler struct{ impl Interface }
+<end>
 
 func (h <(lower .Name)>_NoWireHandler) HandleNoWire(ctx <$context>.Context, nwc *<$thrift>.NoWireCall) (<$thrift>.NoWireResponse, error) {
 	var (
@@ -199,6 +232,15 @@ func (h <(lower .Name)>_NoWireHandler) HandleNoWire(ctx <$context>.Context, nwc 
 			"could not decode (via no wire) Thrift request for service '<$service.Name>' procedure '<.Name>': %w", err)
 	}
 
+	<if methodHasActorUUIDArg . $compiledModule $svcThriftName>
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return <$thrift>.NoWireResponse{}, <$yarpcerrors>.InvalidArgumentErrorf(
+				"actor UUID validation failed for service '<$service.Name>' procedure '<.Name>': %w", err)
+		}
+	}
+
+	<end>
 	return <$thrift>.NoWireResponse{}, h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
 	<else>
 	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
@@ -207,6 +249,15 @@ func (h <(lower .Name)>_NoWireHandler) HandleNoWire(ctx <$context>.Context, nwc 
 			"could not decode (via no wire) Thrift request for service '<$service.Name>' procedure '<.Name>': %w", err)
 	}
 
+	<if methodHasActorUUIDArg . $compiledModule $svcThriftName>
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return <$thrift>.NoWireResponse{}, <$yarpcerrors>.InvalidArgumentErrorf(
+				"actor UUID validation failed for service '<$service.Name>' procedure '<.Name>': %w", err)
+		}
+	}
+
+	<end>
 	<if .ReturnType>
 	success, appErr := h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
 	<else>

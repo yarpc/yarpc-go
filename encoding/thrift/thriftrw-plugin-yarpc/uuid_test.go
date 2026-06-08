@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/thriftrw/compile"
+	"go.uber.org/thriftrw/plugin/api"
 	"go.uber.org/thriftrw/ptr"
 	withservices "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES"
 )
@@ -165,6 +166,82 @@ func TestUUIDFieldInArgs(t *testing.T) {
 		fn, ok := spec.Services["Store"].Functions["increment"]
 		require.True(t, ok)
 		assert.Nil(t, uuidFieldInArgs(fn))
+	})
+}
+
+// TestMethodHasActorUUIDArg covers the server-template helper that gates
+// per-method validator emission. It exercises all three branches: nil
+// inputs (defensive), a method whose Thrift name is unknown to the
+// compiled module (returns false rather than panicking), an annotated
+// method, and a method whose args carry no annotation.
+func TestMethodHasActorUUIDArg(t *testing.T) {
+	mod, err := compile.Compile("internal/tests/WITHSERVICES.thrift")
+	require.NoError(t, err)
+
+	t.Run("nilFunction", func(t *testing.T) {
+		assert.False(t, methodHasActorUUIDArg(nil, mod, "TestService"))
+	})
+
+	t.Run("unknownThriftName", func(t *testing.T) {
+		fn := &api.Function{Name: "DoesNotExist", ThriftName: "doesNotExist"}
+		assert.False(t, methodHasActorUUIDArg(fn, mod, "TestService"))
+	})
+
+	t.Run("annotatedArg", func(t *testing.T) {
+		fn := &api.Function{Name: "TestMethod", ThriftName: "testMethod"}
+		assert.True(t, methodHasActorUUIDArg(fn, mod, "TestService"))
+	})
+
+	t.Run("structArgWithAnnotatedField", func(t *testing.T) {
+		fn := &api.Function{Name: "TestStructMethod", ThriftName: "testStructMethod"}
+		assert.True(t, methodHasActorUUIDArg(fn, mod, "TestService"))
+	})
+
+	t.Run("annotatedTypedefArg", func(t *testing.T) {
+		fn := &api.Function{Name: "TestTypedefMethod", ThriftName: "testTypedefMethod"}
+		assert.True(t, methodHasActorUUIDArg(fn, mod, "TestService"))
+	})
+
+	t.Run("unannotatedArgs", func(t *testing.T) {
+		atomicMod, err := compile.Compile("internal/tests/atomic.thrift")
+		require.NoError(t, err)
+		fn := &api.Function{Name: "Healthy", ThriftName: "healthy"}
+		assert.False(t, methodHasActorUUIDArg(fn, atomicMod, "Store"))
+	})
+}
+
+// TestServiceHasActorUUIDMethod covers the helper that gates service-wide
+// emission of the actorUUIDValidator field on the wire handler and its
+// initialisation in New.
+func TestServiceHasActorUUIDMethod(t *testing.T) {
+	withSvcMod, err := compile.Compile("internal/tests/WITHSERVICES.thrift")
+	require.NoError(t, err)
+
+	atomicMod, err := compile.Compile("internal/tests/atomic.thrift")
+	require.NoError(t, err)
+
+	t.Run("nilService", func(t *testing.T) {
+		assert.False(t, serviceHasActorUUIDMethod(nil, withSvcMod))
+	})
+
+	t.Run("nilModule", func(t *testing.T) {
+		svc := &api.Service{Name: "TestService", ThriftName: "TestService"}
+		assert.False(t, serviceHasActorUUIDMethod(svc, nil))
+	})
+
+	t.Run("serviceWithAnnotatedMethod", func(t *testing.T) {
+		svc := &api.Service{Name: "TestService", ThriftName: "TestService"}
+		assert.True(t, serviceHasActorUUIDMethod(svc, withSvcMod))
+	})
+
+	t.Run("serviceWithoutAnnotatedMethods", func(t *testing.T) {
+		svc := &api.Service{Name: "Store", ThriftName: "Store"}
+		assert.False(t, serviceHasActorUUIDMethod(svc, atomicMod))
+	})
+
+	t.Run("unknownService", func(t *testing.T) {
+		svc := &api.Service{Name: "NotThere", ThriftName: "NotThere"}
+		assert.False(t, serviceHasActorUUIDMethod(svc, withSvcMod))
 	})
 }
 
