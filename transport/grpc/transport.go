@@ -39,6 +39,11 @@ type Transport struct {
 	once          *lifecycle.Once
 	options       *transportOptions
 	addressToPeer map[string]*grpcPeer
+	// releasedCleanupWg tracks peers released via ReleasePeer. We cannot call
+	// p.wait() inside ReleasePeer because abstractlist.stop() holds list.lock
+	// while calling it, and monitorConnWrapper needs list.lock to exit cleanly
+	// (deadlock). Instead we wait asynchronously and join in Transport.Stop().
+	releasedCleanupWg sync.WaitGroup
 }
 
 // NewTransport returns a new Transport.
@@ -63,14 +68,21 @@ func (t *Transport) Start() error {
 func (t *Transport) Stop() error {
 	return t.once.Stop(func() error {
 		t.lock.Lock()
-		defer t.lock.Unlock()
-
 		for _, grpcPeer := range t.addressToPeer {
 			grpcPeer.stop()
 		}
-		for _, grpcPeer := range t.addressToPeer {
-			grpcPeer.wait()
+		peers := make([]*grpcPeer, 0, len(t.addressToPeer))
+		for _, p := range t.addressToPeer {
+			peers = append(peers, p)
 		}
+		t.lock.Unlock()
+
+		for _, p := range peers {
+			p.wait()
+		}
+		// Wait for peers released via ReleasePeer whose cleanup goroutines
+		// may still be running.
+		t.releasedCleanupWg.Wait()
 		return nil
 	})
 }
@@ -144,6 +156,15 @@ func (t *Transport) ReleasePeer(pid peer.Identifier, ps peer.Subscriber) error {
 	if p.NumSubscribers() == 0 {
 		delete(t.addressToPeer, address)
 		p.stop()
+		// Do not call p.wait() here: abstractlist.stop() holds list.lock while
+		// calling ReleasePeer, and monitorConnWrapper needs list.lock to exit.
+		// Waiting synchronously would deadlock. Instead, wait asynchronously so
+		// abstractlist.stop() can finish and release list.lock first.
+		t.releasedCleanupWg.Add(1)
+		go func() {
+			defer t.releasedCleanupWg.Done()
+			p.wait()
+		}()
 	}
 	return nil
 }
