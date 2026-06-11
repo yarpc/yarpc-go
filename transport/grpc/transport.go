@@ -39,6 +39,10 @@ type Transport struct {
 	once          *lifecycle.Once
 	options       *transportOptions
 	addressToPeer map[string]*grpcPeer
+	// peerMetrics caches connPoolMetrics by peer address so that re-creating a
+	// peer (e.g. after churn) reuses the already-registered metric handles
+	// rather than attempting a duplicate registration, which would error.
+	peerMetrics map[string]*connPoolMetrics
 	// releasedCleanupWg tracks peers released via ReleasePeer. We cannot call
 	// p.wait() inside ReleasePeer because abstractlist.stop() holds list.lock
 	// while calling it, and monitorConnWrapper needs list.lock to exit cleanly
@@ -56,6 +60,7 @@ func newTransport(transportOptions *transportOptions) *Transport {
 		once:          lifecycle.NewOnce(),
 		options:       transportOptions,
 		addressToPeer: make(map[string]*grpcPeer),
+		peerMetrics:   make(map[string]*connPoolMetrics),
 	}
 }
 
@@ -106,6 +111,29 @@ func (t *Transport) NewSingleOutbound(address string, options ...OutboundOption)
 // NewOutbound returns a new Outbound for the given peer.Chooser.
 func (t *Transport) NewOutbound(peerChooser peer.Chooser, options ...OutboundOption) *Outbound {
 	return newOutbound(t, peerChooser, options...)
+}
+
+// getOrCreatePeerMetrics returns cached connPoolMetrics for the given peer
+// address, creating and caching them on first use. Metrics are only registered
+// when dynamic scaling is enabled — for non-scaling peers the pool always has
+// exactly one connection, making the gauges meaningless. Caching prevents
+// duplicate registration errors when a peer is released and re-retained.
+// Must be called with t.lock held.
+func (t *Transport) getOrCreatePeerMetrics(address string) *connPoolMetrics {
+	if !t.options.clientConnPoolDynamicScalingEnabled {
+		return &connPoolMetrics{}
+	}
+	if m, ok := t.peerMetrics[address]; ok {
+		return m
+	}
+	m := newConnPoolMetrics(connPoolMetricsParams{
+		Meter:       t.options.meter,
+		Logger:      t.options.logger,
+		ServiceName: t.options.serviceName,
+		Peer:        address,
+	})
+	t.peerMetrics[address] = m
+	return m
 }
 
 // RetainPeer retains the peer.

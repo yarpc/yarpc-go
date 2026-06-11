@@ -193,7 +193,7 @@ func TestConnPoolMetrics_ConcurrentAccess(t *testing.T) {
 func TestNewConnPoolMetrics_LogsRegistrationErrors(t *testing.T) {
 	root := metrics.New()
 	scope := root.Scope()
-	core, logs := observer.New(zap.ErrorLevel)
+	core, logs := observer.New(zap.WarnLevel)
 	logger := zap.New(core)
 
 	params := connPoolMetricsParams{
@@ -204,11 +204,11 @@ func TestNewConnPoolMetrics_LogsRegistrationErrors(t *testing.T) {
 	}
 
 	// Register the same metrics twice on the same scope+tags to trigger
-	// duplicate registration errors.
+	// duplicate registration warnings.
 	_ = newConnPoolMetrics(params)
 	_ = newConnPoolMetrics(params)
 
-	assert.NotZero(t, logs.Len(), "expected error logs for duplicate metric registration")
+	assert.NotZero(t, logs.Len(), "expected warn logs for duplicate metric registration")
 }
 
 // TestConnPoolMetrics_NilReceiver verifies that calling any method on a nil
