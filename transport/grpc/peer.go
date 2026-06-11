@@ -120,12 +120,7 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 		cancel:       cancel,
 		stoppedC:     make(chan struct{}),
 		grpcDialOpts: dialOptions,
-		metrics: newConnPoolMetrics(connPoolMetricsParams{
-			Meter:       t.options.meter,
-			Logger:      t.options.logger,
-			ServiceName: t.options.serviceName,
-			Peer:        address,
-		}),
+		metrics:      t.getOrCreatePeerMetrics(address),
 		poolCfg: connPoolConfig{
 			dynamicScalingEnabled:  t.options.clientConnPoolDynamicScalingEnabled,
 			maxConcurrentStreams:   t.options.clientConnPoolMaxConcurrentStreams,
