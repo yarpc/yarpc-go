@@ -5,7 +5,6 @@ package testserviceserver
 
 import (
 	context "context"
-
 	stream "go.uber.org/thriftrw/protocol/stream"
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
@@ -70,7 +69,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:   transport.Unary,
 					Unary:  thrift.UnaryHandler(h.TestDoubleTypedefStructMethod),
-					NoWire: testdoubletypedefstructmethod_NoWireHandler{impl},
+					NoWire: testdoubletypedefstructmethod_NoWireHandler{impl: impl, actorUUIDValidator: thrift.ActorUUIDValidatorFromOptions(opts)},
 				},
 				Signature:    "TestDoubleTypedefStructMethod(Arg *WITHSERVICES.DoubleAliasedInner) (string)",
 				Exceptions:   nil,
@@ -96,7 +95,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:   transport.Unary,
 					Unary:  thrift.UnaryHandler(h.TestNestedMethod),
-					NoWire: testnestedmethod_NoWireHandler{impl},
+					NoWire: testnestedmethod_NoWireHandler{impl: impl, actorUUIDValidator: thrift.ActorUUIDValidatorFromOptions(opts)},
 				},
 				Signature:    "TestNestedMethod(Nested *WITHSERVICES.OuterLevel) (string)",
 				Exceptions:   nil,
@@ -109,7 +108,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:   transport.Unary,
 					Unary:  thrift.UnaryHandler(h.TestNestedTypedefStructMethod),
-					NoWire: testnestedtypedefstructmethod_NoWireHandler{impl},
+					NoWire: testnestedtypedefstructmethod_NoWireHandler{impl: impl, actorUUIDValidator: thrift.ActorUUIDValidatorFromOptions(opts)},
 				},
 				Signature:    "TestNestedTypedefStructMethod(Outer *WITHSERVICES.OuterWithAlias) (string)",
 				Exceptions:   nil,
@@ -148,7 +147,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 					Type:   transport.Unary,
 					Unary:  thrift.UnaryHandler(h.TestTypedefStructMethod),
-					NoWire: testtypedefstructmethod_NoWireHandler{impl},
+					NoWire: testtypedefstructmethod_NoWireHandler{impl: impl, actorUUIDValidator: thrift.ActorUUIDValidatorFromOptions(opts)},
 				},
 				Signature:    "TestTypedefStructMethod(TopLevel *WITHSERVICES.AliasedInner) (string)",
 				Exceptions:   nil,
@@ -176,6 +175,13 @@ func (h handler) TestDoubleTypedefStructMethod(ctx context.Context, body wire.Va
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode Thrift request for service 'TestService' procedure 'TestDoubleTypedefStructMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestDoubleTypedefStructMethod': %w", err)
+		}
 	}
 
 	success, appErr := h.impl.TestDoubleTypedefStructMethod(ctx, args.Arg)
@@ -245,6 +251,13 @@ func (h handler) TestNestedMethod(ctx context.Context, body wire.Value) (thrift.
 			"could not decode Thrift request for service 'TestService' procedure 'TestNestedMethod': %w", err)
 	}
 
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestNestedMethod': %w", err)
+		}
+	}
+
 	success, appErr := h.impl.TestNestedMethod(ctx, args.Nested)
 
 	hadError := appErr != nil
@@ -273,6 +286,13 @@ func (h handler) TestNestedTypedefStructMethod(ctx context.Context, body wire.Va
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode Thrift request for service 'TestService' procedure 'TestNestedTypedefStructMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestNestedTypedefStructMethod': %w", err)
+		}
 	}
 
 	success, appErr := h.impl.TestNestedTypedefStructMethod(ctx, args.Outer)
@@ -372,16 +392,18 @@ func (h handler) TestTypedefMethod(ctx context.Context, body wire.Value) (thrift
 	return response, err
 }
 
-type testmethod_NoWireHandler struct {
-	impl               Interface
-	actorUUIDValidator thrift.ActorUUIDValidator
-}
-
 func (h handler) TestTypedefStructMethod(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args WITHSERVICES.TestService_TestTypedefStructMethod_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode Thrift request for service 'TestService' procedure 'TestTypedefStructMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestTypedefStructMethod': %w", err)
+		}
 	}
 
 	success, appErr := h.impl.TestTypedefStructMethod(ctx, args.TopLevel)
@@ -407,7 +429,10 @@ func (h handler) TestTypedefStructMethod(ctx context.Context, body wire.Value) (
 	return response, err
 }
 
-type testdoubletypedefstructmethod_NoWireHandler struct{ impl Interface }
+type testdoubletypedefstructmethod_NoWireHandler struct {
+	impl               Interface
+	actorUUIDValidator thrift.ActorUUIDValidator
+}
 
 func (h testdoubletypedefstructmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
@@ -420,6 +445,13 @@ func (h testdoubletypedefstructmethod_NoWireHandler) HandleNoWire(ctx context.Co
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'TestService' procedure 'TestDoubleTypedefStructMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestDoubleTypedefStructMethod': %w", err)
+		}
 	}
 
 	success, appErr := h.impl.TestDoubleTypedefStructMethod(ctx, args.Arg)
@@ -444,7 +476,10 @@ func (h testdoubletypedefstructmethod_NoWireHandler) HandleNoWire(ctx context.Co
 
 }
 
-type testmethod_NoWireHandler struct{ impl Interface }
+type testmethod_NoWireHandler struct {
+	impl               Interface
+	actorUUIDValidator thrift.ActorUUIDValidator
+}
 
 func (h testmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
@@ -488,11 +523,10 @@ func (h testmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.
 
 }
 
-type teststructmethod_NoWireHandler struct {
+type testnestedmethod_NoWireHandler struct {
 	impl               Interface
 	actorUUIDValidator thrift.ActorUUIDValidator
 }
-type testnestedmethod_NoWireHandler struct{ impl Interface }
 
 func (h testnestedmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
@@ -505,6 +539,13 @@ func (h testnestedmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *t
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'TestService' procedure 'TestNestedMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestNestedMethod': %w", err)
+		}
 	}
 
 	success, appErr := h.impl.TestNestedMethod(ctx, args.Nested)
@@ -529,7 +570,10 @@ func (h testnestedmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *t
 
 }
 
-type testnestedtypedefstructmethod_NoWireHandler struct{ impl Interface }
+type testnestedtypedefstructmethod_NoWireHandler struct {
+	impl               Interface
+	actorUUIDValidator thrift.ActorUUIDValidator
+}
 
 func (h testnestedtypedefstructmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
@@ -542,6 +586,13 @@ func (h testnestedtypedefstructmethod_NoWireHandler) HandleNoWire(ctx context.Co
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'TestService' procedure 'TestNestedTypedefStructMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestNestedTypedefStructMethod': %w", err)
+		}
 	}
 
 	success, appErr := h.impl.TestNestedTypedefStructMethod(ctx, args.Outer)
@@ -566,7 +617,10 @@ func (h testnestedtypedefstructmethod_NoWireHandler) HandleNoWire(ctx context.Co
 
 }
 
-type teststructmethod_NoWireHandler struct{ impl Interface }
+type teststructmethod_NoWireHandler struct {
+	impl               Interface
+	actorUUIDValidator thrift.ActorUUIDValidator
+}
 
 func (h teststructmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
@@ -657,7 +711,10 @@ func (h testtypedefmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *
 
 }
 
-type testtypedefstructmethod_NoWireHandler struct{ impl Interface }
+type testtypedefstructmethod_NoWireHandler struct {
+	impl               Interface
+	actorUUIDValidator thrift.ActorUUIDValidator
+}
 
 func (h testtypedefstructmethod_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
 	var (
@@ -670,6 +727,13 @@ func (h testtypedefstructmethod_NoWireHandler) HandleNoWire(ctx context.Context,
 	if err != nil {
 		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
 			"could not decode (via no wire) Thrift request for service 'TestService' procedure 'TestTypedefStructMethod': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestTypedefStructMethod': %w", err)
+		}
 	}
 
 	success, appErr := h.impl.TestTypedefStructMethod(ctx, args.TopLevel)
