@@ -90,6 +90,54 @@ func (s *testServiceImpl) TestTypedefMethod(
 	return "ok", nil
 }
 
+func (s *testServiceImpl) TestNestedMethod(
+	ctx context.Context,
+	nested *withservices.OuterLevel,
+) (string, error) {
+	s.called = true
+	s.gotCtx = ctx
+	if nested != nil && nested.Mid != nil && nested.Mid.Inner != nil && nested.Mid.Inner.InnerUUID != nil {
+		s.gotUUID = *nested.Mid.Inner.InnerUUID
+	}
+	return "ok", nil
+}
+
+func (s *testServiceImpl) TestTypedefStructMethod(
+	ctx context.Context,
+	topLevel *withservices.AliasedInner,
+) (string, error) {
+	s.called = true
+	s.gotCtx = ctx
+	if topLevel != nil && topLevel.InnerUUID != nil {
+		s.gotUUID = *topLevel.InnerUUID
+	}
+	return "ok", nil
+}
+
+func (s *testServiceImpl) TestNestedTypedefStructMethod(
+	ctx context.Context,
+	outer *withservices.OuterWithAlias,
+) (string, error) {
+	s.called = true
+	s.gotCtx = ctx
+	if outer != nil && outer.Inner != nil && outer.Inner.InnerUUID != nil {
+		s.gotUUID = *outer.Inner.InnerUUID
+	}
+	return "ok", nil
+}
+
+func (s *testServiceImpl) TestDoubleTypedefStructMethod(
+	ctx context.Context,
+	arg *withservices.DoubleAliasedInner,
+) (string, error) {
+	s.called = true
+	s.gotCtx = ctx
+	if arg != nil && arg.InnerUUID != nil {
+		s.gotUUID = *arg.InnerUUID
+	}
+	return "ok", nil
+}
+
 // argsEncoder is the slice of the thriftrw-generated _Args API the
 // drivers below need; both TestService_TestMethod_Args and the
 // struct-/typedef-arg variants satisfy it.
@@ -324,6 +372,38 @@ func TestActorUUIDValidator_StructArg(t *testing.T) {
 	assert.Equal(t, "expected-struct-uuid", seenUUID,
 		"validator should receive the UUID chained through the struct arg")
 	assert.Equal(t, "expected-struct-uuid", impl.gotUUID)
+}
+
+// TestActorUUIDValidator_NestedStructArg proves the validator fires
+// for an arg whose path to the annotated field runs through several
+// nested struct hops. The generated chain
+// (t.GetNested().GetMid().GetInner().GetInnerUUID()) is what makes
+// the deep walk reach the leaf, and this test pins the runtime
+// behaviour end to end.
+func TestActorUUIDValidator_NestedStructArg(t *testing.T) {
+	var seenUUID string
+	validator := func(_ context.Context, uuid string) error {
+		seenUUID = uuid
+		return nil
+	}
+
+	impl := &testServiceImpl{}
+	args := &withservices.TestService_TestNestedMethod_Args{
+		Nested: &withservices.OuterLevel{
+			Mid: &withservices.MidLevel{
+				Inner: &withservices.InnerLevel{
+					InnerUUID: ptr.String("expected-nested-uuid"),
+				},
+			},
+		},
+	}
+	_, err := driveMethod(t, impl, "testNestedMethod", true, args,
+		thrift.WithActorUUIDValidator(validator))
+	require.NoError(t, err)
+	assert.True(t, impl.called)
+	assert.Equal(t, "expected-nested-uuid", seenUUID,
+		"validator should receive the UUID chained through every struct hop")
+	assert.Equal(t, "expected-nested-uuid", impl.gotUUID)
 }
 
 // TestActorUUIDValidator_TypedefArg proves the validator fires for an

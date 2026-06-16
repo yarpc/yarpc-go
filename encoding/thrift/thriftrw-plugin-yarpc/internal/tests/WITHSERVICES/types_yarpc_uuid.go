@@ -5,14 +5,8 @@ package WITHSERVICES
 
 // ActorUUID returns the UUID string from the field annotated with
 // auth.actor_uuid, or "" if it is unset.
-func (t *Struct) ActorUUID() string {
-	return t.GetUserIdentifier()
-}
-
-// ActorUUID returns the UUID string from the field annotated with
-// auth.actor_uuid, or "" if it is unset.
-func (t *StructRequiredUUID) ActorUUID() string {
-	return t.GetUserIdentifier()
+func (t *TestService_TestDoubleTypedefStructMethod_Args) ActorUUID() string {
+	return (*Inner)(t.GetArg()).GetInnerUUID()
 }
 
 // ActorUUID returns the UUID string from the field annotated with
@@ -23,12 +17,30 @@ func (t *TestService_TestMethod_Args) ActorUUID() string {
 
 // ActorUUID returns the UUID string from the field annotated with
 // auth.actor_uuid, or "" if it is unset.
+func (t *TestService_TestNestedMethod_Args) ActorUUID() string {
+	return t.GetNested().GetMid().GetInner().GetInnerUUID()
+}
+
+// ActorUUID returns the UUID string from the field annotated with
+// auth.actor_uuid, or "" if it is unset.
+func (t *TestService_TestNestedTypedefStructMethod_Args) ActorUUID() string {
+	return (*Inner)(t.GetOuter().GetInner()).GetInnerUUID()
+}
+
+// ActorUUID returns the UUID string from the field annotated with
+// auth.actor_uuid, or "" if it is unset.
 func (t *TestService_TestStructMethod_Args) ActorUUID() string {
-	return t.GetRequest().ActorUUID()
+	return t.GetRequest().GetUserIdentifier()
 }
 
 // ActorUUID returns the UUID string from the field annotated with
 // auth.actor_uuid, or "" if it is unset.
 func (t *TestService_TestTypedefMethod_Args) ActorUUID() string {
 	return string(t.GetIdentifier())
+}
+
+// ActorUUID returns the UUID string from the field annotated with
+// auth.actor_uuid, or "" if it is unset.
+func (t *TestService_TestTypedefStructMethod_Args) ActorUUID() string {
+	return (*Inner)(t.GetTopLevel()).GetInnerUUID()
 }

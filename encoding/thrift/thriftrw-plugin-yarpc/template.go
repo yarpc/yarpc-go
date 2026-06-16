@@ -131,6 +131,30 @@ type moduleTemplateData struct {
 	// file. It is shared across all generators so the file is compiled at most
 	// once per request.
 	CompiledModule *compile.Module
+
+	// AllModules is keyed by the cleaned absolute Thrift file path of every
+	// module visible to the current generation request, including the
+	// transitive closure of includes. It is used by the UUID generator to
+	// resolve the Go import path of a struct reached through a typedef hop in
+	// another included Thrift file (a struct sitting in a different .thrift
+	// file lives in a different generated Go package, so the cast emitted in
+	// the ActorUUID() chain has to qualify the type with that package's
+	// import alias).
+	AllModules map[string]*api.Module
+}
+
+// importPathForThriftFile returns the Go import path for the package that
+// owns the given Thrift file, or "" if no module is registered for it. It is
+// the resolver the UUID template helper uses to decide whether a cast to a
+// struct reached through a typedef hop needs to import another package.
+func (d *moduleTemplateData) importPathForThriftFile(thriftFile string) string {
+	if d == nil || d.AllModules == nil || thriftFile == "" {
+		return ""
+	}
+	if m, ok := d.AllModules[filepath.Clean(thriftFile)]; ok && m != nil {
+		return m.GetImportPath()
+	}
+	return ""
 }
 
 // ParentServerPackagePath returns the import path for the immediate parent
