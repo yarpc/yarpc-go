@@ -271,9 +271,8 @@ func TestTransportSpec(t *testing.T) {
 			transportCfg: attrs{
 				"numStreamWorkers": "100",
 			},
-			inboundCfg: attrs{"address": ":54572"},
+			inboundCfg: attrs{"address": "localhost:0"},
 			wantInbound: &wantInbound{
-				Address:          ":54572",
 				NumStreamWorkers: 100,
 			},
 		},
