@@ -235,7 +235,6 @@ func (p *grpcPeer) addConn() error {
 func (p *grpcPeer) monitorConnWrapper(w *grpcClientConnWrapper) {
 	defer func() {
 		_ = w.clientConn.Close()
-		close(w.stoppedC)
 		p.removeConn(w)
 		// Skip status notification during peer shutdown: NotifyStatusChanged
 		// acquires list.lock, but the caller (abstractlist.stop) already holds
@@ -244,6 +243,9 @@ func (p *grpcPeer) monitorConnWrapper(w *grpcClientConnWrapper) {
 			p.recomputeConnectionStatus()
 		}
 		p.refreshPoolMetrics()
+		// Close stoppedC after metrics are updated so that any goroutine
+		// waiting on stoppedC (e.g. tests) observes a consistent metric state.
+		close(w.stoppedC)
 		p.connWg.Done()
 	}()
 

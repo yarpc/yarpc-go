@@ -230,7 +230,8 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 			},
 		}
 		te.do(t, func(t *testing.T, e *testEnv) {
-			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second*5)
+			// The value is ~64 MB; allow extra headroom under race detector and parallel load.
+			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second*30)
 			defer cancel()
 
 			if assert.NoError(t, e.SetValueYARPC(ctx, "foo", value)) {
