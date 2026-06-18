@@ -23,8 +23,7 @@ package internal
 import "go.uber.org/yarpc/transport/tchannel"
 
 // RemoveVariableMapKeys removes any headers that might have been added by tracing,
-// the server handler, or the HTTP stack (including HTTP/2 when User-Agent is not
-// stripped as a hop-by-hop field).
+// the server handler, or the HTTP stack.
 func RemoveVariableMapKeys(headers map[string]string) {
 	delete(headers, "$tracing$uber-trace-id")
 	delete(headers, tchannel.ServiceHeaderKey)
