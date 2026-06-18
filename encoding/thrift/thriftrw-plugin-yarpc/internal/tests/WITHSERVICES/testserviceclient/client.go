@@ -9,6 +9,7 @@ import (
 	yarpc "go.uber.org/yarpc"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
+	shared "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/random_pkg/shared"
 	WITHSERVICES "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES"
 	reflect "reflect"
 )
@@ -18,6 +19,12 @@ type Interface interface {
 	TestDoubleTypedefStructMethod(
 		ctx context.Context,
 		Arg *WITHSERVICES.DoubleAliasedInner,
+		opts ...yarpc.CallOption,
+	) (string, error)
+
+	TestImportedTypedef(
+		ctx context.Context,
+		Req *shared.GlobalRequestActorUUID,
 		opts ...yarpc.CallOption,
 	) (string, error)
 
@@ -113,6 +120,34 @@ func (c client) TestDoubleTypedefStructMethod(
 	}
 
 	success, err = WITHSERVICES.TestService_TestDoubleTypedefStructMethod_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) TestImportedTypedef(
+	ctx context.Context,
+	_Req *shared.GlobalRequestActorUUID,
+	opts ...yarpc.CallOption,
+) (success string, err error) {
+
+	var result WITHSERVICES.TestService_TestImportedTypedef_Result
+	args := WITHSERVICES.TestService_TestImportedTypedef_Helper.Args(_Req)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = WITHSERVICES.TestService_TestImportedTypedef_Helper.UnwrapResponse(&result)
 	return
 }
 

@@ -11,6 +11,12 @@ func (t *TestService_TestDoubleTypedefStructMethod_Args) ActorUUID() string {
 
 // ActorUUID returns the UUID string from the field annotated with
 // auth.actor_uuid, or "" if it is unset.
+func (t *TestService_TestImportedTypedef_Args) ActorUUID() string {
+	return string(t.GetReq())
+}
+
+// ActorUUID returns the UUID string from the field annotated with
+// auth.actor_uuid, or "" if it is unset.
 func (t *TestService_TestMethod_Args) ActorUUID() string {
 	return t.GetInterested()
 }
