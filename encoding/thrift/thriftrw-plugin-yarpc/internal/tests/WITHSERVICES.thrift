@@ -7,6 +7,8 @@
 // separate lets TestCodeIsUpToDate enforce drift on the service-arg
 // path too.
 
+include "../random_pkg/shared.thrift"
+
 typedef string ActorIdentifier
 
 struct Struct {
@@ -126,5 +128,10 @@ service TestService {
     // underlying struct definition.
     string testDoubleTypedefStructMethod(
         1: DoubleAliasedInner arg,
+    )
+
+    // testImportedTypedef's arg imports a typedef from another package
+    string testImportedTypedef(
+        1: shared.GlobalRequestActorUUID req (auth.actor_uuid = "true")
     )
 }

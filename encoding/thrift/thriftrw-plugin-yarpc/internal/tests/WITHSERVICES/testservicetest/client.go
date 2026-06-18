@@ -7,6 +7,7 @@ import (
 	context "context"
 	gomock "github.com/golang/mock/gomock"
 	yarpc "go.uber.org/yarpc"
+	shared "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/random_pkg/shared"
 	WITHSERVICES "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES"
 	testserviceclient "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES/testserviceclient"
 )
@@ -73,6 +74,39 @@ func (mr *_MockClientRecorder) TestDoubleTypedefStructMethod(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _Arg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestDoubleTypedefStructMethod", args...)
+}
+
+// TestImportedTypedef responds to a TestImportedTypedef call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+//	client.EXPECT().TestImportedTypedef(gomock.Any(), ...).Return(...)
+//	... := client.TestImportedTypedef(...)
+func (m *MockClient) TestImportedTypedef(
+	ctx context.Context,
+	_Req *shared.GlobalRequestActorUUID,
+	opts ...yarpc.CallOption,
+) (success string, err error) {
+
+	args := []interface{}{ctx, _Req}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "TestImportedTypedef", args...)
+	success, _ = ret[i].(string)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) TestImportedTypedef(
+	ctx interface{},
+	_Req interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Req}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "TestImportedTypedef", args...)
 }
 
 // TestMethod responds to a TestMethod call based on the mock expectations. This

@@ -9,6 +9,7 @@ import (
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
+	shared "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/random_pkg/shared"
 	WITHSERVICES "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES"
 	yarpcerrors "go.uber.org/yarpc/yarpcerrors"
 )
@@ -18,6 +19,11 @@ type Interface interface {
 	TestDoubleTypedefStructMethod(
 		ctx context.Context,
 		Arg *WITHSERVICES.DoubleAliasedInner,
+	) (string, error)
+
+	TestImportedTypedef(
+		ctx context.Context,
+		Req *shared.GlobalRequestActorUUID,
 	) (string, error)
 
 	TestMethod(
@@ -72,6 +78,19 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: testdoubletypedefstructmethod_NoWireHandler{impl: impl, actorUUIDValidator: thrift.ActorUUIDValidatorFromOptions(opts)},
 				},
 				Signature:    "TestDoubleTypedefStructMethod(Arg *WITHSERVICES.DoubleAliasedInner) (string)",
+				Exceptions:   nil,
+				ThriftModule: WITHSERVICES.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "testImportedTypedef",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TestImportedTypedef),
+					NoWire: testimportedtypedef_NoWireHandler{impl: impl, actorUUIDValidator: thrift.ActorUUIDValidatorFromOptions(opts)},
+				},
+				Signature:    "TestImportedTypedef(Req *shared.GlobalRequestActorUUID) (string)",
 				Exceptions:   nil,
 				ThriftModule: WITHSERVICES.ThriftModule,
 			},
@@ -156,7 +175,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 7)
+	procedures := make([]transport.Procedure, 0, 8)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -188,6 +207,43 @@ func (h handler) TestDoubleTypedefStructMethod(ctx context.Context, body wire.Va
 
 	hadError := appErr != nil
 	result, err := WITHSERVICES.TestService_TestDoubleTypedefStructMethod_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
+func (h handler) TestImportedTypedef(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args WITHSERVICES.TestService_TestImportedTypedef_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'TestService' procedure 'TestImportedTypedef': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestImportedTypedef': %w", err)
+		}
+	}
+
+	success, appErr := h.impl.TestImportedTypedef(ctx, args.Req)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestImportedTypedef_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
@@ -458,6 +514,53 @@ func (h testdoubletypedefstructmethod_NoWireHandler) HandleNoWire(ctx context.Co
 
 	hadError := appErr != nil
 	result, err := WITHSERVICES.TestService_TestDoubleTypedefStructMethod_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type testimportedtypedef_NoWireHandler struct {
+	impl               Interface
+	actorUUIDValidator thrift.ActorUUIDValidator
+}
+
+func (h testimportedtypedef_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args WITHSERVICES.TestService_TestImportedTypedef_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'TestService' procedure 'TestImportedTypedef': %w", err)
+	}
+
+	if h.actorUUIDValidator != nil {
+		if err := h.actorUUIDValidator(ctx, args.ActorUUID()); err != nil {
+			return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+				"actor UUID validation failed for service 'TestService' procedure 'TestImportedTypedef': %w", err)
+		}
+	}
+
+	success, appErr := h.impl.TestImportedTypedef(ctx, args.Req)
+
+	hadError := appErr != nil
+	result, err := WITHSERVICES.TestService_TestImportedTypedef_Helper.WrapResponse(success, appErr)
 	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
