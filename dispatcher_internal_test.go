@@ -21,6 +21,8 @@
 package yarpc
 
 import (
+	"errors"
+	"sync"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -169,6 +171,87 @@ func TestRegister_thriftNilExceptionsNoWarn(t *testing.T) {
 		HandlerSpec: transport.NewUnaryHandlerSpec(h),
 	}})
 	assert.Equal(t, 0, logs.Len())
+}
+
+// recordingLifecycle is a transport.Lifecycle that records the order in which
+// its Stop method is invoked, so tests can assert teardown ordering.
+type recordingLifecycle struct {
+	name      string
+	stopErr   error
+	mu        *sync.Mutex
+	stopOrder *[]string
+}
+
+func (l *recordingLifecycle) Start() error { return nil }
+
+func (l *recordingLifecycle) Stop() error {
+	l.mu.Lock()
+	*l.stopOrder = append(*l.stopOrder, l.name)
+	l.mu.Unlock()
+	return l.stopErr
+}
+
+func (l *recordingLifecycle) IsRunning() bool { return false }
+
+// TestPhasedStarterAbortStopsInReverseOrder verifies that a failed startup
+// tears down the already-started lifecycles in the reverse of start order
+// (inbounds, then outbounds, then transports). This guarantees that an
+// outbound is always stopped before the transport it depends on, preventing a
+// data race between an outbound's Stop and its transport's Stop.
+func TestPhasedStarterAbortStopsInReverseOrder(t *testing.T) {
+	var (
+		mu        sync.Mutex
+		stopOrder []string
+	)
+	newLifecycle := func(name string) *recordingLifecycle {
+		return &recordingLifecycle{name: name, mu: &mu, stopOrder: &stopOrder}
+	}
+
+	s := &PhasedStarter{
+		log: zap.NewNop(),
+		// started reflects start order: transports, then outbounds, then
+		// inbounds.
+		started: []transport.Lifecycle{
+			newLifecycle("transport"),
+			newLifecycle("outbound"),
+			newLifecycle("inbound"),
+		},
+	}
+
+	err := s.abort(nil)
+	require.NoError(t, err, "abort should not report an error when all Stops succeed")
+	assert.Equal(t, []string{"inbound", "outbound", "transport"}, stopOrder,
+		"lifecycles must be stopped in reverse of start order")
+}
+
+// TestPhasedStarterAbortAggregatesErrors verifies that abort still tears down
+// every started lifecycle even if some Stops fail, and that it combines the
+// original startup error with any Stop errors.
+func TestPhasedStarterAbortAggregatesErrors(t *testing.T) {
+	var (
+		mu        sync.Mutex
+		stopOrder []string
+	)
+	newLifecycle := func(name string, stopErr error) *recordingLifecycle {
+		return &recordingLifecycle{name: name, stopErr: stopErr, mu: &mu, stopOrder: &stopOrder}
+	}
+
+	s := &PhasedStarter{
+		log: zap.NewNop(),
+		started: []transport.Lifecycle{
+			newLifecycle("transport", errors.New("transport stop failed")),
+			newLifecycle("outbound", nil),
+			newLifecycle("inbound", errors.New("inbound stop failed")),
+		},
+	}
+
+	err := s.abort([]error{errors.New("startup failed")})
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "startup failed", "should retain the original startup error")
+	assert.ErrorContains(t, err, "inbound stop failed", "should include inbound Stop error")
+	assert.ErrorContains(t, err, "transport stop failed", "should include transport Stop error")
+	assert.Equal(t, []string{"inbound", "outbound", "transport"}, stopOrder,
+		"all lifecycles must be stopped even when some Stops fail")
 }
 
 func TestRegister_thriftMultipleUnannotatedExceptionsWarnEach(t *testing.T) {
