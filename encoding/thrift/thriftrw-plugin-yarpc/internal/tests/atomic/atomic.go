@@ -1404,7 +1404,7 @@ func (v *OptionalCompareAndSwapWrapper) IsSetCas() bool {
 var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "atomic",
 	Package:  "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic",
-	FilePath: "atomic.thrift",
+	FilePath: "tests/atomic.thrift",
 	SHA1:     "86799ad54683404a517c661f6f10d83cf7afa99e",
 	Includes: []*thriftreflect.ThriftModule{
 		common.ThriftModule,

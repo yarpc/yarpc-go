@@ -148,6 +148,9 @@ func (g g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceRespon
 		if err != nil {
 			return nil, err
 		}
+		if err := validateUUIDArgsInModule(compiledModule); err != nil {
+			return nil, err
+		}
 		data := serviceTemplateData{
 			Svc:                 svc,
 			ContextImportPath:   *_context,

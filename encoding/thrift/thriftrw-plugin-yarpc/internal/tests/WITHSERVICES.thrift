@@ -52,10 +52,12 @@ struct OuterLevel {
 // AliasedInner / DoubleAliasedInner / OuterWithAlias exercise descent
 // through typedef-of-struct hops: thriftrw emits AliasedInner as a
 // distinct named Go type (`type AliasedInner Inner`), so the chain
-// must cast through Inner to reach GetXxx() accessors. The two-hop
-// alias confirms the cast stays valid even after multiple typedefs
-// because `*DoubleAliasedInner`, `*AliasedInner` and `*Inner` all
-// share the same underlying struct type.
+// must cast through Inner to reach GetXxx() accessors. OuterWithAlias
+// only carries a single typedef-wrapped field; declaring two siblings
+// that both pointed at Inner (e.g. AliasedInner + DoubleAliasedInner)
+// would surface two distinct paths to the same annotated leaf, which
+// validateUUIDArgs rejects because the generated ActorUUID() accessor
+// can only walk one of them.
 struct Inner {
     1: optional string innerUUID (auth.actor_uuid = "true")
 }
@@ -65,7 +67,6 @@ typedef AliasedInner DoubleAliasedInner
 
 struct OuterWithAlias {
     1: optional AliasedInner inner
-    2: optional DoubleAliasedInner deeplyAliased
 }
 
 service TestService {
@@ -108,11 +109,10 @@ service TestService {
     )
 
     // testNestedTypedefStructMethod descends through a struct that
-    // owns two typedef-of-struct hops (single- and double-aliased
-    // typedefs to the same underlying struct). Each cast wraps the
-    // partial chain so the next GetXxx() resolves; with two hops the
-    // walker still picks the first reachable annotation by Thrift
-    // field order, which is the inner field on OuterWithAlias.
+    // owns one typedef-of-struct hop. The cast wraps the partial
+    // chain so the next GetXxx() resolves on the underlying Inner
+    // type even though OuterWithAlias.inner is statically
+    // *AliasedInner.
     string testNestedTypedefStructMethod(
         1: OuterWithAlias outer,
     )
