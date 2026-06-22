@@ -249,7 +249,7 @@ func TestUUIDPathInArgs(t *testing.T) {
 // cycle.
 func TestValidateUUIDArgs(t *testing.T) {
 	t.Run("nilFunction", func(t *testing.T) {
-		assert.NoError(t, validateUUIDArgs(nil))
+		assert.NoError(t, validateUUIDAnnotations(nil))
 	})
 
 	t.Run("noAnnotationIsOK", func(t *testing.T) {
@@ -257,7 +257,7 @@ func TestValidateUUIDArgs(t *testing.T) {
 		require.NoError(t, err)
 		fn, ok := spec.Services["Store"].Functions["increment"]
 		require.True(t, ok)
-		assert.NoError(t, validateUUIDArgs(fn))
+		assert.NoError(t, validateUUIDAnnotations(fn))
 	})
 
 	t.Run("singleAnnotationIsOK", func(t *testing.T) {
@@ -265,7 +265,7 @@ func TestValidateUUIDArgs(t *testing.T) {
 		require.NoError(t, err)
 		fn, ok := spec.Services["TestService"].Functions["testMethod"]
 		require.True(t, ok)
-		assert.NoError(t, validateUUIDArgs(fn))
+		assert.NoError(t, validateUUIDAnnotations(fn))
 	})
 
 	t.Run("multiplePathsToSameLeafErrors", func(t *testing.T) {
@@ -274,7 +274,7 @@ func TestValidateUUIDArgs(t *testing.T) {
 		fn, ok := spec.Services["TestService"].Functions["testMethod"]
 		require.True(t, ok)
 
-		err = validateUUIDArgs(fn)
+		err = validateUUIDAnnotations(fn)
 		require.Error(t, err)
 		for _, want := range []string{"outer.first.id", "outer.second.id"} {
 			assert.Contains(t, err.Error(), want,
@@ -288,7 +288,7 @@ func TestValidateUUIDArgs(t *testing.T) {
 		fn, ok := spec.Services["TestService"].Functions["testMethod"]
 		require.True(t, ok)
 
-		err = validateUUIDArgs(fn)
+		err = validateUUIDAnnotations(fn)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "auth.actor_uuid")
 		assert.Contains(t, err.Error(), `"testMethod"`,
@@ -305,7 +305,7 @@ func TestValidateUUIDArgs(t *testing.T) {
 		fn, ok := spec.Services["TestService"].Functions["testMethod"]
 		require.True(t, ok)
 
-		err = validateUUIDArgs(fn)
+		err = validateUUIDAnnotations(fn)
 		require.Error(t, err)
 		for _, want := range []string{"arg.idInsideCycle", "idOutside"} {
 			assert.Contains(t, err.Error(), want,
