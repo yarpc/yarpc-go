@@ -144,15 +144,26 @@ func (s *PhasedStarter) start(lc transport.Lifecycle) func() error {
 }
 
 func (s *PhasedStarter) abort(errs []error) error {
-	// Failed to start so stop everything that was started.
-	wait := errorsync.ErrorWaiter{}
+	// Startup failed, so stop everything we managed to start.
+	//
+	// We must stop in the reverse of start order: inbounds, then outbounds,
+	// then transports. Outbounds hold references to their transports (an
+	// outbound's Stop releases peers back to the transport), so a transport
+	// must never be stopped while one of its outbounds is still shutting
+	// down. Stopping serially in LIFO order guarantees that ordering and
+	// avoids a data race between an outbound's Stop and its transport's Stop.
+	//
+	// We snapshot under the lock but call Stop unlocked, since Stop can block
+	// and may itself touch shared state.
 	s.startedMu.Lock()
-	for _, lc := range s.started {
-		wait.Submit(lc.Stop)
-	}
+	started := make([]transport.Lifecycle, len(s.started))
+	copy(started, s.started)
 	s.startedMu.Unlock()
-	if newErrors := wait.Wait(); len(newErrors) > 0 {
-		errs = append(errs, newErrors...)
+
+	for i := len(started) - 1; i >= 0; i-- {
+		if err := started[i].Stop(); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	return multierr.Combine(errs...)
