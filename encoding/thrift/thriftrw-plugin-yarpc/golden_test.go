@@ -43,7 +43,11 @@ import (
 // This implements a test that verifies that the code in internal/tests/ is up to
 // date.
 
-const _testPackage = "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests"
+const (
+	_testPackage = "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal"
+	_thriftRoot  = "internal"
+	_thriftDir   = "internal/tests"
+)
 
 // Thrift files for which we set --sanitize-tchannel to true.
 var tchannelSanitizeFor = map[string]struct{}{
@@ -150,10 +154,13 @@ func TestCodeIsUpToDate(t *testing.T) {
 			"failed to create thriftrw plugin script")
 	}
 
-	thriftRoot, err := filepath.Abs("internal/tests")
-	require.NoError(t, err, "could not resolve absolute path to internal/tests")
+	thriftRoot, err := filepath.Abs(_thriftRoot)
+	require.NoError(t, err, "could not resolve absolute path to %s", _thriftRoot)
 
-	thriftFiles, err := filepath.Glob(thriftRoot + "/*.thrift")
+	thriftDir, err := filepath.Abs(_thriftDir)
+	require.NoError(t, err, "could not resolve absolute path to %s", _thriftDir)
+
+	thriftFiles, err := filepath.Glob(thriftDir + "/*.thrift")
 	require.NoError(t, err)
 
 	outputDir, err := os.MkdirTemp("", "golden-test")
@@ -166,10 +173,17 @@ func TestCodeIsUpToDate(t *testing.T) {
 
 	t.Logf("Created temporary output directory: %s", outputDir)
 
+	// thriftrw mirrors the relative path of each thrift file under --out, so
+	// with --thrift-root=internal the file internal/tests/X.thrift now lands
+	// at <out>/tests/X/, while the checked-in code stays at internal/tests/X/.
+	relPackageParent, err := filepath.Rel(thriftRoot, thriftDir)
+	require.NoError(t, err, "could not compute relative path from %s to %s",
+		thriftRoot, thriftDir)
+
 	for _, thriftFile := range thriftFiles {
 		packageName := strings.TrimSuffix(filepath.Base(thriftFile), ".thrift")
-		currentPackageDir := filepath.Join("internal/tests", packageName)
-		newPackageDir := filepath.Join(outputDir, packageName)
+		currentPackageDir := filepath.Join(_thriftDir, packageName)
+		newPackageDir := filepath.Join(outputDir, relPackageParent, packageName)
 
 		currentHash, err := dirhash(currentPackageDir)
 		require.NoError(t, err, "could not hash %q", currentPackageDir)

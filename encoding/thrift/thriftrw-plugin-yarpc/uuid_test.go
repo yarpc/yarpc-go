@@ -110,19 +110,6 @@ func TestUUIDPathInArgs(t *testing.T) {
 		assert.False(t, got.IsTypedef)
 	})
 
-	t.Run("multipleAnnotatedArgsTakeFirst", func(t *testing.T) {
-		spec, err := compile.Compile("internal/uuid_test/multipleAnnotatedArgs.thrift")
-		require.NoError(t, err)
-		fn, ok := spec.Services["TestService"].Functions["testMethod"]
-		require.True(t, ok)
-
-		got := uuidPathInArgs(fn, nil)
-		require.NotNil(t, got)
-		assert.Equal(t, []string{"firstUUID"}, stepNames(got),
-			"first annotated arg by position wins; later annotated args and "+
-				"annotations reachable through other args are silently ignored")
-	})
-
 	t.Run("ignoredAnnotationsResolveToNoPath", func(t *testing.T) {
 		spec, err := compile.Compile("internal/uuid_test/ignoredAnnotations.thrift")
 		require.NoError(t, err)
@@ -158,11 +145,6 @@ func TestUUIDPathInArgs(t *testing.T) {
 	})
 
 	t.Run("typedefOfStructArg", func(t *testing.T) {
-		// AliasedInner is `typedef Inner AliasedInner`. The walker
-		// must peel the typedef to descend into Inner's fields, and
-		// the step on AliasedInner must be flagged with a same-
-		// package cast through *Inner so the chain compiles
-		// (thriftrw emits GetID() only on *Inner).
 		spec, err := compile.Compile("internal/uuid_test/typedefStructArg.thrift")
 		require.NoError(t, err)
 		fn, ok := spec.Services["TestService"].Functions["testMethod"]
@@ -177,11 +159,6 @@ func TestUUIDPathInArgs(t *testing.T) {
 	})
 
 	t.Run("multiHopTypedefStructArg", func(t *testing.T) {
-		// DoubleAliasedInner is a two-hop typedef chain to Inner.
-		// Go allows converting any pointer type to *Inner as long
-		// as the underlying struct is the same, so a single cast to
-		// *Inner is sufficient regardless of how many typedefs sit
-		// on the chain.
 		spec, err := compile.Compile("internal/uuid_test/multiTypedefStructArg.thrift")
 		require.NoError(t, err)
 		fn, ok := spec.Services["TestService"].Functions["testMethod"]
@@ -196,11 +173,6 @@ func TestUUIDPathInArgs(t *testing.T) {
 	})
 
 	t.Run("typedefOfStringLeafThroughTypedefStructHop", func(t *testing.T) {
-		// AliasedInner wraps Inner; Inner.id is a typedef-of-string
-		// (ActorIdentifier) carrying the annotation. The walker
-		// must produce both transformations: a cast on the
-		// typedef-of-struct step, and IsTypedef=true so the
-		// template wraps the chain in string(...).
 		spec, err := compile.Compile("internal/uuid_test/typedefStringViaTypedefStruct.thrift")
 		require.NoError(t, err)
 		fn, ok := spec.Services["TestService"].Functions["testMethod"]
@@ -215,12 +187,6 @@ func TestUUIDPathInArgs(t *testing.T) {
 	})
 
 	t.Run("cycleThroughTypedefStillSurfacesSibling", func(t *testing.T) {
-		// CycleNode has a typedef-wrapped self-reference (`loop` of
-		// type AliasedNode = CycleNode), a direct self-reference
-		// (`direct`), and an annotated sibling (`id`). The walker
-		// keys its visited set on the resolved struct, so both
-		// cyclic fields are skipped regardless of typedef wrapping
-		// and `id` is reached through arg directly.
 		spec, err := compile.Compile("internal/uuid_test/cycleThroughTypedef.thrift")
 		require.NoError(t, err)
 		fn, ok := spec.Services["TestService"].Functions["testMethod"]
@@ -234,13 +200,6 @@ func TestUUIDPathInArgs(t *testing.T) {
 	})
 
 	t.Run("crossPackageTypedefOfStructEmitsQualifiedCast", func(t *testing.T) {
-		// AliasedCrossInner is `typedef crossPkgInner.CrossInner
-		// AliasedCrossInner` declared in crossPkgUuid.thrift; the
-		// resolved struct lives in a different .thrift file (and
-		// hence a different generated Go package). With a properly
-		// populated AllModules map, the walker must record both the
-		// cast type name (CrossInner) and the import path of the
-		// package that owns it.
 		spec, err := compile.Compile("internal/uuid_test/crossPkgUuid.thrift")
 		require.NoError(t, err)
 		fn, ok := spec.Services["TestService"].Functions["testMethod"]
@@ -250,10 +209,7 @@ func TestUUIDPathInArgs(t *testing.T) {
 			outerImportPath = "go.uber.org/yarpc/test/crosspkguuid"
 			innerImportPath = "go.uber.org/yarpc/test/crosspkginner"
 		)
-		// Synthesize an AllModules table keyed on the cleaned
-		// thrift file paths so castImportPath can resolve
-		// CrossInner's owning package even though the test does
-		// not run the full plugin.
+
 		innerSS, ok := spec.Includes["crossPkgInner"].Module.Types["CrossInner"].(*compile.StructSpec)
 		require.True(t, ok)
 		data := &moduleTemplateData{
@@ -272,13 +228,6 @@ func TestUUIDPathInArgs(t *testing.T) {
 	})
 
 	t.Run("crossPackageCastFallsBackToUnqualifiedWithoutModulesMap", func(t *testing.T) {
-		// Same fixture as above, but the test passes nil for the
-		// data argument (mirroring how methodHasActorUUIDArg and
-		// the other gating helpers call uuidPathInArgs without
-		// import-resolution context). The walker must still
-		// descend correctly and emit a same-package cast (no
-		// qualifier), since it has no way to know the cast target
-		// lives elsewhere.
 		spec, err := compile.Compile("internal/uuid_test/crossPkgUuid.thrift")
 		require.NoError(t, err)
 		fn, ok := spec.Services["TestService"].Functions["testMethod"]
@@ -288,6 +237,119 @@ func TestUUIDPathInArgs(t *testing.T) {
 		require.NotNil(t, got)
 		assert.Equal(t, []string{"arg", "crossUUID"}, stepNames(got))
 		assert.Equal(t, []string{"CrossInner", ""}, stepCasts(got))
+	})
+}
+
+// TestValidateUUIDArgs covers the per-function validator that the
+// plugin runs upfront in Generate before any code is emitted: it
+// must accept a missing function, a function with no annotations,
+// and a function with exactly one reachable annotation, and reject
+// a function whose args reach more than one annotated leaf — even
+// when one of those leaves sits on a struct that participates in a
+// cycle.
+func TestValidateUUIDArgs(t *testing.T) {
+	t.Run("nilFunction", func(t *testing.T) {
+		assert.NoError(t, validateUUIDArgs(nil))
+	})
+
+	t.Run("noAnnotationIsOK", func(t *testing.T) {
+		spec, err := compile.Compile("internal/tests/atomic.thrift")
+		require.NoError(t, err)
+		fn, ok := spec.Services["Store"].Functions["increment"]
+		require.True(t, ok)
+		assert.NoError(t, validateUUIDArgs(fn))
+	})
+
+	t.Run("singleAnnotationIsOK", func(t *testing.T) {
+		spec, err := compile.Compile("internal/uuid_test/serviceArg.thrift")
+		require.NoError(t, err)
+		fn, ok := spec.Services["TestService"].Functions["testMethod"]
+		require.True(t, ok)
+		assert.NoError(t, validateUUIDArgs(fn))
+	})
+
+	t.Run("multiplePathsToSameLeafErrors", func(t *testing.T) {
+		spec, err := compile.Compile("internal/uuid_test/twoPathsToSameLeaf.thrift")
+		require.NoError(t, err)
+		fn, ok := spec.Services["TestService"].Functions["testMethod"]
+		require.True(t, ok)
+
+		err = validateUUIDArgs(fn)
+		require.Error(t, err)
+		for _, want := range []string{"outer.first.id", "outer.second.id"} {
+			assert.Contains(t, err.Error(), want,
+				"both ambiguous paths must appear in the diagnostic so the user can pick which one to keep")
+		}
+	})
+
+	t.Run("multipleAnnotatedArgsErrors", func(t *testing.T) {
+		spec, err := compile.Compile("internal/uuid_test/multipleAnnotatedArgs.thrift")
+		require.NoError(t, err)
+		fn, ok := spec.Services["TestService"].Functions["testMethod"]
+		require.True(t, ok)
+
+		err = validateUUIDArgs(fn)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "auth.actor_uuid")
+		assert.Contains(t, err.Error(), `"testMethod"`,
+			"the offending method name must appear in the diagnostic so it points at the .thrift declaration")
+		for _, want := range []string{"firstUUID", "second.id", "thirdUUID"} {
+			assert.Contains(t, err.Error(), want,
+				"error message must list every reachable annotated path")
+		}
+	})
+
+	t.Run("multipleAnnotationsAcrossCycleErrors", func(t *testing.T) {
+		spec, err := compile.Compile("internal/uuid_test/multipleAnnotationsAcrossCycle.thrift")
+		require.NoError(t, err)
+		fn, ok := spec.Services["TestService"].Functions["testMethod"]
+		require.True(t, ok)
+
+		err = validateUUIDArgs(fn)
+		require.Error(t, err)
+		for _, want := range []string{"arg.idInsideCycle", "idOutside"} {
+			assert.Contains(t, err.Error(), want,
+				"annotation reachable inside a cycle must still be reported alongside its non-cyclic sibling")
+		}
+	})
+}
+
+// TestValidateUUIDArgsInModule covers the module-level wrapper used
+// by the plugin's Generate entry point: it walks every service and
+// every function in the compiled module and surfaces the first
+// multi-annotation error in deterministic order (services and
+// methods are scanned in alphabetical Thrift-name order, which
+// matters because ThriftRW exposes them as Go maps with randomised
+// iteration).
+func TestValidateUUIDArgsInModule(t *testing.T) {
+	t.Run("nilModule", func(t *testing.T) {
+		assert.NoError(t, validateUUIDArgsInModule(nil))
+	})
+
+	t.Run("cleanModuleWithNoAnnotations", func(t *testing.T) {
+		mod, err := compile.Compile("internal/tests/atomic.thrift")
+		require.NoError(t, err)
+		assert.NoError(t, validateUUIDArgsInModule(mod))
+	})
+
+	t.Run("cleanModuleWithSingleAnnotationsPerMethod", func(t *testing.T) {
+		// WITHSERVICES.thrift has many methods, each with at most
+		// one reachable annotation. The module-level walker must
+		// accept all of them as a group.
+		mod, err := compile.Compile("internal/tests/WITHSERVICES.thrift")
+		require.NoError(t, err)
+		assert.NoError(t, validateUUIDArgsInModule(mod))
+	})
+
+	t.Run("multipleAnnotatedMethodErrorsWithServiceAndMethodNamed", func(t *testing.T) {
+		mod, err := compile.Compile("internal/uuid_test/multipleAnnotatedArgs.thrift")
+		require.NoError(t, err)
+		err = validateUUIDArgsInModule(mod)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `"TestService"`,
+			"the wrapper must name the offending service so the user can locate it in a multi-service file")
+		assert.Contains(t, err.Error(), `"testMethod"`,
+			"the wrapped per-function error must still name the method")
 	})
 }
 
@@ -438,10 +500,6 @@ func TestGetGeneratedUUID(t *testing.T) {
 		assert.Equal(t, "", st.ActorUUID())
 	})
 	t.Run("typedef-of-struct arg casts through underlying struct", func(t *testing.T) {
-		// Verifies the (*Inner)(...) cast emitted in the chain:
-		// thriftrw's GetTopLevel returns *AliasedInner, which has
-		// no GetInnerUUID; the cast is what makes the chain
-		// compile and surface the UUID.
 		val := withservices.AliasedInner{InnerUUID: ptr.String("typedef-uuid")}
 		st := withservices.TestService_TestTypedefStructMethod_Args{TopLevel: &val}
 		assert.Equal(t, "typedef-uuid", st.ActorUUID())
@@ -451,11 +509,6 @@ func TestGetGeneratedUUID(t *testing.T) {
 		assert.Equal(t, "", st.ActorUUID())
 	})
 	t.Run("nested typedef-of-struct chain casts at the typedef hop only", func(t *testing.T) {
-		// OuterWithAlias has both AliasedInner and DoubleAliasedInner
-		// fields; the walker picks the first reachable annotation
-		// (AliasedInner) and the cast wraps that one step. The
-		// outer struct itself is bare (not a typedef), so its hop
-		// emits no cast.
 		val := withservices.AliasedInner{InnerUUID: ptr.String("nested-typedef-uuid")}
 		st := withservices.TestService_TestNestedTypedefStructMethod_Args{
 			Outer: &withservices.OuterWithAlias{Inner: &val},
@@ -469,13 +522,6 @@ func TestGetGeneratedUUID(t *testing.T) {
 		assert.Equal(t, "", st.ActorUUID())
 	})
 	t.Run("two-hop typedef arg uses a single direct cast", func(t *testing.T) {
-		// The arg's static type is DoubleAliasedInner, a two-hop
-		// typedef chain to Inner. The generated chain is
-		// (*Inner)(t.GetArg()).GetInnerUUID() — a single
-		// pointer-conversion that jumps over the AliasedInner
-		// intermediate. This proves multi-hop typedef chains do
-		// not need per-hop information at codegen time: the cast
-		// target is always the resolved underlying struct.
 		val := withservices.DoubleAliasedInner(withservices.AliasedInner{
 			InnerUUID: ptr.String("two-hop-uuid"),
 		})

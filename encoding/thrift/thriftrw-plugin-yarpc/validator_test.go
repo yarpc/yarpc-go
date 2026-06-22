@@ -37,6 +37,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/random_pkg/shared"
 	withservices "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES/testserviceserver"
 )
@@ -110,6 +111,18 @@ func (s *testServiceImpl) TestTypedefStructMethod(
 	s.gotCtx = ctx
 	if topLevel != nil && topLevel.InnerUUID != nil {
 		s.gotUUID = *topLevel.InnerUUID
+	}
+	return "ok", nil
+}
+
+func (s *testServiceImpl) TestImportedTypedef(
+	ctx context.Context,
+	req *shared.GlobalRequestActorUUID,
+) (string, error) {
+	s.called = true
+	s.gotCtx = ctx
+	if req != nil {
+		s.gotUUID = string(*req)
 	}
 	return "ok", nil
 }

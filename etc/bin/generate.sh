@@ -117,12 +117,18 @@ generate_with_thriftrw() {
   thriftrw --pkg-prefix=go.uber.org/yarpc/encoding/thrift --out=encoding/thrift encoding/thrift/internal.thrift
   thriftrw --pkg-prefix=go.uber.org/yarpc/serialize --out=serialize serialize/internal.thrift
 
-  thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends.thrift
-  thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common.thrift
-  thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic.thrift
-  thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/NOSERVICES.thrift
-  thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES.thrift
-  thriftrw --no-recurse --plugin="yarpc --sanitize-tchannel" --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather.thrift
+  # The thriftrw-plugin-yarpc fixtures live under internal/tests/ but
+  # WITHSERVICES.thrift includes ../random_pkg/shared.thrift, which sits
+  # outside internal/tests/. thriftrw refuses to resolve includes that
+  # leave --thrift-root, so we set the root one level up at internal/
+  # and keep --pkg-prefix in sync.
+  thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal --thrift-root=encoding/thrift/thriftrw-plugin-yarpc/internal --out=encoding/thrift/thriftrw-plugin-yarpc/internal encoding/thrift/thriftrw-plugin-yarpc/internal/tests/extends.thrift
+  thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal --thrift-root=encoding/thrift/thriftrw-plugin-yarpc/internal --out=encoding/thrift/thriftrw-plugin-yarpc/internal encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common.thrift
+  thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal --thrift-root=encoding/thrift/thriftrw-plugin-yarpc/internal --out=encoding/thrift/thriftrw-plugin-yarpc/internal encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic.thrift
+  thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal --thrift-root=encoding/thrift/thriftrw-plugin-yarpc/internal --out=encoding/thrift/thriftrw-plugin-yarpc/internal encoding/thrift/thriftrw-plugin-yarpc/internal/tests/NOSERVICES.thrift
+  thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal --thrift-root=encoding/thrift/thriftrw-plugin-yarpc/internal --out=encoding/thrift/thriftrw-plugin-yarpc/internal encoding/thrift/thriftrw-plugin-yarpc/internal/tests/WITHSERVICES.thrift
+  thriftrw --no-recurse --plugin="yarpc --sanitize-tchannel" --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal --thrift-root=encoding/thrift/thriftrw-plugin-yarpc/internal --out=encoding/thrift/thriftrw-plugin-yarpc/internal encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather.thrift
+  thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal --thrift-root=encoding/thrift/thriftrw-plugin-yarpc/internal --out=encoding/thrift/thriftrw-plugin-yarpc/internal encoding/thrift/thriftrw-plugin-yarpc/internal/random_pkg/shared.thrift
   thriftrw --no-recurse --plugin=yarpc --pkg-prefix=go.uber.org/yarpc/encoding/thrift/internal/observabilitytest --out=encoding/thrift/internal/observabilitytest encoding/thrift/internal/observabilitytest/test.thrift
 }
 

@@ -23,6 +23,7 @@ package main
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -131,45 +132,55 @@ type uuidPath struct {
 	IsTypedef bool
 }
 
-// findUUIDPath walks the given fields depth-first and returns the
-// path to the first reachable auth.actor_uuid annotation.
+// findUUIDPath walks the given fields depth-first and returns every
+// reachable auth.actor_uuid-annotated leaf path. The returned slice
+// is empty when no valid annotation is reachable. Cycles are still
+// pruned via the visited set keyed on resolved structs (so the walk
+// terminates), but every annotated field on a struct is observed the
+// first time the walker descends into it — including struct fields
+// that also participate in a cycle through some other parent.
 //
-// Returns nil if no valid annotation is reachable. data is used only
-// to derive the Go import path of a struct reached through a
-// typedef hop in another included Thrift file (so the rendered cast
-// can qualify the type with the right package alias); it may be nil
-// in tests, in which case cross-package casts fall back to
-// unqualified type names.
-func findUUIDPath(fields compile.FieldGroup, data *moduleTemplateData) *uuidPath {
+// Callers that want a single path call the convenience wrapper
+// uuidPathInArgs (which returns paths[0]); callers that need to
+// enforce the "at most one annotation per method" rule call
+// validateUUIDArgs.
+//
+// data is used only to derive the Go import path of a struct
+// reached through a typedef hop in another included Thrift file (so
+// the rendered cast can qualify the type with the right package
+// alias); it may be nil in tests, in which case cross-package casts
+// fall back to unqualified type names.
+func findUUIDPath(fields compile.FieldGroup, data *moduleTemplateData) []*uuidPath {
 	return walkForUUID(fields, data, make(map[*compile.StructSpec]bool))
 }
 
-func walkForUUID(fields compile.FieldGroup, data *moduleTemplateData, visited map[*compile.StructSpec]bool) *uuidPath {
+func walkForUUID(fields compile.FieldGroup, data *moduleTemplateData, visited map[*compile.StructSpec]bool) []*uuidPath {
+	var out []*uuidPath
 	for _, f := range fields {
 		if leaf := matchUUIDLeaf(f); leaf != nil {
-			return leaf
+			out = append(out, leaf)
+			continue
 		}
 		inner, needsCast := resolveStructType(f.Type)
 		if inner == nil || visited[inner] {
 			continue
 		}
 		visited[inner] = true
-		sub := walkForUUID(inner.Fields, data, visited)
+		subs := walkForUUID(inner.Fields, data, visited)
 		delete(visited, inner)
-		if sub == nil {
-			continue
-		}
 		step := uuidPathStep{Field: f}
 		if needsCast {
 			step.CastTypeName = goCase(inner.Name)
 			step.CastImportPath = castImportPath(inner, data)
 		}
-		return &uuidPath{
-			Steps:     append([]uuidPathStep{step}, sub.Steps...),
-			IsTypedef: sub.IsTypedef,
+		for _, sub := range subs {
+			out = append(out, &uuidPath{
+				Steps:     append([]uuidPathStep{step}, sub.Steps...),
+				IsTypedef: sub.IsTypedef,
+			})
 		}
 	}
-	return nil
+	return out
 }
 
 // resolveStructType peels typedef chains to expose the underlying
@@ -234,13 +245,91 @@ func matchUUIDLeaf(f *compile.FieldSpec) *uuidPath {
 
 // uuidPathInArgs is the template-facing entry point for service
 // methods. It returns the path from the synthetic
-// Service_Method_Args struct to its first reachable annotated field,
-// or nil if no method argument leads to one.
+// Service_Method_Args struct to the first reachable annotated leaf,
+// or nil if no method argument leads to one. Callers must have
+// already run validateUUIDArgs on the function (the plugin does so
+// upfront in Generate, so by the time templates run there is at
+// most one path per method).
 func uuidPathInArgs(fn *compile.FunctionSpec, data *moduleTemplateData) *uuidPath {
 	if fn == nil {
 		return nil
 	}
-	return findUUIDPath(compile.FieldGroup(fn.ArgsSpec), data)
+	paths := findUUIDPath(compile.FieldGroup(fn.ArgsSpec), data)
+	if len(paths) == 0 {
+		return nil
+	}
+	return paths[0]
+}
+
+// validateUUIDArgs returns a non-nil error when fn has more than one
+// path from its args to an auth.actor_uuid-annotated field. Each
+// distinct path is its own offence: two paths that resolve to the
+// same FieldSpec leaf are still ambiguous because they live on
+// different runtime fields, the generated ActorUUID() accessor only
+// walks one of them, and the value carried on the unwalked field
+// would silently fail to reach the validator. Annotations that sit
+// on structs participating in a cycle are still counted, because
+// each struct's fields are scanned the first time the walker enters
+// it.
+func validateUUIDArgs(fn *compile.FunctionSpec) error {
+	if fn == nil {
+		return nil
+	}
+	paths := findUUIDPath(compile.FieldGroup(fn.ArgsSpec), nil)
+	if len(paths) <= 1 {
+		return nil
+	}
+	names := make([]string, 0, len(paths))
+	for _, p := range paths {
+		if len(p.Steps) == 0 {
+			continue
+		}
+		stepNames := make([]string, 0, len(p.Steps))
+		for _, s := range p.Steps {
+			stepNames = append(stepNames, s.Field.Name)
+		}
+		names = append(names, strings.Join(stepNames, "."))
+	}
+	if len(names) <= 1 {
+		return nil
+	}
+	return fmt.Errorf(
+		"method %q has %d %s-annotated paths reachable from its args, but only one is allowed per method (found: %s)",
+		fn.Name, len(names), _UUIDAnnotationKey, strings.Join(names, ", "),
+	)
+}
+
+// validateUUIDArgsInModule runs validateUUIDArgs over every method
+// of every service defined in the given compiled module. It returns
+// the first error encountered, scanning services and methods in
+// deterministic (sorted) order so the diagnostic is stable across
+// runs.
+func validateUUIDArgsInModule(mod *compile.Module) error {
+	if mod == nil {
+		return nil
+	}
+	svcNames := make([]string, 0, len(mod.Services))
+	for name := range mod.Services {
+		svcNames = append(svcNames, name)
+	}
+	sort.Strings(svcNames)
+	for _, name := range svcNames {
+		svc := mod.Services[name]
+		if svc == nil {
+			continue
+		}
+		fnNames := make([]string, 0, len(svc.Functions))
+		for n := range svc.Functions {
+			fnNames = append(fnNames, n)
+		}
+		sort.Strings(fnNames)
+		for _, fnName := range fnNames {
+			if err := validateUUIDArgs(svc.Functions[fnName]); err != nil {
+				return fmt.Errorf("service %q: %w", svc.Name, err)
+			}
+		}
+	}
+	return nil
 }
 
 // methodHasActorUUIDArg reports whether the given thriftrw plugin-API
