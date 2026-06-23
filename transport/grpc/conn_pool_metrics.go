@@ -21,16 +21,25 @@
 package grpc
 
 import (
+	"sync"
+
 	"go.uber.org/net/metrics"
 	"go.uber.org/zap"
 )
 
 // Tags for the connection pool metrics.
+//
+// Note: connection pool metrics are intentionally NOT tagged by peer. Tagging
+// by peer (host:port) is unbounded and dynamic — large fleets and peer churn
+// (e.g. rescheduled pods) would explode metric cardinality, inflate TSDB cost,
+// and risk the aggregation tier rate-limiting or dropping the emitter. The
+// gauges below instead hold the aggregate across all of a transport's peers,
+// and the counters accumulate pool-wide scaling events, which is sufficient to
+// tell whether dynamic scaling is behaving correctly at the service level.
 const (
 	_componentTag = "component"
 	_serviceTag   = "service"
 	_transportTag = "transport"
-	_peerTag      = "peer"
 )
 
 // Tag values for the connection pool metrics.
@@ -44,10 +53,12 @@ type connPoolMetricsParams struct {
 	Meter       *metrics.Scope
 	Logger      *zap.Logger
 	ServiceName string
-	Peer        string
 }
 
-// connPoolMetrics holds metric handles for the gRPC connection pool.
+// connPoolMetrics holds metric handles for the gRPC connection pool. A single
+// instance is shared by all peers of a transport. Gauges hold the aggregate
+// connection counts across peers (each peer applies deltas via a
+// peerPoolReporter) and counters accumulate pool-wide scaling events.
 type connPoolMetrics struct {
 	// connectionCount is the number of active connections accepting new streams.
 	connectionCount *metrics.Gauge
@@ -66,7 +77,7 @@ type connPoolMetrics struct {
 	idleReactivationTotal *metrics.Counter
 }
 
-// newConnPoolMetrics creates metric handles scoped to the given peer address.
+// newConnPoolMetrics creates the transport-wide connection pool metric handles.
 func newConnPoolMetrics(p connPoolMetricsParams) *connPoolMetrics {
 	m := &connPoolMetrics{}
 	if p.Meter == nil {
@@ -77,13 +88,12 @@ func newConnPoolMetrics(p connPoolMetricsParams) *connPoolMetrics {
 		_componentTag: _componentTagValueYarpc,
 		_serviceTag:   p.ServiceName,
 		_transportTag: _transportTagValueGrpc,
-		_peerTag:      p.Peer,
 	}
 
 	var err error
 	m.connectionCount, err = p.Meter.Gauge(metrics.Spec{
 		Name:      "conn_pool_active_connections",
-		Help:      "Number of active connections accepting new streams for this peer.",
+		Help:      "Number of active connections accepting new streams, aggregated across all peers.",
 		ConstTags: tags,
 	})
 	if err != nil {
@@ -92,7 +102,7 @@ func newConnPoolMetrics(p connPoolMetricsParams) *connPoolMetrics {
 
 	m.drainingConnectionCount, err = p.Meter.Gauge(metrics.Spec{
 		Name:      "conn_pool_draining_connections",
-		Help:      "Number of connections draining in-flight streams for this peer.",
+		Help:      "Number of connections draining in-flight streams, aggregated across all peers.",
 		ConstTags: tags,
 	})
 	if err != nil {
@@ -101,7 +111,7 @@ func newConnPoolMetrics(p connPoolMetricsParams) *connPoolMetrics {
 
 	m.idleConnectionCount, err = p.Meter.Gauge(metrics.Spec{
 		Name:      "conn_pool_idle_connections",
-		Help:      "Number of idle connections waiting for timeout before closing for this peer.",
+		Help:      "Number of idle connections waiting for timeout before closing, aggregated across all peers.",
 		ConstTags: tags,
 	})
 	if err != nil {
@@ -110,7 +120,7 @@ func newConnPoolMetrics(p connPoolMetricsParams) *connPoolMetrics {
 
 	m.scaleUpTotal, err = p.Meter.Counter(metrics.Spec{
 		Name:      "conn_pool_scale_up_total",
-		Help:      "Total number of times the pool opened a new connection for this peer.",
+		Help:      "Total number of times the pool opened a new connection, aggregated across all peers.",
 		ConstTags: tags,
 	})
 	if err != nil {
@@ -119,7 +129,7 @@ func newConnPoolMetrics(p connPoolMetricsParams) *connPoolMetrics {
 
 	m.scaleDownTotal, err = p.Meter.Counter(metrics.Spec{
 		Name:      "conn_pool_scale_down_total",
-		Help:      "Total number of times the pool marked a connection for draining for this peer.",
+		Help:      "Total number of times the pool marked a connection for draining, aggregated across all peers.",
 		ConstTags: tags,
 	})
 	if err != nil {
@@ -128,7 +138,7 @@ func newConnPoolMetrics(p connPoolMetricsParams) *connPoolMetrics {
 
 	m.idleReactivationTotal, err = p.Meter.Counter(metrics.Spec{
 		Name:      "conn_pool_idle_reactivation_total",
-		Help:      "Total number of times an idle connection was reactivated instead of opening a new one.",
+		Help:      "Total number of times an idle connection was reactivated instead of opening a new one, aggregated across all peers.",
 		ConstTags: tags,
 	})
 	if err != nil {
@@ -138,25 +148,28 @@ func newConnPoolMetrics(p connPoolMetricsParams) *connPoolMetrics {
 	return m
 }
 
-func (m *connPoolMetrics) setConnectionCount(n int64) {
-	if m == nil || m.connectionCount == nil {
+// addConnectionCount applies a delta to the aggregate active-connections gauge.
+func (m *connPoolMetrics) addConnectionCount(delta int64) {
+	if m == nil || m.connectionCount == nil || delta == 0 {
 		return
 	}
-	m.connectionCount.Store(n)
+	m.connectionCount.Add(delta)
 }
 
-func (m *connPoolMetrics) setDrainingConnectionCount(n int64) {
-	if m == nil || m.drainingConnectionCount == nil {
+// addDrainingConnectionCount applies a delta to the aggregate draining gauge.
+func (m *connPoolMetrics) addDrainingConnectionCount(delta int64) {
+	if m == nil || m.drainingConnectionCount == nil || delta == 0 {
 		return
 	}
-	m.drainingConnectionCount.Store(n)
+	m.drainingConnectionCount.Add(delta)
 }
 
-func (m *connPoolMetrics) setIdleConnectionCount(n int64) {
-	if m == nil || m.idleConnectionCount == nil {
+// addIdleConnectionCount applies a delta to the aggregate idle gauge.
+func (m *connPoolMetrics) addIdleConnectionCount(delta int64) {
+	if m == nil || m.idleConnectionCount == nil || delta == 0 {
 		return
 	}
-	m.idleConnectionCount.Store(n)
+	m.idleConnectionCount.Add(delta)
 }
 
 func (m *connPoolMetrics) incScaleUp() {
@@ -178,4 +191,70 @@ func (m *connPoolMetrics) incIdleReactivation() {
 		return
 	}
 	m.idleReactivationTotal.Inc()
+}
+
+// peerPoolReporter applies a single peer's connection-state counts to the
+// shared, transport-wide gauges. Because the gauges are not tagged by peer,
+// every peer contributes to the same series; this reporter tracks the values it
+// last published and applies the difference so the gauges always reflect the
+// sum across all peers. Deltas telescope, so a peer's contribution naturally
+// returns to zero as its connections are removed during teardown — no explicit
+// cleanup is required. Counter events are pool-wide and forwarded directly.
+type peerPoolReporter struct {
+	shared *connPoolMetrics
+
+	mu           sync.Mutex
+	lastActive   int64
+	lastDraining int64
+	lastIdle     int64
+}
+
+// newPeerPoolReporter creates a reporter that feeds the shared transport metrics.
+func newPeerPoolReporter(shared *connPoolMetrics) *peerPoolReporter {
+	return &peerPoolReporter{shared: shared}
+}
+
+// setCounts publishes this peer's current active/draining/idle connection
+// counts, applying the difference from the previously reported values to the
+// shared aggregate gauges. Safe for concurrent use.
+func (r *peerPoolReporter) setCounts(active, draining, idle int64) {
+	if r == nil {
+		return
+	}
+	// Compute deltas under the lock so concurrent callers for the same peer
+	// chain their updates consistently. The gauge writes themselves are atomic
+	// and commutative, so they can happen outside the lock.
+	r.mu.Lock()
+	dActive := active - r.lastActive
+	dDraining := draining - r.lastDraining
+	dIdle := idle - r.lastIdle
+	r.lastActive = active
+	r.lastDraining = draining
+	r.lastIdle = idle
+	r.mu.Unlock()
+
+	r.shared.addConnectionCount(dActive)
+	r.shared.addDrainingConnectionCount(dDraining)
+	r.shared.addIdleConnectionCount(dIdle)
+}
+
+func (r *peerPoolReporter) incScaleUp() {
+	if r == nil {
+		return
+	}
+	r.shared.incScaleUp()
+}
+
+func (r *peerPoolReporter) incScaleDown() {
+	if r == nil {
+		return
+	}
+	r.shared.incScaleDown()
+}
+
+func (r *peerPoolReporter) incIdleReactivation() {
+	if r == nil {
+		return
+	}
+	r.shared.incIdleReactivation()
 }

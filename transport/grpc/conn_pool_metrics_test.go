@@ -36,7 +36,6 @@ func testMetricsParams(scope *metrics.Scope) connPoolMetricsParams {
 		Meter:       scope,
 		Logger:      zap.NewNop(),
 		ServiceName: "test-svc",
-		Peer:        "10.0.0.1:8080",
 	}
 }
 
@@ -54,9 +53,10 @@ func TestNewConnPoolMetrics_NilScope(t *testing.T) {
 		m.incScaleUp()
 		m.incScaleDown()
 		m.incIdleReactivation()
-		m.setConnectionCount(5)
-		m.setDrainingConnectionCount(3)
-		m.setIdleConnectionCount(1)
+		m.addConnectionCount(5)
+		m.addDrainingConnectionCount(3)
+		m.addIdleConnectionCount(1)
+		newPeerPoolReporter(m).setCounts(5, 3, 1)
 	})
 }
 
@@ -97,10 +97,9 @@ func TestConnPoolMetrics_CounterIncrements(t *testing.T) {
 func TestConnPoolMetrics_GaugeValues(t *testing.T) {
 	root := metrics.New()
 	m := newConnPoolMetrics(testMetricsParams(root.Scope()))
+	r := newPeerPoolReporter(m)
 
-	m.setConnectionCount(5)
-	m.setDrainingConnectionCount(2)
-	m.setIdleConnectionCount(1)
+	r.setCounts(5, 2, 1)
 
 	snap := root.Snapshot()
 	gaugesByName := make(map[string]int64)
@@ -112,9 +111,9 @@ func TestConnPoolMetrics_GaugeValues(t *testing.T) {
 	assert.Equal(t, int64(2), gaugesByName["conn_pool_draining_connections"])
 	assert.Equal(t, int64(1), gaugesByName["conn_pool_idle_connections"])
 
-	m.setConnectionCount(10)
-	m.setDrainingConnectionCount(0)
-	m.setIdleConnectionCount(3)
+	// Re-publishing new counts for the same peer applies deltas so the gauge
+	// tracks the latest value rather than accumulating.
+	r.setCounts(10, 0, 3)
 
 	snap = root.Snapshot()
 	gaugesByName = make(map[string]int64)
@@ -127,19 +126,54 @@ func TestConnPoolMetrics_GaugeValues(t *testing.T) {
 	assert.Equal(t, int64(3), gaugesByName["conn_pool_idle_connections"])
 }
 
+// TestPeerPoolReporter_AggregatesAcrossPeers verifies that multiple peers
+// sharing one connPoolMetrics contribute to the same gauges (sum across peers)
+// and that a peer's contribution returns to zero as its connections are removed
+// during teardown.
+func TestPeerPoolReporter_AggregatesAcrossPeers(t *testing.T) {
+	root := metrics.New()
+	m := newConnPoolMetrics(testMetricsParams(root.Scope()))
+
+	peerA := newPeerPoolReporter(m)
+	peerB := newPeerPoolReporter(m)
+
+	peerA.setCounts(3, 1, 0)
+	peerB.setCounts(2, 0, 2)
+
+	gauges := func() map[string]int64 {
+		out := make(map[string]int64)
+		for _, g := range root.Snapshot().Gauges {
+			out[g.Name] = g.Value
+		}
+		return out
+	}
+
+	g := gauges()
+	assert.Equal(t, int64(5), g["conn_pool_active_connections"], "active should sum across peers")
+	assert.Equal(t, int64(1), g["conn_pool_draining_connections"])
+	assert.Equal(t, int64(2), g["conn_pool_idle_connections"])
+
+	// Peer A tears down (all connections removed): its contribution must drop
+	// out of the aggregate, leaving only peer B's counts.
+	peerA.setCounts(0, 0, 0)
+
+	g = gauges()
+	assert.Equal(t, int64(2), g["conn_pool_active_connections"])
+	assert.Equal(t, int64(0), g["conn_pool_draining_connections"])
+	assert.Equal(t, int64(2), g["conn_pool_idle_connections"])
+}
+
 func TestConnPoolMetrics_Tags(t *testing.T) {
 	root := metrics.New()
 	m := newConnPoolMetrics(testMetricsParams(root.Scope()))
 
 	m.incScaleUp()
-	m.setConnectionCount(1)
+	m.addConnectionCount(1)
 
 	wantTags := map[string]string{
 		"component": "yarpc",
 		"service":   "test-svc",
 		"transport": "grpc",
-		// The metrics library sanitizes colons to underscores in tag values.
-		"peer": "10.0.0.1_8080",
 	}
 
 	snap := root.Snapshot()
@@ -147,11 +181,15 @@ func TestConnPoolMetrics_Tags(t *testing.T) {
 		for k, v := range wantTags {
 			assert.Equal(t, v, c.Tags[k], "counter %s: tag %q", c.Name, k)
 		}
+		_, hasPeer := c.Tags["peer"]
+		assert.False(t, hasPeer, "counter %s must not carry a peer tag", c.Name)
 	}
 	for _, g := range snap.Gauges {
 		for k, v := range wantTags {
 			assert.Equal(t, v, g.Tags[k], "gauge %s: tag %q", g.Name, k)
 		}
+		_, hasPeer := g.Tags["peer"]
+		assert.False(t, hasPeer, "gauge %s must not carry a peer tag", g.Name)
 	}
 }
 
@@ -171,9 +209,9 @@ func TestConnPoolMetrics_ConcurrentAccess(t *testing.T) {
 				m.incScaleUp()
 				m.incScaleDown()
 				m.incIdleReactivation()
-				m.setConnectionCount(int64(j))
-				m.setDrainingConnectionCount(int64(j))
-				m.setIdleConnectionCount(int64(j))
+				m.addConnectionCount(int64(j))
+				m.addDrainingConnectionCount(int64(j))
+				m.addIdleConnectionCount(int64(j))
 			}
 		}()
 	}
@@ -200,7 +238,6 @@ func TestNewConnPoolMetrics_LogsRegistrationErrors(t *testing.T) {
 		Meter:       scope,
 		Logger:      logger,
 		ServiceName: "test-svc",
-		Peer:        "10.0.0.1:8080",
 	}
 
 	// Register the same metrics twice on the same scope+tags to trigger
@@ -219,8 +256,16 @@ func TestConnPoolMetrics_NilReceiver(t *testing.T) {
 		m.incScaleUp()
 		m.incScaleDown()
 		m.incIdleReactivation()
-		m.setConnectionCount(5)
-		m.setDrainingConnectionCount(3)
-		m.setIdleConnectionCount(1)
+		m.addConnectionCount(5)
+		m.addDrainingConnectionCount(3)
+		m.addIdleConnectionCount(1)
+	})
+
+	var r *peerPoolReporter
+	assert.NotPanics(t, func() {
+		r.setCounts(5, 3, 1)
+		r.incScaleUp()
+		r.incScaleDown()
+		r.incIdleReactivation()
 	})
 }
