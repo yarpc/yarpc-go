@@ -62,8 +62,8 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "shared",
 	Package:  "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/random_pkg/shared",
 	FilePath: "random_pkg/shared.thrift",
-	SHA1:     "f3ba06f51147f36295cc6c2fa3498ab21a59b0a0",
+	SHA1:     "233bda35959893e0e23cba1fdfd85f13c79e558b",
 	Raw:      rawIDL,
 }
 
-const rawIDL = "// GlobalRequestActorUUID is used to be imported in WITHSERVICES.thrift\ntypedef string GlobalRequestActorUUID"
+const rawIDL = "// GlobalRequestActorUUID is used to be imported in WITHSERVICES.thrift\ntypedef string GlobalRequestActorUUID\n"
