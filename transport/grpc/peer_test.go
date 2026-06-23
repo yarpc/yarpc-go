@@ -517,12 +517,11 @@ func TestMonitorConnWrapperMetrics(t *testing.T) {
 
 	root := metrics.New()
 	p := peerForPool(t)
-	p.metrics = newConnPoolMetrics(connPoolMetricsParams{
+	p.metrics = newPeerPoolReporter(newConnPoolMetrics(connPoolMetricsParams{
 		Meter:       root.Scope(),
 		Logger:      zap.NewNop(),
 		ServiceName: "test-svc",
-		Peer:        p.Peer.Identifier(),
-	})
+	}))
 
 	cc := dialTestClientConn(t)
 	w := newConnWrapper(p.ctx, cc)

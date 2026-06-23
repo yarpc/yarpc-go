@@ -664,12 +664,11 @@ func peerWithMetrics(t *testing.T) (*grpcPeer, *metrics.Root) {
 	t.Helper()
 	root := metrics.New()
 	p := peerForPool(t)
-	p.metrics = newConnPoolMetrics(connPoolMetricsParams{
+	p.metrics = newPeerPoolReporter(newConnPoolMetrics(connPoolMetricsParams{
 		Meter:       root.Scope(),
 		Logger:      zap.NewNop(),
 		ServiceName: "test-svc",
-		Peer:        p.Peer.Identifier(),
-	})
+	}))
 	return p, root
 }
 
