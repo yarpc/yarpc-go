@@ -123,9 +123,17 @@ func (p *grpcPeer) maybeScaleDown() {
 		return
 	}
 
-	p.t.options.logger.Debug("grpc: marked connection for draining during scale-down",
+	// Logged at Info so pool scaling can be debugged from logs: connection pool
+	// metrics are aggregated across peers (not tagged by peer), so the per-peer
+	// detail lives here instead. Logs can safely carry the peer without the
+	// cardinality concerns that affect metrics.
+	p.t.options.logger.Info("grpc: scaling down connection pool; marked connection for draining",
 		zap.String("peer", p.HostPort()),
-		zap.Int32("stream_count", mostLoaded.getStreamCount()))
+		zap.Int("active_connections_before", len(active)),
+		zap.Int("active_connections_after", len(active)-1),
+		zap.Int32("total_streams", totalStreams),
+		zap.Int32("drained_conn_stream_count", mostLoaded.getStreamCount()),
+		zap.Int32("scale_down_threshold", scaleDownThreshold))
 	p.metrics.incScaleDown()
 	p.refreshPoolMetrics()
 }
@@ -178,9 +186,12 @@ func (p *grpcPeer) cleanupIdleConns() {
 		if !c.transitionState(connStateIdle, connStateClosing) {
 			continue
 		}
-		p.t.options.logger.Debug("grpc: closing idle connection after timeout",
+		// Info: closing an idle connection shrinks the pool, so surface it in
+		// logs for scaling debuggability (metrics are not tagged by peer).
+		p.t.options.logger.Info("grpc: scaling down connection pool; closing idle connection after timeout",
 			zap.String("peer", p.HostPort()),
-			zap.Duration("idle_duration", now.Sub(c.idleSince())))
+			zap.Duration("idle_duration", now.Sub(c.idleSince())),
+			zap.Int32("total_connections", p.connCount.Load()))
 		// Cancelling the wrapper context causes monitorConnWrapper to
 		// exit, which closes the underlying clientConn and removes the
 		// wrapper from the pool via removeConn.
@@ -224,8 +235,13 @@ func (p *grpcPeer) tryScaleUp(leastLoadedConn *grpcClientConnWrapper) {
 
 		// Prefer reactivating an idle connection over dialing a new one.
 		if p.reactivateIdleConn() {
-			p.t.options.logger.Debug("grpc: reactivated idle connection during scale-up",
-				zap.String("peer", p.HostPort()))
+			// Logged at Info so pool scaling is debuggable from logs (metrics
+			// are aggregated across peers and not tagged by peer).
+			p.t.options.logger.Info("grpc: scaling up connection pool; reactivated idle connection",
+				zap.String("peer", p.HostPort()),
+				zap.Int32("active_conn_stream_count", leastLoadedConn.getStreamCount()),
+				zap.Int32("scale_up_threshold", threshold),
+				zap.Int32("total_connections", p.connCount.Load()))
 			p.metrics.incIdleReactivation()
 			p.refreshPoolMetrics()
 			return
@@ -234,6 +250,10 @@ func (p *grpcPeer) tryScaleUp(leastLoadedConn *grpcClientConnWrapper) {
 		// No idle connection available; dial a new one if below the cap.
 		// connCount is maintained atomically — no mutex needed for this check.
 		if int(p.connCount.Load()) >= p.poolCfg.maxConnections {
+			p.t.options.logger.Info("grpc: cannot scale up connection pool; at max connections",
+				zap.String("peer", p.HostPort()),
+				zap.Int32("total_connections", p.connCount.Load()),
+				zap.Int("max_connections", p.poolCfg.maxConnections))
 			return
 		}
 
@@ -242,8 +262,13 @@ func (p *grpcPeer) tryScaleUp(leastLoadedConn *grpcClientConnWrapper) {
 				zap.String("peer", p.HostPort()),
 				zap.Error(err))
 		} else {
-			p.t.options.logger.Debug("grpc: scaled up connection pool",
-				zap.String("peer", p.HostPort()))
+			// Logged at Info so pool scaling is debuggable from logs (metrics
+			// are aggregated across peers and not tagged by peer).
+			p.t.options.logger.Info("grpc: scaling up connection pool; opened new connection",
+				zap.String("peer", p.HostPort()),
+				zap.Int32("active_conn_stream_count", leastLoadedConn.getStreamCount()),
+				zap.Int32("scale_up_threshold", threshold),
+				zap.Int32("total_connections", p.connCount.Load()))
 			p.metrics.incScaleUp()
 		}
 	}()
@@ -287,7 +312,7 @@ func (p *grpcPeer) reactivateIdleConn() bool {
 }
 
 // refreshPoolMetrics scans the pool and updates the active, draining, and idle
-// connection gauges.  Lock-free: reads an immutable snapshot via loadConns().
+// connection gauges.
 func (p *grpcPeer) refreshPoolMetrics() {
 	conns := p.loadConns()
 	var active, draining, idle int64
@@ -301,7 +326,5 @@ func (p *grpcPeer) refreshPoolMetrics() {
 			idle++
 		}
 	}
-	p.metrics.setConnectionCount(active)
-	p.metrics.setDrainingConnectionCount(draining)
-	p.metrics.setIdleConnectionCount(idle)
+	p.metrics.setCounts(active, draining, idle)
 }

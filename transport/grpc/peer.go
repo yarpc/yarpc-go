@@ -53,7 +53,9 @@ type grpcPeer struct {
 	// stoppedC is closed once all goroutines finish after the peer is stopped.
 	connWg sync.WaitGroup
 
-	metrics *connPoolMetrics
+	// metrics reports this peer's connection-state counts and scaling events
+	// into the transport-wide shared metrics (which are not tagged by peer).
+	metrics *peerPoolReporter
 
 	// connsPtr holds a pointer to the current immutable connection slice.
 	// Readers (pickConn, recomputeConnectionStatus, refreshPoolMetrics, etc.)
@@ -120,12 +122,7 @@ func (t *Transport) newPeer(address string, options *dialOptions) (*grpcPeer, er
 		cancel:       cancel,
 		stoppedC:     make(chan struct{}),
 		grpcDialOpts: dialOptions,
-		metrics: newConnPoolMetrics(connPoolMetricsParams{
-			Meter:       t.options.meter,
-			Logger:      t.options.logger,
-			ServiceName: t.options.serviceName,
-			Peer:        address,
-		}),
+		metrics: newPeerPoolReporter(t.metrics),
 		poolCfg: connPoolConfig{
 			dynamicScalingEnabled:  t.options.clientConnPoolDynamicScalingEnabled,
 			maxConcurrentStreams:   t.options.clientConnPoolMaxConcurrentStreams,
